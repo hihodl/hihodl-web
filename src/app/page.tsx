@@ -45,9 +45,9 @@ const cardReveal: Variants = {
 function Home() {
   return (
     <DefaultPageLayout>
-      <div className="flex h-full w-full flex-col items-center overflow-auto bg-gradient-to-b from-[#060B10] to-[#0B1520]">
+      <div className="flex h-full w-full flex-col items-center overflow-y-auto overflow-x-hidden bg-gradient-to-b from-[#060B10] to-[#0B1520]">
         {/* ==== TOP BAR ==== */}
-        <div className="flex w-full flex-col items-center justify-center bg-[#0a141e66] px-6 py-6 sticky top-0 z-50 backdrop-blur-xl transition-all duration-300 mobile:px-2 mobile:py-2">
+        <div className="flex w-full flex-col items-center justify-center bg-[#0a141e66] px-6 py-6 sticky top-0 z-50 backdrop-blur-xl transition-all duration-300 mobile:px-2 mobile:py-2 mb-6 md:mb-8">
           <div className="flex w-full max-w-[1280px] items-center justify-between rounded-2xl bg-[#0a141e26] px-8 py-4 shadow-lg backdrop-blur-2xl border-b border-[rgba(255,255,255,0.12)] border-t-2 border-t-brand-600 mobile:hidden">
             <span className="font-['Inter'] text-[24px] font-[700] leading-[28px] text-[#eaf6ffff] -tracking-[0.02em]">
               HIHODL
@@ -78,25 +78,23 @@ function Home() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, amount: 0.3 }}
-          className="flex w-full flex-col items-center justify-center gap-8 px-6 pt-32 pb-24 relative mobile:px-6 mobile:pt-24 mobile:pb-16"
+          className="relative flex w-full flex-col items-center justify-center gap-10 px-4 sm:px-6 md:px-8 pt-32 md:pt-52 pb-24 md:pb-32"
         >
-          <motion.div
-            variants={fadeInUp}
-            custom={0}
-            className="flex h-320 w-320 flex-none items-start absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/4 bg-[radial-gradient(circle_at_center,rgba(245,217,10,0.15)_0%,transparent_60%)] pointer-events-none"
-          />
-          <div className="flex w-full max-w-[1280px] flex-col items-center justify-center gap-8 relative z-10">
+          <div className="pointer-events-none absolute inset-0">
+            <div className="h-full w-full bg-[radial-gradient(circle_at_center,rgba(245,217,10,0.15)_0%,transparent_60%)]" />
+          </div>
+          <div className="relative z-10 mx-auto w-full max-w-[1280px] flex flex-col items-center justify-center gap-6 sm:gap-8 px-4 sm:px-6 md:px-8">
             <motion.span
               variants={fadeInUp}
               custom={1}
-              className="max-w-[1024px] whitespace-pre-wrap font-['Inter'] text-[64px] font-[700] leading-[68px] text-default-font text-center -tracking-[0.05em] mobile:font-['Afacad_Flux'] mobile:text-[40px] mobile:font-[400] mobile:leading-[44px] mobile:tracking-normal"
+              className="max-w-[1024px] text-center font-['Inter'] font-[700] -tracking-[0.05em] leading-tight text-default-font text-4xl sm:text-5xl md:text-6xl xl:text-7xl"
             >
               {"Be the First to Experience the Future of Wallets"}
             </motion.span>
             <motion.span
               variants={fadeInUp}
               custom={2}
-              className="max-w-[768px] whitespace-pre-wrap font-['Inter'] text-[18px] font-[400] leading-[28px] text-[#94a3b8ff] text-center -tracking-[0.01em]"
+              className="max-w-[768px] text-center font-['Inter'] font-[400] -tracking-[0.01em] text-[#94a3b8ff] text-base sm:text-lg md:text-xl leading-relaxed"
             >
               {
                 "Say goodbye to complicated wallets, seed phrases, and endless confusion. With HIHODL, a fully self-custodial wallet that feels like fintech. No native gas hurdles, multichain, clean UX, custom usernames instead of long addresses, and privacy through automatic wallet address rotation."
@@ -134,7 +132,7 @@ function Home() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, amount: 0.3 }}
-          className="flex w-full flex-col items-center justify-center rounded-md px-6 py-16 relative"
+          className="relative flex w-full flex-col items-center justify-center rounded-md px-4 sm:px-6 md:px-8 py-12 md:py-16"
         >
           <motion.div
             variants={cardReveal}
@@ -154,10 +152,10 @@ function Home() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, amount: 0.25 }}
-          className="flex w-full flex-col items-center justify-center gap-12 px-6 py-32 mobile:px-6 mobile:py-24"
+          className="flex w-full flex-col items-center justify-center gap-12 px-4 sm:px-6 md:px-8 py-24 md:py-32"
         >
           <motion.div variants={fadeInUp} className="flex w-full max-w-[1280px] flex-col items-center justify-center gap-4">
-            <span className="font-['Inter'] text-[48px] font-[700] leading-[52px] text-[#eaf6ffff] text-center -tracking-[0.04em] mobile:font-['Afacad_Flux'] mobile:text-[36px] mobile:font-[400] mobile:leading-[40px] mobile:tracking-normal">
+            <span className="text-center font-['Inter'] font-[700] -tracking-[0.04em] text-3xl sm:text-4xl md:text-5xl text-[#eaf6ffff]">
               Key Features
             </span>
           </motion.div>
@@ -211,13 +209,13 @@ function Home() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, amount: 0.3 }}
-          className="flex w-full flex-col items-center justify-center gap-12 px-6 py-32 mobile:px-6 mobile:py-24"
+          className="flex w-full flex-col items-center justify-center gap-12 px-4 sm:px-6 md:px-8 py-24 md:py-32"
         >
           <motion.div variants={fadeInUp} className="flex w-full max-w-[1280px] flex-col items-center justify-center gap-4">
-            <span className="font-['Inter'] text-[48px] font-[700] leading-[52px] text-[#eaf6ffff] text-center -tracking-[0.04em] mobile:font-['Afacad_Flux'] mobile:text-[36px] mobile:font-[400] mobile:leading-[40px] mobile:tracking-normal">
+            <span className="text-center font-['Inter'] font-[700] -tracking-[0.04em] leading-tight text-3xl sm:text-4xl md:text-5xl text-[#eaf6ffff]">
               How It Works
             </span>
-            <span className="max-w-[768px] font-['Inter'] text-[18px] font-[400] leading-[26px] text-[#94a3b8ff] text-center -tracking-[0.01em]">
+            <span className="max-w-[768px] text-center font-['Inter'] font-[400] -tracking-[0.01em] text-[#94a3b8ff] text-base sm:text-lg md:text-xl leading-relaxed">
               Getting started with HIHODL is simple and secure
             </span>
           </motion.div>
@@ -262,7 +260,7 @@ function Home() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, amount: 0.3 }}
-          className="flex w-full flex-col items-center justify-center gap-8 px-6 py-16 mobile:px-6 mobile:py-12"
+          className="flex w-full flex-col items-center justify-center gap-8 px-4 sm:px-6 md:px-8 py-12 md:py-16"
         >
           <motion.div variants={cardReveal} className="flex w-full max-w-[1024px] flex-col items-center justify-center gap-6 rounded-3xl px-12 py-16 border-2 bg-gradient-to-br from-[rgba(245,217,10,0.12)] via-[rgba(10,20,30,0.70)] to-[rgba(10,20,30,0.70)] backdrop-blur-xl mobile:px-6 mobile:py-12">
             <div className="flex h-8 flex-none items-center gap-2 rounded-full bg-brand-primary px-4 py-2">
@@ -280,7 +278,7 @@ function Home() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, amount: 0.3 }}
-          className="flex w-full flex-col items-center justify-center gap-8 px-6 py-32 mobile:px-6 mobile:py-24"
+          className="flex w-full flex-col items-center justify-center gap-8 px-4 sm:px-6 md:px-8 py-24 md:py-32"
         >
           <motion.div variants={cardReveal} className="flex w-full max-w-[1280px] flex-col items-center justify-center gap-8 rounded-3xl px-12 py-24 border-2 bg-gradient-to-br from-[rgba(245,217,10,0.12)] via-[rgba(10,20,30,0.70)] to-[rgba(10,20,30,0.70)] backdrop-blur-xl mobile:px-6 mobile:py-16">
             <div className="flex flex-col items-center justify-center gap-6">
@@ -311,8 +309,8 @@ function Home() {
         </motion.section>
 
         {/* ==== FOOTER ==== */}
-        <div className="flex w-full flex-col items-center px-6 py-12 border-t-2">
-          <div className="flex w-full max-w-[1280px] flex-col items-start gap-12 rounded-2xl bg-[#0a141ea6] px-12 py-12 backdrop-blur-xl border border-[rgba(255,255,255,0.08)] mobile:px-6 mobile:py-8">
+        <div className="flex w-full flex-col items-center px-4 sm:px-6 md:px-8 py-12 border-t-2">
+          <div className="flex w-full max-w-[1280px] flex-col items-start gap-12 rounded-2xl bg-[#0a141ea6] px-6 sm:px-8 md:px-12 py-8 sm:py-10 md:py-12 backdrop-blur-xl border border-[rgba(255,255,255,0.08)]">
             <div className="flex w-full items-start justify-between flex-wrap mobile:flex-col mobile:flex-nowrap mobile:justify-between">
               <div className="flex flex-col items-start gap-6">
                 <span className="font-['Inter'] text-[24px] font-[700] leading-[28px] text-brand-ffb703 -tracking-[0.02em]">HIHODL</span>
