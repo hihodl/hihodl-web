@@ -7,14 +7,39 @@ export const metadata: Metadata = {
     default: "HIHODL",
     template: "%s | HIHODL",
   },
-  icons: {
-    icon: [
-      { url: "/favicon.png", type: "image/png" },
+  description:
+    "Self-custodial. Multichain. Gasless. Transparent. HiHODL is the wallet that makes crypto feel as simple as Revolut.",
+  openGraph: {
+    title: "HIHODL — The Next-Gen Crypto Wallet That Feels Like Fintech",
+    description:
+      "Self-custodial. Multichain. Gasless. Transparent. HiHODL is the wallet that makes crypto feel as simple as Revolut.",
+    url: "https://hihodl.xyz",
+    siteName: "HIHODL",
+    images: [
+      {
+        url: "https://hihodl.xyz/banner-social.png",
+        width: 1200,
+        height: 630,
+        alt: "HIHODL Wallet — Don't Save. HODL.",
+      },
     ],
-    apple: [
-      { url: "/apple-touch-icon.png", sizes: "180x180" },
-    ],
+    locale: "en_US",
+    type: "website",
   },
+  twitter: {
+    card: "summary_large_image",
+    site: "@hiihodl",
+    creator: "@hiihodl",
+    title: "HIHODL — The Next-Gen Crypto Wallet That Feels Like Fintech",
+    description:
+      "Self-custodial. Multichain. Gasless. Transparent. HiHODL makes crypto feel as simple as Revolut.",
+    images: ["https://hihodl.xyz/banner-social.png"],
+  },
+  icons: {
+    icon: [{ url: "/favicon.png", type: "image/png" }],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
+  },
+  metadataBase: new URL("https://hihodl.xyz"),
 };
 
 export const viewport = {
