@@ -3,6 +3,10 @@ import "./globals.css";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
+// Open Graph image URL - debe ser absoluta y accesible públicamente
+// La imagen está en public/banner-social.jpg
+const OG_URL = "https://www.hihodl.xyz/banner-social.jpg";
+
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.hihodl.xyz"),
   title: {
@@ -11,35 +15,33 @@ export const metadata: Metadata = {
   },
   description:
     "Self-custodial. Multichain. Gasless. Transparent. HIHODL is the wallet that makes crypto feel as simple as Fintech.",
-  alternates: {
-    canonical: "https://www.hihodl.xyz",
-  },
+  alternates: { canonical: "https://www.hihodl.xyz" },
   openGraph: {
-    title: "HIHODL — The Next Crypto Wallet That Feels Like Fintech",
-    description:
-      "Self-custodial. Multichain. Gasless. Transparent. HiHODL is the wallet that makes crypto feel as simple as Fintech.",
+    type: "website",
     url: "https://www.hihodl.xyz",
     siteName: "HIHODL",
+    title: "HIHODL — The Next Crypto Wallet That Feels Like Fintech",
+    description:
+      "Self-custodial. Multichain. Gasless. Transparent. HIHODL is the wallet that makes crypto feel as simple as Fintech.",
     images: [
-      {
-        url: "https://www.hihodl.xyz/banner-social.jpg?v=3",
-        width: 1200,
-        height: 630,
-        alt: "HIHODL Wallet — Don't Save. HODL.",
-        type: "image/png",
+      { 
+        url: OG_URL, 
+        width: 1200, 
+        height: 630, 
+        alt: "HIHODL Wallet — Don't Save. HODL.", 
+        type: "image/jpeg",
       },
     ],
     locale: "en_US",
-    type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    site: "@hiihodl",    
-    creator: "@hihodl",
+    site: "@hiihodl",  
+    creator: "@hiihodl",
     title: "HIHODL — The Next-Gen Crypto Wallet That Feels Like Fintech",
     description:
-      "Self-custodial. Multichain. Gasless. Transparent. HIHODL makes crypto feel as simple as Revolut.",
-    images: ["https://www.hihodl.xyz/banner-social.jpg?v=3"],
+      "Self-custodial. Multichain. Gasless. Transparent. HIHODL makes crypto feel as simple as Fintech.",
+    images: [OG_URL],
   },
   icons: {
     icon: [{ url: "/favicon.png", type: "image/png" }],
@@ -47,19 +49,13 @@ export const metadata: Metadata = {
   },
 };
 
-export const viewport = {
-  width: "device-width",
-  initialScale: 1,
-};
+export const viewport = { width: "device-width", initialScale: 1 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <head>
-        {/* Metas OG explícitas para width/height (algunos scrapers son tiquismiquis) */}
-        <meta property="og:image" content="https://www.hihodl.xyz/banner-social.png?v=3" />
-        <meta property="og:image:width" content="1200" />
-        <meta property="og:image:height" content="630" />
+        {/* 🔴 Elimina metas OG manuales para evitar duplicados */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link

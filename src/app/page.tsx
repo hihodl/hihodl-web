@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import type { Variants } from "framer-motion";
 
@@ -54,7 +55,9 @@ function Home() {
             </span>
             <Button
               className="hover:shadow-[0_0_28px_rgba(255,183,3,0.5)] hover:shadow-[0_0_28px_rgba(255,183,3,0.5)]:hover inline-flex items-center px-6 py-3 rounded-xl text-black font-['Inter'] font-[700] bg-brand-ffb703 transition-all duration-300"
-              onClick={(event: React.MouseEvent<HTMLButtonElement>) => {}}
+              onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
+                window.open("https://tally.so/r/3jd2rE", "_blank", "noopener,noreferrer");
+              }}
             >
               Join Beta
             </Button>
@@ -109,7 +112,9 @@ function Home() {
                 className="hover:shadow-[0_0_28px_rgba(255,183,3,0.5)] hover:shadow-[0_0_28px_rgba(255,183,3,0.5)]:hover inline-flex items-center px-6 py-3 rounded-xl text-black font-['Inter'] font-[700] bg-brand-ffb703 transition-all duration-300 !opacity-100 focus:!opacity-100 active:!opacity-100 [&_*]:!opacity-100 [&_*]:!translate-y-0 [&_*]:!scale-100 [&_*]:!blur-0"
                 style={{ opacity: 1 }}
                 size="large"
-                onClick={(event: React.MouseEvent<HTMLButtonElement>) => {}}
+                onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
+                  window.open("https://tally.so/r/3jd2rE", "_blank", "noopener,noreferrer");
+                }}
               >
                 Join Beta Waitlist
               </Button>
@@ -139,10 +144,15 @@ function Home() {
             whileHover={{ y: -6 }}
             className="flex h-144 w-256 flex-none flex-col items-center justify-center gap-2 overflow-hidden rounded-3xl relative z-10 mobile:h-80 mobile:w-full mobile:max-w-[1280px] mobile:flex-none bg-[#0a141ea6] border border-[rgba(255,255,255,0.08)] backdrop-blur-xl"
           >
-            <img
-              className="h-256 w-256 flex-none rounded-[20px] object-contain"
-              src="https://res.cloudinary.com/subframe/image/upload/v1761680947/uploads/29066/pgr7v1odabrmhejxozno.png"
-            />
+            <div className="relative h-256 w-256 flex-none rounded-[20px] overflow-hidden">
+              <Image
+                className="object-contain"
+                src="https://res.cloudinary.com/subframe/image/upload/v1761680947/uploads/29066/pgr7v1odabrmhejxozno.png"
+                alt="HIHODL wallet interface preview"
+                fill
+                sizes="(max-width: 768px) 100vw, 1024px"
+              />
+            </div>
           </motion.div>
         </motion.section>
 
@@ -162,8 +172,14 @@ function Home() {
           <div className="flex w-full max-w-[1280px] gap-6 flex-wrap items-stretch justify-center mobile:flex-col mobile:flex-nowrap mobile:gap-6">
             {/* Card 1 */}
             <motion.div variants={cardReveal} whileHover={{ y: -6 }} className="flex min-w-[288px] grow shrink-0 basis-0 flex-col items-start gap-6 self-stretch rounded-2xl bg-[#0a141ea6] px-8 py-12 border border-[rgba(255,255,255,0.08)] backdrop-blur-xl">
-              <div className="flex h-48 w-full flex-none flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl">
-                <img className="w-full grow shrink-0 basis-0 object-cover" src="https://res.cloudinary.com/subframe/image/upload/v1761593629/uploads/29066/lpv9ql9unbr7nyabxstd.jpg" />
+              <div className="relative flex h-48 w-full flex-none flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl">
+                <Image
+                  className="object-cover"
+                  src="https://res.cloudinary.com/subframe/image/upload/v1761593629/uploads/29066/lpv9ql9unbr7nyabxstd.jpg"
+                  alt="Fintech-smooth self-custody wallet interface"
+                  fill
+                  sizes="(max-width: 768px) 100vw, 288px"
+                />
               </div>
               <div className="flex w-full flex-col items-start gap-3">
                 <span className="font-['Inter'] text-[24px] font-[700] leading-[28px] text-[#eaf6ffff] -tracking-[0.02em]">Fintech-Smooth Self-Custody</span>
@@ -172,8 +188,14 @@ function Home() {
             </motion.div>
             {/* Card 2 */}
             <motion.div variants={cardReveal} whileHover={{ y: -6 }} className="flex min-w-[288px] grow shrink-0 basis-0 flex-col items-start gap-6 self-stretch rounded-2xl bg-[#0a141ea6] px-8 py-12 border border-[rgba(255,255,255,0.08)] backdrop-blur-xl">
-              <div className="flex h-48 w-full flex-none flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl">
-                <img className="w-full grow shrink-0 basis-0 object-cover" src="https://res.cloudinary.com/subframe/image/upload/v1761634174/uploads/29066/la7rbsffelgkohnmll9x.png" />
+              <div className="relative flex h-48 w-full flex-none flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl">
+                <Image
+                  className="object-cover"
+                  src="https://res.cloudinary.com/subframe/image/upload/v1761634174/uploads/29066/la7rbsffelgkohnmll9x.png"
+                  alt="Unified, clean interface dashboard"
+                  fill
+                  sizes="(max-width: 768px) 100vw, 288px"
+                />
               </div>
               <div className="flex w-full flex-col items-start gap-3">
                 <span className="font-['Inter'] text-[24px] font-[600] leading-[28px] text-[#eaf6ffff] -tracking-[0.02em]">Unified, Clean Interface</span>
@@ -183,8 +205,14 @@ function Home() {
             {/* Card 3 */}
             <motion.div variants={cardReveal} whileHover={{ y: -6 }} className="flex min-w-[288px] grow shrink-0 basis-0 flex-col items-start gap-6 self-stretch rounded-2xl bg-[#0a141ea6] px-8 py-12 border border-[rgba(255,255,255,0.08)] backdrop-blur-xl">
               <div className="flex w-full flex-col items-start gap-3">
-                <div className="flex h-48 w-full flex-none flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl">
-                  <img className="w-full grow shrink-0 basis-0 object-cover" src="https://res.cloudinary.com/subframe/image/upload/v1761683382/uploads/29066/mccxhhijefre9w3wjc5u.png" />
+                <div className="relative flex h-48 w-full flex-none flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl">
+                  <Image
+                    className="object-cover"
+                    src="https://res.cloudinary.com/subframe/image/upload/v1761683382/uploads/29066/mccxhhijefre9w3wjc5u.png"
+                    alt="Gasless multichain transactions interface"
+                    fill
+                    sizes="(max-width: 768px) 100vw, 288px"
+                  />
                 </div>
                 <span className="font-['Inter'] text-[24px] font-[700] leading-[28px] text-[#eaf6ffff] -tracking-[0.02em]">Gasless Multichain Transactions</span>
                 <span className="font-['Inter'] text-[16px] font-[400] leading-[24px] text-[#94a3b8ff] -tracking-[0.01em]">Send, receive, and interact across multiple blockchains without worrying about native gas tokens or network hurdles.</span>
@@ -193,8 +221,14 @@ function Home() {
             {/* Card 4 */}
             <motion.div variants={cardReveal} whileHover={{ y: -6 }} className="flex min-w-[288px] grow shrink-0 basis-0 flex-col items-start gap-6 self-stretch rounded-2xl bg-[#0a141ea6] px-8 py-12 border border-[rgba(255,255,255,0.08)] backdrop-blur-xl">
               <div className="flex w-full flex-col items-start gap-3">
-                <div className="flex h-48 w-full flex-none flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl">
-                  <img className="w-full grow shrink-0 basis-0 object-cover" src="https://res.cloudinary.com/subframe/image/upload/v1761683195/uploads/29066/grvjdwuuvnwmx820rof6.jpg" />
+                <div className="relative flex h-48 w-full flex-none flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl">
+                  <Image
+                    className="object-cover"
+                    src="https://res.cloudinary.com/subframe/image/upload/v1761683195/uploads/29066/grvjdwuuvnwmx820rof6.jpg"
+                    alt="Privacy features with address rotation"
+                    fill
+                    sizes="(max-width: 768px) 100vw, 288px"
+                  />
                 </div>
                 <span className="font-['Inter'] text-[24px] font-[700] leading-[28px] text-[#eaf6ffff] -tracking-[0.02em]">Privacy That Evolves With You</span>
                 <span className="font-['Inter'] text-[16px] font-[400] leading-[24px] text-[#94a3b8ff] -tracking-[0.01em]">Enjoy seamless address rotation and custom wallet usernames that keep your wallet activity private and your experience personal.</span>
@@ -274,6 +308,7 @@ function Home() {
 
         {/* ==== WAITLIST ==== */}
         <motion.section
+          id="waitlist"
           variants={fadeInUp}
           initial="hidden"
           whileInView="visible"
@@ -300,7 +335,9 @@ function Home() {
                 className="h-10 w-full flex-none hover:shadow-[0_0_28px_rgba(255,183,3,0.5)] hover:shadow-[0_0_28px_rgba(255,183,3,0.5)]:hover inline-flex items-center justify-center px-6 py-3 rounded-xl text-black font-['Inter'] font-[700] bg-brand-ffb703 transition-all duration-300 !opacity-100 focus:!opacity-100 active:!opacity-100 [&_*]:!opacity-100 [&_*]:!translate-y-0 [&_*]:!scale-100 [&_*]:!blur-0"
                 style={{ opacity: 1 }}
                 size="large"
-                onClick={(event: React.MouseEvent<HTMLButtonElement>) => {}}
+                onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
+                  window.open("https://tally.so/r/3jd2rE", "_blank", "noopener,noreferrer");
+                }}
               >
                 Join Beta Waitlist
               </Button>
