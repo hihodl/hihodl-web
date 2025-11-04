@@ -152,6 +152,11 @@ async function sendWelcomeEmail(email: string, displayName: string, referralCode
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0A141E; color: #eaf6ff; padding: 40px 20px;">
           <div style="max-width: 600px; margin: 0 auto; background: #0A141E; border-radius: 16px;">
             
+            <!-- 🎨 LOGO HIHODL -->
+            <div style="text-align: center; margin-bottom: 30px; padding-top: 20px;">
+              <img src="${siteUrl}/logo-optimized.svg" alt="HIHODL" style="max-width: 200px; height: auto;" />
+            </div>
+            
             <!-- 📝 MENSAJE DE BIENVENIDA -->
             <h1 style="color: #FFB703; font-size: 32px; margin-bottom: 20px;">Welcome ${displayName}! 🎉</h1>
             <p style="font-size: 18px; line-height: 1.6; margin-bottom: 30px;">
