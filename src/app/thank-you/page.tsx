@@ -57,7 +57,7 @@ export default function ThankYouPage() {
                   window.location.href = "/leaderboard";
                 }}
               >
-                Ver Leaderboard
+                View Leaderboard
               </Button>
               <Button
                 className="w-full border px-6 py-3 rounded-xl border-[rgba(255,255,255,0.1)] bg-[rgba(10,20,30,0.60)] backdrop-blur-xl text-[#EAF6FF] transition"
