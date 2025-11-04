@@ -154,7 +154,7 @@ async function sendWelcomeEmail(email: string, displayName: string, referralCode
             
             <!-- 🎨 LOGO HIHODL -->
             <div style="text-align: center; margin-bottom: 30px;">
-              <img src="${siteUrl}/logo-optimized.svg" alt="HIHODL" style="max-width: 200px; height: auto;" />
+              <img src="${siteUrl}/hihodl-v2.png" alt="HIHODL" style="max-width: 250px; height: auto;" />
             </div>
             
             <!-- 📝 MENSAJE DE BIENVENIDA -->
