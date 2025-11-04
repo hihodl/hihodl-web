@@ -14,6 +14,8 @@ import { FeatherInstagram } from "@subframe/core";
 import { FeatherLinkedin } from "@subframe/core";
 import { FeatherMenu } from "@subframe/core";
 import { FeatherXTwitter } from "@subframe/core";
+import JoinWaitlist from "@/components/JoinWaitlist";
+import Leaderboard from "@/components/Leaderboard";
 
 /* =====================
  * Motion variants
@@ -56,7 +58,8 @@ function Home() {
             <Button
               className="hover:shadow-[0_0_28px_rgba(255,183,3,0.5)] hover:shadow-[0_0_28px_rgba(255,183,3,0.5)]:hover inline-flex items-center px-6 py-3 rounded-xl text-black font-['Inter'] font-[700] bg-brand-ffb703 transition-all duration-300"
               onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
-                window.open("https://tally.so/r/3jd2rE", "_blank", "noopener,noreferrer");
+                event.preventDefault();
+                document.getElementById('waitlist')?.scrollIntoView({ behavior: 'smooth' });
               }}
             >
               Join Beta
@@ -113,7 +116,8 @@ function Home() {
                 style={{ opacity: 1 }}
                 size="large"
                 onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
-                  window.open("https://tally.so/r/3jd2rE", "_blank", "noopener,noreferrer");
+                  event.preventDefault();
+                  document.getElementById('waitlist')?.scrollIntoView({ behavior: 'smooth' });
                 }}
               >
                 Join Beta Waitlist
@@ -317,30 +321,16 @@ function Home() {
         >
           <motion.div variants={cardReveal} className="flex w-full max-w-[1280px] flex-col items-center justify-center gap-8 rounded-3xl px-12 py-24 border-2 bg-gradient-to-br from-[rgba(245,217,10,0.12)] via-[rgba(10,20,30,0.70)] to-[rgba(10,20,30,0.70)] backdrop-blur-xl mobile:px-6 mobile:py-16">
             <div className="flex flex-col items-center justify-center gap-6">
-              <span className="max-w-[768px] font-['Inter'] text-[56px] font-[900] leading-[60px] text-[#eaf6ffff] text-center -tracking-[0.05em] mobile:font-['Afacad_Flux'] mobile:text-[40px] mobile:font-[400] mobile:leading-[44px] mobile:tracking-normal">Join our waitlist today</span>
-              <span className="max-w-[768px] whitespace-pre-wrap font-['Inter'] text-[20px] font-[500] leading-[28px] text-[#94a3b8ff] text-center -tracking-[0.015em]">Join the waitlist now and be among the first to experience HIHODL. Simply enter your email below, and we&#39;ll keep you updated on our progress and exclusive launch offers.</span>
+              <span className="max-w-[768px] font-['Inter'] text-[56px] font-[900] leading-[60px] text-[#eaf6ffff] text-center -tracking-[0.05em] mobile:font-['Afacad_Flux'] mobile:text-[40px] mobile:font-[400] mobile:leading-[44px] mobile:tracking-normal">
+                Early access isn&apos;t given. It&apos;s earned.
+              </span>
+              <span className="max-w-[768px] whitespace-pre-wrap font-['Inter'] text-[20px] font-[500] leading-[28px] text-[#94a3b8ff] text-center -tracking-[0.015em]">
+                Invite friends, stack XP, climb the leaderboard. Join the waitlist and earn your way to priority beta access.
+              </span>
             </div>
-            <div className="flex w-full max-w-[576px] flex-col items-start gap-6">
-              <TextField className="h-auto w-full flex-none" label="" helpText="">
-                <TextField.Input placeholder="Enter your email address" value="" onChange={(event: React.ChangeEvent<HTMLInputElement>) => {}} />
-              </TextField>
-              <div className="flex items-start gap-3">
-                <div className="flex h-5 w-5 flex-none items-center justify-center rounded-md border border-solid border-brand-ffb703 bg-[#0a141e99]">
-                  <FeatherCheck className="text-body font-body text-brand-600" />
-                </div>
-                <span className="font-['Inter'] text-[14px] font-[400] leading-[20px] text-[#94a3b8ff] -tracking-[0.01em]">Yes, I would like to sign up for the waiting list.</span>
-              </div>
-              <span className="font-['Inter'] text-[13px] font-[400] leading-[19px] text-[#94a3b8ff]">For information about our privacy practices and commitment to protecting your privacy, check out our Privacy Policy.</span>
-              <Button
-                className="h-10 w-full flex-none hover:shadow-[0_0_28px_rgba(255,183,3,0.5)] hover:shadow-[0_0_28px_rgba(255,183,3,0.5)]:hover inline-flex items-center justify-center px-6 py-3 rounded-xl text-black font-['Inter'] font-[700] bg-brand-ffb703 transition-all duration-300 !opacity-100 focus:!opacity-100 active:!opacity-100 [&_*]:!opacity-100 [&_*]:!translate-y-0 [&_*]:!scale-100 [&_*]:!blur-0"
-                style={{ opacity: 1 }}
-                size="large"
-                onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
-                  window.open("https://tally.so/r/3jd2rE", "_blank", "noopener,noreferrer");
-                }}
-              >
-                Join Beta Waitlist
-              </Button>
+            <JoinWaitlist />
+            <div className="mt-8 w-full max-w-[576px]">
+              <Leaderboard />
             </div>
           </motion.div>
         </motion.section>
