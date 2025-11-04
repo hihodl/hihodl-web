@@ -22,30 +22,30 @@ export default function ThankYouPage() {
 
           <div className="flex flex-col items-center gap-4 text-center">
             <h1 className="font-['Inter'] text-4xl sm:text-5xl font-[700] text-[#eaf6ffff] -tracking-[0.05em]">
-              ¡Genial! Estás en la waitlist 🎉
+              Awesome! You're on the waitlist 🎉
             </h1>
             <p className="font-['Inter'] text-lg text-[#94a3b8ff] max-w-[480px]">
-              Ve a comprobar tu email. Te hemos enviado tu link de referido único y acceso al ranking.
+              Check your email. We've sent you your unique referral link and access to the ranking.
             </p>
           </div>
 
           <div className="flex flex-col gap-4 w-full max-w-[400px]">
             <div className="rounded-xl bg-white/5 p-6 border border-[rgba(255,255,255,0.08)]">
               <h3 className="font-['Inter'] text-lg font-[600] text-[#eaf6ffff] mb-3">
-                ¿Qué sigue?
+                What's next?
               </h3>
               <ul className="space-y-2 text-left">
                 <li className="flex items-start gap-2 text-[#94a3b8ff]">
                   <span className="text-brand-ffb703">✓</span>
-                  <span>Revisa tu email (incluye spam)</span>
+                  <span>Check your email (including spam)</span>
                 </li>
                 <li className="flex items-start gap-2 text-[#94a3b8ff]">
                   <span className="text-brand-ffb703">✓</span>
-                  <span>Comparte tu link de referido único</span>
+                  <span>Share your unique referral link</span>
                 </li>
                 <li className="flex items-start gap-2 text-[#94a3b8ff]">
                   <span className="text-brand-ffb703">✓</span>
-                  <span>Sube en el leaderboard invitando amigos</span>
+                  <span>Climb the leaderboard by inviting friends</span>
                 </li>
               </ul>
             </div>
@@ -66,7 +66,7 @@ export default function ThankYouPage() {
                   window.location.href = "/";
                 }}
               >
-                Volver al inicio
+                Back to Home
               </Button>
             </div>
           </div>
