@@ -153,7 +153,7 @@ async function sendWelcomeEmail(email: string, displayName: string, referralCode
           <div style="max-width: 600px; margin: 0 auto; background: #0A141E; border-radius: 16px;">
             
             <!-- 🎨 LOGO HIHODL -->
-            <div style="text-align: center; margin-bottom: 30px; padding-top: 20px;">
+            <div style="text-align: center; margin-bottom: 30px;">
               <img src="${siteUrl}/logo-optimized.svg" alt="HIHODL" style="max-width: 200px; height: auto;" />
             </div>
             
