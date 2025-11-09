@@ -21,18 +21,18 @@ export default function ThankYouPage() {
           </div>
 
           <div className="flex flex-col items-center gap-4 text-center">
-            <h1 className="font-['Inter'] text-4xl sm:text-5xl font-[700] text-[#eaf6ffff] -tracking-[0.05em]">
-              Awesome! You're on the waitlist 🎉
+            <h1 className="font-[&apos;Inter&apos;] text-4xl sm:text-5xl font-[700] text-[#eaf6ffff] -tracking-[0.05em]">
+              Awesome! You are on the waitlist 🎉
             </h1>
-            <p className="font-['Inter'] text-lg text-[#94a3b8ff] max-w-[480px]">
-              Check your email. We've sent you your unique referral link and access to the ranking.
+            <p className="font-[&apos;Inter&apos;] text-lg text-[#94a3b8ff] max-w-[480px]">
+              Check your email. We have sent you your unique referral link and access to the ranking.
             </p>
           </div>
 
           <div className="flex flex-col gap-4 w-full max-w-[400px]">
             <div className="rounded-xl bg-white/5 p-6 border border-[rgba(255,255,255,0.08)]">
-              <h3 className="font-['Inter'] text-lg font-[600] text-[#eaf6ffff] mb-3">
-                What's next?
+              <h3 className="font-[&apos;Inter&apos;] text-lg font-[600] text-[#eaf6ffff] mb-3">
+                What is next?
               </h3>
               <ul className="space-y-2 text-left">
                 <li className="flex items-start gap-2 text-[#94a3b8ff]">
@@ -52,7 +52,7 @@ export default function ThankYouPage() {
 
             <div className="flex flex-col gap-3">
               <Button
-                className="w-full hover:shadow-[0_0_28px_rgba(255,183,3,0.5)] hover:shadow-[0_0_28px_rgba(255,183,3,0.5)]:hover inline-flex items-center justify-center px-6 py-3 rounded-xl text-black font-['Inter'] font-[700] bg-brand-ffb703 transition-all duration-300"
+                className="w-full hover:shadow-[0_0_28px_rgba(255,183,3,0.5)] hover:shadow-[0_0_28px_rgba(255,183,3,0.5)]:hover inline-flex items-center justify-center px-6 py-3 rounded-xl text-black font-[&apos;Inter&apos;] font-[700] bg-brand-ffb703 transition-all duration-300"
                 onClick={() => {
                   window.location.href = "/leaderboard";
                 }}
