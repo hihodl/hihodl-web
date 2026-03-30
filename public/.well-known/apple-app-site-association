@@ -1,0 +1,22 @@
+{
+  "webcredentials": {
+    "apps": [
+      "VLV25ZF66P.com.sayhihodl.hihodlyes"
+    ]
+  },
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appIDs": [
+          "VLV25ZF66P.com.sayhihodl.hihodlyes"
+        ],
+        "components": [
+          {
+            "/": "/*"
+          }
+        ]
+      }
+    ]
+  }
+}
