@@ -62,7 +62,7 @@ export function NotifyMeForm() {
       <div className="mt-12 max-w-md mx-auto text-center">
         <div className="inline-flex items-center gap-2 px-5 py-4 rounded-pill bg-amber/15 border border-amber/30 text-amber font-medium">
           <span className="text-lg">✓</span>
-          <span>You're in. Check your inbox for the welcome email.</span>
+          <span>You&apos;re in. Check your inbox for the welcome email.</span>
         </div>
       </div>
     );
