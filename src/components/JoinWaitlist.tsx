@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Button } from '@/ui/components/Button';
 import { TextField } from '@/ui/components/TextField';
+import { setStoredToken } from '@/lib/clientAuth';
 
 export default function JoinWaitlist() {
   const [link, setLink] = useState<string | null>(null);
@@ -35,7 +36,14 @@ export default function JoinWaitlist() {
       }
 
       if (data.ok) {
-        // Redirigir a página de agradecimiento después de 1 segundo
+        // Persist the session token so the user can read their own stats /
+        // milestones after signup (the API gates those reads on a Bearer token
+        // that's bound to (userId, email) — without storing it here, the
+        // /thank-you page and ReferralDashboard would 401 immediately).
+        if (data.sessionToken) {
+          setStoredToken(data.sessionToken);
+        }
+        // Redirect to thank-you page
         setTimeout(() => {
           window.location.href = '/thank-you';
         }, 1000);

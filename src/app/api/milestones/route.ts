@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseClient } from '@/lib/supabase';
+import { bearerFromRequest, validateEmail, verifyToken } from '@/lib/security';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,15 +12,31 @@ const tiers = [
   { key: 'legend', at: 100, label: 'Legend' },
 ];
 
+/**
+ * GET /api/milestones?email=<email>
+ *
+ * Returns the caller's referral count + which milestones they've achieved.
+ * Same auth model as /api/referral/stats: requires a Bearer token bound to
+ * the same email. Without it, anyone could enumerate any user's milestone
+ * tier by email (lower-stakes than stats but same IDOR class).
+ */
 export async function GET(req: NextRequest) {
   try {
-    const email = req.nextUrl.searchParams.get('email');
-
+    const email = validateEmail(req.nextUrl.searchParams.get('email'));
     if (!email) {
-      return NextResponse.json({ error: 'missing_email' }, { status: 400 });
+      return NextResponse.json({ error: 'invalid_email' }, { status: 400 });
     }
 
-    const supabase = createSupabaseClient(false);
+    const token = bearerFromRequest(req);
+    const payload = verifyToken(token, email);
+    if (!payload) {
+      return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+    }
+
+    // Service-role key — anon RLS access was removed in the schema fix
+    // (see supabase-schema.sql comment block). The Bearer token above is
+    // the actual auth gate.
+    const supabase = createSupabaseClient(true);
 
     const { data } = await supabase
       .from('waitlist_users')
@@ -40,4 +57,3 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'server_error' }, { status: 500 });
   }
 }
-

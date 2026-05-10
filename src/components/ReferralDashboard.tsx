@@ -1,17 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import useSWR from 'swr';
 import { Button } from '@/ui/components/Button';
 import Milestones from './Milestones';
 import Leaderboard from './Leaderboard';
-
-const fetcher = (u: string) => fetch(u).then((r) => r.json());
+import { authedFetcher } from '@/lib/clientAuth';
 
 export default function ReferralDashboard({ email }: { email: string }) {
-  const { data, isLoading } = useSWR(
+  const { data, isLoading, error } = useSWR(
     email ? `/api/referral/stats?email=${encodeURIComponent(email)}` : null,
-    fetcher
+    authedFetcher
   );
 
   const [copied, setCopied] = useState(false);
@@ -33,6 +32,21 @@ export default function ReferralDashboard({ email }: { email: string }) {
       <div className="animate-pulse space-y-6">
         <div className="h-32 bg-white/5 rounded-2xl"></div>
         <div className="h-64 bg-white/5 rounded-2xl"></div>
+      </div>
+    );
+  }
+
+  // Distinguish "not authed for this email" (401 from API gate) vs other
+  // failures. The 401 case happens when the user enters someone else's
+  // email, OR when they're on a fresh device without the session token
+  // from signup. Both resolve by re-submitting the waitlist form.
+  if (error?.status === 401) {
+    return (
+      <div className="rounded-2xl bg-white/5 p-6 border border-[rgba(255,255,255,0.08)]">
+        <p className="text-[#94a3b8ff]">
+          To view your referral stats, sign up (or re-sign-up on this device)
+          using the form on the homepage. We can&apos;t look up someone else&apos;s stats.
+        </p>
       </div>
     );
   }

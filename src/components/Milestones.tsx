@@ -1,13 +1,12 @@
 'use client';
 
 import useSWR from 'swr';
-
-const fetcher = (u: string) => fetch(u).then((r) => r.json());
+import { authedFetcher } from '@/lib/clientAuth';
 
 export default function Milestones({ email }: { email: string }) {
   const { data, isLoading } = useSWR(
     email ? `/api/milestones?email=${encodeURIComponent(email)}` : null,
-    fetcher
+    authedFetcher
   );
 
   const tiers = data?.tiers ?? [];

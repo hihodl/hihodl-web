@@ -8,6 +8,7 @@ import { Superpowers } from "@/components/site/Superpowers";
 import { BankVsHihodl } from "@/components/site/BankVsHihodl";
 import { BuiltFor } from "@/components/site/BuiltFor";
 import { WhyFree } from "@/components/site/WhyFree";
+import { NotifyMeForm } from "@/components/site/NotifyMeForm";
 
 export default function Home() {
   return (
@@ -318,7 +319,7 @@ export default function Home() {
                 get early access and priority onboarding when we launch in 2027.
               </p>
 
-              <NewsletterSignupPlaceholder />
+              <NotifyMeForm />
             </div>
           </div>
         </section>
@@ -633,27 +634,6 @@ function Testimonial({ quote, name, role }: { quote: string; name: string; role:
   );
 }
 
-function NewsletterSignupPlaceholder() {
-  return (
-    <form
-      className="mt-12 flex flex-col sm:flex-row gap-3 max-w-md mx-auto"
-      action="/api/newsletter/subscribe"
-      method="post"
-    >
-      <input
-        type="email"
-        name="email"
-        required
-        placeholder="your@email.com"
-        className="flex-1 px-5 py-4 rounded-pill bg-white/[0.04] border border-[color:var(--color-hairline)] text-text placeholder:text-text-faint focus:outline-none focus:border-moonlight transition-colors"
-      />
-      <input type="hidden" name="source" value="home-husd" />
-      <button
-        type="submit"
-        className="inline-flex items-center justify-center px-6 py-4 rounded-pill bg-amber text-text-on-amber font-medium hover:bg-amber-glow transition-all duration-180 ease-out-soft hover:scale-[1.02]"
-      >
-        Notify me
-      </button>
-    </form>
-  );
-}
+// NewsletterSignupPlaceholder removed — was a server-side <form action="/api/newsletter/subscribe">
+// which 404'd because that route never existed. Replaced with the client-side
+// <NotifyMeForm /> component (imported above) that POSTs to /api/waitlist/join.

@@ -3,7 +3,12 @@ import { createSupabaseClient } from '@/lib/supabase';
 
 export async function GET() {
   try {
-    const supabase = createSupabaseClient(false);
+    // Service-role key — anon RLS access was removed in the schema fix
+    // (see supabase-schema.sql comment block). Public leaderboard data
+    // (display_name, referrals_count, created_at top-100) is still
+    // exposed via this route, just funneled through the API instead of
+    // direct anon-key reads from the browser.
+    const supabase = createSupabaseClient(true);
 
     const { data, error } = await supabase
       .from('waitlist_users')
