@@ -1,408 +1,659 @@
-"use client";
+import Link from "next/link";
+import { TopNav } from "@/components/site/TopNav";
+import { Footer } from "@/components/site/Footer";
+import { Hero } from "@/components/site/Hero";
+import { IncomeRails } from "@/components/site/IncomeRails";
+import { OneDayJourney } from "@/components/site/OneDayJourney";
+import { Superpowers } from "@/components/site/Superpowers";
+import { BankVsHihodl } from "@/components/site/BankVsHihodl";
+import { BuiltFor } from "@/components/site/BuiltFor";
+import { WhyFree } from "@/components/site/WhyFree";
 
-import React from "react";
-import Image from "next/image";
-import { motion } from "framer-motion";
-import type { Variants } from "framer-motion";
-
-import { Button } from "@/ui/components/Button";
-import { IconButton } from "@/ui/components/IconButton";
-import { TextField } from "@/ui/components/TextField";
-import { DefaultPageLayout } from "@/ui/layouts/DefaultPageLayout";
-import { FeatherCheck } from "@subframe/core";
-import { FeatherInstagram } from "@subframe/core";
-import { FeatherLinkedin } from "@subframe/core";
-import { FeatherMenu } from "@subframe/core";
-import { FeatherXTwitter } from "@subframe/core";
-import JoinWaitlist from "@/components/JoinWaitlist";
-import Leaderboard from "@/components/Leaderboard";
-
-/* =====================
- * Motion variants
- * ===================== */
-const fadeInUp: Variants = {
-  hidden: { opacity: 0, y: 40, filter: "blur(4px)" },
-  visible: (i: number = 0) => ({
-    opacity: 1,
-    y: 0,
-    filter: "blur(0px)",
-    transition: { duration: 0.6, ease: "easeOut", delay: 0.08 * i },
-  }),
-};
-
-const stagger: Variants = {
-  hidden: {},
-  visible: {
-    transition: {
-      staggerChildren: 0.08,
-      delayChildren: 0.04,
-    },
-  },
-};
-
-const cardReveal: Variants = {
-  hidden: { opacity: 0, y: 24, scale: 0.985 },
-  visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.45, ease: "easeOut" } },
-};
-
-function Home() {
+export default function Home() {
   return (
-    <DefaultPageLayout>
-      <div className="flex h-full w-full flex-col items-center overflow-y-auto overflow-x-hidden bg-gradient-to-b from-[#060B10] to-[#0B1520]">
-        {/* ==== TOP BAR ==== */}
-        <div className="flex w-full flex-col items-center justify-center bg-[#0a141e66] px-6 py-6 sticky top-0 z-50 backdrop-blur-xl transition-all duration-300 mobile:px-2 mobile:py-2 mb-6 md:mb-8">
-          <div className="flex w-full max-w-[1280px] items-center justify-between rounded-2xl bg-[#0a141e26] px-8 py-4 shadow-lg backdrop-blur-2xl border-b border-[rgba(255,255,255,0.12)] border-t-2 border-t-brand-600 mobile:hidden">
-            <span className="font-['Inter'] text-[24px] font-[700] leading-[28px] text-[#eaf6ffff] -tracking-[0.02em]">
-              HIHODL
-            </span>
-            <Button
-              className="hover:shadow-[0_0_28px_rgba(255,183,3,0.5)] hover:shadow-[0_0_28px_rgba(255,183,3,0.5)]:hover inline-flex items-center px-6 py-3 rounded-xl text-black font-['Inter'] font-[700] bg-brand-ffb703 transition-all duration-300"
-              onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
-                event.preventDefault();
-                document.getElementById('waitlist')?.scrollIntoView({ behavior: 'smooth' });
-              }}
-            >
-              Join Beta
-            </Button>
+    <>
+      <TopNav />
+
+      <main>
+        {/* ─── 1. Hero ─────────────────────────────────────────── */}
+        <Hero />
+
+        {/* ─── 1.5 · Income rails — credibility strip ──────────── */}
+        <IncomeRails />
+
+        {/* ─── 2. Empathy hook (editorial serif moment) ────────── */}
+        <section
+          className="relative overflow-hidden"
+          style={{
+            background:
+              "linear-gradient(180deg, #2A1F18 0%, #1F1A14 40%, #1F2535 100%)",
+          }}
+        >
+          {/* Warm bronze spotlight, center */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background:
+                "radial-gradient(70% 60% at 50% 50%, rgba(255, 183, 3, 0.10), transparent 70%)",
+            }}
+            aria-hidden
+          />
+          <SectionHairline tone="amber" />
+          <div className="container-page section text-center relative">
+            <p className="font-editorial text-h3 md:text-h2 text-text max-w-3xl mx-auto leading-snug">
+              Stablecoins, sent by username.
+              <br />
+              Across every chain you use.
+              <br />
+              <span className="text-text-muted">Without a single thought about gas.</span>
+            </p>
+            <p className="mt-10 text-small text-text-faint uppercase tracking-wider">
+              The wallet for global earners who hold their own keys.
+            </p>
           </div>
-          <div className="hidden w-full flex-col items-start gap-4 rounded-2xl bg-[#0a141e80] px-6 py-4 shadow-lg backdrop-blur-2xl border-b border-[rgba(255,255,255,0.12)] border-t-2 border-t-brand-600 mobile:flex">
-            <div className="flex w-full items-center justify-between">
-              <span className="font-['Inter'] text-[20px] font-[700] leading-[24px] text-[#eaf6ffff] -tracking-[0.02em]">
-                HIHODL
-              </span>
-              <IconButton
-                icon={<FeatherMenu />}
-                onClick={(event: React.MouseEvent<HTMLButtonElement>) => {}}
+        </section>
+
+        {/* ─── 3. A day in the life — scroll-pin scene ─────────── */}
+        <div id="income">
+          <OneDayJourney />
+        </div>
+
+        {/* ─── 3.5 · Mid-page CTA bridge ────────────────────────── */}
+        <CtaStrip
+          eyebrow="50,000+ global earners already on HIHODL"
+          title="Try it before reading another word."
+          subtitle="On App Store and Google Play. Set up in 30 seconds."
+          primary={{ label: "Download free", href: "#download" }}
+          secondary={{ label: "How it works", href: "#how" }}
+          tone="blue"
+        />
+
+        {/* ─── 4. Five superpowers ─────────────────────────────── */}
+        <div id="swap">
+          <Superpowers />
+        </div>
+
+        {/* ─── 4.3 · Bank vs HIHODL — the side-by-side ─────────── */}
+        <BankVsHihodl />
+
+        {/* ─── 4.6 · Built for — six archetypes ────────────────── */}
+        <BuiltFor />
+
+        {/* ─── 4. How it works in 30 seconds ───────────────────── */}
+        <section id="how" className="bg-night relative overflow-hidden">
+          <div className="absolute inset-0 bg-moonlight-glow opacity-30 pointer-events-none" aria-hidden />
+          <div className="container-page section relative">
+            <div className="max-w-2xl">
+              <p className="text-tiny uppercase tracking-wider text-moonlight">How it works · 30 seconds</p>
+              <h2 className="mt-6 font-display text-h2 md:text-h1 font-light text-text">
+                Faster than any
+                <br />
+                fintech app.
+              </h2>
+              <p className="mt-6 text-lead text-text-muted">
+                No paperwork, no approval queues, no bank visit.
+                Three steps to receive, hold and move your money.
+              </p>
+            </div>
+
+            <ol className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Step
+                n={1}
+                title="Sign in with Face ID"
+                body="No seed phrase. Your private key is split — half on your phone, half held by us — and reassembled only inside your device, only to sign your transactions."
+                badge="10 seconds"
+              />
+              <Step
+                n={2}
+                title="Get paid your way"
+                body="Receive via virtual USD account (IBAN/SWIFT) for employers and clients, or share your stablecoin address with crypto senders. Either way it lands as stablecoins."
+                badge="Instant"
+              />
+              <Step
+                n={3}
+                title="Send, swap, or organize"
+                body="Send to a @username in seconds. Swap stablecoins with zero gas. Split your money across pockets — Travel, Rent, Savings — all from a single balance."
+                badge="Anywhere"
+              />
+            </ol>
+          </div>
+        </section>
+
+        {/* ─── 4.9 · Why free — kills the "what's the catch" ───── */}
+        <WhyFree />
+
+        {/* ─── 5. Pricing — swap comparison ────────────────────── */}
+        <section
+          className="relative overflow-hidden"
+          style={{
+            background:
+              "linear-gradient(180deg, #243246 0%, #2D3D52 50%, #243246 100%)",
+          }}
+        >
+          {/* Premium light wash — feels like a card on a table */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background:
+                "radial-gradient(80% 60% at 50% 30%, rgba(255,183,3,0.12), transparent 70%), radial-gradient(60% 60% at 80% 100%, rgba(114,149,181,0.18), transparent 70%)",
+            }}
+            aria-hidden
+          />
+          <SectionHairline tone="blue" />
+          <div className="container-page section text-center relative">
+            <p className="text-tiny uppercase tracking-wider text-text-faint">Two plans. Zero surprises.</p>
+            <h2 className="mt-6 font-display text-h2 md:text-h1 font-light text-text max-w-3xl mx-auto">
+              Start free.
+              <br />
+              <span className="text-text-muted">Go Pro when you move more.</span>
+            </h2>
+            <p className="mt-8 text-lead text-text-muted max-w-2xl mx-auto">
+              No hidden spread. No tier games. Cancel anytime.
+            </p>
+
+            <div className="mt-16 grid grid-cols-1 md:grid-cols-2 gap-5 max-w-4xl mx-auto text-left">
+              <PlanCard
+                name="Free"
+                price="$0"
+                priceSub="forever"
+                features={[
+                  "Up to $500/mo of gas-free swaps",
+                  "Above the cap: 0.50% all-in network fee",
+                  "$2 minimum swap",
+                  "3 pockets to organize your money",
+                  "Virtual USD account & IBAN",
+                  "Self-custody · biometric login",
+                ]}
+                cta={{ label: "Download free", href: "#download" }}
+              />
+              <PlanCard
+                name="Pro"
+                price="$9.99"
+                priceSub="per month"
+                highlight
+                features={[
+                  "Always gasless. Network fee included.",
+                  "Zero markup on swap volume — no cap",
+                  "Unlimited pockets",
+                  "Priority access to HUSD at launch",
+                  "Virtual USD account & IBAN priority queue",
+                  "Premium support",
+                ]}
+                cta={{ label: "Get Pro", href: "#download" }}
+              />
+            </div>
+
+            <p className="mt-10 text-small text-text-faint max-w-xl mx-auto">
+              Invite 1 friend, get 1 month Pro free. Up to 3 months.
+            </p>
+          </div>
+        </section>
+
+        {/* ─── 5.7 · AI layer teaser (Cursor of stablecoins) ───── */}
+        <section
+          id="ai"
+          className="relative overflow-hidden bg-night"
+        >
+          <div
+            className="absolute inset-0 pointer-events-none opacity-40"
+            style={{
+              background:
+                "radial-gradient(60% 60% at 30% 30%, rgba(91,124,255,0.18), transparent 70%), radial-gradient(60% 60% at 80% 90%, rgba(255,183,3,0.10), transparent 70%)",
+            }}
+            aria-hidden
+          />
+          <SectionHairline tone="moonlight" />
+          <div className="container-page section relative">
+            <div className="max-w-3xl">
+              <p className="text-tiny uppercase tracking-wider text-moonlight">
+                AI layer · coming soon
+              </p>
+              <h2 className="mt-6 font-display text-h2 md:text-h1 font-light text-text leading-tight">
+                The Cursor of stablecoins.
+                <br />
+                <span className="text-text-muted">Talk to your money.</span>
+              </h2>
+              <p className="mt-8 text-lead text-text-muted max-w-2xl">
+                HIHODL is becoming the first AI-native stablecoin wallet. Ask in plain language —
+                <em className="not-italic text-text"> &ldquo;send 200 USDC to Lucía,&rdquo; &ldquo;split my paycheck 60/30/10,&rdquo;
+                &ldquo;move savings to the highest yield&rdquo;</em> — and your wallet does it.
+                Self-custodial, on-chain, signed only by you.
+              </p>
+              <p id="security" className="mt-6 text-small text-text-faint max-w-2xl">
+                Private keys never leave your device. The AI proposes — you approve every signature.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* ─── 5.5 · Mid-page CTA after pricing ─────────────────── */}
+        <CtaStrip
+          eyebrow="The first $500 is on us. Every month."
+          title="Stop thinking. Start moving."
+          subtitle="No setup fees. No KYC for basic use. No bank required."
+          primary={{ label: "Get HIHODL free", href: "#download" }}
+          tone="amber"
+        />
+
+        {/* ─── 6. Social proof ─────────────────────────────────── */}
+        <section
+          className="relative overflow-hidden"
+          style={{
+            background:
+              "linear-gradient(180deg, #161E2A 0%, #1B2638 100%)",
+          }}
+        >
+          {/* Horizontal moonlight band */}
+          <div
+            className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[60%] pointer-events-none opacity-40"
+            style={{
+              background:
+                "radial-gradient(80% 100% at 50% 50%, rgba(91,124,255,0.18), transparent 70%)",
+            }}
+            aria-hidden
+          />
+          <SectionHairline tone="moonlight" />
+          <div className="container-page section relative">
+            <p className="text-tiny uppercase tracking-wider text-text-faint text-center">
+              Loved by global earners in 80+ countries
+            </p>
+            <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Testimonial
+                quote="Finally a wallet that doesn't make me feel like an engineer to receive my paycheck."
+                name="Lucía R."
+                role="Designer · Buenos Aires → Lisbon"
+              />
+              <Testimonial
+                quote="My clients pay me in USD. I pay rent in pesos. HIHODL is the bridge I'd been hacking together with three apps."
+                name="Akin O."
+                role="Developer · Lagos"
+              />
+              <Testimonial
+                quote="I stopped using my bank for international payments. Zero gas swaps and stablecoin rails save me $40/month in FX alone."
+                name="Maria S."
+                role="Writer · Mexico City"
               />
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* ==== HERO ==== */}
-        <motion.section
-          variants={stagger}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.3 }}
-          className="relative flex w-full flex-col items-center justify-center gap-10 px-4 sm:px-6 md:px-8 pt-32 md:pt-52 pb-24 md:pb-32"
+        {/* ─── 7. Newsletter + HUSD teaser (brand blue dominant) ─ */}
+        <section
+          id="husd"
+          className="relative overflow-hidden"
+          style={{
+            background:
+              "linear-gradient(180deg, #2C4566 0%, #4F7090 50%, #2C4566 100%)",
+          }}
         >
-          <div className="pointer-events-none absolute inset-0">
-            <div className="h-full w-full bg-[radial-gradient(circle_at_center,rgba(245,217,10,0.15)_0%,transparent_60%)]" />
-          </div>
-          <div className="relative z-10 mx-auto w-full max-w-[1280px] flex flex-col items-center justify-center gap-6 sm:gap-8 px-4 sm:px-6 md:px-8">
-            <motion.span
-              variants={fadeInUp}
-              custom={1}
-              className="max-w-[1024px] text-center font-['Inter'] font-[700] -tracking-[0.05em] leading-tight text-default-font text-4xl sm:text-5xl md:text-6xl xl:text-7xl"
-            >
-              {"Be the First to Experience the Future of Wallets"}
-            </motion.span>
-            <motion.span
-              variants={fadeInUp}
-              custom={2}
-              className="max-w-[768px] text-center font-['Inter'] font-[400] -tracking-[0.01em] text-[#94a3b8ff] text-base sm:text-lg md:text-xl leading-relaxed"
-            >
-              {
-                "Say goodbye to complicated wallets, seed phrases, and endless confusion. With HIHODL, a fully self-custodial wallet that feels like fintech. No native gas hurdles, multichain, clean UX, custom usernames instead of long addresses, and privacy through automatic wallet address rotation."
-              }
-            </motion.span>
-            <motion.div
-              variants={fadeInUp}
-              custom={3}
-              className="flex items-center justify-center gap-4 pt-4 flex-wrap"
-            >
-              <Button
-                className="hover:shadow-[0_0_28px_rgba(255,183,3,0.5)] hover:shadow-[0_0_28px_rgba(255,183,3,0.5)]:hover inline-flex items-center px-6 py-3 rounded-xl text-black font-['Inter'] font-[700] bg-brand-ffb703 transition-all duration-300 !opacity-100 focus:!opacity-100 active:!opacity-100 [&_*]:!opacity-100 [&_*]:!translate-y-0 [&_*]:!scale-100 [&_*]:!blur-0"
-                style={{ opacity: 1 }}
-                size="large"
-                onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
-                  event.preventDefault();
-                  document.getElementById('waitlist')?.scrollIntoView({ behavior: 'smooth' });
-                }}
-              >
-                Join Beta Waitlist
-              </Button>
-              <Button
-                className="border px-6 py-3 rounded-xl border-[rgba(255,255,255,0.1)] bg-[rgba(10,20,30,0.60)] backdrop-blur-xl text-[#EAF6FF] transition !opacity-100 focus:!opacity-100 active:!opacity-100 [&_*]:!opacity-100 [&_*]:!translate-y-0 [&_*]:!scale-100 [&_*]:!blur-0"
-                style={{ opacity: 1 }}
-                variant="neutral-secondary"
-                size="large"
-                onClick={(event: React.MouseEvent<HTMLButtonElement>) => {}}
-              >
-                Explore Features
-              </Button>
-            </motion.div>
-          </div>
-        </motion.section>
+          {/* Steel-blue gradient mirrors the HIHODL logo background */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background:
+                "radial-gradient(70% 80% at 30% 30%, rgba(114,149,181,0.30), transparent 70%), radial-gradient(70% 80% at 80% 80%, rgba(44,69,102,0.40), transparent 70%)",
+            }}
+            aria-hidden
+          />
+          <SectionHairline tone="blue" />
+          <div className="container-page section relative">
+            <div className="max-w-2xl mx-auto text-center">
+              {/* 50K live counter */}
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-pill border border-[color:var(--color-hairline-strong)] bg-white/[0.04]">
+                <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
+                <span className="text-small text-text font-mono">
+                  <span className="font-medium">50,127</span>
+                  <span className="text-text-muted"> global earners on the list</span>
+                </span>
+              </div>
 
-        {/* ==== PRODUCT SHOT ==== */}
-        <motion.section
-          variants={fadeInUp}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.3 }}
-          className="relative flex w-full flex-col items-center justify-center rounded-md px-4 sm:px-6 md:px-8 py-12 md:py-16"
-        >
-          <motion.div
-            variants={cardReveal}
-            whileHover={{ y: -6 }}
-            className="flex h-144 w-256 flex-none flex-col items-center justify-center gap-2 overflow-hidden rounded-3xl relative z-10 mobile:h-80 mobile:w-full mobile:max-w-[1280px] mobile:flex-none bg-[#0a141ea6] border border-[rgba(255,255,255,0.08)] backdrop-blur-xl"
-          >
-            <div className="relative h-256 w-256 flex-none rounded-[20px] overflow-hidden">
-              <Image
-                className="object-contain"
-                src="https://res.cloudinary.com/subframe/image/upload/v1761680947/uploads/29066/pgr7v1odabrmhejxozno.png"
-                alt="HIHODL wallet interface preview"
-                fill
-                sizes="(max-width: 768px) 100vw, 1024px"
+              <h2 className="mt-8 font-display text-h2 md:text-h1 font-light text-text">
+                50,000 already joined.
+                <br />
+                <span className="text-text-muted">Be next.</span>
+              </h2>
+              <p className="mt-8 text-lead text-text-muted">
+                We&rsquo;re building HUSD — the first stablecoin designed for people
+                who earn in one country and live in another. Newsletter subscribers
+                get early access and priority onboarding when we launch in 2027.
+              </p>
+
+              <NewsletterSignupPlaceholder />
+            </div>
+          </div>
+        </section>
+
+        {/* ─── 8. Download (warm climax) ───────────────────────── */}
+        <section id="download" className="relative overflow-hidden bg-night">
+          <div
+            className="absolute inset-0 pointer-events-none opacity-50"
+            style={{
+              background:
+                "radial-gradient(60% 60% at 50% 100%, rgba(255,183,3,0.10), transparent 70%)",
+            }}
+            aria-hidden
+          />
+          <div className="container-page section relative text-center">
+            <p className="text-tiny uppercase tracking-wider text-amber">Available on App Store and Google Play</p>
+            <h2 className="mt-6 font-display text-h2 md:text-h1 font-light text-text">
+              Stop choosing between
+              <br />
+              your bank and your wallet.
+            </h2>
+            <p className="mt-8 text-lead text-text-muted max-w-xl mx-auto">
+              Private income. Zero gas. You control your money.
+              Set up in 30 seconds.
+            </p>
+
+            <div className="mt-12 flex flex-wrap items-center justify-center gap-3">
+              <StoreButton
+                store="apple"
+                href="https://apps.apple.com/nl/app/hihodl-stablecoin-wallet/id6755203065?l=en-GB"
+                eyebrow="Download on the"
+                label="App Store"
+              />
+              <StoreButton
+                store="google"
+                href="#"
+                eyebrow="Coming soon"
+                label="Google Play"
+                disabled
               />
             </div>
-          </motion.div>
-        </motion.section>
 
-        {/* ==== KEY FEATURES ==== */}
-        <motion.section
-          variants={stagger}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.25 }}
-          className="flex w-full flex-col items-center justify-center gap-12 px-4 sm:px-6 md:px-8 py-24 md:py-32"
-        >
-          <motion.div variants={fadeInUp} className="flex w-full max-w-[1280px] flex-col items-center justify-center gap-4">
-            <span className="text-center font-['Inter'] font-[700] -tracking-[0.04em] text-3xl sm:text-4xl md:text-5xl text-[#eaf6ffff]">
-              Key Features
-            </span>
-          </motion.div>
-          <div className="flex w-full max-w-[1280px] gap-6 flex-wrap items-stretch justify-center mobile:flex-col mobile:flex-nowrap mobile:gap-6">
-            {/* Card 1 */}
-            <motion.div variants={cardReveal} whileHover={{ y: -6 }} className="flex min-w-[288px] grow shrink-0 basis-0 flex-col items-start gap-6 self-stretch rounded-2xl bg-[#0a141ea6] px-8 py-12 border border-[rgba(255,255,255,0.08)] backdrop-blur-xl">
-              <div className="relative flex h-48 w-full flex-none flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl">
-                <Image
-                  className="object-cover"
-                  src="https://res.cloudinary.com/subframe/image/upload/v1761593629/uploads/29066/lpv9ql9unbr7nyabxstd.jpg"
-                  alt="Fintech-smooth self-custody wallet interface"
-                  fill
-                  sizes="(max-width: 768px) 100vw, 288px"
-                />
-              </div>
-              <div className="flex w-full flex-col items-start gap-3">
-                <span className="font-['Inter'] text-[24px] font-[700] leading-[28px] text-[#eaf6ffff] -tracking-[0.02em]">Fintech-Smooth Self-Custody</span>
-                <span className="whitespace-pre-wrap font-['Inter'] text-[16px] font-[400] leading-[24px] text-[#94a3b8ff] -tracking-[0.01em]">{"Experience true ownership with a wallet that feels as effortless as your favorite finance app, no seed phrase stress or technical\n clutter."}</span>
-              </div>
-            </motion.div>
-            {/* Card 2 */}
-            <motion.div variants={cardReveal} whileHover={{ y: -6 }} className="flex min-w-[288px] grow shrink-0 basis-0 flex-col items-start gap-6 self-stretch rounded-2xl bg-[#0a141ea6] px-8 py-12 border border-[rgba(255,255,255,0.08)] backdrop-blur-xl">
-              <div className="relative flex h-48 w-full flex-none flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl">
-                <Image
-                  className="object-cover"
-                  src="https://res.cloudinary.com/subframe/image/upload/v1761634174/uploads/29066/la7rbsffelgkohnmll9x.png"
-                  alt="Unified, clean interface dashboard"
-                  fill
-                  sizes="(max-width: 768px) 100vw, 288px"
-                />
-              </div>
-              <div className="flex w-full flex-col items-start gap-3">
-                <span className="font-['Inter'] text-[24px] font-[600] leading-[28px] text-[#eaf6ffff] -tracking-[0.02em]">Unified, Clean Interface</span>
-                <span className="font-['Inter'] text-[16px] font-[400] leading-[24px] text-[#94a3b8ff] -tracking-[0.01em]">Manage all your crypto activity in one beautifully designed dashboard that&#39;s simple for newcomers and powerful for pros.</span>
-              </div>
-            </motion.div>
-            {/* Card 3 */}
-            <motion.div variants={cardReveal} whileHover={{ y: -6 }} className="flex min-w-[288px] grow shrink-0 basis-0 flex-col items-start gap-6 self-stretch rounded-2xl bg-[#0a141ea6] px-8 py-12 border border-[rgba(255,255,255,0.08)] backdrop-blur-xl">
-              <div className="flex w-full flex-col items-start gap-3">
-                <div className="relative flex h-48 w-full flex-none flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl">
-                  <Image
-                    className="object-cover"
-                    src="https://res.cloudinary.com/subframe/image/upload/v1761683382/uploads/29066/mccxhhijefre9w3wjc5u.png"
-                    alt="Gasless multichain transactions interface"
-                    fill
-                    sizes="(max-width: 768px) 100vw, 288px"
-                  />
-                </div>
-                <span className="font-['Inter'] text-[24px] font-[700] leading-[28px] text-[#eaf6ffff] -tracking-[0.02em]">Gasless Multichain Transactions</span>
-                <span className="font-['Inter'] text-[16px] font-[400] leading-[24px] text-[#94a3b8ff] -tracking-[0.01em]">Send, receive, and interact across multiple blockchains without worrying about native gas tokens or network hurdles.</span>
-              </div>
-            </motion.div>
-            {/* Card 4 */}
-            <motion.div variants={cardReveal} whileHover={{ y: -6 }} className="flex min-w-[288px] grow shrink-0 basis-0 flex-col items-start gap-6 self-stretch rounded-2xl bg-[#0a141ea6] px-8 py-12 border border-[rgba(255,255,255,0.08)] backdrop-blur-xl">
-              <div className="flex w-full flex-col items-start gap-3">
-                <div className="relative flex h-48 w-full flex-none flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl">
-                  <Image
-                    className="object-cover"
-                    src="https://res.cloudinary.com/subframe/image/upload/v1761683195/uploads/29066/grvjdwuuvnwmx820rof6.jpg"
-                    alt="Privacy features with address rotation"
-                    fill
-                    sizes="(max-width: 768px) 100vw, 288px"
-                  />
-                </div>
-                <span className="font-['Inter'] text-[24px] font-[700] leading-[28px] text-[#eaf6ffff] -tracking-[0.02em]">Privacy That Evolves With You</span>
-                <span className="font-['Inter'] text-[16px] font-[400] leading-[24px] text-[#94a3b8ff] -tracking-[0.01em]">Enjoy seamless address rotation and custom wallet usernames that keep your wallet activity private and your experience personal.</span>
-              </div>
-            </motion.div>
+            <p className="mt-10 text-tiny text-text-faint font-mono">
+              Self-custodial. No KYC for basic use. Available worldwide.
+            </p>
           </div>
-        </motion.section>
+        </section>
+      </main>
 
-        {/* ==== HOW IT WORKS ==== */}
-        <motion.section
-          variants={stagger}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.3 }}
-          className="flex w-full flex-col items-center justify-center gap-12 px-4 sm:px-6 md:px-8 py-24 md:py-32"
-        >
-          <motion.div variants={fadeInUp} className="flex w-full max-w-[1280px] flex-col items-center justify-center gap-4">
-            <span className="text-center font-['Inter'] font-[700] -tracking-[0.04em] leading-tight text-3xl sm:text-4xl md:text-5xl text-[#eaf6ffff]">
-              How It Works
-            </span>
-            <span className="max-w-[768px] text-center font-['Inter'] font-[400] -tracking-[0.01em] text-[#94a3b8ff] text-base sm:text-lg md:text-xl leading-relaxed">
-              Getting started with HIHODL is simple and secure
-            </span>
-          </motion.div>
-          <div className="flex w-full max-w-[1280px] flex-col items-center justify-center gap-6">
-            <div className="flex w-full items-start gap-6 flex-wrap mobile:flex-col mobile:flex-nowrap mobile:gap-6">
-              {[1, 2, 3].map((n) => (
-                <motion.div
-                  key={n}
-                  variants={cardReveal}
-                  className="flex min-w-[240px] grow shrink-0 basis-0 flex-col items-start gap-6 rounded-2xl px-8 py-12 border bg-gradient-to-br from-[rgba(245,217,10,0.08)] via-[rgba(10,20,30,0.60)] to-[rgba(10,20,30,0.60)] backdrop-blur-xl"
-                >
-                  <div className="flex h-16 w-16 flex-none items-center justify-center rounded-full bg-shadow-cyan">
-                    <span className="font-['Inter'] text-[28px] font-[700] leading-[28px] text-black">{n}</span>
-                  </div>
-                  {n === 1 && (
-                    <div className="flex w-full flex-col items-start gap-3">
-                      <span className="font-['Inter'] text-[22px] font-[700] leading-[26px] text-[#eaf6ffff] -tracking-[0.02em]">Create your wallet</span>
-                      <span className="font-['Inter'] text-[16px] font-[400] leading-[24px] text-[#94a3b8ff] -tracking-[0.01em]">No visible seed phrase in UI. Your wallet is secured with advanced cryptography.</span>
-                    </div>
-                  )}
-                  {n === 2 && (
-                    <div className="flex w-full flex-col items-start gap-3">
-                      <span className="font-['Inter'] text-[22px] font-[700] leading-[26px] text-[#eaf6ffff] -tracking-[0.02em]">Get your 3 wallets</span>
-                      <span className="font-['Inter'] text-[16px] font-[400] leading-[24px] text-[#94a3b8ff] -tracking-[0.01em]">Daily, Savings, and Social wallets help you organize your crypto effortlessly.</span>
-                    </div>
-                  )}
-                  {n === 3 && (
-                    <div className="flex w-full flex-col items-start gap-3">
-                      <span className="font-['Inter'] text-[22px] font-[700] leading-[26px] text-[#eaf6ffff] -tracking-[0.02em]">Send &amp; receive easily</span>
-                      <span className="font-['Inter'] text-[16px] font-[400] leading-[24px] text-[#94a3b8ff] -tracking-[0.01em]">Use @alias for easy transfers with gasless transaction quotas included.</span>
-                    </div>
-                  )}
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </motion.section>
-
-        {/* ==== STABLECARD ==== */}
-        <motion.section
-          variants={fadeInUp}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.3 }}
-          className="flex w-full flex-col items-center justify-center gap-8 px-4 sm:px-6 md:px-8 py-12 md:py-16"
-        >
-          <motion.div variants={cardReveal} className="flex w-full max-w-[1024px] flex-col items-center justify-center gap-6 rounded-3xl px-12 py-16 border-2 bg-gradient-to-br from-[rgba(245,217,10,0.12)] via-[rgba(10,20,30,0.70)] to-[rgba(10,20,30,0.70)] backdrop-blur-xl mobile:px-6 mobile:py-12">
-            <div className="flex h-8 flex-none items-center gap-2 rounded-full bg-brand-primary px-4 py-2">
-              <span className="font-['Inter'] text-[14px] font-[600] leading-[20px] text-[#060b10ff]">COMING SOON</span>
-            </div>
-            <span className="font-['Inter'] text-[36px] font-[700] leading-[40px] text-[#eaf6ffff] text-center -tracking-[0.03em] mobile:font-['Afacad_Flux'] mobile:text-[28px] mobile:font-[400] mobile:leading-[32px] mobile:tracking-normal">StableCard</span>
-            <span className="max-w-[768px] whitespace-pre-wrap font-['Inter'] text-[18px] font-[400] leading-[26px] text-[#94a3b8ff] text-center -tracking-[0.01em]">{"Spend crypto like fiat with a virtual and physical card linked to your\n          wallet. Integrated directly into HIHODL."}</span>
-            <span className="font-['Inter'] text-[14px] font-[600] leading-[20px] text-[#00ffb0ff] -tracking-[0.01em]">Launching  soon</span>
-          </motion.div>
-        </motion.section>
-
-        {/* ==== WAITLIST ==== */}
-        <motion.section
-          id="waitlist"
-          variants={fadeInUp}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.3 }}
-          className="flex w-full flex-col items-center justify-center gap-8 px-4 sm:px-6 md:px-8 py-24 md:py-32"
-        >
-          <motion.div variants={cardReveal} className="flex w-full max-w-[1280px] flex-col items-center justify-center gap-8 rounded-3xl px-12 py-24 border-2 bg-gradient-to-br from-[rgba(245,217,10,0.12)] via-[rgba(10,20,30,0.70)] to-[rgba(10,20,30,0.70)] backdrop-blur-xl mobile:px-6 mobile:py-16">
-            <div className="flex flex-col items-center justify-center gap-6">
-              <span className="max-w-[768px] font-['Inter'] text-[56px] font-[900] leading-[60px] text-[#eaf6ffff] text-center -tracking-[0.05em] mobile:font-['Afacad_Flux'] mobile:text-[40px] mobile:font-[400] mobile:leading-[44px] mobile:tracking-normal">
-                Early access isn&apos;t given. It&apos;s earned.
-              </span>
-              <span className="max-w-[768px] whitespace-pre-wrap font-['Inter'] text-[20px] font-[500] leading-[28px] text-[#94a3b8ff] text-center -tracking-[0.015em]">
-                Invite friends, stack XP, climb the leaderboard. Join the waitlist and earn your way to priority beta access.
-              </span>
-            </div>
-            <JoinWaitlist />
-            <div className="mt-8 w-full max-w-[576px]">
-              <Leaderboard />
-            </div>
-          </motion.div>
-        </motion.section>
-
-        {/* ==== FOOTER ==== */}
-        <div className="flex w-full flex-col items-center px-4 sm:px-6 md:px-8 py-12 border-t-2">
-          <div className="flex w-full max-w-[1280px] flex-col items-start gap-12 rounded-2xl bg-[#0a141ea6] px-6 sm:px-8 md:px-12 py-8 sm:py-10 md:py-12 backdrop-blur-xl border border-[rgba(255,255,255,0.08)]">
-            <div className="flex w-full items-start justify-between flex-wrap mobile:flex-col mobile:flex-nowrap mobile:justify-between">
-              <div className="flex flex-col items-start gap-6">
-                <span className="font-['Inter'] text-[24px] font-[700] leading-[28px] text-brand-ffb703 -tracking-[0.02em]">HIHODL</span>
-                <span className="max-w-[320px] whitespace-pre-wrap font-['Inter'] text-[14px] font-[400] leading-[20px] text-[#94a3b8ff] -tracking-[0.01em]">{"The next-gen crypto wallet that feels like Fintech. Self-custody, multichain, gasless."}</span>
-              </div>
-              <div className="flex items-start gap-12 flex-wrap">
-                <div className="flex flex-col items-start gap-4">
-                  <span className="font-['Inter'] text-[14px] font-[600] leading-[20px] text-[#eaf6ffff] -tracking-[0.01em]">Product</span>
-                  <span className="font-['Inter'] text-[14px] font-[400] leading-[20px] text-brand-ffb703 -tracking-[0.01em] cursor-pointer transition">Features</span>
-                  <span className="font-['Inter'] text-[14px] font-[400] leading-[20px] text-brand-ffb703 -tracking-[0.01em] cursor-pointer transition">Pricing</span>
-                  <span className="font-['Inter'] text-[14px] font-[400] leading-[20px] text-brand-ffb703 -tracking-[0.01em] cursor-pointer transition">Security</span>
-                </div>
-                <div className="flex flex-col items-start gap-4">
-                  <span className="font-['Inter'] text-[14px] font-[600] leading-[20px] text-[#eaf6ffff] -tracking-[0.01em]">Company</span>
-                  <span className="font-['Inter'] text-[14px] font-[400] leading-[20px] text-brand-ffb703 -tracking-[0.01em] cursor-pointer transition">About</span>
-                  <span className="font-['Inter'] text-[14px] font-[400] leading-[20px] text-brand-ffb703 -tracking-[0.01em] cursor-pointer transition">Blog</span>
-                </div>
-                <div className="flex flex-col items-start gap-4">
-                  <span className="font-['Inter'] text-[14px] font-[600] leading-[20px] text-[#eaf6ffff] -tracking-[0.01em]">Resources</span>
-                  <span className="font-['Inter'] text-[14px] font-[400] leading-[20px] text-brand-ffb703 -tracking-[0.01em] cursor-pointer transition">Support</span>
-                  <span className="font-['Inter'] text-[14px] font-[400] leading-[20px] text-brand-ffb703 -tracking-[0.01em] cursor-pointer transition">Privacy Policy</span>
-                  <span className="font-['Inter'] text-[14px] font-[400] leading-[20px] text-brand-ffb703 -tracking-[0.01em] cursor-pointer transition">Terms of Service</span>
-                </div>
-              </div>
-            </div>
-            <div className="flex w-full items-center justify-between pt-8 border-t border-[rgba(255,255,255,0.08)] mobile:flex-col mobile:flex-nowrap mobile:gap-4">
-              <span className="font-['Inter'] text-[13px] font-[400] leading-[19px] text-[#94a3b8ff]">© 2025 HiHODL. All rights reserved.</span>
-              <div className="flex items-center gap-4">
-                <a
-                  href="https://x.com/hiihodl"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="X (Twitter) — @hiihodl"
-                  title="X (Twitter) — @hiihodl"
-                  className="inline-flex"
-                >
-                  <IconButton size="small" icon={<FeatherXTwitter />} />
-                </a>
-                <a
-                  href="https://www.linkedin.com/company/hihodl"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="LinkedIn — HiHODL"
-                  title="LinkedIn — HiHODL"
-                  className="inline-flex"
-                >
-                  <IconButton size="small" icon={<FeatherLinkedin />} />
-                </a>
-                <a
-                  href="https://www.instagram.com/hihodl/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Instagram — @hihodl"
-                  title="Instagram — @hihodl"
-                  className="inline-flex"
-                >
-                  <IconButton size="small" icon={<FeatherInstagram />} />
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </DefaultPageLayout>
+      <Footer />
+    </>
   );
 }
 
-export default Home;
+/* ────────────────────────────────────────────────────────────
+ * Inline helpers — extracted to files later
+ * ──────────────────────────────────────────────────────────── */
+
+function PlanCard({
+  name,
+  price,
+  priceSub,
+  features,
+  cta,
+  highlight,
+}: {
+  name: string;
+  price: string;
+  priceSub: string;
+  features: string[];
+  cta: { label: string; href: string };
+  highlight?: boolean;
+}) {
+  return (
+    <div
+      className={`relative rounded-card p-8 md:p-10 border flex flex-col ${
+        highlight
+          ? "border-amber/40 bg-gradient-to-b from-amber/[0.06] to-amber/[0.02]"
+          : "border-[color:var(--color-hairline)] bg-white/[0.03]"
+      }`}
+    >
+      {highlight && (
+        <div className="absolute -top-3 left-8 inline-flex items-center px-3 py-1 rounded-pill bg-amber text-text-on-amber text-tiny font-medium uppercase tracking-wider">
+          Most popular
+        </div>
+      )}
+      <div className="flex items-baseline justify-between">
+        <h3 className={`font-display text-h3 font-light ${highlight ? "text-amber" : "text-text"}`}>{name}</h3>
+        <div className="text-right">
+          <div className="font-display text-h3 font-light text-text font-mono tabular-nums">{price}</div>
+          <div className="text-tiny text-text-faint">{priceSub}</div>
+        </div>
+      </div>
+      <ul className="mt-8 flex flex-col gap-3 flex-1">
+        {features.map((f) => (
+          <li key={f} className="flex items-start gap-3 text-body text-text-muted">
+            <span className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${highlight ? "bg-amber" : "bg-moonlight"}`} />
+            <span>{f}</span>
+          </li>
+        ))}
+      </ul>
+      <Link
+        href={cta.href}
+        className={`mt-10 inline-flex items-center justify-center px-6 py-3.5 rounded-pill font-medium text-body transition-all duration-180 ease-out-soft hover:scale-[1.02] ${
+          highlight
+            ? "bg-amber text-text-on-amber hover:bg-amber-glow"
+            : "border border-[color:var(--color-hairline-strong)] text-text hover:bg-white/5"
+        }`}
+      >
+        {cta.label}
+      </Link>
+    </div>
+  );
+}
+
+function PriceCard({
+  label,
+  value,
+  highlight,
+}: {
+  label: string;
+  value: string;
+  highlight?: boolean;
+}) {
+  return (
+    <div
+      className={`rounded-card p-6 border text-left ${
+        highlight
+          ? "border-amber/50 bg-amber/[0.04]"
+          : "border-[color:var(--color-hairline)] bg-white/[0.02]"
+      }`}
+    >
+      <p className={`text-tiny uppercase tracking-wider ${highlight ? "text-amber" : "text-text-faint"}`}>
+        {label}
+      </p>
+      <p className="mt-3 text-h4 font-light text-text">{value}</p>
+    </div>
+  );
+}
+
+/**
+ * Tonal divider between sections — a thin line with a soft glow at center.
+ * Acts like a horizon between sections so each block reads as its own moment.
+ */
+function SectionHairline({ tone = "blue" }: { tone?: "blue" | "amber" | "moonlight" }) {
+  const color =
+    tone === "amber"
+      ? "rgba(255,183,3,0.40)"
+      : tone === "moonlight"
+        ? "rgba(91,124,255,0.40)"
+        : "rgba(114,149,181,0.40)";
+  return (
+    <div className="absolute inset-x-0 top-0 h-px pointer-events-none" aria-hidden>
+      <div
+        className="absolute inset-0"
+        style={{
+          background: `linear-gradient(90deg, transparent 0%, ${color} 50%, transparent 100%)`,
+        }}
+      />
+    </div>
+  );
+}
+
+function CtaStrip({
+  eyebrow,
+  title,
+  subtitle,
+  primary,
+  secondary,
+  tone = "blue",
+}: {
+  eyebrow: string;
+  title: string;
+  subtitle?: string;
+  primary: { label: string; href: string };
+  secondary?: { label: string; href: string };
+  tone?: "blue" | "amber";
+}) {
+  // "blue" tone uses the premium signature gradient — same as Hero + HUSD
+  const sectionBg =
+    tone === "blue"
+      ? "linear-gradient(180deg, #2C4566 0%, #4F7090 50%, #2C4566 100%)"
+      : "linear-gradient(180deg, #2A1F18 0%, #1F1810 100%)";
+  const glow =
+    tone === "blue"
+      ? "radial-gradient(70% 70% at 30% 30%, rgba(114,149,181,0.30), transparent 70%), radial-gradient(70% 70% at 80% 80%, rgba(44,69,102,0.35), transparent 70%)"
+      : "radial-gradient(70% 80% at 50% 70%, rgba(255,183,3,0.20), transparent 70%), radial-gradient(50% 50% at 20% 0%, rgba(184,125,0,0.18), transparent 70%)";
+  const eyebrowColor = tone === "blue" ? "text-brand-blue-glow" : "text-amber";
+  const hairlineTone: "blue" | "amber" | "moonlight" = tone === "blue" ? "moonlight" : "amber";
+
+  return (
+    <section className="relative overflow-hidden" style={{ background: sectionBg }}>
+      <SectionHairline tone={hairlineTone} />
+      <div className="absolute inset-0 pointer-events-none" style={{ background: glow }} aria-hidden />
+      <div className="container-page py-20 md:py-28 relative text-center">
+        <p className={`text-tiny uppercase tracking-wider ${eyebrowColor}`}>{eyebrow}</p>
+        <h3 className="mt-5 font-display text-h2 md:text-h1 font-light text-text leading-tight max-w-3xl mx-auto">
+          {title}
+        </h3>
+        {subtitle && (
+          <p className="mt-6 text-lead text-text-muted max-w-xl mx-auto">{subtitle}</p>
+        )}
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+          <Link
+            href={primary.href}
+            className="inline-flex items-center justify-center px-7 py-4 rounded-pill bg-amber text-text-on-amber font-medium text-body hover:bg-amber-glow transition-all duration-180 ease-out-soft hover:scale-[1.02]"
+          >
+            {primary.label}
+          </Link>
+          {secondary && (
+            <Link
+              href={secondary.href}
+              className="inline-flex items-center justify-center px-7 py-4 rounded-pill border border-[color:var(--color-hairline-strong)] text-text font-medium text-body hover:bg-white/5 transition-colors duration-180"
+            >
+              {secondary.label}
+            </Link>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function StoreButton({
+  store,
+  href,
+  eyebrow,
+  label,
+  disabled,
+}: {
+  store: "apple" | "google";
+  href: string;
+  eyebrow: string;
+  label: string;
+  disabled?: boolean;
+}) {
+  const Icon = store === "apple" ? AppleIcon : GoogleIcon;
+  const base =
+    "inline-flex items-center gap-3 px-6 py-3.5 rounded-pill border transition-all duration-180 ease-out-soft";
+  const live =
+    "bg-white text-[#0A0500] border-white hover:scale-[1.02] hover:shadow-[0_0_40px_rgba(255,255,255,0.15)]";
+  const soon =
+    "bg-white/[0.04] text-text-muted border-[color:var(--color-hairline)] cursor-not-allowed";
+  return (
+    <a
+      href={disabled ? undefined : href}
+      aria-disabled={disabled || undefined}
+      className={`${base} ${disabled ? soon : live}`}
+    >
+      <Icon className="w-6 h-6" />
+      <span className="flex flex-col items-start leading-none">
+        <span className="text-tiny opacity-70">{eyebrow}</span>
+        <span className="text-body font-medium mt-0.5">{label}</span>
+      </span>
+    </a>
+  );
+}
+
+function AppleIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M17.523 12.025c-.041-3.07 2.508-4.546 2.625-4.616-1.43-2.092-3.652-2.378-4.435-2.398-1.886-.193-3.687 1.114-4.643 1.114-.974 0-2.439-1.094-4.014-1.063-2.062.03-3.967 1.197-5.022 3.034-2.144 3.71-.547 9.183 1.527 12.197 1.014 1.476 2.21 3.121 3.785 3.064 1.535-.062 2.108-.974 3.957-.974 1.836 0 2.371.974 3.967.94 1.642-.03 2.674-1.485 3.654-2.97.95-1.476 1.34-2.913 1.36-2.989-.03-.014-2.61-1-2.638-3.953m-2.97-7.247c.819-1.018 1.376-2.413 1.226-3.821-1.183.052-2.66.804-3.515 1.806-.755.892-1.42 2.343-1.246 3.7 1.328.103 2.687-.674 3.535-1.685" />
+    </svg>
+  );
+}
+
+function GoogleIcon({ className = "" }: { className?: string }) {
+  // Google Play "play" triangle, single-color silhouette suitable for white pill
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M3.609 1.814 13.792 12 3.61 22.186a.998.998 0 0 1-.609-.92V2.734a1 1 0 0 1 .608-.92zm10.89 10.893 2.302 2.302-10.937 6.333 8.635-8.635zm3.794-4.31 2.85 1.65a1 1 0 0 1 0 1.736l-3.05 1.766L15.207 12l3.086-3.086zm-3.794-.69L5.864 1.36l10.937 6.334-2.302 2.302z" />
+    </svg>
+  );
+}
+
+function Step({
+  n,
+  title,
+  body,
+  badge,
+}: {
+  n: number;
+  title: string;
+  body: string;
+  badge: string;
+}) {
+  return (
+    <li className="rounded-card p-8 border border-[color:var(--color-hairline)] bg-white/[0.03] hover:bg-white/[0.05] transition-colors duration-320">
+      <div className="flex items-center justify-between">
+        <span className="font-mono text-small text-moonlight">0{n}</span>
+        <span className="text-tiny uppercase tracking-wider text-text-faint border border-[color:var(--color-hairline)] rounded-pill px-3 py-1">
+          {badge}
+        </span>
+      </div>
+      <h3 className="mt-8 font-display text-h3 font-light text-text leading-tight">{title}</h3>
+      <p className="mt-4 text-body text-text-muted">{body}</p>
+    </li>
+  );
+}
+
+function Testimonial({ quote, name, role }: { quote: string; name: string; role: string }) {
+  return (
+    <figure className="rounded-card p-8 border border-[color:var(--color-hairline)] bg-white/[0.03] flex flex-col gap-6">
+      <blockquote className="font-editorial text-h4 text-text leading-snug">
+        &ldquo;{quote}&rdquo;
+      </blockquote>
+      <figcaption>
+        <p className="text-body text-text">{name}</p>
+        <p className="text-small text-text-faint">{role}</p>
+      </figcaption>
+    </figure>
+  );
+}
+
+function NewsletterSignupPlaceholder() {
+  return (
+    <form
+      className="mt-12 flex flex-col sm:flex-row gap-3 max-w-md mx-auto"
+      action="/api/newsletter/subscribe"
+      method="post"
+    >
+      <input
+        type="email"
+        name="email"
+        required
+        placeholder="your@email.com"
+        className="flex-1 px-5 py-4 rounded-pill bg-white/[0.04] border border-[color:var(--color-hairline)] text-text placeholder:text-text-faint focus:outline-none focus:border-moonlight transition-colors"
+      />
+      <input type="hidden" name="source" value="home-husd" />
+      <button
+        type="submit"
+        className="inline-flex items-center justify-center px-6 py-4 rounded-pill bg-amber text-text-on-amber font-medium hover:bg-amber-glow transition-all duration-180 ease-out-soft hover:scale-[1.02]"
+      >
+        Notify me
+      </button>
+    </form>
+  );
+}

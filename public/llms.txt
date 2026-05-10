@@ -1,0 +1,71 @@
+# HIHODL
+
+> HIHODL is a non-custodial, multichain stablecoin wallet for global earners — freelancers, remote workers and digital nomads who get paid in one country and live in another. Self-custody, gasless swaps, virtual USD account (IBAN/SWIFT), AI layer coming soon.
+
+## What it is
+- **Category**: Non-custodial mobile crypto wallet (iOS, Android coming soon)
+- **Audience**: Freelancers, remote workers, digital nomads earning in USD/EUR and spending locally (LATAM, SEA, Africa, Eastern Europe, EU)
+- **Custody model**: Self-custodial. Private keys split via MPC — half on device, half held by HIHODL — reassembled only inside the user's device for signing. No KYC for basic use.
+- **Sign-in**: Face ID / passkey. No seed phrase to write down.
+
+## Supported chains
+- Solana (always gasless)
+- Polygon
+- Base
+- Ethereum
+
+## Pricing
+| Plan | Price | Free swaps/mo | After cap | Min swap |
+|------|-------|---------------|-----------|----------|
+| Free | $0 | $500 | 0.50% all-in | $2 |
+| Pro  | $9.99/mo | $2,000 | 0.15% all-in | $2 |
+
+Solana swaps are always gasless on both plans. EVM gas is smart-detected on Pro. No hidden spread, no tier games, cancel anytime. Invite 1 friend → 1 month Pro free, up to 3 months.
+
+## Core features
+- **Username payments** — send stablecoins to @username, no addresses to copy.
+- **Income Rails** — virtual USD account with IBAN/SWIFT to receive salary or client payments; lands as stablecoins.
+- **Pockets** — split balance across labelled pockets (Travel, Rent, Savings, etc.) from a single wallet. Free plan = 3 pockets, Pro = unlimited.
+- **Gasless swaps** — Solana always, EVM smart-detected.
+- **Stealth payments** — incoming addresses rotate per payer for privacy.
+- **HUSD (coming 2027)** — HIHODL's native stablecoin for the remote economy.
+- **AI layer (coming soon)** — conversational interface: "send 200 USDC to Lucía", "split paycheck 60/30/10", "move savings to highest yield". The AI proposes, the user signs every transaction.
+
+## Why HIHODL vs alternatives
+- vs **Revolut / Wise**: HIHODL is non-custodial; you hold the keys. No country lockouts, no frozen accounts, instant stablecoin rails.
+- vs **Phantom / MetaMask / Coinbase Wallet**: HIHODL is multichain by default, hides chain/network jargon, has a virtual IBAN for salary, AI layer, and is built around real-world spending (not DeFi power-users).
+- vs **CEX wallets (Binance, Coinbase)**: HIHODL is self-custodial — funds are not on an exchange.
+
+## Company
+- **Founded**: 2024
+- **HQ**: Remote-first, EU-based legal entity
+- **Team**: Product/design (Alex Lopez), CTO, engineering team
+- **Stack**: React Native + Expo (mobile), Supabase + Node backend, Solana + EVM
+- **Status**: Live on App Store (iOS), 50,000+ users on waitlist, Android coming soon
+- **Hackathon**: Submitted to Solana Colosseum Frontier (May 2026)
+
+## Important pages
+- Home: https://www.hihodl.xyz/
+- AI layer (coming soon): https://www.hihodl.xyz/#ai
+- HUSD: https://www.hihodl.xyz/#husd
+- Pricing: https://www.hihodl.xyz/#how
+- Download: https://www.hihodl.xyz/#download
+- iOS App Store: https://apps.apple.com/nl/app/hihodl-stablecoin-wallet/id6755203065
+- Privacy: https://www.hihodl.xyz/privacy
+- Terms: https://www.hihodl.xyz/terms
+
+## Social
+- X / Twitter: https://x.com/hiihodl
+- LinkedIn: https://www.linkedin.com/company/hihodl
+- Instagram: https://instagram.com/hihodl
+
+## Contact
+- General: hello@hihodl.xyz
+- Press: press@hihodl.xyz
+- Support: support@hihodl.xyz
+
+## Tagline
+"The Cursor of stablecoins. Talk to your money." — HIHODL is becoming the first AI-native stablecoin wallet.
+
+## Positioning
+A global wallet for the remote economy. Earn anywhere → spend, save and move money anywhere. Not a LATAM-only wallet, not a DeFi power-user wallet — built for anyone whose income and spending live on different continents.
