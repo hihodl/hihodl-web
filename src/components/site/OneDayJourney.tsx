@@ -85,7 +85,7 @@ export function OneDayJourney() {
       style={{ height: reduced ? "auto" : `${SCENES.length * 100}vh` }}
       aria-label="A day in the life with HIHODL"
     >
-      <div className="sticky top-0 h-screen overflow-hidden flex items-center">
+      <div className="sticky top-0 h-[100dvh] overflow-hidden flex items-center pt-20 pb-6 lg:pt-0 lg:pb-0">
         {/* Animated background */}
         <motion.div
           aria-hidden
@@ -115,19 +115,19 @@ export function OneDayJourney() {
         />
 
         <div className="container-page relative w-full">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-12 items-center">
             {/* LEFT — title + scrubbing copy */}
             <div className="lg:col-span-5 xl:col-span-4">
               <p className="text-tiny uppercase tracking-wider text-moonlight">
                 A day · Earn globally · Live locally
               </p>
-              <h2 className="mt-6 font-display text-h2 md:text-h1 font-light text-text leading-tight">
+              <h2 className="mt-3 lg:mt-6 font-display text-h3 md:text-h2 lg:text-h1 font-light text-text leading-tight">
                 One scroll.
                 <br />
                 Sunrise to sleep.
               </h2>
 
-              <div className="mt-12 relative h-[200px]">
+              <div className="mt-5 lg:mt-12 relative h-[140px] lg:h-[200px]">
                 {SCENES.map((scene, i) => {
                   const start = i / SCENES.length;
                   const end = (i + 1) / SCENES.length;
@@ -168,14 +168,11 @@ export function OneDayJourney() {
 function DeviceStage({ progress }: { progress: MotionValue<number> }) {
   return (
     <div
-      className="relative"
+      className="relative h-[min(52vh,460px)] lg:h-[min(88vh,900px)] max-w-full"
       style={{
-        // height is the only fixed dimension; width derives from aspect-ratio
-        // so container == device.png aspect exactly. This keeps the % hole
-        // coords aligned with the real bezel pixels (no objectFit pillar-box).
-        height: "min(88vh, 900px)",
+        // width derives from aspect-ratio so container == device.png aspect exactly.
+        // Keeps the % hole coords aligned with the real bezel pixels.
         aspectRatio: "919 / 1362",
-        maxWidth: "100%",
       }}
     >
       {/* Soft glow under device */}
