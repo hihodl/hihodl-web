@@ -2,37 +2,187 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Typography */
+/* ============================================================
+ * HIHODL Web — Design Tokens
+ * North star: DOCUMENTATION/WEB_DESIGN_TOKENS_2026-05-04.md
+ * Earn globally, live locally — duality system.
+ * ============================================================ */
+
 :root {
-  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  /* Brand — primary accent */
+  --color-amber:        #FFB703;
+  --color-amber-glow:   #FFD234;
+  --color-amber-deep:   #B87D00;
+  --color-text-on-amber: #0A0500;
+
+  /* Brand blue — sampled from HIHODL-512.png steel blue background */
+  --color-brand-blue:        #4F7090;
+  --color-brand-blue-deep:   #2C4566;
+  --color-brand-blue-glow:   #7295B5;
+
+  /* Counterpoint — cool accent for "global / earning" */
+  --color-moonlight:        #5B7CFF;
+  --color-moonlight-faint:  #2A3866;
+
+  /* Surfaces — fintech-twilight, lifted twice from initial near-black */
+  --color-abyss:        #141F2E;
+  --color-night:        #1B2638;
+  --color-warm-noir:    #221A14;
+  --color-card:         rgba(255, 255, 255, 0.05);
+  --color-card-strong:  rgba(255, 255, 255, 0.08);
+
+  /* Borders & dividers */
+  --color-hairline:        rgba(255, 255, 255, 0.08);
+  --color-hairline-strong: rgba(255, 255, 255, 0.14);
+
+  /* Text */
+  --color-text:        #F4F6FA;
+  --color-text-muted:  #9BA3B0;
+  --color-text-faint:  #5A6068;
+
+  /* Functional */
+  --color-success: #4ADE80;
+  --color-danger:  #FF5F5F;
+
+  /* Fonts */
+  --font-display: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-body:    "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-serif:   "Source Serif 4", Georgia, "Times New Roman", serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* Glass */
+  --glass-bg:     rgba(255, 255, 255, 0.04);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-blur:   24px;
+
+  /* Layout */
+  --page-max:     1200px;
+  --section-gap:  128px;
 }
 
+/* Base */
 html {
-  font-family: var(--font-sans);
-  height: 100%; /* avoid locking to 100vh on iOS */
+  font-family: var(--font-body);
+  height: 100%;
+  background: var(--color-abyss);
+  color: var(--color-text);
 }
 
-/* Layout base */
-html, body {
-  height: 100%;
-}
+html, body { height: 100%; }
 
 body {
-  min-height: 100dvh; /* mobile-safe viewport height */
+  min-height: 100dvh;
   margin: 0;
-  /* Evita overflow horizontal global */
   max-width: 100%;
   overflow-x: hidden;
   overscroll-behavior-x: none;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-size: 16px;
+  line-height: 1.5;
+  letter-spacing: 0;
+  color: var(--color-text);
+  /* Atmospheric global background — never a flat dark block */
+  background:
+    radial-gradient(80% 50% at 100% 0%, rgba(79, 112, 144, 0.10), transparent 60%),
+    radial-gradient(80% 50% at 0% 100%, rgba(184, 125, 0, 0.06), transparent 60%),
+    var(--color-abyss);
+  background-attachment: fixed;
 }
 
-/* Buenas prácticas responsive base */
 *, *::before, *::after { box-sizing: border-box; }
 img, video, canvas, svg { max-width: 100%; height: auto; display: block; }
 
-/* Reduce motion para accesibilidad */
+::selection {
+  background: var(--color-amber);
+  color: var(--color-text-on-amber);
+}
+
+/* Display — light weight + tight tracking is the signature */
+.font-display {
+  font-family: var(--font-display);
+  font-weight: 200;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+/* Editorial moment — used once per page max */
+.font-editorial {
+  font-family: var(--font-serif);
+  font-weight: 300;
+  font-style: italic;
+  font-optical-sizing: auto;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+/* Mono — for amounts, addresses */
+.font-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+/* Glass surface utility */
+.glass {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+}
+
+/* Hairline divider */
+.hairline {
+  border-top: 1px solid var(--color-hairline);
+}
+
+/* Section base — 128px gap desktop / 80px mobile */
+.section {
+  padding-top: 80px;
+  padding-bottom: 80px;
+}
+@media (min-width: 768px) {
+  .section { padding-top: 128px; padding-bottom: 128px; }
+}
+
+.container-page {
+  max-width: var(--page-max);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 24px;
+  padding-right: 24px;
+}
+@media (min-width: 768px) {
+  .container-page { padding-left: 32px; padding-right: 32px; }
+}
+
+/* ============================================================
+ * Superpowers — micro-animation keyframes
+ * ============================================================ */
+@keyframes pulse-soft {
+  0%, 100% { transform: translateY(0); opacity: 0.85; }
+  50%      { transform: translateY(-2px); opacity: 1; }
+}
+@keyframes addr-fade {
+  0%, 100% { opacity: 0; transform: translateY(4px); }
+  20%, 70% { opacity: 0.7; transform: translateY(0); }
+}
+@keyframes undo-shrink {
+  0%   { width: 100%; }
+  90%  { width: 0%; }
+  100% { width: 0%; }
+}
+@keyframes sent-blink {
+  0%, 88% { opacity: 0; }
+  92%, 100% { opacity: 1; }
+}
+
+/* Reduced motion — respect user setting */
 @media (prefers-reduced-motion: reduce) {
-  * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
