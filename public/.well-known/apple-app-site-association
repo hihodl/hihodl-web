@@ -1,22 +1,21 @@
 {
-  "webcredentials": {
-    "apps": [
-      "VLV25ZF66P.com.sayhihodl.hihodlyes"
-    ]
-  },
   "applinks": {
     "apps": [],
     "details": [
       {
-        "appIDs": [
-          "VLV25ZF66P.com.sayhihodl.hihodlyes"
-        ],
+        "appIDs": ["VLV25ZF66P.com.sayhihodl.hihodlyes"],
         "components": [
-          {
-            "/": "/*"
-          }
+          { "/": "/open", "comment": "Universal Link entry point" },
+          { "/": "/open/*", "comment": "Universal Link with sub-path" },
+          { "/": "/auth/callback", "comment": "OAuth + magic link callback" },
+          { "/": "/auth/confirm", "comment": "Email verification (token_hash)" },
+          { "/": "/p/*", "comment": "Payment claim links" },
+          { "/": "/r/*", "comment": "Referral invite links" }
         ]
       }
     ]
+  },
+  "webcredentials": {
+    "apps": ["VLV25ZF66P.com.sayhihodl.hihodlyes"]
   }
 }
