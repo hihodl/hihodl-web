@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 const APP_STORE_URL =
@@ -18,7 +18,7 @@ function detectPlatform(): "ios" | "android" | "desktop" {
   return "desktop";
 }
 
-export default function OpenPage() {
+function OpenContent() {
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<"opening" | "fallback">("opening");
   const [platform, setPlatform] = useState<"ios" | "android" | "desktop">("desktop");
@@ -148,5 +148,44 @@ export default function OpenPage() {
         </p>
       </div>
     </main>
+  );
+}
+
+function OpenFallback() {
+  return (
+    <main
+      style={{
+        minHeight: "100dvh",
+        background: "linear-gradient(180deg, #060B10 0%, #0B1520 100%)",
+        color: "#FFFFFF",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "48px 24px",
+      }}
+    >
+      <div style={{ textAlign: "center" }}>
+        <div
+          style={{
+            color: "#FFFFFF",
+            fontSize: 28,
+            fontWeight: 900,
+            letterSpacing: 2,
+            marginBottom: 32,
+          }}
+        >
+          HIHODL
+        </div>
+        <p style={{ color: "#9AA5B4", fontSize: 15 }}>Opening…</p>
+      </div>
+    </main>
+  );
+}
+
+export default function OpenPage() {
+  return (
+    <Suspense fallback={<OpenFallback />}>
+      <OpenContent />
+    </Suspense>
   );
 }
