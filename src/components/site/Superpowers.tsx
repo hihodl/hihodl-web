@@ -3,12 +3,11 @@
 import { useEffect, useState } from "react";
 
 /**
- * Five superpowers — the WHY HIHODL.
+ * Four superpowers — the WHY HIHODL.
  *
  * Layout:
  *   Row 1: 2 cards (Social login · Privacy)
  *   Row 2: 2 cards (Smart payments · Gasless swaps)
- *   Row 3: 1 card full-width (Earn — coming soon)
  *
  * Every card has a distinct micro-animation. No two feel the same.
  * Anti-slop discipline: motion is restrained, never loops continuously
@@ -24,7 +23,7 @@ export function Superpowers() {
         <div className="max-w-2xl">
           <p className="text-tiny uppercase tracking-wider text-text-faint">Built for global earners</p>
           <h2 className="mt-6 font-display text-h2 md:text-h1 font-light text-text">
-            Five things only HIHODL does.
+            Four things only HIHODL does.
           </h2>
           <p className="mt-6 text-lead text-text-muted">
             Most wallets make you choose: simple or onchain. HIHODL gives you both —
@@ -38,11 +37,6 @@ export function Superpowers() {
           <PrivacyCard />
           <SmartPaymentsCard />
           <GaslessSwapCard />
-        </div>
-
-        {/* Earn — coming soon, full width */}
-        <div className="mt-6">
-          <EarnCard />
         </div>
       </div>
     </section>
@@ -367,87 +361,7 @@ function GaslessSwapCard() {
   );
 }
 
-/* ─────────────────────────────────────────────────────────────
- * 5 · Earn — coming soon, full width
- * Visual: Stock ticker grid, onchain badge, market open 24/7
- * ───────────────────────────────────────────────────────────── */
-
-function EarnCard() {
-  return (
-    <article className="group relative overflow-hidden rounded-card border border-[color:var(--color-hairline)] bg-white/[0.03] hover:bg-white/[0.05] transition-colors duration-320 p-10 md:p-14">
-      {/* Subtle amber wash, far from blinding */}
-      <div
-        className="absolute inset-0 pointer-events-none opacity-40"
-        style={{
-          background:
-            "radial-gradient(60% 50% at 80% 100%, rgba(255,183,3,0.08), transparent 70%)",
-        }}
-        aria-hidden
-      />
-
-      <div className="relative grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-        {/* Left — copy */}
-        <div className="lg:col-span-5">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-pill border border-amber/30 bg-amber/[0.06] text-tiny uppercase tracking-wider text-amber">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber" />
-            Earn · Coming soon
-          </div>
-          <h3 className="mt-5 font-display text-h2 font-light text-text leading-tight">
-            Buy Tesla on Sunday at 3am.
-          </h3>
-          <p className="mt-4 text-body text-text-muted max-w-md">
-            Onchain stocks. Open 24/7. Apple, Tesla, Meta, Nvidia and more —
-            settled on Solana, fractional, accessible from any country.
-          </p>
-          <p className="mt-6 text-small text-text-faint">
-            Powered by xStocks via Jupiter. First $200/month earned without fees.
-          </p>
-        </div>
-
-        {/* Right — ticker grid */}
-        <div className="lg:col-span-7">
-          <div className="grid grid-cols-2 gap-3">
-            <Ticker symbol="TSLA" name="Tesla"  price="247.18" change="+1.42%" up />
-            <Ticker symbol="AAPL" name="Apple"  price="189.95" change="+0.31%" up />
-            <Ticker symbol="META" name="Meta"   price="512.04" change="-0.84%" />
-            <Ticker symbol="NVDA" name="Nvidia" price="891.10" change="+2.07%" up />
-          </div>
-          <div className="mt-4 flex items-center justify-between text-tiny text-text-faint font-mono">
-            <span className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-              Markets open · onchain
-            </span>
-            <span>Settled on Solana · 24/7</span>
-          </div>
-        </div>
-      </div>
-    </article>
-  );
-}
-
-function Ticker({
-  symbol,
-  name,
-  price,
-  change,
-  up,
-}: {
-  symbol: string;
-  name: string;
-  price: string;
-  change: string;
-  up?: boolean;
-}) {
-  return (
-    <div className="rounded-tight border border-[color:var(--color-hairline)] bg-white/[0.02] hover:bg-white/[0.04] transition-colors duration-180 p-4">
-      <div className="flex items-baseline justify-between">
-        <span className="font-mono text-small text-text">{symbol}</span>
-        <span className={`font-mono text-tiny ${up ? "text-success" : "text-danger"}`}>{change}</span>
-      </div>
-      <div className="mt-1 flex items-baseline justify-between">
-        <span className="text-tiny text-text-faint">{name}</span>
-        <span className="font-mono text-small text-text-muted tabular-nums">{price}</span>
-      </div>
-    </div>
-  );
-}
+// EarnCard + Ticker removed 2026-05-28: tokenized-stock copy (TSLA/AAPL/NVDA/META,
+// "Buy Tesla on Sunday at 3am", "Powered by xStocks via Jupiter") taken down
+// pre-Apple appeal so the public site mirrors the iOS binary's compliance posture.
+// Re-introduce only after Earn ships as a distinct, regulator-aligned product.
