@@ -48,7 +48,7 @@ export default function PrivacyPage() {
               Privacy Policy
             </h1>
             <p className="text-base sm:text-lg text-[#94a3b8ff] font-['Inter'] font-[400]">
-              Last updated: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+              Last updated: June 7, 2026
             </p>
           </div>
 
@@ -113,14 +113,56 @@ export default function PrivacyPage() {
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">5. Data Security</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">5. Identity Verification (KYC) Data</h2>
+              <p className="text-[#94a3b8ff]">
+                When you choose to access features that require identity verification (such as on/off-ramps, fiat payment rails, fiat accounts, and the payment card), the following identity data is collected and processed by our verification partner, Sumsub (Sum and Substance Ltd.), and not by HIHODL:
+              </p>
+              <ul className="list-disc list-inside space-y-2 ml-4 text-[#94a3b8ff]">
+                <li>Legal name, date of birth, and nationality</li>
+                <li>Government-issued identification (for example, passport or ID, including document number, issuing country, expiry, and embedded data)</li>
+                <li>Selfie images and facial biometric data derived from your selfie and liveness check</li>
+                <li>Residence and address information</li>
+              </ul>
+              <p className="text-[#94a3b8ff]">
+                HIHODL does not maintain, store, or retain your identity documents, selfie, or biometric data in our own systems. As your verification partner, Sumsub captures and processes this data on our documented instructions. HIHODL receives only a verification status and the minimum data needed for compliance — for example, the verification outcome, your country of residence, and a verification reference.
+              </p>
+            </section>
+
+            <section className="flex flex-col gap-4">
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">6. Biometric and Special-Category Data</h2>
+              <p className="text-[#94a3b8ff]">
+                Facial biometric data is &quot;special category&quot; or sensitive personal data under the GDPR, UK GDPR, and comparable laws (for example, LGPD).
+              </p>
+              <ul className="list-disc list-inside space-y-2 ml-4 text-[#94a3b8ff]">
+                <li><strong>Explicit consent:</strong> Where required, biometric data is processed only on the basis of your explicit consent, which you provide at the point of verification. You may withdraw your consent at any time; withdrawal does not affect processing carried out before withdrawal and may mean you can no longer access features that require verification.</li>
+                <li><strong>Processor:</strong> Biometric processing is carried out by Sumsub as a processor acting on our documented instructions. Sumsub captures and processes the biometric data for identity verification and liveness confirmation; HIHODL does not receive or store the underlying biometric data.</li>
+              </ul>
+            </section>
+
+            <section className="flex flex-col gap-4">
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">7. Sharing With Regulated Providers</h2>
+              <p className="text-[#94a3b8ff]">
+                To unlock features you request, we and/or Sumsub may share your verification result and relevant compliance data (such as country of residence and identifying details required by the provider) with regulated third-party providers, including:
+              </p>
+              <ul className="list-disc list-inside space-y-2 ml-4 text-[#94a3b8ff]">
+                <li><strong>Bitso</strong> — on/off-ramp and local payment rails (for example, SPEI in Mexico)</li>
+                <li><strong>MoonPay</strong> — card and ramp services; MoonPay may run its own independent KYC and may collect additional information directly from you</li>
+                <li><strong>A regulated card issuer</strong> — for issuance and operation of the payment card, including transaction data necessary to deliver card services</li>
+              </ul>
+              <p className="text-[#94a3b8ff]">
+                Each provider acts as an independent controller for its own processing and is governed by its own privacy policy. Residence and address data you provide during verification is collected by Sumsub and passed to providers as needed for their compliance and to determine feature eligibility. HIHODL does not store your full residential address beyond what is operationally required, such as your country of residence for eligibility and compliance.
+              </p>
+            </section>
+
+            <section className="flex flex-col gap-4">
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">8. Data Security</h2>
               <p className="text-[#94a3b8ff]">
                 We implement appropriate technical and organizational security measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction. However, no method of transmission over the Internet or electronic storage is 100% secure, and we cannot guarantee absolute security.
               </p>
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">6. Your Rights and Choices</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">9. Your Rights and Choices</h2>
               <p className="text-[#94a3b8ff]">
                 Depending on your location, you may have certain rights regarding your personal information, including:
               </p>
@@ -130,51 +172,59 @@ export default function PrivacyPage() {
                 <li>The right to request deletion of your personal data</li>
                 <li>The right to object to or restrict processing of your data</li>
                 <li>The right to data portability</li>
-                <li>The right to withdraw consent at any time</li>
+                <li>The right to withdraw consent at any time, including consent to biometric processing</li>
                 <li>The right to opt-out of marketing communications</li>
+                <li>The right to lodge a complaint with your data-protection supervisory authority</li>
               </ul>
               <p className="text-[#94a3b8ff] mt-2">
-                To exercise these rights, please contact us at the email address provided below.
+                To exercise these rights, please contact us at the email address provided below. Because your biometric and KYC data are held by Sumsub rather than by HIHODL, some requests may be fulfilled by or directed to Sumsub as our processor; we will assist as required.
               </p>
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">7. Cookies and Tracking Technologies</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">10. Cookies and Tracking Technologies</h2>
               <p className="text-[#94a3b8ff]">
                 We use cookies and similar tracking technologies to track activity on our website and store certain information. You can instruct your browser to refuse all cookies or to indicate when a cookie is being sent. However, if you do not accept cookies, you may not be able to use some portions of our website.
               </p>
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">8. Third-Party Links</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">11. Third-Party Links</h2>
               <p className="text-[#94a3b8ff]">
                 Our website may contain links to third-party websites or services. We are not responsible for the privacy practices of these external sites. We encourage you to review the privacy policies of any third-party sites you visit.
               </p>
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">9. Children&apos;s Privacy</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">12. Children&apos;s Privacy</h2>
               <p className="text-[#94a3b8ff]">
                 Our services are not intended for individuals under the age of 18. We do not knowingly collect personal information from children. If you believe we have collected information from a child, please contact us immediately.
               </p>
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">10. International Data Transfers</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">13. International Data Transfers</h2>
               <p className="text-[#94a3b8ff]">
-                Your information may be transferred to and maintained on computers located outside of your state, province, country, or other governmental jurisdiction where data protection laws may differ. By using our services, you consent to the transfer of your information to these facilities.
+                Your information may be transferred to and maintained on computers located outside of your state, province, country, or other governmental jurisdiction where data protection laws may differ, including by Sumsub, our cloud providers, and downstream regulated providers. Where required, such transfers are protected by appropriate safeguards, such as standard contractual clauses or an adequacy decision. By using our services, you consent to the transfer of your information to these facilities.
               </p>
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">11. Changes to This Privacy Policy</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">14. Data Retention</h2>
+              <p className="text-[#94a3b8ff]">
+                We retain personal information only for as long as necessary for the purposes described in this Policy, including to provide the services, comply with legal and anti-money-laundering obligations, resolve disputes, and enforce our agreements. KYC and biometric data captured by Sumsub are retained and deleted in accordance with Sumsub&apos;s retention practices and applicable law; HIHODL does not hold this data. Retention periods required by anti-money-laundering law may extend beyond account closure.
+              </p>
+            </section>
+
+            <section className="flex flex-col gap-4">
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">15. Changes to This Privacy Policy</h2>
               <p className="text-[#94a3b8ff]">
                 We may update this Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the &quot;Last updated&quot; date. You are advised to review this Privacy Policy periodically for any changes.
               </p>
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">12. Contact Us</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">16. Contact Us</h2>
               <p className="text-[#94a3b8ff]">
                 If you have any questions about this Privacy Policy, please contact us at:
               </p>
@@ -196,6 +246,9 @@ export default function PrivacyPage() {
               </a>
               <a href="/terms" className="text-[#94a3b8ff] hover:text-brand-ffb703 transition text-sm font-['Inter']">
                 Terms
+              </a>
+              <a href="/e-sign" className="text-[#94a3b8ff] hover:text-brand-ffb703 transition text-sm font-['Inter']">
+                E-Sign Consent
               </a>
             </div>
             <span className="font-['Inter'] text-[13px] font-[400] leading-[19px] text-[#94a3b8ff]">

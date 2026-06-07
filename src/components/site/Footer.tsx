@@ -16,6 +16,7 @@ const COMPANY = [
 const LEGAL = [
   { href: "/privacy", label: "Privacy" },
   { href: "/terms",   label: "Terms" },
+  { href: "/e-sign",  label: "E-Sign Consent" },
 ];
 
 const SOCIAL = [
