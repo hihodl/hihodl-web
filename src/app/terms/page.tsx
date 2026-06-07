@@ -48,7 +48,7 @@ export default function TermsPage() {
               Terms of Service
             </h1>
             <p className="text-base sm:text-lg text-[#94a3b8ff] font-['Inter'] font-[400]">
-              Last updated: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+              Last updated: June 7, 2026
             </p>
           </div>
 
@@ -99,19 +99,69 @@ export default function TermsPage() {
             <section className="flex flex-col gap-4">
               <h2 className="text-2xl font-[700] text-[#eaf6ffff]">5. Self-Custodial Wallet</h2>
               <p className="text-[#94a3b8ff]">
-                HIHODL is a self-custodial wallet, which means:
+                HIHODL is non-custodial software: a multichain self-custody wallet that lets you generate, store, and use cryptographic keys on your own device and interact directly with public blockchain networks. HIHODL is a software provider, not a bank, custodian, or exchange. This means:
               </p>
               <ul className="list-disc list-inside space-y-2 ml-4 text-[#94a3b8ff]">
-                <li>You are solely responsible for the security of your private keys and seed phrases</li>
-                <li>We do not have access to, store, or control your private keys or funds</li>
-                <li>You are responsible for all transactions initiated from your wallet</li>
-                <li>We cannot recover your wallet or funds if you lose your private keys or seed phrase</li>
-                <li>You must keep your recovery information secure and confidential</li>
+                <li>You are the sole owner and controller of your wallet, and you are solely responsible for the security of your private keys, seed phrase (recovery phrase), and PIN</li>
+                <li>We never take custody of, control, or have access to your private keys, recovery phrase, or digital assets — they are generated and held under your sole control on your device</li>
+                <li>You are solely responsible for all transactions you authorize from your wallet and bear all risk of any resulting losses</li>
+                <li>Because HIHODL is non-custodial, we cannot reset, recover, restore, freeze, or move your keys, recovery phrase, or funds if they are lost, stolen, or compromised</li>
+                <li>You must keep your recovery information secure and confidential, and you are responsible for the acts of anyone to whom you grant access to your wallet or device</li>
               </ul>
+              <p className="text-[#94a3b8ff]">
+                Any optional time-lock, allowlist, spending-limit, or smart-wallet recovery features are tools you configure and control; they do not transfer custody of your keys or assets to us.
+              </p>
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">6. Acceptable Use</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">6. Identity Verification (KYC) and Regulated Features</h2>
+              <p className="text-[#94a3b8ff]">
+                Core self-custody wallet functionality is available broadly, subject to applicable law. However, certain features require identity verification before they can be unlocked.
+              </p>
+              <div className="flex flex-col gap-3 text-[#94a3b8ff]">
+                <div>
+                  <h3 className="text-xl font-[600] text-[#eaf6ffff] mb-2">6.1 Verification is required for certain features</h3>
+                  <p>
+                    To access features such as on-ramps, off-ramps, fiat payment rails (for example SPEI in Mexico), USD and fiat accounts, and the payment card (collectively, &quot;Regulated Features&quot;), you must complete identity verification (&quot;KYC&quot;) in accordance with applicable anti-money-laundering, counter-terrorist-financing, and sanctions requirements.
+                  </p>
+                </div>
+                <div>
+                  <h3 className="text-xl font-[600] text-[#eaf6ffff] mb-2">6.2 Verification is performed by Sumsub</h3>
+                  <p>
+                    Identity verification is performed by our verification partner, Sumsub (Sum and Substance Ltd.) and/or its affiliates (&quot;Sumsub&quot;). When you complete verification, your identity documents, selfie and liveness check, and biometric data are captured and processed by Sumsub. HIHODL does not store your identity documents, selfie, or biometric data on your device or on our servers — HIHODL receives only a verification status and the minimum data required for compliance. See our Privacy Policy for details, including the explicit consent required for biometric (special-category) data.
+                  </p>
+                </div>
+                <div>
+                  <h3 className="text-xl font-[600] text-[#eaf6ffff] mb-2">6.3 Downstream providers</h3>
+                  <p>
+                    To enable Regulated Features, we and/or Sumsub may share your verification result and relevant compliance data (such as country of residence) with regulated third-party providers, including Bitso (on/off-ramp and local payment rails), MoonPay (card and ramp services), and a regulated card issuer. Some providers, including MoonPay, may run their own independent KYC and may require additional information directly from you. Your use of a provider&apos;s services is also governed by that provider&apos;s own terms and privacy policy.
+                  </p>
+                </div>
+                <div>
+                  <h3 className="text-xl font-[600] text-[#eaf6ffff] mb-2">6.4 Country eligibility</h3>
+                  <p>
+                    Availability of Regulated Features depends on your country of residence and on provider coverage. During verification you may be asked to select your country from a list of supported regions; if your country is not listed, the relevant feature is not available to you, and Regulated Features may be unavailable in some jurisdictions. HIHODL is global-first with an initial focus on Latin America (for example, Mexico, Brazil, Argentina, and Colombia) and is expanding to additional regions over time. Supported jurisdictions may change.
+                  </p>
+                </div>
+                <p>
+                  We, our partners, or providers may decline, suspend, or revoke access to Regulated Features if verification is not completed, if documents do not satisfy applicable criteria, or where required by law or risk controls.
+                </p>
+              </div>
+            </section>
+
+            <section className="flex flex-col gap-4">
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">7. Electronic Communications and E-Signature</h2>
+              <p className="text-[#94a3b8ff]">
+                The Services are provided electronically. By using HIHODL you agree to transact with us, to sign agreements and consents (including KYC and biometric-processing consents collected via our verification partner), and to receive disclosures, notices, and other communications in electronic form. For full details, see our{" "}
+                <a href="/e-sign" className="text-brand-ffb703 underline underline-offset-2 hover:opacity-80 transition">
+                  Consent to Electronic Communications and Signatures
+                </a>
+                .
+              </p>
+            </section>
+
+            <section className="flex flex-col gap-4">
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">8. Acceptable Use</h2>
               <p className="text-[#94a3b8ff]">
                 You agree not to use our services to:
               </p>
@@ -127,7 +177,7 @@ export default function TermsPage() {
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">7. Referral Program</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">9. Referral Program</h2>
               <p className="text-[#94a3b8ff]">
                 If you participate in our referral program:
               </p>
@@ -141,14 +191,14 @@ export default function TermsPage() {
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">8. Intellectual Property</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">10. Intellectual Property</h2>
               <p className="text-[#94a3b8ff]">
                 All content, features, and functionality of our services, including but not limited to text, graphics, logos, icons, images, and software, are the exclusive property of HIHODL and are protected by international copyright, trademark, patent, trade secret, and other intellectual property laws.
               </p>
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">9. Disclaimers</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">11. Disclaimers</h2>
               <p className="text-[#94a3b8ff]">
                 Our services are provided &quot;as is&quot; and &quot;as available&quot; without warranties of any kind, either express or implied. We do not warrant that:
               </p>
@@ -164,7 +214,7 @@ export default function TermsPage() {
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">10. Limitation of Liability</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">12. Limitation of Liability</h2>
               <p className="text-[#94a3b8ff]">
                 To the maximum extent permitted by law, HIHODL and its affiliates, officers, employees, and agents shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including but not limited to loss of profits, data, use, goodwill, or other intangible losses, resulting from:
               </p>
@@ -178,42 +228,42 @@ export default function TermsPage() {
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">11. Indemnification</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">13. Indemnification</h2>
               <p className="text-[#94a3b8ff]">
                 You agree to indemnify, defend, and hold harmless HIHODL and its affiliates, officers, employees, and agents from any claims, damages, losses, liabilities, and expenses (including legal fees) arising out of or relating to your use of our services, violation of these terms, or infringement of any rights of another.
               </p>
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">12. Termination</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">14. Termination</h2>
               <p className="text-[#94a3b8ff]">
                 We may terminate or suspend your access to our services immediately, without prior notice or liability, for any reason, including if you breach these Terms of Service. Upon termination, your right to use our services will cease immediately.
               </p>
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">13. Governing Law</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">15. Governing Law</h2>
               <p className="text-[#94a3b8ff]">
                 These Terms of Service shall be governed by and construed in accordance with applicable laws, without regard to its conflict of law provisions. Any disputes arising from these terms or your use of our services shall be resolved through appropriate legal channels.
               </p>
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">14. Changes to Terms</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">16. Changes to Terms</h2>
               <p className="text-[#94a3b8ff]">
                 We reserve the right to modify or replace these Terms of Service at any time. If a revision is material, we will provide at least 30 days notice prior to any new terms taking effect. What constitutes a material change will be determined at our sole discretion. Your continued use of our services after any changes constitutes acceptance of the new terms.
               </p>
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">15. Severability</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">17. Severability</h2>
               <p className="text-[#94a3b8ff]">
                 If any provision of these Terms of Service is held to be invalid or unenforceable by a court, the remaining provisions will remain in effect. These Terms of Service constitute the entire agreement between you and HIHODL regarding our services.
               </p>
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">16. Contact Information</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">18. Contact Information</h2>
               <p className="text-[#94a3b8ff]">
                 If you have any questions about these Terms of Service, please contact us at:
               </p>
@@ -235,6 +285,9 @@ export default function TermsPage() {
               </a>
               <a href="/terms" className="text-[#94a3b8ff] hover:text-brand-ffb703 transition text-sm font-['Inter']">
                 Terms
+              </a>
+              <a href="/e-sign" className="text-[#94a3b8ff] hover:text-brand-ffb703 transition text-sm font-['Inter']">
+                E-Sign Consent
               </a>
             </div>
             <span className="font-['Inter'] text-[13px] font-[400] leading-[19px] text-[#94a3b8ff]">
