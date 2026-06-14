@@ -6,7 +6,7 @@
     ],
     "target": {
       "namespace": "android_app",
-      "package_name": "com.sayhihodl.hihodlyes",
+      "package_name": "com.sayhihodl.hihodlai",
       "sha256_cert_fingerprints": [
         "F0:AF:16:E2:39:26:87:0D:F8:BF:4E:38:58:41:C9:9F:BA:9A:1E:54:42:36:44:C4:D6:58:76:19:F1:E1:CA:4D",
         "6D:BD:95:A9:DD:9D:21:9E:3D:4D:47:D9:D5:F9:F5:11:2F:1D:17:EC:95:04:CB:48:A3:01:3B:D7:85:81:AF:14"
