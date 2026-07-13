@@ -48,7 +48,7 @@ export default function TermsPage() {
               Terms of Service
             </h1>
             <p className="text-base sm:text-lg text-[#94a3b8ff] font-['Inter'] font-[400]">
-              Last updated: June 7, 2026
+              Last updated: July 12, 2026
             </p>
           </div>
 
@@ -56,7 +56,7 @@ export default function TermsPage() {
             <section className="flex flex-col gap-4">
               <h2 className="text-2xl font-[700] text-[#eaf6ffff]">1. Acceptance of Terms</h2>
               <p className="text-[#94a3b8ff]">
-                By accessing and using HIHODL&apos;s website (hihodl.xyz) and services, you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
+                These Terms of Service are a binding agreement between you and HIHODL TECHNOLOGIES OÜ, a company incorporated in Estonia (&quot;HIHODL&quot;, &quot;we&quot;, &quot;us&quot;). By accessing and using HIHODL&apos;s website (hihodl.xyz) and services, you accept and agree to be bound by the terms and provisions of this agreement. If you do not agree to abide by the above, please do not use this service.
               </p>
             </section>
 
@@ -214,61 +214,83 @@ export default function TermsPage() {
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">12. Limitation of Liability</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">12. Informational Tools and Estimates (Traveler)</h2>
+              <p className="text-[#94a3b8ff]">
+                Some features of the Services — including Traveler and any visa-day, Schengen 90/180, tax-residency, or similar calculators, counters, forecasts, and estimates (collectively, &quot;Informational Tools&quot;) — are provided for general informational and planning purposes only. Informational Tools are not tax, legal, accounting, or immigration advice; HIHODL is not a tax advisor, law firm, accountancy, or immigration adviser; and no advisory, professional, or fiduciary relationship is created by your use of them.
+              </p>
+              <ul className="list-disc list-inside space-y-2 ml-4 text-[#94a3b8ff]">
+                <li><span className="text-[#eaf6ffff] font-[600]">Estimates only.</span> Outputs are estimates generated from the information you enter and from third-party or public datasets that may be incomplete, outdated, or inapplicable to your specific circumstances.</li>
+                <li><span className="text-[#eaf6ffff] font-[600]">No reliance.</span> You must not rely on Informational Tools as the sole basis for any travel, residence, immigration, or tax decision. Immigration officers and tax and other authorities apply their own rules and records, which may differ from ours and which govern.</li>
+                <li><span className="text-[#eaf6ffff] font-[600]">Verify with official sources.</span> Before acting, confirm current requirements with the relevant government, consulate, embassy, or tax authority, and, for anything with real consequences, a qualified professional.</li>
+                <li><span className="text-[#eaf6ffff] font-[600]">Your responsibility.</span> You are solely responsible for your own compliance with immigration, residence, and tax laws, and for the accuracy of the information you enter.</li>
+              </ul>
+              <p className="text-[#94a3b8ff]">
+                The &quot;as is&quot; / no-warranty disclaimer in Section 11 and the limitation of liability in Section 13 apply in full to the Informational Tools. Further detail on how these estimates are produced, the data behind them, and their limits is available at{" "}
+                <a href="/legal/traveler" className="text-brand-ffb703 underline underline-offset-2 hover:opacity-80 transition">
+                  hihodl.xyz/legal/traveler
+                </a>
+                .
+              </p>
+            </section>
+
+            <section className="flex flex-col gap-4">
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">13. Limitation of Liability</h2>
               <p className="text-[#94a3b8ff]">
                 To the maximum extent permitted by law, HIHODL and its affiliates, officers, employees, and agents shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including but not limited to loss of profits, data, use, goodwill, or other intangible losses, resulting from:
               </p>
               <ul className="list-disc list-inside space-y-2 ml-4 text-[#94a3b8ff]">
                 <li>Your use or inability to use our services</li>
                 <li>Any unauthorized access to or use of our servers or your personal information</li>
-                <li>Any errors or omissions in our services</li>
+                <li>Any errors or omissions in our services, including any estimate produced by an Informational Tool</li>
+                <li>Any fine, penalty, denied entry, overstay, tax liability, or other consequence arising from your reliance on an Informational Tool</li>
                 <li>Any loss of funds due to loss of private keys or seed phrases</li>
                 <li>Any blockchain network issues or failures</li>
               </ul>
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">13. Indemnification</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">14. Indemnification</h2>
               <p className="text-[#94a3b8ff]">
                 You agree to indemnify, defend, and hold harmless HIHODL and its affiliates, officers, employees, and agents from any claims, damages, losses, liabilities, and expenses (including legal fees) arising out of or relating to your use of our services, violation of these terms, or infringement of any rights of another.
               </p>
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">14. Termination</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">15. Termination</h2>
               <p className="text-[#94a3b8ff]">
                 We may terminate or suspend your access to our services immediately, without prior notice or liability, for any reason, including if you breach these Terms of Service. Upon termination, your right to use our services will cease immediately.
               </p>
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">15. Governing Law</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">16. Governing Law</h2>
               <p className="text-[#94a3b8ff]">
-                These Terms of Service shall be governed by and construed in accordance with applicable laws, without regard to its conflict of law provisions. Any disputes arising from these terms or your use of our services shall be resolved through appropriate legal channels.
+                HIHODL is operated by HIHODL TECHNOLOGIES OÜ, a company incorporated in Estonia. Except where mandatory local consumer-protection law of your country of residence provides otherwise, these Terms of Service shall be governed by and construed in accordance with the laws of Estonia, without regard to its conflict of law provisions. Any disputes arising from these terms or your use of our services shall be resolved through appropriate legal channels.
               </p>
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">16. Changes to Terms</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">17. Changes to Terms</h2>
               <p className="text-[#94a3b8ff]">
                 We reserve the right to modify or replace these Terms of Service at any time. If a revision is material, we will provide at least 30 days notice prior to any new terms taking effect. What constitutes a material change will be determined at our sole discretion. Your continued use of our services after any changes constitutes acceptance of the new terms.
               </p>
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">17. Severability</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">18. Severability</h2>
               <p className="text-[#94a3b8ff]">
                 If any provision of these Terms of Service is held to be invalid or unenforceable by a court, the remaining provisions will remain in effect. These Terms of Service constitute the entire agreement between you and HIHODL regarding our services.
               </p>
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">18. Contact Information</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">19. Contact Information</h2>
               <p className="text-[#94a3b8ff]">
                 If you have any questions about these Terms of Service, please contact us at:
               </p>
               <div className="bg-white/5 rounded-xl p-6 border border-[rgba(255,255,255,0.08)] backdrop-blur-xl">
-                <p className="text-[#eaf6ffff] font-[600] mb-2">HIHODL</p>
+                <p className="text-[#eaf6ffff] font-[600] mb-2">HIHODL TECHNOLOGIES OÜ</p>
+                <p className="text-[#94a3b8ff]">Registered in Estonia</p>
                 <p className="text-[#94a3b8ff]">Email: legal@hihodl.xyz</p>
                 <p className="text-[#94a3b8ff]">Website: https://hihodl.xyz</p>
               </div>
