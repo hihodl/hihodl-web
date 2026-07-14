@@ -48,7 +48,7 @@ export default function TermsPage() {
               Terms of Service
             </h1>
             <p className="text-base sm:text-lg text-[#94a3b8ff] font-['Inter'] font-[400]">
-              Last updated: July 12, 2026
+              Last updated: July 14, 2026
             </p>
           </div>
 
@@ -141,6 +141,21 @@ export default function TermsPage() {
                   <h3 className="text-xl font-[600] text-[#eaf6ffff] mb-2">6.4 Country eligibility</h3>
                   <p>
                     Availability of Regulated Features depends on your country of residence and on provider coverage. During verification you may be asked to select your country from a list of supported regions; if your country is not listed, the relevant feature is not available to you, and Regulated Features may be unavailable in some jurisdictions. HIHODL is global-first with an initial focus on Latin America (for example, Mexico, Brazil, Argentina, and Colombia) and is expanding to additional regions over time. Supported jurisdictions may change.
+                  </p>
+                </div>
+                <div>
+                  <h3 className="text-xl font-[600] text-[#eaf6ffff] mb-2">6.5 Tokenized stocks (tokenized equities)</h3>
+                  <p>
+                    HIHODL provides passive, non-custodial software that lets you access tokenized stocks (also called tokenized equities) — blockchain tokens that track the price of an underlying share or fund and are issued by a third-party issuer under a prospectus approved in the European Union / Liechtenstein. A tokenized stock is a security and is not the underlying share; holding it does not make you a shareholder and confers no voting or other shareholder rights. In relation to tokenized stocks, HIHODL is <span className="text-[#eaf6ffff] font-[600]">not</span> a broker-dealer, exchange, investment firm, financial adviser, or issuer; does not custody, mint, redeem, or take the other side of your trade; and provides no investment advice or recommendation. You buy and sell tokenized stocks yourself, through a non-custodial on-chain swap executed against third-party liquidity from your own wallet. On-chain transactions are irreversible. Tokenized stocks carry issuer, counterparty, market, liquidity, technology, and regulatory risk, including the possible total loss of your capital.
+                  </p>
+                </div>
+                <div>
+                  <h3 className="text-xl font-[600] text-[#eaf6ffff] mb-2">6.6 Eligibility, restrictions, and required disclosures for tokenized stocks</h3>
+                  <p>
+                    Tokenized stocks are offered only to eligible, identity-verified users resident in supported regions, and are gated by both a location check and a verified-residence (KYC) check. They are not offered, sold, or marketed to U.S. Persons or to persons in the United States, Canada, the United Kingdom, Australia, or any other restricted jurisdiction; the underlying tokens are offered outside the United States to non-U.S. Persons in reliance on Regulation S. By buying, holding, or selling a tokenized stock you represent that you are not a U.S. Person, are not located in or resident of a restricted jurisdiction, and are acting for your own account. Your use of tokenized stocks is additionally governed by, and you must read and accept, the{" "}
+                    <a href="/legal/tokenized-stocks" className="text-brand-ffb703 underline underline-offset-2 hover:opacity-80 transition">Tokenized Stocks Product Disclosure</a>, the{" "}
+                    <a href="/legal/stocks-risk" className="text-brand-ffb703 underline underline-offset-2 hover:opacity-80 transition">Investment Risk Disclosure</a>, and the{" "}
+                    <a href="/legal/restricted-jurisdictions" className="text-brand-ffb703 underline underline-offset-2 hover:opacity-80 transition">Restricted Jurisdictions</a> list. The &quot;as is&quot; / no-warranty disclaimer and the limitation of liability elsewhere in these Terms apply in full to tokenized stocks.
                   </p>
                 </div>
                 <p>
