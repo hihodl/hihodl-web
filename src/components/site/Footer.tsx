@@ -1,16 +1,22 @@
 import Link from "next/link";
+import { CtaLink } from "@/components/site/DownloadLink";
+import { DOWNLOAD_ANCHOR } from "@/lib/appLinks";
 
 const PRODUCT = [
   { href: "/#income", label: "Income Rails" },
   { href: "/#swap",   label: "Swap & Move" },
+  { href: "/rewards", label: "Rewards" },
+  { href: "/travel",  label: "Travel rewards" },
   { href: "/#ai",     label: "AI (soon)" },
   { href: "/#husd",   label: "HUSD" },
 ];
 
 const COMPANY = [
   { href: "/#how",      label: "How it works" },
+  { href: "/founders",  label: "Founder Pass" },
+  { href: "/fees",      label: "Fees" },
   { href: "/#security", label: "Security" },
-  { href: "/#download", label: "Download" },
+  { href: DOWNLOAD_ANCHOR, label: "Download" },
 ];
 
 const LEGAL = [
@@ -83,12 +89,12 @@ function FooterColumn({
       <ul className="flex flex-col gap-2.5">
         {links.map((l) => (
           <li key={l.href}>
-            <Link
+            <CtaLink
               href={l.href}
               className="text-small text-text-muted hover:text-text transition-colors duration-180"
             >
               {l.label}
-            </Link>
+            </CtaLink>
           </li>
         ))}
       </ul>

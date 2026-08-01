@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { DownloadLink } from "@/components/site/DownloadLink";
 
 const NAV_ITEMS = [
   { href: "/#income", label: "Income" },
@@ -59,12 +60,9 @@ export function TopNav() {
           <div className="flex-1" />
 
           {/* Download CTA */}
-          <Link
-            href="#download"
-            className="hidden sm:inline-flex items-center px-5 py-2.5 rounded-pill bg-amber text-text-on-amber font-medium text-small hover:bg-amber-glow transition-all duration-180 ease-out-soft hover:scale-[1.02]"
-          >
+          <DownloadLink className="hidden sm:inline-flex items-center px-5 py-2.5 rounded-pill bg-amber text-text-on-amber font-medium text-small hover:bg-amber-glow transition-all duration-180 ease-out-soft hover:scale-[1.02]">
             Download
-          </Link>
+          </DownloadLink>
 
           {/* Mobile burger */}
           <button
@@ -106,13 +104,12 @@ export function TopNav() {
                 {item.label}
               </Link>
             ))}
-            <Link
-              href="#download"
+            <DownloadLink
               onClick={() => setOpen(false)}
               className="mt-4 inline-flex items-center justify-center px-5 py-3 rounded-pill bg-amber text-text-on-amber font-medium"
             >
               Download
-            </Link>
+            </DownloadLink>
           </nav>
         </div>
       </div>

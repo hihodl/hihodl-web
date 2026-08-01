@@ -3,10 +3,8 @@
 import React, { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
-const APP_STORE_URL =
-  "https://apps.apple.com/nl/app/hihodl-stablecoin-wallet/id6755203065";
-const PLAY_STORE_URL =
-  "https://play.google.com/store/apps/details?id=com.sayhihodl.hihodlyes";
+import { APP_STORE_URL, PLAY_STORE_URL } from "@/lib/appLinks";
+
 const DEEP_LINK_SCHEME = "hihodl://";
 const FALLBACK_DELAY_MS = 1500;
 
