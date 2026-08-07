@@ -56,7 +56,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "Is HIHODL on Android?",
-    a: "iOS is live on the App Store. Android is in active development and will launch on Google Play soon.",
+    a: "Yes. HIHODL is live on both the App Store and Google Play. Set up takes about 30 seconds on either platform.",
   },
   {
     q: "What are pockets?",

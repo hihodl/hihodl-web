@@ -2,8 +2,18 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { DownloadLink } from "@/components/site/DownloadLink";
 
+// Smart Account is the only product page in the nav, and it is first.
+//
+// Not a ranking of what we ship — a ranking of what a stranger needs before
+// they will install anything. "Your money earns by itself" is the claim that
+// makes people ask "so how do YOU make money?", and a company that cannot
+// answer that in one click gets called a scam, correctly. Rewards, Travel and
+// Founder Pass are one question further down and live in the footer; a nav with
+// eight entries is a nav nobody reads.
 const NAV_ITEMS = [
+  { href: "/smart-account", label: "Smart Account" },
   { href: "/#income", label: "Income" },
   { href: "/#swap",   label: "Swap" },
   { href: "/#ai",     label: "AI" },
@@ -59,12 +69,9 @@ export function TopNav() {
           <div className="flex-1" />
 
           {/* Download CTA */}
-          <Link
-            href="#download"
-            className="hidden sm:inline-flex items-center px-5 py-2.5 rounded-pill bg-amber text-text-on-amber font-medium text-small hover:bg-amber-glow transition-all duration-180 ease-out-soft hover:scale-[1.02]"
-          >
+          <DownloadLink className="hidden sm:inline-flex items-center px-5 py-2.5 rounded-pill bg-amber text-text-on-amber font-medium text-small hover:bg-amber-glow transition-all duration-180 ease-out-soft hover:scale-[1.02]">
             Download
-          </Link>
+          </DownloadLink>
 
           {/* Mobile burger */}
           <button
@@ -106,13 +113,12 @@ export function TopNav() {
                 {item.label}
               </Link>
             ))}
-            <Link
-              href="#download"
+            <DownloadLink
               onClick={() => setOpen(false)}
               className="mt-4 inline-flex items-center justify-center px-5 py-3 rounded-pill bg-amber text-text-on-amber font-medium"
             >
               Download
-            </Link>
+            </DownloadLink>
           </nav>
         </div>
       </div>
