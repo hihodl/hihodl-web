@@ -15,6 +15,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: "/",
       disallow: ["/api/", "/founders/checkout", "/invite/", "/thank-you"],
     },
-    sitemap: "https://www.hihodl.xyz/sitemap.xml",
+    sitemap: "https://hihodl.xyz/sitemap.xml",
   };
 }

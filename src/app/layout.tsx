@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 
 import { APP_STORE_URL, PLAY_STORE_URL } from "@/lib/appLinks";
 
-const SITE = "https://www.hihodl.xyz";
+const SITE = "https://hihodl.xyz";
 const OG_URL = `${SITE}/banner-social.png`;
 
 export const metadata: Metadata = {

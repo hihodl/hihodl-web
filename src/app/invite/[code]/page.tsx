@@ -25,7 +25,7 @@ export default function InviteRedirect() {
         window.location.href = PLAY_STORE_URL;
       } else {
         // Desktop fallback — go to homepage
-        window.location.href = "https://www.hihodl.xyz";
+        window.location.href = "https://hihodl.xyz";
       }
     }, 1500);
 

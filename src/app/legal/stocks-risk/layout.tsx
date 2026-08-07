@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
 
-const OG_URL = "https://www.hihodl.xyz/banner-social.jpg";
+const OG_URL = "https://hihodl.xyz/banner-social.jpg";
 
 export const metadata: Metadata = {
   title: "Tokenized Stocks — Investment Risk Disclosure",
   description:
     "The risks of buying, holding, and selling tokenized stocks in HIHODL: market, issuer, counterparty, liquidity, technology, and regulatory risk. You may lose your entire investment.",
-  alternates: { canonical: "https://www.hihodl.xyz/legal/stocks-risk" },
+  alternates: { canonical: "https://hihodl.xyz/legal/stocks-risk" },
   openGraph: {
     type: "website",
-    url: "https://www.hihodl.xyz/legal/stocks-risk",
+    url: "https://hihodl.xyz/legal/stocks-risk",
     siteName: "HIHODL",
     title: "Tokenized Stocks — Investment Risk Disclosure | HIHODL",
     description:

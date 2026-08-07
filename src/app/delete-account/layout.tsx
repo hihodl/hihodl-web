@@ -1,19 +1,19 @@
 import type { Metadata } from "next";
 
-const OG_URL = "https://www.hihodl.xyz/banner-social.jpg";
+const OG_URL = "https://hihodl.xyz/banner-social.jpg";
 
 export const metadata: Metadata = {
   title: "Delete Your Account",
   description:
     "How to permanently delete your HIHODL account and the data associated with it.",
-  alternates: { canonical: "https://www.hihodl.xyz/delete-account" },
+  alternates: { canonical: "https://hihodl.xyz/delete-account" },
   robots: {
     index: true,
     follow: false,
   },
   openGraph: {
     type: "website",
-    url: "https://www.hihodl.xyz/delete-account",
+    url: "https://hihodl.xyz/delete-account",
     siteName: "HIHODL",
     title: "Delete Your Account | HIHODL",
     description:

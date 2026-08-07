@@ -23,7 +23,10 @@ import type { MetadataRoute } from "next";
  * table and its keys before it is published at all.
  */
 
-const SITE = "https://www.hihodl.xyz";
+// The apex, not www. Measured 07-aug-2026: www 307s to the apex, so anything
+// written against www names a URL that redirects — a wasted hop for a crawler
+// and a split signal on the page people search for by name.
+const SITE = "https://hihodl.xyz";
 
 type Entry = { path: string; priority: number; changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"] };
 

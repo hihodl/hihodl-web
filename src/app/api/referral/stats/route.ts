@@ -81,7 +81,7 @@ export async function GET(req: NextRequest) {
       console.error('Total count error:', totalError);
     }
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.hihodl.xyz';
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://hihodl.xyz';
     const referralLink = `${siteUrl}/?ref=${user.referral_code}`;
 
     return NextResponse.json({
