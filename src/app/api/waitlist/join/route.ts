@@ -190,7 +190,7 @@ async function sendWelcomeEmail(email: string, displayName: string, referralCode
   const { Resend } = await import('resend');
   const resend = new Resend(process.env.RESEND_API_KEY);
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.hihodl.xyz';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://hihodl.xyz';
   const referralLink = `${siteUrl}/?ref=${referralCode}`;
 
   // CRITICAL: every interpolation into the HTML below must be escaped.

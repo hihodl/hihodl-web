@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
 
-const OG_URL = "https://www.hihodl.xyz/banner-social.jpg";
+const OG_URL = "https://hihodl.xyz/banner-social.jpg";
 
 export const metadata: Metadata = {
   title: "Traveler — How We Calculate Visa & Tax Days",
   description:
     "How HIHODL's Traveler feature estimates visa allowances and tax-residency days, the data behind it, and its limits. Traveler is an informational tool, not tax or immigration advice.",
-  alternates: { canonical: "https://www.hihodl.xyz/legal/traveler" },
+  alternates: { canonical: "https://hihodl.xyz/legal/traveler" },
   openGraph: {
     type: "website",
-    url: "https://www.hihodl.xyz/legal/traveler",
+    url: "https://hihodl.xyz/legal/traveler",
     siteName: "HIHODL",
     title: "Traveler — How We Calculate Visa & Tax Days | HIHODL",
     description:

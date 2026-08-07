@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
 
-const OG_URL = "https://www.hihodl.xyz/banner-social.jpg";
+const OG_URL = "https://hihodl.xyz/banner-social.jpg";
 
 export const metadata: Metadata = {
   title: "Tokenized Stocks — Product Disclosure",
   description:
     "How tokenized stocks work in HIHODL: a non-custodial, peer-to-pool product you execute yourself. HIHODL is not a broker or issuer. Not available to US persons or in restricted regions.",
-  alternates: { canonical: "https://www.hihodl.xyz/legal/tokenized-stocks" },
+  alternates: { canonical: "https://hihodl.xyz/legal/tokenized-stocks" },
   openGraph: {
     type: "website",
-    url: "https://www.hihodl.xyz/legal/tokenized-stocks",
+    url: "https://hihodl.xyz/legal/tokenized-stocks",
     siteName: "HIHODL",
     title: "Tokenized Stocks — Product Disclosure | HIHODL",
     description:

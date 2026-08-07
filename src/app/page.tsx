@@ -9,6 +9,8 @@ import { BankVsHihodl } from "@/components/site/BankVsHihodl";
 import { BuiltFor } from "@/components/site/BuiltFor";
 import { WhyFree } from "@/components/site/WhyFree";
 import { NotifyMeForm } from "@/components/site/NotifyMeForm";
+import { CtaLink } from "@/components/site/DownloadLink";
+import { APP_STORE_URL, DOWNLOAD_ANCHOR, PLAY_STORE_URL } from "@/lib/appLinks";
 
 export default function Home() {
   return (
@@ -64,7 +66,7 @@ export default function Home() {
           eyebrow="50,000+ global earners already on HIHODL"
           title="Try it before reading another word."
           subtitle="On App Store and Google Play. Set up in 30 seconds."
-          primary={{ label: "Download free", href: "#download" }}
+          primary={{ label: "Download free", href: DOWNLOAD_ANCHOR }}
           secondary={{ label: "How it works", href: "#how" }}
           tone="blue"
         />
@@ -165,7 +167,7 @@ export default function Home() {
                   "Virtual USD account & IBAN",
                   "Self-custody · biometric login",
                 ]}
-                cta={{ label: "Download free", href: "#download" }}
+                cta={{ label: "Download free", href: DOWNLOAD_ANCHOR }}
               />
               <PlanCard
                 name="Pro"
@@ -180,7 +182,7 @@ export default function Home() {
                   "Virtual USD account & IBAN priority queue",
                   "Premium support",
                 ]}
-                cta={{ label: "Get Pro", href: "#download" }}
+                cta={{ label: "Get Pro", href: DOWNLOAD_ANCHOR }}
               />
             </div>
 
@@ -232,7 +234,7 @@ export default function Home() {
           eyebrow="The first $500 is on us. Every month."
           title="Stop thinking. Start moving."
           subtitle="No setup fees. No KYC for basic use. No bank required."
-          primary={{ label: "Get HIHODL free", href: "#download" }}
+          primary={{ label: "Get HIHODL free", href: DOWNLOAD_ANCHOR }}
           tone="amber"
         />
 
@@ -349,16 +351,15 @@ export default function Home() {
             <div className="mt-12 flex flex-wrap items-center justify-center gap-3">
               <StoreButton
                 store="apple"
-                href="https://apps.apple.com/nl/app/hihodl-stablecoin-wallet/id6755203065?l=en-GB"
+                href={APP_STORE_URL}
                 eyebrow="Download on the"
                 label="App Store"
               />
               <StoreButton
                 store="google"
-                href="#"
-                eyebrow="Coming soon"
+                href={PLAY_STORE_URL}
+                eyebrow="Get it on"
                 label="Google Play"
-                disabled
               />
             </div>
 
@@ -421,7 +422,7 @@ function PlanCard({
           </li>
         ))}
       </ul>
-      <Link
+      <CtaLink
         href={cta.href}
         className={`mt-10 inline-flex items-center justify-center px-6 py-3.5 rounded-pill font-medium text-body transition-all duration-180 ease-out-soft hover:scale-[1.02] ${
           highlight
@@ -430,7 +431,7 @@ function PlanCard({
         }`}
       >
         {cta.label}
-      </Link>
+      </CtaLink>
     </div>
   );
 }
@@ -523,12 +524,12 @@ function CtaStrip({
           <p className="mt-6 text-lead text-text-muted max-w-xl mx-auto">{subtitle}</p>
         )}
         <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
-          <Link
+          <CtaLink
             href={primary.href}
             className="inline-flex items-center justify-center px-7 py-4 rounded-pill bg-amber text-text-on-amber font-medium text-body hover:bg-amber-glow transition-all duration-180 ease-out-soft hover:scale-[1.02]"
           >
             {primary.label}
-          </Link>
+          </CtaLink>
           {secondary && (
             <Link
               href={secondary.href}
@@ -548,26 +549,17 @@ function StoreButton({
   href,
   eyebrow,
   label,
-  disabled,
 }: {
   store: "apple" | "google";
   href: string;
   eyebrow: string;
   label: string;
-  disabled?: boolean;
 }) {
   const Icon = store === "apple" ? AppleIcon : GoogleIcon;
-  const base =
-    "inline-flex items-center gap-3 px-6 py-3.5 rounded-pill border transition-all duration-180 ease-out-soft";
-  const live =
-    "bg-white text-[#0A0500] border-white hover:scale-[1.02] hover:shadow-[0_0_40px_rgba(255,255,255,0.15)]";
-  const soon =
-    "bg-white/[0.04] text-text-muted border-[color:var(--color-hairline)] cursor-not-allowed";
   return (
     <a
-      href={disabled ? undefined : href}
-      aria-disabled={disabled || undefined}
-      className={`${base} ${disabled ? soon : live}`}
+      href={href}
+      className="inline-flex items-center gap-3 px-6 py-3.5 rounded-pill border bg-white text-[#0A0500] border-white transition-all duration-180 ease-out-soft hover:scale-[1.02] hover:shadow-[0_0_40px_rgba(255,255,255,0.15)]"
     >
       <Icon className="w-6 h-6" />
       <span className="flex flex-col items-start leading-none">

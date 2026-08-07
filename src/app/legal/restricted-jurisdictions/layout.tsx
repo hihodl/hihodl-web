@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
 
-const OG_URL = "https://www.hihodl.xyz/banner-social.jpg";
+const OG_URL = "https://hihodl.xyz/banner-social.jpg";
 
 export const metadata: Metadata = {
   title: "Tokenized Stocks — Restricted Jurisdictions",
   description:
     "The jurisdictions where HIHODL does not offer tokenized stocks: the United States, Canada, the United Kingdom, Australia, and sanctioned regions.",
-  alternates: { canonical: "https://www.hihodl.xyz/legal/restricted-jurisdictions" },
+  alternates: { canonical: "https://hihodl.xyz/legal/restricted-jurisdictions" },
   openGraph: {
     type: "website",
-    url: "https://www.hihodl.xyz/legal/restricted-jurisdictions",
+    url: "https://hihodl.xyz/legal/restricted-jurisdictions",
     siteName: "HIHODL",
     title: "Tokenized Stocks — Restricted Jurisdictions | HIHODL",
     description:

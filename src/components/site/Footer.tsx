@@ -1,16 +1,29 @@
 import Link from "next/link";
+import { CtaLink } from "@/components/site/DownloadLink";
+import { DOWNLOAD_ANCHOR } from "@/lib/appLinks";
 
+// Every product link here goes to a page that states what we keep on THAT
+// product, in context. There is deliberately no "Fees" entry: an aggregate
+// schedule serves competitors better than customers. See the rule at the top
+// of rates.config.ts.
 const PRODUCT = [
+  { href: "/smart-account", label: "Smart Account" },
   { href: "/#income", label: "Income Rails" },
   { href: "/#swap",   label: "Swap & Move" },
+  { href: "/rewards", label: "Rewards" },
+  { href: "/travel",  label: "Travel rewards" },
   { href: "/#ai",     label: "AI (soon)" },
   { href: "/#husd",   label: "HUSD" },
 ];
 
+// "Founder Pass" belongs here and is deliberately absent until /founders is
+// published. That page is a live Stripe checkout, not an explainer: it needs the
+// founder_orders table and the payment keys in place first, and a footer link to
+// a checkout that 500s is worse than no link at all.
 const COMPANY = [
   { href: "/#how",      label: "How it works" },
   { href: "/#security", label: "Security" },
-  { href: "/#download", label: "Download" },
+  { href: DOWNLOAD_ANCHOR, label: "Download" },
 ];
 
 const LEGAL = [
@@ -83,12 +96,12 @@ function FooterColumn({
       <ul className="flex flex-col gap-2.5">
         {links.map((l) => (
           <li key={l.href}>
-            <Link
+            <CtaLink
               href={l.href}
               className="text-small text-text-muted hover:text-text transition-colors duration-180"
             >
               {l.label}
-            </Link>
+            </CtaLink>
           </li>
         ))}
       </ul>

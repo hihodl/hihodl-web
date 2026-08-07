@@ -2,7 +2,9 @@ import "./globals.css";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
-const SITE = "https://www.hihodl.xyz";
+import { APP_STORE_URL, PLAY_STORE_URL } from "@/lib/appLinks";
+
+const SITE = "https://hihodl.xyz";
 const OG_URL = `${SITE}/banner-social.png`;
 
 export const metadata: Metadata = {
@@ -78,13 +80,12 @@ const jsonLd = {
       "@type": "SoftwareApplication",
       "@id": `${SITE}/#app`,
       name: "HIHODL — Stablecoin Wallet",
-      operatingSystem: "iOS",
+      operatingSystem: "iOS, Android",
       applicationCategory: "FinanceApplication",
       url: SITE,
       description:
         "Non-custodial stablecoin wallet for freelancers and remote workers. Gasless swaps on Solana, virtual USD account, username payments. AI layer coming soon.",
-      downloadUrl:
-        "https://apps.apple.com/nl/app/hihodl-stablecoin-wallet/id6755203065",
+      downloadUrl: [APP_STORE_URL, PLAY_STORE_URL],
       offers: [
         {
           "@type": "Offer",
@@ -211,7 +212,7 @@ const jsonLd = {
           name: "Is HIHODL on Android?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "iOS is live on the App Store. Android is in active development and will launch on Google Play soon.",
+            text: "Yes. HIHODL is live on both the App Store and Google Play. Set up takes about 30 seconds on either platform.",
           },
         },
       ],

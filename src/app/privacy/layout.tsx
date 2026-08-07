@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 
-const OG_URL = "https://www.hihodl.xyz/banner-social.jpg";
+const OG_URL = "https://hihodl.xyz/banner-social.jpg";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description: "HIHODL Privacy Policy - Learn how we collect, use, and protect your personal information.",
-  alternates: { canonical: "https://www.hihodl.xyz/privacy" },
+  alternates: { canonical: "https://hihodl.xyz/privacy" },
   openGraph: {
     type: "website",
-    url: "https://www.hihodl.xyz/privacy",
+    url: "https://hihodl.xyz/privacy",
     siteName: "HIHODL",
     title: "Privacy Policy | HIHODL",
     description: "HIHODL Privacy Policy - Learn how we collect, use, and protect your personal information.",

@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { gsap } from "gsap";
 import { PaymentGlobe } from "./PaymentGlobe";
+import { DownloadLink } from "./DownloadLink";
 
 /**
  * Hero — duality scene.
@@ -132,12 +133,9 @@ export function Hero() {
             </p>
 
             <div ref={ctas} className="mt-10 flex flex-wrap gap-3">
-              <Link
-                href="#download"
-                className="inline-flex items-center justify-center px-7 py-4 rounded-pill bg-amber text-text-on-amber font-medium text-body hover:bg-amber-glow transition-all duration-180 ease-out-soft hover:scale-[1.02]"
-              >
+              <DownloadLink className="inline-flex items-center justify-center px-7 py-4 rounded-pill bg-amber text-text-on-amber font-medium text-body hover:bg-amber-glow transition-all duration-180 ease-out-soft hover:scale-[1.02]">
                 Download
-              </Link>
+              </DownloadLink>
               <Link
                 href="#how"
                 className="inline-flex items-center justify-center px-7 py-4 rounded-pill border border-[color:var(--color-hairline-strong)] text-text font-medium text-body hover:bg-white/5 transition-colors duration-180"

@@ -3,11 +3,7 @@
 import { useEffect } from "react";
 import { useParams } from "next/navigation";
 
-// iOS is live; Android is in active development per layout.tsx:214 — until
-// Play Store goes live, send Android visitors to the homepage where the
-// "Coming soon to Google Play" copy + email-notify CTA lives.
-const APP_STORE_URL = "https://apps.apple.com/nl/app/hihodl-stablecoin-wallet/id6755203065";
-const PLAY_STORE_URL = "https://www.hihodl.xyz/#download";
+import { APP_STORE_URL, PLAY_STORE_URL } from "@/lib/appLinks";
 
 export default function InviteRedirect() {
   const { code } = useParams<{ code: string }>();
@@ -29,7 +25,7 @@ export default function InviteRedirect() {
         window.location.href = PLAY_STORE_URL;
       } else {
         // Desktop fallback — go to homepage
-        window.location.href = "https://www.hihodl.xyz";
+        window.location.href = "https://hihodl.xyz";
       }
     }, 1500);
 
