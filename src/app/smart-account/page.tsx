@@ -165,7 +165,17 @@ export default function SmartAccountPage() {
               />
               <Fact
                 title="It is bounded, not open-ended"
-                body="What you agree to is an amount and a date, not a blank cheque. When either runs out, money that arrives afterwards simply sits still until you say so again. Nothing is lost and nothing breaks."
+                /*
+                 * This card used to end "money that arrives afterwards simply
+                 * sits still until you say so again. Nothing is lost and nothing
+                 * breaks", which sold the failure case as a feature. Money
+                 * sitting still IS the thing broken: a balance that is half
+                 * earning and half idle is the one state this product exists not
+                 * to have. The permission still runs out on purpose; what
+                 * changed is that we now measure how fast it is being spent and
+                 * ask before it does.
+                 */
+                body="What you agree to is an amount and a date, not a blank cheque. We watch how fast you are using it and ask you to renew before it runs out, so your balance is never half earning and half sitting still. If you ignore us, what is already earning carries on — the permission only ever governs what happens next."
               />
               <Fact
                 title="Turning it off changes nothing else"
