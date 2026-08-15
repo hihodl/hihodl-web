@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 /**
  * HeroGlobe — v4 of the payment globe.
@@ -34,6 +34,21 @@ const CYCLE = 14;
 
 /** Authored time the globe freezes at when motion is reduced. */
 const STILL_T = 3.2;
+
+/**
+ * Which slice of the 1920x1080 stage is shown.
+ *
+ * "stage" is the prototype's full 16:9 frame, for a full-bleed slot. "globe" is
+ * a square window around the disc (the halo reaches R*1.1, so 510 of margin
+ * clears it) for a square container — letterboxing 16:9 into a square slot
+ * would shrink the globe to about half the diameter it should have.
+ */
+const VIEWS = {
+  stage: { x: 0, y: 0, w: W, h: H },
+  globe: { x: 450, y: 35, w: 1020, h: 1020 },
+} as const;
+
+export type GlobeFit = keyof typeof VIEWS;
 
 const AMBER = "#FFB703";
 const ICE = "#8FB8FF";
@@ -170,15 +185,24 @@ type Flow = {
   to: string;
 };
 
+/*
+ * Bubble copy carries no amounts.
+ *
+ * The prototype's figures (+$142.60, 9 nights → $412) were invented to dress
+ * the animation. On a financial product's homepage an invented number reads as
+ * a real transaction, so the bubbles show the corridor — which is the true
+ * claim, and the one worth making — and nothing that looks like a quote, a
+ * rate or a balance. Replace with real copy, not with plausible copy.
+ */
 const FLOWS: Flow[] = [
-  { a: 0, b: 2, start: 0.6, dur: 3.2, color: AMBER, kicker: "Freelance invoice · Madrid", main: "$3,200", to: "€2,940" },
-  { a: 1, b: 4, start: 2.4, dur: 3.4, color: ICE, kicker: "Sent Bogotá → Dubai", main: "COP 4.8M", to: "AED 4,300" },
-  { a: 5, b: 8, start: 4.2, dur: 3.4, color: AMBER, kicker: "Interest earned · 30 days", main: "+$142.60", to: "" },
-  { a: 7, b: 3, start: 6.0, dur: 3.2, color: ICE, kicker: "eSIM for Brazil · paid", main: "$18", to: "" },
-  { a: 6, b: 9, start: 7.8, dur: 3.4, color: AMBER, kicker: "Stay booked · Thailand", main: "9 nights", to: "$412" },
-  { a: 2, b: 5, start: 9.4, dur: 3.2, color: ICE, kicker: "USD account payout", main: "€890", to: "$965" },
-  { a: 4, b: 0, start: 10.6, dur: 2.6, color: AMBER, kicker: "Salary · paid in dollars", main: "$5,100", to: "" },
-  { a: 9, b: 6, start: 12.1, dur: 2.4, color: ICE, kicker: "Rent sent · São Paulo", main: "R$4,100", to: "$760" },
+  { a: 0, b: 2, start: 0.6, dur: 3.2, color: AMBER, kicker: "Freelance invoice · Madrid", main: "USD", to: "EUR" },
+  { a: 1, b: 4, start: 2.4, dur: 3.4, color: ICE, kicker: "Sent · Bogotá → Dubai", main: "COP", to: "AED" },
+  { a: 5, b: 8, start: 4.2, dur: 3.4, color: AMBER, kicker: "Interest earned · Savings", main: "USD", to: "" },
+  { a: 7, b: 3, start: 6.0, dur: 3.2, color: ICE, kicker: "eSIM · Brazil", main: "Paid", to: "" },
+  { a: 6, b: 9, start: 7.8, dur: 3.4, color: AMBER, kicker: "Stay booked · Thailand", main: "Paid", to: "" },
+  { a: 2, b: 5, start: 9.4, dur: 3.2, color: ICE, kicker: "USD account payout", main: "EUR", to: "USD" },
+  { a: 4, b: 0, start: 10.6, dur: 2.6, color: AMBER, kicker: "Salary · paid in dollars", main: "USD", to: "" },
+  { a: 9, b: 6, start: 12.1, dur: 2.4, color: ICE, kicker: "Rent sent · São Paulo", main: "BRL", to: "USD" },
 ];
 
 /* ─── Rotation-independent geometry, resolved once ───
@@ -383,7 +407,7 @@ function ringPath(ring: DenseRing, cosRot: number, sinRot: number): string | nul
 
 /* ─── Layers ─── */
 
-function Globe({ rot }: { rot: number }) {
+function Globe({ rot, sheenId }: { rot: number; sheenId: string }) {
   const shapes: JSX.Element[] = [];
   // the whole frame's trigonometry, computed once
   const r = rot * DEG;
@@ -416,7 +440,7 @@ function Globe({ rot }: { rot: number }) {
       />,
     );
     shapes.push(
-      <path key={`lg${i}`} d={d} fill="url(#hg-landSheen)" stroke="none" opacity={0.9} />,
+      <path key={`lg${i}`} d={d} fill={`url(#${sheenId})`} stroke="none" opacity={0.9} />,
     );
   });
   return <>{shapes}</>;
@@ -529,7 +553,15 @@ function Flows({ T, rot }: { T: number; rot: number }) {
 }
 
 /** Currency bubble that pops where a payment lands. */
-function Bubbles({ T, rot }: { T: number; rot: number }) {
+function Bubbles({
+  T,
+  rot,
+  view,
+}: {
+  T: number;
+  rot: number;
+  view: (typeof VIEWS)[GlobeFit];
+}) {
   const items: JSX.Element[] = [];
   FLOWS.forEach((f, fi) => {
     const { local } = flowState(f, T);
@@ -544,16 +576,18 @@ function Bubbles({ T, rot }: { T: number; rot: number }) {
     if (o <= 0.01) return;
     const rise = -18 * easeOutCubic(inP) - 22 * outP;
     const scale = 0.9 + 0.1 * easeOutBack(inP);
-    const ax = clamp(p.x, 90, W - 110);
-    const ay = clamp(p.y, 210, H - 150);
-    const flip = ax > W - 470 ? -1 : 1;
+    // keep the card inside whichever window is on screen, then move it into
+    // that window's own coordinates
+    const ax = clamp(p.x, view.x + 90, view.x + view.w - 110);
+    const ay = clamp(p.y, view.y + 210, view.y + view.h - 150);
+    const flip = ax > view.x + view.w - 470 ? -1 : 1;
     items.push(
       <div
         key={`b${fi}`}
         style={{
           position: "absolute",
-          left: ax,
-          top: ay,
+          left: ax - view.x,
+          top: ay - view.y,
           opacity: o,
           transform: `translate3d(${flip > 0 ? 14 : -14}px, calc(-100% + ${rise}px), 0) translateX(${flip > 0 ? "0" : "-100%"}) scale(${scale})`,
           transformOrigin: flip > 0 ? "0% 100%" : "100% 100%",
@@ -651,6 +685,8 @@ function useClock(active: boolean) {
 export type HeroGlobeProps = {
   /** Degrees per second of base spin. The prototype's Tweaks default is 9. */
   spin?: number;
+  /** "stage" for a full-bleed 16:9 slot, "globe" for a square one. */
+  fit?: GlobeFit;
   /** Currency bubbles that pop where a payment lands. */
   showBubbles?: boolean;
   /** The prototype's built-in caption. Off by default: the hero owns its copy. */
@@ -662,27 +698,31 @@ export type HeroGlobeProps = {
 
 export function HeroGlobe({
   spin = 9,
+  fit = "stage",
   showBubbles = true,
   showCaption = false,
   headline = "Get paid anywhere. Hold dollars.",
   subhead = "HOLD · self-custodial stablecoin wallet",
   className,
 }: HeroGlobeProps) {
+  // SVG ids are document-global, so two mounted globes would collide
+  const uid = `hg-${useId().replace(/:/g, "")}`;
+  const view = VIEWS[fit];
   const hostRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0);
   const [visible, setVisible] = useState(true);
 
-  // The bubbles are absolutely positioned in stage pixels, so the whole 1920x1080
-  // stage is scaled as one unit rather than letting the SVG scale on its own.
+  // The bubbles are absolutely positioned in stage pixels, so the whole window
+  // is scaled as one unit rather than letting the SVG scale on its own.
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
     const ro = new ResizeObserver(([entry]) => {
-      setScale(entry.contentRect.width / W);
+      setScale(entry.contentRect.width / view.w);
     });
     ro.observe(host);
     return () => ro.disconnect();
-  }, []);
+  }, [view.w]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -701,44 +741,48 @@ export function HeroGlobe({
   const defs = useMemo(
     () => (
       <defs>
-        <clipPath id="hg-sphereClip">
+        <clipPath id={`${uid}-sphereClip`}>
           <circle cx={CX} cy={CY} r={R - 1} />
         </clipPath>
-        <radialGradient id="hg-ocean" cx="36%" cy="28%" r="78%">
+        <radialGradient id={`${uid}-ocean`} cx="36%" cy="28%" r="78%">
           <stop offset="0%" stopColor="#2C6C99" />
           <stop offset="45%" stopColor="#13405F" />
           <stop offset="78%" stopColor="#0A2237" />
           <stop offset="100%" stopColor="#05101B" />
         </radialGradient>
-        <radialGradient id="hg-landSheen" cx="32%" cy="18%" r="90%">
+        <radialGradient id={`${uid}-landSheen`} cx="32%" cy="18%" r="90%">
           <stop offset="0%" stopColor="#FFFFFF" stopOpacity={0.22} />
           <stop offset="55%" stopColor="#FFFFFF" stopOpacity={0.05} />
           <stop offset="100%" stopColor="#FFFFFF" stopOpacity={0} />
         </radialGradient>
-        <radialGradient id="hg-specular" cx="50%" cy="50%">
+        <radialGradient id={`${uid}-specular`} cx="50%" cy="50%">
           <stop offset="0%" stopColor="#EAF6FF" stopOpacity={0.4} />
           <stop offset="100%" stopColor="#EAF6FF" stopOpacity={0} />
         </radialGradient>
-        <radialGradient id="hg-terminator" cx="50%" cy="50%">
+        <radialGradient id={`${uid}-terminator`} cx="50%" cy="50%">
           <stop offset="55%" stopColor="#000814" stopOpacity={0} />
           <stop offset="88%" stopColor="#000814" stopOpacity={0.26} />
           <stop offset="100%" stopColor="#000814" stopOpacity={0.5} />
         </radialGradient>
-        <radialGradient id="hg-halo" cx="50%" cy="50%">
+        <radialGradient id={`${uid}-halo`} cx="50%" cy="50%">
           <stop offset="70%" stopColor="#6FA8D6" stopOpacity={0} />
           <stop offset="90%" stopColor="#9AD1F5" stopOpacity={0.14} />
           <stop offset="100%" stopColor="#9AD1F5" stopOpacity={0} />
         </radialGradient>
       </defs>
     ),
-    [],
+    [uid],
   );
 
   return (
     <div
       ref={hostRef}
       className={className}
-      style={{ position: "relative", width: "100%", aspectRatio: `${W} / ${H}` }}
+      style={{
+        position: "relative",
+        width: "100%",
+        aspectRatio: `${view.w} / ${view.h}`,
+      }}
       aria-hidden
     >
       <div
@@ -746,8 +790,8 @@ export function HeroGlobe({
           position: "absolute",
           top: 0,
           left: 0,
-          width: W,
-          height: H,
+          width: view.w,
+          height: view.h,
           transformOrigin: "top left",
           transform: `scale(${scale})`,
           overflow: "hidden",
@@ -756,31 +800,33 @@ export function HeroGlobe({
         }}
       >
         <svg
-          width={W}
-          height={H}
-          viewBox={`0 0 ${W} ${H}`}
+          width={view.w}
+          height={view.h}
+          viewBox={`${view.x} ${view.y} ${view.w} ${view.h}`}
           style={{
             position: "absolute",
             inset: 0,
             transform: `scale(${breathe})`,
-            transformOrigin: `${CX}px ${CY}px`,
+            // transform-origin is CSS pixels from the element's own top-left,
+            // which the viewBox has moved to (view.x, view.y)
+            transformOrigin: `${CX - view.x}px ${CY - view.y}px`,
           }}
         >
           {defs}
-          <circle cx={CX} cy={CY} r={R * 1.1} fill="url(#hg-halo)" />
-          <circle cx={CX} cy={CY} r={R} fill="url(#hg-ocean)" />
-          <g clipPath="url(#hg-sphereClip)">
-            <Globe rot={rot} />
+          <circle cx={CX} cy={CY} r={R * 1.1} fill={`url(#${uid}-halo)`} />
+          <circle cx={CX} cy={CY} r={R} fill={`url(#${uid}-ocean)`} />
+          <g clipPath={`url(#${uid}-sphereClip)`}>
+            <Globe rot={rot} sheenId={`${uid}-landSheen`} />
           </g>
           <ellipse
             cx={CX - R * 0.34}
             cy={CY - R * 0.4}
             rx={R * 0.5}
             ry={R * 0.4}
-            fill="url(#hg-specular)"
+            fill={`url(#${uid}-specular)`}
             opacity={0.75}
           />
-          <circle cx={CX} cy={CY} r={R} fill="url(#hg-terminator)" />
+          <circle cx={CX} cy={CY} r={R} fill={`url(#${uid}-terminator)`} />
           <Flows T={T} rot={rot} />
           <circle
             cx={CX}
@@ -800,7 +846,7 @@ export function HeroGlobe({
           />
         </svg>
 
-        {showBubbles ? <Bubbles T={T} rot={rot} /> : null}
+        {showBubbles ? <Bubbles T={T} rot={rot} view={view} /> : null}
 
         {showCaption ? (
           <div
