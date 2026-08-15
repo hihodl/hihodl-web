@@ -25,7 +25,7 @@ Preview it at `/lab/hero-globe` (`npm run dev`). Nothing on the live site change
 - **Non-uniform spin.** The globe races across the empty Pacific and slows over
   land, so the interesting half is on screen longer.
 - **Currency bubbles.** A glass card pops where each payment lands, carrying the
-  corridor and the two amounts (`$3,200 → €2,940`).
+  amount and the corridor.
 
 Both are pure SVG and maths. v4 adds **no dependencies**.
 
@@ -90,34 +90,67 @@ a 16:9 stage into it letterboxes, leaving the globe at 48% of the slot width.
 globe at 90% — roughly double the diameter. `fit="stage"` keeps the prototype's
 full 16:9 frame for any future full-bleed slot.
 
-**Bubbles off.** The hero already renders two glass cards ("Salary received",
-"Gasless swap"), animated in by its GSAP intro. The globe's bubbles use the same
-visual language, so running both puts two card systems in the same 448px. The
-hero keeps its own cards; the bubbles show at `/lab/hero-globe`.
+**Bubbles off, cards on.** The globe's bubbles are sized for a 1920px stage; in
+a 448px slot they scale to roughly half the size the hero's own glass cards read
+at. So the hero keeps its two cards and the bubbles stay at `/lab/hero-globe`,
+where the stage is full width.
 
-If we later want the bubbles instead, that means deleting those two cards and
-their timeline steps from `Hero.tsx` — a design call, not a mechanical one.
+## Payment cards
 
-### Bubble copy
+The hero's two glass cards used to be static — "Salary received" and a gasless
+swap, revealed once by the GSAP intro and then frozen for the rest of the visit.
+They are now slots that turn over as payments land on the globe.
 
-The prototype's amounts (`+$142.60`, `9 nights → $412`, `$3,200 → €2,940`) were
-invented to dress the animation. On a financial product's homepage an invented
-number reads as a real transaction, so the bubbles now carry the corridor and
-nothing that resembles a quote, a rate or a balance:
+**One clock.** `useGlobeClock` is exported and the hero owns it, passing the
+same `T` to `HeroGlobe` and to both cards. Two clocks would each accumulate
+their own rounding and slide apart, and a card that turns over half a second
+after its arc lands looks like a bug.
 
-| Kicker | Shows |
-| --- | --- |
-| Freelance invoice · Madrid | USD → EUR |
-| Sent · Bogotá → Dubai | COP → AED |
-| Interest earned · Savings | USD |
-| eSIM · Brazil | Paid |
-| Stay booked · Thailand | Paid |
-| USD account payout | EUR → USD |
-| Salary · paid in dollars | USD |
-| Rent sent · São Paulo | BRL → USD |
+**Two animations, two elements.** The GSAP intro animates the wrapper; the card
+inside animates its own opacity and lift. Sharing one element would put the
+intro and the cycle in a fight over one `opacity`.
 
-This is a holding state, not final copy. Replace it with real copy — not with
-plausible copy.
+**No state.** A card derives everything from the clock: which payment its slot
+is showing, how long ago that payment landed, and how long until the slot turns
+over. So it is correct on any frame it happens to mount on, including the
+reduced-motion still.
+
+**Slot allocation.** Landings are dealt to the two slots in strict alternation,
+which is what keeps one slot holding while the other swaps. A slot holds its
+payment until the next one dealt to it lands, so both cards are always
+populated — a hero that goes card-less between payments reads as a loading
+state. Verified over the cycle: no blank frame, and no slot ever asked to show
+two payments at once.
+
+Two of the eight flows carry `card: false`. They land in the crowded tail of the
+cycle, where a card would get about a second on screen; skipping them lifts the
+shortest hold from 1.9s to 3.4s. They still fly, and still pop a bubble at
+`/lab/hero-globe`.
+
+| Lands at | Slot | Card |
+| --- | --- | --- |
+| 0.40s | moonlight | Interest earned · +9.20 USD · on your Savings balance |
+| 3.67s | amber | Salary received · +3,200 USD · San Francisco → Madrid |
+| 5.66s | moonlight | Payment received · +4.2M COP · Bogotá → Dubai |
+| 7.46s | amber | Interest earned · +25.40 USD · on your Savings balance |
+| 9.07s | moonlight | Invoice paid · +1,450 EUR · Berlin → Lagos |
+| 11.06s | amber | Payment received · +8,400 BRL · São Paulo → Singapore |
+
+The accent is fixed per slot rather than per card, so only the content changes —
+a card that also changed colour would read as two cards trading places.
+
+### On the figures
+
+These are illustrative, and nothing here is read from an account or a rate. Two
+rules keep them from reading as quotes, and both are worth holding to if the
+copy is rewritten:
+
+- **One currency per card.** A pair (`$3,200 → €2,940`, as the prototype had)
+  implies an FX rate, which we would then have to keep true.
+- **No APY on the interest cards.** A rate on the homepage is a promise.
+
+Both were checked across the whole set before this landed, along with the
+absence of any swap card.
 
 ## Open questions
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import type { RefObject } from "react";
 
 /**
  * HeroGlobe — v4 of the payment globe.
@@ -174,36 +175,97 @@ const CITIES = [
   { n: "Singapore", lat: 1.35, lon: 103.82 },
 ];
 
-type Flow = {
+/** What a bubble, and the hero's glass cards, say about one payment. */
+export type GlobePayment = {
+  kicker: string;
+  /** Pre-formatted, sign included — never a number to be formatted at render. */
+  amount: string;
+  currency: string;
+  note: string;
+};
+
+type Flow = GlobePayment & {
   a: number;
   b: number;
   start: number;
   dur: number;
   color: string;
-  kicker: string;
-  main: string;
-  to: string;
+  /** Whether this payment also fills a hero card slot (see paymentInSlot). */
+  card: boolean;
 };
 
 /*
- * Bubble copy carries no amounts.
+ * Marketing copy, not data.
  *
- * The prototype's figures (+$142.60, 9 nights → $412) were invented to dress
- * the animation. On a financial product's homepage an invented number reads as
- * a real transaction, so the bubbles show the corridor — which is the true
- * claim, and the one worth making — and nothing that looks like a quote, a
- * rate or a balance. Replace with real copy, not with plausible copy.
+ * These figures are illustrative — nothing here is read from an account or a
+ * rate. Two rules keep them from reading as quotes: one currency per card (a
+ * pair would imply an FX rate we would then have to keep true), and the
+ * interest cards say what they are without an APY, since a rate on the
+ * homepage is a promise.
  */
 const FLOWS: Flow[] = [
-  { a: 0, b: 2, start: 0.6, dur: 3.2, color: AMBER, kicker: "Freelance invoice · Madrid", main: "USD", to: "EUR" },
-  { a: 1, b: 4, start: 2.4, dur: 3.4, color: ICE, kicker: "Sent · Bogotá → Dubai", main: "COP", to: "AED" },
-  { a: 5, b: 8, start: 4.2, dur: 3.4, color: AMBER, kicker: "Interest earned · Savings", main: "USD", to: "" },
-  { a: 7, b: 3, start: 6.0, dur: 3.2, color: ICE, kicker: "eSIM · Brazil", main: "Paid", to: "" },
-  { a: 6, b: 9, start: 7.8, dur: 3.4, color: AMBER, kicker: "Stay booked · Thailand", main: "Paid", to: "" },
-  { a: 2, b: 5, start: 9.4, dur: 3.2, color: ICE, kicker: "USD account payout", main: "EUR", to: "USD" },
-  { a: 4, b: 0, start: 10.6, dur: 2.6, color: AMBER, kicker: "Salary · paid in dollars", main: "USD", to: "" },
-  { a: 9, b: 6, start: 12.1, dur: 2.4, color: ICE, kicker: "Rent sent · São Paulo", main: "BRL", to: "USD" },
+  { a: 0, b: 2, start: 0.6, dur: 3.2, color: AMBER, card: true,
+    kicker: "Salary received", amount: "+3,200", currency: "USD", note: "San Francisco → Madrid" },
+  { a: 1, b: 4, start: 2.4, dur: 3.4, color: ICE, card: true,
+    kicker: "Payment received", amount: "+4.2M", currency: "COP", note: "Bogotá → Dubai" },
+  { a: 5, b: 8, start: 4.2, dur: 3.4, color: AMBER, card: true,
+    kicker: "Interest earned", amount: "+25.40", currency: "USD", note: "on your Savings balance" },
+  { a: 7, b: 3, start: 6.0, dur: 3.2, color: ICE, card: true,
+    kicker: "Invoice paid", amount: "+1,450", currency: "EUR", note: "Berlin → Lagos" },
+  { a: 6, b: 9, start: 7.8, dur: 3.4, color: AMBER, card: true,
+    kicker: "Payment received", amount: "+8,400", currency: "BRL", note: "São Paulo → Singapore" },
+  { a: 2, b: 5, start: 9.4, dur: 3.2, color: ICE, card: false,
+    kicker: "Invoice paid", amount: "+1,200", currency: "USD", note: "Madrid → Manila" },
+  { a: 4, b: 0, start: 10.6, dur: 2.6, color: AMBER, card: false,
+    kicker: "Payment received", amount: "+5,600", currency: "AED", note: "Dubai → San Francisco" },
+  { a: 9, b: 6, start: 12.1, dur: 2.4, color: ICE, card: true,
+    kicker: "Interest earned", amount: "+9.20", currency: "USD", note: "on your Savings balance" },
 ];
+
+/* ─── Hero card schedule ─── */
+
+/**
+ * The hero's two glass cards show the same payments as the bubbles, so a card
+ * turns over when its arc lands.
+ *
+ * Landings are dealt to the two slots in strict alternation, which is what
+ * keeps one slot holding while the other swaps. A slot holds its payment until
+ * the next one dealt to it lands, so both cards are always populated — a hero
+ * that goes card-less between payments reads as a loading state.
+ *
+ * Two of the eight flows carry no card (`card: false`): they land in the
+ * crowded tail of the cycle, where a card would get about a second on screen.
+ * They still fly, and still pop a bubble.
+ */
+const LANDINGS = FLOWS.map((f, i) => ({ i, at: (f.start + f.dur * 0.96) % CYCLE }))
+  .filter(({ i }) => FLOWS[i].card)
+  .sort((x, y) => x.at - y.at);
+
+const SLOTS: { at: number; payment: GlobePayment }[][] = [[], []];
+LANDINGS.forEach((l, k) => SLOTS[k % SLOTS.length].push({ at: l.at, payment: FLOWS[l.i] }));
+
+/**
+ * The payment a hero card slot is showing at time T, with the age of that
+ * payment and the time left before the slot turns over — the two numbers a
+ * card needs to fade itself in and out without holding any state.
+ */
+export function paymentInSlot(slot: number, T: number) {
+  const list = SLOTS[((slot % SLOTS.length) + SLOTS.length) % SLOTS.length];
+  const t = ((T % CYCLE) + CYCLE) % CYCLE;
+  let current = 0;
+  let age = Infinity;
+  let remaining = Infinity;
+  list.forEach((item, i) => {
+    const since = (((t - item.at) % CYCLE) + CYCLE) % CYCLE;
+    if (since < age) {
+      age = since;
+      current = i;
+    }
+    const until = (((item.at - t) % CYCLE) + CYCLE) % CYCLE;
+    if (until > 0 && until < remaining) remaining = until;
+  });
+  return { payment: list[current].payment, index: current, age, remaining };
+}
 
 /* ─── Rotation-independent geometry, resolved once ───
  *
@@ -623,18 +685,16 @@ function Bubbles({
           }}
         >
           <span style={{ fontSize: 34, fontWeight: 700, letterSpacing: "-0.02em" }}>
-            {f.main}
+            {f.amount}
           </span>
-          {f.to ? (
-            <span style={{ fontSize: 22, color: "rgba(255,255,255,0.42)" }}>→</span>
-          ) : null}
-          {f.to ? (
-            <span
-              style={{ fontSize: 24, fontWeight: 600, color: "rgba(255,255,255,0.86)" }}
-            >
-              {f.to}
-            </span>
-          ) : null}
+          <span
+            style={{ fontSize: 24, fontWeight: 600, color: "rgba(255,255,255,0.62)" }}
+          >
+            {f.currency}
+          </span>
+        </div>
+        <div style={{ fontSize: 17, marginTop: 6, color: "rgba(255,255,255,0.45)" }}>
+          {f.note}
         </div>
       </div>,
     );
@@ -645,15 +705,20 @@ function Bubbles({
 /* ─── Clock ─── */
 
 /**
- * Authored seconds, advanced by rAF.
+ * Authored seconds, advanced by rAF while `ref` is on screen.
  *
  * Freezes at STILL_T when the visitor asks for reduced motion, and stops
- * entirely while the globe is scrolled out of view — a hero that keeps
+ * entirely while the element is scrolled out of view — a hero that keeps
  * projecting 4,000 points a frame from three screens away is pure battery.
+ *
+ * Exported because the hero drives its payment cards off the same clock: two
+ * clocks would accumulate their own rounding and slide apart, and a card that
+ * turns over half a second after its arc lands looks like a bug.
  */
-function useClock(active: boolean) {
+export function useGlobeClock(ref: RefObject<Element | null>, enabled = true) {
   const [T, setT] = useState(STILL_T);
   const [reduced, setReduced] = useState(false);
+  const [visible, setVisible] = useState(true);
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -664,7 +729,17 @@ function useClock(active: boolean) {
   }, []);
 
   useEffect(() => {
-    if (reduced || !active) return;
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting), {
+      rootMargin: "200px",
+    });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [ref]);
+
+  useEffect(() => {
+    if (!enabled || reduced || !visible) return;
     let raf = 0;
     let last = performance.now();
     const tick = (now: number) => {
@@ -675,7 +750,7 @@ function useClock(active: boolean) {
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [reduced, active]);
+  }, [enabled, reduced, visible]);
 
   return reduced ? STILL_T : T;
 }
@@ -691,6 +766,12 @@ export type HeroGlobeProps = {
   showBubbles?: boolean;
   /** The prototype's built-in caption. Off by default: the hero owns its copy. */
   showCaption?: boolean;
+  /**
+   * Authored seconds from an external useGlobeClock. Pass this when something
+   * outside the globe animates in step with it; omit it and the globe runs its
+   * own clock.
+   */
+  clock?: number;
   headline?: string;
   subhead?: string;
   className?: string;
@@ -701,6 +782,7 @@ export function HeroGlobe({
   fit = "stage",
   showBubbles = true,
   showCaption = false,
+  clock,
   headline = "Get paid anywhere. Hold dollars.",
   subhead = "HOLD · self-custodial stablecoin wallet",
   className,
@@ -710,7 +792,6 @@ export function HeroGlobe({
   const view = VIEWS[fit];
   const hostRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0);
-  const [visible, setVisible] = useState(true);
 
   // The bubbles are absolutely positioned in stage pixels, so the whole window
   // is scaled as one unit rather than letting the SVG scale on its own.
@@ -724,17 +805,8 @@ export function HeroGlobe({
     return () => ro.disconnect();
   }, [view.w]);
 
-  useEffect(() => {
-    const host = hostRef.current;
-    if (!host) return;
-    const io = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting), {
-      rootMargin: "200px",
-    });
-    io.observe(host);
-    return () => io.disconnect();
-  }, []);
-
-  const T = useClock(visible);
+  const ownT = useGlobeClock(hostRef, clock === undefined);
+  const T = clock ?? ownT;
   const rot = rotAt(T, spin);
   const breathe = 1 + 0.01 * Math.sin(T * 0.45);
 
