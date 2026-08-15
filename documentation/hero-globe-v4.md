@@ -129,15 +129,57 @@ shortest hold from 1.9s to 3.4s. They still fly, and still pop a bubble at
 
 | Lands at | Slot | Card |
 | --- | --- | --- |
-| 0.40s | moonlight | Interest earned · +9.20 USD · on your Savings balance |
-| 3.67s | amber | Salary received · +3,200 USD · San Francisco → Madrid |
-| 5.66s | moonlight | Payment received · +4.2M COP · Bogotá → Dubai |
-| 7.46s | amber | Interest earned · +25.40 USD · on your Savings balance |
-| 9.07s | moonlight | Invoice paid · +1,450 EUR · Berlin → Lagos |
-| 11.06s | amber | Payment received · +8,400 BRL · São Paulo → Singapore |
+| 0.40s | top | Interest earned · +9.20 USD · on your Savings balance |
+| 3.67s | bottom | Salary received · +3,200 USD · San Francisco → Madrid |
+| 5.66s | top | Payment received · +4.2M COP · Bogotá → Dubai |
+| 7.46s | bottom | Interest earned · +25.40 USD · on your Savings balance |
+| 9.07s | top | Invoice paid · +1,450 EUR · Berlin → Lagos |
+| 11.06s | bottom | Payment received · +8,400 BRL · São Paulo → Singapore |
 
-The accent is fixed per slot rather than per card, so only the content changes —
-a card that also changed colour would read as two cards trading places.
+### Contrast
+
+Two of the design tokens the cards started with do not survive this hero's
+background. The section paints `#2C4566 → #4F7090 → #2C4566` and the cards are
+glass, so the type is effectively sitting on brand blue:
+
+| Line | Was | On `#4F7090` | Now |
+| --- | --- | --- | --- |
+| Kicker, top slot | `moonlight` `#5B7CFF` | 1.43:1 | `amber`, 2.97:1 |
+| Corridor / note | `text-faint` `#5A6068` | 1.22:1 | `text` `#F4F6FA`, 4.73:1 |
+
+Both were effectively invisible. Worth knowing that these are palette tokens,
+not one-offs — anything else that puts `text-faint` on a brand-blue ground has
+the same problem.
+
+Both kickers are amber now, so the accent no longer distinguishes the slots. It
+does not need to: they are in opposite corners. And the note goes full white
+rather than a lighter grey, because hierarchy here already comes from size — the
+amount above it is an `h4` and the note is `text-tiny`.
+
+### The count-up
+
+One card counts its amount up on arrival: Salary received, once per 14s cycle.
+
+The restraint is the point. A count-up on every card fires every three or four
+seconds forever, a few hundred pixels from the headline and the download button,
+and stops reading as a flourish and starts reading as a tic. Once a cycle it
+stays an event.
+
+Three details:
+
+- **Cubic easing, not exponential.** An expo count-up is inside 5% of its target
+  by the time the card has finished fading in, so the remaining half second
+  reads as a number that has stalled rather than one still arriving.
+- **The width is reserved up front**, in `ch` against the already-monospaced
+  digits, so the currency beside it does not slide as the number grows past each
+  thousands separator.
+- **Only plain figures roll.** `+4.2M` and `+25.40` render as authored — a
+  count-up that has to invent a format is one that will eventually print
+  something the copy never said.
+
+Verified over the cycle: exactly one card rolls, the count-up is monotonic,
+never overshoots the authored figure, never exceeds its reserved width, and the
+reduced-motion still does not land mid-roll.
 
 ### On the figures
 
