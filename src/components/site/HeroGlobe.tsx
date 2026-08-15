@@ -182,6 +182,12 @@ export type GlobePayment = {
   amount: string;
   currency: string;
   note: string;
+  /**
+   * Count the amount up on arrival. Deliberately set on ONE card: a count-up
+   * on every card is a tic, and a tic beside the headline competes with the
+   * CTA. Once per 14s cycle it stays an event.
+   */
+  roll?: boolean;
 };
 
 type Flow = GlobePayment & {
@@ -205,7 +211,8 @@ type Flow = GlobePayment & {
  */
 const FLOWS: Flow[] = [
   { a: 0, b: 2, start: 0.6, dur: 3.2, color: AMBER, card: true,
-    kicker: "Salary received", amount: "+3,200", currency: "USD", note: "San Francisco → Madrid" },
+    kicker: "Salary received", amount: "+3,200", currency: "USD", note: "San Francisco → Madrid",
+    roll: true },
   { a: 1, b: 4, start: 2.4, dur: 3.4, color: ICE, card: true,
     kicker: "Payment received", amount: "+4.2M", currency: "COP", note: "Bogotá → Dubai" },
   { a: 5, b: 8, start: 4.2, dur: 3.4, color: AMBER, card: true,
@@ -693,7 +700,9 @@ function Bubbles({
             {f.currency}
           </span>
         </div>
-        <div style={{ fontSize: 17, marginTop: 6, color: "rgba(255,255,255,0.45)" }}>
+        {/* Same reasoning as the hero cards: the corridor is the claim worth
+            reading, so it does not get the faintest grey in the card. */}
+        <div style={{ fontSize: 17, marginTop: 6, color: "rgba(255,255,255,0.78)" }}>
           {f.note}
         </div>
       </div>,

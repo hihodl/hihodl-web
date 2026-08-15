@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { gsap } from "gsap";
 import { HeroGlobe, paymentInSlot, useGlobeClock } from "./HeroGlobe";
+import type { GlobePayment } from "./HeroGlobe";
 import { DownloadLink } from "./DownloadLink";
 
 /**
@@ -13,10 +14,10 @@ import { DownloadLink } from "./DownloadLink";
  * scroll-up gets gimmicky — Linear / Stripe / Mercury pattern: a hero is a
  * moment, not a loop.
  *
- * The globe sits center-right with two glass cards beside it, one top-left
- * (moonlight) and one bottom-right (amber). The cards are not static: each is
- * a slot that turns over as payments land on the globe, driven by the globe's
- * own clock so a card and its arc arrive together.
+ * The globe sits center-right with two glass cards beside it, top-left and
+ * bottom-right. The cards are not static: each is a slot that turns over as
+ * payments land on the globe, driven by the globe's own clock so a card and
+ * its arc arrive together.
  *
  * The two animations own different properties and must stay that way. GSAP
  * animates the wrapper (the intro reveal, once); the card inside animates its
@@ -24,23 +25,43 @@ import { DownloadLink } from "./DownloadLink";
  * and the cycle fighting over one opacity.
  */
 
-/** Accent per slot — fixed, so only the content changes as payments turn over. */
-const TONES = {
-  moonlight: { text: "text-moonlight", dot: "bg-moonlight" },
-  amber: { text: "text-amber", dot: "bg-amber" },
-} as const;
+/** Seconds the count-up takes. */
+const ROLL = 0.9;
 
-function PaymentCard({
-  slot,
-  clock,
-  tone,
-}: {
-  slot: number;
-  clock: number;
-  tone: keyof typeof TONES;
-}) {
+/**
+ * The amount, counted up on arrival when the payment asks for it.
+ *
+ * Two things keep the roll from jittering the line it sits on: the digits are
+ * already monospaced, and the span reserves the final width in `ch` up front,
+ * so the currency beside it never slides while the number grows.
+ *
+ * Anything the regex does not recognise as a plain figure — "+4.2M", "+25.40" —
+ * renders as authored. A count-up that has to invent a format is a count-up
+ * that will one day print something the copy never said.
+ */
+function Amount({ payment, age }: { payment: GlobePayment; age: number }) {
+  const plain = payment.roll ? /^([+-]?)([\d,]+)$/.exec(payment.amount) : null;
+  if (!plain || age >= ROLL) {
+    return <span className="font-mono">{payment.amount}</span>;
+  }
+  const target = Number(plain[2].replace(/,/g, ""));
+  // Cubic, not exponential: an expo count-up is inside 5% of its target by the
+  // time the card has finished fading in, so the remaining half second reads as
+  // a number that has stalled rather than one still arriving.
+  const eased = 1 - Math.pow(1 - age / ROLL, 3);
+  return (
+    <span
+      className="font-mono inline-block"
+      style={{ minWidth: `${payment.amount.length}ch` }}
+    >
+      {plain[1]}
+      {Math.round(target * eased).toLocaleString("en-US")}
+    </span>
+  );
+}
+
+function PaymentCard({ slot, clock }: { slot: number; clock: number }) {
   const { payment, age, remaining } = paymentInSlot(slot, clock);
-  const accent = TONES[tone];
 
   // In on arrival, out just before the slot turns over. Both ends are derived
   // from the clock rather than held in state, so the card is correct on any
@@ -57,17 +78,26 @@ function PaymentCard({
         transform: `translateY(${(10 * (1 - eased)).toFixed(2)}px)`,
       }}
     >
-      <div
-        className={`flex items-center gap-2 text-tiny uppercase tracking-wider ${accent.text}`}
-      >
-        <span className={`w-1.5 h-1.5 rounded-full ${accent.dot}`} />
+      {/*
+        Amber on both cards, not one amber and one moonlight. Moonlight
+        (#5B7CFF) on this hero's blue gradient is 1.43:1 — the kicker was
+        effectively invisible. Amber clears 2.97:1 on the same ground.
+      */}
+      <div className="flex items-center gap-2 text-tiny uppercase tracking-wider text-amber">
+        <span className="w-1.5 h-1.5 rounded-full bg-amber" />
         {payment.kicker}
       </div>
       <div className="mt-2 font-display text-h4 font-light text-text leading-tight">
-        <span className="font-mono">{payment.amount}</span>{" "}
+        <Amount payment={payment} age={age} />{" "}
         <span className="text-text-muted text-small">{payment.currency}</span>
       </div>
-      <div className="mt-1 text-tiny text-text-faint">{payment.note}</div>
+      {/*
+        text-text, not text-text-faint. The faint grey (#5A6068) is 1.22:1 on
+        this hero's blue gradient — the corridor was unreadable. Hierarchy here
+        comes from size and weight, which the h4 amount above already carries;
+        it does not need the colour as well.
+      */}
+      <div className="mt-1 text-tiny text-text">{payment.note}</div>
     </div>
   );
 }
@@ -110,7 +140,7 @@ export function Hero() {
         0.4,
       );
 
-      // 1.4 — payment card slot A (moonlight)
+      // 1.4 — payment card slot A
       tl.to(
         cardTop.current,
         { opacity: 1, y: 0, scale: 1, duration: 0.6, ease: "power3.out" },
@@ -123,7 +153,7 @@ export function Hero() {
       // 2.2 — ctas
       tl.to(ctas.current, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 2.2);
 
-      // 2.6 — payment card slot B (amber)
+      // 2.6 — payment card slot B
       tl.to(
         cardBottom.current,
         { opacity: 1, y: 0, scale: 1, duration: 0.6, ease: "power3.out" },
@@ -238,11 +268,11 @@ export function Hero() {
               </div>
 
               <div ref={cardTop} className="absolute top-6 -left-2 md:-left-8 z-10">
-                <PaymentCard slot={0} clock={clock} tone="moonlight" />
+                <PaymentCard slot={0} clock={clock} />
               </div>
 
               <div ref={cardBottom} className="absolute bottom-10 -right-2 md:-right-8 z-10">
-                <PaymentCard slot={1} clock={clock} tone="amber" />
+                <PaymentCard slot={1} clock={clock} />
               </div>
             </div>
           </div>
