@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 /**
- * Four superpowers — the WHY HIHODL.
+ * Four superpowers — the WHY HOLD.
  *
  * Layout:
  *   Row 1: 2 cards (Social login · Privacy)
@@ -23,10 +23,10 @@ export function Superpowers() {
         <div className="max-w-2xl">
           <p className="text-tiny uppercase tracking-wider text-text-faint">Built for global earners</p>
           <h2 className="mt-6 font-display text-h2 md:text-h1 font-light text-text">
-            Four things only HIHODL does.
+            Four things only HOLD does.
           </h2>
           <p className="mt-6 text-lead text-text-muted">
-            Most wallets make you choose: simple or onchain. HIHODL gives you both —
+            Most wallets make you choose: simple or onchain. HOLD gives you both —
             fintech-grade UX with full self-custody, gasless rails and on-chain privacy.
           </p>
         </div>
@@ -107,8 +107,8 @@ function SocialLoginCard() {
       accent="moonlight"
       eyebrow="No seed phrase"
       title="Sign up like an app. Still your money."
-      body="Sign in with Face ID or Google. Your private key is split into shards — one on your device, one with us — and reassembled only inside your phone, only to sign your transactions. We never see the full key. We never hold your funds. Non-custodial by design."
-      proof="Multi-party computation (MPC) + device biometrics. Recover from any device with the same Face ID or Google account."
+      body="Sign in with Face ID or Google. Your wallet is created on your own device and your keys stay there — transactions are signed on your phone, by you. We never hold your funds and we cannot move them. Non-custodial by design."
+      proof="Device biometrics plus an encrypted backup, so you can recover on a new device by signing in. How that backup works is spelled out in Section 5.1 of our Terms."
       visual={<SocialLoginVisual />}
     />
   );

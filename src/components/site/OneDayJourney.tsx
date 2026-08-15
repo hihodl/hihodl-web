@@ -83,7 +83,7 @@ export function OneDayJourney() {
       ref={sectionRef}
       className="relative bg-abyss"
       style={{ height: reduced ? "auto" : `${SCENES.length * 100}vh` }}
-      aria-label="A day in the life with HIHODL"
+      aria-label="A day in the life with HOLD"
     >
       <div className="sticky top-0 h-[100dvh] overflow-hidden flex items-center pt-20 pb-6 lg:pt-0 lg:pb-0">
         {/* Animated background */}

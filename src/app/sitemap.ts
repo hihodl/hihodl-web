@@ -5,7 +5,7 @@ import type { MetadataRoute } from "next";
  *
  * Every product page was reachable only from the footer, which means a crawler
  * finds them by following links from the home page and nothing tells it which
- * ones matter. Product pages are the reason someone searching "hihodl smart
+ * ones matter. Product pages are the reason someone searching "hold smart
  * account" lands on us rather than on a thread about us.
  *
  * RULES FOR THIS LIST
@@ -35,10 +35,22 @@ const PAGES: Entry[] = [
   // The product pages. Rates move, so they are the ones worth recrawling.
   { path: "/smart-account", priority: 0.9, changeFrequency: "weekly" },
   { path: "/rewards", priority: 0.8, changeFrequency: "weekly" },
+  // One entry per product, never a combined one. "esim japan" and "hotel
+  // cashback" are different searches by different people a month apart, and a
+  // page that answers both ranks for neither.
+  { path: "/esim", priority: 0.8, changeFrequency: "monthly" },
   { path: "/travel", priority: 0.7, changeFrequency: "monthly" },
   { path: "/faq", priority: 0.6, changeFrequency: "monthly" },
   { path: "/privacy", priority: 0.3, changeFrequency: "yearly" },
   { path: "/terms", priority: 0.3, changeFrequency: "yearly" },
+  // Linked from the eSIM checkout in the app, so it is read far more often than
+  // a legal page normally is — and it is the page that says who the seller is.
+  { path: "/legal/esim", priority: 0.3, changeFrequency: "yearly" },
+  // Referenced from both legal pages and quoted to counterparties in compliance
+  // reviews, so it is checked far more often than a yearly page. It also changes
+  // whenever an integration does, which is the whole reason it exists.
+  { path: "/legal/providers", priority: 0.3, changeFrequency: "monthly" },
+  { path: "/legal/referral-terms", priority: 0.2, changeFrequency: "yearly" },
   { path: "/e-sign", priority: 0.2, changeFrequency: "yearly" },
 ];
 

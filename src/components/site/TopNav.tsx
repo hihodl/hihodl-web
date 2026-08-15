@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { DownloadLink } from "@/components/site/DownloadLink";
+import { Wordmark } from "@/components/site/Wordmark";
 
 // Smart Account is the only product page in the nav, and it is first.
 //
@@ -41,15 +42,9 @@ export function TopNav() {
         }`}
       >
         <div className="container-page flex items-center h-18 gap-6">
-          {/* Logo — amber wordmark forced to white via CSS for crisp brand contrast */}
-          <Link href="/" className="flex items-center shrink-0" aria-label="HIHODL home">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/logo-amber.png"
-              alt="HIHODL"
-              className="h-6 md:h-7 w-auto"
-              style={{ filter: "brightness(0) invert(1)" }}
-            />
+          {/* Logo — vector wordmark, white via currentColor */}
+          <Link href="/" className="flex items-center shrink-0 text-text" aria-label="HOLD home">
+            <Wordmark className="h-6 md:h-7 w-auto" />
           </Link>
 
           {/* Center nav */}

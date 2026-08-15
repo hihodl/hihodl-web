@@ -1,26 +1,26 @@
 import type { Metadata } from "next";
 
-const OG_URL = "https://hihodl.xyz/banner-social.jpg";
+const OG_URL = "https://hihodl.xyz/banner-social.png";
 
 export const metadata: Metadata = {
   title: "Traveler — How We Calculate Visa & Tax Days",
   description:
-    "How HIHODL's Traveler feature estimates visa allowances and tax-residency days, the data behind it, and its limits. Traveler is an informational tool, not tax or immigration advice.",
+    "How HOLD's Traveler feature estimates visa allowances and tax-residency days, the data behind it, and its limits. Traveler is an informational tool, not tax or immigration advice.",
   alternates: { canonical: "https://hihodl.xyz/legal/traveler" },
   openGraph: {
     type: "website",
     url: "https://hihodl.xyz/legal/traveler",
-    siteName: "HIHODL",
-    title: "Traveler — How We Calculate Visa & Tax Days | HIHODL",
+    siteName: "HOLD",
+    title: "Traveler — How We Calculate Visa & Tax Days | HOLD",
     description:
-      "How HIHODL's Traveler feature estimates visa allowances and tax-residency days, the data behind it, and its limits. Informational only, not advice.",
+      "How HOLD's Traveler feature estimates visa allowances and tax-residency days, the data behind it, and its limits. Informational only, not advice.",
     images: [
       {
         url: OG_URL,
         width: 1200,
         height: 630,
-        alt: "HIHODL Wallet — Don't Save. HODL.",
-        type: "image/jpeg",
+        alt: "HOLD — Earn globally, live locally",
+        type: "image/png",
       },
     ],
     locale: "en_US",
@@ -29,9 +29,9 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     site: "@hiihodl",
     creator: "@hiihodl",
-    title: "Traveler — How We Calculate Visa & Tax Days | HIHODL",
+    title: "Traveler — How We Calculate Visa & Tax Days | HOLD",
     description:
-      "How HIHODL's Traveler feature estimates visa allowances and tax-residency days, the data behind it, and its limits. Informational only, not advice.",
+      "How HOLD's Traveler feature estimates visa allowances and tax-residency days, the data behind it, and its limits. Informational only, not advice.",
     images: [OG_URL],
   },
 };

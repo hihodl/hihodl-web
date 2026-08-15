@@ -1,24 +1,24 @@
 import type { Metadata } from "next";
 
-const OG_URL = "https://hihodl.xyz/banner-social.jpg";
+const OG_URL = "https://hihodl.xyz/banner-social.png";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
-  description: "HIHODL Terms of Service - Read our terms and conditions for using HIHODL wallet services.",
+  description: "HOLD Terms of Service - Read our terms and conditions for using HOLD wallet services.",
   alternates: { canonical: "https://hihodl.xyz/terms" },
   openGraph: {
     type: "website",
     url: "https://hihodl.xyz/terms",
-    siteName: "HIHODL",
-    title: "Terms of Service | HIHODL",
-    description: "HIHODL Terms of Service - Read our terms and conditions for using HIHODL wallet services.",
+    siteName: "HOLD",
+    title: "Terms of Service | HOLD",
+    description: "HOLD Terms of Service - Read our terms and conditions for using HOLD wallet services.",
     images: [
       { 
         url: OG_URL, 
         width: 1200, 
         height: 630, 
-        alt: "HIHODL Wallet — Don't Save. HODL.", 
-        type: "image/jpeg",
+        alt: "HOLD — Earn globally, live locally", 
+        type: "image/png",
       },
     ],
     locale: "en_US",
@@ -27,8 +27,8 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     site: "@hiihodl",  
     creator: "@hiihodl",
-    title: "Terms of Service | HIHODL",
-    description: "HIHODL Terms of Service - Read our terms and conditions for using HIHODL wallet services.",
+    title: "Terms of Service | HOLD",
+    description: "HOLD Terms of Service - Read our terms and conditions for using HOLD wallet services.",
     images: [OG_URL],
   },
 };

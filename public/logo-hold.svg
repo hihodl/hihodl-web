@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  HOLD wordmark - inherits colour from CSS (currentColor).
+  Geometry measured from Marketing/LOGOS V.3/1.png. Design grid 339x82.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 339 82" role="img" aria-label="HOLD">
+  <path fill="currentColor" fill-rule="evenodd" d="M0,1.0 H18.0 V33.5 H55.0 V1.0 H73.0 V81.0 H55.0 V48.5 H18.0 V81.0 H0 Z M88.0,41.0 a43.5,41.0 0 1,0 87.0,0 a43.5,41.0 0 1,0 -87.0,0 Z M106.0,41.0 a25.5,26.0 0 1,0 51.0,0 a25.5,26.0 0 1,0 -51.0,0 Z M189.0,1.0 H207.0 V66.0 H248.0 V81.0 H189.0 Z M259.0,1.0 H299.0 A39.5,40.0 0 0,1 299.0,81.0 H259.0 Z M277.0,16.0 H300.5 A21.0,25.0 0 0,1 300.5,66.0 H277.0 Z"/>
+</svg>

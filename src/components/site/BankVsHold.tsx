@@ -1,41 +1,41 @@
 /**
- * BankVsHihodl — editorial comparison.
+ * BankVsHold — editorial comparison.
  *
  * Not a feature checklist (Ogvio does that). A side-by-side written like
- * a book: bank on the left in muted text, HIHODL on the right in living
+ * a book: bank on the left in muted text, HOLD on the right in living
  * text. Reads top-down as a story, not a spec sheet.
  */
-export function BankVsHihodl() {
-  const rows: Array<{ topic: string; bank: string; hihodl: string }> = [
+export function BankVsHold() {
+  const rows: Array<{ topic: string; bank: string; hold: string }> = [
     {
       topic: "Receiving from abroad",
       bank: "3–5 business days. $25–40 wire fee. FX markup hidden in the rate.",
-      hihodl: "Minutes. Stablecoins land 1:1 with the dollar. Zero fees on receive.",
+      hold: "Minutes. Stablecoins land 1:1 with the dollar. Zero fees on receive.",
     },
     {
       topic: "Custody of your money",
       bank: "They hold it. They can freeze it.",
-      hihodl: "You hold it. Private key on your device. We can't touch it.",
+      hold: "You hold it. Private key on your device. We can't touch it.",
     },
     {
       topic: "Moving across borders",
       bank: "Compliance forms. Limits. Calls.",
-      hihodl: "A username. A tap. Done.",
+      hold: "A username. A tap. Done.",
     },
     {
       topic: "Cost to swap",
       bank: "1.5–3% spread, buried in the rate.",
-      hihodl: "First $500/month gas-free. 0.50% above the cap, all-in.",
+      hold: "First $500/month gas-free. 0.50% above the cap, all-in.",
     },
     {
       topic: "Privacy on chain",
       bank: "Not on chain.",
-      hihodl: "Stealth addresses. Your public handle never exposes your balance.",
+      hold: "Stealth addresses. Your public handle never exposes your balance.",
     },
     {
       topic: "When you travel",
       bank: "Card declined. App requires home wifi. Support closed.",
-      hihodl: "Same balance. Same app. Same speed. Anywhere.",
+      hold: "Same balance. Same app. Same speed. Anywhere.",
     },
   ];
 
@@ -78,7 +78,7 @@ export function BankVsHihodl() {
             </div>
             <div className="px-8 py-6">
               <p className="text-small uppercase tracking-[0.18em] text-amber font-medium">
-                HIHODL
+                HOLD
               </p>
             </div>
           </div>
@@ -102,7 +102,7 @@ export function BankVsHihodl() {
               </div>
               <div className="px-8 py-5 md:py-10 pb-7">
                 <p className="text-lead md:text-h4 font-light text-text leading-snug">
-                  {r.hihodl}
+                  {r.hold}
                 </p>
               </div>
             </div>

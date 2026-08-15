@@ -48,7 +48,7 @@ export function WhyFree() {
           <Reason
             n="02"
             title="Card interchange"
-            body="When the HIHODL Card launches, every swipe pays us a small fee from the merchant — not from you. The same way Apple Pay and Revolut work, minus the bank in the middle."
+            body="When the HOLD Card launches, every swipe pays us a small fee from the merchant — not from you. The same way Apple Pay and Revolut work, minus the bank in the middle."
           />
           <Reason
             n="03"

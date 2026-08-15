@@ -10,6 +10,7 @@ import Leaderboard from "@/components/Leaderboard";
 import Milestones from "@/components/Milestones";
 import ReferralDashboard from "@/components/ReferralDashboard";
 import { FeatherXTwitter } from "@subframe/core";
+import { Wordmark } from "@/components/site/Wordmark";
 
 const fadeInUp: Variants = {
   hidden: { opacity: 0, y: 40, filter: "blur(4px)" },
@@ -38,8 +39,8 @@ export default function LeaderboardPage() {
         {/* ==== TOP BAR ==== */}
         <div className="flex w-full flex-col items-center justify-center bg-[#0a141e66] px-6 py-6 sticky top-0 z-50 backdrop-blur-xl transition-all duration-300 mobile:px-2 mobile:py-2 mb-6 md:mb-8">
           <div className="flex w-full max-w-[1280px] items-center justify-between rounded-2xl bg-[#0a141e26] px-8 py-4 shadow-lg backdrop-blur-2xl border-b border-[rgba(255,255,255,0.12)] border-t-2 border-t-brand-600 mobile:hidden">
-            <a href="/" className="font-['Inter'] text-[24px] font-[700] leading-[28px] text-[#eaf6ffff] -tracking-[0.02em] hover:text-brand-ffb703 transition">
-              HIHODL
+            <a href="/" aria-label="HOLD home" className="text-[#eaf6ffff] hover:text-brand-ffb703 transition">
+              <Wordmark className="h-5 w-auto" />
             </a>
             <Button
               className="hover:shadow-[0_0_28px_rgba(255,183,3,0.5)] hover:shadow-[0_0_28px_rgba(255,183,3,0.5)]:hover inline-flex items-center px-6 py-3 rounded-xl text-black font-['Inter'] font-[700] bg-brand-ffb703 transition-all duration-300"
@@ -132,7 +133,7 @@ export default function LeaderboardPage() {
               to help spread the word!
             </p>
             <span className="font-['Inter'] text-[13px] font-[400] leading-[19px] text-[#94a3b8ff]">
-              © 2025 HiHODL. All rights reserved.
+              © 2026 HOLD. All rights reserved.
             </span>
           </div>
         </div>

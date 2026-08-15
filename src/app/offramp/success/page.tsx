@@ -37,7 +37,7 @@ export default function OfframpSuccessPage() {
               Your withdrawal is on its way
             </h1>
             <p className="font-[&apos;Inter&apos;] text-lg text-[#94a3b8ff] max-w-[480px]">
-              We have handed it to our payout partner. You can close this page — HIHODL
+              We have handed it to our payout partner. You can close this page — HOLD
               will tell you the moment it reaches your bank.
             </p>
           </div>
@@ -67,14 +67,14 @@ export default function OfframpSuccessPage() {
               <Button
                 className="w-full hover:shadow-[0_0_28px_rgba(255,183,3,0.5)] inline-flex items-center justify-center px-6 py-3 rounded-xl text-black font-[&apos;Inter&apos;] font-[700] bg-brand-ffb703 transition-all duration-300"
                 onClick={() => {
-                  // /open bridges to hihodl:// and falls back to the store.
+                  // /open bridges to hold:// and falls back to the store.
                   // No `to` param on purpose: the app opens at its root, and
                   // there is no published deep link for a withdrawal screen to
                   // point at yet.
                   window.location.href = "/open";
                 }}
               >
-                Open HIHODL
+                Open HOLD
               </Button>
               <Button
                 className="w-full border px-6 py-3 rounded-xl border-[rgba(255,255,255,0.1)] bg-[rgba(10,20,30,0.60)] backdrop-blur-xl text-[#EAF6FF] transition"

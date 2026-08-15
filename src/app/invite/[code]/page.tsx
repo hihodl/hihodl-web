@@ -12,7 +12,7 @@ export default function InviteRedirect() {
     if (!code) return;
 
     // Try to open the app via deep link
-    window.location.href = `hihodl://invite/${code}`;
+    window.location.href = `hold://invite/${code}`;
 
     // Fallback: after 1.5s, redirect to the appropriate store
     const timer = setTimeout(() => {
@@ -63,7 +63,7 @@ export default function InviteRedirect() {
         </svg>
       </div>
       <h1 style={{ fontSize: 28, fontWeight: 900, marginBottom: 8 }}>
-        You&apos;ve been invited to HiHODL
+        You&apos;ve been invited to HOLD
       </h1>
       <p
         style={{
@@ -73,7 +73,7 @@ export default function InviteRedirect() {
           maxWidth: 400,
         }}
       >
-        Your friend invited you to join HiHODL — the gasless crypto wallet.
+        Your friend invited you to join HOLD — the gasless stablecoin wallet.
         Sign up and swap $5+ to earn them a free month of Pro.
       </p>
       <p style={{ fontSize: 14, color: "rgba(255,255,255,0.4)" }}>

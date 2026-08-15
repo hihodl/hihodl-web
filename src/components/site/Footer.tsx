@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CtaLink } from "@/components/site/DownloadLink";
 import { DOWNLOAD_ANCHOR } from "@/lib/appLinks";
+import { Wordmark } from "@/components/site/Wordmark";
 
 // Every product link here goes to a page that states what we keep on THAT
 // product, in context. There is deliberately no "Fees" entry: an aggregate
@@ -11,7 +12,8 @@ const PRODUCT = [
   { href: "/#income", label: "Income Rails" },
   { href: "/#swap",   label: "Swap & Move" },
   { href: "/rewards", label: "Rewards" },
-  { href: "/travel",  label: "Travel rewards" },
+  { href: "/travel",  label: "Stays" },
+  { href: "/esim",    label: "eSIM" },
   { href: "/#ai",     label: "AI (soon)" },
   { href: "/#husd",   label: "HUSD" },
 ];
@@ -45,14 +47,8 @@ export function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-12 md:gap-8">
           {/* Brand block */}
           <div className="col-span-2 md:col-span-2 flex flex-col gap-6">
-            <Link href="/" className="inline-flex items-center" aria-label="HIHODL home">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/logo-amber.png"
-                alt="HIHODL"
-                className="h-8 w-auto"
-                style={{ filter: "brightness(0) invert(1)" }}
-              />
+            <Link href="/" className="inline-flex items-center text-text" aria-label="HOLD home">
+              <Wordmark className="h-8 w-auto" />
             </Link>
             <p className="font-editorial text-h4 text-text-muted max-w-sm">
               Earn globally, live locally.
@@ -70,7 +66,7 @@ export function Footer() {
 
         <div className="mt-20 pt-8 hairline flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <p className="text-tiny text-text-faint">
-            © {new Date().getFullYear()} HIHODL. Non-custodial. You hold the keys.
+            © {new Date().getFullYear()} HOLD. Non-custodial. You hold the keys.
           </p>
           <p className="text-tiny text-text-faint font-mono">
             Built for the 100M+ remote workers worldwide.

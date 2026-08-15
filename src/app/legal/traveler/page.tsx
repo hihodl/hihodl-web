@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import type { Variants } from "framer-motion";
 import { DefaultPageLayout } from "@/ui/layouts/DefaultPageLayout";
 import { Button } from "@/ui/components/Button";
+import { Wordmark } from "@/components/site/Wordmark";
 
 const fadeInUp: Variants = {
   hidden: { opacity: 0, y: 40, filter: "blur(4px)" },
@@ -23,11 +24,8 @@ export default function TravelerLegalPage() {
         {/* ==== TOP BAR ==== */}
         <div className="flex w-full flex-col items-center justify-center bg-[#0a141e66] px-6 py-6 sticky top-0 z-50 backdrop-blur-xl transition-all duration-300 mobile:px-2 mobile:py-2 mb-6 md:mb-8">
           <div className="flex w-full max-w-[1280px] items-center justify-between rounded-2xl bg-[#0a141e26] px-8 py-4 shadow-lg backdrop-blur-2xl border-b border-[rgba(255,255,255,0.12)] border-t-2 border-t-brand-600 mobile:hidden">
-            <a
-              href="/"
-              className="font-['Inter'] text-[24px] font-[700] leading-[28px] text-[#eaf6ffff] -tracking-[0.02em] hover:text-brand-ffb703 transition"
-            >
-              HIHODL
+            <a href="/" aria-label="HOLD home" className="text-[#eaf6ffff] hover:text-brand-ffb703 transition">
+              <Wordmark className="h-5 w-auto" />
             </a>
             <Button
               className="hover:shadow-[0_0_28px_rgba(255,183,3,0.5)] inline-flex items-center px-6 py-3 rounded-xl text-black font-['Inter'] font-[700] bg-brand-ffb703 transition-all duration-300"
@@ -60,7 +58,7 @@ export default function TravelerLegalPage() {
             <p className="text-[#eaf6ffff] font-['Inter'] font-[600] leading-relaxed">
               Traveler is an informational tool that helps you estimate your visa
               allowance and tax-residency days. It is not tax, legal, or
-              immigration advice, and HIHODL is not a tax advisor, law firm, or
+              immigration advice, and HOLD is not a tax advisor, law firm, or
               immigration adviser. Estimates can be incomplete or out of date.
               Always confirm your situation with official government sources and,
               where it matters, a qualified professional before you rely on it.
@@ -243,7 +241,7 @@ export default function TravelerLegalPage() {
                 Traveler is provided on an &quot;as is&quot; and &quot;as
                 available&quot; basis, without warranties of any kind, express or
                 implied, including accuracy, completeness, or fitness for a
-                particular purpose. To the fullest extent permitted by law, HIHODL
+                particular purpose. To the fullest extent permitted by law, HOLD
                 and its affiliates are not liable for any loss, penalty, fine,
                 denied entry, overstay, tax consequence, or other damage arising
                 from your use of, or reliance on, Traveler estimates. You remain

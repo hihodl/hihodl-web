@@ -4,7 +4,7 @@ import Link from "next/link";
 import { TopNav } from "@/components/site/TopNav";
 import { Footer } from "@/components/site/Footer";
 import { SectionHairline } from "@/components/site/SectionHairline";
-import { HIHODL_KEEPS, RATE_DISCLAIMER } from "@/lib/rates.config";
+import { HOLD_KEEPS, RATE_DISCLAIMER } from "@/lib/rates.config";
 
 /**
  * /smart-account — what the product is, in the words a customer would use.
@@ -42,7 +42,7 @@ import { HIHODL_KEEPS, RATE_DISCLAIMER } from "@/lib/rates.config";
 export const metadata: Metadata = {
   title: "Smart Account",
   description:
-    "Your balance earns while it sits there, and you can spend it whenever you want. What that means, how it works, and exactly what HIHODL keeps.",
+    "Your balance earns while it sits there, and you can spend it whenever you want. What that means, how it works, and exactly what HOLD keeps.",
   alternates: { canonical: "/smart-account" },
 };
 
@@ -60,11 +60,11 @@ const FAQ = [
     a: "Continuously. There is no payment date and no monthly credit — the amount under your balance is what has been earned so far, and it is already yours. Nothing has to be claimed and nothing is held back until a cut-off.",
   },
   {
-    q: "Can HIHODL take my money?",
+    q: "Can HOLD take my money?",
     a: "No, and this is not a promise — it is how the account is built. Your money stays in your own name the entire time. We can help it start earning, and that is the only thing we can do with it. There is no button on our side that moves your money to us, because we never built one.",
   },
   {
-    q: "What if HIHODL disappears tomorrow?",
+    q: "What if HOLD disappears tomorrow?",
     a: "Your money is not ours to lose. It sits in your name, and you keep the keys to it. If we vanished overnight you would still be able to reach it without us.",
   },
   {
@@ -82,8 +82,8 @@ const FAQ = [
 ];
 
 export default function SmartAccountPage() {
-  const savingsShare = HIHODL_KEEPS.savingsInterestShareBps / 100;
-  const mainShare = HIHODL_KEEPS.mainInterestShareBps / 100;
+  const savingsShare = HOLD_KEEPS.savingsInterestShareBps / 100;
+  const mainShare = HOLD_KEEPS.mainInterestShareBps / 100;
 
   return (
     <>
@@ -276,7 +276,7 @@ export default function SmartAccountPage() {
                 Not everywhere. Rules on this kind of product differ from country to country,
                 and in some places we cannot offer it at all. The app tells you plainly
                 whether it is available to you before you turn anything on, and everything
-                else in HIHODL works either way.
+                else in HOLD works either way.
               </p>
               <p className="mt-8 text-small text-text-faint">
                 <span aria-hidden>* </span>

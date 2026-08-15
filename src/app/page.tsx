@@ -5,7 +5,7 @@ import { Hero } from "@/components/site/Hero";
 import { IncomeRails } from "@/components/site/IncomeRails";
 import { OneDayJourney } from "@/components/site/OneDayJourney";
 import { Superpowers } from "@/components/site/Superpowers";
-import { BankVsHihodl } from "@/components/site/BankVsHihodl";
+import { BankVsHold } from "@/components/site/BankVsHold";
 import { BuiltFor } from "@/components/site/BuiltFor";
 import { WhyFree } from "@/components/site/WhyFree";
 import { NotifyMeForm } from "@/components/site/NotifyMeForm";
@@ -63,7 +63,7 @@ export default function Home() {
 
         {/* ─── 3.5 · Mid-page CTA bridge ────────────────────────── */}
         <CtaStrip
-          eyebrow="50,000+ global earners already on HIHODL"
+          eyebrow="50,000+ global earners already on HOLD"
           title="Try it before reading another word."
           subtitle="On App Store and Google Play. Set up in 30 seconds."
           primary={{ label: "Download free", href: DOWNLOAD_ANCHOR }}
@@ -76,8 +76,8 @@ export default function Home() {
           <Superpowers />
         </div>
 
-        {/* ─── 4.3 · Bank vs HIHODL — the side-by-side ─────────── */}
-        <BankVsHihodl />
+        {/* ─── 4.3 · Bank vs HOLD — the side-by-side ─────────── */}
+        <BankVsHold />
 
         {/* ─── 4.6 · Built for — six archetypes ────────────────── */}
         <BuiltFor />
@@ -103,7 +103,7 @@ export default function Home() {
               <Step
                 n={1}
                 title="Sign in with Face ID"
-                body="No seed phrase. Your private key is split — half on your phone, half held by us — and reassembled only inside your device, only to sign your transactions."
+                body="Nothing to write down. Your wallet is created on your phone, and an encrypted backup means you can sign in on a new device and pick up where you left off. Only you can sign a transaction."
                 badge="10 seconds"
               />
               <Step
@@ -217,7 +217,7 @@ export default function Home() {
                 <span className="text-text-muted">Talk to your money.</span>
               </h2>
               <p className="mt-8 text-lead text-text-muted max-w-2xl">
-                HIHODL is becoming the first AI-native stablecoin wallet. Ask in plain language —
+                HOLD is becoming the first AI-native stablecoin wallet. Ask in plain language —
                 <em className="not-italic text-text"> &ldquo;send 200 USDC to Lucía,&rdquo; &ldquo;split my paycheck 60/30/10,&rdquo;
                 &ldquo;move savings to the highest yield&rdquo;</em> — and your wallet does it.
                 Self-custodial, on-chain, signed only by you.
@@ -234,7 +234,7 @@ export default function Home() {
           eyebrow="The first $500 is on us. Every month."
           title="Stop thinking. Start moving."
           subtitle="No setup fees. No KYC for basic use. No bank required."
-          primary={{ label: "Get HIHODL free", href: DOWNLOAD_ANCHOR }}
+          primary={{ label: "Get HOLD free", href: DOWNLOAD_ANCHOR }}
           tone="amber"
         />
 
@@ -267,7 +267,7 @@ export default function Home() {
                 role="Designer · Buenos Aires → Lisbon"
               />
               <Testimonial
-                quote="My clients pay me in USD. I pay rent in pesos. HIHODL is the bridge I'd been hacking together with three apps."
+                quote="My clients pay me in USD. I pay rent in pesos. HOLD is the bridge I'd been hacking together with three apps."
                 name="Akin O."
                 role="Developer · Lagos"
               />
@@ -289,7 +289,7 @@ export default function Home() {
               "linear-gradient(180deg, #2C4566 0%, #4F7090 50%, #2C4566 100%)",
           }}
         >
-          {/* Steel-blue gradient mirrors the HIHODL logo background */}
+          {/* Steel-blue gradient mirrors the HOLD logo background */}
           <div
             className="absolute inset-0 pointer-events-none"
             style={{

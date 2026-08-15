@@ -17,9 +17,10 @@
  *    quoted back at itself.
  * 2. Anything not signed off is `provisional: true`. Provisional values render
  *    with a marker so nobody mistakes a working assumption for a commitment.
- * 3. What HIHODL KEEPS lives under `HIHODL_KEEPS`. That block is rendered on
- *    /fees and on no other page, ever. Every other surface renders what the
- *    USER RECEIVES, net of our share — use the `net*` helpers at the bottom.
+ * 3. What HOLD KEEPS lives under `HOLD_KEEPS`. Each key there names the ONE
+ *    product page allowed to render it — there is no /fees and there will not
+ *    be one. Everywhere else renders what the USER RECEIVES, net of our share:
+ *    use the `net*` helpers at the bottom.
  * 4. Headline rates are phrased "up to X%". Yields float; a flat claim is a
  *    promise we cannot keep and a regulator can read.
  *
@@ -43,7 +44,7 @@ export const RATE_DISCLAIMER = "Rates are variable and not guaranteed.";
 export const PROVISIONAL_LABEL = "Provisional — not final";
 
 /* ══════════════════════════════════════════════════════════════════════════
- * 1. WHAT HIHODL KEEPS
+ * 1. WHAT HOLD KEEPS
  *
  * ⚠️  NEVER RENDER TWO OF THESE KEYS ON THE SAME PAGE.
  *
@@ -68,7 +69,7 @@ export const PROVISIONAL_LABEL = "Provisional — not final";
  * Superseded: /fees, the aggregate schedule, removed 2026-08-06 (Alex).
  * Archived at documentation/superseded/fees-page-2026-08-06.tsx.txt.
  * ══════════════════════════════════════════════════════════════════════════ */
-export const HIHODL_KEEPS = {
+export const HOLD_KEEPS = {
   /**
    * Our cut of the INTEREST a savings position earns. Never a cut of principal.
    *
@@ -153,12 +154,102 @@ export const HIHODL_KEEPS = {
   atmFeeProvisional: true,
 
   /**
-   * Commission a travel partner pays US on qualifying spend. We never mark a
-   * booking up; the partner sets the price and pays us out of their own margin.
+   * Commission a travel partner pays US on qualifying spend, under a
+   * click-out affiliate model.
+   *
+   * surface: NONE. /travel used to render this and no longer does. The affiliate
+   *          click-out was scoped and dropped — a partner's own app intercepts
+   *          the link and takes the commission with it — and the travel product
+   *          we actually built books the stay ourselves. See `stays` below for
+   *          the model that is live in code. This key stays because card-linked
+   *          offers may bring the affiliate shape back, and if they do it needs
+   *          a page of its own, not a line on someone else's.
    * measured: RATES.partnerCommissionBps = 500 in revenue-model.ts, read
    *           2026-07-30. Real programmes pay in a 3-8% band.
    */
   partnerCommissionBps: 500,
+
+  /**
+   * eSIM data plans. One key, one surface: /esim.
+   *
+   * ── The shape is resale, not commission ──
+   * We buy a bundle wholesale on a signed rate card and sell it at our own
+   * price. There is no booking fee, no delivery fee and no card fee to disclose
+   * because there are none — the entire take is the spread, and the honest
+   * disclosure is to say that plainly and say what share of it comes back.
+   *
+   * ── What is deliberately NOT published ──
+   * The cost-side mechanics: the wholesale floor, the flat margin component, the
+   * benchmark ceiling. A customer needs to know what they pay and what we keep
+   * of it; neither question is answered by handing over the pricing function.
+   * The two numbers below are the ones that change what a customer receives.
+   *
+   * measured: TRAVEL_PRICING.USER_SHARE {free: 0.5, pro: 0.6} in
+   *           server/services/travel/pricing.service.ts, read 2026-08-13 on
+   *           .worktrees/connectivity. We keep the remainder.
+   * measured: CONNECTIVITY_PRICING.TARGET_UNDERCUT_VS_BENCHMARK = 0.3 and
+   *           MIN_UNDERCUT_VS_PUBLIC = 0.02, same branch, same day.
+   *
+   * ⚠️  NOT LIVE. The connectivity layer sits on a branch, not in production.
+   *     /esim carried an "in development" label until 13-aug-2026; Alex removed
+   *     it — the page is not shared until the product is public, so the label
+   *     was warning nobody. That makes the branch the only thing standing
+   *     between these numbers and a customer reading them as an offer, so this
+   *     block does not ship to a public URL before the code does.
+   */
+  esim: {
+    /** Our share of the spread on the Free plan. The user gets the rest. */
+    marginShareBps: 5000,
+    /** Our share on Pro. Lower on purpose — the plan has to buy something. */
+    marginShareProBps: 4000,
+    /** Where we aim to land against a comparable public price, when one exists. */
+    targetUndercutVsPublicBps: 3000,
+    /** The guard rail: with a benchmark in hand we are never above it. */
+    minUndercutVsPublicBps: 200,
+    provisional: true,
+  },
+
+  /**
+   * Stays. One key, one surface: /travel.
+   *
+   * Hotels give trade partners a net rate. We add a markup, and if that lands
+   * at or above the price the same room shows publicly we come back down under
+   * it. We keep that spread — all of it. The guest's reward for booking here is
+   * HiPoints, on the same one-point-one-rate scale as everywhere else.
+   *
+   * ── THERE IS NO DOLLAR SHARE ON THIS PRODUCT, AND THAT IS A DECISION ──
+   * This block used to carry `marginShareBps: 5000` and /travel used to render
+   * it as "half of what is left, in dollars, after check-out". Alex corrected
+   * that on 13-aug-2026: we do not hand back cash on a stay. The reward is
+   * points, and the revenue model behind the product is the spread plus the
+   * float on money we hold against a supplier invoice — neither of which is a
+   * number a guest is owed.
+   *
+   * The keys are gone rather than zeroed on purpose. A `marginShareBps: 0` is
+   * an invitation for somebody to render "0% back" or to raise it without
+   * reading why it was lowered; an absent key makes the page fail to compile.
+   *
+   * ⚠️  THE BACKEND STILL DISAGREES WITH THIS BLOCK.
+   *     TRAVEL_PRICING.USER_SHARE is still {free: 0.5, pro: 0.6} and
+   *     cashback-payout.service.ts still sends real USDC with a MIN_CASHBACK of
+   *     0.5, on .worktrees/connectivity (read 2026-08-13). Nothing has shipped
+   *     — every travel table in production has zero rows — so no user has been
+   *     paid under either model, but that code must move to points before the
+   *     branch merges or the site and the product will say different things.
+   *
+   * measured: TRAVEL_PRICING.GROSS_MARKUP_ON_NET = 0.1 and
+   *           MIN_UNDERCUT_VS_PUBLIC = 0.02, same file, same day. Those two
+   *           describe the PRICE, which is unchanged and is still true.
+   */
+  stays: {
+    /** What we add to the net rate before the public price is consulted. */
+    markupOnNetBps: 1000,
+    /** With a public price in hand we always land at least this far under it. */
+    minUndercutVsPublicBps: 200,
+    /** What the guest earns. Points, never cash. See the note above. */
+    rewardCurrency: "points",
+    provisional: true,
+  },
 } as const;
 
 /* ══════════════════════════════════════════════════════════════════════════

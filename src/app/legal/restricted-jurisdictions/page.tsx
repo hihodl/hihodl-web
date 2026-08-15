@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import type { Variants } from "framer-motion";
 import { DefaultPageLayout } from "@/ui/layouts/DefaultPageLayout";
 import { Button } from "@/ui/components/Button";
+import { Wordmark } from "@/components/site/Wordmark";
 
 const fadeInUp: Variants = {
   hidden: { opacity: 0, y: 40, filter: "blur(4px)" },
@@ -63,8 +64,8 @@ export default function RestrictedJurisdictionsPage() {
         {/* ==== TOP BAR ==== */}
         <div className="flex w-full flex-col items-center justify-center bg-[#0a141e66] px-6 py-6 sticky top-0 z-50 backdrop-blur-xl transition-all duration-300 mobile:px-2 mobile:py-2 mb-6 md:mb-8">
           <div className="flex w-full max-w-[1280px] items-center justify-between rounded-2xl bg-[#0a141e26] px-8 py-4 shadow-lg backdrop-blur-2xl border-b border-[rgba(255,255,255,0.12)] border-t-2 border-t-brand-600 mobile:hidden">
-            <a href="/" className="font-['Inter'] text-[24px] font-[700] leading-[28px] text-[#eaf6ffff] -tracking-[0.02em] hover:text-brand-ffb703 transition">
-              HIHODL
+            <a href="/" aria-label="HOLD home" className="text-[#eaf6ffff] hover:text-brand-ffb703 transition">
+              <Wordmark className="h-5 w-auto" />
             </a>
             <Button
               className="hover:shadow-[0_0_28px_rgba(255,183,3,0.5)] hover:shadow-[0_0_28px_rgba(255,183,3,0.5)]:hover inline-flex items-center px-6 py-3 rounded-xl text-black font-['Inter'] font-[700] bg-brand-ffb703 transition-all duration-300"
@@ -95,7 +96,7 @@ export default function RestrictedJurisdictionsPage() {
           <div className="flex flex-col gap-8 text-[#eaf6ffff] font-['Inter'] font-[400] leading-relaxed">
             <section className="flex flex-col gap-4">
               <p className="text-[#94a3b8ff]">
-                Tokenized stocks are offered only to eligible users in supported regions. This page lists the jurisdictions where HIHODL does <span className="text-[#eaf6ffff] font-[600]">not</span> offer, market, or make tokenized stocks available. These controls apply only to the tokenized-stocks feature. Your self-custodial wallet and its other functions are not restricted by country. See the{" "}
+                Tokenized stocks are offered only to eligible users in supported regions. This page lists the jurisdictions where HOLD does <span className="text-[#eaf6ffff] font-[600]">not</span> offer, market, or make tokenized stocks available. These controls apply only to the tokenized-stocks feature. Your self-custodial wallet and its other functions are not restricted by country. See the{" "}
                 <a href="/legal/tokenized-stocks" className="text-brand-ffb703 underline underline-offset-2 hover:opacity-80 transition">Product Disclosure</a> for how the feature works.
               </p>
             </section>
@@ -111,7 +112,7 @@ export default function RestrictedJurisdictionsPage() {
             <section className="flex flex-col gap-4">
               <h2 className="text-2xl font-[700] text-[#eaf6ffff]">2. Sanctioned and high-risk jurisdictions</h2>
               <p className="text-[#94a3b8ff]">
-                In addition, tokenized stocks (like all of HIHODL&apos;s regulated features) are not available to persons resident in, or otherwise connected to, jurisdictions subject to comprehensive sanctions or heightened financial-crime controls, including:
+                In addition, tokenized stocks (like all of HOLD&apos;s regulated features) are not available to persons resident in, or otherwise connected to, jurisdictions subject to comprehensive sanctions or heightened financial-crime controls, including:
               </p>
               <CountryList items={SANCTIONED} />
               <p className="text-[#94a3b8ff]">
@@ -137,7 +138,7 @@ export default function RestrictedJurisdictionsPage() {
               <h2 className="text-2xl font-[700] text-[#eaf6ffff]">5. Contact</h2>
               <div className="bg-white/5 rounded-xl p-6 border border-[rgba(255,255,255,0.08)] backdrop-blur-xl">
                 <p className="text-[#eaf6ffff] font-[600] mb-2">HIHODL TECHNOLOGIES OÜ</p>
-                <p className="text-[#94a3b8ff]">Registered in Estonia</p>
+                <p className="text-[#94a3b8ff]">Registered in Estonia — the entity behind HOLD</p>
                 <p className="text-[#94a3b8ff]">Email: legal@hihodl.xyz</p>
                 <p className="text-[#94a3b8ff]">Website: https://hihodl.xyz</p>
               </div>
@@ -155,7 +156,7 @@ export default function RestrictedJurisdictionsPage() {
               <a href="/legal/stocks-risk" className="text-[#94a3b8ff] hover:text-brand-ffb703 transition text-sm font-['Inter']">Risk Disclosure</a>
             </div>
             <span className="font-['Inter'] text-[13px] font-[400] leading-[19px] text-[#94a3b8ff]">
-              © 2025 HiHODL. All rights reserved.
+              © 2026 HOLD. All rights reserved.
             </span>
           </div>
         </div>

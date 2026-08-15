@@ -47,7 +47,7 @@ import {
 export const metadata: Metadata = {
   title: "Rewards",
   description:
-    "How HIHODL rewards work: plan tiers, cashback bands and monthly limits, and what every asset earns and can borrow against. Rates are variable and not guaranteed.",
+    "How HOLD rewards work: plan tiers, cashback bands and monthly limits, and what every asset earns and can borrow against. Rates are variable and not guaranteed.",
   alternates: { canonical: "/rewards" },
 };
 

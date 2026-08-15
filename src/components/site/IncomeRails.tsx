@@ -1,5 +1,5 @@
 /**
- * IncomeRails — credibility strip showing the rails HIHODL plugs into.
+ * IncomeRails — credibility strip showing the rails HOLD plugs into.
  *
  * Goes RIGHT AFTER the Hero so the first scroll proves we're real
  * infrastructure, not a logo on a deck. Editorial, monochrome, no logos

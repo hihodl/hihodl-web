@@ -4,36 +4,68 @@ import Link from "next/link";
 import { TopNav } from "@/components/site/TopNav";
 import { Footer } from "@/components/site/Footer";
 import { SectionHairline } from "@/components/site/SectionHairline";
-import { HIHODL_KEEPS, RATE_DISCLAIMER, bps } from "@/lib/rates.config";
+import { HOLD_KEEPS, RATE_DISCLAIMER, bps } from "@/lib/rates.config";
 
 /**
- * /travel — what travel rewards are and how they will work.
+ * /travel — booking a stay from inside HOLD.
  *
- * EXPLANATORY ONLY. No exit links, no partner buttons, no outbound tracking.
+ * WHAT THIS PAGE USED TO SAY, AND WHY IT NO LONGER SAYS IT
  *
- * A click-out endpoint was scoped and dropped on purpose: the only way to keep
- * affiliate attribution alive from a mobile app is to force the booking into a
- * system browser tab, and the partner's own app then intercepts the link,
- * strips the parameters and takes the commission with it. Sending people into a
- * browser that is about to close on them is a worse experience and earns
- * nothing. The page exists so the story is written down and ready for the day
- * the card ships and the flow lives inside the product.
+ * Twice, now.
  *
- * TWO WORDS THIS PAGE MUST NEVER USE.
+ * Until 13-aug-2026 this URL described a click-out affiliate programme: you book
+ * with a partner, the partner pays us a commission, we pass most of it on. That
+ * page was honest about a model we then did not build. The click-out was dropped
+ * — a partner's own app intercepts the link, strips the parameters and takes the
+ * commission with it — and the travel product that exists in code books the stay
+ * itself, at a rate hotels give trade partners, with a price we set. Archived
+ * verbatim at documentation/superseded/travel-affiliate-page-2026-08-13.tsx.txt.
  *
- * "Discount" — we do not set partner prices and we cannot lower them. What we
- * do is share a commission the partner pays us. Calling that a discount is a
- * claim about someone else's pricing that we have no standing to make.
+ * Its replacement, written the same day, then said the guest gets half of the
+ * margin back IN DOLLARS after check-out. Alex struck that out within the hour:
+ * we do not hand back cash on a stay. The reward is HiPoints, the spread is ours
+ * in full, and the revenue behind the product is that spread plus the float on
+ * money we hold against a supplier invoice.
  *
- * A partner's name — not one appears here, and none may be added until the
- * agreement is signed. Naming an unsigned partner is a promise made with
- * somebody else's brand.
+ * So: no dollar figure, no share of the margin, no "cashback" on this page.
+ *
+ * THREE WORDS THIS PAGE MUST NEVER USE
+ *
+ * "Discount" — we do not lower anybody's rate. We are quoted a net rate, we set
+ * a price on top of it, and we hold that price under the public one. Calling the
+ * gap a discount describes the wrong party's decision.
+ *
+ * "Commission" — not on this page and not in the app. The guest's number is the
+ * guest's number; the word invites the question of whose margin it came out of.
+ *
+ * "Cashback" — the card pays cashback, in dollars, and that word is spoken for.
+ * A stay earns points. Letting the two share a word is how a guest ends up
+ * expecting a transfer that is never coming.
+ *
+ * WHAT IS DELIBERATELY NOT ON THIS PAGE
+ *
+ * The float. It is the larger half of the economics and it stays off the public
+ * site until Nuitée confirms their invoicing terms in writing. The reason is in
+ * the header of server/services/travel/float.service.ts: "we hold the guest's
+ * payment until their October stay" and "we owe our supplier on invoice terms"
+ * are the same bank balance and completely different things in law, and only the
+ * second one keeps us out of travel-insolvency territory. A marketing sentence
+ * that gets that backwards would be read back to us. TRAVEL_FLOAT.ENABLED is
+ * false today; the page can describe it when the contract says we may.
+ *
+ * RULES
+ *
+ * 1. Only `HOLD_KEEPS.stays` may be rendered here, and nowhere else.
+ * 2. No hotel or supplier is named on the page until it is agreed in writing.
+ * 3. The reward is described as landing AFTER check-out, always. A stay that is
+ *    cancelled earns nothing, and points credited at booking are points taken
+ *    back from somebody who had already counted them.
  */
 
 export const metadata: Metadata = {
-  title: "Travel rewards",
+  title: "Stays",
   description:
-    "How travel rewards work at HIHODL: we are paid a commission by travel partners and share it with you as cashback. We do not set partner prices. Rates vary by partner and are not guaranteed.",
+    "Book a hotel from inside HOLD and pay from the dollars you already hold. Priced under what the same room shows publicly, with no booking fee, and every night earns HiPoints.",
   alternates: { canonical: "/travel" },
 };
 
@@ -48,22 +80,17 @@ export default function TravelPage() {
           <div className="absolute inset-0 bg-moonlight-glow opacity-30 pointer-events-none" aria-hidden />
           <div className="container-page section relative">
             <div className="max-w-3xl">
-              <p className="text-tiny uppercase tracking-wider text-moonlight">
-                Travel rewards · in development
-              </p>
+              <p className="text-tiny uppercase tracking-wider text-moonlight">Stays</p>
               <h1 className="mt-6 font-display text-h1 font-light text-text leading-tight">
-                Cashback on travel,
+                Book the room
                 <br />
-                <span className="text-text-muted">paid out of our share.</span>
+                <span className="text-text-muted">for less than it costs you.</span>
               </h1>
               <p className="mt-8 text-lead text-text-muted">
-                Travel partners pay a commission when someone books through them. When that
-                happens through HIHODL, most of that commission goes to you as cashback.
-                The price you pay is set by the partner and we never touch it.
-              </p>
-              <p className="mt-8 text-small text-text-faint max-w-2xl">
-                This page explains how the programme works. It is not live yet — it starts
-                with the card.
+                Hotels quote travel companies a rate below the one they show the public.
+                We book at that rate and price the room under what you would pay booking
+                it yourself, so the saving is in the number you pay — not in something we
+                promise to send you later. The nights you stay earn HiPoints.
               </p>
             </div>
           </div>
@@ -76,25 +103,25 @@ export default function TravelPage() {
             <div className="max-w-2xl">
               <h2 className="font-display text-h2 font-light text-text">How it works</h2>
               <p className="mt-6 text-body text-text-muted leading-relaxed">
-                Three steps, and it is worth being precise about which of them we control.
+                Three steps, and none of them ask you to leave the app or reach for a card.
               </p>
             </div>
 
             <ol className="mt-14 grid grid-cols-1 md:grid-cols-3 gap-6">
               <Step
                 n={1}
-                title="You book"
-                body="You choose a flight or a stay and you pay the partner directly, at the partner's price. We are not in the transaction and we cannot change what you are charged."
+                title="Find the stay"
+                body="Search a city and a set of dates the way you would anywhere else. Live availability, live rates, the map and the list showing the same rooms."
               />
               <Step
                 n={2}
-                title="The partner pays us"
-                body="Travel partners run commission programmes. When a booking is credited to us, they pay us a percentage of it out of their own margin."
+                title="Pay from your balance"
+                body="The booking is settled out of the dollars in your HOLD account, from whichever account you choose at checkout. No card, no separate payment page, no booking fee on top."
               />
               <Step
                 n={3}
-                title="We pass most of it on"
-                body="That commission becomes cashback on your account, in dollars. It is money we received and shared, not a reduction we negotiated."
+                title="Points land after you check out"
+                body="HiPoints for the stay are credited once it is completed, not when you book — a room you cancel earns nothing, and we would rather credit late than take points back off you."
               />
             </ol>
           </div>
@@ -112,34 +139,35 @@ export default function TravelPage() {
 
             <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-5">
               <Fact
+                title="Never above the public price"
+                body="When the same room can be priced publicly we read that number and stay under it. If our own pricing would have landed above it, our price comes down — not the other way around."
+              />
+              <Fact
                 title="It is not a discount"
-                body="We do not set partner prices, we cannot lower them, and we will never tell you a booking is cheaper because you came through us. What changes is what lands back in your account afterwards."
+                body="We are not lowering a hotel's rate; nobody can do that from outside. What you are seeing is a rate hotels quote to trade partners, priced under the one they publish themselves."
               />
               <Fact
-                title="The rate depends on the partner"
-                body={`Every partner runs its own programme and every programme pays differently — by product, by season, by market. Commissions in this category typically run to around ${bps(HIHODL_KEEPS.partnerCommissionBps)}, and what we can share follows whatever we are actually paid.`}
+                title="You earn points, not money back"
+                body="A stay pays HiPoints. It does not pay dollars, and nothing is transferred to your balance afterwards — the whole of what you get out of booking here is in the price you paid and the points you earned. The card is the product that pays cash."
               />
               <Fact
-                title="Rates move"
-                body={`${RATE_DISCLAIMER} A partner can change its commission at any time, and the cashback rate moves with it. Whatever rate is shown when you book is the rate for that booking.`}
+                title="Cancellations follow the hotel"
+                body="Whether a room is refundable, and until when, is the hotel's own policy — it is shown before you pay and we do not override it. What we handle is getting your money back to you when a cancellation qualifies."
               />
               <Fact
-                title="Cancellations reverse it"
-                body="Partners pay after a stay is completed or a booking becomes final. If you cancel, the commission is reversed and so is the cashback — usually weeks after the booking, which is why it is not credited instantly."
+                title="We are the one you talk to"
+                body="If something is wrong with a booking, the conversation is with us. That is not a preference: the reservation was made by us, and the hotel has no relationship with you to act on."
               />
               <Fact
-                title="No partner is named until it is signed"
-                body="We will not put a company's name on this page to make a programme look bigger than it is. When an agreement is signed, that partner appears here, and not before."
-              />
-              <Fact
-                title="It is a category, not everything"
-                body="Travel cashback applies to travel bookings made through the programme. It does not change the cashback on the rest of your spending, which works the same as always."
+                title="No hotel is named until it is signed"
+                body="We will not put a brand on this page to make the inventory look bigger than it is. What you will find in the app is live availability, not a list of logos."
               />
             </div>
 
             <p className="mt-12 text-small text-text-faint max-w-2xl">
               <span aria-hidden>* </span>
-              {RATE_DISCLAIMER} Rates vary by partner, by product and by market.
+              {RATE_DISCLAIMER} How far under the public price a given room lands depends
+              on the rate that room was quoted at, so it moves with the booking.
             </p>
 
             {/* Every product page carries this section, and it names only the
@@ -150,24 +178,31 @@ export default function TravelPage() {
               </h2>
               <div className="mt-8 space-y-6 text-body text-text-muted">
                 <p>
-                  We never mark a booking up. You pay the partner&rsquo;s own price —
-                  the same price you would pay going to them directly — and the
-                  partner pays us a commission out of their own margin for
-                  sending you. Your cashback comes out of that commission.
+                  Hotels quote travel companies a net rate — the price they will accept for
+                  the room — and expect the company to sell it for more. We add up to{" "}
+                  {bps(HOLD_KEEPS.stays.markupOnNetBps)} to that rate. Then we look at what
+                  the same room is showing publicly, and if our number is not comfortably
+                  under it, ours comes down until it is.
                 </p>
                 <p className="text-text">
-                  So we are paid by the partner, not by you. If a partner pays us
-                  nothing on a booking, that booking earns you nothing, and we
-                  make nothing either. There is no travel fee, no booking fee and
-                  no markup, because there is nothing on this product for us to
-                  charge you for.
+                  That gap is what we make, and we keep it. There is nothing else: no
+                  booking fee, no service fee, no resort fee of our own, no charge for
+                  paying from a particular account, and no fee taken at cancellation. One
+                  number, disclosed here, already inside the price you were shown.
+                </p>
+                <p>
+                  Which is also why we are straight about the points rather than dressing
+                  them up as money back. A rewards programme paid out of a margin that may
+                  not exist on a given room is a programme that gets quietly cut in its
+                  first busy month. Points come out of the same place for every product, at
+                  the same rate, whether the room was a good one for us or not.
                 </p>
               </div>
             </div>
           </div>
         </section>
 
-        {/* ─── Why a category and not a bigger flat rate ─────────── */}
+        {/* ─── Why this category ─────────────────────────────────── */}
         <section
           className="relative overflow-hidden"
           style={{
@@ -186,17 +221,21 @@ export default function TravelPage() {
           <div className="container-page section relative text-center">
             <p className="text-tiny uppercase tracking-wider text-amber">Why travel</p>
             <p className="mt-8 font-editorial text-h3 md:text-h2 text-text max-w-3xl mx-auto leading-snug">
-              A high rate on one category we are paid for beats a thin rate on everything we
-              are not.
+              The cheapest thing we can give you is the price itself.
             </p>
             <p className="mt-8 text-lead text-text-muted max-w-2xl mx-auto">
-              Cashback has to be funded by something. Travel is a category where somebody
-              else already pays a commission, so the rate can be generous without being a
-              transfer out of the treasury — which is the only kind of reward programme that
-              survives its first busy month.
+              Every other travel app puts its margin in the price and then hands a slice of
+              it back to you with a flourish, as though the two were unrelated. We would
+              rather take the margin once, quietly, and let the number on the room be the
+              reason you booked. Hotels are a category where a trade rate already exists
+              before we arrive — so being cheaper does not cost us anything we had.
             </p>
             <p className="mt-8 text-small text-text-faint max-w-2xl mx-auto">
               See{" "}
+              <Link href="/esim" className="text-text-muted hover:text-text underline">
+                eSIM data plans
+              </Link>{" "}
+              for the other half of the trip, or{" "}
               <Link href="/rewards" className="text-text-muted hover:text-text underline">
                 how rewards work
               </Link>{" "}

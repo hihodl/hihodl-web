@@ -77,7 +77,7 @@ export function BuiltFor() {
           </h2>
           <p className="mt-6 text-lead text-text-muted">
             If your income lives on the internet and your rent doesn&rsquo;t,
-            HIHODL was built around your week.
+            HOLD was built around your week.
           </p>
         </div>
 

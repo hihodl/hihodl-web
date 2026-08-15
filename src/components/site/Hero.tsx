@@ -164,7 +164,7 @@ export function Hero() {
               </div>
               <span>
                 <span className="font-mono text-text font-medium">50,000+</span>{" "}
-                global earners already on HIHODL
+                global earners already on HOLD
               </span>
             </div>
           </div>
