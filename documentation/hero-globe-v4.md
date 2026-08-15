@@ -80,18 +80,48 @@ verified rather than assumed: across a full revolution, all 7,700 emitted land
 path strings are byte-identical to the prototype's, and the 1,696 arc sample
 points match to within 1e-9.
 
-## To adopt it
+## Adopted in the homepage hero
 
-In `src/components/site/Hero.tsx`, swap the `PaymentGlobe` import and usage for
-`HeroGlobe`. Keep `showCaption` off — the hero already renders its own headline.
-Decide separately whether the bubble copy is the messaging we want, since it
-names specific corridors and amounts.
+The hero now mounts v4. Two things it needed that a straight import did not give:
+
+**A square window.** The hero's globe slot is `aspect-square max-w-md`. Dropping
+a 16:9 stage into it letterboxes, leaving the globe at 48% of the slot width.
+`fit="globe"` crops to a 1020x1020 window centred on the disc, which puts the
+globe at 90% — roughly double the diameter. `fit="stage"` keeps the prototype's
+full 16:9 frame for any future full-bleed slot.
+
+**Bubbles off.** The hero already renders two glass cards ("Salary received",
+"Gasless swap"), animated in by its GSAP intro. The globe's bubbles use the same
+visual language, so running both puts two card systems in the same 448px. The
+hero keeps its own cards; the bubbles show at `/lab/hero-globe`.
+
+If we later want the bubbles instead, that means deleting those two cards and
+their timeline steps from `Hero.tsx` — a design call, not a mechanical one.
+
+### Bubble copy
+
+The prototype's amounts (`+$142.60`, `9 nights → $412`, `$3,200 → €2,940`) were
+invented to dress the animation. On a financial product's homepage an invented
+number reads as a real transaction, so the bubbles now carry the corridor and
+nothing that resembles a quote, a rate or a balance:
+
+| Kicker | Shows |
+| --- | --- |
+| Freelance invoice · Madrid | USD → EUR |
+| Sent · Bogotá → Dubai | COP → AED |
+| Interest earned · Savings | USD |
+| eSIM · Brazil | Paid |
+| Stay booked · Thailand | Paid |
+| USD account payout | EUR → USD |
+| Salary · paid in dollars | USD |
+| Rent sent · São Paulo | BRL → USD |
+
+This is a holding state, not final copy. Replace it with real copy — not with
+plausible copy.
 
 ## Open questions
 
-- Bubble copy is prototype placeholder (`Stay booked · Thailand`, `+$142.60`).
-  It needs a marketing pass before it goes near production.
 - `backdrop-filter` on the bubbles is the one expensive paint. Worth checking on
-  a low-end Android before shipping.
-- v4 is 1920x1080 and letterboxes on narrow viewports. If it becomes the hero,
-  the mobile crop needs a look — the current hero handles that differently.
+  a low-end Android before the bubbles go anywhere near production.
+- `/lab/hero-globe` is a public route. `noindex`, unlinked, but not auth-gated —
+  worth removing before it matters.

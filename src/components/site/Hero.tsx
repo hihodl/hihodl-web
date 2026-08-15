@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { gsap } from "gsap";
-import { PaymentGlobe } from "./PaymentGlobe";
+import { HeroGlobe } from "./HeroGlobe";
 import { DownloadLink } from "./DownloadLink";
 
 /**
@@ -173,7 +173,13 @@ export function Hero() {
           <div className="lg:col-span-5">
             <div className="relative aspect-square w-full max-w-md mx-auto">
               <div ref={phone} className="absolute inset-0 flex items-center justify-center">
-                <PaymentGlobe />
+                {/*
+                  Square window, and the globe's own bubbles stay off: the two
+                  glass cards below are this hero's cards, timed by the GSAP
+                  intro. Running both would be two card systems fighting over
+                  the same 448px.
+                */}
+                <HeroGlobe fit="globe" showBubbles={false} />
               </div>
 
               {/* Salary received — top-left, moonlight accent */}
