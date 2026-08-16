@@ -35,7 +35,7 @@ const PRODUCTS: Product[] = [
       "Send to a @username instead of a 42-character address",
       "Five seconds to cancel after you hit send",
     ],
-    link: { href: "/smart-account", label: "How the account works" },
+    link: { href: "/#income", label: "How income rails work" },
     accent: "amber",
     visual: <PaymentsVisual />,
   },
@@ -51,7 +51,7 @@ const PRODUCTS: Product[] = [
     ],
     // The share is a number, and a number belongs on the one page that owns it.
     // See the disclosure rule at the top of rates.config.ts.
-    link: { href: "/smart-account", label: "What we keep on the interest" },
+    link: { href: "/savings", label: "What we keep on the interest" },
     accent: "moonlight",
     visual: <SavingsVisual />,
   },
@@ -60,6 +60,7 @@ const PRODUCTS: Product[] = [
     eyebrow: "Invest",
     title: "One portfolio, with what you paid for it.",
     body: "Everything you hold that isn't a dollar sits in one place, with live prices and the cost basis beside them. Rebalance from your balance — no exchange account, no transfer out.",
+    link: { href: "/invest", label: "What a conversion costs" },
     points: [
       "Profit and loss per position, not just a total",
       "Buy and rebalance without leaving the app",
@@ -78,7 +79,7 @@ const PRODUCTS: Product[] = [
       "Stays — real hotel inventory, booked and paid in the app",
       "eSIM data for wherever you land next",
     ],
-    link: { href: "/rewards", label: "See how HiPoints work" },
+    link: { href: "/hipoints", label: "See how HiPoints work" },
     accent: "amber",
     visual: <BenefitsVisual />,
   },

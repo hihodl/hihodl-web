@@ -11,17 +11,16 @@ import { Wordmark } from "@/components/site/Wordmark";
 // them. "Swap & Move" is gone: it named a mechanic, not a product, and it was
 // the only entry here a stranger could not place.
 const PRODUCT = [
-  { href: "/#payments",     label: "Payments" },
-  { href: "/#savings",      label: "Savings" },
-  { href: "/#invest",       label: "Invest" },
-  { href: "/#benefits",     label: "Benefits" },
-  { href: "/#income",       label: "Income Rails" },
-  { href: "/smart-account", label: "Smart Account" },
-  { href: "/rewards",       label: "HiPoints" },
-  { href: "/travel",        label: "Stays" },
-  { href: "/esim",          label: "eSIM" },
-  { href: "/#ai",           label: "AI (soon)" },
-  { href: "/#husd",         label: "HUSD" },
+  { href: "/#payments", label: "Payments" },
+  { href: "/savings",   label: "Savings" },
+  { href: "/invest",    label: "Invest" },
+  { href: "/#benefits", label: "Benefits" },
+  { href: "/#income",   label: "Income Rails" },
+  { href: "/hipoints",  label: "HiPoints" },
+  { href: "/travel",    label: "Stays" },
+  { href: "/esim",      label: "eSIM" },
+  { href: "/#ai",       label: "AI (soon)" },
+  { href: "/#husd",     label: "HUSD" },
 ];
 
 // "Founder Pass" belongs here and is deliberately absent until /founders is

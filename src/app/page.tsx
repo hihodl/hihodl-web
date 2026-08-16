@@ -12,6 +12,7 @@ import { WhyFree } from "@/components/site/WhyFree";
 import { NotifyMeForm } from "@/components/site/NotifyMeForm";
 import { CtaLink } from "@/components/site/DownloadLink";
 import { APP_STORE_URL, DOWNLOAD_ANCHOR, PLAY_STORE_URL } from "@/lib/appLinks";
+import { FREE_ALLOWANCE, HOLD_KEEPS, usd } from "@/lib/rates.config";
 
 export default function Home() {
   return (
@@ -176,8 +177,8 @@ export default function Home() {
                 price="$0"
                 priceSub="forever"
                 features={[
-                  "First $500/month moved: network fee on us",
-                  "Above that, 0.50% all-in · $2 minimum",
+                  `First ${usd(FREE_ALLOWANCE.monthlyVolumeUsd)}/month converted: network fee on us`,
+                  `Above that, ${HOLD_KEEPS.swapMarkupFreeBps / 100}% all-in · $2 minimum`,
                   "Savings and Benefits, same as Pro",
                   "One USD account — IBAN and SWIFT",
                   "3 pockets · one @username",
@@ -192,7 +193,7 @@ export default function Home() {
                 highlight
                 features={[
                   "Network fee covered, with no monthly cap",
-                  "No markup on what you move, at any volume",
+                  "No markup on what you convert, at any volume",
                   "A fresh receiving address on every payment",
                   "Up to 3 USD accounts · 3 @usernames",
                   "Unlimited pockets",
@@ -247,7 +248,7 @@ export default function Home() {
 
         {/* ─── 5.5 · Mid-page CTA after pricing ─────────────────── */}
         <CtaStrip
-          eyebrow="The first $500 is on us. Every month."
+          eyebrow={`The first ${usd(FREE_ALLOWANCE.monthlyVolumeUsd)} is on us. Every month.`}
           title="Stop thinking. Start moving."
           subtitle="No setup fees. No KYC for basic use. No bank required."
           primary={{ label: "Get HOLD free", href: DOWNLOAD_ANCHOR }}

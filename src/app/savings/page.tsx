@@ -7,7 +7,20 @@ import { SectionHairline } from "@/components/site/SectionHairline";
 import { HOLD_KEEPS, RATE_DISCLAIMER } from "@/lib/rates.config";
 
 /**
- * /smart-account — what the product is, in the words a customer would use.
+ * /savings — what the product is, in the words a customer would use.
+ *
+ * WHY THIS URL AND NOT /smart-account
+ *
+ * This page was /smart-account until 16-aug-2026, and it was already the
+ * savings page — the whole thing answers "does my balance earn, and what do
+ * you keep". When the nav moved to the app's own four words, the choice was to
+ * write a second page called Savings or to rename this one. A second page
+ * would have said the same things in different sentences, and the two would
+ * have drifted inside a month; whichever one then carried the take rate, the
+ * other would eventually contradict it. So: one page, at the name a customer
+ * would search for. /smart-account 301s here. "Smart Account" survives as what
+ * it always was — the name of the mechanism, explained below, not a product a
+ * stranger was ever going to ask for by name.
  *
  * WHY THIS PAGE EXISTS
  *
@@ -33,17 +46,17 @@ import { HOLD_KEEPS, RATE_DISCLAIMER } from "@/lib/rates.config";
  *
  * STRUCTURE
  *
- * Same shell as /rewards and /travel: alternating night/abyss sections, a
+ * Same shell as /hipoints and /travel: alternating night/abyss sections, a
  * hairline at each seam, card grids rather than prose walls, and the "How we
  * make money here" block last. A reader who lands on two product pages should
  * not have to learn two layouts to find the same answer.
  */
 
 export const metadata: Metadata = {
-  title: "Smart Account",
+  title: "Savings",
   description:
-    "Your balance earns while it sits there, and you can spend it whenever you want. What that means, how it works, and exactly what HOLD keeps.",
-  alternates: { canonical: "/smart-account" },
+    "Your balance earns while it sits there, and you can spend it whenever you want. No lock-up, no notice period, no minimum — and exactly what HOLD keeps, in full.",
+  alternates: { canonical: "/savings" },
 };
 
 const FAQ = [
@@ -95,7 +108,7 @@ export default function SmartAccountPage() {
           <div className="absolute inset-0 bg-moonlight-glow opacity-30 pointer-events-none" aria-hidden />
           <div className="container-page section relative">
             <div className="max-w-3xl">
-              <p className="text-tiny uppercase tracking-wider text-moonlight">Smart Account</p>
+              <p className="text-tiny uppercase tracking-wider text-moonlight">Savings</p>
               <h1 className="mt-6 font-display text-h1 font-light text-text leading-tight">
                 Your money works
                 <br />
@@ -255,8 +268,8 @@ export default function SmartAccountPage() {
                 are everything we make on this product — there is no other charge, and
                 nothing further to look up. What the card gives back and what you can borrow
                 are on{" "}
-                <Link href="/rewards" className="text-text-muted hover:text-text underline">
-                  the rewards page
+                <Link href="/hipoints" className="text-text-muted hover:text-text underline">
+                  the HiPoints page
                 </Link>
                 .
               </p>

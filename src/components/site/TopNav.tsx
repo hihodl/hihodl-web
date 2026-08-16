@@ -32,16 +32,15 @@ const NAV_ITEMS: NavItem[] = [
     menu: [
       { href: "/#payments", label: "Send & receive", blurb: "A username, not an address" },
       { href: "/#income", label: "Income rails", blurb: "Your own USD account details" },
-      { href: "/smart-account", label: "Smart Account", blurb: "How the account works" },
     ],
   },
-  { label: "Savings", href: "/#savings" },
-  { label: "Invest", href: "/#invest" },
+  { label: "Savings", href: "/savings" },
+  { label: "Invest", href: "/invest" },
   {
     label: "Benefits",
     href: "/#benefits",
     menu: [
-      { href: "/rewards", label: "HiPoints", blurb: "Earned on what you already spend" },
+      { href: "/hipoints", label: "HiPoints", blurb: "Earned on what you already spend" },
       { href: "/travel", label: "Stays", blurb: "Book hotels, pay from your balance" },
       { href: "/esim", label: "eSIM", blurb: "Data for the country you land in" },
     ],

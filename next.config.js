@@ -14,6 +14,20 @@ const nextConfig = {
   // page uses inline JSON-LD blobs and Tailwind's just-in-time inline styles;
   // a tight CSP would require nonces or hashes per build. That's a v1.1
   // hardening pass once we have time to wire next-safe to inject nonces.
+  // /smart-account was the savings page under the name of its mechanism. It
+  // moved to /savings on 16-aug-2026 rather than being duplicated there. It is
+  // permanent because the old URL is in the sitemap, in the footer of every
+  // page we have shipped, and linked from /travel and the rewards page — a 302
+  // would keep both alive in the index, which is the split we moved to avoid.
+  async redirects() {
+    return [
+      { source: "/smart-account", destination: "/savings", permanent: true },
+      // /rewards is the HiPoints page. Two names for one thing was costing us
+      // the only word customers actually use in the app.
+      { source: "/rewards", destination: "/hipoints", permanent: true },
+    ];
+  },
+
   async headers() {
     return [
       {

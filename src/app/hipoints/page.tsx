@@ -22,7 +22,14 @@ import {
 } from "@/lib/rates.config";
 
 /**
- * /rewards — how rewards work.
+ * /hipoints — how HOLD pays you back.
+ *
+ * Was /rewards until 16-aug-2026. "Rewards" and "HiPoints" were two names for
+ * one thing: the app has never had a screen called Rewards, and the nav, the
+ * homepage and the ledger all say HiPoints. Keeping both meant a customer read
+ * one word on the site and met a different one in the product. /rewards 301s
+ * here. If card rewards and HiPoints ever become genuinely different currencies
+ * this splits again — today they are not, so it does not.
  *
  * Structure mirrors what the market already trained people to read: a tier
  * comparison, then an asset table with the rate and the borrowing limit side by
@@ -35,7 +42,7 @@ import {
  *    `headlineCashbackBps()` are always rendered behind "up to".
  * 2. EVERY rate on this page is NET of our share. `netApyPct()` runs the market
  *    rate through the tier's fee before it is displayed. The savings share
- *    itself belongs to Smart Account and is stated on /smart-account, linked
+ *    itself belongs to Savings and is stated on /savings, linked
  *    from the tables here. There is no aggregate fee page and there will not be
  *    one — see the rule at the top of rates.config.ts.
  *
@@ -45,13 +52,13 @@ import {
  */
 
 export const metadata: Metadata = {
-  title: "Rewards",
+  title: "HiPoints",
   description:
-    "How HOLD rewards work: plan tiers, cashback bands and monthly limits, and what every asset earns and can borrow against. Rates are variable and not guaranteed.",
-  alternates: { canonical: "/rewards" },
+    "How HOLD pays you back: HiPoints, plan tiers, cashback bands and monthly limits, and what every asset earns and can borrow against. Rates are variable and not guaranteed.",
+  alternates: { canonical: "/hipoints" },
 };
 
-export default function RewardsPage() {
+export default function HiPointsPage() {
   const measured = new Date(RATES_MEASURED_ON).toLocaleDateString("en-GB", {
     day: "numeric",
     month: "long",
@@ -78,7 +85,7 @@ export default function RewardsPage() {
           <div className="absolute inset-0 bg-moonlight-glow opacity-30 pointer-events-none" aria-hidden />
           <div className="container-page section relative">
             <div className="max-w-3xl">
-              <p className="text-tiny uppercase tracking-wider text-moonlight">Rewards</p>
+              <p className="text-tiny uppercase tracking-wider text-moonlight">HiPoints</p>
               <h1 className="mt-6 font-display text-h1 font-light text-text leading-tight">
                 Three ways your
                 <br />
@@ -309,7 +316,7 @@ export default function RewardsPage() {
                 share of the interest. We keep a share of what your balance earns
                 and never a share of the balance itself — the split for each plan
                 is in the table above, and{" "}
-                <Link href="/smart-account" className="text-amber hover:underline">
+                <Link href="/savings" className="text-amber hover:underline">
                   how that works
                 </Link>{" "}
                 is explained in full.
@@ -391,7 +398,7 @@ export default function RewardsPage() {
                   <span className="text-text">We keep a share of the interest
                   your balance earns.</span> Never a share of the balance itself.
                   The exact split, and what it is a share of, is set out on{" "}
-                  <Link href="/smart-account" className="text-amber hover:underline">
+                  <Link href="/savings" className="text-amber hover:underline">
                     the Smart Account page
                   </Link>
                   .

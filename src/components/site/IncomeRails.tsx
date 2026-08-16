@@ -25,14 +25,19 @@ export function IncomeRails() {
         <ul className="mt-10 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-px bg-[color:var(--color-hairline)] border border-[color:var(--color-hairline)] rounded-card overflow-hidden">
           <Rail name="ACH" sub="US bank" />
           <Rail name="SEPA" sub="Eurozone" />
+          <Rail name="SWIFT" sub="Worldwide" />
           <Rail name="SPEI" sub="Mexico" />
           <Rail name="PIX" sub="Brazil" />
-          <Rail name="USDC" sub="On-chain" />
-          <Rail name="USDT" sub="On-chain" />
+          {/* One cell, not two ticker cells. A grid of payment networks with
+              USDC and USDT sitting in it reads as a category error — nobody's
+              employer pays "in USDT", they pay over a rail. Which stablecoin
+              it lands as is an implementation detail of ours, not a rail the
+              sender chooses. */}
+          <Rail name="Stablecoins" sub="On-chain" />
         </ul>
 
         <p className="mt-8 text-small text-text-faint text-center max-w-xl mx-auto">
-          One balance. Receive however your client pays. Land as stablecoins.
+          One balance. Receive however your client pays.
         </p>
       </div>
     </section>

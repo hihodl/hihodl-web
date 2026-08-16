@@ -27,7 +27,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "How does Savings work?",
-    a: "You move any part of your balance into Savings and it starts earning that day. The money is supplied to Aave, an on-chain lending market, on Base and Polygon — it is not lent to us and it does not sit on our books. Interest accrues to your Savings balance. We keep a share of the interest, never a cut of the balance itself, and the exact share is published on our Smart Account page.",
+    a: "You move any part of your balance into Savings and it starts earning that day. The money is supplied to Aave, an on-chain lending market, on Base and Polygon — it is not lent to us and it does not sit on our books. Interest accrues to your Savings balance. We keep a share of the interest, never a cut of the balance itself, and the exact share is published on our Savings page.",
   },
   {
     q: "Is my money locked when it is earning?",
@@ -51,7 +51,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "How much does HOLD cost?",
-    a: "Free is $0/month. On the first $500 of swap volume each month we cover the network fee for you, up to $0.10 per swap — if the network is congested and the real cost is higher, you pay only the excess. Above $500/month, 0.50% all-in. Pro is $9.99/month: the network fee is covered with no monthly cap and there is no swap markup. Both plans have a $2 minimum swap. Savings and Benefits are on both plans.",
+    a: "Free is $0/month. On the first $500 you convert each month we cover the network fee for you, up to $0.10 per conversion — if the network is congested and the real cost is higher, you pay only the excess. Above $500/month, 0.50% all-in on the excess. Pro is $9.99/month: the network fee is covered with no monthly cap and there is no markup at any volume. Both plans have a $2 minimum conversion. Savings and Benefits are on both plans.",
   },
   {
     q: "What chains does HOLD support?",
@@ -75,7 +75,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "Does HOLD have an AI assistant?",
-    a: "An AI conversational layer is coming soon. Users will be able to ask in plain language — \"send 200 USDC to Lucía,\" \"split my paycheck 60/30/10,\" \"move savings to the highest yield\" — and HOLD will execute. The AI proposes, the user signs every transaction. Self-custody is preserved.",
+    a: "An AI conversational layer is coming soon. Users will be able to ask in plain language — \"send 200 to Lucía,\" \"split my paycheck 60/30/10,\" \"move savings to the highest yield\" — and HOLD will execute. The AI proposes, the user signs every transaction. Self-custody is preserved.",
   },
   {
     q: "How is HOLD different from Revolut, Wise or Coinbase?",

@@ -1,3 +1,5 @@
+import { HOLD_KEEPS, FREE_ALLOWANCE, usd } from "@/lib/rates.config";
+
 /**
  * BankVsHold — editorial comparison.
  *
@@ -25,7 +27,7 @@ export function BankVsHold() {
     {
       topic: "Cost to move it",
       bank: "1.5–3% spread, buried in the rate.",
-      hold: "First $500/month free. 0.50% above the cap, all-in, shown before you tap.",
+      hold: `First ${usd(FREE_ALLOWANCE.monthlyVolumeUsd)}/month free. ${HOLD_KEEPS.swapMarkupFreeBps / 100}% above the cap, all-in, shown before you tap.`,
     },
     {
       topic: "Custody of your money",

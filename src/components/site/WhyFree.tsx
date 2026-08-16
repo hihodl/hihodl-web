@@ -1,3 +1,5 @@
+import { FREE_ALLOWANCE, usd } from "@/lib/rates.config";
+
 /**
  * WhyFree — kills the "what's the catch" objection.
  *
@@ -29,7 +31,7 @@ export function WhyFree() {
             The honest version
           </p>
           <h2 className="mt-6 font-display text-h2 md:text-h1 font-light text-text leading-tight">
-            Why the first $500
+            Why the first {usd(FREE_ALLOWANCE.monthlyVolumeUsd)}
             <br />
             <span className="text-text-muted">every month is free.</span>
           </h2>

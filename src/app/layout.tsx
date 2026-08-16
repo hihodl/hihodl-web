@@ -100,7 +100,7 @@ const jsonLd = {
           price: "0",
           priceCurrency: "USD",
           description:
-            "$500/month of swap volume with the network fee covered. 0.50% all-in above the cap. 3 pockets. Savings and Benefits included. Self-custody.",
+            "$500/month of conversions with the network fee covered. 0.50% all-in above the cap. 3 pockets. Savings and Benefits included. Self-custody.",
         },
         {
           "@type": "Offer",
@@ -108,7 +108,7 @@ const jsonLd = {
           price: "9.99",
           priceCurrency: "USD",
           description:
-            "Network fee covered with no monthly cap and no swap markup. Unlimited pockets. Savings and Benefits included. Priority HUSD access.",
+            "Network fee covered with no monthly cap and no markup at any volume. Unlimited pockets. Savings and Benefits included. Priority HUSD access.",
         },
       ],
       featureList: [
@@ -118,7 +118,7 @@ const jsonLd = {
         "Invest — one portfolio with cost basis and profit and loss per position",
         "Benefits — HiPoints, hotel stays and eSIM data paid from your balance",
         "Non-custodial — keys generated on your device, with encrypted cloud recovery",
-        "Network fee covered on the first $500 of swap volume each month",
+        "Network fee covered on the first $500 you convert each month",
         "Stealth incoming addresses — automatic rotation on Pro",
         "Pockets — split one balance into labelled buckets",
         "AI conversational layer (coming soon)",
@@ -141,7 +141,7 @@ const jsonLd = {
           name: "How does Savings work in HOLD?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "You move any part of your balance into Savings and it starts earning that day. The money is supplied to Aave, an on-chain lending market, on Base and Polygon — it is not lent to HOLD and it does not sit on our books. There is no lock-up, no notice period and no minimum, and every withdrawal is signed on your own device. HOLD keeps a share of the interest, never a cut of the balance; the exact share is published on the Smart Account page.",
+            text: "You move any part of your balance into Savings and it starts earning that day. The money is supplied to Aave, an on-chain lending market, on Base and Polygon — it is not lent to HOLD and it does not sit on our books. There is no lock-up, no notice period and no minimum, and every withdrawal is signed on your own device. HOLD keeps a share of the interest, never a cut of the balance; the exact share is published on the Savings page.",
           },
         },
         {
@@ -173,7 +173,7 @@ const jsonLd = {
           name: "How much does HOLD cost?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Free is $0/month. On the first $500 of swap volume each month HOLD covers the network fee for you, up to $0.10 per swap; if the network is congested and the real cost is higher, you pay only the excess. Above $500/month it is 0.50% all-in. Pro is $9.99/month: the network fee is covered with no monthly cap and there is no swap markup. Both plans have a $2 minimum swap, and Savings and Benefits are included on both.",
+            text: "Free is $0/month. On the first $500 you convert each month HOLD covers the network fee for you, up to $0.10 per conversion; if the network is congested and the real cost is higher, you pay only the excess. Above $500/month it is 0.50% all-in on the excess. Pro is $9.99/month: the network fee is covered with no monthly cap and there is no markup at any volume. Both plans have a $2 minimum conversion, and Savings and Benefits are included on both.",
           },
         },
         {
@@ -221,7 +221,7 @@ const jsonLd = {
           name: "Does HOLD have an AI assistant?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "An AI conversational layer is coming soon. Users will be able to ask in plain language — \"send 200 USDC to Lucía,\" \"split my paycheck 60/30/10,\" \"move savings to the highest yield\" — and HOLD will execute. The AI proposes, the user signs every transaction. Self-custody is preserved.",
+            text: "An AI conversational layer is coming soon. Users will be able to ask in plain language — \"send 200 to Lucía,\" \"split my paycheck 60/30/10,\" \"move savings to the highest yield\" — and HOLD will execute. The AI proposes, the user signs every transaction. Self-custody is preserved.",
           },
         },
         {

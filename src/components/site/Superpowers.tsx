@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import { FREE_ALLOWANCE, usd } from "@/lib/rates.config";
+
 /**
  * The four mechanics, AFTER the four products.
  *
@@ -330,9 +332,9 @@ function GaslessSwapCard() {
   return (
     <Card
       accent="amber"
-      eyebrow="The first $500 is on us"
+      eyebrow={`The first ${usd(FREE_ALLOWANCE.monthlyVolumeUsd)} is on us`}
       title="Moving your money costs you nothing."
-      body="Every network charges a fee to move money across it. We pay it for you on the first $500 you move each month — you do not need to hold anything to cover it, and there is nothing to top up."
+      body={`Every network charges a fee to move money across it. We pay it for you on the first ${usd(FREE_ALLOWANCE.monthlyVolumeUsd)} you convert each month, up to ${usd(FREE_ALLOWANCE.networkFeeCeilingUsd)} a time — you do not need to hold anything to cover it, and there is nothing to top up.`}
       proof="Powered by Jupiter. Above the cap: real network cost + 0.50%, shown as one combined Network fee. No hidden spread. Pro: always gasless."
       visual={
         <div className="absolute inset-0 flex flex-col items-center justify-center px-8">
