@@ -43,6 +43,16 @@ const PAGES: Entry[] = [
   { path: "/esim", priority: 0.8, changeFrequency: "monthly" },
   { path: "/travel", priority: 0.7, changeFrequency: "monthly" },
   { path: "/faq", priority: 0.6, changeFrequency: "monthly" },
+  // The technical section. Lower priority than a product page because nobody
+  // searches for these by name — but they are what a suspicious reader finds
+  // when they search "is HOLD safe" or "hold non custodial", and losing that
+  // search to somebody else's forum thread is worse than not ranking at all.
+  { path: "/how-it-works", priority: 0.6, changeFrequency: "monthly" },
+  { path: "/how-it-works/self-custody", priority: 0.6, changeFrequency: "monthly" },
+  { path: "/how-it-works/security", priority: 0.6, changeFrequency: "monthly" },
+  { path: "/how-it-works/networks", priority: 0.5, changeFrequency: "monthly" },
+  { path: "/how-it-works/fees", priority: 0.5, changeFrequency: "monthly" },
+  { path: "/how-it-works/modes", priority: 0.4, changeFrequency: "monthly" },
   { path: "/privacy", priority: 0.3, changeFrequency: "yearly" },
   { path: "/terms", priority: 0.3, changeFrequency: "yearly" },
   // Linked from the eSIM checkout in the app, so it is read far more often than
