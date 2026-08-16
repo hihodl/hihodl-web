@@ -35,7 +35,7 @@ export function BankVsHold() {
     {
       topic: "Who can see your income",
       bank: "Your bank, its partners, and anyone with the right paperwork.",
-      hold: "Every payment lands at a new address. Nobody can add up what you earn.",
+      hold: "On Pro, every payment lands at a new address. Nobody can add up what you earn.",
     },
     {
       topic: "When you travel",

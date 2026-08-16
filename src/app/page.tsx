@@ -150,24 +150,38 @@ export default function Home() {
             <h2 className="mt-6 font-display text-h2 md:text-h1 font-light text-text max-w-3xl mx-auto">
               Start free.
               <br />
-              <span className="text-text-muted">Go Pro when you move more.</span>
+              <span className="text-text-muted">Go Pro when your money does more.</span>
             </h2>
             <p className="mt-8 text-lead text-text-muted max-w-2xl mx-auto">
-              No hidden spread. No tier games. Cancel anytime.
+              Savings, investing and benefits are on both plans. Pro buys you
+              room, not access. No hidden spread, no tier games, cancel anytime.
             </p>
 
+            {/*
+              Every line below is a live constant, not a plan we would like to
+              sell. Two that were wrong until 16-aug-2026:
+
+              — Address rotation is Pro. plans.service.ts sets the free pool to
+                0 and getAddressRotation() returns enabled: poolSize > 0, so a
+                free account receives at one address. The site sold rotation as
+                if everyone had it, which is the worst kind of claim to get
+                wrong: a privacy promise the product does not keep.
+              — "Premium support" told the reader nothing. The real Pro benefits
+                are the caps: 3 income accounts against 1, 3 handles against 1,
+                unlimited pockets against 3.
+            */}
             <div className="mt-16 grid grid-cols-1 md:grid-cols-2 gap-5 max-w-4xl mx-auto text-left">
               <PlanCard
                 name="Free"
                 price="$0"
                 priceSub="forever"
                 features={[
-                  "Up to $500/mo of gas-free swaps",
-                  "Above the cap: 0.50% all-in network fee",
-                  "$2 minimum swap",
-                  "3 pockets to organize your money",
-                  "Virtual USD account & IBAN",
-                  "Self-custody · biometric login",
+                  "First $500/month moved: network fee on us",
+                  "Above that, 0.50% all-in · $2 minimum",
+                  "Savings and Benefits, same as Pro",
+                  "One USD account — IBAN and SWIFT",
+                  "3 pockets · one @username",
+                  "Self-custody · Face ID",
                 ]}
                 cta={{ label: "Download free", href: DOWNLOAD_ANCHOR }}
               />
@@ -177,12 +191,12 @@ export default function Home() {
                 priceSub="per month"
                 highlight
                 features={[
-                  "Always gasless. Network fee included.",
-                  "Zero markup on swap volume — no cap",
+                  "Network fee covered, with no monthly cap",
+                  "No markup on what you move, at any volume",
+                  "A fresh receiving address on every payment",
+                  "Up to 3 USD accounts · 3 @usernames",
                   "Unlimited pockets",
                   "Priority access to HUSD at launch",
-                  "Virtual USD account & IBAN priority queue",
-                  "Premium support",
                 ]}
                 cta={{ label: "Get Pro", href: DOWNLOAD_ANCHOR }}
               />

@@ -206,8 +206,8 @@ function PrivacyCard() {
       accent="moonlight"
       eyebrow="Who can see your income"
       title="Your salary is nobody else's business."
-      body="Every payment you receive lands at a fresh address, so a client who paid you once cannot watch what you earn afterwards. Nobody can add it up — including us."
-      proof="Stealth address rotation. Each receive is unlinkable on-chain. Reveal it selectively when you actually need to: taxes, audits, your own records."
+      body="On Pro, every payment you receive lands at a fresh address, so a client who paid you once cannot go back and watch what you earn afterwards. Nobody can add it up — including us."
+      proof="Automatic address rotation, on Pro. Each receive is unlinkable on-chain. Reveal it selectively when you actually need to: taxes, audits, your own records."
       visual={<PrivacyVisual />}
     />
   );

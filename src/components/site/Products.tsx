@@ -49,6 +49,9 @@ const PRODUCTS: Product[] = [
       "No lock-up, no notice period, no minimum",
       "We take a share of the interest, never a cut of your balance",
     ],
+    // The share is a number, and a number belongs on the one page that owns it.
+    // See the disclosure rule at the top of rates.config.ts.
+    link: { href: "/smart-account", label: "What we keep on the interest" },
     accent: "moonlight",
     visual: <SavingsVisual />,
   },
