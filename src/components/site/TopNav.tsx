@@ -32,6 +32,7 @@ const NAV_ITEMS: NavItem[] = [
     menu: [
       { href: "/#payments", label: "Send & receive", blurb: "A username, not an address" },
       { href: "/#income", label: "Income rails", blurb: "Your own USD account details" },
+      { href: "/smart-account", label: "Smart Account", blurb: "Main earns without you moving it" },
     ],
   },
   { label: "Savings", href: "/savings" },

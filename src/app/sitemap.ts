@@ -34,6 +34,7 @@ const PAGES: Entry[] = [
   { path: "/", priority: 1, changeFrequency: "weekly" },
   // The product pages. Rates move, so they are the ones worth recrawling.
   { path: "/savings", priority: 0.9, changeFrequency: "weekly" },
+  { path: "/smart-account", priority: 0.8, changeFrequency: "weekly" },
   { path: "/invest", priority: 0.9, changeFrequency: "weekly" },
   { path: "/hipoints", priority: 0.8, changeFrequency: "weekly" },
   // One entry per product, never a combined one. "esim japan" and "hotel

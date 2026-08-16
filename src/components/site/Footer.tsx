@@ -3,24 +3,25 @@ import { CtaLink } from "@/components/site/DownloadLink";
 import { DOWNLOAD_ANCHOR } from "@/lib/appLinks";
 import { Wordmark } from "@/components/site/Wordmark";
 
-// Every product link here goes to a page that states what we keep on THAT
-// product, in context. There is deliberately no "Fees" entry: an aggregate
-// schedule serves competitors better than customers. See the rule at the top
-// of rates.config.ts.
-// Same four words as the nav and the app's tab bar, then the second level under
-// them. "Swap & Move" is gone: it named a mechanic, not a product, and it was
-// the only entry here a stranger could not place.
+// The nav's four words first, then the second level under them.
+//
+// Every product link goes to a page that states what we keep on THAT product,
+// in context. There is deliberately no "Fees" entry: an aggregate schedule
+// serves competitors better than customers. See the rule at the top of
+// rates.config.ts — which is also why Savings and Smart Account are two
+// entries and not one. They are two prices.
 const PRODUCT = [
-  { href: "/#payments", label: "Payments" },
-  { href: "/savings",   label: "Savings" },
-  { href: "/invest",    label: "Invest" },
-  { href: "/#benefits", label: "Benefits" },
-  { href: "/#income",   label: "Income Rails" },
-  { href: "/hipoints",  label: "HiPoints" },
-  { href: "/travel",    label: "Stays" },
-  { href: "/esim",      label: "eSIM" },
-  { href: "/#ai",       label: "AI (soon)" },
-  { href: "/#husd",     label: "HUSD" },
+  { href: "/#payments",     label: "Payments" },
+  { href: "/savings",       label: "Savings" },
+  { href: "/invest",        label: "Invest" },
+  { href: "/#benefits",     label: "Benefits" },
+  { href: "/#income",       label: "Income Rails" },
+  { href: "/smart-account", label: "Smart Account" },
+  { href: "/hipoints",      label: "HiPoints" },
+  { href: "/travel",        label: "Stays" },
+  { href: "/esim",          label: "eSIM" },
+  { href: "/#ai",           label: "AI (soon)" },
+  { href: "/#husd",         label: "HUSD" },
 ];
 
 // "Founder Pass" belongs here and is deliberately absent until /founders is

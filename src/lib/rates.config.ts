@@ -3,8 +3,8 @@
  * THE ONE PLACE A RATE CHANGES.
  * ═══════════════════════════════════════════════════════════════════════════
  *
- * Every number rendered on /hipoints, /savings, /invest, /founders and
- * /travel comes from this file. No page hardcodes a percentage, a price or a cap. Change a value
+ * Every number rendered on /hipoints, /savings, /smart-account, /invest,
+ * /founders and /travel comes from this file. No page hardcodes a percentage, a price or a cap. Change a value
  * here and every surface moves together — that is the whole point, because the
  * failure mode we are avoiding is a marketing page quoting a rate the product
  * stopped charging six weeks ago.
@@ -115,13 +115,13 @@ export const HOLD_KEEPS = {
    * goal is psychologically money set aside, and it is the stickiest balance we
    * hold.
    *
-   * surface: /savings
+   * surface: /smart-account
    * decided: Alex, 2026-08-06. NOT YET LIVE IN CODE -- savings-fee.service.ts
    *          still applies one flat SAVINGS_FEE_BPS = 1500 to every container,
    *          because savings_cost_basis has no container dimension to price
    *          against. yield_fee_accrual (migration, unapplied) adds it.
    *
-   * ⚠️  DO NOT SHIP MAIN AT 40% UNTIL /savings SAYS 40%. Charging more
+   * ⚠️  DO NOT SHIP MAIN AT 40% UNTIL /smart-account SAYS 40%. Charging more
    *     than the published number is the single fastest way to earn the
    *     accusation that page exists to prevent. The page reads this constant,
    *     so the two cannot drift -- but only while the page stays deployed.
