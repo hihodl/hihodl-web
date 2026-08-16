@@ -7,15 +7,21 @@ import { Wordmark } from "@/components/site/Wordmark";
 // product, in context. There is deliberately no "Fees" entry: an aggregate
 // schedule serves competitors better than customers. See the rule at the top
 // of rates.config.ts.
+// Same four words as the nav and the app's tab bar, then the second level under
+// them. "Swap & Move" is gone: it named a mechanic, not a product, and it was
+// the only entry here a stranger could not place.
 const PRODUCT = [
+  { href: "/#payments",     label: "Payments" },
+  { href: "/#savings",      label: "Savings" },
+  { href: "/#invest",       label: "Invest" },
+  { href: "/#benefits",     label: "Benefits" },
+  { href: "/#income",       label: "Income Rails" },
   { href: "/smart-account", label: "Smart Account" },
-  { href: "/#income", label: "Income Rails" },
-  { href: "/#swap",   label: "Swap & Move" },
-  { href: "/rewards", label: "Rewards" },
-  { href: "/travel",  label: "Stays" },
-  { href: "/esim",    label: "eSIM" },
-  { href: "/#ai",     label: "AI (soon)" },
-  { href: "/#husd",   label: "HUSD" },
+  { href: "/rewards",       label: "HiPoints" },
+  { href: "/travel",        label: "Stays" },
+  { href: "/esim",          label: "eSIM" },
+  { href: "/#ai",           label: "AI (soon)" },
+  { href: "/#husd",         label: "HUSD" },
 ];
 
 // "Founder Pass" belongs here and is deliberately absent until /founders is
@@ -54,8 +60,8 @@ export function Footer() {
               Earn globally, live locally.
             </p>
             <p className="text-small text-text-faint max-w-sm">
-              The stablecoin wallet for global earners.
-              Receive your income privately. Spend in your city. You control your money.
+              One account for people who earn in one country and live in another.
+              Payments, Savings, Invest and Benefits — and you hold the keys.
             </p>
           </div>
 

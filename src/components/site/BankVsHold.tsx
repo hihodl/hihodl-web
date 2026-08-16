@@ -13,9 +13,9 @@ export function BankVsHold() {
       hold: "Minutes. Stablecoins land 1:1 with the dollar. Zero fees on receive.",
     },
     {
-      topic: "Custody of your money",
-      bank: "They hold it. They can freeze it.",
-      hold: "You hold it. Private key on your device. We can't touch it.",
+      topic: "What the balance earns",
+      bank: "Close to nothing, and only if you lock it for a year.",
+      hold: "Move it to Savings and it earns from that day. Take it out whenever.",
     },
     {
       topic: "Moving across borders",
@@ -23,14 +23,19 @@ export function BankVsHold() {
       hold: "A username. A tap. Done.",
     },
     {
-      topic: "Cost to swap",
+      topic: "Cost to move it",
       bank: "1.5–3% spread, buried in the rate.",
-      hold: "First $500/month gas-free. 0.50% above the cap, all-in.",
+      hold: "First $500/month free. 0.50% above the cap, all-in, shown before you tap.",
     },
     {
-      topic: "Privacy on chain",
-      bank: "Not on chain.",
-      hold: "Stealth addresses. Your public handle never exposes your balance.",
+      topic: "Custody of your money",
+      bank: "They hold it. They can freeze it.",
+      hold: "You hold it. The key is on your phone. We can't touch it.",
+    },
+    {
+      topic: "Who can see your income",
+      bank: "Your bank, its partners, and anyone with the right paperwork.",
+      hold: "Every payment lands at a new address. Nobody can add up what you earn.",
     },
     {
       topic: "When you travel",

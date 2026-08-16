@@ -213,9 +213,9 @@ export function Hero() {
               ref={sub}
               className="mt-8 text-lead text-text-muted max-w-xl"
             >
-              The stablecoin wallet for global earners.
-              Receive your income privately. You control your money.
-              Send to usernames, not long addresses — across every chain, without thinking about gas.
+              One account for people who earn in one country and live in another.
+              Get paid in minutes, earn on the balance while it sits, and spend it
+              wherever you are — with the keys in your pocket, not ours.
             </p>
 
             <div ref={ctas} className="mt-10 flex flex-wrap gap-3">

@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     template: "%s | HOLD",
   },
   description:
-    "The non-custodial wallet for remote workers. Get paid in stablecoins, spend in your city, keep custody — always.",
+    "One account for people who earn in one country and live in another. Get paid in minutes, earn on the balance, invest and spend — you hold the keys.",
   alternates: { canonical: SITE },
   openGraph: {
     type: "website",
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     siteName: "HOLD",
     title: "HOLD — Earn globally, live locally",
     description:
-      "The non-custodial wallet for remote workers. Get paid in stablecoins, spend in your city, keep custody — always.",
+      "One account for people who earn in one country and live in another. Get paid in minutes, earn on the balance, invest and spend — you hold the keys.",
     images: [
       {
         url: OG_URL,
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     creator: "@hiihodl",
     title: "HOLD — Earn globally, live locally",
     description:
-      "The non-custodial wallet for remote workers. Get paid in stablecoins, spend in your city, keep custody — always.",
+      "One account for people who earn in one country and live in another. Get paid in minutes, earn on the balance, invest and spend — you hold the keys.",
     images: [OG_URL],
   },
   icons: {
@@ -91,7 +91,7 @@ const jsonLd = {
       applicationCategory: "FinanceApplication",
       url: SITE,
       description:
-        "Non-custodial stablecoin wallet for freelancers and remote workers. Gasless swaps on Solana, virtual USD account, username payments. AI layer coming soon.",
+        "Payments, Savings, Invest and Benefits in one non-custodial account for freelancers and remote workers. Virtual USD account with IBAN and SWIFT, username payments, on-chain savings, gasless swaps on Solana.",
       downloadUrl: [APP_STORE_URL, PLAY_STORE_URL],
       offers: [
         {

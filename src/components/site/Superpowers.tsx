@@ -3,11 +3,17 @@
 import { useEffect, useState } from "react";
 
 /**
- * Four superpowers — the WHY HOLD.
+ * The four mechanics, AFTER the four products.
+ *
+ * This section used to open the argument: no seed phrase, stealth addresses,
+ * gasless swaps. That is a wallet pitch, and it asks a stranger to care about
+ * plumbing before they know what the thing does with their money. Products
+ * comes first now; this is the "how is that possible" answer, and every title
+ * leads with what the reader gets rather than with the machinery.
  *
  * Layout:
- *   Row 1: 2 cards (Social login · Privacy)
- *   Row 2: 2 cards (Smart payments · Gasless swaps)
+ *   Row 1: 2 cards (Opening an account · Who can see your income)
+ *   Row 2: 2 cards (Sending · Cost of moving money)
  *
  * Every card has a distinct micro-animation. No two feel the same.
  * Anti-slop discipline: motion is restrained, never loops continuously
@@ -21,13 +27,16 @@ export function Superpowers() {
       <div className="container-page section relative">
         {/* Section header */}
         <div className="max-w-2xl">
-          <p className="text-tiny uppercase tracking-wider text-text-faint">Built for global earners</p>
+          <p className="text-tiny uppercase tracking-wider text-text-faint">Under the hood</p>
           <h2 className="mt-6 font-display text-h2 md:text-h1 font-light text-text">
-            Four things only HOLD does.
+            Four things that
+            <br />
+            make the rest possible.
           </h2>
           <p className="mt-6 text-lead text-text-muted">
-            Most wallets make you choose: simple or onchain. HOLD gives you both —
-            fintech-grade UX with full self-custody, gasless rails and on-chain privacy.
+            You can use everything above without reading a word of this. It is
+            here because the difference between HOLD and a banking app is real,
+            and you deserve to know where it comes from.
           </p>
         </div>
 
@@ -105,9 +114,9 @@ function SocialLoginCard() {
   return (
     <Card
       accent="moonlight"
-      eyebrow="No seed phrase"
-      title="Sign up like an app. Still your money."
-      body="Sign in with Face ID or Google. Your wallet is created on your own device and your keys stay there — transactions are signed on your phone, by you. We never hold your funds and we cannot move them. Non-custodial by design."
+      eyebrow="Opening an account"
+      title="Thirty seconds. Nothing to write down."
+      body="Sign in with Face ID or Google. The account is created on your own phone and the key stays there — every payment is signed on the device, by you. We never hold your money, and we could not move it if we wanted to."
       proof="Device biometrics plus an encrypted backup, so you can recover on a new device by signing in. How that backup works is spelled out in Section 5.1 of our Terms."
       visual={<SocialLoginVisual />}
     />
@@ -195,10 +204,10 @@ function PrivacyCard() {
   return (
     <Card
       accent="moonlight"
-      eyebrow="Your account, your business"
-      title="Same wallet. Infinite faces."
-      body="Every payment you receive lands at a fresh on-chain address. Your client sees a different address each time. Anyone trying to track your income hits a wall — including us."
-      proof="Stealth address rotation. Each receive is unlinkable on-chain. Reveal selectively when you need to (taxes, audits, your own records)."
+      eyebrow="Who can see your income"
+      title="Your salary is nobody else's business."
+      body="Every payment you receive lands at a fresh address, so a client who paid you once cannot watch what you earn afterwards. Nobody can add it up — including us."
+      proof="Stealth address rotation. Each receive is unlinkable on-chain. Reveal it selectively when you actually need to: taxes, audits, your own records."
       visual={<PrivacyVisual />}
     />
   );
@@ -251,10 +260,10 @@ function SmartPaymentsCard() {
   return (
     <Card
       accent="amber"
-      eyebrow="Payments that feel like chat"
+      eyebrow="Sending money"
       title="Send anywhere. Undo for 5 seconds."
-      body="Pay anyone, any chain. We hide the network. Wrong address? You have five seconds to cancel before it leaves your wallet."
-      proof="Cross-chain abstraction · Gasless on Solana · 5-second Undo Send."
+      body="Pay anyone, and never pick a network to do it — we work that part out. Sent it to the wrong person? You have five seconds to take it back."
+      proof="Cross-chain routing handled for you · Gasless on Solana · 5-second Undo Send."
       visual={<SmartPaymentsVisual />}
     />
   );
@@ -322,8 +331,8 @@ function GaslessSwapCard() {
     <Card
       accent="amber"
       eyebrow="The first $500 is on us"
-      title="Swap with zero gas. Even without SOL."
-      body="No SOL in your wallet? Doesn't matter. Solana swaps are gasless by default — we cover the network fee. Up to $500 of swap volume every month, on us."
+      title="Moving your money costs you nothing."
+      body="Every network charges a fee to move money across it. We pay it for you on the first $500 you move each month — you do not need to hold anything to cover it, and there is nothing to top up."
       proof="Powered by Jupiter. Above the cap: real network cost + 0.50%, shown as one combined Network fee. No hidden spread. Pro: always gasless."
       visual={
         <div className="absolute inset-0 flex flex-col items-center justify-center px-8">
