@@ -236,7 +236,7 @@ export default function TravelPage() {
                 eSIM data plans
               </Link>{" "}
               for the other half of the trip, or{" "}
-              <Link href="/rewards" className="text-text-muted hover:text-text underline">
+              <Link href="/hipoints" className="text-text-muted hover:text-text underline">
                 how rewards work
               </Link>{" "}
               for the rest of the programme.

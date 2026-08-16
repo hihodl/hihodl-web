@@ -4,6 +4,7 @@ import { Footer } from "@/components/site/Footer";
 import { Hero } from "@/components/site/Hero";
 import { IncomeRails } from "@/components/site/IncomeRails";
 import { OneDayJourney } from "@/components/site/OneDayJourney";
+import { Products } from "@/components/site/Products";
 import { Superpowers } from "@/components/site/Superpowers";
 import { BankVsHold } from "@/components/site/BankVsHold";
 import { BuiltFor } from "@/components/site/BuiltFor";
@@ -11,6 +12,7 @@ import { WhyFree } from "@/components/site/WhyFree";
 import { NotifyMeForm } from "@/components/site/NotifyMeForm";
 import { CtaLink } from "@/components/site/DownloadLink";
 import { APP_STORE_URL, DOWNLOAD_ANCHOR, PLAY_STORE_URL } from "@/lib/appLinks";
+import { FREE_ALLOWANCE, HOLD_KEEPS, usd } from "@/lib/rates.config";
 
 export default function Home() {
   return (
@@ -22,7 +24,9 @@ export default function Home() {
         <Hero />
 
         {/* ─── 1.5 · Income rails — credibility strip ──────────── */}
-        <IncomeRails />
+        <div id="income" className="scroll-mt-20">
+          <IncomeRails />
+        </div>
 
         {/* ─── 2. Empathy hook (editorial serif moment) ────────── */}
         <section
@@ -44,22 +48,23 @@ export default function Home() {
           <SectionHairline tone="amber" />
           <div className="container-page section text-center relative">
             <p className="font-editorial text-h3 md:text-h2 text-text max-w-3xl mx-auto leading-snug">
-              Stablecoins, sent by username.
+              Your pay lands in minutes.
               <br />
-              Across every chain you use.
+              It earns while you sleep.
               <br />
-              <span className="text-text-muted">Without a single thought about gas.</span>
+              <span className="text-text-muted">You spend it wherever you are.</span>
             </p>
             <p className="mt-10 text-small text-text-faint uppercase tracking-wider">
-              The wallet for global earners who hold their own keys.
+              One account for people who earn in one country and live in another.
             </p>
           </div>
         </section>
 
+        {/* ─── 2.5 · The four products — what we actually offer ── */}
+        <Products />
+
         {/* ─── 3. A day in the life — scroll-pin scene ─────────── */}
-        <div id="income">
-          <OneDayJourney />
-        </div>
+        <OneDayJourney />
 
         {/* ─── 3.5 · Mid-page CTA bridge ────────────────────────── */}
         <CtaStrip
@@ -71,10 +76,8 @@ export default function Home() {
           tone="blue"
         />
 
-        {/* ─── 4. Five superpowers ─────────────────────────────── */}
-        <div id="swap">
-          <Superpowers />
-        </div>
+        {/* ─── 4. What makes the four products possible ────────── */}
+        <Superpowers />
 
         {/* ─── 4.3 · Bank vs HOLD — the side-by-side ─────────── */}
         <BankVsHold />
@@ -114,8 +117,8 @@ export default function Home() {
               />
               <Step
                 n={3}
-                title="Send, swap, or organize"
-                body="Send to a @username in seconds. Swap stablecoins with zero gas. Split your money across pockets — Travel, Rent, Savings — all from a single balance."
+                title="Spend it, save it, or grow it"
+                body="Send to a @username in seconds. Move part of the balance into Savings and it starts earning that day. Split the rest across pockets — Travel, Rent, whatever your month looks like."
                 badge="Anywhere"
               />
             </ol>
@@ -148,24 +151,38 @@ export default function Home() {
             <h2 className="mt-6 font-display text-h2 md:text-h1 font-light text-text max-w-3xl mx-auto">
               Start free.
               <br />
-              <span className="text-text-muted">Go Pro when you move more.</span>
+              <span className="text-text-muted">Go Pro when your money does more.</span>
             </h2>
             <p className="mt-8 text-lead text-text-muted max-w-2xl mx-auto">
-              No hidden spread. No tier games. Cancel anytime.
+              Savings, investing and benefits are on both plans. Pro buys you
+              room, not access. No hidden spread, no tier games, cancel anytime.
             </p>
 
+            {/*
+              Every line below is a live constant, not a plan we would like to
+              sell. Two that were wrong until 16-aug-2026:
+
+              — Address rotation is Pro. plans.service.ts sets the free pool to
+                0 and getAddressRotation() returns enabled: poolSize > 0, so a
+                free account receives at one address. The site sold rotation as
+                if everyone had it, which is the worst kind of claim to get
+                wrong: a privacy promise the product does not keep.
+              — "Premium support" told the reader nothing. The real Pro benefits
+                are the caps: 3 income accounts against 1, 3 handles against 1,
+                unlimited pockets against 3.
+            */}
             <div className="mt-16 grid grid-cols-1 md:grid-cols-2 gap-5 max-w-4xl mx-auto text-left">
               <PlanCard
                 name="Free"
                 price="$0"
                 priceSub="forever"
                 features={[
-                  "Up to $500/mo of gas-free swaps",
-                  "Above the cap: 0.50% all-in network fee",
-                  "$2 minimum swap",
-                  "3 pockets to organize your money",
-                  "Virtual USD account & IBAN",
-                  "Self-custody · biometric login",
+                  `First ${usd(FREE_ALLOWANCE.monthlyVolumeUsd)}/month converted: network fee on us`,
+                  `Above that, ${HOLD_KEEPS.swapMarkupFreeBps / 100}% all-in · $2 minimum`,
+                  "Savings and Benefits, same as Pro",
+                  "One USD account — IBAN and SWIFT",
+                  "3 pockets · one @username",
+                  "Self-custody · Face ID",
                 ]}
                 cta={{ label: "Download free", href: DOWNLOAD_ANCHOR }}
               />
@@ -175,12 +192,12 @@ export default function Home() {
                 priceSub="per month"
                 highlight
                 features={[
-                  "Always gasless. Network fee included.",
-                  "Zero markup on swap volume — no cap",
+                  "Network fee covered, with no monthly cap",
+                  "No markup on what you convert, at any volume",
+                  "A fresh receiving address on every payment",
+                  "Up to 3 USD accounts · 3 @usernames",
                   "Unlimited pockets",
                   "Priority access to HUSD at launch",
-                  "Virtual USD account & IBAN priority queue",
-                  "Premium support",
                 ]}
                 cta={{ label: "Get Pro", href: DOWNLOAD_ANCHOR }}
               />
@@ -212,18 +229,18 @@ export default function Home() {
                 AI layer · coming soon
               </p>
               <h2 className="mt-6 font-display text-h2 md:text-h1 font-light text-text leading-tight">
-                The Cursor of stablecoins.
+                Just say what you want done.
                 <br />
-                <span className="text-text-muted">Talk to your money.</span>
+                <span className="text-text-muted">Your money, in plain language.</span>
               </h2>
               <p className="mt-8 text-lead text-text-muted max-w-2xl">
-                HOLD is becoming the first AI-native stablecoin wallet. Ask in plain language —
-                <em className="not-italic text-text"> &ldquo;send 200 USDC to Lucía,&rdquo; &ldquo;split my paycheck 60/30/10,&rdquo;
-                &ldquo;move savings to the highest yield&rdquo;</em> — and your wallet does it.
-                Self-custodial, on-chain, signed only by you.
+                The four products above, without the menus. Ask for it —
+                <em className="not-italic text-text"> &ldquo;send 200 to Lucía,&rdquo; &ldquo;split this paycheck 60/30/10,&rdquo;
+                &ldquo;move my savings to whatever pays most&rdquo;</em> — and it happens.
+                Nothing moves until you approve it.
               </p>
               <p id="security" className="mt-6 text-small text-text-faint max-w-2xl">
-                Private keys never leave your device. The AI proposes — you approve every signature.
+                Your key never leaves your phone. The assistant proposes; every payment is signed by you.
               </p>
             </div>
           </div>
@@ -231,7 +248,7 @@ export default function Home() {
 
         {/* ─── 5.5 · Mid-page CTA after pricing ─────────────────── */}
         <CtaStrip
-          eyebrow="The first $500 is on us. Every month."
+          eyebrow={`The first ${usd(FREE_ALLOWANCE.monthlyVolumeUsd)} is on us. Every month.`}
           title="Stop thinking. Start moving."
           subtitle="No setup fees. No KYC for basic use. No bank required."
           primary={{ label: "Get HOLD free", href: DOWNLOAD_ANCHOR }}
@@ -262,7 +279,7 @@ export default function Home() {
             </p>
             <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
               <Testimonial
-                quote="Finally a wallet that doesn't make me feel like an engineer to receive my paycheck."
+                quote="Finally an app that doesn't make me feel like an engineer to receive my paycheck."
                 name="Lucía R."
                 role="Designer · Buenos Aires → Lisbon"
               />
@@ -272,7 +289,7 @@ export default function Home() {
                 role="Developer · Lagos"
               />
               <Testimonial
-                quote="I stopped using my bank for international payments. Zero gas swaps and stablecoin rails save me $40/month in FX alone."
+                quote="I stopped using my bank for international payments. What I stopped losing on the exchange rate covers my phone bill."
                 name="Maria S."
                 role="Writer · Mexico City"
               />
@@ -344,8 +361,8 @@ export default function Home() {
               your bank and your wallet.
             </h2>
             <p className="mt-8 text-lead text-text-muted max-w-xl mx-auto">
-              Private income. Zero gas. You control your money.
-              Set up in 30 seconds.
+              Get paid, earn on the balance, invest what&rsquo;s left and spend it —
+              in one app. Set up in 30 seconds.
             </p>
 
             <div className="mt-12 flex flex-wrap items-center justify-center gap-3">

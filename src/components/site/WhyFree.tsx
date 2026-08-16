@@ -1,3 +1,5 @@
+import { FREE_ALLOWANCE, usd } from "@/lib/rates.config";
+
 /**
  * WhyFree — kills the "what's the catch" objection.
  *
@@ -29,9 +31,9 @@ export function WhyFree() {
             The honest version
           </p>
           <h2 className="mt-6 font-display text-h2 md:text-h1 font-light text-text leading-tight">
-            Why we can give you
+            Why the first {usd(FREE_ALLOWANCE.monthlyVolumeUsd)}
             <br />
-            <span className="text-text-muted">$500/month gas-free.</span>
+            <span className="text-text-muted">every month is free.</span>
           </h2>
           <p className="mt-8 text-lead text-text-muted">
             Free isn&rsquo;t a trick. It&rsquo;s a different business model. We make
@@ -47,13 +49,13 @@ export function WhyFree() {
           />
           <Reason
             n="02"
-            title="Card interchange"
-            body="When the HOLD Card launches, every swipe pays us a small fee from the merchant — not from you. The same way Apple Pay and Revolut work, minus the bank in the middle."
+            title="A share of what Savings earns"
+            body="Money you move into Savings earns interest. We keep a share of that interest and you keep the rest. We never take a cut of the balance itself — if it earns nothing, we earn nothing."
           />
           <Reason
             n="03"
-            title="HUSD treasury yield"
-            body="HUSD, our coming stablecoin, holds reserves in short-term US Treasuries. The yield on those reserves funds the rails. No yield is taken from your balance."
+            title="Card interchange"
+            body="When the HOLD Card launches, every payment pays us a small fee from the merchant — not from you. The same way Apple Pay and Revolut work, minus the bank in the middle."
           />
         </ol>
 

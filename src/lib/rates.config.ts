@@ -3,8 +3,8 @@
  * THE ONE PLACE A RATE CHANGES.
  * ═══════════════════════════════════════════════════════════════════════════
  *
- * Every number rendered on /rewards, /fees, /founders and /travel comes from
- * this file. No page hardcodes a percentage, a price or a cap. Change a value
+ * Every number rendered on /hipoints, /savings, /smart-account, /invest,
+ * /founders and /travel comes from this file. No page hardcodes a percentage, a price or a cap. Change a value
  * here and every surface moves together — that is the whole point, because the
  * failure mode we are avoiding is a marketing page quoting a rate the product
  * stopped charging six weeks ago.
@@ -43,6 +43,28 @@ export const RATE_DISCLAIMER = "Rates are variable and not guaranteed.";
 /** Rendered next to anything still `provisional`. */
 export const PROVISIONAL_LABEL = "Provisional — not final";
 
+/**
+ * What a Free account gets for nothing before any markup applies.
+ *
+ * These were hardcoded on the homepage — five times, in four components, plus
+ * the FAQ and the JSON-LD — which is the exact thing rule 1 above exists to
+ * stop. Moved here 16-aug-2026.
+ *
+ * measured: FREE_MONTHLY_CAP_USD = 500 and NETWORK_FEE_SPONSOR_CAP_USD = 0.10
+ *           in hihodl-backend/server/services/swap-fees.service.ts on
+ *           origin/main, read 2026-08-16.
+ */
+export const FREE_ALLOWANCE = {
+  /** USD of conversion volume per calendar month with the network fee on us. */
+  monthlyVolumeUsd: 500,
+  /**
+   * Most we absorb per conversion. Above this the user pays only the excess —
+   * which the site did not say until 16-aug-2026, and a fee ceiling nobody
+   * published is a fee nobody agreed to.
+   */
+  networkFeeCeilingUsd: 0.1,
+} as const;
+
 /* ══════════════════════════════════════════════════════════════════════════
  * 1. WHAT HOLD KEEPS
  *
@@ -73,7 +95,7 @@ export const HOLD_KEEPS = {
   /**
    * Our cut of the INTEREST a savings position earns. Never a cut of principal.
    *
-   * surface: /smart-account
+   * surface: /savings
    * measured: SAVINGS_FEE_BPS in hihodl-backend/server/services/savings-fee.service.ts
    *           on feat/card-rewards-and-credit-gaps, read 2026-07-30. Live at 1500.
    *           Decision dated 2026-07-14.

@@ -4,10 +4,25 @@ import Link from "next/link";
 import { TopNav } from "@/components/site/TopNav";
 import { Footer } from "@/components/site/Footer";
 import { SectionHairline } from "@/components/site/SectionHairline";
-import { HOLD_KEEPS, RATE_DISCLAIMER } from "@/lib/rates.config";
+import { HOLD_KEEPS, PROVISIONAL_LABEL, RATE_DISCLAIMER } from "@/lib/rates.config";
 
 /**
- * /smart-account — what the product is, in the words a customer would use.
+ * /smart-account — the Main balance earning by itself.
+ *
+ * SMART ACCOUNT IS NOT SAVINGS, AND THIS PAGE IS NOT /savings
+ *
+ * The two were briefly merged on 16-aug-2026 and un-merged the same day,
+ * because they are different products with different prices:
+ *
+ *   Savings  — money you DELIBERATELY moved into Savings or a Pocket. Live
+ *              today. We keep savingsInterestShareBps of the interest. /savings
+ *   Smart    — the Main balance, the money you did NOT move, earning anyway.
+ *   Account    We keep mainInterestShareBps, which is higher because we did the
+ *              work you did not. This page.
+ *
+ * The price difference IS the product difference, so one page cannot carry
+ * both — and rates.config's rule 3 says as much: never render two HOLD_KEEPS
+ * keys on the same page. This page used to render both.
  *
  * WHY THIS PAGE EXISTS
  *
@@ -33,7 +48,7 @@ import { HOLD_KEEPS, RATE_DISCLAIMER } from "@/lib/rates.config";
  *
  * STRUCTURE
  *
- * Same shell as /rewards and /travel: alternating night/abyss sections, a
+ * Same shell as /savings, /invest and /travel: alternating night/abyss sections, a
  * hairline at each seam, card grids rather than prose walls, and the "How we
  * make money here" block last. A reader who lands on two product pages should
  * not have to learn two layouts to find the same answer.
@@ -42,7 +57,7 @@ import { HOLD_KEEPS, RATE_DISCLAIMER } from "@/lib/rates.config";
 export const metadata: Metadata = {
   title: "Smart Account",
   description:
-    "Your balance earns while it sits there, and you can spend it whenever you want. What that means, how it works, and exactly what HOLD keeps.",
+    "The money you did not set aside earns too. Your Main balance works while it sits there, stays spendable the whole time, and we tell you exactly what we keep.",
   alternates: { canonical: "/smart-account" },
 };
 
@@ -82,8 +97,10 @@ const FAQ = [
 ];
 
 export default function SmartAccountPage() {
-  const savingsShare = HOLD_KEEPS.savingsInterestShareBps / 100;
+  // Only the Main share appears on this page. The Savings share is a different
+  // product at a different price and lives on /savings. See rates.config rule 3.
   const mainShare = HOLD_KEEPS.mainInterestShareBps / 100;
+  const provisional = HOLD_KEEPS.mainInterestShareProvisional;
 
   return (
     <>
@@ -97,14 +114,23 @@ export default function SmartAccountPage() {
             <div className="max-w-3xl">
               <p className="text-tiny uppercase tracking-wider text-moonlight">Smart Account</p>
               <h1 className="mt-6 font-display text-h1 font-light text-text leading-tight">
-                Your money works
+                Even the money you
                 <br />
-                <span className="text-text-muted">while you are not looking.</span>
+                <span className="text-text-muted">never set aside.</span>
               </h1>
               <p className="mt-8 text-lead text-text-muted">
-                Most accounts hold your money still. Yours does not. The balance sitting in
-                your account earns while it sits there, and you can still spend it, send it
-                or withdraw it the second you want to. No notice, no minimum, no lock-up.
+                Setting money aside to earn is easy to say and easy to forget. Smart Account
+                is what happens to the rest: the everyday balance you left in Main, the money
+                you were going to spend anyway, earning while it waits. You move nothing, and
+                it stays as spendable as it was a second ago.
+              </p>
+              <p className="mt-6 text-body text-text-muted">
+                Money you <em className="not-italic text-text">did</em> deliberately set aside
+                is a different product at a better rate —{" "}
+                <Link href="/savings" className="text-text hover:text-amber underline">
+                  that is Savings
+                </Link>
+                .
               </p>
               <p className="mt-8 text-small text-text-faint max-w-2xl">
                 <span aria-hidden>* </span>
@@ -122,15 +148,15 @@ export default function SmartAccountPage() {
             <div className="max-w-2xl">
               <h2 className="font-display text-h2 font-light text-text">The short version</h2>
               <p className="mt-6 text-body text-text-muted leading-relaxed">
-                There is no separate savings product to open, no transfer to remember and no
-                minimum to reach. The account you already have is the account that earns.
+                Nothing to open, no transfer to remember, no minimum to reach. The account
+                you already spend from is the account that earns.
               </p>
             </div>
 
             <div className="mt-14 grid grid-cols-1 md:grid-cols-3 gap-5">
               <Card
                 title="It earns where it sits"
-                body="Money in your account does not sit idle. It earns quietly in the background, and you never have to move it anywhere or think about it."
+                body="Money in Main does not sit idle. It earns quietly in the background, and you never have to move it anywhere or think about it. That is the whole idea — the money most people never get round to setting aside is the money this is for."
               />
               <Card
                 title="It is still spendable"
@@ -203,60 +229,56 @@ export default function SmartAccountPage() {
               </h2>
               <div className="mt-8 space-y-6 text-body text-text-muted">
                 <p>
-                  Your balance earns interest. We keep a share of that interest, and you keep
-                  the rest. We never take a share of your money itself — only of what it
+                  Your Main balance earns interest. We keep a share of that interest, and you
+                  keep the rest. We never take a share of your money itself — only of what it
                   earns. If it earns nothing, we get nothing.
+                </p>
+                <p>
+                  Our share on Main is the highest we charge anywhere, and it should be: you
+                  did nothing. You did not decide, did not move anything and did not remember
+                  to. If you would rather keep more of it, moving the money into Savings takes
+                  one tap and costs you less — the rate is on{" "}
+                  <Link href="/savings" className="text-text hover:text-amber underline">
+                    the savings page
+                  </Link>
+                  .
                 </p>
               </div>
 
-              <div className="mt-10 overflow-x-auto -mx-6 px-6 md:mx-0 md:px-0">
-                <table className="w-full min-w-[420px] border-collapse text-left">
-                  <thead>
-                    <tr>
-                      {["Where your money is", "We keep", "You keep"].map((h, i) => (
-                        <th
-                          key={h}
-                          scope="col"
-                          className={`pb-4 text-tiny uppercase tracking-wider text-text-faint font-normal border-b border-[color:var(--color-hairline-strong)] ${
-                            i === 0 ? "" : "text-right pl-6"
-                          }`}
-                        >
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <ShareRow
-                      label="Main"
-                      note="Your everyday balance. Nothing to set up."
-                      keepPct={mainShare}
-                    />
-                    <ShareRow
-                      label="Savings and Pockets"
-                      note="Money you chose to set aside."
-                      keepPct={savingsShare}
-                    />
-                  </tbody>
-                </table>
+              {/* Same two-cell split as /savings. One product, one price, and the
+                  two pages read identically so the reader can hold them side by
+                  side without our help — which is not the same as printing both
+                  numbers in one place. */}
+              <div className="mt-10 flex flex-col sm:flex-row gap-px bg-[color:var(--color-hairline)] border border-[color:var(--color-hairline)] rounded-card overflow-hidden">
+                <Split label="You keep" value={`${100 - mainShare}%`} highlight />
+                <Split label="We keep" value={`${mainShare}%`} />
               </div>
+              <p className="mt-4 text-small text-text-faint">
+                of the interest on your Main balance — never of the balance
+              </p>
+
+              {provisional && (
+                <p className="mt-8 text-small text-amber">
+                  {PROVISIONAL_LABEL}. Smart Account is not switched on yet. This is what it
+                  will charge when it is — published before it ships rather than after, so
+                  nobody finds out by looking at a statement.
+                </p>
+              )}
 
               <p className="mt-8 text-body text-text-muted leading-relaxed">
-                Money you deliberately set aside costs you less, because you did the work of
-                putting it there. Money that simply sits in Main costs more, because we do
-                that work for you. Move money between them whenever you like — we charge each
-                share only for the days your money actually spent there.
+                Move money between Main and Savings whenever you like. We charge each share
+                only for the days your money actually spent there, so a balance you move
+                across on the tenth is not billed at the Main rate for the rest of the month.
               </p>
 
               <p className="mt-6 text-small text-text-faint">
                 <span aria-hidden>* </span>
                 {RATE_DISCLAIMER} There is no account fee, no minimum balance and no charge
-                to move money between Main, Savings and Pockets. The two percentages above
-                are everything we make on this product — there is no other charge, and
-                nothing further to look up. What the card gives back and what you can borrow
-                are on{" "}
-                <Link href="/rewards" className="text-text-muted hover:text-text underline">
-                  the rewards page
+                to move money between Main, Savings and Pockets. The percentage above is
+                everything we make on this product — there is no other charge and nothing
+                further to look up. What the card gives back and what you can borrow are on{" "}
+                <Link href="/hipoints" className="text-text-muted hover:text-text underline">
+                  the HiPoints page
                 </Link>
                 .
               </p>
@@ -329,27 +351,25 @@ function Answer({ q, a }: { q: string; a: string }) {
   );
 }
 
-function ShareRow({
+function Split({
   label,
-  note,
-  keepPct,
+  value,
+  highlight,
 }: {
   label: string;
-  note: string;
-  keepPct: number;
+  value: string;
+  highlight?: boolean;
 }) {
   return (
-    <tr>
-      <td className="py-4 pr-6 border-b border-[color:var(--color-hairline)]">
-        <span className="text-body text-text">{label}</span>
-        <span className="block mt-1 text-small text-text-faint">{note}</span>
-      </td>
-      <td className="py-4 pl-6 text-right align-top border-b border-[color:var(--color-hairline)]">
-        <span className="font-mono tabular-nums text-body text-text-muted">{keepPct}%</span>
-      </td>
-      <td className="py-4 pl-6 text-right align-top border-b border-[color:var(--color-hairline)]">
-        <span className="font-mono tabular-nums text-body text-amber">{100 - keepPct}%</span>
-      </td>
-    </tr>
+    <div className="flex-1 bg-night/60 px-8 py-8">
+      <p className="text-tiny uppercase tracking-wider text-text-faint">{label}</p>
+      <p
+        className={`mt-3 font-mono tabular-nums text-h2 font-light ${
+          highlight ? "text-amber" : "text-text-muted"
+        }`}
+      >
+        {value}
+      </p>
+    </div>
   );
 }

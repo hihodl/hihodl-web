@@ -9,6 +9,20 @@ const nextConfig = {
       { protocol: "https", hostname: "res.cloudinary.com" }
     ]
   },
+  // /rewards is the HiPoints page. Two names for one thing was costing us the
+  // only word customers actually use in the app. Permanent because the old URL
+  // is in the sitemap and in the footer of every page we have shipped.
+  //
+  // /smart-account is NOT redirected. It briefly pointed at /savings on
+  // 16-aug-2026, which was wrong: Smart Account is the Main balance earning by
+  // itself and Savings is money you moved on purpose. Different products,
+  // different prices, one page each.
+  async redirects() {
+    return [
+      { source: "/rewards", destination: "/hipoints", permanent: true },
+    ];
+  },
+
   // Standard hardening — Vercel adds Strict-Transport-Security automatically
   // so we set the rest. CSP is intentionally NOT set here yet because the
   // page uses inline JSON-LD blobs and Tailwind's just-in-time inline styles;
