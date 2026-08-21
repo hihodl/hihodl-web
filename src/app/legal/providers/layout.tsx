@@ -5,7 +5,7 @@ const OG_URL = "https://hihodl.xyz/banner-social.png";
 export const metadata: Metadata = {
   title: "Service Providers — Who We Work With",
   description:
-    "The regulated financial institutions, verification partners, commercial suppliers, and technical infrastructure behind HOLD, and what data each one receives.",
+    "The maintained list of the institutions and suppliers behind HOLD: who performs each regulated activity, who verifies identity, and what data each one receives.",
   alternates: { canonical: "https://hihodl.xyz/legal/providers" },
   openGraph: {
     type: "website",
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     siteName: "HOLD",
     title: "Service Providers — Who We Work With | HOLD",
     description:
-      "The regulated financial institutions, verification partners, commercial suppliers, and technical infrastructure behind HOLD, and what data each one receives.",
+      "Who performs each regulated activity in HOLD, who verifies identity, and what data each provider receives. Kept current as integrations change.",
     images: [
       {
         url: OG_URL,
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     creator: "@hiihodl",
     title: "Service Providers — Who We Work With | HOLD",
     description:
-      "The regulated financial institutions, verification partners, commercial suppliers, and technical infrastructure behind HOLD.",
+      "Who performs each regulated activity in HOLD, who verifies identity, and what data each provider receives.",
     images: [OG_URL],
   },
 };

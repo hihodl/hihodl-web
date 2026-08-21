@@ -10,8 +10,11 @@
  * names the provider is updated, not when the code deploys.
  *
  * Rules for editing this page:
- *  - Only list a provider that is contracted AND live. No roadmap, no "coming
- *    soon", no counterparty still in onboarding.
+ *  - Only list a provider whose integration exists in the product. No roadmap,
+ *    no "coming soon", no counterparty we have merely talked to.
+ *  - Never state or imply a contractual status that is not executed. A provider
+ *    can be integrated and still be mid-onboarding on their side; `pending`
+ *    says the feature is off, it does not claim a signed agreement.
  *  - Registration and licence numbers go in ONLY where verified from the
  *    provider's own filing or agreement. An unverified number is worse than none.
  *  - Bump "Last updated" in the same commit. That date is the whole point.
@@ -176,7 +179,7 @@ export default function ProvidersLegalPage() {
               Service providers
             </h1>
             <p className="text-base sm:text-lg text-[#94a3b8ff] font-['Inter'] font-[400]">
-              Last updated: August 13, 2026
+              Last updated: August 17, 2026
             </p>
           </div>
 
@@ -194,7 +197,7 @@ export default function ProvidersLegalPage() {
               <span className="text-brand-ffb703 font-[600]">
                 Not yet enabled
               </span>{" "}
-              are contracted and built, but the feature they power is not
+              are built into the app, but the feature they power is not
               switched on in the public release yet. They are listed in advance
               so that nothing about where your data goes is a surprise on the
               day a feature ships.
