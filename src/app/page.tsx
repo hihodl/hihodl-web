@@ -256,46 +256,13 @@ export default function Home() {
         />
 
         {/* ─── 6. Social proof ─────────────────────────────────── */}
-        <section
-          className="relative overflow-hidden"
-          style={{
-            background:
-              "linear-gradient(180deg, #161E2A 0%, #1B2638 100%)",
-          }}
-        >
-          {/* Horizontal moonlight band */}
-          <div
-            className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[60%] pointer-events-none opacity-40"
-            style={{
-              background:
-                "radial-gradient(80% 100% at 50% 50%, rgba(91,124,255,0.18), transparent 70%)",
-            }}
-            aria-hidden
-          />
-          <SectionHairline tone="moonlight" />
-          <div className="container-page section relative">
-            <p className="text-tiny uppercase tracking-wider text-text-faint text-center">
-              Loved by global earners in 80+ countries
-            </p>
-            <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Testimonial
-                quote="Finally an app that doesn't make me feel like an engineer to receive my paycheck."
-                name="Lucía R."
-                role="Designer · Buenos Aires → Lisbon"
-              />
-              <Testimonial
-                quote="My clients pay me in USD. I pay rent in pesos. HOLD is the bridge I'd been hacking together with three apps."
-                name="Akin O."
-                role="Developer · Lagos"
-              />
-              <Testimonial
-                quote="I stopped using my bank for international payments. What I stopped losing on the exchange rate covers my phone bill."
-                name="Maria S."
-                role="Writer · Mexico City"
-              />
-            </div>
-          </div>
-        </section>
+        {/* REMOVED 2026-08-19: three fabricated testimonials ("Lucía R.", "Akin O.",
+            "Maria S.") and the claim "Loved by global earners in 80+ countries".
+            Confirmed invented by Alex. Production holds single-digit real users.
+            Do not regenerate social proof here: for a financial product an invented
+            testimonial is a regulatory exposure, not just a credibility one. This slot
+            stays empty until real, attributable evidence exists. See PRODUCT.md
+            > Evidence on Hand. */}
 
         {/* ─── 7. Newsletter + HUSD teaser (brand blue dominant) ─ */}
         <section
@@ -626,20 +593,6 @@ function Step({
       <h3 className="mt-8 font-display text-h3 font-light text-text leading-tight">{title}</h3>
       <p className="mt-4 text-body text-text-muted">{body}</p>
     </li>
-  );
-}
-
-function Testimonial({ quote, name, role }: { quote: string; name: string; role: string }) {
-  return (
-    <figure className="rounded-card p-8 border border-[color:var(--color-hairline)] bg-white/[0.03] flex flex-col gap-6">
-      <blockquote className="font-editorial text-h4 text-text leading-snug">
-        &ldquo;{quote}&rdquo;
-      </blockquote>
-      <figcaption>
-        <p className="text-body text-text">{name}</p>
-        <p className="text-small text-text-faint">{role}</p>
-      </figcaption>
-    </figure>
   );
 }
 

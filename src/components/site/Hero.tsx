@@ -215,7 +215,7 @@ export function Hero() {
             >
               One account for people who earn in one country and live in another.
               Get paid in minutes, earn on the balance while it sits, and spend it
-              wherever you are — with the keys in your pocket, not ours.
+              wherever you are — in an account we cannot freeze.
             </p>
 
             <div ref={ctas} className="mt-10 flex flex-wrap gap-3">
