@@ -427,6 +427,20 @@ export interface AssetRate {
    * nobody can reach through us, on a page that promises the opposite.
    */
   routed: boolean;
+  /**
+   * Whether this is a dollar.
+   *
+   * The headline says what a BALANCE earns, and a balance here means dollars.
+   * SOL is routed and pays the most of anything we route to (4.69 % against the
+   * best dollar's 3.70 %), so an unfiltered max headlines a Solana position on
+   * a page selling a dollar account. The app already refuses this: useSavings.ts
+   * filters `kamino-sol` out of its own "Earn up to" for the same reason, in its
+   * own words — "SOL's rate, the highest of the lot, would headline Earn up to
+   * on a screen about dollars". The web should not claim what the app declines to.
+   *
+   * EURC is a euro, and is not routed either way.
+   */
+  dollar: boolean;
   /** Where this exact pair of numbers came from. */
   source: string;
   note?: string;
@@ -441,6 +455,7 @@ export const ASSETS: AssetRate[] = [
     grossApyPct: 1.22,
     maxLtvPct: 80,
     routed: true,
+    dollar: true,
     // measured: Kamino Main reserve metrics API, on the reserve the product
     // actually deposits into (kamino-yield.service.ts PINNED_RESERVE_BY_MINT), 2026-09-06.
     source: "Kamino Main reserve metrics, 2026-09-06",
@@ -459,6 +474,7 @@ export const ASSETS: AssetRate[] = [
     grossApyPct: 3.25,
     maxLtvPct: 80,
     routed: true,
+    dollar: true,
     // measured: Kamino Main reserve metrics API, on the reserve the product
     // actually deposits into (kamino-yield.service.ts PINNED_RESERVE_BY_MINT), 2026-09-06.
     source: "Kamino Main reserve metrics, 2026-09-06",
@@ -471,6 +487,7 @@ export const ASSETS: AssetRate[] = [
     grossApyPct: 3.49,
     maxLtvPct: 80,
     routed: true,
+    dollar: true,
     // measured: Kamino Main reserve metrics API, on the reserve the product
     // actually deposits into (kamino-yield.service.ts PINNED_RESERVE_BY_MINT), 2026-09-06.
     source: "Kamino Main reserve metrics, 2026-09-06",
@@ -484,6 +501,7 @@ export const ASSETS: AssetRate[] = [
     grossApyPct: 3.7,
     maxLtvPct: 75,
     routed: true,
+    dollar: true,
     // measured: hihodl-contracts/tools/baseEthReserves.cjs, 2026-09-06.
     source: "Aave V3 Base reserve data, 2026-09-06",
   },
@@ -495,6 +513,7 @@ export const ASSETS: AssetRate[] = [
     grossApyPct: 4.69,
     maxLtvPct: 74,
     routed: true,
+    dollar: false,
     // measured: Kamino Main reserve metrics API, on the reserve the product
     // actually deposits into (kamino-yield.service.ts PINNED_RESERVE_BY_MINT), 2026-09-06.
     source: "Kamino Main reserve metrics, 2026-09-06",
@@ -507,6 +526,7 @@ export const ASSETS: AssetRate[] = [
     grossApyPct: 5.51,
     maxLtvPct: 0,
     routed: false,
+    dollar: true,
     // measured: hihodl-contracts/tools/baseEthReserves.cjs, 2026-09-06.
     source: "Aave V3 Base reserve data, 2026-09-06",
     note: "What the venue pays. Not somewhere a HOLD balance can be supplied today, and not usable as collateral.",
@@ -519,6 +539,7 @@ export const ASSETS: AssetRate[] = [
     grossApyPct: 1.83,
     maxLtvPct: 0,
     routed: false,
+    dollar: false,
     // measured: hihodl-contracts/tools/baseEthReserves.cjs, 2026-09-06.
     source: "Aave V3 Base reserve data, 2026-09-06",
     note: "What the venue pays. Not somewhere a HOLD balance can be supplied today, and not usable as collateral.",
@@ -531,6 +552,7 @@ export const ASSETS: AssetRate[] = [
     grossApyPct: 1.82,
     maxLtvPct: 80,
     routed: false,
+    dollar: false,
     // measured: hihodl-contracts/tools/baseEthReserves.cjs, 2026-09-06.
     source: "Aave V3 Base reserve data, 2026-09-06",
     note: "Held to borrow against, not to earn on."
@@ -543,6 +565,7 @@ export const ASSETS: AssetRate[] = [
     grossApyPct: 0.013,
     maxLtvPct: 73,
     routed: false,
+    dollar: false,
     // measured: hihodl-contracts/tools/baseEthReserves.cjs, 2026-09-06.
     source: "Aave V3 Base reserve data, 2026-09-06",
     note: "Held to borrow against, not to earn on.",
@@ -633,14 +656,21 @@ export function netApyPct(grossApyPct: number, tier: TierId): number {
  * The best net APY any tier can reach on an asset a balance can actually be
  * supplied to. The "up to" headline.
  *
- * `routed` is the whole point — see the field. On 06-Sep-2026 the unfiltered
- * version would have headlined GHO's 5.51 %, which no HOLD balance can reach.
+ * Two filters, both load-bearing, both measured on 06-Sep-2026:
+ *   • `routed` — without it the headline was GHO's 5.51 %, which no HOLD balance
+ *     can reach. It is on this page because it says something true about the
+ *     venue, not because a balance can go there.
+ *   • `dollar` — without it the headline was SOL's 4.69 %, a Solana position
+ *     quoted on a page selling a dollar account. The app declines the same
+ *     claim on the same reasoning; see the field.
+ *
+ * What is left is the dollar ceiling: 3.70 %, USDC on Aave Base, Prime plan.
  */
 export function bestNetApyPct(): number {
   const bestTier = TIERS.reduce((a, b) =>
     a.savingsInterestShareBps <= b.savingsInterestShareBps ? a : b,
   );
-  const reachable = ASSETS.filter((a) => a.routed);
+  const reachable = ASSETS.filter((a) => a.routed && a.dollar);
   return Math.max(...reachable.map((a) => netApyPct(a.grossApyPct, bestTier.id)));
 }
 

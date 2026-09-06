@@ -100,7 +100,7 @@ export default function HiPointsPage() {
 
             <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-5">
               <Headline
-                label="Your balance earns"
+                label="Your dollars earn"
                 value={`up to ${pct(bestApy)}`}
                 sub={`Annual rate, net of everything. ${bestTier.name} plan.`}
               />
