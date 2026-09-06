@@ -93,7 +93,8 @@ export default function HiPointsPage() {
               </h1>
               <p className="mt-8 text-lead text-text-muted">
                 What your balance earns, what your card gives back, and what you can borrow
-                without selling. Every rate below is what you receive.
+                without selling. Every rate below is net of our share — and where a row is
+                not somewhere a HOLD balance can be supplied, it says so.
               </p>
             </div>
 
