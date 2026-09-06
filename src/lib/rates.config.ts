@@ -35,7 +35,7 @@
  */
 
 /** The day every APY and LTV below was last read off a live source. */
-export const RATES_MEASURED_ON = "2026-07-30";
+export const RATES_MEASURED_ON = "2026-09-06";
 
 /** Goes under every rate table. Non-negotiable. */
 export const RATE_DISCLAIMER = "Rates are variable and not guaranteed.";
@@ -412,6 +412,35 @@ export interface AssetRate {
   chain: "solana" | "base";
   grossApyPct: number;
   maxLtvPct: number;
+  /**
+   * Whether a HOLD balance can actually be supplied here.
+   *
+   * The page above this table says "Every rate below is what you receive", and
+   * for four of these rows it was not: GHO, EURC, ETH and cbBTC have no offer in
+   * the app's yield catalogue (hihodl-wallet src/services/yield/catalog.ts —
+   * usdc, usdt, usdg, usds, pyusd, sol, and nothing else). They are here because
+   * they say something true about the venues we use; they are not places a
+   * balance can go.
+   *
+   * `bestNetApyPct()` reads this. Without it the "up to" headline would have
+   * moved onto GHO at 5.51 % the moment these rates were re-measured — a rate
+   * nobody can reach through us, on a page that promises the opposite.
+   */
+  routed: boolean;
+  /**
+   * Whether this is a dollar.
+   *
+   * The headline says what a BALANCE earns, and a balance here means dollars.
+   * SOL is routed and pays the most of anything we route to (4.69 % against the
+   * best dollar's 3.70 %), so an unfiltered max headlines a Solana position on
+   * a page selling a dollar account. The app already refuses this: useSavings.ts
+   * filters `kamino-sol` out of its own "Earn up to" for the same reason, in its
+   * own words — "SOL's rate, the highest of the lot, would headline Earn up to
+   * on a screen about dollars". The web should not claim what the app declines to.
+   *
+   * EURC is a euro, and is not routed either way.
+   */
+  dollar: boolean;
   /** Where this exact pair of numbers came from. */
   source: string;
   note?: string;
@@ -423,31 +452,45 @@ export const ASSETS: AssetRate[] = [
     label: "PayPal USD",
     venue: "Kamino Main",
     chain: "solana",
-    grossApyPct: 4.18,
+    grossApyPct: 1.22,
     maxLtvPct: 80,
-    // measured: Kamino Main reserve metrics API, 2026-07-30.
-    source: "Kamino Main reserve metrics, 2026-07-30",
-    note: "Highest-paying dollar on any rail we route to, at full borrowing power.",
+    routed: true,
+    dollar: true,
+    // measured: Kamino Main reserve metrics API, on the reserve the product
+    // actually deposits into (kamino-yield.service.ts PINNED_RESERVE_BY_MINT), 2026-09-06.
+    source: "Kamino Main reserve metrics, 2026-09-06",
+    // No superlative here any more. This row read "Highest-paying dollar on
+    // any rail we route to" from 30-Jul until 06-Sep, by which time PYUSD had
+    // fallen to 1.22 % and was the LOWEST-paying dollar on the page. A ranking
+    // claim next to a variable number goes false on its own, silently, with
+    // nothing in the repo that could notice.
+    note: "Full borrowing power, like every dollar on this page.",
   },
   {
     symbol: "USDT",
     label: "Tether",
     venue: "Kamino Main",
     chain: "solana",
-    grossApyPct: 3.84,
+    grossApyPct: 3.25,
     maxLtvPct: 80,
-    // measured: Kamino Main reserve metrics API, 2026-07-30.
-    source: "Kamino Main reserve metrics, 2026-07-30",
+    routed: true,
+    dollar: true,
+    // measured: Kamino Main reserve metrics API, on the reserve the product
+    // actually deposits into (kamino-yield.service.ts PINNED_RESERVE_BY_MINT), 2026-09-06.
+    source: "Kamino Main reserve metrics, 2026-09-06",
   },
   {
     symbol: "USDC",
     label: "USD Coin",
     venue: "Kamino Main",
     chain: "solana",
-    grossApyPct: 3.56,
+    grossApyPct: 3.49,
     maxLtvPct: 80,
-    // measured: Kamino Main reserve metrics API, 2026-07-30.
-    source: "Kamino Main reserve metrics, 2026-07-30",
+    routed: true,
+    dollar: true,
+    // measured: Kamino Main reserve metrics API, on the reserve the product
+    // actually deposits into (kamino-yield.service.ts PINNED_RESERVE_BY_MINT), 2026-09-06.
+    source: "Kamino Main reserve metrics, 2026-09-06",
     note: "The default route.",
   },
   {
@@ -455,62 +498,76 @@ export const ASSETS: AssetRate[] = [
     label: "USD Coin",
     venue: "Aave V3",
     chain: "base",
-    grossApyPct: 3.5,
+    grossApyPct: 3.7,
     maxLtvPct: 75,
-    // measured: hihodl-contracts/tools/baseEthReserves.cjs, 2026-07-30.
-    source: "Aave V3 Base reserve data, 2026-07-30",
+    routed: true,
+    dollar: true,
+    // measured: hihodl-contracts/tools/baseEthReserves.cjs, 2026-09-06.
+    source: "Aave V3 Base reserve data, 2026-09-06",
   },
   {
     symbol: "SOL",
     label: "Solana",
     venue: "Kamino Main",
     chain: "solana",
-    grossApyPct: 4.99,
+    grossApyPct: 4.69,
     maxLtvPct: 74,
-    // measured: Kamino Main reserve metrics API, 2026-07-30.
-    source: "Kamino Main reserve metrics, 2026-07-30",
+    routed: true,
+    dollar: false,
+    // measured: Kamino Main reserve metrics API, on the reserve the product
+    // actually deposits into (kamino-yield.service.ts PINNED_RESERVE_BY_MINT), 2026-09-06.
+    source: "Kamino Main reserve metrics, 2026-09-06",
   },
   {
     symbol: "GHO",
     label: "GHO",
     venue: "Aave V3",
     chain: "base",
-    grossApyPct: 4.57,
+    grossApyPct: 5.51,
     maxLtvPct: 0,
-    // measured: hihodl-contracts/tools/baseEthReserves.cjs, 2026-07-30.
-    source: "Aave V3 Base reserve data, 2026-07-30",
-    note: "Earns well, cannot be used as collateral.",
+    routed: false,
+    dollar: true,
+    // measured: hihodl-contracts/tools/baseEthReserves.cjs, 2026-09-06.
+    source: "Aave V3 Base reserve data, 2026-09-06",
+    note: "What the venue pays. Not somewhere a HOLD balance can be supplied today, and not usable as collateral.",
   },
   {
     symbol: "EURC",
     label: "Euro Coin",
     venue: "Aave V3",
     chain: "base",
-    grossApyPct: 2.71,
+    grossApyPct: 1.83,
     maxLtvPct: 0,
-    // measured: hihodl-contracts/tools/baseEthReserves.cjs, 2026-07-30.
-    source: "Aave V3 Base reserve data, 2026-07-30",
-    note: "Earns well, cannot be used as collateral.",
+    routed: false,
+    dollar: false,
+    // measured: hihodl-contracts/tools/baseEthReserves.cjs, 2026-09-06.
+    source: "Aave V3 Base reserve data, 2026-09-06",
+    note: "What the venue pays. Not somewhere a HOLD balance can be supplied today, and not usable as collateral.",
   },
   {
     symbol: "ETH",
     label: "Ether",
     venue: "Aave V3",
     chain: "base",
-    grossApyPct: 1.45,
+    grossApyPct: 1.82,
     maxLtvPct: 80,
-    // measured: hihodl-contracts/tools/baseEthReserves.cjs, 2026-07-30.
-    source: "Aave V3 Base reserve data, 2026-07-30",
+    routed: false,
+    dollar: false,
+    // measured: hihodl-contracts/tools/baseEthReserves.cjs, 2026-09-06.
+    source: "Aave V3 Base reserve data, 2026-09-06",
+    note: "Held to borrow against, not to earn on."
   },
   {
     symbol: "BTC",
     label: "Bitcoin (cbBTC)",
     venue: "Aave V3",
     chain: "base",
-    grossApyPct: 0.012,
+    grossApyPct: 0.013,
     maxLtvPct: 73,
-    // measured: hihodl-contracts/tools/baseEthReserves.cjs, 2026-07-30.
-    source: "Aave V3 Base reserve data, 2026-07-30",
+    routed: false,
+    dollar: false,
+    // measured: hihodl-contracts/tools/baseEthReserves.cjs, 2026-09-06.
+    source: "Aave V3 Base reserve data, 2026-09-06",
     note: "Held to borrow against, not to earn on.",
   },
 ];
@@ -595,12 +652,26 @@ export function netApyPct(grossApyPct: number, tier: TierId): number {
   return grossApyPct * (1 - shareBps / 10_000);
 }
 
-/** The best net APY any tier can reach on any asset. The "up to" headline. */
+/**
+ * The best net APY any tier can reach on an asset a balance can actually be
+ * supplied to. The "up to" headline.
+ *
+ * Two filters, both load-bearing, both measured on 06-Sep-2026:
+ *   • `routed` — without it the headline was GHO's 5.51 %, which no HOLD balance
+ *     can reach. It is on this page because it says something true about the
+ *     venue, not because a balance can go there.
+ *   • `dollar` — without it the headline was SOL's 4.69 %, a Solana position
+ *     quoted on a page selling a dollar account. The app declines the same
+ *     claim on the same reasoning; see the field.
+ *
+ * What is left is the dollar ceiling: 3.70 %, USDC on Aave Base, Prime plan.
+ */
 export function bestNetApyPct(): number {
   const bestTier = TIERS.reduce((a, b) =>
     a.savingsInterestShareBps <= b.savingsInterestShareBps ? a : b,
   );
-  return Math.max(...ASSETS.map((a) => netApyPct(a.grossApyPct, bestTier.id)));
+  const reachable = ASSETS.filter((a) => a.routed && a.dollar);
+  return Math.max(...reachable.map((a) => netApyPct(a.grossApyPct, bestTier.id)));
 }
 
 /** The highest LTV any asset reaches. The "borrow up to" headline. */

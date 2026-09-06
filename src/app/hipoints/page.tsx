@@ -93,13 +93,14 @@ export default function HiPointsPage() {
               </h1>
               <p className="mt-8 text-lead text-text-muted">
                 What your balance earns, what your card gives back, and what you can borrow
-                without selling. Every rate below is what you receive.
+                without selling. Every rate below is net of our share — and where a row is
+                not somewhere a HOLD balance can be supplied, it says so.
               </p>
             </div>
 
             <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-5">
               <Headline
-                label="Your balance earns"
+                label="Your dollars earn"
                 value={`up to ${pct(bestApy)}`}
                 sub={`Annual rate, net of everything. ${bestTier.name} plan.`}
               />
