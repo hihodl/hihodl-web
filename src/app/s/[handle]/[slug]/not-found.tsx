@@ -21,7 +21,7 @@ export default function AdSpaceNotFound() {
         </p>
         <div className="mt-10">
           <Link href="/" className={btnSecondary}>
-            Go to HIHODL
+            Go to HOLD
           </Link>
         </div>
       </main>

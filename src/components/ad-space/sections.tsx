@@ -35,7 +35,7 @@ export function SlimHeader() {
       <Link href="/" className="flex items-center text-text" aria-label="Home">
         <Wordmark className="h-5 w-auto" />
       </Link>
-      <DownloadLink className={btnSmallSecondary}>Get HIHODL</DownloadLink>
+      <DownloadLink className={btnSmallSecondary}>Get HOLD</DownloadLink>
     </header>
   );
 }
@@ -48,12 +48,12 @@ export function SpaceFooter({ space }: { space: Space }) {
         <div className="flex max-w-md flex-col gap-3">
           <Wordmark className="h-5 w-auto self-start text-text" />
           <p className="text-small text-text-muted">
-            Powered by HIHODL. Sponsors pay creators directly in USDC, and HIHODL never holds the money.
+            Powered by HOLD. Sponsors pay creators directly in USDC, and HOLD never holds the money.
           </p>
-          <p className="text-small text-text-faint">Have an audience? Sell your own Ad Space from the HIHODL app.</p>
+          <p className="text-small text-text-faint">Have an audience? Sell your own Ad Space from the HOLD app.</p>
         </div>
         <nav className="flex flex-wrap gap-x-6 gap-y-3 text-small" aria-label="Ad Space">
-          <DownloadLink className="text-text-muted transition-colors duration-180 hover:text-text">Get HIHODL</DownloadLink>
+          <DownloadLink className="text-text-muted transition-colors duration-180 hover:text-text">Get HOLD</DownloadLink>
           <a href={report} className="text-text-muted transition-colors duration-180 hover:text-text">
             Report this Ad Space
           </a>
@@ -311,9 +311,9 @@ export function SpacePromises({ space }: { space: Space }) {
 
           <Block title="How the money moves">
             <p className="text-small text-text-muted">
-              You pay the creator directly in USDC, from your own wallet. HIHODL&rsquo;s fee is{" "}
-              {space.feeBps / 100}%, paid by the {space.feePayer}, and it moves in the same transaction. HIHODL never
-              holds your money, and paid spots can&rsquo;t be refunded by HIHODL.
+              You pay the creator directly in USDC, from your own wallet. HOLD&rsquo;s fee is{" "}
+              {space.feeBps / 100}%, paid by the {space.feePayer}, and it moves in the same transaction. HOLD never
+              holds your money, and paid spots can&rsquo;t be refunded by HOLD.
             </p>
             {declares.length > 0 && (
               <p className="text-small text-text-muted">
