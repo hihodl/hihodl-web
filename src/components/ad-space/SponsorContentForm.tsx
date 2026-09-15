@@ -12,7 +12,7 @@ import {
 } from "@/lib/ad-space/checkout-client";
 import { CONTENT_KIND_LABEL } from "@/lib/ad-space/format";
 import { ImageProblem, prepareImage } from "@/lib/ad-space/image";
-import type { ContentKind, Order, Position } from "@/lib/ad-space/types";
+import type { ContentKind, Order, Position, Sponsor } from "@/lib/ad-space/types";
 
 import { btnPrimary, input } from "./ui";
 
@@ -25,7 +25,11 @@ import { btnPrimary, input } from "./ui";
  * while it is pending or after a rejection.
  *
  * Where it stands is read back from `GET /public/spaces/:id` with the checkout
- * key: only this browser's own position carries `content` there.
+ * key: only this browser's own position carries `content` there, plus the
+ * pending sponsor block. Until the creator approves it the image is private,
+ * and its `imageUrl` is a signed link that dies within the hour. So the URL is
+ * never kept: the space is read again on mount, after each send, when the tab
+ * comes back into view, and once if the image fails to load.
  */
 
 type Review = NonNullable<Position["content"]>;
@@ -65,12 +69,15 @@ export function SponsorContentForm({
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [review, setReview] = useState<Review | null>(null);
+  const [sentAs, setSentAs] = useState<Sponsor | null>(null);
+  const [imageRetried, setImageRetried] = useState(false);
 
   const loadReview = useCallback(async () => {
     try {
       const space = await spaceForCheckout(order.spaceId, checkoutKey);
       const mine = space.positions.find((p) => p.id === order.positionId);
       setReview(mine?.content ?? null);
+      setSentAs(mine?.sponsor ?? null);
     } catch {
       // Not knowing the review state is fine; the form still works.
     }
@@ -78,6 +85,11 @@ export function SponsorContentForm({
 
   useEffect(() => {
     void loadReview();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void loadReview();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
   }, [loadReview]);
 
   const needsImage = kind === "logo" || kind === "photo";
@@ -122,6 +134,8 @@ export function SponsorContentForm({
       let imagePath: string | undefined;
       if (needsImage && file) {
         const blob = await prepareImage(file, { keepTransparency: kind === "logo" });
+        // The response's `url` is a signed preview that expires; only the
+        // path is kept. The preview comes back through `loadReview`.
         imagePath = (await uploadMedia(order.id, checkoutKey, blob)).path;
       }
       const body: ContentBody = {
@@ -134,6 +148,8 @@ export function SponsorContentForm({
       };
       const res = await putContent(order.id, checkoutKey, body);
       setReview({ status: res.content?.status ?? "pending", rejectedReason: res.content?.rejectedReason ?? null });
+      setImageRetried(false);
+      void loadReview();
     } catch (err) {
       if (err instanceof ImageProblem) {
         setNotice(
@@ -175,6 +191,32 @@ export function SponsorContentForm({
           Waiting for @{creatorHandle}&rsquo;s approval. It appears on the board once they approve it, and you can send
           a new version while you wait.
         </p>
+      )}
+      {review && sentAs && (
+        <div className="flex items-center gap-3">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-tight bg-white">
+            {sentAs.imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element -- signed, short-lived preview link
+              <img
+                src={sentAs.imageUrl}
+                alt=""
+                className="h-full w-full object-contain"
+                onError={() => {
+                  // The signed link has probably expired: read the space once more.
+                  if (imageRetried) return;
+                  setImageRetried(true);
+                  void loadReview();
+                }}
+              />
+            ) : (
+              <span className="text-body font-medium text-text-on-amber">{sentAs.name.slice(0, 1).toUpperCase()}</span>
+            )}
+          </span>
+          <p className="min-w-0 text-small text-text-muted">
+            You sent <span className="text-text">{sentAs.name}</span>
+            {sentAs.contentText ? <span className="font-mono"> · {sentAs.contentText}</span> : null}
+          </p>
+        </div>
       )}
       {review?.status === "rejected" && (
         <p className="rounded-card border border-amber/30 bg-amber/[0.05] px-4 py-3 text-small text-text-muted" role="status">

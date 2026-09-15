@@ -128,7 +128,11 @@ export interface Space {
   share: { url: string; text: string };
 }
 
-export type OrderStatus = "awaiting_payment" | "paid" | "paid_duplicate" | "expired" | "cancelled";
+/**
+ * `quoted`: a Base/Polygon checkout that was handed out and not signed yet. It
+ * holds nothing; the position is held only once the signatures arrive.
+ */
+export type OrderStatus = "quoted" | "awaiting_payment" | "paid" | "paid_duplicate" | "expired" | "cancelled";
 
 export interface Order {
   id: string;

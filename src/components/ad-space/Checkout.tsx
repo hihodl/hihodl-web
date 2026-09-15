@@ -9,6 +9,7 @@ import {
   checkoutKey,
   confirmOrder,
   currentCheckout,
+  describeAuthorizationRefusal,
   describeError,
   existingCheckoutKey,
   rotateCheckoutKey,
@@ -161,6 +162,8 @@ export function Checkout({
   const [hasEvm, setHasEvm] = useState(false);
   const [mobile, setMobile] = useState(false);
   const [mobileLink, setMobileLink] = useState<string | null>(null);
+  /** After a refusal that means "this spot is gone", offer the way back to the board. */
+  const [offerOtherSpot, setOfferOtherSpot] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
   const keyRef = useRef<string>("");
@@ -193,6 +196,12 @@ export function Checkout({
           if (order.status === "paid") return setPhase({ kind: "paid", order });
           if (order.status === "paid_duplicate") return setPhase({ kind: "duplicate", order });
           if (order.status === "awaiting_payment") return setPhase({ kind: "confirming", order });
+          // A quote holds nothing and is not worth resuming: the next
+          // checkout issues a fresh one.
+          if (order.status === "quoted") {
+            if (!cancelled) setPhase({ kind: "choose" });
+            return;
+          }
         }
         if (order) keyRef.current = rotateCheckoutKey(position.id);
       } catch {
@@ -294,7 +303,12 @@ export function Checkout({
       try {
         const order = await currentCheckout(keyRef.current);
         if (stop) return;
-        if (order && order.positionId === position.id && order.status !== "expired" && order.status !== "cancelled") {
+        if (
+          order &&
+          order.positionId === position.id &&
+          order.chain === "solana" &&
+          (order.status === "awaiting_payment" || order.status === "paid")
+        ) {
           signatureRef.current = null;
           setChain("solana");
           setPhase({ kind: "confirming", order });
@@ -341,6 +355,7 @@ export function Checkout({
 
   async function payWithSolanaWallet(wallet: SolanaWallet) {
     setNotice(null);
+    setOfferOtherSpot(false);
     try {
       setPhase({ kind: "busy", label: `Connecting ${wallet.name}…` });
       const connected = (await wallet.provider.connect()) as { publicKey?: { toString(): string } } | undefined;
@@ -375,6 +390,9 @@ export function Checkout({
       setPhase({ kind: "confirming", order: res.order });
     } catch (e) {
       setNotice(describeError(e, "solana"));
+      setOfferOtherSpot(
+        e instanceof CheckoutError && (e.code === "position_sold" || e.code === "position_held" || e.code === "space_closed"),
+      );
       // A connected wallet that declined leaves the hold in place; the next
       // attempt with the same key gets the same transaction back.
       setPhase({ kind: "choose" });
@@ -389,6 +407,8 @@ export function Checkout({
 
   async function payWithEvm(evmChain: "base" | "polygon") {
     setNotice(null);
+    setOfferOtherSpot(false);
+    let submitting = false;
     const provider = injected().ethereum;
     if (!provider) {
       setNotice("No browser wallet found. Open this page in MetaMask, Coinbase Wallet or Rabby, or pay another way.");
@@ -434,12 +454,20 @@ export function Checkout({
         params: [sponsorAddress, typedData(res.evm, feeAuth.message)],
       })) as string;
 
+      // The hold starts here, not at checkout: until now this was a quote
+      // and another sponsor could sign first.
       setPhase({ kind: "evm-sign", order: res.order, evm: res.evm, step: 2 });
+      submitting = true;
       const submitted = await submitAuthorizations(res.order.id, keyRef.current, { creatorSignature, feeSignature });
       signatureRef.current = null;
       setPhase({ kind: "confirming", order: submitted.order });
     } catch (e) {
-      setNotice(describeError(e, evmChain));
+      const refusal = submitting ? describeAuthorizationRefusal(e, evmChain) : null;
+      setNotice(refusal ?? describeError(e, evmChain));
+      setOfferOtherSpot(
+        refusal !== null ||
+          (e instanceof CheckoutError && (e.code === "position_sold" || e.code === "position_held" || e.code === "space_closed")),
+      );
       setPhase({ kind: "choose" });
     }
   }
@@ -635,7 +663,7 @@ export function Checkout({
                       Sending both payments…
                     </p>
                   )}
-                  <HoldLine ms={heldMs(phase.order)} />
+                  <QuoteLine ms={phase.evm.validBefore * 1000 - now} />
                 </div>
               )}
 
@@ -655,9 +683,16 @@ export function Checkout({
           )}
 
           {notice && (
-            <p className="rounded-card border border-amber/30 bg-amber/[0.05] px-4 py-3 text-small text-text-muted" role="status">
-              {notice}
-            </p>
+            <div className="flex flex-col gap-3 rounded-card border border-amber/30 bg-amber/[0.05] px-4 py-3" role="status">
+              <p className="text-small text-text-muted">{notice}</p>
+              {offerOtherSpot && (
+                <div>
+                  <button type="button" className={btnSmallSecondary} onClick={onClose}>
+                    Pick another spot
+                  </button>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -748,6 +783,18 @@ function Disclaimer() {
       You pay the creator directly. HIHODL never holds your money. Paid spots can&rsquo;t be refunded
       by HIHODL; the creator&rsquo;s fallback policy is above.
     </p>
+  );
+}
+
+/** A Base/Polygon quote: valid until `validBefore`, holding nothing meanwhile. */
+function QuoteLine({ ms }: { ms: number }) {
+  return ms > 0 ? (
+    <p className="text-tiny text-text-faint">
+      Sign within <span className="font-mono text-text-muted">{timeLeft(ms)}</span>. The spot is held for you once
+      both signatures are in; until then another sponsor can still take it.
+    </p>
+  ) : (
+    <p className="text-tiny text-amber">This quote has expired. Close your wallet and start again for a fresh one.</p>
   );
 }
 

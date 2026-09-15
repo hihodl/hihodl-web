@@ -233,6 +233,32 @@ export function putContent(
 
 /* ── Errors in plain words ─────────────────────────────────────────── */
 
+/**
+ * Why `POST /authorizations` turned the signatures down. On Base and Polygon
+ * the checkout is only a quote, so another sponsor can sign first; in every
+ * one of these cases nothing moved. Null for anything else.
+ */
+export function describeAuthorizationRefusal(e: unknown, chain: Chain): string | null {
+  if (!(e instanceof CheckoutError)) return null;
+  const net = CHAIN_LABEL[chain];
+  switch (e.code) {
+    case "position_held":
+      return "Another sponsor signed for this spot a moment before you. Nothing was paid.";
+    case "position_sold":
+      return "This spot sold while you were signing. Nothing was paid.";
+    case "space_closed":
+      return "This Ad Space closed while you were signing. Nothing was paid.";
+    case "insufficient_funds":
+      return `This wallet no longer has enough USDC on ${net} for this spot. Nothing was paid.`;
+    case "bad_signature":
+      return "Those signatures didn't match the payment, so we didn't send it. Nothing was paid.";
+    case "would_revert":
+      return `That payment would fail on ${net}, so we didn't send it. Nothing was paid.`;
+    default:
+      return null;
+  }
+}
+
 function str(v: unknown): string | null {
   return typeof v === "string" && v.length > 0 ? v : null;
 }
@@ -289,6 +315,10 @@ export function describeError(e: unknown, chain?: Chain | null): string {
       return "This connection is already holding spots that aren't paid. Finish those, or wait for them to lapse.";
     case "too_many_lapsed_holds":
       return "Too many unpaid holds from this connection lately. Try again later today.";
+    case "space_busy":
+      return "Two other people are paying for spots here right now. Try again in a few minutes, or pay on Base or Polygon.";
+    case "would_revert":
+      return `That payment would fail on ${net}, so we didn't send it. Nothing was paid. Check the wallet's USDC, or try another wallet.`;
     case "chain_unavailable":
       return `Payments on ${net} are paused right now. Pick another network, or try again shortly.`;
     case "relayer_not_configured":
@@ -305,7 +335,10 @@ export function describeError(e: unknown, chain?: Chain | null): string {
     case "order_uses_another_wallet":
       return "This order was started with a different wallet. Connect that one, or start again.";
     case "rate_limited":
-      return "Too many requests from this connection. Wait a moment and try again.";
+      // 503 means our limiter is down and checkout fails closed; 429 is a burst.
+      return e.status === 503
+        ? "Checkout is paused for a moment on our side. Nothing was paid; try again in a minute."
+        : "Too many requests from this connection. Wait a moment and try again.";
     case "not_found":
       return "We can't find this spot or order any more. Refresh the page.";
     case "network":
