@@ -12,6 +12,7 @@
     "@noble/curves": "^1.9.7",
     "@noble/hashes": "^1.8.0",
     "@scure/bip32": "^1.7.0",
+    "@solana/web3.js": "^1.99.0",
     "@subframe/core": "^1.147.0",
     "@supabase/supabase-js": "^2.78.0",
     "classnames": "^2.3.2",
