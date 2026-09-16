@@ -77,7 +77,7 @@ function upstreamPath(handle: string, slug: string): string | null {
  * fallback: `AD_SPACE_FIXTURE=1 npm run dev`. A production build ignores the
  * flag entirely, so a missing API can never serve made-up spots to a sponsor.
  */
-function fixtureEnabled(): boolean {
+export function fixtureEnabled(): boolean {
   return process.env.NODE_ENV !== "production" && process.env.AD_SPACE_FIXTURE === "1";
 }
 

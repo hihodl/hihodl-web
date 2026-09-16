@@ -24,7 +24,10 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: "*",
       allow: ["/", "/api/og/"],
       // `/b/` is a session's manage link: the token in it is the booking.
-      disallow: ["/api/", "/founders/checkout", "/invite/", "/thank-you", "/statements/verify", "/b/"],
+      // `/pay/r/` is a receipt, private to its payer. `/pay/<code>` itself is
+      // NOT disallowed: X must fetch the page to draw the generic card, and the
+      // page tells crawlers `noindex` itself.
+      disallow: ["/api/", "/founders/checkout", "/invite/", "/thank-you", "/statements/verify", "/b/", "/pay/r/"],
     },
     sitemap: "https://hihodl.xyz/sitemap.xml",
   };

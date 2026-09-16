@@ -30,6 +30,18 @@ import {
 import { PUBLIC_CHAINS } from "@/lib/orders/chains.public";
 import type { Booking, Chain, EvmPayload, Order, Position, Space } from "@/lib/ad-space/types";
 
+import {
+  type SolanaWallet,
+  base64ToBytes,
+  blockhashExpired,
+  detectSolanaWallets,
+  injected,
+  isMobile,
+  switchEvmChain,
+  typedData,
+} from "@/lib/ad-space/wallets";
+
+import { Check, ChainPicker, SolanaOptions, Spinner } from "./checkout-parts";
 import { QrCode } from "./qr";
 import { ManageLinkBox, SessionContactForm } from "./SessionBooking";
 import { SponsorContentForm } from "./SponsorContentForm";
@@ -63,93 +75,6 @@ type Phase =
   | { kind: "lapsed" };
 
 const POLL_MS = 3_000;
-
-/* ── Injected wallets ─────────────────────────────────────────────── */
-
-interface SolanaProvider {
-  isPhantom?: boolean;
-  isSolflare?: boolean;
-  isBackpack?: boolean;
-  publicKey?: { toString(): string } | null;
-  connect(opts?: unknown): Promise<unknown>;
-  signAndSendTransaction(tx: unknown, opts?: unknown): Promise<unknown>;
-}
-
-interface Eip1193Provider {
-  request(args: { method: string; params?: unknown[] }): Promise<unknown>;
-}
-
-type InjectedWindow = {
-  phantom?: { solana?: SolanaProvider };
-  solflare?: SolanaProvider;
-  backpack?: SolanaProvider;
-  solana?: SolanaProvider;
-  ethereum?: Eip1193Provider;
-};
-
-type SolanaWallet = { name: string; provider: SolanaProvider };
-
-function injected(): InjectedWindow {
-  return window as unknown as InjectedWindow;
-}
-
-function detectSolanaWallets(): SolanaWallet[] {
-  const w = injected();
-  const found: SolanaWallet[] = [];
-  const seen = new Set<SolanaProvider>();
-  const add = (name: string, p: SolanaProvider | undefined) => {
-    if (!p || seen.has(p) || typeof p.signAndSendTransaction !== "function") return;
-    if (found.some((f) => f.name === name)) return;
-    seen.add(p);
-    found.push({ name, provider: p });
-  };
-  add("Phantom", w.phantom?.solana);
-  add("Solflare", w.solflare);
-  add("Backpack", w.backpack);
-  const generic = w.solana;
-  if (generic) {
-    add(
-      generic.isPhantom ? "Phantom" : generic.isSolflare ? "Solflare" : generic.isBackpack ? "Backpack" : "your wallet",
-      generic,
-    );
-  }
-  return found;
-}
-
-function blockhashExpired(e: unknown): boolean {
-  const msg = String((e as { message?: unknown })?.message ?? "");
-  return /blockhash|block height exceeded|expired/i.test(msg);
-}
-
-function isMobile(): boolean {
-  return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-}
-
-function base64ToBytes(b64: string): Uint8Array {
-  const bin = atob(b64);
-  const out = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
-  return out;
-}
-
-/** EIP712Domain lists exactly the keys present in `domain`, in the standard order. */
-const DOMAIN_FIELDS: [string, string][] = [
-  ["name", "string"],
-  ["version", "string"],
-  ["chainId", "uint256"],
-  ["verifyingContract", "address"],
-  ["salt", "bytes32"],
-];
-
-function typedData(evm: EvmPayload, message: Record<string, string>): string {
-  const EIP712Domain = DOMAIN_FIELDS.filter(([k]) => k in evm.domain).map(([name, type]) => ({ name, type }));
-  return JSON.stringify({
-    domain: evm.domain,
-    types: { EIP712Domain, ...evm.types },
-    primaryType: evm.primaryType,
-    message,
-  });
-}
 
 /** Refusals that mean "this spot is not there to buy": offer the way back to the board. */
 const GONE_CODES = new Set(["position_sold", "position_held", "space_closed", "nothing_to_take_over"]);
@@ -440,19 +365,7 @@ export function Checkout({
       if (!sponsorAddress) throw new Error("no_account");
 
       setPhase({ kind: "busy", label: `Switching your wallet to ${meta.label}…` });
-      try {
-        await provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: meta.chainIdHex }] });
-      } catch (switchError) {
-        // 4902: the wallet does not know this chain yet.
-        if ((switchError as { code?: number })?.code === 4902) {
-          await provider.request({
-            method: "wallet_addEthereumChain",
-            params: [{ chainId: meta.chainIdHex, ...meta.addChainParams }],
-          });
-        } else {
-          throw switchError;
-        }
-      }
+      await switchEvmChain(provider, meta);
 
       setPhase({ kind: "busy", label: "Preparing the payment…" });
       const res = await withFreshKey((key) => startCheckout(position.id, key, { chain: evmChain, sponsorAddress }));
@@ -560,29 +473,14 @@ export function Checkout({
               {phase.kind === "choose" && (
                 <>
                   {chains.length > 1 && (
-                    <fieldset>
-                      <legend className="mb-3 text-small text-text-muted">Pay with USDC on</legend>
-                      <div className="flex flex-wrap gap-2">
-                        {chains.map((c) => (
-                          <button
-                            key={c}
-                            type="button"
-                            aria-pressed={chain === c}
-                            onClick={() => {
-                              setChain(c);
-                              setNotice(null);
-                            }}
-                            className={`inline-flex h-10 items-center whitespace-nowrap rounded-[20px] border px-4 text-small transition-colors duration-180 ${
-                              chain === c
-                                ? "border-amber bg-amber/10 text-text"
-                                : "border-[color:var(--color-hairline-strong)] text-text-muted hover:text-text"
-                            }`}
-                          >
-                            {CHAIN_LABEL[c]}
-                          </button>
-                        ))}
-                      </div>
-                    </fieldset>
+                    <ChainPicker
+                      chains={chains}
+                      chain={chain}
+                      onChange={(c) => {
+                        setChain(c);
+                        setNotice(null);
+                      }}
+                    />
                   )}
 
                   {chain === "solana" ? (
@@ -784,54 +682,6 @@ function Summary({ space, position: p, session }: { space: Space; position: Posi
   );
 }
 
-function SolanaOptions({
-  wallets,
-  mobile,
-  mobileLink,
-  onWallet,
-  onQr,
-  onMobileLink,
-}: {
-  wallets: SolanaWallet[];
-  mobile: boolean;
-  mobileLink: string | null;
-  onWallet: (w: SolanaWallet) => void;
-  onQr: () => void;
-  onMobileLink: () => void;
-}) {
-  return (
-    <div className="flex flex-col gap-3">
-      {wallets.map((w, i) => (
-        <button
-          key={w.name}
-          type="button"
-          className={i === 0 ? btnPrimary : btnSecondary}
-          onClick={() => onWallet(w)}
-        >
-          Pay with {w.name}
-        </button>
-      ))}
-
-      {mobile && mobileLink && (
-        // The same Solana Pay link the QR carries, for a wallet on this phone.
-        <a href={mobileLink} className={wallets.length ? btnSecondary : btnPrimary} onClick={onMobileLink}>
-          Open in my wallet app
-        </a>
-      )}
-
-      <button type="button" className={wallets.length || mobile ? btnSecondary : btnPrimary} onClick={onQr}>
-        Pay with QR
-      </button>
-
-      {wallets.length === 0 && !mobile && (
-        <p className="text-tiny text-text-faint">
-          No Solana wallet in this browser. Scan the QR with the wallet on your phone.
-        </p>
-      )}
-    </div>
-  );
-}
-
 function Disclaimer({ session }: { session: boolean }) {
   return (
     <p className="text-tiny leading-relaxed text-text-faint">
@@ -1001,19 +851,3 @@ function Duplicate({ order }: { order: Order }) {
   );
 }
 
-function Check() {
-  return (
-    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden>
-      <path d="M2 5.2l2 2L8 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function Spinner() {
-  return (
-    <span
-      className="inline-block h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-amber/30 border-t-amber"
-      aria-hidden
-    />
-  );
-}
