@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { SlimHeader } from "@/components/ad-space/sections";
 import { btnSmallSecondary, card, eyebrow } from "@/components/ad-space/ui";
 import { CHAIN_LABEL, instantUtc, usdFromCents } from "@/lib/ad-space/format";
-import { explorerTxUrl } from "@/lib/pay-links/client";
+import { ownerHandleLine, ownerName, paymentExplorerUrl } from "@/lib/pay-links/client";
 import { payPageMetadata } from "@/lib/pay-links/metadata";
 import { getReceipt } from "@/lib/pay-links/server";
 
@@ -42,7 +42,8 @@ export default async function ReceiptPage({ params }: { params: { token: string 
         ) : (
           (() => {
             const r = found.value;
-            const explorer = r.explorerUrl ?? explorerTxUrl(r.chain, r.txHash);
+            const explorer = paymentExplorerUrl(r);
+            const handleLine = ownerHandleLine(r.link.owner);
             return (
               <section className={`${card} flex flex-col gap-5 p-5 md:p-6`} aria-label="Receipt">
                 <div>
@@ -51,26 +52,43 @@ export default async function ReceiptPage({ params }: { params: { token: string 
                     {usdFromCents(r.amountCents)} USDC
                   </h1>
                   <p className="mt-1 break-words text-small text-text-muted [overflow-wrap:anywhere]">
-                    To {r.link.owner.displayName} (@{r.link.owner.handle} on HOLD) for &ldquo;{r.link.title}&rdquo;
+                    To {ownerName(r.link.owner)}
+                    {handleLine && ` (${handleLine})`}
+                    {r.link.title ? (
+                      <>
+                        {" "}
+                        for &ldquo;{r.link.title}&rdquo;
+                      </>
+                    ) : null}
                   </p>
                 </div>
                 <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-3 border-t border-[color:var(--color-hairline)] pt-4 text-small">
                   <dt className="text-text-faint">Network</dt>
                   <dd className="text-text">USDC on {CHAIN_LABEL[r.chain]}</dd>
-                  <dt className="text-text-faint">Paid</dt>
-                  <dd className="text-text">
-                    <time dateTime={r.paidAt}>{instantUtc(r.paidAt)}</time>
-                  </dd>
+                  {r.paidAt && (
+                    <>
+                      <dt className="text-text-faint">Paid</dt>
+                      <dd className="text-text">
+                        <time dateTime={r.paidAt}>{instantUtc(r.paidAt)}</time>
+                      </dd>
+                    </>
+                  )}
                   <dt className="text-text-faint">From</dt>
                   <dd className="break-all font-mono text-tiny text-text">{r.payerAddress}</dd>
-                  <dt className="text-text-faint">Transaction</dt>
-                  <dd className="break-all font-mono text-tiny text-text">{r.txHash}</dd>
+                  {r.txHash && (
+                    <>
+                      <dt className="text-text-faint">Transaction</dt>
+                      <dd className="break-all font-mono text-tiny text-text">{r.txHash}</dd>
+                    </>
+                  )}
                 </dl>
-                <div>
-                  <a href={explorer} target="_blank" rel="noopener noreferrer" className={btnSmallSecondary}>
-                    View the transaction
-                  </a>
-                </div>
+                {explorer && (
+                  <div>
+                    <a href={explorer} target="_blank" rel="noopener noreferrer" className={btnSmallSecondary}>
+                      View the transaction
+                    </a>
+                  </div>
+                )}
                 <p className="text-tiny text-text-faint">
                   The payment went straight to the recipient&rsquo;s wallet. HOLD charged no fee, never held the money
                   and can&rsquo;t reverse it.

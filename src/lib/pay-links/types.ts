@@ -1,7 +1,6 @@
 /**
- * Pay links, as the public API returns them. Mirrors
- * documentation/pay-links-v0.md; where the contract names a route but not its
- * answer, the shape here is marked ASSUMPTION and is this page's proposal.
+ * Pay links, as the public API returns them. Mirrors the backend
+ * implementation section of documentation/pay-links-v0.md.
  *
  * A pay link is free: no fee leg, no percentage. Amounts are integer US cents.
  */
@@ -12,18 +11,32 @@ export type PayLinkStatus = "active" | "paid" | "closed" | "expired" | "disabled
 
 export type PayLinkAmount = { mode: "fixed"; cents: number } | { mode: "open"; maxCents: number | null };
 
+export interface PayLinkOwner {
+  /** Frozen and filtered by the server, but still possibly null. */
+  displayName: string | null;
+  handle: string | null;
+}
+
+/**
+ * `GET /:code`. A `disabled` link answers with every field the owner wrote
+ * nulled (`title`, `note`, `amount`, `owner`, `payTo`) and no chains.
+ */
 export interface PayLinkPublic {
   code: string;
   /** At most 80 characters, checked by the server for links, emails and impersonation. */
-  title: string;
+  title: string | null;
   /** At most 280 characters, or null. */
   note: string | null;
-  amount: PayLinkAmount;
+  amount: PayLinkAmount | null;
   chains: Chain[];
   status: PayLinkStatus;
-  owner: { displayName: string; handle: string };
-  payTo: { solana: string | null; evm: string | null };
+  owner: PayLinkOwner | null;
+  /** Null unless the link is active. */
+  payTo: { solana: string | null; evm: string | null } | null;
 }
+
+/** A link that still says what it asks for: anything but a disabled one. */
+export type ShownPayLink = PayLinkPublic & { title: string; amount: PayLinkAmount };
 
 export type PaymentStatus = "awaiting_payment" | "paid" | "unpaid" | "paid_duplicate";
 
@@ -34,17 +47,15 @@ export interface PayLinkPayment {
   payerAddress: string;
   status: PaymentStatus;
   txHash: string | null;
+  /** Set with `txHash`. */
+  explorerUrl?: string | null;
   paidAt: string | null;
-  /** `https://hihodl.xyz/pay/r/<receiptToken>`. ASSUMPTION: null until paid. */
+  createdAt?: string;
+  /** `https://hihodl.xyz/pay/r/<receiptToken>`, null until paid and only for the paying browser. */
   receiptUrl: string | null;
 }
 
-/**
- * The one ERC-3009 authorization a Base or Polygon payment signs.
- *
- * ASSUMPTION: the contract says "an EVM typed-data payload"; this is the
- * HiSpace EvmPayload with a single entry in `authorizations`.
- */
+/** The one ERC-3009 authorization a Base or Polygon payment signs: HiSpace's EvmPayload with one entry. */
 export interface PayLinkEvmPayload {
   chainId: number;
   token: string;
@@ -55,7 +66,7 @@ export interface PayLinkEvmPayload {
   validBefore: number;
 }
 
-/** ASSUMPTION: `POST /:code/checkout` answers `{ payment, solana }` or `{ payment, evm }`. */
+/** `POST /:code/checkout` answers `{ payment, solana }` or `{ payment, evm }`. */
 export type PayLinkCheckout =
   | { payment: PayLinkPayment; solana: { transaction: string; lastValidBlockHeight: number } }
   | { payment: PayLinkPayment; evm: PayLinkEvmPayload };
@@ -65,17 +76,16 @@ export interface PayConfirm {
   payment: PayLinkPayment;
 }
 
-/**
- * `GET /receipts/:token`. ASSUMPTION: the contract lists amount, chain, tx
- * link and time; the link's title and owner are added so the receipt says
- * what was paid and to whom.
- */
+/** `GET /receipts/:token`. On a disabled link `title` is null; the facts stay. */
 export interface PayReceipt {
   amountCents: number;
+  amountUsdc?: string;
   chain: Chain;
-  txHash: string;
+  status?: PaymentStatus;
+  txHash: string | null;
   explorerUrl: string | null;
-  paidAt: string;
+  paidAt: string | null;
   payerAddress: string;
-  link: { code: string; title: string; owner: { displayName: string; handle: string } };
+  receiverAddress?: string | null;
+  link: { code: string | null; title: string | null; owner: PayLinkOwner | null };
 }

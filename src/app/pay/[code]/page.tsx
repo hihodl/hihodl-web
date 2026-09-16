@@ -9,9 +9,10 @@ import { PayLinkPay } from "@/components/pay-links/PayLinkPay";
 import { ReportLink } from "@/components/pay-links/ReportLink";
 import { Wordmark } from "@/components/site/Wordmark";
 import { CHAIN_LABEL, usdFromCents } from "@/lib/ad-space/format";
+import { ownerHandleLine, ownerName } from "@/lib/pay-links/client";
 import { payPageMetadata } from "@/lib/pay-links/metadata";
 import { getPayLink } from "@/lib/pay-links/server";
-import type { PayLinkPublic, PayLinkStatus } from "@/lib/pay-links/types";
+import type { PayLinkPublic, PayLinkStatus, ShownPayLink } from "@/lib/pay-links/types";
 
 /**
  * /pay/<code> — somebody asks to be paid, and the payer has no HOLD account
@@ -43,7 +44,7 @@ export default async function PayLinkPage({ params }: { params: { code: string }
       <main className="container-page max-w-2xl py-10 md:py-16">
         {found.kind === "unreachable" ? (
           <Unavailable />
-        ) : found.value.status === "disabled" ? (
+        ) : !isShown(found.value) ? (
           // Nothing the owner wrote is shown on a link we took down.
           <div className="flex min-h-[50vh] flex-col justify-center">
             <p className={`${eyebrow} text-amber`}>Pay link</p>
@@ -77,7 +78,13 @@ export default async function PayLinkPage({ params }: { params: { code: string }
   );
 }
 
-function PayLinkBody({ link }: { link: PayLinkPublic }) {
+/** A disabled link, or one that comes back without its title or amount, shows nothing the owner wrote. */
+function isShown(link: PayLinkPublic): link is ShownPayLink {
+  return link.status !== "disabled" && link.title !== null && link.amount !== null;
+}
+
+function PayLinkBody({ link }: { link: ShownPayLink }) {
+  const handleLine = ownerHandleLine(link.owner);
   const active = link.status === "active";
   const gone = link.status === "active" || link.status === "disabled" ? null : GONE[link.status];
   return (
@@ -110,7 +117,8 @@ function PayLinkBody({ link }: { link: PayLinkPublic }) {
           <div className="min-w-0">
             <dt className="text-tiny text-text-faint">To</dt>
             <dd className="mt-1 break-words text-body text-text [overflow-wrap:anywhere]">
-              {link.owner.displayName} <span className="text-small text-text-muted">@{link.owner.handle} on HOLD</span>
+              {ownerName(link.owner)}
+              {handleLine && <span className="text-small text-text-muted"> {handleLine}</span>}
             </dd>
           </div>
           <div className="sm:col-span-2">
