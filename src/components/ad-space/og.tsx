@@ -25,6 +25,27 @@ export const OG = {
   chip: "rgba(255,255,255,0.14)",
 };
 
+const OG_IMAGE_MAX_BYTES = 4 * 1024 * 1024;
+
+/** The body, or null as soon as it passes `max` bytes (the rest is never downloaded). */
+async function readCapped(res: Response, max: number): Promise<Buffer | null> {
+  if (!res.body) return null;
+  const reader = res.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > max) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks);
+}
+
 /**
  * A remote image as a data URI, or null. Satori throws on an image it cannot
  * decode, which would turn one bad upload into no card at all, so anything that
@@ -38,9 +59,15 @@ export async function loadOgImage(url: string | null): Promise<string | null> {
     if (!res.ok) return null;
     const type = (res.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
     if (type !== "image/png" && type !== "image/jpeg") return null;
-    const buf = Buffer.from(await res.arrayBuffer());
-    if (buf.byteLength > 4 * 1024 * 1024) return null;
-    return `data:${type};base64,${buf.toString("base64")}`;
+    // A declared size over the limit is refused before a byte is read. The
+    // header can be missing or wrong, so the limit is enforced again while reading.
+    const declared = Number(res.headers.get("content-length"));
+    if (Number.isFinite(declared) && declared > OG_IMAGE_MAX_BYTES) {
+      await res.body?.cancel();
+      return null;
+    }
+    const buf = await readCapped(res, OG_IMAGE_MAX_BYTES);
+    return buf ? `data:${type};base64,${buf.toString("base64")}` : null;
   } catch {
     return null;
   }
