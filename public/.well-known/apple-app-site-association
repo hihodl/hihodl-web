@@ -10,7 +10,8 @@
           { "/": "/auth/callback", "comment": "OAuth + magic link callback" },
           { "/": "/auth/confirm", "comment": "Email verification (token_hash)" },
           { "/": "/p/*", "comment": "Payment claim links" },
-          { "/": "/r/*", "comment": "Referral invite links" }
+          { "/": "/invite/*", "comment": "Referral invite links — the path the app and the backend actually use" },
+          { "/": "/r/*", "comment": "Reserved. Listed here since the first build and never built: the web serves no /r/ page and nothing links to one. Kept so a link sent while it was listed still opens the app rather than the browser." }
         ]
       }
     ]
