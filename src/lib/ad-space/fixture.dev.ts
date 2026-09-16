@@ -4,12 +4,23 @@
  * Loaded only when `AD_SPACE_FIXTURE=1` and NODE_ENV is not production (see
  * `getPublicSpace`). The outlines and zones are copied from the backend
  * catalog (server/services/ad-space/catalog-data.ts) so the board renders the
- * real geometry. Two spaces:
- *   /s/coinempress/road-to-token2049   placement, carry-on suitcase
- *   /s/coinempress/token2049-videos    service, short-form video
+ * real geometry. Spaces:
+ *   /s/coinempress/road-to-token2049   placement, carry-on suitcase, fixed price,
+ *                                      TOKEN2049 (city photo), sibling on the feed
+ *   /s/coinempress/token2049-videos    service, short-form video, TOKEN2049, its
+ *                                      own banner image, sibling on the ground
+ *   /s/coinempress/token2049-takeover  the same suitcase, priced by takeover, no
+ *                                      event, ember gradient
+ *   /s/coinempress/road-to-devcon-8    Devcon 8 (no city photo), sea gradient
+ * and every other card on an event page opens a copy of the matching board.
+ *
+ * Events:
+ *   /events/token2049-singapore-2026   both tabs, the feed has more open spots
+ *   /events/devcon-8-mumbai-2026       no city photo, an empty feed
+ *   /events/token-2049-singapore       merged: redirects to the first
  */
 
-import type { Position, Space, TemplateZone } from "./types";
+import type { EventPage, EventSummary, Position, Space, SpaceCard, Takeover, TemplateZone } from "./types";
 
 function circle(cx: number, cy: number, r: number): string {
   return `M${cx - r} ${cy} a${r} ${r} 0 1 0 ${2 * r} 0 a${r} ${r} 0 1 0 ${-2 * r} 0`;
@@ -92,6 +103,7 @@ function position(
     pitch: null,
     accepts: ["logo", "qr", "text"],
     status: "open",
+    takeover: null,
     sponsor: null,
     delivered: null,
     ...over,
@@ -99,6 +111,9 @@ function position(
 }
 
 const DAY = 24 * 60 * 60 * 1000;
+
+/** How many times one spot may change hands (the server's MAX_TAKEOVERS). */
+const MAX_HANDS = 6;
 
 function suitcase(): Space {
   const zones = [...zonesFor(["front", "back"], FACE_ZONES), ...zonesFor(["left", "right"], SIDE_ZONES)];
@@ -218,6 +233,8 @@ function suitcase(): Space {
     },
     feeBps: 500,
     feePayer: "sponsor",
+    pricingMode: "fixed",
+    takeoverMultiple: null,
     venueType: "conference",
     eventName: "TOKEN2049 Singapore",
     fallback: "content_anyway",
@@ -265,6 +282,13 @@ function suitcase(): Space {
       url: "https://hihodl.xyz/s/coinempress/road-to-token2049?m=8",
       text: "8 of 18 spots on my suitcase are sold for TOKEN2049 https://hihodl.xyz/s/coinempress/road-to-token2049?m=8",
     },
+    // Null on a draft and on an account with no code yet; set here so the
+    // recruiting strip above the footer is visible in local development.
+    creatorInvite: { code: "coin-3f2a1", url: "https://hihodl.xyz/invite/coin-3f2a1" },
+    event: TOKEN2049,
+    bannerUrl: null,
+    bannerGradient: "steel",
+    siblings: [{ path: "/s/coinempress/token2049-videos", tab: "feed", title: "TOKEN2049 short videos" }],
   };
 }
 
@@ -325,12 +349,414 @@ function videos(): Space {
       url: "https://hihodl.xyz/s/coinempress/token2049-videos?m=1",
       text: "1 of 3 video slots sold https://hihodl.xyz/s/coinempress/token2049-videos?m=1",
     },
+    // The creator's own banner, which wins over the city photo.
+    bannerUrl: photo("photo-1565967511849-76a60a516170"),
+    siblings: [{ path: "/s/coinempress/road-to-token2049", tab: "ground", title: "Road to TOKEN2049" }],
+  };
+}
+
+/**
+ * The same board, priced by takeover, with the ladder in every state a card has
+ * to render: a spot nobody has taken, one taken twice, one that has changed
+ * hands as often as it may, and one a doubling would push past the ceiling.
+ *
+ * The headline spot is the pair of figures the copy exists for: a $87.50 floor
+ * taken twice is a $350 spot, and the next hand costs $735 while repaying
+ * $367.50 — two amounts one line apart that must never appear unlabelled.
+ */
+function takeovers(): Space {
+  const base = suitcase();
+  const byKey = Object.fromEntries(base.template.zones.map((z) => [z.zoneKey, z]));
+  const pid = (n: number) => `00000000-0000-4000-a000-${String(n).padStart(12, "0")}`;
+
+  /**
+   * One spot's ladder, as the server builds it: the next three figures exist
+   * only while there is something to take. A spot nobody holds yet, and one
+   * that can go no higher, carry the floor and the count and nothing else.
+   */
+  const ladder = (args: {
+    priceCents: number;
+    floorPriceCents: number;
+    handsSoFar: number;
+    takeable: boolean;
+    closed?: string;
+  }): Takeover => {
+    const next = args.takeable ? args.priceCents * 2 : null;
+    return {
+      priceUsdc: usdc(args.priceCents),
+      nextPriceUsdc: next ? usdc(next) : null,
+      nextSponsorPaysUsdc: next ? usdc(next + Math.round(next * 0.05)) : null,
+      refundsUsdc: next ? usdc(args.priceCents + Math.round(args.priceCents * 0.05)) : null,
+      floorPriceCents: args.floorPriceCents,
+      handsSoFar: args.handsSoFar,
+      handsLeft: MAX_HANDS - args.handsSoFar,
+      closed: args.closed ?? null,
+    };
+  };
+
+  /** A spot whose price has moved off the zone's suggestion, as bidding does. */
+  const at = (n: number, zoneKey: string, priceCents: number, over: Partial<Position>): Position =>
+    position(pid(n), byKey[zoneKey], {
+      priceCents,
+      sponsorPaysUsdc: usdc(priceCents + Math.round(priceCents * 0.05)),
+      creatorReceivesUsdc: usdc(priceCents),
+      ...over,
+    });
+
+  const positions: Position[] = [
+    at(1, "front-headline", 35000, {
+      status: "sold",
+      sponsor: {
+        name: "Acme",
+        url: "https://acme.xyz",
+        xHandle: "acme",
+        contentKind: "logo",
+        contentText: null,
+        imageUrl: logo("ACME", "#FFFFFF", "#141F2E"),
+      },
+      takeover: ladder({ priceCents: 35000, floorPriceCents: 8750, handsSoFar: 2, takeable: true }),
+    }),
+    at(2, "front-upper-left", 20000, {
+      pitch: "Right under the headline, in every airport shot",
+      takeover: ladder({ priceCents: 20000, floorPriceCents: 20000, handsSoFar: 0, takeable: false }),
+    }),
+    at(3, "front-upper-right", 50000, {
+      status: "sold",
+      sponsor: {
+        name: "Nodeline",
+        url: "https://nodeline.io",
+        xHandle: "nodeline",
+        contentKind: "qr",
+        contentText: "https://nodeline.io/r/coin",
+        imageUrl: null,
+      },
+      takeover: ladder({ priceCents: 50000, floorPriceCents: 50000, handsSoFar: 0, takeable: true }),
+    }),
+    at(4, "front-lower-left", 17500, {
+      status: "held",
+      takeover: ladder({ priceCents: 17500, floorPriceCents: 17500, handsSoFar: 0, takeable: false }),
+    }),
+    at(5, "front-lower-right", 800000, {
+      status: "sold",
+      sponsor: {
+        name: "Kopi Labs",
+        url: null,
+        xHandle: null,
+        contentKind: "text",
+        contentText: "CODE10",
+        imageUrl: null,
+      },
+      takeover: ladder({
+        priceCents: 800000,
+        floorPriceCents: 12500,
+        handsSoFar: MAX_HANDS,
+        takeable: false,
+        closed: "too_many_takeovers",
+      }),
+    }),
+    at(6, "back-headline", 1600000, {
+      status: "sold",
+      sponsor: {
+        name: "Orbit",
+        url: "https://orbit.fi",
+        xHandle: "orbitfi",
+        contentKind: "logo",
+        contentText: null,
+        imageUrl: logo("ORBIT", "#5B7CFF", "#FFFFFF"),
+      },
+      // Doubling $16,000 lands past the $25,000 a spot may cost, so it stops
+      // here even though it has a hand left.
+      takeover: ladder({
+        priceCents: 1600000,
+        floorPriceCents: 50000,
+        handsSoFar: 5,
+        takeable: false,
+        closed: "price_ceiling",
+      }),
+    }),
+    at(7, "back-upper-left", 20000, {
+      takeover: ladder({ priceCents: 20000, floorPriceCents: 20000, handsSoFar: 0, takeable: false }),
+    }),
+    at(8, "back-upper-right", 20000, {
+      takeover: ladder({ priceCents: 20000, floorPriceCents: 20000, handsSoFar: 0, takeable: false }),
+    }),
+  ];
+
+  return {
+    ...base,
+    id: "33333333-3333-4333-8333-333333333333",
+    slug: "token2049-takeover",
+    title: "TOKEN2049 suitcase, open bidding",
+    reason: "Every spot opens low. Sponsors outbid each other, and whoever is outbid gets their money straight back.",
+    // Takeovers are Solana only: the refund is a leg of the very transaction
+    // that displaces the sponsor, and a transaction lives on one chain.
+    chains: ["solana"],
+    pricingMode: "takeover",
+    takeoverMultiple: 2,
+    positions,
+    totals: { positions: positions.length, sold: 4, committedCents: 2485000, totalCents: 2562500 },
+    updates: [],
+    share: {
+      url: "https://hihodl.xyz/s/coinempress/token2049-takeover?m=4",
+      text: "4 of 8 spots taken, and every one of them is still up for grabs https://hihodl.xyz/s/coinempress/token2049-takeover?m=4",
+    },
+    // A space from before events: a free-text event name and nothing else.
+    event: null,
+    bannerGradient: "ember",
+    siblings: [],
+  };
+}
+
+/* ── Events ──────────────────────────────────────────────────────────── */
+
+function photo(id: string): string {
+  return `https://images.unsplash.com/${id}?w=2000&q=70&fm=jpg&fit=crop`;
+}
+
+/** Days from today as a calendar date, so the countdowns never go stale. */
+function dayFromNow(days: number): string {
+  return new Date(Date.now() + days * DAY).toISOString().slice(0, 10);
+}
+
+const TOKEN2049: EventSummary = {
+  id: "e0000000-0000-4000-8000-000000000001",
+  slug: "token2049-singapore-2026",
+  name: "TOKEN2049",
+  city: "Singapore",
+  country: "SG",
+  startsOn: dayFromNow(21),
+  endsOn: dayFromNow(22),
+  category: "crypto",
+  coverUrl: photo("photo-1508964942454-1a56651d54ac"),
+  coverCredit: "Photo: Unsplash",
+  spaceCount: 6,
+};
+
+const DEVCON: EventSummary = {
+  id: "e0000000-0000-4000-8000-000000000002",
+  slug: "devcon-8-mumbai-2026",
+  name: "Devcon 8",
+  city: "Mumbai",
+  country: "IN",
+  startsOn: dayFromNow(57),
+  endsOn: dayFromNow(60),
+  category: "crypto",
+  coverUrl: null,
+  coverCredit: null,
+  spaceCount: 2,
+};
+
+type CardCreator = SpaceCard["creator"];
+
+function creator(xHandle: string, xName: string | null, xFollowers: number | null, over: Partial<CardCreator> = {}): CardCreator {
+  return {
+    xHandle,
+    xName,
+    xAvatarUrl: null,
+    xVerifiedType: "blue",
+    xFollowers,
+    trackRecord: { delivered: 0, missed: 0 },
+    ...over,
+  };
+}
+
+const COIN = creator("coinempress", "Coin Empress", 48210, { trackRecord: { delivered: 3, missed: 0 } });
+
+function card(
+  n: number,
+  over: Omit<Partial<SpaceCard>, "creator" | "totals"> &
+    Pick<SpaceCard, "path" | "title" | "tab" | "templateName"> & {
+      creator: CardCreator;
+      totals: SpaceCard["totals"];
+    },
+): SpaceCard {
+  return {
+    spaceId: `c0000000-0000-4000-8000-${String(n).padStart(12, "0")}`,
+    pricingMode: "fixed",
+    status: "live",
+    closesAt: new Date(Date.now() + 12 * DAY).toISOString(),
+    bannerUrl: null,
+    bannerGradient: "steel",
+    fromPriceCents: 12500,
+    ...over,
+  };
+}
+
+function token2049Tabs(): EventPage["tabs"] {
+  return {
+    ground: [
+      card(1, {
+        path: "/s/coinempress/road-to-token2049",
+        title: "Road to TOKEN2049",
+        tab: "ground",
+        templateName: "Carry-on suitcase",
+        creator: COIN,
+        totals: { positions: 18, open: 9, sold: 8 },
+        closesAt: new Date(Date.now() + 12 * DAY + 5 * 60 * 60 * 1000).toISOString(),
+      }),
+      card(2, {
+        path: "/s/defidana/token2049-blazer",
+        title: "My blazer at TOKEN2049",
+        tab: "ground",
+        templateName: "Blazer",
+        creator: creator("defidana", "Dana | DeFi", 12840, {
+          xVerifiedType: null,
+          trackRecord: { delivered: 1, missed: 0 },
+        }),
+        bannerGradient: "night",
+        pricingMode: "takeover",
+        totals: { positions: 6, open: 4, sold: 3 },
+        fromPriceCents: 30000,
+        closesAt: new Date(Date.now() + 9 * DAY).toISOString(),
+      }),
+      card(3, {
+        path: "/s/kaitotrades/backpack-singapore",
+        title: "Backpack through Singapore",
+        tab: "ground",
+        templateName: "Backpack",
+        creator: creator("kaitotrades", "Kaito", 210400, {
+          xVerifiedType: "business",
+          trackRecord: { delivered: 7, missed: 1 },
+        }),
+        bannerGradient: "slate",
+        status: "closed",
+        totals: { positions: 8, open: 0, sold: 8 },
+        fromPriceCents: null,
+        closesAt: new Date(Date.now() - 2 * DAY).toISOString(),
+      }),
+    ],
+    feed: [
+      card(4, {
+        path: "/s/mira_onchain/token2049-interviews",
+        title: "Founder interviews from the floor",
+        tab: "feed",
+        templateName: "Interview",
+        creator: creator("mira_onchain", "Mira", 96300, { trackRecord: { delivered: 4, missed: 0 } }),
+        bannerGradient: "sea",
+        totals: { positions: 12, open: 10, sold: 2 },
+        fromPriceCents: 45000,
+        closesAt: new Date(Date.now() + 18 * DAY).toISOString(),
+      }),
+      card(5, {
+        path: "/s/sgnomad/token2049-week-wrap",
+        title: "TOKEN2049 week, wrapped",
+        tab: "feed",
+        templateName: "Event wrap",
+        creator: creator("sgnomad", "SG Nomad with a rather long display name", 5120, { xVerifiedType: null }),
+        bannerUrl: photo("photo-1496939376851-89342e90adcd"),
+        totals: { positions: 5, open: 3, sold: 2 },
+        fromPriceCents: 20000,
+        closesAt: new Date(Date.now() + 20 * 60 * 60 * 1000).toISOString(),
+      }),
+      card(6, {
+        path: "/s/coinempress/token2049-videos",
+        title: "TOKEN2049 short videos",
+        tab: "feed",
+        templateName: "Short-form video",
+        creator: COIN,
+        bannerUrl: photo("photo-1565967511849-76a60a516170"),
+        totals: { positions: 3, open: 1, sold: 1 },
+        fromPriceCents: 50000,
+      }),
+    ],
+  };
+}
+
+function devconTabs(): EventPage["tabs"] {
+  return {
+    ground: [
+      card(7, {
+        path: "/s/coinempress/road-to-devcon-8",
+        title: "Road to Devcon 8",
+        tab: "ground",
+        templateName: "Carry-on suitcase",
+        creator: COIN,
+        bannerGradient: "sea",
+        totals: { positions: 18, open: 18, sold: 0 },
+        closesAt: new Date(Date.now() + 40 * DAY).toISOString(),
+      }),
+      card(8, {
+        path: "/s/priya_builds/devcon-tote",
+        title: "A tote bag across Devcon",
+        tab: "ground",
+        // An X sync that came back thin, and a template gone from the catalogue.
+        templateName: null,
+        creator: creator("priya_builds", null, null, { xVerifiedType: "unknown_kind", trackRecord: { delivered: 2, missed: 0 } }),
+        bannerUrl: photo("photo-1570168007204-dfb528c6958f"),
+        totals: { positions: 4, open: 2, sold: 2 },
+        fromPriceCents: 8000,
+        closesAt: new Date(Date.now() + 30 * DAY).toISOString(),
+      }),
+    ],
+    feed: [],
+  };
+}
+
+export function fixtureEvents(): EventSummary[] {
+  return [TOKEN2049, DEVCON];
+}
+
+export function fixtureEvent(slug: string): EventPage | { redirectTo: string } | null {
+  // As the API computes it: open spots on live spaces, feed 14 to ground 13.
+  if (slug === TOKEN2049.slug) return { event: TOKEN2049, tabs: token2049Tabs(), defaultTab: "feed" };
+  if (slug === DEVCON.slug) return { event: DEVCON, tabs: devconTabs(), defaultTab: "ground" };
+  if (slug === "token-2049-singapore") return { redirectTo: TOKEN2049.slug };
+  return null;
+}
+
+/**
+ * Any card on an event page opens a board: the real fixtures for coinempress,
+ * and for everybody else a copy of the suitcase or the video board wearing that
+ * card's creator, title, event and look.
+ */
+function fromCard(c: SpaceCard, event: EventSummary, all: SpaceCard[]): Space {
+  const base = c.tab === "feed" ? videos() : suitcase();
+  const slug = c.path.split("/").pop() ?? base.slug;
+  return {
+    ...base,
+    id: c.spaceId,
+    slug,
+    title: c.title,
+    status: c.status,
+    closesAt: c.closesAt,
+    pricingMode: "fixed",
+    creator: {
+      ...base.creator,
+      xHandle: c.creator.xHandle ?? base.creator.xHandle,
+      xName: c.creator.xName ?? c.creator.xHandle ?? base.creator.xName,
+      xAvatarUrl: c.creator.xAvatarUrl,
+      xVerifiedType: c.creator.xVerifiedType === "blue" || c.creator.xVerifiedType === "business" ? c.creator.xVerifiedType : null,
+      xFollowers: c.creator.xFollowers ?? 0,
+      trackRecord: c.creator.trackRecord,
+      xUserId: c.creator.xHandle ?? c.spaceId,
+      xAccountCreatedAt: "2021-06-01T00:00:00.000Z",
+    },
+    eventName: event.name,
+    event,
+    bannerUrl: c.bannerUrl,
+    bannerGradient: c.bannerGradient,
+    siblings: all
+      .filter((o) => o.creator.xHandle === c.creator.xHandle && o.path !== c.path)
+      .map((o) => ({ path: o.path, tab: o.tab, title: o.title })),
+    share: { url: `https://hihodl.xyz${c.path}`, text: `${c.title} https://hihodl.xyz${c.path}` },
+    creatorInvite: null,
   };
 }
 
 export function fixtureSpace(handle: string, slug: string): Space | null {
-  if (handle.toLowerCase() !== "coinempress") return null;
-  if (slug === "road-to-token2049") return suitcase();
-  if (slug === "token2049-videos") return videos();
+  if (handle.toLowerCase() === "coinempress") {
+    if (slug === "road-to-token2049") return suitcase();
+    if (slug === "token2049-videos") return videos();
+    if (slug === "token2049-takeover") return takeovers();
+  }
+  const path = `/s/${handle.toLowerCase()}/${slug}`;
+  for (const [event, tabs] of [
+    [TOKEN2049, token2049Tabs()],
+    [DEVCON, devconTabs()],
+  ] as const) {
+    const all = [...tabs.ground, ...tabs.feed];
+    const hit = all.find((c) => c.path.toLowerCase() === path);
+    if (hit) return fromCard(hit, event, all);
+  }
   return null;
 }

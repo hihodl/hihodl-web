@@ -11,8 +11,13 @@ export default function InviteRedirect() {
   useEffect(() => {
     if (!code) return;
 
-    // Try to open the app via deep link
-    window.location.href = `hold://invite/${code}`;
+    // Try to open the app via deep link.
+    //
+    // `hihodl`, not `hold`: the app registers exactly one custom scheme, and
+    // that is it — `scheme: "hihodl"` in app.json, `hihodl` in Info.plist and
+    // in the Android manifest. `hold://` is registered on neither platform, so
+    // it opened nothing and every invite fell through to the store, code lost.
+    window.location.href = `hihodl://invite/${code}`;
 
     // Fallback: after 1.5s, redirect to the appropriate store
     const timer = setTimeout(() => {

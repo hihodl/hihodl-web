@@ -164,9 +164,13 @@ function Zone({
   const rw = zone.rect.w * W;
   const rh = zone.rect.h * H;
   const radius = Math.min(rw, rh) * 0.12;
-  const label = `${p.label}, ${STATUS_LABEL[p.status].toLowerCase()}${
-    p.status === "open" ? `, ${p.sponsorPaysUsdc} USDC` : ""
-  }${p.sponsor ? `, ${p.sponsor.name}` : ""}`;
+  // The figure drawn in an open zone is what it costs to take it now. On a
+  // takeover board it is also where bidding opens, and the spoken label says so:
+  // the card is where a reader learns what the next hand would cost.
+  const price = p.status === "open" ? `, ${p.takeover ? "bidding opens at " : ""}${p.sponsorPaysUsdc} USDC` : "";
+  const label = `${p.label}, ${STATUS_LABEL[p.status].toLowerCase()}${price}${
+    p.sponsor ? `, ${p.sponsor.name}` : ""
+  }`;
 
   const onKey = (e: KeyboardEvent<SVGGElement>) => {
     if (e.key === "Enter" || e.key === " ") {

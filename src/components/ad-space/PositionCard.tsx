@@ -2,8 +2,17 @@
 
 import { forwardRef } from "react";
 
-import { CONTENT_KIND_LABEL, STATUS_LABEL, calendarDate } from "@/lib/ad-space/format";
-import type { Position, Sponsor } from "@/lib/ad-space/types";
+import {
+  CONTENT_KIND_LABEL,
+  STATUS_LABEL,
+  calendarDate,
+  handsLeftText,
+  handsText,
+  takeoverClosedText,
+  takeoverVerb,
+  usdFromCents,
+} from "@/lib/ad-space/format";
+import type { Position, Sponsor, Takeover } from "@/lib/ad-space/types";
 
 import { QrCode } from "./qr";
 import { btnSmall, pill } from "./ui";
@@ -19,12 +28,14 @@ type Props = {
   active: boolean;
   /** False once the space is closed: no spot can be bought. */
   buyable: boolean;
+  /** What a takeover multiplies the last price by. Null on a fixed-price space. */
+  takeoverMultiple: number | null;
   onHover: (id: string | null) => void;
   onSponsor: (p: Position) => void;
 };
 
 export const PositionCard = forwardRef<HTMLElement, Props>(function PositionCard(
-  { position: p, sizeLabel, active, buyable, onHover, onSponsor },
+  { position: p, sizeLabel, active, buyable, takeoverMultiple, onHover, onSponsor },
   ref,
 ) {
   return (
@@ -73,21 +84,35 @@ export const PositionCard = forwardRef<HTMLElement, Props>(function PositionCard
         </a>
       )}
 
+      {p.takeover && <TakeoverLines position={p} takeover={p.takeover} multiple={takeoverMultiple} />}
+
       <div className="mt-auto flex flex-wrap items-end justify-between gap-x-4 gap-y-3 border-t border-[color:var(--color-hairline)] pt-4">
-        <dl className="flex flex-col gap-0.5">
-          <div className="flex items-baseline gap-2">
-            <dt className="sr-only">Sponsor pays</dt>
-            <dd className="font-mono text-body text-text">{p.sponsorPaysUsdc} USDC</dd>
-          </div>
-          <div className="flex items-baseline gap-1 text-tiny text-text-faint">
-            <dt>Creator receives</dt>
-            <dd className="font-mono">{p.creatorReceivesUsdc}</dd>
-          </div>
-        </dl>
+        {p.takeover ? (
+          <TakeoverPrices position={p} takeover={p.takeover} />
+        ) : (
+          <dl className="flex flex-col gap-0.5">
+            <div className="flex items-baseline gap-2">
+              <dt className="sr-only">Sponsor pays</dt>
+              <dd className="font-mono text-body text-text">{p.sponsorPaysUsdc} USDC</dd>
+            </div>
+            <div className="flex items-baseline gap-1 text-tiny text-text-faint">
+              <dt>Creator receives</dt>
+              <dd className="font-mono">{p.creatorReceivesUsdc}</dd>
+            </div>
+          </dl>
+        )}
 
         {p.status === "open" && buyable && (
           <button type="button" className={btnSmall} onClick={() => onSponsor(p)}>
             Sponsor this spot
+          </button>
+        )}
+        {/* A sold spot on a takeover board is still for sale — at double. The
+            card already says what that costs and what goes back to the sponsor
+            holding it, so the button only has to name the act. */}
+        {p.status === "sold" && buyable && p.takeover && !p.takeover.closed && p.takeover.nextPriceUsdc && (
+          <button type="button" className={btnSmall} onClick={() => onSponsor(p)}>
+            Take this spot
           </button>
         )}
         {p.status === "held" && buyable && (
@@ -99,6 +124,87 @@ export const PositionCard = forwardRef<HTMLElement, Props>(function PositionCard
     </article>
   );
 });
+
+/**
+ * The two figures a takeover spot leads with, each under its own visible label.
+ *
+ * At a multiple of two the price a spot last went for and the money a takeover
+ * hands the creator are the SAME number, so the sr-only label the fixed-price
+ * card uses is not enough here: a reader who sees one amount has to be told
+ * which one it is without asking a screen reader.
+ */
+function TakeoverPrices({ position: p, takeover: t }: { position: Position; takeover: Takeover }) {
+  const takeable = p.status === "sold" && !t.closed && t.nextSponsorPaysUsdc !== null;
+  return (
+    <dl className="flex flex-col gap-0.5">
+      <div className="flex items-baseline gap-2">
+        <dt className="text-tiny text-text-faint">{p.status === "sold" ? "Sold at" : "You pay"}</dt>
+        <dd className="font-mono text-body text-text">
+          {p.status === "sold" ? t.priceUsdc : p.sponsorPaysUsdc} USDC
+        </dd>
+      </div>
+      {takeable ? (
+        <div className="flex items-baseline gap-1 text-tiny text-amber">
+          <dt>Take it for</dt>
+          <dd className="font-mono">{t.nextSponsorPaysUsdc} USDC</dd>
+        </div>
+      ) : (
+        p.status !== "sold" && (
+          <div className="flex items-baseline gap-1 text-tiny text-text-faint">
+            <dt>Creator receives</dt>
+            <dd className="font-mono">{p.creatorReceivesUsdc}</dd>
+          </div>
+        )
+      )}
+    </dl>
+  );
+}
+
+/**
+ * What the ladder has done to this spot and what happens next, in sentences.
+ *
+ * No amount here appears twice and none appears bare: the price, what a
+ * takeover costs and the refund sit within two lines of each other, and at a
+ * multiple of two a pair of them can be the same figure.
+ */
+function TakeoverLines({
+  position: p,
+  takeover: t,
+  multiple,
+}: {
+  position: Position;
+  takeover: Takeover;
+  multiple: number | null;
+}) {
+  if (p.status !== "sold") {
+    return (
+      <p className="text-tiny text-text-muted">
+        Bidding starts at {usdFromCents(t.floorPriceCents)}, and every takeover after that{" "}
+        {takeoverVerb(multiple)}.
+      </p>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-1.5 text-tiny text-text-muted">
+      {t.handsSoFar > 0 && (
+        <p>
+          {handsText(t.handsSoFar)} since bidding opened at {usdFromCents(t.floorPriceCents)}.
+        </p>
+      )}
+      {t.closed ? (
+        <p>{takeoverClosedText(t.closed)}</p>
+      ) : (
+        t.nextPriceUsdc &&
+        t.refundsUsdc && (
+          <p>
+            Taking it moves the price to {t.nextPriceUsdc} USDC and sends {t.refundsUsdc} USDC straight back to the
+            sponsor who has it now, in the same transaction. {handsLeftText(t.handsLeft)}
+          </p>
+        )
+      )}
+    </div>
+  );
+}
 
 /** Only http(s) links are ever rendered from sponsor content. */
 export function safeHref(url: string | null | undefined): string | null {

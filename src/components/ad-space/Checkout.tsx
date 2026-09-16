@@ -17,6 +17,7 @@ import {
   startCheckout,
   submitAuthorizations,
 } from "@/lib/ad-space/checkout-client";
+import { TAKEOVER_CHAINS } from "@/lib/ad-space/config";
 import { CHAIN_LABEL, CONTENT_KIND_LABEL, FALLBACK_TEXT, timeLeft } from "@/lib/ad-space/format";
 import { PUBLIC_CHAINS } from "@/lib/orders/chains.public";
 import type { Chain, EvmPayload, Order, Position, Space } from "@/lib/ad-space/types";
@@ -141,6 +142,9 @@ function typedData(evm: EvmPayload, message: Record<string, string>): string {
   });
 }
 
+/** Refusals that mean "this spot is not there to buy": offer the way back to the board. */
+const GONE_CODES = new Set(["position_sold", "position_held", "space_closed", "nothing_to_take_over"]);
+
 /* ── The component ─────────────────────────────────────────────────── */
 
 export function Checkout({
@@ -154,7 +158,12 @@ export function Checkout({
   onClose: () => void;
   onPaid: () => void;
 }) {
-  const chains = space.chains;
+  // Taking a sold spot over is only possible on the chains takeovers work on.
+  // The position view does not say which chain the holder paid on, so the
+  // backend's `wrong_chain` still catches a spot bought elsewhere.
+  const takingOver = position.status === "sold" && position.takeover !== null;
+  const takeoverChains = space.chains.filter((c) => TAKEOVER_CHAINS.includes(c));
+  const chains = takingOver && takeoverChains.length > 0 ? takeoverChains : space.chains;
   const [chain, setChain] = useState<Chain>(chains.includes("solana") ? "solana" : chains[0]);
   const [phase, setPhase] = useState<Phase>({ kind: "loading" });
   const [notice, setNotice] = useState<string | null>(null);
@@ -390,9 +399,7 @@ export function Checkout({
       setPhase({ kind: "confirming", order: res.order });
     } catch (e) {
       setNotice(describeError(e, "solana"));
-      setOfferOtherSpot(
-        e instanceof CheckoutError && (e.code === "position_sold" || e.code === "position_held" || e.code === "space_closed"),
-      );
+      setOfferOtherSpot(e instanceof CheckoutError && GONE_CODES.has(e.code));
       // A connected wallet that declined leaves the hold in place; the next
       // attempt with the same key gets the same transaction back.
       setPhase({ kind: "choose" });
@@ -466,7 +473,7 @@ export function Checkout({
       setNotice(refusal ?? describeError(e, evmChain));
       setOfferOtherSpot(
         refusal !== null ||
-          (e instanceof CheckoutError && (e.code === "position_sold" || e.code === "position_held" || e.code === "space_closed")),
+          (e instanceof CheckoutError && GONE_CODES.has(e.code)),
       );
       setPhase({ kind: "choose" });
     }
@@ -704,17 +711,35 @@ export function Checkout({
 
 function Summary({ space, position: p }: { space: Space; position: Position }) {
   const zone = space.template.zones.find((z) => z.zoneKey === p.zoneKey);
+  // Taking a spot from whoever holds it, rather than buying an empty one. The
+  // figures differ enough that showing the fixed-price pair would be wrong:
+  // what this sponsor pays is the DOUBLED price plus the fee, and most of it
+  // is not the creator's — it goes straight back to the sponsor displaced.
+  const taking = p.status === "sold" && p.takeover?.nextSponsorPaysUsdc ? p.takeover : null;
   return (
     <div className="flex flex-col gap-4">
       <dl className="grid grid-cols-2 gap-4 rounded-card border border-[color:var(--color-hairline)] bg-white/[0.03] p-4">
         <div>
           <dt className="text-tiny text-text-faint">You pay</dt>
-          <dd className="mt-1 font-mono text-body text-text">{p.sponsorPaysUsdc} USDC</dd>
+          <dd className="mt-1 font-mono text-body text-text">
+            {taking ? taking.nextSponsorPaysUsdc : p.sponsorPaysUsdc} USDC
+          </dd>
         </div>
         <div>
-          <dt className="text-tiny text-text-faint">@{space.creator.xHandle} receives</dt>
-          <dd className="mt-1 font-mono text-body text-text">{p.creatorReceivesUsdc} USDC</dd>
+          <dt className="text-tiny text-text-faint">
+            {taking ? "New price for the spot" : `@${space.creator.xHandle} receives`}
+          </dt>
+          <dd className="mt-1 font-mono text-body text-text">
+            {taking ? taking.nextPriceUsdc : p.creatorReceivesUsdc} USDC
+          </dd>
         </div>
+        {taking && (
+          <div className="col-span-2 border-t border-[color:var(--color-hairline)] pt-3 text-small text-text-muted">
+            Of that, <span className="font-mono text-text">{taking.refundsUsdc} USDC</span> goes straight back to the
+            sponsor who holds this spot now — everything they paid, in the same transaction that takes it from them.
+            HOLD never holds it in between.
+          </div>
+        )}
         <div className="col-span-2 text-tiny text-text-faint">
           {[zone?.sizeLabel, `Takes ${p.accepts.map((k) => CONTENT_KIND_LABEL[k]).join(", ")}`]
             .filter(Boolean)
@@ -829,8 +854,18 @@ function Paid({
         <p className={`${eyebrow} text-success`}>Paid</p>
         <h3 className="mt-2 font-display text-h3 font-light text-text">You&rsquo;re sponsoring this spot.</h3>
         <p className="mt-3 text-small text-text-muted">
-          {order.sponsorPaysUsdc} USDC on {CHAIN_LABEL[order.chain]}: {order.creatorReceivesUsdc} to @{handle} and{" "}
-          {order.feeUsdc} to HOLD.
+          {order.takeover ? (
+            <>
+              {order.sponsorPaysUsdc} USDC on {CHAIN_LABEL[order.chain]}: {order.takeover.refundsUsdc} back to the
+              sponsor you took it from, {order.creatorReceivesUsdc} more to @{handle}, and {order.feeUsdc} to HOLD. The
+              spot is listed at {order.priceUsdc} now.
+            </>
+          ) : (
+            <>
+              {order.sponsorPaysUsdc} USDC on {CHAIN_LABEL[order.chain]}: {order.creatorReceivesUsdc} to @{handle} and{" "}
+              {order.feeUsdc} to HOLD.
+            </>
+          )}
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           {order.explorerUrl && (
@@ -864,7 +899,7 @@ function Duplicate({ order }: { order: Order }) {
       <p className="text-small text-text-muted">
         Your payment arrived after this spot was already sold, so it couldn&rsquo;t buy it. HOLD never
         held it, and our team has been alerted. Email{" "}
-        <a className="text-amber hover:underline" href={`mailto:support@hihodl.xyz?subject=${encodeURIComponent(`Ad Space order ${order.id}`)}`}>
+        <a className="text-amber hover:underline" href={`mailto:support@hihodl.xyz?subject=${encodeURIComponent(`HiSpace order ${order.id}`)}`}>
           support@hihodl.xyz
         </a>{" "}
         with order <span className="font-mono text-text">{order.id.slice(0, 8)}</span> and we&rsquo;ll help you sort

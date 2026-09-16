@@ -17,6 +17,8 @@
  * already points the statements proxy at staging points this page there too.
  */
 
+import type { Chain } from "./types";
+
 const DEFAULT_API = "https://api.hihodl.xyz/api/v1";
 
 function trim(url: string): string {
@@ -37,3 +39,11 @@ export const SUPPORT_EMAIL = "support@hihodl.xyz";
 /** X handles are 1 to 15 of [A-Za-z0-9_]; slugs are lowercase words and dashes. */
 export const HANDLE_RE = /^[A-Za-z0-9_]{1,15}$/;
 export const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{0,78}[a-z0-9])?$/;
+
+/**
+ * The chains a sold spot can be taken over on, as the backend's TAKEOVER_CHAINS.
+ * The displaced sponsor's refund is a leg of the same transaction, and only
+ * Solana carries that today. The backend refuses any other with
+ * `takeover_chain_unsupported`; this list only keeps the picker from offering it.
+ */
+export const TAKEOVER_CHAINS: readonly Chain[] = ["solana"];

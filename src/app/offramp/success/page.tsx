@@ -67,7 +67,7 @@ export default function OfframpSuccessPage() {
               <Button
                 className="w-full hover:shadow-[0_0_28px_rgba(255,183,3,0.5)] inline-flex items-center justify-center px-6 py-3 rounded-xl text-black font-[&apos;Inter&apos;] font-[700] bg-brand-ffb703 transition-all duration-300"
                 onClick={() => {
-                  // /open bridges to hold:// and falls back to the store.
+                  // /open bridges to hihodl:// and falls back to the store.
                   // No `to` param on purpose: the app opens at its root, and
                   // there is no published deep link for a withdrawal screen to
                   // point at yet.

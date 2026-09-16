@@ -12,6 +12,9 @@ import type {
   DeliverableState,
   Fallback,
   PositionStatus,
+  Space,
+  SpaceCard,
+  SpaceTab,
   VerifiedType,
 } from "./types";
 
@@ -143,6 +146,57 @@ export const FALLBACK_TEXT: Record<Fallback, string> = {
     "If a venue does not let the item in, the creator carries every sponsor to their next event instead.",
 };
 
+/**
+ * How many times a spot has changed hands, in the words a person says out loud.
+ * The caller renders nothing at all for a spot still on its first sponsor.
+ */
+export function handsText(hands: number): string {
+  if (hands === 1) return "Changed hands once";
+  if (hands === 2) return "Changed hands twice";
+  return `Changed hands ${hands} times`;
+}
+
+/**
+ * How much room the ladder has left AFTER the takeover being described.
+ *
+ * `handsLeft` from the API counts the takeover on offer as one of them, so the
+ * number a sponsor actually cares about is one less: having paid, how many more
+ * times can this be taken off me? Reaching zero is the good news on this page —
+ * it means the spot is theirs and nobody can outbid them — so it gets said
+ * rather than left as silence.
+ */
+export function handsLeftText(handsLeft: number): string | null {
+  const after = handsLeft - 1;
+  if (after < 0) return null;
+  if (after === 0) return "That is the last time it can change hands, so it would stay with whoever takes it now.";
+  if (after === 1) return "After that it could be taken off them once more, and then it is settled for good.";
+  return `After that it could be taken off them ${after} more times.`;
+}
+
+/**
+ * What a takeover does to the price. Two is the only multiple nobody has to
+ * think about, so it is a verb; anything else is stated as a factor rather than
+ * given a word of its own.
+ */
+export function takeoverVerb(multiple: number | null): string {
+  return multiple === 2 || multiple === null ? "doubles the price" : `multiplies the price by ${multiple}`;
+}
+
+/**
+ * Why a spot can go no higher, without the server's words for it. An unknown
+ * reason still says the only thing a sponsor needs: the ladder has stopped.
+ */
+const TAKEOVER_CLOSED_TEXT: Record<string, string> = {
+  too_many_takeovers:
+    "This spot has changed hands as many times as an Ad Space spot is allowed to, so it can go no higher. It stays with the sponsor who has it now.",
+  price_ceiling:
+    "Doubling this spot again would take it past the most an Ad Space spot can cost, so it can go no higher. It stays with the sponsor who has it now.",
+};
+
+export function takeoverClosedText(reason: string): string {
+  return TAKEOVER_CLOSED_TEXT[reason] ?? "This spot can go no higher. It stays with the sponsor who has it now.";
+}
+
 /** Phrased to follow "The creator declares that they …". */
 const ATTESTATION_TEXT: Record<string, string> = {
   owns_item: "own the item",
@@ -161,4 +215,129 @@ export function deliverableText(kind: string, platform: string, count: number): 
   const plural = count === 1 ? noun : noun.endsWith("s") ? noun : `${noun}s`;
   const where = platform.toLowerCase() === "x" ? "X" : platform.charAt(0).toUpperCase() + platform.slice(1);
   return `${count} ${plural} on ${where}`;
+}
+
+/* ── Events ──────────────────────────────────────────────────────────── */
+
+const MONTH = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function ymd(date: string): [number, number, number] | null {
+  const [y, m, d] = date.slice(0, 10).split("-").map(Number);
+  return y && m && d ? [y, m, d] : null;
+}
+
+/**
+ * An event's dates as a person writes them: "7 Oct 2026", "7 to 8 Oct 2026",
+ * "30 Sep to 2 Oct 2026", "30 Dec 2026 to 2 Jan 2027". Words, not a dash, so
+ * the range still reads when a screen reader says it.
+ */
+export function eventDates(startsOn: string, endsOn: string): string {
+  const a = ymd(startsOn);
+  const b = ymd(endsOn);
+  if (!a || !b) return startsOn;
+  const [ay, am, ad] = a;
+  const [by, bm, bd] = b;
+  if (ay === by && am === bm && ad === bd) return `${ad} ${MONTH[am - 1]} ${ay}`;
+  if (ay === by && am === bm) return `${ad} to ${bd} ${MONTH[am - 1]} ${ay}`;
+  if (ay === by) return `${ad} ${MONTH[am - 1]} to ${bd} ${MONTH[bm - 1]} ${ay}`;
+  return `${ad} ${MONTH[am - 1]} ${ay} to ${bd} ${MONTH[bm - 1]} ${by}`;
+}
+
+/** Whole days from today (UTC) to a calendar date; negative once it has passed. */
+function daysUntil(date: string, now: number): number {
+  const p = ymd(date);
+  if (!p) return NaN;
+  const t = new Date(now);
+  const today = Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate());
+  return Math.round((Date.UTC(p[0], p[1] - 1, p[2]) - today) / 86_400_000);
+}
+
+export type EventPhase = "upcoming" | "now" | "ended";
+
+/**
+ * "in 21 days", "tomorrow", "happening now", "ended". Counted in whole calendar
+ * days in UTC: an event's dates carry no time zone, and a day either way at the
+ * edges is the honest precision of "in 21 days".
+ */
+export function eventCountdown(startsOn: string, endsOn: string, now = Date.now()): { phase: EventPhase; text: string } {
+  const toStart = daysUntil(startsOn, now);
+  const toEnd = daysUntil(endsOn, now);
+  if (toEnd < 0) return { phase: "ended", text: "ended" };
+  if (toStart <= 0) return { phase: "now", text: "happening now" };
+  if (toStart === 1) return { phase: "upcoming", text: "tomorrow" };
+  return { phase: "upcoming", text: `in ${toStart} days` };
+}
+
+/**
+ * A card's closing time, coarse on purpose: a grid of cards ticking every second
+ * is noise, and the space's own page has the exact countdown.
+ */
+export function closesText(closesAt: string, closed: boolean, now = Date.now()): string {
+  const left = Date.parse(closesAt) - now;
+  if (closed || !Number.isFinite(left) || left <= 0) return "Closed";
+  const h = Math.floor(left / 3_600_000);
+  if (h >= 48) return `Closes in ${Math.floor(h / 24)} days`;
+  if (h >= 1) return `Closes in ${h} h`;
+  return "Closes within the hour";
+}
+
+/** What a sponsor can still get on a tab: open spots on live spaces only. */
+export function openSpots(cards: SpaceCard[]): number {
+  return cards.reduce((sum, c) => sum + (c.status === "live" ? Math.max(0, c.totals.open) : 0), 0);
+}
+
+/**
+ * The tab an event page opens on when the API does not say. More open spots on
+ * live spaces wins; on a tie, a tab with something on it beats an empty one, and
+ * the ground wins after that.
+ */
+export function defaultEventTab(tabs: Record<SpaceTab, SpaceCard[]>): SpaceTab {
+  const ground = openSpots(tabs.ground);
+  const feed = openSpots(tabs.feed);
+  if (feed !== ground) return feed > ground ? "feed" : "ground";
+  return tabs.ground.length === 0 && tabs.feed.length > 0 ? "feed" : "ground";
+}
+
+/**
+ * How many spots a sponsor can still get on a space. An open spot counts; on a
+ * takeover board so does a sold spot whose ladder has not stopped, because it
+ * can be bought from the sponsor holding it.
+ */
+export function takeableSpots(space: Pick<Space, "pricingMode" | "positions">): number {
+  const isTakeover = space.pricingMode === "takeover";
+  return space.positions.filter(
+    (p) =>
+      p.status === "open" ||
+      (isTakeover && p.status === "sold" && !!p.takeover && !p.takeover.closed && !!p.takeover.nextPriceUsdc),
+  ).length;
+}
+
+/**
+ * "Sold out" only when it is true. On a fixed-price board that is every spot
+ * sold; on a takeover board it is nothing left to take, since a sold spot there
+ * is still for sale.
+ */
+export function spaceSoldOut(space: Pick<Space, "pricingMode" | "positions" | "totals">): boolean {
+  const { totals } = space;
+  if (totals.positions === 0) return false;
+  // A spot being paid for right now is not settled either way: it may lapse.
+  if (totals.sold < totals.positions) return false;
+  return space.pricingMode === "takeover" ? takeableSpots(space) === 0 : true;
+}
+
+/**
+ * One line on how a space is doing, for a link card or a meta description:
+ * "3 of 8 spots sold", "Sold out: all 8 spots taken", and on a takeover board
+ * "5 of 8 spots still up for grabs" or "Every spot settled: all 8 taken".
+ */
+export function spaceProgressText(space: Pick<Space, "pricingMode" | "positions" | "totals" | "kind">): string {
+  const { totals } = space;
+  const noun = space.kind === "service" ? "slots" : "spots";
+  const soldOut = spaceSoldOut(space);
+  if (space.pricingMode === "takeover") {
+    return soldOut
+      ? `Every ${noun.slice(0, -1)} settled: all ${totals.positions} taken`
+      : `${takeableSpots(space)} of ${totals.positions} ${noun} still up for grabs`;
+  }
+  return soldOut ? `Sold out: all ${totals.positions} ${noun} taken` : `${totals.sold} of ${totals.positions} ${noun} sold`;
 }

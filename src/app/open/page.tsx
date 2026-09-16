@@ -6,7 +6,14 @@ import { useSearchParams } from "next/navigation";
 import { APP_STORE_URL, PLAY_STORE_URL } from "@/lib/appLinks";
 import { Wordmark } from "@/components/site/Wordmark";
 
-const DEEP_LINK_SCHEME = "hold://";
+/**
+ * The app's one custom scheme: `scheme: "hihodl"` in app.json, `hihodl` in
+ * Info.plist's CFBundleURLSchemes and in the Android manifest. It is spelled
+ * that way on both platforms and nowhere is `hold` registered, so a `hold://`
+ * link here opened nothing and sent everyone who already has the app to the
+ * store instead.
+ */
+const DEEP_LINK_SCHEME = "hihodl://";
 const FALLBACK_DELAY_MS = 1500;
 
 function detectPlatform(): "ios" | "android" | "desktop" {

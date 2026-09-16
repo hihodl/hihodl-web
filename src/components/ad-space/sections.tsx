@@ -15,11 +15,15 @@ import {
   compactNumber,
   deliverableText,
   relativeTime,
+  spaceSoldOut,
+  takeableSpots,
+  takeoverVerb,
   usdFromCents,
 } from "@/lib/ad-space/format";
 import type { Creator, DeliverableState, Space } from "@/lib/ad-space/types";
 
 import { ClosesCountdown } from "./ClosesCountdown";
+import { SpaceSiblings } from "./events";
 import { btnSmallSecondary, card, eyebrow, pill } from "./ui";
 
 /* ── Chrome ────────────────────────────────────────────────────────── */
@@ -41,7 +45,7 @@ export function SlimHeader() {
 }
 
 export function SpaceFooter({ space }: { space: Space }) {
-  const report = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(`Report Ad Space ${space.id}`)}`;
+  const report = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(`Report HiSpace ${space.id}`)}`;
   return (
     <footer className="hairline">
       <div className="container-page flex flex-col gap-8 py-12 md:flex-row md:items-start md:justify-between">
@@ -50,12 +54,15 @@ export function SpaceFooter({ space }: { space: Space }) {
           <p className="text-small text-text-muted">
             Powered by HOLD. Sponsors pay creators directly in USDC, and HOLD never holds the money.
           </p>
-          <p className="text-small text-text-faint">Have an audience? Sell your own Ad Space from the HOLD app.</p>
+          {/* Said once. With an invite link on the page, SpaceInvite says it, and says it better. */}
+          {!space.creatorInvite && (
+            <p className="text-small text-text-faint">Have an audience? Sell your own HiSpace from the HOLD app.</p>
+          )}
         </div>
-        <nav className="flex flex-wrap gap-x-6 gap-y-3 text-small" aria-label="Ad Space">
+        <nav className="flex flex-wrap gap-x-6 gap-y-3 text-small" aria-label="HiSpace">
           <DownloadLink className="text-text-muted transition-colors duration-180 hover:text-text">Get HOLD</DownloadLink>
           <a href={report} className="text-text-muted transition-colors duration-180 hover:text-text">
-            Report this Ad Space
+            Report this HiSpace
           </a>
           <Link href="/terms" className="text-text-muted transition-colors duration-180 hover:text-text">
             Terms
@@ -73,8 +80,19 @@ export function SpaceFooter({ space }: { space: Space }) {
 
 export function SpaceHero({ space }: { space: Space }) {
   const { totals } = space;
-  const soldOut = totals.positions > 0 && totals.sold >= totals.positions;
   const noun = space.kind === "service" ? "slots" : "spots";
+  const isTakeover = space.pricingMode === "takeover";
+
+  /* On a takeover board a sold spot is not gone — it can be bought from the
+     sponsor holding it. So "sold out" is only true here when there is nothing
+     left to take: every spot has an owner AND every ladder has stopped. Counting
+     sold spots as unavailable would turn the whole mechanic into a closed sign.
+     The link card and the meta description count the same way. */
+  const takeable = takeableSpots(space);
+  const soldOut = spaceSoldOut(space);
+  /* The bar tracks whatever the headline counts, so the two can never disagree. */
+  const headline = isTakeover ? takeable : totals.sold;
+  const headlineLabel = `${headline} of ${totals.positions} ${noun} ${isTakeover ? "still up for grabs" : "sold"}`;
   const what =
     space.kind === "service"
       ? `Sponsored ${space.template.name.toLowerCase()}`
@@ -91,10 +109,11 @@ export function SpaceHero({ space }: { space: Space }) {
         aria-hidden
       />
       <div className="container-page relative pb-14 pt-8 md:pb-20 md:pt-14">
-        <p className={`${eyebrow} text-amber`}>
+        <SpaceSiblings siblings={space.siblings} />
+        <p className={`${eyebrow} break-words text-amber [overflow-wrap:anywhere]`}>
           {[space.eventName, what].filter(Boolean).join(" · ")}
         </p>
-        <h1 className="mt-5 max-w-4xl font-display text-[40px] font-light leading-[1.05] text-text md:text-h1">
+        <h1 className="mt-5 max-w-4xl break-words font-display text-[40px] font-light leading-[1.05] text-text [overflow-wrap:anywhere] md:text-h1">
           {space.title}
         </h1>
         {space.reason && <p className="mt-5 max-w-2xl text-body text-text-muted md:text-lead">{space.reason}</p>}
@@ -106,33 +125,40 @@ export function SpaceHero({ space }: { space: Space }) {
             <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
               <p className="text-text">
                 {soldOut ? (
-                  <span className="font-display text-h3 font-light text-amber">Sold out</span>
+                  <span className="font-display text-h3 font-light text-amber">
+                    {isTakeover ? "Every spot settled" : "Sold out"}
+                  </span>
                 ) : (
                   <>
-                    <span className="font-display text-h3 font-light">{totals.sold}</span>
+                    <span className="font-display text-h3 font-light">{headline}</span>
                     <span className="text-body text-text-muted">
                       {" "}
-                      of {totals.positions} {noun} sold
+                      of {totals.positions} {noun} {isTakeover ? "still up for grabs" : "sold"}
                     </span>
                   </>
                 )}
               </p>
               <p className="text-small">
                 <span className="font-mono text-text">{usdFromCents(totals.committedCents)}</span>
-                <span className="text-text-faint"> committed of {usdFromCents(totals.totalCents)}</span>
+                {/* A takeover board has no ceiling to measure against: every
+                    takeover raises the total, so "of" would name a number
+                    that is already out of date by the next sponsor. */}
+                <span className="text-text-faint">
+                  {isTakeover ? " committed so far" : ` committed of ${usdFromCents(totals.totalCents)}`}
+                </span>
               </p>
             </div>
             <div
               className="h-2 overflow-hidden rounded-[4px] bg-white/[0.06]"
               role="progressbar"
-              aria-label={`${totals.sold} of ${totals.positions} ${noun} sold`}
+              aria-label={headlineLabel}
               aria-valuemin={0}
               aria-valuemax={totals.positions}
-              aria-valuenow={totals.sold}
+              aria-valuenow={headline}
             >
               <div
                 className="h-full rounded-[4px] bg-amber"
-                style={{ width: `${totals.positions ? Math.min(100, (totals.sold / totals.positions) * 100) : 0}%` }}
+                style={{ width: `${totals.positions ? Math.min(100, (headline / totals.positions) * 100) : 0}%` }}
               />
             </div>
             <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 text-small">
@@ -179,7 +205,7 @@ function CreatorCard({ creator: c }: { creator: Creator }) {
             label="Track record"
             value={
               delivered + missed === 0
-                ? "First Ad Space"
+                ? "First HiSpace"
                 : `${delivered} delivered${missed ? `, ${missed} missed` : ", none missed"}`
             }
             tone={missed > 0 ? "attention" : undefined}
@@ -220,6 +246,45 @@ function Avatar({ creator: c }: { creator: Creator }) {
     >
       {(c.xName || c.xHandle).slice(0, 1).toUpperCase()}
     </span>
+  );
+}
+
+/* ── Takeovers ─────────────────────────────────────────────────────── */
+
+/**
+ * The mechanic, said once, immediately above the spots it prices.
+ *
+ * A sponsor meets these prices on the cards, so the explanation belongs where
+ * they are and not with the trust copy further down. Nothing renders on a
+ * fixed-price space: the product there is the one it has always been.
+ */
+export function SpaceTakeover({ space }: { space: Space }) {
+  if (space.pricingMode !== "takeover") return null;
+
+  return (
+    <section
+      aria-label="How takeovers work"
+      className={`${card} mb-10 flex flex-col gap-3 p-5 md:p-6`}
+    >
+      <h2 className={`${eyebrow} text-moonlight`}>Any spot can change hands</h2>
+      <p className="max-w-3xl text-small text-text-muted">
+        The price on a spot is where bidding opens, not what it will sell for. Once a spot is sold, anyone can take it
+        from the sponsor holding it, and doing so {takeoverVerb(space.takeoverMultiple)}. Each card says what taking
+        that spot costs today.
+      </p>
+      <p className="max-w-3xl text-small text-text-muted">
+        The sponsor who loses a spot gets back every cent they paid
+        {space.feePayer === "sponsor" ? `, HOLD's ${space.feeBps / 100}% fee included,` : ""} in the very same
+        transaction that displaces them. Nobody holds that money in between: repaying them is one leg of the new
+        sponsor&rsquo;s payment, and if that leg fails the payment fails with it.
+      </p>
+      {/* Only worth saying where there is a choice of chain to get wrong. */}
+      {space.chains.length > 1 && (
+        <p className="max-w-3xl text-small text-text-faint">
+          A spot changes hands on the chain it was bought on, because the refund travels in that same transaction.
+        </p>
+      )}
+    </section>
   );
 }
 
@@ -315,6 +380,17 @@ export function SpacePromises({ space }: { space: Space }) {
               {space.feeBps / 100}%, paid by the {space.feePayer}, and it moves in the same transaction. HOLD never
               holds your money, and paid spots can&rsquo;t be refunded by HOLD.
             </p>
+            {/* The two sentences above are true on a takeover board too, and
+                together they read as a contradiction of the refund promised
+                further up the page. The difference is worth one line: HOLD
+                still refunds nobody — the sponsor taking the spot does. */}
+            {space.pricingMode === "takeover" && (
+              <p className="text-small text-text-muted">
+                That holds when a spot changes hands, too. The money that goes back to a sponsor who has been outbid is
+                not HOLD&rsquo;s to send: it is part of the payment made by whoever took the spot from them, moving in
+                the same transaction.
+              </p>
+            )}
             {declares.length > 0 && (
               <p className="text-small text-text-muted">
                 The creator declares that they {joinWords(declares)}.
@@ -374,12 +450,47 @@ export function SpaceUpdates({ space }: { space: Space }) {
   );
 }
 
+/* ── The other reader ──────────────────────────────────────────────── */
+
+/**
+ * Two kinds of people read this page: sponsors, who buy, and creators, who see
+ * it and want one of their own. This is the line for the second kind, and it is
+ * deliberately the quietest thing on the page — a hairline strip of small muted
+ * text above the footer, with a plain text link instead of a button. The amber
+ * fill on this page means "sponsor this spot"; recruiting a creator must never
+ * borrow it, or the page starts competing with the job it was built for.
+ *
+ * Nothing renders without an invite link: a draft has none, and neither does an
+ * account old enough to predate invite codes.
+ */
+export function SpaceInvite({ space }: { space: Space }) {
+  const invite = space.creatorInvite;
+  if (!invite) return null;
+
+  return (
+    <section className="hairline" aria-label="Sell your own HiSpace">
+      <div className="container-page flex flex-col gap-3 py-10 sm:flex-row sm:items-baseline sm:justify-between sm:gap-8">
+        <p className="max-w-2xl text-small text-text-muted">
+          @{space.creator.xHandle} sells sponsorships on HOLD. If you have an audience, you can too: sponsors pay you
+          directly in USDC, and HOLD takes {space.feeBps / 100}%.
+        </p>
+        <a
+          href={invite.url}
+          className="self-start whitespace-nowrap text-small text-text-muted underline-offset-4 transition-colors duration-180 hover:text-text hover:underline"
+        >
+          Sell your own HiSpace
+        </a>
+      </div>
+    </section>
+  );
+}
+
 /* ── When the API is down ──────────────────────────────────────────── */
 
 export function SpaceUnavailable() {
   return (
     <section className="container-page flex min-h-[60vh] flex-col justify-center py-20">
-      <p className={`${eyebrow} text-amber`}>Ad Space</p>
+      <p className={`${eyebrow} text-amber`}>HiSpace</p>
       <h1 className="mt-5 max-w-2xl font-display text-h3 font-light text-text md:text-h2">
         We couldn&rsquo;t load this board just now.
       </h1>
