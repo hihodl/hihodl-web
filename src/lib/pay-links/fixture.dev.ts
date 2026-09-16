@@ -5,7 +5,7 @@
  * Codes follow the backend rule: 8 characters, no 0, 1, i, l or o.
  *
  *   /pay/k7x2m9qa   active, fixed $150, Solana and Base
- *   /pay/dana4pay   active, open amount up to $1,000, every chain
+ *   /pay/dana4pay   active, open amount up to $1,000, every chain, an owner named with no handle
  *   /pay/n2wnerxy   active, fixed $20, an owner with no name and no handle
  *   /pay/pa2dpa2d   single use, already paid
  *   /pay/c2sedxyz   closed by its owner
@@ -17,7 +17,7 @@
 
 import type { PayLinkPublic, PayReceipt } from "./types";
 
-const OWNER = { displayName: "Dana Okafor", handle: "dana" };
+const OWNER = { displayName: "Dana Okafor", handle: "dana", label: "@dana" };
 const PAY_TO = { solana: "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU", evm: "0xAb5801a7D398351b8bE11C439e05C5B3259aeC9B" };
 
 const LINKS: Record<string, PayLinkPublic> = {
@@ -38,7 +38,8 @@ const LINKS: Record<string, PayLinkPublic> = {
     amount: { mode: "open", maxCents: 100000 },
     chains: ["solana", "base", "polygon"],
     status: "active",
-    owner: OWNER,
+    // A handle the text filter refused: the label falls back to the display name.
+    owner: { displayName: "Dana Okafor", handle: null, label: "Dana Okafor" },
     payTo: PAY_TO,
   },
   n2wnerxy: {
@@ -48,7 +49,7 @@ const LINKS: Record<string, PayLinkPublic> = {
     amount: { mode: "fixed", cents: 2000 },
     chains: ["base"],
     status: "active",
-    owner: { displayName: null, handle: null },
+    owner: { displayName: null, handle: null, label: "the link owner" },
     payTo: PAY_TO,
   },
   pa2dpa2d: {

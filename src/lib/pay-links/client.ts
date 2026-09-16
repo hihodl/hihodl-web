@@ -15,7 +15,7 @@ import { CheckoutError, apiRequest, describeError } from "@/lib/ad-space/checkou
 import type { Chain } from "@/lib/ad-space/types";
 import { PUBLIC_CHAINS } from "@/lib/orders/chains.public";
 
-import type { PayConfirm, PayLinkCheckout, PayLinkPayment, PayLinkPublic } from "./types";
+import type { PayConfirm, PayLinkCheckout, PayLinkOwner, PayLinkPayment, PayLinkPublic } from "./types";
 
 const PUBLIC = `${API_BASE}/pay-links/public`;
 
@@ -112,23 +112,30 @@ export function paymentExplorerUrl(p: { chain: Chain; txHash: string | null; exp
 
 /* ── Who is being paid ─────────────────────────────────────────────── */
 
-type Owner = { displayName: string | null; handle: string | null } | null | undefined;
+type Owner = PayLinkOwner | null | undefined;
 
-/** "Dana Okafor", else "@dana", else "the link owner". Never empty. */
+/**
+ * The server's `label`, the name the payer's wallet also signs against ("Pay
+ * @dana 150.00 USDC"). Without one, the same rule the server uses: "@dana",
+ * else "Dana Okafor", else "the link owner". Never empty.
+ */
 export function ownerName(owner: Owner): string {
+  const label = owner?.label?.trim();
+  if (label) return label;
+  if (owner?.handle) return `@${owner.handle}`;
   const name = owner?.displayName?.trim();
   if (name) return name;
-  if (owner?.handle) return `@${owner.handle}`;
   return "the link owner";
 }
 
 /**
- * "@dana on HOLD" beside a display name, or null when there is no handle or
- * the handle is already the name (never a bare "@").
+ * "@dana on HOLD" when the owner has a handle, or null when there is none or
+ * the name above already is that handle (never a bare "@", never it twice).
  */
 export function ownerHandleLine(owner: Owner): string | null {
-  if (!owner?.handle || !owner.displayName?.trim()) return null;
-  return `@${owner.handle} on HOLD`;
+  if (!owner?.handle) return null;
+  const handle = `@${owner.handle}`;
+  return ownerName(owner) === handle ? null : `${handle} on HOLD`;
 }
 
 /* ── Payments this page sent ───────────────────────────────────────── */

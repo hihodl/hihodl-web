@@ -11,10 +11,21 @@ export type PayLinkStatus = "active" | "paid" | "closed" | "expired" | "disabled
 
 export type PayLinkAmount = { mode: "fixed"; cents: number } | { mode: "open"; maxCents: number | null };
 
+/**
+ * Who is being paid, frozen on the link at creation and run through the same
+ * text filter as the title.
+ */
 export interface PayLinkOwner {
-  /** Frozen and filtered by the server, but still possibly null. */
+  /** Null when it didn't pass the filter. */
   displayName: string | null;
+  /** The HOLD handle without "@", null when there is none or it didn't pass. */
   handle: string | null;
+  /**
+   * What every page, signing label and receipt names the owner by: "@handle",
+   * else the display name, else "the link owner". Optional only because a
+   * server older than this field sends none.
+   */
+  label?: string;
 }
 
 /**
