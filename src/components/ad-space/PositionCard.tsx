@@ -6,6 +6,7 @@ import {
   CONTENT_KIND_LABEL,
   STATUS_LABEL,
   calendarDate,
+  handsLeftText,
   handsText,
   takeoverClosedText,
   takeoverVerb,
@@ -197,7 +198,7 @@ function TakeoverLines({
         t.refundsUsdc && (
           <p>
             Taking it moves the price to {t.nextPriceUsdc} USDC and sends {t.refundsUsdc} USDC straight back to the
-            sponsor who has it now, in the same transaction.
+            sponsor who has it now, in the same transaction. {handsLeftText(t.handsLeft)}
           </p>
         )
       )}

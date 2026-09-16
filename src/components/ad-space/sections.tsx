@@ -77,8 +77,22 @@ export function SpaceFooter({ space }: { space: Space }) {
 
 export function SpaceHero({ space }: { space: Space }) {
   const { totals } = space;
-  const soldOut = totals.positions > 0 && totals.sold >= totals.positions;
   const noun = space.kind === "service" ? "slots" : "spots";
+  const isTakeover = space.pricingMode === "takeover";
+
+  /* On a takeover board a sold spot is not gone — it can be bought from the
+     sponsor holding it. So "sold out" is only true here when there is nothing
+     left to take: every spot has an owner AND every ladder has stopped. Counting
+     sold spots as unavailable would turn the whole mechanic into a closed sign. */
+  const takeable = space.positions.filter(
+    (p) =>
+      p.status === "open" ||
+      (isTakeover && p.status === "sold" && p.takeover && !p.takeover.closed && p.takeover.nextPriceUsdc),
+  ).length;
+  const soldOut = totals.positions > 0 && (isTakeover ? takeable === 0 : totals.sold >= totals.positions);
+  /* The bar tracks whatever the headline counts, so the two can never disagree. */
+  const headline = isTakeover ? takeable : totals.sold;
+  const headlineLabel = `${headline} of ${totals.positions} ${noun} ${isTakeover ? "still up for grabs" : "sold"}`;
   const what =
     space.kind === "service"
       ? `Sponsored ${space.template.name.toLowerCase()}`
@@ -110,33 +124,40 @@ export function SpaceHero({ space }: { space: Space }) {
             <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
               <p className="text-text">
                 {soldOut ? (
-                  <span className="font-display text-h3 font-light text-amber">Sold out</span>
+                  <span className="font-display text-h3 font-light text-amber">
+                    {isTakeover ? "Every spot settled" : "Sold out"}
+                  </span>
                 ) : (
                   <>
-                    <span className="font-display text-h3 font-light">{totals.sold}</span>
+                    <span className="font-display text-h3 font-light">{headline}</span>
                     <span className="text-body text-text-muted">
                       {" "}
-                      of {totals.positions} {noun} sold
+                      of {totals.positions} {noun} {isTakeover ? "still up for grabs" : "sold"}
                     </span>
                   </>
                 )}
               </p>
               <p className="text-small">
                 <span className="font-mono text-text">{usdFromCents(totals.committedCents)}</span>
-                <span className="text-text-faint"> committed of {usdFromCents(totals.totalCents)}</span>
+                {/* A takeover board has no ceiling to measure against: every
+                    takeover raises the total, so "of" would name a number
+                    that is already out of date by the next sponsor. */}
+                <span className="text-text-faint">
+                  {isTakeover ? " committed so far" : ` committed of ${usdFromCents(totals.totalCents)}`}
+                </span>
               </p>
             </div>
             <div
               className="h-2 overflow-hidden rounded-[4px] bg-white/[0.06]"
               role="progressbar"
-              aria-label={`${totals.sold} of ${totals.positions} ${noun} sold`}
+              aria-label={headlineLabel}
               aria-valuemin={0}
               aria-valuemax={totals.positions}
-              aria-valuenow={totals.sold}
+              aria-valuenow={headline}
             >
               <div
                 className="h-full rounded-[4px] bg-amber"
-                style={{ width: `${totals.positions ? Math.min(100, (totals.sold / totals.positions) * 100) : 0}%` }}
+                style={{ width: `${totals.positions ? Math.min(100, (headline / totals.positions) * 100) : 0}%` }}
               />
             </div>
             <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 text-small">

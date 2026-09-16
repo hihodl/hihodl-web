@@ -17,8 +17,9 @@ import { btnSmall, eyebrow, pill } from "./ui";
  *
  * Board and list are linked both ways. Hovering a zone lights its card and
  * hovering a card lights its zone. Tapping an open zone goes straight to the
- * checkout; tapping a sold or held one scrolls to its card, which says who has
- * it.
+ * checkout, and so does a sold one on a takeover board while its ladder is
+ * still going; tapping any other sold or held one scrolls to its card, which
+ * says who has it.
  */
 export function SpaceBoard({ space }: { space: Space }) {
   const router = useRouter();
@@ -139,7 +140,7 @@ export function SpaceBoard({ space }: { space: Space }) {
               onHover={setHoverId}
               onPick={pick}
             />
-            <Legend />
+            <Legend takeover={space.pricingMode === "takeover"} />
           </div>
           <div>
             <h2 className="mb-6 font-display text-h4 font-light text-text">Every spot</h2>
@@ -155,12 +156,14 @@ export function SpaceBoard({ space }: { space: Space }) {
   );
 }
 
-function Legend() {
+function Legend({ takeover }: { takeover: boolean }) {
   return (
     <ul className="mt-10 flex flex-wrap items-center justify-center gap-3" aria-label="Legend">
       <li className={pill.open}>Available, tap to sponsor</li>
       <li className={pill.held}>Being paid now</li>
-      <li className={pill.sold}>Sold</li>
+      {/* On a takeover board a sold spot opens checkout like an open one does
+          (see `pick`), so the legend cannot call it just "Sold". */}
+      <li className={pill.sold}>{takeover ? "Taken, tap to take it" : "Sold"}</li>
     </ul>
   );
 }

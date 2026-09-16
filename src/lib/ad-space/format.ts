@@ -154,6 +154,23 @@ export function handsText(hands: number): string {
 }
 
 /**
+ * How much room the ladder has left AFTER the takeover being described.
+ *
+ * `handsLeft` from the API counts the takeover on offer as one of them, so the
+ * number a sponsor actually cares about is one less: having paid, how many more
+ * times can this be taken off me? Reaching zero is the good news on this page —
+ * it means the spot is theirs and nobody can outbid them — so it gets said
+ * rather than left as silence.
+ */
+export function handsLeftText(handsLeft: number): string | null {
+  const after = handsLeft - 1;
+  if (after < 0) return null;
+  if (after === 0) return "That is the last time it can change hands, so it would stay with whoever takes it now.";
+  if (after === 1) return "After that it could be taken off them once more, and then it is settled for good.";
+  return `After that it could be taken off them ${after} more times.`;
+}
+
+/**
  * What a takeover does to the price. Two is the only multiple nobody has to
  * think about, so it is a verb; anything else is stated as a factor rather than
  * given a word of its own.
