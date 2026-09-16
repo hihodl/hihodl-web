@@ -12,6 +12,7 @@
  * and the page then shows nothing rather than a guess.
  */
 
+import { usdFromCents } from "./format";
 import type { OfferView, Position, Space } from "./types";
 
 /** "315.525" to 315_525_000. Null for anything that is not a plain decimal of at most six places. */
@@ -67,4 +68,9 @@ export function pointsForPosition(position: Position, space: Pick<Space, "sponso
 /** "Pay with HOLD and earn 500 points". */
 export function earnPointsLine(points: number): string {
   return `Pay with HOLD and earn ${points.toLocaleString("en-US")} ${points === 1 ? "point" : "points"}`;
+}
+
+/** What the points are worth, one point being $0.01: 500 to "$5". */
+export function pointsWorth(points: number): string {
+  return usdFromCents(points);
 }
