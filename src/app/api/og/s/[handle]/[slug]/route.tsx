@@ -1,6 +1,8 @@
 import { ImageResponse } from "next/og";
 
+import { OG, OgBanner, OgEventCard, clip as clipOg, loadOgImage } from "@/components/ad-space/og";
 import { CHAIN_LABEL, usdFromCents } from "@/lib/ad-space/format";
+import { bannerFor } from "@/lib/ad-space/look";
 import { getPublicSpace } from "@/lib/ad-space/server";
 import type { Position, Space, TemplateView } from "@/lib/ad-space/types";
 
@@ -14,6 +16,11 @@ import type { Position, Space, TemplateView } from "@/lib/ad-space/types";
  * Satori renders this, so: flex layout only, no classes, inline SVG with
  * explicit sizes, and the default font. Fetching is the slow part, so the API
  * read is cached for 30 s and the image for 5 minutes.
+ *
+ * A space for an event draws the event's composition instead of the board: the
+ * banner (creator image, then city photo, then gradient), the event's small card,
+ * and "@handle is going to {event}" with the creator's avatar, so every creator
+ * who shares a link advertises the event too. The board count stays on it.
  */
 
 const W = 1200;
@@ -47,11 +54,79 @@ export async function GET(_req: Request, { params }: { params: { handle: string;
     });
   }
 
+  if (found.space.event) {
+    return new ImageResponse(await EventCard({ space: found.space }), {
+      width: W,
+      height: H,
+      headers: { "Cache-Control": CACHE },
+    });
+  }
+
   return new ImageResponse(<Card space={found.space} />, {
     width: W,
     height: H,
     headers: { "Cache-Control": CACHE },
   });
+}
+
+async function EventCard({ space: s }: { space: Space }) {
+  const event = s.event!;
+  const banner = bannerFor(s, event);
+  const [image, avatar] = await Promise.all([loadOgImage(banner.imageUrl), loadOgImage(s.creator.xAvatarUrl)]);
+  const { totals } = s;
+  const noun = s.kind === "service" ? "slots" : "spots";
+  const soldOut = totals.positions > 0 && totals.sold >= totals.positions;
+  const progress = soldOut ? `Sold out: all ${totals.positions} ${noun} taken` : `${totals.sold} of ${totals.positions} ${noun} sold`;
+
+  return (
+    <OgBanner banner={{ ...banner, imageUrl: image, credit: image ? banner.credit : null }}>
+      <OgEventCard
+        event={event}
+        now={Date.now()}
+        compact
+        header={
+          <div style={{ display: "flex", alignItems: "center", marginBottom: 18 }}>
+            {avatar ? (
+              // eslint-disable-next-line @next/next/no-img-element -- Satori draws <img>
+              <img src={avatar} alt="" width={64} height={64} style={{ width: 64, height: 64, borderRadius: 32 }} />
+            ) : (
+              <div
+                style={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: 32,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: "#2C4566",
+                  fontSize: 30,
+                }}
+              >
+                {(s.creator.xName || s.creator.xHandle).slice(0, 1).toUpperCase()}
+              </div>
+            )}
+            <div style={{ display: "flex", marginLeft: 18, fontSize: 30 }}>
+              {`@${clipOg(s.creator.xHandle, 15)} is going to ${clipOg(event.name, 22)}`}
+            </div>
+          </div>
+        }
+        footer={
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              marginTop: 18,
+              paddingTop: 16,
+              borderTop: `1px solid ${OG.cardBorder}`,
+            }}
+          >
+            <div style={{ fontSize: 24, color: OG.muted }}>{clipOg(s.title, 48)}</div>
+            <div style={{ fontSize: 28, color: soldOut ? OG.amber : OG.text, marginTop: 4 }}>{progress}</div>
+          </div>
+        }
+      />
+    </OgBanner>
+  );
 }
 
 function Card({ space: s }: { space: Space }) {
