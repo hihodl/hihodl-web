@@ -8,13 +8,16 @@
 
 import type {
   Chain,
+  ContactKind,
   ContentKind,
   DeliverableState,
   Fallback,
   PositionStatus,
+  SessionState,
   Space,
   SpaceCard,
   SpaceTab,
+  TrackRecord,
   VerifiedType,
 } from "./types";
 
@@ -71,6 +74,42 @@ export function instantUtc(iso: string): string {
   const date = d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
   const time = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
   return `${date}, ${time} UTC`;
+}
+
+/**
+ * The zone name if this runtime's `Intl` knows it, else null. A missing, empty
+ * or unknown zone never throws out of a render: the caller falls back.
+ */
+export function knownTimeZone(tz: string | null | undefined): string | null {
+  if (!tz) return null;
+  try {
+    return new Intl.DateTimeFormat("en-GB", { timeZone: tz }).resolvedOptions().timeZone;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * An instant as a wall clock in one zone: "Wed 7 Oct, 10:00 GMT+8". With no
+ * zone it is the reader's own clock. Null for a date that doesn't parse or a
+ * zone this runtime refuses.
+ */
+export function instantIn(iso: string, timeZone?: string): string | null {
+  const d = new Date(iso);
+  if (!Number.isFinite(d.getTime())) return null;
+  try {
+    return d.toLocaleString("en-GB", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZoneName: "short",
+      ...(timeZone ? { timeZone } : {}),
+    });
+  } catch {
+    return null;
+  }
 }
 
 /** "3 days ago", "just now". For the updates feed. */
@@ -132,6 +171,68 @@ export const CONTENT_KIND_LABEL: Record<ContentKind, string> = {
   text: "Text",
   photo: "Photo",
 };
+
+/** The same three states, for a session: a buyer books, nobody "sponsors". */
+export const SESSION_STATUS_LABEL: Record<PositionStatus, string> = {
+  open: "Available",
+  held: "Being booked",
+  sold: "Booked",
+};
+
+/**
+ * A space that sells a creator's time in person (hispace-in-the-room-v0.md).
+ * Everything that says "sponsor" on a content space says "book" on one of these.
+ */
+export function isSessionSpace(space: { template: Pick<Space["template"], "service"> }): boolean {
+  return space.template.service?.format === "session";
+}
+
+/**
+ * "3 delivered, none missed", and " · 1 disputed" only when there is one.
+ * "First HiSpace" when there is nothing to count yet.
+ */
+export function trackRecordText(record: TrackRecord): string {
+  const { delivered, missed } = record;
+  const disputed = Math.max(0, record.disputed ?? 0);
+  if (delivered + missed + disputed === 0) return "First HiSpace";
+  const base = `${delivered} delivered${missed ? `, ${missed} missed` : ", none missed"}`;
+  return disputed > 0 ? `${base} · ${disputed} disputed` : base;
+}
+
+/** Whether a track record has anything a buyer should look at twice. */
+export function trackRecordNeedsAttention(record: TrackRecord): boolean {
+  return record.missed > 0 || (record.disputed ?? 0) > 0;
+}
+
+/**
+ * The fallback policy for a session. `content_anyway` is refused for sessions
+ * (`fallback_not_for_sessions`), so it only appears here if the server sends
+ * something it should not, and then it promises nothing.
+ */
+export const SESSION_FALLBACK_TEXT: Record<Fallback, string> = {
+  creator_refund: "If the session can't happen, the creator refunds you themselves, from their own wallet.",
+  next_event: "If the session can't happen, the creator offers you the same session at their next event instead.",
+  content_anyway: "If the session can't happen, talk to the creator: HOLD can't refund a booking.",
+};
+
+export const CONTACT_KIND_LABEL: Record<ContactKind, string> = {
+  x: "X",
+  telegram: "Telegram",
+  email: "Email",
+};
+
+/** Where a booked session stands, from the buyer's side. */
+export const SESSION_STATE_LABEL: Record<SessionState, string> = {
+  awaiting_contact: "Send your contact",
+  awaiting_schedule: "Waiting for a time",
+  scheduled: "Scheduled",
+  awaiting_confirmation: "Did it happen?",
+  delivered: "Delivered",
+  disputed: "You said it didn't happen",
+};
+
+/** The limits the contract sets on what a buyer types. */
+export const SESSION_TEXT_MAX = 280;
 
 /**
  * The fallback policy in plain words. The creator picks one when they publish;
@@ -203,6 +304,9 @@ const ATTESTATION_TEXT: Record<string, string> = {
   venue_rules_checked: "have checked the venue's rules",
   discloses_sponsorship: "will label sponsored content as sponsored",
   temporary_skin_safe_adult: "are an adult and use skin-safe temporary tattoos",
+  public_place: "meet only at the venue or in a public place, never at a private address",
+  no_investment_advice: "give no investment advice",
+  no_investor_intros: "make no introductions to investors",
 };
 
 export function attestationText(key: string): string {
@@ -286,16 +390,22 @@ export function openSpots(cards: SpaceCard[]): number {
   return cards.reduce((sum, c) => sum + (c.status === "live" ? Math.max(0, c.totals.open) : 0), 0);
 }
 
+/** The event page's tabs, in the order they are shown. */
+export const EVENT_TABS: readonly SpaceTab[] = ["ground", "feed", "room"];
+
 /**
  * The tab an event page opens on when the API does not say. More open spots on
  * live spaces wins; on a tie, a tab with something on it beats an empty one, and
- * the ground wins after that.
+ * after that the earlier tab (ground, feed, room) wins.
  */
 export function defaultEventTab(tabs: Record<SpaceTab, SpaceCard[]>): SpaceTab {
-  const ground = openSpots(tabs.ground);
-  const feed = openSpots(tabs.feed);
-  if (feed !== ground) return feed > ground ? "feed" : "ground";
-  return tabs.ground.length === 0 && tabs.feed.length > 0 ? "feed" : "ground";
+  let best: SpaceTab = "ground";
+  for (const tab of EVENT_TABS) {
+    const open = openSpots(tabs[tab]);
+    const bestOpen = openSpots(tabs[best]);
+    if (open > bestOpen || (open === bestOpen && tabs[best].length === 0 && tabs[tab].length > 0)) best = tab;
+  }
+  return best;
 }
 
 /**
@@ -330,8 +440,15 @@ export function spaceSoldOut(space: Pick<Space, "pricingMode" | "positions" | "t
  * "3 of 8 spots sold", "Sold out: all 8 spots taken", and on a takeover board
  * "5 of 8 spots still up for grabs" or "Every spot settled: all 8 taken".
  */
-export function spaceProgressText(space: Pick<Space, "pricingMode" | "positions" | "totals" | "kind">): string {
+export function spaceProgressText(
+  space: Pick<Space, "pricingMode" | "positions" | "totals" | "kind" | "template">,
+): string {
   const { totals } = space;
+  if (isSessionSpace(space) && space.pricingMode !== "takeover") {
+    return spaceSoldOut(space)
+      ? `Fully booked: all ${totals.positions} sessions taken`
+      : `${totals.sold} of ${totals.positions} sessions booked`;
+  }
   const noun = space.kind === "service" ? "slots" : "spots";
   const soldOut = spaceSoldOut(space);
   if (space.pricingMode === "takeover") {

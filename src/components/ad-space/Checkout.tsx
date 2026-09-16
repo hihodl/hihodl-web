@@ -12,17 +12,26 @@ import {
   describeAuthorizationRefusal,
   describeError,
   existingCheckoutKey,
+  rememberManageToken,
   rotateCheckoutKey,
   solanaPayLink,
   startCheckout,
   submitAuthorizations,
 } from "@/lib/ad-space/checkout-client";
 import { TAKEOVER_CHAINS } from "@/lib/ad-space/config";
-import { CHAIN_LABEL, CONTENT_KIND_LABEL, FALLBACK_TEXT, timeLeft } from "@/lib/ad-space/format";
+import {
+  CHAIN_LABEL,
+  CONTENT_KIND_LABEL,
+  FALLBACK_TEXT,
+  SESSION_FALLBACK_TEXT,
+  isSessionSpace,
+  timeLeft,
+} from "@/lib/ad-space/format";
 import { PUBLIC_CHAINS } from "@/lib/orders/chains.public";
-import type { Chain, EvmPayload, Order, Position, Space } from "@/lib/ad-space/types";
+import type { Booking, Chain, EvmPayload, Order, Position, Space } from "@/lib/ad-space/types";
 
 import { QrCode } from "./qr";
+import { ManageLinkBox, SessionContactForm } from "./SessionBooking";
 import { SponsorContentForm } from "./SponsorContentForm";
 import { btnPrimary, btnSecondary, btnSmallSecondary, eyebrow } from "./ui";
 
@@ -177,8 +186,10 @@ export function Checkout({
 
   const keyRef = useRef<string>("");
   const signatureRef = useRef<string | null>(null);
-  const handle = space.creator.xHandle;
   const feePct = `${space.feeBps / 100}%`;
+  /** A session in person: booked, not sponsored (hispace-in-the-room-v0.md). */
+  const session = isSessionSpace(space);
+  const subject = session ? "session" : "spot";
 
   /* Wallets are only knowable in the browser, after mount. */
   useEffect(() => {
@@ -287,7 +298,7 @@ export function Checkout({
         if (stop) return;
         if (e instanceof CheckoutError && e.code === "rate_limited") wait = POLL_MS * 4;
         else if (e instanceof CheckoutError && e.code === "not_found") {
-          setNotice(describeError(e));
+          setNotice(describeError(e, null, session ? "session" : "spot"));
           return;
         }
         // Anything else: a dropped poll is not an event. Ask again.
@@ -299,7 +310,7 @@ export function Checkout({
       stop = true;
       if (timer) clearTimeout(timer);
     };
-  }, [confirmingId, onPaid]);
+  }, [confirmingId, onPaid, session]);
 
   /* QR poll: every 3 s until the phone wallet has created the order. */
   const waitingQr = phase.kind === "qr";
@@ -398,7 +409,7 @@ export function Checkout({
       signatureRef.current = signature;
       setPhase({ kind: "confirming", order: res.order });
     } catch (e) {
-      setNotice(describeError(e, "solana"));
+      setNotice(describeError(e, "solana", subject));
       setOfferOtherSpot(e instanceof CheckoutError && GONE_CODES.has(e.code));
       // A connected wallet that declined leaves the hold in place; the next
       // attempt with the same key gets the same transaction back.
@@ -469,8 +480,8 @@ export function Checkout({
       signatureRef.current = null;
       setPhase({ kind: "confirming", order: submitted.order });
     } catch (e) {
-      const refusal = submitting ? describeAuthorizationRefusal(e, evmChain) : null;
-      setNotice(refusal ?? describeError(e, evmChain));
+      const refusal = submitting ? describeAuthorizationRefusal(e, evmChain, subject) : null;
+      setNotice(refusal ?? describeError(e, evmChain, subject));
       setOfferOtherSpot(
         refusal !== null ||
           (e instanceof CheckoutError && GONE_CODES.has(e.code)),
@@ -494,7 +505,7 @@ export function Checkout({
       <div className="relative flex max-h-[92dvh] w-full flex-col overflow-y-auto rounded-t-card border border-[color:var(--color-hairline-strong)] bg-night shadow-2xl sm:m-6 sm:max-w-lg sm:rounded-card">
         <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-[color:var(--color-hairline)] bg-night/95 px-5 py-4 backdrop-blur">
           <div className="min-w-0">
-            <p className={`${eyebrow} text-amber`}>Sponsor a spot</p>
+            <p className={`${eyebrow} text-amber`}>{session ? "Book a session" : "Sponsor a spot"}</p>
             <h2 id="checkout-title" className="mt-1 truncate text-body text-text">
               {position.label}
             </h2>
@@ -513,14 +524,18 @@ export function Checkout({
 
         <div className="flex flex-col gap-6 px-5 py-6">
           {phase.kind === "paid" ? (
-            <Paid order={phase.order} space={space} position={position} checkoutKey={keyRef.current} />
+            session ? (
+              <PaidSession order={phase.order} space={space} />
+            ) : (
+              <Paid order={phase.order} space={space} position={position} checkoutKey={keyRef.current} />
+            )
           ) : phase.kind === "duplicate" ? (
             <Duplicate order={phase.order} />
           ) : phase.kind === "lapsed" ? (
             <div className="flex flex-col gap-4">
               <h3 className="font-display text-h4 font-light text-text">The hold ran out.</h3>
               <p className="text-small text-text-muted">
-                No payment arrived in time, so nothing left your wallet and the spot went back on
+                No payment arrived in time, so nothing left your wallet and the {subject} went back on
                 the board. Start again if it&rsquo;s still available.
               </p>
               <div>
@@ -531,7 +546,7 @@ export function Checkout({
             </div>
           ) : (
             <>
-              <Summary space={space} position={position} />
+              <Summary space={space} position={position} session={session} />
 
               {phase.kind === "loading" && <p className="text-small text-text-muted">One moment…</p>}
 
@@ -604,7 +619,7 @@ export function Checkout({
                     </div>
                   )}
 
-                  <Disclaimer />
+                  <Disclaimer session={session} />
                 </>
               )}
 
@@ -681,9 +696,9 @@ export function Checkout({
                     Confirming your payment on {CHAIN_LABEL[phase.order.chain]}…
                   </p>
                   <p className="text-small text-text-muted">
-                    This page updates on its own. The spot is yours the moment the network confirms it.
+                    This page updates on its own. The {subject} is yours the moment the network confirms it.
                   </p>
-                  <HoldLine ms={heldMs(phase.order)} />
+                  <HoldLine ms={heldMs(phase.order)} subject={subject} />
                 </div>
               )}
             </>
@@ -695,7 +710,7 @@ export function Checkout({
               {offerOtherSpot && (
                 <div>
                   <button type="button" className={btnSmallSecondary} onClick={onClose}>
-                    Pick another spot
+                    Pick another {subject}
                   </button>
                 </div>
               )}
@@ -709,7 +724,7 @@ export function Checkout({
 
 /* ── Pieces ────────────────────────────────────────────────────────── */
 
-function Summary({ space, position: p }: { space: Space; position: Position }) {
+function Summary({ space, position: p, session }: { space: Space; position: Position; session: boolean }) {
   const zone = space.template.zones.find((z) => z.zoneKey === p.zoneKey);
   // Taking a spot from whoever holds it, rather than buying an empty one. The
   // figures differ enough that showing the fixed-price pair would be wrong:
@@ -740,14 +755,29 @@ function Summary({ space, position: p }: { space: Space; position: Position }) {
             HOLD never holds it in between.
           </div>
         )}
-        <div className="col-span-2 text-tiny text-text-faint">
-          {[zone?.sizeLabel, `Takes ${p.accepts.map((k) => CONTENT_KIND_LABEL[k]).join(", ")}`]
-            .filter(Boolean)
-            .join(" · ")}
-        </div>
+        {session ? (
+          <div className="col-span-2 text-tiny text-text-faint">
+            Nothing else to fill in before you pay. Afterwards you send the creator your contact and what the session
+            is for.
+          </div>
+        ) : (
+          <div className="col-span-2 text-tiny text-text-faint">
+            {[zone?.sizeLabel, `Takes ${p.accepts.map((k) => CONTENT_KIND_LABEL[k]).join(", ")}`]
+              .filter(Boolean)
+              .join(" · ")}
+          </div>
+        )}
       </dl>
       <p className="text-small text-text-muted">
-        <span className="text-text">If a venue says no.</span> {FALLBACK_TEXT[space.fallback]}
+        {session ? (
+          <>
+            <span className="text-text">If the session can&rsquo;t happen.</span> {SESSION_FALLBACK_TEXT[space.fallback]}
+          </>
+        ) : (
+          <>
+            <span className="text-text">If a venue says no.</span> {FALLBACK_TEXT[space.fallback]}
+          </>
+        )}
         {space.fallbackNote ? ` ${space.fallbackNote}` : ""}
       </p>
     </div>
@@ -802,11 +832,20 @@ function SolanaOptions({
   );
 }
 
-function Disclaimer() {
+function Disclaimer({ session }: { session: boolean }) {
   return (
     <p className="text-tiny leading-relaxed text-text-faint">
-      You pay the creator directly. HOLD never holds your money. Paid spots can&rsquo;t be refunded
-      by HOLD; the creator&rsquo;s fallback policy is above.
+      {session ? (
+        <>
+          You pay the creator directly. HOLD never holds your money and can&rsquo;t refund a booking; the
+          creator&rsquo;s policy is above.
+        </>
+      ) : (
+        <>
+          You pay the creator directly. HOLD never holds your money. Paid spots can&rsquo;t be refunded
+          by HOLD; the creator&rsquo;s fallback policy is above.
+        </>
+      )}
     </p>
   );
 }
@@ -823,10 +862,10 @@ function QuoteLine({ ms }: { ms: number }) {
   );
 }
 
-function HoldLine({ ms }: { ms: number }) {
+function HoldLine({ ms, subject }: { ms: number; subject: "spot" | "session" }) {
   return ms > 0 ? (
     <p className="text-tiny text-text-faint">
-      This spot is held for you for <span className="font-mono text-text-muted">{timeLeft(ms)}</span>.
+      This {subject} is held for you for <span className="font-mono text-text-muted">{timeLeft(ms)}</span>.
     </p>
   ) : (
     <p className="text-tiny text-amber">
@@ -888,6 +927,52 @@ function Paid({
       <div className="border-t border-[color:var(--color-hairline)] pt-6">
         <SponsorContentForm order={order} checkoutKey={checkoutKey} accepts={position.accepts} creatorHandle={handle} />
       </div>
+    </div>
+  );
+}
+
+/**
+ * After a session is paid: the manage link first, because a buyer with no
+ * account has no other way back, then the contact and brief in place of the
+ * logo form. Nothing else is asked before paying.
+ */
+function PaidSession({ order, space }: { order: Order; space: Space }) {
+  const handle = space.creator.xHandle;
+  const [token, setToken] = useState<string | null>(null);
+  const [session, setSession] = useState(order.session ?? null);
+  useEffect(() => setToken(rememberManageToken(order)), [order]);
+  const onSaved = useCallback((b: Booking) => setSession(b.order.session), []);
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div>
+        <p className={`${eyebrow} text-success`}>Paid</p>
+        <h3 className="mt-2 font-display text-h3 font-light text-text">Your session is booked.</h3>
+        <p className="mt-3 text-small text-text-muted">
+          {order.sponsorPaysUsdc} USDC on {CHAIN_LABEL[order.chain]}: {order.creatorReceivesUsdc} to @{handle} and{" "}
+          {order.feeUsdc} to HOLD.
+        </p>
+        {order.explorerUrl && (
+          <div className="mt-4">
+            <a href={order.explorerUrl} target="_blank" rel="noopener noreferrer" className={btnSmallSecondary}>
+              View the transaction
+            </a>
+          </div>
+        )}
+      </div>
+      {token ? (
+        <>
+          <ManageLinkBox token={token} />
+          <div className="border-t border-[color:var(--color-hairline)] pt-6">
+            <SessionContactForm token={token} session={session} creatorHandle={handle} onSaved={onSaved} />
+          </div>
+        </>
+      ) : (
+        <p className="rounded-card border border-amber/30 bg-amber/[0.05] px-4 py-3 text-small text-text-muted" role="status">
+          Your booking link hasn&rsquo;t reached this page yet. Reload the page in this browser to get it: it is how you
+          send @{handle} your contact and confirm the session.
+        </p>
+      )}
     </div>
   );
 }

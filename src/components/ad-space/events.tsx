@@ -2,7 +2,16 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { DownloadLink } from "@/components/site/DownloadLink";
-import { closesText, compactNumber, eventCountdown, eventDates, usdFromCents } from "@/lib/ad-space/format";
+import {
+  EVENT_TABS,
+  closesText,
+  compactNumber,
+  eventCountdown,
+  eventDates,
+  trackRecordNeedsAttention,
+  trackRecordText,
+  usdFromCents,
+} from "@/lib/ad-space/format";
 import { type Banner, bannerFor, categoryLabel, gradientCss, gradientOverPhotoCss } from "@/lib/ad-space/look";
 import type { EventSummary, SpaceCard, SpaceSibling, SpaceTab, VerifiedType } from "@/lib/ad-space/types";
 
@@ -176,7 +185,14 @@ export function SpaceBanner({
   );
 }
 
-const TAB_NAME: Record<SpaceTab, string> = { ground: "On the ground", feed: "On the feed" };
+export const TAB_NAME: Record<SpaceTab, string> = { ground: "On the ground", feed: "On the feed", room: "In the room" };
+
+/** Each tab's line under its name, named from the buyer's side. */
+export function tabSubtitle(tab: SpaceTab, eventName: string): string {
+  if (tab === "ground") return `Your logo, walking ${eventName}`;
+  if (tab === "feed") return `Content from inside ${eventName}`;
+  return `Time with creators at ${eventName}`;
+}
 
 /** "Also on the feed: TOKEN2049 short videos". Nothing when there are none. */
 export function SpaceSiblings({ siblings }: { siblings: SpaceSibling[] }) {
@@ -211,39 +227,44 @@ export function EventTabs({
   active: SpaceTab;
   tabs: Record<SpaceTab, SpaceCard[]>;
 }) {
-  const subtitle: Record<SpaceTab, string> = {
-    ground: `Your logo, walking ${eventName}`,
-    feed: `Content from inside ${eventName}`,
-  };
   return (
-    <nav aria-label="Kinds of space" className="grid grid-cols-2 gap-3">
-      {(["ground", "feed"] as const).map((tab) => {
-        const on = tab === active;
-        const n = tabs[tab].length;
-        return (
-          <Link
-            key={tab}
-            href={`${eventPath(slug)}?tab=${tab}`}
-            scroll={false}
-            replace
-            aria-current={on ? "page" : undefined}
-            className={`flex min-w-0 flex-col gap-1 rounded-card border p-4 transition-colors duration-180 md:p-5 ${
-              on
-                ? "border-amber/50 bg-amber/[0.07]"
-                : "border-[color:var(--color-hairline)] bg-white/[0.02] hover:bg-white/[0.05]"
-            }`}
-          >
-            <span className="flex flex-wrap items-baseline justify-between gap-x-3">
-              <span className={`text-body ${on ? "text-amber" : "text-text"}`}>{TAB_NAME[tab]}</span>
-              <span className="text-tiny text-text-faint">
-                {n} {n === 1 ? "space" : "spaces"}
+    <div>
+      {/* Three across at every width. Below sm the subtitles would not fit in a
+          third of a phone, so only the active one is shown, under the row. */}
+      <nav aria-label="Kinds of space" className="grid grid-cols-3 gap-2 sm:gap-3">
+        {EVENT_TABS.map((tab) => {
+          const on = tab === active;
+          const n = tabs[tab].length;
+          return (
+            <Link
+              key={tab}
+              href={`${eventPath(slug)}?tab=${tab}`}
+              scroll={false}
+              replace
+              aria-current={on ? "page" : undefined}
+              className={`flex min-w-0 flex-col gap-1 rounded-card border p-3 transition-colors duration-180 sm:p-4 md:p-5 ${
+                on
+                  ? "border-amber/50 bg-amber/[0.07]"
+                  : "border-[color:var(--color-hairline)] bg-white/[0.02] hover:bg-white/[0.05]"
+              }`}
+            >
+              <span className="flex flex-col gap-x-3 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between">
+                <span className={`text-small sm:text-body ${on ? "text-amber" : "text-text"}`}>{TAB_NAME[tab]}</span>
+                <span className="text-tiny text-text-faint">
+                  {n} {n === 1 ? "space" : "spaces"}
+                </span>
               </span>
-            </span>
-            <span className="break-words text-small text-text-muted [overflow-wrap:anywhere]">{subtitle[tab]}</span>
-          </Link>
-        );
-      })}
-    </nav>
+              <span className="hidden break-words text-small text-text-muted [overflow-wrap:anywhere] sm:block">
+                {tabSubtitle(tab, eventName)}
+              </span>
+            </Link>
+          );
+        })}
+      </nav>
+      <p className="mt-3 break-words text-small text-text-muted [overflow-wrap:anywhere] sm:hidden">
+        {tabSubtitle(active, eventName)}
+      </p>
+    </div>
   );
 }
 
@@ -274,7 +295,7 @@ function SpaceCardTile({ card: c, event, now }: { card: SpaceCard; event: EventS
   const banner = bannerFor(c, event);
   const closed = c.status !== "live";
   const { xHandle, xName, xFollowers } = c.creator;
-  const { delivered, missed } = c.creator.trackRecord;
+  const room = c.tab === "room";
   const handleLine = [
     // Without a name the handle is already the line above.
     xHandle && xName ? `@${xHandle}` : null,
@@ -282,8 +303,6 @@ function SpaceCardTile({ card: c, event, now }: { card: SpaceCard; event: EventS
   ]
     .filter(Boolean)
     .join(" · ");
-  const record =
-    delivered + missed === 0 ? "First HiSpace" : `${delivered} delivered${missed ? `, ${missed} missed` : ", none missed"}`;
 
   return (
     <Link
@@ -311,7 +330,9 @@ function SpaceCardTile({ card: c, event, now }: { card: SpaceCard; event: EventS
 
         <h3 className="mt-4 line-clamp-2 break-words text-body [overflow-wrap:anywhere] text-text group-hover:text-amber">{c.title}</h3>
         {c.templateName && <p className="mt-1 text-small text-text-muted">{c.templateName}</p>}
-        <p className={`mt-1 text-tiny ${missed > 0 ? "text-amber" : "text-text-faint"}`}>{record}</p>
+        <p className={`mt-1 text-tiny ${trackRecordNeedsAttention(c.creator.trackRecord) ? "text-amber" : "text-text-faint"}`}>
+          {trackRecordText(c.creator.trackRecord)}
+        </p>
 
         <div className="mt-auto flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 pt-5 text-small">
           {/* A closed space sells nothing more, so it says what it sold and names no price. */}
@@ -319,11 +340,11 @@ function SpaceCardTile({ card: c, event, now }: { card: SpaceCard; event: EventS
             <span className="tabular-nums text-text">
               {closed ? c.totals.sold : c.totals.open} of {c.totals.positions}
             </span>
-            <span className="text-text-muted">{closed ? " sold" : " open"}</span>
+            <span className="text-text-muted">{closed ? (room ? " booked" : " sold") : room ? " sessions open" : " open"}</span>
           </span>
           {!closed && c.fromPriceCents !== null && (
             <span>
-              <span className="text-text-muted">from </span>
+              <span className="text-text-muted">{room ? "book from " : "from "}</span>
               <span className="font-mono text-text">{usdFromCents(c.fromPriceCents)}</span>
             </span>
           )}
@@ -383,17 +404,21 @@ export function VerifiedTick({ type }: { type: string | null }) {
 }
 
 function EmptyTab({ event, tab }: { event: EventSummary; tab: SpaceTab }) {
-  const what =
-    tab === "ground"
-      ? "Sell spots on what you carry there, from a suitcase to a blazer, and let sponsors pay for the trip."
-      : "Sell interviews, short videos or a wrap of the event to sponsors who can’t be there.";
+  const what: Record<SpaceTab, string> = {
+    ground: "Sell spots on what you carry there, from a suitcase to a blazer, and let sponsors pay for the trip.",
+    feed: "Sell interviews, short videos or a wrap of the event to sponsors who can’t be there.",
+    room: "Sell your time there: host a side event, moderate a panel, review pitches or hold office hours.",
+  };
+  const paidBy = tab === "room" ? "Clients pay you directly in USDC." : "Sponsors pay you directly in USDC.";
   return (
     <div className={`${cardClass} flex flex-col items-start gap-4 p-6 md:p-8`}>
       <p className={`${eyebrow} text-text-faint`}>No spaces here yet</p>
       <h3 className="max-w-xl break-words font-display text-h4 font-light text-text [overflow-wrap:anywhere]">
         Going to {event.name}? Open your space in the HOLD app.
       </h3>
-      <p className="max-w-xl text-small text-text-muted">{what} Sponsors pay you directly in USDC.</p>
+      <p className="max-w-xl text-small text-text-muted">
+        {what[tab]} {paidBy}
+      </p>
       <DownloadLink className={btnSmallSecondary}>Get HOLD</DownloadLink>
     </div>
   );

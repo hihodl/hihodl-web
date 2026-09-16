@@ -4,6 +4,7 @@ import { forwardRef } from "react";
 
 import {
   CONTENT_KIND_LABEL,
+  SESSION_STATUS_LABEL,
   STATUS_LABEL,
   calendarDate,
   handsLeftText,
@@ -30,12 +31,17 @@ type Props = {
   buyable: boolean;
   /** What a takeover multiplies the last price by. Null on a fixed-price space. */
   takeoverMultiple: number | null;
+  /**
+   * A session in person (hispace-in-the-room-v0.md): it is booked, not
+   * sponsored, and nothing about the buyer is ever shown on it.
+   */
+  session?: boolean;
   onHover: (id: string | null) => void;
   onSponsor: (p: Position) => void;
 };
 
 export const PositionCard = forwardRef<HTMLElement, Props>(function PositionCard(
-  { position: p, sizeLabel, active, buyable, takeoverMultiple, onHover, onSponsor },
+  { position: p, sizeLabel, active, buyable, takeoverMultiple, session = false, onHover, onSponsor },
   ref,
 ) {
   return (
@@ -53,18 +59,25 @@ export const PositionCard = forwardRef<HTMLElement, Props>(function PositionCard
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="text-body text-text">{p.label}</h3>
-          <p className="mt-1 text-tiny text-text-faint">
-            {[sizeLabel, `Takes ${p.accepts.map((k) => CONTENT_KIND_LABEL[k]).join(", ")}`]
-              .filter(Boolean)
-              .join(" · ")}
-          </p>
+          {!session && (
+            <p className="mt-1 text-tiny text-text-faint">
+              {[sizeLabel, `Takes ${p.accepts.map((k) => CONTENT_KIND_LABEL[k]).join(", ")}`]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+          )}
         </div>
-        <span className={pill[p.status]}>{STATUS_LABEL[p.status]}</span>
+        <span className={pill[p.status]}>{(session ? SESSION_STATUS_LABEL : STATUS_LABEL)[p.status]}</span>
       </header>
 
       {p.pitch && <p className="text-small text-text-muted">{p.pitch}</p>}
 
+      {p.status === "sold" && session && (
+        <p className="text-small text-text-muted">Booked. The creator and the buyer arrange the time and place.</p>
+      )}
+
       {p.status === "sold" &&
+        !session &&
         (p.sponsor ? (
           <SponsorLine sponsor={p.sponsor} />
         ) : (
@@ -92,7 +105,7 @@ export const PositionCard = forwardRef<HTMLElement, Props>(function PositionCard
         ) : (
           <dl className="flex flex-col gap-0.5">
             <div className="flex items-baseline gap-2">
-              <dt className="sr-only">Sponsor pays</dt>
+              <dt className="sr-only">{session ? "You pay" : "Sponsor pays"}</dt>
               <dd className="font-mono text-body text-text">{p.sponsorPaysUsdc} USDC</dd>
             </div>
             <div className="flex items-baseline gap-1 text-tiny text-text-faint">
@@ -104,7 +117,7 @@ export const PositionCard = forwardRef<HTMLElement, Props>(function PositionCard
 
         {p.status === "open" && buyable && (
           <button type="button" className={btnSmall} onClick={() => onSponsor(p)}>
-            Sponsor this spot
+            {session ? "Book a session" : "Sponsor this spot"}
           </button>
         )}
         {/* A sold spot on a takeover board is still for sale — at double. The
@@ -117,7 +130,8 @@ export const PositionCard = forwardRef<HTMLElement, Props>(function PositionCard
         )}
         {p.status === "held" && buyable && (
           <p className="max-w-[16rem] text-tiny text-amber">
-            Someone is paying for this spot right now. It opens again if they don&rsquo;t finish.
+            Someone is paying for this {session ? "session" : "spot"} right now. It opens again if they don&rsquo;t
+            finish.
           </p>
         )}
       </div>

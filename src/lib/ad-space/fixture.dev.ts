@@ -12,15 +12,35 @@
  *   /s/coinempress/token2049-takeover  the same suitcase, priced by takeover, no
  *                                      event, ember gradient
  *   /s/coinempress/road-to-devcon-8    Devcon 8 (no city photo), sea gradient
+ *   /s/coinempress/token2049-pitch-reviews
+ *                                      a session space (In the room): pitch
+ *                                      review, TOKEN2049, one dispute on record
  * and every other card on an event page opens a copy of the matching board.
  *
  * Events:
  *   /events/token2049-singapore-2026   both tabs, the feed has more open spots
  *   /events/devcon-8-mumbai-2026       no city photo, an empty feed
  *   /events/token-2049-singapore       merged: redirects to the first
+ *
+ * Bookings (/b/<token>), one per state a buyer can find their session in:
+ *   /b/fixture_awaiting_contact  /b/fixture_awaiting_schedule  /b/fixture_scheduled
+ *   /b/fixture_awaiting_confirmation  /b/fixture_delivered  /b/fixture_disputed
+ *   /b/fixture_window_closed (awaiting_confirmation with confirmBy passed)
+ *   /b/fixture_no_handle (scheduled; no handle, path, template name or label)
  */
 
-import type { EventPage, EventSummary, Position, Space, SpaceCard, Takeover, TemplateZone } from "./types";
+import type {
+  Booking,
+  EventPage,
+  EventSummary,
+  Position,
+  SessionState,
+  SessionView,
+  Space,
+  SpaceCard,
+  Takeover,
+  TemplateZone,
+} from "./types";
 
 function circle(cx: number, cy: number, r: number): string {
   return `M${cx - r} ${cy} a${r} ${r} 0 1 0 ${2 * r} 0 a${r} ${r} 0 1 0 ${-2 * r} 0`;
@@ -507,6 +527,62 @@ function takeovers(): Space {
   };
 }
 
+/**
+ * In the room: a creator's time at TOKEN2049, sold as pitch reviews. No sponsor
+ * block ever shows on a session slot, and the track record carries a dispute so
+ * "· 1 disputed" renders.
+ */
+function pitchReviews(): Space {
+  const base = videos();
+  const slot = (n: number, over: Partial<Position> = {}) =>
+    position(
+      `00000000-0000-4000-b000-${String(n).padStart(12, "0")}`,
+      { zoneKey: `slot-${n}`, label: `Slot ${n}`, suggestedPriceCents: 10000 },
+      { accepts: [], pitch: null, ...over },
+    );
+  return {
+    ...base,
+    id: "44444444-4444-4444-8444-444444444444",
+    slug: "token2049-pitch-reviews",
+    title: "Pitch reviews at TOKEN2049",
+    reason: "Thirty minutes on your deck before you pitch, at the venue. I have judged four demo days this year.",
+    keyDates: [],
+    kind: "service",
+    deliverBy: dayFromNow(23),
+    chains: ["solana", "base", "polygon"],
+    fallback: "creator_refund",
+    fallbackNote: "If I can't make the time we set, I refund you the same day.",
+    attestations: ["public_place", "no_investment_advice", "no_investor_intros"],
+    requiredAttestations: ["public_place", "no_investment_advice", "no_investor_intros"],
+    creator: { ...base.creator, trackRecord: { delivered: 5, missed: 0, disputed: 1 } },
+    template: {
+      id: "pitch-review",
+      kind: "service",
+      productType: "service",
+      name: "Pitch review",
+      views: [],
+      zones: [],
+      service: {
+        deliverableKind: "session",
+        summary: "A 30-minute review of your pitch, in person at the event, at the venue or a public place.",
+        maxSlots: 12,
+        format: "session",
+      },
+    },
+    positions: [slot(1, { status: "sold" }), slot(2, { status: "sold" }), slot(3, { status: "held" }), slot(4), slot(5), slot(6)],
+    totals: { positions: 6, sold: 2, committedCents: 20000, totalCents: 60000 },
+    share: {
+      url: "https://hihodl.xyz/s/coinempress/token2049-pitch-reviews?m=2",
+      text: "Pitch reviews at TOKEN2049 https://hihodl.xyz/s/coinempress/token2049-pitch-reviews?m=2",
+    },
+    bannerUrl: null,
+    siblings: [
+      { path: "/s/coinempress/road-to-token2049", tab: "ground", title: "Road to TOKEN2049" },
+      { path: "/s/coinempress/token2049-videos", tab: "feed", title: "TOKEN2049 short videos" },
+    ],
+  };
+}
+
 /* ── Events ──────────────────────────────────────────────────────────── */
 
 function photo(id: string): string {
@@ -526,6 +602,7 @@ const TOKEN2049: EventSummary = {
   country: "SG",
   startsOn: dayFromNow(21),
   endsOn: dayFromNow(22),
+  timeZone: "Asia/Singapore",
   category: "crypto",
   coverUrl: photo("photo-1508964942454-1a56651d54ac"),
   coverCredit: "Photo: Unsplash",
@@ -540,6 +617,7 @@ const DEVCON: EventSummary = {
   country: "IN",
   startsOn: dayFromNow(57),
   endsOn: dayFromNow(60),
+  timeZone: "Asia/Kolkata",
   category: "crypto",
   coverUrl: null,
   coverCredit: null,
@@ -659,6 +737,27 @@ function token2049Tabs(): EventPage["tabs"] {
         fromPriceCents: 50000,
       }),
     ],
+    room: [
+      card(9, {
+        path: "/s/coinempress/token2049-pitch-reviews",
+        title: "Pitch reviews at TOKEN2049",
+        tab: "room",
+        templateName: "Pitch review",
+        creator: { ...COIN, trackRecord: { delivered: 5, missed: 0, disputed: 1 } },
+        totals: { positions: 6, open: 3, sold: 2 },
+        fromPriceCents: 10000,
+      }),
+      card(10, {
+        path: "/s/mira_onchain/token2049-side-event-host",
+        title: "I host your side event",
+        tab: "room",
+        templateName: "Host or MC your side event",
+        creator: creator("mira_onchain", "Mira", 96300, { trackRecord: { delivered: 4, missed: 0 } }),
+        bannerGradient: "sea",
+        totals: { positions: 3, open: 2, sold: 1 },
+        fromPriceCents: 60000,
+      }),
+    ],
   };
 }
 
@@ -689,6 +788,7 @@ function devconTabs(): EventPage["tabs"] {
       }),
     ],
     feed: [],
+    room: [],
   };
 }
 
@@ -710,7 +810,7 @@ export function fixtureEvent(slug: string): EventPage | { redirectTo: string } |
  * card's creator, title, event and look.
  */
 function fromCard(c: SpaceCard, event: EventSummary, all: SpaceCard[]): Space {
-  const base = c.tab === "feed" ? videos() : suitcase();
+  const base = c.tab === "room" ? pitchReviews() : c.tab === "feed" ? videos() : suitcase();
   const slug = c.path.split("/").pop() ?? base.slug;
   return {
     ...base,
@@ -748,15 +848,101 @@ export function fixtureSpace(handle: string, slug: string): Space | null {
     if (slug === "road-to-token2049") return suitcase();
     if (slug === "token2049-videos") return videos();
     if (slug === "token2049-takeover") return takeovers();
+    if (slug === "token2049-pitch-reviews") return pitchReviews();
   }
   const path = `/s/${handle.toLowerCase()}/${slug}`;
   for (const [event, tabs] of [
     [TOKEN2049, token2049Tabs()],
     [DEVCON, devconTabs()],
   ] as const) {
-    const all = [...tabs.ground, ...tabs.feed];
+    const all = [...tabs.ground, ...tabs.feed, ...tabs.room];
     const hit = all.find((c) => c.path.toLowerCase() === path);
     if (hit) return fromCard(hit, event, all);
   }
   return null;
+}
+
+/* ── Bookings ────────────────────────────────────────────────────────── */
+
+const HOUR = 60 * 60 * 1000;
+
+function sessionFor(state: SessionState, confirmByPast = false): SessionView {
+  const contact = state === "awaiting_contact" ? null : { kind: "telegram" as const, value: "@dana_builds" };
+  const brief =
+    state === "awaiting_contact" ? null : "We launch on day 2 and want the deck reviewed before the demo stage.";
+  const scheduled = state !== "awaiting_contact" && state !== "awaiting_schedule";
+  const sessionAt = !scheduled
+    ? null
+    : state === "scheduled"
+      ? new Date(Date.now() + 21 * DAY + 10 * HOUR).toISOString()
+      : new Date(Date.now() - (confirmByPast ? 9 : 1) * DAY).toISOString();
+  const answered = state === "delivered" || state === "disputed" || state === "awaiting_confirmation";
+  return {
+    contact,
+    brief,
+    sessionAt,
+    sessionPlace: scheduled ? "TOKEN2049 venue, Level 4 lounge" : null,
+    event: { startsOn: TOKEN2049.startsOn, endsOn: TOKEN2049.endsOn, timeZone: TOKEN2049.timeZone ?? null },
+    state,
+    confirmBy:
+      answered && sessionAt ? new Date(Date.parse(sessionAt) + 7 * DAY).toISOString() : null,
+    disputeNote: state === "disputed" ? "Nobody came to the lounge at the time we agreed." : null,
+    creatorReply: state === "disputed" ? "I was there from 10:00 to 10:40. Happy to do it again tomorrow." : null,
+  };
+}
+
+export function fixtureBooking(token: string): Booking | null {
+  const states: Record<string, [SessionState, boolean]> = {
+    fixture_awaiting_contact: ["awaiting_contact", false],
+    fixture_awaiting_schedule: ["awaiting_schedule", false],
+    fixture_scheduled: ["scheduled", false],
+    fixture_awaiting_confirmation: ["awaiting_confirmation", false],
+    fixture_delivered: ["delivered", false],
+    fixture_disputed: ["disputed", false],
+    fixture_window_closed: ["awaiting_confirmation", true],
+    fixture_no_handle: ["scheduled", false],
+  };
+  const hit = states[token];
+  if (!hit) return null;
+  const space = pitchReviews();
+  const position = space.positions[0];
+  // The server can name no handle, path, template or slot: the page must still read.
+  const bare = token === "fixture_no_handle";
+  return {
+    order: {
+      id: "0e000000-0000-4000-8000-000000000001",
+      positionId: position.id,
+      spaceId: space.id,
+      status: "paid",
+      chain: "base",
+      priceUsdc: "100.00",
+      creatorReceivesUsdc: "100.00",
+      feeUsdc: "5.00",
+      sponsorPaysUsdc: "105.00",
+      takeover: null,
+      feeBps: 500,
+      feePayer: "sponsor",
+      creatorAddress: "0xAb5801a7D398351b8bE11C439e05C5B3259aeC9B",
+      feeAddress: "0x0000000000000000000000000000000000000001",
+      sponsorAddress: "0x1111111111111111111111111111111111111111",
+      reservedUntil: new Date(Date.now() - 3 * DAY).toISOString(),
+      txSignature: "0xabc",
+      paidAt: new Date(Date.now() - 3 * DAY).toISOString(),
+      explorerUrl: "https://basescan.org/tx/0xabc",
+      share: null,
+      session: sessionFor(hit[0], hit[1]),
+    },
+    positionLabel: bare ? null : position.label,
+    space: {
+      id: space.id,
+      path: bare ? null : "/s/coinempress/token2049-pitch-reviews",
+      title: space.title,
+      templateName: bare ? null : space.template.name,
+      status: space.status,
+      creator: { xHandle: bare ? null : space.creator.xHandle, xName: space.creator.xName, xAvatarUrl: null },
+      event: space.event,
+      fallback: space.fallback,
+      fallbackNote: space.fallbackNote,
+    },
+  };
 }

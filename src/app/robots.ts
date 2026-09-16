@@ -23,7 +23,8 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: ["/", "/api/og/"],
-      disallow: ["/api/", "/founders/checkout", "/invite/", "/thank-you", "/statements/verify"],
+      // `/b/` is a session's manage link: the token in it is the booking.
+      disallow: ["/api/", "/founders/checkout", "/invite/", "/thank-you", "/statements/verify", "/b/"],
     },
     sitemap: "https://hihodl.xyz/sitemap.xml",
   };

@@ -32,7 +32,18 @@ export interface Creator {
   xIdentityVerified: boolean;
   xFollowers: number;
   xAccountCreatedAt: string | null;
-  trackRecord: { delivered: number; missed: number };
+  trackRecord: TrackRecord;
+}
+
+/**
+ * What a creator has delivered. `disputed` (hispace-in-the-room-v0.md) counts
+ * sessions a buyer said did not happen; a backend that predates it leaves it
+ * out, which reads as zero.
+ */
+export interface TrackRecord {
+  delivered: number;
+  missed: number;
+  disputed?: number;
 }
 
 export interface TemplateView {
@@ -58,8 +69,20 @@ export interface Template {
   name: string;
   views: TemplateView[];
   zones: TemplateZone[];
-  service: { deliverableKind: string; summary: string; maxSlots: number } | null;
+  service: {
+    deliverableKind: string;
+    summary: string;
+    maxSlots: number;
+    /**
+     * `content` is delivered by a public link (tab `feed`); `session` is time in
+     * person at an event (tab `room`), delivered by the buyer confirming it. A
+     * backend that predates sessions leaves it out, which reads as `content`.
+     */
+    format?: ServiceFormat;
+  } | null;
 }
+
+export type ServiceFormat = "content" | "session";
 
 export interface Sponsor {
   name: string;
@@ -218,6 +241,12 @@ export interface EventSummary {
   /** Calendar dates, "2026-11-12". No time zone: the day it is in that city. */
   startsOn: string;
   endsOn: string;
+  /**
+   * The event's IANA zone ("Asia/Singapore"), or null when nobody knows it.
+   * Only for showing times; every instant stays UTC. Optional because a server
+   * older than hispace-in-the-room-v0.md sends no key at all.
+   */
+  timeZone?: string | null;
   category: EventCategory;
   /** The event's cover, else the city photo, else null (the client draws `steel`). */
   coverUrl: string | null;
@@ -226,8 +255,8 @@ export interface EventSummary {
   spaceCount: number;
 }
 
-/** Placement templates are `ground`, services are `feed`. */
-export type SpaceTab = "ground" | "feed";
+/** Placement templates are `ground`, content services `feed`, sessions `room`. */
+export type SpaceTab = "ground" | "feed" | "room";
 
 export interface SpaceSibling {
   path: string;
@@ -247,7 +276,7 @@ export interface CardCreator {
   xAvatarUrl: string | null;
   xVerifiedType: string | null;
   xFollowers: number | null;
-  trackRecord: { delivered: number; missed: number };
+  trackRecord: TrackRecord;
 }
 
 /** One card on an event page. */
@@ -325,6 +354,76 @@ export interface Order {
   paidAt: string | null;
   explorerUrl: string | null;
   share: { url: string; text: string } | null;
+  /**
+   * Set only on a session order (hispace-in-the-room-v0.md), and only for its
+   * buyer and its creator. Never on a public page.
+   */
+  session?: SessionView | null;
+  /**
+   * The buyer's manage link, `https://hihodl.xyz/b/<token>`, on a PAID session
+   * order read with this browser's checkout key.
+   *
+   * ASSUMPTION (not named in the contract): the order carries it as
+   * `manageUrl`. The server keeps only the token's hash, so the page also keeps
+   * the first copy it sees in localStorage, keyed by order.
+   */
+  manageUrl?: string | null;
+}
+
+/* ── Sessions: time in person at an event ─────────────────────────────── */
+
+export type ContactKind = "x" | "telegram" | "email";
+
+export type SessionState =
+  | "awaiting_contact"
+  | "awaiting_schedule"
+  | "scheduled"
+  | "awaiting_confirmation"
+  | "delivered"
+  | "disputed";
+
+/** What only a session's buyer and its creator see. */
+export interface SessionView {
+  contact: { kind: ContactKind; value: string } | null;
+  brief: string | null;
+  sessionAt: string | null;
+  sessionPlace: string | null;
+  /**
+   * The event's dates and zone as they were when the session was sold, so the
+   * page shows the time in the event's own clock. Optional: an older server
+   * sends none, and the page then shows the reader's clock.
+   */
+  event?: { startsOn: string; endsOn: string; timeZone: string | null } | null;
+  state: SessionState;
+  /** Until when the buyer can answer (or turn a dispute into delivered). */
+  confirmBy: string | null;
+  disputeNote: string | null;
+  creatorReply: string | null;
+}
+
+/**
+ * `GET /public/bookings/:token`.
+ *
+ * The shape is the contract's (hispace-in-the-room-v0.md, backend section).
+ * `PUT contact` and `POST confirm` answer the same object. The labels and the
+ * creator's handle can be null, so the page names "the creator" instead.
+ */
+export interface Booking {
+  order: Order & { session: SessionView };
+  /** The slot's label, "Session 3". Null when the server can't name it. */
+  positionLabel: string | null;
+  space: {
+    id: string;
+    /** "/s/<handle>/<slug>", or null when the creator has no X handle on file. */
+    path: string | null;
+    title: string;
+    templateName: string | null;
+    status: SpaceStatus;
+    creator: { xHandle: string | null; xName: string | null; xAvatarUrl: string | null };
+    event: EventSummary | null;
+    fallback: Fallback;
+    fallbackNote: string | null;
+  };
 }
 
 export interface EvmAuthorization {
