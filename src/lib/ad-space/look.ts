@@ -7,7 +7,7 @@
  * Tailwind class would be useless to half the readers of this file.
  */
 
-import type { BannerGradient, EventCategory } from "./types";
+import type { BannerGradient, EventCategory, EventSummary } from "./types";
 
 export const GRADIENTS: Record<BannerGradient, { from: string; via: string }> = {
   steel: { from: "#2C4566", via: "#4F7090" },
@@ -59,4 +59,27 @@ export const CATEGORY_LABEL: Record<EventCategory, string> = {
 
 export function categoryLabel(key: string): string {
   return CATEGORY_LABEL[key as EventCategory] ?? "Other";
+}
+
+export interface Banner {
+  imageUrl: string | null;
+  /** Laid over the photo's lower half, or drawn alone when there is no photo. */
+  gradient: BannerGradient;
+  /** Set only when the picture is the event's (licensed) city photo. */
+  credit: string | null;
+}
+
+/**
+ * What a creator's banner draws: their own image, then the event's city photo,
+ * then their gradient. The creator's image wears the creator's gradient; the
+ * city photo wears steel, as it does on the event page, so one event looks the
+ * same everywhere it appears.
+ */
+export function bannerFor(
+  own: { bannerUrl: string | null; bannerGradient: BannerGradient },
+  event: Pick<EventSummary, "coverUrl" | "coverCredit"> | null,
+): Banner {
+  if (own.bannerUrl) return { imageUrl: own.bannerUrl, gradient: gradientKey(own.bannerGradient), credit: null };
+  if (event?.coverUrl) return { imageUrl: event.coverUrl, gradient: "steel", credit: event.coverCredit };
+  return { imageUrl: null, gradient: gradientKey(own.bannerGradient), credit: null };
 }
