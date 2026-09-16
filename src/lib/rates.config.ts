@@ -3,8 +3,8 @@
  * THE ONE PLACE A RATE CHANGES.
  * ═══════════════════════════════════════════════════════════════════════════
  *
- * Every number rendered on /rewards, /fees, /founders and /travel comes from
- * this file. No page hardcodes a percentage, a price or a cap. Change a value
+ * Every number rendered on /hipoints, /savings, /smart-account, /invest,
+ * /founders and /travel comes from this file. No page hardcodes a percentage, a price or a cap. Change a value
  * here and every surface moves together — that is the whole point, because the
  * failure mode we are avoiding is a marketing page quoting a rate the product
  * stopped charging six weeks ago.
@@ -17,9 +17,10 @@
  *    quoted back at itself.
  * 2. Anything not signed off is `provisional: true`. Provisional values render
  *    with a marker so nobody mistakes a working assumption for a commitment.
- * 3. What HIHODL KEEPS lives under `HIHODL_KEEPS`. That block is rendered on
- *    /fees and on no other page, ever. Every other surface renders what the
- *    USER RECEIVES, net of our share — use the `net*` helpers at the bottom.
+ * 3. What HOLD KEEPS lives under `HOLD_KEEPS`. Each key there names the ONE
+ *    product page allowed to render it — there is no /fees and there will not
+ *    be one. Everywhere else renders what the USER RECEIVES, net of our share:
+ *    use the `net*` helpers at the bottom.
  * 4. Headline rates are phrased "up to X%". Yields float; a flat claim is a
  *    promise we cannot keep and a regulator can read.
  *
@@ -34,7 +35,7 @@
  */
 
 /** The day every APY and LTV below was last read off a live source. */
-export const RATES_MEASURED_ON = "2026-07-30";
+export const RATES_MEASURED_ON = "2026-09-06";
 
 /** Goes under every rate table. Non-negotiable. */
 export const RATE_DISCLAIMER = "Rates are variable and not guaranteed.";
@@ -42,8 +43,30 @@ export const RATE_DISCLAIMER = "Rates are variable and not guaranteed.";
 /** Rendered next to anything still `provisional`. */
 export const PROVISIONAL_LABEL = "Provisional — not final";
 
+/**
+ * What a Free account gets for nothing before any markup applies.
+ *
+ * These were hardcoded on the homepage — five times, in four components, plus
+ * the FAQ and the JSON-LD — which is the exact thing rule 1 above exists to
+ * stop. Moved here 16-aug-2026.
+ *
+ * measured: FREE_MONTHLY_CAP_USD = 500 and NETWORK_FEE_SPONSOR_CAP_USD = 0.10
+ *           in hihodl-backend/server/services/swap-fees.service.ts on
+ *           origin/main, read 2026-08-16.
+ */
+export const FREE_ALLOWANCE = {
+  /** USD of conversion volume per calendar month with the network fee on us. */
+  monthlyVolumeUsd: 500,
+  /**
+   * Most we absorb per conversion. Above this the user pays only the excess —
+   * which the site did not say until 16-aug-2026, and a fee ceiling nobody
+   * published is a fee nobody agreed to.
+   */
+  networkFeeCeilingUsd: 0.1,
+} as const;
+
 /* ══════════════════════════════════════════════════════════════════════════
- * 1. WHAT HIHODL KEEPS
+ * 1. WHAT HOLD KEEPS
  *
  * ⚠️  NEVER RENDER TWO OF THESE KEYS ON THE SAME PAGE.
  *
@@ -68,11 +91,11 @@ export const PROVISIONAL_LABEL = "Provisional — not final";
  * Superseded: /fees, the aggregate schedule, removed 2026-08-06 (Alex).
  * Archived at documentation/superseded/fees-page-2026-08-06.tsx.txt.
  * ══════════════════════════════════════════════════════════════════════════ */
-export const HIHODL_KEEPS = {
+export const HOLD_KEEPS = {
   /**
    * Our cut of the INTEREST a savings position earns. Never a cut of principal.
    *
-   * surface: /smart-account
+   * surface: /savings
    * measured: SAVINGS_FEE_BPS in hihodl-backend/server/services/savings-fee.service.ts
    *           on feat/card-rewards-and-credit-gaps, read 2026-07-30. Live at 1500.
    *           Decision dated 2026-07-14.
@@ -153,12 +176,102 @@ export const HIHODL_KEEPS = {
   atmFeeProvisional: true,
 
   /**
-   * Commission a travel partner pays US on qualifying spend. We never mark a
-   * booking up; the partner sets the price and pays us out of their own margin.
+   * Commission a travel partner pays US on qualifying spend, under a
+   * click-out affiliate model.
+   *
+   * surface: NONE. /travel used to render this and no longer does. The affiliate
+   *          click-out was scoped and dropped — a partner's own app intercepts
+   *          the link and takes the commission with it — and the travel product
+   *          we actually built books the stay ourselves. See `stays` below for
+   *          the model that is live in code. This key stays because card-linked
+   *          offers may bring the affiliate shape back, and if they do it needs
+   *          a page of its own, not a line on someone else's.
    * measured: RATES.partnerCommissionBps = 500 in revenue-model.ts, read
    *           2026-07-30. Real programmes pay in a 3-8% band.
    */
   partnerCommissionBps: 500,
+
+  /**
+   * eSIM data plans. One key, one surface: /esim.
+   *
+   * ── The shape is resale, not commission ──
+   * We buy a bundle wholesale on a signed rate card and sell it at our own
+   * price. There is no booking fee, no delivery fee and no card fee to disclose
+   * because there are none — the entire take is the spread, and the honest
+   * disclosure is to say that plainly and say what share of it comes back.
+   *
+   * ── What is deliberately NOT published ──
+   * The cost-side mechanics: the wholesale floor, the flat margin component, the
+   * benchmark ceiling. A customer needs to know what they pay and what we keep
+   * of it; neither question is answered by handing over the pricing function.
+   * The two numbers below are the ones that change what a customer receives.
+   *
+   * measured: TRAVEL_PRICING.USER_SHARE {free: 0.5, pro: 0.6} in
+   *           server/services/travel/pricing.service.ts, read 2026-08-13 on
+   *           .worktrees/connectivity. We keep the remainder.
+   * measured: CONNECTIVITY_PRICING.TARGET_UNDERCUT_VS_BENCHMARK = 0.3 and
+   *           MIN_UNDERCUT_VS_PUBLIC = 0.02, same branch, same day.
+   *
+   * ⚠️  NOT LIVE. The connectivity layer sits on a branch, not in production.
+   *     /esim carried an "in development" label until 13-aug-2026; Alex removed
+   *     it — the page is not shared until the product is public, so the label
+   *     was warning nobody. That makes the branch the only thing standing
+   *     between these numbers and a customer reading them as an offer, so this
+   *     block does not ship to a public URL before the code does.
+   */
+  esim: {
+    /** Our share of the spread on the Free plan. The user gets the rest. */
+    marginShareBps: 5000,
+    /** Our share on Pro. Lower on purpose — the plan has to buy something. */
+    marginShareProBps: 4000,
+    /** Where we aim to land against a comparable public price, when one exists. */
+    targetUndercutVsPublicBps: 3000,
+    /** The guard rail: with a benchmark in hand we are never above it. */
+    minUndercutVsPublicBps: 200,
+    provisional: true,
+  },
+
+  /**
+   * Stays. One key, one surface: /travel.
+   *
+   * Hotels give trade partners a net rate. We add a markup, and if that lands
+   * at or above the price the same room shows publicly we come back down under
+   * it. We keep that spread — all of it. The guest's reward for booking here is
+   * HiPoints, on the same one-point-one-rate scale as everywhere else.
+   *
+   * ── THERE IS NO DOLLAR SHARE ON THIS PRODUCT, AND THAT IS A DECISION ──
+   * This block used to carry `marginShareBps: 5000` and /travel used to render
+   * it as "half of what is left, in dollars, after check-out". Alex corrected
+   * that on 13-aug-2026: we do not hand back cash on a stay. The reward is
+   * points, and the revenue model behind the product is the spread plus the
+   * float on money we hold against a supplier invoice — neither of which is a
+   * number a guest is owed.
+   *
+   * The keys are gone rather than zeroed on purpose. A `marginShareBps: 0` is
+   * an invitation for somebody to render "0% back" or to raise it without
+   * reading why it was lowered; an absent key makes the page fail to compile.
+   *
+   * ⚠️  THE BACKEND STILL DISAGREES WITH THIS BLOCK.
+   *     TRAVEL_PRICING.USER_SHARE is still {free: 0.5, pro: 0.6} and
+   *     cashback-payout.service.ts still sends real USDC with a MIN_CASHBACK of
+   *     0.5, on .worktrees/connectivity (read 2026-08-13). Nothing has shipped
+   *     — every travel table in production has zero rows — so no user has been
+   *     paid under either model, but that code must move to points before the
+   *     branch merges or the site and the product will say different things.
+   *
+   * measured: TRAVEL_PRICING.GROSS_MARKUP_ON_NET = 0.1 and
+   *           MIN_UNDERCUT_VS_PUBLIC = 0.02, same file, same day. Those two
+   *           describe the PRICE, which is unchanged and is still true.
+   */
+  stays: {
+    /** What we add to the net rate before the public price is consulted. */
+    markupOnNetBps: 1000,
+    /** With a public price in hand we always land at least this far under it. */
+    minUndercutVsPublicBps: 200,
+    /** What the guest earns. Points, never cash. See the note above. */
+    rewardCurrency: "points",
+    provisional: true,
+  },
 } as const;
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -299,6 +412,35 @@ export interface AssetRate {
   chain: "solana" | "base";
   grossApyPct: number;
   maxLtvPct: number;
+  /**
+   * Whether a HOLD balance can actually be supplied here.
+   *
+   * The page above this table says "Every rate below is what you receive", and
+   * for four of these rows it was not: GHO, EURC, ETH and cbBTC have no offer in
+   * the app's yield catalogue (hihodl-wallet src/services/yield/catalog.ts —
+   * usdc, usdt, usdg, usds, pyusd, sol, and nothing else). They are here because
+   * they say something true about the venues we use; they are not places a
+   * balance can go.
+   *
+   * `bestNetApyPct()` reads this. Without it the "up to" headline would have
+   * moved onto GHO at 5.51 % the moment these rates were re-measured — a rate
+   * nobody can reach through us, on a page that promises the opposite.
+   */
+  routed: boolean;
+  /**
+   * Whether this is a dollar.
+   *
+   * The headline says what a BALANCE earns, and a balance here means dollars.
+   * SOL is routed and pays the most of anything we route to (4.69 % against the
+   * best dollar's 3.70 %), so an unfiltered max headlines a Solana position on
+   * a page selling a dollar account. The app already refuses this: useSavings.ts
+   * filters `kamino-sol` out of its own "Earn up to" for the same reason, in its
+   * own words — "SOL's rate, the highest of the lot, would headline Earn up to
+   * on a screen about dollars". The web should not claim what the app declines to.
+   *
+   * EURC is a euro, and is not routed either way.
+   */
+  dollar: boolean;
   /** Where this exact pair of numbers came from. */
   source: string;
   note?: string;
@@ -310,31 +452,45 @@ export const ASSETS: AssetRate[] = [
     label: "PayPal USD",
     venue: "Kamino Main",
     chain: "solana",
-    grossApyPct: 4.18,
+    grossApyPct: 1.22,
     maxLtvPct: 80,
-    // measured: Kamino Main reserve metrics API, 2026-07-30.
-    source: "Kamino Main reserve metrics, 2026-07-30",
-    note: "Highest-paying dollar on any rail we route to, at full borrowing power.",
+    routed: true,
+    dollar: true,
+    // measured: Kamino Main reserve metrics API, on the reserve the product
+    // actually deposits into (kamino-yield.service.ts PINNED_RESERVE_BY_MINT), 2026-09-06.
+    source: "Kamino Main reserve metrics, 2026-09-06",
+    // No superlative here any more. This row read "Highest-paying dollar on
+    // any rail we route to" from 30-Jul until 06-Sep, by which time PYUSD had
+    // fallen to 1.22 % and was the LOWEST-paying dollar on the page. A ranking
+    // claim next to a variable number goes false on its own, silently, with
+    // nothing in the repo that could notice.
+    note: "Full borrowing power, like every dollar on this page.",
   },
   {
     symbol: "USDT",
     label: "Tether",
     venue: "Kamino Main",
     chain: "solana",
-    grossApyPct: 3.84,
+    grossApyPct: 3.25,
     maxLtvPct: 80,
-    // measured: Kamino Main reserve metrics API, 2026-07-30.
-    source: "Kamino Main reserve metrics, 2026-07-30",
+    routed: true,
+    dollar: true,
+    // measured: Kamino Main reserve metrics API, on the reserve the product
+    // actually deposits into (kamino-yield.service.ts PINNED_RESERVE_BY_MINT), 2026-09-06.
+    source: "Kamino Main reserve metrics, 2026-09-06",
   },
   {
     symbol: "USDC",
     label: "USD Coin",
     venue: "Kamino Main",
     chain: "solana",
-    grossApyPct: 3.56,
+    grossApyPct: 3.49,
     maxLtvPct: 80,
-    // measured: Kamino Main reserve metrics API, 2026-07-30.
-    source: "Kamino Main reserve metrics, 2026-07-30",
+    routed: true,
+    dollar: true,
+    // measured: Kamino Main reserve metrics API, on the reserve the product
+    // actually deposits into (kamino-yield.service.ts PINNED_RESERVE_BY_MINT), 2026-09-06.
+    source: "Kamino Main reserve metrics, 2026-09-06",
     note: "The default route.",
   },
   {
@@ -342,62 +498,76 @@ export const ASSETS: AssetRate[] = [
     label: "USD Coin",
     venue: "Aave V3",
     chain: "base",
-    grossApyPct: 3.5,
+    grossApyPct: 3.7,
     maxLtvPct: 75,
-    // measured: hihodl-contracts/tools/baseEthReserves.cjs, 2026-07-30.
-    source: "Aave V3 Base reserve data, 2026-07-30",
+    routed: true,
+    dollar: true,
+    // measured: hihodl-contracts/tools/baseEthReserves.cjs, 2026-09-06.
+    source: "Aave V3 Base reserve data, 2026-09-06",
   },
   {
     symbol: "SOL",
     label: "Solana",
     venue: "Kamino Main",
     chain: "solana",
-    grossApyPct: 4.99,
+    grossApyPct: 4.69,
     maxLtvPct: 74,
-    // measured: Kamino Main reserve metrics API, 2026-07-30.
-    source: "Kamino Main reserve metrics, 2026-07-30",
+    routed: true,
+    dollar: false,
+    // measured: Kamino Main reserve metrics API, on the reserve the product
+    // actually deposits into (kamino-yield.service.ts PINNED_RESERVE_BY_MINT), 2026-09-06.
+    source: "Kamino Main reserve metrics, 2026-09-06",
   },
   {
     symbol: "GHO",
     label: "GHO",
     venue: "Aave V3",
     chain: "base",
-    grossApyPct: 4.57,
+    grossApyPct: 5.51,
     maxLtvPct: 0,
-    // measured: hihodl-contracts/tools/baseEthReserves.cjs, 2026-07-30.
-    source: "Aave V3 Base reserve data, 2026-07-30",
-    note: "Earns well, cannot be used as collateral.",
+    routed: false,
+    dollar: true,
+    // measured: hihodl-contracts/tools/baseEthReserves.cjs, 2026-09-06.
+    source: "Aave V3 Base reserve data, 2026-09-06",
+    note: "What the venue pays. Not somewhere a HOLD balance can be supplied today, and not usable as collateral.",
   },
   {
     symbol: "EURC",
     label: "Euro Coin",
     venue: "Aave V3",
     chain: "base",
-    grossApyPct: 2.71,
+    grossApyPct: 1.83,
     maxLtvPct: 0,
-    // measured: hihodl-contracts/tools/baseEthReserves.cjs, 2026-07-30.
-    source: "Aave V3 Base reserve data, 2026-07-30",
-    note: "Earns well, cannot be used as collateral.",
+    routed: false,
+    dollar: false,
+    // measured: hihodl-contracts/tools/baseEthReserves.cjs, 2026-09-06.
+    source: "Aave V3 Base reserve data, 2026-09-06",
+    note: "What the venue pays. Not somewhere a HOLD balance can be supplied today, and not usable as collateral.",
   },
   {
     symbol: "ETH",
     label: "Ether",
     venue: "Aave V3",
     chain: "base",
-    grossApyPct: 1.45,
+    grossApyPct: 1.82,
     maxLtvPct: 80,
-    // measured: hihodl-contracts/tools/baseEthReserves.cjs, 2026-07-30.
-    source: "Aave V3 Base reserve data, 2026-07-30",
+    routed: false,
+    dollar: false,
+    // measured: hihodl-contracts/tools/baseEthReserves.cjs, 2026-09-06.
+    source: "Aave V3 Base reserve data, 2026-09-06",
+    note: "Held to borrow against, not to earn on."
   },
   {
     symbol: "BTC",
     label: "Bitcoin (cbBTC)",
     venue: "Aave V3",
     chain: "base",
-    grossApyPct: 0.012,
+    grossApyPct: 0.013,
     maxLtvPct: 73,
-    // measured: hihodl-contracts/tools/baseEthReserves.cjs, 2026-07-30.
-    source: "Aave V3 Base reserve data, 2026-07-30",
+    routed: false,
+    dollar: false,
+    // measured: hihodl-contracts/tools/baseEthReserves.cjs, 2026-09-06.
+    source: "Aave V3 Base reserve data, 2026-09-06",
     note: "Held to borrow against, not to earn on.",
   },
 ];
@@ -482,12 +652,26 @@ export function netApyPct(grossApyPct: number, tier: TierId): number {
   return grossApyPct * (1 - shareBps / 10_000);
 }
 
-/** The best net APY any tier can reach on any asset. The "up to" headline. */
+/**
+ * The best net APY any tier can reach on an asset a balance can actually be
+ * supplied to. The "up to" headline.
+ *
+ * Two filters, both load-bearing, both measured on 06-Sep-2026:
+ *   • `routed` — without it the headline was GHO's 5.51 %, which no HOLD balance
+ *     can reach. It is on this page because it says something true about the
+ *     venue, not because a balance can go there.
+ *   • `dollar` — without it the headline was SOL's 4.69 %, a Solana position
+ *     quoted on a page selling a dollar account. The app declines the same
+ *     claim on the same reasoning; see the field.
+ *
+ * What is left is the dollar ceiling: 3.70 %, USDC on Aave Base, Prime plan.
+ */
 export function bestNetApyPct(): number {
   const bestTier = TIERS.reduce((a, b) =>
     a.savingsInterestShareBps <= b.savingsInterestShareBps ? a : b,
   );
-  return Math.max(...ASSETS.map((a) => netApyPct(a.grossApyPct, bestTier.id)));
+  const reachable = ASSETS.filter((a) => a.routed && a.dollar);
+  return Math.max(...reachable.map((a) => netApyPct(a.grossApyPct, bestTier.id)));
 }
 
 /** The highest LTV any asset reaches. The "borrow up to" headline. */

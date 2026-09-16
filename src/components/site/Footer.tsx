@@ -1,19 +1,44 @@
 import Link from "next/link";
 import { CtaLink } from "@/components/site/DownloadLink";
 import { DOWNLOAD_ANCHOR } from "@/lib/appLinks";
+import { Wordmark } from "@/components/site/Wordmark";
 
-// Every product link here goes to a page that states what we keep on THAT
-// product, in context. There is deliberately no "Fees" entry: an aggregate
-// schedule serves competitors better than customers. See the rule at the top
-// of rates.config.ts.
+// The nav's four words first, then the second level under them.
+//
+// Every product link goes to a page that states what we keep on THAT product,
+// in context. There is deliberately no "Fees" entry: an aggregate schedule
+// serves competitors better than customers. See the rule at the top of
+// rates.config.ts — which is also why Savings and Smart Account are two
+// entries and not one. They are two prices.
 const PRODUCT = [
+  { href: "/#payments",     label: "Payments" },
+  { href: "/savings",       label: "Savings" },
+  { href: "/invest",        label: "Invest" },
+  { href: "/#benefits",     label: "Benefits" },
+  { href: "/#income",       label: "Income Rails" },
   { href: "/smart-account", label: "Smart Account" },
-  { href: "/#income", label: "Income Rails" },
-  { href: "/#swap",   label: "Swap & Move" },
-  { href: "/rewards", label: "Rewards" },
-  { href: "/travel",  label: "Travel rewards" },
-  { href: "/#ai",     label: "AI (soon)" },
-  { href: "/#husd",   label: "HUSD" },
+  { href: "/hipoints",      label: "HiPoints" },
+  { href: "/travel",        label: "Stays" },
+  { href: "/esim",          label: "eSIM" },
+  { href: "/#ai",           label: "AI (soon)" },
+  { href: "/#husd",         label: "HUSD" },
+];
+
+// The technical section. Deliberately footer-only and never in the header: the
+// person choosing an account is not asking how key derivation works, and a nav
+// entry would tell them they ought to be. The person who IS asking goes looking
+// down here, which is exactly where every other company files it too.
+//
+// "Security" used to point at /#security — a single sentence inside the AI
+// section of the homepage, linked as though it were a page. It is a real page
+// now, which is why the entry moved out of Company and into here.
+const LEARN = [
+  { href: "/how-it-works",              label: "How HOLD works" },
+  { href: "/how-it-works/self-custody", label: "Who holds your money" },
+  { href: "/how-it-works/security",     label: "Security" },
+  { href: "/how-it-works/networks",     label: "Networks & dollars" },
+  { href: "/how-it-works/fees",         label: "Network fees" },
+  { href: "/how-it-works/modes",        label: "Display modes" },
 ];
 
 // "Founder Pass" belongs here and is deliberately absent until /founders is
@@ -22,7 +47,7 @@ const PRODUCT = [
 // a checkout that 500s is worse than no link at all.
 const COMPANY = [
   { href: "/#how",      label: "How it works" },
-  { href: "/#security", label: "Security" },
+  { href: "/faq",       label: "FAQ" },
   { href: DOWNLOAD_ANCHOR, label: "Download" },
 ];
 
@@ -42,35 +67,30 @@ export function Footer() {
   return (
     <footer className="hairline bg-abyss">
       <div className="container-page py-20">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-12 md:gap-8">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-12 md:gap-8">
           {/* Brand block */}
           <div className="col-span-2 md:col-span-2 flex flex-col gap-6">
-            <Link href="/" className="inline-flex items-center" aria-label="HIHODL home">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/logo-amber.png"
-                alt="HIHODL"
-                className="h-8 w-auto"
-                style={{ filter: "brightness(0) invert(1)" }}
-              />
+            <Link href="/" className="inline-flex items-center text-text" aria-label="HOLD home">
+              <Wordmark className="h-8 w-auto" />
             </Link>
             <p className="font-editorial text-h4 text-text-muted max-w-sm">
               Earn globally, live locally.
             </p>
             <p className="text-small text-text-faint max-w-sm">
-              The stablecoin wallet for global earners.
-              Receive your income privately. Spend in your city. You control your money.
+              One account for people who earn in one country and live in another.
+              Payments, Savings, Invest and Benefits — in an account we cannot freeze.
             </p>
           </div>
 
           <FooterColumn title="Product" links={PRODUCT} />
+          <FooterColumn title="Learn" links={LEARN} />
           <FooterColumn title="Company" links={COMPANY} />
           <FooterColumn title="Legal" links={LEGAL} extra={<SocialBlock />} />
         </div>
 
         <div className="mt-20 pt-8 hairline flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <p className="text-tiny text-text-faint">
-            © {new Date().getFullYear()} HIHODL. Non-custodial. You hold the keys.
+            © {new Date().getFullYear()} HOLD. Your money stays in your name.
           </p>
           <p className="text-tiny text-text-faint font-mono">
             Built for the 100M+ remote workers worldwide.

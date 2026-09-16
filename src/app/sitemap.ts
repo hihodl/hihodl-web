@@ -1,11 +1,13 @@
 import type { MetadataRoute } from "next";
 
+import { listPublicEvents } from "@/lib/ad-space/server";
+
 /**
  * The sitemap.
  *
  * Every product page was reachable only from the footer, which means a crawler
  * finds them by following links from the home page and nothing tells it which
- * ones matter. Product pages are the reason someone searching "hihodl smart
+ * ones matter. Product pages are the reason someone searching "hold smart
  * account" lands on us rather than on a thread about us.
  *
  * RULES FOR THIS LIST
@@ -33,24 +35,66 @@ type Entry = { path: string; priority: number; changeFrequency: MetadataRoute.Si
 const PAGES: Entry[] = [
   { path: "/", priority: 1, changeFrequency: "weekly" },
   // The product pages. Rates move, so they are the ones worth recrawling.
-  { path: "/smart-account", priority: 0.9, changeFrequency: "weekly" },
-  { path: "/rewards", priority: 0.8, changeFrequency: "weekly" },
+  { path: "/savings", priority: 0.9, changeFrequency: "weekly" },
+  { path: "/smart-account", priority: 0.8, changeFrequency: "weekly" },
+  { path: "/invest", priority: 0.9, changeFrequency: "weekly" },
+  { path: "/hipoints", priority: 0.8, changeFrequency: "weekly" },
+  // One entry per product, never a combined one. "esim japan" and "hotel
+  // cashback" are different searches by different people a month apart, and a
+  // page that answers both ranks for neither.
+  { path: "/esim", priority: 0.8, changeFrequency: "monthly" },
   { path: "/travel", priority: 0.7, changeFrequency: "monthly" },
   { path: "/faq", priority: 0.6, changeFrequency: "monthly" },
+  // The technical section. Lower priority than a product page because nobody
+  // searches for these by name — but they are what a suspicious reader finds
+  // when they search "is HOLD safe" or "hold non custodial", and losing that
+  // search to somebody else's forum thread is worse than not ranking at all.
+  { path: "/how-it-works", priority: 0.6, changeFrequency: "monthly" },
+  { path: "/how-it-works/self-custody", priority: 0.6, changeFrequency: "monthly" },
+  { path: "/how-it-works/security", priority: 0.6, changeFrequency: "monthly" },
+  { path: "/how-it-works/networks", priority: 0.5, changeFrequency: "monthly" },
+  { path: "/how-it-works/fees", priority: 0.5, changeFrequency: "monthly" },
+  { path: "/how-it-works/modes", priority: 0.4, changeFrequency: "monthly" },
   { path: "/privacy", priority: 0.3, changeFrequency: "yearly" },
   { path: "/terms", priority: 0.3, changeFrequency: "yearly" },
+  // Linked from the eSIM checkout in the app, so it is read far more often than
+  // a legal page normally is — and it is the page that says who the seller is.
+  { path: "/legal/esim", priority: 0.3, changeFrequency: "yearly" },
+  // Referenced from both legal pages and quoted to counterparties in compliance
+  // reviews, so it is checked far more often than a yearly page. It also changes
+  // whenever an integration does, which is the whole reason it exists.
+  { path: "/legal/providers", priority: 0.3, changeFrequency: "monthly" },
+  { path: "/legal/referral-terms", priority: 0.2, changeFrequency: "yearly" },
   { path: "/e-sign", priority: 0.2, changeFrequency: "yearly" },
 ];
 
-export default function sitemap(): MetadataRoute.Sitemap {
+// Rebuilt hourly, so an event page appears once it has a live space and leaves
+// once it is over, without a deploy.
+export const revalidate = 3600;
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // One timestamp for the whole file rather than a per-page date we do not
   // track. A lastModified that is really "whenever this deployed" is honest at
   // the file level and a lie at the page level.
   const lastModified = new Date();
-  return PAGES.map((p) => ({
+  const pages: MetadataRoute.Sitemap = PAGES.map((p) => ({
     url: `${SITE}${p.path === "/" ? "" : p.path}`,
     lastModified,
     changeFrequency: p.changeFrequency,
     priority: p.priority,
   }));
+
+  // Event pages, and only the ones the API lists: upcoming or ongoing, with at
+  // least one live space (rule 1). Creator spaces are not listed; they are
+  // reached from their event page and from X. On any API failure this is empty
+  // and the rest of the sitemap still ships.
+  const events = await listPublicEvents(50);
+  const eventPages: MetadataRoute.Sitemap = events.map((e) => ({
+    url: `${SITE}/events/${encodeURIComponent(e.slug)}`,
+    lastModified,
+    changeFrequency: "daily",
+    priority: 0.6,
+  }));
+
+  return [...pages, ...eventPages];
 }

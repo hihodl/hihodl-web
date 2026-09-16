@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import type { Variants } from "framer-motion";
 import { DefaultPageLayout } from "@/ui/layouts/DefaultPageLayout";
 import { Button } from "@/ui/components/Button";
+import { Wordmark } from "@/components/site/Wordmark";
 
 const fadeInUp: Variants = {
   hidden: { opacity: 0, y: 40, filter: "blur(4px)" },
@@ -23,11 +24,8 @@ export default function DeleteAccountPage() {
         {/* ==== TOP BAR ==== */}
         <div className="flex w-full flex-col items-center justify-center bg-[#0a141e66] px-6 py-6 sticky top-0 z-50 backdrop-blur-xl transition-all duration-300 mobile:px-2 mobile:py-2 mb-6 md:mb-8">
           <div className="flex w-full max-w-[1280px] items-center justify-between rounded-2xl bg-[#0a141e26] px-8 py-4 shadow-lg backdrop-blur-2xl border-b border-[rgba(255,255,255,0.12)] border-t-2 border-t-brand-600 mobile:hidden">
-            <a
-              href="/"
-              className="font-['Inter'] text-[24px] font-[700] leading-[28px] text-[#eaf6ffff] -tracking-[0.02em] hover:text-brand-ffb703 transition"
-            >
-              HIHODL
+            <a href="/" aria-label="HOLD home" className="text-[#eaf6ffff] hover:text-brand-ffb703 transition">
+              <Wordmark className="h-5 w-auto" />
             </a>
             <Button
               className="hover:shadow-[0_0_28px_rgba(255,183,3,0.5)] inline-flex items-center px-6 py-3 rounded-xl text-black font-['Inter'] font-[700] bg-brand-ffb703 transition-all duration-300"
@@ -48,7 +46,7 @@ export default function DeleteAccountPage() {
         >
           <div className="flex flex-col gap-6">
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-['Inter'] font-[700] -tracking-[0.05em] leading-tight text-[#eaf6ffff]">
-              Delete your HIHODL account
+              Delete your HOLD account
             </h1>
             <p className="text-base sm:text-lg text-[#94a3b8ff] font-['Inter'] font-[400]">
               Last updated:{" "}
@@ -70,7 +68,7 @@ export default function DeleteAccountPage() {
                 Before you delete — back up your recovery phrase
               </h2>
               <p className="text-[#eaf6ffcc]">
-                HIHODL is a non-custodial wallet. The keys to your funds live on
+                HOLD is a non-custodial wallet. The keys to your funds live on
                 your device, not on our servers. If you delete your account
                 without first backing up your 12-word recovery phrase (and
                 ideally moving any on-chain balances to another wallet), those
@@ -89,10 +87,10 @@ export default function DeleteAccountPage() {
               </h2>
               <p className="text-[#94a3b8ff]">
                 The fastest way to permanently delete your account is directly
-                from the HIHODL mobile app:
+                from the HOLD mobile app:
               </p>
               <ol className="list-decimal list-inside space-y-2 ml-4 text-[#94a3b8ff]">
-                <li>Open the HIHODL app on your phone.</li>
+                <li>Open the HOLD app on your phone.</li>
                 <li>
                   Open the side menu and go to{" "}
                   <span className="text-[#eaf6ffff] font-[600]">
@@ -130,7 +128,7 @@ export default function DeleteAccountPage() {
               <p className="text-[#94a3b8ff]">
                 If you no longer have access to the app, send an email to{" "}
                 <a
-                  href="mailto:delete@hihodl.xyz?subject=Delete%20my%20HIHODL%20account"
+                  href="mailto:delete@hihodl.xyz?subject=Delete%20my%20HOLD%20account"
                   className="text-brand-ffb703 underline underline-offset-2 hover:opacity-80 transition"
                 >
                   delete@hihodl.xyz
@@ -199,7 +197,7 @@ export default function DeleteAccountPage() {
               </h2>
               <p className="text-[#94a3b8ff]">
                 Your blockchain addresses and any balances they hold are not
-                controlled by HIHODL. They stay on-chain forever. If you kept
+                controlled by HOLD. They stay on-chain forever. If you kept
                 a backup of your recovery phrase, you can import it into any
                 compatible wallet and regain access to those funds.
               </p>

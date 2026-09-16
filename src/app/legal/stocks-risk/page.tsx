@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import type { Variants } from "framer-motion";
 import { DefaultPageLayout } from "@/ui/layouts/DefaultPageLayout";
 import { Button } from "@/ui/components/Button";
+import { Wordmark } from "@/components/site/Wordmark";
 
 const fadeInUp: Variants = {
   hidden: { opacity: 0, y: 40, filter: "blur(4px)" },
@@ -23,8 +24,8 @@ export default function StocksRiskDisclosurePage() {
         {/* ==== TOP BAR ==== */}
         <div className="flex w-full flex-col items-center justify-center bg-[#0a141e66] px-6 py-6 sticky top-0 z-50 backdrop-blur-xl transition-all duration-300 mobile:px-2 mobile:py-2 mb-6 md:mb-8">
           <div className="flex w-full max-w-[1280px] items-center justify-between rounded-2xl bg-[#0a141e26] px-8 py-4 shadow-lg backdrop-blur-2xl border-b border-[rgba(255,255,255,0.12)] border-t-2 border-t-brand-600 mobile:hidden">
-            <a href="/" className="font-['Inter'] text-[24px] font-[700] leading-[28px] text-[#eaf6ffff] -tracking-[0.02em] hover:text-brand-ffb703 transition">
-              HIHODL
+            <a href="/" aria-label="HOLD home" className="text-[#eaf6ffff] hover:text-brand-ffb703 transition">
+              <Wordmark className="h-5 w-auto" />
             </a>
             <Button
               className="hover:shadow-[0_0_28px_rgba(255,183,3,0.5)] hover:shadow-[0_0_28px_rgba(255,183,3,0.5)]:hover inline-flex items-center px-6 py-3 rounded-xl text-black font-['Inter'] font-[700] bg-brand-ffb703 transition-all duration-300"
@@ -60,7 +61,7 @@ export default function StocksRiskDisclosurePage() {
                 </p>
               </div>
               <p className="text-[#94a3b8ff]">
-                This disclosure summarizes the main risks of buying, holding, and selling tokenized stocks in the HIHODL app. Read it together with the{" "}
+                This disclosure summarizes the main risks of buying, holding, and selling tokenized stocks in the HOLD app. Read it together with the{" "}
                 <a href="/legal/tokenized-stocks" className="text-brand-ffb703 underline underline-offset-2 hover:opacity-80 transition">Product Disclosure</a> and our{" "}
                 <a href="/terms" className="text-brand-ffb703 underline underline-offset-2 hover:opacity-80 transition">Terms of Service</a>. It is not exhaustive.
               </p>
@@ -76,7 +77,7 @@ export default function StocksRiskDisclosurePage() {
             <section className="flex flex-col gap-4">
               <h2 className="text-2xl font-[700] text-[#eaf6ffff]">2. Issuer and counterparty risk</h2>
               <p className="text-[#94a3b8ff]">
-                A tokenized stock is a claim against a third-party issuer (Backed Finance) and depends on the custodians and counterparties holding the underlying securities. If the issuer, a custodian, or another counterparty defaults or becomes insolvent, access to the underlying shares may be delayed or impossible, and you may face a partial or total loss. HIHODL does not guarantee the issuer&apos;s obligations and cannot compensate you for their failure.
+                A tokenized stock is a claim against a third-party issuer (Backed Finance) and depends on the custodians and counterparties holding the underlying securities. If the issuer, a custodian, or another counterparty defaults or becomes insolvent, access to the underlying shares may be delayed or impossible, and you may face a partial or total loss. HOLD does not guarantee the issuer&apos;s obligations and cannot compensate you for their failure.
               </p>
             </section>
 
@@ -97,7 +98,7 @@ export default function StocksRiskDisclosurePage() {
             <section className="flex flex-col gap-4">
               <h2 className="text-2xl font-[700] text-[#eaf6ffff]">5. Technology, custody, and irreversibility risk</h2>
               <p className="text-[#94a3b8ff]">
-                Tokenized stocks are settled on the Solana blockchain and held non-custodially in your own wallet. You are solely responsible for the security of your keys and recovery phrase. On-chain transactions are irreversible once broadcast: HIHODL cannot cancel, reverse, or refund a trade, and cannot recover funds lost to a mistaken transaction, a lost recovery phrase, a smart-contract flaw, an oracle failure, or network congestion or outage.
+                Tokenized stocks are settled on the Solana blockchain and held non-custodially in your own wallet. You are solely responsible for the security of your keys and recovery phrase. On-chain transactions are irreversible once broadcast: HOLD cannot cancel, reverse, or refund a trade, and cannot recover funds lost to a mistaken transaction, a lost recovery phrase, a smart-contract flaw, an oracle failure, or network congestion or outage.
               </p>
             </section>
 
@@ -118,7 +119,7 @@ export default function StocksRiskDisclosurePage() {
             <section className="flex flex-col gap-4">
               <h2 className="text-2xl font-[700] text-[#eaf6ffff]">8. No advice; your responsibility</h2>
               <p className="text-[#94a3b8ff]">
-                HIHODL is not a broker, adviser, or issuer, and provides no investment, tax, or legal advice and no personal recommendation. Any information in the app (including prices, charts, and company names) is for general information only. You are solely responsible for your own investment decisions and for any tax arising from them. Consider taking independent professional advice before you invest.
+                HOLD is not a broker, adviser, or issuer, and provides no investment, tax, or legal advice and no personal recommendation. Any information in the app (including prices, charts, and company names) is for general information only. You are solely responsible for your own investment decisions and for any tax arising from them. Consider taking independent professional advice before you invest.
               </p>
             </section>
 
@@ -126,7 +127,7 @@ export default function StocksRiskDisclosurePage() {
               <h2 className="text-2xl font-[700] text-[#eaf6ffff]">9. Contact</h2>
               <div className="bg-white/5 rounded-xl p-6 border border-[rgba(255,255,255,0.08)] backdrop-blur-xl">
                 <p className="text-[#eaf6ffff] font-[600] mb-2">HIHODL TECHNOLOGIES OÜ</p>
-                <p className="text-[#94a3b8ff]">Registered in Estonia</p>
+                <p className="text-[#94a3b8ff]">Registered in Estonia — the entity behind HOLD</p>
                 <p className="text-[#94a3b8ff]">Email: legal@hihodl.xyz</p>
                 <p className="text-[#94a3b8ff]">Website: https://hihodl.xyz</p>
               </div>
@@ -144,7 +145,7 @@ export default function StocksRiskDisclosurePage() {
               <a href="/legal/restricted-jurisdictions" className="text-[#94a3b8ff] hover:text-brand-ffb703 transition text-sm font-['Inter']">Restricted Jurisdictions</a>
             </div>
             <span className="font-['Inter'] text-[13px] font-[400] leading-[19px] text-[#94a3b8ff]">
-              © 2025 HiHODL. All rights reserved.
+              © 2026 HOLD. All rights reserved.
             </span>
           </div>
         </div>

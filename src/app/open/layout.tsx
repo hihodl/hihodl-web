@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
-  title: "Opening HIHODL",
-  description: "Opening the HIHODL app.",
+  title: "Opening HOLD",
+  description: "Opening the HOLD app.",
   robots: { index: false, follow: false },
 };
 

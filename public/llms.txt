@@ -1,11 +1,13 @@
-# HIHODL
+# HOLD
 
-> HIHODL is a non-custodial, multichain stablecoin wallet for global earners — freelancers, remote workers and digital nomads who get paid in one country and live in another. Self-custody, gasless swaps, virtual USD account (IBAN/SWIFT), AI layer coming soon.
+> HOLD is a non-custodial, multichain stablecoin wallet for global earners — freelancers, remote workers and digital nomads who get paid in one country and live in another. Self-custody, gasless swaps, virtual USD account (IBAN/SWIFT), AI layer coming soon.
+>
+> HOLD is the trading name of HIHODL TECHNOLOGIES OÜ, a company incorporated in Estonia. The product was previously called HIHODL; the site still serves from hihodl.xyz.
 
 ## What it is
-- **Category**: Non-custodial mobile crypto wallet (iOS, Android coming soon)
+- **Category**: Non-custodial mobile stablecoin wallet (iOS and Android, both live)
 - **Audience**: Freelancers, remote workers, digital nomads earning in USD/EUR and spending locally (LATAM, SEA, Africa, Eastern Europe, EU)
-- **Custody model**: Self-custodial. Private keys split via MPC — half on device, half held by HIHODL — reassembled only inside the user's device for signing. No KYC for basic use.
+- **Custody model**: Non-custodial. Keys are generated on the user's device and transactions are signed there; HOLD cannot move, spend or freeze funds. An encrypted backup of the recovery phrase is stored so a user can restore on a new device by signing in — see Section 5.1 of the Terms for what that backup does and does not mean. No KYC for basic use.
 - **Sign-in**: Face ID / passkey. No seed phrase to write down.
 
 ## Supported chains
@@ -28,31 +30,33 @@ Solana swaps are always gasless on both plans. EVM gas is smart-detected on Pro.
 - **Pockets** — split balance across labelled pockets (Travel, Rent, Savings, etc.) from a single wallet. Free plan = 3 pockets, Pro = unlimited.
 - **Gasless swaps** — Solana always, EVM smart-detected.
 - **Stealth payments** — incoming addresses rotate per payer for privacy.
-- **HUSD (coming 2027)** — HIHODL's native stablecoin for the remote economy.
+- **HUSD (coming 2027)** — HOLD's native stablecoin for the remote economy.
 - **AI layer (coming soon)** — conversational interface: "send 200 USDC to Lucía", "split paycheck 60/30/10", "move savings to highest yield". The AI proposes, the user signs every transaction.
 
-## Why HIHODL vs alternatives
-- vs **Revolut / Wise**: HIHODL is non-custodial; you hold the keys. No country lockouts, no frozen accounts, instant stablecoin rails.
-- vs **Phantom / MetaMask / Coinbase Wallet**: HIHODL is multichain by default, hides chain/network jargon, has a virtual IBAN for salary, AI layer, and is built around real-world spending (not DeFi power-users).
-- vs **CEX wallets (Binance, Coinbase)**: HIHODL is self-custodial — funds are not on an exchange.
+## Why HOLD vs alternatives
+- vs **Revolut / Wise**: HOLD is non-custodial; you hold the keys. No country lockouts, no frozen accounts, instant stablecoin rails.
+- vs **Phantom / MetaMask / Coinbase Wallet**: HOLD is multichain by default, hides chain/network jargon, has a virtual IBAN for salary, AI layer, and is built around real-world spending (not DeFi power-users).
+- vs **CEX wallets (Binance, Coinbase)**: HOLD is self-custodial — funds are not on an exchange.
 
 ## Company
 - **Founded**: 2024
+- **Legal entity**: HIHODL TECHNOLOGIES OÜ (Estonia). HOLD is the trading name.
 - **HQ**: Remote-first, EU-based legal entity
 - **Team**: Product/design (Alex Lopez), CTO, engineering team
 - **Stack**: React Native + Expo (mobile), Supabase + Node backend, Solana + EVM
-- **Status**: Live on App Store (iOS), 50,000+ users on waitlist, Android coming soon
+- **Status**: Live on both the App Store (iOS) and Google Play (Android). 50,000+ users on waitlist
 - **Hackathon**: Submitted to Solana Colosseum Frontier (May 2026)
 
 ## Important pages
-- Home: https://www.hihodl.xyz/
-- AI layer (coming soon): https://www.hihodl.xyz/#ai
-- HUSD: https://www.hihodl.xyz/#husd
-- Pricing: https://www.hihodl.xyz/#how
-- Download: https://www.hihodl.xyz/#download
+- Home: https://hihodl.xyz/
+- AI layer (coming soon): https://hihodl.xyz/#ai
+- HUSD: https://hihodl.xyz/#husd
+- Pricing: https://hihodl.xyz/#how
+- Download: https://hihodl.xyz/#download
 - iOS App Store: https://apps.apple.com/nl/app/hihodl-stablecoin-wallet/id6755203065
-- Privacy: https://www.hihodl.xyz/privacy
-- Terms: https://www.hihodl.xyz/terms
+- Privacy: https://hihodl.xyz/privacy
+- Terms: https://hihodl.xyz/terms
+- Service providers (who we work with, kept current): https://hihodl.xyz/legal/providers
 
 ## Social
 - X / Twitter: https://x.com/hiihodl
@@ -65,7 +69,7 @@ Solana swaps are always gasless on both plans. EVM gas is smart-detected on Pro.
 - Support: support@hihodl.xyz
 
 ## Tagline
-"The Cursor of stablecoins. Talk to your money." — HIHODL is becoming the first AI-native stablecoin wallet.
+"The Cursor of stablecoins. Talk to your money." — HOLD is becoming the first AI-native stablecoin wallet.
 
 ## Positioning
 A global wallet for the remote economy. Earn anywhere → spend, save and move money anywhere. Not a LATAM-only wallet, not a DeFi power-user wallet — built for anyone whose income and spending live on different continents.

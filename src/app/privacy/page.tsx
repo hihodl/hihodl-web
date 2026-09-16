@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import type { Variants } from "framer-motion";
 import { DefaultPageLayout } from "@/ui/layouts/DefaultPageLayout";
 import { Button } from "@/ui/components/Button";
+import { Wordmark } from "@/components/site/Wordmark";
 
 const fadeInUp: Variants = {
   hidden: { opacity: 0, y: 40, filter: "blur(4px)" },
@@ -23,8 +24,8 @@ export default function PrivacyPage() {
         {/* ==== TOP BAR ==== */}
         <div className="flex w-full flex-col items-center justify-center bg-[#0a141e66] px-6 py-6 sticky top-0 z-50 backdrop-blur-xl transition-all duration-300 mobile:px-2 mobile:py-2 mb-6 md:mb-8">
           <div className="flex w-full max-w-[1280px] items-center justify-between rounded-2xl bg-[#0a141e26] px-8 py-4 shadow-lg backdrop-blur-2xl border-b border-[rgba(255,255,255,0.12)] border-t-2 border-t-brand-600 mobile:hidden">
-            <a href="/" className="font-['Inter'] text-[24px] font-[700] leading-[28px] text-[#eaf6ffff] -tracking-[0.02em] hover:text-brand-ffb703 transition">
-              HIHODL
+            <a href="/" aria-label="HOLD home" className="text-[#eaf6ffff] hover:text-brand-ffb703 transition">
+              <Wordmark className="h-5 w-auto" />
             </a>
             <Button
               className="hover:shadow-[0_0_28px_rgba(255,183,3,0.5)] hover:shadow-[0_0_28px_rgba(255,183,3,0.5)]:hover inline-flex items-center px-6 py-3 rounded-xl text-black font-['Inter'] font-[700] bg-brand-ffb703 transition-all duration-300"
@@ -48,7 +49,7 @@ export default function PrivacyPage() {
               Privacy Policy
             </h1>
             <p className="text-base sm:text-lg text-[#94a3b8ff] font-['Inter'] font-[400]">
-              Last updated: June 7, 2026
+              Last updated: August 13, 2026
             </p>
           </div>
 
@@ -56,7 +57,7 @@ export default function PrivacyPage() {
             <section className="flex flex-col gap-4">
               <h2 className="text-2xl font-[700] text-[#eaf6ffff]">1. Introduction</h2>
               <p className="text-[#94a3b8ff]">
-                Welcome to HIHODL (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;). We are committed to protecting your privacy and ensuring you have a positive experience on our website and in using our products and services. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website hihodl.xyz or use our services.
+                Welcome to HOLD, a service of HIHODL TECHNOLOGIES OÜ, a company incorporated in Estonia (&quot;HOLD&quot;, &quot;we,&quot; &quot;our,&quot; or &quot;us&quot;). We are committed to protecting your privacy and ensuring you have a positive experience on our website and in using our products and services. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website hihodl.xyz or use our services.
               </p>
             </section>
 
@@ -115,7 +116,7 @@ export default function PrivacyPage() {
             <section className="flex flex-col gap-4">
               <h2 className="text-2xl font-[700] text-[#eaf6ffff]">5. Identity Verification (KYC) Data</h2>
               <p className="text-[#94a3b8ff]">
-                When you choose to access features that require identity verification (such as on/off-ramps, fiat payment rails, fiat accounts, and the payment card), the following identity data is collected and processed by our verification partner, Sumsub (Sum and Substance Ltd.), and not by HIHODL:
+                When you choose to access features that require identity verification (such as on/off-ramps, fiat payment rails, fiat accounts, and the payment card), the following identity data is collected and processed by our verification partner, Sumsub (Sum and Substance Ltd.), and not by HOLD:
               </p>
               <ul className="list-disc list-inside space-y-2 ml-4 text-[#94a3b8ff]">
                 <li>Legal name, date of birth, and nationality</li>
@@ -124,7 +125,7 @@ export default function PrivacyPage() {
                 <li>Residence and address information</li>
               </ul>
               <p className="text-[#94a3b8ff]">
-                HIHODL does not maintain, store, or retain your identity documents, selfie, or biometric data in our own systems. As your verification partner, Sumsub captures and processes this data on our documented instructions. HIHODL receives only a verification status and the minimum data needed for compliance — for example, the verification outcome, your country of residence, and a verification reference.
+                HOLD does not maintain, store, or retain your identity documents, selfie, or biometric data in our own systems. As your verification partner, Sumsub captures and processes this data on our documented instructions. HOLD receives only a verification status and the minimum data needed for compliance — for example, the verification outcome, your country of residence, and a verification reference.
               </p>
             </section>
 
@@ -135,7 +136,7 @@ export default function PrivacyPage() {
               </p>
               <ul className="list-disc list-inside space-y-2 ml-4 text-[#94a3b8ff]">
                 <li><strong>Explicit consent:</strong> Where required, biometric data is processed only on the basis of your explicit consent, which you provide at the point of verification. You may withdraw your consent at any time; withdrawal does not affect processing carried out before withdrawal and may mean you can no longer access features that require verification.</li>
-                <li><strong>Processor:</strong> Biometric processing is carried out by Sumsub as a processor acting on our documented instructions. Sumsub captures and processes the biometric data for identity verification and liveness confirmation; HIHODL does not receive or store the underlying biometric data.</li>
+                <li><strong>Processor:</strong> Biometric processing is carried out by Sumsub as a processor acting on our documented instructions. Sumsub captures and processes the biometric data for identity verification and liveness confirmation; HOLD does not receive or store the underlying biometric data.</li>
               </ul>
             </section>
 
@@ -144,13 +145,16 @@ export default function PrivacyPage() {
               <p className="text-[#94a3b8ff]">
                 To unlock features you request, we and/or Sumsub may share your verification result and relevant compliance data (such as country of residence and identifying details required by the provider) with regulated third-party providers, including:
               </p>
-              <ul className="list-disc list-inside space-y-2 ml-4 text-[#94a3b8ff]">
-                <li><strong>Bitso</strong> — on/off-ramp and local payment rails (for example, SPEI in Mexico)</li>
-                <li><strong>MoonPay</strong> — card and ramp services; MoonPay may run its own independent KYC and may collect additional information directly from you</li>
-                <li><strong>A regulated card issuer</strong> — for issuance and operation of the payment card, including transaction data necessary to deliver card services</li>
-              </ul>
               <p className="text-[#94a3b8ff]">
-                Each provider acts as an independent controller for its own processing and is governed by its own privacy policy. Residence and address data you provide during verification is collected by Sumsub and passed to providers as needed for their compliance and to determine feature eligibility. HIHODL does not store your full residential address beyond what is operationally required, such as your country of residence for eligibility and compliance.
+                Those providers — who they are, what each one does, and what data each one receives — are listed on our{" "}
+                <a href="/legal/providers" className="text-brand-ffb703 underline underline-offset-2 hover:opacity-80 transition">Service Providers</a>
+                {" "}page. We maintain that page as a live list and update it when an integration changes, so it is always the accurate answer to &quot;who receives my data&quot;. It also names our commercial suppliers and technical sub-processors.
+              </p>
+              <p className="text-[#94a3b8ff]">
+                Versions of this Policy published before August 13, 2026 named Bitso and MoonPay in this section. That reflected an integration plan we did not proceed with; neither is integrated in the live product and we have no contractual relationship with either. The Service Providers page records this correction.
+              </p>
+              <p className="text-[#94a3b8ff]">
+                Each regulated provider acts as an independent controller for its own processing and is governed by its own privacy policy. Residence and address data you provide during verification is collected by Sumsub and passed to providers as needed for their compliance and to determine feature eligibility. HOLD does not store your full residential address beyond what is operationally required, such as your country of residence for eligibility and compliance.
               </p>
             </section>
 
@@ -158,6 +162,12 @@ export default function PrivacyPage() {
               <h2 className="text-2xl font-[700] text-[#eaf6ffff]">8. Data Security</h2>
               <p className="text-[#94a3b8ff]">
                 We implement appropriate technical and organizational security measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction. However, no method of transmission over the Internet or electronic storage is 100% secure, and we cannot guarantee absolute security.
+              </p>
+              <h3 className="text-xl font-[600] text-[#eaf6ffff] mt-2">8.1 Encrypted backup of your wallet recovery phrase</h3>
+              <p className="text-[#94a3b8ff]">
+                So that you can restore your wallet on a new device by signing in, we store an encrypted copy of your wallet recovery phrase. It is encrypted and decrypted on your device and is never transmitted to us in readable form. The key that encrypts it is currently derived from values held on our systems rather than from a secret only you know, which means HOLD is technically capable of decrypting that backup. We do not do so, and we are replacing this design with one in which no single party, HOLD included, can decrypt it alone. This is explained in full, including how to have the backup deleted, in{" "}
+                <a href="/terms" className="text-brand-ffb703 underline underline-offset-2 hover:opacity-80 transition">Section 5.1 of our Terms of Service</a>
+                .
               </p>
             </section>
 
@@ -177,7 +187,7 @@ export default function PrivacyPage() {
                 <li>The right to lodge a complaint with your data-protection supervisory authority</li>
               </ul>
               <p className="text-[#94a3b8ff] mt-2">
-                To exercise these rights, please contact us at the email address provided below. Because your biometric and KYC data are held by Sumsub rather than by HIHODL, some requests may be fulfilled by or directed to Sumsub as our processor; we will assist as required.
+                To exercise these rights, please contact us at the email address provided below. Because your biometric and KYC data are held by Sumsub rather than by HOLD, some requests may be fulfilled by or directed to Sumsub as our processor; we will assist as required.
               </p>
             </section>
 
@@ -212,7 +222,7 @@ export default function PrivacyPage() {
             <section className="flex flex-col gap-4">
               <h2 className="text-2xl font-[700] text-[#eaf6ffff]">14. Data Retention</h2>
               <p className="text-[#94a3b8ff]">
-                We retain personal information only for as long as necessary for the purposes described in this Policy, including to provide the services, comply with legal and anti-money-laundering obligations, resolve disputes, and enforce our agreements. KYC and biometric data captured by Sumsub are retained and deleted in accordance with Sumsub&apos;s retention practices and applicable law; HIHODL does not hold this data. Retention periods required by anti-money-laundering law may extend beyond account closure.
+                We retain personal information only for as long as necessary for the purposes described in this Policy, including to provide the services, comply with legal and anti-money-laundering obligations, resolve disputes, and enforce our agreements. KYC and biometric data captured by Sumsub are retained and deleted in accordance with Sumsub&apos;s retention practices and applicable law; HOLD does not hold this data. Retention periods required by anti-money-laundering law may extend beyond account closure.
               </p>
             </section>
 
@@ -229,7 +239,7 @@ export default function PrivacyPage() {
                 If you have any questions about this Privacy Policy, please contact us at:
               </p>
               <div className="bg-white/5 rounded-xl p-6 border border-[rgba(255,255,255,0.08)] backdrop-blur-xl">
-                <p className="text-[#eaf6ffff] font-[600] mb-2">HIHODL</p>
+                <p className="text-[#eaf6ffff] font-[600] mb-2">HOLD</p>
                 <p className="text-[#94a3b8ff]">Email: privacy@hihodl.xyz</p>
                 <p className="text-[#94a3b8ff]">Website: https://hihodl.xyz</p>
               </div>
@@ -247,12 +257,15 @@ export default function PrivacyPage() {
               <a href="/terms" className="text-[#94a3b8ff] hover:text-brand-ffb703 transition text-sm font-['Inter']">
                 Terms
               </a>
+              <a href="/legal/providers" className="text-[#94a3b8ff] hover:text-brand-ffb703 transition text-sm font-['Inter']">
+                Providers
+              </a>
               <a href="/e-sign" className="text-[#94a3b8ff] hover:text-brand-ffb703 transition text-sm font-['Inter']">
                 E-Sign Consent
               </a>
             </div>
             <span className="font-['Inter'] text-[13px] font-[400] leading-[19px] text-[#94a3b8ff]">
-              © 2025 HiHODL. All rights reserved.
+              © 2026 HOLD. All rights reserved.
             </span>
           </div>
         </div>

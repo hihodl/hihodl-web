@@ -3,31 +3,117 @@
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { gsap } from "gsap";
-import { PaymentGlobe } from "./PaymentGlobe";
+import { HeroGlobe, paymentInSlot, useGlobeClock } from "./HeroGlobe";
+import type { GlobePayment } from "./HeroGlobe";
 import { DownloadLink } from "./DownloadLink";
 
 /**
  * Hero — duality scene.
  *
- * Animation runs ONCE on mount, then content stays static.
- * Re-triggering on scroll-up gets gimmicky — Linear / Stripe / Mercury
- * pattern: hero is a moment, not a loop.
+ * The GSAP intro runs ONCE on mount, then the type stays put. Re-triggering on
+ * scroll-up gets gimmicky — Linear / Stripe / Mercury pattern: a hero is a
+ * moment, not a loop.
  *
- * The phone PNG sits center-right. Two glass cards animate in beside it:
- *   - "Salary received"  (top-left of phone, moonlight blue — global)
- *   - "Card · €4.20"      (bottom-right of phone, amber — local)
+ * The globe sits center-right with two glass cards beside it, top-left and
+ * bottom-right. The cards are not static: each is a slot that turns over as
+ * payments land on the globe, driven by the globe's own clock so a card and
+ * its arc arrive together.
  *
- * Until /public/hero-phone.png exists, the phone slot shows a gradient
- * placeholder that matches the dark cinematic mood.
+ * The two animations own different properties and must stay that way. GSAP
+ * animates the wrapper (the intro reveal, once); the card inside animates its
+ * own opacity and lift, every cycle. Sharing an element would have the intro
+ * and the cycle fighting over one opacity.
  */
+
+/** Seconds the count-up takes. */
+const ROLL = 0.9;
+
+/**
+ * The amount, counted up on arrival when the payment asks for it.
+ *
+ * Two things keep the roll from jittering the line it sits on: the digits are
+ * already monospaced, and the span reserves the final width in `ch` up front,
+ * so the currency beside it never slides while the number grows.
+ *
+ * Anything the regex does not recognise as a plain figure — "+4.2M", "+25.40" —
+ * renders as authored. A count-up that has to invent a format is a count-up
+ * that will one day print something the copy never said.
+ */
+function Amount({ payment, age }: { payment: GlobePayment; age: number }) {
+  const plain = payment.roll ? /^([+-]?)([\d,]+)$/.exec(payment.amount) : null;
+  if (!plain || age >= ROLL) {
+    return <span className="font-mono">{payment.amount}</span>;
+  }
+  const target = Number(plain[2].replace(/,/g, ""));
+  // Cubic, not exponential: an expo count-up is inside 5% of its target by the
+  // time the card has finished fading in, so the remaining half second reads as
+  // a number that has stalled rather than one still arriving.
+  const eased = 1 - Math.pow(1 - age / ROLL, 3);
+  return (
+    <span
+      className="font-mono inline-block"
+      style={{ minWidth: `${payment.amount.length}ch` }}
+    >
+      {plain[1]}
+      {Math.round(target * eased).toLocaleString("en-US")}
+    </span>
+  );
+}
+
+function PaymentCard({ slot, clock }: { slot: number; clock: number }) {
+  const { payment, age, remaining } = paymentInSlot(slot, clock);
+
+  // In on arrival, out just before the slot turns over. Both ends are derived
+  // from the clock rather than held in state, so the card is correct on any
+  // frame it happens to be mounted on — including the reduced-motion still.
+  const arriving = Math.min(1, age / 0.45);
+  const leaving = Math.min(1, remaining / 0.35);
+  const eased = 1 - Math.pow(1 - arriving, 3);
+
+  return (
+    <div
+      className="max-w-[250px] glass rounded-card p-3.5 md:p-4 shadow-lg"
+      style={{
+        opacity: Math.min(eased, leaving),
+        transform: `translateY(${(10 * (1 - eased)).toFixed(2)}px)`,
+      }}
+    >
+      {/*
+        Amber on both cards, not one amber and one moonlight. Moonlight
+        (#5B7CFF) on this hero's blue gradient is 1.43:1 — the kicker was
+        effectively invisible. Amber clears 2.97:1 on the same ground.
+      */}
+      <div className="flex items-center gap-2 text-tiny uppercase tracking-wider text-amber">
+        <span className="w-1.5 h-1.5 rounded-full bg-amber" />
+        {payment.kicker}
+      </div>
+      <div className="mt-2 font-display text-h4 font-light text-text leading-tight">
+        <Amount payment={payment} age={age} />{" "}
+        <span className="text-text-muted text-small">{payment.currency}</span>
+      </div>
+      {/*
+        text-text, not text-text-faint. The faint grey (#5A6068) is 1.22:1 on
+        this hero's blue gradient — the corridor was unreadable. Hierarchy here
+        comes from size and weight, which the h4 amount above already carries;
+        it does not need the colour as well.
+      */}
+      <div className="mt-1 text-tiny text-text">{payment.note}</div>
+    </div>
+  );
+}
+
 export function Hero() {
   const root = useRef<HTMLDivElement | null>(null);
+  const stage = useRef<HTMLDivElement | null>(null);
   const phone = useRef<HTMLDivElement | null>(null);
-  const cardSalary = useRef<HTMLDivElement | null>(null);
-  const cardCard = useRef<HTMLDivElement | null>(null);
+  const cardTop = useRef<HTMLDivElement | null>(null);
+  const cardBottom = useRef<HTMLDivElement | null>(null);
   const headline = useRef<HTMLHeadingElement | null>(null);
   const sub = useRef<HTMLParagraphElement | null>(null);
   const ctas = useRef<HTMLDivElement | null>(null);
+
+  // One clock for the globe and both cards. Pauses itself off screen.
+  const clock = useGlobeClock(stage);
 
   useEffect(() => {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -38,7 +124,7 @@ export function Hero() {
 
       // Pre-state
       gsap.set(phone.current, { opacity: 0, y: 24, scale: 0.98 });
-      gsap.set([cardSalary.current, cardCard.current], { opacity: 0, y: 16, scale: 0.96 });
+      gsap.set([cardTop.current, cardBottom.current], { opacity: 0, y: 16, scale: 0.96 });
       gsap.set(sub.current, { opacity: 0, y: 12 });
       gsap.set(ctas.current, { opacity: 0, y: 12 });
       const lines = headline.current?.querySelectorAll<HTMLSpanElement>("[data-line]") ?? [];
@@ -54,9 +140,9 @@ export function Hero() {
         0.4,
       );
 
-      // 1.4 — salary card (moonlight)
+      // 1.4 — payment card slot A
       tl.to(
-        cardSalary.current,
+        cardTop.current,
         { opacity: 1, y: 0, scale: 1, duration: 0.6, ease: "power3.out" },
         1.4,
       );
@@ -67,9 +153,9 @@ export function Hero() {
       // 2.2 — ctas
       tl.to(ctas.current, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 2.2);
 
-      // 2.6 — card swipe (amber)
+      // 2.6 — payment card slot B
       tl.to(
-        cardCard.current,
+        cardBottom.current,
         { opacity: 1, y: 0, scale: 1, duration: 0.6, ease: "power3.out" },
         2.6,
       );
@@ -127,9 +213,9 @@ export function Hero() {
               ref={sub}
               className="mt-8 text-lead text-text-muted max-w-xl"
             >
-              The stablecoin wallet for global earners.
-              Receive your income privately. You control your money.
-              Send to usernames, not long addresses — across every chain, without thinking about gas.
+              One account for people who earn in one country and live in another.
+              Get paid in minutes, earn on the balance while it sits, and spend it
+              wherever you are — in an account we cannot freeze.
             </p>
 
             <div ref={ctas} className="mt-10 flex flex-wrap gap-3">
@@ -164,55 +250,29 @@ export function Hero() {
               </div>
               <span>
                 <span className="font-mono text-text font-medium">50,000+</span>{" "}
-                global earners already on HIHODL
+                global earners already on HOLD
               </span>
             </div>
           </div>
 
           {/* RIGHT — animated payment globe with floating glass cards */}
           <div className="lg:col-span-5">
-            <div className="relative aspect-square w-full max-w-md mx-auto">
+            <div ref={stage} className="relative aspect-square w-full max-w-md mx-auto">
               <div ref={phone} className="absolute inset-0 flex items-center justify-center">
-                <PaymentGlobe />
+                {/*
+                  Square window, and the globe's own bubbles stay off — in a
+                  448px slot they would scale down to about half the size the
+                  cards read at, and they would say the same thing twice.
+                */}
+                <HeroGlobe fit="globe" showBubbles={false} clock={clock} />
               </div>
 
-              {/* Salary received — top-left, moonlight accent */}
-              <div
-                ref={cardSalary}
-                className="absolute top-6 -left-2 md:-left-8 max-w-[230px] glass rounded-card p-3.5 md:p-4 shadow-lg z-10"
-              >
-                <div className="flex items-center gap-2 text-tiny uppercase tracking-wider text-moonlight">
-                  <span className="w-1.5 h-1.5 rounded-full bg-moonlight" />
-                  Salary received
-                </div>
-                <div className="mt-2 font-display text-h4 font-light text-text leading-tight">
-                  +<span className="font-mono">3,200</span>{" "}
-                  <span className="text-text-muted text-small">USDC</span>
-                </div>
-                <div className="mt-1 text-tiny text-text-faint">
-                  from Acme · San Francisco
-                </div>
+              <div ref={cardTop} className="absolute top-6 -left-2 md:-left-8 z-10">
+                <PaymentCard slot={0} clock={clock} />
               </div>
 
-              {/* Gasless swap — bottom-right, amber accent */}
-              <div
-                ref={cardCard}
-                className="absolute bottom-10 -right-2 md:-right-8 max-w-[220px] glass rounded-card p-3.5 md:p-4 shadow-lg z-10"
-              >
-                <div className="flex items-center gap-2 text-tiny uppercase tracking-wider text-amber">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber" />
-                  Swap · zero gas
-                </div>
-                <div className="mt-2 font-display text-h4 font-light text-text leading-tight">
-                  <span className="font-mono">30</span>{" "}
-                  <span className="text-text-muted text-small">USDG</span>
-                  <span className="text-text-faint mx-1">→</span>
-                  <span className="font-mono">0.34</span>{" "}
-                  <span className="text-text-muted text-small">SOL</span>
-                </div>
-                <div className="mt-1 text-tiny text-text-faint">
-                  Network fee · <span className="text-success">Free</span>
-                </div>
+              <div ref={cardBottom} className="absolute bottom-10 -right-2 md:-right-8 z-10">
+                <PaymentCard slot={1} clock={clock} />
               </div>
             </div>
           </div>

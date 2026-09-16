@@ -4,7 +4,7 @@
 // not be started, or the user backed out of the widget.
 //
 // No red anywhere on this page, on purpose. Red is reserved for hard errors in
-// HIHODL, and this is not one: nothing was taken, so the honest register is
+// HOLD, and this is not one: nothing was taken, so the honest register is
 // neutral and calm rather than alarming. The neutral slate treatment below is
 // what carries that, not a colour that makes someone think they lost money.
 //
@@ -69,7 +69,7 @@ export default function OfframpFailurePage() {
                   window.location.href = "/open";
                 }}
               >
-                Try again in HIHODL
+                Try again in HOLD
               </Button>
               <Button
                 className="w-full border px-6 py-3 rounded-xl border-[rgba(255,255,255,0.1)] bg-[rgba(10,20,30,0.60)] backdrop-blur-xl text-[#EAF6FF] transition"

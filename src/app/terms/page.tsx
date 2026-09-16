@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import type { Variants } from "framer-motion";
 import { DefaultPageLayout } from "@/ui/layouts/DefaultPageLayout";
 import { Button } from "@/ui/components/Button";
+import { Wordmark } from "@/components/site/Wordmark";
 
 const fadeInUp: Variants = {
   hidden: { opacity: 0, y: 40, filter: "blur(4px)" },
@@ -23,8 +24,8 @@ export default function TermsPage() {
         {/* ==== TOP BAR ==== */}
         <div className="flex w-full flex-col items-center justify-center bg-[#0a141e66] px-6 py-6 sticky top-0 z-50 backdrop-blur-xl transition-all duration-300 mobile:px-2 mobile:py-2 mb-6 md:mb-8">
           <div className="flex w-full max-w-[1280px] items-center justify-between rounded-2xl bg-[#0a141e26] px-8 py-4 shadow-lg backdrop-blur-2xl border-b border-[rgba(255,255,255,0.12)] border-t-2 border-t-brand-600 mobile:hidden">
-            <a href="/" className="font-['Inter'] text-[24px] font-[700] leading-[28px] text-[#eaf6ffff] -tracking-[0.02em] hover:text-brand-ffb703 transition">
-              HIHODL
+            <a href="/" aria-label="HOLD home" className="text-[#eaf6ffff] hover:text-brand-ffb703 transition">
+              <Wordmark className="h-5 w-auto" />
             </a>
             <Button
               className="hover:shadow-[0_0_28px_rgba(255,183,3,0.5)] hover:shadow-[0_0_28px_rgba(255,183,3,0.5)]:hover inline-flex items-center px-6 py-3 rounded-xl text-black font-['Inter'] font-[700] bg-brand-ffb703 transition-all duration-300"
@@ -48,7 +49,7 @@ export default function TermsPage() {
               Terms of Service
             </h1>
             <p className="text-base sm:text-lg text-[#94a3b8ff] font-['Inter'] font-[400]">
-              Last updated: July 14, 2026
+              Last updated: August 13, 2026
             </p>
           </div>
 
@@ -56,21 +57,21 @@ export default function TermsPage() {
             <section className="flex flex-col gap-4">
               <h2 className="text-2xl font-[700] text-[#eaf6ffff]">1. Acceptance of Terms</h2>
               <p className="text-[#94a3b8ff]">
-                These Terms of Service are a binding agreement between you and HIHODL TECHNOLOGIES OÜ, a company incorporated in Estonia (&quot;HIHODL&quot;, &quot;we&quot;, &quot;us&quot;). By accessing and using HIHODL&apos;s website (hihodl.xyz) and services, you accept and agree to be bound by the terms and provisions of this agreement. If you do not agree to abide by the above, please do not use this service.
+                These Terms of Service are a binding agreement between you and HIHODL TECHNOLOGIES OÜ, a company incorporated in Estonia (&quot;HOLD&quot;, &quot;we&quot;, &quot;us&quot;). By accessing and using HOLD&apos;s website (hihodl.xyz) and services, you accept and agree to be bound by the terms and provisions of this agreement. If you do not agree to abide by the above, please do not use this service.
               </p>
             </section>
 
             <section className="flex flex-col gap-4">
               <h2 className="text-2xl font-[700] text-[#eaf6ffff]">2. Description of Service</h2>
               <p className="text-[#94a3b8ff]">
-                HIHODL provides a self-custodial, multichain cryptocurrency wallet service. Our services include, but are not limited to, wallet management, blockchain interactions, and related financial technology services. We reserve the right to modify, suspend, or discontinue any aspect of our services at any time.
+                HOLD provides a self-custodial, multichain cryptocurrency wallet service. Our services include, but are not limited to, wallet management, blockchain interactions, and related financial technology services. We reserve the right to modify, suspend, or discontinue any aspect of our services at any time.
               </p>
             </section>
 
             <section className="flex flex-col gap-4">
               <h2 className="text-2xl font-[700] text-[#eaf6ffff]">3. Eligibility</h2>
               <p className="text-[#94a3b8ff]">
-                You must be at least 18 years old to use our services. By using HIHODL, you represent and warrant that:
+                You must be at least 18 years old to use our services. By using HOLD, you represent and warrant that:
               </p>
               <ul className="list-disc list-inside space-y-2 ml-4 text-[#94a3b8ff]">
                 <li>You are of legal age to form a binding contract</li>
@@ -99,15 +100,27 @@ export default function TermsPage() {
             <section className="flex flex-col gap-4">
               <h2 className="text-2xl font-[700] text-[#eaf6ffff]">5. Self-Custodial Wallet</h2>
               <p className="text-[#94a3b8ff]">
-                HIHODL is non-custodial software: a multichain self-custody wallet that lets you generate, store, and use cryptographic keys on your own device and interact directly with public blockchain networks. HIHODL is a software provider, not a bank, custodian, or exchange. This means:
+                HOLD is non-custodial software: a multichain self-custody wallet that lets you generate, store, and use cryptographic keys on your own device and interact directly with public blockchain networks. HOLD is a software provider, not a bank, custodian, or exchange. This means:
               </p>
               <ul className="list-disc list-inside space-y-2 ml-4 text-[#94a3b8ff]">
                 <li>You are the sole owner and controller of your wallet, and you are solely responsible for the security of your private keys, seed phrase (recovery phrase), and PIN</li>
-                <li>We never take custody of, control, or have access to your private keys, recovery phrase, or digital assets — they are generated and held under your sole control on your device</li>
+                <li>Your keys are generated on your own device. We do not hold, control, or take custody of your digital assets, we cannot sign a transaction on your behalf, and we cannot move, spend, freeze, or seize your funds. Only you can authorize a transaction, from your device</li>
                 <li>You are solely responsible for all transactions you authorize from your wallet and bear all risk of any resulting losses</li>
-                <li>Because HIHODL is non-custodial, we cannot reset, recover, restore, freeze, or move your keys, recovery phrase, or funds if they are lost, stolen, or compromised</li>
+                <li>We never receive your PIN, and we do not transmit your recovery phrase to our servers in readable form</li>
                 <li>You must keep your recovery information secure and confidential, and you are responsible for the acts of anyone to whom you grant access to your wallet or device</li>
               </ul>
+              <h3 className="text-xl font-[600] text-[#eaf6ffff] mt-2">5.1 Encrypted cloud backup of your recovery phrase</h3>
+              <p className="text-[#94a3b8ff]">
+                So that you can restore your wallet on a new device by signing in, HOLD stores an encrypted copy of your recovery phrase. Encryption and decryption happen on your device; the phrase is never sent to us in readable form.
+              </p>
+              <p className="text-[#94a3b8ff]">
+                You should understand what this does and does not mean. The key that encrypts this backup is currently derived from values held on our systems rather than from a secret only you know. That is what allows you to recover your wallet with nothing but your sign-in, and it also means that <span className="text-[#eaf6ffff] font-[600]">HOLD is technically capable of decrypting this backup</span>. We do not do so, it is not part of how the product works, and it does not give us the ability to move your funds without you. We are replacing this design with one in which no single party, HOLD included, holds enough material to decrypt the backup alone. We would rather tell you this plainly than describe our software as something it is not.
+              </p>
+              <p className="text-[#94a3b8ff]">
+                If you do not want us to hold a recoverable backup of your recovery phrase, write your recovery phrase down and keep it somewhere safe, then email{" "}
+                <a href="mailto:privacy@hihodl.xyz" className="text-brand-ffb703 underline underline-offset-2 hover:opacity-80 transition">privacy@hihodl.xyz</a>
+                {" "}and we will delete the stored backup. After deletion, your recovery phrase is the only way to restore your wallet, and if you lose it, no one — including us — can recover your funds.
+              </p>
               <p className="text-[#94a3b8ff]">
                 Any optional time-lock, allowlist, spending-limit, or smart-wallet recovery features are tools you configure and control; they do not transfer custody of your keys or assets to us.
               </p>
@@ -128,25 +141,27 @@ export default function TermsPage() {
                 <div>
                   <h3 className="text-xl font-[600] text-[#eaf6ffff] mb-2">6.2 Verification is performed by Sumsub</h3>
                   <p>
-                    Identity verification is performed by our verification partner, Sumsub (Sum and Substance Ltd.) and/or its affiliates (&quot;Sumsub&quot;). When you complete verification, your identity documents, selfie and liveness check, and biometric data are captured and processed by Sumsub. HIHODL does not store your identity documents, selfie, or biometric data on your device or on our servers — HIHODL receives only a verification status and the minimum data required for compliance. See our Privacy Policy for details, including the explicit consent required for biometric (special-category) data.
+                    Identity verification is performed by our verification partner, Sumsub (Sum and Substance Ltd.) and/or its affiliates (&quot;Sumsub&quot;). When you complete verification, your identity documents, selfie and liveness check, and biometric data are captured and processed by Sumsub. HOLD does not store your identity documents, selfie, or biometric data on your device or on our servers — HOLD receives only a verification status and the minimum data required for compliance. See our Privacy Policy for details, including the explicit consent required for biometric (special-category) data.
                   </p>
                 </div>
                 <div>
                   <h3 className="text-xl font-[600] text-[#eaf6ffff] mb-2">6.3 Downstream providers</h3>
                   <p>
-                    To enable Regulated Features, we and/or Sumsub may share your verification result and relevant compliance data (such as country of residence) with regulated third-party providers, including Bitso (on/off-ramp and local payment rails), MoonPay (card and ramp services), and a regulated card issuer. Some providers, including MoonPay, may run their own independent KYC and may require additional information directly from you. Your use of a provider&apos;s services is also governed by that provider&apos;s own terms and privacy policy.
+                    To enable Regulated Features, we and/or Sumsub may share your verification result and relevant compliance data (such as country of residence) with regulated third-party providers. Those providers are named, with what each one does and what data it receives, on our{" "}
+                    <a href="/legal/providers" className="text-brand-ffb703 underline underline-offset-2 hover:opacity-80 transition">Service Providers</a>
+                    {" "}page, which we keep current as integrations change. Some providers run their own independent KYC and may require additional information directly from you. Your use of a provider&apos;s services is also governed by that provider&apos;s own terms and privacy policy.
                   </p>
                 </div>
                 <div>
                   <h3 className="text-xl font-[600] text-[#eaf6ffff] mb-2">6.4 Country eligibility</h3>
                   <p>
-                    Availability of Regulated Features depends on your country of residence and on provider coverage. During verification you may be asked to select your country from a list of supported regions; if your country is not listed, the relevant feature is not available to you, and Regulated Features may be unavailable in some jurisdictions. HIHODL is global-first with an initial focus on Latin America (for example, Mexico, Brazil, Argentina, and Colombia) and is expanding to additional regions over time. Supported jurisdictions may change.
+                    Availability of Regulated Features depends on your country of residence and on provider coverage. During verification you may be asked to select your country from a list of supported regions; if your country is not listed, the relevant feature is not available to you, and Regulated Features may be unavailable in some jurisdictions. HOLD is global-first with an initial focus on Latin America (for example, Mexico, Brazil, Argentina, and Colombia) and is expanding to additional regions over time. Supported jurisdictions may change.
                   </p>
                 </div>
                 <div>
                   <h3 className="text-xl font-[600] text-[#eaf6ffff] mb-2">6.5 Tokenized stocks (tokenized equities)</h3>
                   <p>
-                    HIHODL provides passive, non-custodial software that lets you access tokenized stocks (also called tokenized equities) — blockchain tokens that track the price of an underlying share or fund and are issued by a third-party issuer under a prospectus approved in the European Union / Liechtenstein. A tokenized stock is a security and is not the underlying share; holding it does not make you a shareholder and confers no voting or other shareholder rights. In relation to tokenized stocks, HIHODL is <span className="text-[#eaf6ffff] font-[600]">not</span> a broker-dealer, exchange, investment firm, financial adviser, or issuer; does not custody, mint, redeem, or take the other side of your trade; and provides no investment advice or recommendation. You buy and sell tokenized stocks yourself, through a non-custodial on-chain swap executed against third-party liquidity from your own wallet. On-chain transactions are irreversible. Tokenized stocks carry issuer, counterparty, market, liquidity, technology, and regulatory risk, including the possible total loss of your capital.
+                    HOLD provides passive, non-custodial software that lets you access tokenized stocks (also called tokenized equities) — blockchain tokens that track the price of an underlying share or fund and are issued by a third-party issuer under a prospectus approved in the European Union / Liechtenstein. A tokenized stock is a security and is not the underlying share; holding it does not make you a shareholder and confers no voting or other shareholder rights. In relation to tokenized stocks, HOLD is <span className="text-[#eaf6ffff] font-[600]">not</span> a broker-dealer, exchange, investment firm, financial adviser, or issuer; does not custody, mint, redeem, or take the other side of your trade; and provides no investment advice or recommendation. You buy and sell tokenized stocks yourself, through a non-custodial on-chain swap executed against third-party liquidity from your own wallet. On-chain transactions are irreversible. Tokenized stocks carry issuer, counterparty, market, liquidity, technology, and regulatory risk, including the possible total loss of your capital.
                   </p>
                 </div>
                 <div>
@@ -167,7 +182,7 @@ export default function TermsPage() {
             <section className="flex flex-col gap-4">
               <h2 className="text-2xl font-[700] text-[#eaf6ffff]">7. Electronic Communications and E-Signature</h2>
               <p className="text-[#94a3b8ff]">
-                The Services are provided electronically. By using HIHODL you agree to transact with us, to sign agreements and consents (including KYC and biometric-processing consents collected via our verification partner), and to receive disclosures, notices, and other communications in electronic form. For full details, see our{" "}
+                The Services are provided electronically. By using HOLD you agree to transact with us, to sign agreements and consents (including KYC and biometric-processing consents collected via our verification partner), and to receive disclosures, notices, and other communications in electronic form. For full details, see our{" "}
                 <a href="/e-sign" className="text-brand-ffb703 underline underline-offset-2 hover:opacity-80 transition">
                   Consent to Electronic Communications and Signatures
                 </a>
@@ -208,7 +223,7 @@ export default function TermsPage() {
             <section className="flex flex-col gap-4">
               <h2 className="text-2xl font-[700] text-[#eaf6ffff]">10. Intellectual Property</h2>
               <p className="text-[#94a3b8ff]">
-                All content, features, and functionality of our services, including but not limited to text, graphics, logos, icons, images, and software, are the exclusive property of HIHODL and are protected by international copyright, trademark, patent, trade secret, and other intellectual property laws.
+                All content, features, and functionality of our services, including but not limited to text, graphics, logos, icons, images, and software, are the exclusive property of HOLD and are protected by international copyright, trademark, patent, trade secret, and other intellectual property laws.
               </p>
             </section>
 
@@ -231,7 +246,7 @@ export default function TermsPage() {
             <section className="flex flex-col gap-4">
               <h2 className="text-2xl font-[700] text-[#eaf6ffff]">12. Informational Tools and Estimates (Traveler)</h2>
               <p className="text-[#94a3b8ff]">
-                Some features of the Services — including Traveler and any visa-day, Schengen 90/180, tax-residency, or similar calculators, counters, forecasts, and estimates (collectively, &quot;Informational Tools&quot;) — are provided for general informational and planning purposes only. Informational Tools are not tax, legal, accounting, or immigration advice; HIHODL is not a tax advisor, law firm, accountancy, or immigration adviser; and no advisory, professional, or fiduciary relationship is created by your use of them.
+                Some features of the Services — including Traveler and any visa-day, Schengen 90/180, tax-residency, or similar calculators, counters, forecasts, and estimates (collectively, &quot;Informational Tools&quot;) — are provided for general informational and planning purposes only. Informational Tools are not tax, legal, accounting, or immigration advice; HOLD is not a tax advisor, law firm, accountancy, or immigration adviser; and no advisory, professional, or fiduciary relationship is created by your use of them.
               </p>
               <ul className="list-disc list-inside space-y-2 ml-4 text-[#94a3b8ff]">
                 <li><span className="text-[#eaf6ffff] font-[600]">Estimates only.</span> Outputs are estimates generated from the information you enter and from third-party or public datasets that may be incomplete, outdated, or inapplicable to your specific circumstances.</li>
@@ -251,7 +266,7 @@ export default function TermsPage() {
             <section className="flex flex-col gap-4">
               <h2 className="text-2xl font-[700] text-[#eaf6ffff]">13. Limitation of Liability</h2>
               <p className="text-[#94a3b8ff]">
-                To the maximum extent permitted by law, HIHODL and its affiliates, officers, employees, and agents shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including but not limited to loss of profits, data, use, goodwill, or other intangible losses, resulting from:
+                To the maximum extent permitted by law, HOLD and its affiliates, officers, employees, and agents shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including but not limited to loss of profits, data, use, goodwill, or other intangible losses, resulting from:
               </p>
               <ul className="list-disc list-inside space-y-2 ml-4 text-[#94a3b8ff]">
                 <li>Your use or inability to use our services</li>
@@ -266,7 +281,7 @@ export default function TermsPage() {
             <section className="flex flex-col gap-4">
               <h2 className="text-2xl font-[700] text-[#eaf6ffff]">14. Indemnification</h2>
               <p className="text-[#94a3b8ff]">
-                You agree to indemnify, defend, and hold harmless HIHODL and its affiliates, officers, employees, and agents from any claims, damages, losses, liabilities, and expenses (including legal fees) arising out of or relating to your use of our services, violation of these terms, or infringement of any rights of another.
+                You agree to indemnify, defend, and hold harmless HOLD and its affiliates, officers, employees, and agents from any claims, damages, losses, liabilities, and expenses (including legal fees) arising out of or relating to your use of our services, violation of these terms, or infringement of any rights of another.
               </p>
             </section>
 
@@ -280,7 +295,7 @@ export default function TermsPage() {
             <section className="flex flex-col gap-4">
               <h2 className="text-2xl font-[700] text-[#eaf6ffff]">16. Governing Law</h2>
               <p className="text-[#94a3b8ff]">
-                HIHODL is operated by HIHODL TECHNOLOGIES OÜ, a company incorporated in Estonia. Except where mandatory local consumer-protection law of your country of residence provides otherwise, these Terms of Service shall be governed by and construed in accordance with the laws of Estonia, without regard to its conflict of law provisions. Any disputes arising from these terms or your use of our services shall be resolved through appropriate legal channels.
+                HOLD is operated by HIHODL TECHNOLOGIES OÜ, a company incorporated in Estonia. Except where mandatory local consumer-protection law of your country of residence provides otherwise, these Terms of Service shall be governed by and construed in accordance with the laws of Estonia, without regard to its conflict of law provisions. Any disputes arising from these terms or your use of our services shall be resolved through appropriate legal channels.
               </p>
             </section>
 
@@ -294,7 +309,7 @@ export default function TermsPage() {
             <section className="flex flex-col gap-4">
               <h2 className="text-2xl font-[700] text-[#eaf6ffff]">18. Severability</h2>
               <p className="text-[#94a3b8ff]">
-                If any provision of these Terms of Service is held to be invalid or unenforceable by a court, the remaining provisions will remain in effect. These Terms of Service constitute the entire agreement between you and HIHODL regarding our services.
+                If any provision of these Terms of Service is held to be invalid or unenforceable by a court, the remaining provisions will remain in effect. These Terms of Service constitute the entire agreement between you and HOLD regarding our services.
               </p>
             </section>
 
@@ -305,7 +320,7 @@ export default function TermsPage() {
               </p>
               <div className="bg-white/5 rounded-xl p-6 border border-[rgba(255,255,255,0.08)] backdrop-blur-xl">
                 <p className="text-[#eaf6ffff] font-[600] mb-2">HIHODL TECHNOLOGIES OÜ</p>
-                <p className="text-[#94a3b8ff]">Registered in Estonia</p>
+                <p className="text-[#94a3b8ff]">Registered in Estonia — the entity behind HOLD</p>
                 <p className="text-[#94a3b8ff]">Email: legal@hihodl.xyz</p>
                 <p className="text-[#94a3b8ff]">Website: https://hihodl.xyz</p>
               </div>
@@ -323,12 +338,15 @@ export default function TermsPage() {
               <a href="/terms" className="text-[#94a3b8ff] hover:text-brand-ffb703 transition text-sm font-['Inter']">
                 Terms
               </a>
+              <a href="/legal/providers" className="text-[#94a3b8ff] hover:text-brand-ffb703 transition text-sm font-['Inter']">
+                Providers
+              </a>
               <a href="/e-sign" className="text-[#94a3b8ff] hover:text-brand-ffb703 transition text-sm font-['Inter']">
                 E-Sign Consent
               </a>
             </div>
             <span className="font-['Inter'] text-[13px] font-[400] leading-[19px] text-[#94a3b8ff]">
-              © 2025 HiHODL. All rights reserved.
+              © 2026 HOLD. All rights reserved.
             </span>
           </div>
         </div>

@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 
-const OG_URL = "https://hihodl.xyz/banner-social.jpg";
+const OG_URL = "https://hihodl.xyz/banner-social.png";
 
 export const metadata: Metadata = {
   title: "Delete Your Account",
   description:
-    "How to permanently delete your HIHODL account and the data associated with it.",
+    "How to permanently delete your HOLD account and the data associated with it.",
   alternates: { canonical: "https://hihodl.xyz/delete-account" },
   robots: {
     index: true,
@@ -14,17 +14,17 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: "https://hihodl.xyz/delete-account",
-    siteName: "HIHODL",
-    title: "Delete Your Account | HIHODL",
+    siteName: "HOLD",
+    title: "Delete Your Account | HOLD",
     description:
-      "How to permanently delete your HIHODL account and the data associated with it.",
+      "How to permanently delete your HOLD account and the data associated with it.",
     images: [
       {
         url: OG_URL,
         width: 1200,
         height: 630,
-        alt: "HIHODL Wallet",
-        type: "image/jpeg",
+        alt: "HOLD Wallet",
+        type: "image/png",
       },
     ],
     locale: "en_US",
@@ -33,9 +33,9 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     site: "@hiihodl",
     creator: "@hiihodl",
-    title: "Delete Your Account | HIHODL",
+    title: "Delete Your Account | HOLD",
     description:
-      "How to permanently delete your HIHODL account and the data associated with it.",
+      "How to permanently delete your HOLD account and the data associated with it.",
     images: [OG_URL],
   },
 };

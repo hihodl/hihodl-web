@@ -203,9 +203,9 @@ async function sendWelcomeEmail(email: string, displayName: string, referralCode
 
   try {
     await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL || 'HIHODL <noreply@hihodl.xyz>',
+      from: process.env.RESEND_FROM_EMAIL || 'HOLD <noreply@hihodl.xyz>',
       to: email,
-      subject: 'Welcome to HIHODL Beta! 🚀',
+      subject: 'Welcome to HOLD Beta! 🚀',
       html: `
         <!DOCTYPE html>
         <html>
@@ -216,11 +216,11 @@ async function sendWelcomeEmail(email: string, displayName: string, referralCode
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0A141E; color: #eaf6ff; padding: 40px 20px;">
           <div style="max-width: 600px; margin: 0 auto; background: #0A141E; border-radius: 16px;">
             <div style="text-align: center; margin-bottom: 30px;">
-              <img src="${safeSite}/hihodl-v2.png" alt="HIHODL" style="max-width: 250px; height: auto;" />
+              <img src="${safeSite}/logo-white.png" alt="HOLD" style="max-width: 200px; height: auto;" />
             </div>
             <h1 style="color: #FFB703; font-size: 32px; margin-bottom: 20px;">Welcome ${safeName}! 🎉</h1>
             <p style="font-size: 18px; line-height: 1.6; margin-bottom: 30px;">
-              You're now part of the HIHODL beta waitlist. Early access isn't given—it's earned.
+              You're now part of the HOLD beta waitlist. Early access isn't given—it's earned.
             </p>
             <p style="font-size: 16px; line-height: 1.6; margin-bottom: 30px;">
               Share your referral link to climb the leaderboard and unlock exclusive perks:
@@ -248,7 +248,7 @@ async function sendWelcomeEmail(email: string, displayName: string, referralCode
             </div>
             <p style="margin-top: 40px; font-size: 14px; color: #94a3b8; text-align: center;">
               See you at the top! 🚀<br/>
-              The HIHODL Team
+              The HOLD Team
             </p>
           </div>
         </body>

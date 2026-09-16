@@ -4,7 +4,15 @@ import React, { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { APP_STORE_URL, PLAY_STORE_URL } from "@/lib/appLinks";
+import { Wordmark } from "@/components/site/Wordmark";
 
+/**
+ * The app's one custom scheme: `scheme: "hihodl"` in app.json, `hihodl` in
+ * Info.plist's CFBundleURLSchemes and in the Android manifest. It is spelled
+ * that way on both platforms and nowhere is `hold` registered, so a `hold://`
+ * link here opened nothing and sent everyone who already has the app to the
+ * store instead.
+ */
 const DEEP_LINK_SCHEME = "hihodl://";
 const FALLBACK_DELAY_MS = 1500;
 
@@ -82,16 +90,8 @@ function OpenContent() {
       }}
     >
       <div style={{ width: "100%", maxWidth: 420, textAlign: "center" }}>
-        <div
-          style={{
-            color: "#FFFFFF",
-            fontSize: 28,
-            fontWeight: 900,
-            letterSpacing: 2,
-            marginBottom: 32,
-          }}
-        >
-          HIHODL
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 32, color: "#FFFFFF" }}>
+          <Wordmark className="h-6 w-auto" />
         </div>
 
         <h1
@@ -102,7 +102,7 @@ function OpenContent() {
             lineHeight: "30px",
           }}
         >
-          {status === "opening" ? "Opening HIHODL…" : "Almost there"}
+          {status === "opening" ? "Opening HOLD…" : "Almost there"}
         </h1>
 
         <p
@@ -142,7 +142,7 @@ function OpenContent() {
             lineHeight: "18px",
           }}
         >
-          HIHODL · The wallet for the remote economy
+          HOLD · The wallet for the remote economy
         </p>
       </div>
     </main>
@@ -163,16 +163,8 @@ function OpenFallback() {
       }}
     >
       <div style={{ textAlign: "center" }}>
-        <div
-          style={{
-            color: "#FFFFFF",
-            fontSize: 28,
-            fontWeight: 900,
-            letterSpacing: 2,
-            marginBottom: 32,
-          }}
-        >
-          HIHODL
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 32, color: "#FFFFFF" }}>
+          <Wordmark className="h-6 w-auto" />
         </div>
         <p style={{ color: "#9AA5B4", fontSize: 15 }}>Opening…</p>
       </div>

@@ -17,7 +17,7 @@ export function BuiltFor() {
       name: "Lucía",
       role: "Product designer",
       route: "Buenos Aires → Lisbon",
-      tools: "Figma · Linear · paid in USDC",
+      tools: "Figma · Linear · paid in dollars",
       quote: "Receives client invoices. Pays rent in EUR.",
     },
     {
@@ -45,7 +45,7 @@ export function BuiltFor() {
       name: "Priya",
       role: "Vibecoder",
       route: "Bangalore · ships AI products on weekends",
-      tools: "Claude · Replicate · revenue in USDC",
+      tools: "Claude · Replicate · revenue in dollars",
       quote: "Makes money in the same rails her stack runs on.",
     },
     {
@@ -77,7 +77,7 @@ export function BuiltFor() {
           </h2>
           <p className="mt-6 text-lead text-text-muted">
             If your income lives on the internet and your rent doesn&rsquo;t,
-            HIHODL was built around your week.
+            HOLD was built around your week.
           </p>
         </div>
 
