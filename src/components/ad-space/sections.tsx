@@ -15,6 +15,7 @@ import {
   compactNumber,
   deliverableText,
   relativeTime,
+  takeoverVerb,
   usdFromCents,
 } from "@/lib/ad-space/format";
 import type { Creator, DeliverableState, Space } from "@/lib/ad-space/types";
@@ -226,6 +227,45 @@ function Avatar({ creator: c }: { creator: Creator }) {
   );
 }
 
+/* ── Takeovers ─────────────────────────────────────────────────────── */
+
+/**
+ * The mechanic, said once, immediately above the spots it prices.
+ *
+ * A sponsor meets these prices on the cards, so the explanation belongs where
+ * they are and not with the trust copy further down. Nothing renders on a
+ * fixed-price space: the product there is the one it has always been.
+ */
+export function SpaceTakeover({ space }: { space: Space }) {
+  if (space.pricingMode !== "takeover") return null;
+
+  return (
+    <section
+      aria-label="How takeovers work"
+      className={`${card} mb-10 flex flex-col gap-3 p-5 md:p-6`}
+    >
+      <h2 className={`${eyebrow} text-moonlight`}>Any spot can change hands</h2>
+      <p className="max-w-3xl text-small text-text-muted">
+        The price on a spot is where bidding opens, not what it will sell for. Once a spot is sold, anyone can take it
+        from the sponsor holding it, and doing so {takeoverVerb(space.takeoverMultiple)}. Each card says what taking
+        that spot costs today.
+      </p>
+      <p className="max-w-3xl text-small text-text-muted">
+        The sponsor who loses a spot gets back every cent they paid
+        {space.feePayer === "sponsor" ? `, HOLD's ${space.feeBps / 100}% fee included,` : ""} in the very same
+        transaction that displaces them. Nobody holds that money in between: repaying them is one leg of the new
+        sponsor&rsquo;s payment, and if that leg fails the payment fails with it.
+      </p>
+      {/* Only worth saying where there is a choice of chain to get wrong. */}
+      {space.chains.length > 1 && (
+        <p className="max-w-3xl text-small text-text-faint">
+          A spot changes hands on the chain it was bought on, because the refund travels in that same transaction.
+        </p>
+      )}
+    </section>
+  );
+}
+
 /* ── Promises ──────────────────────────────────────────────────────── */
 
 const STATE_PILL: Record<DeliverableState, string> = {
@@ -318,6 +358,17 @@ export function SpacePromises({ space }: { space: Space }) {
               {space.feeBps / 100}%, paid by the {space.feePayer}, and it moves in the same transaction. HOLD never
               holds your money, and paid spots can&rsquo;t be refunded by HOLD.
             </p>
+            {/* The two sentences above are true on a takeover board too, and
+                together they read as a contradiction of the refund promised
+                further up the page. The difference is worth one line: HOLD
+                still refunds nobody — the sponsor taking the spot does. */}
+            {space.pricingMode === "takeover" && (
+              <p className="text-small text-text-muted">
+                That holds when a spot changes hands, too. The money that goes back to a sponsor who has been outbid is
+                not HOLD&rsquo;s to send: it is part of the payment made by whoever took the spot from them, moving in
+                the same transaction.
+              </p>
+            )}
             {declares.length > 0 && (
               <p className="text-small text-text-muted">
                 The creator declares that they {joinWords(declares)}.

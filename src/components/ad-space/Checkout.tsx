@@ -704,17 +704,35 @@ export function Checkout({
 
 function Summary({ space, position: p }: { space: Space; position: Position }) {
   const zone = space.template.zones.find((z) => z.zoneKey === p.zoneKey);
+  // Taking a spot from whoever holds it, rather than buying an empty one. The
+  // figures differ enough that showing the fixed-price pair would be wrong:
+  // what this sponsor pays is the DOUBLED price plus the fee, and most of it
+  // is not the creator's — it goes straight back to the sponsor displaced.
+  const taking = p.status === "sold" && p.takeover?.nextSponsorPaysUsdc ? p.takeover : null;
   return (
     <div className="flex flex-col gap-4">
       <dl className="grid grid-cols-2 gap-4 rounded-card border border-[color:var(--color-hairline)] bg-white/[0.03] p-4">
         <div>
           <dt className="text-tiny text-text-faint">You pay</dt>
-          <dd className="mt-1 font-mono text-body text-text">{p.sponsorPaysUsdc} USDC</dd>
+          <dd className="mt-1 font-mono text-body text-text">
+            {taking ? taking.nextSponsorPaysUsdc : p.sponsorPaysUsdc} USDC
+          </dd>
         </div>
         <div>
-          <dt className="text-tiny text-text-faint">@{space.creator.xHandle} receives</dt>
-          <dd className="mt-1 font-mono text-body text-text">{p.creatorReceivesUsdc} USDC</dd>
+          <dt className="text-tiny text-text-faint">
+            {taking ? "New price for the spot" : `@${space.creator.xHandle} receives`}
+          </dt>
+          <dd className="mt-1 font-mono text-body text-text">
+            {taking ? taking.nextPriceUsdc : p.creatorReceivesUsdc} USDC
+          </dd>
         </div>
+        {taking && (
+          <div className="col-span-2 border-t border-[color:var(--color-hairline)] pt-3 text-small text-text-muted">
+            Of that, <span className="font-mono text-text">{taking.refundsUsdc} USDC</span> goes straight back to the
+            sponsor who holds this spot now — everything they paid, in the same transaction that takes it from them.
+            HOLD never holds it in between.
+          </div>
+        )}
         <div className="col-span-2 text-tiny text-text-faint">
           {[zone?.sizeLabel, `Takes ${p.accepts.map((k) => CONTENT_KIND_LABEL[k]).join(", ")}`]
             .filter(Boolean)
@@ -829,8 +847,18 @@ function Paid({
         <p className={`${eyebrow} text-success`}>Paid</p>
         <h3 className="mt-2 font-display text-h3 font-light text-text">You&rsquo;re sponsoring this spot.</h3>
         <p className="mt-3 text-small text-text-muted">
-          {order.sponsorPaysUsdc} USDC on {CHAIN_LABEL[order.chain]}: {order.creatorReceivesUsdc} to @{handle} and{" "}
-          {order.feeUsdc} to HOLD.
+          {order.takeover ? (
+            <>
+              {order.sponsorPaysUsdc} USDC on {CHAIN_LABEL[order.chain]}: {order.takeover.refundsUsdc} back to the
+              sponsor you took it from, {order.creatorReceivesUsdc} more to @{handle}, and {order.feeUsdc} to HOLD. The
+              spot is listed at {order.priceUsdc} now.
+            </>
+          ) : (
+            <>
+              {order.sponsorPaysUsdc} USDC on {CHAIN_LABEL[order.chain]}: {order.creatorReceivesUsdc} to @{handle} and{" "}
+              {order.feeUsdc} to HOLD.
+            </>
+          )}
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           {order.explorerUrl && (

@@ -16,6 +16,12 @@ export type VerifiedType = "blue" | "business" | "government" | null;
 export type DeliverableState = "upcoming" | "overdue" | "delivered" | "missed";
 export type Fallback = "content_anyway" | "creator_refund" | "next_event";
 export type VenueType = "travel" | "conference" | "sports_event" | "private_event" | "everyday";
+/**
+ * `takeover`: the listed price is where bidding OPENS, and a sold spot can be
+ * taken by paying a multiple of what it last went for. The sponsor displaced is
+ * repaid every cent inside the same transaction.
+ */
+export type PricingMode = "fixed" | "takeover";
 
 export interface Creator {
   xUserId: string;
@@ -64,6 +70,36 @@ export interface Sponsor {
   imageUrl: string | null;
 }
 
+/**
+ * The ladder on a spot, on a space that prices by takeover. Null on a
+ * fixed-price space.
+ *
+ * Each figure is named because at a multiple of two they collide: what the
+ * creator gets from a takeover equals what the spot last sold for, so the same
+ * amount can mean two different things one line apart. Nothing here is ever
+ * rendered as a bare number.
+ *
+ * `nextPriceUsdc`, `nextSponsorPaysUsdc` and `refundsUsdc` are null when there
+ * is nothing to take — the spot is still open, or `closed` says it can go no
+ * higher.
+ */
+export interface Takeover {
+  /** What the spot costs now. */
+  priceUsdc: string;
+  /** What it would be listed at after the next takeover. */
+  nextPriceUsdc: string | null;
+  /** What the next sponsor's wallet signs for: the new price, our fee, and the refund. */
+  nextSponsorPaysUsdc: string | null;
+  /** What the sponsor being displaced gets back, in full, in that same payment. */
+  refundsUsdc: string | null;
+  /** Where bidding opened. */
+  floorPriceCents: number;
+  handsSoFar: number;
+  handsLeft: number;
+  /** "too_many_takeovers" | "price_ceiling", or null while it can still be taken. */
+  closed: string | null;
+}
+
 export interface Position {
   id: string;
   zoneKey: string;
@@ -74,6 +110,8 @@ export interface Position {
   pitch: string | null;
   accepts: ContentKind[];
   status: PositionStatus;
+  /** Null on a fixed-price space, where a spot is sold once and stays sold. */
+  takeover: Takeover | null;
   sponsor: Sponsor | null;
   /** Only for the creator, or the sponsor reading with their checkout key. */
   content?: { status: "pending" | "approved" | "rejected"; rejectedReason: string | null } | null;
@@ -114,6 +152,9 @@ export interface Space {
   creator: Creator;
   feeBps: number;
   feePayer: "sponsor" | "creator";
+  pricingMode: PricingMode;
+  /** How much a takeover multiplies the last price by; null on a fixed-price space. */
+  takeoverMultiple: number | null;
   venueType: VenueType;
   eventName: string | null;
   fallback: Fallback;
@@ -139,7 +180,15 @@ export interface Space {
  * `quoted`: a Base/Polygon checkout that was handed out and not signed yet. It
  * holds nothing; the position is held only once the signatures arrive.
  */
-export type OrderStatus = "quoted" | "awaiting_payment" | "paid" | "paid_duplicate" | "expired" | "cancelled";
+export type OrderStatus =
+  | "quoted"
+  | "awaiting_payment"
+  | "paid"
+  | "paid_duplicate"
+  | "expired"
+  | "cancelled"
+  /** Was paid and held the spot, until somebody doubled the price and repaid it. */
+  | "outbid";
 
 export interface Order {
   id: string;
@@ -147,12 +196,24 @@ export interface Order {
   spaceId: string;
   status: OrderStatus;
   chain: Chain;
+  /** What the spot costs. On a takeover, the doubled price. */
+  priceUsdc: string;
+  /**
+   * What reaches the creator FROM THIS ORDER. On a takeover that is the
+   * DIFFERENCE between the new price and the old one, not the price — at a
+   * multiple of two it equals what the spot last sold for, so it must never be
+   * put on screen without a label saying which of the two it is.
+   */
   creatorReceivesUsdc: string;
   feeUsdc: string;
+  /** Every leg together: what the wallet signs for. */
   sponsorPaysUsdc: string;
+  /** Set only on a takeover: the sponsor displaced, repaid in full. */
+  takeover: { replacesOrderId: string; refundsUsdc: string; refundAddress: string | null } | null;
   feeBps: number;
   feePayer: "sponsor" | "creator";
   creatorAddress: string;
+  feeAddress: string;
   sponsorAddress: string | null;
   reservedUntil: string;
   txSignature: string | null;

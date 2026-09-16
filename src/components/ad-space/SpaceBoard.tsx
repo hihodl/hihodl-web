@@ -64,7 +64,10 @@ export function SpaceBoard({ space }: { space: Space }) {
 
   const pick = useCallback(
     (p: Position) => {
-      if (p.status === "open" && buyable) {
+      // Clicking a spot on the product opens checkout when the spot can be
+      // bought — which on a takeover board includes a SOLD one, at double.
+      const takeable = p.status === "sold" && p.takeover && !p.takeover.closed && p.takeover.nextPriceUsdc;
+      if (buyable && (p.status === "open" || takeable)) {
         setCheckoutFor(p);
         return;
       }
@@ -93,6 +96,7 @@ export function SpaceBoard({ space }: { space: Space }) {
           sizeLabel={sizeOf(p)}
           active={active === p.id}
           buyable={buyable}
+          takeoverMultiple={space.takeoverMultiple}
           onHover={setHoverId}
           onSponsor={setCheckoutFor}
         />

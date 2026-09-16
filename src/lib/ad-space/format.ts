@@ -143,6 +143,40 @@ export const FALLBACK_TEXT: Record<Fallback, string> = {
     "If a venue does not let the item in, the creator carries every sponsor to their next event instead.",
 };
 
+/**
+ * How many times a spot has changed hands, in the words a person says out loud.
+ * The caller renders nothing at all for a spot still on its first sponsor.
+ */
+export function handsText(hands: number): string {
+  if (hands === 1) return "Changed hands once";
+  if (hands === 2) return "Changed hands twice";
+  return `Changed hands ${hands} times`;
+}
+
+/**
+ * What a takeover does to the price. Two is the only multiple nobody has to
+ * think about, so it is a verb; anything else is stated as a factor rather than
+ * given a word of its own.
+ */
+export function takeoverVerb(multiple: number | null): string {
+  return multiple === 2 || multiple === null ? "doubles the price" : `multiplies the price by ${multiple}`;
+}
+
+/**
+ * Why a spot can go no higher, without the server's words for it. An unknown
+ * reason still says the only thing a sponsor needs: the ladder has stopped.
+ */
+const TAKEOVER_CLOSED_TEXT: Record<string, string> = {
+  too_many_takeovers:
+    "This spot has changed hands as many times as an Ad Space spot is allowed to, so it can go no higher. It stays with the sponsor who has it now.",
+  price_ceiling:
+    "Doubling this spot again would take it past the most an Ad Space spot can cost, so it can go no higher. It stays with the sponsor who has it now.",
+};
+
+export function takeoverClosedText(reason: string): string {
+  return TAKEOVER_CLOSED_TEXT[reason] ?? "This spot can go no higher. It stays with the sponsor who has it now.";
+}
+
 /** Phrased to follow "The creator declares that they …". */
 const ATTESTATION_TEXT: Record<string, string> = {
   owns_item: "own the item",

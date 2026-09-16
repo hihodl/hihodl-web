@@ -4,12 +4,13 @@
  * Loaded only when `AD_SPACE_FIXTURE=1` and NODE_ENV is not production (see
  * `getPublicSpace`). The outlines and zones are copied from the backend
  * catalog (server/services/ad-space/catalog-data.ts) so the board renders the
- * real geometry. Two spaces:
- *   /s/coinempress/road-to-token2049   placement, carry-on suitcase
+ * real geometry. Three spaces:
+ *   /s/coinempress/road-to-token2049   placement, carry-on suitcase, fixed price
  *   /s/coinempress/token2049-videos    service, short-form video
+ *   /s/coinempress/token2049-takeover  the same suitcase, priced by takeover
  */
 
-import type { Position, Space, TemplateZone } from "./types";
+import type { Position, Space, Takeover, TemplateZone } from "./types";
 
 function circle(cx: number, cy: number, r: number): string {
   return `M${cx - r} ${cy} a${r} ${r} 0 1 0 ${2 * r} 0 a${r} ${r} 0 1 0 ${-2 * r} 0`;
@@ -92,6 +93,7 @@ function position(
     pitch: null,
     accepts: ["logo", "qr", "text"],
     status: "open",
+    takeover: null,
     sponsor: null,
     delivered: null,
     ...over,
@@ -99,6 +101,9 @@ function position(
 }
 
 const DAY = 24 * 60 * 60 * 1000;
+
+/** How many times one spot may change hands (the server's MAX_TAKEOVERS). */
+const MAX_HANDS = 6;
 
 function suitcase(): Space {
   const zones = [...zonesFor(["front", "back"], FACE_ZONES), ...zonesFor(["left", "right"], SIDE_ZONES)];
@@ -218,6 +223,8 @@ function suitcase(): Space {
     },
     feeBps: 500,
     feePayer: "sponsor",
+    pricingMode: "fixed",
+    takeoverMultiple: null,
     venueType: "conference",
     eventName: "TOKEN2049 Singapore",
     fallback: "content_anyway",
@@ -331,9 +338,158 @@ function videos(): Space {
   };
 }
 
+/**
+ * The same board, priced by takeover, with the ladder in every state a card has
+ * to render: a spot nobody has taken, one taken twice, one that has changed
+ * hands as often as it may, and one a doubling would push past the ceiling.
+ *
+ * The headline spot is the pair of figures the copy exists for: a $87.50 floor
+ * taken twice is a $350 spot, and the next hand costs $735 while repaying
+ * $367.50 — two amounts one line apart that must never appear unlabelled.
+ */
+function takeovers(): Space {
+  const base = suitcase();
+  const byKey = Object.fromEntries(base.template.zones.map((z) => [z.zoneKey, z]));
+  const pid = (n: number) => `00000000-0000-4000-a000-${String(n).padStart(12, "0")}`;
+
+  /**
+   * One spot's ladder, as the server builds it: the next three figures exist
+   * only while there is something to take. A spot nobody holds yet, and one
+   * that can go no higher, carry the floor and the count and nothing else.
+   */
+  const ladder = (args: {
+    priceCents: number;
+    floorPriceCents: number;
+    handsSoFar: number;
+    takeable: boolean;
+    closed?: string;
+  }): Takeover => {
+    const next = args.takeable ? args.priceCents * 2 : null;
+    return {
+      priceUsdc: usdc(args.priceCents),
+      nextPriceUsdc: next ? usdc(next) : null,
+      nextSponsorPaysUsdc: next ? usdc(next + Math.round(next * 0.05)) : null,
+      refundsUsdc: next ? usdc(args.priceCents + Math.round(args.priceCents * 0.05)) : null,
+      floorPriceCents: args.floorPriceCents,
+      handsSoFar: args.handsSoFar,
+      handsLeft: MAX_HANDS - args.handsSoFar,
+      closed: args.closed ?? null,
+    };
+  };
+
+  /** A spot whose price has moved off the zone's suggestion, as bidding does. */
+  const at = (n: number, zoneKey: string, priceCents: number, over: Partial<Position>): Position =>
+    position(pid(n), byKey[zoneKey], {
+      priceCents,
+      sponsorPaysUsdc: usdc(priceCents + Math.round(priceCents * 0.05)),
+      creatorReceivesUsdc: usdc(priceCents),
+      ...over,
+    });
+
+  const positions: Position[] = [
+    at(1, "front-headline", 35000, {
+      status: "sold",
+      sponsor: {
+        name: "Acme",
+        url: "https://acme.xyz",
+        xHandle: "acme",
+        contentKind: "logo",
+        contentText: null,
+        imageUrl: logo("ACME", "#FFFFFF", "#141F2E"),
+      },
+      takeover: ladder({ priceCents: 35000, floorPriceCents: 8750, handsSoFar: 2, takeable: true }),
+    }),
+    at(2, "front-upper-left", 20000, {
+      pitch: "Right under the headline, in every airport shot",
+      takeover: ladder({ priceCents: 20000, floorPriceCents: 20000, handsSoFar: 0, takeable: false }),
+    }),
+    at(3, "front-upper-right", 50000, {
+      status: "sold",
+      sponsor: {
+        name: "Nodeline",
+        url: "https://nodeline.io",
+        xHandle: "nodeline",
+        contentKind: "qr",
+        contentText: "https://nodeline.io/r/coin",
+        imageUrl: null,
+      },
+      takeover: ladder({ priceCents: 50000, floorPriceCents: 50000, handsSoFar: 0, takeable: true }),
+    }),
+    at(4, "front-lower-left", 17500, {
+      status: "held",
+      takeover: ladder({ priceCents: 17500, floorPriceCents: 17500, handsSoFar: 0, takeable: false }),
+    }),
+    at(5, "front-lower-right", 800000, {
+      status: "sold",
+      sponsor: {
+        name: "Kopi Labs",
+        url: null,
+        xHandle: null,
+        contentKind: "text",
+        contentText: "CODE10",
+        imageUrl: null,
+      },
+      takeover: ladder({
+        priceCents: 800000,
+        floorPriceCents: 12500,
+        handsSoFar: MAX_HANDS,
+        takeable: false,
+        closed: "too_many_takeovers",
+      }),
+    }),
+    at(6, "back-headline", 1600000, {
+      status: "sold",
+      sponsor: {
+        name: "Orbit",
+        url: "https://orbit.fi",
+        xHandle: "orbitfi",
+        contentKind: "logo",
+        contentText: null,
+        imageUrl: logo("ORBIT", "#5B7CFF", "#FFFFFF"),
+      },
+      // Doubling $16,000 lands past the $25,000 a spot may cost, so it stops
+      // here even though it has a hand left.
+      takeover: ladder({
+        priceCents: 1600000,
+        floorPriceCents: 50000,
+        handsSoFar: 5,
+        takeable: false,
+        closed: "price_ceiling",
+      }),
+    }),
+    at(7, "back-upper-left", 20000, {
+      takeover: ladder({ priceCents: 20000, floorPriceCents: 20000, handsSoFar: 0, takeable: false }),
+    }),
+    at(8, "back-upper-right", 20000, {
+      takeover: ladder({ priceCents: 20000, floorPriceCents: 20000, handsSoFar: 0, takeable: false }),
+    }),
+  ];
+
+  return {
+    ...base,
+    id: "33333333-3333-4333-8333-333333333333",
+    slug: "token2049-takeover",
+    title: "TOKEN2049 suitcase, open bidding",
+    reason: "Every spot opens low. Sponsors outbid each other, and whoever is outbid gets their money straight back.",
+    // Takeovers are Solana only: the refund is a leg of the very transaction
+    // that displaces the sponsor, and a transaction lives on one chain.
+    chains: ["solana"],
+    pricingMode: "takeover",
+    takeoverMultiple: 2,
+    positions,
+    totals: { positions: positions.length, sold: 4, committedCents: 2485000, totalCents: 2562500 },
+    updates: [],
+    share: {
+      url: "https://hihodl.xyz/s/coinempress/token2049-takeover?m=4",
+      text: "4 of 8 spots taken, and every one of them is still up for grabs https://hihodl.xyz/s/coinempress/token2049-takeover?m=4",
+    },
+  };
+}
+
 export function fixtureSpace(handle: string, slug: string): Space | null {
   if (handle.toLowerCase() !== "coinempress") return null;
   if (slug === "road-to-token2049") return suitcase();
   if (slug === "token2049-videos") return videos();
+  if (slug === "token2049-takeover") return takeovers();
   return null;
 }

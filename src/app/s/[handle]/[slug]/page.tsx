@@ -8,6 +8,7 @@ import {
   SpaceHero,
   SpaceInvite,
   SpacePromises,
+  SpaceTakeover,
   SpaceUnavailable,
   SpaceUpdates,
 } from "@/components/ad-space/sections";
@@ -100,6 +101,7 @@ export default async function AdSpacePage({ params }: { params: Params }) {
           <main>
             <SpaceHero space={found.space} />
             <section className="container-page py-12 md:py-16" aria-label="Spots">
+              <SpaceTakeover space={found.space} />
               <SpaceBoard space={found.space} />
             </section>
             <SpacePromises space={found.space} />
