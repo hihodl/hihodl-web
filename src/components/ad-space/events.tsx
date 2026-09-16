@@ -92,8 +92,8 @@ export function EventMiniCard({
           {countdown.phase === "upcoming" ? `Starts ${countdown.text}` : capitalise(countdown.text)}
         </span>
       </div>
-      <Heading className="mt-3 font-display text-h4 font-light leading-tight text-white">{event.name}</Heading>
-      <p className="mt-1 text-small text-white/75">
+      <Heading className="mt-3 break-words font-display text-h4 font-light leading-tight text-white [overflow-wrap:anywhere]">{event.name}</Heading>
+      <p className="mt-1 break-words text-small text-white/75">
         {event.city} · {eventDates(event.startsOn, event.endsOn)}
       </p>
     </>
@@ -118,7 +118,7 @@ export function EventBanner({ event, now }: { event: EventSummary; now: number }
   const banner: Banner = { imageUrl: event.coverUrl, gradient: "steel", credit: event.coverUrl ? event.coverCredit : null };
   return (
     <BannerFrame banner={banner} className="h-[320px] sm:h-[380px] md:h-[440px]">
-      <div className="container-page relative flex h-full items-end pb-8 md:pb-10">
+      <div className="container-page relative flex h-full items-end pb-10">
         <EventMiniCard event={event} now={now} as="h1" />
       </div>
       <PhotoCredit credit={banner.credit} />
@@ -153,10 +153,12 @@ export function SpaceBanner({
   }
 
   return (
-    <BannerFrame banner={banner} className={event ? "h-[260px] md:h-[340px]" : "h-[180px] md:h-[240px]"}>
+    <BannerFrame banner={banner} className={event ? "flex min-h-[260px] md:min-h-[340px]" : "h-[180px] md:h-[240px]"}>
       {event && (
-        // pb-8 below md: the photo credit sits in the bottom 24px, under a card as wide as the screen.
-        <div className="container-page relative flex h-full flex-col justify-between pb-8 pt-4 md:py-6">
+        // A minimum height, not a fixed one: a long event name grows the banner
+        // instead of pushing the card down over the credit. pb-10 below md: the
+        // credit sits in the bottom 24px, under a card as wide as the screen.
+        <div className="container-page relative flex w-full flex-col justify-between gap-4 pb-10 pt-4 md:py-6">
           <Link
             href={eventPath(event.slug)}
             className="inline-flex h-9 max-w-full items-center self-start overflow-hidden whitespace-nowrap rounded-[18px] bg-[#141F2E]/60 px-3.5 text-small text-white backdrop-blur-md transition-colors duration-180 hover:bg-[#141F2E]/80"
@@ -237,7 +239,7 @@ export function EventTabs({
                 {n} {n === 1 ? "space" : "spaces"}
               </span>
             </span>
-            <span className="break-words text-small text-text-muted">{subtitle[tab]}</span>
+            <span className="break-words text-small text-text-muted [overflow-wrap:anywhere]">{subtitle[tab]}</span>
           </Link>
         );
       })}
@@ -307,7 +309,7 @@ function SpaceCardTile({ card: c, event, now }: { card: SpaceCard; event: EventS
           {handleLine && <p className="truncate text-small text-text-muted">{handleLine}</p>}
         </div>
 
-        <h3 className="mt-4 line-clamp-2 break-words text-body text-text group-hover:text-amber">{c.title}</h3>
+        <h3 className="mt-4 line-clamp-2 break-words text-body [overflow-wrap:anywhere] text-text group-hover:text-amber">{c.title}</h3>
         {c.templateName && <p className="mt-1 text-small text-text-muted">{c.templateName}</p>}
         <p className={`mt-1 text-tiny ${missed > 0 ? "text-amber" : "text-text-faint"}`}>{record}</p>
 
@@ -388,7 +390,7 @@ function EmptyTab({ event, tab }: { event: EventSummary; tab: SpaceTab }) {
   return (
     <div className={`${cardClass} flex flex-col items-start gap-4 p-6 md:p-8`}>
       <p className={`${eyebrow} text-text-faint`}>No spaces here yet</p>
-      <h3 className="max-w-xl font-display text-h4 font-light text-text">
+      <h3 className="max-w-xl break-words font-display text-h4 font-light text-text [overflow-wrap:anywhere]">
         Going to {event.name}? Open your space in the HOLD app.
       </h3>
       <p className="max-w-xl text-small text-text-muted">{what} Sponsors pay you directly in USDC.</p>
