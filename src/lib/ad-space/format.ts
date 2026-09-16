@@ -76,6 +76,42 @@ export function instantUtc(iso: string): string {
   return `${date}, ${time} UTC`;
 }
 
+/**
+ * The zone name if this runtime's `Intl` knows it, else null. A missing, empty
+ * or unknown zone never throws out of a render: the caller falls back.
+ */
+export function knownTimeZone(tz: string | null | undefined): string | null {
+  if (!tz) return null;
+  try {
+    return new Intl.DateTimeFormat("en-GB", { timeZone: tz }).resolvedOptions().timeZone;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * An instant as a wall clock in one zone: "Wed 7 Oct, 10:00 GMT+8". With no
+ * zone it is the reader's own clock. Null for a date that doesn't parse or a
+ * zone this runtime refuses.
+ */
+export function instantIn(iso: string, timeZone?: string): string | null {
+  const d = new Date(iso);
+  if (!Number.isFinite(d.getTime())) return null;
+  try {
+    return d.toLocaleString("en-GB", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZoneName: "short",
+      ...(timeZone ? { timeZone } : {}),
+    });
+  } catch {
+    return null;
+  }
+}
+
 /** "3 days ago", "just now". For the updates feed. */
 export function relativeTime(iso: string, now = Date.now()): string {
   const s = Math.round((now - new Date(iso).getTime()) / 1000);

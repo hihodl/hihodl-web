@@ -352,6 +352,15 @@ export function describeSessionError(e: unknown): string | null {
       return "The session has already started, so its time and place can't change any more.";
     case "session_in_the_past":
       return "That time has already passed. Pick a time that's still to come.";
+    // The next three come from the creator's side (scheduling, publishing,
+    // creating an event in the app); no call this site makes can get them.
+    // Mapped anyway so a sentence never falls back to a raw code.
+    case "confirm_window_open":
+      return "The buyer can already say whether the session happened, so its time and place can't change any more.";
+    case "session_closes_after_event":
+      return "A session space has to close by the end of the day after its event.";
+    case "time_zone_invalid":
+      return "That time zone isn't one we recognise. Use a name like \"Asia/Singapore\".";
     case "session_place_invalid":
       return "Say where the session is in up to 120 characters, like \"TOKEN2049 venue, Level 4 lounge\".";
     case "no_dispute":

@@ -602,6 +602,7 @@ const TOKEN2049: EventSummary = {
   country: "SG",
   startsOn: dayFromNow(21),
   endsOn: dayFromNow(22),
+  timeZone: "Asia/Singapore",
   category: "crypto",
   coverUrl: photo("photo-1508964942454-1a56651d54ac"),
   coverCredit: "Photo: Unsplash",
@@ -616,6 +617,7 @@ const DEVCON: EventSummary = {
   country: "IN",
   startsOn: dayFromNow(57),
   endsOn: dayFromNow(60),
+  timeZone: "Asia/Kolkata",
   category: "crypto",
   coverUrl: null,
   coverCredit: null,
@@ -880,6 +882,7 @@ function sessionFor(state: SessionState, confirmByPast = false): SessionView {
     brief,
     sessionAt,
     sessionPlace: scheduled ? "TOKEN2049 venue, Level 4 lounge" : null,
+    event: { startsOn: TOKEN2049.startsOn, endsOn: TOKEN2049.endsOn, timeZone: TOKEN2049.timeZone ?? null },
     state,
     confirmBy:
       answered && sessionAt ? new Date(Date.parse(sessionAt) + 7 * DAY).toISOString() : null,

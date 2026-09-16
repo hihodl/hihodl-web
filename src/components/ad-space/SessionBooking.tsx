@@ -15,7 +15,9 @@ import {
   SESSION_FALLBACK_TEXT,
   SESSION_STATE_LABEL,
   SESSION_TEXT_MAX,
+  instantIn,
   instantUtc,
+  knownTimeZone,
 } from "@/lib/ad-space/format";
 import type { Booking, ContactKind, SessionState, SessionView } from "@/lib/ad-space/types";
 
@@ -282,19 +284,45 @@ export function SessionContactForm({
 /* ── Times ─────────────────────────────────────────────────────────── */
 
 /**
- * An instant in UTC on the server, and in the reader's own clock once the page
- * is in their browser, so the two never disagree during hydration.
+ * An instant in the event's own clock, since that is where the session
+ * happens: "Wed 7 Oct, 10:00 GMT+8". The zone is fixed, so the server and the
+ * browser write the same words. Once in the browser, the reader's own clock is
+ * added in small text when it reads differently.
+ *
+ * With no zone, or one this runtime doesn't know, it is UTC on the server and
+ * the reader's clock once in the browser, as before.
  */
-export function LocalInstant({ iso }: { iso: string }) {
+export function EventInstant({
+  iso,
+  timeZone,
+  inline = false,
+}: {
+  iso: string;
+  timeZone?: string | null;
+  /** Inside a sentence: the reader's time goes in brackets, not on its own line. */
+  inline?: boolean;
+}) {
+  const zone = knownTimeZone(timeZone);
+  const inEvent = zone ? instantIn(iso, zone) : null;
   const [local, setLocal] = useState<string | null>(null);
-  useEffect(() => {
-    const d = new Date(iso);
-    if (!Number.isFinite(d.getTime())) return;
-    setLocal(
-      d.toLocaleString([], { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZoneName: "short" }),
-    );
-  }, [iso]);
-  return <time dateTime={iso}>{local ?? instantUtc(iso)}</time>;
+  useEffect(() => setLocal(instantIn(iso)), [iso]);
+
+  if (!inEvent) return <time dateTime={iso}>{local ?? instantUtc(iso)}</time>;
+
+  const differs = local !== null && local !== inEvent;
+  return (
+    <>
+      <time dateTime={iso} suppressHydrationWarning>
+        {inEvent}
+      </time>
+      {differs &&
+        (inline ? (
+          <span className="text-text-faint"> ({local} your time)</span>
+        ) : (
+          <span className="mt-1 block text-tiny text-text-faint">Your time: {local}</span>
+        ))}
+    </>
+  );
 }
 
 const STATE_PILL: Record<SessionState, string> = {
@@ -325,6 +353,8 @@ export function BookingPanel({ token, initial, renderedAt }: { token: string; in
   const who = creatorRef(handle);
   const paid = order.status === "paid";
   const windowOpen = !s.confirmBy || Date.parse(s.confirmBy) > now;
+  // The zone frozen on the session when it was sold, else the event's.
+  const zone = s.event?.timeZone ?? space.event?.timeZone ?? null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -376,12 +406,13 @@ export function BookingPanel({ token, initial, renderedAt }: { token: string; in
         </p>
       ) : (
         <>
-          <Schedule session={s} handle={handle} />
+          <Schedule session={s} handle={handle} timeZone={zone} />
 
           <Outcome
             token={token}
             booking={booking}
             windowOpen={windowOpen}
+            timeZone={zone}
             onChange={setBooking}
           />
 
@@ -419,14 +450,25 @@ export function BookingPanel({ token, initial, renderedAt }: { token: string; in
   );
 }
 
-function Schedule({ session: s, handle }: { session: SessionView; handle: string | null }) {
+/** States in which the buyer's window to answer has opened (or already closed). */
+const ANSWERABLE: ReadonlySet<SessionState> = new Set(["awaiting_confirmation", "delivered", "disputed"]);
+
+function Schedule({
+  session: s,
+  handle,
+  timeZone,
+}: {
+  session: SessionView;
+  handle: string | null;
+  timeZone: string | null;
+}) {
   return (
     <section className={`${card} flex flex-col gap-3 p-5 md:p-6`} aria-label="When and where">
       <h2 className={`${eyebrow} text-text-faint`}>When and where</h2>
       {s.sessionAt ? (
         <>
           <p className="text-body text-text">
-            <LocalInstant iso={s.sessionAt} />
+            <EventInstant iso={s.sessionAt} timeZone={timeZone} />
           </p>
           {s.sessionPlace && (
             <p className="break-words text-small text-text-muted [overflow-wrap:anywhere]">{s.sessionPlace}</p>
@@ -434,17 +476,27 @@ function Schedule({ session: s, handle }: { session: SessionView; handle: string
           {s.state === "scheduled" && (
             <p className="text-tiny text-text-faint">
               {creatorRef(handle, true)} can still change this until the session starts. Check back here before you go.
+              Once it starts, this page asks you whether it happened.
             </p>
           )}
         </>
-      ) : s.state === "awaiting_contact" ? (
-        <p className="text-small text-text-muted">
-          Send {creatorRef(handle)} your contact below, and they set a time and place with you.
-        </p>
+      ) : ANSWERABLE.has(s.state) ? (
+        <p className="text-small text-text-muted">No time was set for this session.</p>
       ) : (
-        <p className="text-small text-text-muted">
-          {creatorRef(handle, true)} hasn&rsquo;t set a time yet. It shows here as soon as they do.
-        </p>
+        <>
+          {s.state === "awaiting_contact" ? (
+            <p className="text-small text-text-muted">
+              Send {creatorRef(handle)} your contact below, and they set a time and place with you.
+            </p>
+          ) : (
+            <p className="text-small text-text-muted">
+              {creatorRef(handle, true)} hasn&rsquo;t set a time yet. It shows here as soon as they do.
+            </p>
+          )}
+          <p className="text-tiny text-text-faint">
+            If no time is ever set, this page asks you whether the session happened once the event is over.
+          </p>
+        </>
       )}
     </section>
   );
@@ -454,11 +506,13 @@ function Outcome({
   token,
   booking,
   windowOpen,
+  timeZone,
   onChange,
 }: {
   token: string;
   booking: Booking;
   windowOpen: boolean;
+  timeZone: string | null;
   onChange: (b: Booking) => void;
 }) {
   const s = booking.order.session;
@@ -503,7 +557,7 @@ function Outcome({
   const confirmBy = s.confirmBy ? (
     <>
       {" "}
-      by <LocalInstant iso={s.confirmBy} />
+      by <EventInstant iso={s.confirmBy} timeZone={timeZone} inline />
     </>
   ) : null;
 

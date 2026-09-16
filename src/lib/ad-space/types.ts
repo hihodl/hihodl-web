@@ -241,6 +241,12 @@ export interface EventSummary {
   /** Calendar dates, "2026-11-12". No time zone: the day it is in that city. */
   startsOn: string;
   endsOn: string;
+  /**
+   * The event's IANA zone ("Asia/Singapore"), or null when nobody knows it.
+   * Only for showing times; every instant stays UTC. Optional because a server
+   * older than hispace-in-the-room-v0.md sends no key at all.
+   */
+  timeZone?: string | null;
   category: EventCategory;
   /** The event's cover, else the city photo, else null (the client draws `steel`). */
   coverUrl: string | null;
@@ -382,6 +388,12 @@ export interface SessionView {
   brief: string | null;
   sessionAt: string | null;
   sessionPlace: string | null;
+  /**
+   * The event's dates and zone as they were when the session was sold, so the
+   * page shows the time in the event's own clock. Optional: an older server
+   * sends none, and the page then shows the reader's clock.
+   */
+  event?: { startsOn: string; endsOn: string; timeZone: string | null } | null;
   state: SessionState;
   /** Until when the buyer can answer (or turn a dispute into delivered). */
   confirmBy: string | null;
