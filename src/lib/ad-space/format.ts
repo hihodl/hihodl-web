@@ -213,3 +213,67 @@ export function deliverableText(kind: string, platform: string, count: number): 
   const where = platform.toLowerCase() === "x" ? "X" : platform.charAt(0).toUpperCase() + platform.slice(1);
   return `${count} ${plural} on ${where}`;
 }
+
+/* ── Events ──────────────────────────────────────────────────────────── */
+
+const MONTH = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function ymd(date: string): [number, number, number] | null {
+  const [y, m, d] = date.slice(0, 10).split("-").map(Number);
+  return y && m && d ? [y, m, d] : null;
+}
+
+/**
+ * An event's dates as a person writes them: "7 Oct 2026", "7 to 8 Oct 2026",
+ * "30 Sep to 2 Oct 2026", "30 Dec 2026 to 2 Jan 2027". Words, not a dash, so
+ * the range still reads when a screen reader says it.
+ */
+export function eventDates(startsOn: string, endsOn: string): string {
+  const a = ymd(startsOn);
+  const b = ymd(endsOn);
+  if (!a || !b) return startsOn;
+  const [ay, am, ad] = a;
+  const [by, bm, bd] = b;
+  if (ay === by && am === bm && ad === bd) return `${ad} ${MONTH[am - 1]} ${ay}`;
+  if (ay === by && am === bm) return `${ad} to ${bd} ${MONTH[am - 1]} ${ay}`;
+  if (ay === by) return `${ad} ${MONTH[am - 1]} to ${bd} ${MONTH[bm - 1]} ${ay}`;
+  return `${ad} ${MONTH[am - 1]} ${ay} to ${bd} ${MONTH[bm - 1]} ${by}`;
+}
+
+/** Whole days from today (UTC) to a calendar date; negative once it has passed. */
+function daysUntil(date: string, now: number): number {
+  const p = ymd(date);
+  if (!p) return NaN;
+  const t = new Date(now);
+  const today = Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate());
+  return Math.round((Date.UTC(p[0], p[1] - 1, p[2]) - today) / 86_400_000);
+}
+
+export type EventPhase = "upcoming" | "now" | "ended";
+
+/**
+ * "in 21 days", "tomorrow", "happening now", "ended". Counted in whole calendar
+ * days in UTC: an event's dates carry no time zone, and a day either way at the
+ * edges is the honest precision of "in 21 days".
+ */
+export function eventCountdown(startsOn: string, endsOn: string, now = Date.now()): { phase: EventPhase; text: string } {
+  const toStart = daysUntil(startsOn, now);
+  const toEnd = daysUntil(endsOn, now);
+  if (toEnd < 0) return { phase: "ended", text: "ended" };
+  if (toStart <= 0) return { phase: "now", text: "happening now" };
+  if (toStart === 1) return { phase: "upcoming", text: "tomorrow" };
+  return { phase: "upcoming", text: `in ${toStart} days` };
+}
+
+/**
+ * A card's closing time, coarse on purpose: a grid of cards ticking every second
+ * is noise, and the space's own page has the exact countdown.
+ */
+export function closesText(closesAt: string, closed: boolean, now = Date.now()): string {
+  const left = Date.parse(closesAt) - now;
+  if (closed || !Number.isFinite(left) || left <= 0) return "Closed";
+  const h = Math.floor(left / 3_600_000);
+  if (h >= 48) return `Closes in ${Math.floor(h / 24)} days`;
+  if (h >= 1) return `Closes in ${h} h`;
+  return "Closes within the hour";
+}

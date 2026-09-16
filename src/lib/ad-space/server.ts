@@ -1,6 +1,7 @@
 // Server-only by construction: no "use client" file imports this module.
 import { AD_SPACE_API, HANDLE_RE, SLUG_RE } from "./config";
-import type { Space } from "./types";
+import { gradientKey } from "./look";
+import type { EventPage, EventSummary, Space, SpaceCard } from "./types";
 
 /**
  * Reading a public Ad Space on the server.
@@ -47,7 +48,7 @@ export async function getPublicSpace(
   if (fixtureEnabled()) {
     const { fixtureSpace } = await import("./fixture.dev");
     const space = fixtureSpace(handle, slug);
-    return space ? { kind: "found", space } : { kind: "missing" };
+    return space ? { kind: "found", space: withEventFields(space) } : { kind: "missing" };
   }
 
   const path = upstreamPath(handle, slug);
@@ -63,8 +64,107 @@ export async function getPublicSpace(
     if (!res.ok) return { kind: "unreachable" };
     const body = (await res.json()) as { data?: { space?: Space } };
     const space = body?.data?.space;
-    return space ? { kind: "found", space } : { kind: "unreachable" };
+    return space ? { kind: "found", space: withEventFields(space) } : { kind: "unreachable" };
   } catch {
     return { kind: "unreachable" };
+  }
+}
+
+/**
+ * The event fields, filled in when a backend that predates them leaves them
+ * out, and the gradient held to the five presets. Every reader downstream can
+ * then trust the type instead of checking for undefined.
+ */
+function withEventFields(space: Space): Space {
+  const raw = space as Partial<Space> & Space;
+  return {
+    ...raw,
+    event: raw.event ?? null,
+    bannerUrl: raw.bannerUrl ?? null,
+    bannerGradient: gradientKey(raw.bannerGradient),
+    siblings: Array.isArray(raw.siblings) ? raw.siblings : [],
+  };
+}
+
+/* ── Events ──────────────────────────────────────────────────────────── */
+
+/**
+ * `moved`: the slug belonged to an event merged into another. The page answers
+ * with a permanent redirect so a link already shared on X keeps working.
+ */
+export type EventLookup =
+  | { kind: "found"; page: EventPage }
+  | { kind: "moved"; slug: string }
+  | { kind: "missing" }
+  | { kind: "unreachable" };
+
+function withCardDefaults(card: SpaceCard): SpaceCard {
+  return { ...card, bannerUrl: card.bannerUrl ?? null, bannerGradient: gradientKey(card.bannerGradient) };
+}
+
+/** @param revalidate seconds; the API sends `max-age=30` for event pages. */
+export async function getPublicEvent(slug: string, revalidate = 30): Promise<EventLookup> {
+  if (!SLUG_RE.test(slug)) return { kind: "missing" };
+
+  let body: { data?: { event?: EventSummary; tabs?: Partial<EventPage["tabs"]>; redirectTo?: string } } | null;
+  if (fixtureEnabled()) {
+    const { fixtureEvent } = await import("./fixture.dev");
+    const data = fixtureEvent(slug);
+    if (!data) return { kind: "missing" };
+    body = { data };
+  } else {
+    try {
+      const res = await fetch(`${AD_SPACE_API}/public/events/${encodeURIComponent(slug)}`, {
+        headers: { accept: "application/json" },
+        next: { revalidate },
+        signal: AbortSignal.timeout(6_000),
+      });
+      if (res.status === 404) return { kind: "missing" };
+      if (!res.ok) return { kind: "unreachable" };
+      body = await res.json();
+    } catch {
+      return { kind: "unreachable" };
+    }
+  }
+
+  const data = body?.data;
+  if (typeof data?.redirectTo === "string" && SLUG_RE.test(data.redirectTo) && data.redirectTo !== slug) {
+    return { kind: "moved", slug: data.redirectTo };
+  }
+  if (!data?.event) return { kind: "unreachable" };
+  return {
+    kind: "found",
+    page: {
+      event: data.event,
+      tabs: {
+        ground: (data.tabs?.ground ?? []).map(withCardDefaults),
+        feed: (data.tabs?.feed ?? []).map(withCardDefaults),
+      },
+    },
+  };
+}
+
+/**
+ * Upcoming and ongoing events with at least one live space, for the sitemap.
+ * An empty list on any failure: a sitemap that cannot list events still lists
+ * every other page.
+ */
+export async function listPublicEvents(limit = 50): Promise<EventSummary[]> {
+  if (fixtureEnabled()) {
+    const { fixtureEvents } = await import("./fixture.dev");
+    return fixtureEvents();
+  }
+  try {
+    const res = await fetch(`${AD_SPACE_API}/public/events?limit=${limit}`, {
+      headers: { accept: "application/json" },
+      next: { revalidate: 3600 },
+      signal: AbortSignal.timeout(6_000),
+    });
+    if (!res.ok) return [];
+    const body = (await res.json()) as { data?: { events?: EventSummary[] } };
+    const events = body?.data?.events;
+    return Array.isArray(events) ? events : [];
+  } catch {
+    return [];
   }
 }

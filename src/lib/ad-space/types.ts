@@ -174,6 +174,92 @@ export interface Space {
    * nothing rather than invent a link.
    */
   creatorInvite: { code: string; url: string } | null;
+  /**
+   * The event this space is for, or null. `eventName` above stays and is
+   * written from the event's name, so older share texts keep reading right.
+   *
+   * The four fields below are from ad-space-events-v0.md. A backend that
+   * predates them sends none of them; `getPublicSpace` fills the defaults so no
+   * reader has to guess.
+   */
+  event: EventSummary | null;
+  /** The creator's own banner image, or null. */
+  bannerUrl: string | null;
+  bannerGradient: BannerGradient;
+  /** The same creator's other live or closed spaces for the same event. */
+  siblings: SpaceSibling[];
+}
+
+/* ── Events (ad-space-events-v0.md) ───────────────────────────────────── */
+
+/** The only values `bannerGradient` accepts. Colours live in `./look`. */
+export type BannerGradient = "steel" | "ember" | "night" | "slate" | "sea";
+
+export type EventCategory =
+  | "crypto"
+  | "fintech"
+  | "ai"
+  | "tech"
+  | "robotics"
+  | "science"
+  | "motorsport"
+  | "sports"
+  | "travel"
+  | "culture"
+  | "other";
+
+export interface EventSummary {
+  id: string;
+  slug: string;
+  name: string;
+  city: string;
+  /** ISO 3166-1 alpha-2, or null. */
+  country: string | null;
+  /** Calendar dates, "2026-11-12". No time zone: the day it is in that city. */
+  startsOn: string;
+  endsOn: string;
+  category: EventCategory;
+  /** The event's cover, else the city photo, else null (the client draws `steel`). */
+  coverUrl: string | null;
+  coverCredit: string | null;
+  /** Live and closed spaces. Never shown on the banner. */
+  spaceCount: number;
+}
+
+/** Placement templates are `ground`, services are `feed`. */
+export type SpaceTab = "ground" | "feed";
+
+export interface SpaceSibling {
+  path: string;
+  tab: SpaceTab;
+  title: string;
+}
+
+/** One card on an event page. */
+export interface SpaceCard {
+  spaceId: string;
+  path: string;
+  title: string;
+  tab: SpaceTab;
+  templateName: string;
+  pricingMode: PricingMode;
+  status: "live" | "closed";
+  closesAt: string;
+  creator: Pick<Creator, "xHandle" | "xName" | "xAvatarUrl" | "xVerifiedType" | "xFollowers" | "trackRecord">;
+  bannerUrl: string | null;
+  bannerGradient: BannerGradient;
+  /**
+   * `open` counts what a sponsor can still get: on a takeover board that
+   * includes a sold spot whose ladder has not stopped, as on the page's hero.
+   */
+  totals: { positions: number; open: number; sold: number };
+  /** The lowest price a sponsor can pay right now, or null when nothing can be bought. */
+  fromPriceCents: number | null;
+}
+
+export interface EventPage {
+  event: EventSummary;
+  tabs: Record<SpaceTab, SpaceCard[]>;
 }
 
 /**
