@@ -274,7 +274,8 @@ function SpaceCardTile({ card: c, event, now }: { card: SpaceCard; event: EventS
   const { xHandle, xName, xFollowers } = c.creator;
   const { delivered, missed } = c.creator.trackRecord;
   const handleLine = [
-    xHandle ? `@${xHandle}` : null,
+    // Without a name the handle is already the line above.
+    xHandle && xName ? `@${xHandle}` : null,
     typeof xFollowers === "number" ? `${compactNumber(xFollowers)} followers` : null,
   ]
     .filter(Boolean)
