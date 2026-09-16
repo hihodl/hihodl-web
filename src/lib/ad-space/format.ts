@@ -12,6 +12,9 @@ import type {
   DeliverableState,
   Fallback,
   PositionStatus,
+  Space,
+  SpaceCard,
+  SpaceTab,
   VerifiedType,
 } from "./types";
 
@@ -276,4 +279,63 @@ export function closesText(closesAt: string, closed: boolean, now = Date.now()):
   if (h >= 48) return `Closes in ${Math.floor(h / 24)} days`;
   if (h >= 1) return `Closes in ${h} h`;
   return "Closes within the hour";
+}
+
+/** What a sponsor can still get on a tab: open spots on live spaces only. */
+export function openSpots(cards: SpaceCard[]): number {
+  return cards.reduce((sum, c) => sum + (c.status === "live" ? Math.max(0, c.totals.open) : 0), 0);
+}
+
+/**
+ * The tab an event page opens on when the API does not say. More open spots on
+ * live spaces wins; on a tie, a tab with something on it beats an empty one, and
+ * the ground wins after that.
+ */
+export function defaultEventTab(tabs: Record<SpaceTab, SpaceCard[]>): SpaceTab {
+  const ground = openSpots(tabs.ground);
+  const feed = openSpots(tabs.feed);
+  if (feed !== ground) return feed > ground ? "feed" : "ground";
+  return tabs.ground.length === 0 && tabs.feed.length > 0 ? "feed" : "ground";
+}
+
+/**
+ * How many spots a sponsor can still get on a space. An open spot counts; on a
+ * takeover board so does a sold spot whose ladder has not stopped, because it
+ * can be bought from the sponsor holding it.
+ */
+export function takeableSpots(space: Pick<Space, "pricingMode" | "positions">): number {
+  const isTakeover = space.pricingMode === "takeover";
+  return space.positions.filter(
+    (p) =>
+      p.status === "open" ||
+      (isTakeover && p.status === "sold" && !!p.takeover && !p.takeover.closed && !!p.takeover.nextPriceUsdc),
+  ).length;
+}
+
+/**
+ * "Sold out" only when it is true. On a fixed-price board that is every spot
+ * sold; on a takeover board it is nothing left to take, since a sold spot there
+ * is still for sale.
+ */
+export function spaceSoldOut(space: Pick<Space, "pricingMode" | "positions" | "totals">): boolean {
+  const { totals } = space;
+  if (totals.positions === 0) return false;
+  return space.pricingMode === "takeover" ? takeableSpots(space) === 0 : totals.sold >= totals.positions;
+}
+
+/**
+ * One line on how a space is doing, for a link card or a meta description:
+ * "3 of 8 spots sold", "Sold out: all 8 spots taken", and on a takeover board
+ * "5 of 8 spots still up for grabs" or "Every spot settled: all 8 taken".
+ */
+export function spaceProgressText(space: Pick<Space, "pricingMode" | "positions" | "totals" | "kind">): string {
+  const { totals } = space;
+  const noun = space.kind === "service" ? "slots" : "spots";
+  const soldOut = spaceSoldOut(space);
+  if (space.pricingMode === "takeover") {
+    return soldOut
+      ? `Every ${noun.slice(0, -1)} settled: all ${totals.positions} taken`
+      : `${takeableSpots(space)} of ${totals.positions} ${noun} still up for grabs`;
+  }
+  return soldOut ? `Sold out: all ${totals.positions} ${noun} taken` : `${totals.sold} of ${totals.positions} ${noun} sold`;
 }

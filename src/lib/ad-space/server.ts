@@ -2,6 +2,7 @@
 import { headers as requestHeaders } from "next/headers";
 
 import { AD_SPACE_API, HANDLE_RE, SLUG_RE } from "./config";
+import { defaultEventTab } from "./format";
 import { gradientKey } from "./look";
 import type { EventPage, EventSummary, Space, SpaceCard } from "./types";
 
@@ -150,7 +151,9 @@ function withCardDefaults(card: SpaceCard): SpaceCard {
 export async function getPublicEvent(slug: string, revalidate = 30): Promise<EventLookup> {
   if (!SLUG_RE.test(slug)) return { kind: "missing" };
 
-  let body: { data?: { event?: EventSummary; tabs?: Partial<EventPage["tabs"]>; redirectTo?: string } } | null;
+  let body: {
+    data?: { event?: EventSummary; tabs?: Partial<EventPage["tabs"]>; defaultTab?: unknown; redirectTo?: string };
+  } | null;
   if (fixtureEnabled()) {
     const { fixtureEvent } = await import("./fixture.dev");
     const data = fixtureEvent(slug);
@@ -176,15 +179,14 @@ export async function getPublicEvent(slug: string, revalidate = 30): Promise<Eve
     return { kind: "moved", slug: data.redirectTo };
   }
   if (!data?.event) return { kind: "unreachable" };
+  const tabs = {
+    ground: (data.tabs?.ground ?? []).map(withCardDefaults),
+    feed: (data.tabs?.feed ?? []).map(withCardDefaults),
+  };
+  const fromApi = data.defaultTab === "ground" || data.defaultTab === "feed" ? data.defaultTab : null;
   return {
     kind: "found",
-    page: {
-      event: data.event,
-      tabs: {
-        ground: (data.tabs?.ground ?? []).map(withCardDefaults),
-        feed: (data.tabs?.feed ?? []).map(withCardDefaults),
-      },
-    },
+    page: { event: data.event, tabs, defaultTab: fromApi ?? defaultEventTab(tabs) },
   };
 }
 

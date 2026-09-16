@@ -197,15 +197,6 @@ export function SpaceSiblings({ siblings }: { siblings: SpaceSibling[] }) {
 
 /* ── The event page ────────────────────────────────────────────────── */
 
-export function openSpots(cards: SpaceCard[]): number {
-  return cards.reduce((sum, c) => sum + Math.max(0, c.totals.open), 0);
-}
-
-/** More open spots wins; a tie goes to the ground, the tab that pays for the trip. */
-export function defaultTab(tabs: Record<SpaceTab, SpaceCard[]>): SpaceTab {
-  return openSpots(tabs.feed) > openSpots(tabs.ground) ? "feed" : "ground";
-}
-
 export function EventTabs({
   slug,
   eventName,

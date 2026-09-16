@@ -260,6 +260,8 @@ export interface SpaceCard {
 export interface EventPage {
   event: EventSummary;
   tabs: Record<SpaceTab, SpaceCard[]>;
+  /** The tab to open on without `?tab=`: the API's, else computed the same way here. */
+  defaultTab: SpaceTab;
 }
 
 /**

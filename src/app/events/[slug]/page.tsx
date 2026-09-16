@@ -1,19 +1,12 @@
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 
-import {
-  EventBanner,
-  EventTabs,
-  SpaceCardGrid,
-  defaultTab,
-  eventPath,
-  openSpots,
-} from "@/components/ad-space/events";
+import { EventBanner, EventTabs, SpaceCardGrid, eventPath } from "@/components/ad-space/events";
 import { SlimHeader } from "@/components/ad-space/sections";
 import { eyebrow } from "@/components/ad-space/ui";
 import { DownloadLink } from "@/components/site/DownloadLink";
 import { Wordmark } from "@/components/site/Wordmark";
-import { eventDates } from "@/lib/ad-space/format";
+import { eventDates, openSpots } from "@/lib/ad-space/format";
 import { getPublicEvent } from "@/lib/ad-space/server";
 import type { SpaceTab } from "@/lib/ad-space/types";
 
@@ -117,8 +110,8 @@ export default async function EventPage({
     );
   }
 
-  const { event, tabs } = found.page;
-  const active = tabParam(searchParams) ?? defaultTab(tabs);
+  const { event, tabs, defaultTab } = found.page;
+  const active = tabParam(searchParams) ?? defaultTab;
   const now = Date.now();
   const total = tabs.ground.length + tabs.feed.length;
 

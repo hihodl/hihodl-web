@@ -696,8 +696,9 @@ export function fixtureEvents(): EventSummary[] {
 }
 
 export function fixtureEvent(slug: string): EventPage | { redirectTo: string } | null {
-  if (slug === TOKEN2049.slug) return { event: TOKEN2049, tabs: token2049Tabs() };
-  if (slug === DEVCON.slug) return { event: DEVCON, tabs: devconTabs() };
+  // As the API computes it: open spots on live spaces, feed 14 to ground 13.
+  if (slug === TOKEN2049.slug) return { event: TOKEN2049, tabs: token2049Tabs(), defaultTab: "feed" };
+  if (slug === DEVCON.slug) return { event: DEVCON, tabs: devconTabs(), defaultTab: "ground" };
   if (slug === "token-2049-singapore") return { redirectTo: TOKEN2049.slug };
   return null;
 }
