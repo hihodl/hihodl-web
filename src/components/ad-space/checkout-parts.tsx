@@ -55,7 +55,6 @@ export function SolanaOptions({
   onQr,
   onMobileLink,
   disabled = false,
-  qr = true,
 }: {
   wallets: SolanaWallet[];
   mobile: boolean;
@@ -65,11 +64,6 @@ export function SolanaOptions({
   onMobileLink: () => void;
   /** Every way to pay is shown but can't be pressed, e.g. while the server asks the payer to wait. */
   disabled?: boolean;
-  /**
-   * False where Solana Pay can't be used: an accepted offer is paid through a
-   * checkout bound to its token, and a Solana Pay request only names a position.
-   */
-  qr?: boolean;
 }) {
   return (
     <div className="flex flex-col gap-3">
@@ -85,7 +79,7 @@ export function SolanaOptions({
         </button>
       ))}
 
-      {qr && mobile && mobileLink && (
+      {mobile && mobileLink && (
         // The same Solana Pay link the QR carries, for a wallet on this phone.
         <a
           href={disabled ? undefined : mobileLink}
@@ -97,25 +91,18 @@ export function SolanaOptions({
         </a>
       )}
 
-      {qr && (
-        <button
-          type="button"
-          className={wallets.length || mobile ? btnSecondary : btnPrimary}
-          disabled={disabled}
-          onClick={onQr}
-        >
-          Pay with QR
-        </button>
-      )}
+      <button
+        type="button"
+        className={wallets.length || mobile ? btnSecondary : btnPrimary}
+        disabled={disabled}
+        onClick={onQr}
+      >
+        Pay with QR
+      </button>
 
-      {qr && wallets.length === 0 && !mobile && (
+      {wallets.length === 0 && !mobile && (
         <p className="text-tiny text-text-faint">
           No Solana wallet in this browser. Scan the QR with the wallet on your phone.
-        </p>
-      )}
-      {!qr && wallets.length === 0 && (
-        <p className="text-small text-text-muted">
-          No Solana wallet in this browser. Open this page in Phantom, Solflare or Backpack, or pay on Base or Polygon.
         </p>
       )}
     </div>

@@ -27,7 +27,7 @@ import {
   isSessionSpace,
   timeLeft,
 } from "@/lib/ad-space/format";
-import { describeOfferError, startOfferCheckout } from "@/lib/ad-space/offers-client";
+import { describeOfferError, offerSolanaPayLink, startOfferCheckout } from "@/lib/ad-space/offers-client";
 import { PUBLIC_CHAINS } from "@/lib/orders/chains.public";
 import type { Booking, Chain, EvmPayload, OfferView, Order, Position, Space } from "@/lib/ad-space/types";
 
@@ -66,8 +66,10 @@ import { btnPrimary, btnSecondary, btnSmallSecondary, eyebrow } from "./ui";
  *
  * With `offer`, this pays an accepted offer or bid (hispace-offers-v0.md): the
  * checkout is asked for through the offer's token and priced at the agreed
- * amount, and everything after it (confirm, content) is the same flow. There is
- * no Solana Pay QR for it, since that request only names a position.
+ * amount, and everything after it (confirm, content) is the same flow. Its
+ * Solana Pay QR comes from the offer too (`POST /public/offers/:token/checkout`
+ * with `qr: true`), which binds this browser's checkout key to the offer; the
+ * page then waits on `GET /public/checkout` with that key like any QR payment.
  */
 
 type Phase =
@@ -198,9 +200,11 @@ export function Checkout({
     };
   }, [position.id]);
 
-  /* The Solana Pay link for the mobile button, computed once the key is known. */
+  /* The Solana Pay link for the mobile button, computed once the key is known.
+     An accepted offer's link has to be asked for (it binds the key), so it is
+     only fetched when the sponsor chooses QR, whose screen has the same button. */
   useEffect(() => {
-    if (phase.kind !== "choose" || chain !== "solana") return;
+    if (offerToken || phase.kind !== "choose" || chain !== "solana") return;
     let live = true;
     void checkoutId(keyRef.current).then((c) => {
       if (live) setMobileLink(solanaPayLink(position.id, c));
@@ -208,7 +212,7 @@ export function Checkout({
     return () => {
       live = false;
     };
-  }, [phase.kind, chain, position.id]);
+  }, [phase.kind, chain, position.id, offerToken]);
 
   /* Countdown tick while something is held. */
   const ticking = phase.kind === "qr" || phase.kind === "confirming" || phase.kind === "evm-sign";
@@ -382,8 +386,22 @@ export function Checkout({
 
   async function startQr() {
     setNotice(null);
-    const c = await checkoutId(keyRef.current);
-    setPhase({ kind: "qr", link: solanaPayLink(position.id, c) });
+    setOfferOtherSpot(false);
+    if (!offerToken) {
+      const c = await checkoutId(keyRef.current);
+      setPhase({ kind: "qr", link: solanaPayLink(position.id, c) });
+      return;
+    }
+    // An accepted offer: the server binds this key to the offer and answers the link.
+    setPhase({ kind: "busy", label: "Preparing the QR…" });
+    try {
+      const link = await withFreshKey((key) => offerSolanaPayLink(offerToken, key));
+      setPhase({ kind: "qr", link });
+    } catch (e) {
+      setNotice(explain(e, "solana"));
+      setOfferOtherSpot(e instanceof CheckoutError && GONE_CODES.has(e.code));
+      setPhase({ kind: "choose" });
+    }
   }
 
   async function payWithEvm(evmChain: "base" | "polygon") {
@@ -537,7 +555,6 @@ export function Checkout({
                       onWallet={payWithSolanaWallet}
                       onQr={() => void startQr()}
                       onMobileLink={() => void startQr()}
-                      qr={!offer}
                     />
                   ) : (
                     <div className="flex flex-col gap-4">
