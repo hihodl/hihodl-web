@@ -239,6 +239,9 @@ export interface OfferView {
   leading: boolean | null;
   createdAt: string;
   updatedAt: string;
+  /** The space's title and web path ("/s/<handle>/<slug>"), when the server joins them in. */
+  spaceTitle?: string | null;
+  spacePath?: string | null;
 }
 
 /** `GET /public/offers/:token`, and what `respond` answers. */
@@ -321,7 +324,12 @@ export interface Space {
   deliverables: Deliverable[];
   template: Template;
   positions: Position[];
-  totals: { positions: number; sold: number; committedCents: number; totalCents: number };
+  /**
+   * `committedCents`: paid so far (on `offers` and `bids`, the agreed amounts of
+   * paid orders). `totalCents`: every listed price added up, null on `offers`
+   * and `bids`, which have no total to be "of".
+   */
+  totals: { positions: number; sold: number; committedCents: number; totalCents: number | null };
   updates: Update[];
   share: { url: string; text: string };
   /**
@@ -423,9 +431,10 @@ export interface SpaceCard {
   templateName: string | null;
   pricingMode: PricingMode;
   /**
-   * ASSUMPTION (the offers contract adds these to the Space, not the card): a
-   * card carries them too so the event page can say how a space sells. Missing
-   * reads as a space that takes no offers and has no bidding end.
+   * Board and event cards carry these (hispace-offers-v0.md, Backend
+   * implementation) so the event page can say how a space sells: "Accepts
+   * offers", "Make an offer", "Bidding · 2d left" from `biddingEndsAt`. Missing
+   * (an older server) reads as a space that takes no offers and has no end.
    */
   acceptsOffers?: boolean;
   biddingEndsAt?: string | null;

@@ -153,6 +153,12 @@ function Card({ space: s }: { space: Space }) {
   const full = [s.eventName, s.template.name].filter(Boolean).join(" · ");
   const eyebrow = full.length <= 38 ? full : (s.eventName ?? s.template.name);
   const bids = bidsSummaryText(s);
+  /* Offers and bids have no listed total (`totalCents` null) and commit only
+     what was paid at an agreed amount: nothing before the first sale, rather
+     than "$0 committed". */
+  const noTotal = totals.totalCents === null || s.pricingMode === "offers" || s.pricingMode === "bids";
+  const committedLine =
+    noTotal && totals.committedCents <= 0 ? null : `${usdFromCents(totals.committedCents)} committed in USDC`;
 
   return (
     <div
@@ -214,11 +220,9 @@ function Card({ space: s }: { space: Space }) {
           </div>
           {bids ? (
             <div style={{ display: "flex", marginTop: 18, fontSize: 32, color: C.amber }}>{bids}</div>
-          ) : (
-            <div style={{ display: "flex", marginTop: 18, fontSize: 28, color: C.muted }}>
-              {`${usdFromCents(totals.committedCents)} committed in USDC`}
-            </div>
-          )}
+          ) : committedLine ? (
+            <div style={{ display: "flex", marginTop: 18, fontSize: 28, color: C.muted }}>{committedLine}</div>
+          ) : null}
         </div>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>

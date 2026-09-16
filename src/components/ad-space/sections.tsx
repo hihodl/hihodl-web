@@ -90,9 +90,12 @@ export function SpaceHero({ space }: { space: Space }) {
   const noun = session ? "sessions" : space.kind === "service" ? "slots" : "spots";
   const soldWord = session ? "booked" : "sold";
   const isTakeover = space.pricingMode === "takeover";
-  /* With no set prices (offers) or prices still being bid up, "of $X" would
-     name a total nobody has agreed to. */
-  const namesPrice = space.pricingMode === "offers" || space.pricingMode === "bids";
+  /* Offers and bids have no listed total (the server sends `totalCents: null`):
+     "of $X" would name a total nobody has agreed to. What they commit is the
+     agreed amounts of paid orders, so before a sale there is nothing to show,
+     and "$0 committed" would read as a space nobody wants. */
+  const noTotal = totals.totalCents === null || space.pricingMode === "offers" || space.pricingMode === "bids";
+  const showCommitted = !noTotal || totals.committedCents > 0;
 
   /* On a takeover board a sold spot is not gone — it can be bought from the
      sponsor holding it. So "sold out" is only true here when there is nothing
@@ -150,15 +153,21 @@ export function SpaceHero({ space }: { space: Space }) {
                   </>
                 )}
               </p>
-              <p className="text-small">
-                <span className="font-mono text-text">{usdFromCents(totals.committedCents)}</span>
-                {/* A takeover board has no ceiling to measure against: every
-                    takeover raises the total, so "of" would name a number
-                    that is already out of date by the next sponsor. */}
-                <span className="text-text-faint">
-                  {isTakeover || namesPrice ? " committed so far" : ` committed of ${usdFromCents(totals.totalCents)}`}
-                </span>
-              </p>
+              {showCommitted ? (
+                <p className="text-small">
+                  <span className="font-mono text-text">{usdFromCents(totals.committedCents)}</span>
+                  {/* A takeover board has no ceiling to measure against: every
+                      takeover raises the total, so "of" would name a number
+                      that is already out of date by the next sponsor. */}
+                  <span className="text-text-faint">
+                    {isTakeover || noTotal || totals.totalCents === null
+                      ? " committed so far"
+                      : ` committed of ${usdFromCents(totals.totalCents)}`}
+                  </span>
+                </p>
+              ) : (
+                <p className="text-small text-text-faint">No sales yet</p>
+              )}
             </div>
             <div
               className="h-2 overflow-hidden rounded-[4px] bg-white/[0.06]"
