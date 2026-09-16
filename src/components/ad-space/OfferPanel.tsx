@@ -22,7 +22,7 @@ import { AppPrompt } from "./AppPrompt";
 import { Checkout } from "./Checkout";
 import { Spinner } from "./checkout-parts";
 import { type CheckedFunds, FundsCheck, usableProof } from "./FundsCheck";
-import { AmountField, amountProblem } from "./OfferSheet";
+import { AmountField, amountProblem, proofSpent } from "./OfferSheet";
 import { btnPrimary, btnSecondary, btnSmallSecondary, card, eyebrow, pill } from "./ui";
 import { useServerNow } from "./useServerNow";
 
@@ -168,6 +168,12 @@ export function OfferPanel({
   const biddingOpen =
     bid && positionOffers?.biddingOpen !== false && !(Number.isFinite(biddingEnd) && now !== null && biddingEnd <= now);
   const canRaise = open && (!bid || biddingOpen);
+  /*
+   * Withdraw only while the thread waits (pending or countered). An accepted
+   * one is never withdrawn: unpaid, it lapses. The leading bid stays once
+   * bidding has ended (`bid_locked`): it is the bid the creator is choosing.
+   */
+  const canWithdraw = open && !(bid && offer.leading === true && !biddingOpen);
   /* Only this browser can know whether it holds the payment's key: read after mount. */
   const [paidHere, setPaidHere] = useState(false);
   const positionId = position?.id ?? null;
@@ -185,7 +191,7 @@ export function OfferPanel({
               {what}, on {handle ? `@${handle}’s` : "the creator’s"} HiSpace
             </h1>
             <p className="mt-1 break-words text-small text-text-muted [overflow-wrap:anywhere]">
-              {[summary.event?.name, summary.title].filter(Boolean).join(" · ")}
+              {[summary.event?.name, summary.title || offer.spaceTitle].filter(Boolean).join(" · ")}
             </p>
           </div>
           <span className={STATUS_PILL[offer.status]}>
@@ -214,8 +220,8 @@ export function OfferPanel({
         </dl>
 
         <div className="flex flex-wrap gap-2">
-          {summary.path && (
-            <a href={summary.path} className={btnSmallSecondary}>
+          {(summary.path ?? offer.spacePath) && (
+            <a href={(summary.path ?? offer.spacePath)!} className={btnSmallSecondary}>
               See the space
             </a>
           )}
@@ -286,7 +292,7 @@ export function OfferPanel({
           />
         )}
 
-        {(canRaise || open || offer.status === "accepted") && !raising && (
+        {(canRaise || canWithdraw) && !raising && (
           <div className="flex flex-wrap gap-2 border-t border-[color:var(--color-hairline)] pt-4">
             {canRaise && space && (
               <button
@@ -302,7 +308,7 @@ export function OfferPanel({
                 {bid ? "Raise my bid" : "Raise my offer"}
               </button>
             )}
-            {confirmWithdraw ? (
+            {!canWithdraw ? null : confirmWithdraw ? (
               <>
                 <button
                   type="button"
@@ -525,7 +531,8 @@ function Standing({
               ) : (
                 " within 24 hours"
               )}
-              , from any wallet, straight to the creator. If it isn&rsquo;t paid in time, it goes back to the space.
+              , from any wallet, straight to the creator. An accepted {thing} can&rsquo;t be withdrawn: if it isn&rsquo;t
+              paid in time, the acceptance lapses and the {subject} goes back to the space.
             </>,
           )}
         </div>
@@ -625,18 +632,21 @@ function RaiseForm({
   const [wantsCheck, setWantsCheck] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const cents = parseUsdToCents(amount);
+  const counter = offer.status === "countered" ? usdcToCents(offer.counterUsdc) : null;
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     setProblem(null);
-    const p = amountProblem(cents, { kind: offer.kind, minimum, belowCents, aboveCents: last });
+    const p = amountProblem(cents, { kind: offer.kind, minimum, belowCents, aboveCents: last, counterCents: counter });
     if (p) return setProblem(p);
     const proofOk = usableProof(checked, cents, now);
     try {
       await onRaise({ action: "raise", amountCents: cents!, ...(proofOk && checked ? { proof: checked.proof } : {}) });
     } catch (err) {
-      // The sentence is already on the page. A bid above what was checked before needs a fresh check.
-      if (err instanceof CheckoutError && ["bid_needs_backing", "proof_invalid", "proof_expired"].includes(err.code)) {
+      // The sentence is already on the page. A bid above what was checked before
+      // needs a fresh check, and a proof the server consumed before failing on
+      // its side (`chain_unavailable`, any 5xx) is spent.
+      if (proofSpent(err) && (checked || (err instanceof CheckoutError && err.code === "bid_needs_backing"))) {
         setChecked(null);
         setWantsCheck(true);
       }
@@ -657,7 +667,7 @@ function RaiseForm({
         creatorHandle={space.creator.xHandle}
         hint={`Your last ${bid ? "bid" : "offer"} was ${offer.amountUsdc} USDC.${
           bid && positionOffers?.nextMinimumBidUsdc ? ` The next bid has to be at least ${positionOffers.nextMinimumBidUsdc} USDC.` : ""
-        }`}
+        }${counter !== null && offer.counterUsdc ? ` Stay under the counter of ${offer.counterUsdc} USDC, or accept the counter instead.` : ""}`}
         disabled={busy}
       />
       {bid &&

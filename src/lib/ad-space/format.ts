@@ -498,11 +498,15 @@ export function pricingChipText(
   }
 }
 
-/** "420.00" to 42000, only to compare two server amounts. */
+/**
+ * "420.00" to 42000, only to compare two server amounts. The server writes up to
+ * six decimals ("441.525"); past the cent it rounds up, never down.
+ */
 function centsOf(usdc: string | null | undefined): number | null {
-  if (!usdc || !/^\d+(\.\d{1,2})?$/.test(usdc.replace(/,/g, ""))) return null;
-  const [w, f = ""] = usdc.replace(/,/g, "").split(".");
-  return Number(w) * 100 + Number(f.padEnd(2, "0"));
+  const m = /^(\d+)(?:\.(\d{1,6}))?$/.exec((usdc ?? "").replace(/,/g, ""));
+  if (!m) return null;
+  const f = (m[2] ?? "").padEnd(2, "0");
+  return Number(m[1]) * 100 + Number(f.slice(0, 2)) + (f.length > 2 && /[1-9]/.test(f.slice(2)) ? 1 : 0);
 }
 
 /**

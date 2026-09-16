@@ -45,6 +45,18 @@ import { btnPrimary, btnSmallSecondary, eyebrow, input } from "./ui";
 
 /* ── The amount, with what it comes to ───────────────────────────────── */
 
+/**
+ * Whether a refusal leaves the funds check that went with it spent. The server
+ * consumes the nonce before it reads the balance, so a failure on its side
+ * after that (`chain_unavailable`, or any 5xx) spent it too.
+ */
+export function proofSpent(err: unknown): boolean {
+  if (!(err instanceof CheckoutError)) return false;
+  return (
+    ["proof_invalid", "proof_expired", "bid_needs_backing", "chain_unavailable"].includes(err.code) || err.status >= 500
+  );
+}
+
 export function AmountField({
   label,
   value,
@@ -65,6 +77,7 @@ export function AmountField({
   disabled?: boolean;
 }) {
   const cents = parseUsdToCents(value);
+  // The server's own arithmetic, to the sixth decimal it writes (offerFigures).
   const figures = cents !== null && cents > 0 ? offerFigures(cents, feeBps, feePayer) : null;
   const pct = `${feeBps / 100}%`;
   return (
@@ -96,13 +109,13 @@ export function AmountField({
         <div>
           <dt className="text-tiny text-text-faint">You pay</dt>
           <dd className="mt-0.5 font-mono text-small text-text">
-            {figures ? `$${usdcFromCents(figures.sponsorPaysCents)}` : "—"}
+            {figures ? `${figures.sponsorPaysUsdc} USDC` : "—"}
           </dd>
         </div>
         <div>
           <dt className="text-tiny text-text-faint">@{creatorHandle} receives</dt>
           <dd className="mt-0.5 font-mono text-small text-text">
-            {figures ? `$${usdcFromCents(figures.creatorReceivesCents)}` : "—"}
+            {figures ? `${figures.creatorReceivesUsdc} USDC` : "—"}
           </dd>
         </div>
         <div className="col-span-2 text-tiny text-text-faint">
@@ -118,12 +131,22 @@ export function AmountField({
 /** What is wrong with an amount, in words, or null when it can be sent. */
 export function amountProblem(
   cents: number | null,
-  opts: { kind: OfferKind; minimum: number; belowCents: number | null; aboveCents?: number | null },
+  opts: {
+    kind: OfferKind;
+    minimum: number;
+    belowCents: number | null;
+    aboveCents?: number | null;
+    /** The creator's standing counter: a raise stays under it (`raise_not_below_counter`). */
+    counterCents?: number | null;
+  },
 ): string | null {
   const thing = opts.kind === "bid" ? "bid" : "offer";
   if (cents === null || cents <= 0) return `Type your ${thing} in dollars, like 300 or 300.50.`;
   if (opts.aboveCents != null && cents <= opts.aboveCents) {
     return `A raise has to be more than your last ${thing} of $${usdcFromCents(opts.aboveCents)}.`;
+  }
+  if (opts.counterCents != null && cents >= opts.counterCents) {
+    return `That's the counter-offer of $${usdcFromCents(opts.counterCents)} or more. To pay the counter, accept it instead of raising.`;
   }
   if (cents < opts.minimum) {
     return opts.kind === "bid"
@@ -255,7 +278,9 @@ export function OfferSheet({
           describeError(err, checked?.proof.chain ?? null, session ? "session" : "spot"),
       );
       // A proof is single use and bound to its amount: after these it is spent.
-      if (err instanceof CheckoutError && ["proof_invalid", "proof_expired", "bid_needs_backing"].includes(err.code)) {
+      // So is one the server consumed before a balance read or anything else
+      // failed on its side (`chain_unavailable`, any 5xx): check again.
+      if (proofSpent(err) && (checked || (err instanceof CheckoutError && err.code === "bid_needs_backing"))) {
         setChecked(null);
         setWantsCheck(true);
       }

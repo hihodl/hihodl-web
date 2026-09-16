@@ -54,9 +54,19 @@ export function parseUsdToCents(input: string): number | null {
   return Number.isSafeInteger(cents) ? cents : null;
 }
 
-/** A server amount, "441.00", in cents, for comparing and prefilling only. */
+/**
+ * A server USDC string, in cents, for comparing and prefilling only. The server
+ * writes up to six decimals ("315.525", "26.2605"); anything past the cent is
+ * rounded UP, so a minimum is never read as less than it is. Null for anything
+ * that is not a plain decimal.
+ */
 export function usdcToCents(usdc: string | null | undefined): number | null {
-  return usdc ? parseUsdToCents(usdc) : null;
+  const m = /^(\d{1,12})(?:\.(\d{1,6}))?$/.exec((usdc ?? "").trim().replace(/,/g, ""));
+  if (!m) return null;
+  const frac = (m[2] ?? "").padEnd(2, "0");
+  const extra = frac.length > 2 && /[1-9]/.test(frac.slice(2)) ? 1 : 0;
+  const cents = Number(m[1]) * 100 + Number(frac.slice(0, 2)) + extra;
+  return Number.isSafeInteger(cents) ? cents : null;
 }
 
 /** 31500 to "315.00", the way the server writes USDC. */
@@ -66,28 +76,50 @@ export function usdcFromCents(cents: number): string {
   return `${sign}${Math.floor(abs / 100).toLocaleString("en-US")}.${String(abs % 100).padStart(2, "0")}`;
 }
 
+/** USDC base units (6 decimals) per cent. */
+const BASE_PER_CENT = 10_000;
+
+/**
+ * USDC base units written the way the server writes them (backend rules.ts
+ * `formatUsdc`): at least two decimals, at most six, trailing zeros trimmed.
+ * 315_525_000 to "315.525", 300_000_000 to "300.00".
+ */
+export function formatUsdcBase(base: number): string {
+  const neg = base < 0;
+  const abs = Math.abs(Math.trunc(base));
+  const whole = Math.floor(abs / 1_000_000);
+  const frac = String(abs % 1_000_000).padStart(6, "0").replace(/0+$/, "");
+  return `${neg ? "-" : ""}${whole}.${frac.length < 2 ? frac.padEnd(2, "0") : frac}`;
+}
+
 export interface OfferFigures {
-  /** What the wallet would sign for. */
-  sponsorPaysCents: number;
+  /** What the wallet would sign for, as the server would write it. */
+  sponsorPaysUsdc: string;
   /** What would reach the creator. */
-  creatorReceivesCents: number;
-  feeCents: number;
+  creatorReceivesUsdc: string;
+  feeUsdc: string;
 }
 
 /**
  * What an amount the sponsor is still typing comes to, before the server has
  * seen it. The amount is the creator's side, before our fee, as `amountCents`
- * is in the contract. The fee is rounded to the cent, half up.
+ * is in the contract.
  *
- * ASSUMPTION: the server rounds the same way. Once an offer exists every
- * figure on screen is the server's (`sponsorPaysUsdc`, `agreedSponsorPaysUsdc`),
- * and this is only the preview under the input.
+ * This is the server's own arithmetic (backend rules.ts `orderAmounts`): the
+ * amount in USDC base units, the fee `base * bps / 10_000` with no rounding
+ * (exact for whole cents), written like `formatUsdc`. So $300.50 at 5% shows
+ * 315.525, the very figure the offer then comes back with. Integers only: at
+ * most $25,000 at 10,000 bps stays well inside a safe integer. Null for an
+ * amount that isn't whole cents in range, or a fee out of range.
  */
-export function offerFigures(amountCents: number, feeBps: number, feePayer: "sponsor" | "creator"): OfferFigures {
-  const feeCents = Math.round((amountCents * feeBps) / 10_000);
+export function offerFigures(amountCents: number, feeBps: number, feePayer: "sponsor" | "creator"): OfferFigures | null {
+  if (!Number.isSafeInteger(amountCents) || amountCents < 0 || amountCents > OFFER_MAX_CENTS) return null;
+  if (!Number.isInteger(feeBps) || feeBps < 0 || feeBps > 10_000) return null;
+  const listed = amountCents * BASE_PER_CENT;
+  const fee = Math.floor((listed * feeBps) / 10_000);
   return feePayer === "sponsor"
-    ? { sponsorPaysCents: amountCents + feeCents, creatorReceivesCents: amountCents, feeCents }
-    : { sponsorPaysCents: amountCents, creatorReceivesCents: amountCents - feeCents, feeCents };
+    ? { sponsorPaysUsdc: formatUsdcBase(listed + fee), creatorReceivesUsdc: formatUsdcBase(listed), feeUsdc: formatUsdcBase(fee) }
+    : { sponsorPaysUsdc: formatUsdcBase(listed), creatorReceivesUsdc: formatUsdcBase(listed - fee), feeUsdc: formatUsdcBase(fee) };
 }
 
 /* ── How a space sells ────────────────────────────────────────────────── */
@@ -205,6 +237,24 @@ export function startOfferCheckout(
   body: { chain: Chain; sponsorAddress: string },
 ): Promise<SolanaCheckout | EvmCheckout> {
   return tokenCall(token, "/checkout", { method: "POST", json: body, key });
+}
+
+/**
+ * Solana Pay for an accepted offer: the transaction-request link a phone wallet
+ * scans, bound to this browser's checkout key and to the offer. The page then
+ * waits on `GET /public/checkout` with the same key, exactly as for a spot.
+ * Answers a `solana:` link whether the server sends one or the bare https URL.
+ */
+export async function offerSolanaPayLink(token: string, key: string): Promise<string> {
+  const data = await tokenCall<{ solanaPayUrl?: unknown }>(token, "/checkout", {
+    method: "POST",
+    json: { chain: "solana", qr: true },
+    key,
+  });
+  const url = typeof data?.solanaPayUrl === "string" ? data.solanaPayUrl : "";
+  if (/^solana:/i.test(url)) return url;
+  if (/^https:\/\//i.test(url)) return `solana:${encodeURIComponent(url)}`;
+  throw new CheckoutError("server", 500);
 }
 
 /* ── The manage link ──────────────────────────────────────────────────── */
@@ -330,7 +380,7 @@ export function describeOfferError(e: unknown, ctx: OfferErrorContext = {}): str
     case "contact_invalid":
       return "That contact doesn't look right. An X or Telegram handle, or a full email address.";
     case "message_invalid":
-      return `A message is up to ${OFFER_MESSAGE_MAX} characters.`;
+      return `The message can't be sent: keep it to ${OFFER_MESSAGE_MAX} characters, with no links, emails, phone numbers, @handles or wallet addresses. Your contact goes in its own field.`;
     case "proof_invalid":
       return "Your wallet's signature didn't check out. Check your funds again with the same wallet.";
     case "proof_expired":
@@ -339,13 +389,25 @@ export function describeOfferError(e: unknown, ctx: OfferErrorContext = {}): str
       return `This creator doesn't take payments on ${net}. Pick another network.`;
     case "raise_too_low":
       return `A raise has to be more than your last ${thing}.`;
+    case "raise_not_below_counter":
+      return "That's the creator's counter or more. To pay the counter, use Accept instead of raising.";
+    case "offer_required":
+      return `This space sells by offers or bids, so there's no price to pay straight away. Make an offer or bid, and pay once it's accepted.`;
+    case "offer_target_invalid":
+      return "This offer doesn't match how the space is laid out: on an item it goes on a spot, on a service it's for any slot. Refresh the page and try again.";
+    case "offer_expired":
+      return `This ${thing}'s time ran out before that went through, so it can't change any more. The page now shows where it stands.`;
+    case "bid_locked":
+      return "Bidding has ended and yours is the highest bid, so it can't be withdrawn now. If it's accepted and you don't pay within 24 hours, it lapses.";
+    case "blocked":
+      return "You've blocked this creator in HOLD, so you can't sponsor, make offers or bid on their spaces.";
     case "space_closed":
     case "space_not_live":
       return "This HiSpace has closed, so it takes no more offers or bids.";
     case "position_sold":
       return subject === "session" ? "Every session here has been booked." : "This spot has just sold.";
     case "own_space":
-      return "This is your own space, so you can't make an offer on it.";
+      return "This is your own space, so you can't sponsor it, make an offer or bid on it.";
     case "too_many_offers":
       return "You already have 5 open offers on this space with this contact. Wait for an answer, or withdraw one first.";
     case "position_reserved": {
@@ -379,7 +441,7 @@ export function describeOfferError(e: unknown, ctx: OfferErrorContext = {}): str
     case "offers_only_on_fixed":
       return "Only a space with a fixed price can also take offers.";
     case "bidding_end_invalid":
-      return "The end of bidding has to be at least a day after publishing and two days before the space closes.";
+      return "The end of bidding has to be at least 24 hours after publishing and at least 50 hours before the space closes.";
     case "reserve_below_opening_bid":
       return "The reserve can't be below the opening bid.";
     case "minimum_not_below_price":
@@ -408,4 +470,7 @@ export const OFFER_STALE_CODES: ReadonlySet<string> = new Set([
   "position_sold",
   "space_closed",
   "too_many_rounds",
+  "offer_expired",
+  "bid_locked",
+  "raise_not_below_counter",
 ]);

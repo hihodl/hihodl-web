@@ -181,7 +181,12 @@ export async function evmAccount(provider: Eip1193Provider): Promise<string> {
   return address;
 }
 
-/** `personal_sign` of plain text. The server recovers the address from it. */
+/**
+ * `personal_sign` of plain text. The server recovers the address from it, or,
+ * for a smart-contract wallet on Base, asks the wallet itself (EIP-1271). So any
+ * hex signature is passed on as it comes, whatever its length: nothing here
+ * decides which wallets may check their funds.
+ */
 export async function signEvmMessage(provider: Eip1193Provider, address: string, message: string): Promise<string> {
   const signature = await provider.request({ method: "personal_sign", params: [utf8Hex(message), address] });
   if (typeof signature !== "string" || !/^0x[0-9a-fA-F]+$/.test(signature)) throw new Error("no_signature");
