@@ -19,13 +19,28 @@
 
 import { NextResponse } from "next/server";
 
-import { AD_SPACE_API, SITE_URL } from "@/lib/ad-space/config";
+import { AD_SPACE_API, HANDLE_RE, SITE_URL, SLUG_RE } from "@/lib/ad-space/config";
+import { upstreamHeaders } from "@/lib/ad-space/server";
 
 /** Always fresh: a destination corrected after a rejection must take effect now. */
 export const dynamic = "force-dynamic";
 
 /** Crockford's alphabet, as minted by the backend. */
 const CODE_RE = /^[0-9A-HJ-NP-TV-Z]{4,16}$/;
+
+/**
+ * A space's own page, as the backend names it: `/s/<handle>/<slug>`, or
+ * `/s/id/<spaceId>` for a creator with no handle on record. Anything else is
+ * not a path this handler sends a person to.
+ */
+function spacePathOrNull(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const m = /^\/s\/([^/?#]+)\/([^/?#]+)$/.exec(value);
+  if (!m) return null;
+  const [, handle, slug] = m;
+  const byId = handle === "id" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
+  return byId || (HANDLE_RE.test(handle) && SLUG_RE.test(slug)) ? value : null;
+}
 
 /** Long enough for a cold backend, short enough that nobody walks away. */
 const TIMEOUT_MS = 4000;
@@ -40,16 +55,25 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
       cache: "no-store",
       // Passed through so the backend can tell a preview card fetcher from a
       // person with a camera. It counts one of those and not the other.
-      headers: { "user-agent": request.headers.get("user-agent") ?? "" },
+      headers: upstreamHeaders(request.headers, { "user-agent": request.headers.get("user-agent") ?? "" }),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     if (!res.ok) return NextResponse.redirect(SITE_URL, 307);
 
-    const body = (await res.json()) as { data?: { url?: string; spaceId?: string } };
+    const body = (await res.json()) as { data?: { url?: string | null; spaceId?: string; spacePath?: string } };
     const url = body?.data?.url;
+
+    // A known code whose sponsor content is not approved yet: no destination
+    // of its own, so the scan lands on the creator's page, which is where the
+    // person scanning was looking anyway.
+    if (url === null || url === undefined) {
+      const path = spacePathOrNull(body?.data?.spacePath);
+      return NextResponse.redirect(path ? `${SITE_URL}${path}` : SITE_URL, 307);
+    }
+
     // https only, checked again here: this handler is what actually moves a
     // person, and it does not move them anywhere the backend did not name.
-    if (!url || !url.startsWith("https://")) return NextResponse.redirect(SITE_URL, 307);
+    if (typeof url !== "string" || !url.startsWith("https://")) return NextResponse.redirect(SITE_URL, 307);
 
     // 307 and not 301: the destination is a database row that can change, and
     // a permanent redirect would be cached in a phone for as long as it liked.
