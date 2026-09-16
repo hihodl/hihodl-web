@@ -13,6 +13,8 @@ export interface SolanaProvider {
   publicKey?: { toString(): string } | null;
   connect(opts?: unknown): Promise<unknown>;
   signAndSendTransaction(tx: unknown, opts?: unknown): Promise<unknown>;
+  /** Phantom, Solflare and Backpack answer `{ signature }`; some wallets the bytes alone. */
+  signMessage?(message: Uint8Array, display?: string): Promise<unknown>;
 }
 
 export interface Eip1193Provider {
@@ -112,4 +114,72 @@ export async function switchEvmChain(
       throw switchError;
     }
   }
+}
+
+/* ── Signing a plain-text message (the offers funds check) ─────────────── */
+
+const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
+/** Bytes to base58 (Bitcoin alphabet), as Solana writes signatures. */
+export function base58(bytes: Uint8Array): string {
+  if (bytes.length === 0) return "";
+  const digits: number[] = [0];
+  for (const byte of bytes) {
+    let carry = byte;
+    for (let i = 0; i < digits.length; i++) {
+      carry += digits[i] << 8;
+      digits[i] = carry % 58;
+      carry = (carry / 58) | 0;
+    }
+    while (carry > 0) {
+      digits.push(carry % 58);
+      carry = (carry / 58) | 0;
+    }
+  }
+  let out = "";
+  for (const byte of bytes) {
+    if (byte !== 0) break;
+    out += "1";
+  }
+  for (let i = digits.length - 1; i >= 0; i--) out += B58[digits[i]];
+  // All-zero input: the leading "1"s already say it, and the lone 0 digit must not add another.
+  return bytes.every((b) => b === 0) ? out.slice(0, bytes.length) : out;
+}
+
+/** UTF-8 text as a 0x hex string, which is what `personal_sign` takes. */
+export function utf8Hex(text: string): string {
+  return `0x${Array.from(new TextEncoder().encode(text), (b) => b.toString(16).padStart(2, "0")).join("")}`;
+}
+
+/**
+ * Connect a Solana wallet and sign `message` as UTF-8. Answers the address that
+ * signed and the base58 signature, or throws when the wallet can't sign messages.
+ */
+export async function signSolanaMessage(
+  provider: SolanaProvider,
+  message: string,
+): Promise<{ address: string; signature: string }> {
+  if (typeof provider.signMessage !== "function") throw new Error("sign_message_unsupported");
+  const connected = (await provider.connect()) as { publicKey?: { toString(): string } } | undefined;
+  const address = (connected?.publicKey ?? provider.publicKey)?.toString();
+  if (!address) throw new Error("no_account");
+  const signed = await provider.signMessage(new TextEncoder().encode(message), "utf8");
+  const raw = signed instanceof Uint8Array ? signed : (signed as { signature?: unknown })?.signature;
+  if (!(raw instanceof Uint8Array) || raw.length !== 64) throw new Error("no_signature");
+  return { address, signature: base58(raw) };
+}
+
+/** The first account of an EIP-1193 wallet, asking to connect. */
+export async function evmAccount(provider: Eip1193Provider): Promise<string> {
+  const accounts = (await provider.request({ method: "eth_requestAccounts" })) as string[];
+  const address = accounts?.[0];
+  if (!address) throw new Error("no_account");
+  return address;
+}
+
+/** `personal_sign` of plain text. The server recovers the address from it. */
+export async function signEvmMessage(provider: Eip1193Provider, address: string, message: string): Promise<string> {
+  const signature = await provider.request({ method: "personal_sign", params: [utf8Hex(message), address] });
+  if (typeof signature !== "string" || !/^0x[0-9a-fA-F]+$/.test(signature)) throw new Error("no_signature");
+  return signature;
 }

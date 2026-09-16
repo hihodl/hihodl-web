@@ -128,6 +128,10 @@ function withEventFields(space: Space): Space {
     bannerUrl: raw.bannerUrl ?? null,
     bannerGradient: gradientKey(raw.bannerGradient),
     siblings: Array.isArray(raw.siblings) ? raw.siblings : [],
+    // hispace-offers-v0.md: absent on a server older than offers.
+    acceptsOffers: raw.acceptsOffers === true,
+    biddingEndsAt: raw.biddingEndsAt ?? null,
+    spaceOffers: raw.spaceOffers ?? null,
   };
 }
 
