@@ -1,5 +1,7 @@
 import type { MetadataRoute } from "next";
 
+import { listPublicEvents } from "@/lib/ad-space/server";
+
 /**
  * The sitemap.
  *
@@ -66,15 +68,33 @@ const PAGES: Entry[] = [
   { path: "/e-sign", priority: 0.2, changeFrequency: "yearly" },
 ];
 
-export default function sitemap(): MetadataRoute.Sitemap {
+// Rebuilt hourly, so an event page appears once it has a live space and leaves
+// once it is over, without a deploy.
+export const revalidate = 3600;
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // One timestamp for the whole file rather than a per-page date we do not
   // track. A lastModified that is really "whenever this deployed" is honest at
   // the file level and a lie at the page level.
   const lastModified = new Date();
-  return PAGES.map((p) => ({
+  const pages: MetadataRoute.Sitemap = PAGES.map((p) => ({
     url: `${SITE}${p.path === "/" ? "" : p.path}`,
     lastModified,
     changeFrequency: p.changeFrequency,
     priority: p.priority,
   }));
+
+  // Event pages, and only the ones the API lists: upcoming or ongoing, with at
+  // least one live space (rule 1). Creator spaces are not listed; they are
+  // reached from their event page and from X. On any API failure this is empty
+  // and the rest of the sitemap still ships.
+  const events = await listPublicEvents(50);
+  const eventPages: MetadataRoute.Sitemap = events.map((e) => ({
+    url: `${SITE}/events/${encodeURIComponent(e.slug)}`,
+    lastModified,
+    changeFrequency: "daily",
+    priority: 0.6,
+  }));
+
+  return [...pages, ...eventPages];
 }
