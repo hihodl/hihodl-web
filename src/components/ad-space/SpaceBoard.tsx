@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { currentCheckout, existingCheckoutKey } from "@/lib/ad-space/checkout-client";
+import { isSessionSpace } from "@/lib/ad-space/format";
 import type { Order, Position, Space } from "@/lib/ad-space/types";
 
 import { Checkout } from "./Checkout";
@@ -83,6 +84,7 @@ export function SpaceBoard({ space }: { space: Space }) {
   const active = hoverId ?? flashId;
   const sizeOf = (p: Position) => space.template.zones.find((z) => z.zoneKey === p.zoneKey)?.sizeLabel ?? null;
   const isService = space.template.kind === "service";
+  const session = isSessionSpace(space);
 
   const cardList = (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -98,6 +100,7 @@ export function SpaceBoard({ space }: { space: Space }) {
           active={active === p.id}
           buyable={buyable}
           takeoverMultiple={space.takeoverMultiple}
+          session={session}
           onHover={setHoverId}
           onSponsor={setCheckoutFor}
         />
@@ -110,12 +113,14 @@ export function SpaceBoard({ space }: { space: Space }) {
       {resumable && !checkoutFor && (
         <div className="mb-10 flex flex-col gap-4 rounded-card border border-amber/40 bg-amber/[0.06] p-5 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-small text-text">
-            {resumable.order.status === "paid"
-              ? `You sponsored ${resumable.position.label}. Send the creator what goes on it.`
-              : `Your payment for ${resumable.position.label} is still going through.`}
+            {resumable.order.status !== "paid"
+              ? `Your payment for ${resumable.position.label} is still going through.`
+              : session
+                ? `You booked ${resumable.position.label}. Your booking link and your contact for the creator are here.`
+                : `You sponsored ${resumable.position.label}. Send the creator what goes on it.`}
           </p>
           <button type="button" className={btnSmall} onClick={() => setCheckoutFor(resumable.position)}>
-            {resumable.order.status === "paid" ? "Add your logo" : "See the payment"}
+            {resumable.order.status !== "paid" ? "See the payment" : session ? "See your booking" : "Add your logo"}
           </button>
         </div>
       )}
@@ -124,7 +129,7 @@ export function SpaceBoard({ space }: { space: Space }) {
         <div className="flex flex-col gap-8">
           {space.template.service && (
             <div className="max-w-2xl">
-              <p className={`${eyebrow} text-moonlight`}>{space.template.name}</p>
+              <p className={`${eyebrow} text-moonlight`}>{session ? `Book: ${space.template.name}` : space.template.name}</p>
               <p className="mt-3 text-lead text-text-muted">{space.template.service.summary}</p>
             </div>
           )}

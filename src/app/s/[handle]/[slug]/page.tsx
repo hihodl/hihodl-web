@@ -13,7 +13,7 @@ import {
   SpaceUnavailable,
   SpaceUpdates,
 } from "@/components/ad-space/sections";
-import { spaceProgressText } from "@/lib/ad-space/format";
+import { isSessionSpace, spaceProgressText } from "@/lib/ad-space/format";
 import { getPublicSpace } from "@/lib/ad-space/server";
 
 /**
@@ -60,7 +60,9 @@ export async function generateMetadata({
   const progress = spaceProgressText(s);
   const where = s.event ? ` for ${s.event.name} in ${s.event.city}` : s.eventName ? ` for ${s.eventName}` : "";
   const title = `${s.title} · @${handle}`;
-  const description = `${progress} on @${handle}'s ${s.template.name.toLowerCase()}${where}. Sponsors pay the creator directly in USDC.`;
+  const description = isSessionSpace(s)
+    ? `Book @${handle}, ${s.template.name.toLowerCase()}${s.event ? ` at ${s.event.name} in ${s.event.city}` : s.eventName ? ` at ${s.eventName}` : ""}: ${progress.charAt(0).toLowerCase()}${progress.slice(1)}. You pay the creator directly in USDC.`
+    : `${progress} on @${handle}'s ${s.template.name.toLowerCase()}${where}. Sponsors pay the creator directly in USDC.`;
   const alt = `${s.title}: ${progress}`;
 
   return {

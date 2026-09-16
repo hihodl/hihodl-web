@@ -8,16 +8,21 @@ import {
   CHAIN_LABEL,
   DELIVERABLE_STATE_LABEL,
   FALLBACK_TEXT,
+  SESSION_FALLBACK_TEXT,
   VERIFIED_LABEL,
   accountAge,
   attestationText,
   calendarDate,
   compactNumber,
   deliverableText,
+  eventDates,
+  isSessionSpace,
   relativeTime,
   spaceSoldOut,
   takeableSpots,
   takeoverVerb,
+  trackRecordNeedsAttention,
+  trackRecordText,
   usdFromCents,
 } from "@/lib/ad-space/format";
 import type { Creator, DeliverableState, Space } from "@/lib/ad-space/types";
@@ -52,7 +57,8 @@ export function SpaceFooter({ space }: { space: Space }) {
         <div className="flex max-w-md flex-col gap-3">
           <Wordmark className="h-5 w-auto self-start text-text" />
           <p className="text-small text-text-muted">
-            Powered by HOLD. Sponsors pay creators directly in USDC, and HOLD never holds the money.
+            Powered by HOLD. {isSessionSpace(space) ? "Clients" : "Sponsors"} pay creators directly in USDC, and HOLD
+            never holds the money.
           </p>
           {/* Said once. With an invite link on the page, SpaceInvite says it, and says it better. */}
           {!space.creatorInvite && (
@@ -80,7 +86,9 @@ export function SpaceFooter({ space }: { space: Space }) {
 
 export function SpaceHero({ space }: { space: Space }) {
   const { totals } = space;
-  const noun = space.kind === "service" ? "slots" : "spots";
+  const session = isSessionSpace(space);
+  const noun = session ? "sessions" : space.kind === "service" ? "slots" : "spots";
+  const soldWord = session ? "booked" : "sold";
   const isTakeover = space.pricingMode === "takeover";
 
   /* On a takeover board a sold spot is not gone — it can be bought from the
@@ -92,9 +100,10 @@ export function SpaceHero({ space }: { space: Space }) {
   const soldOut = spaceSoldOut(space);
   /* The bar tracks whatever the headline counts, so the two can never disagree. */
   const headline = isTakeover ? takeable : totals.sold;
-  const headlineLabel = `${headline} of ${totals.positions} ${noun} ${isTakeover ? "still up for grabs" : "sold"}`;
-  const what =
-    space.kind === "service"
+  const headlineLabel = `${headline} of ${totals.positions} ${noun} ${isTakeover ? "still up for grabs" : soldWord}`;
+  const what = session
+    ? space.template.name
+    : space.kind === "service"
       ? `Sponsored ${space.template.name.toLowerCase()}`
       : `Ad Space on a ${space.template.name.toLowerCase()}`;
 
@@ -126,14 +135,14 @@ export function SpaceHero({ space }: { space: Space }) {
               <p className="text-text">
                 {soldOut ? (
                   <span className="font-display text-h3 font-light text-amber">
-                    {isTakeover ? "Every spot settled" : "Sold out"}
+                    {isTakeover ? "Every spot settled" : session ? "Fully booked" : "Sold out"}
                   </span>
                 ) : (
                   <>
                     <span className="font-display text-h3 font-light">{headline}</span>
                     <span className="text-body text-text-muted">
                       {" "}
-                      of {totals.positions} {noun} {isTakeover ? "still up for grabs" : "sold"}
+                      of {totals.positions} {noun} {isTakeover ? "still up for grabs" : soldWord}
                     </span>
                   </>
                 )}
@@ -176,7 +185,6 @@ export function SpaceHero({ space }: { space: Space }) {
 
 function CreatorCard({ creator: c }: { creator: Creator }) {
   const age = accountAge(c.xAccountCreatedAt);
-  const { delivered, missed } = c.trackRecord;
   return (
     <div className={`${card} flex items-start gap-4 p-5 md:p-6`}>
       <Avatar creator={c} />
@@ -203,12 +211,8 @@ function CreatorCard({ creator: c }: { creator: Creator }) {
           {age && <Fact label="On X" value={age.replace(/ on X$/, "")} />}
           <Fact
             label="Track record"
-            value={
-              delivered + missed === 0
-                ? "First HiSpace"
-                : `${delivered} delivered${missed ? `, ${missed} missed` : ", none missed"}`
-            }
-            tone={missed > 0 ? "attention" : undefined}
+            value={trackRecordText(c.trackRecord)}
+            tone={trackRecordNeedsAttention(c.trackRecord) ? "attention" : undefined}
           />
         </dl>
       </div>
@@ -300,6 +304,7 @@ const STATE_PILL: Record<DeliverableState, string> = {
 export function SpacePromises({ space }: { space: Space }) {
   const hasDeliverables = space.deliverables.length > 0;
   const declares = space.attestations.map(attestationText);
+  const session = isSessionSpace(space);
   return (
     <section className="relative bg-night">
       <div className="container-page py-16 md:py-24">
@@ -307,8 +312,32 @@ export function SpacePromises({ space }: { space: Space }) {
         <h2 className="mt-4 font-display text-h3 font-light text-text md:text-h2">What the creator promises</h2>
 
         <div className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-2">
-          <Block title={space.kind === "service" ? "Delivery" : "Deliverables"}>
-            {space.kind === "service" && space.deliverBy && (
+          <Block title={session ? "How a session is confirmed" : space.kind === "service" ? "Delivery" : "Deliverables"}>
+            {session && (
+              <>
+                <p className="text-small text-text-muted">
+                  Every session happens
+                  {space.event ? (
+                    <>
+                      {" "}
+                      at <span className="text-text">{space.event.name}</span>,{" "}
+                      {eventDates(space.event.startsOn, space.event.endsOn)},
+                    </>
+                  ) : space.eventName ? (
+                    <>
+                      {" "}
+                      at <span className="text-text">{space.eventName}</span>,
+                    </>
+                  ) : null}{" "}
+                  at the venue or in a public place. The creator sets the time and place with you after you book.
+                </p>
+                <p className="text-small text-text-muted">
+                  After it, you tell us whether it happened from your booking link. If you say nothing within 7 days, it
+                  counts as delivered. A session that didn&rsquo;t happen shows on the creator&rsquo;s track record.
+                </p>
+              </>
+            )}
+            {!session && space.kind === "service" && space.deliverBy && (
               <p className="text-small text-text-muted">
                 Every sold slot is delivered by{" "}
                 <span className="text-text">{calendarDate(space.deliverBy)}</span>, each with its own public link on
@@ -358,14 +387,16 @@ export function SpacePromises({ space }: { space: Space }) {
                 </li>
               ))}
               <li className="flex items-baseline justify-between gap-4 text-small">
-                <span className="text-text">Sponsorship closes</span>
+                <span className="text-text">{session ? "Booking closes" : "Sponsorship closes"}</span>
                 <span className="shrink-0 font-mono text-text-muted">{calendarDate(space.closesAt)}</span>
               </li>
             </ul>
           </Block>
 
-          <Block title="If a venue says no">
-            <p className="text-small text-text-muted">{FALLBACK_TEXT[space.fallback]}</p>
+          <Block title={session ? "If the session can't happen" : "If a venue says no"}>
+            <p className="text-small text-text-muted">
+              {(session ? SESSION_FALLBACK_TEXT : FALLBACK_TEXT)[space.fallback]}
+            </p>
             {space.fallbackNote && (
               <p className="border-l-2 border-amber/40 pl-3 text-small text-text">
                 <span className="sr-only">The creator adds: </span>
@@ -377,8 +408,8 @@ export function SpacePromises({ space }: { space: Space }) {
           <Block title="How the money moves">
             <p className="text-small text-text-muted">
               You pay the creator directly in USDC, from your own wallet. HOLD&rsquo;s fee is{" "}
-              {space.feeBps / 100}%, paid by the {space.feePayer}, and it moves in the same transaction. HOLD never
-              holds your money, and paid spots can&rsquo;t be refunded by HOLD.
+              {space.feeBps / 100}%, paid by the {session && space.feePayer === "sponsor" ? "buyer" : space.feePayer}, and it moves in the same transaction. HOLD never
+              holds your money, and {session ? "a booking" : "paid spots"} can&rsquo;t be refunded by HOLD.
             </p>
             {/* The two sentences above are true on a takeover board too, and
                 together they read as a contradiction of the refund promised
@@ -471,8 +502,9 @@ export function SpaceInvite({ space }: { space: Space }) {
     <section className="hairline" aria-label="Sell your own HiSpace">
       <div className="container-page flex flex-col gap-3 py-10 sm:flex-row sm:items-baseline sm:justify-between sm:gap-8">
         <p className="max-w-2xl text-small text-text-muted">
-          @{space.creator.xHandle} sells sponsorships on HOLD. If you have an audience, you can too: sponsors pay you
-          directly in USDC, and HOLD takes {space.feeBps / 100}%.
+          {isSessionSpace(space)
+            ? `@${space.creator.xHandle} sells their time at events on HOLD. You can too: clients pay you directly in USDC, and HOLD takes ${space.feeBps / 100}%.`
+            : `@${space.creator.xHandle} sells sponsorships on HOLD. If you have an audience, you can too: sponsors pay you directly in USDC, and HOLD takes ${space.feeBps / 100}%.`}
         </p>
         <a
           href={invite.url}
