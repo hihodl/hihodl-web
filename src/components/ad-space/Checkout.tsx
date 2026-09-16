@@ -26,7 +26,7 @@ import { SponsorContentForm } from "./SponsorContentForm";
 import { btnPrimary, btnSecondary, btnSmallSecondary, eyebrow } from "./ui";
 
 /**
- * Paying for one spot from the public page, with no HIHODL account.
+ * Paying for one spot from the public page, with no HOLD account.
  *
  * Three ways in, one order underneath:
  *   - Solana, connected wallet: we build the transaction, the wallet signs and
@@ -575,7 +575,7 @@ export function Checkout({
                   ) : (
                     <div className="flex flex-col gap-4">
                       <p className="text-small text-text-muted">
-                        Two signatures, no gas: one pays the creator, one pays HIHODL&rsquo;s {feePct}. Both
+                        Two signatures, no gas: one pays the creator, one pays HOLD&rsquo;s {feePct}. Both
                         go through together or not at all.
                       </p>
                       {!hasEvm && (
@@ -628,7 +628,7 @@ export function Checkout({
               {phase.kind === "evm-sign" && (
                 <div className="flex flex-col gap-4">
                   <p className="text-small text-text-muted">
-                    Two signatures, no gas: one pays the creator, one pays HIHODL&rsquo;s {feePct}. Both go
+                    Two signatures, no gas: one pays the creator, one pays HOLD&rsquo;s {feePct}. Both go
                     through together or not at all.
                   </p>
                   <ol className="flex flex-col gap-2">
@@ -780,8 +780,8 @@ function SolanaOptions({
 function Disclaimer() {
   return (
     <p className="text-tiny leading-relaxed text-text-faint">
-      You pay the creator directly. HIHODL never holds your money. Paid spots can&rsquo;t be refunded
-      by HIHODL; the creator&rsquo;s fallback policy is above.
+      You pay the creator directly. HOLD never holds your money. Paid spots can&rsquo;t be refunded
+      by HOLD; the creator&rsquo;s fallback policy is above.
     </p>
   );
 }
@@ -830,7 +830,7 @@ function Paid({
         <h3 className="mt-2 font-display text-h3 font-light text-text">You&rsquo;re sponsoring this spot.</h3>
         <p className="mt-3 text-small text-text-muted">
           {order.sponsorPaysUsdc} USDC on {CHAIN_LABEL[order.chain]}: {order.creatorReceivesUsdc} to @{handle} and{" "}
-          {order.feeUsdc} to HIHODL.
+          {order.feeUsdc} to HOLD.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           {order.explorerUrl && (
@@ -862,7 +862,7 @@ function Duplicate({ order }: { order: Order }) {
     <div className="flex flex-col gap-4">
       <h3 className="font-display text-h4 font-light text-text">Someone else&rsquo;s payment landed first.</h3>
       <p className="text-small text-text-muted">
-        Your payment arrived after this spot was already sold, so it couldn&rsquo;t buy it. HIHODL never
+        Your payment arrived after this spot was already sold, so it couldn&rsquo;t buy it. HOLD never
         held it, and our team has been alerted. Email{" "}
         <a className="text-amber hover:underline" href={`mailto:support@hihodl.xyz?subject=${encodeURIComponent(`Ad Space order ${order.id}`)}`}>
           support@hihodl.xyz

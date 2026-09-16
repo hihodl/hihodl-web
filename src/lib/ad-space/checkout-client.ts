@@ -342,7 +342,7 @@ export function describeError(e: unknown, chain?: Chain | null): string {
     case "not_found":
       return "We can't find this spot or order any more. Refresh the page.";
     case "network":
-      return "We couldn't reach HIHODL. Check your connection and try again.";
+      return "We couldn't reach HOLD. Check your connection and try again.";
     default:
       return "Something went wrong on our side. Try again in a moment.";
   }

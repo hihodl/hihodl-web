@@ -132,7 +132,7 @@ export const CONTENT_KIND_LABEL: Record<ContentKind, string> = {
 
 /**
  * The fallback policy in plain words. The creator picks one when they publish;
- * HIHODL is never the party that refunds, and the copy does not suggest it is.
+ * HOLD is never the party that refunds, and the copy does not suggest it is.
  */
 export const FALLBACK_TEXT: Record<Fallback, string> = {
   content_anyway:

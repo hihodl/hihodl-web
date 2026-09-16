@@ -66,7 +66,7 @@ export async function generateMetadata({
     openGraph: {
       type: "website",
       url: path,
-      siteName: "HIHODL",
+      siteName: "HOLD",
       title,
       description,
       images: [{ url: og, width: 1200, height: 630, alt, type: "image/png" }],
