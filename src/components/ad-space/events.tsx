@@ -281,7 +281,7 @@ function SpaceCardTile({ card: c, event, now }: { card: SpaceCard; event: EventS
   const closed = c.status !== "live";
   const { delivered, missed } = c.creator.trackRecord;
   const record =
-    delivered + missed === 0 ? "First Ad Space" : `${delivered} delivered${missed ? `, ${missed} missed` : ", none missed"}`;
+    delivered + missed === 0 ? "First HiSpace" : `${delivered} delivered${missed ? `, ${missed} missed` : ", none missed"}`;
 
   return (
     <Link

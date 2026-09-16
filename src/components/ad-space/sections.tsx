@@ -43,7 +43,7 @@ export function SlimHeader() {
 }
 
 export function SpaceFooter({ space }: { space: Space }) {
-  const report = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(`Report Ad Space ${space.id}`)}`;
+  const report = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(`Report HiSpace ${space.id}`)}`;
   return (
     <footer className="hairline">
       <div className="container-page flex flex-col gap-8 py-12 md:flex-row md:items-start md:justify-between">
@@ -54,13 +54,13 @@ export function SpaceFooter({ space }: { space: Space }) {
           </p>
           {/* Said once. With an invite link on the page, SpaceInvite says it, and says it better. */}
           {!space.creatorInvite && (
-            <p className="text-small text-text-faint">Have an audience? Sell your own Ad Space from the HOLD app.</p>
+            <p className="text-small text-text-faint">Have an audience? Sell your own HiSpace from the HOLD app.</p>
           )}
         </div>
-        <nav className="flex flex-wrap gap-x-6 gap-y-3 text-small" aria-label="Ad Space">
+        <nav className="flex flex-wrap gap-x-6 gap-y-3 text-small" aria-label="HiSpace">
           <DownloadLink className="text-text-muted transition-colors duration-180 hover:text-text">Get HOLD</DownloadLink>
           <a href={report} className="text-text-muted transition-colors duration-180 hover:text-text">
-            Report this Ad Space
+            Report this HiSpace
           </a>
           <Link href="/terms" className="text-text-muted transition-colors duration-180 hover:text-text">
             Terms
@@ -206,7 +206,7 @@ function CreatorCard({ creator: c }: { creator: Creator }) {
             label="Track record"
             value={
               delivered + missed === 0
-                ? "First Ad Space"
+                ? "First HiSpace"
                 : `${delivered} delivered${missed ? `, ${missed} missed` : ", none missed"}`
             }
             tone={missed > 0 ? "attention" : undefined}
@@ -469,7 +469,7 @@ export function SpaceInvite({ space }: { space: Space }) {
   if (!invite) return null;
 
   return (
-    <section className="hairline" aria-label="Sell your own Ad Space">
+    <section className="hairline" aria-label="Sell your own HiSpace">
       <div className="container-page flex flex-col gap-3 py-10 sm:flex-row sm:items-baseline sm:justify-between sm:gap-8">
         <p className="max-w-2xl text-small text-text-muted">
           @{space.creator.xHandle} sells sponsorships on HOLD. If you have an audience, you can too: sponsors pay you
@@ -479,7 +479,7 @@ export function SpaceInvite({ space }: { space: Space }) {
           href={invite.url}
           className="self-start whitespace-nowrap text-small text-text-muted underline-offset-4 transition-colors duration-180 hover:text-text hover:underline"
         >
-          Sell your own Ad Space
+          Sell your own HiSpace
         </a>
       </div>
     </section>
@@ -491,7 +491,7 @@ export function SpaceInvite({ space }: { space: Space }) {
 export function SpaceUnavailable() {
   return (
     <section className="container-page flex min-h-[60vh] flex-col justify-center py-20">
-      <p className={`${eyebrow} text-amber`}>Ad Space</p>
+      <p className={`${eyebrow} text-amber`}>HiSpace</p>
       <h1 className="mt-5 max-w-2xl font-display text-h3 font-light text-text md:text-h2">
         We couldn&rsquo;t load this board just now.
       </h1>

@@ -48,7 +48,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const found = await getPublicSpace(params.handle, params.slug);
   if (found.kind !== "found") {
-    return { title: "Ad Space", robots: { index: false, follow: false } };
+    return { title: "HiSpace", robots: { index: false, follow: false } };
   }
 
   const s = found.space;

@@ -892,7 +892,7 @@ function Duplicate({ order }: { order: Order }) {
       <p className="text-small text-text-muted">
         Your payment arrived after this spot was already sold, so it couldn&rsquo;t buy it. HOLD never
         held it, and our team has been alerted. Email{" "}
-        <a className="text-amber hover:underline" href={`mailto:support@hihodl.xyz?subject=${encodeURIComponent(`Ad Space order ${order.id}`)}`}>
+        <a className="text-amber hover:underline" href={`mailto:support@hihodl.xyz?subject=${encodeURIComponent(`HiSpace order ${order.id}`)}`}>
           support@hihodl.xyz
         </a>{" "}
         with order <span className="font-mono text-text">{order.id.slice(0, 8)}</span> and we&rsquo;ll help you sort

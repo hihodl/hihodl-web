@@ -332,7 +332,7 @@ function Fallback() {
         backgroundImage: "radial-gradient(60% 80% at 15% 20%, rgba(255,183,3,0.14), transparent 70%)",
       }}
     >
-      <div style={{ fontSize: 26, color: C.amber, letterSpacing: 2, textTransform: "uppercase" }}>Ad Space</div>
+      <div style={{ fontSize: 26, color: C.amber, letterSpacing: 2, textTransform: "uppercase" }}>HiSpace</div>
       <div style={{ marginTop: 24, fontSize: 72, lineHeight: 1.05 }}>Sponsor a creator directly, in USDC.</div>
       <div style={{ marginTop: 32, fontSize: 28, color: C.muted }}>hihodl.xyz</div>
     </div>

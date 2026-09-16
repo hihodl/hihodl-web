@@ -247,7 +247,7 @@ export function describeAuthorizationRefusal(e: unknown, chain: Chain): string |
     case "position_sold":
       return "This spot sold while you were signing. Nothing was paid.";
     case "space_closed":
-      return "This Ad Space closed while you were signing. Nothing was paid.";
+      return "This HiSpace closed while you were signing. Nothing was paid.";
     case "insufficient_funds":
       return `This wallet no longer has enough USDC on ${net} for this spot. Nothing was paid.`;
     case "bad_signature":
@@ -295,7 +295,7 @@ export function describeError(e: unknown, chain?: Chain | null): string {
     }
     case "space_closed":
     case "space_not_live":
-      return "This Ad Space has closed, so its spots can't be bought any more.";
+      return "This HiSpace has closed, so its spots can't be bought any more.";
     case "insufficient_funds": {
       const need = str(d.neededUsdc);
       const have = str(d.balanceUsdc);
@@ -306,7 +306,7 @@ export function describeError(e: unknown, chain?: Chain | null): string {
     case "chain_not_accepted":
       return `This creator doesn't take payments on ${net}. Pick one of the other networks.`;
     case "own_address":
-      return "That wallet belongs to the creator of this Ad Space. Sponsor from a different wallet.";
+      return "That wallet belongs to the creator of this HiSpace. Sponsor from a different wallet.";
     case "invalid_address":
       return `Your wallet gave us an address we can't use on ${net}. Reconnect it and try again.`;
     case "bad_signature":

@@ -9,7 +9,7 @@ export default function EventNotFound() {
     <>
       <SlimHeader />
       <main className="container-page flex min-h-[60vh] flex-col justify-center py-20">
-        <p className={`${eyebrow} text-amber`}>Ad Space</p>
+        <p className={`${eyebrow} text-amber`}>HiSpace</p>
         <h1 className="mt-5 max-w-2xl font-display text-h3 font-light text-text md:text-h2">
           There&rsquo;s no event at this link.
         </h1>

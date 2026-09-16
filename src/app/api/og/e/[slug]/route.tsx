@@ -43,7 +43,7 @@ function Fallback() {
   return (
     <OgBanner banner={{ imageUrl: null, gradient: "steel", credit: null }}>
       <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", padding: 96 }}>
-        <div style={{ fontSize: 26, color: OG.amber, letterSpacing: 2, textTransform: "uppercase" }}>Ad Space</div>
+        <div style={{ fontSize: 26, color: OG.amber, letterSpacing: 2, textTransform: "uppercase" }}>HiSpace</div>
         <div style={{ marginTop: 24, fontSize: 72, lineHeight: 1.05 }}>Sponsor creators going to the event.</div>
       </div>
     </OgBanner>

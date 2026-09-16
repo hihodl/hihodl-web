@@ -47,7 +47,7 @@ function today(): string {
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const found = await getPublicEvent(params.slug);
   if (found.kind !== "found") {
-    return { title: "Ad Space", robots: { index: false, follow: false } };
+    return { title: "HiSpace", robots: { index: false, follow: false } };
   }
 
   const { event, tabs } = found.page;
@@ -105,7 +105,7 @@ export default async function EventPage({
       <>
         <SlimHeader />
         <main className="container-page flex min-h-[60vh] flex-col justify-center py-20">
-          <p className={`${eyebrow} text-amber`}>Ad Space</p>
+          <p className={`${eyebrow} text-amber`}>HiSpace</p>
           <h1 className="mt-5 max-w-2xl font-display text-h3 font-light text-text md:text-h2">
             We couldn&rsquo;t load this event just now.
           </h1>
@@ -154,7 +154,7 @@ export default async function EventPage({
               affiliated with {event.name}.
             </p>
           </div>
-          <nav className="flex flex-wrap gap-x-6 gap-y-3 text-small" aria-label="Ad Space">
+          <nav className="flex flex-wrap gap-x-6 gap-y-3 text-small" aria-label="HiSpace">
             <DownloadLink className="text-text-muted transition-colors duration-180 hover:text-text">
               Open your own space
             </DownloadLink>
