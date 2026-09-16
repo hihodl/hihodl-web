@@ -29,6 +29,8 @@ export const metadata: Metadata = {
   title: "Your booking",
   robots: { index: false, follow: false, nocache: true, googleBot: { index: false, follow: false } },
   referrer: "no-referrer",
+  // The layout's canonical points at the home page; a private page names none.
+  alternates: { canonical: null },
 };
 
 export default async function BookingPage({ params }: { params: { token: string } }) {
