@@ -341,7 +341,29 @@ export function describeSessionError(e: unknown): string | null {
     case "session_not_started":
       return "The session hasn't started yet. You can answer once its time comes.";
     case "confirm_window_closed":
-      return "The 7 days to answer have passed, so this session now counts as delivered.";
+      return "The 7 days to answer have passed, so this booking is closed and your answer can't change any more.";
+    case "already_confirmed":
+      return "This session has already been answered, so it can't be changed any more. The page now shows where it stands.";
+    case "order_not_paid":
+      return "This payment hasn't confirmed yet. Once it does, you can send your contact and confirm the session here.";
+    case "session_event_over":
+      return "This event has ended, so its sessions can't be booked any more. Nothing was paid.";
+    case "session_already_started":
+      return "The session has already started, so its time and place can't change any more.";
+    case "session_in_the_past":
+      return "That time has already passed. Pick a time that's still to come.";
+    case "session_place_invalid":
+      return "Say where the session is in up to 120 characters, like \"TOKEN2049 venue, Level 4 lounge\".";
+    case "no_dispute":
+      return "The buyer hasn't said this session didn't happen, so there is nothing to reply to.";
+    case "already_replied":
+      return "There is already a reply on this dispute, and there can only be one.";
+    case "reply_invalid":
+      return "A reply is 1 to 280 characters.";
+    case "not_for_sessions":
+      return "A session is confirmed by the person who booked it, so there is no link to send for it.";
+    case "takeover_not_for_sessions":
+      return "A booked session can't be taken over by paying more.";
     case "session_outside_event":
       return "That time is outside the event's dates. A session has to fall between the day before the event and the day after it.";
     case "contact_invalid":
