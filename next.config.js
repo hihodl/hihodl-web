@@ -40,6 +40,17 @@ const nextConfig = {
           { key: "X-DNS-Prefetch-Control", value: "on" },
         ],
       },
+      // A session's manage link is its only credential (hispace-in-the-room-v0.md).
+      // Listed after the catch-all so these win: no cache anywhere, no index,
+      // and no Referer that would carry the token to another site.
+      {
+        source: "/b/:token*",
+        headers: [
+          { key: "Cache-Control", value: "private, no-store, max-age=0" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+          { key: "Referrer-Policy", value: "no-referrer" },
+        ],
+      },
       {
         source: "/.well-known/apple-app-site-association",
         headers: [
