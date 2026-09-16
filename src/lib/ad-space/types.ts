@@ -126,6 +126,13 @@ export interface Space {
   totals: { positions: number; sold: number; committedCents: number; totalCents: number };
   updates: Update[];
   share: { url: string; text: string };
+  /**
+   * The creator's own invite link, for the other audience this page has: the
+   * creator who reads it and wants one. Null on a draft, and null on an older
+   * account that has no code yet, so every reader of this field must render
+   * nothing rather than invent a link.
+   */
+  creatorInvite: { code: string; url: string } | null;
 }
 
 /**

@@ -6,6 +6,7 @@ import {
   SlimHeader,
   SpaceFooter,
   SpaceHero,
+  SpaceInvite,
   SpacePromises,
   SpaceUnavailable,
   SpaceUpdates,
@@ -103,6 +104,7 @@ export default async function AdSpacePage({ params }: { params: Params }) {
             </section>
             <SpacePromises space={found.space} />
             <SpaceUpdates space={found.space} />
+            <SpaceInvite space={found.space} />
           </main>
           <SpaceFooter space={found.space} />
         </>

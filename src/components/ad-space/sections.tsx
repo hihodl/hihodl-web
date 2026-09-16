@@ -50,7 +50,10 @@ export function SpaceFooter({ space }: { space: Space }) {
           <p className="text-small text-text-muted">
             Powered by HOLD. Sponsors pay creators directly in USDC, and HOLD never holds the money.
           </p>
-          <p className="text-small text-text-faint">Have an audience? Sell your own Ad Space from the HOLD app.</p>
+          {/* Said once. With an invite link on the page, SpaceInvite says it, and says it better. */}
+          {!space.creatorInvite && (
+            <p className="text-small text-text-faint">Have an audience? Sell your own Ad Space from the HOLD app.</p>
+          )}
         </div>
         <nav className="flex flex-wrap gap-x-6 gap-y-3 text-small" aria-label="Ad Space">
           <DownloadLink className="text-text-muted transition-colors duration-180 hover:text-text">Get HOLD</DownloadLink>
@@ -370,6 +373,41 @@ export function SpaceUpdates({ space }: { space: Space }) {
           </li>
         ))}
       </ol>
+    </section>
+  );
+}
+
+/* ── The other reader ──────────────────────────────────────────────── */
+
+/**
+ * Two kinds of people read this page: sponsors, who buy, and creators, who see
+ * it and want one of their own. This is the line for the second kind, and it is
+ * deliberately the quietest thing on the page — a hairline strip of small muted
+ * text above the footer, with a plain text link instead of a button. The amber
+ * fill on this page means "sponsor this spot"; recruiting a creator must never
+ * borrow it, or the page starts competing with the job it was built for.
+ *
+ * Nothing renders without an invite link: a draft has none, and neither does an
+ * account old enough to predate invite codes.
+ */
+export function SpaceInvite({ space }: { space: Space }) {
+  const invite = space.creatorInvite;
+  if (!invite) return null;
+
+  return (
+    <section className="hairline" aria-label="Sell your own Ad Space">
+      <div className="container-page flex flex-col gap-3 py-10 sm:flex-row sm:items-baseline sm:justify-between sm:gap-8">
+        <p className="max-w-2xl text-small text-text-muted">
+          @{space.creator.xHandle} sells sponsorships on HOLD. If you have an audience, you can too: sponsors pay you
+          directly in USDC, and HOLD takes {space.feeBps / 100}%.
+        </p>
+        <a
+          href={invite.url}
+          className="self-start whitespace-nowrap text-small text-text-muted underline-offset-4 transition-colors duration-180 hover:text-text hover:underline"
+        >
+          Sell your own Ad Space
+        </a>
+      </div>
     </section>
   );
 }

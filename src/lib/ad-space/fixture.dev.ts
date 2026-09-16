@@ -265,6 +265,9 @@ function suitcase(): Space {
       url: "https://hihodl.xyz/s/coinempress/road-to-token2049?m=8",
       text: "8 of 18 spots on my suitcase are sold for TOKEN2049 https://hihodl.xyz/s/coinempress/road-to-token2049?m=8",
     },
+    // Null on a draft and on an account with no code yet; set here so the
+    // recruiting strip above the footer is visible in local development.
+    creatorInvite: { code: "coin-3f2a1", url: "https://hihodl.xyz/invite/coin-3f2a1" },
   };
 }
 
