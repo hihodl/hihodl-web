@@ -15,7 +15,7 @@ import { getPublicEvent } from "@/lib/ad-space/server";
 const CACHE = "public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400";
 
 export async function GET(_req: Request, { params }: { params: { slug: string } }) {
-  let found = await getPublicEvent(params.slug, 300);
+  let found = await getPublicEvent(params.slug.toLowerCase(), 300);
   if (found.kind === "moved") found = await getPublicEvent(found.slug, 300);
   if (found.kind === "missing") return new Response("Not found", { status: 404 });
 

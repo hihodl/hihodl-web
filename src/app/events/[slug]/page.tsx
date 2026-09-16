@@ -6,6 +6,7 @@ import { SlimHeader } from "@/components/ad-space/sections";
 import { eyebrow } from "@/components/ad-space/ui";
 import { DownloadLink } from "@/components/site/DownloadLink";
 import { Wordmark } from "@/components/site/Wordmark";
+import { SLUG_RE } from "@/lib/ad-space/config";
 import { eventDates, openSpots } from "@/lib/ad-space/format";
 import { getPublicEvent } from "@/lib/ad-space/server";
 import type { SpaceTab } from "@/lib/ad-space/types";
@@ -86,6 +87,14 @@ export default async function EventPage({
   params: Params;
   searchParams: SearchParams;
 }) {
+  // Slugs are lowercase. "/events/TOKEN2049-Singapore-2026", typed from a
+  // poster, is the same event: send it to the one address that exists.
+  const lower = params.slug.toLowerCase();
+  if (lower !== params.slug && SLUG_RE.test(lower)) {
+    const tab = tabParam(searchParams);
+    permanentRedirect(`${eventPath(lower)}${tab ? `?tab=${tab}` : ""}`);
+  }
+
   const found = await getPublicEvent(params.slug);
   if (found.kind === "missing") notFound();
   if (found.kind === "moved") {
