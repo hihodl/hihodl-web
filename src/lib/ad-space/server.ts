@@ -1,6 +1,4 @@
 // Server-only by construction: no "use client" file imports this module.
-import { headers as requestHeaders } from "next/headers";
-
 import { AD_SPACE_API, HANDLE_RE, SLUG_RE } from "./config";
 import { defaultEventTab } from "./format";
 import { gradientKey } from "./look";
@@ -35,16 +33,23 @@ export function visitorIpFrom(h: Headers): string | null {
 }
 
 /**
- * Headers for every server-side call to the public Ad Space API.
+ * Headers for every server-side call to the public Ad Space API. Nothing else
+ * builds them, and no client component may import this module.
  *
- * Every page render reaches the backend from a handful of Vercel addresses, so
- * the backend's per-IP limiter would otherwise count all our visitors as one.
+ * Every render reaches the backend from a handful of Vercel addresses, so the
+ * backend's per-IP limiter would otherwise count all our visitors as one.
  * `x-hold-web-key` proves the call is ours (server-only env, never
  * NEXT_PUBLIC); `x-hold-client-ip` names the person the call is for, so the
  * limit still applies to them. Each is left out when it is unknown.
  *
- * @param from the incoming request's headers, or null when there is no visitor
- *   (the sitemap).
+ * Pass the request's headers only to an uncached call (`cache: "no-store"`).
+ * Next folds request headers into the Data Cache key, so a visitor IP on a
+ * `next: { revalidate }` fetch gives every visitor their own cache entry and
+ * the 10 s / 30 s window stops protecting the backend at all. Cached reads
+ * go out with the key alone: one call per URL per window, whoever is looking.
+ *
+ * @param from the incoming request's headers, or null for a cached read or a
+ *   call with no visitor behind it (the sitemap, a link card crawler).
  */
 export function upstreamHeaders(from: Headers | null, extra: Record<string, string> = {}): Record<string, string> {
   const out: Record<string, string> = { accept: "application/json", ...extra };
@@ -53,11 +58,6 @@ export function upstreamHeaders(from: Headers | null, extra: Record<string, stri
   const ip = from ? visitorIpFrom(from) : null;
   if (ip) out["x-hold-client-ip"] = ip;
   return out;
-}
-
-/** The same, for a page or route rendering inside a request. */
-function visitorHeaders(): Record<string, string> {
-  return upstreamHeaders(requestHeaders());
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -101,7 +101,7 @@ export async function getPublicSpace(
 
   try {
     const res = await fetch(`${AD_SPACE_API}${path}`, {
-      headers: visitorHeaders(),
+      headers: upstreamHeaders(null),
       next: { revalidate },
       signal: AbortSignal.timeout(6_000),
     });
@@ -162,7 +162,7 @@ export async function getPublicEvent(slug: string, revalidate = 30): Promise<Eve
   } else {
     try {
       const res = await fetch(`${AD_SPACE_API}/public/events/${encodeURIComponent(slug)}`, {
-        headers: visitorHeaders(),
+        headers: upstreamHeaders(null),
         next: { revalidate },
         signal: AbortSignal.timeout(6_000),
       });
@@ -201,7 +201,6 @@ export async function listPublicEvents(limit = 50): Promise<EventSummary[]> {
     return fixtureEvents();
   }
   try {
-    // No visitor behind a sitemap fetch: the key alone.
     const res = await fetch(`${AD_SPACE_API}/public/events?limit=${limit}`, {
       headers: upstreamHeaders(null),
       next: { revalidate: 3600 },
