@@ -13,7 +13,7 @@
  */
 
 import { AD_SPACE_API } from "./config";
-import { CHAIN_LABEL, clockTime } from "./format";
+import { CHAIN_LABEL, clockTime, takeoverClosedText } from "./format";
 import type { ApiErrorBody, Chain, ConfirmOutcome, ContentKind, EvmPayload, Order, Space } from "./types";
 
 /* ── The checkout key ─────────────────────────────────────────────── */
@@ -305,6 +305,24 @@ export function describeError(e: unknown, chain?: Chain | null): string {
     }
     case "chain_not_accepted":
       return `This creator doesn't take payments on ${net}. Pick one of the other networks.`;
+    case "takeover_chain_unsupported":
+      return `A sold spot can't be taken over on ${net} yet. Pay on Solana to take it.`;
+    case "wrong_chain": {
+      const was = str(d.chain);
+      const label = was && was in CHAIN_LABEL ? CHAIN_LABEL[was as Chain] : null;
+      return label
+        ? `This spot was bought on ${label}, so it can only be taken over on ${label}: the sponsor who holds it is repaid in the same payment. Pay on ${label} instead.`
+        : "This spot was bought on another network, and it can only be taken over on that one. Pick that network instead.";
+    }
+    case "already_yours":
+      return "This wallet already holds this spot, so there is nothing to take over. Nothing was paid.";
+    case "creator_cannot_bid":
+      return "That wallet belongs to the creator of this HiSpace, so it can't take over a spot here. Use a different wallet.";
+    case "nothing_to_take_over":
+      return "This spot isn't held by a sponsor right now, so there is nothing to take over. Refresh the page to see it as it is.";
+    case "too_many_takeovers":
+    case "price_ceiling":
+      return takeoverClosedText(e.code);
     case "own_address":
       return "That wallet belongs to the creator of this HiSpace. Sponsor from a different wallet.";
     case "invalid_address":

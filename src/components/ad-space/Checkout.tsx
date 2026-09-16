@@ -17,6 +17,7 @@ import {
   startCheckout,
   submitAuthorizations,
 } from "@/lib/ad-space/checkout-client";
+import { TAKEOVER_CHAINS } from "@/lib/ad-space/config";
 import { CHAIN_LABEL, CONTENT_KIND_LABEL, FALLBACK_TEXT, timeLeft } from "@/lib/ad-space/format";
 import { PUBLIC_CHAINS } from "@/lib/orders/chains.public";
 import type { Chain, EvmPayload, Order, Position, Space } from "@/lib/ad-space/types";
@@ -141,6 +142,9 @@ function typedData(evm: EvmPayload, message: Record<string, string>): string {
   });
 }
 
+/** Refusals that mean "this spot is not there to buy": offer the way back to the board. */
+const GONE_CODES = new Set(["position_sold", "position_held", "space_closed", "nothing_to_take_over"]);
+
 /* ── The component ─────────────────────────────────────────────────── */
 
 export function Checkout({
@@ -154,7 +158,12 @@ export function Checkout({
   onClose: () => void;
   onPaid: () => void;
 }) {
-  const chains = space.chains;
+  // Taking a sold spot over is only possible on the chains takeovers work on.
+  // The position view does not say which chain the holder paid on, so the
+  // backend's `wrong_chain` still catches a spot bought elsewhere.
+  const takingOver = position.status === "sold" && position.takeover !== null;
+  const takeoverChains = space.chains.filter((c) => TAKEOVER_CHAINS.includes(c));
+  const chains = takingOver && takeoverChains.length > 0 ? takeoverChains : space.chains;
   const [chain, setChain] = useState<Chain>(chains.includes("solana") ? "solana" : chains[0]);
   const [phase, setPhase] = useState<Phase>({ kind: "loading" });
   const [notice, setNotice] = useState<string | null>(null);
@@ -390,9 +399,7 @@ export function Checkout({
       setPhase({ kind: "confirming", order: res.order });
     } catch (e) {
       setNotice(describeError(e, "solana"));
-      setOfferOtherSpot(
-        e instanceof CheckoutError && (e.code === "position_sold" || e.code === "position_held" || e.code === "space_closed"),
-      );
+      setOfferOtherSpot(e instanceof CheckoutError && GONE_CODES.has(e.code));
       // A connected wallet that declined leaves the hold in place; the next
       // attempt with the same key gets the same transaction back.
       setPhase({ kind: "choose" });
@@ -466,7 +473,7 @@ export function Checkout({
       setNotice(refusal ?? describeError(e, evmChain));
       setOfferOtherSpot(
         refusal !== null ||
-          (e instanceof CheckoutError && (e.code === "position_sold" || e.code === "position_held" || e.code === "space_closed")),
+          (e instanceof CheckoutError && GONE_CODES.has(e.code)),
       );
       setPhase({ kind: "choose" });
     }
