@@ -130,7 +130,7 @@ export default async function EventPage({
       <main>
         <EventBanner event={event} now={now} />
         <section className="container-page py-10 md:py-14" aria-label="Spaces">
-          <p className="mb-6 max-w-2xl text-body text-text-muted">
+          <p className="mb-6 max-w-2xl break-words text-body text-text-muted [overflow-wrap:anywhere]">
             {total === 0
               ? `Nobody has opened a space for ${event.name} yet.`
               : `Creators going to ${event.name} sell space to sponsors here. Open a card to see what is left and pay the creator directly in USDC.`}

@@ -110,10 +110,10 @@ export function SpaceHero({ space }: { space: Space }) {
       />
       <div className="container-page relative pb-14 pt-8 md:pb-20 md:pt-14">
         <SpaceSiblings siblings={space.siblings} />
-        <p className={`${eyebrow} text-amber`}>
+        <p className={`${eyebrow} break-words text-amber [overflow-wrap:anywhere]`}>
           {[space.eventName, what].filter(Boolean).join(" · ")}
         </p>
-        <h1 className="mt-5 max-w-4xl font-display text-[40px] font-light leading-[1.05] text-text md:text-h1">
+        <h1 className="mt-5 max-w-4xl break-words font-display text-[40px] font-light leading-[1.05] text-text [overflow-wrap:anywhere] md:text-h1">
           {space.title}
         </h1>
         {space.reason && <p className="mt-5 max-w-2xl text-body text-text-muted md:text-lead">{space.reason}</p>}
