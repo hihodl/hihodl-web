@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { SpaceBoard } from "@/components/ad-space/SpaceBoard";
+import { SpaceBanner } from "@/components/ad-space/events";
 import {
   SlimHeader,
   SpaceFooter,
@@ -22,6 +23,9 @@ import { getPublicSpace } from "@/lib/ad-space/server";
  * every 10 s like the API's own cache. Everything interactive (the board, the
  * spots, the checkout) is one client island; the rest is plain HTML so the
  * page is readable before any JavaScript arrives.
+ *
+ * The banner on top is the creator's image, else their event's city photo, else
+ * their gradient. A space for an event links back to the event's page from it.
  *
  * `?m=<sold>` is the milestone the link was shared at. It only changes the
  * og:image URL, which is what makes X fetch a fresh card for each milestone.
@@ -56,7 +60,7 @@ export async function generateMetadata({
   const progress = soldOut
     ? `Sold out: all ${s.totals.positions} ${noun} taken`
     : `${s.totals.sold} of ${s.totals.positions} ${noun} sold`;
-  const where = s.eventName ? ` for ${s.eventName}` : "";
+  const where = s.event ? ` for ${s.event.name} in ${s.event.city}` : s.eventName ? ` for ${s.eventName}` : "";
   const title = `${s.title} · @${handle}`;
   const description = `${progress} on @${handle}'s ${s.template.name.toLowerCase()}${where}. Sponsors pay the creator directly in USDC.`;
   const alt = `${s.title}: ${progress}`;
@@ -99,6 +103,7 @@ export default async function AdSpacePage({ params }: { params: Params }) {
       ) : (
         <>
           <main>
+            <SpaceBanner space={found.space} now={Date.now()} />
             <SpaceHero space={found.space} />
             <section className="container-page py-12 md:py-16" aria-label="Spots">
               <SpaceTakeover space={found.space} />

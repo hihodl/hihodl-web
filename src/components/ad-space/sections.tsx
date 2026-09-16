@@ -21,6 +21,7 @@ import {
 import type { Creator, DeliverableState, Space } from "@/lib/ad-space/types";
 
 import { ClosesCountdown } from "./ClosesCountdown";
+import { SpaceSiblings } from "./events";
 import { btnSmallSecondary, card, eyebrow, pill } from "./ui";
 
 /* ── Chrome ────────────────────────────────────────────────────────── */
@@ -109,6 +110,7 @@ export function SpaceHero({ space }: { space: Space }) {
         aria-hidden
       />
       <div className="container-page relative pb-14 pt-8 md:pb-20 md:pt-14">
+        <SpaceSiblings siblings={space.siblings} />
         <p className={`${eyebrow} text-amber`}>
           {[space.eventName, what].filter(Boolean).join(" · ")}
         </p>
