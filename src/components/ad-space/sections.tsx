@@ -332,8 +332,9 @@ export function SpacePromises({ space }: { space: Space }) {
                   at the venue or in a public place. The creator sets the time and place with you after you book.
                 </p>
                 <p className="text-small text-text-muted">
-                  After it, you tell us whether it happened from your booking link. If you say nothing within 7 days, it
-                  counts as delivered. A session that didn&rsquo;t happen shows on the creator&rsquo;s track record.
+                  After it, you tell us whether it happened from your booking link. Only a session you confirm counts
+                  as delivered on the creator&rsquo;s track record, and one that didn&rsquo;t happen shows there as
+                  disputed. If you say nothing within 7 days, the booking closes.
                 </p>
               </>
             )}
