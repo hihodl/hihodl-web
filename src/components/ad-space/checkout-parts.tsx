@@ -54,6 +54,7 @@ export function SolanaOptions({
   onWallet,
   onQr,
   onMobileLink,
+  disabled = false,
 }: {
   wallets: SolanaWallet[];
   mobile: boolean;
@@ -61,6 +62,8 @@ export function SolanaOptions({
   onWallet: (w: SolanaWallet) => void;
   onQr: () => void;
   onMobileLink: () => void;
+  /** Every way to pay is shown but can't be pressed, e.g. while the server asks the payer to wait. */
+  disabled?: boolean;
 }) {
   return (
     <div className="flex flex-col gap-3">
@@ -69,6 +72,7 @@ export function SolanaOptions({
           key={w.name}
           type="button"
           className={i === 0 ? btnPrimary : btnSecondary}
+          disabled={disabled}
           onClick={() => onWallet(w)}
         >
           Pay with {w.name}
@@ -77,12 +81,22 @@ export function SolanaOptions({
 
       {mobile && mobileLink && (
         // The same Solana Pay link the QR carries, for a wallet on this phone.
-        <a href={mobileLink} className={wallets.length ? btnSecondary : btnPrimary} onClick={onMobileLink}>
+        <a
+          href={disabled ? undefined : mobileLink}
+          aria-disabled={disabled || undefined}
+          className={`${wallets.length ? btnSecondary : btnPrimary}${disabled ? " pointer-events-none opacity-50" : ""}`}
+          onClick={onMobileLink}
+        >
           Open in my wallet app
         </a>
       )}
 
-      <button type="button" className={wallets.length || mobile ? btnSecondary : btnPrimary} onClick={onQr}>
+      <button
+        type="button"
+        className={wallets.length || mobile ? btnSecondary : btnPrimary}
+        disabled={disabled}
+        onClick={onQr}
+      >
         Pay with QR
       </button>
 

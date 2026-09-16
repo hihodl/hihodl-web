@@ -40,14 +40,16 @@ import {
   payKeyScope,
   payLinkSolanaPay,
   paymentExplorerUrl,
+  previousAttemptSentence,
   receiptPath,
+  retryAfterSeconds,
   sentHere,
   solanaCheckoutProblem,
   startPayCheckout,
   submitPayAuthorization,
   type ExpectedPayment,
 } from "@/lib/pay-links/client";
-import type { PayLinkCheckout, PayLinkEvmPayload, PayLinkPayment, ShownPayLink } from "@/lib/pay-links/types";
+import type { PayLinkEvmPayload, PayLinkPayment, ShownPayLink, TimedPayLinkCheckout } from "@/lib/pay-links/types";
 
 /**
  * Paying a pay link, from any wallet, with no HOLD account.
@@ -72,7 +74,8 @@ type Phase =
   | { kind: "busy"; label: string }
   /** `scanned`: a phone wallet has opened the payment and not sent it yet. */
   | { kind: "qr"; link: string; scanned: boolean }
-  | { kind: "evm-sign"; label: string; validBefore: number; sending: boolean }
+  /** `skewMs`: the server's clock minus this browser's, from the checkout answer. */
+  | { kind: "evm-sign"; label: string; validBefore: number; skewMs: number; sending: boolean }
   | { kind: "confirming"; payment: PayLinkPayment }
   | { kind: "paid"; payment: PayLinkPayment }
   | { kind: "duplicate"; payment: PayLinkPayment }
@@ -97,6 +100,8 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
   const [mobile, setMobile] = useState(false);
   const [amountText, setAmountText] = useState("");
   const [now, setNow] = useState(() => Date.now());
+  /** When the server said a previous attempt of this payer's may have settled (`previous_attempt_pending`). */
+  const [retryAt, setRetryAt] = useState<number | null>(null);
   const keyRef = useRef("");
   const signatureRef = useRef<string | null>(null);
   /** What the open QR code asks for, and whether it has already been replaced once. */
@@ -110,6 +115,8 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
   const maxCents = link.amount.mode === "open" ? Math.min(link.amount.maxCents ?? MAX_CENTS, MAX_CENTS) : MAX_CENTS;
   const limits = { minCents: MIN_CENTS, maxCents };
   const payee = ownerName(link.owner);
+  const errorContext = { limits, accepts: link.chains, payee };
+  const waiting = retryAt !== null && retryAt > now;
 
   useEffect(() => {
     setWallets(detectSolanaWallets());
@@ -158,7 +165,7 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
     };
   }, [scope]);
 
-  const ticking = phase.kind === "evm-sign";
+  const ticking = phase.kind === "evm-sign" || waiting;
   useEffect(() => {
     if (!ticking) return;
     const t = setInterval(() => setNow(Date.now()), 1_000);
@@ -303,7 +310,7 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
    */
   async function checkedCheckout<T>(
     body: { chain: Chain; payerAddress: string; amountCents?: number },
-    check: (res: PayLinkCheckout) => { ok: T } | { problem: string },
+    check: (res: TimedPayLinkCheckout) => { ok: T } | { problem: string },
   ): Promise<T> {
     for (let attempt = 0; ; attempt++) {
       const res = await withFreshKey((key) => startPayCheckout(link.code, key, body));
@@ -314,8 +321,30 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
     }
   }
 
-  async function payWithSolanaWallet(wallet: SolanaWallet) {
+  /**
+   * A refusal, in words, back on the choice. A spent key is replaced; a link
+   * that changed under the page is read again; a payer asked to wait sees the
+   * seconds count down, and the buttons come back when they run out.
+   */
+  function fail(e: unknown, failedChain: Chain) {
+    if (e instanceof CheckoutError && PAY_SPENT_KEY_CODES.has(e.code)) keyRef.current = rotateCheckoutKey(scope);
+    setNotice(describePayError(e, failedChain, errorContext));
+    if (e instanceof CheckoutError && e.code === "previous_attempt_pending") {
+      const start = Date.now();
+      setNow(start);
+      setRetryAt(start + (retryAfterSeconds(e) ?? 30) * 1000);
+    }
+    setPhase({ kind: "choose" });
+    if (e instanceof CheckoutError && e.code === "link_not_active") router.refresh();
+  }
+
+  function clearNotice() {
     setNotice(null);
+    setRetryAt(null);
+  }
+
+  async function payWithSolanaWallet(wallet: SolanaWallet) {
+    clearNotice();
     const amount = amountOrProblem();
     if (!amount) return;
     try {
@@ -362,14 +391,12 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
       signatureRef.current = signature;
       setPhase({ kind: "confirming", payment });
     } catch (e) {
-      if (e instanceof CheckoutError && PAY_SPENT_KEY_CODES.has(e.code)) keyRef.current = rotateCheckoutKey(scope);
-      setNotice(describePayError(e, "solana", limits));
-      setPhase({ kind: "choose" });
+      fail(e, "solana");
     }
   }
 
   async function startQr() {
-    setNotice(null);
+    clearNotice();
     const amount = amountOrProblem();
     if (!amount) return;
     setPhase({ kind: "busy", label: "Making your code…" });
@@ -386,7 +413,7 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
   }
 
   async function payWithEvm(evmChain: "base" | "polygon") {
-    setNotice(null);
+    clearNotice();
     const amount = amountOrProblem();
     if (!amount) return;
     const provider = injected().ethereum;
@@ -406,39 +433,38 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
 
       setPhase({ kind: "busy", label: "Preparing the payment…" });
       const expect: ExpectedPayment = { cents: amount.expected, chain: evmChain, payerAddress, payTo: link.payTo };
-      const { payment, evm } = await checkedCheckout<{ payment: PayLinkPayment; evm: PayLinkEvmPayload }>(
-        { chain: evmChain, payerAddress, ...(amount.cents ? { amountCents: amount.cents } : {}) },
-        (res) => {
-          const problem = evmCheckoutProblem(res, expect);
-          if (problem || !("evm" in res)) return { problem: problem ?? "shape" };
-          return { ok: { payment: res.payment, evm: res.evm } };
-        },
-      );
+      const { payment, evm, skewMs } = await checkedCheckout<{
+        payment: PayLinkPayment;
+        evm: PayLinkEvmPayload;
+        skewMs: number;
+      }>({ chain: evmChain, payerAddress, ...(amount.cents ? { amountCents: amount.cents } : {}) }, (res) => {
+        const problem = evmCheckoutProblem(res, expect);
+        if (problem || !("evm" in res)) return { problem: problem ?? "shape" };
+        return { ok: { payment: res.payment, evm: res.evm, skewMs: res.skewMs } };
+      });
       const auth = evm.authorizations[0];
 
-      setPhase({ kind: "evm-sign", label: auth.label, validBefore: evm.validBefore, sending: false });
+      setPhase({ kind: "evm-sign", label: auth.label, validBefore: evm.validBefore, skewMs, sending: false });
       const signature = (await provider.request({
         method: "eth_signTypedData_v4",
         params: [payerAddress, typedData(evm, auth.message)],
       })) as string;
 
-      setPhase({ kind: "evm-sign", label: auth.label, validBefore: evm.validBefore, sending: true });
+      setPhase({ kind: "evm-sign", label: auth.label, validBefore: evm.validBefore, skewMs, sending: true });
       markSentHere(payment.id);
       const submitted = await submitPayAuthorization(payment.id, keyRef.current, signature);
       signatureRef.current = null;
       setPhase({ kind: "confirming", payment: submitted.payment });
     } catch (e) {
-      // A key whose quote ran out would hand the same dead quote back: the next try starts on a new one.
-      if (e instanceof CheckoutError && PAY_SPENT_KEY_CODES.has(e.code)) keyRef.current = rotateCheckoutKey(scope);
-      setNotice(describePayError(e, evmChain, limits));
-      setPhase({ kind: "choose" });
+      // A key whose quote ran out would hand the same dead quote back: `fail` starts the next try on a new one.
+      fail(e, evmChain);
     }
   }
 
   function payAgain() {
     keyRef.current = rotateCheckoutKey(scope);
     signatureRef.current = null;
-    setNotice(null);
+    clearNotice();
     setAmountText("");
     setPhase({ kind: "choose" });
   }
@@ -540,7 +566,8 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
               chain={chain}
               onChange={(c) => {
                 setChain(c);
-                setNotice(null);
+                // A wait is for the same wallet on the same network; another network can be tried now.
+                clearNotice();
               }}
             />
           )}
@@ -551,6 +578,7 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
               mobile={mobile}
               // The phone link needs the amount first, so on mobile it goes through the QR step.
               mobileLink={null}
+              disabled={waiting}
               onWallet={(w) => void payWithSolanaWallet(w)}
               onQr={() => void startQr()}
               onMobileLink={() => void startQr()}
@@ -567,7 +595,7 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
                 </p>
               )}
               <div>
-                <button type="button" className={btnPrimary} disabled={!hasEvm} onClick={() => void payWithEvm(chain)}>
+                <button type="button" className={btnPrimary} disabled={!hasEvm || waiting} onClick={() => void payWithEvm(chain)}>
                   Connect wallet and pay
                 </button>
               </div>
@@ -626,9 +654,10 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
               <Spinner />
               Sending the payment…
             </p>
-          ) : phase.validBefore * 1000 > now ? (
+          ) : phase.validBefore * 1000 > now + phase.skewMs ? (
             <p className="text-tiny text-text-faint">
-              Sign within <span className="font-mono text-text-muted">{timeLeft(phase.validBefore * 1000 - now)}</span>.
+              Sign within{" "}
+              <span className="font-mono text-text-muted">{timeLeft(phase.validBefore * 1000 - (now + phase.skewMs))}</span>.
             </p>
           ) : (
             <p className="text-tiny text-amber">This signature request has expired. Close your wallet and start again.</p>
@@ -646,9 +675,9 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
         </div>
       )}
 
-      {notice && (
+      {(notice || retryAt !== null) && (
         <p className="rounded-card border border-amber/30 bg-amber/[0.05] px-4 py-3 text-small text-text-muted" role="status">
-          {notice}
+          {retryAt !== null ? previousAttemptSentence(Math.max(0, Math.ceil((retryAt - now) / 1000))) : notice}
         </p>
       )}
     </div>

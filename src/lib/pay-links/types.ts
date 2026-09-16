@@ -78,9 +78,20 @@ export interface PayLinkEvmPayload {
 }
 
 /** `POST /:code/checkout` answers `{ payment, solana }` or `{ payment, evm }`. */
-export type PayLinkCheckout =
+export type PayLinkCheckout = (
   | { payment: PayLinkPayment; solana: { transaction: string; lastValidBlockHeight: number } }
-  | { payment: PayLinkPayment; evm: PayLinkEvmPayload };
+  | { payment: PayLinkPayment; evm: PayLinkEvmPayload }
+) & {
+  /** The server's clock when it answered, ISO 8601. */
+  serverTime?: string;
+};
+
+/**
+ * A checkout as this page holds it: the answer plus how far the server's clock
+ * is ahead of this browser's (ms, negative when behind), measured when the
+ * answer arrived. 0 when the server sent no usable `serverTime`.
+ */
+export type TimedPayLinkCheckout = PayLinkCheckout & { skewMs: number };
 
 export interface PayConfirm {
   outcome: ConfirmOutcome;

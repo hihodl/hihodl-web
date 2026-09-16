@@ -15,7 +15,14 @@ import { CheckoutError, apiRequest, describeError } from "@/lib/ad-space/checkou
 import type { Chain } from "@/lib/ad-space/types";
 import { PUBLIC_CHAINS } from "@/lib/orders/chains.public";
 
-import type { PayConfirm, PayLinkCheckout, PayLinkOwner, PayLinkPayment, PayLinkPublic } from "./types";
+import type {
+  PayConfirm,
+  PayLinkCheckout,
+  PayLinkOwner,
+  PayLinkPayment,
+  PayLinkPublic,
+  TimedPayLinkCheckout,
+} from "./types";
 
 const PUBLIC = `${API_BASE}/pay-links/public`;
 
@@ -31,12 +38,24 @@ export function payKeyScope(code: string): string {
  */
 export const PAY_SPENT_KEY_CODES: ReadonlySet<string> = new Set(["checkout_key_reused", "payment_expired"]);
 
-export function startPayCheckout(
+/**
+ * How far the server's clock is ahead of this browser's, from a `serverTime`
+ * read just now. 0 when there is none, so a server that sends none is judged
+ * on this browser's clock as before.
+ */
+export function clockSkewMs(serverTime: unknown, receivedAt: number): number {
+  if (typeof serverTime !== "string") return 0;
+  const t = Date.parse(serverTime);
+  return Number.isFinite(t) ? t - receivedAt : 0;
+}
+
+export async function startPayCheckout(
   code: string,
   key: string,
   body: { chain: Chain; payerAddress: string; amountCents?: number },
-): Promise<PayLinkCheckout> {
-  return apiRequest(`${PUBLIC}/${encodeURIComponent(code)}/checkout`, { key, json: body });
+): Promise<TimedPayLinkCheckout> {
+  const res = await apiRequest<PayLinkCheckout>(`${PUBLIC}/${encodeURIComponent(code)}/checkout`, { key, json: body });
+  return { ...res, skewMs: clockSkewMs(res.serverTime, Date.now()) };
 }
 
 /** A Solana signature, as the confirm route accepts it. */
@@ -201,7 +220,7 @@ export interface ExpectedPayment {
  * payer, the receiver, and on Base and Polygon the token contract the
  * signature is valid for.
  */
-export function evmCheckoutProblem(res: PayLinkCheckout, expect: ExpectedPayment): string | null {
+export function evmCheckoutProblem(res: TimedPayLinkCheckout, expect: ExpectedPayment): string | null {
   if (!("evm" in res)) return "shape";
   if (expect.chain === "solana") return "chain";
   const meta = PUBLIC_CHAINS[expect.chain];
@@ -217,7 +236,8 @@ export function evmCheckoutProblem(res: PayLinkCheckout, expect: ExpectedPayment
   if (Number(evm.domain.chainId) !== meta.chainId || evm.chainId !== meta.chainId) return "chain_id";
   if (!sameEvm(evm.domain.verifyingContract, meta.usdc)) return "token";
   // A quote with under 30 seconds left can't be signed and relayed in time: ask for a new one.
-  if (!Number.isFinite(evm.validBefore) || evm.validBefore * 1000 <= Date.now() + 30_000) return "expired";
+  // Judged on the server's clock, so a browser clock that runs fast or slow doesn't decide it.
+  if (!Number.isFinite(evm.validBefore) || evm.validBefore * 1000 <= Date.now() + res.skewMs + 30_000) return "expired";
   return null;
 }
 
@@ -274,17 +294,74 @@ export function solanaCheckoutProblem(web3: typeof SolanaWeb3, tx: SolanaWeb3.Ve
 /** Thrown when the server's answer twice did not match the page. Nothing was signed. */
 export const MISMATCH_CODE = "checkout_mismatch";
 
+/** What a sentence about a refusal may name: the amount limits, the link's networks and who is paid. */
+export interface PayErrorContext {
+  limits?: { minCents: number; maxCents: number };
+  /** The networks the link accepts, so a paused network can point at another. */
+  accepts?: readonly Chain[];
+  /** `ownerName(link.owner)`. */
+  payee?: string;
+}
+
+/** `details.retryAfterSeconds` as a whole number of seconds, at least 1, or null. */
+export function retryAfterSeconds(e: unknown): number | null {
+  if (!(e instanceof CheckoutError)) return null;
+  const s = e.details.retryAfterSeconds;
+  return typeof s === "number" && Number.isFinite(s) && s > 0 ? Math.ceil(s) : null;
+}
+
+export function previousAttemptSentence(seconds: number): string {
+  return seconds > 0
+    ? `Your previous attempt is still settling. Try again in ${seconds} ${seconds === 1 ? "second" : "seconds"}.`
+    : "Your previous attempt has had time to settle. You can try again now.";
+}
+
+function capitalise(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function detailsChain(e: CheckoutError): Chain | null {
+  const c = e.details.chain;
+  return c === "solana" || c === "base" || c === "polygon" ? c : null;
+}
+
+const GONE_STATUS: Record<string, string> = {
+  paid: "This link has already been paid, so it takes no more payments. This attempt took nothing from your wallet; if an earlier one of yours paid it, it shows in your wallet's history.",
+  closed: "Its owner closed this link while you were paying, so it takes no more payments. Nothing was paid.",
+  expired: "This link expired while you were paying, so it takes no more payments. Nothing was paid.",
+  disabled: "This link is no longer available. Nothing was paid.",
+};
+
 /**
  * Pay-link codes in plain words, falling back to the HiSpace sentences for the
- * checkout codes the two routers share (a paused chain, a wallet that closed,
- * a transfer that would fail).
+ * checkout codes the two routers share (a wallet that closed, a transfer that
+ * would fail).
  */
-export function describePayError(e: unknown, chain: Chain | null, limits?: { minCents: number; maxCents: number }): string {
+export function describePayError(e: unknown, chain: Chain | null, ctx: PayErrorContext = {}): string {
+  const { limits, accepts, payee } = ctx;
   const net = chain ? CHAIN_LABEL[chain] : "this network";
   if (e instanceof CheckoutError) {
     switch (e.code) {
-      case "link_not_active":
-        return "This link can't take payments any more. It may have been paid, closed or expired. Nothing was paid.";
+      case "link_not_active": {
+        // Also the answer to a retry on a key whose link has changed since.
+        const status = typeof e.details.status === "string" ? e.details.status : null;
+        return (
+          (status && GONE_STATUS[status]) ??
+          "This link can't take payments any more. It may have been paid, closed or expired. Nothing was paid."
+        );
+      }
+      case "previous_attempt_pending":
+        return previousAttemptSentence(retryAfterSeconds(e) ?? 30);
+      case "chain_unavailable": {
+        const refused = detailsChain(e) ?? chain;
+        if (e.details.reason === "gas_budget_exhausted") {
+          const where = refused ? CHAIN_LABEL[refused] : "Base and Polygon";
+          return accepts?.includes("solana") && refused !== "solana"
+            ? `${where} payments are paused for today. Try Solana.`
+            : `${where} payments on this link are paused for today. Nothing was paid; try again tomorrow.`;
+        }
+        break;
+      }
       case "link_busy":
         return "Someone else is paying this link right now. Try again in a couple of minutes.";
       case "amount_out_of_range":
@@ -303,9 +380,18 @@ export function describePayError(e: unknown, chain: Chain | null, limits?: { min
           : `This wallet doesn't have enough USDC on ${net} for this payment. Add USDC or pay from another wallet.`;
       }
       case "rate_limited":
-        return e.status === 503
-          ? "Payments are paused for a moment on our side. Nothing was paid; try again in a minute."
-          : "This link or this wallet has reached its limit of payments for now. Nothing was paid; try again later.";
+        if (e.status === 503) return "Payments are paused for a moment on our side. Nothing was paid; try again in a minute.";
+        switch (e.details.scope) {
+          case "link":
+            return "This link has taken as many payments as it can today. Nothing was paid; try again tomorrow.";
+          case "owner":
+            return `${payee ? capitalise(payee) : "The person you're paying"} has received as many payments as they can today. Nothing was paid; try again tomorrow.`;
+          case "payer":
+            return `This wallet has started as many payments on ${net} as it can today. Nothing was paid; try again tomorrow or pay from another wallet.`;
+          case "open_checkouts":
+            return "Too many payments to this link are waiting to be signed right now. Nothing was paid; try again in a few minutes.";
+        }
+        return "Too many requests from this connection. Nothing was paid; wait a moment and try again.";
       case "own_address":
         return "That wallet is the one this link pays. Pay from a different wallet.";
       case "invalid_address":
