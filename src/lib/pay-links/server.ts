@@ -15,8 +15,11 @@ import type { PayLinkPublic, PayReceipt } from "./types";
 
 export const PAY_LINKS_API = `${API_BASE}/pay-links`;
 
-/** Codes are short lowercase letters and digits ("k7x2m9qa"). */
-export const PAY_CODE_RE = /^[A-Za-z0-9]{4,32}$/;
+/**
+ * The backend's code rule (`isLinkCode`): 8 characters from an alphabet with
+ * no 0, 1, i, l or o ("k7x2m9qa"). Anything else names no link.
+ */
+export const PAY_CODE_RE = /^[23456789abcdefghjkmnpqrstuvwxyz]{8}$/;
 /** Receipt tokens are random and URL-safe. */
 export const RECEIPT_TOKEN_RE = /^[A-Za-z0-9_-]{16,128}$/;
 
@@ -29,7 +32,8 @@ async function read<T>(path: string, pick: (data: Record<string, unknown>) => T 
       cache: "no-store",
       signal: AbortSignal.timeout(6_000),
     });
-    if (res.status === 404) return { kind: "missing" };
+    // 400 is the server refusing a code or token of the wrong shape: no such link either.
+    if (res.status === 404 || res.status === 400) return { kind: "missing" };
     if (!res.ok) return { kind: "unreachable" };
     const body = (await res.json()) as { data?: Record<string, unknown> };
     const value = body?.data ? pick(body.data) : undefined;
