@@ -548,7 +548,7 @@ const DEVCON: EventSummary = {
 
 type CardCreator = SpaceCard["creator"];
 
-function creator(xHandle: string, xName: string, xFollowers: number, over: Partial<CardCreator> = {}): CardCreator {
+function creator(xHandle: string, xName: string | null, xFollowers: number | null, over: Partial<CardCreator> = {}): CardCreator {
   return {
     xHandle,
     xName,
@@ -679,8 +679,9 @@ function devconTabs(): EventPage["tabs"] {
         path: "/s/priya_builds/devcon-tote",
         title: "A tote bag across Devcon",
         tab: "ground",
-        templateName: "Tote bag",
-        creator: creator("priya_builds", "Priya", 33900, { trackRecord: { delivered: 2, missed: 0 } }),
+        // An X sync that came back thin, and a template gone from the catalogue.
+        templateName: null,
+        creator: creator("priya_builds", null, null, { xVerifiedType: "unknown_kind", trackRecord: { delivered: 2, missed: 0 } }),
         bannerUrl: photo("photo-1570168007204-dfb528c6958f"),
         totals: { positions: 4, open: 2, sold: 2 },
         fromPriceCents: 8000,
@@ -719,7 +720,17 @@ function fromCard(c: SpaceCard, event: EventSummary, all: SpaceCard[]): Space {
     status: c.status,
     closesAt: c.closesAt,
     pricingMode: "fixed",
-    creator: { ...base.creator, ...c.creator, xUserId: c.creator.xHandle, xAccountCreatedAt: "2021-06-01T00:00:00.000Z" },
+    creator: {
+      ...base.creator,
+      xHandle: c.creator.xHandle ?? base.creator.xHandle,
+      xName: c.creator.xName ?? c.creator.xHandle ?? base.creator.xName,
+      xAvatarUrl: c.creator.xAvatarUrl,
+      xVerifiedType: c.creator.xVerifiedType === "blue" || c.creator.xVerifiedType === "business" ? c.creator.xVerifiedType : null,
+      xFollowers: c.creator.xFollowers ?? 0,
+      trackRecord: c.creator.trackRecord,
+      xUserId: c.creator.xHandle ?? c.spaceId,
+      xAccountCreatedAt: "2021-06-01T00:00:00.000Z",
+    },
     eventName: event.name,
     event,
     bannerUrl: c.bannerUrl,

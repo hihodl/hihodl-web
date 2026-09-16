@@ -155,7 +155,8 @@ export function SpaceBanner({
   return (
     <BannerFrame banner={banner} className={event ? "h-[260px] md:h-[340px]" : "h-[180px] md:h-[240px]"}>
       {event && (
-        <div className="container-page relative flex h-full flex-col justify-between py-4 md:py-6">
+        // pb-8 below md: the photo credit sits in the bottom 24px, under a card as wide as the screen.
+        <div className="container-page relative flex h-full flex-col justify-between pb-8 pt-4 md:py-6">
           <Link
             href={eventPath(event.slug)}
             className="inline-flex h-9 max-w-full items-center self-start overflow-hidden whitespace-nowrap rounded-[18px] bg-[#141F2E]/60 px-3.5 text-small text-white backdrop-blur-md transition-colors duration-180 hover:bg-[#141F2E]/80"
@@ -236,7 +237,7 @@ export function EventTabs({
                 {n} {n === 1 ? "space" : "spaces"}
               </span>
             </span>
-            <span className="text-small text-text-muted">{subtitle[tab]}</span>
+            <span className="break-words text-small text-text-muted">{subtitle[tab]}</span>
           </Link>
         );
       })}
@@ -270,7 +271,14 @@ export function SpaceCardGrid({
 function SpaceCardTile({ card: c, event, now }: { card: SpaceCard; event: EventSummary; now: number }) {
   const banner = bannerFor(c, event);
   const closed = c.status !== "live";
+  const { xHandle, xName, xFollowers } = c.creator;
   const { delivered, missed } = c.creator.trackRecord;
+  const handleLine = [
+    xHandle ? `@${xHandle}` : null,
+    typeof xFollowers === "number" ? `${compactNumber(xFollowers)} followers` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
   const record =
     delivered + missed === 0 ? "First HiSpace" : `${delivered} delivered${missed ? `, ${missed} missed` : ", none missed"}`;
 
@@ -282,7 +290,7 @@ function SpaceCardTile({ card: c, event, now }: { card: SpaceCard; event: EventS
       <BannerFrame banner={banner} className="h-28 shrink-0" />
       <div className="flex flex-1 flex-col px-5 pb-5">
         <div className="relative -mt-7 flex items-end justify-between gap-3">
-          <CreatorAvatar name={c.creator.xName || c.creator.xHandle} url={c.creator.xAvatarUrl} />
+          <CreatorAvatar name={xName || xHandle || ""} url={c.creator.xAvatarUrl} />
           {closed ? (
             <span className={pill.neutral}>Closed</span>
           ) : c.pricingMode === "takeover" ? (
@@ -292,26 +300,25 @@ function SpaceCardTile({ card: c, event, now }: { card: SpaceCard; event: EventS
 
         <div className="mt-3 min-w-0">
           <p className="flex min-w-0 items-center gap-1.5 text-body text-text">
-            <span className="truncate">{c.creator.xName || `@${c.creator.xHandle}`}</span>
+            <span className="truncate">{xName || (xHandle ? `@${xHandle}` : "A creator")}</span>
             <VerifiedTick type={c.creator.xVerifiedType} />
           </p>
-          <p className="truncate text-small text-text-muted">
-            @{c.creator.xHandle} · {compactNumber(c.creator.xFollowers)} followers
-          </p>
+          {handleLine && <p className="truncate text-small text-text-muted">{handleLine}</p>}
         </div>
 
-        <h3 className="mt-4 line-clamp-2 text-body text-text group-hover:text-amber">{c.title}</h3>
-        <p className="mt-1 text-small text-text-muted">{c.templateName}</p>
+        <h3 className="mt-4 line-clamp-2 break-words text-body text-text group-hover:text-amber">{c.title}</h3>
+        {c.templateName && <p className="mt-1 text-small text-text-muted">{c.templateName}</p>}
         <p className={`mt-1 text-tiny ${missed > 0 ? "text-amber" : "text-text-faint"}`}>{record}</p>
 
         <div className="mt-auto flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 pt-5 text-small">
+          {/* A closed space sells nothing more, so it says what it sold and names no price. */}
           <span>
             <span className="tabular-nums text-text">
-              {c.totals.open} of {c.totals.positions}
+              {closed ? c.totals.sold : c.totals.open} of {c.totals.positions}
             </span>
-            <span className="text-text-muted"> open</span>
+            <span className="text-text-muted">{closed ? " sold" : " open"}</span>
           </span>
-          {c.fromPriceCents !== null && (
+          {!closed && c.fromPriceCents !== null && (
             <span>
               <span className="text-text-muted">from </span>
               <span className="font-mono text-text">{usdFromCents(c.fromPriceCents)}</span>
@@ -334,7 +341,7 @@ function CreatorAvatar({ name, url }: { name: string; url: string | null }) {
   }
   return (
     <span className={`${ring} flex items-center justify-center bg-brand-blue-deep text-h4 font-light text-text`} aria-hidden>
-      {name.replace(/^@/, "").slice(0, 1).toUpperCase()}
+      {name.replace(/^@/, "").slice(0, 1).toUpperCase() || "?"}
     </span>
   );
 }
@@ -357,8 +364,13 @@ const TICK_LABEL: Record<Exclude<VerifiedType, null>, string> = {
   government: "Verified government on X",
 };
 
-export function VerifiedTick({ type }: { type: VerifiedType }) {
-  if (!type) return null;
+function isVerifiedType(type: string | null): type is Exclude<VerifiedType, null> {
+  return type === "blue" || type === "business" || type === "government";
+}
+
+/** Nothing for no verification, and nothing for a kind this page has no tick for. */
+export function VerifiedTick({ type }: { type: string | null }) {
+  if (!isVerifiedType(type)) return null;
   return (
     <svg viewBox="0 0 16 16" width={16} height={16} className="shrink-0" role="img" aria-label={TICK_LABEL[type]}>
       <circle cx="8" cy="8" r="8" fill={TICK_COLOR[type]} />

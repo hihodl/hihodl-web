@@ -235,17 +235,34 @@ export interface SpaceSibling {
   title: string;
 }
 
+/**
+ * The creator on an event page's card. Unlike a space's own page, the backend
+ * sends these straight from the last X sync, so a name, a follower count or a
+ * verification kind may be null, and `xVerifiedType` may be a kind this page
+ * has no tick for.
+ */
+export interface CardCreator {
+  xHandle: string | null;
+  xName: string | null;
+  xAvatarUrl: string | null;
+  xVerifiedType: string | null;
+  xFollowers: number | null;
+  trackRecord: { delivered: number; missed: number };
+}
+
 /** One card on an event page. */
 export interface SpaceCard {
   spaceId: string;
   path: string;
   title: string;
   tab: SpaceTab;
-  templateName: string;
+  /** Null when the space's template is gone from the catalogue. */
+  templateName: string | null;
   pricingMode: PricingMode;
   status: "live" | "closed";
   closesAt: string;
-  creator: Pick<Creator, "xHandle" | "xName" | "xAvatarUrl" | "xVerifiedType" | "xFollowers" | "trackRecord">;
+  /** The creator's X profile as last synced; any of it can be missing. */
+  creator: CardCreator;
   bannerUrl: string | null;
   bannerGradient: BannerGradient;
   /**
