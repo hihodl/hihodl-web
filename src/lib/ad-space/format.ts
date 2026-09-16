@@ -506,7 +506,8 @@ function centsOf(usdc: string | null | undefined): number | null {
 }
 
 /**
- * The bids line of a link card: the highest bid across the open spots and the
+ * The bids line of a link card: the highest bid among spots still open for
+ * bidding with that spot's own time left, or else where bidding opens and the
  * soonest end still ahead. "Highest bid $420 · 2d left", "Bidding opens at $100
  * · 2d left", "Bidding ended". Null when nothing on the space is up for bids.
  */
@@ -515,11 +516,18 @@ export function bidsSummaryText(space: Pick<Space, "pricingMode" | "positions" |
   let highest: { cents: number; usdc: string } | null = null;
   let opening: { cents: number; usdc: string } | null = null;
   let soonest: number | null = null;
+  let highestEnds: number | null = null;
   for (const p of space.positions) {
     const o = p.offers;
     if (!o || o.mode !== "bids" || p.status === "sold") continue;
     const h = centsOf(o.highestBidUsdc);
-    if (h !== null && o.highestBidUsdc && (!highest || h > highest.cents)) highest = { cents: h, usdc: o.highestBidUsdc };
+    const endAt = o.biddingEndsAt ? Date.parse(o.biddingEndsAt) : NaN;
+    const stillOpen = o.biddingOpen !== false && Number.isFinite(endAt) && endAt > now;
+    // The highest bid is paired with its OWN spot's end, never another spot's.
+    if (h !== null && o.highestBidUsdc && stillOpen && (!highest || h > highest.cents)) {
+      highest = { cents: h, usdc: o.highestBidUsdc };
+      highestEnds = endAt;
+    }
     const op = centsOf(o.openingBidUsdc);
     if (op !== null && o.openingBidUsdc && (!opening || op < opening.cents)) opening = { cents: op, usdc: o.openingBidUsdc };
     const end = o.biddingEndsAt ? Date.parse(o.biddingEndsAt) : NaN;
@@ -529,9 +537,9 @@ export function bidsSummaryText(space: Pick<Space, "pricingMode" | "positions" |
     const end = Date.parse(space.biddingEndsAt);
     if (Number.isFinite(end) && end > now) soonest = end;
   }
-  if (soonest === null) return highest ? `Bidding ended · highest bid ${usdFromCents(highest.cents)}` : "Bidding ended";
+  if (highest && highestEnds !== null) return `Highest bid ${usdFromCents(highest.cents)} · ${coarseLeft(highestEnds - now)} left`;
+  if (soonest === null) return "Bidding ended";
   const left = `${coarseLeft(soonest - now)} left`;
-  if (highest) return `Highest bid ${usdFromCents(highest.cents)} · ${left}`;
   if (opening) return `Bidding opens at ${usdFromCents(opening.cents)} · ${left}`;
   return `Bidding · ${left}`;
 }
