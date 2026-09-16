@@ -26,6 +26,7 @@
  *   /b/fixture_awaiting_contact  /b/fixture_awaiting_schedule  /b/fixture_scheduled
  *   /b/fixture_awaiting_confirmation  /b/fixture_delivered  /b/fixture_disputed
  *   /b/fixture_window_closed (awaiting_confirmation with confirmBy passed)
+ *   /b/fixture_no_handle (scheduled; no handle, path, template name or label)
  */
 
 import type {
@@ -896,11 +897,14 @@ export function fixtureBooking(token: string): Booking | null {
     fixture_delivered: ["delivered", false],
     fixture_disputed: ["disputed", false],
     fixture_window_closed: ["awaiting_confirmation", true],
+    fixture_no_handle: ["scheduled", false],
   };
   const hit = states[token];
   if (!hit) return null;
   const space = pitchReviews();
   const position = space.positions[0];
+  // The server can name no handle, path, template or slot: the page must still read.
+  const bare = token === "fixture_no_handle";
   return {
     order: {
       id: "0e000000-0000-4000-8000-000000000001",
@@ -925,14 +929,14 @@ export function fixtureBooking(token: string): Booking | null {
       share: null,
       session: sessionFor(hit[0], hit[1]),
     },
-    positionLabel: position.label,
+    positionLabel: bare ? null : position.label,
     space: {
       id: space.id,
-      path: "/s/coinempress/token2049-pitch-reviews",
+      path: bare ? null : "/s/coinempress/token2049-pitch-reviews",
       title: space.title,
-      templateName: space.template.name,
+      templateName: bare ? null : space.template.name,
       status: space.status,
-      creator: { xHandle: space.creator.xHandle, xName: space.creator.xName, xAvatarUrl: null },
+      creator: { xHandle: bare ? null : space.creator.xHandle, xName: space.creator.xName, xAvatarUrl: null },
       event: space.event,
       fallback: space.fallback,
       fallbackNote: space.fallbackNote,

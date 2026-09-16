@@ -7,6 +7,7 @@ import {
   confirmSession,
   describeError,
   describeSessionError,
+  getBookingClient,
   putSessionContact,
 } from "@/lib/ad-space/checkout-client";
 import {
@@ -60,6 +61,29 @@ function normaliseContact(kind: ContactKind, value: string): string {
   const v = value.trim();
   if (kind === "email") return v;
   return `@${v.replace(/^@/, "")}`;
+}
+
+/**
+ * "@dana", or "the creator" when the server has no handle to give, so a
+ * sentence never ends up with a bare "@".
+ */
+function creatorRef(handle: string | null | undefined, sentenceStart = false): string {
+  if (handle) return `@${handle}`;
+  return sentenceStart ? "The creator" : "the creator";
+}
+
+function creatorPossessive(handle: string | null | undefined): string {
+  return handle ? `@${handle}\u2019s` : "the creator\u2019s";
+}
+
+/**
+ * Refusals that mean the page is showing an old state: the server has settled
+ * the session since. The page asks for the booking again instead of guessing.
+ */
+const STALE_CODES: ReadonlySet<string> = new Set(["already_confirmed", "confirm_window_closed", "order_not_paid"]);
+
+function isStale(e: unknown): boolean {
+  return e instanceof CheckoutError && STALE_CODES.has(e.code);
 }
 
 /** States in which the buyer can still change their contact and brief. */
@@ -128,9 +152,10 @@ export function SessionContactForm({
 }: {
   token: string;
   session: SessionView | null;
-  creatorHandle: string;
+  creatorHandle: string | null;
   onSaved: (booking: Booking) => void;
 }) {
+  const who = creatorRef(creatorHandle);
   const [kind, setKind] = useState<ContactKind>(session?.contact?.kind ?? "telegram");
   const [value, setValue] = useState(session?.contact?.value ?? "");
   const [brief, setBrief] = useState(session?.brief ?? "");
@@ -158,6 +183,13 @@ export function SessionContactForm({
       onSaved(booking);
     } catch (err) {
       setNotice(describeSessionError(err) ?? describeError(err, null, "session"));
+      if (isStale(err)) {
+        try {
+          onSaved(await getBookingClient(token));
+        } catch {
+          // Keep what the page shows; the sentence above already says why.
+        }
+      }
     } finally {
       setBusy(false);
     }
@@ -166,9 +198,9 @@ export function SessionContactForm({
   return (
     <form onSubmit={submit} className="flex flex-col gap-5" noValidate>
       <div>
-        <h3 className="text-body text-text">{sent ? "Your contact and brief" : `How @${creatorHandle} reaches you`}</h3>
+        <h3 className="text-body text-text">{sent ? "Your contact and brief" : `How ${who} reaches you`}</h3>
         <p className="mt-1 text-small text-text-muted">
-          Only @{creatorHandle} sees these. They never appear on a public page. You can change them until you confirm
+          Only {who} sees these. They never appear on a public page. You can change them until you confirm
           the session.
         </p>
       </div>
@@ -234,13 +266,13 @@ export function SessionContactForm({
       )}
       {saved && !notice && (
         <p className="rounded-card border border-success/30 bg-success/[0.06] px-4 py-3 text-small text-text-muted" role="status">
-          Sent. @{creatorHandle} can see it now.
+          Sent. {creatorRef(creatorHandle, true)} can see it now.
         </p>
       )}
 
       <div>
         <button type="submit" className={btnPrimary} disabled={busy}>
-          {busy ? "Sending…" : sent ? "Save changes" : `Send to @${creatorHandle}`}
+          {busy ? "Sending…" : sent ? "Save changes" : `Send to ${who}`}
         </button>
       </div>
     </form>
@@ -290,6 +322,7 @@ export function BookingPanel({ token, initial, renderedAt }: { token: string; in
   const { order, space } = booking;
   const s = order.session;
   const handle = space.creator.xHandle;
+  const who = creatorRef(handle);
   const paid = order.status === "paid";
   const windowOpen = !s.confirmBy || Date.parse(s.confirmBy) > now;
 
@@ -300,7 +333,7 @@ export function BookingPanel({ token, initial, renderedAt }: { token: string; in
           <div className="min-w-0">
             <p className={`${eyebrow} text-text-faint`}>Your booking</p>
             <h1 className="mt-2 break-words font-display text-h4 font-light text-text [overflow-wrap:anywhere] md:text-h3">
-              {space.templateName} with @{handle}
+              {space.templateName ? `${space.templateName} with ${who}` : `Your session with ${who}`}
             </h1>
             <p className="mt-1 break-words text-small text-text-muted [overflow-wrap:anywhere]">
               {[space.event?.name, space.title, booking.positionLabel].filter(Boolean).join(" · ")}
@@ -318,7 +351,7 @@ export function BookingPanel({ token, initial, renderedAt }: { token: string; in
             <dd className="mt-1 font-mono text-text">{order.sponsorPaysUsdc} USDC</dd>
           </div>
           <div>
-            <dt className="text-tiny text-text-faint">@{handle} received</dt>
+            <dt className="text-tiny text-text-faint">{creatorRef(handle, true)} received</dt>
             <dd className="mt-1 font-mono text-text">{order.creatorReceivesUsdc} USDC</dd>
           </div>
         </dl>
@@ -328,9 +361,11 @@ export function BookingPanel({ token, initial, renderedAt }: { token: string; in
               View the transaction
             </a>
           )}
-          <a href={space.path} className={btnSmallSecondary}>
-            See @{handle}&rsquo;s space
-          </a>
+          {space.path && (
+            <a href={space.path} className={btnSmallSecondary}>
+              See {creatorPossessive(handle)} space
+            </a>
+          )}
         </div>
       </section>
 
@@ -375,7 +410,7 @@ export function BookingPanel({ token, initial, renderedAt }: { token: string; in
               </p>
             )}
             <p className="text-small text-text-muted">
-              You paid @{handle} directly. HOLD never held the money and can&rsquo;t refund it or rule on it.
+              You paid {who} directly. HOLD never held the money and can&rsquo;t refund it or rule on it.
             </p>
           </section>
         </>
@@ -384,7 +419,7 @@ export function BookingPanel({ token, initial, renderedAt }: { token: string; in
   );
 }
 
-function Schedule({ session: s, handle }: { session: SessionView; handle: string }) {
+function Schedule({ session: s, handle }: { session: SessionView; handle: string | null }) {
   return (
     <section className={`${card} flex flex-col gap-3 p-5 md:p-6`} aria-label="When and where">
       <h2 className={`${eyebrow} text-text-faint`}>When and where</h2>
@@ -398,17 +433,17 @@ function Schedule({ session: s, handle }: { session: SessionView; handle: string
           )}
           {s.state === "scheduled" && (
             <p className="text-tiny text-text-faint">
-              @{handle} can still change this until the session starts. Check back here before you go.
+              {creatorRef(handle, true)} can still change this until the session starts. Check back here before you go.
             </p>
           )}
         </>
       ) : s.state === "awaiting_contact" ? (
         <p className="text-small text-text-muted">
-          Send @{handle} your contact below, and they set a time and place with you.
+          Send {creatorRef(handle)} your contact below, and they set a time and place with you.
         </p>
       ) : (
         <p className="text-small text-text-muted">
-          @{handle} hasn&rsquo;t set a time yet. It shows here as soon as they do.
+          {creatorRef(handle, true)} hasn&rsquo;t set a time yet. It shows here as soon as they do.
         </p>
       )}
     </section>
@@ -428,6 +463,7 @@ function Outcome({
 }) {
   const s = booking.order.session;
   const handle = booking.space.creator.xHandle;
+  const who = creatorRef(handle);
   const [disputing, setDisputing] = useState(false);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
@@ -448,9 +484,16 @@ function Outcome({
       onChange(next);
     } catch (e) {
       setNotice(describeSessionError(e) ?? describeError(e, null, "session"));
-      // A closed window means the server has already settled it: show that.
-      if (e instanceof CheckoutError && e.code === "confirm_window_closed") {
-        onChange({ ...booking, order: { ...booking.order, session: { ...s, state: "delivered" } } });
+      // The server has settled the session since this page loaded (the week
+      // ran out, or it was already answered): show what it holds now, not a
+      // guess. A dispute whose week ran out stays a dispute.
+      if (isStale(e)) {
+        try {
+          setDisputing(false);
+          onChange(await getBookingClient(token));
+        } catch {
+          // Keep what the page shows; the sentence above already says why.
+        }
       }
     } finally {
       setBusy(false);
@@ -468,7 +511,10 @@ function Outcome({
     return (
       <section className="rounded-card border border-success/30 bg-success/[0.06] p-5 md:p-6" aria-label="Outcome">
         <p className="text-body text-text">Delivered.</p>
-        <p className="mt-1 text-small text-text-muted">This session counts as delivered on @{handle}&rsquo;s track record.</p>
+        <p className="mt-1 text-small text-text-muted">
+          Nothing more to do here. A session its buyer confirms shows as delivered on {creatorPossessive(handle)} public
+          track record.
+        </p>
         {notice && <p className="mt-3 text-small text-text-muted">{notice}</p>}
       </section>
     );
@@ -479,7 +525,7 @@ function Outcome({
       <section className={`${card} flex flex-col gap-3 p-5 md:p-6`} aria-label="Outcome">
         <h2 className="text-body text-text">You said this session didn&rsquo;t happen.</h2>
         <p className="text-small text-text-muted">
-          It shows on @{handle}&rsquo;s public track record as one disputed session. Your note isn&rsquo;t public.
+          It shows on {creatorPossessive(handle)} public track record as one disputed session. Your note isn&rsquo;t public.
         </p>
         {s.disputeNote && (
           <p className="whitespace-pre-line break-words border-l-2 border-[color:var(--color-hairline-strong)] pl-3 text-small text-text-muted [overflow-wrap:anywhere]">
@@ -489,7 +535,7 @@ function Outcome({
         )}
         {s.creatorReply && (
           <p className="whitespace-pre-line break-words border-l-2 border-amber/40 pl-3 text-small text-text [overflow-wrap:anywhere]">
-            <span className="text-text-faint">@{handle} replied: </span>
+            <span className="text-text-faint">{creatorRef(handle, true)} replied: </span>
             {s.creatorReply}
           </p>
         )}
@@ -515,7 +561,8 @@ function Outcome({
   if (!windowOpen) {
     return (
       <section className={`${card} p-5 text-small text-text-muted md:p-6`} aria-label="Outcome">
-        The 7 days to answer have passed, so this session counts as delivered.
+        The 7 days to answer have passed, so this booking is closed as delivered. Only a session you confirm shows as
+        delivered on {creatorPossessive(handle)} public track record.
       </section>
     );
   }
@@ -523,9 +570,10 @@ function Outcome({
   return (
     <section className="flex flex-col gap-4 rounded-card border border-amber/40 bg-amber/[0.06] p-5 md:p-6" aria-label="Outcome">
       <div>
-        <h2 className="text-body text-text">Did your session with @{handle} happen?</h2>
+        <h2 className="text-body text-text">Did your session with {who} happen?</h2>
         <p className="mt-1 text-small text-text-muted">
-          Answer{confirmBy}. If you say nothing, it counts as delivered.
+          Answer{confirmBy}. Saying yes is what puts it on {creatorPossessive(handle)} public track record; if you say
+          nothing, the booking closes as delivered but doesn&rsquo;t count there.
         </p>
       </div>
 
@@ -541,8 +589,8 @@ function Outcome({
       ) : (
         <div className="flex flex-col gap-3">
           <p className="text-small text-text-muted">
-            This counts as one disputed session on @{handle}&rsquo;s public track record. Only the number is public;
-            your note is seen by @{handle} and HOLD, nobody else. HOLD doesn&rsquo;t move or refund money either way.
+            This counts as one disputed session on {creatorPossessive(handle)} public track record. Only the number is
+            public; your note is seen by {who} and HOLD, nobody else. HOLD doesn&rsquo;t move or refund money either way.
           </p>
           <label className="flex flex-col gap-2">
             <span className="flex items-baseline justify-between gap-3 text-small text-text-muted">

@@ -392,22 +392,22 @@ export interface SessionView {
 /**
  * `GET /public/bookings/:token`.
  *
- * ASSUMPTION: the contract names the route and says it "shows the booking";
- * the shape is this page's proposal. `PUT contact` and `POST confirm` answer
- * the same object.
+ * The shape is the contract's (hispace-in-the-room-v0.md, backend section).
+ * `PUT contact` and `POST confirm` answer the same object. The labels and the
+ * creator's handle can be null, so the page names "the creator" instead.
  */
 export interface Booking {
   order: Order & { session: SessionView };
-  /** The slot's label, "Slot 3". */
-  positionLabel: string;
+  /** The slot's label, "Session 3". Null when the server can't name it. */
+  positionLabel: string | null;
   space: {
     id: string;
-    /** "/s/<handle>/<slug>" */
-    path: string;
+    /** "/s/<handle>/<slug>", or null when the creator has no X handle on file. */
+    path: string | null;
     title: string;
-    templateName: string;
+    templateName: string | null;
     status: SpaceStatus;
-    creator: { xHandle: string; xName: string | null; xAvatarUrl: string | null };
+    creator: { xHandle: string | null; xName: string | null; xAvatarUrl: string | null };
     event: EventSummary | null;
     fallback: Fallback;
     fallbackNote: string | null;
