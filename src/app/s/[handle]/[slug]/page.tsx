@@ -13,6 +13,7 @@ import {
   SpaceUnavailable,
   SpaceUpdates,
 } from "@/components/ad-space/sections";
+import { spaceProgressText } from "@/lib/ad-space/format";
 import { getPublicSpace } from "@/lib/ad-space/server";
 
 /**
@@ -55,11 +56,8 @@ export async function generateMetadata({
   const handle = s.creator.xHandle;
   const path = `/s/${encodeURIComponent(handle)}/${encodeURIComponent(s.slug)}`;
   const og = `/api/og${path}?m=${milestone(searchParams, s.totals.sold)}`;
-  const noun = s.kind === "service" ? "slots" : "spots";
-  const soldOut = s.totals.positions > 0 && s.totals.sold >= s.totals.positions;
-  const progress = soldOut
-    ? `Sold out: all ${s.totals.positions} ${noun} taken`
-    : `${s.totals.sold} of ${s.totals.positions} ${noun} sold`;
+  // Counted as the hero counts it: a takeover board is not sold out while a spot can be taken.
+  const progress = spaceProgressText(s);
   const where = s.event ? ` for ${s.event.name} in ${s.event.city}` : s.eventName ? ` for ${s.eventName}` : "";
   const title = `${s.title} · @${handle}`;
   const description = `${progress} on @${handle}'s ${s.template.name.toLowerCase()}${where}. Sponsors pay the creator directly in USDC.`;

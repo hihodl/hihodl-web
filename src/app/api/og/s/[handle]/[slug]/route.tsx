@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 import { OG, OgBanner, OgEventCard, clip as clipOg, loadOgImage } from "@/components/ad-space/og";
-import { CHAIN_LABEL, usdFromCents } from "@/lib/ad-space/format";
+import { CHAIN_LABEL, spaceProgressText, spaceSoldOut, takeableSpots, usdFromCents } from "@/lib/ad-space/format";
 import { bannerFor } from "@/lib/ad-space/look";
 import { getPublicSpace } from "@/lib/ad-space/server";
 import type { Position, Space, TemplateView } from "@/lib/ad-space/types";
@@ -73,10 +73,9 @@ async function EventCard({ space: s }: { space: Space }) {
   const event = s.event!;
   const banner = bannerFor(s, event);
   const [image, avatar] = await Promise.all([loadOgImage(banner.imageUrl), loadOgImage(s.creator.xAvatarUrl)]);
-  const { totals } = s;
-  const noun = s.kind === "service" ? "slots" : "spots";
-  const soldOut = totals.positions > 0 && totals.sold >= totals.positions;
-  const progress = soldOut ? `Sold out: all ${totals.positions} ${noun} taken` : `${totals.sold} of ${totals.positions} ${noun} sold`;
+  // A takeover board is never "sold out" while a sold spot can still be taken.
+  const soldOut = spaceSoldOut(s);
+  const progress = spaceProgressText(s);
 
   return (
     <OgBanner banner={{ ...banner, imageUrl: image, credit: image ? banner.credit : null }}>
@@ -131,9 +130,13 @@ async function EventCard({ space: s }: { space: Space }) {
 
 function Card({ space: s }: { space: Space }) {
   const { totals } = s;
-  const soldOut = totals.positions > 0 && totals.sold >= totals.positions;
+  const isTakeover = s.pricingMode === "takeover";
+  const soldOut = spaceSoldOut(s);
   const noun = s.kind === "service" ? "slots" : "spots";
-  const pct = totals.positions ? Math.min(100, (totals.sold / totals.positions) * 100) : 0;
+  // A takeover board counts what can still be taken, as its page does.
+  const headline = isTakeover ? takeableSpots(s) : totals.sold;
+  // The bar tracks the headline, so the two never disagree.
+  const pct = totals.positions ? Math.min(100, (headline / totals.positions) * 100) : 0;
   const full = [s.eventName, s.template.name].filter(Boolean).join(" · ");
   const eyebrow = full.length <= 38 ? full : (s.eventName ?? s.template.name);
 
@@ -172,11 +175,15 @@ function Card({ space: s }: { space: Space }) {
 
         <div style={{ display: "flex", flexDirection: "column" }}>
           {soldOut ? (
-            <div style={{ fontSize: 104, lineHeight: 1, color: C.amber, letterSpacing: -3 }}>SOLD OUT</div>
+            <div style={{ fontSize: 104, lineHeight: 1, color: C.amber, letterSpacing: -3 }}>
+              {isTakeover ? "ALL SETTLED" : "SOLD OUT"}
+            </div>
           ) : (
             <div style={{ display: "flex", alignItems: "baseline" }}>
-              <div style={{ fontSize: 104, lineHeight: 1, letterSpacing: -3 }}>{`${totals.sold} of ${totals.positions}`}</div>
-              <div style={{ fontSize: 40, color: C.muted, marginLeft: 18 }}>{`${noun} sold`}</div>
+              <div style={{ fontSize: 104, lineHeight: 1, letterSpacing: -3 }}>{`${headline} of ${totals.positions}`}</div>
+              <div style={{ fontSize: 40, color: C.muted, marginLeft: 18 }}>
+                {isTakeover ? `${noun} up for grabs` : `${noun} sold`}
+              </div>
             </div>
           )}
           <div

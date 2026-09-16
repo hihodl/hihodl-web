@@ -320,7 +320,9 @@ export function takeableSpots(space: Pick<Space, "pricingMode" | "positions">): 
 export function spaceSoldOut(space: Pick<Space, "pricingMode" | "positions" | "totals">): boolean {
   const { totals } = space;
   if (totals.positions === 0) return false;
-  return space.pricingMode === "takeover" ? takeableSpots(space) === 0 : totals.sold >= totals.positions;
+  // A spot being paid for right now is not settled either way: it may lapse.
+  if (totals.sold < totals.positions) return false;
+  return space.pricingMode === "takeover" ? takeableSpots(space) === 0 : true;
 }
 
 /**

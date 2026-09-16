@@ -15,6 +15,8 @@ import {
   compactNumber,
   deliverableText,
   relativeTime,
+  spaceSoldOut,
+  takeableSpots,
   takeoverVerb,
   usdFromCents,
 } from "@/lib/ad-space/format";
@@ -84,13 +86,10 @@ export function SpaceHero({ space }: { space: Space }) {
   /* On a takeover board a sold spot is not gone — it can be bought from the
      sponsor holding it. So "sold out" is only true here when there is nothing
      left to take: every spot has an owner AND every ladder has stopped. Counting
-     sold spots as unavailable would turn the whole mechanic into a closed sign. */
-  const takeable = space.positions.filter(
-    (p) =>
-      p.status === "open" ||
-      (isTakeover && p.status === "sold" && p.takeover && !p.takeover.closed && p.takeover.nextPriceUsdc),
-  ).length;
-  const soldOut = totals.positions > 0 && (isTakeover ? takeable === 0 : totals.sold >= totals.positions);
+     sold spots as unavailable would turn the whole mechanic into a closed sign.
+     The link card and the meta description count the same way. */
+  const takeable = takeableSpots(space);
+  const soldOut = spaceSoldOut(space);
   /* The bar tracks whatever the headline counts, so the two can never disagree. */
   const headline = isTakeover ? takeable : totals.sold;
   const headlineLabel = `${headline} of ${totals.positions} ${noun} ${isTakeover ? "still up for grabs" : "sold"}`;
