@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 
-import { EventBanner, EventTabs, SpaceCardGrid, eventPath } from "@/components/ad-space/events";
+import { EventBanner, EventTabs, SpaceCardGrid, TAB_NAME, eventPath } from "@/components/ad-space/events";
 import { SlimHeader } from "@/components/ad-space/sections";
 import { eyebrow } from "@/components/ad-space/ui";
 import { DownloadLink } from "@/components/site/DownloadLink";
 import { Wordmark } from "@/components/site/Wordmark";
 import { SLUG_RE } from "@/lib/ad-space/config";
-import { eventDates, openSpots } from "@/lib/ad-space/format";
+import { EVENT_TABS, eventDates, openSpots } from "@/lib/ad-space/format";
 import { getPublicEvent } from "@/lib/ad-space/server";
 import type { SpaceTab } from "@/lib/ad-space/types";
 
@@ -16,10 +16,10 @@ import type { SpaceTab } from "@/lib/ad-space/types";
  * creators there sees it.
  *
  * Server-rendered from `GET /public/events/:slug`, refreshed every 30 s like the
- * API's own cache. Two tabs, named from the sponsor's side: things a creator
- * carries (on the ground) and content they make (on the feed). The tab lives in
- * the URL (`?tab=feed`) so a link to one of them can be shared; without it the
- * page opens on whichever has more open spots.
+ * API's own cache. Three tabs, named from the buyer's side: things a creator
+ * carries (on the ground), content they make (on the feed) and their time in
+ * person (in the room). The tab lives in the URL (`?tab=room`) so a link to one
+ * of them can be shared; without it the page opens on the API's `defaultTab`.
  *
  * A merged event's old slug answers a 308 to the event it was merged into, so a
  * link already posted on X never breaks.
@@ -30,7 +30,7 @@ type SearchParams = Record<string, string | string[] | undefined>;
 
 function tabParam(searchParams: SearchParams): SpaceTab | null {
   const t = searchParams.tab;
-  return t === "ground" || t === "feed" ? t : null;
+  return t === "ground" || t === "feed" || t === "room" ? t : null;
 }
 
 /** Today in UTC: the X card's cache key, so the countdown on it is never a day stale. */
@@ -48,12 +48,16 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const path = eventPath(event.slug);
   const og = `/api/og/e/${encodeURIComponent(event.slug)}?d=${today()}`;
   const title = `${event.name}, ${event.city} · Sponsor creators going`;
+  const offers =
+    tabs.room.length > 0
+      ? "your logo on what they carry, content from inside the event, or their time in person"
+      : "your logo on what they carry, or content from inside the event";
   const description = `Sponsor creators going to ${event.name} in ${event.city}, ${eventDates(
     event.startsOn,
     event.endsOn,
-  )}: your logo on what they carry, or content from inside the event. You pay the creator directly in USDC.`;
+  )}: ${offers}. You pay the creator directly in USDC.`;
   const alt = `${event.name}, ${event.city}, ${eventDates(event.startsOn, event.endsOn)}`;
-  const hasSpaces = tabs.ground.length + tabs.feed.length > 0;
+  const hasSpaces = EVENT_TABS.some((t) => tabs[t].length > 0);
 
   return {
     title,
@@ -122,7 +126,8 @@ export default async function EventPage({
   const { event, tabs, defaultTab } = found.page;
   const active = tabParam(searchParams) ?? defaultTab;
   const now = Date.now();
-  const total = tabs.ground.length + tabs.feed.length;
+  const total = EVENT_TABS.reduce((sum, t) => sum + tabs[t].length, 0);
+  const openElsewhere = EVENT_TABS.some((t) => t !== active && openSpots(tabs[t]) > 0);
 
   return (
     <>
@@ -133,16 +138,16 @@ export default async function EventPage({
           <p className="mb-6 max-w-2xl break-words text-body text-text-muted [overflow-wrap:anywhere]">
             {total === 0
               ? `Nobody has opened a space for ${event.name} yet.`
-              : `Creators going to ${event.name} sell space to sponsors here. Open a card to see what is left and pay the creator directly in USDC.`}
+              : `Creators going to ${event.name} sell space, content and their time here. Open a card to see what is left and pay the creator directly in USDC.`}
           </p>
           <EventTabs slug={event.slug} eventName={event.name} active={active} tabs={tabs} />
-          <div className="mt-8" role="region" aria-label={active === "ground" ? "On the ground" : "On the feed"}>
+          <div className="mt-8" role="region" aria-label={TAB_NAME[active]}>
             <SpaceCardGrid cards={tabs[active]} event={event} tab={active} now={now} />
           </div>
           {/* Visible only when the other tab is where the spots are, so nobody misses it. */}
-          {tabs[active].length > 0 && openSpots(tabs[active]) === 0 && openSpots(tabs[active === "ground" ? "feed" : "ground"]) > 0 && (
+          {tabs[active].length > 0 && openSpots(tabs[active]) === 0 && openElsewhere && (
             <p className="mt-6 text-small text-text-muted">
-              Everything here is taken. The other tab still has open spots.
+              Everything here is taken. Another tab still has open spots.
             </p>
           )}
         </section>
@@ -152,7 +157,7 @@ export default async function EventPage({
           <div className="flex max-w-md flex-col gap-3">
             <Wordmark className="h-5 w-auto self-start text-text" />
             <p className="text-small text-text-muted">
-              Powered by HOLD. Sponsors pay creators directly in USDC, and HOLD never holds the money. HOLD is not
+              Powered by HOLD. You pay creators directly in USDC, and HOLD never holds the money. HOLD is not
               affiliated with {event.name}.
             </p>
           </div>

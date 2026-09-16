@@ -2,7 +2,7 @@
 import { AD_SPACE_API, HANDLE_RE, SLUG_RE } from "./config";
 import { defaultEventTab } from "./format";
 import { gradientKey } from "./look";
-import type { EventPage, EventSummary, Space, SpaceCard } from "./types";
+import type { Booking, EventPage, EventSummary, Space, SpaceCard } from "./types";
 
 /**
  * Reading a public Ad Space on the server.
@@ -182,8 +182,11 @@ export async function getPublicEvent(slug: string, revalidate = 30): Promise<Eve
   const tabs = {
     ground: (data.tabs?.ground ?? []).map(withCardDefaults),
     feed: (data.tabs?.feed ?? []).map(withCardDefaults),
+    // A backend that predates sessions sends no `room`.
+    room: (data.tabs?.room ?? []).map(withCardDefaults),
   };
-  const fromApi = data.defaultTab === "ground" || data.defaultTab === "feed" ? data.defaultTab : null;
+  const fromApi =
+    data.defaultTab === "ground" || data.defaultTab === "feed" || data.defaultTab === "room" ? data.defaultTab : null;
   return {
     kind: "found",
     page: { event: data.event, tabs, defaultTab: fromApi ?? defaultEventTab(tabs) },
@@ -212,5 +215,53 @@ export async function listPublicEvents(limit = 50): Promise<EventSummary[]> {
     return Array.isArray(events) ? events : [];
   } catch {
     return [];
+  }
+}
+
+/* ── A booked session, by its manage link ────────────────────────────── */
+
+/**
+ * The token in `/b/<token>`: 32 random bytes. The contract does not fix the
+ * encoding, so anything URL-safe of a sane length is passed on and the server
+ * decides; the check only keeps junk out of the upstream path.
+ */
+export const BOOKING_TOKEN_RE = /^[A-Za-z0-9_-]{16,128}$/;
+
+export type BookingLookup =
+  | { kind: "found"; booking: Booking }
+  | { kind: "missing" }
+  | { kind: "unreachable" };
+
+/**
+ * `GET /public/bookings/:token`, never cached: the page is the buyer's own and
+ * changes when the creator schedules. The token is a bearer secret, so it goes
+ * into the upstream URL and nowhere else: no log line, no error message, no
+ * cache key of ours.
+ *
+ * @param from the visitor's request headers, so the backend limits the visitor
+ *   and not our server.
+ */
+export async function getBooking(token: string, from: Headers | null): Promise<BookingLookup> {
+  if (!BOOKING_TOKEN_RE.test(token)) return { kind: "missing" };
+
+  if (fixtureEnabled()) {
+    const { fixtureBooking } = await import("./fixture.dev");
+    const booking = fixtureBooking(token);
+    return booking ? { kind: "found", booking } : { kind: "missing" };
+  }
+
+  try {
+    const res = await fetch(`${AD_SPACE_API}/public/bookings/${encodeURIComponent(token)}`, {
+      headers: upstreamHeaders(from),
+      cache: "no-store",
+      signal: AbortSignal.timeout(6_000),
+    });
+    if (res.status === 404) return { kind: "missing" };
+    if (!res.ok) return { kind: "unreachable" };
+    const body = (await res.json()) as { data?: { booking?: Booking } };
+    const booking = body?.data?.booking;
+    return booking?.order?.session ? { kind: "found", booking } : { kind: "unreachable" };
+  } catch {
+    return { kind: "unreachable" };
   }
 }

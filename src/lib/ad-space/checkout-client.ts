@@ -14,7 +14,17 @@
 
 import { AD_SPACE_API } from "./config";
 import { CHAIN_LABEL, clockTime, takeoverClosedText } from "./format";
-import type { ApiErrorBody, Chain, ConfirmOutcome, ContentKind, EvmPayload, Order, Space } from "./types";
+import type {
+  ApiErrorBody,
+  Booking,
+  Chain,
+  ConfirmOutcome,
+  ContactKind,
+  ContentKind,
+  EvmPayload,
+  Order,
+  Space,
+} from "./types";
 
 /* ── The checkout key ─────────────────────────────────────────────── */
 
@@ -103,12 +113,27 @@ export class CheckoutError extends Error {
   }
 }
 
-async function call<T>(
-  path: string,
-  key: string,
-  init: { method?: string; json?: unknown; raw?: Blob; contentType?: string } = {},
+/**
+ * One call to our API from the browser, answering `data` or throwing a
+ * CheckoutError carrying `error.code`. Shared by the HiSpace checkout, the
+ * booking page and pay links.
+ *
+ * @param init.key the checkout key, sent as `X-Checkout-Key` when given.
+ * @param init.referrerPolicy "no-referrer" when the URL holds a bearer token.
+ */
+export async function apiRequest<T>(
+  url: string,
+  init: {
+    method?: string;
+    key?: string;
+    json?: unknown;
+    raw?: Blob;
+    contentType?: string;
+    referrerPolicy?: ReferrerPolicy;
+  } = {},
 ): Promise<T> {
-  const headers: Record<string, string> = { accept: "application/json", "X-Checkout-Key": key };
+  const headers: Record<string, string> = { accept: "application/json" };
+  if (init.key) headers["X-Checkout-Key"] = init.key;
   let body: BodyInit | undefined;
   if (init.raw) {
     headers["Content-Type"] = init.contentType ?? init.raw.type;
@@ -120,11 +145,12 @@ async function call<T>(
 
   let res: Response;
   try {
-    res = await fetch(`${AD_SPACE_API}${path}`, {
+    res = await fetch(url, {
       method: init.method ?? (body ? "POST" : "GET"),
       headers,
       body,
       cache: "no-store",
+      ...(init.referrerPolicy ? { referrerPolicy: init.referrerPolicy } : {}),
     });
   } catch {
     throw new CheckoutError("network", 0);
@@ -143,6 +169,14 @@ async function call<T>(
     throw new CheckoutError(code, res.status, err?.details ?? {});
   }
   return parsed.data;
+}
+
+function call<T>(
+  path: string,
+  key: string,
+  init: { method?: string; json?: unknown; raw?: Blob; contentType?: string } = {},
+): Promise<T> {
+  return apiRequest<T>(`${AD_SPACE_API}${path}`, { ...init, key });
 }
 
 export interface SolanaCheckout {
@@ -231,6 +265,100 @@ export function putContent(
   return call(`/public/orders/${encodeURIComponent(orderId)}/content`, key, { method: "PUT", json: body });
 }
 
+/* ── Sessions: the manage link and what the buyer sends ───────────────── */
+
+const MANAGE_PREFIX = "hihodl:ad-space:manage:";
+
+/**
+ * The token out of a manage link, `https://hihodl.xyz/b/<token>`, or null if
+ * the link is not one. Only the path is read: whatever host the server writes,
+ * the page links to its own `/b/`.
+ */
+export function manageToken(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    const m = new URL(url, "https://hihodl.xyz").pathname.match(/^\/b\/([A-Za-z0-9_-]{16,128})\/?$/);
+    return m ? m[1] : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The manage link for a paid session order: the one on the order if the server
+ * sent it, else the copy this browser kept the first time it saw it. Kept per
+ * order in localStorage, like the checkout key, because the server stores only
+ * the token's hash and may not be able to hand it out twice.
+ */
+export function rememberManageToken(order: Order): string | null {
+  const name = MANAGE_PREFIX + order.id;
+  const fresh = manageToken(order.manageUrl);
+  if (fresh) {
+    storageSet(name, fresh);
+    return fresh;
+  }
+  return storageGet(name);
+}
+
+export interface ContactBody {
+  contact: { kind: ContactKind; value: string };
+  brief: string;
+}
+
+/** Calls under `/public/bookings/:token`. The token is the only credential. */
+function bookingCall<T>(token: string, path: string, init: { method: string; json?: unknown }): Promise<T> {
+  return apiRequest<T>(`${AD_SPACE_API}/public/bookings/${encodeURIComponent(token)}${path}`, {
+    ...init,
+    // The token is in the path: never let it leave in a Referer.
+    referrerPolicy: "no-referrer",
+  });
+}
+
+export async function getBookingClient(token: string): Promise<Booking> {
+  return (await bookingCall<{ booking: Booking }>(token, "", { method: "GET" })).booking;
+}
+
+export async function putSessionContact(token: string, body: ContactBody): Promise<Booking> {
+  return (await bookingCall<{ booking: Booking }>(token, "/contact", { method: "PUT", json: body })).booking;
+}
+
+export async function confirmSession(
+  token: string,
+  body: { outcome: "delivered" | "didnt_happen"; note?: string },
+): Promise<Booking> {
+  return (await bookingCall<{ booking: Booking }>(token, "/confirm", { method: "POST", json: body })).booking;
+}
+
+/**
+ * The session codes, in plain words. Null for any other code, so the caller
+ * falls through to `describeError`.
+ */
+export function describeSessionError(e: unknown): string | null {
+  if (!(e instanceof CheckoutError)) return null;
+  switch (e.code) {
+    case "not_a_session":
+      return "This booking isn't a session, so there is nothing to confirm here.";
+    case "session_not_started":
+      return "The session hasn't started yet. You can answer once its time comes.";
+    case "confirm_window_closed":
+      return "The 7 days to answer have passed, so this session now counts as delivered.";
+    case "session_outside_event":
+      return "That time is outside the event's dates. A session has to fall between the day before the event and the day after it.";
+    case "contact_invalid":
+      return "That contact doesn't look right. An X or Telegram handle, or a full email address.";
+    case "room_needs_an_event":
+      return "A session is always at an event, so this space needs one.";
+    case "fallback_not_for_sessions":
+      return "For a session the creator can refund you or offer their next event; delivering content instead doesn't apply.";
+    case "price_below_minimum":
+      return "A session costs at least $50.";
+    case "not_found":
+      return "This booking link doesn't work. Check you copied all of it.";
+    default:
+      return null;
+  }
+}
+
 /* ── Errors in plain words ─────────────────────────────────────────── */
 
 /**
@@ -238,18 +366,27 @@ export function putContent(
  * the checkout is only a quote, so another sponsor can sign first; in every
  * one of these cases nothing moved. Null for anything else.
  */
-export function describeAuthorizationRefusal(e: unknown, chain: Chain): string | null {
+/**
+ * What is being bought, for the sentences below: a spot a sponsor pays for, or
+ * a session a buyer books (hispace-in-the-room-v0.md).
+ */
+export type Subject = "spot" | "session";
+
+export function describeAuthorizationRefusal(e: unknown, chain: Chain, subject: Subject = "spot"): string | null {
   if (!(e instanceof CheckoutError)) return null;
   const net = CHAIN_LABEL[chain];
+  const session = subject === "session";
   switch (e.code) {
     case "position_held":
-      return "Another sponsor signed for this spot a moment before you. Nothing was paid.";
+      return session
+        ? "Someone else signed for this session a moment before you. Nothing was paid."
+        : "Another sponsor signed for this spot a moment before you. Nothing was paid.";
     case "position_sold":
-      return "This spot sold while you were signing. Nothing was paid.";
+      return `This ${subject} ${session ? "was booked" : "sold"} while you were signing. Nothing was paid.`;
     case "space_closed":
       return "This HiSpace closed while you were signing. Nothing was paid.";
     case "insufficient_funds":
-      return `This wallet no longer has enough USDC on ${net} for this spot. Nothing was paid.`;
+      return `This wallet no longer has enough USDC on ${net} for this ${subject}. Nothing was paid.`;
     case "bad_signature":
       return "Those signatures didn't match the payment, so we didn't send it. Nothing was paid.";
     case "would_revert":
@@ -267,8 +404,9 @@ function str(v: unknown): string | null {
  * One sentence per error code, saying what happened and what to do. The
  * server's message is never shown: it is written for developers.
  */
-export function describeError(e: unknown, chain?: Chain | null): string {
+export function describeError(e: unknown, chain?: Chain | null, subject: Subject = "spot"): string {
   const net = chain ? CHAIN_LABEL[chain] : "this network";
+  const session = subject === "session";
 
   // Wallets reject with EIP-1193 code 4001 or a message; Solana wallets differ.
   const walletCode = (e as { code?: unknown })?.code;
@@ -283,25 +421,30 @@ export function describeError(e: unknown, chain?: Chain | null): string {
     return "Your wallet could not finish that. Nothing was paid; try again, or pay another way.";
   }
 
+  const sessionText = describeSessionError(e);
+  if (sessionText && e.code !== "not_found") return sessionText;
+
   const d = e.details;
   switch (e.code) {
     case "position_sold":
-      return "Someone has just bought this spot. Pick another one on the board.";
+      return session
+        ? "Someone has just booked this session. Pick another one."
+        : "Someone has just bought this spot. Pick another one on the board.";
     case "position_held": {
       const until = str(d.heldUntil);
       return until
-        ? `Someone is paying for this spot right now. It frees up at ${clockTime(until)} if they don't.`
-        : "Someone is paying for this spot right now. It frees up in a few minutes if they don't.";
+        ? `Someone is paying for this ${subject} right now. It frees up at ${clockTime(until)} if they don't.`
+        : `Someone is paying for this ${subject} right now. It frees up in a few minutes if they don't.`;
     }
     case "space_closed":
     case "space_not_live":
-      return "This HiSpace has closed, so its spots can't be bought any more.";
+      return `This HiSpace has closed, so its ${subject}s can't be ${session ? "booked" : "bought"} any more.`;
     case "insufficient_funds": {
       const need = str(d.neededUsdc);
       const have = str(d.balanceUsdc);
       return need && have
-        ? `This wallet has ${have} USDC on ${net} and this spot needs ${need}. Add USDC or pay from another wallet.`
-        : `This wallet doesn't have enough USDC on ${net} for this spot. Add USDC or pay from another wallet.`;
+        ? `This wallet has ${have} USDC on ${net} and this ${subject} needs ${need}. Add USDC or pay from another wallet.`
+        : `This wallet doesn't have enough USDC on ${net} for this ${subject}. Add USDC or pay from another wallet.`;
     }
     case "chain_not_accepted":
       return `This creator doesn't take payments on ${net}. Pick one of the other networks.`;
@@ -324,17 +467,17 @@ export function describeError(e: unknown, chain?: Chain | null): string {
     case "price_ceiling":
       return takeoverClosedText(e.code);
     case "own_address":
-      return "That wallet belongs to the creator of this HiSpace. Sponsor from a different wallet.";
+      return `That wallet belongs to the creator of this HiSpace. ${session ? "Book" : "Sponsor"} from a different wallet.`;
     case "invalid_address":
       return `Your wallet gave us an address we can't use on ${net}. Reconnect it and try again.`;
     case "bad_signature":
       return "Those signatures didn't match the payment. Sign again with the same wallet you connected.";
     case "too_many_holds":
-      return "This connection is already holding spots that aren't paid. Finish those, or wait for them to lapse.";
+      return `This connection is already holding ${subject}s that aren't paid. Finish those, or wait for them to lapse.`;
     case "too_many_lapsed_holds":
       return "Too many unpaid holds from this connection lately. Try again later today.";
     case "space_busy":
-      return "Two other people are paying for spots here right now. Try again in a few minutes, or pay on Base or Polygon.";
+      return `Two other people are paying for ${subject}s here right now. Try again in a few minutes, or pay on Base or Polygon.`;
     case "would_revert":
       return `That payment would fail on ${net}, so we didn't send it. Nothing was paid. Check the wallet's USDC, or try another wallet.`;
     case "chain_unavailable":
@@ -345,7 +488,7 @@ export function describeError(e: unknown, chain?: Chain | null): string {
       return `${net} fees are unusually high right now. Try again in a few minutes, or pick another network.`;
     case "hold_expired":
     case "checkout_key_reused":
-      return "Your hold on this spot ran out before the payment arrived. Start again to hold it for you.";
+      return `Your hold on this ${subject} ran out before the payment arrived. Start again to hold it for you.`;
     case "already_paid":
       return "This order is already paid.";
     case "payment_pending":
@@ -358,7 +501,7 @@ export function describeError(e: unknown, chain?: Chain | null): string {
         ? "Checkout is paused for a moment on our side. Nothing was paid; try again in a minute."
         : "Too many requests from this connection. Wait a moment and try again.";
     case "not_found":
-      return "We can't find this spot or order any more. Refresh the page.";
+      return `We can't find this ${subject} or order any more. Refresh the page.`;
     case "network":
       return "We couldn't reach HOLD. Check your connection and try again.";
     default:

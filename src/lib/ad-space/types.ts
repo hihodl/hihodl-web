@@ -32,7 +32,18 @@ export interface Creator {
   xIdentityVerified: boolean;
   xFollowers: number;
   xAccountCreatedAt: string | null;
-  trackRecord: { delivered: number; missed: number };
+  trackRecord: TrackRecord;
+}
+
+/**
+ * What a creator has delivered. `disputed` (hispace-in-the-room-v0.md) counts
+ * sessions a buyer said did not happen; a backend that predates it leaves it
+ * out, which reads as zero.
+ */
+export interface TrackRecord {
+  delivered: number;
+  missed: number;
+  disputed?: number;
 }
 
 export interface TemplateView {
@@ -58,8 +69,20 @@ export interface Template {
   name: string;
   views: TemplateView[];
   zones: TemplateZone[];
-  service: { deliverableKind: string; summary: string; maxSlots: number } | null;
+  service: {
+    deliverableKind: string;
+    summary: string;
+    maxSlots: number;
+    /**
+     * `content` is delivered by a public link (tab `feed`); `session` is time in
+     * person at an event (tab `room`), delivered by the buyer confirming it. A
+     * backend that predates sessions leaves it out, which reads as `content`.
+     */
+    format?: ServiceFormat;
+  } | null;
 }
+
+export type ServiceFormat = "content" | "session";
 
 export interface Sponsor {
   name: string;
@@ -226,8 +249,8 @@ export interface EventSummary {
   spaceCount: number;
 }
 
-/** Placement templates are `ground`, services are `feed`. */
-export type SpaceTab = "ground" | "feed";
+/** Placement templates are `ground`, content services `feed`, sessions `room`. */
+export type SpaceTab = "ground" | "feed" | "room";
 
 export interface SpaceSibling {
   path: string;
@@ -247,7 +270,7 @@ export interface CardCreator {
   xAvatarUrl: string | null;
   xVerifiedType: string | null;
   xFollowers: number | null;
-  trackRecord: { delivered: number; missed: number };
+  trackRecord: TrackRecord;
 }
 
 /** One card on an event page. */
@@ -325,6 +348,70 @@ export interface Order {
   paidAt: string | null;
   explorerUrl: string | null;
   share: { url: string; text: string } | null;
+  /**
+   * Set only on a session order (hispace-in-the-room-v0.md), and only for its
+   * buyer and its creator. Never on a public page.
+   */
+  session?: SessionView | null;
+  /**
+   * The buyer's manage link, `https://hihodl.xyz/b/<token>`, on a PAID session
+   * order read with this browser's checkout key.
+   *
+   * ASSUMPTION (not named in the contract): the order carries it as
+   * `manageUrl`. The server keeps only the token's hash, so the page also keeps
+   * the first copy it sees in localStorage, keyed by order.
+   */
+  manageUrl?: string | null;
+}
+
+/* ── Sessions: time in person at an event ─────────────────────────────── */
+
+export type ContactKind = "x" | "telegram" | "email";
+
+export type SessionState =
+  | "awaiting_contact"
+  | "awaiting_schedule"
+  | "scheduled"
+  | "awaiting_confirmation"
+  | "delivered"
+  | "disputed";
+
+/** What only a session's buyer and its creator see. */
+export interface SessionView {
+  contact: { kind: ContactKind; value: string } | null;
+  brief: string | null;
+  sessionAt: string | null;
+  sessionPlace: string | null;
+  state: SessionState;
+  /** Until when the buyer can answer (or turn a dispute into delivered). */
+  confirmBy: string | null;
+  disputeNote: string | null;
+  creatorReply: string | null;
+}
+
+/**
+ * `GET /public/bookings/:token`.
+ *
+ * ASSUMPTION: the contract names the route and says it "shows the booking";
+ * the shape is this page's proposal. `PUT contact` and `POST confirm` answer
+ * the same object.
+ */
+export interface Booking {
+  order: Order & { session: SessionView };
+  /** The slot's label, "Slot 3". */
+  positionLabel: string;
+  space: {
+    id: string;
+    /** "/s/<handle>/<slug>" */
+    path: string;
+    title: string;
+    templateName: string;
+    status: SpaceStatus;
+    creator: { xHandle: string; xName: string | null; xAvatarUrl: string | null };
+    event: EventSummary | null;
+    fallback: Fallback;
+    fallbackNote: string | null;
+  };
 }
 
 export interface EvmAuthorization {
