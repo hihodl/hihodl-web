@@ -151,22 +151,26 @@ export function utf8Hex(text: string): string {
   return `0x${Array.from(new TextEncoder().encode(text), (b) => b.toString(16).padStart(2, "0")).join("")}`;
 }
 
-/**
- * Connect a Solana wallet and sign `message` as UTF-8. Answers the address that
- * signed and the base58 signature, or throws when the wallet can't sign messages.
- */
-export async function signSolanaMessage(
-  provider: SolanaProvider,
-  message: string,
-): Promise<{ address: string; signature: string }> {
-  if (typeof provider.signMessage !== "function") throw new Error("sign_message_unsupported");
+/** Connect a Solana wallet and answer its address. */
+export async function connectSolana(provider: SolanaProvider): Promise<string> {
   const connected = (await provider.connect()) as { publicKey?: { toString(): string } } | undefined;
   const address = (connected?.publicKey ?? provider.publicKey)?.toString();
   if (!address) throw new Error("no_account");
+  return address;
+}
+
+/** Whether a Solana wallet can sign a plain message (the funds check needs it). */
+export function canSignMessage(provider: SolanaProvider): boolean {
+  return typeof provider.signMessage === "function";
+}
+
+/** Sign `message` as UTF-8 with a connected Solana wallet: the base58 signature. */
+export async function signSolanaMessage(provider: SolanaProvider, message: string): Promise<string> {
+  if (typeof provider.signMessage !== "function") throw new Error("sign_message_unsupported");
   const signed = await provider.signMessage(new TextEncoder().encode(message), "utf8");
   const raw = signed instanceof Uint8Array ? signed : (signed as { signature?: unknown })?.signature;
   if (!(raw instanceof Uint8Array) || raw.length !== 64) throw new Error("no_signature");
-  return { address, signature: base58(raw) };
+  return base58(raw);
 }
 
 /** The first account of an EIP-1193 wallet, asking to connect. */
