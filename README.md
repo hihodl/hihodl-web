@@ -145,3 +145,18 @@ visible next to the revoke.
 | `NEXT_PUBLIC_SITE_URL` | Stripe return URLs. |
 
 Point the Stripe webhook at `/api/founders/stripe/webhook`.
+
+# HiSpace
+
+### Environment
+
+| Variable | Used for |
+|---|---|
+| `HIHODL_API_BASE_URL` | Backend base, `.../api/v1`. `NEXT_PUBLIC_HIHODL_API_URL` wins when set. |
+| `AD_SPACE_WEB_KEY` | **Server-only**, never `NEXT_PUBLIC`. Sent as `x-hold-web-key` on every server-side call to the Ad Space public API so the backend's per-IP limiter does not count all our visitors as one Vercel address. Unset: the header is left out and those calls are limited like any other client. Built only by `upstreamHeaders` in `src/lib/ad-space/server.ts`. |
+| `AD_SPACE_FIXTURE` | `1` renders HiSpace pages from local fixtures in development. Ignored by a production build. |
+
+Uncached calls (the `/q/<code>` scan redirect) also send `x-hold-client-ip`,
+the visitor's address from `x-forwarded-for` or `x-real-ip`. Cached page reads
+send the key alone: request headers are part of Next's Data Cache key, so a
+per-visitor IP there would give every visitor their own cache entry.
