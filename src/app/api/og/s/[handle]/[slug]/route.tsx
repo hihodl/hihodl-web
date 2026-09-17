@@ -1,7 +1,14 @@
 import { ImageResponse } from "next/og";
 
 import { OG, OgBanner, OgEventCard, clip as clipOg, loadOgImage } from "@/components/ad-space/og";
-import { CHAIN_LABEL, spaceProgressText, spaceSoldOut, takeableSpots, usdFromCents } from "@/lib/ad-space/format";
+import {
+  CHAIN_LABEL,
+  bidsSummaryText,
+  spaceProgressText,
+  spaceSoldOut,
+  takeableSpots,
+  usdFromCents,
+} from "@/lib/ad-space/format";
 import { bannerFor } from "@/lib/ad-space/look";
 import { getPublicSpace } from "@/lib/ad-space/server";
 import type { Position, Space, TemplateView } from "@/lib/ad-space/types";
@@ -21,6 +28,10 @@ import type { Position, Space, TemplateView } from "@/lib/ad-space/types";
  * banner (creator image, then city photo, then gradient), the event's small card,
  * and "@handle is going to {event}" with the creator's avatar, so every creator
  * who shares a link advertises the event too. The board count stays on it.
+ *
+ * A space sold by bidding (hispace-offers-v0.md) adds the highest bid and the
+ * time left, counted when the card is drawn: the card is cached for 5 minutes,
+ * and "2d left" is as fine as a picture on X can honestly be.
  */
 
 const W = 1200;
@@ -76,6 +87,7 @@ async function EventCard({ space: s }: { space: Space }) {
   // A takeover board is never "sold out" while a sold spot can still be taken.
   const soldOut = spaceSoldOut(s);
   const progress = spaceProgressText(s);
+  const bids = bidsSummaryText(s);
 
   return (
     <OgBanner banner={{ ...banner, imageUrl: image, credit: image ? banner.credit : null }}>
@@ -121,6 +133,7 @@ async function EventCard({ space: s }: { space: Space }) {
           >
             <div style={{ fontSize: 24, color: OG.muted }}>{clipOg(s.title, 48)}</div>
             <div style={{ fontSize: 28, color: soldOut ? OG.amber : OG.text, marginTop: 4 }}>{progress}</div>
+            {bids && <div style={{ fontSize: 28, color: OG.amber, marginTop: 4 }}>{bids}</div>}
           </div>
         }
       />
@@ -139,6 +152,13 @@ function Card({ space: s }: { space: Space }) {
   const pct = totals.positions ? Math.min(100, (headline / totals.positions) * 100) : 0;
   const full = [s.eventName, s.template.name].filter(Boolean).join(" · ");
   const eyebrow = full.length <= 38 ? full : (s.eventName ?? s.template.name);
+  const bids = bidsSummaryText(s);
+  /* Offers and bids have no listed total (`totalCents` null) and commit only
+     what was paid at an agreed amount: nothing before the first sale, rather
+     than "$0 committed". */
+  const noTotal = totals.totalCents === null || s.pricingMode === "offers" || s.pricingMode === "bids";
+  const committedLine =
+    noTotal && totals.committedCents <= 0 ? null : `${usdFromCents(totals.committedCents)} committed in USDC`;
 
   return (
     <div
@@ -198,9 +218,11 @@ function Card({ space: s }: { space: Space }) {
           >
             <div style={{ width: `${pct}%`, height: 10, borderRadius: 5, backgroundColor: C.amber }} />
           </div>
-          <div style={{ display: "flex", marginTop: 18, fontSize: 28, color: C.muted }}>
-            {`${usdFromCents(totals.committedCents)} committed in USDC`}
-          </div>
+          {bids ? (
+            <div style={{ display: "flex", marginTop: 18, fontSize: 32, color: C.amber }}>{bids}</div>
+          ) : committedLine ? (
+            <div style={{ display: "flex", marginTop: 18, fontSize: 28, color: C.muted }}>{committedLine}</div>
+          ) : null}
         </div>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>

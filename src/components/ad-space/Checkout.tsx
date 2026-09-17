@@ -27,8 +27,9 @@ import {
   isSessionSpace,
   timeLeft,
 } from "@/lib/ad-space/format";
+import { describeOfferError, offerSolanaPayLink, startOfferCheckout } from "@/lib/ad-space/offers-client";
 import { PUBLIC_CHAINS } from "@/lib/orders/chains.public";
-import type { Booking, Chain, EvmPayload, Order, Position, Space } from "@/lib/ad-space/types";
+import type { Booking, Chain, EvmPayload, OfferView, Order, Position, Space } from "@/lib/ad-space/types";
 
 import {
   type SolanaWallet,
@@ -41,6 +42,7 @@ import {
   typedData,
 } from "@/lib/ad-space/wallets";
 
+import { AppPrompt } from "./AppPrompt";
 import { Check, ChainPicker, SolanaOptions, Spinner } from "./checkout-parts";
 import { QrCode } from "./qr";
 import { ManageLinkBox, SessionContactForm } from "./SessionBooking";
@@ -61,6 +63,13 @@ import { btnPrimary, btnSecondary, btnSmallSecondary, eyebrow } from "./ui";
  * which is why the page is allowed to poll as often as it does.
  *
  * No red, including on failures: problems are amber and say what to do next.
+ *
+ * With `offer`, this pays an accepted offer or bid (hispace-offers-v0.md): the
+ * checkout is asked for through the offer's token and priced at the agreed
+ * amount, and everything after it (confirm, content) is the same flow. Its
+ * Solana Pay QR comes from the offer too (`POST /public/offers/:token/checkout`
+ * with `qr: true`), which binds this browser's checkout key to the offer; the
+ * page then waits on `GET /public/checkout` with that key like any QR payment.
  */
 
 type Phase =
@@ -77,7 +86,13 @@ type Phase =
 const POLL_MS = 3_000;
 
 /** Refusals that mean "this spot is not there to buy": offer the way back to the board. */
-const GONE_CODES = new Set(["position_sold", "position_held", "space_closed", "nothing_to_take_over"]);
+const GONE_CODES = new Set([
+  "position_sold",
+  "position_held",
+  "position_reserved",
+  "space_closed",
+  "nothing_to_take_over",
+]);
 
 /* ── The component ─────────────────────────────────────────────────── */
 
@@ -86,11 +101,14 @@ export function Checkout({
   position,
   onClose,
   onPaid,
+  offer = null,
 }: {
   space: Space;
   position: Position;
   onClose: () => void;
   onPaid: () => void;
+  /** An accepted offer or bid to pay, by its manage-link token. */
+  offer?: { token: string; view: OfferView } | null;
 }) {
   // Taking a sold spot over is only possible on the chains takeovers work on.
   // The position view does not say which chain the holder paid on, so the
@@ -115,6 +133,28 @@ export function Checkout({
   /** A session in person: booked, not sponsored (hispace-in-the-room-v0.md). */
   const session = isSessionSpace(space);
   const subject = session ? "session" : "spot";
+
+  /** The checkout calls: the position's, or the accepted offer's at the agreed amount. */
+  const offerToken = offer?.token ?? null;
+  const beginSolana = useCallback(
+    (key: string, sponsorAddress: string) =>
+      offerToken
+        ? startOfferCheckout(offerToken, key, { chain: "solana", sponsorAddress })
+        : startCheckout(position.id, key, { chain: "solana", sponsorAddress }),
+    [offerToken, position.id],
+  );
+  const beginEvm = useCallback(
+    (key: string, chain: "base" | "polygon", sponsorAddress: string) =>
+      offerToken
+        ? startOfferCheckout(offerToken, key, { chain, sponsorAddress })
+        : startCheckout(position.id, key, { chain, sponsorAddress }),
+    [offerToken, position.id],
+  );
+  const explain = useCallback(
+    (e: unknown, c: Chain | null) =>
+      (offer ? describeOfferError(e, { kind: offer.view.kind, chain: c, subject }) : null) ?? describeError(e, c, subject),
+    [offer, subject],
+  );
 
   /* Wallets are only knowable in the browser, after mount. */
   useEffect(() => {
@@ -160,9 +200,11 @@ export function Checkout({
     };
   }, [position.id]);
 
-  /* The Solana Pay link for the mobile button, computed once the key is known. */
+  /* The Solana Pay link for the mobile button, computed once the key is known.
+     An accepted offer's link has to be asked for (it binds the key), so it is
+     only fetched when the sponsor chooses QR, whose screen has the same button. */
   useEffect(() => {
-    if (phase.kind !== "choose" || chain !== "solana") return;
+    if (offerToken || phase.kind !== "choose" || chain !== "solana") return;
     let live = true;
     void checkoutId(keyRef.current).then((c) => {
       if (live) setMobileLink(solanaPayLink(position.id, c));
@@ -170,7 +212,7 @@ export function Checkout({
     return () => {
       live = false;
     };
-  }, [phase.kind, chain, position.id]);
+  }, [phase.kind, chain, position.id, offerToken]);
 
   /* Countdown tick while something is held. */
   const ticking = phase.kind === "qr" || phase.kind === "confirming" || phase.kind === "evm-sign";
@@ -223,7 +265,7 @@ export function Checkout({
         if (stop) return;
         if (e instanceof CheckoutError && e.code === "rate_limited") wait = POLL_MS * 4;
         else if (e instanceof CheckoutError && e.code === "not_found") {
-          setNotice(describeError(e, null, session ? "session" : "spot"));
+          setNotice(explain(e, null));
           return;
         }
         // Anything else: a dropped poll is not an event. Ask again.
@@ -235,7 +277,7 @@ export function Checkout({
       stop = true;
       if (timer) clearTimeout(timer);
     };
-  }, [confirmingId, onPaid, session]);
+  }, [confirmingId, onPaid, explain]);
 
   /* QR poll: every 3 s until the phone wallet has created the order. */
   const waitingQr = phase.kind === "qr";
@@ -309,7 +351,7 @@ export function Checkout({
 
       setPhase({ kind: "busy", label: "Preparing the payment…" });
       const checkout = () =>
-        withFreshKey((key) => startCheckout(position.id, key, { chain: "solana", sponsorAddress }));
+        withFreshKey((key) => beginSolana(key, sponsorAddress));
       let [res, web3] = await Promise.all([checkout(), import("@solana/web3.js")]);
 
       setPhase({ kind: "busy", label: `Approve the payment in ${wallet.name}…` });
@@ -334,7 +376,7 @@ export function Checkout({
       signatureRef.current = signature;
       setPhase({ kind: "confirming", order: res.order });
     } catch (e) {
-      setNotice(describeError(e, "solana", subject));
+      setNotice(explain(e, "solana"));
       setOfferOtherSpot(e instanceof CheckoutError && GONE_CODES.has(e.code));
       // A connected wallet that declined leaves the hold in place; the next
       // attempt with the same key gets the same transaction back.
@@ -344,8 +386,22 @@ export function Checkout({
 
   async function startQr() {
     setNotice(null);
-    const c = await checkoutId(keyRef.current);
-    setPhase({ kind: "qr", link: solanaPayLink(position.id, c) });
+    setOfferOtherSpot(false);
+    if (!offerToken) {
+      const c = await checkoutId(keyRef.current);
+      setPhase({ kind: "qr", link: solanaPayLink(position.id, c) });
+      return;
+    }
+    // An accepted offer: the server binds this key to the offer and answers the link.
+    setPhase({ kind: "busy", label: "Preparing the QR…" });
+    try {
+      const link = await withFreshKey((key) => offerSolanaPayLink(offerToken, key));
+      setPhase({ kind: "qr", link });
+    } catch (e) {
+      setNotice(explain(e, "solana"));
+      setOfferOtherSpot(e instanceof CheckoutError && GONE_CODES.has(e.code));
+      setPhase({ kind: "choose" });
+    }
   }
 
   async function payWithEvm(evmChain: "base" | "polygon") {
@@ -368,7 +424,7 @@ export function Checkout({
       await switchEvmChain(provider, meta);
 
       setPhase({ kind: "busy", label: "Preparing the payment…" });
-      const res = await withFreshKey((key) => startCheckout(position.id, key, { chain: evmChain, sponsorAddress }));
+      const res = await withFreshKey((key) => beginEvm(key, evmChain, sponsorAddress));
       const creatorAuth = res.evm.authorizations.find((a) => a.role === "creator");
       const feeAuth = res.evm.authorizations.find((a) => a.role === "fee");
       if (!creatorAuth || !feeAuth) throw new CheckoutError("server", 500);
@@ -394,7 +450,7 @@ export function Checkout({
       setPhase({ kind: "confirming", order: submitted.order });
     } catch (e) {
       const refusal = submitting ? describeAuthorizationRefusal(e, evmChain, subject) : null;
-      setNotice(refusal ?? describeError(e, evmChain, subject));
+      setNotice(refusal ?? explain(e, evmChain));
       setOfferOtherSpot(
         refusal !== null ||
           (e instanceof CheckoutError && GONE_CODES.has(e.code)),
@@ -418,7 +474,15 @@ export function Checkout({
       <div className="relative flex max-h-[92dvh] w-full flex-col overflow-y-auto rounded-t-card border border-[color:var(--color-hairline-strong)] bg-night shadow-2xl sm:m-6 sm:max-w-lg sm:rounded-card">
         <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-[color:var(--color-hairline)] bg-night/95 px-5 py-4 backdrop-blur">
           <div className="min-w-0">
-            <p className={`${eyebrow} text-amber`}>{session ? "Book a session" : "Sponsor a spot"}</p>
+            <p className={`${eyebrow} text-amber`}>
+              {offer
+                ? offer.view.kind === "bid"
+                  ? "Pay your winning bid"
+                  : "Pay your accepted offer"
+                : session
+                  ? "Book a session"
+                  : "Sponsor a spot"}
+            </p>
             <h2 id="checkout-title" className="mt-1 truncate text-body text-text">
               {position.label}
             </h2>
@@ -459,7 +523,7 @@ export function Checkout({
             </div>
           ) : (
             <>
-              <Summary space={space} position={position} session={session} />
+              <Summary space={space} position={position} session={session} offer={offer?.view ?? null} />
 
               {phase.kind === "loading" && <p className="text-small text-text-muted">One moment…</p>}
 
@@ -518,6 +582,7 @@ export function Checkout({
                   )}
 
                   <Disclaimer session={session} />
+                  {offer && <AppPrompt title="No wallet with USDC? Pay with HOLD" />}
                 </>
               )}
 
@@ -622,8 +687,19 @@ export function Checkout({
 
 /* ── Pieces ────────────────────────────────────────────────────────── */
 
-function Summary({ space, position: p, session }: { space: Space; position: Position; session: boolean }) {
+function Summary({
+  space,
+  position: p,
+  session,
+  offer,
+}: {
+  space: Space;
+  position: Position;
+  session: boolean;
+  offer: OfferView | null;
+}) {
   const zone = space.template.zones.find((z) => z.zoneKey === p.zoneKey);
+  const agreed = offer?.agreedUsdc && offer.agreedSponsorPaysUsdc ? offer : null;
   // Taking a spot from whoever holds it, rather than buying an empty one. The
   // figures differ enough that showing the fixed-price pair would be wrong:
   // what this sponsor pays is the DOUBLED price plus the fee, and most of it
@@ -635,15 +711,15 @@ function Summary({ space, position: p, session }: { space: Space; position: Posi
         <div>
           <dt className="text-tiny text-text-faint">You pay</dt>
           <dd className="mt-1 font-mono text-body text-text">
-            {taking ? taking.nextSponsorPaysUsdc : p.sponsorPaysUsdc} USDC
+            {agreed ? agreed.agreedSponsorPaysUsdc : taking ? taking.nextSponsorPaysUsdc : p.sponsorPaysUsdc} USDC
           </dd>
         </div>
         <div>
           <dt className="text-tiny text-text-faint">
-            {taking ? "New price for the spot" : `@${space.creator.xHandle} receives`}
+            {agreed ? "Agreed price" : taking ? "New price for the spot" : `@${space.creator.xHandle} receives`}
           </dt>
           <dd className="mt-1 font-mono text-body text-text">
-            {taking ? taking.nextPriceUsdc : p.creatorReceivesUsdc} USDC
+            {agreed ? agreed.agreedUsdc : taking ? taking.nextPriceUsdc : p.creatorReceivesUsdc} USDC
           </dd>
         </div>
         {taking && (

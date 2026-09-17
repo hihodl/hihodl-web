@@ -90,6 +90,12 @@ export function SpaceHero({ space }: { space: Space }) {
   const noun = session ? "sessions" : space.kind === "service" ? "slots" : "spots";
   const soldWord = session ? "booked" : "sold";
   const isTakeover = space.pricingMode === "takeover";
+  /* Offers and bids have no listed total (the server sends `totalCents: null`):
+     "of $X" would name a total nobody has agreed to. What they commit is the
+     agreed amounts of paid orders, so before a sale there is nothing to show,
+     and "$0 committed" would read as a space nobody wants. */
+  const noTotal = totals.totalCents === null || space.pricingMode === "offers" || space.pricingMode === "bids";
+  const showCommitted = !noTotal || totals.committedCents > 0;
 
   /* On a takeover board a sold spot is not gone — it can be bought from the
      sponsor holding it. So "sold out" is only true here when there is nothing
@@ -147,15 +153,21 @@ export function SpaceHero({ space }: { space: Space }) {
                   </>
                 )}
               </p>
-              <p className="text-small">
-                <span className="font-mono text-text">{usdFromCents(totals.committedCents)}</span>
-                {/* A takeover board has no ceiling to measure against: every
-                    takeover raises the total, so "of" would name a number
-                    that is already out of date by the next sponsor. */}
-                <span className="text-text-faint">
-                  {isTakeover ? " committed so far" : ` committed of ${usdFromCents(totals.totalCents)}`}
-                </span>
-              </p>
+              {showCommitted ? (
+                <p className="text-small">
+                  <span className="font-mono text-text">{usdFromCents(totals.committedCents)}</span>
+                  {/* A takeover board has no ceiling to measure against: every
+                      takeover raises the total, so "of" would name a number
+                      that is already out of date by the next sponsor. */}
+                  <span className="text-text-faint">
+                    {isTakeover || noTotal || totals.totalCents === null
+                      ? " committed so far"
+                      : ` committed of ${usdFromCents(totals.totalCents)}`}
+                  </span>
+                </p>
+              ) : (
+                <p className="text-small text-text-faint">No sales yet</p>
+              )}
             </div>
             <div
               className="h-2 overflow-hidden rounded-[4px] bg-white/[0.06]"
@@ -288,6 +300,43 @@ export function SpaceTakeover({ space }: { space: Space }) {
           A spot changes hands on the chain it was bought on, because the refund travels in that same transaction.
         </p>
       )}
+    </section>
+  );
+}
+
+/**
+ * How a sponsor names the price (hispace-offers-v0.md), said once above the
+ * spots. Nothing renders on a space that takes no offers.
+ */
+export function SpaceOffersHowItWorks({ space }: { space: Space }) {
+  const mode =
+    space.pricingMode === "bids"
+      ? "bids"
+      : space.pricingMode === "offers"
+        ? "offers"
+        : space.pricingMode === "fixed" && space.acceptsOffers
+          ? "fixed_with_offers"
+          : null;
+  if (!mode) return null;
+  const who = `@${space.creator.xHandle}`;
+
+  return (
+    <section aria-label="How offers work" className={`${card} mb-10 flex flex-col gap-3 p-5 md:p-6`}>
+      <h2 className={`${eyebrow} text-moonlight`}>
+        {mode === "bids" ? "Bid for a spot" : mode === "offers" ? "Name your price" : "Buy now, or make an offer"}
+      </h2>
+      <p className="max-w-3xl text-small text-text-muted">
+        {mode === "bids"
+          ? `Each spot is its own bidding. The highest bid backed by a wallet that holds the money leads, and a bid in the last 10 minutes gives everyone 10 more. When bidding ends, ${who} accepts a bid.`
+          : mode === "offers"
+            ? `There is no set price. Offer what the spot is worth to you, and ${who} accepts, counters or declines.`
+            : `Every spot has a price you can pay now. If it's more than you want to spend, offer less, and ${who} accepts, counters or declines.`}
+      </p>
+      <p className="max-w-3xl text-small text-text-muted">
+        Nothing you offer is paid or locked. If your {mode === "bids" ? "bid" : "offer"} is accepted, you have 24 hours
+        to pay it from any wallet, straight to the creator, and it goes through like any other sponsorship. Neither side
+        is bound to go ahead.
+      </p>
     </section>
   );
 }

@@ -20,8 +20,13 @@ export type VenueType = "travel" | "conference" | "sports_event" | "private_even
  * `takeover`: the listed price is where bidding OPENS, and a sold spot can be
  * taken by paying a multiple of what it last went for. The sponsor displaced is
  * repaid every cent inside the same transaction.
+ *
+ * `offers` and `bids` (hispace-offers-v0.md): the sponsor names the price. In
+ * `offers` no price is shown; in `bids` the listed price is the opening bid and
+ * the highest backed bid is public. A `fixed` space may also accept offers
+ * (`acceptsOffers`). A server older than offers only ever sends the first two.
  */
-export type PricingMode = "fixed" | "takeover";
+export type PricingMode = "fixed" | "takeover" | "offers" | "bids";
 
 export interface Creator {
   xUserId: string;
@@ -127,9 +132,10 @@ export interface Position {
   id: string;
   zoneKey: string;
   label: string;
-  priceCents: number;
-  sponsorPaysUsdc: string;
-  creatorReceivesUsdc: string;
+  /** Null in `offers` mode, where no price is shown. In `bids` it is the opening bid. */
+  priceCents: number | null;
+  sponsorPaysUsdc: string | null;
+  creatorReceivesUsdc: string | null;
   pitch: string | null;
   accepts: ContentKind[];
   status: PositionStatus;
@@ -139,6 +145,128 @@ export interface Position {
   /** Only for the creator, or the sponsor reading with their checkout key. */
   content?: { status: "pending" | "approved" | "rejected"; rejectedReason: string | null } | null;
   delivered: { url: string; at: string } | null;
+  /**
+   * How offers and bids stand on this spot, or null when the space takes none.
+   * Always null on a service slot: a service space carries it once, as
+   * `Space.spaceOffers`. Optional because a server older than offers sends no key.
+   */
+  offers?: PositionOffers | null;
+}
+
+/* ── Offers and bids (hispace-offers-v0.md) ───────────────────────────── */
+
+export type OfferMode = "fixed_with_offers" | "offers" | "bids";
+
+/**
+ * The public side of offers on a spot (or on a service space). Every amount is
+ * the creator's side, before our fee, unless its name says `SponsorPays`.
+ */
+export interface PositionOffers {
+  mode: OfferMode;
+  /** Offers modes: open threads (pending, countered, accepted). */
+  openCount: number | null;
+  /** Bids only. */
+  bidCount: number | null;
+  /** Bids only: the highest BACKED bid, creator amount. */
+  highestBidUsdc: string | null;
+  highestBidSponsorPaysUsdc: string | null;
+  /** Bids only: the display name of whoever leads. */
+  leaderName: string | null;
+  /** Bids only; null when there is no reserve. */
+  reserveMet: boolean | null;
+  openingBidUsdc: string | null;
+  /** Bids only: the least the next bid can be, creator amount. */
+  nextMinimumBidUsdc: string | null;
+  /** Bids only: this spot's end, extensions included. */
+  biddingEndsAt: string | null;
+  biddingOpen: boolean | null;
+  /** While an accepted offer waits for its payment. */
+  reservedUntil: string | null;
+}
+
+export type OfferKind = "offer" | "bid";
+
+export type OfferStatus =
+  | "pending"
+  | "countered"
+  | "accepted"
+  | "paid"
+  | "declined"
+  | "expired"
+  | "withdrawn"
+  | "lapsed"
+  | "superseded";
+
+export interface OfferRound {
+  by: "sponsor" | "creator" | "auto";
+  amountUsdc: string;
+  at: string;
+}
+
+/** One offer or bid, as its sponsor sees it through the manage link. */
+export interface OfferView {
+  id: string;
+  spaceId: string;
+  /** Null on a service space until an acceptance assigns a slot. */
+  positionId: string | null;
+  positionLabel: string | null;
+  kind: OfferKind;
+  status: OfferStatus;
+  /** The sponsor's latest amount, creator side, before fee. */
+  amountUsdc: string;
+  sponsorPaysUsdc: string;
+  /** The creator's latest counter, while countered. */
+  counterUsdc: string | null;
+  counterSponsorPaysUsdc: string | null;
+  /** Once accepted. */
+  agreedUsdc: string | null;
+  agreedSponsorPaysUsdc: string | null;
+  rounds: OfferRound[];
+  countersLeft: number;
+  sponsor: {
+    name: string;
+    contactKind: ContactKind | null;
+    contactValue: string | null;
+    message: string | null;
+    via: "app" | "web";
+    backed: null | { chain: Chain; address: string; checkedAt: string };
+  };
+  declineReason: "too_low" | "not_a_fit" | "other" | null;
+  /** When the current wait ends: the creator's answer, the sponsor's, or the payment. */
+  expiresAt: string | null;
+  orderId: string | null;
+  /** Bids only: this is the highest backed bid now. */
+  leading: boolean | null;
+  createdAt: string;
+  updatedAt: string;
+  /** The space's title and web path ("/s/<handle>/<slug>"), when the server joins them in. */
+  spaceTitle?: string | null;
+  spacePath?: string | null;
+}
+
+/** `GET /public/offers/:token`, and what `respond` answers. */
+export interface OfferThread {
+  offer: OfferView;
+  space: {
+    id: string;
+    /** "/s/<handle>/<slug>". */
+    path: string | null;
+    title: string;
+    templateName: string | null;
+    pricingMode: PricingMode;
+    status: SpaceStatus;
+    closesAt: string;
+    creator: { xHandle: string | null; xName: string | null; xAvatarUrl: string | null };
+    event: EventSummary | null;
+  };
+  position: Position | null;
+}
+
+export interface OfferProof {
+  chain: Chain;
+  address: string;
+  nonce: string;
+  signature: string;
 }
 
 export interface Update {
@@ -178,6 +306,15 @@ export interface Space {
   pricingMode: PricingMode;
   /** How much a takeover multiplies the last price by; null on a fixed-price space. */
   takeoverMultiple: number | null;
+  /**
+   * A `fixed` space that also takes offers below its price. `getPublicSpace`
+   * fills false when a server older than offers leaves it out.
+   */
+  acceptsOffers: boolean;
+  /** `bids` only: when bidding ends, space-wide. Each spot's own end is on its `offers`. */
+  biddingEndsAt: string | null;
+  /** A service space's offers, which target the space rather than a slot. */
+  spaceOffers: PositionOffers | null;
   venueType: VenueType;
   eventName: string | null;
   fallback: Fallback;
@@ -187,7 +324,12 @@ export interface Space {
   deliverables: Deliverable[];
   template: Template;
   positions: Position[];
-  totals: { positions: number; sold: number; committedCents: number; totalCents: number };
+  /**
+   * `committedCents`: paid so far (on `offers` and `bids`, the agreed amounts of
+   * paid orders). `totalCents`: every listed price added up, null on `offers`
+   * and `bids`, which have no total to be "of".
+   */
+  totals: { positions: number; sold: number; committedCents: number; totalCents: number | null };
   updates: Update[];
   share: { url: string; text: string };
   /**
@@ -288,6 +430,14 @@ export interface SpaceCard {
   /** Null when the space's template is gone from the catalogue. */
   templateName: string | null;
   pricingMode: PricingMode;
+  /**
+   * Board and event cards carry these (hispace-offers-v0.md, Backend
+   * implementation) so the event page can say how a space sells: "Accepts
+   * offers", "Make an offer", "Bidding · 2d left" from `biddingEndsAt`. Missing
+   * (an older server) reads as a space that takes no offers and has no end.
+   */
+  acceptsOffers?: boolean;
+  biddingEndsAt?: string | null;
   status: "live" | "closed";
   closesAt: string;
   /** The creator's X profile as last synced; any of it can be missing. */

@@ -458,3 +458,92 @@ export function spaceProgressText(
   }
   return soldOut ? `Sold out: all ${totals.positions} ${noun} taken` : `${totals.sold} of ${totals.positions} ${noun} sold`;
 }
+
+/* ── Offers and bids (hispace-offers-v0.md) ──────────────────────────────── */
+
+/** "2d", "5h", "40m": coarse on purpose, for chips and link cards. */
+function coarseLeft(ms: number): string {
+  const h = Math.floor(ms / 3_600_000);
+  if (h >= 24) return `${Math.floor(h / 24)}d`;
+  if (h >= 1) return `${h}h`;
+  return `${Math.max(1, Math.floor(ms / 60_000))}m`;
+}
+
+/** "Bidding · 2d left", "Bidding ended", or "Bidding" when no end is known. */
+export function biddingChipText(biddingEndsAt: string | null | undefined, now = Date.now()): string {
+  if (!biddingEndsAt) return "Bidding";
+  const left = Date.parse(biddingEndsAt) - now;
+  if (!Number.isFinite(left)) return "Bidding";
+  return left > 0 ? `Bidding · ${coarseLeft(left)} left` : "Bidding ended";
+}
+
+/**
+ * How a space sells, as a chip on an event card: "Accepts offers", "Make an
+ * offer", "Bidding · 2d left", "Open bidding" for a takeover board, or null for
+ * a plain fixed price.
+ */
+export function pricingChipText(
+  card: { pricingMode: string; acceptsOffers?: boolean; biddingEndsAt?: string | null },
+  now = Date.now(),
+): string | null {
+  switch (card.pricingMode) {
+    case "takeover":
+      return "Open bidding";
+    case "offers":
+      return "Make an offer";
+    case "bids":
+      return biddingChipText(card.biddingEndsAt, now);
+    default:
+      return card.acceptsOffers ? "Accepts offers" : null;
+  }
+}
+
+/**
+ * "420.00" to 42000, only to compare two server amounts. The server writes up to
+ * six decimals ("441.525"); past the cent it rounds up, never down.
+ */
+function centsOf(usdc: string | null | undefined): number | null {
+  const m = /^(\d+)(?:\.(\d{1,6}))?$/.exec((usdc ?? "").replace(/,/g, ""));
+  if (!m) return null;
+  const f = (m[2] ?? "").padEnd(2, "0");
+  return Number(m[1]) * 100 + Number(f.slice(0, 2)) + (f.length > 2 && /[1-9]/.test(f.slice(2)) ? 1 : 0);
+}
+
+/**
+ * The bids line of a link card: the highest bid among spots still open for
+ * bidding with that spot's own time left, or else where bidding opens and the
+ * soonest end still ahead. "Highest bid $420 · 2d left", "Bidding opens at $100
+ * · 2d left", "Bidding ended". Null when nothing on the space is up for bids.
+ */
+export function bidsSummaryText(space: Pick<Space, "pricingMode" | "positions" | "biddingEndsAt">, now = Date.now()): string | null {
+  if (space.pricingMode !== "bids") return null;
+  let highest: { cents: number; usdc: string } | null = null;
+  let opening: { cents: number; usdc: string } | null = null;
+  let soonest: number | null = null;
+  let highestEnds: number | null = null;
+  for (const p of space.positions) {
+    const o = p.offers;
+    if (!o || o.mode !== "bids" || p.status === "sold") continue;
+    const h = centsOf(o.highestBidUsdc);
+    const endAt = o.biddingEndsAt ? Date.parse(o.biddingEndsAt) : NaN;
+    const stillOpen = o.biddingOpen !== false && Number.isFinite(endAt) && endAt > now;
+    // The highest bid is paired with its OWN spot's end, never another spot's.
+    if (h !== null && o.highestBidUsdc && stillOpen && (!highest || h > highest.cents)) {
+      highest = { cents: h, usdc: o.highestBidUsdc };
+      highestEnds = endAt;
+    }
+    const op = centsOf(o.openingBidUsdc);
+    if (op !== null && o.openingBidUsdc && (!opening || op < opening.cents)) opening = { cents: op, usdc: o.openingBidUsdc };
+    const end = o.biddingEndsAt ? Date.parse(o.biddingEndsAt) : NaN;
+    if (Number.isFinite(end) && end > now && (soonest === null || end < soonest)) soonest = end;
+  }
+  if (soonest === null && space.biddingEndsAt) {
+    const end = Date.parse(space.biddingEndsAt);
+    if (Number.isFinite(end) && end > now) soonest = end;
+  }
+  if (highest && highestEnds !== null) return `Highest bid ${usdFromCents(highest.cents)} · ${coarseLeft(highestEnds - now)} left`;
+  if (soonest === null) return "Bidding ended";
+  const left = `${coarseLeft(soonest - now)} left`;
+  if (opening) return `Bidding opens at ${usdFromCents(opening.cents)} · ${left}`;
+  return `Bidding · ${left}`;
+}

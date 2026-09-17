@@ -33,7 +33,10 @@ import type {
   Booking,
   EventPage,
   EventSummary,
+  OfferThread,
+  OfferView,
   Position,
+  PositionOffers,
   SessionState,
   SessionView,
   Space,
@@ -255,6 +258,9 @@ function suitcase(): Space {
     feePayer: "sponsor",
     pricingMode: "fixed",
     takeoverMultiple: null,
+    acceptsOffers: false,
+    biddingEndsAt: null,
+    spaceOffers: null,
     venueType: "conference",
     eventName: "TOKEN2049 Singapore",
     fallback: "content_anyway",
@@ -672,6 +678,37 @@ function token2049Tabs(): EventPage["tabs"] {
         totals: { positions: 18, open: 9, sold: 8 },
         closesAt: new Date(Date.now() + 12 * DAY + 5 * 60 * 60 * 1000).toISOString(),
       }),
+      card(21, {
+        path: "/s/coinempress/token2049-bids",
+        title: "Bid for my TOKEN2049 suitcase",
+        tab: "ground",
+        templateName: "Carry-on suitcase",
+        creator: COIN,
+        pricingMode: "bids",
+        biddingEndsAt: new Date(Date.now() + 2 * DAY + 5 * 60 * 60 * 1000).toISOString(),
+        totals: { positions: 18, open: 8, sold: 8 },
+        fromPriceCents: null,
+      }),
+      card(22, {
+        path: "/s/coinempress/token2049-offers",
+        title: "Make me an offer: TOKEN2049 suitcase",
+        tab: "ground",
+        templateName: "Carry-on suitcase",
+        creator: COIN,
+        pricingMode: "offers",
+        totals: { positions: 18, open: 9, sold: 8 },
+        fromPriceCents: null,
+      }),
+      card(23, {
+        path: "/s/coinempress/token2049-videos-offers",
+        title: "TOKEN2049 short videos, offers welcome",
+        tab: "ground",
+        templateName: "Short-form video",
+        creator: COIN,
+        acceptsOffers: true,
+        totals: { positions: 3, open: 1, sold: 1 },
+        fromPriceCents: 52500,
+      }),
       card(2, {
         path: "/s/defidana/token2049-blazer",
         title: "My blazer at TOKEN2049",
@@ -843,8 +880,245 @@ function fromCard(c: SpaceCard, event: EventSummary, all: SpaceCard[]): Space {
   };
 }
 
+/* ── Offers and bids (hispace-offers-v0.md) ─────────────────────────────── */
+
+const NO_OFFERS: PositionOffers = {
+  mode: "offers",
+  openCount: null,
+  bidCount: null,
+  highestBidUsdc: null,
+  highestBidSponsorPaysUsdc: null,
+  leaderName: null,
+  reserveMet: null,
+  openingBidUsdc: null,
+  nextMinimumBidUsdc: null,
+  biddingEndsAt: null,
+  biddingOpen: null,
+  reservedUntil: null,
+};
+
+/**
+ * The suitcase, sold by bidding: a spot with no bids, one led with the reserve
+ * met, one led below the reserve, one whose bidding ended, and one held for the
+ * winning bid while it is paid.
+ */
+function bidsBoard(): Space {
+  const base = suitcase();
+  const ends = new Date(Date.now() + 2 * DAY + 5 * HOUR).toISOString();
+  const bids = (over: Partial<PositionOffers>): PositionOffers => ({
+    ...NO_OFFERS,
+    mode: "bids",
+    bidCount: 0,
+    openingBidUsdc: "100.00",
+    nextMinimumBidUsdc: "100.00",
+    biddingEndsAt: ends,
+    biddingOpen: true,
+    ...over,
+  });
+  const positions = base.positions.map((p, i): Position => {
+    if (p.status === "sold") return { ...p, offers: bids({ biddingOpen: false }) };
+    const opening = { priceCents: 10000, sponsorPaysUsdc: "105.00", creatorReceivesUsdc: "100.00" };
+    if (i === 1) {
+      return {
+        ...p,
+        ...opening,
+        offers: bids({
+          bidCount: 12,
+          highestBidUsdc: "420.00",
+          highestBidSponsorPaysUsdc: "441.00",
+          leaderName: "Acme",
+          reserveMet: true,
+          nextMinimumBidUsdc: "441.00",
+        }),
+      };
+    }
+    if (i === 3) {
+      return {
+        ...p,
+        ...opening,
+        status: "held",
+        offers: bids({
+          bidCount: 4,
+          highestBidUsdc: "260.00",
+          highestBidSponsorPaysUsdc: "273.00",
+          leaderName: "Nodeline",
+          biddingOpen: false,
+          biddingEndsAt: new Date(Date.now() - 3 * HOUR).toISOString(),
+          reservedUntil: new Date(Date.now() + 20 * HOUR).toISOString(),
+        }),
+      };
+    }
+    if (i === 6) {
+      return {
+        ...p,
+        ...opening,
+        offers: bids({
+          bidCount: 2,
+          highestBidUsdc: "150.00",
+          highestBidSponsorPaysUsdc: "157.50",
+          leaderName: "Kopi Labs",
+          reserveMet: false,
+          nextMinimumBidUsdc: "157.50",
+          biddingEndsAt: new Date(Date.now() + 7 * 60 * 1000).toISOString(),
+        }),
+      };
+    }
+    if (i === 7) {
+      return {
+        ...p,
+        ...opening,
+        offers: bids({
+          bidCount: 1,
+          highestBidUsdc: "100.00",
+          highestBidSponsorPaysUsdc: "105.00",
+          leaderName: "Orbit",
+          biddingOpen: false,
+          biddingEndsAt: new Date(Date.now() - HOUR).toISOString(),
+        }),
+      };
+    }
+    return { ...p, ...opening, offers: bids({}) };
+  });
+  return {
+    ...base,
+    id: "44444444-4444-4444-8444-444444444444",
+    slug: "token2049-bids",
+    title: "Bid for my TOKEN2049 suitcase",
+    pricingMode: "bids",
+    biddingEndsAt: ends,
+    positions,
+    share: { url: "https://hihodl.xyz/s/coinempress/token2049-bids", text: "Bid for my suitcase" },
+    siblings: [],
+  };
+}
+
+/** The suitcase with no prices: every open spot takes offers. */
+function offersBoard(): Space {
+  const base = suitcase();
+  return {
+    ...base,
+    id: "55555555-5555-4555-8555-555555555555",
+    slug: "token2049-offers",
+    title: "Make me an offer: TOKEN2049 suitcase",
+    pricingMode: "offers",
+    positions: base.positions.map((p, i) =>
+      p.status === "sold"
+        ? { ...p, offers: { ...NO_OFFERS } }
+        : {
+            ...p,
+            priceCents: null,
+            sponsorPaysUsdc: null,
+            creatorReceivesUsdc: null,
+            offers: {
+              ...NO_OFFERS,
+              openCount: i % 3,
+              reservedUntil: p.status === "held" ? new Date(Date.now() + 18 * HOUR).toISOString() : null,
+            },
+          },
+    ),
+    share: { url: "https://hihodl.xyz/s/coinempress/token2049-offers", text: "Make me an offer" },
+    siblings: [],
+  };
+}
+
+/** The video slots at a fixed price that also takes offers, on the space. */
+function videosWithOffers(): Space {
+  const base = videos();
+  return {
+    ...base,
+    id: "66666666-6666-4666-8666-666666666666",
+    slug: "token2049-videos-offers",
+    acceptsOffers: true,
+    spaceOffers: { ...NO_OFFERS, mode: "fixed_with_offers", openCount: 3 },
+    siblings: [],
+  };
+}
+
+function offersFixtures(): Space[] {
+  return [bidsBoard(), offersBoard(), videosWithOffers()];
+}
+
+/** A fixture offer's token: a 43-character name, so it passes the real token check. */
+function fixtureToken(name: string): string {
+  return `fixture_${name}`.padEnd(43, "x");
+}
+
+export function fixtureOffer(token: string): OfferThread | null {
+  const names = ["pending", "countered", "accepted", "paid", "declined", "expired", "bid_leading", "bid_outbid", "videos_accepted"];
+  const name = names.find((n) => fixtureToken(n) === token);
+  if (!name) return null;
+  const bid = name.startsWith("bid_");
+  const space = bid ? bidsBoard() : name.startsWith("videos") ? videosWithOffers() : offersBoard();
+  const position = bid ? space.positions[1] : name.startsWith("videos") ? space.positions[2] : space.positions[1];
+  const at = (h: number) => new Date(Date.now() - h * HOUR).toISOString();
+  const status: OfferView["status"] =
+    name === "bid_leading" || name === "bid_outbid" ? "pending" : name === "videos_accepted" ? "accepted" : (name as OfferView["status"]);
+  const accepted = status === "accepted" || status === "paid";
+  const rounds: OfferView["rounds"] =
+    name === "pending" || bid
+      ? [{ by: "sponsor", amountUsdc: bid ? "420.00" : "300.00", at: at(5) }]
+      : [
+          { by: "sponsor", amountUsdc: "300.00", at: at(30) },
+          { by: "auto", amountUsdc: "350.00", at: at(30) },
+          ...(status === "countered" ? [] : [{ by: "sponsor" as const, amountUsdc: "350.00", at: at(4) }]),
+        ];
+  const offer: OfferView = {
+    id: "0f000000-0000-4000-8000-000000000001",
+    spaceId: space.id,
+    positionId: position.id,
+    positionLabel: position.label,
+    kind: bid ? "bid" : "offer",
+    status,
+    amountUsdc: bid ? (name === "bid_leading" ? "420.00" : "380.00") : status === "countered" || name === "pending" ? "300.00" : "350.00",
+    sponsorPaysUsdc: bid ? (name === "bid_leading" ? "441.00" : "399.00") : status === "countered" || name === "pending" ? "315.00" : "367.50",
+    counterUsdc: status === "countered" ? "350.00" : null,
+    counterSponsorPaysUsdc: status === "countered" ? "367.50" : null,
+    agreedUsdc: accepted ? "350.00" : null,
+    agreedSponsorPaysUsdc: accepted ? "367.50" : null,
+    rounds,
+    countersLeft: 2,
+    sponsor: {
+      name: "Acme",
+      contactKind: "email",
+      contactValue: "team@acme.xyz",
+      message: "We launch on day 2 and would love the front of the suitcase.",
+      via: "web",
+      backed: bid || name === "accepted" ? { chain: "solana", address: "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU", checkedAt: at(5) } : null,
+    },
+    declineReason: status === "declined" ? "too_low" : null,
+    expiresAt:
+      status === "pending" || status === "countered"
+        ? new Date(Date.now() + 40 * HOUR).toISOString()
+        : status === "accepted"
+          ? new Date(Date.now() + 20 * HOUR).toISOString()
+          : null,
+    orderId: status === "paid" ? "0e000000-0000-4000-8000-000000000009" : null,
+    leading: bid ? name === "bid_leading" : null,
+    createdAt: at(30),
+    updatedAt: at(4),
+  };
+  return {
+    offer,
+    space: {
+      id: space.id,
+      path: `/s/coinempress/${space.slug}`,
+      title: space.title,
+      templateName: space.template.name,
+      pricingMode: space.pricingMode,
+      status: space.status,
+      closesAt: space.closesAt,
+      creator: { xHandle: space.creator.xHandle, xName: space.creator.xName, xAvatarUrl: null },
+      event: space.event,
+    },
+    position,
+  };
+}
+
 export function fixtureSpace(handle: string, slug: string): Space | null {
+  if (handle === "id") return [suitcase(), videos(), takeovers(), pitchReviews(), ...offersFixtures()].find((s) => s.id === slug) ?? null;
   if (handle.toLowerCase() === "coinempress") {
+    const offered = offersFixtures().find((s) => s.slug === slug);
+    if (offered) return offered;
     if (slug === "road-to-token2049") return suitcase();
     if (slug === "token2049-videos") return videos();
     if (slug === "token2049-takeover") return takeovers();

@@ -167,7 +167,8 @@ function Zone({
   // The figure drawn in an open zone is what it costs to take it now. On a
   // takeover board it is also where bidding opens, and the spoken label says so:
   // the card is where a reader learns what the next hand would cost.
-  const price = p.status === "open" ? `, ${p.takeover ? "bidding opens at " : ""}${p.sponsorPaysUsdc} USDC` : "";
+  const figure = zoneFigure(p);
+  const price = p.status === "open" ? figure.spoken : "";
   const label = `${p.label}, ${STATUS_LABEL[p.status].toLowerCase()}${price}${
     p.sponsor ? `, ${p.sponsor.name}` : ""
   }`;
@@ -207,7 +208,7 @@ function Zone({
             vectorEffect="non-scaling-stroke"
           />
           <FittedText
-            text={priceShort(p.sponsorPaysUsdc)}
+            text={figure.short}
             x={rx}
             y={ry}
             w={rw}
@@ -371,6 +372,25 @@ function FittedText({
       {shown}
     </text>
   );
+}
+
+/**
+ * What an open zone shows, and what a screen reader says after its name: the
+ * price, or on an offers board the word "Offer", or on a bids board the highest
+ * bid (else where bidding opens). Amounts are the server's strings.
+ */
+function zoneFigure(p: Position): { short: string; spoken: string } {
+  const o = p.offers;
+  if (o?.mode === "bids") {
+    if (o.highestBidUsdc) return { short: priceShort(o.highestBidUsdc), spoken: `, highest bid ${o.highestBidUsdc} USDC` };
+    if (o.openingBidUsdc) return { short: priceShort(o.openingBidUsdc), spoken: `, bidding opens at ${o.openingBidUsdc} USDC` };
+    return { short: "Bid", spoken: ", open for bids" };
+  }
+  if (o?.mode === "offers" || p.sponsorPaysUsdc === null) return { short: "Offer", spoken: ", open to offers" };
+  return {
+    short: priceShort(p.sponsorPaysUsdc),
+    spoken: `, ${p.takeover ? "bidding opens at " : ""}${p.sponsorPaysUsdc} USDC`,
+  };
 }
 
 /** "525.00" to "$525", "12.50" to "$12.50". Formatting only. */

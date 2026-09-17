@@ -2,7 +2,7 @@
 import { AD_SPACE_API, HANDLE_RE, SLUG_RE } from "./config";
 import { defaultEventTab } from "./format";
 import { gradientKey } from "./look";
-import type { Booking, EventPage, EventSummary, Space, SpaceCard } from "./types";
+import type { Booking, EventPage, EventSummary, OfferThread, Space, SpaceCard } from "./types";
 
 /**
  * Reading a public Ad Space on the server.
@@ -128,6 +128,10 @@ function withEventFields(space: Space): Space {
     bannerUrl: raw.bannerUrl ?? null,
     bannerGradient: gradientKey(raw.bannerGradient),
     siblings: Array.isArray(raw.siblings) ? raw.siblings : [],
+    // hispace-offers-v0.md: absent on a server older than offers.
+    acceptsOffers: raw.acceptsOffers === true,
+    biddingEndsAt: raw.biddingEndsAt ?? null,
+    spaceOffers: raw.spaceOffers ?? null,
   };
 }
 
@@ -264,4 +268,54 @@ export async function getBooking(token: string, from: Headers | null): Promise<B
   } catch {
     return { kind: "unreachable" };
   }
+}
+
+/* ── An offer or bid, by its manage link ─────────────────────────────── */
+
+/** 32 random bytes, base64url, no padding (hispace-offers-v0.md). */
+export const OFFER_TOKEN_RE = /^[A-Za-z0-9_-]{43}$/;
+
+export type OfferLookup =
+  | { kind: "found"; thread: OfferThread }
+  | { kind: "missing" }
+  | { kind: "unreachable" };
+
+/**
+ * `GET /public/offers/:token`, never cached: a counter or an acceptance can
+ * arrive at any moment. The token is a bearer secret, so it goes into the
+ * upstream URL and nowhere else: no log line, no error message, no cache key.
+ *
+ * @param from the visitor's request headers, so the backend limits the visitor
+ *   and not our server.
+ */
+export async function getOffer(token: string, from: Headers | null): Promise<OfferLookup> {
+  if (!OFFER_TOKEN_RE.test(token)) return { kind: "missing" };
+
+  if (fixtureEnabled()) {
+    const { fixtureOffer } = await import("./fixture.dev");
+    const thread = fixtureOffer(token);
+    return thread ? { kind: "found", thread } : { kind: "missing" };
+  }
+
+  try {
+    const res = await fetch(`${AD_SPACE_API}/public/offers/${encodeURIComponent(token)}`, {
+      headers: upstreamHeaders(from),
+      cache: "no-store",
+      signal: AbortSignal.timeout(6_000),
+    });
+    if (res.status === 404) return { kind: "missing" };
+    if (!res.ok) return { kind: "unreachable" };
+    const body = (await res.json()) as { data?: Partial<OfferThread> };
+    const data = body?.data;
+    return data?.offer && data.space
+      ? { kind: "found", thread: { offer: data.offer, space: data.space, position: data.position ?? null } }
+      : { kind: "unreachable" };
+  } catch {
+    return { kind: "unreachable" };
+  }
+}
+
+/** The full public space by id, for paying an accepted offer with the page's checkout. */
+export function getPublicSpaceById(spaceId: string): Promise<SpaceLookup> {
+  return getPublicSpace("id", spaceId);
 }
