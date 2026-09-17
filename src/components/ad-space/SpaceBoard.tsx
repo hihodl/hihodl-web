@@ -14,6 +14,7 @@ import { PositionCard } from "./PositionCard";
 import { ProductBoard } from "./ProductBoard";
 import { btnSmall, btnSmallSecondary, eyebrow, pill } from "./ui";
 import { useServerNow } from "./useServerNow";
+import { WhatTheBrandGets } from "./WhatTheBrandGets";
 
 /**
  * The interactive middle of the page: the board (a drawn product, or a grid
@@ -182,6 +183,7 @@ export function SpaceBoard({ space }: { space: Space }) {
               )}
             </div>
           )}
+          <WhatTheBrandGets space={space} />
           {spaceMode && spaceMode !== "bids" && (
             <SpaceOffersPanel
               mode={spaceMode}
@@ -206,6 +208,7 @@ export function SpaceBoard({ space }: { space: Space }) {
             />
             <Legend takeover={space.pricingMode === "takeover"} mode={spaceMode} />
           </div>
+          <WhatTheBrandGets space={space} />
           <div>
             <h2 className="mb-6 font-display text-h4 font-light text-text">Every spot</h2>
             {cardList}
