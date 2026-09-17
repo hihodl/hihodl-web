@@ -10,6 +10,7 @@ import type {
   Chain,
   ContactKind,
   ContentKind,
+  Deliverable,
   DeliverableState,
   Fallback,
   PositionStatus,
@@ -313,12 +314,59 @@ export function attestationText(key: string): string {
   return ATTESTATION_TEXT[key] ?? key.replace(/_/g, " ");
 }
 
-/** "video" + "x" + 2 to "2 videos on X". */
-export function deliverableText(kind: string, platform: string, count: number): string {
-  const noun = kind.replace(/_/g, " ");
-  const plural = count === 1 ? noun : noun.endsWith("s") ? noun : `${noun}s`;
-  const where = platform.toLowerCase() === "x" ? "X" : platform.charAt(0).toUpperCase() + platform.slice(1);
-  return `${count} ${plural} on ${where}`;
+function platformName(platform: string): string {
+  const p = platform.trim();
+  return p.toLowerCase() === "x" ? "X" : p.charAt(0).toUpperCase() + p.slice(1);
+}
+
+/**
+ * One deliverable in words, as the brand reads it:
+ *   video, x, 2              "2 videos on X"
+ *   mention, x, 1            "Mentions your brand on X"
+ *   mention, x, 3            "Mentions your brand on X, 3 times"
+ *   custom, null, 1, "…"     the creator's note as written
+ */
+export function deliverableText(d: Pick<Deliverable, "kind" | "platform" | "count" | "note">): string {
+  const times = d.count > 1 ? `, ${d.count} times` : "";
+  const where = d.platform?.trim() ? ` on ${platformName(d.platform)}` : "";
+  if (d.kind === "mention") return `Mentions your brand${where}${times}`;
+  if (d.kind === "custom") {
+    const note = d.note?.trim();
+    return `${note || "Something extra from the creator"}${where}${times}`;
+  }
+  const noun = d.kind.replace(/_/g, " ");
+  const plural = d.count === 1 ? noun : noun.endsWith("s") ? noun : `${noun}s`;
+  return `${d.count} ${plural}${where}`;
+}
+
+/**
+ * The creator's note under a deliverable, when it adds something. On a
+ * `custom` one the note already is the line, so it is never repeated.
+ */
+export function deliverableNote(d: Pick<Deliverable, "kind" | "note">): string | null {
+  if (d.kind === "custom") return null;
+  return d.note?.trim() || null;
+}
+
+/**
+ * What a space sells, by name. A `custom-service` space is named by its creator;
+ * everything else by its template ("Carry-on suitcase", "Booth appearance").
+ */
+export function serviceName(space: Pick<Space, "template" | "serviceName">): string {
+  const own = space.serviceName?.trim();
+  return space.template.kind === "service" && own ? own : space.template.name;
+}
+
+/** The service's description, the creator's own on a `custom-service` space. */
+export function serviceSummary(space: Pick<Space, "template" | "serviceSummary">): string | null {
+  const own = space.serviceSummary?.trim();
+  if (space.template.kind === "service" && own) return own;
+  return space.template.service?.summary ?? null;
+}
+
+/** The same name for a board or event card, which carries it flat. */
+export function cardServiceName(card: Pick<SpaceCard, "templateName" | "serviceName">): string | null {
+  return card.serviceName?.trim() || card.templateName;
 }
 
 /* ── Events ──────────────────────────────────────────────────────────── */

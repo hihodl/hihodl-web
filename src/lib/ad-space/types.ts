@@ -84,6 +84,12 @@ export interface Template {
      * backend that predates sessions leaves it out, which reads as `content`.
      */
     format?: ServiceFormat;
+    /**
+     * The `custom-service` template: the creator names and describes what they
+     * sell, so a brand reads `Space.serviceName` and `Space.serviceSummary`, not
+     * this template's generic ones. Absent on a server older than it.
+     */
+    custom?: boolean;
   } | null;
 }
 
@@ -277,10 +283,27 @@ export interface Update {
   createdAt: string;
 }
 
+/**
+ * `mention`: the creator mentions or tags the brand on `platform`. `custom`:
+ * whatever the creator wrote in `note`. The rest are the original catalogue.
+ * Kept open as a string so a kind this page does not know still renders.
+ */
+export type DeliverableKind =
+  | "in_person"
+  | "photo_post"
+  | "video"
+  | "story"
+  | "thank_you_post"
+  | "mention"
+  | "custom";
+
 export interface Deliverable {
   id: string;
-  kind: string;
-  platform: string;
+  kind: DeliverableKind | (string & {});
+  /** Null on a `custom` deliverable that happens nowhere in particular. */
+  platform: string | null;
+  /** The creator's own words; the whole promise on a `custom` one. `getPublicSpace` fills null. */
+  note: string | null;
   count: number;
   dueDate: string;
   deliveredUrl: string | null;
@@ -323,6 +346,13 @@ export interface Space {
   requiredAttestations: string[];
   deliverables: Deliverable[];
   template: Template;
+  /**
+   * What the creator calls their service, and how they describe it. Set on a
+   * `custom-service` space, where they replace the template's name and summary;
+   * null otherwise. `getPublicSpace` fills null on an older server.
+   */
+  serviceName: string | null;
+  serviceSummary: string | null;
   positions: Position[];
   /**
    * `committedCents`: paid so far (on `offers` and `bids`, the agreed amounts of
@@ -429,6 +459,9 @@ export interface SpaceCard {
   tab: SpaceTab;
   /** Null when the space's template is gone from the catalogue. */
   templateName: string | null;
+  /** The creator's own name for a custom service; wins over `templateName`. Missing on an older server. */
+  serviceName?: string | null;
+  serviceSummary?: string | null;
   pricingMode: PricingMode;
   /**
    * Board and event cards carry these (hispace-offers-v0.md, Backend

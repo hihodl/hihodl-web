@@ -132,6 +132,14 @@ function withEventFields(space: Space): Space {
     acceptsOffers: raw.acceptsOffers === true,
     biddingEndsAt: raw.biddingEndsAt ?? null,
     spaceOffers: raw.spaceOffers ?? null,
+    // A server older than custom services and free-text deliverables.
+    serviceName: raw.serviceName ?? null,
+    serviceSummary: raw.serviceSummary ?? null,
+    deliverables: (Array.isArray(raw.deliverables) ? raw.deliverables : []).map((d) => ({
+      ...d,
+      platform: d.platform ?? null,
+      note: d.note ?? null,
+    })),
   };
 }
 

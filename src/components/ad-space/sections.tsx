@@ -14,10 +14,12 @@ import {
   attestationText,
   calendarDate,
   compactNumber,
+  deliverableNote,
   deliverableText,
   eventDates,
   isSessionSpace,
   relativeTime,
+  serviceName,
   spaceSoldOut,
   takeableSpots,
   takeoverVerb,
@@ -107,11 +109,17 @@ export function SpaceHero({ space }: { space: Space }) {
   /* The bar tracks whatever the headline counts, so the two can never disagree. */
   const headline = isTakeover ? takeable : totals.sold;
   const headlineLabel = `${headline} of ${totals.positions} ${noun} ${isTakeover ? "still up for grabs" : soldWord}`;
+  const name = serviceName(space);
+  /* A custom service is named by its creator, so it is shown as they wrote it,
+     never lowercased into a sentence. */
+  const custom = space.template.service?.custom === true;
   const what = session
-    ? space.template.name
+    ? name
     : space.kind === "service"
-      ? `Sponsored ${space.template.name.toLowerCase()}`
-      : `Ad Space on a ${space.template.name.toLowerCase()}`;
+      ? custom
+        ? name
+        : `Sponsored ${name.toLowerCase()}`
+      : `Ad Space on a ${name.toLowerCase()}`;
 
   return (
     <section
@@ -399,7 +407,12 @@ export function SpacePromises({ space }: { space: Space }) {
                 {space.deliverables.map((d) => (
                   <li key={d.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3 first:pt-0 last:pb-0">
                     <div className="min-w-0">
-                      <p className="text-small text-text">{deliverableText(d.kind, d.platform, d.count)}</p>
+                      <p className="break-words text-small text-text [overflow-wrap:anywhere]">{deliverableText(d)}</p>
+                      {deliverableNote(d) && (
+                        <p className="mt-0.5 break-words text-tiny text-text-muted [overflow-wrap:anywhere]">
+                          {deliverableNote(d)}
+                        </p>
+                      )}
                       <p className="text-tiny text-text-faint">
                         Due {calendarDate(d.dueDate)}
                         {d.deliveredUrl && (

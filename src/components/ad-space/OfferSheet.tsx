@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { SITE_URL } from "@/lib/ad-space/config";
 import { CheckoutError, describeError } from "@/lib/ad-space/checkout-client";
 import { CONTACT_KINDS, CONTACT_PLACEHOLDER, contactProblem, normaliseContact } from "@/lib/ad-space/contact";
-import { CONTACT_KIND_LABEL, isSessionSpace, usdFromCents } from "@/lib/ad-space/format";
+import { CONTACT_KIND_LABEL, isSessionSpace, serviceName, usdFromCents } from "@/lib/ad-space/format";
 import {
   OFFER_MAX_CENTS,
   OFFER_MESSAGE_MAX,
@@ -184,7 +184,7 @@ export function OfferSheet({
   const offers = offersFor(space, position);
   const mode = offerModeOf(space, position);
   const handle = space.creator.xHandle;
-  const what = position?.label ?? space.template.name;
+  const what = position?.label ?? serviceName(space);
   const minimum = minimumCents(kind, session, offers);
   // On a fixed price that also takes offers, an offer must be under the price.
   const priceCents = position?.priceCents ?? (space.kind === "service" ? space.positions[0]?.priceCents ?? null : null);

@@ -4,6 +4,7 @@ import { OG, OgBanner, OgEventCard, clip as clipOg, loadOgImage } from "@/compon
 import {
   CHAIN_LABEL,
   bidsSummaryText,
+  serviceName,
   spaceProgressText,
   spaceSoldOut,
   takeableSpots,
@@ -150,8 +151,9 @@ function Card({ space: s }: { space: Space }) {
   const headline = isTakeover ? takeableSpots(s) : totals.sold;
   // The bar tracks the headline, so the two never disagree.
   const pct = totals.positions ? Math.min(100, (headline / totals.positions) * 100) : 0;
-  const full = [s.eventName, s.template.name].filter(Boolean).join(" · ");
-  const eyebrow = full.length <= 38 ? full : (s.eventName ?? s.template.name);
+  const name = serviceName(s);
+  const full = [s.eventName, name].filter(Boolean).join(" · ");
+  const eyebrow = full.length <= 38 ? full : (s.eventName ?? name);
   const bids = bidsSummaryText(s);
   /* Offers and bids have no listed total (`totalCents` null) and commit only
      what was paid at an agreed amount: nothing before the first sale, rather

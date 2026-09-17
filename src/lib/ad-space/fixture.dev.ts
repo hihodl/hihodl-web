@@ -15,6 +15,9 @@
  *   /s/coinempress/token2049-pitch-reviews
  *                                      a session space (In the room): pitch
  *                                      review, TOKEN2049, one dispute on record
+ *   /s/coinempress/token2049-afterparty-host
+ *                                      a custom service, named by its creator,
+ *                                      with a mention on X
  * and every other card on an event page opens a copy of the matching board.
  *
  * Events:
@@ -268,10 +271,14 @@ function suitcase(): Space {
     attestations: ["owns_item", "venue_rules_checked"],
     requiredAttestations: ["owns_item", "venue_rules_checked"],
     deliverables: [
-      { id: "d1", kind: "video", platform: "x", count: 1, dueDate: "2026-10-04", deliveredUrl: null, state: "upcoming" },
-      { id: "d2", kind: "photo", platform: "x", count: 3, dueDate: "2026-10-09", deliveredUrl: null, state: "upcoming" },
-      { id: "d3", kind: "post", platform: "x", count: 1, dueDate: "2026-09-12", deliveredUrl: "https://x.com/coinempress/status/1", state: "delivered" },
+      { id: "d1", kind: "video", platform: "x", count: 1, dueDate: "2026-10-04", deliveredUrl: null, state: "upcoming", note: "The packing vlog, suitcase in frame." },
+      { id: "d2", kind: "photo_post", platform: "x", count: 3, dueDate: "2026-10-09", deliveredUrl: null, state: "upcoming", note: null },
+      { id: "d4", kind: "mention", platform: "x", count: 2, dueDate: "2026-10-08", deliveredUrl: null, state: "upcoming", note: null },
+      { id: "d5", kind: "custom", platform: null, count: 1, dueDate: "2026-10-08", deliveredUrl: null, state: "upcoming", note: "Your sticker on my conference badge for both days" },
+      { id: "d3", kind: "thank_you_post", platform: "x", count: 1, dueDate: "2026-09-12", deliveredUrl: "https://x.com/coinempress/status/1", state: "delivered", note: null },
     ],
+    serviceName: null,
+    serviceSummary: null,
     template: {
       id: "carry-on-suitcase",
       kind: "placement",
@@ -538,6 +545,39 @@ function takeovers(): Space {
  * block ever shows on a session slot, and the track record carries a dispute so
  * "· 1 disputed" renders.
  */
+/**
+ * A `custom-service` space: the creator names and describes what they sell, and
+ * the brand reads that instead of the template's generic copy.
+ */
+function customService(): Space {
+  const base = videos();
+  return {
+    ...base,
+    id: "55555555-5555-4555-8555-555555555555",
+    slug: "token2049-afterparty-host",
+    title: "Host my TOKEN2049 afterparty table",
+    reason: null,
+    serviceName: "Afterparty table host",
+    serviceSummary: "Your brand hosts my table at the Marina Bay afterparty: your name on the table card and a toast to you.",
+    deliverables: [
+      { id: "c1", kind: "mention", platform: "x", count: 1, dueDate: "2026-10-09", deliveredUrl: null, state: "upcoming", note: "Tagged in the night's recap thread" },
+    ],
+    template: {
+      id: "custom-service",
+      kind: "service",
+      productType: "service",
+      name: "Custom service",
+      views: [],
+      zones: [],
+      service: { deliverableKind: "custom", summary: "Something the creator describes.", maxSlots: 20, custom: true },
+    },
+    share: {
+      url: "https://hihodl.xyz/s/coinempress/token2049-afterparty-host",
+      text: "Host my TOKEN2049 afterparty table https://hihodl.xyz/s/coinempress/token2049-afterparty-host",
+    },
+  };
+}
+
 function pitchReviews(): Space {
   const base = videos();
   const slot = (n: number, over: Partial<Position> = {}) =>
@@ -1115,7 +1155,7 @@ export function fixtureOffer(token: string): OfferThread | null {
 }
 
 export function fixtureSpace(handle: string, slug: string): Space | null {
-  if (handle === "id") return [suitcase(), videos(), takeovers(), pitchReviews(), ...offersFixtures()].find((s) => s.id === slug) ?? null;
+  if (handle === "id") return [suitcase(), videos(), takeovers(), pitchReviews(), customService(), ...offersFixtures()].find((s) => s.id === slug) ?? null;
   if (handle.toLowerCase() === "coinempress") {
     const offered = offersFixtures().find((s) => s.slug === slug);
     if (offered) return offered;
@@ -1123,6 +1163,7 @@ export function fixtureSpace(handle: string, slug: string): Space | null {
     if (slug === "token2049-videos") return videos();
     if (slug === "token2049-takeover") return takeovers();
     if (slug === "token2049-pitch-reviews") return pitchReviews();
+    if (slug === "token2049-afterparty-host") return customService();
   }
   const path = `/s/${handle.toLowerCase()}/${slug}`;
   for (const [event, tabs] of [

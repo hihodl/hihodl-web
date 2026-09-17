@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { currentCheckout, existingCheckoutKey } from "@/lib/ad-space/checkout-client";
-import { instantUtc, isSessionSpace, timeLeft } from "@/lib/ad-space/format";
+import { instantUtc, isSessionSpace, serviceName, serviceSummary, timeLeft } from "@/lib/ad-space/format";
 import { type SavedOffer, offerModeOf, offerPath, savedOffers } from "@/lib/ad-space/offers-client";
 import type { OfferKind, OfferMode, Order, Position, PositionOffers, Space } from "@/lib/ad-space/types";
 
@@ -172,8 +172,14 @@ export function SpaceBoard({ space }: { space: Space }) {
         <div className="flex flex-col gap-8">
           {space.template.service && (
             <div className="max-w-2xl">
-              <p className={`${eyebrow} text-moonlight`}>{session ? `Book: ${space.template.name}` : space.template.name}</p>
-              <p className="mt-3 text-lead text-text-muted">{space.template.service.summary}</p>
+              <p className={`${eyebrow} break-words text-moonlight [overflow-wrap:anywhere]`}>
+                {session ? `Book: ${serviceName(space)}` : serviceName(space)}
+              </p>
+              {serviceSummary(space) && (
+                <p className="mt-3 whitespace-pre-line break-words text-lead text-text-muted [overflow-wrap:anywhere]">
+                  {serviceSummary(space)}
+                </p>
+              )}
             </div>
           )}
           {spaceMode && spaceMode !== "bids" && (
