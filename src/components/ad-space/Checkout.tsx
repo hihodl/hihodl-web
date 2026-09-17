@@ -22,6 +22,7 @@ import { TAKEOVER_CHAINS } from "@/lib/ad-space/config";
 import {
   CHAIN_LABEL,
   CONTENT_KIND_LABEL,
+  FALLBACK_LABEL,
   FALLBACK_TEXT,
   SESSION_FALLBACK_TEXT,
   isSessionSpace,
@@ -742,16 +743,12 @@ function Summary({
           </div>
         )}
       </dl>
+      {/* The lead-in is the policy the creator picked, in the app's own words,
+          so the sentence after it can open with "if the venue says no" without
+          the line saying it twice. */}
       <p className="text-small text-text-muted">
-        {session ? (
-          <>
-            <span className="text-text">If the session can&rsquo;t happen.</span> {SESSION_FALLBACK_TEXT[space.fallback]}
-          </>
-        ) : (
-          <>
-            <span className="text-text">If a venue says no.</span> {FALLBACK_TEXT[space.fallback]}
-          </>
-        )}
+        <span className="text-text">{FALLBACK_LABEL[space.fallback]}.</span>{" "}
+        {(session ? SESSION_FALLBACK_TEXT : FALLBACK_TEXT)[space.fallback]}
         {space.fallbackNote ? ` ${space.fallbackNote}` : ""}
       </p>
     </div>

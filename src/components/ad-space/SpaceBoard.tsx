@@ -9,6 +9,7 @@ import { type SavedOffer, offerModeOf, offerPath, savedOffers } from "@/lib/ad-s
 import type { OfferKind, OfferMode, Order, Position, PositionOffers, Space } from "@/lib/ad-space/types";
 
 import { Checkout } from "./Checkout";
+import { IfItDoesNotHappen } from "./IfItDoesNotHappen";
 import { OfferSheet } from "./OfferSheet";
 import { PositionCard } from "./PositionCard";
 import { ProductBoard } from "./ProductBoard";
@@ -184,6 +185,10 @@ export function SpaceBoard({ space }: { space: Space }) {
             </div>
           )}
           <WhatTheBrandGets space={space} />
+          {/* A session space has no "every slot includes" card at all, so this
+              is the only thing between the summary and the slots that says what
+              happens if the session doesn't. It renders on both boards. */}
+          <IfItDoesNotHappen space={space} />
           {spaceMode && spaceMode !== "bids" && (
             <SpaceOffersPanel
               mode={spaceMode}
@@ -209,6 +214,7 @@ export function SpaceBoard({ space }: { space: Space }) {
             <Legend takeover={space.pricingMode === "takeover"} mode={spaceMode} />
           </div>
           <WhatTheBrandGets space={space} />
+          <IfItDoesNotHappen space={space} />
           <div>
             <h2 className="mb-6 font-display text-h4 font-light text-text">Every spot</h2>
             {cardList}

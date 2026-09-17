@@ -135,6 +135,15 @@ function withEventFields(space: Space): Space {
     // A server older than custom services and free-text deliverables.
     serviceName: raw.serviceName ?? null,
     serviceSummary: raw.serviceSummary ?? null,
+    /* A server older than funding goals sends no key, and a creator who named
+       none sends null. Zero is treated as none too: a goal of nothing has no
+       percentage to be at, and the page must never print "null%" or divide by
+       it. Anything that is not a positive number reads as "no goal", so the
+       hero falls back to counting spots exactly as it does today. */
+    fundingGoalCents:
+      typeof raw.fundingGoalCents === "number" && Number.isFinite(raw.fundingGoalCents) && raw.fundingGoalCents > 0
+        ? Math.round(raw.fundingGoalCents)
+        : null,
     deliverables: (Array.isArray(raw.deliverables) ? raw.deliverables : []).map((d) => ({
       ...d,
       platform: d.platform ?? null,

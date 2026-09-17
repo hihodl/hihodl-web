@@ -7,8 +7,6 @@ import { SUPPORT_EMAIL } from "@/lib/ad-space/config";
 import {
   CHAIN_LABEL,
   DELIVERABLE_STATE_LABEL,
-  FALLBACK_TEXT,
-  SESSION_FALLBACK_TEXT,
   VERIFIED_LABEL,
   accountAge,
   attestationText,
@@ -17,6 +15,7 @@ import {
   deliverableNote,
   deliverableText,
   eventDates,
+  fundingProgress,
   isSessionSpace,
   relativeTime,
   serviceName,
@@ -98,6 +97,11 @@ export function SpaceHero({ space }: { space: Space }) {
      and "$0 committed" would read as a space nobody wants. */
   const noTotal = totals.totalCents === null || space.pricingMode === "offers" || space.pricingMode === "bids";
   const showCommitted = !noTotal || totals.committedCents > 0;
+  /* A creator who named a goal has told us what this campaign is for, and it is
+     an amount of money, not a number of spots. So the figure and the bar both
+     measure the money against that goal and say the percentage out loud, the
+     way the app does. A space with no goal is counted exactly as before. */
+  const funding = fundingProgress(space);
 
   /* On a takeover board a sold spot is not gone — it can be bought from the
      sponsor holding it. So "sold out" is only true here when there is nothing
@@ -161,7 +165,18 @@ export function SpaceHero({ space }: { space: Space }) {
                   </>
                 )}
               </p>
-              {showCommitted ? (
+              {funding ? (
+                /* Before the first sale this reads "$0 of $2,400 · 0%", which
+                   is a campaign that has just opened rather than one nobody
+                   wants: the goal is the story, so it is said from the start. */
+                <p className="text-small">
+                  <span className="font-mono text-text">{funding.raised}</span>
+                  <span className="text-text-faint">
+                    {" "}
+                    of {funding.goal} · {funding.percent}%
+                  </span>
+                </p>
+              ) : showCommitted ? (
                 <p className="text-small">
                   <span className="font-mono text-text">{usdFromCents(totals.committedCents)}</span>
                   {/* A takeover board has no ceiling to measure against: every
@@ -177,17 +192,24 @@ export function SpaceHero({ space }: { space: Space }) {
                 <p className="text-small text-text-faint">No sales yet</p>
               )}
             </div>
+            {/* Past the goal the bar stops at full and the percentage above it
+                keeps climbing: beating what you asked for is the good ending,
+                and a bar that cannot say so would be the only thing on the page
+                pretending otherwise. */}
             <div
               className="h-2 overflow-hidden rounded-[4px] bg-white/[0.06]"
               role="progressbar"
-              aria-label={headlineLabel}
+              aria-label={funding ? `${funding.raised} raised of ${funding.goal}` : headlineLabel}
               aria-valuemin={0}
-              aria-valuemax={totals.positions}
-              aria-valuenow={headline}
+              aria-valuemax={funding ? 100 : totals.positions}
+              aria-valuenow={funding ? Math.min(100, funding.percent) : headline}
+              aria-valuetext={funding ? `${funding.percent}%` : undefined}
             >
               <div
                 className="h-full rounded-[4px] bg-amber"
-                style={{ width: `${totals.positions ? Math.min(100, (headline / totals.positions) * 100) : 0}%` }}
+                style={{
+                  width: `${funding ? funding.fill : totals.positions ? Math.min(100, (headline / totals.positions) * 100) : 0}%`,
+                }}
               />
             </div>
             <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 text-small">
@@ -456,17 +478,11 @@ export function SpacePromises({ space }: { space: Space }) {
             </ul>
           </Block>
 
-          <Block title={session ? "If the session can't happen" : "If a venue says no"}>
-            <p className="text-small text-text-muted">
-              {(session ? SESSION_FALLBACK_TEXT : FALLBACK_TEXT)[space.fallback]}
-            </p>
-            {space.fallbackNote && (
-              <p className="border-l-2 border-amber/40 pl-3 text-small text-text">
-                <span className="sr-only">The creator adds: </span>
-                {space.fallbackNote}
-              </p>
-            )}
-          </Block>
+          {/* The fallback policy used to have a block of its own here. It now
+              sits beside the spots (`IfItDoesNotHappen`), because this section
+              is below the board and a sponsor who picks a spot and pays never
+              reaches it. Saying it twice, word for word, would only teach
+              people that the bottom of the page repeats the top. */}
 
           <Block title="How the money moves">
             <p className="text-small text-text-muted">

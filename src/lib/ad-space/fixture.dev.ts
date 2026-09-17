@@ -14,10 +14,12 @@
  *   /s/coinempress/road-to-devcon-8    Devcon 8 (no city photo), sea gradient
  *   /s/coinempress/token2049-pitch-reviews
  *                                      a session space (In the room): pitch
- *                                      review, TOKEN2049, one dispute on record
+ *                                      review, TOKEN2049, one dispute on record,
+ *                                      and a funding goal already beaten (133%)
  *   /s/coinempress/token2049-afterparty-host
  *                                      a custom service, named by its creator,
- *                                      with a mention on X
+ *                                      with a mention on X and a funding goal
+ *                                      still a way off (21%)
  * and every other card on an event page opens a copy of the matching board.
  *
  * Events:
@@ -294,6 +296,10 @@ function suitcase(): Space {
       service: null,
     },
     positions,
+    // No goal: the ordinary space, and the one that proves the hero still counts
+    // spots exactly as it did before goals existed. The afterparty and the pitch
+    // reviews carry one.
+    fundingGoalCents: null,
     totals: { positions: 18, sold: 8, committedCents: 177500, totalCents: 420000 },
     updates: [
       {
@@ -571,6 +577,10 @@ function customService(): Space {
       zones: [],
       service: { deliverableKind: "custom", summary: "Something the creator describes.", maxSlots: 20, custom: true },
     },
+    // A campaign with a goal and a way to go: the hero reads "$500 of $2,400 ·
+    // 21%" and the bar fills with the money rather than with the slots sold.
+    // Its fallback carries no note, so the block shows the standard sentence.
+    fundingGoalCents: 240000,
     share: {
       url: "https://hihodl.xyz/s/coinempress/token2049-afterparty-host",
       text: "Host my TOKEN2049 afterparty table https://hihodl.xyz/s/coinempress/token2049-afterparty-host",
@@ -616,6 +626,9 @@ function pitchReviews(): Space {
       },
     },
     positions: [slot(1, { status: "sold" }), slot(2, { status: "sold" }), slot(3, { status: "held" }), slot(4), slot(5), slot(6)],
+    // A goal already beaten, which is the case the bar must not get wrong:
+    // "$200 of $150 · 133%", the bar full and the number still climbing.
+    fundingGoalCents: 15000,
     totals: { positions: 6, sold: 2, committedCents: 20000, totalCents: 60000 },
     share: {
       url: "https://hihodl.xyz/s/coinempress/token2049-pitch-reviews?m=2",

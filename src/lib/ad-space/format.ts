@@ -206,13 +206,15 @@ export function trackRecordNeedsAttention(record: TrackRecord): boolean {
 }
 
 /**
- * The fallback policy for a session. `content_anyway` is refused for sessions
- * (`fallback_not_for_sessions`), so it only appears here if the server sends
- * something it should not, and then it promises nothing.
+ * The fallback policy for a session, from the app's `sessionFallbackHint`.
+ * `content_anyway` is refused for sessions (`fallback_not_for_sessions`), so it
+ * only appears here if the server sends something it should not, and then it
+ * promises nothing — the app has no line for that case either.
  */
 export const SESSION_FALLBACK_TEXT: Record<Fallback, string> = {
-  creator_refund: "If the session can't happen, the creator refunds you themselves, from their own wallet.",
-  next_event: "If the session can't happen, the creator offers you the same session at their next event instead.",
+  creator_refund:
+    "If the session can't happen, the creator sends the price back from their own wallet. It's their promise: HOLD never holds the money.",
+  next_event: "If the session can't happen, it moves to another event within 90 days.",
   content_anyway: "If the session can't happen, talk to the creator: HOLD can't refund a booking.",
 };
 
@@ -236,16 +238,33 @@ export const SESSION_STATE_LABEL: Record<SessionState, string> = {
 export const SESSION_TEXT_MAX = 280;
 
 /**
- * The fallback policy in plain words. The creator picks one when they publish;
- * HOLD is never the party that refunds, and the copy does not suggest it is.
+ * The name of the policy the creator picked, exactly as the app writes it
+ * (`fallbackLabel`). It is the creator's own answer to the question, so it is
+ * left in their voice: "I refund the price" is a promise somebody signed, which
+ * is the whole point of showing it on a page a brand reads before paying.
+ */
+export const FALLBACK_LABEL: Record<Fallback, string> = {
+  content_anyway: "Content anyway",
+  creator_refund: "I refund the price",
+  next_event: "Moves to the next event",
+};
+
+/**
+ * The fallback policy in plain words, from the app's `fallbackHint` so the two
+ * products cannot promise different things — the 90 days on `next_event` is the
+ * contract's, not a rounding of "their next event".
+ *
+ * One thing is not carried across verbatim: the app says "you send the price
+ * back from your own wallet" because in the app the reader is the creator. Here
+ * the reader is the brand about to pay, and telling them THEY send the money
+ * back would be the opposite of what happens, so the same sentence is said
+ * about the creator. HOLD is never the party that refunds, and neither copy
+ * suggests it is.
  */
 export const FALLBACK_TEXT: Record<Fallback, string> = {
-  content_anyway:
-    "If a venue does not let the item in, the creator still delivers every post, photo and video they promised.",
-  creator_refund:
-    "If a venue does not let the item in, the creator refunds sponsors themselves, from their own wallet.",
-  next_event:
-    "If a venue does not let the item in, the creator carries every sponsor to their next event instead.",
+  content_anyway: "If the venue says no, every post and video is still delivered as promised.",
+  creator_refund: "If the venue says no, the creator sends the price back from their own wallet.",
+  next_event: "If the venue says no, the spot moves to another event within 90 days.",
 };
 
 /**
@@ -505,6 +524,32 @@ export function spaceProgressText(
       : `${takeableSpots(space)} of ${totals.positions} ${noun} still up for grabs`;
   }
   return soldOut ? `Sold out: all ${totals.positions} ${noun} taken` : `${totals.sold} of ${totals.positions} ${noun} sold`;
+}
+
+/**
+ * A campaign measured against the goal it named: "$1,900 of $2,400 · 79%".
+ *
+ * Spots sold out of spots listed is the creator's arithmetic. What a campaign is
+ * FOR is money, so a space that named a goal is counted in money — in the figure
+ * and in the bar — and says the percentage out loud, which is how every board of
+ * this kind is read. The app counts it the same way (`ProgressCard`).
+ *
+ * Null when no goal was named, and the caller then counts spots exactly as it
+ * did before goals existed. Past 100% only `fill` stops, at full: beating the
+ * goal is the good ending, so the number itself keeps climbing.
+ */
+export function fundingProgress(
+  space: Pick<Space, "fundingGoalCents" | "totals">,
+): { raised: string; goal: string; percent: number; fill: number } | null {
+  const goal = space.fundingGoalCents;
+  if (!goal || goal <= 0) return null;
+  const raised = Math.max(0, space.totals.committedCents);
+  return {
+    raised: usdFromCents(raised),
+    goal: usdFromCents(goal),
+    percent: Math.round((raised / goal) * 100),
+    fill: Math.min(100, (raised / goal) * 100),
+  };
 }
 
 /* ── Offers and bids (hispace-offers-v0.md) ──────────────────────────────── */

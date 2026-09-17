@@ -355,6 +355,14 @@ export interface Space {
   serviceSummary: string | null;
   positions: Position[];
   /**
+   * What the campaign is raising, in integer cents, or null when the creator
+   * named no goal. A space that has one is measured against it — money, not
+   * spots — because what a campaign is FOR is an amount and not an inventory.
+   * `getPublicSpace` fills null, so a server older than the goal reads as a
+   * space that never named one and the page stays exactly as it was.
+   */
+  fundingGoalCents: number | null;
+  /**
    * `committedCents`: paid so far (on `offers` and `bids`, the agreed amounts of
    * paid orders). `totalCents`: every listed price added up, null on `offers`
    * and `bids`, which have no total to be "of".
