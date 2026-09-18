@@ -8,9 +8,11 @@ import type {
   EventPage,
   EventSummary,
   OfferThread,
+  PhotoRect,
   Position,
   Space,
   SpaceCard,
+  SpacePhoto,
 } from "./types";
 
 /**
@@ -160,9 +162,14 @@ function withTierFields(p: Position): Position {
  */
 function withEventFields(space: Space): Space {
   const raw = space as Partial<Space> & Space;
+  const positions = (Array.isArray(raw.positions) ? raw.positions : []).map(withTierFields);
+  const photo = usablePhoto(raw.photo, positions);
   return {
     ...raw,
-    positions: (Array.isArray(raw.positions) ? raw.positions : []).map(withTierFields),
+    // With no photo to draw them on, squares are dropped too, so nothing
+    // downstream can place one on the catalog drawing by mistake.
+    positions: photo ? positions : positions.map((p) => ({ ...p, rect: null })),
+    photo,
     event: raw.event ?? null,
     bannerUrl: raw.bannerUrl ?? null,
     bannerGradient: gradientKey(raw.bannerGradient),
@@ -189,6 +196,31 @@ function withEventFields(space: Space): Space {
       note: d.note ?? null,
     })),
   };
+}
+
+/** A square that is really inside the photo, or null. */
+function usableRect(r: unknown): PhotoRect | null {
+  if (!r || typeof r !== "object") return null;
+  const { x, y, w, h } = r as Record<string, unknown>;
+  if (![x, y, w, h].every((n) => typeof n === "number" && Number.isFinite(n))) return null;
+  const q = { x: x as number, y: y as number, w: w as number, h: h as number };
+  if (q.x < 0 || q.y < 0 || q.w <= 0 || q.h <= 0 || q.x + q.w > 1.00001 || q.y + q.h > 1.00001) return null;
+  return q;
+}
+
+/**
+ * The creator's photo, only when it can be drawn whole: a URL, a real size and
+ * a square for every position. Anything less (a server older than photos, a
+ * creator halfway through placing squares) draws the catalog, as before.
+ */
+function usablePhoto(raw: unknown, positions: Position[]): SpacePhoto | null {
+  if (!raw || typeof raw !== "object") return null;
+  const p = raw as Record<string, unknown>;
+  if (typeof p.url !== "string" || !p.url.startsWith("https://")) return null;
+  if (typeof p.width !== "number" || typeof p.height !== "number" || p.width <= 0 || p.height <= 0) return null;
+  if (p.ready === false) return null;
+  if (positions.length === 0 || positions.some((pos) => !usableRect(pos.rect))) return null;
+  return { url: p.url, width: p.width, height: p.height };
 }
 
 /* ── Events ──────────────────────────────────────────────────────────── */

@@ -14,7 +14,7 @@ import {
 } from "@/lib/ad-space/format";
 import { bannerFor } from "@/lib/ad-space/look";
 import { getPublicSpace } from "@/lib/ad-space/server";
-import type { Position, Space, TemplateView } from "@/lib/ad-space/types";
+import type { Position, Space, SpacePhoto, TemplateView } from "@/lib/ad-space/types";
 
 /**
  * The link card for an Ad Space: 1200 × 630, the board as it stands now.
@@ -184,6 +184,8 @@ function Card({ space: s }: { space: Space }) {
           <Ladder tiers={tiers} />
         ) : s.template.kind === "service" ? (
           <Slots positions={s.positions} />
+        ) : s.photo ? (
+          <PhotoBoard photo={s.photo} positions={s.positions} />
         ) : (
           <Views space={s} />
         )}
@@ -285,6 +287,43 @@ function Views({ space: s }: { space: Space }) {
           ))}
         </div>
       ))}
+    </div>
+  );
+}
+
+/**
+ * The creator's own photo with the spots on it, as big as the board allows.
+ * Squares as on the drawing: sold filled amber, held a dashed amber, open a
+ * moonlight edge over a dark glass so it reads on any photo. The API sends a
+ * photo here only once every spot has its square.
+ */
+function PhotoBoard({ photo, positions }: { photo: SpacePhoto; positions: Position[] }) {
+  const k = Math.min(BOARD_W / photo.width, BOARD_H / photo.height);
+  const w = Math.round(photo.width * k);
+  const h = Math.round(photo.height * k);
+  return (
+    <div style={{ display: "flex", position: "relative", width: w, height: h, borderRadius: 18, overflow: "hidden" }}>
+      {/* eslint-disable-next-line @next/next/no-img-element -- Satori draws <img> */}
+      <img src={photo.url} alt="" width={w} height={h} style={{ width: w, height: h, objectFit: "cover" }} />
+      {positions.map((p) => {
+        if (!p.rect) return null;
+        const r = p.rect;
+        const side = Math.min(r.w * w, r.h * h);
+        const box = {
+          position: "absolute" as const,
+          display: "flex",
+          left: r.x * w,
+          top: r.y * h,
+          width: r.w * w,
+          height: r.h * h,
+          borderRadius: Math.max(4, side * 0.12),
+        };
+        if (p.status === "sold") return <div key={p.id} style={{ ...box, backgroundColor: C.amber }} />;
+        if (p.status === "held") {
+          return <div key={p.id} style={{ ...box, backgroundColor: "rgba(8,12,24,0.45)", border: `3px dashed ${C.amber}` }} />;
+        }
+        return <div key={p.id} style={{ ...box, backgroundColor: "rgba(8,12,24,0.58)", border: `3px solid ${C.moonlight}` }} />;
+      })}
     </div>
   );
 }

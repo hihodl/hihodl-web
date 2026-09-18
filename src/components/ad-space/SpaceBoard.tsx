@@ -353,7 +353,7 @@ function ListingStage({
 }) {
   return (
     <div>
-      <ProductBoard template={space.template} positions={space.positions} activeId={activeId} onHover={onHover} onPick={onPick} />
+      <ProductBoard template={space.template} photo={space.photo} positions={space.positions} activeId={activeId} onHover={onHover} onPick={onPick} />
       <Legend takeover={space.pricingMode === "takeover"} mode={mode} />
     </div>
   );
