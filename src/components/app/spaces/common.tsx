@@ -15,9 +15,11 @@ export const STATUS_LABEL: Record<SpaceStatus | string, string> = {
   delisted: "Taken down",
 };
 
-export function StatusPill({ status }: { status: string }) {
+export function StatusPill({ status, onPhoto = false }: { status: string; onPhoto?: boolean }) {
   const cls = status === "live" ? pill.open : status === "draft" ? pill.attention : pill.neutral;
-  return <span className={cls}>{STATUS_LABEL[status] ?? status}</span>;
+  const text = <span className={cls}>{STATUS_LABEL[status] ?? status}</span>;
+  // The pills are tints; on a picture they sit on a dark backing of the same shape so they read.
+  return onPhoto ? <span className="inline-flex rounded-[12px] bg-[#04101A]/75 backdrop-blur-md">{text}</span> : text;
 }
 
 export function ReadError({ error }: { error: unknown }) {
@@ -43,7 +45,7 @@ export function dueText(iso: string | null | undefined): string {
 }
 
 /** The list pane scrolls inside itself on a wide screen, so the page does not. */
-export const LIST_PANEL = "lg:max-h-[calc(100dvh-196px)]";
+export const LIST_PANEL = "lg:max-h-[calc(var(--app-vh,100dvh)-196px)]";
 
 /** A two-pane screen: a list on the left, the chosen item on the right. One pane at a time on a phone. */
 export function MasterDetail({

@@ -108,6 +108,22 @@ export function shareListing(spaceId: string): Promise<{ url: string; text: stri
   return call<{ url: string; text: string }>(`ad-space/spaces/${spaceId}/share`);
 }
 
+/* ── The listing's picture ────────────────────────────────────────── */
+
+/** What the picture route takes: the backend's `MEDIA_TYPES` and `MEDIA_MAX_BYTES`. */
+export const BANNER_TYPES = ["image/png", "image/jpeg", "image/webp"] as const;
+export const BANNER_MAX_BYTES = 3 * 1024 * 1024;
+
+/** The creator's own picture on top of this listing, sent as the image itself. The owner only. */
+export function setListingBanner(spaceId: string, image: Blob): Promise<{ bannerUrl: string | null }> {
+  return call<{ bannerUrl: string | null }>(`ad-space/spaces/${spaceId}/banner`, { method: "POST", file: image });
+}
+
+/** Back to the gradient. */
+export function clearListingBanner(spaceId: string): Promise<{ bannerUrl: null }> {
+  return call<{ bannerUrl: null }>(`ad-space/spaces/${spaceId}/banner`, { method: "DELETE" });
+}
+
 /* ── One listing, several events ──────────────────────────────────── */
 
 /**
@@ -275,8 +291,9 @@ export function getTeam(): Promise<{ team: TeamMember[] }> {
  * of the code, so a creator who loses it removes the seat and invites again;
  * there is no call that shows it back.
  */
-export function inviteToTeam(label: string, role: TeamRole): Promise<Invitation> {
-  return call<Invitation>("ad-space/team", { json: { label, role } });
+export function inviteToTeam(label: string, role: TeamRole, email?: string | null): Promise<Invitation> {
+  // With an address the server also emails the link; `emailed` says whether it went.
+  return call<Invitation>("ad-space/team", { json: email ? { label, role, email } : { label, role } });
 }
 
 /** Take somebody off the team, or close a seat nobody took. What they are already owed stays owed. */

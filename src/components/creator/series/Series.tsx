@@ -106,7 +106,7 @@ export function ListingSeries({ space, onChanged }: { space: SpaceView; onChange
     for (const draft of drafts) {
       try {
         await publishListing(draft.id);
-        out[draft.id] = { live: true, message: "Its link is below — post it where that event's people are." };
+        out[draft.id] = { live: true, message: "" };
       } catch (e) {
         out[draft.id] = { live: false, message: refusalSentence(e, draft.template) };
       }
@@ -131,7 +131,7 @@ export function ListingSeries({ space, onChanged }: { space: SpaceView; onChange
   }
 
   return (
-    <Section label="One listing, several events" title="Series">
+    <Section title="Events">
       {loading ? (
         <Loading what="your other events" />
       ) : picking ? (
@@ -151,7 +151,7 @@ export function ListingSeries({ space, onChanged }: { space: SpaceView; onChange
         />
       ) : spaces.length === 0 ? (
         <div className="flex flex-col gap-5">
-          <p className="text-small text-text-muted">One copy per event, each with its own link and spots.</p>
+          <p className="text-small text-text-muted">{space.event?.name ?? space.eventName ?? "No event"}</p>
           <div>
             <button type="button" className={btnSmall} onClick={() => setPicking(true)}>
               Add events
@@ -160,8 +160,6 @@ export function ListingSeries({ space, onChanged }: { space: SpaceView; onChange
         </div>
       ) : (
         <div className="flex flex-col gap-5">
-          <p className="text-small text-text-muted">{spaces.length} listings, one per event.</p>
-
           <ul className="flex flex-col gap-3">
             {spaces.map((s) => {
               const outcome = outcomes[s.id];
@@ -189,11 +187,9 @@ export function ListingSeries({ space, onChanged }: { space: SpaceView; onChange
                     </div>
                   </div>
 
-                  {s.share ? <p className="break-all font-mono text-tiny text-text">{s.share.url}</p> : null}
-
                   {outcome ? (
                     <p className={`text-small ${outcome.live ? "text-success" : "text-amber"}`}>
-                      {outcome.live ? "Published. " : "Still a draft. "}
+                      {outcome.live ? "Published" : "Still a draft. "}
                       {outcome.message}
                     </p>
                   ) : null}
@@ -249,13 +245,10 @@ export function ListingSeries({ space, onChanged }: { space: SpaceView; onChange
           */}
           {leaving ? (
             <div className="flex flex-col gap-3 border-t border-[color:var(--color-hairline)] pt-5">
-              <p className="text-small text-text">
-                Show this one on its own? It keeps everything — its link, its spots and anything already sold. It only
-                stops being shown here with the others, and it is not put back afterwards.
-              </p>
+              <p className="text-small text-text">Take this one out of the series? It keeps its link and spots.</p>
               <div className="flex flex-wrap gap-3">
                 <button type="button" className={btnSmall} onClick={() => void leave()}>
-                  Yes, on its own
+                  Take it out
                 </button>
                 <button type="button" className={btnSmallSecondary} onClick={() => setLeaving(false)}>
                   Cancel
@@ -269,9 +262,8 @@ export function ListingSeries({ space, onChanged }: { space: SpaceView; onChange
                 className="underline decoration-dotted underline-offset-4"
                 onClick={() => setLeaving(true)}
               >
-                Show this one on its own
-              </button>{" "}
-              to stop listing it here with the others. The listing itself is untouched.
+                Take this one out of the series
+              </button>
             </p>
           )}
         </div>

@@ -332,6 +332,9 @@ export interface SpaceView {
   updates: SpaceUpdate[];
   share: { url: string; text: string } | null;
   event: EventSummary | null;
+  /** The creator's own picture for this listing, or null (the gradient is drawn instead). */
+  bannerUrl?: string | null;
+  bannerGradient?: string | null;
 }
 
 export interface SpaceCard {
@@ -351,6 +354,8 @@ export interface SpaceCard {
   fundingGoalCents: number | null;
   awaitingReview: number;
   event: EventSummary | null;
+  bannerUrl?: string | null;
+  bannerGradient?: string | null;
 }
 
 /* ── One listing, several events ──────────────────────────────────── */

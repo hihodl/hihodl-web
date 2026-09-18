@@ -155,3 +155,61 @@ export const IconLink = (p: P) => (
     <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
   </Icon>
 );
+
+export const IconImage = (p: P) => (
+  <Icon {...p}>
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <circle cx="9" cy="9" r="2" />
+    <path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21" />
+  </Icon>
+);
+
+export const IconCalendar = (p: P) => (
+  <Icon {...p}>
+    <rect x="3" y="4" width="18" height="18" rx="2" />
+    <path d="M16 2v4M8 2v4M3 10h18" />
+  </Icon>
+);
+
+export const IconFloor = (p: P) => (
+  <Icon {...p}>
+    <path d="M12 3v12M7 10l5 5 5-5" />
+    <path d="M4 21h16" />
+  </Icon>
+);
+
+export const IconGrid = (p: P) => (
+  <Icon {...p}>
+    <rect x="3" y="3" width="7" height="7" rx="1" />
+    <rect x="14" y="3" width="7" height="7" rx="1" />
+    <rect x="3" y="14" width="7" height="7" rx="1" />
+    <rect x="14" y="14" width="7" height="7" rx="1" />
+  </Icon>
+);
+
+export const IconMegaphone = (p: P) => (
+  <Icon {...p}>
+    <path d="m3 11 18-5v12L3 14v-3z" />
+    <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" />
+  </Icon>
+);
+
+export const IconShare = (p: P) => (
+  <Icon {...p}>
+    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+    <path d="M16 6l-4-4-4 4M12 2v13" />
+  </Icon>
+);
+
+export const IconCopy = (p: P) => (
+  <Icon {...p}>
+    <rect x="9" y="9" width="13" height="13" rx="2" />
+    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+  </Icon>
+);
+
+export const IconDirector = (p: P) => (
+  <Icon {...p}>
+    <path d="m2 7 5 4 5-7 5 7 5-4-2 12H4L2 7z" />
+  </Icon>
+);

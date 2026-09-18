@@ -5,8 +5,8 @@
  *
  * Built on the KPI dashboard's structure: a glass sidebar with grouped
  * navigation, the signed-in person at its foot, a sticky top bar with the page
- * title, when the numbers were read, ⌘K and the one primary action, and the
- * page under it. On a phone the sidebar is a drawer.
+ * title, ⌘K and the one primary action, and the page under it. On a phone
+ * the sidebar is a drawer.
  *
  * Signed out, it is a centred sign-in and nothing else: no website header, no
  * footer. An invitation link (`/team?seat=…`) is the one page that renders
@@ -16,7 +16,7 @@
 import type { Session } from "@supabase/supabase-js";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { SpacesGround } from "@/components/ad-space/ground";
 import { SignIn } from "@/components/creator/SignIn";
@@ -26,8 +26,9 @@ import type { SpaceCard } from "@/lib/creator/listing";
 import { signOut, useCreatorSession } from "@/lib/creator/session";
 import { creatorText, isSeatCode, pendingSeat, type TeamMember, type WorkListing } from "@/lib/creator/team";
 import type { XAccountStatus } from "@/lib/creator/types";
+import { useAgency, type Agency } from "@/lib/app/agency";
 import { roleOf, waitingOnYou, type ShellRole } from "@/lib/app/spaces-model";
-import { useLastRead, useListings, useOffers, useRefreshAll, useSeats, useWork, useX } from "@/lib/app/spaces-data";
+import { useListings, useOffers, useSeats, useTeam, useWork, useX } from "@/lib/app/spaces-data";
 
 import { SpacesBaseProvider, useHref, useSpacesBase } from "./base";
 import { CommandPalette, type PaletteEntry } from "./CommandPalette";
@@ -37,11 +38,10 @@ import {
   IconExpand,
   IconMenu,
   IconPlus,
-  IconRefresh,
   IconSearch,
   IconSignOut,
 } from "./icons";
-import { ACCOUNT_ITEM, activeKey, itemsFor, SPACES_GROUPS, titleFor, type NavItem, type NavKey } from "./nav";
+import { ACCOUNT_ITEM, activeKey, itemsFor, SPACES_GROUPS, titleFor, visible, type NavItem, type NavKey } from "./nav";
 import { Alert, glass } from "./ui";
 
 /* ── What every page inside can read ──────────────────────────────── */
@@ -56,6 +56,10 @@ export interface ShellState {
   work: WorkListing[];
   /** The listings this person sells for somebody else. */
   managed: WorkListing[];
+  /** Creator or Creative Director (lib/app/agency). */
+  agency: Agency;
+  /** Whether there is a Team page for this person at all. */
+  teamPage: boolean;
 }
 
 const ShellContext = createContext<ShellState | null>(null);
@@ -131,14 +135,23 @@ function SignedIn({ session, children }: { session: Session; children: ReactNode
   const seats = useSeats();
   const x = useX();
   const work = useWork();
+  const team = useTeam();
+  const agency = useAgency(session.user.id, team.data);
 
-  const ready = listings.data !== undefined && seats.data !== undefined && (x.data !== undefined || x.error);
+  // The team is read before the first paint so a Creative Director's Team item
+  // is there from the start; a failed read only means no team is shown.
+  const ready =
+    listings.data !== undefined &&
+    seats.data !== undefined &&
+    (x.data !== undefined || x.error) &&
+    (team.data !== undefined || team.error);
   const failed = listings.error ?? seats.error;
 
   const state = useMemo<ShellState | null>(() => {
     if (!ready || !listings.data || !seats.data) return null;
     const role = roleOf(listings.data, seats.data, x.data ?? null);
     const w = work.data ?? [];
+    const onTeams = seats.data.some((s) => s.status === "active");
     return {
       session,
       role,
@@ -147,8 +160,10 @@ function SignedIn({ session, children }: { session: Session; children: ReactNode
       x: x.data ?? null,
       work: w,
       managed: w.filter((l) => l.role === "manager"),
+      agency,
+      teamPage: role !== "creator" || agency.on || onTeams,
     };
-  }, [ready, listings.data, seats.data, x.data, work.data, session]);
+  }, [ready, listings.data, seats.data, x.data, work.data, session, agency]);
 
   if (failed && !state) {
     return (
@@ -226,7 +241,7 @@ function Frame({ children }: { children: ReactNode }) {
   }, []);
 
   // A rep's whole product is Deliveries: the module's home sends them there.
-  const allowed = itemsFor(shell.role);
+  const allowed = itemsFor(shell.role, shell.teamPage);
   const here = active ? allowed.some((i) => i.key === active) : true;
   useEffect(() => {
     if (!here) router.replace(href(allowed[0]?.path ?? "/deliveries"));
@@ -234,9 +249,15 @@ function Frame({ children }: { children: ReactNode }) {
 
   const badges = useBadges();
   const entries = usePaletteEntries(allowed);
+  const scale = useUiScale();
 
   return (
-    <div className="mx-auto w-full max-w-[1440px] px-[clamp(12px,2vw,32px)] py-3 lg:py-5">
+    <div
+      className="w-full px-[clamp(12px,1.6vw,28px)] py-3 lg:py-4"
+      // The dashboard's way to big screens: the whole product drawn larger,
+      // and anything sized by the viewport divided back (--app-vh).
+      style={{ zoom: scale, ["--ui-scale" as string]: scale, ["--app-vh" as string]: `calc(100dvh / ${scale})` }}
+    >
       {palette ? <CommandPalette entries={entries} onClose={() => setPalette(false)} /> : null}
 
       <div
@@ -245,7 +266,7 @@ function Frame({ children }: { children: ReactNode }) {
         }`}
       >
         <div className="hidden lg:block">
-          <div className="sticky top-5 h-[calc(100dvh-2.5rem)]">
+          <div className="sticky top-4 h-[calc(var(--app-vh,100dvh)-2rem)]">
             <Sidebar collapsed={collapsed} onToggle={toggleCollapsed} active={active} badges={badges} />
           </div>
         </div>
@@ -270,6 +291,31 @@ function Frame({ children }: { children: ReactNode }) {
       ) : null}
     </div>
   );
+}
+
+/* ── Big screens ──────────────────────────────────────────────────── */
+
+/**
+ * How much larger to draw everything, as the KPI dashboard does: at least the
+ * 1470 × 820 the screens are laid out for, never below 1 (a laptop and a phone
+ * draw at their own size) and at most 1.75, in 5% steps so a window being
+ * dragged does not re-lay out on every pixel.
+ */
+export function uiScaleFor(width: number, height: number): number {
+  if (width < 1470) return 1;
+  const s = Math.min(width / 1470, height / 820);
+  return Math.max(1, Math.min(1.75, Math.floor(s * 20) / 20));
+}
+
+function useUiScale(): number {
+  const [scale, setScale] = useState(1);
+  useEffect(() => {
+    const read = () => setScale(uiScaleFor(window.innerWidth, window.innerHeight));
+    read();
+    window.addEventListener("resize", read);
+    return () => window.removeEventListener("resize", read);
+  }, []);
+  return scale;
 }
 
 /* ── Sidebar ──────────────────────────────────────────────────────── */
@@ -298,9 +344,9 @@ function Sidebar({
   active: NavKey | null;
   badges: Partial<Record<NavKey, number>>;
 }) {
-  const { role } = useShell();
+  const { role, teamPage } = useShell();
   const href = useHref();
-  const groups = SPACES_GROUPS.map((g) => ({ ...g, items: g.items.filter((i) => i.roles.includes(role)) })).filter(
+  const groups = SPACES_GROUPS.map((g) => ({ ...g, items: g.items.filter((i) => visible(i, role, teamPage)) })).filter(
     (g) => g.items.length > 0,
   );
   const account = ACCOUNT_ITEM.roles.includes(role) ? ACCOUNT_ITEM : null;
@@ -339,10 +385,12 @@ function Sidebar({
 
       <nav aria-label="Spaces" className={`flex w-full flex-1 flex-col overflow-y-auto ${collapsed ? "items-center gap-1 pt-2" : "gap-4"}`}>
         {groups.map((g) => (
-          <div key={g.title} className={collapsed ? "flex flex-col items-center gap-1" : "flex flex-col gap-1"}>
-            {collapsed ? <div className="my-1 h-px w-8 bg-white/10" /> : (
+          <div key={g.title ?? "main"} className={collapsed ? "flex flex-col items-center gap-1" : "flex flex-col gap-1"}>
+            {collapsed ? (
+              g.title ? <div className="my-1 h-px w-8 bg-white/10" /> : null
+            ) : g.title ? (
               <p className="px-2.5 pb-1 text-[10px] font-medium uppercase tracking-wider text-[#6B8A99]">{g.title}</p>
-            )}
+            ) : null}
             {g.items.map((i) => (
               <NavLink key={i.key} item={i} active={active === i.key} badge={badges[i.key]} collapsed={collapsed} />
             ))}
@@ -403,11 +451,14 @@ function NavLink({ item, active, badge, collapsed }: { item: NavItem; active: bo
 const ROLE_LABEL: Record<ShellRole, string> = { creator: "Creator", manager: "Manager", rep: "Rep" };
 
 function UserCard({ collapsed }: { collapsed: boolean }) {
-  const { session, x, role, seats } = useShell();
+  const { session, x, role, seats, agency } = useShell();
+  const href = useHref();
   const linked = x?.linked ? x : null;
   const name = linked ? `@${linked.handle}` : session.user.email ?? "Signed in";
   const seat = role !== "creator" ? seats.find((s) => s.status === "active" && s.role === role) : null;
-  const sub = seat ? `${ROLE_LABEL[role]} · ${creatorText(seat) ?? "a creator"}` : ROLE_LABEL[role];
+  const title = role === "creator" && agency.on ? "Creative Director" : ROLE_LABEL[role];
+  const sub = seat ? `${title} · ${creatorText(seat) ?? "a creator"}` : title;
+  const upgrade = role === "creator" && !agency.on;
   const initial = (linked?.handle ?? session.user.email ?? "?").slice(0, 1).toUpperCase();
   const [broken, setBroken] = useState(false);
 
@@ -435,7 +486,14 @@ function UserCard({ collapsed }: { collapsed: boolean }) {
       {avatar}
       <div className="min-w-0 flex-1">
         <p className="truncate text-small text-text">{name}</p>
-        <p className="truncate text-[11px] text-[#9FB7C2]">{sub}</p>
+        <p className="flex min-w-0 items-center gap-1.5 text-[11px] text-[#9FB7C2]">
+          <span className="truncate">{sub}</span>
+          {upgrade ? (
+            <Link href={`${href("/account")}#team`} className="shrink-0 text-amber hover:text-[#FFE2A1]">
+              · Run a team
+            </Link>
+          ) : null}
+        </p>
       </div>
       <button
         type="button"
@@ -468,7 +526,6 @@ function TopBar({ title, onMenu, onSearch }: { title: string; onMenu: () => void
             <IconMenu />
           </button>
           <h1 className="truncate pl-1 text-body font-medium text-text sm:text-[18px]">{title}</h1>
-          <SyncChip />
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           <button type="button" onClick={onSearch} aria-label="Search" className={btnGhost}>
@@ -488,43 +545,6 @@ function TopBar({ title, onMenu, onSearch }: { title: string; onMenu: () => void
         </div>
       </div>
     </header>
-  );
-}
-
-/** When the numbers were last read, and a way to read them again. */
-function SyncChip() {
-  const last = useLastRead();
-  const refresh = useRefreshAll();
-  const [busy, setBusy] = useState(false);
-  const [, tick] = useState(0);
-
-  useEffect(() => {
-    const t = setInterval(() => tick((n) => n + 1), 30_000);
-    return () => clearInterval(t);
-  }, []);
-
-  const age = last ? Math.max(0, Math.round((Date.now() - last) / 60_000)) : null;
-  const label = busy ? "syncing" : age === null ? "…" : age === 0 ? "now" : `${age}m ago`;
-
-  const run = useCallback(() => {
-    setBusy(true);
-    void refresh().finally(() => setBusy(false));
-  }, [refresh]);
-
-  return (
-    <button
-      type="button"
-      onClick={run}
-      disabled={busy}
-      title="Read everything again"
-      className="hidden shrink-0 items-center gap-1.5 rounded-[10px] border border-white/10 bg-white/[0.05] py-1 pl-2 pr-1 text-[11px] text-[#9FB7C2] transition-colors hover:text-text sm:inline-flex"
-    >
-      <IconRefresh className={`h-3 w-3 ${busy ? "animate-spin" : ""}`} />
-      <span className="inline-flex items-center gap-1 rounded-[6px] bg-white/[0.08] px-1.5 py-0.5 tabular-nums text-text">
-        <span className={`h-1.5 w-1.5 rounded-[3px] ${busy ? "animate-pulse bg-[#2EB4D6]" : "bg-success"}`} />
-        {label}
-      </span>
-    </button>
   );
 }
 

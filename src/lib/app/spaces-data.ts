@@ -3,8 +3,7 @@
  *
  * Every read here is one of the console's existing calls (lib/creator/*): no
  * new route, no new shape. SWR holds the answers so moving from Overview to
- * Offers to a listing does not ask the same question three times, and so the
- * top bar can say when the numbers were last read and refresh them all.
+ * Offers to a listing does not ask the same question three times.
  *
  * Keys carry the signed-in user, so a different person in the same tab (the
  * demo's role switch, a sign-out and back in) never reads the last one's data.
@@ -53,8 +52,13 @@ export function useLastRead(): number | null {
   );
 }
 
+/**
+ * Coming back to the tab reads again (at most every 30 s), and so does every
+ * screen that mounts a read: there is no refresh control for a person to find.
+ */
 const OPTIONS: SWRConfiguration = {
-  revalidateOnFocus: false,
+  revalidateOnFocus: true,
+  focusThrottleInterval: 30_000,
   shouldRetryOnError: false,
   dedupingInterval: 10_000,
 };

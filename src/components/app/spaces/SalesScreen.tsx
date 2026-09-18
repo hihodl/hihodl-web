@@ -78,7 +78,7 @@ export function SalesScreen() {
         ) : shown.length === 0 ? (
           <EmptyState title="No sales yet." />
         ) : (
-          <div className="-mx-1 max-h-[calc(100dvh-420px)] min-h-[240px] overflow-auto">
+          <div className="-mx-1 max-h-[calc(var(--app-vh,100dvh)-420px)] min-h-[240px] overflow-auto">
             <table className="w-full min-w-[560px] text-left text-small">
               <thead className="sticky top-0 bg-[rgba(6,18,30,0.95)]">
                 <tr className="text-[11px] text-[#9FB7C2]">
