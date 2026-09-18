@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 
+import { SpacesGround } from "@/components/ad-space/ground";
 import { ProfileFooter } from "@/components/ad-space/creator";
 import { EventBanner, EventTabs, SpaceCardGrid, TAB_NAME, eventPath } from "@/components/ad-space/events";
 import { SlimHeader } from "@/components/ad-space/sections";
@@ -107,7 +108,7 @@ export default async function EventPage({
 
   if (found.kind === "unreachable") {
     return (
-      <>
+      <SpacesGround>
         <SlimHeader />
         <main className="container-page flex min-h-[60vh] flex-col justify-center py-20">
           <p className={`${eyebrow} text-amber`}>HiSpace</p>
@@ -118,7 +119,7 @@ export default async function EventPage({
             This is on our side, not the link. Give it a moment and refresh the page.
           </p>
         </main>
-      </>
+      </SpacesGround>
     );
   }
 
@@ -129,7 +130,7 @@ export default async function EventPage({
   const openElsewhere = EVENT_TABS.some((t) => t !== active && openSpots(tabs[t]) > 0);
 
   return (
-    <>
+    <SpacesGround>
       <SlimHeader />
       <main>
         <EventBanner event={event} now={now} />
@@ -154,6 +155,6 @@ export default async function EventPage({
       {/* The HOLD mark, and the one sentence that has to stay: this page uses the
           event's name and picture without being the event. */}
       <ProfileFooter note={`HOLD is not affiliated with ${event.name}.`} />
-    </>
+    </SpacesGround>
   );
 }
