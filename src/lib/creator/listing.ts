@@ -476,6 +476,36 @@ export function feeSplit(priceCents: number, feePayer: "sponsor" | "creator") {
     : { sponsorPaysCents: priceCents + fee, creatorGetsCents: priceCents, feeCents: fee };
 }
 
+/**
+ * What actually reaches the creator's wallet, as USDC, exactly.
+ *
+ * WHY THIS IS COMPUTED HERE AT ALL, GIVEN THE HOUSE RULE
+ *
+ * Every other figure on these screens comes from the server. An OFFER is the
+ * one place it cannot: the API sends the agreed amount and what the sponsor
+ * moves, and when the creator carries our fee those are the SAME number and
+ * neither of them is the creator's receipt. Money on this screen is somebody's
+ * income, so it is worked out rather than left as the sponsor's gross with a
+ * hopeful label.
+ *
+ * It is the server's own arithmetic, not an approximation of it: base units as
+ * BigInt (`cents × 10⁴`), the fee floored in base units exactly as `feeFor`
+ * does it, and the same printing as `formatUsdc`. `12.34 × 0.95` in floating
+ * point is not this, which is why none of it is a number.
+ */
+export function creatorReceivesUsdc(priceCents: number, feePayer: "sponsor" | "creator"): string {
+  const base = BigInt(priceCents) * 10_000n;
+  const fee = (base * BigInt(LIMITS.FEE_BPS)) / 10_000n;
+  return formatUsdcBase(feePayer === "creator" ? base - fee : base);
+}
+
+/** A bigint of USDC base units as the API prints it: at least two decimals, no trailing zeros past that. */
+function formatUsdcBase(base: bigint): string {
+  const whole = base / 1_000_000n;
+  const frac = (base % 1_000_000n).toString().padStart(6, "0").replace(/0+$/, "");
+  return `${whole}.${frac.length < 2 ? frac.padEnd(2, "0") : frac}`;
+}
+
 /* ── The draft the form holds ─────────────────────────────────────── */
 
 /** One rung of the ladder, as a person writes it. */

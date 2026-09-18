@@ -115,7 +115,11 @@ export function Listings() {
                       <Link href={`/creator/listings/${s.id}/edit`} className={btnSmallSecondary}>
                         Finish it
                       </Link>
-                    ) : null}
+                    ) : (
+                      <Link href={`/creator/listings/${s.id}`} className={btnSmallSecondary}>
+                        Open it
+                      </Link>
+                    )}
                   </div>
                 </li>
               ))}

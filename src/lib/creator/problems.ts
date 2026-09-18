@@ -332,6 +332,88 @@ const PLAIN: Record<string, string> = {
 };
 
 /**
+ * A refusal on a listing that is already live, as one sentence.
+ *
+ * Running a listing has no form to hang a problem on: there is a button, and
+ * what comes back is either done or a reason. Every one of these is a race the
+ * creator did not lose through carelessness — a sponsor who withdrew while the
+ * page sat open, a bid that was outbid a second ago, a spot somebody else
+ * bought — so each says what happened rather than what they did wrong.
+ */
+export function describeRunError(e: unknown): string {
+  if (!(e instanceof CreatorApiError)) return "Something went wrong. Try again.";
+  switch (e.code) {
+    case "network":
+      return "We could not reach HOLD. Check your connection and try again.";
+    case "UNAUTHORIZED":
+    case "ACCOUNT_DELETED":
+      return "Your sign-in has expired. Sign in again and pick up where you left off.";
+    case "rate_limited":
+    case "RATE_LIMIT_EXCEEDED":
+      return "That is more than we allow in a minute. Wait a moment and try again.";
+    case "offer_changed":
+      return "This moved while you were reading it — they raised it, withdrew it, or the clock ran out. Refresh and look again before you answer.";
+    case "offer_not_open":
+      return "This one is already settled, so there is nothing left to answer.";
+    case "offer_expired":
+      return "The time on this one ran out. Nothing was agreed and nothing is owed.";
+    case "not_for_bids":
+      return "There is no countering a bid. Bidding is one number going up against a clock; you can take the highest or leave it.";
+    case "too_many_rounds":
+      return "Three counters is as far as one negotiation goes. Take it, or pass.";
+    case "counter_not_above_offer":
+      return "A counter has to be more than they offered. Anything less is just saying yes for less.";
+    case "counter_above_price":
+      return "Your counter is above the price on the page, and buying it outright has to stay the better deal. Ask for less than the listed price.";
+    case "offer_too_low":
+      return "That is under the least anyone can be asked for on HiSpace, which is $25.";
+    case "offer_too_high":
+      return "That is more than a HiSpace spot can cost.";
+    case "space_closed":
+      return "This listing has closed, so nothing more can be agreed on it.";
+    case "too_close_to_closing":
+      return "There is not enough time left before this closes for a sponsor to pay. Nothing can be accepted this late.";
+    case "position_sold":
+      return "Somebody bought that spot while you were reading this.";
+    case "position_reserved":
+      return "That spot is already held for another accepted offer. It comes back if they do not pay.";
+    case "position_held":
+      return "Somebody is paying for that spot right now. If it lapses, it comes back.";
+    case "nothing_to_review":
+      return "There is nothing waiting on this one — you have already answered it, or the sponsor took it back.";
+    case "reason_required":
+      return "Say why, in a line. The sponsor gets it and sends something else; without it they are guessing.";
+    case "content_changed":
+      return "The sponsor swapped in something different since you looked. Refresh and read the new one before you answer.";
+    case "position_not_sold":
+    case "order_not_paid":
+      return "Nobody has paid for this yet, so there is nothing to deliver.";
+    case "not_for_sessions":
+      return "Time in person is confirmed by the person who booked it, not by a link — there is nothing for you to mark here.";
+    case "offers_not_accepted":
+      return "This one does not take offers, so a floor would never be read.";
+    case "offer_price_invalid":
+    case "minimum_not_below_price":
+    case "reserve_below_opening_bid":
+      return "A floor has to sit under the price on a listing that has one, and above the opening bid on one that is bid for. It is never the price itself.";
+    case "offer_target_invalid":
+      return "That floor belongs on the other one: a listing selling identical slots keeps one floor for all of them, and everything else keeps its own.";
+    case "not_live":
+      return "This listing is not live yet, so it has no page to share.";
+    case "space_not_live":
+      return "This listing is not live, so there is nothing to post about yet.";
+    case "update_empty":
+      return "Write something first.";
+    case "min_offer_invalid":
+      return "A floor runs from $25 up to the price, and never above it.";
+    case "not_found":
+      return "We cannot find that any more.";
+    default:
+      return "Something went wrong. Try again.";
+  }
+}
+
+/**
  * Everything a refusal means, ready to render.
  *
  * `draft` is only used to decide which box a spot-level problem sits in, so a

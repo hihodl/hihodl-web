@@ -35,6 +35,7 @@ import type { PayoutAddressView, XAccountStatus } from "@/lib/creator/types";
 import { Listings } from "./Listings";
 import { PayoutAddress } from "./PayoutAddress";
 import { ReadyToPublish } from "./ReadyToPublish";
+import { Sales } from "./Sales";
 import { SignIn } from "./SignIn";
 import { XAccount } from "./XAccount";
 
@@ -72,6 +73,7 @@ export function CreatorConsole() {
           </div>
 
           <Listings />
+          <Sales />
           <PayoutAddress onChange={setPayout} />
           <XAccount onChange={setX} />
           <ReadyToPublish x={x} payout={payout} />

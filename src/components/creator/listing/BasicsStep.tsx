@@ -120,31 +120,33 @@ export function BasicsStep({
         >
           <div className="flex flex-col gap-3">
             {draft.keyDates.map((k, i) => (
-              <div key={i} className="flex flex-col gap-2 sm:flex-row">
-                <div className="min-w-0 flex-1">
-                  <Text
-                    value={k.label}
-                    onChange={(label) =>
-                      set({ keyDates: draft.keyDates.map((d, j) => (j === i ? { ...d, label } : d)) })
-                    }
-                    maxLength={60}
-                    placeholder="Everything posted by"
-                  />
+              <div key={i} className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <div className="min-w-0 flex-1">
+                    <Text
+                      value={k.label}
+                      onChange={(label) =>
+                        set({ keyDates: draft.keyDates.map((d, j) => (j === i ? { ...d, label } : d)) })
+                      }
+                      maxLength={60}
+                      placeholder="Everything posted by"
+                    />
+                  </div>
+                  <div className="sm:w-48">
+                    <Text
+                      type="date"
+                      value={k.date}
+                      onChange={(date) => set({ keyDates: draft.keyDates.map((d, j) => (j === i ? { ...d, date } : d)) })}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className="h-12 shrink-0 rounded-[24px] border border-[color:var(--color-hairline-strong)] px-5 text-small text-text transition-colors duration-180 hover:bg-white/5"
+                    onClick={() => set({ keyDates: draft.keyDates.filter((_, j) => j !== i) })}
+                  >
+                    Remove
+                  </button>
                 </div>
-                <div className="sm:w-48">
-                  <Text
-                    type="date"
-                    value={k.date}
-                    onChange={(date) => set({ keyDates: draft.keyDates.map((d, j) => (j === i ? { ...d, date } : d)) })}
-                  />
-                </div>
-                <button
-                  type="button"
-                  className="h-12 shrink-0 rounded-[24px] border border-[color:var(--color-hairline-strong)] px-5 text-small text-text transition-colors duration-180 hover:bg-white/5"
-                  onClick={() => set({ keyDates: draft.keyDates.filter((_, j) => j !== i) })}
-                >
-                  Remove
-                </button>
                 <Problems list={problemsAt(problems, `keyDate:${i}`)} />
               </div>
             ))}

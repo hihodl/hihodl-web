@@ -223,15 +223,17 @@ function Rung({
         <div className="flex flex-col gap-2">
           {perks.map((line, i) => (
             <div key={i} className="flex items-center gap-2">
-              <Text
-                value={line}
-                onChange={(v) => onPatch({ perks: perks.map((p, j) => (j === i ? v : p)) })}
-                maxLength={LIMITS.TIER_PERK_MAX}
-                placeholder={i === 0 ? "A 6 to 10 minute interview, shot and edited by me" : "One more line"}
-              />
+              <span className="min-w-0 flex-1">
+                <Text
+                  value={line}
+                  onChange={(v) => onPatch({ perks: perks.map((p, j) => (j === i ? v : p)) })}
+                  maxLength={LIMITS.TIER_PERK_MAX}
+                  placeholder={i === 0 ? "A 6 to 10 minute interview, shot and edited by me" : "One more line"}
+                />
+              </span>
               <button
                 type="button"
-                className={btnSmallSecondary}
+                className={`${btnSmallSecondary} shrink-0`}
                 disabled={perks.length === 1}
                 onClick={() => onPatch({ perks: perks.filter((_, j) => j !== i) })}
                 aria-label="Remove this line"
