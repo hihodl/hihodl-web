@@ -1,15 +1,39 @@
 /**
- * The console's calls, from the browser.
+ * The console's calls, straight from the browser to the backend.
  *
- * Every one goes to `/api/creator/...` on this origin, which forwards it to
- * the backend with the creator's Bearer token — see that route for why it is
- * not a direct call. The shapes and the error codes are the backend's own, so
- * the indirection is invisible from here.
+ * WHY THERE IS NO LONGER A PROXY
  *
- * Clients switch on `error.code`, never on the message (see the contract).
+ * This console used to talk through `/api/creator/[...path]` on our own
+ * origin, because CORS on the backend was mounted on the PUBLIC routers only
+ * and those allow `Content-Type` and `X-Checkout-Key` — not `Authorization`.
+ * A browser at hihodl.xyz calling an authenticated route with a Bearer token
+ * got a failed preflight and no answer, so the calls were made server to
+ * server instead.
+ *
+ * That proxy carried a literal five-entry allow-list, which was honest while
+ * the console only signed in and declared an address. Publishing and running a
+ * listing is some fifteen calls, several with an id in the path, and an
+ * allow-list that has to grow patterns to fit them stops being the security
+ * model it was written as. So the backend now mounts `holdWebAuthedCors()` on
+ * the authenticated Ad Space and X routers: the origin is echoed only when it
+ * is one of ours, never `*`, and credentials stay off — the token travels as a
+ * header this page puts there on purpose, and no ambient cookie can be spent
+ * by a page on another origin.
+ *
+ * THAT BACKEND CHANGE IS NOT DEPLOYED YET
+ *
+ * It is on `feat/spaces-roles`. Against production `api.hihodl.xyz` every call
+ * below fails its preflight until that ships, and the console is unmerged too:
+ * they go out together. Running this locally against a real backend needs your
+ * dev origin in the backend's `AD_SPACE_PUBLIC_ORIGINS`.
+ *
+ * Every response is `{ data: ... }` and nothing else. Clients switch on
+ * `error.code`, never on the message (see the contract).
  */
 
 "use client";
+
+import { API_BASE } from "@/lib/ad-space/config";
 
 import { accessToken } from "./session";
 import type { PayoutAddressView, PayoutChain, PayoutChallenge, XAccountStatus } from "./types";
@@ -31,23 +55,38 @@ interface ApiErrorBody {
   details?: Record<string, unknown>;
 }
 
-async function call<T>(path: string, init: { method?: "GET" | "POST"; json?: unknown } = {}): Promise<T> {
+export type Method = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
+
+/**
+ * One call, with the creator's token on it.
+ *
+ * A body is sent whenever `json` is given, `null` included: several routes
+ * take `{ minOfferCents: null }` to mean "no floor at all", which is not the
+ * same as sending nothing.
+ */
+export async function call<T>(
+  path: string,
+  init: { method?: Method; json?: unknown } = {},
+): Promise<T> {
   const token = await accessToken();
   if (!token) throw new CreatorApiError("UNAUTHORIZED", 401);
 
+  const hasBody = init.json !== undefined;
   let res: Response;
   try {
-    res = await fetch(`/api/creator/${path}`, {
-      method: init.method ?? (init.json !== undefined ? "POST" : "GET"),
+    res = await fetch(`${API_BASE}/${path}`, {
+      method: init.method ?? (hasBody ? "POST" : "GET"),
       headers: {
         accept: "application/json",
         authorization: `Bearer ${token}`,
-        ...(init.json !== undefined ? { "content-type": "application/json" } : {}),
+        ...(hasBody ? { "content-type": "application/json" } : {}),
       },
-      body: init.json !== undefined ? JSON.stringify(init.json) : undefined,
+      body: hasBody ? JSON.stringify(init.json) : undefined,
       cache: "no-store",
     });
   } catch {
+    // A refused preflight lands here too, indistinguishable from a dead
+    // network — which is the honest thing to say about either.
     throw new CreatorApiError("network", 0);
   }
 
@@ -114,6 +153,9 @@ export function completeXLink(ticket: string): Promise<{ result: string; account
  * One sentence per code the console can actually meet, and every one of them
  * says what to do next. A code with no sentence here falls through to a line
  * that at least does not pretend to know.
+ *
+ * The listing's own refusals are not here: they belong beside the field they
+ * are about, which is `describeProblem` in ./problems.
  */
 export function describeCreatorError(e: unknown): string {
   if (!(e instanceof CreatorApiError)) return "Something went wrong. Try again.";
