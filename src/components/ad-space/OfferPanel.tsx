@@ -17,6 +17,7 @@ import {
   usdcFromCents,
   usdcToCents,
 } from "@/lib/ad-space/offers-client";
+import { earnPointsLine, pointsForOfferAmount, pointsWorth } from "@/lib/ad-space/points";
 import type { OfferStatus, OfferThread, OfferView, Position, Space } from "@/lib/ad-space/types";
 
 import { AppPrompt } from "./AppPrompt";
@@ -170,6 +171,14 @@ export function OfferPanel({
     bid && positionOffers?.biddingOpen !== false && !(Number.isFinite(biddingEnd) && now !== null && biddingEnd <= now);
   const canRaise = open && (!bid || biddingOpen);
   /*
+   * What paying with the HOLD app would earn (spaces-sponsor-points-v0.md): on
+   * the agreed amount once accepted, on the latest amount while it waits. The
+   * fee rate comes from the full space; without it, nothing is promised.
+   */
+  const holdPoints = space
+    ? pointsForOfferAmount(offer.status === "accepted" ? offer.agreedUsdc : offer.amountUsdc, space, offer)
+    : null;
+  /*
    * Withdraw only while the thread waits (pending or countered). An accepted
    * one is never withdrawn: unpaid, it lapses. The leading bid stays once
    * bidding has ended (`bid_locked`): it is the bid the creator is choosing.
@@ -265,7 +274,14 @@ export function OfferPanel({
                 We couldn&rsquo;t load the payment just now. Refresh the page to pay.
               </p>
             )}
-            <AppPrompt title="No wallet with USDC? Pay with HOLD" />
+            {holdPoints !== null ? (
+              <AppPrompt
+                title={earnPointsLine(holdPoints)}
+                body={`Worth ${pointsWorth(holdPoints)} in HOLD. Only a payment from the HOLD app earns them; any other wallet pays the same and earns none.`}
+              />
+            ) : (
+              <AppPrompt title="No wallet with USDC? Pay with HOLD" />
+            )}
           </div>
         )}
 
@@ -389,6 +405,7 @@ export function OfferPanel({
               ? "Get notified the moment someone outbids you: follow it in HOLD"
               : "Get notified the moment the creator answers: follow it in HOLD"
           }
+          body={open && holdPoints !== null ? `${earnPointsLine(holdPoints)} if it's accepted.` : undefined}
         />
       )}
 

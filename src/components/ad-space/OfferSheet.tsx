@@ -25,6 +25,7 @@ import {
   usdcFromCents,
   usdcToCents,
 } from "@/lib/ad-space/offers-client";
+import { earnPointsLine, pointsForOfferAmount } from "@/lib/ad-space/points";
 import type { ContactKind, OfferKind, OfferView, Position, Space } from "@/lib/ad-space/types";
 
 import { AppPrompt } from "./AppPrompt";
@@ -511,6 +512,9 @@ function OfferSent({ sent, space, what }: { sent: Sent; space: Space; what: stri
   const shown = cents !== null ? usdFromCents(cents) : `${offer.amountUsdc} USDC`;
   const spaceUrl = `${SITE_URL}/s/${encodeURIComponent(handle)}/${encodeURIComponent(space.slug)}`;
   const shareText = `I just ${bid ? "bid" : "offered"} ${shown} for @${handle}'s ${what} 👇`;
+  // Nothing is paid on sending, so nothing is earned yet: the promise is for
+  // paying it with HOLD once accepted (spaces-sponsor-points-v0.md).
+  const points = pointsForOfferAmount(offer.amountUsdc, space, offer);
 
   return (
     <div className="flex flex-col gap-6">
@@ -554,6 +558,7 @@ function OfferSent({ sent, space, what }: { sent: Sent; space: Space; what: stri
             ? "Get notified the moment someone outbids you: follow it in HOLD"
             : "Get notified the moment the creator answers: follow it in HOLD"
         }
+        body={points !== null ? `${earnPointsLine(points)} if it's accepted.` : undefined}
       />
 
       <ShareButton text={shareText} url={spaceUrl} />

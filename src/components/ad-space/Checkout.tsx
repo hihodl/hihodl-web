@@ -29,6 +29,7 @@ import {
   timeLeft,
 } from "@/lib/ad-space/format";
 import { describeOfferError, offerSolanaPayLink, startOfferCheckout } from "@/lib/ad-space/offers-client";
+import { earnPointsLine, pointsForOfferAmount, pointsForPosition, pointsWorth } from "@/lib/ad-space/points";
 import { PUBLIC_CHAINS } from "@/lib/orders/chains.public";
 import type { Booking, Chain, EvmPayload, OfferView, Order, Position, Space } from "@/lib/ad-space/types";
 
@@ -134,6 +135,15 @@ export function Checkout({
   /** A session in person: booked, not sponsored (hispace-in-the-room-v0.md). */
   const session = isSessionSpace(space);
   const subject = session ? "session" : "spot";
+  /**
+   * What paying this from the HOLD app would earn (spaces-sponsor-points-v0.md):
+   * on an accepted offer, the fee on the agreed amount; otherwise the fee this
+   * spot's payment carries. Null when the server doesn't say, and then the pay
+   * step promises nothing.
+   */
+  const holdPoints = offer
+    ? pointsForOfferAmount(offer.view.agreedUsdc, space, offer.view)
+    : pointsForPosition(position, space);
 
   /** The checkout calls: the position's, or the accepted offer's at the agreed amount. */
   const offerToken = offer?.token ?? null;
@@ -583,7 +593,14 @@ export function Checkout({
                   )}
 
                   <Disclaimer session={session} />
-                  {offer && <AppPrompt title="No wallet with USDC? Pay with HOLD" />}
+                  {holdPoints !== null ? (
+                    <AppPrompt
+                      title={earnPointsLine(holdPoints)}
+                      body={`Worth ${pointsWorth(holdPoints)} in HOLD. Only a payment from the HOLD app earns them; any other wallet pays the same and earns none.`}
+                    />
+                  ) : (
+                    offer && <AppPrompt title="No wallet with USDC? Pay with HOLD" />
+                  )}
                 </>
               )}
 
