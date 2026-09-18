@@ -169,12 +169,12 @@ function SalesChart({ sales, loading }: { sales: SalesSummary | undefined; loadi
       }
     >
       {loading ? (
-        <Skeleton className="h-36" />
+        <Skeleton className="h-28" />
       ) : (
-        <div className="flex h-36 items-end gap-1.5 sm:gap-3" role="img" aria-label="Sales per week">
+        <div className="flex h-28 items-end gap-1.5 sm:gap-3" role="img" aria-label="Sales per week">
           {points.map((p, i) => {
             const v = values[i];
-            const h = v === 0 ? 2 : Math.max(6, Math.round((v / max) * 112));
+            const h = v === 0 ? 2 : Math.max(6, Math.round((v / max) * 72));
             return (
               <div key={p.label} className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
                 <span className="truncate text-[10px] tabular-nums text-[#9FB7C2]">
@@ -229,12 +229,12 @@ function NeedsYou({
   return (
     <Panel title="Needs you" meta={loading ? "" : `${rows.length}`}>
       {loading ? (
-        <Skeleton className="h-40" />
+        <Skeleton className="h-36" />
       ) : rows.length === 0 ? (
         <EmptyState title="Nothing waiting." />
       ) : (
         <ul className="flex flex-col gap-1">
-          {rows.slice(0, 5).map((r) => (
+          {rows.slice(0, 4).map((r) => (
             <li key={r.key}>
               <RowLink href={r.href} title={r.title} sub={r.sub} right={r.right} />
             </li>

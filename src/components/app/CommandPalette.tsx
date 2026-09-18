@@ -112,7 +112,7 @@ export function CommandPalette({ entries, onClose }: { entries: readonly Palette
                         i === cursor ? "bg-white/[0.08]" : ""
                       }`}
                     >
-                      <span className="flex size-8 shrink-0 items-center justify-center rounded-[8px] border border-white/10 bg-white/5 text-[#9FB7C2]">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] border border-white/10 bg-white/5 text-[#9FB7C2]">
                         {e.icon ?? (e.group === "Offers" ? <IconOffers /> : e.group === "Actions" ? <IconPlus /> : <IconListings />)}
                       </span>
                       <span className="min-w-0 flex-1">

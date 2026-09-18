@@ -109,7 +109,7 @@ function Gate({ children }: { children: ReactNode }) {
 }
 
 export function Centered({ children }: { children: ReactNode }) {
-  return <div className="flex min-h-dvh w-full flex-col items-center justify-center gap-6 px-4 py-10">{children}</div>;
+  return <div className="flex min-h-[100dvh] w-full flex-col items-center justify-center gap-6 px-4 py-10">{children}</div>;
 }
 
 function Mark({ compact = false }: { compact?: boolean }) {
@@ -314,7 +314,7 @@ function Sidebar({
       <div className={`flex w-full items-center ${collapsed ? "flex-col gap-3" : "justify-between gap-2 px-1.5 pb-3 pt-1"}`}>
         <Link href={href()} aria-label="Spaces overview" className="flex min-w-0 items-center">
           {collapsed ? (
-            <span className="flex size-9 items-center justify-center rounded-[10px] border border-white/10 bg-white/[0.06] text-[13px] font-semibold text-amber">
+            <span className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-white/10 bg-white/[0.06] text-[13px] font-semibold text-amber">
               S
             </span>
           ) : (
@@ -322,7 +322,7 @@ function Sidebar({
           )}
         </Link>
         {onClose ? (
-          <button type="button" aria-label="Close menu" onClick={onClose} className="flex size-8 items-center justify-center rounded-[8px] text-[#9FB7C2] hover:bg-white/10 hover:text-text">
+          <button type="button" aria-label="Close menu" onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-[8px] text-[#9FB7C2] hover:bg-white/10 hover:text-text">
             <IconClose />
           </button>
         ) : onToggle ? (
@@ -330,7 +330,7 @@ function Sidebar({
             type="button"
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             onClick={onToggle}
-            className="flex size-8 items-center justify-center rounded-[8px] text-[#9FB7C2] hover:bg-white/10 hover:text-text"
+            className="flex h-8 w-8 items-center justify-center rounded-[8px] text-[#9FB7C2] hover:bg-white/10 hover:text-text"
           >
             {collapsed ? <IconExpand /> : <IconCollapse />}
           </button>
@@ -368,12 +368,12 @@ function NavLink({ item, active, badge, collapsed }: { item: NavItem; active: bo
         aria-label={item.label}
         title={item.label}
         aria-current={active ? "page" : undefined}
-        className={`relative flex size-9 items-center justify-center rounded-[10px] transition-colors ${
+        className={`relative flex h-9 w-9 items-center justify-center rounded-[10px] transition-colors ${
           active ? "bg-amber/25 text-[#FFE2A1]" : "text-[#9FB7C2] hover:bg-white/10 hover:text-text"
         }`}
       >
         <Icon />
-        {badge ? <span className="absolute right-1 top-1 size-2 rounded-[4px] bg-amber" aria-hidden /> : null}
+        {badge ? <span className="absolute right-1 top-1 h-2 w-2 rounded-[4px] bg-amber" aria-hidden /> : null}
       </Link>
     );
   }
@@ -392,7 +392,7 @@ function NavLink({ item, active, badge, collapsed }: { item: NavItem; active: bo
       </span>
       <span className="min-w-0 flex-1 truncate">{item.label}</span>
       {badge ? (
-        <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-[10px] bg-amber px-1.5 text-[11px] font-medium text-text-on-amber">
+        <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-[10px] bg-amber px-1.5 text-[11px] font-medium text-text-on-amber">
           {badge > 9 ? "9+" : badge}
         </span>
       ) : null}
@@ -409,12 +409,13 @@ function UserCard({ collapsed }: { collapsed: boolean }) {
   const seat = role !== "creator" ? seats.find((s) => s.status === "active" && s.role === role) : null;
   const sub = seat ? `${ROLE_LABEL[role]} · ${creatorText(seat) ?? "a creator"}` : ROLE_LABEL[role];
   const initial = (linked?.handle ?? session.user.email ?? "?").slice(0, 1).toUpperCase();
+  const [broken, setBroken] = useState(false);
 
-  const avatar = linked?.avatarUrl ? (
+  const avatar = linked?.avatarUrl && !broken ? (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={linked.avatarUrl} alt="" className="size-9 shrink-0 rounded-[10px] object-cover" />
+    <img src={linked.avatarUrl} alt="" onError={() => setBroken(true)} className="h-9 w-9 shrink-0 rounded-[10px] object-cover" />
   ) : (
-    <span className="flex size-9 shrink-0 items-center justify-center rounded-[10px] border border-white/10 bg-white/[0.08] text-small font-medium text-text">
+    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-white/10 bg-white/[0.08] text-small font-medium text-text">
       {initial}
     </span>
   );
@@ -423,7 +424,7 @@ function UserCard({ collapsed }: { collapsed: boolean }) {
     return (
       <div className="flex flex-col items-center gap-1">
         <span title={name}>{avatar}</span>
-        <button type="button" aria-label="Sign out" title="Sign out" onClick={() => void signOut()} className="flex size-8 items-center justify-center rounded-[8px] text-[#9FB7C2] hover:bg-white/10 hover:text-text">
+        <button type="button" aria-label="Sign out" title="Sign out" onClick={() => void signOut()} className="flex h-8 w-8 items-center justify-center rounded-[8px] text-[#9FB7C2] hover:bg-white/10 hover:text-text">
           <IconSignOut />
         </button>
       </div>
@@ -441,7 +442,7 @@ function UserCard({ collapsed }: { collapsed: boolean }) {
         aria-label="Sign out"
         title="Sign out"
         onClick={() => void signOut()}
-        className="flex size-8 shrink-0 items-center justify-center rounded-[8px] text-[#9FB7C2] hover:bg-white/10 hover:text-text"
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] text-[#9FB7C2] hover:bg-white/10 hover:text-text"
       >
         <IconSignOut />
       </button>
@@ -462,7 +463,7 @@ function TopBar({ title, onMenu, onSearch }: { title: string; onMenu: () => void
             type="button"
             aria-label="Open menu"
             onClick={onMenu}
-            className="flex size-9 shrink-0 items-center justify-center rounded-[10px] border border-white/10 bg-white/[0.05] text-[#CFE3EC] lg:hidden"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-white/10 bg-white/[0.05] text-[#CFE3EC] lg:hidden"
           >
             <IconMenu />
           </button>
@@ -471,7 +472,7 @@ function TopBar({ title, onMenu, onSearch }: { title: string; onMenu: () => void
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           <button type="button" onClick={onSearch} aria-label="Search" className={btnGhost}>
-            <IconSearch className="size-3.5" />
+            <IconSearch className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Search</span>
             <kbd className="hidden rounded-[4px] border border-white/15 px-1 py-0.5 text-[9px] sm:inline">⌘K</kbd>
           </button>
@@ -480,7 +481,7 @@ function TopBar({ title, onMenu, onSearch }: { title: string; onMenu: () => void
               href={href("/listings/new")}
               className="inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] bg-amber px-3 text-tiny font-medium text-text-on-amber transition-colors hover:bg-amber-glow"
             >
-              <IconPlus className="size-3.5" />
+              <IconPlus className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">New listing</span>
             </Link>
           ) : null}
@@ -518,9 +519,9 @@ function SyncChip() {
       title="Read everything again"
       className="hidden shrink-0 items-center gap-1.5 rounded-[10px] border border-white/10 bg-white/[0.05] py-1 pl-2 pr-1 text-[11px] text-[#9FB7C2] transition-colors hover:text-text sm:inline-flex"
     >
-      <IconRefresh className={`size-3 ${busy ? "animate-spin" : ""}`} />
+      <IconRefresh className={`h-3 w-3 ${busy ? "animate-spin" : ""}`} />
       <span className="inline-flex items-center gap-1 rounded-[6px] bg-white/[0.08] px-1.5 py-0.5 tabular-nums text-text">
-        <span className={`size-1.5 rounded-[3px] ${busy ? "animate-pulse bg-[#2EB4D6]" : "bg-success"}`} />
+        <span className={`h-1.5 w-1.5 rounded-[3px] ${busy ? "animate-pulse bg-[#2EB4D6]" : "bg-success"}`} />
         {label}
       </span>
     </button>

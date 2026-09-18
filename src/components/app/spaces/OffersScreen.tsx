@@ -23,7 +23,7 @@ import { useHref } from "../base";
 import { IconArrowLeft } from "../icons";
 import { useShell } from "../Shell";
 import { EmptyState, FilterPills, Panel, RowLink, Skeleton } from "../ui";
-import { MasterDetail, ReadError } from "./common";
+import { LIST_PANEL, MasterDetail, ReadError } from "./common";
 
 type Show = "waiting" | "open" | "all";
 type Kind = "all" | "offer" | "bid";
@@ -58,7 +58,9 @@ export function OffersScreen({ selected, view }: { selected: string | null; view
   const inView = (o: OfferView, s: Show) =>
     s === "all" ? true : s === "open" ? OPEN_OFFER.includes(o.status) : o.status === "pending";
   const list = (offers ?? []).filter((o) => inView(o, show) && (kind === "all" || o.kind === kind));
-  const current = offers?.find((o) => o.id === selected) ?? null;
+  // Nothing picked: the first one is open beside the list on a wide screen,
+  // and the list is what a phone shows.
+  const current = offers?.find((o) => o.id === selected) ?? list[0] ?? null;
 
   const rowHref = (o: OfferView) => `${href("/offers")}?view=${show}&id=${o.id}`;
 
@@ -89,9 +91,9 @@ export function OffersScreen({ selected, view }: { selected: string | null; view
       <ReadError error={read.error} />
 
       <MasterDetail
-        showDetail={!!current}
+        showDetail={!!selected && !!current}
         list={
-          <Panel title="Inbox" meta={offers ? `${list.length}` : ""}>
+          <Panel title="Inbox" meta={offers ? `${list.length}` : ""} className={LIST_PANEL} bodyClassName="min-h-0 overflow-y-auto">
             {offers === null ? (
               <Skeleton className="h-60" />
             ) : list.length === 0 ? (
@@ -104,7 +106,7 @@ export function OffersScreen({ selected, view }: { selected: string | null; view
                     <li key={o.id}>
                       <RowLink
                         href={rowHref(o)}
-                        selected={o.id === selected}
+                        selected={o.id === current?.id}
                         title={`${o.sponsor.name} · ${o.amountUsdc} USDC`}
                         sub={`${o.kind === "bid" ? "Bid" : "Offer"} · ${o.serviceName || o.spaceTitle}${o.positionLabel ? ` · ${o.positionLabel}` : ""}`}
                         right={
@@ -125,7 +127,7 @@ export function OffersScreen({ selected, view }: { selected: string | null; view
             <OfferDetail offer={current} backHref={`${href("/offers")}?view=${show}`} />
           ) : (
             <Panel>
-              <EmptyState title={offers && list.length ? "Pick an offer." : "Nothing selected."} />
+              <EmptyState title="Nothing selected." />
             </Panel>
           )
         }
@@ -142,7 +144,7 @@ function OfferDetail({ offer, backHref }: { offer: OfferView; backHref: string }
   return (
     <div className="flex flex-col gap-3">
       <Link href={backHref} scroll={false} className="inline-flex w-fit items-center gap-1.5 text-tiny text-[#9FB7C2] hover:text-text lg:hidden">
-        <IconArrowLeft className="size-3.5" />
+        <IconArrowLeft className="h-3.5 w-3.5" />
         Inbox
       </Link>
       <Panel

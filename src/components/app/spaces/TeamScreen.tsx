@@ -57,7 +57,7 @@ export function TeamScreen({ tab }: { tab: string | null }) {
       {tabs.length > 1 ? (
         <LinkTabs active={active} tabs={tabs.map((t) => ({ ...t, href: `${href("/team")}?tab=${t.key}` }))} />
       ) : null}
-      <div className="mx-auto w-full max-w-[860px]">
+      <div className={`w-full ${active === "members" ? "" : "mx-auto max-w-[860px]"}`}>
         {active === "members" ? <Members /> : null}
         {active === "owed" ? <Owed /> : null}
         {active === "teams" ? <Seats version={0} /> : null}

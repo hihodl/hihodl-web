@@ -198,7 +198,7 @@ export function LinkTabs({ tabs, active }: { tabs: readonly { key: string; label
             >
               {t.label}
               {t.count ? (
-                <span className={`inline-flex h-4 min-w-4 items-center justify-center rounded-[8px] px-1 text-[10px] ${on ? "bg-amber/30" : "bg-white/10"}`}>
+                <span className={`inline-flex h-4 min-w-[16px] items-center justify-center rounded-[8px] px-1 text-[10px] ${on ? "bg-amber/30" : "bg-white/10"}`}>
                   {t.count}
                 </span>
               ) : null}
@@ -228,14 +228,14 @@ export function RowLink({
   selected?: boolean;
   onClick?: () => void;
 }) {
-  const cls = `group flex w-full min-w-0 items-center gap-3 rounded-[12px] px-3 py-2.5 text-left transition-colors ${
+  const cls = `group flex w-full min-w-0 items-center gap-3 rounded-[12px] px-3 py-2 text-left transition-colors ${
     selected ? "bg-amber/[0.14]" : "hover:bg-white/[0.05]"
   }`;
   const inner = (
     <>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-small text-text">{title}</p>
-        {sub ? <p className="mt-0.5 truncate text-tiny text-[#9FB7C2]">{sub}</p> : null}
+        <div className="truncate text-small text-text">{title}</div>
+        {sub ? <div className="mt-0.5 truncate text-tiny text-[#9FB7C2]">{sub}</div> : null}
       </div>
       {right ? <div className="flex shrink-0 items-center gap-2">{right}</div> : null}
       <IconChevronRight className={`shrink-0 ${selected ? "text-amber" : "text-white/30 group-hover:text-white/60"}`} />

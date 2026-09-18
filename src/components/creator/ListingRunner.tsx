@@ -66,6 +66,9 @@ import { Work } from "./run/Work";
 import { ListingSeries } from "./series/Series";
 import { ListingTeam } from "./team/ListingTeam";
 
+/** A tab's content scrolls inside its panel on a wide screen, so the page stays one screen. */
+const TAB_BODY = "lg:max-h-[calc(100dvh-480px)] lg:overflow-y-auto";
+
 type Tab = "spots" | "offers" | "deliveries" | "share" | "series" | "team" | "updates" | "floors";
 
 export function ListingRunner({ spaceId, tab }: { spaceId: string; tab?: string; item?: string }) {
@@ -193,12 +196,16 @@ export function ListingRunner({ spaceId, tab }: { spaceId: string; tab?: string;
       {active === "spots" ? <Spots space={space} /> : null}
       {active === "offers" ? (
         <Section title="Offers & bids">
-          <Offers space={space} offers={offers} onChanged={changed} />
+          <div className={TAB_BODY}>
+            <Offers space={space} offers={offers} onChanged={changed} />
+          </div>
         </Section>
       ) : null}
       {active === "deliveries" ? (
         <Section title="Deliveries">
-          <Work space={space} onChanged={changed} />
+          <div className={TAB_BODY}>
+            <Work space={space} onChanged={changed} />
+          </div>
         </Section>
       ) : null}
       {active === "share" && share ? <Share share={share} /> : null}
@@ -215,7 +222,7 @@ function Frame({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-4">
       <Link href={href("/listings")} className="inline-flex w-fit items-center gap-1.5 text-tiny text-[#9FB7C2] hover:text-text">
-        <IconArrowLeft className="size-3.5" />
+        <IconArrowLeft className="h-3.5 w-3.5" />
         Listings
       </Link>
       {children}
@@ -239,7 +246,7 @@ const SPOT_LABEL: Record<string, string> = { open: "Open", held: "Held", sold: "
 function Spots({ space }: { space: SpaceView }) {
   return (
     <Panel title="Spots" meta={`${space.positions.length}`}>
-      <div className="-mx-1 overflow-x-auto">
+      <div className={`-mx-1 overflow-x-auto ${TAB_BODY}`}>
         <table className="w-full min-w-[520px] text-left text-small">
           <thead>
             <tr className="text-[11px] text-[#9FB7C2]">

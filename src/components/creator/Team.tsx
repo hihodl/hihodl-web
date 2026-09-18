@@ -26,7 +26,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { btnPrimary, btnSmallSecondary } from "@/components/ad-space/ui";
+import { btnPrimary, btnSmall, btnSmallSecondary } from "@/components/ad-space/ui";
 import { useHref } from "@/components/app/base";
 import { glass } from "@/components/app/ui";
 import { useRefreshAll } from "@/lib/app/spaces-data";
@@ -154,7 +154,7 @@ function SeatOffer({
           As <span className="text-text">{taken.label}</span> · {ROLE_TEXT[taken.role].label}
         </p>
         <div className="flex flex-wrap gap-3">
-          <Link href={href("/deliveries")} className={btnPrimary} onClick={() => forgetSeat()}>
+          <Link href={href("/deliveries")} className={btnSmall} onClick={() => forgetSeat()}>
             Deliveries
           </Link>
           <button type="button" className={btnSmallSecondary} onClick={onDone}>

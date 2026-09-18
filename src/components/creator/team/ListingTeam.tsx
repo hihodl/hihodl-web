@@ -202,11 +202,11 @@ function AssignmentRow({
           >
             <Percent value={percent} onChange={setPercent} />
           </Field>
-          <Field label="A note for yourself" hint="Optional. What they do on this one, say.">
+          <Field label="Note" hint="Optional. Only you see it.">
             <Text value={note} onChange={setNote} maxLength={TEAM_LIMITS.NOTE_MAX} placeholder="Runs the booth both days" />
           </Field>
           <p className="text-tiny text-text-muted">
-            A new share counts from sales made after you save it. What sales before now already owe them does not change.
+            Counts from the next sale. Past sales keep the old share.
           </p>
           <div className="flex flex-wrap gap-2">
             <button
@@ -311,30 +311,30 @@ function AddForm({
 
   return (
     <div className="flex flex-col gap-5 border-t border-[color:var(--color-hairline)] pt-6">
-      <h3 className="text-body text-text">Put somebody on this listing</h3>
+      <h3 className="text-body text-text">Add to this listing</h3>
       {room === 0 ? (
-        <p className="text-small text-text-muted">
-          All 100% of what you receive is already shared out on this listing. Lower somebody’s share to make room.
-        </p>
+        <p className="text-small text-text-muted">100% already shared. Lower a share to make room.</p>
       ) : (
         <>
-          <Field label="Who">
-            <Dropdown
-              value={chosen}
-              onChange={setMemberId}
-              options={free.map((m) => ({ value: m.id, label: `${m.label} · ${ROLE_TEXT[m.role].pill}` }))}
-            />
-          </Field>
-          <Field
-            label="Their share"
-            hint={`A percentage of what you receive from each sale. Up to ${shareText(room)} is left on this listing.`}
-            problems={percent.trim() && problem ? [problem] : []}
-          >
-            <Percent value={percent} onChange={setPercent} />
-          </Field>
-          <Field label="A note for yourself" hint="Optional. What they do on this one, say.">
-            <Text value={note} onChange={setNote} maxLength={TEAM_LIMITS.NOTE_MAX} placeholder="Runs the booth both days" />
-          </Field>
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-3">
+            <Field label="Who">
+              <Dropdown
+                value={chosen}
+                onChange={setMemberId}
+                options={free.map((m) => ({ value: m.id, label: `${m.label} · ${ROLE_TEXT[m.role].pill}` }))}
+              />
+            </Field>
+            <Field
+              label="Share"
+              hint={`Up to ${shareText(room)} left`}
+              problems={percent.trim() && problem ? [problem] : []}
+            >
+              <Percent value={percent} onChange={setPercent} />
+            </Field>
+            <Field label="Note" hint="Optional. Only you see it.">
+              <Text value={note} onChange={setNote} maxLength={TEAM_LIMITS.NOTE_MAX} placeholder="Runs the booth both days" />
+            </Field>
+          </div>
           <div>
             <button
               type="button"
@@ -353,7 +353,7 @@ function AddForm({
                   .finally(() => setBusy(false));
               }}
             >
-              {busy ? "Saving…" : "Put them on it"}
+              {busy ? "Saving…" : "Add"}
             </button>
           </div>
         </>

@@ -52,7 +52,7 @@ function Ready({ canPublish, payout }: { canPublish: boolean; payout: PayoutAddr
       {items.map((i) => (
         <span key={i.label} className="inline-flex items-center gap-2 text-tiny text-[#CFE3EC]">
           <span
-            className={`inline-flex size-4 items-center justify-center rounded-[4px] text-[10px] ${
+            className={`inline-flex h-4 w-4 items-center justify-center rounded-[4px] text-[10px] ${
               i.done === true ? "bg-success/20 text-success" : i.done === false ? "bg-amber/20 text-amber" : "bg-white/10 text-[#9FB7C2]"
             }`}
             aria-hidden

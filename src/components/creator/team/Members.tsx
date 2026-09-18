@@ -79,36 +79,40 @@ export function Members() {
 
   return (
     <Section label="Your team" title="Members">
-      <div className="flex flex-col gap-6">
-        {team === null ? (
-          <Loading what="your team" />
-        ) : team.length === 0 ? (
-          <p className="text-small text-text-muted">No members yet.</p>
-        ) : (
-          <ul className="flex flex-col gap-3">
-            {team.map((m) => (
-              <MemberRow
-                key={m.id}
-                member={m}
-                onRemoved={() => {
-                  if (invitation?.member.id === m.id) setInvitation(null);
-                  void load();
-                }}
-              />
-            ))}
-          </ul>
-        )}
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-2 lg:items-start">
+        <div className="flex min-w-0 flex-col gap-3">
+          {team === null ? (
+            <Loading what="your team" />
+          ) : team.length === 0 ? (
+            <p className="text-small text-text-muted">No members yet.</p>
+          ) : (
+            <ul className="flex flex-col gap-3">
+              {team.map((m) => (
+                <MemberRow
+                  key={m.id}
+                  member={m}
+                  onRemoved={() => {
+                    if (invitation?.member.id === m.id) setInvitation(null);
+                    void load();
+                  }}
+                />
+              ))}
+            </ul>
+          )}
+        </div>
 
-        {invitation ? <InvitationCard invitation={invitation} onClose={() => setInvitation(null)} /> : null}
+        <div className="flex min-w-0 flex-col gap-6">
+          {invitation ? <InvitationCard invitation={invitation} onClose={() => setInvitation(null)} /> : null}
 
-        <InviteForm
-          full={full}
-          count={team?.length ?? 0}
-          onInvited={(inv) => {
-            setInvitation(inv);
-            void load();
-          }}
-        />
+          <InviteForm
+            full={full}
+            count={team?.length ?? 0}
+            onInvited={(inv) => {
+              setInvitation(inv);
+              void load();
+            }}
+          />
+        </div>
 
         {notice ? <Notice>{notice}</Notice> : null}
       </div>
@@ -209,7 +213,7 @@ function InviteForm({
   const trimmed = label.trim();
 
   return (
-    <div className="flex flex-col gap-5 border-t border-[color:var(--color-hairline)] pt-6">
+    <div className="flex flex-col gap-5 border-t border-[color:var(--color-hairline)] pt-6 lg:border-t-0 lg:pt-0">
       <div className="flex flex-col gap-2">
         <h3 className="text-body text-text">Invite</h3>
       </div>

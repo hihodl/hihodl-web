@@ -24,7 +24,7 @@ import { useHref } from "../base";
 import { IconArrowLeft } from "../icons";
 import { useShell } from "../Shell";
 import { EmptyState, FilterPills, Panel, RowLink, Skeleton } from "../ui";
-import { dueText, MasterDetail, ReadError } from "./common";
+import { dueText, LIST_PANEL, MasterDetail, ReadError } from "./common";
 
 type Show = "todo" | "done" | "all";
 type Kind = "all" | "artwork" | "spot" | "promise";
@@ -61,7 +61,7 @@ export function DeliveriesScreen({ selected, view }: { selected: string | null; 
 
   const inView = (i: DeliveryItem, s: Show) => (s === "all" ? true : s === "done" ? i.state === "done" : i.state !== "done");
   const list = items.filter((i) => inView(i, show) && (kind === "all" || i.kind === kind));
-  const current = items.find((i) => i.id === selected) ?? null;
+  const current = items.find((i) => i.id === selected) ?? list[0] ?? null;
   const itemHref = (i: DeliveryItem) => `${href("/deliveries")}?view=${show}&item=${encodeURIComponent(i.id)}`;
 
   return (
@@ -92,9 +92,14 @@ export function DeliveriesScreen({ selected, view }: { selected: string | null; 
       <ReadError error={views.error} />
 
       <MasterDetail
-        showDetail={!!current}
+        showDetail={!!selected && !!current}
         list={
-          <Panel title={show === "done" ? "Delivered" : show === "all" ? "All" : "To do"} meta={loading ? "" : `${list.length}`}>
+          <Panel
+            title={show === "done" ? "Delivered" : show === "all" ? "All" : "To do"}
+            meta={loading ? "" : `${list.length}`}
+            className={LIST_PANEL}
+            bodyClassName="min-h-0 overflow-y-auto"
+          >
             {loading ? (
               <Skeleton className="h-60" />
             ) : list.length === 0 ? (
@@ -105,7 +110,7 @@ export function DeliveriesScreen({ selected, view }: { selected: string | null; 
                   <li key={i.id}>
                     <RowLink
                       href={itemHref(i)}
-                      selected={i.id === selected}
+                      selected={i.id === current?.id}
                       title={i.title}
                       sub={`${KIND_TEXT[i.kind]} · ${i.listing}`}
                       right={
@@ -125,7 +130,7 @@ export function DeliveriesScreen({ selected, view }: { selected: string | null; 
             <Detail item={current} backHref={`${href("/deliveries")}?view=${show}`} />
           ) : (
             <Panel>
-              <EmptyState title={list.length ? "Pick an item." : "Nothing selected."} />
+              <EmptyState title="Nothing selected." />
             </Panel>
           )
         }
@@ -144,7 +149,7 @@ function Detail({ item, backHref }: { item: DeliveryItem; backHref: string }) {
   return (
     <div className="flex flex-col gap-3">
       <Link href={backHref} scroll={false} className="inline-flex w-fit items-center gap-1.5 text-tiny text-[#9FB7C2] hover:text-text lg:hidden">
-        <IconArrowLeft className="size-3.5" />
+        <IconArrowLeft className="h-3.5 w-3.5" />
         Deliveries
       </Link>
       <Panel
