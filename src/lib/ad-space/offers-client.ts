@@ -126,13 +126,21 @@ export function offerFigures(amountCents: number, feeBps: number, feePayer: "spo
 
 /**
  * The offer mode of a spot, or of a service space when no position is given.
- * The server's `offers.mode` wins; without it the space's own fields decide,
+ *
+ * The spot's OWN `saleMode` wins, because a rung of a ladder may sell its own
+ * way (ad-space-tiers-v0.md): `fixed` there means a price and nothing to
+ * offer, so it answers null even on a space that sells by offers. Without one,
+ * the server's `offers.mode` decides, and without that the space's own fields,
  * so a board whose offers block has not arrived yet still reads right.
  */
 export function offerModeOf(
   space: Pick<Space, "pricingMode" | "acceptsOffers" | "spaceOffers" | "kind" | "positions">,
-  position?: Pick<Position, "offers"> | null,
+  position?: Pick<Position, "offers" | "saleMode"> | null,
 ): OfferMode | null {
+  const own = position?.saleMode;
+  // Said by the rung itself: nothing below may overrule it, null included.
+  if (own === "fixed") return null;
+  if (own === "fixed_with_offers" || own === "offers" || own === "bids") return own;
   // A tiered service carries its offers on the rungs, not on the space, so the
   // space's block is only consulted where it exists: an untiered one.
   const onTheSpace = space.kind === "service" && !isTieredSpace(space);

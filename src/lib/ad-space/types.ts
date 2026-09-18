@@ -158,6 +158,22 @@ export interface Position {
   tierKey?: string | null;
   title?: string | null;
   perks?: string[];
+  /**
+   * How THIS rung sells, when it does not sell the way its space does: the $50
+   * logo to whoever pays first, the one interview to the highest bid, on the
+   * same board. Null means the space's own mode, which is every space that
+   * exists today, and `takeover` is never a rung's to choose — it is a rule
+   * about what one sponsor may do to another and it belongs to the space.
+   *
+   * It wins over everything else the page could read, `offers.mode` included:
+   * a rung that sells at its price carries no offers block at all, and without
+   * this the page would fall back to the space and offer a "Make an offer"
+   * button on a rung that does not take one.
+   *
+   * Optional, and `getPublicSpace` fills it: a server older than per-rung modes
+   * sends no key, and anything it does not recognise reads as null.
+   */
+  saleMode?: SaleMode | null;
   /** Null in `offers` mode, where no price is shown. In `bids` it is the opening bid. */
   priceCents: number | null;
   sponsorPaysUsdc: string | null;
@@ -186,6 +202,13 @@ export interface Position {
 /* ── Offers and bids (hispace-offers-v0.md) ───────────────────────────── */
 
 export type OfferMode = "fixed_with_offers" | "offers" | "bids";
+
+/**
+ * How one spot sells, as the server names it (`saleModeOf`). It is `OfferMode`
+ * plus the one mode that takes no offer at all, which the page carries as a
+ * null `OfferMode`: on a `fixed` rung there is nothing to offer, only a price.
+ */
+export type SaleMode = OfferMode | "fixed";
 
 /**
  * The public side of offers on a spot (or on a service space). Every amount is
@@ -358,7 +381,15 @@ export interface Space {
    * fills false when a server older than offers leaves it out.
    */
   acceptsOffers: boolean;
-  /** `bids` only: when bidding ends, space-wide. Each spot's own end is on its `offers`. */
+  /**
+   * When bidding ends, space-wide. Each spot's own end is on its `offers`, and
+   * that is the one the page counts down, because a late bid moves a spot's
+   * end and never the others'.
+   *
+   * Usually `bids` only — but a tiered space may sell at a fixed price and
+   * still carry one, because on a ladder the countdown can belong to a single
+   * rung (the interview) rather than to the board.
+   */
   biddingEndsAt: string | null;
   /**
    * An untiered service space's offers, which target the space rather than a

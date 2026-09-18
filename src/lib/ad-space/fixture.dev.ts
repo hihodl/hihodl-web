@@ -25,7 +25,9 @@
  *                                      one event, three prices — $50 logos (six,
  *                                      four left), a $200 card and mic placement
  *                                      (three, all gone, so the rung shows grey)
- *                                      and one $1,300 flagship interview
+ *                                      and one $1,300 flagship interview that
+ *                                      sells its own way, by bidding, on a board
+ *                                      whose other rungs sell at their price
  * and every other card on an event page opens a copy of the matching board.
  *
  * Events:
@@ -140,11 +142,13 @@ function position(
     takeover: null,
     sponsor: null,
     delivered: null,
-    // The old shapes: a placement's zones and N identical slots carry no tier,
-    // and render exactly as they did before tiers existed.
+    // The old shapes: a placement's zones and N identical slots carry no tier
+    // and no mode of their own, and render exactly as they did before tiers
+    // existed — selling the way their space sells.
     tierKey: null,
     title: null,
     perks: [],
+    saleMode: null,
     ...over,
   };
 }
@@ -614,12 +618,18 @@ function eventCoverage(): Space {
   const pid = (n: number) => `00000000-0000-4000-c000-${String(n).padStart(12, "0")}`;
 
   /** A tier, and the copies of it that are for sale. */
-  type Tier = { key: string; title: string; priceCents: number; perks: string[] };
+  type Tier = { key: string; title: string; priceCents: number; perks: string[]; saleMode?: Position["saleMode"] };
+  /* The flagship's countdown. On a ladder the clock can belong to one rung
+     rather than to the board, so the two cheaper rungs know nothing about it. */
+  const biddingEndsAt = new Date(Date.now() + 3 * DAY + 4 * HOUR).toISOString();
 
   const STRIP: Tier = {
     key: "mini-strip",
     title: "Logo in my mini strip",
     priceCents: 5000,
+    // Said out loud, though it is also the space's mode: a rung that sells
+    // first come first served on a board where the flagship is bid for.
+    saleMode: "fixed",
     perks: [
       "Your logo in the strip that runs on every clip I post from the floor",
       "Your name in the caption of each daily recap",
@@ -629,16 +639,21 @@ function eventCoverage(): Space {
     key: "card-and-mic",
     title: "Card and mic placement",
     priceCents: 20000,
+    saleMode: "fixed",
     perks: [
       "Everything in the mini strip",
       "Your card on the table in every interview I shoot",
       "Your logo on my mic flag, on camera all three days",
     ],
   };
+  /* There is one interview and one evening to post it, so it goes to the
+     highest bid: a rung selling its own way on a board that otherwise sells at
+     a price. Bidding rungs sell exactly one thing, hence the single copy. */
   const FLAGSHIP: Tier = {
     key: "flagship-interview",
     title: "Flagship on-site interview, fully produced",
     priceCents: 130000,
+    saleMode: "bids",
     perks: [
       "Everything in the card and mic placement",
       "A 10-minute interview with your founder, shot and edited by me",
@@ -656,6 +671,7 @@ function eventCoverage(): Space {
         tierKey: tier.key,
         title: tier.title,
         perks: tier.perks,
+        saleMode: tier.saleMode ?? null,
         accepts: ["logo", "qr", "text"],
         pitch: null,
         ...over,
@@ -681,7 +697,23 @@ function eventCoverage(): Space {
     copy(7, CARD_MIC, { status: "sold", sponsor: sponsor("Acme", "#FFFFFF", "#141F2E") }),
     copy(8, CARD_MIC, { status: "sold", sponsor: sponsor("Nodeline", "#5B7CFF", "#FFFFFF") }),
     copy(9, CARD_MIC, { status: "sold", sponsor: sponsor("Lumen", "#FFB703", "#0A0500") }),
-    copy(10, FLAGSHIP),
+    copy(10, FLAGSHIP, {
+      // The opening bid is the rung's price; everything else here is the
+      // ordinary bids block, carried by the position as a placement's is.
+      offers: {
+        ...NO_OFFERS,
+        mode: "bids",
+        bidCount: 3,
+        highestBidUsdc: "1500.00",
+        highestBidSponsorPaysUsdc: "1575.00",
+        leaderName: "Orbit",
+        reserveMet: true,
+        openingBidUsdc: "1300.00",
+        nextMinimumBidUsdc: "1575.00",
+        biddingEndsAt,
+        biddingOpen: true,
+      },
+    }),
   ];
 
   return {
@@ -716,6 +748,10 @@ function eventCoverage(): Space {
       },
     },
     positions,
+    // The board sells at its prices; only the flagship rung takes bids, so the
+    // space's mode stays fixed and the countdown sits on that rung.
+    pricingMode: "fixed",
+    biddingEndsAt,
     // $650 of $2,000 so far: one mini strip and the three card and mic spots.
     fundingGoalCents: 200000,
     totals: { positions: positions.length, sold: 4, committedCents: 65000, totalCents: 220000 },

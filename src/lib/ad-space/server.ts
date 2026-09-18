@@ -115,6 +115,9 @@ export async function getPublicSpace(
   }
 }
 
+/** The only per-rung modes the page knows how to sell (ad-space-tiers-v0.md). */
+const SALE_MODES = new Set(["fixed", "fixed_with_offers", "offers", "bids"]);
+
 /**
  * A position's tier fields (ad-space-tiers-v0.md), filled in for a server that
  * predates tiers and for one that sends them as something other than a list of
@@ -129,6 +132,11 @@ function withTierFields(p: Position): Position {
   return {
     ...p,
     tierKey: typeof p.tierKey === "string" && p.tierKey ? p.tierKey : null,
+    // A mode this page has no button for is not a mode: it reads as null, which
+    // is "sells the way its space does" and the behaviour of every space that
+    // predates per-rung modes. `takeover` is deliberately among them — it is
+    // the space's to declare, never a rung's.
+    saleMode: SALE_MODES.has(p.saleMode as string) ? (p.saleMode as Position["saleMode"]) : null,
     title: typeof p.title === "string" && p.title.trim() ? p.title.trim() : null,
     // Five is the database's limit; a longer list would be a server we do not
     // know, and the page still shows the five the creator was allowed to write.

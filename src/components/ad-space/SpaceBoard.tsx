@@ -234,6 +234,7 @@ export function SpaceBoard({ space }: { space: Space }) {
               session={session}
               modeOf={modeOf}
               biddingOpen={biddingOpen}
+              now={now}
               onSponsor={setCheckoutFor}
               onOffer={openOffer}
             />

@@ -3,6 +3,7 @@
 import { type SpaceTier, tiersStartAtCents, usdFromCents } from "@/lib/ad-space/format";
 import type { OfferMode, Position } from "@/lib/ad-space/types";
 
+import { BidLines } from "./PositionCard";
 import { btnSmall, btnSmallSecondary, eyebrow, pill } from "./ui";
 
 /**
@@ -19,6 +20,10 @@ import { btnSmall, btnSmallSecondary, eyebrow, pill } from "./ui";
  * reads as a mistake — and a brand that arrives after the $50 logos have gone
  * needs to see they existed to understand what the $1,300 one is.
  *
+ * A rung may also sell its own way (ad-space-tiers-v0.md): the $50 logo to
+ * whoever pays first, the one interview to the highest bid, on the same board.
+ * So the action and the figure are asked per rung and never once for the page.
+ *
  * Everything here is written from the brand's side: what you get, what you pay,
  * what the creator does. The lines are the creator's own plain text and are
  * printed as text.
@@ -29,6 +34,7 @@ export function TierLadder({
   session,
   modeOf,
   biddingOpen,
+  now,
   onSponsor,
   onOffer,
 }: {
@@ -41,12 +47,18 @@ export function TierLadder({
   modeOf: (p: Position) => OfferMode | null;
   /** Whether bidding is still open on this rung's copy, on a rung sold by bids. */
   biddingOpen: (p: Position) => boolean;
+  /** The server-clock "now" for the bidding countdown; null before mount. */
+  now: number | null;
   onSponsor: (p: Position) => void;
   onOffer: (p: Position) => void;
 }) {
   if (tiers.length === 0) return null;
   const from = tiersStartAtCents(tiers);
   const noun = session ? "Sessions" : "Spots";
+  /* "Pay and it's yours" is only true while every rung on offer sells at its
+     price. The moment one of them takes offers or bids, the line has to stop
+     promising a brand it can walk up and buy the one it wants. */
+  const allOnePrice = tiers.every((t) => !t.buy || modeOf(t.buy) === null);
 
   return (
     <section aria-labelledby="the-ladder" className="flex flex-col gap-6">
@@ -56,8 +68,10 @@ export function TierLadder({
         </h2>
         {from !== null && (
           <p className="mt-1 text-small text-text-muted">
-            {noun} start at <span className="font-mono text-text">{usdFromCents(from)}</span>. Pick one and pay in USDC;
-            there is nothing to negotiate first.
+            {noun} start at <span className="font-mono text-text">{usdFromCents(from)}</span>.{" "}
+            {allOnePrice
+              ? "Pick one and pay in USDC; there is nothing to agree first."
+              : "Each one says what it costs and how it sells: some at their price, some to the best bid or offer."}
           </p>
         )}
       </div>
@@ -70,6 +84,7 @@ export function TierLadder({
               session={session}
               modeOf={modeOf}
               biddingOpen={biddingOpen}
+              now={now}
               onSponsor={onSponsor}
               onOffer={onOffer}
             />
@@ -86,6 +101,7 @@ function TierCard({
   session,
   modeOf,
   biddingOpen,
+  now,
   onSponsor,
   onOffer,
 }: {
@@ -94,6 +110,7 @@ function TierCard({
   session: boolean;
   modeOf: (p: Position) => OfferMode | null;
   biddingOpen: (p: Position) => boolean;
+  now: number | null;
   onSponsor: (p: Position) => void;
   onOffer: (p: Position) => void;
 }) {
@@ -101,8 +118,12 @@ function TierCard({
   const gone = buy === null;
   /* A rung with nothing open is not an error state: it is a price somebody
      already paid. It goes quiet — dimmed, no amber, no button — and stays on
-     the ladder so the rungs above and below it still make sense. */
-  const mode = buy ? modeOf(buy) : null;
+     the ladder so the rungs above and below it still make sense.
+
+     How it sells is asked of a copy either way, so a rung that went by bidding
+     still says "Highest bid" once it is gone, rather than reading as a price
+     somebody could have walked up and paid. */
+  const mode = modeOf(buy ?? t.positions[0]);
   const total = t.positions.length;
   const left =
     t.open.length > 0
@@ -150,6 +171,11 @@ function TierCard({
               ))}
             </ul>
           </>
+        )}
+        {mode === "bids" && buy && (
+          <div className="mt-4">
+            <BidLines offers={t.offers} now={now} />
+          </div>
         )}
       </div>
 
