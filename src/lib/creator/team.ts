@@ -23,6 +23,8 @@
  * ("12.5%") has to survive the trip to the server exactly.
  */
 
+import { spacesPath } from "@/lib/app/paths";
+
 /** `manager` sells on the creator's behalf; `rep` turns up and does the thing, and sees no money. */
 export type TeamRole = "manager" | "rep";
 
@@ -388,5 +390,5 @@ export function forgetSeat(): void {
 
 /** Where a pending seat is opened. The seat alone says whose it is. */
 export function seatHref(seat: string): string {
-  return `/creator/team?${new URLSearchParams({ seat }).toString()}`;
+  return spacesPath(`/team?${new URLSearchParams({ seat }).toString()}`);
 }
