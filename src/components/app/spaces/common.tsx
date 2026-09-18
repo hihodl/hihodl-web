@@ -43,7 +43,7 @@ export function dueText(iso: string | null | undefined): string {
 }
 
 /** The list pane scrolls inside itself on a wide screen, so the page does not. */
-export const LIST_PANEL = "lg:max-h-[calc(100dvh-196px)]";
+export const LIST_PANEL = "lg:max-h-[calc(var(--app-vh,100dvh)-196px)]";
 
 /** A two-pane screen: a list on the left, the chosen item on the right. One pane at a time on a phone. */
 export function MasterDetail({

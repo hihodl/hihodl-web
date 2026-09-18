@@ -234,9 +234,15 @@ function Frame({ children }: { children: ReactNode }) {
 
   const badges = useBadges();
   const entries = usePaletteEntries(allowed);
+  const scale = useUiScale();
 
   return (
-    <div className="mx-auto w-full max-w-[1440px] px-[clamp(12px,2vw,32px)] py-3 lg:py-5">
+    <div
+      className="w-full px-[clamp(12px,1.6vw,28px)] py-3 lg:py-4"
+      // The dashboard's way to big screens: the whole product drawn larger,
+      // and anything sized by the viewport divided back (--app-vh).
+      style={{ zoom: scale, ["--ui-scale" as string]: scale, ["--app-vh" as string]: `calc(100dvh / ${scale})` }}
+    >
       {palette ? <CommandPalette entries={entries} onClose={() => setPalette(false)} /> : null}
 
       <div
@@ -245,7 +251,7 @@ function Frame({ children }: { children: ReactNode }) {
         }`}
       >
         <div className="hidden lg:block">
-          <div className="sticky top-5 h-[calc(100dvh-2.5rem)]">
+          <div className="sticky top-4 h-[calc(var(--app-vh,100dvh)-2rem)]">
             <Sidebar collapsed={collapsed} onToggle={toggleCollapsed} active={active} badges={badges} />
           </div>
         </div>
@@ -270,6 +276,31 @@ function Frame({ children }: { children: ReactNode }) {
       ) : null}
     </div>
   );
+}
+
+/* ── Big screens ──────────────────────────────────────────────────── */
+
+/**
+ * How much larger to draw everything, as the KPI dashboard does: at least the
+ * 1470 × 820 the screens are laid out for, never below 1 (a laptop and a phone
+ * draw at their own size) and at most 1.75, in 5% steps so a window being
+ * dragged does not re-lay out on every pixel.
+ */
+export function uiScaleFor(width: number, height: number): number {
+  if (width < 1470) return 1;
+  const s = Math.min(width / 1470, height / 820);
+  return Math.max(1, Math.min(1.75, Math.floor(s * 20) / 20));
+}
+
+function useUiScale(): number {
+  const [scale, setScale] = useState(1);
+  useEffect(() => {
+    const read = () => setScale(uiScaleFor(window.innerWidth, window.innerHeight));
+    read();
+    window.addEventListener("resize", read);
+    return () => window.removeEventListener("resize", read);
+  }, []);
+  return scale;
 }
 
 /* ── Sidebar ──────────────────────────────────────────────────────── */

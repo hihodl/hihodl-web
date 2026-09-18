@@ -93,7 +93,7 @@ export function CommandPalette({ entries, onClose }: { entries: readonly Palette
           <kbd className="hidden rounded-[4px] border border-white/15 px-1.5 py-0.5 text-[10px] text-[#9FB7C2] sm:block">ESC</kbd>
         </div>
 
-        <div ref={list} className="max-h-[60vh] overflow-y-auto p-2">
+        <div ref={list} className="max-h-[calc(var(--app-vh,100dvh)*0.6)] overflow-y-auto p-2">
           {flat.length === 0 ? (
             <p className="px-4 py-8 text-center text-small text-[#9FB7C2]">No match for “{query}”</p>
           ) : (
