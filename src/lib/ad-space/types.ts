@@ -569,6 +569,49 @@ export interface EventPage {
   defaultTab: SpaceTab;
 }
 
+/* ── A creator's hub (/s/<handle>) ────────────────────────────────────── */
+
+/**
+ * The creator at the top of their own hub. The same thin shape the cards carry
+ * — the backend sends it from the last X sync, so a name, a follower count or a
+ * verification kind may be null — except for the handle, which is the address
+ * the page was reached by and therefore always there.
+ */
+export interface CreatorProfile extends CardCreator {
+  xHandle: string;
+}
+
+/**
+ * One section of a hub: an event, and everything this creator sells for it.
+ *
+ * `othersAtEvent` is the number behind the way OUT of this page — other
+ * creators with something listed at the same event, this one excluded. It is
+ * the whole reason a hub is worth sharing: a brand the creator does not win
+ * still finds the event, and the event finds them a creator.
+ */
+export interface CreatorGroup {
+  /** Null on exactly one group, always the last: what they sell for no event. */
+  event: EventSummary | null;
+  othersAtEvent: number;
+  cards: SpaceCard[];
+}
+
+/**
+ * `GET /public/creators/:handle`.
+ *
+ * The groups arrive ordered — upcoming events by start date, then past ones,
+ * then the group tied to no event — and the cards inside them are ordered too.
+ * That order is the server's and the page never touches it: two pages sorting
+ * the same list by different rules is how the same creator ends up looking
+ * like two different creators.
+ */
+export interface CreatorPage {
+  creator: CreatorProfile;
+  groups: CreatorGroup[];
+  /** Across every group: spaces listed, spots a sponsor can still take, events. */
+  totals: { spaces: number; openSpots: number; events: number };
+}
+
 /**
  * `quoted`: a Base/Polygon checkout that was handed out and not signed yet. It
  * holds nothing; the position is held only once the signatures arrive.
