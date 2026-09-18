@@ -34,7 +34,7 @@ export function WaitingSeat() {
       <p className="text-body text-text">You have an invitation to join somebody’s team</p>
       <p className="text-small text-text-muted">You opened it before you signed in. It is still waiting for your answer.</p>
       <div>
-        <Link href={seatHref(seat.seat, seat.from)} className={btnPrimary}>
+        <Link href={seatHref(seat.seat)} className={btnPrimary}>
           Open the invitation
         </Link>
       </div>

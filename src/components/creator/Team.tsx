@@ -19,7 +19,8 @@
  *
  * A seat is taken once, and taking it puts this account on somebody's team and
  * lets them see it there. Arriving on a link is not agreeing to that, so the
- * page says who the link says it is from and waits for a yes.
+ * page says whose team it is — read from the seat by the server, never from
+ * the editable rest of the link — and waits for a yes.
  */
 
 "use client";
@@ -32,7 +33,16 @@ import { CreatorApiError } from "@/lib/creator/api";
 import { acceptSeat } from "@/lib/creator/listings";
 import { describeTeamError } from "@/lib/creator/problems";
 import { signOut, useCreatorSession } from "@/lib/creator/session";
-import { forgetSeat, pendingSeat, rememberSeat, type TeamMember } from "@/lib/creator/team";
+import {
+  creatorText,
+  dayText,
+  forgetSeat,
+  pendingSeat,
+  rememberSeat,
+  seatHref,
+  type SeatLookup,
+  type TeamMember,
+} from "@/lib/creator/team";
 
 import { Notice } from "./parts";
 import { SignIn } from "./SignIn";
@@ -42,30 +52,29 @@ import { Earnings, Owed } from "./team/Money";
 interface Props {
   /** The seat code from the link, already checked for shape. */
   seat: string | null;
-  /** The invite code the link was built on, which names the account that made it. */
-  from: string | null;
-  /** That account's name, as `/referrals/resolve` gave it. Null when it has none or did not answer. */
-  inviter: string | null;
+  /** What the server said about that seat before anybody signed in. */
+  lookup: SeatLookup | null;
 }
 
-export function Team({ seat: seatFromUrl, from: fromUrl, inviter }: Props) {
+export function Team({ seat: seatFromUrl, lookup }: Props) {
   const { session, configured } = useCreatorSession();
-  const [seat, setSeat] = useState<{ seat: string; from: string | null } | null>(
-    seatFromUrl ? { seat: seatFromUrl, from: fromUrl } : null,
-  );
+  const [seat, setSeat] = useState<string | null>(seatFromUrl);
   // Bumped whenever a seat is taken, so the list of teams you are on re-reads.
   const [version, setVersion] = useState(0);
 
   useEffect(() => {
     if (seatFromUrl) {
-      rememberSeat(seatFromUrl, fromUrl);
+      // A seat that is gone or ran out is not worth offering back later.
+      if (lookup?.kind === "refused") forgetSeat();
+      else rememberSeat(seatFromUrl);
       return;
     }
     // Back from a sign-in link, which lands wherever the email sent it and
-    // without the seat: the one kept in this browser is offered instead.
+    // without the seat. The kept one is reopened by its address, so the server
+    // reads whose it is exactly as it did the first time.
     const kept = pendingSeat();
-    if (kept) setSeat({ seat: kept.seat, from: kept.from });
-  }, [seatFromUrl, fromUrl]);
+    if (kept) window.location.replace(seatHref(kept.seat));
+  }, [seatFromUrl, lookup]);
 
   const done = () => {
     forgetSeat();
@@ -75,9 +84,8 @@ export function Team({ seat: seatFromUrl, from: fromUrl, inviter }: Props) {
     window.history.replaceState(null, "", "/creator/team");
   };
 
-  // The name belongs to the link it came with. A seat recovered from storage
-  // was opened from a link we did not read on this load.
-  const who = seat && seat.from === fromUrl ? inviter : null;
+  const who = lookup?.kind === "found" ? creatorText(lookup.invite) : null;
+  const refused = lookup?.kind === "refused" ? lookup.code : null;
 
   return (
     <div className="mx-auto flex w-full max-w-[760px] flex-col gap-6 px-6 py-18">
@@ -94,7 +102,8 @@ export function Team({ seat: seatFromUrl, from: fromUrl, inviter }: Props) {
         <p className="text-small text-text-muted">Checking whether you are signed in…</p>
       ) : session === null ? (
         <>
-          {seat ? <SeatWaiting who={who} /> : null}
+          {seat && refused ? <SeatRefused code={refused} onDone={done} /> : null}
+          {seat && !refused ? <SeatWaiting who={who} /> : null}
           <SignIn configured={configured} />
         </>
       ) : (
@@ -108,10 +117,12 @@ export function Team({ seat: seatFromUrl, from: fromUrl, inviter }: Props) {
             </button>
           </div>
 
-          {seat ? (
+          {seat && refused ? <SeatRefused code={refused} onDone={done} /> : null}
+          {seat && !refused ? (
             <SeatOffer
-              code={seat.seat}
+              code={seat}
               who={who}
+              lookup={lookup}
               onAccepted={() => {
                 setVersion((v) => v + 1);
               }}
@@ -151,17 +162,34 @@ function SeatWaiting({ who }: { who: string | null }) {
   );
 }
 
+/** A seat the server already said no to, before anybody pressed anything. */
+function SeatRefused({ code, onDone }: { code: string; onDone: () => void }) {
+  return (
+    <div className={`${card} flex flex-col gap-3 p-6 sm:p-8`}>
+      <h2 className="text-h4 font-light text-text">This invitation cannot be taken</h2>
+      <Notice>{describeTeamError(new CreatorApiError(code, 410))}</Notice>
+      <div>
+        <button type="button" className={btnSmallSecondary} onClick={onDone}>
+          Done
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /** Refusals of a seat that asking again will never change. */
 const FINAL = new Set(["invite_not_found", "invite_expired", "invite_is_your_own", "already_on_this_team"]);
 
 function SeatOffer({
   code,
   who,
+  lookup,
   onAccepted,
   onDone,
 }: {
   code: string;
   who: string | null;
+  lookup: SeatLookup | null;
   onAccepted: () => void;
   onDone: () => void;
 }) {
@@ -170,9 +198,10 @@ function SeatOffer({
   const [taken, setTaken] = useState<TeamMember | null>(null);
 
   if (taken) {
+    const theirs = creatorText(taken) ?? who;
     return (
       <div className={`${card} flex flex-col gap-3 p-6 sm:p-8`}>
-        <h2 className="text-h4 font-light text-text">{who ? `You are on ${who}’s team` : "You are on the team"}</h2>
+        <h2 className="text-h4 font-light text-text">{theirs ? `You are on ${theirs}’s team` : "You are on the team"}</h2>
         <p className="text-small text-text-muted">
           They know you as <span className="text-text">{taken.label}</span>. {ROLE_TEXT[taken.role].yours}
         </p>
@@ -180,7 +209,10 @@ function SeatOffer({
           The listings they put you on, and your share of each, are theirs to set. When a share is owed to you, they pay
           you themselves — HOLD never holds or sends that money.
         </p>
-        <div>
+        <div className="flex flex-wrap gap-3">
+          <Link href="/creator/team/work" className={btnPrimary}>
+            What you have to deliver
+          </Link>
           <button type="button" className={btnSmallSecondary} onClick={onDone}>
             Done
           </button>
@@ -189,14 +221,17 @@ function SeatOffer({
     );
   }
 
+  const invite = lookup?.kind === "found" ? lookup.invite : null;
+
   return (
     <div className={`${card} flex flex-col gap-4 p-6 sm:p-8`}>
       <h2 className="text-h4 font-light text-text">
         {who ? `${who} invited you to their team` : "Somebody invited you to their team"}
       </h2>
-      {who ? (
-        <p className="text-tiny text-text-muted">
-          That name comes from the link you opened. Accept if you were expecting it from them.
+      {invite ? (
+        <p className="text-small text-text-muted">
+          {ROLE_TEXT[invite.role].invited}
+          {invite.expiresAt ? ` The invitation is open until ${dayText(invite.expiresAt)}.` : ""}
         </p>
       ) : null}
       <p className="text-small text-text-muted">

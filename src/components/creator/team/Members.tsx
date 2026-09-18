@@ -26,24 +26,27 @@
 
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import { btnSmall, btnSmallSecondary, card, pill } from "@/components/ad-space/ui";
 import { getTeam, inviteToTeam, mySeats, removeFromTeam } from "@/lib/creator/listings";
 import { describeTeamError } from "@/lib/creator/problems";
-import { dayText, TEAM_LIMITS, type Invitation, type TeamMember, type TeamRole } from "@/lib/creator/team";
+import { creatorText, dayText, TEAM_LIMITS, type Invitation, type TeamMember, type TeamRole } from "@/lib/creator/team";
 
 import { Choice, Field, Text } from "../listing/parts";
 import { Address, Loading, Notice, Section } from "../parts";
 
 /** What each role may do, said to the creator choosing it and to the person who holds it. */
-export const ROLE_TEXT: Record<TeamRole, { label: string; pill: string; body: string; yours: string }> = {
+export const ROLE_TEXT: Record<TeamRole, { label: string; pill: string; body: string; yours: string; invited: string }> = {
   manager: {
     label: "Sells for you",
     pill: "Sells",
     body: "On the listings you put them on: publishes and edits them, answers brands’ offers and sees what each one made. They cannot change your team, mark anybody paid or delete a listing.",
     yours:
       "You sell for them: on the listings they put you on you can publish, edit, answer brands’ offers and see what each one made.",
+    invited:
+      "They want you to sell for them: publish and edit the listings they put you on, and answer brands’ offers. The money a brand pays always goes to them, never to you.",
   },
   rep: {
     label: "Turns up and delivers",
@@ -51,6 +54,8 @@ export const ROLE_TEXT: Record<TeamRole, { label: string; pill: string; body: st
     body: "On the listings you put them on: uploads the proof and marks the work delivered. They see no prices and no money at all.",
     yours:
       "You deliver for them: on the listings they put you on you upload the proof and mark the work delivered. Prices and money on those listings are not shown to you.",
+    invited:
+      "They want you to turn up and deliver: upload the proof and mark the work done on the listings they put you on.",
   },
 };
 
@@ -296,9 +301,9 @@ function InvitationCard({ invitation, onClose }: { invitation: Invitation; onClo
 /**
  * The teams this person is on, for somebody who works for other creators.
  *
- * The server says the seat and not whose team it is, so each row is what the
- * creator called them and what they may do — which is also exactly how that
- * creator will refer to them.
+ * Each row says whose team it is — the creator's X account, from the server —
+ * what that creator calls them, and what they may do, and leads to the one
+ * screen somebody on a team needs: what they have to deliver.
  */
 export function Seats({ version }: { version: number }) {
   const [seats, setSeats] = useState<TeamMember[] | null>(null);
@@ -333,12 +338,20 @@ export function Seats({ version }: { version: number }) {
               <li key={s.id} className={`${card} flex flex-col gap-2 p-5`}>
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <p className="min-w-0 break-words text-body text-text">
-                    As <span className="text-text">{s.label}</span>
+                    {creatorText(s) ? `${creatorText(s)}’s team` : "A creator’s team"}
                   </p>
                   <span className={pill.neutral}>{ROLE_TEXT[s.role].pill}</span>
                 </div>
+                <p className="text-tiny text-text-muted">
+                  They know you as <span className="text-text">{s.label}</span>
+                  {s.acceptedAt ? ` · since ${dayText(s.acceptedAt)}` : ""}
+                </p>
                 <p className="text-small text-text-muted">{ROLE_TEXT[s.role].yours}</p>
-                {s.acceptedAt ? <p className="text-tiny text-text-muted">Since {dayText(s.acceptedAt)}</p> : null}
+                <div>
+                  <Link href="/creator/team/work" className={btnSmallSecondary}>
+                    What you have to deliver
+                  </Link>
+                </div>
               </li>
             ))}
           </ul>

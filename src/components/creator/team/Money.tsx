@@ -21,6 +21,14 @@
  * the team with one total, and the sales behind it are there to check, not to
  * pay one at a time.
  *
+ * WHY EVERY ROW CARRIES ITS OWN NAMES
+ *
+ * The server sends each debt with the listing's title, the creator's X handle
+ * and the label the creator gave the member — read from the seat even after
+ * it was removed, because somebody taken off the team is still owed and still
+ * has a name. So nothing here joins ids against a second list that might not
+ * have them any more.
+ *
  * WHY AMOUNTS KEEP THEIR FRACTIONS OF A CENT
  *
  * A share is rounded DOWN on the server, in USDC's own six decimals, and the
@@ -33,8 +41,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { btnSmall, btnSmallSecondary, card, pill } from "@/components/ad-space/ui";
-import type { SpaceCard } from "@/lib/creator/listing";
-import { getTeam, markTeamPaid, myListings, mySeats, teamEarnings, teamOwed } from "@/lib/creator/listings";
+import { markTeamPaid, teamEarnings, teamOwed } from "@/lib/creator/listings";
 import { describeTeamError } from "@/lib/creator/problems";
 import {
   baseOf,
@@ -46,33 +53,24 @@ import {
   usdcText,
   type Earning,
   type OwedGroup,
-  type TeamMember,
 } from "@/lib/creator/team";
 
 import { Field, Text } from "../listing/parts";
 import { Loading, Notice, Section } from "../parts";
 
-/** Somebody the team list no longer has: removed, and still owed. */
-const GONE = "Somebody no longer on your team";
+/** A debt whose seat has no label at all, which the server should never send. */
+const UNNAMED = "Somebody on your team";
 
 /* ── What I owe my team ───────────────────────────────────────────── */
 
 export function Owed() {
   const [rows, setRows] = useState<Earning[] | null>(null);
-  const [names, setNames] = useState<Map<string, string>>(new Map());
-  const [listings, setListings] = useState<Map<string, string>>(new Map());
   const [notice, setNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const [o, t, l] = await Promise.all([
-        teamOwed(),
-        getTeam().catch(() => ({ team: [] as TeamMember[] })),
-        myListings().catch(() => ({ spaces: [] as SpaceCard[] })),
-      ]);
+      const o = await teamOwed();
       setRows(o.owed);
-      setNames(new Map(t.team.map((m) => [m.id, m.label])));
-      setListings(new Map(l.spaces.map((s) => [s.id, s.serviceName || s.title])));
       setNotice(null);
     } catch (e) {
       setRows((r) => r ?? []);
@@ -112,8 +110,7 @@ export function Owed() {
                   <OwedRow
                     key={g.memberId}
                     group={g}
-                    name={names.get(g.memberId) ?? GONE}
-                    listings={listings}
+                    name={(g.owed[0] ?? g.paid[0])?.memberLabel ?? UNNAMED}
                     onPaid={() => void load()}
                   />
                 ))}
@@ -128,17 +125,7 @@ export function Owed() {
   );
 }
 
-function OwedRow({
-  group,
-  name,
-  listings,
-  onPaid,
-}: {
-  group: OwedGroup;
-  name: string;
-  listings: Map<string, string>;
-  onPaid: () => void;
-}) {
+function OwedRow({ group, name, onPaid }: { group: OwedGroup; name: string; onPaid: () => void }) {
   const [open, setOpen] = useState(false);
   const [paying, setPaying] = useState(false);
 
@@ -183,7 +170,7 @@ function OwedRow({
         />
       ) : null}
 
-      {open ? <Sales rows={[...group.owed, ...group.paid]} listings={listings} who="you" /> : null}
+      {open ? <Sales rows={[...group.owed, ...group.paid]} who="you" /> : null}
     </li>
   );
 }
@@ -209,7 +196,7 @@ function PayForm({
   const batch = [...owed]
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
     .slice(0, TEAM_LIMITS.PAID_BATCH_MAX);
-  const total = batch.reduce((n, r) => n + baseOf(r.amountBase), 0n);
+  const total = batch.reduce((n, r) => n + baseOf(r.amountUsdc), 0n);
   const chains = [...new Set(batch.map((r) => chainName(r.chain)))];
 
   return (
@@ -261,7 +248,7 @@ function PayForm({
 }
 
 /** The sales behind a total, newest first, each with what it added and whether it is marked paid. */
-function Sales({ rows, listings, who }: { rows: Earning[]; listings: Map<string, string>; who: "you" | "they" }) {
+function Sales({ rows, who }: { rows: Earning[]; who: "you" | "they" }) {
   const sorted = [...rows].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   return (
     <ul className="flex flex-col divide-y divide-[color:var(--color-hairline)] border-t border-[color:var(--color-hairline)]">
@@ -269,9 +256,9 @@ function Sales({ rows, listings, who }: { rows: Earning[]; listings: Map<string,
         <li key={r.id} className="flex flex-col gap-1 py-3">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <span className="min-w-0 break-words text-small text-text">
-              {listings.get(r.spaceId) ?? "A listing"} · {dayText(r.createdAt)}
+              {r.listingTitle ?? "A listing"} · {dayText(r.createdAt)}
             </span>
-            <span className="text-small text-text">{usdcText(baseOf(r.amountBase))}</span>
+            <span className="text-small text-text">{usdcText(baseOf(r.amountUsdc))}</span>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-tiny text-text-muted">
             <span>
@@ -304,22 +291,19 @@ function Sales({ rows, listings, who }: { rows: Earning[]; listings: Map<string,
  * works for nobody, so their own page does not carry an empty card about a
  * situation they are not in.
  *
- * Grouped by seat, and a seat is named by what that creator called you: the
- * server does not say whose team a seat is on, and the label is the one thing
- * both sides already share.
+ * Grouped by seat — one per creator you work for — and named by that
+ * creator's X handle, as the listing was published under it.
  */
 export function Earnings() {
   const [rows, setRows] = useState<Earning[] | null>(null);
-  const [seats, setSeats] = useState<Map<string, string>>(new Map());
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
-    void Promise.all([teamEarnings(), mySeats().catch(() => ({ seats: [] as TeamMember[] }))])
-      .then(([e, s]) => {
+    void teamEarnings()
+      .then((e) => {
         if (!alive) return;
         setRows(e.earnings);
-        setSeats(new Map(s.seats.map((m) => [m.id, m.label])));
       })
       .catch((e) => {
         if (!alive) return;
@@ -349,7 +333,7 @@ export function Earnings() {
           </p>
           <ul className="flex flex-col gap-3">
             {groups.map((g) => (
-              <EarningRow key={g.memberId} group={g} name={seats.get(g.memberId) ?? null} />
+              <EarningRow key={g.memberId} group={g} handle={(g.owed[0] ?? g.paid[0])?.creatorHandle ?? null} />
             ))}
           </ul>
           {notice ? <Notice>{notice}</Notice> : null}
@@ -359,20 +343,14 @@ export function Earnings() {
   );
 }
 
-function EarningRow({ group, name }: { group: OwedGroup; name: string | null }) {
+function EarningRow({ group, handle }: { group: OwedGroup; handle: string | null }) {
   const [open, setOpen] = useState(false);
   return (
     <li className={`${card} flex flex-col gap-4 p-5`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="break-words text-body text-text">
-            {name ? (
-              <>
-                On a team as <span className="text-text">{name}</span>
-              </>
-            ) : (
-              "A team you are no longer on"
-            )}
+            {handle ? `From @${handle}` : "From a creator you work for"}
           </p>
           <p className="mt-1 text-tiny text-text-muted">
             {group.paidBase > 0n ? `${usdcText(group.paidBase)} marked paid by them` : "Nothing marked paid yet"}
@@ -388,7 +366,7 @@ function EarningRow({ group, name }: { group: OwedGroup; name: string | null }) 
           {open ? "Hide the sales" : "See the sales"}
         </button>
       </div>
-      {open ? <Sales rows={[...group.owed, ...group.paid]} listings={new Map()} who="they" /> : null}
+      {open ? <Sales rows={[...group.owed, ...group.paid]} who="they" /> : null}
     </li>
   );
 }

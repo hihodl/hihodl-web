@@ -27,7 +27,7 @@ import type {
   SpaceView,
   Template,
 } from "./listing";
-import type { Assignment, Earning, Invitation, TeamMember, TeamRole } from "./team";
+import type { Assignment, Earning, Invitation, TeamMember, TeamRole, WorkListing } from "./team";
 
 /* ── The catalogue ────────────────────────────────────────────────── */
 
@@ -289,7 +289,14 @@ export function mySeats(): Promise<{ seats: TeamMember[] }> {
   return call<{ seats: TeamMember[] }>("ad-space/team/seats");
 }
 
-/** Take the seat a creator opened for you. A code is taken once; a forwarded link opens nothing after. */
+/**
+ * Take the seat a creator opened for you. A code is taken once; a forwarded
+ * link opens nothing after.
+ *
+ * Accepting also counts you as somebody the creator brought to HOLD when your
+ * account is new, by the same rules as the app's invite link. The server does
+ * that; nothing here has to.
+ */
 export function acceptSeat(code: string): Promise<{ member: TeamMember }> {
   return call<{ member: TeamMember }>("ad-space/team/accept", { json: { code } });
 }
@@ -321,6 +328,18 @@ export function assignToListing(
 /** Take somebody off one listing. Sales already made while they were on it stay owed to them. */
 export function unassignFromListing(spaceId: string, memberId: string): Promise<{ removed: boolean }> {
   return call<{ removed: boolean }>(`ad-space/spaces/${spaceId}/team/${memberId}`, { method: "DELETE" });
+}
+
+/**
+ * What this person has to deliver, on every listing they were put on.
+ *
+ * No money in it: the server never selects any for this view. Each slot and
+ * promise is marked delivered with the same two calls the creator uses,
+ * `markPositionDelivered` and `markDeliverableDelivered`, which now let
+ * somebody on the listing's team in as well as its owner.
+ */
+export function teamWork(): Promise<{ work: WorkListing[] }> {
+  return call<{ work: WorkListing[] }>("ad-space/team/work");
 }
 
 /** What this creator owes their team, and what they have said they paid. */

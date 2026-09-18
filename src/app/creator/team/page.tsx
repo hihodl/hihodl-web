@@ -5,59 +5,60 @@
  *
  * A creator's invitation is their own HOLD invite link, `/invite/<code>`, with
  * `?seat=<seat code>` on the end. `/invite/<code>` sends a link carrying a
- * seat here, as `?seat=<seat code>&from=<invite code>`, because this is the
- * only place a seat can be taken today: the app's deep link carries the invite
- * code and drops everything after it.
+ * seat here, because this is the only place a seat can be taken today: the
+ * app's deep link carries the invite code and drops everything after it.
  *
- * Both are read here rather than with `useSearchParams`, the same way
- * /creator/x reads its return: the values arrive with the first render, so the
- * page never paints a spinner it does not need and hands them down as props.
+ * It is read here rather than with `useSearchParams`, the same way /creator/x
+ * reads its return: the value arrives with the first render, so the page never
+ * paints a spinner it does not need and hands it down as a prop.
  *
- * WHO INVITED YOU
+ * WHO INVITED YOU, FROM THE SEAT
  *
- * The invite code names a HOLD account, and `/referrals/resolve` says whose —
- * a public call with no token, made from this server because that router sends
- * no CORS for a browser. The name is what the LINK says, not what the seat
- * says: the seat's owner is only known to the server once it is accepted, and
- * the page says so beside the name rather than promising more than it knows.
+ * `GET /ad-space/public/team/invite/:code` answers who made the seat, as what,
+ * and until when, with no session — the person reading may not have an
+ * account yet, and the code is the credential. The name is read from the SEAT
+ * and never from the invite code in the rest of the link: that part is
+ * anybody's to edit, and reading a name from it would let a stranger's
+ * invitation arrive wearing a famous creator's name.
+ *
+ * Asked from this server so the first paint already says who it is. The call
+ * goes out with the visitor's address (`upstreamHeaders`), uncached, so the
+ * public limiter counts the person rather than our servers.
  */
 
+import { headers } from "next/headers";
+
 import { Team } from "@/components/creator/Team";
-import { API_BASE } from "@/lib/ad-space/config";
-import { isReferralCode, isSeatCode } from "@/lib/creator/team";
+import { AD_SPACE_API } from "@/lib/ad-space/config";
+import { upstreamHeaders } from "@/lib/ad-space/server";
+import { isSeatCode, type InvitePreview, type SeatLookup } from "@/lib/creator/team";
 
 export const dynamic = "force-dynamic";
 
-/** The backend's stand-in when an account has no name at all; saying it would be worse than saying nothing. */
-const NO_NAME = "A HiHODL user";
-
-async function inviterName(code: string | undefined): Promise<string | null> {
-  if (!isReferralCode(code)) return null;
+async function preview(code: string): Promise<SeatLookup> {
   try {
-    const res = await fetch(`${API_BASE}/referrals/resolve`, {
-      method: "POST",
-      headers: { accept: "application/json", "content-type": "application/json" },
-      body: JSON.stringify({ code }),
+    const res = await fetch(`${AD_SPACE_API}/public/team/invite/${encodeURIComponent(code)}`, {
+      headers: upstreamHeaders(headers()),
       cache: "no-store",
-      signal: AbortSignal.timeout(3_000),
+      signal: AbortSignal.timeout(4_000),
     });
-    if (!res.ok) return null;
-    const body = (await res.json()) as { data?: { referrerName?: unknown } };
-    const name = body.data?.referrerName;
-    return typeof name === "string" && name.trim() && name !== NO_NAME ? name.trim().slice(0, 80) : null;
+    const body = (await res.json().catch(() => null)) as
+      | { data?: { invite?: InvitePreview }; error?: { code?: string } }
+      | null;
+    if (res.ok && body?.data?.invite) return { kind: "found", invite: body.data.invite };
+    if (body?.error?.code === "invite_not_found" || body?.error?.code === "invite_expired") {
+      return { kind: "refused", code: body.error.code };
+    }
+    return { kind: "unreachable" };
   } catch {
-    // A slow or missing answer costs the invitee a name, never the seat.
-    return null;
+    // A slow answer costs the invitee the name on the first paint, never the
+    // seat: accepting is still offered, and the server decides.
+    return { kind: "unreachable" };
   }
 }
 
-export default async function CreatorTeamPage({
-  searchParams,
-}: {
-  searchParams: { seat?: string; from?: string };
-}) {
+export default async function CreatorTeamPage({ searchParams }: { searchParams: { seat?: string } }) {
   const seat = isSeatCode(searchParams.seat) ? searchParams.seat : null;
-  const from = seat && isReferralCode(searchParams.from) ? searchParams.from : null;
-  const inviter = from ? await inviterName(from) : null;
-  return <Team seat={seat} from={from} inviter={inviter} />;
+  const lookup = seat ? await preview(seat) : null;
+  return <Team seat={seat} lookup={lookup} />;
 }

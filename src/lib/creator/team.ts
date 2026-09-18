@@ -40,6 +40,46 @@ export interface TeamMember {
   acceptedAt: string | null;
   /** Only while the seat is still open. */
   inviteExpiresAt: string | null;
+  /**
+   * Whose team this is, on a seat read from the MEMBER's side (`/team/seats`,
+   * `/team/accept`): the creator's linked X account as the server has it.
+   * Absent on the owner's own list, where it would only ever be themselves.
+   */
+  creatorHandle?: string | null;
+  creatorName?: string | null;
+  creatorAvatarUrl?: string | null;
+}
+
+/**
+ * An invitation, read from the seat code before anybody signs in.
+ *
+ * The name comes from the seat, which nobody can forge — 24 random bytes,
+ * stored hashed — and never from the rest of the link, which anybody can
+ * edit. It does not carry the label: that is the creator's private name for
+ * the person, and not for the person to read.
+ */
+export interface InvitePreview {
+  role: TeamRole;
+  creatorHandle: string | null;
+  creatorName: string | null;
+  creatorAvatarUrl: string | null;
+  expiresAt: string | null;
+}
+
+/**
+ * What the seat preview answered: who made it, or that it is gone or ran out,
+ * or nothing at all because the server did not answer in time.
+ */
+export type SeatLookup =
+  | { kind: "found"; invite: InvitePreview }
+  | { kind: "refused"; code: string }
+  | { kind: "unreachable" };
+
+/** "Alex Creator (@alex)", "@alex", or null when the creator has no X account linked. */
+export function creatorText(c: { creatorHandle?: string | null; creatorName?: string | null }): string | null {
+  const handle = c.creatorHandle ? `@${c.creatorHandle}` : null;
+  if (c.creatorName && handle) return `${c.creatorName} (${handle})`;
+  return c.creatorName || handle;
 }
 
 /**
@@ -66,28 +106,74 @@ export interface Assignment {
 }
 
 /**
- * One sale's worth of one member's share.
+ * One sale's worth of one member's share, with the names it is read by.
  *
- * `amountBase` is USDC base units, six decimals. The column is a Postgres
- * bigint, so it is read as whatever arrives — a string or a number — and never
- * trusted to be one or the other.
+ * `amountUsdc` is a USDC string with up to six decimals ("12.345678"), the
+ * server's own printing of the stored amount. `memberLabel` is read from the
+ * seat even after it was removed, so somebody taken off the team and still
+ * owed keeps their name. `creatorHandle` is the X account the listing was
+ * published under.
  */
 export interface Earning {
   id: string;
   orderId: string;
   spaceId: string;
+  listingTitle: string | null;
   memberId: string;
-  ownerUserId: string;
-  memberUserId: string;
-  amountBase: string | number;
+  memberLabel: string | null;
+  creatorHandle: string | null;
+  amountUsdc: string;
   shareBps: number;
   chain: string;
   status: "owed" | "paid" | "void";
   paidTx: string | null;
   paidAt: string | null;
   paidNote: string | null;
-  voidReason: string | null;
   createdAt: string;
+}
+
+/**
+ * What somebody on a team has to deliver, on one listing they were put on.
+ *
+ * There is no money in it, and not because it is hidden here: the server
+ * never selects a price, an amount or an offer for this view.
+ */
+export interface WorkListing {
+  spaceId: string;
+  role: TeamRole;
+  title: string;
+  slug: string | null;
+  status: string;
+  eventName: string | null;
+  eventStartsOn: string | null;
+  eventEndsOn: string | null;
+  deliverBy: string | null;
+  closesAt: string | null;
+  slots: WorkSlot[];
+  deliverables: WorkDeliverable[];
+}
+
+export interface WorkSlot {
+  id: string;
+  spaceId: string;
+  label: string | null;
+  zoneKey: string | null;
+  sponsorName: string | null;
+  contentStatus: string | null;
+  deliveredUrl: string | null;
+  deliveredAt: string | null;
+}
+
+export interface WorkDeliverable {
+  id: string;
+  spaceId: string;
+  kind: string;
+  platform: string | null;
+  count: number;
+  note: string | null;
+  dueDate: string | null;
+  deliveredUrl: string | null;
+  deliveredAt: string | null;
 }
 
 /** The server's limits. Mirrored, never the authority: it checks all of them again. */
@@ -113,10 +199,6 @@ export function isSeatCode(v: string | null | undefined): v is string {
   return !!v && /^[A-Za-z0-9_-]{16,128}$/.test(v);
 }
 
-/** A HOLD invite code, as `/referrals/resolve` accepts one. */
-export function isReferralCode(v: string | null | undefined): v is string {
-  return !!v && /^[A-Za-z0-9_-]{3,20}$/.test(v);
-}
 
 /* ── Shares ───────────────────────────────────────────────────────── */
 
@@ -169,11 +251,14 @@ export function shareProblem(
 
 /* ── Money ────────────────────────────────────────────────────────── */
 
-/** An earning's amount as a bigint of base units; zero for anything unreadable rather than a crash. */
-export function baseOf(v: string | number | null | undefined): bigint {
-  if (typeof v === "number") return Number.isSafeInteger(v) && v > 0 ? BigInt(v) : 0n;
-  if (typeof v === "string" && /^\d+$/.test(v.trim())) return BigInt(v.trim());
-  return 0n;
+/**
+ * A USDC string as a bigint of base units, so totals are added exactly; zero
+ * for anything unreadable rather than a crash.
+ */
+export function baseOf(usdc: string | null | undefined): bigint {
+  const m = /^(\d+)(?:\.(\d{0,6}))?$/.exec((usdc ?? "").trim());
+  if (!m) return 0n;
+  return BigInt(m[1]) * 1_000_000n + BigInt((m[2] ?? "").padEnd(6, "0") || "0");
 }
 
 /**
@@ -210,7 +295,7 @@ export function groupByMember(rows: readonly Earning[]): OwedGroup[] {
   for (const r of rows) {
     if (r.status === "void") continue;
     const g = groups.get(r.memberId) ?? { memberId: r.memberId, owed: [], paid: [], owedBase: 0n, paidBase: 0n };
-    const amount = baseOf(r.amountBase);
+    const amount = baseOf(r.amountUsdc);
     if (r.status === "owed") {
       g.owed.push(r);
       g.owedBase += amount;
@@ -266,13 +351,12 @@ const SEAT_KEY = "hold-creator-seat";
 
 export interface PendingSeat {
   seat: string;
-  from: string | null;
   at: number;
 }
 
-export function rememberSeat(seat: string, from: string | null): void {
+export function rememberSeat(seat: string): void {
   try {
-    window.localStorage.setItem(SEAT_KEY, JSON.stringify({ seat, from, at: Date.now() } satisfies PendingSeat));
+    window.localStorage.setItem(SEAT_KEY, JSON.stringify({ seat, at: Date.now() } satisfies PendingSeat));
   } catch {
     /* the reminder is a convenience */
   }
@@ -288,7 +372,7 @@ export function pendingSeat(): PendingSeat | null {
       window.localStorage.removeItem(SEAT_KEY);
       return null;
     }
-    return { seat: v.seat, from: isReferralCode(v.from) ? v.from : null, at: v.at as number };
+    return { seat: v.seat, at: v.at as number };
   } catch {
     return null;
   }
@@ -302,9 +386,7 @@ export function forgetSeat(): void {
   }
 }
 
-/** Where a pending seat is opened, with the invite code that names who sent it. */
-export function seatHref(seat: string, from: string | null): string {
-  const q = new URLSearchParams({ seat });
-  if (from) q.set("from", from);
-  return `/creator/team?${q.toString()}`;
+/** Where a pending seat is opened. The seat alone says whose it is. */
+export function seatHref(seat: string): string {
+  return `/creator/team?${new URLSearchParams({ seat }).toString()}`;
 }
