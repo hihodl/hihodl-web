@@ -264,16 +264,13 @@ function Rung({
           value={rung.saleMode ?? "inherit"}
           onChange={(value) => {
             const next = value === "inherit" ? null : (value as SaleMode);
-            // A rung that ends up bid for sells one copy, so the count is set
-            // here rather than left for the creator to meet as a refusal at the
-            // very end. Resolved, not named: going back to "the same as the
-            // whole listing" on a listing that is bid for lands in the same
-            // place, and the field below would otherwise be disabled while
-            // holding a number the API refuses.
-            onPatch({
-              saleMode: next,
-              ...(saleModeOf(draft, next) === "bids" ? { available: 1 } : {}),
-            });
+            // The count is NOT set from here. A rung that ends up bid for
+            // does sell one copy, but "how many of these am I selling" is a
+            // number the creator typed, and quietly rewriting six to one on a
+            // change of mode loses it — switching back does not bring it
+            // returning. The rule is enforced the way every other rule on this
+            // form is: said beside the field, and the step does not advance.
+            onPatch({ saleMode: next });
           }}
           options={[
             { value: "inherit", label: `The same as the whole listing — ${boardModeText(draft)}` },
@@ -314,7 +311,7 @@ function Rung({
           htmlFor={id("available")}
           hint={
             bidding
-              ? "One. This one goes to the highest bid, and bidding is one thing going to one winner: five identical copies under a single countdown are five auctions of the same thing, so the brands spread across them and every one ends under what a single one would have fetched. Sell it another way if you have more than one."
+              ? "One. This one goes to the highest bid, and bidding is one thing going to one winner: five identical copies under a single countdown are five auctions of the same thing, so the brands spread across them and every one ends under what a single one would have fetched. Set it to 1, or sell this rung another way."
               : "Each one is sold separately, to a different brand."
           }
         >
@@ -323,7 +320,6 @@ function Rung({
             value={rung.available}
             min={1}
             max={maxSlots}
-            disabled={bidding}
             onChange={(available) => onPatch({ available })}
           />
         </Field>

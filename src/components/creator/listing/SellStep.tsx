@@ -115,15 +115,12 @@ export function SellStep({
                 value === "fixed_with_offers"
                   ? { pricingMode: "fixed", acceptsOffers: true }
                   : { pricingMode: value as PricingMode, acceptsOffers: false };
-              // Turning the whole listing over to bidding makes every rung that
-              // follows it a rung that is bid for, and one of those sells a
-              // single copy. Pinning them here is what keeps the count from
-              // being a disabled box holding a number the API refuses: the
-              // creator can still send any rung somewhere else and get its
-              // count back.
-              if (change.pricingMode === "bids" && draft.sells === "ladder") {
-                change.rungs = draft.rungs.map((r) => (r.saleMode ? r : { ...r, available: 1 }));
-              }
+              // Turning the whole listing over to bidding does NOT rewrite the
+              // rungs that follow it. It would mean one click silently cutting
+              // six logo strips down to one, on several rungs at once, with no
+              // way back to the number the creator typed. Each of those rungs
+              // says so itself, beside its own count, and the step holds until
+              // they are answered.
               set(change);
             }}
             options={pricingOptions.map((o) => ({ ...o, value: o.value as string }))}
