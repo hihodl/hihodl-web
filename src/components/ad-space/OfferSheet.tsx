@@ -108,22 +108,14 @@ export function AmountField({
         className="grid grid-cols-2 gap-3 rounded-card border border-[color:var(--color-hairline)] bg-white/[0.03] p-3"
         aria-live="polite"
       >
-        <div>
+        <div className="col-span-2">
           <dt className="text-tiny text-text-faint">You pay</dt>
           <dd className="mt-0.5 font-mono text-small text-text">
             {figures ? `${figures.sponsorPaysUsdc} USDC` : "—"}
           </dd>
         </div>
-        <div>
-          <dt className="text-tiny text-text-faint">@{creatorHandle} receives</dt>
-          <dd className="mt-0.5 font-mono text-small text-text">
-            {figures ? `${figures.creatorReceivesUsdc} USDC` : "—"}
-          </dd>
-        </div>
         <div className="col-span-2 text-tiny text-text-faint">
-          {feePayer === "sponsor"
-            ? `You pay HOLD's ${pct} on top, in USDC, only if the offer is accepted and you pay it.`
-            : `HOLD's ${pct} comes out of what the creator receives, only if the offer is accepted and paid.`}
+          HOLD charges a {pct} fee, only if it&rsquo;s accepted and paid.
         </div>
       </dl>
     </div>
@@ -528,7 +520,7 @@ function OfferSent({ sent, space, what }: { sent: Sent; space: Space; what: stri
           {offer.sponsorPaysUsdc !== offer.amountUsdc && (
             <>
               {" "}
-              (you would pay <span className="font-mono text-text">{offer.sponsorPaysUsdc} USDC</span> with the fee)
+              (<span className="font-mono text-text">{offer.sponsorPaysUsdc} USDC</span> in total)
             </>
           )}
           .{" "}

@@ -8,7 +8,6 @@ import {
   STATUS_LABEL,
   calendarDate,
   clockTime,
-  handsLeftText,
   handsText,
   takeoverClosedText,
   takeoverVerb,
@@ -103,11 +102,7 @@ export const PositionCard = forwardRef<HTMLElement, Props>(function PositionCard
       {p.pitch && <p className="text-small text-text-muted">{p.pitch}</p>}
 
       {offerMode === "fixed_with_offers" && p.status === "open" && (
-        <p className="text-tiny text-text-faint">Accepts offers below this price.</p>
-      )}
-
-      {p.status === "sold" && session && (
-        <p className="text-small text-text-muted">Booked. The creator and the buyer arrange the time and place.</p>
+        <p className="text-tiny text-text-faint">Open to offers.</p>
       )}
 
       {p.status === "sold" &&
@@ -115,9 +110,7 @@ export const PositionCard = forwardRef<HTMLElement, Props>(function PositionCard
         (p.sponsor ? (
           <SponsorLine sponsor={p.sponsor} />
         ) : (
-          <p className="text-small text-text-muted">
-            Sold. The sponsor&rsquo;s logo shows here once the creator approves it.
-          </p>
+          <p className="text-small text-text-muted">Sold. Logo coming soon.</p>
         ))}
 
       {p.delivered && (
@@ -145,19 +138,15 @@ export const PositionCard = forwardRef<HTMLElement, Props>(function PositionCard
         ) : (
           <dl className="flex flex-col gap-0.5">
             <div className="flex items-baseline gap-2">
-              <dt className="sr-only">{session ? "You pay" : "Sponsor pays"}</dt>
+              <dt className="sr-only">You pay</dt>
               <dd className="font-mono text-body text-text">{p.sponsorPaysUsdc} USDC</dd>
-            </div>
-            <div className="flex items-baseline gap-1 text-tiny text-text-faint">
-              <dt>Creator receives</dt>
-              <dd className="font-mono">{p.creatorReceivesUsdc}</dd>
             </div>
           </dl>
         )}
 
         {p.status === "open" && buyable && offerMode === null && (
           <button type="button" className={btnSmall} onClick={() => onSponsor(p)}>
-            {session ? "Book a session" : "Sponsor this spot"}
+            {session ? "Book a session" : "Claim this spot"}
           </button>
         )}
         {p.status === "open" && buyable && offerMode === "fixed_with_offers" && (
@@ -194,16 +183,14 @@ export const PositionCard = forwardRef<HTMLElement, Props>(function PositionCard
           <p className="max-w-[16rem] text-tiny text-amber">
             {o?.reservedUntil ? (
               <>
-                An accepted {bids ? "bid" : "offer"} holds this {noun} until{" "}
+                Held for an accepted {bids ? "bid" : "offer"} until{" "}
                 <time dateTime={o.reservedUntil} suppressHydrationWarning>
                   {now === null ? instantUtc(o.reservedUntil) : clockTime(o.reservedUntil)}
                 </time>
-                . It opens again if it isn&rsquo;t paid by then.
+                .
               </>
             ) : (
-              <>
-                Someone is paying for this {noun} right now. It opens again if they don&rsquo;t finish.
-              </>
+              <>Someone is paying for this {noun} right now.</>
             )}
           </p>
         )}
@@ -248,7 +235,7 @@ export function BidLines({ offers: o, now }: { offers: PositionOffers | null; no
         </p>
       )}
       {ended ? (
-        <p>Bidding has ended. The creator has 24 hours to accept a bid.</p>
+        <p>Bidding has ended. The creator picks a bid within 24 hours.</p>
       ) : (
         o.biddingEndsAt && (
           <p>
@@ -283,12 +270,6 @@ function BidFigure({ offers: o }: { offers: PositionOffers | null }) {
         <dt className="text-tiny text-text-faint">{highest ? "Highest bid" : "Opening bid"}</dt>
         <dd className="font-mono text-body text-text">{shown} USDC</dd>
       </div>
-      {highest && o?.highestBidSponsorPaysUsdc && o.highestBidSponsorPaysUsdc !== highest && (
-        <div className="flex items-baseline gap-1 text-tiny text-text-faint">
-          <dt>With the fee</dt>
-          <dd className="font-mono">{o.highestBidSponsorPaysUsdc}</dd>
-        </div>
-      )}
     </dl>
   );
 }
@@ -329,14 +310,7 @@ function TakeoverPrices({ position: p, takeover: t }: { position: Position; take
           <dt>Take it for</dt>
           <dd className="font-mono">{t.nextSponsorPaysUsdc} USDC</dd>
         </div>
-      ) : (
-        p.status !== "sold" && (
-          <div className="flex items-baseline gap-1 text-tiny text-text-faint">
-            <dt>Creator receives</dt>
-            <dd className="font-mono">{p.creatorReceivesUsdc}</dd>
-          </div>
-        )
-      )}
+      ) : null}
     </dl>
   );
 }
@@ -360,8 +334,7 @@ function TakeoverLines({
   if (p.status !== "sold") {
     return (
       <p className="text-tiny text-text-muted">
-        Bidding starts at {usdFromCents(t.floorPriceCents)}, and every takeover after that{" "}
-        {takeoverVerb(multiple)}.
+        Every takeover {takeoverVerb(multiple)}.
       </p>
     );
   }
@@ -377,10 +350,7 @@ function TakeoverLines({
       ) : (
         t.nextPriceUsdc &&
         t.refundsUsdc && (
-          <p>
-            Taking it moves the price to {t.nextPriceUsdc} USDC and sends {t.refundsUsdc} USDC straight back to the
-            sponsor who has it now, in the same transaction. {handsLeftText(t.handsLeft)}
-          </p>
+          <p>The current sponsor gets their {t.refundsUsdc} USDC back.</p>
         )
       )}
     </div>

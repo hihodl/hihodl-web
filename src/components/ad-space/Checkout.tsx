@@ -131,7 +131,6 @@ export function Checkout({
 
   const keyRef = useRef<string>("");
   const signatureRef = useRef<string | null>(null);
-  const feePct = `${space.feeBps / 100}%`;
   /** A session in person: booked, not sponsored (hispace-in-the-room-v0.md). */
   const session = isSessionSpace(space);
   const subject = session ? "session" : "spot";
@@ -570,8 +569,8 @@ export function Checkout({
                   ) : (
                     <div className="flex flex-col gap-4">
                       <p className="text-small text-text-muted">
-                        Two signatures, no gas: one pays the creator, one pays HOLD&rsquo;s {feePct}. Both
-                        go through together or not at all.
+                        Two signatures, no gas: one pays the creator, one pays HOLD&rsquo;s fee. Both go
+                        through together or not at all.
                       </p>
                       {!hasEvm && (
                         <p className="text-small text-amber">
@@ -631,7 +630,7 @@ export function Checkout({
               {phase.kind === "evm-sign" && (
                 <div className="flex flex-col gap-4">
                   <p className="text-small text-text-muted">
-                    Two signatures, no gas: one pays the creator, one pays HOLD&rsquo;s {feePct}. Both go
+                    Two signatures, no gas: one pays the creator, one pays HOLD&rsquo;s fee. Both go
                     through together or not at all.
                   </p>
                   <ol className="flex flex-col gap-2">
@@ -705,6 +704,11 @@ export function Checkout({
 
 /* ── Pieces ────────────────────────────────────────────────────────── */
 
+/** 500 bps to "5%", 250 to "2.5%". */
+function feeText(bps: number): string {
+  return `${Number((bps / 100).toFixed(2))}%`;
+}
+
 function Summary({
   space,
   position: p,
@@ -732,25 +736,30 @@ function Summary({
   return (
     <div className="flex flex-col gap-4">
       <dl className="grid grid-cols-2 gap-4 rounded-card border border-[color:var(--color-hairline)] bg-white/[0.03] p-4">
-        <div>
+        <div className={agreed || taking ? "" : "col-span-2"}>
           <dt className="text-tiny text-text-faint">You pay</dt>
           <dd className="mt-1 font-mono text-body text-text">
             {agreed ? agreed.agreedSponsorPaysUsdc : taking ? taking.nextSponsorPaysUsdc : p.sponsorPaysUsdc} USDC
           </dd>
         </div>
-        <div>
-          <dt className="text-tiny text-text-faint">
-            {agreed ? "Agreed price" : taking ? "New price for the spot" : `@${space.creator.xHandle} receives`}
-          </dt>
-          <dd className="mt-1 font-mono text-body text-text">
-            {agreed ? agreed.agreedUsdc : taking ? taking.nextPriceUsdc : p.creatorReceivesUsdc} USDC
-          </dd>
+        {(agreed || taking) && (
+          <div>
+            <dt className="text-tiny text-text-faint">{agreed ? "Agreed price" : "New price for the spot"}</dt>
+            <dd className="mt-1 font-mono text-body text-text">
+              {agreed ? agreed.agreedUsdc : taking?.nextPriceUsdc} USDC
+            </dd>
+          </div>
+        )}
+        {/* The one place the page names our fee: here, beside the amount it is
+            part of, as a plain fact. Whether it sits inside the price or on top
+            of it is the creator's setting and is not spelled out. */}
+        <div className="col-span-2 text-small text-text-muted">
+          HOLD charges a {feeText(space.feeBps)} fee.
         </div>
         {taking && (
           <div className="col-span-2 border-t border-[color:var(--color-hairline)] pt-3 text-small text-text-muted">
-            Of that, <span className="font-mono text-text">{taking.refundsUsdc} USDC</span> goes straight back to the
-            sponsor who holds this spot now — everything they paid, in the same transaction that takes it from them.
-            HOLD never holds it in between.
+            <span className="font-mono text-text">{taking.refundsUsdc} USDC</span> of it goes straight back to the
+            sponsor who holds this spot now, in the same transaction.
           </div>
         )}
         {perks.length > 0 && (

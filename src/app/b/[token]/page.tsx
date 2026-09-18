@@ -56,12 +56,11 @@ export default async function BookingPage({ params }: { params: { token: string 
         )}
       </main>
       <footer className="hairline">
-        <div className="container-page flex flex-col gap-3 py-10">
-          <Wordmark className="h-5 w-auto self-start text-text" />
-          <p className="max-w-xl text-small text-text-muted">
-            Powered by HOLD. You paid the creator directly in USDC, and HOLD never held the money. Keep this link to
-            yourself: anyone who has it can manage this booking.
+        <div className="container-page flex flex-col gap-6 py-10">
+          <p className="max-w-xl text-tiny text-text-faint">
+            Keep this link to yourself: anyone who has it can manage this booking.
           </p>
+          <Wordmark className="h-5 w-auto self-start text-text-muted" />
         </div>
       </footer>
     </>
