@@ -1,9 +1,10 @@
 import Link from "next/link";
 
-import { creatorTotalsText, otherCreatorsLine } from "@/lib/ad-space/creator";
 import {
   VERIFIED_LABEL,
   compactNumber,
+  creatorTotalsText,
+  otherCreatorsLine,
   trackRecordNeedsAttention,
   trackRecordText,
 } from "@/lib/ad-space/format";
@@ -24,9 +25,10 @@ import { card as cardClass, eyebrow, pill } from "./ui";
  * because a brand that likes the event but not this creator is not a lost
  * reader; they are the next sponsor for somebody else going.
  *
- * All server components. The cards are the event page's own grid, unchanged: a
- * brand who came from an event page should see the same tile twice, not two
- * designs of the same thing.
+ * All server components. The cards are the event page's own grid: a brand who
+ * came from an event page should see the same tile twice, not two designs of
+ * the same thing. The one difference is that they do not repeat the creator,
+ * who is named once above them.
  */
 
 export function creatorPath(handle: string): string {
@@ -149,7 +151,8 @@ function GroupSection({ group, now }: { group: CreatorGroup; now: number }) {
     <section className="container-page py-8 md:py-12" aria-label={event ? event.name : "Not tied to an event"}>
       {event ? <EventHeading event={event} now={now} /> : <OffEventHeading />}
       <div className="mt-6">
-        <SpaceCardGrid cards={group.cards} event={event} tab={null} now={now} />
+        {/* Every card here is the same person, and the header said who once. */}
+        <SpaceCardGrid cards={group.cards} event={event} tab={null} now={now} showCreator={false} />
       </div>
       {event && <EventJump event={event} othersAtEvent={group.othersAtEvent} />}
     </section>

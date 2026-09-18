@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 import { OG, OG_H, OG_W, OgBanner, OgChip, clip, loadOgImage } from "@/components/ad-space/og";
-import { creatorTotalsText } from "@/lib/ad-space/creator";
+import { creatorTotalsText } from "@/lib/ad-space/format";
 import { getPublicCreator } from "@/lib/ad-space/server";
 
 /**

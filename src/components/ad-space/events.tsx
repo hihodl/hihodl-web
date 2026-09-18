@@ -282,25 +282,46 @@ export function SpaceCardGrid({
   event,
   tab,
   now,
+  showCreator = true,
 }: {
   cards: SpaceCard[];
   event: EventSummary | null;
   tab: SpaceTab | null;
   now: number;
+  /** See `SpaceCardTile`: false on a creator's own hub. */
+  showCreator?: boolean;
 }) {
   if (cards.length === 0) return event && tab ? <EmptyTab event={event} tab={tab} /> : null;
   return (
     <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
       {cards.map((c) => (
         <li key={c.spaceId} className="flex">
-          <SpaceCardTile card={c} event={event} now={now} />
+          <SpaceCardTile card={c} event={event} now={now} showCreator={showCreator} />
         </li>
       ))}
     </ul>
   );
 }
 
-function SpaceCardTile({ card: c, event, now }: { card: SpaceCard; event: EventSummary | null; now: number }) {
+function SpaceCardTile({
+  card: c,
+  event,
+  now,
+  showCreator = true,
+}: {
+  card: SpaceCard;
+  event: EventSummary | null;
+  now: number;
+  /**
+   * False on a creator's own hub, where every card is the same person and the
+   * page said who they are once, at the top. Repeating the avatar, the name,
+   * the followers and the record on every tile buries the part that actually
+   * differs between them, so what stands in its place is the kind of space —
+   * which on a hub is the real difference, the cards being grouped by event
+   * rather than by tab.
+   */
+  showCreator?: boolean;
+}) {
   const banner = bannerFor(c, event);
   const closed = c.status !== "live";
   const { xHandle, xName, xFollowers } = c.creator;
@@ -314,6 +335,11 @@ function SpaceCardTile({ card: c, event, now }: { card: SpaceCard; event: EventS
   ]
     .filter(Boolean)
     .join(" · ");
+  const status = closed ? (
+    <span className={pill.neutral}>Closed</span>
+  ) : chip ? (
+    <span className={pill.open}>{chip}</span>
+  ) : null;
 
   return (
     <Link
@@ -321,31 +347,39 @@ function SpaceCardTile({ card: c, event, now }: { card: SpaceCard; event: EventS
       className={`${cardClass} group flex w-full flex-col overflow-hidden transition-colors duration-180 hover:border-[color:var(--color-hairline-strong)] hover:bg-white/[0.05]`}
     >
       <BannerFrame banner={banner} className="h-28 shrink-0" />
-      <div className="flex flex-1 flex-col px-5 pb-5">
-        <div className="relative -mt-7 flex items-end justify-between gap-3">
-          <CreatorAvatar name={xName || xHandle || ""} url={c.creator.xAvatarUrl} />
-          {closed ? (
-            <span className={pill.neutral}>Closed</span>
-          ) : chip ? (
-            <span className={pill.open}>{chip}</span>
-          ) : null}
-        </div>
+      <div className={`flex flex-1 flex-col px-5 pb-5 ${showCreator ? "" : "pt-5"}`}>
+        {showCreator ? (
+          <>
+            {/* The avatar rides up over the banner, so this row hangs above the padding. */}
+            <div className="relative -mt-7 flex items-end justify-between gap-3">
+              <CreatorAvatar name={xName || xHandle || ""} url={c.creator.xAvatarUrl} />
+              {status}
+            </div>
 
-        <div className="mt-3 min-w-0">
-          <p className="flex min-w-0 items-center gap-1.5 text-body text-text">
-            <span className="truncate">{xName || (xHandle ? `@${xHandle}` : "A creator")}</span>
-            <VerifiedTick type={c.creator.xVerifiedType} />
-          </p>
-          {handleLine && <p className="truncate text-small text-text-muted">{handleLine}</p>}
-        </div>
+            <div className="mt-3 min-w-0">
+              <p className="flex min-w-0 items-center gap-1.5 text-body text-text">
+                <span className="truncate">{xName || (xHandle ? `@${xHandle}` : "A creator")}</span>
+                <VerifiedTick type={c.creator.xVerifiedType} />
+              </p>
+              {handleLine && <p className="truncate text-small text-text-muted">{handleLine}</p>}
+            </div>
+          </>
+        ) : (
+          <div className="flex min-h-6 items-center justify-between gap-3">
+            <span className={`${eyebrow} truncate text-text-faint`}>{TAB_NAME[c.tab]}</span>
+            {status}
+          </div>
+        )}
 
         <h3 className="mt-4 line-clamp-2 break-words text-body [overflow-wrap:anywhere] text-text group-hover:text-amber">{c.title}</h3>
         {cardServiceName(c) && (
           <p className="mt-1 truncate text-small text-text-muted">{cardServiceName(c)}</p>
         )}
-        <p className={`mt-1 text-tiny ${trackRecordNeedsAttention(c.creator.trackRecord) ? "text-amber" : "text-text-faint"}`}>
-          {trackRecordText(c.creator.trackRecord)}
-        </p>
+        {showCreator && (
+          <p className={`mt-1 text-tiny ${trackRecordNeedsAttention(c.creator.trackRecord) ? "text-amber" : "text-text-faint"}`}>
+            {trackRecordText(c.creator.trackRecord)}
+          </p>
+        )}
 
         <div className="mt-auto flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 pt-5 text-small">
           {/* A closed space sells nothing more, so it says what it sold and names no price. */}

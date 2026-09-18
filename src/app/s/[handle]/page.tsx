@@ -6,7 +6,7 @@ import { SlimHeader } from "@/components/ad-space/sections";
 import { eyebrow } from "@/components/ad-space/ui";
 import { DownloadLink } from "@/components/site/DownloadLink";
 import { Wordmark } from "@/components/site/Wordmark";
-import { creatorTotalsText } from "@/lib/ad-space/creator";
+import { creatorTotalsText } from "@/lib/ad-space/format";
 import { getPublicCreator } from "@/lib/ad-space/server";
 
 /**

@@ -301,7 +301,7 @@ export async function getPublicCreator(handle: string, revalidate = 30): Promise
   const bare = handle.replace(/^@/, "");
   if (!HANDLE_RE.test(bare)) return { kind: "missing" };
 
-  let body: { data?: Partial<CreatorPage> } | Partial<CreatorPage> | null;
+  let body: { data?: Partial<CreatorPage> } | null;
   if (fixtureEnabled()) {
     const { fixtureCreator } = await import("./fixture.dev");
     const page = fixtureCreator(bare);
@@ -322,9 +322,7 @@ export async function getPublicCreator(handle: string, revalidate = 30): Promise
     }
   }
 
-  // Every other public route answers inside `data`; the contract for this one is
-  // written as the bare object, so both are read rather than betting on one.
-  const data = ((body as { data?: Partial<CreatorPage> })?.data ?? body) as Partial<CreatorPage> | undefined;
+  const data = body?.data;
   const creator = data?.creator;
   if (!creator?.xHandle) return { kind: "unreachable" };
 
