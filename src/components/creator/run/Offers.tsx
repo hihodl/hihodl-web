@@ -88,7 +88,7 @@ export function Offers({
           <div className="flex flex-col gap-2">
             <h3 className="text-body text-text">Offers</h3>
           </div>
-          <ul className="flex flex-col gap-3">
+          <ul className="grid grid-cols-[minmax(0,1fr)] gap-3 xl:grid-cols-2">
             {plain.map((o) => (
               <li key={o.id}>
                 <OfferCard offer={o} space={space} onChanged={onChanged} />

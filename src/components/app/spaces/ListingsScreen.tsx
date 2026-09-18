@@ -162,7 +162,7 @@ function ListingCard({ listing: l, kind }: { listing: SpaceCard; kind: string })
   return (
     <Link href={href(`/listings/${l.id}`)} className={cardCls}>
       <Cover url={l.bannerUrl} gradient={l.bannerGradient}>
-        <StatusPill status={l.status} />
+        <StatusPill status={l.status} onPhoto />
       </Cover>
       <div className="flex flex-1 flex-col gap-3 p-4">
         <div className="min-w-0">
@@ -196,7 +196,7 @@ function ManagedListings() {
         <li key={m.spaceId}>
           <Link href={href(`/listings/${m.spaceId}`)} className={cardCls}>
             <Cover>
-              <StatusPill status={m.status} />
+              <StatusPill status={m.status} onPhoto />
             </Cover>
             <div className="flex flex-1 flex-col gap-1 p-4">
               <p className="truncate text-small font-medium text-text">{m.title}</p>

@@ -81,6 +81,8 @@ import { ListingTeam } from "./team/ListingTeam";
 
 /** A screen's body scrolls inside itself on a wide screen, so the page stays one screen. */
 const SCREEN_BODY = "lg:max-h-[calc(var(--app-vh,100dvh)-196px)] lg:overflow-y-auto";
+/** The same, inside a panel that has its own title and padding. */
+const PANEL_BODY = "lg:max-h-[calc(var(--app-vh,100dvh)-252px)] lg:overflow-y-auto";
 
 type Screen = "events" | "offers" | "floors" | "spots" | "deliveries" | "updates" | "team";
 
@@ -179,14 +181,14 @@ export function ListingRunner({ spaceId, tab }: { spaceId: string; tab?: string;
           </div>
         ) : null}
         {screen === "offers" ? (
-          <Panel title="Offers & bids" meta={`${offers.length}`} bodyClassName={SCREEN_BODY}>
+          <Panel title="Offers & bids" meta={`${offers.length}`} bodyClassName={PANEL_BODY}>
             <Offers space={space} offers={offers} onChanged={changed} />
           </Panel>
         ) : null}
         {screen === "floors" ? <Floors space={space} groups={floors} onChanged={changed} /> : null}
         {screen === "spots" ? <Spots space={space} /> : null}
         {screen === "deliveries" ? (
-          <Panel title="Deliveries" bodyClassName={SCREEN_BODY}>
+          <Panel title="Deliveries" bodyClassName={PANEL_BODY}>
             <Work space={space} onChanged={changed} />
           </Panel>
         ) : null}
@@ -212,8 +214,9 @@ export function ListingRunner({ spaceId, tab }: { spaceId: string; tab?: string;
     <div className="flex flex-col gap-4">
       <ListingBanner space={space} owner={owner} publicUrl={share?.url ?? null} onChanged={changed} />
 
-      <ul className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <li>
+      {/* Two across even on a phone: each card is one figure. The link's two buttons take a row of their own there. */}
+      <ul className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        <li className="col-span-2 sm:col-span-1">
           <LinkCard share={share} />
         </li>
         {shown.events ? (
@@ -256,7 +259,7 @@ export function ListingRunner({ spaceId, tab }: { spaceId: string; tab?: string;
 
 /* ── The hub's cards ──────────────────────────────────────────────── */
 
-const cardBox = `${glass} flex h-full min-h-[128px] min-w-0 flex-col justify-between gap-4 p-4 sm:p-5`;
+const cardBox = `${glass} flex h-full min-h-[112px] min-w-0 flex-col justify-between gap-4 p-4 sm:min-h-[128px] sm:p-5`;
 
 function CardHead({ icon: Icon, title }: { icon: ComponentType<SVGProps<SVGSVGElement>>; title: string }) {
   return (
@@ -290,7 +293,7 @@ function HubCard({
       <Link href={href(`/listings/${space.id}?tab=${screen}`)} className={`${cardBox} transition-colors hover:bg-white/[0.07]`}>
         <CardHead icon={icon} title={SCREEN_TITLE[screen]} />
         <p className="flex min-w-0 items-baseline gap-2">
-          <span className={`text-[26px] font-medium leading-none tabular-nums ${attention ? "text-amber" : "text-text"}`}>{value}</span>
+          <span className={`text-[22px] font-medium leading-none tabular-nums sm:text-[26px] ${attention ? "text-amber" : "text-text"}`}>{value}</span>
           <span className="truncate text-tiny text-[#9FB7C2]">{unit}</span>
         </p>
       </Link>
@@ -402,7 +405,7 @@ function priceText(p: PositionView): string {
 function Spots({ space }: { space: SpaceView }) {
   const rungs = rungsOf(space.positions);
   return (
-    <Panel title="Spots" meta={`${space.totals.sold}/${space.totals.positions} sold`} bodyClassName={SCREEN_BODY}>
+    <Panel title="Spots" meta={`${space.totals.sold}/${space.totals.positions} sold`} bodyClassName={PANEL_BODY}>
       <div className="-mx-1 overflow-x-auto">
         <table className="w-full min-w-[480px] text-left text-small">
           <thead>
@@ -473,7 +476,7 @@ function floorGroups(space: SpaceView): FloorGroup[] {
 
 function Floors({ space, groups, onChanged }: { space: SpaceView; groups: FloorGroup[]; onChanged: () => void }) {
   return (
-    <Panel title="Floor prices" meta="Private" bodyClassName={SCREEN_BODY}>
+    <Panel title="Floor prices" meta="Private" bodyClassName={PANEL_BODY}>
       <ul className="flex flex-col">
         {groups.map((g) => (
           <FloorRow key={`${space.id}-${g.key}`} group={g} onChanged={onChanged} />
@@ -518,11 +521,15 @@ function FloorRow({ group, onChanged }: { group: FloorGroup; onChanged: () => vo
           >
             {busy ? "Saving…" : "Save"}
           </button>
-          {current !== null ? (
-            <button type="button" className={btnSmallSecondary} disabled={busy} onClick={() => save(null)}>
-              Remove
-            </button>
-          ) : null}
+          {/* Kept in place without a floor, so every row's buttons line up. */}
+          <button
+            type="button"
+            className={`${btnSmallSecondary} ${current === null ? "invisible" : ""}`}
+            disabled={busy || current === null}
+            onClick={() => save(null)}
+          >
+            Remove
+          </button>
         </div>
       </div>
       {notice ? <Notice>{notice}</Notice> : null}
@@ -538,7 +545,7 @@ function Updates({ space, onChanged }: { space: SpaceView; onChanged: () => void
   const [notice, setNotice] = useState<string | null>(null);
 
   return (
-    <Panel title="Updates" meta={`${space.updates.length}`} bodyClassName={SCREEN_BODY}>
+    <Panel title="Updates" meta={`${space.updates.length}`} bodyClassName={PANEL_BODY}>
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-2 sm:flex-row">
           <div className="min-w-0 flex-1">

@@ -84,8 +84,10 @@ function RunATeam() {
       id="team"
       aria-label="Run a team"
       className={`${glass} flex flex-col gap-4 overflow-hidden px-5 py-4 sm:flex-row sm:items-center sm:justify-between ${
-        on ? "" : "bg-[linear-gradient(120deg,rgba(255,183,3,0.16),rgba(9,27,40,0.72)_55%)]"
+        on ? "" : "border-amber/30"
       }`}
+      // Off, it reads as the upgrade it is: an amber wash from the left.
+      style={on ? undefined : { background: "linear-gradient(110deg, rgba(255,183,3,0.20), rgba(9,27,40,0.72) 60%)" }}
     >
       <div className="flex min-w-0 items-center gap-3">
         <span
@@ -121,7 +123,7 @@ function RunATeam() {
             disabled={agency.forced}
             onClick={() => agency.set(!on)}
             className={`relative h-7 w-12 shrink-0 rounded-[14px] transition-colors disabled:opacity-60 ${
-              on ? "bg-amber" : "bg-white/15 hover:bg-white/25"
+              on ? "bg-amber" : "bg-white/25 hover:bg-white/35"
             }`}
           >
             <span

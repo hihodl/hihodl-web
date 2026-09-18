@@ -151,7 +151,7 @@ export function ListingBanner({
         <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
           <div className="min-w-0 max-w-full">
             <div className="flex flex-wrap items-center gap-2">
-              <StatusPill status={space.status} />
+              <StatusPill status={space.status} onPhoto />
               {space.event ? (
                 <span className="inline-flex h-6 max-w-full items-center truncate rounded-[12px] border border-white/20 bg-[#04101A]/45 px-2.5 text-tiny text-text backdrop-blur-md">
                   {space.event.name}

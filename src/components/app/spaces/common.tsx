@@ -15,9 +15,11 @@ export const STATUS_LABEL: Record<SpaceStatus | string, string> = {
   delisted: "Taken down",
 };
 
-export function StatusPill({ status }: { status: string }) {
+export function StatusPill({ status, onPhoto = false }: { status: string; onPhoto?: boolean }) {
   const cls = status === "live" ? pill.open : status === "draft" ? pill.attention : pill.neutral;
-  return <span className={cls}>{STATUS_LABEL[status] ?? status}</span>;
+  const text = <span className={cls}>{STATUS_LABEL[status] ?? status}</span>;
+  // The pills are tints; on a picture they sit on a dark backing of the same shape so they read.
+  return onPhoto ? <span className="inline-flex rounded-[12px] bg-[#04101A]/75 backdrop-blur-md">{text}</span> : text;
 }
 
 export function ReadError({ error }: { error: unknown }) {
