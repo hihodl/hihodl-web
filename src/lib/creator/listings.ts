@@ -20,6 +20,7 @@ import type {
   OfferView,
   SalesSummary,
   SeriesEventInput,
+  SeriesRefusal,
   SeriesView,
   SpaceCard,
   SpaceUpdate,
@@ -117,18 +118,29 @@ export function shareListing(spaceId: string): Promise<{ url: string; text: stri
  * time, which is why nothing here goes live: the console publishes each copy
  * itself and says which ones did.
  *
- * Refusals are `series_events_required`, `series_event_repeated`,
- * `series_too_large` (`error.details.max`), `event_unavailable` and
- * `space_delisted` — plus anything creating a draft can refuse, since every
- * copy goes through the same path. ./problems turns all of them into sentences.
+ * A REFUSAL ON ONE EVENT IS NOT A REFUSAL OF THE CALL
+ *
+ * `created` and `refused` both always come back, and one is never inferred
+ * from the other: a 2xx does not mean all of them. A creator taking their
+ * listing to three conferences wants the two that worked, so the third event
+ * being hidden this morning costs them the third and nothing else.
+ * `refused[].code` is an ordinary refusal code — `series_event_repeated`,
+ * `event_unavailable`, `closes_too_soon`, `session_closes_after_event` — and
+ * belongs beside that event's row.
+ *
+ * What still THROWS is what is about the source listing rather than one event:
+ * `404 not_found`, `409 space_delisted`, `422 series_events_required`,
+ * `422 series_too_large` (`error.details.max`) and `422 zones_required`. None
+ * of them writes anything, so nothing needs re-reading after one.
  */
 export function addToSeries(
   spaceId: string,
   events: readonly SeriesEventInput[],
-): Promise<{ seriesId: string; created: string[]; spaces: SpaceView[] }> {
-  return call<{ seriesId: string; created: string[]; spaces: SpaceView[] }>(`ad-space/spaces/${spaceId}/series`, {
-    json: { events },
-  });
+): Promise<{ seriesId: string; created: string[]; refused: SeriesRefusal[]; spaces: SpaceView[] }> {
+  return call<{ seriesId: string; created: string[]; refused: SeriesRefusal[]; spaces: SpaceView[] }>(
+    `ad-space/spaces/${spaceId}/series`,
+    { json: { events } },
+  );
 }
 
 /**

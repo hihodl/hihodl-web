@@ -23,6 +23,16 @@
  * It is the same act: find the event other creators have already added, or add
  * it once for everybody. A second event picker would be a second set of rules
  * about what an event is, and the two would drift.
+ *
+ * WHY ONE EVENT BEING REFUSED LEAVES THE OTHERS ALONE
+ *
+ * Because the server answers per event: `created` holds the listings it made
+ * and `refused` names the events it could not, each with its own reason, and
+ * both arrive together in a 2xx. A creator taking their listing to three
+ * conferences wants the two that worked, so the two that worked leave this
+ * screen and join the set, and the third stays here with its reason under it,
+ * ready to be fixed or taken off. Nothing about that reads as the whole thing
+ * having failed, because it has not.
  */
 
 "use client";
@@ -41,7 +51,7 @@ import {
   type SpaceView,
 } from "@/lib/creator/listing";
 import { addToSeries } from "@/lib/creator/listings";
-import { describeSeriesError } from "@/lib/creator/problems";
+import { describeSeriesError, seriesRefusalError } from "@/lib/creator/problems";
 
 import { EventPicker } from "../listing/EventPicker";
 import { Field, Problems, Text } from "../listing/parts";
@@ -106,8 +116,8 @@ export function PickEvents({
   space,
   taken,
   held,
-  onDone,
-  onRefused,
+  onSeries,
+  onFinished,
   onCancel,
 }: {
   space: SpaceView;
@@ -115,28 +125,29 @@ export function PickEvents({
   taken: readonly string[];
   /** How many listings the set holds right now, the original counted. */
   held: number;
-  onDone: (series: SeriesView) => void;
-  /** Re-read the set: a refused call may still have made the copies before it. */
-  onRefused: () => void;
+  /** The set as it now stands. Handed up as soon as any copy is made. */
+  onSeries: (series: SeriesView) => void;
+  /** Every event asked for is now a listing: there is nothing left on screen. */
+  onFinished: () => void;
   onCancel: () => void;
 }) {
   const [rows, setRows] = useState<Row[]>([]);
+  /** Why one event did not become a listing, kept beside that event's row. */
+  const [refusals, setRefusals] = useState<Record<string, string>>({});
+  /** How many this screen has set up so far, so a partial result says so out loud. */
+  const [made, setMade] = useState(0);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const session = isSessionTemplate(space.template);
-  // A copy that was actually made is one the parent now knows about, so it
-  // leaves this list on its own: what is left after a half-refused call is
-  // exactly the ones that did not happen, next to the reason.
-  const pending = rows.filter((r) => !taken.includes(r.event.id));
-  const room = Math.max(0, LIMITS.SERIES_MAX - held - pending.length);
+  const room = Math.max(0, LIMITS.SERIES_MAX - held - rows.length);
   const now = Date.now();
-  const problemsByEvent = new Map(pending.map((r) => [r.event.id, closeProblems(r, session, now)]));
-  const blocked = pending.length === 0 || [...problemsByEvent.values()].some((list) => list.length > 0);
+  const problemsByEvent = new Map(rows.map((r) => [r.event.id, closeProblems(r, session, now)]));
+  const blocked = rows.length === 0 || [...problemsByEvent.values()].some((list) => list.length > 0);
 
   function add(event: EventSummary) {
     setNotice(null);
-    if (taken.includes(event.id) || pending.some((r) => r.event.id === event.id)) {
+    if (taken.includes(event.id) || rows.some((r) => r.event.id === event.id)) {
       setNotice(
         `This listing already goes to ${event.name}. Two pages at the same event only take sponsors off each other.`,
       );
@@ -149,21 +160,42 @@ export function PickEvents({
     setRows((list) => [...list, { event, closesAt: defaultCloseFor(event, space.closesAt) }]);
   }
 
+  function drop(eventId: string) {
+    setRows((list) => list.filter((r) => r.event.id !== eventId));
+    setRefusals(({ [eventId]: _gone, ...rest }) => rest);
+  }
+
   async function submit() {
     setBusy(true);
     setNotice(null);
     try {
-      const { seriesId, spaces } = await addToSeries(
+      const { seriesId, created, refused, spaces } = await addToSeries(
         space.id,
-        pending.map((r) => ({ eventId: r.event.id, closesAt: instantOf(r.closesAt)! })),
+        rows.map((r) => ({ eventId: r.event.id, closesAt: instantOf(r.closesAt)! })),
       );
-      onDone({ seriesId, spaces });
+      // The set has grown by whatever landed, whether or not everything did.
+      onSeries({ seriesId, spaces });
+      if (refused.length === 0) {
+        onFinished();
+        return;
+      }
+      // The events that were made are listings now and have no business still
+      // being on a form. The ones that were not stay exactly where they were,
+      // each under its own reason, editable and re-sendable.
+      const byEvent = new Map(refused.map((r) => [r.eventId, r]));
+      setRows((list) => list.filter((r) => byEvent.has(r.event.id)));
+      setRefusals(
+        Object.fromEntries(
+          refused.map((r) => [r.eventId, describeSeriesError(seriesRefusalError(r), space.template)]),
+        ),
+      );
+      // Added up rather than replaced: a creator who fixes one date and sends
+      // again has three set up, not the one this second call happened to make.
+      setMade((n) => n + created.length);
     } catch (e) {
+      // Thrown refusals are about the source listing, not one event, and none
+      // of them writes anything — so the list on screen is still the truth.
       setNotice(describeSeriesError(e, space.template));
-      // Copies are made one after another, so a call refused on the third has
-      // already made the first two. The set is re-read rather than guessed at,
-      // and the rows that did land drop out of this list by themselves.
-      onRefused();
     } finally {
       setBusy(false);
     }
@@ -179,13 +211,25 @@ export function PickEvents({
       </p>
 
       <p className="text-small text-text">
-        {held === 1
-          ? "This listing is at one event so far."
-          : `This listing already goes to ${held} events.`}{" "}
-        {pending.length > 0
-          ? `Adding ${pending.length} more makes ${held + pending.length} of ${LIMITS.SERIES_MAX}.`
+        {held === 1 ? "This listing is at one event so far." : `This listing already goes to ${held} events.`}{" "}
+        {rows.length > 0
+          ? `Adding ${rows.length} more makes ${held + rows.length} of ${LIMITS.SERIES_MAX}.`
           : `You can add ${room} more, up to ${LIMITS.SERIES_MAX} in all.`}
       </p>
+
+      {/*
+        A partial result, said as what it is. The listings that were made are
+        already with the others behind this screen; what is left here is the
+        one that was not, and it says why under its own row.
+      */}
+      {made > 0 ? (
+        <p role="status" className="text-small text-success">
+          {made === 1 ? "One listing is set up" : `${made} listings are set up`} and waiting with the others.{" "}
+          {rows.length === 1
+            ? "This one is not, and the reason is under it."
+            : "These are not, and each says why under it."}
+        </p>
+      ) : null}
 
       {room > 0 ? (
         <EventPicker
@@ -205,9 +249,9 @@ export function PickEvents({
         </p>
       )}
 
-      {pending.length > 0 ? (
+      {rows.length > 0 ? (
         <ul className="flex flex-col gap-4">
-          {pending.map((row) => (
+          {rows.map((row) => (
             <li key={row.event.id} className={`${card} flex flex-col gap-4 p-5`}>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -216,14 +260,13 @@ export function PickEvents({
                     {row.event.city} · {eventDates(row.event.startsOn, row.event.endsOn)}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  className={btnSmallSecondary}
-                  onClick={() => setRows((list) => list.filter((r) => r.event.id !== row.event.id))}
-                >
+                <button type="button" className={btnSmallSecondary} onClick={() => drop(row.event.id)}>
                   Take it off
                 </button>
               </div>
+              {refusals[row.event.id] ? (
+                <p className="text-small text-amber">{refusals[row.event.id]}</p>
+              ) : null}
               <Field
                 label="This one stops selling"
                 hint="The day the event starts, unless you say otherwise. Every date you set on the original — the countdown, the day you deliver by — moves with it."
@@ -250,24 +293,20 @@ export function PickEvents({
         </p>
       ) : null}
 
-      <Problems list={pending.length === 0 ? ["Pick at least one event. Nothing is made until you do."] : []} />
+      <Problems list={rows.length === 0 ? ["Pick at least one event. Nothing is made until you do."] : []} />
 
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" className={btnPrimary} disabled={blocked || busy} onClick={() => void submit()}>
-          {busy
-            ? "Making them…"
-            : pending.length <= 1
-              ? "Make the listing"
-              : `Make the ${pending.length} listings`}
+          {busy ? "Making them…" : rows.length <= 1 ? "Make the listing" : `Make the ${rows.length} listings`}
         </button>
         <button type="button" className={btnSecondary} disabled={busy} onClick={onCancel}>
-          Cancel
+          {made > 0 ? "Done" : "Cancel"}
         </button>
       </div>
 
       <p className="text-tiny text-text-muted">
-        They are made as drafts. Nobody can see one until it is published, and publishing happens one listing at a time —
-        so you will be told which ones went live and which did not.
+        Each one is made on its own, so an event that cannot take this listing costs you that event and nothing else.
+        They are made as drafts: nobody can see one until it is published, and publishing happens one listing at a time.
       </p>
     </div>
   );

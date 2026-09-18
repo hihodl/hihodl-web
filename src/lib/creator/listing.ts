@@ -369,6 +369,21 @@ export interface SeriesEventInput {
 }
 
 /**
+ * One event the listing could not be taken to, and why.
+ *
+ * A refusal here is about THAT event and nothing else: the call still made
+ * every other copy, and they come back in the same answer. `code` is an
+ * ordinary refusal code — `series_event_repeated`, `event_unavailable`, or
+ * anything creating a draft can refuse — so it goes through the same machinery
+ * every other refusal does.
+ */
+export interface SeriesRefusal {
+  eventId: string;
+  code: string;
+  details?: unknown;
+}
+
+/**
  * Every listing that came out of one authoring act, the original first.
  *
  * They are ordinary listings and nothing about them is joint: each has its own

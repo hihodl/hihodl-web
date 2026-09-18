@@ -138,12 +138,14 @@ export function ListingSeries({ space, onChanged }: { space: SpaceView; onChange
           space={space}
           taken={taken}
           held={held}
-          onDone={(next) => {
+          // Handed up the moment anything lands, whether or not all of it did:
+          // a copy that was made is part of the set from that instant, and the
+          // picker stays open only for the events that were refused.
+          onSeries={(next) => {
             setSeries(next);
             setOutcomes({});
-            setPicking(false);
           }}
-          onRefused={() => void load()}
+          onFinished={() => setPicking(false)}
           onCancel={() => setPicking(false)}
         />
       ) : spaces.length === 0 ? (

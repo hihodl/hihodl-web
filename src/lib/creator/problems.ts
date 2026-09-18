@@ -432,24 +432,27 @@ export function refusalSentence(e: unknown, template: Template | null): string {
 /**
  * Taking a listing to more events, refused.
  *
- * Five of these belong to the series itself. Everything else is a copy being
- * refused by the same rules that made the original — a close date out of range,
- * a price that no longer fits — so the rest falls through to `refusalSentence`
- * rather than being written out again here.
+ * Two kinds of refusal arrive here and both are read the same way. The ones
+ * about the SOURCE listing were thrown by the call — it is delisted, it has
+ * nothing to sell, the list was empty or too long. The ones about ONE EVENT
+ * came back inside a 2xx, in `refused[]`, while the other copies were made
+ * anyway; `seriesRefusalError` turns one of those into the error this reads.
+ *
+ * Everything else is a copy being refused by the same rules that made the
+ * original — a close date outside the window, a session closing after its own
+ * event — so the rest falls through to `refusalSentence` rather than being
+ * written out a second time here.
  */
 export function describeSeriesError(e: unknown, template: Template | null): string {
   if (e instanceof CreatorApiError) {
     switch (e.code) {
+      /* about the whole call */
       case "series_events_required":
         return "Pick at least one event first.";
-      case "series_event_repeated":
-        return "One of those is an event this listing already has a page at. Two pages at the same event only compete with each other, so take that one off the list and send the rest.";
       case "series_too_large": {
         const max = typeof e.details.max === "number" ? e.details.max : LIMITS.SERIES_MAX;
         return `${max} events is as far as one listing goes, counting the one it is at now. Take some off the list.`;
       }
-      case "event_unavailable":
-        return "One of those events is not taking listings any more. Take it off the list and send the rest.";
       case "space_delisted":
         return "This listing has been taken down, so there is nothing to copy from it.";
       case "zones_required":
@@ -457,11 +460,33 @@ export function describeSeriesError(e: unknown, template: Template | null): stri
       case "VALIDATION_ERROR":
       case "validation_error":
         return `Check the list: every event needs a day it stops selling, and one go adds at most ${LIMITS.SERIES_MAX - 1} of them.`;
+
+      /* about one event, and said beside that event */
+      case "series_event_repeated":
+        return "This listing already has a page at this event. Two pages at the same event only take sponsors off each other.";
+      case "event_unavailable":
+        return "This event is not taking listings any more.";
       default:
         break;
     }
   }
   return refusalSentence(e, template);
+}
+
+/**
+ * One entry of `refused[]` as the error the rest of this file already reads.
+ *
+ * The server sends a code and whatever details that code carries, which is
+ * exactly what a thrown refusal carries too. Rebuilding it as one means a
+ * per-event refusal and a thrown one get the same sentence from the same
+ * `switch`, instead of a second table of words that drifts from the first.
+ */
+export function seriesRefusalError(refusal: { code: string; details?: unknown }): CreatorApiError {
+  const details =
+    refusal.details && typeof refusal.details === "object" && !Array.isArray(refusal.details)
+      ? (refusal.details as Record<string, unknown>)
+      : {};
+  return new CreatorApiError(refusal.code, 422, details);
 }
 
 /**
