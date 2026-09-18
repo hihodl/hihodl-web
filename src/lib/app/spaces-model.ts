@@ -4,7 +4,16 @@
  */
 
 import type { XAccountStatus } from "@/lib/creator/types";
-import { centsFromUsdc, type DeliverableView, type OfferView, type PositionView, type SalesSummary, type SpaceCard, type SpaceView } from "@/lib/creator/listing";
+import {
+  centsFromUsdc,
+  type DeliverableView,
+  type OfferView,
+  type PositionView,
+  type SalesSummary,
+  type SpaceCard,
+  type SpaceView,
+  type TemplateKind,
+} from "@/lib/creator/listing";
 import type { TeamMember, WorkDeliverable, WorkListing, WorkSlot } from "@/lib/creator/team";
 
 /* ── Role ─────────────────────────────────────────────────────────── */
@@ -214,4 +223,142 @@ export function salesByWeek(sales: SalesSummary | null | undefined, weeks = 8): 
 /** A USDC string as cents, zero when unreadable. */
 export function cents(usdc: string | null | undefined): number {
   return centsFromUsdc(usdc) ?? 0;
+}
+
+/* ── Events and the listings under them ───────────────────────────── */
+
+/** The key of the "Not tied to an event" group, in a URL too. */
+export const NO_EVENT = "none";
+
+export interface EventRef {
+  /** The event's slug: what `?event=` carries. */
+  key: string;
+  name: string;
+  city: string | null;
+  startsOn: string | null;
+  endsOn: string | null;
+}
+
+/** What a drill-down card needs to know about one listing. */
+export interface ListingRef {
+  id: string;
+  title: string;
+  event: EventRef | null;
+  /** Ad space (placement) or service; null when only a team seat is known. */
+  kind: TemplateKind | null;
+  status: string;
+  bannerUrl: string | null;
+  bannerGradient: string | null;
+}
+
+export function eventSlug(name: string): string {
+  return (
+    name
+      .toLowerCase()
+      .normalize("NFKD")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || NO_EVENT
+  );
+}
+
+/**
+ * Every listing this person can see, by id: their own (with the event's own
+ * slug) and the ones they work on for somebody else (which carry only the
+ * event's name, matched back to the same slug when the creator also has a
+ * listing there).
+ */
+export function listingRefs(
+  own: readonly SpaceCard[],
+  kindOf: (l: SpaceCard) => TemplateKind,
+  others: readonly WorkListing[] = [],
+): Map<string, ListingRef> {
+  const out = new Map<string, ListingRef>();
+  const byName = new Map<string, string>();
+  for (const l of own) {
+    const e = l.event;
+    if (e) byName.set(e.name.toLowerCase(), e.slug);
+    out.set(l.id, {
+      id: l.id,
+      title: l.serviceName || l.title,
+      event: e ? { key: e.slug, name: e.name, city: e.city, startsOn: e.startsOn, endsOn: e.endsOn } : null,
+      kind: kindOf(l),
+      status: l.status,
+      bannerUrl: l.bannerUrl ?? null,
+      bannerGradient: l.bannerGradient ?? null,
+    });
+  }
+  for (const w of others) {
+    if (out.has(w.spaceId)) continue;
+    const name = w.eventName?.trim() || null;
+    out.set(w.spaceId, {
+      id: w.spaceId,
+      title: w.title,
+      event: name
+        ? { key: byName.get(name.toLowerCase()) ?? eventSlug(name), name, city: null, startsOn: w.eventStartsOn, endsOn: w.eventEndsOn }
+        : null,
+      kind: null,
+      status: w.status,
+      bannerUrl: null,
+      bannerGradient: null,
+    });
+  }
+  return out;
+}
+
+export interface Group<T> {
+  key: string;
+  items: T[];
+}
+
+/** Items grouped by the event of their listing, in first-seen order. Unknown listings go to NO_EVENT. */
+export function byEvent<T>(items: readonly T[], spaceOf: (t: T) => string, refs: ReadonlyMap<string, ListingRef>): Group<T>[] {
+  return groupBy(items, (t) => refs.get(spaceOf(t))?.event?.key ?? NO_EVENT);
+}
+
+/** Items grouped by listing, in first-seen order. */
+export function byListing<T>(items: readonly T[], spaceOf: (t: T) => string): Group<T>[] {
+  return groupBy(items, spaceOf);
+}
+
+function groupBy<T>(items: readonly T[], keyOf: (t: T) => string): Group<T>[] {
+  const map = new Map<string, T[]>();
+  for (const t of items) {
+    const k = keyOf(t);
+    const list = map.get(k);
+    if (list) list.push(t);
+    else map.set(k, [t]);
+  }
+  return [...map.entries()].map(([key, list]) => ({ key, items: list }));
+}
+
+/** "1 ad space · 2 services", from the listings' kinds. */
+export function kindsText(kinds: readonly (TemplateKind | null)[]): string {
+  const spaces = kinds.filter((k) => k === "placement").length;
+  const services = kinds.filter((k) => k === "service").length;
+  const other = kinds.length - spaces - services;
+  const parts: string[] = [];
+  if (spaces) parts.push(`${spaces} ad ${spaces === 1 ? "space" : "spaces"}`);
+  if (services) parts.push(`${services} ${services === 1 ? "service" : "services"}`);
+  if (other) parts.push(`${other} ${other === 1 ? "listing" : "listings"}`);
+  return parts.join(" · ");
+}
+
+/* ── Sales ────────────────────────────────────────────────────────── */
+
+/**
+ * The order statuses that mean money reached the creator, as the server's
+ * `SALE_STATUSES`: `paid`, and `outbid` (it paid and held the spot, and the
+ * next sponsor repaid it, not the creator). `/sales` sends nothing else; the
+ * filter is here so a sale is never anything but money that arrived.
+ */
+export const SALE_STATUSES: readonly string[] = ["paid", "outbid"];
+
+export type SaleRow = SalesSummary["recent"][number];
+
+export function paidSales(sales: SalesSummary | null | undefined): SaleRow[] {
+  return (sales?.recent ?? []).filter((r) => SALE_STATUSES.includes(r.status));
+}
+
+export function receivedCents(rows: readonly SaleRow[]): number {
+  return rows.reduce((n, r) => n + cents(r.receivedUsdc), 0);
 }
