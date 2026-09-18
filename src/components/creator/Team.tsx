@@ -37,6 +37,7 @@ import { forgetSeat, pendingSeat, rememberSeat, type TeamMember } from "@/lib/cr
 import { Notice } from "./parts";
 import { SignIn } from "./SignIn";
 import { Members, ROLE_TEXT, Seats } from "./team/Members";
+import { Earnings, Owed } from "./team/Money";
 
 interface Props {
   /** The seat code from the link, already checked for shape. */
@@ -120,7 +121,9 @@ export function Team({ seat: seatFromUrl, from: fromUrl, inviter }: Props) {
 
           <MoneyRule />
           <Members />
+          <Owed />
           <Seats version={version} />
+          <Earnings key={version} />
         </>
       )}
 
