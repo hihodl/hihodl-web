@@ -38,6 +38,7 @@ import { useCallback, useEffect, useState } from "react";
 import { btnSmall, btnSmallSecondary, card, pill } from "@/components/ad-space/ui";
 import { CreatorApiError } from "@/lib/creator/api";
 import { assignToListing, getTeam, listingTeam, unassignFromListing } from "@/lib/creator/listings";
+import { spacesPath } from "@/lib/app/paths";
 import { describeTeamError } from "@/lib/creator/problems";
 import {
   bpsFromPercent,
@@ -93,16 +94,12 @@ export function ListingTeam({ spaceId }: { spaceId: string }) {
   const waiting = team.filter((m) => m.status === "invited").length;
 
   return (
-    <Section label="Who works it" title="Your team on this listing">
+    <Section label="Who works it" title="Team on this listing">
       {assignments === null ? (
         <Loading what="who is on this listing" />
       ) : (
         <div className="flex flex-col gap-6">
-          <p className="text-body text-text-muted">
-            A share is a percentage of what you receive from each sale on this listing, counted from the day you put
-            somebody on it. It is a note of what you owe them: brands still pay you directly, and you pay your team
-            yourself.
-          </p>
+          <p className="text-tiny text-text-muted">Share of what you receive per sale. You pay it yourself.</p>
 
           <RoomLeft room={room} />
 
@@ -122,11 +119,10 @@ export function ListingTeam({ spaceId }: { spaceId: string }) {
 
           {team.length === 0 ? (
             <p className="text-small text-text-muted">
-              Nobody on your team yet.{" "}
-              <Link href="/creator/team" className="text-text underline decoration-dotted underline-offset-4">
-                Invite somebody
-              </Link>{" "}
-              and put them on this listing once they have accepted.
+              No team yet.{" "}
+              <Link href={spacesPath("/team")} className="text-text underline decoration-dotted underline-offset-4">
+                Invite someone
+              </Link>
             </p>
           ) : free.length === 0 ? (
             <p className="text-small text-text-muted">

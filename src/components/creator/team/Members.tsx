@@ -31,6 +31,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { btnSmall, btnSmallSecondary, card, pill } from "@/components/ad-space/ui";
 import { getTeam, inviteToTeam, mySeats, removeFromTeam } from "@/lib/creator/listings";
+import { spacesPath } from "@/lib/app/paths";
 import { describeTeamError } from "@/lib/creator/problems";
 import { creatorText, dayText, TEAM_LIMITS, type Invitation, type TeamMember, type TeamRole } from "@/lib/creator/team";
 
@@ -40,22 +41,18 @@ import { Address, Loading, Notice, Section } from "../parts";
 /** What each role may do, said to the creator choosing it and to the person who holds it. */
 export const ROLE_TEXT: Record<TeamRole, { label: string; pill: string; body: string; yours: string; invited: string }> = {
   manager: {
-    label: "Sells for you",
-    pill: "Sells",
-    body: "On the listings you put them on: publishes and edits them, answers brands’ offers and sees what each one made. They cannot change your team, mark anybody paid or delete a listing.",
-    yours:
-      "You sell for them: on the listings they put you on you can publish, edit, answer brands’ offers and see what each one made.",
-    invited:
-      "They want you to sell for them: publish and edit the listings they put you on, and answer brands’ offers. The money a brand pays always goes to them, never to you.",
+    label: "Manager",
+    pill: "Manager",
+    body: "Publishes, edits and answers offers on their listings. Sees sales. Can’t change the team or pay anyone.",
+    yours: "You publish, edit and answer offers on their listings.",
+    invited: "Role: manager. You publish, edit and answer offers on their listings. Brands always pay them, never you.",
   },
   rep: {
-    label: "Turns up and delivers",
-    pill: "Delivers",
-    body: "On the listings you put them on: uploads the proof and marks the work delivered. They see no prices and no money at all.",
-    yours:
-      "You deliver for them: on the listings they put you on you upload the proof and mark the work delivered. Prices and money on those listings are not shown to you.",
-    invited:
-      "They want you to turn up and deliver: upload the proof and mark the work done on the listings they put you on.",
+    label: "Rep",
+    pill: "Rep",
+    body: "Uploads proof and marks work delivered. Sees no prices or money.",
+    yours: "You upload proof and mark work delivered.",
+    invited: "Role: rep. You upload proof and mark work delivered on their listings.",
   },
 };
 
@@ -81,14 +78,12 @@ export function Members() {
   const full = (team?.length ?? 0) >= TEAM_LIMITS.MAX_MEMBERS;
 
   return (
-    <Section label="Your team" title="Who works with you">
+    <Section label="Your team" title="Members">
       <div className="flex flex-col gap-6">
         {team === null ? (
           <Loading what="your team" />
         ) : team.length === 0 ? (
-          <p className="text-body text-text-muted">
-            Nobody yet. Invite the people who turn up and do the work, then put each of them on the listings they work.
-          </p>
+          <p className="text-small text-text-muted">No members yet.</p>
         ) : (
           <ul className="flex flex-col gap-3">
             {team.map((m) => (
@@ -216,18 +211,14 @@ function InviteForm({
   return (
     <div className="flex flex-col gap-5 border-t border-[color:var(--color-hairline)] pt-6">
       <div className="flex flex-col gap-2">
-        <h3 className="text-body text-text">Invite somebody</h3>
-        <p className="text-small text-text-muted">
-          You get a link to send them however you like. They open it, sign in with their email — or make an account if
-          they do not have one — and take the seat.
-        </p>
+        <h3 className="text-body text-text">Invite</h3>
       </div>
 
-      <Field label="What you call them" hint="Only you see this. Their name, or what they do for you.">
+      <Field label="Name" hint="Only you see this.">
         <Text value={label} onChange={setLabel} maxLength={TEAM_LIMITS.LABEL_MAX} placeholder="Maria, Singapore crew" />
       </Field>
 
-      <Field label="What they do">
+      <Field label="Role">
         <Choice
           name="team-role"
           value={role}
@@ -258,13 +249,13 @@ function InviteForm({
                 .finally(() => setBusy(false));
             }}
           >
-            {busy ? "Making it…" : "Make the invitation"}
+            {busy ? "Creating…" : "Create invite link"}
           </button>
         </div>
         <p className="text-tiny text-text-muted">
           {full
-            ? `Your team is full: ${TEAM_LIMITS.MAX_MEMBERS} people, invitations included. Remove somebody or cancel an invitation to make room.`
-            : `${count} of ${TEAM_LIMITS.MAX_MEMBERS}, invitations nobody has taken yet included.`}
+            ? `Team full: ${TEAM_LIMITS.MAX_MEMBERS} of ${TEAM_LIMITS.MAX_MEMBERS}, invitations included.`
+            : `${count} of ${TEAM_LIMITS.MAX_MEMBERS} seats used`}
         </p>
       </div>
 
@@ -280,14 +271,10 @@ function InvitationCard({ invitation, onClose }: { invitation: Invitation; onClo
     <div className="flex flex-col gap-4 rounded-card border border-amber/40 bg-amber/10 p-5">
       <p className="text-body text-text">Send this link to {member.label}</p>
       <Address value={url} />
-      <p className="text-small text-text">
-        We will not show this link again. We keep only a scrambled copy of the code in it, so nobody can read it back to
-        you — not even us. If you lose it, cancel this invitation and make another.
-      </p>
+      <p className="text-small text-text">Shown once. Works once, for one person.</p>
       <p className="text-small text-text-muted">
-        It is your own HOLD invite link with their seat on the end — the same link that counts the people you bring to
-        HOLD. It works once, for one person, and stops working
-        {member.inviteExpiresAt ? ` on ${dayText(member.inviteExpiresAt)}` : ` after ${TEAM_LIMITS.INVITE_DAYS} days`}.
+        Expires
+        {member.inviteExpiresAt ? ` ${dayText(member.inviteExpiresAt)}` : ` in ${TEAM_LIMITS.INVITE_DAYS} days`}.
       </p>
       <div>
         <button type="button" className={btnSmallSecondary} onClick={onClose}>
@@ -328,7 +315,7 @@ export function Seats({ version }: { version: number }) {
   if (seats !== null && seats.length === 0 && !notice) return null;
 
   return (
-    <Section label="Working for others" title="Teams you are on">
+    <Section label="Working for others" title="Teams you’re on">
       {seats === null ? (
         <Loading what="the teams you are on" />
       ) : (
@@ -346,10 +333,9 @@ export function Seats({ version }: { version: number }) {
                   They know you as <span className="text-text">{s.label}</span>
                   {s.acceptedAt ? ` · since ${dayText(s.acceptedAt)}` : ""}
                 </p>
-                <p className="text-small text-text-muted">{ROLE_TEXT[s.role].yours}</p>
                 <div>
-                  <Link href="/creator/team/work" className={btnSmallSecondary}>
-                    What you have to deliver
+                  <Link href={spacesPath("/deliveries")} className={btnSmallSecondary}>
+                    Deliveries
                   </Link>
                 </div>
               </li>

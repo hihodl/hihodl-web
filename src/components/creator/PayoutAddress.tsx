@@ -83,11 +83,8 @@ export function PayoutAddress({ onChange }: { onChange?: (view: PayoutAddressVie
   }, [load]);
 
   return (
-    <Section label="Step two" title="Where you get paid">
-      <p className="text-body text-text-muted">
-        The sponsor&apos;s wallet pays yours directly, in one transaction they sign. HOLD never holds the money and
-        never touches your keys, so all we need from you is the address.
-      </p>
+    <Section label="Step two" title="Payout wallet">
+      <p className="text-tiny text-text-muted">Sponsors pay this address directly.</p>
 
       {loading ? (
         <div className="mt-6">
@@ -217,24 +214,16 @@ function ChainCard({
         <div className="mt-4 flex flex-col gap-3">
           <Address value={entry.address} />
           {entry.source === "hold" ? (
-            <p className="text-small text-text-muted">
-              You have a HOLD wallet, so this is where your sales are paid. It is the address HOLD uses everywhere, and
-              it is not something this page can point somewhere else.
-            </p>
+            <p className="text-small text-text-muted">Your HOLD wallet.</p>
           ) : (
-            <p className="text-small text-text-muted">
-              You proved this address, and it is where your sales are paid. If you ever install HOLD, your HOLD wallet
-              takes over from it — a space already published keeps paying the address its sponsors saw.
-            </p>
+            <p className="text-small text-text-muted">Proved by signature. A HOLD wallet, if you add one, takes over.</p>
           )}
         </div>
       ) : (
         <div className="mt-4 flex flex-col gap-4">
           {step === "idle" ? (
             <>
-              <p className="text-small text-text-muted">
-                Connect the wallet you want paid in, then sign one message to prove it is yours.
-              </p>
+              <p className="text-small text-text-muted">Connect, then sign one message. No fee, no transaction.</p>
               <div>
                 <button type="button" className={btnSmall} disabled={busy} onClick={() => void connect()}>
                   {busy ? "Waiting for your wallet…" : `Connect ${copy.wallet}`}
@@ -246,11 +235,7 @@ function ChainCard({
           {step === "connected" && address ? (
             <>
               <Address value={address} />
-              <p className="text-small text-text-muted">
-                Next you sign a message saying this address is yours.{" "}
-                <span className="text-text">Signing moves no money and needs no balance.</span> It makes no transaction
-                and costs no fee — it is a sentence signed with your key, and nothing leaves your wallet.
-              </p>
+              <p className="text-small text-text-muted">Signing moves no money and costs no fee.</p>
               <div className="flex flex-wrap gap-3">
                 <button type="button" className={btnPrimary} disabled={busy} onClick={() => void ask()}>
                   {busy ? "Preparing…" : "Show me what I sign"}

@@ -21,7 +21,9 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
-import { btnPrimary, btnSmallSecondary, card } from "@/components/ad-space/ui";
+import { btnPrimary, btnSmallSecondary } from "@/components/ad-space/ui";
+import { glass } from "@/components/app/ui";
+import { useHref } from "@/components/app/base";
 import { completeXLink, describeCreatorError } from "@/lib/creator/api";
 import { useCreatorSession } from "@/lib/creator/session";
 import { isLinkResult, isTicket, type LinkResult } from "@/lib/creator/types";
@@ -82,6 +84,7 @@ function initialState(result?: string, ticket?: string): State {
 
 export function XReturn({ result, ticket }: { result?: string; ticket?: string }) {
   const { session } = useCreatorSession();
+  const href = useHref();
   const [state, setState] = useState<State>(() => initialState(result, ticket));
   // A ticket is single use. React runs an effect twice in development, and a
   // reload would present a spent one, so it is redeemed at most once per load.
@@ -109,23 +112,20 @@ export function XReturn({ result, ticket }: { result?: string; ticket?: string }
       } finally {
         // Take the ticket out of the address bar either way: it is spent, and
         // a link somebody copies out of here should not carry a credential.
-        window.history.replaceState(null, "", "/creator/x");
+        window.history.replaceState(null, "", href("/x"));
       }
     })();
-  }, [result, ticket, session]);
+  }, [result, ticket, session, href]);
 
   return (
-    <div className="mx-auto flex w-full max-w-[600px] flex-col gap-6 px-6 py-18">
-      <div className={`${card} p-6 sm:p-8`}>
+    <div className="flex w-full max-w-[600px] flex-col gap-6">
+      <div className={`${glass} p-6 sm:p-8`}>
         {state.kind === "working" ? (
           <p className="text-body text-text-muted">Finishing up with X…</p>
         ) : state.kind === "needs-session" ? (
           <>
             <h1 className="text-h4 font-light text-text">Sign in to finish linking X</h1>
-            <p className="mt-3 text-small text-text-muted">
-              X sent you back, but this browser is not signed in to HOLD any more, and only the account that started
-              this can finish it. Sign in and connect X again — it takes a moment.
-            </p>
+            <p className="mt-3 text-small text-text-muted">Sign in and connect X again.</p>
           </>
         ) : state.kind === "error" ? (
           <>
@@ -142,8 +142,8 @@ export function XReturn({ result, ticket }: { result?: string; ticket?: string }
         )}
 
         <div className="mt-6 flex flex-wrap gap-3">
-          <Link href="/creator" className={state.kind === "result" && state.result === "ok" ? btnPrimary : btnSmallSecondary}>
-            Back to your account
+          <Link href={href("/account")} className={state.kind === "result" && state.result === "ok" ? btnPrimary : btnSmallSecondary}>
+            Open Account
           </Link>
         </div>
       </div>

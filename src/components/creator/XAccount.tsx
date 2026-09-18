@@ -67,11 +67,8 @@ export function XAccount({ onChange }: { onChange?: (status: XAccountStatus | nu
   }
 
   return (
-    <Section label="Step three" title="Your X account">
-      <p className="text-body text-text-muted">
-        Sponsors buy from a name they can look up. Your X handle is what a space is published under, and it is frozen on
-        the space when you publish, so its page keeps naming the account they paid.
-      </p>
+    <Section label="Step three" title="X account">
+      <p className="text-tiny text-text-muted">Listings publish under this handle.</p>
 
       {loading ? (
         <div className="mt-6">
@@ -85,10 +82,7 @@ export function XAccount({ onChange }: { onChange?: (status: XAccountStatus | nu
             <Linked status={status} onRelink={() => void link()} busy={busy} />
           ) : (
             <>
-              <p className="text-small text-text-muted">
-                You will sign in at X and come straight back here. HOLD reads your handle, your check mark and the day
-                the account was made, and can neither post nor read your messages.
-              </p>
+              <p className="text-small text-text-muted">Read-only: handle, check mark, account age. HOLD can’t post.</p>
               <div>
                 <button type="button" className={btnPrimary} disabled={busy} onClick={() => void link()}>
                   {busy ? "Taking you to X…" : "Connect X"}
@@ -149,11 +143,11 @@ function Linked({
 function refusalText(refusal: NonNullable<Extract<XAccountStatus, { linked: true }>["refusal"]>): string {
   switch (refusal) {
     case "x_not_verified":
-      return "A space is published under a verified X account. Yours has no check mark that we can see — X Premium, business or government all count. Connect again once X shows one.";
+      return "Needs a verified X account (Premium, business or government). Connect again once X shows the check mark.";
     case "x_account_too_new":
-      return `A space is published under an X account at least ${MIN_X_ACCOUNT_AGE_DAYS} days old, and we cannot see that age on yours yet.`;
+      return `Needs an X account at least ${MIN_X_ACCOUNT_AGE_DAYS} days old. We can’t see that age on yours yet.`;
     case "x_relink_needed":
-      return "It has been a while since X last confirmed this account for us, and we will not publish on a copy we cannot check. Connect again and it is settled.";
+      return "X needs to confirm this account again. Connect again.";
     case "x_not_linked":
       return "No X account is linked yet.";
   }

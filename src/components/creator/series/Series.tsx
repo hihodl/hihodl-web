@@ -35,6 +35,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { btnPrimary, btnSmall, btnSmallSecondary, card, pill } from "@/components/ad-space/ui";
 import { closesText } from "@/lib/ad-space/format";
+import { spacesPath } from "@/lib/app/paths";
 import { describeCreatorError } from "@/lib/creator/api";
 import { LIMITS, type SeriesView, type SpaceView } from "@/lib/creator/listing";
 import { getSeries, leaveSeries, publishListing } from "@/lib/creator/listings";
@@ -130,7 +131,7 @@ export function ListingSeries({ space, onChanged }: { space: SpaceView; onChange
   }
 
   return (
-    <Section label="One listing, several events" title="The same thing at your other events">
+    <Section label="One listing, several events" title="Series">
       {loading ? (
         <Loading what="your other events" />
       ) : picking ? (
@@ -150,23 +151,16 @@ export function ListingSeries({ space, onChanged }: { space: SpaceView; onChange
         />
       ) : spaces.length === 0 ? (
         <div className="flex flex-col gap-5">
-          <p className="text-body text-text-muted">
-            Going to more than one conference with this? Build it once here and take it with you: each event gets its own
-            listing, with everything this one has and its own link to post. You are not selling one thing across several
-            events — you are selling the same thing at each of them, and each one has its own spots to sell.
-          </p>
+          <p className="text-small text-text-muted">One copy per event, each with its own link and spots.</p>
           <div>
             <button type="button" className={btnSmall} onClick={() => setPicking(true)}>
-              Take it to more events
+              Add events
             </button>
           </div>
         </div>
       ) : (
         <div className="flex flex-col gap-5">
-          <p className="text-body text-text-muted">
-            {spaces.length} listings, one per event. Each sells its own spots and closes on its own day — nothing is
-            shared between them but the words.
-          </p>
+          <p className="text-small text-text-muted">{spaces.length} listings, one per event.</p>
 
           <ul className="flex flex-col gap-3">
             {spaces.map((s) => {
@@ -184,7 +178,7 @@ export function ListingSeries({ space, onChanged }: { space: SpaceView; onChange
                       </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                      {here ? <span className={pill.neutral}>The one you are on</span> : null}
+                      {here ? <span className={pill.neutral}>This one</span> : null}
                       <span
                         className={
                           s.status === "live" ? pill.open : s.status === "draft" ? pill.attention : pill.neutral
@@ -207,10 +201,10 @@ export function ListingSeries({ space, onChanged }: { space: SpaceView; onChange
                   {!here ? (
                     <div>
                       <Link
-                        href={s.status === "draft" ? `/creator/listings/${s.id}/edit` : `/creator/listings/${s.id}`}
+                        href={spacesPath(s.status === "draft" ? `/listings/${s.id}/edit` : `/listings/${s.id}`)}
                         className={btnSmallSecondary}
                       >
-                        {s.status === "draft" ? "Finish this one" : "Open this one"}
+                        {s.status === "draft" ? "Finish draft" : "Open"}
                       </Link>
                     </div>
                   ) : null}
@@ -222,10 +216,7 @@ export function ListingSeries({ space, onChanged }: { space: SpaceView; onChange
           {drafts.length > 0 ? (
             <div className="flex flex-col gap-3">
               <p className="text-small text-text-muted">
-                {drafts.length === 1
-                  ? "One of these is still a draft, which means nobody can buy from it."
-                  : `${drafts.length} of these are still drafts, which means nobody can buy from them.`}{" "}
-                They go live one at a time and each gets its own answer, so one being turned away does not stop the rest.
+                {drafts.length === 1 ? "1 draft in this series." : `${drafts.length} drafts in this series.`}
               </p>
               <div>
                 <button type="button" className={btnPrimary} disabled={publishing} onClick={() => void publishDrafts()}>
@@ -241,13 +232,12 @@ export function ListingSeries({ space, onChanged }: { space: SpaceView; onChange
 
           {full ? (
             <p className="text-small text-text-muted">
-              {LIMITS.SERIES_MAX} is as many events as one listing goes to. Past that it stops being the same thing at
-              several events and starts being weekends nobody can keep.
+              {LIMITS.SERIES_MAX} events maximum.
             </p>
           ) : (
             <div>
               <button type="button" className={btnSmall} onClick={() => setPicking(true)}>
-                Take it to another event
+                Add event
               </button>
             </div>
           )}
