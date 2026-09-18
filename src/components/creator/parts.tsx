@@ -14,22 +14,30 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 
-import { btnSmallSecondary, card, eyebrow, pill } from "@/components/ad-space/ui";
+import { btnSmallSecondary, pill } from "@/components/ad-space/ui";
+import { glass } from "@/components/app/ui";
 
+/**
+ * A panel in the product shell. `label` is kept for the callers that pass
+ * one; the panel says only what it is.
+ */
 export function Section({
-  label,
   title,
+  action,
   children,
 }: {
-  label: string;
+  label?: string;
   title: string;
+  action?: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <section className={`${card} p-6 sm:p-8`}>
-      <p className={`${eyebrow} text-text-faint`}>{label}</p>
-      <h2 className="mt-2 text-h4 font-light text-text">{title}</h2>
-      <div className="mt-6">{children}</div>
+    <section className={`${glass} min-w-0 p-4 sm:p-5`}>
+      <header className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-small font-medium text-text">{title}</h2>
+        {action}
+      </header>
+      <div className="mt-4 min-w-0">{children}</div>
     </section>
   );
 }
@@ -97,5 +105,9 @@ export function Address({ value }: { value: string }) {
 
 /** The skeleton a card wears while its first read is in flight. */
 export function Loading({ what }: { what: string }) {
-  return <p className="text-small text-text-muted">Reading {what}…</p>;
+  return (
+    <p className="text-small text-text-muted" aria-label={`Loading ${what}`}>
+      Loading…
+    </p>
+  );
 }
