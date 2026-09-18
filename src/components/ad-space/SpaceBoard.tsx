@@ -4,7 +4,15 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { currentCheckout, existingCheckoutKey } from "@/lib/ad-space/checkout-client";
-import { instantUtc, isSessionSpace, serviceName, serviceSummary, timeLeft } from "@/lib/ad-space/format";
+import {
+  instantUtc,
+  isSessionSpace,
+  isTieredSpace,
+  serviceName,
+  serviceSummary,
+  spaceTiers,
+  timeLeft,
+} from "@/lib/ad-space/format";
 import { type SavedOffer, offerModeOf, offerPath, savedOffers } from "@/lib/ad-space/offers-client";
 import type { OfferKind, OfferMode, Order, Position, PositionOffers, Space } from "@/lib/ad-space/types";
 
@@ -13,6 +21,7 @@ import { IfItDoesNotHappen } from "./IfItDoesNotHappen";
 import { OfferSheet } from "./OfferSheet";
 import { PositionCard } from "./PositionCard";
 import { ProductBoard } from "./ProductBoard";
+import { TierLadder } from "./TierLadder";
 import { btnSmall, btnSmallSecondary, eyebrow, pill } from "./ui";
 import { useServerNow } from "./useServerNow";
 import { WhatTheBrandGets } from "./WhatTheBrandGets";
@@ -87,10 +96,25 @@ export function SpaceBoard({ space }: { space: Space }) {
   }, [router, space.id]);
 
   const isService = space.template.kind === "service";
+  /* A ladder, or N of one thing (ad-space-tiers-v0.md). On a ladder every rung
+     carries its own price, its own lines and its own offers, so the offer sits
+     on the rung and not on the space, exactly as it does on a placement. */
+  const tiered = isTieredSpace(space);
+  const tiers = tiered ? spaceTiers(space) : [];
   const spaceMode = offerModeOf(space);
   const modeOf = useCallback(
-    (p: Position): OfferMode | null => offerModeOf(space, isService ? null : p),
-    [space, isService],
+    (p: Position): OfferMode | null => offerModeOf(space, isService && !tiered ? null : p),
+    [space, isService, tiered],
+  );
+  /** Bidding is open while the server says so and its end is still ahead on the server's clock. */
+  const biddingOpen = useCallback(
+    (p: Position) => {
+      const o = p.offers;
+      if (!o || o.biddingOpen === false) return false;
+      if (!o.biddingEndsAt || now === null) return true;
+      return Date.parse(o.biddingEndsAt) > now;
+    },
+    [now],
   );
   const openOffer = useCallback(
     (p: Position) => setOfferFor({ position: p, kind: modeOf(p) === "bids" ? "bid" : "offer" }),
@@ -126,9 +150,13 @@ export function SpaceBoard({ space }: { space: Space }) {
   const sizeOf = (p: Position) => space.template.zones.find((z) => z.zoneKey === p.zoneKey)?.sizeLabel ?? null;
   const session = isSessionSpace(space);
 
-  const cardList = (
+  /* Everything the ladder does not already show. Without a ladder that is every
+     position, whatever the positions carry, so a placement or an untiered
+     service is the board exactly as it has always been. */
+  const loose = tiered ? space.positions.filter((p) => !p.tierKey) : space.positions;
+  const cardList = loose.length === 0 ? null : (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {space.positions.map((p) => (
+      {loose.map((p) => (
         <PositionCard
           key={p.id}
           ref={(el) => {
@@ -145,7 +173,7 @@ export function SpaceBoard({ space }: { space: Space }) {
           now={now}
           onHover={setHoverId}
           onSponsor={setCheckoutFor}
-          onOffer={isService ? undefined : openOffer}
+          onOffer={isService && !tiered ? undefined : openOffer}
         />
       ))}
     </div>
@@ -189,7 +217,7 @@ export function SpaceBoard({ space }: { space: Space }) {
               is the only thing between the summary and the slots that says what
               happens if the session doesn't. It renders on both boards. */}
           <IfItDoesNotHappen space={space} />
-          {spaceMode && spaceMode !== "bids" && (
+          {!tiered && spaceMode && spaceMode !== "bids" && (
             <SpaceOffersPanel
               mode={spaceMode}
               offers={space.spaceOffers}
@@ -197,6 +225,17 @@ export function SpaceBoard({ space }: { space: Space }) {
               session={session}
               now={now}
               onOffer={() => setOfferFor({ position: null, kind: "offer" })}
+            />
+          )}
+          {tiered && (
+            <TierLadder
+              tiers={tiers}
+              buyable={buyable}
+              session={session}
+              modeOf={modeOf}
+              biddingOpen={biddingOpen}
+              onSponsor={setCheckoutFor}
+              onOffer={openOffer}
             />
           )}
           {cardList}

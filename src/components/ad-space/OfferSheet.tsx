@@ -15,6 +15,7 @@ import {
   minimumCents,
   offerFigures,
   offerModeOf,
+  offerNamesPosition,
   offerPath,
   offerToken,
   offersFor,
@@ -173,7 +174,10 @@ export function OfferSheet({
   onSent,
 }: {
   space: Space;
-  /** The spot, or null on a service space, where an offer targets the space. */
+  /**
+   * The spot, or null on an untiered service space, where an offer targets the
+   * space and any free slot will do. A rung of a ladder is always named.
+   */
   position: Position | null;
   kind: OfferKind;
   now: number | null;
@@ -185,6 +189,8 @@ export function OfferSheet({
   const mode = offerModeOf(space, position);
   const handle = space.creator.xHandle;
   const what = position?.label ?? serviceName(space);
+  /** What this rung gives the brand, on a tiered space. Empty on every other. */
+  const perks = position?.perks ?? [];
   const minimum = minimumCents(kind, session, offers);
   // On a fixed price that also takes offers, an offer must be under the price.
   const priceCents = position?.priceCents ?? (space.kind === "service" ? space.positions[0]?.priceCents ?? null : null);
@@ -251,7 +257,8 @@ export function OfferSheet({
     try {
       const res = await submitOffer({
         spaceId: space.id,
-        ...(position && space.kind !== "service" ? { positionId: position.id } : {}),
+        // A tier is named; an untiered service's identical slots are not.
+        ...(position && offerNamesPosition(space) ? { positionId: position.id } : {}),
         amountCents: amountCents!,
         sponsorName: name.trim(),
         contact: { kind: contactKind, value: normaliseContact(contactKind, contactValue) },
@@ -332,6 +339,18 @@ export function OfferSheet({
             <OfferSent sent={sent} space={space} what={what} />
           ) : (
             <form onSubmit={send} className="flex flex-col gap-6" noValidate>
+              {/* On a ladder an amount only means something next to the rung it
+                  is for: "$900" says nothing unless it says $900 for the
+                  interview. The creator's own lines, printed as text. */}
+              {perks.length > 0 && (
+                <ul className="flex flex-col gap-1.5 rounded-card border border-[color:var(--color-hairline)] bg-white/[0.03] p-4">
+                  {perks.map((line, i) => (
+                    <li key={i} className="break-words text-small text-text-muted [overflow-wrap:anywhere]">
+                      {line}
+                    </li>
+                  ))}
+                </ul>
+              )}
               <AmountField
                 label={kind === "bid" ? "Your bid" : "Your offer"}
                 value={amount}
@@ -432,7 +451,7 @@ export function OfferSheet({
                 {wantsCheck ? (
                   <FundsCheck
                     spaceId={space.id}
-                    positionId={position && space.kind !== "service" ? position.id : null}
+                    positionId={position && offerNamesPosition(space) ? position.id : null}
                     chains={space.chains}
                     amountCents={amountCents}
                     kind={kind}

@@ -701,6 +701,12 @@ function Summary({
 }) {
   const zone = space.template.zones.find((z) => z.zoneKey === p.zoneKey);
   const agreed = offer?.agreedUsdc && offer.agreedSponsorPaysUsdc ? offer : null;
+  /* A rung of a ladder (ad-space-tiers-v0.md): the sheet's heading already
+     carries its name, because `label` falls back to the tier's title. What it
+     cannot carry is the list the brand picked this rung FOR, and a sponsor
+     about to sign for $1,300 should be reading the interview, not remembering
+     it from the page behind the sheet. Plain text, as it arrives. */
+  const perks = p.perks ?? [];
   // Taking a spot from whoever holds it, rather than buying an empty one. The
   // figures differ enough that showing the fixed-price pair would be wrong:
   // what this sponsor pays is the DOUBLED price plus the fee, and most of it
@@ -728,6 +734,18 @@ function Summary({
             Of that, <span className="font-mono text-text">{taking.refundsUsdc} USDC</span> goes straight back to the
             sponsor who holds this spot now — everything they paid, in the same transaction that takes it from them.
             HOLD never holds it in between.
+          </div>
+        )}
+        {perks.length > 0 && (
+          <div className="col-span-2 border-t border-[color:var(--color-hairline)] pt-3">
+            <h3 className={`${eyebrow} text-text-faint`}>What you get</h3>
+            <ul className="mt-2 flex flex-col gap-1.5">
+              {perks.map((line, i) => (
+                <li key={i} className="break-words text-small text-text [overflow-wrap:anywhere]">
+                  {line}
+                </li>
+              ))}
+            </ul>
           </div>
         )}
         {session ? (

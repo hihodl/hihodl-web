@@ -137,7 +137,27 @@ export interface Takeover {
 export interface Position {
   id: string;
   zoneKey: string;
+  /** The tier's name when this position sells one, else the zone's label or the slot number. */
   label: string;
+  /**
+   * Tiers (ad-space-tiers-v0.md). A service space can sell a LADDER: up to six
+   * rungs, each its own price and its own list of what the brand gets, and a
+   * rung with five available is five positions sharing a `tierKey`.
+   *
+   * `tierKey` is null on the old shapes — a placement's zones, or N identical
+   * slots — and those render exactly as they always have. `title` is the
+   * rung's name ("Flagship on-site interview"); `label` already falls back to
+   * it, so anything that prints a label prints the tier's name for free.
+   *
+   * `perks` is what the brand gets for that price, up to five short lines.
+   * PLAIN TEXT, and printed as text: never as HTML, never as markdown.
+   *
+   * All three are optional because a server older than tiers sends no key at
+   * all; `getPublicSpace` fills them, so nothing downstream has to guess.
+   */
+  tierKey?: string | null;
+  title?: string | null;
+  perks?: string[];
   /** Null in `offers` mode, where no price is shown. In `bids` it is the opening bid. */
   priceCents: number | null;
   sponsorPaysUsdc: string | null;
@@ -153,8 +173,12 @@ export interface Position {
   delivered: { url: string; at: string } | null;
   /**
    * How offers and bids stand on this spot, or null when the space takes none.
-   * Always null on a service slot: a service space carries it once, as
-   * `Space.spaceOffers`. Optional because a server older than offers sends no key.
+   * Null on a service slot of an UNTIERED space, which carries it once as
+   * `Space.spaceOffers` because its slots are identical and any one will do.
+   * On a tiered space the rungs are not identical — "$900" means nothing
+   * unless it says $900 for the interview — so each position carries its own,
+   * exactly as a placement's zones do. Optional because a server older than
+   * offers sends no key.
    */
   offers?: PositionOffers | null;
 }
@@ -336,7 +360,10 @@ export interface Space {
   acceptsOffers: boolean;
   /** `bids` only: when bidding ends, space-wide. Each spot's own end is on its `offers`. */
   biddingEndsAt: string | null;
-  /** A service space's offers, which target the space rather than a slot. */
+  /**
+   * An untiered service space's offers, which target the space rather than a
+   * slot. Null on a tiered one, where every rung carries its own.
+   */
   spaceOffers: PositionOffers | null;
   venueType: VenueType;
   eventName: string | null;

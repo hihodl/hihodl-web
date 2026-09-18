@@ -20,6 +20,12 @@
  *                                      a custom service, named by its creator,
  *                                      with a mention on X and a funding goal
  *                                      still a way off (21%)
+ *   /s/coinempress/breakpoint-london-coverage
+ *                                      a TIERED service (ad-space-tiers-v0.md):
+ *                                      one event, three prices — $50 logos (six,
+ *                                      four left), a $200 card and mic placement
+ *                                      (three, all gone, so the rung shows grey)
+ *                                      and one $1,300 flagship interview
  * and every other card on an event page opens a copy of the matching board.
  *
  * Events:
@@ -134,6 +140,11 @@ function position(
     takeover: null,
     sponsor: null,
     delivered: null,
+    // The old shapes: a placement's zones and N identical slots carry no tier,
+    // and render exactly as they did before tiers existed.
+    tierKey: null,
+    title: null,
+    perks: [],
     ...over,
   };
 }
@@ -585,6 +596,141 @@ function customService(): Space {
       url: "https://hihodl.xyz/s/coinempress/token2049-afterparty-host",
       text: "Host my TOKEN2049 afterparty table https://hihodl.xyz/s/coinempress/token2049-afterparty-host",
     },
+  };
+}
+
+/**
+ * The listing tiers exist for (ad-space-tiers-v0.md): a creator with a
+ * content-creator pass covering one event, selling three different things at
+ * three prices on one page.
+ *
+ * Every state the ladder has to render is here: a rung half sold with one copy
+ * being paid for, a rung with nothing left (which still shows, greyed, because
+ * a ladder with a missing rung reads as a mistake), and the flagship, sold
+ * once, still there.
+ */
+function eventCoverage(): Space {
+  const base = videos();
+  const pid = (n: number) => `00000000-0000-4000-c000-${String(n).padStart(12, "0")}`;
+
+  /** A tier, and the copies of it that are for sale. */
+  type Tier = { key: string; title: string; priceCents: number; perks: string[] };
+
+  const STRIP: Tier = {
+    key: "mini-strip",
+    title: "Logo in my mini strip",
+    priceCents: 5000,
+    perks: [
+      "Your logo in the strip that runs on every clip I post from the floor",
+      "Your name in the caption of each daily recap",
+    ],
+  };
+  const CARD_MIC: Tier = {
+    key: "card-and-mic",
+    title: "Card and mic placement",
+    priceCents: 20000,
+    perks: [
+      "Everything in the mini strip",
+      "Your card on the table in every interview I shoot",
+      "Your logo on my mic flag, on camera all three days",
+    ],
+  };
+  const FLAGSHIP: Tier = {
+    key: "flagship-interview",
+    title: "Flagship on-site interview, fully produced",
+    priceCents: 130000,
+    perks: [
+      "Everything in the card and mic placement",
+      "A 10-minute interview with your founder, shot and edited by me",
+      "Posted the same evening, with your handle in the post",
+      "The raw footage as well, yours to re-cut anywhere you like",
+    ],
+  };
+
+  /** One copy of a rung. Every copy of a tier carries the same name, price and lines. */
+  const copy = (n: number, tier: Tier, over: Partial<Position> = {}): Position =>
+    position(
+      pid(n),
+      { zoneKey: `slot-${n}`, label: tier.title, suggestedPriceCents: tier.priceCents },
+      {
+        tierKey: tier.key,
+        title: tier.title,
+        perks: tier.perks,
+        accepts: ["logo", "qr", "text"],
+        pitch: null,
+        ...over,
+      },
+    );
+
+  const sponsor = (name: string, bg: string, fg: string): Position["sponsor"] => ({
+    name,
+    url: null,
+    xHandle: name.toLowerCase().replace(/\W/g, ""),
+    contentKind: "logo",
+    contentText: null,
+    imageUrl: logo(name.toUpperCase(), bg, fg),
+  });
+
+  const positions: Position[] = [
+    copy(1, STRIP, { status: "sold", sponsor: sponsor("Kopi Labs", "#FFFFFF", "#141F2E") }),
+    copy(2, STRIP, { status: "held" }),
+    copy(3, STRIP),
+    copy(4, STRIP),
+    copy(5, STRIP),
+    copy(6, STRIP),
+    copy(7, CARD_MIC, { status: "sold", sponsor: sponsor("Acme", "#FFFFFF", "#141F2E") }),
+    copy(8, CARD_MIC, { status: "sold", sponsor: sponsor("Nodeline", "#5B7CFF", "#FFFFFF") }),
+    copy(9, CARD_MIC, { status: "sold", sponsor: sponsor("Lumen", "#FFB703", "#0A0500") }),
+    copy(10, FLAGSHIP),
+  ];
+
+  return {
+    ...base,
+    id: "77777777-7777-4777-8777-777777777777",
+    slug: "breakpoint-london-coverage",
+    title: "I'm covering Breakpoint London",
+    reason:
+      "Three days on the floor with a creator pass: interviews, recap footage and daily posts, all shot and edited by me. Pick a spot, pay in USDC, your brand goes live.",
+    deliverBy: dayFromNow(45),
+    chains: ["solana", "base", "polygon"],
+    fallback: "creator_refund",
+    fallbackNote: null,
+    attestations: ["discloses_sponsorship"],
+    requiredAttestations: ["discloses_sponsorship"],
+    deliverables: [
+      { id: "b1", kind: "video", platform: "x", count: 3, dueDate: dayFromNow(45), deliveredUrl: null, state: "upcoming", note: "One recap a day, all three days." },
+      { id: "b2", kind: "mention", platform: "x", count: 1, dueDate: dayFromNow(46), deliveredUrl: null, state: "upcoming", note: null },
+    ],
+    template: {
+      id: "event-coverage",
+      kind: "service",
+      productType: "service",
+      name: "Cover an event for you",
+      views: [],
+      zones: [],
+      service: {
+        deliverableKind: "video",
+        summary:
+          "Three days at the event with a content-creator pass: floor interviews, recap footage and daily posts.",
+        maxSlots: 20,
+      },
+    },
+    positions,
+    // $650 of $2,000 so far: one mini strip and the three card and mic spots.
+    fundingGoalCents: 200000,
+    totals: { positions: positions.length, sold: 4, committedCents: 65000, totalCents: 220000 },
+    updates: [],
+    // A space with no event row of its own: the name is free text, as it is on
+    // every space made before events existed.
+    eventName: "Breakpoint London",
+    event: null,
+    bannerUrl: null,
+    bannerGradient: "night",
+    share: {
+      url: "https://hihodl.xyz/s/coinempress/breakpoint-london-coverage",
+      text: "Spots on my Breakpoint London coverage start at $50 https://hihodl.xyz/s/coinempress/breakpoint-london-coverage",
+    },
+    siblings: [],
   };
 }
 
@@ -1168,7 +1314,12 @@ export function fixtureOffer(token: string): OfferThread | null {
 }
 
 export function fixtureSpace(handle: string, slug: string): Space | null {
-  if (handle === "id") return [suitcase(), videos(), takeovers(), pitchReviews(), customService(), ...offersFixtures()].find((s) => s.id === slug) ?? null;
+  if (handle === "id")
+    return (
+      [suitcase(), videos(), takeovers(), pitchReviews(), customService(), eventCoverage(), ...offersFixtures()].find(
+        (s) => s.id === slug,
+      ) ?? null
+    );
   if (handle.toLowerCase() === "coinempress") {
     const offered = offersFixtures().find((s) => s.slug === slug);
     if (offered) return offered;
@@ -1177,6 +1328,7 @@ export function fixtureSpace(handle: string, slug: string): Space | null {
     if (slug === "token2049-takeover") return takeovers();
     if (slug === "token2049-pitch-reviews") return pitchReviews();
     if (slug === "token2049-afterparty-host") return customService();
+    if (slug === "breakpoint-london-coverage") return eventCoverage();
   }
   const path = `/s/${handle.toLowerCase()}/${slug}`;
   for (const [event, tabs] of [

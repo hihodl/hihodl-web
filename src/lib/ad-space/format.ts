@@ -13,6 +13,8 @@ import type {
   Deliverable,
   DeliverableState,
   Fallback,
+  Position,
+  PositionOffers,
   PositionStatus,
   SessionState,
   Space,
@@ -381,6 +383,115 @@ export function serviceSummary(space: Pick<Space, "template" | "serviceSummary">
   const own = space.serviceSummary?.trim();
   if (space.template.kind === "service" && own) return own;
   return space.template.service?.summary ?? null;
+}
+
+/* ── Tiers: a ladder, not N of one thing (ad-space-tiers-v0.md) ──────── */
+
+/**
+ * One rung of a ladder, as the page shows it: a price, a name, what the brand
+ * gets for it, and how many are left.
+ *
+ * A tier is not a row of its own in the API — it IS the positions that sell it,
+ * all sharing a `tierKey` — so everything a rung needs is read off its copies
+ * and nothing is computed twice. A tier with five available is five positions,
+ * and they are one card saying "5 left", never five cards.
+ */
+export interface SpaceTier {
+  key: string;
+  /** The rung's name. Falls back to a copy's label, which the server already fills from the title. */
+  title: string;
+  /** What the brand gets, one plain-text line each. Printed as text, never as markup. */
+  perks: string[];
+  /** Every copy of this rung, in the creator's order. */
+  positions: Position[];
+  /** The copies a brand can still buy. */
+  open: Position[];
+  held: number;
+  sold: number;
+  /** What a click buys, offers on or bids for: the first copy still open, else null. */
+  buy: Position | null;
+  /** The rung's figures, from the copy on offer: every copy of a tier is priced alike. */
+  priceCents: number | null;
+  sponsorPaysUsdc: string | null;
+  creatorReceivesUsdc: string | null;
+  /** How offers or bids stand on the copy on offer, or null when the space takes none. */
+  offers: PositionOffers | null;
+  /** The rung's own pitch, when a creator wrote one. */
+  pitch: string | null;
+}
+
+/**
+ * A space that sells a ladder. Only a service can: a placement's zones are
+ * priced by the size of a rectangle, and mixing a drawing and a service in one
+ * space is not in v0. So a placement is never read as tiered, and its zones
+ * keep rendering exactly as they do today.
+ *
+ * It is also where offers live: on a tiered space they sit on the positions,
+ * like a placement's, because "$900" means nothing unless it says $900 for the
+ * interview.
+ */
+export function isTieredSpace(space: Pick<Space, "kind" | "positions">): boolean {
+  return space.kind === "service" && space.positions.some((p) => Boolean(p.tierKey));
+}
+
+/**
+ * The ladder, in the creator's order — which is the order the API sends the
+ * positions in, and the order the creator built it in, so it is kept as it
+ * arrives rather than sorted by price.
+ *
+ * Empty on every space that is not tiered, so a caller that renders nothing for
+ * an empty ladder is a caller that has not changed.
+ */
+export function spaceTiers(space: Pick<Space, "kind" | "positions">): SpaceTier[] {
+  if (!isTieredSpace(space)) return [];
+  const order: string[] = [];
+  const copies = new Map<string, Position[]>();
+  for (const p of space.positions) {
+    if (!p.tierKey) continue;
+    const seen = copies.get(p.tierKey);
+    if (seen) seen.push(p);
+    else {
+      copies.set(p.tierKey, [p]);
+      order.push(p.tierKey);
+    }
+  }
+  return order.map((key) => {
+    const all = copies.get(key)!;
+    const open = all.filter((p) => p.status === "open");
+    // The copy on offer carries the figures a sponsor would pay. With none open
+    // the first copy still holds the price, so a sold-out rung can say what it
+    // went for instead of showing a blank where its price was.
+    const shown = open[0] ?? all[0];
+    return {
+      key,
+      title: all.find((p) => p.title)?.title ?? all[0].label,
+      perks: all.find((p) => p.perks && p.perks.length > 0)?.perks ?? [],
+      positions: all,
+      open,
+      held: all.filter((p) => p.status === "held").length,
+      sold: all.filter((p) => p.status === "sold").length,
+      buy: open[0] ?? null,
+      priceCents: shown.priceCents,
+      sponsorPaysUsdc: shown.sponsorPaysUsdc,
+      creatorReceivesUsdc: shown.creatorReceivesUsdc,
+      offers: shown.offers ?? null,
+      pitch: all.find((p) => p.pitch)?.pitch ?? null,
+    };
+  });
+}
+
+/**
+ * The cheapest thing a brand can actually buy right now, for the "Spots start
+ * at $50" line the whole ladder is written around. Null when nothing is left to
+ * buy, or when the rungs carry no prices at all (a space sold by offers).
+ */
+export function tiersStartAtCents(tiers: SpaceTier[]): number | null {
+  let least: number | null = null;
+  for (const t of tiers) {
+    if (!t.buy || t.priceCents === null) continue;
+    if (least === null || t.priceCents < least) least = t.priceCents;
+  }
+  return least;
 }
 
 /** The same name for a board or event card, which carries it flat. */

@@ -2,7 +2,7 @@
 import { AD_SPACE_API, HANDLE_RE, SLUG_RE } from "./config";
 import { defaultEventTab } from "./format";
 import { gradientKey } from "./look";
-import type { Booking, EventPage, EventSummary, OfferThread, Space, SpaceCard } from "./types";
+import type { Booking, EventPage, EventSummary, OfferThread, Position, Space, SpaceCard } from "./types";
 
 /**
  * Reading a public Ad Space on the server.
@@ -116,6 +116,27 @@ export async function getPublicSpace(
 }
 
 /**
+ * A position's tier fields (ad-space-tiers-v0.md), filled in for a server that
+ * predates tiers and for one that sends them as something other than a list of
+ * strings. `perks` is plain text by contract; here it is also made plain text
+ * by construction, so nothing downstream can be handed an object to render.
+ *
+ * `tierKey` null is the old shapes — a placement's zones, N identical slots —
+ * and every reader keeps rendering them exactly as it did.
+ */
+function withTierFields(p: Position): Position {
+  const perks = Array.isArray(p.perks) ? p.perks : [];
+  return {
+    ...p,
+    tierKey: typeof p.tierKey === "string" && p.tierKey ? p.tierKey : null,
+    title: typeof p.title === "string" && p.title.trim() ? p.title.trim() : null,
+    // Five is the database's limit; a longer list would be a server we do not
+    // know, and the page still shows the five the creator was allowed to write.
+    perks: perks.filter((line): line is string => typeof line === "string" && line.trim().length > 0).slice(0, 5),
+  };
+}
+
+/**
  * The event fields, filled in when a backend that predates them leaves them
  * out, and the gradient held to the five presets. Every reader downstream can
  * then trust the type instead of checking for undefined.
@@ -124,6 +145,7 @@ function withEventFields(space: Space): Space {
   const raw = space as Partial<Space> & Space;
   return {
     ...raw,
+    positions: (Array.isArray(raw.positions) ? raw.positions : []).map(withTierFields),
     event: raw.event ?? null,
     bannerUrl: raw.bannerUrl ?? null,
     bannerGradient: gradientKey(raw.bannerGradient),
@@ -325,7 +347,17 @@ export async function getOffer(token: string, from: Headers | null): Promise<Off
     const body = (await res.json()) as { data?: Partial<OfferThread> };
     const data = body?.data;
     return data?.offer && data.space
-      ? { kind: "found", thread: { offer: data.offer, space: data.space, position: data.position ?? null } }
+      ? {
+          kind: "found",
+          // The spot comes from a different endpoint than the board, so its
+          // tier fields are filled here too: the offer page prints a tier's
+          // name and its lines from the same shape the board does.
+          thread: {
+            offer: data.offer,
+            space: data.space,
+            position: data.position ? withTierFields(data.position) : null,
+          },
+        }
       : { kind: "unreachable" };
   } catch {
     return { kind: "unreachable" };
