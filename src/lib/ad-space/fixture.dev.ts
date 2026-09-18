@@ -14,7 +14,20 @@
  *   /s/coinempress/road-to-devcon-8    Devcon 8 (no city photo), sea gradient
  *   /s/coinempress/token2049-pitch-reviews
  *                                      a session space (In the room): pitch
- *                                      review, TOKEN2049, one dispute on record
+ *                                      review, TOKEN2049, one dispute on record,
+ *                                      and a funding goal already beaten (133%)
+ *   /s/coinempress/token2049-afterparty-host
+ *                                      a custom service, named by its creator,
+ *                                      with a mention on X and a funding goal
+ *                                      still a way off (21%)
+ *   /s/coinempress/breakpoint-london-coverage
+ *                                      a TIERED service (ad-space-tiers-v0.md):
+ *                                      one event, three prices — $50 logos (six,
+ *                                      four left), a $200 card and mic placement
+ *                                      (three, all gone, so the rung shows grey)
+ *                                      and one $1,300 flagship interview that
+ *                                      sells its own way, by bidding, on a board
+ *                                      whose other rungs sell at their price
  * and every other card on an event page opens a copy of the matching board.
  *
  * Events:
@@ -31,9 +44,13 @@
 
 import type {
   Booking,
+  CreatorPage,
   EventPage,
   EventSummary,
+  OfferThread,
+  OfferView,
   Position,
+  PositionOffers,
   SessionState,
   SessionView,
   Space,
@@ -126,6 +143,13 @@ function position(
     takeover: null,
     sponsor: null,
     delivered: null,
+    // The old shapes: a placement's zones and N identical slots carry no tier
+    // and no mode of their own, and render exactly as they did before tiers
+    // existed — selling the way their space sells.
+    tierKey: null,
+    title: null,
+    perks: [],
+    saleMode: null,
     ...over,
   };
 }
@@ -255,6 +279,9 @@ function suitcase(): Space {
     feePayer: "sponsor",
     pricingMode: "fixed",
     takeoverMultiple: null,
+    acceptsOffers: false,
+    biddingEndsAt: null,
+    spaceOffers: null,
     venueType: "conference",
     eventName: "TOKEN2049 Singapore",
     fallback: "content_anyway",
@@ -262,10 +289,14 @@ function suitcase(): Space {
     attestations: ["owns_item", "venue_rules_checked"],
     requiredAttestations: ["owns_item", "venue_rules_checked"],
     deliverables: [
-      { id: "d1", kind: "video", platform: "x", count: 1, dueDate: "2026-10-04", deliveredUrl: null, state: "upcoming" },
-      { id: "d2", kind: "photo", platform: "x", count: 3, dueDate: "2026-10-09", deliveredUrl: null, state: "upcoming" },
-      { id: "d3", kind: "post", platform: "x", count: 1, dueDate: "2026-09-12", deliveredUrl: "https://x.com/coinempress/status/1", state: "delivered" },
+      { id: "d1", kind: "video", platform: "x", count: 1, dueDate: "2026-10-04", deliveredUrl: null, state: "upcoming", note: "The packing vlog, suitcase in frame." },
+      { id: "d2", kind: "photo_post", platform: "x", count: 3, dueDate: "2026-10-09", deliveredUrl: null, state: "upcoming", note: null },
+      { id: "d4", kind: "mention", platform: "x", count: 2, dueDate: "2026-10-08", deliveredUrl: null, state: "upcoming", note: null },
+      { id: "d5", kind: "custom", platform: null, count: 1, dueDate: "2026-10-08", deliveredUrl: null, state: "upcoming", note: "Your sticker on my conference badge for both days" },
+      { id: "d3", kind: "thank_you_post", platform: "x", count: 1, dueDate: "2026-09-12", deliveredUrl: "https://x.com/coinempress/status/1", state: "delivered", note: null },
     ],
+    serviceName: null,
+    serviceSummary: null,
     template: {
       id: "carry-on-suitcase",
       kind: "placement",
@@ -281,6 +312,10 @@ function suitcase(): Space {
       service: null,
     },
     positions,
+    // No goal: the ordinary space, and the one that proves the hero still counts
+    // spots exactly as it did before goals existed. The afterparty and the pitch
+    // reviews carry one.
+    fundingGoalCents: null,
     totals: { positions: 18, sold: 8, committedCents: 177500, totalCents: 420000 },
     updates: [
       {
@@ -532,6 +567,210 @@ function takeovers(): Space {
  * block ever shows on a session slot, and the track record carries a dispute so
  * "· 1 disputed" renders.
  */
+/**
+ * A `custom-service` space: the creator names and describes what they sell, and
+ * the brand reads that instead of the template's generic copy.
+ */
+function customService(): Space {
+  const base = videos();
+  return {
+    ...base,
+    id: "55555555-5555-4555-8555-555555555555",
+    slug: "token2049-afterparty-host",
+    title: "Host my TOKEN2049 afterparty table",
+    reason: null,
+    serviceName: "Afterparty table host",
+    serviceSummary: "Your brand hosts my table at the Marina Bay afterparty: your name on the table card and a toast to you.",
+    deliverables: [
+      { id: "c1", kind: "mention", platform: "x", count: 1, dueDate: "2026-10-09", deliveredUrl: null, state: "upcoming", note: "Tagged in the night's recap thread" },
+    ],
+    template: {
+      id: "custom-service",
+      kind: "service",
+      productType: "service",
+      name: "Custom service",
+      views: [],
+      zones: [],
+      service: { deliverableKind: "custom", summary: "Something the creator describes.", maxSlots: 20, custom: true },
+    },
+    // A campaign with a goal and a way to go: the hero reads "$500 of $2,400 ·
+    // 21%" and the bar fills with the money rather than with the slots sold.
+    // Its fallback carries no note, so the block shows the standard sentence.
+    fundingGoalCents: 240000,
+    share: {
+      url: "https://hihodl.xyz/s/coinempress/token2049-afterparty-host",
+      text: "Host my TOKEN2049 afterparty table https://hihodl.xyz/s/coinempress/token2049-afterparty-host",
+    },
+  };
+}
+
+/**
+ * The listing tiers exist for (ad-space-tiers-v0.md): a creator with a
+ * content-creator pass covering one event, selling three different things at
+ * three prices on one page.
+ *
+ * Every state the ladder has to render is here: a rung half sold with one copy
+ * being paid for, a rung with nothing left (which still shows, greyed, because
+ * a ladder with a missing rung reads as a mistake), and the flagship, sold
+ * once, still there.
+ */
+function eventCoverage(): Space {
+  const base = videos();
+  const pid = (n: number) => `00000000-0000-4000-c000-${String(n).padStart(12, "0")}`;
+
+  /** A tier, and the copies of it that are for sale. */
+  type Tier = { key: string; title: string; priceCents: number; perks: string[]; saleMode?: Position["saleMode"] };
+  /* The flagship's countdown. On a ladder the clock can belong to one rung
+     rather than to the board, so the two cheaper rungs know nothing about it. */
+  const biddingEndsAt = new Date(Date.now() + 3 * DAY + 4 * HOUR).toISOString();
+
+  const STRIP: Tier = {
+    key: "mini-strip",
+    title: "Logo in my mini strip",
+    priceCents: 5000,
+    // Said out loud, though it is also the space's mode: a rung that sells
+    // first come first served on a board where the flagship is bid for.
+    saleMode: "fixed",
+    perks: [
+      "Your logo in the strip that runs on every clip I post from the floor",
+      "Your name in the caption of each daily recap",
+    ],
+  };
+  const CARD_MIC: Tier = {
+    key: "card-and-mic",
+    title: "Card and mic placement",
+    priceCents: 20000,
+    saleMode: "fixed",
+    perks: [
+      "Everything in the mini strip",
+      "Your card on the table in every interview I shoot",
+      "Your logo on my mic flag, on camera all three days",
+    ],
+  };
+  /* There is one interview and one evening to post it, so it goes to the
+     highest bid: a rung selling its own way on a board that otherwise sells at
+     a price. Bidding rungs sell exactly one thing, hence the single copy. */
+  const FLAGSHIP: Tier = {
+    key: "flagship-interview",
+    title: "Flagship on-site interview, fully produced",
+    priceCents: 130000,
+    saleMode: "bids",
+    perks: [
+      "Everything in the card and mic placement",
+      "A 10-minute interview with your founder, shot and edited by me",
+      "Posted the same evening, with your handle in the post",
+      "The raw footage as well, yours to re-cut anywhere you like",
+    ],
+  };
+
+  /** One copy of a rung. Every copy of a tier carries the same name, price and lines. */
+  const copy = (n: number, tier: Tier, over: Partial<Position> = {}): Position =>
+    position(
+      pid(n),
+      { zoneKey: `slot-${n}`, label: tier.title, suggestedPriceCents: tier.priceCents },
+      {
+        tierKey: tier.key,
+        title: tier.title,
+        perks: tier.perks,
+        saleMode: tier.saleMode ?? null,
+        accepts: ["logo", "qr", "text"],
+        pitch: null,
+        ...over,
+      },
+    );
+
+  const sponsor = (name: string, bg: string, fg: string): Position["sponsor"] => ({
+    name,
+    url: null,
+    xHandle: name.toLowerCase().replace(/\W/g, ""),
+    contentKind: "logo",
+    contentText: null,
+    imageUrl: logo(name.toUpperCase(), bg, fg),
+  });
+
+  const positions: Position[] = [
+    copy(1, STRIP, { status: "sold", sponsor: sponsor("Kopi Labs", "#FFFFFF", "#141F2E") }),
+    copy(2, STRIP, { status: "held" }),
+    copy(3, STRIP),
+    copy(4, STRIP),
+    copy(5, STRIP),
+    copy(6, STRIP),
+    copy(7, CARD_MIC, { status: "sold", sponsor: sponsor("Acme", "#FFFFFF", "#141F2E") }),
+    copy(8, CARD_MIC, { status: "sold", sponsor: sponsor("Nodeline", "#5B7CFF", "#FFFFFF") }),
+    copy(9, CARD_MIC, { status: "sold", sponsor: sponsor("Lumen", "#FFB703", "#0A0500") }),
+    copy(10, FLAGSHIP, {
+      // The opening bid is the rung's price; everything else here is the
+      // ordinary bids block, carried by the position as a placement's is.
+      offers: {
+        ...NO_OFFERS,
+        mode: "bids",
+        bidCount: 3,
+        highestBidUsdc: "1500.00",
+        highestBidSponsorPaysUsdc: "1575.00",
+        leaderName: "Orbit",
+        reserveMet: true,
+        openingBidUsdc: "1300.00",
+        nextMinimumBidUsdc: "1575.00",
+        biddingEndsAt,
+        biddingOpen: true,
+      },
+    }),
+  ];
+
+  return {
+    ...base,
+    id: "77777777-7777-4777-8777-777777777777",
+    slug: "breakpoint-london-coverage",
+    title: "I'm covering Breakpoint London",
+    reason:
+      "Three days on the floor with a creator pass: interviews, recap footage and daily posts, all shot and edited by me. Pick a spot, pay in USDC, your brand goes live.",
+    deliverBy: dayFromNow(45),
+    chains: ["solana", "base", "polygon"],
+    fallback: "creator_refund",
+    fallbackNote: null,
+    attestations: ["discloses_sponsorship"],
+    requiredAttestations: ["discloses_sponsorship"],
+    deliverables: [
+      { id: "b1", kind: "video", platform: "x", count: 3, dueDate: dayFromNow(45), deliveredUrl: null, state: "upcoming", note: "One recap a day, all three days." },
+      { id: "b2", kind: "mention", platform: "x", count: 1, dueDate: dayFromNow(46), deliveredUrl: null, state: "upcoming", note: null },
+    ],
+    template: {
+      id: "event-coverage",
+      kind: "service",
+      productType: "service",
+      name: "Cover an event for you",
+      views: [],
+      zones: [],
+      service: {
+        deliverableKind: "video",
+        summary:
+          "Three days at the event with a content-creator pass: floor interviews, recap footage and daily posts.",
+        maxSlots: 20,
+      },
+    },
+    positions,
+    // The board sells at its prices; only the flagship rung takes bids, so the
+    // space's mode stays fixed and the countdown sits on that rung.
+    pricingMode: "fixed",
+    biddingEndsAt,
+    // $650 of $2,000 so far: one mini strip and the three card and mic spots.
+    fundingGoalCents: 200000,
+    totals: { positions: positions.length, sold: 4, committedCents: 65000, totalCents: 220000 },
+    updates: [],
+    // A space with no event row of its own: the name is free text, as it is on
+    // every space made before events existed.
+    eventName: "Breakpoint London",
+    event: null,
+    bannerUrl: null,
+    bannerGradient: "night",
+    share: {
+      url: "https://hihodl.xyz/s/coinempress/breakpoint-london-coverage",
+      text: "Spots on my Breakpoint London coverage start at $50 https://hihodl.xyz/s/coinempress/breakpoint-london-coverage",
+    },
+    siblings: [],
+  };
+}
+
 function pitchReviews(): Space {
   const base = videos();
   const slot = (n: number, over: Partial<Position> = {}) =>
@@ -570,6 +809,9 @@ function pitchReviews(): Space {
       },
     },
     positions: [slot(1, { status: "sold" }), slot(2, { status: "sold" }), slot(3, { status: "held" }), slot(4), slot(5), slot(6)],
+    // A goal already beaten, which is the case the bar must not get wrong:
+    // "$200 of $150 · 133%", the bar full and the number still climbing.
+    fundingGoalCents: 15000,
     totals: { positions: 6, sold: 2, committedCents: 20000, totalCents: 60000 },
     share: {
       url: "https://hihodl.xyz/s/coinempress/token2049-pitch-reviews?m=2",
@@ -671,6 +913,37 @@ function token2049Tabs(): EventPage["tabs"] {
         creator: COIN,
         totals: { positions: 18, open: 9, sold: 8 },
         closesAt: new Date(Date.now() + 12 * DAY + 5 * 60 * 60 * 1000).toISOString(),
+      }),
+      card(21, {
+        path: "/s/coinempress/token2049-bids",
+        title: "Bid for my TOKEN2049 suitcase",
+        tab: "ground",
+        templateName: "Carry-on suitcase",
+        creator: COIN,
+        pricingMode: "bids",
+        biddingEndsAt: new Date(Date.now() + 2 * DAY + 5 * 60 * 60 * 1000).toISOString(),
+        totals: { positions: 18, open: 8, sold: 8 },
+        fromPriceCents: null,
+      }),
+      card(22, {
+        path: "/s/coinempress/token2049-offers",
+        title: "Make me an offer: TOKEN2049 suitcase",
+        tab: "ground",
+        templateName: "Carry-on suitcase",
+        creator: COIN,
+        pricingMode: "offers",
+        totals: { positions: 18, open: 9, sold: 8 },
+        fromPriceCents: null,
+      }),
+      card(23, {
+        path: "/s/coinempress/token2049-videos-offers",
+        title: "TOKEN2049 short videos, offers welcome",
+        tab: "ground",
+        templateName: "Short-form video",
+        creator: COIN,
+        acceptsOffers: true,
+        totals: { positions: 3, open: 1, sold: 1 },
+        fromPriceCents: 52500,
       }),
       card(2, {
         path: "/s/defidana/token2049-blazer",
@@ -805,6 +1078,65 @@ export function fixtureEvent(slug: string): EventPage | { redirectTo: string } |
 }
 
 /**
+ * A creator's hub, `/s/coinempress`: the same cards the two event fixtures
+ * carry, regrouped the way the API groups them — one section per event, in the
+ * server's order, and last the takeover suitcase, which belongs to no event.
+ * Every other handle answers 404, as a handle with nothing listable does.
+ */
+export function fixtureCreator(handle: string): CreatorPage | null {
+  const lower = handle.toLowerCase();
+  if (lower !== "coinempress") return null;
+
+  const mine = (tabs: EventPage["tabs"]): SpaceCard[] =>
+    [...tabs.ground, ...tabs.feed, ...tabs.room].filter((c) => c.creator.xHandle === "coinempress");
+  const others = (tabs: EventPage["tabs"]): number =>
+    new Set(
+      [...tabs.ground, ...tabs.feed, ...tabs.room]
+        .map((c) => c.creator.xHandle)
+        .filter((h): h is string => Boolean(h) && h !== "coinempress"),
+    ).size;
+
+  const token = token2049Tabs();
+  const devcon = devconTabs();
+  const groups: CreatorPage["groups"] = [
+    { event: TOKEN2049, othersAtEvent: others(token), cards: mine(token) },
+    { event: DEVCON, othersAtEvent: others(devcon), cards: mine(devcon) },
+    {
+      // The one group with no event, always last, so the page's honest heading
+      // for it has something to render against.
+      event: null,
+      othersAtEvent: 0,
+      cards: [
+        card(11, {
+          path: "/s/coinempress/token2049-takeover",
+          title: "Take my suitcase off whoever has it",
+          tab: "ground",
+          templateName: "Carry-on suitcase",
+          creator: COIN,
+          bannerGradient: "ember",
+          pricingMode: "takeover",
+          totals: { positions: 18, open: 11, sold: 7 },
+          fromPriceCents: 25000,
+        }),
+      ],
+    },
+  ];
+
+  return {
+    creator: { ...COIN, xHandle: "coinempress" },
+    groups,
+    totals: {
+      spaces: groups.reduce((n, g) => n + g.cards.length, 0),
+      openSpots: groups.reduce(
+        (n, g) => n + g.cards.reduce((m, c) => m + (c.status === "live" ? c.totals.open : 0), 0),
+        0,
+      ),
+      events: groups.filter((g) => g.event).length,
+    },
+  };
+}
+
+/**
  * Any card on an event page opens a board: the real fixtures for coinempress,
  * and for everybody else a copy of the suitcase or the video board wearing that
  * card's creator, title, event and look.
@@ -843,12 +1175,256 @@ function fromCard(c: SpaceCard, event: EventSummary, all: SpaceCard[]): Space {
   };
 }
 
+/* ── Offers and bids (hispace-offers-v0.md) ─────────────────────────────── */
+
+const NO_OFFERS: PositionOffers = {
+  mode: "offers",
+  openCount: null,
+  bidCount: null,
+  highestBidUsdc: null,
+  highestBidSponsorPaysUsdc: null,
+  leaderName: null,
+  reserveMet: null,
+  openingBidUsdc: null,
+  nextMinimumBidUsdc: null,
+  biddingEndsAt: null,
+  biddingOpen: null,
+  reservedUntil: null,
+};
+
+/**
+ * The suitcase, sold by bidding: a spot with no bids, one led with the reserve
+ * met, one led below the reserve, one whose bidding ended, and one held for the
+ * winning bid while it is paid.
+ */
+function bidsBoard(): Space {
+  const base = suitcase();
+  const ends = new Date(Date.now() + 2 * DAY + 5 * HOUR).toISOString();
+  const bids = (over: Partial<PositionOffers>): PositionOffers => ({
+    ...NO_OFFERS,
+    mode: "bids",
+    bidCount: 0,
+    openingBidUsdc: "100.00",
+    nextMinimumBidUsdc: "100.00",
+    biddingEndsAt: ends,
+    biddingOpen: true,
+    ...over,
+  });
+  const positions = base.positions.map((p, i): Position => {
+    if (p.status === "sold") return { ...p, offers: bids({ biddingOpen: false }) };
+    const opening = { priceCents: 10000, sponsorPaysUsdc: "105.00", creatorReceivesUsdc: "100.00" };
+    if (i === 1) {
+      return {
+        ...p,
+        ...opening,
+        offers: bids({
+          bidCount: 12,
+          highestBidUsdc: "420.00",
+          highestBidSponsorPaysUsdc: "441.00",
+          leaderName: "Acme",
+          reserveMet: true,
+          nextMinimumBidUsdc: "441.00",
+        }),
+      };
+    }
+    if (i === 3) {
+      return {
+        ...p,
+        ...opening,
+        status: "held",
+        offers: bids({
+          bidCount: 4,
+          highestBidUsdc: "260.00",
+          highestBidSponsorPaysUsdc: "273.00",
+          leaderName: "Nodeline",
+          biddingOpen: false,
+          biddingEndsAt: new Date(Date.now() - 3 * HOUR).toISOString(),
+          reservedUntil: new Date(Date.now() + 20 * HOUR).toISOString(),
+        }),
+      };
+    }
+    if (i === 6) {
+      return {
+        ...p,
+        ...opening,
+        offers: bids({
+          bidCount: 2,
+          highestBidUsdc: "150.00",
+          highestBidSponsorPaysUsdc: "157.50",
+          leaderName: "Kopi Labs",
+          reserveMet: false,
+          nextMinimumBidUsdc: "157.50",
+          biddingEndsAt: new Date(Date.now() + 7 * 60 * 1000).toISOString(),
+        }),
+      };
+    }
+    if (i === 7) {
+      return {
+        ...p,
+        ...opening,
+        offers: bids({
+          bidCount: 1,
+          highestBidUsdc: "100.00",
+          highestBidSponsorPaysUsdc: "105.00",
+          leaderName: "Orbit",
+          biddingOpen: false,
+          biddingEndsAt: new Date(Date.now() - HOUR).toISOString(),
+        }),
+      };
+    }
+    return { ...p, ...opening, offers: bids({}) };
+  });
+  return {
+    ...base,
+    id: "44444444-4444-4444-8444-444444444444",
+    slug: "token2049-bids",
+    title: "Bid for my TOKEN2049 suitcase",
+    pricingMode: "bids",
+    biddingEndsAt: ends,
+    positions,
+    share: { url: "https://hihodl.xyz/s/coinempress/token2049-bids", text: "Bid for my suitcase" },
+    siblings: [],
+  };
+}
+
+/** The suitcase with no prices: every open spot takes offers. */
+function offersBoard(): Space {
+  const base = suitcase();
+  return {
+    ...base,
+    id: "55555555-5555-4555-8555-555555555555",
+    slug: "token2049-offers",
+    title: "Make me an offer: TOKEN2049 suitcase",
+    pricingMode: "offers",
+    positions: base.positions.map((p, i) =>
+      p.status === "sold"
+        ? { ...p, offers: { ...NO_OFFERS } }
+        : {
+            ...p,
+            priceCents: null,
+            sponsorPaysUsdc: null,
+            creatorReceivesUsdc: null,
+            offers: {
+              ...NO_OFFERS,
+              openCount: i % 3,
+              reservedUntil: p.status === "held" ? new Date(Date.now() + 18 * HOUR).toISOString() : null,
+            },
+          },
+    ),
+    share: { url: "https://hihodl.xyz/s/coinempress/token2049-offers", text: "Make me an offer" },
+    siblings: [],
+  };
+}
+
+/** The video slots at a fixed price that also takes offers, on the space. */
+function videosWithOffers(): Space {
+  const base = videos();
+  return {
+    ...base,
+    id: "66666666-6666-4666-8666-666666666666",
+    slug: "token2049-videos-offers",
+    acceptsOffers: true,
+    spaceOffers: { ...NO_OFFERS, mode: "fixed_with_offers", openCount: 3 },
+    siblings: [],
+  };
+}
+
+function offersFixtures(): Space[] {
+  return [bidsBoard(), offersBoard(), videosWithOffers()];
+}
+
+/** A fixture offer's token: a 43-character name, so it passes the real token check. */
+function fixtureToken(name: string): string {
+  return `fixture_${name}`.padEnd(43, "x");
+}
+
+export function fixtureOffer(token: string): OfferThread | null {
+  const names = ["pending", "countered", "accepted", "paid", "declined", "expired", "bid_leading", "bid_outbid", "videos_accepted"];
+  const name = names.find((n) => fixtureToken(n) === token);
+  if (!name) return null;
+  const bid = name.startsWith("bid_");
+  const space = bid ? bidsBoard() : name.startsWith("videos") ? videosWithOffers() : offersBoard();
+  const position = bid ? space.positions[1] : name.startsWith("videos") ? space.positions[2] : space.positions[1];
+  const at = (h: number) => new Date(Date.now() - h * HOUR).toISOString();
+  const status: OfferView["status"] =
+    name === "bid_leading" || name === "bid_outbid" ? "pending" : name === "videos_accepted" ? "accepted" : (name as OfferView["status"]);
+  const accepted = status === "accepted" || status === "paid";
+  const rounds: OfferView["rounds"] =
+    name === "pending" || bid
+      ? [{ by: "sponsor", amountUsdc: bid ? "420.00" : "300.00", at: at(5) }]
+      : [
+          { by: "sponsor", amountUsdc: "300.00", at: at(30) },
+          { by: "auto", amountUsdc: "350.00", at: at(30) },
+          ...(status === "countered" ? [] : [{ by: "sponsor" as const, amountUsdc: "350.00", at: at(4) }]),
+        ];
+  const offer: OfferView = {
+    id: "0f000000-0000-4000-8000-000000000001",
+    spaceId: space.id,
+    positionId: position.id,
+    positionLabel: position.label,
+    kind: bid ? "bid" : "offer",
+    status,
+    amountUsdc: bid ? (name === "bid_leading" ? "420.00" : "380.00") : status === "countered" || name === "pending" ? "300.00" : "350.00",
+    sponsorPaysUsdc: bid ? (name === "bid_leading" ? "441.00" : "399.00") : status === "countered" || name === "pending" ? "315.00" : "367.50",
+    counterUsdc: status === "countered" ? "350.00" : null,
+    counterSponsorPaysUsdc: status === "countered" ? "367.50" : null,
+    agreedUsdc: accepted ? "350.00" : null,
+    agreedSponsorPaysUsdc: accepted ? "367.50" : null,
+    rounds,
+    countersLeft: 2,
+    sponsor: {
+      name: "Acme",
+      contactKind: "email",
+      contactValue: "team@acme.xyz",
+      message: "We launch on day 2 and would love the front of the suitcase.",
+      via: "web",
+      backed: bid || name === "accepted" ? { chain: "solana", address: "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU", checkedAt: at(5) } : null,
+    },
+    declineReason: status === "declined" ? "too_low" : null,
+    expiresAt:
+      status === "pending" || status === "countered"
+        ? new Date(Date.now() + 40 * HOUR).toISOString()
+        : status === "accepted"
+          ? new Date(Date.now() + 20 * HOUR).toISOString()
+          : null,
+    orderId: status === "paid" ? "0e000000-0000-4000-8000-000000000009" : null,
+    leading: bid ? name === "bid_leading" : null,
+    createdAt: at(30),
+    updatedAt: at(4),
+  };
+  return {
+    offer,
+    space: {
+      id: space.id,
+      path: `/s/coinempress/${space.slug}`,
+      title: space.title,
+      templateName: space.template.name,
+      pricingMode: space.pricingMode,
+      status: space.status,
+      closesAt: space.closesAt,
+      creator: { xHandle: space.creator.xHandle, xName: space.creator.xName, xAvatarUrl: null },
+      event: space.event,
+    },
+    position,
+  };
+}
+
 export function fixtureSpace(handle: string, slug: string): Space | null {
+  if (handle === "id")
+    return (
+      [suitcase(), videos(), takeovers(), pitchReviews(), customService(), eventCoverage(), ...offersFixtures()].find(
+        (s) => s.id === slug,
+      ) ?? null
+    );
   if (handle.toLowerCase() === "coinempress") {
+    const offered = offersFixtures().find((s) => s.slug === slug);
+    if (offered) return offered;
     if (slug === "road-to-token2049") return suitcase();
     if (slug === "token2049-videos") return videos();
     if (slug === "token2049-takeover") return takeovers();
     if (slug === "token2049-pitch-reviews") return pitchReviews();
+    if (slug === "token2049-afterparty-host") return customService();
+    if (slug === "breakpoint-london-coverage") return eventCoverage();
   }
   const path = `/s/${handle.toLowerCase()}/${slug}`;
   for (const [event, tabs] of [

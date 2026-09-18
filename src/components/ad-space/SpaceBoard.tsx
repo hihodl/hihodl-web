@@ -4,13 +4,27 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { currentCheckout, existingCheckoutKey } from "@/lib/ad-space/checkout-client";
-import { isSessionSpace } from "@/lib/ad-space/format";
-import type { Order, Position, Space } from "@/lib/ad-space/types";
+import {
+  instantUtc,
+  isSessionSpace,
+  isTieredSpace,
+  serviceName,
+  serviceSummary,
+  spaceTiers,
+  timeLeft,
+} from "@/lib/ad-space/format";
+import { type SavedOffer, offerModeOf, offerPath, savedOffers } from "@/lib/ad-space/offers-client";
+import type { OfferKind, OfferMode, Order, Position, PositionOffers, Space } from "@/lib/ad-space/types";
 
 import { Checkout } from "./Checkout";
+import { IfItDoesNotHappen } from "./IfItDoesNotHappen";
+import { OfferSheet } from "./OfferSheet";
 import { PositionCard } from "./PositionCard";
 import { ProductBoard } from "./ProductBoard";
-import { btnSmall, eyebrow, pill } from "./ui";
+import { TierLadder } from "./TierLadder";
+import { btnSmall, btnSmallSecondary, eyebrow, pill } from "./ui";
+import { useServerNow } from "./useServerNow";
+import { WhatTheBrandGets } from "./WhatTheBrandGets";
 
 /**
  * The interactive middle of the page: the board (a drawn product, or a grid
@@ -21,12 +35,21 @@ import { btnSmall, eyebrow, pill } from "./ui";
  * checkout, and so does a sold one on a takeover board while its ladder is
  * still going; tapping any other sold or held one scrolls to its card, which
  * says who has it.
+ *
+ * On a space where the sponsor names the price (hispace-offers-v0.md), an open
+ * zone opens the offer or bid form instead, and a fixed price that also takes
+ * offers keeps Buy now on the zone and adds Make an offer on the card. A service
+ * space takes offers once, for the space, above its slots.
  */
 export function SpaceBoard({ space }: { space: Space }) {
   const router = useRouter();
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [flashId, setFlashId] = useState<string | null>(null);
   const [checkoutFor, setCheckoutFor] = useState<Position | null>(null);
+  /** The offer or bid form: a spot, or null for a service space's own offer. */
+  const [offerFor, setOfferFor] = useState<{ position: Position | null; kind: OfferKind } | null>(null);
+  const [mine, setMine] = useState<SavedOffer[]>([]);
+  const now = useServerNow();
   const [resumable, setResumable] = useState<{ position: Position; order: Order } | null>(null);
   const cards = useRef(new Map<string, HTMLElement>());
 
@@ -61,15 +84,57 @@ export function SpaceBoard({ space }: { space: Space }) {
     };
   }, [space.positions]);
 
+  /* The offers this browser made here, so a sponsor finds their way back. */
+  useEffect(() => setMine(savedOffers(space.id)), [space.id]);
+
   const onPaid = useCallback(() => router.refresh(), [router]);
   const onClose = useCallback(() => setCheckoutFor(null), []);
+  const onOfferClose = useCallback(() => setOfferFor(null), []);
+  const onOfferSent = useCallback(() => {
+    setMine(savedOffers(space.id));
+    router.refresh();
+  }, [router, space.id]);
+
+  const isService = space.template.kind === "service";
+  /* A ladder, or N of one thing (ad-space-tiers-v0.md). On a ladder every rung
+     carries its own price, its own lines and its own offers, so the offer sits
+     on the rung and not on the space, exactly as it does on a placement. */
+  const tiered = isTieredSpace(space);
+  const tiers = tiered ? spaceTiers(space) : [];
+  const spaceMode = offerModeOf(space);
+  const modeOf = useCallback(
+    (p: Position): OfferMode | null => offerModeOf(space, isService && !tiered ? null : p),
+    [space, isService, tiered],
+  );
+  /** Bidding is open while the server says so and its end is still ahead on the server's clock. */
+  const biddingOpen = useCallback(
+    (p: Position) => {
+      const o = p.offers;
+      if (!o || o.biddingOpen === false) return false;
+      if (!o.biddingEndsAt || now === null) return true;
+      return Date.parse(o.biddingEndsAt) > now;
+    },
+    [now],
+  );
+  const openOffer = useCallback(
+    (p: Position) => setOfferFor({ position: p, kind: modeOf(p) === "bids" ? "bid" : "offer" }),
+    [modeOf],
+  );
 
   const pick = useCallback(
     (p: Position) => {
       // Clicking a spot on the product opens checkout when the spot can be
       // bought — which on a takeover board includes a SOLD one, at double.
       const takeable = p.status === "sold" && p.takeover && !p.takeover.closed && p.takeover.nextPriceUsdc;
-      if (buyable && (p.status === "open" || takeable)) {
+      const mode = modeOf(p);
+      if (buyable && p.status === "open" && (mode === "offers" || mode === "bids")) {
+        const ends = p.offers?.biddingEndsAt ? Date.parse(p.offers.biddingEndsAt) : NaN;
+        const biddingOver = mode === "bids" && (p.offers?.biddingOpen === false || (now !== null && ends <= now));
+        if (!biddingOver) {
+          openOffer(p);
+          return;
+        }
+      } else if (buyable && (p.status === "open" || takeable)) {
         setCheckoutFor(p);
         return;
       }
@@ -78,17 +143,20 @@ export function SpaceBoard({ space }: { space: Space }) {
       setFlashId(p.id);
       window.setTimeout(() => setFlashId((f) => (f === p.id ? null : f)), 1600);
     },
-    [buyable],
+    [buyable, modeOf, now, openOffer],
   );
 
   const active = hoverId ?? flashId;
   const sizeOf = (p: Position) => space.template.zones.find((z) => z.zoneKey === p.zoneKey)?.sizeLabel ?? null;
-  const isService = space.template.kind === "service";
   const session = isSessionSpace(space);
 
-  const cardList = (
+  /* Everything the ladder does not already show. Without a ladder that is every
+     position, whatever the positions carry, so a placement or an untiered
+     service is the board exactly as it has always been. */
+  const loose = tiered ? space.positions.filter((p) => !p.tierKey) : space.positions;
+  const cardList = loose.length === 0 ? null : (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {space.positions.map((p) => (
+      {loose.map((p) => (
         <PositionCard
           key={p.id}
           ref={(el) => {
@@ -101,8 +169,11 @@ export function SpaceBoard({ space }: { space: Space }) {
           buyable={buyable}
           takeoverMultiple={space.takeoverMultiple}
           session={session}
+          offerMode={modeOf(p)}
+          now={now}
           onHover={setHoverId}
           onSponsor={setCheckoutFor}
+          onOffer={isService && !tiered ? undefined : openOffer}
         />
       ))}
     </div>
@@ -125,13 +196,48 @@ export function SpaceBoard({ space }: { space: Space }) {
         </div>
       )}
 
+      {mine.length > 0 && <YourOffers offers={mine} />}
+
       {isService ? (
         <div className="flex flex-col gap-8">
           {space.template.service && (
             <div className="max-w-2xl">
-              <p className={`${eyebrow} text-moonlight`}>{session ? `Book: ${space.template.name}` : space.template.name}</p>
-              <p className="mt-3 text-lead text-text-muted">{space.template.service.summary}</p>
+              <p className={`${eyebrow} break-words text-moonlight [overflow-wrap:anywhere]`}>
+                {session ? `Book: ${serviceName(space)}` : serviceName(space)}
+              </p>
+              {serviceSummary(space) && (
+                <p className="mt-3 whitespace-pre-line break-words text-lead text-text-muted [overflow-wrap:anywhere]">
+                  {serviceSummary(space)}
+                </p>
+              )}
             </div>
+          )}
+          <WhatTheBrandGets space={space} />
+          {/* A session space has no "every slot includes" card at all, so this
+              is the only thing between the summary and the slots that says what
+              happens if the session doesn't. It renders on both boards. */}
+          <IfItDoesNotHappen space={space} />
+          {!tiered && spaceMode && spaceMode !== "bids" && (
+            <SpaceOffersPanel
+              mode={spaceMode}
+              offers={space.spaceOffers}
+              canOffer={buyable && space.positions.some((p) => p.status === "open")}
+              session={session}
+              now={now}
+              onOffer={() => setOfferFor({ position: null, kind: "offer" })}
+            />
+          )}
+          {tiered && (
+            <TierLadder
+              tiers={tiers}
+              buyable={buyable}
+              session={session}
+              modeOf={modeOf}
+              biddingOpen={biddingOpen}
+              now={now}
+              onSponsor={setCheckoutFor}
+              onOffer={openOffer}
+            />
           )}
           {cardList}
         </div>
@@ -145,8 +251,10 @@ export function SpaceBoard({ space }: { space: Space }) {
               onHover={setHoverId}
               onPick={pick}
             />
-            <Legend takeover={space.pricingMode === "takeover"} />
+            <Legend takeover={space.pricingMode === "takeover"} mode={spaceMode} />
           </div>
+          <WhatTheBrandGets space={space} />
+          <IfItDoesNotHappen space={space} />
           <div>
             <h2 className="mb-6 font-display text-h4 font-light text-text">Every spot</h2>
             {cardList}
@@ -157,18 +265,102 @@ export function SpaceBoard({ space }: { space: Space }) {
       {checkoutFor && (
         <Checkout space={space} position={checkoutFor} onClose={onClose} onPaid={onPaid} />
       )}
+
+      {offerFor && (
+        <OfferSheet
+          space={space}
+          position={offerFor.position}
+          kind={offerFor.kind}
+          now={now}
+          onClose={onOfferClose}
+          onSent={onOfferSent}
+        />
+      )}
     </>
   );
 }
 
-function Legend({ takeover }: { takeover: boolean }) {
+function Legend({ takeover, mode }: { takeover: boolean; mode: OfferMode | null }) {
   return (
     <ul className="mt-10 flex flex-wrap items-center justify-center gap-3" aria-label="Legend">
-      <li className={pill.open}>Available, tap to sponsor</li>
+      <li className={pill.open}>
+        {mode === "offers" ? "Available, tap to make an offer" : mode === "bids" ? "Available, tap to bid" : "Available, tap to sponsor"}
+      </li>
       <li className={pill.held}>Being paid now</li>
       {/* On a takeover board a sold spot opens checkout like an open one does
           (see `pick`), so the legend cannot call it just "Sold". */}
       <li className={pill.sold}>{takeover ? "Taken, tap to take it" : "Sold"}</li>
     </ul>
+  );
+}
+
+/**
+ * A service space takes offers once, for the space: slots are identical, and an
+ * accepted offer is given the lowest open one. So the offer button sits here,
+ * above the slots, and never on a slot.
+ */
+function SpaceOffersPanel({
+  mode,
+  offers,
+  canOffer,
+  session,
+  now,
+  onOffer,
+}: {
+  mode: OfferMode;
+  offers: PositionOffers | null;
+  canOffer: boolean;
+  session: boolean;
+  now: number | null;
+  onOffer: () => void;
+}) {
+  const n = offers?.openCount ?? null;
+  const reserved = offers?.reservedUntil ?? null;
+  const noun = session ? "session" : "slot";
+  return (
+    <div className="flex flex-col gap-4 rounded-card border border-[color:var(--color-hairline)] bg-white/[0.03] p-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0">
+        <p className="text-body text-text">
+          {mode === "offers" ? "Name your price" : `Buy a ${noun} now, or make an offer below the price`}
+        </p>
+        <p className="mt-1 text-small text-text-muted">
+          Your offer is for any open {noun}. If the creator accepts it, you get the next free one and 24 hours to pay.
+          {n !== null && (n === 0 ? " No offers yet." : n === 1 ? " 1 open offer." : ` ${n} open offers.`)}
+        </p>
+        {reserved && (
+          <p className="mt-1 text-tiny text-amber">
+            An accepted offer holds a {noun} for{" "}
+            {now === null ? `until ${instantUtc(reserved)}` : timeLeft(Date.parse(reserved) - now)} while it waits for
+            its payment.
+          </p>
+        )}
+      </div>
+      {canOffer && (
+        <button type="button" className={mode === "offers" ? btnSmall : btnSmallSecondary} onClick={onOffer}>
+          Make an offer
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** The offers and bids this browser made on the space, each with its link. */
+function YourOffers({ offers }: { offers: SavedOffer[] }) {
+  return (
+    <div className="mb-10 flex flex-col gap-3 rounded-card border border-amber/40 bg-amber/[0.06] p-5">
+      <p className="text-small text-text">
+        {offers.length === 1 ? "You made an offer here from this browser." : `You made ${offers.length} offers here from this browser.`}
+      </p>
+      <ul className="flex flex-wrap gap-2">
+        {offers.slice(0, 6).map((o) => (
+          <li key={o.token}>
+            <a href={offerPath(o.token)} rel="noreferrer" className={btnSmallSecondary}>
+              {o.kind === "bid" ? "Your bid" : "Your offer"}
+              {o.label ? ` on ${o.label}` : ""}: {o.amountUsdc} USDC
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

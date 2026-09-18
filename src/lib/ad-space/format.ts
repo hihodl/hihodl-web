@@ -10,8 +10,11 @@ import type {
   Chain,
   ContactKind,
   ContentKind,
+  Deliverable,
   DeliverableState,
   Fallback,
+  Position,
+  PositionOffers,
   PositionStatus,
   SessionState,
   Space,
@@ -205,13 +208,15 @@ export function trackRecordNeedsAttention(record: TrackRecord): boolean {
 }
 
 /**
- * The fallback policy for a session. `content_anyway` is refused for sessions
- * (`fallback_not_for_sessions`), so it only appears here if the server sends
- * something it should not, and then it promises nothing.
+ * The fallback policy for a session, from the app's `sessionFallbackHint`.
+ * `content_anyway` is refused for sessions (`fallback_not_for_sessions`), so it
+ * only appears here if the server sends something it should not, and then it
+ * promises nothing — the app has no line for that case either.
  */
 export const SESSION_FALLBACK_TEXT: Record<Fallback, string> = {
-  creator_refund: "If the session can't happen, the creator refunds you themselves, from their own wallet.",
-  next_event: "If the session can't happen, the creator offers you the same session at their next event instead.",
+  creator_refund:
+    "If the session can't happen, the creator sends the price back from their own wallet. It's their promise: HOLD never holds the money.",
+  next_event: "If the session can't happen, it moves to another event within 90 days.",
   content_anyway: "If the session can't happen, talk to the creator: HOLD can't refund a booking.",
 };
 
@@ -235,16 +240,33 @@ export const SESSION_STATE_LABEL: Record<SessionState, string> = {
 export const SESSION_TEXT_MAX = 280;
 
 /**
- * The fallback policy in plain words. The creator picks one when they publish;
- * HOLD is never the party that refunds, and the copy does not suggest it is.
+ * The name of the policy the creator picked, exactly as the app writes it
+ * (`fallbackLabel`). It is the creator's own answer to the question, so it is
+ * left in their voice: "I refund the price" is a promise somebody signed, which
+ * is the whole point of showing it on a page a brand reads before paying.
+ */
+export const FALLBACK_LABEL: Record<Fallback, string> = {
+  content_anyway: "Content anyway",
+  creator_refund: "I refund the price",
+  next_event: "Moves to the next event",
+};
+
+/**
+ * The fallback policy in plain words, from the app's `fallbackHint` so the two
+ * products cannot promise different things — the 90 days on `next_event` is the
+ * contract's, not a rounding of "their next event".
+ *
+ * One thing is not carried across verbatim: the app says "you send the price
+ * back from your own wallet" because in the app the reader is the creator. Here
+ * the reader is the brand about to pay, and telling them THEY send the money
+ * back would be the opposite of what happens, so the same sentence is said
+ * about the creator. HOLD is never the party that refunds, and neither copy
+ * suggests it is.
  */
 export const FALLBACK_TEXT: Record<Fallback, string> = {
-  content_anyway:
-    "If a venue does not let the item in, the creator still delivers every post, photo and video they promised.",
-  creator_refund:
-    "If a venue does not let the item in, the creator refunds sponsors themselves, from their own wallet.",
-  next_event:
-    "If a venue does not let the item in, the creator carries every sponsor to their next event instead.",
+  content_anyway: "If the venue says no, every post and video is still delivered as promised.",
+  creator_refund: "If the venue says no, the creator sends the price back from their own wallet.",
+  next_event: "If the venue says no, the spot moves to another event within 90 days.",
 };
 
 /**
@@ -313,12 +335,168 @@ export function attestationText(key: string): string {
   return ATTESTATION_TEXT[key] ?? key.replace(/_/g, " ");
 }
 
-/** "video" + "x" + 2 to "2 videos on X". */
-export function deliverableText(kind: string, platform: string, count: number): string {
-  const noun = kind.replace(/_/g, " ");
-  const plural = count === 1 ? noun : noun.endsWith("s") ? noun : `${noun}s`;
-  const where = platform.toLowerCase() === "x" ? "X" : platform.charAt(0).toUpperCase() + platform.slice(1);
-  return `${count} ${plural} on ${where}`;
+function platformName(platform: string): string {
+  const p = platform.trim();
+  return p.toLowerCase() === "x" ? "X" : p.charAt(0).toUpperCase() + p.slice(1);
+}
+
+/**
+ * One deliverable in words, as the brand reads it:
+ *   video, x, 2              "2 videos on X"
+ *   mention, x, 1            "Mentions your brand on X"
+ *   mention, x, 3            "Mentions your brand on X, 3 times"
+ *   custom, null, 1, "…"     the creator's note as written
+ */
+export function deliverableText(d: Pick<Deliverable, "kind" | "platform" | "count" | "note">): string {
+  const times = d.count > 1 ? `, ${d.count} times` : "";
+  const where = d.platform?.trim() ? ` on ${platformName(d.platform)}` : "";
+  if (d.kind === "mention") return `Mentions your brand${where}${times}`;
+  if (d.kind === "custom") {
+    const note = d.note?.trim();
+    return `${note || "Something extra from the creator"}${where}${times}`;
+  }
+  const noun = d.kind.replace(/_/g, " ");
+  const plural = d.count === 1 ? noun : noun.endsWith("s") ? noun : `${noun}s`;
+  return `${d.count} ${plural}${where}`;
+}
+
+/**
+ * The creator's note under a deliverable, when it adds something. On a
+ * `custom` one the note already is the line, so it is never repeated.
+ */
+export function deliverableNote(d: Pick<Deliverable, "kind" | "note">): string | null {
+  if (d.kind === "custom") return null;
+  return d.note?.trim() || null;
+}
+
+/**
+ * What a space sells, by name. A `custom-service` space is named by its creator;
+ * everything else by its template ("Carry-on suitcase", "Booth appearance").
+ */
+export function serviceName(space: Pick<Space, "template" | "serviceName">): string {
+  const own = space.serviceName?.trim();
+  return space.template.kind === "service" && own ? own : space.template.name;
+}
+
+/** The service's description, the creator's own on a `custom-service` space. */
+export function serviceSummary(space: Pick<Space, "template" | "serviceSummary">): string | null {
+  const own = space.serviceSummary?.trim();
+  if (space.template.kind === "service" && own) return own;
+  return space.template.service?.summary ?? null;
+}
+
+/* ── Tiers: a ladder, not N of one thing (ad-space-tiers-v0.md) ──────── */
+
+/**
+ * One rung of a ladder, as the page shows it: a price, a name, what the brand
+ * gets for it, and how many are left.
+ *
+ * A tier is not a row of its own in the API — it IS the positions that sell it,
+ * all sharing a `tierKey` — so everything a rung needs is read off its copies
+ * and nothing is computed twice. A tier with five available is five positions,
+ * and they are one card saying "5 left", never five cards.
+ */
+export interface SpaceTier {
+  key: string;
+  /** The rung's name. Falls back to a copy's label, which the server already fills from the title. */
+  title: string;
+  /** What the brand gets, one plain-text line each. Printed as text, never as markup. */
+  perks: string[];
+  /** Every copy of this rung, in the creator's order. */
+  positions: Position[];
+  /** The copies a brand can still buy. */
+  open: Position[];
+  held: number;
+  sold: number;
+  /** What a click buys, offers on or bids for: the first copy still open, else null. */
+  buy: Position | null;
+  /** The rung's figures, from the copy on offer: every copy of a tier is priced alike. */
+  priceCents: number | null;
+  sponsorPaysUsdc: string | null;
+  creatorReceivesUsdc: string | null;
+  /** How offers or bids stand on the copy on offer, or null when the space takes none. */
+  offers: PositionOffers | null;
+  /** The rung's own pitch, when a creator wrote one. */
+  pitch: string | null;
+}
+
+/**
+ * A space that sells a ladder. Only a service can: a placement's zones are
+ * priced by the size of a rectangle, and mixing a drawing and a service in one
+ * space is not in v0. So a placement is never read as tiered, and its zones
+ * keep rendering exactly as they do today.
+ *
+ * It is also where offers live: on a tiered space they sit on the positions,
+ * like a placement's, because "$900" means nothing unless it says $900 for the
+ * interview.
+ */
+export function isTieredSpace(space: Pick<Space, "kind" | "positions">): boolean {
+  return space.kind === "service" && space.positions.some((p) => Boolean(p.tierKey));
+}
+
+/**
+ * The ladder, in the creator's order — which is the order the API sends the
+ * positions in, and the order the creator built it in, so it is kept as it
+ * arrives rather than sorted by price.
+ *
+ * Empty on every space that is not tiered, so a caller that renders nothing for
+ * an empty ladder is a caller that has not changed.
+ */
+export function spaceTiers(space: Pick<Space, "kind" | "positions">): SpaceTier[] {
+  if (!isTieredSpace(space)) return [];
+  const order: string[] = [];
+  const copies = new Map<string, Position[]>();
+  for (const p of space.positions) {
+    if (!p.tierKey) continue;
+    const seen = copies.get(p.tierKey);
+    if (seen) seen.push(p);
+    else {
+      copies.set(p.tierKey, [p]);
+      order.push(p.tierKey);
+    }
+  }
+  return order.map((key) => {
+    const all = copies.get(key)!;
+    const open = all.filter((p) => p.status === "open");
+    // The copy on offer carries the figures a sponsor would pay. With none open
+    // the first copy still holds the price, so a sold-out rung can say what it
+    // went for instead of showing a blank where its price was.
+    const shown = open[0] ?? all[0];
+    return {
+      key,
+      title: all.find((p) => p.title)?.title ?? all[0].label,
+      perks: all.find((p) => p.perks && p.perks.length > 0)?.perks ?? [],
+      positions: all,
+      open,
+      held: all.filter((p) => p.status === "held").length,
+      sold: all.filter((p) => p.status === "sold").length,
+      buy: open[0] ?? null,
+      priceCents: shown.priceCents,
+      sponsorPaysUsdc: shown.sponsorPaysUsdc,
+      creatorReceivesUsdc: shown.creatorReceivesUsdc,
+      offers: shown.offers ?? null,
+      pitch: all.find((p) => p.pitch)?.pitch ?? null,
+    };
+  });
+}
+
+/**
+ * The cheapest thing a brand can actually buy right now, for the "Spots start
+ * at $50" line the whole ladder is written around. Null when nothing is left to
+ * buy, or when the rungs carry no prices at all (a space sold by offers).
+ */
+export function tiersStartAtCents(tiers: SpaceTier[]): number | null {
+  let least: number | null = null;
+  for (const t of tiers) {
+    if (!t.buy || t.priceCents === null) continue;
+    if (least === null || t.priceCents < least) least = t.priceCents;
+  }
+  return least;
+}
+
+/** The same name for a board or event card, which carries it flat. */
+export function cardServiceName(card: Pick<SpaceCard, "templateName" | "serviceName">): string | null {
+  return card.serviceName?.trim() || card.templateName;
 }
 
 /* ── Events ──────────────────────────────────────────────────────────── */
@@ -390,6 +568,37 @@ export function openSpots(cards: SpaceCard[]): number {
   return cards.reduce((sum, c) => sum + (c.status === "live" ? Math.max(0, c.totals.open) : 0), 0);
 }
 
+/* ── A creator's hub ─────────────────────────────────────────────────── */
+
+/**
+ * What a creator has on sale, in one line under their name: "9 spaces · 34
+ * spots open · 3 events". Events are left out when everything they sell is tied
+ * to none, rather than printed as a zero a sponsor has to interpret.
+ */
+export function creatorTotalsText(totals: { spaces: number; openSpots: number; events: number }): string {
+  const parts = [
+    `${totals.spaces} ${totals.spaces === 1 ? "space" : "spaces"}`,
+    `${totals.openSpots} ${totals.openSpots === 1 ? "spot" : "spots"} open`,
+  ];
+  if (totals.events > 0) parts.push(`${totals.events} ${totals.events === 1 ? "event" : "events"}`);
+  return parts.join(" · ");
+}
+
+/**
+ * The way out of a creator's hub and into the event's own page, which is how a
+ * brand this creator did not win still finds one that fits — and how the event
+ * page finds its next reader.
+ *
+ * With nobody else listed there it names no number. "0 other creators are
+ * going" is both true and useless, and a link that invents a crowd is worse
+ * than one that simply opens the event.
+ */
+export function otherCreatorsLine(othersAtEvent: number, eventName: string): string {
+  if (othersAtEvent <= 0) return `See everything on sale at ${eventName}`;
+  if (othersAtEvent === 1) return `1 more creator is going to ${eventName}`;
+  return `${othersAtEvent} more creators are going to ${eventName}`;
+}
+
 /** The event page's tabs, in the order they are shown. */
 export const EVENT_TABS: readonly SpaceTab[] = ["ground", "feed", "room"];
 
@@ -457,4 +666,119 @@ export function spaceProgressText(
       : `${takeableSpots(space)} of ${totals.positions} ${noun} still up for grabs`;
   }
   return soldOut ? `Sold out: all ${totals.positions} ${noun} taken` : `${totals.sold} of ${totals.positions} ${noun} sold`;
+}
+
+/**
+ * A campaign measured against the goal it named: "$1,900 of $2,400 · 79%".
+ *
+ * Spots sold out of spots listed is the creator's arithmetic. What a campaign is
+ * FOR is money, so a space that named a goal is counted in money — in the figure
+ * and in the bar — and says the percentage out loud, which is how every board of
+ * this kind is read. The app counts it the same way (`ProgressCard`).
+ *
+ * Null when no goal was named, and the caller then counts spots exactly as it
+ * did before goals existed. Past 100% only `fill` stops, at full: beating the
+ * goal is the good ending, so the number itself keeps climbing.
+ */
+export function fundingProgress(
+  space: Pick<Space, "fundingGoalCents" | "totals">,
+): { raised: string; goal: string; percent: number; fill: number } | null {
+  const goal = space.fundingGoalCents;
+  if (!goal || goal <= 0) return null;
+  const raised = Math.max(0, space.totals.committedCents);
+  return {
+    raised: usdFromCents(raised),
+    goal: usdFromCents(goal),
+    percent: Math.round((raised / goal) * 100),
+    fill: Math.min(100, (raised / goal) * 100),
+  };
+}
+
+/* ── Offers and bids (hispace-offers-v0.md) ──────────────────────────────── */
+
+/** "2d", "5h", "40m": coarse on purpose, for chips and link cards. */
+function coarseLeft(ms: number): string {
+  const h = Math.floor(ms / 3_600_000);
+  if (h >= 24) return `${Math.floor(h / 24)}d`;
+  if (h >= 1) return `${h}h`;
+  return `${Math.max(1, Math.floor(ms / 60_000))}m`;
+}
+
+/** "Bidding · 2d left", "Bidding ended", or "Bidding" when no end is known. */
+export function biddingChipText(biddingEndsAt: string | null | undefined, now = Date.now()): string {
+  if (!biddingEndsAt) return "Bidding";
+  const left = Date.parse(biddingEndsAt) - now;
+  if (!Number.isFinite(left)) return "Bidding";
+  return left > 0 ? `Bidding · ${coarseLeft(left)} left` : "Bidding ended";
+}
+
+/**
+ * How a space sells, as a chip on an event card: "Accepts offers", "Make an
+ * offer", "Bidding · 2d left", "Open bidding" for a takeover board, or null for
+ * a plain fixed price.
+ */
+export function pricingChipText(
+  card: { pricingMode: string; acceptsOffers?: boolean; biddingEndsAt?: string | null },
+  now = Date.now(),
+): string | null {
+  switch (card.pricingMode) {
+    case "takeover":
+      return "Open bidding";
+    case "offers":
+      return "Make an offer";
+    case "bids":
+      return biddingChipText(card.biddingEndsAt, now);
+    default:
+      return card.acceptsOffers ? "Accepts offers" : null;
+  }
+}
+
+/**
+ * "420.00" to 42000, only to compare two server amounts. The server writes up to
+ * six decimals ("441.525"); past the cent it rounds up, never down.
+ */
+function centsOf(usdc: string | null | undefined): number | null {
+  const m = /^(\d+)(?:\.(\d{1,6}))?$/.exec((usdc ?? "").replace(/,/g, ""));
+  if (!m) return null;
+  const f = (m[2] ?? "").padEnd(2, "0");
+  return Number(m[1]) * 100 + Number(f.slice(0, 2)) + (f.length > 2 && /[1-9]/.test(f.slice(2)) ? 1 : 0);
+}
+
+/**
+ * The bids line of a link card: the highest bid among spots still open for
+ * bidding with that spot's own time left, or else where bidding opens and the
+ * soonest end still ahead. "Highest bid $420 · 2d left", "Bidding opens at $100
+ * · 2d left", "Bidding ended". Null when nothing on the space is up for bids.
+ */
+export function bidsSummaryText(space: Pick<Space, "pricingMode" | "positions" | "biddingEndsAt">, now = Date.now()): string | null {
+  if (space.pricingMode !== "bids") return null;
+  let highest: { cents: number; usdc: string } | null = null;
+  let opening: { cents: number; usdc: string } | null = null;
+  let soonest: number | null = null;
+  let highestEnds: number | null = null;
+  for (const p of space.positions) {
+    const o = p.offers;
+    if (!o || o.mode !== "bids" || p.status === "sold") continue;
+    const h = centsOf(o.highestBidUsdc);
+    const endAt = o.biddingEndsAt ? Date.parse(o.biddingEndsAt) : NaN;
+    const stillOpen = o.biddingOpen !== false && Number.isFinite(endAt) && endAt > now;
+    // The highest bid is paired with its OWN spot's end, never another spot's.
+    if (h !== null && o.highestBidUsdc && stillOpen && (!highest || h > highest.cents)) {
+      highest = { cents: h, usdc: o.highestBidUsdc };
+      highestEnds = endAt;
+    }
+    const op = centsOf(o.openingBidUsdc);
+    if (op !== null && o.openingBidUsdc && (!opening || op < opening.cents)) opening = { cents: op, usdc: o.openingBidUsdc };
+    const end = o.biddingEndsAt ? Date.parse(o.biddingEndsAt) : NaN;
+    if (Number.isFinite(end) && end > now && (soonest === null || end < soonest)) soonest = end;
+  }
+  if (soonest === null && space.biddingEndsAt) {
+    const end = Date.parse(space.biddingEndsAt);
+    if (Number.isFinite(end) && end > now) soonest = end;
+  }
+  if (highest && highestEnds !== null) return `Highest bid ${usdFromCents(highest.cents)} · ${coarseLeft(highestEnds - now)} left`;
+  if (soonest === null) return "Bidding ended";
+  const left = `${coarseLeft(soonest - now)} left`;
+  if (opening) return `Bidding opens at ${usdFromCents(opening.cents)} · ${left}`;
+  return `Bidding · ${left}`;
 }

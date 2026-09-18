@@ -20,8 +20,13 @@ export type VenueType = "travel" | "conference" | "sports_event" | "private_even
  * `takeover`: the listed price is where bidding OPENS, and a sold spot can be
  * taken by paying a multiple of what it last went for. The sponsor displaced is
  * repaid every cent inside the same transaction.
+ *
+ * `offers` and `bids` (hispace-offers-v0.md): the sponsor names the price. In
+ * `offers` no price is shown; in `bids` the listed price is the opening bid and
+ * the highest backed bid is public. A `fixed` space may also accept offers
+ * (`acceptsOffers`). A server older than offers only ever sends the first two.
  */
-export type PricingMode = "fixed" | "takeover";
+export type PricingMode = "fixed" | "takeover" | "offers" | "bids";
 
 export interface Creator {
   xUserId: string;
@@ -79,6 +84,12 @@ export interface Template {
      * backend that predates sessions leaves it out, which reads as `content`.
      */
     format?: ServiceFormat;
+    /**
+     * The `custom-service` template: the creator names and describes what they
+     * sell, so a brand reads `Space.serviceName` and `Space.serviceSummary`, not
+     * this template's generic ones. Absent on a server older than it.
+     */
+    custom?: boolean;
   } | null;
 }
 
@@ -126,10 +137,47 @@ export interface Takeover {
 export interface Position {
   id: string;
   zoneKey: string;
+  /** The tier's name when this position sells one, else the zone's label or the slot number. */
   label: string;
-  priceCents: number;
-  sponsorPaysUsdc: string;
-  creatorReceivesUsdc: string;
+  /**
+   * Tiers (ad-space-tiers-v0.md). A service space can sell a LADDER: up to six
+   * rungs, each its own price and its own list of what the brand gets, and a
+   * rung with five available is five positions sharing a `tierKey`.
+   *
+   * `tierKey` is null on the old shapes — a placement's zones, or N identical
+   * slots — and those render exactly as they always have. `title` is the
+   * rung's name ("Flagship on-site interview"); `label` already falls back to
+   * it, so anything that prints a label prints the tier's name for free.
+   *
+   * `perks` is what the brand gets for that price, up to five short lines.
+   * PLAIN TEXT, and printed as text: never as HTML, never as markdown.
+   *
+   * All three are optional because a server older than tiers sends no key at
+   * all; `getPublicSpace` fills them, so nothing downstream has to guess.
+   */
+  tierKey?: string | null;
+  title?: string | null;
+  perks?: string[];
+  /**
+   * How THIS rung sells, when it does not sell the way its space does: the $50
+   * logo to whoever pays first, the one interview to the highest bid, on the
+   * same board. Null means the space's own mode, which is every space that
+   * exists today, and `takeover` is never a rung's to choose — it is a rule
+   * about what one sponsor may do to another and it belongs to the space.
+   *
+   * It wins over everything else the page could read, `offers.mode` included:
+   * a rung that sells at its price carries no offers block at all, and without
+   * this the page would fall back to the space and offer a "Make an offer"
+   * button on a rung that does not take one.
+   *
+   * Optional, and `getPublicSpace` fills it: a server older than per-rung modes
+   * sends no key, and anything it does not recognise reads as null.
+   */
+  saleMode?: SaleMode | null;
+  /** Null in `offers` mode, where no price is shown. In `bids` it is the opening bid. */
+  priceCents: number | null;
+  sponsorPaysUsdc: string | null;
+  creatorReceivesUsdc: string | null;
   pitch: string | null;
   accepts: ContentKind[];
   status: PositionStatus;
@@ -139,6 +187,139 @@ export interface Position {
   /** Only for the creator, or the sponsor reading with their checkout key. */
   content?: { status: "pending" | "approved" | "rejected"; rejectedReason: string | null } | null;
   delivered: { url: string; at: string } | null;
+  /**
+   * How offers and bids stand on this spot, or null when the space takes none.
+   * Null on a service slot of an UNTIERED space, which carries it once as
+   * `Space.spaceOffers` because its slots are identical and any one will do.
+   * On a tiered space the rungs are not identical — "$900" means nothing
+   * unless it says $900 for the interview — so each position carries its own,
+   * exactly as a placement's zones do. Optional because a server older than
+   * offers sends no key.
+   */
+  offers?: PositionOffers | null;
+}
+
+/* ── Offers and bids (hispace-offers-v0.md) ───────────────────────────── */
+
+export type OfferMode = "fixed_with_offers" | "offers" | "bids";
+
+/**
+ * How one spot sells, as the server names it (`saleModeOf`). It is `OfferMode`
+ * plus the one mode that takes no offer at all, which the page carries as a
+ * null `OfferMode`: on a `fixed` rung there is nothing to offer, only a price.
+ */
+export type SaleMode = OfferMode | "fixed";
+
+/**
+ * The public side of offers on a spot (or on a service space). Every amount is
+ * the creator's side, before our fee, unless its name says `SponsorPays`.
+ */
+export interface PositionOffers {
+  mode: OfferMode;
+  /** Offers modes: open threads (pending, countered, accepted). */
+  openCount: number | null;
+  /** Bids only. */
+  bidCount: number | null;
+  /** Bids only: the highest BACKED bid, creator amount. */
+  highestBidUsdc: string | null;
+  highestBidSponsorPaysUsdc: string | null;
+  /** Bids only: the display name of whoever leads. */
+  leaderName: string | null;
+  /** Bids only; null when there is no reserve. */
+  reserveMet: boolean | null;
+  openingBidUsdc: string | null;
+  /** Bids only: the least the next bid can be, creator amount. */
+  nextMinimumBidUsdc: string | null;
+  /** Bids only: this spot's end, extensions included. */
+  biddingEndsAt: string | null;
+  biddingOpen: boolean | null;
+  /** While an accepted offer waits for its payment. */
+  reservedUntil: string | null;
+}
+
+export type OfferKind = "offer" | "bid";
+
+export type OfferStatus =
+  | "pending"
+  | "countered"
+  | "accepted"
+  | "paid"
+  | "declined"
+  | "expired"
+  | "withdrawn"
+  | "lapsed"
+  | "superseded";
+
+export interface OfferRound {
+  by: "sponsor" | "creator" | "auto";
+  amountUsdc: string;
+  at: string;
+}
+
+/** One offer or bid, as its sponsor sees it through the manage link. */
+export interface OfferView {
+  id: string;
+  spaceId: string;
+  /** Null on a service space until an acceptance assigns a slot. */
+  positionId: string | null;
+  positionLabel: string | null;
+  kind: OfferKind;
+  status: OfferStatus;
+  /** The sponsor's latest amount, creator side, before fee. */
+  amountUsdc: string;
+  sponsorPaysUsdc: string;
+  /** The creator's latest counter, while countered. */
+  counterUsdc: string | null;
+  counterSponsorPaysUsdc: string | null;
+  /** Once accepted. */
+  agreedUsdc: string | null;
+  agreedSponsorPaysUsdc: string | null;
+  rounds: OfferRound[];
+  countersLeft: number;
+  sponsor: {
+    name: string;
+    contactKind: ContactKind | null;
+    contactValue: string | null;
+    message: string | null;
+    via: "app" | "web";
+    backed: null | { chain: Chain; address: string; checkedAt: string };
+  };
+  declineReason: "too_low" | "not_a_fit" | "other" | null;
+  /** When the current wait ends: the creator's answer, the sponsor's, or the payment. */
+  expiresAt: string | null;
+  orderId: string | null;
+  /** Bids only: this is the highest backed bid now. */
+  leading: boolean | null;
+  createdAt: string;
+  updatedAt: string;
+  /** The space's title and web path ("/s/<handle>/<slug>"), when the server joins them in. */
+  spaceTitle?: string | null;
+  spacePath?: string | null;
+}
+
+/** `GET /public/offers/:token`, and what `respond` answers. */
+export interface OfferThread {
+  offer: OfferView;
+  space: {
+    id: string;
+    /** "/s/<handle>/<slug>". */
+    path: string | null;
+    title: string;
+    templateName: string | null;
+    pricingMode: PricingMode;
+    status: SpaceStatus;
+    closesAt: string;
+    creator: { xHandle: string | null; xName: string | null; xAvatarUrl: string | null };
+    event: EventSummary | null;
+  };
+  position: Position | null;
+}
+
+export interface OfferProof {
+  chain: Chain;
+  address: string;
+  nonce: string;
+  signature: string;
 }
 
 export interface Update {
@@ -149,10 +330,27 @@ export interface Update {
   createdAt: string;
 }
 
+/**
+ * `mention`: the creator mentions or tags the brand on `platform`. `custom`:
+ * whatever the creator wrote in `note`. The rest are the original catalogue.
+ * Kept open as a string so a kind this page does not know still renders.
+ */
+export type DeliverableKind =
+  | "in_person"
+  | "photo_post"
+  | "video"
+  | "story"
+  | "thank_you_post"
+  | "mention"
+  | "custom";
+
 export interface Deliverable {
   id: string;
-  kind: string;
-  platform: string;
+  kind: DeliverableKind | (string & {});
+  /** Null on a `custom` deliverable that happens nowhere in particular. */
+  platform: string | null;
+  /** The creator's own words; the whole promise on a `custom` one. `getPublicSpace` fills null. */
+  note: string | null;
   count: number;
   dueDate: string;
   deliveredUrl: string | null;
@@ -178,6 +376,26 @@ export interface Space {
   pricingMode: PricingMode;
   /** How much a takeover multiplies the last price by; null on a fixed-price space. */
   takeoverMultiple: number | null;
+  /**
+   * A `fixed` space that also takes offers below its price. `getPublicSpace`
+   * fills false when a server older than offers leaves it out.
+   */
+  acceptsOffers: boolean;
+  /**
+   * When bidding ends, space-wide. Each spot's own end is on its `offers`, and
+   * that is the one the page counts down, because a late bid moves a spot's
+   * end and never the others'.
+   *
+   * Usually `bids` only — but a tiered space may sell at a fixed price and
+   * still carry one, because on a ladder the countdown can belong to a single
+   * rung (the interview) rather than to the board.
+   */
+  biddingEndsAt: string | null;
+  /**
+   * An untiered service space's offers, which target the space rather than a
+   * slot. Null on a tiered one, where every rung carries its own.
+   */
+  spaceOffers: PositionOffers | null;
   venueType: VenueType;
   eventName: string | null;
   fallback: Fallback;
@@ -186,8 +404,28 @@ export interface Space {
   requiredAttestations: string[];
   deliverables: Deliverable[];
   template: Template;
+  /**
+   * What the creator calls their service, and how they describe it. Set on a
+   * `custom-service` space, where they replace the template's name and summary;
+   * null otherwise. `getPublicSpace` fills null on an older server.
+   */
+  serviceName: string | null;
+  serviceSummary: string | null;
   positions: Position[];
-  totals: { positions: number; sold: number; committedCents: number; totalCents: number };
+  /**
+   * What the campaign is raising, in integer cents, or null when the creator
+   * named no goal. A space that has one is measured against it — money, not
+   * spots — because what a campaign is FOR is an amount and not an inventory.
+   * `getPublicSpace` fills null, so a server older than the goal reads as a
+   * space that never named one and the page stays exactly as it was.
+   */
+  fundingGoalCents: number | null;
+  /**
+   * `committedCents`: paid so far (on `offers` and `bids`, the agreed amounts of
+   * paid orders). `totalCents`: every listed price added up, null on `offers`
+   * and `bids`, which have no total to be "of".
+   */
+  totals: { positions: number; sold: number; committedCents: number; totalCents: number | null };
   updates: Update[];
   share: { url: string; text: string };
   /**
@@ -287,7 +525,18 @@ export interface SpaceCard {
   tab: SpaceTab;
   /** Null when the space's template is gone from the catalogue. */
   templateName: string | null;
+  /** The creator's own name for a custom service; wins over `templateName`. Missing on an older server. */
+  serviceName?: string | null;
+  serviceSummary?: string | null;
   pricingMode: PricingMode;
+  /**
+   * Board and event cards carry these (hispace-offers-v0.md, Backend
+   * implementation) so the event page can say how a space sells: "Accepts
+   * offers", "Make an offer", "Bidding · 2d left" from `biddingEndsAt`. Missing
+   * (an older server) reads as a space that takes no offers and has no end.
+   */
+  acceptsOffers?: boolean;
+  biddingEndsAt?: string | null;
   status: "live" | "closed";
   closesAt: string;
   /** The creator's X profile as last synced; any of it can be missing. */
@@ -308,6 +557,49 @@ export interface EventPage {
   tabs: Record<SpaceTab, SpaceCard[]>;
   /** The tab to open on without `?tab=`: the API's, else computed the same way here. */
   defaultTab: SpaceTab;
+}
+
+/* ── A creator's hub (/s/<handle>) ────────────────────────────────────── */
+
+/**
+ * The creator at the top of their own hub. The same thin shape the cards carry
+ * — the backend sends it from the last X sync, so a name, a follower count or a
+ * verification kind may be null — except for the handle, which is the address
+ * the page was reached by and therefore always there.
+ */
+export interface CreatorProfile extends CardCreator {
+  xHandle: string;
+}
+
+/**
+ * One section of a hub: an event, and everything this creator sells for it.
+ *
+ * `othersAtEvent` is the number behind the way OUT of this page — other
+ * creators with something listed at the same event, this one excluded. It is
+ * the whole reason a hub is worth sharing: a brand the creator does not win
+ * still finds the event, and the event finds them a creator.
+ */
+export interface CreatorGroup {
+  /** Null on exactly one group, always the last: what they sell for no event. */
+  event: EventSummary | null;
+  othersAtEvent: number;
+  cards: SpaceCard[];
+}
+
+/**
+ * `GET /public/creators/:handle`.
+ *
+ * The groups arrive ordered — upcoming events by start date, then past ones,
+ * then the group tied to no event — and the cards inside them are ordered too.
+ * That order is the server's and the page never touches it: two pages sorting
+ * the same list by different rules is how the same creator ends up looking
+ * like two different creators.
+ */
+export interface CreatorPage {
+  creator: CreatorProfile;
+  groups: CreatorGroup[];
+  /** Across every group: spaces listed, spots a sponsor can still take, events. */
+  totals: { spaces: number; openSpots: number; events: number };
 }
 
 /**

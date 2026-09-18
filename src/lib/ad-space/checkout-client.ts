@@ -467,6 +467,13 @@ export function describeError(e: unknown, chain?: Chain | null, subject: Subject
         ? `Someone is paying for this ${subject} right now. It frees up at ${clockTime(until)} if they don't.`
         : `Someone is paying for this ${subject} right now. It frees up in a few minutes if they don't.`;
     }
+    case "position_reserved": {
+      // hispace-offers-v0.md: an accepted offer holds the spot for its sponsor.
+      const until = str(d.reservedUntil);
+      return until
+        ? `An accepted offer holds this ${subject} until ${clockTime(until)}. If it isn't paid by then, it opens again.`
+        : `An accepted offer holds this ${subject} while it waits for its payment. If it isn't paid in time, it opens again.`;
+    }
     case "space_closed":
     case "space_not_live":
       return `This HiSpace has closed, so its ${subject}s can't be ${session ? "booked" : "bought"} any more.`;

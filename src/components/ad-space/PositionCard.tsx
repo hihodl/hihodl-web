@@ -7,16 +7,19 @@ import {
   SESSION_STATUS_LABEL,
   STATUS_LABEL,
   calendarDate,
+  clockTime,
   handsLeftText,
   handsText,
   takeoverClosedText,
   takeoverVerb,
+  instantUtc,
+  timeLeft,
   usdFromCents,
 } from "@/lib/ad-space/format";
-import type { Position, Sponsor, Takeover } from "@/lib/ad-space/types";
+import type { OfferMode, Position, PositionOffers, Sponsor, Takeover } from "@/lib/ad-space/types";
 
 import { QrCode } from "./qr";
-import { btnSmall, pill } from "./ui";
+import { btnSmall, btnSmallSecondary, pill } from "./ui";
 
 /**
  * One spot: what it is, what it costs, who has it. The same card is the
@@ -36,14 +39,41 @@ type Props = {
    * sponsored, and nothing about the buyer is ever shown on it.
    */
   session?: boolean;
+  /**
+   * How this spot sells when the sponsor names the price (hispace-offers-v0.md),
+   * or null for a fixed price or a takeover. On a service slot this is the
+   * space's mode, but the offer itself is made on the space, not the slot.
+   */
+  offerMode?: OfferMode | null;
+  /** The server-clock "now" for the bidding countdown; null before mount. */
+  now?: number | null;
   onHover: (id: string | null) => void;
   onSponsor: (p: Position) => void;
+  /** Opens the offer or bid form for this spot. Absent on a service slot. */
+  onOffer?: (p: Position) => void;
 };
 
 export const PositionCard = forwardRef<HTMLElement, Props>(function PositionCard(
-  { position: p, sizeLabel, active, buyable, takeoverMultiple, session = false, onHover, onSponsor },
+  {
+    position: p,
+    sizeLabel,
+    active,
+    buyable,
+    takeoverMultiple,
+    session = false,
+    offerMode = null,
+    now = null,
+    onHover,
+    onSponsor,
+    onOffer,
+  },
   ref,
 ) {
+  const o = p.offers ?? null;
+  const bids = offerMode === "bids";
+  const namesPrice = offerMode === "offers" || bids || p.sponsorPaysUsdc === null;
+  const biddingOpen = bids && biddingIsOpen(o, now);
+  const noun = session ? "session" : "spot";
   return (
     <article
       ref={ref}
@@ -72,6 +102,10 @@ export const PositionCard = forwardRef<HTMLElement, Props>(function PositionCard
 
       {p.pitch && <p className="text-small text-text-muted">{p.pitch}</p>}
 
+      {offerMode === "fixed_with_offers" && p.status === "open" && (
+        <p className="text-tiny text-text-faint">Accepts offers below this price.</p>
+      )}
+
       {p.status === "sold" && session && (
         <p className="text-small text-text-muted">Booked. The creator and the buyer arrange the time and place.</p>
       )}
@@ -99,9 +133,15 @@ export const PositionCard = forwardRef<HTMLElement, Props>(function PositionCard
 
       {p.takeover && <TakeoverLines position={p} takeover={p.takeover} multiple={takeoverMultiple} />}
 
+      {bids && p.status !== "sold" && <BidLines offers={o} now={now} />}
+
       <div className="mt-auto flex flex-wrap items-end justify-between gap-x-4 gap-y-3 border-t border-[color:var(--color-hairline)] pt-4">
         {p.takeover ? (
           <TakeoverPrices position={p} takeover={p.takeover} />
+        ) : bids ? (
+          <BidFigure offers={o} />
+        ) : namesPrice ? (
+          <OffersFigure offers={o} status={p.status} />
         ) : (
           <dl className="flex flex-col gap-0.5">
             <div className="flex items-baseline gap-2">
@@ -115,9 +155,31 @@ export const PositionCard = forwardRef<HTMLElement, Props>(function PositionCard
           </dl>
         )}
 
-        {p.status === "open" && buyable && (
+        {p.status === "open" && buyable && offerMode === null && (
           <button type="button" className={btnSmall} onClick={() => onSponsor(p)}>
             {session ? "Book a session" : "Sponsor this spot"}
+          </button>
+        )}
+        {p.status === "open" && buyable && offerMode === "fixed_with_offers" && (
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className={btnSmall} onClick={() => onSponsor(p)}>
+              Buy now
+            </button>
+            {onOffer && (
+              <button type="button" className={btnSmallSecondary} onClick={() => onOffer(p)}>
+                Make an offer
+              </button>
+            )}
+          </div>
+        )}
+        {p.status === "open" && buyable && offerMode === "offers" && onOffer && (
+          <button type="button" className={btnSmall} onClick={() => onOffer(p)}>
+            Make an offer
+          </button>
+        )}
+        {p.status === "open" && buyable && bids && biddingOpen && onOffer && (
+          <button type="button" className={btnSmall} onClick={() => onOffer(p)}>
+            Bid
           </button>
         )}
         {/* A sold spot on a takeover board is still for sale — at double. The
@@ -130,14 +192,119 @@ export const PositionCard = forwardRef<HTMLElement, Props>(function PositionCard
         )}
         {p.status === "held" && buyable && (
           <p className="max-w-[16rem] text-tiny text-amber">
-            Someone is paying for this {session ? "session" : "spot"} right now. It opens again if they don&rsquo;t
-            finish.
+            {o?.reservedUntil ? (
+              <>
+                An accepted {bids ? "bid" : "offer"} holds this {noun} until{" "}
+                <time dateTime={o.reservedUntil} suppressHydrationWarning>
+                  {now === null ? instantUtc(o.reservedUntil) : clockTime(o.reservedUntil)}
+                </time>
+                . It opens again if it isn&rsquo;t paid by then.
+              </>
+            ) : (
+              <>
+                Someone is paying for this {noun} right now. It opens again if they don&rsquo;t finish.
+              </>
+            )}
           </p>
         )}
       </div>
     </article>
   );
 });
+
+/** Bidding is open while the server says so and its end is still ahead on the server's clock. */
+function biddingIsOpen(o: PositionOffers | null, now: number | null): boolean {
+  if (!o || o.biddingOpen === false) return false;
+  if (!o.biddingEndsAt || now === null) return true;
+  return Date.parse(o.biddingEndsAt) > now;
+}
+
+/**
+ * Where bidding stands on a spot: the leader, the reserve, the bid count and the
+ * time left. Every amount is the creator's side, before our fee, as the bid form
+ * asks for it.
+ *
+ * Exported because a rung of a ladder that sells by bids stands exactly the same
+ * way, and two wordings for one fact is how two products start promising
+ * different things.
+ */
+export function BidLines({ offers: o, now }: { offers: PositionOffers | null; now: number | null }) {
+  if (!o) return null;
+  const end = o.biddingEndsAt ? Date.parse(o.biddingEndsAt) : NaN;
+  const ended = o.biddingOpen === false || (Number.isFinite(end) && now !== null && end <= now);
+  const count = o.bidCount ?? 0;
+  return (
+    <div className="flex flex-col gap-2 text-tiny text-text-muted">
+      <div className="flex flex-wrap items-center gap-2">
+        {o.reserveMet === true && <span className={pill.done}>Reserve met</span>}
+        {o.reserveMet === false && <span className={pill.attention}>Reserve not met yet</span>}
+        <span className={pill.neutral}>
+          {count === 0 ? "No bids yet" : count === 1 ? "1 bid" : `${count} bids`}
+        </span>
+      </div>
+      {o.highestBidUsdc && o.leaderName && (
+        <p>
+          <span className="text-text">{o.leaderName}</span> leads.
+        </p>
+      )}
+      {ended ? (
+        <p>Bidding has ended. The creator has 24 hours to accept a bid.</p>
+      ) : (
+        o.biddingEndsAt && (
+          <p>
+            {now === null ? (
+              <>Bidding ends {instantUtc(o.biddingEndsAt)}</>
+            ) : (
+              <>
+                Bidding ends in <span className="font-mono text-text">{timeLeft(end - now)}</span>
+              </>
+            )}
+            {o.nextMinimumBidUsdc && (
+              <>
+                {" "}
+                · next bid from <span className="font-mono text-text">{o.nextMinimumBidUsdc} USDC</span>
+              </>
+            )}
+          </p>
+        )
+      )}
+    </div>
+  );
+}
+
+/** The one figure a bids spot leads with, under its own label. */
+function BidFigure({ offers: o }: { offers: PositionOffers | null }) {
+  const highest = o?.highestBidUsdc ?? null;
+  const shown = highest ?? o?.openingBidUsdc ?? null;
+  if (!shown) return <p className="text-small text-text-muted">Open for bids</p>;
+  return (
+    <dl className="flex flex-col gap-0.5">
+      <div className="flex items-baseline gap-2">
+        <dt className="text-tiny text-text-faint">{highest ? "Highest bid" : "Opening bid"}</dt>
+        <dd className="font-mono text-body text-text">{shown} USDC</dd>
+      </div>
+      {highest && o?.highestBidSponsorPaysUsdc && o.highestBidSponsorPaysUsdc !== highest && (
+        <div className="flex items-baseline gap-1 text-tiny text-text-faint">
+          <dt>With the fee</dt>
+          <dd className="font-mono">{o.highestBidSponsorPaysUsdc}</dd>
+        </div>
+      )}
+    </dl>
+  );
+}
+
+/** A spot with no price: how many offers are open on it, never what they are. */
+function OffersFigure({ offers: o, status }: { offers: PositionOffers | null; status: Position["status"] }) {
+  const n = o?.openCount ?? null;
+  return (
+    <div className="flex flex-col gap-0.5">
+      <p className="text-body text-text">{status === "sold" ? "Sold" : "Name your price"}</p>
+      {status !== "sold" && n !== null && (
+        <p className="text-tiny text-text-faint">{n === 0 ? "No offers yet" : n === 1 ? "1 open offer" : `${n} open offers`}</p>
+      )}
+    </div>
+  );
+}
 
 /**
  * The two figures a takeover spot leads with, each under its own visible label.

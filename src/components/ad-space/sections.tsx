@@ -7,17 +7,18 @@ import { SUPPORT_EMAIL } from "@/lib/ad-space/config";
 import {
   CHAIN_LABEL,
   DELIVERABLE_STATE_LABEL,
-  FALLBACK_TEXT,
-  SESSION_FALLBACK_TEXT,
   VERIFIED_LABEL,
   accountAge,
   attestationText,
   calendarDate,
   compactNumber,
+  deliverableNote,
   deliverableText,
   eventDates,
+  fundingProgress,
   isSessionSpace,
   relativeTime,
+  serviceName,
   spaceSoldOut,
   takeableSpots,
   takeoverVerb,
@@ -90,6 +91,17 @@ export function SpaceHero({ space }: { space: Space }) {
   const noun = session ? "sessions" : space.kind === "service" ? "slots" : "spots";
   const soldWord = session ? "booked" : "sold";
   const isTakeover = space.pricingMode === "takeover";
+  /* Offers and bids have no listed total (the server sends `totalCents: null`):
+     "of $X" would name a total nobody has agreed to. What they commit is the
+     agreed amounts of paid orders, so before a sale there is nothing to show,
+     and "$0 committed" would read as a space nobody wants. */
+  const noTotal = totals.totalCents === null || space.pricingMode === "offers" || space.pricingMode === "bids";
+  const showCommitted = !noTotal || totals.committedCents > 0;
+  /* A creator who named a goal has told us what this campaign is for, and it is
+     an amount of money, not a number of spots. So the figure and the bar both
+     measure the money against that goal and say the percentage out loud, the
+     way the app does. A space with no goal is counted exactly as before. */
+  const funding = fundingProgress(space);
 
   /* On a takeover board a sold spot is not gone — it can be bought from the
      sponsor holding it. So "sold out" is only true here when there is nothing
@@ -101,11 +113,17 @@ export function SpaceHero({ space }: { space: Space }) {
   /* The bar tracks whatever the headline counts, so the two can never disagree. */
   const headline = isTakeover ? takeable : totals.sold;
   const headlineLabel = `${headline} of ${totals.positions} ${noun} ${isTakeover ? "still up for grabs" : soldWord}`;
+  const name = serviceName(space);
+  /* A custom service is named by its creator, so it is shown as they wrote it,
+     never lowercased into a sentence. */
+  const custom = space.template.service?.custom === true;
   const what = session
-    ? space.template.name
+    ? name
     : space.kind === "service"
-      ? `Sponsored ${space.template.name.toLowerCase()}`
-      : `Ad Space on a ${space.template.name.toLowerCase()}`;
+      ? custom
+        ? name
+        : `Sponsored ${name.toLowerCase()}`
+      : `Ad Space on a ${name.toLowerCase()}`;
 
   return (
     <section
@@ -147,27 +165,51 @@ export function SpaceHero({ space }: { space: Space }) {
                   </>
                 )}
               </p>
-              <p className="text-small">
-                <span className="font-mono text-text">{usdFromCents(totals.committedCents)}</span>
-                {/* A takeover board has no ceiling to measure against: every
-                    takeover raises the total, so "of" would name a number
-                    that is already out of date by the next sponsor. */}
-                <span className="text-text-faint">
-                  {isTakeover ? " committed so far" : ` committed of ${usdFromCents(totals.totalCents)}`}
-                </span>
-              </p>
+              {funding ? (
+                /* Before the first sale this reads "$0 of $2,400 · 0%", which
+                   is a campaign that has just opened rather than one nobody
+                   wants: the goal is the story, so it is said from the start. */
+                <p className="text-small">
+                  <span className="font-mono text-text">{funding.raised}</span>
+                  <span className="text-text-faint">
+                    {" "}
+                    of {funding.goal} · {funding.percent}%
+                  </span>
+                </p>
+              ) : showCommitted ? (
+                <p className="text-small">
+                  <span className="font-mono text-text">{usdFromCents(totals.committedCents)}</span>
+                  {/* A takeover board has no ceiling to measure against: every
+                      takeover raises the total, so "of" would name a number
+                      that is already out of date by the next sponsor. */}
+                  <span className="text-text-faint">
+                    {isTakeover || noTotal || totals.totalCents === null
+                      ? " committed so far"
+                      : ` committed of ${usdFromCents(totals.totalCents)}`}
+                  </span>
+                </p>
+              ) : (
+                <p className="text-small text-text-faint">No sales yet</p>
+              )}
             </div>
+            {/* Past the goal the bar stops at full and the percentage above it
+                keeps climbing: beating what you asked for is the good ending,
+                and a bar that cannot say so would be the only thing on the page
+                pretending otherwise. */}
             <div
               className="h-2 overflow-hidden rounded-[4px] bg-white/[0.06]"
               role="progressbar"
-              aria-label={headlineLabel}
+              aria-label={funding ? `${funding.raised} raised of ${funding.goal}` : headlineLabel}
               aria-valuemin={0}
-              aria-valuemax={totals.positions}
-              aria-valuenow={headline}
+              aria-valuemax={funding ? 100 : totals.positions}
+              aria-valuenow={funding ? Math.min(100, funding.percent) : headline}
+              aria-valuetext={funding ? `${funding.percent}%` : undefined}
             >
               <div
                 className="h-full rounded-[4px] bg-amber"
-                style={{ width: `${totals.positions ? Math.min(100, (headline / totals.positions) * 100) : 0}%` }}
+                style={{
+                  width: `${funding ? funding.fill : totals.positions ? Math.min(100, (headline / totals.positions) * 100) : 0}%`,
+                }}
               />
             </div>
             <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 text-small">
@@ -292,6 +334,43 @@ export function SpaceTakeover({ space }: { space: Space }) {
   );
 }
 
+/**
+ * How a sponsor names the price (hispace-offers-v0.md), said once above the
+ * spots. Nothing renders on a space that takes no offers.
+ */
+export function SpaceOffersHowItWorks({ space }: { space: Space }) {
+  const mode =
+    space.pricingMode === "bids"
+      ? "bids"
+      : space.pricingMode === "offers"
+        ? "offers"
+        : space.pricingMode === "fixed" && space.acceptsOffers
+          ? "fixed_with_offers"
+          : null;
+  if (!mode) return null;
+  const who = `@${space.creator.xHandle}`;
+
+  return (
+    <section aria-label="How offers work" className={`${card} mb-10 flex flex-col gap-3 p-5 md:p-6`}>
+      <h2 className={`${eyebrow} text-moonlight`}>
+        {mode === "bids" ? "Bid for a spot" : mode === "offers" ? "Name your price" : "Buy now, or make an offer"}
+      </h2>
+      <p className="max-w-3xl text-small text-text-muted">
+        {mode === "bids"
+          ? `Each spot is its own bidding. The highest bid backed by a wallet that holds the money leads, and a bid in the last 10 minutes gives everyone 10 more. When bidding ends, ${who} accepts a bid.`
+          : mode === "offers"
+            ? `There is no set price. Offer what the spot is worth to you, and ${who} accepts, counters or declines.`
+            : `Every spot has a price you can pay now. If it's more than you want to spend, offer less, and ${who} accepts, counters or declines.`}
+      </p>
+      <p className="max-w-3xl text-small text-text-muted">
+        Nothing you offer is paid or locked. If your {mode === "bids" ? "bid" : "offer"} is accepted, you have 24 hours
+        to pay it from any wallet, straight to the creator, and it goes through like any other sponsorship. Neither side
+        is bound to go ahead.
+      </p>
+    </section>
+  );
+}
+
 /* ── Promises ──────────────────────────────────────────────────────── */
 
 const STATE_PILL: Record<DeliverableState, string> = {
@@ -350,7 +429,12 @@ export function SpacePromises({ space }: { space: Space }) {
                 {space.deliverables.map((d) => (
                   <li key={d.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3 first:pt-0 last:pb-0">
                     <div className="min-w-0">
-                      <p className="text-small text-text">{deliverableText(d.kind, d.platform, d.count)}</p>
+                      <p className="break-words text-small text-text [overflow-wrap:anywhere]">{deliverableText(d)}</p>
+                      {deliverableNote(d) && (
+                        <p className="mt-0.5 break-words text-tiny text-text-muted [overflow-wrap:anywhere]">
+                          {deliverableNote(d)}
+                        </p>
+                      )}
                       <p className="text-tiny text-text-faint">
                         Due {calendarDate(d.dueDate)}
                         {d.deliveredUrl && (
@@ -394,17 +478,11 @@ export function SpacePromises({ space }: { space: Space }) {
             </ul>
           </Block>
 
-          <Block title={session ? "If the session can't happen" : "If a venue says no"}>
-            <p className="text-small text-text-muted">
-              {(session ? SESSION_FALLBACK_TEXT : FALLBACK_TEXT)[space.fallback]}
-            </p>
-            {space.fallbackNote && (
-              <p className="border-l-2 border-amber/40 pl-3 text-small text-text">
-                <span className="sr-only">The creator adds: </span>
-                {space.fallbackNote}
-              </p>
-            )}
-          </Block>
+          {/* The fallback policy used to have a block of its own here. It now
+              sits beside the spots (`IfItDoesNotHappen`), because this section
+              is below the board and a sponsor who picks a spot and pays never
+              reaches it. Saying it twice, word for word, would only teach
+              people that the bottom of the page repeats the top. */}
 
           <Block title="How the money moves">
             <p className="text-small text-text-muted">

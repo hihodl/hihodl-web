@@ -8,12 +8,13 @@ import {
   SpaceFooter,
   SpaceHero,
   SpaceInvite,
+  SpaceOffersHowItWorks,
   SpacePromises,
   SpaceTakeover,
   SpaceUnavailable,
   SpaceUpdates,
 } from "@/components/ad-space/sections";
-import { isSessionSpace, spaceProgressText } from "@/lib/ad-space/format";
+import { isSessionSpace, serviceName, spaceProgressText } from "@/lib/ad-space/format";
 import { getPublicSpace } from "@/lib/ad-space/server";
 
 /**
@@ -58,11 +59,12 @@ export async function generateMetadata({
   const og = `/api/og${path}?m=${milestone(searchParams, s.totals.sold)}`;
   // Counted as the hero counts it: a takeover board is not sold out while a spot can be taken.
   const progress = spaceProgressText(s);
+  const name = s.template.service?.custom ? serviceName(s) : serviceName(s).toLowerCase();
   const where = s.event ? ` for ${s.event.name} in ${s.event.city}` : s.eventName ? ` for ${s.eventName}` : "";
   const title = `${s.title} · @${handle}`;
   const description = isSessionSpace(s)
-    ? `Book @${handle}, ${s.template.name.toLowerCase()}${s.event ? ` at ${s.event.name} in ${s.event.city}` : s.eventName ? ` at ${s.eventName}` : ""}: ${progress.charAt(0).toLowerCase()}${progress.slice(1)}. You pay the creator directly in USDC.`
-    : `${progress} on @${handle}'s ${s.template.name.toLowerCase()}${where}. Sponsors pay the creator directly in USDC.`;
+    ? `Book @${handle}, ${name}${s.event ? ` at ${s.event.name} in ${s.event.city}` : s.eventName ? ` at ${s.eventName}` : ""}: ${progress.charAt(0).toLowerCase()}${progress.slice(1)}. You pay the creator directly in USDC.`
+    : `${progress} on @${handle}'s ${name}${where}. Sponsors pay the creator directly in USDC.`;
   const alt = `${s.title}: ${progress}`;
 
   return {
@@ -107,6 +109,7 @@ export default async function AdSpacePage({ params }: { params: Params }) {
             <SpaceHero space={found.space} />
             <section className="container-page py-12 md:py-16" aria-label="Spots">
               <SpaceTakeover space={found.space} />
+              <SpaceOffersHowItWorks space={found.space} />
               <SpaceBoard space={found.space} />
             </section>
             <SpacePromises space={found.space} />

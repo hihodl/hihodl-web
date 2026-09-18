@@ -1,8 +1,17 @@
 // Server-only by construction: no "use client" file imports this module.
 import { AD_SPACE_API, HANDLE_RE, SLUG_RE } from "./config";
-import { defaultEventTab } from "./format";
+import { defaultEventTab, openSpots } from "./format";
 import { gradientKey } from "./look";
-import type { Booking, EventPage, EventSummary, Space, SpaceCard } from "./types";
+import type {
+  Booking,
+  CreatorPage,
+  EventPage,
+  EventSummary,
+  OfferThread,
+  Position,
+  Space,
+  SpaceCard,
+} from "./types";
 
 /**
  * Reading a public Ad Space on the server.
@@ -115,6 +124,35 @@ export async function getPublicSpace(
   }
 }
 
+/** The only per-rung modes the page knows how to sell (ad-space-tiers-v0.md). */
+const SALE_MODES = new Set(["fixed", "fixed_with_offers", "offers", "bids"]);
+
+/**
+ * A position's tier fields (ad-space-tiers-v0.md), filled in for a server that
+ * predates tiers and for one that sends them as something other than a list of
+ * strings. `perks` is plain text by contract; here it is also made plain text
+ * by construction, so nothing downstream can be handed an object to render.
+ *
+ * `tierKey` null is the old shapes — a placement's zones, N identical slots —
+ * and every reader keeps rendering them exactly as it did.
+ */
+function withTierFields(p: Position): Position {
+  const perks = Array.isArray(p.perks) ? p.perks : [];
+  return {
+    ...p,
+    tierKey: typeof p.tierKey === "string" && p.tierKey ? p.tierKey : null,
+    // A mode this page has no button for is not a mode: it reads as null, which
+    // is "sells the way its space does" and the behaviour of every space that
+    // predates per-rung modes. `takeover` is deliberately among them — it is
+    // the space's to declare, never a rung's.
+    saleMode: SALE_MODES.has(p.saleMode as string) ? (p.saleMode as Position["saleMode"]) : null,
+    title: typeof p.title === "string" && p.title.trim() ? p.title.trim() : null,
+    // Five is the database's limit; a longer list would be a server we do not
+    // know, and the page still shows the five the creator was allowed to write.
+    perks: perks.filter((line): line is string => typeof line === "string" && line.trim().length > 0).slice(0, 5),
+  };
+}
+
 /**
  * The event fields, filled in when a backend that predates them leaves them
  * out, and the gradient held to the five presets. Every reader downstream can
@@ -124,10 +162,32 @@ function withEventFields(space: Space): Space {
   const raw = space as Partial<Space> & Space;
   return {
     ...raw,
+    positions: (Array.isArray(raw.positions) ? raw.positions : []).map(withTierFields),
     event: raw.event ?? null,
     bannerUrl: raw.bannerUrl ?? null,
     bannerGradient: gradientKey(raw.bannerGradient),
     siblings: Array.isArray(raw.siblings) ? raw.siblings : [],
+    // hispace-offers-v0.md: absent on a server older than offers.
+    acceptsOffers: raw.acceptsOffers === true,
+    biddingEndsAt: raw.biddingEndsAt ?? null,
+    spaceOffers: raw.spaceOffers ?? null,
+    // A server older than custom services and free-text deliverables.
+    serviceName: raw.serviceName ?? null,
+    serviceSummary: raw.serviceSummary ?? null,
+    /* A server older than funding goals sends no key, and a creator who named
+       none sends null. Zero is treated as none too: a goal of nothing has no
+       percentage to be at, and the page must never print "null%" or divide by
+       it. Anything that is not a positive number reads as "no goal", so the
+       hero falls back to counting spots exactly as it does today. */
+    fundingGoalCents:
+      typeof raw.fundingGoalCents === "number" && Number.isFinite(raw.fundingGoalCents) && raw.fundingGoalCents > 0
+        ? Math.round(raw.fundingGoalCents)
+        : null,
+    deliverables: (Array.isArray(raw.deliverables) ? raw.deliverables : []).map((d) => ({
+      ...d,
+      platform: d.platform ?? null,
+      note: d.note ?? null,
+    })),
   };
 }
 
@@ -218,6 +278,80 @@ export async function listPublicEvents(limit = 50): Promise<EventSummary[]> {
   }
 }
 
+/* ── A creator's hub ─────────────────────────────────────────────────── */
+
+export type CreatorLookup =
+  | { kind: "found"; page: CreatorPage }
+  | { kind: "missing" }
+  | { kind: "unreachable" };
+
+/**
+ * `GET /public/creators/:handle`. The handle is case-insensitive upstream, and
+ * a reader who pasted `@handle` from a post gets the same page: the `@` is
+ * dropped here rather than turned into a 404 nobody can explain.
+ *
+ * A 404 covers both a handle nobody has and a handle with nothing listable, and
+ * so does an answer with no groups at all — an empty hub is a page that says a
+ * creator sells nothing, which is worse than the honest "there is nothing at
+ * this link". `unreachable` stays separate, as everywhere else here.
+ *
+ * @param revalidate seconds; the hub is an event page's sibling and matches it.
+ */
+export async function getPublicCreator(handle: string, revalidate = 30): Promise<CreatorLookup> {
+  const bare = handle.replace(/^@/, "");
+  if (!HANDLE_RE.test(bare)) return { kind: "missing" };
+
+  let body: { data?: Partial<CreatorPage> } | null;
+  if (fixtureEnabled()) {
+    const { fixtureCreator } = await import("./fixture.dev");
+    const page = fixtureCreator(bare);
+    if (!page) return { kind: "missing" };
+    body = { data: page };
+  } else {
+    try {
+      const res = await fetch(`${AD_SPACE_API}/public/creators/${encodeURIComponent(bare)}`, {
+        headers: upstreamHeaders(null),
+        next: { revalidate },
+        signal: AbortSignal.timeout(6_000),
+      });
+      if (res.status === 404) return { kind: "missing" };
+      if (!res.ok) return { kind: "unreachable" };
+      body = await res.json();
+    } catch {
+      return { kind: "unreachable" };
+    }
+  }
+
+  const data = body?.data;
+  const creator = data?.creator;
+  if (!creator?.xHandle) return { kind: "unreachable" };
+
+  const groups = (Array.isArray(data?.groups) ? (data?.groups ?? []) : [])
+    // Kept in the server's order, which is the one thing about this list the
+    // page must not have an opinion about.
+    .map((g) => ({
+      event: g?.event ?? null,
+      othersAtEvent: Math.max(0, Math.trunc(Number(g?.othersAtEvent) || 0)),
+      cards: (Array.isArray(g?.cards) ? g.cards : []).map(withCardDefaults),
+    }))
+    .filter((g) => g.cards.length > 0);
+  if (groups.length === 0) return { kind: "missing" };
+
+  const totals = data?.totals;
+  return {
+    kind: "found",
+    page: {
+      creator,
+      groups,
+      totals: {
+        spaces: totals?.spaces ?? groups.reduce((n, g) => n + g.cards.length, 0),
+        openSpots: totals?.openSpots ?? groups.reduce((n, g) => n + openSpots(g.cards), 0),
+        events: totals?.events ?? groups.filter((g) => g.event).length,
+      },
+    },
+  };
+}
+
 /* ── A booked session, by its manage link ────────────────────────────── */
 
 /**
@@ -264,4 +398,64 @@ export async function getBooking(token: string, from: Headers | null): Promise<B
   } catch {
     return { kind: "unreachable" };
   }
+}
+
+/* ── An offer or bid, by its manage link ─────────────────────────────── */
+
+/** 32 random bytes, base64url, no padding (hispace-offers-v0.md). */
+export const OFFER_TOKEN_RE = /^[A-Za-z0-9_-]{43}$/;
+
+export type OfferLookup =
+  | { kind: "found"; thread: OfferThread }
+  | { kind: "missing" }
+  | { kind: "unreachable" };
+
+/**
+ * `GET /public/offers/:token`, never cached: a counter or an acceptance can
+ * arrive at any moment. The token is a bearer secret, so it goes into the
+ * upstream URL and nowhere else: no log line, no error message, no cache key.
+ *
+ * @param from the visitor's request headers, so the backend limits the visitor
+ *   and not our server.
+ */
+export async function getOffer(token: string, from: Headers | null): Promise<OfferLookup> {
+  if (!OFFER_TOKEN_RE.test(token)) return { kind: "missing" };
+
+  if (fixtureEnabled()) {
+    const { fixtureOffer } = await import("./fixture.dev");
+    const thread = fixtureOffer(token);
+    return thread ? { kind: "found", thread } : { kind: "missing" };
+  }
+
+  try {
+    const res = await fetch(`${AD_SPACE_API}/public/offers/${encodeURIComponent(token)}`, {
+      headers: upstreamHeaders(from),
+      cache: "no-store",
+      signal: AbortSignal.timeout(6_000),
+    });
+    if (res.status === 404) return { kind: "missing" };
+    if (!res.ok) return { kind: "unreachable" };
+    const body = (await res.json()) as { data?: Partial<OfferThread> };
+    const data = body?.data;
+    return data?.offer && data.space
+      ? {
+          kind: "found",
+          // The spot comes from a different endpoint than the board, so its
+          // tier fields are filled here too: the offer page prints a tier's
+          // name and its lines from the same shape the board does.
+          thread: {
+            offer: data.offer,
+            space: data.space,
+            position: data.position ? withTierFields(data.position) : null,
+          },
+        }
+      : { kind: "unreachable" };
+  } catch {
+    return { kind: "unreachable" };
+  }
+}
+
+/** The full public space by id, for paying an accepted offer with the page's checkout. */
+export function getPublicSpaceById(spaceId: string): Promise<SpaceLookup> {
+  return getPublicSpace("id", spaceId);
 }
