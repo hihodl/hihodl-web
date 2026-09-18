@@ -5,24 +5,40 @@
  * Director has people working for them: the Team page, the "Who works it" card
  * on a listing, and the title under their name.
  *
- * There is no backend flag for it yet, so the choice is kept in this browser,
- * per user. It can never hide a team that exists: anybody with a member or an
- * open invitation is a Creative Director whatever the switch says.
+ * The choice is kept by the server (`/ad-space/settings`), so it follows the
+ * creator to every device. It can never hide a team that exists: anybody with
+ * a member or an open invitation is a Creative Director whatever the switch
+ * says.
+ *
+ * Before the server kept it, this browser did (`hold-agency:<user>`). That old
+ * choice is read once: if the server says the creator never chose and this
+ * browser says they turned it on, it is sent up and the local copy removed.
+ * While the server cannot be read, the local copy is what is shown.
  */
 
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
+import { useCreatorSettings } from "@/lib/app/spaces-data";
+import { setAgencyMode } from "@/lib/creator/listings";
 import type { TeamMember } from "@/lib/creator/team";
 
 const keyFor = (userId: string) => `hold-agency:${userId}`;
 
-function readChoice(userId: string): boolean {
+function readLocal(userId: string): boolean {
   try {
     return window.localStorage.getItem(keyFor(userId)) === "1";
   } catch {
     return false;
+  }
+}
+
+function forgetLocal(userId: string) {
+  try {
+    window.localStorage.removeItem(keyFor(userId));
+  } catch {
+    /* nothing kept to forget */
   }
 }
 
@@ -34,24 +50,47 @@ export interface Agency {
   set: (on: boolean) => void;
 }
 
-/** Only ever used after sign-in, in the browser: the stored choice is read on the first render. */
+/** Only ever used after sign-in, in the browser. */
 export function useAgency(userId: string, team: readonly TeamMember[] | undefined): Agency {
-  const [chosen, setChosen] = useState<boolean>(() => (typeof window === "undefined" ? false : readChoice(userId)));
+  const settings = useCreatorSettings();
+  // What the creator just switched to, shown before the server answers.
+  const [optimistic, setOptimistic] = useState<boolean | null>(null);
+  const migrated = useRef<string | null>(null);
 
-  useEffect(() => setChosen(readChoice(userId)), [userId]);
+  useEffect(() => setOptimistic(null), [userId]);
 
-  const forced = (team ?? []).some((m) => m.status === "active" || m.status === "invited");
+  // The one-time carry-over of a choice this browser made before the server kept it.
+  const { data, mutate } = settings;
+  useEffect(() => {
+    const s = data;
+    if (!s || migrated.current === userId) return;
+    migrated.current = userId;
+    if (s.chosen || !readLocal(userId)) {
+      if (s.chosen) forgetLocal(userId);
+      return;
+    }
+    setAgencyMode(true)
+      .then(() => {
+        forgetLocal(userId);
+        return mutate();
+      })
+      .catch(() => undefined);
+    setOptimistic(true);
+  }, [data, mutate, userId]);
+
+  const forced = Boolean(data?.hasTeam) || (team ?? []).some((m) => m.status === "active" || m.status === "invited");
+  const stored = data ? data.agencyMode : settings.error ? readLocal(userId) : false;
+  const chosen = optimistic ?? stored;
 
   const set = useCallback(
     (on: boolean) => {
-      setChosen(on);
-      try {
-        window.localStorage.setItem(keyFor(userId), on ? "1" : "0");
-      } catch {
-        /* kept for this page only */
-      }
+      setOptimistic(on);
+      setAgencyMode(on)
+        .then((r) => mutate(r.settings, { revalidate: false }))
+        .then(() => setOptimistic(null))
+        .catch(() => setOptimistic(null));
     },
-    [userId],
+    [mutate],
   );
 
   return { on: chosen || forced, forced, set };

@@ -280,6 +280,26 @@ export function removeUpdate(spaceId: string, updateId: string): Promise<{ remov
  * member is owed is the creator's bookkeeping, and the creator pays it.
  */
 
+/**
+ * The creator's Spaces settings. `agencyMode` is what they chose (Creator or
+ * Creative Director); `on` is what is in effect — the choice, or a team that
+ * exists; `chosen` is false until they have ever chosen.
+ */
+export interface CreatorSettings {
+  agencyMode: boolean;
+  chosen: boolean;
+  hasTeam: boolean;
+  on: boolean;
+}
+
+export function getCreatorSettings(): Promise<{ settings: CreatorSettings }> {
+  return call<{ settings: CreatorSettings }>("ad-space/settings");
+}
+
+export function setAgencyMode(agencyMode: boolean): Promise<{ settings: CreatorSettings }> {
+  return call<{ settings: CreatorSettings }>("ad-space/settings", { method: "PATCH", json: { agencyMode } });
+}
+
 /** Everybody on this creator's team, invitations nobody has taken yet included. */
 export function getTeam(): Promise<{ team: TeamMember[] }> {
   return call<{ team: TeamMember[] }>("ad-space/team");

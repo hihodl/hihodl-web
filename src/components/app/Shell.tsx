@@ -28,7 +28,7 @@ import { creatorText, isSeatCode, pendingSeat, type TeamMember, type WorkListing
 import type { XAccountStatus } from "@/lib/creator/types";
 import { useAgency, type Agency } from "@/lib/app/agency";
 import { roleOf, waitingOnYou, type ShellRole } from "@/lib/app/spaces-model";
-import { useListings, useOffers, useSeats, useTeam, useWork, useX } from "@/lib/app/spaces-data";
+import { useCreatorSettings, useListings, useOffers, useSeats, useTeam, useWork, useX } from "@/lib/app/spaces-data";
 
 import { SpacesBaseProvider, useHref, useSpacesBase } from "./base";
 import { CommandPalette, type PaletteEntry } from "./CommandPalette";
@@ -150,6 +150,7 @@ function SignedIn({ session, children }: { session: Session; children: ReactNode
   const x = useX();
   const work = useWork();
   const team = useTeam();
+  const settings = useCreatorSettings();
   const agency = useAgency(session.user.id, team.data);
 
   // The team is read before the first paint so a Creative Director's Team item
@@ -158,7 +159,8 @@ function SignedIn({ session, children }: { session: Session; children: ReactNode
     listings.data !== undefined &&
     seats.data !== undefined &&
     (x.data !== undefined || x.error) &&
-    (team.data !== undefined || team.error);
+    (team.data !== undefined || team.error) &&
+    (settings.data !== undefined || settings.error);
   const failed = listings.error ?? seats.error;
 
   const state = useMemo<ShellState | null>(() => {

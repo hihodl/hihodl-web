@@ -28,6 +28,7 @@ import {
   teamOwed,
   teamWork,
   getTeam,
+  getCreatorSettings,
 } from "@/lib/creator/listings";
 import { useCreatorSession } from "@/lib/creator/session";
 
@@ -111,6 +112,7 @@ export const useOwed = (on = true) => useRead(on ? "owed" : null, async () => (a
 export const useEarnings = (on = true) => useRead(on ? "earnings" : null, async () => (await teamEarnings()).earnings);
 export const useTeam = (on = true) => useRead(on ? "team" : null, async () => (await getTeam()).team);
 export const useX = () => useRead("x", getXAccount);
+export const useCreatorSettings = () => useRead("settings", async () => (await getCreatorSettings()).settings);
 export const usePayout = (on = true) => useRead(on ? "payout" : null, getPayoutAddress);
 export const useTemplates = (on = true) => useRead(on ? "templates" : null, getTemplates);
 
