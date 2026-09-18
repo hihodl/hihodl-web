@@ -8,6 +8,7 @@ import {
   compactNumber,
   eventCountdown,
   eventDates,
+  pricingChipText,
   trackRecordNeedsAttention,
   trackRecordText,
   usdFromCents,
@@ -296,6 +297,8 @@ function SpaceCardTile({ card: c, event, now }: { card: SpaceCard; event: EventS
   const closed = c.status !== "live";
   const { xHandle, xName, xFollowers } = c.creator;
   const room = c.tab === "room";
+  // How it sells: "Accepts offers", "Make an offer", "Bidding · 2d left", "Open bidding".
+  const chip = closed ? null : pricingChipText(c, now);
   const handleLine = [
     // Without a name the handle is already the line above.
     xHandle && xName ? `@${xHandle}` : null,
@@ -315,8 +318,8 @@ function SpaceCardTile({ card: c, event, now }: { card: SpaceCard; event: EventS
           <CreatorAvatar name={xName || xHandle || ""} url={c.creator.xAvatarUrl} />
           {closed ? (
             <span className={pill.neutral}>Closed</span>
-          ) : c.pricingMode === "takeover" ? (
-            <span className={pill.open}>Open bidding</span>
+          ) : chip ? (
+            <span className={pill.open}>{chip}</span>
           ) : null}
         </div>
 
