@@ -7,7 +7,6 @@ import {
   BeforeYouPay,
   HowItWorks,
   ListingHead,
-  SlimHeader,
   SpaceFooter,
   SpaceInvite,
   SpaceStats,
@@ -99,7 +98,6 @@ export default async function AdSpacePage({ params }: { params: Params }) {
 
   return (
     <SpacesGround>
-      <SlimHeader />
       {found.kind === "unreachable" ? (
         <main>
           <SpaceUnavailable />
