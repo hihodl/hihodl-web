@@ -28,6 +28,8 @@
 import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
 
+import { clientSpacesBase } from "@/lib/app/paths";
+
 import { creatorDemoEnabled, demoAccessToken, demoSession, demoSignIn, demoSignOut, demoState, subscribeDemo } from "./demo";
 
 /** `undefined` = not built yet, `null` = not configured on this deploy. */
@@ -114,7 +116,8 @@ export const useCreatorSession: () => CreatorSession = creatorDemoEnabled() ? us
  * `shouldCreateUser` is left on: a creator whose only HOLD account is this one
  * is exactly who this console is for — the whole point is that they never had
  * to install the app. `emailRedirectTo` is where a link-style email lands, and
- * it has to be on the project's redirect allow-list for that half to work.
+ * it has to be on the project's redirect allow-list for that half to work:
+ * https://app.hihodl.xyz/spaces in production (see lib/app/paths).
  */
 export async function sendSignInCode(email: string): Promise<void> {
   // Demo mode: asking for a code IS signing in, so one click gets you back.
@@ -125,7 +128,7 @@ export async function sendSignInCode(email: string): Promise<void> {
     email: email.trim(),
     options: {
       shouldCreateUser: true,
-      emailRedirectTo: typeof window === "undefined" ? undefined : `${window.location.origin}/creator`,
+      emailRedirectTo: typeof window === "undefined" ? undefined : `${window.location.origin}${clientSpacesBase()}`,
     },
   });
   if (error) throw error;

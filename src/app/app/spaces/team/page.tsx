@@ -1,14 +1,17 @@
 /**
- * /creator/team — the people who work a creator's listings with them.
+ * Spaces › Team — the people who work a creator's listings with them, and the
+ * teams this person is on.
  *
  * WHERE `?seat=` COMES FROM
  *
  * A creator's invitation is their own HOLD invite link, `/invite/<code>`, with
  * `?seat=<seat code>` on the end. `/invite/<code>` sends a link carrying a
- * seat here, because this is the only place a seat can be taken today: the
- * app's deep link carries the invite code and drops everything after it.
+ * seat here (app.hihodl.xyz/spaces/team?seat=…), because this is the only
+ * place a seat can be taken today: the app's deep link carries the invite code
+ * and drops everything after it. With a seat, the page renders on its own,
+ * outside the shell (see components/app/Shell), with sign-in beside it.
  *
- * It is read here rather than with `useSearchParams`, the same way /creator/x
+ * It is read here rather than with `useSearchParams`, the same way /x
  * reads its return: the value arrives with the first render, so the page never
  * paints a spinner it does not need and hands it down as a prop.
  *
@@ -26,15 +29,18 @@
  * public limiter counts the person rather than our servers.
  */
 
+import type { Metadata } from "next";
 import { headers } from "next/headers";
 
-import { Team } from "@/components/creator/Team";
+import { TeamScreen } from "@/components/app/spaces/TeamScreen";
+import { SeatInvitation } from "@/components/creator/Team";
 import { AD_SPACE_API } from "@/lib/ad-space/config";
 import { upstreamHeaders } from "@/lib/ad-space/server";
 import { creatorDemoEnabled } from "@/lib/creator/demo";
 import { isSeatCode, type InvitePreview, type SeatLookup } from "@/lib/creator/team";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = { title: "Team" };
 
 async function preview(code: string): Promise<SeatLookup> {
   // Local demo mode: the seat is read from the in-memory mock (lib/creator/demo.ts).
@@ -64,8 +70,9 @@ async function preview(code: string): Promise<SeatLookup> {
   }
 }
 
-export default async function CreatorTeamPage({ searchParams }: { searchParams: { seat?: string } }) {
+export default async function TeamPage({ searchParams }: { searchParams: { seat?: string; tab?: string } }) {
   const seat = isSeatCode(searchParams.seat) ? searchParams.seat : null;
-  const lookup = seat ? await preview(seat) : null;
-  return <Team seat={seat} lookup={lookup} />;
+  if (!seat) return <TeamScreen tab={searchParams.tab ?? null} />;
+  const lookup = await preview(seat);
+  return <SeatInvitation seat={seat} lookup={lookup} />;
 }

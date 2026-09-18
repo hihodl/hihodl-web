@@ -25,7 +25,7 @@ import { btnPrimary, btnSmallSecondary, input } from "@/components/ad-space/ui";
 import { creatorDemoEnabled, DEMO_PEOPLE, demoState } from "@/lib/creator/demo";
 import { sendSignInCode, verifySignInCode } from "@/lib/creator/session";
 
-import { Notice, Section } from "./parts";
+import { Notice } from "./parts";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -39,9 +39,10 @@ export function SignIn({ configured }: { configured: boolean }) {
 
   if (!configured) {
     return (
-      <Section label="Step one" title="Sign in">
-        <Notice>Sign-in is not set up on this deployment yet. Nothing you do here would be saved.</Notice>
-      </Section>
+      <div className="flex flex-col gap-4">
+        <h1 className="text-h4 font-light text-text">Sign in</h1>
+        <Notice>Sign-in is not set up on this deployment.</Notice>
+      </div>
     );
   }
 
@@ -82,10 +83,9 @@ export function SignIn({ configured }: { configured: boolean }) {
   }
 
   return (
-    <Section label="Step one" title="Sign in">
-      <p className="text-body text-text-muted">
-        Your email is how you get back into this page later. You need no app and no wallet to sign in.
-      </p>
+    <div className="flex flex-col">
+      <h1 className="text-h4 font-light text-text">Sign in</h1>
+      <p className="mt-1 text-small text-text-muted">Email code. No app, no wallet.</p>
 
       {!sent ? (
         <form
@@ -93,7 +93,7 @@ export function SignIn({ configured }: { configured: boolean }) {
             e.preventDefault();
             void send();
           }}
-          className="mt-6 flex flex-col gap-4 sm:flex-row"
+          className="mt-6 flex flex-col gap-3"
         >
           <input
             type="email"
@@ -118,9 +118,9 @@ export function SignIn({ configured }: { configured: boolean }) {
           className="mt-6 flex flex-col gap-4"
         >
           <p className="text-small text-text-muted">
-            We sent a code to <span className="text-text">{email.trim()}</span>. It is good for an hour.
+            Code sent to <span className="break-all text-text">{email.trim()}</span>
           </p>
-          <div className="flex flex-col gap-4 sm:flex-row">
+          <div className="flex flex-col gap-3">
             <input
               // `one-time-code` is what makes a phone offer the digits from the
               // notification instead of making them switch to the mail app.
@@ -147,10 +147,10 @@ export function SignIn({ configured }: { configured: boolean }) {
                 setNotice(null);
               }}
             >
-              Use another email
+              Other email
             </button>
             <button type="button" className={btnSmallSecondary} disabled={busy} onClick={() => void send()}>
-              Send it again
+              Resend
             </button>
           </div>
         </form>
@@ -161,6 +161,6 @@ export function SignIn({ configured }: { configured: boolean }) {
           <Notice>{notice}</Notice>
         </div>
       ) : null}
-    </Section>
+    </div>
   );
 }

@@ -24,6 +24,8 @@
  * exactly the same place on screen.
  */
 
+import { spacesPath } from "@/lib/app/paths";
+
 import { CreatorApiError } from "./api";
 import { usd, LIMITS, type ListingDraft, type Template } from "./listing";
 import type { Problem, Step } from "./rules";
@@ -38,7 +40,10 @@ export interface Refusal {
   fix: { href: string; label: string } | null;
 }
 
-const ACCOUNT_FIX = { href: "/creator", label: "Go to your account" };
+/** Built when a refusal is read, in the browser, so it points at this host's product. */
+function accountFix(): { href: string; label: string } {
+  return { href: spacesPath("/account"), label: "Open Account" };
+}
 
 /**
  * A `zoneKey` (and on a ladder a `tierKey`) as a field on this form.
@@ -277,7 +282,7 @@ function bareProblem(code: string, draft: ListingDraft | null): Problem | null {
  * it would be paid to. Each says where it is fixed, because it is not here.
  */
 function accountRefusal(code: string): Refusal | null {
-  const fixed = (message: string): Refusal => ({ problems: [], message, fix: ACCOUNT_FIX });
+  const fixed = (message: string): Refusal => ({ problems: [], message, fix: accountFix() });
   switch (code) {
     case "x_not_linked":
       return fixed(
@@ -304,7 +309,7 @@ function accountRefusal(code: string): Refusal | null {
         problems: [],
         message:
           "Your Solana wallet has no USDC account yet, so a sponsor paying from the HOLD app could pay and never reach you — our relayer is never allowed to open somebody else's token account. Two things fix it: publish on Base and Polygon instead, or have any amount of USDC sent to you on Solana once, which opens it for good.",
-        fix: ACCOUNT_FIX,
+        fix: accountFix(),
       };
     default:
       return null;
@@ -567,7 +572,7 @@ export function refusalOf(e: unknown, template: Template | null, draft: ListingD
     };
   }
   if (e.code === "UNAUTHORIZED" || e.code === "ACCOUNT_DELETED") {
-    return { problems: [], message: "Your sign-in has expired. Sign in again and pick up where you left off.", fix: ACCOUNT_FIX };
+    return { problems: [], message: "Your sign-in has expired. Sign in again and pick up where you left off.", fix: accountFix() };
   }
   if (e.code === "rate_limited" || e.code === "RATE_LIMIT_EXCEEDED") {
     return { problems: [], message: "That is more saves than we allow in a minute. Wait a moment and try again.", fix: null };

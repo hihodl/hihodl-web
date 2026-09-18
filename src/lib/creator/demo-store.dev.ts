@@ -2192,12 +2192,12 @@ export function demoShortcuts(): { label: string; href: string }[] {
   const out: { label: string; href: string }[] = [];
   const add = (label: string, slug: string) => {
     const sp = find(slug);
-    if (sp) out.push({ label, href: `/creator/listings/${sp.id}` });
+    if (sp) out.push({ label, href: `/app/spaces/listings/${sp.id}` });
   };
   add("Fixed ladder with offers (series of 3)", "token2049-videos");
   add("Ladder with a bidding rung", "breakpoint-london-coverage");
   add("Closed listing with sales", "road-to-korea-blockchain-week");
   const draft = find("devcon-8-hallway-interviews");
-  if (draft) out.push({ label: "Draft, in the wizard", href: `/creator/listings/${draft.id}/edit` });
+  if (draft) out.push({ label: "Draft, in the wizard", href: `/app/spaces/listings/${draft.id}/edit` });
   return out;
 }

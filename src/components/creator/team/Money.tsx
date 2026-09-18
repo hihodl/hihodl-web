@@ -86,20 +86,15 @@ export function Owed() {
   const owedTotal = groups.reduce((n, g) => n + g.owedBase, 0n);
 
   return (
-    <Section label="Settling up" title="What you owe your team">
+    <Section label="Settling up" title="Owed to your team">
       {rows === null ? (
         <Loading what="what you owe" />
       ) : (
         <div className="flex flex-col gap-6">
-          <p className="text-body text-text-muted">
-            Each sale on a listing somebody works adds their share of what you received. You pay them yourself, from your
-            own wallet — HOLD never sends, holds or guarantees this money. Marking it paid is your note that you did.
-          </p>
+          <p className="text-tiny text-text-muted">You pay your team from your own wallet. HOLD never moves this money.</p>
 
           {groups.length === 0 ? (
-            <p className="text-small text-text-muted">
-              Nothing yet. When a listing with somebody on it sells, what you owe them shows up here.
-            </p>
+            <p className="text-small text-text-muted">Nothing owed.</p>
           ) : (
             <>
               <p className="text-small text-text">
@@ -324,17 +319,12 @@ export function Earnings() {
   const groups = rows ? groupByMember(rows) : [];
 
   return (
-    <Section label="Working for others" title="What you are owed">
+    <Section label="Working for others" title="Owed to you">
       {rows === null ? (
         <Loading what="what you are owed" />
       ) : (
         <div className="flex flex-col gap-6">
-          <p className="text-body text-text-muted">
-            What the creators you work for have recorded owing you: your share of what they received from each sale on
-            the listings you work. They pay you themselves. HOLD never sends, holds or guarantees this money, and
-            “marked paid” is their word that they did — not a receipt. If something is marked paid and never arrived,
-            take it up with them.
-          </p>
+          <p className="text-tiny text-text-muted">Paid to you by the creator. “Marked paid” is their word, not a receipt.</p>
           <ul className="flex flex-col gap-3">
             {groups.map((g) => (
               <EarningRow key={g.memberId} group={g} handle={(g.owed[0] ?? g.paid[0])?.creatorHandle ?? null} />

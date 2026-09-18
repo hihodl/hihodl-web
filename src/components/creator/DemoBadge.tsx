@@ -140,7 +140,7 @@ export function DemoBadge() {
 
   return (
     <div
-      className="fixed left-4 z-[60] flex flex-col items-start gap-2"
+      className="fixed right-4 z-[60] flex flex-col items-end gap-2"
       style={{ bottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}
     >
       {open ? (
@@ -267,11 +267,11 @@ export function DemoBadge() {
             <p className="text-tiny uppercase tracking-wider text-text-faint">Go to</p>
             <ul className="flex flex-col gap-1 text-tiny">
               {[
-                { label: "Account home", href: "/creator" },
-                { label: "New listing", href: "/creator/listings/new" },
+                { label: "Account home", href: "/app/spaces" },
+                { label: "New listing", href: "/app/spaces/listings/new" },
                 ...(status?.shortcuts ?? []),
-                { label: "Team", href: "/creator/team" },
-                { label: "What you deliver (team member)", href: "/creator/team/work" },
+                { label: "Team", href: "/app/spaces/team" },
+                { label: "What you deliver (team member)", href: "/app/spaces/deliveries" },
                 ...(status?.seatCode
                   ? [{ label: "Pending invitation link", href: `/invite/${DEMO_INVITE_CODE}?seat=${status.seatCode}` }]
                   : []),

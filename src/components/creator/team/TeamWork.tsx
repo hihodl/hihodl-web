@@ -4,7 +4,7 @@
  * The one screen a rep needs: every listing they were put on, the spots that
  * were sold on it, the promises the listing made, and a box on each for the
  * link that proves it happened. The link is what the sponsor checks and what
- * the creator's public record is built from, so "It is up" is the whole job.
+ * the creator's public record is built from, so "Mark delivered" is the whole job.
  *
  * NO MONEY, BY CONSTRUCTION
  *
@@ -22,19 +22,16 @@
 
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
-import { btnSmall, btnSmallSecondary, card, eyebrow, pill } from "@/components/ad-space/ui";
+import { btnSmall, card, pill } from "@/components/ad-space/ui";
 import { calendarDate, deliverableNote, deliverableText, eventDates } from "@/lib/ad-space/format";
 import { markDeliverableDelivered, markPositionDelivered, teamWork } from "@/lib/creator/listings";
 import { describeRunError, describeTeamError } from "@/lib/creator/problems";
-import { signOut, useCreatorSession } from "@/lib/creator/session";
 import type { WorkDeliverable, WorkListing, WorkSlot } from "@/lib/creator/team";
 
 import { Text } from "../listing/parts";
 import { Loading, Notice, Section } from "../parts";
-import { SignIn } from "../SignIn";
 import { ROLE_TEXT } from "./Members";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -44,48 +41,7 @@ const STATUS_LABEL: Record<string, string> = {
   delisted: "Taken down",
 };
 
-export function TeamWork() {
-  const { session, configured } = useCreatorSession();
-
-  return (
-    <div className="mx-auto flex w-full max-w-[760px] flex-col gap-6 px-6 py-18">
-      <header className="flex flex-col gap-3">
-        <p className={`${eyebrow} text-text-faint`}>Working on a team</p>
-        <h1 className="text-h3 font-light text-text">What you have to deliver</h1>
-        <p className="text-lead font-light text-text-muted">
-          Every listing you were put on, and what is still to do on each. When something is up, paste the link to it:
-          that link is what the sponsor checks.
-        </p>
-      </header>
-
-      {session === undefined ? (
-        <p className="text-small text-text-muted">Checking whether you are signed in…</p>
-      ) : session === null ? (
-        <SignIn configured={configured} />
-      ) : (
-        <>
-          <div className="flex flex-wrap items-center justify-between gap-3 text-small text-text-muted">
-            <span className="min-w-0 break-all">
-              Signed in as <span className="text-text">{session.user.email}</span>
-            </span>
-            <button type="button" className={btnSmallSecondary} onClick={() => void signOut()}>
-              Sign out
-            </button>
-          </div>
-          <WorkList />
-        </>
-      )}
-
-      <p className="text-tiny text-text-muted">
-        <Link href="/creator/team" className="underline decoration-dotted underline-offset-4">
-          Back to your team
-        </Link>
-      </p>
-    </div>
-  );
-}
-
-function WorkList() {
+export function WorkList() {
   const [work, setWork] = useState<WorkListing[] | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -109,11 +65,8 @@ function WorkList() {
   return (
     <>
       {work.length === 0 ? (
-        <Section label="Nothing yet" title="No listings for you yet">
-          <p className="text-body text-text-muted">
-            Once a creator whose team you are on puts you on one of their listings, it shows up here with everything
-            that has to be delivered on it.
-          </p>
+        <Section label="Nothing yet" title="No listings yet">
+          <p className="text-small text-text-muted">Listings you’re put on appear here.</p>
         </Section>
       ) : (
         work.map((w) => <WorkCard key={w.spaceId} listing={w} onChanged={() => void load()} />)
@@ -123,7 +76,7 @@ function WorkList() {
   );
 }
 
-function WorkCard({ listing, onChanged }: { listing: WorkListing; onChanged: () => void }) {
+export function WorkCard({ listing, onChanged }: { listing: WorkListing; onChanged: () => void }) {
   const toDo =
     listing.slots.filter((s) => !s.deliveredUrl).length + listing.deliverables.filter((d) => !d.deliveredUrl).length;
   const canDeliver = listing.status === "live" || listing.status === "closed";
@@ -149,9 +102,7 @@ function WorkCard({ listing, onChanged }: { listing: WorkListing; onChanged: () 
       </div>
 
       {!canDeliver ? (
-        <p className="text-small text-text-muted">
-          This listing is not live yet, so nothing has been sold and there is nothing to deliver.
-        </p>
+        <p className="text-small text-text-muted">Not live yet.</p>
       ) : null}
 
       {listing.slots.length > 0 ? (
@@ -178,12 +129,12 @@ function WorkCard({ listing, onChanged }: { listing: WorkListing; onChanged: () 
 }
 
 const CONTENT_TEXT: Record<string, string> = {
-  pending: "The sponsor sent their artwork and it is waiting for the creator to say yes. Nothing for you to do on that.",
-  approved: "The sponsor’s artwork is approved.",
-  rejected: "The creator asked the sponsor for different artwork. It has not come back yet.",
+  pending: "Artwork waiting on the creator’s approval.",
+  approved: "Artwork approved.",
+  rejected: "New artwork requested from the sponsor.",
 };
 
-function SlotRow({ slot, canDeliver, onChanged }: { slot: WorkSlot; canDeliver: boolean; onChanged: () => void }) {
+export function SlotRow({ slot, canDeliver, onChanged }: { slot: WorkSlot; canDeliver: boolean; onChanged: () => void }) {
   return (
     <div className="flex flex-col gap-3 rounded-input border border-[color:var(--color-hairline)] p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -209,7 +160,7 @@ function SlotRow({ slot, canDeliver, onChanged }: { slot: WorkSlot; canDeliver: 
   );
 }
 
-function DeliverableRow({
+export function DeliverableRow({
   deliverable: d,
   canDeliver,
   onChanged,
@@ -293,7 +244,7 @@ function Delivered({
               .finally(() => setBusy(false));
           }}
         >
-          {busy ? "Saving…" : "It is up"}
+          {busy ? "Saving…" : "Mark delivered"}
         </button>
       </div>
       {notice ? <Notice>{notice}</Notice> : null}
