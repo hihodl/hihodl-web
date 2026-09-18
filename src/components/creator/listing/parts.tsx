@@ -80,7 +80,7 @@ export function Text({
   onChange: (v: string) => void;
   placeholder?: string;
   maxLength?: number;
-  type?: "text" | "url" | "date" | "datetime-local";
+  type?: "text" | "url" | "email" | "date" | "datetime-local";
 }) {
   return (
     <input

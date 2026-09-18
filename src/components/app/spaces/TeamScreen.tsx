@@ -11,10 +11,11 @@
  */
 
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 
 import { Members, Seats } from "@/components/creator/team/Members";
 import { Earnings, Owed } from "@/components/creator/team/Money";
+import { useRefresh } from "@/lib/app/spaces-data";
 import { pendingSeat } from "@/lib/creator/team";
 
 import { useHref } from "../base";
@@ -27,6 +28,9 @@ export function TeamScreen({ tab }: { tab: string | null }) {
   const { role, seats } = useShell();
   const href = useHref();
   const router = useRouter();
+  const refresh = useRefresh();
+  // The shell reads the team too: whether this person is a Creative Director follows it.
+  const onTeamChanged = useCallback(() => void refresh("team"), [refresh]);
 
   // Back from a sign-in link, which lands without the seat: the one kept in
   // this browser is reopened by its address, so the server reads it again.
@@ -58,7 +62,7 @@ export function TeamScreen({ tab }: { tab: string | null }) {
         <LinkTabs active={active} tabs={tabs.map((t) => ({ ...t, href: `${href("/team")}?tab=${t.key}` }))} />
       ) : null}
       <div className={`w-full ${active === "members" ? "" : "mx-auto max-w-[860px]"}`}>
-        {active === "members" ? <Members /> : null}
+        {active === "members" ? <Members onChanged={onTeamChanged} /> : null}
         {active === "owed" ? <Owed /> : null}
         {active === "teams" ? <Seats version={0} /> : null}
         {active === "earnings" ? <Earnings /> : null}

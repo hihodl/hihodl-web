@@ -275,8 +275,9 @@ export function getTeam(): Promise<{ team: TeamMember[] }> {
  * of the code, so a creator who loses it removes the seat and invites again;
  * there is no call that shows it back.
  */
-export function inviteToTeam(label: string, role: TeamRole): Promise<Invitation> {
-  return call<Invitation>("ad-space/team", { json: { label, role } });
+export function inviteToTeam(label: string, role: TeamRole, email?: string | null): Promise<Invitation> {
+  // With an address the server also emails the link; `emailed` says whether it went.
+  return call<Invitation>("ad-space/team", { json: email ? { label, role, email } : { label, role } });
 }
 
 /** Take somebody off the team, or close a seat nobody took. What they are already owed stays owed. */

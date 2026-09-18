@@ -94,6 +94,12 @@ export interface Invitation {
   member: TeamMember;
   code: string;
   url: string;
+  /**
+   * Whether the invitation email actually went, when an address was given. It
+   * can be false with the link still good: a daily cap, an address that looks
+   * like junk, or the limiter being down.
+   */
+  emailed?: boolean;
 }
 
 export interface Assignment {

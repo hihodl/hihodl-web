@@ -43,23 +43,29 @@ export const ROLE_TEXT: Record<TeamRole, { label: string; pill: string; body: st
   manager: {
     label: "Manager",
     pill: "Manager",
-    body: "Publishes, edits and answers offers on their listings. Sees sales. Can’t change the team or pay anyone.",
+    body: "Publishes, edits, answers offers. Sees sales.",
     yours: "You publish, edit and answer offers on their listings.",
     invited: "Role: manager. You publish, edit and answer offers on their listings. Brands always pay them, never you.",
   },
   rep: {
     label: "Rep",
     pill: "Rep",
-    body: "Uploads proof and marks work delivered. Sees no prices or money.",
+    body: "Delivers the work. Sees no money.",
     yours: "You upload proof and mark work delivered.",
     invited: "Role: rep. You upload proof and mark work delivered on their listings.",
   },
 };
 
-export function Members() {
+/** An invitation just made, with the address it was sent to, if any. */
+interface Made {
+  invitation: Invitation;
+  email: string | null;
+}
+
+export function Members({ onChanged }: { onChanged?: () => void } = {}) {
   const [team, setTeam] = useState<TeamMember[] | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [invitation, setInvitation] = useState<Invitation | null>(null);
+  const [made, setMade] = useState<Made | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -92,8 +98,9 @@ export function Members() {
                   key={m.id}
                   member={m}
                   onRemoved={() => {
-                    if (invitation?.member.id === m.id) setInvitation(null);
+                    if (made?.invitation.member.id === m.id) setMade(null);
                     void load();
+                    onChanged?.();
                   }}
                 />
               ))}
@@ -102,14 +109,15 @@ export function Members() {
         </div>
 
         <div className="flex min-w-0 flex-col gap-6">
-          {invitation ? <InvitationCard invitation={invitation} onClose={() => setInvitation(null)} /> : null}
+          {made ? <InvitationCard made={made} onClose={() => setMade(null)} /> : null}
 
           <InviteForm
             full={full}
             count={team?.length ?? 0}
-            onInvited={(inv) => {
-              setInvitation(inv);
+            onInvited={(next) => {
+              setMade(next);
               void load();
+              onChanged?.();
             }}
           />
         </div>
@@ -203,14 +211,18 @@ function InviteForm({
 }: {
   full: boolean;
   count: number;
-  onInvited: (inv: Invitation) => void;
+  onInvited: (made: Made) => void;
 }) {
   const [label, setLabel] = useState("");
+  const [email, setEmail] = useState("");
   const [role, setRole] = useState<TeamRole>("rep");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
   const trimmed = label.trim();
+  const address = email.trim();
+  // The server refuses a malformed address before anything is made (400); say so first.
+  const badEmail = address !== "" && !EMAIL.test(address);
 
   return (
     <div className="flex flex-col gap-5 border-t border-[color:var(--color-hairline)] pt-6 lg:border-t-0 lg:pt-0">
@@ -220,6 +232,10 @@ function InviteForm({
 
       <Field label="Name" hint="Only you see this.">
         <Text value={label} onChange={setLabel} maxLength={TEAM_LIMITS.LABEL_MAX} placeholder="Maria, Singapore crew" />
+      </Field>
+
+      <Field label="Email" hint="Optional" problems={badEmail ? ["That is not an email address."] : []}>
+        <Text type="email" value={email} onChange={setEmail} maxLength={254} placeholder="maria@studio.co" />
       </Field>
 
       <Field label="Role">
@@ -240,20 +256,21 @@ function InviteForm({
           <button
             type="button"
             className={btnSmall}
-            disabled={busy || full || !trimmed}
+            disabled={busy || full || !trimmed || badEmail}
             onClick={() => {
               setBusy(true);
               setNotice(null);
-              void inviteToTeam(trimmed, role)
+              void inviteToTeam(trimmed, role, address || null)
                 .then((inv) => {
                   setLabel("");
-                  onInvited(inv);
+                  setEmail("");
+                  onInvited({ invitation: inv, email: address || null });
                 })
                 .catch((e) => setNotice(describeTeamError(e)))
                 .finally(() => setBusy(false));
             }}
           >
-            {busy ? "Creating…" : "Create invite link"}
+            {busy ? (address ? "Sending…" : "Creating…") : address ? "Send invite" : "Create invite link"}
           </button>
         </div>
         <p className="text-tiny text-text-muted">
@@ -268,12 +285,19 @@ function InviteForm({
   );
 }
 
+/** Loose on purpose: the server has the last word, this only catches typos. */
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 /** The one time the link exists anywhere a person can read it. */
-function InvitationCard({ invitation, onClose }: { invitation: Invitation; onClose: () => void }) {
+function InvitationCard({ made, onClose }: { made: Made; onClose: () => void }) {
+  const { invitation, email } = made;
   const { member, url } = invitation;
+  const sent = !!email && invitation.emailed === true;
   return (
-    <div className="flex flex-col gap-4 rounded-card border border-amber/40 bg-amber/10 p-5">
-      <p className="text-body text-text">Send this link to {member.label}</p>
+    <div className={`flex flex-col gap-4 rounded-card border p-5 ${sent ? "border-success/40 bg-success/10" : "border-amber/40 bg-amber/10"}`}>
+      <p className="break-words text-body text-text">
+        {sent ? `Invitation sent to ${email}` : email ? "Couldn’t email it, copy the link instead" : `Send this link to ${member.label}`}
+      </p>
       <Address value={url} />
       <p className="text-small text-text">Shown once. Works once, for one person.</p>
       <p className="text-small text-text-muted">
@@ -282,7 +306,7 @@ function InvitationCard({ invitation, onClose }: { invitation: Invitation; onClo
       </p>
       <div>
         <button type="button" className={btnSmallSecondary} onClick={onClose}>
-          I have sent it
+          {sent ? "Done" : "I have sent it"}
         </button>
       </div>
     </div>
