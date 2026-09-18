@@ -36,7 +36,15 @@ import {
   type WrappingMeta,
 } from "@/lib/wallet/api";
 import { wipe, WalletCryptoError } from "@/lib/wallet/core";
-import { openMnemonic, openWallet, sealNewWallet, userSecretFrom, WalletFlowError, wrapForPasskey } from "@/lib/wallet/flows";
+import {
+  openMnemonic,
+  openWallet,
+  registerWalletAddress,
+  sealNewWallet,
+  userSecretFrom,
+  WalletFlowError,
+  wrapForPasskey,
+} from "@/lib/wallet/flows";
 import { createPasskeyWithPrf, evaluatePrf, normalizeCredentialId, PasskeyError, passkeysHere } from "@/lib/wallet/passkey";
 import { lock, unlockWith, useVault } from "@/lib/wallet/vault";
 
@@ -119,6 +127,7 @@ function explain(e: unknown): string {
     if (e.code === "APP_WALLET_EXISTS") return "This account already has a wallet in the HOLD app. Nothing was saved.";
     if (e.code === "SEED_BACKUP_EXISTS") return "This account already has a web wallet. Nothing was overwritten.";
     if (e.code === "EMAIL_NOT_VERIFIED") return "Confirm your email address before creating a wallet.";
+    if (e.code === "WEB_WALLET_NOT_ENABLED") return "The web wallet is not available on your account yet. Nothing was saved.";
     if (e.code === "LAST_WRAPPING") return "This is the only passkey that opens your wallet. Add another first.";
     if (e.code === "WRAPPING_EXISTS") return "That passkey already opens your wallet.";
     if (e.code === "rate_limited" || e.status === 429) return "Too many attempts. Wait a few minutes and try again.";
@@ -171,6 +180,22 @@ export function WalletScreen() {
   // Leaving the wallet locks it: another page of the product, signing out, or
   // another person signing in on this tab never finds it open.
   useEffect(() => () => lock(), []);
+
+  // Once unlocked (or just created), make sure the backend watches this
+  // address for deposits. One attempt per address per page visit; a failure
+  // is retried on the next unlock.
+  const tried = useRef<string | null>(null);
+  const unlockedAddress = vault.status === "unlocked" ? vault.address : null;
+  useEffect(() => {
+    if (!unlockedAddress || status === null || tried.current === unlockedAddress) return;
+    tried.current = unlockedAddress;
+    void registerWalletAddress(unlockedAddress, status.registered_address).then((r) => {
+      if (r === "registered") setStatus((s) => (s ? { ...s, registered_address: unlockedAddress } : s));
+    });
+  }, [unlockedAddress, status]);
+
+  // The rollout gate: not enabled means no wallet here at all, not an error.
+  if (status && status.enabled === false) return null;
 
   let body: ReactNode;
   if (loadError) {

@@ -29,6 +29,7 @@ import type { XAccountStatus } from "@/lib/creator/types";
 import { useAgency, type Agency } from "@/lib/app/agency";
 import { roleOf, waitingOnYou, type ShellRole } from "@/lib/app/spaces-model";
 import { useListings, useOffers, useSeats, useTeam, useWork, useX } from "@/lib/app/spaces-data";
+import { useWalletEnabled } from "@/lib/wallet/enabled";
 
 import { SpacesBaseProvider, useHref, useSpacesBase } from "./base";
 import { CommandPalette, type PaletteEntry } from "./CommandPalette";
@@ -60,6 +61,8 @@ export interface ShellState {
   agency: Agency;
   /** Whether there is a Team page for this person at all. */
   teamPage: boolean;
+  /** Whether the Wallet module exists for this person (rollout gate); undefined while asking. */
+  walletPage: boolean | undefined;
 }
 
 const ShellContext = createContext<ShellState | null>(null);
@@ -151,6 +154,8 @@ function SignedIn({ session, children }: { session: Session; children: ReactNode
   const work = useWork();
   const team = useTeam();
   const agency = useAgency(session.user.id, team.data);
+  // Asked alongside, never waited for: the shell draws without it.
+  const walletPage = useWalletEnabled(session.user.id);
 
   // The team is read before the first paint so a Creative Director's Team item
   // is there from the start; a failed read only means no team is shown.
@@ -176,8 +181,9 @@ function SignedIn({ session, children }: { session: Session; children: ReactNode
       managed: w.filter((l) => l.role === "manager"),
       agency,
       teamPage: role !== "creator" || agency.on || onTeams,
+      walletPage,
     };
-  }, [ready, listings.data, seats.data, x.data, work.data, session, agency]);
+  }, [ready, listings.data, seats.data, x.data, work.data, session, agency, walletPage]);
 
   if (failed && !state) {
     return (
@@ -256,8 +262,11 @@ function Frame({ children }: { children: ReactNode }) {
   }, []);
 
   // A rep's whole product is Deliveries: the module's home sends them there.
-  const allowed = itemsFor(shell.role, shell.teamPage);
-  const here = active ? allowed.some((i) => i.key === active) : true;
+  const allowed = itemsFor(shell.role, shell.teamPage, shell.walletPage === true);
+  // While the wallet gate is still being asked, the Wallet page waits blank
+  // rather than being sent away and back.
+  const deciding = active === "wallet" && shell.walletPage === undefined;
+  const here = active ? deciding || allowed.some((i) => i.key === active) : true;
   useEffect(() => {
     if (!here) router.replace(allowed[0] ? hrefFor(allowed[0], base) : href("/deliveries"));
   }, [here, router, href, allowed, base]);
@@ -294,7 +303,7 @@ function Frame({ children }: { children: ReactNode }) {
               onMenu={() => setDrawer(true)}
               onSearch={() => setPalette(true)}
             />
-            <main className="flex min-w-0 flex-1 flex-col">{here ? children : null}</main>
+            <main className="flex min-w-0 flex-1 flex-col">{here && !deciding ? children : null}</main>
           </div>
         </div>
 
@@ -373,12 +382,13 @@ function Sidebar({
   active: NavKey | null;
   badges: Partial<Record<NavKey, number>>;
 }) {
-  const { role, teamPage } = useShell();
+  const { role, teamPage, walletPage } = useShell();
   const href = useHref();
-  const groups = NAV_GROUPS.map((g) => ({ ...g, items: g.items.filter((i) => visible(i, role, teamPage)) })).filter(
+  const wallet = walletPage === true;
+  const groups = NAV_GROUPS.map((g) => ({ ...g, items: g.items.filter((i) => visible(i, role, teamPage, wallet)) })).filter(
     (g) => g.items.length > 0,
   );
-  const foot = FOOT_ITEMS.filter((i) => visible(i, role, teamPage));
+  const foot = FOOT_ITEMS.filter((i) => visible(i, role, teamPage, wallet));
 
   return (
     <aside

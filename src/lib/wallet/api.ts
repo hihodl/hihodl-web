@@ -82,6 +82,14 @@ export interface WrappingMeta {
 
 export interface WalletStatus {
   state: WalletState;
+  /**
+   * The rollout gate. false: the web shows no wallet at all (no nav item, no
+   * page). Always true for somebody who already has a web wallet. An older
+   * backend without the field reads as enabled.
+   */
+  enabled?: boolean;
+  /** The Solana address the backend watches for this account, if any. */
+  registered_address?: string | null;
   current_blob_hash: string | null;
   wrappings: WrappingMeta[];
   email_verified: boolean;
@@ -117,6 +125,19 @@ export function removeWrapping(credentialId: string): Promise<{ removed: boolean
   return send(`wallet-backup/wrappings/${encodeURIComponent(credentialId)}`, { method: "DELETE" });
 }
 
+/**
+ * Registering this wallet's address so the backend watches it for deposits
+ * (the app does the same through register-primary). A single-use challenge,
+ * signed as a message by the unlocked key; never a transaction.
+ */
+export function addressChallenge(address: string): Promise<{ nonce: string; message: string; expires_in_minutes: number }> {
+  return send("wallet-backup/address/challenge", { json: { address } });
+}
+
+export function registerAddress(body: { address: string; nonce: string; signature: string }): Promise<{ address: string; registered: boolean; idempotent: boolean }> {
+  return send("wallet-backup/address", { json: body });
+}
+
 /** The per-person pepper (half of v1's key, one of three inputs to v2's). */
 export async function getPepper(): Promise<string> {
   const d = await send<{ pepper: string }>("security/pepper");
@@ -141,7 +162,6 @@ export async function beginPasskeyRegistration(email: string, supabaseUid: strin
   const body = await send<{ publicKey: RegistrationOptionsJSON }>("passkeys/register/begin", {
     json: { email, userId: supabaseUid },
     raw: true,
-    auth: false,
   });
   return body.publicKey;
 }
@@ -152,7 +172,7 @@ export function completePasskeyRegistration(credential: {
   type: "public-key";
   response: { clientDataJSON: string; attestationObject: string };
 }): Promise<{ success: boolean; credentialId: string }> {
-  return send("passkeys/register/complete", { json: { credential }, auth: false });
+  return send("passkeys/register/complete", { json: { credential } });
 }
 
 export interface RegisteredPasskey {

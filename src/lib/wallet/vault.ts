@@ -9,15 +9,15 @@
  * It locks itself after five minutes without input, and when the tab has been
  * hidden for a minute (a laptop left open on another tab is not "in use").
  *
- * Phase 1 signs nothing: the seed is kept only so phase 2 (sending) has
- * somewhere to start from without another design.
+ * Phase 1 signs no transaction. It signs one kind of MESSAGE: the backend's
+ * ownership challenge for registering this address (signChallenge).
  */
 
 "use client";
 
 import { useSyncExternalStore } from "react";
 
-import { wipe } from "./core";
+import { signMessage, wipe } from "./core";
 
 export const IDLE_LOCK_MS = 5 * 60 * 1000;
 export const HIDDEN_LOCK_MS = 60 * 1000;
@@ -99,6 +99,21 @@ export function lock() {
   seed = null;
   disarm();
   if (was !== "locked" || view.address) emit({ status: "locked", address: null });
+}
+
+/** The first line of the backend's words (server/services/web-wallet-address.ts). */
+export const CHALLENGE_PREFIX = "HOLD web wallet: register this Solana address\n";
+
+/**
+ * Sign the backend's address-ownership words with the unlocked key. Only
+ * words that start with CHALLENGE_PREFIX are signed, so whatever a response
+ * carries, this can never be turned into a transaction signature. Throws
+ * when locked.
+ */
+export function signChallenge(message: string): Uint8Array {
+  if (!seed || view.status !== "unlocked") throw new Error("locked");
+  if (!message.startsWith(CHALLENGE_PREFIX)) throw new Error("not_a_challenge");
+  return signMessage(seed, message);
 }
 
 export function useVault(): VaultView {

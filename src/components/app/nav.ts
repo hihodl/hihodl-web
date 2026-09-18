@@ -79,7 +79,7 @@ export const SPACES_GROUPS: readonly NavGroup[] = [
 
 /**
  * The wallet: a module of its own (routes under src/app/app/wallet), drawn in
- * the same shell. Everybody signed in can have one.
+ * the same shell, for whoever the rollout gate lets in.
  */
 export const WALLET_ITEM: NavItem = {
   key: "wallet",
@@ -117,17 +117,19 @@ export const FOOT_ITEMS: readonly NavItem[] = [ACCOUNT_ITEM, SETTINGS_ITEM];
 
 /**
  * What this person may open. `team` is false for a creator who runs no team
- * and sits on nobody else's: then there is no Team page at all.
+ * and sits on nobody else's: then there is no Team page at all. `wallet` is
+ * the backend's rollout gate (lib/wallet/enabled): no Wallet item until it
+ * says yes.
  */
-export function visible(item: NavItem, role: ShellRole, team: boolean): boolean {
-  return item.roles.includes(role) && (item.key !== "team" || team);
+export function visible(item: NavItem, role: ShellRole, team: boolean, wallet = false): boolean {
+  return item.roles.includes(role) && (item.key !== "team" || team) && (item.key !== "wallet" || wallet);
 }
 
 /** Every group the sidebar draws, in order. */
 export const NAV_GROUPS: readonly NavGroup[] = [...SPACES_GROUPS, WALLET_GROUP];
 
-export function itemsFor(role: ShellRole, team = true): NavItem[] {
-  return [...NAV_GROUPS.flatMap((g) => g.items), ...FOOT_ITEMS].filter((i) => visible(i, role, team));
+export function itemsFor(role: ShellRole, team = true, wallet = false): NavItem[] {
+  return [...NAV_GROUPS.flatMap((g) => g.items), ...FOOT_ITEMS].filter((i) => visible(i, role, team, wallet));
 }
 
 /**

@@ -7,6 +7,8 @@
  *   openWallet      PRF → userSecret → K → mnemonic → Solana key.
  *   wrapForPasskey  the same userSecret under one more passkey; the blob is
  *                   never touched.
+ *   registerWalletAddress  the address, proved by a signed message, so the
+ *                   backend watches it for deposits.
  */
 
 "use client";
@@ -18,14 +20,16 @@ import {
   fromBase64,
   generateMnemonic,
   newUserSecret,
+  toBase64,
   unwrapUserSecret,
   wipe,
   wrapUserSecret,
   type SolanaKey,
   type WrappedSecret,
 } from "./core";
-import { createWalletBackup, getPepper, WalletApiError, type WalletBackup } from "./api";
+import { addressChallenge, createWalletBackup, getPepper, registerAddress, WalletApiError, type WalletBackup } from "./api";
 import { normalizeCredentialId } from "./passkey";
+import { signChallenge } from "./vault";
 
 export class WalletFlowError extends Error {
   constructor(readonly code: "unknown_passkey" | "self_check_failed" | "upload_failed", readonly cause?: unknown) {
@@ -138,4 +142,27 @@ export async function wrapForPasskey(userSecret: Uint8Array, prf: Uint8Array): P
   wipe(back);
   if (!same) throw new WalletFlowError("self_check_failed");
   return wrapped;
+}
+
+/**
+ * Tell the backend this wallet's address, so it is watched for deposits and
+ * shows in activity like the app's (the backend runs the app's own
+ * registration path, Helius webhook included).
+ *
+ * The server issues a single-use nonce and the exact words; the unlocked key
+ * signs those words as a MESSAGE (vault.signChallenge refuses anything else).
+ * Idempotent on the server, and skipped when the backend already has this
+ * address. Best effort: a failure changes nothing and is retried on the next
+ * unlock.
+ */
+export async function registerWalletAddress(address: string, registered: string | null | undefined): Promise<"registered" | "already" | "failed"> {
+  if (registered === address) return "already";
+  try {
+    const challenge = await addressChallenge(address);
+    const signature = toBase64(signChallenge(challenge.message));
+    await registerAddress({ address, nonce: challenge.nonce, signature });
+    return "registered";
+  } catch {
+    return "failed";
+  }
 }

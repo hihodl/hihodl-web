@@ -17,6 +17,10 @@
  *      aesGcmDecrypt), so the app can open what the web writes.
  *   4. Wrappings: wrap/unwrap round trip; a wrong PRF output, a wrong
  *      userSecret, a tampered byte and a short PRF all fail loudly.
+ *   5. Address proof: the key signs the backend's challenge words and the
+ *      BACKEND's own verifier (server/services/web-wallet-address.ts, found
+ *      via HIHODL_BACKEND_DIR or a hihodl-backend checkout nearby) accepts it
+ *      for this address and refuses it for another nonce.
  *
  * The app parts need the hihodl-wallet repo beside this one (or
  * HIHODL_WALLET_DIR). Without it they are reported as SKIPPED, never passed.
@@ -38,8 +42,10 @@ import {
   mnemonicToSeed,
   prfSaltBytes,
   randomBytes,
+  signMessage,
   toBase64,
   unwrapUserSecret,
+  verifyMessage,
   validateMnemonic,
   WalletCryptoError,
   wrapUserSecret,
@@ -64,6 +70,19 @@ async function rejects(p: Promise<unknown>, code: string, what: string) {
 }
 const hex = (u: Uint8Array) => Array.from(u, (b) => b.toString(16).padStart(2, "0")).join("");
 const eq = (a: Uint8Array, b: Uint8Array) => a.length === b.length && a.every((x, i) => x === b[i]);
+
+function findBackendFile(): string | null {
+  const rel = "server/services/web-wallet-address.ts";
+  const roots: string[] = [];
+  if (process.env.HIHODL_BACKEND_DIR) roots.push(process.env.HIHODL_BACKEND_DIR);
+  let dir = resolve(__dirname);
+  for (let i = 0; i < 8; i++) {
+    roots.push(join(dir, "hihodl-backend", ".worktrees", "web-wallet"), join(dir, "hihodl-backend"));
+    dir = dirname(dir);
+  }
+  for (const r of roots) if (existsSync(join(r, rel))) return join(r, rel);
+  return null;
+}
 
 function findWalletRepo(): string | null {
   if (process.env.HIHODL_WALLET_DIR && existsSync(process.env.HIHODL_WALLET_DIR)) return process.env.HIHODL_WALLET_DIR;
@@ -192,6 +211,33 @@ async function main() {
   const unwrapped = await unwrapUserSecret(prfA, wA);
   ok((await decryptSeedV2({ uid, pepper, userSecret: unwrapped, blob })) === mnemonic, "full path: PRF → userSecret → K → mnemonic");
   ok(new TextDecoder().decode(prfSaltBytes()) === "hihodl/seed-backup/v2", "PRF salt is the app's PRF_SALT");
+
+  console.log("5. Address proof (message signing, never a transaction)");
+  const signer = await deriveSolanaKey(zero);
+  const words = (nonce: string) =>
+    [
+      "HOLD web wallet: register this Solana address",
+      `Address: ${signer.address}`,
+      "User: user-1",
+      "Account: acct-1",
+      "Derivation path: m/44'/501'/0'/0'/0'",
+      `Nonce: ${nonce}`,
+    ].join("\n");
+  const sig = signMessage(signer.seed, words("n-1"));
+  ok(sig.length === 64 && verifyMessage(signer.address, words("n-1"), sig), "signs the words; verifies for this address");
+  ok(!verifyMessage(signer.address, words("n-2"), sig), "does not verify for another nonce");
+  const backendFile = findBackendFile();
+  if (backendFile) {
+    const backend = require(backendFile);
+    const serverWords = backend.webWalletAddressMessage({ userId: "user-1", accountId: "acct-1", address: signer.address, nonce: "n-1" });
+    ok(serverWords === words("n-1"), "the backend builds the same words");
+    ok(backend.signedByWebWalletAddress({ message: serverWords, signature: toBase64(sig), address: signer.address }), "the BACKEND's verifier accepts the web's signature");
+    const other = await deriveSolanaKey(ff);
+    ok(!backend.signedByWebWalletAddress({ message: serverWords, signature: toBase64(sig), address: other.address }), "and refuses it for another address");
+  } else {
+    skipped++;
+    console.log("  SKIP  backend verifier (hihodl-backend not found)");
+  }
 
   console.log(failures ? `\n${failures} FAILED` : `\nall passed${skipped ? ` (${skipped} skipped)` : ""}`);
   process.exit(failures ? 1 : 0);

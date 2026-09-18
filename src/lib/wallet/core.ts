@@ -232,6 +232,25 @@ export async function deriveSolanaKey(mnemonic: string): Promise<SolanaKey> {
   }
 }
 
+/**
+ * An ed25519 signature over a MESSAGE, never a transaction: the proof the
+ * backend asks for before it registers this address (POST
+ * /wallet-backup/address). The words are the server's, built from a
+ * single-use nonce; this only signs their UTF-8 bytes.
+ */
+export function signMessage(seed: Uint8Array, message: string): Uint8Array {
+  return ed25519.sign(new TextEncoder().encode(message), seed);
+}
+
+/** Whether `signature` over `message` is `address`'s (the check script uses it). */
+export function verifyMessage(address: string, message: string, signature: Uint8Array): boolean {
+  try {
+    return ed25519.verify(signature, new TextEncoder().encode(message), base58.decode(address));
+  } catch {
+    return false;
+  }
+}
+
 /* ── AES-256-GCM (WebCrypto; output ct ‖ 16-byte tag, as the app's @noble/ciphers gcm) ── */
 
 async function aesKey(raw: Uint8Array, usage: KeyUsage[]): Promise<CryptoKey> {
