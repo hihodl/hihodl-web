@@ -24,6 +24,18 @@
 
 "use client";
 
+import { creatorDemoEnabled, DEMO_WALLETS } from "./demo";
+
+/*
+ * Local demo mode (./demo) answers the four calls below at once, with a demo
+ * address and a signature the mock accepts, so the real screens can be
+ * clicked through with no Phantom or MetaMask installed. A short wait keeps
+ * the "Waiting for your wallet…" states visible for a moment.
+ */
+function demoWallet<T>(value: T): Promise<T> {
+  return new Promise((resolve) => setTimeout(() => resolve(value), 400));
+}
+
 /* ── Provider shapes ──────────────────────────────────────────────── */
 
 interface SolanaProvider {
@@ -142,10 +154,12 @@ function findSolana(): SolanaProvider | undefined {
 }
 
 export function hasSolanaWallet(): boolean {
+  if (creatorDemoEnabled()) return true;
   return !!findSolana();
 }
 
 export async function connectSolana(): Promise<string> {
+  if (creatorDemoEnabled()) return demoWallet(DEMO_WALLETS.solana);
   const provider = solanaProvider();
   try {
     const { publicKey } = await provider.connect();
@@ -164,6 +178,7 @@ export async function connectSolana(): Promise<string> {
  * of hex is where people close the tab.
  */
 export async function signSolanaMessage(message: string): Promise<string> {
+  if (creatorDemoEnabled()) return demoWallet(`demo-signature-${message.length}`);
   const provider = solanaProvider();
   try {
     const { signature } = await provider.signMessage(new TextEncoder().encode(message), "utf8");
@@ -185,10 +200,12 @@ function evmProvider(): EvmProvider {
 }
 
 export function hasEvmWallet(): boolean {
+  if (creatorDemoEnabled()) return true;
   return !!injected()?.ethereum;
 }
 
 export async function connectEvm(): Promise<string> {
+  if (creatorDemoEnabled()) return demoWallet(DEMO_WALLETS.evm);
   const provider = evmProvider();
   try {
     const accounts = (await provider.request({ method: "eth_requestAccounts" })) as string[];
@@ -207,6 +224,7 @@ export async function connectEvm(): Promise<string> {
  * cause of a wallet answering "invalid params" to a request that looks right.
  */
 export async function signEvmMessage(address: string, message: string): Promise<string> {
+  if (creatorDemoEnabled()) return demoWallet(`0xdemo${message.length.toString(16)}`);
   const provider = evmProvider();
   try {
     return (await provider.request({ method: "personal_sign", params: [hexMessage(message), address] })) as string;

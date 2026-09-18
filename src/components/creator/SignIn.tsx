@@ -22,6 +22,7 @@
 import { useState } from "react";
 
 import { btnPrimary, btnSmallSecondary, input } from "@/components/ad-space/ui";
+import { creatorDemoEnabled, DEMO_PEOPLE, demoState } from "@/lib/creator/demo";
 import { sendSignInCode, verifySignInCode } from "@/lib/creator/session";
 
 import { Notice, Section } from "./parts";
@@ -29,7 +30,8 @@ import { Notice, Section } from "./parts";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function SignIn({ configured }: { configured: boolean }) {
-  const [email, setEmail] = useState("");
+  // Local demo mode signs straight in on the first click; the box is filled so that click is all it takes.
+  const [email, setEmail] = useState(() => (creatorDemoEnabled() ? DEMO_PEOPLE[demoState().role].email : ""));
   const [code, setCode] = useState("");
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);

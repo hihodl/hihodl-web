@@ -28,6 +28,8 @@
 import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
 
+import { creatorDemoEnabled, demoAccessToken, demoSession, demoSignIn, demoSignOut, demoState, subscribeDemo } from "./demo";
+
 /** `undefined` = not built yet, `null` = not configured on this deploy. */
 let client: SupabaseClient | null | undefined;
 
@@ -69,7 +71,7 @@ export interface CreatorSession {
  * of a signed-in creator must not be the sign-in form: the console would flash
  * "sign in" at somebody who already has.
  */
-export function useCreatorSession(): CreatorSession {
+function useSupabaseSession(): CreatorSession {
   const auth = creatorAuth();
   const [session, setSession] = useState<Session | null | undefined>(auth ? undefined : null);
 
@@ -89,6 +91,23 @@ export function useCreatorSession(): CreatorSession {
   return { session, configured: auth !== null };
 }
 
+/** Local demo mode (./demo): a fake signed-in creator and no Supabase at all. */
+function useDemoSession(): CreatorSession {
+  const [session, setSession] = useState<Session | null | undefined>(undefined);
+  useEffect(() => {
+    const sync = () => setSession(demoSession(demoState()));
+    sync();
+    return subscribeDemo(sync);
+  }, []);
+  return { session, configured: true };
+}
+
+/*
+ * Chosen once, at module load: the flag is a build-time constant, so every
+ * render of every component calls the same hook.
+ */
+export const useCreatorSession: () => CreatorSession = creatorDemoEnabled() ? useDemoSession : useSupabaseSession;
+
 /**
  * Email a one-time code.
  *
@@ -98,6 +117,8 @@ export function useCreatorSession(): CreatorSession {
  * it has to be on the project's redirect allow-list for that half to work.
  */
 export async function sendSignInCode(email: string): Promise<void> {
+  // Demo mode: asking for a code IS signing in, so one click gets you back.
+  if (creatorDemoEnabled()) return demoSignIn();
   const auth = creatorAuth();
   if (!auth) throw new Error("not_configured");
   const { error } = await auth.auth.signInWithOtp({
@@ -112,6 +133,7 @@ export async function sendSignInCode(email: string): Promise<void> {
 
 /** The six digits from the email. `type: "email"` covers a new account and a returning one alike. */
 export async function verifySignInCode(email: string, token: string): Promise<void> {
+  if (creatorDemoEnabled()) return demoSignIn();
   const auth = creatorAuth();
   if (!auth) throw new Error("not_configured");
   const { error } = await auth.auth.verifyOtp({ email: email.trim(), token: token.trim(), type: "email" });
@@ -119,6 +141,7 @@ export async function verifySignInCode(email: string, token: string): Promise<vo
 }
 
 export async function signOut(): Promise<void> {
+  if (creatorDemoEnabled()) return demoSignOut();
   await creatorAuth()?.auth.signOut();
 }
 
@@ -130,6 +153,7 @@ export async function signOut(): Promise<void> {
  * the stale copy at exactly the wrong moment.
  */
 export async function accessToken(): Promise<string | null> {
+  if (creatorDemoEnabled()) return demoAccessToken();
   const auth = creatorAuth();
   if (!auth) return null;
   const { data } = await auth.auth.getSession();

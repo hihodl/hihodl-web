@@ -35,8 +35,12 @@
 
 import { API_BASE } from "@/lib/ad-space/config";
 
+import { creatorDemoEnabled, DEMO_API_BASE } from "./demo";
 import { accessToken } from "./session";
 import type { PayoutAddressView, PayoutChain, PayoutChallenge, XAccountStatus } from "./types";
+
+/** The backend, or in local demo mode (./demo) the in-memory mock on this origin. */
+const BASE = creatorDemoEnabled() ? DEMO_API_BASE : API_BASE;
 
 export class CreatorApiError extends Error {
   constructor(
@@ -74,7 +78,7 @@ export async function call<T>(
   const hasBody = init.json !== undefined;
   let res: Response;
   try {
-    res = await fetch(`${API_BASE}/${path}`, {
+    res = await fetch(`${BASE}/${path}`, {
       method: init.method ?? (hasBody ? "POST" : "GET"),
       headers: {
         accept: "application/json",

@@ -13,8 +13,10 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
+import { DemoBadge } from "@/components/creator/DemoBadge";
 import { Footer } from "@/components/site/Footer";
 import { TopNav } from "@/components/site/TopNav";
+import { creatorDemoEnabled } from "@/lib/creator/demo";
 
 export const metadata: Metadata = {
   title: "Creator console",
@@ -29,6 +31,8 @@ export default function CreatorLayout({ children }: { children: ReactNode }) {
       <TopNav />
       <main className="flex-1">{children}</main>
       <Footer />
+      {/* Local demo mode only (lib/creator/demo.ts): never rendered in production. */}
+      {creatorDemoEnabled() ? <DemoBadge /> : null}
     </div>
   );
 }
