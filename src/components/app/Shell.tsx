@@ -16,7 +16,7 @@
 import type { Session } from "@supabase/supabase-js";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { SpacesGround } from "@/components/ad-space/ground";
 import { SignIn } from "@/components/creator/SignIn";
@@ -41,7 +41,7 @@ import {
   IconSearch,
   IconSignOut,
 } from "./icons";
-import { ACCOUNT_ITEM, activeKey, itemsFor, SPACES_GROUPS, titleFor, visible, type NavItem, type NavKey } from "./nav";
+import { activeKey, FOOT_ITEMS, itemsFor, SPACES_GROUPS, titleFor, visible, type NavItem, type NavKey } from "./nav";
 import { Alert, glass } from "./ui";
 
 /* ── What every page inside can read ──────────────────────────────── */
@@ -63,6 +63,20 @@ export interface ShellState {
 }
 
 const ShellContext = createContext<ShellState | null>(null);
+
+/** How the shell is drawn, which Settings can change: only the sidebar, for now. */
+export interface ShellPrefs {
+  collapsed: boolean;
+  setCollapsed: (v: boolean) => void;
+}
+
+const PrefsContext = createContext<ShellPrefs | null>(null);
+
+export function useShellPrefs(): ShellPrefs {
+  const p = useContext(PrefsContext);
+  if (!p) throw new Error("useShellPrefs outside the Spaces shell");
+  return p;
+}
 
 export function useShell(): ShellState {
   const s = useContext(ShellContext);
@@ -216,15 +230,16 @@ function Frame({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const toggleCollapsed = () =>
-    setCollapsed((v) => {
-      try {
-        window.localStorage.setItem(COLLAPSE_KEY, v ? "0" : "1");
-      } catch {
-        /* remembered for this page only */
-      }
-      return !v;
-    });
+  const saveCollapsed = useCallback((v: boolean) => {
+    setCollapsed(v);
+    try {
+      window.localStorage.setItem(COLLAPSE_KEY, v ? "1" : "0");
+    } catch {
+      /* remembered for this page only */
+    }
+  }, []);
+  const toggleCollapsed = () => saveCollapsed(!collapsed);
+  const prefs = useMemo(() => ({ collapsed, setCollapsed: saveCollapsed }), [collapsed, saveCollapsed]);
 
   // Closing the drawer on every navigation, so a tap on a link is the whole gesture.
   useEffect(() => setDrawer(false), [pathname]);
@@ -258,37 +273,40 @@ function Frame({ children }: { children: ReactNode }) {
       // and anything sized by the viewport divided back (--app-vh).
       style={{ zoom: scale, ["--ui-scale" as string]: scale, ["--app-vh" as string]: `calc(100dvh / ${scale})` }}
     >
-      {palette ? <CommandPalette entries={entries} onClose={() => setPalette(false)} /> : null}
+      <PrefsContext.Provider value={prefs}>
+        {palette ? <CommandPalette entries={entries} onClose={() => setPalette(false)} /> : null}
 
-      <div
-        className={`grid grid-cols-[minmax(0,1fr)] gap-4 ${
-          collapsed ? "lg:grid-cols-[60px_minmax(0,1fr)]" : "lg:grid-cols-[248px_minmax(0,1fr)]"
-        }`}
-      >
-        <div className="hidden lg:block">
-          <div className="sticky top-4 h-[calc(var(--app-vh,100dvh)-2rem)]">
-            <Sidebar collapsed={collapsed} onToggle={toggleCollapsed} active={active} badges={badges} />
+        <div
+          className={`grid grid-cols-[minmax(0,1fr)] gap-4 ${
+            collapsed ? "lg:grid-cols-[60px_minmax(0,1fr)]" : "lg:grid-cols-[248px_minmax(0,1fr)]"
+          }`}
+        >
+          <div className="hidden lg:block">
+            <div className="sticky top-4 h-[calc(var(--app-vh,100dvh)-2rem)]">
+              <Sidebar collapsed={collapsed} onToggle={toggleCollapsed} active={active} badges={badges} />
+            </div>
+          </div>
+
+          {/* As tall as the sidebar at least, so a screen that fills it ends where the sidebar ends. */}
+          <div className="flex min-w-0 flex-col gap-4 lg:min-h-[calc(var(--app-vh,100dvh)-2rem)]">
+            <TopBar
+              title={titleFor(rel)}
+              onMenu={() => setDrawer(true)}
+              onSearch={() => setPalette(true)}
+            />
+            <main className="flex min-w-0 flex-1 flex-col">{here ? children : null}</main>
           </div>
         </div>
 
-        <div className="flex min-w-0 flex-col gap-4">
-          <TopBar
-            title={titleFor(rel)}
-            onMenu={() => setDrawer(true)}
-            onSearch={() => setPalette(true)}
-          />
-          <main className="min-w-0">{here ? children : null}</main>
-        </div>
-      </div>
-
-      {drawer ? (
-        <div className="fixed inset-0 z-[65] lg:hidden">
-          <button aria-label="Close menu" className="absolute inset-0 bg-[#030b13]/70 backdrop-blur-sm" onClick={() => setDrawer(false)} />
-          <div className="absolute inset-y-0 left-0 w-[min(86vw,300px)] p-3">
-            <Sidebar collapsed={false} active={active} badges={badges} onClose={() => setDrawer(false)} />
+        {drawer ? (
+          <div className="fixed inset-0 z-[65] lg:hidden">
+            <button aria-label="Close menu" className="absolute inset-0 bg-[#030b13]/70 backdrop-blur-sm" onClick={() => setDrawer(false)} />
+            <div className="absolute inset-y-0 left-0 w-[min(86vw,300px)] p-3">
+              <Sidebar collapsed={false} active={active} badges={badges} onClose={() => setDrawer(false)} />
+            </div>
           </div>
-        </div>
-      ) : null}
+        ) : null}
+      </PrefsContext.Provider>
     </div>
   );
 }
@@ -349,7 +367,7 @@ function Sidebar({
   const groups = SPACES_GROUPS.map((g) => ({ ...g, items: g.items.filter((i) => visible(i, role, teamPage)) })).filter(
     (g) => g.items.length > 0,
   );
-  const account = ACCOUNT_ITEM.roles.includes(role) ? ACCOUNT_ITEM : null;
+  const foot = FOOT_ITEMS.filter((i) => visible(i, role, teamPage));
 
   return (
     <aside
@@ -399,7 +417,11 @@ function Sidebar({
       </nav>
 
       <div className={`mt-3 flex w-full flex-col gap-2 border-t border-white/10 pt-3 ${collapsed ? "items-center" : ""}`}>
-        {account ? <NavLink item={account} active={active === "account"} collapsed={collapsed} /> : null}
+        <div className={`flex w-full flex-col gap-1 ${collapsed ? "items-center" : ""}`}>
+          {foot.map((i) => (
+            <NavLink key={i.key} item={i} active={active === i.key} collapsed={collapsed} />
+          ))}
+        </div>
         <UserCard collapsed={collapsed} />
       </div>
     </aside>
@@ -528,10 +550,10 @@ function TopBar({ title, onMenu, onSearch }: { title: string; onMenu: () => void
           <h1 className="truncate pl-1 text-body font-medium text-text sm:text-[18px]">{title}</h1>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
-          <button type="button" onClick={onSearch} aria-label="Search" className={btnGhost}>
+          <button type="button" onClick={onSearch} aria-label="Search" className={`${btnGhost} sm:w-[180px] sm:justify-start xl:w-[220px]`}>
             <IconSearch className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Search</span>
-            <kbd className="hidden rounded-[4px] border border-white/15 px-1 py-0.5 text-[9px] sm:inline">⌘K</kbd>
+            <kbd className="ml-auto hidden rounded-[4px] border border-white/15 px-1 py-0.5 text-[9px] sm:inline">⌘K</kbd>
           </button>
           {role === "creator" ? (
             <Link

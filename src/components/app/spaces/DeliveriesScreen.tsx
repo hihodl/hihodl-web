@@ -2,32 +2,45 @@
 
 /**
  * Spaces › Deliveries: everything owed after the money moved — artwork to
- * approve, sold spots to deliver, the listing's own promises — across every
- * listing, one item at a time.
+ * approve, sold spots to deliver, the listing's own promises — by event, then
+ * by listing, then the items of one listing, one at a time.
+ *
+ *   /deliveries                  one card per event: what is due there
+ *   /deliveries?event=<slug>     that event's listings
+ *   /deliveries?listing=<id>     that listing's items; `&item=` opens one
  *
  * The detail pane is the console's own card for that item (`Review`,
  * `SoldSpot`, `PromiseCard` for the creator; `SlotRow`, `DeliverableRow` for
  * somebody on a team), so marking something delivered is the same call it
- * always was. `?item=<kind>:<id>` opens one directly.
+ * always was. `?item=<kind>:<id>` alone opens its listing with it chosen.
  */
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { PromiseCard, Review, SoldSpot } from "@/components/creator/run/Work";
 import { DeliverableRow, SlotRow } from "@/components/creator/team/TeamWork";
-import { memberDeliveries, ownerDeliveries, sortDeliveries, type DeliveryItem } from "@/lib/app/spaces-model";
+import {
+  byEvent,
+  byListing,
+  memberDeliveries,
+  NO_EVENT,
+  ownerDeliveries,
+  sortDeliveries,
+  type DeliveryItem,
+  type ListingRef,
+} from "@/lib/app/spaces-model";
 import { useListingViews, useRefresh } from "@/lib/app/spaces-data";
 
 import { useHref } from "../base";
-import { IconArrowLeft } from "../icons";
+import { IconArrowLeft, IconDeliveries } from "../icons";
 import { useShell } from "../Shell";
 import { EmptyState, FilterPills, Panel, RowLink, Skeleton } from "../ui";
 import { dueText, LIST_PANEL, MasterDetail, ReadError } from "./common";
+import { CardGrid, DrillBar, EventCard, eventName, eventParam, ListingFigureCard, Pager, unknownListing, useListingRefs, usePaged } from "./cards";
 
 type Show = "todo" | "done" | "all";
-type Kind = "all" | "artwork" | "spot" | "promise";
 
 const KIND_TEXT: Record<DeliveryItem["kind"], string> = { artwork: "Artwork", spot: "Spot", promise: "Promise" };
 const STATE_TEXT: Record<DeliveryItem["state"], string> = {
@@ -37,7 +50,41 @@ const STATE_TEXT: Record<DeliveryItem["state"], string> = {
   done: "Delivered",
 };
 
-export function DeliveriesScreen({ selected, view }: { selected: string | null; view: string | null }) {
+const open = (i: DeliveryItem) => i.state !== "done";
+
+/** What is due in a set of items: the counts, and the nearest date. */
+function due(items: readonly DeliveryItem[]) {
+  const left = items.filter(open);
+  const artwork = left.filter((i) => i.kind === "artwork").length;
+  const waiting = left.filter((i) => i.state === "waiting").length;
+  const deliver = left.length - artwork - waiting;
+  const next = left.map((i) => i.due).filter((d): d is string => !!d).sort()[0] ?? null;
+  const late = left.some((i) => i.state === "overdue");
+  const parts = [
+    deliver ? `${deliver} to deliver` : "",
+    artwork ? `${artwork} artwork to approve` : "",
+    waiting ? `${waiting} waiting on artwork` : "",
+  ].filter(Boolean);
+  return {
+    open: left.length,
+    text: parts.length ? parts.join(" · ") : "All delivered",
+    next,
+    late,
+    note: next ? (dueText(next).endsWith("late") ? dueText(next) : `Due ${dueText(next)}`) : left.length ? "" : `${items.length} done`,
+  };
+}
+
+export function DeliveriesScreen({
+  event,
+  listing,
+  selected,
+  view,
+}: {
+  event: string | null;
+  listing: string | null;
+  selected: string | null;
+  view: string | null;
+}) {
   const { role, listings, work } = useShell();
   const running = useMemo(
     () => (role === "creator" ? listings.filter((l) => l.status !== "draft").map((l) => l.id) : null),
@@ -45,64 +92,183 @@ export function DeliveriesScreen({ selected, view }: { selected: string | null; 
   );
   const views = useListingViews(running);
   const own = useMemo(() => new Set(listings.map((l) => l.id)), [listings]);
+  const refs = useListingRefs();
 
   const items = useMemo(
     () => sortDeliveries([...ownerDeliveries(views.data ?? []), ...memberDeliveries(work, own)]),
     [views.data, work, own],
   );
   const loading = role === "creator" && !views.data && !views.error;
+  const refOf = (id: string, i?: DeliveryItem) => refs.get(id) ?? unknownListing(id, i?.listing ?? "Listing");
 
-  const router = useRouter();
-  const pathname = usePathname();
+  // An item on its own (the Overview's "needs you") opens on its listing.
+  const spaceId = listing ?? items.find((i) => i.id === selected)?.spaceId ?? null;
+
+  if (loading) return <Skeleton className="h-[260px]" />;
+  if (spaceId) {
+    return (
+      <ListingDeliveries
+        listing={refOf(spaceId, items.find((i) => i.spaceId === spaceId))}
+        items={items.filter((i) => i.spaceId === spaceId)}
+        selected={selected}
+        view={view}
+        error={views.error}
+      />
+    );
+  }
+
+  const groups = byEvent(items, (i) => i.spaceId, refs).sort(
+    (a, b) =>
+      Number(a.key === NO_EVENT) - Number(b.key === NO_EVENT) ||
+      Number(due(a.items).open === 0) - Number(due(b.items).open === 0) ||
+      (due(a.items).next ?? "9999").localeCompare(due(b.items).next ?? "9999"),
+  );
+
+  if (event) {
+    const here = groups.find((g) => g.key === event)?.items ?? [];
+    return <EventDeliveries eventKey={event} items={here} refOf={refOf} />;
+  }
+  return (
+    <>
+      <ReadError error={views.error} />
+      <EventGrid groups={groups} refOf={refOf} />
+    </>
+  );
+}
+
+type RefOf = (id: string, i?: DeliveryItem) => ListingRef;
+
+function EventGrid({ groups, refOf }: { groups: { key: string; items: DeliveryItem[] }[]; refOf: RefOf }) {
   const href = useHref();
-  const [kind, setKind] = useState<Kind>("all");
-  const show: Show = view === "done" || view === "all" ? view : "todo";
-  const setShow = (v: Show) => router.replace(`${pathname}?view=${v}`, { scroll: false });
+  const paged = usePaged(groups, groups.length);
+  if (groups.length === 0) {
+    return (
+      <Panel>
+        <EmptyState title="Nothing to deliver." />
+      </Panel>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-4">
+      <CardGrid>
+        {paged.shown.map((g) => {
+          const d = due(g.items);
+          return (
+            <EventCard
+              key={g.key}
+              href={`${href("/deliveries")}?${eventParam(g.key)}`}
+              event={refOf(g.items[0].spaceId, g.items[0]).event}
+              icon={IconDeliveries}
+              lines={[d.text]}
+              value={d.open}
+              note={d.note}
+              attention={d.open > 0}
+            />
+          );
+        })}
+      </CardGrid>
+      <Pager {...paged} />
+    </div>
+  );
+}
 
-  const inView = (i: DeliveryItem, s: Show) => (s === "all" ? true : s === "done" ? i.state === "done" : i.state !== "done");
-  const list = items.filter((i) => inView(i, show) && (kind === "all" || i.kind === kind));
-  const current = items.find((i) => i.id === selected) ?? list[0] ?? null;
-  const itemHref = (i: DeliveryItem) => `${href("/deliveries")}?view=${show}&item=${encodeURIComponent(i.id)}`;
+function EventDeliveries({ eventKey, items, refOf }: { eventKey: string; items: DeliveryItem[]; refOf: RefOf }) {
+  const href = useHref();
+  const listings = byListing(items, (i) => i.spaceId).sort((a, b) => due(b.items).open - due(a.items).open);
+  const paged = usePaged(listings, eventKey);
+  const event = items[0] ? refOf(items[0].spaceId, items[0]).event : null;
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <FilterPills
-          label="Show"
-          value={show}
-          onChange={setShow}
-          options={[
-            { value: "todo", label: "To do", count: items.filter((i) => inView(i, "todo")).length },
-            { value: "done", label: "Delivered", count: items.filter((i) => inView(i, "done")).length },
-            { value: "all", label: "All", count: items.length },
-          ]}
-        />
-        <FilterPills
-          label="Kind"
-          value={kind}
-          onChange={setKind}
-          options={[
-            { value: "all", label: "All" },
-            ...(role === "creator" ? [{ value: "artwork" as const, label: "Artwork" }] : []),
-            { value: "spot", label: "Spots" },
-            { value: "promise", label: "Promises" },
-          ]}
-        />
-      </div>
-      <ReadError error={views.error} />
+      <DrillBar back={href("/deliveries")} crumb="Deliveries" title={eventName(event)} />
+      {listings.length === 0 ? (
+        <Panel>
+          <EmptyState title="Nothing to deliver here." />
+        </Panel>
+      ) : (
+        <>
+          <CardGrid>
+            {paged.shown.map((l) => {
+              const d = due(l.items);
+              return (
+                <ListingFigureCard
+                  key={l.key}
+                  href={`${href("/deliveries")}?listing=${encodeURIComponent(l.key)}`}
+                  listing={refOf(l.key, l.items[0])}
+                  line={d.text}
+                  value={d.open}
+                  note={d.note}
+                  attention={d.open > 0}
+                />
+              );
+            })}
+          </CardGrid>
+          <Pager {...paged} />
+        </>
+      )}
+    </div>
+  );
+}
+
+function ListingDeliveries({
+  listing,
+  items,
+  selected,
+  view,
+  error,
+}: {
+  listing: ListingRef;
+  items: DeliveryItem[];
+  selected: string | null;
+  view: string | null;
+  error: unknown;
+}) {
+  const { role } = useShell();
+  const router = useRouter();
+  const pathname = usePathname();
+  const href = useHref();
+
+  const inView = (i: DeliveryItem, s: Show) => (s === "all" ? true : s === "done" ? i.state === "done" : open(i));
+  // Nothing left to do here: show what was delivered rather than an empty list.
+  const show: Show = view === "done" || view === "all" || view === "todo" ? view : items.some(open) ? "todo" : "all";
+  const base = `${href("/deliveries")}?listing=${encodeURIComponent(listing.id)}`;
+  const setShow = (v: Show) => router.replace(`${pathname}?listing=${encodeURIComponent(listing.id)}&view=${v}`, { scroll: false });
+
+  const list = items.filter((i) => inView(i, show));
+  const current = items.find((i) => i.id === selected) ?? list[0] ?? null;
+  const itemHref = (i: DeliveryItem) => `${base}&view=${show}&item=${encodeURIComponent(i.id)}`;
+
+  return (
+    <div className="flex flex-col gap-4">
+      <DrillBar
+        back={`${href("/deliveries")}?${eventParam(listing.event?.key ?? NO_EVENT)}`}
+        crumb={eventName(listing.event)}
+        title={listing.title}
+        right={
+          <FilterPills
+            label="Show"
+            value={show}
+            onChange={setShow}
+            options={[
+              { value: "todo", label: "To do", count: items.filter((i) => inView(i, "todo")).length },
+              { value: "done", label: "Delivered", count: items.filter((i) => inView(i, "done")).length },
+              { value: "all", label: "All", count: items.length },
+            ]}
+          />
+        }
+      />
+      <ReadError error={error} />
 
       <MasterDetail
         showDetail={!!selected && !!current}
         list={
           <Panel
             title={show === "done" ? "Delivered" : show === "all" ? "All" : "To do"}
-            meta={loading ? "" : `${list.length}`}
+            meta={`${list.length}`}
             className={LIST_PANEL}
             bodyClassName="min-h-0 overflow-y-auto"
           >
-            {loading ? (
-              <Skeleton className="h-60" />
-            ) : list.length === 0 ? (
+            {list.length === 0 ? (
               <EmptyState title={show === "todo" ? "Nothing to deliver." : "Nothing here."} />
             ) : (
               <ul className="flex flex-col gap-1">
@@ -112,9 +278,9 @@ export function DeliveriesScreen({ selected, view }: { selected: string | null; 
                       href={itemHref(i)}
                       selected={i.id === current?.id}
                       title={i.title}
-                      sub={`${KIND_TEXT[i.kind]} · ${i.listing}`}
+                      sub={i.sub === KIND_TEXT[i.kind] ? i.sub : `${KIND_TEXT[i.kind]} · ${i.sub}`}
                       right={
-                        <span className={`text-[11px] ${i.state === "overdue" || i.kind === "artwork" ? "text-amber" : "text-[#9FB7C2]"}`}>
+                        <span className={`text-[11px] ${i.state === "overdue" || (i.kind === "artwork" && role === "creator") ? "text-amber" : "text-[#9FB7C2]"}`}>
                           {i.state === "done" ? STATE_TEXT.done : i.due ? dueText(i.due) : STATE_TEXT[i.state]}
                         </span>
                       }
@@ -127,7 +293,7 @@ export function DeliveriesScreen({ selected, view }: { selected: string | null; 
         }
         detail={
           current ? (
-            <Detail item={current} backHref={`${href("/deliveries")}?view=${show}`} />
+            <Detail item={current} backHref={`${base}&view=${show}`} />
           ) : (
             <Panel>
               <EmptyState title="Nothing selected." />
@@ -150,7 +316,7 @@ function Detail({ item, backHref }: { item: DeliveryItem; backHref: string }) {
     <div className="flex flex-col gap-3">
       <Link href={backHref} scroll={false} className="inline-flex w-fit items-center gap-1.5 text-tiny text-[#9FB7C2] hover:text-text lg:hidden">
         <IconArrowLeft className="h-3.5 w-3.5" />
-        Deliveries
+        {item.listing}
       </Link>
       <Panel
         title={item.listing}

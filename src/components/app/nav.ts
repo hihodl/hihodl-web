@@ -17,6 +17,7 @@ import {
   IconOffers,
   IconOverview,
   IconSales,
+  IconSettings,
   IconTeam,
 } from "./icons";
 
@@ -28,7 +29,8 @@ export type NavKey =
   | "deliveries"
   | "team"
   | "inspire"
-  | "account";
+  | "account"
+  | "settings";
 
 export interface NavItem {
   key: NavKey;
@@ -74,8 +76,21 @@ export const ACCOUNT_ITEM: NavItem = {
   path: "/account",
   icon: IconAccount,
   roles: ["creator"],
-  keywords: "x twitter payout wallet address settings",
+  keywords: "x twitter payout wallet address plan creative director run a team",
 };
+
+/** The app itself: signing out, help and the legal pages, how the sidebar is drawn. Everybody has it. */
+export const SETTINGS_ITEM: NavItem = {
+  key: "settings",
+  label: "Settings",
+  path: "/settings",
+  icon: IconSettings,
+  roles: ALL,
+  keywords: "sign out log out terms privacy support help sidebar display",
+};
+
+/** The sidebar's bottom block, in order. */
+export const FOOT_ITEMS: readonly NavItem[] = [ACCOUNT_ITEM, SETTINGS_ITEM];
 
 /**
  * What this person may open. `team` is false for a creator who runs no team
@@ -86,14 +101,14 @@ export function visible(item: NavItem, role: ShellRole, team: boolean): boolean 
 }
 
 export function itemsFor(role: ShellRole, team = true): NavItem[] {
-  return [...SPACES_GROUPS.flatMap((g) => g.items), ACCOUNT_ITEM].filter((i) => visible(i, role, team));
+  return [...SPACES_GROUPS.flatMap((g) => g.items), ...FOOT_ITEMS].filter((i) => visible(i, role, team));
 }
 
 /** Which item a path (relative to the base) belongs to. */
 export function activeKey(rel: string): NavKey | null {
   if (rel === "" || rel === "/") return "overview";
   const first = rel.split("/")[1] ?? "";
-  const all = [...SPACES_GROUPS.flatMap((g) => g.items), ACCOUNT_ITEM];
+  const all = [...SPACES_GROUPS.flatMap((g) => g.items), ...FOOT_ITEMS];
   if (first === "x") return "account";
   return all.find((i) => i.path === `/${first}`)?.key ?? null;
 }
@@ -105,6 +120,6 @@ export function titleFor(rel: string): string {
   if (/^\/listings\/[^/]+/.test(rel)) return "Listing";
   if (/^\/x\/?$/.test(rel)) return "X account";
   const key = activeKey(rel);
-  const all = [...SPACES_GROUPS.flatMap((g) => g.items), ACCOUNT_ITEM];
+  const all = [...SPACES_GROUPS.flatMap((g) => g.items), ...FOOT_ITEMS];
   return all.find((i) => i.key === key)?.label ?? "Spaces";
 }
