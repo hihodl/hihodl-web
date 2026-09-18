@@ -161,7 +161,7 @@ export function ListingRunner({ spaceId }: { spaceId: string }) {
         <Section label="Send people to it" title="Your link">
           <div className="flex flex-col gap-4">
             <p className="break-all font-mono text-small text-text">{share.url}</p>
-            <p className="rounded-input border border-[color:var(--color-hairline)] px-4 py-3 text-small text-text-muted">
+            <p className="break-words rounded-input border border-[color:var(--color-hairline)] px-4 py-3 text-small text-text-muted [overflow-wrap:anywhere]">
               {share.text}
             </p>
             <p className="text-tiny text-text-muted">
