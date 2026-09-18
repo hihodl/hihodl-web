@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 
+import { ProfileFooter } from "@/components/ad-space/creator";
 import { EventBanner, EventTabs, SpaceCardGrid, TAB_NAME, eventPath } from "@/components/ad-space/events";
 import { SlimHeader } from "@/components/ad-space/sections";
 import { eyebrow } from "@/components/ad-space/ui";
-import { DownloadLink } from "@/components/site/DownloadLink";
-import { Wordmark } from "@/components/site/Wordmark";
 import { SLUG_RE } from "@/lib/ad-space/config";
 import { EVENT_TABS, eventDates, openSpots } from "@/lib/ad-space/format";
 import { getPublicEvent } from "@/lib/ad-space/server";
@@ -135,11 +134,11 @@ export default async function EventPage({
       <main>
         <EventBanner event={event} now={now} />
         <section className="container-page py-10 md:py-14" aria-label="Spaces">
-          <p className="mb-6 max-w-2xl break-words text-body text-text-muted [overflow-wrap:anywhere]">
-            {total === 0
-              ? `Nobody has opened a space for ${event.name} yet.`
-              : `Creators going to ${event.name} sell space, content and their time here. Open a card to see what is left and pay the creator directly in USDC.`}
-          </p>
+          {total === 0 && (
+            <p className="mb-6 max-w-2xl break-words text-body text-text-muted [overflow-wrap:anywhere]">
+              Nobody has opened a space for {event.name} yet.
+            </p>
+          )}
           <EventTabs slug={event.slug} eventName={event.name} active={active} tabs={tabs} />
           <div className="mt-8" role="region" aria-label={TAB_NAME[active]}>
             <SpaceCardGrid cards={tabs[active]} event={event} tab={active} now={now} />
@@ -152,22 +151,9 @@ export default async function EventPage({
           )}
         </section>
       </main>
-      <footer className="hairline">
-        <div className="container-page flex flex-col gap-6 py-12 md:flex-row md:items-start md:justify-between">
-          <div className="flex max-w-md flex-col gap-3">
-            <Wordmark className="h-5 w-auto self-start text-text" />
-            <p className="text-small text-text-muted">
-              Powered by HOLD. You pay creators directly in USDC, and HOLD never holds the money. HOLD is not
-              affiliated with {event.name}.
-            </p>
-          </div>
-          <nav className="flex flex-wrap gap-x-6 gap-y-3 text-small" aria-label="HiSpace">
-            <DownloadLink className="text-text-muted transition-colors duration-180 hover:text-text">
-              Open your own space
-            </DownloadLink>
-          </nav>
-        </div>
-      </footer>
+      {/* The HOLD mark, and the one sentence that has to stay: this page uses the
+          event's name and picture without being the event. */}
+      <ProfileFooter note={`HOLD is not affiliated with ${event.name}.`} />
     </>
   );
 }
