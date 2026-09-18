@@ -528,10 +528,10 @@ function TopBar({ title, onMenu, onSearch }: { title: string; onMenu: () => void
           <h1 className="truncate pl-1 text-body font-medium text-text sm:text-[18px]">{title}</h1>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
-          <button type="button" onClick={onSearch} aria-label="Search" className={btnGhost}>
+          <button type="button" onClick={onSearch} aria-label="Search" className={`${btnGhost} sm:w-[180px] sm:justify-start xl:w-[220px]`}>
             <IconSearch className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Search</span>
-            <kbd className="hidden rounded-[4px] border border-white/15 px-1 py-0.5 text-[9px] sm:inline">⌘K</kbd>
+            <kbd className="ml-auto hidden rounded-[4px] border border-white/15 px-1 py-0.5 text-[9px] sm:inline">⌘K</kbd>
           </button>
           {role === "creator" ? (
             <Link
