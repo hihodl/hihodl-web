@@ -84,7 +84,8 @@ export function EventMiniCard({
   event: EventSummary;
   now: number;
   href?: string;
-  as?: "h1" | "p";
+  /** `h2` on a creator's hub, where each event is a section of a longer page. */
+  as?: "h1" | "h2" | "p";
 }) {
   const countdown = eventCountdown(event.startsOn, event.endsOn, now);
   const body = (
@@ -270,6 +271,12 @@ export function EventTabs({
   );
 }
 
+/**
+ * The same grid on both pages that show a list of spaces. A creator's hub
+ * groups by event rather than by tab and can hold a group tied to no event at
+ * all, so both are nullable here — and with neither there is nothing to invite
+ * anybody to, which is why an empty group simply draws nothing.
+ */
 export function SpaceCardGrid({
   cards,
   event,
@@ -277,11 +284,11 @@ export function SpaceCardGrid({
   now,
 }: {
   cards: SpaceCard[];
-  event: EventSummary;
-  tab: SpaceTab;
+  event: EventSummary | null;
+  tab: SpaceTab | null;
   now: number;
 }) {
-  if (cards.length === 0) return <EmptyTab event={event} tab={tab} />;
+  if (cards.length === 0) return event && tab ? <EmptyTab event={event} tab={tab} /> : null;
   return (
     <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
       {cards.map((c) => (
@@ -293,7 +300,7 @@ export function SpaceCardGrid({
   );
 }
 
-function SpaceCardTile({ card: c, event, now }: { card: SpaceCard; event: EventSummary; now: number }) {
+function SpaceCardTile({ card: c, event, now }: { card: SpaceCard; event: EventSummary | null; now: number }) {
   const banner = bannerFor(c, event);
   const closed = c.status !== "live";
   const { xHandle, xName, xFollowers } = c.creator;

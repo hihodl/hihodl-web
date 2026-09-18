@@ -44,6 +44,7 @@
 
 import type {
   Booking,
+  CreatorPage,
   EventPage,
   EventSummary,
   OfferThread,
@@ -1074,6 +1075,65 @@ export function fixtureEvent(slug: string): EventPage | { redirectTo: string } |
   if (slug === DEVCON.slug) return { event: DEVCON, tabs: devconTabs(), defaultTab: "ground" };
   if (slug === "token-2049-singapore") return { redirectTo: TOKEN2049.slug };
   return null;
+}
+
+/**
+ * A creator's hub, `/s/coinempress`: the same cards the two event fixtures
+ * carry, regrouped the way the API groups them — one section per event, in the
+ * server's order, and last the takeover suitcase, which belongs to no event.
+ * Every other handle answers 404, as a handle with nothing listable does.
+ */
+export function fixtureCreator(handle: string): CreatorPage | null {
+  const lower = handle.toLowerCase();
+  if (lower !== "coinempress") return null;
+
+  const mine = (tabs: EventPage["tabs"]): SpaceCard[] =>
+    [...tabs.ground, ...tabs.feed, ...tabs.room].filter((c) => c.creator.xHandle === "coinempress");
+  const others = (tabs: EventPage["tabs"]): number =>
+    new Set(
+      [...tabs.ground, ...tabs.feed, ...tabs.room]
+        .map((c) => c.creator.xHandle)
+        .filter((h): h is string => Boolean(h) && h !== "coinempress"),
+    ).size;
+
+  const token = token2049Tabs();
+  const devcon = devconTabs();
+  const groups: CreatorPage["groups"] = [
+    { event: TOKEN2049, othersAtEvent: others(token), cards: mine(token) },
+    { event: DEVCON, othersAtEvent: others(devcon), cards: mine(devcon) },
+    {
+      // The one group with no event, always last, so the page's honest heading
+      // for it has something to render against.
+      event: null,
+      othersAtEvent: 0,
+      cards: [
+        card(11, {
+          path: "/s/coinempress/token2049-takeover",
+          title: "Take my suitcase off whoever has it",
+          tab: "ground",
+          templateName: "Carry-on suitcase",
+          creator: COIN,
+          bannerGradient: "ember",
+          pricingMode: "takeover",
+          totals: { positions: 18, open: 11, sold: 7 },
+          fromPriceCents: 25000,
+        }),
+      ],
+    },
+  ];
+
+  return {
+    creator: { ...COIN, xHandle: "coinempress" },
+    groups,
+    totals: {
+      spaces: groups.reduce((n, g) => n + g.cards.length, 0),
+      openSpots: groups.reduce(
+        (n, g) => n + g.cards.reduce((m, c) => m + (c.status === "live" ? c.totals.open : 0), 0),
+        0,
+      ),
+      events: groups.filter((g) => g.event).length,
+    },
+  };
 }
 
 /**

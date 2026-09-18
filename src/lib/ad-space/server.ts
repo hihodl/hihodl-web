@@ -1,8 +1,17 @@
 // Server-only by construction: no "use client" file imports this module.
 import { AD_SPACE_API, HANDLE_RE, SLUG_RE } from "./config";
-import { defaultEventTab } from "./format";
+import { defaultEventTab, openSpots } from "./format";
 import { gradientKey } from "./look";
-import type { Booking, EventPage, EventSummary, OfferThread, Position, Space, SpaceCard } from "./types";
+import type {
+  Booking,
+  CreatorPage,
+  EventPage,
+  EventSummary,
+  OfferThread,
+  Position,
+  Space,
+  SpaceCard,
+} from "./types";
 
 /**
  * Reading a public Ad Space on the server.
@@ -267,6 +276,82 @@ export async function listPublicEvents(limit = 50): Promise<EventSummary[]> {
   } catch {
     return [];
   }
+}
+
+/* ── A creator's hub ─────────────────────────────────────────────────── */
+
+export type CreatorLookup =
+  | { kind: "found"; page: CreatorPage }
+  | { kind: "missing" }
+  | { kind: "unreachable" };
+
+/**
+ * `GET /public/creators/:handle`. The handle is case-insensitive upstream, and
+ * a reader who pasted `@handle` from a post gets the same page: the `@` is
+ * dropped here rather than turned into a 404 nobody can explain.
+ *
+ * A 404 covers both a handle nobody has and a handle with nothing listable, and
+ * so does an answer with no groups at all — an empty hub is a page that says a
+ * creator sells nothing, which is worse than the honest "there is nothing at
+ * this link". `unreachable` stays separate, as everywhere else here.
+ *
+ * @param revalidate seconds; the hub is an event page's sibling and matches it.
+ */
+export async function getPublicCreator(handle: string, revalidate = 30): Promise<CreatorLookup> {
+  const bare = handle.replace(/^@/, "");
+  if (!HANDLE_RE.test(bare)) return { kind: "missing" };
+
+  let body: { data?: Partial<CreatorPage> } | Partial<CreatorPage> | null;
+  if (fixtureEnabled()) {
+    const { fixtureCreator } = await import("./fixture.dev");
+    const page = fixtureCreator(bare);
+    if (!page) return { kind: "missing" };
+    body = { data: page };
+  } else {
+    try {
+      const res = await fetch(`${AD_SPACE_API}/public/creators/${encodeURIComponent(bare)}`, {
+        headers: upstreamHeaders(null),
+        next: { revalidate },
+        signal: AbortSignal.timeout(6_000),
+      });
+      if (res.status === 404) return { kind: "missing" };
+      if (!res.ok) return { kind: "unreachable" };
+      body = await res.json();
+    } catch {
+      return { kind: "unreachable" };
+    }
+  }
+
+  // Every other public route answers inside `data`; the contract for this one is
+  // written as the bare object, so both are read rather than betting on one.
+  const data = ((body as { data?: Partial<CreatorPage> })?.data ?? body) as Partial<CreatorPage> | undefined;
+  const creator = data?.creator;
+  if (!creator?.xHandle) return { kind: "unreachable" };
+
+  const groups = (Array.isArray(data?.groups) ? (data?.groups ?? []) : [])
+    // Kept in the server's order, which is the one thing about this list the
+    // page must not have an opinion about.
+    .map((g) => ({
+      event: g?.event ?? null,
+      othersAtEvent: Math.max(0, Math.trunc(Number(g?.othersAtEvent) || 0)),
+      cards: (Array.isArray(g?.cards) ? g.cards : []).map(withCardDefaults),
+    }))
+    .filter((g) => g.cards.length > 0);
+  if (groups.length === 0) return { kind: "missing" };
+
+  const totals = data?.totals;
+  return {
+    kind: "found",
+    page: {
+      creator,
+      groups,
+      totals: {
+        spaces: totals?.spaces ?? groups.reduce((n, g) => n + g.cards.length, 0),
+        openSpots: totals?.openSpots ?? groups.reduce((n, g) => n + openSpots(g.cards), 0),
+        events: totals?.events ?? groups.filter((g) => g.event).length,
+      },
+    },
+  };
 }
 
 /* ── A booked session, by its manage link ────────────────────────────── */
