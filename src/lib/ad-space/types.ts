@@ -126,6 +126,8 @@ export interface Takeover {
   nextSponsorPaysUsdc: string | null;
   /** What the sponsor being displaced gets back, in full, in that same payment. */
   refundsUsdc: string | null;
+  /** Our fee on that next takeover: the fee on the difference. Absent on an older server. */
+  nextFeeUsdc?: string | null;
   /** Where bidding opened. */
   floorPriceCents: number;
   handsSoFar: number;
@@ -292,6 +294,8 @@ export interface OfferView {
   leading: boolean | null;
   createdAt: string;
   updatedAt: string;
+  /** The space's `sponsorPointsShareBps`, when the server joins it in. */
+  sponsorPointsShareBps?: number;
   /** The space's title and web path ("/s/<handle>/<slug>"), when the server joins them in. */
   spaceTitle?: string | null;
   spacePath?: string | null;
@@ -373,6 +377,12 @@ export interface Space {
   creator: Creator;
   feeBps: number;
   feePayer: "sponsor" | "creator";
+  /**
+   * The share of our fee a sponsor paying from the HOLD app earns back in
+   * HiPoints (spaces-sponsor-points-v0.md), 1000 today. Absent on a server
+   * older than sponsor points: the page then promises nothing.
+   */
+  sponsorPointsShareBps?: number;
   pricingMode: PricingMode;
   /** How much a takeover multiplies the last price by; null on a fixed-price space. */
   takeoverMultiple: number | null;

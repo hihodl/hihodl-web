@@ -277,6 +277,7 @@ function suitcase(): Space {
     },
     feeBps: 500,
     feePayer: "sponsor",
+    sponsorPointsShareBps: 1000,
     pricingMode: "fixed",
     takeoverMultiple: null,
     acceptsOffers: false,
@@ -442,6 +443,7 @@ function takeovers(): Space {
       nextPriceUsdc: next ? usdc(next) : null,
       nextSponsorPaysUsdc: next ? usdc(next + Math.round(next * 0.05)) : null,
       refundsUsdc: next ? usdc(args.priceCents + Math.round(args.priceCents * 0.05)) : null,
+      nextFeeUsdc: next ? usdc(Math.round((next - args.priceCents) * 0.05)) : null,
       floorPriceCents: args.floorPriceCents,
       handsSoFar: args.handsSoFar,
       handsLeft: MAX_HANDS - args.handsSoFar,
@@ -1389,6 +1391,7 @@ export function fixtureOffer(token: string): OfferThread | null {
           : null,
     orderId: status === "paid" ? "0e000000-0000-4000-8000-000000000009" : null,
     leading: bid ? name === "bid_leading" : null,
+    sponsorPointsShareBps: 1000,
     createdAt: at(30),
     updatedAt: at(4),
   };
