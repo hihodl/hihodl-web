@@ -1,6 +1,6 @@
 "use client";
 
-import { type SpaceTier, tiersStartAtCents, usdFromCents } from "@/lib/ad-space/format";
+import type { SpaceTier } from "@/lib/ad-space/format";
 import type { OfferMode, Position } from "@/lib/ad-space/types";
 
 import { BidLines } from "./PositionCard";
@@ -53,28 +53,9 @@ export function TierLadder({
   onOffer: (p: Position) => void;
 }) {
   if (tiers.length === 0) return null;
-  const from = tiersStartAtCents(tiers);
-  const noun = session ? "Sessions" : "Spots";
-  /* "Pay and it's yours" is only true while every rung on offer sells at its
-     price. The moment one of them takes offers or bids, the line has to stop
-     promising a brand it can walk up and buy the one it wants. */
-  const allOnePrice = tiers.every((t) => !t.buy || modeOf(t.buy) === null);
 
   return (
-    <section aria-labelledby="the-ladder" className="flex flex-col gap-6">
-      <div>
-        <h2 id="the-ladder" className="font-display text-h4 font-light text-text">
-          What you can buy
-        </h2>
-        {from !== null && (
-          <p className="mt-1 text-small text-text-muted">
-            {noun} start at <span className="font-mono text-text">{usdFromCents(from)}</span>.{" "}
-            {allOnePrice
-              ? "Pick one and pay in USDC; there is nothing to agree first."
-              : "Each one says what it costs and how it sells: some at their price, some to the best bid or offer."}
-          </p>
-        )}
-      </div>
+    <section aria-label={session ? "Sessions" : "Packages"} className="flex flex-col gap-6">
       <ul className="flex flex-col gap-4">
         {tiers.map((t) => (
           <li key={t.key}>
@@ -185,7 +166,7 @@ function TierCard({
           <div className="flex flex-wrap gap-2 sm:justify-end">
             {(mode === null || mode === "fixed_with_offers") && (
               <button type="button" className={btnSmall} onClick={() => onSponsor(buy)}>
-                {mode === "fixed_with_offers" ? "Buy now" : session ? "Book a session" : "Sponsor this spot"}
+                {mode === "fixed_with_offers" ? "Buy now" : session ? "Book a session" : "Claim it"}
               </button>
             )}
             {(mode === "offers" || mode === "fixed_with_offers") && (
@@ -206,7 +187,7 @@ function TierCard({
         )}
         {!buy && t.held > 0 && (
           <p className="max-w-[18rem] text-tiny text-amber sm:text-right">
-            Somebody is paying for the last one right now. It comes back if they don&rsquo;t finish.
+            Somebody is paying for the last one right now.
           </p>
         )}
       </div>
@@ -251,12 +232,6 @@ function TierFigure({ tier: t, mode, session }: { tier: SpaceTier; mode: OfferMo
     <dl className="flex flex-col gap-0.5 sm:text-right">
       <dt className="text-tiny text-text-faint">{gone ? "Went for" : "You pay"}</dt>
       <dd className="font-mono text-h4 font-light text-text">{t.sponsorPaysUsdc} USDC</dd>
-      {!gone && t.creatorReceivesUsdc && (
-        <div className="flex items-baseline gap-1 text-tiny text-text-faint sm:justify-end">
-          <dt>Creator receives</dt>
-          <dd className="font-mono">{t.creatorReceivesUsdc}</dd>
-        </div>
-      )}
     </dl>
   );
 }
