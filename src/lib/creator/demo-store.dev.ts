@@ -93,6 +93,8 @@ interface DeliverableRec {
 }
 
 interface SpaceRec {
+  /** The creator's own picture (POST /spaces/:id/banner). */
+  bannerUrl?: string | null;
   id: string;
   ownerId: UserId;
   templateId: string;
@@ -665,6 +667,7 @@ function seeded(): Store {
     createdAt: ago(9 * DAY),
     updates: [{ id: uuid(), body: "First video is shot, going up tomorrow morning.", imageUrl: null, positionId: null, createdAt: ago(20 * HOUR) }],
   });
+  videos.bannerUrl = "/demo/singapore.jpg";
   s.spaces.push(videos);
   const videoSold = videos.positions[0];
   sell(s, videos, videoSold, sponsorOf("Kopi Labs"), 3);
@@ -808,6 +811,7 @@ function seeded(): Store {
       { id: uuid(), kind: "thank_you_post", platform: "x", count: 1, dueDate: day(2), note: null, deliveredUrl: null, deliveredAt: null },
     ],
   });
+  kbwSpace.bannerUrl = "/demo/suitcase-front.jpg";
   s.spaces.push(kbwSpace);
   const kbwSales = ["Orbit", "Mesa", "Stackd", "Acme", "Nodeline", "Lumen"].map((name, i) => {
     const p = kbwSpace.positions[i];
@@ -1226,6 +1230,8 @@ function spaceView(s: Store, sp: SpaceRec, viewer: UserId, origin: string): Spac
     updates: [...sp.updates].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     share: shareOf(sp, origin, totals),
     event: eventById(s, sp.eventId),
+    bannerUrl: sp.bannerUrl ?? null,
+    bannerGradient: "steel",
   };
 }
 
@@ -1247,6 +1253,8 @@ function cardView(s: Store, sp: SpaceRec): SpaceCard {
     fundingGoalCents: sp.fundingGoalCents,
     awaitingReview: sp.positions.filter((p) => p.content?.status === "pending").length,
     event: eventById(s, sp.eventId),
+    bannerUrl: sp.bannerUrl ?? null,
+    bannerGradient: "steel",
   };
 }
 
@@ -1835,6 +1843,18 @@ function route(req: DemoRequest): DemoResponse {
     return ok({ removed: true });
   }
 
+  /* The listing's picture. The mock cannot read the image bytes (the route parses JSON), so it keeps a stock one. */
+  if ((p = is("POST", "ad-space/spaces/:/banner"))) {
+    const sp = spaceFor(s, viewer, p[0], "own");
+    sp.bannerUrl = "/demo/singapore.jpg";
+    return ok({ bannerUrl: sp.bannerUrl }, 201);
+  }
+  if ((p = is("DELETE", "ad-space/spaces/:/banner"))) {
+    const sp = spaceFor(s, viewer, p[0], "own");
+    sp.bannerUrl = null;
+    return ok({ bannerUrl: null });
+  }
+
   /* The team */
   if (is("GET", "ad-space/team")) {
     return ok({ team: s.members.filter((m) => m.ownerId === viewer && m.status !== "removed").map((m) => memberView(m, false)) });
@@ -1842,6 +1862,8 @@ function route(req: DemoRequest): DemoResponse {
   if (is("POST", "ad-space/team")) {
     const label = (str(req.body?.label) ?? "").trim();
     const r = req.body?.role;
+    const email = str(req.body?.email);
+    if (email !== null && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new DemoError("VALIDATION_ERROR", 400);
     if (!label || label.length > 64) throw new DemoError("team_label_required", 422);
     if (r !== "manager" && r !== "rep") throw new DemoError("team_role_unknown", 422);
     if (s.members.filter((m) => m.ownerId === viewer && m.status !== "removed").length >= 25) {
@@ -1861,7 +1883,10 @@ function route(req: DemoRequest): DemoResponse {
       code,
     };
     s.members.push(m);
-    return ok({ member: memberView(m, false), code, url: `${req.origin}/invite/${DEMO_INVITE_CODE}?seat=${code}` }, 201);
+    return ok(
+      { member: memberView(m, false), code, url: `${req.origin}/invite/${DEMO_INVITE_CODE}?seat=${code}`, emailed: email !== null },
+      201,
+    );
   }
   if (is("GET", "ad-space/team/seats")) {
     return ok({ seats: s.members.filter((m) => m.memberUserId === viewer && m.status === "active").map((m) => memberView(m, true)) });
