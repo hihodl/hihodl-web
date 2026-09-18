@@ -1,34 +1,34 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
 import { currentCheckout, existingCheckoutKey } from "@/lib/ad-space/checkout-client";
 import {
   instantUtc,
   isSessionSpace,
   isTieredSpace,
-  serviceName,
   serviceSummary,
   spaceTiers,
   timeLeft,
 } from "@/lib/ad-space/format";
+import { gradientCss } from "@/lib/ad-space/look";
 import { type SavedOffer, offerModeOf, offerPath, savedOffers } from "@/lib/ad-space/offers-client";
 import type { OfferKind, OfferMode, Order, Position, PositionOffers, Space } from "@/lib/ad-space/types";
 
 import { Checkout } from "./Checkout";
-import { IfItDoesNotHappen } from "./IfItDoesNotHappen";
 import { OfferSheet } from "./OfferSheet";
 import { PositionCard } from "./PositionCard";
 import { ProductBoard } from "./ProductBoard";
 import { TierLadder } from "./TierLadder";
-import { btnSmall, btnSmallSecondary, eyebrow, pill } from "./ui";
+import { btnSmall, btnSmallSecondary, pill } from "./ui";
 import { useServerNow } from "./useServerNow";
-import { WhatTheBrandGets } from "./WhatTheBrandGets";
 
 /**
- * The interactive middle of the page: the board (a drawn product, or a grid
- * of slots for a service), the spots, and the checkout sheet.
+ * The listing page's interactive body, and its layout: the banner with the
+ * product on it (a placement) or the slots and packages (a service), the spots,
+ * and the checkout and offer sheets. The server-rendered parts (the head, the
+ * numbers, what you get) come in as slots, so they stay plain HTML.
  *
  * Board and list are linked both ways. Hovering a zone lights its card and
  * hovering a card lights its zone. Tapping an open zone goes straight to the
@@ -41,7 +41,20 @@ import { WhatTheBrandGets } from "./WhatTheBrandGets";
  * offers keeps Buy now on the zone and adds Make an offer on the card. A service
  * space takes offers once, for the space, above its slots.
  */
-export function SpaceBoard({ space }: { space: Space }) {
+export function SpaceBoard({
+  space,
+  head,
+  stats,
+  details,
+}: {
+  space: Space;
+  /** The title and the creator, server-rendered, drawn on the banner. */
+  head: ReactNode;
+  /** The big numbers, between the banner and the rest. */
+  stats: ReactNode;
+  /** What you get and how it works, before the full list of spots. */
+  details: ReactNode;
+}) {
   const router = useRouter();
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [flashId, setFlashId] = useState<string | null>(null);
@@ -179,87 +192,92 @@ export function SpaceBoard({ space }: { space: Space }) {
     </div>
   );
 
-  return (
-    <>
+  const notices = (resumable && !checkoutFor) || mine.length > 0 ? (
+    <div className="container-page flex flex-col gap-4">
       {resumable && !checkoutFor && (
-        <div className="mb-10 flex flex-col gap-4 rounded-card border border-amber/40 bg-amber/[0.06] p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 rounded-card border border-amber/40 bg-amber/[0.06] p-5 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-small text-text">
             {resumable.order.status !== "paid"
               ? `Your payment for ${resumable.position.label} is still going through.`
               : session
-                ? `You booked ${resumable.position.label}. Your booking link and your contact for the creator are here.`
-                : `You sponsored ${resumable.position.label}. Send the creator what goes on it.`}
+                ? `You booked ${resumable.position.label}.`
+                : `You sponsored ${resumable.position.label}. Send the creator your logo.`}
           </p>
           <button type="button" className={btnSmall} onClick={() => setCheckoutFor(resumable.position)}>
             {resumable.order.status !== "paid" ? "See the payment" : session ? "See your booking" : "Add your logo"}
           </button>
         </div>
       )}
-
       {mine.length > 0 && <YourOffers offers={mine} />}
+    </div>
+  ) : null;
 
-      {isService ? (
-        <div className="flex flex-col gap-8">
-          {space.template.service && (
-            <div className="max-w-2xl">
-              <p className={`${eyebrow} break-words text-moonlight [overflow-wrap:anywhere]`}>
-                {session ? `Book: ${serviceName(space)}` : serviceName(space)}
-              </p>
-              {serviceSummary(space) && (
-                <p className="mt-3 whitespace-pre-line break-words text-lead text-text-muted [overflow-wrap:anywhere]">
-                  {serviceSummary(space)}
-                </p>
-              )}
-            </div>
-          )}
-          <WhatTheBrandGets space={space} />
-          {/* A session space has no "every slot includes" card at all, so this
-              is the only thing between the summary and the slots that says what
-              happens if the session doesn't. It renders on both boards. */}
-          <IfItDoesNotHappen space={space} />
-          {!tiered && spaceMode && spaceMode !== "bids" && (
-            <SpaceOffersPanel
-              mode={spaceMode}
-              offers={space.spaceOffers}
-              canOffer={buyable && space.positions.some((p) => p.status === "open")}
-              session={session}
-              now={now}
-              onOffer={() => setOfferFor({ position: null, kind: "offer" })}
-            />
-          )}
-          {tiered && (
-            <TierLadder
-              tiers={tiers}
-              buyable={buyable}
-              session={session}
-              modeOf={modeOf}
-              biddingOpen={biddingOpen}
-              now={now}
-              onSponsor={setCheckoutFor}
-              onOffer={openOffer}
-            />
-          )}
-          {cardList}
-        </div>
-      ) : (
-        <div className="flex flex-col gap-12">
-          <div className="rounded-card border border-[color:var(--color-hairline)] bg-white/[0.02] px-4 py-10 md:px-10">
-            <ProductBoard
-              template={space.template}
-              positions={space.positions}
-              activeId={active}
-              onHover={setHoverId}
-              onPick={pick}
-            />
-            <Legend takeover={space.pricingMode === "takeover"} mode={spaceMode} />
+  const noun = session ? "session" : isService ? (tiered ? "package" : "slot") : "spot";
+
+  return (
+    <>
+      <ListingBand space={space}>
+        {head}
+        {/* On a placement the product IS the banner: the suitcase itself, with
+            every spot on it live. `ListingStage` is the one boundary a photo
+            of the real object would replace (see its comment). */}
+        {!isService && (
+          <div id="spots" className="mt-10 scroll-mt-20">
+            <ListingStage space={space} activeId={active} onHover={setHoverId} onPick={pick} mode={spaceMode} />
           </div>
-          <WhatTheBrandGets space={space} />
-          <IfItDoesNotHappen space={space} />
-          <div>
-            <h2 className="mb-6 font-display text-h4 font-light text-text">Every spot</h2>
+        )}
+      </ListingBand>
+
+      {stats}
+      {notices}
+
+      {isService && (
+        <section id="spots" className="container-page scroll-mt-20 py-10 md:py-14" aria-labelledby="pick">
+          <h2 id="pick" className="font-display text-h3 font-light text-text md:text-h2">
+            {session ? "Book a session" : `Pick your ${noun}`}
+          </h2>
+          {serviceSummary(space) && (
+            <p className="mt-3 max-w-2xl whitespace-pre-line break-words text-body text-text-muted [overflow-wrap:anywhere]">
+              {serviceSummary(space)}
+            </p>
+          )}
+          <div className="mt-8 flex flex-col gap-6">
+            {!tiered && spaceMode && spaceMode !== "bids" && (
+              <SpaceOffersPanel
+                mode={spaceMode}
+                offers={space.spaceOffers}
+                canOffer={buyable && space.positions.some((p) => p.status === "open")}
+                session={session}
+                now={now}
+                onOffer={() => setOfferFor({ position: null, kind: "offer" })}
+              />
+            )}
+            {tiered && (
+              <TierLadder
+                tiers={tiers}
+                buyable={buyable}
+                session={session}
+                modeOf={modeOf}
+                biddingOpen={biddingOpen}
+                now={now}
+                onSponsor={setCheckoutFor}
+                onOffer={openOffer}
+              />
+            )}
             {cardList}
           </div>
-        </div>
+        </section>
+      )}
+
+      {details}
+
+      {!isService && cardList && (
+        <section className="container-page py-12 md:py-16" aria-labelledby="every-spot">
+          <h2 id="every-spot" className="font-display text-h3 font-light text-text md:text-h2">
+            Every spot
+          </h2>
+          <div className="mt-8">{cardList}</div>
+        </section>
       )}
 
       {checkoutFor && (
@@ -280,13 +298,76 @@ export function SpaceBoard({ space }: { space: Space }) {
   );
 }
 
+/**
+ * The banner, drawn from the listing itself and never from its event: the
+ * creator's own picture when they set one, else (on a placement) the product
+ * drawn below the title on the creator's gradient, else the gradient alone.
+ */
+function ListingBand({ space, children }: { space: Space; children: ReactNode }) {
+  const photo = space.bannerUrl;
+  return (
+    <section className="relative overflow-hidden" style={{ background: gradientCss(space.bannerGradient) }}>
+      {photo && (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element -- the creator's banner, from our own bucket */}
+          <img src={photo} alt="" className="absolute inset-0 h-full w-full object-cover" />
+          <div
+            className="absolute inset-0"
+            style={{ background: "linear-gradient(180deg, rgba(20,31,46,0.35) 0%, rgba(20,31,46,0.75) 55%, #141F2E 100%)" }}
+            aria-hidden
+          />
+        </>
+      )}
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-32"
+        style={{ background: "linear-gradient(180deg, transparent, #141F2E)" }}
+        aria-hidden
+      />
+      <div className="container-page relative pb-10 pt-6 md:pb-14 md:pt-10">{children}</div>
+    </section>
+  );
+}
+
+/**
+ * The listing's own picture: today the catalog drawing of the product with its
+ * zones on it, live.
+ *
+ * Phase 2 (real photos) plugs in here and nowhere else. Every zone is already a
+ * rectangle in FRACTIONS of its view, so a photo of the real suitcase taken (or
+ * cropped) to a view's aspect ratio can carry the very same rectangles: an
+ * <img> per view with the same absolutely-positioned zone layer on top, and a
+ * creator who uploads their own photo only has to drag those fractions. The
+ * board's contract (positions, activeId, onHover, onPick) stays as it is, so
+ * the stats, the cards and the checkout never know which one is drawn.
+ */
+function ListingStage({
+  space,
+  activeId,
+  onHover,
+  onPick,
+  mode,
+}: {
+  space: Space;
+  activeId: string | null;
+  onHover: (id: string | null) => void;
+  onPick: (p: Position) => void;
+  mode: OfferMode | null;
+}) {
+  return (
+    <div>
+      <ProductBoard template={space.template} positions={space.positions} activeId={activeId} onHover={onHover} onPick={onPick} />
+      <Legend takeover={space.pricingMode === "takeover"} mode={mode} />
+    </div>
+  );
+}
+
 function Legend({ takeover, mode }: { takeover: boolean; mode: OfferMode | null }) {
   return (
-    <ul className="mt-10 flex flex-wrap items-center justify-center gap-3" aria-label="Legend">
+    <ul className="mt-8 flex flex-wrap items-center justify-center gap-2" aria-label="Legend">
       <li className={pill.open}>
-        {mode === "offers" ? "Available, tap to make an offer" : mode === "bids" ? "Available, tap to bid" : "Available, tap to sponsor"}
+        {mode === "offers" ? "Open, tap to offer" : mode === "bids" ? "Open, tap to bid" : "Open, tap to claim"}
       </li>
-      <li className={pill.held}>Being paid now</li>
+      <li className={pill.held}>Being paid</li>
       {/* On a takeover board a sold spot opens checkout like an open one does
           (see `pick`), so the legend cannot call it just "Sold". */}
       <li className={pill.sold}>{takeover ? "Taken, tap to take it" : "Sold"}</li>
@@ -321,10 +402,10 @@ function SpaceOffersPanel({
     <div className="flex flex-col gap-4 rounded-card border border-[color:var(--color-hairline)] bg-white/[0.03] p-5 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
         <p className="text-body text-text">
-          {mode === "offers" ? "Name your price" : `Buy a ${noun} now, or make an offer below the price`}
+          {mode === "offers" ? "Name your price" : `Buy a ${noun} now, or offer less`}
         </p>
         <p className="mt-1 text-small text-text-muted">
-          Your offer is for any open {noun}. If the creator accepts it, you get the next free one and 24 hours to pay.
+          For any open {noun}. Accepted? You get the next free one and 24 hours to pay.
           {n !== null && (n === 0 ? " No offers yet." : n === 1 ? " 1 open offer." : ` ${n} open offers.`)}
         </p>
         {reserved && (

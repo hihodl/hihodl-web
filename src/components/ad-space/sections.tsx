@@ -6,31 +6,38 @@ import { Wordmark } from "@/components/site/Wordmark";
 import { SUPPORT_EMAIL } from "@/lib/ad-space/config";
 import {
   CHAIN_LABEL,
-  DELIVERABLE_STATE_LABEL,
   VERIFIED_LABEL,
-  accountAge,
   attestationText,
   calendarDate,
   compactNumber,
-  deliverableNote,
-  deliverableText,
-  eventDates,
   fundingProgress,
   isSessionSpace,
+  isTieredSpace,
   relativeTime,
   serviceName,
   spaceSoldOut,
   takeableSpots,
-  takeoverVerb,
   trackRecordNeedsAttention,
   trackRecordText,
   usdFromCents,
 } from "@/lib/ad-space/format";
-import type { Creator, DeliverableState, Space } from "@/lib/ad-space/types";
+import type { Creator, Position, Space } from "@/lib/ad-space/types";
 
 import { ClosesCountdown } from "./ClosesCountdown";
-import { SpaceSiblings } from "./events";
-import { btnSmallSecondary, card, eyebrow, pill } from "./ui";
+import { SpaceSiblings, eventPath } from "./events";
+import { IfItDoesNotHappen } from "./IfItDoesNotHappen";
+import { WhatTheBrandGets } from "./WhatTheBrandGets";
+import { btnPrimary, btnSmallSecondary, card, eyebrow } from "./ui";
+
+/**
+ * The listing page, read by a sponsor who arrived from a creator's post on X.
+ *
+ * It is written like a brand deal page, not a protocol document: in five
+ * seconds they must see what they get, what it costs, how much is left and how
+ * to buy. So the numbers are big, every block is a line or two, and anything
+ * longer sits behind an (i). How the money moves, and what HOLD charges, is said
+ * once, in the checkout, where it is true to the amount being signed.
+ */
 
 /* ── Chrome ────────────────────────────────────────────────────────── */
 
@@ -50,72 +57,42 @@ export function SlimHeader() {
   );
 }
 
+/** The links a page needs, and the HOLD logo at the very bottom. Nothing to read. */
 export function SpaceFooter({ space }: { space: Space }) {
   const report = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(`Report HiSpace ${space.id}`)}`;
+  const link = "text-text-faint transition-colors duration-180 hover:text-text";
   return (
     <footer className="hairline">
-      <div className="container-page flex flex-col gap-8 py-12 md:flex-row md:items-start md:justify-between">
-        <div className="flex max-w-md flex-col gap-3">
-          <Wordmark className="h-5 w-auto self-start text-text" />
-          <p className="text-small text-text-muted">
-            Powered by HOLD. {isSessionSpace(space) ? "Clients" : "Sponsors"} pay creators directly in USDC, and HOLD
-            never holds the money.
-          </p>
-          {/* Said once. With an invite link on the page, SpaceInvite says it, and says it better. */}
-          {!space.creatorInvite && (
-            <p className="text-small text-text-faint">Have an audience? Sell your own HiSpace from the HOLD app.</p>
-          )}
-        </div>
-        <nav className="flex flex-wrap gap-x-6 gap-y-3 text-small" aria-label="HiSpace">
-          <DownloadLink className="text-text-muted transition-colors duration-180 hover:text-text">Get HOLD</DownloadLink>
-          <a href={report} className="text-text-muted transition-colors duration-180 hover:text-text">
+      <div className="container-page flex flex-col gap-6 py-10">
+        <nav className="flex flex-wrap gap-x-6 gap-y-3 text-tiny" aria-label="HiSpace">
+          <a href={report} className={link}>
             Report this HiSpace
           </a>
-          <Link href="/terms" className="text-text-muted transition-colors duration-180 hover:text-text">
+          <Link href="/terms" className={link}>
             Terms
           </Link>
-          <Link href="/privacy" className="text-text-muted transition-colors duration-180 hover:text-text">
+          <Link href="/privacy" className={link}>
             Privacy
           </Link>
         </nav>
+        <Link href="/" aria-label="HOLD" className="self-start text-text-muted transition-colors duration-180 hover:text-text">
+          <Wordmark className="h-5 w-auto" />
+        </Link>
       </div>
     </footer>
   );
 }
 
-/* ── Hero ──────────────────────────────────────────────────────────── */
+/* ── Head: what this is and whose it is ────────────────────────────── */
 
-export function SpaceHero({ space }: { space: Space }) {
-  const { totals } = space;
+/**
+ * The words at the top of the banner. The banner itself (the listing's own
+ * picture, or its product, or its gradient) is drawn by `SpaceBoard`, because on
+ * a placement the product IS the banner and it is the interactive part.
+ */
+export function ListingHead({ space }: { space: Space }) {
   const session = isSessionSpace(space);
-  const noun = session ? "sessions" : space.kind === "service" ? "slots" : "spots";
-  const soldWord = session ? "booked" : "sold";
-  const isTakeover = space.pricingMode === "takeover";
-  /* Offers and bids have no listed total (the server sends `totalCents: null`):
-     "of $X" would name a total nobody has agreed to. What they commit is the
-     agreed amounts of paid orders, so before a sale there is nothing to show,
-     and "$0 committed" would read as a space nobody wants. */
-  const noTotal = totals.totalCents === null || space.pricingMode === "offers" || space.pricingMode === "bids";
-  const showCommitted = !noTotal || totals.committedCents > 0;
-  /* A creator who named a goal has told us what this campaign is for, and it is
-     an amount of money, not a number of spots. So the figure and the bar both
-     measure the money against that goal and say the percentage out loud, the
-     way the app does. A space with no goal is counted exactly as before. */
-  const funding = fundingProgress(space);
-
-  /* On a takeover board a sold spot is not gone — it can be bought from the
-     sponsor holding it. So "sold out" is only true here when there is nothing
-     left to take: every spot has an owner AND every ladder has stopped. Counting
-     sold spots as unavailable would turn the whole mechanic into a closed sign.
-     The link card and the meta description count the same way. */
-  const takeable = takeableSpots(space);
-  const soldOut = spaceSoldOut(space);
-  /* The bar tracks whatever the headline counts, so the two can never disagree. */
-  const headline = isTakeover ? takeable : totals.sold;
-  const headlineLabel = `${headline} of ${totals.positions} ${noun} ${isTakeover ? "still up for grabs" : soldWord}`;
   const name = serviceName(space);
-  /* A custom service is named by its creator, so it is shown as they wrote it,
-     never lowercased into a sentence. */
   const custom = space.template.service?.custom === true;
   const what = session
     ? name
@@ -123,151 +100,70 @@ export function SpaceHero({ space }: { space: Space }) {
       ? custom
         ? name
         : `Sponsored ${name.toLowerCase()}`
-      : `Ad Space on a ${name.toLowerCase()}`;
+      : `Your brand on a ${name.toLowerCase()}`;
 
   return (
-    <section
-      className="relative overflow-hidden"
-      style={{ background: "linear-gradient(180deg, #1B2638 0%, #243246 60%, #141F2E 100%)" }}
-    >
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{ background: "radial-gradient(60% 70% at 20% 10%, rgba(255,183,3,0.10), transparent 70%)" }}
-        aria-hidden
-      />
-      <div className="container-page relative pb-14 pt-8 md:pb-20 md:pt-14">
-        <SpaceSiblings siblings={space.siblings} />
+    <div className="flex flex-col gap-5">
+      {space.event && (
+        <Link
+          href={eventPath(space.event.slug)}
+          className="inline-flex h-8 max-w-full items-center self-start overflow-hidden whitespace-nowrap rounded-[16px] bg-[#141F2E]/60 px-3 text-tiny text-white/85 backdrop-blur-md transition-colors duration-180 hover:bg-[#141F2E]/80 hover:text-white"
+        >
+          <span aria-hidden className="mr-1.5">
+            &larr;
+          </span>
+          <span className="truncate">All spaces for {space.event.name}</span>
+        </Link>
+      )}
+      <div>
         <p className={`${eyebrow} break-words text-amber [overflow-wrap:anywhere]`}>
-          {[space.eventName, what].filter(Boolean).join(" · ")}
+          {[space.event?.name ?? space.eventName, what].filter(Boolean).join(" · ")}
         </p>
-        <h1 className="mt-5 max-w-4xl break-words font-display text-[40px] font-light leading-[1.05] text-text [overflow-wrap:anywhere] md:text-h1">
+        <h1 className="mt-3 max-w-4xl break-words font-display text-[40px] font-light leading-[1.05] text-text [overflow-wrap:anywhere] md:text-h1">
           {space.title}
         </h1>
-        {space.reason && <p className="mt-5 max-w-2xl text-body text-text-muted md:text-lead">{space.reason}</p>}
-
-        <div className="mt-10 grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-          <CreatorCard creator={space.creator} />
-
-          <div className={`${card} flex flex-col gap-5 p-5 md:p-6`}>
-            <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
-              <p className="text-text">
-                {soldOut ? (
-                  <span className="font-display text-h3 font-light text-amber">
-                    {isTakeover ? "Every spot settled" : session ? "Fully booked" : "Sold out"}
-                  </span>
-                ) : (
-                  <>
-                    <span className="font-display text-h3 font-light">{headline}</span>
-                    <span className="text-body text-text-muted">
-                      {" "}
-                      of {totals.positions} {noun} {isTakeover ? "still up for grabs" : soldWord}
-                    </span>
-                  </>
-                )}
-              </p>
-              {funding ? (
-                /* Before the first sale this reads "$0 of $2,400 · 0%", which
-                   is a campaign that has just opened rather than one nobody
-                   wants: the goal is the story, so it is said from the start. */
-                <p className="text-small">
-                  <span className="font-mono text-text">{funding.raised}</span>
-                  <span className="text-text-faint">
-                    {" "}
-                    of {funding.goal} · {funding.percent}%
-                  </span>
-                </p>
-              ) : showCommitted ? (
-                <p className="text-small">
-                  <span className="font-mono text-text">{usdFromCents(totals.committedCents)}</span>
-                  {/* A takeover board has no ceiling to measure against: every
-                      takeover raises the total, so "of" would name a number
-                      that is already out of date by the next sponsor. */}
-                  <span className="text-text-faint">
-                    {isTakeover || noTotal || totals.totalCents === null
-                      ? " committed so far"
-                      : ` committed of ${usdFromCents(totals.totalCents)}`}
-                  </span>
-                </p>
-              ) : (
-                <p className="text-small text-text-faint">No sales yet</p>
-              )}
-            </div>
-            {/* Past the goal the bar stops at full and the percentage above it
-                keeps climbing: beating what you asked for is the good ending,
-                and a bar that cannot say so would be the only thing on the page
-                pretending otherwise. */}
-            <div
-              className="h-2 overflow-hidden rounded-[4px] bg-white/[0.06]"
-              role="progressbar"
-              aria-label={funding ? `${funding.raised} raised of ${funding.goal}` : headlineLabel}
-              aria-valuemin={0}
-              aria-valuemax={funding ? 100 : totals.positions}
-              aria-valuenow={funding ? Math.min(100, funding.percent) : headline}
-              aria-valuetext={funding ? `${funding.percent}%` : undefined}
-            >
-              <div
-                className="h-full rounded-[4px] bg-amber"
-                style={{
-                  width: `${funding ? funding.fill : totals.positions ? Math.min(100, (headline / totals.positions) * 100) : 0}%`,
-                }}
-              />
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 text-small">
-              <ClosesCountdown closesAt={space.closesAt} closed={space.status !== "live"} />
-              <span className="text-text-faint">
-                Paid in USDC on {space.chains.map((c) => CHAIN_LABEL[c]).join(", ")}
-              </span>
-            </div>
-          </div>
-        </div>
+        {space.reason && (
+          <p className="mt-4 max-w-2xl break-words text-body text-text-muted [overflow-wrap:anywhere] md:text-lead">
+            {space.reason}
+          </p>
+        )}
       </div>
-    </section>
-  );
-}
-
-function CreatorCard({ creator: c }: { creator: Creator }) {
-  const age = accountAge(c.xAccountCreatedAt);
-  return (
-    <div className={`${card} flex items-start gap-4 p-5 md:p-6`}>
-      <Avatar creator={c} />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-body text-text">{c.xName}</p>
-        <a
-          href={`https://x.com/i/user/${encodeURIComponent(c.xUserId)}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-small text-text-muted transition-colors duration-180 hover:text-amber"
-        >
-          @{c.xHandle}
-        </a>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {c.xVerifiedType ? (
-            <span className={pill.neutral}>{VERIFIED_LABEL[c.xVerifiedType]}</span>
-          ) : (
-            <span className={pill.neutral}>No X checkmark</span>
-          )}
-          {c.xIdentityVerified && <span className={pill.done}>ID verified by X</span>}
-        </div>
-        <dl className="mt-4 grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 text-small">
-          <Fact label="Followers" value={compactNumber(c.xFollowers)} />
-          {age && <Fact label="On X" value={age.replace(/ on X$/, "")} />}
-          <Fact
-            label="Track record"
-            value={trackRecordText(c.trackRecord)}
-            tone={trackRecordNeedsAttention(c.trackRecord) ? "attention" : undefined}
-          />
-        </dl>
-      </div>
+      <CreatorChip creator={space.creator} />
+      <SpaceSiblings siblings={space.siblings} />
     </div>
   );
 }
 
-function Fact({ label, value, tone }: { label: string; value: string; tone?: "attention" }) {
+function CreatorChip({ creator: c }: { creator: Creator }) {
+  const attention = trackRecordNeedsAttention(c.trackRecord);
   return (
-    <>
-      <dt className="whitespace-nowrap text-text-faint">{label}</dt>
-      <dd className={tone === "attention" ? "text-amber" : "text-text"}>{value}</dd>
-    </>
+    <div className="flex min-w-0 items-center gap-3">
+      <Avatar creator={c} />
+      <div className="min-w-0">
+        <p className="flex min-w-0 flex-wrap items-baseline gap-x-2 text-small">
+          <span className="truncate text-text">{c.xName}</span>
+          <a
+            href={`https://x.com/i/user/${encodeURIComponent(c.xUserId)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-text-muted transition-colors duration-180 hover:text-amber"
+          >
+            @{c.xHandle}
+          </a>
+        </p>
+        <p className="text-tiny text-text-muted">
+          {[
+            `${compactNumber(c.xFollowers)} followers`,
+            c.xVerifiedType ? VERIFIED_LABEL[c.xVerifiedType] : null,
+            c.xIdentityVerified ? "ID verified by X" : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+          {" · "}
+          <span className={attention ? "text-amber" : "text-text"}>{trackRecordText(c.trackRecord)}</span>
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -278,16 +174,16 @@ function Avatar({ creator: c }: { creator: Creator }) {
       <img
         src={c.xAvatarUrl}
         alt=""
-        width={56}
-        height={56}
+        width={44}
+        height={44}
         referrerPolicy="no-referrer"
-        className="h-14 w-14 shrink-0 rounded-full border border-[color:var(--color-hairline-strong)] object-cover"
+        className="h-11 w-11 shrink-0 rounded-full border border-[color:var(--color-hairline-strong)] object-cover"
       />
     );
   }
   return (
     <span
-      className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-brand-blue-deep text-h4 font-light text-text"
+      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-blue-deep text-body text-text"
       aria-hidden
     >
       {(c.xName || c.xHandle).slice(0, 1).toUpperCase()}
@@ -295,220 +191,290 @@ function Avatar({ creator: c }: { creator: Creator }) {
   );
 }
 
-/* ── Takeovers ─────────────────────────────────────────────────────── */
+/* ── The numbers: money, what's left, the price, the dates ─────────── */
 
-/**
- * The mechanic, said once, immediately above the spots it prices.
- *
- * A sponsor meets these prices on the cards, so the explanation belongs where
- * they are and not with the trust copy further down. Nothing renders on a
- * fixed-price space: the product there is the one it has always been.
- */
-export function SpaceTakeover({ space }: { space: Space }) {
-  if (space.pricingMode !== "takeover") return null;
-
-  return (
-    <section
-      aria-label="How takeovers work"
-      className={`${card} mb-10 flex flex-col gap-3 p-5 md:p-6`}
-    >
-      <h2 className={`${eyebrow} text-moonlight`}>Any spot can change hands</h2>
-      <p className="max-w-3xl text-small text-text-muted">
-        The price on a spot is where bidding opens, not what it will sell for. Once a spot is sold, anyone can take it
-        from the sponsor holding it, and doing so {takeoverVerb(space.takeoverMultiple)}. Each card says what taking
-        that spot costs today.
-      </p>
-      <p className="max-w-3xl text-small text-text-muted">
-        The sponsor who loses a spot gets back every cent they paid
-        {space.feePayer === "sponsor" ? `, HOLD's ${space.feeBps / 100}% fee included,` : ""} in the very same
-        transaction that displaces them. Nobody holds that money in between: repaying them is one leg of the new
-        sponsor&rsquo;s payment, and if that leg fails the payment fails with it.
-      </p>
-      {/* Only worth saying where there is a choice of chain to get wrong. */}
-      {space.chains.length > 1 && (
-        <p className="max-w-3xl text-small text-text-faint">
-          A spot changes hands on the chain it was bought on, because the refund travels in that same transaction.
-        </p>
-      )}
-    </section>
-  );
+/** "131.25" to 13125. Server strings only; a malformed one is simply skipped. */
+function centsOf(usdc: string | null | undefined): number | null {
+  const m = /^(\d+)(?:\.(\d{1,6}))?$/.exec((usdc ?? "").replace(/,/g, ""));
+  if (!m) return null;
+  return Number(m[1]) * 100 + Number((m[2] ?? "").padEnd(2, "0").slice(0, 2));
 }
 
 /**
- * How a sponsor names the price (hispace-offers-v0.md), said once above the
- * spots. Nothing renders on a space that takes no offers.
+ * The cheapest thing a sponsor can buy right now, as they would pay it: the
+ * price on an open spot, what taking a spot over costs, or where bidding opens.
+ * Null when nothing left carries a price (a space sold by offers).
  */
-export function SpaceOffersHowItWorks({ space }: { space: Space }) {
-  const mode =
-    space.pricingMode === "bids"
-      ? "bids"
-      : space.pricingMode === "offers"
-        ? "offers"
-        : space.pricingMode === "fixed" && space.acceptsOffers
-          ? "fixed_with_offers"
-          : null;
-  if (!mode) return null;
-  const who = `@${space.creator.xHandle}`;
-
-  return (
-    <section aria-label="How offers work" className={`${card} mb-10 flex flex-col gap-3 p-5 md:p-6`}>
-      <h2 className={`${eyebrow} text-moonlight`}>
-        {mode === "bids" ? "Bid for a spot" : mode === "offers" ? "Name your price" : "Buy now, or make an offer"}
-      </h2>
-      <p className="max-w-3xl text-small text-text-muted">
-        {mode === "bids"
-          ? `Each spot is its own bidding. The highest bid backed by a wallet that holds the money leads, and a bid in the last 10 minutes gives everyone 10 more. When bidding ends, ${who} accepts a bid.`
-          : mode === "offers"
-            ? `There is no set price. Offer what the spot is worth to you, and ${who} accepts, counters or declines.`
-            : `Every spot has a price you can pay now. If it's more than you want to spend, offer less, and ${who} accepts, counters or declines.`}
-      </p>
-      <p className="max-w-3xl text-small text-text-muted">
-        Nothing you offer is paid or locked. If your {mode === "bids" ? "bid" : "offer"} is accepted, you have 24 hours
-        to pay it from any wallet, straight to the creator, and it goes through like any other sponsorship. Neither side
-        is bound to go ahead.
-      </p>
-    </section>
-  );
+function startingPrice(space: Space): { label: string; value: string } | null {
+  let least: number | null = null;
+  let bids = false;
+  const consider = (usdc: string | null | undefined) => {
+    const c = centsOf(usdc);
+    if (c !== null && c > 0 && (least === null || c < least)) least = c;
+  };
+  for (const p of space.positions) {
+    if (p.status === "open") {
+      if (p.offers?.mode === "bids" || p.saleMode === "bids") {
+        bids = true;
+        consider(p.offers?.highestBidUsdc ?? p.offers?.openingBidUsdc ?? p.sponsorPaysUsdc);
+      } else consider(p.sponsorPaysUsdc);
+    } else if (p.status === "sold" && p.takeover && !p.takeover.closed) {
+      consider(p.takeover.nextSponsorPaysUsdc);
+    }
+  }
+  if (least === null) return null;
+  const allBids = bids && space.pricingMode === "bids";
+  return { label: allBids ? "Bids from" : "Starting price", value: `from ${usdFromCents(least)}` };
 }
 
-/* ── Promises ──────────────────────────────────────────────────────── */
+/** A segment per spot: sold, being paid, open — and on a takeover board, taken but still takeable. */
+function segmentTone(p: Position, takeover: boolean): "sold" | "held" | "open" | "takeable" {
+  if (p.status === "open") return "open";
+  if (p.status === "held") return "held";
+  if (takeover && p.takeover && !p.takeover.closed && p.takeover.nextPriceUsdc) return "takeable";
+  return "sold";
+}
 
-const STATE_PILL: Record<DeliverableState, string> = {
-  upcoming: pill.neutral,
-  overdue: pill.attention,
-  delivered: pill.done,
-  missed: pill.attention,
+const SEGMENT: Record<ReturnType<typeof segmentTone>, string> = {
+  sold: "bg-amber",
+  takeable: "bg-amber/40",
+  held: "bg-amber/20",
+  open: "bg-moonlight/30",
 };
 
-export function SpacePromises({ space }: { space: Space }) {
-  const hasDeliverables = space.deliverables.length > 0;
-  const declares = space.attestations.map(attestationText);
+/**
+ * The block a sponsor reads first, modelled on the creator's own campaign page:
+ * the money committed and what is left, in big type, a bar with one segment per
+ * spot, then the price, the close and the dates in one row, and the button.
+ */
+export function SpaceStats({ space }: { space: Space }) {
+  const { totals } = space;
   const session = isSessionSpace(space);
+  const isTakeover = space.pricingMode === "takeover";
+  const tiered = isTieredSpace(space);
+  const noun = session ? "sessions" : space.kind === "service" ? (tiered ? "packages" : "slots") : "spots";
+  const closed = space.status !== "live";
+  const soldOut = spaceSoldOut(space);
+  const left = takeableSpots(space);
+  const funding = fundingProgress(space);
+  /* Offers and bids have no listed total: "$0 committed" before the first sale
+     would read as a space nobody wants, so the money figure waits for a sale. */
+  const noTotal = totals.totalCents === null || space.pricingMode === "offers" || space.pricingMode === "bids";
+  const money = funding
+    ? { label: "Raised", value: funding.raised, sub: `of ${funding.goal} goal · ${funding.percent}%` }
+    : !noTotal || totals.committedCents > 0
+      ? { label: "Committed", value: usdFromCents(totals.committedCents), sub: null }
+      : null;
+  const price = startingPrice(space);
+  const segments = space.positions.map((p) => segmentTone(p, isTakeover));
+  const cta = session ? "Book a session" : space.kind === "service" ? `Claim your ${tiered ? "package" : "slot"}` : "Claim your spot";
+
+  const facts: { label: string; value: ReactNode }[] = [];
+  if (price) facts.push({ label: price.label, value: price.value });
+  else if (!soldOut) facts.push({ label: "Price", value: "Name your price" });
+  facts.push({
+    label: session ? "Booking closes" : "Sales close",
+    value: (
+      <>
+        {calendarDate(space.closesAt)}
+        <span className="block text-tiny text-text-faint">
+          {closed ? "Closed" : <ClosesCountdown closesAt={space.closesAt} closed={closed} />}
+        </span>
+      </>
+    ),
+  });
+  for (const k of space.keyDates.slice(0, 2)) facts.push({ label: k.label, value: calendarDate(k.date) });
+  if (facts.length < 4) facts.push({ label: "Pay with", value: `USDC · ${space.chains.map((c) => CHAIN_LABEL[c]).join(", ")}` });
+
   return (
-    <section className="relative bg-night">
-      <div className="container-page py-16 md:py-24">
-        <p className={`${eyebrow} text-moonlight`}>Before you pay</p>
-        <h2 className="mt-4 font-display text-h3 font-light text-text md:text-h2">What the creator promises</h2>
+    <section className="container-page py-10 md:py-14" aria-label="Availability">
+      <div className={`${card} flex flex-col gap-7 p-5 md:p-8`}>
+        <div className={`grid gap-6 ${money ? "grid-cols-2" : "grid-cols-1"}`}>
+          {money && (
+            <Stat label={money.label} value={money.value} sub={money.sub} />
+          )}
+          {soldOut ? (
+            <Stat
+              label="Available"
+              value={isTakeover ? "Settled" : session ? "Fully booked" : "Sold out"}
+              sub={`All ${totals.positions} ${noun} taken`}
+            />
+          ) : (
+            <Stat
+              label={isTakeover ? "Up for grabs" : "Available"}
+              value={String(left)}
+              of={`of ${totals.positions}`}
+              sub={session ? "sessions" : space.kind === "service" ? "slots" : "spots"}
+            />
+          )}
+        </div>
 
-        <div className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-2">
-          <Block title={session ? "How a session is confirmed" : space.kind === "service" ? "Delivery" : "Deliverables"}>
-            {session && (
-              <>
-                <p className="text-small text-text-muted">
-                  Every session happens
-                  {space.event ? (
-                    <>
-                      {" "}
-                      at <span className="text-text">{space.event.name}</span>,{" "}
-                      {eventDates(space.event.startsOn, space.event.endsOn)},
-                    </>
-                  ) : space.eventName ? (
-                    <>
-                      {" "}
-                      at <span className="text-text">{space.eventName}</span>,
-                    </>
-                  ) : null}{" "}
-                  at the venue or in a public place. The creator sets the time and place with you after you book.
-                </p>
-                <p className="text-small text-text-muted">
-                  After it, you tell us whether it happened from your booking link. Only a session you confirm counts
-                  as delivered on the creator&rsquo;s track record, and one that didn&rsquo;t happen shows there as
-                  disputed. If you say nothing within 7 days, the booking closes.
-                </p>
-              </>
-            )}
-            {!session && space.kind === "service" && space.deliverBy && (
-              <p className="text-small text-text-muted">
-                Every sold slot is delivered by{" "}
-                <span className="text-text">{calendarDate(space.deliverBy)}</span>, each with its own public link on
-                this page.
-              </p>
-            )}
-            {hasDeliverables ? (
-              <ul className="flex flex-col divide-y divide-[color:var(--color-hairline)]">
-                {space.deliverables.map((d) => (
-                  <li key={d.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3 first:pt-0 last:pb-0">
-                    <div className="min-w-0">
-                      <p className="break-words text-small text-text [overflow-wrap:anywhere]">{deliverableText(d)}</p>
-                      {deliverableNote(d) && (
-                        <p className="mt-0.5 break-words text-tiny text-text-muted [overflow-wrap:anywhere]">
-                          {deliverableNote(d)}
-                        </p>
-                      )}
-                      <p className="text-tiny text-text-faint">
-                        Due {calendarDate(d.dueDate)}
-                        {d.deliveredUrl && (
-                          <>
-                            {" · "}
-                            <a
-                              href={d.deliveredUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-success hover:underline"
-                            >
-                              See it
-                            </a>
-                          </>
-                        )}
-                      </p>
-                    </div>
-                    <span className={STATE_PILL[d.state]}>{DELIVERABLE_STATE_LABEL[d.state]}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              space.kind !== "service" && (
-                <p className="text-small text-text-muted">The creator hasn&rsquo;t listed deliverables.</p>
-              )
-            )}
-          </Block>
+        {segments.length > 0 && segments.length <= 60 ? (
+          <div
+            className="flex h-3 gap-[3px]"
+            role="img"
+            aria-label={`${left} of ${totals.positions} ${noun} available`}
+          >
+            {segments.map((tone, i) => (
+              <span key={i} className={`h-full min-w-0 flex-1 rounded-[3px] ${SEGMENT[tone]}`} />
+            ))}
+          </div>
+        ) : (
+          <div className="h-3 overflow-hidden rounded-[6px] bg-moonlight/30" role="img" aria-label={`${left} of ${totals.positions} available`}>
+            <div
+              className="h-full bg-amber"
+              style={{ width: `${totals.positions ? ((totals.positions - left) / totals.positions) * 100 : 0}%` }}
+            />
+          </div>
+        )}
 
+        <ul className="-mt-4 flex flex-wrap gap-x-4 gap-y-1 text-tiny text-text-faint" aria-hidden>
+          {(isTakeover
+            ? ([["sold", "Settled"], ["takeable", "Taken, can be taken over"], ["held", "Being paid"], ["open", "Open"]] as const)
+            : ([["sold", session ? "Booked" : "Sold"], ["held", "Being paid"], ["open", "Open"]] as const)
+          ).map(([tone, word]) => (
+            <li key={tone} className="flex items-center gap-1.5">
+              <span className={`h-2 w-2 rounded-[2px] ${SEGMENT[tone]}`} />
+              {word}
+            </li>
+          ))}
+        </ul>
+
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-5 md:grid-cols-4">
+          {facts.slice(0, 4).map((f) => (
+            <div key={f.label} className="min-w-0">
+              <dt className={`${eyebrow} break-words text-text-faint`}>{f.label}</dt>
+              <dd className="mt-1 break-words text-body text-text [overflow-wrap:anywhere]">{f.value}</dd>
+            </div>
+          ))}
+        </dl>
+
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <ModeNote space={space} />
+          {!closed && !soldOut && (
+            <a href="#spots" className={`${btnPrimary} self-start sm:self-auto`}>
+              {cta}
+            </a>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Stat({ label, value, of, sub }: { label: string; value: string; of?: string; sub: string | null }) {
+  return (
+    <div className="min-w-0">
+      <p className={`${eyebrow} text-text-faint`}>{label}</p>
+      <p className="mt-2 break-words font-display text-[40px] font-light leading-none text-text md:text-[64px]">
+        {value}
+        {of && <span className="text-[24px] text-text-muted md:text-[32px]"> {of}</span>}
+      </p>
+      {sub && <p className="mt-2 text-small text-text-muted">{sub}</p>}
+    </div>
+  );
+}
+
+/**
+ * How this space sells, when it is not a plain price: one line, and the rest
+ * behind an (i). A plain fixed price needs no note.
+ */
+function ModeNote({ space }: { space: Space }) {
+  const who = `@${space.creator.xHandle}`;
+  const x = space.takeoverMultiple && space.takeoverMultiple !== 2 ? `${space.takeoverMultiple}x` : "double";
+  if (space.pricingMode === "takeover") {
+    return (
+      <Note line={`Any spot can be taken: pay ${x} and it's yours.`}>
+        <p>The price on a spot is where bidding opens. Once sold, anyone can take it from its sponsor for {x} the price.</p>
+        <p>
+          The sponsor who loses a spot gets back everything they paid, in the same transaction.
+          {space.chains.length > 1 ? " A spot changes hands on the chain it was bought on." : ""}
+        </p>
+      </Note>
+    );
+  }
+  if (space.pricingMode === "bids") {
+    return (
+      <Note line="Highest bid wins.">
+        <p>Each spot is its own auction. A bid in the last 10 minutes adds 10 more. When bidding ends, {who} accepts a bid.</p>
+        <p>Nothing is paid when you bid. If yours is accepted, you have 24 hours to pay.</p>
+      </Note>
+    );
+  }
+  if (space.pricingMode === "offers") {
+    return (
+      <Note line="No set price: make an offer.">
+        <p>{who} accepts, counters or declines. Nothing is paid when you offer.</p>
+        <p>If yours is accepted, you have 24 hours to pay.</p>
+      </Note>
+    );
+  }
+  if (space.acceptsOffers) {
+    return (
+      <Note line="Buy now, or make an offer.">
+        <p>Offer less than the price and {who} accepts, counters or declines. Nothing is paid when you offer.</p>
+        <p>If yours is accepted, you have 24 hours to pay.</p>
+      </Note>
+    );
+  }
+  return <span className="hidden sm:block" />;
+}
+
+/** One short line, with the details behind an (i). Works without JavaScript. */
+export function Note({ line, children }: { line: string; children: ReactNode }) {
+  return (
+    <details className="group min-w-0 text-small">
+      <summary className="flex cursor-pointer list-none items-center gap-2 text-text [&::-webkit-details-marker]:hidden">
+        <span>{line}</span>
+        <span
+          aria-hidden
+          className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-[10px] border border-[color:var(--color-hairline-strong)] font-mono text-[11px] text-text-muted transition-colors duration-180 group-open:bg-white/10 group-open:text-text"
+        >
+          i
+        </span>
+        <span className="sr-only">How it works</span>
+      </summary>
+      <div className="mt-3 flex max-w-xl flex-col gap-2 text-text-muted">{children}</div>
+    </details>
+  );
+}
+
+/* ── Before you pay: what you get, and what if it doesn't happen ───── */
+
+export function BeforeYouPay({ space }: { space: Space }) {
+  const session = isSessionSpace(space);
+  const declares = space.attestations.map(attestationText);
+  return (
+    <section className="container-page py-12 md:py-16" aria-labelledby="what-you-get">
+      <p className={`${eyebrow} text-moonlight`}>Before you pay</p>
+      <h2 id="what-you-get" className="mt-3 font-display text-h3 font-light text-text md:text-h2">
+        What you get
+      </h2>
+      <div className="mt-8 grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <WhatTheBrandGets space={space} />
+        <div className="flex flex-col gap-5">
+          <IfItDoesNotHappen space={space} />
           <Block title="Key dates">
-            <ul className="flex flex-col gap-3">
+            <ul className="flex flex-col gap-2.5">
               {space.keyDates.map((k, i) => (
                 <li key={`${k.date}-${i}`} className="flex items-baseline justify-between gap-4 text-small">
-                  <span className="text-text">{k.label}</span>
+                  <span className="min-w-0 break-words text-text [overflow-wrap:anywhere]">{k.label}</span>
                   <span className="shrink-0 font-mono text-text-muted">{calendarDate(k.date)}</span>
                 </li>
               ))}
               <li className="flex items-baseline justify-between gap-4 text-small">
-                <span className="text-text">{session ? "Booking closes" : "Sponsorship closes"}</span>
+                <span className="text-text">{session ? "Booking closes" : "Sales close"}</span>
                 <span className="shrink-0 font-mono text-text-muted">{calendarDate(space.closesAt)}</span>
               </li>
             </ul>
           </Block>
-
-          {/* The fallback policy used to have a block of its own here. It now
-              sits beside the spots (`IfItDoesNotHappen`), because this section
-              is below the board and a sponsor who picks a spot and pays never
-              reaches it. Saying it twice, word for word, would only teach
-              people that the bottom of the page repeats the top. */}
-
-          <Block title="How the money moves">
-            <p className="text-small text-text-muted">
-              You pay the creator directly in USDC, from your own wallet. HOLD&rsquo;s fee is{" "}
-              {space.feeBps / 100}%, paid by the {session && space.feePayer === "sponsor" ? "buyer" : space.feePayer}, and it moves in the same transaction. HOLD never
-              holds your money, and {session ? "a booking" : "paid spots"} can&rsquo;t be refunded by HOLD.
-            </p>
-            {/* The two sentences above are true on a takeover board too, and
-                together they read as a contradiction of the refund promised
-                further up the page. The difference is worth one line: HOLD
-                still refunds nobody — the sponsor taking the spot does. */}
-            {space.pricingMode === "takeover" && (
-              <p className="text-small text-text-muted">
-                That holds when a spot changes hands, too. The money that goes back to a sponsor who has been outbid is
-                not HOLD&rsquo;s to send: it is part of the payment made by whoever took the spot from them, moving in
-                the same transaction.
-              </p>
-            )}
-            {declares.length > 0 && (
-              <p className="text-small text-text-muted">
-                The creator declares that they {joinWords(declares)}.
-              </p>
-            )}
-          </Block>
         </div>
       </div>
+      {declares.length > 0 && (
+        <p className="mt-5 text-tiny text-text-faint">
+          @{space.creator.xHandle} declares that they {joinWords(declares)}.
+        </p>
+      )}
     </section>
   );
 }
@@ -527,6 +493,88 @@ function joinWords(items: string[]): string {
   return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
 }
 
+/* ── How it works: four steps ──────────────────────────────────────── */
+
+type Step = { title: string; body: string };
+
+function steps(space: Space): Step[] {
+  const session = isSessionSpace(space);
+  const tiered = isTieredSpace(space);
+  const service = space.kind === "service";
+  const thing = service ? (tiered ? "package" : "slot") : "spot";
+  const chains = space.chains.map((c) => CHAIN_LABEL[c]).join(", ");
+  const send = service
+    ? { title: "Send your brief", body: "Right after paying, tell the creator what to feature." }
+    : { title: "Send your logo", body: "Upload it right after paying. The creator approves it." };
+  const last = service
+    ? {
+        title: "It goes live",
+        body: space.deliverBy ? `Delivered by ${calendarDate(space.deliverBy)}, linked on this page.` : "Each delivery is linked on this page.",
+      }
+    : { title: "Ride along", body: "Your brand goes where the creator goes, in every post listed above." };
+
+  if (session) {
+    return [
+      { title: "Book a session", body: "Pick one below." },
+      { title: "Pay in USDC", body: `From any wallet, on ${chains}.` },
+      { title: "Send your contact", body: "The creator sets the time and place with you." },
+      { title: "Meet, then confirm", body: "Only a session you confirm counts as delivered." },
+    ];
+  }
+  if (space.pricingMode === "takeover") {
+    return [
+      { title: `Pick a ${thing}`, body: "An open one, or one somebody already holds." },
+      { title: "Pay in USDC", body: "Taking a held spot pays its sponsor back in full." },
+      send,
+      { title: "Hold it", body: "It's yours until someone pays more for it." },
+    ];
+  }
+  if (space.pricingMode === "bids") {
+    return [
+      { title: "Place a bid", body: "Nothing is paid or locked." },
+      { title: "Highest bid wins", body: "The creator accepts a bid when bidding ends." },
+      { title: "Pay within 24 hours", body: `In USDC, from any wallet, on ${chains}.` },
+      send,
+    ];
+  }
+  if (space.pricingMode === "offers") {
+    return [
+      { title: "Make an offer", body: "Name your price. Nothing is paid or locked." },
+      { title: "The creator answers", body: "Accept, counter or decline." },
+      { title: "Pay within 24 hours", body: `In USDC, from any wallet, on ${chains}.` },
+      send,
+    ];
+  }
+  return [
+    { title: `Pick a ${thing}`, body: service ? "Pick one below." : "Tap an open spot on the drawing." },
+    {
+      title: "Pay in USDC",
+      body: tiered ? "Or bid or offer, where a package says so." : `From any wallet, on ${chains}.`,
+    },
+    send,
+    last,
+  ];
+}
+
+export function HowItWorks({ space }: { space: Space }) {
+  return (
+    <section className="container-page py-12 md:py-16" aria-labelledby="how-it-works">
+      <h2 id="how-it-works" className="font-display text-h3 font-light text-text md:text-h2">
+        How it works
+      </h2>
+      <ol className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {steps(space).map((s, i) => (
+          <li key={s.title} className={`${card} flex flex-col gap-2 p-5`}>
+            <span className="font-mono text-small text-amber">{String(i + 1).padStart(2, "0")}</span>
+            <p className="text-body text-text">{s.title}</p>
+            <p className="text-small text-text-muted">{s.body}</p>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
 /* ── Updates ───────────────────────────────────────────────────────── */
 
 export function SpaceUpdates({ space }: { space: Space }) {
@@ -536,10 +584,10 @@ export function SpaceUpdates({ space }: { space: Space }) {
   const now = Date.now();
 
   return (
-    <section className="container-page py-16 md:py-24">
+    <section className="container-page py-12 md:py-16">
       <p className={`${eyebrow} text-amber`}>From @{space.creator.xHandle}</p>
-      <h2 className="mt-4 font-display text-h3 font-light text-text md:text-h2">Updates</h2>
-      <ol className="mt-10 flex max-w-2xl flex-col gap-5">
+      <h2 className="mt-3 font-display text-h3 font-light text-text md:text-h2">Updates</h2>
+      <ol className="mt-8 flex max-w-2xl flex-col gap-5">
         {updates.map((u) => (
           <li key={u.id} className={`${card} overflow-hidden`}>
             {u.imageUrl && (
@@ -547,7 +595,7 @@ export function SpaceUpdates({ space }: { space: Space }) {
               <img src={u.imageUrl} alt="" loading="lazy" className="max-h-[420px] w-full object-cover" />
             )}
             <div className="flex flex-col gap-2 p-5">
-              {u.body && <p className="whitespace-pre-line text-body text-text">{u.body}</p>}
+              {u.body && <p className="whitespace-pre-line break-words text-body text-text [overflow-wrap:anywhere]">{u.body}</p>}
               <p className="text-tiny text-text-faint">
                 <time dateTime={u.createdAt}>{relativeTime(u.createdAt, now)}</time>
                 {u.positionId && labelOf.get(u.positionId) ? ` · Proof for ${labelOf.get(u.positionId)}` : ""}
@@ -563,15 +611,9 @@ export function SpaceUpdates({ space }: { space: Space }) {
 /* ── The other reader ──────────────────────────────────────────────── */
 
 /**
- * Two kinds of people read this page: sponsors, who buy, and creators, who see
- * it and want one of their own. This is the line for the second kind, and it is
- * deliberately the quietest thing on the page — a hairline strip of small muted
- * text above the footer, with a plain text link instead of a button. The amber
- * fill on this page means "sponsor this spot"; recruiting a creator must never
- * borrow it, or the page starts competing with the job it was built for.
- *
- * Nothing renders without an invite link: a draft has none, and neither does an
- * account old enough to predate invite codes.
+ * The line for the other reader: a creator who sees this page and wants one of
+ * their own. Deliberately the quietest thing on the page, and it never borrows
+ * the amber that means "sponsor this spot". Nothing without an invite link.
  */
 export function SpaceInvite({ space }: { space: Space }) {
   const invite = space.creatorInvite;
@@ -579,11 +621,10 @@ export function SpaceInvite({ space }: { space: Space }) {
 
   return (
     <section className="hairline" aria-label="Sell your own HiSpace">
-      <div className="container-page flex flex-col gap-3 py-10 sm:flex-row sm:items-baseline sm:justify-between sm:gap-8">
-        <p className="max-w-2xl text-small text-text-muted">
-          {isSessionSpace(space)
-            ? `@${space.creator.xHandle} sells their time at events on HOLD. You can too: clients pay you directly in USDC, and HOLD takes ${space.feeBps / 100}%.`
-            : `@${space.creator.xHandle} sells sponsorships on HOLD. If you have an audience, you can too: sponsors pay you directly in USDC, and HOLD takes ${space.feeBps / 100}%.`}
+      <div className="container-page flex flex-col gap-2 py-8 sm:flex-row sm:items-baseline sm:justify-between sm:gap-8">
+        <p className="text-small text-text-muted">
+          {isSessionSpace(space) ? "Sell your time at events, like" : "Have an audience? Sell sponsorships, like"} @
+          {space.creator.xHandle}.
         </p>
         <a
           href={invite.url}

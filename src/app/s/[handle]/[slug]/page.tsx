@@ -2,15 +2,14 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { SpaceBoard } from "@/components/ad-space/SpaceBoard";
-import { SpaceBanner } from "@/components/ad-space/events";
 import {
+  BeforeYouPay,
+  HowItWorks,
+  ListingHead,
   SlimHeader,
   SpaceFooter,
-  SpaceHero,
   SpaceInvite,
-  SpaceOffersHowItWorks,
-  SpacePromises,
-  SpaceTakeover,
+  SpaceStats,
   SpaceUnavailable,
   SpaceUpdates,
 } from "@/components/ad-space/sections";
@@ -26,8 +25,10 @@ import { getPublicSpace } from "@/lib/ad-space/server";
  * spots, the checkout) is one client island; the rest is plain HTML so the
  * page is readable before any JavaScript arrives.
  *
- * The banner on top is the creator's image, else their event's city photo, else
- * their gradient. A space for an event links back to the event's page from it.
+ * Laid out like the creator's own campaign page: the listing's own picture (the
+ * creator's banner, else the product with its spots live on it, else their
+ * gradient; never the event's photo), then the numbers in big type, what you
+ * get, how it works, and every spot. A space for an event links back to it.
  *
  * `?m=<sold>` is the milestone the link was shared at. It only changes the
  * og:image URL, which is what makes X fetch a fresh card for each milestone.
@@ -104,15 +105,18 @@ export default async function AdSpacePage({ params }: { params: Params }) {
         </main>
       ) : (
         <>
-          <main>
-            <SpaceBanner space={found.space} now={Date.now()} />
-            <SpaceHero space={found.space} />
-            <section className="container-page py-12 md:py-16" aria-label="Spots">
-              <SpaceTakeover space={found.space} />
-              <SpaceOffersHowItWorks space={found.space} />
-              <SpaceBoard space={found.space} />
-            </section>
-            <SpacePromises space={found.space} />
+          <main className="overflow-x-clip">
+            <SpaceBoard
+              space={found.space}
+              head={<ListingHead space={found.space} />}
+              stats={<SpaceStats space={found.space} />}
+              details={
+                <>
+                  <BeforeYouPay space={found.space} />
+                  <HowItWorks space={found.space} />
+                </>
+              }
+            />
             <SpaceUpdates space={found.space} />
             <SpaceInvite space={found.space} />
           </main>

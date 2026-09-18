@@ -14,14 +14,19 @@ import { ZONE } from "./ui";
  *
  * All views share one scale (pixels per viewBox unit), so the side of a
  * suitcase is narrower than its front and a helmet is smaller than a race suit,
- * the way the real objects are. The scale is set so the tallest view is 200px
- * on a phone (two suitcase faces side by side at 400px) and 300px from `md` up.
+ * the way the real objects are. The scale is set so the tallest view is 220px
+ * on a phone (two suitcase faces still side by side at 400px) and
+ * 340px from `md` up: the product is the page's banner, so it is drawn big.
  *
  * Zone states: open is a moonlight outline, held is an amber tint with a dashed
  * edge (someone is paying right now), sold is solid amber, or the sponsor's
  * approved logo, QR or text on a white plate. Zones nobody is selling are a
  * faint dashed outline and are not interactive.
  */
+
+/** Hover and focus change a colour, never a stroke width. */
+const ACTIVE_STROKE = "#F4F6FA";
+const HELD_FILL_ACTIVE = "rgba(255,183,3,0.28)";
 
 type Props = {
   template: Template;
@@ -36,8 +41,8 @@ export function ProductBoard({ template, positions, activeId, onHover, onPick }:
   const tallest = Math.max(...template.views.map((v) => v.viewBox[1]), 1);
 
   const scaleVars = {
-    "--u-sm": `${200 / tallest}px`,
-    "--u-md": `${300 / tallest}px`,
+    "--u-sm": `${220 / tallest}px`,
+    "--u-md": `${340 / tallest}px`,
   } as CSSProperties;
 
   return (
@@ -203,8 +208,8 @@ function Zone({
             height={rh}
             rx={radius}
             fill={active ? ZONE.openFillHover : ZONE.openFill}
-            stroke={ZONE.openStroke}
-            strokeWidth={active ? 2 : 1.25}
+            stroke={active ? ACTIVE_STROKE : ZONE.openStroke}
+            strokeWidth={1.25}
             vectorEffect="non-scaling-stroke"
           />
           <FittedText
@@ -226,9 +231,9 @@ function Zone({
           width={rw}
           height={rh}
           rx={radius}
-          fill={ZONE.heldFill}
+          fill={active ? HELD_FILL_ACTIVE : ZONE.heldFill}
           stroke={ZONE.heldStroke}
-          strokeWidth={active ? 2 : 1.25}
+          strokeWidth={1.25}
           strokeDasharray="3 2"
           vectorEffect="non-scaling-stroke"
         />
@@ -266,8 +271,8 @@ function SoldZone({
       height={h}
       rx={radius}
       fill="none"
-      stroke={ZONE.soldFill}
-      strokeWidth={active ? 2.5 : 1.25}
+      stroke={active ? ACTIVE_STROKE : ZONE.soldFill}
+      strokeWidth={1.25}
       vectorEffect="non-scaling-stroke"
     />
   );
