@@ -223,8 +223,12 @@ function biddingIsOpen(o: PositionOffers | null, now: number | null): boolean {
  * Where bidding stands on a spot: the leader, the reserve, the bid count and the
  * time left. Every amount is the creator's side, before our fee, as the bid form
  * asks for it.
+ *
+ * Exported because a rung of a ladder that sells by bids stands exactly the same
+ * way, and two wordings for one fact is how two products start promising
+ * different things.
  */
-function BidLines({ offers: o, now }: { offers: PositionOffers | null; now: number | null }) {
+export function BidLines({ offers: o, now }: { offers: PositionOffers | null; now: number | null }) {
   if (!o) return null;
   const end = o.biddingEndsAt ? Date.parse(o.biddingEndsAt) : NaN;
   const ended = o.biddingOpen === false || (Number.isFinite(end) && now !== null && end <= now);

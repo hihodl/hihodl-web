@@ -2,7 +2,7 @@
 import { AD_SPACE_API, HANDLE_RE, SLUG_RE } from "./config";
 import { defaultEventTab } from "./format";
 import { gradientKey } from "./look";
-import type { Booking, EventPage, EventSummary, OfferThread, Space, SpaceCard } from "./types";
+import type { Booking, EventPage, EventSummary, OfferThread, Position, Space, SpaceCard } from "./types";
 
 /**
  * Reading a public Ad Space on the server.
@@ -115,6 +115,35 @@ export async function getPublicSpace(
   }
 }
 
+/** The only per-rung modes the page knows how to sell (ad-space-tiers-v0.md). */
+const SALE_MODES = new Set(["fixed", "fixed_with_offers", "offers", "bids"]);
+
+/**
+ * A position's tier fields (ad-space-tiers-v0.md), filled in for a server that
+ * predates tiers and for one that sends them as something other than a list of
+ * strings. `perks` is plain text by contract; here it is also made plain text
+ * by construction, so nothing downstream can be handed an object to render.
+ *
+ * `tierKey` null is the old shapes — a placement's zones, N identical slots —
+ * and every reader keeps rendering them exactly as it did.
+ */
+function withTierFields(p: Position): Position {
+  const perks = Array.isArray(p.perks) ? p.perks : [];
+  return {
+    ...p,
+    tierKey: typeof p.tierKey === "string" && p.tierKey ? p.tierKey : null,
+    // A mode this page has no button for is not a mode: it reads as null, which
+    // is "sells the way its space does" and the behaviour of every space that
+    // predates per-rung modes. `takeover` is deliberately among them — it is
+    // the space's to declare, never a rung's.
+    saleMode: SALE_MODES.has(p.saleMode as string) ? (p.saleMode as Position["saleMode"]) : null,
+    title: typeof p.title === "string" && p.title.trim() ? p.title.trim() : null,
+    // Five is the database's limit; a longer list would be a server we do not
+    // know, and the page still shows the five the creator was allowed to write.
+    perks: perks.filter((line): line is string => typeof line === "string" && line.trim().length > 0).slice(0, 5),
+  };
+}
+
 /**
  * The event fields, filled in when a backend that predates them leaves them
  * out, and the gradient held to the five presets. Every reader downstream can
@@ -124,6 +153,7 @@ function withEventFields(space: Space): Space {
   const raw = space as Partial<Space> & Space;
   return {
     ...raw,
+    positions: (Array.isArray(raw.positions) ? raw.positions : []).map(withTierFields),
     event: raw.event ?? null,
     bannerUrl: raw.bannerUrl ?? null,
     bannerGradient: gradientKey(raw.bannerGradient),
@@ -132,6 +162,23 @@ function withEventFields(space: Space): Space {
     acceptsOffers: raw.acceptsOffers === true,
     biddingEndsAt: raw.biddingEndsAt ?? null,
     spaceOffers: raw.spaceOffers ?? null,
+    // A server older than custom services and free-text deliverables.
+    serviceName: raw.serviceName ?? null,
+    serviceSummary: raw.serviceSummary ?? null,
+    /* A server older than funding goals sends no key, and a creator who named
+       none sends null. Zero is treated as none too: a goal of nothing has no
+       percentage to be at, and the page must never print "null%" or divide by
+       it. Anything that is not a positive number reads as "no goal", so the
+       hero falls back to counting spots exactly as it does today. */
+    fundingGoalCents:
+      typeof raw.fundingGoalCents === "number" && Number.isFinite(raw.fundingGoalCents) && raw.fundingGoalCents > 0
+        ? Math.round(raw.fundingGoalCents)
+        : null,
+    deliverables: (Array.isArray(raw.deliverables) ? raw.deliverables : []).map((d) => ({
+      ...d,
+      platform: d.platform ?? null,
+      note: d.note ?? null,
+    })),
   };
 }
 
@@ -308,7 +355,17 @@ export async function getOffer(token: string, from: Headers | null): Promise<Off
     const body = (await res.json()) as { data?: Partial<OfferThread> };
     const data = body?.data;
     return data?.offer && data.space
-      ? { kind: "found", thread: { offer: data.offer, space: data.space, position: data.position ?? null } }
+      ? {
+          kind: "found",
+          // The spot comes from a different endpoint than the board, so its
+          // tier fields are filled here too: the offer page prints a tier's
+          // name and its lines from the same shape the board does.
+          thread: {
+            offer: data.offer,
+            space: data.space,
+            position: data.position ? withTierFields(data.position) : null,
+          },
+        }
       : { kind: "unreachable" };
   } catch {
     return { kind: "unreachable" };
