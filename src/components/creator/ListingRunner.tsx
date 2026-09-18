@@ -97,7 +97,7 @@ const SCREEN_TITLE: Record<Screen, string> = {
 };
 
 export function ListingRunner({ spaceId, tab }: { spaceId: string; tab?: string; item?: string }) {
-  const { listings, agency } = useShell();
+  const { listings, agency, role } = useShell();
   const refresh = useRefresh();
   const owner = listings.some((l) => l.id === spaceId);
 
@@ -226,6 +226,8 @@ export function ListingRunner({ spaceId, tab }: { spaceId: string; tab?: string;
           <HubCard
             screen="offers"
             space={space}
+            // The inbox's own screen for this listing, with Back to this hub. A rep has no inbox.
+            to={role === "rep" ? undefined : `/offers?listing=${encodeURIComponent(space.id)}&from=listing`}
             icon={IconOffers}
             value={waiting}
             unit={waiting ? "waiting on you" : offers.length ? `${offers.length} in total` : "none yet"}
@@ -279,9 +281,12 @@ function HubCard({
   value,
   unit,
   attention,
+  to,
 }: {
   screen: Screen;
   space: SpaceView;
+  /** Where the card opens, when that is a screen of its own outside the listing. */
+  to?: string;
   icon: ComponentType<SVGProps<SVGSVGElement>>;
   value: ReactNode;
   unit: string;
@@ -290,7 +295,7 @@ function HubCard({
   const href = useHref();
   return (
     <li>
-      <Link href={href(`/listings/${space.id}?tab=${screen}`)} className={`${cardBox} transition-colors hover:bg-white/[0.07]`}>
+      <Link href={href(to ?? `/listings/${space.id}?tab=${screen}`)} className={`${cardBox} transition-colors hover:bg-white/[0.07]`}>
         <CardHead icon={icon} title={SCREEN_TITLE[screen]} />
         <p className="flex min-w-0 items-baseline gap-2">
           <span className={`text-[22px] font-medium leading-none tabular-nums sm:text-[26px] ${attention ? "text-amber" : "text-text"}`}>{value}</span>
