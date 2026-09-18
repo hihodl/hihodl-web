@@ -8,7 +8,8 @@
  *   /s/coinempress/road-to-token2049   placement, carry-on suitcase, fixed price,
  *                                      TOKEN2049 (city photo), sibling on the feed
  *   /s/coinempress/token2049-videos    service, short-form video, TOKEN2049, its
- *                                      own banner image, sibling on the ground
+ *                                      own banner image (a camera), sibling on the
+ *                                      ground
  *   /s/coinempress/token2049-takeover  the same suitcase, priced by takeover, no
  *                                      event, ember gradient
  *   /s/coinempress/road-to-devcon-8    Devcon 8 (no city photo), sea gradient
@@ -18,8 +19,8 @@
  *                                      and a funding goal already beaten (133%)
  *   /s/coinempress/token2049-afterparty-host
  *                                      a custom service, named by its creator,
- *                                      with a mention on X and a funding goal
- *                                      still a way off (21%)
+ *                                      with a mention on X, its own photo and a
+ *                                      funding goal still a way off (21%)
  *   /s/coinempress/breakpoint-london-coverage
  *                                      a TIERED service (ad-space-tiers-v0.md):
  *                                      one event, three prices — $50 logos (six,
@@ -27,12 +28,24 @@
  *                                      (three, all gone, so the rung shows grey)
  *                                      and one $1,300 flagship interview that
  *                                      sells its own way, by bidding, on a board
- *                                      whose other rungs sell at their price
+ *                                      whose other rungs sell at their price;
+ *                                      tied to the Breakpoint event row
+ *   /s/coinempress/weekly-x-space-sponsor
+ *                                      a custom service tied to no event: the
+ *                                      hub's "On sale all year" group
+ *   /s/coinempress/token2049-bids, /token2049-offers, /token2049-videos-offers
+ *                                      the offers and bidding boards; reachable by
+ *                                      URL, on no hub or event page
  * and every other card on an event page opens a copy of the matching board.
+ *
+ * Creator hub (/s/coinempress): TOKEN2049 (suitcase + three services),
+ * Breakpoint, Devcon, EthCC (past, behind "Past events"), and all year.
  *
  * Events:
  *   /events/token2049-singapore-2026   both tabs, the feed has more open spots
  *   /events/devcon-8-mumbai-2026       no city photo, an empty feed
+ *   /events/breakpoint-london-2026     the feed only
+ *   /events/ethcc-cannes-2026          over; everything closed and sold
  *   /events/token-2049-singapore       merged: redirects to the first
  *
  * Bookings (/b/<token>), one per state a buyer can find their session in:
@@ -405,8 +418,9 @@ function videos(): Space {
       url: "https://hihodl.xyz/s/coinempress/token2049-videos?m=1",
       text: "1 of 3 video slots sold https://hihodl.xyz/s/coinempress/token2049-videos?m=1",
     },
-    // The creator's own banner, which wins over the city photo.
-    bannerUrl: photo("photo-1565967511849-76a60a516170"),
+    // The creator's own banner, which wins over the city photo: the camera the
+    // videos are shot on, never the event's own picture.
+    bannerUrl: SHORT_VIDEOS_PHOTO,
     siblings: [{ path: "/s/coinempress/road-to-token2049", tab: "ground", title: "Road to TOKEN2049" }],
   };
 }
@@ -599,6 +613,8 @@ function customService(): Space {
     // 21%" and the bar fills with the money rather than with the slots sold.
     // Its fallback carries no note, so the block shows the standard sentence.
     fundingGoalCents: 240000,
+    bannerUrl: AFTERPARTY_PHOTO,
+    bannerGradient: "ember",
     share: {
       url: "https://hihodl.xyz/s/coinempress/token2049-afterparty-host",
       text: "Host my TOKEN2049 afterparty table https://hihodl.xyz/s/coinempress/token2049-afterparty-host",
@@ -759,10 +775,11 @@ function eventCoverage(): Space {
     fundingGoalCents: 200000,
     totals: { positions: positions.length, sold: 4, committedCents: 65000, totalCents: 220000 },
     updates: [],
-    // A space with no event row of its own: the name is free text, as it is on
-    // every space made before events existed.
+    // Tied to the Breakpoint event row, so a creator's hub has a third event to
+    // show. The free-text case (a space from before events) is still covered by
+    // the takeover suitcase.
     eventName: "Breakpoint London",
-    event: null,
+    event: BREAKPOINT,
     bannerUrl: null,
     bannerGradient: "night",
     share: {
@@ -820,10 +837,43 @@ function pitchReviews(): Space {
       text: "Pitch reviews at TOKEN2049 https://hihodl.xyz/s/coinempress/token2049-pitch-reviews?m=2",
     },
     bannerUrl: null,
+    bannerGradient: "slate",
     siblings: [
       { path: "/s/coinempress/road-to-token2049", tab: "ground", title: "Road to TOKEN2049" },
       { path: "/s/coinempress/token2049-videos", tab: "feed", title: "TOKEN2049 short videos" },
     ],
+  };
+}
+
+/**
+ * All year: a service tied to no event, which is what the hub's "On sale all
+ * year" group exists for. The creator names it themselves (custom service).
+ */
+function allYearService(): Space {
+  const base = customService();
+  return {
+    ...base,
+    id: "77777777-7777-4777-8777-777777777777",
+    slug: "weekly-x-space-sponsor",
+    title: "Sponsor my weekly X Space",
+    reason: "Every Thursday, an hour on the week in crypto. Your brand opens it and gets a two-minute segment.",
+    keyDates: [],
+    deliverBy: dayFromNow(60),
+    serviceName: "Weekly X Space sponsor",
+    serviceSummary: "Your brand opens one of my weekly X Spaces and gets a two-minute segment in it.",
+    deliverables: [
+      { id: "w1", kind: "mention", platform: "x", count: 1, dueDate: dayFromNow(14), deliveredUrl: null, state: "upcoming", note: "Named as the sponsor in the Space's title" },
+    ],
+    fundingGoalCents: null,
+    eventName: null,
+    event: null,
+    bannerUrl: WEEKLY_SPACE_PHOTO,
+    bannerGradient: "night",
+    share: {
+      url: "https://hihodl.xyz/s/coinempress/weekly-x-space-sponsor",
+      text: "Sponsor my weekly X Space https://hihodl.xyz/s/coinempress/weekly-x-space-sponsor",
+    },
+    siblings: [],
   };
 }
 
@@ -832,6 +882,15 @@ function pitchReviews(): Space {
 function photo(id: string): string {
   return `https://images.unsplash.com/${id}?w=2000&q=70&fm=jpg&fit=crop`;
 }
+
+/**
+ * Each listing wears its own picture, never its event's: a camera for the
+ * videos, a microphone for the X Space, a party for the afterparty. The
+ * suitcases carry none, so their cards draw the product itself.
+ */
+const SHORT_VIDEOS_PHOTO = photo("photo-1516035069371-29a1b244cc32");
+const AFTERPARTY_PHOTO = photo("photo-1475721027785-f74eccf877e2");
+const WEEKLY_SPACE_PHOTO = photo("photo-1478737270239-2f02b77fc618");
 
 /** Days from today as a calendar date, so the countdowns never go stale. */
 function dayFromNow(days: number): string {
@@ -850,7 +909,7 @@ const TOKEN2049: EventSummary = {
   category: "crypto",
   coverUrl: photo("photo-1508964942454-1a56651d54ac"),
   coverCredit: "Photo: Unsplash",
-  spaceCount: 6,
+  spaceCount: 9,
 };
 
 const DEVCON: EventSummary = {
@@ -865,6 +924,41 @@ const DEVCON: EventSummary = {
   category: "crypto",
   coverUrl: null,
   coverCredit: null,
+  spaceCount: 2,
+};
+
+const BREAKPOINT: EventSummary = {
+  id: "e0000000-0000-4000-8000-000000000003",
+  slug: "breakpoint-london-2026",
+  name: "Breakpoint",
+  city: "London",
+  country: "GB",
+  startsOn: dayFromNow(43),
+  endsOn: dayFromNow(45),
+  timeZone: "Europe/London",
+  category: "crypto",
+  coverUrl: photo("photo-1513635269975-59663e0ac1ad"),
+  coverCredit: "Photo: Unsplash",
+  spaceCount: 2,
+};
+
+/**
+ * Over: it ended in July. A creator's hub keeps it off the top level and shows
+ * it only behind "Past events", where it reads as a track record. Not in
+ * `fixtureEvents()`: nobody picks an event that is over for a new space.
+ */
+const ETHCC: EventSummary = {
+  id: "e0000000-0000-4000-8000-000000000004",
+  slug: "ethcc-cannes-2026",
+  name: "EthCC",
+  city: "Cannes",
+  country: "FR",
+  startsOn: dayFromNow(-72),
+  endsOn: dayFromNow(-69),
+  timeZone: "Europe/Paris",
+  category: "crypto",
+  coverUrl: photo("photo-1540575467063-178a50c2df87"),
+  coverCredit: "Photo: Unsplash",
   spaceCount: 2,
 };
 
@@ -904,49 +998,108 @@ function card(
   };
 }
 
+/* coinempress's own cards, one per listing, each with its own look. */
+
+function coinSuitcaseCard(): SpaceCard {
+  return card(1, {
+    path: "/s/coinempress/road-to-token2049",
+    title: "Road to TOKEN2049",
+    tab: "ground",
+    templateName: "Carry-on suitcase",
+    creator: COIN,
+    totals: { positions: 18, open: 9, sold: 8 },
+    closesAt: new Date(Date.now() + 12 * DAY + 5 * 60 * 60 * 1000).toISOString(),
+  });
+}
+
+function coinVideosCard(): SpaceCard {
+  return card(6, {
+    path: "/s/coinempress/token2049-videos",
+    title: "TOKEN2049 short videos",
+    tab: "feed",
+    templateName: "Short-form video",
+    creator: COIN,
+    bannerUrl: SHORT_VIDEOS_PHOTO,
+    totals: { positions: 3, open: 1, sold: 1 },
+    fromPriceCents: 50000,
+  });
+}
+
+function coinAfterpartyCard(): SpaceCard {
+  return card(12, {
+    path: "/s/coinempress/token2049-afterparty-host",
+    title: "Host my TOKEN2049 afterparty table",
+    tab: "feed",
+    templateName: "Custom service",
+    serviceName: "Afterparty table host",
+    creator: COIN,
+    bannerUrl: AFTERPARTY_PHOTO,
+    bannerGradient: "ember",
+    totals: { positions: 3, open: 1, sold: 1 },
+    fromPriceCents: 50000,
+  });
+}
+
+function coinPitchCard(): SpaceCard {
+  return card(9, {
+    path: "/s/coinempress/token2049-pitch-reviews",
+    title: "Pitch reviews at TOKEN2049",
+    tab: "room",
+    templateName: "Pitch review",
+    creator: { ...COIN, trackRecord: { delivered: 5, missed: 0, disputed: 1 } },
+    bannerGradient: "slate",
+    totals: { positions: 6, open: 3, sold: 2 },
+    fromPriceCents: 10000,
+  });
+}
+
+function coinBreakpointCard(): SpaceCard {
+  return card(14, {
+    path: "/s/coinempress/breakpoint-london-coverage",
+    title: "I'm covering Breakpoint London",
+    tab: "feed",
+    templateName: "Short-form video",
+    creator: COIN,
+    bannerGradient: "night",
+    totals: { positions: 10, open: 6, sold: 4 },
+    fromPriceCents: 5000,
+    closesAt: new Date(Date.now() + 38 * DAY).toISOString(),
+  });
+}
+
+function coinDevconCard(): SpaceCard {
+  return card(7, {
+    path: "/s/coinempress/road-to-devcon-8",
+    title: "Road to Devcon 8",
+    tab: "ground",
+    templateName: "Carry-on suitcase",
+    creator: COIN,
+    bannerGradient: "sea",
+    totals: { positions: 18, open: 18, sold: 0 },
+    closesAt: new Date(Date.now() + 40 * DAY).toISOString(),
+  });
+}
+
+function coinAllYearCard(): SpaceCard {
+  return card(13, {
+    path: "/s/coinempress/weekly-x-space-sponsor",
+    title: "Sponsor my weekly X Space",
+    tab: "feed",
+    templateName: "Custom service",
+    serviceName: "Weekly X Space sponsor",
+    creator: COIN,
+    bannerUrl: WEEKLY_SPACE_PHOTO,
+    bannerGradient: "night",
+    totals: { positions: 4, open: 3, sold: 1 },
+    fromPriceCents: 30000,
+    closesAt: new Date(Date.now() + 60 * DAY).toISOString(),
+  });
+}
+
 function token2049Tabs(): EventPage["tabs"] {
   return {
     ground: [
-      card(1, {
-        path: "/s/coinempress/road-to-token2049",
-        title: "Road to TOKEN2049",
-        tab: "ground",
-        templateName: "Carry-on suitcase",
-        creator: COIN,
-        totals: { positions: 18, open: 9, sold: 8 },
-        closesAt: new Date(Date.now() + 12 * DAY + 5 * 60 * 60 * 1000).toISOString(),
-      }),
-      card(21, {
-        path: "/s/coinempress/token2049-bids",
-        title: "Bid for my TOKEN2049 suitcase",
-        tab: "ground",
-        templateName: "Carry-on suitcase",
-        creator: COIN,
-        pricingMode: "bids",
-        biddingEndsAt: new Date(Date.now() + 2 * DAY + 5 * 60 * 60 * 1000).toISOString(),
-        totals: { positions: 18, open: 8, sold: 8 },
-        fromPriceCents: null,
-      }),
-      card(22, {
-        path: "/s/coinempress/token2049-offers",
-        title: "Make me an offer: TOKEN2049 suitcase",
-        tab: "ground",
-        templateName: "Carry-on suitcase",
-        creator: COIN,
-        pricingMode: "offers",
-        totals: { positions: 18, open: 9, sold: 8 },
-        fromPriceCents: null,
-      }),
-      card(23, {
-        path: "/s/coinempress/token2049-videos-offers",
-        title: "TOKEN2049 short videos, offers welcome",
-        tab: "ground",
-        templateName: "Short-form video",
-        creator: COIN,
-        acceptsOffers: true,
-        totals: { positions: 3, open: 1, sold: 1 },
-        fromPriceCents: 52500,
-      }),
+      coinSuitcaseCard(),
       card(2, {
         path: "/s/defidana/token2049-blazer",
         title: "My blazer at TOKEN2049",
@@ -1001,27 +1154,11 @@ function token2049Tabs(): EventPage["tabs"] {
         fromPriceCents: 20000,
         closesAt: new Date(Date.now() + 20 * 60 * 60 * 1000).toISOString(),
       }),
-      card(6, {
-        path: "/s/coinempress/token2049-videos",
-        title: "TOKEN2049 short videos",
-        tab: "feed",
-        templateName: "Short-form video",
-        creator: COIN,
-        bannerUrl: photo("photo-1565967511849-76a60a516170"),
-        totals: { positions: 3, open: 1, sold: 1 },
-        fromPriceCents: 50000,
-      }),
+      coinVideosCard(),
+      coinAfterpartyCard(),
     ],
     room: [
-      card(9, {
-        path: "/s/coinempress/token2049-pitch-reviews",
-        title: "Pitch reviews at TOKEN2049",
-        tab: "room",
-        templateName: "Pitch review",
-        creator: { ...COIN, trackRecord: { delivered: 5, missed: 0, disputed: 1 } },
-        totals: { positions: 6, open: 3, sold: 2 },
-        fromPriceCents: 10000,
-      }),
+      coinPitchCard(),
       card(10, {
         path: "/s/mira_onchain/token2049-side-event-host",
         title: "I host your side event",
@@ -1039,16 +1176,7 @@ function token2049Tabs(): EventPage["tabs"] {
 function devconTabs(): EventPage["tabs"] {
   return {
     ground: [
-      card(7, {
-        path: "/s/coinempress/road-to-devcon-8",
-        title: "Road to Devcon 8",
-        tab: "ground",
-        templateName: "Carry-on suitcase",
-        creator: COIN,
-        bannerGradient: "sea",
-        totals: { positions: 18, open: 18, sold: 0 },
-        closesAt: new Date(Date.now() + 40 * DAY).toISOString(),
-      }),
+      coinDevconCard(),
       card(8, {
         path: "/s/priya_builds/devcon-tote",
         title: "A tote bag across Devcon",
@@ -1067,30 +1195,92 @@ function devconTabs(): EventPage["tabs"] {
   };
 }
 
+function breakpointTabs(): EventPage["tabs"] {
+  return {
+    ground: [],
+    feed: [
+      coinBreakpointCard(),
+      card(15, {
+        path: "/s/mira_onchain/breakpoint-interviews",
+        title: "Builder interviews at Breakpoint",
+        tab: "feed",
+        templateName: "Interview",
+        creator: creator("mira_onchain", "Mira", 96300, { trackRecord: { delivered: 4, missed: 0 } }),
+        bannerGradient: "sea",
+        totals: { positions: 8, open: 7, sold: 1 },
+        fromPriceCents: 40000,
+        closesAt: new Date(Date.now() + 36 * DAY).toISOString(),
+      }),
+    ],
+    room: [],
+  };
+}
+
+/** Everything coinempress sold at EthCC, closed and delivered. */
+function ethccTabs(): EventPage["tabs"] {
+  return {
+    ground: [
+      card(16, {
+        path: "/s/coinempress/road-to-ethcc",
+        title: "Road to EthCC",
+        tab: "ground",
+        templateName: "Carry-on suitcase",
+        creator: COIN,
+        bannerGradient: "ember",
+        status: "closed",
+        totals: { positions: 18, open: 0, sold: 18 },
+        fromPriceCents: null,
+        closesAt: new Date(Date.now() - 75 * DAY).toISOString(),
+      }),
+    ],
+    feed: [
+      card(17, {
+        path: "/s/coinempress/ethcc-recap-videos",
+        title: "EthCC recap videos",
+        tab: "feed",
+        templateName: "Short-form video",
+        creator: COIN,
+        bannerUrl: SHORT_VIDEOS_PHOTO,
+        status: "closed",
+        totals: { positions: 3, open: 0, sold: 3 },
+        fromPriceCents: null,
+        closesAt: new Date(Date.now() - 74 * DAY).toISOString(),
+      }),
+    ],
+    room: [],
+  };
+}
+
 export function fixtureEvents(): EventSummary[] {
-  return [TOKEN2049, DEVCON];
+  return [TOKEN2049, BREAKPOINT, DEVCON];
 }
 
 export function fixtureEvent(slug: string): EventPage | { redirectTo: string } | null {
-  // As the API computes it: open spots on live spaces, feed 14 to ground 13.
+  // As the API computes it: open spots on live spaces, feed 15 to ground 13.
   if (slug === TOKEN2049.slug) return { event: TOKEN2049, tabs: token2049Tabs(), defaultTab: "feed" };
   if (slug === DEVCON.slug) return { event: DEVCON, tabs: devconTabs(), defaultTab: "ground" };
+  if (slug === BREAKPOINT.slug) return { event: BREAKPOINT, tabs: breakpointTabs(), defaultTab: "feed" };
+  if (slug === ETHCC.slug) return { event: ETHCC, tabs: ethccTabs(), defaultTab: "ground" };
   if (slug === "token-2049-singapore") return { redirectTo: TOKEN2049.slug };
   return null;
 }
 
 /**
- * A creator's hub, `/s/coinempress`: the same cards the two event fixtures
- * carry, regrouped the way the API groups them — one section per event, in the
- * server's order, and last the takeover suitcase, which belongs to no event.
- * Every other handle answers 404, as a handle with nothing listable does.
+ * A creator's hub, `/s/coinempress`, the way a real creator's looks: one
+ * suitcase and three services at TOKEN2049, a coverage ladder at Breakpoint,
+ * the same suitcase again for Devcon, one past event (EthCC, all sold) and
+ * one service that belongs to no event. Groups in the server's order
+ * (`compareEventGroups`): upcoming events by start date, then past ones most
+ * recent first, then the group with no event, always last.
+ *
+ * The other coinempress fixtures (the bidding, offers and takeover suitcases)
+ * still open at their own URLs; they are test boards, not what this creator
+ * would have on sale at once, so the hub does not list them.
  */
 export function fixtureCreator(handle: string): CreatorPage | null {
   const lower = handle.toLowerCase();
   if (lower !== "coinempress") return null;
 
-  const mine = (tabs: EventPage["tabs"]): SpaceCard[] =>
-    [...tabs.ground, ...tabs.feed, ...tabs.room].filter((c) => c.creator.xHandle === "coinempress");
   const others = (tabs: EventPage["tabs"]): number =>
     new Set(
       [...tabs.ground, ...tabs.feed, ...tabs.room]
@@ -1098,30 +1288,17 @@ export function fixtureCreator(handle: string): CreatorPage | null {
         .filter((h): h is string => Boolean(h) && h !== "coinempress"),
     ).size;
 
-  const token = token2049Tabs();
-  const devcon = devconTabs();
   const groups: CreatorPage["groups"] = [
-    { event: TOKEN2049, othersAtEvent: others(token), cards: mine(token) },
-    { event: DEVCON, othersAtEvent: others(devcon), cards: mine(devcon) },
     {
-      // The one group with no event, always last, so the page's honest heading
-      // for it has something to render against.
-      event: null,
-      othersAtEvent: 0,
-      cards: [
-        card(11, {
-          path: "/s/coinempress/token2049-takeover",
-          title: "Take my suitcase off whoever has it",
-          tab: "ground",
-          templateName: "Carry-on suitcase",
-          creator: COIN,
-          bannerGradient: "ember",
-          pricingMode: "takeover",
-          totals: { positions: 18, open: 11, sold: 7 },
-          fromPriceCents: 25000,
-        }),
-      ],
+      event: TOKEN2049,
+      othersAtEvent: others(token2049Tabs()),
+      cards: [coinSuitcaseCard(), coinVideosCard(), coinPitchCard(), coinAfterpartyCard()],
     },
+    { event: BREAKPOINT, othersAtEvent: others(breakpointTabs()), cards: [coinBreakpointCard()] },
+    { event: DEVCON, othersAtEvent: others(devconTabs()), cards: [coinDevconCard()] },
+    // Past events after the upcoming ones, most recent first.
+    { event: ETHCC, othersAtEvent: 0, cards: [...ethccTabs().ground, ...ethccTabs().feed] },
+    { event: null, othersAtEvent: 0, cards: [coinAllYearCard()] },
   ];
 
   return {
@@ -1415,7 +1592,7 @@ export function fixtureOffer(token: string): OfferThread | null {
 export function fixtureSpace(handle: string, slug: string): Space | null {
   if (handle === "id")
     return (
-      [suitcase(), videos(), takeovers(), pitchReviews(), customService(), eventCoverage(), ...offersFixtures()].find(
+      [suitcase(), videos(), takeovers(), pitchReviews(), customService(), eventCoverage(), allYearService(), ...offersFixtures()].find(
         (s) => s.id === slug,
       ) ?? null
     );
@@ -1428,11 +1605,14 @@ export function fixtureSpace(handle: string, slug: string): Space | null {
     if (slug === "token2049-pitch-reviews") return pitchReviews();
     if (slug === "token2049-afterparty-host") return customService();
     if (slug === "breakpoint-london-coverage") return eventCoverage();
+    if (slug === "weekly-x-space-sponsor") return allYearService();
   }
   const path = `/s/${handle.toLowerCase()}/${slug}`;
   for (const [event, tabs] of [
     [TOKEN2049, token2049Tabs()],
     [DEVCON, devconTabs()],
+    [BREAKPOINT, breakpointTabs()],
+    [ETHCC, ethccTabs()],
   ] as const) {
     const all = [...tabs.ground, ...tabs.feed, ...tabs.room];
     const hit = all.find((c) => c.path.toLowerCase() === path);

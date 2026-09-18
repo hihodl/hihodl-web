@@ -14,7 +14,7 @@ import {
   trackRecordText,
   usdFromCents,
 } from "@/lib/ad-space/format";
-import { type Banner, bannerFor, categoryLabel, gradientCss, gradientOverPhotoCss } from "@/lib/ad-space/look";
+import { type Banner, bannerFor, categoryLabel, gradientCss, gradientKey, gradientOverPhotoCss } from "@/lib/ad-space/look";
 import type { EventSummary, SpaceCard, SpaceSibling, SpaceTab, VerifiedType } from "@/lib/ad-space/types";
 
 import { btnSmallSecondary, card as cardClass, eyebrow, pill } from "./ui";
@@ -58,15 +58,6 @@ export function BannerFrame({
       )}
       {children}
     </div>
-  );
-}
-
-function PhotoCredit({ credit }: { credit: string | null }) {
-  if (!credit) return null;
-  return (
-    <p className="absolute bottom-2 right-3 max-w-[45%] truncate text-[10px] leading-4 text-white/55 md:right-4">
-      {credit}
-    </p>
   );
 }
 
@@ -125,15 +116,22 @@ function capitalise(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
+/**
+ * An event's own picture: its cover or city photo, else steel. The one place a
+ * page draws it, so no listing ever borrows it. No photo credit is printed over
+ * it: the founder asked for the caption to go.
+ */
+export function eventBanner(event: Pick<EventSummary, "coverUrl">): Banner {
+  return { imageUrl: event.coverUrl, gradient: "steel", credit: null };
+}
+
 /** The event page's banner: the city photo (or steel) with the small card. */
 export function EventBanner({ event, now }: { event: EventSummary; now: number }) {
-  const banner: Banner = { imageUrl: event.coverUrl, gradient: "steel", credit: event.coverUrl ? event.coverCredit : null };
   return (
-    <BannerFrame banner={banner} className="h-[320px] sm:h-[380px] md:h-[440px]">
+    <BannerFrame banner={eventBanner(event)} className="h-[320px] sm:h-[380px] md:h-[440px]">
       <div className="container-page relative flex h-full items-end pb-10">
         <EventMiniCard event={event} now={now} as="h1" />
       </div>
-      <PhotoCredit credit={banner.credit} />
     </BannerFrame>
   );
 }
@@ -168,8 +166,7 @@ export function SpaceBanner({
     <BannerFrame banner={banner} className={event ? "flex min-h-[260px] md:min-h-[340px]" : "h-[180px] md:h-[240px]"}>
       {event && (
         // A minimum height, not a fixed one: a long event name grows the banner
-        // instead of pushing the card down over the credit. pb-10 below md: the
-        // credit sits in the bottom 24px, under a card as wide as the screen.
+        // instead of pushing the card off the bottom.
         <div className="container-page relative flex w-full flex-col justify-between gap-4 pb-10 pt-4 md:py-6">
           <Link
             href={eventPath(event.slug)}
@@ -183,7 +180,6 @@ export function SpaceBanner({
           <EventMiniCard event={event} now={now} href={eventPath(event.slug)} />
         </div>
       )}
-      <PhotoCredit credit={banner.credit} />
     </BannerFrame>
   );
 }
@@ -283,6 +279,7 @@ export function SpaceCardGrid({
   tab,
   now,
   showCreator = true,
+  readOnly = false,
 }: {
   cards: SpaceCard[];
   event: EventSummary | null;
@@ -290,40 +287,122 @@ export function SpaceCardGrid({
   now: number;
   /** See `SpaceCardTile`: false on a creator's own hub. */
   showCreator?: boolean;
+  /** An event that is over: every card reads as closed, whatever it says. */
+  readOnly?: boolean;
 }) {
   if (cards.length === 0) return event && tab ? <EmptyTab event={event} tab={tab} /> : null;
   return (
     <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
       {cards.map((c) => (
-        <li key={c.spaceId} className="flex">
-          <SpaceCardTile card={c} event={event} now={now} showCreator={showCreator} />
+        <li key={c.spaceId} className="flex min-w-0">
+          <SpaceCardTile card={c} now={now} showCreator={showCreator} readOnly={readOnly} />
         </li>
       ))}
     </ul>
   );
 }
 
+/**
+ * A card's picture, and only its own: the creator's banner when they set one,
+ * else the product itself drawn on the creator's gradient for something they
+ * carry, else the gradient alone. Never the event's photo — the event has its
+ * own banner, and six cards wearing the same city are six cards that look like
+ * one.
+ */
+function CardVisual({ card: c }: { card: SpaceCard }) {
+  const banner: Banner = { imageUrl: c.bannerUrl, gradient: gradientKey(c.bannerGradient), credit: null };
+  return (
+    <BannerFrame banner={banner} className="aspect-[16/10] w-full shrink-0">
+      {!c.bannerUrl && c.tab === "ground" && <ProductGlyph name={c.templateName} />}
+      <span className="absolute left-3 top-3 inline-flex h-6 items-center whitespace-nowrap rounded-[12px] bg-[#141F2E]/70 px-2.5 text-tiny text-white backdrop-blur-md">
+        {TAB_NAME[c.tab]}
+      </span>
+    </BannerFrame>
+  );
+}
+
+/**
+ * The product a placement goes on, as a line drawing: what a sponsor is buying
+ * space on, when the creator has not photographed it. Only the catalogue's
+ * common shapes; anything else keeps the plain gradient rather than a wrong
+ * picture.
+ */
+function ProductGlyph({ name }: { name: string | null }) {
+  const paths = productPaths(name);
+  if (!paths) return null;
+  return (
+    <svg
+      viewBox="0 0 100 140"
+      className="absolute inset-0 m-auto h-[68%] w-auto"
+      fill="none"
+      stroke="rgba(244,246,250,0.72)"
+      strokeWidth={2.2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      {paths.map((d) => (
+        <path key={d} d={d} />
+      ))}
+    </svg>
+  );
+}
+
+function productPaths(name: string | null): string[] | null {
+  const n = (name ?? "").toLowerCase();
+  if (n.includes("suitcase") || n.includes("luggage")) {
+    return [
+      "M19 28 H81 a7 7 0 0 1 7 7 V121 a7 7 0 0 1 -7 7 H19 a7 7 0 0 1 -7 -7 V35 a7 7 0 0 1 7 -7 Z",
+      "M41 28 V7 a2 2 0 0 1 2 -2 H57 a2 2 0 0 1 2 2 V28",
+      "M36 28 V128 M64 28 V128",
+      "M22 132 a4.5 4.5 0 1 0 0.1 0 M78 132 a4.5 4.5 0 1 0 0.1 0",
+    ];
+  }
+  if (n.includes("backpack")) {
+    return [
+      "M22 50 a28 28 0 0 1 56 0 V122 a8 8 0 0 1 -8 8 H30 a8 8 0 0 1 -8 -8 Z",
+      "M40 22 a10 10 0 0 1 20 0",
+      "M32 84 H68 V114 H32 Z",
+      "M32 96 H68",
+    ];
+  }
+  if (n.includes("tote") || n.includes("bag")) {
+    return ["M16 50 H84 L78 128 H22 Z", "M34 50 V38 a16 16 0 0 1 32 0 V50"];
+  }
+  if (n.includes("blazer") || n.includes("jacket")) {
+    return [
+      "M36 14 L50 40 L64 14 L86 24 L90 124 H60 L50 60 L40 124 H10 L14 24 Z",
+      "M36 14 L42 48 L50 40 M64 14 L58 48 L50 40",
+      "M72 70 H82",
+    ];
+  }
+  if (n.includes("hoodie") || n.includes("t-shirt") || n.includes("tee") || n.includes("shirt")) {
+    return [
+      "M36 18 L14 30 L6 62 L22 66 L26 50 V126 H74 V50 L78 66 L94 62 L86 30 L64 18",
+      "M36 18 a14 12 0 0 0 28 0",
+    ];
+  }
+  return null;
+}
+
 function SpaceCardTile({
   card: c,
-  event,
   now,
   showCreator = true,
+  readOnly = false,
 }: {
   card: SpaceCard;
-  event: EventSummary | null;
   now: number;
   /**
    * False on a creator's own hub, where every card is the same person and the
    * page said who they are once, at the top. Repeating the avatar, the name,
    * the followers and the record on every tile buries the part that actually
-   * differs between them, so what stands in its place is the kind of space —
-   * which on a hub is the real difference, the cards being grouped by event
-   * rather than by tab.
+   * differs between them.
    */
   showCreator?: boolean;
+  readOnly?: boolean;
 }) {
-  const banner = bannerFor(c, event);
-  const closed = c.status !== "live";
+  const closed = readOnly || c.status !== "live";
   const { xHandle, xName, xFollowers } = c.creator;
   const room = c.tab === "room";
   // How it sells: "Accepts offers", "Make an offer", "Bidding · 2d left", "Open bidding".
@@ -336,24 +415,24 @@ function SpaceCardTile({
     .filter(Boolean)
     .join(" · ");
   const status = closed ? (
-    <span className={pill.neutral}>Closed</span>
+    <span className={pill.neutral}>{c.totals.sold > 0 && c.totals.sold >= c.totals.positions ? "Sold out" : "Closed"}</span>
   ) : chip ? (
     <span className={pill.open}>{chip}</span>
   ) : null;
+  const service = cardServiceName(c);
 
   return (
     <Link
       href={c.path}
-      className={`${cardClass} group flex w-full flex-col overflow-hidden transition-colors duration-180 hover:border-[color:var(--color-hairline-strong)] hover:bg-white/[0.05]`}
+      className={`${cardClass} group flex w-full min-w-0 flex-col overflow-hidden transition-colors duration-180 hover:border-[color:var(--color-hairline-strong)] hover:bg-white/[0.05]`}
     >
-      <BannerFrame banner={banner} className="h-28 shrink-0" />
-      <div className={`flex flex-1 flex-col px-5 pb-5 ${showCreator ? "" : "pt-5"}`}>
-        {showCreator ? (
+      <CardVisual card={c} />
+      <div className={`flex flex-1 flex-col px-5 pb-5 ${showCreator ? "" : "pt-4"}`}>
+        {showCreator && (
           <>
-            {/* The avatar rides up over the banner, so this row hangs above the padding. */}
+            {/* The avatar rides up over the picture, so this row hangs above the padding. */}
             <div className="relative -mt-7 flex items-end justify-between gap-3">
               <CreatorAvatar name={xName || xHandle || ""} url={c.creator.xAvatarUrl} />
-              {status}
             </div>
 
             <div className="mt-3 min-w-0">
@@ -362,41 +441,45 @@ function SpaceCardTile({
                 <VerifiedTick type={c.creator.xVerifiedType} />
               </p>
               {handleLine && <p className="truncate text-small text-text-muted">{handleLine}</p>}
+              <p className={`mt-0.5 text-tiny ${trackRecordNeedsAttention(c.creator.trackRecord) ? "text-amber" : "text-text-faint"}`}>
+                {trackRecordText(c.creator.trackRecord)}
+              </p>
             </div>
           </>
-        ) : (
-          <div className="flex min-h-6 items-center justify-between gap-3">
-            <span className={`${eyebrow} truncate text-text-faint`}>{TAB_NAME[c.tab]}</span>
-            {status}
-          </div>
         )}
 
-        <h3 className="mt-4 line-clamp-2 break-words text-body [overflow-wrap:anywhere] text-text group-hover:text-amber">{c.title}</h3>
-        {cardServiceName(c) && (
-          <p className="mt-1 truncate text-small text-text-muted">{cardServiceName(c)}</p>
-        )}
-        {showCreator && (
-          <p className={`mt-1 text-tiny ${trackRecordNeedsAttention(c.creator.trackRecord) ? "text-amber" : "text-text-faint"}`}>
-            {trackRecordText(c.creator.trackRecord)}
-          </p>
-        )}
+        <h3
+          className={`${showCreator ? "mt-4 text-body" : "text-lead"} line-clamp-2 break-words text-text [overflow-wrap:anywhere] group-hover:text-amber`}
+        >
+          {c.title}
+        </h3>
+        {service && service !== c.title && <p className="mt-1 truncate text-small text-text-muted">{service}</p>}
 
-        <div className="mt-auto flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 pt-5 text-small">
+        <div className="mt-auto flex flex-wrap items-end justify-between gap-x-4 gap-y-2 pt-5">
           {/* A closed space sells nothing more, so it says what it sold and names no price. */}
-          <span>
-            <span className="tabular-nums text-text">
-              {closed ? c.totals.sold : c.totals.open} of {c.totals.positions}
+          {!closed && c.fromPriceCents !== null ? (
+            <span className="min-w-0">
+              <span className="block text-tiny text-text-faint">{room ? "Book from" : "From"}</span>
+              <span className="font-display text-h4 font-light tabular-nums text-text">{usdFromCents(c.fromPriceCents)}</span>
             </span>
-            <span className="text-text-muted">{closed ? (room ? " booked" : " sold") : room ? " sessions open" : " open"}</span>
-          </span>
-          {!closed && c.fromPriceCents !== null && (
-            <span>
-              <span className="text-text-muted">{room ? "book from " : "from "}</span>
-              <span className="font-mono text-text">{usdFromCents(c.fromPriceCents)}</span>
+          ) : (
+            <span className="text-small">
+              <span className="tabular-nums text-text">
+                {closed ? c.totals.sold : c.totals.open} of {c.totals.positions}
+              </span>
+              <span className="text-text-muted">{closed ? (room ? " booked" : " sold") : room ? " sessions open" : " open"}</span>
             </span>
           )}
+          {status}
         </div>
-        <p className="mt-1 text-tiny text-text-faint">{closesText(c.closesAt, closed, now)}</p>
+        {!closed && (
+          <p className="mt-2 text-tiny text-text-faint">
+            <span className="tabular-nums">
+              {c.totals.open} of {c.totals.positions}
+            </span>
+            {room ? " sessions open" : " open"} · {closesText(c.closesAt, closed, now)}
+          </p>
+        )}
       </div>
     </Link>
   );
