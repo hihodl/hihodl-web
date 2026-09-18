@@ -1,30 +1,43 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { CreatorGroups, CreatorHero, creatorPath } from "@/components/ad-space/creator";
+import {
+  CreatorHero,
+  GroupGrid,
+  KindPills,
+  PAST,
+  PastEventsLink,
+  ProfileFooter,
+  ProfileGround,
+  TopBar,
+  activeKind,
+  creatorPath,
+  creatorScreenPath,
+  kindCounts,
+  kindsIn,
+  openNowIn,
+  splitGroups,
+} from "@/components/ad-space/creator";
 import { SlimHeader } from "@/components/ad-space/sections";
 import { eyebrow } from "@/components/ad-space/ui";
-import { DownloadLink } from "@/components/site/DownloadLink";
-import { Wordmark } from "@/components/site/Wordmark";
 import { creatorTotalsText } from "@/lib/ad-space/format";
 import { getPublicCreator } from "@/lib/ad-space/server";
 
 /**
- * /s/<handle> — one creator, everything they sell, grouped by where they are
- * going. The link a creator pins to their profile.
+ * /s/<handle> — one creator: who they are, then one banner per event they sell
+ * at (and one for what they sell all year). The link a creator pins to their
+ * profile, and it sells them and nobody else.
  *
- * Server-rendered from `GET /public/creators/:handle`, refreshed every 30 s like
- * the event page it sits beside. The order of the groups is the server's —
- * upcoming events, then past ones, then whatever is tied to no event — and this
- * page keeps it exactly as it arrives.
- *
- * Every event section ends with the way on to `/events/<slug>`. That is not a
- * footnote: a brand who scans this creator and is not convinced is one click
- * from the other creators going to the same event, and each hub shared on X
- * therefore advertises every event on it.
+ * Server-rendered from `GET /public/creators/:handle`, refreshed every 30 s. The
+ * order of the groups is the server's and is kept. Events that are over go
+ * behind "Past events" (top right); a banner opens that event's own screen
+ * (`/s/<handle>/events/<slug>`), so this page never lists every listing at once.
+ * A creator who sells both placements and services gets Spaces / Services pills
+ * (`?kind=services`).
  */
 
 type Params = { handle: string };
+type SearchParams = Record<string, string | string[] | undefined>;
 
 /** Today in UTC: the X card's cache key, so the countdowns on it are never a day stale. */
 function today(): string {
@@ -46,7 +59,10 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const path = creatorPath(creator.xHandle);
   const og = `/api/og/c/${encodeURIComponent(creator.xHandle)}?d=${today()}`;
   const name = creator.xName || `@${creator.xHandle}`;
-  const events = groups.map((g) => g.event?.name).filter((n): n is string => Boolean(n));
+  // Only where they are going: an event that is over is not something to sell.
+  const events = splitGroups(groups, Date.now())
+    .current.map((g) => g.event?.name)
+    .filter((n): n is string => Boolean(n));
   const going = events.length > 0 ? ` Going to ${events.slice(0, 3).join(", ")}${events.length > 3 ? " and more" : ""}.` : "";
   const title = `${name} · Sponsor them directly in USDC`;
   const description = `${name} on HiSpace: ${creatorTotalsText(
@@ -77,7 +93,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   };
 }
 
-export default async function CreatorPage({ params }: { params: Params }) {
+export default async function CreatorPage({ params, searchParams }: { params: Params; searchParams: SearchParams }) {
   const found = await getPublicCreator(params.handle);
   if (found.kind === "missing") notFound();
 
@@ -98,32 +114,38 @@ export default async function CreatorPage({ params }: { params: Params }) {
     );
   }
 
-  const { creator, groups, totals } = found.page;
-  const name = creator.xName || `@${creator.xHandle}`;
+  const { creator, groups } = found.page;
   const now = Date.now();
+  const { current, past } = splitGroups(groups, now);
+  const cards = current.flatMap((g) => g.cards);
+  const kinds = kindsIn(cards);
+  const kind = activeKind(searchParams.kind, kinds);
+  const home = creatorPath(creator.xHandle);
 
   return (
-    <>
-      <SlimHeader />
+    <ProfileGround>
+      <TopBar
+        left={
+          <KindPills
+            kinds={kinds}
+            active={kind}
+            counts={kindCounts(cards)}
+            hrefFor={(k) => (k === "spaces" ? home : `${home}?kind=${k}`)}
+          />
+        }
+        right={past.length > 0 ? <PastEventsLink href={creatorScreenPath(creator.xHandle, PAST)} /> : null}
+      />
       <main>
-        <CreatorHero creator={creator} totals={totals} />
-        <CreatorGroups groups={groups} now={now} />
+        <CreatorHero creator={creator} openNow={openNowIn(current)} />
+        <section className="container-page" aria-label="Where they sell">
+          {current.length > 0 ? (
+            <GroupGrid handle={creator.xHandle} groups={current} kind={kind} now={now} />
+          ) : (
+            <p className="text-body text-text-muted">Nothing on sale right now.</p>
+          )}
+        </section>
       </main>
-      <footer className="hairline">
-        <div className="container-page flex flex-col gap-6 py-12 md:flex-row md:items-start md:justify-between">
-          <div className="flex max-w-md flex-col gap-3">
-            <Wordmark className="h-5 w-auto self-start text-text" />
-            <p className="text-small text-text-muted">
-              Powered by HOLD. You pay {name} directly in USDC, and HOLD never holds the money.
-            </p>
-          </div>
-          <nav className="flex flex-wrap gap-x-6 gap-y-3 text-small" aria-label="HiSpace">
-            <DownloadLink className="text-text-muted transition-colors duration-180 hover:text-text">
-              Open your own space
-            </DownloadLink>
-          </nav>
-        </div>
-      </footer>
-    </>
+      <ProfileFooter />
+    </ProfileGround>
   );
 }
