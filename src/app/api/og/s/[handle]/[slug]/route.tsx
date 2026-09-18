@@ -7,8 +7,10 @@ import {
   serviceName,
   spaceProgressText,
   spaceSoldOut,
+  spaceTiers,
   takeableSpots,
   usdFromCents,
+  type SpaceTier,
 } from "@/lib/ad-space/format";
 import { bannerFor } from "@/lib/ad-space/look";
 import { getPublicSpace } from "@/lib/ad-space/server";
@@ -152,6 +154,8 @@ function Card({ space: s }: { space: Space }) {
   // The bar tracks the headline, so the two never disagree.
   const pct = totals.positions ? Math.min(100, (headline / totals.positions) * 100) : 0;
   const name = serviceName(s);
+  // A tiered service is drawn as its ladder: see Ladder.
+  const tiers = spaceTiers(s);
   const full = [s.eventName, name].filter(Boolean).join(" · ");
   const eyebrow = full.length <= 38 ? full : (s.eventName ?? name);
   const bids = bidsSummaryText(s);
@@ -176,7 +180,13 @@ function Card({ space: s }: { space: Space }) {
       }}
     >
       <div style={{ width: BOARD_W, height: BOARD_H, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        {s.template.kind === "service" ? <Slots positions={s.positions} /> : <Views space={s} />}
+        {tiers.length > 0 ? (
+          <Ladder tiers={tiers} />
+        ) : s.template.kind === "service" ? (
+          <Slots positions={s.positions} />
+        ) : (
+          <Views space={s} />
+        )}
       </div>
 
       <div
@@ -322,6 +332,71 @@ function ViewSvg({
 }
 
 /** A service: one tile per slot, sold ones filled. */
+/**
+ * A service ladder, as the ladder it is.
+ *
+ * A tiered listing is several different things at several prices — a $50 logo
+ * in the mini strip, a $200 card and mic placement, a $1,300 flagship
+ * interview. Drawn as slots it became ten identical squares, which threw away
+ * the only thing that made the listing worth stopping on: that the rungs are
+ * not the same rung. So each rung gets a row with its name, its price and
+ * what is left of it.
+ *
+ * In the creator's order, which is the order they built the ladder in and the
+ * order the API sends. At most four rows fit at this size legibly; a fifth
+ * rung and beyond is counted on one line rather than shrinking every row.
+ */
+function Ladder({ tiers }: { tiers: SpaceTier[] }) {
+  const shown = tiers.slice(0, 4);
+  const more = tiers.length - shown.length;
+
+  /** What the rung costs, or how it is sold when it carries no price. */
+  const priceOf = (t: SpaceTier): string => {
+    if (t.priceCents !== null) return usdFromCents(t.priceCents);
+    return t.offers?.mode === "bids" ? "To the highest bid" : "Open to offers";
+  };
+
+  /** What is left of the rung, from the brand's side. */
+  const leftOf = (t: SpaceTier): string => {
+    const total = t.positions.length;
+    if (t.open.length === 0) return total === 1 ? "Taken" : "All taken";
+    if (total === 1) return "One only";
+    return `${t.open.length} of ${total} left`;
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", width: BOARD_W, gap: 14 }}>
+      {shown.map((t) => {
+        const gone = t.open.length === 0;
+        return (
+          <div
+            key={t.key}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              padding: 18,
+              borderRadius: 18,
+              backgroundColor: gone ? "rgba(255,183,3,0.14)" : "rgba(91,124,255,0.12)",
+              border: `3px solid ${gone ? C.amber : C.moonlight}`,
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+              <div style={{ display: "flex", fontSize: 26 }}>{clip(t.title, 20)}</div>
+              <div style={{ display: "flex", fontSize: 30, color: C.amber, marginLeft: 12 }}>{priceOf(t)}</div>
+            </div>
+            <div style={{ display: "flex", fontSize: 20, color: C.muted, marginTop: 8 }}>{leftOf(t)}</div>
+          </div>
+        );
+      })}
+      {more > 0 && (
+        <div style={{ display: "flex", fontSize: 22, color: C.muted, paddingLeft: 4 }}>
+          {`+ ${more} more ${more === 1 ? "tier" : "tiers"}`}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Slots({ positions }: { positions: Position[] }) {
   const n = Math.max(positions.length, 1);
   const cols = Math.ceil(Math.sqrt(n));

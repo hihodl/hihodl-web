@@ -56,7 +56,7 @@ import {
 } from "@/lib/creator/team";
 
 import { Field, Text } from "../listing/parts";
-import { Loading, Notice, Section } from "../parts";
+import { Loading, Notice, Section, Status } from "../parts";
 
 /** A debt whose seat has no label at all, which the server should never send. */
 const UNNAMED = "Somebody on your team";
@@ -136,10 +136,14 @@ function OwedRow({ group, name, onPaid }: { group: OwedGroup; name: string; onPa
             {group.paidBase > 0n ? ` · ${usdcText(group.paidBase)} marked paid so far` : ""}
           </p>
         </div>
-        <div className="text-right">
-          <p className="text-h4 font-light text-text">{usdcText(group.owedBase)}</p>
-          <p className="text-tiny text-text-muted">USDC to pay</p>
-        </div>
+        {group.owedBase > 0n ? (
+          <div className="text-right">
+            <p className="text-h4 font-light text-text">{usdcText(group.owedBase)}</p>
+            <p className="text-tiny text-text-muted">USDC to pay</p>
+          </div>
+        ) : (
+          <Status state="done">All paid</Status>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -346,10 +350,14 @@ function EarningRow({ group, handle }: { group: OwedGroup; handle: string | null
             {group.paidBase > 0n ? `${usdcText(group.paidBase)} marked paid by them` : "Nothing marked paid yet"}
           </p>
         </div>
-        <div className="text-right">
-          <p className="text-h4 font-light text-text">{usdcText(group.owedBase)}</p>
-          <p className="text-tiny text-text-muted">USDC not yet paid</p>
-        </div>
+        {group.owedBase > 0n ? (
+          <div className="text-right">
+            <p className="text-h4 font-light text-text">{usdcText(group.owedBase)}</p>
+            <p className="text-tiny text-text-muted">USDC not yet paid</p>
+          </div>
+        ) : (
+          <Status state="done">Nothing owed</Status>
+        )}
       </div>
       <div>
         <button type="button" className={btnSmallSecondary} onClick={() => setOpen((v) => !v)}>

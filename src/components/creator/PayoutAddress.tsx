@@ -252,7 +252,7 @@ function ChainCard({
               <p className="text-small text-text-muted">
                 This is exactly what your wallet will show you. Read it, then approve it there.
               </p>
-              <pre className="overflow-x-auto whitespace-pre-wrap break-words rounded-input border border-[color:var(--color-hairline-strong)] bg-white/[0.04] px-4 py-3 font-mono text-tiny text-text-muted">
+              <pre className="min-w-0 overflow-x-auto whitespace-pre-wrap break-words rounded-input border border-[color:var(--color-hairline-strong)] bg-white/[0.04] px-4 py-3 font-mono text-tiny text-text-muted [overflow-wrap:anywhere]">
                 {challenge.message}
               </pre>
               <div className="flex flex-wrap gap-3">
