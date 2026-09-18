@@ -375,21 +375,25 @@ function ladderProblems(
       add(`${where}:perks`, "sell", `Each line is at most ${LIMITS.TIER_PERK_MAX} characters.`);
     }
 
-    // THE RUNG RULE: bidding is one thing going to one winner.
+    // THE RUNG RULE: a rung sold to the highest bid sells exactly one thing.
     //
-    // Read `rung.saleMode`, not the resolved mode, because that is exactly
-    // where the backend draws it: `checkTierModes` skips any position without
-    // a `saleMode` of its own, so a rung that simply follows a bidding board
-    // is checked as one of that board's spots — each its own bidding, like a
-    // placement's zones — and is not this rule's business. Refusing it here
-    // would be a form saying no to something the API says yes to.
+    // Read the RESOLVED mode, not `rung.saleMode`, because the rule is about
+    // substitutes and not about who named the mode. Every copy of a rung is
+    // priced alike and buys the same thing, so five of them under one
+    // countdown are five auctions of the same lot: the bidders scatter across
+    // them and all five clear under what one would have fetched. That is true
+    // whether the rung chose bidding or the whole listing did.
+    //
+    // It is also why this has never applied to the spots on a product: a lid
+    // and a front are not substitutes, so each of those really is its own
+    // bidding. `saleModeOf` is the line between the two.
     if (!Number.isInteger(rung.available) || rung.available < 1 || rung.available > maxSlots) {
       add(`${where}:available`, "sell", `Between 1 and ${maxSlots} of these.`);
-    } else if (rung.saleMode === "bids" && rung.available !== 1) {
+    } else if (mode === "bids" && rung.available !== 1) {
       add(
         `${where}:available`,
         "sell",
-        `${named} is sold to the highest bid, and bidding is one thing going to one winner — five identical copies under one countdown is an auction house's problem, not yours. Set it to 1, or sell it another way.`,
+        `${named} is sold to the highest bid, and bidding is one thing going to one winner. Five identical copies under one countdown are five auctions of the same thing: the brands spread across them and every one of the five ends under what a single one would have fetched. Set it to 1, or sell it another way.`,
       );
     }
 

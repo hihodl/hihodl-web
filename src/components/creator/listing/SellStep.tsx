@@ -110,13 +110,22 @@ export function SellStep({
           <Choice
             name="pricing"
             value={current}
-            onChange={(value) =>
-              set(
+            onChange={(value) => {
+              const change: Partial<ListingDraft> =
                 value === "fixed_with_offers"
                   ? { pricingMode: "fixed", acceptsOffers: true }
-                  : { pricingMode: value as PricingMode, acceptsOffers: false },
-              )
-            }
+                  : { pricingMode: value as PricingMode, acceptsOffers: false };
+              // Turning the whole listing over to bidding makes every rung that
+              // follows it a rung that is bid for, and one of those sells a
+              // single copy. Pinning them here is what keeps the count from
+              // being a disabled box holding a number the API refuses: the
+              // creator can still send any rung somewhere else and get its
+              // count back.
+              if (change.pricingMode === "bids" && draft.sells === "ladder") {
+                change.rungs = draft.rungs.map((r) => (r.saleMode ? r : { ...r, available: 1 }));
+              }
+              set(change);
+            }}
             options={pricingOptions.map((o) => ({ ...o, value: o.value as string }))}
           />
         </Field>

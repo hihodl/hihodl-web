@@ -168,11 +168,10 @@ function Rung({
   const mode = saleModeOf(draft, rung.saleMode);
   const showsPrice = modeShowsPrice(mode);
   const keepsFloor = modeKeepsFloor(mode);
+  // Whether this rung is bid for, however it came to be: its own answer or the
+  // listing's. The one-copy rule hangs off this and not off who named it,
+  // because the rule is about substitutes — see rules.ts.
   const bidding = mode === "bids";
-  // A rung that CHOOSES bidding sells one thing. A rung that simply follows a
-  // bidding listing is one of that listing's spots, each its own bidding, and
-  // the rule does not reach it — which is exactly where the backend draws it.
-  const ownBids = rung.saleMode === "bids";
   const at = (part: string) => problemsAt(problems, `rung:${rung.key}:${part}`);
   const id = (part: string) => `rung-${rung.key}-${part}`;
 
@@ -265,11 +264,16 @@ function Rung({
           value={rung.saleMode ?? "inherit"}
           onChange={(value) => {
             const next = value === "inherit" ? null : (value as SaleMode);
-            // Choosing bidding for this rung sets the count to one rather than
-            // letting the creator build something the API refuses at the very
-            // end. Following the listing's own bidding does not: those are the
-            // listing's spots and each is its own bidding.
-            onPatch({ saleMode: next, ...(next === "bids" ? { available: 1 } : {}) });
+            // A rung that ends up bid for sells one copy, so the count is set
+            // here rather than left for the creator to meet as a refusal at the
+            // very end. Resolved, not named: going back to "the same as the
+            // whole listing" on a listing that is bid for lands in the same
+            // place, and the field below would otherwise be disabled while
+            // holding a number the API refuses.
+            onPatch({
+              saleMode: next,
+              ...(saleModeOf(draft, next) === "bids" ? { available: 1 } : {}),
+            });
           }}
           options={[
             { value: "inherit", label: `The same as the whole listing — ${boardModeText(draft)}` },
@@ -309,11 +313,9 @@ function Rung({
           problems={at("available")}
           htmlFor={id("available")}
           hint={
-            ownBids
-              ? "One. You have sent this rung out to the highest bid, and bidding is one thing going to one winner — five identical copies under a single countdown is an auction house's problem, not yours. Sell it another way if you have more than one."
-              : bidding
-                ? "Each one is its own bidding, with its own winner."
-                : "Each one is sold separately, to a different brand."
+            bidding
+              ? "One. This one goes to the highest bid, and bidding is one thing going to one winner: five identical copies under a single countdown are five auctions of the same thing, so the brands spread across them and every one ends under what a single one would have fetched. Sell it another way if you have more than one."
+              : "Each one is sold separately, to a different brand."
           }
         >
           <Count
@@ -321,7 +323,7 @@ function Rung({
             value={rung.available}
             min={1}
             max={maxSlots}
-            disabled={ownBids}
+            disabled={bidding}
             onChange={(available) => onPatch({ available })}
           />
         </Field>
