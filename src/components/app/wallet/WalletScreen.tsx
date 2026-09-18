@@ -213,6 +213,8 @@ export function WalletScreen() {
     body = <Skeleton className="mx-auto h-[240px] w-full max-w-[640px]" />;
   } else if (status.state === "app_wallet") {
     body = <AppWallet />;
+  } else if (status.state === "web_wallet" && !status.current_blob_hash) {
+    body = <WalletOnAnotherAccount />;
   } else if (!passkeysHere()) {
     body = (
       <Card title="Wallet">
@@ -228,6 +230,20 @@ export function WalletScreen() {
   }
 
   return <div className="flex min-h-0 flex-1 flex-col justify-center py-2">{body}</div>;
+}
+
+/* ── A web wallet kept under an older account with this email ────── */
+
+function WalletOnAnotherAccount() {
+  return (
+    <Card title="Your wallet is on your previous account">
+      <Note>
+        This email already has a web wallet, created while you were signed in to an earlier HOLD account. To keep one
+        wallet per person, the web never makes a second one. Write to support from this email and we will move you back
+        to the account that holds it.
+      </Note>
+    </Card>
+  );
 }
 
 /* ── An app user ──────────────────────────────────────────────────── */
