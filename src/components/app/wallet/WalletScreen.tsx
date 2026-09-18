@@ -168,6 +168,9 @@ export function WalletScreen() {
     }
   }, []);
   useEffect(() => void load(), [load]);
+  // Leaving the wallet locks it: another page of the product, signing out, or
+  // another person signing in on this tab never finds it open.
+  useEffect(() => () => lock(), []);
 
   let body: ReactNode;
   if (loadError) {
