@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { SpacesGround } from "@/components/ad-space/ground";
 import { SpaceBoard } from "@/components/ad-space/SpaceBoard";
 import {
   BeforeYouPay,
@@ -97,7 +98,7 @@ export default async function AdSpacePage({ params }: { params: Params }) {
   if (found.kind === "missing") notFound();
 
   return (
-    <>
+    <SpacesGround>
       <SlimHeader />
       {found.kind === "unreachable" ? (
         <main>
@@ -123,6 +124,6 @@ export default async function AdSpacePage({ params }: { params: Params }) {
           <SpaceFooter space={found.space} />
         </>
       )}
-    </>
+    </SpacesGround>
   );
 }

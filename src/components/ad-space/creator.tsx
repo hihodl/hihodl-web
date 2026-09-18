@@ -7,6 +7,7 @@ import { gradientCss } from "@/lib/ad-space/look";
 import type { CreatorGroup, CreatorProfile, EventSummary, SpaceCard } from "@/lib/ad-space/types";
 
 import { BannerFrame, VerifiedTick, eventBanner, eventPath } from "./events";
+import { BENEFITS_GROUND, SpacesGround } from "./ground";
 
 /**
  * A creator's page, `/s/<handle>`, and the screens under it.
@@ -132,18 +133,12 @@ export function findGroup(
 
 /**
  * The one place the page background is set, for the profile and every screen
- * under it. When a creator can pick their own colour or gradient, it arrives
- * here and nowhere else.
+ * under it: the Benefits ground (see ./ground), the same as every Spaces page.
  */
-export const PROFILE_GROUND =
-  "radial-gradient(70% 45% at 15% 0%, rgba(255,183,3,0.08), transparent 70%), linear-gradient(180deg, #1B2638 0%, #141F2E 55%, #141F2E 100%)";
+export const PROFILE_GROUND = BENEFITS_GROUND;
 
 export function ProfileGround({ background = PROFILE_GROUND, children }: { background?: string; children: ReactNode }) {
-  return (
-    <div className="flex min-h-screen flex-col" style={{ background }}>
-      {children}
-    </div>
-  );
+  return <SpacesGround background={background}>{children}</SpacesGround>;
 }
 
 /**

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
+import { SpacesGround } from "@/components/ad-space/ground";
 import { OfferPanel } from "@/components/ad-space/OfferPanel";
 import { SlimHeader } from "@/components/ad-space/sections";
 import { eyebrow } from "@/components/ad-space/ui";
@@ -40,7 +41,7 @@ export default async function OfferPage({ params }: { params: { token: string } 
   const space = found.kind === "found" ? await getPublicSpaceById(found.thread.space.id) : null;
 
   return (
-    <>
+    <SpacesGround>
       <SlimHeader />
       <main className="container-page max-w-3xl py-10 md:py-16">
         {found.kind === "found" ? (
@@ -69,6 +70,6 @@ export default async function OfferPage({ params }: { params: { token: string } 
           <Wordmark className="h-5 w-auto self-start text-text-muted" />
         </div>
       </footer>
-    </>
+    </SpacesGround>
   );
 }

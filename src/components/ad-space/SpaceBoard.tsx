@@ -298,6 +298,9 @@ export function SpaceBoard({
   );
 }
 
+/** The banner fades out over its last 45%, into whatever ground is behind it. */
+const BAND_FADE = "linear-gradient(180deg, #000 0%, #000 55%, transparent 100%)";
+
 /**
  * The banner, drawn from the listing itself and never from its event: the
  * creator's own picture when they set one, else (on a placement) the product
@@ -306,23 +309,18 @@ export function SpaceBoard({
 function ListingBand({ space, children }: { space: Space; children: ReactNode }) {
   const photo = space.bannerUrl;
   return (
-    <section className="relative overflow-hidden" style={{ background: gradientCss(space.bannerGradient) }}>
-      {photo && (
-        <>
-          {/* eslint-disable-next-line @next/next/no-img-element -- the creator's banner, from our own bucket */}
-          <img src={photo} alt="" className="absolute inset-0 h-full w-full object-cover" />
-          <div
-            className="absolute inset-0"
-            style={{ background: "linear-gradient(180deg, rgba(20,31,46,0.35) 0%, rgba(20,31,46,0.75) 55%, #141F2E 100%)" }}
-            aria-hidden
-          />
-        </>
-      )}
-      <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-32"
-        style={{ background: "linear-gradient(180deg, transparent, #141F2E)" }}
-        aria-hidden
-      />
+    <section className="relative overflow-hidden">
+      {/* The banner fades into whatever ground is behind it, by its own
+          transparency rather than by painting a colour that has to match. */}
+      <div className="absolute inset-0" style={{ background: gradientCss(space.bannerGradient), maskImage: BAND_FADE, WebkitMaskImage: BAND_FADE }} aria-hidden>
+        {photo && (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element -- the creator's banner, from our own bucket */}
+            <img src={photo} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(10,25,41,0.3) 0%, rgba(10,25,41,0.7) 100%)" }} />
+          </>
+        )}
+      </div>
       <div className="container-page relative pb-10 pt-6 md:pb-14 md:pt-10">{children}</div>
     </section>
   );
