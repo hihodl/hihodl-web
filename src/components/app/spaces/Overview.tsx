@@ -37,6 +37,16 @@ import { useShell } from "../Shell";
 import { dollars, EmptyState, KpiTile, MiniMetric, Panel, ProgressBar, RowLink, Segmented, Skeleton, glass } from "../ui";
 import { dueText, ReadError, StatusPill } from "./common";
 
+/**
+ * The Overview is exactly as tall as the sidebar on a wide screen: the column
+ * it sits in is, and the last row of panels takes what is left, so its bottom
+ * edge is the sidebar's. The panels show a few rows and link to the rest.
+ */
+const FILL = "flex flex-col gap-4 lg:flex-1";
+const BOTTOM = "grid grid-cols-[minmax(0,1fr)] gap-4 lg:flex-1 lg:grid-cols-2 lg:grid-rows-[minmax(0,1fr)]";
+/** Rows in "Needs you" and "Live". */
+const ROWS = 3;
+
 export function Overview() {
   const { role } = useShell();
   return role === "manager" ? <ManagerOverview /> : <CreatorOverview />;
@@ -71,7 +81,7 @@ function CreatorOverview() {
   const artwork = deliveries.filter((d) => d.kind === "artwork").length;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className={FILL}>
       <section aria-label="Position" className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <KpiTile
           label="Received"
@@ -121,14 +131,14 @@ function CreatorOverview() {
       <SalesChart sales={sales.data} loading={!sales.data && !sales.error} />
       <ReadError error={sales.error ?? offers.error} />
 
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-2">
+      <div className={BOTTOM}>
         <NeedsYou offers={waiting} deliveries={due} loading={!offers.data || !views.data} />
         <Panel title="Live" meta={`${live.length}`} action={<Link href={href("/listings")} className="text-tiny text-[#9FB7C2] hover:text-text">All listings</Link>}>
           {live.length === 0 ? (
             <EmptyState title="Nothing live." action={<Link href={href("/listings/new")} className="text-small text-amber">New listing</Link>} />
           ) : (
             <ul className="flex flex-col gap-1">
-              {live.slice(0, 4).map((l) => (
+              {live.slice(0, ROWS).map((l) => (
                 <li key={l.id}>
                   <RowLink
                     href={href(`/listings/${l.id}`)}
@@ -235,14 +245,27 @@ function NeedsYou({
   ];
 
   return (
-    <Panel title="Needs you" meta={loading ? "" : `${rows.length}`}>
+    <Panel
+      title="Needs you"
+      meta={loading ? "" : `${rows.length}`}
+      action={
+        <span className="flex items-center gap-3 text-tiny">
+          <Link href={href("/offers")} className="text-[#9FB7C2] hover:text-text">
+            All offers
+          </Link>
+          <Link href={href("/deliveries")} className="text-[#9FB7C2] hover:text-text">
+            All deliveries
+          </Link>
+        </span>
+      }
+    >
       {loading ? (
         <Skeleton className="h-36" />
       ) : rows.length === 0 ? (
         <EmptyState title="Nothing waiting." />
       ) : (
         <ul className="flex flex-col gap-1">
-          {rows.slice(0, 4).map((r) => (
+          {rows.slice(0, ROWS).map((r) => (
             <li key={r.key}>
               <RowLink href={r.href} title={r.title} sub={r.sub} right={r.right} />
             </li>
@@ -267,7 +290,7 @@ function ManagerOverview() {
   const owedToYou = (earnings.data ?? []).filter((e) => e.status === "owed").reduce((n, e) => n + baseOf(e.amountUsdc), 0n);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className={FILL}>
       <section aria-label="Position" className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <KpiTile label="Listings you sell" value={managed.length} href={href("/listings")} />
         <KpiTile
@@ -280,14 +303,18 @@ function ManagerOverview() {
         <KpiTile label="Owed to you" value={usdcText(owedToYou).replace(/\.00$/, "")} unit="USDC" href={href("/team?tab=earnings")} />
       </section>
 
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-2">
+      <div className={BOTTOM}>
         <NeedsYou offers={waiting} deliveries={due} loading={ids.length > 0 && !offers.data} />
-        <Panel title="Listings you sell" meta={`${managed.length}`}>
+        <Panel
+          title="Listings you sell"
+          meta={`${managed.length}`}
+          action={<Link href={href("/listings")} className="text-tiny text-[#9FB7C2] hover:text-text">All listings</Link>}
+        >
           {managed.length === 0 ? (
             <EmptyState title="No listings yet." />
           ) : (
             <ul className="flex flex-col gap-1">
-              {managed.slice(0, 5).map((m) => (
+              {managed.slice(0, ROWS).map((m) => (
                 <li key={m.spaceId}>
                   <RowLink
                     href={href(`/listings/${m.spaceId}`)}

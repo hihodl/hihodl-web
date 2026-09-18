@@ -271,13 +271,14 @@ function Frame({ children }: { children: ReactNode }) {
           </div>
         </div>
 
-        <div className="flex min-w-0 flex-col gap-4">
+        {/* As tall as the sidebar at least, so a screen that fills it ends where the sidebar ends. */}
+        <div className="flex min-w-0 flex-col gap-4 lg:min-h-[calc(var(--app-vh,100dvh)-2rem)]">
           <TopBar
             title={titleFor(rel)}
             onMenu={() => setDrawer(true)}
             onSearch={() => setPalette(true)}
           />
-          <main className="min-w-0">{here ? children : null}</main>
+          <main className="flex min-w-0 flex-1 flex-col">{here ? children : null}</main>
         </div>
       </div>
 
