@@ -718,16 +718,27 @@ function centsOf(usdc: string | null | undefined): number | null {
  * bidding with that spot's own time left, or else where bidding opens and the
  * soonest end still ahead. "Highest bid $420 · 2d left", "Bidding opens at $100
  * · 2d left", "Bidding ended". Null when nothing on the space is up for bids.
+ *
+ * Which spot bids is read off the SPOTS, never off the board. A service ladder
+ * sells its rungs however each rung says: the Breakpoint listing is a $50 logo
+ * strip and a $200 mid-tier at a fixed price, with the flagship interview going
+ * to the highest bid. That board's `pricingMode` is `fixed`, and reading it
+ * alone left the one rung anybody would bid on unmentioned on the link card.
  */
 export function bidsSummaryText(space: Pick<Space, "pricingMode" | "positions" | "biddingEndsAt">, now = Date.now()): string | null {
-  if (space.pricingMode !== "bids") return null;
+  let anyBids = false;
   let highest: { cents: number; usdc: string } | null = null;
   let opening: { cents: number; usdc: string } | null = null;
   let soonest: number | null = null;
   let highestEnds: number | null = null;
   for (const p of space.positions) {
     const o = p.offers;
-    if (!o || o.mode !== "bids" || p.status === "sold") continue;
+    if (!o || o.mode !== "bids") continue;
+    // Counted before the sold check: a rung that bid and has since been won
+    // still means this space had bidding, and "Bidding ended" is the honest
+    // line for it — the same thing a fully sold bids board already said.
+    anyBids = true;
+    if (p.status === "sold") continue;
     const h = centsOf(o.highestBidUsdc);
     const endAt = o.biddingEndsAt ? Date.parse(o.biddingEndsAt) : NaN;
     const stillOpen = o.biddingOpen !== false && Number.isFinite(endAt) && endAt > now;
@@ -741,6 +752,10 @@ export function bidsSummaryText(space: Pick<Space, "pricingMode" | "positions" |
     const end = o.biddingEndsAt ? Date.parse(o.biddingEndsAt) : NaN;
     if (Number.isFinite(end) && end > now && (soonest === null || end < soonest)) soonest = end;
   }
+  // A board that bids, whose spots have not each been given their own clock
+  // yet, still counts as bidding: the space's own end is the one they share.
+  if (space.pricingMode === "bids") anyBids = true;
+  if (!anyBids) return null;
   if (soonest === null && space.biddingEndsAt) {
     const end = Date.parse(space.biddingEndsAt);
     if (Number.isFinite(end) && end > now) soonest = end;
