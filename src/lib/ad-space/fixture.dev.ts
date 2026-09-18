@@ -355,7 +355,7 @@ function suitcase(): Space {
     // recruiting strip above the footer is visible in local development.
     creatorInvite: { code: "coin-3f2a1", url: "https://hihodl.xyz/invite/coin-3f2a1" },
     event: TOKEN2049,
-    bannerUrl: null,
+    bannerUrl: "/demo/suitcase-front.jpg",
     bannerGradient: "steel",
     siblings: [{ path: "/s/coinempress/token2049-videos", tab: "feed", title: "TOKEN2049 short videos" }],
   };
@@ -907,8 +907,8 @@ const TOKEN2049: EventSummary = {
   endsOn: dayFromNow(22),
   timeZone: "Asia/Singapore",
   category: "crypto",
-  coverUrl: photo("photo-1508964942454-1a56651d54ac"),
-  coverCredit: "Photo: Unsplash",
+  coverUrl: "/demo/singapore.jpg",
+  coverCredit: null,
   spaceCount: 9,
 };
 
@@ -991,7 +991,7 @@ function card(
     pricingMode: "fixed",
     status: "live",
     closesAt: new Date(Date.now() + 12 * DAY).toISOString(),
-    bannerUrl: null,
+    bannerUrl: "/demo/suitcase-front.jpg",
     bannerGradient: "steel",
     fromPriceCents: 12500,
     ...over,
