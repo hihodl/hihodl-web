@@ -355,7 +355,7 @@ function suitcase(): Space {
     // recruiting strip above the footer is visible in local development.
     creatorInvite: { code: "coin-3f2a1", url: "https://hihodl.xyz/invite/coin-3f2a1" },
     event: TOKEN2049,
-    bannerUrl: "/demo/suitcase-front.jpg",
+    bannerUrl: null,
     bannerGradient: "steel",
     siblings: [{ path: "/s/coinempress/token2049-videos", tab: "feed", title: "TOKEN2049 short videos" }],
   };
