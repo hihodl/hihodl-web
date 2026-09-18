@@ -11,6 +11,21 @@ export default function InviteRedirect() {
   useEffect(() => {
     if (!code) return;
 
+    // A creator's team invitation is this same link with `?seat=<code>` on the
+    // end. The app's deep link below carries the invite code and nothing after
+    // it, and the store fallback carries nothing at all, so a seat sent that
+    // way was lost on every device. The creator console takes seats in the
+    // browser with no install, so a link carrying one goes there instead. The
+    // seat alone says whose invitation it is; the invite code is not passed on.
+    // Read from `location` rather than `useSearchParams`: this runs once, after
+    // mount, and needs no Suspense boundary around the whole page for it.
+    const seat = new URLSearchParams(window.location.search).get("seat");
+    if (seat && /^[A-Za-z0-9_-]{16,128}$/.test(seat)) {
+      const q = new URLSearchParams({ seat });
+      window.location.replace(`/creator/team?${q.toString()}`);
+      return;
+    }
+
     // Try to open the app via deep link.
     //
     // `hihodl`, not `hold`: the app registers exactly one custom scheme, and
