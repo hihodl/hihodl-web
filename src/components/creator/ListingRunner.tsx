@@ -23,6 +23,13 @@
  * changes what the other offers on it may become. Patching one card in place
  * would leave a screen where half the state is from before the change. The
  * listing is one read, so it is re-read.
+ *
+ * WHY TAKING IT TO MORE EVENTS STARTS HERE
+ *
+ * Because it is something done to a listing that already exists, and this is
+ * the page about one listing. It is also where the wizard leaves a creator the
+ * moment they publish — which is exactly when somebody going to three
+ * conferences remembers the other two.
  */
 
 "use client";
@@ -56,6 +63,7 @@ import { Money, Text } from "./listing/parts";
 import { Loading, Notice, Section } from "./parts";
 import { Offers } from "./run/Offers";
 import { Work } from "./run/Work";
+import { ListingSeries } from "./series/Series";
 
 const STATUS_LABEL: Record<string, string> = {
   draft: "Draft",
@@ -162,6 +170,8 @@ export function ListingRunner({ spaceId }: { spaceId: string }) {
           </div>
         </Section>
       ) : null}
+
+      <ListingSeries space={space} onChanged={() => void load()} />
 
       <Section label="What brands have said" title="Offers and bids">
         <Offers space={space} offers={offers} onChanged={() => void load()} />

@@ -19,6 +19,8 @@ import type {
   EventSummary,
   OfferView,
   SalesSummary,
+  SeriesEventInput,
+  SeriesView,
   SpaceCard,
   SpaceUpdate,
   SpaceView,
@@ -102,6 +104,52 @@ export function myListings(): Promise<{ spaces: SpaceCard[] }> {
 /** The link and the post. Live listings only; a draft answers `not_live`. */
 export function shareListing(spaceId: string): Promise<{ url: string; text: string }> {
   return call<{ url: string; text: string }>(`ad-space/spaces/${spaceId}/share`);
+}
+
+/* ── One listing, several events ──────────────────────────────────── */
+
+/**
+ * Take this listing to these events.
+ *
+ * The source may be a draft or already live; the copies are always drafts, and
+ * each one is an ordinary listing with its own link, its own spots and its own
+ * close. Publishing is untouched by this and still happens one listing at a
+ * time, which is why nothing here goes live: the console publishes each copy
+ * itself and says which ones did.
+ *
+ * Refusals are `series_events_required`, `series_event_repeated`,
+ * `series_too_large` (`error.details.max`), `event_unavailable` and
+ * `space_delisted` — plus anything creating a draft can refuse, since every
+ * copy goes through the same path. ./problems turns all of them into sentences.
+ */
+export function addToSeries(
+  spaceId: string,
+  events: readonly SeriesEventInput[],
+): Promise<{ seriesId: string; created: string[]; spaces: SpaceView[] }> {
+  return call<{ seriesId: string; created: string[]; spaces: SpaceView[] }>(`ad-space/spaces/${spaceId}/series`, {
+    json: { events },
+  });
+}
+
+/**
+ * The series this listing belongs to, or null when it stands alone.
+ *
+ * Each listing comes back whole, `share` included on the ones that are live, so
+ * the links can be shown without a call per sibling — and `share` is the same
+ * thing `/share` answers, which is why that route is never asked about a draft.
+ */
+export function getSeries(spaceId: string): Promise<{ series: SeriesView | null }> {
+  return call<{ series: SeriesView | null }>(`ad-space/spaces/${spaceId}/series`);
+}
+
+/**
+ * Take this listing out of the series, keeping the listing itself.
+ *
+ * For the creator who decides one of the three is its own thing now. The last
+ * one left is taken out too: a series of one is a listing.
+ */
+export function leaveSeries(spaceId: string): Promise<{ left: boolean }> {
+  return call<{ left: boolean }>(`ad-space/spaces/${spaceId}/series`, { method: "DELETE" });
 }
 
 /* ── Offers and bids ──────────────────────────────────────────────── */

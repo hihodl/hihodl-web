@@ -323,6 +323,7 @@ const PLAIN: Record<string, string> = {
   chain_not_available: "One of the networks this listing accepts is not taking payments right now. Take it off, or try again later.",
   fee_address_not_configured: "This is ours, not yours: HiSpace is not set up to take a payment on one of these networks. Tell us and we will fix it.",
   country_invalid: "Use the two-letter country code, like SG.",
+  event_unavailable: "That event is not one HiSpace carries listings for any more. Pick another one.",
   event_name_invalid: "Give the event a name.",
   time_zone_invalid: "We do not know that time zone.",
   space_not_live: "This listing is not live, so there is nothing to post about yet.",
@@ -411,6 +412,56 @@ export function describeRunError(e: unknown): string {
     default:
       return "Something went wrong. Try again.";
   }
+}
+
+/**
+ * A refusal about one whole listing, as a single sentence.
+ *
+ * The wizard can put a refusal beside the box it is about because the boxes are
+ * on screen. A row in a list of listings has no boxes: it is one line saying
+ * what happened to that listing. So the same machinery runs and its sentences
+ * are joined, rather than a second, thinner set of words being written for the
+ * same codes.
+ */
+export function refusalSentence(e: unknown, template: Template | null): string {
+  const refusal = refusalOf(e, template, null);
+  if (refusal.problems.length > 0) return refusal.problems.map((p) => p.message).join(" ");
+  return refusal.message ?? describeRunError(e);
+}
+
+/**
+ * Taking a listing to more events, refused.
+ *
+ * Five of these belong to the series itself. Everything else is a copy being
+ * refused by the same rules that made the original — a close date out of range,
+ * a price that no longer fits — so the rest falls through to `refusalSentence`
+ * rather than being written out again here.
+ */
+export function describeSeriesError(e: unknown, template: Template | null): string {
+  if (e instanceof CreatorApiError) {
+    switch (e.code) {
+      case "series_events_required":
+        return "Pick at least one event first.";
+      case "series_event_repeated":
+        return "One of those is an event this listing already has a page at. Two pages at the same event only compete with each other, so take that one off the list and send the rest.";
+      case "series_too_large": {
+        const max = typeof e.details.max === "number" ? e.details.max : LIMITS.SERIES_MAX;
+        return `${max} events is as far as one listing goes, counting the one it is at now. Take some off the list.`;
+      }
+      case "event_unavailable":
+        return "One of those events is not taking listings any more. Take it off the list and send the rest.";
+      case "space_delisted":
+        return "This listing has been taken down, so there is nothing to copy from it.";
+      case "zones_required":
+        return "There is nothing on this listing to sell yet, so there would be nothing on the copies either. Finish it first.";
+      case "VALIDATION_ERROR":
+      case "validation_error":
+        return `Check the list: every event needs a day it stops selling, and one go adds at most ${LIMITS.SERIES_MAX - 1} of them.`;
+      default:
+        break;
+    }
+  }
+  return refusalSentence(e, template);
 }
 
 /**

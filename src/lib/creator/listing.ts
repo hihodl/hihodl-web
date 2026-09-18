@@ -69,6 +69,17 @@ export const LIMITS = {
   DELIVERABLE_DAYS_AFTER_CLOSE: 90,
   NOTE_MIN: 3,
   NOTE_MAX: 120,
+  /**
+   * How many listings one series holds, the original counted. Past this,
+   * "the same thing at several events" stops being true: a creator who has
+   * said yes to twenty events has promised twenty weekends.
+   *
+   * One call adds at most `SERIES_MAX - 1` of them, because the original is
+   * always one of the ten — the router's own body schema says so, and a
+   * tenth event in a single request is turned away before the service ever
+   * counts it.
+   */
+  SERIES_MAX: 10,
   SERVICE_NAME_MIN: 3,
   SERVICE_NAME_MAX: 60,
   SERVICE_SUMMARY_MIN: 20,
@@ -340,6 +351,33 @@ export interface SpaceCard {
   fundingGoalCents: number | null;
   awaitingReview: number;
   event: EventSummary | null;
+}
+
+/* ── One listing, several events ──────────────────────────────────── */
+
+/**
+ * One event this listing is being taken to, and when that copy stops selling.
+ *
+ * The close is per event and never shared. The whole reason a series exists is
+ * that the events are on different days, so a single close date would be in the
+ * past for one of them and months early for another.
+ */
+export interface SeriesEventInput {
+  eventId: string;
+  /** An instant, as the API takes it. */
+  closesAt: string;
+}
+
+/**
+ * Every listing that came out of one authoring act, the original first.
+ *
+ * They are ordinary listings and nothing about them is joint: each has its own
+ * link, its own spots, its own close and its own bidding clock. What they share
+ * is only that they can be listed together.
+ */
+export interface SeriesView {
+  seriesId: string;
+  spaces: SpaceView[];
 }
 
 export type OfferKind = "offer" | "bid";

@@ -115,11 +115,16 @@ export function Listings() {
                       <Link href={`/creator/listings/${s.id}/edit`} className={btnSmallSecondary}>
                         Finish it
                       </Link>
-                    ) : (
-                      <Link href={`/creator/listings/${s.id}`} className={btnSmallSecondary}>
-                        Open it
-                      </Link>
-                    )}
+                    ) : null}
+                    {/*
+                      A draft gets this as well as "Finish it": its own page is
+                      where a listing is taken to more events, and a creator
+                      planning three conferences at once wants that before
+                      anything is published, not after.
+                    */}
+                    <Link href={`/creator/listings/${s.id}`} className={btnSmallSecondary}>
+                      Open it
+                    </Link>
                   </div>
                 </li>
               ))}
