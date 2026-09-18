@@ -77,9 +77,7 @@ export function Offers({
 
   if (offers.length === 0) {
     return (
-      <p className="text-body text-text-muted">
-        Nothing yet. A brand that wants this listing names its number here, and you answer from this page.
-      </p>
+      <p className="text-small text-text-muted">No offers yet.</p>
     );
   }
 
@@ -89,10 +87,6 @@ export function Offers({
         <section className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
             <h3 className="text-body text-text">Offers</h3>
-            <p className="text-small text-text-muted">
-              One brand, one number, waiting for you. You can say yes, say no, or name a different number back — three
-              times at most, and only above what they offered.
-            </p>
           </div>
           <ul className="flex flex-col gap-3">
             {plain.map((o) => (
@@ -108,10 +102,6 @@ export function Offers({
         <section className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
             <h3 className="text-body text-text">Bidding</h3>
-            <p className="text-small text-text-muted">
-              Several brands pushing the same spot up, against a clock. There is no countering a bid: the highest one
-              when the clock stops is the one in front of you.
-            </p>
           </div>
           {biddingPositions.map((p) => (
             <BiddingOn key={p.id} position={p} space={space} bids={bids.filter((b) => b.positionId === p.id)} onChanged={onChanged} />
@@ -171,10 +161,7 @@ function BiddingOn({
 
       {block.minOfferUsdc ? (
         <p className="text-small text-text-muted">
-          Your reserve is {block.minOfferUsdc} USDC, and nobody else can see it.{" "}
-          {block.reserveMet
-            ? "The highest bid has met it."
-            : "The highest bid has not met it yet, so nothing is accepted for you when the clock stops."}
+          Reserve {block.minOfferUsdc} USDC (private) · {block.reserveMet ? "met" : "not met yet"}
         </p>
       ) : null}
 
@@ -195,7 +182,7 @@ function BiddingOn({
 
 /* ── One thread ───────────────────────────────────────────────────── */
 
-function OfferCard({
+export function OfferCard({
   offer,
   space,
   onChanged,
@@ -263,11 +250,9 @@ function OfferCard({
           {offer.sponsor.via === "web" ? " · from the web" : " · from the app"}
         </p>
         {offer.sponsor.backed ? (
-          <p>
-            Their wallet held enough to pay this when they made it, checked on {offer.sponsor.backed.chain}.
-          </p>
+          <p>Funds checked on {offer.sponsor.backed.chain}</p>
         ) : (
-          <p>Nothing has been checked about their wallet, so this is a number and not yet money.</p>
+          <p>Funds not checked</p>
         )}
         {offer.sponsor.message ? <p className="text-text">“{offer.sponsor.message}”</p> : null}
         {offer.sponsor.contactValue ? (
@@ -294,10 +279,7 @@ function OfferCard({
       {canAnswer ? (
         mode === "counter" ? (
           <div className="flex flex-col gap-3">
-            <p className="text-small text-text-muted">
-              Name a number above {offer.amountUsdc} USDC. On a listing with a price on it, a counter cannot go above
-              that price — buying it outright has to stay the better deal.
-            </p>
+            <p className="text-small text-text-muted">Above {offer.amountUsdc} USDC, and not above the listed price.</p>
             <Money value={counter} onChange={setCounter} />
             <div className="flex flex-wrap gap-2">
               <button
@@ -319,7 +301,7 @@ function OfferCard({
           </div>
         ) : mode === "decline" ? (
           <div className="flex flex-col gap-3">
-            <p className="text-small text-text-muted">The sponsor is told you passed, and which of these you picked.</p>
+            <p className="text-small text-text-muted">Reason shown to the sponsor:</p>
             <div className="flex flex-wrap gap-2">
               {(["too_low", "not_a_fit", "other"] as DeclineReason[]).map((r) => (
                 <button
@@ -349,7 +331,7 @@ function OfferCard({
             </button>
             {canCounter ? (
               <button type="button" className={btnSmallSecondary} disabled={busy} onClick={() => setMode("counter")}>
-                Name a different number
+                Counter
               </button>
             ) : null}
             <button type="button" className={btnSmallSecondary} disabled={busy} onClick={() => setMode("decline")}>
@@ -360,9 +342,7 @@ function OfferCard({
       ) : null}
 
       {offer.status === "accepted" ? (
-        <p className="text-small text-text-muted">
-          Nothing more to do here: the spot is held for them while they pay, and the money goes straight to your wallet.
-        </p>
+        <p className="text-small text-text-muted">Spot held while they pay.</p>
       ) : null}
 
       {notice ? (

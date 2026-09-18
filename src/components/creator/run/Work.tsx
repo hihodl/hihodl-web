@@ -48,11 +48,7 @@ export function Work({ space, onChanged }: { space: SpaceView; onChanged: () => 
     <div className="flex flex-col gap-10">
       <section className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
-          <h3 className="text-body text-text">What sponsors have sent you</h3>
-          <p className="text-small text-text-muted">
-            Nobody sees a sponsor&apos;s artwork until you say yes. They have paid, so the sooner you answer the sooner
-            they have what they bought — and saying no with a reason is how they know what to send instead.
-          </p>
+          <h3 className="text-body text-text">Artwork to approve</h3>
         </div>
         {waiting.length === 0 ? (
           <p className="text-small text-text-muted">Nothing waiting on you.</p>
@@ -69,11 +65,7 @@ export function Work({ space, onChanged }: { space: SpaceView; onChanged: () => 
 
       <section className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
-          <h3 className="text-body text-text">The spots you have sold</h3>
-          <p className="text-small text-text-muted">
-            Each one is delivered with a public link: the post, the video, the photo. It is what the sponsor checks and
-            what your record is built from.
-          </p>
+          <h3 className="text-body text-text">Sold spots</h3>
         </div>
         {sold.length === 0 ? (
           <p className="text-small text-text-muted">Nothing sold yet.</p>
@@ -91,16 +83,12 @@ export function Work({ space, onChanged }: { space: SpaceView; onChanged: () => 
       {space.deliverables.length > 0 ? (
         <section className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <h3 className="text-body text-text">What you promised the whole listing</h3>
-            <p className="text-small text-text-muted">
-              These are on your page, with their dates. A week past a date with no link against it and it is counted as
-              missed on your public record, so put the link up as soon as it exists.
-            </p>
+            <h3 className="text-body text-text">Promises</h3>
           </div>
           <ul className="flex flex-col gap-3">
             {space.deliverables.map((d) => (
               <li key={d.id}>
-                <Promise deliverable={d} onChanged={onChanged} />
+                <PromiseCard deliverable={d} onChanged={onChanged} />
               </li>
             ))}
           </ul>
@@ -112,7 +100,7 @@ export function Work({ space, onChanged }: { space: SpaceView; onChanged: () => 
 
 /* ── A sponsor's artwork ──────────────────────────────────────────── */
 
-function Review({ position, onChanged }: { position: PositionView; onChanged: () => void }) {
+export function Review({ position, onChanged }: { position: PositionView; onChanged: () => void }) {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [saying, setSaying] = useState(false);
@@ -165,9 +153,7 @@ function Review({ position, onChanged }: { position: PositionView; onChanged: ()
 
       {saying ? (
         <div className="flex flex-col gap-3">
-          <p className="text-small text-text-muted">
-            Say what is wrong with it, in a line. The sponsor reads exactly this and sends something else.
-          </p>
+          <p className="text-small text-text-muted">Reason, shown to the sponsor:</p>
           <Text value={reason} onChange={setReason} maxLength={200} placeholder="The logo is too small to read on the strip" />
           <div className="flex flex-wrap gap-2">
             <button type="button" className={btnSmall} disabled={busy || !reason.trim()} onClick={() => void answer(false)}>
@@ -181,18 +167,15 @@ function Review({ position, onChanged }: { position: PositionView; onChanged: ()
       ) : (
         <div className="flex flex-wrap gap-2">
           <button type="button" className={btnSmall} disabled={busy} onClick={() => void answer(true)}>
-            {busy ? "Working…" : "Approve it"}
+            {busy ? "Working…" : "Approve"}
           </button>
           <button type="button" className={btnSmallSecondary} disabled={busy} onClick={() => setSaying(true)}>
-            Ask for a different one
+            Reject
           </button>
         </div>
       )}
 
-      <p className="text-tiny text-text-muted">
-        Approving puts it on the public page. It applies to this version only — if they swap it after you look, you are
-        asked again.
-      </p>
+      <p className="text-tiny text-text-muted">Approving publishes this version.</p>
 
       {notice ? <Line>{notice}</Line> : null}
     </div>
@@ -201,7 +184,7 @@ function Review({ position, onChanged }: { position: PositionView; onChanged: ()
 
 /* ── A sold spot, and the link that delivers it ───────────────────── */
 
-function SoldSpot({ position, onChanged }: { position: PositionView; onChanged: () => void }) {
+export function SoldSpot({ position, onChanged }: { position: PositionView; onChanged: () => void }) {
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -223,8 +206,8 @@ function SoldSpot({ position, onChanged }: { position: PositionView; onChanged: 
 
       {position.qr ? (
         <p className="text-tiny text-text-muted">
-          Its QR code is at <span className="break-all text-text">{position.qr.url}</span> — scanned {position.qr.scans}{" "}
-          {position.qr.scans === 1 ? "time" : "times"} so far.
+          QR <span className="break-all text-text">{position.qr.url}</span> · {position.qr.scans}{" "}
+          {position.qr.scans === 1 ? "scan" : "scans"}
         </p>
       ) : null}
 
@@ -253,7 +236,7 @@ function SoldSpot({ position, onChanged }: { position: PositionView; onChanged: 
                 .finally(() => setBusy(false));
             }}
           >
-            {busy ? "Saving…" : "It is up"}
+            {busy ? "Saving…" : "Mark delivered"}
           </button>
         </div>
       )}
@@ -265,7 +248,7 @@ function SoldSpot({ position, onChanged }: { position: PositionView; onChanged: 
 
 /* ── One of the listing's own promises ────────────────────────────── */
 
-function Promise({ deliverable, onChanged }: { deliverable: DeliverableView; onChanged: () => void }) {
+export function PromiseCard({ deliverable, onChanged }: { deliverable: DeliverableView; onChanged: () => void }) {
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -313,7 +296,7 @@ function Promise({ deliverable, onChanged }: { deliverable: DeliverableView; onC
                 .finally(() => setBusy(false));
             }}
           >
-            {busy ? "Saving…" : "It is up"}
+            {busy ? "Saving…" : "Mark delivered"}
           </button>
         </div>
       )}

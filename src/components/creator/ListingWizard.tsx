@@ -33,7 +33,10 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { btnPrimary, btnSecondary, btnSmallSecondary, card, eyebrow, pill } from "@/components/ad-space/ui";
+import { btnPrimary, btnSecondary, btnSmallSecondary, pill } from "@/components/ad-space/ui";
+import { useHref } from "@/components/app/base";
+import { glass } from "@/components/app/ui";
+import { useRefresh } from "@/lib/app/spaces-data";
 import type { Chain } from "@/lib/ad-space/types";
 import { describeCreatorError } from "@/lib/creator/api";
 import {
@@ -63,8 +66,10 @@ const STAGES: readonly { key: Stage; label: string }[] = [
   { key: "publish", label: "Go live" },
 ];
 
-export function ListingWizard({ spaceId: initialSpaceId }: { spaceId?: string }) {
+export function ListingWizard({ spaceId: initialSpaceId, templateId }: { spaceId?: string; templateId?: string }) {
   const router = useRouter();
+  const href = useHref();
+  const refresh = useRefresh();
   const [templates, setTemplates] = useState<Template[] | null>(null);
   const [chains, setChains] = useState<Chain[]>([]);
   const [template, setTemplate] = useState<Template | null>(null);
@@ -91,6 +96,13 @@ export function ListingWizard({ spaceId: initialSpaceId }: { spaceId?: string })
         if (!alive) return;
         setTemplates(list);
         setChains(availableChains);
+        // Opened from Inspire on one template: start on it, not on the picker.
+        const picked = !existing && templateId ? list.find((t) => t.id === templateId) : undefined;
+        if (picked) {
+          setTemplate(picked);
+          setDraft({ ...draftFor(picked), chains: availableChains });
+          setStage("basics");
+        }
         if (existing) {
           const own = list.find((t) => t.id === existing.space.template?.id) ?? existing.space.template;
           if (own) {
@@ -110,7 +122,7 @@ export function ListingWizard({ spaceId: initialSpaceId }: { spaceId?: string })
     return () => {
       alive = false;
     };
-  }, [initialSpaceId]);
+  }, [initialSpaceId, templateId]);
 
   const problems = useMemo<Problem[]>(() => {
     if (!draft || !template) return [];
@@ -132,6 +144,7 @@ export function ListingWizard({ spaceId: initialSpaceId }: { spaceId?: string })
         const { space } = await createListing({ templateId: template.id, ...body });
         setSpaceId(space.id);
         setSavedBody(body);
+        void refresh("listings");
         return space.id;
       }
       const patch = patchOf(savedBody ?? {}, body);
@@ -149,7 +162,7 @@ export function ListingWizard({ spaceId: initialSpaceId }: { spaceId?: string })
     } finally {
       setBusy(null);
     }
-  }, [draft, template, spaceId, savedBody]);
+  }, [draft, template, spaceId, savedBody, refresh]);
 
   async function publish() {
     const id = await save();
@@ -159,7 +172,8 @@ export function ListingWizard({ spaceId: initialSpaceId }: { spaceId?: string })
     setFix(null);
     try {
       await publishListing(id);
-      router.push(`/creator/listings/${id}`);
+      void refresh("listings", "views");
+      router.push(href(`/listings/${id}?tab=share`));
     } catch (e) {
       const refusal = refusalOf(e, template, draft);
       setServerProblems(refusal.problems);
@@ -273,10 +287,7 @@ export function ListingWizard({ spaceId: initialSpaceId }: { spaceId?: string })
       </div>
 
       {blocked && stage !== "publish" ? (
-        <p className="text-tiny text-text-muted">
-          There is still something to fill in above. Every one of these is a rule HiSpace would refuse at the end, so it
-          is asked here instead.
-        </p>
+        <p className="text-tiny text-text-muted">Fill in what’s marked above to continue.</p>
       ) : null}
     </Shell>
   );
@@ -287,16 +298,7 @@ export function ListingWizard({ spaceId: initialSpaceId }: { spaceId?: string })
 function Shell({ stage, spaceId, children }: { stage: Stage; spaceId?: string | null; children: React.ReactNode }) {
   const index = STAGES.findIndex((s) => s.key === stage);
   return (
-    <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8 px-6 py-18">
-      <header className="flex flex-col gap-3">
-        <p className={`${eyebrow} text-text-faint`}>A new listing</p>
-        <h1 className="text-h3 font-light text-text">Sell what you are already doing</h1>
-        <p className="text-lead font-light text-text-muted">
-          Pick what it is, say when it happens, build what a brand can buy, and publish. Brands pay you in USDC straight
-          to your own wallet, and you never sign anything on chain.
-        </p>
-      </header>
-
+    <div className="mx-auto flex w-full max-w-[860px] flex-col gap-4">
       <ol className="flex flex-wrap gap-2" aria-label="Steps">
         {STAGES.map((s, i) => (
           <li key={s.key}>
@@ -307,13 +309,9 @@ function Shell({ stage, spaceId, children }: { stage: Stage; spaceId?: string | 
         ))}
       </ol>
 
-      <div className={`${card} flex flex-col gap-8 p-6 sm:p-8`}>{children}</div>
+      <div className={`${glass} flex min-w-0 flex-col gap-8 p-5 sm:p-7`}>{children}</div>
 
-      {spaceId ? (
-        <p className="text-tiny text-text-muted">
-          Saved as a draft. Nobody can see it until you publish, and you can come back to it from your account page.
-        </p>
-      ) : null}
+      {spaceId ? <p className="text-tiny text-text-muted">Draft saved. Only you can see it.</p> : null}
     </div>
   );
 }
@@ -335,16 +333,16 @@ function TemplateStep({
   return (
     <div className="flex flex-col gap-10">
       <Group
-        title="Something you make or do"
-        why="Coverage of an event, a video, a post, time in person. This is where a ladder lives: several different things at several prices, on one listing."
+        title="Services"
+        why="Coverage, videos, posts, time in person."
         list={services}
         chosen={chosen}
         onChoose={onChoose}
         describe={(t) => t.service?.summary ?? ""}
       />
       <Group
-        title="Space on something you own"
-        why="A suitcase, a jacket, a helmet. Brands buy a spot on it, and you carry it where you were going anyway."
+        title="Spaces"
+        why="Spots on something you carry: a suitcase, a jacket, a helmet."
         list={placements}
         chosen={chosen}
         onChoose={onChoose}

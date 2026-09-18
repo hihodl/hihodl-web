@@ -1,35 +1,29 @@
 /**
- * Running a listing that is already live.
- *
- * WHAT THIS PAGE IS FOR
- *
- * Publishing is the easy half. The half that decides whether a creator is paid
- * twice is what happens afterwards: answering a brand that named a number,
- * saying yes to the artwork they sent, and putting the link up that proves the
- * thing was delivered. All of it is an API call, none of it needs a wallet,
- * and until now all of it needed the app.
+ * One listing, in the product shell: a header with its numbers, and each part
+ * of running it as its own tab (`?tab=`), so no screen answers more than one
+ * question — the spots, the offers, the deliveries, the link, the series, the
+ * team on it, the updates, the floors.
  *
  * WHY THE MONEY IS SAID TWICE
  *
  * Because there are two numbers and they are not the same. When the sponsor
  * carries our five percent they pay more than the price and the creator
  * receives the price; when the creator carries it they pay the price and the
- * creator receives less. So every figure on this page says whose it is, and
- * what the creator RECEIVES is the one in the larger type.
+ * creator receives less. So every figure here says whose it is, and what the
+ * creator RECEIVES is the one in the larger type.
  *
  * WHY EVERYTHING RELOADS THE WHOLE LISTING AFTER AN ANSWER
  *
  * Accepting an offer reserves a spot, which changes that spot's status, which
  * changes what the other offers on it may become. Patching one card in place
  * would leave a screen where half the state is from before the change. The
- * listing is one read, so it is re-read.
+ * listing is one read, so it is re-read — and the shell's cached counts with it.
  *
- * WHY TAKING IT TO MORE EVENTS STARTS HERE
+ * WHO SEES WHICH TABS
  *
- * Because it is something done to a listing that already exists, and this is
- * the page about one listing. It is also where the wizard leaves a creator the
- * moment they publish — which is exactly when somebody going to three
- * conferences remembers the other two.
+ * The owner sees all of them. Somebody who sells for the owner (a manager)
+ * sees the spots, the offers, the deliveries, the link and the updates: the
+ * team and its shares are the owner's alone, as the API has it.
  */
 
 "use client";
@@ -37,8 +31,14 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
-import { btnSmall, btnSmallSecondary, card, eyebrow, pill } from "@/components/ad-space/ui";
+import { btnSmall, btnSmallSecondary, pill } from "@/components/ad-space/ui";
+import { useHref } from "@/components/app/base";
+import { IconArrowLeft } from "@/components/app/icons";
+import { useShell } from "@/components/app/Shell";
+import { StatusPill } from "@/components/app/spaces/common";
+import { dollars, glass, LinkTabs, Panel } from "@/components/app/ui";
 import { closesText } from "@/lib/ad-space/format";
+import { useRefresh } from "@/lib/app/spaces-data";
 import { describeCreatorError } from "@/lib/creator/api";
 import {
   centsFromDollars,
@@ -60,20 +60,20 @@ import {
 import { describeRunError } from "@/lib/creator/problems";
 
 import { Money, Text } from "./listing/parts";
-import { Loading, Notice, Section } from "./parts";
+import { Address, Loading, Notice, Section } from "./parts";
 import { Offers } from "./run/Offers";
 import { Work } from "./run/Work";
 import { ListingSeries } from "./series/Series";
 import { ListingTeam } from "./team/ListingTeam";
 
-const STATUS_LABEL: Record<string, string> = {
-  draft: "Draft",
-  live: "Live",
-  closed: "Closed",
-  delisted: "Taken down",
-};
+type Tab = "spots" | "offers" | "deliveries" | "share" | "series" | "team" | "updates" | "floors";
 
-export function ListingRunner({ spaceId }: { spaceId: string }) {
+export function ListingRunner({ spaceId, tab }: { spaceId: string; tab?: string; item?: string }) {
+  const { listings } = useShell();
+  const href = useHref();
+  const refresh = useRefresh();
+  const owner = listings.some((l) => l.id === spaceId);
+
   const [space, setSpace] = useState<SpaceView | null>(null);
   const [offers, setOffers] = useState<OfferView[]>([]);
   const [share, setShare] = useState<{ url: string; text: string } | null>(null);
@@ -105,102 +105,190 @@ export function ListingRunner({ spaceId }: { spaceId: string }) {
     void load();
   }, [load]);
 
+  const changed = useCallback(() => {
+    void load();
+    void refresh("listings", "offers", "views", "sales", "managed-offers", "work");
+  }, [load, refresh]);
+
   if (loading) {
     return (
-      <Page>
-        <Loading what="this listing" />
-      </Page>
+      <Frame>
+        <Panel>
+          <Loading what="this listing" />
+        </Panel>
+      </Frame>
     );
   }
   if (error || !space) {
     return (
-      <Page>
-        <Notice>{error ?? "We cannot find this listing."}</Notice>
-      </Page>
+      <Frame>
+        <Notice>{error ?? "Listing not found."}</Notice>
+      </Frame>
     );
   }
 
   const openOffers = offers.filter((o) => o.status === "pending").length;
-  const waiting = space.positions.filter((p) => p.content?.status === "pending").length;
+  const artwork = space.positions.filter((p) => p.content?.status === "pending").length;
+  const toDeliver =
+    space.positions.filter((p) => p.status === "sold" && !p.delivered).length +
+    space.deliverables.filter((d) => !d.deliveredUrl).length;
+  const takesOffers = space.pricingMode !== "fixed" || space.acceptsOffers || space.positions.some((p) => p.saleMode);
+  const hasFloors =
+    space.positions.some((p) => p.offers?.minOfferUsdc !== undefined) || space.spaceOffers?.minOfferUsdc !== undefined;
+
+  const tabs: { key: Tab; label: string; count?: number; show: boolean }[] = [
+    { key: "spots", label: "Spots", show: true },
+    { key: "offers", label: "Offers", count: openOffers, show: takesOffers },
+    { key: "deliveries", label: "Deliveries", count: artwork + toDeliver, show: space.status !== "draft" },
+    { key: "share", label: "Share", show: !!share },
+    { key: "series", label: "Series", show: owner && space.status !== "delisted" },
+    { key: "team", label: "Team", show: owner },
+    { key: "updates", label: "Updates", count: space.updates.length || undefined, show: space.status !== "draft" },
+    { key: "floors", label: "Floors", show: hasFloors },
+  ];
+  const visible = tabs.filter((t) => t.show);
+  const active: Tab = visible.some((t) => t.key === tab) ? (tab as Tab) : "spots";
+  const tabHref = (t: Tab) => href(`/listings/${space.id}${t === "spots" ? "" : `?tab=${t}`}`);
 
   return (
-    <Page>
-      <header className="flex flex-col gap-4">
-        <p className={`${eyebrow} text-text-faint`}>Your listing</p>
+    <Frame>
+      <header className={`${glass} flex flex-col gap-4 p-4 sm:p-5`}>
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <h1 className="text-h3 font-light text-text">{space.serviceName || space.title}</h1>
-          <span className={space.status === "live" ? pill.open : pill.neutral}>
-            {STATUS_LABEL[space.status] ?? space.status}
-          </span>
-        </div>
-        <p className="text-small text-text-muted">
-          {space.status === "draft" ? "Only you can see this" : closesText(space.closesAt, space.status === "closed")}
-          {space.event ? ` · ${space.event.name}` : ""} · {space.totals.sold} of {space.totals.positions} sold
-        </p>
-        {space.status === "draft" ? (
-          <div>
-            <Link href={`/creator/listings/${space.id}/edit`} className={btnSmall}>
-              Finish it
-            </Link>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="min-w-0 break-words text-[20px] font-medium text-text">{space.serviceName || space.title}</h2>
+              <StatusPill status={space.status} />
+            </div>
+            <p className="mt-1 text-tiny text-[#9FB7C2]">
+              {space.status === "draft" ? "Only you see this" : closesText(space.closesAt, space.status === "closed")}
+              {space.event ? ` · ${space.event.name}` : ""}
+            </p>
           </div>
-        ) : null}
+          <div className="flex flex-wrap gap-2">
+            {space.status === "draft" ? (
+              <Link href={href(`/listings/${space.id}/edit`)} className={btnSmall}>
+                Finish draft
+              </Link>
+            ) : null}
+            {share ? (
+              <a href={share.url} target="_blank" rel="noreferrer" className={btnSmallSecondary}>
+                Public page
+              </a>
+            ) : null}
+          </div>
+        </div>
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
+          <Stat label="Committed" value={dollars(space.totals.committedCents)} big />
+          <Stat label="Sold" value={`${space.totals.sold}/${space.totals.positions}`} />
+          <Stat label="Open offers" value={String(openOffers)} />
+          <Stat label="To deliver" value={String(artwork + toDeliver)} />
+        </dl>
       </header>
 
-      {openOffers > 0 || waiting > 0 ? (
-        <p role="status" className="rounded-input border border-amber/30 bg-amber/10 px-4 py-3 text-small text-text">
-          {openOffers > 0
-            ? `${openOffers} ${openOffers === 1 ? "brand is" : "brands are"} waiting for an answer.`
-            : ""}{" "}
-          {waiting > 0
-            ? `${waiting} ${waiting === 1 ? "sponsor has" : "sponsors have"} sent artwork nobody can see until you approve it.`
-            : ""}
-        </p>
-      ) : null}
+      <LinkTabs
+        active={active}
+        tabs={visible.map((t) => ({ key: t.key, label: t.label, count: t.count, href: tabHref(t.key) }))}
+      />
 
-      {share ? (
-        <Section label="Send people to it" title="Your link">
-          <div className="flex flex-col gap-4">
-            <p className="break-all font-mono text-small text-text">{share.url}</p>
-            <p className="rounded-input border border-[color:var(--color-hairline)] px-4 py-3 text-small text-text-muted">
-              {share.text}
-            </p>
-            <p className="text-tiny text-text-muted">
-              A brand does not need a HOLD account to buy from this: they open the page, connect their own wallet and
-              pay you directly. That is the whole reason the link is worth posting.
-            </p>
-          </div>
+      {active === "spots" ? <Spots space={space} /> : null}
+      {active === "offers" ? (
+        <Section title="Offers & bids">
+          <Offers space={space} offers={offers} onChanged={changed} />
         </Section>
       ) : null}
-
-      <ListingSeries space={space} onChanged={() => void load()} />
-
-      <Section label="What brands have said" title="Offers and bids">
-        <Offers space={space} offers={offers} onChanged={() => void load()} />
-      </Section>
-
-      <Floors space={space} onChanged={() => void load()} />
-
-      <Section label="After the money" title="What you owe">
-        <Work space={space} onChanged={() => void load()} />
-      </Section>
-
-      <ListingTeam spaceId={space.id} />
-
-      <Updates space={space} onChanged={() => void load()} />
-    </Page>
+      {active === "deliveries" ? (
+        <Section title="Deliveries">
+          <Work space={space} onChanged={changed} />
+        </Section>
+      ) : null}
+      {active === "share" && share ? <Share share={share} /> : null}
+      {active === "series" ? <ListingSeries space={space} onChanged={changed} /> : null}
+      {active === "team" ? <ListingTeam spaceId={space.id} /> : null}
+      {active === "updates" ? <Updates space={space} onChanged={changed} /> : null}
+      {active === "floors" ? <Floors space={space} onChanged={changed} /> : null}
+    </Frame>
   );
 }
 
-function Page({ children }: { children: React.ReactNode }) {
+function Frame({ children }: { children: React.ReactNode }) {
+  const href = useHref();
   return (
-    <div className="mx-auto flex w-full max-w-[760px] flex-col gap-6 px-6 py-18">
+    <div className="flex flex-col gap-4">
+      <Link href={href("/listings")} className="inline-flex w-fit items-center gap-1.5 text-tiny text-[#9FB7C2] hover:text-text">
+        <IconArrowLeft className="size-3.5" />
+        Listings
+      </Link>
       {children}
-      <p className="text-tiny text-text-muted">
-        <Link href="/creator" className="underline decoration-dotted underline-offset-4">
-          Back to your account
-        </Link>
-      </p>
     </div>
+  );
+}
+
+function Stat({ label, value, big }: { label: string; value: string; big?: boolean }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-[11px] text-[#9FB7C2]">{label}</dt>
+      <dd className={`mt-1 truncate font-medium leading-none tabular-nums text-text ${big ? "text-[24px]" : "text-[18px]"}`}>{value}</dd>
+    </div>
+  );
+}
+
+/* ── The spots ────────────────────────────────────────────────────── */
+
+const SPOT_LABEL: Record<string, string> = { open: "Open", held: "Held", sold: "Sold" };
+
+function Spots({ space }: { space: SpaceView }) {
+  return (
+    <Panel title="Spots" meta={`${space.positions.length}`}>
+      <div className="-mx-1 overflow-x-auto">
+        <table className="w-full min-w-[520px] text-left text-small">
+          <thead>
+            <tr className="text-[11px] text-[#9FB7C2]">
+              <th className="px-2 py-2 font-normal">Spot</th>
+              <th className="px-2 py-2 font-normal">Price</th>
+              <th className="px-2 py-2 font-normal">To you</th>
+              <th className="px-2 py-2 font-normal">Sponsor</th>
+              <th className="px-2 py-2 font-normal">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {space.positions.map((p) => (
+              <tr key={p.id} className="border-t border-white/[0.06]">
+                <td className="max-w-[240px] truncate px-2 py-2.5 text-text">{p.title ?? p.label}</td>
+                <td className="px-2 py-2.5 tabular-nums text-[#CFE3EC]">
+                  {p.priceCents !== null ? usd(p.priceCents) : p.offers?.mode === "bids" ? "Bids" : "Offers"}
+                </td>
+                <td className="px-2 py-2.5 tabular-nums text-text">{p.creatorReceivesUsdc ? `${p.creatorReceivesUsdc}` : "–"}</td>
+                <td className="max-w-[180px] truncate px-2 py-2.5 text-[#CFE3EC]">{p.sponsor?.name ?? "–"}</td>
+                <td className="px-2 py-2.5">
+                  <span className={p.status === "sold" ? pill.sold : p.status === "held" ? pill.held : pill.open}>
+                    {SPOT_LABEL[p.status] ?? p.status}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="mt-3 text-[11px] text-[#7F97A3]">
+        {space.feePayer === "sponsor" ? "Sponsor pays the 5% fee on top" : "You carry the 5% fee"} · USDC on{" "}
+        {space.chains.join(", ")}
+      </p>
+    </Panel>
+  );
+}
+
+/* ── The link ─────────────────────────────────────────────────────── */
+
+function Share({ share }: { share: { url: string; text: string } }) {
+  return (
+    <Section title="Share link">
+      <div className="flex flex-col gap-4">
+        <Address value={share.url} />
+        <p className="break-words rounded-input border border-[color:var(--color-hairline)] px-4 py-3 text-small text-text-muted [overflow-wrap:anywhere]">
+          {share.text}
+        </p>
+      </div>
+    </Section>
   );
 }
 
@@ -212,16 +300,12 @@ function Floors({ space, onChanged }: { space: SpaceView; onChanged: () => void 
   if (perSpot.length === 0 && !spaceLevel) return null;
 
   return (
-    <Section label="Only you see this" title="The least you would take">
-      <div className="flex flex-col gap-5">
-        <p className="text-body text-text-muted">
-          A floor is private. No brand is ever shown the number — on a spot that is bid for they only see whether it has
-          been met — and anything under it is turned away before it reaches you. Changing it now never re-opens an offer
-          that has already been made.
-        </p>
+    <Section title="Floors">
+      <div className="flex flex-col gap-3">
+        <p className="text-tiny text-text-muted">Private. Offers below a floor never reach you.</p>
         {spaceLevel ? (
           <Floor
-            label="Every slot on this listing"
+            label="Every slot"
             current={space.spaceOffers?.minOfferUsdc ?? null}
             onSave={(cents) => setListingFloor(space.id, cents)}
             onChanged={onChanged}
@@ -266,8 +350,11 @@ function Floor({
   }
 
   return (
-    <div className={`${card} flex flex-col gap-3 p-5`}>
-      <p className="text-small text-text">{label}</p>
+    <div className="flex flex-col gap-2 rounded-[14px] border border-white/[0.08] p-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <p className="text-small text-text">{label}</p>
+        <p className="text-tiny text-text-muted">{current ? `Now ${current} USDC` : "No floor"} · minimum {usd(2_500)}</p>
+      </div>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <div className="min-w-0 flex-1">
           <Money value={value} onChange={setValue} placeholder="No floor" />
@@ -282,20 +369,11 @@ function Floor({
         </button>
         {current ? (
           <button type="button" className={btnSmallSecondary} disabled={busy} onClick={() => save(null)}>
-            Take it off
+            Remove
           </button>
         ) : null}
       </div>
-      <p className="text-tiny text-text-muted">
-        {current ? `Currently ${current} USDC.` : "No floor, so every offer reaches you and you answer each one."}
-        {" The least anybody can offer on HiSpace at all is "}
-        {usd(2_500)}.
-      </p>
-      {notice ? (
-        <p role="status" className="rounded-input border border-amber/30 bg-amber/10 px-4 py-3 text-small text-text">
-          {notice}
-        </p>
-      ) : null}
+      {notice ? <Notice>{notice}</Notice> : null}
     </div>
   );
 }
@@ -310,12 +388,8 @@ function Updates({ space, onChanged }: { space: SpaceView; onChanged: () => void
   if (space.status === "draft") return null;
 
   return (
-    <Section label="While it runs" title="What you tell people">
-      <div className="flex flex-col gap-5">
-        <p className="text-body text-text-muted">
-          A line on your page as things happen — the strip is printed, the first interview is shot, everything is
-          posted. Sponsors read it, and so does the next brand deciding whether to buy.
-        </p>
+    <Section title="Updates">
+      <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-2 sm:flex-row">
           <div className="min-w-0 flex-1">
             <Text value={body} onChange={setBody} maxLength={280} placeholder="The mini strip is printed and on the case" />
@@ -336,14 +410,14 @@ function Updates({ space, onChanged }: { space: SpaceView; onChanged: () => void
                 .finally(() => setBusy(false));
             }}
           >
-            {busy ? "Posting…" : "Post it"}
+            {busy ? "Posting…" : "Post"}
           </button>
         </div>
 
         {space.updates.length > 0 ? (
-          <ul className="flex flex-col gap-3">
+          <ul className="flex flex-col gap-2">
             {space.updates.map((u) => (
-              <li key={u.id} className={`${card} flex flex-wrap items-start justify-between gap-3 p-4`}>
+              <li key={u.id} className="flex flex-wrap items-start justify-between gap-3 rounded-[14px] border border-white/[0.08] p-3">
                 <span className="min-w-0 text-small text-text">{u.body}</span>
                 <button
                   type="button"
@@ -354,18 +428,16 @@ function Updates({ space, onChanged }: { space: SpaceView; onChanged: () => void
                       .catch((e) => setNotice(describeRunError(e)));
                   }}
                 >
-                  Take it down
+                  Remove
                 </button>
               </li>
             ))}
           </ul>
-        ) : null}
+        ) : (
+          <p className="text-small text-text-muted">No updates yet.</p>
+        )}
 
-        {notice ? (
-          <p role="status" className="rounded-input border border-amber/30 bg-amber/10 px-4 py-3 text-small text-text">
-            {notice}
-          </p>
-        ) : null}
+        {notice ? <Notice>{notice}</Notice> : null}
       </div>
     </Section>
   );
