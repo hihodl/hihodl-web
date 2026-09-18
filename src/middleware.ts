@@ -30,7 +30,11 @@ function route(request: NextRequest): NextResponse | null {
     // The prefix is an implementation detail; a link that carries it is
     // sent to the address it means.
     if (pathname === '/app' || pathname.startsWith('/app/')) {
-      return NextResponse.redirect(new URL(`${pathname.slice(4) || '/spaces'}${search}`, request.url));
+      // Leading slashes collapsed to one: `/app//evil.com` would otherwise
+      // become `//evil.com`, which `new URL` reads as another host, an open
+      // redirect on the domain people sign in on.
+      const inner = pathname.slice(4).replace(/^\/{2,}/, '/');
+      return NextResponse.redirect(new URL(`${inner || '/spaces'}${search}`, request.url));
     }
     const url = request.nextUrl.clone();
     url.pathname = `/app${pathname}`;
