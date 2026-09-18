@@ -2045,7 +2045,10 @@ function answerOffer(s: Store, viewer: UserId, offerId: string, action: string, 
   const now = iso(Date.now());
   if (action === "accept") {
     if (o.status !== "pending" && o.status !== "countered") throw new DemoError("offer_not_open", 409);
-    o.agreedCents = o.status === "countered" && o.counterCents !== null ? o.counterCents : o.amountCents;
+    // The creator accepting settles at the sponsor's amount, even over a counter
+    // (backend `agreedAmountCents("creator", …)`); only the sponsor accepting a
+    // counter settles at the counter.
+    o.agreedCents = o.amountCents;
     o.status = "accepted";
     o.expiresAt = ahead(24 * HOUR);
     const q = sp.positions.find((x) => x.id === o.positionId);
