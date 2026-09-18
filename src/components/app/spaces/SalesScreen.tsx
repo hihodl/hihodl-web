@@ -174,7 +174,7 @@ function ListingSales({ spaceId, rows, refOf }: { spaceId: string; rows: SaleRow
         crumb={eventName(ref.event)}
         title={ref.title}
       />
-      <Panel title="Sales" meta={rows.length ? `${salesText(rows.length)} · ${dollars(receivedCents(rows))} received` : ""}>
+      <Panel className="w-full max-w-[760px]" title="Sales" meta={rows.length ? `${salesText(rows.length)} · ${dollars(receivedCents(rows))} received` : ""}>
         {rows.length === 0 ? (
           <EmptyState title="No sales on this listing." />
         ) : (
@@ -185,7 +185,9 @@ function ListingSales({ spaceId, rows, refOf }: { spaceId: string; rows: SaleRow
           </ul>
         )}
       </Panel>
-      <Pager {...paged} />
+      <div className="w-full max-w-[760px]">
+        <Pager {...paged} />
+      </div>
     </div>
   );
 }

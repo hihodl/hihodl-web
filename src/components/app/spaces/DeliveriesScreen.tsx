@@ -278,7 +278,7 @@ function ListingDeliveries({
                       href={itemHref(i)}
                       selected={i.id === current?.id}
                       title={i.title}
-                      sub={`${KIND_TEXT[i.kind]} · ${i.sub}`}
+                      sub={i.sub === KIND_TEXT[i.kind] ? i.sub : `${KIND_TEXT[i.kind]} · ${i.sub}`}
                       right={
                         <span className={`text-[11px] ${i.state === "overdue" || (i.kind === "artwork" && role === "creator") ? "text-amber" : "text-[#9FB7C2]"}`}>
                           {i.state === "done" ? STATE_TEXT.done : i.due ? dueText(i.due) : STATE_TEXT[i.state]}

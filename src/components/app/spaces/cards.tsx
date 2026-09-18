@@ -138,7 +138,8 @@ export function eventName(event: EventRef | null | undefined): string {
 }
 
 function eventWhere(event: EventRef | null): string {
-  if (!event) return "No event";
+  // The title already says "Not tied to an event"; a blank line keeps the cards level.
+  if (!event) return "\u00a0";
   const when = event.startsOn && event.endsOn ? eventDates(event.startsOn, event.endsOn) : "";
   return [event.city, when].filter(Boolean).join(" · ");
 }
@@ -174,7 +175,7 @@ export function EventCard({
 }) {
   return (
     <li>
-      <Link href={href} scroll={false} className={`${cardCls} min-h-[176px] gap-4 p-4 sm:p-5 xl:min-h-[200px]`}>
+      <Link href={href} scroll={false} className={`${cardCls} gap-3 p-4 sm:min-h-[176px] sm:gap-4 sm:p-5 xl:min-h-[200px]`}>
         <div className="flex min-w-0 items-start gap-2.5">
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] border border-white/10 bg-white/[0.06] text-[#CFE3EC]">
             <Icon />
