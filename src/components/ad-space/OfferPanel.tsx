@@ -11,6 +11,7 @@ import {
   getOfferClient,
   minimumCents,
   offerModeOf,
+  offerNamesPosition,
   parseUsdToCents,
   respondToOffer,
   usdcFromCents,
@@ -637,7 +638,9 @@ function RaiseForm({
 }) {
   const bid = offer.kind === "bid";
   const session = isSessionSpace(space);
-  const mode = offerModeOf(space, space.kind === "service" ? null : position);
+  // On a tiered space the rung this offer names is what prices it; on an
+  // untiered service the slots are identical and the space prices them.
+  const mode = offerModeOf(space, offerNamesPosition(space) ? position : null);
   const last = usdcToCents(offer.amountUsdc);
   const minimum = minimumCents(offer.kind, session, positionOffers ?? null);
   const belowCents = mode === "fixed_with_offers" ? (position?.priceCents ?? space.positions[0]?.priceCents ?? null) : null;

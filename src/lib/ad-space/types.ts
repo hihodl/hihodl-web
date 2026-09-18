@@ -84,6 +84,12 @@ export interface Template {
      * backend that predates sessions leaves it out, which reads as `content`.
      */
     format?: ServiceFormat;
+    /**
+     * The `custom-service` template: the creator names and describes what they
+     * sell, so a brand reads `Space.serviceName` and `Space.serviceSummary`, not
+     * this template's generic ones. Absent on a server older than it.
+     */
+    custom?: boolean;
   } | null;
 }
 
@@ -133,7 +139,43 @@ export interface Takeover {
 export interface Position {
   id: string;
   zoneKey: string;
+  /** The tier's name when this position sells one, else the zone's label or the slot number. */
   label: string;
+  /**
+   * Tiers (ad-space-tiers-v0.md). A service space can sell a LADDER: up to six
+   * rungs, each its own price and its own list of what the brand gets, and a
+   * rung with five available is five positions sharing a `tierKey`.
+   *
+   * `tierKey` is null on the old shapes — a placement's zones, or N identical
+   * slots — and those render exactly as they always have. `title` is the
+   * rung's name ("Flagship on-site interview"); `label` already falls back to
+   * it, so anything that prints a label prints the tier's name for free.
+   *
+   * `perks` is what the brand gets for that price, up to five short lines.
+   * PLAIN TEXT, and printed as text: never as HTML, never as markdown.
+   *
+   * All three are optional because a server older than tiers sends no key at
+   * all; `getPublicSpace` fills them, so nothing downstream has to guess.
+   */
+  tierKey?: string | null;
+  title?: string | null;
+  perks?: string[];
+  /**
+   * How THIS rung sells, when it does not sell the way its space does: the $50
+   * logo to whoever pays first, the one interview to the highest bid, on the
+   * same board. Null means the space's own mode, which is every space that
+   * exists today, and `takeover` is never a rung's to choose — it is a rule
+   * about what one sponsor may do to another and it belongs to the space.
+   *
+   * It wins over everything else the page could read, `offers.mode` included:
+   * a rung that sells at its price carries no offers block at all, and without
+   * this the page would fall back to the space and offer a "Make an offer"
+   * button on a rung that does not take one.
+   *
+   * Optional, and `getPublicSpace` fills it: a server older than per-rung modes
+   * sends no key, and anything it does not recognise reads as null.
+   */
+  saleMode?: SaleMode | null;
   /** Null in `offers` mode, where no price is shown. In `bids` it is the opening bid. */
   priceCents: number | null;
   sponsorPaysUsdc: string | null;
@@ -149,8 +191,12 @@ export interface Position {
   delivered: { url: string; at: string } | null;
   /**
    * How offers and bids stand on this spot, or null when the space takes none.
-   * Always null on a service slot: a service space carries it once, as
-   * `Space.spaceOffers`. Optional because a server older than offers sends no key.
+   * Null on a service slot of an UNTIERED space, which carries it once as
+   * `Space.spaceOffers` because its slots are identical and any one will do.
+   * On a tiered space the rungs are not identical — "$900" means nothing
+   * unless it says $900 for the interview — so each position carries its own,
+   * exactly as a placement's zones do. Optional because a server older than
+   * offers sends no key.
    */
   offers?: PositionOffers | null;
 }
@@ -158,6 +204,13 @@ export interface Position {
 /* ── Offers and bids (hispace-offers-v0.md) ───────────────────────────── */
 
 export type OfferMode = "fixed_with_offers" | "offers" | "bids";
+
+/**
+ * How one spot sells, as the server names it (`saleModeOf`). It is `OfferMode`
+ * plus the one mode that takes no offer at all, which the page carries as a
+ * null `OfferMode`: on a `fixed` rung there is nothing to offer, only a price.
+ */
+export type SaleMode = OfferMode | "fixed";
 
 /**
  * The public side of offers on a spot (or on a service space). Every amount is
@@ -281,10 +334,27 @@ export interface Update {
   createdAt: string;
 }
 
+/**
+ * `mention`: the creator mentions or tags the brand on `platform`. `custom`:
+ * whatever the creator wrote in `note`. The rest are the original catalogue.
+ * Kept open as a string so a kind this page does not know still renders.
+ */
+export type DeliverableKind =
+  | "in_person"
+  | "photo_post"
+  | "video"
+  | "story"
+  | "thank_you_post"
+  | "mention"
+  | "custom";
+
 export interface Deliverable {
   id: string;
-  kind: string;
-  platform: string;
+  kind: DeliverableKind | (string & {});
+  /** Null on a `custom` deliverable that happens nowhere in particular. */
+  platform: string | null;
+  /** The creator's own words; the whole promise on a `custom` one. `getPublicSpace` fills null. */
+  note: string | null;
   count: number;
   dueDate: string;
   deliveredUrl: string | null;
@@ -321,9 +391,20 @@ export interface Space {
    * fills false when a server older than offers leaves it out.
    */
   acceptsOffers: boolean;
-  /** `bids` only: when bidding ends, space-wide. Each spot's own end is on its `offers`. */
+  /**
+   * When bidding ends, space-wide. Each spot's own end is on its `offers`, and
+   * that is the one the page counts down, because a late bid moves a spot's
+   * end and never the others'.
+   *
+   * Usually `bids` only — but a tiered space may sell at a fixed price and
+   * still carry one, because on a ladder the countdown can belong to a single
+   * rung (the interview) rather than to the board.
+   */
   biddingEndsAt: string | null;
-  /** A service space's offers, which target the space rather than a slot. */
+  /**
+   * An untiered service space's offers, which target the space rather than a
+   * slot. Null on a tiered one, where every rung carries its own.
+   */
   spaceOffers: PositionOffers | null;
   venueType: VenueType;
   eventName: string | null;
@@ -333,7 +414,22 @@ export interface Space {
   requiredAttestations: string[];
   deliverables: Deliverable[];
   template: Template;
+  /**
+   * What the creator calls their service, and how they describe it. Set on a
+   * `custom-service` space, where they replace the template's name and summary;
+   * null otherwise. `getPublicSpace` fills null on an older server.
+   */
+  serviceName: string | null;
+  serviceSummary: string | null;
   positions: Position[];
+  /**
+   * What the campaign is raising, in integer cents, or null when the creator
+   * named no goal. A space that has one is measured against it — money, not
+   * spots — because what a campaign is FOR is an amount and not an inventory.
+   * `getPublicSpace` fills null, so a server older than the goal reads as a
+   * space that never named one and the page stays exactly as it was.
+   */
+  fundingGoalCents: number | null;
   /**
    * `committedCents`: paid so far (on `offers` and `bids`, the agreed amounts of
    * paid orders). `totalCents`: every listed price added up, null on `offers`
@@ -439,6 +535,9 @@ export interface SpaceCard {
   tab: SpaceTab;
   /** Null when the space's template is gone from the catalogue. */
   templateName: string | null;
+  /** The creator's own name for a custom service; wins over `templateName`. Missing on an older server. */
+  serviceName?: string | null;
+  serviceSummary?: string | null;
   pricingMode: PricingMode;
   /**
    * Board and event cards carry these (hispace-offers-v0.md, Backend

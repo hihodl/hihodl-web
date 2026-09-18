@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { DownloadLink } from "@/components/site/DownloadLink";
 import {
   EVENT_TABS,
+  cardServiceName,
   closesText,
   compactNumber,
   eventCountdown,
@@ -332,7 +333,9 @@ function SpaceCardTile({ card: c, event, now }: { card: SpaceCard; event: EventS
         </div>
 
         <h3 className="mt-4 line-clamp-2 break-words text-body [overflow-wrap:anywhere] text-text group-hover:text-amber">{c.title}</h3>
-        {c.templateName && <p className="mt-1 text-small text-text-muted">{c.templateName}</p>}
+        {cardServiceName(c) && (
+          <p className="mt-1 truncate text-small text-text-muted">{cardServiceName(c)}</p>
+        )}
         <p className={`mt-1 text-tiny ${trackRecordNeedsAttention(c.creator.trackRecord) ? "text-amber" : "text-text-faint"}`}>
           {trackRecordText(c.creator.trackRecord)}
         </p>

@@ -22,6 +22,7 @@ import { TAKEOVER_CHAINS } from "@/lib/ad-space/config";
 import {
   CHAIN_LABEL,
   CONTENT_KIND_LABEL,
+  FALLBACK_LABEL,
   FALLBACK_TEXT,
   SESSION_FALLBACK_TEXT,
   isSessionSpace,
@@ -717,6 +718,12 @@ function Summary({
 }) {
   const zone = space.template.zones.find((z) => z.zoneKey === p.zoneKey);
   const agreed = offer?.agreedUsdc && offer.agreedSponsorPaysUsdc ? offer : null;
+  /* A rung of a ladder (ad-space-tiers-v0.md): the sheet's heading already
+     carries its name, because `label` falls back to the tier's title. What it
+     cannot carry is the list the brand picked this rung FOR, and a sponsor
+     about to sign for $1,300 should be reading the interview, not remembering
+     it from the page behind the sheet. Plain text, as it arrives. */
+  const perks = p.perks ?? [];
   // Taking a spot from whoever holds it, rather than buying an empty one. The
   // figures differ enough that showing the fixed-price pair would be wrong:
   // what this sponsor pays is the DOUBLED price plus the fee, and most of it
@@ -746,6 +753,18 @@ function Summary({
             HOLD never holds it in between.
           </div>
         )}
+        {perks.length > 0 && (
+          <div className="col-span-2 border-t border-[color:var(--color-hairline)] pt-3">
+            <h3 className={`${eyebrow} text-text-faint`}>What you get</h3>
+            <ul className="mt-2 flex flex-col gap-1.5">
+              {perks.map((line, i) => (
+                <li key={i} className="break-words text-small text-text [overflow-wrap:anywhere]">
+                  {line}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         {session ? (
           <div className="col-span-2 text-tiny text-text-faint">
             Nothing else to fill in before you pay. Afterwards you send the creator your contact and what the session
@@ -759,16 +778,12 @@ function Summary({
           </div>
         )}
       </dl>
+      {/* The lead-in is the policy the creator picked, in the app's own words,
+          so the sentence after it can open with "if the venue says no" without
+          the line saying it twice. */}
       <p className="text-small text-text-muted">
-        {session ? (
-          <>
-            <span className="text-text">If the session can&rsquo;t happen.</span> {SESSION_FALLBACK_TEXT[space.fallback]}
-          </>
-        ) : (
-          <>
-            <span className="text-text">If a venue says no.</span> {FALLBACK_TEXT[space.fallback]}
-          </>
-        )}
+        <span className="text-text">{FALLBACK_LABEL[space.fallback]}.</span>{" "}
+        {(session ? SESSION_FALLBACK_TEXT : FALLBACK_TEXT)[space.fallback]}
         {space.fallbackNote ? ` ${space.fallbackNote}` : ""}
       </p>
     </div>

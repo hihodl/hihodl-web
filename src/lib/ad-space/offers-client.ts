@@ -15,7 +15,7 @@
 
 import { AD_SPACE_API } from "./config";
 import { CheckoutError, apiRequest, describeSessionError, type EvmCheckout, type SolanaCheckout } from "./checkout-client";
-import { CHAIN_LABEL, clockTime } from "./format";
+import { CHAIN_LABEL, clockTime, isTieredSpace } from "./format";
 import type {
   Chain,
   ContactKind,
@@ -126,14 +126,25 @@ export function offerFigures(amountCents: number, feeBps: number, feePayer: "spo
 
 /**
  * The offer mode of a spot, or of a service space when no position is given.
- * The server's `offers.mode` wins; without it the space's own fields decide,
+ *
+ * The spot's OWN `saleMode` wins, because a rung of a ladder may sell its own
+ * way (ad-space-tiers-v0.md): `fixed` there means a price and nothing to
+ * offer, so it answers null even on a space that sells by offers. Without one,
+ * the server's `offers.mode` decides, and without that the space's own fields,
  * so a board whose offers block has not arrived yet still reads right.
  */
 export function offerModeOf(
-  space: Pick<Space, "pricingMode" | "acceptsOffers" | "spaceOffers" | "kind">,
-  position?: Pick<Position, "offers"> | null,
+  space: Pick<Space, "pricingMode" | "acceptsOffers" | "spaceOffers" | "kind" | "positions">,
+  position?: Pick<Position, "offers" | "saleMode"> | null,
 ): OfferMode | null {
-  const fromServer = position?.offers?.mode ?? (space.kind === "service" ? space.spaceOffers?.mode : undefined);
+  const own = position?.saleMode;
+  // Said by the rung itself: nothing below may overrule it, null included.
+  if (own === "fixed") return null;
+  if (own === "fixed_with_offers" || own === "offers" || own === "bids") return own;
+  // A tiered service carries its offers on the rungs, not on the space, so the
+  // space's block is only consulted where it exists: an untiered one.
+  const onTheSpace = space.kind === "service" && !isTieredSpace(space);
+  const fromServer = position?.offers?.mode ?? (onTheSpace ? space.spaceOffers?.mode : undefined);
   if (fromServer) return fromServer;
   if (space.pricingMode === "offers") return "offers";
   if (space.pricingMode === "bids") return "bids";
@@ -141,10 +152,25 @@ export function offerModeOf(
   return null;
 }
 
-/** The public offers block for a spot, or for the whole space on a service. */
-export function offersFor(space: Pick<Space, "kind" | "spaceOffers">, position?: Position | null): PositionOffers | null {
-  if (space.kind === "service") return space.spaceOffers ?? null;
+/**
+ * The public offers block for a spot, or for the whole space on an untiered
+ * service, whose slots are identical and where an offer names no slot.
+ */
+export function offersFor(
+  space: Pick<Space, "kind" | "spaceOffers" | "positions">,
+  position?: Position | null,
+): PositionOffers | null {
+  if (space.kind === "service" && !isTieredSpace(space)) return space.spaceOffers ?? null;
   return position?.offers ?? null;
+}
+
+/**
+ * Whether an offer here has to name the spot it is for. A placement's zones
+ * always did; an untiered service's slots never do; a tier does, because the
+ * rungs are not interchangeable (ad-space-tiers-v0.md, rule 3).
+ */
+export function offerNamesPosition(space: Pick<Space, "kind" | "positions">): boolean {
+  return space.kind !== "service" || isTieredSpace(space);
 }
 
 /**
