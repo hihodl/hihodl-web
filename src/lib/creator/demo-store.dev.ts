@@ -822,6 +822,46 @@ function seeded(): Store {
     return o;
   });
 
+  /* 5. A suitcase at Breakpoint too, so one event sells an ad space and a service. */
+  const bpSuitcase = space({
+    templateId: "carry-on-suitcase",
+    slug: "breakpoint-london-suitcase",
+    title: "My suitcase to Breakpoint",
+    status: "live",
+    eventId: breakpoint.id,
+    eventName: breakpoint.name,
+    closesAt: ahead(40 * DAY),
+    deliverBy: day(50),
+    publishedAt: ago(4 * DAY),
+    acceptsOffers: true,
+    attestations: ["owns_item", "venue_rules_checked"],
+    createdAt: ago(5 * DAY),
+    positions: zones.map((z) =>
+      pos({ zoneKey: z.zoneKey, label: z.label, priceCents: z.suggestedPriceCents ?? 10_000, accepts: ["logo", "qr", "text"] }),
+    ),
+  });
+  s.spaces.push(bpSuitcase);
+  sell(s, bpSuitcase, bpSuitcase.positions[0], sponsorOf("Mesa"), 1);
+  bpSuitcase.positions[0].content = { status: "pending", rejectedReason: null, submittedAt: ago(10 * HOUR) };
+  sell(s, bpSuitcase, bpSuitcase.positions[1], sponsorOf("Stackd"), 2, "base");
+  bpSuitcase.positions[1].content = { status: "approved", rejectedReason: null, submittedAt: ago(1 * DAY) };
+
+  /* 6. A sponsored post not tied to any event. */
+  const anytime = space({
+    templateId: "sponsored-x-post",
+    slug: "a-sponsored-post-on-my-x",
+    title: "A sponsored post on my X",
+    status: "live",
+    venueType: "everyday",
+    closesAt: ahead(30 * DAY),
+    deliverBy: day(35),
+    publishedAt: ago(10 * DAY),
+    createdAt: ago(11 * DAY),
+    positions: rung(1, 3, { key: "tier-1", title: "One sponsored post", priceCents: 15_000, perks: ["One post on X with your link"] }),
+  });
+  s.spaces.push(anytime);
+  sell(s, anytime, anytime.positions[0], sponsorOf("Lumen", "text"), 9);
+
   /* Offers and bids — three waiting on the creator. */
   const offer = (o: Partial<OfferRec> & Pick<OfferRec, "spaceId" | "positionId" | "kind" | "amountCents">): OfferRec => ({
     id: uuid(),
@@ -904,6 +944,16 @@ function seeded(): Store {
       createdAt: ago(30 * HOUR),
       updatedAt: ago(9 * HOUR),
       sponsor: { name: "Mesa", contactKind: null, contactValue: null, message: null, via: "app", backed: { chain: "base", address: "0x1111111111111111111111111111111111111111", checkedAt: ago(30 * HOUR) } },
+    }),
+  );
+
+  s.offers.push(
+    offer({
+      spaceId: bpSuitcase.id,
+      positionId: bpSuitcase.positions[2].id,
+      kind: "offer",
+      amountCents: 9_000,
+      sponsor: { name: "Orbit", contactKind: "email", contactValue: "growth@orbit.fi", message: "The side panel, all week?", via: "web", backed: null },
     }),
   );
 
@@ -2124,7 +2174,7 @@ function salesFor(s: Store, viewer: UserId): SalesSummary {
     soldSpots: orders.length,
     orders: orders.length,
     spaces: new Set(orders.map((o) => o.spaceId)).size,
-    recent: orders.slice(0, 10).map((o) => {
+    recent: orders.slice(0, 20).map((o) => {
       const sp = mine.find((x) => x.id === o.spaceId)!;
       const q = sp.positions.find((x) => x.id === o.positionId);
       return {
