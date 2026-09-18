@@ -41,7 +41,8 @@ export interface NavItem {
 }
 
 export interface NavGroup {
-  title: string;
+  /** The first group has none: the sidebar's header already says "Spaces". */
+  title: string | null;
   items: readonly NavItem[];
 }
 
@@ -49,7 +50,7 @@ const ALL: readonly ShellRole[] = ["creator", "manager", "rep"];
 
 export const SPACES_GROUPS: readonly NavGroup[] = [
   {
-    title: "Spaces",
+    title: null,
     items: [
       { key: "overview", label: "Overview", path: "", icon: IconOverview, roles: ["creator", "manager"], keywords: "home kpi summary" },
       { key: "listings", label: "Listings", path: "/listings", icon: IconListings, roles: ["creator", "manager"], keywords: "my spaces services drafts live" },

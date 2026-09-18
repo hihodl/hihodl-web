@@ -5,8 +5,8 @@
  *
  * Built on the KPI dashboard's structure: a glass sidebar with grouped
  * navigation, the signed-in person at its foot, a sticky top bar with the page
- * title, when the numbers were read, ⌘K and the one primary action, and the
- * page under it. On a phone the sidebar is a drawer.
+ * title, ⌘K and the one primary action, and the page under it. On a phone
+ * the sidebar is a drawer.
  *
  * Signed out, it is a centred sign-in and nothing else: no website header, no
  * footer. An invitation link (`/team?seat=…`) is the one page that renders
@@ -16,7 +16,7 @@
 import type { Session } from "@supabase/supabase-js";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { SpacesGround } from "@/components/ad-space/ground";
 import { SignIn } from "@/components/creator/SignIn";
@@ -28,7 +28,7 @@ import { creatorText, isSeatCode, pendingSeat, type TeamMember, type WorkListing
 import type { XAccountStatus } from "@/lib/creator/types";
 import { useAgency, type Agency } from "@/lib/app/agency";
 import { roleOf, waitingOnYou, type ShellRole } from "@/lib/app/spaces-model";
-import { useLastRead, useListings, useOffers, useRefreshAll, useSeats, useTeam, useWork, useX } from "@/lib/app/spaces-data";
+import { useListings, useOffers, useSeats, useTeam, useWork, useX } from "@/lib/app/spaces-data";
 
 import { SpacesBaseProvider, useHref, useSpacesBase } from "./base";
 import { CommandPalette, type PaletteEntry } from "./CommandPalette";
@@ -38,7 +38,6 @@ import {
   IconExpand,
   IconMenu,
   IconPlus,
-  IconRefresh,
   IconSearch,
   IconSignOut,
 } from "./icons";
@@ -386,10 +385,12 @@ function Sidebar({
 
       <nav aria-label="Spaces" className={`flex w-full flex-1 flex-col overflow-y-auto ${collapsed ? "items-center gap-1 pt-2" : "gap-4"}`}>
         {groups.map((g) => (
-          <div key={g.title} className={collapsed ? "flex flex-col items-center gap-1" : "flex flex-col gap-1"}>
-            {collapsed ? <div className="my-1 h-px w-8 bg-white/10" /> : (
+          <div key={g.title ?? "main"} className={collapsed ? "flex flex-col items-center gap-1" : "flex flex-col gap-1"}>
+            {collapsed ? (
+              g.title ? <div className="my-1 h-px w-8 bg-white/10" /> : null
+            ) : g.title ? (
               <p className="px-2.5 pb-1 text-[10px] font-medium uppercase tracking-wider text-[#6B8A99]">{g.title}</p>
-            )}
+            ) : null}
             {g.items.map((i) => (
               <NavLink key={i.key} item={i} active={active === i.key} badge={badges[i.key]} collapsed={collapsed} />
             ))}
@@ -525,7 +526,6 @@ function TopBar({ title, onMenu, onSearch }: { title: string; onMenu: () => void
             <IconMenu />
           </button>
           <h1 className="truncate pl-1 text-body font-medium text-text sm:text-[18px]">{title}</h1>
-          <SyncChip />
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           <button type="button" onClick={onSearch} aria-label="Search" className={btnGhost}>
@@ -545,43 +545,6 @@ function TopBar({ title, onMenu, onSearch }: { title: string; onMenu: () => void
         </div>
       </div>
     </header>
-  );
-}
-
-/** When the numbers were last read, and a way to read them again. */
-function SyncChip() {
-  const last = useLastRead();
-  const refresh = useRefreshAll();
-  const [busy, setBusy] = useState(false);
-  const [, tick] = useState(0);
-
-  useEffect(() => {
-    const t = setInterval(() => tick((n) => n + 1), 30_000);
-    return () => clearInterval(t);
-  }, []);
-
-  const age = last ? Math.max(0, Math.round((Date.now() - last) / 60_000)) : null;
-  const label = busy ? "syncing" : age === null ? "…" : age === 0 ? "now" : `${age}m ago`;
-
-  const run = useCallback(() => {
-    setBusy(true);
-    void refresh().finally(() => setBusy(false));
-  }, [refresh]);
-
-  return (
-    <button
-      type="button"
-      onClick={run}
-      disabled={busy}
-      title="Read everything again"
-      className="hidden shrink-0 items-center gap-1.5 rounded-[10px] border border-white/10 bg-white/[0.05] py-1 pl-2 pr-1 text-[11px] text-[#9FB7C2] transition-colors hover:text-text sm:inline-flex"
-    >
-      <IconRefresh className={`h-3 w-3 ${busy ? "animate-spin" : ""}`} />
-      <span className="inline-flex items-center gap-1 rounded-[6px] bg-white/[0.08] px-1.5 py-0.5 tabular-nums text-text">
-        <span className={`h-1.5 w-1.5 rounded-[3px] ${busy ? "animate-pulse bg-[#2EB4D6]" : "bg-success"}`} />
-        {label}
-      </span>
-    </button>
   );
 }
 
