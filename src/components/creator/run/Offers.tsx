@@ -214,6 +214,11 @@ function OfferCard({
   const open = OPEN.includes(offer.status);
   const canAnswer = offer.status === "pending" || (offer.kind === "offer" && offer.status === "countered");
   const canCounter = offer.kind === "offer" && offer.status === "pending" && offer.countersLeft > 0;
+  // A counter the creator sent is the sponsor's move now. The server still
+  // lets the creator take the sponsor's ORIGINAL number or pass
+  // (`acceptRefusal`, `declineRefusal`), so those stay, but as a way back and
+  // not as the question this card is asking.
+  const waitingOnSponsor = offer.kind === "offer" && offer.status === "countered";
   const expiresIn = offer.expiresAt ? new Date(offer.expiresAt).getTime() - Date.now() : null;
 
   const shown = offer.agreedUsdc ?? offer.amountUsdc;
@@ -275,12 +280,6 @@ function OfferCard({
             {offer.sponsor.contactKind}: <span className="text-text">{offer.sponsor.contactValue}</span>
           </p>
         ) : null}
-        {offer.status === "countered" && offer.counterUsdc ? (
-          <p>
-            You asked for {offer.counterUsdc} USDC. {offer.countersLeft} more{" "}
-            {offer.countersLeft === 1 ? "counter" : "counters"} left on this one.
-          </p>
-        ) : null}
         {expiresIn !== null && expiresIn > 0 && open ? (
           <p>
             {offer.status === "accepted"
@@ -334,6 +333,32 @@ function OfferCard({
               ))}
               <button type="button" className={btnSmallSecondary} onClick={() => setMode("none")}>
                 Cancel
+              </button>
+            </div>
+          </div>
+        ) : waitingOnSponsor ? (
+          <div className="flex flex-col gap-3">
+            <p className="text-body text-text">
+              {offer.counterUsdc ? `Countered at ${offer.counterUsdc} USDC` : "Countered"}, waiting for {offer.sponsor.name}.
+            </p>
+            <p className="text-small text-text-muted">
+              Nothing to do until they answer: they can take your number or come back with another. If you change your
+              mind first, you can still take the {offer.amountUsdc} USDC they offered, or pass.
+              {offer.countersLeft > 0
+                ? ` ${offer.countersLeft} more ${offer.countersLeft === 1 ? "counter" : "counters"} left on this one.`
+                : ""}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className={btnSmallSecondary}
+                disabled={busy}
+                onClick={() => void run(() => acceptOffer(offer.id, offer.updatedAt))}
+              >
+                {busy ? "Working…" : `Take their ${offer.amountUsdc} USDC`}
+              </button>
+              <button type="button" className={btnSmallSecondary} disabled={busy} onClick={() => setMode("decline")}>
+                Pass
               </button>
             </div>
           </div>
