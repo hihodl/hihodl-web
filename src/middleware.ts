@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 import { isAppHost, productOrigin, productPathForCreator } from '@/lib/app/paths';
+import { isWalletPath, newNonce, walletCsp } from '@/lib/wallet/csp';
 
 // Match the nanoid alphabet used in /api/waitlist/join (8 chars, [0-9a-z]).
 // Anything else can never match a real referral_code in the DB anyway, so
@@ -16,7 +17,9 @@ const REFERRAL_CODE_RE = /^[0-9a-z]{8}$/;
  * shows the prefix. Everything else is the website, where the old creator
  * console's `/creator/*` addresses now send people into the product.
  */
-function route(request: NextRequest): NextResponse | null {
+type Init = { request: { headers: Headers } } | undefined;
+
+function route(request: NextRequest, init: Init): NextResponse | null {
   const { pathname, search } = request.nextUrl;
   const host = request.headers.get('host');
 
@@ -38,7 +41,7 @@ function route(request: NextRequest): NextResponse | null {
     }
     const url = request.nextUrl.clone();
     url.pathname = `/app${pathname}`;
-    return NextResponse.rewrite(url);
+    return NextResponse.rewrite(url, init);
   }
 
   const origin = productOrigin();
@@ -57,8 +60,27 @@ function route(request: NextRequest): NextResponse | null {
   return null;
 }
 
+/**
+ * A wallet page gets a fresh nonce and a strict CSP (lib/wallet/csp.ts). The
+ * policy goes on the REQUEST too: that is where Next reads the nonce from to
+ * stamp it on its own scripts.
+ */
+function walletInit(request: NextRequest): { init: Init; csp: string | null } {
+  if (!isWalletPath(request.nextUrl.pathname)) return { init: undefined, csp: null };
+  const csp = walletCsp(newNonce());
+  const headers = new Headers(request.headers);
+  headers.set('content-security-policy', csp);
+  return { init: { request: { headers } }, csp };
+}
+
 export function middleware(request: NextRequest) {
-  const response = route(request) ?? NextResponse.next();
+  const { init, csp } = walletInit(request);
+  const response = route(request, init) ?? NextResponse.next(init);
+  if (csp) {
+    response.headers.set('Content-Security-Policy', csp);
+    response.headers.set('Cache-Control', 'private, no-store, max-age=0');
+    response.headers.set('Referrer-Policy', 'no-referrer');
+  }
   const refCode = request.nextUrl.searchParams.get('ref');
 
   // Only persist the cookie if the ref code matches our nanoid format.

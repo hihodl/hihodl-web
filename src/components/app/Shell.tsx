@@ -41,7 +41,7 @@ import {
   IconSearch,
   IconSignOut,
 } from "./icons";
-import { activeKey, FOOT_ITEMS, itemsFor, SPACES_GROUPS, titleFor, visible, type NavItem, type NavKey } from "./nav";
+import { activeKey, FOOT_ITEMS, hrefFor, itemsFor, NAV_GROUPS, titleFor, visible, type NavItem, type NavKey } from "./nav";
 import { Alert, glass } from "./ui";
 
 /* ── What every page inside can read ──────────────────────────────── */
@@ -215,7 +215,7 @@ function Frame({ children }: { children: ReactNode }) {
   const router = useRouter();
   const base = useSpacesBase();
   const href = useHref();
-  const rel = pathname.startsWith(base) ? pathname.slice(base.length) : pathname;
+  const rel = relativeToProduct(pathname, base);
   const active = activeKey(rel);
 
   const [collapsed, setCollapsed] = useState(false);
@@ -259,8 +259,8 @@ function Frame({ children }: { children: ReactNode }) {
   const allowed = itemsFor(shell.role, shell.teamPage);
   const here = active ? allowed.some((i) => i.key === active) : true;
   useEffect(() => {
-    if (!here) router.replace(href(allowed[0]?.path ?? "/deliveries"));
-  }, [here, router, href, allowed]);
+    if (!here) router.replace(allowed[0] ? hrefFor(allowed[0], base) : href("/deliveries"));
+  }, [here, router, href, allowed, base]);
 
   const badges = useBadges();
   const entries = usePaletteEntries(allowed);
@@ -309,6 +309,17 @@ function Frame({ children }: { children: ReactNode }) {
       </PrefsContext.Provider>
     </div>
   );
+}
+
+/**
+ * A path relative to where its module lives: Spaces pages to Spaces' base,
+ * another module's (`/wallet`) to the product's prefix, which is that base
+ * without `/spaces` (empty on app.hihodl.xyz, `/app` elsewhere).
+ */
+export function relativeToProduct(pathname: string, base: string): string {
+  if (pathname.startsWith(base)) return pathname.slice(base.length);
+  const prefix = base.replace(/\/spaces$/, "");
+  return prefix && pathname.startsWith(prefix) ? pathname.slice(prefix.length) : pathname;
 }
 
 /* ── Big screens ──────────────────────────────────────────────────── */
@@ -364,7 +375,7 @@ function Sidebar({
 }) {
   const { role, teamPage } = useShell();
   const href = useHref();
-  const groups = SPACES_GROUPS.map((g) => ({ ...g, items: g.items.filter((i) => visible(i, role, teamPage)) })).filter(
+  const groups = NAV_GROUPS.map((g) => ({ ...g, items: g.items.filter((i) => visible(i, role, teamPage)) })).filter(
     (g) => g.items.length > 0,
   );
   const foot = FOOT_ITEMS.filter((i) => visible(i, role, teamPage));
@@ -429,12 +440,12 @@ function Sidebar({
 }
 
 function NavLink({ item, active, badge, collapsed }: { item: NavItem; active: boolean; badge?: number; collapsed: boolean }) {
-  const href = useHref();
+  const base = useSpacesBase();
   const Icon = item.icon;
   if (collapsed) {
     return (
       <Link
-        href={href(item.path)}
+        href={hrefFor(item, base)}
         aria-label={item.label}
         title={item.label}
         aria-current={active ? "page" : undefined}
@@ -449,7 +460,7 @@ function NavLink({ item, active, badge, collapsed }: { item: NavItem; active: bo
   }
   return (
     <Link
-      href={href(item.path)}
+      href={hrefFor(item, base)}
       aria-current={active ? "page" : undefined}
       className={`flex h-10 w-full items-center gap-2.5 rounded-[10px] border px-2.5 text-small transition-colors ${
         active
@@ -575,12 +586,13 @@ function TopBar({ title, onMenu, onSearch }: { title: string; onMenu: () => void
 function usePaletteEntries(items: readonly NavItem[]): PaletteEntry[] {
   const { role, listings, managed } = useShell();
   const href = useHref();
+  const base = useSpacesBase();
   const offers = useOffers(role === "creator");
 
   return useMemo(() => {
     const out: PaletteEntry[] = [];
     if (role === "creator") out.push({ id: "new", group: "Actions", label: "New listing", href: href("/listings/new"), keywords: "create start" });
-    for (const i of items) out.push({ id: `page-${i.key}`, group: "Pages", label: i.label, href: href(i.path), keywords: i.keywords });
+    for (const i of items) out.push({ id: `page-${i.key}`, group: "Pages", label: i.label, href: hrefFor(i, base), keywords: i.keywords });
     for (const l of listings) {
       out.push({
         id: `l-${l.id}`,
@@ -607,5 +619,5 @@ function usePaletteEntries(items: readonly NavItem[]): PaletteEntry[] {
     const seat = typeof window !== "undefined" ? pendingSeat() : null;
     if (seat) out.push({ id: "seat", group: "Actions", label: "Open team invitation", href: href(`/team?seat=${encodeURIComponent(seat.seat)}`) });
     return out;
-  }, [role, items, listings, managed, offers.data, href]);
+  }, [role, items, listings, managed, offers.data, href, base]);
 }

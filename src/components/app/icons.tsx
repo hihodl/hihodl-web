@@ -222,3 +222,11 @@ export const IconDirector = (p: P) => (
     <path d="m2 7 5 4 5-7 5 7 5-4-2 12H4L2 7z" />
   </Icon>
 );
+
+export const IconWallet = (p: P) => (
+  <Icon {...p}>
+    <path d="M19 7V5.5A1.5 1.5 0 0 0 17.5 4h-12A1.5 1.5 0 0 0 4 5.5v13A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V15" />
+    <path d="M21 9h-5a3 3 0 0 0 0 6h5z" />
+    <circle cx="16" cy="12" r="0.6" fill="currentColor" />
+  </Icon>
+);

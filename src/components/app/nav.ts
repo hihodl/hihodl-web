@@ -19,6 +19,7 @@ import {
   IconSales,
   IconSettings,
   IconTeam,
+  IconWallet,
 } from "./icons";
 
 export type NavKey =
@@ -30,7 +31,8 @@ export type NavKey =
   | "team"
   | "inspire"
   | "account"
-  | "settings";
+  | "settings"
+  | "wallet";
 
 export interface NavItem {
   key: NavKey;
@@ -40,6 +42,11 @@ export interface NavItem {
   icon: ComponentType<SVGProps<SVGSVGElement>>;
   roles: readonly ShellRole[];
   keywords: string;
+  /**
+   * A page of another module, whose path is relative to the PRODUCT (`/wallet`)
+   * rather than to Spaces' base (see hrefFor).
+   */
+  module?: "wallet";
 }
 
 export interface NavGroup {
@@ -69,6 +76,22 @@ export const SPACES_GROUPS: readonly NavGroup[] = [
     ],
   },
 ];
+
+/**
+ * The wallet: a module of its own (routes under src/app/app/wallet), drawn in
+ * the same shell. Everybody signed in can have one.
+ */
+export const WALLET_ITEM: NavItem = {
+  key: "wallet",
+  label: "Wallet",
+  path: "/wallet",
+  icon: IconWallet,
+  roles: ALL,
+  keywords: "solana usdc address receive passkey recovery phrase words export balance",
+  module: "wallet",
+};
+
+export const WALLET_GROUP: NavGroup = { title: "Money", items: [WALLET_ITEM] };
 
 export const ACCOUNT_ITEM: NavItem = {
   key: "account",
@@ -100,15 +123,28 @@ export function visible(item: NavItem, role: ShellRole, team: boolean): boolean 
   return item.roles.includes(role) && (item.key !== "team" || team);
 }
 
+/** Every group the sidebar draws, in order. */
+export const NAV_GROUPS: readonly NavGroup[] = [...SPACES_GROUPS, WALLET_GROUP];
+
 export function itemsFor(role: ShellRole, team = true): NavItem[] {
-  return [...SPACES_GROUPS.flatMap((g) => g.items), ...FOOT_ITEMS].filter((i) => visible(i, role, team));
+  return [...NAV_GROUPS.flatMap((g) => g.items), ...FOOT_ITEMS].filter((i) => visible(i, role, team));
+}
+
+/**
+ * Where an item links on this host. Spaces items hang off Spaces' base
+ * (`/spaces` or `/app/spaces`); another module's hang off the product's own
+ * prefix (`` or `/app`), which is that base without its `/spaces`.
+ */
+export function hrefFor(item: NavItem, spacesBase: string): string {
+  if (item.module) return `${spacesBase.replace(/\/spaces$/, "")}${item.path}`;
+  return `${spacesBase}${item.path}`;
 }
 
 /** Which item a path (relative to the base) belongs to. */
 export function activeKey(rel: string): NavKey | null {
   if (rel === "" || rel === "/") return "overview";
   const first = rel.split("/")[1] ?? "";
-  const all = [...SPACES_GROUPS.flatMap((g) => g.items), ...FOOT_ITEMS];
+  const all = [...NAV_GROUPS.flatMap((g) => g.items), ...FOOT_ITEMS];
   if (first === "x") return "account";
   return all.find((i) => i.path === `/${first}`)?.key ?? null;
 }
@@ -120,6 +156,6 @@ export function titleFor(rel: string): string {
   if (/^\/listings\/[^/]+/.test(rel)) return "Listing";
   if (/^\/x\/?$/.test(rel)) return "X account";
   const key = activeKey(rel);
-  const all = [...SPACES_GROUPS.flatMap((g) => g.items), ...FOOT_ITEMS];
+  const all = [...NAV_GROUPS.flatMap((g) => g.items), ...FOOT_ITEMS];
   return all.find((i) => i.key === key)?.label ?? "Spaces";
 }
