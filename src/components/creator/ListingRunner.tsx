@@ -64,6 +64,7 @@ import { Loading, Notice, Section } from "./parts";
 import { Offers } from "./run/Offers";
 import { Work } from "./run/Work";
 import { ListingSeries } from "./series/Series";
+import { ListingTeam } from "./team/ListingTeam";
 
 const STATUS_LABEL: Record<string, string> = {
   draft: "Draft",
@@ -182,6 +183,8 @@ export function ListingRunner({ spaceId }: { spaceId: string }) {
       <Section label="After the money" title="What you owe">
         <Work space={space} onChanged={() => void load()} />
       </Section>
+
+      <ListingTeam spaceId={space.id} />
 
       <Updates space={space} onChanged={() => void load()} />
     </Page>
