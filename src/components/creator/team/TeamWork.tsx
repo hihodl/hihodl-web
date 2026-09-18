@@ -26,7 +26,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import { btnSmall, btnSmallSecondary, card, eyebrow, pill } from "@/components/ad-space/ui";
-import { calendarDate, deliverableText, eventDates } from "@/lib/ad-space/format";
+import { calendarDate, deliverableNote, deliverableText, eventDates } from "@/lib/ad-space/format";
 import { markDeliverableDelivered, markPositionDelivered, teamWork } from "@/lib/creator/listings";
 import { describeRunError, describeTeamError } from "@/lib/creator/problems";
 import { signOut, useCreatorSession } from "@/lib/creator/session";
@@ -223,11 +223,11 @@ function DeliverableRow({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="break-words text-small text-text">
-            {d.platform ? deliverableText(d.kind, d.platform, d.count) : `${d.count} × ${d.kind.replace(/_/g, " ")}`}
+            {deliverableText(d)}
           </p>
           <p className="mt-1 break-words text-tiny text-text-muted">
             {d.dueDate ? `By ${calendarDate(d.dueDate)}` : "No date"}
-            {d.note ? ` · ${d.note}` : ""}
+            {deliverableNote(d) ? ` · ${deliverableNote(d)}` : ""}
           </p>
         </div>
         <span className={d.deliveredUrl ? pill.done : pill.attention}>{d.deliveredUrl ? "Delivered" : "To deliver"}</span>
