@@ -1,9 +1,10 @@
 /**
  * /creator
  *
- * Stage one of the console: the account, not the listing. There is nothing to
- * draft or publish here yet, and the page says so by not pretending otherwise —
- * it ends on what is still missing rather than on a button that cannot work.
+ * The whole console on one page: what you are selling, where you get paid, the
+ * X account you publish under, and an honest list of what is still missing.
+ * Building and running a listing are their own pages under /creator/listings,
+ * because each is a sitting rather than a glance.
  */
 
 import { CreatorConsole } from "@/components/creator/CreatorConsole";

@@ -1,6 +1,6 @@
 /**
- * The creator console: sign in, where you get paid, your X account, and an
- * honest list of what is still missing.
+ * The creator console: your listings, where you get paid, your X account, and
+ * an honest list of what is still missing.
  *
  * WHY THIS PAGE EXISTS AT ALL
  *
@@ -32,6 +32,7 @@ import { btnSmallSecondary } from "@/components/ad-space/ui";
 import { signOut, useCreatorSession } from "@/lib/creator/session";
 import type { PayoutAddressView, XAccountStatus } from "@/lib/creator/types";
 
+import { Listings } from "./Listings";
 import { PayoutAddress } from "./PayoutAddress";
 import { ReadyToPublish } from "./ReadyToPublish";
 import { SignIn } from "./SignIn";
@@ -45,10 +46,10 @@ export function CreatorConsole() {
   return (
     <div className="mx-auto flex w-full max-w-[720px] flex-col gap-6 px-6 py-18">
       <header className="flex flex-col gap-3">
-        <h1 className="text-h3 font-light text-text">Sell space on what you wear and carry</h1>
+        <h1 className="text-h3 font-light text-text">Sell what you are already doing</h1>
         <p className="text-lead font-light text-text-muted">
-          Brands pay you in USDC, straight to your own wallet. Set up your account here — it takes three steps and no
-          app.
+          Brands pay you in USDC, straight to your own wallet. Set your account up here, build a listing, and run it —
+          all of it from this page, with no app.
         </p>
       </header>
 
@@ -70,6 +71,7 @@ export function CreatorConsole() {
             </button>
           </div>
 
+          <Listings />
           <PayoutAddress onChange={setPayout} />
           <XAccount onChange={setX} />
           <ReadyToPublish x={x} payout={payout} />

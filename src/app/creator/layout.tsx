@@ -18,7 +18,8 @@ import { TopNav } from "@/components/site/TopNav";
 
 export const metadata: Metadata = {
   title: "Creator console",
-  description: "Set up the account you sell HiSpace from: where you get paid, and the X account you publish under.",
+  description:
+    "Publish and run a HiSpace listing from the browser: what a brand can buy, where you get paid, and the X account you publish under.",
   robots: { index: false, follow: false },
 };
 
