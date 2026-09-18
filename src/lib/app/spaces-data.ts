@@ -102,6 +102,9 @@ export function useRefresh(): (...names: string[]) => Promise<unknown> {
 export const useListings = () => useRead("listings", async () => (await myListings()).spaces);
 export const useOffers = (on = true) => useRead(on ? "offers" : null, async () => (await receivedOffers()).offers);
 export const useSales = (on = true) => useRead(on ? "sales" : null, async () => (await getSales()).sales);
+/** One listing's sales, all of them rather than the latest across every listing. */
+export const useListingSales = (spaceId: string | null) =>
+  useRead(spaceId ? "sales" : null, async () => (await getSales(spaceId!)).sales, spaceId ?? "");
 export const useSeats = () => useRead("seats", async () => (await mySeats()).seats);
 export const useWork = (on = true) => useRead(on ? "work" : null, async () => (await teamWork()).work);
 export const useOwed = (on = true) => useRead(on ? "owed" : null, async () => (await teamOwed()).owed);

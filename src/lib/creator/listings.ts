@@ -232,8 +232,9 @@ export function setListingFloor(spaceId: string, minOfferCents: number | null): 
 
 /* ── What arrived, and what you owe ───────────────────────────────── */
 
-export function getSales(): Promise<{ sales: SalesSummary }> {
-  return call<{ sales: SalesSummary }>("ad-space/sales");
+/** With a listing, `recent` is all of that listing's sales; the totals stay the creator's whole. */
+export function getSales(spaceId?: string): Promise<{ sales: SalesSummary }> {
+  return call<{ sales: SalesSummary }>(spaceId ? `ad-space/sales?spaceId=${encodeURIComponent(spaceId)}` : "ad-space/sales");
 }
 
 /** The link that proves one sponsor's spot was delivered. */

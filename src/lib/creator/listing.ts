@@ -464,7 +464,32 @@ export interface SalesSummary {
     status: string;
     receivedUsdc: string;
     paidAt: string | null;
+    /**
+     * Who paid, as they named themselves: the name on the spot, the offer's,
+     * or a session buyer's handle. Never an email. Null when they gave none;
+     * absent from a server older than it.
+     */
+    sponsorName?: string | null;
   }[];
+  /**
+   * The server's totals per listing, over EVERY sale (not just `recent`),
+   * biggest first. Absent from a server older than it.
+   */
+  listings?: SalesListing[];
+}
+
+/** One listing's sales, totalled by the server. */
+export interface SalesListing {
+  spaceId: string;
+  spaceTitle: string;
+  serviceName: string | null;
+  /** What reached the creator from this listing. */
+  receivedUsdc: string;
+  /** Orders that paid (a spot taken over counts each order that paid for it). */
+  orders: number;
+  /** Spots this listing's sponsors hold now. */
+  soldSpots: number;
+  lastPaidAt: string | null;
 }
 
 /* ── Money, as text and as cents ──────────────────────────────────── */
