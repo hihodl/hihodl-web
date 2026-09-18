@@ -37,6 +37,7 @@ import { PayoutAddress } from "./PayoutAddress";
 import { ReadyToPublish } from "./ReadyToPublish";
 import { Sales } from "./Sales";
 import { SignIn } from "./SignIn";
+import { TeamEntry, WaitingSeat } from "./team/Entry";
 import { XAccount } from "./XAccount";
 
 export function CreatorConsole() {
@@ -72,8 +73,10 @@ export function CreatorConsole() {
             </button>
           </div>
 
+          <WaitingSeat />
           <Listings />
           <Sales />
+          <TeamEntry />
           <PayoutAddress onChange={setPayout} />
           <XAccount onChange={setX} />
           <ReadyToPublish x={x} payout={payout} />

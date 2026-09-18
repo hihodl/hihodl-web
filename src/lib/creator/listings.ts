@@ -27,6 +27,7 @@ import type {
   SpaceView,
   Template,
 } from "./listing";
+import type { Assignment, Earning, Invitation, TeamMember, TeamRole } from "./team";
 
 /* ── The catalogue ────────────────────────────────────────────────── */
 
@@ -252,4 +253,102 @@ export function addUpdate(spaceId: string, body: string): Promise<{ update: Spac
 
 export function removeUpdate(spaceId: string, updateId: string): Promise<{ removed: boolean }> {
   return call<{ removed: boolean }>(`ad-space/spaces/${spaceId}/updates/${updateId}`, { method: "DELETE" });
+}
+
+/* ── The team ─────────────────────────────────────────────────────── */
+
+/*
+ * None of these move money, and nothing in them could: the sponsor still pays
+ * the creator's own address in one transaction the sponsor signs. What a
+ * member is owed is the creator's bookkeeping, and the creator pays it.
+ */
+
+/** Everybody on this creator's team, invitations nobody has taken yet included. */
+export function getTeam(): Promise<{ team: TeamMember[] }> {
+  return call<{ team: TeamMember[] }>("ad-space/team");
+}
+
+/**
+ * Open a seat.
+ *
+ * The answer carries the code and the link ONCE. The server keeps only a hash
+ * of the code, so a creator who loses it removes the seat and invites again;
+ * there is no call that shows it back.
+ */
+export function inviteToTeam(label: string, role: TeamRole): Promise<Invitation> {
+  return call<Invitation>("ad-space/team", { json: { label, role } });
+}
+
+/** Take somebody off the team, or close a seat nobody took. What they are already owed stays owed. */
+export function removeFromTeam(memberId: string): Promise<{ member: TeamMember }> {
+  return call<{ member: TeamMember }>(`ad-space/team/${memberId}`, { method: "DELETE" });
+}
+
+/** The teams this person is on, for somebody who works for other creators. */
+export function mySeats(): Promise<{ seats: TeamMember[] }> {
+  return call<{ seats: TeamMember[] }>("ad-space/team/seats");
+}
+
+/** Take the seat a creator opened for you. A code is taken once; a forwarded link opens nothing after. */
+export function acceptSeat(code: string): Promise<{ member: TeamMember }> {
+  return call<{ member: TeamMember }>("ad-space/team/accept", { json: { code } });
+}
+
+/** Everybody on one listing, with their share. The owner's alone to read: a share is money. */
+export function listingTeam(spaceId: string): Promise<{ assignments: Assignment[] }> {
+  return call<{ assignments: Assignment[] }>(`ad-space/spaces/${spaceId}/team`);
+}
+
+/**
+ * Put somebody on a listing for a share of it, or change the share they have.
+ *
+ * The same call does both: the server keys it on (listing, member). The share
+ * is measured against everybody ELSE on the listing, so all of them together
+ * can reach 100% and never pass it.
+ */
+export function assignToListing(
+  spaceId: string,
+  memberId: string,
+  shareBps: number,
+  note?: string | null,
+): Promise<{ assignment: Assignment }> {
+  return call<{ assignment: Assignment }>(`ad-space/spaces/${spaceId}/team`, {
+    method: "PUT",
+    json: { memberId, shareBps, note: note?.trim() ? note.trim() : null },
+  });
+}
+
+/** Take somebody off one listing. Sales already made while they were on it stay owed to them. */
+export function unassignFromListing(spaceId: string, memberId: string): Promise<{ removed: boolean }> {
+  return call<{ removed: boolean }>(`ad-space/spaces/${spaceId}/team/${memberId}`, { method: "DELETE" });
+}
+
+/** What this creator owes their team, and what they have said they paid. */
+export function teamOwed(): Promise<{ owed: Earning[] }> {
+  return call<{ owed: Earning[] }>("ad-space/team/owed");
+}
+
+/** What this person is owed, by every creator they work for. */
+export function teamEarnings(): Promise<{ earnings: Earning[] }> {
+  return call<{ earnings: Earning[] }>("ad-space/team/earnings");
+}
+
+/**
+ * Record that the creator says they paid these.
+ *
+ * We did not send it and we do not check it: `paidTx` is kept as the
+ * creator's own note, never read as proof of anything.
+ */
+export function markTeamPaid(
+  earningIds: readonly string[],
+  paidTx?: string | null,
+  note?: string | null,
+): Promise<{ paid: number }> {
+  return call<{ paid: number }>("ad-space/team/owed/paid", {
+    json: {
+      earningIds,
+      paidTx: paidTx?.trim() ? paidTx.trim() : null,
+      note: note?.trim() ? note.trim() : null,
+    },
+  });
 }

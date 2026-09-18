@@ -27,6 +27,7 @@
 import { CreatorApiError } from "./api";
 import { usd, LIMITS, type ListingDraft, type Template } from "./listing";
 import type { Problem, Step } from "./rules";
+import { TEAM_LIMITS } from "./team";
 
 export interface Refusal {
   /** Sentences that belong beside a field. */
@@ -471,6 +472,64 @@ export function describeSeriesError(e: unknown, template: Template | null): stri
     }
   }
   return refusalSentence(e, template);
+}
+
+/**
+ * A refusal about the team, as one sentence.
+ *
+ * Same shape as the series: the team's own codes are said here, and anything
+ * else — a dead connection, an expired sign-in, too many tries — falls through
+ * to the sentences the rest of the console already uses, rather than being
+ * written a second time.
+ *
+ * The client-side mirror of the share rules (`shareProblem` in ./team) builds
+ * the SAME error and reads it here, so a share refused before it is sent and
+ * one refused by the server get the same words.
+ *
+ * Nothing here says HOLD sends, holds or guarantees what a member is owed,
+ * because we do none of the three: the creator pays their team themselves.
+ */
+export function describeTeamError(e: unknown): string {
+  if (e instanceof CreatorApiError) {
+    switch (e.code) {
+      /* inviting */
+      case "team_label_required":
+        return `Give them a name you will recognise, in at most ${TEAM_LIMITS.LABEL_MAX} characters. Only you see it.`;
+      case "team_role_unknown":
+        return "Pick what they will do: sell for you, or turn up and deliver.";
+      case "team_too_large": {
+        const max = typeof e.details.max === "number" ? e.details.max : TEAM_LIMITS.MAX_MEMBERS;
+        return `${max} people is as big as a team gets here, invitations nobody has taken yet included. Remove somebody, or cancel an invitation, to make room.`;
+      }
+
+      /* taking a seat */
+      case "invite_not_found":
+        return "That invitation is not open any more. It may already have been taken, or cancelled. Ask whoever sent it for a new link.";
+      case "invite_expired":
+        return `That invitation ran out: a link is good for ${TEAM_LIMITS.INVITE_DAYS} days. Ask whoever sent it for a new one.`;
+      case "invite_is_your_own":
+        return "That is an invitation you made. Send the link to the person you made it for; you cannot take a seat on your own team.";
+      case "already_on_this_team":
+        return "You are already on this team, so there is nothing to accept.";
+
+      /* shares */
+      case "member_not_active":
+        return "They have not accepted your invitation yet. Once they have, you can put them on a listing.";
+      case "share_out_of_range":
+        return "A share runs from 0.01% to 100% of what you receive from each sale on this listing.";
+      case "shares_over_a_hundred":
+        return "Everybody on this listing together would come to more than 100% of what you receive, so you would owe more than each sale pays you. Lower this share, or somebody else's.";
+
+      case "VALIDATION_ERROR":
+      case "validation_error":
+        return "Something in that is not one we can save. Check the name, the share and the note, and try again.";
+      case "not_found":
+        return "We cannot find that any more. It may have been removed while this page was open. Refresh and look again.";
+      default:
+        break;
+    }
+  }
+  return describeRunError(e);
 }
 
 /**
