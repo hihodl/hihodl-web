@@ -26,8 +26,9 @@ import type { SpaceCard } from "@/lib/creator/listing";
 import { signOut, useCreatorSession } from "@/lib/creator/session";
 import { creatorText, isSeatCode, pendingSeat, type TeamMember, type WorkListing } from "@/lib/creator/team";
 import type { XAccountStatus } from "@/lib/creator/types";
+import { useAgency, type Agency } from "@/lib/app/agency";
 import { roleOf, waitingOnYou, type ShellRole } from "@/lib/app/spaces-model";
-import { useLastRead, useListings, useOffers, useRefreshAll, useSeats, useWork, useX } from "@/lib/app/spaces-data";
+import { useLastRead, useListings, useOffers, useRefreshAll, useSeats, useTeam, useWork, useX } from "@/lib/app/spaces-data";
 
 import { SpacesBaseProvider, useHref, useSpacesBase } from "./base";
 import { CommandPalette, type PaletteEntry } from "./CommandPalette";
@@ -41,7 +42,7 @@ import {
   IconSearch,
   IconSignOut,
 } from "./icons";
-import { ACCOUNT_ITEM, activeKey, itemsFor, SPACES_GROUPS, titleFor, type NavItem, type NavKey } from "./nav";
+import { ACCOUNT_ITEM, activeKey, itemsFor, SPACES_GROUPS, titleFor, visible, type NavItem, type NavKey } from "./nav";
 import { Alert, glass } from "./ui";
 
 /* ── What every page inside can read ──────────────────────────────── */
@@ -56,6 +57,10 @@ export interface ShellState {
   work: WorkListing[];
   /** The listings this person sells for somebody else. */
   managed: WorkListing[];
+  /** Creator or Creative Director (lib/app/agency). */
+  agency: Agency;
+  /** Whether there is a Team page for this person at all. */
+  teamPage: boolean;
 }
 
 const ShellContext = createContext<ShellState | null>(null);
@@ -131,14 +136,23 @@ function SignedIn({ session, children }: { session: Session; children: ReactNode
   const seats = useSeats();
   const x = useX();
   const work = useWork();
+  const team = useTeam();
+  const agency = useAgency(session.user.id, team.data);
 
-  const ready = listings.data !== undefined && seats.data !== undefined && (x.data !== undefined || x.error);
+  // The team is read before the first paint so a Creative Director's Team item
+  // is there from the start; a failed read only means no team is shown.
+  const ready =
+    listings.data !== undefined &&
+    seats.data !== undefined &&
+    (x.data !== undefined || x.error) &&
+    (team.data !== undefined || team.error);
   const failed = listings.error ?? seats.error;
 
   const state = useMemo<ShellState | null>(() => {
     if (!ready || !listings.data || !seats.data) return null;
     const role = roleOf(listings.data, seats.data, x.data ?? null);
     const w = work.data ?? [];
+    const onTeams = seats.data.some((s) => s.status === "active");
     return {
       session,
       role,
@@ -147,8 +161,10 @@ function SignedIn({ session, children }: { session: Session; children: ReactNode
       x: x.data ?? null,
       work: w,
       managed: w.filter((l) => l.role === "manager"),
+      agency,
+      teamPage: role !== "creator" || agency.on || onTeams,
     };
-  }, [ready, listings.data, seats.data, x.data, work.data, session]);
+  }, [ready, listings.data, seats.data, x.data, work.data, session, agency]);
 
   if (failed && !state) {
     return (
@@ -226,7 +242,7 @@ function Frame({ children }: { children: ReactNode }) {
   }, []);
 
   // A rep's whole product is Deliveries: the module's home sends them there.
-  const allowed = itemsFor(shell.role);
+  const allowed = itemsFor(shell.role, shell.teamPage);
   const here = active ? allowed.some((i) => i.key === active) : true;
   useEffect(() => {
     if (!here) router.replace(href(allowed[0]?.path ?? "/deliveries"));
@@ -329,9 +345,9 @@ function Sidebar({
   active: NavKey | null;
   badges: Partial<Record<NavKey, number>>;
 }) {
-  const { role } = useShell();
+  const { role, teamPage } = useShell();
   const href = useHref();
-  const groups = SPACES_GROUPS.map((g) => ({ ...g, items: g.items.filter((i) => i.roles.includes(role)) })).filter(
+  const groups = SPACES_GROUPS.map((g) => ({ ...g, items: g.items.filter((i) => visible(i, role, teamPage)) })).filter(
     (g) => g.items.length > 0,
   );
   const account = ACCOUNT_ITEM.roles.includes(role) ? ACCOUNT_ITEM : null;
@@ -434,11 +450,14 @@ function NavLink({ item, active, badge, collapsed }: { item: NavItem; active: bo
 const ROLE_LABEL: Record<ShellRole, string> = { creator: "Creator", manager: "Manager", rep: "Rep" };
 
 function UserCard({ collapsed }: { collapsed: boolean }) {
-  const { session, x, role, seats } = useShell();
+  const { session, x, role, seats, agency } = useShell();
+  const href = useHref();
   const linked = x?.linked ? x : null;
   const name = linked ? `@${linked.handle}` : session.user.email ?? "Signed in";
   const seat = role !== "creator" ? seats.find((s) => s.status === "active" && s.role === role) : null;
-  const sub = seat ? `${ROLE_LABEL[role]} · ${creatorText(seat) ?? "a creator"}` : ROLE_LABEL[role];
+  const title = role === "creator" && agency.on ? "Creative Director" : ROLE_LABEL[role];
+  const sub = seat ? `${title} · ${creatorText(seat) ?? "a creator"}` : title;
+  const upgrade = role === "creator" && !agency.on;
   const initial = (linked?.handle ?? session.user.email ?? "?").slice(0, 1).toUpperCase();
   const [broken, setBroken] = useState(false);
 
@@ -466,7 +485,14 @@ function UserCard({ collapsed }: { collapsed: boolean }) {
       {avatar}
       <div className="min-w-0 flex-1">
         <p className="truncate text-small text-text">{name}</p>
-        <p className="truncate text-[11px] text-[#9FB7C2]">{sub}</p>
+        <p className="flex min-w-0 items-center gap-1.5 text-[11px] text-[#9FB7C2]">
+          <span className="truncate">{sub}</span>
+          {upgrade ? (
+            <Link href={`${href("/account")}#team`} className="shrink-0 text-amber hover:text-[#FFE2A1]">
+              · Run a team
+            </Link>
+          ) : null}
+        </p>
       </div>
       <button
         type="button"

@@ -45,11 +45,11 @@ export function Overview() {
 /* ── Creator ──────────────────────────────────────────────────────── */
 
 function CreatorOverview() {
-  const { listings, work } = useShell();
+  const { listings, work, agency } = useShell();
   const href = useHref();
   const sales = useSales();
   const offers = useOffers();
-  const owed = useOwed();
+  const owed = useOwed(agency.on);
   const running = useMemo(() => listings.filter((l) => l.status !== "draft").map((l) => l.id), [listings]);
   const views = useListingViews(running);
 
@@ -106,7 +106,15 @@ function CreatorOverview() {
         <MiniMetric label="Drafts" value={listings.filter((l) => l.status === "draft").length} href={href("/listings?status=draft")} />
         <MiniMetric label="Open spots" value={positions - sold} href={href("/listings?status=live")} />
         <MiniMetric label="Spots sold" value={sales.data?.soldSpots ?? "…"} href={href("/sales")} />
-        <MiniMetric label="Owed to team" value={usdcText(owedToTeam).replace(/\.00$/, "")} href={href("/team?tab=owed")} />
+        {agency.on ? (
+          <MiniMetric label="Owed to team" value={usdcText(owedToTeam).replace(/\.00$/, "")} href={href("/team?tab=owed")} />
+        ) : (
+          <MiniMetric
+            label="Closed"
+            value={listings.filter((l) => l.status === "closed" || l.status === "delisted").length}
+            href={href("/listings?status=closed")}
+          />
+        )}
         <MiniMetric label="Sell-through" value={<span className="text-[14px]">{positions ? `${Math.round((sold / positions) * 100)}%` : "–"}</span>} />
       </section>
 

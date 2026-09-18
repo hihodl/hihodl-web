@@ -76,8 +76,16 @@ export const ACCOUNT_ITEM: NavItem = {
   keywords: "x twitter payout wallet address settings",
 };
 
-export function itemsFor(role: ShellRole): NavItem[] {
-  return [...SPACES_GROUPS.flatMap((g) => g.items), ACCOUNT_ITEM].filter((i) => i.roles.includes(role));
+/**
+ * What this person may open. `team` is false for a creator who runs no team
+ * and sits on nobody else's: then there is no Team page at all.
+ */
+export function visible(item: NavItem, role: ShellRole, team: boolean): boolean {
+  return item.roles.includes(role) && (item.key !== "team" || team);
+}
+
+export function itemsFor(role: ShellRole, team = true): NavItem[] {
+  return [...SPACES_GROUPS.flatMap((g) => g.items), ACCOUNT_ITEM].filter((i) => visible(i, role, team));
 }
 
 /** Which item a path (relative to the base) belongs to. */
