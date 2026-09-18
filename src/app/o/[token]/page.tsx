@@ -62,12 +62,11 @@ export default async function OfferPage({ params }: { params: { token: string } 
         )}
       </main>
       <footer className="hairline">
-        <div className="container-page flex flex-col gap-3 py-10">
-          <Wordmark className="h-5 w-auto self-start text-text" />
-          <p className="max-w-xl text-small text-text-muted">
-            Powered by HOLD. Nothing you offer is paid or locked; if it&rsquo;s accepted, you pay the creator directly in
-            USDC and HOLD never holds the money. Keep this link to yourself: anyone who has it can manage this offer.
+        <div className="container-page flex flex-col gap-6 py-10">
+          <p className="max-w-xl text-tiny text-text-faint">
+            Keep this link to yourself: anyone who has it can manage this offer.
           </p>
+          <Wordmark className="h-5 w-auto self-start text-text-muted" />
         </div>
       </footer>
     </>
