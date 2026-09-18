@@ -63,15 +63,19 @@ export type Method = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
  * A body is sent whenever `json` is given, `null` included: several routes
  * take `{ minOfferCents: null }` to mean "no floor at all", which is not the
  * same as sending nothing.
+ *
+ * `file` sends the bytes themselves with their own type instead (a listing's
+ * picture: the route takes the raw image, not JSON).
  */
 export async function call<T>(
   path: string,
-  init: { method?: Method; json?: unknown } = {},
+  init: { method?: Method; json?: unknown; file?: Blob } = {},
 ): Promise<T> {
   const token = await accessToken();
   if (!token) throw new CreatorApiError("UNAUTHORIZED", 401);
 
-  const hasBody = init.json !== undefined;
+  const file = init.file;
+  const hasBody = init.json !== undefined || file !== undefined;
   let res: Response;
   try {
     res = await fetch(`${API_BASE}/${path}`, {
@@ -79,9 +83,9 @@ export async function call<T>(
       headers: {
         accept: "application/json",
         authorization: `Bearer ${token}`,
-        ...(hasBody ? { "content-type": "application/json" } : {}),
+        ...(file ? { "content-type": file.type } : hasBody ? { "content-type": "application/json" } : {}),
       },
-      body: hasBody ? JSON.stringify(init.json) : undefined,
+      body: file ?? (hasBody ? JSON.stringify(init.json) : undefined),
       cache: "no-store",
     });
   } catch {

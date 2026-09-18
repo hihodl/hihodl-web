@@ -94,13 +94,11 @@ export function ListingTeam({ spaceId }: { spaceId: string }) {
   const waiting = team.filter((m) => m.status === "invited").length;
 
   return (
-    <Section label="Who works it" title="Team on this listing">
+    <Section title="Who works it">
       {assignments === null ? (
         <Loading what="who is on this listing" />
       ) : (
         <div className="flex flex-col gap-6">
-          <p className="text-tiny text-text-muted">Share of what you receive per sale. You pay it yourself.</p>
-
           <RoomLeft room={room} />
 
           {assignments.length > 0 ? (
@@ -126,10 +124,8 @@ export function ListingTeam({ spaceId }: { spaceId: string }) {
             </p>
           ) : free.length === 0 ? (
             <p className="text-small text-text-muted">
-              {assignments.length > 0 ? "Everybody on your team who has accepted is on this listing." : "Nobody on your team has accepted yet."}
-              {waiting > 0
-                ? ` ${waiting} ${waiting === 1 ? "invitation is" : "invitations are"} still waiting — somebody can be put on a listing once they have accepted.`
-                : ""}
+              {assignments.length > 0 ? "Everyone who has accepted is on it." : "Nobody has accepted yet."}
+              {waiting > 0 ? ` ${waiting} ${waiting === 1 ? "invitation" : "invitations"} open.` : ""}
             </p>
           ) : (
             <AddForm spaceId={spaceId} free={free} assignments={assignments} room={room} onChanged={() => void load()} />
@@ -197,7 +193,7 @@ function AssignmentRow({
         <div className="flex flex-col gap-4">
           <Field
             label="Their share"
-            hint={`Up to ${shareText(roomForThem)} — what is left once everybody else on this listing has theirs.`}
+            hint={`Up to ${shareText(roomForThem)}`}
             problems={percent.trim() && problem ? [problem] : []}
           >
             <Percent value={percent} onChange={setPercent} />
@@ -205,9 +201,7 @@ function AssignmentRow({
           <Field label="Note" hint="Optional. Only you see it.">
             <Text value={note} onChange={setNote} maxLength={TEAM_LIMITS.NOTE_MAX} placeholder="Runs the booth both days" />
           </Field>
-          <p className="text-tiny text-text-muted">
-            Counts from the next sale. Past sales keep the old share.
-          </p>
+          <p className="text-tiny text-text-muted">From the next sale.</p>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -245,9 +239,7 @@ function AssignmentRow({
       ) : asking ? (
         <div className="flex flex-col gap-3 rounded-input border border-[color:var(--color-hairline-strong)] px-4 py-3">
           <p className="text-small text-text">Take {assignment.label} off this listing?</p>
-          <p className="text-small text-text-muted">
-            Sales from now on owe them nothing. What earlier sales already owe them stays owed, and they stay on your team.
-          </p>
+          <p className="text-small text-text-muted">Past sales stay owed.</p>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"

@@ -108,6 +108,22 @@ export function shareListing(spaceId: string): Promise<{ url: string; text: stri
   return call<{ url: string; text: string }>(`ad-space/spaces/${spaceId}/share`);
 }
 
+/* ── The listing's picture ────────────────────────────────────────── */
+
+/** What the picture route takes: the backend's `MEDIA_TYPES` and `MEDIA_MAX_BYTES`. */
+export const BANNER_TYPES = ["image/png", "image/jpeg", "image/webp"] as const;
+export const BANNER_MAX_BYTES = 3 * 1024 * 1024;
+
+/** The creator's own picture on top of this listing, sent as the image itself. The owner only. */
+export function setListingBanner(spaceId: string, image: Blob): Promise<{ bannerUrl: string | null }> {
+  return call<{ bannerUrl: string | null }>(`ad-space/spaces/${spaceId}/banner`, { method: "POST", file: image });
+}
+
+/** Back to the gradient. */
+export function clearListingBanner(spaceId: string): Promise<{ bannerUrl: null }> {
+  return call<{ bannerUrl: null }>(`ad-space/spaces/${spaceId}/banner`, { method: "DELETE" });
+}
+
 /* ── One listing, several events ──────────────────────────────────── */
 
 /**
