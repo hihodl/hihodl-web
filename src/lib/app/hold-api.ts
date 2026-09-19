@@ -159,6 +159,26 @@ export interface Transfer {
   parentIntentId?: string | null;
   createdAt: string;
   updatedAt?: string;
+  /* The rest of what the row carries. The app's own transform reads every one
+     of these (see _useDashboardPayments.transformRawTransfer), and a web row
+     built without them is a row that says less than the app's. */
+  /** The subaccount slug this transfer belongs to: `main`, `savings`, a pocket. */
+  account?: string | null;
+  /** The server's own verb for the row — "Booked", "Withdrawn". It wins over our vocabulary. */
+  actionLabel?: string | null;
+  /** The dollars this was worth when it happened, frozen. Absent on older rows. */
+  usdValueAtTx?: number | null;
+  /**
+   * What a `move` IS, next to what it says. A yield placement is labelled
+   * "Main → Savings" like a real transfer, so the sign cannot be read off the
+   * label — see moveSignForScope.
+   */
+  moveKind?: "transfer" | "yield" | "bridge" | null;
+  bridgeFrom?: string | null;
+  bridgeTo?: string | null;
+  /** The counterparty's photo, when the ledger is allowed to show it. */
+  counterpartyAvatar?: string | null;
+  profileEmoji?: string | null;
 }
 
 export interface TransfersAnswer {

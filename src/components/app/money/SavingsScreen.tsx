@@ -153,9 +153,12 @@ function productsFrom(reserves: readonly YieldReserve[]): EarnProduct[] {
 }
 
 export function SavingsScreen() {
-  const positions = useYieldPositions();
+  const yieldRead = useYieldPositions();
+  // The read names the venue that did not answer; the rows are what it did get.
+  const positions = { ...yieldRead, data: yieldRead.data?.positions };
+  const venuesDown = yieldRead.data?.failed ?? [];
   const reserves = useYieldReserves();
-  const { bySlug, rows } = useSuppliedBySlug(positions.data);
+  const { bySlug, rows } = useSuppliedBySlug();
 
   const products = useMemo(() => productsFrom(reserves.data ?? []), [reserves.data]);
   const maxApy = products.reduce((m, p) => Math.max(m, p.apy), 0);
@@ -172,7 +175,7 @@ export function SavingsScreen() {
             (!r.chain || !p.chain || r.chain.toLowerCase() === p.chain.toLowerCase()),
         );
         const gross = reserve?.supplyApy ?? 0;
-        return { usd: p.suppliedUsd, apy: gross * (1 - perfFeeForPosition(rows, p)) };
+        return { usd: p.suppliedUsd, apy: gross * (1 - perfFeeForPosition({ rows, chain: p.chain ?? null, token: p.token })) };
       }),
     [positions.data, reserves.data, rows],
   );

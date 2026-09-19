@@ -118,9 +118,12 @@ export function InvestScreen() {
   /* Supplied money is not in `/balances`, which is liquid by design. The app
    * folds the working SOL back into the hero for exactly that reason: without
    * it the two screens print different totals for the same money. */
-  const positions = useYieldPositions();
+  const yieldRead = useYieldPositions();
+  // The read names the venue that did not answer; the rows are what it did get.
+  const positions = { ...yieldRead, data: yieldRead.data?.positions };
+  const venuesDown = yieldRead.data?.failed ?? [];
   const reserves = useYieldReserves();
-  const { rows: placementRows } = useSuppliedBySlug(positions.data);
+  const { rows: placementRows } = useSuppliedBySlug();
   const working = useMemo(() => {
     const invested = (positions.data ?? []).filter((p) => !isStable(p.token));
     const usd = invested.reduce((s, p) => s + p.suppliedUsd, 0);
@@ -130,7 +133,7 @@ export function InvestScreen() {
     const rated = invested
       .map((p) => {
         const reserve = (reserves.data ?? []).find((r) => (r.token || r.symbol || "").toLowerCase() === p.token.toLowerCase());
-        return { usd: p.suppliedUsd, apy: (reserve?.supplyApy ?? 0) * (1 - perfFeeForPosition(placementRows, p)) };
+        return { usd: p.suppliedUsd, apy: (reserve?.supplyApy ?? 0) * (1 - perfFeeForPosition({ rows: placementRows, chain: p.chain ?? null, token: p.token })) };
       })
       .filter((r) => r.apy > 0 && r.usd > 0);
     const apy = rated.length ? rated.reduce((s, r) => s + r.apy * r.usd, 0) / rated.reduce((s, r) => s + r.usd, 0) : null;
