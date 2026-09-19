@@ -182,3 +182,77 @@ export async function evaluatePrf(credentialIds: readonly string[]): Promise<Prf
 export function normalizeCredentialId(id: string): string {
   return id.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
+
+/** The server's WebAuthn request options, as JSON (base64url ids and challenge). */
+export interface ServerAssertionOptions {
+  challenge: string;
+  rpId?: string;
+  timeout?: number;
+  allowCredentials?: { id: string; type: "public-key"; transports?: string[] }[];
+}
+
+export interface BoundAssertion {
+  credentialId: string;
+  /** This passkey's PRF output: opens the wallet. Never sent anywhere; the caller wipes it. */
+  prf: Uint8Array;
+  /** The assertion for the server (@simplewebauthn/server's AuthenticationResponseJSON), without the PRF result. */
+  assertion: {
+    id: string;
+    rawId: string;
+    type: "public-key";
+    response: { clientDataJSON: string; authenticatorData: string; signature: string; userHandle?: string };
+    clientExtensionResults: Record<string, never>;
+  };
+}
+
+/**
+ * ONE ceremony that does two things: signs the SERVER's challenge (which
+ * binds the assertion to one withdrawal's exact bytes) and evaluates PRF
+ * (which opens the wallet that signs them). So a withdrawal is one prompt.
+ *
+ * `onlyIds` narrows the server's list to the passkeys that open this wallet:
+ * a passkey that signs in but has no wrapping could authorize and then fail
+ * to sign.
+ */
+export async function assertWithPrf(options: ServerAssertionOptions, onlyIds: readonly string[]): Promise<BoundAssertion> {
+  if (!passkeysHere()) throw new PasskeyError("unavailable");
+  const wanted = new Set(onlyIds.map(normalizeCredentialId));
+  const server = (options.allowCredentials ?? []).map((c) => normalizeCredentialId(c.id));
+  const both = server.length ? server.filter((id) => wanted.has(id)) : [...wanted];
+  const ids = both.length ? both : [...wanted];
+  const publicKey: PublicKeyCredentialRequestOptions = {
+    challenge: fromBase64(options.challenge),
+    rpId: RP_ID,
+    allowCredentials: ids.map((id) => ({ type: "public-key" as const, id: fromBase64(id) })),
+    userVerification: "required",
+    timeout: options.timeout ?? 60000,
+    extensions: { prf: { eval: { first: prfSaltBytes() } } } as AuthenticationExtensionsClientInputs,
+  };
+  let cred: PublicKeyCredential;
+  try {
+    const got = await navigator.credentials.get({ publicKey });
+    if (!got) throw new PasskeyError("cancelled");
+    cred = got as PublicKeyCredential;
+  } catch (e) {
+    throw e instanceof PasskeyError ? e : mapError(e);
+  }
+  const first = asBytes(prfOf(cred)?.results?.first);
+  if (!first || first.length !== 32) throw new PasskeyError("no_prf");
+  const res = cred.response as AuthenticatorAssertionResponse;
+  return {
+    credentialId: cred.id,
+    prf: first,
+    assertion: {
+      id: cred.id,
+      rawId: toBase64Url(new Uint8Array(cred.rawId)),
+      type: "public-key",
+      response: {
+        clientDataJSON: toBase64Url(new Uint8Array(res.clientDataJSON)),
+        authenticatorData: toBase64Url(new Uint8Array(res.authenticatorData)),
+        signature: toBase64Url(new Uint8Array(res.signature)),
+        ...(res.userHandle ? { userHandle: toBase64Url(new Uint8Array(res.userHandle)) } : {}),
+      },
+      clientExtensionResults: {},
+    },
+  };
+}

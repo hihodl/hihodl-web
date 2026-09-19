@@ -8,7 +8,8 @@
  *   no wallet anywhere        → Create (passkey with PRF, then the wallet)
  *   a wallet in the HOLD app  → "Open the HOLD app" (we never make a second one)
  *   a web wallet, locked      → Unlock with passkey
- *   unlocked                  → Home: Balance · Receive · Settings
+ *   unlocked                  → Home: Balance · Withdraw · Receive · Settings
+ *   Withdraw                  → approved on the linked phone (Withdraw.tsx)
  *   Settings                  → Add another passkey · Export 12 words
  *
  * Design and threat model: documentation/web-wallet-passkey-phase-1.md.
@@ -48,6 +49,8 @@ import {
 } from "@/lib/wallet/flows";
 import { createPasskeyWithPrf, evaluatePrf, normalizeCredentialId, PasskeyError, passkeysHere } from "@/lib/wallet/passkey";
 import { lock, unlockWith, useVault } from "@/lib/wallet/vault";
+
+import { Withdraw } from "./Withdraw";
 
 /* ── Small parts ──────────────────────────────────────────────────── */
 
@@ -391,9 +394,10 @@ function Unlock() {
 
 /* ── Home ─────────────────────────────────────────────────────────── */
 
-type HomeScreen = "home" | "receive" | "settings" | "export" | "add";
+type HomeScreen = "home" | "withdraw" | "receive" | "settings" | "export" | "add";
 
 function Home({ address, status, onChanged }: { address: string; status: WalletStatus; onChanged: () => void }) {
+  const { session } = useShell();
   const [screen, setScreen] = useState<HomeScreen>("home");
   const [balances, setBalances] = useState<Balances | null>(null);
   const [balanceError, setBalanceError] = useState(false);
@@ -409,6 +413,7 @@ function Home({ address, status, onChanged }: { address: string; status: WalletS
   const toSettings = () => setScreen("settings");
 
   if (screen === "receive") return <Receive address={address} onBack={back} />;
+  if (screen === "withdraw") return <Withdraw uid={session.user.id} from={address} balances={balances} onBack={back} />;
   if (screen === "settings")
     return <Settings wrappings={status.wrappings} onBack={back} onExport={() => setScreen("export")} onAdd={() => setScreen("add")} onChanged={onChanged} />;
   if (screen === "export") return <Export onBack={toSettings} />;
@@ -433,10 +438,12 @@ function Home({ address, status, onChanged }: { address: string; status: WalletS
           onClick={() => setScreen("receive")}
         />
         <Tile label="SOL" value={balances ? fmt(balances.sol, 4) : balanceError ? "—" : "…"} sub="For network fees" onClick={() => setScreen("receive")} />
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <Tile label="Withdraw" value="Send out" sub="Approved on your phone" onClick={() => setScreen("withdraw")} />
         <Tile label="Receive" value="Address & QR" sub="USDC or SOL on Solana only" onClick={() => setScreen("receive")} />
         <Tile label="Settings" value="Passkeys & words" sub={`${status.wrappings.length} passkey${status.wrappings.length === 1 ? "" : "s"} open this wallet`} onClick={toSettings} />
       </div>
-      <p className="px-1 text-tiny text-[#7F97A3]">Sending from the web is not available yet. Use the HOLD app to send.</p>
     </div>
   );
 }

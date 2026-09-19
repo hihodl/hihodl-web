@@ -70,6 +70,26 @@ const nextConfig = {
           { key: "Referrer-Policy", value: "no-referrer" },
         ],
       },
+      // A phone-link address carries a session id and its public key
+      // (link-your-phone-and-approved-withdrawals.md): not cached, not
+      // indexed, no Referer. Both spellings: app.hihodl.xyz/link/… is
+      // rewritten to /app/link/… by the middleware.
+      {
+        source: "/link/:path*",
+        headers: [
+          { key: "Cache-Control", value: "private, no-store, max-age=0" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+          { key: "Referrer-Policy", value: "no-referrer" },
+        ],
+      },
+      {
+        source: "/app/link/:path*",
+        headers: [
+          { key: "Cache-Control", value: "private, no-store, max-age=0" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+          { key: "Referrer-Policy", value: "no-referrer" },
+        ],
+      },
       {
         source: "/.well-known/apple-app-site-association",
         headers: [

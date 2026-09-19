@@ -9,6 +9,7 @@
  *   Recovery codes  emailed, only when the account has none
  *   Wallet          the Solana web wallet, when the rollout gate lets it be made;
  *                   "your wallet is in the HOLD app" when the app made one
+ *   Link your phone required, no skip, while no phone is linked (link/LinkPhone)
  *
  * What to ask is decided from the server once, when the page opens
  * (lib/app/onboarding), so closing the tab half-way means coming back to the
@@ -43,6 +44,7 @@ import { registerWalletAddress, sealNewWallet } from "@/lib/wallet/flows";
 import { createPasskeyWithPrf, evaluatePrf, PasskeyError } from "@/lib/wallet/passkey";
 import { lock, unlockWith } from "@/lib/wallet/vault";
 
+import { LinkPhone } from "../link/LinkPhone";
 import { Door } from "./Door";
 import { Avatar, btnGhost, btnLink, btnPrimary, DoorCard, HoldMark, inputCls, Note, Warn } from "./kit";
 
@@ -65,6 +67,7 @@ const TITLES: Record<StepKey, string> = {
   recovery: "Your recovery codes",
   wallet: "Create your wallet",
   "app-wallet": "Your wallet",
+  link: "Link your phone",
 };
 
 /** Where to go once done: back where they were going, or the Dashboard. */
@@ -173,6 +176,7 @@ function Flow({ session }: { session: Session }) {
           {key === "recovery" ? <RecoveryStep {...props} /> : null}
           {key === "wallet" ? <WalletStep {...props} onSkip={() => { saveChoice(session.user.id, "wallet"); complete(key); }} /> : null}
           {key === "app-wallet" ? <AppWalletStep onDone={() => { saveChoice(session.user.id, "appWallet"); complete(key); }} /> : null}
+          {key === "link" ? <LinkPhone onDone={() => { facts.linkedPhones = 1; complete(key); }} /> : null}
         </div>
       </div>
     </DoorCard>

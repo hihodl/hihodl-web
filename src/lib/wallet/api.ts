@@ -31,7 +31,7 @@ type Method = "GET" | "POST" | "PUT" | "DELETE";
  * One call. `raw` is for the two passkey routes that answer with a bare body
  * instead of `{ data }`.
  */
-async function send<T>(path: string, init: { method?: Method; json?: unknown; auth?: boolean; raw?: boolean } = {}): Promise<T> {
+export async function send<T>(path: string, init: { method?: Method; json?: unknown; auth?: boolean; raw?: boolean } = {}): Promise<T> {
   const headers: Record<string, string> = { accept: "application/json" };
   if (init.auth !== false) {
     const token = await accessToken();

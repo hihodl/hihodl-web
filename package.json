@@ -25,7 +25,8 @@
     "react-dom": "^18.3.1",
     "resend": "^6.4.0",
     "stripe": "^17.7.0",
-    "swr": "^2.3.6"
+    "swr": "^2.3.6",
+    "tweetnacl": "^1.0.3"
   },
   "devDependencies": {
     "@types/node": "^20",

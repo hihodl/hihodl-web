@@ -13,6 +13,9 @@
  *   wallet     the Solana web wallet, only when /wallet-backup/status says
  *              enabled and state none; `app_wallet` shows a note; a closed
  *              rollout gate skips it silently
+ *   link       link your phone (documentation/link-your-phone-and-approved-
+ *              withdrawals.md): required, no skip, for everybody with no
+ *              linked phone; the phone is what approves every withdrawal
  *
  * Every "is it done" is read from the server, so a person who finished these
  * in the app goes straight in, and somebody who closed the tab half-way
@@ -25,12 +28,13 @@
 import type { Session } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
 
+import { activeLinkedDevices } from "@/lib/link/api";
 import { getWalletStatus, listPasskeys, type WalletStatus } from "@/lib/wallet/api";
 import { passkeysHere } from "@/lib/wallet/passkey";
 
 import { chosenUsername, getMe, recoveryCodesStatus, type Me } from "./me";
 
-export type StepKey = "username" | "profile" | "passkey" | "recovery" | "wallet" | "app-wallet";
+export type StepKey = "username" | "profile" | "passkey" | "recovery" | "wallet" | "app-wallet" | "link";
 
 export interface Facts {
   me: Me;
@@ -42,6 +46,12 @@ export interface Facts {
   wallet: WalletStatus | null;
   /** Can this page run a passkey ceremony at all (an origin under hihodl.xyz, a browser that does WebAuthn)? */
   canPasskey: boolean;
+  /**
+   * How many phones are linked and not revoked. null when it could not be
+   * read (an older backend): then the link step is not asked, rather than
+   * asked of a server that cannot finish it.
+   */
+  linkedPhones: number | null;
 }
 
 export interface Choices {
@@ -53,7 +63,8 @@ export interface Choices {
   appWallet?: boolean;
 }
 
-const doneKey = (uid: string) => `hold-onboarded:${uid}`;
+// v2: linking a phone became a step, so everybody onboarded before it is asked once more.
+const doneKey = (uid: string) => `hold-onboarded:v2:${uid}`;
 const choicesKey = (uid: string) => `hold-onboarding:${uid}`;
 
 export function readChoices(uid: string): Choices {
@@ -90,11 +101,15 @@ function isOnboarded(uid: string): boolean {
 
 export async function readFacts(): Promise<Facts> {
   const canPasskey = passkeysHere();
-  const [me, passkeys, codes, wallet] = await Promise.all([
+  const [me, passkeys, codes, wallet, phones] = await Promise.all([
     getMe(),
     listPasskeys(),
     recoveryCodesStatus(),
     getWalletStatus().catch(() => null),
+    activeLinkedDevices().then(
+      (d) => d.length,
+      () => null,
+    ),
   ]);
   return {
     me,
@@ -104,6 +119,7 @@ export async function readFacts(): Promise<Facts> {
     hasCodes: codes.hasActiveCodes,
     wallet,
     canPasskey,
+    linkedPhones: phones,
   };
 }
 
@@ -126,6 +142,7 @@ export function stepsFor(f: Facts, c: Choices): StepKey[] {
   if (f.canPasskey && !f.hasPasskey) required.push("passkey");
   if (!f.hasCodes) required.push("recovery");
   if (walletToMake(f) && !c.wallet) required.push("wallet");
+  if (f.linkedPhones === 0) required.push("link");
   if (required.length === 0) return [];
 
   const out: StepKey[] = [];
@@ -135,6 +152,8 @@ export function stepsFor(f: Facts, c: Choices): StepKey[] {
   if (required.includes("recovery")) out.push("recovery");
   if (required.includes("wallet")) out.push("wallet");
   else if (f.wallet?.state === "app_wallet" && f.wallet.enabled !== false && !c.appWallet) out.push("app-wallet");
+  // Last: on Android the phone receives the wallet made just before.
+  if (required.includes("link")) out.push("link");
   return out;
 }
 
