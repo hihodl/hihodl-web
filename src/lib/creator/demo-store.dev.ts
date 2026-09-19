@@ -250,8 +250,10 @@ interface Store {
   armed: ArmedError | null;
   /** Creator or Creative Director, per creator (GET/PATCH /ad-space/settings). */
   agency: Record<UserId, boolean | null>;
-  /** The default page ground, per creator (GET/PATCH /ad-space/settings, `pageGround`). */
+  /** The profile's page ground, per creator (GET/PATCH /ad-space/settings, `pageGround`). */
   grounds?: Record<UserId, string | null>;
+  /** The listings' default ground, per creator (`listingGround`); null follows the profile. */
+  listingGrounds?: Record<UserId, string | null>;
   /** The id counter, kept with the store so ids made after a reload do not repeat. */
   idSeq: number;
 }
@@ -710,8 +712,10 @@ function seeded(): Store {
   const s: Store = {
     seed: "seeded",
     agency: {},
-    // The creator's pages stand on the app's own dark by default; one listing wears White.
+    // The creator's profile stands on the app's own dark, their listings on
+    // HOLD blue by default, and one listing wears White.
     grounds: { [OWNER]: "app" },
+    listingGrounds: { [OWNER]: "hold" },
     idSeq: 0,
     accounts: new Map(),
     spaces: [],
@@ -1661,7 +1665,7 @@ function spaceView(s: Store, sp: SpaceRec, viewer: UserId, origin: string): Spac
         return [view, { ...ph, ready: onSide.length > 0 && onSide.every((q) => !!q.rect) }];
       }),
     ),
-    pageGround: sp.pageGround ?? s.grounds?.[sp.ownerId] ?? null,
+    pageGround: sp.pageGround ?? s.listingGrounds?.[sp.ownerId] ?? s.grounds?.[sp.ownerId] ?? null,
     pageGroundOwn: sp.pageGround ?? null,
   };
 }
@@ -1685,6 +1689,7 @@ function cardView(s: Store, sp: SpaceRec): SpaceCard {
     awaitingReview: sp.positions.filter((p) => p.content?.status === "pending").length,
     event: eventById(s, sp.eventId),
     bannerUrl: sp.bannerUrl ?? null,
+    pageGroundOwn: sp.pageGround ?? null,
     bannerGradient: "steel",
   };
 }
@@ -2380,6 +2385,7 @@ function route(req: DemoRequest): DemoResponse {
   if (is("GET", "ad-space/settings") || is("PATCH", "ad-space/settings")) {
     if (method === "PATCH" && req.body && "agencyMode" in req.body) s.agency[viewer] = req.body.agencyMode === true;
     if (method === "PATCH" && req.body && "pageGround" in req.body) (s.grounds ??= {})[viewer] = str(req.body.pageGround);
+    if (method === "PATCH" && req.body && "listingGround" in req.body) (s.listingGrounds ??= {})[viewer] = str(req.body.listingGround);
     const hasTeam = s.members.some((m) => m.ownerId === viewer && m.status !== "removed");
     const chosen = s.agency[viewer];
     return ok({
@@ -2389,6 +2395,7 @@ function route(req: DemoRequest): DemoResponse {
         hasTeam,
         on: chosen === true || hasTeam,
         pageGround: s.grounds?.[viewer] ?? null,
+        listingGround: s.listingGrounds?.[viewer] ?? null,
       },
     });
   }
