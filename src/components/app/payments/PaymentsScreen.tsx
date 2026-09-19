@@ -238,14 +238,18 @@ function SearchRow({ value, onChange }: { value: string; onChange: (v: string) =
   );
 }
 
-/** SwipeablePaymentRow › GlassCard: the avatar, the name, the last line, the time. */
+/**
+ * SwipeablePaymentRow › GlassCard: the avatar, the name, the last line, the
+ * time. The card's ink is a colour and not a wash, so hover lifts that colour
+ * — a white overlay would replace #15313D and read as a dimmer card.
+ */
 function ThreadRow({ thread, onOpen }: { thread: PaymentThread; onOpen: () => void }) {
   const name = threadDisplayName(thread);
   return (
     <button
       type="button"
       onClick={onOpen}
-      className={`${cardClass} mb-3 flex w-full items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-white/[0.04]`}
+      className={`${cardClass} mb-3 flex w-full items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-[#1A3B49]`}
     >
       <Avatar kind={thread.kind} />
       <span className="min-w-0 flex-1">
