@@ -17,7 +17,6 @@ import { listingRefs, NO_EVENT, type EventRef, type ListingRef } from "@/lib/app
 import { useTemplates } from "@/lib/app/spaces-data";
 
 import { BackHeader } from "../hold";
-import { Ion } from "../ion";
 import { useShell } from "../Shell";
 import { StatusPill } from "./common";
 import { Chip, money } from "./kit";
