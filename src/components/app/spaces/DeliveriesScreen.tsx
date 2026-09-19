@@ -35,15 +35,24 @@ import {
 import { useListingViews, useRefresh } from "@/lib/app/spaces-data";
 
 import { useHref } from "../base";
-import { IconArrowLeft, IconDeliveries } from "../icons";
+import { BackHeader } from "../hold";
+import { IconDeliveries } from "../icons";
+import { Ion, type IonName } from "../ion";
 import { useShell } from "../Shell";
-import { EmptyState, FilterPills, Panel, RowLink, Skeleton } from "../ui";
+import { Skeleton } from "../ui";
 import { countdownText, dueText, LIST_PANEL, MasterDetail, ReadError } from "./common";
+import { Chip, ChipRow, Empty, SectionLabel, Tag } from "./kit";
 import { CardGrid, DrillBar, EventCard, eventName, eventParam, ListingFigureCard, Pager, unknownListing, useListingRefs, usePaged } from "./cards";
 
 type Show = "todo" | "done" | "all";
 
 const KIND_TEXT: Record<DeliveryItem["kind"], string> = { artwork: "Artwork", spot: "Spot", promise: "Promise", production: "Production" };
+const KIND_ICON: Record<DeliveryItem["kind"], IonName> = {
+  artwork: "image-outline",
+  spot: "megaphone-outline",
+  promise: "checkbox-outline",
+  production: "videocam-outline",
+};
 const STATE_TEXT: Record<DeliveryItem["state"], string> = {
   todo: "To do",
   overdue: "Late",
@@ -154,11 +163,7 @@ function EventGrid({ groups, refOf }: { groups: { key: string; items: DeliveryIt
   const href = useHref();
   const paged = usePaged(groups, groups.length);
   if (groups.length === 0) {
-    return (
-      <Panel>
-        <EmptyState title="Nothing to deliver." />
-      </Panel>
-    );
+    return <Empty icon="checkmark-done" title="Nothing to deliver" body="When a brand pays for a spot, what you owe them shows here." />;
   }
   return (
     <div className="flex flex-col gap-4">
@@ -194,9 +199,7 @@ function EventDeliveries({ eventKey, items, refOf }: { eventKey: string; items: 
     <div className="flex flex-col gap-4">
       <DrillBar back={href("/deliveries")} crumb="Deliveries" title={eventName(event)} />
       {listings.length === 0 ? (
-        <Panel>
-          <EmptyState title="Nothing to deliver here." />
-        </Panel>
+        <Empty icon="checkmark-done" title="Nothing to deliver" />
       ) : (
         <>
           <CardGrid>
@@ -250,76 +253,73 @@ function ListingDeliveries({
   const current = items.find((i) => i.id === selected) ?? list[0] ?? null;
   const itemHref = (i: DeliveryItem) => `${base}&view=${show}&item=${encodeURIComponent(i.id)}`;
 
+  const tone = (i: DeliveryItem) => (i.state === "overdue" || (i.kind === "artwork" && role === "creator") ? "caution" : i.state === "done" ? "good" : "calm");
+  const status = (i: DeliveryItem) =>
+    i.kind === "production" && i.production
+      ? i.state === "todo" || i.state === "overdue"
+        ? i.production.state === "revision_requested"
+          ? stateText(i)
+          : countdownText(i.production.dueAt)
+        : stateText(i)
+      : i.state === "done"
+        ? STATE_TEXT.done
+        : i.due
+          ? dueText(i.due)
+          : STATE_TEXT[i.state];
+
   return (
     <div className="flex flex-col gap-4">
       <DrillBar
         back={`${href("/deliveries")}?${eventParam(listing.event?.key ?? NO_EVENT)}`}
         crumb={eventName(listing.event)}
         title={listing.title}
-        right={
-          <FilterPills
-            label="Show"
-            value={show}
-            onChange={setShow}
-            options={[
-              { value: "todo", label: "To do", count: items.filter((i) => inView(i, "todo")).length },
-              { value: "done", label: "Delivered", count: items.filter((i) => inView(i, "done")).length },
-              { value: "all", label: "All", count: items.length },
-            ]}
-          />
-        }
       />
       <ReadError error={error} />
 
       <MasterDetail
         showDetail={!!selected && !!current}
         list={
-          <Panel
-            title={show === "done" ? "Delivered" : show === "all" ? "All" : "To do"}
-            meta={`${list.length}`}
-            className={LIST_PANEL}
-            bodyClassName="min-h-0 overflow-y-auto"
-          >
+          <div className={`flex flex-col gap-2.5 ${LIST_PANEL} lg:overflow-y-auto`}>
+            <ChipRow label="Show">
+              <Chip label="To do" count={items.filter((i) => inView(i, "todo")).length} selected={show === "todo"} onClick={() => setShow("todo")} />
+              <Chip label="Delivered" count={items.filter((i) => inView(i, "done")).length} selected={show === "done"} onClick={() => setShow("done")} />
+              <Chip label="All" count={items.length} selected={show === "all"} onClick={() => setShow("all")} />
+            </ChipRow>
             {list.length === 0 ? (
-              <EmptyState title={show === "todo" ? "Nothing to deliver." : "Nothing here."} />
+              <Empty icon="checkmark-done" title={show === "todo" ? "Nothing to deliver" : "Nothing here"} />
             ) : (
-              <ul className="flex flex-col gap-1">
-                {list.map((i) => (
-                  <li key={i.id}>
-                    <RowLink
-                      href={itemHref(i)}
-                      selected={i.id === current?.id}
-                      title={i.title}
-                      sub={i.sub === KIND_TEXT[i.kind] ? i.sub : `${KIND_TEXT[i.kind]} · ${i.sub}`}
-                      right={
-                        <span className={`text-[11px] ${i.state === "overdue" || (i.kind === "artwork" && role === "creator") ? "text-amber" : "text-[#9FB7C2]"}`}>
-                          {i.kind === "production" && i.production
-                            ? i.state === "todo" || i.state === "overdue"
-                              ? i.production.state === "revision_requested"
-                                ? stateText(i)
-                                : countdownText(i.production.dueAt)
-                              : stateText(i)
-                            : i.state === "done"
-                              ? STATE_TEXT.done
-                              : i.due
-                                ? dueText(i.due)
-                                : STATE_TEXT[i.state]}
+              <ul className="flex flex-col gap-2">
+                {list.map((i) => {
+                  const selectedRow = i.id === current?.id;
+                  return (
+                    <li key={i.id}>
+                      <Link
+                        href={itemHref(i)}
+                        scroll={false}
+                        aria-current={selectedRow ? "true" : undefined}
+                        className={`flex w-full min-w-0 items-center gap-2.5 rounded-[14px] border px-3 py-[11px] text-left transition-colors hover:bg-white/[0.09] ${
+                          selectedRow ? "border-[rgba(241,245,249,0.45)] bg-white/[0.09]" : i.state === "overdue" ? "border-amber bg-white/[0.06]" : "border-white/10 bg-white/[0.06]"
+                        }`}
+                      >
+                        <Ion name={KIND_ICON[i.kind]} size={18} className={`shrink-0 ${i.state === "overdue" ? "text-amber" : "text-white/[0.62]"}`} />
+                        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                          <span className="truncate text-[14.5px] font-strong text-white">{i.title}</span>
+                          <span className="truncate text-[12.5px] text-white/55">{i.sub === KIND_TEXT[i.kind] ? i.sub : `${KIND_TEXT[i.kind]} · ${i.sub}`}</span>
                         </span>
-                      }
-                    />
-                  </li>
-                ))}
+                        <Tag label={status(i)} tone={tone(i)} />
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             )}
-          </Panel>
+          </div>
         }
         detail={
           current ? (
             <Detail item={current} backHref={`${base}&view=${show}`} />
           ) : (
-            <Panel>
-              <EmptyState title="Nothing selected." />
-            </Panel>
+            <Empty icon="checkmark-done" title="Nothing selected" />
           )
         }
       />
@@ -335,22 +335,23 @@ function Detail({ item, backHref }: { item: DeliveryItem; backHref: string }) {
   const canOpen = listings.some((l) => l.id === item.spaceId) || item.member?.listing.role === "manager";
 
   return (
-    <div className="flex flex-col gap-3">
-      <Link href={backHref} scroll={false} className="inline-flex w-fit items-center gap-1.5 text-tiny text-[#9FB7C2] hover:text-text lg:hidden">
-        <IconArrowLeft className="h-3.5 w-3.5" />
-        {item.listing}
-      </Link>
-      <Panel
-        title={item.listing}
-        meta={KIND_TEXT[item.kind]}
-        action={
+    <div className="flex flex-col gap-2.5">
+      <div className="lg:hidden">
+        <BackHeader title={item.listing} backHref={backHref} />
+      </div>
+      <SectionLabel
+        right={
           canOpen ? (
-            <Link href={href(`/listings/${item.spaceId}?tab=deliveries`)} className="text-tiny text-[#9FB7C2] hover:text-text">
+            <Link href={href(`/listings/${item.spaceId}?tab=deliveries`)} className="inline-flex items-center gap-1 text-[13px] font-strong text-white/[0.62] hover:text-white">
               Open listing
+              <Ion name="chevron-forward" size={14} />
             </Link>
           ) : null
         }
       >
+        {KIND_TEXT[item.kind]} · {item.listing}
+      </SectionLabel>
+      <div className="flex flex-col gap-2.5">
         {item.kind === "production" && item.production ? (
           <ProductionSpot
             key={item.id}
@@ -380,7 +381,7 @@ function Detail({ item, backHref }: { item: DeliveryItem; backHref: string }) {
             onChanged={changed}
           />
         ) : null}
-      </Panel>
+      </div>
     </div>
   );
 }
