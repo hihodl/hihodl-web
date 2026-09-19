@@ -63,23 +63,8 @@ export function feePercent(bps: number): string {
   return `${Number((bps / 100).toFixed(2))}%`;
 }
 
-/**
- * The networks this page may offer for a space: where the creator can be paid
- * right now. The server says so in `payableChains`; an older server only sends
- * `payTo`, whose families narrow `chains` the same way.
- */
-export function payChainsOf(space: Pick<Space, "chains" | "payTo" | "payableChains">): Chain[] {
-  const payable = space.payableChains;
-  const payTo = space.payTo;
-  const narrowed = payable
-    ? space.chains.filter((c) => payable.includes(c))
-    : payTo
-      ? space.chains.filter((c) => Boolean(c === "solana" ? payTo.solana : payTo.evm))
-      : space.chains;
-  // Never an empty picker: with nothing payable the checkout's own refusal
-  // (`chain_unavailable`) says why, which is better than a sheet with no network.
-  return narrowed.length > 0 ? narrowed : space.chains;
-}
+// Pure, so server-rendered sections can say the same networks: lib/ad-space/format.
+export { payChainsOf } from "@/lib/ad-space/format";
 
 /* ── The shell ───────────────────────────────────────────────────────── */
 
