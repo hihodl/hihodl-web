@@ -10,7 +10,10 @@
  *   Android   the HOLD app opens it (App Link) and joins with its key; this
  *             screen shows the six-digit code both screens compute, and only
  *             when the person says they match does it unlock the wallet with
- *             the passkey and seal the wallet's secret to the phone's key
+ *             the passkey and seal the wallet's secret to the phone's key.
+ *             Without a web wallet (made in the app, or "Not now") the phone
+ *             still links: same code, same confirm, and the seal carries
+ *             nothing (`carriesSecret: false`, box and nonce null).
  *
  * The web's X25519 key pair lives in a ref for this session and is wiped when
  * the screen goes away. The server only ever sees public keys and the box.
@@ -32,7 +35,7 @@ import {
 import { computeSas, formatSas } from "@/lib/link/sas";
 import { newLinkKeyPair, sealSecret, type LinkKeyPair } from "@/lib/link/seal";
 import { thisDevice, type Phone } from "@/lib/link/ua";
-import { getWalletBackup, getWalletStatus, type WalletBackup, type WalletStatus } from "@/lib/wallet/api";
+import { getWalletBackup, getWalletStatus, WalletApiError, type WalletBackup, type WalletStatus } from "@/lib/wallet/api";
 import { fromBase64, toBase64, toBase64Url, wipe } from "@/lib/wallet/core";
 import { explain } from "@/lib/wallet/explain";
 import { userSecretFrom } from "@/lib/wallet/flows";
@@ -46,10 +49,9 @@ export type LinkPhase =
   | { kind: "starting" }
   | { kind: "failed"; message: string }
   | { kind: "waiting"; url: string; expiresAt: number; here: Phone | null; joining?: boolean; notice?: string | null }
-  | { kind: "confirm"; sas: string; busy: boolean; notice?: string | null }
-  | { kind: "no-wallet"; reason: "app_wallet" | "none" }
+  | { kind: "confirm"; sas: string; carries: boolean; busy: boolean; notice?: string | null }
   | { kind: "mismatch" }
-  | { kind: "sending" }
+  | { kind: "sending"; carries: boolean }
   | { kind: "expired" }
   | { kind: "done"; platform: Phone };
 
@@ -164,7 +166,7 @@ export function LinkView({ phase, actions }: { phase: LinkPhase; actions: LinkAc
   if (phase.kind === "confirm") {
     return (
       <div className="flex flex-1 flex-col">
-        <Note>Your phone joined. Before your wallet goes to it, check this is your phone.</Note>
+        <Note>{phase.carries ? "Your phone joined. Before your wallet goes to it, check this is your phone." : "Your phone joined. Check this is your phone."}</Note>
         <p className="mt-6 text-center font-mono text-[40px] font-medium tracking-[0.12em] text-text tabular-nums" aria-label={`Code ${phase.sas.split("").join(" ")}`}>
           {formatSas(phase.sas)}
         </p>
@@ -172,27 +174,10 @@ export function LinkView({ phase, actions }: { phase: LinkPhase; actions: LinkAc
         {phase.notice ? <div className="mt-4"><Warn>{phase.notice}</Warn></div> : null}
         <Actions>
           <button type="button" className={btnPrimary} disabled={phase.busy} onClick={actions.onConfirm}>
-            {phase.busy ? "Waiting for your passkey…" : "Yes, it matches"}
+            {phase.busy ? (phase.carries ? "Waiting for your passkey…" : "Linking…") : "Yes, it matches"}
           </button>
           <button type="button" className={btnGhost} disabled={phase.busy} onClick={actions.onMismatch}>
             No, it is different
-          </button>
-        </Actions>
-      </div>
-    );
-  }
-
-  if (phase.kind === "no-wallet") {
-    return (
-      <div className="flex flex-1 flex-col">
-        <Warn>
-          {phase.reason === "app_wallet"
-            ? "Your wallet was made in the HOLD app, so there is nothing on the web to send to this phone. Sign in to the HOLD app on it with this account."
-            : "There is no wallet on the web yet to send to your phone. Create your wallet first, then link your phone."}
-        </Warn>
-        <Actions>
-          <button type="button" className={btnGhost} onClick={actions.onRetry}>
-            Show a new code
           </button>
         </Actions>
       </div>
@@ -218,7 +203,11 @@ export function LinkView({ phase, actions }: { phase: LinkPhase; actions: LinkAc
   if (phase.kind === "sending") {
     return (
       <div className="flex flex-1 flex-col">
-        <Note>Sending your wallet to your phone, locked so only your phone can open it. Finish on your phone.</Note>
+        <Note>
+          {phase.carries
+            ? "Sending your wallet to your phone, locked so only your phone can open it. Finish on your phone."
+            : "Linking your phone. Finish on your phone."}
+        </Note>
         <div className="mt-5 h-11 animate-pulse rounded-[12px] bg-white/[0.06]" />
       </div>
     );
@@ -330,12 +319,12 @@ export function LinkPhone({ onDone }: { onDone: () => void }) {
       try {
         const s = await getLinkState(id);
         if (stopped || mine !== run.current) return;
-        onStatus(s.status, s.platform, s.appPub);
+        onStatus(s.status, s.platform, s.appPub, s.carriesSecret);
       } catch {
         /* the next tick asks again */
       }
     };
-    const onStatus = (status: LinkStatus, platform: Phone | null, pub: string | null) => {
+    const onStatus = (status: LinkStatus, platform: Phone | null, pub: string | null, carriesSecret: boolean | null) => {
       if (status === "done") {
         forget();
         setPhase({ kind: "done", platform: platform ?? "ios" });
@@ -346,13 +335,11 @@ export function LinkPhone({ onDone }: { onDone: () => void }) {
         const raw = fromBase64(pub);
         if (raw.length !== 32 || !session.current) return;
         appPub.current = raw;
-        if (!wallet || wallet.state !== "web_wallet" || !wallet.current_blob_hash) {
-          setPhase({ kind: "no-wallet", reason: wallet?.state === "app_wallet" ? "app_wallet" : "none" });
-          return;
-        }
+        // The server says; an older one that does not, read from the wallet itself.
+        const carries = carriesSecret ?? (!!wallet && wallet.state === "web_wallet" && !!wallet.current_blob_hash);
         // Read ahead: the passkey prompt must start inside the click.
-        getWalletBackup().then((b) => (backup.current = b), () => undefined);
-        setPhase({ kind: "confirm", sas: computeSas(id, session.current.webPub, raw), busy: false });
+        if (carries) getWalletBackup().then((b) => (backup.current = b), () => undefined);
+        setPhase({ kind: "confirm", sas: computeSas(id, session.current.webPub, raw), carries, busy: false });
       }
     };
     void tick();
@@ -375,6 +362,22 @@ export function LinkPhone({ onDone }: { onDone: () => void }) {
 
   const confirm = async () => {
     if (phase.kind !== "confirm" || !session.current || !keys.current || !appPub.current) return;
+    if (!phase.carries) {
+      // No web wallet: the phone links, and nothing is sealed.
+      setPhase({ ...phase, busy: true, notice: null });
+      try {
+        await sealLinkSession(session.current.id, { box: null, nonce: null });
+        wipe(keys.current.secretKey);
+        setPhase({ kind: "sending", carries: false });
+      } catch (e) {
+        if (e instanceof WalletApiError && e.code === "SECRET_REQUIRED") {
+          // There is a web wallet after all: it goes to the phone, with the passkey.
+          void getWalletBackup().then((x) => (backup.current = x), () => undefined);
+          setPhase({ ...phase, carries: true, busy: false, notice: "Your wallet goes to this phone too. Confirm again with your passkey." });
+        } else setPhase({ ...phase, busy: false, notice: explain(e) });
+      }
+      return;
+    }
     const b = backup.current;
     if (!b) {
       setPhase({ ...phase, notice: "Still reading your wallet. Try again in a moment." });
@@ -392,7 +395,7 @@ export function LinkPhone({ onDone }: { onDone: () => void }) {
       await sealLinkSession(session.current.id, { box: toBase64(box), nonce: toBase64(nonce) });
       // The web's part is over: its secret key is no longer needed.
       wipe(keys.current.secretKey);
-      setPhase({ kind: "sending" });
+      setPhase({ kind: "sending", carries: true });
     } catch (e) {
       setPhase({ ...phase, busy: false, notice: explain(e) });
     } finally {

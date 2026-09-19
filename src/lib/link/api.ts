@@ -41,6 +41,13 @@ export interface LinkState {
   /** base64 (or base64url) of the app's X25519 key, once an Android phone joined. */
   appPub: string | null;
   expiresAt: string | null;
+  /**
+   * Whether this link hands the phone the wallet's secret: true when the
+   * account has a web wallet. false (an app-born wallet, or none yet): the
+   * web seals nothing (`{ box: null, nonce: null }`). null: an older backend
+   * that does not say.
+   */
+  carriesSecret: boolean | null;
 }
 
 export async function createLinkSession(body: { webPub: string; desktopPlatform: DesktopPlatform; desktopBrowser: string }): Promise<LinkSession> {
@@ -62,6 +69,7 @@ export async function getLinkState(id: string): Promise<LinkState> {
     platform: platform === "android" || platform === "ios" ? platform : null,
     appPub: str(s, "appPub", "app_pub"),
     expiresAt: str(s, "expiresAt", "expires_at"),
+    carriesSecret: typeof s.carriesSecret === "boolean" ? s.carriesSecret : typeof s.carries_secret === "boolean" ? s.carries_secret : null,
   };
 }
 
@@ -69,7 +77,8 @@ export function joinLinkSession(id: string, body: { platform: Phone; appPub?: st
   return send(`device-link/sessions/${encodeURIComponent(id)}/join`, { json: body });
 }
 
-export function sealLinkSession(id: string, body: { box: string; nonce: string }): Promise<unknown> {
+/** `{ box: null, nonce: null }` only when the account has no web wallet (409 SECRET_REQUIRED otherwise). */
+export function sealLinkSession(id: string, body: { box: string | null; nonce: string | null }): Promise<unknown> {
   return send(`device-link/sessions/${encodeURIComponent(id)}/seal`, { json: body });
 }
 
