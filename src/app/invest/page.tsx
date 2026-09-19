@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -39,6 +40,9 @@ export const metadata: Metadata = {
     "One portfolio with what you paid for it and what it is worth now. Buy and rebalance from your balance, with no exchange account — and see exactly what a conversion costs.",
   alternates: { canonical: "/invest" },
 };
+
+/** Where "How do you make money here?" sits in the FAQ: in the middle, not first or last. */
+const MONEY_AT = 2;
 
 const FAQ = [
   {
@@ -187,33 +191,32 @@ export default function InvestPage() {
             </div>
 
             <div className="mt-14 max-w-3xl flex flex-col gap-4">
-              {FAQ.map((item) => (
+              {FAQ.slice(0, MONEY_AT).map((item) => (
                 <Answer key={item.q} q={item.q} a={item.a} />
               ))}
-            </div>
-
-            {/* Every product page carries this, naming only its own take.
-                See rates.config.ts. */}
-            <div className="mt-20 max-w-2xl border-t border-white/10 pt-10">
-              <h2 className="font-display text-h2 font-light text-text">
-                How we make money here
-              </h2>
-              <div className="mt-8 space-y-6 text-body text-text-muted leading-relaxed">
-                <p>
-                  On conversions, and only above the free allowance above. We take nothing
-                  for holding a position, nothing for the portfolio itself, and nothing
-                  from the price movement either way — if what you hold doubles, all of it
-                  is yours.
-                </p>
-                <p>
-                  What your dollars earn while they wait is a different product with a
-                  different share, stated in full on{" "}
-                  <Link href="/savings" className="text-text hover:text-amber underline">
-                    the savings page
-                  </Link>
-                  .
-                </p>
-              </div>
+              {/* How we make money is one question among the others: disclosed
+                  on this page, never a headline. See rates.config.ts. */}
+              <Answer q="How do you make money here?">
+                <div className="space-y-6 text-body text-text-muted leading-relaxed">
+                  <p>
+                    On conversions, and only above the free allowance above. We take nothing
+                    for holding a position, nothing for the portfolio itself, and nothing
+                    from the price movement either way — if what you hold doubles, all of it
+                    is yours.
+                  </p>
+                  <p>
+                    What your dollars earn while they wait is a different product with a
+                    different share, stated in full on{" "}
+                    <Link href="/savings" className="text-text hover:text-amber underline">
+                      the savings page
+                    </Link>
+                    .
+                  </p>
+                </div>
+              </Answer>
+              {FAQ.slice(MONEY_AT).map((item) => (
+                <Answer key={item.q} q={item.q} a={item.a} />
+              ))}
             </div>
           </div>
         </section>
@@ -295,7 +298,7 @@ function PriceCard({
   );
 }
 
-function Answer({ q, a }: { q: string; a: string }) {
+function Answer({ q, a, children }: { q: string; a?: string; children?: ReactNode }) {
   return (
     <details className="group rounded-card border border-[color:var(--color-hairline)] bg-white/[0.03] p-6 open:bg-white/[0.05] transition-colors">
       <summary className="cursor-pointer list-none flex items-start justify-between gap-6">
@@ -307,7 +310,11 @@ function Answer({ q, a }: { q: string; a: string }) {
           +
         </span>
       </summary>
-      <p className="mt-4 text-body text-text-muted leading-relaxed">{a}</p>
+      {children ? (
+        <div className="mt-4 text-body text-text-muted leading-relaxed">{children}</div>
+      ) : (
+        <p className="mt-4 text-body text-text-muted leading-relaxed">{a}</p>
+      )}
     </details>
   );
 }

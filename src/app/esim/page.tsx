@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { QuestionItem, QuestionList } from "@/components/site/Questions";
 
 import { TopNav } from "@/components/site/TopNav";
 import { Footer } from "@/components/site/Footer";
@@ -41,7 +42,7 @@ import { HOLD_KEEPS, bps } from "@/lib/rates.config";
  * STRUCTURE
  *
  * The shell of /savings and /travel: alternating night/abyss, a hairline
- * at each seam, card grids, "How we make money here" last.
+ * at each seam, card grids, and "How do you make money here?" as one question among others.
  */
 
 export const metadata: Metadata = {
@@ -194,37 +195,45 @@ export default function EsimPage() {
               .
             </p>
 
-            {/* Every product page carries this section, and it names only the
-                take that belongs to that product. See rates.config.ts. */}
-            <div className="mt-20 max-w-2xl border-t border-white/10 pt-10">
-              <h2 className="font-display text-h2 font-light text-text">
-                How we make money here
-              </h2>
-              <div className="mt-8 space-y-6 text-body text-text-muted">
-                <p>
-                  We buy data wholesale and sell it at our own price. That spread is the
-                  whole of it: there is no booking fee, no delivery fee, no card fee and
-                  no charge for the plan sitting unused, because the price on the tile is
-                  the entire transaction.
-                </p>
-                <p>
-                  Where the same trip can be priced on a public shelf, we read that price
-                  and stay under it — we aim to come in around {bps(HOLD_KEEPS.esim.targetUndercutVsPublicBps)}{" "}
-                  below, and we are never above it. Where nothing comparable exists to read,
-                  the price runs off what the plan costs us.
-                </p>
-                <p className="text-text">
-                  Then {bps(userShareBps)} of what we make on the sale goes back to you as
-                  HiPoints, credited when the order completes — {bps(userShareProBps)} on
-                  Pro. We keep the rest. That is why the cheaper the plan, the smaller the
-                  reward: it is a share of a real margin rather than a number chosen to
-                  look generous on a screen.
-                </p>
-                <p>
-                  You can also put HiPoints toward the next plan at checkout, up to the
-                  whole price. A point is worth the same wherever it is spent.
-                </p>
-              </div>
+            {/* How we make money is one question among the others: disclosed on
+                this page, never a headline. See rates.config.ts. */}
+            <div className="mt-20 max-w-3xl">
+              <h2 className="font-display text-h4 font-light text-text">Questions</h2>
+              <QuestionList className="mt-6">
+                <QuestionItem q="Will my bank's SMS codes reach me?">
+                  <p>No. A data plan has no phone number, so no normal calls and no text messages, including the one-time codes some banks send. Anything that runs over data works as it does at home.</p>
+                </QuestionItem>
+                <QuestionItem q="How do you make money here?">
+                  <div className="space-y-3">
+                    <p>
+                      We buy data wholesale and sell it at our own price. That spread is the
+                      whole of it: there is no booking fee, no delivery fee, no card fee and
+                      no charge for the plan sitting unused, because the price on the tile is
+                      the entire transaction.
+                    </p>
+                    <p>
+                      Where the same trip can be priced on a public shelf, we read that price
+                      and stay under it — we aim to come in around {bps(HOLD_KEEPS.esim.targetUndercutVsPublicBps)}{" "}
+                      below, and we are never above it. Where nothing comparable exists to read,
+                      the price runs off what the plan costs us.
+                    </p>
+                    <p className="text-text">
+                      Then {bps(userShareBps)} of what we make on the sale goes back to you as
+                      HiPoints, credited when the order completes — {bps(userShareProBps)} on
+                      Pro. We keep the rest. That is why the cheaper the plan, the smaller the
+                      reward: it is a share of a real margin rather than a number chosen to
+                      look generous on a screen.
+                    </p>
+                    <p>
+                      You can also put HiPoints toward the next plan at checkout, up to the
+                      whole price. A point is worth the same wherever it is spent.
+                    </p>
+                  </div>
+                </QuestionItem>
+                <QuestionItem q="What if the plan will not install?">
+                  <p>We refund it in full, points included. That is the promise the checkout makes: if the plan cannot be installed on your device, or it installs and never connects where you are, you get your money back.</p>
+                </QuestionItem>
+              </QuestionList>
             </div>
           </div>
         </section>

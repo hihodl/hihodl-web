@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { QuestionItem, QuestionList } from "@/components/site/Questions";
 
 import { TopNav } from "@/components/site/TopNav";
 import { Footer } from "@/components/site/Footer";
@@ -170,34 +171,42 @@ export default function TravelPage() {
               on the rate that room was quoted at, so it moves with the booking.
             </p>
 
-            {/* Every product page carries this section, and it names only the
-                take that belongs to that product. See rates.config.ts. */}
-            <div className="mt-20 max-w-2xl border-t border-white/10 pt-10">
-              <h2 className="font-display text-h2 font-light text-text">
-                How we make money here
-              </h2>
-              <div className="mt-8 space-y-6 text-body text-text-muted">
-                <p>
-                  Hotels quote travel companies a net rate — the price they will accept for
-                  the room — and expect the company to sell it for more. We add up to{" "}
-                  {bps(HOLD_KEEPS.stays.markupOnNetBps)} to that rate. Then we look at what
-                  the same room is showing publicly, and if our number is not comfortably
-                  under it, ours comes down until it is.
-                </p>
-                <p className="text-text">
-                  That gap is what we make, and we keep it. There is nothing else: no
-                  booking fee, no service fee, no resort fee of our own, no charge for
-                  paying from a particular account, and no fee taken at cancellation. One
-                  number, disclosed here, already inside the price you were shown.
-                </p>
-                <p>
-                  Which is also why we are straight about the points rather than dressing
-                  them up as money back. A rewards programme paid out of a margin that may
-                  not exist on a given room is a programme that gets quietly cut in its
-                  first busy month. Points come out of the same place for every product, at
-                  the same rate, whether the room was a good one for us or not.
-                </p>
-              </div>
+            {/* How we make money is one question among the others: disclosed on
+                this page, never a headline. See rates.config.ts. */}
+            <div className="mt-20 max-w-3xl">
+              <h2 className="font-display text-h4 font-light text-text">Questions</h2>
+              <QuestionList className="mt-6">
+                <QuestionItem q="Is this a discount?">
+                  <p>No. We are not lowering a hotel&rsquo;s rate. What you see is a rate hotels quote to trade partners, priced under the one they publish themselves.</p>
+                </QuestionItem>
+                <QuestionItem q="How do you make money here?">
+                  <div className="space-y-3">
+                    <p>
+                      Hotels quote travel companies a net rate — the price they will accept for
+                      the room — and expect the company to sell it for more. We add up to{" "}
+                      {bps(HOLD_KEEPS.stays.markupOnNetBps)} to that rate. Then we look at what
+                      the same room is showing publicly, and if our number is not comfortably
+                      under it, ours comes down until it is.
+                    </p>
+                    <p className="text-text">
+                      That gap is what we make, and we keep it. There is nothing else: no
+                      booking fee, no service fee, no resort fee of our own, no charge for
+                      paying from a particular account, and no fee taken at cancellation. One
+                      number, disclosed here, already inside the price you were shown.
+                    </p>
+                    <p>
+                      Which is also why we are straight about the points rather than dressing
+                      them up as money back. A rewards programme paid out of a margin that may
+                      not exist on a given room is a programme that gets quietly cut in its
+                      first busy month. Points come out of the same place for every product, at
+                      the same rate, whether the room was a good one for us or not.
+                    </p>
+                  </div>
+                </QuestionItem>
+                <QuestionItem q="Who do I talk to if something goes wrong?">
+                  <p>Us. The reservation was made by us, and the hotel has no relationship with you to act on.</p>
+                </QuestionItem>
+              </QuestionList>
             </div>
           </div>
         </section>

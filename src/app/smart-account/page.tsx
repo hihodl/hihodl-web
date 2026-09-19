@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -49,8 +50,9 @@ import { HOLD_KEEPS, PROVISIONAL_LABEL, RATE_DISCLAIMER } from "@/lib/rates.conf
  * STRUCTURE
  *
  * Same shell as /savings, /invest and /travel: alternating night/abyss sections, a
- * hairline at each seam, card grids rather than prose walls, and the "How we
- * make money here" block last. A reader who lands on two product pages should
+ * hairline at each seam, card grids rather than prose walls, and "How do you
+ * make money here?" as one closed question among the others, never a headline.
+ * A reader who lands on two product pages should
  * not have to learn two layouts to find the same answer.
  */
 
@@ -60,6 +62,9 @@ export const metadata: Metadata = {
     "The money you did not set aside earns too. Your Main balance works while it sits there, stays spendable the whole time, and we tell you exactly what we keep.",
   alternates: { canonical: "/smart-account" },
 };
+
+/** Where "How do you make money here?" sits in the FAQ: in the middle, not first or last. */
+const MONEY_AT = 2;
 
 const FAQ = [
   {
@@ -226,72 +231,67 @@ export default function SmartAccountPage() {
             </div>
 
             <div className="mt-14 max-w-3xl flex flex-col gap-4">
-              {FAQ.map((item) => (
+              {FAQ.slice(0, MONEY_AT).map((item) => (
                 <Answer key={item.q} q={item.q} a={item.a} />
               ))}
-            </div>
-
-            {/* Every product page carries this section, and it names only the
-                take that belongs to that product. See rates.config.ts. */}
-            <div className="mt-20 max-w-2xl border-t border-white/10 pt-10">
-              <h2 className="font-display text-h2 font-light text-text">
-                How we make money here
-              </h2>
-              <div className="mt-8 space-y-6 text-body text-text-muted">
-                <p>
-                  Your Main balance earns interest. We keep a share of that interest, and you
-                  keep the rest. We never take a share of your money itself — only of what it
-                  earns. If it earns nothing, we get nothing.
+              {/* How we make money is one question among the others: disclosed
+                  on this page, never a headline. See rates.config.ts. */}
+              <Answer q="How do you make money here?">
+                <div className="space-y-6 text-body text-text-muted">
+                  <p>
+                    Your Main balance earns interest. We keep a share of that interest, and you
+                    keep the rest. We never take a share of your money itself — only of what it
+                    earns. If it earns nothing, we get nothing.
+                  </p>
+                  <p>
+                    Our share on Main is the highest we charge anywhere, and it should be: you
+                    did nothing. You did not decide, did not move anything and did not remember
+                    to. If you would rather keep more of it, moving the money into Savings takes
+                    one tap and costs you less — the rate is on{" "}
+                    <Link href="/savings" className="text-text hover:text-amber underline">
+                      the savings page
+                    </Link>
+                    .
+                  </p>
+                </div>
+                {/* Same two-cell split as /savings. One product, one price, and the
+                    two pages read identically so the reader can hold them side by
+                    side without our help — which is not the same as printing both
+                    numbers in one place. */}
+                <div className="mt-4 flex flex-col sm:flex-row gap-px bg-[color:var(--color-hairline)] border border-[color:var(--color-hairline)] rounded-card overflow-hidden">
+                  <Split label="You keep" value={`${100 - mainShare}%`} highlight />
+                  <Split label="We keep" value={`${mainShare}%`} />
+                </div>
+                <p className="mt-4 text-small text-text-faint">
+                  of the interest on your Main balance — never of the balance
                 </p>
-                <p>
-                  Our share on Main is the highest we charge anywhere, and it should be: you
-                  did nothing. You did not decide, did not move anything and did not remember
-                  to. If you would rather keep more of it, moving the money into Savings takes
-                  one tap and costs you less — the rate is on{" "}
-                  <Link href="/savings" className="text-text hover:text-amber underline">
-                    the savings page
+                {provisional && (
+                  <p className="mt-4 text-small text-amber">
+                    {PROVISIONAL_LABEL}. Smart Account is not switched on yet. This is what it
+                    will charge when it is — published before it ships rather than after, so
+                    nobody finds out by looking at a statement.
+                  </p>
+                )}
+                <p className="mt-4 text-body text-text-muted leading-relaxed">
+                  Move money between Main and Savings whenever you like. We charge each share
+                  only for the days your money actually spent there, so a balance you move
+                  across on the tenth is not billed at the Main rate for the rest of the month.
+                </p>
+                <p className="mt-4 text-small text-text-faint">
+                  <span aria-hidden>* </span>
+                  {RATE_DISCLAIMER} There is no account fee, no minimum balance and no charge
+                  to move money between Main, Savings and Pockets. The percentage above is
+                  everything we make on this product — there is no other charge and nothing
+                  further to look up. What the card gives back and what you can borrow are on{" "}
+                  <Link href="/hipoints" className="text-text-muted hover:text-text underline">
+                    the HiPoints page
                   </Link>
                   .
                 </p>
-              </div>
-
-              {/* Same two-cell split as /savings. One product, one price, and the
-                  two pages read identically so the reader can hold them side by
-                  side without our help — which is not the same as printing both
-                  numbers in one place. */}
-              <div className="mt-10 flex flex-col sm:flex-row gap-px bg-[color:var(--color-hairline)] border border-[color:var(--color-hairline)] rounded-card overflow-hidden">
-                <Split label="You keep" value={`${100 - mainShare}%`} highlight />
-                <Split label="We keep" value={`${mainShare}%`} />
-              </div>
-              <p className="mt-4 text-small text-text-faint">
-                of the interest on your Main balance — never of the balance
-              </p>
-
-              {provisional && (
-                <p className="mt-8 text-small text-amber">
-                  {PROVISIONAL_LABEL}. Smart Account is not switched on yet. This is what it
-                  will charge when it is — published before it ships rather than after, so
-                  nobody finds out by looking at a statement.
-                </p>
-              )}
-
-              <p className="mt-8 text-body text-text-muted leading-relaxed">
-                Move money between Main and Savings whenever you like. We charge each share
-                only for the days your money actually spent there, so a balance you move
-                across on the tenth is not billed at the Main rate for the rest of the month.
-              </p>
-
-              <p className="mt-6 text-small text-text-faint">
-                <span aria-hidden>* </span>
-                {RATE_DISCLAIMER} There is no account fee, no minimum balance and no charge
-                to move money between Main, Savings and Pockets. The percentage above is
-                everything we make on this product — there is no other charge and nothing
-                further to look up. What the card gives back and what you can borrow are on{" "}
-                <Link href="/hipoints" className="text-text-muted hover:text-text underline">
-                  the HiPoints page
-                </Link>
-                .
-              </p>
+              </Answer>
+              {FAQ.slice(MONEY_AT).map((item) => (
+                <Answer key={item.q} q={item.q} a={item.a} />
+              ))}
             </div>
           </div>
         </section>
@@ -344,7 +344,7 @@ function Fact({ title, body }: { title: string; body: string }) {
   );
 }
 
-function Answer({ q, a }: { q: string; a: string }) {
+function Answer({ q, a, children }: { q: string; a?: string; children?: ReactNode }) {
   return (
     <details className="group rounded-card border border-[color:var(--color-hairline)] bg-white/[0.03] p-6 open:bg-white/[0.05] transition-colors">
       <summary className="cursor-pointer list-none flex items-start justify-between gap-6">
@@ -356,7 +356,11 @@ function Answer({ q, a }: { q: string; a: string }) {
           +
         </span>
       </summary>
-      <p className="mt-4 text-body text-text-muted leading-relaxed">{a}</p>
+      {children ? (
+        <div className="mt-4 text-body text-text-muted leading-relaxed">{children}</div>
+      ) : (
+        <p className="mt-4 text-body text-text-muted leading-relaxed">{a}</p>
+      )}
     </details>
   );
 }

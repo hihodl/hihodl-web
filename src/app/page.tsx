@@ -3,18 +3,14 @@ import type { Metadata } from "next";
 import { Footer } from "@/components/site/Footer";
 import { TopNav } from "@/components/site/TopNav";
 import { EventsStrip } from "@/components/site/spaces/EventsStrip";
-import {
-  ForBrands,
-  SpacesClose,
-  SpacesFaq,
-  SpacesHero,
-  SpotToContentDeal,
-  WhyAHookWorks,
-} from "@/components/site/spaces/sections";
+import { ForBrands, HowItWorks, SpacesClose, SpacesFaq } from "@/components/site/spaces/sections";
+import { StoryHero, StoryScenes } from "@/components/site/spaces/Story";
 import { productUrl } from "@/lib/app/paths";
 
 /**
- * hihodl.xyz: HOLD Spaces, told from the creator's side. The product behind
+ * hihodl.xyz: HOLD Spaces, told from the creator's side as a story in images
+ * (see components/site/spaces/scenes.ts), then how to start, brands, events and
+ * a small FAQ. The product behind
  * the login is app.hihodl.xyz, and every "Create your space" goes there. The
  * money app that used to be this page lives at /money, section ids intact.
  *
@@ -22,7 +18,7 @@ import { productUrl } from "@/lib/app/paths";
  */
 export const revalidate = 300;
 
-const TITLE = "HOLD Spaces: turn a hook into brand deals";
+const TITLE = "HOLD Spaces: this is your hook";
 const DESCRIPTION =
   "Turn a suitcase, a dress or a photo into ad space. Set your spots and prices, post one link, and brands pay you per spot in USDC, straight to your wallet.";
 
@@ -55,9 +51,9 @@ export default function Home() {
     <>
       <TopNav cta={{ label: "Create your space", href: createHref }} />
       <main>
-        <SpacesHero createHref={createHref} />
-        <WhyAHookWorks />
-        <SpotToContentDeal />
+        <StoryHero createHref={createHref} />
+        <StoryScenes />
+        <HowItWorks createHref={createHref} />
         <ForBrands />
         <EventsStrip createHref={createHref} />
         <SpacesFaq />

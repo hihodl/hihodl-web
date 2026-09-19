@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { QuestionItem, QuestionList } from "@/components/site/Questions";
 
 import { TopNav } from "@/components/site/TopNav";
 import { Footer } from "@/components/site/Footer";
@@ -371,40 +372,48 @@ export default function HiPointsPage() {
               </Note>
             </ul>
 
-            {/* Every product page carries this section, and it names only the
-                take that belongs to that product. See rates.config.ts. */}
-            <div className="mt-20 max-w-2xl border-t border-white/10 pt-10">
-              <h2 className="font-display text-h2 font-light text-text">
-                How we make money here
-              </h2>
-              <div className="mt-8 space-y-6 text-body text-text-muted">
-                <p>
-                  Three ways, and none of them is a charge on your balance.
-                </p>
-                <p>
-                  <span className="text-text">You may pay for a plan.</span> The
-                  price of each one is in the table above, and the free plan stays
-                  free. That is the only thing on this page you ever pay us
-                  directly.
-                </p>
-                <p>
-                  <span className="text-text">Card networks pay us when you
-                  spend.</span> Every card in the world earns its issuer a small
-                  cut of a purchase, paid by the merchant&rsquo;s bank rather than by
-                  you. Most issuers keep it. Cashback is us handing part of it
-                  back, which is why cash-like purchases earn nothing — nobody
-                  pays us on those.
-                </p>
-                <p>
-                  <span className="text-text">We keep a share of the interest
-                  your balance earns.</span> Never a share of the balance itself.
-                  The exact split, and what it is a share of, is set out on{" "}
-                  <Link href="/savings" className="text-amber hover:underline">
-                    the Smart Account page
-                  </Link>
-                  .
-                </p>
-              </div>
+            {/* How we make money is one question among the others: disclosed on
+                this page, never a headline. See rates.config.ts. */}
+            <div className="mt-20 max-w-3xl">
+              <h2 className="font-display text-h4 font-light text-text">Questions</h2>
+              <QuestionList className="mt-6">
+                <QuestionItem q="Do points expire?">
+                  <p>Yes, 12 months after they are earned. You get a reminder before they do.</p>
+                </QuestionItem>
+                <QuestionItem q="How do you make money here?">
+                  <div className="space-y-3">
+                    <p>
+                      Three ways, and none of them is a charge on your balance.
+                    </p>
+                    <p>
+                      <span className="text-text">You may pay for a plan.</span> The
+                      price of each one is in the table above, and the free plan stays
+                      free. That is the only thing on this page you ever pay us
+                      directly.
+                    </p>
+                    <p>
+                      <span className="text-text">Card networks pay us when you
+                      spend.</span> Every card in the world earns its issuer a small
+                      cut of a purchase, paid by the merchant&rsquo;s bank rather than by
+                      you. Most issuers keep it. Cashback is us handing part of it
+                      back, which is why cash-like purchases earn nothing — nobody
+                      pays us on those.
+                    </p>
+                    <p>
+                      <span className="text-text">We keep a share of the interest
+                      your balance earns.</span> Never a share of the balance itself.
+                      The exact split, and what it is a share of, is set out on{" "}
+                      <Link href="/savings" className="text-amber hover:underline">
+                        the Smart Account page
+                      </Link>
+                      .
+                    </p>
+                  </div>
+                </QuestionItem>
+                <QuestionItem q="Can I turn points into cash?">
+                  <p>No. Points are not cashback and do not convert to cash. Cashback is paid in dollars, separately.</p>
+                </QuestionItem>
+              </QuestionList>
             </div>
           </div>
         </section>
