@@ -112,7 +112,7 @@ export default async function CreatorGroupScreen({
     const { past } = splitGroups(groups, now);
     if (past.length === 0) notFound();
     return (
-      <ProfileGround>
+      <ProfileGround ground={creator.pageGround ?? null}>
         <TopBar left={<BackLink href={home} label={name} />} />
         <main className="container-page w-full">
           <h1 className="pb-6 pt-6 font-display text-[36px] font-light leading-[1.05] text-sp-ink md:pb-10 md:pt-10 md:text-h2">
@@ -148,7 +148,7 @@ export default async function CreatorGroupScreen({
   const back = over ? creatorScreenPath(handle, PAST) : kind === "services" ? `${home}?kind=services` : home;
 
   return (
-    <ProfileGround>
+    <ProfileGround ground={creator.pageGround ?? null}>
       <TopBar
         left={<BackLink href={back} label={over ? "Past events" : name} />}
         right={<KindPills kinds={kinds} active={kind} counts={kindCounts(group.cards)} hrefFor={(k) => here(k)} />}

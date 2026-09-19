@@ -123,7 +123,7 @@ export default async function CreatorPage({ params, searchParams }: { params: Pa
   const home = creatorPath(creator.xHandle);
 
   return (
-    <ProfileGround>
+    <ProfileGround ground={creator.pageGround ?? null}>
       <TopBar
         left={
           <KindPills

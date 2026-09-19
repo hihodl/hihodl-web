@@ -65,12 +65,14 @@ import {
 } from "@/lib/creator/listing";
 import {
   addUpdate,
+  getCreatorSettings,
   getListing,
   getSeries,
   listingOffers,
   listingTeam,
   removeUpdate,
   setListingFloor,
+  setListingPageGround,
   setPositionFloor,
   shareListing,
 } from "@/lib/creator/listings";
@@ -82,6 +84,7 @@ import { ListingBanner } from "./run/ListingBanner";
 import { Offers } from "./run/Offers";
 import { PhotoEditor } from "./run/PhotoEditor";
 import { ColourEditor, ProductHub, drawingOf } from "./run/ProductLook";
+import { GroundPicker, labelOf } from "./run/GroundPicker";
 import { Work } from "./run/Work";
 import { ListingSeries } from "./series/Series";
 import { ListingTeam } from "./team/ListingTeam";
@@ -91,7 +94,7 @@ const SCREEN_BODY = "lg:max-h-[calc(var(--app-vh,100dvh)-196px)] lg:overflow-y-a
 /** The same, inside a panel that has its own title and padding. */
 const PANEL_BODY = "lg:max-h-[calc(var(--app-vh,100dvh)-252px)] lg:overflow-y-auto";
 
-type Screen = "events" | "offers" | "floors" | "spots" | "photo" | "deliveries" | "updates" | "content" | "team";
+type Screen = "events" | "offers" | "floors" | "spots" | "photo" | "ground" | "deliveries" | "updates" | "content" | "team";
 
 const SCREEN_TITLE: Record<Screen, string> = {
   events: "Events",
@@ -99,6 +102,7 @@ const SCREEN_TITLE: Record<Screen, string> = {
   floors: "Floor prices",
   spots: "Spots",
   photo: "Your product",
+  ground: "Page background",
   deliveries: "Deliveries",
   updates: "Updates",
   content: "Offer them content",
@@ -195,6 +199,8 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
     spots: true,
     // The creator's own photo with the spots on it: a product's, never a service's slots.
     photo: owner && space.kind === "placement" && space.status !== "delisted",
+    // What this listing's page stands on, over the creator's default. Any listing, the owner's alone.
+    ground: owner && space.status !== "delisted",
     deliveries: space.status !== "draft",
     updates: space.status !== "draft",
     content: leads.length > 0,
@@ -238,6 +244,7 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
         {screen === "floors" ? <Floors space={space} groups={floors} onChanged={changed} /> : null}
         {screen === "spots" ? <Spots space={space} /> : null}
         {screen === "photo" ? <ProductHub space={space} /> : null}
+        {screen === "ground" ? <ListingGround space={space} onChanged={changed} /> : null}
         {screen === "deliveries" ? (
           <Panel title="Deliveries" bodyClassName={PANEL_BODY}>
             <Work space={space} onChanged={changed} />
@@ -318,6 +325,15 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
                     ? "on the drawing"
                     : "colours or photos"
             }
+          />
+        ) : null}
+        {shown.ground ? (
+          <HubCard
+            screen="ground"
+            space={space}
+            icon={IconImage}
+            value={labelOf(space.pageGround ?? null)}
+            unit={space.pageGroundOwn ? "this listing's own" : "your default"}
           />
         ) : null}
         {shown.deliveries ? (
@@ -468,6 +484,34 @@ function ScreenFrame({
         </div>
       </div>
       {children}
+    </div>
+  );
+}
+
+/* ── Page background ──────────────────────────────────────────────── */
+
+/** This listing's own ground, or "Same as my default" (Spaces › Settings). */
+function ListingGround({ space, onChanged }: { space: SpaceView; onChanged: () => void }) {
+  const [fallback, setFallback] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    void getCreatorSettings()
+      .then(({ settings }) => setFallback(settings.pageGround ?? null))
+      .catch(() => setFallback(null));
+  }, []);
+  if (fallback === undefined) return <Skeleton className="h-[240px]" />;
+  return (
+    <div className={`${SCREEN_BODY} flex flex-col gap-3`}>
+      <p className="max-w-2xl text-small text-[#CFE3EC]">
+        What this listing&rsquo;s page stands on. &ldquo;Same as my default&rdquo; follows Spaces › Settings, so changing it there
+        changes this page too.
+      </p>
+      <GroundPicker
+        key={space.pageGroundOwn ?? "default"}
+        value={space.pageGroundOwn ?? null}
+        allowDefault
+        defaultValue={fallback}
+        onSave={(next) => setListingPageGround(space.id, next).then(onChanged)}
+      />
     </div>
   );
 }

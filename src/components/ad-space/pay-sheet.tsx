@@ -114,8 +114,9 @@ export function PaySheet({
   }, [onClose]);
 
   return (
+    // The sheet is the app's own dark surface on every page ground (`.sp-dark`).
     <div
-      className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center"
+      className="sp-dark fixed inset-0 z-[60] flex items-end justify-center sm:items-center"
       role="dialog"
       aria-modal="true"
       aria-labelledby={labelledBy}

@@ -381,6 +381,8 @@ function suitcaseColour(): Space {
     ...base,
     id: "11111111-1111-4111-8111-111111111113",
     slug: "road-to-token2049-colour",
+    // A cream suitcase on a white page: the light theme, and the banner band as a dark block.
+    pageGround: "white",
     title: "Road to TOKEN2049, in my colours",
     productLook: { body: "#F2EBDD", accent: "#111418" },
     siblings: [],
@@ -399,6 +401,8 @@ function videos(): Space {
     ...base,
     id: "22222222-2222-4222-8222-222222222222",
     slug: "token2049-videos",
+    // The app's own dark shell (#0F0F1A), over the creator's default.
+    pageGround: "app",
     title: "TOKEN2049 short videos",
     reason: "Three dedicated videos from the floor, one sponsor each.",
     // Never edited: the page shows our two suggestions, and the card is only as tall as they are.
@@ -585,6 +589,7 @@ function takeovers(): Space {
     ...base,
     id: "33333333-3333-4333-8333-333333333333",
     slug: "token2049-takeover",
+    pageGround: "night",
     title: "TOKEN2049 suitcase, open bidding",
     reason: "Every spot opens low. Sponsors outbid each other, and whoever is outbid gets their money straight back.",
     // Takeovers are Solana only: the refund is a leg of the very transaction
@@ -621,6 +626,8 @@ function customService(): Space {
     ...base,
     id: "55555555-5555-4555-8555-555555555555",
     slug: "token2049-afterparty-host",
+    // A custom light colour: dark ink chosen by contrast.
+    pageGround: "#F1E4CF",
     title: "Host my TOKEN2049 afterparty table",
     reason: null,
     serviceName: "Afterparty table host",
@@ -830,6 +837,8 @@ function pitchReviews(): Space {
     ...base,
     id: "44444444-4444-4444-8444-444444444444",
     slug: "token2049-pitch-reviews",
+    // A custom dark colour: light ink, coloured inks kept only where they pass 4.5:1.
+    pageGround: "#2E1F47",
     title: "Pitch reviews at TOKEN2049",
     reason: "Thirty minutes on your deck before you pitch, at the venue. I have judged four demo days this year.",
     keyDates: [],

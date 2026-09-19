@@ -7,7 +7,7 @@ import { gradientCss } from "@/lib/ad-space/look";
 import type { CreatorGroup, CreatorProfile, EventSummary, SpaceCard } from "@/lib/ad-space/types";
 
 import { BannerFrame, VerifiedTick, eventBanner } from "./events";
-import { BENEFITS_GROUND, SpacesGround } from "./ground";
+import { SpacesGround } from "./ground";
 
 /**
  * A creator's page, `/s/<handle>`, and the screens under it.
@@ -133,12 +133,11 @@ export function findGroup(
 
 /**
  * The one place the page background is set, for the profile and every screen
- * under it: the Benefits ground (see ./ground), the same as every Spaces page.
+ * under it: the ground the creator chose for their pages (hold | app | night |
+ * white | #RRGGBB), HOLD blue when they chose none. See ./ground.
  */
-export const PROFILE_GROUND = BENEFITS_GROUND;
-
-export function ProfileGround({ background = PROFILE_GROUND, children }: { background?: string; children: ReactNode }) {
-  return <SpacesGround background={background}>{children}</SpacesGround>;
+export function ProfileGround({ ground = null, children }: { ground?: string | null; children: ReactNode }) {
+  return <SpacesGround ground={ground}>{children}</SpacesGround>;
 }
 
 /**

@@ -343,6 +343,8 @@ export interface CreatorSettings {
   chosen: boolean;
   hasTeam: boolean;
   on: boolean;
+  /** The default ground of the creator's public pages: hold | app | night | white | #RRGGBB; null is HOLD blue. */
+  pageGround?: string | null;
 }
 
 export function getCreatorSettings(): Promise<{ settings: CreatorSettings }> {
@@ -351,6 +353,16 @@ export function getCreatorSettings(): Promise<{ settings: CreatorSettings }> {
 
 export function setAgencyMode(agencyMode: boolean): Promise<{ settings: CreatorSettings }> {
   return call<{ settings: CreatorSettings }>("ad-space/settings", { method: "PATCH", json: { agencyMode } });
+}
+
+/** The default ground of the creator's public pages (their profile and every listing without its own). */
+export function setPageGround(pageGround: string | null): Promise<{ settings: CreatorSettings }> {
+  return call<{ settings: CreatorSettings }>("ad-space/settings", { method: "PATCH", json: { pageGround } });
+}
+
+/** One listing's own ground, over the creator's default; null follows the default. */
+export function setListingPageGround(spaceId: string, pageGround: string | null): Promise<{ pageGroundOwn: string | null }> {
+  return call(`ad-space/spaces/${spaceId}/look`, { method: "PATCH", json: { pageGround } });
 }
 
 /** Everybody on this creator's team, invitations nobody has taken yet included. */

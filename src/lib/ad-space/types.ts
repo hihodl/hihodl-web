@@ -535,6 +535,11 @@ export interface Space {
    * side not here keeps the drawing. Never together with `photo`.
    */
   viewPhotos?: Record<string, SpacePhoto>;
+  /**
+   * The ground this page stands on: the listing's own, else the creator's
+   * default; hold | app | night | white | #RRGGBB. Null or absent: HOLD blue.
+   */
+  pageGround?: string | null;
 }
 
 export type BrandGetsLine = { kind: "reach" } | { kind: "spot" } | { kind: "text"; text: string };
@@ -657,6 +662,8 @@ export interface EventPage {
  */
 export interface CreatorProfile extends CardCreator {
   xHandle: string;
+  /** The ground the creator chose for their pages: hold | app | night | white | #RRGGBB. Null or absent: HOLD blue. */
+  pageGround?: string | null;
 }
 
 /**

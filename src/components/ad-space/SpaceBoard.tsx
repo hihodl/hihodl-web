@@ -298,9 +298,6 @@ export function SpaceBoard({
   );
 }
 
-/** The banner fades out over its last 45%, into whatever ground is behind it. */
-const BAND_FADE = "linear-gradient(180deg, #000 0%, #000 55%, transparent 100%)";
-
 /**
  * The banner, drawn from the listing itself and never from its event: the
  * creator's own picture when they set one, else (on a placement) the product
@@ -309,10 +306,12 @@ const BAND_FADE = "linear-gradient(180deg, #000 0%, #000 55%, transparent 100%)"
 function ListingBand({ space, children }: { space: Space; children: ReactNode }) {
   const photo = space.bannerUrl;
   return (
-    <section className="relative overflow-hidden">
+    <section className="sp-band relative overflow-hidden">
       {/* The banner fades into whatever ground is behind it, by its own
-          transparency rather than by painting a colour that has to match. */}
-      <div className="absolute inset-0" style={{ background: gradientCss(space.bannerGradient), maskImage: BAND_FADE, WebkitMaskImage: BAND_FADE }} aria-hidden>
+          transparency rather than by painting a colour that has to match
+          (`.sp-band-fade`). On a light ground it stays a dark block with a
+          rounded foot, and `.sp-band` keeps the dark ink inside it. */}
+      <div className="sp-band-fade absolute inset-0" style={{ background: gradientCss(space.bannerGradient) }} aria-hidden>
         {photo && (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element -- the creator's banner, from our own bucket */}

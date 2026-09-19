@@ -462,6 +462,10 @@ export interface SpaceView {
   productLook?: { body: string; accent: string } | null;
   /** A photo per side of the product, keyed by view. Empty or absent: none. Never with `photo`. */
   viewPhotos?: Record<string, ListingPhoto>;
+  /** The ground its page wears (its own, else the creator's default); null is HOLD blue. */
+  pageGround?: string | null;
+  /** Its own ground alone; null follows the creator's default. */
+  pageGroundOwn?: string | null;
 }
 
 export interface SpaceCard {
