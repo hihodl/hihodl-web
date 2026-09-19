@@ -25,6 +25,7 @@ import {
   CONTENT_KIND_LABEL,
   FALLBACK_LABEL,
   FALLBACK_TEXT,
+  PRODUCTION_FALLBACK_TEXT,
   SESSION_FALLBACK_TEXT,
   isProductionSpace,
   isSessionSpace,
@@ -842,7 +843,7 @@ function Summary({
             Nothing else to fill in before you pay. Afterwards you send the creator your contact and what the session
             is for.
           </div>
-        ) : (
+        ) : isProductionSpace(space) ? null : (
           <div className="col-span-2 text-tiny text-text-faint">
             {[zone?.sizeLabel, `Takes ${p.accepts.map((k) => CONTENT_KIND_LABEL[k]).join(", ")}`]
               .filter(Boolean)
@@ -855,7 +856,9 @@ function Summary({
           the line saying it twice. */}
       <p className="text-small text-text-muted">
         <span className="text-text">{FALLBACK_LABEL[space.fallback]}.</span>{" "}
-        {(session ? SESSION_FALLBACK_TEXT : FALLBACK_TEXT)[space.fallback]}
+        {isProductionSpace(space)
+          ? PRODUCTION_FALLBACK_TEXT[space.fallback]
+          : (session ? SESSION_FALLBACK_TEXT : FALLBACK_TEXT)[space.fallback]}
         {space.fallbackNote ? ` ${space.fallbackNote}` : ""}
       </p>
     </div>

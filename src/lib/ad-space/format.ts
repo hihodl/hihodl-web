@@ -245,6 +245,14 @@ export const SESSION_FALLBACK_TEXT: Record<Fallback, string> = {
   content_anyway: "If the session can't happen, talk to the creator: HOLD can't refund a booking.",
 };
 
+/** The fallback policy for a content production spot: nothing gets filmed without the event. */
+export const PRODUCTION_FALLBACK_TEXT: Record<Fallback, string> = {
+  creator_refund:
+    "If the event doesn't happen, the creator sends the price back from their own wallet. It's their promise: HOLD never holds the money.",
+  next_event: "If the event doesn't happen, your spot moves to another event within 90 days.",
+  content_anyway: "If the event doesn't happen, talk to the creator: HOLD can't refund a spot.",
+};
+
 export const CONTACT_KIND_LABEL: Record<ContactKind, string> = {
   x: "X",
   telegram: "Telegram",
