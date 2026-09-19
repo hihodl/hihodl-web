@@ -7,6 +7,10 @@
  *
  * Who you are and how you get paid is Account; Spaces' own switches (Creative
  * Director) are in Spaces' settings.
+ *
+ * "Your pages" (the background of the creator's public pages: profile, the
+ * listings' default and each listing's own) opens its own screen, the same
+ * one Spaces › Settings opens (../spaces/YourPages).
  */
 
 import Link from "next/link";
@@ -16,6 +20,7 @@ import { signOut } from "@/lib/creator/session";
 import { useProductHref, useSpacesBase } from "../base";
 import { IconSignOut } from "../icons";
 import { useShell, useShellPrefs } from "../Shell";
+import { YourPagesCard, YourPagesScreen } from "../spaces/YourPages";
 import { Panel, Segmented } from "../ui";
 
 /** The product's own host serves only the product; the website's pages live on the website. */
@@ -24,12 +29,18 @@ const WEBSITE = "https://hihodl.xyz";
 const btn =
   "inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] border border-white/10 bg-white/[0.06] px-3 text-tiny font-medium text-[#CFE3EC] transition-colors hover:bg-white/10 hover:text-text";
 
-export function SettingsScreen() {
+export function SettingsScreen({ screen, item }: { screen?: string; item?: string } = {}) {
   const { session, x } = useShell();
   const { collapsed, setCollapsed } = useShellPrefs();
   // On app.hihodl.xyz a bare /terms would be read as a page of the product.
   const site = useSpacesBase().startsWith("/app") ? "" : WEBSITE;
   const productHref = useProductHref();
+
+  if (screen === "pages") {
+    return (
+      <YourPagesScreen base={productHref("/settings?screen=pages")} back={productHref("/settings")} backLabel="Settings" item={item} />
+    );
+  }
 
   const links = [
     { label: "Support", sub: "support@hihodl.xyz", href: "mailto:support@hihodl.xyz" },
@@ -72,6 +83,8 @@ export function SettingsScreen() {
           />
         </div>
       </Panel>
+
+      <YourPagesCard href={productHref("/settings?screen=pages")} />
 
       <Panel title="Help and legal" className="lg:col-span-2">
         <ul className="grid grid-cols-[minmax(0,1fr)] gap-2 sm:grid-cols-3">

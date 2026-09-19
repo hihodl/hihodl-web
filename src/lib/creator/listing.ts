@@ -487,6 +487,8 @@ export interface SpaceCard {
   event: EventSummary | null;
   bannerUrl?: string | null;
   bannerGradient?: string | null;
+  /** This listing's own page ground; null or absent follows the creator's default for listings. */
+  pageGroundOwn?: string | null;
 }
 
 /* ── One listing, several events ──────────────────────────────────── */

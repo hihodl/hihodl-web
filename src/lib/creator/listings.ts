@@ -343,8 +343,10 @@ export interface CreatorSettings {
   chosen: boolean;
   hasTeam: boolean;
   on: boolean;
-  /** The default ground of the creator's public pages: hold | app | night | white | #RRGGBB; null is HOLD blue. */
+  /** The ground of the creator's profile page: hold | app | night | white | #RRGGBB; null is HOLD blue. */
   pageGround?: string | null;
+  /** The default ground of their listings; null follows `pageGround`. */
+  listingGround?: string | null;
 }
 
 export function getCreatorSettings(): Promise<{ settings: CreatorSettings }> {
@@ -355,9 +357,15 @@ export function setAgencyMode(agencyMode: boolean): Promise<{ settings: CreatorS
   return call<{ settings: CreatorSettings }>("ad-space/settings", { method: "PATCH", json: { agencyMode } });
 }
 
-/** The default ground of the creator's public pages (their profile and every listing without its own). */
-export function setPageGround(pageGround: string | null): Promise<{ settings: CreatorSettings }> {
-  return call<{ settings: CreatorSettings }>("ad-space/settings", { method: "PATCH", json: { pageGround } });
+/**
+ * The creator's grounds: `pageGround` for their profile page, `listingGround`
+ * the default of their listings (null follows the profile). Omitted is left alone.
+ */
+export function setPageGround(change: {
+  pageGround?: string | null;
+  listingGround?: string | null;
+}): Promise<{ settings: CreatorSettings }> {
+  return call<{ settings: CreatorSettings }>("ad-space/settings", { method: "PATCH", json: change });
 }
 
 /** One listing's own ground, over the creator's default; null follows the default. */

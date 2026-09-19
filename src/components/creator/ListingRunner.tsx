@@ -495,15 +495,15 @@ function ListingGround({ space, onChanged }: { space: SpaceView; onChanged: () =
   const [fallback, setFallback] = useState<string | null | undefined>(undefined);
   useEffect(() => {
     void getCreatorSettings()
-      .then(({ settings }) => setFallback(settings.pageGround ?? null))
+      .then(({ settings }) => setFallback(settings.listingGround ?? settings.pageGround ?? null))
       .catch(() => setFallback(null));
   }, []);
   if (fallback === undefined) return <Skeleton className="h-[240px]" />;
   return (
     <div className={`${SCREEN_BODY} flex flex-col gap-3`}>
       <p className="max-w-2xl text-small text-[#CFE3EC]">
-        What this listing&rsquo;s page stands on. &ldquo;Same as my default&rdquo; follows Spaces › Settings, so changing it there
-        changes this page too.
+        What this listing&rsquo;s page stands on. &ldquo;Same as my default&rdquo; follows your listings&rsquo; default in Settings ›
+        Your pages, so changing it there changes this page too.
       </p>
       <GroundPicker
         key={space.pageGroundOwn ?? "default"}

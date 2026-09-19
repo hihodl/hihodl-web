@@ -8,114 +8,58 @@
  *                     fixes it
  *   Creative Director run a team: the Team page, "Who works it" on every
  *                     listing, the title under your name (lib/app/agency)
- *   Page background   the ground of your profile and every listing without
- *                     its own; a card that opens its own screen, with Back
+ *   Page background   the grounds of your profile and your listings: the same
+ *                     screen as Settings › Your pages (./YourPages)
  *
  * Who you are and where you get paid are the person's, on Account.
  */
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
-
-import { GroundPicker, GroundSwatch, labelOf } from "@/components/creator/run/GroundPicker";
-import { getCreatorSettings, setPageGround } from "@/lib/creator/listings";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { useHref } from "../base";
-import { IconDirector } from "../icons";
 import { useShell } from "../Shell";
-import { IconArrowLeft } from "../icons";
 import { glass } from "../ui";
 import { ReadyToPublish } from "./ReadyToPublish";
+import { YourPagesCard, YourPagesScreen } from "./YourPages";
 
-export function SpacesSettingsScreen({ screen }: { screen?: string }) {
-  const [ground, setGround] = useState<string | null | undefined>(undefined);
-  const load = useCallback(() => {
-    void getCreatorSettings()
-      .then(({ settings }) => setGround(settings.pageGround ?? null))
-      .catch(() => setGround(null));
-  }, []);
-  useEffect(load, [load]);
-
-  if (screen === "background") return <BackgroundScreen ground={ground} onSaved={load} />;
+export function SpacesSettingsScreen({ screen, item }: { screen?: string; item?: string }) {
+  const href = useHref();
+  if (screen === "background") {
+    return (
+      <YourPagesScreen base={href("/settings?screen=background")} back={href("/settings")} backLabel="Settings" item={item} />
+    );
+  }
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-2 lg:items-start">
       <ReadyToPublish />
       <div className="flex flex-col gap-4">
         <CreativeDirector />
-        <BackgroundCard ground={ground} />
+        <YourPagesCard href={href("/settings?screen=background")} title="Page background" />
       </div>
-    </div>
-  );
-}
-
-/** The ground of the creator's pages, as a card that opens its own screen. */
-function BackgroundCard({ ground }: { ground: string | null | undefined }) {
-  const href = useHref();
-  return (
-    <Link href={href("/settings?screen=background")} aria-label="Page background" className={`${glass} flex items-center gap-4 p-5 transition-colors hover:bg-white/[0.07]`}>
-      <div className="w-24 shrink-0">
-        <GroundSwatch value={ground ?? null} height={64} />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-small font-medium text-text">Page background</p>
-        <p className="truncate text-tiny text-[#CFE3EC]">
-          {ground === undefined ? "…" : `${labelOf(ground)} · your profile and every listing`}
-        </p>
-      </div>
-      <span aria-hidden className="text-[#CFE3EC]">
-        &rarr;
-      </span>
-    </Link>
-  );
-}
-
-function BackgroundScreen({ ground, onSaved }: { ground: string | null | undefined; onSaved: () => void }) {
-  const href = useHref();
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex min-w-0 items-center gap-3">
-        <Link
-          href={href("/settings")}
-          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-[10px] border border-white/10 bg-white/[0.05] px-3 text-tiny font-medium text-[#CFE3EC] transition-colors hover:bg-white/10 hover:text-text"
-        >
-          <IconArrowLeft className="h-3.5 w-3.5" />
-          Back
-        </Link>
-        <div className="min-w-0">
-          <p className="truncate text-[11px] text-[#CFE3EC]">Settings</p>
-          <h2 className="truncate text-body font-medium text-text">Page background</h2>
-        </div>
-      </div>
-      <p className="max-w-2xl text-small text-[#CFE3EC]">
-        What your profile and every listing stand on. A listing can wear its own from its page, under Page background.
-      </p>
-      {ground === undefined ? null : (
-        <GroundPicker key={ground ?? "none"} value={ground} onSave={(next) => setPageGround(next).then(onSaved)} />
-      )}
     </div>
   );
 }
 
 /**
- * Creator or Creative Director. Switching it on is an upgrade, not a setting:
- * the Team page appears, the title under the name changes, and every listing
- * gains "Who works it". While a team exists it stays on.
+ * Creator or Creative Director: one switch, and a small (i) for what it does.
+ * On, the Team page appears, the title under the name changes and every
+ * listing gains "Who works it". While a team exists it stays on (the server's
+ * `/ad-space/settings` keeps the choice; lib/app/agency).
  */
 function CreativeDirector() {
   const { agency } = useShell();
   const href = useHref();
   const on = agency.on;
   return (
-    <section id="team" aria-label="Creative Director" className={`${glass} flex flex-col gap-3 p-5`}>
+    <section id="team" aria-label="Creative Director" className={`${glass} flex flex-col gap-2 px-5 py-4`}>
       <div className="flex items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] ${on ? "bg-amber text-text-on-amber" : "bg-amber/15 text-amber"}`}>
-            <IconDirector className="h-4 w-4" />
-          </span>
-          <div className="min-w-0">
-            <p className="text-small font-medium text-text">Creative Director</p>
-            <p className="truncate text-tiny text-[#9FB7C2]">Invite by email, assign listings, split per sale</p>
-          </div>
+        <div className="flex min-w-0 items-center gap-1.5">
+          <p className="text-small font-medium text-text">Creative Director</p>
+          <InfoBubble label="What is Creative Director?">
+            Run a team on your listings. You invite people by email, choose who works each listing, and set what each of
+            them earns from a sale. You pay them; HOLD only keeps the count.
+          </InfoBubble>
         </div>
         <button
           type="button"
@@ -131,10 +75,57 @@ function CreativeDirector() {
         </button>
       </div>
       {on ? (
-        <Link href={href("/team")} className="self-start text-tiny text-amber hover:text-[#FFE2A1]">
-          Open Team
-        </Link>
+        <p className="text-tiny text-[#9FB7C2]">
+          {agency.forced ? "On while you have a team. " : ""}
+          <Link href={href("/team")} className="text-amber hover:text-[#FFE2A1]">
+            Open Team
+          </Link>
+        </p>
       ) : null}
     </section>
+  );
+}
+
+/** A small (i) that opens two or three lines about the thing beside it. Escape or a click away closes it. */
+function InfoBubble({ label, children }: { label: string; children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: MouseEvent) => {
+      if (box.current && !box.current.contains(e.target as Node)) setOpen(false);
+    };
+    const esc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", away);
+    document.addEventListener("keydown", esc);
+    return () => {
+      document.removeEventListener("mousedown", away);
+      document.removeEventListener("keydown", esc);
+    };
+  }, [open]);
+  return (
+    <span ref={box} className="relative inline-flex">
+      <button
+        type="button"
+        aria-label={label}
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className={`flex h-5 w-5 items-center justify-center rounded-[10px] border text-[11px] font-semibold transition-colors ${
+          open ? "border-white/30 bg-white/15 text-text" : "border-white/20 text-[#9FB7C2] hover:text-text"
+        }`}
+      >
+        i
+      </button>
+      {open ? (
+        <span
+          role="note"
+          className="absolute left-1/2 top-7 z-30 w-[min(280px,80vw)] -translate-x-1/2 rounded-[12px] border border-white/15 bg-[#0B1C29] p-3 text-tiny leading-relaxed text-[#CFE3EC] shadow-[0_12px_30px_rgba(0,0,0,0.45)]"
+        >
+          {children}
+        </span>
+      ) : null}
+    </span>
   );
 }
