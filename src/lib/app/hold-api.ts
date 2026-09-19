@@ -171,8 +171,29 @@ export function getTransfers(limit = 50, offset = 0): Promise<TransfersAnswer> {
   return read<TransfersAnswer>(`transfers?limit=${limit}&offset=${offset}`);
 }
 
-export function getTransferDetails(id: string): Promise<unknown> {
-  return read(`transfers/${encodeURIComponent(id)}/details`);
+/**
+ * One transfer, expanded: the wallet it left, the inbound record that credited
+ * it, the hash and the error. The list row carries the counterparty and the
+ * symbol; this carries what the chain did.
+ */
+export interface TransferDetails {
+  id: string;
+  chain: string;
+  chainLegacy?: string;
+  tokenId: string;
+  amount: string;
+  toAddress: string | null;
+  status: string;
+  txHash: string | null;
+  error: string | null;
+  fromWallet: { id: string; chain: string; address: string; label: string | null } | null;
+  inbound: { confirmations: number; confirmedAt: string | null; fromAddress: string | null; tokenId: string | null; amount: string } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export function getTransferDetails(id: string): Promise<TransferDetails> {
+  return read<TransferDetails>(`transfers/${encodeURIComponent(id)}/details`);
 }
 
 /* ── The ledger: Main, Savings and the pockets ────────────────────── */
@@ -283,8 +304,32 @@ export function getCostBasis(): Promise<{ positions: CostBasisPosition[] }> {
 
 /* ── Payments the person is owed, owes, or has standing ───────────── */
 
-export function getScheduledPayments(): Promise<{ schedules: unknown[] }> {
-  return read("scheduled-payments");
+/**
+ * A standing payment. `amountMinor` is base units for an on-chain schedule
+ * (six decimals) and cents for an off ramp — two divisors, never one, which is
+ * the bug the app's `formatScheduleAmount` exists to make impossible.
+ */
+export interface Schedule {
+  id: string;
+  kind: "onchain" | "offramp";
+  status: string;
+  token: string;
+  amountMinor: string;
+  amountCurrency: string;
+  recipientLabel: string | null;
+  cadence: string;
+  startsAt: string;
+  expiresAt: string;
+  nextRunAt: string | null;
+  lastRunAt: string | null;
+  runsCompleted: number;
+  runsTotal: number | null;
+  consecutiveFailures: number;
+  authorizations?: { chain: string; revokedAt: string | null }[];
+}
+
+export function getScheduledPayments(): Promise<{ schedules: Schedule[] }> {
+  return read<{ schedules: Schedule[] }>("scheduled-payments");
 }
 
 export function getPaymentRequests(): Promise<unknown> {
@@ -295,9 +340,35 @@ export function getPaymentIntents(): Promise<unknown> {
   return read("payment-intents");
 }
 
-/** Bank payouts on their way out. */
-export function getOfframpOrders(): Promise<unknown> {
-  return read("offramp/orders");
+/**
+ * Where a bank payout got to. Four states and no more: the server maps an
+ * open-ended status column onto them and calls anything it cannot place
+ * `pending`, so nothing here may sound more certain than that.
+ */
+export type PayoutState = "pending" | "sent" | "settled" | "failed";
+
+export interface OfframpOrder {
+  id: string;
+  state: PayoutState;
+  /** The order exists and the wallet never sent the stablecoin. A job, not a status. */
+  needsFunding?: boolean;
+  /** What the recipient gets, in `currency`. */
+  amount: string;
+  currency: string;
+  createdAt: string;
+  updatedAt?: string;
+  beneficiary?: {
+    alias?: string | null;
+    holderName?: string | null;
+    bankName?: string | null;
+    accountLast4?: string | null;
+    currency?: string;
+  } | null;
+}
+
+/** Bank payouts on their way out, newest first. */
+export function getOfframpOrders(limit = 20): Promise<{ orders: OfframpOrder[]; hasMore?: boolean; nextBefore?: string | null }> {
+  return read<{ orders: OfframpOrder[]; hasMore?: boolean; nextBefore?: string | null }>(`offramp/orders?limit=${limit}`);
 }
 
 /** The virtual accounts money can arrive into. */
@@ -306,6 +377,27 @@ export function getRailAccounts(): Promise<unknown> {
 }
 
 /* ── The person ───────────────────────────────────────────────────── */
+
+/** A name money can be sent to: `@alex` and the address it resolves to. */
+export interface AliasRecord {
+  id: string;
+  alias: string;
+  targetChain: string;
+  targetAddress: string;
+  isPublic: boolean;
+  createdAt: string;
+}
+
+/**
+ * The person's own names (GET /alias). The app's request-link screen reads
+ * this and shows `hi.me/<name>`; an empty answer means there is no link to
+ * share, never a link made up from an email.
+ */
+export function getAliases(): Promise<AliasRecord[]> {
+  return read<{ aliases?: AliasRecord[] } | AliasRecord[]>("alias").then((r) =>
+    Array.isArray(r) ? r : (r.aliases ?? []),
+  );
+}
 
 export function getHiPoints(): Promise<unknown> {
   return read("hipoints/me");
