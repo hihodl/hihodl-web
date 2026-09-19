@@ -28,6 +28,7 @@ import { fixtureEvents, fixtureSpace } from "@/lib/ad-space/fixture.dev";
 import type { Chain } from "@/lib/ad-space/types";
 import { demoInsights } from "@/lib/demo/insights";
 import { demoAnalytics, demoCreatorSearch } from "@/lib/demo/analytics";
+import { demoInspireCampaigns, demoInspireEvents } from "@/lib/demo/inspire";
 
 import { DEMO_INVITE_CODE, DEMO_PEOPLE, DEMO_SEAT_CODE, DEMO_WALLETS, demoState, isDemoRole, type DemoRole } from "./demo";
 import {
@@ -2424,6 +2425,13 @@ function route(req: DemoRequest): DemoResponse {
   }
   if (is("GET", "ad-space/creators/search")) {
     return ok({ creators: demoCreatorSearch(req.query.get("q") ?? "", Number(req.query.get("limit")) || 6) });
+  }
+
+  /* Inspire: the sponsor me index seed and three fictional HOLD listings */
+  if (is("GET", "inspire/events")) return ok(demoInspireEvents());
+  if ((p = is("GET", "inspire/events/:/campaigns"))) {
+    const out = demoInspireCampaigns(decodeURIComponent(p[0]), req.query);
+    return out ? ok(out) : { status: 404, error: { code: "not_found" } };
   }
 
   /* Insights: market data, the demo's own numbers */

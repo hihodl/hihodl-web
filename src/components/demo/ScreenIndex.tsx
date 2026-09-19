@@ -325,8 +325,24 @@ function groups(p: string, ids: Ids | null): Group[] {
       { label: "Invitation: a seat link, signed out", href: at(`${S}/team`, { role: "invitee", signed: "out" }, { seat: DEMO_SEAT_CODE }) },
       { label: "Invitation: the invite address", href: at(`/invite/${DEMO_INVITE_CODE}`, { role: "invitee" }, { seat: DEMO_SEAT_CODE }) },
       { label: "Spaces settings", href: at(`${S}/settings`) },
-      { label: "Inspire: templates", href: at(`${S}/inspire`) },
-      { label: "Inspire: events", href: at(`${S}/inspire`, {}, { tab: "events" }) },
+    ],
+  });
+
+  const T49 = "token2049-singapore-2026";
+  out.push({
+    title: "Spaces: Inspire",
+    intro:
+      "What other creators sold ad space on, by event: the 285 campaigns of the public sponsor me index (credited, not HOLD users) and three fictional HOLD listings.",
+    entries: [
+      { label: "Hub: event cards", href: at(`${S}/inspire`) },
+      { label: "Event: TOKEN2049", href: at(`${S}/inspire`, {}, { event: T49 }) },
+      { label: "Event: not tied to an event, filtered to vehicles", href: at(`${S}/inspire`, {}, { event: "anytime", surface: "vehicle" }) },
+      { label: "Campaign from the index (@coinempress, a suitcase)", href: at(`${S}/inspire`, {}, { event: T49, c: "index:demo-0063" }) },
+      { label: "Campaign on HOLD (@nodeline_creator)", href: at(`${S}/inspire`, {}, { event: T49, c: "hold:demo-nodeline-suitcase" }) },
+      {
+        label: "Use this idea: the editor on the suitcase, Inspired by @coinempress",
+        href: at(`${S}/listings/new`, {}, { template: "carry-on-suitcase", inspiredBy: "x:coinempress" }),
+      },
     ],
   });
 
