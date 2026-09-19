@@ -120,6 +120,9 @@ export function receiptPath(url: string | null | undefined): string | null {
 export function explorerTxUrl(chain: Chain, tx: string): string {
   if (chain === "solana") return `https://solscan.io/tx/${encodeURIComponent(tx)}`;
   if (chain === "base") return `https://basescan.org/tx/${encodeURIComponent(tx)}`;
+  // Ethereum had no case of its own, so an Ethereum hash opened polygonscan,
+  // where it does not exist: the link looked right and went nowhere.
+  if (chain === "ethereum") return `https://etherscan.io/tx/${encodeURIComponent(tx)}`;
   return `https://polygonscan.com/tx/${encodeURIComponent(tx)}`;
 }
 
