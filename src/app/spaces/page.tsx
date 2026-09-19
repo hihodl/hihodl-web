@@ -73,7 +73,8 @@ export default function SpacesPage() {
           photo={{
             wide: "/spaces/hero-airport-wide.jpg",
             square: "/spaces/hero-airport-square.jpg",
-            alt: "A creator at the airport with her carry-on. Its front carries sponsor spots: a logo, a QR code and a solid amber panel sold, two spots still open.",
+            ambient: "/spaces/hero-airport-ambient.jpg",
+            alt: "A creator at the airport with her carry-on. Its front carries sponsor spots: a logo, a QR code and a solid amber panel sold, two spots still open at $200 and $175.",
           }}
         />
 
