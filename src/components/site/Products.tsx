@@ -35,7 +35,7 @@ const PRODUCTS: Product[] = [
       "Send to a @username instead of a 42-character address",
       "Five seconds to cancel after you hit send",
     ],
-    link: { href: "/#income", label: "How income rails work" },
+    link: { href: "/money#income", label: "How income rails work" },
     accent: "amber",
     visual: <PaymentsVisual />,
   },

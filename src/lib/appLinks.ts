@@ -19,5 +19,5 @@ export const PLAY_STORE_URL =
  */
 export const SMART_LINK_URL = "https://go.hihodl.xyz/app";
 
-/** The homepage section holding both store badges. Absolute so it also resolves from /faq. */
-export const DOWNLOAD_ANCHOR = "/#download";
+/** The money page's section holding both store badges. Absolute so it also resolves from /faq. */
+export const DOWNLOAD_ANCHOR = "/money#download";

@@ -11,17 +11,18 @@ import { Wordmark } from "@/components/site/Wordmark";
 // rates.config.ts — which is also why Savings and Smart Account are two
 // entries and not one. They are two prices.
 const PRODUCT = [
-  { href: "/#payments",     label: "Payments" },
+  { href: "/",              label: "Spaces" },
+  { href: "/money#payments",     label: "Payments" },
   { href: "/savings",       label: "Savings" },
   { href: "/invest",        label: "Invest" },
-  { href: "/#benefits",     label: "Benefits" },
-  { href: "/#income",       label: "Income Rails" },
+  { href: "/money#benefits",     label: "Benefits" },
+  { href: "/money#income",       label: "Income Rails" },
   { href: "/smart-account", label: "Smart Account" },
   { href: "/hipoints",      label: "HiPoints" },
   { href: "/travel",        label: "Stays" },
   { href: "/esim",          label: "eSIM" },
-  { href: "/#ai",           label: "AI (soon)" },
-  { href: "/#husd",         label: "HUSD" },
+  { href: "/money#ai",           label: "AI (soon)" },
+  { href: "/money#husd",         label: "HUSD" },
 ];
 
 // The technical section. Deliberately footer-only and never in the header: the
@@ -46,7 +47,7 @@ const LEARN = [
 // founder_orders table and the payment keys in place first, and a footer link to
 // a checkout that 500s is worse than no link at all.
 const COMPANY = [
-  { href: "/#how",      label: "How it works" },
+  { href: "/money#how",      label: "How it works" },
   { href: "/faq",       label: "FAQ" },
   { href: DOWNLOAD_ANCHOR, label: "Download" },
 ];

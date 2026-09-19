@@ -6,7 +6,8 @@ import { DownloadLink } from "@/components/site/DownloadLink";
 import { Wordmark } from "@/components/site/Wordmark";
 
 /**
- * The nav mirrors the app's own tab bar: Payments · Savings · Invest · Benefits.
+ * Spaces first: it is what the homepage sells. Then the app's own tab bar:
+ * Payments · Savings · Invest · Benefits.
  *
  * That is not a stylistic choice. Someone who reads the site and then installs
  * should find the same four words in the same order at the bottom of the app —
@@ -27,11 +28,20 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   {
-    label: "Payments",
-    href: "/#payments",
+    label: "Spaces",
+    href: "/",
     menu: [
-      { href: "/#payments", label: "Send & receive", blurb: "A username, not an address" },
-      { href: "/#income", label: "Income rails", blurb: "Your own USD account details" },
+      { href: "/#creators", label: "For creators", blurb: "Turn a hook into paid spots" },
+      { href: "/#brands", label: "For brands", blurb: "Buy a creator's reach and content" },
+      { href: "/#events", label: "Events", blurb: "Creators going to the big ones" },
+    ],
+  },
+  {
+    label: "Payments",
+    href: "/money#payments",
+    menu: [
+      { href: "/money#payments", label: "Send & receive", blurb: "A username, not an address" },
+      { href: "/money#income", label: "Income rails", blurb: "Your own USD account details" },
       { href: "/smart-account", label: "Smart Account", blurb: "Main earns without you moving it" },
     ],
   },
@@ -39,7 +49,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Invest", href: "/invest" },
   {
     label: "Benefits",
-    href: "/#benefits",
+    href: "/money#benefits",
     menu: [
       { href: "/hipoints", label: "HiPoints", blurb: "Earned on what you already spend" },
       { href: "/travel", label: "Stays", blurb: "Book hotels, pay from your balance" },
@@ -48,7 +58,15 @@ const NAV_ITEMS: NavItem[] = [
   },
 ];
 
-export function TopNav() {
+/**
+ * The header's one button. Download by default; the Spaces homepage passes
+ * "Create your space". The href is built on the server and passed in, because
+ * the product's origin depends on server-only env and a client-built link
+ * would not match the server's render.
+ */
+export type NavCta = { label: string; href: string };
+
+export function TopNav({ cta }: { cta?: NavCta } = {}) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   /** Label of the desktop popup currently open, or null. */
@@ -187,10 +205,19 @@ export function TopNav() {
           {/* Spacer */}
           <div className="flex-1" />
 
-          {/* Download CTA */}
-          <DownloadLink className="hidden sm:inline-flex items-center px-5 py-2.5 rounded-pill bg-amber text-text-on-amber font-medium text-small hover:bg-amber-glow transition-all duration-180 ease-out-soft hover:scale-[1.02]">
-            Download
-          </DownloadLink>
+          {/* Primary CTA */}
+          {cta ? (
+            <a
+              href={cta.href}
+              className="hidden sm:inline-flex h-10 items-center whitespace-nowrap px-5 rounded-[20px] bg-amber text-text-on-amber font-medium text-small hover:bg-amber-glow transition-colors duration-180"
+            >
+              {cta.label}
+            </a>
+          ) : (
+            <DownloadLink className="hidden sm:inline-flex items-center px-5 py-2.5 rounded-pill bg-amber text-text-on-amber font-medium text-small hover:bg-amber-glow transition-all duration-180 ease-out-soft hover:scale-[1.02]">
+              Download
+            </DownloadLink>
+          )}
 
           {/* Mobile burger */}
           <button
@@ -262,12 +289,22 @@ export function TopNav() {
                 </Link>
               ),
             )}
-            <DownloadLink
-              onClick={closeAll}
-              className="mt-4 inline-flex items-center justify-center px-5 py-3 rounded-pill bg-amber text-text-on-amber font-medium"
-            >
-              Download
-            </DownloadLink>
+            {cta ? (
+              <a
+                href={cta.href}
+                onClick={closeAll}
+                className="mt-4 inline-flex h-12 items-center justify-center px-5 rounded-[24px] bg-amber text-text-on-amber font-medium"
+              >
+                {cta.label}
+              </a>
+            ) : (
+              <DownloadLink
+                onClick={closeAll}
+                className="mt-4 inline-flex items-center justify-center px-5 py-3 rounded-pill bg-amber text-text-on-amber font-medium"
+              >
+                Download
+              </DownloadLink>
+            )}
           </nav>
         </div>
       </div>
