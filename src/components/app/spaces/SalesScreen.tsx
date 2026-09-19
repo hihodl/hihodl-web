@@ -16,8 +16,12 @@
  *   /sales                 one card per event, and "Not tied to an event"
  *   /sales?event=<slug>    that event's listings
  *   /sales?listing=<id>    that listing's sales
+ *   /sales?listing=<id>&offer=<orderId>
+ *                          "Offer them content": a message for the brand behind
+ *                          that sale, to copy (./ContentOffer)
  */
 
+import Link from "next/link";
 import { useMemo } from "react";
 
 import type { PositionView, SalesListing } from "@/lib/creator/listing";
@@ -25,9 +29,11 @@ import { byEvent, cents, kindsText, listingTotals, NO_EVENT, paidSales, type Sal
 import { useListing, useListingSales, useSales } from "@/lib/app/spaces-data";
 
 import { useHref } from "../base";
+import { useShell } from "../Shell";
 import { IconSales } from "../icons";
 import { dollars, EmptyState, Panel, Skeleton } from "../ui";
 import { ReadError, shortDay } from "./common";
+import { ContentOfferScreen, midSentence, useOffersContent, useTemplateFormats, type ContentLead } from "./ContentOffer";
 import {
   CardGrid,
   DrillBar,
@@ -48,7 +54,7 @@ const salesText = (n: number) => `${n} ${n === 1 ? "sale" : "sales"}`;
 const sumReceived = (ls: readonly SalesListing[]) => ls.reduce((n, l) => n + cents(l.receivedUsdc), 0);
 const sumOrders = (ls: readonly SalesListing[]) => ls.reduce((n, l) => n + l.orders, 0);
 
-export function SalesScreen({ event, listing }: { event: string | null; listing: string | null }) {
+export function SalesScreen({ event, listing, offer = null }: { event: string | null; listing: string | null; offer?: string | null }) {
   const sales = useSales();
   const refs = useListingRefs();
   const totals = useMemo(() => listingTotals(sales.data), [sales.data]);
@@ -58,7 +64,7 @@ export function SalesScreen({ event, listing }: { event: string | null; listing:
   }
   const refOf: RefOf = (id, named) => refs.get(id) ?? unknownListing(id, named?.serviceName || named?.spaceTitle || "Listing");
 
-  if (listing) return <ListingSales spaceId={listing} total={totals.find((l) => l.spaceId === listing) ?? null} refOf={refOf} />;
+  if (listing) return <ListingSales spaceId={listing} total={totals.find((l) => l.spaceId === listing) ?? null} refOf={refOf} offer={offer} />;
   if (event) return <EventSales eventKey={event} totals={totals} refOf={refOf} />;
 
   const groups = byEvent(totals, (l) => l.spaceId, refs).sort(
@@ -164,8 +170,11 @@ function EventSales({ eventKey, totals, refOf }: { eventKey: string; totals: Sal
 /** Eight rows: a listing's sales page like its cards do, and never scroll. */
 const ROWS = 8;
 
-function ListingSales({ spaceId, total, refOf }: { spaceId: string; total: SalesListing | null; refOf: RefOf }) {
+function ListingSales({ spaceId, total, refOf, offer }: { spaceId: string; total: SalesListing | null; refOf: RefOf; offer: string | null }) {
   const href = useHref();
+  const { listings } = useShell();
+  const offersContent = useOffersContent();
+  const { nameOf } = useTemplateFormats();
   const ref = refOf(spaceId, total ?? undefined);
   // Every sale of this one listing, not the latest across all of them.
   const sales = useListingSales(spaceId);
@@ -174,6 +183,34 @@ function ListingSales({ spaceId, total, refOf }: { spaceId: string; total: Sales
   const space = useListing(spaceId);
   const positions = useMemo(() => new Map((space.data?.positions ?? []).map((p) => [p.zoneKey, p])), [space.data]);
   const paged = usePaged(rows, spaceId, ROWS);
+  const here = `${href("/sales")}?listing=${encodeURIComponent(spaceId)}`;
+
+  // A brand that paid for a spot, by name, still holding it: someone to offer content to.
+  const card = listings.find((l) => l.id === spaceId);
+  const canOffer = offersContent(card);
+  const kind = ref.kind ?? "placement";
+  const product = midSentence((card && nameOf(card.templateId)) || card?.serviceName || (kind === "placement" ? "product" : "content"));
+  const leads: ContentLead[] = canOffer
+    ? rows
+        .filter((r) => r.status === "paid" && r.sponsorName)
+        .map((r) => {
+          const p = positions.get(r.zoneKey);
+          return {
+            key: r.orderId,
+            brand: r.sponsorName!,
+            bought: p?.title ?? p?.label ?? r.zoneKey,
+            kind,
+            product,
+            listing: ref.title,
+            event: ref.event ? { slug: ref.event.key, name: ref.event.name, city: ref.event.city, startsOn: ref.event.startsOn, endsOn: ref.event.endsOn } : null,
+          };
+        })
+    : [];
+
+  if (offer) {
+    if (!sales.data || (!space.data && !space.error)) return sales.error ? <ReadError error={sales.error} /> : <Skeleton className="h-[320px]" />;
+    return <ContentOfferScreen back={here} crumb={ref.title} leads={leads} initial={offer} />;
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -194,7 +231,13 @@ function ListingSales({ spaceId, total, refOf }: { spaceId: string; total: Sales
         ) : (
           <ul className="flex flex-col">
             {paged.shown.map((r) => (
-              <SaleLine key={r.orderId} row={r} position={positions.get(r.zoneKey) ?? null} loading={!space.data && !space.error} />
+              <SaleLine
+                key={r.orderId}
+                row={r}
+                position={positions.get(r.zoneKey) ?? null}
+                loading={!space.data && !space.error}
+                offerHref={leads.some((l) => l.key === r.orderId) ? `${here}&offer=${encodeURIComponent(r.orderId)}` : null}
+              />
             ))}
           </ul>
         )}
@@ -206,7 +249,18 @@ function ListingSales({ spaceId, total, refOf }: { spaceId: string; total: Sales
   );
 }
 
-function SaleLine({ row, position, loading }: { row: SaleRow; position: PositionView | null; loading: boolean }) {
+function SaleLine({
+  row,
+  position,
+  loading,
+  offerHref,
+}: {
+  row: SaleRow;
+  position: PositionView | null;
+  loading: boolean;
+  /** "Offer them content", on a sale to a named brand that still holds its spot. */
+  offerHref: string | null;
+}) {
   // The name comes with the sale. The position's is only a fallback for a
   // server older than that, and only while this order still holds the spot.
   const outbid = row.status === "outbid";
@@ -218,6 +272,15 @@ function SaleLine({ row, position, loading }: { row: SaleRow; position: Position
         <p className="truncate text-small text-text">{sponsor}</p>
         <p className="mt-0.5 truncate text-tiny text-[#9FB7C2]">{outbid ? `${what} · outbid since` : what}</p>
       </div>
+      {offerHref ? (
+        <Link
+          href={offerHref}
+          scroll={false}
+          className="inline-flex h-8 shrink-0 items-center rounded-[10px] border border-white/10 bg-white/[0.05] px-3 text-tiny font-medium text-[#CFE3EC] transition-colors hover:bg-white/10 hover:text-text"
+        >
+          Offer them content
+        </Link>
+      ) : null}
       <div className="shrink-0 text-right">
         <p className="text-small tabular-nums text-text">{row.receivedUsdc} USDC</p>
         <p className="mt-0.5 text-tiny text-[#9FB7C2]">{shortDay(row.paidAt)}</p>

@@ -276,6 +276,10 @@ export function CreatorHero({ creator, openNow }: { creator: CreatorProfile; ope
           note={flagged ? [record.missed ? `${record.missed} missed` : null, disputed ? `${disputed} disputed` : null].filter(Boolean).join(" · ") : null}
         />
       </div>
+      {/* What a brand buys here, as creators learned to sell it: the product gets the look, the reach and the content are the point. */}
+      <p className="mt-6 max-w-2xl text-body text-text-muted">
+        Every spot comes with {name}&rsquo;s reach and the content they make. The product is what makes people look.
+      </p>
       {onTimeText(record) ? (
         <p className="mt-6 inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-[20px] border border-success/40 bg-success/10 px-4 text-small text-text">
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden className="text-success">

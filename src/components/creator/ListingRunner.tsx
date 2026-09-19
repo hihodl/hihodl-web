@@ -3,8 +3,10 @@
  *
  * On top, the listing's own picture, big, with its name and the one number that
  * matters. Under it, one card per part of running it — the link, the events,
- * the offers, the floors, the spots, the deliveries, the updates and, for a
- * Creative Director, who works it — each with one small figure. A card opens
+ * the offers, the floors, the spots, the deliveries, the updates, "Offer them
+ * content" once a brand holds a spot (./ContentOffer: a spot is often where a
+ * content deal starts) and, for a Creative Director, who works it — each with
+ * one small figure. A card opens
  * its own screen (`?tab=`), with Back to the hub. Nothing is a long page.
  *
  * Money has its own place (Sales); nothing here says where it goes.
@@ -42,9 +44,11 @@ import {
   IconLink,
   IconMegaphone,
   IconOffers,
+  IconSales,
   IconShare,
   IconTeam,
 } from "@/components/app/icons";
+import { ContentOfferScreen, midSentence, useOffersContent, type ContentLead } from "@/components/app/spaces/ContentOffer";
 import { useShell } from "@/components/app/Shell";
 import { glass, Panel, Skeleton } from "@/components/app/ui";
 import { useRefresh } from "@/lib/app/spaces-data";
@@ -86,7 +90,7 @@ const SCREEN_BODY = "lg:max-h-[calc(var(--app-vh,100dvh)-196px)] lg:overflow-y-a
 /** The same, inside a panel that has its own title and padding. */
 const PANEL_BODY = "lg:max-h-[calc(var(--app-vh,100dvh)-252px)] lg:overflow-y-auto";
 
-type Screen = "events" | "offers" | "floors" | "spots" | "photo" | "deliveries" | "updates" | "team";
+type Screen = "events" | "offers" | "floors" | "spots" | "photo" | "deliveries" | "updates" | "content" | "team";
 
 const SCREEN_TITLE: Record<Screen, string> = {
   events: "Events",
@@ -96,12 +100,15 @@ const SCREEN_TITLE: Record<Screen, string> = {
   photo: "Photo",
   deliveries: "Deliveries",
   updates: "Updates",
+  content: "Offer them content",
   team: "Who works it",
 };
 
-export function ListingRunner({ spaceId, tab }: { spaceId: string; tab?: string; item?: string }) {
+export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: string; item?: string }) {
+  const href = useHref();
   const { listings, agency, role } = useShell();
   const refresh = useRefresh();
+  const offersContent = useOffersContent();
   const owner = listings.some((l) => l.id === spaceId);
 
   const [space, setSpace] = useState<SpaceView | null>(null);
@@ -163,6 +170,23 @@ export function ListingRunner({ spaceId, tab }: { spaceId: string; tab?: string;
   const takesOffers = space.pricingMode !== "fixed" || space.acceptsOffers || space.positions.some((p) => p.saleMode);
   const floors = floorGroups(space);
   const hasFloors = floors.length > 0;
+  // Brands holding a spot here, by name: a spot is often where a content deal starts.
+  const leads: ContentLead[] =
+    owner && offersContent(listings.find((l) => l.id === space.id))
+      ? space.positions
+          .filter((p) => p.status === "sold" && p.sponsor?.name)
+          .map((p) => ({
+            key: p.id,
+            brand: p.sponsor!.name!,
+            bought: p.title ?? p.label,
+            kind: space.kind,
+            product: midSentence(space.template?.name ?? space.serviceName ?? (space.kind === "placement" ? "product" : "content")),
+            listing: space.serviceName || space.title,
+            event: space.event
+              ? { slug: space.event.slug, name: space.event.name, city: space.event.city, startsOn: space.event.startsOn, endsOn: space.event.endsOn }
+              : null,
+          }))
+      : [];
   const shown: Record<Screen, boolean> = {
     events: owner && space.status !== "delisted",
     offers: takesOffers,
@@ -172,10 +196,15 @@ export function ListingRunner({ spaceId, tab }: { spaceId: string; tab?: string;
     photo: owner && space.kind === "placement" && space.status !== "delisted",
     deliveries: space.status !== "draft",
     updates: space.status !== "draft",
+    content: leads.length > 0,
     team: owner && agency.on,
   };
 
   const screen = (Object.keys(shown) as Screen[]).find((k) => k === tab && shown[k]) ?? null;
+
+  if (screen === "content") {
+    return <ContentOfferScreen back={href(`/listings/${space.id}`)} crumb={space.serviceName || space.title} leads={leads} initial={item ?? null} />;
+  }
 
   if (screen) {
     return (
@@ -266,6 +295,9 @@ export function ListingRunner({ spaceId, tab }: { spaceId: string; tab?: string;
         ) : null}
         {shown.updates ? (
           <HubCard screen="updates" space={space} icon={IconMegaphone} value={space.updates.length} unit="posted" />
+        ) : null}
+        {shown.content ? (
+          <HubCard screen="content" space={space} icon={IconSales} value={leads.length} unit={leads.length === 1 ? "brand to offer content" : "brands to offer content"} />
         ) : null}
         {shown.team ? (
           <HubCard screen="team" space={space} icon={IconTeam} value={crew ?? "–"} unit={crew === 1 ? "person" : "people"} />

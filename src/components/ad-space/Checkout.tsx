@@ -29,6 +29,7 @@ import {
   SESSION_FALLBACK_TEXT,
   isProductionSpace,
   isSessionSpace,
+  serviceName,
   timeLeft,
 } from "@/lib/ad-space/format";
 import { describeOfferError, offerSolanaPayLink, startOfferCheckout } from "@/lib/ad-space/offers-client";
@@ -53,6 +54,7 @@ import { BriefForm, BriefReady, EMPTY_BRIEF, PackageLines, PaidProduction, type 
 import { QrCode } from "./qr";
 import { ManageLinkBox, SessionContactForm } from "./SessionBooking";
 import { SponsorContentForm } from "./SponsorContentForm";
+import { reachLine } from "./WhatTheBrandGets";
 import { btnPrimary, btnSecondary, btnSmallSecondary, eyebrow } from "./ui";
 
 /**
@@ -791,7 +793,22 @@ function Summary({
      cannot carry is the list the brand picked this rung FOR, and a sponsor
      about to sign for $1,300 should be reading the interview, not remembering
      it from the page behind the sheet. Plain text, as it arrives. */
+  const reach = reachLine(space);
   const perks = p.perks ?? [];
+  // What a spot on a product buys, said the way creators sell it: the reach
+  // first, the product as the reason people look, then the content promised.
+  // A rung carries its own list (perks); a session and a production have theirs.
+  const got: string[] = perks.length
+    ? [...(reach ? [reach] : []), ...perks]
+    : !session && !isProductionSpace(space) && space.kind === "placement"
+      ? [
+          ...(reach ? [reach] : []),
+          `Your brand on the ${p.label.charAt(0).toLowerCase()}${p.label.slice(1)} of the ${serviceName(space).toLowerCase()}: it's what makes people look`,
+          ...(space.deliverables.length
+            ? [`${space.deliverables.length} ${space.deliverables.length === 1 ? "piece" : "pieces"} of content promised on this page, with dates`]
+            : []),
+        ]
+      : [];
   // Taking a spot from whoever holds it, rather than buying an empty one. The
   // figures differ enough that showing the fixed-price pair would be wrong:
   // what this sponsor pays is the DOUBLED price plus the fee, and most of it
@@ -826,11 +843,11 @@ function Summary({
             sponsor who holds this spot now, in the same transaction.
           </div>
         )}
-        {perks.length > 0 && (
+        {got.length > 0 && (
           <div className="col-span-2 border-t border-[color:var(--color-hairline)] pt-3">
             <h3 className={`${eyebrow} text-text-faint`}>What you get</h3>
             <ul className="mt-2 flex flex-col gap-1.5">
-              {perks.map((line, i) => (
+              {got.map((line, i) => (
                 <li key={i} className="break-words text-small text-text [overflow-wrap:anywhere]">
                   {line}
                 </li>

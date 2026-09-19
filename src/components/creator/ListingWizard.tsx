@@ -12,7 +12,7 @@
  *
  * WHEN THE DRAFT REACHES THE SERVER
  *
- * At the end of "what you sell", because that is the first moment there is
+ * At the end of "pick your hook", because that is the first moment there is
  * something the API will accept — a create needs positions or a service offer,
  * and nothing before that step has either. From then on every change is a
  * PATCH of only what changed, which is what keeps an omitted field's value:
@@ -62,7 +62,7 @@ import { Loading, Notice } from "./parts";
 type Stage = "template" | Step;
 
 const STAGES: readonly { key: Stage; label: string }[] = [
-  { key: "template", label: "What you sell" },
+  { key: "template", label: "Pick your hook" },
   { key: "basics", label: "Name and dates" },
   { key: "sell", label: "The ladder" },
   { key: "publish", label: "Go live" },
@@ -73,7 +73,7 @@ const STAGES: readonly { key: Stage; label: string }[] = [
  * the package, so the package is decided before the price.
  */
 const PRODUCTION_STAGES: readonly { key: Stage; label: string }[] = [
-  { key: "template", label: "What you sell" },
+  { key: "template", label: "Pick your hook" },
   { key: "basics", label: "Name and dates" },
   { key: "includes", label: "What a spot includes" },
   { key: "sell", label: "The spots" },
@@ -352,7 +352,14 @@ function Shell({
   );
 }
 
-/* ── Pick a product ───────────────────────────────────────────────── */
+/* ── Pick your hook ───────────────────────────────────────────────── */
+
+/*
+ * What creators learned selling at TOKEN2049: the product is the hook. A
+ * suitcase, a dress, a photo with squares is why people look; what a brand
+ * pays for is the creator's reach and the content they make. So the products
+ * come first, and the content after them, as what brands come back for.
+ */
 
 function TemplateStep({
   templates,
@@ -368,21 +375,28 @@ function TemplateStep({
 
   return (
     <div className="flex flex-col gap-10">
+      <div className="flex flex-col gap-2">
+        <h2 className="text-body text-text">Pick your hook</h2>
+        <p className="text-small text-text-muted">
+          The product is why people look. What a brand pays for is your reach and the content you make. Go up early, and
+          pick something people don&rsquo;t expect to see.
+        </p>
+      </div>
       <Group
-        title="Services"
-        why="Coverage, videos, posts, time in person."
-        list={services}
-        chosen={chosen}
-        onChoose={onChoose}
-        describe={(t) => t.service?.summary ?? ""}
-      />
-      <Group
-        title="Spaces"
-        why="Spots on something you carry: a suitcase, a jacket, a helmet."
+        title="Products"
+        why="Spots on something you carry or wear: a suitcase, a jacket, a helmet."
         list={placements}
         chosen={chosen}
         onChoose={onChoose}
         describe={(t) => `${t.zones.length} ${t.zones.length === 1 ? "spot" : "spots"} on it`}
+      />
+      <Group
+        title="Content"
+        why="What brands come back for: videos, coverage, content for their own channels, time in person."
+        list={services}
+        chosen={chosen}
+        onChoose={onChoose}
+        describe={(t) => t.service?.summary ?? ""}
       />
     </div>
   );

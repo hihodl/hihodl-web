@@ -513,7 +513,7 @@ function steps(space: Space): Step[] {
         title: "It goes live",
         body: space.deliverBy ? `Delivered by ${calendarDate(space.deliverBy)}, linked on this page.` : "Each delivery is linked on this page.",
       }
-    : { title: "Ride along", body: "Your brand goes where the creator goes, in every post listed above." };
+    : { title: "Ride along", body: "Your brand goes where the creator goes, in front of their audience, in every post listed above." };
 
   if (session) {
     return [

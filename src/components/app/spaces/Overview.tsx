@@ -16,6 +16,7 @@ import { baseOf, groupByMember, pendingSeat, usdcText } from "@/lib/creator/team
 import {
   cents,
   dueSoon,
+  paidSales,
   memberDeliveries,
   ownerDeliveries,
   salesByWeek,
@@ -37,6 +38,10 @@ import { useShell } from "../Shell";
 import { dollars, EmptyState, KpiTile, MiniMetric, Panel, ProgressBar, RowLink, Segmented, Skeleton, glass } from "../ui";
 import { dueText, ReadError, StatusPill } from "./common";
 import { ReadyToPublish } from "./ReadyToPublish";
+import { useOffersContent } from "./ContentOffer";
+
+/** A sale stays in "Needs you" as a content lead this long: the brand just paid, and is listening. */
+const LEAD_DAYS = 7;
 
 /**
  * The Overview is exactly as tall as the sidebar on a wide screen: the column
@@ -80,6 +85,16 @@ function CreatorOverview() {
   const sold = live.reduce((n, l) => n + l.totals.sold, 0);
   const owedToTeam = groupByMember(owed.data ?? []).reduce((n, g) => n + g.owedBase, 0n);
   const artwork = deliveries.filter((d) => d.kind === "artwork").length;
+
+  // A brand that just took a spot: offer them content (a spot is often where a content deal starts).
+  const offersContent = useOffersContent();
+  const leads = useMemo(() => {
+    const since = Date.now() - LEAD_DAYS * 86_400_000;
+    return paidSales(sales.data)
+      .filter((r) => r.status === "paid" && r.sponsorName && r.paidAt && Date.parse(r.paidAt) >= since)
+      .filter((r) => offersContent(listings.find((l) => l.id === r.spaceId)))
+      .map((r) => ({ orderId: r.orderId, spaceId: r.spaceId, brand: r.sponsorName!, listing: r.serviceName || r.spaceTitle }));
+  }, [sales.data, listings, offersContent]);
 
   return (
     <div className={FILL}>
@@ -134,10 +149,10 @@ function CreatorOverview() {
       <ReadError error={sales.error ?? offers.error} />
 
       <div className={BOTTOM}>
-        <NeedsYou offers={waiting} deliveries={due} loading={!offers.data || !views.data} />
+        <NeedsYou offers={waiting} deliveries={due} leads={leads} loading={!offers.data || !views.data} />
         <Panel title="Live" meta={`${live.length}`} action={<Link href={href("/listings")} className="text-tiny text-[#9FB7C2] hover:text-text">All listings</Link>}>
           {live.length === 0 ? (
-            <EmptyState title="Nothing live." action={<Link href={href("/listings/new")} className="text-small text-amber">New listing</Link>} />
+            <EmptyState title="Nothing live." action={<Link href={href("/listings/new")} className="text-small text-amber">Pick your hook</Link>} />
           ) : (
             <ul className="flex flex-col gap-1">
               {live.slice(0, ROWS).map((l) => (
@@ -218,10 +233,13 @@ function SalesChart({ sales, loading }: { sales: SalesSummary | undefined; loadi
 function NeedsYou({
   offers,
   deliveries,
+  leads = [],
   loading,
 }: {
   offers: readonly OfferView[];
   deliveries: readonly DeliveryItem[];
+  /** Brands that just paid for a spot, to offer content to. */
+  leads?: readonly { orderId: string; spaceId: string; brand: string; listing: string }[];
   loading: boolean;
 }) {
   const href = useHref();
@@ -243,6 +261,13 @@ function NeedsYou({
       title: d.kind === "artwork" ? d.title : `${d.kind === "spot" || d.kind === "production" ? "Deliver" : "Promise"} · ${d.title}`,
       sub: d.listing,
       right: d.due ? <span className={`text-tiny ${d.state === "overdue" ? "text-amber" : "text-[#9FB7C2]"}`}>{dueText(d.due)}</span> : null,
+    })),
+    ...leads.map((l) => ({
+      key: `c-${l.orderId}`,
+      href: `${href("/sales")}?listing=${encodeURIComponent(l.spaceId)}&offer=${encodeURIComponent(l.orderId)}`,
+      title: `Offer them content · ${l.brand}`,
+      sub: l.listing,
+      right: <span className="text-tiny text-[#9FB7C2]">New sale</span>,
     })),
   ];
 

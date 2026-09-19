@@ -4,9 +4,10 @@
  * Spaces › Insights: what sells at an event, at what price, when, and which
  * brands pay, built only from HOLD Spaces' own paid orders.
  *
- * A hub of six cards, each opening its own screen with Back:
+ * A hub of seven cards, each opening its own screen with Back:
  *
  *   /insights                     the hub, with the event switcher
+ *   /insights?view=hook           Your hook: be early, be unusual, a spot leads to content
  *   /insights?view=you            Your numbers, against the event's median
  *   /insights?view=sells          What sells, by surface and by product
  *   /insights?view=pricing        Floor price bands, and fixed vs offers vs bids
@@ -26,20 +27,21 @@ import { useMemo, useState, type ComponentType, type ReactNode, type SVGProps } 
 
 import { SITE_URL } from "@/lib/ad-space/config";
 import { eventDates } from "@/lib/ad-space/format";
-import type { Brand, Insights, InsightsEvent, Median, SellRow } from "@/lib/creator/insights";
+import type { Brand, HookBlock, Insights, InsightsEvent, Median, SellRow } from "@/lib/creator/insights";
 import { useInsights } from "@/lib/app/spaces-data";
 
 import { useHref } from "../base";
 import { btnPrimary, CopyButton, inputCls } from "../front/kit";
-import { IconAccount, IconCalendar, IconFloor, IconMegaphone, IconOffers, IconSales } from "../icons";
+import { IconAccount, IconCalendar, IconFloor, IconInspire, IconMegaphone, IconOffers, IconSales } from "../icons";
 import { useShell } from "../Shell";
 import { dollars, EmptyState, FilterPills, Panel, ProgressBar, Segmented, Skeleton } from "../ui";
 import { ReadError } from "./common";
+import { PRODUCTION_TEMPLATE, useProductionAt } from "./ContentOffer";
 import { cardCls, CardGrid, DrillBar, Pager, useListingKind, usePaged } from "./cards";
 
-export type InsightsView = "you" | "sells" | "pricing" | "timing" | "brands" | "pitch";
+export type InsightsView = "hook" | "you" | "sells" | "pricing" | "timing" | "brands" | "pitch";
 
-const VIEWS: readonly InsightsView[] = ["you", "sells", "pricing", "timing", "brands", "pitch"];
+const VIEWS: readonly InsightsView[] = ["hook", "you", "sells", "pricing", "timing", "brands", "pitch"];
 
 export function isInsightsView(v: string | null | undefined): v is InsightsView {
   return typeof v === "string" && (VIEWS as readonly string[]).includes(v);
@@ -52,6 +54,13 @@ const daysText = (n: number) => `${n} ${n === 1 ? "day" : "days"}`;
 const perFollower = (n: number) => (n >= 0.01 ? `$${n.toFixed(2)}` : `$${n.toFixed(4)}`);
 const compact = (n: number) => n.toLocaleString("en-US", { notation: "compact", maximumFractionDigits: 1 });
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+
+/** 1st, 2nd, 3rd, 4th, 11th, 21st. */
+export function ordinal(n: number): string {
+  const tens = n % 100;
+  const suffix = tens >= 11 && tens <= 13 ? "th" : ({ 1: "st", 2: "nd", 3: "rd" } as Record<number, string>)[n % 10] ?? "th";
+  return `${n}${suffix}`;
+}
 
 function sampleText(s: { creators: number; listings: number }): string {
   return `${plural(s.creators, "creator")} · ${plural(s.listings, "listing")}`;
@@ -86,6 +95,7 @@ export function InsightsScreen({ event, view, brand }: { event: string | null; v
   const current = isInsightsView(view) ? view : null;
   const back = to(null);
 
+  if (current === "hook") return <HookScreen data={data} back={back} />;
   if (current === "you") return <YouScreen data={data} back={back} />;
   if (current === "sells") return <SellsScreen data={data} back={back} />;
   if (current === "pricing") return <PricingScreen data={data} back={back} />;
@@ -124,6 +134,7 @@ function Hub({ data, to }: { data: Insights; to: (v: InsightsView | null, extra?
   const topBand = best(pricing.bands);
   const brandList = brands.event ?? brands.allTime;
   const needMore = `Not enough sales yet at ${where(data.event)}`;
+  const hook = hookHeadline(data);
 
   return (
     <div className="flex flex-col gap-4">
@@ -137,6 +148,7 @@ function Hub({ data, to }: { data: Insights; to: (v: InsightsView | null, extra?
         <EventSwitch data={data} />
       </div>
       <CardGrid>
+        <HubCard href={to("hook")} icon={IconInspire} title="Your hook" line={hook.line} value={hook.value} note={hook.note} />
         <HubCard
           href={to("you")}
           icon={IconAccount}
@@ -181,7 +193,7 @@ function Hub({ data, to }: { data: Insights; to: (v: InsightsView | null, extra?
           href={to("pitch")}
           icon={IconMegaphone}
           title="Pitch a brand"
-          line="A plan built from your numbers"
+          line="Lead with your reach and content"
           value="Write"
           note="copy and send"
         />
@@ -301,6 +313,149 @@ function BarRow({
     </li>
   );
 }
+
+/* ── Your hook ────────────────────────────────────────────────────── */
+
+/**
+ * What creators learned selling at TOKEN2049, and the part our data can show.
+ * The product is the hook: a suitcase, a dress, a photo with squares is why
+ * people look. What the brand buys is the creator's reach and the content they
+ * make, and a spot is often the start of a content deal. Two things got the
+ * suitcase seen: going up before the timeline filled, and being something out
+ * of the ordinary.
+ */
+
+/** The creator's first listing here, the one the hook is about. */
+function firstOfMine(hook: HookBlock | undefined) {
+  return hook?.mine[0] ?? null;
+}
+
+function earlyText(days: number): string {
+  if (days > 0) return `${daysText(days)} before it starts`;
+  if (days === 0) return "on the first day";
+  return "after it started";
+}
+
+function hookHeadline(data: Insights): { line: string; value: string; note: string } {
+  const hook = data.hook;
+  const mine = firstOfMine(hook);
+  if (mine && mine.rank !== null) {
+    const d = mine.daysBeforeEvent;
+    return {
+      line: `${mine.product}${d === null ? "" : d > 0 ? ` · ${daysText(d)} early` : d === 0 ? " · on day one" : " · after it started"}`,
+      value: ordinal(mine.rank),
+      note: `of ${plural(mine.sameProduct, "listing")} on it`,
+    };
+  }
+  const open = hook?.leastCrowded ?? [];
+  return {
+    line: open.length ? `Fewest here: ${open.slice(0, 2).map((p) => p.label).join(", ")}` : "The product is why people look",
+    value: mine ? "—" : "Pick",
+    note: mine ? "pick an event" : "one that stands out",
+  };
+}
+
+function HookScreen({ data, back }: { data: Insights; back: string }) {
+  const href = useHref();
+  const hook = data.hook;
+  const mine = firstOfMine(hook);
+  const production = useProductionAt(data.event?.slug ?? null);
+  const event = data.event;
+
+  const early = hook?.early ?? null;
+  const earlyData = !early
+    ? null
+    : early.sold.medianDays !== null
+      ? `Listings here that sold went up a median ${earlyText(early.sold.medianDays)} (${sampleText(early.sold.sample)}).${
+          early.unsold.medianDays !== null ? ` Those that did not: ${earlyText(early.unsold.medianDays)}.` : ""
+        }`
+      : `Not enough sales yet to compare: ${sampleText(early.sold.sample)} sold so far; a figure shows from ${data.minSample} creators.`;
+
+  const deals = hook?.contentDeals ?? null;
+  const dealData = !deals
+    ? null
+    : deals.pct !== null
+      ? `${pctText(deals.pct)} of the brands that took a spot also bought content from the same creator (${plural(deals.sample.sponsors, "brand")}, ${plural(deals.sample.creators, "creator")}).`
+      : `Not enough yet to show how often: ${plural(deals.sample.creators, "creator")} with a spot sold so far; a figure shows from ${data.minSample}.`;
+
+  const rows: { key: string; title: string; body: string; data: string | null; action?: ReactNode }[] = [
+    {
+      key: "early",
+      title: "Be early",
+      body: mine
+        ? mine.rank !== null
+          ? `Your ${mine.product.toLowerCase()} went up ${mine.daysBeforeEvent !== null ? earlyText(mine.daysBeforeEvent) : ""}, the ${ordinal(mine.rank)} of ${mine.sameProduct} at ${where(event)}. The first ones land on a timeline that is not full yet.`
+          : "Pick an event to see how early you went up, and in what order on your product."
+        : "Go up before the timeline fills: the first listings on a product get seen before the rest.",
+      data: earlyData,
+    },
+    {
+      key: "unusual",
+      title: "Be out of the ordinary",
+      body: hook?.leastCrowded.length
+        ? `Fewest listings ${event ? `at ${event.name}` : "on HOLD Spaces"}: ${hook.leastCrowded.map((p) => `${p.label} (${p.listings})`).join(", ")}. Something people do not expect to see is what they stop for.`
+        : "Something people do not expect to see is what they stop for.",
+      data: hook ? sampleText(hook.sample) : null,
+      action: hook?.leastCrowded[0] ? (
+        <Link href={href(`/listings/new?template=${encodeURIComponent(hook.leastCrowded[0].key)}`)} className={smallLink}>
+          List a {hook.leastCrowded[0].label.toLowerCase()}
+        </Link>
+      ) : null,
+    },
+    {
+      key: "content",
+      title: "A spot is the start of a content deal",
+      body: "The product gets their attention. What they pay for is your reach and the content you make, so when a brand takes a spot, offer them content for their own channels.",
+      data: dealData,
+      action: production ? (
+        <Link href={href("/sales")} className={smallLink}>
+          Your sales
+        </Link>
+      ) : (
+        <Link href={href(`/listings/new?template=${PRODUCTION_TEMPLATE}`)} className={smallLink}>
+          Create a Content production listing
+        </Link>
+      ),
+    },
+  ];
+
+  const head = hookHeadline(data);
+  return (
+    <Screen
+      back={back}
+      data={data}
+      title="Your hook"
+      big={mine && mine.rank !== null ? ordinal(mine.rank) : head.value}
+      bigNote={
+        mine && mine.rank !== null
+          ? `${mine.product} of ${mine.sameProduct} at ${where(event)}${mine.daysBeforeEvent !== null ? `, ${earlyText(mine.daysBeforeEvent)}` : ""}`
+          : head.line
+      }
+      aside={
+        <>
+          The product is the hook: it is why people look. What a brand pays for is your reach and the content you make.
+          {!hook ? " Your order and the least crowded products show once this screen can read them." : ""}
+        </>
+      }
+    >
+      <Panel title="What worked" meta={where(event)}>
+        <ul className="flex flex-col">
+          {rows.map((r) => (
+            <li key={r.key} className="flex min-w-0 flex-col gap-1.5 border-t border-white/[0.06] py-3 first:border-t-0 first:pt-0">
+              <p className="text-small font-medium text-text">{r.title}</p>
+              <p className="text-small text-[#CFE3EC]">{r.body}</p>
+              {r.data ? <p className="text-tiny text-[#9FB7C2]">{r.data}</p> : null}
+              {r.action ? <div className="pt-1">{r.action}</div> : null}
+            </li>
+          ))}
+        </ul>
+      </Panel>
+    </Screen>
+  );
+}
+
+const smallLink =
+  "inline-flex h-8 shrink-0 items-center rounded-[10px] border border-white/10 bg-white/[0.05] px-3 text-tiny font-medium text-[#CFE3EC] transition-colors hover:bg-white/10 hover:text-text";
 
 /* ── Your numbers ─────────────────────────────────────────────────── */
 
@@ -641,10 +796,10 @@ function useWhatISell(data: Insights) {
   const kindOf = useListingKind();
   return useMemo(() => {
     const here = listings.filter((l) => l.status !== "draft" && (!data.event || l.event?.slug === data.event.slug));
-    const titles = here.map((l) => l.serviceName || l.title);
+    const hooks = here.filter((l) => kindOf(l) === "placement").map((l) => l.title);
+    const content = here.filter((l) => kindOf(l) === "service").map((l) => l.serviceName || l.title);
     const open = here.reduce((n, l) => n + Math.max(0, l.totals.positions - l.totals.sold), 0);
-    const kinds = new Set(here.map(kindOf));
-    return { titles, open, placements: kinds.has("placement"), services: kinds.has("service") };
+    return { hooks, content, open, placements: hooks.length > 0, services: content.length > 0 };
   }, [listings, data.event, kindOf]);
 }
 
@@ -675,14 +830,17 @@ export function pitchText(input: {
   handle: string | null;
   followers: number | null;
   data: Insights;
-  titles: string[];
+  /** The creator's listings on a product here: the hook. */
+  hooks: string[];
+  /** Their content listings here: what they make for a brand. */
+  content: string[];
   open: number;
   /** What the creator sells here: spots on a product, content slots, or both. */
   placements: boolean;
   services: boolean;
   link: string | null;
 }): string {
-  const { brand, handle, followers, data, titles, open, link, placements, services } = input;
+  const { brand, handle, followers, data, hooks, content, open, link, placements, services } = input;
   const y = data.you;
   const me = handle ? `@${handle}` : "a creator on HOLD Spaces";
   const event = data.event;
@@ -691,32 +849,31 @@ export function pitchText(input: {
   lines.push(
     event
       ? `I'm ${me}, and I'll be at ${event.name} in ${event.city} (${eventDates(event.startsOn, event.endsOn)}).`
-      : `I'm ${me}, and I sell sponsor spots on HOLD Spaces.`,
+      : `I'm ${me}.`,
   );
-  if (titles.length) {
-    const what = titles.slice(0, 3).join(", ");
+  lines.push("");
+
+  // What the brand buys: the reach, then the content. The product comes after, as the hook.
+  lines.push(`What ${brand} gets is my reach and the content I make${event ? ` there` : ""}:`);
+  if (followers) lines.push(`- ${compact(followers)} followers on X see what I post${event ? ` from ${event.name}` : ""}.`);
+  lines.push(`- Photos and posts tagging ${brand}, with the link you want.`);
+  if (services) lines.push(`- Content made for ${brand}${event ? ` at ${event.name}` : ""}: ${content.slice(0, 3).join(", ")}.`);
+  lines.push("");
+
+  if (hooks.length) {
     const floor = y.floorCents !== null ? `, from ${dollars(y.floorCents)}` : "";
-    lines.push(`I'm selling sponsor spots on ${what}${floor}${open ? `, with ${plural(open, "spot")} still open` : ""}.`);
+    lines.push(`The hook: your logo on ${hooks.slice(0, 2).map((h) => `"${h}"`).join(" and ")}${floor}. It's what makes people stop and look.`);
   }
-  lines.push("");
-  const why: string[] = [];
-  if (followers) why.push(`${compact(followers)} followers on X see what I carry and post.`);
-  if (y.placements.filled > 0) why.push(`${y.placements.filled} of my ${y.placements.total} spots here are already taken by brands.`);
+  const proof: string[] = [];
+  if (y.placements.filled > 0) proof.push(`${y.placements.filled} of my ${y.placements.total} spots here are already taken${open ? `, ${plural(open, "spot")} still open` : ""}.`);
   const market = marketLine(data, { placements, services });
-  if (market) why.push(market);
-  if (why.length) {
-    lines.push("Why it works:");
-    for (const w of why) lines.push(`- ${w}`);
-    lines.push("");
-  }
-  lines.push(`What I'd plan for ${brand}:`);
-  if (placements || !services) lines.push(`- Your logo on the spot you choose${event ? `, carried through ${event.name}` : ""}.`);
-  if (services) lines.push(`- A slot in my content${event ? ` from ${event.name}` : ""}, made for ${brand}.`);
-  lines.push(`- Photos and a post on X tagging ${brand}, with the link you want.`);
-  lines.push("- Paid in USDC straight to me, and your spot is yours the moment it is paid.");
-  lines.push("");
+  if (market) proof.push(market);
+  for (const p of proof) lines.push(p);
+  if (hooks.length || proof.length) lines.push("");
+
+  lines.push("Paid in USDC straight to me; your spot is yours the moment it's paid.");
   lines.push(link ? `Everything is here: ${link}` : "I can send the link to the listing.");
-  lines.push("Happy to shape it around what you are launching.", "", handle ? `@${handle}` : "");
+  lines.push(`If you want content for your own channels too, I can shoot it${event ? ` at ${event.name}` : ""}.`, "", handle ? `@${handle}` : "");
   return lines.join("\n").trimEnd();
 }
 
@@ -737,7 +894,8 @@ function PitchScreen({ data, back, initialBrand }: { data: Insights; back: strin
         handle,
         followers: followers ?? data.you.followers,
         data,
-        titles: mine.titles,
+        hooks: mine.hooks,
+        content: mine.content,
         open: mine.open,
         placements: mine.placements,
         services: mine.services,
@@ -767,7 +925,7 @@ function PitchScreen({ data, back, initialBrand }: { data: Insights; back: strin
             <p className="mt-4 text-tiny text-[#9FB7C2]">No brand has paid here yet. Type the one you want to reach.</p>
           )}
           <p className="mt-5 border-t border-white/[0.06] pt-4 text-tiny leading-relaxed text-[#9FB7C2]">
-            Built from your own numbers and what sells here. Nothing is sent: copy it and send it where you talk to brands.
+            It leads with your reach and your content, with the product as the hook. Built from your own numbers; nothing is sent: copy it and send it where you talk to brands.
           </p>
         </Panel>
         <Panel title={name ? `For ${name}` : "Your pitch"} meta={name ? `${text.split("\n").length} lines` : ""}>

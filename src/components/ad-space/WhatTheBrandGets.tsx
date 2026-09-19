@@ -1,6 +1,7 @@
 import {
   DELIVERABLE_STATE_LABEL,
   calendarDate,
+  compactNumber,
   deliverableNote,
   deliverableText,
   eventDates,
@@ -22,6 +23,13 @@ import { card, pill } from "./ui";
  *
  * On a ladder each rung says what it is, so the list is what EVERY rung also
  * includes. On a session it is the session: time in person has no logo.
+ *
+ * What creators learned selling at TOKEN2049: the product is the hook, the
+ * reason people look, and what a brand really buys is the creator's reach and
+ * the content they make. So a spot's list opens with the reach, then the spot
+ * as the thing that gets it seen, then the content. A production is made for
+ * the brand's own channels and a session is time in person: neither leads
+ * with the creator's audience.
  */
 
 const ORDER: ContentKind[] = ["logo", "qr", "text", "photo"];
@@ -38,13 +46,25 @@ function orWords(items: string[]): string {
   return `${items.slice(0, -1).join(", ")} or ${items[items.length - 1]}`;
 }
 
-/** "Your logo, QR code or text on the spot you pick", from what the spots take. */
+/** "Your logo, QR code or text on the suitcase: it's what makes people look", from what the spots take. */
 function spotLine(space: Space): string {
   if (space.kind === "service") return `One slot: ${serviceName(space)}`;
   const taken = new Set(space.positions.flatMap((p) => p.accepts));
   const kinds = ORDER.filter((k) => taken.has(k)).map((k) => WORD[k]);
   const on = `the ${serviceName(space).toLowerCase()}`;
-  return kinds.length ? `Your ${orWords(kinds)} on ${on}, on the spot you pick` : `Your brand on ${on}`;
+  return kinds.length
+    ? `Your ${orWords(kinds)} on ${on}, on the spot you pick. It's what makes people look`
+    : `Your brand on ${on}. It's what makes people look`;
+}
+
+/** "@coinempress's reach: 12.4K followers on X", or null with no count to name. */
+export function reachLine(space: Space): string | null {
+  const c = space.creator;
+  if (!c?.xHandle || !(c.xFollowers > 0)) return null;
+  const where = space.event ? ` from ${space.event.name}` : "";
+  return space.kind === "service"
+    ? `@${c.xHandle}'s reach: ${compactNumber(c.xFollowers)} followers on X see what they post${where}`
+    : `@${c.xHandle}'s reach: ${compactNumber(c.xFollowers)} followers on X see it in every post${where}`;
 }
 
 export function WhatTheBrandGets({ space }: { space: Space }) {
@@ -87,9 +107,11 @@ export function WhatTheBrandGets({ space }: { space: Space }) {
     );
   }
 
+  const reach = reachLine(space);
   return (
     <div className={`${card} p-5 md:p-6`}>
       <ul className="flex flex-col gap-4">
+        {reach ? <Item text={reach} strong /> : null}
         {tiered ? (
           <li className="text-small text-text-muted">
             {items.length ? "Every package also includes:" : "Each package lists what it includes."}

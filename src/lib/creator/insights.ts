@@ -109,11 +109,41 @@ export interface BrandList {
   sample: { paidOrders: number; named: number };
 }
 
+/**
+ * Your hook: the product is why people look, the creator's reach and content
+ * are what a brand buys. How early and in what order the creator went up on
+ * their product here, the least crowded products, and whether early listings
+ * and spots that led to content hold up. Absent from a server older than it.
+ */
+export interface HookBlock {
+  asOf: string;
+  sample: Sample;
+  mine: {
+    listingId: string;
+    productId: string;
+    product: string;
+    surface: Surface;
+    publishedAt: string;
+    /** Negative when it went up after the event started; null across all of Spaces. */
+    daysBeforeEvent: number | null;
+    /** 1 for the first listing on this product at the event; null across all of Spaces. */
+    rank: number | null;
+    sameProduct: number;
+  }[];
+  leastCrowded: { key: string; label: string; listings: number }[];
+  early: {
+    sold: { medianDays: number | null; sample: Sample };
+    unsold: { medianDays: number | null; sample: Sample };
+  } | null;
+  contentDeals: { pct: number | null; sample: { creators: number; sponsors: number } };
+}
+
 export interface Insights {
   asOf: string;
   minSample: number;
   event: InsightsEvent | null;
   events: InsightsEvent[];
+  hook?: HookBlock;
   you: YouBlock;
   whatSells: WhatSellsBlock;
   pricing: PricingBlock;

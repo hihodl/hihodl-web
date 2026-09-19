@@ -300,7 +300,7 @@ function Slots({
 
       <Field
         label="What the brand gets"
-        hint="Optional, but it is what somebody is paying for. A few sentences."
+        hint="Optional. Lead with who sees it and the content you make: that is what a brand pays for. A few sentences."
         htmlFor="slot-pitch"
       >
         <Paragraph id="slot-pitch" value={draft.slotPitch} onChange={(slotPitch) => set({ slotPitch })} maxLength={LIMITS.PITCH_MAX} />
