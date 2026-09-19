@@ -104,6 +104,88 @@ export function SpacesHero({
   );
 }
 
+/**
+ * The overview's hero: a photograph across the whole header, and the words on
+ * a solid ground rather than on the picture.
+ *
+ * From lg the photo takes the band from where the text column ends, the left is
+ * solid navy, and a short fade joins them, so no line of copy ever sits on the
+ * photograph itself (PRODUCT.md: text surfaces are solid). The photo is not
+ * full-bleed because its subject is centred: across the whole band, the case
+ * with the spots would land under the text. On a
+ * phone a 16:9 band would shrink the suitcase to a thumbnail, so the phone gets
+ * a square crop centred on the woman and the case, with the words below it.
+ *
+ * The spots on the case are composited onto the photo (same zones as the
+ * catalog's carry-on), not generated: an image model draws them as a picture
+ * of a suitcase stuck to a suitcase.
+ */
+export function SpacesPhotoHero({
+  current,
+  title,
+  titleMuted,
+  lead,
+  actions,
+  photo,
+}: {
+  current: SpacesPage;
+  title: ReactNode;
+  titleMuted?: ReactNode;
+  lead: ReactNode;
+  actions: ReactNode;
+  photo: { wide: string; square: string; alt: string };
+}) {
+  return (
+    <section className="relative overflow-hidden bg-[#0a1929]">
+      {/* From lg the photo starts at the middle of the band, never before
+          660px: the text column is at most 560px from the content's edge, so
+          the copy never runs onto the picture at any width. */}
+      <picture className="block lg:absolute lg:inset-y-0 lg:right-0 lg:left-[max(660px,50%)]">
+        <source media="(min-width: 640px)" srcSet={photo.wide} />
+        {/* eslint-disable-next-line @next/next/no-img-element -- art direction
+            between two crops needs <picture>; next/image cannot switch source
+            by media query. */}
+        <img
+          src={photo.square}
+          alt={photo.alt}
+          fetchPriority="high"
+          className="block aspect-square w-full object-cover sm:aspect-video lg:aspect-auto lg:h-full"
+        />
+      </picture>
+      {/* Phone: the photo melts into the ground the words stand on. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 aspect-square sm:aspect-video lg:hidden"
+        style={{ background: "linear-gradient(180deg, transparent 72%, #0a1929 100%)" }}
+      />
+      {/* From lg: the photo's left edge fades into the navy the text stands on. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 hidden w-40 lg:block lg:left-[max(660px,50%)]"
+        style={{ background: "linear-gradient(90deg, #0a1929 0%, rgba(10,25,41,0.55) 45%, transparent 100%)" }}
+      />
+      <div className="container-page relative pb-16 pt-8 lg:flex lg:min-h-[720px] lg:flex-col lg:justify-center lg:py-20">
+        <div className="lg:absolute lg:top-10">
+          <SpacesNav current={current} />
+        </div>
+        <div className="mt-8 max-w-xl lg:mt-16 lg:max-w-[560px]">
+          <h1 className="font-display text-[44px] font-light leading-[1.05] tracking-[-0.03em] text-text lg:text-h1">
+            {title}
+            {titleMuted ? (
+              <>
+                <br />
+                <span className="text-[#B9C7D6]">{titleMuted}</span>
+              </>
+            ) : null}
+          </h1>
+          <p className="mt-8 text-lead text-[#C9D4E0]">{lead}</p>
+          <div className="mt-10 flex flex-wrap items-center gap-3">{actions}</div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function PrimaryAction({ href, children }: { href: string; children: ReactNode }) {
   return (
     <Link

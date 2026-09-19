@@ -13,7 +13,7 @@ import {
   Rules,
   SIDE_ZONES,
   SecondaryAction,
-  SpacesHero,
+  SpacesPhotoHero,
   SuitcaseFigure,
   Timeline,
 } from "@/components/spaces-site/parts";
@@ -52,7 +52,7 @@ export default function SpacesPage() {
       <TopNav />
 
       <main>
-        <SpacesHero
+        <SpacesPhotoHero
           current="overview"
           title="Sponsorship,"
           titleMuted="sold by the creator."
@@ -70,24 +70,11 @@ export default function SpacesPage() {
               <SecondaryAction href={join}>I&rsquo;m a brand</SecondaryAction>
             </>
           }
-          figure={
-            <SuitcaseFigure
-              face={[
-                { ...FACE_ZONES.headline, state: "logo" },
-                { ...FACE_ZONES.upperLeft, state: "qr" },
-                { ...FACE_ZONES.upperRight, state: "held" },
-                { ...FACE_ZONES.lowerLeft, state: "open", price: "$175" },
-                { ...FACE_ZONES.lowerRight, state: "sold" },
-              ]}
-              side={[
-                { ...SIDE_ZONES.upperLeft, state: "sold" },
-                { ...SIDE_ZONES.upperRight, state: "open", price: "$125" },
-                { ...SIDE_ZONES.lowerLeft, state: "open", price: "$125" },
-                { ...SIDE_ZONES.lowerRight, state: "open", price: "$125" },
-              ]}
-              caption="A carry-on from the catalog. Every spot has its size, its price and its state."
-            />
-          }
+          photo={{
+            wide: "/spaces/hero-airport-wide.jpg",
+            square: "/spaces/hero-airport-square.jpg",
+            alt: "A creator at the airport with her carry-on. Its front carries sponsor spots: a logo, a QR code and a solid amber panel sold, two spots still open.",
+          }}
         />
 
         <Block tone="abyss" hairline="moonlight">
@@ -124,6 +111,7 @@ export default function SpacesPage() {
             title="How one sale goes"
             intro="From the listing to the proof, and who does each part."
           />
+          <div className="grid grid-cols-1 items-start gap-16 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
           <Timeline
             steps={[
               {
@@ -153,6 +141,25 @@ export default function SpacesPage() {
               },
             ]}
           />
+          <div className="lg:sticky lg:top-28 lg:mt-14">
+            <SuitcaseFigure
+              face={[
+                { ...FACE_ZONES.headline, state: "logo" },
+                { ...FACE_ZONES.upperLeft, state: "qr" },
+                { ...FACE_ZONES.upperRight, state: "held" },
+                { ...FACE_ZONES.lowerLeft, state: "open", price: "$175" },
+                { ...FACE_ZONES.lowerRight, state: "sold" },
+              ]}
+              side={[
+                { ...SIDE_ZONES.upperLeft, state: "sold" },
+                { ...SIDE_ZONES.upperRight, state: "open", price: "$125" },
+                { ...SIDE_ZONES.lowerLeft, state: "open", price: "$125" },
+                { ...SIDE_ZONES.lowerRight, state: "open", price: "$125" },
+              ]}
+              caption="What a brand sees on the listing: every spot with its size, its price and its state."
+            />
+          </div>
+          </div>
         </Block>
 
         <Block tone="abyss" hairline="moonlight">
