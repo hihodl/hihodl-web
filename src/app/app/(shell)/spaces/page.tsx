@@ -1,6 +1,6 @@
 import { Overview } from "@/components/app/spaces/Overview";
 
-/** The hub; `?view=` opens one of its screens (brands, events, sells, pay, inspired, needs). */
-export default function SpacesOverviewPage({ searchParams }: { searchParams: { view?: string } }) {
-  return <Overview view={searchParams.view ?? null} />;
+/** The hub; `?view=` opens one of its screens (brands, brand, events, sells, pay, inspired, needs). */
+export default function SpacesOverviewPage({ searchParams }: { searchParams: { view?: string; brand?: string } }) {
+  return <Overview view={searchParams.view ?? null} brand={searchParams.brand ?? null} />;
 }

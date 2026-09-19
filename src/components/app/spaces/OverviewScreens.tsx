@@ -5,7 +5,8 @@
  * its card on the Overview hub, each with Back. One big number on the left,
  * the detail on the right, nothing that scrolls for long.
  *
- *   ?view=brands     Brands you work with: who paid, at which events, who came back
+ *   ?view=brands     Brands you work with: one card per brand
+ *   ?view=brand      One brand alone (./BrandScreen)
  *   ?view=events     By event: what each event made
  *   ?view=sells      What sells for you: % sold and days to sell, per product, kind, listing
  *   ?view=pay        How brands pay: network, HOLD account or wallet, and the deal
@@ -13,6 +14,13 @@
  *
  * Built from GET /ad-space/me/analytics (lib/creator/analytics.ts): this
  * creator's own paid orders, nothing about anybody else.
+ *
+ * NO WRITTEN-OUT OBSERVATIONS
+ *
+ * These screens used to carry a lightbulb note under the big number —
+ * "Carry-on suitcase sells best: 75% of its spots", "3 brands came back for a
+ * second event". A sentence that only restates the figure next to it is
+ * filler, and it pushed every screen past one screenful. The figures say it.
  */
 
 import Link from "next/link";
@@ -23,9 +31,8 @@ import { eventDates } from "@/lib/ad-space/format";
 import type { BrandRelation, CreatorAnalytics, GroupRow, ListingRow, MixRow } from "@/lib/creator/analytics";
 
 import { useHref } from "../base";
-import { Notice } from "../hold";
 import { dollars } from "../ui";
-import { DrillBar, Pager, usePaged } from "./cards";
+import { CardGrid, DrillBar, Pager, usePaged } from "./cards";
 import { Card, Empty as KitEmpty, Group as Panel, Pills as FilterPills, ProgressBar as Bar, Tag as KitTag } from "./kit";
 
 /** The shared bar takes a fraction; these screens think in value and max. */
@@ -33,9 +40,9 @@ function ProgressBar({ value, max }: { value: number; max: number }) {
   return <Bar value={max > 0 ? value / max : 0} />;
 }
 
-export type OverviewView = "brands" | "events" | "sells" | "pay" | "inspired" | "needs";
+export type OverviewView = "brands" | "brand" | "events" | "sells" | "pay" | "inspired" | "needs";
 
-const VIEWS: readonly OverviewView[] = ["brands", "events", "sells", "pay", "inspired", "needs"];
+const VIEWS: readonly OverviewView[] = ["brands", "brand", "events", "sells", "pay", "inspired", "needs"];
 
 export function isOverviewView(v: string | null | undefined): v is OverviewView {
   return typeof v === "string" && (VIEWS as readonly string[]).includes(v);
@@ -50,7 +57,7 @@ export function daysText(n: number): string {
   if (v === 0) return "same day";
   return `${v} ${v === 1 ? "day" : "days"}`;
 }
-const monthYear = (iso: string | null) =>
+export const monthYear = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" }) : "";
 
 /** "Brands paid our 5% on top" when they did on every sale, else what came out of your price. */
@@ -70,7 +77,6 @@ function Screen({
   title,
   big,
   bigNote,
-  aside,
   extra,
   children,
 }: {
@@ -78,7 +84,6 @@ function Screen({
   title: string;
   big: ReactNode;
   bigNote: ReactNode;
-  aside?: ReactNode;
   /** Under the big number: a short ranked list that belongs with it. */
   extra?: ReactNode;
   children: ReactNode;
@@ -93,11 +98,6 @@ function Screen({
             <p className="text-[14.5px] leading-5 text-white/[0.62]">{bigNote}</p>
             {extra ? <div className="mt-1.5 border-t border-white/[0.08] pt-3">{extra}</div> : null}
           </Card>
-          {aside ? (
-            <Notice tone="calm" icon="bulb-outline">
-              {aside}
-            </Notice>
-          ) : null}
         </div>
         <div className="flex min-w-0 flex-col gap-4">{children}</div>
       </div>
@@ -115,7 +115,7 @@ function Empty({ title, body }: { title: string; body: string }) {
 }
 
 /** A brand's logo as the page shows it, or its initial. */
-function Logo({ brand }: { brand: Pick<BrandRelation, "name" | "logoUrl"> }) {
+export function Logo({ brand }: { brand: Pick<BrandRelation, "name" | "logoUrl"> }) {
   const initial = brand.name.replace(/^@/, "").trim().charAt(0).toUpperCase() || "?";
   return brand.logoUrl ? (
     // eslint-disable-next-line @next/next/no-img-element
@@ -143,105 +143,78 @@ function BarLine({ label, right, value, max, sub }: { label: ReactNode; right: R
 
 /* ── Brands you work with ─────────────────────────────────────────── */
 
-function howPaid(b: BrandRelation): string {
-  const chains = b.chains.map((c) => c.label).join(" and ");
-  const from = b.payFrom.map((p) => p.label).join(" and ");
-  return [chains, from].filter(Boolean).join(" · ");
-}
-
-export function BrandsScreen({ data, back }: { data: CreatorAnalytics; back: string }) {
+/**
+ * Every brand is a card, and the card opens that brand alone (./BrandScreen).
+ * A list of rows made twenty brands look like a ledger; a brand is somebody
+ * the creator sells to again, so it gets a face and a way in.
+ */
+export function BrandsScreen({ data, back, hrefOf }: { data: CreatorAnalytics; back: string; hrefOf: (key: string) => string }) {
   const [filter, setFilter] = useState<"all" | "repeat">("all");
   const list = filter === "repeat" ? data.brands.filter((b) => b.repeat) : data.brands;
-  const paged = usePaged(list, filter, 5);
+  const paged = usePaged(list, filter, 8);
   const t = data.totals;
-  const top = data.topBrands;
-  const maxTop = Math.max(1, ...top.map((b) => b.receivedCents));
 
   return (
-    <Screen
-      back={back}
-      title="Brands you work with"
-      big={String(t.brands)}
-      bigNote={`${t.brands === 1 ? "brand has" : "brands have"} paid you`}
-      extra={
-        top.length ? (
-          <>
-            <p className="mb-3 text-[12.5px] text-white/55">Top payers</p>
-            <ul className="flex flex-col gap-2.5">
-              {top.map((b) => (
-                <li key={b.key} className="flex min-w-0 flex-col gap-1">
-                  <div className="flex min-w-0 items-baseline justify-between gap-3">
-                    <p className="truncate text-[13px] text-white">{b.name}</p>
-                    <p className="shrink-0 text-[13px] font-strong tabular-nums text-white">{dollars(b.receivedCents)}</p>
-                  </div>
-                  <ProgressBar value={b.receivedCents} max={maxTop} />
-                </li>
-              ))}
-            </ul>
-          </>
-        ) : null
-      }
-      aside={
+    <div className="flex flex-col gap-4">
+      <DrillBar back={back} crumb={CROSS} title="Brands you work with" />
+      <div className="flex flex-wrap items-center justify-between gap-2.5">
+        <p className="text-[14.5px] text-white/[0.62]">
+          <span className="text-[18px] font-extrabold tabular-nums text-white">{t.brands}</span>{" "}
+          {t.brands === 1 ? "brand has" : "brands have"} paid you
+        </p>
+        <FilterPills
+          label="Brands"
+          value={filter}
+          onChange={setFilter}
+          options={[
+            { value: "all", label: "All", count: data.brands.length },
+            { value: "repeat", label: "Came back", count: t.repeatBrands },
+          ]}
+        />
+      </div>
+      {list.length === 0 ? (
+        <Empty
+          title={filter === "repeat" ? "Nobody has come back yet." : "No brand has paid you yet."}
+          body="A brand shows here the moment its payment lands, with the events it sponsored and how it paid."
+        />
+      ) : (
         <>
-          {t.repeatBrands > 0
-            ? `${plural(t.repeatBrands, "brand")} came back for a second event or listing: ${t.repeatReceivedPct !== null ? pctText(t.repeatReceivedPct) : "—"} of what you earned.`
-            : "No brand has come back yet. A brand that paid once is the easiest one to sell the next event to."}{" "}
-          Named as your pages show them, else as your Sales do.
+          <CardGrid>
+            {paged.shown.map((b) => (
+              <BrandCard key={b.key} brand={b} href={hrefOf(b.key)} />
+            ))}
+          </CardGrid>
+          <Pager {...paged} size={8} />
         </>
-      }
-    >
-      <Panel
-        title="Every brand"
-        meta={plural(list.length, "brand")}
-        action={
-          <FilterPills
-            label="Brands"
-            value={filter}
-            onChange={setFilter}
-            options={[
-              { value: "all", label: "All", count: data.brands.length },
-              { value: "repeat", label: "Came back", count: t.repeatBrands },
-            ]}
-          />
-        }
-      >
-        {list.length === 0 ? (
-          <Empty
-            title={filter === "repeat" ? "Nobody has come back yet." : "No brand has paid you yet."}
-            body="A brand shows here the moment its payment lands, with the events it sponsored and how it paid."
-          />
-        ) : (
-          <>
-            <ul className="flex flex-col">
-              {paged.shown.map((b) => (
-                <li key={b.key} className="flex min-w-0 items-start gap-3 border-t border-white/[0.08] py-3 first:border-t-0 first:pt-0">
-                  <Logo brand={b} />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <p className="truncate text-[14.5px] font-bold text-white">{b.name}</p>
-                      {b.repeat ? <Tag>Repeat</Tag> : null}
-                    </div>
-                    <p className="mt-0.5 truncate text-[13px] text-white/[0.62]">
-                      {b.events.length ? b.events.map((e) => e.name).join(", ") : "Not tied to an event"}
-                    </p>
-                    <p className="mt-0.5 truncate text-[12.5px] text-white/55">
-                      {[b.handle ? `@${b.handle}` : null, b.firstPaidAt ? `since ${monthYear(b.firstPaidAt)}` : null, howPaid(b)].filter(Boolean).join(" · ")}
-                    </p>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <p className="text-[14.5px] font-bold tabular-nums text-white">{dollars(b.receivedCents)}</p>
-                    <p className="mt-0.5 text-[12.5px] tabular-nums text-white/55">{plural(b.orders, "order")}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-            <div className="mt-3">
-              <Pager {...paged} size={5} />
-            </div>
-          </>
-        )}
-      </Panel>
-    </Screen>
+      )}
+    </div>
+  );
+}
+
+/** One brand: its mark, its name, where it paid, and what reached you from it. */
+function BrandCard({ brand: b, href }: { brand: BrandRelation; href: string }) {
+  return (
+    <li className="flex">
+      <Card href={href} className="w-full sm:min-h-[168px]">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <Logo brand={b} />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[15px] font-strong tracking-[-0.2px] text-white">{b.name}</p>
+            <p className="truncate text-[12.5px] font-strong text-white/[0.62]">
+              {b.handle ? `@${b.handle}` : b.firstPaidAt ? `since ${monthYear(b.firstPaidAt)}` : " "}
+            </p>
+          </div>
+          {b.repeat ? <Tag>Repeat</Tag> : null}
+        </div>
+        <p className="truncate text-[13px] text-white/[0.62]">
+          {b.events.length ? b.events.map((e) => e.name).join(", ") : "Not tied to an event"}
+        </p>
+        <div className="mt-auto flex min-w-0 items-end justify-between gap-2">
+          <p className="text-[24px] font-extrabold leading-none tracking-[-0.5px] tabular-nums text-white">{dollars(b.receivedCents)}</p>
+          <p className="truncate text-[12.5px] font-strong tabular-nums text-white/55">{plural(b.orders, "order")}</p>
+        </div>
+      </Card>
+    </li>
   );
 }
 
@@ -250,7 +223,6 @@ export function BrandsScreen({ data, back }: { data: CreatorAnalytics; back: str
 export function EventsScreen({ data, back }: { data: CreatorAnalytics; back: string }) {
   const rows = data.byEvent;
   const max = Math.max(1, ...rows.map((e) => e.receivedCents));
-  const top = rows[0] ?? null;
   const paged = usePaged(rows, rows.length, 6);
   return (
     <Screen
@@ -258,7 +230,6 @@ export function EventsScreen({ data, back }: { data: CreatorAnalytics; back: str
       title="By event"
       big={dollars(data.totals.receivedCents)}
       bigNote={`earned across ${plural(data.totals.events, "event")}`}
-      aside={top && top.receivedCents > 0 ? `${top.name} made you the most: ${dollars(top.receivedCents)} from ${plural(top.brands, "brand")}.` : "Every event you list at shows here with what it made."}
     >
       <Panel title="Money per event" meta="what reached you">
         {rows.length === 0 ? (
@@ -327,7 +298,6 @@ export function SellsScreen({ data, back }: { data: CreatorAnalytics; back: stri
           speed: speed(g),
         }));
   const paged = usePaged(rows, by, 6);
-  const best = [...data.byProduct].filter((p) => p.soldPct !== null && p.spotsTotal > 0).sort((a, b) => b.soldPct! - a.soldPct! || b.receivedCents - a.receivedCents)[0];
 
   return (
     <Screen
@@ -335,12 +305,6 @@ export function SellsScreen({ data, back }: { data: CreatorAnalytics; back: stri
       title="What sells for you"
       big={t.sellThroughPct !== null ? pctText(t.sellThroughPct) : "—"}
       bigNote={`of your spots sold · ${t.spotsSold} of ${t.spotsTotal}`}
-      aside={
-        <>
-          {best ? `${best.label} sells best: ${pctText(best.soldPct!)} of its spots. ` : ""}
-          {t.medianDaysToFirstSale !== null ? `A listing of yours takes ${daysText(t.medianDaysToFirstSale)} to a first sale, median.` : "Days to a first sale show once something sells."}
-        </>
-      }
     >
       <Panel
         title="Sold, and how fast"
@@ -415,20 +379,15 @@ function MixPanel({ title, rows }: { title: string; rows: MixRow[] }) {
 
 export function PayScreen({ data, back }: { data: CreatorAnalytics; back: string }) {
   const top = data.payMix.byChain[0] ?? null;
-  const hold = data.payMix.byPayFrom.find((m) => m.key === "hold") ?? null;
   return (
     <Screen
       back={back}
       title="How brands pay"
       big={top?.receivedPct != null ? pctText(top.receivedPct) : "—"}
       bigNote={top ? `of your money came on ${top.label}` : "No payment yet"}
-      aside={
-        <>
-          {feeLine(data.totals)}. Every payment goes straight to your wallet in USDC.{" "}
-          {hold ? `${pctText(hold.ordersPct ?? 0)} of orders came from a HOLD account. ` : ""}A QR scan and a wallet connected in the browser are the same payment to
-          us, so both show as External wallet.
-        </>
-      }
+      // How to read "Paid from", not an observation about it: a QR scan and a
+      // wallet connected in the browser are the same payment to us.
+      extra={<p className="text-[12.5px] leading-[17px] text-white/[0.62]">A QR scan and a connected wallet both show as External wallet.</p>}
     >
       <div className="grid grid-cols-[minmax(0,1fr)] gap-4 xl:grid-cols-2">
         <MixPanel title="Network" rows={data.payMix.byChain} />
@@ -450,16 +409,16 @@ export function InspiredScreen({ data, back }: { data: CreatorAnalytics; back: s
       title="You inspired"
       big={String(block.listings)}
       bigNote={`${block.listings === 1 ? "listing credits" : "listings credit"} you as the inspiration`}
-      aside={
-        <>
-          {block.creators > 0 ? `${plural(block.creators, "creator")} named you on their page. ` : ""}Credit others the same way: “Inspired by” in the listing editor.{" "}
-          <Link href={href("/listings/new")} className="font-strong text-white underline decoration-white/30 underline-offset-2">
+    >
+      <Panel
+        title="Who credited you"
+        meta={plural(block.recent.length, "listing")}
+        action={
+          <Link href={href("/listings/new")} className="text-[12.5px] font-strong normal-case tracking-normal text-white/[0.62] hover:text-white">
             New listing
           </Link>
-        </>
-      }
-    >
-      <Panel title="Who credited you" meta={plural(block.recent.length, "listing")}>
+        }
+      >
         {block.recent.length === 0 ? (
           <Empty title="Nobody has credited you yet." body="When a creator names you as the inspiration for a listing, it shows here and you get a notification." />
         ) : (

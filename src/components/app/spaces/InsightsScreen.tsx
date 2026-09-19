@@ -19,6 +19,11 @@
  * server picks your nearest event. A figure about other creators is null
  * below three of them, and the screen says so with the sample instead of
  * showing one person's result as a market.
+ *
+ * The note under a big number says how to READ the figure — the sample, the
+ * time zone, what a band counts — and never restates it as a sentence
+ * ("Objects fill 3.2x more than outfits here"). A written-out observation is
+ * filler next to the number it came from, and it costs a screenful.
  */
 
 import Link from "next/link";
@@ -536,12 +541,9 @@ function YouScreen({ data, back }: { data: Insights; back: string }) {
       big={dollars(y.raisedCents)}
       bigNote={`raised at ${where(data.event)}, from paid orders only`}
       aside={
-        <>
-          {y.followers !== null ? `${compact(y.followers)} followers on X, as of your last check. ` : "Link X again to count your followers. "}
-          {m.raisedCents.value === null
-            ? `Not enough sales yet at ${where(data.event)} to compare: the median shows from ${data.minSample} creators. Until then, watch your days to a first sale and how many spots fill in the first week.`
-            : <>Medians are the middle creator of {sampleText(y.sample)}; money medians are rounded, and nobody&apos;s exact receipt is shown.</>}
-        </>
+        m.raisedCents.value === null
+          ? `The median shows from ${data.minSample} creators at the same event.`
+          : `Medians are the middle creator of ${sampleText(y.sample)}, rounded; nobody's exact receipt is shown.`
       }
     >
       <Panel title="You and the median creator" meta={where(data.event)}>
@@ -580,9 +582,6 @@ function SellsScreen({ data, back }: { data: Insights; back: string }) {
   const rows = by === "surface" ? w.surfaces : w.products;
   const paged = usePaged(rows, by, 6);
   const top = best(w.surfaces.map((s) => ({ ...s, pct: s.filledPct })));
-  const objects = w.surfaces.find((s) => s.key === "object")?.filledPct ?? null;
-  const clothing = w.surfaces.find((s) => s.key === "clothing")?.filledPct ?? null;
-  const ratio = objects !== null && clothing !== null && clothing > 0 ? objects / clothing : null;
 
   return (
     <Screen
@@ -591,11 +590,6 @@ function SellsScreen({ data, back }: { data: Insights; back: string }) {
       title="What sells"
       big={top ? pctText(top.pct!) : "—"}
       bigNote={top ? `of spots filled on ${top.label.toLowerCase()}, the best surface here` : `Not enough sales yet at ${where(data.event)}`}
-      aside={
-        ratio !== null && ratio >= 1.5
-          ? `Objects fill ${ratio.toFixed(ratio >= 10 ? 0 : 1)}x more than outfits here. A brand sees a suitcase or a laptop in every photo; an outfit changes daily.`
-          : "Watch which surface fills first: a sponsor pays for a logo that stays in shot."
-      }
     >
       <Panel title="Spots filled" meta={sampleText(w.sample)} action={<Segmented label="Group by" value={by} onChange={setBy} options={[{ value: "surface", label: "Surface" }, { value: "product", label: "Product" }]} />}>
         {rows.length === 0 ? (
@@ -623,7 +617,6 @@ function PricingScreen({ data, back }: { data: Insights; back: string }) {
   const [by, setBy] = useState<"floor" | "way">("floor");
   const p = data.pricing;
   const top = best(p.bands);
-  const mine = data.you.floorCents;
   const ways = p.ways.filter((w) => w.placements > 0);
 
   return (
@@ -635,8 +628,7 @@ function PricingScreen({ data, back }: { data: Insights; back: string }) {
       bigNote={top ? `of listings with a ${top.label} floor sold at least one spot` : `Not enough sales yet at ${where(data.event)}`}
       aside={
         <>
-          A listing counts in the band of its cheapest spot.{" "}
-          {mine !== null ? `Your floor is ${dollars(mine)}.` : "Set a floor to see where you sit."}
+          A listing counts in the band of its cheapest spot.
           {p.sample.unpriced ? ` ${plural(p.sample.unpriced, "listing")} on offers with no minimum are left out.` : ""}
         </>
       }
@@ -671,7 +663,6 @@ function PricingScreen({ data, back }: { data: Insights; back: string }) {
 function TimingScreen({ data, back }: { data: Insights; back: string }) {
   const [by, setBy] = useState<"age" | "day">("age");
   const t = data.timing;
-  const bestDay = t.weekdays.filter((d) => d.soldFirstWeekPct !== null).sort((a, b) => b.soldFirstWeekPct! - a.soldFirstWeekPct!)[0] ?? null;
 
   return (
     <Screen
@@ -680,13 +671,7 @@ function TimingScreen({ data, back }: { data: Insights; back: string }) {
       title="Timing"
       big={t.medianDaysToFirstSale !== null ? daysText(t.medianDaysToFirstSale) : "—"}
       bigNote={t.medianDaysToFirstSale !== null ? "from going live to a first sale, median" : `Not enough sales yet at ${where(data.event)}`}
-      aside={
-        <>
-          {bestDay ? `Listings that went live on a ${bestDay.label} sold in their first week most often. ` : ""}
-          {data.you.daysToFirstSale !== null ? `Your first sale came after ${daysText(data.you.daysToFirstSale)}. ` : ""}
-          Days are counted in UTC.
-        </>
-      }
+      aside="Days are counted in UTC."
     >
       <Panel
         title={by === "age" ? "Spots filled by listing age" : "Launch day"}
@@ -727,7 +712,6 @@ function BrandsScreen({ data, back, pitchHref }: { data: Insights; back: string;
   const [scope, setScope] = useState<"event" | "all">(data.brands.event ? "event" : "all");
   const list = scope === "event" && data.brands.event ? data.brands.event : data.brands.allTime;
   const paged = usePaged(list.brands, scope, 6);
-  const top = list.brands[0] ?? null;
 
   return (
     <Screen
@@ -736,12 +720,7 @@ function BrandsScreen({ data, back, pitchHref }: { data: Insights; back: string;
       title="Brands buying"
       big={String(list.brands.length)}
       bigNote={`${list.brands.length === 1 ? "brand has" : "brands have"} paid for a spot ${scope === "event" ? `at ${where(data.event)}` : "on HOLD Spaces"}`}
-      aside={
-        <>
-          Names as the listings show them publicly, from paid orders only. Spend is a band, never an amount.
-          {top ? ` ${top.name} bought the most spots.` : ""}
-        </>
-      }
+      aside="Names as the listings show them publicly, from paid orders only. Spend is a band, never an amount."
     >
       <Panel
         title="Who paid"
