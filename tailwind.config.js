@@ -76,6 +76,16 @@ module.exports = {
         medium:  '500',
         strong:  '600',
       },
+      // The app's inks are alphas Tailwind 3.3 has no step for (textMuted
+      // 0.62 aside): 0.35, 0.45, 0.55 and 0.65 white are used as written.
+      opacity: {
+        15: '0.15',
+        35: '0.35',
+        45: '0.45',
+        55: '0.55',
+        65: '0.65',
+        85: '0.85',
+      },
       borderRadius: {
         card:  '18px',
         input: '14px',
