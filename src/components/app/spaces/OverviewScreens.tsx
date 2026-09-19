@@ -133,7 +133,7 @@ function BarLine({ label, right, value, max, sub }: { label: ReactNode; right: R
     <li className="flex min-w-0 flex-col gap-1.5 border-t border-white/[0.08] py-2.5 first:border-t-0 first:pt-0">
       <div className="flex min-w-0 items-baseline justify-between gap-3">
         <p className="min-w-0 truncate text-[14.5px] text-white">{label}</p>
-        <p className="shrink-0 text-[14.5px] font-strong tabular-nums text-white">{right}</p>
+        <p className="shrink-0 text-[14.5px] font-bold tabular-nums text-white">{right}</p>
       </div>
       <ProgressBar value={value} max={max} />
       {sub ? <p className="truncate text-[12.5px] text-white/55">{sub}</p> : null}
@@ -218,7 +218,7 @@ export function BrandsScreen({ data, back }: { data: CreatorAnalytics; back: str
                   <Logo brand={b} />
                   <div className="min-w-0 flex-1">
                     <div className="flex min-w-0 items-center gap-2">
-                      <p className="truncate text-[14.5px] font-strong text-white">{b.name}</p>
+                      <p className="truncate text-[14.5px] font-bold text-white">{b.name}</p>
                       {b.repeat ? <Tag>Repeat</Tag> : null}
                     </div>
                     <p className="mt-0.5 truncate text-[13px] text-white/[0.62]">
@@ -229,7 +229,7 @@ export function BrandsScreen({ data, back }: { data: CreatorAnalytics; back: str
                     </p>
                   </div>
                   <div className="shrink-0 text-right">
-                    <p className="text-[14.5px] font-strong tabular-nums text-white">{dollars(b.receivedCents)}</p>
+                    <p className="text-[14.5px] font-bold tabular-nums text-white">{dollars(b.receivedCents)}</p>
                     <p className="mt-0.5 text-[12.5px] tabular-nums text-white/55">{plural(b.orders, "order")}</p>
                   </div>
                 </li>
@@ -474,7 +474,7 @@ export function InspiredScreen({ data, back }: { data: CreatorAnalytics; back: s
                   </p>
                 </div>
                 {l.path ? (
-                  <a href={`${SITE_URL}${l.path}`} target="_blank" rel="noopener noreferrer" className="inline-flex h-[34px] shrink-0 items-center rounded-[17px] border border-white/[0.14] bg-white/[0.06] px-[13px] text-[13.5px] font-strong text-white/[0.62] hover:bg-white/10">
+                  <a href={`${SITE_URL}${l.path}`} target="_blank" rel="noopener noreferrer" className="inline-flex h-[34px] shrink-0 items-center rounded-[17px] border border-white/[0.14] bg-white/[0.06] px-[13px] text-[13.5px] font-bold text-white/[0.62] hover:bg-white/10">
                     View
                   </a>
                 ) : null}

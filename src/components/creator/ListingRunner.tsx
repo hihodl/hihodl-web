@@ -557,13 +557,13 @@ function Spots({ space }: { space: SpaceView }) {
           // The app's PositionRow: label and status tag, the price, who sponsored it.
           <div key={r.key} className="flex flex-col gap-[5px] rounded-[14px] border border-transparent bg-white/[0.04] p-3">
             <div className="flex items-center justify-between gap-2.5">
-              <p className="min-w-0 flex-1 truncate text-[14.5px] font-strong text-white">{r.title}</p>
+              <p className="min-w-0 flex-1 truncate text-[14.5px] font-bold text-white">{r.title}</p>
               <Tag
                 label={r.positions.length > 1 ? `${sold} of ${r.positions.length} sold${held ? ` · ${held} being paid` : ""}` : all ? "Sold" : held ? "Being paid" : "Open"}
                 tone={all ? "good" : held ? "caution" : "calm"}
               />
             </div>
-            <p className="text-[13.5px] font-strong tabular-nums text-white">{priceText(r.positions[0])}</p>
+            <p className="text-[13.5px] font-bold tabular-nums text-white">{priceText(r.positions[0])}</p>
             {sponsors.length ? <p className="text-[12.5px] leading-[17px] text-white/55">Sponsored by {sponsors.join(", ")}</p> : null}
           </div>
         );
@@ -635,7 +635,7 @@ function FloorRow({ group, onChanged }: { group: FloorGroup; onChanged: () => vo
   return (
     <li className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0">
       <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-4">
-        <p className="min-w-0 flex-1 truncate text-[14.5px] font-strong text-white">
+        <p className="min-w-0 flex-1 truncate text-[14.5px] font-bold text-white">
           {group.title}
           <span className="font-normal text-white/55"> · {current !== null ? usd(current) : "No floor"}</span>
         </p>

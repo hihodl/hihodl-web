@@ -278,7 +278,7 @@ function RolePicker({ value, onChange }: { value: TeamRole; onChange: (r: TeamRo
               {on ? <Ion name="checkmark" size={13} /> : null}
             </span>
             <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <span className="text-[14.5px] font-strong text-white">{ROLE_TEXT[r].label}</span>
+              <span className="text-[14.5px] font-bold text-white">{ROLE_TEXT[r].label}</span>
               <span className="text-[12.5px] leading-[17px] text-white/[0.62]">{ROLE_TEXT[r].line}</span>
             </span>
           </button>
@@ -289,7 +289,7 @@ function RolePicker({ value, onChange }: { value: TeamRole; onChange: (r: TeamRo
 }
 
 const sheetCls = "flex flex-col gap-3 rounded-[18px] border border-white/10 bg-white/[0.04] p-3.5";
-const sheetTitle = "text-[18px] font-strong tracking-[-0.3px] text-white";
+const sheetTitle = "text-[18px] font-extrabold tracking-[-0.3px] text-white";
 
 /** InviteSheet, first half: who, what they do, and (on the web) where to email the link. */
 function InviteForm({ full, onCancel, onInvited }: { full: boolean; onCancel: () => void; onInvited: (made: Made) => void }) {

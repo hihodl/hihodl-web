@@ -69,7 +69,7 @@ export function ProductHub({ space }: { space: SpaceView }) {
   return (
     <div className="flex flex-col gap-5">
       <section className="flex flex-col gap-3">
-        <h3 className="text-[14.5px] font-strong text-white">The drawing</h3>
+        <h3 className="text-[14.5px] font-bold text-white">The drawing</h3>
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <li>
             <HubLink href={href(`${base}&item=colour`)} title="Colours" note={look ? "Your colours, on your page" : "Outline only"}>
@@ -81,7 +81,7 @@ export function ProductHub({ space }: { space: SpaceView }) {
 
       <section className="flex flex-col gap-3">
         <div className="flex flex-col gap-1">
-          <h3 className="text-[14.5px] font-strong text-white">Real photos, one per side</h3>
+          <h3 className="text-[14.5px] font-bold text-white">Real photos, one per side</h3>
           <p className="text-[12.5px] text-white/[0.62]">
             Upload each side of your own {(space.template?.name ?? "product").toLowerCase()} and place its spots on it. A side
             without a photo keeps the drawing.
@@ -112,7 +112,7 @@ export function ProductHub({ space }: { space: SpaceView }) {
       </section>
 
       <section className="flex flex-col gap-3">
-        <h3 className="text-[14.5px] font-strong text-white">Or one photo for the whole product</h3>
+        <h3 className="text-[14.5px] font-bold text-white">Or one photo for the whole product</h3>
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <li>
             <HubLink
@@ -151,7 +151,7 @@ function HubLink({
       <div className="flex min-h-[72px] items-center">{children}</div>
       <div className="flex items-end justify-between gap-2">
         <div className="min-w-0">
-          <p className="truncate text-[14.5px] font-strong text-white">{title}</p>
+          <p className="truncate text-[14.5px] font-bold text-white">{title}</p>
           <p className={`truncate text-[12.5px] ${live ? "text-[#2FBE8A]" : "text-white/[0.62]"}`}>{note}</p>
         </div>
         <span aria-hidden className="text-white/[0.62]">
@@ -285,7 +285,7 @@ function Swatches({
   const id = `hex-${title.replace(/\W+/g, "-").toLowerCase()}`;
   return (
     <fieldset className="flex flex-col gap-2.5">
-      <legend className="mb-1 text-[14.5px] font-strong text-white">{title}</legend>
+      <legend className="mb-1 text-[14.5px] font-bold text-white">{title}</legend>
       <div className="flex flex-wrap gap-2">
         {palette.map((c) => {
           const on = c.hex.toUpperCase() === value.toUpperCase();

@@ -191,7 +191,7 @@ function PayForm({ name, owed, onCancel, onPaid }: { name: string; owed: Earning
 
   return (
     <div className="flex flex-col gap-3 rounded-[18px] border border-white/10 bg-white/[0.04] p-3.5">
-      <p className="text-[18px] font-strong tracking-[-0.3px] text-white">Mark {name} as paid</p>
+      <p className="text-[18px] font-extrabold tracking-[-0.3px] text-white">Mark {name} as paid</p>
       <Body dim>
         This records that you paid {name} {usdcText(total)}. It moves no money: pay them yourself first. We don&apos;t check it.
         {owed.length > batch.length ? ` It covers the oldest ${batch.length} sales; mark again for the rest.` : ""}

@@ -134,7 +134,7 @@ function SpotScreen({
           <p className="text-[12px] font-strong uppercase tracking-[0.4px] text-white/55">Production spot</p>
           <Tag label={state.label} tone={state.tone} />
         </div>
-        <p className={`text-[28px] font-strong tracking-[-0.6px] tabular-nums ${p.state === "overdue" ? "text-amber" : "text-white"}`}>
+        <p className={`text-[28px] font-extrabold tracking-[-0.6px] tabular-nums ${p.state === "overdue" ? "text-amber" : "text-white"}`}>
           {p.state === "accepted" ? "Accepted" : p.state === "delivered" ? "With the brand" : countdownText(p.dueAt)}
         </p>
         <p className={meta}>
@@ -152,7 +152,7 @@ function SpotScreen({
             <button
               type="button"
               onClick={() => setEditingDay(true)}
-              className="inline-flex h-[34px] shrink-0 items-center gap-1.5 rounded-[17px] border border-white/[0.14] bg-white/[0.06] px-[13px] text-[13.5px] font-strong text-white/[0.62] hover:bg-white/10"
+              className="inline-flex h-[34px] shrink-0 items-center gap-1.5 rounded-[17px] border border-white/[0.14] bg-white/[0.06] px-[13px] text-[13.5px] font-bold text-white/[0.62] hover:bg-white/10"
             >
               <Ion name="calendar-outline" size={14} />
               Change
@@ -366,7 +366,7 @@ function DeliverScreen({
             <div key={l.key} className="flex flex-col gap-2.5">
               {i > 0 ? <Divider /> : null}
               <div className="flex items-center justify-between gap-3">
-                <span className="flex min-w-0 items-center gap-2 text-[14.5px] font-strong text-white">
+                <span className="flex min-w-0 items-center gap-2 text-[14.5px] font-bold text-white">
                   {n >= l.count ? <Ion name="checkmark-circle" size={16} className="shrink-0 text-[#2FBE8A]" /> : null}
                   {PRODUCTION_DELIVERABLE_LABEL[l.key]}
                 </span>
@@ -427,7 +427,7 @@ function Back({ onBack, title }: { onBack: () => void; title: string }) {
       <button type="button" onClick={onBack} aria-label="Back" className="flex h-9 w-9 items-center justify-center rounded-[18px] text-white transition-colors hover:bg-white/10">
         <Ion name="chevron-back" size={22} />
       </button>
-      <p className="truncate text-[18px] font-strong tracking-[-0.3px] text-white">{title}</p>
+      <p className="truncate text-[18px] font-extrabold tracking-[-0.3px] text-white">{title}</p>
     </div>
   );
 }

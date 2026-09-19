@@ -98,7 +98,7 @@ export function FundsChecked() {
 }
 
 const meta = `text-[12.5px] leading-[17px] ${P.dim}`;
-const strong = "text-[13.5px] font-strong leading-[18px] text-white";
+const strong = "text-[13.5px] font-bold leading-[18px] text-white";
 
 /** PositionOffersLines, the creator's reading: bidding, open offers, the reserve or hidden minimum only they see. */
 export function PositionOffersLines({ offers }: { offers: OffersBlock | null | undefined }) {
@@ -386,7 +386,7 @@ function contactUrl(kind: string, value: string): string | null {
 /* ── The sheets, as forms under the thread ────────────────────────── */
 
 const formCls = "mt-1 flex flex-col gap-3 rounded-[18px] border border-white/10 bg-white/[0.04] p-3.5";
-const formTitle = "text-[18px] font-strong tracking-[-0.3px] text-white";
+const formTitle = "text-[18px] font-extrabold tracking-[-0.3px] text-white";
 const formBody = "text-[13.5px] leading-[19px] text-white/[0.62]";
 
 /** AmountSheet, for a counter: the amount, what the sponsor would pay and what reaches you, worked out as it is typed. */
@@ -433,7 +433,7 @@ function CounterForm({ offer, space, onCancel, onSubmit }: { offer: OfferView; s
         />
       </Field>
       {preview ? (
-        <p className="text-[13.5px] font-strong leading-[19px] text-white">
+        <p className="text-[13.5px] font-bold leading-[19px] text-white">
           The sponsor would pay {usdc(preview.sponsorPaysUsdc)} · you receive {usdc(preview.creatorReceivesUsdc)}
         </p>
       ) : null}

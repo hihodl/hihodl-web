@@ -125,7 +125,7 @@ function Invited({ who, lookup }: { who: string | null; lookup: SeatLookup }) {
 function SeatRefused({ code, onDone }: { code: string; onDone: () => void }) {
   return (
     <div className="flex flex-col gap-2.5">
-      <p className="text-[18px] font-strong tracking-[-0.3px] text-white">Join a team</p>
+      <p className="text-[18px] font-extrabold tracking-[-0.3px] text-white">Join a team</p>
       <Notice>{describeTeamError(new CreatorApiError(code, 410))}</Notice>
       <button type="button" className={ctaSecondary} onClick={onDone}>
         Open Spaces

@@ -303,7 +303,7 @@ function ListingDeliveries({
                       >
                         <Ion name={KIND_ICON[i.kind]} size={18} className={`shrink-0 ${i.state === "overdue" ? "text-amber" : "text-white/[0.62]"}`} />
                         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                          <span className="truncate text-[14.5px] font-strong text-white">{i.title}</span>
+                          <span className="truncate text-[14.5px] font-bold text-white">{i.title}</span>
                           <span className="truncate text-[12.5px] text-white/55">{i.sub === KIND_TEXT[i.kind] ? i.sub : `${KIND_TEXT[i.kind]} · ${i.sub}`}</span>
                         </span>
                         <Tag label={status(i)} tone={tone(i)} />

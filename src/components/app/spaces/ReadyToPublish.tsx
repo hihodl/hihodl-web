@@ -150,7 +150,7 @@ function Mark({ state }: { state: State }) {
 
 /** The app's Chip, as a button: 34 high, radius half of it. */
 const actionCls =
-  "inline-flex h-[34px] shrink-0 items-center justify-center whitespace-nowrap rounded-[17px] border border-white/[0.14] bg-white/[0.06] px-[13px] text-[13.5px] font-strong text-white transition-colors hover:bg-white/10";
+  "inline-flex h-[34px] shrink-0 items-center justify-center whitespace-nowrap rounded-[17px] border border-white/[0.14] bg-white/[0.06] px-[13px] text-[13.5px] font-bold text-white transition-colors hover:bg-white/10";
 
 function ActionButton({ action }: { action: Action }) {
   if (action.copy) return <CopyButton value={action.copy} label={action.label} className={actionCls} />;
@@ -166,7 +166,7 @@ function Row({ item }: { item: Item }) {
     <li className="flex min-w-0 items-center gap-2.5 py-2.5">
       <Mark state={item.state} />
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="truncate text-[14.5px] font-strong text-white">{item.label}</span>
+        <span className="truncate text-[14.5px] font-bold text-white">{item.label}</span>
         <span className={`truncate text-[12.5px] ${item.state === "todo" || item.state === "wait" ? "text-amber" : "text-white/55"}`}>{item.sub}</span>
       </span>
       {item.action && item.state !== "done" ? <ActionButton action={item.action} /> : null}

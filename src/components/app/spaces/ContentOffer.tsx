@@ -33,7 +33,7 @@ import { Empty, emptyBtn, Group as Panel, Pills as FilterPills } from "./kit";
 
 /** The app's Chip as the copy button: 34 high, radius half of it. */
 const copyCls =
-  "inline-flex h-[34px] shrink-0 items-center justify-center whitespace-nowrap rounded-[17px] border border-[#F1F5F9] bg-[#F1F5F9] px-[13px] text-[13.5px] font-strong text-[#0A1420] transition-opacity hover:opacity-90";
+  "inline-flex h-[34px] shrink-0 items-center justify-center whitespace-nowrap rounded-[17px] border border-[#F1F5F9] bg-[#F1F5F9] px-[13px] text-[13.5px] font-bold text-[#0A1420] transition-opacity hover:opacity-90";
 
 /** The catalog's Content production template. */
 export const PRODUCTION_TEMPLATE = "content-production";

@@ -27,7 +27,7 @@ import { Notice } from "../parts";
 
 /** The app's Chip as a link. */
 const chipLink =
-  "inline-flex h-[34px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[17px] border border-white/[0.14] bg-white/[0.06] px-[13px] text-[13.5px] font-strong text-white/[0.62] transition-colors hover:bg-white/10";
+  "inline-flex h-[34px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[17px] border border-white/[0.14] bg-white/[0.06] px-[13px] text-[13.5px] font-bold text-white/[0.62] transition-colors hover:bg-white/10";
 
 export function ListingBanner({
   space,

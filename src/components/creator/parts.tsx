@@ -77,7 +77,7 @@ export function Address({ value }: { value: string }) {
       <code className="min-w-0 break-all font-mono text-[14px] text-white">{value}</code>
       <button
         type="button"
-        className="inline-flex h-[34px] shrink-0 items-center gap-1.5 rounded-[17px] border border-white/[0.14] bg-white/[0.06] px-[13px] text-[13.5px] font-strong text-white/[0.62] transition-colors hover:bg-white/10"
+        className="inline-flex h-[34px] shrink-0 items-center gap-1.5 rounded-[17px] border border-white/[0.14] bg-white/[0.06] px-[13px] text-[13.5px] font-bold text-white/[0.62] transition-colors hover:bg-white/10"
         onClick={() => {
           // `navigator.clipboard` is missing outside a secure context, and
           // optional-chaining the property still leaves `.then` called on

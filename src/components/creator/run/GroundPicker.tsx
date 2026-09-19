@@ -89,7 +89,7 @@ export function GroundPicker({
         >
           <GroundSwatch value={swatch} />
           <span className="px-0.5">
-            <span className="block text-[14.5px] font-strong text-white">{title}</span>
+            <span className="block text-[14.5px] font-bold text-white">{title}</span>
             <span className="block text-[12.5px] text-white/[0.62]">{note}</span>
           </span>
         </button>
