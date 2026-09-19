@@ -264,6 +264,13 @@ function bareProblem(code: string, draft: ListingDraft | null): Problem | null {
         "chains",
         "Taking a spot over repays the displaced sponsor inside the same payment, and only Solana carries that. Accept Solana, or sell another way.",
       );
+    case "inspired_by_invalid":
+    case "inspired_by_handle_invalid":
+      return { where: "inspiredBy", step: "basics", message: "That is not a handle we can credit. Letters, numbers and underscores, as on X." };
+    case "inspired_by_not_found":
+      return { where: "inspiredBy", step: "basics", message: "No HOLD creator has that username. Pick one from the list, or credit their X handle instead." };
+    case "inspired_by_self":
+      return { where: "inspiredBy", step: "basics", message: "That is you. Credit somebody else, or leave it empty." };
     case "closes_too_soon":
       return { where: "closesAt", step: "basics", message: `A listing runs for at least ${LIMITS.MIN_CAMPAIGN_HOURS} hours.` };
     case "closes_too_late":

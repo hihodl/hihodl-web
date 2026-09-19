@@ -466,6 +466,23 @@ export interface SpaceView {
   pageGround?: string | null;
   /** Its own ground alone; null follows the creator's default. */
   pageGroundOwn?: string | null;
+  /** Who the creator credits as the inspiration; null or absent is nobody. */
+  inspiredBy?: InspiredBy | null;
+}
+
+/**
+ * "Inspired by": a HOLD creator (their page is `/s/<handle>`) or an X handle
+ * (x.com). Creator-to-creator recognition, shown on the public page as a
+ * credit that links to them.
+ */
+export interface InspiredBy {
+  kind: "hold" | "x";
+  /** Without the @. */
+  handle: string;
+  /** A HOLD creator's name, when known. */
+  name?: string | null;
+  /** `/s/<handle>` for a HOLD creator, `https://x.com/<handle>` for an X handle. */
+  href?: string;
 }
 
 export interface SpaceCard {
@@ -790,6 +807,8 @@ export interface ListingDraft {
   deliverables: DeliverableDraft[];
   /** "What you get" lines in the creator's order; null is never edited (the suggestions show). */
   brandGets: BrandGetsLine[] | null;
+  /** Who inspired it: optional, a HOLD creator or an X handle. */
+  inspiredBy: InspiredBy | null;
   deliverBy: string;
   serviceName: string;
   serviceSummary: string;
@@ -861,6 +880,7 @@ export function draftFor(template: Template): ListingDraft {
     attestations: [],
     deliverables: [],
     brandGets: null,
+    inspiredBy: null,
     deliverBy: "",
     serviceName: "",
     serviceSummary: "",
@@ -947,6 +967,7 @@ export function draftFromSpace(space: SpaceView, template: Template): ListingDra
       note: d.note ?? "",
     })),
     brandGets: space.brandGets ? space.brandGets.map((l) => ({ ...l })) : null,
+    inspiredBy: space.inspiredBy ? { kind: space.inspiredBy.kind, handle: space.inspiredBy.handle, name: space.inspiredBy.name ?? null } : null,
     deliverBy: space.deliverBy ?? "",
     serviceName: space.serviceName ?? "",
     serviceSummary: space.serviceSummary ?? "",
@@ -1072,6 +1093,8 @@ export function bodyOf(draft: ListingDraft, template: Template): Record<string, 
         : draft.brandGets.flatMap((l): BrandGetsLine[] =>
             l.kind !== "text" ? [l] : l.text.trim() ? [{ kind: "text", text: l.text.trim() }] : [],
           ),
+    // Only the kind and the handle: the server resolves a HOLD creator itself.
+    inspiredBy: draft.inspiredBy ? { kind: draft.inspiredBy.kind, handle: draft.inspiredBy.handle.trim().replace(/^@+/, "") } : null,
   };
 
   if (template.kind === "service") {

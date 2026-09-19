@@ -32,6 +32,7 @@ import {
 import { problemsAt, type Problem } from "@/lib/creator/rules";
 
 import { EventPicker } from "./EventPicker";
+import { InspiredByField } from "./InspiredByField";
 import { Block, Field, Money, Paragraph, Problems, Text } from "./parts";
 
 const VENUE_LABEL: Record<VenueType, string> = {
@@ -106,6 +107,7 @@ export function BasicsStep({
         >
           <Money id="listing-goal" value={draft.fundingGoalDollars} onChange={(fundingGoalDollars) => set({ fundingGoalDollars })} />
         </Field>
+        <InspiredByField value={draft.inspiredBy} onChange={(inspiredBy) => set({ inspiredBy })} problems={problemsAt(problems, "inspiredBy")} />
       </Block>
 
       <Block
