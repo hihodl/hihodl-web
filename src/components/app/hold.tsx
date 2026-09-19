@@ -11,7 +11,7 @@
  *                                         top edge (0.16) over dim sides (0.07)
  *                                         and a darker bottom (0.04)
  *   SectionTitle    src/ui/SectionTitle   13/600 in textSubtle, 16 above, 8 below
- *   MenuRow         src/ui/MenuRow        icon 18, label 14 strong, sub 12,
+ *   MenuRow         src/ui/MenuRow        icon 18, label 14/700, sub 12,
  *                                         value 12 on the right, 18px padding,
  *                                         no dividers, chevron only when asked
  *   SettingsRow     src/ui/Row            the Settings screen's row: 20px tall
@@ -23,14 +23,16 @@
  * Colours are src/theme/colors.ts: text #FFFFFF, textMuted #CFE3EC,
  * textSubtle #9FB7C2, brand yellow #FFB703 on ink #0F0F1A.
  *
- * Two web-only differences, both deliberate: the app's 700/800 weights are
- * drawn at 600 (the web loads Inter to 600 and its type rule stops there), and
- * a row that is pressed on the phone is hovered here.
+ * Weights are the app's: 700 for row labels and headers, 800 on the CTA
+ * plates, 600 (`font-strong`) where the app says 600. The one web-only
+ * difference is that a row that is pressed on the phone is hovered here.
  */
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
+import { useHeaderSlot } from "./header-slot";
 import { Ion, type IonName } from "./ion";
 
 /* ── Colours (src/theme/colors.ts) ───────────────────────────────── */
@@ -91,7 +93,7 @@ export function MenuRow({ icon, label, sub, value, badge, right, chevron, href, 
   const trailing = right ? (
     right
   ) : badge && badge > 0 ? (
-    <span className="inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-[11px] border border-white/[0.18] bg-white/10 px-[7px] text-[12px] font-strong text-white" aria-label={`${badge} pending`}>
+    <span className="inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-[11px] border border-white/[0.18] bg-white/10 px-[7px] text-[12px] font-bold text-white" aria-label={`${badge} pending`}>
       {badge}
     </span>
   ) : value !== undefined && value !== null ? (
@@ -104,7 +106,7 @@ export function MenuRow({ icon, label, sub, value, badge, right, chevron, href, 
     <>
       <Ion name={icon} size={18} className={`shrink-0 ${ink} ${sub ? "self-start mt-[2px]" : ""}`} />
       <span className="min-w-0 flex-1">
-        <span className={`block truncate text-[14px] font-strong leading-5 ${ink}`}>{label}</span>
+        <span className={`block truncate text-[14px] font-bold leading-5 ${ink}`}>{label}</span>
         {sub ? <span className="mt-0.5 block truncate text-[12px] leading-4 text-[#9FB7C2]">{sub}</span> : null}
       </span>
       {trailing}
@@ -202,23 +204,69 @@ export function Switch({ checked, onChange, label, disabled }: { checked: boolea
 
 /* ── The header of a screen opened from another ─────────────────── */
 
-/** GlassHeader: a chevron back on the left, the title centred on the screen. */
-export function BackHeader({ title, onBack, backHref, right }: { title: string; onBack?: () => void; backHref?: string; right?: ReactNode }) {
-  const btn = "flex h-9 w-9 items-center justify-center rounded-[18px] text-white transition-colors hover:bg-white/10";
+/**
+ * GlassHeader / TravelHeader: a chevron back on the left, the title (17/700)
+ * centred on the screen with its subtitle (12/500) under it.
+ *
+ * Inside the product shell it is drawn in the top bar instead of the page
+ * (see header-slot), so the section title and this one are never both on
+ * screen.
+ */
+export function BackHeader({
+  title,
+  subtitle,
+  onBack,
+  backHref,
+  right,
+}: {
+  title: string;
+  subtitle?: string;
+  onBack?: () => void;
+  backHref?: string;
+  right?: ReactNode;
+}) {
+  const slot = useHeaderSlot();
+  const claim = slot?.claim;
+  useEffect(() => (claim ? claim() : undefined), [claim]);
+
+  const btn = "flex h-9 w-9 shrink-0 items-center justify-center rounded-[18px] text-white transition-colors hover:bg-white/10";
+  const back = backHref ? (
+    <Link href={backHref} aria-label="Back" className={btn}>
+      <Ion name="chevron-back" size={22} />
+    </Link>
+  ) : onBack ? (
+    <button type="button" onClick={onBack} aria-label="Back" className={btn}>
+      <Ion name="chevron-back" size={22} />
+    </button>
+  ) : null;
+  const words = (
+    <>
+      <h1 className="truncate text-[17px] font-bold tracking-[-0.3px] text-white">{title}</h1>
+      {subtitle ? <p className="mt-0.5 truncate text-[12px] font-medium tracking-[-0.1px] text-white/55">{subtitle}</p> : null}
+    </>
+  );
+
+  if (slot) {
+    return (
+      <>
+        {slot.title
+          ? createPortal(
+              <div className="flex min-w-0 flex-1 items-center gap-1">
+                {back}
+                <div className={`min-w-0 flex-1 ${back ? "" : "pl-1"}`}>{words}</div>
+              </div>,
+              slot.title,
+            )
+          : null}
+        {right && slot.right ? createPortal(right, slot.right) : null}
+      </>
+    );
+  }
+
   return (
     <header className="relative mb-2 flex h-11 items-center">
-      {backHref ? (
-        <Link href={backHref} aria-label="Back" className={btn}>
-          <Ion name="chevron-back" size={24} />
-        </Link>
-      ) : onBack ? (
-        <button type="button" onClick={onBack} aria-label="Back" className={btn}>
-          <Ion name="chevron-back" size={24} />
-        </button>
-      ) : (
-        <span className="w-9" />
-      )}
-      <h1 className="pointer-events-none absolute inset-x-14 truncate text-center text-[18px] font-strong text-white">{title}</h1>
+      {back ?? <span className="w-9" />}
+      <div className="pointer-events-none absolute inset-x-14 text-center">{words}</div>
       <span className="ml-auto flex min-w-9 items-center justify-end">{right}</span>
     </header>
   );
@@ -235,15 +283,15 @@ const ctaBase =
   "inline-flex h-[52px] w-full items-center justify-center gap-[9px] rounded-[26px] px-6 text-[16px] tracking-[-0.2px] transition-opacity hover:opacity-90 disabled:cursor-not-allowed";
 
 /** The one amber plate: the tap that commits (TravelCta "commit", CTAButton primary). */
-export const ctaCommit = `${ctaBase} bg-amber font-strong text-[#0F0F1A] shadow-[0_10px_18px_rgba(0,0,0,0.3)] disabled:bg-white/[0.07] disabled:text-white/60 disabled:shadow-none`;
+export const ctaCommit = `${ctaBase} bg-amber font-extrabold text-[#0F0F1A] shadow-[0_10px_18px_rgba(0,0,0,0.3)] disabled:bg-white/[0.07] disabled:text-white/60 disabled:shadow-none`;
 /** TravelCta "primary": the white plate that moves on without taking money. */
-export const ctaPrimary = `${ctaBase} bg-[#F1F5F9] font-strong text-[#0A1420] shadow-[0_10px_18px_rgba(0,0,0,0.3)] disabled:bg-white/[0.07] disabled:text-white/60 disabled:shadow-none`;
+export const ctaPrimary = `${ctaBase} bg-[#F1F5F9] font-extrabold text-[#0A1420] shadow-[0_10px_18px_rgba(0,0,0,0.3)] disabled:bg-white/[0.07] disabled:text-white/60 disabled:shadow-none`;
 /** TravelCta "secondary": glass, white ink. */
-export const ctaSecondary = `${ctaBase} border border-white/[0.22] bg-white/10 font-strong text-white disabled:opacity-50`;
+export const ctaSecondary = `${ctaBase} border border-white/[0.22] bg-white/10 font-bold text-white disabled:opacity-50`;
 
 /** A smaller glass button, for an action inside a card (the app's 44-high CTAButton md). */
 export const btnGlass =
-  "inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-[12px] border border-white/[0.22] bg-white/10 px-4 text-[14px] font-strong text-white transition-colors hover:bg-white/[0.14] disabled:cursor-not-allowed disabled:opacity-50";
+  "inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-[12px] border border-white/[0.22] bg-white/10 px-4 text-[14px] font-bold text-white transition-colors hover:bg-white/[0.14] disabled:cursor-not-allowed disabled:opacity-50";
 
 /* ── Notice (the app's amber tint; never red) ────────────────────── */
 

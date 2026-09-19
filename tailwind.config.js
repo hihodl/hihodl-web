@@ -69,7 +69,10 @@ module.exports = {
         'tiny':       ['12px', { lineHeight: '1.4', letterSpacing: '0.02em' }],
       },
       fontWeight: {
-        // Strict weights — never go above 600
+        // The marketing site stops at 600. The product at app.hihodl.xyz copies
+        // the HOLD app, which draws labels at 700 and headings, tags and money at
+        // 800, so there it uses Tailwind's own font-bold / font-extrabold /
+        // font-black (Inter is loaded 200-900).
         light:   '200',
         book:    '300',
         regular: '400',

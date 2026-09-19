@@ -13,6 +13,9 @@
  * a pill's radius is half its height, and selecting changes a colour, never a
  * border width.
  *
+ * Weights are the app's own: 700 for labels, chips and row titles, 800 for
+ * tags, headings and money, 600 where the app says 600 (`font-strong`).
+ *
  * One web-only change: the app's dim ink (42% white) is drawn at 55% wherever
  * it carries small text, so it keeps 4.5:1 on the ground.
  */
@@ -59,7 +62,7 @@ export function Card({ children, className = "", href, onClick }: { children: Re
 export function SectionLabel({ children, right }: { children: ReactNode; right?: ReactNode }) {
   return (
     <div className="mt-1.5 flex items-center justify-between gap-2">
-      <h2 className="text-[12px] font-strong uppercase tracking-[0.4px] text-white/55">{children}</h2>
+      <h2 className="text-[12px] font-bold uppercase tracking-[0.4px] text-white/55">{children}</h2>
       {right}
     </div>
   );
@@ -70,9 +73,9 @@ export function Body({ children, dim, className = "" }: { children: ReactNode; d
 }
 
 /** adStyles.h1 / h2 / money / small. */
-export const h1 = "text-[24px] font-strong tracking-[-0.5px] text-white";
-export const h2 = "text-[18px] font-strong tracking-[-0.3px] text-white";
-export const money = "text-[28px] font-strong tracking-[-0.6px] tabular-nums text-white";
+export const h1 = "text-[24px] font-extrabold tracking-[-0.5px] text-white";
+export const h2 = "text-[18px] font-extrabold tracking-[-0.3px] text-white";
+export const money = "text-[28px] font-extrabold tracking-[-0.6px] tabular-nums text-white";
 export const small = "text-[12px] font-strong text-white/55";
 
 /* ── Chips and tags ──────────────────────────────────────────────── */
@@ -95,7 +98,7 @@ export function Chip({
   disabled?: boolean;
   count?: number;
 }) {
-  const cls = `inline-flex h-[34px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[17px] border px-[13px] text-[13.5px] font-strong transition-colors ${
+  const cls = `inline-flex h-[34px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[17px] border px-[13px] text-[13.5px] font-bold transition-colors ${
     selected ? "border-[#F1F5F9] bg-[#F1F5F9] text-[#0A1420]" : "border-white/[0.14] bg-white/[0.06] text-white/[0.62] hover:bg-white/10"
   } ${disabled ? "opacity-45" : ""}`;
   const inner = (
@@ -131,7 +134,7 @@ export function ChipRow({ children, label }: { children: ReactNode; label?: stri
 export function Tag({ label, tone = "calm" }: { label: ReactNode; tone?: "calm" | "good" | "caution" | "dim" }) {
   const ink = tone === "good" ? "text-[#2FBE8A]" : tone === "caution" ? "text-amber" : tone === "dim" ? "text-white/55" : "text-white/[0.62]";
   const bg = tone === "good" ? "bg-[rgba(14,155,104,0.14)]" : tone === "caution" ? "bg-amber/[0.12]" : "bg-white/[0.07]";
-  return <span className={`inline-flex h-[22px] shrink-0 items-center self-start whitespace-nowrap rounded-[11px] px-[9px] text-[11.5px] font-strong tracking-[0.1px] ${bg} ${ink}`}>{label}</span>;
+  return <span className={`inline-flex h-[22px] shrink-0 items-center self-start whitespace-nowrap rounded-[11px] px-[9px] text-[11.5px] font-extrabold tracking-[0.1px] ${bg} ${ink}`}>{label}</span>;
 }
 
 /* ── Rows ────────────────────────────────────────────────────────── */
@@ -161,7 +164,7 @@ export function SheetRow({
     <>
       {icon ? <Ion name={icon} size={18} className={`shrink-0 ${attention ? "text-amber" : "text-white/[0.62]"}`} /> : null}
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="truncate text-[14.5px] font-strong text-white">{title}</span>
+        <span className="truncate text-[14.5px] font-bold text-white">{title}</span>
         {meta ? <span className="truncate text-[12.5px] text-white/55">{meta}</span> : null}
       </span>
       {right ?? <Ion name="chevron-forward" size={16} className="shrink-0 text-white/55" />}
@@ -186,7 +189,7 @@ export function KV({ k, v, strong }: { k: ReactNode; v: ReactNode; strong?: bool
   return (
     <div className="flex justify-between gap-3">
       <span className="text-[14px] text-white/[0.62]">{k}</span>
-      <span className={`shrink text-right text-white ${strong ? "text-[15px] font-strong" : "text-[14px] font-medium"}`}>{v}</span>
+      <span className={`shrink text-right text-white ${strong ? "text-[15px] font-extrabold" : "text-[14px] font-strong"}`}>{v}</span>
     </div>
   );
 }
@@ -197,7 +200,7 @@ export function Divider() {
 
 /* ── Fields ──────────────────────────────────────────────────────── */
 
-export const fieldLabel = "text-[12.5px] font-strong text-white/[0.62]";
+export const fieldLabel = "text-[12.5px] font-bold text-white/[0.62]";
 export const inputCls =
   "min-h-12 w-full min-w-0 rounded-[16px] border border-white/[0.12] bg-white/[0.06] px-3.5 py-3 text-[15.5px] text-white outline-none transition-colors placeholder:text-white/[0.28] focus:border-white/30 disabled:opacity-60";
 export const inputAttention = "border-amber";
@@ -260,7 +263,7 @@ export function Stepper({ value, min = 1, max, onChange, suffix, labelLess, labe
       <button type="button" aria-label={labelLess} className={btn} onClick={() => onChange(Math.max(min, value - 1))}>
         <Ion name="remove" size={18} />
       </button>
-      <span className="min-w-[34px] text-center text-[20px] font-strong tabular-nums text-white">{suffix ? `${value}${suffix}` : value}</span>
+      <span className="min-w-[34px] text-center text-[20px] font-extrabold tabular-nums text-white">{suffix ? `${value}${suffix}` : value}</span>
       <button type="button" aria-label={labelMore} className={btn} onClick={() => onChange(Math.min(max, value + 1))}>
         <Ion name="add" size={18} />
       </button>
@@ -276,7 +279,7 @@ export function Disclosure({ label, children, attention, summary }: { label: str
     <div className="flex flex-col gap-2">
       <button type="button" aria-expanded={shown} onClick={() => setOpen((v) => !v)} className="flex items-center gap-2 py-2 text-left">
         <Ion name={shown ? "chevron-down" : "chevron-forward"} size={16} className={attention ? "text-amber" : "text-white/[0.62]"} />
-        <span className={`text-[13px] font-strong ${attention ? "text-amber" : "text-white/[0.62]"}`}>{label}</span>
+        <span className={`text-[13px] font-extrabold ${attention ? "text-amber" : "text-white/[0.62]"}`}>{label}</span>
         {!shown && summary ? <span className="flex-1 truncate text-right text-[12px] text-white/55">{summary}</span> : null}
       </button>
       {shown ? <div className="flex flex-col gap-3 pb-0.5">{children}</div> : null}
@@ -291,7 +294,7 @@ export function Empty({ icon, title, body, action }: { icon: IonName; title: str
       <span className="mb-1 flex h-14 w-14 items-center justify-center rounded-[28px] border border-white/10 bg-white/[0.04] text-white/55">
         <Ion name={icon} size={24} />
       </span>
-      <p className="text-[17px] font-strong tracking-[-0.3px] text-white">{title}</p>
+      <p className="text-[17px] font-bold tracking-[-0.3px] text-white">{title}</p>
       {body ? <p className="max-w-[360px] text-[14px] leading-5 text-white/[0.62]">{body}</p> : null}
       {action ? <div className="mt-2">{action}</div> : null}
     </div>
@@ -412,7 +415,7 @@ export function Pills<T extends string>({
 export function Stat({ label, value, note, href, attention }: { label: string; value: ReactNode; note?: ReactNode; href?: string; attention?: boolean }) {
   return (
     <Card href={href} className="gap-1.5">
-      <span className="text-[12px] font-strong uppercase tracking-[0.4px] text-white/55">{label}</span>
+      <span className="text-[12px] font-bold uppercase tracking-[0.4px] text-white/55">{label}</span>
       <span className={`${money} ${attention ? "!text-amber" : ""}`}>{value}</span>
       {note ? <span className="truncate text-[12.5px] font-strong text-white/55">{note}</span> : null}
     </Card>
@@ -425,7 +428,7 @@ export function ListRow({ href, title, meta, right, onClick }: { href?: string; 
   const inner = (
     <>
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="truncate text-[14.5px] font-strong text-white">{title}</span>
+        <span className="truncate text-[14.5px] font-bold text-white">{title}</span>
         {meta ? <span className="truncate text-[12.5px] text-white/55">{meta}</span> : null}
       </span>
       {right ? <span className="shrink-0">{right}</span> : null}
@@ -450,17 +453,17 @@ export function ListRow({ href, title, meta, right, onClick }: { href?: string; 
 
 /** A white plate, 42 high: an action inside a screen that moves on without taking money (TravelCta primary, small). */
 export const btnWhite =
-  "inline-flex h-[42px] items-center justify-center gap-2 whitespace-nowrap rounded-[21px] bg-[#F1F5F9] px-[18px] text-[14px] font-strong text-[#0A1420] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:bg-white/[0.07] disabled:text-white/60";
+  "inline-flex h-[42px] items-center justify-center gap-2 whitespace-nowrap rounded-[21px] bg-[#F1F5F9] px-[18px] text-[14px] font-extrabold text-[#0A1420] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:bg-white/[0.07] disabled:text-white/60";
 /** Glass, 42 high: the quieter action next to it (TravelEmpty's action). */
 export const btnGlassPill =
   "inline-flex h-[42px] items-center justify-center gap-2 whitespace-nowrap rounded-[21px] border border-white/[0.22] bg-white/10 px-[18px] text-[14px] font-strong text-white transition-colors hover:bg-white/[0.14] disabled:cursor-not-allowed disabled:opacity-45";
 /** The one amber plate, 42 high: publishing, from inside a list. */
 export const btnAmberPill =
-  "inline-flex h-[42px] items-center justify-center gap-2 whitespace-nowrap rounded-[21px] bg-amber px-[18px] text-[14px] font-strong text-[#0F0F1A] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:bg-white/[0.07] disabled:text-white/60";
+  "inline-flex h-[42px] items-center justify-center gap-2 whitespace-nowrap rounded-[21px] bg-amber px-[18px] text-[14px] font-extrabold text-[#0F0F1A] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:bg-white/[0.07] disabled:text-white/60";
 /** The app's Card as a plain box (no flex), for a list item that lays itself out. */
 export const cardBox = "rounded-[18px] border border-white/10 bg-white/[0.06]";
 /** The app's Tag as a class, by the old pill names: calm, good (green) or caution (amber). */
-const tagBase = "inline-flex h-[22px] shrink-0 items-center gap-1 whitespace-nowrap rounded-[11px] px-[9px] text-[11.5px] font-strong tracking-[0.1px]";
+const tagBase = "inline-flex h-[22px] shrink-0 items-center gap-1 whitespace-nowrap rounded-[11px] px-[9px] text-[11.5px] font-extrabold tracking-[0.1px]";
 export const tagCls = {
   neutral: `${tagBase} bg-white/[0.07] text-white/[0.62]`,
   open: `${tagBase} bg-white/[0.07] text-white/[0.62]`,
