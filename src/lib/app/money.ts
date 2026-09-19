@@ -23,22 +23,31 @@ import { useCreatorSession } from "@/lib/creator/session";
 import {
   getAavePositions,
   getAaveReserves,
+  getAliases,
   getBalances,
   getContainer,
   getContainerBalances,
   getCostBasis,
   getKaminoPositions,
   getKaminoReserves,
+  getOfframpOrders,
   getPriceHistory,
   getPrices,
+  getRailAccounts,
   getScheduledPayments,
+  getTransferDetails,
   getTransfers,
   pocketsOf,
+  type AliasRecord,
   type Balance,
   type BalancesAnswer,
   type ContainerAnswer,
   type LedgerSubaccount,
+  type OfframpOrder,
+  type RailAccount,
+  type Schedule,
   type SubaccountBalanceRow,
+  type TransferDetails,
   type TransfersAnswer,
   type YieldPosition,
   type YieldReserve,
@@ -139,6 +148,11 @@ export function useTransfers(limit = 50, offset = 0) {
   return useRead<TransfersAnswer>("transfers", () => getTransfers(limit, offset), `${limit}:${offset}`);
 }
 
+/** One transfer, expanded — what the app's details sheet is drawn from. */
+export function useTransferDetails(id: string | null) {
+  return useRead<TransferDetails>(id ? "transfer-details" : null, () => getTransferDetails(id!), id ?? "");
+}
+
 /* ── What it earns ────────────────────────────────────────────────── */
 
 /**
@@ -186,7 +200,26 @@ export function useCostBasis() {
 /* ── Standing payments ────────────────────────────────────────────── */
 
 export function useScheduledPayments() {
-  return useRead("scheduled", getScheduledPayments);
+  return useRead<{ schedules: Schedule[] }>("scheduled", getScheduledPayments);
+}
+
+/** Bank payouts and where each of them got to. */
+export function usePayouts(limit = 20) {
+  return useRead<{ orders: OfframpOrder[]; hasMore?: boolean }>("payouts", () => getOfframpOrders(limit), String(limit));
+}
+
+/* ── Where money can arrive ───────────────────────────────────────── */
+
+/** The virtual accounts a bank transfer can land in. A row means there is one. */
+export function useRailAccounts() {
+  return useRead<{ accounts: RailAccount[] }>("rails", getRailAccounts);
+}
+
+/* ── The person's own name ────────────────────────────────────────── */
+
+/** `@alex` and the address behind it, for the hi.me link. */
+export function useAliases() {
+  return useRead<AliasRecord[]>("aliases", getAliases);
 }
 
 /* ── The rules the app applies to these numbers, not the server ───── */
