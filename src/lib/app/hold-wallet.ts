@@ -16,7 +16,7 @@
 
 import useSWR from "swr";
 
-import { getBalances, type Balances } from "@/lib/wallet/api";
+import { getBalances, usdcAccountState, type Balances, type UsdcAccountState } from "@/lib/wallet/api";
 
 import { useMyAddresses, useWalletStatus } from "./spaces-data";
 
@@ -57,6 +57,15 @@ export function useHoldWallet(): HoldWallet {
 
 export function useBalances(address: string | null) {
   return useSWR<Balances>(address ? ["balances", address] : null, () => getBalances(address!), {
+    revalidateOnFocus: true,
+    focusThrottleInterval: 30_000,
+    shouldRetryOnError: false,
+  });
+}
+
+/** Whether sponsors can pay this Solana address in USDC yet (the publish gate's check). */
+export function useUsdcAccount(address: string | null) {
+  return useSWR<UsdcAccountState>(address ? ["usdc-account", address] : null, () => usdcAccountState(address!), {
     revalidateOnFocus: true,
     focusThrottleInterval: 30_000,
     shouldRetryOnError: false,

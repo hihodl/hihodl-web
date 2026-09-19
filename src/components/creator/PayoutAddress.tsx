@@ -36,13 +36,8 @@ import {
   requestPayoutChallenge,
 } from "@/lib/creator/api";
 import type { PayoutAddressView, PayoutChain } from "@/lib/creator/types";
-import {
-  connectEvm,
-  connectSolana,
-  describeWalletError,
-  signEvmMessage,
-  signSolanaMessage,
-} from "@/lib/creator/wallets";
+import { connectSolana, describeWalletError, signSolanaMessage } from "@/lib/creator/wallets";
+import { MoreChainsLine } from "@/components/app/MoreChains";
 
 import { Address, Loading, Notice, Section, Status } from "./parts";
 
@@ -54,10 +49,12 @@ interface ChainCopy {
   wallet: string;
 }
 
-const CHAINS: readonly ChainCopy[] = [
-  { chain: "solana", title: "Solana", networks: "Solana", wallet: "Phantom" },
-  { chain: "evm", title: "Base and Polygon", networks: "Base, Polygon and Ethereum", wallet: "MetaMask" },
-];
+/**
+ * Solana only. The web pays creators on Solana; Base and Polygon come with the
+ * HOLD app's wallet, so nothing on the web asks for MetaMask or an EVM address
+ * (one line says where the other chains are instead).
+ */
+const CHAINS: readonly ChainCopy[] = [{ chain: "solana", title: "Solana", networks: "Solana", wallet: "Phantom" }];
 
 export function PayoutAddress({ onChange }: { onChange?: (view: PayoutAddressView | null) => void }) {
   const [view, setView] = useState<PayoutAddressView | null>(null);
@@ -104,6 +101,7 @@ export function PayoutAddress({ onChange }: { onChange?: (view: PayoutAddressVie
           {CHAINS.map((copy) => (
             <ChainCard key={copy.chain} copy={copy} view={view} onDeclared={setView} onDone={load} />
           ))}
+          <MoreChainsLine />
         </div>
       )}
     </Section>
@@ -146,7 +144,7 @@ function ChainCard({
     setBusy(true);
     setNotice(null);
     try {
-      const next = copy.chain === "solana" ? await connectSolana() : await connectEvm();
+      const next = await connectSolana();
       setAddress(next);
       setStep("connected");
     } catch (e) {
@@ -178,10 +176,7 @@ function ChainCard({
     setBusy(true);
     setNotice(null);
     try {
-      const signature =
-        copy.chain === "solana"
-          ? await signSolanaMessage(challenge.message)
-          : await signEvmMessage(address, challenge.message);
+      const signature = await signSolanaMessage(challenge.message);
       onDeclared(await declarePayoutAddress({ chain: copy.chain, address, nonce: challenge.nonce, signature }));
       reset();
       await onDone();

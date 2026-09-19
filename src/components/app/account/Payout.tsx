@@ -5,17 +5,16 @@
  *
  * What this says is what the server does (`payoutOwner` in
  * server/services/ad-space/payout-address.service.ts): a HOLD address wins
- * whenever there is one, on each chain family; an address proved by signature
- * is used only where there is no HOLD one; with neither, that chain is not
- * offered to sponsors. `GET /ad-space/payout-address` answers exactly that, so
- * the screen reads it and says it, per family:
+ * whenever there is one; an address proved by signature is used only where
+ * there is no HOLD one. `GET /ad-space/payout-address` answers exactly that.
  *
- *   Solana            the HOLD wallet (web or app), else a proved address
- *   Base and Polygon  the app wallet's EVM address, else a proved one, else
- *                     "paid on Solana" said plainly
+ * On the web a creator is paid on Solana, and that is all this screen sets up:
+ * nothing here asks for MetaMask or an EVM address. Base and Polygon come with
+ * the HOLD app's wallet; when the app already gave this account an address
+ * there, it is shown read-only, and otherwise one line points to the app.
  *
- * MetaMask, Phantom and the rest sit behind "Use another wallet", on their
- * own screen: they are the exception, not the way.
+ * Phantom and the rest sit behind "Use another wallet", on their own screen:
+ * they are the exception, not the way.
  */
 
 import { useCallback } from "react";
@@ -29,6 +28,7 @@ import { usePayout, useRefresh } from "@/lib/app/spaces-data";
 import { btnGhost, btnLink, CopyButton, Note, ScreenHeader, shortAddress, Warn } from "../front/kit";
 import { IconChevronRight } from "../icons";
 import { glass, Skeleton } from "../ui";
+import { MoreChainsLine } from "../MoreChains";
 import { Chip } from "./XScreen";
 
 interface Line {
@@ -40,7 +40,7 @@ interface Line {
 }
 
 /** The two families, in words, from the server's view and what we know of the HOLD wallet. */
-function linesOf(view: PayoutAddressView, w: ReturnType<typeof useHoldWallet>): { solana: Line; evm: Line } {
+function linesOf(view: PayoutAddressView, w: ReturnType<typeof useHoldWallet>): { solana: Line; evm: Line | null } {
   const sol = view.solana;
   const solana: Line =
     sol.source === "hold"
@@ -66,20 +66,16 @@ function linesOf(view: PayoutAddressView, w: ReturnType<typeof useHoldWallet>): 
             : { title: "No wallet yet", address: null, text: "Make your wallet in the HOLD app, or use another wallet.", tone: "neutral", chip: "No wallet yet" };
 
   const e = view.evm;
-  const evm: Line =
-    e.source === "hold"
-      ? { title: "Base and Polygon", address: e.address, text: "Your HOLD wallet's address on Base and Polygon.", tone: "done", chip: "HOLD wallet" }
-      : e.source === "declared"
-        ? { title: "Base and Polygon", address: e.address, text: "Another wallet, proved by your signature.", tone: "done", chip: "Another wallet" }
-        : {
-            title: "Base and Polygon",
-            address: null,
-            text: sol.address
-              ? "Sponsors pay you on Solana. Base and Polygon come with the HOLD app's wallet, or with another wallet you add."
-              : "Base and Polygon come with the HOLD app's wallet, or with another wallet you add.",
-            tone: "neutral",
-            chip: "Solana only",
-          };
+  // Read-only here: Base and Polygon are set up in the HOLD app.
+  const evm: Line | null = e.address
+    ? {
+        title: "Base and Polygon",
+        address: e.address,
+        text: e.source === "hold" ? "From the HOLD app's wallet. Listings made in the app can be paid here too." : "Another wallet, proved by your signature.",
+        tone: "done",
+        chip: e.source === "hold" ? "HOLD app" : "Another wallet",
+      }
+    : null;
   return { solana, evm };
 }
 
@@ -137,7 +133,7 @@ export function PayoutScreen({ onBack, onOther, walletHref }: { onBack: () => vo
       ) : (
         <>
           <Note>Sponsors pay you directly, in USDC, to the address below. HOLD never holds it on the way.</Note>
-          {[lines.solana, lines.evm].map((l) => (
+          {[lines.solana, ...(lines.evm ? [lines.evm] : [])].map((l) => (
             <div key={l.title} className="flex flex-col gap-2 rounded-[14px] border border-white/10 bg-white/[0.04] p-4">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-small font-medium text-text">{l.title}</p>
@@ -152,6 +148,7 @@ export function PayoutScreen({ onBack, onOther, walletHref }: { onBack: () => vo
               <p className="text-tiny text-[#9FB7C2]">{l.text}</p>
             </div>
           ))}
+          {lines.evm ? null : <MoreChainsLine />}
           <div className="flex flex-wrap items-center gap-2">
             {w.walletPage ? (
               // The Wallet page carries a strict CSP that only a full page load can set.
@@ -169,7 +166,7 @@ export function PayoutScreen({ onBack, onOther, walletHref }: { onBack: () => vo
   );
 }
 
-/** MetaMask, Phantom and friends: prove an address by signing, as before, on its own screen. */
+/** Phantom and friends: prove a Solana address by signing, on its own screen. */
 export function OtherWallet({ onBack }: { onBack: () => void }) {
   const refresh = useRefresh();
   // Stable: PayoutAddress reads again whenever this changes.
@@ -179,8 +176,8 @@ export function OtherWallet({ onBack }: { onBack: () => void }) {
       <div className={`${glass} flex flex-col gap-3 p-5 sm:p-6`}>
         <ScreenHeader title="Use another wallet" onBack={onBack} />
         <Note>
-          For a chain your HOLD wallet does not cover. Connect the wallet and sign one message: no fee, no transaction.
-          Wherever you have a HOLD wallet, it is the one that gets paid.
+          A Solana wallet other than HOLD, such as Phantom. Connect it and sign one message: no fee, no transaction. If
+          you have a HOLD wallet, it is the one that gets paid.
         </Note>
       </div>
       <PayoutAddress onChange={onChange} />

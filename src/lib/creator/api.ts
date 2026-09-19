@@ -187,7 +187,7 @@ export function describeCreatorError(e: unknown): string {
     case "payout_signature_invalid":
       return "That signature was not this address's. Make sure the wallet you signed with is the one you connected, and try again.";
     case "x_fronts_a_live_space":
-      return "This X account is on a space that is live, so it cannot be unlinked until that space closes.";
+      return "This X account is on a live listing, so it stays connected until that listing closes. Sponsors paid for that handle.";
     default:
       return "Something went wrong. Try again.";
   }

@@ -44,7 +44,7 @@ import { useWalletEnabled } from "@/lib/wallet/enabled";
 import { SpacesBaseProvider, useHref, useProductHref, useSpacesBase } from "./base";
 import { CommandPalette, type PaletteEntry } from "./CommandPalette";
 import { Door as SignInDoor } from "./front/Door";
-import { Avatar } from "./front/kit";
+import { UserAvatar } from "./account/UserAvatar";
 import { IconArrowLeft, IconClose, IconCollapse, IconExpand, IconMenu, IconPlus, IconSearch, IconSignOut } from "./icons";
 import {
   activeKey,
@@ -576,13 +576,12 @@ function UserCard({ collapsed }: { collapsed: boolean }) {
   const seat = role !== "creator" ? seats.find((s) => s.status === "active" && s.role === role) : null;
   const title = role === "creator" && agency.on ? "Creative Director" : ROLE_LABEL[role];
   const sub = seat ? `${title} · ${creatorText(seat) ?? "a creator"}` : username && me.data?.profile.displayName ? `@${username}` : title;
-  const photo = me.data?.profile.avatarUrl ?? linked?.avatarUrl ?? null;
 
   if (collapsed) {
     return (
       <div className="flex flex-col items-center gap-1">
         <Link href={productHref("/account")} title={name}>
-          <Avatar src={photo} name={name} size={36} />
+          <UserAvatar size={36} fallbackName={name} />
         </Link>
         <button type="button" aria-label="Sign out" title="Sign out" onClick={() => void signOut()} className="flex h-8 w-8 items-center justify-center rounded-[8px] text-[#9FB7C2] hover:bg-white/10 hover:text-text">
           <IconSignOut />
@@ -593,7 +592,7 @@ function UserCard({ collapsed }: { collapsed: boolean }) {
   return (
     <div className="flex items-center gap-2.5 rounded-[12px] border border-white/10 bg-white/[0.04] p-2">
       <Link href={productHref("/account")} className="flex min-w-0 flex-1 items-center gap-2.5" title="Account">
-        <Avatar src={photo} name={name} size={36} />
+        <UserAvatar size={36} fallbackName={name} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-small text-text">{name}</p>
           <p className="truncate text-[11px] text-[#9FB7C2]">{sub}</p>
@@ -615,8 +614,9 @@ function UserCard({ collapsed }: { collapsed: boolean }) {
 /* ── Top bar ──────────────────────────────────────────────────────── */
 
 function TopBar({ title, level, onMenu, onSearch }: { title: string; level: Level; onMenu: () => void; onSearch: () => void }) {
-  const { role } = useShell();
+  const { role, session } = useShell();
   const href = useHref();
+  const productHref = useProductHref();
   return (
     <header className="sticky top-2 z-40 rounded-[18px] border border-white/10 bg-[linear-gradient(145deg,rgba(8,23,36,0.9),rgba(6,16,27,0.88))] p-2 shadow-[0_18px_35px_rgba(0,0,0,0.32)] backdrop-blur-xl">
       <div className="flex items-center justify-between gap-2">
@@ -646,6 +646,10 @@ function TopBar({ title, level, onMenu, onSearch }: { title: string; level: Leve
               <span className="hidden sm:inline">New listing</span>
             </Link>
           ) : null}
+          {/* On a phone the sidebar, and the person in it, is behind the menu. */}
+          <Link href={productHref("/account")} aria-label="Account" className="shrink-0 lg:hidden">
+            <UserAvatar size={36} fallbackName={session.user.email} />
+          </Link>
         </div>
       </div>
     </header>

@@ -65,13 +65,27 @@ export function ScreenHeader({ title, onBack, action }: { title: string; onBack?
 }
 
 /** A square photo with the initial when there is none, its radius a fixed fraction of its size. */
-export function Avatar({ src, name, size = 48 }: { src: string | null | undefined; name: string; size?: number }) {
+export function Avatar({
+  src,
+  name,
+  size = 48,
+  onError,
+}: {
+  src: string | null | undefined;
+  name: string;
+  size?: number;
+  /** A signed photo expires within the hour: the caller may read a fresh one. */
+  onError?: () => void;
+}) {
   const initial = (name.replace(/^@/, "").trim()[0] ?? "?").toUpperCase();
   const style = { width: size, height: size, borderRadius: Math.round(size * 0.28) };
   const [broken, setBroken] = useState<string | null>(null);
   if (src && broken !== src) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={src} alt="" style={style} onError={() => setBroken(src)} className="shrink-0 object-cover" />;
+    return <img src={src} alt="" style={style} onError={() => {
+          setBroken(src);
+          onError?.();
+        }} className="shrink-0 object-cover" />;
   }
   return (
     <span

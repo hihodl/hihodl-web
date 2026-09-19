@@ -4,6 +4,6 @@ import { SettingsScreen } from "@/components/app/main/SettingsScreen";
 
 export const metadata: Metadata = { title: "Settings" };
 
-export default function SettingsPage() {
-  return <SettingsScreen />;
+export default function SettingsPage({ searchParams }: { searchParams: { screen?: string; item?: string } }) {
+  return <SettingsScreen screen={searchParams.screen} item={searchParams.item} />;
 }

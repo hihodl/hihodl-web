@@ -4,6 +4,6 @@ import { SpacesSettingsScreen } from "@/components/app/spaces/SpacesSettingsScre
 
 export const metadata: Metadata = { title: "Settings" };
 
-export default function SpacesSettingsPage({ searchParams }: { searchParams: { screen?: string } }) {
-  return <SpacesSettingsScreen screen={searchParams.screen} />;
+export default function SpacesSettingsPage({ searchParams }: { searchParams: { screen?: string; item?: string } }) {
+  return <SpacesSettingsScreen screen={searchParams.screen} item={searchParams.item} />;
 }

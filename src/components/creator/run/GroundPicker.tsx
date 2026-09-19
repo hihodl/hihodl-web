@@ -53,6 +53,7 @@ export function GroundPicker({
   onSave,
   allowDefault = false,
   defaultValue = null,
+  defaultLabel = "Same as my default",
 }: {
   /** What is saved now: a preset, a #RRGGBB, or null (HOLD blue; on a listing, "same as my default"). */
   value: string | null;
@@ -61,6 +62,8 @@ export function GroundPicker({
   allowDefault?: boolean;
   /** The creator's default, shown on the "Same as my default" card. */
   defaultValue?: string | null;
+  /** What that card is called. */
+  defaultLabel?: string;
 }) {
   // With no default to fall back to, a stored "hold" and null are the same card.
   const start = !allowDefault && value === "hold" ? null : value;
@@ -109,7 +112,7 @@ export function GroundPicker({
     <div className="flex flex-col gap-4">
       <ul role="radiogroup" aria-label="Page background" className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
         {allowDefault
-          ? option(null, "Same as my default", defaultValue ? labelOf(defaultValue) : PAGE_GROUND_LABEL.hold, defaultValue)
+          ? option(null, defaultLabel, defaultValue ? labelOf(defaultValue) : PAGE_GROUND_LABEL.hold, defaultValue)
           : null}
         {PAGE_GROUND_PRESETS.map((k) =>
           // With no default to fall back to, HOLD blue is what null means: one card for both.
@@ -177,7 +180,7 @@ export function GroundPicker({
   );
 }
 
-export function labelOf(value: string | null): string {
+export function labelOf(value: string | null | undefined): string {
   if (!value) return PAGE_GROUND_LABEL.hold;
   return (PAGE_GROUND_PRESETS as readonly string[]).includes(value) ? PAGE_GROUND_LABEL[value as PageGroundPreset] : value;
 }
