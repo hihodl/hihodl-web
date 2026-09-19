@@ -6,9 +6,17 @@
  * One card per spot (one "Any slot" card on a service, where an offer targets
  * the space), with the spot's own lines (bidding, reserve, hidden minimum),
  * then its open threads, bids ranked highest first, and the closed ones behind
- * "Earlier (n)". Each thread is the app's `OfferThread`: the amount, what the
- * sponsor pays, the sponsor with "Funds checked", the message, the contact, the
- * time left, and Accept, Counter and Decline.
+ * "Earlier (n)". Each thread is the app's `OfferThread`: the amount, the
+ * sponsor with "Funds checked", the message, the contact, the time left, and
+ * Accept, Counter and Decline.
+ *
+ * ONE FIGURE, THE CREATOR'S
+ *
+ * Every thread also said "Sponsor pays 420.00 USDC" under the amount, and the
+ * counter and the agreement repeated it in brackets. The creator agreed our
+ * 5% when they made the listing; restating the sponsor's side of the same
+ * money afterwards is the fee charged twice in words. The creator's screens
+ * show what the creator gets, once.
  *
  * Accept, Counter and Decline act on the version the creator was shown
  * (`updatedAt`): a thread that moved is refused, and the list reads again. A
@@ -284,20 +292,15 @@ function OfferThread({ offer: o, space, rank, onChanged }: { offer: OfferView; s
           tone={o.status === "accepted" || o.status === "paid" || o.leading ? "good" : o.status === "countered" ? "caution" : "calm"}
         />
       </div>
-      <p className={meta}>Sponsor pays {usdc(o.sponsorPaysUsdc)}</p>
       <div className="flex flex-wrap items-center gap-2">
         <p className="truncate text-[14px] font-strong text-white">{o.sponsor.name}</p>
         {o.sponsor.backed ? <FundsChecked /> : null}
       </div>
       {o.status === "countered" && o.counterUsdc ? (
-        <p className={meta}>
-          Your counter: {usdc(o.counterUsdc)} (they&apos;d pay {usdc(o.counterSponsorPaysUsdc)}), waiting for their answer
-        </p>
+        <p className={meta}>Your counter: {usdc(o.counterUsdc)}, waiting for their answer</p>
       ) : null}
       {o.status === "accepted" && o.agreedUsdc ? (
-        <p className={meta}>
-          Agreed {usdc(o.agreedUsdc)} (they pay {usdc(o.agreedSponsorPaysUsdc)})
-        </p>
+        <p className={meta}>Agreed {usdc(o.agreedUsdc)}</p>
       ) : null}
       {o.sponsor.message ? <p className="text-[13.5px] italic leading-[19px] text-white/[0.62]">“{o.sponsor.message}”</p> : null}
       {contact ? (
@@ -433,9 +436,7 @@ function CounterForm({ offer, space, onCancel, onSubmit }: { offer: OfferView; s
         />
       </Field>
       {preview ? (
-        <p className="text-[13.5px] font-bold leading-[19px] text-white">
-          The sponsor would pay {usdc(preview.sponsorPaysUsdc)} · you receive {usdc(preview.creatorReceivesUsdc)}
-        </p>
+        <p className="text-[13.5px] font-bold leading-[19px] text-white">You receive {usdc(preview.creatorReceivesUsdc)}</p>
       ) : null}
       <p className={meta}>
         {left} {plural(left, "counter", "counters")} left on this offer after this one
