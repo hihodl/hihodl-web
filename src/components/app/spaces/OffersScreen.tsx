@@ -8,11 +8,13 @@
  *   /offers?event=<slug>      that event's listings
  *   /offers?listing=<id>      that listing's offers and bids; `&id=` opens one
  *
- * One listing's inbox is a list on the left and the one you picked on the
- * right, answered with the same card the listing page uses (`OfferCard`), so
- * an answer here is the same call with the same version pin. `?id=<offer>`
- * alone opens its listing with it chosen, which is where the Overview's
- * "Needs you" rows land; `&from=listing` sends Back to the listing's hub.
+ * One listing's inbox is the app's Offers tab (ReceivedOffersList): "Waiting
+ * on you", then "Earlier", each thread a card under the spot it is on,
+ * answered with the same thread the listing page uses (`OfferCard`), so an
+ * answer here is the same call with the same version pin. `?id=<offer>` alone
+ * opens its listing with that thread outlined and in view, which is where the
+ * Overview's "Needs you" rows land; `&from=listing` sends Back to the
+ * listing's hub.
  *
  * A manager's inbox is read listing by listing: `offers/received` is the
  * owner's only.
@@ -20,35 +22,24 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { OfferCard } from "@/components/creator/run/Offers";
-import { timeLeft } from "@/lib/ad-space/format";
 import type { OfferView } from "@/lib/creator/listing";
 import { byEvent, byListing, NO_EVENT, OPEN_OFFER, type ListingRef } from "@/lib/app/spaces-model";
 import { useListing, useManagedOffers, useOffers, useRefresh } from "@/lib/app/spaces-data";
 
 import { useHref } from "../base";
-import { IconArrowLeft, IconOffers } from "../icons";
+import { IconOffers } from "../icons";
+import { Ion } from "../ion";
 import { useShell } from "../Shell";
-import { EmptyState, FilterPills, Panel, RowLink, Skeleton } from "../ui";
-import { LIST_PANEL, MasterDetail, ReadError } from "./common";
+import { Skeleton } from "../ui";
+import { ReadError } from "./common";
+import { Card, Chip, ChipRow, Divider, Empty, SectionLabel } from "./kit";
 import { CardGrid, DrillBar, EventCard, eventName, eventParam, ListingFigureCard, Pager, unknownListing, useListingRefs, usePaged } from "./cards";
 
 type Show = "waiting" | "open" | "all";
 type Kind = "all" | "offer" | "bid";
-
-const STATUS_TEXT: Record<string, string> = {
-  pending: "Waiting on you",
-  countered: "Countered",
-  accepted: "Accepted",
-  paid: "Paid",
-  declined: "Declined",
-  expired: "Expired",
-  withdrawn: "Withdrawn",
-  lapsed: "Lapsed",
-  superseded: "Outbid",
-};
 
 const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
@@ -129,9 +120,11 @@ function EventGrid({ groups, refOf }: { groups: { key: string; items: OfferView[
   const paged = usePaged(groups, groups.length);
   if (groups.length === 0) {
     return (
-      <Panel>
-        <EmptyState title="No offers yet." />
-      </Panel>
+      <Empty
+        icon="pricetags-outline"
+        title="No offers yet"
+        body="When a brand makes an offer or a bid on one of your spaces, it lands here to accept, counter or decline."
+      />
     );
   }
   return (
@@ -169,9 +162,7 @@ function EventOffers({ eventKey, offers, refOf }: { eventKey: string; offers: Of
     <div className="flex flex-col gap-4">
       <DrillBar back={href("/offers")} crumb="Offers & bids" title={eventName(event)} />
       {listings.length === 0 ? (
-        <Panel>
-          <EmptyState title="No offers here." />
-        </Panel>
+        <Empty icon="pricetags-outline" title="No offers yet" />
       ) : (
         <>
           <CardGrid>
@@ -215,6 +206,8 @@ function ListingOffers({
   const router = useRouter();
   const pathname = usePathname();
   const href = useHref();
+  const space = useListing(listing.id);
+  const refresh = useRefresh();
   const [kind, setKind] = useState<Kind>("all");
 
   const inView = (o: OfferView, s: Show) =>
@@ -223,15 +216,41 @@ function ListingOffers({
   const show: Show =
     view === "open" || view === "all" || view === "waiting" ? view : offers.some((o) => inView(o, "waiting")) ? "waiting" : "all";
   const keep = `listing=${encodeURIComponent(listing.id)}${fromHub ? "&from=listing" : ""}`;
-  const base = `${href("/offers")}?${keep}`;
   const setShow = (v: Show) => router.replace(`${pathname}?${keep}&view=${v}${selected ? `&id=${selected}` : ""}`, { scroll: false });
 
   const list = offers.filter((o) => inView(o, show) && (kind === "all" || o.kind === kind));
-  // Nothing picked: the first one is open beside the list on a wide screen,
-  // and the list is what a phone shows.
-  const current = offers.find((o) => o.id === selected) ?? list[0] ?? null;
-  const rowHref = (o: OfferView) => `${base}&view=${show}&id=${o.id}`;
+  // The app's Offers tab: what needs an answer first, then the rest.
+  const open = list.filter((o) => OPEN_OFFER.includes(o.status));
+  const earlier = list.filter((o) => !OPEN_OFFER.includes(o.status));
   const hasBoth = offers.some((o) => o.kind === "bid") && offers.some((o) => o.kind === "offer");
+
+  // Arriving on one thread (the Overview's "Needs you"): bring it into view.
+  useEffect(() => {
+    if (!selected) return;
+    document.getElementById(`offer-${selected}`)?.scrollIntoView({ block: "center" });
+  }, [selected, space.data]);
+
+  const row = (o: OfferView) => (
+    <div key={o.id} id={`offer-${o.id}`}>
+      <Card className={o.id === selected ? "!border-[rgba(241,245,249,0.45)]" : ""}>
+        <Link href={href(`/listings/${o.spaceId}?tab=offers`)} scroll={false} className="flex items-center gap-2.5 hover:opacity-80">
+          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <span className="truncate text-[15.5px] font-strong tracking-[-0.2px] text-white">{o.serviceName || o.spaceTitle || listing.title}</span>
+            {o.positionLabel ? <span className="truncate text-[12.5px] font-strong text-white/55">{o.positionLabel}</span> : null}
+          </span>
+          <Ion name="chevron-forward" size={16} className="shrink-0 text-white/55" />
+        </Link>
+        <Divider />
+        {space.data ? (
+          <OfferCard offer={o} space={space.data} onChanged={() => void refresh("offers", "managed-offers", "listing", "listings", "views")} />
+        ) : space.error ? (
+          <ReadError error={space.error} />
+        ) : (
+          <Skeleton className="h-32" />
+        )}
+      </Card>
+    </div>
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -239,111 +258,41 @@ function ListingOffers({
         back={fromHub ? href(`/listings/${listing.id}`) : `${href("/offers")}?${eventParam(listing.event?.key ?? NO_EVENT)}`}
         crumb={fromHub ? listing.title : eventName(listing.event)}
         title={fromHub ? "Offers & bids" : listing.title}
-        right={
-          <div className="flex flex-wrap items-center gap-3">
-            <FilterPills
-              label="Show"
-              value={show}
-              onChange={setShow}
-              options={[
-                { value: "waiting", label: "Waiting on you", count: offers.filter((o) => inView(o, "waiting")).length },
-                { value: "open", label: "Open", count: offers.filter((o) => inView(o, "open")).length },
-                { value: "all", label: "All", count: offers.length },
-              ]}
-            />
-            {hasBoth ? (
-              <FilterPills
-                label="Kind"
-                value={kind}
-                onChange={setKind}
-                options={[
-                  { value: "all", label: "Both" },
-                  { value: "offer", label: "Offers" },
-                  { value: "bid", label: "Bids" },
-                ]}
-              />
-            ) : null}
-          </div>
-        }
       />
-      <ReadError error={error} />
-
-      <MasterDetail
-        showDetail={!!selected && !!current}
-        list={
-          <Panel title="Inbox" meta={`${list.length}`} className={LIST_PANEL} bodyClassName="min-h-0 overflow-y-auto">
-            {list.length === 0 ? (
-              <EmptyState title={show === "waiting" ? "Nothing waiting on you." : "No offers."} />
-            ) : (
-              <ul className="flex flex-col gap-1">
-                {list.map((o) => {
-                  const left = o.expiresAt ? new Date(o.expiresAt).getTime() - Date.now() : null;
-                  return (
-                    <li key={o.id}>
-                      <RowLink
-                        href={rowHref(o)}
-                        selected={o.id === current?.id}
-                        title={`${o.sponsor.name} · ${o.amountUsdc} USDC`}
-                        sub={`${o.kind === "bid" ? "Bid" : "Offer"}${o.positionLabel ? ` · ${o.positionLabel}` : ""}`}
-                        right={
-                          <span className={`text-[11px] ${o.status === "pending" ? "text-amber" : "text-[#9FB7C2]"}`}>
-                            {o.status === "pending" && left !== null && left > 0 ? `${timeLeft(left)} left` : STATUS_TEXT[o.status] ?? o.status}
-                          </span>
-                        }
-                      />
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </Panel>
-        }
-        detail={
-          current ? (
-            <OfferDetail offer={current} backHref={`${base}&view=${show}`} />
-          ) : (
-            <Panel>
-              <EmptyState title="Nothing selected." />
-            </Panel>
-          )
-        }
-      />
-    </div>
-  );
-}
-
-function OfferDetail({ offer, backHref }: { offer: OfferView; backHref: string }) {
-  const href = useHref();
-  const space = useListing(offer.spaceId);
-  const refresh = useRefresh();
-
-  return (
-    <div className="flex flex-col gap-3">
-      <Link href={backHref} scroll={false} className="inline-flex w-fit items-center gap-1.5 text-tiny text-[#9FB7C2] hover:text-text lg:hidden">
-        <IconArrowLeft className="h-3.5 w-3.5" />
-        Inbox
-      </Link>
-      <Panel
-        title={offer.serviceName || offer.spaceTitle}
-        meta={offer.positionLabel ?? undefined}
-        action={
-          <Link href={href(`/listings/${offer.spaceId}?tab=offers`)} className="text-tiny text-[#9FB7C2] hover:text-text">
-            Open listing
-          </Link>
-        }
-      >
-        {space.data ? (
-          <OfferCard
-            offer={offer}
-            space={space.data}
-            onChanged={() => void refresh("offers", "managed-offers", "listing", "listings", "views")}
+      <div className="mx-auto flex w-full max-w-[720px] flex-col gap-2.5">
+        <ChipRow label="Show">
+          <Chip label="Waiting on you" count={offers.filter((o) => inView(o, "waiting")).length} selected={show === "waiting"} onClick={() => setShow("waiting")} />
+          <Chip label="Open" count={offers.filter((o) => inView(o, "open")).length} selected={show === "open"} onClick={() => setShow("open")} />
+          <Chip label="All" count={offers.length} selected={show === "all"} onClick={() => setShow("all")} />
+        </ChipRow>
+        {hasBoth ? (
+          <ChipRow label="Kind">
+            <Chip label="Both" selected={kind === "all"} onClick={() => setKind("all")} />
+            <Chip label="Offers" selected={kind === "offer"} onClick={() => setKind("offer")} />
+            <Chip label="Bids" selected={kind === "bid"} onClick={() => setKind("bid")} />
+          </ChipRow>
+        ) : null}
+        <ReadError error={error} />
+        {list.length === 0 ? (
+          <Empty
+            icon="pricetags-outline"
+            title={show === "waiting" ? "Nothing waiting on you" : "No offers yet"}
+            body="When a brand makes an offer or a bid on one of your spaces, it lands here to accept, counter or decline."
           />
-        ) : space.error ? (
-          <ReadError error={space.error} />
-        ) : (
-          <Skeleton className="h-48" />
-        )}
-      </Panel>
+        ) : null}
+        {open.length ? (
+          <>
+            <SectionLabel>Waiting on you</SectionLabel>
+            {open.map(row)}
+          </>
+        ) : null}
+        {earlier.length ? (
+          <>
+            <SectionLabel>Earlier</SectionLabel>
+            {earlier.map(row)}
+          </>
+        ) : null}
+      </div>
     </div>
   );
 }
