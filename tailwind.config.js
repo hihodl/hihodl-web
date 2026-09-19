@@ -34,8 +34,8 @@ module.exports = {
         // Text
         text: {
           DEFAULT: "#F4F6FA",
-          muted:   "#9BA3B0",
-          faint:   "#5A6068",
+          muted:   "#C8D0D9", // = globals.css --color-text-muted; >=5:1 on the lightest ground
+          faint:   "#B4BEC9", // = globals.css --color-text-faint; >=4.1:1 on the lightest ground
           "on-amber": "#0A0500",
         },
         // Spaces public pages: ink that follows the page's ground (globals.css --sp-*)
