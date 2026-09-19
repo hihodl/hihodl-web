@@ -25,7 +25,7 @@ import {
 import type { Creator, Position, Space } from "@/lib/ad-space/types";
 
 import { ClosesCountdown } from "./ClosesCountdown";
-import { creatorScreenPath } from "./creator";
+import { creatorPath, creatorScreenPath } from "./creator";
 import { SpaceSiblings } from "./events";
 import { IfItDoesNotHappen } from "./IfItDoesNotHappen";
 import { WhatTheBrandGets } from "./WhatTheBrandGets";
@@ -135,8 +135,37 @@ export function ListingHead({ space }: { space: Space }) {
         )}
       </div>
       <CreatorChip creator={space.creator} />
+      <InspiredByCredit credit={space.inspiredBy ?? null} />
       <SpaceSiblings siblings={space.siblings} handle={space.creator.xHandle} eventName={space.event?.name ?? space.eventName} />
     </div>
+  );
+}
+
+/**
+ * "Inspired by @handle": a creator crediting another, and the one place this
+ * page links to somebody else, on purpose: it is recognition between
+ * creators, not a way off the page. A HOLD creator goes to their page, an X
+ * handle to x.com. The link is built here from the handle, never taken as a
+ * URL from the server.
+ */
+function InspiredByCredit({ credit }: { credit: NonNullable<Space["inspiredBy"]> | null }) {
+  if (!credit || !/^[A-Za-z0-9_.]{1,40}$/.test(credit.handle)) return null;
+  const hold = credit.kind === "hold";
+  const href = hold ? creatorPath(credit.handle) : `https://x.com/${encodeURIComponent(credit.handle)}`;
+  const cls = "text-sp-ink transition-colors duration-180 hover:text-sp-amber";
+  return (
+    <p className="-mt-2 text-tiny text-sp-ink/85">
+      Inspired by{" "}
+      {hold ? (
+        <Link href={href} className={cls}>
+          @{credit.handle}
+        </Link>
+      ) : (
+        <a href={href} target="_blank" rel="noopener noreferrer" className={cls}>
+          @{credit.handle}
+        </a>
+      )}
+    </p>
   );
 }
 

@@ -32,6 +32,7 @@ import {
 } from "@/lib/creator/listings";
 import { useCreatorSession } from "@/lib/creator/session";
 import { getInsights } from "@/lib/creator/insights";
+import { getAnalytics } from "@/lib/creator/analytics";
 import { getWalletStatus } from "@/lib/wallet/api";
 
 import { getMe, getMyAddresses } from "./me";
@@ -129,6 +130,9 @@ export const useMyAddresses = (on = true) => useRead(on ? "my-addresses" : null,
 /** Market data for an event (a slug), all of Spaces (`all`), or the creator's nearest event (null). */
 export const useInsights = (event: string | null) =>
   useRead("insights", async () => (await getInsights(event)).insights, event ?? "");
+
+/** The creator's own business: brands, events, what sells, how brands pay (GET /ad-space/me/analytics). */
+export const useAnalytics = (on = true) => useRead(on ? "analytics" : null, async () => (await getAnalytics()).analytics);
 
 /** One listing, whole. */
 export const useListing = (spaceId: string | null) =>
