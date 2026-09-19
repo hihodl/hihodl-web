@@ -41,10 +41,19 @@ import { EmptyState, FilterPills, Panel, Skeleton } from "../ui";
 import { cardCls, CardGrid, DrillBar, Pager, usePaged } from "./cards";
 import { ReadError } from "./common";
 
-export function InspireScreen({ event, campaign }: { event: string | null; campaign: string | null }) {
+export function InspireScreen({
+  event,
+  campaign,
+  surface = null,
+}: {
+  event: string | null;
+  campaign: string | null;
+  /** `&surface=vehicle`: the event opens already filtered (a shared link). */
+  surface?: string | null;
+}) {
   if (!event) return <Hub />;
   if (campaign) return <CampaignScreen slug={event} id={campaign} />;
-  return <EventScreen slug={event} />;
+  return <EventScreen key={`${event}:${surface ?? ""}`} slug={event} initialSurface={surface} />;
 }
 
 /* ── Links ────────────────────────────────────────────────────────── */
@@ -197,10 +206,14 @@ function EventTile({ event, href }: { event: InspireEvent; href: string }) {
 
 type SurfaceFilter = "all" | SurfaceKind;
 
-function EventScreen({ slug }: { slug: string }) {
+function isSurface(v: string | null): v is SurfaceKind {
+  return v !== null && Object.prototype.hasOwnProperty.call(SURFACE_LABEL, v);
+}
+
+function EventScreen({ slug, initialSurface }: { slug: string; initialSurface: string | null }) {
   const read = useInspireCampaigns(slug);
   const links = useInspireHref();
-  const [surface, setSurface] = useState<SurfaceFilter>("all");
+  const [surface, setSurface] = useState<SurfaceFilter>(isSurface(initialSurface) ? initialSurface : "all");
   const all = useMemo(() => read.data?.campaigns ?? [], [read.data]);
   const shown = useMemo(() => (surface === "all" ? all : all.filter((c) => c.surface.kind === surface)), [all, surface]);
   const paged = usePaged(shown, `${slug}:${surface}`);
