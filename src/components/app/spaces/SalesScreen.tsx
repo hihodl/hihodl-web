@@ -30,7 +30,6 @@ import { useListing, useListingSales, useSales } from "@/lib/app/spaces-data";
 
 import { useHref } from "../base";
 import { useShell } from "../Shell";
-import { IconSales } from "../icons";
 import { btnGlass } from "../hold";
 import { Ion } from "../ion";
 import { dollars, Skeleton } from "../ui";
@@ -111,7 +110,6 @@ function EventGrid({
               key={g.key}
               href={`${href("/sales")}?${eventParam(g.key)}`}
               event={listings[0]?.event ?? null}
-              icon={IconSales}
               lines={[kindsText(listings.map((l) => l.kind)) || "Listings"]}
               value={dollars(sumReceived(g.items))}
               note={salesText(sumOrders(g.items))}

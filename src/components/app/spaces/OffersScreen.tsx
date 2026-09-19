@@ -30,7 +30,6 @@ import { byEvent, byListing, NO_EVENT, OPEN_OFFER, type ListingRef } from "@/lib
 import { useListing, useManagedOffers, useOffers, useRefresh } from "@/lib/app/spaces-data";
 
 import { useHref } from "../base";
-import { IconOffers } from "../icons";
 import { Ion } from "../ion";
 import { useShell } from "../Shell";
 import { Skeleton } from "../ui";
@@ -138,7 +137,6 @@ function EventGrid({ groups, refOf }: { groups: { key: string; items: OfferView[
               key={g.key}
               href={`${href("/offers")}?${eventParam(g.key)}`}
               event={refOf(g.items[0].spaceId, g.items[0]).event}
-              icon={IconOffers}
               lines={[w.text, count(listings, "listing", "listings")]}
               value={w.count}
               note={w.note}

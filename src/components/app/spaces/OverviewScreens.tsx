@@ -32,7 +32,7 @@ import type { BrandRelation, CreatorAnalytics, GroupRow, ListingRow, MixRow } fr
 
 import { useHref } from "../base";
 import { dollars } from "../ui";
-import { CardGrid, DrillBar, Pager, usePaged } from "./cards";
+import { CardGrid, DrillBar, EventBadge, Pager, usePaged, useEventCountry } from "./cards";
 import { Card, Empty as KitEmpty, Group as Panel, Pills as FilterPills, ProgressBar as Bar, Tag as KitTag } from "./kit";
 
 /** The shared bar takes a fraction; these screens think in value and max. */
@@ -224,6 +224,7 @@ export function EventsScreen({ data, back }: { data: CreatorAnalytics; back: str
   const rows = data.byEvent;
   const max = Math.max(1, ...rows.map((e) => e.receivedCents));
   const paged = usePaged(rows, rows.length, 6);
+  const countryOf = useEventCountry();
   return (
     <Screen
       back={back}
@@ -241,10 +242,16 @@ export function EventsScreen({ data, back }: { data: CreatorAnalytics; back: str
                 <BarLine
                   key={e.key}
                   label={
-                    <>
-                      {e.name}
-                      {e.startsOn ? <span className="ml-2 text-[12.5px] text-white/55">{[e.city, eventDates(e.startsOn, e.endsOn ?? e.startsOn)].filter(Boolean).join(" · ")}</span> : null}
-                    </>
+                    <span className="flex min-w-0 items-center gap-2">
+                      <EventBadge
+                        event={{ key: e.key, name: e.name, city: e.city, country: countryOf({ key: e.slug ?? e.key, name: e.name }), startsOn: e.startsOn, endsOn: e.endsOn }}
+                        size={22}
+                      />
+                      <span className="min-w-0 truncate">
+                        {e.name}
+                        {e.startsOn ? <span className="ml-2 text-[12.5px] text-white/55">{[e.city, eventDates(e.startsOn, e.endsOn ?? e.startsOn)].filter(Boolean).join(" · ")}</span> : null}
+                      </span>
+                    </span>
                   }
                   right={dollars(e.receivedCents)}
                   value={e.receivedCents}
