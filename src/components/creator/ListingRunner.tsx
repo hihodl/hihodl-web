@@ -226,7 +226,8 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
             <Offers space={space} offers={offers} onChanged={changed} />
           </Panel>
         ) : null}
-        {screen === "floors" ? <Floors space={space} groups={floors} onChanged={changed} /> : null}
+        {/* Keyed on what the server holds: a save reloads the listing and the card starts from it. */}
+        {screen === "floors" ? <Floors key={floorsKey(floors)} groups={floors} onChanged={changed} /> : null}
         {screen === "spots" ? <Spots space={space} /> : null}
         {screen === "photo" ? <ProductHub space={space} /> : null}
         {screen === "ground" ? <ListingGround space={space} onChanged={changed} /> : null}
@@ -540,6 +541,14 @@ function priceText(p: PositionView): string {
 
 /* ── Spots ────────────────────────────────────────────────────────── */
 
+/**
+ * Every spot as a small card, in a grid.
+ *
+ * Eighteen spots were eighteen full-width rows and a page that scrolled twice.
+ * A spot is four short things — what it is, what it costs, whether it is sold,
+ * and who bought it — so it fits a card a quarter of the width, and eighteen
+ * of them fit a screen.
+ */
 function Spots({ space }: { space: SpaceView }) {
   const rungs = rungsOf(space.positions);
   return (
@@ -547,26 +556,26 @@ function Spots({ space }: { space: SpaceView }) {
       <SectionLabel right={<span className="text-[12.5px] font-strong normal-case tracking-normal text-white/55">{`${space.totals.sold} of ${space.totals.positions} sold`}</span>}>
         {space.kind === "service" ? "Slots" : "Spots"}
       </SectionLabel>
-      {rungs.map((r) => {
-        const sold = r.positions.filter((p) => p.status === "sold").length;
-        const held = r.positions.filter((p) => p.status === "held").length;
-        const sponsors = r.positions.map((p) => p.sponsor?.name).filter((n): n is string => !!n);
-        const all = sold === r.positions.length;
-        return (
-          // The app's PositionRow: label and status tag, the price, who sponsored it.
-          <div key={r.key} className="flex flex-col gap-[5px] rounded-[14px] border border-transparent bg-white/[0.04] p-3">
-            <div className="flex items-center justify-between gap-2.5">
-              <p className="min-w-0 flex-1 truncate text-[14.5px] font-bold text-white">{r.title}</p>
+      <ul className={`grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 ${SCREEN_BODY}`}>
+        {rungs.map((r) => {
+          const sold = r.positions.filter((p) => p.status === "sold").length;
+          const held = r.positions.filter((p) => p.status === "held").length;
+          const sponsors = r.positions.map((p) => p.sponsor?.name).filter((n): n is string => !!n);
+          const all = sold === r.positions.length;
+          return (
+            // The app's PositionRow, folded into a card: name, price, state, who bought it.
+            <li key={r.key} className="flex min-w-0 flex-col gap-1.5 rounded-[14px] bg-white/[0.04] p-2.5">
+              <p className="min-w-0 truncate text-[13.5px] font-bold text-white">{r.title}</p>
+              <p className="text-[13.5px] font-bold tabular-nums text-white">{priceText(r.positions[0])}</p>
               <Tag
                 label={r.positions.length > 1 ? `${sold} of ${r.positions.length} sold${held ? ` · ${held} being paid` : ""}` : all ? "Sold" : held ? "Being paid" : "Open"}
                 tone={all ? "good" : held ? "caution" : "calm"}
               />
-            </div>
-            <p className="text-[13.5px] font-bold tabular-nums text-white">{priceText(r.positions[0])}</p>
-            {sponsors.length ? <p className="text-[12.5px] leading-[17px] text-white/55">Sponsored by {sponsors.join(", ")}</p> : null}
-          </div>
-        );
-      })}
+              {sponsors.length ? <p className="min-w-0 truncate text-[12px] leading-4 text-white/55">{sponsors.join(", ")}</p> : null}
+            </li>
+          );
+        })}
+      </ul>
     </section>
   );
 }
@@ -603,59 +612,96 @@ function floorGroups(space: SpaceView): FloorGroup[] {
   return out;
 }
 
-function Floors({ space, groups, onChanged }: { space: SpaceView; groups: FloorGroup[]; onChanged: () => void }) {
-  return (
-    <Panel title="Floor prices" meta="Private">
-      <ul className="flex flex-col divide-y divide-white/[0.08]">
-        {groups.map((g) => (
-          <FloorRow key={`${space.id}-${g.key}`} group={g} onChanged={onChanged} />
-        ))}
-      </ul>
-    </Panel>
-  );
+/** What each row holds now, as typed. An empty string is "no floor". */
+type FloorValues = Record<string, string>;
+
+function typedNow(groups: readonly FloorGroup[]): FloorValues {
+  return Object.fromEntries(groups.map((g) => [g.key, dollarsFromCents(centsFromUsdc(g.current))]));
 }
 
-function FloorRow({ group, onChanged }: { group: FloorGroup; onChanged: () => void }) {
-  const [value, setValue] = useState(dollarsFromCents(centsFromUsdc(group.current)));
+/** A row's figure is a floor, nothing at all, or something that is not money. */
+function readFloor(text: string): { ok: true; cents: number | null } | { ok: false } {
+  if (!text.trim()) return { ok: true, cents: null };
+  const cents = centsFromDollars(text);
+  return cents === null ? { ok: false } : { ok: true, cents };
+}
+
+/** A signature of what the server holds: the card starts over when that changes. */
+function floorsKey(groups: readonly FloorGroup[]): string {
+  return groups.map((g) => `${g.key}:${g.current ?? ""}`).join("|");
+}
+
+/**
+ * Every floor on one card, with one Save.
+ *
+ * There was a Save and a Remove on every row — eighteen of each on a board
+ * with eighteen spots, and no way to tell whether the card as a whole was
+ * saved. The rows are fields now. One Save writes every row that changed,
+ * "Set the same floor for all" copies the first row's figure down the card,
+ * and "Clear all" empties them (saving then takes every floor off).
+ */
+function Floors({ groups, onChanged }: { groups: FloorGroup[]; onChanged: () => void }) {
+  const [values, setValues] = useState<FloorValues>(() => typedNow(groups));
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  const current = centsFromUsdc(group.current);
 
-  function save(cents: number | null) {
+  const saved = typedNow(groups);
+  const changed = groups.filter((g) => (values[g.key] ?? "") !== saved[g.key]);
+  const bad = groups.some((g) => !readFloor(values[g.key] ?? "").ok);
+  // What "the same floor for all" copies: the first row that holds a figure.
+  const first = groups.map((g) => (values[g.key] ?? "").trim()).find((v) => v !== "") ?? "";
+
+  const set = (key: string, text: string) => setValues((v) => ({ ...v, [key]: text }));
+  const fill = (text: string) => setValues(Object.fromEntries(groups.map((g) => [g.key, text])));
+
+  async function saveAll() {
     setBusy(true);
     setNotice(null);
-    void group
-      .save(cents)
-      .then(onChanged)
-      .catch((e) => setNotice(describeRunError(e)))
-      .finally(() => setBusy(false));
+    try {
+      for (const g of changed) {
+        const read = readFloor(values[g.key] ?? "");
+        if (!read.ok) continue;
+        await g.save(read.cents);
+      }
+      onChanged();
+    } catch (e) {
+      setNotice(describeRunError(e));
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
-    <li className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0">
-      <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-4">
-        <p className="min-w-0 flex-1 truncate text-[14.5px] font-bold text-white">
-          {group.title}
-          <span className="font-normal text-white/55"> · {current !== null ? usd(current) : "No floor"}</span>
-        </p>
-        <div className="flex items-center gap-2">
-          <div className="w-full min-w-0 lg:w-[180px]">
-            <Money value={value} onChange={setValue} placeholder={`Min ${usd(2_500)}`} />
-          </div>
-          <Chip
-            label={busy ? "Saving…" : "Save"}
-            selected
-            disabled={busy || (value.trim() !== "" && centsFromDollars(value) === null)}
-            onClick={() => save(value.trim() ? centsFromDollars(value) : null)}
-          />
-          {/* Kept in place without a floor, so every row's buttons line up. */}
-          <span className={current === null ? "invisible" : ""}>
-            <Chip label="Remove" disabled={busy || current === null} onClick={() => save(null)} />
-          </span>
-        </div>
+    <Panel title="Floor prices" meta="Private">
+      <ul className={`flex flex-col divide-y divide-white/[0.08] ${SCREEN_BODY}`}>
+        {groups.map((g) => {
+          const current = centsFromUsdc(g.current);
+          return (
+            <li key={g.key} className="flex flex-col gap-2 py-2.5 first:pt-0 last:pb-0 lg:flex-row lg:items-center lg:gap-4">
+              <p className="min-w-0 flex-1 truncate text-[14.5px] font-bold text-white">
+                {g.title}
+                <span className="font-normal text-white/55"> · {current !== null ? usd(current) : "No floor"}</span>
+              </p>
+              <div className="w-full min-w-0 lg:w-[180px]">
+                <Money value={values[g.key] ?? ""} onChange={(text) => set(g.key, text)} placeholder={`Min ${usd(2_500)}`} />
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      <div className="flex flex-wrap items-center gap-2 border-t border-white/[0.08] pt-3">
+        <Chip
+          label={busy ? "Saving…" : changed.length ? `Save ${changed.length === 1 ? "1 change" : `${changed.length} changes`}` : "Save"}
+          selected
+          disabled={busy || bad || changed.length === 0}
+          onClick={() => void saveAll()}
+        />
+        <Chip label="Set the same floor for all" disabled={busy || groups.length < 2 || first === ""} onClick={() => fill(first)} />
+        <Chip label="Clear all" disabled={busy || groups.every((g) => (values[g.key] ?? "") === "")} onClick={() => fill("")} />
+        {bad ? <span className="text-[12.5px] font-strong text-amber">One of these is not an amount.</span> : null}
       </div>
       {notice ? <Notice>{notice}</Notice> : null}
-    </li>
+    </Panel>
   );
 }
 
