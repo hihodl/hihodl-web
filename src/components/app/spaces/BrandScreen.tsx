@@ -25,6 +25,7 @@
  * two brands, which is what the Overview already counts.
  */
 
+import Link from "next/link";
 import { useMemo } from "react";
 
 import type { BrandRelation, CreatorAnalytics } from "@/lib/creator/analytics";
@@ -38,6 +39,13 @@ import { DrillBar, useListingRefs } from "./cards";
 import { dueText, shortDay } from "./common";
 import { Card, Empty, Group as Panel, ListRow, Tag } from "./kit";
 import { Logo, monthYear, plural } from "./OverviewScreens";
+
+/** Rows on this screen before it would start to scroll: five bought, three each side under them. */
+const SHOWN = 5;
+const SHOWN_SMALL = 3;
+
+/** A group's "see all": the app's link ink, as the Overview draws it. */
+const seeAll = "text-[12.5px] font-strong normal-case tracking-normal text-white/[0.62] hover:text-white";
 
 /** Two brand names are the same brand when they are the same word: case, spaces and a leading @ aside. */
 function sameBrand(a: string | null | undefined, b: string | null | undefined): boolean {
@@ -133,14 +141,24 @@ function TheirActivity({ brand, back }: { brand: BrandRelation; back: string }) 
         </Card>
 
         <div className="flex min-w-0 flex-col gap-4">
-          <Panel title="What they bought" meta={loadingSales ? "" : plural(bought.length, "order")}>
+          <Panel
+            title="What they bought"
+            meta={loadingSales ? "" : plural(bought.length, "order")}
+            action={
+              bought.length > SHOWN ? (
+                <Link href={href("/sales")} className={seeAll}>
+                  All sales
+                </Link>
+              ) : null
+            }
+          >
             {loadingSales ? (
               <Skeleton className="h-28" />
             ) : bought.length === 0 ? (
               <Empty icon="cash-outline" title="No paid order under this name" body="Their orders show here the moment a payment lands." />
             ) : (
               <ul className="flex flex-col divide-y divide-white/[0.08]">
-                {bought.slice(0, 6).map((r) => {
+                {bought.slice(0, SHOWN).map((r) => {
                   const ref = refs.get(r.spaceId);
                   const listing = r.serviceName || r.spaceTitle;
                   return (
@@ -166,7 +184,7 @@ function TheirActivity({ brand, back }: { brand: BrandRelation; back: string }) 
                 <Empty icon="checkmark-done" title="Nothing owed to them" />
               ) : (
                 <ul className="flex flex-col divide-y divide-white/[0.08]">
-                  {owedToThem.slice(0, 4).map((d) => (
+                  {owedToThem.slice(0, SHOWN_SMALL).map((d) => (
                     <li key={d.id}>
                       <ListRow
                         href={`${href("/deliveries")}?item=${encodeURIComponent(d.id)}`}
@@ -187,7 +205,7 @@ function TheirActivity({ brand, back }: { brand: BrandRelation; back: string }) 
                 <Empty icon="checkmark-done" title="Nothing waiting to be paid" />
               ) : (
                 <ul className="flex flex-col divide-y divide-white/[0.08]">
-                  {owedByThem.slice(0, 4).map((o) => (
+                  {owedByThem.slice(0, SHOWN_SMALL).map((o) => (
                     <li key={o.id}>
                       <ListRow
                         href={`${href("/offers")}?id=${o.id}`}

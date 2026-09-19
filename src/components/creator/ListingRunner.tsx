@@ -233,7 +233,9 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
         {screen === "ground" ? <ListingGround space={space} onChanged={changed} /> : null}
         {screen === "deliveries" ? (
           <Panel title="Deliveries">
-            <Work space={space} onChanged={changed} />
+            <div className={SCREEN_BODY}>
+              <Work space={space} onChanged={changed} />
+            </div>
           </Panel>
         ) : null}
         {screen === "updates" ? <Updates space={space} onChanged={changed} /> : null}
@@ -556,7 +558,9 @@ function Spots({ space }: { space: SpaceView }) {
       <SectionLabel right={<span className="text-[12.5px] font-strong normal-case tracking-normal text-white/55">{`${space.totals.sold} of ${space.totals.positions} sold`}</span>}>
         {space.kind === "service" ? "Slots" : "Spots"}
       </SectionLabel>
-      <ul className={`grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 ${SCREEN_BODY}`}>
+      {/* Three to a row, not four: the screen is 720 wide, and a fourth column
+          would cut "Front face, large" in half. */}
+      <ul className={`grid grid-cols-2 gap-2 sm:grid-cols-3 ${SCREEN_BODY}`}>
         {rungs.map((r) => {
           const sold = r.positions.filter((p) => p.status === "sold").length;
           const held = r.positions.filter((p) => p.status === "held").length;

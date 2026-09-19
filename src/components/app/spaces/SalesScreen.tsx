@@ -169,7 +169,7 @@ function EventSales({ eventKey, totals, refOf }: { eventKey: string; totals: Sal
         back={href("/sales")}
         crumb="Sales"
         title={eventName(event)}
-        right={here.length ? <p className="text-tiny tabular-nums text-[#9FB7C2]">{dollars(sumReceived(here))} received</p> : null}
+        right={here.length ? <p className="text-[12.5px] font-strong tabular-nums text-white/[0.62]">{dollars(sumReceived(here))} received</p> : null}
       />
       {here.length === 0 ? (
         <Empty icon="cash-outline" title="No sales yet" body="When a brand pays for a spot on one of your spaces, it shows here." />
