@@ -28,29 +28,15 @@
 
 "use client";
 
-import Link from "next/link";
-import { useCallback, useEffect, useState, type ComponentType, type ReactNode, type SVGProps } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 
-import { btnSmall, btnSmallSecondary, pill } from "@/components/ad-space/ui";
 import { useHref } from "@/components/app/base";
-import {
-  IconArrowLeft,
-  IconCalendar,
-  IconCopy,
-  IconDeliveries,
-  IconFloor,
-  IconGrid,
-  IconImage,
-  IconLink,
-  IconMegaphone,
-  IconOffers,
-  IconSales,
-  IconShare,
-  IconTeam,
-} from "@/components/app/icons";
+import { BackHeader, ctaPrimary, Notice as HoldNotice } from "@/components/app/hold";
+import { Ion, type IonName } from "@/components/app/ion";
 import { ContentOfferScreen, midSentence, useOffersContent, type ContentLead } from "@/components/app/spaces/ContentOffer";
+import { Body, Card, Chip, dateTimeText, Group as Panel, SectionLabel, SheetRow, Tag } from "@/components/app/spaces/kit";
 import { useShell } from "@/components/app/Shell";
-import { glass, Panel, Skeleton } from "@/components/app/ui";
+import { Skeleton } from "@/components/app/ui";
 import { useRefresh } from "@/lib/app/spaces-data";
 import { describeCreatorError } from "@/lib/creator/api";
 import {
@@ -91,8 +77,6 @@ import { ListingTeam } from "./team/ListingTeam";
 
 /** A screen's body scrolls inside itself on a wide screen, so the page stays one screen. */
 const SCREEN_BODY = "lg:max-h-[calc(var(--app-vh,100dvh)-196px)] lg:overflow-y-auto";
-/** The same, inside a panel that has its own title and padding. */
-const PANEL_BODY = "lg:max-h-[calc(var(--app-vh,100dvh)-252px)] lg:overflow-y-auto";
 
 type Screen = "events" | "offers" | "floors" | "spots" | "photo" | "ground" | "deliveries" | "updates" | "content" | "team";
 
@@ -161,16 +145,17 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
   if (loading) {
     return (
       <div className="flex flex-col gap-4">
-        <Skeleton className="h-[240px] sm:h-[280px] xl:h-[300px]" />
-        <div className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <Skeleton className="h-[168px] rounded-[16px] sm:h-[200px] xl:h-[220px]" />
+        <Skeleton className="h-[112px] rounded-[18px]" />
+        <div className="flex flex-col gap-2">
           {Array.from({ length: 4 }, (_, i) => (
-            <Skeleton key={i} className="h-[128px]" />
+            <Skeleton key={i} className="h-[58px] rounded-[14px]" />
           ))}
         </div>
       </div>
     );
   }
-  if (error || !space) return <Notice>{error ?? "Listing not found."}</Notice>;
+  if (error || !space) return <HoldNotice icon="cloud-offline-outline">{error ?? "This space isn't loading"}</HoldNotice>;
 
   const takesOffers = space.pricingMode !== "fixed" || space.acceptsOffers || space.positions.some((p) => p.saleMode);
   const floors = floorGroups(space);
@@ -237,7 +222,7 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
           </div>
         ) : null}
         {screen === "offers" ? (
-          <Panel title="Offers & bids" meta={`${offers.length}`} bodyClassName={PANEL_BODY}>
+          <Panel title="Offers & bids" meta={`${offers.length}`}>
             <Offers space={space} offers={offers} onChanged={changed} />
           </Panel>
         ) : null}
@@ -246,7 +231,7 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
         {screen === "photo" ? <ProductHub space={space} /> : null}
         {screen === "ground" ? <ListingGround space={space} onChanged={changed} /> : null}
         {screen === "deliveries" ? (
-          <Panel title="Deliveries" bodyClassName={PANEL_BODY}>
+          <Panel title="Deliveries">
             <Work space={space} onChanged={changed} />
           </Panel>
         ) : null}
@@ -271,16 +256,24 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
   const sidesLive = Object.values(space.viewPhotos ?? {}).filter((v) => v.ready).length;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="mx-auto flex w-full max-w-[720px] flex-col gap-3.5">
+      <BackHeader title={space.serviceName || space.title} backHref={href("/listings")} right={<ShareButton share={share} />} />
+
+      {space.status === "delisted" ? (
+        <HoldNotice icon="eye-off-outline">This space was taken down after a review. It isn&apos;t public and takes no new sponsors.</HoldNotice>
+      ) : space.status === "closed" ? (
+        <HoldNotice icon="lock-closed-outline" tone="calm">
+          This space is closed. Unsold spots stay unsold.
+        </HoldNotice>
+      ) : null}
+
       <ListingBanner space={space} owner={owner} publicUrl={share?.url ?? null} onChanged={changed} />
 
-      {/* Two across even on a phone: each card is one figure. The link's two buttons take a row of their own there. */}
-      <ul className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <li className="col-span-2 sm:col-span-1">
-          <LinkCard share={share} />
-        </li>
+      {space.status === "live" ? <LinkCard share={share} /> : null}
+
+      <ul className="flex flex-col gap-2">
         {shown.events ? (
-          <HubCard screen="events" space={space} icon={IconCalendar} value={events} unit={events === 1 ? "event" : "events"} />
+          <HubCard screen="events" space={space} icon="calendar-outline" value={events} unit={events === 1 ? "event" : "events"} />
         ) : null}
         {shown.offers ? (
           <HubCard
@@ -288,26 +281,26 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
             space={space}
             // The inbox's own screen for this listing, with Back to this hub. A rep has no inbox.
             to={role === "rep" ? undefined : `/offers?listing=${encodeURIComponent(space.id)}&from=listing`}
-            icon={IconOffers}
+            icon="pricetags-outline"
             value={waiting}
             unit={waiting ? "waiting on you" : offers.length ? `${offers.length} in total` : "none yet"}
             attention={waiting > 0}
           />
         ) : null}
         {shown.floors ? (
-          <HubCard screen="floors" space={space} icon={IconFloor} value={floorsSet} unit={`of ${floors.length} set`} />
+          <HubCard screen="floors" space={space} icon="cash-outline" value={floorsSet} unit={`of ${floors.length} set`} />
         ) : null}
-        <HubCard screen="spots" space={space} icon={IconGrid} value={`${space.totals.sold}/${space.totals.positions}`} unit="sold" />
+        <HubCard screen="spots" space={space} icon="grid-outline" value={`${space.totals.sold} of ${space.totals.positions}`} unit="sold" />
         {shown.photo ? (
           <HubCard
             screen="photo"
             space={space}
-            icon={IconImage}
+            icon="camera-outline"
             value={
               space.photo
                 ? space.photo.ready
                   ? "Photo"
-                  : `${placedSquares}/${space.positions.length}`
+                  : `${placedSquares} of ${space.positions.length}`
                 : sidesLive > 0
                   ? `${sidesLive} ${sidesLive === 1 ? "side" : "sides"}`
                   : space.productLook
@@ -331,7 +324,7 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
           <HubCard
             screen="ground"
             space={space}
-            icon={IconImage}
+            icon="color-palette-outline"
             value={labelOf(space.pageGround ?? null)}
             unit={space.pageGroundOwn ? "this listing's own" : "your default"}
           />
@@ -340,41 +333,32 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
           <HubCard
             screen="deliveries"
             space={space}
-            icon={IconDeliveries}
+            icon="checkbox-outline"
             value={artwork + toDeliver}
             unit={artwork ? `to do · ${artwork} artwork` : "to do"}
             attention={artwork + toDeliver > 0}
           />
         ) : null}
         {shown.updates ? (
-          <HubCard screen="updates" space={space} icon={IconMegaphone} value={space.updates.length} unit="posted" />
+          <HubCard screen="updates" space={space} icon="megaphone-outline" value={space.updates.length} unit="posted" />
         ) : null}
         {shown.content ? (
-          <HubCard screen="content" space={space} icon={IconSales} value={leads.length} unit={leads.length === 1 ? "brand to offer content" : "brands to offer content"} />
+          <HubCard screen="content" space={space} icon="chatbubble-ellipses-outline" value={leads.length} unit={leads.length === 1 ? "brand to offer content" : "brands to offer content"} />
         ) : null}
         {shown.team ? (
-          <HubCard screen="team" space={space} icon={IconTeam} value={crew ?? "–"} unit={crew === 1 ? "person" : "people"} />
+          <HubCard screen="team" space={space} icon="people-outline" value={crew ?? "–"} unit={crew === 1 ? "person" : "people"} />
         ) : null}
       </ul>
     </div>
   );
 }
 
-/* ── The hub's cards ──────────────────────────────────────────────── */
+/* ── The hub's rows ──────────────────────────────────────────────── */
 
-const cardBox = `${glass} flex h-full min-h-[112px] min-w-0 flex-col justify-between gap-4 p-4 sm:min-h-[128px] sm:p-5`;
-
-function CardHead({ icon: Icon, title }: { icon: ComponentType<SVGProps<SVGSVGElement>>; title: string }) {
-  return (
-    <div className="flex items-center gap-2.5">
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] border border-white/10 bg-white/[0.06] text-[#CFE3EC]">
-        <Icon />
-      </span>
-      <span className="truncate text-small font-medium text-text">{title}</span>
-    </div>
-  );
-}
-
+/**
+ * One part of running the listing, as the app's SheetRow: an icon, the name,
+ * the figure on the meta line, a chevron. Amber when it waits on the creator.
+ */
 function HubCard({
   screen,
   space,
@@ -388,7 +372,7 @@ function HubCard({
   space: SpaceView;
   /** Where the card opens, when that is a screen of its own outside the listing. */
   to?: string;
-  icon: ComponentType<SVGProps<SVGSVGElement>>;
+  icon: IonName;
   value: ReactNode;
   unit: string;
   attention?: boolean;
@@ -396,21 +380,47 @@ function HubCard({
   const href = useHref();
   return (
     <li>
-      <Link href={href(to ?? `/listings/${space.id}?tab=${screen}`)} className={`${cardBox} transition-colors hover:bg-white/[0.07]`}>
-        <CardHead icon={icon} title={SCREEN_TITLE[screen]} />
-        <p className="flex min-w-0 items-baseline gap-2">
-          <span className={`text-[22px] font-medium leading-none tabular-nums sm:text-[26px] ${attention ? "text-amber" : "text-text"}`}>{value}</span>
-          <span className="truncate text-tiny text-[#9FB7C2]">{unit}</span>
-        </p>
-      </Link>
+      <SheetRow
+        href={href(to ?? `/listings/${space.id}?tab=${screen}`)}
+        icon={icon}
+        title={SCREEN_TITLE[screen]}
+        meta={
+          <span className={attention ? "text-amber" : undefined}>
+            {value} {unit}
+          </span>
+        }
+        attention={attention}
+      />
     </li>
   );
 }
 
-const actionBtn =
-  "inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] border border-white/10 bg-white/[0.06] px-3 text-tiny font-medium text-[#CFE3EC] transition-colors hover:bg-white/10 hover:text-text disabled:cursor-not-allowed disabled:opacity-40";
+/** Opens the browser's share sheet, or a post on X where there is none. */
+function sendShare(share: { url: string; text: string }) {
+  const text = share.text.includes(share.url) ? share.text : `${share.text} ${share.url}`;
+  if (typeof navigator.share === "function") {
+    void navigator.share({ text: share.text, url: share.url }).catch(() => undefined);
+    return;
+  }
+  window.open(`https://x.com/intent/post?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
+}
 
-/** "Your link": copy it or share it. The address itself is never printed. */
+/** The header's share icon, as the app's creator header carries it. */
+function ShareButton({ share }: { share: { url: string; text: string } | null }) {
+  if (!share) return null;
+  return (
+    <button
+      type="button"
+      aria-label="Share progress"
+      onClick={() => sendShare(share)}
+      className="flex h-9 w-9 items-center justify-center rounded-[18px] text-white transition-colors hover:bg-white/10"
+    >
+      <Ion name="share-outline" size={21} />
+    </button>
+  );
+}
+
+/** "Share progress" (the app's TravelCta) and the link under it, copied on a tap. */
 function LinkCard({ share }: { share: { url: string; text: string } | null }) {
   const [copied, setCopied] = useState(false);
 
@@ -426,29 +436,24 @@ function LinkCard({ share }: { share: { url: string; text: string } | null }) {
     if (done) void done.then(() => setCopied(true), () => setCopied(false));
   }
 
-  function send() {
-    if (!share) return;
-    const text = share.text.includes(share.url) ? share.text : `${share.text} ${share.url}`;
-    if (typeof navigator.share === "function") {
-      void navigator.share({ text: share.text, url: share.url }).catch(() => undefined);
-      return;
-    }
-    window.open(`https://x.com/intent/post?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
-  }
-
   return (
-    <div className={cardBox}>
-      <CardHead icon={IconLink} title="Your link" />
-      <div className="flex gap-2">
-        <button type="button" className={`${actionBtn} flex-1`} disabled={!share} onClick={copy}>
-          <IconCopy className="h-3.5 w-3.5" />
-          {copied ? "Copied" : "Copy"}
+    <div className="flex flex-col gap-2">
+      <button type="button" className={ctaPrimary} disabled={!share} onClick={() => share && sendShare(share)}>
+        <Ion name="share-outline" size={20} />
+        Share progress
+      </button>
+      {share ? (
+        <button type="button" onClick={copy} className="flex max-w-full items-center gap-1.5 self-center py-1 text-white/55 hover:text-white">
+          <Ion name={copied ? "checkmark" : "link-outline"} size={14} />
+          <span className="truncate text-[13px] font-strong text-white/[0.62]">
+            {copied ? "Link copied." : share.url.replace(/^https:\/\//, "").replace(/\?.*$/, "")}
+          </span>
+          {copied ? null : <Ion name="copy-outline" size={14} />}
         </button>
-        <button type="button" className={`${actionBtn} flex-1`} disabled={!share} onClick={send}>
-          <IconShare className="h-3.5 w-3.5" />
-          Share
-        </button>
-      </div>
+      ) : null}
+      <p className="text-center text-[12px] leading-[17px] text-white/55">
+        The link card on X shows your board as it is right now. We never post for you.
+      </p>
     </div>
   );
 }
@@ -469,20 +474,9 @@ function ScreenFrame({
 }) {
   const href = useHref();
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex min-w-0 items-center gap-3">
-        <Link
-          href={back ?? href(`/listings/${space.id}`)}
-          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-[10px] border border-white/10 bg-white/[0.05] px-3 text-tiny font-medium text-[#CFE3EC] transition-colors hover:bg-white/10 hover:text-text"
-        >
-          <IconArrowLeft className="h-3.5 w-3.5" />
-          Back
-        </Link>
-        <div className="min-w-0">
-          <p className="truncate text-[11px] text-[#9FB7C2]">{space.serviceName || space.title}</p>
-          <h2 className="truncate text-body font-medium text-text">{title}</h2>
-        </div>
-      </div>
+    <div className="mx-auto flex w-full max-w-[720px] flex-col gap-3.5">
+      <BackHeader title={title} backHref={back ?? href(`/listings/${space.id}`)} />
+      <p className="-mt-3 truncate text-center text-[12.5px] font-strong text-white/55">{space.serviceName || space.title}</p>
       {children}
     </div>
   );
@@ -501,10 +495,10 @@ function ListingGround({ space, onChanged }: { space: SpaceView; onChanged: () =
   if (fallback === undefined) return <Skeleton className="h-[240px]" />;
   return (
     <div className={`${SCREEN_BODY} flex flex-col gap-3`}>
-      <p className="max-w-2xl text-small text-[#CFE3EC]">
+      <Body dim>
         What this listing&rsquo;s page stands on. &ldquo;Same as my default&rdquo; follows your listings&rsquo; default in Settings ›
-        Your pages, so changing it there changes this page too.
-      </p>
+        Your pages.
+      </Body>
       <GroundPicker
         key={space.pageGroundOwn ?? "default"}
         value={space.pageGroundOwn ?? null}
@@ -550,40 +544,31 @@ function priceText(p: PositionView): string {
 function Spots({ space }: { space: SpaceView }) {
   const rungs = rungsOf(space.positions);
   return (
-    <Panel title="Spots" meta={`${space.totals.sold}/${space.totals.positions} sold`} bodyClassName={PANEL_BODY}>
-      <div className="-mx-1 overflow-x-auto">
-        <table className="w-full min-w-[480px] text-left text-small">
-          <thead>
-            <tr className="text-[11px] text-[#9FB7C2]">
-              <th className="px-2 py-2 font-normal">Spot</th>
-              <th className="px-2 py-2 font-normal">Price</th>
-              <th className="px-2 py-2 font-normal">Sold</th>
-              <th className="px-2 py-2 font-normal">Sponsors</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rungs.map((r) => {
-              const sold = r.positions.filter((p) => p.status === "sold").length;
-              const held = r.positions.filter((p) => p.status === "held").length;
-              const sponsors = r.positions.map((p) => p.sponsor?.name).filter((n): n is string => !!n);
-              return (
-                <tr key={r.key} className="border-t border-white/[0.06]">
-                  <td className="max-w-[260px] truncate px-2 py-2.5 text-text">{r.title}</td>
-                  <td className="px-2 py-2.5 tabular-nums text-[#CFE3EC]">{priceText(r.positions[0])}</td>
-                  <td className="px-2 py-2.5">
-                    <span className={sold === r.positions.length ? pill.sold : held ? pill.held : pill.open}>
-                      {sold}/{r.positions.length}
-                      {held ? ` · ${held} held` : ""}
-                    </span>
-                  </td>
-                  <td className="max-w-[220px] truncate px-2 py-2.5 text-[#CFE3EC]">{sponsors.length ? sponsors.join(", ") : "–"}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </Panel>
+    <section className="flex flex-col gap-2">
+      <SectionLabel right={<span className="text-[12.5px] font-strong normal-case tracking-normal text-white/55">{`${space.totals.sold} of ${space.totals.positions} sold`}</span>}>
+        {space.kind === "service" ? "Slots" : "Spots"}
+      </SectionLabel>
+      {rungs.map((r) => {
+        const sold = r.positions.filter((p) => p.status === "sold").length;
+        const held = r.positions.filter((p) => p.status === "held").length;
+        const sponsors = r.positions.map((p) => p.sponsor?.name).filter((n): n is string => !!n);
+        const all = sold === r.positions.length;
+        return (
+          // The app's PositionRow: label and status tag, the price, who sponsored it.
+          <div key={r.key} className="flex flex-col gap-[5px] rounded-[14px] border border-transparent bg-white/[0.04] p-3">
+            <div className="flex items-center justify-between gap-2.5">
+              <p className="min-w-0 flex-1 truncate text-[14.5px] font-strong text-white">{r.title}</p>
+              <Tag
+                label={r.positions.length > 1 ? `${sold} of ${r.positions.length} sold${held ? ` · ${held} being paid` : ""}` : all ? "Sold" : held ? "Being paid" : "Open"}
+                tone={all ? "good" : held ? "caution" : "calm"}
+              />
+            </div>
+            <p className="text-[13.5px] font-strong tabular-nums text-white">{priceText(r.positions[0])}</p>
+            {sponsors.length ? <p className="text-[12.5px] leading-[17px] text-white/55">Sponsored by {sponsors.join(", ")}</p> : null}
+          </div>
+        );
+      })}
+    </section>
   );
 }
 
@@ -621,8 +606,8 @@ function floorGroups(space: SpaceView): FloorGroup[] {
 
 function Floors({ space, groups, onChanged }: { space: SpaceView; groups: FloorGroup[]; onChanged: () => void }) {
   return (
-    <Panel title="Floor prices" meta="Private" bodyClassName={PANEL_BODY}>
-      <ul className="flex flex-col">
+    <Panel title="Floor prices" meta="Private">
+      <ul className="flex flex-col divide-y divide-white/[0.08]">
         {groups.map((g) => (
           <FloorRow key={`${space.id}-${g.key}`} group={g} onChanged={onChanged} />
         ))}
@@ -648,33 +633,26 @@ function FloorRow({ group, onChanged }: { group: FloorGroup; onChanged: () => vo
   }
 
   return (
-    <li className="flex flex-col gap-2 border-t border-white/[0.06] py-3 first:border-t-0 first:pt-0">
+    <li className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0">
       <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-4">
-        <p className="min-w-0 flex-1 truncate text-small text-text">
+        <p className="min-w-0 flex-1 truncate text-[14.5px] font-strong text-white">
           {group.title}
-          <span className="text-[#9FB7C2]"> · {current !== null ? usd(current) : "No floor"}</span>
+          <span className="font-normal text-white/55"> · {current !== null ? usd(current) : "No floor"}</span>
         </p>
         <div className="flex items-center gap-2">
           <div className="w-full min-w-0 lg:w-[180px]">
             <Money value={value} onChange={setValue} placeholder={`Min ${usd(2_500)}`} />
           </div>
-          <button
-            type="button"
-            className={btnSmall}
+          <Chip
+            label={busy ? "Saving…" : "Save"}
+            selected
             disabled={busy || (value.trim() !== "" && centsFromDollars(value) === null)}
             onClick={() => save(value.trim() ? centsFromDollars(value) : null)}
-          >
-            {busy ? "Saving…" : "Save"}
-          </button>
+          />
           {/* Kept in place without a floor, so every row's buttons line up. */}
-          <button
-            type="button"
-            className={`${btnSmallSecondary} ${current === null ? "invisible" : ""}`}
-            disabled={busy || current === null}
-            onClick={() => save(null)}
-          >
-            Remove
-          </button>
+          <span className={current === null ? "invisible" : ""}>
+            <Chip label="Remove" disabled={busy || current === null} onClick={() => save(null)} />
+          </span>
         </div>
       </div>
       {notice ? <Notice>{notice}</Notice> : null}
@@ -688,59 +666,67 @@ function Updates({ space, onChanged }: { space: SpaceView; onChanged: () => void
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const labelOf = new Map(space.positions.map((p) => [p.id, p.label]));
 
   return (
-    <Panel title="Updates" meta={`${space.updates.length}`} bodyClassName={PANEL_BODY}>
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <div className="min-w-0 flex-1">
-            <Text value={body} onChange={setBody} maxLength={280} placeholder="The mini strip is printed and on the case" />
-          </div>
-          <button
-            type="button"
-            className={btnSmall}
-            disabled={busy || !body.trim()}
-            onClick={() => {
-              setBusy(true);
-              setNotice(null);
-              void addUpdate(space.id, body.trim())
-                .then(() => {
-                  setBody("");
-                  onChanged();
-                })
-                .catch((e) => setNotice(describeRunError(e)))
-                .finally(() => setBusy(false));
-            }}
-          >
-            {busy ? "Posting…" : "Post"}
-          </button>
+    <section className="flex flex-col gap-2.5">
+      <SectionLabel>Post an update</SectionLabel>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="min-w-0 flex-1">
+          <Text value={body} onChange={setBody} maxLength={280} placeholder="The mini strip is printed and on the case" />
         </div>
-
-        {space.updates.length > 0 ? (
-          <ul className="flex flex-col gap-2">
-            {space.updates.map((u) => (
-              <li key={u.id} className="flex flex-wrap items-start justify-between gap-3 rounded-[14px] border border-white/[0.08] p-3">
-                <span className="min-w-0 text-small text-text">{u.body}</span>
-                <button
-                  type="button"
-                  className={btnSmallSecondary}
-                  onClick={() => {
-                    void removeUpdate(space.id, u.id)
-                      .then(onChanged)
-                      .catch((e) => setNotice(describeRunError(e)));
-                  }}
-                >
-                  Remove
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-small text-text-muted">No updates yet.</p>
-        )}
-
-        {notice ? <Notice>{notice}</Notice> : null}
+        <Chip
+          label={busy ? "Posting…" : "Post"}
+          icon="send-outline"
+          selected
+          disabled={busy || !body.trim()}
+          onClick={() => {
+            setBusy(true);
+            setNotice(null);
+            void addUpdate(space.id, body.trim())
+              .then(() => {
+                setBody("");
+                onChanged();
+              })
+              .catch((e) => setNotice(describeRunError(e)))
+              .finally(() => setBusy(false));
+          }}
+        />
       </div>
-    </Panel>
+      {notice ? <Notice>{notice}</Notice> : null}
+
+      <SectionLabel>Updates</SectionLabel>
+      {space.updates.length > 0 ? (
+        // The app's UpdatesList: one Card per update, the words, then when and which spot, and Delete.
+        <ul className="flex flex-col gap-2.5">
+          {space.updates.map((u) => (
+            <li key={u.id}>
+              <Card>
+                <p className="text-[13.5px] leading-[19px] text-white/[0.62]">{u.body}</p>
+                <div className="flex items-center justify-between gap-2.5">
+                  <p className="text-[12.5px] leading-[17px] text-white/55">
+                    {dateTimeText(u.createdAt)}
+                    {u.positionId && labelOf.get(u.positionId) ? ` · ${labelOf.get(u.positionId)}` : ""}
+                  </p>
+                  <button
+                    type="button"
+                    className="text-[13px] font-strong text-white/[0.62] hover:text-white"
+                    onClick={() => {
+                      void removeUpdate(space.id, u.id)
+                        .then(onChanged)
+                        .catch((e) => setNotice(describeRunError(e)));
+                    }}
+                  >
+                    Delete update
+                  </button>
+                </div>
+              </Card>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-[12px] leading-[17px] text-white/55">Photos from the road go here. Pinned to a sold spot, a photo is its delivery proof.</p>
+      )}
+    </section>
   );
 }

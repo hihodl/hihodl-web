@@ -1,7 +1,8 @@
 /**
- * The top of a listing: the creator's own picture, big, because this is the
- * thing being sold — and on it the name, the event, where it stands and the
- * one number that matters.
+ * The top of a listing, as the app's space page draws it for its creator:
+ * the BannerView (the creator's picture or the listing's gradient, radius 16,
+ * the event's small dark card on its foot) with the look chips under it, then
+ * the ProgressCard (what it has raised, the bar, sold and when it closes).
  *
  * The picture is the creator's to choose ("Change image"), sent to the
  * backend as the image itself. With none, the listing's gradient is drawn:
@@ -15,10 +16,8 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import { useHref } from "@/components/app/base";
-import { IconArrowLeft, IconImage } from "@/components/app/icons";
-import { StatusPill } from "@/components/app/spaces/common";
-import { dollars } from "@/components/app/ui";
-import { closesText } from "@/lib/ad-space/format";
+import { Ion } from "@/components/app/ion";
+import { Card, centsText, Chip, ChipRow, dateTimeText, eventDatesText, ProgressBar } from "@/components/app/spaces/kit";
 import { gradientCss } from "@/lib/ad-space/look";
 import type { SpaceView } from "@/lib/creator/listing";
 import { BANNER_MAX_BYTES, BANNER_TYPES, clearListingBanner, setListingBanner } from "@/lib/creator/listings";
@@ -26,8 +25,9 @@ import { describeRunError } from "@/lib/creator/problems";
 
 import { Notice } from "../parts";
 
-const onPhoto = "border-white/20 bg-[#04101A]/55 text-text backdrop-blur-md hover:bg-[#04101A]/75";
-const chip = `inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-[10px] border px-3 text-tiny font-medium transition-colors ${onPhoto}`;
+/** The app's Chip as a link. */
+const chipLink =
+  "inline-flex h-[34px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[17px] border border-white/[0.14] bg-white/[0.06] px-[13px] text-[13.5px] font-strong text-white/[0.62] transition-colors hover:bg-white/10";
 
 export function ListingBanner({
   space,
@@ -54,7 +54,6 @@ export function ListingBanner({
   useEffect(() => setPreview(null), [space.bannerUrl]);
 
   const image = preview ?? space.bannerUrl ?? null;
-  const name = space.serviceName || space.title;
   const canDress = owner && space.status !== "delisted";
 
   function choose(file: File | undefined) {
@@ -88,94 +87,92 @@ export function ListingBanner({
       .finally(() => setBusy(false));
   }
 
+  const { totals } = space;
+  const takeover = space.pricingMode === "takeover";
+  const noTotal = totals.totalCents == null;
+  const meta = "text-[12.5px] leading-[17px] text-white/55";
+
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2.5">
       <section
-        className="relative isolate flex h-[240px] min-w-0 flex-col justify-between overflow-hidden rounded-[18px] border border-white/10 p-3 sm:h-[280px] sm:p-4 xl:h-[300px]"
+        className="relative isolate flex h-[168px] min-w-0 flex-col justify-end overflow-hidden rounded-[16px] sm:h-[200px] xl:h-[220px]"
         style={image ? undefined : { background: gradientCss(space.bannerGradient) }}
       >
         {image ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={image} alt="" className="absolute inset-0 -z-10 h-full w-full object-cover" />
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={image} alt="" className="absolute inset-0 -z-10 h-full w-full object-cover" />
+            <div aria-hidden className="absolute inset-x-0 bottom-0 -z-10 h-1/2 bg-[linear-gradient(180deg,rgba(4,12,20,0)_0%,rgba(4,12,20,0.88)_100%)]" />
+          </>
         ) : null}
-        {/* Dark at the foot and along the top, so the words read on any picture. */}
-        <div
-          aria-hidden
-          className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgba(4,12,20,0.55)_0%,rgba(4,12,20,0)_30%,rgba(4,12,20,0)_45%,rgba(4,12,20,0.88)_100%)]"
-        />
-
-        <div className="flex items-start justify-between gap-2">
-          <Link href={href("/listings")} className={chip}>
-            <IconArrowLeft className="h-3.5 w-3.5" />
-            Listings
-          </Link>
-          <div className="flex flex-wrap justify-end gap-1.5">
-            {canDress ? (
-              <>
-                <button type="button" className={chip} disabled={busy} onClick={() => input.current?.click()}>
-                  <IconImage className="h-3.5 w-3.5" />
-                  {busy ? "Uploading…" : image ? "Change image" : "Add image"}
-                </button>
-                {space.bannerUrl && !busy ? (
-                  <button type="button" className={`${chip} hidden sm:inline-flex`} onClick={remove}>
-                    Remove
-                  </button>
-                ) : null}
-                <input
-                  ref={input}
-                  type="file"
-                  accept={BANNER_TYPES.join(",")}
-                  className="hidden"
-                  onChange={(e) => {
-                    choose(e.target.files?.[0]);
-                    e.target.value = "";
-                  }}
-                />
-              </>
-            ) : null}
-            {space.status === "draft" && owner ? (
-              <Link
-                href={href(`/listings/${space.id}/edit`)}
-                className="inline-flex h-9 items-center whitespace-nowrap rounded-[10px] bg-amber px-3 text-tiny font-medium text-text-on-amber transition-colors hover:bg-amber-glow"
-              >
-                Finish draft
-              </Link>
-            ) : publicUrl ? (
-              <a href={publicUrl} target="_blank" rel="noreferrer" className={`${chip} hidden sm:inline-flex`}>
-                Public page
-              </a>
-            ) : null}
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-          <div className="min-w-0 max-w-full">
-            <div className="flex flex-wrap items-center gap-2">
-              <StatusPill status={space.status} onPhoto />
-              {space.event ? (
-                <span className="inline-flex h-6 max-w-full items-center truncate rounded-[12px] border border-white/20 bg-[#04101A]/45 px-2.5 text-tiny text-text backdrop-blur-md">
-                  {space.event.name}
-                </span>
-              ) : null}
-            </div>
-            <h2 className="mt-2 line-clamp-2 break-words text-[24px] font-medium leading-tight text-text [text-shadow:0_1px_12px_rgba(0,0,0,0.45)] sm:text-[32px]">
-              {name}
-            </h2>
-            <p className="mt-1 text-tiny text-[#CFE3EC]">
-              {space.status === "draft" ? "Draft" : closesText(space.closesAt, space.status === "closed")}
+        {space.event ? (
+          <div className="m-2.5 flex max-w-[82%] flex-col gap-px self-start rounded-[12px] bg-[rgba(6,11,16,0.55)] px-2.5 py-[7px]">
+            <p className="truncate text-[14px] font-strong tracking-[-0.2px] text-white">{space.event.name}</p>
+            <p className="truncate text-[12px] font-strong text-white/[0.78]">
+              {[space.event.city, eventDatesText(space.event.startsOn, space.event.endsOn)].filter(Boolean).join(" · ")}
             </p>
           </div>
-          <div className="text-left sm:text-right">
-            <p className="text-[28px] font-medium leading-none tabular-nums text-text sm:text-[34px]">
-              {dollars(space.totals.committedCents)}
-            </p>
-            <p className="mt-1 text-tiny text-[#CFE3EC]">
-              {space.totals.sold}/{space.totals.positions} sold
-            </p>
-          </div>
-        </div>
+        ) : null}
       </section>
+
+      {canDress || (space.status === "draft" && owner) || publicUrl ? (
+        <ChipRow>
+          {canDress ? (
+            <>
+              <Chip
+                label={busy ? "Uploading…" : image ? "Change image" : "Add image"}
+                icon="image-outline"
+                disabled={busy}
+                onClick={() => input.current?.click()}
+              />
+              {space.bannerUrl && !busy ? <Chip label="Remove" icon="trash-outline" onClick={remove} /> : null}
+              <input
+                ref={input}
+                type="file"
+                accept={BANNER_TYPES.join(",")}
+                className="hidden"
+                onChange={(e) => {
+                  choose(e.target.files?.[0]);
+                  e.target.value = "";
+                }}
+              />
+            </>
+          ) : null}
+          {space.status === "draft" && owner ? (
+            <Link href={href(`/listings/${space.id}/edit`)} className={chipLink}>
+              <Ion name="create-outline" size={14} />
+              Continue editing
+            </Link>
+          ) : publicUrl ? (
+            <a href={publicUrl} target="_blank" rel="noreferrer" className={chipLink}>
+              <Ion name="open-outline" size={14} />
+              Public page
+            </a>
+          ) : null}
+        </ChipRow>
+      ) : null}
       {notice ? <Notice>{notice}</Notice> : null}
+
+      {/* The app's ProgressCard. */}
+      <Card>
+        <div className="flex items-center justify-between gap-2.5">
+          {noTotal && totals.committedCents <= 0 ? (
+            <p className={meta}>No sales yet</p>
+          ) : (
+            <>
+              <p className="text-[26px] font-strong tracking-[-0.6px] tabular-nums text-white">{centsText(totals.committedCents)}</p>
+              <p className={meta}>{takeover || noTotal ? "so far" : `of ${centsText(totals.totalCents)}`}</p>
+            </>
+          )}
+        </div>
+        <ProgressBar value={totals.positions > 0 ? totals.sold / totals.positions : 0} />
+        <div className="flex items-center justify-between gap-2.5">
+          <p className={meta}>{takeover ? `${totals.sold} of ${totals.positions} taken` : `${totals.sold} of ${totals.positions} sold`}</p>
+          <p className={meta}>
+            {space.status === "draft" ? "Draft" : space.status === "live" ? `Closes ${dateTimeText(space.closesAt)}` : `Closed ${dateTimeText(space.closesAt)}`}
+          </p>
+        </div>
+      </Card>
     </div>
   );
 }
