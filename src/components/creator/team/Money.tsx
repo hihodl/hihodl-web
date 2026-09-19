@@ -41,7 +41,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { ctaPrimary, ctaSecondary, Notice as HoldNotice } from "@/components/app/hold";
-import { Body, Card, Divider, Empty, Field, inputCls, KV, money, P, SectionLabel, Tag } from "@/components/app/spaces/kit";
+import { Body, Card, Disclosure, Divider, Empty, Field, inputCls, KV, money, P, SectionLabel, Tag } from "@/components/app/spaces/kit";
 import { markTeamPaid, teamEarnings, teamOwed } from "@/lib/creator/listings";
 import { describeTeamError } from "@/lib/creator/problems";
 import { baseOf, chainName, dayText, groupByMember, shareText, TEAM_LIMITS, usdcText, type Earning, type OwedGroup } from "@/lib/creator/team";
@@ -138,7 +138,7 @@ export function Owed() {
 
 function PersonCard({ group, name, onPaid }: { group: OwedGroup; name: string; onPaid: () => void }) {
   const [paying, setPaying] = useState(false);
-  const rows = [...group.owed, ...group.paid].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const newest = (a: Earning, b: Earning) => b.createdAt.localeCompare(a.createdAt);
 
   return (
     <Card>
@@ -146,10 +146,17 @@ function PersonCard({ group, name, onPaid }: { group: OwedGroup; name: string; o
         <p className="flex-1 truncate text-[15px] font-strong tracking-[-0.2px] text-white">{name}</p>
         <p className="shrink-0 text-[16px] font-strong tabular-nums text-white">{usdcText(group.owedBase)}</p>
       </div>
-      {rows.map((r) => (
+      {[...group.owed].sort(newest).map((r) => (
         <SaleLine key={r.id} r={r} who="you" />
       ))}
       {group.paidBase > 0n ? <KV k="Marked paid" v={usdcText(group.paidBase)} /> : null}
+      {group.paid.length ? (
+        <Disclosure label={`What you marked paid (${group.paid.length})`}>
+          {[...group.paid].sort(newest).map((r) => (
+            <SaleLine key={r.id} r={r} who="you" />
+          ))}
+        </Disclosure>
+      ) : null}
       {group.owed.length > 0 && !paying ? (
         <button type="button" className={ctaSecondary} onClick={() => setPaying(true)}>
           Mark as paid

@@ -18,6 +18,11 @@
  * lets them see it there. Arriving on a link is not agreeing to that, so the
  * page says whose team it is — read from the seat by the server, never from
  * the editable rest of the link — and waits for a yes.
+ *
+ * Drawn as the app's Join a team (hihodl-wallet app/(drawer)/(internal)/
+ * ad-space/join.tsx): whose team and as what in one card, who pays, then
+ * "Join the team"; once joined, the green notice, the role, and the way into
+ * what they deliver.
  */
 
 "use client";
@@ -26,8 +31,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { btnPrimary, btnSmall, btnSmallSecondary } from "@/components/ad-space/ui";
 import { useHref } from "@/components/app/base";
+import { ctaPrimary, ctaSecondary, Notice } from "@/components/app/hold";
+import { Body, Card } from "@/components/app/spaces/kit";
 import { glass } from "@/components/app/ui";
 import { useRefreshAll } from "@/lib/app/spaces-data";
 import { Wordmark } from "@/components/site/Wordmark";
@@ -37,7 +43,6 @@ import { describeTeamError } from "@/lib/creator/problems";
 import { useCreatorSession } from "@/lib/creator/session";
 import { creatorText, dayText, forgetSeat, rememberSeat, type SeatLookup, type TeamMember } from "@/lib/creator/team";
 
-import { Notice } from "./parts";
 import { SignIn } from "./SignIn";
 import { ROLE_TEXT } from "./team/Members";
 
@@ -72,7 +77,7 @@ export function SeatInvitation({ seat, lookup }: Props) {
   const refused = lookup.kind === "refused" ? lookup.code : null;
 
   return (
-    <div className={`${glass} flex w-full max-w-[480px] flex-col gap-6 p-6 sm:p-8`}>
+    <div className={`${glass} flex w-full max-w-[480px] flex-col gap-5 p-6 sm:p-8`}>
       <div className="flex items-center gap-2.5">
         <Wordmark className="h-5 w-auto text-text" />
         <span className="h-4 w-px bg-white/20" aria-hidden />
@@ -84,7 +89,7 @@ export function SeatInvitation({ seat, lookup }: Props) {
       ) : session === undefined ? null : session === null ? (
         <>
           <Invited who={who} lookup={lookup} />
-          <div className="border-t border-white/10 pt-6">
+          <div className="border-t border-white/10 pt-5">
             <SignIn configured={configured} />
           </div>
         </>
@@ -95,32 +100,36 @@ export function SeatInvitation({ seat, lookup }: Props) {
   );
 }
 
+const title = "text-[16px] font-strong tracking-[-0.2px] text-white";
+const fine = "text-[12px] leading-[17px] text-white/55";
+
 function Invited({ who, lookup }: { who: string | null; lookup: SeatLookup }) {
   const invite = lookup.kind === "found" ? lookup.invite : null;
   return (
-    <div className="flex flex-col gap-2">
-      <h1 className="text-h4 font-light text-text">{who ? `${who} invited you to their team` : "Team invitation"}</h1>
+    <Card>
+      <p className={title}>{who ? `${who} wants you on their team` : "Somebody wants you on their team"}</p>
       {invite ? (
-        <p className="text-small text-text-muted">
-          {ROLE_TEXT[invite.role].invited}
-          {invite.expiresAt ? ` Open until ${dayText(invite.expiresAt)}.` : ""}
-        </p>
+        <Body>
+          As {ROLE_TEXT[invite.role].label}: {ROLE_TEXT[invite.role].line}
+        </Body>
       ) : null}
-    </div>
+      <Body dim>
+        A creator on HOLD can invite you to sell for them or to turn up and deliver at their events. Accept and they can put you on their listings.
+        {invite?.expiresAt ? ` Open until ${dayText(invite.expiresAt)}.` : ""}
+      </Body>
+    </Card>
   );
 }
 
 /** A seat the server already said no to, before anybody pressed anything. */
 function SeatRefused({ code, onDone }: { code: string; onDone: () => void }) {
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-h4 font-light text-text">Invitation unavailable</h1>
+    <div className="flex flex-col gap-2.5">
+      <p className="text-[18px] font-strong tracking-[-0.3px] text-white">Join a team</p>
       <Notice>{describeTeamError(new CreatorApiError(code, 410))}</Notice>
-      <div>
-        <button type="button" className={btnSmallSecondary} onClick={onDone}>
-          Open Spaces
-        </button>
-      </div>
+      <button type="button" className={ctaSecondary} onClick={onDone}>
+        Open Spaces
+      </button>
     </div>
   );
 }
@@ -147,59 +156,63 @@ function SeatOffer({
 
   if (taken) {
     const theirs = creatorText(taken) ?? who;
+    const role = ROLE_TEXT[taken.role];
     return (
-      <div className="flex flex-col gap-4">
-        <h1 className="text-h4 font-light text-text">{theirs ? `You’re on ${theirs}’s team` : "You’re on the team"}</h1>
-        <p className="text-small text-text-muted">
-          As <span className="text-text">{taken.label}</span> · {ROLE_TEXT[taken.role].label}
+      <div className="flex flex-col gap-2.5">
+        <Notice icon="checkmark-circle-outline" tone="good">
+          {theirs ? `You're on ${theirs}'s team as ${role.label}.` : `You're on the team as ${role.label}.`}
+        </Notice>
+        <Card>
+          <p className={title}>{role.label}</p>
+          <Body dim>{role.line}</Body>
+        </Card>
+        <p className={fine}>
+          When they put you on a listing for a share, the creator who invited you pays it to you themselves. HOLD keeps a record of what you&apos;re owed;
+          it doesn&apos;t send it, hold it or guarantee it.
         </p>
-        <div className="flex flex-wrap gap-3">
-          <Link href={href("/deliveries")} className={btnSmall} onClick={() => forgetSeat()}>
-            Deliveries
-          </Link>
-          <button type="button" className={btnSmallSecondary} onClick={onDone}>
-            Open Spaces
-          </button>
-        </div>
+        <Link href={href("/deliveries")} className={ctaPrimary} onClick={() => forgetSeat()}>
+          What you have to deliver
+        </Link>
+        <button type="button" className={ctaSecondary} onClick={onDone}>
+          See your teams
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-2.5">
       <Invited who={who} lookup={lookup} />
-      <p className="text-tiny text-text-muted">The creator pays your share. HOLD never moves that money.</p>
+      <p className={fine}>Whatever they give you a share of, they pay you themselves. HOLD records it and never moves that money.</p>
       {notice ? <Notice>{notice}</Notice> : null}
-      <div className="flex flex-wrap gap-3">
-        <button
-          type="button"
-          className={btnPrimary}
-          disabled={busy}
-          onClick={() => {
-            setBusy(true);
-            setNotice(null);
-            void acceptSeat(code)
-              .then(({ member }) => {
-                forgetSeat();
-                void refresh();
-                setTaken(member);
-              })
-              .catch((e) => {
-                // A seat that is gone, spent or your own will not become
-                // takeable by asking again, so it is not kept to be offered
-                // back. A dropped connection is kept: that one is worth a retry.
-                if (e instanceof CreatorApiError && FINAL.has(e.code)) forgetSeat();
-                setNotice(describeTeamError(e));
-              })
-              .finally(() => setBusy(false));
-          }}
-        >
-          {busy ? "Accepting…" : "Accept"}
-        </button>
-        <button type="button" className={btnSmallSecondary} disabled={busy} onClick={onDone}>
-          Not now
-        </button>
-      </div>
+      <button
+        type="button"
+        className={ctaPrimary}
+        disabled={busy}
+        onClick={() => {
+          setBusy(true);
+          setNotice(null);
+          void acceptSeat(code)
+            .then(({ member }) => {
+              forgetSeat();
+              void refresh();
+              setTaken(member);
+            })
+            .catch((e) => {
+              // A seat that is gone, spent or your own will not become
+              // takeable by asking again, so it is not kept to be offered
+              // back. A dropped connection is kept: that one is worth a retry.
+              if (e instanceof CreatorApiError && FINAL.has(e.code)) forgetSeat();
+              setNotice(describeTeamError(e));
+            })
+            .finally(() => setBusy(false));
+        }}
+      >
+        {busy ? "Joining…" : "Join the team"}
+      </button>
+      <button type="button" className={ctaSecondary} disabled={busy} onClick={onDone}>
+        Not now
+      </button>
     </div>
   );
 }
