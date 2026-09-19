@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { createPortal } from "react-dom";
 
 import { CHAIN_LABEL, usdFromCents } from "@/lib/ad-space/format";
 import { usdcToCents } from "@/lib/ad-space/offers-client";
@@ -223,13 +224,29 @@ export function NetworkPill({
 }) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
+  const button = useRef<HTMLButtonElement>(null);
+  const menu = useRef<HTMLUListElement>(null);
+  const place = useMenuPlace(open, button, chains.length);
   useEffect(() => {
     if (!open) return;
     const off = (e: MouseEvent) => {
-      if (!box.current?.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (!box.current?.contains(t) && !menu.current?.contains(t)) setOpen(false);
+    };
+    const esc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        setOpen(false);
+        button.current?.focus();
+      }
     };
     document.addEventListener("mousedown", off);
-    return () => document.removeEventListener("mousedown", off);
+    // Capture, so the sheet's own Escape (which closes the whole sheet) does not also fire.
+    window.addEventListener("keydown", esc, true);
+    return () => {
+      document.removeEventListener("mousedown", off);
+      window.removeEventListener("keydown", esc, true);
+    };
   }, [open]);
 
   if (chains.length <= 1) {
@@ -244,6 +261,7 @@ export function NetworkPill({
   return (
     <div ref={box} className="relative">
       <button
+        ref={button}
         type="button"
         aria-haspopup="listbox"
         aria-expanded={open}
@@ -258,11 +276,13 @@ export function NetworkPill({
           <path d="M2 3.5l3 3 3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
-      {open && (
+      {open && place && createPortal(
         <ul
+          ref={menu}
           role="listbox"
           aria-label="Network"
-          className="absolute left-1/2 top-full z-20 mt-2 w-60 -translate-x-1/2 rounded-[18px] bg-[#1A3946] p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.5)]"
+          className="fixed z-[80] overflow-y-auto rounded-[18px] bg-[#1A3946] p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.5)]"
+          style={{ left: place.left, top: place.top, width: place.width, maxHeight: place.maxHeight }}
         >
           {chains.map((c) => (
             <li key={c}>
@@ -284,10 +304,60 @@ export function NetworkPill({
               </button>
             </li>
           ))}
-        </ul>
+        </ul>,
+        document.body,
       )}
     </div>
   );
+}
+
+/**
+ * Where the network menu goes: a fixed box under the pill (or above it when
+ * the room below is short), clamped inside the viewport with a 12px margin.
+ *
+ * The menu used to be absolutely positioned inside the sheet, whose body
+ * scrolls and clips: it was cut off at the sheet's edge and widened the page
+ * into a horizontal scrollbar. Portalled to <body> and fixed, it can never do
+ * either; it follows the pill when the sheet scrolls or the window resizes.
+ */
+function useMenuPlace(
+  open: boolean,
+  anchor: RefObject<HTMLElement>,
+  rows: number,
+): { left: number; top: number; width: number; maxHeight: number } | null {
+  const [place, setPlace] = useState<{ left: number; top: number; width: number; maxHeight: number } | null>(null);
+  useLayoutEffect(() => {
+    if (!open) {
+      setPlace(null);
+      return;
+    }
+    const measure = () => {
+      const el = anchor.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const vw = document.documentElement.clientWidth;
+      const vh = window.innerHeight;
+      const margin = 12;
+      const width = Math.min(240, vw - margin * 2);
+      const wanted = rows * 48 + 12;
+      const left = Math.min(Math.max(margin, r.left + r.width / 2 - width / 2), vw - margin - width);
+      const below = vh - r.bottom - margin - 8;
+      const above = r.top - margin - 8;
+      const down = below >= Math.min(wanted, 160) || below >= above;
+      const maxHeight = Math.max(96, Math.min(wanted, down ? below : above));
+      const top = down ? r.bottom + 8 : r.top - 8 - maxHeight;
+      setPlace({ left, top, width, maxHeight });
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    // Any scroll (the sheet's body, the page) moves the pill: follow it.
+    window.addEventListener("scroll", measure, true);
+    return () => {
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("scroll", measure, true);
+    };
+  }, [open, anchor, rows]);
+  return place;
 }
 
 /** The one row that says what leaves the wallet. */
