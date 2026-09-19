@@ -57,7 +57,7 @@ function spotLine(space: Space): string {
     : `Your brand on ${on}. It's what makes people look`;
 }
 
-/** "@coinempress's reach: 12.4K followers on X", or null with no count to name. */
+/** "@demo_creator's reach: 12.4K followers on X", or null with no count to name. */
 export function reachLine(space: Space): string | null {
   const c = space.creator;
   if (!c?.xHandle || !(c.xFollowers > 0)) return null;

@@ -160,7 +160,7 @@ export function ProfileFooter({ note }: { note?: string }) {
 const barLink =
   "inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[18px] bg-white/[0.06] px-3.5 text-small text-text-muted transition-colors duration-180 hover:bg-white/[0.1] hover:text-text";
 
-/** "← Coin Empress": the way back up, always top left. */
+/** "← Demo Creator": the way back up, always top left. */
 export function BackLink({ href, label }: { href: string; label: string }) {
   return (
     <Link href={href} className={`${barLink} min-w-0 max-w-full`}>

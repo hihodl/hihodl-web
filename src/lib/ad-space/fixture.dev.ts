@@ -5,23 +5,23 @@
  * `getPublicSpace`). The outlines and zones are copied from the backend
  * catalog (server/services/ad-space/catalog-data.ts) so the board renders the
  * real geometry. Spaces:
- *   /s/coinempress/road-to-token2049   placement, carry-on suitcase, fixed price,
+ *   /s/demo_creator/road-to-token2049   placement, carry-on suitcase, fixed price,
  *                                      TOKEN2049 (city photo), sibling on the feed
- *   /s/coinempress/token2049-videos    service, short-form video, TOKEN2049, its
+ *   /s/demo_creator/token2049-videos    service, short-form video, TOKEN2049, its
  *                                      own banner image (a camera), sibling on the
  *                                      ground
- *   /s/coinempress/token2049-takeover  the same suitcase, priced by takeover, no
+ *   /s/demo_creator/token2049-takeover  the same suitcase, priced by takeover, no
  *                                      event, ember gradient
- *   /s/coinempress/road-to-devcon-8    Devcon 8 (no city photo), sea gradient
- *   /s/coinempress/token2049-pitch-reviews
+ *   /s/demo_creator/road-to-devcon-8    Devcon 8 (no city photo), sea gradient
+ *   /s/demo_creator/token2049-pitch-reviews
  *                                      a session space (In the room): pitch
  *                                      review, TOKEN2049, one dispute on record,
  *                                      and a funding goal already beaten (133%)
- *   /s/coinempress/token2049-afterparty-host
+ *   /s/demo_creator/token2049-afterparty-host
  *                                      a custom service, named by its creator,
  *                                      with a mention on X, its own photo and a
  *                                      funding goal still a way off (21%)
- *   /s/coinempress/breakpoint-london-coverage
+ *   /s/demo_creator/breakpoint-london-coverage
  *                                      a TIERED service (ad-space-tiers-v0.md):
  *                                      one event, three prices — $50 logos (six,
  *                                      four left), a $200 card and mic placement
@@ -30,15 +30,15 @@
  *                                      sells its own way, by bidding, on a board
  *                                      whose other rungs sell at their price;
  *                                      tied to the Breakpoint event row
- *   /s/coinempress/weekly-x-space-sponsor
+ *   /s/demo_creator/weekly-x-space-sponsor
  *                                      a custom service tied to no event: the
  *                                      hub's "On sale all year" group
- *   /s/coinempress/token2049-bids, /token2049-offers, /token2049-videos-offers
+ *   /s/demo_creator/token2049-bids, /token2049-offers, /token2049-videos-offers
  *                                      the offers and bidding boards; reachable by
  *                                      URL, on no hub or event page
  * and every other card on an event page opens a copy of the matching board.
  *
- * Creator hub (/s/coinempress): TOKEN2049 (suitcase + three services),
+ * Creator hub (/s/demo_creator): TOKEN2049 (suitcase + three services),
  * Breakpoint, Devcon, EthCC (past, behind "Past events"), and all year.
  *
  * Events:
@@ -281,8 +281,8 @@ function suitcase(): Space {
     payTo: { solana: "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU", evm: "0xAb5801a7D398351b8bE11C439e05C5B3259aeC9B" },
     creator: {
       xUserId: "123",
-      xHandle: "coinempress",
-      xName: "Coin Empress",
+      xHandle: "demo_creator",
+      xName: "Demo Creator",
       xAvatarUrl: null,
       xVerifiedType: "blue",
       xIdentityVerified: false,
@@ -309,7 +309,7 @@ function suitcase(): Space {
       { id: "d2", kind: "photo_post", platform: "x", count: 3, dueDate: "2026-10-09", deliveredUrl: null, state: "upcoming", note: null },
       { id: "d4", kind: "mention", platform: "x", count: 2, dueDate: "2026-10-08", deliveredUrl: null, state: "upcoming", note: null },
       { id: "d5", kind: "custom", platform: null, count: 1, dueDate: "2026-10-08", deliveredUrl: null, state: "upcoming", note: "Your sticker on my conference badge for both days" },
-      { id: "d3", kind: "thank_you_post", platform: "x", count: 1, dueDate: "2026-09-12", deliveredUrl: "https://x.com/coinempress/status/1", state: "delivered", note: null },
+      { id: "d3", kind: "thank_you_post", platform: "x", count: 1, dueDate: "2026-09-12", deliveredUrl: "https://x.com/demo_creator/status/1", state: "delivered", note: null },
     ],
     serviceName: null,
     serviceSummary: null,
@@ -350,8 +350,8 @@ function suitcase(): Space {
       },
     ],
     share: {
-      url: "https://hihodl.xyz/s/coinempress/road-to-token2049?m=8",
-      text: "8 of 18 spots on my suitcase are sold for TOKEN2049 https://hihodl.xyz/s/coinempress/road-to-token2049?m=8",
+      url: "https://hihodl.xyz/s/demo_creator/road-to-token2049?m=8",
+      text: "8 of 18 spots on my suitcase are sold for TOKEN2049 https://hihodl.xyz/s/demo_creator/road-to-token2049?m=8",
     },
     // Null on a draft and on an account with no code yet; set here so the
     // recruiting strip above the footer is visible in local development.
@@ -359,7 +359,7 @@ function suitcase(): Space {
     event: TOKEN2049,
     bannerUrl: null,
     bannerGradient: "steel",
-    siblings: [{ path: "/s/coinempress/token2049-videos", tab: "feed", title: "TOKEN2049 short videos" }],
+    siblings: [{ path: "/s/demo_creator/token2049-videos", tab: "feed", title: "TOKEN2049 short videos" }],
   };
 }
 
@@ -409,7 +409,7 @@ function videos(): Space {
           contentText: null,
           imageUrl: logo("ACME", "#FFFFFF", "#141F2E"),
         },
-        delivered: { url: "https://x.com/coinempress/status/2", at: new Date().toISOString() },
+        delivered: { url: "https://x.com/demo_creator/status/2", at: new Date().toISOString() },
       }),
       slot(2, { status: "held" }),
       slot(3),
@@ -417,13 +417,13 @@ function videos(): Space {
     totals: { positions: 3, sold: 1, committedCents: 50000, totalCents: 150000 },
     updates: [],
     share: {
-      url: "https://hihodl.xyz/s/coinempress/token2049-videos?m=1",
-      text: "1 of 3 video slots sold https://hihodl.xyz/s/coinempress/token2049-videos?m=1",
+      url: "https://hihodl.xyz/s/demo_creator/token2049-videos?m=1",
+      text: "1 of 3 video slots sold https://hihodl.xyz/s/demo_creator/token2049-videos?m=1",
     },
     // The creator's own banner, which wins over the city photo: the camera the
     // videos are shot on, never the event's own picture.
     bannerUrl: SHORT_VIDEOS_PHOTO,
-    siblings: [{ path: "/s/coinempress/road-to-token2049", tab: "ground", title: "Road to TOKEN2049" }],
+    siblings: [{ path: "/s/demo_creator/road-to-token2049", tab: "ground", title: "Road to TOKEN2049" }],
   };
 }
 
@@ -570,8 +570,8 @@ function takeovers(): Space {
     totals: { positions: positions.length, sold: 4, committedCents: 2485000, totalCents: 2562500 },
     updates: [],
     share: {
-      url: "https://hihodl.xyz/s/coinempress/token2049-takeover?m=4",
-      text: "4 of 8 spots taken, and every one of them is still up for grabs https://hihodl.xyz/s/coinempress/token2049-takeover?m=4",
+      url: "https://hihodl.xyz/s/demo_creator/token2049-takeover?m=4",
+      text: "4 of 8 spots taken, and every one of them is still up for grabs https://hihodl.xyz/s/demo_creator/token2049-takeover?m=4",
     },
     // A space from before events: a free-text event name and nothing else.
     event: null,
@@ -618,8 +618,8 @@ function customService(): Space {
     bannerUrl: AFTERPARTY_PHOTO,
     bannerGradient: "ember",
     share: {
-      url: "https://hihodl.xyz/s/coinempress/token2049-afterparty-host",
-      text: "Host my TOKEN2049 afterparty table https://hihodl.xyz/s/coinempress/token2049-afterparty-host",
+      url: "https://hihodl.xyz/s/demo_creator/token2049-afterparty-host",
+      text: "Host my TOKEN2049 afterparty table https://hihodl.xyz/s/demo_creator/token2049-afterparty-host",
     },
   };
 }
@@ -785,8 +785,8 @@ function eventCoverage(): Space {
     bannerUrl: null,
     bannerGradient: "night",
     share: {
-      url: "https://hihodl.xyz/s/coinempress/breakpoint-london-coverage",
-      text: "Spots on my Breakpoint London coverage start at $50 https://hihodl.xyz/s/coinempress/breakpoint-london-coverage",
+      url: "https://hihodl.xyz/s/demo_creator/breakpoint-london-coverage",
+      text: "Spots on my Breakpoint London coverage start at $50 https://hihodl.xyz/s/demo_creator/breakpoint-london-coverage",
     },
     siblings: [],
   };
@@ -835,14 +835,14 @@ function pitchReviews(): Space {
     fundingGoalCents: 15000,
     totals: { positions: 6, sold: 2, committedCents: 20000, totalCents: 60000 },
     share: {
-      url: "https://hihodl.xyz/s/coinempress/token2049-pitch-reviews?m=2",
-      text: "Pitch reviews at TOKEN2049 https://hihodl.xyz/s/coinempress/token2049-pitch-reviews?m=2",
+      url: "https://hihodl.xyz/s/demo_creator/token2049-pitch-reviews?m=2",
+      text: "Pitch reviews at TOKEN2049 https://hihodl.xyz/s/demo_creator/token2049-pitch-reviews?m=2",
     },
     bannerUrl: null,
     bannerGradient: "slate",
     siblings: [
-      { path: "/s/coinempress/road-to-token2049", tab: "ground", title: "Road to TOKEN2049" },
-      { path: "/s/coinempress/token2049-videos", tab: "feed", title: "TOKEN2049 short videos" },
+      { path: "/s/demo_creator/road-to-token2049", tab: "ground", title: "Road to TOKEN2049" },
+      { path: "/s/demo_creator/token2049-videos", tab: "feed", title: "TOKEN2049 short videos" },
     ],
   };
 }
@@ -902,8 +902,8 @@ function contentProduction(): Space {
     fundingGoalCents: null,
     totals: { positions: 4, sold: 2, committedCents: 300000, totalCents: 600000 },
     share: {
-      url: "https://hihodl.xyz/s/coinempress/token2049-content-production?m=2",
-      text: "Sponsor the content at TOKEN2049 https://hihodl.xyz/s/coinempress/token2049-content-production?m=2",
+      url: "https://hihodl.xyz/s/demo_creator/token2049-content-production?m=2",
+      text: "Sponsor the content at TOKEN2049 https://hihodl.xyz/s/demo_creator/token2049-content-production?m=2",
     },
     bannerUrl: null,
     bannerGradient: "night",
@@ -930,7 +930,7 @@ export function fixtureProduction(token: string): BrandProduction | null {
   return {
     orderId: "0f000000-0000-4000-8000-000000000001",
     space: { id: space.id, title: space.title, slug: space.slug, eventName: "TOKEN2049" },
-    creatorHandle: "coinempress",
+    creatorHandle: "demo_creator",
     positionLabel: "Spot 1",
     chain: "solana",
     paidAt: new Date(Date.now() - 9 * DAY).toISOString(),
@@ -1003,8 +1003,8 @@ function allYearService(): Space {
     bannerUrl: WEEKLY_SPACE_PHOTO,
     bannerGradient: "night",
     share: {
-      url: "https://hihodl.xyz/s/coinempress/weekly-x-space-sponsor",
-      text: "Sponsor my weekly X Space https://hihodl.xyz/s/coinempress/weekly-x-space-sponsor",
+      url: "https://hihodl.xyz/s/demo_creator/weekly-x-space-sponsor",
+      text: "Sponsor my weekly X Space https://hihodl.xyz/s/demo_creator/weekly-x-space-sponsor",
     },
     siblings: [],
   };
@@ -1109,7 +1109,7 @@ function creator(xHandle: string, xName: string | null, xFollowers: number | nul
   };
 }
 
-const COIN = creator("coinempress", "Coin Empress", 48210, {
+const COIN = creator("demo_creator", "Demo Creator", 48210, {
   trackRecord: { delivered: 3, missed: 0, production: { onTime: 4, accepted: 4 } },
 });
 
@@ -1133,11 +1133,11 @@ function card(
   };
 }
 
-/* coinempress's own cards, one per listing, each with its own look. */
+/* demo_creator's own cards, one per listing, each with its own look. */
 
 function coinSuitcaseCard(): SpaceCard {
   return card(1, {
-    path: "/s/coinempress/road-to-token2049",
+    path: "/s/demo_creator/road-to-token2049",
     title: "Road to TOKEN2049",
     tab: "ground",
     templateName: "Carry-on suitcase",
@@ -1149,7 +1149,7 @@ function coinSuitcaseCard(): SpaceCard {
 
 function coinVideosCard(): SpaceCard {
   return card(6, {
-    path: "/s/coinempress/token2049-videos",
+    path: "/s/demo_creator/token2049-videos",
     title: "TOKEN2049 short videos",
     tab: "feed",
     templateName: "Short-form video",
@@ -1162,7 +1162,7 @@ function coinVideosCard(): SpaceCard {
 
 function coinAfterpartyCard(): SpaceCard {
   return card(12, {
-    path: "/s/coinempress/token2049-afterparty-host",
+    path: "/s/demo_creator/token2049-afterparty-host",
     title: "Host my TOKEN2049 afterparty table",
     tab: "feed",
     templateName: "Custom service",
@@ -1177,7 +1177,7 @@ function coinAfterpartyCard(): SpaceCard {
 
 function coinPitchCard(): SpaceCard {
   return card(9, {
-    path: "/s/coinempress/token2049-pitch-reviews",
+    path: "/s/demo_creator/token2049-pitch-reviews",
     title: "Pitch reviews at TOKEN2049",
     tab: "room",
     templateName: "Pitch review",
@@ -1190,7 +1190,7 @@ function coinPitchCard(): SpaceCard {
 
 function coinBreakpointCard(): SpaceCard {
   return card(14, {
-    path: "/s/coinempress/breakpoint-london-coverage",
+    path: "/s/demo_creator/breakpoint-london-coverage",
     title: "I'm covering Breakpoint London",
     tab: "feed",
     templateName: "Short-form video",
@@ -1204,7 +1204,7 @@ function coinBreakpointCard(): SpaceCard {
 
 function coinDevconCard(): SpaceCard {
   return card(7, {
-    path: "/s/coinempress/road-to-devcon-8",
+    path: "/s/demo_creator/road-to-devcon-8",
     title: "Road to Devcon 8",
     tab: "ground",
     templateName: "Carry-on suitcase",
@@ -1217,7 +1217,7 @@ function coinDevconCard(): SpaceCard {
 
 function coinAllYearCard(): SpaceCard {
   return card(13, {
-    path: "/s/coinempress/weekly-x-space-sponsor",
+    path: "/s/demo_creator/weekly-x-space-sponsor",
     title: "Sponsor my weekly X Space",
     tab: "feed",
     templateName: "Custom service",
@@ -1351,12 +1351,12 @@ function breakpointTabs(): EventPage["tabs"] {
   };
 }
 
-/** Everything coinempress sold at EthCC, closed and delivered. */
+/** Everything demo_creator sold at EthCC, closed and delivered. */
 function ethccTabs(): EventPage["tabs"] {
   return {
     ground: [
       card(16, {
-        path: "/s/coinempress/road-to-ethcc",
+        path: "/s/demo_creator/road-to-ethcc",
         title: "Road to EthCC",
         tab: "ground",
         templateName: "Carry-on suitcase",
@@ -1370,7 +1370,7 @@ function ethccTabs(): EventPage["tabs"] {
     ],
     feed: [
       card(17, {
-        path: "/s/coinempress/ethcc-recap-videos",
+        path: "/s/demo_creator/ethcc-recap-videos",
         title: "EthCC recap videos",
         tab: "feed",
         templateName: "Short-form video",
@@ -1401,26 +1401,26 @@ export function fixtureEvent(slug: string): EventPage | { redirectTo: string } |
 }
 
 /**
- * A creator's hub, `/s/coinempress`, the way a real creator's looks: one
+ * A creator's hub, `/s/demo_creator`, the way a real creator's looks: one
  * suitcase and three services at TOKEN2049, a coverage ladder at Breakpoint,
  * the same suitcase again for Devcon, one past event (EthCC, all sold) and
  * one service that belongs to no event. Groups in the server's order
  * (`compareEventGroups`): upcoming events by start date, then past ones most
  * recent first, then the group with no event, always last.
  *
- * The other coinempress fixtures (the bidding, offers and takeover suitcases)
+ * The other demo_creator fixtures (the bidding, offers and takeover suitcases)
  * still open at their own URLs; they are test boards, not what this creator
  * would have on sale at once, so the hub does not list them.
  */
 export function fixtureCreator(handle: string): CreatorPage | null {
   const lower = handle.toLowerCase();
-  if (lower !== "coinempress") return null;
+  if (lower !== "demo_creator") return null;
 
   const others = (tabs: EventPage["tabs"]): number =>
     new Set(
       [...tabs.ground, ...tabs.feed, ...tabs.room]
         .map((c) => c.creator.xHandle)
-        .filter((h): h is string => Boolean(h) && h !== "coinempress"),
+        .filter((h): h is string => Boolean(h) && h !== "demo_creator"),
     ).size;
 
   const groups: CreatorPage["groups"] = [
@@ -1437,7 +1437,7 @@ export function fixtureCreator(handle: string): CreatorPage | null {
   ];
 
   return {
-    creator: { ...COIN, xHandle: "coinempress" },
+    creator: { ...COIN, xHandle: "demo_creator" },
     groups,
     totals: {
       spaces: groups.reduce((n, g) => n + g.cards.length, 0),
@@ -1451,7 +1451,7 @@ export function fixtureCreator(handle: string): CreatorPage | null {
 }
 
 /**
- * Any card on an event page opens a board: the real fixtures for coinempress,
+ * Any card on an event page opens a board: the real fixtures for demo_creator,
  * and for everybody else a copy of the suitcase or the video board wearing that
  * card's creator, title, event and look.
  */
@@ -1596,7 +1596,7 @@ function bidsBoard(): Space {
     pricingMode: "bids",
     biddingEndsAt: ends,
     positions,
-    share: { url: "https://hihodl.xyz/s/coinempress/token2049-bids", text: "Bid for my suitcase" },
+    share: { url: "https://hihodl.xyz/s/demo_creator/token2049-bids", text: "Bid for my suitcase" },
     siblings: [],
   };
 }
@@ -1625,7 +1625,7 @@ function offersBoard(): Space {
             },
           },
     ),
-    share: { url: "https://hihodl.xyz/s/coinempress/token2049-offers", text: "Make me an offer" },
+    share: { url: "https://hihodl.xyz/s/demo_creator/token2049-offers", text: "Make me an offer" },
     siblings: [],
   };
 }
@@ -1711,7 +1711,7 @@ export function fixtureOffer(token: string): OfferThread | null {
     offer,
     space: {
       id: space.id,
-      path: `/s/coinempress/${space.slug}`,
+      path: `/s/demo_creator/${space.slug}`,
       title: space.title,
       templateName: space.template.name,
       pricingMode: space.pricingMode,
@@ -1731,7 +1731,7 @@ export function fixtureSpace(handle: string, slug: string): Space | null {
         (s) => s.id === slug,
       ) ?? null
     );
-  if (handle.toLowerCase() === "coinempress") {
+  if (handle.toLowerCase() === "demo_creator") {
     const offered = offersFixtures().find((s) => s.slug === slug);
     if (offered) return offered;
     if (slug === "road-to-token2049") return suitcase();
@@ -1830,7 +1830,7 @@ export function fixtureBooking(token: string): Booking | null {
     positionLabel: bare ? null : position.label,
     space: {
       id: space.id,
-      path: bare ? null : "/s/coinempress/token2049-pitch-reviews",
+      path: bare ? null : "/s/demo_creator/token2049-pitch-reviews",
       title: space.title,
       templateName: bare ? null : space.template.name,
       status: space.status,
