@@ -272,6 +272,28 @@ export const HOLD_KEEPS = {
     rewardCurrency: "points",
     provisional: true,
   },
+
+  /**
+   * Spaces: creators selling sponsor spots, content and time to brands.
+   * Three keys, one family of surfaces: /spaces, /spaces/creators, /spaces/brands.
+   *
+   * measured: AD_SPACE in hihodl-backend/server/services/ad-space/rules.ts on
+   *           origin/main, read 2026-09-19. FEE_BPS 500, SPONSOR_POINTS_SHARE_BPS
+   *           1_000 (of the fee), REFERRAL_FEE_SHARE_BPS 2_000 (of the fee) for
+   *           REFERRAL_MONTHS 12.
+   *
+   * The fee is charged once per sale, on the price. The creator chooses per
+   * listing whether it goes on top (the sponsor pays it, the default) or comes
+   * out of the price. The money itself never passes through us.
+   */
+  spaces: {
+    feeBps: 500,
+    /** Share of OUR fee returned as HiPoints to a sponsor paying from the HOLD app. */
+    sponsorPointsShareOfFeeBps: 1000,
+    /** Share of OUR fee paid to the creator who invited the seller. */
+    referralShareOfFeeBps: 2000,
+    referralMonths: 12,
+  },
 } as const;
 
 /* ══════════════════════════════════════════════════════════════════════════
