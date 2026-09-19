@@ -16,7 +16,9 @@
  * documentation/web-copies-the-app-onboarding.md has the map.
  */
 
-import { useEffect, type ReactNode, type SVGProps } from "react";
+import { useEffect, type ReactNode } from "react";
+
+import { Ion, type IonName } from "../ion";
 
 /* ── The step's colours (setup.tsx STEP_GRADIENTS / STEP_ACCENTS) ─── */
 
@@ -186,7 +188,7 @@ export function StatusLine({ tone, children }: { tone: "muted" | "ok" | "warn"; 
 export function ErrorBanner({ children, onDismiss }: { children: ReactNode; onDismiss?: () => void }) {
   return (
     <div role="status" className="mb-2 flex items-center gap-2 rounded-[14px] border border-[rgba(245,158,11,0.15)] bg-[rgba(245,158,11,0.08)] p-3">
-      <Ion name="information-circle" size={16} className="shrink-0 text-[#F59E0B]" />
+      <Ion name="alert-circle" size={16} className="shrink-0 text-[#F59E0B]" />
       <p className="flex-1 text-[13px] font-medium leading-[18px] text-white/75">{children}</p>
       {onDismiss ? (
         <button type="button" onClick={onDismiss} aria-label="Dismiss" className="shrink-0 rounded-[8px] p-0.5 text-white/40 hover:text-white">
@@ -267,7 +269,7 @@ export function ReadyBox({ title, line }: { title: string; line: string }) {
   return (
     <div className="flex flex-col items-center gap-3.5 py-5 text-center">
       <span className="flex h-[72px] w-[72px] items-center justify-center rounded-[36px] text-white" style={{ backgroundColor: DONE_GREEN }}>
-        <Ion name="checkmark" size={36} strokeWidth={2.6} />
+        <Ion name="checkmark" size={40} />
       </span>
       <h2 className="text-[24px] font-extrabold leading-8 text-white">{title}</h2>
       <p className="text-[15px] leading-[22px] text-white/60">{line}</p>
@@ -298,170 +300,6 @@ export function InfoSheet({ title, body, onClose, children }: { title: string; b
   );
 }
 
-/* ── Icons: the Ionicons outline set the app draws with ──────────── */
+/* ── Icons: the app's own Ionicons glyphs (../ion) ───────────────── */
 
-export type IonName =
-  | "person-outline"
-  | "person-circle-outline"
-  | "key-outline"
-  | "mail-outline"
-  | "mail-unread-outline"
-  | "lock-closed-outline"
-  | "wallet-outline"
-  | "phone-portrait-outline"
-  | "keypad-outline"
-  | "checkmark"
-  | "checkmark-circle"
-  | "close"
-  | "arrow-back"
-  | "chevron-back"
-  | "information-circle"
-  | "information-circle-outline"
-  | "copy-outline"
-  | "warning-outline";
-
-export function Ion({
-  name,
-  size = 20,
-  strokeWidth = 1.9,
-  ...rest
-}: { name: IonName; size?: number; strokeWidth?: number } & Omit<SVGProps<SVGSVGElement>, "name">) {
-  const common = { fill: "none", stroke: "currentColor", strokeWidth, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
-  let body: ReactNode;
-  switch (name) {
-    case "person-outline":
-      body = (
-        <g {...common}>
-          <circle cx="12" cy="8" r="4" />
-          <path d="M4.5 20.5c.9-3.6 3.9-5.5 7.5-5.5s6.6 1.9 7.5 5.5" />
-        </g>
-      );
-      break;
-    case "person-circle-outline":
-      body = (
-        <g {...common}>
-          <circle cx="12" cy="12" r="9.5" />
-          <circle cx="12" cy="10" r="3.2" />
-          <path d="M6.3 18.4c1.2-2 3.2-3.1 5.7-3.1s4.5 1.1 5.7 3.1" />
-        </g>
-      );
-      break;
-    case "key-outline":
-      body = (
-        <g {...common}>
-          <circle cx="7.5" cy="15.5" r="4.5" />
-          <path d="M10.7 12.3 20.5 2.5M17 6l2.5 2.5M14.5 8.5 17 11" />
-        </g>
-      );
-      break;
-    case "mail-outline":
-      body = (
-        <g {...common}>
-          <rect x="3" y="5" width="18" height="14" rx="2.5" />
-          <path d="m6.5 8.5 5.5 4.2 5.5-4.2" />
-        </g>
-      );
-      break;
-    case "mail-unread-outline":
-      body = (
-        <g {...common}>
-          <path d="M14 5H5.5A2.5 2.5 0 0 0 3 7.5v9A2.5 2.5 0 0 0 5.5 19h13a2.5 2.5 0 0 0 2.5-2.5V11" />
-          <path d="m6.5 8.5 5.5 4.2 3-2.3" />
-          <circle cx="19" cy="5.5" r="2.5" />
-        </g>
-      );
-      break;
-    case "lock-closed-outline":
-      body = (
-        <g {...common}>
-          <rect x="4.5" y="10" width="15" height="11" rx="2.5" />
-          <path d="M8 10V7a4 4 0 0 1 8 0v3" />
-        </g>
-      );
-      break;
-    case "wallet-outline":
-      body = (
-        <g {...common}>
-          <rect x="3" y="6.5" width="18" height="13" rx="2.5" />
-          <path d="M17.5 6.5V5a2 2 0 0 0-2.5-1.9L5 5.8A2.6 2.6 0 0 0 3 8.3" />
-          <path d="M16.5 13.5h.01" strokeWidth={strokeWidth + 1.2} />
-        </g>
-      );
-      break;
-    case "phone-portrait-outline":
-      body = (
-        <g {...common}>
-          <rect x="6.5" y="2.5" width="11" height="19" rx="2.5" />
-          <path d="M10.5 5h3" />
-        </g>
-      );
-      break;
-    case "keypad-outline":
-      body = (
-        <g {...common}>
-          {[6, 12, 18].flatMap((x) => [5, 11, 17].map((y) => <circle key={`${x}${y}`} cx={x} cy={y} r="1.6" />))}
-        </g>
-      );
-      break;
-    case "checkmark":
-      body = <path {...common} d="M5 12.5 10 17.5 19 7" />;
-      break;
-    case "checkmark-circle":
-      body = (
-        <g>
-          <circle cx="12" cy="12" r="10" fill="currentColor" />
-          <path d="m7.5 12.3 3 3 6-6.3" fill="none" stroke="#0a1929" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
-        </g>
-      );
-      break;
-    case "close":
-      body = <path {...common} d="M6.5 6.5l11 11M17.5 6.5l-11 11" />;
-      break;
-    case "arrow-back":
-      body = <path {...common} d="M19.5 12h-15M11 5.5 4.5 12l6.5 6.5" />;
-      break;
-    case "chevron-back":
-      body = <path {...common} d="M15 5 8 12l7 7" />;
-      break;
-    case "information-circle":
-      body = (
-        <g>
-          <circle cx="12" cy="12" r="10" fill="currentColor" />
-          <path d="M12 11v5.5" stroke="#0a1929" strokeWidth={2} strokeLinecap="round" />
-          <circle cx="12" cy="7.8" r="1.2" fill="#0a1929" />
-        </g>
-      );
-      break;
-    case "information-circle-outline":
-      body = (
-        <g {...common}>
-          <circle cx="12" cy="12" r="9.5" />
-          <path d="M12 11v5.5" />
-          <circle cx="12" cy="7.8" r="0.6" fill="currentColor" />
-        </g>
-      );
-      break;
-    case "warning-outline":
-      body = (
-        <g {...common}>
-          <path d="M10.3 4.2 2.8 17.5A2 2 0 0 0 4.5 20.5h15a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z" />
-          <path d="M12 9.5v4.5" />
-          <circle cx="12" cy="17" r="0.6" fill="currentColor" />
-        </g>
-      );
-      break;
-    case "copy-outline":
-      body = (
-        <g {...common}>
-          <rect x="8.5" y="8.5" width="12" height="12" rx="2.5" />
-          <path d="M15.5 8.5V6a2.5 2.5 0 0 0-2.5-2.5H6A2.5 2.5 0 0 0 3.5 6v7A2.5 2.5 0 0 0 6 15.5h2.5" />
-        </g>
-      );
-      break;
-  }
-  return (
-    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden {...rest}>
-      {body}
-    </svg>
-  );
-}
+export { Ion, type IonName };
