@@ -55,6 +55,12 @@ export const IconSales = (p: P) => (
   </Icon>
 );
 
+export const IconInsights = (p: P) => (
+  <Icon {...p}>
+    <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+  </Icon>
+);
+
 export const IconDeliveries = (p: P) => (
   <Icon {...p}>
     <path d="M9 11l3 3L22 4" />

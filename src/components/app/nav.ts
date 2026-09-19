@@ -22,6 +22,7 @@ import {
   IconDeliveries,
   IconGift,
   IconHome,
+  IconInsights,
   IconInspire,
   IconListings,
   IconMegaphone,
@@ -52,6 +53,7 @@ export type NavKey =
   | "deliveries"
   | "team"
   | "inspire"
+  | "insights"
   | "spaces-settings";
 
 export type Level = "main" | "spaces";
@@ -115,6 +117,7 @@ export const SPACES_GROUPS: readonly NavGroup[] = [
     title: "Grow",
     items: [
       { key: "team", label: "Team", path: "/spaces/team", icon: IconTeam, roles: ALL, keywords: "members invite shares owed paid teams" },
+      { key: "insights", label: "Insights", path: "/spaces/insights", icon: IconInsights, roles: ["creator"], keywords: "market data what sells pricing timing brands buying pitch a brand" },
       { key: "inspire", label: "Inspire", path: "/spaces/inspire", icon: IconInspire, roles: ["creator"], keywords: "templates ideas new listing" },
     ],
   },

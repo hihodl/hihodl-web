@@ -31,6 +31,7 @@ import {
   getCreatorSettings,
 } from "@/lib/creator/listings";
 import { useCreatorSession } from "@/lib/creator/session";
+import { getInsights } from "@/lib/creator/insights";
 import { getWalletStatus } from "@/lib/wallet/api";
 
 import { getMe, getMyAddresses } from "./me";
@@ -124,6 +125,10 @@ export const useMe = () => useRead("me", getMe);
 export const useWalletStatus = (on = true) => useRead(on ? "wallet-status" : null, getWalletStatus);
 /** The app wallet's addresses (GET /me/addresses). */
 export const useMyAddresses = (on = true) => useRead(on ? "my-addresses" : null, getMyAddresses);
+
+/** Market data for an event (a slug), all of Spaces (`all`), or the creator's nearest event (null). */
+export const useInsights = (event: string | null) =>
+  useRead("insights", async () => (await getInsights(event)).insights, event ?? "");
 
 /** One listing, whole. */
 export const useListing = (spaceId: string | null) =>
