@@ -76,7 +76,10 @@ export interface MenuRowProps {
   right?: ReactNode;
   chevron?: boolean;
   href?: string;
+  /** Opens in a new tab (a mailto stays in this one). */
   external?: boolean;
+  /** A full page load, for pages that set their own CSP (the Wallet, /welcome). */
+  reload?: boolean;
   onClick?: () => void;
   disabled?: boolean;
   /** An amber label for a row that needs the person (never red). */
@@ -84,7 +87,7 @@ export interface MenuRowProps {
 }
 
 /** src/ui/MenuRow: one trailing element wins, right > badge > value > chevron. */
-export function MenuRow({ icon, label, sub, value, badge, right, chevron, href, external, onClick, disabled, attention }: MenuRowProps) {
+export function MenuRow({ icon, label, sub, value, badge, right, chevron, href, external, reload, onClick, disabled, attention }: MenuRowProps) {
   const trailing = right ? (
     right
   ) : badge && badge > 0 ? (
@@ -108,8 +111,8 @@ export function MenuRow({ icon, label, sub, value, badge, right, chevron, href, 
     </>
   );
   if (href) {
-    return external ? (
-      <a href={href} target={href.startsWith("mailto:") ? undefined : "_blank"} rel="noopener noreferrer" className={rowBase}>
+    return external || reload ? (
+      <a href={href} target={external && !href.startsWith("mailto:") ? "_blank" : undefined} rel={external ? "noopener noreferrer" : undefined} className={rowBase}>
         {inner}
       </a>
     ) : (

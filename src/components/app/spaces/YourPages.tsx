@@ -12,6 +12,10 @@
  * settings as the one source of truth, so the two can never disagree. Each
  * choice is a card that opens its own screen with Back (`item=`), drawn with
  * the same GroundPicker a listing uses for its own.
+ *
+ * The app has no screen for this (a creator's public pages are the web's), so
+ * it is drawn with the app's parts: a GlassSurface card of rows, SectionTitle
+ * over each group, and the Spaces card for each choice.
  */
 
 import Link from "next/link";
@@ -21,9 +25,10 @@ import { GroundPicker, GroundSwatch, labelOf } from "@/components/creator/run/Gr
 import { getCreatorSettings, setPageGround, type CreatorSettings } from "@/lib/creator/listings";
 
 import { useHref } from "../base";
-import { IconArrowLeft } from "../icons";
+import { BackHeader, Column, HoldCard, SectionTitle } from "../hold";
+import { Ion } from "../ion";
 import { useShell } from "../Shell";
-import { glass } from "../ui";
+import { Card } from "./kit";
 
 type Grounds = Pick<CreatorSettings, "pageGround" | "listingGround">;
 
@@ -39,24 +44,24 @@ export function useGrounds(): { grounds: Grounds | null; reload: () => void } {
   return { grounds, reload };
 }
 
-/** The card that opens this screen, for any settings page. */
+/** The row that opens this screen, in a card of its own, for any settings page. */
 export function YourPagesCard({ href, title = "Your pages" }: { href: string; title?: string }) {
   const { grounds } = useGrounds();
   return (
-    <Link href={href} aria-label={title} className={`${glass} flex items-center gap-4 p-5 transition-colors hover:bg-white/[0.07]`}>
-      <div className="w-24 shrink-0">
-        <GroundSwatch value={grounds?.pageGround ?? null} height={64} />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-small font-medium text-text">{title}</p>
-        <p className="truncate text-tiny text-[#CFE3EC]">
-          {grounds ? `Background: ${labelOf(grounds.pageGround)} profile, ${labelOf(grounds.listingGround ?? grounds.pageGround)} listings` : "…"}
-        </p>
-      </div>
-      <span aria-hidden className="text-[#CFE3EC]">
-        &rarr;
-      </span>
-    </Link>
+    <HoldCard>
+      <Link href={href} aria-label={title} className="flex w-full min-w-0 items-center gap-3 px-[18px] py-[14px] transition-colors hover:bg-white/[0.03]">
+        <div className="w-14 shrink-0 overflow-hidden rounded-[10px]">
+          <GroundSwatch value={grounds?.pageGround ?? null} height={40} />
+        </div>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[14px] font-strong leading-5 text-white">{title}</span>
+          <span className="mt-0.5 block truncate text-[12px] leading-4 text-[#9FB7C2]">
+            {grounds ? `Background: ${labelOf(grounds.pageGround)} profile, ${labelOf(grounds.listingGround ?? grounds.pageGround)} listings` : "…"}
+          </span>
+        </span>
+        <Ion name="chevron-forward" size={16} className="shrink-0 text-white/35" />
+      </Link>
+    </HoldCard>
   );
 }
 
@@ -82,7 +87,7 @@ export function YourPagesScreen({
     const profile = item === "profile";
     return (
       <Frame back={base} backLabel="Your pages" title={profile ? "Profile page" : "Listings, by default"}>
-        <p className="max-w-2xl text-small text-[#CFE3EC]">
+        <p className="mb-4 px-1 text-[15px] font-medium leading-[21px] text-white/[0.72]">
           {profile
             ? "What your profile and its event screens stand on."
             : "What every listing stands on unless it has its own. “Same as my profile” follows your profile page."}
@@ -104,10 +109,10 @@ export function YourPagesScreen({
   const listingDefault = grounds ? grounds.listingGround ?? grounds.pageGround ?? null : null;
   return (
     <Frame back={back} backLabel={backLabel} title="Your pages">
-      <p className="max-w-2xl text-small text-[#CFE3EC]">
+      <p className="mb-2 px-1 text-[15px] font-medium leading-[21px] text-white/[0.72]">
         The background sponsors see on your public pages. The payment sheet keeps the app&rsquo;s dark on every one.
       </p>
-      <ul className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2">
+      <ul className="mt-2 grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2">
         <li>
           <GroundCard href={`${base}${sep}item=profile`} value={grounds?.pageGround ?? null} title="Profile page" note={grounds ? labelOf(grounds.pageGround) : "…"} />
         </li>
@@ -121,77 +126,55 @@ export function YourPagesScreen({
         </li>
       </ul>
 
-      <section className="flex flex-col gap-2">
-        <h3 className="text-small font-medium text-text">Each listing</h3>
-        {listings.length === 0 ? (
-          <p className="text-tiny text-[#CFE3EC]">No listings yet.</p>
-        ) : (
-          <ul className={`${glass} divide-y divide-white/[0.06] overflow-hidden`}>
-            {listings.map((l) => {
-              const own = l.pageGroundOwn ?? null;
-              return (
-                <li key={l.id}>
-                  <Link
-                    href={href(`/listings/${l.id}?tab=ground`)}
-                    className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-white/[0.05]"
-                  >
-                    <div className="w-14 shrink-0">
-                      <GroundSwatch value={own ?? listingDefault} height={36} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-small text-text">{l.serviceName || l.title}</p>
-                      <p className="truncate text-tiny text-[#CFE3EC]">
-                        {own ? `Its own: ${labelOf(own)}` : `Default · ${labelOf(listingDefault)}`}
-                      </p>
-                    </div>
-                    <span aria-hidden className="text-[#CFE3EC]">
-                      &rarr;
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
+      <SectionTitle>Each listing</SectionTitle>
+      {listings.length === 0 ? (
+        <p className="px-1 text-[13px] text-[#9FB7C2]">No listings yet.</p>
+      ) : (
+        <HoldCard>
+          {listings.map((l) => {
+            const own = l.pageGroundOwn ?? null;
+            return (
+              <Link key={l.id} href={href(`/listings/${l.id}?tab=ground`)} className="flex items-center gap-3 px-[18px] py-[14px] transition-colors hover:bg-white/[0.03]">
+                <div className="w-14 shrink-0 overflow-hidden rounded-[10px]">
+                  <GroundSwatch value={own ?? listingDefault} height={36} />
+                </div>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[14px] font-strong leading-5 text-white">{l.serviceName || l.title}</span>
+                  <span className="mt-0.5 block truncate text-[12px] leading-4 text-[#9FB7C2]">{own ? `Its own: ${labelOf(own)}` : `Default · ${labelOf(listingDefault)}`}</span>
+                </span>
+                <Ion name="chevron-forward" size={16} className="shrink-0 text-white/35" />
+              </Link>
+            );
+          })}
+        </HoldCard>
+      )}
     </Frame>
   );
 }
 
 function GroundCard({ href, value, title, note }: { href: string; value: string | null; title: string; note: string }) {
   return (
-    <Link href={href} className={`${glass} flex h-full flex-col gap-3 p-4 transition-colors hover:bg-white/[0.07]`}>
-      <GroundSwatch value={value} height={96} />
-      <div className="flex items-end justify-between gap-2">
-        <div className="min-w-0">
-          <p className="truncate text-small font-medium text-text">{title}</p>
-          <p className="truncate text-tiny text-[#CFE3EC]">{note}</p>
-        </div>
-        <span aria-hidden className="text-[#CFE3EC]">
-          &rarr;
-        </span>
+    <Card href={href} className="h-full">
+      <div className="overflow-hidden rounded-[12px]">
+        <GroundSwatch value={value} height={96} />
       </div>
-    </Link>
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <p className="truncate text-[16px] font-strong tracking-[-0.2px] text-white">{title}</p>
+          <p className="truncate text-[12.5px] font-strong text-white/55">{note}</p>
+        </div>
+        <Ion name="chevron-forward" size={16} className="shrink-0 text-white/55" />
+      </div>
+    </Card>
   );
 }
 
-function Frame({ back, backLabel, title, children }: { back: string; backLabel: string; title: string; children: ReactNode }) {
+/** A screen under Settings: the app's header, a chevron back and the title centred. */
+function Frame({ back, title, children }: { back: string; backLabel: string; title: string; children: ReactNode }) {
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex min-w-0 items-center gap-3">
-        <Link
-          href={back}
-          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-[10px] border border-white/10 bg-white/[0.05] px-3 text-tiny font-medium text-[#CFE3EC] transition-colors hover:bg-white/10 hover:text-text"
-        >
-          <IconArrowLeft className="h-3.5 w-3.5" />
-          Back
-        </Link>
-        <div className="min-w-0">
-          <p className="truncate text-[11px] text-[#CFE3EC]">{backLabel}</p>
-          <h2 className="truncate text-body font-medium text-text">{title}</h2>
-        </div>
-      </div>
+    <Column wide>
+      <BackHeader title={title} backHref={back} />
       {children}
-    </div>
+    </Column>
   );
 }

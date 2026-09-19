@@ -25,11 +25,14 @@ import type { PayoutAddressView } from "@/lib/creator/types";
 import { useHoldWallet } from "@/lib/app/hold-wallet";
 import { usePayout, useRefresh } from "@/lib/app/spaces-data";
 
-import { btnGhost, btnLink, CopyButton, Note, ScreenHeader, shortAddress, Warn } from "../front/kit";
-import { IconChevronRight } from "../icons";
-import { glass, Skeleton } from "../ui";
+import { CopyButton, shortAddress } from "../front/kit";
+import { BackHeader, Column, HoldCard, MenuRow, Notice } from "../hold";
 import { MoreChainsLine } from "../MoreChains";
-import { Chip } from "./XScreen";
+import { Card, Tag } from "../spaces/kit";
+import { Skeleton } from "../ui";
+
+const copyCls =
+  "inline-flex h-8 shrink-0 items-center rounded-[16px] border border-white/[0.22] bg-white/10 px-3 text-[13px] font-strong text-white transition-colors hover:bg-white/[0.14]";
 
 interface Line {
   title: string;
@@ -79,43 +82,14 @@ function linesOf(view: PayoutAddressView, w: ReturnType<typeof useHoldWallet>): 
   return { solana, evm };
 }
 
-export function PayoutCard({ onOpen, walletHref }: { onOpen: () => void; walletHref: string }) {
+/** The row on Account: where sponsors pay, in one line. */
+export function usePayoutSummary(): { value: string | null; attention: boolean } {
   const payout = usePayout();
   const w = useHoldWallet();
-  const lines = payout.data ? linesOf(payout.data, w) : null;
-  return (
-    <section className={`${glass} flex min-h-[180px] w-full min-w-0 flex-col justify-between gap-4 p-5 sm:p-6`}>
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-small font-medium text-text">Where you get paid</span>
-        {lines ? <Chip tone={lines.solana.tone}>{lines.solana.chip}</Chip> : null}
-      </div>
-      {payout.error ? (
-        <Warn>{describeCreatorError(payout.error)}</Warn>
-      ) : !lines ? (
-        <Skeleton className="h-12" />
-      ) : (
-        <div className="flex min-w-0 flex-col gap-2">
-          <p className="text-body text-text">{lines.solana.title}</p>
-          {lines.solana.address ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-mono text-small text-[#CFE3EC]">{shortAddress(lines.solana.address)}</span>
-              <CopyButton value={lines.solana.address} />
-              {w.walletPage ? (
-                <a href={walletHref} className="text-tiny text-[#9FB7C2] hover:text-text">
-                  Open Wallet
-                </a>
-              ) : null}
-            </div>
-          ) : (
-            <p className="text-tiny text-[#9FB7C2]">{lines.solana.text}</p>
-          )}
-        </div>
-      )}
-      <button type="button" onClick={onOpen} className="flex items-center gap-1 self-start text-small text-amber hover:text-[#FFE2A1]">
-        Details <IconChevronRight />
-      </button>
-    </section>
-  );
+  if (payout.error) return { value: null, attention: false };
+  if (!payout.data) return { value: null, attention: false };
+  const sol = linesOf(payout.data, w).solana;
+  return { value: sol.address ? shortAddress(sol.address) : sol.chip, attention: !sol.address };
 }
 
 export function PayoutScreen({ onBack, onOther, walletHref }: { onBack: () => void; onOther: () => void; walletHref: string }) {
@@ -124,45 +98,43 @@ export function PayoutScreen({ onBack, onOther, walletHref }: { onBack: () => vo
   const lines = payout.data ? linesOf(payout.data, w) : null;
 
   return (
-    <section className={`${glass} flex w-full max-w-[600px] flex-col gap-5 p-5 sm:p-6`}>
-      <ScreenHeader title="Where you get paid" onBack={onBack} />
+    <Column>
+      <BackHeader title="Where you get paid" onBack={onBack} />
       {payout.error ? (
-        <Warn>{describeCreatorError(payout.error)}</Warn>
+        <Notice>{describeCreatorError(payout.error)}</Notice>
       ) : !lines ? (
-        <Skeleton className="h-48" />
+        <Skeleton className="h-48 rounded-[18px]" />
       ) : (
-        <>
-          <Note>Sponsors pay you directly, in USDC, to the address below. HOLD never holds it on the way.</Note>
+        <div className="flex flex-col gap-3.5">
+          <p className="px-1 text-[15px] font-medium leading-[21px] text-white/[0.72]">
+            Sponsors pay you directly, in USDC, to the address below. HOLD never holds it on the way.
+          </p>
           {[lines.solana, ...(lines.evm ? [lines.evm] : [])].map((l) => (
-            <div key={l.title} className="flex flex-col gap-2 rounded-[14px] border border-white/10 bg-white/[0.04] p-4">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-small font-medium text-text">{l.title}</p>
-                <Chip tone={l.tone}>{l.chip}</Chip>
+            <Card key={l.title}>
+              <div className="flex items-center justify-between gap-2.5">
+                <p className="min-w-0 flex-1 text-[16px] font-strong tracking-[-0.2px] text-white">{l.title}</p>
+                <Tag label={l.chip} tone={l.tone === "done" ? "good" : "calm"} />
               </div>
               {l.address ? (
                 <div className="flex flex-wrap items-center gap-2">
-                  <code className="min-w-0 break-all font-mono text-tiny text-[#CFE3EC]">{l.address}</code>
-                  <CopyButton value={l.address} />
+                  <code className="min-w-0 break-all font-mono text-[12.5px] text-white/[0.78]">{l.address}</code>
+                  <CopyButton value={l.address} className={copyCls} />
                 </div>
               ) : null}
-              <p className="text-tiny text-[#9FB7C2]">{l.text}</p>
-            </div>
+              <p className="text-[12.5px] leading-[17px] text-white/55">{l.text}</p>
+            </Card>
           ))}
           {lines.evm ? null : <MoreChainsLine />}
-          <div className="flex flex-wrap items-center gap-2">
+          <HoldCard className="mt-1">
             {w.walletPage ? (
               // The Wallet page carries a strict CSP that only a full page load can set.
-              <a href={walletHref} className={btnGhost}>
-                Open Wallet
-              </a>
+              <MenuRow icon="wallet-outline" label="Open Wallet" href={walletHref} reload chevron />
             ) : null}
-            <button type="button" className={btnLink} onClick={onOther}>
-              Use another wallet
-            </button>
-          </div>
-        </>
+            <MenuRow icon="swap-horizontal" label="Use another wallet" sub="Phantom or another Solana wallet" onClick={onOther} chevron />
+          </HoldCard>
+        </div>
       )}
-    </section>
+    </Column>
   );
 }
 
@@ -172,15 +144,13 @@ export function OtherWallet({ onBack }: { onBack: () => void }) {
   // Stable: PayoutAddress reads again whenever this changes.
   const onChange = useCallback(() => void refresh("payout"), [refresh]);
   return (
-    <section className="flex w-full max-w-[640px] flex-col gap-4">
-      <div className={`${glass} flex flex-col gap-3 p-5 sm:p-6`}>
-        <ScreenHeader title="Use another wallet" onBack={onBack} />
-        <Note>
-          A Solana wallet other than HOLD, such as Phantom. Connect it and sign one message: no fee, no transaction. If
-          you have a HOLD wallet, it is the one that gets paid.
-        </Note>
-      </div>
+    <Column wide>
+      <BackHeader title="Use another wallet" onBack={onBack} />
+      <p className="mb-4 px-1 text-[15px] font-medium leading-[21px] text-white/[0.72]">
+        A Solana wallet other than HOLD, such as Phantom. Connect it and sign one message: no fee, no transaction. If you have a HOLD wallet, it is the one
+        that gets paid.
+      </p>
       <PayoutAddress onChange={onChange} />
-    </section>
+    </Column>
   );
 }

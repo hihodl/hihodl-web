@@ -28,7 +28,7 @@ export function useUserPhoto(): { photo: string | null; name: string | null } {
   return { photo: me.data?.profile.avatarUrl ?? linked?.avatarUrl ?? null, name };
 }
 
-export function UserAvatar({ size = 36, fallbackName }: { size?: number; fallbackName?: string | null }) {
+export function UserAvatar({ size = 36, fallbackName, round = false }: { size?: number; fallbackName?: string | null; round?: boolean }) {
   const { photo, name } = useUserPhoto();
   const refresh = useRefresh();
   const retried = useRef(false);
@@ -37,5 +37,5 @@ export function UserAvatar({ size = 36, fallbackName }: { size?: number; fallbac
     retried.current = true;
     void refresh("me");
   }, [refresh]);
-  return <Avatar src={photo} name={name ?? fallbackName ?? "?"} size={size} onError={onError} />;
+  return <Avatar src={photo} name={name ?? fallbackName ?? "?"} size={size} onError={onError} round={round} />;
 }
