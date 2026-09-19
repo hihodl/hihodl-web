@@ -120,11 +120,11 @@ export function LinkView({ phase, actions }: { phase: LinkPhase; actions: LinkAc
       return (
         <div>
           <StepDesc>Open the HOLD app with this link. It shows a six-digit code; come back here to check it matches.</StepDesc>
-          <p className="text-[13px] font-medium text-white/55">Code valid for {left}</p>
+          <p className="text-[13px] font-medium text-white/[0.55]">Code valid for {left}</p>
           <Cta>
             <a
               href={phase.url}
-              className="flex h-[54px] w-full items-center justify-center gap-2 rounded-[27px] border border-white/10 bg-white/[0.05] text-[16px] font-bold text-white/85 transition-colors hover:bg-white/[0.09]"
+              className="flex h-[54px] w-full items-center justify-center gap-2 rounded-[27px] border border-white/10 bg-white/[0.05] text-[16px] font-bold text-white/[0.85] transition-colors hover:bg-white/[0.09]"
             >
               Open in HOLD
             </a>
@@ -150,7 +150,7 @@ export function LinkView({ phase, actions }: { phase: LinkPhase; actions: LinkAc
             <span className="text-white/60"> opens the HOLD app, or shows where to get it.</span>
           </li>
         </ul>
-        <p className="mt-4 flex items-center gap-2 text-[13px] font-medium text-white/55" role="status">
+        <p className="mt-4 flex items-center gap-2 text-[13px] font-medium text-white/[0.55]" role="status">
           <Spinner size={14} color="rgba(255,255,255,0.55)" />
           Waiting for your phone · <span className="tabular-nums">{left}</span>
         </p>

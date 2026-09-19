@@ -357,7 +357,7 @@ function UsernameStep({ facts, onDone, head, hint }: StepProps) {
     >
       {head}
       {notice ? <ErrorBanner onDismiss={() => setNotice(null)}>{notice}</ErrorBanner> : null}
-      <InputRow prefix={<span className="mr-0.5 text-[17px] font-semibold text-white/55">@</span>}>
+      <InputRow prefix={<span className="mr-0.5 text-[17px] font-semibold text-white/[0.55]">@</span>}>
         <input
           autoFocus
           autoCapitalize="none"

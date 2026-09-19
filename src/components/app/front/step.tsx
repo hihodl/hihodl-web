@@ -105,7 +105,7 @@ export function CompletedRow({ title, onBack }: { title: string; onBack: () => v
       <span className="flex h-6 w-6 items-center justify-center rounded-[12px] border border-[rgba(32,214,144,0.15)] bg-[rgba(32,214,144,0.08)]">
         <Ion name="checkmark" size={12} style={{ color: DONE_GREEN }} />
       </span>
-      <span className="min-w-0 truncate text-[14px] font-semibold text-white/55">{title}</span>
+      <span className="min-w-0 truncate text-[14px] font-semibold text-white/[0.55]">{title}</span>
       <Ion name="chevron-back" size={12} className="ml-auto text-white/30" />
     </button>
   );
@@ -169,7 +169,7 @@ export function InputRow({ prefix, children }: { prefix?: ReactNode; children: R
 }
 
 export const inputFieldCls =
-  "h-full min-w-0 flex-1 bg-transparent text-[17px] font-medium text-white outline-none placeholder:text-white/35 disabled:opacity-60";
+  "h-full min-w-0 flex-1 bg-transparent text-[17px] font-medium text-white outline-none placeholder:text-white/[0.35] disabled:opacity-60";
 
 /** The status line under an input: 13 px. */
 export function StatusLine({ tone, children }: { tone: "muted" | "ok" | "warn"; children: ReactNode }) {
@@ -221,7 +221,7 @@ export function ActionButton({
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className="flex h-[54px] w-full items-center justify-center gap-2 rounded-[27px] border border-white/10 bg-white/[0.05] text-[16px] font-bold text-white/85 transition-[background-color,transform] hover:bg-white/[0.09] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white/[0.05] disabled:active:scale-100"
+      className="flex h-[54px] w-full items-center justify-center gap-2 rounded-[27px] border border-white/10 bg-white/[0.05] text-[16px] font-bold text-white/[0.85] transition-[background-color,transform] hover:bg-white/[0.09] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white/[0.05] disabled:active:scale-100"
     >
       {icon ? <Ion name={icon} size={18} /> : null}
       {title}
@@ -236,7 +236,7 @@ export function SkipButton({ label = "Skip", onClick, disabled }: { label?: stri
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="self-center rounded-[10px] px-5 py-3 text-[14px] font-semibold text-white/55 transition-colors hover:text-white/80 disabled:opacity-50"
+      className="self-center rounded-[10px] px-5 py-3 text-[14px] font-semibold text-white/[0.55] transition-colors hover:text-white/80 disabled:opacity-50"
     >
       {label}
     </button>
@@ -291,7 +291,7 @@ export function InfoSheet({ title, body, onClose, children }: { title: string; b
       <div className="relative w-full max-w-[440px] rounded-t-[24px] border border-white/10 bg-[#0D1820] px-6 pb-8 pt-3 shadow-[0_-20px_40px_rgba(0,0,0,0.35)] sm:rounded-[24px]">
         <span className="mx-auto block h-1 w-10 rounded-[2px] bg-white/[0.22]" aria-hidden />
         <h2 className="mt-4 text-[20px] font-bold text-white">{title}</h2>
-        {body ? <p className="mt-3 text-[15px] leading-[22px] text-white/65">{body}</p> : null}
+        {body ? <p className="mt-3 text-[15px] leading-[22px] text-white/[0.65]">{body}</p> : null}
         {children}
       </div>
     </div>
