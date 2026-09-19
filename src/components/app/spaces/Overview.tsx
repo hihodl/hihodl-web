@@ -146,7 +146,7 @@ function CreatorOverview({ view }: { view: string | null }) {
     <div className={FILL}>
       <ReadyToPublish compact />
       <section aria-label="Your business" className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <KpiTile label="Earned" value={v(dollars(t?.receivedCents ?? 0))} note={t ? (t.orders && t.fee.paidByYouCents === 0 ? "Brands paid our 5%, not you" : feeLine(t)) : " "} href={href("/sales")} />
+        <KpiTile label="Earned" value={v(dollars(t?.receivedCents ?? 0))} note={t ? (t.orders && t.fee.paidByYouCents === 0 ? "5% paid by brands" : feeLine(t)) : " "} href={href("/sales")} />
         <KpiTile
           label="Brands that paid you"
           value={v(t?.brands ?? 0)}
@@ -162,20 +162,31 @@ function CreatorOverview({ view }: { view: string | null }) {
         <KpiTile
           label="Needs you"
           value={offers.data && views.data ? needs : "…"}
-          note={`${plural(waiting.length, "offer")} · ${due.length} due${agency.on && owedToTeam > 0n ? ` · ${dollars(Number(owedToTeam / 10_000n))} to team` : ""}`}
+          note={`${plural(waiting.length, "offer")} · ${due.length} due`}
           href={`${href("")}?view=needs`}
           attention={needs > 0}
         />
       </section>
       <ReadError error={analytics.error ?? sales.error ?? offers.error} />
-      <Hub data={data ?? null} sales={sales.data} href={href} />
+      <Hub data={data ?? null} sales={sales.data} href={href} owedToTeamCents={agency.on ? Number(owedToTeam / 10_000n) : 0} />
     </div>
   );
 }
 
 /* ── The hub ──────────────────────────────────────────────────────── */
 
-function Hub({ data, sales, href }: { data: CreatorAnalytics | null; sales: SalesSummary | undefined; href: (p?: string) => string }) {
+function Hub({
+  data,
+  sales,
+  href,
+  owedToTeamCents,
+}: {
+  data: CreatorAnalytics | null;
+  sales: SalesSummary | undefined;
+  href: (p?: string) => string;
+  /** A Creative Director's team is owed this (their own bookkeeping); 0 hides it. */
+  owedToTeamCents: number;
+}) {
   const to = (view: string) => `${href("")}?view=${view}`;
   const t = data?.totals;
   const topEvent = data?.byEvent.find((e) => e.receivedCents > 0) ?? data?.byEvent[0] ?? null;
@@ -228,7 +239,7 @@ function Hub({ data, sales, href }: { data: CreatorAnalytics | null; sales: Sale
         title="Needs you and live"
         line="Offers, deliveries, what is live"
         value={t ? String(t.listings) : dash}
-        note="listings published"
+        note={owedToTeamCents > 0 ? `${dollars(owedToTeamCents)} owed to team` : "listings published"}
       />
       {inspired && inspired.listings > 0 ? (
         <HubCard
