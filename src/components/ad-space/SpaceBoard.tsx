@@ -11,6 +11,7 @@ import {
   serviceSummary,
   spaceTiers,
   timeLeft,
+  usdFromUsdc,
 } from "@/lib/ad-space/format";
 import { gradientCss } from "@/lib/ad-space/look";
 import { type SavedOffer, offerModeOf, offerPath, savedOffers } from "@/lib/ad-space/offers-client";
@@ -434,7 +435,7 @@ function YourOffers({ offers }: { offers: SavedOffer[] }) {
           <li key={o.token}>
             <a href={offerPath(o.token)} rel="noreferrer" className={btnSmallSecondary}>
               {o.kind === "bid" ? "Your bid" : "Your offer"}
-              {o.label ? ` on ${o.label}` : ""}: {o.amountUsdc} USDC
+              {o.label ? ` on ${o.label}` : ""}: {usdFromUsdc(o.amountUsdc)}
             </a>
           </li>
         ))}
