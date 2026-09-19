@@ -276,6 +276,26 @@ export interface PositionView {
   content: { status: string; rejectedReason: string | null; submittedAt: string | null } | null;
   delivered: { url: string; at: string } | null;
   qr: { code: string; url: string; scans: number } | null;
+  /** This spot's square on the listing's photo, in fractions (0 to 1) of it. A server older than photos sends none. */
+  rect?: PhotoRect | null;
+  /** Sold, or reserved for an accepted offer: the square cannot move. */
+  rectFrozen?: boolean;
+}
+
+/** A square on the photo, in fractions (0 to 1) of it. */
+export interface PhotoRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** The creator's own photo of the product. `ready`: every spot has its square, so the page shows it. */
+export interface ListingPhoto {
+  url: string | null;
+  width: number;
+  height: number;
+  ready: boolean;
 }
 
 export interface DeliverableView {
@@ -335,6 +355,8 @@ export interface SpaceView {
   /** The creator's own picture for this listing, or null (the gradient is drawn instead). */
   bannerUrl?: string | null;
   bannerGradient?: string | null;
+  /** The creator's photo of the product with the spots on it, or null. A server older than photos sends none. */
+  photo?: ListingPhoto | null;
 }
 
 export interface SpaceCard {

@@ -38,6 +38,7 @@ import {
   IconDeliveries,
   IconFloor,
   IconGrid,
+  IconImage,
   IconLink,
   IconMegaphone,
   IconOffers,
@@ -75,6 +76,7 @@ import { Money, Text } from "./listing/parts";
 import { Notice } from "./parts";
 import { ListingBanner } from "./run/ListingBanner";
 import { Offers } from "./run/Offers";
+import { PhotoEditor } from "./run/PhotoEditor";
 import { Work } from "./run/Work";
 import { ListingSeries } from "./series/Series";
 import { ListingTeam } from "./team/ListingTeam";
@@ -84,13 +86,14 @@ const SCREEN_BODY = "lg:max-h-[calc(var(--app-vh,100dvh)-196px)] lg:overflow-y-a
 /** The same, inside a panel that has its own title and padding. */
 const PANEL_BODY = "lg:max-h-[calc(var(--app-vh,100dvh)-252px)] lg:overflow-y-auto";
 
-type Screen = "events" | "offers" | "floors" | "spots" | "deliveries" | "updates" | "team";
+type Screen = "events" | "offers" | "floors" | "spots" | "photo" | "deliveries" | "updates" | "team";
 
 const SCREEN_TITLE: Record<Screen, string> = {
   events: "Events",
   offers: "Offers & bids",
   floors: "Floor prices",
   spots: "Spots",
+  photo: "Photo",
   deliveries: "Deliveries",
   updates: "Updates",
   team: "Who works it",
@@ -165,6 +168,8 @@ export function ListingRunner({ spaceId, tab }: { spaceId: string; tab?: string;
     offers: takesOffers,
     floors: hasFloors,
     spots: true,
+    // The creator's own photo with the spots on it: a product's, never a service's slots.
+    photo: owner && space.kind === "placement" && space.status !== "delisted",
     deliveries: space.status !== "draft",
     updates: space.status !== "draft",
     team: owner && agency.on,
@@ -187,6 +192,7 @@ export function ListingRunner({ spaceId, tab }: { spaceId: string; tab?: string;
         ) : null}
         {screen === "floors" ? <Floors space={space} groups={floors} onChanged={changed} /> : null}
         {screen === "spots" ? <Spots space={space} /> : null}
+        {screen === "photo" ? <PhotoEditor space={space} onChanged={changed} /> : null}
         {screen === "deliveries" ? (
           <Panel title="Deliveries" bodyClassName={PANEL_BODY}>
             <Work space={space} onChanged={changed} />
@@ -209,6 +215,7 @@ export function ListingRunner({ spaceId, tab }: { spaceId: string; tab?: string;
     space.deliverables.filter((d) => !d.deliveredUrl).length;
   const events = series?.spaces.length ?? (space.event ? 1 : 0);
   const floorsSet = floors.filter((g) => g.current !== null).length;
+  const placedSquares = space.positions.filter((p) => p.rect).length;
 
   return (
     <div className="flex flex-col gap-4">
@@ -238,6 +245,15 @@ export function ListingRunner({ spaceId, tab }: { spaceId: string; tab?: string;
           <HubCard screen="floors" space={space} icon={IconFloor} value={floorsSet} unit={`of ${floors.length} set`} />
         ) : null}
         <HubCard screen="spots" space={space} icon={IconGrid} value={`${space.totals.sold}/${space.totals.positions}`} unit="sold" />
+        {shown.photo ? (
+          <HubCard
+            screen="photo"
+            space={space}
+            icon={IconImage}
+            value={!space.photo ? "–" : space.photo.ready ? "Live" : `${placedSquares}/${space.positions.length}`}
+            unit={!space.photo ? "use the drawing" : space.photo.ready ? "on your page" : "spots placed"}
+          />
+        ) : null}
         {shown.deliveries ? (
           <HubCard
             screen="deliveries"

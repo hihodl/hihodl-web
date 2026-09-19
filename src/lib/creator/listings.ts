@@ -17,7 +17,9 @@ import type { Chain } from "@/lib/ad-space/types";
 import { call } from "./api";
 import type {
   EventSummary,
+  ListingPhoto,
   OfferView,
+  PhotoRect,
   SalesSummary,
   SeriesEventInput,
   SeriesRefusal,
@@ -122,6 +124,26 @@ export function setListingBanner(spaceId: string, image: Blob): Promise<{ banner
 /** Back to the gradient. */
 export function clearListingBanner(spaceId: string): Promise<{ bannerUrl: null }> {
   return call<{ bannerUrl: null }>(`ad-space/spaces/${spaceId}/banner`, { method: "DELETE" });
+}
+
+/* ── The product photo, with the spots as squares on it ───────────── */
+
+/** Upload or replace the photo of the product. PNG or JPEG: the X card draws it. The owner only. */
+export function setListingPhoto(spaceId: string, image: Blob): Promise<{ photo: ListingPhoto | null }> {
+  return call<{ photo: ListingPhoto | null }>(`ad-space/spaces/${spaceId}/photo`, { method: "POST", file: image });
+}
+
+/** Take the photo down, and every square with it. Refused once a spot on it is sold. */
+export function clearListingPhoto(spaceId: string): Promise<{ photo: null }> {
+  return call<{ photo: null }>(`ad-space/spaces/${spaceId}/photo`, { method: "DELETE" });
+}
+
+/** Place, move or take off squares. Spots not named keep theirs. */
+export function setListingSquares(
+  spaceId: string,
+  squares: { positionId: string; rect: PhotoRect | null }[],
+): Promise<{ photo: ListingPhoto | null; squares: { positionId: string; rect: PhotoRect | null; frozen: boolean }[] }> {
+  return call(`ad-space/spaces/${spaceId}/photo/squares`, { method: "PUT", json: { squares } });
 }
 
 /* ── One listing, several events ──────────────────────────────────── */

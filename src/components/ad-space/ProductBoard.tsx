@@ -3,7 +3,7 @@
 import type { CSSProperties, KeyboardEvent } from "react";
 
 import { STATUS_LABEL } from "@/lib/ad-space/format";
-import type { Position, Template, TemplateView, TemplateZone } from "@/lib/ad-space/types";
+import type { PhotoRect, Position, SpacePhoto, Template, TemplateView, TemplateZone } from "@/lib/ad-space/types";
 
 import { qrModules } from "./qr";
 import { ZONE } from "./ui";
@@ -27,16 +27,34 @@ import { ZONE } from "./ui";
 /** Hover and focus change a colour, never a stroke width. */
 const ACTIVE_STROKE = "#F4F6FA";
 const HELD_FILL_ACTIVE = "rgba(255,183,3,0.28)";
+/**
+ * On a photo an open square sits over whatever the camera saw, bright or dark,
+ * so it gets a dark glass under its price instead of the drawing's faint tint.
+ * Hover lightens it to moonlight: a colour, as everywhere else.
+ */
+const PHOTO_OPEN_FILL = "rgba(8,12,24,0.58)";
+const PHOTO_OPEN_FILL_ACTIVE = "rgba(91,124,255,0.55)";
+/** The photo's viewBox is this wide; its height follows the photo's shape. */
+const PHOTO_UNITS = 1000;
 
 type Props = {
   template: Template;
+  /**
+   * The creator's own photo, with every position's `rect` on it. When given it
+   * is drawn INSTEAD of the catalog views; `getPublicSpace` only passes one on
+   * when every position has its square.
+   */
+  photo?: SpacePhoto | null;
   positions: Position[];
   activeId: string | null;
   onHover: (positionId: string | null) => void;
   onPick: (position: Position) => void;
 };
 
-export function ProductBoard({ template, positions, activeId, onHover, onPick }: Props) {
+export function ProductBoard({ template, photo, positions, activeId, onHover, onPick }: Props) {
+  if (photo && positions.length > 0 && positions.every((p) => p.rect)) {
+    return <PhotoFigure photo={photo} positions={positions} activeId={activeId} onHover={onHover} onPick={onPick} />;
+  }
   const byZone = new Map(positions.map((p) => [p.zoneKey, p]));
   const tallest = Math.max(...template.views.map((v) => v.viewBox[1]), 1);
 
@@ -110,7 +128,7 @@ function ViewFigure({
           return p ? (
             <Zone
               key={z.zoneKey}
-              zone={z}
+              rect={z.rect}
               position={p}
               W={W}
               H={H}
@@ -124,6 +142,64 @@ function ViewFigure({
         })}
       </svg>
       <figcaption className="text-tiny uppercase tracking-wider text-text-faint">{view.label}</figcaption>
+    </figure>
+  );
+}
+
+/**
+ * The creator's own photo of the product, with each spot a square on it where
+ * the creator placed it. One figure, as tall as the drawing's tallest view
+ * could be and a little more (a photo carries more to look at), never wider
+ * than the column. The squares are the same Zone the drawing uses: a sponsor
+ * reads open, held and sold the same way on both.
+ */
+function PhotoFigure({
+  photo,
+  positions,
+  activeId,
+  onHover,
+  onPick,
+}: {
+  photo: SpacePhoto;
+  positions: Position[];
+  activeId: string | null;
+  onHover: (id: string | null) => void;
+  onPick: (p: Position) => void;
+}) {
+  const W = PHOTO_UNITS;
+  const H = Math.max(1, Math.round((PHOTO_UNITS * photo.height) / photo.width));
+  const aspect = photo.width / photo.height;
+  return (
+    <figure
+      className="mx-auto [--ph:300px] md:[--ph:440px]"
+      style={{ width: `min(100%, calc(var(--ph) * ${aspect.toFixed(5)}))` }}
+    >
+      <div className="overflow-hidden rounded-[18px] border border-white/10">
+        <svg
+          viewBox={`0 0 ${W} ${H}`}
+          className="block w-full"
+          style={{ aspectRatio: `${W} / ${H}` }}
+          role="group"
+          aria-label="The product, photographed by the creator"
+        >
+          <image href={photo.url} x={0} y={0} width={W} height={H} preserveAspectRatio="xMidYMid slice" />
+          {positions.map((p) =>
+            p.rect ? (
+              <Zone
+                key={p.id}
+                rect={p.rect}
+                position={p}
+                W={W}
+                H={H}
+                active={activeId === p.id}
+                onHover={onHover}
+                onPick={onPick}
+                onPhoto
+              />
+            ) : null,
+          )}
+        </svg>
+      </div>
     </figure>
   );
 }
@@ -148,26 +224,28 @@ function IdleZone({ zone, W, H }: { zone: TemplateZone; W: number; H: number }) 
 }
 
 function Zone({
-  zone,
+  rect,
   position: p,
   W,
   H,
   active,
   onHover,
   onPick,
+  onPhoto = false,
 }: {
-  zone: TemplateZone;
+  rect: PhotoRect;
   position: Position;
   W: number;
   H: number;
   active: boolean;
   onHover: (id: string | null) => void;
   onPick: (p: Position) => void;
+  onPhoto?: boolean;
 }) {
-  const rx = zone.rect.x * W;
-  const ry = zone.rect.y * H;
-  const rw = zone.rect.w * W;
-  const rh = zone.rect.h * H;
+  const rx = rect.x * W;
+  const ry = rect.y * H;
+  const rw = rect.w * W;
+  const rh = rect.h * H;
   const radius = Math.min(rw, rh) * 0.12;
   // The figure drawn in an open zone is what it costs to take it now. On a
   // takeover board it is also where bidding opens, and the spoken label says so:
@@ -207,7 +285,15 @@ function Zone({
             width={rw}
             height={rh}
             rx={radius}
-            fill={active ? ZONE.openFillHover : ZONE.openFill}
+            fill={
+              onPhoto
+                ? active
+                  ? PHOTO_OPEN_FILL_ACTIVE
+                  : PHOTO_OPEN_FILL
+                : active
+                  ? ZONE.openFillHover
+                  : ZONE.openFill
+            }
             stroke={active ? ACTIVE_STROKE : ZONE.openStroke}
             strokeWidth={1.25}
             vectorEffect="non-scaling-stroke"
@@ -225,18 +311,21 @@ function Zone({
       )}
 
       {p.status === "held" && (
-        <rect
-          x={rx}
-          y={ry}
-          width={rw}
-          height={rh}
-          rx={radius}
-          fill={active ? HELD_FILL_ACTIVE : ZONE.heldFill}
-          stroke={ZONE.heldStroke}
-          strokeWidth={1.25}
-          strokeDasharray="3 2"
-          vectorEffect="non-scaling-stroke"
-        />
+        <>
+          {onPhoto && <rect x={rx} y={ry} width={rw} height={rh} rx={radius} fill={PHOTO_OPEN_FILL} />}
+          <rect
+            x={rx}
+            y={ry}
+            width={rw}
+            height={rh}
+            rx={radius}
+            fill={active ? HELD_FILL_ACTIVE : ZONE.heldFill}
+            stroke={ZONE.heldStroke}
+            strokeWidth={1.25}
+            strokeDasharray="3 2"
+            vectorEffect="non-scaling-stroke"
+          />
+        </>
       )}
 
       {p.status === "sold" && <SoldZone p={p} x={rx} y={ry} w={rw} h={rh} radius={radius} active={active} />}

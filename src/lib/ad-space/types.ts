@@ -136,9 +136,34 @@ export interface Takeover {
   closed: string | null;
 }
 
+/**
+ * A spot's square on the creator's own photo, in FRACTIONS (0 to 1) of the
+ * photo, the way a catalog zone is a fraction of its view.
+ */
+export interface PhotoRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/**
+ * The creator's own photo of the product. On a public page it is only ever
+ * present when every position has its square (`getPublicSpace` drops it
+ * otherwise), and then it is drawn instead of the catalog drawing.
+ */
+export interface SpacePhoto {
+  url: string;
+  /** Natural size in pixels, read by the server from the image itself. */
+  width: number;
+  height: number;
+}
+
 export interface Position {
   id: string;
   zoneKey: string;
+  /** This spot's square on `Space.photo`, or null. Only drawn when the space has a photo. */
+  rect?: PhotoRect | null;
   /** The tier's name when this position sells one, else the zone's label or the slot number. */
   label: string;
   /**
@@ -457,6 +482,11 @@ export interface Space {
   /** The creator's own banner image, or null. */
   bannerUrl: string | null;
   bannerGradient: BannerGradient;
+  /**
+   * The creator's own photo of the product, with every position's `rect` on
+   * it; null draws the catalog template as before.
+   */
+  photo?: SpacePhoto | null;
   /** The same creator's other live or closed spaces for the same event. */
   siblings: SpaceSibling[];
 }
