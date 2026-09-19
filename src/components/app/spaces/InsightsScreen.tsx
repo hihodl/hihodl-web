@@ -35,7 +35,7 @@ import { IconAccount, IconCalendar, IconFloor, IconMegaphone, IconOffers, IconSa
 import { useShell } from "../Shell";
 import { dollars, EmptyState, FilterPills, Panel, ProgressBar, Segmented, Skeleton } from "../ui";
 import { ReadError } from "./common";
-import { cardCls, CardGrid, DrillBar, Pager, usePaged } from "./cards";
+import { cardCls, CardGrid, DrillBar, Pager, useListingKind, usePaged } from "./cards";
 
 export type InsightsView = "you" | "sells" | "pricing" | "timing" | "brands" | "pitch";
 
@@ -167,7 +167,7 @@ function Hub({ data, to }: { data: Insights; to: (v: InsightsView | null, extra?
           title="Timing"
           line={timing.medianDaysToFirstSale !== null ? "to a first sale, median" : needMore}
           value={timing.medianDaysToFirstSale !== null ? daysText(timing.medianDaysToFirstSale) : "—"}
-          note={sampleText(timing.medianDaysToFirstSaleSample)}
+          note={plural(timing.medianDaysToFirstSaleSample.creators, "creator")}
         />
         <HubCard
           href={to("brands")}
@@ -216,7 +216,7 @@ function HubCard({
         </div>
         <p className="truncate text-tiny text-[#CFE3EC]">{line}</p>
         <div className="mt-auto flex min-w-0 items-end justify-between gap-2">
-          <p className="text-[26px] font-medium leading-none tabular-nums text-text xl:text-[30px]">{value}</p>
+          <p className="whitespace-nowrap text-[26px] font-medium leading-none tabular-nums text-text xl:text-[30px]">{value}</p>
           {note ? <p className="truncate text-tiny tabular-nums text-[#9FB7C2]">{note}</p> : null}
         </div>
       </Link>
@@ -279,16 +279,19 @@ function BarRow({
   filled,
   total,
   right,
+  grid = false,
 }: {
   label: string;
   sub: string;
+  /** In a two-column grid every row keeps its rule and padding, so the columns line up. */
+  grid?: boolean;
   pct: number | null;
   filled?: number;
   total?: number;
   right?: ReactNode;
 }) {
   return (
-    <li className="flex min-w-0 flex-col gap-1.5 border-t border-white/[0.06] py-2.5 first:border-t-0 first:pt-0">
+    <li className={`flex min-w-0 flex-col gap-1.5 border-t border-white/[0.06] py-2.5 ${grid ? "" : "first:border-t-0 first:pt-0"}`}>
       <div className="flex min-w-0 items-baseline justify-between gap-3">
         <p className="truncate text-small text-text">{label}</p>
         <p className="shrink-0 text-small tabular-nums text-text">{right ?? (pct !== null ? pctText(pct) : <span className="text-tiny text-[#7F97A3]">not enough yet</span>)}</p>
@@ -362,7 +365,9 @@ function YouScreen({ data, back }: { data: Insights; back: string }) {
       aside={
         <>
           {y.followers !== null ? `${compact(y.followers)} followers on X, as of your last check. ` : "Link X again to count your followers. "}
-          Medians are the middle creator of {sampleText(y.sample)}; money medians are rounded, and nobody&apos;s exact receipt is shown.
+          {m.raisedCents.value === null
+            ? `Not enough sales yet at ${where(data.event)} to compare: the median shows from ${data.minSample} creators. Until then, watch your days to a first sale and how many spots fill in the first week.`
+            : <>Medians are the middle creator of {sampleText(y.sample)}; money medians are rounded, and nobody&apos;s exact receipt is shown.</>}
         </>
       }
     >
@@ -426,7 +431,7 @@ function SellsScreen({ data, back }: { data: Insights; back: string }) {
           <>
             <ul className="flex flex-col">
               {paged.shown.map((r) => (
-                <BarRow key={r.key} label={r.label} pct={r.filledPct} filled={r.filled} total={r.placements} sub={`${sellSub(r)} · ${sampleText(r.sample)}`} />
+                <BarRow key={r.key} label={r.label} pct={r.filledPct} filled={r.filled} total={r.placements} sub={`${sellSub(r)} · ${plural(r.sample.creators, "creator")}`} />
               ))}
             </ul>
             <div className="mt-3">
@@ -530,6 +535,7 @@ function TimingScreen({ data, back }: { data: Insights; back: string }) {
                 key={d.day}
                 label={d.label}
                 pct={d.soldFirstWeekPct}
+                grid
                 filled={0}
                 total={d.listings}
                 sub={`${plural(d.listings, "listing")}${d.firstWeekSalesPerListing !== null ? ` · ${d.firstWeekSalesPerListing} sales each in week one` : ""}`}
@@ -632,20 +638,30 @@ function BrandRow({ brand, pitch }: { brand: Brand; pitch: string }) {
 /** What this creator sells at the event, from their own listings. */
 function useWhatISell(data: Insights) {
   const { listings } = useShell();
+  const kindOf = useListingKind();
   return useMemo(() => {
     const here = listings.filter((l) => l.status !== "draft" && (!data.event || l.event?.slug === data.event.slug));
     const titles = here.map((l) => l.serviceName || l.title);
     const open = here.reduce((n, l) => n + Math.max(0, l.totals.positions - l.totals.sold), 0);
-    return { titles, open };
-  }, [listings, data.event]);
+    const kinds = new Set(here.map(kindOf));
+    return { titles, open, placements: kinds.has("placement"), services: kinds.has("service") };
+  }, [listings, data.event, kindOf]);
 }
 
-/** The strongest honest line the market gives for this pitch; null when it gives none. */
-function marketLine(data: Insights): string | null {
+/**
+ * The strongest honest line the market gives for what this creator sells;
+ * null when it gives none. A creator selling videos is not pitched on how
+ * suitcases fill.
+ */
+function marketLine(data: Insights, sells: { placements: boolean; services: boolean }): string | null {
   const s = data.whatSells.surfaces;
   const objects = s.find((r) => r.key === "object")?.filledPct ?? null;
   const clothing = s.find((r) => r.key === "clothing")?.filledPct ?? null;
+  const services = s.find((r) => r.key === "service")?.filledPct ?? null;
   const at = data.event ? `at ${data.event.name}` : "on HOLD Spaces";
+  if (sells.services && !sells.placements) {
+    return services !== null ? `On HOLD Spaces ${at}, ${pctText(services)} of sponsored content slots have been bought by brands.` : null;
+  }
   if (objects !== null && clothing !== null && clothing > 0 && objects / clothing >= 1.5) {
     return `On HOLD Spaces ${at}, spots on objects fill ${(objects / clothing).toFixed(objects / clothing >= 10 ? 0 : 1)}x more than spots on outfits: a logo on a suitcase or a laptop is in every shot, all week.`;
   }
@@ -661,9 +677,12 @@ export function pitchText(input: {
   data: Insights;
   titles: string[];
   open: number;
+  /** What the creator sells here: spots on a product, content slots, or both. */
+  placements: boolean;
+  services: boolean;
   link: string | null;
 }): string {
-  const { brand, handle, followers, data, titles, open, link } = input;
+  const { brand, handle, followers, data, titles, open, link, placements, services } = input;
   const y = data.you;
   const me = handle ? `@${handle}` : "a creator on HOLD Spaces";
   const event = data.event;
@@ -683,7 +702,7 @@ export function pitchText(input: {
   const why: string[] = [];
   if (followers) why.push(`${compact(followers)} followers on X see what I carry and post.`);
   if (y.placements.filled > 0) why.push(`${y.placements.filled} of my ${y.placements.total} spots here are already taken by brands.`);
-  const market = marketLine(data);
+  const market = marketLine(data, { placements, services });
   if (market) why.push(market);
   if (why.length) {
     lines.push("Why it works:");
@@ -691,7 +710,8 @@ export function pitchText(input: {
     lines.push("");
   }
   lines.push(`What I'd plan for ${brand}:`);
-  lines.push(`- Your logo on the spot you choose${event ? `, carried through ${event.name}` : ""}.`);
+  if (placements || !services) lines.push(`- Your logo on the spot you choose${event ? `, carried through ${event.name}` : ""}.`);
+  if (services) lines.push(`- A slot in my content${event ? ` from ${event.name}` : ""}, made for ${brand}.`);
   lines.push(`- Photos and a post on X tagging ${brand}, with the link you want.`);
   lines.push("- Paid in USDC straight to me, and your spot is yours the moment it is paid.");
   lines.push("");
@@ -719,6 +739,8 @@ function PitchScreen({ data, back, initialBrand }: { data: Insights; back: strin
         data,
         titles: mine.titles,
         open: mine.open,
+        placements: mine.placements,
+        services: mine.services,
         link: handle ? `${SITE_URL}/s/${handle}` : null,
       })
     : "";
