@@ -162,7 +162,7 @@ function CreatorOverview({ view }: { view: string | null }) {
         <KpiTile
           label="Needs you"
           value={offers.data && views.data ? needs : "…"}
-          note={`${plural(waiting.length, "offer")} · ${due.length} due in 7 days${agency.on && owedToTeam > 0n ? ` · ${dollars(Number(owedToTeam / 10_000n))} owed to team` : ""}`}
+          note={agency.on && owedToTeam > 0n ? `${plural(waiting.length, "offer")} · ${dollars(Number(owedToTeam / 10_000n))} owed to team` : `${plural(waiting.length, "offer")} · ${due.length} due in 7 days`}
           href={`${href("")}?view=needs`}
           attention={needs > 0}
         />
@@ -226,7 +226,7 @@ function Hub({ data, sales, href }: { data: CreatorAnalytics | null; sales: Sale
         href={to("needs")}
         icon={IconDeliveries}
         title="Needs you and live"
-        line="Offers, deliveries, new sales to follow up"
+        line="Offers, deliveries, what is live"
         value={t ? String(t.listings) : dash}
         note="listings published"
       />
