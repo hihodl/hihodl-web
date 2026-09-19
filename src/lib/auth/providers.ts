@@ -82,6 +82,14 @@ export function takeNext(fallback: string): string {
 }
 
 /**
+ * Apple on the web needs its own Services ID and return URL in Apple
+ * Developer; the app's native sign-in does not. Supabase reports Apple as on
+ * because the app uses it, so the web offers Apple only once that Services ID
+ * exists and this is set to "1".
+ */
+const WEB_APPLE = process.env.NEXT_PUBLIC_WEB_APPLE_SIGNIN === "1";
+
+/**
  * Which of the two this Supabase project has switched on, read from its
  * public settings (`/auth/v1/settings`, the same document the dashboard's
  * toggles write). A provider that is off is not offered: pressing it would
@@ -89,6 +97,11 @@ export function takeNext(fallback: string): string {
  * cannot be read, both are offered.
  */
 export async function enabledProviders(): Promise<Record<OAuthProvider, boolean>> {
+  const on = await providersInSupabase();
+  return { apple: on.apple && WEB_APPLE, google: on.google };
+}
+
+async function providersInSupabase(): Promise<Record<OAuthProvider, boolean>> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const both = { apple: true, google: true };
