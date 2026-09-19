@@ -370,6 +370,23 @@ function suitcase(): Space {
   };
 }
 
+/**
+ * The same suitcase in the creator's own colours: a cream body with black
+ * handle and wheels. Every spot keeps its dark glass plate, so a light body
+ * reads as well as a dark one. `/s/demo_creator/road-to-token2049-colour`.
+ */
+function suitcaseColour(): Space {
+  const base = suitcase();
+  return {
+    ...base,
+    id: "11111111-1111-4111-8111-111111111113",
+    slug: "road-to-token2049-colour",
+    title: "Road to TOKEN2049, in my colours",
+    productLook: { body: "#F2EBDD", accent: "#111418" },
+    siblings: [],
+  };
+}
+
 function videos(): Space {
   const base = suitcase();
   const slot = (n: number, over: Partial<Position> = {}) =>
@@ -1736,7 +1753,7 @@ export function fixtureOffer(token: string): OfferThread | null {
 export function fixtureSpace(handle: string, slug: string): Space | null {
   if (handle === "id")
     return (
-      [suitcase(), videos(), takeovers(), pitchReviews(), customService(), eventCoverage(), allYearService(), contentProduction(), ...offersFixtures()].find(
+      [suitcase(), suitcaseColour(), videos(), takeovers(), pitchReviews(), customService(), eventCoverage(), allYearService(), contentProduction(), ...offersFixtures()].find(
         (s) => s.id === slug,
       ) ?? null
     );
@@ -1744,6 +1761,7 @@ export function fixtureSpace(handle: string, slug: string): Space | null {
     const offered = offersFixtures().find((s) => s.slug === slug);
     if (offered) return offered;
     if (slug === "road-to-token2049") return suitcase();
+    if (slug === "road-to-token2049-colour") return suitcaseColour();
     if (slug === "token2049-videos") return videos();
     if (slug === "token2049-takeover") return takeovers();
     if (slug === "token2049-pitch-reviews") return pitchReviews();

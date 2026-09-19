@@ -81,6 +81,7 @@ import { Notice } from "./parts";
 import { ListingBanner } from "./run/ListingBanner";
 import { Offers } from "./run/Offers";
 import { PhotoEditor } from "./run/PhotoEditor";
+import { ColourEditor, ProductHub, drawingOf } from "./run/ProductLook";
 import { Work } from "./run/Work";
 import { ListingSeries } from "./series/Series";
 import { ListingTeam } from "./team/ListingTeam";
@@ -97,7 +98,7 @@ const SCREEN_TITLE: Record<Screen, string> = {
   offers: "Offers & bids",
   floors: "Floor prices",
   spots: "Spots",
-  photo: "Photo",
+  photo: "Your product",
   deliveries: "Deliveries",
   updates: "Updates",
   content: "Offer them content",
@@ -206,6 +207,21 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
     return <ContentOfferScreen back={href(`/listings/${space.id}`)} crumb={space.serviceName || space.title} leads={leads} initial={item ?? null} />;
   }
 
+  if (screen === "photo" && item) {
+    // One way of dressing the product, on its own screen, with Back to "Your product".
+    const back = href(`/listings/${space.id}?tab=photo`);
+    const side = item.startsWith("side-") ? decodeURIComponent(item.slice(5)) : null;
+    const sideLabel = side ? drawingOf(space).views.find((v) => v.key === side)?.label ?? side : null;
+    const title = item === "colour" ? "Colours" : item === "one" ? "One photo" : sideLabel ? `${sideLabel} photo` : "Your product";
+    return (
+      <ScreenFrame space={space} title={title} back={back}>
+        {item === "colour" ? <ColourEditor space={space} onChanged={changed} /> : null}
+        {item === "one" ? <PhotoEditor space={space} onChanged={changed} /> : null}
+        {side ? <PhotoEditor key={side} space={space} onChanged={changed} view={side} viewLabel={sideLabel} /> : null}
+      </ScreenFrame>
+    );
+  }
+
   if (screen) {
     return (
       <ScreenFrame space={space} title={SCREEN_TITLE[screen]}>
@@ -221,7 +237,7 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
         ) : null}
         {screen === "floors" ? <Floors space={space} groups={floors} onChanged={changed} /> : null}
         {screen === "spots" ? <Spots space={space} /> : null}
-        {screen === "photo" ? <PhotoEditor space={space} onChanged={changed} /> : null}
+        {screen === "photo" ? <ProductHub space={space} /> : null}
         {screen === "deliveries" ? (
           <Panel title="Deliveries" bodyClassName={PANEL_BODY}>
             <Work space={space} onChanged={changed} />
@@ -245,6 +261,7 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
   const events = series?.spaces.length ?? (space.event ? 1 : 0);
   const floorsSet = floors.filter((g) => g.current !== null).length;
   const placedSquares = space.positions.filter((p) => p.rect).length;
+  const sidesLive = Object.values(space.viewPhotos ?? {}).filter((v) => v.ready).length;
 
   return (
     <div className="flex flex-col gap-4">
@@ -279,8 +296,28 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
             screen="photo"
             space={space}
             icon={IconImage}
-            value={!space.photo ? "–" : space.photo.ready ? "Live" : `${placedSquares}/${space.positions.length}`}
-            unit={!space.photo ? "use the drawing" : space.photo.ready ? "on your page" : "spots placed"}
+            value={
+              space.photo
+                ? space.photo.ready
+                  ? "Photo"
+                  : `${placedSquares}/${space.positions.length}`
+                : sidesLive > 0
+                  ? `${sidesLive} ${sidesLive === 1 ? "side" : "sides"}`
+                  : space.productLook
+                    ? "Colours"
+                    : "–"
+            }
+            unit={
+              space.photo
+                ? space.photo.ready
+                  ? "on your page"
+                  : "spots placed"
+                : sidesLive > 0
+                  ? "photographed"
+                  : space.productLook
+                    ? "on the drawing"
+                    : "colours or photos"
+            }
           />
         ) : null}
         {shown.deliveries ? (
@@ -402,13 +439,24 @@ function LinkCard({ share }: { share: { url: string; text: string } | null }) {
 
 /* ── A card's own screen ──────────────────────────────────────────── */
 
-function ScreenFrame({ space, title, children }: { space: SpaceView; title: string; children: ReactNode }) {
+function ScreenFrame({
+  space,
+  title,
+  back,
+  children,
+}: {
+  space: SpaceView;
+  title: string;
+  /** Where Back goes: the listing's hub unless this screen sits under another. */
+  back?: string;
+  children: ReactNode;
+}) {
   const href = useHref();
   return (
     <div className="flex flex-col gap-4">
       <div className="flex min-w-0 items-center gap-3">
         <Link
-          href={href(`/listings/${space.id}`)}
+          href={back ?? href(`/listings/${space.id}`)}
           className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-[10px] border border-white/10 bg-white/[0.05] px-3 text-tiny font-medium text-[#CFE3EC] transition-colors hover:bg-white/10 hover:text-text"
         >
           <IconArrowLeft className="h-3.5 w-3.5" />

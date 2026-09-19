@@ -77,6 +77,7 @@ import { BriefForm, BriefReady, EMPTY_BRIEF, PackageLines, PaidProduction, type 
 import { QrCode } from "./qr";
 import { ManageLinkBox, SessionContactForm } from "./SessionBooking";
 import { SponsorContentForm } from "./SponsorContentForm";
+import { SpotPreview } from "./ProductBoard";
 
 /**
  * Paying for one spot from the public page, with no HOLD account.
@@ -637,6 +638,17 @@ export function Checkout({
         <>
           {/* Who is paid, how much, on what: Quick Send's head. */}
           <div className="flex flex-col items-center gap-4 pt-1 text-center">
+            {/* The spot itself, on the creator's own product: their photo or their colours. */}
+            {space.kind === "placement" && space.template ? (
+              <SpotPreview
+                template={space.template}
+                look={space.productLook ?? null}
+                viewPhotos={space.viewPhotos ?? null}
+                photo={space.photo ?? null}
+                positions={space.positions}
+                position={position}
+              />
+            ) : null}
             <CreatorChip creator={space.creator} />
             {/* One figure: what leaves the wallet. The fee is inside it, said once. */}
             <div className="flex flex-col items-center gap-1.5">

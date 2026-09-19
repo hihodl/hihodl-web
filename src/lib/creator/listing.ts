@@ -458,6 +458,10 @@ export interface SpaceView {
   production?: PackageView | null;
   /** "What you get" in the creator's words; null or absent is never edited. */
   brandGets?: BrandGetsLine[] | null;
+  /** The product in the creator's colours, or null for the outline alone. Absent on an older server. */
+  productLook?: { body: string; accent: string } | null;
+  /** A photo per side of the product, keyed by view. Empty or absent: none. Never with `photo`. */
+  viewPhotos?: Record<string, ListingPhoto>;
 }
 
 export interface SpaceCard {

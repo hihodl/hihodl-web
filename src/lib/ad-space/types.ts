@@ -524,6 +524,17 @@ export interface Space {
    * or absent: never edited, the page shows the suggestions.
    */
   brandGets?: BrandGetsLine[] | null;
+  /**
+   * The product in the creator's colours: `body` fills the drawing, `accent`
+   * its handle, wheels and trim. Null draws the outline alone.
+   */
+  productLook?: { body: string; accent: string } | null;
+  /**
+   * A real photo per side of the product, keyed by view, each side's spots
+   * `rect`s on its own photo. Only sides whose every spot has its square; a
+   * side not here keeps the drawing. Never together with `photo`.
+   */
+  viewPhotos?: Record<string, SpacePhoto>;
 }
 
 export type BrandGetsLine = { kind: "reach" } | { kind: "spot" } | { kind: "text"; text: string };
