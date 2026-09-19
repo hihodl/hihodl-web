@@ -457,7 +457,9 @@ export function BeforeYouPay({ space }: { space: Space }) {
       <h2 id="what-you-get" className="mt-3 font-display text-h3 font-light text-sp-ink md:text-h2">
         What you get
       </h2>
-      <div className="mt-8 grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+      {/* items-start: each card is as tall as what it says. Stretched to the
+          taller column, a two-line list was a big empty box. */}
+      <div className="mt-8 grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <WhatTheBrandGets space={space} />
         <div className="flex flex-col gap-5">
           <IfItDoesNotHappen space={space} />

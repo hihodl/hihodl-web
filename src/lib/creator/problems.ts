@@ -184,9 +184,23 @@ function detailedProblems(
           `Say what a brand gets, in ${LIMITS.SERVICE_SUMMARY_MIN} to ${LIMITS.SERVICE_SUMMARY_MAX} characters.`,
         );
         break;
+      case "brand_gets_too_many":
+      case "brand_gets_invalid":
+        at("brandGets", "publish", "Up to 8 lines, each one thing a brand gets.");
+        break;
+      case "brand_gets_line_invalid":
+      case "brand_gets_line_length":
+        at(`brandGets:${index}`, "publish", "3 to 120 characters.");
+        break;
       case "text_not_allowed": {
         const field2 =
-          p.field === "serviceName" ? "serviceName" : p.field === "serviceSummary" ? "serviceSummary" : `deliverable:${index}:note`;
+          p.field === "serviceName"
+            ? "serviceName"
+            : p.field === "serviceSummary"
+              ? "serviceSummary"
+              : p.field === "brandGets"
+                ? `brandGets:${index}`
+                : `deliverable:${index}:note`;
         at(
           field2,
           "publish",

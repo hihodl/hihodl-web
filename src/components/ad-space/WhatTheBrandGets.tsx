@@ -107,18 +107,22 @@ export function WhatTheBrandGets({ space }: { space: Space }) {
     );
   }
 
-  const reach = reachLine(space);
+  // The creator's lines in their order; untouched, our two suggestions. A
+  // ladder's rungs each say what they are, so a ladder never shows "the spot".
+  const lines = (space.brandGets ?? [{ kind: "reach" }, { kind: "spot" }]).filter((l) => !(tiered && l.kind === "spot"));
+  const shown = lines.flatMap((l, i) => {
+    const text = l.kind === "text" ? l.text : l.kind === "reach" ? reachLine(space) : spotLine(space);
+    return text ? [<Item key={`${l.kind}-${i}`} text={text} strong />] : [];
+  });
   return (
     <div className={`${card} p-5 md:p-6`}>
       <ul className="flex flex-col gap-4">
-        {reach ? <Item text={reach} strong /> : null}
+        {shown}
         {tiered ? (
           <li className="text-small text-sp-ink/85">
             {items.length ? "Every package also includes:" : "Each package lists what it includes."}
           </li>
-        ) : (
-          <Item text={spotLine(space)} strong />
-        )}
+        ) : null}
         {items.map((d) => {
           const note = deliverableNote(d);
           const statePill = STATE_PILL[d.state];
@@ -144,6 +148,9 @@ export function WhatTheBrandGets({ space }: { space: Space }) {
             </li>
           );
         })}
+        {shown.length === 0 && items.length === 0 && !tiered ? (
+          <Item text={spotLine(space)} strong />
+        ) : null}
       </ul>
     </div>
   );

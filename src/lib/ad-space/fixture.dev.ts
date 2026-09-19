@@ -267,6 +267,13 @@ function suitcase(): Space {
     slug: "road-to-token2049",
     title: "Road to TOKEN2049",
     reason: "Funding my ticket, flight and stay. Your logo rides through Changi, the venue and every vlog.",
+    // The creator's own "What you get": two lines of theirs around our two suggestions.
+    brandGets: [
+      { kind: "reach" },
+      { kind: "text", text: "Your logo in the thumbnail of the packing vlog" },
+      { kind: "spot" },
+      { kind: "text", text: "A thank-you tag the day I land in Singapore" },
+    ],
     status: "live",
     kind: "placement",
     closesAt: new Date(Date.now() + 12 * DAY + 5 * 60 * 60 * 1000).toISOString(),
@@ -377,6 +384,8 @@ function videos(): Space {
     slug: "token2049-videos",
     title: "TOKEN2049 short videos",
     reason: "Three dedicated videos from the floor, one sponsor each.",
+    // Never edited: the page shows our two suggestions, and the card is only as tall as they are.
+    brandGets: null,
     kind: "service",
     deliverBy: "2026-10-20",
     chains: ["solana", "base"],

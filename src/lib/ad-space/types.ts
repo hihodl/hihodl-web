@@ -518,7 +518,15 @@ export interface Space {
   photo?: SpacePhoto | null;
   /** The same creator's other live or closed spaces for the same event. */
   siblings: SpaceSibling[];
+  /**
+   * "What you get" in the creator's words and order: their own `text` lines
+   * and our `reach` / `spot` suggestions, worded here from live figures. Null
+   * or absent: never edited, the page shows the suggestions.
+   */
+  brandGets?: BrandGetsLine[] | null;
 }
+
+export type BrandGetsLine = { kind: "reach" } | { kind: "spot" } | { kind: "text"; text: string };
 
 /* ── Events (ad-space-events-v0.md) ───────────────────────────────────── */
 

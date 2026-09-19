@@ -456,6 +456,8 @@ export interface SpaceView {
   photo?: ListingPhoto | null;
   /** Content production: what a spot includes. Null on every other template; absent on an older server. */
   production?: PackageView | null;
+  /** "What you get" in the creator's words; null or absent is never edited. */
+  brandGets?: BrandGetsLine[] | null;
 }
 
 export interface SpaceCard {
@@ -736,6 +738,18 @@ export interface ZoneDraft {
   accepts: ContentKind[];
 }
 
+/**
+ * One line of "What you get", in the creator's words (brand-gets-rules.ts on
+ * the backend). `reach` and `spot` are OUR suggestions, worded on the page
+ * from live figures; `text` is the creator's own line.
+ */
+export type BrandGetsLine = { kind: "reach" } | { kind: "spot" } | { kind: "text"; text: string };
+
+export const BRAND_GETS_LIMITS = { MAX_LINES: 8, TEXT_MIN: 3, TEXT_MAX: 120 } as const;
+
+/** What an untouched listing shows: the two suggestions, reach first. */
+export const BRAND_GETS_SUGGESTED: readonly BrandGetsLine[] = [{ kind: "reach" }, { kind: "spot" }];
+
 export interface DeliverableDraft {
   kind: DeliverableKind;
   platform: Platform | null;
@@ -764,6 +778,8 @@ export interface ListingDraft {
   fallbackNote: string;
   attestations: Attestation[];
   deliverables: DeliverableDraft[];
+  /** "What you get" lines in the creator's order; null is never edited (the suggestions show). */
+  brandGets: BrandGetsLine[] | null;
   deliverBy: string;
   serviceName: string;
   serviceSummary: string;
@@ -834,6 +850,7 @@ export function draftFor(template: Template): ListingDraft {
     fallbackNote: "",
     attestations: [],
     deliverables: [],
+    brandGets: null,
     deliverBy: "",
     serviceName: "",
     serviceSummary: "",
@@ -919,6 +936,7 @@ export function draftFromSpace(space: SpaceView, template: Template): ListingDra
       dueDate: d.dueDate,
       note: d.note ?? "",
     })),
+    brandGets: space.brandGets ? space.brandGets.map((l) => ({ ...l })) : null,
     deliverBy: space.deliverBy ?? "",
     serviceName: space.serviceName ?? "",
     serviceSummary: space.serviceSummary ?? "",
@@ -1037,6 +1055,13 @@ export function bodyOf(draft: ListingDraft, template: Template): Record<string, 
     fallback: draft.fallback,
     fallbackNote: draft.fallbackNote.trim() || null,
     attestations: draft.attestations,
+    // A line still being typed (empty) is not sent: the draft keeps it, the page does not.
+    brandGets:
+      draft.brandGets === null
+        ? null
+        : draft.brandGets.flatMap((l): BrandGetsLine[] =>
+            l.kind !== "text" ? [l] : l.text.trim() ? [{ kind: "text", text: l.text.trim() }] : [],
+          ),
   };
 
   if (template.kind === "service") {
