@@ -141,7 +141,7 @@ function ViewFigure({
           );
         })}
       </svg>
-      <figcaption className="text-tiny uppercase tracking-wider text-text-faint">{view.label}</figcaption>
+      <figcaption className="text-tiny uppercase tracking-wider text-sp-ink/80">{view.label}</figcaption>
     </figure>
   );
 }
@@ -174,7 +174,7 @@ function PhotoFigure({
       className="mx-auto [--ph:300px] md:[--ph:440px]"
       style={{ width: `min(100%, calc(var(--ph) * ${aspect.toFixed(5)}))` }}
     >
-      <div className="overflow-hidden rounded-[18px] border border-white/10">
+      <div className="overflow-hidden rounded-[18px] border border-sp-ink/10">
         <svg
           viewBox={`0 0 ${W} ${H}`}
           className="block w-full"
@@ -268,7 +268,7 @@ function Zone({
       role="button"
       tabIndex={0}
       aria-label={label}
-      className="cursor-pointer outline-none [&:focus-visible>rect:first-of-type]:stroke-text"
+      className="cursor-pointer outline-none [&:focus-visible>rect:first-of-type]:stroke-sp-ink"
       onPointerEnter={() => onHover(p.id)}
       onPointerLeave={() => onHover(null)}
       onFocus={() => onHover(p.id)}

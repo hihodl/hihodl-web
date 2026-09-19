@@ -111,11 +111,11 @@ export default async function EventPage({
       <SpacesGround>
         <SlimHeader />
         <main className="container-page flex min-h-[60vh] flex-col justify-center py-20">
-          <p className={`${eyebrow} text-amber`}>HiSpace</p>
-          <h1 className="mt-5 max-w-2xl font-display text-h3 font-light text-text md:text-h2">
+          <p className={`${eyebrow} text-sp-amber`}>HiSpace</p>
+          <h1 className="mt-5 max-w-2xl font-display text-h3 font-light text-sp-ink md:text-h2">
             We couldn&rsquo;t load this event just now.
           </h1>
-          <p className="mt-5 max-w-xl text-body text-text-muted">
+          <p className="mt-5 max-w-xl text-body text-sp-ink/85">
             This is on our side, not the link. Give it a moment and refresh the page.
           </p>
         </main>
@@ -136,7 +136,7 @@ export default async function EventPage({
         <EventBanner event={event} now={now} />
         <section className="container-page py-10 md:py-14" aria-label="Spaces">
           {total === 0 && (
-            <p className="mb-6 max-w-2xl break-words text-body text-text-muted [overflow-wrap:anywhere]">
+            <p className="mb-6 max-w-2xl break-words text-body text-sp-ink/85 [overflow-wrap:anywhere]">
               Nobody has opened a space for {event.name} yet.
             </p>
           )}
@@ -146,7 +146,7 @@ export default async function EventPage({
           </div>
           {/* Visible only when the other tab is where the spots are, so nobody misses it. */}
           {tabs[active].length > 0 && openSpots(tabs[active]) === 0 && openElsewhere && (
-            <p className="mt-6 text-small text-text-muted">
+            <p className="mt-6 text-small text-sp-ink/85">
               Everything here is taken. Another tab still has open spots.
             </p>
           )}

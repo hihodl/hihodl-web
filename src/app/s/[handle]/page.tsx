@@ -102,11 +102,11 @@ export default async function CreatorPage({ params, searchParams }: { params: Pa
       <>
         <SlimHeader />
         <main className="container-page flex min-h-[60vh] flex-col justify-center py-20">
-          <p className={`${eyebrow} text-amber`}>HiSpace</p>
-          <h1 className="mt-5 max-w-2xl font-display text-h3 font-light text-text md:text-h2">
+          <p className={`${eyebrow} text-sp-amber`}>HiSpace</p>
+          <h1 className="mt-5 max-w-2xl font-display text-h3 font-light text-sp-ink md:text-h2">
             We couldn&rsquo;t load this creator just now.
           </h1>
-          <p className="mt-5 max-w-xl text-body text-text-muted">
+          <p className="mt-5 max-w-xl text-body text-sp-ink/85">
             This is on our side, not the link. Give it a moment and refresh the page.
           </p>
         </main>
@@ -141,7 +141,7 @@ export default async function CreatorPage({ params, searchParams }: { params: Pa
           {current.length > 0 ? (
             <GroupGrid handle={creator.xHandle} groups={current} kind={kind} now={now} />
           ) : (
-            <p className="text-body text-text-muted">Nothing on sale right now.</p>
+            <p className="text-body text-sp-ink/85">Nothing on sale right now.</p>
           )}
         </section>
       </main>

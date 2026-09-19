@@ -102,7 +102,7 @@ export function AmountField({
       <label className="flex flex-col items-center gap-2 text-center">
         <span className={fieldLabel}>{label}</span>
         <span className="flex items-baseline justify-center gap-1 tabular-nums">
-          <span className="text-[52px] font-strong leading-none tracking-[-0.035em] text-white/60 sm:text-[60px]" aria-hidden>
+          <span className="text-[52px] font-strong leading-none tracking-[-0.035em] text-white/85 sm:text-[60px]" aria-hidden>
             $
           </span>
           {/* A mirror of the value sizes the input, so the amount stays centred as it is typed. */}
@@ -114,7 +114,7 @@ export function AmountField({
               {value || "0"}
             </span>
             <input
-              className="col-start-1 row-start-1 w-full min-w-0 bg-transparent text-[52px] font-strong leading-none tracking-[-0.035em] text-text caret-amber outline-none placeholder:text-white/25 disabled:opacity-60 sm:text-[60px]"
+              className="col-start-1 row-start-1 w-full min-w-0 bg-transparent text-[52px] font-strong leading-none tracking-[-0.035em] text-sp-ink caret-amber outline-none placeholder:text-white/45 disabled:opacity-60 sm:text-[60px]"
               size={1}
               value={value}
               onChange={(e) => onChange(e.target.value)}
@@ -125,7 +125,7 @@ export function AmountField({
               aria-describedby="offer-amount-figures"
             />
           </span>
-          <span className="ml-1 text-[18px] font-medium text-white/60">USDC</span>
+          <span className="ml-1 text-[18px] font-medium text-white/85">USDC</span>
         </span>
         {hint && <span className="text-small text-[#CFE3EC]">{hint}</span>}
       </label>
@@ -332,7 +332,7 @@ export function OfferSheet({
           "Send my offer"
         )}
       </button>
-      <p className="flex items-center justify-center gap-2 text-center text-tiny text-white/60">
+      <p className="flex items-center justify-center gap-2 text-center text-tiny text-white/85">
         Nothing is paid now.
         <InfoTip label="What happens next">
           Nothing is paid and nothing is locked. If @{handle} accepts your {thing}, you have 24 hours to pay it from any
@@ -378,7 +378,7 @@ export function OfferSheet({
             <ul className="flex flex-col gap-1.5 px-1">
               {perks.slice(0, 3).map((line, i) => (
                 <li key={i} className="flex items-start gap-2.5 text-small text-[#CFE3EC] [overflow-wrap:anywhere]">
-                  <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-[3px] bg-white/40" aria-hidden />
+                  <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-[3px] bg-sp-ink/40" aria-hidden />
                   {line}
                 </li>
               ))}
@@ -410,7 +410,7 @@ export function OfferSheet({
                     : "Only the creator sees it. We don't message X or Telegram: the link you get next is how you follow it."}
                 </InfoTip>
               </span>
-              <div className="flex items-stretch overflow-hidden rounded-[14px] bg-black/25 ring-1 ring-inset ring-white/[0.08] focus-within:ring-amber/60">
+              <div className="flex items-stretch overflow-hidden rounded-[14px] bg-black/25 ring-1 ring-inset ring-sp-ink/[0.08] focus-within:ring-amber/60">
                 <select
                   aria-label="Contact type"
                   value={contactKind}
@@ -419,7 +419,7 @@ export function OfferSheet({
                     setNotice(null);
                   }}
                   disabled={busy}
-                  className="shrink-0 cursor-pointer appearance-none border-r border-white/[0.08] bg-white/[0.05] py-3 pl-4 pr-8 text-small font-medium text-text outline-none"
+                  className="shrink-0 cursor-pointer appearance-none border-r border-sp-ink/[0.08] bg-sp-ink/[0.05] py-3 pl-4 pr-8 text-small font-medium text-sp-ink outline-none"
                   style={{
                     backgroundImage:
                       "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M2 3.5l3 3 3-3' stroke='%23ffffff99' stroke-width='1.5' fill='none' stroke-linecap='round'/></svg>\")",
@@ -434,7 +434,7 @@ export function OfferSheet({
                   ))}
                 </select>
                 <input
-                  className="min-w-0 flex-1 bg-transparent px-4 py-3 text-body text-text outline-none placeholder:text-white/30"
+                  className="min-w-0 flex-1 bg-transparent px-4 py-3 text-body text-sp-ink outline-none placeholder:text-white/45"
                   aria-labelledby="offer-contact-label"
                   value={contactValue}
                   onChange={(e) => setContactValue(e.target.value)}
@@ -452,7 +452,7 @@ export function OfferSheet({
               <label className="flex flex-col gap-2">
                 <span className="flex items-baseline justify-between gap-3">
                   <span className={fieldLabel}>Message to @{handle}</span>
-                  <span className={`text-tiny ${message.length > OFFER_MESSAGE_MAX ? "text-amber" : "text-white/60"}`}>
+                  <span className={`text-tiny ${message.length > OFFER_MESSAGE_MAX ? "text-sp-amber" : "text-white/85"}`}>
                     {message.length}/{OFFER_MESSAGE_MAX}
                   </span>
                 </span>
@@ -469,7 +469,7 @@ export function OfferSheet({
             ) : (
               <button
                 type="button"
-                className="self-start px-1 text-small font-medium text-amber hover:text-amber-glow"
+                className="self-start px-1 text-small font-medium text-sp-amber hover:text-amber-glow"
                 onClick={() => setWantsMessage(true)}
               >
                 + Add a message
@@ -479,15 +479,15 @@ export function OfferSheet({
 
           <section
             ref={verifyRef}
-            className="flex scroll-mb-4 flex-col gap-4 rounded-[18px] p-4 ring-1 ring-inset ring-white/[0.10]"
+            className="flex scroll-mb-4 flex-col gap-4 rounded-[18px] p-4 ring-1 ring-inset ring-sp-ink/[0.10]"
             aria-labelledby="verify-title"
           >
             <div className="flex items-center justify-between gap-3">
               <span className="flex min-w-0 items-center gap-2">
-                <span id="verify-title" className="text-body font-medium text-text">
+                <span id="verify-title" className="text-body font-medium text-sp-ink">
                   Verify you can pay
                 </span>
-                {kind !== "bid" && <span className="text-tiny text-white/60">Optional</span>}
+                {kind !== "bid" && <span className="text-tiny text-white/85">Optional</span>}
                 <InfoTip label="About verifying">
                   {kind === "bid"
                     ? "A bid counts only if a wallet of yours holds what you'd pay. "
@@ -545,13 +545,13 @@ function OfferSent({ sent, space, what }: { sent: Sent; space: Space; what: stri
     <div className="flex flex-col gap-6">
       <div className="flex flex-col items-center gap-3 pt-2 text-center">
         <PaidMark />
-        <p className="text-[40px] font-medium leading-none tracking-[-0.02em] tabular-nums text-text">
+        <p className="text-[40px] font-medium leading-none tracking-[-0.02em] tabular-nums text-sp-ink">
           {dollars(offer.amountUsdc) ?? `${offer.amountUsdc} USDC`}
         </p>
-        <p className="text-body text-text">
+        <p className="text-body text-sp-ink">
           {bid ? (offer.leading ? "You're the highest bid." : "Your bid is in.") : `Your offer is with @${handle}.`}
         </p>
-        <p className="max-w-sm text-small text-white/60">
+        <p className="max-w-sm text-small text-white/85">
           {offer.status === "countered" && offer.counterUsdc
             ? `@${handle} already answered with ${dollars(offer.counterUsdc) ?? offer.counterUsdc}: open your link to accept, raise or withdraw.`
             : bid
@@ -559,12 +559,12 @@ function OfferSent({ sent, space, what }: { sent: Sent; space: Space; what: stri
               : "The creator has 48 hours to accept, counter or decline."}
         </p>
         {offer.sponsor.backed ? (
-          <p className="flex items-center gap-1.5 text-small text-success">
+          <p className="flex items-center gap-1.5 text-small text-sp-ok">
             <Tick /> Funds checked
           </p>
         ) : (
           sent.proofSent && (
-            <p className="max-w-sm text-small text-amber">
+            <p className="max-w-sm text-small text-sp-amber">
               We couldn&rsquo;t confirm the USDC in that wallet, so it went in without the Funds checked badge.
             </p>
           )
@@ -611,13 +611,13 @@ export function OfferLinkBox({ token, manageUrl, kind }: { token: string | null;
 
   return (
     <div className="flex flex-col gap-3 rounded-card border border-amber/40 bg-amber/[0.06] p-4">
-      <p className="text-body text-text">Save this link</p>
-      <p className="text-small text-text-muted">
+      <p className="text-body text-sp-ink">Save this link</p>
+      <p className="text-small text-sp-ink/85">
         It is your {thing}: where you see the creator&rsquo;s answer, accept a counter-offer, raise, withdraw, and pay
         if it&rsquo;s accepted. This browser keeps it too. Anyone with it can manage your {thing}, so keep it to
         yourself.
       </p>
-      <p className="break-all rounded-input border border-[color:var(--color-hairline-strong)] bg-white/[0.04] px-3 py-2 font-mono text-tiny text-text">
+      <p className="break-all rounded-input border border-[color:var(--color-hairline-strong)] bg-sp-ink/[0.04] px-3 py-2 font-mono text-tiny text-sp-ink">
         {link}
       </p>
       <div className="flex flex-wrap gap-2">

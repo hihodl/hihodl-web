@@ -82,29 +82,29 @@ export function EventMiniCard({
   const body = (
     <>
       <div className="flex flex-wrap items-center gap-2">
-        <span className="inline-flex h-6 items-center whitespace-nowrap rounded-[12px] bg-white/[0.12] px-2.5 text-tiny text-white/85">
+        <span className="inline-flex h-6 items-center whitespace-nowrap rounded-[12px] bg-sp-ink/[0.12] px-2.5 text-tiny text-white/85">
           {categoryLabel(event.category)}
         </span>
         <span
           className={
             countdown.phase === "now"
-              ? "inline-flex h-6 items-center whitespace-nowrap rounded-[12px] bg-amber/20 px-2.5 text-tiny text-amber"
-              : "inline-flex h-6 items-center whitespace-nowrap rounded-[12px] bg-white/[0.12] px-2.5 text-tiny text-white/85"
+              ? "inline-flex h-6 items-center whitespace-nowrap rounded-[12px] bg-amber/20 px-2.5 text-tiny text-sp-amber"
+              : "inline-flex h-6 items-center whitespace-nowrap rounded-[12px] bg-sp-ink/[0.12] px-2.5 text-tiny text-white/85"
           }
         >
           {countdown.phase === "upcoming" ? `Starts ${countdown.text}` : capitalise(countdown.text)}
         </span>
       </div>
       <Heading className="mt-3 break-words font-display text-h4 font-light leading-tight text-white [overflow-wrap:anywhere]">{event.name}</Heading>
-      <p className="mt-1 break-words text-small text-white/75">
+      <p className="mt-1 break-words text-small text-white/85">
         {event.city} · {eventDates(event.startsOn, event.endsOn)}
       </p>
     </>
   );
   const shell =
-    "block w-full max-w-[320px] rounded-card border border-white/[0.14] bg-[#141F2E]/70 p-4 backdrop-blur-md";
+    "block w-full max-w-[320px] rounded-card border border-sp-ink/[0.14] bg-[#141F2E]/70 p-4 backdrop-blur-md";
   return href ? (
-    <Link href={href} className={`${shell} transition-colors duration-180 hover:border-white/30`}>
+    <Link href={href} className={`${shell} transition-colors duration-180 hover:border-sp-ink/30`}>
       {body}
     </Link>
   ) : (
@@ -200,10 +200,10 @@ export function SpaceSiblings({ siblings }: { siblings: SpaceSibling[] }) {
     <ul className="mb-6 flex flex-col gap-1.5">
       {siblings.map((s) => (
         <li key={s.path} className="text-small">
-          <Link href={s.path} className="group text-text-muted transition-colors duration-180 hover:text-text">
+          <Link href={s.path} className="group text-sp-ink/85 transition-colors duration-180 hover:text-sp-ink">
             Also {TAB_NAME[s.tab].toLowerCase()}:{" "}
-            <span className="text-text underline-offset-4 group-hover:underline">{s.title}</span>
-            <span aria-hidden className="ml-1 text-text-faint">
+            <span className="text-sp-ink underline-offset-4 group-hover:underline">{s.title}</span>
+            <span aria-hidden className="ml-1 text-sp-ink/80">
               &rarr;
             </span>
           </Link>
@@ -244,23 +244,23 @@ export function EventTabs({
               className={`flex min-w-0 flex-col gap-1 rounded-card border p-3 transition-colors duration-180 sm:p-4 md:p-5 ${
                 on
                   ? "border-amber/50 bg-amber/[0.07]"
-                  : "border-[color:var(--color-hairline)] bg-white/[0.02] hover:bg-white/[0.05]"
+                  : "border-[color:var(--color-hairline)] bg-sp-ink/[0.02] hover:bg-sp-ink/[0.05]"
               }`}
             >
               <span className="flex flex-col gap-x-3 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between">
-                <span className={`text-small sm:text-body ${on ? "text-amber" : "text-text"}`}>{TAB_NAME[tab]}</span>
-                <span className="text-tiny text-text-faint">
+                <span className={`text-small sm:text-body ${on ? "text-sp-amber" : "text-sp-ink"}`}>{TAB_NAME[tab]}</span>
+                <span className="text-tiny text-sp-ink/80">
                   {n} {n === 1 ? "space" : "spaces"}
                 </span>
               </span>
-              <span className="hidden break-words text-small text-text-muted [overflow-wrap:anywhere] sm:block">
+              <span className="hidden break-words text-small text-sp-ink/85 [overflow-wrap:anywhere] sm:block">
                 {tabSubtitle(tab, eventName)}
               </span>
             </Link>
           );
         })}
       </nav>
-      <p className="mt-3 break-words text-small text-text-muted [overflow-wrap:anywhere] sm:hidden">
+      <p className="mt-3 break-words text-small text-sp-ink/85 [overflow-wrap:anywhere] sm:hidden">
         {tabSubtitle(active, eventName)}
       </p>
     </div>
@@ -424,7 +424,7 @@ function SpaceCardTile({
   return (
     <Link
       href={c.path}
-      className={`${cardClass} group flex w-full min-w-0 flex-col overflow-hidden transition-colors duration-180 hover:border-[color:var(--color-hairline-strong)] hover:bg-white/[0.05]`}
+      className={`${cardClass} group flex w-full min-w-0 flex-col overflow-hidden transition-colors duration-180 hover:border-[color:var(--color-hairline-strong)] hover:bg-sp-ink/[0.05]`}
     >
       <CardVisual card={c} />
       <div className={`flex flex-1 flex-col px-5 pb-5 ${showCreator ? "" : "pt-4"}`}>
@@ -436,12 +436,12 @@ function SpaceCardTile({
             </div>
 
             <div className="mt-3 min-w-0">
-              <p className="flex min-w-0 items-center gap-1.5 text-body text-text">
+              <p className="flex min-w-0 items-center gap-1.5 text-body text-sp-ink">
                 <span className="truncate">{xName || (xHandle ? `@${xHandle}` : "A creator")}</span>
                 <VerifiedTick type={c.creator.xVerifiedType} />
               </p>
-              {handleLine && <p className="truncate text-small text-text-muted">{handleLine}</p>}
-              <p className={`mt-0.5 text-tiny ${trackRecordNeedsAttention(c.creator.trackRecord) ? "text-amber" : "text-text-faint"}`}>
+              {handleLine && <p className="truncate text-small text-sp-ink/85">{handleLine}</p>}
+              <p className={`mt-0.5 text-tiny ${trackRecordNeedsAttention(c.creator.trackRecord) ? "text-sp-amber" : "text-sp-ink/80"}`}>
                 {trackRecordText(c.creator.trackRecord)}
               </p>
             </div>
@@ -449,31 +449,31 @@ function SpaceCardTile({
         )}
 
         <h3
-          className={`${showCreator ? "mt-4 text-body" : "text-lead"} line-clamp-2 break-words text-text [overflow-wrap:anywhere] group-hover:text-amber`}
+          className={`${showCreator ? "mt-4 text-body" : "text-lead"} line-clamp-2 break-words text-sp-ink [overflow-wrap:anywhere] group-hover:text-sp-amber`}
         >
           {c.title}
         </h3>
-        {service && service !== c.title && <p className="mt-1 truncate text-small text-text-muted">{service}</p>}
+        {service && service !== c.title && <p className="mt-1 truncate text-small text-sp-ink/85">{service}</p>}
 
         <div className="mt-auto flex flex-wrap items-end justify-between gap-x-4 gap-y-2 pt-5">
           {/* A closed space sells nothing more, so it says what it sold and names no price. */}
           {!closed && c.fromPriceCents !== null ? (
             <span className="min-w-0">
-              <span className="block text-tiny text-text-faint">{room ? "Book from" : "From"}</span>
-              <span className="font-display text-h4 font-light tabular-nums text-text">{usdFromCents(c.fromPriceCents)}</span>
+              <span className="block text-tiny text-sp-ink/80">{room ? "Book from" : "From"}</span>
+              <span className="font-display text-h4 font-light tabular-nums text-sp-ink">{usdFromCents(c.fromPriceCents)}</span>
             </span>
           ) : (
             <span className="text-small">
-              <span className="tabular-nums text-text">
+              <span className="tabular-nums text-sp-ink">
                 {closed ? c.totals.sold : c.totals.open} of {c.totals.positions}
               </span>
-              <span className="text-text-muted">{closed ? (room ? " booked" : " sold") : room ? " sessions open" : " open"}</span>
+              <span className="text-sp-ink/85">{closed ? (room ? " booked" : " sold") : room ? " sessions open" : " open"}</span>
             </span>
           )}
           {status}
         </div>
         {!closed && (
-          <p className="mt-2 text-tiny text-text-faint">
+          <p className="mt-2 text-tiny text-sp-ink/80">
             <span className="tabular-nums">
               {c.totals.open} of {c.totals.positions}
             </span>
@@ -494,7 +494,7 @@ function CreatorAvatar({ name, url }: { name: string; url: string | null }) {
     );
   }
   return (
-    <span className={`${ring} flex items-center justify-center bg-brand-blue-deep text-h4 font-light text-text`} aria-hidden>
+    <span className={`${ring} flex items-center justify-center bg-brand-blue-deep text-h4 font-light text-sp-ink`} aria-hidden>
       {name.replace(/^@/, "").slice(0, 1).toUpperCase() || "?"}
     </span>
   );
@@ -542,11 +542,11 @@ function EmptyTab({ event, tab }: { event: EventSummary; tab: SpaceTab }) {
   const paidBy = tab === "room" ? "Clients pay you directly in USDC." : "Sponsors pay you directly in USDC.";
   return (
     <div className={`${cardClass} flex flex-col items-start gap-4 p-6 md:p-8`}>
-      <p className={`${eyebrow} text-text-faint`}>No spaces here yet</p>
-      <h3 className="max-w-xl break-words font-display text-h4 font-light text-text [overflow-wrap:anywhere]">
+      <p className={`${eyebrow} text-sp-ink/80`}>No spaces here yet</p>
+      <h3 className="max-w-xl break-words font-display text-h4 font-light text-sp-ink [overflow-wrap:anywhere]">
         Going to {event.name}? Open your space in the HOLD app.
       </h3>
-      <p className="max-w-xl text-small text-text-muted">
+      <p className="max-w-xl text-small text-sp-ink/85">
         {what[tab]} {paidBy}
       </p>
       <DownloadLink className={btnSmallSecondary}>Get HOLD</DownloadLink>

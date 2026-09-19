@@ -58,6 +58,23 @@
   /* Layout */
   --page-max:     1200px;
   --section-gap:  128px;
+
+  /* Spaces (public creator pages): the ink everything on the page is written
+     in, as RGB channels so Tailwind's /opacity works (`text-sp-ink/85`).
+     Dark grounds by default; a light ground re-declares these on its wrapper
+     (see src/lib/ad-space/theme.ts). Secondary text is ink at 85%, small
+     uppercase labels ink at 80%: never the old #5A6068 grey. */
+  --sp-ink:        255 255 255;
+  --sp-amber-ink:  255 183 3;
+  --sp-ok-ink:     74 222 128;
+  --sp-cool-ink:   142 163 255;
+  --sp-outline:    rgba(244, 246, 250, 0.55);
+  --sp-idle:       rgba(255, 255, 255, 0.28);
+  --sp-zone-ink:   #F4F6FA;
+  --sp-zone-fill:  rgba(91, 124, 255, 0.10);
+  --sp-zone-fill-hover: rgba(91, 124, 255, 0.24);
+  --sp-zone-stroke: #5B7CFF;
+  --sp-active:     #F4F6FA;
 }
 
 /* Base */

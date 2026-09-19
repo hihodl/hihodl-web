@@ -196,7 +196,7 @@ export function SpaceBoard({
     <div className="container-page flex flex-col gap-4">
       {resumable && !checkoutFor && (
         <div className="flex flex-col gap-4 rounded-card border border-amber/40 bg-amber/[0.06] p-5 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-small text-text">
+          <p className="text-small text-sp-ink">
             {resumable.order.status !== "paid"
               ? `Your payment for ${resumable.position.label} is still going through.`
               : session
@@ -233,11 +233,11 @@ export function SpaceBoard({
 
       {isService && (
         <section id="spots" className="container-page scroll-mt-20 py-10 md:py-14" aria-labelledby="pick">
-          <h2 id="pick" className="font-display text-h3 font-light text-text md:text-h2">
+          <h2 id="pick" className="font-display text-h3 font-light text-sp-ink md:text-h2">
             {session ? "Book a session" : `Pick your ${noun}`}
           </h2>
           {serviceSummary(space) && (
-            <p className="mt-3 max-w-2xl whitespace-pre-line break-words text-body text-text-muted [overflow-wrap:anywhere]">
+            <p className="mt-3 max-w-2xl whitespace-pre-line break-words text-body text-sp-ink/85 [overflow-wrap:anywhere]">
               {serviceSummary(space)}
             </p>
           )}
@@ -273,7 +273,7 @@ export function SpaceBoard({
 
       {!isService && cardList && (
         <section className="container-page py-12 md:py-16" aria-labelledby="every-spot">
-          <h2 id="every-spot" className="font-display text-h3 font-light text-text md:text-h2">
+          <h2 id="every-spot" className="font-display text-h3 font-light text-sp-ink md:text-h2">
             Every spot
           </h2>
           <div className="mt-8">{cardList}</div>
@@ -397,17 +397,17 @@ function SpaceOffersPanel({
   const reserved = offers?.reservedUntil ?? null;
   const noun = session ? "session" : "slot";
   return (
-    <div className="flex flex-col gap-4 rounded-card border border-[color:var(--color-hairline)] bg-white/[0.03] p-5 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-4 rounded-card border border-[color:var(--color-hairline)] bg-sp-ink/[0.03] p-5 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
-        <p className="text-body text-text">
+        <p className="text-body text-sp-ink">
           {mode === "offers" ? "Name your price" : `Buy a ${noun} now, or offer less`}
         </p>
-        <p className="mt-1 text-small text-text-muted">
+        <p className="mt-1 text-small text-sp-ink/85">
           For any open {noun}. Accepted? You get the next free one and 24 hours to pay.
           {n !== null && (n === 0 ? " No offers yet." : n === 1 ? " 1 open offer." : ` ${n} open offers.`)}
         </p>
         {reserved && (
-          <p className="mt-1 text-tiny text-amber">
+          <p className="mt-1 text-tiny text-sp-amber">
             An accepted offer holds a {noun} for{" "}
             {now === null ? `until ${instantUtc(reserved)}` : timeLeft(Date.parse(reserved) - now)} while it waits for
             its payment.
@@ -427,7 +427,7 @@ function SpaceOffersPanel({
 function YourOffers({ offers }: { offers: SavedOffer[] }) {
   return (
     <div className="mb-10 flex flex-col gap-3 rounded-card border border-amber/40 bg-amber/[0.06] p-5">
-      <p className="text-small text-text">
+      <p className="text-small text-sp-ink">
         {offers.length === 1 ? "You made an offer here from this browser." : `You made ${offers.length} offers here from this browser.`}
       </p>
       <ul className="flex flex-wrap gap-2">

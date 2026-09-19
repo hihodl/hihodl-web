@@ -9,11 +9,11 @@ export default function ProductionNotFound() {
     <>
       <SlimHeader />
       <main className="container-page flex min-h-[60vh] flex-col justify-center py-20">
-        <p className={`${eyebrow} text-amber`}>HiSpace</p>
-        <h1 className="mt-5 max-w-2xl font-display text-h3 font-light text-text md:text-h2">
+        <p className={`${eyebrow} text-sp-amber`}>HiSpace</p>
+        <h1 className="mt-5 max-w-2xl font-display text-h3 font-light text-sp-ink md:text-h2">
           This delivery link doesn&rsquo;t work.
         </h1>
-        <p className="mt-5 max-w-xl text-body text-text-muted">
+        <p className="mt-5 max-w-xl text-body text-sp-ink/85">
           Check that you copied all of it: it is the link the page showed you after you paid for your production spot.
         </p>
         <div className="mt-10">

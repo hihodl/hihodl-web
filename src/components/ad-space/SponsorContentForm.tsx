@@ -174,20 +174,20 @@ export function SponsorContentForm({
   return (
     <form onSubmit={submit} className="flex flex-col gap-5" noValidate>
       <div>
-        <h3 className="text-body text-text">What goes on your spot</h3>
-        <p className="mt-1 text-small text-text-muted">
+        <h3 className="text-body text-sp-ink">What goes on your spot</h3>
+        <p className="mt-1 text-small text-sp-ink/85">
           @{creatorHandle} approves it before it shows on the board. Come back in this same browser to check on it
           or send a new version: this browser is what proves the spot is yours.
         </p>
       </div>
 
       {review?.status === "approved" && (
-        <p className="rounded-card border border-success/30 bg-success/[0.06] px-4 py-3 text-small text-text-muted" role="status">
+        <p className="rounded-card border border-success/30 bg-success/[0.06] px-4 py-3 text-small text-sp-ink/85" role="status">
           Approved. It&rsquo;s on the board.
         </p>
       )}
       {review?.status === "pending" && (
-        <p className="rounded-card border border-[color:var(--color-hairline-strong)] bg-white/[0.03] px-4 py-3 text-small text-text-muted" role="status">
+        <p className="rounded-card border border-[color:var(--color-hairline-strong)] bg-sp-ink/[0.03] px-4 py-3 text-small text-sp-ink/85" role="status">
           Waiting for @{creatorHandle}&rsquo;s approval. It appears on the board once they approve it, and you can send
           a new version while you wait.
         </p>
@@ -212,18 +212,18 @@ export function SponsorContentForm({
               <span className="text-body font-medium text-text-on-amber">{sentAs.name.slice(0, 1).toUpperCase()}</span>
             )}
           </span>
-          <p className="min-w-0 text-small text-text-muted">
-            You sent <span className="text-text">{sentAs.name}</span>
+          <p className="min-w-0 text-small text-sp-ink/85">
+            You sent <span className="text-sp-ink">{sentAs.name}</span>
             {sentAs.contentText ? <span className="font-mono"> · {sentAs.contentText}</span> : null}
           </p>
         </div>
       )}
       {review?.status === "rejected" && (
-        <p className="rounded-card border border-amber/30 bg-amber/[0.05] px-4 py-3 text-small text-text-muted" role="status">
+        <p className="rounded-card border border-amber/30 bg-amber/[0.05] px-4 py-3 text-small text-sp-ink/85" role="status">
           @{creatorHandle} asked for a change
           {review.rejectedReason ? (
             <>
-              : <span className="text-text">&ldquo;{review.rejectedReason}&rdquo;</span>
+              : <span className="text-sp-ink">&ldquo;{review.rejectedReason}&rdquo;</span>
             </>
           ) : null}
           . Send a new version below.
@@ -231,7 +231,7 @@ export function SponsorContentForm({
       )}
 
       <label className="flex flex-col gap-2">
-        <span className="text-small text-text-muted">Name to credit</span>
+        <span className="text-small text-sp-ink/85">Name to credit</span>
         <input
           className={input}
           value={name}
@@ -244,7 +244,7 @@ export function SponsorContentForm({
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         <label className="flex flex-col gap-2">
-          <span className="text-small text-text-muted">Link (optional)</span>
+          <span className="text-small text-sp-ink/85">Link (optional)</span>
           <input
             className={input}
             value={url}
@@ -255,7 +255,7 @@ export function SponsorContentForm({
           />
         </label>
         <label className="flex flex-col gap-2">
-          <span className="text-small text-text-muted">X handle (optional)</span>
+          <span className="text-small text-sp-ink/85">X handle (optional)</span>
           <input
             className={input}
             value={xHandle}
@@ -269,7 +269,7 @@ export function SponsorContentForm({
 
       {kinds.length > 1 && (
         <fieldset className="flex flex-col gap-2">
-          <legend className="mb-2 text-small text-text-muted">What to print</legend>
+          <legend className="mb-2 text-small text-sp-ink/85">What to print</legend>
           <div className="flex flex-wrap gap-2">
             {kinds.map((k) => (
               <button
@@ -279,8 +279,8 @@ export function SponsorContentForm({
                 aria-pressed={kind === k}
                 className={`inline-flex h-10 items-center whitespace-nowrap rounded-[20px] border px-4 text-small transition-colors duration-180 ${
                   kind === k
-                    ? "border-amber bg-amber/10 text-text"
-                    : "border-[color:var(--color-hairline-strong)] text-text-muted hover:text-text"
+                    ? "border-amber bg-amber/10 text-sp-ink"
+                    : "border-[color:var(--color-hairline-strong)] text-sp-ink/85 hover:text-sp-ink"
                 }`}
               >
                 {CONTENT_KIND_LABEL[k]}
@@ -289,11 +289,11 @@ export function SponsorContentForm({
           </div>
         </fieldset>
       )}
-      <p className="-mt-2 text-tiny text-text-faint">{KIND_HINT[kind]}</p>
+      <p className="-mt-2 text-tiny text-sp-ink/80">{KIND_HINT[kind]}</p>
 
       {needsImage && (
         <label className="flex flex-col gap-2">
-          <span className="text-small text-text-muted">{kind === "logo" ? "Logo" : "Photo"}</span>
+          <span className="text-small text-sp-ink/85">{kind === "logo" ? "Logo" : "Photo"}</span>
           <span className="flex items-center gap-4">
             <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-tight bg-white">
               {preview ? (
@@ -307,16 +307,16 @@ export function SponsorContentForm({
               type="file"
               accept="image/png,image/jpeg,image/webp"
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              className="min-w-0 text-small text-text-muted file:mr-3 file:h-10 file:rounded-[20px] file:border file:border-solid file:border-[color:var(--color-hairline-strong)] file:bg-transparent file:px-4 file:text-small file:text-text"
+              className="min-w-0 text-small text-sp-ink/85 file:mr-3 file:h-10 file:rounded-[20px] file:border file:border-solid file:border-[color:var(--color-hairline-strong)] file:bg-transparent file:px-4 file:text-small file:text-sp-ink"
             />
           </span>
-          <span className="text-tiny text-text-faint">PNG, JPEG or WebP. We straighten and shrink it before sending.</span>
+          <span className="text-tiny text-sp-ink/80">PNG, JPEG or WebP. We straighten and shrink it before sending.</span>
         </label>
       )}
 
       {kind === "qr" && (
         <label className="flex flex-col gap-2">
-          <span className="text-small text-text-muted">Link the QR code opens</span>
+          <span className="text-small text-sp-ink/85">Link the QR code opens</span>
           <input
             className={input}
             value={text}
@@ -329,7 +329,7 @@ export function SponsorContentForm({
 
       {kind === "text" && (
         <label className="flex flex-col gap-2">
-          <span className="text-small text-text-muted">Line to print</span>
+          <span className="text-small text-sp-ink/85">Line to print</span>
           <input
             className={input}
             value={text}
@@ -341,7 +341,7 @@ export function SponsorContentForm({
       )}
 
       {notice && (
-        <p className="rounded-card border border-amber/30 bg-amber/[0.05] px-4 py-3 text-small text-text-muted" role="status">
+        <p className="rounded-card border border-amber/30 bg-amber/[0.05] px-4 py-3 text-small text-sp-ink/85" role="status">
           {notice}
         </p>
       )}

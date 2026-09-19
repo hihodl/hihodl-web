@@ -38,12 +38,12 @@ export function PackageLines({ pkg }: { pkg: PackageView }) {
       <ul className="flex flex-col gap-1.5">
         {pkg.lines.map((l) => (
           <li key={l.key} className="flex items-baseline justify-between gap-4 text-small">
-            <span className="text-text">{l.label}</span>
-            <span className="tabular-nums text-text-muted">× {l.count}</span>
+            <span className="text-sp-ink">{l.label}</span>
+            <span className="tabular-nums text-sp-ink/85">× {l.count}</span>
           </li>
         ))}
       </ul>
-      <p className="text-tiny text-text-muted">
+      <p className="text-tiny text-sp-ink/85">
         Delivered to you within {pkg.turnaroundHours} hours of the shoot day. {usageText(pkg)} One round of changes
         included.
       </p>
@@ -143,14 +143,14 @@ export function BriefForm({
       }}
     >
       <div>
-        <p className="text-body text-text">You bring the brief</p>
-        <p className="mt-1 text-small text-text-muted">
+        <p className="text-body text-sp-ink">You bring the brief</p>
+        <p className="mt-1 text-small text-sp-ink/85">
           What {who} films is built on this. Only {who}, their team and you see it.
         </p>
       </div>
 
       <fieldset className="flex flex-col gap-2">
-        <legend className="mb-2 text-small text-text">What is it for?</legend>
+        <legend className="mb-2 text-small text-sp-ink">What is it for?</legend>
         <div className="grid grid-cols-2 gap-2">
           {GOALS.map((g) => {
             const on = draft.goal === g.value;
@@ -161,11 +161,11 @@ export function BriefForm({
                 aria-pressed={on}
                 onClick={() => set({ goal: g.value })}
                 className={`flex flex-col gap-1 rounded-input border px-3 py-2.5 text-left transition-colors duration-180 ${
-                  on ? "border-amber bg-amber/10" : "border-[color:var(--color-hairline-strong)] hover:bg-white/5"
+                  on ? "border-amber bg-amber/10" : "border-[color:var(--color-hairline-strong)] hover:bg-sp-ink/5"
                 }`}
               >
-                <span className="text-small text-text">{g.label}</span>
-                <span className="text-tiny text-text-muted">{g.body}</span>
+                <span className="text-small text-sp-ink">{g.label}</span>
+                <span className="text-tiny text-sp-ink/85">{g.body}</span>
               </button>
             );
           })}
@@ -173,7 +173,7 @@ export function BriefForm({
       </fieldset>
 
       <div className="flex flex-col gap-2">
-        <p className="text-small text-text">Key messages, up to 3</p>
+        <p className="text-small text-sp-ink">Key messages, up to 3</p>
         {draft.keyMessages.map((m, i) => (
           <input
             key={i}
@@ -188,7 +188,7 @@ export function BriefForm({
         {draft.keyMessages.length < 3 ? (
           <button
             type="button"
-            className="w-fit text-tiny text-[#9FB7C2] hover:text-text"
+            className="w-fit text-tiny text-white/80 hover:text-sp-ink"
             onClick={() => set({ keyMessages: [...draft.keyMessages, ""] })}
           >
             + Add a message
@@ -197,7 +197,7 @@ export function BriefForm({
       </div>
 
       <label className="flex flex-col gap-2">
-        <span className="text-small text-text">Who to interview, and when they are there</span>
+        <span className="text-small text-sp-ink">Who to interview, and when they are there</span>
         <textarea
           className={`${input} resize-y`}
           rows={2}
@@ -209,7 +209,7 @@ export function BriefForm({
       </label>
 
       <label className="flex flex-col gap-2">
-        <span className="text-small text-text">Brand assets link</span>
+        <span className="text-small text-sp-ink">Brand assets link</span>
         <input
           className={input}
           type="url"
@@ -222,7 +222,7 @@ export function BriefForm({
 
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-2">
-          <span className="text-small text-text">Do</span>
+          <span className="text-small text-sp-ink">Do</span>
           <textarea
             className={`${input} resize-y`}
             rows={2}
@@ -233,7 +233,7 @@ export function BriefForm({
           />
         </label>
         <label className="flex flex-col gap-2">
-          <span className="text-small text-text">Don&rsquo;t</span>
+          <span className="text-small text-sp-ink">Don&rsquo;t</span>
           <textarea
             className={`${input} resize-y`}
             rows={2}
@@ -246,7 +246,7 @@ export function BriefForm({
       </div>
 
       <div className="flex flex-col gap-2">
-        <p className="text-small text-text">Contact on the shoot day</p>
+        <p className="text-small text-sp-ink">Contact on the shoot day</p>
         <div className="flex gap-2">
           <select
             className={`${input} w-auto`}
@@ -273,7 +273,7 @@ export function BriefForm({
       </div>
 
       {problem ? (
-        <p className="rounded-input border border-amber/30 bg-amber/10 px-4 py-3 text-small text-text" role="status">
+        <p className="rounded-input border border-amber/30 bg-amber/10 px-4 py-3 text-small text-sp-ink" role="status">
           {problem}
         </p>
       ) : null}
@@ -292,8 +292,8 @@ export function BriefReady({ brief, onEdit }: { brief: BriefBody; onEdit: () => 
   return (
     <div className="flex items-center justify-between gap-3 rounded-input border border-success/30 bg-success/[0.06] px-4 py-3">
       <span className="min-w-0">
-        <span className="block text-small text-text">Brief ready</span>
-        <span className="block truncate text-tiny text-text-muted">
+        <span className="block text-small text-sp-ink">Brief ready</span>
+        <span className="block truncate text-tiny text-sp-ink/85">
           {GOAL_LABEL[brief.goal]} · {brief.keyMessages.length} key {brief.keyMessages.length === 1 ? "message" : "messages"}
         </span>
       </span>
@@ -321,21 +321,21 @@ export function PaidProduction({ order, space }: { order: Order; space: Space })
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <p className={`${eyebrow} text-success`}>Paid</p>
-        <h3 className="mt-2 font-display text-h3 font-light text-text">Your production spot is booked.</h3>
-        <p className="mt-3 text-small text-text-muted">
+        <p className={`${eyebrow} text-sp-ok`}>Paid</p>
+        <h3 className="mt-2 font-display text-h3 font-light text-sp-ink">Your production spot is booked.</h3>
+        <p className="mt-3 text-small text-sp-ink/85">
           {order.sponsorPaysUsdc} USDC on {CHAIN_LABEL[order.chain]}. @{handle} has your brief and will reach your
           shoot-day contact.
         </p>
       </div>
       {link ? (
         <div className="flex flex-col gap-3 rounded-card border border-amber/40 bg-amber/[0.06] p-4">
-          <p className="text-body text-text">Save this link: your delivery arrives here.</p>
-          <p className="text-small text-text-muted">
+          <p className="text-body text-sp-ink">Save this link: your delivery arrives here.</p>
+          <p className="text-small text-sp-ink/85">
             It is where you open the files, accept them or ask for one round of changes. Anyone with it can do that, so
             keep it to yourself.
           </p>
-          <p className="break-all rounded-input border border-[color:var(--color-hairline-strong)] bg-white/[0.04] px-3 py-2 font-mono text-tiny text-text">
+          <p className="break-all rounded-input border border-[color:var(--color-hairline-strong)] bg-sp-ink/[0.04] px-3 py-2 font-mono text-tiny text-sp-ink">
             {link}
           </p>
           <div className="flex flex-wrap gap-2">
@@ -360,7 +360,7 @@ export function PaidProduction({ order, space }: { order: Order; space: Space })
           </div>
         </div>
       ) : (
-        <p className="rounded-card border border-amber/30 bg-amber/[0.05] px-4 py-3 text-small text-text-muted" role="status">
+        <p className="rounded-card border border-amber/30 bg-amber/[0.05] px-4 py-3 text-small text-sp-ink/85" role="status">
           Your delivery link hasn&rsquo;t reached this page yet. Reload the page in this browser to get it.
         </p>
       )}
@@ -404,18 +404,18 @@ export function BrandProductionPanel({ token, initial }: { token: string; initia
   if (screen === "revision") {
     return (
       <div className="flex flex-col gap-6">
-        <button type="button" onClick={() => setScreen("delivery")} className="w-fit text-tiny text-[#9FB7C2] hover:text-text">
+        <button type="button" onClick={() => setScreen("delivery")} className="w-fit text-tiny text-white/80 hover:text-sp-ink">
           ← Back
         </button>
         <div>
-          <p className={`${eyebrow} text-amber`}>{data.space.title}</p>
-          <h1 className="mt-3 font-display text-h3 font-light text-text">Ask for a revision</h1>
-          <p className="mt-3 max-w-xl text-small text-text-muted">
+          <p className={`${eyebrow} text-sp-amber`}>{data.space.title}</p>
+          <h1 className="mt-3 font-display text-h3 font-light text-sp-ink">Ask for a revision</h1>
+          <p className="mt-3 max-w-xl text-small text-sp-ink/85">
             One round, so say everything you want changed in one go. {who} delivers the new cut to this page.
           </p>
         </div>
         <label className="flex flex-col gap-2">
-          <span className="text-small text-text">What should change</span>
+          <span className="text-small text-sp-ink">What should change</span>
           <textarea
             className={`${input} resize-y`}
             rows={6}
@@ -424,10 +424,10 @@ export function BrandProductionPanel({ token, initial }: { token: string; initia
             placeholder="e.g. Shorter cuts, under 30 seconds. Use the second interview take."
             onChange={(e) => setNote(e.target.value)}
           />
-          <span className="text-right text-tiny tabular-nums text-text-faint">{note.trim().length} / 500</span>
+          <span className="text-right text-tiny tabular-nums text-sp-ink/80">{note.trim().length} / 500</span>
         </label>
         {notice ? (
-          <p className="rounded-input border border-amber/30 bg-amber/10 px-4 py-3 text-small text-text" role="status">
+          <p className="rounded-input border border-amber/30 bg-amber/10 px-4 py-3 text-small text-sp-ink" role="status">
             {notice}
           </p>
         ) : null}
@@ -461,11 +461,11 @@ export function BrandProductionPanel({ token, initial }: { token: string; initia
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <p className={`${eyebrow} text-amber`}>
+        <p className={`${eyebrow} text-sp-amber`}>
           {data.space.eventName ? `${data.space.eventName} · ` : ""}Content production
         </p>
-        <h1 className="mt-3 font-display text-h3 font-light text-text md:text-h2">{data.space.title}</h1>
-        <p className="mt-3 text-small text-text-muted">
+        <h1 className="mt-3 font-display text-h3 font-light text-sp-ink md:text-h2">{data.space.title}</h1>
+        <p className="mt-3 text-small text-sp-ink/85">
           By {who}. {data.positionLabel ? `${data.positionLabel}. ` : ""}Paid on {CHAIN_LABEL[data.chain]}.
         </p>
       </div>
@@ -473,7 +473,7 @@ export function BrandProductionPanel({ token, initial }: { token: string; initia
       <section className={`${card} flex flex-col gap-5 p-5`}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-body text-text">
+            <p className="text-body text-sp-ink">
               {p.state === "accepted"
                 ? "Delivered and accepted"
                 : p.delivery
@@ -482,7 +482,7 @@ export function BrandProductionPanel({ token, initial }: { token: string; initia
                     : "Your content is ready"
                   : "Your content is being made"}
             </p>
-            <p className="mt-1 text-tiny text-text-muted">
+            <p className="mt-1 text-tiny text-sp-ink/85">
               {p.delivery
                 ? `Delivered ${when(p.delivery.deliveredAt)}.`
                 : `Filmed ${new Date(`${p.shootOn}T12:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}. Due ${when(p.dueAt)}.`}
@@ -502,8 +502,8 @@ export function BrandProductionPanel({ token, initial }: { token: string; initia
                   const got = p.delivery!.checklist.find((c) => c.key === l.key)?.count ?? 0;
                   return (
                     <li key={l.key} className="flex items-baseline justify-between gap-4 text-small">
-                      <span className="text-text-muted">{l.label}</span>
-                      <span className={`tabular-nums ${got >= l.count ? "text-success" : "text-amber"}`}>
+                      <span className="text-sp-ink/85">{l.label}</span>
+                      <span className={`tabular-nums ${got >= l.count ? "text-sp-ok" : "text-sp-amber"}`}>
                         {got} of {l.count}
                       </span>
                     </li>
@@ -518,8 +518,8 @@ export function BrandProductionPanel({ token, initial }: { token: string; initia
 
         {p.revision ? (
           <div className="rounded-input border border-[color:var(--color-hairline-strong)] px-4 py-3">
-            <p className="text-tiny text-text-muted">Your revision, {when(p.revision.requestedAt)}</p>
-            <p className="mt-1 whitespace-pre-line text-small text-text">{p.revision.note}</p>
+            <p className="text-tiny text-sp-ink/85">Your revision, {when(p.revision.requestedAt)}</p>
+            <p className="mt-1 whitespace-pre-line text-small text-sp-ink">{p.revision.note}</p>
           </div>
         ) : null}
 
@@ -548,7 +548,7 @@ export function BrandProductionPanel({ token, initial }: { token: string; initia
               ) : null}
             </div>
             {p.autoAcceptAt ? (
-              <p className="text-tiny text-text-muted">
+              <p className="text-tiny text-sp-ink/85">
                 If you say nothing, it is accepted on {when(p.autoAcceptAt)}.
                 {p.revisionAvailable ? " You have one round of changes." : " Your round of changes has been used."}
               </p>
@@ -557,19 +557,19 @@ export function BrandProductionPanel({ token, initial }: { token: string; initia
         ) : null}
 
         {p.state === "accepted" && p.accepted ? (
-          <p className="text-tiny text-text-muted">
+          <p className="text-tiny text-sp-ink/85">
             {p.accepted.auto ? `Accepted automatically ${when(p.accepted.at)}, 72 hours after delivery.` : `You accepted it ${when(p.accepted.at)}.`}
           </p>
         ) : null}
 
         {notice ? (
-          <p className="rounded-input border border-amber/30 bg-amber/10 px-4 py-3 text-small text-text" role="status">
+          <p className="rounded-input border border-amber/30 bg-amber/10 px-4 py-3 text-small text-sp-ink" role="status">
             {notice}
           </p>
         ) : null}
       </section>
 
-      {p.package ? <p className="text-tiny text-text-muted">{usageText(p.package)}</p> : null}
+      {p.package ? <p className="text-tiny text-sp-ink/85">{usageText(p.package)}</p> : null}
     </div>
   );
 }

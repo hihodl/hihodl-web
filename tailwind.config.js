@@ -38,6 +38,13 @@ module.exports = {
           faint:   "#5A6068",
           "on-amber": "#0A0500",
         },
+        // Spaces public pages: ink that follows the page's ground (globals.css --sp-*)
+        sp: {
+          ink:   "rgb(var(--sp-ink) / <alpha-value>)",
+          amber: "rgb(var(--sp-amber-ink) / <alpha-value>)",
+          ok:    "rgb(var(--sp-ok-ink) / <alpha-value>)",
+          cool:  "rgb(var(--sp-cool-ink) / <alpha-value>)",
+        },
         // Functional
         success: "#4ADE80",
         danger:  "#FF5F5F",

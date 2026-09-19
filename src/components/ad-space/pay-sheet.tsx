@@ -43,12 +43,12 @@ export const ctaPrimary =
 
 /** Everything else that is a button: white on glass, as the app's secondary actions. */
 export const ctaGlass =
-  "inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-[22px] bg-white/[0.10] px-5 text-small font-medium text-text transition-colors duration-180 hover:bg-white/[0.16] disabled:cursor-not-allowed disabled:opacity-40";
+  "inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-[22px] bg-sp-ink/[0.10] px-5 text-small font-medium text-sp-ink transition-colors duration-180 hover:bg-sp-ink/[0.16] disabled:cursor-not-allowed disabled:opacity-40";
 
-export const fieldLabel = "text-[11px] font-strong uppercase tracking-[0.08em] text-white/60";
+export const fieldLabel = "text-[11px] font-strong uppercase tracking-[0.08em] text-white/85";
 
 export const sheetInput =
-  "w-full rounded-[14px] bg-black/25 px-4 py-3 text-body text-text placeholder:text-white/30 outline-none ring-1 ring-inset ring-white/[0.08] transition-colors duration-180 focus:ring-amber/60 disabled:opacity-60";
+  "w-full rounded-[14px] bg-black/25 px-4 py-3 text-body text-sp-ink placeholder:text-white/45 outline-none ring-1 ring-inset ring-sp-ink/[0.08] transition-colors duration-180 focus:ring-amber/60 disabled:opacity-60";
 
 /* ── Amounts ─────────────────────────────────────────────────────────── */
 
@@ -122,21 +122,21 @@ export function PaySheet({
     >
       <button type="button" aria-label="Close" className="absolute inset-0 bg-[#03080B]/75 backdrop-blur-md" onClick={onClose} />
       <div
-        className="relative flex h-[calc(100dvh-10px)] w-full flex-col overflow-hidden rounded-t-[28px] border-t border-white/[0.16] shadow-[0_-12px_48px_rgba(0,0,0,0.45)] sm:m-6 sm:h-auto sm:max-h-[min(92dvh,880px)] sm:min-h-[min(640px,92dvh)] sm:w-[560px] sm:rounded-[28px] sm:border sm:border-white/[0.10] sm:shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
+        className="relative flex h-[calc(100dvh-10px)] w-full flex-col overflow-hidden rounded-t-[28px] border-t border-sp-ink/[0.16] shadow-[0_-12px_48px_rgba(0,0,0,0.45)] sm:m-6 sm:h-auto sm:max-h-[min(92dvh,880px)] sm:min-h-[min(640px,92dvh)] sm:w-[560px] sm:rounded-[28px] sm:border sm:border-sp-ink/[0.10] sm:shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
         style={{ background: SHEET_FALL }}
       >
-        <div className="mx-auto mt-2.5 h-1 w-10 shrink-0 rounded-[2px] bg-white/[0.22] sm:hidden" aria-hidden />
+        <div className="mx-auto mt-2.5 h-1 w-10 shrink-0 rounded-[2px] bg-sp-ink/[0.22] sm:hidden" aria-hidden />
         <header className="flex shrink-0 items-start justify-between gap-4 px-5 pb-1 pt-3 sm:px-8 sm:pt-7">
           <div className="min-w-0">
             <p className={fieldLabel}>{eyebrow}</p>
-            <h2 id={labelledBy} className="mt-1 truncate text-body font-medium text-text">
+            <h2 id={labelledBy} className="mt-1 truncate text-body font-medium text-sp-ink">
               {title}
             </h2>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="-mr-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-[20px] bg-white/[0.06] text-white/60 transition-colors duration-180 hover:bg-white/[0.12] hover:text-text"
+            className="-mr-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-[20px] bg-sp-ink/[0.06] text-white/85 transition-colors duration-180 hover:bg-sp-ink/[0.12] hover:text-sp-ink"
             aria-label="Close"
           >
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
@@ -152,7 +152,7 @@ export function PaySheet({
           {children}
         </div>
         {footer && (
-          <div className="flex shrink-0 flex-col gap-3 border-t border-white/[0.06] bg-[#08151C]/90 px-5 pb-[max(16px,env(safe-area-inset-bottom))] pt-4 backdrop-blur sm:px-8 sm:pb-7">
+          <div className="flex shrink-0 flex-col gap-3 border-t border-sp-ink/[0.06] bg-[#08151C]/90 px-5 pb-[max(16px,env(safe-area-inset-bottom))] pt-4 backdrop-blur sm:px-8 sm:pb-7">
             {footer}
           </div>
         )}
@@ -166,7 +166,7 @@ export function PaySheet({
 export function CreatorChip({ creator }: { creator: Pick<Space["creator"], "xHandle" | "xName" | "xAvatarUrl"> }) {
   const initial = (creator.xName || creator.xHandle || "?").replace(/^@/, "").slice(0, 1).toUpperCase();
   return (
-    <span className="inline-flex h-9 max-w-full items-center gap-2 rounded-[18px] bg-white/[0.07] pl-1 pr-3.5">
+    <span className="inline-flex h-9 max-w-full items-center gap-2 rounded-[18px] bg-sp-ink/[0.07] pl-1 pr-3.5">
       {creator.xAvatarUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- X avatar, served by X
         <img
@@ -178,11 +178,11 @@ export function CreatorChip({ creator }: { creator: Pick<Space["creator"], "xHan
           className="h-7 w-7 shrink-0 rounded-[14px] object-cover"
         />
       ) : (
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[14px] bg-amber/15 text-tiny font-medium text-amber" aria-hidden>
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[14px] bg-amber/15 text-tiny font-medium text-sp-amber" aria-hidden>
           {initial}
         </span>
       )}
-      <span className="truncate text-small font-medium text-text">@{creator.xHandle}</span>
+      <span className="truncate text-small font-medium text-sp-ink">@{creator.xHandle}</span>
     </span>
   );
 }
@@ -191,10 +191,10 @@ export function CreatorChip({ creator }: { creator: Pick<Space["creator"], "xHan
 export function BigAmount({ value, unit = "USDC" }: { value: string; unit?: string }) {
   return (
     <p className="flex items-baseline justify-center gap-2 tabular-nums">
-      <span className="text-[52px] font-strong leading-none tracking-[-0.035em] text-text sm:text-[60px]">
+      <span className="text-[52px] font-strong leading-none tracking-[-0.035em] text-sp-ink sm:text-[60px]">
         {value}
       </span>
-      <span className="text-[18px] font-medium text-white/60">{unit}</span>
+      <span className="text-[18px] font-medium text-white/85">{unit}</span>
     </p>
   );
 }
@@ -251,7 +251,7 @@ export function NetworkPill({
 
   if (chains.length <= 1) {
     return (
-      <span className="inline-flex h-8 items-center gap-2 text-small text-white/55">
+      <span className="inline-flex h-8 items-center gap-2 text-small text-white/85">
         <ChainIcon chain={chain} size={16} />
         USDC on {CHAIN_LABEL[chain]}
       </span>
@@ -268,11 +268,11 @@ export function NetworkPill({
         aria-label={`Network: ${CHAIN_LABEL[chain]}. Change`}
         disabled={disabled}
         onClick={() => setOpen((o) => !o)}
-        className="inline-flex h-9 items-center gap-2 rounded-[18px] bg-white/[0.08] pl-2 pr-3 text-small font-medium text-text transition-colors duration-180 hover:bg-white/[0.14] disabled:opacity-50"
+        className="inline-flex h-9 items-center gap-2 rounded-[18px] bg-sp-ink/[0.08] pl-2 pr-3 text-small font-medium text-sp-ink transition-colors duration-180 hover:bg-sp-ink/[0.14] disabled:opacity-50"
       >
         <ChainIcon chain={chain} />
         {CHAIN_LABEL[chain]}
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden className="text-white/50">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden className="text-white/85">
           <path d="M2 3.5l3 3 3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
@@ -295,12 +295,12 @@ export function NetworkPill({
                   setOpen(false);
                 }}
                 className={`flex h-12 w-full items-center gap-3 rounded-[12px] px-3 text-left text-small transition-colors duration-180 ${
-                  c === chain ? "bg-white/[0.10] text-text" : "text-white/70 hover:bg-white/[0.05] hover:text-text"
+                  c === chain ? "bg-sp-ink/[0.10] text-sp-ink" : "text-white/85 hover:bg-sp-ink/[0.05] hover:text-sp-ink"
                 }`}
               >
                 <ChainIcon chain={c} size={22} />
                 <span className="flex-1">USDC on {CHAIN_LABEL[c]}</span>
-                {c === chain && <Tick className="text-amber" />}
+                {c === chain && <Tick className="text-sp-amber" />}
               </button>
             </li>
           ))}
@@ -376,11 +376,11 @@ export function TotalRow({
   return (
     <div className={`${sheetCard} flex items-center justify-between gap-3 px-4 py-3.5`}>
       <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-        <span className="text-small text-text">{label}</span>
-        {note && <span className="text-tiny text-white/60">({note})</span>}
+        <span className="text-small text-sp-ink">{label}</span>
+        {note && <span className="text-tiny text-white/85">({note})</span>}
         {info}
       </span>
-      <span className="shrink-0 text-body font-medium tabular-nums text-text">{dollars(totalUsdc) ?? "—"}</span>
+      <span className="shrink-0 text-body font-medium tabular-nums text-sp-ink">{dollars(totalUsdc) ?? "—"}</span>
     </div>
   );
 }
@@ -433,7 +433,7 @@ export function InfoTip({ label, children }: { label: string; children: ReactNod
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
         className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-[10px] align-middle font-serif text-[12px] italic leading-none transition-colors duration-180 ${
-          open ? "bg-white/[0.20] text-text" : "bg-white/[0.08] text-white/60 hover:bg-white/[0.14] hover:text-text"
+          open ? "bg-sp-ink/[0.20] text-sp-ink" : "bg-sp-ink/[0.08] text-white/85 hover:bg-sp-ink/[0.14] hover:text-sp-ink"
         }`}
       >
         i
@@ -484,11 +484,11 @@ export function MethodTabs<T extends string>({
           disabled={disabled}
           onClick={() => onChange(o.id)}
           className={`flex h-12 min-w-0 flex-col items-center justify-center rounded-[14px] px-2 text-small font-medium leading-tight transition-colors duration-180 disabled:opacity-50 ${
-            o.id === value ? "bg-[#1C3D4B] text-text" : "text-white/55 hover:text-text"
+            o.id === value ? "bg-[#1C3D4B] text-sp-ink" : "text-white/85 hover:text-sp-ink"
           }`}
         >
           <span className="truncate">{o.label}</span>
-          {o.badge && <span className="truncate text-[11px] font-medium text-amber">{o.badge}</span>}
+          {o.badge && <span className="truncate text-[11px] font-medium text-sp-amber">{o.badge}</span>}
         </button>
       ))}
     </div>
@@ -525,7 +525,7 @@ export function WalletIcon({ wallet, size = 32 }: { wallet: WalletChoice; size?:
   }
   return (
     <span
-      className="flex shrink-0 items-center justify-center rounded-[9px] bg-white/[0.10] text-small font-medium text-text"
+      className="flex shrink-0 items-center justify-center rounded-[9px] bg-sp-ink/[0.10] text-small font-medium text-sp-ink"
       style={{ width: size, height: size }}
       aria-hidden
     >
@@ -569,15 +569,15 @@ export function WalletRows({
             }`}
           >
             <WalletIcon wallet={w} size={30} />
-            <span className="min-w-0 flex-1 truncate text-body font-medium text-text">{w.name}</span>
-            <span className="shrink-0 text-tiny text-white/60">Detected</span>
+            <span className="min-w-0 flex-1 truncate text-body font-medium text-sp-ink">{w.name}</span>
+            <span className="shrink-0 text-tiny text-white/85">Detected</span>
             <span
               className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-[10px] border-2 transition-colors duration-180 ${
-                on ? "border-amber" : "border-white/25"
+                on ? "border-amber" : "border-sp-ink/25"
               }`}
               aria-hidden
             >
-              <span className={`h-2.5 w-2.5 rounded-[5px] transition-colors duration-180 ${on ? "bg-text" : "bg-transparent"}`} />
+              <span className={`h-2.5 w-2.5 rounded-[5px] transition-colors duration-180 ${on ? "bg-sp-ink" : "bg-transparent"}`} />
             </span>
           </button>
         );
@@ -603,12 +603,12 @@ export function ExtraRow({
 }) {
   const inner = (
     <>
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-white/[0.06] text-white/60" aria-hidden>
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-sp-ink/[0.06] text-white/85" aria-hidden>
         {icon ?? <Dots />}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-small font-medium text-text">{title}</span>
-        {sub && <span className="block truncate text-tiny text-white/60">{sub}</span>}
+        <span className="block truncate text-small font-medium text-sp-ink">{title}</span>
+        {sub && <span className="block truncate text-tiny text-white/85">{sub}</span>}
       </span>
       <svg width="8" height="12" viewBox="0 0 8 12" fill="none" aria-hidden className="shrink-0 text-white/35">
         <path d="M2 2l4 4-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
@@ -616,7 +616,7 @@ export function ExtraRow({
     </>
   );
   const cls =
-    "flex h-14 w-full items-center gap-3 rounded-[16px] px-4 text-left ring-1 ring-inset ring-white/[0.08] transition-colors duration-180 hover:bg-white/[0.04]";
+    "flex h-14 w-full items-center gap-3 rounded-[16px] px-4 text-left ring-1 ring-inset ring-sp-ink/[0.08] transition-colors duration-180 hover:bg-sp-ink/[0.04]";
   return href ? (
     <a href={href} className={cls} onClick={onClick}>
       {inner}
@@ -636,7 +636,7 @@ export function StatusLine({ tone = "wait", children }: { tone?: "wait" | "done"
     <p
       role="status"
       className={`flex items-center justify-center gap-2.5 text-center text-small ${
-        tone === "done" ? "text-success" : tone === "attention" ? "text-amber" : "text-white/75"
+        tone === "done" ? "text-sp-ok" : tone === "attention" ? "text-sp-amber" : "text-white/85"
       }`}
     >
       {tone === "wait" && <Spinner />}
@@ -698,7 +698,7 @@ function Dots() {
 /** The big round mark of a paid payment. */
 export function PaidMark() {
   return (
-    <span className="flex h-16 w-16 items-center justify-center rounded-[32px] bg-success/20 text-success" aria-hidden>
+    <span className="flex h-16 w-16 items-center justify-center rounded-[32px] bg-success/20 text-sp-ok" aria-hidden>
       <svg width="28" height="28" viewBox="0 0 14 14" fill="none">
         <path d="M3 7.4l2.6 2.6L11 4.4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
