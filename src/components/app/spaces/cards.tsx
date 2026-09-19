@@ -7,17 +7,16 @@
  */
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, type ComponentType, type ReactNode, type SVGProps } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { eventDates } from "@/lib/ad-space/format";
 import { gradientCss } from "@/lib/ad-space/look";
 import type { SpaceCard, TemplateKind } from "@/lib/creator/listing";
+import { eventLook, tintRgba } from "@/lib/app/event-look";
 import { listingRefs, NO_EVENT, type EventRef, type ListingRef } from "@/lib/app/spaces-model";
 import { useTemplates } from "@/lib/app/spaces-data";
 
-import { IconCalendar } from "../icons";
 import { BackHeader } from "../hold";
-import { Ion } from "../ion";
 import { useShell } from "../Shell";
 import { StatusPill } from "./common";
 import { Chip, money } from "./kit";
@@ -105,6 +104,28 @@ export function useListingRefs(): ReadonlyMap<string, ListingRef> {
   return useMemo(() => listingRefs(listings, kindOf, work), [listings, kindOf, work]);
 }
 
+/**
+ * The country of an event this creator has listed at, by slug or by name.
+ *
+ * The analytics read groups money by event but carries no country, and the
+ * flag on an event's badge needs one. Their own listings know it, and every
+ * event on that screen is one they listed at.
+ */
+export function useEventCountry(): (event: { key?: string | null; name?: string | null }) => string | null {
+  const { listings } = useShell();
+  return useMemo(() => {
+    const bySlug = new Map<string, string>();
+    const byName = new Map<string, string>();
+    for (const l of listings) {
+      const e = l.event;
+      if (!e?.country) continue;
+      bySlug.set(e.slug, e.country);
+      byName.set(e.name.toLowerCase(), e.country);
+    }
+    return (event) => (event.key ? bySlug.get(event.key) ?? null : null) ?? (event.name ? byName.get(event.name.toLowerCase()) ?? null : null);
+  }, [listings]);
+}
+
 /* ── The drill-down ───────────────────────────────────────────────── */
 
 /**
@@ -127,6 +148,41 @@ function eventWhere(event: EventRef | null): string {
   return [event.city, when].filter(Boolean).join(" · ");
 }
 
+/**
+ * An event in a 32 slot: the flag of the country it is in, on that country's
+ * own colour. With no country, the same slot takes a colour picked from the
+ * eSIM palette by the event's key and draws its initial (lib/app/event-look).
+ *
+ * Every event card carried the same chart glyph before this, so one event read
+ * exactly like the next until you got to the words.
+ */
+export function EventBadge({ event, size = 32 }: { event: EventRef | null; size?: number }) {
+  const look = eventLook(event);
+  return (
+    <span
+      aria-hidden
+      className="flex shrink-0 items-center justify-center overflow-hidden rounded-[16px] border"
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        background: tintRgba(look.tint, 0.22),
+        borderColor: tintRgba(look.tint, 0.45),
+      }}
+    >
+      {look.flag ? (
+        <span className="leading-none" style={{ fontSize: Math.round(size * 0.56) }}>
+          {look.flag}
+        </span>
+      ) : (
+        <span className="font-extrabold leading-none text-white" style={{ fontSize: Math.round(size * 0.44) }}>
+          {look.initial}
+        </span>
+      )}
+    </span>
+  );
+}
+
 /** The figure a card is about: big, amber when it waits on you. */
 function Figure({ value, note, attention }: { value: ReactNode; note?: ReactNode; attention?: boolean }) {
   return (
@@ -145,7 +201,6 @@ export function EventCard({
   value,
   note,
   attention,
-  icon: Icon = IconCalendar,
 }: {
   href: string;
   event: EventRef | null;
@@ -154,15 +209,12 @@ export function EventCard({
   value: ReactNode;
   note?: ReactNode;
   attention?: boolean;
-  icon?: ComponentType<SVGProps<SVGSVGElement>>;
 }) {
   return (
     <li>
       <Link href={href} scroll={false} className={`${cardCls} gap-2.5 p-3.5 sm:min-h-[168px] xl:min-h-[188px]`}>
         <div className="flex min-w-0 items-start gap-2.5">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[16px] border border-white/10 bg-white/[0.04] text-white/[0.62]">
-            <Icon className="h-4 w-4" />
-          </span>
+          <EventBadge event={event} />
           <div className="min-w-0">
             <p className="truncate text-[16px] font-strong tracking-[-0.2px] text-white">{eventName(event)}</p>
             <p className="mt-0.5 truncate text-[12.5px] font-strong text-white/55">{eventWhere(event)}</p>

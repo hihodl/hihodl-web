@@ -36,7 +36,6 @@ import { useListingViews, useRefresh } from "@/lib/app/spaces-data";
 
 import { useHref } from "../base";
 import { BackHeader } from "../hold";
-import { IconDeliveries } from "../icons";
 import { Ion, type IonName } from "../ion";
 import { useShell } from "../Shell";
 import { Skeleton } from "../ui";
@@ -175,7 +174,6 @@ function EventGrid({ groups, refOf }: { groups: { key: string; items: DeliveryIt
               key={g.key}
               href={`${href("/deliveries")}?${eventParam(g.key)}`}
               event={refOf(g.items[0].spaceId, g.items[0]).event}
-              icon={IconDeliveries}
               lines={[d.text]}
               value={d.open}
               note={d.note}

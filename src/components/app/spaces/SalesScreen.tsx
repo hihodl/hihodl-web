@@ -30,7 +30,6 @@ import { useListing, useListingSales, useSales } from "@/lib/app/spaces-data";
 
 import { useHref } from "../base";
 import { useShell } from "../Shell";
-import { IconSales } from "../icons";
 import { btnGlass } from "../hold";
 import { Ion } from "../ion";
 import { dollars, Skeleton } from "../ui";
@@ -111,7 +110,6 @@ function EventGrid({
               key={g.key}
               href={`${href("/sales")}?${eventParam(g.key)}`}
               event={listings[0]?.event ?? null}
-              icon={IconSales}
               lines={[kindsText(listings.map((l) => l.kind)) || "Listings"]}
               value={dollars(sumReceived(g.items))}
               note={salesText(sumOrders(g.items))}
@@ -171,7 +169,7 @@ function EventSales({ eventKey, totals, refOf }: { eventKey: string; totals: Sal
         back={href("/sales")}
         crumb="Sales"
         title={eventName(event)}
-        right={here.length ? <p className="text-tiny tabular-nums text-[#9FB7C2]">{dollars(sumReceived(here))} received</p> : null}
+        right={here.length ? <p className="text-[12.5px] font-strong tabular-nums text-white/[0.62]">{dollars(sumReceived(here))} received</p> : null}
       />
       {here.length === 0 ? (
         <Empty icon="cash-outline" title="No sales yet" body="When a brand pays for a spot on one of your spaces, it shows here." />

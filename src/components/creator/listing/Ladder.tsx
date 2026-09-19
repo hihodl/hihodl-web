@@ -279,8 +279,8 @@ function Rung({
             hint={
               split
                 ? draft.feePayer === "sponsor"
-                  ? `The sponsor pays ${usd(split.sponsorPaysCents)} and you receive ${usd(split.creatorGetsCents)}.`
-                  : `The sponsor pays ${usd(split.sponsorPaysCents)} and you receive ${usd(split.creatorGetsCents)} after our 5%.`
+                  ? `You receive ${usd(split.creatorGetsCents)}.`
+                  : `You receive ${usd(split.creatorGetsCents)} after our 5%.`
                 : undefined
             }
           >

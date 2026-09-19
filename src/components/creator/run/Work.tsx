@@ -46,15 +46,13 @@ export function Work({ space, onChanged }: { space: SpaceView; onChanged: () => 
   const sold = space.positions.filter((p) => p.status === "sold");
 
   return (
-    <div className="flex flex-col gap-10">
-      <section className="flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
-          <h3 className="text-[15.5px] text-white">Artwork to approve</h3>
-        </div>
+    <div className="flex flex-col gap-6">
+      <section className="flex flex-col gap-2.5">
+        <h3 className="text-[15.5px] font-bold text-white">Artwork to approve</h3>
         {waiting.length === 0 ? (
           <p className="text-[14.5px] text-white/[0.62]">Nothing waiting on you.</p>
         ) : (
-          <ul className="flex flex-col gap-3">
+          <ul className="flex flex-col gap-2.5">
             {waiting.map((p) => (
               <li key={p.id}>
                 <Review position={p} onChanged={onChanged} />
@@ -64,16 +62,18 @@ export function Work({ space, onChanged }: { space: SpaceView; onChanged: () => 
         )}
       </section>
 
-      <section className="flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
-          <h3 className="text-[15.5px] text-white">Sold spots</h3>
-        </div>
+      <section className="flex flex-col gap-2.5">
+        <h3 className="text-[15.5px] font-bold text-white">Sold spots</h3>
         {sold.length === 0 ? (
           <p className="text-[14.5px] text-white/[0.62]">Nothing sold yet.</p>
         ) : (
-          <ul className="flex flex-col gap-3">
+          // Small cards side by side rather than a stack of full-width rows: a
+          // board with eighteen spots sold was a page that scrolled twice. A
+          // production spot keeps the full width — its brief and its countdown
+          // do not fold into half a column.
+          <ul className="grid grid-cols-[minmax(0,1fr)] gap-3 xl:grid-cols-2">
             {sold.map((p) => (
-              <li key={p.id}>
+              <li key={p.id} className={p.production ? "xl:col-span-2" : ""}>
                 {p.production ? (
                   <ProductionSpot positionId={p.id} production={p.production} canDeliver onChanged={onChanged} />
                 ) : (
@@ -86,11 +86,9 @@ export function Work({ space, onChanged }: { space: SpaceView; onChanged: () => 
       </section>
 
       {space.deliverables.length > 0 ? (
-        <section className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <h3 className="text-[15.5px] text-white">Promises</h3>
-          </div>
-          <ul className="flex flex-col gap-3">
+        <section className="flex flex-col gap-2.5">
+          <h3 className="text-[15.5px] font-bold text-white">Promises</h3>
+          <ul className="grid grid-cols-[minmax(0,1fr)] gap-2.5 xl:grid-cols-2">
             {space.deliverables.map((d) => (
               <li key={d.id}>
                 <PromiseCard deliverable={d} onChanged={onChanged} />
@@ -129,7 +127,7 @@ export function Review({ position, onChanged }: { position: PositionView; onChan
   }
 
   return (
-    <div className={`${card} flex flex-col gap-4 p-5`}>
+    <div className={`${card} flex flex-col gap-3 p-3.5`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[15.5px] text-white">{position.title ?? position.label}</p>
@@ -195,11 +193,11 @@ export function SoldSpot({ position, onChanged }: { position: PositionView; onCh
   const [notice, setNotice] = useState<string | null>(null);
 
   return (
-    <div className={`${card} flex flex-col gap-3 p-5`}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className={`${card} flex flex-col gap-2.5 p-3.5`}>
+      <div className="flex flex-wrap items-start justify-between gap-2.5">
         <div className="min-w-0">
-          <p className="text-[15.5px] text-white">{position.title ?? position.label}</p>
-          <p className="mt-1 text-[12.5px] text-white/[0.62]">
+          <p className="truncate text-[14.5px] font-bold text-white">{position.title ?? position.label}</p>
+          <p className="mt-0.5 truncate text-[12.5px] text-white/[0.62]">
             {position.sponsor?.name ?? "Sold"}
             {position.creatorReceivesUsdc ? ` · ${position.creatorReceivesUsdc} USDC to you` : ""}
           </p>
@@ -210,14 +208,14 @@ export function SoldSpot({ position, onChanged }: { position: PositionView; onCh
       </div>
 
       {position.qr ? (
-        <p className="text-[12.5px] text-white/[0.62]">
-          QR <span className="break-all text-white">{position.qr.url}</span> · {position.qr.scans}{" "}
+        <p className="truncate text-[12.5px] text-white/[0.62]">
+          QR <span className="text-white">{position.qr.url}</span> · {position.qr.scans}{" "}
           {position.qr.scans === 1 ? "scan" : "scans"}
         </p>
       ) : null}
 
       {position.delivered ? (
-        <p className="break-all text-[14.5px] text-white/[0.62]">
+        <p className="break-all text-[13px] text-white/[0.62]">
           Delivered {calendarDate(position.delivered.at)}: <span className="text-white">{position.delivered.url}</span>
         </p>
       ) : (
@@ -259,7 +257,7 @@ export function PromiseCard({ deliverable, onChanged }: { deliverable: Deliverab
   const [notice, setNotice] = useState<string | null>(null);
 
   return (
-    <div className={`${card} flex flex-col gap-3 p-5`}>
+    <div className={`${card} flex flex-col gap-2.5 p-3.5`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[15.5px] text-white">
