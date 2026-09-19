@@ -2,11 +2,11 @@
 
 /** Pieces the Spaces screens share. */
 
-import { pill } from "@/components/ad-space/ui";
 import { describeCreatorError } from "@/lib/creator/api";
 import type { SpaceStatus } from "@/lib/creator/listing";
 
-import { Alert } from "../ui";
+import { Notice } from "../hold";
+import { Tag } from "./kit";
 
 export const STATUS_LABEL: Record<SpaceStatus | string, string> = {
   draft: "Draft",
@@ -15,15 +15,23 @@ export const STATUS_LABEL: Record<SpaceStatus | string, string> = {
   delisted: "Taken down",
 };
 
+/** The app's `statusTag` (MySpacesList): Live is green, Draft calm, Closed dim, Taken down amber. */
+const STATUS_TONE: Record<string, "good" | "calm" | "dim" | "caution"> = {
+  live: "good",
+  draft: "calm",
+  closed: "dim",
+  delisted: "caution",
+};
+
 export function StatusPill({ status, onPhoto = false }: { status: string; onPhoto?: boolean }) {
-  const cls = status === "live" ? pill.open : status === "draft" ? pill.attention : pill.neutral;
-  const text = <span className={cls}>{STATUS_LABEL[status] ?? status}</span>;
-  // The pills are tints; on a picture they sit on a dark backing of the same shape so they read.
-  return onPhoto ? <span className="inline-flex rounded-[12px] bg-[#04101A]/75 backdrop-blur-md">{text}</span> : text;
+  const tag = <Tag label={STATUS_LABEL[status] ?? status} tone={STATUS_TONE[status] ?? "calm"} />;
+  // A tag is a tint; on a picture it sits on a dark backing of the same shape so it reads.
+  return onPhoto ? <span className="inline-flex rounded-[11px] bg-[#04101A]/75 backdrop-blur-md">{tag}</span> : tag;
 }
 
+/** The app's Notice for a read that failed: an amber tint, never red. */
 export function ReadError({ error }: { error: unknown }) {
-  return error ? <Alert>{describeCreatorError(error)}</Alert> : null;
+  return error ? <Notice icon="cloud-offline-outline">{describeCreatorError(error)}</Notice> : null;
 }
 
 /** "12 Sep" for a day or an instant. */
