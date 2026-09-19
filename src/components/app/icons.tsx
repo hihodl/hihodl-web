@@ -264,3 +264,53 @@ export const IconSim = (p: P) => (
     <path d="M2 20h.01M7 20v-4M12 20v-8M17 20V8M22 4v16" />
   </Icon>
 );
+
+/* ── The app's own places: its tabs and the screens under them ────── */
+
+/** Payments: the app's list.bullet.rectangle tab. */
+export const IconPayments = (p: P) => (
+  <Icon {...p}>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M7 9h6M7 13h10M7 17h4" />
+  </Icon>
+);
+
+/** Savings: the app's piggy-bank hub. */
+export const IconSavings = (p: P) => (
+  <Icon {...p}>
+    <path d="M4 12a6 6 0 0 1 6-6h3a6 6 0 0 1 6 6v3a2 2 0 0 1-2 2h-1v2h-3v-2h-3v2H7v-2.3A6 6 0 0 1 4 15z" />
+    <path d="M4 11H3a1 1 0 0 1 0-2h1" />
+    <circle cx="15.5" cy="11.5" r="0.7" fill="currentColor" />
+  </Icon>
+);
+
+/** Invest: the app's Invest tab (arrow.left.arrow.right became a rising line). */
+export const IconInvest = (p: P) => (
+  <Icon {...p}>
+    <path d="M3 17.5 9 11l4 4 7.5-8" />
+    <path d="M15 3.5h5.5V9" />
+  </Icon>
+);
+
+/** Activity: the app's list of what moved. */
+export const IconActivity = (p: P) => (
+  <Icon {...p}>
+    <path d="M3 12h4l2.5-6 4 13 2.5-7h5" />
+  </Icon>
+);
+
+/** Menu: the app's own menu, where the person and everything about them lives. */
+export const IconMenuDots = (p: P) => (
+  <Icon {...p}>
+    <path d="M4 7h16M4 12h16M4 17h10" />
+    <circle cx="18" cy="17" r="1.6" />
+  </Icon>
+);
+
+/** Add money: the app's plus. */
+export const IconAdd = (p: P) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 8v8M8 12h8" />
+  </Icon>
+);
