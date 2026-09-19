@@ -20,7 +20,8 @@ import { useMe, useOffers } from "@/lib/app/spaces-data";
 import { waitingOnYou } from "@/lib/app/spaces-model";
 
 import { useProductHref } from "../base";
-import { Avatar, CopyButton, shortAddress } from "../front/kit";
+import { UserAvatar } from "../account/UserAvatar";
+import { CopyButton, shortAddress } from "../front/kit";
 import { IconChevronRight, IconWallet } from "../icons";
 import { useShell } from "../Shell";
 import { glass, Skeleton } from "../ui";
@@ -137,7 +138,7 @@ function YouCard() {
     <Link href={href("/account")} className={`${glass} flex min-w-0 flex-col justify-between gap-5 p-5 transition-colors hover:bg-white/[0.06] sm:p-6`}>
       <span className="text-small font-medium text-text">Account</span>
       <span className="flex min-w-0 items-center gap-4">
-        <Avatar src={me.data?.profile.avatarUrl} name={name} size={56} />
+        <UserAvatar size={56} fallbackName={name} />
         <span className="min-w-0">
           <span className="block truncate text-body font-medium text-text">{name}</span>
           <span className="mt-0.5 block truncate text-tiny text-[#9FB7C2]">{username ? `@${username}` : session.user.email}</span>

@@ -28,6 +28,7 @@ import { Avatar, btnGhost, btnLink, btnPrimary, inputCls, ScreenHeader, Warn } f
 import { IconChevronRight } from "../icons";
 import { useShell } from "../Shell";
 import { glass, Skeleton } from "../ui";
+import { UserAvatar } from "./UserAvatar";
 
 const PLAN: Record<string, string> = { free: "Free", pro: "Pro" };
 
@@ -67,7 +68,7 @@ export function ProfileCard({ onOpen }: { onOpen: () => void }) {
   return (
     <button type="button" onClick={onOpen} className={`${glass} group flex w-full min-w-0 flex-col gap-5 p-5 text-left transition-colors hover:bg-white/[0.06] sm:flex-row sm:items-center sm:p-6`}>
       <span className="flex min-w-0 flex-1 items-center gap-4">
-        <Avatar src={m.profile.avatarUrl} name={name} size={72} />
+        <UserAvatar size={72} fallbackName={name} />
         <span className="min-w-0">
           <span className="block truncate text-[22px] font-medium leading-tight text-text">{name}</span>
           <span className="mt-1 block truncate text-small text-[#9FB7C2]">{username ? `@${username}` : "No username yet"}</span>
