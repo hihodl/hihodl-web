@@ -265,6 +265,29 @@ export function getAaveReserves(): Promise<{ reserves: YieldReserve[] }> {
   return read("yield/aave/reserves");
 }
 
+/**
+ * The standing authorization for one (chain, token), and the one line to show
+ * about it.
+ *
+ * The app draws this as RenewalNotice, which renders nothing in the common
+ * case: the server returns copy only for `expired`, the state where new
+ * deposits really have stopped being put to work. A 503 means the table is not
+ * applied in this environment — the app treats that as "off", and so does the
+ * web. Renewing is a signature, so it happens on the phone; this read is only
+ * how the web knows to say so.
+ */
+export interface YieldAuthorization {
+  enabled: boolean;
+  mode: "none" | "silent" | "ambient" | "expired";
+  copy: { line: string; cta: string } | null;
+  runwayDays: number | null;
+}
+
+export function getYieldAuthorization(chain: string, token = "usdc"): Promise<YieldAuthorization> {
+  const q = new URLSearchParams({ chain, token });
+  return read<YieldAuthorization>(`yield/authorization?${q}`);
+}
+
 /* ── What the money cost ──────────────────────────────────────────── */
 
 export interface CostBasisPosition {
