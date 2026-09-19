@@ -38,6 +38,8 @@ import {
 } from "@/lib/creator/listing";
 import { problemsAt, type Problem } from "@/lib/creator/rules";
 
+import { MoreChainsLine } from "@/components/app/MoreChains";
+
 import { Ladder } from "./Ladder";
 import { Block, Choice, Count, Field, Money, Paragraph, Problems, Text, Toggles } from "./parts";
 
@@ -222,15 +224,20 @@ export function SellStep({
 
       <Block
         title="Where you can be paid"
-        why="A sponsor pays in USDC on one of these, straight to your own address on that chain. Nothing is bridged and nothing waits in between, so the chains you accept are the wallets that can buy from you."
+        why="A sponsor pays in USDC on Solana, straight to your own address. Nothing is bridged and nothing waits in between."
       >
         <Field label="Networks" problems={problemsAt(problems, "chains")}>
           <Toggles
             values={draft.chains}
             onChange={(chains) => set({ chains: chains as Chain[] })}
-            options={availableChains.map((c) => ({ value: c, label: CHAIN_LABEL[c] ?? c }))}
+            // The web sets up Solana only. A chain is still listed when this
+            // draft already takes it (made in the app), so it can be dropped.
+            options={availableChains
+              .filter((c) => c === "solana" || draft.chains.includes(c))
+              .map((c) => ({ value: c, label: CHAIN_LABEL[c] ?? c }))}
           />
         </Field>
+        <MoreChainsLine />
       </Block>
     </div>
   );

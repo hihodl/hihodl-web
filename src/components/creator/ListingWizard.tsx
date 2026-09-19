@@ -84,6 +84,16 @@ function stagesFor(template: Template | null) {
   return isProductionTemplate(template) ? PRODUCTION_STAGES : STAGES;
 }
 
+/**
+ * The networks a listing made on the web starts with: Solana, the one the web
+ * can set up end to end. Base and Polygon need an address from the HOLD app's
+ * wallet, so a web draft never starts on them (a draft made in the app keeps
+ * the ones it chose).
+ */
+function webChains(available: readonly Chain[]): Chain[] {
+  return available.filter((c) => c === "solana");
+}
+
 export function ListingWizard({ spaceId: initialSpaceId, templateId }: { spaceId?: string; templateId?: string }) {
   const router = useRouter();
   const href = useHref();
@@ -118,7 +128,7 @@ export function ListingWizard({ spaceId: initialSpaceId, templateId }: { spaceId
         const picked = !existing && templateId ? list.find((t) => t.id === templateId) : undefined;
         if (picked) {
           setTemplate(picked);
-          setDraft({ ...draftFor(picked), chains: availableChains });
+          setDraft({ ...draftFor(picked), chains: webChains(availableChains) });
           setStage("basics");
         }
         if (existing) {
@@ -128,7 +138,7 @@ export function ListingWizard({ spaceId: initialSpaceId, templateId }: { spaceId
             const next = draftFromSpace(existing.space, own);
             // A draft reopened with no chains picked yet gets the ones this
             // server can actually take a payment on, not a remembered list.
-            setDraft({ ...next, chains: next.chains.length ? next.chains : availableChains });
+            setDraft({ ...next, chains: next.chains.length ? next.chains : webChains(availableChains) });
             setSavedBody(bodyOf(next, own));
             setPickedEvent(existing.space.event);
           }

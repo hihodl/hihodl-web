@@ -347,12 +347,24 @@ function accountRefusal(code: string): Refusal | null {
     case "no_solana_address":
       return fixed("This listing takes Solana and there is no Solana address on your account to pay it to.");
     case "no_evm_address":
-      return fixed("This listing takes Base or Polygon and there is no address on your account to pay it to.");
+      // Said beside the networks, where it is fixed: the web sets up Solana only.
+      return {
+        problems: [
+          {
+            where: "chains",
+            step: "sell",
+            message:
+              "Base and Polygon need an address from the HOLD app's wallet, which this account does not have yet. Untick them to publish on Solana, or publish from the HOLD app.",
+          },
+        ],
+        message: null,
+        fix: null,
+      };
     case "creator_cannot_receive_usdc":
       return {
         problems: [],
         message:
-          "Your Solana wallet has no USDC account yet, so a sponsor paying from the HOLD app could pay and never reach you — our relayer is never allowed to open somebody else's token account. Two things fix it: publish on Base and Polygon instead, or have any amount of USDC sent to you on Solana once, which opens it for good.",
+          "Your Solana wallet has no USDC account yet, so a sponsor paying from the HOLD app could pay and never reach you — our relayer is never allowed to open somebody else's token account. Have any amount of USDC sent to you on Solana once, which opens it for good, then publish again.",
         fix: accountFix("payout"),
       };
     default:

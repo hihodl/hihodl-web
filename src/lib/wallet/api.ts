@@ -217,3 +217,35 @@ export async function getBalances(address: string): Promise<Balances> {
   const usdc = tokens.value.reduce((s, a) => s + (a.account.data.parsed.info.tokenAmount.uiAmount ?? 0), 0);
   return { sol: lamports.value / 1e9, usdc };
 }
+
+/* ── Can this address be paid in USDC? ────────────────────────────── */
+
+export type UsdcAccountState = "ready" | "missing" | "not_theirs" | "frozen";
+
+const TOKEN_PROGRAM_ID = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
+const ATA_PROGRAM_ID = "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL";
+
+/**
+ * The publish gate's own check (`usdcAccountState` in the backend's
+ * services/ad-space/solana.ts), read through the same RPC proxy: the owner's
+ * canonical USDC account exists, is USDC, is still theirs and is not frozen.
+ * A listing on Solana is refused at publish without it, because a sponsor
+ * paying from the app could not open it for them.
+ */
+export async function usdcAccountState(owner: string): Promise<UsdcAccountState> {
+  const { PublicKey } = await import("@solana/web3.js");
+  const o = new PublicKey(owner);
+  const [ata] = PublicKey.findProgramAddressSync(
+    [o.toBuffer(), new PublicKey(TOKEN_PROGRAM_ID).toBuffer(), new PublicKey(USDC_MINT).toBuffer()],
+    new PublicKey(ATA_PROGRAM_ID),
+  );
+  const info = await rpc<{ value: { data?: { parsed?: { info?: { mint?: string; owner?: string; state?: string } } } } | null } | null>(
+    "getAccountInfo",
+    [ata.toBase58(), { encoding: "jsonParsed", commitment: "confirmed" }],
+  );
+  if (!info?.value) return "missing";
+  const parsed = info.value.data?.parsed?.info;
+  if (!parsed || parsed.mint !== USDC_MINT || parsed.owner !== owner) return "not_theirs";
+  if (parsed.state === "frozen") return "frozen";
+  return "ready";
+}
