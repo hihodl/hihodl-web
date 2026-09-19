@@ -21,6 +21,7 @@ import type { Session } from "@supabase/supabase-js";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { CreatorApiError, describeCreatorError } from "@/lib/creator/api";
+import { demoParam } from "@/lib/creator/demo";
 import { signOut, useCreatorSession } from "@/lib/creator/session";
 import { clientProductBase, safeNext } from "@/lib/app/paths";
 import {
@@ -93,9 +94,13 @@ function Flow({ session }: { session: Session }) {
     setError(null);
     try {
       const f = await readFacts();
-      const s = stepsFor(f, readChoices(uid));
+      // DEMO BRANCH: ?step=<key> opens onboarding on that step, every step listed.
+      const demoStep = demoParam("step") as StepKey | null;
+      const all: StepKey[] = ["username", "profile", "passkey", "recovery", f.wallet?.state === "app_wallet" ? "app-wallet" : "wallet", "link"];
+      const s = demoStep && all.includes(demoStep) ? all : stepsFor(f, readChoices(uid));
       setFacts(f);
       setSteps(s);
+      if (demoStep && all.includes(demoStep)) setAt(all.indexOf(demoStep));
       if (s.length === 0) {
         markOnboarded(uid);
         window.location.replace(destination());

@@ -22,6 +22,7 @@ import { useCallback, useEffect, useState } from "react";
 import { getLinkState, joinLinkSession } from "@/lib/link/api";
 import { phoneOf, type Phone } from "@/lib/link/ua";
 import { PLAY_STORE_URL } from "@/lib/appLinks";
+import { demoParam } from "@/lib/creator/demo";
 import { signOut, useCreatorSession } from "@/lib/creator/session";
 import { WalletApiError } from "@/lib/wallet/api";
 
@@ -129,7 +130,13 @@ export function PhoneLinkView({ phase, onJoin, onSignOut }: { phase: PhonePhase;
 
 export function PhoneLink({ sessionId }: { sessionId: string }) {
   const [phone, setPhone] = useState<Phone | null | undefined>(undefined);
-  useEffect(() => setPhone(phoneOf(navigator.userAgent, navigator.maxTouchPoints ?? 0)), []);
+  useEffect(() => {
+    // DEMO BRANCH: ?phone=android|ios|computer shows the page as that device would.
+    const forced = demoParam("phone");
+    if (forced === "android" || forced === "ios") return setPhone(forced);
+    if (forced === "computer") return setPhone(null);
+    setPhone(phoneOf(navigator.userAgent, navigator.maxTouchPoints ?? 0));
+  }, []);
 
   if (phone === undefined) return <PhoneLinkView phase={{ kind: "reading" }} onJoin={() => undefined} onSignOut={() => undefined} />;
   if (phone === "android") {

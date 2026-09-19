@@ -63,6 +63,10 @@ function newKey(): string {
 
 /** The key this tab already holds for a position, if any. */
 export function existingCheckoutKey(positionId: string): string | null {
+  // DEMO BRANCH: ?demo-checkout=paid opens any spot on its receipt.
+  if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("demo-checkout") === "paid") {
+    return `demo-paid-${positionId}`;
+  }
   return storageGet(KEY_PREFIX + positionId);
 }
 
@@ -71,7 +75,7 @@ export function checkoutKey(positionId: string): string {
   const name = KEY_PREFIX + positionId;
   const found = storageGet(name);
   if (found) return found;
-  const key = newKey();
+  const key = `demo-${positionId}-${newKey().slice(0, 8)}`;
   storageSet(name, key);
   return key;
 }
@@ -83,7 +87,7 @@ export function checkoutKey(positionId: string): string {
  * instead of the new one.
  */
 export function rotateCheckoutKey(positionId: string): string {
-  const key = newKey();
+  const key = `demo-${positionId}-${newKey().slice(0, 8)}`;
   storageSet(KEY_PREFIX + positionId, key);
   return key;
 }

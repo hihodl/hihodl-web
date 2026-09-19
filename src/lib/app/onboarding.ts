@@ -28,6 +28,7 @@
 import type { Session } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
 
+import { creatorDemoEnabled } from "@/lib/creator/demo";
 import { activeLinkedDevices } from "@/lib/link/api";
 import { getWalletStatus, listPasskeys, type WalletStatus } from "@/lib/wallet/api";
 import { passkeysHere } from "@/lib/wallet/passkey";
@@ -129,7 +130,17 @@ export async function readFacts(): Promise<Facts> {
  * then it is offered from Account → Your phone, and Withdraw still asks for it
  * (the server answers LINK_YOUR_PHONE_FIRST). Set to "1" with that release.
  */
-const LINK_REQUIRED = process.env.NEXT_PUBLIC_LINK_REQUIRED === "1";
+const LINK_REQUIRED_ENV = process.env.NEXT_PUBLIC_LINK_REQUIRED === "1";
+
+/**
+ * DEMO BRANCH: onboarding itself (/welcome) asks to link a phone when none is,
+ * so "Link your phone" from Account and Withdraw lands on the step; the shell
+ * still lets the person in without one, as production does today.
+ */
+function linkRequired(): boolean {
+  if (LINK_REQUIRED_ENV) return true;
+  return creatorDemoEnabled() && typeof window !== "undefined" && /\/welcome\/?$/.test(window.location.pathname);
+}
 
 /** Whether the web wallet is one this person should be offered now. */
 export function walletToMake(f: Facts): boolean {
@@ -150,7 +161,7 @@ export function stepsFor(f: Facts, c: Choices): StepKey[] {
   if (f.canPasskey && !f.hasPasskey) required.push("passkey");
   if (!f.hasCodes) required.push("recovery");
   if (walletToMake(f) && !c.wallet) required.push("wallet");
-  if (LINK_REQUIRED && f.linkedPhones === 0) required.push("link");
+  if (linkRequired() && f.linkedPhones === 0) required.push("link");
   if (required.length === 0) return [];
 
   const out: StepKey[] = [];

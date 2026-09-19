@@ -24,14 +24,23 @@
  * The contract is documentation/ad-space-api-v0.md.
  */
 
-import { randomBytes, randomUUID } from "node:crypto";
-
 import { fixtureEvents, fixtureSpace } from "@/lib/ad-space/fixture.dev";
 import type { Chain } from "@/lib/ad-space/types";
+import { demoInsights } from "@/lib/demo/insights";
 
-import { DEMO_INVITE_CODE, DEMO_PEOPLE, DEMO_SEAT_CODE, DEMO_WALLETS, isDemoRole, type DemoRole } from "./demo";
+import { DEMO_INVITE_CODE, DEMO_PEOPLE, DEMO_SEAT_CODE, DEMO_WALLETS, demoState, isDemoRole, type DemoRole } from "./demo";
+import {
+  PRODUCTION_DELIVERABLE_LABEL,
+  PRODUCTION_DELIVERABLES,
+  type ChecklistItem,
+  type DeliverableView,
+  type PackageView,
+  type PhotoRect,
+  type ProductionBrief,
+  type ProductionPackage,
+  type ProductionView,
+} from "./listing";
 import type {
-  DeliverableView,
   EventSummary,
   OfferView,
   OffersBlock,
@@ -79,6 +88,21 @@ interface PosRec {
   content: PositionView["content"];
   delivered: PositionView["delivered"];
   qr: PositionView["qr"];
+  /** Its square on the listing's photo. */
+  rect?: PhotoRect | null;
+  /** A sold content production spot: the brief, the due time and the delivery. */
+  prod?: ProdRec | null;
+}
+
+interface ProdRec {
+  brief: ProductionBrief;
+  shootOn: string;
+  shootOnSet: boolean;
+  dueAt: string;
+  state: ProductionView["state"];
+  delivery: ProductionView["delivery"];
+  revision: ProductionView["revision"];
+  accepted: ProductionView["accepted"];
 }
 
 interface DeliverableRec {
@@ -95,6 +119,10 @@ interface DeliverableRec {
 interface SpaceRec {
   /** The creator's own picture (POST /spaces/:id/banner). */
   bannerUrl?: string | null;
+  /** The creator's photo of the product (POST /spaces/:id/photo). */
+  photo?: { url: string; width: number; height: number } | null;
+  /** Content production: what a spot includes. */
+  production?: ProductionPackage | null;
   id: string;
   ownerId: UserId;
   templateId: string;
@@ -212,6 +240,10 @@ interface Store {
   earnings: EarningRec[];
   events: EventSummary[];
   armed: ArmedError | null;
+  /** Creator or Creative Director, per creator (GET/PATCH /ad-space/settings). */
+  agency: Record<UserId, boolean | null>;
+  /** The id counter, kept with the store so ids made after a reload do not repeat. */
+  idSeq: number;
 }
 
 export class DemoError extends Error {
@@ -254,8 +286,38 @@ function creatorGets(cents: number, feePayer: "sponsor" | "creator"): number {
   return feePayer === "creator" ? cents - feeOf(cents) : cents;
 }
 
+/*
+ * Ids are made from a counter, not at random: the same seed always gives the
+ * same ids, so the screen index can link to a seeded listing by its id, and a
+ * reload (which re-seeds a browser that kept nothing) lands on the same one.
+ */
+let idSeq = 0;
 function uuid(): string {
-  return randomUUID();
+  idSeq += 1;
+  let h = (idSeq * 2654435761) >>> 0;
+  let hex = "";
+  for (let i = 0; i < 4; i += 1) {
+    h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0;
+    h = Math.imul(h ^ (h >>> 13), 3266489909) >>> 0;
+    hex += h.toString(16).padStart(8, "0");
+  }
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+}
+
+function randBytes(n: number): Uint8Array {
+  const b = new Uint8Array(n);
+  globalThis.crypto.getRandomValues(b);
+  return b;
+}
+
+function randHex(n: number): string {
+  return Array.from(randBytes(n), (x) => x.toString(16).padStart(2, "0")).join("");
+}
+
+function randToken(n: number): string {
+  let s = "";
+  for (const x of randBytes(n)) s += String.fromCharCode(x);
+  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 function slugify(text: string): string {
@@ -274,8 +336,8 @@ const MANAGER: UserId = DEMO_PEOPLE.manager.userId;
 const REP: UserId = DEMO_PEOPLE.rep.userId;
 
 const COIN_X = {
-  handle: "coinempress",
-  name: "Coin Empress",
+  handle: "demo_creator",
+  name: "Demo Creator",
   avatarUrl: null as string | null,
 };
 
@@ -323,7 +385,7 @@ function sessionService(id: string, name: string, summary: string, maxSlots: num
  * the brand page render the same board.
  */
 function catalogue(): Template[] {
-  const suitcase = fixtureSpace("coinempress", "road-to-token2049")?.template;
+  const suitcase = fixtureSpace("demo_creator", "road-to-token2049")?.template;
   const suitcaseTemplate: Template = {
     id: "carry-on-suitcase",
     productType: "luggage",
@@ -340,8 +402,26 @@ function catalogue(): Template[] {
   };
   // The public Template also carries `views` (the outlines); the console ignores them but the brand page draws them.
   (suitcaseTemplate as Template & { views?: unknown }).views = suitcase?.views ?? [];
+  const production: Template = {
+    id: "content-production",
+    productType: "production",
+    name: "Content production",
+    kind: "service",
+    service: {
+      deliverableKind: "video",
+      summary:
+        "You bring the brief, the creator brings the camera: interviews, short-form, b-roll and social assets filmed at the event, edited and delivered to you.",
+      maxSlots: 10,
+      format: "production",
+      suggestedPriceCents: 150_000,
+    },
+    allowedVenues: [...AT_AN_EVENT] as Template["allowedVenues"],
+    requiredAttestations: ["discloses_sponsorship", "no_investment_advice"],
+    zones: [],
+  };
   return [
     suitcaseTemplate,
+    production,
     contentService(
       "short-form-video",
       "Short video",
@@ -469,6 +549,23 @@ function notLinked(): XAccountStatus {
   return { linked: false, canPublish: false, refusal: "x_not_linked", configured: true };
 }
 
+/** The owner's X as the demo badge set it: linked, none, not verified, too new, or to link again. */
+function xFor(x: XAccountStatus, viewer: UserId): XAccountStatus {
+  if (viewer !== OWNER || !x.linked) return x;
+  switch (demoState().x) {
+    case "none":
+      return notLinked();
+    case "unverified":
+      return { ...x, verifiedType: null, canPublish: false, refusal: "x_not_verified" };
+    case "too-new":
+      return { ...x, accountCreatedAt: ago(40 * DAY), canPublish: false, refusal: "x_account_too_new" };
+    case "relink":
+      return { ...x, canPublish: false, refusal: "x_relink_needed" };
+    default:
+      return x;
+  }
+}
+
 function coinX(): XAccountStatus {
   return {
     linked: true,
@@ -521,10 +618,10 @@ function sponsorOf(name: string, kind: "logo" | "text" | "qr" = "logo"): NonNull
   const handle = name.toLowerCase().replace(/\W/g, "");
   return {
     name,
-    url: `https://${handle}.xyz`,
+    url: `https://${handle}.example`,
     xHandle: handle,
     contentKind: kind,
-    contentText: kind === "text" ? "CODE10" : kind === "qr" ? `https://${handle}.xyz/r/coin` : null,
+    contentText: kind === "text" ? "CODE10" : kind === "qr" ? `https://${handle}.example/r/demo` : null,
     imageUrl: kind === "logo" ? logo(name.toUpperCase().slice(0, 6), "#FFFFFF", "#141F2E") : null,
   };
 }
@@ -599,8 +696,11 @@ function sell(s: Store, sp: SpaceRec, p: PosRec, sponsor: NonNullable<PosRec["sp
 }
 
 function seeded(): Store {
+  idSeq = 0;
   const s: Store = {
     seed: "seeded",
+    agency: {},
+    idSeq: 0,
     accounts: new Map(),
     spaces: [],
     offers: [],
@@ -806,7 +906,7 @@ function seeded(): Store {
       pos({ zoneKey: z.zoneKey, label: z.label, priceCents: z.suggestedPriceCents ?? 10_000, accepts: ["logo", "qr", "text"] }),
     ),
     deliverables: [
-      { id: uuid(), kind: "video", platform: "x", count: 1, dueDate: day(-18), note: "The packing vlog, suitcase in frame.", deliveredUrl: "https://x.com/coinempress/status/1830000000000000001", deliveredAt: ago(18 * DAY) },
+      { id: uuid(), kind: "video", platform: "x", count: 1, dueDate: day(-18), note: "The packing vlog, suitcase in frame.", deliveredUrl: "https://x.com/demo_creator/status/1830000000000000001", deliveredAt: ago(18 * DAY) },
       { id: uuid(), kind: "photo_post", platform: "instagram", count: 3, dueDate: day(-10), note: null, deliveredUrl: null, deliveredAt: null },
       { id: uuid(), kind: "thank_you_post", platform: "x", count: 1, dueDate: day(2), note: null, deliveredUrl: null, deliveredAt: null },
     ],
@@ -817,7 +917,7 @@ function seeded(): Store {
     const p = kbwSpace.positions[i];
     const o = sell(s, kbwSpace, p, sponsorOf(name, i === 4 ? "text" : "logo"), 30 - i * 2, i === 2 ? "base" : "solana");
     p.content = { status: i === 5 ? "pending" : "approved", rejectedReason: null, submittedAt: ago((20 - i) * DAY) };
-    if (i < 3) p.delivered = { url: `https://x.com/coinempress/status/18300000000000001${i}`, at: ago((16 - i) * DAY) };
+    if (i < 3) p.delivered = { url: `https://x.com/demo_creator/status/18300000000000001${i}`, at: ago((16 - i) * DAY) };
     if (i === 0) p.qr = { code: "kbw-orbit", url: "https://hihodl.xyz/q/kbw-orbit", scans: 214 };
     return o;
   });
@@ -862,6 +962,129 @@ function seeded(): Store {
   s.spaces.push(anytime);
   sell(s, anytime, anytime.positions[0], sponsorOf("Lumen", "text"), 9);
 
+  /* 7. The suitcase's own photo, with the front spots placed on it and the rest still to place. */
+  bpSuitcase.photo = { url: "/demo/suitcase-front.jpg", width: 1100, height: 1100 };
+  bpSuitcase.positions.forEach((q, i) => {
+    if (!q.zoneKey.startsWith("front-")) return;
+    const col = i % 2;
+    const row = Math.floor(i / 2);
+    q.rect = { x: 0.28 + col * 0.24, y: 0.18 + row * 0.16, w: 0.2, h: 0.12 };
+  });
+
+  /* 8. CONTENT PRODUCTION at TOKEN2049: a package for the brand's own channels,
+        with a spot in each state it can be in, and a draft of the next one. */
+  const prodPackage: ProductionPackage = {
+    deliverables: { interviews: 2, shortForm: 3, brollPack: 1, photoSet: 0, socialAssets: 5 },
+    turnaroundHours: 48,
+    usage: { scope: "organic_and_paid", term: "12m" },
+  };
+  const production = space({
+    templateId: "content-production",
+    slug: "token2049-content-production",
+    title: "Your brand's TOKEN2049 content, filmed and edited",
+    reason:
+      "Don't sponsor my trip. Sponsor the content. You bring the brief, I bring the camera: interviews, short-form, b-roll and social assets, delivered within 48 hours.",
+    status: "live",
+    eventId: token2049.id,
+    eventName: token2049.name,
+    closesAt: ahead(18 * DAY),
+    publishedAt: ago(7 * DAY),
+    chains: ["solana", "base", "polygon"],
+    fallback: "creator_refund",
+    acceptsOffers: true,
+    attestations: ["discloses_sponsorship", "no_investment_advice"],
+    createdAt: ago(8 * DAY),
+    positions: Array.from({ length: 6 }, (_, i) => pos({ zoneKey: `slot-${i + 1}`, label: `Spot ${i + 1}`, priceCents: 150_000, accepts: [] })),
+  });
+  production.production = prodPackage;
+  production.bannerUrl = "/demo/singapore.jpg";
+  s.spaces.push(production);
+  const brief = (brand: string, goal: ProductionBrief["goal"], messages: string[]): ProductionBrief => ({
+    goal,
+    keyMessages: messages,
+    interviewees: `${brand}'s founder, day two after 3pm at our booth`,
+    assetsUrl: `https://${brand.toLowerCase().replace(/\W/g, "")}.example/brand-kit`,
+    dos: "Show the product on a phone, in daylight",
+    donts: "No price talk, no competitors in frame",
+    shootContact: { kind: "telegram", value: `@${brand.toLowerCase().replace(/\W/g, "")}_team` },
+  });
+  const full = (): ChecklistItem[] => PRODUCTION_DELIVERABLES.filter((k) => prodPackage.deliverables[k] > 0).map((k) => ({ key: k, count: prodPackage.deliverables[k] }));
+  const prodSpots: { brand: string; prod: ProdRec; daysAgo: number }[] = [
+    {
+      brand: "Northwind",
+      daysAgo: 6,
+      prod: { brief: brief("Northwind", "product_launch", ["Pay anyone in USDC, no gas", "Live in 40 countries"]), shootOn: token2049.startsOn, shootOnSet: true, dueAt: ahead(30 * HOUR), state: "awaiting_delivery", delivery: null, revision: null, accepted: null },
+    },
+    {
+      brand: "Paperclip",
+      daysAgo: 5,
+      prod: { brief: brief("Paperclip", "awareness", ["The wallet your accountant likes"]), shootOn: token2049.startsOn, shootOnSet: false, dueAt: ago(5 * HOUR), state: "overdue", delivery: null, revision: null, accepted: null },
+    },
+    {
+      brand: "Lumen Labs",
+      daysAgo: 4,
+      prod: {
+        brief: brief("Lumen Labs", "hiring", ["We are hiring engineers in Singapore"]),
+        shootOn: token2049.startsOn,
+        shootOnSet: true,
+        dueAt: ago(20 * HOUR),
+        state: "delivered",
+        delivery: { url: "https://frame.io/r/token2049-lumen", checklist: full(), deliveredAt: ago(22 * HOUR), firstDeliveredAt: ago(22 * HOUR) },
+        revision: null,
+        accepted: null,
+      },
+    },
+    {
+      brand: "Mesa",
+      daysAgo: 4,
+      prod: {
+        brief: brief("Mesa", "community", ["Builders first", "Join the Mesa Discord"]),
+        shootOn: token2049.startsOn,
+        shootOnSet: true,
+        dueAt: ahead(20 * HOUR),
+        state: "revision_requested",
+        delivery: { url: "https://frame.io/r/token2049-mesa", checklist: full(), deliveredAt: ago(30 * HOUR), firstDeliveredAt: ago(30 * HOUR) },
+        revision: { note: "Shorter cuts, under 30 seconds, and use the second interview take.", requestedAt: ago(4 * HOUR) },
+        accepted: null,
+      },
+    },
+    {
+      brand: "Stackd",
+      daysAgo: 3,
+      prod: {
+        brief: brief("Stackd", "product_launch", ["Stackd v2 is live"]),
+        shootOn: token2049.startsOn,
+        shootOnSet: true,
+        dueAt: ago(3 * DAY),
+        state: "accepted",
+        delivery: { url: "https://frame.io/r/token2049-stackd", checklist: full(), deliveredAt: ago(4 * DAY), firstDeliveredAt: ago(4 * DAY) },
+        revision: null,
+        accepted: { at: ago(2 * DAY), auto: false },
+      },
+    },
+  ];
+  prodSpots.forEach((x, i) => {
+    const q = production.positions[i];
+    sell(s, production, q, { ...sponsorOf(x.brand), contentKind: "text", contentText: null, imageUrl: null }, x.daysAgo);
+    q.prod = x.prod;
+  });
+  const productionDraft = space({
+    templateId: "content-production",
+    slug: "breakpoint-content-production",
+    title: "Your Breakpoint content, filmed and edited",
+    reason: "Your brief, my camera, at Breakpoint London.",
+    status: "draft",
+    eventId: breakpoint.id,
+    eventName: breakpoint.name,
+    closesAt: ahead(40 * DAY),
+    chains: ["solana"],
+    fallback: "creator_refund",
+    createdAt: ago(2 * HOUR),
+    positions: Array.from({ length: 3 }, (_, i) => pos({ zoneKey: `slot-${i + 1}`, label: `Spot ${i + 1}`, priceCents: 120_000, accepts: [] })),
+  });
+  productionDraft.production = { ...prodPackage, deliverables: { ...prodPackage.deliverables }, usage: { ...prodPackage.usage } };
+  s.spaces.push(productionDraft);
+
   /* Offers and bids — three waiting on the creator. */
   const offer = (o: Partial<OfferRec> & Pick<OfferRec, "spaceId" | "positionId" | "kind" | "amountCents">): OfferRec => ({
     id: uuid(),
@@ -887,7 +1110,7 @@ function seeded(): Store {
       sponsor: {
         name: "Acme",
         contactKind: "email",
-        contactValue: "team@acme.xyz",
+        contactValue: "team@acme.example",
         message: "We launch on day 2 and would love a video that week.",
         via: "web",
         backed: { chain: "solana", address: "9wFFyRfZBsuAha4YcuxcXLKwMxJR43S7fPfQLusDBzvT", checkedAt: ago(5 * HOUR) },
@@ -927,7 +1150,7 @@ function seeded(): Store {
       sponsor: {
         name: "Orbit",
         contactKind: "email",
-        contactValue: "growth@orbit.fi",
+        contactValue: "growth@orbit.example",
         message: "Our founder is in London all three days.",
         via: "web",
         backed: { chain: "solana", address: "4Nd1mBQtrMJVYVfKf2PJy9NZUZdTAsp7D4xWLs4gDB4T", checkedAt: ago(9 * HOUR) },
@@ -953,7 +1176,7 @@ function seeded(): Store {
       positionId: bpSuitcase.positions[2].id,
       kind: "offer",
       amountCents: 9_000,
-      sponsor: { name: "Orbit", contactKind: "email", contactValue: "growth@orbit.fi", message: "The side panel, all week?", via: "web", backed: null },
+      sponsor: { name: "Orbit", contactKind: "email", contactValue: "growth@orbit.example", message: "The side panel, all week?", via: "web", backed: null },
     }),
   );
 
@@ -1031,12 +1254,19 @@ function seeded(): Store {
   accrue(s.orders.find((o) => o.positionId === videoSold.id)!, dana, 1_000);
   for (const o of kbwSales) accrue(o, kai, 500);
 
+  // Kai films the production spots, so a rep has production work too.
+  s.assignments.push({ id: uuid(), spaceId: production.id, memberId: kai.id, shareBps: 1_500, note: "Films and edits the production spots" });
+
+  s.agency[OWNER] = true;
   return s;
 }
 
 function empty(): Store {
+  idSeq = 0;
   const s: Store = {
     seed: "empty",
+    agency: {},
+    idSeq: 0,
     accounts: new Map(),
     spaces: [],
     offers: [],
@@ -1055,13 +1285,69 @@ function empty(): Store {
 
 const G = globalThis as typeof globalThis & { __holdCreatorDemo?: Store };
 
+function initialSeed(): "seeded" | "empty" {
+  return demoState().seed;
+}
+
+/*
+ * In the browser the store is kept in this tab's sessionStorage after every
+ * write, so a full page load (a link from the screen index, a role switch)
+ * finds the listing just published or the offer just answered. On the server
+ * (the invite preview) it is only ever the seed.
+ */
+const SAVED = "hold-web-demo-spaces";
+
+function replacer(_key: string, value: unknown): unknown {
+  if (value instanceof Map) return { __map: [...value.entries()] };
+  if (typeof value === "bigint") return { __big: value.toString() };
+  return value;
+}
+
+function reviver(_key: string, value: unknown): unknown {
+  if (value && typeof value === "object") {
+    const v = value as { __map?: [unknown, unknown][]; __big?: string };
+    if (Array.isArray(v.__map)) return new Map(v.__map);
+    if (typeof v.__big === "string") return BigInt(v.__big);
+  }
+  return value;
+}
+
+function loadSaved(): Store | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.sessionStorage.getItem(SAVED);
+    if (!raw) return null;
+    const s = JSON.parse(raw, reviver) as Store;
+    if (!Array.isArray(s.spaces) || !(s.accounts instanceof Map)) return null;
+    idSeq = s.idSeq ?? 0;
+    return s;
+  } catch {
+    return null;
+  }
+}
+
+/** Keep the store for the next page load of this tab. */
+export function saveDemo(): void {
+  const s = G.__holdCreatorDemo;
+  if (!s || typeof window === "undefined") return;
+  s.idSeq = idSeq;
+  try {
+    window.sessionStorage.setItem(SAVED, JSON.stringify(s, replacer));
+  } catch {
+    /* a full page load starts from the seed again */
+  }
+}
+
 function store(): Store {
-  G.__holdCreatorDemo ??= seeded();
+  if (!G.__holdCreatorDemo) {
+    G.__holdCreatorDemo = loadSaved() ?? (initialSeed() === "empty" ? empty() : seeded());
+  }
   return G.__holdCreatorDemo;
 }
 
 export function resetDemo(seed: "seeded" | "empty"): void {
   G.__holdCreatorDemo = seed === "empty" ? empty() : seeded();
+  saveDemo();
 }
 
 export function armDemoError(armed: ArmedError | null): void {
@@ -1211,6 +1497,45 @@ function requiredAttestationsOf(t: Template | null, sp: SpaceRec): string[] {
   return [...out];
 }
 
+function packageView(pkg: ProductionPackage | null | undefined): PackageView | null {
+  if (!pkg) return null;
+  return {
+    ...pkg,
+    lines: PRODUCTION_DELIVERABLES.filter((k) => pkg.deliverables[k] > 0).map((k) => ({
+      key: k,
+      label: PRODUCTION_DELIVERABLE_LABEL[k],
+      count: pkg.deliverables[k],
+    })),
+  };
+}
+
+function productionViewOf(s: Store, sp: SpaceRec, q: PosRec): ProductionView | null {
+  const pr = q.prod;
+  if (!pr) return null;
+  const order = s.orders.find((o) => o.positionId === q.id);
+  const e = eventById(s, sp.eventId);
+  const d = pr.delivery;
+  return {
+    orderId: order?.id ?? null,
+    positionId: q.id,
+    package: packageView(sp.production),
+    brief: pr.brief,
+    event: { startsOn: e?.startsOn ?? day(0), endsOn: e?.endsOn ?? day(0), timeZone: e?.slug.includes("token2049") ? "Asia/Singapore" : null },
+    shootOn: pr.shootOn,
+    shootOnSet: pr.shootOnSet,
+    dueAt: pr.dueAt,
+    state: pr.state,
+    delivery: d,
+    revision: pr.revision,
+    // One round: offered on a first delivery only.
+    revisionAvailable: pr.state === "delivered" && !!d && d.deliveredAt === d.firstDeliveredAt,
+    accepted: pr.accepted,
+    autoAcceptAt: pr.state === "delivered" && d ? iso(Date.parse(d.deliveredAt) + 72 * HOUR) : null,
+    onTime: d ? Date.parse(d.firstDeliveredAt) <= Date.parse(pr.dueAt) : null,
+    publicProof: null,
+  };
+}
+
 function spaceView(s: Store, sp: SpaceRec, viewer: UserId, origin: string): SpaceView {
   const creator = sp.ownerId === viewer;
   const t = templateOf(sp.templateId);
@@ -1275,6 +1600,10 @@ function spaceView(s: Store, sp: SpaceRec, viewer: UserId, origin: string): Spac
       content: p.content,
       delivered: p.delivered,
       qr: p.qr,
+      rect: p.rect ?? null,
+      rectFrozen: p.status !== "open",
+      orderId: creator ? s.orders.find((o) => o.positionId === p.id)?.id ?? null : null,
+      production: productionViewOf(s, sp, p),
     })),
     totals,
     updates: [...sp.updates].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
@@ -1282,6 +1611,10 @@ function spaceView(s: Store, sp: SpaceRec, viewer: UserId, origin: string): Spac
     event: eventById(s, sp.eventId),
     bannerUrl: sp.bannerUrl ?? null,
     bannerGradient: "steel",
+    photo: sp.photo
+      ? { ...sp.photo, ready: sp.positions.length > 0 && sp.positions.every((q) => !!q.rect) }
+      : null,
+    production: packageView(sp.production),
   };
 }
 
@@ -1635,9 +1968,13 @@ function route(req: DemoRequest): DemoResponse {
   let p: string[] | null;
 
   /* X */
-  if (is("GET", "x-account")) return ok(accountOf(s, viewer).x);
+  if (is("GET", "x-account")) return ok(xFor(accountOf(s, viewer).x, viewer));
+  if (is("DELETE", "x-account")) {
+    accountOf(s, viewer).x = notLinked();
+    return ok({ unlinked: true });
+  }
   if (is("POST", "x-account/link")) {
-    const ticket = randomBytes(24).toString("base64url");
+    const ticket = randToken(24);
     return ok({ authorizeUrl: `${req.origin}/creator/x?result=signed_in&ticket=${ticket}`, returnUrl: `${req.origin}/creator/x` });
   }
   if (is("POST", "x-account/complete")) {
@@ -1669,7 +2006,7 @@ function route(req: DemoRequest): DemoResponse {
     const address = str(req.body?.address);
     if (!chain) throw new DemoError("payout_chain_unknown", 422);
     if (!address) throw new DemoError("payout_address_invalid", 422);
-    const nonce = randomBytes(16).toString("hex");
+    const nonce = randHex(16);
     accountOf(s, viewer).challenges.set(nonce, { chain, address });
     return ok({
       nonce,
@@ -1843,7 +2180,7 @@ function route(req: DemoRequest): DemoResponse {
   }
 
   /* Money in, work out */
-  if (is("GET", "ad-space/sales")) return ok({ sales: salesFor(s, viewer) });
+  if (is("GET", "ad-space/sales")) return ok({ sales: salesFor(s, viewer, req.query.get("spaceId")) });
   if ((p = is("POST", "ad-space/positions/:/delivered"))) {
     const sp = s.spaces.find((x) => x.positions.some((q) => q.id === p![0]));
     if (!sp) throw new DemoError("not_found", 404);
@@ -1905,6 +2242,71 @@ function route(req: DemoRequest): DemoResponse {
     return ok({ bannerUrl: null });
   }
 
+  /* The product photo and its squares. The mock keeps a stock photo: it does not read the bytes. */
+  if ((p = is("POST", "ad-space/spaces/:/photo"))) {
+    const sp = spaceFor(s, viewer, p[0], "own");
+    sp.photo = { url: "/demo/suitcase-side.jpg", width: 1100, height: 1100 };
+    return ok({ photo: spaceView(s, sp, viewer, req.origin).photo }, 201);
+  }
+  if ((p = is("DELETE", "ad-space/spaces/:/photo"))) {
+    const sp = spaceFor(s, viewer, p[0], "own");
+    if (sp.positions.some((q) => q.status === "sold" && q.rect)) throw new DemoError("photo_has_sold_squares", 409);
+    sp.photo = null;
+    for (const q of sp.positions) q.rect = null;
+    return ok({ photo: null });
+  }
+  if ((p = is("PUT", "ad-space/spaces/:/photo/squares"))) {
+    const sp = spaceFor(s, viewer, p[0], "own");
+    if (!sp.photo) throw new DemoError("photo_required", 409);
+    const list = Array.isArray(req.body?.squares) ? (req.body!.squares as { positionId?: string; rect?: PhotoRect | null }[]) : [];
+    for (const sq of list) {
+      const q = sp.positions.find((x) => x.id === sq.positionId);
+      if (!q) throw new DemoError("unknown_position", 422);
+      if (q.status !== "open") throw new DemoError("square_frozen", 409, { positionId: q.id });
+      q.rect = sq.rect ?? null;
+    }
+    const view = spaceView(s, sp, viewer, req.origin);
+    return ok({ photo: view.photo, squares: sp.positions.map((q) => ({ positionId: q.id, rect: q.rect ?? null, frozen: q.status !== "open" })) });
+  }
+
+  /* Content production: the shoot day and the delivery */
+  if ((p = is("PUT", "ad-space/positions/:/production/shoot-day")) || (p = is("POST", "ad-space/positions/:/production/deliver"))) {
+    const sp = s.spaces.find((x) => x.positions.some((q) => q.id === p![0]));
+    if (!sp) throw new DemoError("not_found", 404);
+    spaceFor(s, viewer, sp.id, "deliver");
+    const q = sp.positions.find((x) => x.id === p![0])!;
+    if (!q.prod) throw new DemoError("not_a_production", 409);
+    if (seg[4] === "shoot-day") {
+      const shootOn = str(req.body?.shootOn);
+      const e = eventById(s, sp.eventId);
+      if (!shootOn || (e && (shootOn < e.startsOn || shootOn > e.endsOn))) throw new DemoError("shoot_day_outside_event", 422);
+      q.prod.shootOn = shootOn;
+      q.prod.shootOnSet = true;
+    } else {
+      const url = str(req.body?.url);
+      if (!url || !/^https:\/\//.test(url)) throw new DemoError("delivery_url_invalid", 422);
+      if (q.prod.state === "accepted") throw new DemoError("production_accepted", 409);
+      const at = iso(Date.now());
+      const checklist = Array.isArray(req.body?.checklist) ? (req.body!.checklist as ChecklistItem[]) : [];
+      q.prod.delivery = { url, checklist, deliveredAt: at, firstDeliveredAt: q.prod.delivery?.firstDeliveredAt ?? at };
+      q.prod.state = "delivered";
+    }
+    return ok({ production: productionViewOf(s, sp, q) });
+  }
+
+  /* Spaces settings: Creator or Creative Director */
+  if (is("GET", "ad-space/settings") || is("PATCH", "ad-space/settings")) {
+    if (method === "PATCH") s.agency[viewer] = req.body?.agencyMode === true;
+    const hasTeam = s.members.some((m) => m.ownerId === viewer && m.status !== "removed");
+    const chosen = s.agency[viewer];
+    return ok({ settings: { agencyMode: chosen === true, chosen: chosen !== undefined && chosen !== null, hasTeam, on: chosen === true || hasTeam } });
+  }
+
+  /* Insights: market data, the demo's own numbers */
+  if (is("GET", "ad-space/insights")) {
+    return ok({ insights: demoInsights(req.query.get("event"), s.spaces.filter((x) => x.ownerId === viewer && x.publishedAt).map((x) => ({ id: x.id, title: x.title, templateId: x.templateId, eventSlug: eventById(s, x.eventId)?.slug ?? null, publishedAt: x.publishedAt! }))) });
+  }
+
   /* The team */
   if (is("GET", "ad-space/team")) {
     return ok({ team: s.members.filter((m) => m.ownerId === viewer && m.status !== "removed").map((m) => memberView(m, false)) });
@@ -1919,7 +2321,7 @@ function route(req: DemoRequest): DemoResponse {
     if (s.members.filter((m) => m.ownerId === viewer && m.status !== "removed").length >= 25) {
       throw new DemoError("team_too_large", 422, { max: 25 });
     }
-    const code = randomBytes(24).toString("base64url");
+    const code = randToken(24);
     const m: MemberRec = {
       id: uuid(),
       ownerId: viewer,
@@ -2026,7 +2428,8 @@ function route(req: DemoRequest): DemoResponse {
 function publish(s: Store, sp: SpaceRec): void {
   if (sp.status !== "draft") throw new DemoError("space_not_draft", 409);
   const owner = accountOf(s, sp.ownerId);
-  if (!owner.x.canPublish) throw new DemoError(owner.x.refusal ?? "x_not_linked", 422);
+  const x = xFor(owner.x, sp.ownerId);
+  if (!x.canPublish) throw new DemoError(x.refusal ?? "x_not_linked", 422);
   if (sp.positions.length === 0) throw new DemoError("no_positions", 422);
   if (sp.chains.includes("solana") && !owner.payout.solana) throw new DemoError("no_solana_address", 422);
   if (sp.chains.some((c) => c !== "solana") && !owner.payout.evm) throw new DemoError("no_evm_address", 422);
@@ -2161,7 +2564,7 @@ function answerOffer(s: Store, viewer: UserId, offerId: string, action: string, 
   return o;
 }
 
-function salesFor(s: Store, viewer: UserId): SalesSummary {
+function salesFor(s: Store, viewer: UserId, spaceId: string | null = null): SalesSummary {
   const mine = s.spaces.filter((x) => x.ownerId === viewer);
   const ids = new Set(mine.map((x) => x.id));
   const orders = s.orders.filter((o) => ids.has(o.spaceId)).sort((a, b) => b.paidAt.localeCompare(a.paidAt));
@@ -2174,7 +2577,7 @@ function salesFor(s: Store, viewer: UserId): SalesSummary {
     soldSpots: orders.length,
     orders: orders.length,
     spaces: new Set(orders.map((o) => o.spaceId)).size,
-    recent: orders.slice(0, 20).map((o) => {
+    recent: (spaceId ? orders.filter((o) => o.spaceId === spaceId) : orders.slice(0, 20)).map((o) => {
       const sp = mine.find((x) => x.id === o.spaceId)!;
       const q = sp.positions.find((x) => x.id === o.positionId);
       return {
@@ -2187,8 +2590,24 @@ function salesFor(s: Store, viewer: UserId): SalesSummary {
         status: "paid",
         receivedUsdc: usdc(creatorGets(o.priceCents, sp.feePayer)),
         paidAt: o.paidAt,
+        sponsorName: q?.sponsor?.name ?? null,
       };
     }),
+    listings: mine
+      .map((sp) => {
+        const own = orders.filter((o) => o.spaceId === sp.id);
+        return {
+          spaceId: sp.id,
+          spaceTitle: sp.title,
+          serviceName: sp.serviceName,
+          receivedUsdc: usdc(own.reduce((n, o) => n + creatorGets(o.priceCents, sp.feePayer), 0)),
+          orders: own.length,
+          soldSpots: sp.positions.filter((q) => q.status === "sold").length,
+          lastPaidAt: own[0]?.paidAt ?? null,
+        };
+      })
+      .filter((l) => l.orders > 0)
+      .sort((a, b) => Number(b.receivedUsdc) - Number(a.receivedUsdc)),
   };
 }
 
@@ -2242,6 +2661,7 @@ function workFor(s: Store, viewer: UserId): WorkListing[] {
             contentStatus: q.content?.status ?? null,
             deliveredUrl: q.delivered?.url ?? null,
             deliveredAt: q.delivered?.at ?? null,
+            production: productionViewOf(s, sp, q),
           })),
         deliverables: sp.deliverables.map((d) => ({
           id: d.id,

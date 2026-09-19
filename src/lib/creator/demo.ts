@@ -1,47 +1,44 @@
 /**
- * The creator console's local DEMO MODE: every screen of /creator clickable
- * in a browser with no backend and no sign-in.
+ * DEMO MODE: every screen of the web (app.hihodl.xyz and the public Spaces
+ * pages) clickable in a browser with no backend, no Supabase and no account.
  *
- * ON ONLY WHEN BOTH ARE TRUE
+ * ALWAYS ON, ON THIS BRANCH ONLY
  *
- *   NEXT_PUBLIC_CREATOR_DEMO=1   and   NODE_ENV !== "production"
- *
- * Both are inlined at build time, so a production bundle carries `false` for
- * the gate and every demo branch below it is dead code. With the flag off the
- * console behaves exactly as it does without this file: every caller asks
- * `creatorDemoEnabled()` first and falls through to the real path.
+ * This file lives on `preview/web-together-demo`, which is never merged. The
+ * gate below answers true in every build, production included, because a
+ * Vercel preview IS a production build and nobody sets env vars for it.
  *
  * WHAT IS FAKE
  *
- *  - the session (no Supabase): who you are is the demo ROLE below, kept in
+ *  - the session (no Supabase): who you are is the demo state below, kept in
  *    this browser's localStorage;
- *  - the backend: `/api/creator-demo/*`, a stateful in-memory mock served by
- *    this same Next server (see `demo-store.dev.ts`);
- *  - the wallets: connecting and signing answer at once with a demo address
- *    and a signature the mock accepts.
+ *  - the backend: every call to the HOLD API (and to Supabase) is answered in
+ *    this browser by an in-memory store (lib/demo/*), which a window.fetch
+ *    shim installs before any screen asks anything. Nothing leaves the page;
+ *  - passkeys: the ceremonies answer at once with a demo credential and a
+ *    fixed PRF, so the real wallet crypto runs on a real (demo) backup;
+ *  - browser wallets (Phantom, MetaMask): demo addresses and signatures.
  *
- * Nothing else is. Every screen is the real component, fed the shapes the
- * real backend returns.
- *
- * Runbook: documentation/creator-console-demo.md
+ * Every screen is the real component, fed the shapes the real backend
+ * returns. Runbook: documentation/web-demo.md.
  */
 
 import type { Session } from "@supabase/supabase-js";
 
 export function creatorDemoEnabled(): boolean {
-  return process.env.NEXT_PUBLIC_CREATOR_DEMO === "1" && process.env.NODE_ENV !== "production";
+  return true;
 }
 
-/** Where the console's calls go in demo mode, instead of `API_BASE`. Same origin. */
+/** Where the console's calls go in demo mode. Answered in the browser by lib/demo/fetch. */
 export const DEMO_API_BASE = "/api/creator-demo";
 
 /**
  * Who is looking. The console differs by role, so the demo lets you BE each
  * of them rather than describing what they would see.
  *
- *  - owner:   coinempress, the creator whose account this is;
- *  - manager: Dana, on coinempress's team, sells for them;
- *  - rep:     Kai, on coinempress's team, turns up and delivers;
+ *  - owner:   @demo_creator, the creator whose account this is;
+ *  - manager: Dana, on the creator's team, sells for them;
+ *  - rep:     Kai, on the creator's team, turns up and delivers;
  *  - invitee: somebody with a fresh account who was sent a seat link.
  */
 export type DemoRole = "owner" | "manager" | "rep" | "invitee";
@@ -49,10 +46,10 @@ export type DemoRole = "owner" | "manager" | "rep" | "invitee";
 export const DEMO_ROLES: readonly DemoRole[] = ["owner", "manager", "rep", "invitee"];
 
 export const DEMO_PEOPLE: Record<DemoRole, { email: string; name: string; userId: string }> = {
-  owner: { email: "coin@coinempress.xyz", name: "Coin Empress (@coinempress)", userId: "demo-user-owner" },
-  manager: { email: "dana@studio-dana.co", name: "Dana, sells for coinempress", userId: "demo-user-manager" },
-  rep: { email: "kai@kaifilms.io", name: "Kai, delivers for coinempress", userId: "demo-user-rep" },
-  invitee: { email: "sam.newcomer@gmail.com", name: "Sam, holding a seat link", userId: "demo-user-invitee" },
+  owner: { email: "creator@example.com", name: "Demo Creator (@demo_creator)", userId: "demo-user-owner" },
+  manager: { email: "dana@example.com", name: "Dana, sells for @demo_creator", userId: "demo-user-manager" },
+  rep: { email: "kai@example.com", name: "Kai, delivers for @demo_creator", userId: "demo-user-rep" },
+  invitee: { email: "sam@example.com", name: "Sam, holding a seat link", userId: "demo-user-invitee" },
 };
 
 export function isDemoRole(v: unknown): v is DemoRole {
@@ -67,8 +64,8 @@ export function demoToken(role: DemoRole): string {
 /** The seat code of the seeded pending invitation, so the accept page has one that works. */
 export const DEMO_SEAT_CODE = "demo-seat-singapore-crew-2026";
 
-/** coinempress's own HOLD invite code, which a seat link is built on. */
-export const DEMO_INVITE_CODE = "coin-3f2a1";
+/** The creator's own HOLD invite code, which a seat link is built on. */
+export const DEMO_INVITE_CODE = "demo-3f2a1";
 
 /** Addresses the demo "wallets" answer with. The Solana one is the seeded, already-proved one. */
 export const DEMO_WALLETS = {
@@ -76,25 +73,69 @@ export const DEMO_WALLETS = {
   evm: "0xAb5801a7D398351b8bE11C439e05C5B3259aeC9B",
 } as const;
 
-/* ── The demo session, in this browser ────────────────────────────── */
+/* ── The account's state: what the store answers ─────────────────── */
 
-const KEY = "hold-creator-demo";
+/** web: a web wallet · app: made in the HOLD app · none: no wallet yet · other: a web wallet on an earlier account. */
+export type DemoWallet = "web" | "app" | "none" | "other";
+/** Which phone approves withdrawals: none linked, an Android phone, an iPhone. */
+export type DemoPhone = "none" | "android" | "ios";
+/** done: onboarded · new: nothing set up (no username, no passkey) · half: username and passkey, no codes, no wallet. */
+export type DemoAccount = "done" | "new" | "half";
+/** How this browser last signed in, for the door's "Welcome back". */
+export type DemoRemembered = "none" | "google" | "email";
+/** The X account behind the listings (owner only). */
+export type DemoX = "linked" | "none" | "unverified" | "too-new" | "relink";
 
-interface DemoState {
+export interface DemoState {
   signedIn: boolean;
   role: DemoRole;
+  wallet: DemoWallet;
+  phone: DemoPhone;
+  account: DemoAccount;
+  remembered: DemoRemembered;
+  x: DemoX;
+  seed: "seeded" | "empty";
 }
 
-const DEFAULT_STATE: DemoState = { signedIn: true, role: "owner" };
+export const DEMO_WALLET_KINDS: readonly DemoWallet[] = ["web", "app", "none", "other"];
+export const DEMO_PHONES: readonly DemoPhone[] = ["none", "android", "ios"];
+export const DEMO_ACCOUNTS: readonly DemoAccount[] = ["done", "new", "half"];
+export const DEMO_XS: readonly DemoX[] = ["linked", "none", "unverified", "too-new", "relink"];
+
+const KEY = "hold-web-demo";
+
+export const DEFAULT_DEMO: DemoState = {
+  signedIn: true,
+  role: "owner",
+  wallet: "web",
+  phone: "android",
+  account: "done",
+  remembered: "none",
+  x: "linked",
+  seed: "seeded",
+};
+
+function oneOf<T extends string>(v: unknown, list: readonly T[], fallback: T): T {
+  return typeof v === "string" && (list as readonly string[]).includes(v) ? (v as T) : fallback;
+}
 
 function read(): DemoState {
   try {
     const raw = window.localStorage.getItem(KEY);
-    if (!raw) return DEFAULT_STATE;
+    if (!raw) return DEFAULT_DEMO;
     const v = JSON.parse(raw) as Partial<DemoState>;
-    return { signedIn: v.signedIn !== false, role: isDemoRole(v.role) ? v.role : "owner" };
+    return {
+      signedIn: v.signedIn !== false,
+      role: isDemoRole(v.role) ? v.role : "owner",
+      wallet: oneOf(v.wallet, DEMO_WALLET_KINDS, DEFAULT_DEMO.wallet),
+      phone: oneOf(v.phone, DEMO_PHONES, DEFAULT_DEMO.phone),
+      account: oneOf(v.account, DEMO_ACCOUNTS, DEFAULT_DEMO.account),
+      remembered: oneOf(v.remembered, ["none", "google", "email"] as const, DEFAULT_DEMO.remembered),
+      x: oneOf(v.x, DEMO_XS, DEFAULT_DEMO.x),
+      seed: v.seed === "empty" ? "empty" : "seeded",
+    };
   } catch {
-    return DEFAULT_STATE;
+    return DEFAULT_DEMO;
   }
 }
 
@@ -106,11 +147,12 @@ function write(next: DemoState): void {
   } catch {
     /* a private window keeps the default: signed in as the owner */
   }
+  syncBrowserFacts(next);
   for (const l of listeners) l();
 }
 
 export function demoState(): DemoState {
-  return typeof window === "undefined" ? DEFAULT_STATE : read();
+  return typeof window === "undefined" ? DEFAULT_DEMO : read();
 }
 
 export function subscribeDemo(fn: () => void): () => void {
@@ -118,19 +160,23 @@ export function subscribeDemo(fn: () => void): () => void {
   return () => listeners.delete(fn);
 }
 
+export function updateDemo(patch: Partial<DemoState>): void {
+  write({ ...read(), ...patch });
+}
+
 export function demoSignIn(): void {
-  write({ ...read(), signedIn: true });
+  updateDemo({ signedIn: true });
 }
 
 export function demoSignOut(): void {
-  write({ ...read(), signedIn: false });
+  updateDemo({ signedIn: false });
 }
 
 export function setDemoRole(role: DemoRole): void {
-  write({ signedIn: true, role });
+  updateDemo({ signedIn: true, role });
 }
 
-/** A Session-shaped object: the console reads `user.email` and the token, nothing else. */
+/** A Session-shaped object: the web reads `user.id`, `user.email` and the token, nothing else. */
 export function demoSession(state: DemoState): Session | null {
   if (!state.signedIn) return null;
   const who = DEMO_PEOPLE[state.role];
@@ -138,12 +184,96 @@ export function demoSession(state: DemoState): Session | null {
     access_token: demoToken(state.role),
     refresh_token: "demo",
     expires_in: 3600,
+    expires_at: Math.floor(Date.now() / 1000) + 3600,
     token_type: "bearer",
-    user: { id: who.userId, email: who.email, app_metadata: {}, user_metadata: {}, aud: "authenticated", created_at: "" },
+    user: {
+      id: who.userId,
+      email: who.email,
+      app_metadata: { provider: "google", providers: ["google"] },
+      user_metadata: {},
+      aud: "authenticated",
+      created_at: "",
+    },
   } as unknown as Session;
 }
 
 export function demoAccessToken(): string | null {
   const s = demoState();
   return s.signedIn ? demoToken(s.role) : null;
+}
+
+/* ── Browser facts the screens read on their own ──────────────────── */
+
+/**
+ * Onboarding keeps "done" and "not now" in localStorage, and the door keeps
+ * who signed in last. Those follow the demo state, so an account set to
+ * `new` really is asked everything and `done` never is.
+ */
+function syncBrowserFacts(s: DemoState): void {
+  try {
+    for (const who of Object.values(DEMO_PEOPLE)) {
+      const done = `hold-onboarded:v2:${who.userId}`;
+      const choices = `hold-onboarding:${who.userId}`;
+      if (s.account === "done") window.localStorage.setItem(done, "1");
+      else {
+        window.localStorage.removeItem(done);
+        window.localStorage.removeItem(choices);
+      }
+    }
+    if (s.remembered === "none") window.localStorage.removeItem("hold-last-signin");
+    else
+      window.localStorage.setItem(
+        "hold-last-signin",
+        JSON.stringify({ method: s.remembered, email: DEMO_PEOPLE[s.role].email, name: s.role === "owner" ? "Demo" : DEMO_PEOPLE[s.role].name.split(",")[0] }),
+      );
+  } catch {
+    /* the screens ask the store instead */
+  }
+}
+
+/**
+ * The address bar, read once when the page loads: a link from the screen
+ * index lands straight on a state. Every one is optional.
+ *
+ *   ?demo-role=owner|manager|rep|invitee
+ *   ?demo-wallet=web|app|none|other
+ *   ?demo-phone=none|android|ios
+ *   ?demo-account=done|new|half
+ *   ?demo-signed=in|out
+ *   ?demo-remembered=none|google|email
+ *   ?demo-x=linked|none|unverified|too-new|relink
+ *   ?demo=seeded|empty                 (resets the Spaces account)
+ */
+export function applyDemoParams(): boolean {
+  if (typeof window === "undefined") return false;
+  const q = new URLSearchParams(window.location.search);
+  const patch: Partial<DemoState> = {};
+  const role = q.get("demo-role");
+  if (isDemoRole(role)) patch.role = role;
+  const wallet = q.get("demo-wallet");
+  if (wallet) patch.wallet = oneOf(wallet, DEMO_WALLET_KINDS, DEFAULT_DEMO.wallet);
+  const phone = q.get("demo-phone");
+  if (phone) patch.phone = oneOf(phone, DEMO_PHONES, DEFAULT_DEMO.phone);
+  const account = q.get("demo-account");
+  if (account) patch.account = oneOf(account, DEMO_ACCOUNTS, DEFAULT_DEMO.account);
+  const signed = q.get("demo-signed");
+  if (signed) patch.signedIn = signed !== "out";
+  const remembered = q.get("demo-remembered");
+  if (remembered) patch.remembered = oneOf(remembered, ["none", "google", "email"] as const, "none");
+  const x = q.get("demo-x");
+  if (x) patch.x = oneOf(x, DEMO_XS, DEFAULT_DEMO.x);
+  const seed = q.get("demo");
+  if (seed === "seeded" || seed === "empty") patch.seed = seed;
+  if (Object.keys(patch).length === 0) {
+    syncBrowserFacts(read());
+    return false;
+  }
+  write({ ...read(), ...patch });
+  return true;
+}
+
+/** A demo-only screen state from the address bar (`?state=`), or null. */
+export function demoParam(name: string): string | null {
+  if (typeof window === "undefined") return null;
+  return new URLSearchParams(window.location.search).get(name);
 }

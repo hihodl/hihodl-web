@@ -34,6 +34,7 @@ import {
 } from "@/lib/link/api";
 import { computeSas, formatSas } from "@/lib/link/sas";
 import { newLinkKeyPair, sealSecret, type LinkKeyPair } from "@/lib/link/seal";
+import { demoParam } from "@/lib/creator/demo";
 import { thisDevice, type Phone } from "@/lib/link/ua";
 import { getWalletBackup, getWalletStatus, WalletApiError, type WalletBackup, type WalletStatus } from "@/lib/wallet/api";
 import { fromBase64, toBase64, toBase64Url, wipe } from "@/lib/wallet/core";
@@ -251,7 +252,46 @@ const POLL_MS = 2000;
 const FIVE_MINUTES = 5 * 60 * 1000;
 
 /** Onboarding's link step: opens a session, waits for the phone, seals on Android. */
+/** DEMO BRANCH: `?state=` lands the computer's side on one phase, for the screen index. */
+function demoLinkPhase(): LinkPhase | null {
+  const url = typeof window === "undefined" ? "" : `${window.location.origin}/app/link/demo-session?k=demo`;
+  switch (demoParam("state")) {
+    case "qr":
+      return { kind: "waiting", url, expiresAt: Date.now() + 4 * 60_000 + 32_000, here: null };
+    case "qr-iphone":
+      return { kind: "waiting", url, expiresAt: Date.now() + 4 * 60_000, here: "ios" };
+    case "qr-android":
+      return { kind: "waiting", url, expiresAt: Date.now() + 4 * 60_000, here: "android" };
+    case "sas":
+      return { kind: "confirm", sas: "482913", carries: true, busy: false };
+    case "sas-no-wallet":
+      return { kind: "confirm", sas: "482913", carries: false, busy: false };
+    case "sending":
+      return { kind: "sending", carries: true };
+    case "done-android":
+      return { kind: "done", platform: "android" };
+    case "done-ios":
+      return { kind: "done", platform: "ios" };
+    case "mismatch":
+      return { kind: "mismatch" };
+    case "expired":
+      return { kind: "expired" };
+    case "failed":
+      return { kind: "failed", message: "We could not reach HOLD. Check your connection and try again." };
+    default:
+      return null;
+  }
+}
+
 export function LinkPhone({ onDone }: { onDone: () => void }) {
+  const [demoPhase] = useState<LinkPhase | null>(demoLinkPhase);
+  if (demoPhase) {
+    return <LinkView phase={demoPhase} actions={{ onRetry: () => window.location.assign(window.location.pathname + "?step=link"), onJoinHere: () => undefined, onConfirm: () => undefined, onMismatch: () => undefined, onDone }} />;
+  }
+  return <LivePhoneLink onDone={onDone} />;
+}
+
+function LivePhoneLink({ onDone }: { onDone: () => void }) {
   const [phase, setPhase] = useState<LinkPhase>({ kind: "starting" });
   // Read here, not handed down: a wallet made one step earlier must count.
   const [wallet, setWallet] = useState<WalletStatus | null>(null);

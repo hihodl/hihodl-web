@@ -22,6 +22,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Alert, glass, Segmented } from "@/components/app/ui";
 import { clientProductBase } from "@/lib/app/paths";
+import { demoParam } from "@/lib/creator/demo";
 import {
   authorizeWithdrawalPasskey,
   createWithdrawal,
@@ -363,9 +364,59 @@ function describe(e: unknown): string {
   return explain(e);
 }
 
+/** DEMO BRANCH: `?state=` lands the withdrawal on one phase, for the screen index. */
+const DEMO_DRAFT: Draft = { token: "USDC", amount: "250", to: "9wFFyRfZBsuAha4YcuxcXLKwMxJR43S7fPfQLusDBzvT" };
+
+function demoWithdrawal(status: WithdrawalStatus, channel: Withdrawal["channel"] = "app"): Withdrawal {
+  return {
+    id: "demo-withdrawal",
+    channel,
+    status,
+    token: "USDC",
+    amount: "250",
+    to: DEMO_DRAFT.to,
+    expiresAt: new Date(Date.now() + 9 * 60_000 + 20_000).toISOString(),
+    signature: status === "confirmed" ? "5VfYnJ4Bq9zN7r2demoXw8XH3kPq1Lm6Tt9Ue2Rs4Dc7Gh1Jk8Mn3Pq5Rs7Tu9Vw2Xy4Za6Bc8De1Fg3Hj5" : null,
+  };
+}
+
+function demoWithdrawPhase(): { phase: WithdrawPhase; draft: Draft } | null {
+  const state = demoParam("state");
+  const d = DEMO_DRAFT;
+  switch (state) {
+    case "form":
+      return { phase: { kind: "form" }, draft: { token: "USDC", amount: "", to: "" } };
+    case "form-filled":
+      return { phase: { kind: "form" }, draft: d };
+    case "form-invalid":
+      return { phase: { kind: "form" }, draft: { token: "USDC", amount: "99999", to: "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed" } };
+    case "review":
+      return { phase: { kind: "review", busy: false }, draft: d };
+    case "link-first":
+      return { phase: { kind: "link-first" }, draft: d };
+    case "on-phone":
+      return { phase: { kind: "on-phone", withdrawal: demoWithdrawal("pending") }, draft: d };
+    case "passkey":
+      return { phase: { kind: "passkey", withdrawal: demoWithdrawal("pending", "web_passkey"), busy: false }, draft: d };
+    case "sending":
+      return { phase: { kind: "sending", withdrawal: demoWithdrawal("approved", "web_passkey") }, draft: d };
+    case "sent":
+      return { phase: { kind: "result", withdrawal: demoWithdrawal("confirmed"), status: "confirmed" }, draft: d };
+    case "rejected":
+      return { phase: { kind: "result", withdrawal: demoWithdrawal("rejected"), status: "rejected" }, draft: d };
+    case "expired":
+      return { phase: { kind: "result", withdrawal: demoWithdrawal("expired"), status: "expired" }, draft: d };
+    case "failed":
+      return { phase: { kind: "result", withdrawal: demoWithdrawal("failed"), status: "failed" }, draft: d };
+    default:
+      return null;
+  }
+}
+
 export function Withdraw({ uid, from, balances, onBack }: { uid: string; from: string; balances: Balances | null; onBack: () => void }) {
-  const [draft, setDraft] = useState<Draft>({ token: "USDC", amount: "", to: "" });
-  const [phase, setPhase] = useState<WithdrawPhase>({ kind: "form" });
+  const [demo] = useState(demoWithdrawPhase);
+  const [draft, setDraft] = useState<Draft>(demo?.draft ?? { token: "USDC", amount: "", to: "" });
+  const [phase, setPhase] = useState<WithdrawPhase>(demo?.phase ?? { kind: "form" });
   const backup = useRef<WalletBackup | null>(null);
   const prepared = useRef<{ built: BuiltWithdrawal; options: AssertionOptionsJSON } | null>(null);
   // The withdrawal the server already approved: its bytes are fixed from then on.

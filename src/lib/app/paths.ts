@@ -54,10 +54,9 @@ export function spacesPath(path = ""): string {
  * keeps the product on the same origin under `/app`.
  */
 export function productOrigin(): string {
-  const set = process.env.NEXT_PUBLIC_APP_ORIGIN;
-  if (set) return set.replace(/\/+$/, "");
-  const env = process.env.NEXT_PUBLIC_VERCEL_ENV ?? process.env.VERCEL_ENV;
-  return env === "production" ? "https://app.hihodl.xyz" : "";
+  // DEMO BRANCH: the product is served under /app on whatever host the preview
+  // has, whatever NEXT_PUBLIC_APP_ORIGIN or VERCEL_ENV say.
+  return "";
 }
 
 /** A product path (`/spaces/team?seat=…`) as a URL the website can send people to. */

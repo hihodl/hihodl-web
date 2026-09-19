@@ -51,6 +51,7 @@ import {
 } from "@/lib/creator/listing";
 import { createListing, getListing, getTemplates, patchListing, publishListing } from "@/lib/creator/listings";
 import { refusalOf } from "@/lib/creator/problems";
+import { demoParam } from "@/lib/creator/demo";
 import { firstStepWithProblem, listingProblems, type Problem, type Step } from "@/lib/creator/rules";
 
 import { BasicsStep } from "./listing/BasicsStep";
@@ -131,6 +132,10 @@ export function ListingWizard({ spaceId: initialSpaceId, templateId }: { spaceId
             setDraft({ ...next, chains: next.chains.length ? next.chains : availableChains });
             setSavedBody(bodyOf(next, own));
             setPickedEvent(existing.space.event);
+            // DEMO BRANCH: ?step= opens the draft on that step.
+            const want = demoParam("step");
+            const known = stagesFor(own).find((st) => st.key === want);
+            if (known) setStage(known.key);
           }
         }
       } catch (e) {

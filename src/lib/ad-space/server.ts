@@ -90,7 +90,8 @@ function upstreamPath(handle: string, slug: string): string | null {
  * flag entirely, so a missing API can never serve made-up spots to a sponsor.
  */
 export function fixtureEnabled(): boolean {
-  return process.env.NODE_ENV !== "production" && process.env.AD_SPACE_FIXTURE === "1";
+  // DEMO BRANCH: always, production builds included (a Vercel preview is one).
+  return true;
 }
 
 /**
@@ -217,7 +218,8 @@ function usableRect(r: unknown): PhotoRect | null {
 function usablePhoto(raw: unknown, positions: Position[]): SpacePhoto | null {
   if (!raw || typeof raw !== "object") return null;
   const p = raw as Record<string, unknown>;
-  if (typeof p.url !== "string" || !p.url.startsWith("https://")) return null;
+  // DEMO BRANCH: the demo's photos are this site's own files (/demo/…).
+  if (typeof p.url !== "string" || !(p.url.startsWith("https://") || p.url.startsWith("/demo/"))) return null;
   if (typeof p.width !== "number" || typeof p.height !== "number" || p.width <= 0 || p.height <= 0) return null;
   if (p.ready === false) return null;
   if (positions.length === 0 || positions.some((pos) => !usableRect(pos.rect))) return null;

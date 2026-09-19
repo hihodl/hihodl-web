@@ -15,6 +15,7 @@ import { useEffect, useState } from "react";
 
 import { clientProductBase } from "@/lib/app/paths";
 import { takeNext } from "@/lib/auth/providers";
+import { creatorDemoEnabled, demoSignIn } from "@/lib/creator/demo";
 import { creatorAuth } from "@/lib/creator/session";
 
 import { btnPrimary, DoorCard, HoldMark, Note, Warn } from "./kit";
@@ -27,6 +28,13 @@ export function AuthCallback() {
     const params = new URLSearchParams(window.location.search);
     const providerError = params.get("error_description") || params.get("error");
     const auth = creatorAuth();
+
+    // Demo mode: whoever came back is signed in.
+    if (creatorDemoEnabled()) {
+      demoSignIn();
+      window.location.replace(takeNext(clientProductBase() || "/"));
+      return;
+    }
 
     void (async () => {
       if (!auth) {

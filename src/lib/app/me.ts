@@ -22,6 +22,7 @@
 "use client";
 
 import { call } from "@/lib/creator/api";
+import { creatorDemoEnabled } from "@/lib/creator/demo";
 import { creatorAuth } from "@/lib/creator/session";
 
 export interface Me {
@@ -144,6 +145,17 @@ function storagePathOf(value: string | null | undefined): string | null {
  * afterwards, best effort, only from this person's own folder.
  */
 export async function uploadAvatar(file: Blob, supabaseUid: string, previous: string | null): Promise<void> {
+  // Demo mode: no storage bucket; the picture is kept as a data URL on the demo profile.
+  if (creatorDemoEnabled()) {
+    const jpeg = await squareJpeg(file);
+    const url = await new Promise<string>((resolve) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result));
+      r.readAsDataURL(jpeg);
+    });
+    await updateMe({ avatarUrl: url });
+    return;
+  }
   const auth = creatorAuth();
   if (!auth) throw new Error("not_configured");
   const jpeg = await squareJpeg(file);

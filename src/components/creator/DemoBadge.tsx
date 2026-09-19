@@ -1,15 +1,13 @@
 /**
- * The DEMO badge: the one control surface of the console's local demo mode.
+ * The DEMO badge: the one control surface of the web demo, on every page.
  *
- * Rendered by the /creator layout only when `creatorDemoEnabled()`, which is
- * never true in production. It changes nothing about the screens under it —
- * those are the real components talking to the in-memory mock — it only says
- * who you are, which account you are looking at, and whether the next call
- * should be refused, so every state a creator can meet is one click away.
+ * It changes nothing about the screens under it (those are the real
+ * components talking to the in-browser demo backend), it only says who you
+ * are, which account you are looking at, and whether the next call should be
+ * refused, so every state is one click away. "All screens" opens the index.
  *
- * Also driven from the address bar, for links that land on a state:
- *   ?demo=empty | ?demo=seeded     reset the account first
- *   ?demo-role=owner|manager|rep|invitee
+ * Also driven from the address bar, for links that land on a state (see
+ * lib/creator/demo `applyDemoParams`), plus:
  *   ?demo-fail=<code>              the next call answers that code
  */
 
@@ -20,16 +18,24 @@ import { useCallback, useEffect, useState } from "react";
 
 import { card } from "@/components/ad-space/ui";
 import {
+  DEFAULT_DEMO,
   DEMO_API_BASE,
   DEMO_INVITE_CODE,
   DEMO_PEOPLE,
+  DEMO_PHONES,
   DEMO_ROLES,
+  DEMO_WALLET_KINDS,
+  DEMO_XS,
   demoState,
-  isDemoRole,
-  setDemoRole,
   subscribeDemo,
+  updateDemo,
+  type DemoPhone,
   type DemoRole,
+  type DemoState,
+  type DemoWallet,
+  type DemoX,
 } from "@/lib/creator/demo";
+import { resetAccount } from "@/lib/demo/account";
 
 interface Preset {
   label: string;
@@ -69,6 +75,10 @@ const ROLE_LABEL: Record<DemoRole, string> = {
   invitee: "Invitee",
 };
 
+const WALLET_LABEL: Record<DemoWallet, string> = { web: "Web wallet", app: "App wallet", none: "No wallet", other: "On another account" };
+const PHONE_LABEL: Record<DemoPhone, string> = { none: "None linked", android: "Android", ios: "iPhone" };
+const X_LABEL: Record<DemoX, string> = { linked: "Linked", none: "Not linked", unverified: "Not verified", "too-new": "Too new", relink: "Link again" };
+
 interface Status {
   seed: "seeded" | "empty";
   armed: { code: string; match: string } | null;
@@ -100,35 +110,22 @@ const chipOn = `${chip} border-amber bg-amber text-text-on-amber`;
 
 export function DemoBadge() {
   const [open, setOpen] = useState(false);
-  const [role, setRole] = useState<DemoRole>("owner");
+  const [demo, setDemo] = useState<DemoState>(DEFAULT_DEMO);
+  const role = demo.role;
   const [status, setStatus] = useState<Status | null>(null);
   const [preset, setPreset] = useState(0);
   const [custom, setCustom] = useState("");
 
   const refresh = useCallback(async () => setStatus(await demoCall("state")), []);
 
-  // The address bar, once: a link can land straight on a state.
+  // The address bar, once: `?demo-fail=` arms a refusal (the other `demo-*` were read as the page loaded).
   useEffect(() => {
-    const sync = () => setRole(demoState().role);
+    const sync = () => setDemo(demoState());
     sync();
     const off = subscribeDemo(sync);
-    const url = new URL(window.location.href);
-    const seed = url.searchParams.get("demo");
-    const asRole = url.searchParams.get("demo-role");
-    const fail = url.searchParams.get("demo-fail");
-    if (seed || asRole || fail) {
-      void (async () => {
-        if (seed === "empty" || seed === "seeded") await demoCall("reset", { seed });
-        if (isDemoRole(asRole)) setDemoRole(asRole);
-        if (fail) await demoCall("arm", { code: fail, status: 422, match: "" });
-        url.searchParams.delete("demo");
-        url.searchParams.delete("demo-role");
-        url.searchParams.delete("demo-fail");
-        window.location.replace(url.toString());
-      })();
-    } else {
-      void refresh();
-    }
+    const fail = new URL(window.location.href).searchParams.get("demo-fail");
+    if (fail) void demoCall("arm", { code: fail, status: 422, match: "" }).then(setStatus);
+    else void refresh();
     return off;
   }, [refresh]);
 
@@ -137,6 +134,15 @@ export function DemoBadge() {
   }, [open, refresh]);
 
   const reload = () => window.location.reload();
+  /** Change the account's state and read everything again, from the state (what this tab did is forgotten). */
+  const change = (patch: Partial<DemoState>) => {
+    updateDemo({ signedIn: true, ...patch });
+    resetAccount();
+    // A link from the index carries its own state in the address: drop it, so the change sticks.
+    const url = new URL(window.location.href);
+    for (const k of [...url.searchParams.keys()]) if (k === "demo" || k.startsWith("demo-")) url.searchParams.delete(k);
+    window.location.replace(url.toString());
+  };
 
   return (
     <div
@@ -150,11 +156,14 @@ export function DemoBadge() {
           aria-label="Demo controls"
         >
           <div className="flex flex-col gap-1">
-            <p className="text-small text-text">Local demo</p>
+            <p className="text-small text-text">Demo</p>
             <p className="text-tiny text-text-muted">
-              No backend, no sign-in. Every call goes to an in-memory mock on this dev server, which forgets everything
-              when it restarts.
+              No backend, no sign-in. Every call is answered in this browser, from demo data; what you change is kept
+              in this tab until you reset it.
             </p>
+            <a href="/app/screens" className="mt-2 inline-flex h-8 w-fit items-center rounded-[16px] bg-amber px-3 text-tiny font-medium text-text-on-amber">
+              All screens
+            </a>
           </div>
 
           <section className="flex flex-col gap-2">
@@ -165,16 +174,58 @@ export function DemoBadge() {
                   key={r}
                   type="button"
                   className={r === role ? chipOn : chipIdle}
-                  onClick={() => {
-                    setDemoRole(r);
-                    reload();
-                  }}
+                  onClick={() => change({ role: r })}
                 >
                   {ROLE_LABEL[r]}
                 </button>
               ))}
             </div>
             <p className="text-tiny text-text-muted">{DEMO_PEOPLE[role].name}</p>
+          </section>
+
+          <section className="flex flex-col gap-2">
+            <p className="text-tiny uppercase tracking-wider text-text-faint">Wallet</p>
+            <div className="flex flex-wrap gap-2">
+              {DEMO_WALLET_KINDS.map((w) => (
+                <button key={w} type="button" className={w === demo.wallet ? chipOn : chipIdle} onClick={() => change({ wallet: w })}>
+                  {WALLET_LABEL[w]}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section className="flex flex-col gap-2">
+            <p className="text-tiny uppercase tracking-wider text-text-faint">Linked phone</p>
+            <div className="flex flex-wrap gap-2">
+              {DEMO_PHONES.map((ph) => (
+                <button key={ph} type="button" className={ph === demo.phone ? chipOn : chipIdle} onClick={() => change({ phone: ph })}>
+                  {PHONE_LABEL[ph]}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section className="flex flex-col gap-2">
+            <p className="text-tiny uppercase tracking-wider text-text-faint">X account</p>
+            <div className="flex flex-wrap gap-2">
+              {DEMO_XS.map((x) => (
+                <button key={x} type="button" className={x === demo.x ? chipOn : chipIdle} onClick={() => change({ x })}>
+                  {X_LABEL[x]}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section className="flex flex-col gap-2">
+            <p className="text-tiny uppercase tracking-wider text-text-faint">Session</p>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" className={chipIdle} onClick={() => change({ signedIn: !demo.signedIn })}>
+                {demo.signedIn ? "Sign out" : "Sign in"}
+              </button>
+              <button type="button" className={chipIdle} onClick={() => change({ ...DEFAULT_DEMO })}>
+                Everything back to default
+              </button>
+            </div>
           </section>
 
           <section className="flex flex-col gap-2">
@@ -185,14 +236,20 @@ export function DemoBadge() {
               <button
                 type="button"
                 className={chipIdle}
-                onClick={() => void demoCall("reset", { seed: "seeded" }).then(reload)}
+                onClick={() => {
+                  updateDemo({ seed: "seeded" });
+                  void demoCall("reset", { seed: "seeded" }).then(reload);
+                }}
               >
                 Reset to mid-life
               </button>
               <button
                 type="button"
                 className={chipIdle}
-                onClick={() => void demoCall("reset", { seed: "empty" }).then(reload)}
+                onClick={() => {
+                  updateDemo({ seed: "empty" });
+                  void demoCall("reset", { seed: "empty" }).then(reload);
+                }}
               >
                 Reset to empty
               </button>
@@ -275,7 +332,7 @@ export function DemoBadge() {
                 ...(status?.seatCode
                   ? [{ label: "Pending invitation link", href: `/invite/${DEMO_INVITE_CODE}?seat=${status.seatCode}` }]
                   : []),
-                { label: "Public: creator hub", href: "/s/coinempress" },
+                { label: "Public: creator page", href: "/s/demo_creator" },
                 { label: "Public: TOKEN2049 event", href: "/events/token2049-singapore-2026" },
               ].map((l) => (
                 <li key={l.href}>
@@ -296,7 +353,9 @@ export function DemoBadge() {
         className="inline-flex h-8 items-center gap-2 whitespace-nowrap rounded-[16px] border border-amber/60 bg-abyss/90 px-3 text-tiny text-amber shadow-lg backdrop-blur transition-colors duration-180 hover:bg-amber/10"
       >
         <span className="font-medium tracking-wider">DEMO</span>
-        <span className="text-text-muted">{ROLE_LABEL[role]}</span>
+        <span className="text-text-muted">
+          {ROLE_LABEL[role]} · {WALLET_LABEL[demo.wallet]}
+        </span>
         {status?.armed ? <span className="text-amber">· armed</span> : null}
       </button>
     </div>

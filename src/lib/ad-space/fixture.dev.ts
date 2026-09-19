@@ -363,6 +363,34 @@ function suitcase(): Space {
   };
 }
 
+/**
+ * DEMO BRANCH: the same suitcase with the creator's own photo, the front
+ * spots placed on it as squares (spaces-photo-with-squares).
+ */
+function suitcasePhoto(): Space {
+  const base = suitcase();
+  const front = base.positions.filter((p) => p.zoneKey.startsWith("front-"));
+  const rects = [
+    { x: 0.3, y: 0.14, w: 0.4, h: 0.1 },
+    { x: 0.3, y: 0.3, w: 0.18, h: 0.14 },
+    { x: 0.52, y: 0.3, w: 0.18, h: 0.14 },
+    { x: 0.3, y: 0.5, w: 0.18, h: 0.14 },
+    { x: 0.52, y: 0.5, w: 0.18, h: 0.14 },
+    { x: 0.3, y: 0.7, w: 0.18, h: 0.12 },
+    { x: 0.52, y: 0.7, w: 0.18, h: 0.12 },
+  ];
+  return {
+    ...base,
+    id: "11111111-1111-4111-8111-111111111112",
+    slug: "road-to-token2049-photo",
+    title: "My suitcase to TOKEN2049, as it is",
+    positions: front.map((p, i) => ({ ...p, rect: rects[i % rects.length] })),
+    photo: { url: "/demo/suitcase-front.jpg", width: 1100, height: 1100 },
+    totals: { ...base.totals, positions: front.length, sold: front.filter((p) => p.status === "sold").length },
+    siblings: [],
+  };
+}
+
 function videos(): Space {
   const base = suitcase();
   const slot = (n: number, over: Partial<Position> = {}) =>
@@ -1727,7 +1755,7 @@ export function fixtureOffer(token: string): OfferThread | null {
 export function fixtureSpace(handle: string, slug: string): Space | null {
   if (handle === "id")
     return (
-      [suitcase(), videos(), takeovers(), pitchReviews(), customService(), eventCoverage(), allYearService(), contentProduction(), ...offersFixtures()].find(
+      [suitcase(), suitcasePhoto(), videos(), takeovers(), pitchReviews(), customService(), eventCoverage(), allYearService(), contentProduction(), ...offersFixtures()].find(
         (s) => s.id === slug,
       ) ?? null
     );
@@ -1735,6 +1763,7 @@ export function fixtureSpace(handle: string, slug: string): Space | null {
     const offered = offersFixtures().find((s) => s.slug === slug);
     if (offered) return offered;
     if (slug === "road-to-token2049") return suitcase();
+    if (slug === "road-to-token2049-photo") return suitcasePhoto();
     if (slug === "token2049-videos") return videos();
     if (slug === "token2049-takeover") return takeovers();
     if (slug === "token2049-pitch-reviews") return pitchReviews();

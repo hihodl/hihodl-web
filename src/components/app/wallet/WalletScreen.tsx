@@ -49,6 +49,7 @@ import {
   wrapForPasskey,
 } from "@/lib/wallet/flows";
 import { createPasskeyWithPrf, evaluatePrf, normalizeCredentialId, PasskeyError, passkeysHere } from "@/lib/wallet/passkey";
+import { demoParam } from "@/lib/creator/demo";
 import { lock, unlockWith, useVault } from "@/lib/wallet/vault";
 
 import { Withdraw } from "./Withdraw";
@@ -368,6 +369,14 @@ function Unlock() {
     getWalletBackup().then(setBackup, setError);
   }, []);
 
+  // DEMO BRANCH: ?unlock=1 (or a ?screen= inside the wallet) opens it with the demo passkey at once.
+  const autoUnlock = demoParam("unlock") === "1" || !!demoParam("screen");
+  useEffect(() => {
+    if (autoUnlock && backup) void unlock();
+    // Once, when the backup arrives.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoUnlock, backup]);
+
   const unlock = async () => {
     if (!backup) return;
     setBusy(true);
@@ -404,7 +413,11 @@ type HomeScreen = "home" | "withdraw" | "receive" | "settings" | "export" | "add
 
 function Home({ address, status, onChanged }: { address: string; status: WalletStatus; onChanged: () => void }) {
   const { session } = useShell();
-  const [screen, setScreen] = useState<HomeScreen>("home");
+  // DEMO BRANCH: ?screen= opens the wallet on one of its screens.
+  const [screen, setScreen] = useState<HomeScreen>(() => {
+    const want = demoParam("screen");
+    return want === "withdraw" || want === "receive" || want === "settings" || want === "export" || want === "add" ? want : "home";
+  });
   const [balances, setBalances] = useState<Balances | null>(null);
   const [balanceError, setBalanceError] = useState(false);
 

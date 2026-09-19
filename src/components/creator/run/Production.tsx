@@ -12,6 +12,8 @@
 
 import { useState } from "react";
 
+import { demoParam } from "@/lib/creator/demo";
+
 import { btnPrimary, btnSmallSecondary, card, pill } from "@/components/ad-space/ui";
 import { IconArrowLeft } from "@/components/app/icons";
 import { countdownText } from "@/components/app/spaces/common";
@@ -75,7 +77,11 @@ export function ProductionSpot({
   canDeliver: boolean;
   onChanged: () => void;
 }) {
-  const [screen, setScreen] = useState<Screen>("spot");
+  // DEMO BRANCH: ?pane=brief|deliver opens the spot on that screen.
+  const [screen, setScreen] = useState<Screen>(() => {
+    const want = demoParam("pane");
+    return want === "brief" || want === "deliver" ? want : "spot";
+  });
   const [p, setP] = useState(production);
   const updated = (next: ProductionView) => {
     setP(next);

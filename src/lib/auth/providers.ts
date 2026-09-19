@@ -29,6 +29,7 @@
 "use client";
 
 import { clientProductBase, safeNext } from "@/lib/app/paths";
+import { creatorDemoEnabled, demoSignIn } from "@/lib/creator/demo";
 import { creatorAuth } from "@/lib/creator/session";
 
 import { notePendingMethod } from "./remember";
@@ -44,6 +45,13 @@ export function callbackUrl(): string {
 
 /** Remember where to come back to (this tab only), then leave for the provider. */
 export async function continueWith(provider: OAuthProvider): Promise<void> {
+  // Demo mode: the provider says yes at once, and the person is in where they were.
+  if (creatorDemoEnabled()) {
+    notePendingMethod(provider);
+    await new Promise((r) => setTimeout(r, 500));
+    demoSignIn();
+    return;
+  }
   const auth = creatorAuth();
   if (!auth) throw new Error("not_configured");
   const here = `${window.location.pathname}${window.location.search}${window.location.hash}`;

@@ -20,6 +20,9 @@
 
 "use client";
 
+import { creatorDemoEnabled } from "@/lib/creator/demo";
+import { DEMO_PASSKEY_ID, demoBytes, demoPrf, demoWait, newDemoCredentialId } from "@/lib/demo/passkey";
+
 import { fromBase64, prfSaltBytes, randomBytes, toBase64Url } from "./core";
 import type { RegistrationOptionsJSON } from "./api";
 
@@ -42,6 +45,8 @@ export class PasskeyError extends Error {
 
 /** Can a ceremony for rpId hihodl.xyz run on this page at all? */
 export function passkeysHere(): boolean {
+  // Demo mode: the demo passkey works on any origin.
+  if (creatorDemoEnabled()) return typeof window !== "undefined";
   if (typeof window === "undefined" || !window.PublicKeyCredential || !navigator.credentials) return false;
   const h = window.location.hostname;
   return window.isSecureContext && (h === RP_ID || h.endsWith(`.${RP_ID}`));
@@ -98,6 +103,22 @@ export async function createPasskeyWithPrf(
   options: RegistrationOptionsJSON,
   { requirePrf = true }: { requirePrf?: boolean } = {},
 ): Promise<CreatedPasskey> {
+  if (creatorDemoEnabled()) {
+    void requirePrf;
+    await demoWait();
+    const id = newDemoCredentialId();
+    return {
+      credentialId: id,
+      prf: demoPrf(),
+      prfEnabled: true,
+      registration: {
+        id,
+        rawId: id,
+        type: "public-key",
+        response: { clientDataJSON: demoBytes("client"), attestationObject: demoBytes("attestation") },
+      },
+    };
+  }
   if (!passkeysHere()) throw new PasskeyError("unavailable");
   const publicKey: PublicKeyCredentialCreationOptions = {
     challenge: fromBase64(options.challenge),
@@ -156,6 +177,10 @@ export interface PrfAssertion {
  * passkey if there are several; the returned id says which one answered.
  */
 export async function evaluatePrf(credentialIds: readonly string[]): Promise<PrfAssertion> {
+  if (creatorDemoEnabled()) {
+    await demoWait();
+    return { credentialId: credentialIds[0] ?? DEMO_PASSKEY_ID, prf: demoPrf() };
+  }
   if (!passkeysHere()) throw new PasskeyError("unavailable");
   const publicKey: PublicKeyCredentialRequestOptions = {
     challenge: randomBytes(32),
@@ -215,6 +240,21 @@ export interface BoundAssertion {
  * to sign.
  */
 export async function assertWithPrf(options: ServerAssertionOptions, onlyIds: readonly string[]): Promise<BoundAssertion> {
+  if (creatorDemoEnabled()) {
+    await demoWait();
+    const id = onlyIds[0] ?? DEMO_PASSKEY_ID;
+    return {
+      credentialId: id,
+      prf: demoPrf(),
+      assertion: {
+        id,
+        rawId: id,
+        type: "public-key",
+        response: { clientDataJSON: demoBytes(options.challenge), authenticatorData: demoBytes("auth"), signature: demoBytes("sig") },
+        clientExtensionResults: {},
+      },
+    };
+  }
   if (!passkeysHere()) throw new PasskeyError("unavailable");
   const wanted = new Set(onlyIds.map(normalizeCredentialId));
   const server = (options.allowCredentials ?? []).map((c) => normalizeCredentialId(c.id));

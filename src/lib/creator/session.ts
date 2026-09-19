@@ -36,6 +36,8 @@ import { creatorDemoEnabled, demoAccessToken, demoSession, demoSignIn, demoSignO
 let client: SupabaseClient | null | undefined;
 
 export function creatorAuth(): SupabaseClient | null {
+  // Demo mode: no Supabase client is ever made, so nothing can talk to it.
+  if (creatorDemoEnabled()) return null;
   if (client !== undefined) return client;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -127,8 +129,8 @@ export const useCreatorSession: () => CreatorSession = creatorDemoEnabled() ? us
  * https://app.hihodl.xyz/ (the Dashboard) in production (see lib/app/paths).
  */
 export async function sendSignInCode(email: string): Promise<void> {
-  // Demo mode: asking for a code IS signing in, so one click gets you back.
-  if (creatorDemoEnabled()) return demoSignIn();
+  // Demo mode: the code screen shows, and any six digits sign you in.
+  if (creatorDemoEnabled()) return new Promise((r) => setTimeout(r, 400));
   const auth = creatorAuth();
   if (!auth) throw new Error("not_configured");
   const { error } = await auth.auth.signInWithOtp({

@@ -2,6 +2,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
+import { DemoRuntime } from "@/components/demo/DemoRuntime";
 import { APP_STORE_URL, PLAY_STORE_URL } from "@/lib/appLinks";
 
 const SITE = "https://hihodl.xyz";
@@ -268,7 +269,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body className="bg-abyss text-text min-h-dvh">{children}</body>
+      <body className="bg-abyss text-text min-h-dvh">
+        {/* DEMO BRANCH: every backend call answered in the browser, and the DEMO badge. */}
+        <DemoRuntime />
+        {children}
+      </body>
     </html>
   );
 }

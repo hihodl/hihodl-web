@@ -25,9 +25,14 @@ function trim(url: string): string {
   return url.replace(/\/+$/, "");
 }
 
-export const API_BASE = trim(
-  process.env.NEXT_PUBLIC_HIHODL_API_URL ?? process.env.HIHODL_API_BASE_URL ?? DEFAULT_API,
-);
+/*
+ * DEMO BRANCH (preview/web-together-demo): the API is an address that cannot
+ * resolve, whatever the environment says. Every call to it is answered in the
+ * browser by lib/demo/fetch; one that slipped past would fail, never reach
+ * api.hihodl.xyz.
+ */
+void DEFAULT_API;
+export const API_BASE = trim("https://api.demo.invalid/api/v1");
 
 /** Base of every Ad Space route: `${AD_SPACE_API}/public/...`. */
 export const AD_SPACE_API = `${API_BASE}/ad-space`;
