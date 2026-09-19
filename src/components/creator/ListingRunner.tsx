@@ -475,8 +475,7 @@ function ScreenFrame({
   const href = useHref();
   return (
     <div className="mx-auto flex w-full max-w-[720px] flex-col gap-3.5">
-      <BackHeader title={title} backHref={back ?? href(`/listings/${space.id}`)} />
-      <p className="-mt-3 truncate text-center text-[12.5px] font-strong text-white/55">{space.serviceName || space.title}</p>
+      <BackHeader title={title} subtitle={space.serviceName || space.title} backHref={back ?? href(`/listings/${space.id}`)} />
       {children}
     </div>
   );

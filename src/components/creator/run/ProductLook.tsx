@@ -69,7 +69,7 @@ export function ProductHub({ space }: { space: SpaceView }) {
   return (
     <div className="flex flex-col gap-5">
       <section className="flex flex-col gap-3">
-        <h3 className="text-[14.5px] font-bold text-white">The drawing</h3>
+        <h3 className="mt-1.5 text-[12px] font-bold uppercase tracking-[0.4px] text-white/55">The drawing</h3>
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <li>
             <HubLink href={href(`${base}&item=colour`)} title="Colours" note={look ? "Your colours, on your page" : "Outline only"}>
@@ -81,7 +81,7 @@ export function ProductHub({ space }: { space: SpaceView }) {
 
       <section className="flex flex-col gap-3">
         <div className="flex flex-col gap-1">
-          <h3 className="text-[14.5px] font-bold text-white">Real photos, one per side</h3>
+          <h3 className="mt-1.5 text-[12px] font-bold uppercase tracking-[0.4px] text-white/55">Real photos, one per side</h3>
           <p className="text-[12.5px] text-white/[0.62]">
             Upload each side of your own {(space.template?.name ?? "product").toLowerCase()} and place its spots on it. A side
             without a photo keeps the drawing.
@@ -112,7 +112,7 @@ export function ProductHub({ space }: { space: SpaceView }) {
       </section>
 
       <section className="flex flex-col gap-3">
-        <h3 className="text-[14.5px] font-bold text-white">Or one photo for the whole product</h3>
+        <h3 className="mt-1.5 text-[12px] font-bold uppercase tracking-[0.4px] text-white/55">Or one photo for the whole product</h3>
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <li>
             <HubLink
