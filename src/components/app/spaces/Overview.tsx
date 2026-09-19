@@ -220,7 +220,7 @@ function SalesChart({ sales, loading }: { sales: SalesSummary | undefined; loadi
                   style={{ height: h }}
                   title={`${p.label}: ${mode === "usdc" ? dollars(v) : `${v} orders`}`}
                 />
-                <span className="truncate text-[10px] text-[#7F97A3]">{p.label}</span>
+                <span className="truncate text-[10px] text-[#B4BEC9]">{p.label}</span>
               </div>
             );
           })}

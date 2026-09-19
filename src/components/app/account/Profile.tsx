@@ -283,7 +283,7 @@ export function ProfileEdit({ onBack }: { onBack: () => void }) {
       <div>
         <p className="text-tiny text-[#9FB7C2]">Email</p>
         <p className="mt-1 break-all text-small text-text">{m.email ?? session.user.email ?? "–"}</p>
-        <p className="mt-0.5 text-[11px] text-[#7F97A3]">The one you sign in with.</p>
+        <p className="mt-0.5 text-[11px] text-[#B4BEC9]">The one you sign in with.</p>
       </div>
 
       {notice ? <Warn>{notice}</Warn> : null}

@@ -147,7 +147,7 @@ function ManagedListings() {
             <div className="flex flex-1 flex-col gap-1 p-4">
               <p className="truncate text-small font-medium text-text">{m.title}</p>
               <p className="truncate text-tiny text-[#9FB7C2]">{m.eventName ?? "No event"}</p>
-              <p className="mt-auto pt-2 text-[11px] text-[#7F97A3]">{m.closesAt ? closesText(m.closesAt, m.status === "closed") : ""}</p>
+              <p className="mt-auto pt-2 text-[11px] text-[#B4BEC9]">{m.closesAt ? closesText(m.closesAt, m.status === "closed") : ""}</p>
             </div>
           </Link>
         </li>

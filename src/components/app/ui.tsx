@@ -79,7 +79,7 @@ export function KpiTile({
         </span>
         {unit ? <span className="text-tiny text-[#9FB7C2]">{unit}</span> : null}
       </p>
-      {note ? <p className="mt-2 truncate text-tiny text-[#7F97A3]">{note}</p> : null}
+      {note ? <p className="mt-2 truncate text-tiny text-[#B4BEC9]">{note}</p> : null}
     </>
   );
   const cls = `${glass} block min-w-0 px-5 py-4 text-left`;

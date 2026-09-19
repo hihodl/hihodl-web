@@ -198,7 +198,7 @@ export function WithdrawView({
               </button>
             ) : null}
           </div>
-          <span className={`h-4 text-tiny ${tooMuch || (draft.amount && units === null) ? "text-amber" : "text-[#7F97A3]"}`}>{amountHint}</span>
+          <span className={`h-4 text-tiny ${tooMuch || (draft.amount && units === null) ? "text-amber" : "text-[#B4BEC9]"}`}>{amountHint}</span>
         </label>
         <label className="flex flex-col gap-1.5">
           <span className="text-tiny text-[#9FB7C2]">To (a Solana address)</span>

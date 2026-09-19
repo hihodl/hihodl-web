@@ -87,7 +87,7 @@ function WalletCard() {
             <span className="text-[44px] font-medium leading-none tracking-tight tabular-nums text-text">{usdc}</span>
             <span className="text-small text-[#9FB7C2]">USDC</span>
           </p>
-          <p className="mt-2 text-tiny text-[#7F97A3]">
+          <p className="mt-2 text-tiny text-[#B4BEC9]">
             {balances.data ? `${money(balances.data.sol, 4)} SOL for network fees` : balances.error ? "Balance unavailable right now" : " "}
           </p>
         </div>

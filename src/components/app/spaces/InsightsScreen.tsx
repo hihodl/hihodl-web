@@ -306,7 +306,7 @@ function BarRow({
     <li className={`flex min-w-0 flex-col gap-1.5 border-t border-white/[0.06] py-2.5 ${grid ? "" : "first:border-t-0 first:pt-0"}`}>
       <div className="flex min-w-0 items-baseline justify-between gap-3">
         <p className="truncate text-small text-text">{label}</p>
-        <p className="shrink-0 text-small tabular-nums text-text">{right ?? (pct !== null ? pctText(pct) : <span className="text-tiny text-[#7F97A3]">not enough yet</span>)}</p>
+        <p className="shrink-0 text-small tabular-nums text-text">{right ?? (pct !== null ? pctText(pct) : <span className="text-tiny text-[#B4BEC9]">not enough yet</span>)}</p>
       </div>
       {pct !== null ? <ProgressBar value={pct} max={100} /> : filled !== undefined && total ? <div className="h-1.5 w-full rounded-[3px] bg-white/[0.05]" /> : null}
       <p className="truncate text-tiny text-[#9FB7C2]">{sub}</p>
@@ -460,7 +460,7 @@ const smallLink =
 /* ── Your numbers ─────────────────────────────────────────────────── */
 
 function medianText(m: Median, fmt: (n: number) => string): ReactNode {
-  return m.value !== null ? fmt(m.value) : <span className="text-tiny text-[#7F97A3]">{plural(m.creators, "creator")}, not enough</span>;
+  return m.value !== null ? fmt(m.value) : <span className="text-tiny text-[#B4BEC9]">{plural(m.creators, "creator")}, not enough</span>;
 }
 
 function YouScreen({ data, back }: { data: Insights; back: string }) {
