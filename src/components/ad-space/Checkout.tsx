@@ -27,48 +27,80 @@ import {
   FALLBACK_TEXT,
   PRODUCTION_FALLBACK_TEXT,
   SESSION_FALLBACK_TEXT,
+  compactNumber,
+  deliverableText,
   isProductionSpace,
   isSessionSpace,
   serviceName,
   timeLeft,
 } from "@/lib/ad-space/format";
 import { describeOfferError, offerSolanaPayLink, startOfferCheckout } from "@/lib/ad-space/offers-client";
-import { earnPointsLine, pointsForOfferAmount, pointsForPosition, pointsWorth } from "@/lib/ad-space/points";
+import { pointsForOfferAmount, pointsForPosition, pointsWorth } from "@/lib/ad-space/points";
+import { APP_STORE_URL, PLAY_STORE_URL, SMART_LINK_URL } from "@/lib/appLinks";
 import { PUBLIC_CHAINS } from "@/lib/orders/chains.public";
 import type { Booking, BriefBody, Chain, EvmPayload, OfferView, Order, Position, Space } from "@/lib/ad-space/types";
 
 import {
+  type EvmWallet,
   type SolanaWallet,
   base64ToBytes,
   blockhashExpired,
-  detectSolanaWallets,
-  injected,
-  isMobile,
   switchEvmChain,
   typedData,
 } from "@/lib/ad-space/wallets";
 
-import { AppPrompt } from "./AppPrompt";
-import { Check, ChainPicker, SolanaOptions, Spinner } from "./checkout-parts";
+import {
+  BigAmount,
+  CopyButton,
+  CreatorChip,
+  ExtraRow,
+  InfoTip,
+  MethodTabs,
+  NetworkPill,
+  PaidMark,
+  PaySheet,
+  SheetNotice,
+  StatusLine,
+  TotalRow,
+  WaitMark,
+  WalletRows,
+  ctaGlass,
+  ctaPrimary,
+  dollars,
+  feePercent,
+  fieldLabel,
+  payChainsOf,
+  sheetCard,
+  useBrowserWallets,
+} from "./pay-sheet";
 import { BriefForm, BriefReady, EMPTY_BRIEF, PackageLines, PaidProduction, type BriefDraft } from "./Production";
 import { QrCode } from "./qr";
 import { ManageLinkBox, SessionContactForm } from "./SessionBooking";
 import { SponsorContentForm } from "./SponsorContentForm";
-import { reachLine } from "./WhatTheBrandGets";
-import { btnPrimary, btnSecondary, btnSmallSecondary, eyebrow } from "./ui";
 
 /**
  * Paying for one spot from the public page, with no HOLD account.
  *
  * Three ways in, one order underneath:
- *   - Solana, connected wallet: we build the transaction, the wallet signs and
- *     sends it, we confirm by signature.
- *   - Solana, QR (Solana Pay): the sponsor's phone wallet asks our API for the
- *     transaction; the page watches for the order that creates and confirms it.
- *   - Base / Polygon: the wallet signs two USDC authorizations (no gas) and our
- *     relayer submits both in one transaction.
+ *   - A wallet in this browser. Solana: we build the transaction, the wallet
+ *     signs and sends it, we confirm by signature. Base / Polygon: the wallet
+ *     signs two USDC authorizations (no gas) and our relayer submits both in
+ *     one transaction.
+ *   - Scan to pay (Solana Pay): the sponsor's phone wallet asks our API for
+ *     the transaction; the page watches for the order that creates and
+ *     confirms it.
+ *   - The HOLD app, which earns HiPoints on our fee: the page hands the phone
+ *     over to the app.
  * The server decides when an order is paid. Nothing here settles anything,
  * which is why the page is allowed to poll as often as it does.
+ *
+ * There is deliberately no "send USDC to this address yourself". The server
+ * settles only a transaction it issued for the order (its blockhash and
+ * reference, both legs, our fee included); a hand-made transfer to the
+ * creator is not a sale and would be recorded as a duplicate at best.
+ *
+ * The networks offered are exactly where the creator can be paid
+ * (`payChainsOf`): one network, no picker.
  *
  * No red, including on failures: problems are amber and say what to do next.
  *
@@ -85,11 +117,13 @@ type Phase =
   | { kind: "choose" }
   | { kind: "busy"; label: string }
   | { kind: "qr"; link: string }
-  | { kind: "evm-sign"; order: Order; evm: EvmPayload; step: 0 | 1 | 2 }
+  | { kind: "evm-sign"; order: Order; evm: EvmPayload; step: 0 | 1 | 2; wallet: string }
   | { kind: "confirming"; order: Order }
   | { kind: "paid"; order: Order }
   | { kind: "duplicate"; order: Order }
   | { kind: "lapsed" };
+
+type Method = "wallet" | "scan" | "hold";
 
 const POLL_MS = 3_000;
 
@@ -118,18 +152,20 @@ export function Checkout({
   /** An accepted offer or bid to pay, by its manage-link token. */
   offer?: { token: string; view: OfferView } | null;
 }) {
-  // Taking a sold spot over is only possible on the chains takeovers work on.
-  // The position view does not say which chain the holder paid on, so the
-  // backend's `wrong_chain` still catches a spot bought elsewhere.
+  // Only where the creator can be paid. Taking a sold spot over is only
+  // possible on the chains takeovers work on; the position view does not say
+  // which chain the holder paid on, so the backend's `wrong_chain` still
+  // catches a spot bought elsewhere.
   const takingOver = position.status === "sold" && position.takeover !== null;
-  const takeoverChains = space.chains.filter((c) => TAKEOVER_CHAINS.includes(c));
-  const chains = takingOver && takeoverChains.length > 0 ? takeoverChains : space.chains;
+  const offered = payChainsOf(space);
+  const takeoverChains = offered.filter((c) => TAKEOVER_CHAINS.includes(c));
+  const chains = takingOver && takeoverChains.length > 0 ? takeoverChains : offered;
   const [chain, setChain] = useState<Chain>(chains.includes("solana") ? "solana" : chains[0]);
   const [phase, setPhase] = useState<Phase>({ kind: "loading" });
+  const [method, setMethod] = useState<Method>("wallet");
   const [notice, setNotice] = useState<string | null>(null);
-  const [wallets, setWallets] = useState<SolanaWallet[]>([]);
-  const [hasEvm, setHasEvm] = useState(false);
-  const [mobile, setMobile] = useState(false);
+  const { solana: solanaWallets, evm: evmWallets, mobile } = useBrowserWallets();
+  const [picked, setPicked] = useState<string | null>(null);
   const [mobileLink, setMobileLink] = useState<string | null>(null);
   /** After a refusal that means "this spot is gone", offer the way back to the board. */
   const [offerOtherSpot, setOfferOtherSpot] = useState(false);
@@ -156,8 +192,8 @@ export function Checkout({
   /**
    * What paying this from the HOLD app would earn (spaces-sponsor-points-v0.md):
    * on an accepted offer, the fee on the agreed amount; otherwise the fee this
-   * spot's payment carries. Null when the server doesn't say, and then the pay
-   * step promises nothing.
+   * spot's payment carries. Null when the server doesn't say, and then the HOLD
+   * option promises nothing.
    */
   const holdPoints = offer
     ? pointsForOfferAmount(offer.view.agreedUsdc, space, offer.view)
@@ -186,13 +222,6 @@ export function Checkout({
       (offer ? describeOfferError(e, { kind: offer.view.kind, chain: c, subject }) : null) ?? describeError(e, c, subject),
     [offer, subject],
   );
-
-  /* Wallets are only knowable in the browser, after mount. */
-  useEffect(() => {
-    setWallets(detectSolanaWallets());
-    setHasEvm(Boolean(injected().ethereum));
-    setMobile(isMobile());
-  }, []);
 
   /* Resume: this browser may already hold a checkout for this spot. */
   useEffect(() => {
@@ -233,7 +262,7 @@ export function Checkout({
 
   /* The Solana Pay link for the mobile button, computed once the key is known.
      An accepted offer's link has to be asked for (it binds the key), so it is
-     only fetched when the sponsor chooses QR, whose screen has the same button. */
+     only fetched when the sponsor chooses Scan, whose panel has the same button. */
   useEffect(() => {
     if (offerToken || phase.kind !== "choose" || chain !== "solana") return;
     let live = true;
@@ -252,20 +281,6 @@ export function Checkout({
     const t = setInterval(() => setNow(Date.now()), 1_000);
     return () => clearInterval(t);
   }, [ticking]);
-
-  /* Escape closes, and the page behind does not scroll. */
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
-    };
-  }, [onClose]);
 
   /* Confirm poll: every 3 s while an order is waiting. */
   const confirmingId = phase.kind === "confirming" ? phase.order.id : null;
@@ -385,7 +400,7 @@ export function Checkout({
         withFreshKey((key) => beginSolana(key, sponsorAddress));
       let [res, web3] = await Promise.all([checkout(), import("@solana/web3.js")]);
 
-      setPhase({ kind: "busy", label: `Approve the payment in ${wallet.name}…` });
+      setPhase({ kind: "busy", label: `Approve it in ${wallet.name}` });
       let sent: unknown;
       try {
         sent = await wallet.provider.signAndSendTransaction(
@@ -395,7 +410,7 @@ export function Checkout({
         // Approving took long enough for the blockhash to expire. The same key
         // gets a fresh transaction for the same order: ask once more.
         if (!blockhashExpired(e)) throw e;
-        setPhase({ kind: "busy", label: `That took a while, so here is a fresh one. Approve it in ${wallet.name}…` });
+        setPhase({ kind: "busy", label: `That took a while. Approve the fresh one in ${wallet.name}` });
         res = await checkout();
         sent = await wallet.provider.signAndSendTransaction(
           web3.VersionedTransaction.deserialize(base64ToBytes(res.solana.transaction)),
@@ -447,23 +462,19 @@ export function Checkout({
     }
   }
 
-  async function payWithEvm(evmChain: "base" | "polygon") {
+  async function payWithEvm(evmChain: "base" | "polygon", wallet: EvmWallet) {
     setNotice(null);
     setOfferOtherSpot(false);
     let submitting = false;
-    const provider = injected().ethereum;
-    if (!provider) {
-      setNotice("No browser wallet found. Open this page in MetaMask, Coinbase Wallet or Rabby, or pay another way.");
-      return;
-    }
+    const provider = wallet.provider;
     const meta = PUBLIC_CHAINS[evmChain];
     try {
-      setPhase({ kind: "busy", label: "Connecting your wallet…" });
+      setPhase({ kind: "busy", label: `Connecting ${wallet.name}…` });
       const accounts = (await provider.request({ method: "eth_requestAccounts" })) as string[];
       const sponsorAddress = accounts?.[0];
       if (!sponsorAddress) throw new Error("no_account");
 
-      setPhase({ kind: "busy", label: `Switching your wallet to ${meta.label}…` });
+      setPhase({ kind: "busy", label: `Switching ${wallet.name} to ${meta.label}…` });
       await switchEvmChain(provider, meta);
 
       setPhase({ kind: "busy", label: "Preparing the payment…" });
@@ -472,13 +483,13 @@ export function Checkout({
       const feeAuth = res.evm.authorizations.find((a) => a.role === "fee");
       if (!creatorAuth || !feeAuth) throw new CheckoutError("server", 500);
 
-      setPhase({ kind: "evm-sign", order: res.order, evm: res.evm, step: 0 });
+      setPhase({ kind: "evm-sign", order: res.order, evm: res.evm, step: 0, wallet: wallet.name });
       const creatorSignature = (await provider.request({
         method: "eth_signTypedData_v4",
         params: [sponsorAddress, typedData(res.evm, creatorAuth.message)],
       })) as string;
 
-      setPhase({ kind: "evm-sign", order: res.order, evm: res.evm, step: 1 });
+      setPhase({ kind: "evm-sign", order: res.order, evm: res.evm, step: 1, wallet: wallet.name });
       const feeSignature = (await provider.request({
         method: "eth_signTypedData_v4",
         params: [sponsorAddress, typedData(res.evm, feeAuth.message)],
@@ -486,7 +497,7 @@ export function Checkout({
 
       // The hold starts here, not at checkout: until now this was a quote
       // and another sponsor could sign first.
-      setPhase({ kind: "evm-sign", order: res.order, evm: res.evm, step: 2 });
+      setPhase({ kind: "evm-sign", order: res.order, evm: res.evm, step: 2, wallet: wallet.name });
       submitting = true;
       const submitted = await submitAuthorizations(res.order.id, keyRef.current, { creatorSignature, feeSignature });
       signatureRef.current = null;
@@ -502,426 +513,647 @@ export function Checkout({
     }
   }
 
-  /* ── Render ─────────────────────────────────────────────────────── */
+  /* ── What the sheet shows ───────────────────────────────────────── */
 
+  const needsBrief = production && !brief;
+  const scanWorks = chains.includes("solana");
+
+  /* Choosing Scan draws the QR straight away: no second button to press. */
+  const choosing = phase.kind === "choose";
+  useEffect(() => {
+    if (method !== "scan" || chain !== "solana" || !choosing || needsBrief || notice) return;
+    void startQr();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- startQr reads refs; re-running on its identity would loop
+  }, [method, chain, choosing, needsBrief, notice]);
+
+  /* A chosen way to pay comes into view whole, the QR most of all. */
+  const panelRef = useRef<HTMLDivElement>(null);
+  const qrShown = phase.kind === "qr";
+  useEffect(() => {
+    if (method === "wallet" && !qrShown) return;
+    panelRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [method, qrShown]);
+
+  const onMethod = (m: Method) => {
+    setMethod(m);
+    setNotice(null);
+    setOfferOtherSpot(false);
+    // Leaving the QR stops watching for it; the key and any order stay as they are.
+    if (phase.kind === "qr") setPhase({ kind: "choose" });
+  };
+
+  const walletsHere = chain === "solana" ? solanaWallets.map((w) => ({ id: w.name, name: w.name, icon: w.icon ?? null })) : evmWallets;
+  const chosen = walletsHere.find((w) => w.id === picked) ?? walletsHere[0] ?? null;
+
+  const figures = amountsOf(position, offer?.view ?? null);
+  const total = dollars(figures.totalUsdc);
+  const feeNote = space.feeBps > 0 ? `includes ${feePercent(space.feeBps)} HOLD fee` : null;
+  const busy = phase.kind === "busy" || phase.kind === "evm-sign";
   const heldMs = (o: Order) => new Date(o.reservedUntil).getTime() - now;
 
+  const eyebrow = offer
+    ? offer.view.kind === "bid"
+      ? "Pay your winning bid"
+      : "Pay your accepted offer"
+    : session
+      ? "Book a session"
+      : production
+        ? "Book a production spot"
+        : takingOver
+          ? "Take this spot"
+          : "Sponsor a spot";
+
+  const methods = [
+    { id: "wallet" as const, label: "Wallet" },
+    ...(scanWorks ? [{ id: "scan" as const, label: "Scan to pay" }] : []),
+    { id: "hold" as const, label: "HOLD app", badge: holdPoints !== null ? `Earn ${pointsWorth(holdPoints)}` : null },
+  ];
+
+  const payNow = () => {
+    if (!chosen) return;
+    if (chain === "solana") {
+      const w = solanaWallets.find((s) => s.name === chosen.id);
+      if (w) void payWithSolanaWallet(w);
+    } else {
+      const w = evmWallets.find((e) => e.id === chosen.id);
+      if (w) void payWithEvm(chain, w);
+    }
+  };
+
+  /* The bottom bloc, as in the app: the one action, then one line of trust. */
+  const paying = phase.kind === "choose" || phase.kind === "busy" || phase.kind === "evm-sign" || phase.kind === "qr";
+  const footer =
+    paying && !needsBrief ? (
+      <>
+        {method === "wallet" && (
+          <WalletAction
+            phase={phase}
+            chosen={chosen}
+            hasWallets={walletsHere.length > 0}
+            evm={chain !== "solana"}
+            total={total}
+            now={now}
+            onPay={payNow}
+            phoneLink={mobile && chain === "solana" ? mobileLink : null}
+            onPhoneLink={() => void startQr()}
+          />
+        )}
+        {method === "scan" && phase.kind === "qr" && <StatusLine>Waiting for payment</StatusLine>}
+        <p className="flex items-center justify-center gap-2 text-center text-tiny text-white/60">
+          Paid straight to @{space.creator.xHandle}. HOLD never holds your money.
+          <InfoTip label="About refunds">
+            {session
+              ? "HOLD can't refund a booking. If the session can't happen, the creator's policy applies: "
+              : "HOLD can't refund a paid spot. If the plan changes, the creator's policy applies: "}
+            <span className="text-text">{FALLBACK_LABEL[space.fallback]}.</span>{" "}
+            {(production ? PRODUCTION_FALLBACK_TEXT : session ? SESSION_FALLBACK_TEXT : FALLBACK_TEXT)[space.fallback]}
+            {space.fallbackNote ? ` ${space.fallbackNote}` : ""}
+          </InfoTip>
+        </p>
+      </>
+    ) : null;
+
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-labelledby="checkout-title">
-      <button
-        type="button"
-        aria-label="Close"
-        className="absolute inset-0 bg-abyss/80 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      <div className="relative flex max-h-[92dvh] w-full flex-col overflow-y-auto rounded-t-card border border-[color:var(--color-hairline-strong)] bg-night shadow-2xl sm:m-6 sm:max-w-lg sm:rounded-card">
-        <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-[color:var(--color-hairline)] bg-night/95 px-5 py-4 backdrop-blur">
-          <div className="min-w-0">
-            <p className={`${eyebrow} text-amber`}>
-              {offer
-                ? offer.view.kind === "bid"
-                  ? "Pay your winning bid"
-                  : "Pay your accepted offer"
-                : session
-                  ? "Book a session"
-                  : production
-                    ? "Book a production spot"
-                    : "Sponsor a spot"}
-            </p>
-            <h2 id="checkout-title" className="mt-1 truncate text-body text-text">
-              {position.label}
-            </h2>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="-mr-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-[20px] text-text-muted hover:bg-white/5 hover:text-text"
-            aria-label="Close checkout"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-              <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
+    <PaySheet labelledBy="checkout-title" eyebrow={eyebrow} title={position.label} onClose={onClose} footer={footer}>
+      {phase.kind === "paid" ? (
+        session ? (
+          <PaidSession order={phase.order} space={space} />
+        ) : production ? (
+          <PaidProduction order={phase.order} space={space} />
+        ) : (
+          <Paid order={phase.order} space={space} position={position} checkoutKey={keyRef.current} />
+        )
+      ) : phase.kind === "duplicate" ? (
+        <Duplicate order={phase.order} />
+      ) : phase.kind === "lapsed" ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 py-8 text-center">
+          <h3 className="font-display text-h4 font-light text-text">The hold ran out.</h3>
+          <p className="max-w-sm text-small text-white/60">Nothing left your wallet. The {subject} is back on the board.</p>
+          <button type="button" className={`${ctaPrimary} max-w-xs`} onClick={startAgain}>
+            Start again
           </button>
         </div>
+      ) : (
+        <>
+          {/* Who is paid, how much, on what: Quick Send's head. */}
+          <div className="flex flex-col items-center gap-4 pt-1 text-center">
+            <CreatorChip creator={space.creator} />
+            <BigAmount value={dollars(figures.headlineUsdc) ?? "—"} />
+            <NetworkPill
+              chains={chains}
+              chain={chain}
+              disabled={busy || phase.kind === "confirming"}
+              onChange={(c) => {
+                setChain(c);
+                setNotice(null);
+                setPicked(null);
+                if (phase.kind === "qr") setPhase({ kind: "choose" });
+              }}
+            />
+          </div>
 
-        <div className="flex flex-col gap-6 px-5 py-6">
-          {phase.kind === "paid" ? (
-            session ? (
-              <PaidSession order={phase.order} space={space} />
-            ) : production ? (
-              <PaidProduction order={phase.order} space={space} />
-            ) : (
-              <Paid order={phase.order} space={space} position={position} checkoutKey={keyRef.current} />
-            )
-          ) : phase.kind === "duplicate" ? (
-            <Duplicate order={phase.order} />
-          ) : phase.kind === "lapsed" ? (
-            <div className="flex flex-col gap-4">
-              <h3 className="font-display text-h4 font-light text-text">The hold ran out.</h3>
-              <p className="text-small text-text-muted">
-                No payment arrived in time, so nothing left your wallet and the {subject} went back on
-                the board. Start again if it&rsquo;s still available.
+          <TotalRow
+            totalUsdc={figures.totalUsdc}
+            note={feeNote}
+            info={
+              figures.refundsUsdc ? (
+                <InfoTip label="Where a takeover's money goes">
+                  {dollars(figures.refundsUsdc)} of it goes straight back to the sponsor who holds this spot now, in the
+                  same transaction. The rest is the creator&rsquo;s, and HOLD&rsquo;s fee.
+                </InfoTip>
+              ) : null
+            }
+          />
+
+          {phase.kind === "loading" && <StatusLine>One moment</StatusLine>}
+
+          {phase.kind === "confirming" ? (
+            <div className="flex flex-1 flex-col items-center justify-center gap-3 py-6 text-center">
+              <WaitMark />
+              <p className="text-body font-medium text-text" role="status">
+                Confirming on {CHAIN_LABEL[phase.order.chain]}…
               </p>
-              <div>
-                <button type="button" className={btnPrimary} onClick={startAgain}>
-                  Start again
-                </button>
-              </div>
+              <HoldLine ms={heldMs(phase.order)} subject={subject} />
             </div>
-          ) : (
+          ) : needsBrief && phase.kind === "choose" ? (
             <>
-              <Summary space={space} position={position} session={session} offer={offer?.view ?? null} />
-
-              {phase.kind === "loading" && <p className="text-small text-text-muted">One moment…</p>}
-
-              {phase.kind === "busy" && (
-                <p className="flex items-center gap-3 text-small text-text" role="status">
-                  <Spinner />
-                  {phase.label}
-                </p>
-              )}
-
-              {phase.kind === "choose" && production && !brief && (
-                <>
-                  {space.production ? (
-                    <div className="flex flex-col gap-2">
-                      <p className="text-small text-text">What you get</p>
-                      <PackageLines pkg={space.production} />
-                    </div>
-                  ) : null}
-                  <div className="border-t border-[color:var(--color-hairline)] pt-6">
-                    <BriefForm
-                      draft={briefDraft}
-                      onChange={setBriefDraft}
-                      busy={savingBrief}
-                      creatorHandle={space.creator.xHandle}
-                      onContinue={(body) => {
-                        setSavingBrief(true);
-                        setNotice(null);
-                        // Checked by the server now, so a problem is said here and not at the wallet.
-                        void fileBrief(position.id, keyRef.current, body)
-                          .then(() => setBrief(body))
-                          .catch((e) => setNotice(explain(e, null)))
-                          .finally(() => setSavingBrief(false));
-                      }}
-                    />
-                  </div>
-                </>
-              )}
-
-              {phase.kind === "choose" && (!production || brief) && (
-                <>
-                  {production && brief ? <BriefReady brief={brief} onEdit={() => setBrief(null)} /> : null}
-                  {chains.length > 1 && (
-                    <ChainPicker
-                      chains={chains}
-                      chain={chain}
-                      onChange={(c) => {
-                        setChain(c);
-                        setNotice(null);
-                      }}
-                    />
-                  )}
-
-                  {chain === "solana" ? (
-                    <SolanaOptions
-                      wallets={wallets}
-                      mobile={mobile}
-                      mobileLink={mobileLink}
-                      onWallet={payWithSolanaWallet}
-                      onQr={() => void startQr()}
-                      onMobileLink={() => void startQr()}
-                    />
-                  ) : (
-                    <div className="flex flex-col gap-4">
-                      <p className="text-small text-text-muted">
-                        Two signatures, no gas: one pays the creator, one pays HOLD&rsquo;s fee. Both go
-                        through together or not at all.
-                      </p>
-                      {!hasEvm && (
-                        <p className="text-small text-amber">
-                          No browser wallet found here. Open this page in MetaMask, Coinbase Wallet or
-                          Rabby{chains.includes("solana") ? ", or pay on Solana by QR" : ""}.
-                        </p>
-                      )}
-                      <div>
-                        <button
-                          type="button"
-                          className={btnPrimary}
-                          disabled={!hasEvm}
-                          onClick={() => void payWithEvm(chain)}
-                        >
-                          Connect wallet and sign
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  <Disclaimer session={session} />
-                  {holdPoints !== null ? (
-                    <AppPrompt
-                      title={earnPointsLine(holdPoints)}
-                      body={`Worth ${pointsWorth(holdPoints)} in HOLD. Only a payment from the HOLD app earns them; any other wallet pays the same and earns none.`}
-                    />
-                  ) : (
-                    offer && <AppPrompt title="No wallet with USDC? Pay with HOLD" />
-                  )}
-                </>
-              )}
-
-              {phase.kind === "qr" && (
-                <div className="flex flex-col items-center gap-4 text-center">
-                  <div className="w-full max-w-[240px] rounded-card bg-white p-3">
-                    <QrCode text={phase.link} title="Solana Pay QR code" className="h-auto w-full" />
-                  </div>
-                  <p className="text-small text-text-muted">
-                    Scan with Phantom, Solflare or any Solana wallet. It shows the exact amount before
-                    you approve.
-                  </p>
-                  {mobile && (
-                    <a href={phase.link} className={btnSecondary}>
-                      Open in my wallet
-                    </a>
-                  )}
-                  <p className="flex items-center gap-3 text-small text-text-faint" role="status">
-                    <Spinner />
-                    Waiting for your wallet…
-                  </p>
-                  <button type="button" className={btnSmallSecondary} onClick={() => setPhase({ kind: "choose" })}>
-                    Back
-                  </button>
+              {space.production ? (
+                <div className={`${sheetCard} flex flex-col gap-2 p-4`}>
+                  <p className={fieldLabel}>What you get</p>
+                  <PackageLines pkg={space.production} />
                 </div>
-              )}
-
-              {phase.kind === "evm-sign" && (
-                <div className="flex flex-col gap-4">
-                  <p className="text-small text-text-muted">
-                    Two signatures, no gas: one pays the creator, one pays HOLD&rsquo;s fee. Both go
-                    through together or not at all.
-                  </p>
-                  <ol className="flex flex-col gap-2">
-                    {(["creator", "fee"] as const).map((role, i) => {
-                      const a = phase.evm.authorizations.find((x) => x.role === role);
-                      const done = phase.step > i;
-                      const current = phase.step === i;
-                      return (
-                        <li
-                          key={role}
-                          className={`flex items-center gap-3 rounded-input border px-4 py-3 text-small ${
-                            current ? "border-amber/50 text-text" : "border-[color:var(--color-hairline)] text-text-muted"
-                          }`}
-                        >
-                          <span
-                            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-[12px] text-tiny ${
-                              done ? "bg-success/20 text-success" : current ? "bg-amber text-text-on-amber" : "bg-white/5"
-                            }`}
-                            aria-hidden
-                          >
-                            {done ? <Check /> : i + 1}
-                          </span>
-                          <span className="min-w-0 flex-1">{a?.label}</span>
-                          {current && <span className="text-tiny text-amber">Sign in your wallet</span>}
-                        </li>
-                      );
-                    })}
-                  </ol>
-                  {phase.step === 2 && (
-                    <p className="flex items-center gap-3 text-small text-text" role="status">
-                      <Spinner />
-                      Sending both payments…
-                    </p>
-                  )}
-                  <QuoteLine ms={phase.evm.validBefore * 1000 - now} />
-                </div>
-              )}
-
-              {phase.kind === "confirming" && (
-                <div className="flex flex-col gap-4">
-                  <p className="flex items-center gap-3 text-body text-text" role="status">
-                    <Spinner />
-                    Confirming your payment on {CHAIN_LABEL[phase.order.chain]}…
-                  </p>
-                  <p className="text-small text-text-muted">
-                    This page updates on its own. The {subject} is yours the moment the network confirms it.
-                  </p>
-                  <HoldLine ms={heldMs(phase.order)} subject={subject} />
-                </div>
-              )}
+              ) : null}
+              <div className="flex flex-col gap-4">
+                <p className={fieldLabel}>Step 1 of 2 · Your brief</p>
+                <BriefForm
+                  draft={briefDraft}
+                  onChange={setBriefDraft}
+                  busy={savingBrief}
+                  creatorHandle={space.creator.xHandle}
+                  onContinue={(body) => {
+                    setSavingBrief(true);
+                    setNotice(null);
+                    // Checked by the server now, so a problem is said here and not at the wallet.
+                    void fileBrief(position.id, keyRef.current, body)
+                      .then(() => setBrief(body))
+                      .catch((e) => setNotice(explain(e, null)))
+                      .finally(() => setSavingBrief(false));
+                  }}
+                />
+              </div>
             </>
-          )}
+          ) : phase.kind !== "loading" ? (
+            <>
+              {production && brief && phase.kind === "choose" ? (
+                <BriefReady brief={brief} onEdit={() => setBrief(null)} />
+              ) : !production ? (
+                <Included space={space} position={position} session={session} />
+              ) : null}
+
+              <MethodTabs options={methods} value={method} onChange={onMethod} disabled={busy} />
+
+              <div ref={panelRef} className="flex scroll-mb-4 flex-col gap-5">
+                {method === "wallet" && (
+                  <WalletList
+                    chain={chain}
+                    chains={chains}
+                    wallets={walletsHere}
+                    chosenId={chosen?.id ?? null}
+                    onPick={setPicked}
+                    mobile={mobile}
+                    mobileLink={mobileLink}
+                    busy={busy}
+                    onScan={() => onMethod("scan")}
+                    onSolana={() => {
+                      setChain("solana");
+                      onMethod("scan");
+                    }}
+                    onPhoneLink={() => void startQr()}
+                  />
+                )}
+
+                {method === "scan" && (
+                  <ScanPanel
+                    chain={chain}
+                    phase={phase}
+                    mobile={mobile}
+                    canSwitch={scanWorks}
+                    onSolana={() => setChain("solana")}
+                  />
+                )}
+
+                {method === "hold" && (
+                  <HoldPanel points={holdPoints} mobile={mobile} takeover={space.pricingMode === "takeover"} />
+                )}
+              </div>
+            </>
+          ) : null}
 
           {notice && (
-            <div className="flex flex-col gap-3 rounded-card border border-amber/30 bg-amber/[0.05] px-4 py-3" role="status">
-              <p className="text-small text-text-muted">{notice}</p>
+            <SheetNotice>
+              <p>{notice}</p>
               {offerOtherSpot && (
                 <div>
-                  <button type="button" className={btnSmallSecondary} onClick={onClose}>
+                  <button type="button" className={ctaGlass} onClick={onClose}>
                     Pick another {subject}
                   </button>
                 </div>
               )}
-            </div>
+            </SheetNotice>
           )}
-        </div>
-      </div>
-    </div>
+
+        </>
+      )}
+    </PaySheet>
   );
 }
 
-/* ── Pieces ────────────────────────────────────────────────────────── */
+/* ── The figures ───────────────────────────────────────────────────── */
 
-/** 500 bps to "5%", 250 to "2.5%". */
-function feeText(bps: number): string {
-  return `${Number((bps / 100).toFixed(2))}%`;
+/**
+ * The big number, the total and, on a takeover, the refund inside it. The big
+ * number is the price (what the spot costs); the total is what leaves the
+ * wallet, fee included, whichever side the creator put it on.
+ */
+function amountsOf(
+  p: Position,
+  offer: OfferView | null,
+): { headlineUsdc: string | null; totalUsdc: string | null; refundsUsdc: string | null } {
+  if (offer?.agreedUsdc && offer.agreedSponsorPaysUsdc) {
+    return { headlineUsdc: offer.agreedUsdc, totalUsdc: offer.agreedSponsorPaysUsdc, refundsUsdc: null };
+  }
+  const t = p.status === "sold" && p.takeover?.nextSponsorPaysUsdc ? p.takeover : null;
+  if (t) return { headlineUsdc: t.nextPriceUsdc, totalUsdc: t.nextSponsorPaysUsdc, refundsUsdc: t.refundsUsdc };
+  const price = p.priceCents !== null ? (p.priceCents / 100).toFixed(2) : p.creatorReceivesUsdc;
+  return { headlineUsdc: price, totalUsdc: p.sponsorPaysUsdc, refundsUsdc: null };
 }
 
-function Summary({
-  space,
-  position: p,
-  session,
-  offer,
-}: {
-  space: Space;
-  position: Position;
-  session: boolean;
-  offer: OfferView | null;
-}) {
+/* ── What you get, in three short lines ────────────────────────────── */
+
+function Included({ space, position: p, session }: { space: Space; position: Position; session: boolean }) {
+  const [open, setOpen] = useState(false);
   const zone = space.template.zones.find((z) => z.zoneKey === p.zoneKey);
-  const agreed = offer?.agreedUsdc && offer.agreedSponsorPaysUsdc ? offer : null;
-  /* A rung of a ladder (ad-space-tiers-v0.md): the sheet's heading already
-     carries its name, because `label` falls back to the tier's title. What it
-     cannot carry is the list the brand picked this rung FOR, and a sponsor
-     about to sign for $1,300 should be reading the interview, not remembering
-     it from the page behind the sheet. Plain text, as it arrives. */
-  const reach = reachLine(space);
   const perks = p.perks ?? [];
-  // What a spot on a product buys, said the way creators sell it: the reach
-  // first, the product as the reason people look, then the content promised.
-  // A rung carries its own list (perks); a session and a production have theirs.
-  const got: string[] = perks.length
-    ? [...(reach ? [reach] : []), ...perks]
-    : !session && !isProductionSpace(space) && space.kind === "placement"
-      ? [
-          ...(reach ? [reach] : []),
-          `Your brand on the ${p.label.charAt(0).toLowerCase()}${p.label.slice(1)} of the ${serviceName(space).toLowerCase()}: it's what makes people look`,
-          ...(space.deliverables.length
-            ? [`${space.deliverables.length} ${space.deliverables.length === 1 ? "piece" : "pieces"} of content promised on this page, with dates`]
-            : []),
-        ]
-      : [];
-  // Taking a spot from whoever holds it, rather than buying an empty one. The
-  // figures differ enough that showing the fixed-price pair would be wrong:
-  // what this sponsor pays is the DOUBLED price plus the fee, and most of it
-  // is not the creator's — it goes straight back to the sponsor displaced.
-  const taking = p.status === "sold" && p.takeover?.nextSponsorPaysUsdc ? p.takeover : null;
+  const c = space.creator;
+  const reach = c?.xHandle && c.xFollowers > 0 ? `Seen by ${compactNumber(c.xFollowers)} followers on X` : null;
+  const where = space.event ? ` at ${space.event.name}` : "";
+  // Short first: what the brand is, who sees it, what is promised. The rung's
+  // own list, when it has one, is the creator's words and leads.
+  const short: string[] = perks.length
+    ? perks.slice(0, 2).concat(reach ? [reach] : [])
+    : session
+      ? [`${serviceName(space)} with @${c.xHandle}${where}`, ...(reach ? [reach] : [])]
+      : space.kind === "placement"
+        ? [
+            `Your brand on the ${p.label.charAt(0).toLowerCase()}${p.label.slice(1)} of the ${serviceName(space).toLowerCase()}`,
+            ...(reach ? [`${reach}${where}`] : []),
+            ...(space.deliverables.length
+              ? [`${space.deliverables.length} ${space.deliverables.length === 1 ? "post" : "posts"} promised, with dates`]
+              : []),
+          ]
+        : reach
+          ? [reach]
+          : [];
+  const more: string[] = [
+    ...perks.slice(2),
+    ...space.deliverables.map((d) => deliverableText(d)),
+    ...(!session && zone ? [[zone.sizeLabel, `Takes ${p.accepts.map((k) => CONTENT_KIND_LABEL[k]).join(", ")}`].filter(Boolean).join(" · ")] : []),
+  ];
+  if (short.length === 0 && more.length === 0) return null;
+
   return (
-    <div className="flex flex-col gap-4">
-      <dl className="grid grid-cols-2 gap-4 rounded-card border border-[color:var(--color-hairline)] bg-white/[0.03] p-4">
-        <div className={agreed || taking ? "" : "col-span-2"}>
-          <dt className="text-tiny text-text-faint">You pay</dt>
-          <dd className="mt-1 font-mono text-body text-text">
-            {agreed ? agreed.agreedSponsorPaysUsdc : taking ? taking.nextSponsorPaysUsdc : p.sponsorPaysUsdc} USDC
-          </dd>
-        </div>
-        {(agreed || taking) && (
-          <div>
-            <dt className="text-tiny text-text-faint">{agreed ? "Agreed price" : "New price for the spot"}</dt>
-            <dd className="mt-1 font-mono text-body text-text">
-              {agreed ? agreed.agreedUsdc : taking?.nextPriceUsdc} USDC
-            </dd>
-          </div>
-        )}
-        {/* The one place the page names our fee: here, beside the amount it is
-            part of, as a plain fact. Whether it sits inside the price or on top
-            of it is the creator's setting and is not spelled out. */}
-        <div className="col-span-2 text-small text-text-muted">
-          HOLD charges a {feeText(space.feeBps)} fee.
-        </div>
-        {taking && (
-          <div className="col-span-2 border-t border-[color:var(--color-hairline)] pt-3 text-small text-text-muted">
-            <span className="font-mono text-text">{taking.refundsUsdc} USDC</span> of it goes straight back to the
-            sponsor who holds this spot now, in the same transaction.
-          </div>
-        )}
-        {got.length > 0 && (
-          <div className="col-span-2 border-t border-[color:var(--color-hairline)] pt-3">
-            <h3 className={`${eyebrow} text-text-faint`}>What you get</h3>
-            <ul className="mt-2 flex flex-col gap-1.5">
-              {got.map((line, i) => (
-                <li key={i} className="break-words text-small text-text [overflow-wrap:anywhere]">
+    <div className="flex flex-col gap-2 px-1">
+      <ul className="flex flex-col gap-1.5">
+        {short.slice(0, 3).map((line, i) => (
+          <li key={i} className="flex items-start gap-2.5 text-small text-[#CFE3EC] [overflow-wrap:anywhere]">
+            <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-[3px] bg-white/40" aria-hidden />
+            {line}
+          </li>
+        ))}
+      </ul>
+      {more.length > 0 && (
+        <>
+          {open && (
+            <ul className="flex flex-col gap-1.5 pl-4">
+              {more.map((line, i) => (
+                <li key={i} className="text-tiny text-white/55 [overflow-wrap:anywhere]">
                   {line}
                 </li>
               ))}
             </ul>
-          </div>
-        )}
-        {session ? (
-          <div className="col-span-2 text-tiny text-text-faint">
-            Nothing else to fill in before you pay. Afterwards you send the creator your contact and what the session
-            is for.
-          </div>
-        ) : isProductionSpace(space) ? null : (
-          <div className="col-span-2 text-tiny text-text-faint">
-            {[zone?.sizeLabel, `Takes ${p.accepts.map((k) => CONTENT_KIND_LABEL[k]).join(", ")}`]
-              .filter(Boolean)
-              .join(" · ")}
-          </div>
-        )}
-      </dl>
-      {/* The lead-in is the policy the creator picked, in the app's own words,
-          so the sentence after it can open with "if the venue says no" without
-          the line saying it twice. */}
-      <p className="text-small text-text-muted">
-        <span className="text-text">{FALLBACK_LABEL[space.fallback]}.</span>{" "}
-        {isProductionSpace(space)
-          ? PRODUCTION_FALLBACK_TEXT[space.fallback]
-          : (session ? SESSION_FALLBACK_TEXT : FALLBACK_TEXT)[space.fallback]}
-        {space.fallbackNote ? ` ${space.fallbackNote}` : ""}
-      </p>
+          )}
+          <button
+            type="button"
+            className="self-start pl-4 text-tiny font-medium text-amber hover:text-amber-glow"
+            aria-expanded={open}
+            onClick={() => setOpen((o) => !o)}
+          >
+            {open ? "Show less" : "See what's included"}
+          </button>
+        </>
+      )}
     </div>
   );
 }
 
-function Disclaimer({ session }: { session: boolean }) {
+/* ── Pay with a wallet in this browser ─────────────────────────────── */
+
+function WalletList({
+  chain,
+  chains,
+  wallets,
+  chosenId,
+  onPick,
+  mobile,
+  mobileLink,
+  busy,
+  onScan,
+  onSolana,
+  onPhoneLink,
+}: {
+  chain: Chain;
+  chains: Chain[];
+  wallets: { id: string; name: string; icon?: string | null }[];
+  chosenId: string | null;
+  onPick: (id: string) => void;
+  mobile: boolean;
+  mobileLink: string | null;
+  busy: boolean;
+  onScan: () => void;
+  onSolana: () => void;
+  onPhoneLink: () => void;
+}) {
+  const solana = chain === "solana";
+  const extra = busy ? null : solana ? (
+    mobile && mobileLink ? (
+      <ExtraRow title="Open in my wallet app" sub="Phantom, Solflare or any Solana wallet" href={mobileLink} onClick={onPhoneLink} />
+    ) : (
+      <ExtraRow title="Another wallet" sub="Scan a QR with any Solana wallet" onClick={onScan} />
+    )
+  ) : (
+    <>
+      <CopyLinkRow />
+      {chains.includes("solana") && <ExtraRow title="Pay on Solana instead" sub="Scan a QR with any Solana wallet" onClick={onSolana} />}
+    </>
+  );
+
+  if (wallets.length > 0) {
+    return <WalletRows wallets={wallets} selected={chosenId} onSelect={onPick} disabled={busy} extra={extra} />;
+  }
+  // A phone: the button below opens the wallet app itself, so the list has nothing to add.
+  if (solana && mobile && mobileLink) {
+    return (
+      <p className="px-1 text-center text-small text-white/60">
+        Opens Phantom, Solflare or any Solana wallet on this phone, with the amount filled in.
+      </p>
+    );
+  }
   return (
-    <p className="text-tiny leading-relaxed text-text-faint">
-      {session ? (
-        <>
-          You pay the creator directly. HOLD never holds your money and can&rsquo;t refund a booking; the
-          creator&rsquo;s policy is above.
-        </>
-      ) : (
-        <>
-          You pay the creator directly. HOLD never holds your money. Paid spots can&rsquo;t be refunded
-          by HOLD; the creator&rsquo;s fallback policy is above.
-        </>
-      )}
-    </p>
+    <div className="flex flex-col gap-2">
+      <p className="px-1 text-small text-white/60">No {solana ? "Solana" : CHAIN_LABEL[chain]} wallet in this browser.</p>
+      {extra}
+    </div>
   );
 }
+
+/** The amber button, or what is happening instead of it. */
+function WalletAction({
+  phase,
+  chosen,
+  hasWallets,
+  evm,
+  total,
+  now,
+  onPay,
+  phoneLink,
+  onPhoneLink,
+}: {
+  phase: Phase;
+  chosen: { name: string } | null;
+  hasWallets: boolean;
+  evm: boolean;
+  total: string | null;
+  now: number;
+  onPay: () => void;
+  /** On a phone with no wallet in the browser: the Solana Pay link that opens the wallet app. */
+  phoneLink: string | null;
+  /** The page starts watching for the order the wallet app will open. */
+  onPhoneLink: () => void;
+}) {
+  // The wallet app was opened from here: watch for its payment, as the QR does.
+  if (phase.kind === "qr") return <StatusLine>Waiting for payment</StatusLine>;
+  if (phase.kind === "busy") return <StatusLine>{phase.label}</StatusLine>;
+  if (phase.kind === "evm-sign") {
+    return (
+      <div className="flex flex-col gap-2">
+        <StatusLine>{phase.step === 2 ? "Sending both payments…" : `Sign ${phase.step + 1} of 2 in ${phase.wallet}`}</StatusLine>
+        <QuoteLine ms={phase.evm.validBefore * 1000 - now} />
+      </div>
+    );
+  }
+  if (!hasWallets) {
+    return phoneLink && phase.kind === "choose" ? (
+      <a href={phoneLink} className={ctaPrimary} onClick={onPhoneLink}>
+        Pay {total ?? ""} in my wallet app
+      </a>
+    ) : null;
+  }
+  return (
+    <div className="flex flex-col gap-2">
+      <button type="button" className={ctaPrimary} disabled={!chosen || phase.kind !== "choose"} onClick={onPay}>
+        Pay {total ?? ""} with {chosen?.name ?? "wallet"}
+      </button>
+      {evm && (
+        <p className="flex items-center justify-center gap-2 text-tiny text-white/60">
+          Two signatures, no gas.
+          <InfoTip label="Why two signatures">
+            One pays the creator, one pays HOLD&rsquo;s fee. Both go through together in one transaction, or not at all.
+            Our relayer pays the gas.
+          </InfoTip>
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** For an EVM wallet this browser does not have: open the page inside that wallet. */
+function CopyLinkRow() {
+  const [copied, setCopied] = useState(false);
+  return (
+    <ExtraRow
+      title={copied ? "Link copied" : "Use another wallet"}
+      sub="Copy this page's link and open it in your wallet's browser"
+      onClick={() => {
+        void navigator.clipboard
+          .writeText(window.location.href)
+          .then(() => {
+            setCopied(true);
+            window.setTimeout(() => setCopied(false), 2000);
+          })
+          .catch(() => setCopied(false));
+      }}
+    />
+  );
+}
+
+/* ── Scan to pay (Solana Pay) ──────────────────────────────────────── */
+
+function ScanPanel({
+  chain,
+  phase,
+  mobile,
+  canSwitch,
+  onSolana,
+}: {
+  chain: Chain;
+  phase: Phase;
+  mobile: boolean;
+  canSwitch: boolean;
+  onSolana: () => void;
+}) {
+  if (chain !== "solana") {
+    return (
+      <div className={`${sheetCard} flex flex-col items-center gap-3 px-5 py-6 text-center`}>
+        <p className="text-small text-text">Scan to pay works on Solana.</p>
+        {canSwitch && (
+          <button type="button" className={ctaGlass} onClick={onSolana}>
+            Switch to Solana
+          </button>
+        )}
+      </div>
+    );
+  }
+  if (phase.kind !== "qr") {
+    return phase.kind === "busy" ? <StatusLine>{phase.label}</StatusLine> : <StatusLine>Drawing your QR</StatusLine>;
+  }
+  return (
+    <div className="flex flex-col items-center gap-4 text-center">
+      <div className="w-full max-w-[232px] rounded-[20px] bg-white p-3 shadow-[0_12px_32px_rgba(0,0,0,0.35)]">
+        <QrCode text={phase.link} title="Solana Pay QR code" className="h-auto w-full" />
+      </div>
+      <p className="flex items-center gap-2 text-small text-[#CFE3EC]">
+        Scan with Phantom, Solflare or any Solana wallet
+        <InfoTip label="How scanning works">
+          Your wallet shows the exact amount, the creator and HOLD&rsquo;s fee before you approve. One transaction pays
+          both; this page updates on its own.
+        </InfoTip>
+      </p>
+      {mobile && (
+        <a href={phase.link} className={ctaGlass}>
+          Open in my wallet app
+        </a>
+      )}
+    </div>
+  );
+}
+
+/* ── Pay from the HOLD app ─────────────────────────────────────────── */
+
+/**
+ * What paying from HOLD gets the brand, in money, as the server computes it:
+ * points = floor(fee × share), one point = $0.01, credited once the payment
+ * confirms (sponsor-points.ts). They are HiPoints, not cash back, and the
+ * page says so where it matters: behind the (i).
+ */
+function HoldPanel({ points, mobile, takeover }: { points: number | null; mobile: boolean; takeover: boolean }) {
+  const worth = points !== null ? pointsWorth(points) : null;
+  return (
+    <div
+      className="flex flex-col gap-5 overflow-hidden rounded-[20px] p-5 sm:flex-row sm:items-center"
+      style={{ background: "linear-gradient(135deg, rgba(255,183,3,0.16) 0%, rgba(255,183,3,0.04) 45%, #15313D 100%)" }}
+    >
+      <div className="min-w-0 flex-1">
+        <p className="text-[26px] font-medium leading-tight tracking-[-0.01em] text-text">
+          {worth ? (
+            <>
+              Earn <span className="text-amber">{worth}</span> on this spot
+            </>
+          ) : (
+            "Pay from the HOLD app"
+          )}
+        </p>
+        <p className="mt-2 flex items-center gap-2 text-small text-[#CFE3EC]">
+          {worth
+            ? mobile
+              ? "In HiPoints, when you pay from the HOLD app."
+              : "In HiPoints, when you pay from the HOLD app. Scan to get it."
+            : mobile
+              ? "Get HOLD, then pay this spot in the app."
+              : "Scan with your phone, get HOLD, pay in the app."}
+          {worth && (
+            <InfoTip label="About HiPoints">
+              {(points ?? 0).toLocaleString("en-US")} HiPoints, worth {worth} (1 point = $0.01). They come out of HOLD&rsquo;s
+              fee, never the creator&rsquo;s price, and are credited once your payment confirms. Spend them in HOLD on
+              hotels, eSIMs or your next spot&rsquo;s fee.
+              {takeover ? " If someone takes the spot over, the points go back." : ""}
+            </InfoTip>
+          )}
+        </p>
+        {mobile && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer" className={ctaGlass}>
+              App Store
+            </a>
+            <a href={PLAY_STORE_URL} target="_blank" rel="noopener noreferrer" className={ctaGlass}>
+              Google Play
+            </a>
+          </div>
+        )}
+      </div>
+      {!mobile && (
+        <div className="w-[132px] shrink-0 self-center rounded-[16px] bg-white p-2 shadow-[0_12px_32px_rgba(0,0,0,0.35)]">
+          <QrCode text={SMART_LINK_URL} title="QR code to get the HOLD app" className="h-auto w-full" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Countdowns ────────────────────────────────────────────────────── */
 
 /** A Base/Polygon quote: valid until `validBefore`, holding nothing meanwhile. */
 function QuoteLine({ ms }: { ms: number }) {
   return ms > 0 ? (
-    <p className="text-tiny text-text-faint">
-      Sign within <span className="font-mono text-text-muted">{timeLeft(ms)}</span>. The spot is held for you once
-      both signatures are in; until then another sponsor can still take it.
+    <p className="flex items-center justify-center gap-2 text-tiny text-white/60">
+      Sign within <span className="tabular-nums text-white/75">{timeLeft(ms)}</span>
+      <InfoTip label="About the quote">
+        The spot is held for you once both signatures are in. Until then another sponsor can still take it.
+      </InfoTip>
     </p>
   ) : (
-    <p className="text-tiny text-amber">This quote has expired. Close your wallet and start again for a fresh one.</p>
+    <p className="text-center text-tiny text-amber">This quote expired. Close your wallet and start again.</p>
   );
 }
 
 function HoldLine({ ms, subject }: { ms: number; subject: "spot" | "session" }) {
   return ms > 0 ? (
-    <p className="text-tiny text-text-faint">
-      This {subject} is held for you for <span className="font-mono text-text-muted">{timeLeft(ms)}</span>.
+    <p className="text-small text-white/55">
+      This {subject} is held for you for <span className="tabular-nums text-text">{timeLeft(ms)}</span>
     </p>
   ) : (
-    <p className="text-tiny text-amber">
-      The hold has run out. If you already approved the payment it can still confirm, and this page keeps
-      checking.
+    <p className="max-w-sm text-small text-amber">
+      The hold ran out. If you already approved, it can still confirm: this page keeps checking.
     </p>
+  );
+}
+
+/* ── After paying ──────────────────────────────────────────────────── */
+
+function PaidHead({ order, handle, title }: { order: Order; handle: string; title: string }) {
+  return (
+    <div className="flex flex-col items-center gap-3 pt-2 text-center">
+      <PaidMark />
+      <p className="text-[40px] font-medium leading-none tracking-[-0.02em] text-text">
+        {dollars(order.sponsorPaysUsdc) ?? `${order.sponsorPaysUsdc} USDC`}
+      </p>
+      <p className="text-body text-text">{title}</p>
+      <p className="text-tiny text-white/60">
+        {order.takeover
+          ? `${dollars(order.takeover.refundsUsdc)} back to the previous sponsor · ${dollars(order.creatorReceivesUsdc)} to @${handle} · ${dollars(order.feeUsdc)} HOLD fee`
+          : `${dollars(order.creatorReceivesUsdc)} to @${handle} · ${dollars(order.feeUsdc)} HOLD fee`}{" "}
+        · {CHAIN_LABEL[order.chain]}
+      </p>
+    </div>
   );
 }
 
@@ -939,42 +1171,26 @@ function Paid({
   const handle = space.creator.xHandle;
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <p className={`${eyebrow} text-success`}>Paid</p>
-        <h3 className="mt-2 font-display text-h3 font-light text-text">You&rsquo;re sponsoring this spot.</h3>
-        <p className="mt-3 text-small text-text-muted">
-          {order.takeover ? (
-            <>
-              {order.sponsorPaysUsdc} USDC on {CHAIN_LABEL[order.chain]}: {order.takeover.refundsUsdc} back to the
-              sponsor you took it from, {order.creatorReceivesUsdc} more to @{handle}, and {order.feeUsdc} to HOLD. The
-              spot is listed at {order.priceUsdc} now.
-            </>
-          ) : (
-            <>
-              {order.sponsorPaysUsdc} USDC on {CHAIN_LABEL[order.chain]}: {order.creatorReceivesUsdc} to @{handle} and{" "}
-              {order.feeUsdc} to HOLD.
-            </>
-          )}
-        </p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          {order.explorerUrl && (
-            <a href={order.explorerUrl} target="_blank" rel="noopener noreferrer" className={btnSmallSecondary}>
-              View the transaction
-            </a>
-          )}
-          {order.share && (
-            <a
-              href={`https://x.com/intent/post?text=${encodeURIComponent(order.share.text)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={btnSmallSecondary}
-            >
-              Share on X
-            </a>
-          )}
-        </div>
+      <PaidHead order={order} handle={handle} title={`You're sponsoring ${position.label.toLowerCase()}.`} />
+      <div className="flex flex-wrap justify-center gap-2">
+        {order.explorerUrl && (
+          <a href={order.explorerUrl} target="_blank" rel="noopener noreferrer" className={ctaGlass}>
+            View the transaction
+          </a>
+        )}
+        {order.share && (
+          <a
+            href={`https://x.com/intent/post?text=${encodeURIComponent(order.share.text)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={ctaGlass}
+          >
+            Share on X
+          </a>
+        )}
       </div>
-      <div className="border-t border-[color:var(--color-hairline)] pt-6">
+      {order.takeover && <p className="text-center text-tiny text-white/60">The spot is listed at {dollars(order.priceUsdc)} now.</p>}
+      <div className="border-t border-white/[0.08] pt-6">
         <SponsorContentForm order={order} checkoutKey={checkoutKey} accepts={position.accepts} creatorHandle={handle} />
       </div>
     </div>
@@ -995,33 +1211,28 @@ function PaidSession({ order, space }: { order: Order; space: Space }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <p className={`${eyebrow} text-success`}>Paid</p>
-        <h3 className="mt-2 font-display text-h3 font-light text-text">Your session is booked.</h3>
-        <p className="mt-3 text-small text-text-muted">
-          {order.sponsorPaysUsdc} USDC on {CHAIN_LABEL[order.chain]}: {order.creatorReceivesUsdc} to @{handle} and{" "}
-          {order.feeUsdc} to HOLD.
-        </p>
-        {order.explorerUrl && (
-          <div className="mt-4">
-            <a href={order.explorerUrl} target="_blank" rel="noopener noreferrer" className={btnSmallSecondary}>
-              View the transaction
-            </a>
-          </div>
-        )}
-      </div>
+      <PaidHead order={order} handle={handle} title="Your session is booked." />
+      {order.explorerUrl && (
+        <div className="flex justify-center">
+          <a href={order.explorerUrl} target="_blank" rel="noopener noreferrer" className={ctaGlass}>
+            View the transaction
+          </a>
+        </div>
+      )}
       {token ? (
         <>
           <ManageLinkBox token={token} />
-          <div className="border-t border-[color:var(--color-hairline)] pt-6">
+          <div className="border-t border-white/[0.08] pt-6">
             <SessionContactForm token={token} session={session} creatorHandle={handle} onSaved={onSaved} />
           </div>
         </>
       ) : (
-        <p className="rounded-card border border-amber/30 bg-amber/[0.05] px-4 py-3 text-small text-text-muted" role="status">
-          Your booking link hasn&rsquo;t reached this page yet. Reload the page in this browser to get it: it is how you
-          send @{handle} your contact and confirm the session.
-        </p>
+        <SheetNotice>
+          <p>
+            Your booking link hasn&rsquo;t reached this page yet. Reload it in this browser: it is how you send @{handle}{" "}
+            your contact.
+          </p>
+        </SheetNotice>
       )}
     </div>
   );
@@ -1029,25 +1240,24 @@ function PaidSession({ order, space }: { order: Order; space: Space }) {
 
 function Duplicate({ order }: { order: Order }) {
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-1 flex-col items-center justify-center gap-4 py-8 text-center">
       <h3 className="font-display text-h4 font-light text-text">Someone else&rsquo;s payment landed first.</h3>
-      <p className="text-small text-text-muted">
-        Your payment arrived after this spot was already sold, so it couldn&rsquo;t buy it. HOLD never
-        held it, and our team has been alerted. Email{" "}
+      <p className="max-w-sm text-small text-white/60">
+        Your payment arrived after this spot sold. Our team has been alerted; email{" "}
         <a className="text-amber hover:underline" href={`mailto:support@hihodl.xyz?subject=${encodeURIComponent(`HiSpace order ${order.id}`)}`}>
           support@hihodl.xyz
         </a>{" "}
-        with order <span className="font-mono text-text">{order.id.slice(0, 8)}</span> and we&rsquo;ll help you sort
-        it out with the creator.
+        with order <span className="font-mono text-text">{order.id.slice(0, 8)}</span> and we&rsquo;ll sort it out with the
+        creator.
       </p>
-      {order.explorerUrl && (
-        <div>
-          <a href={order.explorerUrl} target="_blank" rel="noopener noreferrer" className={btnSmallSecondary}>
+      <div className="flex flex-wrap justify-center gap-2">
+        {order.explorerUrl && (
+          <a href={order.explorerUrl} target="_blank" rel="noopener noreferrer" className={ctaGlass}>
             View the transaction
           </a>
-        </div>
-      )}
+        )}
+        <CopyButton value={order.id} label="Copy order id" />
+      </div>
     </div>
   );
 }
-

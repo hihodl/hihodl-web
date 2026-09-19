@@ -25,6 +25,7 @@ import { Checkout } from "./Checkout";
 import { Spinner } from "./checkout-parts";
 import { type CheckedFunds, FundsCheck, usableProof } from "./FundsCheck";
 import { AmountField, amountProblem, proofSpent } from "./OfferSheet";
+import { payChainsOf } from "./pay-sheet";
 import { btnPrimary, btnSecondary, btnSmallSecondary, card, eyebrow, pill } from "./ui";
 import { useServerNow } from "./useServerNow";
 
@@ -695,7 +696,7 @@ function RaiseForm({
           <FundsCheck
             spaceId={space.id}
             positionId={offer.positionId}
-            chains={space.chains}
+            chains={payChainsOf(space)}
             amountCents={cents}
             kind="bid"
             checked={checked}

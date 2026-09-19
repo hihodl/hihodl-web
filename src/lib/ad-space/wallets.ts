@@ -29,7 +29,11 @@ export type InjectedWindow = {
   ethereum?: Eip1193Provider;
 };
 
-export type SolanaWallet = { name: string; provider: SolanaProvider };
+/** `icon` is the wallet's own image (a data: URI) when it announced one. */
+export type SolanaWallet = { name: string; provider: SolanaProvider; icon?: string | null };
+
+/** An EVM wallet the browser announced (EIP-6963), or the lone `window.ethereum`. */
+export type EvmWallet = { id: string; name: string; icon: string | null; provider: Eip1193Provider };
 
 export function injected(): InjectedWindow {
   return window as unknown as InjectedWindow;
@@ -191,4 +195,186 @@ export async function signEvmMessage(provider: Eip1193Provider, address: string,
   const signature = await provider.request({ method: "personal_sign", params: [utf8Hex(message), address] });
   if (typeof signature !== "string" || !/^0x[0-9a-fA-F]+$/.test(signature)) throw new Error("no_signature");
   return signature;
+}
+
+/* ── Finding every wallet this browser has ───────────────────────────────── */
+
+/**
+ * Wallet Standard (Solana) and EIP-6963 (EVM): the two ways a browser wallet
+ * says "I am here", with its own name and icon, so the page lists the wallets
+ * the sponsor actually has instead of guessing from `window` globals.
+ *
+ * A Solana wallet that is ALSO injected the old way (Phantom, Solflare,
+ * Backpack) keeps its injected provider, the path the checkout has always
+ * paid through, and only borrows the announced icon. A wallet that exists only
+ * through the standard gets a thin adapter below.
+ */
+
+interface StandardAccount {
+  address: string;
+  chains?: readonly string[];
+}
+
+interface StandardWallet {
+  name: string;
+  icon: string;
+  chains: readonly string[];
+  accounts: readonly StandardAccount[];
+  features: Record<string, unknown>;
+}
+
+type StandardConnect = { connect(input?: { silent?: boolean }): Promise<{ accounts: readonly StandardAccount[] }> };
+type StandardSignAndSend = {
+  signAndSendTransaction(
+    ...inputs: { account: StandardAccount; chain: string; transaction: Uint8Array }[]
+  ): Promise<readonly { signature: Uint8Array }[]>;
+};
+type StandardSignMessage = {
+  signMessage(...inputs: { account: StandardAccount; message: Uint8Array }[]): Promise<readonly { signature: Uint8Array }[]>;
+};
+
+const SOLANA_MAINNET = "solana:mainnet";
+
+function standardCanPay(w: StandardWallet): boolean {
+  return (
+    Array.isArray(w.chains) &&
+    w.chains.includes(SOLANA_MAINNET) &&
+    Boolean(w.features?.["standard:connect"]) &&
+    Boolean(w.features?.["solana:signAndSendTransaction"])
+  );
+}
+
+/** A Wallet Standard wallet, shaped like the injected providers the checkout already speaks to. */
+function standardProvider(w: StandardWallet): SolanaProvider {
+  let account: StandardAccount | null = w.accounts[0] ?? null;
+  const signMessage = w.features["solana:signMessage"] as StandardSignMessage | undefined;
+  const provider: SolanaProvider = {
+    publicKey: account ? { toString: () => account!.address } : null,
+    async connect() {
+      const res = await (w.features["standard:connect"] as StandardConnect).connect();
+      account = res?.accounts?.[0] ?? w.accounts[0] ?? null;
+      if (!account) throw new Error("no_account");
+      const address = account.address;
+      provider.publicKey = { toString: () => address };
+      return { publicKey: provider.publicKey };
+    },
+    async signAndSendTransaction(tx: unknown) {
+      if (!account) throw new Error("no_account");
+      const bytes = (tx as { serialize(): Uint8Array }).serialize();
+      const [out] = await (w.features["solana:signAndSendTransaction"] as StandardSignAndSend).signAndSendTransaction({
+        account,
+        chain: SOLANA_MAINNET,
+        transaction: bytes,
+      });
+      if (!out?.signature) throw new Error("no_signature");
+      return { signature: base58(out.signature) };
+    },
+  };
+  if (signMessage) {
+    provider.signMessage = async (message: Uint8Array) => {
+      if (!account) throw new Error("no_account");
+      const [out] = await signMessage.signMessage({ account, message });
+      return { signature: out?.signature };
+    };
+  }
+  return provider;
+}
+
+/**
+ * Every Solana wallet that can pay from this browser, kept current as wallets
+ * register late (extensions inject after the page). Answers a stop function.
+ */
+export function watchSolanaWallets(onChange: (wallets: SolanaWallet[]) => void): () => void {
+  const standard = new Set<StandardWallet>();
+  const emit = () => {
+    const legacy = detectSolanaWallets();
+    const out = [...legacy];
+    let added = false;
+    for (const w of standard) {
+      if (!standardCanPay(w)) continue;
+      const same = out.find((l) => l.name.toLowerCase() === w.name.toLowerCase());
+      if (same) {
+        same.icon = same.icon ?? w.icon ?? null;
+        continue;
+      }
+      added = true;
+      out.push({ name: w.name, icon: w.icon ?? null, provider: standardProvider(w) });
+    }
+    // An unnamed injected `window.solana` is one of the wallets that announced
+    // itself by name; listing both would show the same wallet twice.
+    onChange(added ? out.filter((w) => w.name !== "your wallet") : out);
+  };
+  const api = {
+    register(...wallets: StandardWallet[]) {
+      wallets.forEach((w) => standard.add(w));
+      emit();
+      return () => {
+        wallets.forEach((w) => standard.delete(w));
+        emit();
+      };
+    },
+  };
+  const onRegister = (e: Event) => {
+    const cb = (e as CustomEvent<(a: typeof api) => void>).detail;
+    if (typeof cb === "function") cb(api);
+  };
+  window.addEventListener("wallet-standard:register-wallet", onRegister);
+  try {
+    window.dispatchEvent(new CustomEvent("wallet-standard:app-ready", { detail: api }));
+  } catch {
+    // An old browser without CustomEvent: the injected wallets are still listed.
+  }
+  emit();
+  // Some extensions inject their globals a beat after the page.
+  const late = window.setTimeout(emit, 600);
+  return () => {
+    window.removeEventListener("wallet-standard:register-wallet", onRegister);
+    window.clearTimeout(late);
+  };
+}
+
+type Eip6963Detail = { info?: { uuid?: string; name?: string; icon?: string; rdns?: string }; provider?: Eip1193Provider };
+
+function injectedEvmName(p: Eip1193Provider): string {
+  const f = p as { isRabby?: boolean; isCoinbaseWallet?: boolean; isMetaMask?: boolean };
+  if (f.isRabby) return "Rabby";
+  if (f.isCoinbaseWallet) return "Coinbase Wallet";
+  if (f.isMetaMask) return "MetaMask";
+  return "Browser wallet";
+}
+
+/**
+ * Every EVM wallet in this browser, by EIP-6963. A browser whose wallet does
+ * not speak it (older in-app browsers) still shows its `window.ethereum`.
+ */
+export function watchEvmWallets(onChange: (wallets: EvmWallet[]) => void): () => void {
+  const announced = new Map<string, EvmWallet>();
+  const emit = () => {
+    const list = [...announced.values()];
+    const eth = injected().ethereum;
+    if (list.length === 0 && eth) list.push({ id: "injected", name: injectedEvmName(eth), icon: null, provider: eth });
+    onChange(list);
+  };
+  const onAnnounce = (e: Event) => {
+    const d = (e as CustomEvent<Eip6963Detail>).detail;
+    if (!d?.provider || typeof d.provider.request !== "function") return;
+    const id = d.info?.uuid ?? d.info?.rdns ?? d.info?.name ?? String(announced.size);
+    // One wallet announcing twice (reloads, several frames) is still one wallet.
+    const name = d.info?.name ?? "Browser wallet";
+    for (const [k, w] of announced) if (w.name === name) announced.delete(k);
+    announced.set(id, { id, name, icon: d.info?.icon ?? null, provider: d.provider });
+    emit();
+  };
+  window.addEventListener("eip6963:announceProvider", onAnnounce);
+  try {
+    window.dispatchEvent(new Event("eip6963:requestProvider"));
+  } catch {
+    // Nothing to ask: the injected fallback below still applies.
+  }
+  emit();
+  const late = window.setTimeout(emit, 600);
+  return () => {
+    window.removeEventListener("eip6963:announceProvider", onAnnounce);
+    window.clearTimeout(late);
+  };
 }
