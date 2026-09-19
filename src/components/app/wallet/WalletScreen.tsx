@@ -85,7 +85,7 @@ function Tile({ label, value, sub, onClick }: { label: string; value: ReactNode;
     <button type="button" onClick={onClick} className={`${glass} flex min-w-0 flex-col items-start gap-2 px-5 py-4 text-left transition-colors hover:bg-white/[0.06]`}>
       <span className="text-tiny text-[#9FB7C2]">{label}</span>
       <span className="text-[22px] font-medium leading-none tabular-nums text-text">{value}</span>
-      {sub ? <span className="truncate text-tiny text-[#7F97A3]">{sub}</span> : null}
+      {sub ? <span className="truncate text-tiny text-[#B4BEC9]">{sub}</span> : null}
     </button>
   );
 }
@@ -534,7 +534,7 @@ function Settings({
           <div key={w.credential_id} className="flex items-center justify-between gap-2 rounded-[12px] px-3 py-2 hover:bg-white/[0.04]">
             <div className="min-w-0">
               <p className="truncate text-small text-text">{w.label ?? `Passkey ${i + 1}`}</p>
-              <p className="text-tiny text-[#7F97A3]">Added {new Date(w.created_at).toLocaleDateString("en-GB")}</p>
+              <p className="text-tiny text-[#B4BEC9]">Added {new Date(w.created_at).toLocaleDateString("en-GB")}</p>
             </div>
             {wrappings.length > 1 ? (
               confirming === w.credential_id ? (
@@ -611,7 +611,7 @@ function Export({ onBack }: { onBack: () => void }) {
           <ol className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {words.map((w, i) => (
               <li key={i} className="flex items-center gap-2 rounded-[10px] border border-white/10 bg-white/[0.04] px-3 py-2 text-small text-text">
-                <span className="w-5 text-right text-tiny tabular-nums text-[#7F97A3]">{i + 1}</span>
+                <span className="w-5 text-right text-tiny tabular-nums text-[#B4BEC9]">{i + 1}</span>
                 <span className="font-mono">{w}</span>
               </li>
             ))}
@@ -746,9 +746,9 @@ function AddPasskey({ onBack, onAdded }: { onBack: () => void; onAdded: () => vo
             means losing one of them does not lock you out.
           </Note>
           <ol className="flex flex-col gap-1 text-small">
-            <li className={step === "current" ? "text-text" : "text-[#7F97A3]"}>1. Confirm with a passkey that opens your wallet</li>
-            <li className={step === "create" ? "text-text" : "text-[#7F97A3]"}>2. Create the new passkey</li>
-            <li className={step === "confirm" ? "text-text" : "text-[#7F97A3]"}>3. Confirm the new passkey</li>
+            <li className={step === "current" ? "text-text" : "text-[#B4BEC9]"}>1. Confirm with a passkey that opens your wallet</li>
+            <li className={step === "create" ? "text-text" : "text-[#B4BEC9]"}>2. Create the new passkey</li>
+            <li className={step === "confirm" ? "text-text" : "text-[#B4BEC9]"}>3. Confirm the new passkey</li>
           </ol>
           {error ? <Alert>{explain(error)}</Alert> : null}
           {reg.error && step === "create" ? <Alert>{explain(reg.error)}</Alert> : null}
