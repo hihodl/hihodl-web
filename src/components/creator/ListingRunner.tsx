@@ -386,7 +386,7 @@ function HubCard({
         title={SCREEN_TITLE[screen]}
         meta={
           <span className={attention ? "text-amber" : undefined}>
-            {value} {unit}
+            {value === "–" ? unit : typeof value === "string" && !/\d/.test(value) ? `${value} · ${unit}` : <>{value} {unit}</>}
           </span>
         }
         attention={attention}
