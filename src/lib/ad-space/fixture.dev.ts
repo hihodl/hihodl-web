@@ -267,6 +267,8 @@ function suitcase(): Space {
     slug: "road-to-token2049",
     title: "Road to TOKEN2049",
     reason: "Funding my ticket, flight and stay. Your logo rides through Changi, the venue and every vlog.",
+    // Creator to creator: a HOLD creator credited (links to their page).
+    inspiredBy: { kind: "hold", handle: "nodeline_creator", name: "Nodeline Creator", href: "/s/nodeline_creator" },
     // The creator's own "What you get": two lines of theirs around our two suggestions.
     brandGets: [
       { kind: "reach" },
@@ -478,6 +480,8 @@ function videos(): Space {
     pageGround: "app",
     title: "TOKEN2049 short videos",
     reason: "Three dedicated videos from the floor, one sponsor each.",
+    // An X handle credited (links to x.com).
+    inspiredBy: { kind: "x", handle: "orbit_travels", href: "https://x.com/orbit_travels" },
     // Never edited: the page shows our two suggestions, and the card is only as tall as they are.
     brandGets: null,
     kind: "service",

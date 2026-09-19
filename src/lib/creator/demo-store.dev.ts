@@ -27,6 +27,7 @@
 import { fixtureEvents, fixtureSpace } from "@/lib/ad-space/fixture.dev";
 import type { Chain } from "@/lib/ad-space/types";
 import { demoInsights } from "@/lib/demo/insights";
+import { demoAnalytics, demoCreatorSearch } from "@/lib/demo/analytics";
 
 import { DEMO_INVITE_CODE, DEMO_PEOPLE, DEMO_SEAT_CODE, DEMO_WALLETS, demoState, isDemoRole, type DemoRole } from "./demo";
 import {
@@ -131,6 +132,8 @@ interface SpaceRec {
   viewPhotos?: Record<string, { url: string; width: number; height: number }>;
   /** This listing's page ground (PATCH /spaces/:id/look, `pageGround`); null follows the default. */
   pageGround?: string | null;
+  /** Who the creator credits as the inspiration (`inspiredBy`); null is nobody. */
+  inspiredBy?: { kind: "hold" | "x"; handle: string; name?: string | null } | null;
   id: string;
   ownerId: UserId;
   templateId: string;
@@ -1658,6 +1661,9 @@ function spaceView(s: Store, sp: SpaceRec, viewer: UserId, origin: string): Spac
       : null,
     production: packageView(sp.production),
     brandGets: (sp.brandGets ?? null) as SpaceView["brandGets"],
+    inspiredBy: sp.inspiredBy
+      ? { ...sp.inspiredBy, href: sp.inspiredBy.kind === "hold" ? `/s/${sp.inspiredBy.handle}` : `https://x.com/${sp.inspiredBy.handle}` }
+      : null,
     productLook: sp.productLook ?? null,
     viewPhotos: Object.fromEntries(
       Object.entries(sp.viewPhotos ?? {}).map(([view, ph]) => {
@@ -1884,6 +1890,18 @@ function applyBody(s: Store, sp: SpaceRec, body: Body, t: Template): void {
     const list = body.brandGets;
     if (list !== null && (!Array.isArray(list) || list.length > 8)) throw new DemoError("policy_problems", 422, { problems: [{ code: "brand_gets_too_many", max: 8 }] });
     sp.brandGets = list === null ? null : (list as SpaceRec["brandGets"]);
+  }
+  if ("inspiredBy" in body) {
+    const v = body.inspiredBy as { kind?: unknown; handle?: unknown } | null;
+    if (v === null) sp.inspiredBy = null;
+    else {
+      const handle = typeof v?.handle === "string" ? v.handle.trim().replace(/^@+/, "") : "";
+      if ((v?.kind !== "x" && v?.kind !== "hold") || !/^[A-Za-z0-9_.]{1,40}$/.test(handle)) throw new DemoError("inspired_by_handle_invalid", 422);
+      const found = v.kind === "hold" ? demoCreatorSearch(handle).find((c) => c.handle === handle || c.username === handle.toLowerCase()) : null;
+      if (v.kind === "hold" && !found) throw new DemoError("inspired_by_not_found", 422);
+      if (handle.toLowerCase() === "demo_creator") throw new DemoError("inspired_by_self", 422);
+      sp.inspiredBy = found ? { kind: "hold", handle: found.handle, name: found.name } : { kind: "x", handle };
+    }
   }
   if ("deliverables" in body && Array.isArray(body.deliverables)) {
     sp.deliverables = (body.deliverables as Body[]).map((d) => ({
@@ -2398,6 +2416,14 @@ function route(req: DemoRequest): DemoResponse {
         listingGround: s.listingGrounds?.[viewer] ?? null,
       },
     });
+  }
+
+  /* The creator's own business (Overview), and who "Inspired by" can find */
+  if (is("GET", "ad-space/me/analytics")) {
+    return ok({ analytics: demoAnalytics(!s.spaces.some((x) => x.ownerId === viewer && x.publishedAt)) });
+  }
+  if (is("GET", "ad-space/creators/search")) {
+    return ok({ creators: demoCreatorSearch(req.query.get("q") ?? "", Number(req.query.get("limit")) || 6) });
   }
 
   /* Insights: market data, the demo's own numbers */

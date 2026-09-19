@@ -239,6 +239,12 @@ function groups(p: string, ids: Ids | null): Group[] {
     entries: [
       { label: "Overview", href: at(S) },
       { label: "Overview: an empty account", href: at(S, {}, { demo: "empty" }), note: "Every other link brings the seeded account back" },
+      { label: "Overview: Brands you work with", href: at(S, {}, { view: "brands" }) },
+      { label: "Overview: By event", href: at(S, {}, { view: "events" }) },
+      { label: "Overview: What sells for you", href: at(S, {}, { view: "sells" }) },
+      { label: "Overview: How brands pay", href: at(S, {}, { view: "pay" }) },
+      { label: "Overview: You inspired", href: at(S, {}, { view: "inspired" }), note: "Listings other creators credit you for" },
+      { label: "Overview: Needs you and live", href: at(S, {}, { view: "needs" }) },
       { label: "Listings", href: at(`${S}/listings`) },
       { label: "Listings: drafts", href: at(`${S}/listings`, {}, { status: "draft" }) },
       { label: "Listings: closed", href: at(`${S}/listings`, {}, { status: "closed" }) },
@@ -258,6 +264,12 @@ function groups(p: string, ids: Ids | null): Group[] {
       { label: "New listing: Pick your hook", href: at(`${S}/listings/new`) },
       { label: "New listing: suitcase, name and dates", href: at(`${S}/listings/new`, {}, { template: "carry-on-suitcase" }) },
       { label: "New listing: content production, name and dates", href: at(`${S}/listings/new`, {}, { template: "content-production" }) },
+      {
+        label: "New listing: Inspired by a HOLD creator",
+        href: at(`${S}/listings/new`, {}, { template: "carry-on-suitcase", inspiredBy: "hold:nodeline_creator" }),
+        note: "Search finds nodeline, orbit, mesa, kopi",
+      },
+      { label: "New listing: Inspired by an X handle", href: at(`${S}/listings/new`, {}, { template: "carry-on-suitcase", inspiredBy: "x:orbit_travels" }) },
       { label: "Draft: name and dates", href: at(`${S}/listings/${draft}/edit`, {}, { step: "basics" }) },
       { label: "Draft: the ladder", href: at(`${S}/listings/${draft}/edit`, {}, { step: "sell" }) },
       { label: "Draft: go live", href: at(`${S}/listings/${draft}/edit`, {}, { step: "publish" }) },
@@ -360,9 +372,9 @@ function groups(p: string, ids: Ids | null): Group[] {
   out.push({
     title: "Public pages: every kind of space",
     entries: [
-      { label: "Placement (a suitcase)", href: pub("road-to-token2049") },
+      { label: "Placement (a suitcase), inspired by a HOLD creator", href: pub("road-to-token2049") },
       { label: "Photo with squares", href: pub("road-to-token2049-photo") },
-      { label: "Service (short videos)", href: pub("token2049-videos") },
+      { label: "Service (short videos), inspired by an X handle", href: pub("token2049-videos") },
       { label: "Tiers with a bidding rung", href: pub("breakpoint-london-coverage") },
       { label: "Content production", href: pub("token2049-content-production") },
       { label: "Takeover", href: pub("token2049-takeover") },
