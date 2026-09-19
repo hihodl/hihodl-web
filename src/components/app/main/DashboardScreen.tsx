@@ -3,9 +3,9 @@
 /**
  * Dashboard: HOLD's home on the web, where signing in lands.
  *
- * One screen, no scroll: the wallet first (balance, the address to receive
- * on, the way into Wallet), the person beside it, and Benefits' products
- * under both. Every card is a door to the screen that explains it.
+ * One screen, no scroll: the wallet first (the app's balance hero and its
+ * quick actions), the person beside it, and Benefits' products under both.
+ * Every card is a door to the screen that explains it.
  *
  * The balance is read from the public address (no unlock), the same read the
  * Wallet page makes. A wallet made in the app is summarised here too; it is
@@ -21,10 +21,10 @@ import { waitingOnYou } from "@/lib/app/spaces-model";
 
 import { useProductHref } from "../base";
 import { UserAvatar } from "../account/UserAvatar";
-import { CopyButton, shortAddress } from "../front/kit";
-import { IconChevronRight, IconWallet } from "../icons";
+import { IconChevronRight } from "../icons";
 import { useShell } from "../Shell";
 import { glass, Skeleton } from "../ui";
+import { ActionsRow, HeroBalance, MiniAction, money } from "../wallet/app-kit";
 import { DoorRow, PRODUCTS, StoreButtons } from "./products";
 
 const cta =
@@ -40,89 +40,65 @@ export function DashboardScreen() {
   );
 }
 
-function money(n: number, digits = 2): string {
-  return n.toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits });
-}
-
+/**
+ * The wallet, as the HOLD app's home opens on it (HeroSection): the balance
+ * centred at 48/800, then the quick actions as glass squircles. Each action
+ * opens the Wallet page on that screen; the Wallet page carries a strict CSP
+ * that only a full page load can set, so they are plain links.
+ */
 function WalletCard() {
   const w = useHoldWallet();
   const href = useProductHref();
   const balances = useBalances(w.solana);
-  // The Wallet page carries a strict CSP that only a full page load can set.
-  const openWallet = (
-    <a href={href("/wallet")} className={cta}>
-      Open Wallet
-    </a>
-  );
+  const open = (screen: string) => `${href("/wallet")}?open=${screen}`;
 
   let body;
   if (w.loading) {
-    body = <Skeleton className="h-[136px]" />;
+    body = <Skeleton className="h-[176px]" />;
   } else if (w.kind === "none") {
     body = w.canCreate ? (
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col items-center gap-4 py-2 text-center">
         <p className="text-[26px] font-medium leading-tight text-text">Make your HOLD wallet</p>
-        <p className="max-w-[520px] text-small text-[#9FB7C2]">
-          A Solana wallet for USDC, made in this browser and locked by your passkey. Sponsors pay your listings into it.
-        </p>
-        <div>
-          <a href={href("/wallet")} className={cta}>
-            Create wallet
-          </a>
-        </div>
+        <p className="max-w-[420px] text-small text-[#9FB7C2]">A Solana wallet for USDC, locked by your passkey.</p>
+        <a href={href("/wallet")} className={cta}>
+          Create wallet
+        </a>
       </div>
     ) : (
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col items-center gap-4 py-2 text-center">
         <p className="text-[26px] font-medium leading-tight text-text">Your wallet lives in the HOLD app</p>
-        <p className="max-w-[520px] text-small text-[#9FB7C2]">Make it in the app with this same account and it shows here.</p>
+        <p className="max-w-[420px] text-small text-[#9FB7C2]">Make it in the app with this same account and it shows here.</p>
         <StoreButtons />
       </div>
     );
   } else {
-    const usdc = balances.data ? money(balances.data.usdc) : balances.error ? "–" : "…";
+    const value = balances.data ? money(balances.data.usdc) : null;
     body = (
-      <div className="flex flex-col gap-5">
-        <div>
-          <p className="text-tiny text-[#9FB7C2]">USDC on Solana</p>
-          <p className="mt-2 flex items-baseline gap-2">
-            <span className="text-[44px] font-medium leading-none tracking-tight tabular-nums text-text">{usdc}</span>
-            <span className="text-small text-[#9FB7C2]">USDC</span>
-          </p>
-          <p className="mt-2 text-tiny text-[#B4BEC9]">
-            {balances.data ? `${money(balances.data.sol, 4)} SOL for network fees` : balances.error ? "Balance unavailable right now" : " "}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {w.solana ? (
-            <span className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-white/10 bg-white/[0.04] pl-3 pr-1">
-              <span className="font-mono text-small text-text">{shortAddress(w.solana)}</span>
-              <CopyButton value={w.solana} label="Copy address" />
-            </span>
-          ) : w.unregistered ? (
-            <span className="text-small text-[#9FB7C2]">Open your wallet once to finish setting it up.</span>
-          ) : null}
-          {w.kind === "web" && w.walletPage ? openWallet : null}
-          {w.kind === "app" ? <span className="text-tiny text-[#9FB7C2]">Made in the HOLD app. Send and swap there.</span> : null}
+      <div className="flex flex-col items-center py-2">
+        {balances.error || (!w.solana && !w.unregistered) ? (
+          <span className="block text-[48px] font-strong leading-[52px] text-white">–</span>
+        ) : w.unregistered ? (
+          <p className="py-3 text-center text-[13px] text-[#9FB7C2]">Open your wallet once to finish setting it up.</p>
+        ) : (
+          <HeroBalance value={value} />
+        )}
+        <div className="mt-6">
+          <ActionsRow>
+            <MiniAction icon="add-circle-outline" label="Receive" href={w.kind === "web" ? open("receive") : href("/wallet")} />
+            {w.kind === "web" && w.walletPage ? (
+              <>
+                <MiniAction icon="send-outline" label="Send" href={open("send")} />
+                <MiniAction icon="shield-checkmark-outline" label="Security" href={open("security")} />
+              </>
+            ) : null}
+          </ActionsRow>
         </div>
       </div>
     );
   }
 
   return (
-    <section className={`${glass} flex min-w-0 flex-col gap-5 p-5 sm:p-6`} aria-label="Wallet">
-      <header className="flex items-center justify-between gap-2">
-        <span className="flex items-center gap-2 text-small font-medium text-text">
-          <span className="text-amber">
-            <IconWallet />
-          </span>
-          Wallet
-        </span>
-        {w.kind === "web" && w.walletPage ? (
-          <a href={href("/wallet")} className="flex items-center gap-1 text-tiny text-[#9FB7C2] hover:text-text">
-            Receive, passkeys, 12 words <IconChevronRight />
-          </a>
-        ) : null}
-      </header>
+    <section className={`${glass} flex min-w-0 flex-col justify-center p-5 sm:p-6`} aria-label="Wallet">
       {body}
     </section>
   );
