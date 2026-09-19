@@ -61,7 +61,7 @@ import {
   PaySheet,
   SheetNotice,
   StatusLine,
-  TotalRow,
+
   WaitMark,
   WalletRows,
   ctaGlass,
@@ -547,7 +547,7 @@ export function Checkout({
 
   const figures = amountsOf(position, offer?.view ?? null);
   const total = dollars(figures.totalUsdc);
-  const feeNote = space.feeBps > 0 ? `includes ${feePercent(space.feeBps)} HOLD fee` : null;
+  const feeNote = space.feeBps > 0 ? `${feePercent(space.feeBps)} HOLD fee included` : null;
   const busy = phase.kind === "busy" || phase.kind === "evm-sign";
   const heldMs = (o: Order) => new Date(o.reservedUntil).getTime() - now;
 
@@ -638,7 +638,21 @@ export function Checkout({
           {/* Who is paid, how much, on what: Quick Send's head. */}
           <div className="flex flex-col items-center gap-4 pt-1 text-center">
             <CreatorChip creator={space.creator} />
-            <BigAmount value={dollars(figures.headlineUsdc) ?? "—"} />
+            {/* One figure: what leaves the wallet. The fee is inside it, said once. */}
+            <div className="flex flex-col items-center gap-1.5">
+              <BigAmount value={dollars(figures.totalUsdc) ?? "—"} />
+              {feeNote && (
+                <span className="flex items-center gap-1.5 text-tiny text-white/60">
+                  {feeNote}
+                  {figures.refundsUsdc ? (
+                    <InfoTip label="Where a takeover's money goes">
+                      {dollars(figures.refundsUsdc)} of it goes straight back to the sponsor who holds this spot now, in the
+                      same transaction. The rest is the creator&rsquo;s, and HOLD&rsquo;s fee.
+                    </InfoTip>
+                  ) : null}
+                </span>
+              )}
+            </div>
             <NetworkPill
               chains={chains}
               chain={chain}
@@ -652,18 +666,6 @@ export function Checkout({
             />
           </div>
 
-          <TotalRow
-            totalUsdc={figures.totalUsdc}
-            note={feeNote}
-            info={
-              figures.refundsUsdc ? (
-                <InfoTip label="Where a takeover's money goes">
-                  {dollars(figures.refundsUsdc)} of it goes straight back to the sponsor who holds this spot now, in the
-                  same transaction. The rest is the creator&rsquo;s, and HOLD&rsquo;s fee.
-                </InfoTip>
-              ) : null
-            }
-          />
 
           {phase.kind === "loading" && <StatusLine>One moment</StatusLine>}
 
