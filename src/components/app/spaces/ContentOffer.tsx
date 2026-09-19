@@ -25,10 +25,15 @@ import type { SpaceCard } from "@/lib/creator/listing";
 import { useTemplates } from "@/lib/app/spaces-data";
 
 import { useHref } from "../base";
-import { btnPrimary, CopyButton } from "../front/kit";
+import { CopyButton } from "../front/kit";
+import { Notice } from "../hold";
 import { useShell } from "../Shell";
-import { EmptyState, FilterPills, Panel } from "../ui";
 import { DrillBar } from "./cards";
+import { Empty, emptyBtn, Group as Panel, Pills as FilterPills } from "./kit";
+
+/** The app's Chip as the copy button: 34 high, radius half of it. */
+const copyCls =
+  "inline-flex h-[34px] shrink-0 items-center justify-center whitespace-nowrap rounded-[17px] border border-[#F1F5F9] bg-[#F1F5F9] px-[13px] text-[13.5px] font-strong text-[#0A1420] transition-opacity hover:opacity-90";
 
 /** The catalog's Content production template. */
 export const PRODUCTION_TEMPLATE = "content-production";
@@ -143,21 +148,21 @@ export function ContentOfferScreen({
   const text = lead ? contentOfferText({ lead, handle, productionUrl: production?.url ?? null }) : "";
 
   return (
-    <div className="flex flex-col gap-4">
-      <DrillBar back={back} crumb={crumb} title="Offer them content" right={text ? <CopyButton value={text} label="Copy message" /> : null} />
+    <div className="flex flex-col gap-3.5">
+      <DrillBar back={back} crumb={crumb} title="Offer them content" right={text ? <CopyButton value={text} label="Copy message" className={copyCls} /> : null} />
       <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)] lg:items-start">
         <Panel title={leads.length > 1 ? "Which brand" : "The brand"}>
           {leads.length > 1 ? (
             <FilterPills label="Brand" value={lead?.key ?? ""} onChange={setKey} options={leads.slice(0, 12).map((l) => ({ value: l.key, label: l.brand }))} />
           ) : lead ? (
-            <p className="text-small text-text">{lead.brand}</p>
+            <p className="text-[16px] font-strong tracking-[-0.2px] text-white">{lead.brand}</p>
           ) : null}
           {lead ? (
-            <p className="mt-2 text-tiny text-[#9FB7C2]">
+            <p className="text-[12.5px] font-strong text-white/55">
               {lead.bought} · {lead.listing}
             </p>
           ) : null}
-          <div className="mt-5 border-t border-white/[0.06] pt-4 text-tiny leading-relaxed text-[#9FB7C2]">
+          <div className="flex flex-col gap-3 border-t border-white/[0.08] pt-3 text-[13px] leading-[18px] text-white/[0.62]">
             {production ? (
               <p>
                 {production.url ? "The message links your" : "Link X to add your"} Content production listing at {lead?.event?.name}.
@@ -169,21 +174,23 @@ export function ContentOfferScreen({
                     ? `You have no Content production listing at ${lead.event.name}. With one, the message links the package and its dates.`
                     : "With a Content production listing, the message links the package and its dates."}
                 </p>
-                <Link href={href(`/listings/new?template=${PRODUCTION_TEMPLATE}`)} className={btnPrimary}>
+                <Link href={href(`/listings/new?template=${PRODUCTION_TEMPLATE}`)} className={emptyBtn}>
                   Create one
                 </Link>
               </div>
             )}
-            <p className="mt-3">A spot is often where a content deal starts. Nothing is sent: copy it and send it where you talk to them.</p>
+            <Notice tone="calm" icon="chatbubble-ellipses-outline">
+              Nothing is sent: copy it and send it where you talk to them.
+            </Notice>
           </div>
         </Panel>
         <Panel title={lead ? `For ${lead.brand}` : "Your message"}>
           {lead ? (
-            <pre className="max-h-[calc(var(--app-vh,100dvh)-260px)] overflow-y-auto whitespace-pre-wrap break-words font-sans text-small leading-relaxed text-text">
+            <pre className="max-h-[calc(var(--app-vh,100dvh)-260px)] overflow-y-auto whitespace-pre-wrap break-words font-sans text-[14.5px] leading-5 text-white">
               {text}
             </pre>
           ) : (
-            <EmptyState title="No brand has paid for a spot here yet." />
+            <Empty icon="chatbubble-outline" title="No brand has paid for a spot here yet" />
           )}
         </Panel>
       </div>

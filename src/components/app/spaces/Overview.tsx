@@ -22,7 +22,7 @@
  */
 
 import Link from "next/link";
-import { useMemo, type ComponentType, type ReactNode, type SVGProps } from "react";
+import { useMemo, type ReactNode } from "react";
 
 import { baseOf, groupByMember, pendingSeat } from "@/lib/creator/team";
 import {
@@ -48,11 +48,12 @@ import type { CreatorAnalytics } from "@/lib/creator/analytics";
 import type { OfferView, SalesSummary } from "@/lib/creator/listing";
 
 import { useHref } from "../base";
-import { IconCalendar, IconInspire, IconOffers, IconSales, IconWallet, IconGrid, IconDeliveries } from "../icons";
+import { Ion, type IonName } from "../ion";
 import { useShell } from "../Shell";
-import { dollars, EmptyState, KpiTile, Panel, ProgressBar, RowLink, Skeleton } from "../ui";
-import { cardCls, CardGrid, DrillBar } from "./cards";
+import { dollars, Skeleton } from "../ui";
+import { CardGrid, DrillBar } from "./cards";
 import { dueText, ReadError, StatusPill } from "./common";
+import { Card, Empty, emptyBtn, Group as Panel, ListRow as RowLink, money, ProgressBar, Stat as KpiTile, Tag } from "./kit";
 import { ReadyToPublish } from "./ReadyToPublish";
 import { useOffersContent } from "./ContentOffer";
 import {
@@ -73,6 +74,9 @@ const LEAD_DAYS = 7;
 
 const FILL = "flex flex-col gap-4 lg:flex-1";
 const BOTTOM = "grid grid-cols-[minmax(0,1fr)] gap-4 lg:flex-1 lg:grid-cols-2 lg:grid-rows-[minmax(0,1fr)]";
+/** A group's "see all": 12.5/600 muted, the app's link ink. */
+const seeAll = "text-[12.5px] font-strong normal-case tracking-normal text-white/[0.62] hover:text-white";
+
 /** Rows in "Needs you" and "Live". */
 const ROWS = 3;
 
@@ -145,7 +149,7 @@ function CreatorOverview({ view }: { view: string | null }) {
   return (
     <div className={FILL}>
       <ReadyToPublish compact />
-      <section aria-label="Your business" className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+      <section aria-label="Your business" className="grid grid-cols-2 gap-2.5 xl:grid-cols-4">
         <KpiTile label="Earned" value={v(dollars(t?.receivedCents ?? 0))} note={t ? (t.orders && t.fee.paidByYouCents === 0 ? "5% paid by brands" : feeLine(t)) : " "} href={href("/sales")} />
         <KpiTile
           label="Brands that paid you"
@@ -202,7 +206,7 @@ function Hub({
     <CardGrid>
       <HubCard
         href={to("brands")}
-        icon={IconOffers}
+        icon="people-outline"
         title="Brands you work with"
         line={data ? (data.topBrands.length ? data.topBrands.slice(0, 3).map((b) => b.name).join(", ") : "No brand has paid yet") : " "}
         value={t ? String(t.brands) : dash}
@@ -210,7 +214,7 @@ function Hub({
       />
       <HubCard
         href={to("events")}
-        icon={IconCalendar}
+        icon="calendar-outline"
         title="By event"
         line={topEvent ? `${topEvent.name} made the most` : data ? "No event yet" : " "}
         value={topEvent ? dollars(topEvent.receivedCents) : dash}
@@ -218,7 +222,7 @@ function Hub({
       />
       <HubCard
         href={to("sells")}
-        icon={IconGrid}
+        icon="pricetags-outline"
         title="What sells for you"
         line={bestProduct ? `${bestProduct.label} sells best` : data ? "Publish to see what sells" : " "}
         value={bestProduct?.soldPct != null ? pctText(bestProduct.soldPct) : dash}
@@ -226,16 +230,16 @@ function Hub({
       />
       <HubCard
         href={to("pay")}
-        icon={IconWallet}
+        icon="wallet-outline"
         title="How brands pay"
         line={chain ? [`${chain.label} ${pctText(chain.receivedPct ?? 0)}`, hold ? `HOLD ${pctText(hold.ordersPct ?? 0)} of orders` : null].filter(Boolean).join(" · ") : data ? "No payment yet" : " "}
         value={chain ? chain.label : dash}
         note={t ? (t.fee.paidByYouCents === 0 && t.orders > 0 ? "you kept 100%" : "USDC to your wallet") : ""}
       />
-      <HubCard href={href("/sales")} icon={IconSales} title="Sales" line="Received per week, last 8 weeks" value={<WeekBars sales={sales} />} note={t ? plural(t.orders, "order") : ""} />
+      <HubCard href={href("/sales")} icon="stats-chart-outline" title="Sales" line="Received per week, last 8 weeks" value={<WeekBars sales={sales} />} note={t ? plural(t.orders, "order") : ""} />
       <HubCard
         href={to("needs")}
-        icon={IconDeliveries}
+        icon="notifications-outline"
         title="Needs you and live"
         line="Offers, deliveries, what is live"
         value={t ? String(t.listings) : dash}
@@ -244,7 +248,7 @@ function Hub({
       {inspired && inspired.listings > 0 ? (
         <HubCard
           href={to("inspired")}
-          icon={IconInspire}
+          icon="sparkles-outline"
           title="You inspired"
           line={inspired.recent.slice(0, 2).map((l) => (l.creatorHandle ? `@${l.creatorHandle}` : l.title)).join(", ")}
           value={String(inspired.listings)}
@@ -257,34 +261,34 @@ function Hub({
 
 function HubCard({
   href,
-  icon: Icon,
+  icon,
   title,
   line,
   value,
   note,
 }: {
   href: string;
-  icon: ComponentType<SVGProps<SVGSVGElement>>;
+  icon: IonName;
   title: string;
   line: ReactNode;
   value: ReactNode;
   note?: ReactNode;
 }) {
   return (
-    <li>
-      <Link href={href} scroll={false} className={`${cardCls} gap-3 p-4 sm:min-h-[168px] sm:gap-4 sm:p-5 xl:min-h-[184px]`}>
+    <li className="flex">
+      <Card href={href} className="w-full sm:min-h-[160px]">
         <div className="flex min-w-0 items-center gap-2.5">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] border border-white/10 bg-white/[0.06] text-[#CFE3EC]">
-            <Icon />
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[16px] bg-white/[0.08] text-white">
+            <Ion name={icon} size={16} />
           </span>
-          <p className="truncate text-small font-medium text-text">{title}</p>
+          <p className="truncate text-[16px] font-strong tracking-[-0.2px] text-white">{title}</p>
         </div>
-        <p className="truncate text-tiny text-[#CFE3EC]">{line}</p>
+        <p className="truncate text-[13px] text-white/[0.62]">{line}</p>
         <div className="mt-auto flex min-w-0 items-end justify-between gap-2">
-          <div className="min-w-0 whitespace-nowrap text-[26px] font-medium leading-none tabular-nums text-text xl:text-[30px]">{value}</div>
-          {note ? <p className="truncate text-tiny tabular-nums text-[#9FB7C2]">{note}</p> : null}
+          <div className={`${money} min-w-0 whitespace-nowrap leading-none`}>{value}</div>
+          {note ? <p className="truncate text-[12.5px] font-strong tabular-nums text-white/55">{note}</p> : null}
         </div>
-      </Link>
+      </Card>
     </li>
   );
 }
@@ -298,7 +302,7 @@ function WeekBars({ sales }: { sales: SalesSummary | undefined }) {
       {points.map((p) => (
         <span
           key={p.label}
-          className={`w-2.5 rounded-[2px] ${p.cents ? "bg-amber" : "bg-white/10"}`}
+          className={`w-2.5 rounded-[2px] ${p.cents ? "bg-[#0E9B68]" : "bg-white/10"}`}
           style={{ height: p.cents ? Math.max(4, Math.round((p.cents / max) * 30)) : 2 }}
           title={`${p.label}: ${dollars(p.cents)}`}
         />
@@ -310,25 +314,25 @@ function WeekBars({ sales }: { sales: SalesSummary | undefined }) {
 function LivePanel({ live, rows = ROWS }: { live: ReturnType<typeof useShell>["listings"]; rows?: number }) {
   const href = useHref();
   return (
-    <Panel title="Live" meta={`${live.length}`} action={<Link href={href("/listings")} className="text-tiny text-[#9FB7C2] hover:text-text">All listings</Link>}>
+    <Panel title="Live" meta={`${live.length}`} action={<Link href={href("/listings")} className={seeAll}>All listings</Link>}>
       {live.length === 0 ? (
-        <EmptyState title="Nothing live." action={<Link href={href("/listings/new")} className="text-small text-amber">Pick your hook</Link>} />
+        <Empty icon="megaphone-outline" title="Nothing live" action={<Link href={href("/listings/new")} className={emptyBtn}>Create a space</Link>} />
       ) : (
-        <ul className="flex flex-col gap-1">
+        <ul className="flex flex-col divide-y divide-white/[0.08]">
           {live.slice(0, rows).map((l) => (
             <li key={l.id}>
               <RowLink
                 href={href(`/listings/${l.id}`)}
                 title={l.serviceName || l.title}
-                sub={
+                meta={
                   <span className="flex items-center gap-2">
                     <span className="w-20 shrink-0">
-                      <ProgressBar value={l.totals.sold} max={l.totals.positions} />
+                      <ProgressBar value={l.totals.positions > 0 ? l.totals.sold / l.totals.positions : 0} />
                     </span>
                     {l.totals.sold}/{l.totals.positions} sold
                   </span>
                 }
-                right={<span className="text-small tabular-nums text-text">{dollars(l.totals.committedCents)}</span>}
+                right={<span className="text-[15px] font-strong tabular-nums text-white">{dollars(l.totals.committedCents)}</span>}
               />
             </li>
           ))}
@@ -356,28 +360,28 @@ function NeedsYou({
   const seat = typeof window !== "undefined" ? pendingSeat() : null;
   const rows = [
     ...(seat
-      ? [{ key: "seat", href: href(`/team?seat=${encodeURIComponent(seat.seat)}`), title: "Team invitation", sub: "Waiting for your answer", right: <span className="text-tiny text-amber">Open</span> }]
+      ? [{ key: "seat", href: href(`/team?seat=${encodeURIComponent(seat.seat)}`), title: "Team invitation", sub: "Waiting for your answer", right: <Tag label="Open" tone="caution" /> }]
       : []),
     ...offers.map((o) => ({
       key: `o-${o.id}`,
       href: href(`/offers?id=${o.id}`),
       title: `${o.kind === "bid" ? "Bid" : "Offer"} · ${o.sponsor.name}`,
       sub: o.serviceName || o.spaceTitle,
-      right: <span className="text-small tabular-nums text-text">{dollars(cents(o.amountUsdc))}</span>,
+      right: <span className="text-[15px] font-strong tabular-nums text-white">{dollars(cents(o.amountUsdc))}</span>,
     })),
     ...deliveries.map((d) => ({
       key: `d-${d.id}`,
       href: href(`/deliveries?item=${encodeURIComponent(d.id)}`),
       title: d.kind === "artwork" ? d.title : `${d.kind === "spot" || d.kind === "production" ? "Deliver" : "Promise"} · ${d.title}`,
       sub: d.listing,
-      right: d.due ? <span className={`text-tiny ${d.state === "overdue" ? "text-amber" : "text-[#9FB7C2]"}`}>{dueText(d.due)}</span> : null,
+      right: d.due ? <Tag label={dueText(d.due)} tone={d.state === "overdue" ? "caution" : "calm"} /> : null,
     })),
     ...leads.map((l) => ({
       key: `c-${l.orderId}`,
       href: `${href("/sales")}?listing=${encodeURIComponent(l.spaceId)}&offer=${encodeURIComponent(l.orderId)}`,
       title: `Offer them content · ${l.brand}`,
       sub: l.listing,
-      right: <span className="text-tiny text-[#9FB7C2]">New sale</span>,
+      right: <Tag label="New sale" tone="good" />,
     })),
   ];
 
@@ -386,11 +390,11 @@ function NeedsYou({
       title="Needs you"
       meta={loading ? "" : `${rows.length}`}
       action={
-        <span className="flex items-center gap-3 text-tiny">
-          <Link href={href("/offers")} className="text-[#9FB7C2] hover:text-text">
+        <span className="flex items-center gap-3">
+          <Link href={href("/offers")} className={seeAll}>
             All offers
           </Link>
-          <Link href={href("/deliveries")} className="text-[#9FB7C2] hover:text-text">
+          <Link href={href("/deliveries")} className={seeAll}>
             All deliveries
           </Link>
         </span>
@@ -399,12 +403,12 @@ function NeedsYou({
       {loading ? (
         <Skeleton className="h-36" />
       ) : rows.length === 0 ? (
-        <EmptyState title="Nothing waiting." />
+        <Empty icon="checkmark-done" title="Nothing waiting" />
       ) : (
-        <ul className="flex flex-col gap-1">
+        <ul className="flex flex-col divide-y divide-white/[0.08]">
           {rows.slice(0, limit).map((r) => (
             <li key={r.key}>
-              <RowLink href={r.href} title={r.title} sub={r.sub} right={r.right} />
+              <RowLink href={r.href} title={r.title} meta={r.sub} right={r.right} />
             </li>
           ))}
         </ul>
@@ -428,7 +432,7 @@ function ManagerOverview() {
 
   return (
     <div className={FILL}>
-      <section aria-label="Position" className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+      <section aria-label="Position" className="grid grid-cols-2 gap-2.5 xl:grid-cols-4">
         <KpiTile label="Listings you sell" value={managed.length} href={href("/listings")} />
         <KpiTile
           label="Offers & bids waiting"
@@ -445,18 +449,18 @@ function ManagerOverview() {
         <Panel
           title="Listings you sell"
           meta={`${managed.length}`}
-          action={<Link href={href("/listings")} className="text-tiny text-[#9FB7C2] hover:text-text">All listings</Link>}
+          action={<Link href={href("/listings")} className={seeAll}>All listings</Link>}
         >
           {managed.length === 0 ? (
-            <EmptyState title="No listings yet." />
+            <Empty icon="megaphone-outline" title="No listings yet" />
           ) : (
-            <ul className="flex flex-col gap-1">
+            <ul className="flex flex-col divide-y divide-white/[0.08]">
               {managed.slice(0, ROWS).map((m) => (
                 <li key={m.spaceId}>
                   <RowLink
                     href={href(`/listings/${m.spaceId}`)}
                     title={m.title}
-                    sub={m.eventName ?? "No event"}
+                    meta={m.eventName ?? "No event"}
                     right={<StatusPill status={m.status} />}
                   />
                 </li>

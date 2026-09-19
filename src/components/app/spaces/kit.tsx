@@ -355,3 +355,93 @@ export function EventLine({ event }: { event: { name: string; city?: string | nu
     </div>
   );
 }
+
+/* ── Web-only screens, drawn with the app's parts (appended) ─────── */
+
+/** A group: its SectionLabel (with a count and a control on the right) over a Card. */
+export function Group({
+  title,
+  meta,
+  action,
+  children,
+  className = "",
+}: {
+  title?: ReactNode;
+  meta?: ReactNode;
+  action?: ReactNode;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <section className={`flex min-w-0 flex-col gap-2.5 ${className}`}>
+      {title || action ? (
+        <SectionLabel
+          right={action}
+        >
+          {title}
+          {meta !== undefined && meta !== null && meta !== "" ? <span className="ml-2 normal-case tracking-normal text-white/55">{meta}</span> : null}
+        </SectionLabel>
+      ) : null}
+      <Card>{children}</Card>
+    </section>
+  );
+}
+
+/** The FilterPills contract (options, value, onChange), drawn as the app's Chips. */
+export function Pills<T extends string>({
+  options,
+  value,
+  onChange,
+  label,
+}: {
+  options: readonly { value: T; label: string; count?: number }[];
+  value: T;
+  onChange: (v: T) => void;
+  label: string;
+}) {
+  return (
+    <ChipRow label={label}>
+      {options.map((o) => (
+        <Chip key={o.value} label={o.label} count={o.count} selected={value === o.value} onClick={() => onChange(o.value)} />
+      ))}
+    </ChipRow>
+  );
+}
+
+/** A figure on a card: small capitals, the money size, a dim line; amber ink when it waits on you. */
+export function Stat({ label, value, note, href, attention }: { label: string; value: ReactNode; note?: ReactNode; href?: string; attention?: boolean }) {
+  return (
+    <Card href={href} className="gap-1.5">
+      <span className="text-[12px] font-strong uppercase tracking-[0.4px] text-white/55">{label}</span>
+      <span className={`${money} ${attention ? "!text-amber" : ""}`}>{value}</span>
+      {note ? <span className="truncate text-[12.5px] font-strong text-white/55">{note}</span> : null}
+    </Card>
+  );
+}
+
+/** A row inside a Card: title, meta, something on the right; no chevron, the whole row opens. */
+export function ListRow({ href, title, meta, right, onClick }: { href?: string; title: ReactNode; meta?: ReactNode; right?: ReactNode; onClick?: () => void }) {
+  const cls = "flex w-full min-w-0 items-center gap-3 rounded-[12px] px-1 py-2.5 text-left transition-colors hover:bg-white/[0.04]";
+  const inner = (
+    <>
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="truncate text-[14.5px] font-strong text-white">{title}</span>
+        {meta ? <span className="truncate text-[12.5px] text-white/55">{meta}</span> : null}
+      </span>
+      {right ? <span className="shrink-0">{right}</span> : null}
+    </>
+  );
+  if (href)
+    return (
+      <Link href={href} scroll={false} className={cls}>
+        {inner}
+      </Link>
+    );
+  if (onClick)
+    return (
+      <button type="button" onClick={onClick} className={cls}>
+        {inner}
+      </button>
+    );
+  return <div className={cls}>{inner}</div>;
+}
