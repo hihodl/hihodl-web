@@ -197,7 +197,7 @@ export function ReadyToPublish({ compact = false }: { compact?: boolean }) {
             <Mark state={i.state} />
             <span className="min-w-0 flex-1">
               <span className="block text-small text-text">{i.label}</span>
-              <span className="block truncate text-tiny text-[#9FB7C2]">{i.sub}</span>
+              <span className="block text-tiny text-[#9FB7C2]">{i.sub}</span>
             </span>
             {i.action && i.state !== "done" ? <ActionButton action={i.action} /> : null}
           </li>

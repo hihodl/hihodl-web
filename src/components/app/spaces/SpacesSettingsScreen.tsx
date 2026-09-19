@@ -52,7 +52,7 @@ function CreativeDirector() {
   const href = useHref();
   const on = agency.on;
   return (
-    <section id="team" aria-label="Creative Director" className={`${glass} flex flex-col gap-2 px-5 py-4`}>
+    <section id="team" aria-label="Creative Director" className={`${glass} relative z-10 flex flex-col gap-2 px-5 py-4`}>
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-1.5">
           <p className="text-small font-medium text-text">Creative Director</p>
