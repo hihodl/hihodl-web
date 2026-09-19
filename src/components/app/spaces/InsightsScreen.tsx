@@ -23,7 +23,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, type ComponentType, type ReactNode, type SVGProps } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 
 import { SITE_URL } from "@/lib/ad-space/config";
 import { eventDates } from "@/lib/ad-space/format";
@@ -31,13 +31,35 @@ import type { Brand, HookBlock, Insights, InsightsEvent, Median, SellRow } from 
 import { useInsights } from "@/lib/app/spaces-data";
 
 import { useHref } from "../base";
-import { btnPrimary, CopyButton, inputCls } from "../front/kit";
-import { IconAccount, IconCalendar, IconFloor, IconInspire, IconMegaphone, IconOffers, IconSales } from "../icons";
+import { CopyButton } from "../front/kit";
+import { ctaPrimary } from "../hold";
+import { Ion, type IonName } from "../ion";
 import { useShell } from "../Shell";
-import { dollars, EmptyState, FilterPills, Panel, ProgressBar, Segmented, Skeleton } from "../ui";
+import { dollars, Skeleton } from "../ui";
 import { ReadError } from "./common";
 import { PRODUCTION_TEMPLATE, useProductionAt } from "./ContentOffer";
 import { cardCls, CardGrid, DrillBar, Pager, useListingKind, usePaged } from "./cards";
+import { Card, Empty, Group, inputCls, money, Pills, ProgressBar as Bar } from "./kit";
+
+/* ── The app's parts, under the names these screens were written with ── */
+
+/** A titled group: the app's SectionLabel over its Card. */
+const Panel = Group;
+const Segmented = Pills;
+const FilterPills = Pills;
+
+function EmptyState({ title, action }: { title: string; action?: ReactNode }) {
+  return <Empty icon="stats-chart-outline" title={title} action={action} />;
+}
+
+/** The app's green bar, fed a percentage. */
+function ProgressBar({ value, max }: { value: number; max: number }) {
+  return <Bar value={max > 0 ? value / max : 0} />;
+}
+
+/** The app's Chip, as a link or a button: 34 high, radius half of it. */
+const chipLink =
+  "inline-flex h-[34px] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[17px] border border-white/[0.14] bg-white/[0.06] px-[13px] text-[13.5px] font-bold text-white transition-colors hover:bg-white/10";
 
 export type InsightsView = "hook" | "you" | "sells" | "pricing" | "timing" | "brands" | "pitch";
 
@@ -137,21 +159,21 @@ function Hub({ data, to }: { data: Insights; to: (v: InsightsView | null, extra?
   const hook = hookHeadline(data);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3.5">
       <div className="flex flex-col gap-3">
         <div className="min-w-0">
-          <h2 className="truncate text-body font-medium text-text">{where(data.event)}</h2>
-          <p className="mt-0.5 truncate text-tiny text-[#9FB7C2]">
+          <h2 className="truncate text-[18px] font-extrabold tracking-[-0.3px] text-white">{where(data.event)}</h2>
+          <p className="mt-0.5 truncate text-[12px] leading-4 text-white/55">
             {eventLine(data.event)} · {sampleText(you.sample)} on HOLD Spaces
           </p>
         </div>
         <EventSwitch data={data} />
       </div>
       <CardGrid>
-        <HubCard href={to("hook")} icon={IconInspire} title="Your hook" line={hook.line} value={hook.value} note={hook.note} />
+        <HubCard href={to("hook")} icon="bulb-outline" title="Your hook" line={hook.line} value={hook.value} note={hook.note} />
         <HubCard
           href={to("you")}
-          icon={IconAccount}
+          icon="person-outline"
           title="Your numbers"
           line={you.listings ? `${you.placements.filled} of ${you.placements.total} spots filled` : "No listing here yet"}
           value={dollars(you.raisedCents)}
@@ -159,7 +181,7 @@ function Hub({ data, to }: { data: Insights; to: (v: InsightsView | null, extra?
         />
         <HubCard
           href={to("sells")}
-          icon={IconSales}
+          icon="stats-chart-outline"
           title="What sells"
           line={topSurface ? `${topSurface.label} fill best` : needMore}
           value={topSurface ? pctText(topSurface.pct!) : "—"}
@@ -167,7 +189,7 @@ function Hub({ data, to }: { data: Insights; to: (v: InsightsView | null, extra?
         />
         <HubCard
           href={to("pricing")}
-          icon={IconFloor}
+          icon="pricetag-outline"
           title="Pricing"
           line={topBand ? `${topBand.label} floors sell most often` : needMore}
           value={topBand ? pctText(topBand.pct!) : "—"}
@@ -175,7 +197,7 @@ function Hub({ data, to }: { data: Insights; to: (v: InsightsView | null, extra?
         />
         <HubCard
           href={to("timing")}
-          icon={IconCalendar}
+          icon="calendar-outline"
           title="Timing"
           line={timing.medianDaysToFirstSale !== null ? "to a first sale, median" : needMore}
           value={timing.medianDaysToFirstSale !== null ? daysText(timing.medianDaysToFirstSale) : "—"}
@@ -183,7 +205,7 @@ function Hub({ data, to }: { data: Insights; to: (v: InsightsView | null, extra?
         />
         <HubCard
           href={to("brands")}
-          icon={IconOffers}
+          icon="business-outline"
           title="Brands buying"
           line={brandList.brands.length ? brandList.brands.slice(0, 3).map((b) => b.name).join(", ") : "No named brand yet"}
           value={String(brandList.brands.length)}
@@ -191,7 +213,7 @@ function Hub({ data, to }: { data: Insights; to: (v: InsightsView | null, extra?
         />
         <HubCard
           href={to("pitch")}
-          icon={IconMegaphone}
+          icon="megaphone-outline"
           title="Pitch a brand"
           line="Lead with your reach and content"
           value="Write"
@@ -204,14 +226,14 @@ function Hub({ data, to }: { data: Insights; to: (v: InsightsView | null, extra?
 
 function HubCard({
   href,
-  icon: Icon,
+  icon,
   title,
   line,
   value,
   note,
 }: {
   href: string;
-  icon: ComponentType<SVGProps<SVGSVGElement>>;
+  icon: IonName;
   title: string;
   line: ReactNode;
   value: ReactNode;
@@ -219,17 +241,15 @@ function HubCard({
 }) {
   return (
     <li>
-      <Link href={href} scroll={false} className={`${cardCls} gap-3 p-4 sm:min-h-[176px] sm:gap-4 sm:p-5 xl:min-h-[200px]`}>
+      <Link href={href} scroll={false} className={`${cardCls} gap-2.5 p-3.5 sm:min-h-[168px] xl:min-h-[190px]`}>
         <div className="flex min-w-0 items-center gap-2.5">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] border border-white/10 bg-white/[0.06] text-[#CFE3EC]">
-            <Icon />
-          </span>
-          <p className="truncate text-small font-medium text-text">{title}</p>
+          <Ion name={icon} size={18} className="shrink-0 text-white/[0.62]" />
+          <p className="truncate text-[14.5px] font-bold text-white">{title}</p>
         </div>
-        <p className="truncate text-tiny text-[#CFE3EC]">{line}</p>
+        <p className="truncate text-[12.5px] font-strong text-white/[0.62]">{line}</p>
         <div className="mt-auto flex min-w-0 items-end justify-between gap-2">
-          <p className="whitespace-nowrap text-[26px] font-medium leading-none tabular-nums text-text xl:text-[30px]">{value}</p>
-          {note ? <p className="truncate text-tiny tabular-nums text-[#9FB7C2]">{note}</p> : null}
+          <p className={`${money} whitespace-nowrap leading-none`}>{value}</p>
+          {note ? <p className="truncate text-[12.5px] font-strong tabular-nums text-white/55">{note}</p> : null}
         </div>
       </Link>
     </li>
@@ -257,14 +277,14 @@ function Screen({
   children: ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3.5">
       <DrillBar back={back} crumb={`Insights · ${where(data.event)}`} title={title} />
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)] lg:items-start">
-        <Panel>
-          <p className="text-[40px] font-medium leading-none tracking-tight tabular-nums text-text">{big}</p>
-          <p className="mt-3 text-small text-[#CFE3EC]">{bigNote}</p>
-          {aside ? <div className="mt-5 border-t border-white/[0.06] pt-4 text-tiny leading-relaxed text-[#9FB7C2]">{aside}</div> : null}
-        </Panel>
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-3.5 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)] lg:items-start">
+        <Card>
+          <p className="text-[34px] font-extrabold leading-none tracking-[-0.6px] tabular-nums text-white">{big}</p>
+          <p className="text-[14px] leading-5 text-white/[0.62]">{bigNote}</p>
+          {aside ? <div className="mt-1 border-t border-white/[0.08] pt-3 text-[12px] leading-[17px] text-white/55">{aside}</div> : null}
+        </Card>
         {children}
       </div>
     </div>
@@ -275,8 +295,8 @@ function Screen({
 function TooFew({ data, sample, watch }: { data: Insights; sample: { creators: number; listings: number }; watch: string }) {
   return (
     <div className="flex flex-col gap-1.5 py-2">
-      <p className="text-small text-text">Not enough sales yet at {where(data.event)}.</p>
-      <p className="text-tiny text-[#9FB7C2]">
+      <p className="text-[14.5px] text-white">Not enough sales yet at {where(data.event)}.</p>
+      <p className="text-[12px] leading-4 text-white/55">
         {sampleText(sample)} so far; a figure shows from {data.minSample} creators. {watch}
       </p>
     </div>
@@ -303,13 +323,13 @@ function BarRow({
   right?: ReactNode;
 }) {
   return (
-    <li className={`flex min-w-0 flex-col gap-1.5 border-t border-white/[0.06] py-2.5 ${grid ? "" : "first:border-t-0 first:pt-0"}`}>
+    <li className={`flex min-w-0 flex-col gap-1.5 border-t border-white/[0.08] py-2.5 ${grid ? "" : "first:border-t-0 first:pt-0"}`}>
       <div className="flex min-w-0 items-baseline justify-between gap-3">
-        <p className="truncate text-small text-text">{label}</p>
-        <p className="shrink-0 text-small tabular-nums text-text">{right ?? (pct !== null ? pctText(pct) : <span className="text-tiny text-[#B4BEC9]">not enough yet</span>)}</p>
+        <p className="truncate text-[14.5px] text-white">{label}</p>
+        <p className="shrink-0 text-[14px] font-strong tabular-nums text-white">{right ?? (pct !== null ? pctText(pct) : <span className="text-[12px] text-white/55">not enough yet</span>)}</p>
       </div>
       {pct !== null ? <ProgressBar value={pct} max={100} /> : filled !== undefined && total ? <div className="h-1.5 w-full rounded-[3px] bg-white/[0.05]" /> : null}
-      <p className="truncate text-tiny text-[#9FB7C2]">{sub}</p>
+      <p className="truncate text-[12px] leading-4 text-white/55">{sub}</p>
     </li>
   );
 }
@@ -397,7 +417,7 @@ function HookScreen({ data, back }: { data: Insights; back: string }) {
         : "Something people do not expect to see is what they stop for.",
       data: hook ? sampleText(hook.sample) : null,
       action: hook?.leastCrowded[0] ? (
-        <Link href={href(`/listings/new?template=${encodeURIComponent(hook.leastCrowded[0].key)}`)} className={smallLink}>
+        <Link href={href(`/listings/new?template=${encodeURIComponent(hook.leastCrowded[0].key)}`)} className={chipLink}>
           List a {hook.leastCrowded[0].label.toLowerCase()}
         </Link>
       ) : null,
@@ -408,11 +428,11 @@ function HookScreen({ data, back }: { data: Insights; back: string }) {
       body: "The product gets their attention. What they pay for is your reach and the content you make, so when a brand takes a spot, offer them content for their own channels.",
       data: dealData,
       action: production ? (
-        <Link href={href("/sales")} className={smallLink}>
+        <Link href={href("/sales")} className={chipLink}>
           Your sales
         </Link>
       ) : (
-        <Link href={href(`/listings/new?template=${PRODUCTION_TEMPLATE}`)} className={smallLink}>
+        <Link href={href(`/listings/new?template=${PRODUCTION_TEMPLATE}`)} className={chipLink}>
           Create a Content production listing
         </Link>
       ),
@@ -441,10 +461,10 @@ function HookScreen({ data, back }: { data: Insights; back: string }) {
       <Panel title="What worked" meta={where(event)}>
         <ul className="flex flex-col">
           {rows.map((r) => (
-            <li key={r.key} className="flex min-w-0 flex-col gap-1.5 border-t border-white/[0.06] py-3 first:border-t-0 first:pt-0">
-              <p className="text-small font-medium text-text">{r.title}</p>
-              <p className="text-small text-[#CFE3EC]">{r.body}</p>
-              {r.data ? <p className="text-tiny text-[#9FB7C2]">{r.data}</p> : null}
+            <li key={r.key} className="flex min-w-0 flex-col gap-1.5 border-t border-white/[0.08] py-3 first:border-t-0 first:pt-0">
+              <p className="text-[14.5px] font-bold text-white">{r.title}</p>
+              <p className="text-[14px] leading-5 text-white/[0.62]">{r.body}</p>
+              {r.data ? <p className="text-[12px] leading-4 text-white/55">{r.data}</p> : null}
               {r.action ? <div className="pt-1">{r.action}</div> : null}
             </li>
           ))}
@@ -454,13 +474,11 @@ function HookScreen({ data, back }: { data: Insights; back: string }) {
   );
 }
 
-const smallLink =
-  "inline-flex h-8 shrink-0 items-center rounded-[10px] border border-white/10 bg-white/[0.05] px-3 text-tiny font-medium text-[#CFE3EC] transition-colors hover:bg-white/10 hover:text-text";
 
 /* ── Your numbers ─────────────────────────────────────────────────── */
 
 function medianText(m: Median, fmt: (n: number) => string): ReactNode {
-  return m.value !== null ? fmt(m.value) : <span className="text-tiny text-[#B4BEC9]">{plural(m.creators, "creator")}, not enough</span>;
+  return m.value !== null ? fmt(m.value) : <span className="text-[12px] text-white/55">{plural(m.creators, "creator")}, not enough</span>;
 }
 
 function YouScreen({ data, back }: { data: Insights; back: string }) {
@@ -481,8 +499,8 @@ function YouScreen({ data, back }: { data: Insights; back: string }) {
           <EmptyState
             title="Publish a listing to see how you compare."
             action={
-              <Link href={href("/listings/new")} className={btnPrimary}>
-                New listing
+              <Link href={href("/listings/new")} className={`${ctaPrimary} !w-auto`}>
+                Create a space
               </Link>
             }
           />
@@ -527,7 +545,7 @@ function YouScreen({ data, back }: { data: Insights; back: string }) {
       }
     >
       <Panel title="You and the median creator" meta={where(data.event)}>
-        <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)] gap-x-3 text-tiny text-[#9FB7C2]">
+        <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)] gap-x-3 text-[12px] leading-4 text-white/55">
           <span />
           <span>You</span>
           <span>Median</span>
@@ -536,11 +554,11 @@ function YouScreen({ data, back }: { data: Insights; back: string }) {
           {rows.map((r) => (
             <li
               key={r.label}
-              className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)] items-baseline gap-x-3 border-t border-white/[0.06] py-2.5 first:border-t-0"
+              className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)] items-baseline gap-x-3 border-t border-white/[0.08] py-2.5 first:border-t-0"
             >
-              <span className="truncate text-small text-[#CFE3EC]">{r.label}</span>
-              <span className="truncate text-small tabular-nums text-text">{r.you}</span>
-              <span className="truncate text-small tabular-nums text-[#CFE3EC]">{r.median}</span>
+              <span className="truncate text-[14px] leading-5 text-white/[0.62]">{r.label}</span>
+              <span className="truncate text-[14px] font-strong tabular-nums text-white">{r.you}</span>
+              <span className="truncate text-[14px] tabular-nums text-white/[0.62]">{r.median}</span>
             </li>
           ))}
         </ul>
@@ -744,8 +762,8 @@ function BrandsScreen({ data, back, pitchHref }: { data: Insights; back: string;
       >
         {list.brands.length === 0 ? (
           <div className="flex flex-col gap-1.5 py-2">
-            <p className="text-small text-text">No brand has paid here yet.</p>
-            <p className="text-tiny text-[#9FB7C2]">
+            <p className="text-[14.5px] text-white">No brand has paid here yet.</p>
+            <p className="text-[12px] leading-4 text-white/55">
               Brands appear once a spot is paid and its artwork is approved. Until then, pitch the brands you already know: Pitch a brand writes it from your numbers.
             </p>
           </div>
@@ -769,19 +787,15 @@ function BrandsScreen({ data, back, pitchHref }: { data: Insights; back: string;
 function BrandRow({ brand, pitch }: { brand: Brand; pitch: string }) {
   const bits = [plural(brand.placements, "spot"), brand.spendBandLabel, brand.country].filter(Boolean).join(" · ");
   return (
-    <li className="flex min-w-0 items-center gap-3 border-t border-white/[0.06] py-2.5 first:border-t-0 first:pt-0">
+    <li className="flex min-w-0 items-center gap-3 border-t border-white/[0.08] py-2.5 first:border-t-0 first:pt-0">
       <div className="min-w-0 flex-1">
-        <p className="truncate text-small text-text">
+        <p className="truncate text-[14.5px] text-white">
           {brand.name}
-          {brand.handle ? <span className="ml-2 text-tiny text-[#9FB7C2]">@{brand.handle}</span> : null}
+          {brand.handle ? <span className="ml-2 text-[12px] leading-4 text-white/55">@{brand.handle}</span> : null}
         </p>
-        <p className="mt-0.5 truncate text-tiny text-[#9FB7C2]">{bits}</p>
+        <p className="mt-0.5 truncate text-[12px] leading-4 text-white/55">{bits}</p>
       </div>
-      <Link
-        href={pitch}
-        scroll={false}
-        className="inline-flex h-8 shrink-0 items-center rounded-[10px] border border-white/10 bg-white/[0.05] px-3 text-tiny font-medium text-[#CFE3EC] transition-colors hover:bg-white/10 hover:text-text"
-      >
+      <Link href={pitch} scroll={false} className={chipLink}>
         Pitch
       </Link>
     </li>
@@ -904,9 +918,9 @@ function PitchScreen({ data, back, initialBrand }: { data: Insights; back: strin
     : "";
 
   return (
-    <div className="flex flex-col gap-4">
-      <DrillBar back={back} crumb={`Insights · ${where(data.event)}`} title="Pitch a brand" right={text ? <CopyButton value={text} label="Copy pitch" /> : null} />
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)] lg:items-start">
+    <div className="flex flex-col gap-3.5">
+      <DrillBar back={back} crumb={`Insights · ${where(data.event)}`} title="Pitch a brand" right={text ? <CopyButton value={text} label="Copy pitch" className={chipLink} /> : null} />
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-3.5 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)] lg:items-start">
         <Panel title="Which brand">
           <input
             className={inputCls}
@@ -917,20 +931,20 @@ function PitchScreen({ data, back, initialBrand }: { data: Insights; back: strin
             aria-label="Brand"
           />
           {known.length ? (
-            <div className="mt-4">
-              <p className="mb-2 text-tiny text-[#9FB7C2]">Brands that already paid on HOLD Spaces</p>
+            <div>
+              <p className="mb-2 text-[12px] leading-4 text-white/55">Brands that already paid on HOLD Spaces</p>
               <FilterPills label="Brands" value={known.includes(name) ? name : ""} onChange={setBrand} options={known.map((b) => ({ value: b, label: b }))} />
             </div>
           ) : (
-            <p className="mt-4 text-tiny text-[#9FB7C2]">No brand has paid here yet. Type the one you want to reach.</p>
+            <p className="text-[12px] leading-4 text-white/55">No brand has paid here yet. Type the one you want to reach.</p>
           )}
-          <p className="mt-5 border-t border-white/[0.06] pt-4 text-tiny leading-relaxed text-[#9FB7C2]">
+          <p className="mt-1 border-t border-white/[0.08] pt-3 text-[12px] leading-[17px] text-white/55">
             It leads with your reach and your content, with the product as the hook. Built from your own numbers; nothing is sent: copy it and send it where you talk to brands.
           </p>
         </Panel>
         <Panel title={name ? `For ${name}` : "Your pitch"} meta={name ? `${text.split("\n").length} lines` : ""}>
           {name ? (
-            <pre className="max-h-[calc(var(--app-vh,100dvh)-260px)] overflow-y-auto whitespace-pre-wrap break-words font-sans text-small leading-relaxed text-text">
+            <pre className="max-h-[calc(var(--app-vh,100dvh)-260px)] overflow-y-auto whitespace-pre-wrap break-words font-sans text-[14.5px] leading-[22px] text-white">
               {text}
             </pre>
           ) : (

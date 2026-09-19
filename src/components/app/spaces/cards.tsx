@@ -16,6 +16,7 @@ import { listingRefs, NO_EVENT, type EventRef, type ListingRef } from "@/lib/app
 import { useTemplates } from "@/lib/app/spaces-data";
 
 import { IconCalendar } from "../icons";
+import { BackHeader } from "../hold";
 import { Ion } from "../ion";
 import { useShell } from "../Shell";
 import { StatusPill } from "./common";
@@ -106,27 +107,13 @@ export function useListingRefs(): ReadonlyMap<string, ListingRef> {
 
 /* ── The drill-down ───────────────────────────────────────────────── */
 
-/** The app's GlassHeader on a drilled-in screen: a chevron back, where you are, and one control on the right. */
+/**
+ * The app's GlassHeader on a drilled-in screen: a chevron back, the title, and
+ * where you are under it. Inside the shell it is drawn in the top bar (the
+ * BackHeader's header slot), so the section title is not said twice.
+ */
 export function DrillBar({ back, crumb, title, right }: { back: string; crumb: string; title: string; right?: ReactNode }) {
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div className="flex min-w-0 items-center gap-2">
-        <Link
-          href={back}
-          scroll={false}
-          aria-label="Back"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[18px] text-white transition-colors hover:bg-white/10"
-        >
-          <Ion name="chevron-back" size={24} />
-        </Link>
-        <div className="min-w-0">
-          <p className="truncate text-[12px] font-strong text-white/55">{crumb}</p>
-          <h2 className="truncate text-[18px] font-strong tracking-[-0.3px] text-white">{title}</h2>
-        </div>
-      </div>
-      {right}
-    </div>
-  );
+  return <BackHeader title={title} subtitle={crumb} backHref={back} right={right} />;
 }
 
 export function eventName(event: EventRef | null | undefined): string {
