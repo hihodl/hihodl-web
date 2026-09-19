@@ -283,7 +283,6 @@ function CampaignCard({ campaign: c, href }: { campaign: InspireCampaign; href: 
               <p className="truncate text-small font-medium text-text">@{c.creator.handle}</p>
               <p className="truncate text-[11px] text-[#9FB7C2]">{c.creator.name ?? " "}</p>
             </div>
-            <OriginTag origin={c.origin} />
           </div>
           <p className="line-clamp-2 min-h-[40px] text-small text-text">{c.title}</p>
           <div className="flex min-w-0 flex-col gap-0.5">
@@ -295,6 +294,9 @@ function CampaignCard({ campaign: c, href }: { campaign: InspireCampaign; href: 
           {c.links.post ? <External href={c.links.post}>See the post</External> : null}
           {c.links.website ? <External href={c.links.website}>Website</External> : null}
           {c.links.holdPage ? <External href={`${SITE_URL}${c.links.holdPage}`}>Their page</External> : null}
+          <span className="ml-auto pr-2">
+            <OriginTag origin={c.origin} />
+          </span>
         </div>
       </article>
     </li>
