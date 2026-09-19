@@ -2,7 +2,7 @@
 
 import type { CSSProperties, KeyboardEvent } from "react";
 
-import { STATUS_LABEL } from "@/lib/ad-space/format";
+import { STATUS_LABEL, usdFromUsdc } from "@/lib/ad-space/format";
 import { inkOn, isClosedPath, type ProductLook } from "@/lib/ad-space/product-look";
 import type { PhotoRect, Position, SpacePhoto, Template, TemplateView, TemplateZone } from "@/lib/ad-space/types";
 
@@ -683,14 +683,14 @@ function FittedText({
 function zoneFigure(p: Position): { short: string; spoken: string } {
   const o = p.offers;
   if (o?.mode === "bids") {
-    if (o.highestBidUsdc) return { short: priceShort(o.highestBidUsdc), spoken: `, highest bid ${o.highestBidUsdc} USDC` };
-    if (o.openingBidUsdc) return { short: priceShort(o.openingBidUsdc), spoken: `, bidding opens at ${o.openingBidUsdc} USDC` };
+    if (o.highestBidUsdc) return { short: priceShort(o.highestBidUsdc), spoken: `, highest bid ${usdFromUsdc(o.highestBidUsdc)}` };
+    if (o.openingBidUsdc) return { short: priceShort(o.openingBidUsdc), spoken: `, bidding opens at ${usdFromUsdc(o.openingBidUsdc)}` };
     return { short: "Bid", spoken: ", open for bids" };
   }
   if (o?.mode === "offers" || p.sponsorPaysUsdc === null) return { short: "Offer", spoken: ", open to offers" };
   return {
     short: priceShort(p.sponsorPaysUsdc),
-    spoken: `, ${p.takeover ? "bidding opens at " : ""}${p.sponsorPaysUsdc} USDC`,
+    spoken: `, ${p.takeover ? "bidding opens at " : ""}${usdFromUsdc(p.sponsorPaysUsdc)}`,
   };
 }
 

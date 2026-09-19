@@ -1,6 +1,6 @@
 "use client";
 
-import type { SpaceTier } from "@/lib/ad-space/format";
+import { usdFromUsdc, type SpaceTier } from "@/lib/ad-space/format";
 import type { OfferMode, Position } from "@/lib/ad-space/types";
 
 import { BidLines } from "./PositionCard";
@@ -211,7 +211,10 @@ function TierFigure({ tier: t, mode, session }: { tier: SpaceTier; mode: OfferMo
     return (
       <dl className="flex flex-col gap-0.5 sm:text-right">
         <dt className="text-tiny text-sp-ink/80">{highest ? "Highest bid" : "Opening bid"}</dt>
-        <dd className="font-mono text-h4 font-light text-sp-ink">{shown} USDC</dd>
+        <dd className="text-h4 font-light tabular-nums text-sp-ink">
+          {usdFromUsdc(shown)}
+          <span className="ml-1 text-[11px] font-normal text-sp-ink/80">USDC</span>
+        </dd>
       </dl>
     );
   }
@@ -231,7 +234,10 @@ function TierFigure({ tier: t, mode, session }: { tier: SpaceTier; mode: OfferMo
   return (
     <dl className="flex flex-col gap-0.5 sm:text-right">
       <dt className="text-tiny text-sp-ink/80">{gone ? "Went for" : "You pay"}</dt>
-      <dd className="font-mono text-h4 font-light text-sp-ink">{t.sponsorPaysUsdc} USDC</dd>
+      <dd className="text-h4 font-light tabular-nums text-sp-ink">
+        {usdFromUsdc(t.sponsorPaysUsdc)}
+        <span className="ml-1 text-[11px] font-normal text-sp-ink/80">USDC</span>
+      </dd>
     </dl>
   );
 }

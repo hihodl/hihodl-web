@@ -14,6 +14,7 @@ import {
   instantUtc,
   timeLeft,
   usdFromCents,
+  usdFromUsdc,
 } from "@/lib/ad-space/format";
 import type { OfferMode, Position, PositionOffers, Sponsor, Takeover } from "@/lib/ad-space/types";
 
@@ -139,7 +140,10 @@ export const PositionCard = forwardRef<HTMLElement, Props>(function PositionCard
           <dl className="flex flex-col gap-0.5">
             <div className="flex items-baseline gap-2">
               <dt className="sr-only">You pay</dt>
-              <dd className="font-mono text-body text-sp-ink">{p.sponsorPaysUsdc} USDC</dd>
+              <dd className="text-body tabular-nums text-sp-ink">
+                {usdFromUsdc(p.sponsorPaysUsdc)}
+                <span className="ml-1 text-[11px] font-normal text-sp-ink/80">USDC</span>
+              </dd>
             </div>
           </dl>
         )}
@@ -249,7 +253,7 @@ export function BidLines({ offers: o, now }: { offers: PositionOffers | null; no
             {o.nextMinimumBidUsdc && (
               <>
                 {" "}
-                · next bid from <span className="font-mono text-sp-ink">{o.nextMinimumBidUsdc} USDC</span>
+                · next bid from <span className="tabular-nums text-sp-ink">{usdFromUsdc(o.nextMinimumBidUsdc)}</span>
               </>
             )}
           </p>
@@ -268,7 +272,10 @@ function BidFigure({ offers: o }: { offers: PositionOffers | null }) {
     <dl className="flex flex-col gap-0.5">
       <div className="flex items-baseline gap-2">
         <dt className="text-tiny text-sp-ink/80">{highest ? "Highest bid" : "Opening bid"}</dt>
-        <dd className="font-mono text-body text-sp-ink">{shown} USDC</dd>
+        <dd className="text-body tabular-nums text-sp-ink">
+          {usdFromUsdc(shown)}
+          <span className="ml-1 text-[11px] font-normal text-sp-ink/80">USDC</span>
+        </dd>
       </div>
     </dl>
   );
@@ -301,14 +308,15 @@ function TakeoverPrices({ position: p, takeover: t }: { position: Position; take
     <dl className="flex flex-col gap-0.5">
       <div className="flex items-baseline gap-2">
         <dt className="text-tiny text-sp-ink/80">{p.status === "sold" ? "Sold at" : "You pay"}</dt>
-        <dd className="font-mono text-body text-sp-ink">
-          {p.status === "sold" ? t.priceUsdc : p.sponsorPaysUsdc} USDC
+        <dd className="text-body tabular-nums text-sp-ink">
+          {usdFromUsdc(p.status === "sold" ? t.priceUsdc : p.sponsorPaysUsdc)}
+          <span className="ml-1 text-[11px] font-normal text-sp-ink/80">USDC</span>
         </dd>
       </div>
       {takeable ? (
         <div className="flex items-baseline gap-1 text-tiny text-sp-amber">
           <dt>Take it for</dt>
-          <dd className="font-mono">{t.nextSponsorPaysUsdc} USDC</dd>
+          <dd className="tabular-nums">{usdFromUsdc(t.nextSponsorPaysUsdc)}</dd>
         </div>
       ) : null}
     </dl>
@@ -350,7 +358,7 @@ function TakeoverLines({
       ) : (
         t.nextPriceUsdc &&
         t.refundsUsdc && (
-          <p>The current sponsor gets their {t.refundsUsdc} USDC back.</p>
+          <p>The current sponsor gets their {usdFromUsdc(t.refundsUsdc)} back.</p>
         )
       )}
     </div>
