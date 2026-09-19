@@ -69,12 +69,25 @@ module.exports = {
         'tiny':       ['12px', { lineHeight: '1.4', letterSpacing: '0.02em' }],
       },
       fontWeight: {
-        // Strict weights — never go above 600
+        // The marketing site stops at 600. The product at app.hihodl.xyz copies
+        // the HOLD app, which draws labels at 700 and headings, tags and money at
+        // 800, so there it uses Tailwind's own font-bold / font-extrabold /
+        // font-black (Inter is loaded 200-900).
         light:   '200',
         book:    '300',
         regular: '400',
         medium:  '500',
         strong:  '600',
+      },
+      // The app's inks are alphas Tailwind 3.3 has no step for (textMuted
+      // 0.62 aside): 0.35, 0.45, 0.55 and 0.65 white are used as written.
+      opacity: {
+        15: '0.15',
+        35: '0.35',
+        45: '0.45',
+        55: '0.55',
+        65: '0.65',
+        85: '0.85',
       },
       borderRadius: {
         card:  '18px',

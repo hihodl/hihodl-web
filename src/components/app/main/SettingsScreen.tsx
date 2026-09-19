@@ -1,28 +1,31 @@
 "use client";
 
 /**
- * Settings, from the person's side: a few cards, each opening its own screen
- * with Back (`?screen=`, so the browser's Back works too). Nothing is a long
- * page. It mirrors the app's settings where the web has the same thing:
+ * Settings, as the app draws the person's menu (src/components/MenuContent)
+ * and the screens under it: one GlassSurface card of rows, the quiet Sign Out
+ * under it, and the help line and the company at the foot. Each row opens its
+ * own screen with Back (`?screen=`, so the browser's Back works too).
  *
- *   Profile & account   → Account (photo, name, username, email)
- *   X account           → Account › X (verified, 90 days, change, disconnect)
- *   Security            → ?screen=security: passkeys, recovery codes, the
- *                         phones that approve withdrawals, sign out
- *   Payout              → Account › Where you get paid (Solana on the web)
- *   Personalization     → ?screen=personalization: the sidebar, and "Your
- *                         pages" (→ ?screen=pages, ../spaces/YourPages: the
- *                         backgrounds of a creator's public pages)
- *
- * Help and legal are a row of small links at the foot, not cards.
+ *   Security           → ?screen=security   security.tsx: the rows the web has
+ *                          (Link your phone, Passkeys)
+ *   Account recovery   → ?screen=recovery   backup.tsx, the fintech "ways to
+ *                          get back in": Passkey, Recovery codes
+ *                          → ?screen=passkeys       passkeys.tsx
+ *                          → ?screen=codes          recovery-codes.tsx
+ *   Sign-in            → Account › Account (the AccountSheet)
+ *   Appearance         → ?screen=personalization   settings/index.tsx's
+ *                          Appearance section, with the web's own rows
+ *                          (sidebar; a creator's pages → ?screen=pages)
+ *   Help & Support     → an email to support
+ *   About HOLD         → ?screen=about      about.tsx: Website, Follow us, Legal
  *
  * Left out on purpose, because the web has nothing real behind them yet:
  * notifications (the backend keeps an email switch nothing reads), sessions
- * (`/sessions` is the app's and not open to the web), language and currency
- * (the web is in English and in dollars).
+ * (`/sessions` is the app's and not open to the web), PIN, Face ID, auto-lock
+ * and the authenticator (the phone's), language and currency (the web is in
+ * English and in dollars), statements and invite.
  */
 
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 
@@ -30,38 +33,40 @@ import { describeCreatorError } from "@/lib/creator/api";
 import { signOut } from "@/lib/creator/session";
 import { emailRecoveryCodes, recoveryCodesStatus } from "@/lib/app/me";
 import { useHoldWallet } from "@/lib/app/hold-wallet";
-import { usePayout, useX } from "@/lib/app/spaces-data";
 import { listPasskeys, type RegisteredPasskey } from "@/lib/wallet/api";
 
-import { useUserPhoto, UserAvatar } from "../account/UserAvatar";
 import { useLinkedPhones } from "../account/PhoneScreen";
 import { useProductHref, useSpacesBase } from "../base";
-import { btnGhost, btnLink, Note, ScreenHeader, shortAddress, Warn } from "../front/kit";
-import { IconChevronRight, IconSignOut } from "../icons";
+import { BackHeader, Column, ctaPrimary, ctaSecondary, HoldCard, MenuRow, Notice, SectionTitle, Switch } from "../hold";
+import { Ion, type IonName } from "../ion";
 import { useShell, useShellPrefs } from "../Shell";
 import { YourPagesCard, YourPagesScreen } from "../spaces/YourPages";
-import { glass, Segmented, Skeleton } from "../ui";
+import { Skeleton } from "../ui";
 
 /** The product's own host serves only the product; the website's pages live on the website. */
 const WEBSITE = "https://hihodl.xyz";
 
-type Screen = "home" | "security" | "personalization";
+type Screen = "home" | "security" | "recovery" | "passkeys" | "codes" | "personalization" | "about";
 
 export function SettingsScreen({ screen, item }: { screen?: string; item?: string } = {}) {
   const router = useRouter();
   const pathname = usePathname();
   const productHref = useProductHref();
   const open = useCallback((s: Screen) => router.push(s === "home" ? pathname : `${pathname}?screen=${s}`, { scroll: false }), [router, pathname]);
-  const back = () => open("home");
-  if (screen === "security") return <Centred><SecurityScreen onBack={back} /></Centred>;
-  if (screen === "personalization") return <Centred><PersonalizationScreen onBack={back} /></Centred>;
+  const home = () => open("home");
+  if (screen === "security") return <SecurityScreen onBack={home} open={open} />;
+  if (screen === "recovery") return <RecoveryScreen onBack={home} open={open} />;
+  if (screen === "passkeys") return <PasskeysScreen onBack={() => open("recovery")} />;
+  if (screen === "codes") return <CodesScreen onBack={() => open("recovery")} />;
+  if (screen === "personalization") return <PersonalizationScreen onBack={home} />;
+  if (screen === "about") return <AboutScreen onBack={home} />;
   if (screen === "pages") {
-    // Your pages, one level under Personalization (../spaces/YourPages).
+    // Your pages, one level under Appearance (../spaces/YourPages).
     return (
       <YourPagesScreen
         base={productHref("/settings?screen=pages")}
         back={productHref("/settings?screen=personalization")}
-        backLabel="Personalization"
+        backLabel="Appearance"
         item={item}
       />
     );
@@ -69,146 +74,7 @@ export function SettingsScreen({ screen, item }: { screen?: string; item?: strin
   return <SettingsHome open={open} />;
 }
 
-function Centred({ children }: { children: ReactNode }) {
-  return <div className="flex flex-1 flex-col items-center py-2">{children}</div>;
-}
-
-/* ── Home ─────────────────────────────────────────────────────────── */
-
-function SettingsHome({ open }: { open: (s: Screen) => void }) {
-  const { session } = useShell();
-  const productHref = useProductHref();
-  const { name } = useUserPhoto();
-  const x = useX();
-  const payout = usePayout();
-  const passkeys = usePasskeys();
-  const linkedX = x.data?.linked ? x.data : null;
-  const sol = payout.data?.solana.address ?? null;
-
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <SettingsCard
-          href={productHref("/account")}
-          title="Profile & account"
-          sub={session.user.email ?? "Photo, name, username"}
-          lead={<UserAvatar size={40} fallbackName={name ?? session.user.email} />}
-          body={name ?? "Add your name"}
-        />
-        <SettingsCard
-          href={productHref("/account?view=x")}
-          title="X account"
-          sub={linkedX ? (linkedX.canPublish ? "Verified, ready to publish" : "Not ready to publish yet") : "Listings publish under it"}
-          body={x.data === undefined ? null : linkedX ? `@${linkedX.handle}` : "Not connected"}
-          attention={!!x.data && !x.data.canPublish}
-        />
-        <SettingsCard
-          onClick={() => open("security")}
-          title="Security"
-          sub="Passkeys, recovery codes, phones"
-          body={passkeys === undefined ? null : passkeys === null ? "Passkeys" : `${passkeys.length} passkey${passkeys.length === 1 ? "" : "s"}`}
-        />
-        <SettingsCard
-          href={productHref("/account?view=payout")}
-          title="Payout"
-          sub="Where sponsors pay you, in USDC on Solana"
-          body={payout.data === undefined && !payout.error ? null : sol ? shortAddress(sol) : "Not set up"}
-          attention={!!payout.data && !sol}
-        />
-        <SettingsCard onClick={() => open("personalization")} title="Personalization" sub="Sidebar, your pages" body="Look and feel" />
-      </div>
-
-      <FootRow />
-    </div>
-  );
-}
-
-/** A card that opens its own screen: a link to another page, or a button for one of this page's screens. */
-function SettingsCard({
-  title,
-  sub,
-  body,
-  lead,
-  href,
-  onClick,
-  attention,
-}: {
-  title: string;
-  sub: string;
-  body: ReactNode;
-  lead?: ReactNode;
-  href?: string;
-  onClick?: () => void;
-  attention?: boolean;
-}) {
-  const inner = (
-    <>
-      <span className="flex items-center justify-between gap-2">
-        <span className="text-small font-medium text-text">{title}</span>
-        <IconChevronRight className="h-4 w-4 shrink-0 text-[#9FB7C2]" />
-      </span>
-      <span className="flex min-w-0 items-center gap-3">
-        {lead}
-        <span className="min-w-0">
-          {body === null ? (
-            <Skeleton className="h-5 w-28" />
-          ) : (
-            <span className={`block truncate text-body ${attention ? "text-amber" : "text-text"}`}>{body}</span>
-          )}
-          <span className="mt-0.5 block truncate text-tiny text-[#9FB7C2]">{sub}</span>
-        </span>
-      </span>
-    </>
-  );
-  const cls = `${glass} flex min-h-[120px] w-full min-w-0 flex-col justify-between gap-4 p-5 text-left transition-colors hover:bg-white/[0.06]`;
-  return href ? (
-    <Link href={href} className={cls}>
-      {inner}
-    </Link>
-  ) : (
-    <button type="button" onClick={onClick} className={cls}>
-      {inner}
-    </button>
-  );
-}
-
-/** Signed in as, sign out, and help and legal: one small row. */
-function FootRow() {
-  const { session } = useShell();
-  // On app.hihodl.xyz a bare /terms would be read as a page of the product.
-  const site = useSpacesBase().startsWith("/app") ? "" : WEBSITE;
-  const links = [
-    { label: "Support", href: "mailto:support@hihodl.xyz" },
-    { label: "Terms", href: `${site}/terms` },
-    { label: "Privacy", href: `${site}/privacy` },
-  ];
-  return (
-    <footer className="flex flex-col gap-3 border-t border-white/10 px-1 pt-4 sm:flex-row sm:items-center sm:justify-between">
-      <nav aria-label="Help and legal" className="flex flex-wrap items-center gap-x-4 gap-y-1 text-tiny">
-        {links.map((l) => (
-          <a
-            key={l.label}
-            href={l.href}
-            target={l.href.startsWith("mailto:") ? undefined : "_blank"}
-            rel="noopener noreferrer"
-            className="text-[#9FB7C2] hover:text-text"
-          >
-            {l.label}
-          </a>
-        ))}
-      </nav>
-      <div className="flex min-w-0 items-center gap-3">
-        <span className="min-w-0 truncate text-tiny text-[#9FB7C2]">{session.user.email ?? "Signed in"}</span>
-        <button type="button" onClick={() => void signOut()} className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-[8px] px-2 text-tiny text-[#CFE3EC] hover:bg-white/10 hover:text-text">
-          <IconSignOut className="h-3.5 w-3.5" />
-          Sign out
-        </button>
-      </div>
-    </footer>
-  );
-}
-
-/* ── Security ─────────────────────────────────────────────────────── */
+/* ── Data ─────────────────────────────────────────────────────────── */
 
 /** undefined while reading, null when it could not be read. */
 function usePasskeys(): RegisteredPasskey[] | null | undefined {
@@ -226,48 +92,307 @@ function usePasskeys(): RegisteredPasskey[] | null | undefined {
   return list;
 }
 
-function day(iso: string | null | undefined): string {
-  return iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "";
+type CodesStatus = { hasActiveCodes: boolean; unusedCount: number; generatedAt: string | null };
+
+function useCodes(): [CodesStatus | null | undefined, () => void] {
+  const [codes, setCodes] = useState<CodesStatus | null | undefined>(undefined);
+  const load = useCallback(() => {
+    recoveryCodesStatus().then(setCodes, () => setCodes(null));
+  }, []);
+  useEffect(load, [load]);
+  return [codes, load];
 }
 
-function Row({ title, children, action }: { title: string; children: ReactNode; action?: ReactNode }) {
+/* ── Home: the app's menu card ────────────────────────────────────── */
+
+function SettingsHome({ open }: { open: (s: Screen) => void }) {
+  const productHref = useProductHref();
+  const [codes] = useCodes();
+  // The app's badge on Account recovery: recovery codes never made.
+  const recoveryBadge = codes && !codes.hasActiveCodes ? 1 : 0;
   return (
-    <div className="flex flex-col gap-3 rounded-[14px] border border-white/10 bg-white/[0.03] p-4">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-small font-medium text-text">{title}</p>
-        {action}
+    <Column>
+      <HoldCard className="mt-1.5">
+        <MenuRow icon="shield-checkmark-outline" label="Security" onClick={() => open("security")} />
+        <MenuRow icon="key-outline" label="Account recovery" badge={recoveryBadge} onClick={() => open("recovery")} />
+        <MenuRow icon="log-in-outline" label="Sign-in" href={productHref("/account?view=account")} />
+        <MenuRow icon="contrast-outline" label="Appearance" onClick={() => open("personalization")} />
+        <MenuRow icon="help-circle-outline" label="Help & Support" href="mailto:support@hihodl.xyz" external />
+        <MenuRow icon="information-circle-outline" label="About HOLD" onClick={() => open("about")} />
+      </HoldCard>
+
+      {/* Sign Out: quieter than a row, on purpose (the app's signOutRow). */}
+      <button
+        type="button"
+        onClick={() => void signOut()}
+        className="mt-[18px] flex items-center justify-center gap-2 rounded-[12px] px-4 py-3.5 text-[15px] font-strong text-white/55 transition-colors hover:text-white/80"
+      >
+        <Ion name="log-out-outline" size={16} />
+        Sign Out
+      </button>
+
+      <p className="mt-[18px] text-center text-[12px] text-[#9FB7C2]">Need something else? We&apos;re here to help.</p>
+      <p className="mt-8 text-center text-[11px] font-strong tracking-[1.2px] text-white/55">HIHODL TECHNOLOGIES OÜ</p>
+    </Column>
+  );
+}
+
+/* ── Security (security.tsx) ──────────────────────────────────────── */
+
+function SecurityScreen({ onBack, open }: { onBack: () => void; open: (s: Screen) => void }) {
+  const productHref = useProductHref();
+  const passkeys = usePasskeys();
+  const phones = useLinkedPhones();
+  const n = phones.devices?.length ?? 0;
+  const phoneValue = phones.error ? "Unavailable" : phones.devices === undefined ? undefined : n === 0 ? "Not linked" : n === 1 ? "Linked" : `${n} phones`;
+  return (
+    <Column>
+      <BackHeader title="Security" onBack={onBack} />
+      <HoldCard className="mt-4">
+        {/* The app's "Link with the web", from this side: the phones that approve withdrawals. */}
+        <MenuRow icon="qr-code-outline" label="Link your phone" value={phoneValue} href={productHref("/account?view=phone")} />
+        <MenuRow
+          icon="finger-print-outline"
+          label="Passkeys"
+          value={passkeys === undefined ? undefined : passkeys === null ? "Unavailable" : String(passkeys.length)}
+          onClick={() => open("passkeys")}
+        />
+      </HoldCard>
+    </Column>
+  );
+}
+
+/* ── Account recovery (backup.tsx, the fintech "ways to get back in") ─ */
+
+function FactorRow({ icon, title, subtitle, active, divider, onClick }: { icon: IonName; title: string; subtitle: string; active: boolean | null; divider: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex w-full items-center gap-3.5 px-4 py-4 text-left transition-colors hover:bg-white/[0.03] ${divider ? "border-t border-white/[0.08]" : ""}`}
+    >
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-white/[0.08] text-white">
+        <Ion name={icon} size={20} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[14px] font-strong leading-5 text-white">{title}</span>
+        <span className="mt-[3px] block text-[13px] leading-[18px] text-white/55">{subtitle}</span>
+      </span>
+      {active === null ? (
+        <Skeleton className="h-6 w-10" />
+      ) : active ? (
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[12px] bg-[#3ED598] text-[#0A1A24]" aria-label="On">
+          <Ion name="checkmark" size={15} />
+        </span>
+      ) : (
+        <span className="shrink-0 text-[13px] font-strong text-amber">Set up</span>
+      )}
+    </button>
+  );
+}
+
+function RecoveryScreen({ onBack, open }: { onBack: () => void; open: (s: Screen) => void }) {
+  const passkeys = usePasskeys();
+  const [codes] = useCodes();
+  const [info, setInfo] = useState(false);
+  return (
+    <Column>
+      <BackHeader title="Account recovery" onBack={onBack} />
+      <div className="mt-4 flex items-start gap-2 px-1">
+        <p className="flex-1 text-[15px] font-medium leading-[21px] text-white/[0.72]">If you ever lose your phone, any of these brings your account back.</p>
+        <button type="button" aria-label="How recovery works" aria-expanded={info} onClick={() => setInfo((v) => !v)} className="mt-px text-amber">
+          <Ion name="information-circle-outline" size={20} />
+        </button>
       </div>
-      {children}
+
+      {info ? (
+        <HoldCard className="mt-4 flex flex-col items-center gap-3 px-5 py-6 text-center">
+          <span className="flex h-[54px] w-[54px] items-center justify-center rounded-[27px] bg-amber/[0.12] text-amber">
+            <Ion name="shield-checkmark" size={24} />
+          </span>
+          <p className="text-[19px] font-strong text-white">How you get back in</p>
+          <p className="text-[14px] leading-5 text-white/[0.72]">
+            Your money lives in your wallet, not with us, so we can never move it on our own. To make sure you can always get back in, set up at least two
+            ways below.
+          </p>
+          <p className="text-[14px] leading-5 text-white/[0.72]">
+            Recovery codes are one-time backups. Save them somewhere that is not your email, like your password manager.
+          </p>
+          <p className="text-[13px] text-white/55">The more ways you set up, the safer you are.</p>
+        </HoldCard>
+      ) : null}
+
+      <HoldCard className="mt-[18px]">
+        <FactorRow
+          icon="finger-print-outline"
+          title="Passkey"
+          subtitle="Unlock with your face. Works on your new phone automatically."
+          active={passkeys === undefined ? null : !!passkeys && passkeys.length > 0}
+          divider={false}
+          onClick={() => open("passkeys")}
+        />
+        <FactorRow
+          icon="grid-outline"
+          title="Recovery codes"
+          subtitle="One-time codes. Save them somewhere that is not your email."
+          active={codes === undefined ? null : !!codes?.hasActiveCodes}
+          divider
+          onClick={() => open("codes")}
+        />
+      </HoldCard>
+      <p className="mt-4 px-4 text-center text-[13px] leading-[18px] text-[#9FB7C2]">Set up at least two. You can change these anytime.</p>
+    </Column>
+  );
+}
+
+/* ── Passkeys (passkeys.tsx) ──────────────────────────────────────── */
+
+function added(iso: string): string {
+  const days = Math.floor((Date.now() - Date.parse(iso)) / 86_400_000);
+  if (!Number.isFinite(days)) return "";
+  if (days < 1) return "today";
+  if (days === 1) return "yesterday";
+  if (days < 30) return `${days}d ago`;
+  const months = Math.floor(days / 30);
+  return months === 1 ? "1mo ago" : `${months}mo ago`;
+}
+
+function PasskeysScreen({ onBack }: { onBack: () => void }) {
+  const productHref = useProductHref();
+  const w = useHoldWallet();
+  const passkeys = usePasskeys();
+  const [info, setInfo] = useState(false);
+  // Adding a passkey happens in the Wallet, which carries a strict CSP only a full page load can set.
+  const add = w.walletPage ? (
+    <a href={productHref("/wallet")} className={passkeys && passkeys.length > 0 ? ctaSecondary : ctaPrimary}>
+      <Ion name="add" size={18} />
+      {passkeys && passkeys.length > 0 ? "Add another device" : "Add a passkey"}
+    </a>
+  ) : null;
+  return (
+    <Column>
+      <BackHeader
+        title="Passkeys"
+        onBack={onBack}
+        right={
+          <button type="button" aria-label="What are passkeys?" aria-expanded={info} onClick={() => setInfo((v) => !v)} className="flex h-9 w-9 items-center justify-center text-white/70 hover:text-white">
+            <Ion name="information-circle-outline" size={24} />
+          </button>
+        }
+      />
+      {info ? (
+        <HoldCard className="mb-4 mt-2 flex flex-col items-center gap-3 px-5 py-6 text-center">
+          <span className="flex h-[60px] w-[60px] items-center justify-center rounded-[30px] bg-amber/[0.12] text-amber">
+            <Ion name="finger-print" size={30} />
+          </span>
+          <p className="text-[20px] font-strong text-white">What are passkeys?</p>
+          <p className="text-[14px] leading-[21px] text-white/65">Passkeys let you sign in with Face ID or your fingerprint — no password and no recovery phrase to type.</p>
+          <p className="text-[14px] leading-[21px] text-white/65">
+            Each device you sign in from registers its own passkey, so you can add or remove them independently here.
+          </p>
+        </HoldCard>
+      ) : null}
+
+      {passkeys === undefined ? (
+        <div className="mt-4 flex flex-col gap-3">
+          <Skeleton className="h-[74px] rounded-[16px]" />
+          <Skeleton className="h-[74px] rounded-[16px]" />
+        </div>
+      ) : passkeys === null ? (
+        <div className="mt-4">
+          <Notice icon="alert-circle-outline" tone="calm">
+            Failed to load passkeys
+          </Notice>
+        </div>
+      ) : passkeys.length === 0 ? (
+        <div className="mt-4 flex flex-col items-center gap-2 rounded-[18px] border border-amber/[0.22] bg-amber/[0.06] p-5 text-center">
+          <span className="mb-0.5 flex h-[54px] w-[54px] items-center justify-center rounded-[27px] bg-amber/[0.12] text-amber">
+            <Ion name="finger-print" size={26} />
+          </span>
+          <p className="text-[17px] font-strong text-white">Protect this device</p>
+          <p className="mb-2 px-1 text-[13px] leading-[19px] text-white/60">
+            This device doesn&apos;t have a passkey yet. Add one to sign in with Face ID or your fingerprint — no password needed.
+          </p>
+          {add ? <div className="w-full">{add}</div> : null}
+        </div>
+      ) : (
+        <>
+          <p className="mb-3 mt-4 px-0.5 text-[12px] font-strong uppercase tracking-[0.6px] text-white/55">All passkeys</p>
+          <div className="mb-4 flex flex-col gap-3">
+            {passkeys.map((p) => (
+              <div key={p.id} className="flex items-center gap-3 rounded-[16px] border border-white/[0.08] bg-white/[0.05] p-3.5">
+                <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[10px] bg-amber/10 text-amber">
+                  <Ion name={p.deviceType === "singleDevice" ? "phone-portrait-outline" : "key-outline"} size={20} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[15px] font-strong text-white">{p.name || "Passkey"}</span>
+                  <span className="mt-[3px] block text-[12px] font-medium text-white/55">Added {added(p.createdAt)}</span>
+                </span>
+              </div>
+            ))}
+          </div>
+          {add}
+        </>
+      )}
+
+      <div className="flex items-start gap-2.5 px-1 pt-[18px]">
+        <Ion name="shield-checkmark-outline" size={18} className="shrink-0 text-white/55" />
+        <p className="flex-1 text-[12px] leading-[17px] text-white/55">
+          Removing the last passkey is not allowed. To replace it, add a new one first, then remove the old.
+        </p>
+      </div>
+    </Column>
+  );
+}
+
+/* ── Recovery codes (recovery-codes.tsx, the email flow) ──────────── */
+
+function maskEmail(email: string): string {
+  const at = email.indexOf("@");
+  if (at <= 0) return email;
+  return `${email.slice(0, Math.min(2, at))}•••@${email.slice(at + 1)}`;
+}
+
+function ago(iso: string | null): string {
+  if (!iso) return "previously";
+  const days = Math.floor((Date.now() - Date.parse(iso)) / 86_400_000);
+  if (!Number.isFinite(days)) return "previously";
+  if (days < 1) return "today";
+  if (days === 1) return "1 day ago";
+  if (days < 30) return `${days} days ago`;
+  const months = Math.floor(days / 30);
+  return months === 1 ? "1 month ago" : `${months} months ago`;
+}
+
+function Box({ icon, children, tone }: { icon: IonName; children: ReactNode; tone: "warn" | "info" }) {
+  return (
+    <div className={`flex items-start gap-3 rounded-[12px] p-4 ${tone === "warn" ? "border border-amber/30 bg-amber/10" : "bg-white/[0.05]"}`}>
+      <Ion name={icon} size={20} className={tone === "warn" ? "shrink-0 text-amber" : "shrink-0 text-white/60"} />
+      <p className={`flex-1 text-[14px] leading-5 ${tone === "warn" ? "text-white/90" : "text-[13px] leading-[18px] text-white/60"}`}>{children}</p>
     </div>
   );
 }
 
-function SecurityScreen({ onBack }: { onBack: () => void }) {
+function CodesScreen({ onBack }: { onBack: () => void }) {
   const { session } = useShell();
-  const productHref = useProductHref();
-  const w = useHoldWallet();
-  const passkeys = usePasskeys();
-  const phones = useLinkedPhones();
-
-  const [codes, setCodes] = useState<{ hasActiveCodes: boolean; unusedCount: number; generatedAt: string | null } | null | undefined>(undefined);
+  const [codes, reload] = useCodes();
   const [confirm, setConfirm] = useState(false);
   const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  const loadCodes = useCallback(() => {
-    recoveryCodesStatus().then(setCodes, () => setCodes(null));
-  }, []);
-  useEffect(loadCodes, [loadCodes]);
   const email = session.user.email ?? null;
+  const masked = email ? maskEmail(email) : "your email";
+  const has = !!codes?.hasActiveCodes;
 
-  const sendCodes = async () => {
+  const send = async () => {
     if (!email) return;
     setSending(true);
     setNotice(null);
     try {
       await emailRecoveryCodes(email);
       setConfirm(false);
-      setNotice(`New codes are on their way to ${email}.`);
-      loadCodes();
+      setSent(true);
+      reload();
     } catch (e) {
       setNotice(describeCreatorError(e));
     } finally {
@@ -275,131 +400,171 @@ function SecurityScreen({ onBack }: { onBack: () => void }) {
     }
   };
 
-  const phoneCount = phones.devices?.length ?? 0;
+  const badge = (icon: IonName, good: boolean) => (
+    <span
+      className={`mx-auto mb-6 flex h-[72px] w-[72px] items-center justify-center rounded-[36px] border ${
+        good ? "border-[rgba(76,175,80,0.28)] bg-[rgba(76,175,80,0.12)] text-[#4CAF50]" : "border-amber/[0.28] bg-amber/[0.12] text-amber"
+      }`}
+    >
+      <Ion name={icon} size={34} />
+    </span>
+  );
 
   return (
-    <section className={`${glass} flex w-full max-w-[600px] flex-col gap-4 p-5 sm:p-6`}>
-      <ScreenHeader title="Security" onBack={onBack} />
-
-      <Row
-        title="Passkeys"
-        action={
-          w.walletPage ? (
-            // The Wallet page carries a strict CSP that only a full page load can set.
-            <a href={productHref("/wallet")} className="text-tiny text-amber hover:text-[#FFE2A1]">
-              Manage in Wallet
-            </a>
-          ) : null
-        }
-      >
-        {passkeys === undefined ? (
-          <Skeleton className="h-10" />
-        ) : passkeys === null ? (
-          <Note>We could not read your passkeys right now.</Note>
-        ) : passkeys.length === 0 ? (
-          <Note>No passkey yet. Your wallet asks for one when you make it.</Note>
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {passkeys.map((p) => (
-              <li key={p.id} className="flex items-center justify-between gap-3">
-                <span className="min-w-0 truncate text-small text-text">{p.name || "Passkey"}</span>
-                <span className="shrink-0 text-tiny text-[#9FB7C2]">Added {day(p.createdAt)}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Row>
-
-      <Row title="Recovery codes">
-        {codes === undefined ? (
-          <Skeleton className="h-10" />
-        ) : codes === null ? (
-          <Note>We could not read your recovery codes right now.</Note>
-        ) : (
-          <p className="text-small text-[#CFE3EC]">
-            {codes.hasActiveCodes
-              ? `${codes.unusedCount} unused${codes.generatedAt ? `, sent ${day(codes.generatedAt)}` : ""}. Each one gets you back in once if you lose your passkeys.`
-              : "None yet. They get you back in if you lose your passkeys."}
+    <Column>
+      <BackHeader title="Recovery Codes" onBack={onBack} />
+      {codes === undefined ? (
+        <Skeleton className="mt-4 h-72 rounded-[28px]" />
+      ) : sent ? (
+        <div className="mt-4 flex flex-col">
+          {badge("mail-open-outline", true)}
+          <p className="mb-3 text-center text-[24px] font-strong text-white">Check your email</p>
+          <p className="mb-5 text-center text-[15px] leading-[22px] text-white/70">
+            We just sent your recovery codes to {masked}. Keep that email somewhere safe — you&apos;ll need a code to get back into your account.
           </p>
-        )}
-        {confirm ? (
-          <div className="flex flex-col gap-2">
-            <p className="text-small text-text">
-              Eight new codes go to {email}. The ones you have now stop working as soon as they arrive.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <button type="button" className={btnGhost} disabled={sending} onClick={() => void sendCodes()}>
-                {sending ? "Sending…" : "Send new codes"}
-              </button>
-              <button type="button" className={btnLink} disabled={sending} onClick={() => setConfirm(false)}>
-                Not now
-              </button>
-            </div>
+          <div className="mb-6 flex justify-center">
+            <span className="inline-flex h-9 items-center gap-2 rounded-[18px] border border-[rgba(76,175,80,0.28)] bg-[rgba(76,175,80,0.1)] px-3.5 text-[14px] font-strong text-[#4CAF50]">
+              <Ion name="mail-outline" size={16} />
+              {masked}
+            </span>
           </div>
-        ) : email && codes !== undefined ? (
-          <div>
-            <button type="button" className={btnGhost} onClick={() => setConfirm(true)}>
-              {codes?.hasActiveCodes ? "Email me new codes" : "Email me codes"}
+          <Box icon="information-circle-outline" tone="info">
+            Each code can only be used once. After using a code, generate new ones if needed.
+          </Box>
+          <div className="mt-5 flex flex-col gap-3">
+            <button type="button" className={ctaPrimary} onClick={onBack}>
+              Done
             </button>
           </div>
-        ) : null}
-        {notice ? <Warn>{notice}</Warn> : null}
-      </Row>
-
-      <Row
-        title="Phones that approve withdrawals"
-        action={
-          <Link href={productHref("/account?view=phone")} className="text-tiny text-amber hover:text-[#FFE2A1]">
-            Manage
-          </Link>
-        }
-      >
-        {phones.devices === undefined && !phones.error ? (
-          <Skeleton className="h-6 w-1/2" />
-        ) : (
-          <p className="text-small text-[#CFE3EC]">
-            {phones.error ? "We could not read your phones right now." : phoneCount === 0 ? "None linked yet." : `${phoneCount} linked`}
+        </div>
+      ) : (
+        <div className="mt-4 flex flex-col">
+          {badge(has ? "shield-checkmark-outline" : "key-outline", has)}
+          <p className="mb-3 text-center text-[24px] font-strong text-white">{has ? "Recovery Codes Active" : "Recovery Codes"}</p>
+          <p className="mb-5 text-center text-[15px] leading-[22px] text-white/70">
+            {codes === null
+              ? "We could not read your recovery codes right now."
+              : has
+                ? `You generated recovery codes ${ago(codes.generatedAt)}. They're valid until you regenerate or use them.${codes.unusedCount ? ` ${codes.unusedCount} unused.` : ""}`
+                : "Recovery codes are backup codes that can be used to recover your account if you lose access to your device or forget your password."}
           </p>
-        )}
-      </Row>
-
-      <div>
-        <button type="button" className={btnGhost} onClick={() => void signOut()}>
-          <IconSignOut className="h-3.5 w-3.5" />
-          Sign out
-        </button>
-      </div>
-    </section>
+          <div className="mx-auto mb-6 flex max-w-[340px] items-start gap-2 px-1">
+            <Ion name="mail-outline" size={16} className="mt-px shrink-0 text-white/55" />
+            <p className="flex-1 text-[13px] leading-[18px] text-white/55">
+              We&apos;ll send them to {masked}. Generate new ones here anytime — it replaces the old set.
+            </p>
+          </div>
+          <Box icon={has ? "refresh-outline" : "warning-outline"} tone="warn">
+            {has
+              ? "Regenerating will invalidate your existing codes immediately. Only do this if you have lost or compromised the old ones."
+              : "Keep the email somewhere safe. Anyone with these codes can recover your account, so don't forward or share them."}
+          </Box>
+          {notice ? (
+            <div className="mt-4">
+              <Notice>{notice}</Notice>
+            </div>
+          ) : null}
+          {confirm ? (
+            <HoldCard className="mt-5 flex flex-col gap-3 p-5">
+              <p className="text-[17px] font-strong text-white">{has ? "Regenerate Recovery Codes?" : "Generate Recovery Codes?"}</p>
+              <p className="text-[14px] leading-5 text-white/[0.72]">
+                {has
+                  ? "Your existing recovery codes will be invalidated immediately. We'll email a fresh set to your inbox. Only do this if you've lost or compromised the old ones."
+                  : "We'll create your recovery codes and email them straight to you. Use them to get back into your account if you ever lose access."}
+              </p>
+              <button type="button" className={ctaPrimary} disabled={sending} onClick={() => void send()}>
+                {sending ? "Sending…" : has ? "Regenerate" : "Generate"}
+              </button>
+              <button type="button" className="h-11 text-[15px] font-strong text-white/80 hover:text-white" disabled={sending} onClick={() => setConfirm(false)}>
+                Cancel
+              </button>
+            </HoldCard>
+          ) : email ? (
+            <div className="mt-5">
+              <button type="button" className={ctaPrimary} onClick={() => setConfirm(true)}>
+                {has ? "Regenerate Recovery Codes" : "Generate & email my codes"}
+              </button>
+            </div>
+          ) : null}
+        </div>
+      )}
+    </Column>
   );
 }
 
-/* ── Personalization ──────────────────────────────────────────────── */
+/* ── Appearance (settings/index.tsx › Appearance, the web's rows) ──── */
 
 function PersonalizationScreen({ onBack }: { onBack: () => void }) {
   const { role } = useShell();
   const { collapsed, setCollapsed } = useShellPrefs();
   const productHref = useProductHref();
   return (
-    <section className={`${glass} flex w-full max-w-[600px] flex-col gap-4 p-5 sm:p-6`}>
-      <ScreenHeader title="Personalization" onBack={onBack} />
-
-      <Row title="Sidebar">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-tiny text-[#9FB7C2]">On a wide screen. Remembered in this browser.</p>
-          <Segmented
-            label="Sidebar"
-            value={collapsed ? "icons" : "full"}
-            onChange={(v) => setCollapsed(v === "icons")}
-            options={[
-              { value: "full", label: "Full" },
-              { value: "icons", label: "Icons only" },
-            ]}
-          />
+    <Column>
+      <BackHeader title="Appearance" onBack={onBack} />
+      <SectionTitle>Sidebar</SectionTitle>
+      <HoldCard>
+        <div className="flex items-center gap-3 px-3 py-5">
+          <Ion name="contrast-outline" size={18} className="shrink-0 text-white" />
+          <span className="min-w-0 flex-1 pr-3">
+            <span className="block text-[16px] font-strong leading-[21px] tracking-[0.1px] text-white">Icons only</span>
+            <span className="mt-0.5 block text-[13px] leading-[17px] text-white/[0.62]">Keep the sidebar narrow on a wide screen. Remembered in this browser.</span>
+          </span>
+          <Switch checked={collapsed} onChange={setCollapsed} label="Icons only" />
         </div>
-      </Row>
+      </HoldCard>
 
       {/* Your pages: what a creator's public pages stand on (../spaces/YourPages). */}
-      {role === "creator" ? <YourPagesCard href={productHref("/settings?screen=pages")} /> : null}
-    </section>
+      {role === "creator" ? (
+        <>
+          <SectionTitle>Your pages</SectionTitle>
+          <YourPagesCard href={productHref("/settings?screen=pages")} />
+        </>
+      ) : null}
+    </Column>
+  );
+}
+
+/* ── About (about.tsx) ────────────────────────────────────────────── */
+
+function AboutScreen({ onBack }: { onBack: () => void }) {
+  // On app.hihodl.xyz a bare /terms would be read as a page of the product.
+  const site = useSpacesBase().startsWith("/app") ? "" : WEBSITE;
+  const social = (label: string, icon: IonName, href: string) => (
+    <a
+      key={label}
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex flex-1 flex-col items-center gap-2 rounded-[16px] py-3.5 text-white transition-colors hover:bg-white/[0.04]"
+    >
+      <span className="flex h-11 w-11 items-center justify-center rounded-[22px] bg-white/[0.08]">
+        <Ion name={icon} size={20} />
+      </span>
+      <span className="text-[12px] font-strong text-white/[0.72]">{label}</span>
+    </a>
+  );
+  return (
+    <Column>
+      <BackHeader title="About" onBack={onBack} />
+      <SectionTitle>Connect</SectionTitle>
+      <HoldCard>
+        <MenuRow icon="globe-outline" label="Website" href={`${WEBSITE}`} external />
+      </HoldCard>
+
+      <SectionTitle>Follow us</SectionTitle>
+      <HoldCard className="flex px-2 py-1">
+        {social("X", "fa6:x-twitter", "https://x.com/hiihodl")}
+        {social("LinkedIn", "fa6:linkedin", "https://www.linkedin.com/company/hihodl")}
+        {social("Telegram", "fa6:telegram", "https://t.me/HiHODLchat")}
+      </HoldCard>
+
+      <SectionTitle>Legal</SectionTitle>
+      <HoldCard>
+        <MenuRow icon="document-text-outline" label="Terms of Service" href={`${site}/terms`} external />
+        <MenuRow icon="shield-outline" label="Privacy Policy" href={`${site}/privacy`} external />
+      </HoldCard>
+
+      <p className="mt-6 text-center text-[12px] text-[#9FB7C2]">Made for freelancers around the world.</p>
+    </Column>
   );
 }

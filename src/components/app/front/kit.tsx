@@ -70,15 +70,18 @@ export function Avatar({
   name,
   size = 48,
   onError,
+  round = false,
 }: {
   src: string | null | undefined;
   name: string;
   size?: number;
+  /** A circle, as the app draws a person (src/ui/UserAvatar). */
+  round?: boolean;
   /** A signed photo expires within the hour: the caller may read a fresh one. */
   onError?: () => void;
 }) {
   const initial = (name.replace(/^@/, "").trim()[0] ?? "?").toUpperCase();
-  const style = { width: size, height: size, borderRadius: Math.round(size * 0.28) };
+  const style = { width: size, height: size, borderRadius: round ? size / 2 : Math.round(size * 0.28) };
   const [broken, setBroken] = useState<string | null>(null);
   if (src && broken !== src) {
     // eslint-disable-next-line @next/next/no-img-element

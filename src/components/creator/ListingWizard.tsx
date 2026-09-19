@@ -31,11 +31,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
-import { btnPrimary, btnSecondary, btnSmallSecondary, pill } from "@/components/ad-space/ui";
 import { useHref } from "@/components/app/base";
-import { glass } from "@/components/app/ui";
+import { BackHeader, ctaCommit, ctaPrimary, Notice as HoldNotice } from "@/components/app/hold";
+import { Ion, type IonName } from "@/components/app/ion";
+import { Body, Empty, SectionLabel } from "@/components/app/spaces/kit";
 import { useRefresh } from "@/lib/app/spaces-data";
 import type { Chain } from "@/lib/ad-space/types";
 import { describeCreatorError } from "@/lib/creator/api";
@@ -231,34 +232,48 @@ export function ListingWizard({
     }
   }
 
+  const title = spaceId ? "Draft" : "New space";
+  const back = () => router.push(href("/listings"));
+
   if (loadError) {
     return (
-      <Shell stage={stage}>
-        <Notice>{loadError}</Notice>
-      </Shell>
+      <Frame title={title} onBack={back}>
+        <Empty icon="cloud-offline-outline" title="This draft isn't loading" body={loadError} />
+      </Frame>
     );
   }
   if (!templates) {
     return (
-      <Shell stage={stage}>
+      <Frame title={title} onBack={back}>
         <Loading what="what you can sell" />
-      </Shell>
+      </Frame>
     );
   }
 
   if (stage === "template" || !template || !draft) {
+    const stages = stagesFor(template);
     return (
-      <Shell stage="template">
+      <Frame
+        title={title}
+        subtitle={`Step 1 of ${stages.length} · ${stages[0].label}`}
+        onBack={back}
+        footer={
+          <button type="button" className={ctaPrimary} disabled={!template || !draft} onClick={() => setStage("basics")}>
+            Next
+          </button>
+        }
+      >
         <TemplateStep
           templates={templates}
           chosen={template}
+          locked={!!spaceId}
           onChoose={(t) => {
+            if (spaceId || t.id === template?.id) return;
             setTemplate(t);
             setDraft({ ...draftFor(t), chains, inspiredBy: inspiredBy ?? null });
-            setStage("basics");
           }}
         />
-      </Shell>
+      </Frame>
     );
   }
 
@@ -266,11 +281,57 @@ export function ListingWizard({
   const blocked = stepProblems.length > 0;
   const stages = stagesFor(template);
   const at = stages.findIndex((s) => s.key === stage);
-  const previous = stages[Math.max(0, at - 1)].key;
+  // A saved draft keeps its product: its first step is the one after the picker.
+  const first = spaceId ? 1 : 0;
+  const previous = at > first ? stages[at - 1].key : null;
   const next = stages[Math.min(stages.length - 1, at + 1)].key;
+  // The draft reaches the server once there is something to sell: the step before "Go live" saves.
+  const saves = next === "publish";
 
   return (
-    <Shell stage={stage} spaceId={spaceId} stages={stages}>
+    <Frame
+      title={title}
+      subtitle={`Step ${at + 1} of ${stages.length} · ${stages[at].label}`}
+      onBack={previous ? () => setStage(previous) : back}
+      right={
+        spaceId ? (
+          <button type="button" className={btnSave} disabled={busy !== null} onClick={() => void save()}>
+            {busy === "saving" ? "Saving…" : "Save"}
+          </button>
+        ) : null
+      }
+      footer={
+        <>
+          {stage === "publish" ? (
+            <button type="button" className={ctaCommit} disabled={problems.length > 0 || busy !== null} onClick={() => void publish()}>
+              {busy === "publishing" ? "Publishing…" : "Publish"}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={ctaPrimary}
+              disabled={blocked || busy !== null}
+              onClick={() => {
+                if (!saves) {
+                  setStage(next);
+                  return;
+                }
+                void (async () => {
+                  const id = await save();
+                  if (id) setStage("publish");
+                })();
+              }}
+            >
+              {busy === "saving" ? "Saving…" : saves ? "Save and continue" : "Next"}
+            </button>
+          )}
+          {blocked && stage !== "publish" ? (
+            <p className="mt-2 text-center text-[12px] leading-4 text-white/55">Fill in what&rsquo;s marked above to continue.</p>
+          ) : null}
+        </>
+      }
+    >
+      {stage !== "publish" && banner ? <Notice>{banner}</Notice> : null}
       {stage === "basics" ? (
         <BasicsStep
           draft={draft}
@@ -290,96 +351,55 @@ export function ListingWizard({
           template={template}
           onChange={setDraft}
           problems={problems}
-          onPublish={() => void publish()}
-          publishing={busy === "publishing"}
           banner={banner}
           fix={fix}
           canPublish={problems.length === 0 && busy === null}
         />
       )}
-
-      {stage !== "publish" && banner ? <Notice>{banner}</Notice> : null}
-
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[color:var(--color-hairline)] pt-6">
-        <button
-          type="button"
-          className={btnSecondary}
-          onClick={() => setStage(previous)}
-        >
-          Back
-        </button>
-
-        <div className="flex flex-wrap items-center gap-3">
-          {spaceId ? (
-            <button type="button" className={btnSmallSecondary} disabled={busy !== null} onClick={() => void save()}>
-              {busy === "saving" ? "Saving…" : "Save and finish later"}
-            </button>
-          ) : null}
-          {stage !== "publish" ? (
-            <button
-              type="button"
-              className={btnPrimary}
-              disabled={blocked || busy !== null}
-              onClick={() => {
-                // The draft reaches the server once there is something to sell;
-                // every step before "the spots" only moves on.
-                if (next !== "publish") {
-                  setStage(next);
-                  return;
-                }
-                void (async () => {
-                  const id = await save();
-                  if (id) setStage("publish");
-                })();
-              }}
-            >
-              {busy === "saving" ? "Saving…" : "Continue"}
-            </button>
-          ) : null}
-        </div>
-      </div>
-
-      {blocked && stage !== "publish" ? (
-        <p className="text-tiny text-text-muted">Fill in what’s marked above to continue.</p>
-      ) : null}
-    </Shell>
+    </Frame>
   );
 }
 
-/* ── The page around it ───────────────────────────────────────────── */
+/* ── The screen around it: the app's create.tsx ──────────────────── */
 
-function Shell({
-  stage,
-  spaceId,
-  stages = STAGES,
+/** The header's Save: a small glass pill, 36 high. */
+const btnSave =
+  "inline-flex h-9 items-center justify-center whitespace-nowrap rounded-[18px] border border-white/[0.22] bg-white/10 px-3.5 text-[13px] font-bold text-white transition-colors hover:bg-white/[0.14] disabled:opacity-45";
+
+/**
+ * TravelScreen with TravelHeader ("New space" or "Draft", and "Step n of N ·
+ * name" under it), the step in one column, and the footer holding the one
+ * button that moves on, on the footer ground with a hairline over it.
+ */
+function Frame({
+  title,
+  subtitle,
+  onBack,
+  right,
+  footer,
   children,
 }: {
-  stage: Stage;
-  spaceId?: string | null;
-  stages?: readonly { key: Stage; label: string }[];
-  children: React.ReactNode;
+  title: string;
+  subtitle?: string;
+  onBack: () => void;
+  right?: ReactNode;
+  footer?: ReactNode;
+  children: ReactNode;
 }) {
-  const index = stages.findIndex((s) => s.key === stage);
   return (
-    <div className="mx-auto flex w-full max-w-[860px] flex-col gap-4">
-      <ol className="flex flex-wrap gap-2" aria-label="Steps">
-        {stages.map((s, i) => (
-          <li key={s.key}>
-            <span className={i === index ? pill.sold : i < index ? pill.done : pill.neutral}>
-              {i + 1}. {s.label}
-            </span>
-          </li>
-        ))}
-      </ol>
-
-      <div className={`${glass} flex min-w-0 flex-col gap-8 p-5 sm:p-7`}>{children}</div>
-
-      {spaceId ? <p className="text-tiny text-text-muted">Draft saved. Only you can see it.</p> : null}
+    <div className="mx-auto flex w-full max-w-[640px] flex-col">
+      <BackHeader title={title} subtitle={subtitle} onBack={onBack} right={right} />
+      <div className="flex min-w-0 flex-col gap-3.5 pb-6 pt-1">{children}</div>
+      {footer ? (
+        <div className="sticky bottom-0 z-20 rounded-t-[18px] border-t border-white/[0.08] bg-[#0a1929] px-4 pb-[calc(12px+env(safe-area-inset-bottom,0px))] pt-2.5">
+          {footer}
+        </div>
+      ) : null}
     </div>
   );
 }
 
-/* ── Pick your hook ───────────────────────────────────────────────── */
+/* ── Pick your hook: the app's TemplateStep ───────────────────────── */
 
 /*
  * What creators learned selling at TOKEN2049: the product is the hook. A
@@ -388,87 +408,143 @@ function Shell({
  * come first, and the content after them, as what brands come back for.
  */
 
+/** The outline the app draws on a product card, when the catalogue sends one. */
+type Outlined = Template & { views?: { viewBox: [number, number]; outline: string[] }[] };
+
 function TemplateStep({
   templates,
   chosen,
+  locked,
   onChoose,
 }: {
   templates: readonly Template[];
   chosen: Template | null;
+  locked: boolean;
   onChoose: (t: Template) => void;
 }) {
-  const services = templates.filter((t) => t.kind === "service");
-  const placements = templates.filter((t) => t.kind === "placement");
+  const products = templates.filter((t) => t.kind !== "service");
+  const services = templates.filter((t) => t.kind === "service" && t.service?.format !== "session");
+  const sessions = templates.filter((t) => t.kind === "service" && t.service?.format === "session");
 
   return (
-    <div className="flex flex-col gap-10">
-      <div className="flex flex-col gap-2">
-        <h2 className="text-body text-text">Pick your hook</h2>
-        <p className="text-small text-text-muted">
-          The product is why people look. What a brand pays for is your reach and the content you make. Go up early, and
-          pick something people don&rsquo;t expect to see.
-        </p>
-      </div>
-      <Group
-        title="Products"
-        why="Spots on something you carry or wear: a suitcase, a jacket, a helmet."
-        list={placements}
-        chosen={chosen}
-        onChoose={onChoose}
-        describe={(t) => `${t.zones.length} ${t.zones.length === 1 ? "spot" : "spots"} on it`}
-      />
-      <Group
-        title="Content"
-        why="What brands come back for: videos, coverage, content for their own channels, time in person."
-        list={services}
-        chosen={chosen}
-        onChoose={onChoose}
-        describe={(t) => t.service?.summary ?? ""}
-      />
+    <div className="flex flex-col gap-3.5">
+      <Body dim>
+        Pick your hook. The product is why people look; what a brand pays for is your reach and the content you make. The spots
+        and their sizes come with the product; you choose which to sell and for how much.
+      </Body>
+      {locked ? (
+        <HoldNotice tone="calm">This draft is saved with its product. Delete the draft to start over with another.</HoldNotice>
+      ) : null}
+
+      {products.length ? (
+        <>
+          <Shelf title="Ad Space" hint="Spots on something you carry or wear. The less people expect it, the more they look." />
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+            {products.map((t) => {
+              const on = t.id === chosen?.id;
+              const view = (t as Outlined).views?.[0];
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  aria-pressed={on}
+                  disabled={locked && !on}
+                  onClick={() => onChoose(t)}
+                  className={`flex flex-col gap-1.5 rounded-[18px] border p-3.5 text-left transition-colors ${
+                    on ? "border-[#F1F5F9] bg-[rgba(241,245,249,0.10)]" : "border-white/10 bg-white/[0.06] hover:bg-white/[0.09]"
+                  } ${locked && !on ? "opacity-40" : ""}`}
+                >
+                  <span className="flex h-[110px] items-center justify-center">
+                    {view ? (
+                      <svg viewBox={`0 0 ${view.viewBox[0]} ${view.viewBox[1]}`} className="h-full max-h-[110px] w-full" aria-hidden>
+                        {view.outline.map((d, i) => (
+                          <path
+                            key={i}
+                            d={d}
+                            fill="none"
+                            stroke={on ? "#FFFFFF" : "rgba(255,255,255,0.55)"}
+                            strokeWidth={Math.max(0.6, view.viewBox[0] / 120)}
+                          />
+                        ))}
+                      </svg>
+                    ) : (
+                      <Ion name="cube-outline" size={34} className="text-white/55" />
+                    )}
+                  </span>
+                  <span className="line-clamp-2 text-[14.5px] font-extrabold tracking-[-0.2px] text-white">{t.name}</span>
+                  <span className="text-[12px] font-strong text-white/55">{t.zones.length} spots</span>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      ) : null}
+
+      {services.length ? (
+        <>
+          <Shelf title="Services" hint="What brands come back for: an interview, a video, a post, content for their own channels." />
+          {services.map((t) => (
+            <OfferCard key={t.id} t={t} on={t.id === chosen?.id} locked={locked} icon="videocam-outline" onChoose={onChoose} unit="slots" />
+          ))}
+        </>
+      ) : null}
+
+      {sessions.length ? (
+        <>
+          <Shelf title="In the room" hint="Your time at an event: host, moderate, review pitches." />
+          {sessions.map((t) => (
+            <OfferCard key={t.id} t={t} on={t.id === chosen?.id} locked={locked} icon="people-outline" onChoose={onChoose} unit="sessions" />
+          ))}
+        </>
+      ) : null}
     </div>
   );
 }
 
-function Group({
-  title,
-  why,
-  list,
-  chosen,
-  onChoose,
-  describe,
-}: {
-  title: string;
-  why: string;
-  list: readonly Template[];
-  chosen: Template | null;
-  onChoose: (t: Template) => void;
-  describe: (t: Template) => string;
-}) {
-  if (list.length === 0) return null;
+function Shelf({ title, hint }: { title: string; hint: string }) {
   return (
-    <section className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2">
-        <h2 className="text-body text-text">{title}</h2>
-        <p className="text-small text-text-muted">{why}</p>
-      </div>
-      <ul className="grid gap-3 sm:grid-cols-2">
-        {list.map((t) => (
-          <li key={t.id}>
-            <button
-              type="button"
-              onClick={() => onChoose(t)}
-              className={`flex h-full w-full flex-col gap-2 rounded-card border p-4 text-left transition-colors duration-180 ${
-                chosen?.id === t.id
-                  ? "border-amber bg-amber/10"
-                  : "border-[color:var(--color-hairline-strong)] hover:bg-white/5"
-              }`}
-            >
-              <span className="text-small text-text">{t.name}</span>
-              <span className="text-tiny text-text-muted">{describe(t)}</span>
-            </button>
-          </li>
-        ))}
-      </ul>
-    </section>
+    <div className="flex flex-col gap-1">
+      <SectionLabel>{title}</SectionLabel>
+      <Body dim>{hint}</Body>
+    </div>
+  );
+}
+
+function OfferCard({
+  t,
+  on,
+  locked,
+  icon,
+  onChoose,
+  unit,
+}: {
+  t: Template;
+  on: boolean;
+  locked: boolean;
+  icon: IonName;
+  onChoose: (t: Template) => void;
+  unit: "slots" | "sessions";
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      disabled={locked && !on}
+      onClick={() => onChoose(t)}
+      className={`flex w-full min-w-0 flex-col gap-2.5 rounded-[18px] border p-3.5 text-left transition-colors ${
+        on ? "border-[#F1F5F9] bg-[rgba(241,245,249,0.10)]" : "border-white/10 bg-white/[0.06] hover:bg-white/[0.09]"
+      } ${locked && !on ? "opacity-40" : ""}`}
+    >
+      <span className="flex items-center gap-2">
+        <Ion name={icon} size={18} className={on ? "text-white" : "text-white/[0.62]"} />
+        <span className="text-[14.5px] font-extrabold tracking-[-0.2px] text-white">{t.name}</span>
+      </span>
+      {t.service?.summary ? <span className="text-[13.5px] leading-[19px] text-white/[0.62]">{t.service.summary}</span> : null}
+      {t.service?.maxSlots ? (
+        <span className="text-[12px] font-strong text-white/55">
+          Up to {t.service.maxSlots} {unit}
+        </span>
+      ) : null}
+    </button>
   );
 }

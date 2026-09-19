@@ -23,8 +23,15 @@ import { eventDates } from "@/lib/ad-space/format";
 import type { BrandRelation, CreatorAnalytics, GroupRow, ListingRow, MixRow } from "@/lib/creator/analytics";
 
 import { useHref } from "../base";
-import { dollars, FilterPills, Panel, ProgressBar } from "../ui";
+import { Notice } from "../hold";
+import { dollars } from "../ui";
 import { DrillBar, Pager, usePaged } from "./cards";
+import { Card, Empty as KitEmpty, Group as Panel, Pills as FilterPills, ProgressBar as Bar, Tag as KitTag } from "./kit";
+
+/** The shared bar takes a fraction; these screens think in value and max. */
+function ProgressBar({ value, max }: { value: number; max: number }) {
+  return <Bar value={max > 0 ? value / max : 0} />;
+}
 
 export type OverviewView = "brands" | "events" | "sells" | "pay" | "inspired" | "needs";
 
@@ -80,32 +87,31 @@ function Screen({
     <div className="flex flex-col gap-4">
       <DrillBar back={back} crumb={CROSS} title={title} />
       <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)] lg:items-start">
-        <Panel>
-          <p className="text-[40px] font-medium leading-none tracking-tight tabular-nums text-text">{big}</p>
-          <p className="mt-3 text-small text-[#CFE3EC]">{bigNote}</p>
-          {extra ? <div className="mt-5 border-t border-white/[0.06] pt-4">{extra}</div> : null}
-          {aside ? <div className="mt-5 border-t border-white/[0.06] pt-4 text-tiny leading-relaxed text-[#9FB7C2]">{aside}</div> : null}
-        </Panel>
+        <div className="flex min-w-0 flex-col gap-2.5">
+          <Card>
+            <p className="text-[40px] font-strong leading-none tracking-[-0.8px] tabular-nums text-white">{big}</p>
+            <p className="text-[14.5px] leading-5 text-white/[0.62]">{bigNote}</p>
+            {extra ? <div className="mt-1.5 border-t border-white/[0.08] pt-3">{extra}</div> : null}
+          </Card>
+          {aside ? (
+            <Notice tone="calm" icon="bulb-outline">
+              {aside}
+            </Notice>
+          ) : null}
+        </div>
         <div className="flex min-w-0 flex-col gap-4">{children}</div>
       </div>
     </div>
   );
 }
 
-/** A tinted tag. 20px high, 10px radius: half its height, never a 999. */
-function Tag({ children }: { children: ReactNode }) {
-  return (
-    <span className="inline-flex h-5 shrink-0 items-center rounded-[10px] bg-amber/15 px-2 text-[11px] font-medium text-[#FFE2A1]">{children}</span>
-  );
+/** The app's Tag, green: a brand that came back is good news. */
+function Tag({ children }: { children: string }) {
+  return <KitTag label={children} tone="good" />;
 }
 
 function Empty({ title, body }: { title: string; body: string }) {
-  return (
-    <div className="flex flex-col gap-1.5 py-2">
-      <p className="text-small text-text">{title}</p>
-      <p className="text-tiny text-[#9FB7C2]">{body}</p>
-    </div>
-  );
+  return <KitEmpty icon="analytics-outline" title={title} body={body} />;
 }
 
 /** A brand's logo as the page shows it, or its initial. */
@@ -113,9 +119,9 @@ function Logo({ brand }: { brand: Pick<BrandRelation, "name" | "logoUrl"> }) {
   const initial = brand.name.replace(/^@/, "").trim().charAt(0).toUpperCase() || "?";
   return brand.logoUrl ? (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={brand.logoUrl} alt="" className="h-9 w-9 shrink-0 rounded-[10px] border border-white/10 bg-white object-contain p-1" loading="lazy" />
+    <img src={brand.logoUrl} alt="" className="h-9 w-9 shrink-0 rounded-[18px] border border-white/10 bg-white object-contain p-1" loading="lazy" />
   ) : (
-    <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-white/10 bg-white/[0.06] text-small font-medium text-[#CFE3EC]">
+    <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[18px] bg-white/[0.08] text-[14px] font-strong text-white">
       {initial}
     </span>
   );
@@ -124,13 +130,13 @@ function Logo({ brand }: { brand: Pick<BrandRelation, "name" | "logoUrl"> }) {
 /** One row of a bar list: a label, its money or share, a bar, a small line under it. */
 function BarLine({ label, right, value, max, sub }: { label: ReactNode; right: ReactNode; value: number; max: number; sub?: ReactNode }) {
   return (
-    <li className="flex min-w-0 flex-col gap-1.5 border-t border-white/[0.06] py-2.5 first:border-t-0 first:pt-0">
+    <li className="flex min-w-0 flex-col gap-1.5 border-t border-white/[0.08] py-2.5 first:border-t-0 first:pt-0">
       <div className="flex min-w-0 items-baseline justify-between gap-3">
-        <p className="min-w-0 truncate text-small text-text">{label}</p>
-        <p className="shrink-0 text-small tabular-nums text-text">{right}</p>
+        <p className="min-w-0 truncate text-[14.5px] text-white">{label}</p>
+        <p className="shrink-0 text-[14.5px] font-bold tabular-nums text-white">{right}</p>
       </div>
       <ProgressBar value={value} max={max} />
-      {sub ? <p className="truncate text-tiny text-[#9FB7C2]">{sub}</p> : null}
+      {sub ? <p className="truncate text-[12.5px] text-white/55">{sub}</p> : null}
     </li>
   );
 }
@@ -160,13 +166,13 @@ export function BrandsScreen({ data, back }: { data: CreatorAnalytics; back: str
       extra={
         top.length ? (
           <>
-            <p className="mb-3 text-tiny text-[#9FB7C2]">Top payers</p>
+            <p className="mb-3 text-[12.5px] text-white/55">Top payers</p>
             <ul className="flex flex-col gap-2.5">
               {top.map((b) => (
                 <li key={b.key} className="flex min-w-0 flex-col gap-1">
                   <div className="flex min-w-0 items-baseline justify-between gap-3">
-                    <p className="truncate text-tiny text-text">{b.name}</p>
-                    <p className="shrink-0 text-tiny tabular-nums text-text">{dollars(b.receivedCents)}</p>
+                    <p className="truncate text-[13px] text-white">{b.name}</p>
+                    <p className="shrink-0 text-[13px] font-strong tabular-nums text-white">{dollars(b.receivedCents)}</p>
                   </div>
                   <ProgressBar value={b.receivedCents} max={maxTop} />
                 </li>
@@ -208,23 +214,23 @@ export function BrandsScreen({ data, back }: { data: CreatorAnalytics; back: str
           <>
             <ul className="flex flex-col">
               {paged.shown.map((b) => (
-                <li key={b.key} className="flex min-w-0 items-start gap-3 border-t border-white/[0.06] py-3 first:border-t-0 first:pt-0">
+                <li key={b.key} className="flex min-w-0 items-start gap-3 border-t border-white/[0.08] py-3 first:border-t-0 first:pt-0">
                   <Logo brand={b} />
                   <div className="min-w-0 flex-1">
                     <div className="flex min-w-0 items-center gap-2">
-                      <p className="truncate text-small font-medium text-text">{b.name}</p>
+                      <p className="truncate text-[14.5px] font-bold text-white">{b.name}</p>
                       {b.repeat ? <Tag>Repeat</Tag> : null}
                     </div>
-                    <p className="mt-0.5 truncate text-tiny text-[#CFE3EC]">
+                    <p className="mt-0.5 truncate text-[13px] text-white/[0.62]">
                       {b.events.length ? b.events.map((e) => e.name).join(", ") : "Not tied to an event"}
                     </p>
-                    <p className="mt-0.5 truncate text-tiny text-[#9FB7C2]">
+                    <p className="mt-0.5 truncate text-[12.5px] text-white/55">
                       {[b.handle ? `@${b.handle}` : null, b.firstPaidAt ? `since ${monthYear(b.firstPaidAt)}` : null, howPaid(b)].filter(Boolean).join(" · ")}
                     </p>
                   </div>
                   <div className="shrink-0 text-right">
-                    <p className="text-small tabular-nums text-text">{dollars(b.receivedCents)}</p>
-                    <p className="mt-0.5 text-tiny tabular-nums text-[#9FB7C2]">{plural(b.orders, "order")}</p>
+                    <p className="text-[14.5px] font-bold tabular-nums text-white">{dollars(b.receivedCents)}</p>
+                    <p className="mt-0.5 text-[12.5px] tabular-nums text-white/55">{plural(b.orders, "order")}</p>
                   </div>
                 </li>
               ))}
@@ -266,7 +272,7 @@ export function EventsScreen({ data, back }: { data: CreatorAnalytics; back: str
                   label={
                     <>
                       {e.name}
-                      {e.startsOn ? <span className="ml-2 text-tiny text-[#9FB7C2]">{[e.city, eventDates(e.startsOn, e.endsOn ?? e.startsOn)].filter(Boolean).join(" · ")}</span> : null}
+                      {e.startsOn ? <span className="ml-2 text-[12.5px] text-white/55">{[e.city, eventDates(e.startsOn, e.endsOn ?? e.startsOn)].filter(Boolean).join(" · ")}</span> : null}
                     </>
                   }
                   right={dollars(e.receivedCents)}
@@ -363,7 +369,7 @@ export function SellsScreen({ data, back }: { data: CreatorAnalytics; back: stri
                   right={
                     <>
                       {r.pct !== null ? pctText(r.pct) : "—"}
-                      <span className="ml-2 text-tiny text-[#9FB7C2]">{dollars(r.cents)}</span>
+                      <span className="ml-2 text-[12.5px] text-white/55">{dollars(r.cents)}</span>
                     </>
                   }
                   value={r.sold}
@@ -447,7 +453,7 @@ export function InspiredScreen({ data, back }: { data: CreatorAnalytics; back: s
       aside={
         <>
           {block.creators > 0 ? `${plural(block.creators, "creator")} named you on their page. ` : ""}Credit others the same way: “Inspired by” in the listing editor.{" "}
-          <Link href={href("/listings/new")} className="text-[#CFE3EC] underline decoration-white/30 underline-offset-2 hover:text-text">
+          <Link href={href("/listings/new")} className="font-strong text-white underline decoration-white/30 underline-offset-2">
             New listing
           </Link>
         </>
@@ -459,16 +465,16 @@ export function InspiredScreen({ data, back }: { data: CreatorAnalytics; back: s
         ) : (
           <ul className="flex flex-col">
             {block.recent.map((l) => (
-              <li key={l.spaceId} className="flex min-w-0 items-center justify-between gap-3 border-t border-white/[0.06] py-2.5 first:border-t-0 first:pt-0">
+              <li key={l.spaceId} className="flex min-w-0 items-center justify-between gap-3 border-t border-white/[0.08] py-2.5 first:border-t-0 first:pt-0">
                 <div className="min-w-0">
-                  <p className="truncate text-small text-text">{l.title}</p>
-                  <p className="mt-0.5 truncate text-tiny text-[#9FB7C2]">
+                  <p className="truncate text-[14.5px] text-white">{l.title}</p>
+                  <p className="mt-0.5 truncate text-[12.5px] text-white/55">
                     {l.creatorHandle ? `@${l.creatorHandle}` : "A creator"}
                     {l.creditedAt ? ` · ${monthYear(l.creditedAt)}` : ""}
                   </p>
                 </div>
                 {l.path ? (
-                  <a href={`${SITE_URL}${l.path}`} target="_blank" rel="noopener noreferrer" className="shrink-0 text-tiny text-[#CFE3EC] hover:text-text">
+                  <a href={`${SITE_URL}${l.path}`} target="_blank" rel="noopener noreferrer" className="inline-flex h-[34px] shrink-0 items-center rounded-[17px] border border-white/[0.14] bg-white/[0.06] px-[13px] text-[13.5px] font-bold text-white/[0.62] hover:bg-white/10">
                     View
                   </a>
                 ) : null}

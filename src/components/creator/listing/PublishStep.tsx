@@ -21,7 +21,9 @@
 
 "use client";
 
-import { btnPrimary, btnSecondary, card } from "@/components/ad-space/ui";
+import { btnGlass, Notice } from "@/components/app/hold";
+import { Ion } from "@/components/app/ion";
+import { Body, Card, Chip, ChipRow, SectionLabel } from "@/components/app/spaces/kit";
 import {
   ATTESTATIONS,
   DELIVERABLE_KINDS,
@@ -43,15 +45,15 @@ import {
 import { problemsAt, type Problem } from "@/lib/creator/rules";
 
 import { BrandGetsEditor } from "./BrandGetsEditor";
-import { Block, Choice, Count, Dropdown, Field, Paragraph, Problems, Text, Tick } from "./parts";
+import { Block, btnSmallGlass, Choice, Count, Dropdown, Field, Paragraph, Problems, Text, Tick } from "./parts";
 
 const DELIVERABLE_LABEL: Record<DeliverableKind, string> = {
-  in_person: "Being there with it",
-  photo_post: "A photo post",
-  video: "A video",
-  story: "A story",
-  thank_you_post: "A thank-you post",
-  mention: "A mention",
+  in_person: "In person",
+  photo_post: "Photo post",
+  video: "Video",
+  story: "Story",
+  thank_you_post: "Thank-you post",
+  mention: "Brand mention",
   custom: "Something else",
 };
 
@@ -61,41 +63,41 @@ const PLATFORM_LABEL: Record<Platform, string> = {
   tiktok: "TikTok",
   youtube: "YouTube",
   linkedin: "LinkedIn",
-  other: "Somewhere else",
+  other: "Other",
 };
 
 const FALLBACK_LABEL: Record<Fallback, string> = {
-  content_anyway: "I deliver everything I promised anyway",
-  creator_refund: "I refund the sponsor myself",
-  next_event: "I carry the sponsor to my next event",
+  content_anyway: "Content anyway",
+  creator_refund: "I refund the price",
+  next_event: "Moves to the next event",
 };
 
 const FALLBACK_BODY: Record<Fallback, string> = {
-  content_anyway:
-    "The posts, photos and videos above still happen, wherever you end up. The least you can promise, and the one most listings pick.",
-  creator_refund: "Out of your own wallet. HOLD never holds the money, so HOLD can never send it back — only you can.",
-  next_event: "The same spot at another event within 90 days. Name it below, or it promises nothing.",
+  content_anyway: "If the venue says no, every post and video is still delivered as promised.",
+  creator_refund: "If the venue says no, you send the price back from your own wallet.",
+  next_event: "If the venue says no, the spot moves to another event within 90 days.",
+};
+
+/** A session's fallback, said about a session rather than a venue. */
+const SESSION_FALLBACK_BODY: Record<Fallback, string> = {
+  ...FALLBACK_BODY,
+  creator_refund: "If a session can't happen, you send the price back from your own wallet. It's your promise: HOLD never holds the money.",
+  next_event: "If a session can't happen, it moves to another event within 90 days.",
 };
 
 /** Each declaration in the first person, because that is who is saying it. */
-const ATTESTATION_TEXT: Record<Attestation, { label: string; body?: string }> = {
-  owns_item: { label: "I own the item and will use it as shown." },
-  venue_rules_checked: {
-    label: "I have checked this event's rules on branded items.",
-    body: "Organisers do turn people away for this, and the sponsor is the one who paid.",
-  },
-  sports_rules_allow_logos: { label: "This race or match allows sponsor logos on what competitors wear." },
-  host_consent: { label: "The host of this private event has agreed." },
+const ATTESTATION_TEXT: Record<Attestation, { label: string }> = {
+  owns_item: { label: "I own this item and will use it as shown." },
+  venue_rules_checked: { label: "I checked the event's rules on branded items." },
+  sports_rules_allow_logos: { label: "The race allows brand logos on athletes' gear." },
+  host_consent: { label: "The host of this event has agreed." },
   temporary_skin_safe_adult: {
-    label: "Temporary, skin-safe and removable. I am 18 or over, and nothing goes on my face or anywhere intimate.",
+    label: "It's temporary, skin-safe and removable, I'm 18 or over, and nothing goes on the face or intimate areas.",
   },
-  discloses_sponsorship: {
-    label: "Every sponsored post I make is labelled as an ad.",
-    body: "#ad, or X's paid partnership label. It is the law in most places and it is what keeps the account you are selling.",
-  },
-  public_place: { label: "Sessions happen at the venue or somewhere public, never at a private address." },
-  no_investment_advice: { label: "I give no investment advice." },
-  no_investor_intros: { label: "I make no introductions to investors." },
+  discloses_sponsorship: { label: "I'll label every sponsored post as sponsored (#ad or the platform's paid-partnership tag)." },
+  public_place: { label: "Every session happens at the event venue or another public place, never at a private address." },
+  no_investment_advice: { label: "I won't give investment advice in a session, or tell anyone what to buy or sell." },
+  no_investor_intros: { label: "I won't sell or promise introductions to investors, in a session or because of one." },
 };
 
 export function PublishStep({
@@ -103,8 +105,6 @@ export function PublishStep({
   template,
   onChange,
   problems,
-  onPublish,
-  publishing,
   banner,
   fix,
   canPublish,
@@ -113,8 +113,6 @@ export function PublishStep({
   template: Template;
   onChange: (next: ListingDraft) => void;
   problems: readonly Problem[];
-  onPublish: () => void;
-  publishing: boolean;
   banner: string | null;
   fix: { href: string; label: string } | null;
   canPublish: boolean;
@@ -131,7 +129,7 @@ export function PublishStep({
   );
 
   return (
-    <div className="flex flex-col gap-10">
+    <div className="flex flex-col gap-3.5">
       {isCustomServiceTemplate(template) ? (
         <Block
           title="What you are selling"
@@ -181,34 +179,32 @@ export function PublishStep({
             title="When it is delivered"
             why="Nothing to set: time in person is delivered by the day after the event ends, and that date comes from the event you picked."
           >
-            <p className="text-small text-text-muted">
-              The buyer is the one who confirms it happened, because a conversation leaves no link anybody can check.
-            </p>
+            <Body dim>
+              The client confirms each session after it happens. If they say nothing within 7 days, it counts as delivered. If
+              they say it didn&rsquo;t happen, your public record shows it as disputed.
+            </Body>
           </Block>
         ) : (
           <Block
             title="The day every sponsor has it by"
             why="One date for the whole listing, on the page before anybody pays. It is the promise the listing rests on, and a link against each sale is how it is kept."
           >
-            <Field label="Delivered by" problems={problemsAt(problems, "deliverBy")} htmlFor="deliver-by">
+            <Field label="Every slot delivered by" problems={problemsAt(problems, "deliverBy")} htmlFor="deliver-by">
               <Text id="deliver-by" type="date" value={draft.deliverBy} onChange={(deliverBy) => set({ deliverBy })} />
             </Field>
           </Block>
         )
       ) : (
         <Block
-          title="What you will post"
+          title="What the brand gets"
           why="At least one thing a venue cannot take away. A sponsor who bought a spot on your suitcase and nothing else has bought something the organiser can cancel at the door."
         >
           <Deliverables draft={draft} onChange={onChange} problems={problems} />
         </Block>
       )}
 
-      <Block
-        title="If it does not happen"
-        why="Say it now, on the page, before anybody pays. Sponsors read this and it is the difference between a listing that sells and one that gets a question and no money."
-      >
-        <Field label="If the event is cancelled, or the venue says no" problems={problemsAt(problems, "fallback")}>
+      <Block title={session ? "If a session can't happen" : "If the venue says no"}>
+        <Field label="Your promise, on the page before anybody pays" problems={problemsAt(problems, "fallback")}>
           <Choice
             name="fallback"
             value={draft.fallback}
@@ -216,7 +212,7 @@ export function PublishStep({
             options={FALLBACKS.filter((f) => !session || f !== "content_anyway").map((f) => ({
               value: f,
               label: FALLBACK_LABEL[f],
-              body: FALLBACK_BODY[f],
+              body: session ? SESSION_FALLBACK_BODY[f] : FALLBACK_BODY[f],
             }))}
           />
         </Field>
@@ -232,16 +228,17 @@ export function PublishStep({
               value={draft.fallbackNote}
               onChange={(fallbackNote) => set({ fallbackNote })}
               maxLength={LIMITS.REASON_MAX}
+              placeholder="Devcon, 12 November"
             />
           </Field>
         ) : null}
       </Block>
 
       <Block
-        title="What you are declaring"
-        why="Each of these is something you are telling sponsors is true. They are shown on your page, and we will not publish without all of them."
+        title="Declarations"
+        why="Before a stranger pays you, confirm each of these. They're part of what you publish, and a space that breaks them is taken down."
       >
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1.5">
           {required.map((a) => (
             <Tick
               key={a}
@@ -254,42 +251,33 @@ export function PublishStep({
                 })
               }
               label={ATTESTATION_TEXT[a].label}
-              body={ATTESTATION_TEXT[a].body}
             />
           ))}
           <Problems list={problemsAt(problems, "attestations")} />
         </div>
       </Block>
 
-      <div className={`${card} flex flex-col gap-4 p-6`}>
-        <h3 className="text-body text-text">Publish it</h3>
-        <p className="text-small text-text-muted">
-          Going live needs a verified X account at least 90 days old and an address to be paid at. Your listing is
-          published under that handle and the page keeps naming it, so sponsors can see who they paid. Nothing here asks
-          you to sign anything on chain: a sponsor&apos;s wallet pays yours in one transaction they sign.
-        </p>
-        <Problems list={problemsAt(problems, "form")} />
-        {banner ? (
-          <p role="status" className="rounded-input border border-amber/30 bg-amber/10 px-4 py-3 text-small text-text">
-            {banner}
-          </p>
-        ) : null}
-        <div className="flex flex-wrap items-center gap-3">
-          <button type="button" className={btnPrimary} disabled={publishing || !canPublish} onClick={onPublish}>
-            {publishing ? "Publishing…" : "Publish"}
-          </button>
+      <Block title="Published as">
+        <Card>
+          <Body dim>
+            Going live needs a verified X account at least 90 days old and an address to be paid at. Your listing is published
+            under that handle and the page keeps naming it, so brands can see who they paid. A brand&rsquo;s wallet pays yours in one
+            transaction they sign.
+          </Body>
           {fix ? (
-            <a href={fix.href} className={btnSecondary}>
+            <a href={fix.href} className={btnGlass}>
               {fix.label}
             </a>
           ) : null}
-        </div>
+        </Card>
+        <Problems list={problemsAt(problems, "form")} />
+        {banner ? <Notice icon="alert-circle-outline">{banner}</Notice> : null}
         {!canPublish ? (
-          <p className="text-tiny text-text-muted">
-            There is still something to fix above. Your draft is saved either way — nothing you have written is lost.
+          <p className="text-[12px] leading-4 text-white/55">
+            There is still something to fix above. Your draft is saved either way: nothing you have written is lost.
           </p>
         ) : null}
-      </div>
+      </Block>
     </div>
   );
 }
@@ -311,11 +299,17 @@ function Deliverables({
     set(list.map((d, j) => (j === i ? { ...d, ...change } : d)));
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-2.5">
       <Problems list={problemsAt(problems, "deliverables")} />
       {list.map((d, i) => (
-        <div key={i} className={`${card} flex flex-col gap-4 p-5`}>
-          <div className="grid gap-4 sm:grid-cols-2">
+        <Card key={i} className="!gap-3.5">
+          <div className="flex items-center justify-between gap-3">
+            <SectionLabel>{`${d.count}× ${DELIVERABLE_LABEL[d.kind]}`}</SectionLabel>
+            <button type="button" aria-label="Remove" className={`${btnSmallGlass} !w-9 !px-0`} onClick={() => set(list.filter((_, j) => j !== i))}>
+              <Ion name="trash-outline" size={17} />
+            </button>
+          </div>
+          <div className="grid gap-3.5 sm:grid-cols-2">
             <Field label="What" problems={problemsAt(problems, `deliverable:${i}:kind`)} htmlFor={`d-${i}-kind`}>
               <Dropdown
                 id={`d-${i}-kind`}
@@ -358,29 +352,12 @@ function Deliverables({
               maxLength={LIMITS.NOTE_MAX}
             />
           </Field>
-          <div>
-            <button
-              type="button"
-              className="inline-flex h-10 items-center rounded-[20px] border border-[color:var(--color-hairline-strong)] px-5 text-small text-text transition-colors duration-180 hover:bg-white/5"
-              onClick={() => set(list.filter((_, j) => j !== i))}
-            >
-              Remove
-            </button>
-          </div>
-        </div>
+        </Card>
       ))}
       {list.length < LIMITS.DELIVERABLES_MAX ? (
-        <div>
-          <button
-            type="button"
-            className="inline-flex h-10 items-center rounded-[20px] border border-[color:var(--color-hairline-strong)] px-5 text-small text-text transition-colors duration-180 hover:bg-white/5"
-            onClick={() =>
-              set([...list, { kind: "photo_post", platform: "x", count: 1, dueDate: "", note: "" }])
-            }
-          >
-            Add something you will post
-          </button>
-        </div>
+        <ChipRow label="What the brand gets">
+          <Chip icon="add" label="Add a deliverable" onClick={() => set([...list, { kind: "photo_post", platform: "x", count: 1, dueDate: "", note: "" }])} />
+        </ChipRow>
       ) : null}
     </div>
   );

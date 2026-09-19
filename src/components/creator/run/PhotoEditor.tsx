@@ -39,8 +39,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 
-import { btnSmall, btnSmallSecondary } from "@/components/ad-space/ui";
-import { glass } from "@/components/app/ui";
+import { btnWhite as btnSmall, btnGlassPill as btnSmallSecondary } from "@/components/app/spaces/kit";
+import { cardBox as glass } from "@/components/app/spaces/kit";
 import { ImageProblem, prepareImage } from "@/lib/ad-space/image";
 import { CreatorApiError } from "@/lib/creator/api";
 import type { PhotoRect, PositionView, SpaceView } from "@/lib/creator/listing";
@@ -300,17 +300,17 @@ export function PhotoEditor({
     return (
       <section className={`${glass} flex h-[calc(var(--app-vh,100dvh)-220px)] min-h-[280px] flex-col items-center justify-center gap-4 p-6 text-center`}>
         <div className="flex max-w-[440px] flex-col gap-2">
-          <h3 className="text-body font-medium text-text">
+          <h3 className="text-[15.5px] font-strong text-white">
             {view ? `Your ${side}, as it really is` : "Show sponsors the real thing"}
           </h3>
-          <p className="text-small text-text-muted">
+          <p className="text-[14.5px] text-white/[0.62]">
             {view
               ? `Upload a photo of the ${side} of your ${(space.template?.name ?? "product").toLowerCase()}, then place its ${positions.length} ${positions.length === 1 ? "spot" : "spots"} on it. Once they are placed, your page shows this photo for the ${side} and the drawing for any side without one.`
               : "Upload a photo of what you are selling space on, then place each spot on it. Once every spot is placed, your page and your X card show your photo instead of the drawing."}
           </p>
         </div>
         {conflict ? (
-          <p className="max-w-[440px] text-small text-amber">
+          <p className="max-w-[440px] text-[14.5px] text-amber">
             {view
               ? "This listing uses one photo for the whole product. Remove it first to give each side its own."
               : "This listing has a photo per side. Remove those first to use one photo for the whole product."}
@@ -320,7 +320,7 @@ export function PhotoEditor({
             {busy === "upload" ? "Uploading…" : "Upload a photo"}
           </button>
         )}
-        <p className="text-tiny text-text-faint">JPG, PNG or WebP. We remove the location and camera details.</p>
+        <p className="text-[12.5px] text-white/55">JPG, PNG or WebP. We remove the location and camera details.</p>
         {chooser}
         {notice ? <Notice>{notice}</Notice> : null}
       </section>
@@ -332,7 +332,7 @@ export function PhotoEditor({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="min-w-0 text-tiny text-[#9FB7C2]">
+        <p className="min-w-0 text-[12.5px] text-white/55">
           {trouble.size > 0
             ? "Fix the squares in amber before saving."
             : dirty
@@ -399,12 +399,12 @@ export function PhotoEditor({
               key={p.id}
               type="button"
               onClick={() => setSelected(on ? null : p.id)}
-              className={`inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[16px] border px-3 text-tiny transition-colors ${
+              className={`inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[16px] border px-3 text-[12.5px] transition-colors ${
                 on
-                  ? "border-text bg-white/15 text-text"
+                  ? "border-text bg-white/15 text-white"
                   : bad
                     ? "border-amber/60 bg-amber/10 text-amber"
-                    : "border-white/10 bg-white/[0.05] text-[#CFE3EC] hover:bg-white/10"
+                    : "border-white/10 bg-white/[0.05] text-white/[0.62] hover:bg-white/10"
               }`}
             >
               {p.label}
@@ -414,7 +414,7 @@ export function PhotoEditor({
         })}
       </div>
       {selectedPosition && trouble.has(selectedPosition.id) ? (
-        <p className="text-tiny text-amber">
+        <p className="text-[12.5px] text-amber">
           {selectedPosition.label} is {trouble.get(selectedPosition.id)}.
         </p>
       ) : null}
@@ -594,7 +594,7 @@ function Stage({
                   zIndex: on ? 2 : 1,
                 }}
               >
-                <span className="pointer-events-none truncate px-1 text-[11px] font-medium text-text">
+                <span className="pointer-events-none truncate px-1 text-[11px] font-strong text-white">
                   {locked ? `${p.label} · Sold` : p.label}
                 </span>
                 {on && !locked

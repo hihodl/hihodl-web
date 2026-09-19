@@ -30,10 +30,11 @@
 
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
-import { btnPrimary, btnSmall, btnSmallSecondary, card, pill } from "@/components/ad-space/ui";
+import { ctaSecondary, Notice } from "@/components/app/hold";
+import { StatusPill } from "@/components/app/spaces/common";
+import { btnWhite as btnSmall, btnGlassPill as btnSmallSecondary, Card, EventLine, SectionLabel, SheetRow } from "@/components/app/spaces/kit";
 import { closesText } from "@/lib/ad-space/format";
 import { spacesPath } from "@/lib/app/paths";
 import { describeCreatorError } from "@/lib/creator/api";
@@ -41,15 +42,8 @@ import { LIMITS, type SeriesView, type SpaceView } from "@/lib/creator/listing";
 import { getSeries, leaveSeries, publishListing } from "@/lib/creator/listings";
 import { describeSeriesError, refusalSentence } from "@/lib/creator/problems";
 
-import { Loading, Section } from "../parts";
+import { Loading } from "../parts";
 import { PickEvents } from "./PickEvents";
-
-const STATUS_LABEL: Record<string, string> = {
-  draft: "Draft",
-  live: "Live",
-  closed: "Closed",
-  delisted: "Taken down",
-};
 
 /** What happened to one listing the last time the drafts were published. */
 interface Outcome {
@@ -130,8 +124,10 @@ export function ListingSeries({ space, onChanged }: { space: SpaceView; onChange
     }
   }
 
+  const live = spaces.filter((s) => s.status === "live").length;
+
   return (
-    <Section title="Events">
+    <section className="flex flex-col gap-2.5">
       {loading ? (
         <Loading what="your other events" />
       ) : picking ? (
@@ -149,93 +145,71 @@ export function ListingSeries({ space, onChanged }: { space: SpaceView; onChange
           onFinished={() => setPicking(false)}
           onCancel={() => setPicking(false)}
         />
-      ) : spaces.length === 0 ? (
-        <div className="flex flex-col gap-5">
-          <p className="text-small text-text-muted">{space.event?.name ?? space.eventName ?? "No event"}</p>
-          <div>
-            <button type="button" className={btnSmall} onClick={() => setPicking(true)}>
-              Add events
-            </button>
-          </div>
-        </div>
+      ) : spaces.length < 2 ? (
+        // The app's SeriesPanel with no series yet: the invitation.
+        <>
+          <SectionLabel>More events</SectionLabel>
+          <SheetRow
+            icon="calendar-outline"
+            title="Take this listing to other events"
+            meta="One listing per event, each with its own link and its own spots."
+            onClick={() => setPicking(true)}
+          />
+        </>
       ) : (
-        <div className="flex flex-col gap-5">
-          <ul className="flex flex-col gap-3">
-            {spaces.map((s) => {
-              const outcome = outcomes[s.id];
-              const here = s.id === space.id;
-              return (
-                <li key={s.id} className={`${card} flex flex-col gap-3 p-5`}>
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-body text-text">{s.event?.name ?? s.eventName ?? "No event"}</p>
-                      <p className="mt-1 text-tiny text-text-muted">
-                        {s.status === "draft" ? "Only you can see this" : closesText(s.closesAt, s.status === "closed")}
-                        {" · "}
-                        {s.totals.sold} of {s.totals.positions} sold
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {here ? <span className={pill.neutral}>This one</span> : null}
-                      <span
-                        className={
-                          s.status === "live" ? pill.open : s.status === "draft" ? pill.attention : pill.neutral
-                        }
-                      >
-                        {STATUS_LABEL[s.status] ?? s.status}
-                      </span>
-                    </div>
-                  </div>
-
-                  {outcome ? (
-                    <p className={`text-small ${outcome.live ? "text-success" : "text-amber"}`}>
-                      {outcome.live ? "Published" : "Still a draft. "}
-                      {outcome.message}
-                    </p>
-                  ) : null}
-
-                  {!here ? (
-                    <div>
-                      <Link
-                        href={spacesPath(s.status === "draft" ? `/listings/${s.id}/edit` : `/listings/${s.id}`)}
-                        className={btnSmallSecondary}
-                      >
-                        {s.status === "draft" ? "Finish draft" : "Open"}
-                      </Link>
-                    </div>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ul>
-
-          {drafts.length > 0 ? (
-            <div className="flex flex-col gap-3">
-              <p className="text-small text-text-muted">
-                {drafts.length === 1 ? "1 draft in this series." : `${drafts.length} drafts in this series.`}
-              </p>
-              <div>
-                <button type="button" className={btnPrimary} disabled={publishing} onClick={() => void publishDrafts()}>
-                  {publishing
-                    ? "Publishing…"
-                    : drafts.length === 1
-                      ? "Publish the draft"
-                      : `Publish the ${drafts.length} drafts`}
-                </button>
-              </div>
-            </div>
+        <>
+          <SectionLabel>{`This listing is at ${spaces.length} events`}</SectionLabel>
+          <p className="text-[12px] leading-[17px] text-white/55">
+            One listing per event, each with its own link, its own spots and its own close. What sells at one doesn&apos;t come out of another.
+          </p>
+          {Object.keys(outcomes).length ? (
+            <Notice tone={drafts.length ? "caution" : "good"}>
+              {drafts.length === 0
+                ? `All ${spaces.length} are live, each with its own link.`
+                : `${live} of ${spaces.length} are live. The rest are still drafts — each says why.`}
+            </Notice>
           ) : null}
 
-          {full ? (
-            <p className="text-small text-text-muted">
-              {LIMITS.SERIES_MAX} events maximum.
-            </p>
-          ) : (
-            <div>
-              <button type="button" className={btnSmall} onClick={() => setPicking(true)}>
-                Add event
-              </button>
-            </div>
+          {spaces.map((s) => {
+            const outcome = outcomes[s.id];
+            const here = s.id === space.id;
+            // The app's SeriesRow: the event and its status tag, the event line, which one this is, why it is still a draft.
+            const body = (
+              <>
+                <div className="flex items-center justify-between gap-2.5">
+                  <p className="min-w-0 flex-1 truncate text-[15px] font-strong tracking-[-0.2px] text-white">{s.event?.name ?? s.eventName ?? s.title}</p>
+                  <StatusPill status={s.status} />
+                </div>
+                {s.event ? <EventLine event={s.event} /> : null}
+                <p className="text-[12.5px] leading-[17px] text-white/55">
+                  {here ? "The one you're looking at" : s.status === "draft" ? "Continue editing" : closesText(s.closesAt, s.status === "closed")}
+                  {` · ${s.totals.sold} of ${s.totals.positions} sold`}
+                </p>
+                {outcome && !outcome.live ? <p className="text-[12.5px] leading-[17px] text-amber">Still a draft: {outcome.message}</p> : null}
+              </>
+            );
+            return here ? (
+              <Card key={s.id}>{body}</Card>
+            ) : (
+              <Card key={s.id} href={spacesPath(s.status === "draft" ? `/listings/${s.id}/edit` : `/listings/${s.id}`)}>
+                {body}
+              </Card>
+            );
+          })}
+
+          {drafts.length > 0 ? (
+            <button type="button" className={ctaSecondary} disabled={publishing} onClick={() => void publishDrafts()}>
+              {publishing ? "Publishing…" : drafts.length === 1 ? "Publish the draft" : `Publish the ${drafts.length} drafts`}
+            </button>
+          ) : null}
+
+          {full ? null : (
+            <SheetRow
+              icon="add-circle-outline"
+              title="Another event"
+              meta={`Room for ${Math.max(0, LIMITS.SERIES_MAX - held)} more`}
+              onClick={() => setPicking(true)}
+            />
           )}
 
           {/*
@@ -244,9 +218,9 @@ export function ListingSeries({ space, onChanged }: { space: SpaceView; onChange
             itself is never touched, and the sentence says so before the click.
           */}
           {leaving ? (
-            <div className="flex flex-col gap-3 border-t border-[color:var(--color-hairline)] pt-5">
-              <p className="text-small text-text">Take this one out of the series? It keeps its link and spots.</p>
-              <div className="flex flex-wrap gap-3">
+            <Card>
+              <p className="text-[14.5px] leading-5 text-white">Take this one out of the series? It keeps its link and spots.</p>
+              <div className="flex flex-wrap gap-2">
                 <button type="button" className={btnSmall} onClick={() => void leave()}>
                   Take it out
                 </button>
@@ -254,26 +228,16 @@ export function ListingSeries({ space, onChanged }: { space: SpaceView; onChange
                   Cancel
                 </button>
               </div>
-            </div>
+            </Card>
           ) : (
-            <p className="text-tiny text-text-muted">
-              <button
-                type="button"
-                className="underline decoration-dotted underline-offset-4"
-                onClick={() => setLeaving(true)}
-              >
-                Take this one out of the series
-              </button>
-            </p>
+            <button type="button" className="self-center py-1 text-[13px] font-strong text-white/[0.62] hover:text-white" onClick={() => setLeaving(true)}>
+              Take this one out of the series
+            </button>
           )}
-        </div>
+        </>
       )}
 
-      {notice ? (
-        <p role="status" className="mt-5 rounded-input border border-amber/30 bg-amber/10 px-4 py-3 text-small text-text">
-          {notice}
-        </p>
-      ) : null}
-    </Section>
+      {notice ? <Notice>{notice}</Notice> : null}
+    </section>
   );
 }

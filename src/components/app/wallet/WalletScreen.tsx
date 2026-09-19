@@ -3,24 +3,29 @@
 /**
  * The web wallet (phase 1: Solana, read-only), protected by a passkey.
  *
- * One screen at a time, each a card that opens its own screen with a Back:
+ * Every screen is the HOLD app's own, ported (documentation/web-copies-the-app-wallet.md):
+ * the home is the app's balance hero and quick actions, Receive is the app's
+ * Receive, Send is Quick Send and Confirm, and the settings are the app's
+ * Account recovery, Passkeys and Recovery Phrase. One screen at a time, each
+ * with the app's back chevron:
  *
  *   no wallet anywhere        → Create (passkey with PRF, then the wallet)
  *   a wallet in the HOLD app  → "Open the HOLD app" (we never make a second one)
  *   a web wallet, locked      → Unlock with passkey
- *   unlocked                  → Home: Balance · Withdraw · Receive · Settings
- *   Withdraw                  → approved on the linked phone (Withdraw.tsx)
- *   Settings                  → Add another passkey · Export 12 words
+ *   unlocked                  → Home: balance · Receive · Send · Security
+ *   Send                      → approved on the linked phone (Withdraw.tsx)
+ *   Security                  → Recovery phrase (12 words) · Passkeys (add, remove)
  *
  * Design and threat model: documentation/web-wallet-passkey-phase-1.md.
  */
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
-import { QrCode } from "@/components/ad-space/qr";
+import { chosenUsername } from "@/lib/app/me";
 import { useHoldWallet } from "@/lib/app/hold-wallet";
+import { useMe } from "@/lib/app/spaces-data";
 import { useShell } from "@/components/app/Shell";
-import { Alert, glass, Skeleton } from "@/components/app/ui";
+import { Skeleton } from "@/components/app/ui";
 import {
   addWrapping,
   beginPasskeyRegistration,
@@ -52,50 +57,36 @@ import { createPasskeyWithPrf, evaluatePrf, normalizeCredentialId, PasskeyError,
 import { demoParam } from "@/lib/creator/demo";
 import { lock, unlockWith, useVault } from "@/lib/wallet/vault";
 
+import { UserAvatar } from "../account/UserAvatar";
+import {
+  ActionsRow,
+  AppScreen,
+  Card,
+  FooterNote,
+  HeroBalance,
+  HeroBody,
+  HeroCard,
+  InfoBox,
+  MiniAction,
+  money,
+  PrimaryButton,
+  RowSeparator,
+  SecondaryButton,
+  SectionLabel,
+  TokenRow,
+  WarningNote,
+  AMBER,
+  GREEN,
+} from "./app-kit";
+import { Ion, type IonName } from "../ion";
+import { Receive } from "./Receive";
 import { Withdraw } from "./Withdraw";
 
 /* ── Small parts ──────────────────────────────────────────────────── */
 
-const btnPrimary =
-  "inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-[10px] bg-amber px-4 text-small font-medium text-text-on-amber transition-colors hover:bg-amber-glow disabled:cursor-not-allowed disabled:opacity-50";
-const btnGhost =
-  "inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-[10px] border border-white/10 bg-white/[0.05] px-4 text-small font-medium text-[#CFE3EC] transition-colors hover:bg-white/10 hover:text-text disabled:cursor-not-allowed disabled:opacity-50";
-
-function Card({ title, children, onBack, action }: { title: string; children: ReactNode; onBack?: () => void; action?: ReactNode }) {
-  return (
-    <section className={`${glass} mx-auto flex w-full max-w-[640px] flex-col gap-4 p-5 sm:p-6`}>
-      <header className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
-          {onBack ? (
-            <button type="button" onClick={onBack} className="h-8 rounded-[8px] px-2 text-tiny text-[#9FB7C2] hover:bg-white/10 hover:text-text">
-              ← Back
-            </button>
-          ) : null}
-          <h2 className="truncate text-body font-medium text-text">{title}</h2>
-        </div>
-        {action}
-      </header>
-      {children}
-    </section>
-  );
-}
-
-function Tile({ label, value, sub, onClick }: { label: string; value: ReactNode; sub?: ReactNode; onClick: () => void }) {
-  return (
-    <button type="button" onClick={onClick} className={`${glass} flex min-w-0 flex-col items-start gap-2 px-5 py-4 text-left transition-colors hover:bg-white/[0.06]`}>
-      <span className="text-tiny text-[#9FB7C2]">{label}</span>
-      <span className="text-[22px] font-medium leading-none tabular-nums text-text">{value}</span>
-      {sub ? <span className="truncate text-tiny text-[#B4BEC9]">{sub}</span> : null}
-    </button>
-  );
-}
-
-function Note({ children }: { children: ReactNode }) {
-  return <p className="text-small leading-relaxed text-[#9FB7C2]">{children}</p>;
-}
-
-function short(addr: string): string {
-  return `${addr.slice(0, 4)}…${addr.slice(-4)}`;
+/** An error line, the app's way: amber on an amber tint, never red. */
+function Problem({ children }: { children: ReactNode }) {
+  return <WarningNote>{children}</WarningNote>;
 }
 
 /** Registration options, fetched ahead of the click (Safari wants the ceremony inside it) and kept fresh. */
@@ -161,26 +152,28 @@ export function WalletScreen() {
   let body: ReactNode;
   if (loadError) {
     body = (
-      <Card title="Wallet">
-        <Alert>{explain(loadError)}</Alert>
-        <div>
-          <button type="button" className={btnGhost} onClick={() => void load()}>
+      <AppScreen title="Wallet">
+        <div className="flex flex-col gap-4 pt-4">
+          <Problem>{explain(loadError)}</Problem>
+          <SecondaryButton onClick={() => void load()}>
             Try again
-          </button>
+          </SecondaryButton>
         </div>
-      </Card>
+      </AppScreen>
     );
   } else if (!status) {
-    body = <Skeleton className="mx-auto h-[240px] w-full max-w-[640px]" />;
+    body = <Skeleton className="mx-auto h-[320px] w-full max-w-[460px]" />;
   } else if (status.state === "app_wallet") {
     body = <AppWallet />;
   } else if (status.state === "web_wallet" && !status.current_blob_hash) {
     body = <WalletOnAnotherAccount />;
   } else if (!passkeysHere()) {
     body = (
-      <Card title="Wallet">
-        <Alert>{explain(new PasskeyError("unavailable"))}</Alert>
-      </Card>
+      <AppScreen title="Wallet">
+        <div className="pt-4">
+          <InfoBox>{explain(new PasskeyError("unavailable"))}</InfoBox>
+        </div>
+      </AppScreen>
     );
   } else if (status.state === "none") {
     body = <Create status={status} onCreated={() => void load()} />;
@@ -190,20 +183,23 @@ export function WalletScreen() {
     body = <Unlock />;
   }
 
-  return <div className="flex min-h-0 flex-1 flex-col justify-center py-2">{body}</div>;
+  return <div className="flex min-h-0 flex-1 flex-col py-2">{body}</div>;
 }
 
 /* ── A web wallet kept under an older account with this email ────── */
 
 function WalletOnAnotherAccount() {
   return (
-    <Card title="Your wallet is on your previous account">
-      <Note>
-        This email already has a web wallet, created while you were signed in to an earlier HOLD account. To keep one
-        wallet per person, the web never makes a second one. Write to support from this email and we will move you back
-        to the account that holds it.
-      </Note>
-    </Card>
+    <AppScreen title="Wallet">
+      <div className="pt-4">
+        <HeroCard icon="wallet-outline" title="Your wallet is on your previous account">
+          <HeroBody>
+            This email already has a web wallet, made under an earlier HOLD account, and the web never makes a second one.
+            Write to support from this email and we will move you back to that account.
+          </HeroBody>
+        </HeroCard>
+      </div>
+    </AppScreen>
   );
 }
 
@@ -211,17 +207,13 @@ function WalletOnAnotherAccount() {
 
 function AppWallet() {
   const w = useHoldWallet();
-  if (w.loading) return <Skeleton className="mx-auto h-[240px] w-full max-w-[640px]" />;
+  if (w.loading) return <Skeleton className="mx-auto h-[320px] w-full max-w-[460px]" />;
   return (
     <div className="flex flex-col gap-4">
       {w.solana ? <Receive address={w.solana} /> : null}
-      <Card title="Your wallet is in the HOLD app">
-        <Note>
-          This account&apos;s wallet was made in the HOLD app, and this is its Solana address: sponsors and deposits reach it
-          here. The web never makes a second wallet and never holds this one&apos;s keys.
-        </Note>
-        <Note>Send, swap and withdraw in the HOLD app.</Note>
-      </Card>
+      <div className="mx-auto w-full max-w-[460px]">
+        <FooterNote icon="phone-portrait-outline">This wallet was made in the HOLD app, which keeps its keys. Send and swap there.</FooterNote>
+      </div>
     </div>
   );
 }
@@ -297,63 +289,68 @@ function Create({ status, onCreated }: { status: WalletStatus; onCreated: () => 
 
   if (step.kind === "done") {
     return (
-      <Card title="Your wallet is ready">
-        <Note>This is your Solana address. Send USDC or SOL on Solana to it.</Note>
-        <p className="break-all rounded-[12px] border border-white/10 bg-white/[0.04] px-4 py-3 font-mono text-small text-text">{step.address}</p>
-        <Note>Export your 12 words from Settings and keep them on paper: they are the only way back if every passkey is lost.</Note>
-        <div>
-          <button type="button" className={btnPrimary} onClick={onCreated}>
-            Open wallet
-          </button>
+      <AppScreen title="Wallet">
+        <div className="flex flex-col gap-4 pt-4">
+          <HeroCard icon="shield-checkmark" title="Your wallet is ready">
+            <HeroBody>Your Solana address:</HeroBody>
+            <p className="break-all px-1 text-center font-mono text-[13px] leading-[19px] text-white">{step.address}</p>
+          </HeroCard>
+          <PrimaryButton onClick={onCreated}>Open wallet</PrimaryButton>
+          <FooterNote icon="lock-closed-outline">Write down your 12 words from Security. They are the only way back if every passkey is lost.</FooterNote>
         </div>
-      </Card>
+      </AppScreen>
     );
   }
 
   if (step.kind === "sealing") {
     return (
-      <Card title="Creating your wallet">
-        <Note>Generating your wallet in this browser, checking it opens with your passkey, then saving the encrypted backup.</Note>
-        <Skeleton className="h-10 w-full" />
-      </Card>
+      <AppScreen title="Wallet">
+        <div className="flex flex-col gap-4 pt-4">
+          <HeroCard icon="hourglass-outline" title="Creating your wallet">
+            <HeroBody>Making it in this browser and sealing it with your passkey.</HeroBody>
+          </HeroCard>
+          <Skeleton className="h-[52px] w-full" />
+        </div>
+      </AppScreen>
     );
   }
 
   if (step.kind === "confirm") {
     return (
-      <Card title="Confirm your new passkey">
-        <Note>Your passkey was created. Confirm it once more so it can seal your wallet.</Note>
-        {error ? <Alert>{explain(error)}</Alert> : null}
-        <div>
-          <button type="button" className={btnPrimary} disabled={busy} onClick={() => void confirm([step.credentialId], "This browser")}>
+      <AppScreen title="Wallet">
+        <div className="flex flex-col gap-4 pt-4">
+          <HeroCard icon="finger-print" title="Confirm your new passkey">
+            <HeroBody>Once more, so it can seal your wallet.</HeroBody>
+          </HeroCard>
+          {error ? <Problem>{explain(error)}</Problem> : null}
+          <PrimaryButton icon="finger-print" disabled={busy} onClick={() => void confirm([step.credentialId], "This browser")}>
             Confirm with passkey
-          </button>
+          </PrimaryButton>
         </div>
-      </Card>
+      </AppScreen>
     );
   }
 
   return (
-    <Card title="Create your wallet">
-      <Note>
-        A Solana wallet for USDC and SOL, created in this browser and locked by a passkey (Face ID, Touch ID or your device
-        PIN). HOLD stores only an encrypted backup it cannot open.
-      </Note>
-      <p className="rounded-[12px] border border-amber/30 bg-amber/10 px-4 py-3 text-small text-text">{LOSS_WARNING}</p>
-      {!status.email_verified ? <Alert>{explain(new WalletApiError("EMAIL_NOT_VERIFIED", 403))}</Alert> : null}
-      {error ? <Alert>{explain(error)}</Alert> : null}
-      {reg.error ? <Alert>{explain(reg.error)}</Alert> : null}
-      <div className="flex flex-wrap gap-2">
-        <button type="button" className={btnPrimary} disabled={busy || !reg.options || !status.email_verified} onClick={() => void createNew()}>
+    <AppScreen title="Wallet">
+      <div className="flex flex-col gap-4 pt-4">
+        <HeroCard icon="finger-print" title="Create your wallet">
+          <HeroBody>A Solana wallet for USDC and SOL, locked by a passkey: Face ID, Touch ID or your device PIN.</HeroBody>
+        </HeroCard>
+        {!status.email_verified ? <Problem>{explain(new WalletApiError("EMAIL_NOT_VERIFIED", 403))}</Problem> : null}
+        {error ? <Problem>{explain(error)}</Problem> : null}
+        {reg.error ? <Problem>{explain(reg.error)}</Problem> : null}
+        <PrimaryButton icon="add" disabled={busy || !reg.options || !status.email_verified} onClick={() => void createNew()}>
           Create with a new passkey
-        </button>
+        </PrimaryButton>
         {existing.length > 0 ? (
-          <button type="button" className={btnGhost} disabled={busy || !status.email_verified} onClick={() => void confirm(existing, null)}>
+          <SecondaryButton icon="finger-print" disabled={busy || !status.email_verified} onClick={() => void confirm(existing, null)}>
             Use a passkey I already have
-          </button>
+          </SecondaryButton>
         ) : null}
+        <FooterNote icon="lock-closed-outline">{LOSS_WARNING}</FooterNote>
       </div>
-    </Card>
+    </AppScreen>
   );
 }
 
@@ -394,32 +391,52 @@ function Unlock() {
     }
   };
 
+  const name = useDisplayName();
   return (
-    <Card title="Wallet locked">
-      <Note>Unlock with your passkey. The wallet opens in this tab only and locks itself after a few minutes away.</Note>
-      {error ? <Alert>{explain(error)}</Alert> : null}
-      <div>
-        <button type="button" className={btnPrimary} disabled={busy || !backup} onClick={() => void unlock()}>
+    <AppScreen>
+      <div className="flex flex-col items-center px-6 pt-10">
+        <p className="mb-6 text-center text-[24px] font-strong text-white">Welcome Back, {name}</p>
+        <span className="mb-8">
+          <UserAvatar size={100} fallbackName={name} />
+        </span>
+        {error ? (
+          <div className="mb-4 w-full">
+            <Problem>{explain(error)}</Problem>
+          </div>
+        ) : null}
+        <PrimaryButton icon="finger-print" disabled={busy || !backup} onClick={() => void unlock()}>
           Unlock with passkey
-        </button>
+        </PrimaryButton>
       </div>
-    </Card>
+    </AppScreen>
   );
 }
 
 /* ── Home ─────────────────────────────────────────────────────────── */
 
-type HomeScreen = "home" | "withdraw" | "receive" | "settings" | "export" | "add";
+/** The name the app greets with: the @username, else the display name, else the email. */
+function useDisplayName(): string {
+  const me = useMe();
+  const { session } = useShell();
+  const username = chosenUsername(me.data);
+  return username ? `@${username}` : me.data?.profile.displayName?.trim() || session.user.email || "you";
+}
+
+type HomeScreen = "home" | "withdraw" | "receive" | "security" | "passkeys" | "export" | "add";
 
 function Home({ address, status, onChanged }: { address: string; status: WalletStatus; onChanged: () => void }) {
   const { session } = useShell();
-  // DEMO BRANCH: ?screen= opens the wallet on one of its screens.
+  // DEMO BRANCH: ?screen= opens the wallet on one of its screens; otherwise the Dashboard's ?open=.
   const [screen, setScreen] = useState<HomeScreen>(() => {
     const want = demoParam("screen");
-    return want === "withdraw" || want === "receive" || want === "settings" || want === "export" || want === "add" ? want : "home";
+    if (want === "settings") return "security";
+    if (want === "withdraw" || want === "receive" || want === "security" || want === "passkeys" || want === "export" || want === "add") return want;
+    const open = typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("open");
+    return open === "receive" ? "receive" : open === "send" ? "withdraw" : open === "security" ? "security" : "home";
   });
   const [balances, setBalances] = useState<Balances | null>(null);
   const [balanceError, setBalanceError] = useState(false);
+  const name = useDisplayName();
 
   useEffect(() => {
     getBalances(address).then(
@@ -429,86 +446,124 @@ function Home({ address, status, onChanged }: { address: string; status: WalletS
   }, [address]);
 
   const back = () => setScreen("home");
-  const toSettings = () => setScreen("settings");
+  const toSecurity = () => setScreen("security");
+  const toPasskeys = () => setScreen("passkeys");
 
   if (screen === "receive") return <Receive address={address} onBack={back} />;
   if (screen === "withdraw") return <Withdraw uid={session.user.id} from={address} balances={balances} onBack={back} />;
-  if (screen === "settings")
-    return <Settings wrappings={status.wrappings} onBack={back} onExport={() => setScreen("export")} onAdd={() => setScreen("add")} onChanged={onChanged} />;
-  if (screen === "export") return <Export onBack={toSettings} />;
-  if (screen === "add") return <AddPasskey onBack={toSettings} onAdded={onChanged} />;
+  if (screen === "security") return <Security onBack={back} onPhrase={() => setScreen("export")} onPasskeys={toPasskeys} />;
+  if (screen === "passkeys")
+    return <Passkeys wrappings={status.wrappings} onBack={toSecurity} onAdd={() => setScreen("add")} onChanged={onChanged} />;
+  if (screen === "export") return <Export onBack={toSecurity} />;
+  if (screen === "add") return <AddPasskey onBack={toPasskeys} onAdded={onChanged} />;
 
-  const fmt = (n: number, d: number) => n.toLocaleString("en-US", { maximumFractionDigits: d });
+  const fmt = (n: number, d: number) => n.toLocaleString("en-US", { minimumFractionDigits: d === 2 ? 2 : 0, maximumFractionDigits: d });
+  const sol = balances ? `${fmt(balances.sol, 4)} SOL` : balanceError ? "–" : "…";
   return (
-    <div className="mx-auto flex w-full max-w-[640px] flex-col gap-3">
-      <div className="flex items-center justify-between gap-2 px-1">
-        <p className="truncate text-small text-[#9FB7C2]">
-          Solana · <span className="font-mono text-text">{short(address)}</span>
-        </p>
-        <button type="button" className={btnGhost} onClick={lock}>
-          Lock
+    <AppScreen>
+      {/* DashboardHeader: who you are on the left, the glass buttons on the right. */}
+      <div className="flex items-center justify-between gap-3 px-1">
+        <span className="flex min-w-0 items-center gap-2.5">
+          <UserAvatar size={36} fallbackName={name} />
+          <span className="truncate text-[17px] font-strong text-white">{name}</span>
+        </span>
+        <button
+          type="button"
+          onClick={lock}
+          aria-label="Lock"
+          title="Lock"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] border border-white/[0.15] bg-white/10 transition-colors hover:bg-white/[0.16]"
+        >
+          <Ion name="lock-closed-outline" size={18} color="#FFFFFF" />
         </button>
       </div>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Tile
-          label="USDC"
-          value={balances ? fmt(balances.usdc, 2) : balanceError ? "—" : "…"}
-          sub={balanceError ? "Balance unavailable right now" : "On Solana"}
-          onClick={() => setScreen("receive")}
-        />
-        <Tile label="SOL" value={balances ? fmt(balances.sol, 4) : balanceError ? "—" : "…"} sub="For network fees" onClick={() => setScreen("receive")} />
+
+      {/* HeroSection: the balance, centred, then the quick actions. */}
+      <div className="mt-8 flex flex-col items-center">
+        {balanceError ? (
+          <span className="block text-[48px] font-strong leading-[52px] text-white">–</span>
+        ) : (
+          <HeroBalance value={balances ? money(balances.usdc) : null} />
+        )}
       </div>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <Tile label="Withdraw" value="Send out" sub="Approved on your phone" onClick={() => setScreen("withdraw")} />
-        <Tile label="Receive" value="Address & QR" sub="USDC or SOL on Solana only" onClick={() => setScreen("receive")} />
-        <Tile label="Settings" value="Passkeys & words" sub={`${status.wrappings.length} passkey${status.wrappings.length === 1 ? "" : "s"} open this wallet`} onClick={toSettings} />
+      <div className="mt-7">
+        <ActionsRow>
+          <MiniAction icon="add-circle-outline" label="Receive" onClick={() => setScreen("receive")} />
+          <MiniAction icon="send-outline" label="Send" onClick={() => setScreen("withdraw")} />
+          <MiniAction icon="shield-checkmark-outline" label="Security" onClick={toSecurity} />
+        </ActionsRow>
       </div>
-    </div>
+
+      {/* TokenList, in its GlassCard. */}
+      <div className="mt-5">
+        <Card className="overflow-hidden">
+          <TokenRow
+            symbol="USDC"
+            name="USD Coin"
+            sub={balances ? `${fmt(balances.usdc, 2)} USDC` : balanceError ? "–" : "…"}
+            value={balances ? money(balances.usdc) : balanceError ? "–" : "…"}
+            valueSub={balances ? `${fmt(balances.usdc, 2)} USDC` : undefined}
+          />
+          <RowSeparator />
+          <TokenRow symbol="SOL" name="Solana" sub="Network fees" value={sol} />
+        </Card>
+      </div>
+    </AppScreen>
   );
 }
 
-function Receive({ address, onBack }: { address: string; onBack?: () => void }) {
-  const [copied, setCopied] = useState(false);
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(address);
-      setCopied(true);
-    } catch {
-      setCopied(false);
-    }
-  };
+/* ── Security: the app's Account recovery (backup.tsx) ────────────── */
+
+function MenuRow({ icon, label, sub, onClick, divider }: { icon: IonName; label: string; sub?: string; onClick: () => void; divider?: boolean }) {
   return (
-    <Card title="Receive" onBack={onBack}>
-      <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
-        <div className="w-[180px] shrink-0 overflow-hidden rounded-[12px]">
-          <QrCode text={address} title="Your Solana address" className="h-auto w-full" />
-        </div>
-        <div className="flex min-w-0 flex-col gap-3">
-          <p className="break-all font-mono text-small text-text">{address}</p>
-          <Note>Send only USDC or SOL, and only on the Solana network. Tokens sent on another network to this address are lost.</Note>
-          <div>
-            <button type="button" className={btnGhost} onClick={() => void copy()}>
-              {copied ? "Copied" : "Copy address"}
-            </button>
-          </div>
-        </div>
-      </div>
-    </Card>
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex w-full items-center gap-3 px-[18px] py-[18px] text-left transition-colors hover:bg-white/[0.03] ${divider ? "border-t border-white/[0.08]" : ""}`}
+    >
+      <Ion name={icon} size={18} color="#FFFFFF" />
+      <span className="min-w-0 flex-1">
+        <span className="block text-[15px] font-strong text-white">{label}</span>
+        {sub ? <span className="mt-0.5 block text-[13px] text-white/55">{sub}</span> : null}
+      </span>
+      <Ion name="chevron-forward" size={16} color="rgba(255,255,255,0.55)" />
+    </button>
   );
 }
 
-/* ── Settings ─────────────────────────────────────────────────────── */
+function Security({ onBack, onPhrase, onPasskeys }: { onBack: () => void; onPhrase: () => void; onPasskeys: () => void }) {
+  return (
+    <AppScreen title="Account recovery" onBack={onBack}>
+      <div className="flex flex-col pt-2">
+        <HeroCard icon="shield-checkmark" title="Your safety net">
+          <HeroBody>
+            HOLD is non-custodial — we cannot recover your funds if you lose access. Keep at least one backup factor active and
+            stored somewhere safe.
+          </HeroBody>
+        </HeroCard>
+        <div className="mt-6">
+          <SectionLabel>Backup factors</SectionLabel>
+          <Card className="overflow-hidden">
+            <MenuRow icon="key-outline" label="Recovery phrase" onClick={onPhrase} />
+            <MenuRow icon="finger-print" label="Passkeys" onClick={onPasskeys} divider />
+          </Card>
+        </div>
+        <FooterNote icon="lock-closed-outline">{LOSS_WARNING}</FooterNote>
+      </div>
+    </AppScreen>
+  );
+}
 
-function Settings({
+/* ── Passkeys (passkeys.tsx) ──────────────────────────────────────── */
+
+function Passkeys({
   wrappings,
   onBack,
-  onExport,
   onAdd,
   onChanged,
 }: {
   wrappings: WrappingMeta[];
   onBack: () => void;
-  onExport: () => void;
   onAdd: () => void;
   onChanged: () => void;
 }) {
@@ -527,47 +582,80 @@ function Settings({
   };
 
   return (
-    <Card title="Wallet settings" onBack={onBack}>
-      <div className="flex flex-col gap-1">
-        <p className="text-tiny text-[#9FB7C2]">Passkeys that open this wallet</p>
-        {wrappings.map((w, i) => (
-          <div key={w.credential_id} className="flex items-center justify-between gap-2 rounded-[12px] px-3 py-2 hover:bg-white/[0.04]">
-            <div className="min-w-0">
-              <p className="truncate text-small text-text">{w.label ?? `Passkey ${i + 1}`}</p>
-              <p className="text-tiny text-[#B4BEC9]">Added {new Date(w.created_at).toLocaleDateString("en-GB")}</p>
-            </div>
-            {wrappings.length > 1 ? (
-              confirming === w.credential_id ? (
-                <div className="flex gap-1.5">
-                  <button type="button" className={btnGhost} onClick={() => void remove(w.credential_id)}>
-                    Remove
-                  </button>
-                  <button type="button" className={btnGhost} onClick={() => setConfirming(null)}>
-                    Keep
-                  </button>
+    <AppScreen title="Passkeys" onBack={onBack}>
+      <div className="flex flex-col pt-3">
+        <SectionLabel>All passkeys</SectionLabel>
+        <div className="mb-4 flex flex-col gap-3">
+          {wrappings.map((w, i) => {
+            const name = w.label ?? `Passkey ${i + 1}`;
+            const asking = confirming === w.credential_id;
+            return (
+              <div key={w.credential_id} className="flex flex-col gap-3 rounded-[16px] border border-white/[0.08] bg-white/[0.05] p-3.5">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[10px] bg-[rgba(255,183,3,0.1)]">
+                    <Ion name="finger-print" size={20} color={AMBER} />
+                  </span>
+                  <span className="flex min-w-0 flex-1 flex-col gap-[3px]">
+                    <span className="truncate text-[15px] font-strong text-white">{name}</span>
+                    <span className="truncate text-[12px] font-medium text-white/55">
+                      Added {new Date(w.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                    </span>
+                  </span>
+                  {wrappings.length > 1 && !asking ? (
+                    <button
+                      type="button"
+                      onClick={() => setConfirming(w.credential_id)}
+                      aria-label={`Remove ${name}`}
+                      className="flex h-[34px] w-[34px] items-center justify-center rounded-[17px] transition-colors hover:bg-white/[0.12]"
+                    >
+                      <Ion name="trash-outline" size={18} color="rgba(255,255,255,0.55)" />
+                    </button>
+                  ) : null}
                 </div>
-              ) : (
-                <button type="button" className="h-8 rounded-[8px] px-2 text-tiny text-[#9FB7C2] hover:bg-white/10 hover:text-text" onClick={() => setConfirming(w.credential_id)}>
-                  Remove
-                </button>
-              )
-            ) : null}
+                {asking ? (
+                  <div className="flex flex-col gap-2 border-t border-white/[0.07] pt-2.5">
+                    <p className="text-[13px] leading-[18px] text-white/65">
+                      Remove {name}? It won&apos;t open this wallet anymore. You can add it back any time from this screen.
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void remove(w.credential_id)}
+                        className="h-9 flex-1 rounded-[12px] border border-white/10 bg-white/[0.06] text-[14px] font-strong text-[#FFB703] hover:bg-white/[0.12]"
+                      >
+                        Remove
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirming(null)}
+                        className="h-9 flex-1 rounded-[12px] border border-white/10 bg-white/[0.06] text-[14px] font-strong text-white hover:bg-white/[0.12]"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+        {error ? (
+          <div className="mb-4">
+            <Problem>{explain(error)}</Problem>
           </div>
-        ))}
+        ) : null}
+        <SecondaryButton icon="add" onClick={onAdd}>
+          Add a passkey
+        </SecondaryButton>
+        <FooterNote icon="shield-checkmark-outline">
+          Removing the last passkey is not allowed. To replace it, add a new one first, then remove the old.
+        </FooterNote>
       </div>
-      {error ? <Alert>{explain(error)}</Alert> : null}
-      <div className="flex flex-wrap gap-2">
-        <button type="button" className={btnPrimary} onClick={onAdd}>
-          Add another passkey
-        </button>
-        <button type="button" className={btnGhost} onClick={onExport}>
-          Export 12 words
-        </button>
-      </div>
-      <p className="text-tiny leading-relaxed text-[#9FB7C2]">{LOSS_WARNING}</p>
-    </Card>
+    </AppScreen>
   );
 }
+
+/* ── Recovery Phrase (view-recovery.tsx) ──────────────────────────── */
 
 function Export({ onBack }: { onBack: () => void }) {
   const { session } = useShell();
@@ -605,46 +693,47 @@ function Export({ onBack }: { onBack: () => void }) {
   };
 
   return (
-    <Card title="Export 12 words" onBack={() => { setWords(null); onBack(); }}>
-      {words ? (
-        <>
-          <ol className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {words.map((w, i) => (
-              <li key={i} className="flex items-center gap-2 rounded-[10px] border border-white/10 bg-white/[0.04] px-3 py-2 text-small text-text">
-                <span className="w-5 text-right text-tiny tabular-nums text-[#B4BEC9]">{i + 1}</span>
-                <span className="font-mono">{w}</span>
-              </li>
-            ))}
-          </ol>
-          <Note>
-            Write them on paper, in order, and keep them offline. Anyone with these words controls the funds. They are not
-            copied to your clipboard and are not shown again unless you confirm with a passkey.
-          </Note>
-          <div>
-            <button type="button" className={btnPrimary} onClick={() => setWords(null)}>
+    <AppScreen
+      title="Recovery Phrase"
+      onBack={() => {
+        setWords(null);
+        onBack();
+      }}
+    >
+      <div className="flex flex-col pt-4">
+        {words ? (
+          <>
+            <WarningNote>Never share your recovery phrase with anyone. Anyone with access to these words can control your wallet.</WarningNote>
+            <ol className="my-6 grid grid-cols-2 gap-3">
+              {words.map((w, i) => (
+                <li key={i} className="flex items-center rounded-[12px] border border-white/[0.08] bg-[rgba(3,12,16,0.35)] p-3.5">
+                  <span className="mr-2.5 min-w-6 text-[12px] font-strong tabular-nums text-[#9FB7C2]">{i + 1}</span>
+                  <span className="flex-1 text-[15px] font-strong text-white">{w}</span>
+                </li>
+              ))}
+            </ol>
+            <SecondaryButton icon="checkmark" onClick={() => setWords(null)}>
               I wrote them down, hide them
-            </button>
-          </div>
-        </>
-      ) : (
-        <>
-          <Note>
-            Your 12 words are the master key to this wallet. Show them only where nobody can see your screen. Confirm with
-            your passkey to show them once.
-          </Note>
-          {error ? <Alert>{explain(error)}</Alert> : null}
-          <div>
-            <button type="button" className={btnPrimary} disabled={busy || !backup} onClick={() => void reveal()}>
+            </SecondaryButton>
+            <FooterNote icon="lock-closed-outline">Write them on paper, in order. They are never copied to your clipboard.</FooterNote>
+          </>
+        ) : (
+          <div className="flex flex-col gap-4">
+            <HeroCard icon="key-outline" title="Recovery phrase">
+              <HeroBody>Your 12 words open this wallet anywhere. Show them only where nobody can see your screen.</HeroBody>
+            </HeroCard>
+            {error ? <Problem>{explain(error)}</Problem> : null}
+            <PrimaryButton icon="finger-print" disabled={busy || !backup} onClick={() => void reveal()}>
               Confirm with passkey
-            </button>
+            </PrimaryButton>
           </div>
-        </>
-      )}
-    </Card>
+        )}
+      </div>
+    </AppScreen>
   );
 }
 
-/* ── Add another passkey ──────────────────────────────────────────── */
+/* ── Add a passkey ────────────────────────────────────────────────── */
 
 type AddStep = "current" | "create" | "confirm" | "done";
 
@@ -735,40 +824,60 @@ function AddPasskey({ onBack, onAdded }: { onBack: () => void; onAdded: () => vo
     }
   };
 
+  const steps: { key: AddStep; label: string }[] = [
+    { key: "current", label: "Confirm with a passkey that opens your wallet" },
+    { key: "create", label: "Create the new passkey" },
+    { key: "confirm", label: "Confirm the new passkey" },
+  ];
+  const at = steps.findIndex((x) => x.key === step);
+
   return (
-    <Card title="Add another passkey" onBack={onBack}>
-      {step === "done" ? (
-        <Note>Done. That passkey now opens your wallet too.</Note>
-      ) : (
-        <>
-          <Note>
-            A second passkey in another password manager (for example Google Password Manager besides iCloud Keychain)
-            means losing one of them does not lock you out.
-          </Note>
-          <ol className="flex flex-col gap-1 text-small">
-            <li className={step === "current" ? "text-text" : "text-[#B4BEC9]"}>1. Confirm with a passkey that opens your wallet</li>
-            <li className={step === "create" ? "text-text" : "text-[#B4BEC9]"}>2. Create the new passkey</li>
-            <li className={step === "confirm" ? "text-text" : "text-[#B4BEC9]"}>3. Confirm the new passkey</li>
-          </ol>
-          {error ? <Alert>{explain(error)}</Alert> : null}
-          {reg.error && step === "create" ? <Alert>{explain(reg.error)}</Alert> : null}
-          <div>
-            {step === "current" ? (
-              <button type="button" className={btnPrimary} disabled={busy || !backup} onClick={() => void current()}>
-                Confirm with passkey
-              </button>
-            ) : step === "create" ? (
-              <button type="button" className={btnPrimary} disabled={busy || !reg.options} onClick={() => void create()}>
-                Create new passkey
-              </button>
-            ) : (
-              <button type="button" className={btnPrimary} disabled={busy} onClick={() => void confirm()}>
-                Confirm new passkey
-              </button>
-            )}
+    <AppScreen title="Add passkey" onBack={onBack}>
+      <div className="flex flex-col gap-4 pt-3">
+        {step === "done" ? (
+          <div className="flex items-center gap-3 rounded-[16px] border border-[rgba(52,199,89,0.28)] bg-[rgba(52,199,89,0.06)] p-3.5">
+            <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[10px] bg-[rgba(52,199,89,0.12)]">
+              <Ion name="shield-checkmark" size={20} color={GREEN} />
+            </span>
+            <span className="text-[15px] font-strong text-white">That passkey now opens your wallet too.</span>
           </div>
-        </>
-      )}
-    </Card>
+        ) : (
+          <>
+            <HeroCard icon="finger-print" title="Add a passkey">
+              <HeroBody>One in another password manager too means losing one of them does not lock you out.</HeroBody>
+            </HeroCard>
+            <Card className="overflow-hidden">
+              {steps.map((x, i) => (
+                <div key={x.key} className={`flex items-center gap-3 px-4 py-3.5 ${i > 0 ? "border-t border-white/[0.08]" : ""}`}>
+                  <span
+                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-[12px] text-[12px] font-strong ${
+                      i < at ? "bg-[#3ED598] text-[#0A1A24]" : i === at ? "bg-[rgba(255,183,3,0.16)] text-[#FFB703]" : "bg-white/[0.08] text-white/60"
+                    }`}
+                  >
+                    {i < at ? <Ion name="checkmark" size={15} color="#0A1A24" /> : i + 1}
+                  </span>
+                  <span className={`text-[14px] ${i === at ? "font-strong text-white" : "text-white/60"}`}>{x.label}</span>
+                </div>
+              ))}
+            </Card>
+            {error ? <Problem>{explain(error)}</Problem> : null}
+            {reg.error && step === "create" ? <Problem>{explain(reg.error)}</Problem> : null}
+            {step === "current" ? (
+              <PrimaryButton icon="finger-print" disabled={busy || !backup} onClick={() => void current()}>
+                Confirm with passkey
+              </PrimaryButton>
+            ) : step === "create" ? (
+              <PrimaryButton icon="add" disabled={busy || !reg.options} onClick={() => void create()}>
+                Create new passkey
+              </PrimaryButton>
+            ) : (
+              <PrimaryButton icon="finger-print" disabled={busy} onClick={() => void confirm()}>
+                Confirm new passkey
+              </PrimaryButton>
+            )}
+          </>
+        )}
+      </div>
+    </AppScreen>
   );
 }

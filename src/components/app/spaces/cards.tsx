@@ -15,10 +15,12 @@ import type { SpaceCard, TemplateKind } from "@/lib/creator/listing";
 import { listingRefs, NO_EVENT, type EventRef, type ListingRef } from "@/lib/app/spaces-model";
 import { useTemplates } from "@/lib/app/spaces-data";
 
-import { IconArrowLeft, IconCalendar } from "../icons";
+import { IconCalendar } from "../icons";
+import { BackHeader } from "../hold";
+import { Ion } from "../ion";
 import { useShell } from "../Shell";
-import { glass } from "../ui";
 import { StatusPill } from "./common";
+import { Chip, money } from "./kit";
 
 /** Two rows of four on a laptop: a page of cards never grows past one screen. */
 export const PAGE = 8;
@@ -50,19 +52,13 @@ export function Pager({
   setPage: (p: number) => void;
 }) {
   if (pages <= 1) return null;
-  const btn =
-    "inline-flex h-8 items-center rounded-[10px] border border-white/10 bg-white/[0.05] px-3 text-tiny text-[#CFE3EC] transition-colors hover:bg-white/10 disabled:opacity-40";
   return (
     <nav aria-label="Pages" className="flex items-center justify-end gap-2">
-      <span className="text-tiny tabular-nums text-[#9FB7C2]">
+      <span className="text-[12.5px] font-strong tabular-nums text-white/55">
         {page * size + 1}–{Math.min(total, (page + 1) * size)} of {total}
       </span>
-      <button type="button" className={btn} disabled={page === 0} onClick={() => setPage(page - 1)}>
-        Previous
-      </button>
-      <button type="button" className={btn} disabled={page >= pages - 1} onClick={() => setPage(page + 1)}>
-        Next
-      </button>
+      <Chip label="Previous" icon="chevron-back" disabled={page === 0} onClick={() => setPage(page - 1)} />
+      <Chip label="Next" disabled={page >= pages - 1} onClick={() => setPage(page + 1)} />
     </nav>
   );
 }
@@ -84,7 +80,8 @@ export function Cover({ url, gradient, children }: { url?: string | null; gradie
   );
 }
 
-export const cardCls = `${glass} flex h-full min-w-0 flex-col overflow-hidden transition-colors hover:bg-white/[0.06]`;
+/** The app's Card (ui.tsx): a 6% white wash, a 10% stroke, radius 18. */
+export const cardCls = "flex h-full min-w-0 flex-col overflow-hidden rounded-[18px] border border-white/10 bg-white/[0.06] transition-colors hover:bg-white/[0.09]";
 
 /**
  * Ad space or service, by the listing's template — the same rule as the
@@ -110,27 +107,13 @@ export function useListingRefs(): ReadonlyMap<string, ListingRef> {
 
 /* ── The drill-down ───────────────────────────────────────────────── */
 
-/** Back, where you are, and one control on the right. */
+/**
+ * The app's GlassHeader on a drilled-in screen: a chevron back, the title, and
+ * where you are under it. Inside the shell it is drawn in the top bar (the
+ * BackHeader's header slot), so the section title is not said twice.
+ */
 export function DrillBar({ back, crumb, title, right }: { back: string; crumb: string; title: string; right?: ReactNode }) {
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div className="flex min-w-0 items-center gap-3">
-        <Link
-          href={back}
-          scroll={false}
-          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-[10px] border border-white/10 bg-white/[0.05] px-3 text-tiny font-medium text-[#CFE3EC] transition-colors hover:bg-white/10 hover:text-text"
-        >
-          <IconArrowLeft className="h-3.5 w-3.5" />
-          Back
-        </Link>
-        <div className="min-w-0">
-          <p className="truncate text-[11px] text-[#9FB7C2]">{crumb}</p>
-          <h2 className="truncate text-body font-medium text-text">{title}</h2>
-        </div>
-      </div>
-      {right}
-    </div>
-  );
+  return <BackHeader title={title} subtitle={crumb} backHref={back} right={right} />;
 }
 
 export function eventName(event: EventRef | null | undefined): string {
@@ -148,8 +131,8 @@ function eventWhere(event: EventRef | null): string {
 function Figure({ value, note, attention }: { value: ReactNode; note?: ReactNode; attention?: boolean }) {
   return (
     <div className="mt-auto flex min-w-0 items-end justify-between gap-2">
-      <p className={`text-[26px] font-medium leading-none tabular-nums xl:text-[30px] ${attention ? "text-amber" : "text-text"}`}>{value}</p>
-      {note ? <p className="truncate text-tiny tabular-nums text-[#9FB7C2]">{note}</p> : null}
+      <p className={`${money} leading-none ${attention ? "!text-amber" : ""}`}>{value}</p>
+      {note ? <p className="truncate text-[12.5px] font-strong tabular-nums text-white/55">{note}</p> : null}
     </div>
   );
 }
@@ -175,19 +158,19 @@ export function EventCard({
 }) {
   return (
     <li>
-      <Link href={href} scroll={false} className={`${cardCls} gap-3 p-4 sm:min-h-[176px] sm:gap-4 sm:p-5 xl:min-h-[200px]`}>
+      <Link href={href} scroll={false} className={`${cardCls} gap-2.5 p-3.5 sm:min-h-[168px] xl:min-h-[188px]`}>
         <div className="flex min-w-0 items-start gap-2.5">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] border border-white/10 bg-white/[0.06] text-[#CFE3EC]">
-            <Icon />
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[16px] border border-white/10 bg-white/[0.04] text-white/[0.62]">
+            <Icon className="h-4 w-4" />
           </span>
           <div className="min-w-0">
-            <p className="truncate text-small font-medium text-text">{eventName(event)}</p>
-            <p className="mt-0.5 truncate text-tiny text-[#9FB7C2]">{eventWhere(event)}</p>
+            <p className="truncate text-[16px] font-strong tracking-[-0.2px] text-white">{eventName(event)}</p>
+            <p className="mt-0.5 truncate text-[12.5px] font-strong text-white/55">{eventWhere(event)}</p>
           </div>
         </div>
         <div className="flex min-w-0 flex-col gap-0.5">
           {lines.map((l, i) => (
-            <p key={i} className="truncate text-tiny text-[#CFE3EC]">
+            <p key={i} className="truncate text-[13px] text-white/[0.62]">
               {l}
             </p>
           ))}
@@ -220,10 +203,10 @@ export function ListingFigureCard({
         <Cover url={listing.bannerUrl} gradient={listing.bannerGradient}>
           <StatusPill status={listing.status} onPhoto />
         </Cover>
-        <div className="flex flex-1 flex-col gap-3 p-4">
+        <div className="flex flex-1 flex-col gap-2.5 p-3.5">
           <div className="min-w-0">
-            <p className="truncate text-small font-medium text-text">{listing.title}</p>
-            <p className="mt-0.5 truncate text-tiny text-[#9FB7C2]">{line}</p>
+            <p className="truncate text-[16px] font-strong tracking-[-0.2px] text-white">{listing.title}</p>
+            <p className="mt-0.5 truncate text-[12.5px] font-strong text-white/55">{line}</p>
           </div>
           <Figure value={value} note={note} attention={attention} />
         </div>

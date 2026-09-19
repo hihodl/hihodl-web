@@ -35,7 +35,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
-import { btnSmall, btnSmallSecondary, card, pill } from "@/components/ad-space/ui";
+import { ProgressBar, Tag } from "@/components/app/spaces/kit";
 import { CreatorApiError } from "@/lib/creator/api";
 import { assignToListing, getTeam, listingTeam, unassignFromListing } from "@/lib/creator/listings";
 import { spacesPath } from "@/lib/app/paths";
@@ -51,7 +51,12 @@ import {
   type TeamMember,
 } from "@/lib/creator/team";
 
-import { Dropdown, Field, Text } from "../listing/parts";
+import { btnSmallGlass, Dropdown, Field, Text } from "../listing/parts";
+
+/** The white plate, small: the action inside a row that moves on without taking money. */
+const btnSmall =
+  "inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-[18px] bg-[#F1F5F9] px-3.5 text-[13px] font-extrabold text-[#0A1420] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:bg-white/[0.07] disabled:text-white/60";
+const btnSmallSecondary = btnSmallGlass;
 import { Loading, Notice, Section } from "../parts";
 import { ROLE_TEXT } from "./Members";
 
@@ -98,11 +103,11 @@ export function ListingTeam({ spaceId }: { spaceId: string }) {
       {assignments === null ? (
         <Loading what="who is on this listing" />
       ) : (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-3.5">
           <RoomLeft room={room} />
 
           {assignments.length > 0 ? (
-            <ul className="flex flex-col gap-3">
+            <ul className="flex flex-col gap-2">
               {assignments.map((a) => (
                 <AssignmentRow
                   key={a.memberId}
@@ -116,14 +121,14 @@ export function ListingTeam({ spaceId }: { spaceId: string }) {
           ) : null}
 
           {team.length === 0 ? (
-            <p className="text-small text-text-muted">
+            <p className="text-[14px] leading-5 text-white/[0.62]">
               No team yet.{" "}
-              <Link href={spacesPath("/team")} className="text-text underline decoration-dotted underline-offset-4">
+              <Link href={spacesPath("/team")} className="text-white underline underline-offset-2">
                 Invite someone
               </Link>
             </p>
           ) : free.length === 0 ? (
-            <p className="text-small text-text-muted">
+            <p className="text-[14px] leading-5 text-white/[0.62]">
               {assignments.length > 0 ? "Everyone who has accepted is on it." : "Nobody has accepted yet."}
               {waiting > 0 ? ` ${waiting} ${waiting === 1 ? "invitation" : "invitations"} open.` : ""}
             </p>
@@ -142,15 +147,15 @@ function RoomLeft({ room }: { room: number }) {
   const taken = TEAM_LIMITS.SHARE_TOTAL_MAX_BPS - room;
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-baseline justify-between gap-2 text-small">
-        <span className="text-text">
+      <div className="flex flex-wrap items-baseline justify-between gap-2 text-[14px]">
+        <span className="font-strong text-white">
           {taken === 0 ? "Nothing given away yet" : `${shareText(taken)} given to your team`}
         </span>
-        <span className="text-text-muted">{shareText(room)} left</span>
+        <span className="text-white/55">{shareText(room)} left</span>
       </div>
       {/* Width only ever says how much: the colour is the same amber at 10% and at 100%. */}
-      <div className="h-2 w-full overflow-hidden rounded-[4px] bg-white/[0.06]" aria-hidden>
-        <div className="h-full rounded-[4px] bg-amber" style={{ width: `${taken / 100}%` }} />
+      <div aria-hidden>
+        <ProgressBar value={taken / 10000} />
       </div>
     </div>
   );
@@ -179,15 +184,15 @@ function AssignmentRow({
   const roomForThem = roomLeftBps(all, assignment.memberId);
 
   return (
-    <li className={`${card} flex flex-col gap-3 p-5`}>
+    <li className="flex flex-col gap-2.5 rounded-[14px] border border-white/10 bg-white/[0.06] px-3 py-[11px]">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="break-words text-body text-text">{assignment.label}</p>
-          <p className="mt-1 text-tiny text-text-muted">{ROLE_TEXT[assignment.role].label}</p>
+          <p className="break-words text-[14.5px] font-bold text-white">{assignment.label}</p>
+          <p className="mt-0.5 text-[12.5px] text-white/55">{ROLE_TEXT[assignment.role].label}</p>
         </div>
-        <span className={pill.neutral}>{shareText(assignment.shareBps)} of what you receive</span>
+        <Tag label={`${shareText(assignment.shareBps)} of what you receive`} />
       </div>
-      {assignment.note && !editing ? <p className="break-words text-small text-text-muted">{assignment.note}</p> : null}
+      {assignment.note && !editing ? <p className="break-words text-[14px] leading-5 text-white/[0.62]">{assignment.note}</p> : null}
 
       {editing ? (
         <div className="flex flex-col gap-4">
@@ -201,7 +206,7 @@ function AssignmentRow({
           <Field label="Note" hint="Optional. Only you see it.">
             <Text value={note} onChange={setNote} maxLength={TEAM_LIMITS.NOTE_MAX} placeholder="Runs the booth both days" />
           </Field>
-          <p className="text-tiny text-text-muted">From the next sale.</p>
+          <p className="text-[12px] leading-4 text-white/55">From the next sale.</p>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -237,9 +242,9 @@ function AssignmentRow({
           </div>
         </div>
       ) : asking ? (
-        <div className="flex flex-col gap-3 rounded-input border border-[color:var(--color-hairline-strong)] px-4 py-3">
-          <p className="text-small text-text">Take {assignment.label} off this listing?</p>
-          <p className="text-small text-text-muted">Past sales stay owed.</p>
+        <div className="flex flex-col gap-2 rounded-[12px] bg-amber/[0.12] px-3 py-2.5">
+          <p className="text-[13px] font-strong leading-[18px] text-amber">Take {assignment.label} off this listing?</p>
+          <p className="text-[14px] leading-5 text-white/[0.62]">Past sales stay owed.</p>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -302,10 +307,10 @@ function AddForm({
   const problem = shareSentence(shareProblem(bps, assignments, chosen));
 
   return (
-    <div className="flex flex-col gap-5 border-t border-[color:var(--color-hairline)] pt-6">
-      <h3 className="text-body text-text">Add to this listing</h3>
+    <div className="flex flex-col gap-3.5 border-t border-white/[0.08] pt-3.5">
+      <h3 className="text-[12px] font-bold uppercase tracking-[0.4px] text-white/55">Add to this listing</h3>
       {room === 0 ? (
-        <p className="text-small text-text-muted">100% already shared. Lower a share to make room.</p>
+        <p className="text-[14px] leading-5 text-white/[0.62]">100% already shared. Lower a share to make room.</p>
       ) : (
         <>
           <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-3">
@@ -362,12 +367,12 @@ function Percent({ value, onChange }: { value: string; onChange: (v: string) => 
       <input
         type="text"
         inputMode="decimal"
-        className="w-full rounded-input border border-[color:var(--color-hairline-strong)] bg-white/[0.04] py-3 pl-4 pr-10 text-body text-text outline-none transition-colors duration-180 placeholder:text-text-faint focus:border-amber/60"
+        className="min-h-12 w-full rounded-[16px] border border-white/[0.12] bg-white/[0.06] py-3 pl-3.5 pr-10 text-[15.5px] text-white outline-none transition-colors placeholder:text-white/[0.28] focus:border-white/30"
         value={value}
         placeholder="20"
         onChange={(e) => onChange(e.target.value)}
       />
-      <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-body text-text-faint">%</span>
+      <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[15.5px] text-white/55">%</span>
     </div>
   );
 }

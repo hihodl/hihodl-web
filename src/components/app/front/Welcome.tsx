@@ -1,14 +1,20 @@
 "use client";
 
 /**
- * Onboarding on the web: one step per card, progress on top, Back that works.
+ * Onboarding on the web, drawn as the HOLD app draws its own
+ * (hihodl-wallet/app/onboarding/setup.tsx): the step's gradient, "Protect
+ * your wallet" on top with a close that signs out, and at the foot the step
+ * just done (tap to go back), the step now, the step after it, one glass
+ * action. The pieces are in ./step; the map is
+ * documentation/web-copies-the-app-onboarding.md.
  *
  *   Username        the app's claim and rules (PATCH /me aliasHandle)
- *   Name and photo  optional, "Skip"
+ *   Profile         name and photo, optional, "Skip" (the app has no such step)
  *   Passkey         /passkeys/register/* with the session
- *   Recovery codes  emailed, only when the account has none
+ *   Recovery Key    the codes emailed, only when the account has none
  *   Wallet          the Solana web wallet, when the rollout gate lets it be made;
- *                   "your wallet is in the HOLD app" when the app made one
+ *                   "your wallet is in the HOLD app" when the app made one.
+ *                   Made, it shows the app's Ready: "Your wallet is ready"
  *   Link your phone required, no skip, while no phone is linked (link/LinkPhone)
  *
  * What to ask is decided from the server once, when the page opens
@@ -47,28 +53,83 @@ import { lock, unlockWith } from "@/lib/wallet/vault";
 
 import { LinkPhone } from "../link/LinkPhone";
 import { Door } from "./Door";
-import { Avatar, btnGhost, btnLink, btnPrimary, DoorCard, HoldMark, inputCls, Note, Warn } from "./kit";
+import { HoldMark } from "./kit";
+import {
+  ACCENTS,
+  ActionButton,
+  CompletedRow,
+  Cta,
+  ErrorBanner,
+  InfoSheet,
+  InputRow,
+  inputFieldCls,
+  Ion,
+  NextHint,
+  ReadyBox,
+  SkipButton,
+  Spinner,
+  StatusLine,
+  StepDesc,
+  StepScreen,
+  StepTitle,
+  type IonName,
+  type StepTone,
+} from "./step";
 
 /* ── The page ─────────────────────────────────────────────────────── */
 
 export function Welcome() {
   const { session, configured } = useCreatorSession();
   if (session === null) return <Door configured={configured} />;
-  return (
-    <div className="flex min-h-[100dvh] w-full flex-col items-center justify-center px-4 py-8">
-      {session === undefined ? <HoldMark /> : <Flow key={session.user.id} session={session} />}
-    </div>
-  );
+  if (session === undefined) {
+    return (
+      <div className="flex min-h-[100dvh] w-full items-center justify-center">
+        <HoldMark />
+      </div>
+    );
+  }
+  return <Flow key={session.user.id} session={session} />;
 }
 
-const TITLES: Record<StepKey, string> = {
-  username: "Choose your username",
-  profile: "Your name and photo",
-  passkey: "Create your passkey",
-  recovery: "Your recovery codes",
-  wallet: "Create your wallet",
-  "app-wallet": "Your wallet",
-  link: "Link your phone",
+/** Each step as the app names and colours it (setup.tsx ALL_STEPS, STEP_GRADIENTS, STEP_INFO). */
+const STEP: Record<StepKey, { title: string; icon: IonName; tone: StepTone; info?: string }> = {
+  username: {
+    title: "Username",
+    icon: "person-outline",
+    tone: "username",
+    info: "Your unique @handle for receiving payments and being found by friends on HOLD.",
+  },
+  profile: {
+    title: "Profile",
+    icon: "person-circle-outline",
+    tone: "username",
+    info: "Your name and photo, shown to the people you pay and sell to. Both are optional.",
+  },
+  passkey: {
+    title: "Passkey",
+    icon: "key-outline",
+    tone: "passkey",
+    info: "A secure key stored on your device. Uses Face ID or fingerprint to verify your identity — no passwords needed.",
+  },
+  recovery: {
+    title: "Recovery Key",
+    icon: "mail-outline",
+    tone: "recovery",
+    info: "We'll send 8 recovery codes to your email. These codes are the ONLY way to recover your account if you lose access to Google or Apple. Save them somewhere safe — each code works only once.",
+  },
+  wallet: {
+    title: "Wallet",
+    icon: "wallet-outline",
+    tone: "ready",
+    info: "A Solana wallet for USDC, made in this browser and locked by your passkey. HOLD keeps only an encrypted backup it cannot open.",
+  },
+  "app-wallet": { title: "Wallet", icon: "wallet-outline", tone: "ready" },
+  link: {
+    title: "Link your phone",
+    icon: "phone-portrait-outline",
+    tone: "passkey",
+    info: "Your phone approves every withdrawal from your wallet.",
+  },
 };
 
 /** Where to go once done: back where they were going, or the Dashboard. */
@@ -89,6 +150,10 @@ function Flow({ session }: { session: Session }) {
   const [at, setAt] = useState(0);
   // What this visit finished, so Back to a done step shows it done.
   const [done, setDone] = useState<Set<StepKey>>(new Set());
+  const [info, setInfo] = useState<StepKey | null>(null);
+  // The wallet step's Ready takes the whole foot, as the app's does.
+  const [ready, setReady] = useState(false);
+  const slow = useSlow(!facts && !error);
 
   const load = useCallback(async () => {
     setError(null);
@@ -123,6 +188,7 @@ function Flow({ session }: { session: Session }) {
   const complete = useCallback(
     (key: StepKey) => {
       setDone((d) => new Set(d).add(key));
+      setReady(false);
       if (!steps) return;
       if (at + 1 >= steps.length) finish();
       else setAt(at + 1);
@@ -130,77 +196,87 @@ function Flow({ session }: { session: Session }) {
     [steps, at, finish],
   );
 
+  const close = () => void signOut();
+
+  // setup.tsx's "Setup incomplete": what the app shows when it could not read the account.
   if (error) {
     return (
-      <DoorCard>
-        <HoldMark />
-        <div className="mt-8 flex flex-col gap-4">
-          <Warn>{describeCreatorError(error)}</Warn>
-          <div className="flex flex-wrap gap-2">
-            <button type="button" className={btnPrimary} onClick={() => void load()}>
-              Try again
-            </button>
-            <button type="button" className={btnGhost} onClick={() => window.location.replace(dashboard())}>
-              Skip for now
-            </button>
-          </div>
+      <StepScreen tone="ready" title={"Protect\nyour wallet"} onClose={close} closeLabel="Sign out">
+        <div className="flex flex-col items-center gap-3.5 py-5 text-center">
+          <Ion name="warning-outline" size={32} className="text-[#F59E0B]" />
+          <h2 className="text-[24px] font-extrabold leading-8 text-[#F59E0B]">Setup incomplete</h2>
+          <p className="text-[15px] leading-[22px] text-white/60">Check your connection and try again.</p>
         </div>
-      </DoorCard>
+        <Cta>
+          <ActionButton title="Retry" onClick={() => void load()} />
+          <SkipButton label="Skip for now" onClick={() => window.location.replace(dashboard())} />
+        </Cta>
+      </StepScreen>
     );
   }
-  if (!facts || !steps || steps.length === 0) return <HoldMark />;
+
+  if (!facts || !steps || steps.length === 0) {
+    return (
+      <StepScreen tone="username" title={"Protect\nyour wallet"}>
+        <div className="flex min-h-[40dvh] flex-col items-center justify-center gap-3.5">
+          <Spinner />
+          {slow ? <p className="px-8 text-center text-[13px] text-white/60">Connection seems slow. Hang on…</p> : null}
+        </div>
+      </StepScreen>
+    );
+  }
 
   const key = steps[at];
-  const back = at > 0 ? () => setAt(at - 1) : undefined;
-  const props = { facts, session, done: done.has(key), onDone: () => complete(key) };
+  const meta = STEP[key];
+  const last = at + 1 >= steps.length;
+  const back = at > 0 ? () => { setReady(false); setAt(at - 1); } : undefined;
+  const next = !last ? STEP[steps[at + 1]] : null;
+
+  const head = (
+    <>
+      {back ? <CompletedRow title={STEP[steps[at - 1]].title} onBack={back} /> : null}
+      <StepTitle icon={meta.icon} title={meta.title} accent={ACCENTS[meta.tone]} onInfo={meta.info ? () => setInfo(key) : undefined} />
+    </>
+  );
+  const hint = next ? <NextHint icon={next.icon} title={next.title} /> : null;
+  const props = { facts, session, done: done.has(key), onDone: () => complete(key), head, hint };
 
   return (
-    <DoorCard wide>
-      <div className="flex items-center justify-between gap-3">
-        <HoldMark className="h-4 w-auto" />
-        <button type="button" className="text-tiny text-[#9FB7C2] hover:text-text" onClick={() => void signOut()}>
-          Sign out
-        </button>
-      </div>
+    <StepScreen
+      tone={ready ? "ready" : meta.tone}
+      title={ready && last ? "All set!" : "Protect\nyour wallet"}
+      onClose={ready && last ? undefined : close}
+      closeLabel="Sign out"
+    >
+      {key === "username" ? <UsernameStep {...props} /> : null}
+      {key === "profile" ? <ProfileStep {...props} onSkip={() => { saveChoice(session.user.id, "profile"); complete(key); }} /> : null}
+      {key === "passkey" ? <PasskeyStep {...props} /> : null}
+      {key === "recovery" ? <RecoveryStep {...props} /> : null}
+      {key === "wallet" ? (
+        <WalletStep {...props} last={last} onReady={setReady} onSkip={() => { saveChoice(session.user.id, "wallet"); complete(key); }} />
+      ) : null}
+      {key === "app-wallet" ? <AppWalletStep {...props} onDone={() => { saveChoice(session.user.id, "appWallet"); complete(key); }} /> : null}
+      {key === "link" ? (
+        <>
+          {head}
+          <LinkPhone onDone={() => { facts.linkedPhones = 1; complete(key); }} />
+        </>
+      ) : null}
 
-      <Progress steps={steps} at={at} />
-
-      <div className="mt-6 flex min-h-[300px] flex-col">
-        <div className="flex items-center gap-1">
-          {back ? (
-            <button type="button" onClick={back} className="-ml-2 h-8 shrink-0 rounded-[8px] px-2 text-tiny text-[#9FB7C2] hover:bg-white/10 hover:text-text">
-              ← Back
-            </button>
-          ) : null}
-          <h1 className="text-h4 font-light text-text">{TITLES[key]}</h1>
-        </div>
-        <div className="mt-4 flex flex-1 flex-col">
-          {key === "username" ? <UsernameStep {...props} /> : null}
-          {key === "profile" ? <ProfileStep {...props} onSkip={() => { saveChoice(session.user.id, "profile"); complete(key); }} /> : null}
-          {key === "passkey" ? <PasskeyStep {...props} /> : null}
-          {key === "recovery" ? <RecoveryStep {...props} /> : null}
-          {key === "wallet" ? <WalletStep {...props} onSkip={() => { saveChoice(session.user.id, "wallet"); complete(key); }} /> : null}
-          {key === "app-wallet" ? <AppWalletStep onDone={() => { saveChoice(session.user.id, "appWallet"); complete(key); }} /> : null}
-          {key === "link" ? <LinkPhone onDone={() => { facts.linkedPhones = 1; complete(key); }} /> : null}
-        </div>
-      </div>
-    </DoorCard>
+      {info && STEP[info].info ? <InfoSheet title={STEP[info].title} body={STEP[info].info} onClose={() => setInfo(null)} /> : null}
+    </StepScreen>
   );
 }
 
-function Progress({ steps, at }: { steps: StepKey[]; at: number }) {
-  return (
-    <div className="mt-6">
-      <p className="text-tiny text-[#9FB7C2]">
-        Step {at + 1} of {steps.length}
-      </p>
-      <div className="mt-2 flex gap-1.5" aria-hidden>
-        {steps.map((s, i) => (
-          <span key={s} className={`h-1 flex-1 rounded-[2px] transition-colors ${i <= at ? "bg-amber" : "bg-white/10"}`} />
-        ))}
-      </div>
-    </div>
-  );
+/** setup.tsx: "Connection seems slow" after a second and a half of waiting. */
+function useSlow(waiting: boolean): boolean {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    if (!waiting) return;
+    const t = setTimeout(() => setSlow(true), 1500);
+    return () => clearTimeout(t);
+  }, [waiting]);
+  return waiting && slow;
 }
 
 interface StepProps {
@@ -208,28 +284,34 @@ interface StepProps {
   session: Session;
   done: boolean;
   onDone: () => void;
-}
-
-/** The step's actions, always at the bottom of the card. */
-function Actions({ children }: { children: ReactNode }) {
-  return <div className="mt-auto flex flex-wrap items-center gap-2 pt-6">{children}</div>;
+  /** The step just done and this step's title row. */
+  head: ReactNode;
+  /** The step after this one, faint. */
+  hint: ReactNode;
 }
 
 /* ── Username ─────────────────────────────────────────────────────── */
 
-const VERDICT_TEXT: Record<UsernameVerdict | "checking" | "error", string> = {
-  checking: "Checking…",
-  available: "Available",
-  own: "This is yours",
-  taken: "Taken. Try another.",
-  reserved: "That one is reserved. Try another.",
-  invalid: "3 or more letters, numbers, _ . or -",
-  error: "We could not check that right now. Try again.",
-};
+type UsernameStatus = UsernameVerdict | "checking" | "error";
 
-function UsernameStep({ facts, onDone }: StepProps) {
+/** The app's four states (setup.tsx); "own" is the web's, for a name already theirs. */
+function statusLine(s: UsernameStatus | null) {
+  if (s === null || s === "invalid") return null;
+  if (s === "checking")
+    return (
+      <StatusLine tone="muted">
+        <Spinner size={14} color="rgba(255,255,255,0.55)" />
+        Checking...
+      </StatusLine>
+    );
+  if (s === "available" || s === "own") return <StatusLine tone="ok">Available</StatusLine>;
+  if (s === "error") return <StatusLine tone="warn">Connection error</StatusLine>;
+  return <StatusLine tone="warn">Not available</StatusLine>;
+}
+
+function UsernameStep({ facts, onDone, head, hint }: StepProps) {
   const [value, setValue] = useState(facts.username ?? "");
-  const [verdict, setVerdict] = useState<UsernameVerdict | "checking" | "error" | null>(facts.username ? "own" : null);
+  const [verdict, setVerdict] = useState<UsernameStatus | null>(facts.username ? "own" : null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -241,14 +323,15 @@ function UsernameStep({ facts, onDone }: StepProps) {
     setNotice(null);
     if (timer.current) clearTimeout(timer.current);
     if (!v) return setVerdict(null);
-    setVerdict("checking");
     asked.current = v;
+    // The app waits 800 ms after the last key.
     timer.current = setTimeout(() => {
+      setVerdict("checking");
       checkUsername(v).then(
         (r) => asked.current === v && setVerdict(r),
         () => asked.current === v && setVerdict("error"),
       );
-    }, 450);
+    }, 800);
   };
   useEffect(() => () => void (timer.current && clearTimeout(timer.current)), []);
 
@@ -272,15 +355,14 @@ function UsernameStep({ facts, onDone }: StepProps) {
   const ok = verdict === "available" || verdict === "own";
   return (
     <form
-      className="flex flex-1 flex-col"
       onSubmit={(e) => {
         e.preventDefault();
         if (ok && !busy) void save();
       }}
     >
-      <Note>How people find you and pay you on HOLD. The same in the app.</Note>
-      <div className="mt-4 flex items-center rounded-[12px] border border-white/10 bg-white/[0.05] pl-4 focus-within:border-amber/60">
-        <span className="text-small text-[#9FB7C2]">@</span>
+      {head}
+      {notice ? <ErrorBanner onDismiss={() => setNotice(null)}>{notice}</ErrorBanner> : null}
+      <InputRow prefix={<span className="mr-0.5 text-[17px] font-semibold text-white/[0.55]">@</span>}>
         <input
           autoFocus
           autoCapitalize="none"
@@ -292,25 +374,21 @@ function UsernameStep({ facts, onDone }: StepProps) {
           value={value}
           onChange={(e) => onChange(e.target.value)}
           disabled={busy}
-          className="h-11 min-w-0 flex-1 bg-transparent pl-1 pr-4 text-small text-text outline-none placeholder:text-[#6B8A99]"
+          className={inputFieldCls}
         />
-      </div>
-      <p className={`mt-2 h-5 text-tiny ${ok ? "text-success" : verdict === "checking" || verdict === null ? "text-[#9FB7C2]" : "text-amber"}`}>
-        {verdict ? VERDICT_TEXT[verdict] : "3 or more letters, numbers, _ . or -"}
-      </p>
-      {notice ? <Warn>{notice}</Warn> : null}
-      <Actions>
-        <button type="submit" className={btnPrimary} disabled={!ok || busy}>
-          {busy ? "Saving…" : "Continue"}
-        </button>
-      </Actions>
+      </InputRow>
+      {statusLine(verdict)}
+      {hint}
+      <Cta>
+        <ActionButton type="submit" title={busy ? "Saving..." : "Continue"} disabled={!ok || busy} />
+      </Cta>
     </form>
   );
 }
 
-/* ── Name and photo (optional) ────────────────────────────────────── */
+/* ── Profile: name and photo (the web's; optional) ───────────────── */
 
-function ProfileStep({ facts, session, onDone, onSkip }: StepProps & { onSkip: () => void }) {
+function ProfileStep({ facts, session, onDone, onSkip, head, hint }: StepProps & { onSkip: () => void }) {
   const [name, setName] = useState(facts.me.profile.displayName ?? "");
   const [file, setFile] = useState<File | null>(null);
   const preview = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
@@ -334,37 +412,53 @@ function ProfileStep({ facts, session, onDone, onSkip }: StepProps & { onSkip: (
     }
   };
 
+  const initial = (name || facts.username || "?").replace(/^@/, "").trim().charAt(0).toUpperCase() || "?";
   return (
-    <div className="flex flex-1 flex-col">
-      <Note>Optional. Shown to people you pay and sell to.</Note>
-      <div className="mt-5 flex items-center gap-4">
-        <Avatar src={preview} name={name || facts.username || "?"} size={72} />
-        <div className="flex flex-col items-start gap-1">
-          <button type="button" className={btnGhost} disabled={busy} onClick={() => input.current?.click()}>
-            {file ? "Choose another photo" : "Add a photo"}
-          </button>
-          <input
-            ref={input}
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/heic"
-            className="hidden"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          />
-        </div>
+    <div>
+      {head}
+      {notice ? <ErrorBanner onDismiss={() => setNotice(null)}>{notice}</ErrorBanner> : null}
+      <div className="mb-3 flex items-center gap-4">
+        <button
+          type="button"
+          onClick={() => input.current?.click()}
+          disabled={busy}
+          aria-label={file ? "Choose another photo" : "Add a photo"}
+          className="relative flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-[36px] border-2 border-[rgba(236,240,244,0.55)] bg-white/10 text-[30px] font-bold text-white"
+        >
+          {preview ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={preview} alt="" className="h-full w-full object-cover" />
+          ) : (
+            initial
+          )}
+        </button>
+        <button type="button" onClick={() => input.current?.click()} disabled={busy} className="rounded-[10px] px-1 py-2 text-[14px] font-semibold text-white/80 hover:text-white">
+          {file ? "Choose another photo" : "Add a photo"}
+        </button>
+        <input
+          ref={input}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/heic"
+          className="hidden"
+          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+        />
       </div>
-      <label className="mt-5 block text-tiny text-[#9FB7C2]" htmlFor="onb-name">
-        Display name
-      </label>
-      <input id="onb-name" className={`${inputCls} mt-1.5`} maxLength={60} placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} disabled={busy} />
-      {notice ? <div className="mt-3"><Warn>{notice}</Warn></div> : null}
-      <Actions>
-        <button type="button" className={btnPrimary} disabled={busy || (!file && !name.trim())} onClick={() => void save()}>
-          {busy ? "Saving…" : "Continue"}
-        </button>
-        <button type="button" className={btnLink} disabled={busy} onClick={onSkip}>
-          Skip
-        </button>
-      </Actions>
+      <InputRow prefix={<Ion name="person-outline" size={18} className="mr-2 shrink-0" style={{ color: ACCENTS.username }} />}>
+        <input
+          aria-label="Your name"
+          maxLength={60}
+          placeholder="Your name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          disabled={busy}
+          className={inputFieldCls}
+        />
+      </InputRow>
+      {hint}
+      <Cta>
+        <ActionButton title={busy ? "Saving..." : "Continue"} disabled={busy || (!file && !name.trim())} onClick={() => void save()} />
+        <SkipButton onClick={onSkip} disabled={busy} />
+      </Cta>
     </div>
   );
 }
@@ -393,7 +487,10 @@ function useRegistrationOptions(session: Session, active: boolean) {
   return { options, error, refresh };
 }
 
-function PasskeyStep({ facts, session, done, onDone }: StepProps) {
+/** A closed prompt is the person's call, not a failure: the app says nothing. */
+const cancelled = (e: unknown) => e instanceof PasskeyError && e.code === "cancelled";
+
+function PasskeyStep({ facts, session, done, onDone, head, hint }: StepProps) {
   const [made, setMade] = useState(done || facts.hasPasskey);
   const reg = useRegistrationOptions(session, !made);
   const [busy, setBusy] = useState(false);
@@ -418,92 +515,104 @@ function PasskeyStep({ facts, session, done, onDone }: StepProps) {
         onDone();
         return;
       }
-      setError(e);
+      if (!cancelled(e)) setError(e);
       void reg.refresh();
     } finally {
       setBusy(false);
     }
   };
 
+  const problem = error ?? (!made ? reg.error : null);
   return (
-    <div className="flex flex-1 flex-col">
-      <Note>
-        Face ID, Touch ID or your device PIN, instead of a password. It signs you in to HOLD and it is what locks your
-        wallet. Kept by your password manager (iCloud Keychain or Google Password Manager), so it follows you to your
-        other devices.
-      </Note>
-      {made ? <p className="mt-4 text-small text-success">Your passkey is set.</p> : null}
-      {error ? <div className="mt-4"><Warn>{explain(error)}</Warn></div> : null}
-      {reg.error && !made ? <div className="mt-4"><Warn>{explain(reg.error)}</Warn></div> : null}
-      <Actions>
+    <div>
+      {head}
+      {problem ? (
+        <ErrorBanner onDismiss={() => setError(null)}>{explain(problem)}</ErrorBanner>
+      ) : made ? (
+        <StepDesc>Your passkey is set.</StepDesc>
+      ) : (
+        <StepDesc>Uses Face ID or fingerprint — no passwords needed.</StepDesc>
+      )}
+      {hint}
+      <Cta>
         {made ? (
-          <button type="button" className={btnPrimary} onClick={onDone}>
-            Continue
-          </button>
+          <ActionButton title="Continue" onClick={onDone} />
         ) : (
-          <button type="button" className={btnPrimary} disabled={busy || !reg.options} onClick={() => void create()}>
-            {busy ? "Waiting for your passkey…" : "Create passkey"}
-          </button>
+          <ActionButton title={busy ? "Creating..." : "Create Passkey"} icon="key-outline" disabled={busy || !reg.options} onClick={() => void create()} />
         )}
-      </Actions>
+      </Cta>
     </div>
   );
 }
 
-/* ── Recovery codes ───────────────────────────────────────────────── */
+/* ── Recovery Key ─────────────────────────────────────────────────── */
 
-function RecoveryStep({ facts, session, done, onDone }: StepProps) {
-  const email = session.user.email ?? facts.me.email ?? "";
-  const [sent, setSent] = useState(done || facts.hasCodes);
+function RecoveryStep({ facts, session, done, onDone, head, hint }: StepProps) {
+  const [email, setEmail] = useState(session.user.email ?? facts.me.email ?? "");
+  const sent = done || facts.hasCodes;
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
+  // The app's one Continue: it sends, then moves on.
   const send = async () => {
+    if (sent) return onDone();
     setBusy(true);
     setNotice(null);
     try {
-      await emailRecoveryCodes(email);
+      await emailRecoveryCodes(email.trim());
       facts.hasCodes = true;
-      setSent(true);
+      onDone();
     } catch (e) {
-      setNotice(describeCreatorError(e));
+      setNotice(e instanceof CreatorApiError && e.serverMessage ? e.serverMessage : "Failed to send recovery codes. Please check your email and try again.");
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <div className="flex flex-1 flex-col">
-      <Note>
-        Eight single-use codes, sent to your email. They get you back into your HOLD account if you ever lose your
-        sign-in (your Apple or Google account, or this email). Keep them somewhere safe and offline.
-      </Note>
-      <div className="mt-4 rounded-[12px] border border-white/10 bg-white/[0.04] px-4 py-3">
-        <p className="text-tiny text-[#9FB7C2]">Sent to</p>
-        <p className="mt-0.5 break-all text-small text-text">{email || "Your account's email"}</p>
-      </div>
-      {sent ? <p className="mt-4 text-small text-success">Sent. Check your inbox, then save them.</p> : null}
-      {notice ? <div className="mt-4"><Warn>{notice}</Warn></div> : null}
-      <Actions>
-        {sent ? (
-          <button type="button" className={btnPrimary} onClick={onDone}>
-            Continue
-          </button>
-        ) : (
-          <button type="button" className={btnPrimary} disabled={busy} onClick={() => void send()}>
-            {busy ? "Sending…" : "Email my recovery codes"}
-          </button>
-        )}
-      </Actions>
-    </div>
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!busy && email.trim()) void send();
+      }}
+    >
+      {head}
+      {notice ? <ErrorBanner onDismiss={() => setNotice(null)}>{notice}</ErrorBanner> : null}
+      <InputRow prefix={<Ion name="mail-outline" size={18} className="mr-2 shrink-0" style={{ color: ACCENTS.recovery }} />}>
+        <input
+          type="email"
+          autoComplete="email"
+          aria-label="Email for your recovery codes"
+          placeholder="email@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          disabled={busy || sent}
+          className={inputFieldCls}
+        />
+      </InputRow>
+      {sent ? <StatusLine tone="ok">Sent</StatusLine> : null}
+      {hint}
+      <Cta>
+        <ActionButton type="submit" title={busy ? "Sending..." : "Continue"} disabled={busy || !email.trim()} />
+      </Cta>
+    </form>
   );
 }
 
 /* ── Wallet ───────────────────────────────────────────────────────── */
 
-type WalletPhase = { kind: "intro" } | { kind: "confirm"; credentialId: string } | { kind: "sealing" } | { kind: "ready"; address: string };
+type WalletPhase = { kind: "intro" } | { kind: "confirm"; credentialId: string } | { kind: "sealing" } | { kind: "ready" };
 
-function WalletStep({ facts, session, onDone, onSkip }: StepProps & { onSkip: () => void }) {
+function WalletStep({
+  facts,
+  session,
+  onDone,
+  onSkip,
+  onReady,
+  last,
+  head,
+  hint,
+}: StepProps & { onSkip: () => void; onReady: (ready: boolean) => void; last: boolean }) {
   const [phase, setPhase] = useState<WalletPhase>({ kind: "intro" });
   const [ids, setIds] = useState<string[]>(facts.passkeyIds);
   const [busy, setBusy] = useState(false);
@@ -521,12 +630,12 @@ function WalletStep({ facts, session, onDone, onSkip }: StepProps & { onSkip: ()
     setPhase({ kind: "sealing" });
     try {
       const key = await sealNewWallet({ uid: session.user.id, credentialId, prf, label });
-      const address = key.address;
       unlockWith(key);
       // So the backend watches it for deposits, as the Wallet page does after an unlock.
-      await registerWalletAddress(address, null).catch(() => undefined);
+      await registerWalletAddress(key.address, null).catch(() => undefined);
       lock();
-      setPhase({ kind: "ready", address });
+      setPhase({ kind: "ready" });
+      onReady(true);
     } catch (e) {
       setError(e);
       setPhase({ kind: "intro" });
@@ -542,7 +651,7 @@ function WalletStep({ facts, session, onDone, onSkip }: StepProps & { onSkip: ()
       const a = await evaluatePrf(only ?? ids);
       await seal(a.credentialId, a.prf, only ? "This browser" : null);
     } catch (e) {
-      setError(e);
+      if (!cancelled(e)) setError(e);
     } finally {
       setBusy(false);
     }
@@ -558,100 +667,87 @@ function WalletStep({ facts, session, onDone, onSkip }: StepProps & { onSkip: ()
       if (made.prf) await seal(made.credentialId, made.prf, "This browser");
       else setPhase({ kind: "confirm", credentialId: made.credentialId });
     } catch (e) {
-      setError(e);
+      if (!cancelled(e)) setError(e);
       void reg.refresh();
     } finally {
       setBusy(false);
     }
   };
 
+  // setup.tsx's Ready, what the app shows once the wallet is set up (and after a restore).
   if (phase.kind === "ready") {
     return (
-      <div className="flex flex-1 flex-col">
-        <Note>Your Solana wallet is ready. Sponsors pay you here, and you can receive USDC on Solana to this address.</Note>
-        <p className="mt-4 break-all rounded-[12px] border border-white/10 bg-white/[0.04] px-4 py-3 font-mono text-small text-text">{phase.address}</p>
-        <Note>
-          <span className="mt-3 block">Export your 12 words from Wallet, Settings, and keep them on paper.</span>
-        </Note>
-        <Actions>
-          <button type="button" className={btnPrimary} onClick={onDone}>
-            Continue
-          </button>
-        </Actions>
+      <div>
+        <ReadyBox title="Your wallet is ready" line="You're all set to start using HOLD." />
+        <Cta>
+          <ActionButton title={last ? "Go to Dashboard" : "Continue"} onClick={onDone} />
+        </Cta>
       </div>
     );
   }
 
   if (phase.kind === "sealing") {
     return (
-      <div className="flex flex-1 flex-col">
-        <Note>Making your wallet in this browser, checking it opens with your passkey, then saving the encrypted backup.</Note>
-        <div className="mt-4 h-11 animate-pulse rounded-[12px] bg-white/[0.06]" />
+      <div>
+        {head}
+        <div className="flex items-center gap-3 py-5" role="status">
+          <Spinner color="#20D690" />
+          <span className="text-[16px] font-semibold text-white/60">Setting up your wallet...</span>
+        </div>
       </div>
     );
   }
 
   if (phase.kind === "confirm") {
     return (
-      <div className="flex flex-1 flex-col">
-        <Note>Your new passkey was created. Confirm it once more so it can lock your wallet.</Note>
-        {error ? <div className="mt-4"><Warn>{explain(error)}</Warn></div> : null}
-        <Actions>
-          <button type="button" className={btnPrimary} disabled={busy} onClick={() => void withExisting([phase.credentialId])}>
-            Confirm with passkey
-          </button>
-        </Actions>
+      <div>
+        {head}
+        {error ? <ErrorBanner onDismiss={() => setError(null)}>{explain(error)}</ErrorBanner> : null}
+        <StepDesc>Your new passkey was created. Confirm it once more so it can lock your wallet.</StepDesc>
+        {hint}
+        <Cta>
+          <ActionButton title={busy ? "Creating..." : "Confirm with passkey"} icon="key-outline" disabled={busy} onClick={() => void withExisting([phase.credentialId])} />
+        </Cta>
       </div>
     );
   }
 
   const noPrf = error instanceof PasskeyError && error.code === "no_prf";
+  const useExisting = ids.length > 0 && !noPrf;
   return (
-    <div className="flex flex-1 flex-col">
-      <Note>
-        A Solana wallet for USDC, made in this browser and locked by your passkey. HOLD keeps only an encrypted backup
-        it cannot open. Sponsors pay your listings into it.
-      </Note>
-      <p className="mt-4 rounded-[12px] border border-amber/30 bg-amber/10 px-4 py-3 text-tiny leading-relaxed text-text">{LOSS_WARNING}</p>
-      {error ? <div className="mt-3"><Warn>{explain(error)}</Warn></div> : null}
-      <Actions>
-        {ids.length > 0 && !noPrf ? (
-          <button type="button" className={btnPrimary} disabled={busy} onClick={() => void withExisting()}>
-            {busy ? "Waiting for your passkey…" : "Create my wallet"}
-          </button>
-        ) : null}
-        <button
-          type="button"
-          className={ids.length > 0 && !noPrf ? btnGhost : btnPrimary}
-          disabled={busy || !reg.options}
-          onClick={() => void withNew()}
-        >
-          {ids.length > 0 ? "Use a new passkey" : "Create my wallet"}
-        </button>
-        <button type="button" className={btnLink} disabled={busy} onClick={onSkip}>
-          Not now
-        </button>
-      </Actions>
+    <div>
+      {head}
+      {error ? <ErrorBanner onDismiss={() => setError(null)}>{explain(error)}</ErrorBanner> : null}
+      <StepDesc>A Solana wallet for USDC, locked by your passkey.</StepDesc>
+      {/* A disclosure, not filler: the web wallet has no seed in a keychain behind it. */}
+      <div className="mt-1 flex gap-2 rounded-[12px] border border-[rgba(245,158,11,0.15)] bg-[rgba(245,158,11,0.08)] p-2.5">
+        <Ion name="warning-outline" size={16} className="mt-px shrink-0 text-[#F59E0B]" />
+        <p className="text-[13px] font-medium leading-[18px] text-white/75">{LOSS_WARNING}</p>
+      </div>
+      {hint}
+      <Cta>
+        <ActionButton
+          title={busy ? "Creating..." : "Create Wallet"}
+          icon="key-outline"
+          disabled={busy || (!useExisting && !reg.options)}
+          onClick={() => void (useExisting ? withExisting() : withNew())}
+        />
+        {useExisting ? <SkipButton label="Use a new passkey" disabled={busy || !reg.options} onClick={() => void withNew()} /> : null}
+        <SkipButton label="Not now" disabled={busy} onClick={onSkip} />
+      </Cta>
     </div>
   );
 }
 
-function AppWalletStep({ onDone }: { onDone: () => void }) {
+function AppWalletStep({ onDone, head, hint }: StepProps) {
   return (
-    <div className="flex flex-1 flex-col">
-      <Note>
-        Your account already has a wallet, made in the HOLD app. To keep one wallet per person, the web never makes a
-        second one. Sponsors pay you there.
-      </Note>
-      <Note>
-        <span className="mt-3 block">Open the HOLD app to turn it on here too.</span>
-      </Note>
-      <Actions>
-        <button type="button" className={btnPrimary} onClick={onDone}>
-          Continue
-        </button>
-      </Actions>
+    <div>
+      {head}
+      <StepDesc>Your account already has a wallet, made in the HOLD app. Open the HOLD app to turn it on here too.</StepDesc>
+      {hint}
+      <Cta>
+        <ActionButton title="Continue" onClick={onDone} />
+      </Cta>
     </div>
   );
 }
-

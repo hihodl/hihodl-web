@@ -11,7 +11,7 @@
  *                 original single photo for the whole product. A side without
  *                 a photo keeps the drawing.
  *
- * Selecting a swatch changes a COLOUR (its edge goes amber), never the width
+ * Selecting a swatch changes a COLOUR (its edge goes the select white), never the width
  * of its border, and no swatch is a 9999 pill.
  */
 
@@ -20,10 +20,10 @@
 import Link from "next/link";
 import { useMemo, useState, type ReactNode } from "react";
 
-import { btnSmall, btnSmallSecondary } from "@/components/ad-space/ui";
+import { btnWhite as btnSmall, btnGlassPill as btnSmallSecondary } from "@/components/app/spaces/kit";
 import { ProductOutline } from "@/components/ad-space/ProductBoard";
 import { useHref } from "@/components/app/base";
-import { glass } from "@/components/app/ui";
+import { cardBox as glass } from "@/components/app/spaces/kit";
 import {
   ACCENT_PALETTE,
   BODY_PALETTE,
@@ -69,7 +69,7 @@ export function ProductHub({ space }: { space: SpaceView }) {
   return (
     <div className="flex flex-col gap-5">
       <section className="flex flex-col gap-3">
-        <h3 className="text-small font-medium text-text">The drawing</h3>
+        <h3 className="mt-1.5 text-[12px] font-bold uppercase tracking-[0.4px] text-white/55">The drawing</h3>
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <li>
             <HubLink href={href(`${base}&item=colour`)} title="Colours" note={look ? "Your colours, on your page" : "Outline only"}>
@@ -81,8 +81,8 @@ export function ProductHub({ space }: { space: SpaceView }) {
 
       <section className="flex flex-col gap-3">
         <div className="flex flex-col gap-1">
-          <h3 className="text-small font-medium text-text">Real photos, one per side</h3>
-          <p className="text-tiny text-[#CFE3EC]">
+          <h3 className="mt-1.5 text-[12px] font-bold uppercase tracking-[0.4px] text-white/55">Real photos, one per side</h3>
+          <p className="text-[12.5px] text-white/[0.62]">
             Upload each side of your own {(space.template?.name ?? "product").toLowerCase()} and place its spots on it. A side
             without a photo keeps the drawing.
           </p>
@@ -112,7 +112,7 @@ export function ProductHub({ space }: { space: SpaceView }) {
       </section>
 
       <section className="flex flex-col gap-3">
-        <h3 className="text-small font-medium text-text">Or one photo for the whole product</h3>
+        <h3 className="mt-1.5 text-[12px] font-bold uppercase tracking-[0.4px] text-white/55">Or one photo for the whole product</h3>
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <li>
             <HubLink
@@ -151,10 +151,10 @@ function HubLink({
       <div className="flex min-h-[72px] items-center">{children}</div>
       <div className="flex items-end justify-between gap-2">
         <div className="min-w-0">
-          <p className="truncate text-small font-medium text-text">{title}</p>
-          <p className={`truncate text-tiny ${live ? "text-success" : "text-[#CFE3EC]"}`}>{note}</p>
+          <p className="truncate text-[14.5px] font-bold text-white">{title}</p>
+          <p className={`truncate text-[12.5px] ${live ? "text-[#2FBE8A]" : "text-white/[0.62]"}`}>{note}</p>
         </div>
-        <span aria-hidden className="text-[#CFE3EC]">
+        <span aria-hidden className="text-white/[0.62]">
           &rarr;
         </span>
       </div>
@@ -229,12 +229,12 @@ export function ColourEditor({ space, onChanged }: { space: SpaceView; onChanged
                     />
                   ))}
                 </svg>
-                <figcaption className="text-[11px] uppercase tracking-wider text-[#CFE3EC]">{v.label}</figcaption>
+                <figcaption className="text-[12px] font-strong uppercase tracking-[0.4px] text-white/55">{v.label}</figcaption>
               </figure>
             );
           })}
         </div>
-        <p className="text-center text-tiny text-[#CFE3EC]">
+        <p className="text-center text-[12.5px] text-white/[0.62]">
           Spots sit on a dark glass plate with white figures, so they read on any colour. Outline ink: {ink === "#0A141E" ? "dark" : "light"}{" "}
           ({contrast(look.body, ink).toFixed(1)}:1).
         </p>
@@ -285,7 +285,7 @@ function Swatches({
   const id = `hex-${title.replace(/\W+/g, "-").toLowerCase()}`;
   return (
     <fieldset className="flex flex-col gap-2.5">
-      <legend className="mb-1 text-small font-medium text-text">{title}</legend>
+      <legend className="mb-1 text-[14.5px] font-bold text-white">{title}</legend>
       <div className="flex flex-wrap gap-2">
         {palette.map((c) => {
           const on = c.hex.toUpperCase() === value.toUpperCase();
@@ -300,14 +300,14 @@ function Swatches({
                 onChange(c.hex);
                 setTyped(c.hex);
               }}
-              className={`h-10 w-10 rounded-[12px] border-2 transition-colors duration-180 ${on ? "border-amber" : "border-white/15 hover:border-white/40"}`}
+              className={`h-10 w-10 rounded-[12px] border-2 transition-colors duration-180 ${on ? "border-[#F1F5F9]" : "border-white/15 hover:border-white/40"}`}
               style={{ background: c.hex }}
             />
           );
         })}
       </div>
       <div className="flex items-center gap-2">
-        <label htmlFor={id} className="text-tiny text-[#CFE3EC]">
+        <label htmlFor={id} className="text-[12.5px] text-white/[0.62]">
           Custom
         </label>
         <input
@@ -321,7 +321,7 @@ function Swatches({
               setTyped(hex);
             }
           }}
-          className={`h-10 w-10 cursor-pointer rounded-[12px] border-2 bg-transparent p-0.5 ${custom ? "border-amber" : "border-white/15"}`}
+          className={`h-10 w-10 cursor-pointer rounded-[12px] border-2 bg-transparent p-0.5 ${custom ? "border-[#F1F5F9]" : "border-white/15"}`}
         />
         <input
           id={id}
@@ -333,7 +333,7 @@ function Swatches({
             const hex = normalHex(e.target.value);
             if (hex) onChange(hex);
           }}
-          className="h-10 w-28 rounded-[12px] border border-white/15 bg-black/20 px-3 font-mono text-small uppercase text-text outline-none focus:border-amber/60"
+          className="h-10 w-28 rounded-[12px] border border-white/15 bg-black/20 px-3 font-mono text-[14.5px] uppercase text-white outline-none focus:border-white/30"
         />
       </div>
     </fieldset>

@@ -12,9 +12,12 @@
  * imported in the app.
  *
  * WELCOME BACK is the app's lock screen (app/auth/lock.tsx) without the PIN:
- * "Welcome back, {name}" over the round initial, and one button that is the
+ * "Welcome Back, {name}" over the round initial, and one button that is the
  * way they came in last time (lib/auth/remember). Everything else is one tap
  * away, and "Not you?" forgets this browser's guess.
+ *
+ * EMAIL is the app's email screen (app/onboarding/email.tsx), full screen:
+ * ./EmailSignIn. Map: documentation/web-copies-the-app-onboarding.md.
  */
 
 import { useEffect, useState } from "react";
@@ -22,11 +25,20 @@ import { useEffect, useState } from "react";
 import type { OAuthProvider } from "@/lib/auth/providers";
 import { forgetRemembered, readRemembered, type Remembered } from "@/lib/auth/remember";
 
-import { EmailCode, goWith, NotConfigured, PROVIDER_NAME, ProviderLogo, useProviders } from "@/components/creator/SignIn";
+import { goWith, NotConfigured, PROVIDER_NAME, ProviderLogo, useProviders } from "@/components/creator/SignIn";
 
+import { EmailSignIn } from "./EmailSignIn";
 import { btnLink, HoldMark, Warn } from "./kit";
 
 type Sheet = null | "choose" | "email";
+
+/** The app's own sign-in marks (hihodl-wallet/assets/icons), Google's in one colour: the house has no red. */
+function Mark({ provider }: { provider: OAuthProvider | "email" }) {
+  if (provider === "google") return <ProviderLogo provider="google" className="h-[26px] w-[26px] shrink-0 text-white" />;
+  const src = provider === "apple" ? "/app/apple.png" : "/app/email.png";
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={src} alt="" aria-hidden className={provider === "apple" ? "h-[26px] w-[22px] shrink-0 object-contain" : "h-[26px] w-[26px] shrink-0 object-contain"} />;
+}
 
 export function Door({ configured }: { configured: boolean }) {
   // Read after mount: the server draws the first-time welcome, and a stored
@@ -61,6 +73,20 @@ export function Door({ configured }: { configured: boolean }) {
 
   const back = known && known.method !== "email" && providers !== null && !providers.includes(known.method) ? null : known;
 
+  // The app opens email as its own screen, not inside the sheet.
+  if (sheet === "email") {
+    return (
+      <EmailSignIn
+        initialEmail={emailNow ? (back?.email ?? "") : (known?.email ?? "")}
+        sendNow={emailNow}
+        onClose={() => {
+          setSheet(emailNow ? null : "choose");
+          setEmailNow(false);
+        }}
+      />
+    );
+  }
+
   return (
     <Stage>
       {back ? (
@@ -89,32 +115,21 @@ export function Door({ configured }: { configured: boolean }) {
         </div>
       ) : null}
 
-      {sheet ? (
-        <SheetPanel
-          title={sheet === "email" ? "Continue with email" : "Continue with"}
-          onClose={() => {
-            setSheet(null);
-            setEmailNow(false);
-          }}
-          onBack={sheet === "email" && !emailNow ? () => setSheet("choose") : undefined}
-        >
-          {sheet === "choose" ? (
-            <div className="flex flex-col gap-3">
-              {(providers ?? []).map((p) => (
-                <Row key={p} onClick={() => void go(p)} disabled={busy !== null}>
-                  <ProviderLogo provider={p} className="h-5 w-5" />
-                  {busy === p ? "Opening…" : PROVIDER_NAME[p]}
-                </Row>
-              ))}
-              <Row onClick={() => setSheet("email")} disabled={busy !== null}>
-                <ProviderLogo provider="email" className="h-5 w-5 text-[#CFE3EC]" />
-                Email
+      {sheet === "choose" ? (
+        <SheetPanel title="Continue with" onClose={() => setSheet(null)}>
+          <div className="flex flex-col gap-3">
+            {(providers ?? []).map((p) => (
+              <Row key={p} onClick={() => void go(p)} disabled={busy !== null}>
+                <Mark provider={p} />
+                {busy === p ? "Opening…" : PROVIDER_NAME[p]}
               </Row>
-              {notice ? <Warn>{notice}</Warn> : null}
-            </div>
-          ) : (
-            <EmailCode initialEmail={emailNow ? (back?.email ?? "") : (known?.email ?? "")} sendNow={emailNow} />
-          )}
+            ))}
+            <Row onClick={() => setSheet("email")} disabled={busy !== null}>
+              <Mark provider="email" />
+              Email
+            </Row>
+            {notice ? <Warn>{notice}</Warn> : null}
+          </div>
         </SheetPanel>
       ) : null}
     </Stage>
@@ -133,14 +148,15 @@ function Welcome({ onGo }: { onGo: () => void }) {
         <HoldMark className="h-12 w-auto sm:h-14" />
         <div className="mt-5 flex w-full items-center gap-3">
           <span className="h-px flex-1 bg-amber/25" />
-          <span className="text-[13px] font-medium tracking-[0.5px] text-white/40">Your money, your rules</span>
+          {/* The app draws it at 40 % white; 60 % is the floor for small text here (4.5:1). */}
+          <span className="text-[13px] font-medium tracking-[0.5px] text-white/60">Your money, your rules</span>
           <span className="h-px flex-1 bg-amber/25" />
         </div>
       </div>
       <button
         type="button"
         onClick={onGo}
-        className="h-14 w-full rounded-[28px] bg-amber text-[17px] font-extrabold tracking-[-0.2px] text-[#0A1117] shadow-[0_6px_20px_rgba(255,183,3,0.2)] transition-colors hover:bg-amber-glow"
+        className="h-[58px] w-full rounded-[29px] bg-amber text-[17px] font-extrabold tracking-[-0.2px] text-[#0A1117] shadow-[0_6px_20px_rgba(255,183,3,0.2)] transition-colors hover:bg-amber-glow"
       >
         Let&apos;s go
       </button>
@@ -166,9 +182,9 @@ function WelcomeBack({
   const how = known.method === "email" ? "Email me a code" : `Continue with ${PROVIDER_NAME[known.method]}`;
   return (
     <div className="flex min-h-[70dvh] w-full max-w-[400px] flex-col">
-      <div className="flex flex-1 flex-col items-center justify-center pb-10 text-center">
-        <HoldMark className="h-6 w-auto opacity-80" />
-        <h1 className="mt-10 text-[24px] font-semibold text-text">{name ? `Welcome back, ${name}` : "Welcome back"}</h1>
+      {/* app/auth/lock.tsx: the greeting on top, the photo under it; no wordmark. */}
+      <div className="flex flex-1 flex-col items-center pb-10 pt-4 text-center">
+        <h1 className="text-[24px] font-semibold text-text">{name ? `Welcome Back, ${name}` : "Welcome Back"}</h1>
         {/* A circle: 100 px with a radius of half of it, as the app draws it. */}
         <span className="mt-6 flex h-[100px] w-[100px] items-center justify-center rounded-[50px] border-2 border-[rgba(236,240,244,0.55)] bg-white/[0.08] text-[44px] font-medium text-text" aria-hidden>
           {initial}
@@ -179,7 +195,7 @@ function WelcomeBack({
         type="button"
         onClick={onContinue}
         disabled={busy !== null}
-        className="flex h-14 w-full items-center justify-center gap-2.5 rounded-[28px] bg-amber text-[17px] font-extrabold tracking-[-0.2px] text-[#0A1117] shadow-[0_6px_20px_rgba(255,183,3,0.2)] transition-colors hover:bg-amber-glow disabled:opacity-60"
+        className="flex h-[58px] w-full items-center justify-center gap-2.5 rounded-[29px] bg-amber text-[17px] font-extrabold tracking-[-0.2px] text-[#0A1117] shadow-[0_6px_20px_rgba(255,183,3,0.2)] transition-colors hover:bg-amber-glow disabled:opacity-60"
       >
         <ProviderLogo provider={known.method} className="h-5 w-5" />
         {busy ? "Opening…" : how}
@@ -203,25 +219,18 @@ function WelcomeBack({
 function SheetPanel({
   title,
   onClose,
-  onBack,
   children,
 }: {
   title: string;
   onClose: () => void;
-  onBack?: () => void;
   children: React.ReactNode;
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-label={title}>
       <button type="button" aria-label="Close" className="absolute inset-0 bg-[#030b13]/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-[440px] rounded-t-[24px] border border-white/10 bg-[linear-gradient(160deg,rgba(15,53,85,0.97),rgba(10,25,41,0.98))] px-5 pb-8 pt-3 shadow-[0_-20px_40px_rgba(0,0,0,0.35)] sm:rounded-[24px] sm:pb-6">
-        <span className="mx-auto block h-1 w-10 rounded-[2px] bg-white/25 sm:hidden" aria-hidden />
+        <span className="mx-auto block h-1 w-10 rounded-[2px] bg-white/[0.22] sm:hidden" aria-hidden />
         <div className="relative mt-4 flex items-center justify-center">
-          {onBack ? (
-            <button type="button" onClick={onBack} className="absolute left-0 h-8 rounded-[8px] px-2 text-tiny text-[#9FB7C2] hover:bg-white/10 hover:text-text">
-              ← Back
-            </button>
-          ) : null}
           <h2 className="text-[18px] font-black tracking-[-0.5px] text-text">{title}</h2>
           <button
             type="button"

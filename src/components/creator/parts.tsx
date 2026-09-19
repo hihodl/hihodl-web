@@ -14,12 +14,14 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 
-import { btnSmallSecondary, pill } from "@/components/ad-space/ui";
-import { glass } from "@/components/app/ui";
+import { Notice as HoldNotice } from "@/components/app/hold";
+import { Ion } from "@/components/app/ion";
+import { Card, SectionLabel, Tag } from "@/components/app/spaces/kit";
 
 /**
- * A panel in the product shell. `label` is kept for the callers that pass
- * one; the panel says only what it is.
+ * A group in the app's vocabulary: its SectionLabel (small capitals) over a
+ * Card. `label` is kept for the callers that pass one; the group says only
+ * what it is.
  */
 export function Section({
   title,
@@ -32,20 +34,16 @@ export function Section({
   children: ReactNode;
 }) {
   return (
-    <section className={`${glass} min-w-0 p-4 sm:p-5`}>
-      <header className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-small font-medium text-text">{title}</h2>
-        {action}
-      </header>
-      <div className="mt-4 min-w-0">{children}</div>
+    <section className="flex min-w-0 flex-col gap-2.5">
+      <SectionLabel right={action}>{title}</SectionLabel>
+      <Card>{children}</Card>
     </section>
   );
 }
 
 /** Done, waiting on the creator, or simply a fact. Never an alarm. */
 export function Status({ state, children }: { state: "done" | "todo" | "neutral"; children: ReactNode }) {
-  const cls = state === "done" ? pill.done : state === "todo" ? pill.attention : pill.neutral;
-  return <span className={cls}>{children}</span>;
+  return <Tag label={children} tone={state === "done" ? "good" : state === "todo" ? "caution" : "calm"} />;
 }
 
 /**
@@ -55,11 +53,7 @@ export function Status({ state, children }: { state: "done" | "todo" | "neutral"
  * half of it is the creator having changed their mind in a wallet.
  */
 export function Notice({ children }: { children: ReactNode }) {
-  return (
-    <p role="status" className="rounded-input border border-amber/30 bg-amber/10 px-4 py-3 text-small text-text">
-      {children}
-    </p>
-  );
+  return <HoldNotice>{children}</HoldNotice>;
 }
 
 /**
@@ -80,10 +74,10 @@ export function Address({ value }: { value: string }) {
 
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <code className="min-w-0 break-all font-mono text-small text-text">{value}</code>
+      <code className="min-w-0 break-all font-mono text-[14px] text-white">{value}</code>
       <button
         type="button"
-        className={btnSmallSecondary}
+        className="inline-flex h-[34px] shrink-0 items-center gap-1.5 rounded-[17px] border border-white/[0.14] bg-white/[0.06] px-[13px] text-[13.5px] font-bold text-white/[0.62] transition-colors hover:bg-white/10"
         onClick={() => {
           // `navigator.clipboard` is missing outside a secure context, and
           // optional-chaining the property still leaves `.then` called on
@@ -97,6 +91,7 @@ export function Address({ value }: { value: string }) {
           );
         }}
       >
+        <Ion name={copied ? "checkmark" : "copy-outline"} size={14} />
         {copied ? "Copied" : "Copy"}
       </button>
     </div>
@@ -106,7 +101,7 @@ export function Address({ value }: { value: string }) {
 /** The skeleton a card wears while its first read is in flight. */
 export function Loading({ what }: { what: string }) {
   return (
-    <p className="text-small text-text-muted" aria-label={`Loading ${what}`}>
+    <p className="text-[14px] text-white/55" aria-label={`Loading ${what}`}>
       Loading…
     </p>
   );

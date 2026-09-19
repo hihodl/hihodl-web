@@ -25,7 +25,7 @@
 
 import { useState } from "react";
 
-import { btnSmall, btnSmallSecondary, card, pill } from "@/components/ad-space/ui";
+import { btnWhite as btnSmall, btnGlassPill as btnSmallSecondary, cardBox as card, tagCls as pill } from "@/components/app/spaces/kit";
 import { calendarDate } from "@/lib/ad-space/format";
 import type { DeliverableView, PositionView, SpaceView } from "@/lib/creator/listing";
 import { markDeliverableDelivered, markPositionDelivered, reviewContent } from "@/lib/creator/listings";
@@ -49,10 +49,10 @@ export function Work({ space, onChanged }: { space: SpaceView; onChanged: () => 
     <div className="flex flex-col gap-10">
       <section className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
-          <h3 className="text-body text-text">Artwork to approve</h3>
+          <h3 className="text-[15.5px] text-white">Artwork to approve</h3>
         </div>
         {waiting.length === 0 ? (
-          <p className="text-small text-text-muted">Nothing waiting on you.</p>
+          <p className="text-[14.5px] text-white/[0.62]">Nothing waiting on you.</p>
         ) : (
           <ul className="flex flex-col gap-3">
             {waiting.map((p) => (
@@ -66,10 +66,10 @@ export function Work({ space, onChanged }: { space: SpaceView; onChanged: () => 
 
       <section className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
-          <h3 className="text-body text-text">Sold spots</h3>
+          <h3 className="text-[15.5px] text-white">Sold spots</h3>
         </div>
         {sold.length === 0 ? (
-          <p className="text-small text-text-muted">Nothing sold yet.</p>
+          <p className="text-[14.5px] text-white/[0.62]">Nothing sold yet.</p>
         ) : (
           <ul className="flex flex-col gap-3">
             {sold.map((p) => (
@@ -88,7 +88,7 @@ export function Work({ space, onChanged }: { space: SpaceView; onChanged: () => 
       {space.deliverables.length > 0 ? (
         <section className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <h3 className="text-body text-text">Promises</h3>
+            <h3 className="text-[15.5px] text-white">Promises</h3>
           </div>
           <ul className="flex flex-col gap-3">
             {space.deliverables.map((d) => (
@@ -132,8 +132,8 @@ export function Review({ position, onChanged }: { position: PositionView; onChan
     <div className={`${card} flex flex-col gap-4 p-5`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-body text-text">{position.title ?? position.label}</p>
-          <p className="mt-1 text-tiny text-text-muted">
+          <p className="text-[15.5px] text-white">{position.title ?? position.label}</p>
+          <p className="mt-1 text-[12.5px] text-white/[0.62]">
             From {position.sponsor?.name ?? "a sponsor"}
             {position.sponsor?.xHandle ? ` · @${position.sponsor.xHandle}` : ""}
           </p>
@@ -146,19 +146,19 @@ export function Review({ position, onChanged }: { position: PositionView; onChan
         <img
           src={position.sponsor.imageUrl}
           alt={`What ${position.sponsor.name ?? "the sponsor"} sent`}
-          className="max-h-64 w-auto max-w-full rounded-input border border-[color:var(--color-hairline)] bg-white/5 object-contain"
+          className="max-h-64 w-auto max-w-full rounded-[16px] border border-white/[0.08] bg-white/5 object-contain"
         />
       ) : null}
       {position.sponsor?.contentText ? (
-        <p className="rounded-input border border-[color:var(--color-hairline)] px-4 py-3 text-body text-text">
+        <p className="rounded-[16px] border border-white/[0.08] px-4 py-3 text-[15.5px] text-white">
           {position.sponsor.contentText}
         </p>
       ) : null}
-      {position.sponsor?.url ? <p className="break-all text-tiny text-text-muted">{position.sponsor.url}</p> : null}
+      {position.sponsor?.url ? <p className="break-all text-[12.5px] text-white/[0.62]">{position.sponsor.url}</p> : null}
 
       {saying ? (
         <div className="flex flex-col gap-3">
-          <p className="text-small text-text-muted">Reason, shown to the sponsor:</p>
+          <p className="text-[14.5px] text-white/[0.62]">Reason, shown to the sponsor:</p>
           <Text value={reason} onChange={setReason} maxLength={200} placeholder="The logo is too small to read on the strip" />
           <div className="flex flex-wrap gap-2">
             <button type="button" className={btnSmall} disabled={busy || !reason.trim()} onClick={() => void answer(false)}>
@@ -180,7 +180,7 @@ export function Review({ position, onChanged }: { position: PositionView; onChan
         </div>
       )}
 
-      <p className="text-tiny text-text-muted">Approving publishes this version.</p>
+      <p className="text-[12.5px] text-white/[0.62]">Approving publishes this version.</p>
 
       {notice ? <Line>{notice}</Line> : null}
     </div>
@@ -198,8 +198,8 @@ export function SoldSpot({ position, onChanged }: { position: PositionView; onCh
     <div className={`${card} flex flex-col gap-3 p-5`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-body text-text">{position.title ?? position.label}</p>
-          <p className="mt-1 text-tiny text-text-muted">
+          <p className="text-[15.5px] text-white">{position.title ?? position.label}</p>
+          <p className="mt-1 text-[12.5px] text-white/[0.62]">
             {position.sponsor?.name ?? "Sold"}
             {position.creatorReceivesUsdc ? ` · ${position.creatorReceivesUsdc} USDC to you` : ""}
           </p>
@@ -210,15 +210,15 @@ export function SoldSpot({ position, onChanged }: { position: PositionView; onCh
       </div>
 
       {position.qr ? (
-        <p className="text-tiny text-text-muted">
-          QR <span className="break-all text-text">{position.qr.url}</span> · {position.qr.scans}{" "}
+        <p className="text-[12.5px] text-white/[0.62]">
+          QR <span className="break-all text-white">{position.qr.url}</span> · {position.qr.scans}{" "}
           {position.qr.scans === 1 ? "scan" : "scans"}
         </p>
       ) : null}
 
       {position.delivered ? (
-        <p className="break-all text-small text-text-muted">
-          Delivered {calendarDate(position.delivered.at)}: <span className="text-text">{position.delivered.url}</span>
+        <p className="break-all text-[14.5px] text-white/[0.62]">
+          Delivered {calendarDate(position.delivered.at)}: <span className="text-white">{position.delivered.url}</span>
         </p>
       ) : (
         <div className="flex flex-col gap-2 sm:flex-row">
@@ -262,11 +262,11 @@ export function PromiseCard({ deliverable, onChanged }: { deliverable: Deliverab
     <div className={`${card} flex flex-col gap-3 p-5`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-body text-text">
+          <p className="text-[15.5px] text-white">
             {deliverable.count} × {deliverable.kind.replace(/_/g, " ")}
             {deliverable.platform ? ` on ${deliverable.platform}` : ""}
           </p>
-          <p className="mt-1 text-tiny text-text-muted">
+          <p className="mt-1 text-[12.5px] text-white/[0.62]">
             By {calendarDate(deliverable.dueDate)}
             {deliverable.note ? ` · ${deliverable.note}` : ""}
           </p>
@@ -277,8 +277,8 @@ export function PromiseCard({ deliverable, onChanged }: { deliverable: Deliverab
       </div>
 
       {deliverable.deliveredUrl ? (
-        <p className="break-all text-small text-text-muted">
-          <span className="text-text">{deliverable.deliveredUrl}</span>
+        <p className="break-all text-[14.5px] text-white/[0.62]">
+          <span className="text-white">{deliverable.deliveredUrl}</span>
         </p>
       ) : (
         <div className="flex flex-col gap-2 sm:flex-row">
@@ -313,7 +313,7 @@ export function PromiseCard({ deliverable, onChanged }: { deliverable: Deliverab
 
 function Line({ children }: { children: React.ReactNode }) {
   return (
-    <p role="status" className="rounded-input border border-amber/30 bg-amber/10 px-4 py-3 text-small text-text">
+    <p role="status" className="rounded-[12px] bg-amber/[0.12] px-3 py-2.5 text-[13px] font-strong leading-[18px] text-amber">
       {children}
     </p>
   );

@@ -5,8 +5,10 @@
  * for somebody who works for other creators — the teams they are on and what
  * they are owed. One tab at a time (`?tab=`).
  *
- * The cards are the console's own (`Members`, `Owed`, `Seats`, `Earnings`).
- * HOLD never moves this money: it is the creator's bookkeeping, paid by the
+ * The cards are the console's own (`Members`, `Owed`, `Seats`, `Earnings`),
+ * laid out as the app's Your team: the people, then a row into the money,
+ * then the teams this person is on with a row into what they deliver. HOLD
+ * never moves this money: it is the creator's bookkeeping, paid by the
  * creator.
  */
 
@@ -20,7 +22,7 @@ import { pendingSeat } from "@/lib/creator/team";
 
 import { useHref } from "../base";
 import { useShell } from "../Shell";
-import { LinkTabs } from "../ui";
+import { Chip, ChipRow, SectionLabel, SheetRow } from "./kit";
 
 type Tab = "members" | "owed" | "teams" | "earnings";
 
@@ -57,16 +59,51 @@ export function TeamScreen({ tab }: { tab: string | null }) {
   const active: Tab = tabs.some((t) => t.key === tab) ? (tab as Tab) : tabs[0]?.key ?? "members";
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="mx-auto flex w-full max-w-[720px] flex-col gap-2.5">
       {tabs.length > 1 ? (
-        <LinkTabs active={active} tabs={tabs.map((t) => ({ ...t, href: `${href("/team")}?tab=${t.key}` }))} />
+        <ChipRow label="Team">
+          {tabs.map((t) => (
+            <Chip key={t.key} label={t.label} selected={active === t.key} href={`${href("/team")}?tab=${t.key}`} />
+          ))}
+        </ChipRow>
       ) : null}
-      <div className={`w-full ${active === "members" ? "" : "mx-auto max-w-[860px]"}`}>
-        {active === "members" ? <Members onChanged={onTeamChanged} /> : null}
-        {active === "owed" ? <Owed /> : null}
-        {active === "teams" ? <Seats version={0} /> : null}
-        {active === "earnings" ? <Earnings /> : null}
-      </div>
+      {active === "members" ? (
+        <>
+          <Members onChanged={onTeamChanged} />
+          <SectionLabel>Money</SectionLabel>
+          <SheetRow
+            icon="receipt-outline"
+            title="What you owe, and what you're owed"
+            meta="Your own records. You pay your team yourself."
+            href={`${href("/team")}?tab=owed`}
+          />
+          {onTeams ? (
+            <>
+              <SectionLabel>Teams you&apos;re on</SectionLabel>
+              <Seats version={0} />
+              <SheetRow
+                icon="checkbox-outline"
+                title="What you have to deliver"
+                meta="The listings you were put on, and what's still to do"
+                href={href("/deliveries")}
+              />
+            </>
+          ) : null}
+        </>
+      ) : null}
+      {active === "owed" ? <Owed /> : null}
+      {active === "teams" ? (
+        <>
+          <Seats version={0} />
+          <SheetRow
+            icon="checkbox-outline"
+            title="What you have to deliver"
+            meta="The listings you were put on, and what's still to do"
+            href={href("/deliveries")}
+          />
+        </>
+      ) : null}
+      {active === "earnings" ? <Earnings /> : null}
     </div>
   );
 }

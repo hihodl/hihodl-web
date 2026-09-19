@@ -31,7 +31,8 @@
 
 "use client";
 
-import { btnSmallSecondary, card } from "@/components/ad-space/ui";
+import { Ion } from "@/components/app/ion";
+import { Card, Chip, ChipRow, fieldLabel, SectionLabel } from "@/components/app/spaces/kit";
 import {
   LIMITS,
   modeKeepsFloor,
@@ -47,7 +48,9 @@ import {
 } from "@/lib/creator/listing";
 import { problemsAt, type Problem } from "@/lib/creator/rules";
 
-import { Count, Dropdown, Field, Money, Paragraph, Problems, Text } from "./parts";
+import { btnSmallGlass, Count, Field, Money, Paragraph, Problems, Text } from "./parts";
+
+const iconBtn = `${btnSmallGlass} !w-9 !px-0`;
 
 /** How the whole listing sells, said in the words the rung's dropdown uses. */
 function boardModeText(draft: ListingDraft): string {
@@ -64,10 +67,10 @@ function boardModeText(draft: ListingDraft): string {
 }
 
 const MODE_OPTIONS: readonly { value: SaleMode; label: string }[] = [
-  { value: "fixed", label: "At a fixed price — first to pay gets it" },
-  { value: "fixed_with_offers", label: "At a price, and I will also read offers under it" },
-  { value: "offers", label: "By offers only, with no price shown" },
-  { value: "bids", label: "To the highest bid, on a countdown" },
+  { value: "fixed", label: "Buy now" },
+  { value: "fixed_with_offers", label: "Buy now, and offers" },
+  { value: "offers", label: "Make an offer" },
+  { value: "bids", label: "Bid" },
 ];
 
 export function Ladder({
@@ -91,7 +94,7 @@ export function Ladder({
   const copies = rungs.reduce((sum, r) => sum + (Number.isInteger(r.available) ? Math.max(0, r.available) : 0), 0);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-2.5">
       {rungs.map((rung, index) => (
         <Rung
           key={rung.key}
@@ -117,21 +120,21 @@ export function Ladder({
 
       <Problems list={problemsAt(problems, "ladder")} />
 
-      <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          className={btnSmallSecondary}
-          disabled={rungs.length >= LIMITS.MAX_TIERS}
-          onClick={() => set([...rungs, newRung(rungs)])}
-        >
-          Add another
-        </button>
-        <span className="text-tiny text-text-muted">
-          {rungs.length} of {LIMITS.MAX_TIERS} · {copies} {copies === 1 ? "thing" : "things"} for sale, out of {maxSlots}
+      <div className="flex flex-wrap items-center justify-between gap-2.5">
+        <ChipRow label="The ladder">
+          <Chip
+            icon="add"
+            label="Add a tier"
+            disabled={rungs.length >= LIMITS.MAX_TIERS}
+            onClick={() => set([...rungs, newRung(rungs)])}
+          />
+        </ChipRow>
+        <span className="text-[11.5px] font-bold uppercase tracking-[0.4px] text-white/55">
+          {copies} of {maxSlots} slots on the ladder
         </span>
       </div>
       {rungs.length > 1 ? (
-        <p className="text-tiny text-text-muted">
+        <p className="text-[12px] leading-4 text-white/55">
           A new one starts with the lines of the one below it, because a ladder is usually cumulative — everything in
           the $50, plus the mic flag. Edit or delete any of them: a rung that deliberately does not include the one
           under it is allowed to say so.
@@ -181,26 +184,26 @@ function Rung({
   const perks = rung.perks.length ? rung.perks : [""];
 
   return (
-    <div className={`${card} flex flex-col gap-5 p-5 sm:p-6`}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <span className="text-tiny uppercase tracking-wider text-text-faint">
-          {index + 1} of {total}
-        </span>
-        <div className="flex flex-wrap gap-2">
-          <button type="button" className={btnSmallSecondary} disabled={index === 0} onClick={() => onMove(-1)}>
-            Move up
+    <Card className="!gap-3.5">
+      <div className="flex items-center justify-between gap-3">
+        <SectionLabel>
+          Tier {index + 1} <span className="ml-1 normal-case tracking-normal">of {total}</span>
+        </SectionLabel>
+        <div className="flex gap-1.5">
+          <button type="button" aria-label="Move up" className={iconBtn} disabled={index === 0} onClick={() => onMove(-1)}>
+            <Ion name="chevron-up" size={18} />
           </button>
-          <button type="button" className={btnSmallSecondary} disabled={index === total - 1} onClick={() => onMove(1)}>
-            Move down
+          <button type="button" aria-label="Move down" className={iconBtn} disabled={index === total - 1} onClick={() => onMove(1)}>
+            <Ion name="chevron-down" size={18} />
           </button>
-          <button type="button" className={btnSmallSecondary} disabled={total === 1} onClick={onRemove}>
-            Remove
+          <button type="button" aria-label="Take this tier off the ladder" className={iconBtn} disabled={total === 1} onClick={onRemove}>
+            <Ion name="trash-outline" size={17} />
           </button>
         </div>
       </div>
 
       <Field
-        label="What it is called"
+        label="What this tier is called"
         hint="The line a brand reads before the price. “Flagship on-site interview”, not “Tier 3”."
         problems={at("title")}
         htmlFor={id("title")}
@@ -215,7 +218,7 @@ function Rung({
       </Field>
 
       <Field
-        label="What the brand gets"
+        label="What the brand gets for it"
         hint={`One plain line at a time, up to ${LIMITS.TIER_PERKS_MAX}. This is what somebody is paying for, so it is the part worth writing twice.`}
         problems={at("perks")}
       >
@@ -227,62 +230,50 @@ function Rung({
                   value={line}
                   onChange={(v) => onPatch({ perks: perks.map((p, j) => (j === i ? v : p)) })}
                   maxLength={LIMITS.TIER_PERK_MAX}
-                  placeholder={i === 0 ? "A 6 to 10 minute interview, shot and edited by me" : "One more line"}
+                  placeholder={i === 0 ? "Your logo in the mini strip of every clip" : `Line ${i + 1}`}
                 />
               </span>
               <button
                 type="button"
-                className={`${btnSmallSecondary} shrink-0`}
+                className={`${iconBtn} !h-12 !w-12 !rounded-[24px]`}
                 disabled={perks.length === 1}
                 onClick={() => onPatch({ perks: perks.filter((_, j) => j !== i) })}
                 aria-label="Remove this line"
               >
-                −
+                <Ion name="remove" size={18} />
               </button>
             </div>
           ))}
-          <div>
-            <button
-              type="button"
-              className={btnSmallSecondary}
-              disabled={perks.length >= LIMITS.TIER_PERKS_MAX}
-              onClick={() => onPatch({ perks: [...perks, ""] })}
-            >
-              Add a line
-            </button>
-          </div>
+          <ChipRow label="Lines">
+            <Chip icon="add" label="Add a line" disabled={perks.length >= LIMITS.TIER_PERKS_MAX} onClick={() => onPatch({ perks: [...perks, ""] })} />
+          </ChipRow>
         </div>
       </Field>
 
-      <Field
-        label="How this one sells"
-        hint="Each rung answers for itself. The $50 logo can go to whoever pays first while the one interview goes to the highest bid, on the same listing."
-        htmlFor={id("mode")}
-      >
-        <Dropdown
-          id={id("mode")}
-          value={rung.saleMode ?? "inherit"}
-          onChange={(value) => {
-            const next = value === "inherit" ? null : (value as SaleMode);
-            // The count is NOT set from here. A rung that ends up bid for
-            // does sell one copy, but "how many of these am I selling" is a
-            // number the creator typed, and quietly rewriting six to one on a
-            // change of mode loses it — switching back does not bring it
-            // returning. The rule is enforced the way every other rule on this
-            // form is: said beside the field, and the step does not advance.
-            onPatch({ saleMode: next });
-          }}
-          options={[
-            { value: "inherit", label: `The same as the whole listing — ${boardModeText(draft)}` },
-            ...MODE_OPTIONS.map((o) => ({ value: o.value as string, label: o.label })),
-          ]}
-        />
-      </Field>
+      <div className="flex flex-col gap-1.5">
+        <span className={fieldLabel}>How this one sells</span>
+        <ChipRow label="How this one sells">
+          <Chip label="Same as the rest" selected={rung.saleMode === null} onClick={() => onPatch({ saleMode: null })} />
+          {MODE_OPTIONS.map((o) => (
+            // The count is NOT set from here. A rung that ends up bid for does
+            // sell one copy, but "how many of these am I selling" is a number
+            // the creator typed, and quietly rewriting six to one on a change
+            // of mode loses it. The rule is said beside the field instead, and
+            // the step does not advance.
+            <Chip key={o.value} label={o.label} selected={rung.saleMode === o.value} onClick={() => onPatch({ saleMode: o.value })} />
+          ))}
+        </ChipRow>
+        <p className="text-[12px] leading-4 text-white/55">
+          {rung.saleMode === null
+            ? `It sells the way the space does: ${boardModeText(draft)}.`
+            : "Just this tier. The rest of the ladder sells the way the space does."}
+        </p>
+      </div>
 
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid gap-3.5 sm:grid-cols-2">
         {showsPrice ? (
           <Field
-            label={bidding ? "Where bidding opens" : "Price"}
+            label={bidding ? "Where bidding opens" : "What this tier costs"}
             problems={at("price")}
             htmlFor={id("price")}
             hint={
@@ -296,17 +287,14 @@ function Rung({
             <Money id={id("price")} value={rung.priceDollars} onChange={(priceDollars) => onPatch({ priceDollars })} />
           </Field>
         ) : (
-          <div className="flex flex-col gap-2">
-            <span className="text-small text-text">Price</span>
-            <p className="text-tiny text-text-muted">
-              Nothing to set. This one is sold by offers, so the page shows no price at all and a brand names its own
-              number.
-            </p>
+          <div className="flex flex-col gap-1.5">
+            <span className={fieldLabel}>What this tier costs</span>
+            <p className="text-[12px] leading-4 text-white/55">No price is shown: brands name theirs.</p>
           </div>
         )}
 
         <Field
-          label="How many of these"
+          label="How many of this one"
           problems={at("available")}
           htmlFor={id("available")}
           hint={
@@ -327,13 +315,13 @@ function Rung({
 
       {keepsFloor ? (
         <Field
-          label={bidding ? "Your reserve" : "The least you would take"}
+          label={bidding ? "The least you'd let it go for" : "The least you'll listen to"}
           problems={at("floor")}
           htmlFor={id("floor")}
           hint={
             bidding
-              ? `Private. Bidding that ends under this wins nothing, and no brand is ever shown the number — they only see whether it has been met. Leave it empty for no reserve. At least ${usd(isSession ? LIMITS.SESSION_MIN_CENTS : LIMITS.OFFER_MIN_CENTS)}.`
-              : `Private. Anything under it is turned away before it reaches you, and no brand is ever shown the number. Leave it empty to read every offer yourself.`
+              ? `Nobody sees it. Leave it empty for no floor at all. At least ${usd(isSession ? LIMITS.SESSION_MIN_CENTS : LIMITS.OFFER_MIN_CENTS)}.`
+              : "Nobody sees it. Leave it empty for no floor at all."
           }
         >
           <Money id={id("floor")} value={rung.minOfferDollars} onChange={(minOfferDollars) => onPatch({ minOfferDollars })} />
@@ -341,8 +329,8 @@ function Rung({
       ) : null}
 
       <Field
-        label="Anything else about it"
-        hint="Optional. One or two sentences, shown under the lines above."
+        label="Pitch (optional)"
+        hint="One or two sentences, shown under the lines above."
         problems={at("pitch")}
         htmlFor={id("pitch")}
       >
@@ -354,6 +342,6 @@ function Rung({
           rows={2}
         />
       </Field>
-    </div>
+    </Card>
   );
 }

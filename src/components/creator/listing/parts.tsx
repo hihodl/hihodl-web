@@ -22,9 +22,13 @@
 
 import type { ReactNode } from "react";
 
-import { input } from "@/components/ad-space/ui";
+import { Ion } from "@/components/app/ion";
+import { Body, fieldLabel, inputCls, SectionLabel } from "@/components/app/spaces/kit";
 
-/** A field with its label, its reason for existing, and whatever is wrong with it. */
+/**
+ * The app's Field (ui.tsx): a 12.5 label, the box, and under it either what
+ * is wrong (amber) or the hint (dim).
+ */
 export function Field({
   label,
   hint,
@@ -39,13 +43,12 @@ export function Field({
   children: ReactNode;
 }) {
   return (
-    <div className="flex min-w-0 flex-col gap-2">
-      <label htmlFor={htmlFor} className="text-small text-text">
+    <div className="flex min-w-0 flex-col gap-1.5">
+      <label htmlFor={htmlFor} className={fieldLabel}>
         {label}
       </label>
-      {hint ? <p className="text-tiny text-text-muted">{hint}</p> : null}
       {children}
-      <Problems list={problems} />
+      {problems.length ? <Problems list={problems} /> : hint ? <p className="text-[12px] leading-4 text-white/55">{hint}</p> : null}
     </div>
   );
 }
@@ -56,7 +59,7 @@ export function Problems({ list }: { list: readonly string[] }) {
   return (
     <ul className="flex flex-col gap-1">
       {list.map((message) => (
-        <li key={message} className="text-tiny text-amber">
+        <li key={message} className="text-[12.5px] font-strong leading-[17px] text-amber">
           {message}
         </li>
       ))}
@@ -64,7 +67,7 @@ export function Problems({ list }: { list: readonly string[] }) {
   );
 }
 
-export const inputClass = input;
+export const inputClass = inputCls;
 
 /** A box for words. */
 export function Text({
@@ -113,7 +116,7 @@ export function Paragraph({
   return (
     <textarea
       id={id}
-      className={`${inputClass} resize-y`}
+      className={`${inputClass} min-h-[84px] resize-y`}
       rows={rows}
       value={value}
       placeholder={placeholder}
@@ -145,13 +148,13 @@ export function Money({
 }) {
   return (
     <div className="relative">
-      <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-body text-text-faint">$</span>
+      <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[15.5px] text-white/55">$</span>
       <input
         id={id}
         type="text"
         inputMode="decimal"
         disabled={disabled}
-        className={`${inputClass} pl-8 disabled:cursor-not-allowed disabled:opacity-40`}
+        className={`${inputClass} !pl-7 disabled:cursor-not-allowed disabled:opacity-40`}
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
@@ -201,18 +204,23 @@ export function Dropdown<T extends string>({
   options: readonly { value: T; label: string }[];
 }) {
   return (
-    <select id={id} className={inputClass} value={value} onChange={(e) => onChange(e.target.value as T)}>
-      {options.map((o) => (
-        <option key={o.value} value={o.value} className="bg-night">
-          {o.label}
-        </option>
-      ))}
-    </select>
+    <div className="relative">
+      <select id={id} className={`${inputClass} appearance-none pr-10`} value={value} onChange={(e) => onChange(e.target.value as T)}>
+        {options.map((o) => (
+          <option key={o.value} value={o.value} className="bg-night">
+            {o.label}
+          </option>
+        ))}
+      </select>
+      <Ion name="chevron-down" size={16} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-white/55" />
+    </div>
   );
 }
 
 /**
- * One of several, each with a sentence saying what it means.
+ * One of several, each with a sentence saying what it means: the app's
+ * `Option` (DetailsStep), a radio in a 16-radius card whose stroke turns the
+ * select white when chosen.
  *
  * Selection changes a COLOUR and never a border width: on a card whose height
  * can change, growing the border by a pixel moves everything inside it.
@@ -235,22 +243,28 @@ export function Choice<T extends string>({
         return (
           <label
             key={o.value}
-            className={`flex cursor-pointer items-start gap-3 rounded-input border px-4 py-3 transition-colors duration-180 ${
-              on ? "border-amber bg-amber/10" : "border-[color:var(--color-hairline-strong)] hover:bg-white/5"
-            } ${o.disabled ? "cursor-not-allowed opacity-40" : ""}`}
+            className={`flex cursor-pointer items-start gap-3 rounded-[16px] border p-3.5 transition-colors ${
+              on ? "border-[#F1F5F9] bg-[rgba(241,245,249,0.08)]" : "border-white/10 bg-white/[0.05] hover:bg-white/[0.08]"
+            } ${o.disabled ? "cursor-not-allowed opacity-45" : ""}`}
           >
             <input
               type="radio"
               name={name}
-              className="mt-1 accent-amber"
+              className="sr-only"
               checked={on}
               disabled={o.disabled}
               onChange={() => onChange(o.value)}
             />
-            <span className="min-w-0">
-              <span className="block text-small text-text">{o.label}</span>
-              {o.body ? <span className="mt-1 block text-tiny text-text-muted">{o.body}</span> : null}
-              {o.disabled && o.why ? <span className="mt-1 block text-tiny text-amber">{o.why}</span> : null}
+            <span
+              aria-hidden
+              className={`mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-[10px] border-[1.5px] ${on ? "border-[#F1F5F9]" : "border-white/40"}`}
+            >
+              {on ? <span className="h-2.5 w-2.5 rounded-[5px] bg-[#F1F5F9]" /> : null}
+            </span>
+            <span className="flex min-w-0 flex-col gap-[3px]">
+              <span className="block text-[14.5px] font-extrabold text-white">{o.label}</span>
+              {o.body ? <span className="block text-[13px] leading-[18px] text-white/[0.62]">{o.body}</span> : null}
+              {o.disabled && o.why ? <span className="block text-[12.5px] font-strong leading-[17px] text-amber">{o.why}</span> : null}
             </span>
           </label>
         );
@@ -272,17 +286,25 @@ export function Tick({
   body?: string;
 }) {
   return (
-    <label className="flex cursor-pointer items-start gap-3">
-      <input type="checkbox" className="mt-1 accent-amber" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+    <label className="flex cursor-pointer items-start gap-3 py-1.5">
+      <input type="checkbox" className="peer sr-only" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      <span
+        aria-hidden
+        className={`mt-px flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[7px] border peer-focus-visible:ring-2 peer-focus-visible:ring-white/40 ${
+          checked ? "border-[#F1F5F9] bg-[#F1F5F9] text-[#0A1420]" : "border-white/35"
+        }`}
+      >
+        {checked ? <Ion name="checkmark" size={15} /> : null}
+      </span>
       <span className="min-w-0">
-        <span className="block text-small text-text">{label}</span>
-        {body ? <span className="mt-1 block text-tiny text-text-muted">{body}</span> : null}
+        <span className="block text-[14.5px] leading-5 text-white">{label}</span>
+        {body ? <span className="mt-0.5 block text-[12px] leading-4 text-white/55">{body}</span> : null}
       </span>
     </label>
   );
 }
 
-/** Several of a set, as pills that can be on or off. */
+/** Several of a set, as the app's Chips: selected is the white plate with navy ink. */
 export function Toggles<T extends string>({
   values,
   onChange,
@@ -302,8 +324,8 @@ export function Toggles<T extends string>({
             type="button"
             aria-pressed={on}
             onClick={() => onChange(on ? values.filter((v) => v !== o.value) : [...values, o.value])}
-            className={`inline-flex h-10 items-center whitespace-nowrap rounded-[20px] border px-4 text-small transition-colors duration-180 ${
-              on ? "border-amber bg-amber text-text-on-amber" : "border-[color:var(--color-hairline-strong)] text-text-muted hover:bg-white/5"
+            className={`inline-flex h-[34px] shrink-0 items-center whitespace-nowrap rounded-[17px] border px-[13px] text-[13.5px] font-bold transition-colors ${
+              on ? "border-[#F1F5F9] bg-[#F1F5F9] text-[#0A1420]" : "border-white/[0.14] bg-white/[0.06] text-white/[0.62] hover:bg-white/10"
             }`}
           >
             {o.label}
@@ -314,15 +336,17 @@ export function Toggles<T extends string>({
   );
 }
 
-/** A block inside a step: its own heading and the reason it is being asked. */
+/** A group inside a step, as the app's wizard draws one: a SectionLabel, an optional dim line, the fields. */
 export function Block({ title, why, children }: { title: string; why?: ReactNode; children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-4 border-t border-[color:var(--color-hairline)] pt-8 first:border-0 first:pt-0">
-      <div className="flex flex-col gap-2">
-        <h3 className="text-body text-text">{title}</h3>
-        {why ? <p className="text-small text-text-muted">{why}</p> : null}
-      </div>
+    <section className="flex flex-col gap-3.5">
+      <SectionLabel>{title}</SectionLabel>
+      {why ? <Body dim>{why}</Body> : null}
       {children}
     </section>
   );
 }
+
+/** A small glass action inside a field or a row (Remove, Change): 36 high, radius half of it. */
+export const btnSmallGlass =
+  "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[18px] border border-white/[0.22] bg-white/10 px-3.5 text-[13px] font-bold text-white transition-colors hover:bg-white/[0.14] disabled:cursor-not-allowed disabled:opacity-45";

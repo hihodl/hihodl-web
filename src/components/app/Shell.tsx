@@ -44,6 +44,7 @@ import { useWalletEnabled } from "@/lib/wallet/enabled";
 import { SpacesBaseProvider, useHref, useProductHref, useSpacesBase } from "./base";
 import { CommandPalette, type PaletteEntry } from "./CommandPalette";
 import { Door as SignInDoor } from "./front/Door";
+import { HeaderSlotContext, type HeaderSlot } from "./header-slot";
 import { UserAvatar } from "./account/UserAvatar";
 import { IconArrowLeft, IconClose, IconCollapse, IconExpand, IconMenu, IconPlus, IconSearch, IconSignOut } from "./icons";
 import {
@@ -316,6 +317,16 @@ function Frame({ children }: { children: ReactNode }) {
   const entries = usePaletteEntries();
   const scale = useUiScale();
 
+  // A screen with the app's own header draws it in the top bar (header-slot).
+  const [titleEl, setTitleEl] = useState<HTMLElement | null>(null);
+  const [rightEl, setRightEl] = useState<HTMLElement | null>(null);
+  const [claims, setClaims] = useState(0);
+  const claim = useCallback(() => {
+    setClaims((n) => n + 1);
+    return () => setClaims((n) => n - 1);
+  }, []);
+  const slot = useMemo<HeaderSlot>(() => ({ title: titleEl, right: rightEl, claim }), [titleEl, rightEl, claim]);
+
   return (
     <div
       className="w-full px-[clamp(12px,1.6vw,28px)] py-3 lg:py-4"
@@ -324,6 +335,7 @@ function Frame({ children }: { children: ReactNode }) {
       style={{ zoom: scale, ["--ui-scale" as string]: scale, ["--app-vh" as string]: `calc(100dvh / ${scale})` }}
     >
       <PrefsContext.Provider value={prefs}>
+        <HeaderSlotContext.Provider value={slot}>
         {palette ? <CommandPalette entries={entries} onClose={() => setPalette(false)} /> : null}
 
         <div
@@ -339,7 +351,15 @@ function Frame({ children }: { children: ReactNode }) {
 
           {/* As tall as the sidebar at least, so a screen that fills it ends where the sidebar ends. */}
           <div className="flex min-w-0 flex-col gap-4 lg:min-h-[calc(var(--app-vh,100dvh)-2rem)]">
-            <TopBar title={titleFor(rel)} level={level} onMenu={() => setDrawer(true)} onSearch={() => setPalette(true)} />
+            <TopBar
+              title={titleFor(rel)}
+              screenHeader={claims > 0}
+              titleRef={setTitleEl}
+              rightRef={setRightEl}
+              level={level}
+              onMenu={() => setDrawer(true)}
+              onSearch={() => setPalette(true)}
+            />
             <main className="flex min-w-0 flex-1 flex-col">{here && !deciding ? children : null}</main>
           </div>
         </div>
@@ -352,6 +372,7 @@ function Frame({ children }: { children: ReactNode }) {
             </div>
           </div>
         ) : null}
+        </HeaderSlotContext.Provider>
       </PrefsContext.Provider>
     </div>
   );
@@ -613,14 +634,31 @@ function UserCard({ collapsed }: { collapsed: boolean }) {
 
 /* ── Top bar ──────────────────────────────────────────────────────── */
 
-function TopBar({ title, level, onMenu, onSearch }: { title: string; level: Level; onMenu: () => void; onSearch: () => void }) {
+function TopBar({
+  title,
+  screenHeader,
+  titleRef,
+  rightRef,
+  level,
+  onMenu,
+  onSearch,
+}: {
+  title: string;
+  /** A screen's own header (a chevron back and its title) is drawn here instead of the section title. */
+  screenHeader: boolean;
+  titleRef: (el: HTMLElement | null) => void;
+  rightRef: (el: HTMLElement | null) => void;
+  level: Level;
+  onMenu: () => void;
+  onSearch: () => void;
+}) {
   const { role, session } = useShell();
   const href = useHref();
   const productHref = useProductHref();
   return (
     <header className="sticky top-2 z-40 rounded-[18px] border border-white/10 bg-[linear-gradient(145deg,rgba(8,23,36,0.9),rgba(6,16,27,0.88))] p-2 shadow-[0_18px_35px_rgba(0,0,0,0.32)] backdrop-blur-xl">
       <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
           <button
             type="button"
             aria-label="Open menu"
@@ -629,9 +667,11 @@ function TopBar({ title, level, onMenu, onSearch }: { title: string; level: Leve
           >
             <IconMenu />
           </button>
-          <h1 className="truncate pl-1 text-body font-medium text-text sm:text-[18px]">{title}</h1>
+          <div ref={titleRef} className={screenHeader ? "flex min-w-0 flex-1 items-center" : "hidden"} />
+          {screenHeader ? null : <h1 className="truncate pl-1 text-[17px] font-bold tracking-[-0.3px] text-text">{title}</h1>}
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
+          <div ref={rightRef} className="flex items-center gap-1.5 empty:hidden" />
           <button type="button" onClick={onSearch} aria-label="Search" className={`${btnGhost} sm:w-[180px] sm:justify-start xl:w-[220px]`}>
             <IconSearch className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Search</span>
@@ -640,7 +680,7 @@ function TopBar({ title, level, onMenu, onSearch }: { title: string; level: Leve
           {level === "spaces" && role === "creator" ? (
             <Link
               href={href("/listings/new")}
-              className="inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] bg-amber px-3 text-tiny font-medium text-text-on-amber transition-colors hover:bg-amber-glow"
+              className={`${screenHeader ? "hidden sm:inline-flex" : "inline-flex"} h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] bg-amber px-3 text-tiny font-medium text-text-on-amber transition-colors hover:bg-amber-glow`}
             >
               <IconPlus className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">New listing</span>

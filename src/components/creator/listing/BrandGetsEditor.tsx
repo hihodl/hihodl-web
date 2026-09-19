@@ -24,13 +24,13 @@ import {
 } from "@/lib/creator/listing";
 import { problemsAt, type Problem } from "@/lib/creator/rules";
 
+import { Ion } from "@/components/app/ion";
+import { Chip, ChipRow, Tag } from "@/components/app/spaces/kit";
+
 import { Problems } from "./parts";
 
 const iconBtn =
-  "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[20px] text-text-muted transition-colors duration-180 hover:bg-white/[0.08] hover:text-text disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent";
-
-const addBtn =
-  "inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-[20px] border border-[color:var(--color-hairline-strong)] px-4 text-small text-text transition-colors duration-180 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40";
+  "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[18px] text-white/[0.62] transition-colors hover:bg-white/[0.08] hover:text-white disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent";
 
 /** How a suggestion reads in the editor: what the page will say, with today's figure filled in there. */
 function suggestionText(kind: "reach" | "spot", template: Template): string {
@@ -71,10 +71,10 @@ export function BrandGetsEditor({
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-2.5">
       <Problems list={problemsAt(problems, "brandGets")} />
       {lines.length === 0 ? (
-        <p className="rounded-input border border-dashed border-[color:var(--color-hairline-strong)] px-4 py-4 text-small text-text-muted">
+        <p className="rounded-[14px] border border-dashed border-white/[0.14] px-3.5 py-3.5 text-[14px] leading-5 text-white/[0.62]">
           No lines of your own. Your page lists only what you will post, below. Add a line to say more.
         </p>
       ) : (
@@ -85,9 +85,9 @@ export function BrandGetsEditor({
             return (
               <li
                 key={own ? `text-${i}` : l.kind}
-                className="flex items-center gap-1 rounded-input border border-[color:var(--color-hairline-strong)] bg-white/[0.03] py-1.5 pl-3 pr-1.5"
+                className="flex items-center gap-1 rounded-[14px] border border-white/10 bg-white/[0.06] py-1.5 pl-3 pr-1.5"
               >
-                <span className="w-5 shrink-0 text-center text-tiny tabular-nums text-text-muted" aria-hidden>
+                <span className="w-5 shrink-0 text-center text-[12px] font-bold tabular-nums text-white/55" aria-hidden>
                   {i + 1}
                 </span>
                 <div className="min-w-0 flex-1 px-1">
@@ -103,23 +103,21 @@ export function BrandGetsEditor({
                         maxLength={BRAND_GETS_LIMITS.TEXT_MAX}
                         placeholder="A shout-out from the stage, your product in the vlog…"
                         onChange={(e) => set(lines.map((x, j) => (j === i ? { kind: "text", text: e.target.value.replace(/\n/g, " ") } : x)))}
-                        className="block w-full resize-none bg-transparent py-2 text-body text-text outline-none placeholder:text-text-muted/70 sm:[field-sizing:content]"
+                        className="block w-full resize-none bg-transparent py-2 text-[15.5px] text-white outline-none placeholder:text-white/[0.28] sm:[field-sizing:content]"
                       />
                       {lineProblems.length ? <Problems list={lineProblems} /> : null}
                     </>
                   ) : (
                     <p className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 py-2">
-                      <span className="inline-flex h-6 shrink-0 items-center rounded-[12px] border border-moonlight/40 bg-moonlight/10 px-2.5 text-tiny text-text">
-                        Suggested
-                      </span>
-                      <span className="min-w-0 text-small text-text">{suggestionText(l.kind, template)}</span>
+                      <Tag label="Suggested" />
+                      <span className="min-w-0 text-[14.5px] leading-5 text-white">{suggestionText(l.kind, template)}</span>
                     </p>
                   )}
                 </div>
                 {/* Up and down stacked on a phone, side by side from `sm`: the line keeps the room. */}
                 <div className="flex shrink-0 flex-col sm:flex-row">
                   <button type="button" className={iconBtn} aria-label={`Move line ${i + 1} up`} disabled={i === 0} onClick={() => move(i, -1)}>
-                    <Chevron up />
+                    <Ion name="chevron-up" size={16} />
                   </button>
                   <button
                     type="button"
@@ -128,7 +126,7 @@ export function BrandGetsEditor({
                     disabled={i === lines.length - 1}
                     onClick={() => move(i, 1)}
                   >
-                    <Chevron />
+                    <Ion name="chevron-down" size={16} />
                   </button>
                 </div>
                 <button
@@ -137,9 +135,7 @@ export function BrandGetsEditor({
                   aria-label={`Remove line ${i + 1}`}
                   onClick={() => set(lines.filter((_, j) => j !== i))}
                 >
-                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
-                    <path d="M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                  </svg>
+                  <Ion name="close" size={18} />
                 </button>
               </li>
             );
@@ -147,32 +143,15 @@ export function BrandGetsEditor({
         </ol>
       )}
 
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          className={addBtn}
-          disabled={full}
-          onClick={() => set([...lines, { kind: "text", text: "" }])}
-        >
-          <span aria-hidden>+</span> Add a line
-        </button>
+      <ChipRow label="Add to what the brand gets">
+        <Chip icon="add" label="Add a line" disabled={full} onClick={() => set([...lines, { kind: "text", text: "" }])} />
         {missing.map((s) => (
-          <button key={s.kind} type="button" className={addBtn} disabled={full} onClick={() => set([...lines, { ...s }])}>
-            <span aria-hidden>+</span> {s.kind === "reach" ? "Your reach" : "The spot"} (suggested)
-          </button>
+          <Chip key={s.kind} icon="add" label={`${s.kind === "reach" ? "Your reach" : "The spot"} (suggested)`} disabled={full} onClick={() => set([...lines, { ...s }])} />
         ))}
-        <span className="text-tiny text-text-muted">
-          {lines.length} of {BRAND_GETS_LIMITS.MAX_LINES} lines · up to {BRAND_GETS_LIMITS.TEXT_MAX} characters each
-        </span>
-      </div>
+      </ChipRow>
+      <p className="text-[12px] leading-4 text-white/55">
+        {lines.length} of {BRAND_GETS_LIMITS.MAX_LINES} lines · up to {BRAND_GETS_LIMITS.TEXT_MAX} characters each
+      </p>
     </div>
-  );
-}
-
-function Chevron({ up = false }: { up?: boolean }) {
-  return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden style={up ? { transform: "rotate(180deg)" } : undefined}>
-      <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
   );
 }

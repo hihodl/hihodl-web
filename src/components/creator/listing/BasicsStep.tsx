@@ -33,7 +33,10 @@ import { problemsAt, type Problem } from "@/lib/creator/rules";
 
 import { EventPicker } from "./EventPicker";
 import { InspiredByField } from "./InspiredByField";
-import { Block, Field, Money, Paragraph, Problems, Text } from "./parts";
+import { Ion } from "@/components/app/ion";
+import { emptyBtn } from "@/components/app/spaces/kit";
+
+import { Block, btnSmallGlass, Choice, Field, Money, Paragraph, Problems, Text } from "./parts";
 
 const VENUE_LABEL: Record<VenueType, string> = {
   travel: "While travelling",
@@ -72,7 +75,7 @@ export function BasicsStep({
   const venues = VENUE_TYPES.filter((v) => template.allowedVenues.includes(v));
 
   return (
-    <div className="flex flex-col gap-10">
+    <div className="flex flex-col gap-3.5">
       <Block
         title="What to call it"
         why="This is the headline on your page and in every link anybody shares. Say where you are going and what you are doing there."
@@ -145,10 +148,11 @@ export function BasicsStep({
                   </div>
                   <button
                     type="button"
-                    className="h-12 shrink-0 rounded-[24px] border border-[color:var(--color-hairline-strong)] px-5 text-small text-text transition-colors duration-180 hover:bg-white/5"
+                    aria-label="Remove this date"
+                    className={`${btnSmallGlass} !h-12 !w-12 !rounded-[24px] !px-0`}
                     onClick={() => set({ keyDates: draft.keyDates.filter((_, j) => j !== i) })}
                   >
-                    Remove
+                    <Ion name="trash-outline" size={18} />
                   </button>
                 </div>
                 <Problems list={problemsAt(problems, `keyDate:${i}`)} />
@@ -158,9 +162,10 @@ export function BasicsStep({
               <div>
                 <button
                   type="button"
-                  className="inline-flex h-10 items-center rounded-[20px] border border-[color:var(--color-hairline-strong)] px-5 text-small text-text transition-colors duration-180 hover:bg-white/5"
+                  className={emptyBtn}
                   onClick={() => set({ keyDates: [...draft.keyDates, { label: "", date: "" }] })}
                 >
+                  <Ion name="add" size={16} className="mr-1.5" />
                   Add a date
                 </button>
               </div>
@@ -175,30 +180,12 @@ export function BasicsStep({
           why="It decides what you will be asked to confirm before it goes live — a conference has rules about branded items, a private event has a host who has to have agreed."
         >
           <Field label="Occasion" problems={problemsAt(problems, "venueType")}>
-            <div className="flex flex-col gap-2">
-              {venues.map((v) => (
-                <label
-                  key={v}
-                  className={`flex cursor-pointer items-start gap-3 rounded-input border px-4 py-3 transition-colors duration-180 ${
-                    draft.venueType === v
-                      ? "border-amber bg-amber/10"
-                      : "border-[color:var(--color-hairline-strong)] hover:bg-white/5"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="venue"
-                    className="mt-1 accent-amber"
-                    checked={draft.venueType === v}
-                    onChange={() => set({ venueType: v })}
-                  />
-                  <span className="min-w-0">
-                    <span className="block text-small text-text">{VENUE_LABEL[v]}</span>
-                    <span className="mt-1 block text-tiny text-text-muted">{VENUE_BODY[v]}</span>
-                  </span>
-                </label>
-              ))}
-            </div>
+            <Choice
+              name="venue"
+              value={draft.venueType}
+              onChange={(venueType) => set({ venueType })}
+              options={venues.map((v) => ({ value: v, label: VENUE_LABEL[v], body: VENUE_BODY[v] }))}
+            />
           </Field>
         </Block>
       ) : null}
