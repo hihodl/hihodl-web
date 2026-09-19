@@ -57,6 +57,7 @@
 
 import type {
   Booking,
+  BrandProduction,
   CreatorPage,
   EventPage,
   EventSummary,
@@ -64,6 +65,7 @@ import type {
   OfferView,
   Position,
   PositionOffers,
+  ProductionView,
   SessionState,
   SessionView,
   Space,
@@ -286,7 +288,7 @@ function suitcase(): Space {
       xIdentityVerified: false,
       xFollowers: 48210,
       xAccountCreatedAt: "2019-03-11T00:00:00.000Z",
-      trackRecord: { delivered: 3, missed: 0 },
+      trackRecord: { delivered: 3, missed: 0, production: { onTime: 4, accepted: 4 } },
     },
     feeBps: 500,
     feePayer: "sponsor",
@@ -845,6 +847,137 @@ function pitchReviews(): Space {
   };
 }
 
+/** Content production at TOKEN2049: a package for the brand's own channels. */
+const PRODUCTION_PACKAGE = {
+  deliverables: { interviews: 2, shortForm: 3, brollPack: 1, photoSet: 0, socialAssets: 5 },
+  turnaroundHours: 48 as const,
+  usage: { scope: "organic_and_paid" as const, term: "12m" as const },
+  lines: [
+    { key: "interviews" as const, label: "On-camera interviews", count: 2 },
+    { key: "shortForm" as const, label: "Short-form edits (9:16, up to 60 s)", count: 3 },
+    { key: "brollPack" as const, label: "B-roll pack (raw clips)", count: 1 },
+    { key: "socialAssets" as const, label: "Social assets (cut-downs, captions)", count: 5 },
+  ],
+};
+
+function contentProduction(): Space {
+  const base = videos();
+  const slot = (n: number, over: Partial<Position> = {}) =>
+    position(
+      `00000000-0000-4000-c000-${String(n).padStart(12, "0")}`,
+      { zoneKey: `slot-${n}`, label: `Spot ${n}`, suggestedPriceCents: 150000 },
+      { accepts: [], pitch: null, ...over },
+    );
+  return {
+    ...base,
+    id: "77777777-7777-4777-8777-777777777777",
+    slug: "token2049-content-production",
+    title: "Your brand's TOKEN2049 content, filmed and edited",
+    reason:
+      "Don't sponsor my trip. Sponsor the content. You bring the brief, I bring the camera: interviews, short-form, b-roll and social assets, delivered within 48 hours.",
+    kind: "service",
+    deliverBy: dayFromNow(24),
+    chains: ["solana", "base", "polygon"],
+    fallback: "creator_refund",
+    fallbackNote: null,
+    attestations: ["discloses_sponsorship", "no_investment_advice"],
+    requiredAttestations: ["discloses_sponsorship", "no_investment_advice"],
+    template: {
+      id: "content-production",
+      kind: "service",
+      productType: "production",
+      name: "Content production",
+      views: [],
+      zones: [],
+      service: {
+        deliverableKind: "video",
+        summary:
+          "You bring the brief, the creator brings the camera: interviews, short-form, b-roll and social assets filmed at the event, edited and delivered to you.",
+        maxSlots: 10,
+        format: "production",
+      },
+    },
+    production: PRODUCTION_PACKAGE,
+    positions: [slot(1, { status: "sold" }), slot(2, { status: "sold" }), slot(3), slot(4)],
+    fundingGoalCents: null,
+    totals: { positions: 4, sold: 2, committedCents: 300000, totalCents: 600000 },
+    share: {
+      url: "https://hihodl.xyz/s/coinempress/token2049-content-production?m=2",
+      text: "Sponsor the content at TOKEN2049 https://hihodl.xyz/s/coinempress/token2049-content-production?m=2",
+    },
+    bannerUrl: null,
+    bannerGradient: "night",
+    siblings: [],
+  };
+}
+
+/**
+ * The brand's delivery page, `/p/<token>`, in each state it can be in:
+ * fixture_production_making, _delivered, _revision, _accepted.
+ */
+export function fixtureProduction(token: string): BrandProduction | null {
+  const states: Record<string, ProductionView["state"]> = {
+    fixture_production_making: "awaiting_delivery",
+    fixture_production_delivered: "delivered",
+    fixture_production_revision: "revision_requested",
+    fixture_production_accepted: "accepted",
+  };
+  const state = states[token];
+  if (!state) return null;
+  const space = contentProduction();
+  const delivered = state !== "awaiting_delivery";
+  const deliveredAt = new Date(Date.now() - 20 * HOUR).toISOString();
+  return {
+    orderId: "0f000000-0000-4000-8000-000000000001",
+    space: { id: space.id, title: space.title, slug: space.slug, eventName: "TOKEN2049" },
+    creatorHandle: "coinempress",
+    positionLabel: "Spot 1",
+    chain: "solana",
+    paidAt: new Date(Date.now() - 9 * DAY).toISOString(),
+    production: {
+      orderId: "0f000000-0000-4000-8000-000000000001",
+      positionId: space.positions[0].id,
+      package: PRODUCTION_PACKAGE,
+      brief: {
+        goal: "product_launch",
+        keyMessages: ["Pay anyone in USDC, no gas", "Live in 40 countries"],
+        interviewees: "Our CEO, day two after 3pm at booth B12",
+        assetsUrl: "https://drive.google.com/brand-kit",
+        dos: "Show the app on a phone",
+        donts: "No price talk",
+        shootContact: { kind: "telegram", value: "@hold_ops" },
+      },
+      event: { startsOn: TOKEN2049.startsOn, endsOn: TOKEN2049.endsOn, timeZone: TOKEN2049.timeZone ?? null },
+      shootOn: TOKEN2049.endsOn,
+      shootOnSet: false,
+      dueAt: new Date(Date.now() + 28 * HOUR).toISOString(),
+      state,
+      delivery: delivered
+        ? {
+            url: "https://frame.io/r/token2049-hold",
+            checklist: [
+              { key: "interviews", count: 2 },
+              { key: "shortForm", count: 3 },
+              { key: "brollPack", count: 1 },
+              { key: "socialAssets", count: state === "accepted" ? 5 : 4 },
+            ],
+            deliveredAt,
+            firstDeliveredAt: deliveredAt,
+          }
+        : null,
+      revision:
+        state === "revision_requested"
+          ? { note: "Shorter cuts, under 30 seconds, and use the second interview take.", requestedAt: new Date(Date.now() - 4 * HOUR).toISOString() }
+          : null,
+      revisionAvailable: state === "delivered",
+      accepted: state === "accepted" ? { at: new Date(Date.now() - 2 * HOUR).toISOString(), auto: false } : null,
+      autoAcceptAt: state === "delivered" ? new Date(Date.parse(deliveredAt) + 72 * HOUR).toISOString() : null,
+      onTime: delivered ? true : null,
+      publicProof: null,
+    },
+  };
+}
+
 /**
  * All year: a service tied to no event, which is what the hub's "On sale all
  * year" group exists for. The creator names it themselves (custom service).
@@ -976,7 +1109,9 @@ function creator(xHandle: string, xName: string | null, xFollowers: number | nul
   };
 }
 
-const COIN = creator("coinempress", "Coin Empress", 48210, { trackRecord: { delivered: 3, missed: 0 } });
+const COIN = creator("coinempress", "Coin Empress", 48210, {
+  trackRecord: { delivered: 3, missed: 0, production: { onTime: 4, accepted: 4 } },
+});
 
 function card(
   n: number,
@@ -1592,7 +1727,7 @@ export function fixtureOffer(token: string): OfferThread | null {
 export function fixtureSpace(handle: string, slug: string): Space | null {
   if (handle === "id")
     return (
-      [suitcase(), videos(), takeovers(), pitchReviews(), customService(), eventCoverage(), allYearService(), ...offersFixtures()].find(
+      [suitcase(), videos(), takeovers(), pitchReviews(), customService(), eventCoverage(), allYearService(), contentProduction(), ...offersFixtures()].find(
         (s) => s.id === slug,
       ) ?? null
     );
@@ -1606,6 +1741,7 @@ export function fixtureSpace(handle: string, slug: string): Space | null {
     if (slug === "token2049-afterparty-host") return customService();
     if (slug === "breakpoint-london-coverage") return eventCoverage();
     if (slug === "weekly-x-space-sponsor") return allYearService();
+    if (slug === "token2049-content-production") return contentProduction();
   }
   const path = `/s/${handle.toLowerCase()}/${slug}`;
   for (const [event, tabs] of [

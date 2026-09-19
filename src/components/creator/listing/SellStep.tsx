@@ -33,6 +33,7 @@ import {
   type ListingDraft,
   type PricingMode,
   type Template,
+  isProductionTemplate,
   isSessionTemplate,
 } from "@/lib/creator/listing";
 import { problemsAt, type Problem } from "@/lib/creator/rules";
@@ -63,6 +64,9 @@ export function SellStep({
   const set = (change: Partial<ListingDraft>) => onChange({ ...draft, ...change });
   const service = template.kind === "service";
   const session = isSessionTemplate(template);
+  // Content production sells N identical spots at a price; brands may offer under it.
+  const production = isProductionTemplate(template);
+  const onlyAtAPrice = "A production spot is sold at a price. You can still read offers under it.";
   const maxSlots = template.service?.maxSlots ?? 0;
   const needsCountdown = draft.pricingMode === "bids" || anyRungBids(draft);
 
@@ -81,20 +85,24 @@ export function SellStep({
       value: "offers",
       label: "By offers only, with no price shown",
       body: "Nothing on the page says what it costs. Every brand names its own number and you answer each one.",
+      disabled: production,
+      why: onlyAtAPrice,
     },
     {
       value: "bids",
       label: "To the highest bid",
       body: "A price to open at and a moment bidding stops. Each spot is its own bidding, and the highest bid at the end is the one you decide on.",
-      disabled: service && draft.sells !== "ladder",
-      why: "Identical slots cannot all go to one highest bid. Build a ladder and send one rung out to bids instead.",
+      disabled: production || (service && draft.sells !== "ladder"),
+      why: production
+        ? onlyAtAPrice
+        : "Identical slots cannot all go to one highest bid. Build a ladder and send one rung out to bids instead.",
     },
     {
       value: "takeover",
       label: "At a price anybody can take by paying double",
       body: "A sold spot never stops being for sale: the next brand pays double and the one it displaces is repaid in full inside the same payment. Solana only.",
-      disabled: session,
-      why: "A booking a stranger can take off you by paying double is not a booking.",
+      disabled: session || production,
+      why: production ? onlyAtAPrice : "A booking a stranger can take off you by paying double is not a booking.",
     },
   ];
 
@@ -145,9 +153,11 @@ export function SellStep({
       </Block>
 
       <Block
-        title={service ? (draft.sells === "ladder" ? "The ladder" : "The slots") : "The spots"}
+        title={production ? "The spots" : service ? (draft.sells === "ladder" ? "The ladder" : "The slots") : "The spots"}
         why={
-          service
+          production
+            ? "Each spot is one brand's package, at one price. Sell as many as you can film well at one event."
+            : service
             ? "A ladder is several different things at several prices, on one listing — a $50 logo, a $200 placement, one $1,300 interview. Selling the same thing several times over is the other shape."
             : "Each spot on the product is sold separately, to a different brand."
         }
@@ -164,6 +174,8 @@ export function SellStep({
                     value: "ladder",
                     label: "Several different things, at different prices",
                     body: "Each one names itself, lists what the brand gets, and can sell its own way.",
+                    disabled: production,
+                    why: "Every production spot is the package you set in the step before, so they share one price.",
                   },
                   {
                     value: "slots",

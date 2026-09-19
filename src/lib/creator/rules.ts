@@ -27,7 +27,11 @@ import {
   anyRungBids,
   centsFromDollars,
   isCustomServiceTemplate,
+  isProductionTemplate,
   isSessionTemplate,
+  PRODUCTION_DELIVERABLE_MAX,
+  PRODUCTION_DELIVERABLES,
+  PRODUCTION_TURNAROUNDS,
   modeKeepsFloor,
   modeShowsPrice,
   requiredAttestations,
@@ -39,7 +43,7 @@ import {
 } from "./listing";
 
 /** Which step of the wizard a problem belongs to, so the shell can point at it. */
-export type Step = "basics" | "sell" | "publish";
+export type Step = "basics" | "includes" | "sell" | "publish";
 
 export interface Problem {
   /** The field this sits next to: "title", "rung:tier-2:price", "attestations". */
@@ -75,6 +79,7 @@ export function listingProblems(draft: ListingDraft, template: Template, now = D
   const out: Problem[] = [];
   const add = (where: string, step: Step, message: string) => out.push({ where, step, message });
   const session = isSessionTemplate(template);
+  const production = isProductionTemplate(template);
   const service = template.kind === "service";
 
   /* ── What it is called, and when it closes ─────────────────────── */
@@ -133,10 +138,36 @@ export function listingProblems(draft: ListingDraft, template: Template, now = D
     );
   }
 
+  if (production && !draft.eventId) {
+    add(
+      "event",
+      "basics",
+      "Content production is filmed at an event, and it has to be one from the list: its dates are your shoot window.",
+    );
+  }
+
+  /* ── What a spot includes (content production) ─────────────────── */
+
+  if (production) {
+    const pkg = draft.production;
+    const counts = PRODUCTION_DELIVERABLES.map((k) => pkg.deliverables[k]);
+    if (counts.some((n) => !Number.isInteger(n) || n < 0 || n > PRODUCTION_DELIVERABLE_MAX)) {
+      add("production:deliverables", "includes", `Each line runs from 0 to ${PRODUCTION_DELIVERABLE_MAX}.`);
+    } else if (counts.every((n) => n === 0)) {
+      add("production:deliverables", "includes", "Tick at least one thing a spot includes. A brand is buying the package, so it has to hold something.");
+    }
+    if (!(PRODUCTION_TURNAROUNDS as readonly number[]).includes(pkg.turnaroundHours)) {
+      add("production:turnaround", "includes", "Pick how soon after each shoot day you deliver.");
+    }
+  }
+
   /* ── How it sells ──────────────────────────────────────────────── */
 
   if (draft.acceptsOffers && draft.pricingMode !== "fixed") {
     add("pricing", "sell", "Sponsors can only be allowed to offer less on a listing that has a fixed price.");
+  }
+  if (production && draft.pricingMode !== "fixed") {
+    add("pricing", "sell", "A production spot is sold at a price. You can still let brands offer less.");
   }
   if (session && draft.pricingMode === "takeover") {
     add("pricing", "sell", "A booking a stranger can take off you by paying double is not a booking, so time in person is never sold that way.");
@@ -239,7 +270,7 @@ export function listingProblems(draft: ListingDraft, template: Template, now = D
   const latestDue = closeDay + LIMITS.DELIVERABLE_DAYS_AFTER_CLOSE * DAY;
 
   if (service) {
-    if (!session) {
+    if (!session && !production) {
       const by = draft.deliverBy ? dayStart(draft.deliverBy) : null;
       if (!draft.deliverBy) {
         add("deliverBy", "publish", "Say the day every sponsor has their work by. It is the promise the whole listing rests on.");
@@ -294,6 +325,13 @@ export function listingProblems(draft: ListingDraft, template: Template, now = D
     });
   }
 
+  if (production && draft.fallback !== "creator_refund" && draft.fallback !== "next_event") {
+    add(
+      "fallback",
+      "publish",
+      "Without the event there is nothing to film, so the answer has to be a refund from you or the same spot at your next event.",
+    );
+  }
   if (session && draft.fallback !== "creator_refund" && draft.fallback !== "next_event") {
     add(
       "fallback",
@@ -323,7 +361,7 @@ export function listingProblems(draft: ListingDraft, template: Template, now = D
     }
   }
 
-  const required = requiredAttestations(template.requiredAttestations, draft.venueType, template.kind, session);
+  const required = requiredAttestations(template.requiredAttestations, draft.venueType, template.kind, session, production);
   if (required.some((a) => !draft.attestations.includes(a))) {
     add("attestations", "publish", "Tick every line below. Each one is something you are telling sponsors is true.");
   }
@@ -469,7 +507,7 @@ function priceProblems(args: {
 
 /** The first step that still has something wrong on it, or null. */
 export function firstStepWithProblem(problems: readonly Problem[]): Step | null {
-  for (const step of ["basics", "sell", "publish"] as const) {
+  for (const step of ["basics", "includes", "sell", "publish"] as const) {
     if (problems.some((p) => p.step === step)) return step;
   }
   return null;

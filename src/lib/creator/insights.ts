@@ -51,7 +51,7 @@ export interface YouBlock {
   };
 }
 
-export type Surface = "object" | "clothing" | "service" | "photo" | "other";
+export type Surface = "object" | "clothing" | "service" | "production" | "photo" | "other";
 
 export interface SellRow {
   key: string;

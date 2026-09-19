@@ -29,6 +29,7 @@ import {
   LIMITS,
   PLATFORMS,
   isCustomServiceTemplate,
+  isProductionTemplate,
   isSessionTemplate,
   requiredAttestations,
   type Attestation,
@@ -120,7 +121,13 @@ export function PublishStep({
   const set = (change: Partial<ListingDraft>) => onChange({ ...draft, ...change });
   const service = template.kind === "service";
   const session = isSessionTemplate(template);
-  const required = requiredAttestations(template.requiredAttestations, draft.venueType, template.kind, session);
+  const required = requiredAttestations(
+    template.requiredAttestations,
+    draft.venueType,
+    template.kind,
+    session,
+    isProductionTemplate(template),
+  );
 
   return (
     <div className="flex flex-col gap-10">

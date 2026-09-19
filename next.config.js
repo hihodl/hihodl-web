@@ -51,6 +51,16 @@ const nextConfig = {
           { key: "Referrer-Policy", value: "no-referrer" },
         ],
       },
+      // A production brand's delivery link is its only credential
+      // (spaces-content-production-v0.md).
+      {
+        source: "/p/:token*",
+        headers: [
+          { key: "Cache-Control", value: "private, no-store, max-age=0" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+          { key: "Referrer-Policy", value: "no-referrer" },
+        ],
+      },
       // An offer's or bid's manage link is its only credential (hispace-offers-v0.md).
       {
         source: "/o/:token*",

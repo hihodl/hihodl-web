@@ -240,7 +240,7 @@ function NeedsYou({
     ...deliveries.map((d) => ({
       key: `d-${d.id}`,
       href: href(`/deliveries?item=${encodeURIComponent(d.id)}`),
-      title: d.kind === "artwork" ? d.title : `${d.kind === "spot" ? "Deliver" : "Promise"} · ${d.title}`,
+      title: d.kind === "artwork" ? d.title : `${d.kind === "spot" || d.kind === "production" ? "Deliver" : "Promise"} · ${d.title}`,
       sub: d.listing,
       right: d.due ? <span className={`text-tiny ${d.state === "overdue" ? "text-amber" : "text-[#9FB7C2]"}`}>{dueText(d.due)}</span> : null,
     })),

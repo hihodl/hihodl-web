@@ -32,6 +32,7 @@ import type { WorkDeliverable, WorkListing, WorkSlot } from "@/lib/creator/team"
 
 import { Text } from "../listing/parts";
 import { Loading, Notice, Section } from "../parts";
+import { ProductionSpot } from "../run/Production";
 import { ROLE_TEXT } from "./Members";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -109,7 +110,11 @@ export function WorkCard({ listing, onChanged }: { listing: WorkListing; onChang
         <div className="flex flex-col gap-3">
           <h3 className="text-body text-text">The spots sponsors bought</h3>
           {listing.slots.map((s) => (
-            <SlotRow key={s.id} slot={s} canDeliver={canDeliver} onChanged={onChanged} />
+            s.production ? (
+              <ProductionSpot key={s.id} positionId={s.id} production={s.production} canDeliver={canDeliver} onChanged={onChanged} />
+            ) : (
+              <SlotRow key={s.id} slot={s} canDeliver={canDeliver} onChanged={onChanged} />
+            )
           ))}
         </div>
       ) : canDeliver ? (

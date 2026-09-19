@@ -19,6 +19,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo } from "react";
 
+import { ProductionSpot } from "@/components/creator/run/Production";
 import { PromiseCard, Review, SoldSpot } from "@/components/creator/run/Work";
 import { DeliverableRow, SlotRow } from "@/components/creator/team/TeamWork";
 import {
@@ -37,12 +38,12 @@ import { useHref } from "../base";
 import { IconArrowLeft, IconDeliveries } from "../icons";
 import { useShell } from "../Shell";
 import { EmptyState, FilterPills, Panel, RowLink, Skeleton } from "../ui";
-import { dueText, LIST_PANEL, MasterDetail, ReadError } from "./common";
+import { countdownText, dueText, LIST_PANEL, MasterDetail, ReadError } from "./common";
 import { CardGrid, DrillBar, EventCard, eventName, eventParam, ListingFigureCard, Pager, unknownListing, useListingRefs, usePaged } from "./cards";
 
 type Show = "todo" | "done" | "all";
 
-const KIND_TEXT: Record<DeliveryItem["kind"], string> = { artwork: "Artwork", spot: "Spot", promise: "Promise" };
+const KIND_TEXT: Record<DeliveryItem["kind"], string> = { artwork: "Artwork", spot: "Spot", promise: "Promise", production: "Production" };
 const STATE_TEXT: Record<DeliveryItem["state"], string> = {
   todo: "To do",
   overdue: "Late",
@@ -50,20 +51,31 @@ const STATE_TEXT: Record<DeliveryItem["state"], string> = {
   done: "Delivered",
 };
 
+/** A production spot waiting on its brand says so, not "artwork pending". */
+function stateText(i: DeliveryItem): string {
+  if (i.kind === "production" && i.production) {
+    if (i.state === "waiting") return "With the brand";
+    if (i.production.state === "revision_requested") return "Revision";
+  }
+  return STATE_TEXT[i.state];
+}
+
 const open = (i: DeliveryItem) => i.state !== "done";
 
 /** What is due in a set of items: the counts, and the nearest date. */
 function due(items: readonly DeliveryItem[]) {
   const left = items.filter(open);
   const artwork = left.filter((i) => i.kind === "artwork").length;
-  const waiting = left.filter((i) => i.state === "waiting").length;
-  const deliver = left.length - artwork - waiting;
+  const waiting = left.filter((i) => i.state === "waiting" && i.kind !== "production").length;
+  const withBrand = left.filter((i) => i.state === "waiting" && i.kind === "production").length;
+  const deliver = left.length - artwork - waiting - withBrand;
   const next = left.map((i) => i.due).filter((d): d is string => !!d).sort()[0] ?? null;
   const late = left.some((i) => i.state === "overdue");
   const parts = [
     deliver ? `${deliver} to deliver` : "",
     artwork ? `${artwork} artwork to approve` : "",
     waiting ? `${waiting} waiting on artwork` : "",
+    withBrand ? `${withBrand} with the brand` : "",
   ].filter(Boolean);
   return {
     open: left.length,
@@ -281,7 +293,17 @@ function ListingDeliveries({
                       sub={i.sub === KIND_TEXT[i.kind] ? i.sub : `${KIND_TEXT[i.kind]} · ${i.sub}`}
                       right={
                         <span className={`text-[11px] ${i.state === "overdue" || (i.kind === "artwork" && role === "creator") ? "text-amber" : "text-[#9FB7C2]"}`}>
-                          {i.state === "done" ? STATE_TEXT.done : i.due ? dueText(i.due) : STATE_TEXT[i.state]}
+                          {i.kind === "production" && i.production
+                            ? i.state === "todo" || i.state === "overdue"
+                              ? i.production.state === "revision_requested"
+                                ? stateText(i)
+                                : countdownText(i.production.dueAt)
+                              : stateText(i)
+                            : i.state === "done"
+                              ? STATE_TEXT.done
+                              : i.due
+                                ? dueText(i.due)
+                                : STATE_TEXT[i.state]}
                         </span>
                       }
                     />
@@ -329,7 +351,15 @@ function Detail({ item, backHref }: { item: DeliveryItem; backHref: string }) {
           ) : null
         }
       >
-        {item.owner?.position && item.kind === "artwork" ? (
+        {item.kind === "production" && item.production ? (
+          <ProductionSpot
+            key={item.id}
+            positionId={item.id.slice("production:".length)}
+            production={item.production}
+            canDeliver={item.owner ? true : item.member?.listing.status === "live" || item.member?.listing.status === "closed"}
+            onChanged={changed}
+          />
+        ) : item.owner?.position && item.kind === "artwork" ? (
           <Review key={item.id} position={item.owner.position} onChanged={changed} />
         ) : item.owner?.position ? (
           <SoldSpot key={item.id} position={item.owner.position} onChanged={changed} />

@@ -32,6 +32,7 @@ import { markDeliverableDelivered, markPositionDelivered, reviewContent } from "
 import { describeRunError } from "@/lib/creator/problems";
 
 import { Text } from "../listing/parts";
+import { ProductionSpot } from "./Production";
 
 const DELIVERABLE_STATE: Record<DeliverableView["state"], string> = {
   delivered: "Delivered",
@@ -73,7 +74,11 @@ export function Work({ space, onChanged }: { space: SpaceView; onChanged: () => 
           <ul className="flex flex-col gap-3">
             {sold.map((p) => (
               <li key={p.id}>
-                <SoldSpot position={p} onChanged={onChanged} />
+                {p.production ? (
+                  <ProductionSpot positionId={p.id} production={p.production} canDeliver onChanged={onChanged} />
+                ) : (
+                  <SoldSpot position={p} onChanged={onChanged} />
+                )}
               </li>
             ))}
           </ul>

@@ -7,6 +7,8 @@
  * doing arithmetic on them.
  */
 
+import type { PackageView as ProductionPackageView, ProductionView as ProductionSpotView } from "@/lib/creator/listing";
+
 export type Chain = "solana" | "base" | "polygon";
 
 export type SpaceStatus = "draft" | "live" | "closed" | "delisted";
@@ -49,6 +51,12 @@ export interface TrackRecord {
   delivered: number;
   missed: number;
   disputed?: number;
+  /**
+   * Content production: "Delivered on time: onTime of accepted", counted from
+   * spots a brand accepted (or 72 hours of its silence did). Absent when the
+   * creator has none, and on an older server.
+   */
+  production?: { onTime: number; accepted: number };
 }
 
 export interface TemplateView {
@@ -93,7 +101,17 @@ export interface Template {
   } | null;
 }
 
-export type ServiceFormat = "content" | "session";
+export type ServiceFormat = "content" | "session" | "production";
+
+// Content production (spaces-content-production-v0.md): one set of types for
+// the console and the public pages, kept with the creator's listing model.
+export type {
+  ChecklistItem,
+  PackageView,
+  ProductionBrief,
+  ProductionState,
+  ProductionView,
+} from "@/lib/creator/listing";
 
 export interface Sponsor {
   name: string;
@@ -390,6 +408,11 @@ export interface Space {
   id: string;
   slug: string;
   title: string;
+  /**
+   * Content production: what a spot includes, the turnaround and the usage
+   * rights. Null on every other template; absent on an older server.
+   */
+  production?: ProductionPackageView | null;
   reason: string | null;
   status: SpaceStatus;
   kind: "placement" | "service";
@@ -692,6 +715,11 @@ export interface Order {
    */
   session?: SessionView | null;
   /**
+   * Set only on a paid content production order, and only for the brand that
+   * paid: its brief, the due time, the private delivery and its acceptance.
+   */
+  production?: ProductionSpotView | null;
+  /**
    * The buyer's manage link, `https://hihodl.xyz/b/<token>`, on a PAID session
    * order read with this browser's checkout key.
    *
@@ -700,6 +728,31 @@ export interface Order {
    * the first copy it sees in localStorage, keyed by order.
    */
   manageUrl?: string | null;
+}
+
+/**
+ * `GET /public/productions/:token`: the brand's delivery page. Accept and
+ * revision answer the same object.
+ */
+export interface BrandProduction {
+  orderId: string;
+  space: { id: string; title: string; slug: string; eventName: string | null };
+  creatorHandle: string | null;
+  positionLabel: string | null;
+  chain: Chain;
+  paidAt: string | null;
+  production: ProductionSpotView;
+}
+
+/** The brand's brief, as the checkout sends it. */
+export interface BriefBody {
+  goal: "awareness" | "product_launch" | "hiring" | "community";
+  keyMessages: string[];
+  interviewees?: string | null;
+  assetsUrl?: string | null;
+  dos?: string | null;
+  donts?: string | null;
+  shootContact: { kind: "x" | "telegram"; value: string };
 }
 
 /* ── Sessions: time in person at an event ─────────────────────────────── */

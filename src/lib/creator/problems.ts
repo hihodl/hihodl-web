@@ -254,6 +254,29 @@ function bareProblem(code: string, draft: ListingDraft | null): Problem | null {
       return { where: "closesAt", step: "basics", message: `A listing runs for at least ${LIMITS.MIN_CAMPAIGN_HOURS} hours.` };
     case "closes_too_late":
       return { where: "closesAt", step: "basics", message: `A listing runs for at most ${LIMITS.MAX_CAMPAIGN_DAYS} days.` };
+    case "production_needs_an_event":
+      return { where: "event", step: "basics", message: "Content production is filmed at an event. Pick one from the list." };
+    case "production_package_invalid":
+    case "production_package_empty":
+      return {
+        where: "production:deliverables",
+        step: "includes",
+        message: "Tick at least one thing a spot includes, and pick a turnaround and the usage rights.",
+      };
+    case "production_sells_at_a_price":
+      return { where: "pricing", step: "sell", message: "A production spot is sold at a price. You can still read offers under it." };
+    case "fallback_not_for_production":
+      return {
+        where: "fallback",
+        step: "publish",
+        message: "Without the event there is nothing to film, so the answer has to be a refund from you or the same spot at your next event.",
+      };
+    case "production_closes_after_event":
+      return {
+        where: "closesAt",
+        step: "basics",
+        message: "This closes after the event is over, when there is nothing left to film. Close it by the event's last day.",
+      };
     case "room_needs_an_event":
       return { where: "event", step: "basics", message: "Time in person is always sold at an event. Pick one from the list." };
     case "fallback_not_for_sessions":
@@ -365,6 +388,16 @@ export function describeRunError(e: unknown): string {
     case "rate_limited":
     case "RATE_LIMIT_EXCEEDED":
       return "That is more than we allow in a minute. Wait a moment and try again.";
+    case "delivery_link_invalid":
+      return "Paste the link the brand will open, starting with https://: a Drive, Frame.io or Dropbox folder.";
+    case "checklist_invalid":
+      return "The checklist can only count what the spot includes, and never more than it promised.";
+    case "already_accepted":
+      return "The brand has already accepted this one, so there is nothing more to deliver.";
+    case "shoot_day_outside_event":
+      return "Pick a day inside the event's dates.";
+    case "already_delivered":
+      return "The shoot day is fixed once you have delivered.";
     case "offer_changed":
       return "This moved while you were reading it — they raised it, withdrew it, or the clock ran out. Refresh and look again before you answer.";
     case "offer_not_open":

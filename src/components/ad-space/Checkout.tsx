@@ -12,6 +12,7 @@ import {
   describeAuthorizationRefusal,
   describeError,
   existingCheckoutKey,
+  fileBrief,
   rememberManageToken,
   rotateCheckoutKey,
   solanaPayLink,
@@ -25,13 +26,14 @@ import {
   FALLBACK_LABEL,
   FALLBACK_TEXT,
   SESSION_FALLBACK_TEXT,
+  isProductionSpace,
   isSessionSpace,
   timeLeft,
 } from "@/lib/ad-space/format";
 import { describeOfferError, offerSolanaPayLink, startOfferCheckout } from "@/lib/ad-space/offers-client";
 import { earnPointsLine, pointsForOfferAmount, pointsForPosition, pointsWorth } from "@/lib/ad-space/points";
 import { PUBLIC_CHAINS } from "@/lib/orders/chains.public";
-import type { Booking, Chain, EvmPayload, OfferView, Order, Position, Space } from "@/lib/ad-space/types";
+import type { Booking, BriefBody, Chain, EvmPayload, OfferView, Order, Position, Space } from "@/lib/ad-space/types";
 
 import {
   type SolanaWallet,
@@ -46,6 +48,7 @@ import {
 
 import { AppPrompt } from "./AppPrompt";
 import { Check, ChainPicker, SolanaOptions, Spinner } from "./checkout-parts";
+import { BriefForm, BriefReady, EMPTY_BRIEF, PackageLines, PaidProduction, type BriefDraft } from "./Production";
 import { QrCode } from "./qr";
 import { ManageLinkBox, SessionContactForm } from "./SessionBooking";
 import { SponsorContentForm } from "./SponsorContentForm";
@@ -135,6 +138,19 @@ export function Checkout({
   const session = isSessionSpace(space);
   const subject = session ? "session" : "spot";
   /**
+   * Content production (spaces-content-production-v0.md): the brand brings a
+   * brief, and brings it before paying. It rides on every checkout call, and
+   * is filed under the key first for the QR, whose wallet opens the order.
+   */
+  const production = isProductionSpace(space);
+  const [briefDraft, setBriefDraft] = useState<BriefDraft>(EMPTY_BRIEF);
+  const [brief, setBrief] = useState<BriefBody | null>(null);
+  const [savingBrief, setSavingBrief] = useState(false);
+  const briefRef = useRef<BriefBody | null>(null);
+  briefRef.current = production ? brief : null;
+  const withBrief = <T extends object>(body: T): T & { brief?: BriefBody } =>
+    briefRef.current ? { ...body, brief: briefRef.current } : body;
+  /**
    * What paying this from the HOLD app would earn (spaces-sponsor-points-v0.md):
    * on an accepted offer, the fee on the agreed amount; otherwise the fee this
    * spot's payment carries. Null when the server doesn't say, and then the pay
@@ -149,15 +165,17 @@ export function Checkout({
   const beginSolana = useCallback(
     (key: string, sponsorAddress: string) =>
       offerToken
-        ? startOfferCheckout(offerToken, key, { chain: "solana", sponsorAddress })
-        : startCheckout(position.id, key, { chain: "solana", sponsorAddress }),
+        ? startOfferCheckout(offerToken, key, withBrief({ chain: "solana" as const, sponsorAddress }))
+        : startCheckout(position.id, key, withBrief({ chain: "solana" as const, sponsorAddress })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the brief is read from its ref at call time
     [offerToken, position.id],
   );
   const beginEvm = useCallback(
     (key: string, chain: "base" | "polygon", sponsorAddress: string) =>
       offerToken
-        ? startOfferCheckout(offerToken, key, { chain, sponsorAddress })
-        : startCheckout(position.id, key, { chain, sponsorAddress }),
+        ? startOfferCheckout(offerToken, key, withBrief({ chain, sponsorAddress }))
+        : startCheckout(position.id, key, withBrief({ chain, sponsorAddress })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the brief is read from its ref at call time
     [offerToken, position.id],
   );
   const explain = useCallback(
@@ -398,6 +416,15 @@ export function Checkout({
     setNotice(null);
     setOfferOtherSpot(false);
     if (!offerToken) {
+      if (briefRef.current) {
+        // The wallet that scans the code opens the order: the brief waits for it under this key.
+        try {
+          await fileBrief(position.id, keyRef.current, briefRef.current);
+        } catch (e) {
+          setNotice(explain(e, "solana"));
+          return;
+        }
+      }
       const c = await checkoutId(keyRef.current);
       setPhase({ kind: "qr", link: solanaPayLink(position.id, c) });
       return;
@@ -405,7 +432,10 @@ export function Checkout({
     // An accepted offer: the server binds this key to the offer and answers the link.
     setPhase({ kind: "busy", label: "Preparing the QR…" });
     try {
-      const link = await withFreshKey((key) => offerSolanaPayLink(offerToken, key));
+      const link = await withFreshKey(async (key) => {
+        if (briefRef.current) await fileBrief(position.id, key, briefRef.current);
+        return offerSolanaPayLink(offerToken, key);
+      });
       setPhase({ kind: "qr", link });
     } catch (e) {
       setNotice(explain(e, "solana"));
@@ -491,7 +521,9 @@ export function Checkout({
                   : "Pay your accepted offer"
                 : session
                   ? "Book a session"
-                  : "Sponsor a spot"}
+                  : production
+                    ? "Book a production spot"
+                    : "Sponsor a spot"}
             </p>
             <h2 id="checkout-title" className="mt-1 truncate text-body text-text">
               {position.label}
@@ -513,6 +545,8 @@ export function Checkout({
           {phase.kind === "paid" ? (
             session ? (
               <PaidSession order={phase.order} space={space} />
+            ) : production ? (
+              <PaidProduction order={phase.order} space={space} />
             ) : (
               <Paid order={phase.order} space={space} position={position} checkoutKey={keyRef.current} />
             )
@@ -544,8 +578,37 @@ export function Checkout({
                 </p>
               )}
 
-              {phase.kind === "choose" && (
+              {phase.kind === "choose" && production && !brief && (
                 <>
+                  {space.production ? (
+                    <div className="flex flex-col gap-2">
+                      <p className="text-small text-text">What you get</p>
+                      <PackageLines pkg={space.production} />
+                    </div>
+                  ) : null}
+                  <div className="border-t border-[color:var(--color-hairline)] pt-6">
+                    <BriefForm
+                      draft={briefDraft}
+                      onChange={setBriefDraft}
+                      busy={savingBrief}
+                      creatorHandle={space.creator.xHandle}
+                      onContinue={(body) => {
+                        setSavingBrief(true);
+                        setNotice(null);
+                        // Checked by the server now, so a problem is said here and not at the wallet.
+                        void fileBrief(position.id, keyRef.current, body)
+                          .then(() => setBrief(body))
+                          .catch((e) => setNotice(explain(e, null)))
+                          .finally(() => setSavingBrief(false));
+                      }}
+                    />
+                  </div>
+                </>
+              )}
+
+              {phase.kind === "choose" && (!production || brief) && (
+                <>
+                  {production && brief ? <BriefReady brief={brief} onEdit={() => setBrief(null)} /> : null}
                   {chains.length > 1 && (
                     <ChainPicker
                       chains={chains}

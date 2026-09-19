@@ -190,6 +190,11 @@ export function isSessionSpace(space: { template: Pick<Space["template"], "servi
   return space.template.service?.format === "session";
 }
 
+/** A content production space: a package made for the brand, delivered privately. */
+export function isProductionSpace(space: { template: Pick<Space["template"], "service"> }): boolean {
+  return space.template.service?.format === "production";
+}
+
 /**
  * "3 delivered, none missed", and " · 1 disputed" only when there is one.
  * "First HiSpace" when there is nothing to count yet.
@@ -200,6 +205,26 @@ export function trackRecordText(record: TrackRecord): string {
   if (delivered + missed + disputed === 0) return "First HiSpace";
   const base = `${delivered} delivered${missed ? `, ${missed} missed` : ", none missed"}`;
   return disputed > 0 ? `${base} · ${disputed} disputed` : base;
+}
+
+const USAGE_SCOPE: Record<string, string> = { organic: "organic social only", organic_and_paid: "organic and paid ads" };
+const USAGE_TERM: Record<string, string> = { "6m": "6 months", "12m": "12 months" };
+
+/** A production spot's rights: "Use it on organic and paid ads, for 12 months." */
+export function usageText(pkg: { usage: { scope: string; term: string } }): string {
+  const scope = USAGE_SCOPE[pkg.usage.scope] ?? pkg.usage.scope;
+  const term = pkg.usage.term === "perpetual" ? "with no end date" : `for ${USAGE_TERM[pkg.usage.term] ?? pkg.usage.term}`;
+  return `Use it on ${scope}, ${term}.`;
+}
+
+/**
+ * "Delivered on time: 7 of 8", from content production spots brands accepted.
+ * Null when there are none to count, so the page says nothing rather than 0 of 0.
+ */
+export function onTimeText(record: TrackRecord): string | null {
+  const p = record.production;
+  if (!p || p.accepted <= 0) return null;
+  return `Delivered on time: ${Math.min(p.onTime, p.accepted)} of ${p.accepted}`;
 }
 
 /** Whether a track record has anything a buyer should look at twice. */

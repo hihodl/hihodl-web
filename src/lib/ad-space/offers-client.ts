@@ -17,6 +17,7 @@ import { AD_SPACE_API } from "./config";
 import { CheckoutError, apiRequest, describeSessionError, type EvmCheckout, type SolanaCheckout } from "./checkout-client";
 import { CHAIN_LABEL, clockTime, isTieredSpace } from "./format";
 import type {
+  BriefBody,
   Chain,
   ContactKind,
   OfferKind,
@@ -250,17 +251,17 @@ export function respondToOffer(token: string, body: RespondBody): Promise<OfferT
 export function startOfferCheckout(
   token: string,
   key: string,
-  body: { chain: "solana"; sponsorAddress: string },
+  body: { chain: "solana"; sponsorAddress: string; brief?: BriefBody },
 ): Promise<SolanaCheckout>;
 export function startOfferCheckout(
   token: string,
   key: string,
-  body: { chain: "base" | "polygon"; sponsorAddress: string },
+  body: { chain: "base" | "polygon"; sponsorAddress: string; brief?: BriefBody },
 ): Promise<EvmCheckout>;
 export function startOfferCheckout(
   token: string,
   key: string,
-  body: { chain: Chain; sponsorAddress: string },
+  body: { chain: Chain; sponsorAddress: string; brief?: BriefBody },
 ): Promise<SolanaCheckout | EvmCheckout> {
   return tokenCall(token, "/checkout", { method: "POST", json: body, key });
 }

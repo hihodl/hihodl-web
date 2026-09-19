@@ -17,6 +17,8 @@ import { CHAIN_LABEL, clockTime, takeoverClosedText } from "./format";
 import type {
   ApiErrorBody,
   Booking,
+  BrandProduction,
+  BriefBody,
   Chain,
   ConfirmOutcome,
   ContactKind,
@@ -192,17 +194,17 @@ export interface EvmCheckout {
 export function startCheckout(
   positionId: string,
   key: string,
-  body: { chain: "solana"; sponsorAddress: string },
+  body: { chain: "solana"; sponsorAddress: string; brief?: BriefBody },
 ): Promise<SolanaCheckout>;
 export function startCheckout(
   positionId: string,
   key: string,
-  body: { chain: "base" | "polygon"; sponsorAddress: string },
+  body: { chain: "base" | "polygon"; sponsorAddress: string; brief?: BriefBody },
 ): Promise<EvmCheckout>;
 export function startCheckout(
   positionId: string,
   key: string,
-  body: { chain: Chain; sponsorAddress: string },
+  body: { chain: Chain; sponsorAddress: string; brief?: BriefBody },
 ): Promise<SolanaCheckout | EvmCheckout> {
   return call(`/public/positions/${encodeURIComponent(positionId)}/checkout`, key, { json: body });
 }
@@ -263,6 +265,58 @@ export function putContent(
   body: ContentBody,
 ): Promise<{ order: Order; content: { status: "pending" | "approved" | "rejected"; rejectedReason?: string | null } }> {
   return call(`/public/orders/${encodeURIComponent(orderId)}/content`, key, { method: "PUT", json: body });
+}
+
+/* ── Content production: the brief, and the brand's delivery page ─────── */
+
+/**
+ * File the brand's brief under this checkout key before any order exists.
+ * The Solana Pay QR needs it: the wallet that scans it opens the order and
+ * cannot carry a brief, so the order picks up this one.
+ */
+export function fileBrief(positionId: string, key: string, brief: BriefBody): Promise<{ brief: BriefBody }> {
+  return call("/public/checkout/brief", key, { method: "PUT", json: { positionId, brief } });
+}
+
+const BRAND_PREFIX = "hihodl:ad-space:brand:";
+
+/** The token out of a brand link, `https://hihodl.xyz/p/<token>`, or null. */
+export function brandToken(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    const m = new URL(url, "https://hihodl.xyz").pathname.match(/^\/p\/([A-Za-z0-9_-]{16,128})\/?$/);
+    return m ? m[1] : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The brand link for a paid production order, kept per order like the booking link. */
+export function rememberBrandToken(order: Order): string | null {
+  const name = BRAND_PREFIX + order.id;
+  const fresh = brandToken(order.manageUrl);
+  if (fresh) {
+    storageSet(name, fresh);
+    return fresh;
+  }
+  return storageGet(name);
+}
+
+/** Calls under `/public/productions/:token`. The token is the only credential. */
+function productionCall<T>(token: string, path: string, init: { method: string; json?: unknown }): Promise<T> {
+  return apiRequest<T>(`${AD_SPACE_API}/public/productions/${encodeURIComponent(token)}${path}`, {
+    ...init,
+    referrerPolicy: "no-referrer",
+  });
+}
+
+export async function acceptProduction(token: string): Promise<BrandProduction> {
+  return (await productionCall<{ production: BrandProduction }>(token, "/accept", { method: "POST", json: {} })).production;
+}
+
+export async function askForRevision(token: string, note: string): Promise<BrandProduction> {
+  return (await productionCall<{ production: BrandProduction }>(token, "/revision", { method: "POST", json: { note } }))
+    .production;
 }
 
 /* ── Sessions: the manage link and what the buyer sends ───────────────── */
@@ -457,6 +511,10 @@ export function describeError(e: unknown, chain?: Chain | null, subject: Subject
 
   const d = e.details;
   switch (e.code) {
+    case "brief_required":
+      return "Fill in the brief first: the creator films from it. Nothing was paid.";
+    case "brief_invalid":
+      return "Something in the brief doesn't fit. Check the key messages, the assets link (https://) and the contact handle.";
     case "position_sold":
       return session
         ? "Someone has just booked this session. Pick another one."

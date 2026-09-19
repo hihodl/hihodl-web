@@ -16,10 +16,12 @@ import type { Chain } from "@/lib/ad-space/types";
 
 import { call } from "./api";
 import type {
+  ChecklistItem,
   EventSummary,
   ListingPhoto,
   OfferView,
   PhotoRect,
+  ProductionView,
   SalesSummary,
   SeriesEventInput,
   SeriesRefusal,
@@ -262,6 +264,19 @@ export function getSales(spaceId?: string): Promise<{ sales: SalesSummary }> {
 /** The link that proves one sponsor's spot was delivered. */
 export function markPositionDelivered(positionId: string, url: string): Promise<unknown> {
   return call(`ad-space/positions/${positionId}/delivered`, { json: { url } });
+}
+
+/** Content production: the day a spot is filmed, inside the event's dates. */
+export function setShootDay(positionId: string, shootOn: string): Promise<{ production: ProductionView }> {
+  return call(`ad-space/positions/${positionId}/production/shoot-day`, { method: "PUT", json: { shootOn } });
+}
+
+/** Content production: the private link and what it holds, against the package. */
+export function deliverProduction(
+  positionId: string,
+  body: { url: string; checklist: ChecklistItem[] },
+): Promise<{ production: ProductionView }> {
+  return call(`ad-space/positions/${positionId}/production/deliver`, { json: body });
 }
 
 /** The link that proves one of the listing's own promises was kept. */

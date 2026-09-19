@@ -26,6 +26,7 @@ import {
   type ListingDraft,
   type Template,
   type VenueType,
+  isProductionTemplate,
   isSessionTemplate,
 } from "@/lib/creator/listing";
 import { problemsAt, type Problem } from "@/lib/creator/rules";
@@ -66,6 +67,7 @@ export function BasicsStep({
 }) {
   const set = (change: Partial<ListingDraft>) => onChange({ ...draft, ...change });
   const session = isSessionTemplate(template);
+  const production = isProductionTemplate(template);
   const venues = VENUE_TYPES.filter((v) => template.allowedVenues.includes(v));
 
   return (
@@ -202,7 +204,9 @@ export function BasicsStep({
       <Block
         title="The event"
         why={
-          session
+          production
+            ? "Content production is filmed at an event: its dates are your shoot window, and spots stop selling when it ends."
+            : session
             ? "Time in person is always sold at an event: its last day is what sets the day you have to have delivered by, and a slot cannot be sold after it."
             : "Picking it from the list puts your listing on that event's page, next to every other creator going. It is where sponsors who are not already following you look."
         }
@@ -211,7 +215,7 @@ export function BasicsStep({
           eventId={draft.eventId}
           eventName={draft.eventName}
           picked={picked}
-          mustPick={session}
+          mustPick={session || production}
           onPick={(event) => {
             onPickEvent(event);
             set({ eventId: event?.id ?? null, eventName: event ? "" : draft.eventName });

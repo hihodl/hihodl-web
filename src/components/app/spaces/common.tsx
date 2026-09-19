@@ -44,6 +44,18 @@ export function dueText(iso: string | null | undefined): string {
   return diff > 0 ? `in ${diff}d` : `${-diff}d late`;
 }
 
+/** "Due in 1d 4h", "Due in 5h", "6h late": a production spot is due to the hour. */
+export function countdownText(iso: string, now = Date.now()): string {
+  const ms = new Date(iso).getTime() - now;
+  if (!Number.isFinite(ms)) return "";
+  const abs = Math.abs(ms);
+  const days = Math.floor(abs / 86_400_000);
+  const hours = Math.floor((abs % 86_400_000) / 3_600_000);
+  const minutes = Math.max(1, Math.floor((abs % 3_600_000) / 60_000));
+  const span = days > 0 ? `${days}d ${hours}h` : hours > 0 ? `${hours}h` : `${minutes}m`;
+  return ms >= 0 ? `Due in ${span}` : `${span} late`;
+}
+
 /** The list pane scrolls inside itself on a wide screen, so the page does not. */
 export const LIST_PANEL = "lg:max-h-[calc(var(--app-vh,100dvh)-196px)]";
 

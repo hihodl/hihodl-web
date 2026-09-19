@@ -9,6 +9,7 @@ import {
   type DeliverableView,
   type OfferView,
   type PositionView,
+  type ProductionView,
   type SalesListing,
   type SalesSummary,
   type SpaceCard,
@@ -38,7 +39,7 @@ export function roleOf(listings: readonly SpaceCard[], seats: readonly TeamMembe
 
 /* ── Deliveries ───────────────────────────────────────────────────── */
 
-export type DeliveryKind = "artwork" | "spot" | "promise";
+export type DeliveryKind = "artwork" | "spot" | "promise" | "production";
 export type DeliveryState = "todo" | "overdue" | "waiting" | "done";
 
 export interface DeliveryItem {
@@ -56,6 +57,54 @@ export interface DeliveryItem {
     | { space: SpaceView; position?: PositionView; deliverable?: DeliverableView }
     | null;
   member: { listing: WorkListing; slot?: WorkSlot; deliverable?: WorkDeliverable } | null;
+  /** Content production: the spot's brief, due time and private delivery. */
+  production?: ProductionView;
+}
+
+/**
+ * Where a production spot stands, in the list's four words: owed (or owed
+ * again after a revision), late, with the brand, accepted.
+ */
+function productionState(p: ProductionView): DeliveryState {
+  switch (p.state) {
+    case "accepted":
+      return "done";
+    case "delivered":
+      return "waiting";
+    case "overdue":
+      return "overdue";
+    default:
+      return "todo";
+  }
+}
+
+const GOAL_TEXT: Record<string, string> = {
+  awareness: "Awareness",
+  product_launch: "Product launch",
+  hiring: "Hiring",
+  community: "Community",
+};
+
+function productionItem(
+  spaceId: string,
+  listing: string,
+  positionId: string,
+  label: string,
+  sponsorName: string | null,
+  production: ProductionView,
+): Omit<DeliveryItem, "owner" | "member"> {
+  return {
+    id: `production:${positionId}`,
+    kind: "production",
+    state: productionState(production),
+    spaceId,
+    listing,
+    title: label,
+    sub: [sponsorName, production.brief ? GOAL_TEXT[production.brief.goal] ?? null : null].filter(Boolean).join(" · ") || "Production",
+    // An instant, not a day: the countdown is to the hour.
+    due: production.state === "accepted" ? null : production.dueAt,
+    production,
+  };
 }
 
 const KIND_TEXT: Record<string, string> = {
@@ -92,6 +141,10 @@ export function ownerDeliveries(spaces: readonly SpaceView[]): DeliveryItem[] {
           owner: { space, position: p },
           member: null,
         });
+      }
+      if (p.status === "sold" && p.production) {
+        out.push({ ...productionItem(space.id, listing, p.id, p.title ?? p.label, p.sponsor?.name ?? null, p.production), owner: { space, position: p }, member: null });
+        continue;
       }
       if (p.status === "sold") {
         out.push({
@@ -133,6 +186,14 @@ export function memberDeliveries(work: readonly WorkListing[], skip: ReadonlySet
   for (const w of work) {
     if (skip.has(w.spaceId)) continue;
     for (const s of w.slots) {
+      if (s.production) {
+        out.push({
+          ...productionItem(w.spaceId, w.title, s.id, s.label ?? s.zoneKey ?? "Spot", s.sponsorName, s.production),
+          owner: null,
+          member: { listing: w, slot: s },
+        });
+        continue;
+      }
       out.push({
         id: `spot:${s.id}`,
         kind: "spot",
@@ -165,7 +226,7 @@ export function memberDeliveries(work: readonly WorkListing[], skip: ReadonlySet
 }
 
 const STATE_ORDER: Record<DeliveryState, number> = { overdue: 0, todo: 1, waiting: 2, done: 3 };
-const KIND_ORDER: Record<DeliveryKind, number> = { artwork: 0, spot: 1, promise: 2 };
+const KIND_ORDER: Record<DeliveryKind, number> = { artwork: 0, production: 1, spot: 1, promise: 2 };
 
 export function sortDeliveries(items: DeliveryItem[]): DeliveryItem[] {
   return [...items].sort(

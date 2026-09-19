@@ -4,6 +4,7 @@ import { defaultEventTab, openSpots } from "./format";
 import { gradientKey } from "./look";
 import type {
   Booking,
+  BrandProduction,
   CreatorPage,
   EventPage,
   EventSummary,
@@ -427,6 +428,43 @@ export async function getBooking(token: string, from: Headers | null): Promise<B
     const body = (await res.json()) as { data?: { booking?: Booking } };
     const booking = body?.data?.booking;
     return booking?.order?.session ? { kind: "found", booking } : { kind: "unreachable" };
+  } catch {
+    return { kind: "unreachable" };
+  }
+}
+
+/* ── Content production: the brand's delivery page ───────────────────── */
+
+export type ProductionLookup =
+  | { kind: "found"; production: BrandProduction }
+  | { kind: "missing" }
+  | { kind: "unreachable" };
+
+/**
+ * `GET /public/productions/:token`, never cached: a delivery can arrive at any
+ * moment. The token is a bearer secret, so it goes into the upstream URL and
+ * nowhere else.
+ */
+export async function getProduction(token: string, from: Headers | null): Promise<ProductionLookup> {
+  if (!BOOKING_TOKEN_RE.test(token)) return { kind: "missing" };
+
+  if (fixtureEnabled()) {
+    const { fixtureProduction } = await import("./fixture.dev");
+    const production = fixtureProduction(token);
+    return production ? { kind: "found", production } : { kind: "missing" };
+  }
+
+  try {
+    const res = await fetch(`${AD_SPACE_API}/public/productions/${encodeURIComponent(token)}`, {
+      headers: upstreamHeaders(from),
+      cache: "no-store",
+      signal: AbortSignal.timeout(6_000),
+    });
+    if (res.status === 404) return { kind: "missing" };
+    if (!res.ok) return { kind: "unreachable" };
+    const body = (await res.json()) as { data?: { production?: BrandProduction } };
+    const production = body?.data?.production;
+    return production?.production ? { kind: "found", production } : { kind: "unreachable" };
   } catch {
     return { kind: "unreachable" };
   }

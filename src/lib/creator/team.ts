@@ -24,6 +24,7 @@
  */
 
 import { spacesPath } from "@/lib/app/paths";
+import type { ProductionView } from "@/lib/creator/listing";
 
 /** `manager` sells on the creator's behalf; `rep` turns up and does the thing, and sees no money. */
 export type TeamRole = "manager" | "rep";
@@ -170,6 +171,8 @@ export interface WorkSlot {
   contentStatus: string | null;
   deliveredUrl: string | null;
   deliveredAt: string | null;
+  /** A sold content production spot: its brief, due time and private delivery. */
+  production?: ProductionView | null;
 }
 
 export interface WorkDeliverable {

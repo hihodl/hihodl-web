@@ -43,6 +43,7 @@ import {
   bodyOf,
   draftFor,
   draftFromSpace,
+  isProductionTemplate,
   patchOf,
   type EventSummary,
   type ListingDraft,
@@ -53,6 +54,7 @@ import { refusalOf } from "@/lib/creator/problems";
 import { firstStepWithProblem, listingProblems, type Problem, type Step } from "@/lib/creator/rules";
 
 import { BasicsStep } from "./listing/BasicsStep";
+import { IncludesStep } from "./listing/IncludesStep";
 import { PublishStep } from "./listing/PublishStep";
 import { SellStep } from "./listing/SellStep";
 import { Loading, Notice } from "./parts";
@@ -65,6 +67,22 @@ const STAGES: readonly { key: Stage; label: string }[] = [
   { key: "sell", label: "The ladder" },
   { key: "publish", label: "Go live" },
 ];
+
+/**
+ * Content production gets one more step, "What a spot includes": a brand buys
+ * the package, so the package is decided before the price.
+ */
+const PRODUCTION_STAGES: readonly { key: Stage; label: string }[] = [
+  { key: "template", label: "What you sell" },
+  { key: "basics", label: "Name and dates" },
+  { key: "includes", label: "What a spot includes" },
+  { key: "sell", label: "The spots" },
+  { key: "publish", label: "Go live" },
+];
+
+function stagesFor(template: Template | null) {
+  return isProductionTemplate(template) ? PRODUCTION_STAGES : STAGES;
+}
 
 export function ListingWizard({ spaceId: initialSpaceId, templateId }: { spaceId?: string; templateId?: string }) {
   const router = useRouter();
@@ -219,9 +237,13 @@ export function ListingWizard({ spaceId: initialSpaceId, templateId }: { spaceId
 
   const stepProblems = problemsOn(stage as Step);
   const blocked = stepProblems.length > 0;
+  const stages = stagesFor(template);
+  const at = stages.findIndex((s) => s.key === stage);
+  const previous = stages[Math.max(0, at - 1)].key;
+  const next = stages[Math.min(stages.length - 1, at + 1)].key;
 
   return (
-    <Shell stage={stage} spaceId={spaceId}>
+    <Shell stage={stage} spaceId={spaceId} stages={stages}>
       {stage === "basics" ? (
         <BasicsStep
           draft={draft}
@@ -231,6 +253,8 @@ export function ListingWizard({ spaceId: initialSpaceId, templateId }: { spaceId
           onChange={setDraft}
           problems={problems}
         />
+      ) : stage === "includes" ? (
+        <IncludesStep draft={draft} onChange={setDraft} problems={problems} />
       ) : stage === "sell" ? (
         <SellStep draft={draft} template={template} availableChains={chains} onChange={setDraft} problems={problems} />
       ) : (
@@ -253,7 +277,7 @@ export function ListingWizard({ spaceId: initialSpaceId, templateId }: { spaceId
         <button
           type="button"
           className={btnSecondary}
-          onClick={() => setStage(stage === "publish" ? "sell" : stage === "sell" ? "basics" : "template")}
+          onClick={() => setStage(previous)}
         >
           Back
         </button>
@@ -270,8 +294,10 @@ export function ListingWizard({ spaceId: initialSpaceId, templateId }: { spaceId
               className={btnPrimary}
               disabled={blocked || busy !== null}
               onClick={() => {
-                if (stage === "basics") {
-                  setStage("sell");
+                // The draft reaches the server once there is something to sell;
+                // every step before "the spots" only moves on.
+                if (next !== "publish") {
+                  setStage(next);
                   return;
                 }
                 void (async () => {
@@ -295,12 +321,22 @@ export function ListingWizard({ spaceId: initialSpaceId, templateId }: { spaceId
 
 /* ── The page around it ───────────────────────────────────────────── */
 
-function Shell({ stage, spaceId, children }: { stage: Stage; spaceId?: string | null; children: React.ReactNode }) {
-  const index = STAGES.findIndex((s) => s.key === stage);
+function Shell({
+  stage,
+  spaceId,
+  stages = STAGES,
+  children,
+}: {
+  stage: Stage;
+  spaceId?: string | null;
+  stages?: readonly { key: Stage; label: string }[];
+  children: React.ReactNode;
+}) {
+  const index = stages.findIndex((s) => s.key === stage);
   return (
     <div className="mx-auto flex w-full max-w-[860px] flex-col gap-4">
       <ol className="flex flex-wrap gap-2" aria-label="Steps">
-        {STAGES.map((s, i) => (
+        {stages.map((s, i) => (
           <li key={s.key}>
             <span className={i === index ? pill.sold : i < index ? pill.done : pill.neutral}>
               {i + 1}. {s.label}

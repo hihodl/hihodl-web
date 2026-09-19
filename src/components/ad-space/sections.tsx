@@ -17,6 +17,7 @@ import {
   serviceName,
   spaceSoldOut,
   takeableSpots,
+  onTimeText,
   trackRecordNeedsAttention,
   trackRecordText,
   usdFromCents,
@@ -161,6 +162,7 @@ function CreatorChip({ creator: c }: { creator: Creator }) {
             .join(" · ")}
           {" · "}
           <span className={attention ? "text-amber" : "text-text"}>{trackRecordText(c.trackRecord)}</span>
+          {onTimeText(c.trackRecord) ? <span className="text-text">{` · ${onTimeText(c.trackRecord)}`}</span> : null}
         </p>
       </div>
     </div>

@@ -4,9 +4,11 @@ import {
   deliverableNote,
   deliverableText,
   eventDates,
+  isProductionSpace,
   isSessionSpace,
   isTieredSpace,
   serviceName,
+  usageText,
 } from "@/lib/ad-space/format";
 import type { ContentKind, DeliverableState, Space } from "@/lib/ad-space/types";
 
@@ -48,6 +50,25 @@ function spotLine(space: Space): string {
 export function WhatTheBrandGets({ space }: { space: Space }) {
   const items = space.deliverables;
   const tiered = isTieredSpace(space);
+
+  // Content production: the package itself, line by line, is what sells it.
+  if (isProductionSpace(space) && space.production) {
+    const pkg = space.production;
+    const at = space.event ? `${space.event.name}, ${eventDates(space.event.startsOn, space.event.endsOn)}` : space.eventName;
+    return (
+      <div className={`${card} p-5 md:p-6`}>
+        <ul className="flex flex-col gap-4">
+          {pkg.lines.map((l) => (
+            <Item key={l.key} text={`${l.count} × ${l.label}`} strong />
+          ))}
+          {at ? <Item text={`Filmed at ${at}`} /> : null}
+          <Item text={`Delivered to you within ${pkg.turnaroundHours} hours of the shoot day, with one round of changes`} />
+          <Item text={usageText(pkg)} />
+          <Item text="You bring the brief before you pay: goal, key messages, who to interview" />
+        </ul>
+      </div>
+    );
+  }
 
   if (isSessionSpace(space)) {
     const where = space.event

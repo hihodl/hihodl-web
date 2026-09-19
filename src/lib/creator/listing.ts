@@ -159,8 +159,13 @@ export function requiredAttestations(
   venue: VenueType,
   kind: TemplateKind,
   isSession: boolean,
+  /** Content production declares exactly what its template asks, like the backend. */
+  isProduction = false,
 ): Attestation[] {
   const out = new Set<Attestation>();
+  if (kind === "service" && isProduction) {
+    return ATTESTATIONS.filter((a) => templateRequires.includes(a));
+  }
   if (kind === "service" && isSession) {
     for (const a of SESSION_ATTESTATIONS) out.add(a);
   } else {
@@ -178,7 +183,7 @@ export function requiredAttestations(
 /* ── What the API hands back ──────────────────────────────────────── */
 
 export type TemplateKind = "placement" | "service";
-export type ServiceFormat = "content" | "session";
+export type ServiceFormat = "content" | "session" | "production";
 
 export interface TemplateZone {
   zoneKey: string;
@@ -210,6 +215,95 @@ export interface Template {
 /** A session is the creator's time in person, and it has rules of its own. */
 export function isSessionTemplate(t: Template | null): boolean {
   return t?.kind === "service" && t.service?.format === "session";
+}
+
+/** Content production: a package for the brand's own channels, delivered privately. */
+export function isProductionTemplate(t: Template | null): boolean {
+  return t?.kind === "service" && t.service?.format === "production";
+}
+
+/* ── Content production (spaces-content-production-v0.md) ─────────── */
+
+export const PRODUCTION_DELIVERABLES = ["interviews", "shortForm", "brollPack", "photoSet", "socialAssets"] as const;
+export type ProductionDeliverable = (typeof PRODUCTION_DELIVERABLES)[number];
+
+/** What each line is, as the creator ticks it and the brand reads it. Mirrors production-rules.ts. */
+export const PRODUCTION_DELIVERABLE_LABEL: Record<ProductionDeliverable, string> = {
+  interviews: "On-camera interviews",
+  shortForm: "Short-form edits (9:16, up to 60 s)",
+  brollPack: "B-roll pack (raw clips)",
+  photoSet: "Photo set",
+  socialAssets: "Social assets (cut-downs, captions)",
+};
+
+export const PRODUCTION_TURNAROUNDS = [24, 48, 72] as const;
+export type Turnaround = (typeof PRODUCTION_TURNAROUNDS)[number];
+export const USAGE_SCOPES = ["organic", "organic_and_paid"] as const;
+export const USAGE_TERMS = ["6m", "12m", "perpetual"] as const;
+export const USAGE_SCOPE_LABEL: Record<(typeof USAGE_SCOPES)[number], string> = {
+  organic: "Organic social only",
+  organic_and_paid: "Organic and paid ads",
+};
+export const USAGE_TERM_LABEL: Record<(typeof USAGE_TERMS)[number], string> = {
+  "6m": "6 months",
+  "12m": "12 months",
+  perpetual: "Perpetual",
+};
+/** Each line, at most this many per spot. */
+export const PRODUCTION_DELIVERABLE_MAX = 20;
+
+export interface ProductionPackage {
+  deliverables: Record<ProductionDeliverable, number>;
+  turnaroundHours: Turnaround;
+  usage: { scope: (typeof USAGE_SCOPES)[number]; term: (typeof USAGE_TERMS)[number] };
+}
+
+/** What a spot includes, as the API sends it back on a space. */
+export interface PackageView extends ProductionPackage {
+  lines: { key: ProductionDeliverable; label: string; count: number }[];
+}
+
+export const DEFAULT_PACKAGE: ProductionPackage = {
+  deliverables: { interviews: 1, shortForm: 3, brollPack: 1, photoSet: 0, socialAssets: 0 },
+  turnaroundHours: 48,
+  usage: { scope: "organic", term: "12m" },
+};
+
+export interface ChecklistItem {
+  key: ProductionDeliverable;
+  count: number;
+}
+
+export type ProductionState = "awaiting_delivery" | "overdue" | "delivered" | "revision_requested" | "accepted";
+
+export interface ProductionBrief {
+  goal: "awareness" | "product_launch" | "hiring" | "community";
+  keyMessages: string[];
+  interviewees: string | null;
+  assetsUrl: string | null;
+  dos: string | null;
+  donts: string | null;
+  shootContact: { kind: "x" | "telegram"; value: string };
+}
+
+/** One sold production spot, for the creator, a delivering seat and the brand. Never public. */
+export interface ProductionView {
+  orderId: string | null;
+  positionId: string;
+  package: PackageView | null;
+  brief: ProductionBrief | null;
+  event: { startsOn: string; endsOn: string; timeZone: string | null };
+  shootOn: string;
+  shootOnSet: boolean;
+  dueAt: string;
+  state: ProductionState;
+  delivery: null | { url: string; checklist: ChecklistItem[]; deliveredAt: string; firstDeliveredAt: string };
+  revision: null | { note: string; requestedAt: string };
+  revisionAvailable: boolean;
+  accepted: null | { at: string; auto: boolean };
+  autoAcceptAt: string | null;
+  onTime: boolean | null;
+  publicProof: null | { url: string; at: string };
 }
 
 export function isCustomServiceTemplate(t: Template | null): boolean {
@@ -280,6 +374,9 @@ export interface PositionView {
   rect?: PhotoRect | null;
   /** Sold, or reserved for an accepted offer: the square cannot move. */
   rectFrozen?: boolean;
+  /** A sold content production spot, on the creator's own view only. */
+  orderId?: string | null;
+  production?: ProductionView | null;
 }
 
 /** A square on the photo, in fractions (0 to 1) of it. */
@@ -357,6 +454,8 @@ export interface SpaceView {
   bannerGradient?: string | null;
   /** The creator's photo of the product with the spots on it, or null. A server older than photos sends none. */
   photo?: ListingPhoto | null;
+  /** Content production: what a spot includes. Null on every other template; absent on an older server. */
+  production?: PackageView | null;
 }
 
 export interface SpaceCard {
@@ -668,6 +767,8 @@ export interface ListingDraft {
   deliverBy: string;
   serviceName: string;
   serviceSummary: string;
+  /** Content production only: what a spot includes, the turnaround and the rights. */
+  production: ProductionPackage;
   /** What this listing is made of. A placement always sells zones. */
   sells: "ladder" | "slots" | "zones";
   rungs: RungDraft[];
@@ -711,6 +812,7 @@ export function newRung(existing: readonly RungDraft[]): RungDraft {
 export function draftFor(template: Template): ListingDraft {
   const service = template.kind === "service";
   const session = isSessionTemplate(template);
+  const production = isProductionTemplate(template);
   const suggested = template.service?.suggestedPriceCents ?? null;
   return {
     templateId: template.id,
@@ -727,14 +829,17 @@ export function draftFor(template: Template): ListingDraft {
     eventName: "",
     keyDates: [],
     chains: [],
-    fallback: session ? "creator_refund" : "content_anyway",
+    // Production is filmed at the event: without the event there is no content either.
+    fallback: session || production ? "creator_refund" : "content_anyway",
     fallbackNote: "",
     attestations: [],
     deliverables: [],
     deliverBy: "",
     serviceName: "",
     serviceSummary: "",
-    sells: service ? "ladder" : "zones",
+    production: { ...DEFAULT_PACKAGE, deliverables: { ...DEFAULT_PACKAGE.deliverables }, usage: { ...DEFAULT_PACKAGE.usage } },
+    // A production spot is one package at one price: N identical spots, not a ladder.
+    sells: production ? "slots" : service ? "ladder" : "zones",
     rungs: service ? [{ ...newRung([]), perks: [""] }] : [],
     slots: 1,
     slotPriceDollars: dollarsFromCents(suggested),
@@ -817,6 +922,13 @@ export function draftFromSpace(space: SpaceView, template: Template): ListingDra
     deliverBy: space.deliverBy ?? "",
     serviceName: space.serviceName ?? "",
     serviceSummary: space.serviceSummary ?? "",
+    production: space.production
+      ? {
+          deliverables: { ...space.production.deliverables },
+          turnaroundHours: space.production.turnaroundHours,
+          usage: { ...space.production.usage },
+        }
+      : base.production,
     sells: template.kind === "service" ? (tiered ? "ladder" : "slots") : "zones",
     rungs: rungs.length ? rungs : base.rungs,
     slots: template.kind === "service" && !tiered ? Math.max(1, space.positions.length) : base.slots,
@@ -902,6 +1014,7 @@ function linesOf(perks: readonly string[]): string[] {
  */
 export function bodyOf(draft: ListingDraft, template: Template): Record<string, unknown> {
   const session = isSessionTemplate(template);
+  const production = isProductionTemplate(template);
   const body: Record<string, unknown> = {
     title: draft.title.trim(),
     reason: draft.reason.trim() || null,
@@ -929,7 +1042,9 @@ export function bodyOf(draft: ListingDraft, template: Template): Record<string, 
   if (template.kind === "service") {
     // A session's deliver-by is not typed: publish sets it to the day after
     // the event ends. Sending one would be a number we made up.
-    body.deliverBy = session ? null : draft.deliverBy || null;
+    body.deliverBy = session || production ? null : draft.deliverBy || null;
+    // Sent only for production, so no other listing's PATCH ever mentions it.
+    if (production) body.production = draft.production;
     body.deliverables = [];
     body.serviceName = isCustomServiceTemplate(template) ? draft.serviceName.trim() || null : null;
     body.serviceSummary = isCustomServiceTemplate(template) ? draft.serviceSummary.trim() || null : null;

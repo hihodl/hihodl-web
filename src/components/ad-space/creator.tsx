@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { Wordmark } from "@/components/site/Wordmark";
-import { compactNumber, eventDates, eventCountdown, openSpots, trackRecordNeedsAttention, usdFromCents } from "@/lib/ad-space/format";
+import { compactNumber, eventDates, eventCountdown, onTimeText, openSpots, trackRecordNeedsAttention, usdFromCents } from "@/lib/ad-space/format";
 import { gradientCss } from "@/lib/ad-space/look";
 import type { CreatorGroup, CreatorProfile, EventSummary, SpaceCard } from "@/lib/ad-space/types";
 
@@ -276,6 +276,14 @@ export function CreatorHero({ creator, openNow }: { creator: CreatorProfile; ope
           note={flagged ? [record.missed ? `${record.missed} missed` : null, disputed ? `${disputed} disputed` : null].filter(Boolean).join(" · ") : null}
         />
       </div>
+      {onTimeText(record) ? (
+        <p className="mt-6 inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-[20px] border border-success/40 bg-success/10 px-4 text-small text-text">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden className="text-success">
+            <path d="M3.5 8.5l3 3 6-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          {onTimeText(record)}
+        </p>
+      ) : null}
     </section>
   );
 }
