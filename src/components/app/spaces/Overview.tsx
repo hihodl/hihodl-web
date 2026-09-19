@@ -54,7 +54,6 @@ import { dollars, Skeleton } from "../ui";
 import { CardGrid, DrillBar } from "./cards";
 import { dueText, ReadError, StatusPill } from "./common";
 import { Card, Empty, emptyBtn, Group as Panel, ListRow as RowLink, money, ProgressBar, Stat as KpiTile, Tag } from "./kit";
-import { ReadyToPublish } from "./ReadyToPublish";
 import { useOffersContent } from "./ContentOffer";
 import {
   BrandsScreen,
@@ -148,7 +147,6 @@ function CreatorOverview({ view }: { view: string | null }) {
 
   return (
     <div className={FILL}>
-      <ReadyToPublish compact />
       <section aria-label="Your business" className="grid grid-cols-2 gap-2.5 xl:grid-cols-4">
         <KpiTile label="Earned" value={v(dollars(t?.receivedCents ?? 0))} note={t ? (t.orders && t.fee.paidByYouCents === 0 ? "5% paid by brands" : feeLine(t)) : " "} href={href("/sales")} />
         <KpiTile

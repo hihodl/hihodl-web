@@ -14,8 +14,9 @@
  * On the web a listing is paid on Solana only. Base and Polygon come with the
  * HOLD app's wallet, so the checklist ends on one line pointing there.
  *
- * `compact` is the strip the Overview shows while something is missing (and
- * never once everything is done).
+ * `compact` is the strip Listings shows while something is missing (and never
+ * once everything is done). It belongs where publishing happens: the Overview
+ * carried it too and read as a banner about nothing, so it was taken off there.
  */
 
 import Link from "next/link";
@@ -182,7 +183,7 @@ export function ReadyToPublish({ compact = false }: { compact?: boolean }) {
   const done = items.filter((i) => i.state === "done").length;
 
   if (compact) {
-    // The app's XAccountPanel compact: one Card above the list, only while publishing would be refused.
+    // The app's XAccountPanel compact: one Card above the listings, only while publishing would be refused.
     if (open.length === 0) return null;
     return (
       <section aria-label="Before you publish">
