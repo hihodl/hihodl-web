@@ -146,23 +146,23 @@ function CreatorOverview({ view }: { view: string | null }) {
     <div className={FILL}>
       <ReadyToPublish compact />
       <section aria-label="Your business" className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <KpiTile label="Earned" value={v(dollars(t?.receivedCents ?? 0))} note={t ? feeLine(t) : " "} href={href("/sales")} />
+        <KpiTile label="Earned" value={v(dollars(t?.receivedCents ?? 0))} note={t ? (t.orders && t.fee.paidByYouCents === 0 ? "Brands paid our 5%, not you" : feeLine(t)) : " "} href={href("/sales")} />
         <KpiTile
           label="Brands that paid you"
           value={v(t?.brands ?? 0)}
-          note={t ? (t.repeatBrands ? `${t.repeatBrands} came back · ${t.repeatReceivedPct !== null ? pctText(t.repeatReceivedPct) : "—"} of earnings` : "none back yet") : " "}
+          note={t ? (t.repeatBrands ? `${t.repeatBrands} came back` : "none back yet") : " "}
           href={`${href("")}?view=brands`}
         />
         <KpiTile
           label="Sell-through"
           value={v(t?.sellThroughPct != null ? pctText(t.sellThroughPct) : "–")}
-          note={t ? `${t.spotsSold} of ${t.spotsTotal} spots${t.medianDaysToFirstSale !== null ? ` · first sale in ${daysText(t.medianDaysToFirstSale)}` : ""}` : " "}
+          note={t ? `${t.spotsSold} of ${t.spotsTotal} spots sold` : " "}
           href={`${href("")}?view=sells`}
         />
         <KpiTile
           label="Needs you"
           value={offers.data && views.data ? needs : "…"}
-          note={agency.on && owedToTeam > 0n ? `${plural(waiting.length, "offer")} · ${dollars(Number(owedToTeam / 10_000n))} owed to team` : `${plural(waiting.length, "offer")} · ${due.length} due in 7 days`}
+          note={`${plural(waiting.length, "offer")} · ${due.length} due${agency.on && owedToTeam > 0n ? ` · ${dollars(Number(owedToTeam / 10_000n))} to team` : ""}`}
           href={`${href("")}?view=needs`}
           attention={needs > 0}
         />
