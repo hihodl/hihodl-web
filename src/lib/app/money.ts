@@ -33,6 +33,7 @@ import {
   getOfframpOrders,
   getPriceHistory,
   getPrices,
+  getRailAccounts,
   getScheduledPayments,
   getTransferDetails,
   getTransfers,
@@ -43,6 +44,7 @@ import {
   type ContainerAnswer,
   type LedgerSubaccount,
   type OfframpOrder,
+  type RailAccount,
   type Schedule,
   type SubaccountBalanceRow,
   type TransferDetails,
@@ -204,6 +206,13 @@ export function useScheduledPayments() {
 /** Bank payouts and where each of them got to. */
 export function usePayouts(limit = 20) {
   return useRead<{ orders: OfframpOrder[]; hasMore?: boolean }>("payouts", () => getOfframpOrders(limit), String(limit));
+}
+
+/* ── Where money can arrive ───────────────────────────────────────── */
+
+/** The virtual accounts a bank transfer can land in. A row means there is one. */
+export function useRailAccounts() {
+  return useRead<{ accounts: RailAccount[] }>("rails", getRailAccounts);
 }
 
 /* ── The person's own name ────────────────────────────────────────── */

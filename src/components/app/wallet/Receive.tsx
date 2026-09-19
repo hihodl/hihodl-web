@@ -7,11 +7,20 @@
  *                   (ReceiveSelectToken): the person thinks in tokens, not
  *                   networks
  *   the QR          one token's QR (ReceiveFintech): the @username chip, the
- *                   HQR, the token line, the address chip that copies, the
- *                   safety line naming the network, and Share
+ *                   HQR, the token line, the address chip that copies,
+ *                   "Receiving on another network?" when the token lives on
+ *                   more than one, the safety line naming the network, and
+ *                   Share
  *
- * The web wallet is Solana only, so there is no "Receiving on another
- * network?" link: each token here lives on one network.
+ * TWO CALLERS, ONE SCREEN
+ *
+ * The Wallet page passes `address`: the web wallet is Solana only, so its list
+ * is USDC and SOL and there is no other network to offer. Add money passes
+ * `addresses` — every chain `GET /me/addresses` knows this person on — and
+ * then the list is the app's own RECEIVE_TOKENS, filtered to what we can
+ * actually be paid on. A chain we have no address for is never drawn: the
+ * whole point of the token-first flow is that nothing on it can send money
+ * somewhere we cannot credit.
  */
 
 import { useState } from "react";
@@ -23,29 +32,76 @@ import { UserAvatar } from "../account/UserAvatar";
 import { AppScreen, GREEN, HQR, PrimaryButton, shortAddr, SUB, TokenIcon } from "./app-kit";
 import { Ion } from "../ion";
 
-type Sym = "USDC" | "SOL";
+/** The networks the app can credit a deposit on (src/config/receiveTokens.ts). */
+export type ReceiveNet = "solana" | "base" | "polygon" | "ethereum" | "bitcoin";
 
-const TOKENS: readonly { symbol: Sym; name: string }[] = [
-  { symbol: "USDC", name: "USD Coin" },
-  { symbol: "SOL", name: "Solana" },
-];
+export type ReceiveAddresses = Partial<Record<ReceiveNet, string>>;
 
-export function Receive({ address, onBack }: { address: string; onBack?: () => void }) {
-  const [token, setToken] = useState<Sym | null>(null);
-  if (!token) return <SelectCrypto onBack={onBack} onPick={setToken} />;
-  return <ReceiveQr address={address} symbol={token} onBack={() => setToken(null)} />;
+const NET_LABEL: Record<ReceiveNet, string> = {
+  solana: "Solana",
+  base: "Base",
+  polygon: "Polygon",
+  ethereum: "Ethereum",
+  bitcoin: "Bitcoin",
+};
+
+interface Token {
+  symbol: string;
+  name: string;
+  /** ORDER MATTERS — networks[0] is the one the QR opens on. */
+  networks: readonly ReceiveNet[];
 }
 
-function SelectCrypto({ onBack, onPick }: { onBack?: () => void; onPick: (s: Sym) => void }) {
+/** RECEIVE_TOKENS, in the app's order. */
+const TOKENS: readonly Token[] = [
+  { symbol: "USDC", name: "USD Coin", networks: ["solana", "base", "polygon", "ethereum"] },
+  { symbol: "USDT", name: "Tether USD", networks: ["solana", "base", "polygon", "ethereum"] },
+  { symbol: "BTC", name: "Bitcoin", networks: ["bitcoin"] },
+  { symbol: "ETH", name: "Ethereum", networks: ["base", "ethereum"] },
+  { symbol: "SOL", name: "Solana", networks: ["solana"] },
+  { symbol: "POL", name: "Polygon", networks: ["polygon"] },
+];
+
+/** The web wallet's own two, on the one network it has. */
+const WEB_TOKENS: readonly Token[] = [
+  { symbol: "USDC", name: "USD Coin", networks: ["solana"] },
+  { symbol: "SOL", name: "Solana", networks: ["solana"] },
+];
+
+export function Receive({
+  address,
+  addresses,
+  onBack,
+}: {
+  /** The web wallet's Solana address. */
+  address?: string;
+  /** Every network this person can be paid on, when there is more than one. */
+  addresses?: ReceiveAddresses;
+  onBack?: () => void;
+}) {
+  const [token, setToken] = useState<Token | null>(null);
+  const byNet: ReceiveAddresses = addresses ?? (address ? { solana: address } : {});
+  const list = (addresses ? TOKENS : WEB_TOKENS).filter((t) => t.networks.some((n) => byNet[n]));
+
+  if (!token) return <SelectCrypto tokens={list} onBack={onBack} onPick={setToken} />;
+  return <ReceiveQr byNet={byNet} token={token} onBack={() => setToken(null)} />;
+}
+
+function SelectCrypto({ tokens, onBack, onPick }: { tokens: readonly Token[]; onBack?: () => void; onPick: (t: Token) => void }) {
   return (
     <AppScreen title="Select crypto" onBack={onBack}>
       <div className="px-1 pt-2">
         <p className="mb-3.5 px-1 text-[13.5px] text-[#9FB7C2]">Choose which crypto you want to receive.</p>
-        {TOKENS.map((t) => (
+        {tokens.length === 0 ? (
+          <p className="px-1 text-[13px] leading-[18px] text-white/55">
+            There is no address to be paid on yet. Open your wallet once and it appears here.
+          </p>
+        ) : null}
+        {tokens.map((t) => (
           <button
             key={t.symbol}
             type="button"
-            onClick={() => onPick(t.symbol)}
+            onClick={() => onPick(t)}
             aria-label={`Receive ${t.symbol}`}
             className="mb-2.5 flex w-full items-center gap-3.5 rounded-[18px] border border-white/10 bg-white/[0.05] p-3.5 text-left transition-colors hover:bg-white/[0.09]"
           >
@@ -78,7 +134,11 @@ function useCopied(): [boolean, (v: string) => void] {
   return [copied, copy];
 }
 
-function ReceiveQr({ address, symbol, onBack }: { address: string; symbol: Sym; onBack: () => void }) {
+function ReceiveQr({ byNet, token, onBack }: { byNet: ReceiveAddresses; token: Token; onBack: () => void }) {
+  const nets = token.networks.filter((n) => byNet[n]);
+  const [net, setNet] = useState<ReceiveNet>(nets[0] ?? token.networks[0]);
+  const [picking, setPicking] = useState(false);
+  const address = byNet[net] ?? "";
   const me = useMe();
   const username = chosenUsername(me.data);
   const handle = username ? `@${username}` : null;
@@ -121,32 +181,81 @@ function ReceiveQr({ address, symbol, onBack }: { address: string; symbol: Sym; 
           <div className="h-1.5" />
         )}
 
-        <HQR value={address} title={`Your ${symbol} address on Solana`} />
+        {address ? (
+          <HQR value={address} title={`Your ${token.symbol} address on ${NET_LABEL[net]}`} />
+        ) : (
+          // Addresses loaded and this rail has none yet: a calm "not ready"
+          // beats a spinner that never ends.
+          <div className="flex h-[248px] w-[248px] flex-col items-center justify-center gap-2.5 rounded-[28px] bg-white px-6 text-center">
+            <Ion name="time-outline" size={30} color="#0A0F14" />
+            <p className="text-[14px] font-bold text-[#0A0F14]">{NET_LABEL[net]} isn&apos;t available yet</p>
+          </div>
+        )}
 
         <div className="mt-[18px] flex items-center gap-[9px]">
-          <TokenIcon symbol={symbol} size={34} />
-          <span className="text-[18px] font-strong text-white">{symbol}</span>
+          <TokenIcon symbol={token.symbol} size={34} />
+          <span className="text-[18px] font-strong text-white">{token.symbol}</span>
         </div>
 
         <button
           type="button"
           onClick={() => copy(address)}
+          disabled={!address}
           aria-label="Copy address"
           title={address}
-          className="mt-3.5 flex h-[38px] items-center gap-2 rounded-[19px] border border-white/[0.12] bg-white/[0.05] px-3.5 transition-colors hover:bg-white/[0.09]"
+          className="mt-3.5 flex h-[38px] items-center gap-2 rounded-[19px] border border-white/[0.12] bg-white/[0.05] px-3.5 transition-colors hover:bg-white/[0.09] disabled:opacity-50"
         >
           <span className="text-[14px] font-strong tracking-[0.2px] text-white">{shortAddr(address)}</span>
           <Ion name={copied ? "checkmark" : "copy-outline"} size={16} color={copied ? GREEN : SUB} />
         </button>
 
+        {/* Question framing, as the app has it: it prompts the exact
+            self-check, which network is my sender using? */}
+        {nets.length > 1 && !picking ? (
+          <button
+            type="button"
+            onClick={() => setPicking(true)}
+            className="mt-4 flex items-center gap-1 px-2 py-1.5 text-[14px] font-strong text-white transition-opacity hover:opacity-70"
+          >
+            Receiving on another network?
+            <Ion name="chevron-forward" size={15} color={SUB} />
+          </button>
+        ) : null}
+
+        {picking ? (
+          <div className="mt-4 w-full">
+            <p className="text-center text-[18px] font-extrabold text-white">Receive {token.symbol} on</p>
+            <p className="mb-4 mt-1.5 text-center text-[13px] text-[#9FB7C2]">Pick the network your sender is using.</p>
+            {nets.map((k) => {
+              const active = k === net;
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => {
+                    setNet(k);
+                    setPicking(false);
+                  }}
+                  className={`mb-2.5 flex w-full items-center gap-3.5 rounded-[16px] border px-3.5 py-3.5 text-left transition-colors ${
+                    active ? "border-[rgba(255,183,3,0.45)] bg-[rgba(255,183,3,0.10)]" : "border-white/10 bg-white/[0.05] hover:bg-white/[0.09]"
+                  }`}
+                >
+                  <span className="min-w-0 flex-1 truncate text-[16px] font-bold text-white">{NET_LABEL[k]}</span>
+                  {active ? <Ion name="checkmark-circle" size={20} color="#FFB703" /> : <span className="w-5" />}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+
         <p className="mt-3 px-2 text-center text-[12.5px] leading-[18px] text-[#9FB7C2]">
-          Only send {symbol} on Solana.
+          Only send {token.symbol} on {NET_LABEL[net]}.
           <br />
           Sending on another network may lose your funds.
         </p>
 
         <div className="mt-6 w-full">
-          <PrimaryButton icon="share-outline" onClick={() => void share()}>
+          <PrimaryButton icon="share-outline" onClick={() => void share()} disabled={!address}>
             {shared ? "Copied" : "Share"}
           </PrimaryButton>
         </div>

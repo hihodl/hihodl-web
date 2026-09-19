@@ -371,9 +371,19 @@ export function getOfframpOrders(limit = 20): Promise<{ orders: OfframpOrder[]; 
   return read<{ orders: OfframpOrder[]; hasMore?: boolean; nextBefore?: string | null }>(`offramp/orders?limit=${limit}`);
 }
 
-/** The virtual accounts money can arrive into. */
-export function getRailAccounts(): Promise<unknown> {
-  return read("rails/accounts");
+/**
+ * The virtual accounts money can arrive into. The server returns only rows
+ * that are alive, so a row existing IS "this person has a working account".
+ */
+export interface RailAccount {
+  id?: string;
+  currency?: string;
+  provider?: string;
+  railType?: string;
+}
+
+export function getRailAccounts(): Promise<{ accounts: RailAccount[] }> {
+  return read<{ accounts: RailAccount[] }>("rails/accounts");
 }
 
 /* ── The person ───────────────────────────────────────────────────── */
