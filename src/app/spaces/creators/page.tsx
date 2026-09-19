@@ -15,7 +15,7 @@ import {
   SuitcaseFigure,
   Timeline,
 } from "@/components/spaces-site/parts";
-import { productOrigin } from "@/lib/app/paths";
+import { productHref } from "@/lib/app/paths";
 import { HOLD_KEEPS, bps } from "@/lib/rates.config";
 
 /**
@@ -34,12 +34,6 @@ import { HOLD_KEEPS, bps } from "@/lib/rates.config";
 const FEE = bps(HOLD_KEEPS.spaces.feeBps);
 const REFERRAL = bps((HOLD_KEEPS.spaces.feeBps * HOLD_KEEPS.spaces.referralShareOfFeeBps) / 10_000);
 
-/** The console, on its own origin in production and under /app anywhere else. */
-function sellHref(): string {
-  const origin = productOrigin();
-  return origin ? `${origin}/spaces` : "/app/spaces";
-}
-
 export const metadata: Metadata = {
   title: "Spaces for creators",
   description:
@@ -48,7 +42,7 @@ export const metadata: Metadata = {
 };
 
 export default function SpacesCreatorsPage() {
-  const sell = sellHref();
+  const sell = productHref();
 
   return (
     <>
