@@ -30,6 +30,30 @@ export const CHAIN_LABEL: Record<Chain, string> = {
   polygon: "Polygon",
 };
 
+/**
+ * The networks this page may offer for a space: where the creator can be paid
+ * right now. The server says so in `payableChains`; an older server only sends
+ * `payTo`, whose families narrow `chains` the same way.
+ */
+export function payChainsOf(space: Pick<Space, "chains" | "payTo" | "payableChains">): Chain[] {
+  const payable = space.payableChains;
+  const payTo = space.payTo;
+  const narrowed = payable
+    ? space.chains.filter((c) => payable.includes(c))
+    : payTo
+      ? space.chains.filter((c) => Boolean(c === "solana" ? payTo.solana : payTo.evm))
+      : space.chains;
+  // Never an empty picker: with nothing payable the checkout's own refusal
+  // (`chain_unavailable`) says why, which is better than a sheet with no network.
+  return narrowed.length > 0 ? narrowed : space.chains;
+}
+
+/** The networks a space is paid on, in words: "Solana", "Solana and Base". */
+export function payChainsText(space: Pick<Space, "chains" | "payTo" | "payableChains">): string {
+  const names = payChainsOf(space).map((c) => CHAIN_LABEL[c]);
+  return names.length <= 1 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+}
+
 /** Integer cents to "$1,775" (or "$1,775.50" when there are cents). */
 export function usdFromCents(cents: number): string {
   const whole = cents % 100 === 0;
@@ -39,6 +63,20 @@ export function usdFromCents(cents: number): string {
     minimumFractionDigits: whole ? 0 : 2,
     maximumFractionDigits: whole ? 0 : 2,
   });
+}
+
+/**
+ * A USDC amount as the server writes it ("525.00", "131.250000") in dollars,
+ * the way the checkout shows money: "$525", "$131.25". Cents only when the
+ * amount is not whole. Anything that is not an amount is printed as it came.
+ */
+export function usdFromUsdc(usdc: string | null | undefined): string {
+  const raw = (usdc ?? "").trim().replace(/,/g, "");
+  const m = /^(\d{1,12})(?:\.(\d{1,6}))?$/.exec(raw);
+  if (!m) return usdc ? `${usdc} USDC` : "";
+  const frac = (m[2] ?? "").padEnd(2, "0");
+  const up = frac.length > 2 && /[1-9]/.test(frac.slice(2)) ? 1 : 0;
+  return usdFromCents(Number(m[1]) * 100 + Number(frac.slice(0, 2)) + up);
 }
 
 /** "48210" to "48.2K". */

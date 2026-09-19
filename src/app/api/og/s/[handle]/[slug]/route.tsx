@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 
 import { OG, OgBanner, OgEventCard, clip as clipOg, loadOgImage } from "@/components/ad-space/og";
 import {
-  CHAIN_LABEL,
+  payChainsText,
   bidsSummaryText,
   serviceName,
   spaceProgressText,
@@ -243,7 +243,7 @@ function Card({ space: s }: { space: Space }) {
           <div style={{ display: "flex", flexDirection: "column", flex: 1, marginRight: 24 }}>
             <div style={{ fontSize: 32 }}>{`@${s.creator.xHandle}`}</div>
             <div style={{ fontSize: 20, color: C.faint, marginTop: 6 }}>
-              {`USDC on ${s.chains.map((c) => CHAIN_LABEL[c]).join(", ")}`}
+              {`USDC on ${payChainsText(s)}`}
             </div>
           </div>
           <div style={{ fontSize: 24, color: C.muted, letterSpacing: 1 }}>hihodl.xyz</div>

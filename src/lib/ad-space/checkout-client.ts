@@ -573,7 +573,7 @@ export function describeError(e: unknown, chain?: Chain | null, subject: Subject
     case "too_many_lapsed_holds":
       return "Too many unpaid holds from this connection lately. Try again later today.";
     case "space_busy":
-      return `Two other people are paying for ${subject}s here right now. Try again in a few minutes, or pay on Base or Polygon.`;
+      return `Two other people are paying for ${subject}s here right now. Try again in a few minutes.`;
     case "would_revert":
       return `That payment would fail on ${net}, so we didn't send it. Nothing was paid. Check the wallet's USDC, or try another wallet.`;
     case "chain_unavailable":

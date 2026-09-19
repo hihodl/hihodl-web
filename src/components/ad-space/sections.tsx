@@ -5,7 +5,8 @@ import { DownloadLink } from "@/components/site/DownloadLink";
 import { Wordmark } from "@/components/site/Wordmark";
 import { SUPPORT_EMAIL } from "@/lib/ad-space/config";
 import {
-  CHAIN_LABEL,
+  payChainsOf,
+  payChainsText,
   VERIFIED_LABEL,
   attestationText,
   calendarDate,
@@ -320,7 +321,7 @@ export function SpaceStats({ space }: { space: Space }) {
     ),
   });
   for (const k of space.keyDates.slice(0, 2)) facts.push({ label: k.label, value: calendarDate(k.date) });
-  if (facts.length < 4) facts.push({ label: "Pay with", value: `USDC · ${space.chains.map((c) => CHAIN_LABEL[c]).join(", ")}` });
+  if (facts.length < 4) facts.push({ label: "Pay with", value: `USDC on ${payChainsText(space)}` });
 
   return (
     <section className="container-page py-10 md:py-14" aria-label="Availability">
@@ -424,7 +425,7 @@ function ModeNote({ space }: { space: Space }) {
         <p>The price on a spot is where bidding opens. Once sold, anyone can take it from its sponsor for {x} the price.</p>
         <p>
           The sponsor who loses a spot gets back everything they paid, in the same transaction.
-          {space.chains.length > 1 ? " A spot changes hands on the chain it was bought on." : ""}
+          {payChainsOf(space).length > 1 ? " A spot changes hands on the chain it was bought on." : ""}
         </p>
       </Note>
     );
@@ -540,7 +541,8 @@ function steps(space: Space): Step[] {
   const tiered = isTieredSpace(space);
   const service = space.kind === "service";
   const thing = service ? (tiered ? "package" : "slot") : "spot";
-  const chains = space.chains.map((c) => CHAIN_LABEL[c]).join(", ");
+  // Where this creator can be paid right now (payableChains), never a list of every chain.
+  const chains = payChainsText(space);
   const send = service
     ? { title: "Send your brief", body: "Right after paying, tell the creator what to feature." }
     : { title: "Send your logo", body: "Upload it right after paying. The creator approves it." };
