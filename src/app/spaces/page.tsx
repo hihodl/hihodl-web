@@ -17,6 +17,7 @@ import {
   SuitcaseFigure,
   Timeline,
 } from "@/components/spaces-site/parts";
+import { productHref } from "@/lib/app/paths";
 import { HOLD_KEEPS, bps } from "@/lib/rates.config";
 
 /**
@@ -42,6 +43,10 @@ export const metadata: Metadata = {
 };
 
 export default function SpacesPage() {
+  // Both sides sign up in the product. The pills above already lead to each
+  // side's page, so the actions lead somewhere the pills do not.
+  const join = productHref();
+
   return (
     <>
       <TopNav />
@@ -61,8 +66,8 @@ export default function SpacesPage() {
           }
           actions={
             <>
-              <PrimaryAction href="/spaces/creators">I&rsquo;m a creator</PrimaryAction>
-              <SecondaryAction href="/spaces/brands">I&rsquo;m a brand</SecondaryAction>
+              <PrimaryAction href={join}>I&rsquo;m a creator</PrimaryAction>
+              <SecondaryAction href={join}>I&rsquo;m a brand</SecondaryAction>
             </>
           }
           figure={
@@ -218,8 +223,8 @@ export default function SpacesPage() {
         body="Spaces is part of HOLD Benefits, next to Stays and eSIM. Creators can list from the web with no app; brands can pay from the wallet they already use."
         actions={
           <>
-            <PrimaryAction href="/spaces/creators">Start selling</PrimaryAction>
-            <SecondaryAction href="/spaces/brands">Sponsor a creator</SecondaryAction>
+            <PrimaryAction href={join}>Start selling</PrimaryAction>
+            <SecondaryAction href={join}>Sponsor a creator</SecondaryAction>
           </>
         }
       />

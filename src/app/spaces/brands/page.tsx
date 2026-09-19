@@ -15,7 +15,7 @@ import {
   SuitcaseFigure,
   Timeline,
 } from "@/components/spaces-site/parts";
-import { DOWNLOAD_ANCHOR } from "@/lib/appLinks";
+import { productHref } from "@/lib/app/paths";
 import { SUPPORT_EMAIL } from "@/lib/ad-space/config";
 import { HOLD_KEEPS, bps } from "@/lib/rates.config";
 
@@ -47,6 +47,7 @@ export const metadata: Metadata = {
 };
 
 export default function SpacesBrandsPage() {
+  const join = productHref();
   const contact = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("Sponsoring through Spaces")}`;
 
   return (
@@ -67,8 +68,8 @@ export default function SpacesBrandsPage() {
           }
           actions={
             <>
-              <PrimaryAction href="#how-to-pay">How paying works</PrimaryAction>
-              <SecondaryAction href={contact}>Tell us what you want to sponsor</SecondaryAction>
+              <PrimaryAction href={join}>Create your account</PrimaryAction>
+              <SecondaryAction href="#how-to-pay">How paying works</SecondaryAction>
             </>
           }
           figure={
@@ -226,10 +227,10 @@ export default function SpacesBrandsPage() {
 
       <Closing
         line="Pay the person who brings you into the room."
-        body="Ask the creator you follow for their link, or tell us what you want to sponsor. Pay from the HOLD app to skip gas and earn HiPoints."
+        body="Create your account, ask the creator you follow for their link, or tell us what you want to sponsor. Pay from the HOLD app to skip gas and earn HiPoints."
         actions={
           <>
-            <PrimaryAction href={DOWNLOAD_ANCHOR}>Get HOLD</PrimaryAction>
+            <PrimaryAction href={join}>Create your account</PrimaryAction>
             <SecondaryAction href={contact}>Write to us</SecondaryAction>
           </>
         }

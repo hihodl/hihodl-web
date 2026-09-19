@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { DownloadLink } from "@/components/site/DownloadLink";
 import { Wordmark } from "@/components/site/Wordmark";
+import { productHref } from "@/lib/app/paths";
 
 /**
  * The nav mirrors the app's own tab bar: Payments · Savings · Invest · Benefits.
@@ -188,6 +189,16 @@ export function TopNav() {
           {/* Spacer */}
           <div className="flex-1" />
 
+          {/* Log in: words, not a pill, so Download stays the one action the
+              header asks for. It opens the product, where signing in and
+              signing up are the same email code. */}
+          <a
+            href={productHref()}
+            className="hidden sm:inline-flex items-center px-2 py-2.5 text-small font-medium text-text-muted hover:text-text transition-colors duration-180"
+          >
+            Log in
+          </a>
+
           {/* Download CTA */}
           <DownloadLink className="hidden sm:inline-flex items-center px-5 py-2.5 rounded-pill bg-amber text-text-on-amber font-medium text-small hover:bg-amber-glow transition-all duration-180 ease-out-soft hover:scale-[1.02]">
             Download
@@ -269,6 +280,13 @@ export function TopNav() {
             >
               Download
             </DownloadLink>
+            <a
+              href={productHref()}
+              onClick={closeAll}
+              className="mt-2 inline-flex items-center justify-center py-3 text-body font-medium text-text-muted"
+            >
+              Log in
+            </a>
           </nav>
         </div>
       </div>
