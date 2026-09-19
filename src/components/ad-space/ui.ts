@@ -28,7 +28,8 @@ export const pill = {
   neutral: `${pillBase} border-[color:var(--color-hairline-strong)] text-text-muted`,
   open: `${pillBase} border-moonlight/40 bg-moonlight/10 text-text`,
   held: `${pillBase} border-dashed border-amber/60 bg-amber/10 text-amber`,
-  sold: `${pillBase} border-amber bg-amber text-text-on-amber`,
+  // Finished, so quiet: one amber in the palette, and filled amber is only ever the action.
+  sold: `${pillBase} border-[color:var(--color-hairline-strong)] bg-white/[0.06] text-text-muted`,
   attention: `${pillBase} border-amber/40 bg-amber/10 text-amber`,
   done: `${pillBase} border-success/40 bg-success/10 text-success`,
 } as const;
@@ -48,8 +49,9 @@ export const ZONE = {
   openFillHover: "rgba(91,124,255,0.24)",
   heldStroke: "#FFB703",
   heldFill: "rgba(255,183,3,0.14)",
-  soldFill: "#FFB703",
-  soldInk: "#0A0500",
+  // A sold zone is done, not an action: a quiet light plate, never the CTA amber.
+  soldFill: "#C9D3DC",
+  soldInk: "#0A141E",
   plate: "#FFFFFF",
   idleStroke: "rgba(255,255,255,0.18)",
   outline: "rgba(244,246,250,0.55)",
