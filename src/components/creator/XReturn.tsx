@@ -21,9 +21,9 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
-import { btnPrimary, btnSmallSecondary } from "@/components/ad-space/ui";
-import { glass } from "@/components/app/ui";
 import { useHref, useProductHref } from "@/components/app/base";
+import { ctaPrimary, ctaSecondary } from "@/components/app/hold";
+import { Ion } from "@/components/app/ion";
 import { completeXLink, describeCreatorError } from "@/lib/creator/api";
 import { useCreatorSession } from "@/lib/creator/session";
 import { isLinkResult, isTicket, type LinkResult } from "@/lib/creator/types";
@@ -118,36 +118,36 @@ export function XReturn({ result, ticket }: { result?: string; ticket?: string }
     })();
   }, [result, ticket, session, href]);
 
-  return (
-    <div className="flex w-full max-w-[600px] flex-col gap-6">
-      <div className={`${glass} p-6 sm:p-8`}>
-        {state.kind === "working" ? (
-          <p className="text-body text-text-muted">Finishing up with X…</p>
-        ) : state.kind === "needs-session" ? (
-          <>
-            <h1 className="text-h4 font-light text-text">Sign in to finish linking X</h1>
-            <p className="mt-3 text-small text-text-muted">Sign in and connect X again.</p>
-          </>
-        ) : state.kind === "error" ? (
-          <>
-            <h1 className="text-h4 font-light text-text">We could not finish linking X</h1>
-            <div className="mt-4">
-              <Notice>{state.message}</Notice>
-            </div>
-          </>
-        ) : (
-          <>
-            <h1 className="text-h4 font-light text-text">{RESULT_TEXT[state.result].title}</h1>
-            <p className="mt-3 text-small text-text-muted">{RESULT_TEXT[state.result].body}</p>
-          </>
-        )}
+  const ok = state.kind === "result" && state.result === "ok";
+  const title =
+    state.kind === "working"
+      ? "Finishing up with X…"
+      : state.kind === "needs-session"
+        ? "Sign in to finish linking X"
+        : state.kind === "error"
+          ? "We could not finish linking X"
+          : RESULT_TEXT[state.result].title;
+  const body =
+    state.kind === "needs-session" ? "Sign in and connect X again." : state.kind === "result" ? RESULT_TEXT[state.result].body : null;
 
-        <div className="mt-6 flex flex-wrap gap-3">
-          <Link href={productHref("/account?view=x")} className={state.kind === "result" && state.result === "ok" ? btnPrimary : btnSmallSecondary}>
-            Open Account
-          </Link>
+  // TravelEmpty: the icon in its disc, the title, the sentence, and the one way on.
+  return (
+    <div className="mx-auto flex w-full max-w-[560px] flex-col items-center gap-2.5 px-6 py-10 text-center">
+      <span className="mb-1 flex h-14 w-14 items-center justify-center rounded-[28px] border border-white/10 bg-white/[0.04] text-white/[0.62]">
+        <Ion name={ok ? "checkmark-circle-outline" : "logo-x"} size={24} className={ok ? "text-[#2FBE8A]" : undefined} />
+      </span>
+      <h1 className="text-[17px] font-bold tracking-[-0.3px] text-white">{title}</h1>
+      {body ? <p className="max-w-[400px] text-[14px] leading-5 text-white/[0.62]">{body}</p> : null}
+      {state.kind === "error" ? (
+        <div className="w-full text-left">
+          <Notice>{state.message}</Notice>
         </div>
-      </div>
+      ) : null}
+      {state.kind !== "working" ? (
+        <Link href={productHref("/account?view=x")} className={`${ok ? ctaPrimary : ctaSecondary} mt-3 !w-auto`}>
+          Open Account
+        </Link>
+      ) : null}
     </div>
   );
 }
