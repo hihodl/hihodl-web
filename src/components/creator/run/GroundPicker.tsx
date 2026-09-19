@@ -5,15 +5,15 @@
  *
  * Used twice: on Spaces › Settings for the default (the profile and every
  * listing), and on a listing for its own, where "Same as my default" is the
- * first option. Selecting changes the edge's COLOUR (amber), never its width.
+ * first option. Selecting changes the edge's COLOUR (the select white), never its width.
  */
 
 "use client";
 
 import { useState } from "react";
 
-import { btnSmall } from "@/components/ad-space/ui";
-import { glass } from "@/components/app/ui";
+import { btnWhite as btnSmall } from "@/components/app/spaces/kit";
+import { cardBox as glass } from "@/components/app/spaces/kit";
 import { contrast, inkOn, normalHex } from "@/lib/ad-space/product-look";
 import { PAGE_GROUND_LABEL, PAGE_GROUND_PRESETS, groundOf, type PageGroundPreset } from "@/lib/ad-space/theme";
 
@@ -84,13 +84,13 @@ export function GroundPicker({
           aria-checked={on}
           onClick={() => setPicked(key)}
           className={`flex h-full w-full flex-col gap-2.5 rounded-[16px] border-2 p-2.5 text-left transition-colors duration-180 ${
-            on ? "border-amber bg-amber/[0.06]" : "border-white/10 hover:border-white/25"
+            on ? "border-[#F1F5F9] bg-[rgba(241,245,249,0.08)]" : "border-white/10 hover:border-white/25"
           }`}
         >
           <GroundSwatch value={swatch} />
           <span className="px-0.5">
-            <span className="block text-small font-medium text-text">{title}</span>
-            <span className="block text-tiny text-[#CFE3EC]">{note}</span>
+            <span className="block text-[14.5px] font-strong text-white">{title}</span>
+            <span className="block text-[12.5px] text-white/[0.62]">{note}</span>
           </span>
         </button>
       </li>
@@ -127,8 +127,8 @@ export function GroundPicker({
             role="radio"
             aria-checked={customOn}
             onClick={() => customHex && setPicked(customHex)}
-            className={`inline-flex h-10 items-center gap-2 rounded-[12px] border-2 px-3 text-small text-text transition-colors ${
-              customOn ? "border-amber bg-amber/[0.06]" : "border-white/10 hover:border-white/25"
+            className={`inline-flex h-10 items-center gap-2 rounded-[12px] border-2 px-3 text-[14.5px] text-white transition-colors ${
+              customOn ? "border-[#F1F5F9] bg-[rgba(241,245,249,0.08)]" : "border-white/10 hover:border-white/25"
             }`}
           >
             <span className="h-5 w-5 rounded-[6px] border border-white/20" style={{ background: customHex ?? "transparent" }} aria-hidden />
@@ -157,15 +157,15 @@ export function GroundPicker({
               const hex = normalHex(e.target.value);
               if (hex) setPicked(hex);
             }}
-            className="h-10 w-28 rounded-[12px] border border-white/15 bg-black/20 px-3 font-mono text-small uppercase text-text outline-none focus:border-amber/60"
+            className="h-10 w-28 rounded-[12px] border border-white/15 bg-black/20 px-3 font-mono text-[14.5px] uppercase text-white outline-none focus:border-white/30"
           />
         </div>
         {customHex && ink ? (
-          <p className="text-tiny text-[#CFE3EC]">
+          <p className="text-[12.5px] text-white/[0.62]">
             Text goes {ink === "#0A141E" ? "dark" : "white"} on this colour ({contrast(customHex, ink).toFixed(1)}:1), chosen for you.
           </p>
         ) : (
-          <p className="text-tiny text-amber">Write a colour as #RRGGBB.</p>
+          <p className="text-[12.5px] text-amber">Write a colour as #RRGGBB.</p>
         )}
       </section>
 
@@ -173,9 +173,9 @@ export function GroundPicker({
         <button type="button" className={btnSmall} disabled={busy || !dirty} onClick={save}>
           {busy ? "Saving…" : dirty ? "Save background" : "Saved"}
         </button>
-        <p className="text-tiny text-[#CFE3EC]">The payment sheet keeps the app&rsquo;s dark on every background.</p>
+        <p className="text-[12.5px] text-white/[0.62]">The payment sheet keeps the app&rsquo;s dark on every background.</p>
       </div>
-      {notice ? <p className="text-tiny text-amber">{notice}</p> : null}
+      {notice ? <p className="text-[12.5px] text-amber">{notice}</p> : null}
     </div>
   );
 }

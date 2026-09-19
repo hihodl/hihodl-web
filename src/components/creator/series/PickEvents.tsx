@@ -39,7 +39,7 @@
 
 import { useState } from "react";
 
-import { btnPrimary, btnSecondary, btnSmallSecondary, card } from "@/components/ad-space/ui";
+import { btnWhite as btnPrimary, btnGlassPill as btnSecondary, btnGlassPill as btnSmallSecondary, cardBox as card } from "@/components/app/spaces/kit";
 import { eventDates } from "@/lib/ad-space/format";
 import {
   LIMITS,
@@ -203,14 +203,14 @@ export function PickEvents({
 
   return (
     <div className="flex flex-col gap-6">
-      <p className="text-body text-text-muted">
+      <p className="text-[15.5px] text-white/[0.62]">
         Pick the events. Each one becomes its own listing with everything this one has — the same ladder, the same
         wording, the same promises — and its own link. What it does not share is what is for sale: {space.totals.positions}{" "}
         {space.totals.positions === 1 ? "spot" : "spots"} here means {space.totals.positions} at each of them, not{" "}
         {space.totals.positions} between them.
       </p>
 
-      <p className="text-small text-text">
+      <p className="text-[14.5px] text-white">
         {held === 1 ? "This listing is at one event so far." : `This listing already goes to ${held} events.`}{" "}
         {rows.length > 0
           ? `Adding ${rows.length} more makes ${held + rows.length} of ${LIMITS.SERIES_MAX}.`
@@ -223,7 +223,7 @@ export function PickEvents({
         one that was not, and it says why under its own row.
       */}
       {made > 0 ? (
-        <p role="status" className="text-small text-success">
+        <p role="status" className="text-[14.5px] text-[#2FBE8A]">
           {made === 1 ? "One listing is set up" : `${made} listings are set up`} and waiting with the others.{" "}
           {rows.length === 1
             ? "This one is not, and the reason is under it."
@@ -244,7 +244,7 @@ export function PickEvents({
           mustPick
         />
       ) : (
-        <p className="text-small text-text-muted">
+        <p className="text-[14.5px] text-white/[0.62]">
           That is {LIMITS.SERIES_MAX}, which is as many as one listing goes to. Take one off the list to pick another.
         </p>
       )}
@@ -255,8 +255,8 @@ export function PickEvents({
             <li key={row.event.id} className={`${card} flex flex-col gap-4 p-5`}>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-body text-text">{row.event.name}</p>
-                  <p className="text-tiny text-text-muted">
+                  <p className="text-[15.5px] text-white">{row.event.name}</p>
+                  <p className="text-[12.5px] text-white/[0.62]">
                     {row.event.city} · {eventDates(row.event.startsOn, row.event.endsOn)}
                   </p>
                 </div>
@@ -265,7 +265,7 @@ export function PickEvents({
                 </button>
               </div>
               {refusals[row.event.id] ? (
-                <p className="text-small text-amber">{refusals[row.event.id]}</p>
+                <p className="text-[14.5px] text-amber">{refusals[row.event.id]}</p>
               ) : null}
               <Field
                 label="This one stops selling"
@@ -288,7 +288,7 @@ export function PickEvents({
       ) : null}
 
       {notice ? (
-        <p role="status" className="rounded-input border border-amber/30 bg-amber/10 px-4 py-3 text-small text-text">
+        <p role="status" className="rounded-[12px] bg-amber/[0.12] px-3 py-2.5 text-[13px] font-strong leading-[18px] text-amber">
           {notice}
         </p>
       ) : null}
@@ -304,7 +304,7 @@ export function PickEvents({
         </button>
       </div>
 
-      <p className="text-tiny text-text-muted">
+      <p className="text-[12.5px] text-white/[0.62]">
         Each one is made on its own, so an event that cannot take this listing costs you that event and nothing else.
         They are made as drafts: nobody can see one until it is published, and publishing happens one listing at a time.
       </p>

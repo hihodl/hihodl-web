@@ -445,3 +445,27 @@ export function ListRow({ href, title, meta, right, onClick }: { href?: string; 
     );
   return <div className={cls}>{inner}</div>;
 }
+
+/* ── Class names for screens still written in the web's old class vocabulary (appended) ── */
+
+/** A white plate, 42 high: an action inside a screen that moves on without taking money (TravelCta primary, small). */
+export const btnWhite =
+  "inline-flex h-[42px] items-center justify-center gap-2 whitespace-nowrap rounded-[21px] bg-[#F1F5F9] px-[18px] text-[14px] font-strong text-[#0A1420] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:bg-white/[0.07] disabled:text-white/60";
+/** Glass, 42 high: the quieter action next to it (TravelEmpty's action). */
+export const btnGlassPill =
+  "inline-flex h-[42px] items-center justify-center gap-2 whitespace-nowrap rounded-[21px] border border-white/[0.22] bg-white/10 px-[18px] text-[14px] font-strong text-white transition-colors hover:bg-white/[0.14] disabled:cursor-not-allowed disabled:opacity-45";
+/** The one amber plate, 42 high: publishing, from inside a list. */
+export const btnAmberPill =
+  "inline-flex h-[42px] items-center justify-center gap-2 whitespace-nowrap rounded-[21px] bg-amber px-[18px] text-[14px] font-strong text-[#0F0F1A] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:bg-white/[0.07] disabled:text-white/60";
+/** The app's Card as a plain box (no flex), for a list item that lays itself out. */
+export const cardBox = "rounded-[18px] border border-white/10 bg-white/[0.06]";
+/** The app's Tag as a class, by the old pill names: calm, good (green) or caution (amber). */
+const tagBase = "inline-flex h-[22px] shrink-0 items-center gap-1 whitespace-nowrap rounded-[11px] px-[9px] text-[11.5px] font-strong tracking-[0.1px]";
+export const tagCls = {
+  neutral: `${tagBase} bg-white/[0.07] text-white/[0.62]`,
+  open: `${tagBase} bg-white/[0.07] text-white/[0.62]`,
+  held: `${tagBase} bg-amber/[0.12] text-amber`,
+  sold: `${tagBase} bg-[rgba(14,155,104,0.14)] text-[#2FBE8A]`,
+  attention: `${tagBase} bg-amber/[0.12] text-amber`,
+  done: `${tagBase} bg-[rgba(14,155,104,0.14)] text-[#2FBE8A]`,
+} as const;

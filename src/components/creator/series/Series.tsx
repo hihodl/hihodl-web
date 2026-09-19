@@ -33,7 +33,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
-import { btnPrimary, btnSmall, btnSmallSecondary, card, pill } from "@/components/ad-space/ui";
+import { btnWhite as btnPrimary, btnWhite as btnSmall, btnGlassPill as btnSmallSecondary, cardBox as card, tagCls as pill } from "@/components/app/spaces/kit";
 import { closesText } from "@/lib/ad-space/format";
 import { spacesPath } from "@/lib/app/paths";
 import { describeCreatorError } from "@/lib/creator/api";
@@ -151,7 +151,7 @@ export function ListingSeries({ space, onChanged }: { space: SpaceView; onChange
         />
       ) : spaces.length === 0 ? (
         <div className="flex flex-col gap-5">
-          <p className="text-small text-text-muted">{space.event?.name ?? space.eventName ?? "No event"}</p>
+          <p className="text-[14.5px] text-white/[0.62]">{space.event?.name ?? space.eventName ?? "No event"}</p>
           <div>
             <button type="button" className={btnSmall} onClick={() => setPicking(true)}>
               Add events
@@ -168,8 +168,8 @@ export function ListingSeries({ space, onChanged }: { space: SpaceView; onChange
                 <li key={s.id} className={`${card} flex flex-col gap-3 p-5`}>
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-body text-text">{s.event?.name ?? s.eventName ?? "No event"}</p>
-                      <p className="mt-1 text-tiny text-text-muted">
+                      <p className="text-[15.5px] text-white">{s.event?.name ?? s.eventName ?? "No event"}</p>
+                      <p className="mt-1 text-[12.5px] text-white/[0.62]">
                         {s.status === "draft" ? "Only you can see this" : closesText(s.closesAt, s.status === "closed")}
                         {" · "}
                         {s.totals.sold} of {s.totals.positions} sold
@@ -188,7 +188,7 @@ export function ListingSeries({ space, onChanged }: { space: SpaceView; onChange
                   </div>
 
                   {outcome ? (
-                    <p className={`text-small ${outcome.live ? "text-success" : "text-amber"}`}>
+                    <p className={`text-[14.5px] ${outcome.live ? "text-[#2FBE8A]" : "text-amber"}`}>
                       {outcome.live ? "Published" : "Still a draft. "}
                       {outcome.message}
                     </p>
@@ -211,7 +211,7 @@ export function ListingSeries({ space, onChanged }: { space: SpaceView; onChange
 
           {drafts.length > 0 ? (
             <div className="flex flex-col gap-3">
-              <p className="text-small text-text-muted">
+              <p className="text-[14.5px] text-white/[0.62]">
                 {drafts.length === 1 ? "1 draft in this series." : `${drafts.length} drafts in this series.`}
               </p>
               <div>
@@ -227,7 +227,7 @@ export function ListingSeries({ space, onChanged }: { space: SpaceView; onChange
           ) : null}
 
           {full ? (
-            <p className="text-small text-text-muted">
+            <p className="text-[14.5px] text-white/[0.62]">
               {LIMITS.SERIES_MAX} events maximum.
             </p>
           ) : (
@@ -244,8 +244,8 @@ export function ListingSeries({ space, onChanged }: { space: SpaceView; onChange
             itself is never touched, and the sentence says so before the click.
           */}
           {leaving ? (
-            <div className="flex flex-col gap-3 border-t border-[color:var(--color-hairline)] pt-5">
-              <p className="text-small text-text">Take this one out of the series? It keeps its link and spots.</p>
+            <div className="flex flex-col gap-3 border-t border-white/[0.08] pt-5">
+              <p className="text-[14.5px] text-white">Take this one out of the series? It keeps its link and spots.</p>
               <div className="flex flex-wrap gap-3">
                 <button type="button" className={btnSmall} onClick={() => void leave()}>
                   Take it out
@@ -256,7 +256,7 @@ export function ListingSeries({ space, onChanged }: { space: SpaceView; onChange
               </div>
             </div>
           ) : (
-            <p className="text-tiny text-text-muted">
+            <p className="text-[12.5px] text-white/[0.62]">
               <button
                 type="button"
                 className="underline decoration-dotted underline-offset-4"
@@ -270,7 +270,7 @@ export function ListingSeries({ space, onChanged }: { space: SpaceView; onChange
       )}
 
       {notice ? (
-        <p role="status" className="mt-5 rounded-input border border-amber/30 bg-amber/10 px-4 py-3 text-small text-text">
+        <p role="status" className="mt-5 rounded-[12px] bg-amber/[0.12] px-3 py-2.5 text-[13px] font-strong leading-[18px] text-amber">
           {notice}
         </p>
       ) : null}
