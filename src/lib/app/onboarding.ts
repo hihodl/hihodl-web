@@ -123,6 +123,14 @@ export async function readFacts(): Promise<Facts> {
   };
 }
 
+/**
+ * Linking a phone is mandatory only once the Android build that can link is
+ * on Play: before that, an Android user could never finish onboarding. Until
+ * then it is offered from Account → Your phone, and Withdraw still asks for it
+ * (the server answers LINK_YOUR_PHONE_FIRST). Set to "1" with that release.
+ */
+const LINK_REQUIRED = process.env.NEXT_PUBLIC_LINK_REQUIRED === "1";
+
 /** Whether the web wallet is one this person should be offered now. */
 export function walletToMake(f: Facts): boolean {
   const w = f.wallet;
@@ -142,7 +150,7 @@ export function stepsFor(f: Facts, c: Choices): StepKey[] {
   if (f.canPasskey && !f.hasPasskey) required.push("passkey");
   if (!f.hasCodes) required.push("recovery");
   if (walletToMake(f) && !c.wallet) required.push("wallet");
-  if (f.linkedPhones === 0) required.push("link");
+  if (LINK_REQUIRED && f.linkedPhones === 0) required.push("link");
   if (required.length === 0) return [];
 
   const out: StepKey[] = [];

@@ -18,6 +18,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { QrCode } from "@/components/ad-space/qr";
+import { useHoldWallet } from "@/lib/app/hold-wallet";
 import { useShell } from "@/components/app/Shell";
 import { Alert, glass, Skeleton } from "@/components/app/ui";
 import {
@@ -208,14 +209,19 @@ function WalletOnAnotherAccount() {
 /* ── An app user ──────────────────────────────────────────────────── */
 
 function AppWallet() {
+  const w = useHoldWallet();
+  if (w.loading) return <Skeleton className="mx-auto h-[240px] w-full max-w-[640px]" />;
   return (
-    <Card title="Your wallet is in the HOLD app">
-      <Note>
-        Your account already has a wallet, created in the HOLD app. To keep one wallet per person, the web never makes a
-        second one and never touches the one you have.
-      </Note>
-      <Note>Open the HOLD app to turn on your wallet on the web.</Note>
-    </Card>
+    <div className="flex flex-col gap-4">
+      {w.solana ? <Receive address={w.solana} /> : null}
+      <Card title="Your wallet is in the HOLD app">
+        <Note>
+          This account&apos;s wallet was made in the HOLD app, and this is its Solana address: sponsors and deposits reach it
+          here. The web never makes a second wallet and never holds this one&apos;s keys.
+        </Note>
+        <Note>Send, swap and withdraw in the HOLD app.</Note>
+      </Card>
+    </div>
   );
 }
 
@@ -448,7 +454,7 @@ function Home({ address, status, onChanged }: { address: string; status: WalletS
   );
 }
 
-function Receive({ address, onBack }: { address: string; onBack: () => void }) {
+function Receive({ address, onBack }: { address: string; onBack?: () => void }) {
   const [copied, setCopied] = useState(false);
   const copy = async () => {
     try {
