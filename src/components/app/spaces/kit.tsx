@@ -301,3 +301,57 @@ export function Empty({ icon, title, body, action }: { icon: IonName; title: str
 /** TravelEmpty's action: a glass pill, 42 high. */
 export const emptyBtn =
   "inline-flex h-[42px] items-center justify-center rounded-[21px] border border-white/[0.22] bg-white/10 px-[18px] text-[14px] font-strong tracking-[-0.1px] text-white transition-colors hover:bg-white/[0.14]";
+
+/* ── The app's format.ts and EventLine (appended) ────────────────── */
+
+/** formatCents: "$1,200" or "$1,200.50"; "—" for nothing. */
+export function centsText(cents: number | null | undefined): string {
+  if (cents == null || !Number.isFinite(cents)) return "—";
+  const d = cents / 100;
+  const whole = Number.isInteger(d);
+  return `$${d.toLocaleString("en-US", { minimumFractionDigits: whole ? 0 : 2, maximumFractionDigits: 2 })}`;
+}
+
+/** formatDateTime: "Wed, 7 Oct, 10:00". */
+export function dateTimeText(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+
+/** formatDay: "7 Oct 2026". */
+export function dayText(day: string | null | undefined): string {
+  if (!day) return "—";
+  const d = new Date(`${day.slice(0, 10)}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return day;
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+}
+
+/** formatEventDates: "7–8 Oct", "30 Sep – 2 Oct", the year only when it is not this one. */
+export function eventDatesText(startsOn: string, endsOn: string): string {
+  const a = Date.parse(`${startsOn.slice(0, 10)}T00:00:00Z`);
+  const b0 = Date.parse(`${(endsOn || startsOn).slice(0, 10)}T00:00:00Z`);
+  const b = Number.isFinite(b0) ? b0 : a;
+  if (!Number.isFinite(a)) return startsOn || "";
+  const da = new Date(a);
+  const db = new Date(b);
+  const m = (d: Date) => d.toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" });
+  const thisYear = new Date().getUTCFullYear();
+  if (da.getUTCFullYear() !== db.getUTCFullYear()) return `${da.getUTCDate()} ${m(da)} ${da.getUTCFullYear()} – ${db.getUTCDate()} ${m(db)} ${db.getUTCFullYear()}`;
+  const year = db.getUTCFullYear() !== thisYear ? ` ${db.getUTCFullYear()}` : "";
+  if (a === b) return `${da.getUTCDate()} ${m(da)}${year}`;
+  if (da.getUTCMonth() === db.getUTCMonth()) return `${da.getUTCDate()}–${db.getUTCDate()} ${m(db)}${year}`;
+  return `${da.getUTCDate()} ${m(da)} – ${db.getUTCDate()} ${m(db)}${year}`;
+}
+
+/** EventLine (EventParts): a calendar icon and "Name · City · 7–8 Oct", 12.5/600 muted. */
+export function EventLine({ event }: { event: { name: string; city?: string | null; startsOn?: string | null; endsOn?: string | null } }) {
+  const when = event.startsOn ? eventDatesText(event.startsOn, event.endsOn ?? event.startsOn) : "";
+  return (
+    <div className="flex min-w-0 items-center gap-1.5">
+      <Ion name="calendar-outline" size={13} className="shrink-0 text-white/[0.62]" />
+      <span className="min-w-0 flex-1 truncate text-[12.5px] font-strong text-white/[0.62]">{[event.name, event.city, when].filter(Boolean).join(" · ")}</span>
+    </div>
+  );
+}

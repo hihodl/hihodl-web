@@ -27,8 +27,9 @@ import { usePayout } from "@/lib/app/spaces-data";
 import { useProductHref } from "../base";
 import { CopyButton } from "../front/kit";
 import { MoreChainsLine } from "../MoreChains";
+import { Ion, type IonName } from "../ion";
 import { useShell } from "../Shell";
-import { glass } from "../ui";
+import { Card, SectionLabel, Tag } from "./kit";
 
 type State = "done" | "todo" | "wait" | "unknown";
 
@@ -130,24 +131,26 @@ function useItems(): Item[] | null {
   return items;
 }
 
-const MARK: Record<State, { cls: string; glyph: string; word: string }> = {
-  done: { cls: "bg-success/20 text-success", glyph: "✓", word: "Done" },
-  todo: { cls: "bg-amber/20 text-amber", glyph: "!", word: "To do" },
-  wait: { cls: "bg-amber/20 text-amber", glyph: "…", word: "Waiting" },
-  unknown: { cls: "bg-white/10 text-[#9FB7C2]", glyph: "·", word: "Not yet" },
+/** Each state as the app's XAccountPanel `Fact` draws it: an Ionicon, green when done, amber while it waits on you. */
+const MARK: Record<State, { icon: IonName; cls: string; word: string }> = {
+  done: { icon: "checkmark-circle", cls: "text-[#2FBE8A]", word: "Done" },
+  todo: { icon: "alert-circle-outline", cls: "text-amber", word: "To do" },
+  wait: { icon: "time-outline", cls: "text-amber", word: "Waiting" },
+  unknown: { icon: "ellipse-outline", cls: "text-white/55", word: "Not yet" },
 };
 
 function Mark({ state }: { state: State }) {
   const m = MARK[state];
   return (
-    <span className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px] text-[11px] font-semibold ${m.cls}`} aria-label={m.word} role="img">
-      {m.glyph}
+    <span role="img" aria-label={m.word} className={`flex shrink-0 ${m.cls}`}>
+      <Ion name={m.icon} size={18} />
     </span>
   );
 }
 
+/** The app's Chip, as a button: 34 high, radius half of it. */
 const actionCls =
-  "inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-[9px] border border-amber/40 bg-amber/10 px-3 text-tiny font-medium text-amber transition-colors hover:bg-amber/20";
+  "inline-flex h-[34px] shrink-0 items-center justify-center whitespace-nowrap rounded-[17px] border border-white/[0.14] bg-white/[0.06] px-[13px] text-[13.5px] font-strong text-white transition-colors hover:bg-white/10";
 
 function ActionButton({ action }: { action: Action }) {
   if (action.copy) return <CopyButton value={action.copy} label={action.label} className={actionCls} />;
@@ -155,6 +158,19 @@ function ActionButton({ action }: { action: Action }) {
     <Link href={action.href ?? "#"} className={actionCls}>
       {action.label}
     </Link>
+  );
+}
+
+function Row({ item }: { item: Item }) {
+  return (
+    <li className="flex min-w-0 items-center gap-2.5 py-2.5">
+      <Mark state={item.state} />
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="truncate text-[14.5px] font-strong text-white">{item.label}</span>
+        <span className={`truncate text-[12.5px] ${item.state === "todo" || item.state === "wait" ? "text-amber" : "text-white/55"}`}>{item.sub}</span>
+      </span>
+      {item.action && item.state !== "done" ? <ActionButton action={item.action} /> : null}
+    </li>
   );
 }
 
@@ -166,44 +182,42 @@ export function ReadyToPublish({ compact = false }: { compact?: boolean }) {
   const done = items.filter((i) => i.state === "done").length;
 
   if (compact) {
+    // The app's XAccountPanel compact: one Card above the list, only while publishing would be refused.
     if (open.length === 0) return null;
     return (
-      <section aria-label="Before you publish" className={`${glass} flex flex-col gap-2 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-5 sm:px-5`}>
-        <span className="text-tiny font-medium text-text">
-          {open.length === 1 ? "One step before you publish" : `${open.length} steps before you publish`}
-        </span>
-        {open.map((i) => (
-          <span key={i.key} className="flex min-w-0 items-center gap-2">
-            <Mark state={i.state} />
-            <span className="min-w-0 truncate text-tiny text-[#CFE3EC]">{i.sub}</span>
-            {i.action ? <ActionButton action={i.action} /> : null}
-          </span>
-        ))}
+      <section aria-label="Before you publish">
+        <Card>
+          <div className="flex items-center gap-3">
+            <span className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[21px] bg-white/[0.08] text-white">
+              <Ion name="megaphone-outline" size={20} />
+            </span>
+            <p className="min-w-0 flex-1 text-[16px] font-strong tracking-[-0.2px] text-white">
+              {open.length === 1 ? "One step before you publish" : `${open.length} steps before you publish`}
+            </p>
+          </div>
+          <ul className="flex flex-col divide-y divide-white/[0.08]">
+            {open.map((i) => (
+              <Row key={i.key} item={i} />
+            ))}
+          </ul>
+        </Card>
       </section>
     );
   }
 
   return (
-    <section aria-label="Ready to publish" className={`${glass} flex flex-col gap-3 p-5`}>
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-small font-medium text-text">{open.length ? "Before you publish" : "Ready to publish"}</p>
-        <span className={`text-tiny ${open.length ? "text-amber" : "text-success"}`}>
-          {done} of {items.length} done
-        </span>
-      </div>
-      <ul className="flex flex-col divide-y divide-white/[0.06] rounded-[12px] border border-white/[0.08] bg-white/[0.02]">
-        {items.map((i) => (
-          <li key={i.key} className="flex items-center gap-3 px-3 py-2.5">
-            <Mark state={i.state} />
-            <span className="min-w-0 flex-1">
-              <span className="block text-small text-text">{i.label}</span>
-              <span className="block text-tiny text-[#9FB7C2]">{i.sub}</span>
-            </span>
-            {i.action && i.state !== "done" ? <ActionButton action={i.action} /> : null}
-          </li>
-        ))}
-      </ul>
-      <MoreChainsLine />
+    <section aria-label="Ready to publish" className="flex flex-col gap-2.5">
+      <SectionLabel right={<Tag label={`${done} of ${items.length} done`} tone={open.length ? "caution" : "good"} />}>
+        {open.length ? "Before you publish" : "Ready to publish"}
+      </SectionLabel>
+      <Card>
+        <ul className="flex flex-col divide-y divide-white/[0.08]">
+          {items.map((i) => (
+            <Row key={i.key} item={i} />
+          ))}
+        </ul>
+        <MoreChainsLine />
+      </Card>
     </section>
   );
 }
