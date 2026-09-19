@@ -135,7 +135,7 @@ export function ListingHead({ space }: { space: Space }) {
         )}
       </div>
       <CreatorChip creator={space.creator} />
-      <SpaceSiblings siblings={space.siblings} />
+      <SpaceSiblings siblings={space.siblings} handle={space.creator.xHandle} eventName={space.event?.name ?? space.eventName} />
     </div>
   );
 }
@@ -270,7 +270,7 @@ export function SpaceStats({ space }: { space: Space }) {
   const money = funding
     ? { label: "Raised", value: funding.raised, sub: `of ${funding.goal} goal · ${funding.percent}%` }
     : !noTotal || totals.committedCents > 0
-      ? { label: "Committed", value: usdFromCents(totals.committedCents), sub: null }
+      ? { label: "Backed by brands", value: usdFromCents(totals.committedCents), sub: null }
       : null;
   const price = startingPrice(space);
   const segments = space.positions.map((p) => segmentTone(p, isTakeover));

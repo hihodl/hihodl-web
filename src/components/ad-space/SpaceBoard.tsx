@@ -274,7 +274,7 @@ export function SpaceBoard({
       {!isService && cardList && (
         <section className="container-page py-12 md:py-16" aria-labelledby="every-spot">
           <h2 id="every-spot" className="font-display text-h3 font-light text-sp-ink md:text-h2">
-            Every spot
+            Pick your spot
           </h2>
           <div className="mt-8">{cardList}</div>
         </section>

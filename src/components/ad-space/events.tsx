@@ -193,23 +193,48 @@ export function tabSubtitle(tab: SpaceTab, eventName: string): string {
   return `Time with creators at ${eventName}`;
 }
 
-/** "Also on the feed: TOKEN2049 short videos". Nothing when there are none. */
-export function SpaceSiblings({ siblings }: { siblings: SpaceSibling[] }) {
+/** What a sibling is, in the brand's words: a spot to wear their logo, content, or time in person. */
+const SIBLING_KIND: Record<SpaceTab, string> = { ground: "Spot", feed: "Content", room: "In person" };
+
+/**
+ * "More from @demo_creator at TOKEN2049": the same creator's other listings at
+ * this event, each a link with what it is. It sells more of THIS creator (a
+ * brand that came for the suitcase may want the videos too), never anybody
+ * else. Nothing when there are none.
+ */
+export function SpaceSiblings({
+  siblings,
+  handle,
+  eventName,
+}: {
+  siblings: SpaceSibling[];
+  handle: string;
+  eventName?: string | null;
+}) {
   if (siblings.length === 0) return null;
   return (
-    <ul className="mb-6 flex flex-col gap-1.5">
-      {siblings.map((s) => (
-        <li key={s.path} className="text-small">
-          <Link href={s.path} className="group text-sp-ink/85 transition-colors duration-180 hover:text-sp-ink">
-            Also {TAB_NAME[s.tab].toLowerCase()}:{" "}
-            <span className="text-sp-ink underline-offset-4 group-hover:underline">{s.title}</span>
-            <span aria-hidden className="ml-1 text-sp-ink/80">
-              &rarr;
-            </span>
-          </Link>
-        </li>
-      ))}
-    </ul>
+    <nav aria-label={`More from @${handle}`} className="mb-6 flex min-w-0 flex-col gap-2.5">
+      <p className="text-tiny uppercase tracking-wider text-sp-ink/80">
+        More from @{handle}
+        {eventName ? ` at ${eventName}` : ""}
+      </p>
+      <ul className="flex min-w-0 flex-wrap gap-2">
+        {siblings.map((s) => (
+          <li key={s.path} className="min-w-0 max-w-full">
+            <Link
+              href={s.path}
+              className="group inline-flex h-10 max-w-full items-center gap-2 whitespace-nowrap rounded-[20px] border border-[color:var(--color-hairline-strong)] bg-sp-ink/[0.06] pl-3 pr-3.5 text-small text-sp-ink transition-colors duration-180 hover:bg-sp-ink/[0.12]"
+            >
+              <span className="shrink-0 text-tiny uppercase tracking-wider text-sp-ink/80">{SIBLING_KIND[s.tab]}</span>
+              <span className="min-w-0 truncate">{s.title}</span>
+              <span aria-hidden className="shrink-0 text-sp-ink/80 transition-transform duration-180 group-hover:translate-x-0.5">
+                &rarr;
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
   );
 }
 
