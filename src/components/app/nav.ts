@@ -97,7 +97,7 @@ export const MAIN_GROUPS: readonly NavGroup[] = [
 
 export const MAIN_FOOT: readonly NavItem[] = [
   { key: "account", label: "Account", path: "/account", icon: IconAccount, keywords: "profile photo name username email x twitter payout wallet address" },
-  { key: "settings", label: "Settings", path: "/settings", icon: IconSettings, keywords: "sign out log out terms privacy support help sidebar display" },
+  { key: "settings", label: "Settings", path: "/settings", icon: IconSettings, keywords: "sign out log out terms privacy support help sidebar display security passkeys recovery codes personalization your pages payout x account profile" },
 ];
 
 /* ── Spaces ───────────────────────────────────────────────────────── */
