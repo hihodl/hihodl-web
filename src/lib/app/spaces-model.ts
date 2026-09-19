@@ -9,6 +9,7 @@ import {
   type DeliverableView,
   type OfferView,
   type PositionView,
+  type SalesListing,
   type SalesSummary,
   type SpaceCard,
   type SpaceView,
@@ -359,6 +360,24 @@ export function paidSales(sales: SalesSummary | null | undefined): SaleRow[] {
   return (sales?.recent ?? []).filter((r) => SALE_STATUSES.includes(r.status));
 }
 
-export function receivedCents(rows: readonly SaleRow[]): number {
+export function receivedCents(rows: readonly { receivedUsdc: string }[]): number {
   return rows.reduce((n, r) => n + cents(r.receivedUsdc), 0);
+}
+
+/**
+ * The server's per-listing totals. A server older than them sends none, and
+ * then they are rebuilt from `recent` — the only case where a screen adds up
+ * sales itself.
+ */
+export function listingTotals(sales: SalesSummary | null | undefined): SalesListing[] {
+  if (sales?.listings) return sales.listings;
+  return byListing(paidSales(sales), (r) => r.spaceId).map((g) => ({
+    spaceId: g.key,
+    spaceTitle: g.items[0].spaceTitle,
+    serviceName: g.items[0].serviceName,
+    receivedUsdc: (receivedCents(g.items) / 100).toFixed(2),
+    orders: g.items.length,
+    soldSpots: g.items.filter((r) => r.status === "paid").length,
+    lastPaidAt: g.items[0].paidAt,
+  }));
 }

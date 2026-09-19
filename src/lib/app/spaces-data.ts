@@ -28,6 +28,7 @@ import {
   teamOwed,
   teamWork,
   getTeam,
+  getCreatorSettings,
 } from "@/lib/creator/listings";
 import { useCreatorSession } from "@/lib/creator/session";
 import { getWalletStatus } from "@/lib/wallet/api";
@@ -105,12 +106,16 @@ export function useRefresh(): (...names: string[]) => Promise<unknown> {
 export const useListings = () => useRead("listings", async () => (await myListings()).spaces);
 export const useOffers = (on = true) => useRead(on ? "offers" : null, async () => (await receivedOffers()).offers);
 export const useSales = (on = true) => useRead(on ? "sales" : null, async () => (await getSales()).sales);
+/** One listing's sales, all of them rather than the latest across every listing. */
+export const useListingSales = (spaceId: string | null) =>
+  useRead(spaceId ? "sales" : null, async () => (await getSales(spaceId!)).sales, spaceId ?? "");
 export const useSeats = () => useRead("seats", async () => (await mySeats()).seats);
 export const useWork = (on = true) => useRead(on ? "work" : null, async () => (await teamWork()).work);
 export const useOwed = (on = true) => useRead(on ? "owed" : null, async () => (await teamOwed()).owed);
 export const useEarnings = (on = true) => useRead(on ? "earnings" : null, async () => (await teamEarnings()).earnings);
 export const useTeam = (on = true) => useRead(on ? "team" : null, async () => (await getTeam()).team);
 export const useX = () => useRead("x", getXAccount);
+export const useCreatorSettings = () => useRead("settings", async () => (await getCreatorSettings()).settings);
 export const usePayout = (on = true) => useRead(on ? "payout" : null, getPayoutAddress);
 export const useTemplates = (on = true) => useRead(on ? "templates" : null, getTemplates);
 /** The person: profile, username, photo (GET /me). */

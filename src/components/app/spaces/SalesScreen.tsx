@@ -9,6 +9,10 @@
  * each order — not what sponsors were charged — so every total says
  * "received".
  *
+ * Every total is the server's (`listings`, over all the creator's sales), not
+ * a sum of the latest orders the page happens to hold. An event's figure is
+ * its listings' totals added; a listing's page reads all of its own sales.
+ *
  *   /sales                 one card per event, and "Not tied to an event"
  *   /sales?event=<slug>    that event's listings
  *   /sales?listing=<id>    that listing's sales
@@ -16,9 +20,9 @@
 
 import { useMemo } from "react";
 
-import type { PositionView } from "@/lib/creator/listing";
-import { byEvent, byListing, cents, kindsText, NO_EVENT, paidSales, receivedCents, type SaleRow } from "@/lib/app/spaces-model";
-import { useListing, useSales } from "@/lib/app/spaces-data";
+import type { PositionView, SalesListing } from "@/lib/creator/listing";
+import { byEvent, cents, kindsText, listingTotals, NO_EVENT, paidSales, type SaleRow } from "@/lib/app/spaces-model";
+import { useListing, useListingSales, useSales } from "@/lib/app/spaces-data";
 
 import { useHref } from "../base";
 import { IconSales } from "../icons";
@@ -40,43 +44,44 @@ import {
 
 const salesText = (n: number) => `${n} ${n === 1 ? "sale" : "sales"}`;
 
+/** Server totals added across listings: an event is the listings under it. */
+const sumReceived = (ls: readonly SalesListing[]) => ls.reduce((n, l) => n + cents(l.receivedUsdc), 0);
+const sumOrders = (ls: readonly SalesListing[]) => ls.reduce((n, l) => n + l.orders, 0);
+
 export function SalesScreen({ event, listing }: { event: string | null; listing: string | null }) {
   const sales = useSales();
   const refs = useListingRefs();
-  const rows = useMemo(() => paidSales(sales.data), [sales.data]);
+  const totals = useMemo(() => listingTotals(sales.data), [sales.data]);
 
   if (!sales.data) {
     return sales.error ? <ReadError error={sales.error} /> : <Skeleton className="h-[260px]" />;
   }
-  // `recent` is the server's latest orders, not all of them: say so when it is cut.
-  const partial = rows.length < sales.data.orders;
-  const refOf = (id: string, row?: SaleRow) => refs.get(id) ?? unknownListing(id, row?.serviceName || row?.spaceTitle || "Listing");
+  const refOf: RefOf = (id, named) => refs.get(id) ?? unknownListing(id, named?.serviceName || named?.spaceTitle || "Listing");
 
-  if (listing) return <ListingSales spaceId={listing} rows={rows.filter((r) => r.spaceId === listing)} refOf={refOf} />;
-  if (event) return <EventSales eventKey={event} rows={rows} refOf={refOf} />;
+  if (listing) return <ListingSales spaceId={listing} total={totals.find((l) => l.spaceId === listing) ?? null} refOf={refOf} />;
+  if (event) return <EventSales eventKey={event} totals={totals} refOf={refOf} />;
 
-  const groups = byEvent(rows, (r) => r.spaceId, refs).sort(
-    (a, b) => Number(a.key === NO_EVENT) - Number(b.key === NO_EVENT) || receivedCents(b.items) - receivedCents(a.items),
+  const groups = byEvent(totals, (l) => l.spaceId, refs).sort(
+    (a, b) => Number(a.key === NO_EVENT) - Number(b.key === NO_EVENT) || sumReceived(b.items) - sumReceived(a.items),
   );
-  return <EventGrid groups={groups} refOf={refOf} received={sales.data.receivedUsdc} partial={partial} />;
+  return <EventGrid groups={groups} refOf={refOf} received={sales.data.receivedUsdc} orders={sales.data.orders} />;
 }
 
-type RefOf = (id: string, row?: SaleRow) => ReturnType<typeof unknownListing>;
+type RefOf = (id: string, named?: { spaceTitle: string; serviceName: string | null }) => ReturnType<typeof unknownListing>;
 
 function EventGrid({
   groups,
   refOf,
   received,
-  partial,
+  orders,
 }: {
-  groups: { key: string; items: SaleRow[] }[];
+  groups: { key: string; items: SalesListing[] }[];
   refOf: RefOf;
   received: string;
-  partial: boolean;
+  orders: number;
 }) {
   const href = useHref();
   const paged = usePaged(groups, groups.length);
-  const total = groups.reduce((n, g) => n + g.items.length, 0);
 
   if (groups.length === 0) {
     return (
@@ -89,12 +94,11 @@ function EventGrid({
     <div className="flex flex-col gap-4">
       <p className="flex flex-wrap items-baseline gap-x-2 text-tiny text-[#9FB7C2]">
         <span className="text-[18px] font-medium tabular-nums text-text">{dollars(cents(received))}</span>
-        received · {salesText(total)}
-        {partial ? ` · the cards add up your latest ${total}` : ""}
+        received · {salesText(orders)}
       </p>
       <CardGrid>
         {paged.shown.map((g) => {
-          const listings = byListing(g.items, (r) => r.spaceId).map((l) => refOf(l.key, l.items[0]));
+          const listings = g.items.map((l) => refOf(l.spaceId, l));
           return (
             <EventCard
               key={g.key}
@@ -102,8 +106,8 @@ function EventGrid({
               event={listings[0]?.event ?? null}
               icon={IconSales}
               lines={[kindsText(listings.map((l) => l.kind)) || "Listings"]}
-              value={dollars(receivedCents(g.items))}
-              note={salesText(g.items.length)}
+              value={dollars(sumReceived(g.items))}
+              note={salesText(sumOrders(g.items))}
             />
           );
         })}
@@ -113,11 +117,12 @@ function EventGrid({
   );
 }
 
-function EventSales({ eventKey, rows, refOf }: { eventKey: string; rows: SaleRow[]; refOf: RefOf }) {
+function EventSales({ eventKey, totals, refOf }: { eventKey: string; totals: SalesListing[]; refOf: RefOf }) {
   const href = useHref();
-  const here = rows.filter((r) => (refOf(r.spaceId, r).event?.key ?? NO_EVENT) === eventKey);
-  const listings = byListing(here, (r) => r.spaceId).sort((a, b) => receivedCents(b.items) - receivedCents(a.items));
-  const paged = usePaged(listings, eventKey);
+  const here = totals
+    .filter((l) => (refOf(l.spaceId, l).event?.key ?? NO_EVENT) === eventKey)
+    .sort((a, b) => cents(b.receivedUsdc) - cents(a.receivedUsdc));
+  const paged = usePaged(here, eventKey);
   const event = here[0] ? refOf(here[0].spaceId, here[0]).event : null;
 
   return (
@@ -126,9 +131,9 @@ function EventSales({ eventKey, rows, refOf }: { eventKey: string; rows: SaleRow
         back={href("/sales")}
         crumb="Sales"
         title={eventName(event)}
-        right={here.length ? <p className="text-tiny tabular-nums text-[#9FB7C2]">{dollars(receivedCents(here))} received</p> : null}
+        right={here.length ? <p className="text-tiny tabular-nums text-[#9FB7C2]">{dollars(sumReceived(here))} received</p> : null}
       />
-      {listings.length === 0 ? (
+      {here.length === 0 ? (
         <Panel>
           <EmptyState title="No sales here." />
         </Panel>
@@ -136,15 +141,15 @@ function EventSales({ eventKey, rows, refOf }: { eventKey: string; rows: SaleRow
         <>
           <CardGrid>
             {paged.shown.map((l) => {
-              const ref = refOf(l.key, l.items[0]);
+              const ref = refOf(l.spaceId, l);
               return (
                 <ListingFigureCard
-                  key={l.key}
-                  href={`${href("/sales")}?listing=${encodeURIComponent(l.key)}`}
+                  key={l.spaceId}
+                  href={`${href("/sales")}?listing=${encodeURIComponent(l.spaceId)}`}
                   listing={ref}
                   line={ref.kind ? KIND_NAME[ref.kind] : "Listing"}
-                  value={dollars(receivedCents(l.items))}
-                  note={salesText(l.items.length)}
+                  value={dollars(cents(l.receivedUsdc))}
+                  note={salesText(l.orders)}
                 />
               );
             })}
@@ -159,10 +164,13 @@ function EventSales({ eventKey, rows, refOf }: { eventKey: string; rows: SaleRow
 /** Eight rows: a listing's sales page like its cards do, and never scroll. */
 const ROWS = 8;
 
-function ListingSales({ spaceId, rows, refOf }: { spaceId: string; rows: SaleRow[]; refOf: RefOf }) {
+function ListingSales({ spaceId, total, refOf }: { spaceId: string; total: SalesListing | null; refOf: RefOf }) {
   const href = useHref();
-  const ref = refOf(spaceId, rows[0]);
-  // Who paid and for what live on the listing's positions, not on the order.
+  const ref = refOf(spaceId, total ?? undefined);
+  // Every sale of this one listing, not the latest across all of them.
+  const sales = useListingSales(spaceId);
+  const rows = useMemo(() => paidSales(sales.data).filter((r) => r.spaceId === spaceId), [sales.data, spaceId]);
+  // What each sale bought lives on the listing's positions, not on the order.
   const space = useListing(spaceId);
   const positions = useMemo(() => new Map((space.data?.positions ?? []).map((p) => [p.zoneKey, p])), [space.data]);
   const paged = usePaged(rows, spaceId, ROWS);
@@ -174,8 +182,14 @@ function ListingSales({ spaceId, rows, refOf }: { spaceId: string; rows: SaleRow
         crumb={eventName(ref.event)}
         title={ref.title}
       />
-      <Panel className="w-full max-w-[760px]" title="Sales" meta={rows.length ? `${salesText(rows.length)} · ${dollars(receivedCents(rows))} received` : ""}>
-        {rows.length === 0 ? (
+      <Panel
+        className="w-full max-w-[760px]"
+        title="Sales"
+        meta={total ? `${salesText(total.orders)} · ${dollars(cents(total.receivedUsdc))} received` : ""}
+      >
+        {!sales.data ? (
+          sales.error ? <ReadError error={sales.error} /> : <Skeleton className="h-[200px]" />
+        ) : rows.length === 0 ? (
           <EmptyState title="No sales on this listing." />
         ) : (
           <ul className="flex flex-col">
@@ -193,14 +207,16 @@ function ListingSales({ spaceId, rows, refOf }: { spaceId: string; rows: SaleRow
 }
 
 function SaleLine({ row, position, loading }: { row: SaleRow; position: PositionView | null; loading: boolean }) {
-  // A spot taken over since: this order paid, and the next sponsor holds it now.
-  const sponsor = row.status === "outbid" ? "Outbid since" : position?.sponsor?.name ?? (loading ? "…" : "Sponsor");
+  // The name comes with the sale. The position's is only a fallback for a
+  // server older than that, and only while this order still holds the spot.
+  const outbid = row.status === "outbid";
+  const sponsor = row.sponsorName ?? (outbid ? null : position?.sponsor?.name) ?? (loading && row.sponsorName === undefined ? "…" : "Sponsor");
   const what = position?.title ?? position?.label ?? row.zoneKey;
   return (
     <li className="flex min-w-0 items-center gap-3 border-t border-white/[0.06] py-3 first:border-t-0 first:pt-0">
       <div className="min-w-0 flex-1">
         <p className="truncate text-small text-text">{sponsor}</p>
-        <p className="mt-0.5 truncate text-tiny text-[#9FB7C2]">{what}</p>
+        <p className="mt-0.5 truncate text-tiny text-[#9FB7C2]">{outbid ? `${what} · outbid since` : what}</p>
       </div>
       <div className="shrink-0 text-right">
         <p className="text-small tabular-nums text-text">{row.receivedUsdc} USDC</p>

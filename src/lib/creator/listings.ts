@@ -232,8 +232,9 @@ export function setListingFloor(spaceId: string, minOfferCents: number | null): 
 
 /* ── What arrived, and what you owe ───────────────────────────────── */
 
-export function getSales(): Promise<{ sales: SalesSummary }> {
-  return call<{ sales: SalesSummary }>("ad-space/sales");
+/** With a listing, `recent` is all of that listing's sales; the totals stay the creator's whole. */
+export function getSales(spaceId?: string): Promise<{ sales: SalesSummary }> {
+  return call<{ sales: SalesSummary }>(spaceId ? `ad-space/sales?spaceId=${encodeURIComponent(spaceId)}` : "ad-space/sales");
 }
 
 /** The link that proves one sponsor's spot was delivered. */
@@ -278,6 +279,26 @@ export function removeUpdate(spaceId: string, updateId: string): Promise<{ remov
  * the creator's own address in one transaction the sponsor signs. What a
  * member is owed is the creator's bookkeeping, and the creator pays it.
  */
+
+/**
+ * The creator's Spaces settings. `agencyMode` is what they chose (Creator or
+ * Creative Director); `on` is what is in effect — the choice, or a team that
+ * exists; `chosen` is false until they have ever chosen.
+ */
+export interface CreatorSettings {
+  agencyMode: boolean;
+  chosen: boolean;
+  hasTeam: boolean;
+  on: boolean;
+}
+
+export function getCreatorSettings(): Promise<{ settings: CreatorSettings }> {
+  return call<{ settings: CreatorSettings }>("ad-space/settings");
+}
+
+export function setAgencyMode(agencyMode: boolean): Promise<{ settings: CreatorSettings }> {
+  return call<{ settings: CreatorSettings }>("ad-space/settings", { method: "PATCH", json: { agencyMode } });
+}
 
 /** Everybody on this creator's team, invitations nobody has taken yet included. */
 export function getTeam(): Promise<{ team: TeamMember[] }> {

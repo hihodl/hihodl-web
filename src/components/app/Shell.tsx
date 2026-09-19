@@ -38,7 +38,7 @@ import { useAgency, type Agency } from "@/lib/app/agency";
 import { chosenUsername } from "@/lib/app/me";
 import { useDoor } from "@/lib/app/onboarding";
 import { roleOf, waitingOnYou, type ShellRole } from "@/lib/app/spaces-model";
-import { useListings, useMe, useOffers, useSeats, useTeam, useWork, useX } from "@/lib/app/spaces-data";
+import { useCreatorSettings, useListings, useMe, useOffers, useSeats, useTeam, useWork, useX } from "@/lib/app/spaces-data";
 import { useWalletEnabled } from "@/lib/wallet/enabled";
 
 import { SpacesBaseProvider, useHref, useProductHref, useSpacesBase } from "./base";
@@ -180,6 +180,7 @@ function SignedIn({ session, children }: { session: Session; children: ReactNode
   const work = useWork();
   const team = useTeam();
   const me = useMe();
+  const settings = useCreatorSettings();
   const agency = useAgency(session.user.id, team.data);
   // Asked alongside, never waited for: the shell draws without it.
   const walletPage = useWalletEnabled(session.user.id);
@@ -200,7 +201,8 @@ function SignedIn({ session, children }: { session: Session; children: ReactNode
     listings.data !== undefined &&
     seats.data !== undefined &&
     (x.data !== undefined || x.error) &&
-    (team.data !== undefined || team.error);
+    (team.data !== undefined || team.error) &&
+    (settings.data !== undefined || settings.error);
   const failed = listings.error ?? seats.error;
 
   const state = useMemo<ShellState | null>(() => {
