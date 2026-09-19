@@ -262,7 +262,7 @@ export function Choice<T extends string>({
               {on ? <span className="h-2.5 w-2.5 rounded-[5px] bg-[#F1F5F9]" /> : null}
             </span>
             <span className="flex min-w-0 flex-col gap-[3px]">
-              <span className="block text-[14.5px] font-strong text-white">{o.label}</span>
+              <span className="block text-[14.5px] font-extrabold text-white">{o.label}</span>
               {o.body ? <span className="block text-[13px] leading-[18px] text-white/[0.62]">{o.body}</span> : null}
               {o.disabled && o.why ? <span className="block text-[12.5px] font-strong leading-[17px] text-amber">{o.why}</span> : null}
             </span>
@@ -324,7 +324,7 @@ export function Toggles<T extends string>({
             type="button"
             aria-pressed={on}
             onClick={() => onChange(on ? values.filter((v) => v !== o.value) : [...values, o.value])}
-            className={`inline-flex h-[34px] shrink-0 items-center whitespace-nowrap rounded-[17px] border px-[13px] text-[13.5px] font-strong transition-colors ${
+            className={`inline-flex h-[34px] shrink-0 items-center whitespace-nowrap rounded-[17px] border px-[13px] text-[13.5px] font-bold transition-colors ${
               on ? "border-[#F1F5F9] bg-[#F1F5F9] text-[#0A1420]" : "border-white/[0.14] bg-white/[0.06] text-white/[0.62] hover:bg-white/10"
             }`}
           >
@@ -346,3 +346,7 @@ export function Block({ title, why, children }: { title: string; why?: ReactNode
     </section>
   );
 }
+
+/** A small glass action inside a field or a row (Remove, Change): 36 high, radius half of it. */
+export const btnSmallGlass =
+  "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[18px] border border-white/[0.22] bg-white/10 px-3.5 text-[13px] font-bold text-white transition-colors hover:bg-white/[0.14] disabled:cursor-not-allowed disabled:opacity-45";

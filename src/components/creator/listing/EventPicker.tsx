@@ -21,13 +21,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { btnSmall, btnSmallSecondary, card, pill } from "@/components/ad-space/ui";
+import { ctaPrimary } from "@/components/app/hold";
+import { Ion } from "@/components/app/ion";
+import { Card, Chip, ChipRow, Divider, EventLine, eventDatesText, fieldLabel } from "@/components/app/spaces/kit";
 import { CreatorApiError, describeCreatorError } from "@/lib/creator/api";
 import { EVENT_CATEGORIES, type EventSummary } from "@/lib/creator/listing";
 import { createEvent, searchEvents } from "@/lib/creator/listings";
-import { eventDates } from "@/lib/ad-space/format";
 
-import { Field, Dropdown, Text } from "./parts";
+import { Field, Problems, Text } from "./parts";
 
 const CATEGORY_LABEL: Record<string, string> = {
   crypto: "Crypto",
@@ -92,70 +93,30 @@ export function EventPicker({
     return () => clearTimeout(t);
   }, [query, run]);
 
+  const label = mustPick ? "Event" : "Event (optional)";
+  const typed = query.trim();
+
   if (eventId && picked) {
     return (
-      <div className="flex flex-col gap-3">
-        <div className={`${card} flex flex-wrap items-center justify-between gap-3 p-4`}>
-          <div className="min-w-0">
-            <p className="text-body text-text">{picked.name}</p>
-            <p className="text-tiny text-text-muted">
-              {picked.city} · {eventDates(picked.startsOn, picked.endsOn)}
-            </p>
+      <div className="flex flex-col gap-1.5">
+        <span className={fieldLabel}>{label}</span>
+        <Card>
+          <div className="flex items-center justify-between gap-2.5">
+            <span className="min-w-0 flex-1 truncate text-[15.5px] font-extrabold text-white">{picked.name}</span>
+            <button type="button" onClick={() => onPick(null)} className="shrink-0 text-[13px] font-extrabold text-white hover:opacity-80">
+              Change
+            </button>
           </div>
-          <button type="button" className={btnSmallSecondary} onClick={() => onPick(null)}>
-            Change
-          </button>
-        </div>
+          <EventLine event={picked} />
+        </Card>
       </div>
     );
   }
 
-  return (
-    <div className="flex flex-col gap-4">
-      <Field
-        label="Search for the event"
-        hint="Two letters is enough to start. Conferences, races and festivals other creators have already added come up first."
-        problems={problems}
-        htmlFor="event-search"
-      >
-        <Text id="event-search" value={query} onChange={setQuery} placeholder="TOKEN2049" />
-      </Field>
-
-      {searching ? <p className="text-tiny text-text-muted">Looking…</p> : null}
-
-      {results && results.length > 0 ? (
-        <ul className="flex flex-col gap-2">
-          {results.map((e) => (
-            <li key={e.id}>
-              <button
-                type="button"
-                onClick={() => onPick(e)}
-                className={`${card} flex w-full flex-wrap items-center justify-between gap-3 p-4 text-left transition-colors duration-180 hover:bg-white/[0.06]`}
-              >
-                <span className="min-w-0">
-                  <span className="block text-body text-text">{e.name}</span>
-                  <span className="block text-tiny text-text-muted">
-                    {e.city} · {eventDates(e.startsOn, e.endsOn)}
-                  </span>
-                </span>
-                {e.spaceCount > 0 ? (
-                  <span className={pill.neutral}>
-                    {e.spaceCount} {e.spaceCount === 1 ? "listing" : "listings"}
-                  </span>
-                ) : null}
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-
-      {results && results.length === 0 ? (
-        <p className="text-small text-text-muted">Nothing by that name yet.</p>
-      ) : null}
-
-      {notice ? <p className="text-small text-amber">{notice}</p> : null}
-
-      {adding ? (
+  if (adding) {
+    return (
+      <div className="flex flex-col gap-1.5">
+        <span className={fieldLabel}>{label}</span>
         <AddEvent
           initialName={query}
           onCancel={() => setAdding(false)}
@@ -164,20 +125,46 @@ export function EventPicker({
             onPick(e);
           }}
         />
-      ) : (
-        <div className="flex flex-wrap items-center gap-3">
-          <button type="button" className={btnSmallSecondary} onClick={() => setAdding(true)}>
-            Add the event
-          </button>
-          {!mustPick ? (
-            <span className="text-tiny text-text-muted">or just type its name below</span>
-          ) : null}
-        </div>
-      )}
+      </div>
+    );
+  }
 
-      {!mustPick && !adding ? (
+  const list = results ?? [];
+  return (
+    <div className="flex flex-col gap-3.5">
+      <div className="flex flex-col gap-1.5">
+        <Field label={label} problems={problems} htmlFor="event-search">
+          <Text id="event-search" value={query} onChange={setQuery} placeholder="Search events, like TOKEN2049" />
+        </Field>
+        {typed.length >= 2 ? (
+          <Card className="!gap-0 !py-1.5">
+            {list.map((e, i) => (
+              <div key={e.id}>
+                {i > 0 ? <Divider /> : null}
+                <EventOption event={e} onPick={() => onPick(e)} />
+              </div>
+            ))}
+            {searching && !list.length ? <p className="py-2.5 text-center text-[12px] text-white/55">Looking…</p> : null}
+            {notice ? (
+              <p className="py-2 text-[12px] leading-4 text-white/55">Suggestions aren&rsquo;t loading right now. You can still create the event.</p>
+            ) : results && !searching && !list.length ? (
+              <p className="py-2 text-[12px] leading-4 text-white/55">No event by that name yet.</p>
+            ) : null}
+            {list.length ? <Divider /> : null}
+            <button type="button" onClick={() => setAdding(true)} className="flex items-center gap-2.5 py-[11px] text-left hover:opacity-80">
+              <Ion name="add-circle-outline" size={20} className="shrink-0 text-white" />
+              <span className="min-w-0 flex-1 truncate text-[14.5px] font-extrabold text-white">Create &ldquo;{typed}&rdquo;</span>
+            </button>
+          </Card>
+        ) : null}
+        {typed ? (
+          <p className="text-[12px] leading-4 text-white/55">Pick the event, or create it, so brands looking at that event find your space.</p>
+        ) : null}
+      </div>
+
+      {!mustPick ? (
         <Field
-          label="The event's name"
+          label="Event name (optional)"
           hint="Only used if it is not in the list. A listing with a name and no event still publishes; it just does not show up on that event's page."
           htmlFor="event-name"
         >
@@ -185,6 +172,29 @@ export function EventPicker({
         </Field>
       ) : null}
     </div>
+  );
+}
+
+/** The app's EventOption: the event, "City, CC · dates · N spaces", a chevron. */
+function EventOption({ event, onPick }: { event: EventSummary; onPick: () => void }) {
+  const count = event.spaceCount;
+  return (
+    <button type="button" onClick={onPick} className="flex w-full min-w-0 items-center gap-3 py-[9px] text-left hover:opacity-80">
+      <span aria-hidden className="h-9 w-9 shrink-0 rounded-[10px] bg-[linear-gradient(135deg,#5B7083,#2A3A48)]" />
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="truncate text-[14.5px] font-extrabold text-white">{event.name}</span>
+        <span className="truncate text-[12.5px] font-strong text-white/55">
+          {[
+            [event.city, event.country].filter(Boolean).join(", "),
+            eventDatesText(event.startsOn, event.endsOn),
+            typeof count === "number" ? `${count} ${count === 1 ? "space" : "spaces"}` : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </span>
+      </span>
+      <Ion name="chevron-forward" size={16} className="shrink-0 text-white/55" />
+    </button>
   );
 }
 
@@ -251,79 +261,68 @@ function AddEvent({
 
   if (candidates) {
     return (
-      <div className={`${card} flex flex-col gap-4 p-5`}>
-        <p className="text-small text-text">
-          One of these may already be it. Picking the one that exists puts your listing on the same page as everybody
-          else at that event, which is where sponsors look.
+      <Card>
+        <p className="text-[15px] font-extrabold text-white">Is it one of these?</p>
+        <p className="text-[14.5px] leading-5 text-white/[0.62]">
+          These events already exist. Joining one puts your space on the same event page as every other creator going.
         </p>
-        <ul className="flex flex-col gap-2">
-          {candidates.map((e) => (
-            <li key={e.id}>
-              <button
-                type="button"
-                onClick={() => onAdded(e)}
-                className="flex w-full flex-col rounded-input border border-[color:var(--color-hairline-strong)] px-4 py-3 text-left transition-colors duration-180 hover:bg-white/5"
-              >
-                <span className="text-small text-text">{e.name}</span>
-                <span className="text-tiny text-text-muted">
-                  {e.city} · {eventDates(e.startsOn, e.endsOn)}
-                </span>
-              </button>
-            </li>
+        <div className="flex flex-col">
+          {candidates.map((e, i) => (
+            <div key={e.id}>
+              {i > 0 ? <Divider /> : null}
+              <EventOption event={e} onPick={() => onAdded(e)} />
+            </div>
           ))}
-        </ul>
-        <div className="flex flex-wrap gap-3">
-          <button type="button" className={btnSmall} disabled={busy} onClick={() => void submit(true)}>
-            {busy ? "Adding…" : "None of these — add mine"}
-          </button>
-          <button type="button" className={btnSmallSecondary} onClick={onCancel}>
-            Cancel
-          </button>
         </div>
-        {notice ? <p className="text-small text-amber">{notice}</p> : null}
-      </div>
+        {notice ? <Problems list={[notice]} /> : null}
+        <button type="button" className={ctaPrimary} disabled={busy} onClick={() => void submit(true)}>
+          {busy ? "Creating…" : "No, create mine"}
+        </button>
+        <button type="button" onClick={() => setCandidates(null)} className="self-center py-1 text-[13px] font-extrabold text-white hover:opacity-80">
+          Edit the details
+        </button>
+      </Card>
     );
   }
 
   return (
-    <div className={`${card} flex flex-col gap-4 p-5`}>
-      <p className="text-small text-text-muted">
-        An event is shared: every creator going to it lists under the same one, and it stays after your listing closes.
-      </p>
+    <Card className="!gap-3">
+      <div className="flex items-center justify-between gap-2.5">
+        <p className="text-[15px] font-extrabold text-white">New event</p>
+        <button type="button" aria-label="Cancel" onClick={onCancel} className="flex h-8 w-8 items-center justify-center rounded-[16px] text-white/[0.62] hover:bg-white/10">
+          <Ion name="close" size={20} />
+        </button>
+      </div>
+      <p className="text-[14.5px] leading-5 text-white/[0.62]">It goes live as soon as you create it, and every creator going can join it.</p>
       <Field label="Name" htmlFor="new-event-name">
         <Text id="new-event-name" value={name} onChange={setName} maxLength={120} />
       </Field>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="City" htmlFor="new-event-city">
-          <Text id="new-event-city" value={city} onChange={setCity} maxLength={80} />
-        </Field>
-        <Field label="Country" hint="Two letters, like SG. Leave it out if you are not sure." htmlFor="new-event-country">
-          <Text id="new-event-country" value={country} onChange={setCountry} maxLength={2} />
-        </Field>
-        <Field label="First day" htmlFor="new-event-start">
+      <Field label="City" htmlFor="new-event-city">
+        <Text id="new-event-city" value={city} onChange={setCity} maxLength={80} />
+      </Field>
+      <Field label="Country code (optional)" hint="Two letters, like SG." htmlFor="new-event-country">
+        <Text id="new-event-country" value={country} onChange={setCountry} maxLength={2} />
+      </Field>
+      <div className="grid grid-cols-2 gap-2.5">
+        <Field label="Starts" htmlFor="new-event-start">
           <Text id="new-event-start" type="date" value={startsOn} onChange={setStartsOn} />
         </Field>
-        <Field label="Last day" htmlFor="new-event-end">
+        <Field label="Ends" htmlFor="new-event-end">
           <Text id="new-event-end" type="date" value={endsOn} onChange={setEndsOn} />
         </Field>
       </div>
-      <Field label="What kind of event" htmlFor="new-event-category">
-        <Dropdown
-          id="new-event-category"
-          value={category}
-          onChange={setCategory}
-          options={EVENT_CATEGORIES.map((c) => ({ value: c as string, label: CATEGORY_LABEL[c] ?? c }))}
-        />
-      </Field>
-      {notice ? <p className="text-small text-amber">{notice}</p> : null}
-      <div className="flex flex-wrap gap-3">
-        <button type="button" className={btnSmall} disabled={busy} onClick={() => void submit(false)}>
-          {busy ? "Adding…" : "Add it"}
-        </button>
-        <button type="button" className={btnSmallSecondary} onClick={onCancel}>
-          Cancel
-        </button>
+      <div className="flex flex-col gap-1.5">
+        <span className={fieldLabel}>What kind of event</span>
+        <ChipRow label="What kind of event">
+          {EVENT_CATEGORIES.map((c) => (
+            <Chip key={c} label={CATEGORY_LABEL[c] ?? c} selected={category === c} onClick={() => setCategory(c)} />
+          ))}
+        </ChipRow>
       </div>
-    </div>
+      {notice ? <Problems list={[notice]} /> : null}
+      <button type="button" className={ctaPrimary} disabled={busy} onClick={() => void submit(false)}>
+        {busy ? "Creating…" : "Create event"}
+      </button>
+    </Card>
   );
 }

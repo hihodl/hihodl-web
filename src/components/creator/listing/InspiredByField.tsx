@@ -14,7 +14,10 @@ import { useEffect, useRef, useState } from "react";
 import { searchCreators, type HoldCreatorHit } from "@/lib/creator/analytics";
 import type { InspiredBy } from "@/lib/creator/listing";
 
-import { Field, Text } from "./parts";
+import { Ion } from "@/components/app/ion";
+import { Chip, ChipRow, emptyBtn } from "@/components/app/spaces/kit";
+
+import { btnSmallGlass, Field, Text } from "./parts";
 
 type Mode = "hold" | "x";
 
@@ -69,15 +72,15 @@ export function InspiredByField({
       htmlFor="listing-inspired"
     >
       {value ? (
-        <div className="flex min-w-0 items-center justify-between gap-3 rounded-input border border-[color:var(--color-hairline-strong)] px-4 py-3">
-          <p className="min-w-0 truncate text-small text-text">
-            Inspired by <span className="font-medium">@{value.handle}</span>
-            {value.name ? <span className="text-text-muted"> · {value.name}</span> : null}
-            <span className="text-text-muted"> · {value.kind === "hold" ? "HOLD creator" : "X"}</span>
-          </p>
+        <div className="flex min-w-0 items-center justify-between gap-3 rounded-[14px] border border-white/10 bg-white/[0.06] px-3 py-[11px]">
+          <Ion name={value.kind === "hold" ? "person-circle-outline" : "logo-x"} size={18} className="shrink-0 text-white/[0.62]" />
+          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <span className="truncate text-[14.5px] font-bold text-white">Inspired by @{value.handle}</span>
+            <span className="truncate text-[12.5px] text-white/55">{[value.name, value.kind === "hold" ? "HOLD creator" : "X"].filter(Boolean).join(" · ")}</span>
+          </span>
           <button
             type="button"
-            className="h-9 shrink-0 rounded-[18px] border border-[color:var(--color-hairline-strong)] px-4 text-tiny text-text transition-colors duration-180 hover:bg-white/5"
+            className={btnSmallGlass}
             onClick={() => {
               onChange(null);
               setQuery("");
@@ -88,27 +91,19 @@ export function InspiredByField({
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          <div role="group" aria-label="Who inspired it" className="flex flex-wrap gap-2">
-            {MODES.map((m) => {
-              const on = m.value === mode;
-              return (
-                <button
-                  key={m.value}
-                  type="button"
-                  aria-pressed={on}
-                  onClick={() => {
-                    setMode(m.value);
-                    setHits([]);
-                  }}
-                  className={`h-9 rounded-[18px] border px-4 text-tiny transition-colors duration-180 ${
-                    on ? "border-amber bg-amber/10 text-text" : "border-[color:var(--color-hairline-strong)] text-text-muted hover:bg-white/5"
-                  }`}
-                >
-                  {m.label}
-                </button>
-              );
-            })}
-          </div>
+          <ChipRow label="Who inspired it">
+            {MODES.map((m) => (
+              <Chip
+                key={m.value}
+                label={m.label}
+                selected={m.value === mode}
+                onClick={() => {
+                  setMode(m.value);
+                  setHits([]);
+                }}
+              />
+            ))}
+          </ChipRow>
           <div className="flex flex-col gap-2 sm:flex-row">
             <div className="min-w-0 flex-1">
               <Text
@@ -124,7 +119,7 @@ export function InspiredByField({
                 type="button"
                 disabled={!X_HANDLE.test(typed)}
                 onClick={() => onChange({ kind: "x", handle: typed })}
-                className="h-12 shrink-0 rounded-[24px] border border-[color:var(--color-hairline-strong)] px-5 text-small text-text transition-colors duration-180 hover:bg-white/5 disabled:opacity-40"
+                className={`${emptyBtn} !h-12 !rounded-[24px] shrink-0 disabled:opacity-45`}
               >
                 Credit @{typed || "handle"}
               </button>
@@ -132,25 +127,25 @@ export function InspiredByField({
           </div>
           {mode === "hold" && typed ? (
             hits.length ? (
-              <ul className="flex flex-col gap-1" aria-label="HOLD creators">
+              <ul className="flex flex-col gap-2" aria-label="HOLD creators">
                 {hits.map((h) => (
                   <li key={h.handle}>
                     <button
                       type="button"
                       onClick={() => onChange({ kind: "hold", handle: h.handle, name: h.name })}
-                      className="flex w-full min-w-0 items-center gap-3 rounded-input px-3 py-2 text-left transition-colors duration-180 hover:bg-white/5"
+                      className="flex w-full min-w-0 items-center gap-2.5 rounded-[14px] border border-white/10 bg-white/[0.06] px-3 py-[11px] text-left transition-colors hover:bg-white/[0.09]"
                     >
                       {h.avatarUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={h.avatarUrl} alt="" className="h-8 w-8 shrink-0 rounded-[8px] object-cover" />
                       ) : (
-                        <span aria-hidden className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-white/10 text-tiny text-text">
+                        <span aria-hidden className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-white/10 text-[12px] font-bold text-white">
                           {h.handle.charAt(0).toUpperCase()}
                         </span>
                       )}
                       <span className="min-w-0">
-                        <span className="block truncate text-small text-text">@{h.handle}</span>
-                        <span className="block truncate text-tiny text-text-muted">
+                        <span className="block truncate text-[14.5px] font-bold text-white">@{h.handle}</span>
+                        <span className="block truncate text-[12.5px] text-white/55">
                           {[h.name, h.username ? `HOLD username ${h.username}` : null].filter(Boolean).join(" · ") || "HOLD creator"}
                         </span>
                       </span>
@@ -159,7 +154,7 @@ export function InspiredByField({
                 ))}
               </ul>
             ) : (
-              <p className="text-tiny text-text-muted">
+              <p className="text-[12px] leading-4 text-white/55">
                 {searching ? "Looking…" : "No HOLD creator by that name. Not on HOLD? Credit their X handle instead."}
               </p>
             )

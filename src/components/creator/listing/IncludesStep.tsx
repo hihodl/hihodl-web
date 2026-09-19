@@ -22,7 +22,10 @@ import {
 } from "@/lib/creator/listing";
 import { problemsAt, type Problem } from "@/lib/creator/rules";
 
-import { Block, Problems } from "./parts";
+import { Notice } from "@/components/app/hold";
+import { Card, Chip, ChipRow, Divider, Stepper } from "@/components/app/spaces/kit";
+
+import { Block, Choice, Problems } from "./parts";
 
 const LINE_HINT: Record<ProductionDeliverable, string> = {
   interviews: "Someone from the brand, or people they name, on camera.",
@@ -47,30 +50,35 @@ export function IncludesStep({
     set({ deliverables: { ...pkg.deliverables, [key]: Math.max(0, Math.min(PRODUCTION_DELIVERABLE_MAX, n)) } });
 
   return (
-    <div className="flex flex-col gap-10">
+    <div className="flex flex-col gap-3.5">
       <Block
         title="What a spot includes"
         why="Each brand that buys a spot gets this package, made for their own channels. Set a line to 0 to leave it out."
       >
-        <ul className="grid gap-2 lg:grid-cols-2">
-          {PRODUCTION_DELIVERABLES.map((key) => {
+        <Card className="!gap-0 !py-1">
+          {PRODUCTION_DELIVERABLES.map((key, i) => {
             const n = pkg.deliverables[key];
             return (
-              <li
-                key={key}
-                className={`flex items-center justify-between gap-3 rounded-input border px-4 py-3 transition-colors duration-180 ${
-                  n > 0 ? "border-amber/60 bg-amber/10" : "border-[color:var(--color-hairline-strong)]"
-                }`}
-              >
-                <span className="min-w-0">
-                  <span className="block text-small text-text">{PRODUCTION_DELIVERABLE_LABEL[key]}</span>
-                  <span className="mt-1 block text-tiny text-text-muted">{LINE_HINT[key]}</span>
-                </span>
-                <Stepper label={PRODUCTION_DELIVERABLE_LABEL[key]} value={n} onChange={(v) => setCount(key, v)} />
-              </li>
+              <div key={key}>
+                {i > 0 ? <Divider /> : null}
+                <div className="flex items-center justify-between gap-3 py-3">
+                  <span className="min-w-0">
+                    <span className={`block text-[14.5px] font-bold ${n > 0 ? "text-white" : "text-white/[0.62]"}`}>{PRODUCTION_DELIVERABLE_LABEL[key]}</span>
+                    <span className="mt-0.5 block text-[12.5px] leading-[17px] text-white/55">{LINE_HINT[key]}</span>
+                  </span>
+                  <Stepper
+                    value={n}
+                    min={0}
+                    max={PRODUCTION_DELIVERABLE_MAX}
+                    onChange={(v) => setCount(key, v)}
+                    labelLess={`Fewer: ${PRODUCTION_DELIVERABLE_LABEL[key]}`}
+                    labelMore={`More: ${PRODUCTION_DELIVERABLE_LABEL[key]}`}
+                  />
+                </div>
+              </div>
             );
           })}
-        </ul>
+        </Card>
         <Problems list={problemsAt(problems, "production:deliverables")} />
       </Block>
 
@@ -78,7 +86,7 @@ export function IncludesStep({
         title="Turnaround"
         why="How soon after each shoot day the brand has everything. The countdown on your Deliveries runs from the end of the shoot day."
       >
-        <Cards
+        <Choice
           name="turnaround"
           value={String(pkg.turnaroundHours)}
           onChange={(v) => set({ turnaroundHours: Number(v) as ProductionPackage["turnaroundHours"] })}
@@ -91,11 +99,8 @@ export function IncludesStep({
         <Problems list={problemsAt(problems, "production:turnaround")} />
       </Block>
 
-      <Block
-        title="Usage rights the brand gets"
-        why="What the brand may do with what you deliver, printed on your page before they pay."
-      >
-        <Cards
+      <Block title="Usage rights the brand gets" why="What the brand may do with what you deliver, printed on your page before they pay.">
+        <Choice
           name="usage-scope"
           value={pkg.usage.scope}
           onChange={(scope) => set({ usage: { ...pkg.usage, scope } })}
@@ -104,86 +109,17 @@ export function IncludesStep({
             { value: "organic_and_paid", label: USAGE_SCOPE_LABEL.organic_and_paid, body: "They may also run it as ads." },
           ]}
         />
-        <Cards
-          name="usage-term"
-          value={pkg.usage.term}
-          onChange={(term) => set({ usage: { ...pkg.usage, term } })}
-          options={[
-            { value: "6m", label: USAGE_TERM_LABEL["6m"] },
-            { value: "12m", label: USAGE_TERM_LABEL["12m"] },
-            { value: "perpetual", label: USAGE_TERM_LABEL.perpetual },
-          ]}
-        />
+        <ChipRow label="How long">
+          {(["6m", "12m", "perpetual"] as const).map((term) => (
+            <Chip key={term} label={USAGE_TERM_LABEL[term]} selected={pkg.usage.term === term} onClick={() => set({ usage: { ...pkg.usage, term } })} />
+          ))}
+        </ChipRow>
       </Block>
 
-      <p className="text-tiny text-text-muted">
-        The brand fills in a brief before paying. You send a private link with a checklist; they accept it or ask for one
-        round of changes, and 72 hours of silence counts as accepted. The money reaches your wallet when they pay.
-      </p>
-    </div>
-  );
-}
-
-/**
- * One of a few short options, side by side. Selection changes a COLOUR, never
- * a border width, so nothing moves.
- */
-function Cards<T extends string>({
-  name,
-  value,
-  onChange,
-  options,
-}: {
-  name: string;
-  value: T;
-  onChange: (v: T) => void;
-  options: readonly { value: T; label: string; body?: string }[];
-}) {
-  return (
-    <div role="radiogroup" aria-label={name} className={`grid gap-2 ${options.length === 3 ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
-      {options.map((o) => {
-        const on = o.value === value;
-        return (
-          <button
-            key={o.value}
-            type="button"
-            role="radio"
-            aria-checked={on}
-            onClick={() => onChange(o.value)}
-            className={`flex flex-col gap-1 rounded-input border px-4 py-3 text-left transition-colors duration-180 ${
-              on ? "border-amber bg-amber/10" : "border-[color:var(--color-hairline-strong)] hover:bg-white/5"
-            }`}
-          >
-            <span className="text-small text-text">{o.label}</span>
-            {o.body ? <span className="text-tiny text-text-muted">{o.body}</span> : null}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-/** Minus, the count, plus. Fixed size, so nothing moves as the number changes. */
-function Stepper({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
-  const btn =
-    "inline-flex h-10 w-10 items-center justify-center rounded-[20px] border border-[color:var(--color-hairline-strong)] text-body text-text transition-colors duration-180 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40";
-  return (
-    <div className="flex items-center gap-2">
-      <button type="button" className={btn} aria-label={`Fewer: ${label}`} disabled={value <= 0} onClick={() => onChange(value - 1)}>
-        −
-      </button>
-      <span className="w-8 text-center text-body tabular-nums text-text" aria-live="polite">
-        {value}
-      </span>
-      <button
-        type="button"
-        className={btn}
-        aria-label={`More: ${label}`}
-        disabled={value >= PRODUCTION_DELIVERABLE_MAX}
-        onClick={() => onChange(value + 1)}
-      >
-        +
-      </button>
+      <Notice tone="calm">
+        The brand fills in a brief before paying. You send a private link with a checklist; they accept it or ask for one round
+        of changes, and 72 hours of silence counts as accepted. The money reaches your wallet when they pay.
+      </Notice>
     </div>
   );
 }

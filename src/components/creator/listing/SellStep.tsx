@@ -41,6 +41,8 @@ import { problemsAt, type Problem } from "@/lib/creator/rules";
 import { MoreChainsLine } from "@/components/app/MoreChains";
 
 import { Ladder } from "./Ladder";
+import { Card, Checkbox, fieldLabel } from "@/components/app/spaces/kit";
+
 import { Block, Choice, Count, Field, Money, Paragraph, Problems, Text, Toggles } from "./parts";
 
 const CONTENT_LABEL: Record<ContentKind, string> = {
@@ -75,25 +77,25 @@ export function SellStep({
   const pricingOptions: { value: PricingMode | "fixed_with_offers"; label: string; body: string; disabled?: boolean; why?: string }[] = [
     {
       value: "fixed",
-      label: "At a fixed price",
-      body: "Whoever pays first gets it. The simplest thing to buy, and the one most brands act on the same day.",
+      label: "Buy now",
+      body: session ? "You set the price. The first client to pay books it." : "You set the price. The first brand to pay gets it.",
     },
     {
       value: "fixed_with_offers",
-      label: "At a price, and I will read offers under it",
-      body: "The price still buys it outright. A brand that wants to pay less can name a number, and you say yes, no, or here is mine.",
+      label: "Buy now, and also accept offers",
+      body: "Brands can offer less than the price. You accept, counter or decline.",
     },
     {
       value: "offers",
-      label: "By offers only, with no price shown",
-      body: "Nothing on the page says what it costs. Every brand names its own number and you answer each one.",
+      label: "Make an offer",
+      body: "No price shown. Brands name theirs, and you accept, counter or decline.",
       disabled: production,
       why: onlyAtAPrice,
     },
     {
       value: "bids",
-      label: "To the highest bid",
-      body: "A price to open at and a moment bidding stops. Each spot is its own bidding, and the highest bid at the end is the one you decide on.",
+      label: "Bid",
+      body: "An opening bid and a countdown. When bidding ends, you accept a bid within 24 hours, or the highest one at or above your reserve is accepted for you.",
       disabled: production || (service && draft.sells !== "ladder"),
       why: production
         ? onlyAtAPrice
@@ -101,8 +103,8 @@ export function SellStep({
     },
     {
       value: "takeover",
-      label: "At a price anybody can take by paying double",
-      body: "A sold spot never stops being for sale: the next brand pays double and the one it displaces is repaid in full inside the same payment. Solana only.",
+      label: "A brand can take a sold spot by doubling",
+      body: "Every price becomes an opening one. The brand that is displaced gets back everything it paid, inside the same payment. Solana only.",
       disabled: session || production,
       why: production ? onlyAtAPrice : "A booking a stranger can take off you by paying double is not a booking.",
     },
@@ -111,9 +113,9 @@ export function SellStep({
   const current: string = draft.pricingMode === "fixed" && draft.acceptsOffers ? "fixed_with_offers" : draft.pricingMode;
 
   return (
-    <div className="flex flex-col gap-10">
+    <div className="flex flex-col gap-3.5">
       <Block
-        title="How this listing sells"
+        title="How do you want to sell?"
         why="This is where every part of it starts. On a ladder each rung can answer differently — the $50 logo first come first served, the one interview to the highest bid — so nothing here locks anything down."
       >
         <Field label="The default for the whole listing" problems={problemsAt(problems, "pricing")}>
@@ -139,7 +141,7 @@ export function SellStep({
 
         {needsCountdown ? (
           <Field
-            label="Bidding stops"
+            label="Bidding ends"
             problems={problemsAt(problems, "biddingEndsAt")}
             htmlFor="bidding-ends"
             hint={`At least ${LIMITS.BIDDING_MIN_AFTER_PUBLISH_HOURS} hours after it goes live, and at least ${LIMITS.BIDDING_MIN_BEFORE_CLOSE_HOURS} hours before it closes. That gap is the room the winner needs: a day for you to decide, a day for them to pay, and a little slack for a bid that lands in the last ten minutes and pushes the clock back.`}
@@ -200,8 +202,8 @@ export function SellStep({
       </Block>
 
       <Block
-        title="Who carries our 5%"
-        why="HiSpace takes five percent of the listed price. The amount is the same either way; this only says whether it sits on top of your price or comes out of it."
+        title="What we charge"
+        why="We take 5% of what a space sells for. Nothing to list it, and nothing if nothing sells."
       >
         <Choice
           name="feePayer"
@@ -210,20 +212,22 @@ export function SellStep({
           options={[
             {
               value: "sponsor",
-              label: "The sponsor pays it on top",
-              body: "You receive exactly the price you set. A $1,300 spot costs the brand $1,365.",
+              label: session ? "On top, paid by the client" : "On top, paid by the brand",
+              body: session
+                ? "You receive exactly the price you set. The client pays it plus 5%."
+                : "You receive exactly the price you set. The brand pays it plus 5%.",
             },
             {
               value: "creator",
-              label: "I carry it",
-              body: "The brand pays exactly the price on the page. A $1,300 spot reaches you as $1,235.",
+              label: "Out of the price, paid by me",
+              body: session ? "The client pays the price you set. You receive it minus 5%." : "The brand pays the price you set. You receive it minus 5%.",
             },
           ]}
         />
       </Block>
 
       <Block
-        title="Where you can be paid"
+        title="Get paid on"
         why="A sponsor pays in USDC on Solana, straight to your own address. Nothing is bridged and nothing waits in between."
       >
         <Field label="Networks" problems={problemsAt(problems, "chains")}>
@@ -264,8 +268,8 @@ function Slots({
   const split = cents !== null ? feeSplit(cents, draft.feePayer) : null;
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="grid gap-5 sm:grid-cols-2">
+    <div className="flex flex-col gap-3.5">
+      <div className="grid gap-3.5 sm:grid-cols-2">
         <Field
           label="How many"
           hint={`Up to ${maxSlots}. Each one goes to a different brand.`}
@@ -277,7 +281,7 @@ function Slots({
 
         {modeShowsPrice(mode) ? (
           <Field
-            label={mode === "bids" ? "Where bidding opens" : "Price for each"}
+            label={mode === "bids" ? "Opening bid (USD)" : "Price for each (USD)"}
             problems={problemsAt(problems, "slotPrice")}
             htmlFor="slot-price"
             hint={split ? `The sponsor pays ${usd(split.sponsorPaysCents)} and you receive ${usd(split.creatorGetsCents)}.` : undefined}
@@ -285,21 +289,19 @@ function Slots({
             <Money id="slot-price" value={draft.slotPriceDollars} onChange={(slotPriceDollars) => set({ slotPriceDollars })} />
           </Field>
         ) : (
-          <div className="flex flex-col gap-2">
-            <span className="text-small text-text">Price</span>
-            <p className="text-tiny text-text-muted">
-              Nothing to set: this listing is sold by offers, so the page shows no price and every brand names its own.
-            </p>
+          <div className="flex flex-col gap-1.5">
+            <span className={fieldLabel}>Price</span>
+            <p className="text-[12px] leading-4 text-white/55">No price is shown: brands name theirs.</p>
           </div>
         )}
       </div>
 
       {modeKeepsFloor(mode) ? (
         <Field
-          label={mode === "bids" ? "Your reserve" : "The least you would take"}
+          label={mode === "bids" ? "Reserve (optional, USD)" : "Hidden minimum (optional, USD)"}
           problems={problemsAt(problems, "slotFloor")}
           htmlFor="slot-floor"
-          hint={`Private. No brand is ever shown this number; anything under it is turned away before it reaches you. Leave it empty to read everything yourself. At least ${usd(session ? LIMITS.SESSION_MIN_CENTS : LIMITS.OFFER_MIN_CENTS)}.`}
+          hint={`${mode === "bids" ? "Reserve: below it nothing sells automatically." : "Offers under it get an automatic counter at this price."} Nobody sees it. At least ${usd(session ? LIMITS.SESSION_MIN_CENTS : LIMITS.OFFER_MIN_CENTS)}.`}
         >
           <Money id="slot-floor" value={draft.slotMinOfferDollars} onChange={(slotMinOfferDollars) => set({ slotMinOfferDollars })} />
         </Field>
@@ -334,38 +336,36 @@ function Zones({
     onChange({ ...draft, zones: draft.zones.map((z) => (z.zoneKey === zoneKey ? { ...z, ...change } : z)) });
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-2.5">
       <Problems list={problemsAt(problems, "zones")} />
-      {template.zones.map((zone) => {
+      {template.zones.map((zone, index) => {
         const own = draft.zones.find((z) => z.zoneKey === zone.zoneKey);
         if (!own) return null;
         const cents = centsFromDollars(own.priceDollars);
         const split = cents !== null ? feeSplit(cents, draft.feePayer) : null;
         return (
-          <div
-            key={zone.zoneKey}
-            className={`flex flex-col gap-4 rounded-card border p-5 transition-colors duration-180 ${
-              own.on ? "border-amber/40 bg-amber/[0.04]" : "border-[color:var(--color-hairline)]"
-            }`}
-          >
-            <label className="flex cursor-pointer items-start gap-3">
-              <input
-                type="checkbox"
-                className="mt-1 accent-amber"
-                checked={own.on}
-                onChange={(e) => set(zone.zoneKey, { on: e.target.checked })}
-              />
-              <span className="min-w-0">
-                <span className="block text-body text-text">{zone.label}</span>
-                <span className="mt-1 block text-tiny text-text-muted">{zone.sizeLabel}</span>
-              </span>
-            </label>
+          <Card key={zone.zoneKey} className={own.on ? "" : "opacity-90"}>
+            <Checkbox
+              checked={own.on}
+              onChange={(on) => set(zone.zoneKey, { on })}
+              label={
+                <span className="flex flex-col gap-0.5">
+                  <span className="text-[14.5px] font-extrabold tracking-[-0.2px] text-white">
+                    Spot {String(index + 1).padStart(2, "0")} · {zone.label}
+                  </span>
+                  <span className="text-[12px] leading-4 text-white/55">
+                    {zone.sizeLabel}
+                    {zone.suggestedPriceCents ? ` · suggested ${usd(zone.suggestedPriceCents)}` : ""}
+                  </span>
+                </span>
+              }
+            />
 
             {own.on ? (
-              <div className="flex flex-col gap-4 pl-7">
+              <div className="flex flex-col gap-3.5 pl-[34px]">
                 {modeShowsPrice(mode) ? (
                   <Field
-                    label={mode === "bids" ? "Where bidding opens" : "Price"}
+                    label={mode === "bids" ? "Opening bid (USD)" : "Price (USD)"}
                     problems={problemsAt(problems, `zone:${zone.zoneKey}:price`)}
                     htmlFor={`zone-${zone.zoneKey}-price`}
                     hint={
@@ -382,10 +382,10 @@ function Zones({
 
                 {modeKeepsFloor(mode) ? (
                   <Field
-                    label={mode === "bids" ? "Your reserve" : "The least you would take"}
+                    label={mode === "bids" ? "Reserve (optional, USD)" : "Hidden minimum (optional, USD)"}
                     problems={problemsAt(problems, `zone:${zone.zoneKey}:floor`)}
                     htmlFor={`zone-${zone.zoneKey}-floor`}
-                    hint="Private. No brand is ever shown this number."
+                    hint={mode === "bids" ? "Reserve: below it nothing sells automatically. Nobody sees it." : "Offers under it get an automatic counter at this price. Nobody sees it."}
                   >
                     <Money
                       id={`zone-${zone.zoneKey}-floor`}
@@ -396,7 +396,7 @@ function Zones({
                 ) : null}
 
                 <Field
-                  label="What a sponsor may put here"
+                  label="What a brand can send"
                   problems={problemsAt(problems, `zone:${zone.zoneKey}:accepts`)}
                 >
                   <Toggles
@@ -407,8 +407,7 @@ function Zones({
                 </Field>
 
                 <Field
-                  label="Anything else about this spot"
-                  hint="Optional."
+                  label="Pitch (optional)"
                   problems={problemsAt(problems, `zone:${zone.zoneKey}:pitch`)}
                   htmlFor={`zone-${zone.zoneKey}-pitch`}
                 >
@@ -417,12 +416,13 @@ function Zones({
                     value={own.pitch}
                     onChange={(pitch) => set(zone.zoneKey, { pitch })}
                     maxLength={LIMITS.PITCH_MAX}
+                    placeholder="Biggest spot, seen in every airport shot"
                     rows={2}
                   />
                 </Field>
               </div>
             ) : null}
-          </div>
+          </Card>
         );
       })}
     </div>
