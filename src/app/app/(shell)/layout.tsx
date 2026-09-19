@@ -13,9 +13,15 @@ import { headers } from "next/headers";
 import type { ReactNode } from "react";
 
 import { SpacesApp } from "@/components/app/Shell";
+import { DemoBadge } from "@/components/creator/DemoBadge";
+import { creatorDemoEnabled } from "@/lib/creator/demo";
 import { spacesBaseFor } from "@/lib/app/paths";
 
 export default function ShellLayout({ children }: { children: ReactNode }) {
   const base = spacesBaseFor(headers().get("host"));
-  return <SpacesApp base={base}>{children}</SpacesApp>;
+  return (
+    <SpacesApp base={base} badge={creatorDemoEnabled() ? <DemoBadge /> : null}>
+      {children}
+    </SpacesApp>
+  );
 }

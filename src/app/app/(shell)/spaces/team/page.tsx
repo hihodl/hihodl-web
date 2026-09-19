@@ -36,12 +36,19 @@ import { TeamScreen } from "@/components/app/spaces/TeamScreen";
 import { SeatInvitation } from "@/components/creator/Team";
 import { AD_SPACE_API } from "@/lib/ad-space/config";
 import { upstreamHeaders } from "@/lib/ad-space/server";
+import { creatorDemoEnabled } from "@/lib/creator/demo";
 import { isSeatCode, type InvitePreview, type SeatLookup } from "@/lib/creator/team";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Team" };
 
 async function preview(code: string): Promise<SeatLookup> {
+  // Local demo mode: the seat is read from the in-memory mock (lib/creator/demo.ts).
+  if (creatorDemoEnabled()) {
+    const { demoInvitePreview } = await import("@/lib/creator/demo-store.dev");
+    const r = demoInvitePreview(code);
+    return "error" in r ? { kind: "refused", code: r.error } : { kind: "found", invite: r.invite };
+  }
   try {
     const res = await fetch(`${AD_SPACE_API}/public/team/invite/${encodeURIComponent(code)}`, {
       headers: upstreamHeaders(headers()),

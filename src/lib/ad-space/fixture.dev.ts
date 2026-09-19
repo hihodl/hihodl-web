@@ -1040,8 +1040,8 @@ const TOKEN2049: EventSummary = {
   endsOn: dayFromNow(22),
   timeZone: "Asia/Singapore",
   category: "crypto",
-  coverUrl: photo("photo-1508964942454-1a56651d54ac"),
-  coverCredit: "Photo: Unsplash",
+  coverUrl: "/demo/singapore.jpg",
+  coverCredit: null,
   spaceCount: 9,
 };
 
@@ -1126,7 +1126,7 @@ function card(
     pricingMode: "fixed",
     status: "live",
     closesAt: new Date(Date.now() + 12 * DAY).toISOString(),
-    bannerUrl: null,
+    bannerUrl: "/demo/suitcase-front.jpg",
     bannerGradient: "steel",
     fromPriceCents: 12500,
     ...over,
