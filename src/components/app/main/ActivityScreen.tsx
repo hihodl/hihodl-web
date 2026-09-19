@@ -204,11 +204,22 @@ export function ActivityScreen() {
   const [topId, setTopId] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
 
-  const topRow = topId ? filtered.find((p) => p.id === topId) : undefined;
+  // At the top the header is the live total, whatever row happens to sit under
+  // it. Only a scroll moves the figure back in time, which is what the app's
+  // own `scrolled` means.
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const rewound = scrolled && topId ? balanceById.get(topId) : undefined;
+  const topRow = scrolled && topId ? filtered.find((p) => p.id === topId) : undefined;
   // Floored at zero: the walk-back accumulates drift the ledger cannot see
   // (network fees, sub-cent rounding), so the oldest rows can land a few cents
   // under. A dollar balance was never negative, and "-$0.01" reads as a bug.
-  const shownUsd = Math.max(0, (scrolled && topId && balanceById.get(topId)) || anchorUsd);
+  const shownUsd = Math.max(0, rewound ?? anchorUsd);
 
   const scopeLabel =
     selected === ALL ? "All accounts" : (() => {
@@ -217,7 +228,8 @@ export function ActivityScreen() {
       return s.slug === "main" || s.slug === "savings" ? `${s.label} account` : s.label;
     })();
 
-  const headerLabel = scrolled && topRow ? `${dayLabel(topRow.date)}, ${timeLabel(topRow.date)}` : "Current balance";
+  const headerLabel =
+    topRow && rewound !== undefined ? `${dayLabel(topRow.date)}, ${timeLabel(topRow.date)}` : "Current balance";
 
   /* ── Details ── */
   const [open, setOpen] = useState<PaymentItem | null>(null);
@@ -339,10 +351,7 @@ export function ActivityScreen() {
                 subaccounts={subaccounts}
                 prices={priceMap}
                 inScope={inScope}
-                onTop={(id) => {
-                  setTopId(id);
-                  setScrolled(true);
-                }}
+                onTop={setTopId}
                 onOpen={() => setOpen(s.item)}
               />
             ),
