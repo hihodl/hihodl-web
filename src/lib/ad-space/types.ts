@@ -422,6 +422,12 @@ export interface Space {
   publishedAt: string | null;
   chains: Chain[];
   payTo: { solana: string | null; evm: string | null } | null;
+  /**
+   * The chains a sponsor can pay on right now: `chains` narrowed to where the
+   * creator has an address and the server can take a payment. Absent on an
+   * older server; the page then narrows `chains` by `payTo` itself.
+   */
+  payableChains?: Chain[];
   creator: Creator;
   feeBps: number;
   feePayer: "sponsor" | "creator";

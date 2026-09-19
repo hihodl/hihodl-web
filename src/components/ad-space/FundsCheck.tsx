@@ -1,24 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { CheckoutError, describeError } from "@/lib/ad-space/checkout-client";
 import { CHAIN_LABEL } from "@/lib/ad-space/format";
 import { describeOfferError, requestOfferChallenge } from "@/lib/ad-space/offers-client";
 import type { Chain, OfferKind, OfferProof } from "@/lib/ad-space/types";
-import {
-  type SolanaWallet,
-  canSignMessage,
-  connectSolana,
-  detectSolanaWallets,
-  evmAccount,
-  injected,
-  signEvmMessage,
-  signSolanaMessage,
-} from "@/lib/ad-space/wallets";
+import { canSignMessage, connectSolana, evmAccount, signEvmMessage, signSolanaMessage } from "@/lib/ad-space/wallets";
 
-import { Check, ChainPicker, Spinner } from "./checkout-parts";
-import { btnSmall, btnSmallSecondary } from "./ui";
+import {
+  ExtraRow,
+  InfoTip,
+  NetworkPill,
+  SheetNotice,
+  StatusLine,
+  Tick,
+  WalletRows,
+  ctaGlass,
+  useBrowserWallets,
+} from "./pay-sheet";
 
 /**
  * "Check my funds" (hispace-offers-v0.md, Proof of funds): the page asks for a
@@ -61,6 +61,7 @@ export function FundsCheck({
 }: {
   spaceId: string;
   positionId: string | null;
+  /** The networks to offer: where the creator can be paid (`payChainsOf`). */
   chains: Chain[];
   /** The amount being offered, creator side, in cents; null while the input isn't an amount. */
   amountCents: number | null;
@@ -71,36 +72,39 @@ export function FundsCheck({
   disabled?: boolean;
 }) {
   const [chain, setChain] = useState<Chain>(chains.includes("solana") ? "solana" : chains[0]);
-  const [wallets, setWallets] = useState<SolanaWallet[]>([]);
-  const [hasEvm, setHasEvm] = useState(false);
+  const { solana, evm } = useBrowserWallets();
+  const [picked, setPicked] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  useEffect(() => {
-    setWallets(detectSolanaWallets().filter((w) => canSignMessage(w.provider)));
-    setHasEvm(Boolean(injected().ethereum));
-  }, []);
+  // The check is a signed message, so only wallets that can sign one are listed.
+  const signers = solana.filter((w) => canSignMessage(w.provider));
+  const here =
+    chain === "solana" ? signers.map((w) => ({ id: w.name, name: w.name, icon: w.icon ?? null })) : evm;
+  const chosen = here.find((w) => w.id === picked) ?? here[0] ?? null;
 
   const usable = usableProof(checked, amountCents, now);
   const stale = checked !== null && !usable;
 
-  async function check(wallet: SolanaWallet | null) {
+  async function check() {
     setNotice(null);
     if (amountCents === null) return setNotice(`Type the amount of your ${kind} first: the check is for that amount.`);
+    if (!chosen) return;
     try {
       let address: string;
       let sign: (message: string) => Promise<string>;
       if (chain === "solana") {
+        const wallet = signers.find((w) => w.name === chosen.id);
         if (!wallet) return;
         setBusy(`Connecting ${wallet.name}…`);
         address = await connectSolana(wallet.provider);
         sign = (m) => signSolanaMessage(wallet.provider, m);
       } else {
-        const provider = injected().ethereum;
-        if (!provider) return setNotice("No browser wallet found. Open this page in MetaMask, Coinbase Wallet or Rabby.");
-        setBusy("Connecting your wallet…");
-        address = await evmAccount(provider);
-        sign = (m) => signEvmMessage(provider, address, m);
+        const wallet = evm.find((w) => w.id === chosen.id);
+        if (!wallet) return;
+        setBusy(`Connecting ${wallet.name}…`);
+        address = await evmAccount(wallet.provider);
+        sign = (m) => signEvmMessage(wallet.provider, address, m);
       }
       setBusy("Preparing the check…");
       const challenge = await requestOfferChallenge({
@@ -110,7 +114,7 @@ export function FundsCheck({
         address,
         amountCents,
       });
-      setBusy("Sign the message in your wallet…");
+      setBusy(`Sign the message in ${chosen.name}`);
       const signature = await sign(challenge.message);
       onChecked({
         proof: { chain, address, nonce: challenge.nonce, signature },
@@ -138,21 +142,27 @@ export function FundsCheck({
 
   if (usable && checked) {
     return (
-      <div className="flex flex-col gap-2 rounded-card border border-success/30 bg-success/[0.06] px-4 py-3" role="status">
-        <p className="flex items-center gap-2 text-small text-text">
-          <span className="flex h-5 w-5 items-center justify-center rounded-[10px] bg-success/20 text-success" aria-hidden>
-            <Check />
+      <div className="flex items-center justify-between gap-3 rounded-[14px] bg-success/[0.10] px-4 py-3" role="status">
+        <span className="flex min-w-0 items-center gap-2.5 text-small text-text">
+          <span className="text-success">
+            <Tick />
           </span>
-          Signed by {shortAddress(checked.proof.address)} on {CHAIN_LABEL[checked.proof.chain]}
-        </p>
-        <p className="text-tiny text-text-muted">
-          We read that wallet&rsquo;s USDC when your {kind} arrives. Send it within 5 minutes, or check again.
-        </p>
-        <div>
-          <button type="button" className={btnSmallSecondary} disabled={disabled} onClick={() => onChecked(null)}>
-            Use another wallet
-          </button>
-        </div>
+          <span className="truncate">
+            Verified · <span className="font-mono">{shortAddress(checked.proof.address)}</span> on{" "}
+            {CHAIN_LABEL[checked.proof.chain]}
+          </span>
+          <InfoTip label="About the check">
+            We read that wallet&rsquo;s USDC when your {kind} arrives. Send it within 5 minutes, or verify again.
+          </InfoTip>
+        </span>
+        <button
+          type="button"
+          className="shrink-0 text-small font-medium text-amber hover:text-amber-glow disabled:opacity-50"
+          disabled={disabled}
+          onClick={() => onChecked(null)}
+        >
+          Change
+        </button>
       </div>
     );
   }
@@ -162,68 +172,69 @@ export function FundsCheck({
       {stale && (
         <p className="text-small text-amber" role="status">
           {checked && amountCents !== null && checked.amountCents !== amountCents
-            ? "You changed the amount after checking your funds. Check again for the new amount."
-            : "Your funds check expired. Check again, then send."}
+            ? "You changed the amount. Verify again for the new one."
+            : "Your check expired. Verify again, then send."}
         </p>
       )}
       {chains.length > 1 && (
-        <ChainPicker
-          chains={chains}
-          chain={chain}
-          legend="Wallet on"
-          onChange={(c) => {
-            setChain(c);
-            setNotice(null);
-          }}
-        />
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-small text-white/60">Wallet on</span>
+          <NetworkPill
+            chains={chains}
+            chain={chain}
+            disabled={Boolean(busy) || disabled}
+            onChange={(c) => {
+              setChain(c);
+              setPicked(null);
+              setNotice(null);
+            }}
+          />
+        </div>
+      )}
+      {here.length > 0 ? (
+        <WalletRows wallets={here} selected={chosen?.id ?? null} onSelect={setPicked} disabled={Boolean(busy) || disabled} />
+      ) : (
+        <div className="flex flex-col gap-2">
+          <p className="px-1 text-small text-white/60">
+            No {chain === "solana" ? "Solana wallet that can sign" : `${CHAIN_LABEL[chain]} wallet`} in this browser.
+          </p>
+          <OpenInWalletRow />
+        </div>
       )}
       {busy ? (
-        <p className="flex items-center gap-3 text-small text-text" role="status">
-          <Spinner />
-          {busy}
-        </p>
-      ) : chain === "solana" ? (
-        wallets.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {wallets.map((w, i) => (
-              <button
-                key={w.name}
-                type="button"
-                className={i === 0 ? btnSmall : btnSmallSecondary}
-                disabled={disabled}
-                onClick={() => void check(w)}
-              >
-                Check with {w.name}
-              </button>
-            ))}
-          </div>
-        ) : (
-          <p className="text-small text-text-muted">
-            No Solana wallet that can sign in this browser. Open this page in Phantom, Solflare or Backpack
-            {chains.some((c) => c !== "solana") ? ", or check a wallet on Base or Polygon" : ""}.
-          </p>
-        )
-      ) : hasEvm ? (
-        <div>
-          <button type="button" className={btnSmall} disabled={disabled} onClick={() => void check(null)}>
-            Connect wallet and sign
-          </button>
-        </div>
+        <StatusLine>{busy}</StatusLine>
       ) : (
-        <p className="text-small text-text-muted">
-          No browser wallet found here. Open this page in MetaMask, Coinbase Wallet or Rabby
-          {chains.includes("solana") ? ", or check a wallet on Solana" : ""}.
-        </p>
+        here.length > 0 && (
+          <button type="button" className={`${ctaGlass} h-12 w-full`} disabled={disabled || !chosen} onClick={() => void check()}>
+            Verify with {chosen?.name ?? "wallet"}
+          </button>
+        )
       )}
-      <p className="text-tiny text-text-faint">
-        Signing a message costs nothing and moves no money. It only proves the wallet is yours, so we can read its USDC
-        on {CHAIN_LABEL[chain]}.
-      </p>
       {notice && (
-        <p className="rounded-card border border-amber/30 bg-amber/[0.05] px-4 py-3 text-small text-text-muted" role="status">
-          {notice}
-        </p>
+        <SheetNotice>
+          <p>{notice}</p>
+        </SheetNotice>
       )}
     </div>
+  );
+}
+
+/** For a wallet this browser does not have: open the page inside that wallet. */
+function OpenInWalletRow() {
+  const [copied, setCopied] = useState(false);
+  return (
+    <ExtraRow
+      title={copied ? "Link copied" : "Use another wallet"}
+      sub="Copy this page's link and open it in your wallet's browser"
+      onClick={() => {
+        void navigator.clipboard
+          .writeText(window.location.href)
+          .then(() => {
+            setCopied(true);
+            window.setTimeout(() => setCopied(false), 2000);
+          })
+          .catch(() => setCopied(false));
+      }}
+    />
   );
 }

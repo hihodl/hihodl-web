@@ -31,7 +31,23 @@ import type { ContactKind, OfferKind, OfferView, Position, Space } from "@/lib/a
 import { AppPrompt } from "./AppPrompt";
 import { Spinner } from "./checkout-parts";
 import { type CheckedFunds, FundsCheck, usableProof } from "./FundsCheck";
-import { btnPrimary, btnSmallSecondary, eyebrow, input } from "./ui";
+import {
+  CreatorChip,
+  InfoTip,
+  PaidMark,
+  PaySheet,
+  SheetNotice,
+  Tick,
+  TotalRow,
+  ctaGlass,
+  ctaPrimary,
+  dollars,
+  feePercent,
+  fieldLabel,
+  payChainsOf,
+  sheetInput,
+} from "./pay-sheet";
+import { btnSmallSecondary } from "./ui";
 
 /**
  * Making an offer or a bid from the public page, with no HOLD account
@@ -65,7 +81,7 @@ export function AmountField({
   onChange,
   feeBps,
   feePayer,
-  creatorHandle,
+  creatorHandle: _creatorHandle,
   hint,
   disabled = false,
 }: {
@@ -81,43 +97,51 @@ export function AmountField({
   const cents = parseUsdToCents(value);
   // The server's own arithmetic, to the sixth decimal it writes (offerFigures).
   const figures = cents !== null && cents > 0 ? offerFigures(cents, feeBps, feePayer) : null;
-  const pct = `${feeBps / 100}%`;
   return (
-    <div className="flex flex-col gap-2">
-      <label className="flex flex-col gap-2">
-        <span className="text-small text-text-muted">{label}</span>
-        <span className="relative flex items-center">
-          <span className="pointer-events-none absolute left-4 text-body text-text-faint" aria-hidden>
+    <div className="flex flex-col gap-4">
+      <label className="flex flex-col items-center gap-2 text-center">
+        <span className={fieldLabel}>{label}</span>
+        <span className="flex items-baseline justify-center gap-1 tabular-nums">
+          <span className="text-[52px] font-strong leading-none tracking-[-0.035em] text-white/60 sm:text-[60px]" aria-hidden>
             $
           </span>
-          <input
-            className={`${input} pl-8 font-mono`}
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            inputMode="decimal"
-            autoComplete="off"
-            placeholder="0"
-            disabled={disabled}
-            aria-describedby="offer-amount-figures"
-          />
+          {/* A mirror of the value sizes the input, so the amount stays centred as it is typed. */}
+          <span className="inline-grid">
+            <span
+              className="invisible col-start-1 row-start-1 whitespace-pre text-[52px] font-strong leading-none tracking-[-0.035em] sm:text-[60px]"
+              aria-hidden
+            >
+              {value || "0"}
+            </span>
+            <input
+              className="col-start-1 row-start-1 w-full min-w-0 bg-transparent text-[52px] font-strong leading-none tracking-[-0.035em] text-text caret-amber outline-none placeholder:text-white/25 disabled:opacity-60 sm:text-[60px]"
+              size={1}
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              inputMode="decimal"
+              autoComplete="off"
+              placeholder="0"
+              disabled={disabled}
+              aria-describedby="offer-amount-figures"
+            />
+          </span>
+          <span className="ml-1 text-[18px] font-medium text-white/60">USDC</span>
         </span>
+        {hint && <span className="text-small text-[#CFE3EC]">{hint}</span>}
       </label>
-      {hint && <p className="text-tiny text-text-faint">{hint}</p>}
-      <dl
-        id="offer-amount-figures"
-        className="grid grid-cols-2 gap-3 rounded-card border border-[color:var(--color-hairline)] bg-white/[0.03] p-3"
-        aria-live="polite"
-      >
-        <div className="col-span-2">
-          <dt className="text-tiny text-text-faint">You pay</dt>
-          <dd className="mt-0.5 font-mono text-small text-text">
-            {figures ? `${figures.sponsorPaysUsdc} USDC` : "—"}
-          </dd>
-        </div>
-        <div className="col-span-2 text-tiny text-text-faint">
-          HOLD charges a {pct} fee, only if it&rsquo;s accepted and paid.
-        </div>
-      </dl>
+      <div id="offer-amount-figures" aria-live="polite">
+        <TotalRow
+          label="You pay if accepted"
+          totalUsdc={figures?.sponsorPaysUsdc ?? null}
+          note={feeBps > 0 ? `includes ${feePercent(feeBps)} HOLD fee` : null}
+          info={
+            <InfoTip label="About the fee">
+              HOLD&rsquo;s {feePercent(feeBps)} fee is only charged if your {label.toLowerCase().includes("bid") ? "bid" : "offer"}{" "}
+              is accepted and paid. Nothing is paid now.
+            </InfoTip>
+          }
+        />
+      </div>
     </div>
   );
 }
@@ -192,7 +216,7 @@ export function OfferSheet({
   const [amount, setAmount] = useState(() => {
     if (kind !== "bid") return "";
     const next = usdcToCents(offers?.nextMinimumBidUsdc ?? offers?.openingBidUsdc ?? null);
-    return next !== null ? usdcFromCents(next).replace(/,/g, "") : "";
+    return next !== null ? usdcFromCents(next).replace(/,/g, "").replace(/\.00$/, "") : "";
   });
   const [name, setName] = useState("");
   const [contactKind, setContactKind] = useState<ContactKind>("email");
@@ -200,6 +224,13 @@ export function OfferSheet({
   const [message, setMessage] = useState("");
   const [checked, setChecked] = useState<CheckedFunds | null>(null);
   const [wantsCheck, setWantsCheck] = useState(kind === "bid");
+  const [wantsMessage, setWantsMessage] = useState(false);
+  const verifyRef = useRef<HTMLElement>(null);
+  const openCheck = () => {
+    setWantsCheck(true);
+    // Once it has rendered, bring the wallets into view.
+    window.setTimeout(() => verifyRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }), 60);
+  };
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [sent, setSent] = useState<Sent | null>(null);
@@ -208,20 +239,6 @@ export function OfferSheet({
 
   const amountCents = parseUsdToCents(amount);
   const thing = kind === "bid" ? "bid" : "offer";
-
-  /* Escape closes, and the page behind does not scroll. */
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
-    };
-  }, [onClose]);
 
   async function send(e: FormEvent) {
     e.preventDefault();
@@ -290,115 +307,135 @@ export function OfferSheet({
     }
   }
 
+  const money = (c: number) => usdFromCents(c);
+  const highest = usdcToCents(offers?.highestBidUsdc ?? null);
   const hint =
     kind === "bid"
-      ? offers?.highestBidUsdc
-        ? `Highest bid ${offers.highestBidUsdc} USDC. The next bid has to be at least ${usdcFromCents(minimum)} USDC.`
-        : `No bids yet. Bidding opens at ${usdcFromCents(minimum)} USDC.`
+      ? highest !== null
+        ? `Highest ${money(highest)} · next bid from ${money(minimum)}`
+        : `No bids yet · bidding opens at ${money(minimum)}`
       : belowCents !== null
-        ? `Listed at $${usdcFromCents(belowCents)}. An offer goes from ${usdFromCents(minimum)} to just under that.`
-        : `Offers start at ${usdFromCents(minimum)}. The creator can accept, counter or decline.`;
+        ? `Listed at ${money(belowCents)} · offers from ${money(minimum)}`
+        : `Offers from ${money(minimum)}`;
+
+  const footer = sent ? null : (
+    <>
+      <button type="submit" form="offer-form" className={ctaPrimary} disabled={busy}>
+        {busy ? (
+          <>
+            <Spinner />
+            Sending…
+          </>
+        ) : kind === "bid" ? (
+          "Place my bid"
+        ) : (
+          "Send my offer"
+        )}
+      </button>
+      <p className="flex items-center justify-center gap-2 text-center text-tiny text-white/60">
+        Nothing is paid now.
+        <InfoTip label="What happens next">
+          Nothing is paid and nothing is locked. If @{handle} accepts your {thing}, you have 24 hours to pay it from any
+          wallet, straight to the creator. Neither of you is bound to go ahead.
+        </InfoTip>
+      </p>
+    </>
+  );
 
   return (
-    <div
-      className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="offer-title"
+    <PaySheet
+      labelledBy="offer-title"
+      eyebrow={kind === "bid" ? "Place a bid" : "Make an offer"}
+      title={what}
+      onClose={onClose}
+      footer={footer}
     >
-      <button type="button" aria-label="Close" className="absolute inset-0 bg-abyss/80 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative flex max-h-[92dvh] w-full flex-col overflow-y-auto rounded-t-card border border-[color:var(--color-hairline-strong)] bg-night shadow-2xl sm:m-6 sm:max-w-lg sm:rounded-card">
-        <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-[color:var(--color-hairline)] bg-night/95 px-5 py-4 backdrop-blur">
-          <div className="min-w-0">
-            <p className={`${eyebrow} text-amber`}>{kind === "bid" ? "Bid" : "Make an offer"}</p>
-            <h2 id="offer-title" className="mt-1 truncate text-body text-text">
-              {what}
-            </h2>
+      {sent ? (
+        <OfferSent sent={sent} space={space} what={what} />
+      ) : (
+        <form id="offer-form" onSubmit={send} className="flex flex-col gap-5" noValidate>
+          <div className="flex justify-center pt-1">
+            <CreatorChip creator={space.creator} />
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="-mr-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-[20px] text-text-muted hover:bg-white/5 hover:text-text"
-            aria-label="Close"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-              <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-          </button>
-        </div>
+          <AmountField
+            label={kind === "bid" ? "Your bid" : "Your offer"}
+            value={amount}
+            onChange={(v) => {
+              setAmount(v);
+              setNotice(null);
+            }}
+            feeBps={space.feeBps}
+            feePayer={space.feePayer}
+            creatorHandle={handle}
+            hint={hint}
+            disabled={busy}
+          />
 
-        <div className="flex flex-col gap-6 px-5 py-6">
-          {sent ? (
-            <OfferSent sent={sent} space={space} what={what} />
-          ) : (
-            <form onSubmit={send} className="flex flex-col gap-6" noValidate>
-              {/* On a ladder an amount only means something next to the rung it
-                  is for: "$900" says nothing unless it says $900 for the
-                  interview. The creator's own lines, printed as text. */}
-              {perks.length > 0 && (
-                <ul className="flex flex-col gap-1.5 rounded-card border border-[color:var(--color-hairline)] bg-white/[0.03] p-4">
-                  {perks.map((line, i) => (
-                    <li key={i} className="break-words text-small text-text-muted [overflow-wrap:anywhere]">
-                      {line}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <AmountField
-                label={kind === "bid" ? "Your bid" : "Your offer"}
-                value={amount}
-                onChange={(v) => {
-                  setAmount(v);
-                  setNotice(null);
-                }}
-                feeBps={space.feeBps}
-                feePayer={space.feePayer}
-                creatorHandle={handle}
-                hint={hint}
+          {/* On a ladder an amount only means something next to the rung it
+              is for: "$900" says nothing unless it says $900 for the
+              interview. The creator's own lines, printed as text. */}
+          {perks.length > 0 && (
+            <ul className="flex flex-col gap-1.5 px-1">
+              {perks.slice(0, 3).map((line, i) => (
+                <li key={i} className="flex items-start gap-2.5 text-small text-[#CFE3EC] [overflow-wrap:anywhere]">
+                  <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-[3px] bg-white/40" aria-hidden />
+                  {line}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <div className="flex flex-col gap-3">
+            <label className="flex flex-col gap-2">
+              <span className={fieldLabel}>{kind === "bid" ? "Name or brand, shown if you lead" : "Name or brand"}</span>
+              <input
+                className={sheetInput}
+                value={name}
+                maxLength={OFFER_NAME_MAX}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Acme"
+                autoComplete="organization"
                 disabled={busy}
               />
+            </label>
 
-              <label className="flex flex-col gap-2">
-                <span className="text-small text-text-muted">
-                  Your name or your brand&rsquo;s{kind === "bid" ? ", shown publicly if you lead" : ""}
+            <div className="flex flex-col gap-2">
+              <span className="flex items-center gap-2">
+                <span className={fieldLabel} id="offer-contact-label">
+                  Where we send the answer
                 </span>
-                <input
-                  className={input}
-                  value={name}
-                  maxLength={OFFER_NAME_MAX}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Acme"
-                  autoComplete="organization"
+                <InfoTip label="Who sees your contact">
+                  {contactKind === "email"
+                    ? "Only the creator sees it. We email you the link to this offer with every change."
+                    : "Only the creator sees it. We don't message X or Telegram: the link you get next is how you follow it."}
+                </InfoTip>
+              </span>
+              <div className="flex items-stretch overflow-hidden rounded-[14px] bg-black/25 ring-1 ring-inset ring-white/[0.08] focus-within:ring-amber/60">
+                <select
+                  aria-label="Contact type"
+                  value={contactKind}
+                  onChange={(e) => {
+                    setContactKind(e.target.value as ContactKind);
+                    setNotice(null);
+                  }}
                   disabled={busy}
-                />
-              </label>
-
-              <fieldset className="flex flex-col gap-2">
-                <legend className="mb-2 text-small text-text-muted">How we tell you the answer</legend>
-                <div className="flex flex-wrap gap-2">
+                  className="shrink-0 cursor-pointer appearance-none border-r border-white/[0.08] bg-white/[0.05] py-3 pl-4 pr-8 text-small font-medium text-text outline-none"
+                  style={{
+                    backgroundImage:
+                      "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M2 3.5l3 3 3-3' stroke='%23ffffff99' stroke-width='1.5' fill='none' stroke-linecap='round'/></svg>\")",
+                    backgroundRepeat: "no-repeat",
+                    backgroundPosition: "right 12px center",
+                  }}
+                >
                   {CONTACT_KINDS.map((k) => (
-                    <button
-                      key={k}
-                      type="button"
-                      onClick={() => {
-                        setContactKind(k);
-                        setNotice(null);
-                      }}
-                      aria-pressed={contactKind === k}
-                      disabled={busy}
-                      className={`inline-flex h-10 items-center whitespace-nowrap rounded-[20px] border px-4 text-small transition-colors duration-180 ${
-                        contactKind === k
-                          ? "border-amber bg-amber/10 text-text"
-                          : "border-[color:var(--color-hairline-strong)] text-text-muted hover:text-text"
-                      }`}
-                    >
+                    <option key={k} value={k} className="bg-[#0A1921]">
                       {CONTACT_KIND_LABEL[k]}
-                    </button>
+                    </option>
                   ))}
-                </div>
+                </select>
                 <input
-                  className={`${input} mt-2`}
-                  aria-label={`Your ${CONTACT_KIND_LABEL[contactKind]}`}
+                  className="min-w-0 flex-1 bg-transparent px-4 py-3 text-body text-text outline-none placeholder:text-white/30"
+                  aria-labelledby="offer-contact-label"
                   value={contactValue}
                   onChange={(e) => setContactValue(e.target.value)}
                   placeholder={CONTACT_PLACEHOLDER[contactKind]}
@@ -408,89 +445,85 @@ export function OfferSheet({
                   spellCheck={false}
                   disabled={busy}
                 />
-                <p className="text-tiny text-text-faint">
-                  {contactKind === "email"
-                    ? "We email you the link to this offer with every change. Only the creator sees your contact."
-                    : "Only the creator sees your contact. We don't message X or Telegram: the link you get next is how you follow the offer."}
-                </p>
-              </fieldset>
+              </div>
+            </div>
 
+            {wantsMessage || message ? (
               <label className="flex flex-col gap-2">
-                <span className="flex items-baseline justify-between gap-3 text-small text-text-muted">
-                  <span>Message to @{handle} (optional)</span>
-                  <span className={`text-tiny ${message.length > OFFER_MESSAGE_MAX ? "text-amber" : "text-text-faint"}`}>
+                <span className="flex items-baseline justify-between gap-3">
+                  <span className={fieldLabel}>Message to @{handle}</span>
+                  <span className={`text-tiny ${message.length > OFFER_MESSAGE_MAX ? "text-amber" : "text-white/60"}`}>
                     {message.length}/{OFFER_MESSAGE_MAX}
                   </span>
                 </span>
                 <textarea
-                  className={`${input} min-h-[88px] resize-y`}
+                  className={`${sheetInput} min-h-[88px] resize-y`}
                   value={message}
                   maxLength={OFFER_MESSAGE_MAX}
                   onChange={(e) => setMessage(e.target.value)}
                   placeholder="We launch on day 2 and would love the front of the suitcase."
                   disabled={busy}
+                  autoFocus
                 />
               </label>
+            ) : (
+              <button
+                type="button"
+                className="self-start px-1 text-small font-medium text-amber hover:text-amber-glow"
+                onClick={() => setWantsMessage(true)}
+              >
+                + Add a message
+              </button>
+            )}
+          </div>
 
-              <section className="flex flex-col gap-3 border-t border-[color:var(--color-hairline)] pt-5">
-                <div>
-                  <h3 className="text-body text-text">Check my funds{kind === "bid" ? "" : " (optional)"}</h3>
-                  <p className="mt-1 text-small text-text-muted">
-                    {kind === "bid"
-                      ? "A bid counts only if a wallet of yours holds what you would pay. Sign a message with it; nothing moves."
-                      : "An offer from a wallet that holds the money shows the creator a Funds checked badge and goes to the top of their list."}
-                  </p>
-                </div>
-                {wantsCheck ? (
-                  <FundsCheck
-                    spaceId={space.id}
-                    positionId={position && offerNamesPosition(space) ? position.id : null}
-                    chains={space.chains}
-                    amountCents={amountCents}
-                    kind={kind}
-                    checked={checked}
-                    onChecked={setChecked}
-                    now={now}
-                    disabled={busy}
-                  />
-                ) : (
-                  <div>
-                    <button type="button" className={btnSmallSecondary} onClick={() => setWantsCheck(true)}>
-                      Check my funds
-                    </button>
-                  </div>
-                )}
-              </section>
-
-              {notice && (
-                <p className="rounded-card border border-amber/30 bg-amber/[0.05] px-4 py-3 text-small text-text-muted" role="status">
-                  {notice}
-                </p>
-              )}
-
-              <div className="flex flex-col gap-3">
-                <button type="submit" className={btnPrimary} disabled={busy}>
-                  {busy ? (
-                    <>
-                      <Spinner />
-                      Sending…
-                    </>
-                  ) : kind === "bid" ? (
-                    "Place my bid"
-                  ) : (
-                    "Send my offer"
-                  )}
+          <section
+            ref={verifyRef}
+            className="flex scroll-mb-4 flex-col gap-4 rounded-[18px] p-4 ring-1 ring-inset ring-white/[0.10]"
+            aria-labelledby="verify-title"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <span className="flex min-w-0 items-center gap-2">
+                <span id="verify-title" className="text-body font-medium text-text">
+                  Verify you can pay
+                </span>
+                {kind !== "bid" && <span className="text-tiny text-white/60">Optional</span>}
+                <InfoTip label="About verifying">
+                  {kind === "bid"
+                    ? "A bid counts only if a wallet of yours holds what you'd pay. "
+                    : "A verified offer shows the creator a Funds checked badge and goes to the top of their list. "}
+                  You sign a message: it costs nothing and moves no money. We only read that wallet&rsquo;s USDC.
+                </InfoTip>
+              </span>
+              {!wantsCheck && (
+                <button type="button" className={`${ctaGlass} h-10 px-4`} onClick={openCheck}>
+                  Verify
                 </button>
-                <p className="text-tiny leading-relaxed text-text-faint">
-                  Nothing is paid now and nothing is locked. If @{handle} accepts your {thing}, you have 24 hours to pay
-                  it from any wallet, directly to the creator. Neither of you is bound to go ahead.
-                </p>
-              </div>
-            </form>
+              )}
+            </div>
+            {wantsCheck && (
+              <FundsCheck
+                spaceId={space.id}
+                positionId={position && offerNamesPosition(space) ? position.id : null}
+                chains={payChainsOf(space)}
+                amountCents={amountCents}
+                kind={kind}
+                checked={checked}
+                onChecked={setChecked}
+                now={now}
+                disabled={busy}
+              />
+            )}
+          </section>
+
+          {notice && (
+            <SheetNotice>
+              <p>{notice}</p>
+            </SheetNotice>
           )}
-        </div>
-      </div>
-    </div>
+        </form>
+      )}
+    </PaySheet>
   );
 }
 
@@ -510,33 +543,29 @@ function OfferSent({ sent, space, what }: { sent: Sent; space: Space; what: stri
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <p className={`${eyebrow} text-success`}>{bid ? "Bid placed" : "Offer sent"}</p>
-        <h3 className="mt-2 font-display text-h3 font-light text-text">
-          {bid ? (offer.leading ? "You're the highest bid." : "Your bid is in.") : "Your offer is with @" + handle + "."}
-        </h3>
-        <p className="mt-3 text-small text-text-muted">
-          {bid ? "You bid" : "You offered"} <span className="font-mono text-text">{offer.amountUsdc} USDC</span>
-          {offer.sponsorPaysUsdc !== offer.amountUsdc && (
-            <>
-              {" "}
-              (<span className="font-mono text-text">{offer.sponsorPaysUsdc} USDC</span> in total)
-            </>
-          )}
-          .{" "}
+      <div className="flex flex-col items-center gap-3 pt-2 text-center">
+        <PaidMark />
+        <p className="text-[40px] font-medium leading-none tracking-[-0.02em] tabular-nums text-text">
+          {dollars(offer.amountUsdc) ?? `${offer.amountUsdc} USDC`}
+        </p>
+        <p className="text-body text-text">
+          {bid ? (offer.leading ? "You're the highest bid." : "Your bid is in.") : `Your offer is with @${handle}.`}
+        </p>
+        <p className="max-w-sm text-small text-white/60">
           {offer.status === "countered" && offer.counterUsdc
-            ? `@${handle} has already answered with ${offer.counterUsdc} USDC: open your link to accept it, raise or withdraw.`
+            ? `@${handle} already answered with ${dollars(offer.counterUsdc) ?? offer.counterUsdc}: open your link to accept, raise or withdraw.`
             : bid
-              ? "If you're still the highest when bidding ends and the creator accepts, you have 24 hours to pay."
+              ? "Still highest when bidding ends and accepted? You have 24 hours to pay."
               : "The creator has 48 hours to accept, counter or decline."}
         </p>
         {offer.sponsor.backed ? (
-          <p className="mt-2 text-small text-success">Funds checked.</p>
+          <p className="flex items-center gap-1.5 text-small text-success">
+            <Tick /> Funds checked
+          </p>
         ) : (
           sent.proofSent && (
-            <p className="mt-2 text-small text-amber">
-              We couldn&rsquo;t confirm the USDC in that wallet, so your offer went in without the Funds checked
-              badge.
+            <p className="max-w-sm text-small text-amber">
+              We couldn&rsquo;t confirm the USDC in that wallet, so it went in without the Funds checked badge.
             </p>
           )
         )}
