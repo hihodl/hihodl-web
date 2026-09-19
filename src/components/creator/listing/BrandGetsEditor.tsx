@@ -96,13 +96,14 @@ export function BrandGetsEditor({
                       <label htmlFor={`brand-gets-${i}`} className="sr-only">
                         Line {i + 1}
                       </label>
-                      <input
+                      <textarea
                         id={`brand-gets-${i}`}
                         value={l.text}
+                        rows={l.text.length > 44 ? 3 : 2}
                         maxLength={BRAND_GETS_LIMITS.TEXT_MAX}
                         placeholder="A shout-out from the stage, your product in the vlog…"
-                        onChange={(e) => set(lines.map((x, j) => (j === i ? { kind: "text", text: e.target.value } : x)))}
-                        className="h-10 w-full bg-transparent text-body text-text outline-none placeholder:text-text-muted/70"
+                        onChange={(e) => set(lines.map((x, j) => (j === i ? { kind: "text", text: e.target.value.replace(/\n/g, " ") } : x)))}
+                        className="block w-full resize-none bg-transparent py-2 text-body text-text outline-none placeholder:text-text-muted/70 sm:[field-sizing:content]"
                       />
                       {lineProblems.length ? <Problems list={lineProblems} /> : null}
                     </>
@@ -115,18 +116,21 @@ export function BrandGetsEditor({
                     </p>
                   )}
                 </div>
-                <button type="button" className={iconBtn} aria-label={`Move line ${i + 1} up`} disabled={i === 0} onClick={() => move(i, -1)}>
-                  <Chevron up />
-                </button>
-                <button
-                  type="button"
-                  className={iconBtn}
-                  aria-label={`Move line ${i + 1} down`}
-                  disabled={i === lines.length - 1}
-                  onClick={() => move(i, 1)}
-                >
-                  <Chevron />
-                </button>
+                {/* Up and down stacked on a phone, side by side from `sm`: the line keeps the room. */}
+                <div className="flex shrink-0 flex-col sm:flex-row">
+                  <button type="button" className={iconBtn} aria-label={`Move line ${i + 1} up`} disabled={i === 0} onClick={() => move(i, -1)}>
+                    <Chevron up />
+                  </button>
+                  <button
+                    type="button"
+                    className={iconBtn}
+                    aria-label={`Move line ${i + 1} down`}
+                    disabled={i === lines.length - 1}
+                    onClick={() => move(i, 1)}
+                  >
+                    <Chevron />
+                  </button>
+                </div>
                 <button
                   type="button"
                   className={iconBtn}
