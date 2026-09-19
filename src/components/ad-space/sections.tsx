@@ -25,7 +25,8 @@ import {
 import type { Creator, Position, Space } from "@/lib/ad-space/types";
 
 import { ClosesCountdown } from "./ClosesCountdown";
-import { SpaceSiblings, eventPath } from "./events";
+import { creatorScreenPath } from "./creator";
+import { SpaceSiblings } from "./events";
 import { IfItDoesNotHappen } from "./IfItDoesNotHappen";
 import { WhatTheBrandGets } from "./WhatTheBrandGets";
 import { btnPrimary, btnSmallSecondary, card, eyebrow } from "./ui";
@@ -105,15 +106,19 @@ export function ListingHead({ space }: { space: Space }) {
 
   return (
     <div className="flex flex-col gap-5">
+      {/* Back to this creator's own listings at the event, never the event's
+          page: that one lists other creators, and this page sells for this one. */}
       {space.event && (
         <Link
-          href={eventPath(space.event.slug)}
+          href={creatorScreenPath(space.creator.xHandle, space.event.slug)}
           className="inline-flex h-8 max-w-full items-center self-start overflow-hidden whitespace-nowrap rounded-[16px] bg-[#141F2E]/60 px-3 text-tiny text-white/85 backdrop-blur-md transition-colors duration-180 hover:bg-[#141F2E]/80 hover:text-white"
         >
           <span aria-hidden className="mr-1.5">
             &larr;
           </span>
-          <span className="truncate">All spaces for {space.event.name}</span>
+          <span className="truncate">
+            All of @{space.creator.xHandle} at {space.event.name}
+          </span>
         </Link>
       )}
       <div>

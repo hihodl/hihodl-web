@@ -6,7 +6,7 @@ import { compactNumber, eventDates, eventCountdown, onTimeText, openSpots, track
 import { gradientCss } from "@/lib/ad-space/look";
 import type { CreatorGroup, CreatorProfile, EventSummary, SpaceCard } from "@/lib/ad-space/types";
 
-import { BannerFrame, VerifiedTick, eventBanner, eventPath } from "./events";
+import { BannerFrame, VerifiedTick, eventBanner } from "./events";
 import { BENEFITS_GROUND, SpacesGround } from "./ground";
 
 /**
@@ -320,9 +320,9 @@ function HeroAvatar({ creator }: { creator: CreatorProfile }) {
 /* ── The grid of banners ───────────────────────────────────────────── */
 
 /**
- * One banner per group. Each opens that group's own screen; the event's page
- * is one small "See event" link away, for whoever wants to browse, and nothing
- * more insistent than that.
+ * One banner per group. Each opens that group's own screen. The event is named
+ * (name, city, dates) but never linked: its page lists other creators, and a
+ * creator's page sells for that creator and never sends the brand away.
  */
 export function GroupGrid({
   handle,
@@ -407,14 +407,6 @@ function GroupTile({
     <div className="pointer-events-none relative flex h-full min-h-[210px] flex-col justify-between p-5 md:min-h-[260px] md:p-6">
       <div className="flex items-start justify-between gap-3">
         <span className={countdown?.phase === "now" ? `${glassChip} text-amber` : glassChip}>{chip}</span>
-        {event && (
-          <Link
-            href={eventPath(event.slug)}
-            className={`${glassChip} pointer-events-auto relative z-10 text-white/80 transition-colors duration-180 hover:bg-[#141F2E]/90 hover:text-white`}
-          >
-            See event
-          </Link>
-        )}
       </div>
       <div className="flex items-end justify-between gap-4">
         <div className="min-w-0">
@@ -479,14 +471,6 @@ export function GroupHeader({ event, now }: { event: EventSummary | null; now: n
               : "Not tied to an event"}
           </p>
         </div>
-        {event && (
-          <Link
-            href={eventPath(event.slug)}
-            className={`${glassChip} shrink-0 text-white/80 transition-colors duration-180 hover:bg-[#141F2E]/90 hover:text-white`}
-          >
-            See event
-          </Link>
-        )}
       </div>
     </div>
   );
