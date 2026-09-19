@@ -50,6 +50,7 @@ import {
   type Template,
 } from "@/lib/creator/listing";
 import { createListing, getListing, getTemplates, patchListing, publishListing } from "@/lib/creator/listings";
+import type { InspiredByInput } from "@/lib/creator/inspired-by";
 import { refusalOf } from "@/lib/creator/problems";
 import { firstStepWithProblem, listingProblems, type Problem, type Step } from "@/lib/creator/rules";
 
@@ -94,7 +95,16 @@ function webChains(available: readonly Chain[]): Chain[] {
   return available.filter((c) => c === "solana");
 }
 
-export function ListingWizard({ spaceId: initialSpaceId, templateId }: { spaceId?: string; templateId?: string }) {
+export function ListingWizard({
+  spaceId: initialSpaceId,
+  templateId,
+  inspiredBy,
+}: {
+  spaceId?: string;
+  templateId?: string;
+  /** From Inspire's "Use this idea": the creator whose campaign this started from. */
+  inspiredBy?: InspiredByInput | null;
+}) {
   const router = useRouter();
   const href = useHref();
   const refresh = useRefresh();
@@ -128,7 +138,9 @@ export function ListingWizard({ spaceId: initialSpaceId, templateId }: { spaceId
         const picked = !existing && templateId ? list.find((t) => t.id === templateId) : undefined;
         if (picked) {
           setTemplate(picked);
-          setDraft({ ...draftFor(picked), chains: webChains(availableChains) });
+          // "Use this idea": the credit starts filled in; the Basics step's
+          // "Inspired by" field is where the creator keeps or clears it.
+          setDraft({ ...draftFor(picked), chains: webChains(availableChains), inspiredBy: inspiredBy ?? null });
           setStage("basics");
         }
         if (existing) {
@@ -150,7 +162,7 @@ export function ListingWizard({ spaceId: initialSpaceId, templateId }: { spaceId
     return () => {
       alive = false;
     };
-  }, [initialSpaceId, templateId]);
+  }, [initialSpaceId, templateId, inspiredBy]);
 
   const problems = useMemo<Problem[]>(() => {
     if (!draft || !template) return [];
@@ -237,7 +249,7 @@ export function ListingWizard({ spaceId: initialSpaceId, templateId }: { spaceId
           chosen={template}
           onChoose={(t) => {
             setTemplate(t);
-            setDraft({ ...draftFor(t), chains });
+            setDraft({ ...draftFor(t), chains, inspiredBy: inspiredBy ?? null });
             setStage("basics");
           }}
         />

@@ -33,6 +33,7 @@ import {
 import { useCreatorSession } from "@/lib/creator/session";
 import { getInsights } from "@/lib/creator/insights";
 import { getAnalytics } from "@/lib/creator/analytics";
+import { getInspireCampaigns, getInspireEvents } from "@/lib/creator/inspire";
 import { getWalletStatus } from "@/lib/wallet/api";
 
 import { getMe, getMyAddresses } from "./me";
@@ -133,6 +134,11 @@ export const useInsights = (event: string | null) =>
 
 /** The creator's own business: brands, events, what sells, how brands pay (GET /ad-space/me/analytics). */
 export const useAnalytics = (on = true) => useRead(on ? "analytics" : null, async () => (await getAnalytics()).analytics);
+
+/** Inspire's event cards, and one event's campaigns (GET /inspire/...). */
+export const useInspireEvents = () => useRead("inspire-events", getInspireEvents);
+export const useInspireCampaigns = (slug: string | null) =>
+  useRead(slug ? "inspire-campaigns" : null, () => getInspireCampaigns(slug!), slug ?? "");
 
 /** One listing, whole. */
 export const useListing = (spaceId: string | null) =>
