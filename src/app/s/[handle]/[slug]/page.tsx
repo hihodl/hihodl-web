@@ -97,7 +97,7 @@ export default async function AdSpacePage({ params }: { params: Params }) {
   if (found.kind === "missing") notFound();
 
   return (
-    <SpacesGround>
+    <SpacesGround ground={found.kind === "found" ? found.space.pageGround ?? null : null}>
       {found.kind === "unreachable" ? (
         <main>
           <SpaceUnavailable />

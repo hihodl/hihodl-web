@@ -82,14 +82,14 @@ export const PositionCard = forwardRef<HTMLElement, Props>(function PositionCard
       className={`flex scroll-mt-24 flex-col gap-4 rounded-card border p-5 transition-colors duration-180 ${
         active
           ? "border-amber/50 bg-amber/[0.05]"
-          : "border-[color:var(--color-hairline)] bg-white/[0.03]"
+          : "border-[color:var(--color-hairline)] bg-sp-ink/[0.03]"
       }`}
     >
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="text-body text-text">{p.label}</h3>
+          <h3 className="text-body text-sp-ink">{p.label}</h3>
           {!session && (
-            <p className="mt-1 text-tiny text-text-faint">
+            <p className="mt-1 text-tiny text-sp-ink/80">
               {[sizeLabel, `Takes ${p.accepts.map((k) => CONTENT_KIND_LABEL[k]).join(", ")}`]
                 .filter(Boolean)
                 .join(" · ")}
@@ -99,10 +99,10 @@ export const PositionCard = forwardRef<HTMLElement, Props>(function PositionCard
         <span className={pill[p.status]}>{(session ? SESSION_STATUS_LABEL : STATUS_LABEL)[p.status]}</span>
       </header>
 
-      {p.pitch && <p className="text-small text-text-muted">{p.pitch}</p>}
+      {p.pitch && <p className="text-small text-sp-ink/85">{p.pitch}</p>}
 
       {offerMode === "fixed_with_offers" && p.status === "open" && (
-        <p className="text-tiny text-text-faint">Open to offers.</p>
+        <p className="text-tiny text-sp-ink/80">Open to offers.</p>
       )}
 
       {p.status === "sold" &&
@@ -110,7 +110,7 @@ export const PositionCard = forwardRef<HTMLElement, Props>(function PositionCard
         (p.sponsor ? (
           <SponsorLine sponsor={p.sponsor} />
         ) : (
-          <p className="text-small text-text-muted">Sold. Logo coming soon.</p>
+          <p className="text-small text-sp-ink/85">Sold. Logo coming soon.</p>
         ))}
 
       {p.delivered && (
@@ -118,7 +118,7 @@ export const PositionCard = forwardRef<HTMLElement, Props>(function PositionCard
           href={p.delivered.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-small text-success hover:underline"
+          className="text-small text-sp-ok hover:underline"
         >
           Delivered {calendarDate(p.delivered.at)}: see the post
         </a>
@@ -139,7 +139,7 @@ export const PositionCard = forwardRef<HTMLElement, Props>(function PositionCard
           <dl className="flex flex-col gap-0.5">
             <div className="flex items-baseline gap-2">
               <dt className="sr-only">You pay</dt>
-              <dd className="font-mono text-body text-text">{p.sponsorPaysUsdc} USDC</dd>
+              <dd className="font-mono text-body text-sp-ink">{p.sponsorPaysUsdc} USDC</dd>
             </div>
           </dl>
         )}
@@ -180,7 +180,7 @@ export const PositionCard = forwardRef<HTMLElement, Props>(function PositionCard
           </button>
         )}
         {p.status === "held" && buyable && (
-          <p className="max-w-[16rem] text-tiny text-amber">
+          <p className="max-w-[16rem] text-tiny text-sp-amber">
             {o?.reservedUntil ? (
               <>
                 Held for an accepted {bids ? "bid" : "offer"} until{" "}
@@ -221,7 +221,7 @@ export function BidLines({ offers: o, now }: { offers: PositionOffers | null; no
   const ended = o.biddingOpen === false || (Number.isFinite(end) && now !== null && end <= now);
   const count = o.bidCount ?? 0;
   return (
-    <div className="flex flex-col gap-2 text-tiny text-text-muted">
+    <div className="flex flex-col gap-2 text-tiny text-sp-ink/85">
       <div className="flex flex-wrap items-center gap-2">
         {o.reserveMet === true && <span className={pill.done}>Reserve met</span>}
         {o.reserveMet === false && <span className={pill.attention}>Reserve not met yet</span>}
@@ -231,7 +231,7 @@ export function BidLines({ offers: o, now }: { offers: PositionOffers | null; no
       </div>
       {o.highestBidUsdc && o.leaderName && (
         <p>
-          <span className="text-text">{o.leaderName}</span> leads.
+          <span className="text-sp-ink">{o.leaderName}</span> leads.
         </p>
       )}
       {ended ? (
@@ -243,13 +243,13 @@ export function BidLines({ offers: o, now }: { offers: PositionOffers | null; no
               <>Bidding ends {instantUtc(o.biddingEndsAt)}</>
             ) : (
               <>
-                Bidding ends in <span className="font-mono text-text">{timeLeft(end - now)}</span>
+                Bidding ends in <span className="font-mono text-sp-ink">{timeLeft(end - now)}</span>
               </>
             )}
             {o.nextMinimumBidUsdc && (
               <>
                 {" "}
-                · next bid from <span className="font-mono text-text">{o.nextMinimumBidUsdc} USDC</span>
+                · next bid from <span className="font-mono text-sp-ink">{o.nextMinimumBidUsdc} USDC</span>
               </>
             )}
           </p>
@@ -263,12 +263,12 @@ export function BidLines({ offers: o, now }: { offers: PositionOffers | null; no
 function BidFigure({ offers: o }: { offers: PositionOffers | null }) {
   const highest = o?.highestBidUsdc ?? null;
   const shown = highest ?? o?.openingBidUsdc ?? null;
-  if (!shown) return <p className="text-small text-text-muted">Open for bids</p>;
+  if (!shown) return <p className="text-small text-sp-ink/85">Open for bids</p>;
   return (
     <dl className="flex flex-col gap-0.5">
       <div className="flex items-baseline gap-2">
-        <dt className="text-tiny text-text-faint">{highest ? "Highest bid" : "Opening bid"}</dt>
-        <dd className="font-mono text-body text-text">{shown} USDC</dd>
+        <dt className="text-tiny text-sp-ink/80">{highest ? "Highest bid" : "Opening bid"}</dt>
+        <dd className="font-mono text-body text-sp-ink">{shown} USDC</dd>
       </div>
     </dl>
   );
@@ -279,9 +279,9 @@ function OffersFigure({ offers: o, status }: { offers: PositionOffers | null; st
   const n = o?.openCount ?? null;
   return (
     <div className="flex flex-col gap-0.5">
-      <p className="text-body text-text">{status === "sold" ? "Sold" : "Name your price"}</p>
+      <p className="text-body text-sp-ink">{status === "sold" ? "Sold" : "Name your price"}</p>
       {status !== "sold" && n !== null && (
-        <p className="text-tiny text-text-faint">{n === 0 ? "No offers yet" : n === 1 ? "1 open offer" : `${n} open offers`}</p>
+        <p className="text-tiny text-sp-ink/80">{n === 0 ? "No offers yet" : n === 1 ? "1 open offer" : `${n} open offers`}</p>
       )}
     </div>
   );
@@ -300,13 +300,13 @@ function TakeoverPrices({ position: p, takeover: t }: { position: Position; take
   return (
     <dl className="flex flex-col gap-0.5">
       <div className="flex items-baseline gap-2">
-        <dt className="text-tiny text-text-faint">{p.status === "sold" ? "Sold at" : "You pay"}</dt>
-        <dd className="font-mono text-body text-text">
+        <dt className="text-tiny text-sp-ink/80">{p.status === "sold" ? "Sold at" : "You pay"}</dt>
+        <dd className="font-mono text-body text-sp-ink">
           {p.status === "sold" ? t.priceUsdc : p.sponsorPaysUsdc} USDC
         </dd>
       </div>
       {takeable ? (
-        <div className="flex items-baseline gap-1 text-tiny text-amber">
+        <div className="flex items-baseline gap-1 text-tiny text-sp-amber">
           <dt>Take it for</dt>
           <dd className="font-mono">{t.nextSponsorPaysUsdc} USDC</dd>
         </div>
@@ -333,13 +333,13 @@ function TakeoverLines({
 }) {
   if (p.status !== "sold") {
     return (
-      <p className="text-tiny text-text-muted">
+      <p className="text-tiny text-sp-ink/85">
         Every takeover {takeoverVerb(multiple)}.
       </p>
     );
   }
   return (
-    <div className="flex flex-col gap-1.5 text-tiny text-text-muted">
+    <div className="flex flex-col gap-1.5 text-tiny text-sp-ink/85">
       {t.handsSoFar > 0 && (
         <p>
           {handsText(t.handsSoFar)} since bidding opened at {usdFromCents(t.floorPriceCents)}.
@@ -375,7 +375,7 @@ function SponsorLine({ sponsor: s }: { sponsor: Sponsor }) {
     <div className="flex items-center gap-3">
       <SponsorMark sponsor={s} />
       <div className="min-w-0">
-        <p className="truncate text-small text-text">
+        <p className="truncate text-small text-sp-ink">
           {href ? (
             <a href={href} target="_blank" rel="nofollow ugc noopener noreferrer" className="hover:underline">
               {s.name}
@@ -389,13 +389,13 @@ function SponsorLine({ sponsor: s }: { sponsor: Sponsor }) {
             href={`https://x.com/${encodeURIComponent(handle)}`}
             target="_blank"
             rel="nofollow ugc noopener noreferrer"
-            className="text-tiny text-text-faint hover:text-text-muted"
+            className="text-tiny text-sp-ink/80 hover:text-sp-ink/85"
           >
             @{handle}
           </a>
         )}
         {s.contentKind === "text" && s.contentText && (
-          <p className="mt-0.5 truncate font-mono text-tiny text-text-muted">{s.contentText}</p>
+          <p className="mt-0.5 truncate font-mono text-tiny text-sp-ink/85">{s.contentText}</p>
         )}
       </div>
     </div>

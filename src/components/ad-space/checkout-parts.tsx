@@ -25,7 +25,7 @@ export function ChainPicker({
 }) {
   return (
     <fieldset>
-      <legend className="mb-3 text-small text-text-muted">{legend}</legend>
+      <legend className="mb-3 text-small text-sp-ink/85">{legend}</legend>
       <div className="flex flex-wrap gap-2">
         {chains.map((c) => (
           <button
@@ -35,8 +35,8 @@ export function ChainPicker({
             onClick={() => onChange(c)}
             className={`inline-flex h-10 items-center whitespace-nowrap rounded-[20px] border px-4 text-small transition-colors duration-180 ${
               chain === c
-                ? "border-amber bg-amber/10 text-text"
-                : "border-[color:var(--color-hairline-strong)] text-text-muted hover:text-text"
+                ? "border-amber bg-amber/10 text-sp-ink"
+                : "border-[color:var(--color-hairline-strong)] text-sp-ink/85 hover:text-sp-ink"
             }`}
           >
             {CHAIN_LABEL[c]}
@@ -101,7 +101,7 @@ export function SolanaOptions({
       </button>
 
       {wallets.length === 0 && !mobile && (
-        <p className="text-tiny text-text-faint">
+        <p className="text-tiny text-sp-ink/80">
           No Solana wallet in this browser. Scan the QR with the wallet on your phone.
         </p>
       )}

@@ -7,7 +7,7 @@ import { gradientCss } from "@/lib/ad-space/look";
 import type { CreatorGroup, CreatorProfile, EventSummary, SpaceCard } from "@/lib/ad-space/types";
 
 import { BannerFrame, VerifiedTick, eventBanner } from "./events";
-import { BENEFITS_GROUND, SpacesGround } from "./ground";
+import { SpacesGround } from "./ground";
 
 /**
  * A creator's page, `/s/<handle>`, and the screens under it.
@@ -133,12 +133,11 @@ export function findGroup(
 
 /**
  * The one place the page background is set, for the profile and every screen
- * under it: the Benefits ground (see ./ground), the same as every Spaces page.
+ * under it: the ground the creator chose for their pages (hold | app | night |
+ * white | #RRGGBB), HOLD blue when they chose none. See ./ground.
  */
-export const PROFILE_GROUND = BENEFITS_GROUND;
-
-export function ProfileGround({ background = PROFILE_GROUND, children }: { background?: string; children: ReactNode }) {
-  return <SpacesGround background={background}>{children}</SpacesGround>;
+export function ProfileGround({ ground = null, children }: { ground?: string | null; children: ReactNode }) {
+  return <SpacesGround ground={ground}>{children}</SpacesGround>;
 }
 
 /**
@@ -149,8 +148,8 @@ export function ProfileGround({ background = PROFILE_GROUND, children }: { backg
 export function ProfileFooter({ note }: { note?: string }) {
   return (
     <footer className="container-page mt-auto flex flex-col items-center gap-3 pb-10 pt-16">
-      {note && <p className="text-center text-tiny text-text-faint">{note}</p>}
-      <Wordmark className="h-4 w-auto text-text-faint" />
+      {note && <p className="text-center text-tiny text-sp-ink/80">{note}</p>}
+      <Wordmark className="h-4 w-auto text-sp-ink/80" />
     </footer>
   );
 }
@@ -158,7 +157,7 @@ export function ProfileFooter({ note }: { note?: string }) {
 /* ── The bar at the top ────────────────────────────────────────────── */
 
 const barLink =
-  "inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[18px] bg-white/[0.06] px-3.5 text-small text-text-muted transition-colors duration-180 hover:bg-white/[0.1] hover:text-text";
+  "inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[18px] bg-sp-ink/[0.06] px-3.5 text-small text-sp-ink/85 transition-colors duration-180 hover:bg-sp-ink/[0.1] hover:text-sp-ink";
 
 /** "← Demo Creator": the way back up, always top left. */
 export function BackLink({ href, label }: { href: string; label: string }) {
@@ -205,7 +204,7 @@ export function KindPills({
 }) {
   if (kinds.length < 2 || !active) return null;
   return (
-    <nav aria-label="What they sell" className="inline-flex h-11 shrink-0 items-center gap-1 rounded-[22px] bg-white/[0.06] p-1">
+    <nav aria-label="What they sell" className="inline-flex h-11 shrink-0 items-center gap-1 rounded-[22px] bg-sp-ink/[0.06] p-1">
       {kinds.map((k) => {
         const on = k === active;
         return (
@@ -216,11 +215,11 @@ export function KindPills({
             replace
             aria-current={on ? "page" : undefined}
             className={`inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-[18px] px-4 text-small transition-colors duration-180 ${
-              on ? "bg-amber text-text-on-amber" : "text-text-muted hover:text-text"
+              on ? "bg-amber text-text-on-amber" : "text-sp-ink/85 hover:text-sp-ink"
             }`}
           >
             {k === "spaces" ? "Spaces" : "Services"}
-            <span className={`tabular-nums ${on ? "text-text-on-amber/70" : "text-text-faint"}`}>{counts[k]}</span>
+            <span className={`tabular-nums ${on ? "text-text-on-amber/70" : "text-sp-ink/80"}`}>{counts[k]}</span>
           </Link>
         );
       })}
@@ -252,7 +251,7 @@ export function CreatorHero({ creator, openNow }: { creator: CreatorProfile; ope
       <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center sm:gap-7">
         <HeroAvatar creator={creator} />
         <div className="min-w-0">
-          <h1 className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 break-words font-display text-[36px] font-light leading-[1.05] text-text [overflow-wrap:anywhere] md:text-h2">
+          <h1 className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 break-words font-display text-[36px] font-light leading-[1.05] text-sp-ink [overflow-wrap:anywhere] md:text-h2">
             <span>{name}</span>
             <VerifiedTick type={creator.xVerifiedType} />
           </h1>
@@ -260,7 +259,7 @@ export function CreatorHero({ creator, openNow }: { creator: CreatorProfile; ope
             href={`https://x.com/${encodeURIComponent(creator.xHandle)}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-1.5 inline-block text-body text-text-muted transition-colors duration-180 hover:text-amber"
+            className="mt-1.5 inline-block text-body text-sp-ink/85 transition-colors duration-180 hover:text-sp-amber"
           >
             @{creator.xHandle}
           </a>
@@ -277,12 +276,12 @@ export function CreatorHero({ creator, openNow }: { creator: CreatorProfile; ope
         />
       </div>
       {/* What a brand buys here, as creators learned to sell it: the product gets the look, the reach and the content are the point. */}
-      <p className="mt-6 max-w-2xl text-body text-text-muted">
+      <p className="mt-6 max-w-2xl text-body text-sp-ink/85">
         Every spot comes with {name}&rsquo;s reach and the content they make. The product is what makes people look.
       </p>
       {onTimeText(record) ? (
-        <p className="mt-6 inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-[20px] border border-success/40 bg-success/10 px-4 text-small text-text">
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden className="text-success">
+        <p className="mt-6 inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-[20px] border border-success/40 bg-success/10 px-4 text-small text-sp-ink">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden className="text-sp-ok">
             <path d="M3.5 8.5l3 3 6-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           {onTimeText(record)}
@@ -295,9 +294,9 @@ export function CreatorHero({ creator, openNow }: { creator: CreatorProfile; ope
 function Stat({ value, label, note = null }: { value: string; label: string; note?: string | null }) {
   return (
     <div className="min-w-0">
-      <p className="font-display text-[32px] font-light leading-none tabular-nums text-text md:text-h2">{value}</p>
-      <p className="mt-2 truncate text-tiny text-text-muted">{label}</p>
-      {note && <p className="mt-0.5 truncate text-tiny text-amber">{note}</p>}
+      <p className="font-display text-[32px] font-light leading-none tabular-nums text-sp-ink md:text-h2">{value}</p>
+      <p className="mt-2 truncate text-tiny text-sp-ink/85">{label}</p>
+      {note && <p className="mt-0.5 truncate text-tiny text-sp-amber">{note}</p>}
     </div>
   );
 }
@@ -311,7 +310,7 @@ function HeroAvatar({ creator }: { creator: CreatorProfile }) {
     );
   }
   return (
-    <span className={`${ring} flex items-center justify-center bg-brand-blue-deep text-h3 font-light text-text`} aria-hidden>
+    <span className={`${ring} flex items-center justify-center bg-brand-blue-deep text-h3 font-light text-sp-ink`} aria-hidden>
       {(creator.xName || creator.xHandle).replace(/^@/, "").slice(0, 1).toUpperCase() || "?"}
     </span>
   );
@@ -406,14 +405,14 @@ function GroupTile({
   const body = (
     <div className="pointer-events-none relative flex h-full min-h-[210px] flex-col justify-between p-5 md:min-h-[260px] md:p-6">
       <div className="flex items-start justify-between gap-3">
-        <span className={countdown?.phase === "now" ? `${glassChip} text-amber` : glassChip}>{chip}</span>
+        <span className={countdown?.phase === "now" ? `${glassChip} text-sp-amber` : glassChip}>{chip}</span>
       </div>
       <div className="flex items-end justify-between gap-4">
         <div className="min-w-0">
           <h2 className="break-words font-display text-[30px] font-light leading-[1.05] text-white [overflow-wrap:anywhere] md:text-h3">
             {title}
           </h2>
-          <p className="mt-1.5 truncate text-small text-white/75">
+          <p className="mt-1.5 truncate text-small text-white/85">
             {event ? `${event.city} · ${eventDates(event.startsOn, event.endsOn)}` : "Whenever your campaign runs"}
           </p>
         </div>
@@ -421,7 +420,7 @@ function GroupTile({
           <p className="font-display text-[40px] font-light leading-none tabular-nums text-white md:text-[48px]">
             {over ? sold : n}
           </p>
-          <p className="mt-1 text-tiny text-white/75">
+          <p className="mt-1 text-tiny text-white/85">
             {over ? "sold" : counted}
             {from !== null && <span className="block text-white">from {usdFromCents(from)}</span>}
           </p>
@@ -431,7 +430,7 @@ function GroupTile({
   );
 
   return (
-    <div className="group relative overflow-hidden rounded-card border border-white/[0.08]">
+    <div className="group relative overflow-hidden rounded-card border border-sp-ink/[0.08]">
       {event ? (
         <BannerFrame banner={eventBanner(event)} className="h-full">
           <div className="pointer-events-none absolute inset-0 bg-[#141F2E]/25" aria-hidden />
@@ -445,7 +444,7 @@ function GroupTile({
       <Link
         href={href}
         aria-label={`${title}: ${over ? `${sold} sold` : `${n} ${counted}`}`}
-        className="absolute inset-0 rounded-card outline-offset-2 transition-colors duration-180 group-hover:bg-white/[0.04]"
+        className="absolute inset-0 rounded-card outline-offset-2 transition-colors duration-180 group-hover:bg-sp-ink/[0.04]"
       />
     </div>
   );

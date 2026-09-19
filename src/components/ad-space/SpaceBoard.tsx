@@ -196,7 +196,7 @@ export function SpaceBoard({
     <div className="container-page flex flex-col gap-4">
       {resumable && !checkoutFor && (
         <div className="flex flex-col gap-4 rounded-card border border-amber/40 bg-amber/[0.06] p-5 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-small text-text">
+          <p className="text-small text-sp-ink">
             {resumable.order.status !== "paid"
               ? `Your payment for ${resumable.position.label} is still going through.`
               : session
@@ -233,11 +233,11 @@ export function SpaceBoard({
 
       {isService && (
         <section id="spots" className="container-page scroll-mt-20 py-10 md:py-14" aria-labelledby="pick">
-          <h2 id="pick" className="font-display text-h3 font-light text-text md:text-h2">
+          <h2 id="pick" className="font-display text-h3 font-light text-sp-ink md:text-h2">
             {session ? "Book a session" : `Pick your ${noun}`}
           </h2>
           {serviceSummary(space) && (
-            <p className="mt-3 max-w-2xl whitespace-pre-line break-words text-body text-text-muted [overflow-wrap:anywhere]">
+            <p className="mt-3 max-w-2xl whitespace-pre-line break-words text-body text-sp-ink/85 [overflow-wrap:anywhere]">
               {serviceSummary(space)}
             </p>
           )}
@@ -273,8 +273,8 @@ export function SpaceBoard({
 
       {!isService && cardList && (
         <section className="container-page py-12 md:py-16" aria-labelledby="every-spot">
-          <h2 id="every-spot" className="font-display text-h3 font-light text-text md:text-h2">
-            Every spot
+          <h2 id="every-spot" className="font-display text-h3 font-light text-sp-ink md:text-h2">
+            Pick your spot
           </h2>
           <div className="mt-8">{cardList}</div>
         </section>
@@ -298,9 +298,6 @@ export function SpaceBoard({
   );
 }
 
-/** The banner fades out over its last 45%, into whatever ground is behind it. */
-const BAND_FADE = "linear-gradient(180deg, #000 0%, #000 55%, transparent 100%)";
-
 /**
  * The banner, drawn from the listing itself and never from its event: the
  * creator's own picture when they set one, else (on a placement) the product
@@ -309,10 +306,12 @@ const BAND_FADE = "linear-gradient(180deg, #000 0%, #000 55%, transparent 100%)"
 function ListingBand({ space, children }: { space: Space; children: ReactNode }) {
   const photo = space.bannerUrl;
   return (
-    <section className="relative overflow-hidden">
+    <section className="sp-band relative overflow-hidden">
       {/* The banner fades into whatever ground is behind it, by its own
-          transparency rather than by painting a colour that has to match. */}
-      <div className="absolute inset-0" style={{ background: gradientCss(space.bannerGradient), maskImage: BAND_FADE, WebkitMaskImage: BAND_FADE }} aria-hidden>
+          transparency rather than by painting a colour that has to match
+          (`.sp-band-fade`). On a light ground it stays a dark block with a
+          rounded foot, and `.sp-band` keeps the dark ink inside it. */}
+      <div className="sp-band-fade absolute inset-0" style={{ background: gradientCss(space.bannerGradient) }} aria-hidden>
         {photo && (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element -- the creator's banner, from our own bucket */}
@@ -353,7 +352,7 @@ function ListingStage({
 }) {
   return (
     <div>
-      <ProductBoard template={space.template} photo={space.photo} positions={space.positions} activeId={activeId} onHover={onHover} onPick={onPick} />
+      <ProductBoard template={space.template} look={space.productLook ?? null} viewPhotos={space.viewPhotos ?? null} photo={space.photo} positions={space.positions} activeId={activeId} onHover={onHover} onPick={onPick} />
       <Legend takeover={space.pricingMode === "takeover"} mode={mode} />
     </div>
   );
@@ -397,17 +396,17 @@ function SpaceOffersPanel({
   const reserved = offers?.reservedUntil ?? null;
   const noun = session ? "session" : "slot";
   return (
-    <div className="flex flex-col gap-4 rounded-card border border-[color:var(--color-hairline)] bg-white/[0.03] p-5 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-4 rounded-card border border-[color:var(--color-hairline)] bg-sp-ink/[0.03] p-5 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
-        <p className="text-body text-text">
+        <p className="text-body text-sp-ink">
           {mode === "offers" ? "Name your price" : `Buy a ${noun} now, or offer less`}
         </p>
-        <p className="mt-1 text-small text-text-muted">
+        <p className="mt-1 text-small text-sp-ink/85">
           For any open {noun}. Accepted? You get the next free one and 24 hours to pay.
           {n !== null && (n === 0 ? " No offers yet." : n === 1 ? " 1 open offer." : ` ${n} open offers.`)}
         </p>
         {reserved && (
-          <p className="mt-1 text-tiny text-amber">
+          <p className="mt-1 text-tiny text-sp-amber">
             An accepted offer holds a {noun} for{" "}
             {now === null ? `until ${instantUtc(reserved)}` : timeLeft(Date.parse(reserved) - now)} while it waits for
             its payment.
@@ -427,7 +426,7 @@ function SpaceOffersPanel({
 function YourOffers({ offers }: { offers: SavedOffer[] }) {
   return (
     <div className="mb-10 flex flex-col gap-3 rounded-card border border-amber/40 bg-amber/[0.06] p-5">
-      <p className="text-small text-text">
+      <p className="text-small text-sp-ink">
         {offers.length === 1 ? "You made an offer here from this browser." : `You made ${offers.length} offers here from this browser.`}
       </p>
       <ul className="flex flex-wrap gap-2">

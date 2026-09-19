@@ -518,7 +518,31 @@ export interface Space {
   photo?: SpacePhoto | null;
   /** The same creator's other live or closed spaces for the same event. */
   siblings: SpaceSibling[];
+  /**
+   * "What you get" in the creator's words and order: their own `text` lines
+   * and our `reach` / `spot` suggestions, worded here from live figures. Null
+   * or absent: never edited, the page shows the suggestions.
+   */
+  brandGets?: BrandGetsLine[] | null;
+  /**
+   * The product in the creator's colours: `body` fills the drawing, `accent`
+   * its handle, wheels and trim. Null draws the outline alone.
+   */
+  productLook?: { body: string; accent: string } | null;
+  /**
+   * A real photo per side of the product, keyed by view, each side's spots
+   * `rect`s on its own photo. Only sides whose every spot has its square; a
+   * side not here keeps the drawing. Never together with `photo`.
+   */
+  viewPhotos?: Record<string, SpacePhoto>;
+  /**
+   * The ground this page stands on: the listing's own, else the creator's
+   * default; hold | app | night | white | #RRGGBB. Null or absent: HOLD blue.
+   */
+  pageGround?: string | null;
 }
+
+export type BrandGetsLine = { kind: "reach" } | { kind: "spot" } | { kind: "text"; text: string };
 
 /* ── Events (ad-space-events-v0.md) ───────────────────────────────────── */
 
@@ -638,6 +662,8 @@ export interface EventPage {
  */
 export interface CreatorProfile extends CardCreator {
   xHandle: string;
+  /** The ground the creator chose for their pages: hold | app | night | white | #RRGGBB. Null or absent: HOLD blue. */
+  pageGround?: string | null;
 }
 
 /**

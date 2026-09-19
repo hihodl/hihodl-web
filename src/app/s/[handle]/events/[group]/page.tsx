@@ -89,11 +89,11 @@ export default async function CreatorGroupScreen({
       <>
         <SlimHeader />
         <main className="container-page flex min-h-[60vh] flex-col justify-center py-20">
-          <p className={`${eyebrow} text-amber`}>HiSpace</p>
-          <h1 className="mt-5 max-w-2xl font-display text-h3 font-light text-text md:text-h2">
+          <p className={`${eyebrow} text-sp-amber`}>HiSpace</p>
+          <h1 className="mt-5 max-w-2xl font-display text-h3 font-light text-sp-ink md:text-h2">
             We couldn&rsquo;t load this creator just now.
           </h1>
-          <p className="mt-5 max-w-xl text-body text-text-muted">
+          <p className="mt-5 max-w-xl text-body text-sp-ink/85">
             This is on our side, not the link. Give it a moment and refresh the page.
           </p>
         </main>
@@ -112,10 +112,10 @@ export default async function CreatorGroupScreen({
     const { past } = splitGroups(groups, now);
     if (past.length === 0) notFound();
     return (
-      <ProfileGround>
+      <ProfileGround ground={creator.pageGround ?? null}>
         <TopBar left={<BackLink href={home} label={name} />} />
         <main className="container-page w-full">
-          <h1 className="pb-6 pt-6 font-display text-[36px] font-light leading-[1.05] text-text md:pb-10 md:pt-10 md:text-h2">
+          <h1 className="pb-6 pt-6 font-display text-[36px] font-light leading-[1.05] text-sp-ink md:pb-10 md:pt-10 md:text-h2">
             Past events
           </h1>
           <GroupGrid handle={handle} groups={past} kind={null} now={now} over />
@@ -148,7 +148,7 @@ export default async function CreatorGroupScreen({
   const back = over ? creatorScreenPath(handle, PAST) : kind === "services" ? `${home}?kind=services` : home;
 
   return (
-    <ProfileGround>
+    <ProfileGround ground={creator.pageGround ?? null}>
       <TopBar
         left={<BackLink href={back} label={over ? "Past events" : name} />}
         right={<KindPills kinds={kinds} active={kind} counts={kindCounts(group.cards)} hrefFor={(k) => here(k)} />}

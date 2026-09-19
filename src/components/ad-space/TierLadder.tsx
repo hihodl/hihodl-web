@@ -126,28 +126,28 @@ function TierCard({
     <article
       className={`grid grid-cols-1 gap-5 rounded-card border p-5 transition-colors duration-180 sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-8 md:p-6 ${
         gone
-          ? "border-[color:var(--color-hairline)] bg-white/[0.015] opacity-70"
-          : "border-[color:var(--color-hairline)] bg-white/[0.03]"
+          ? "border-[color:var(--color-hairline)] bg-sp-ink/[0.015] opacity-70"
+          : "border-[color:var(--color-hairline)] bg-sp-ink/[0.03]"
       }`}
     >
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          <h3 className="min-w-0 break-words text-body text-text [overflow-wrap:anywhere]">{t.title}</h3>
+          <h3 className="min-w-0 break-words text-body text-sp-ink [overflow-wrap:anywhere]">{t.title}</h3>
           <span className={leftPill}>{left}</span>
         </div>
         {t.pitch && (
-          <p className="mt-2 break-words text-small text-text-muted [overflow-wrap:anywhere]">{t.pitch}</p>
+          <p className="mt-2 break-words text-small text-sp-ink/85 [overflow-wrap:anywhere]">{t.pitch}</p>
         )}
         {t.perks.length > 0 && (
           <>
-            <h4 className={`${eyebrow} mt-4 text-text-faint`}>What you get</h4>
+            <h4 className={`${eyebrow} mt-4 text-sp-ink/80`}>What you get</h4>
             <ul className="mt-2 flex flex-col gap-2">
               {t.perks.map((line, i) => (
                 // The creator's own words, as text: `perks` is plain text by
                 // contract and is never rendered as markup of any kind.
                 <li key={`${t.key}-${i}`} className="flex items-start gap-3">
                   <Check />
-                  <span className="min-w-0 break-words text-small text-text [overflow-wrap:anywhere]">{line}</span>
+                  <span className="min-w-0 break-words text-small text-sp-ink [overflow-wrap:anywhere]">{line}</span>
                 </li>
               ))}
             </ul>
@@ -186,7 +186,7 @@ function TierCard({
           </div>
         )}
         {!buy && t.held > 0 && (
-          <p className="max-w-[18rem] text-tiny text-amber sm:text-right">
+          <p className="max-w-[18rem] text-tiny text-sp-amber sm:text-right">
             Somebody is paying for the last one right now.
           </p>
         )}
@@ -207,11 +207,11 @@ function TierFigure({ tier: t, mode, session }: { tier: SpaceTier; mode: OfferMo
   if (mode === "bids") {
     const highest = t.offers?.highestBidUsdc ?? null;
     const shown = highest ?? t.offers?.openingBidUsdc ?? null;
-    if (!shown) return <p className="text-small text-text-muted">Open for bids</p>;
+    if (!shown) return <p className="text-small text-sp-ink/85">Open for bids</p>;
     return (
       <dl className="flex flex-col gap-0.5 sm:text-right">
-        <dt className="text-tiny text-text-faint">{highest ? "Highest bid" : "Opening bid"}</dt>
-        <dd className="font-mono text-h4 font-light text-text">{shown} USDC</dd>
+        <dt className="text-tiny text-sp-ink/80">{highest ? "Highest bid" : "Opening bid"}</dt>
+        <dd className="font-mono text-h4 font-light text-sp-ink">{shown} USDC</dd>
       </dl>
     );
   }
@@ -219,9 +219,9 @@ function TierFigure({ tier: t, mode, session }: { tier: SpaceTier; mode: OfferMo
     const n = t.offers?.openCount ?? null;
     return (
       <div className="flex flex-col gap-0.5 sm:text-right">
-        <p className="text-body text-text">{gone ? (session ? "Booked" : "Sold") : "Name your price"}</p>
+        <p className="text-body text-sp-ink">{gone ? (session ? "Booked" : "Sold") : "Name your price"}</p>
         {!gone && n !== null && (
-          <p className="text-tiny text-text-faint">
+          <p className="text-tiny text-sp-ink/80">
             {n === 0 ? "No offers yet" : n === 1 ? "1 open offer" : `${n} open offers`}
           </p>
         )}
@@ -230,15 +230,15 @@ function TierFigure({ tier: t, mode, session }: { tier: SpaceTier; mode: OfferMo
   }
   return (
     <dl className="flex flex-col gap-0.5 sm:text-right">
-      <dt className="text-tiny text-text-faint">{gone ? "Went for" : "You pay"}</dt>
-      <dd className="font-mono text-h4 font-light text-text">{t.sponsorPaysUsdc} USDC</dd>
+      <dt className="text-tiny text-sp-ink/80">{gone ? "Went for" : "You pay"}</dt>
+      <dd className="font-mono text-h4 font-light text-sp-ink">{t.sponsorPaysUsdc} USDC</dd>
     </dl>
   );
 }
 
 function Check() {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="mt-[3px] shrink-0 text-moonlight">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="mt-[3px] shrink-0 text-sp-cool">
       <path d="M3.5 8.5l3 3 6-7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );

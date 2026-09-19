@@ -23,6 +23,7 @@
  */
 
 import {
+  BRAND_GETS_LIMITS,
   LIMITS,
   anyRungBids,
   centsFromDollars,
@@ -359,6 +360,19 @@ export function listingProblems(draft: ListingDraft, template: Template, now = D
         `Say what a brand gets, in ${LIMITS.SERVICE_SUMMARY_MIN} to ${LIMITS.SERVICE_SUMMARY_MAX} characters. This is not in our catalogue, so your words are the only description there is.`,
       );
     }
+  }
+
+  if (draft.brandGets) {
+    if (draft.brandGets.length > BRAND_GETS_LIMITS.MAX_LINES) {
+      add("brandGets", "publish", `${BRAND_GETS_LIMITS.MAX_LINES} lines is the most the list can carry.`);
+    }
+    draft.brandGets.forEach((l, i) => {
+      if (l.kind !== "text") return;
+      const text = l.text.trim();
+      if (text && (text.length < BRAND_GETS_LIMITS.TEXT_MIN || text.length > BRAND_GETS_LIMITS.TEXT_MAX)) {
+        add(`brandGets:${i}`, "publish", `${BRAND_GETS_LIMITS.TEXT_MIN} to ${BRAND_GETS_LIMITS.TEXT_MAX} characters.`);
+      }
+    });
   }
 
   const required = requiredAttestations(template.requiredAttestations, draft.venueType, template.kind, session, production);

@@ -130,14 +130,30 @@ export function clearListingBanner(spaceId: string): Promise<{ bannerUrl: null }
 
 /* ── The product photo, with the spots as squares on it ───────────── */
 
-/** Upload or replace the photo of the product. PNG or JPEG: the X card draws it. The owner only. */
-export function setListingPhoto(spaceId: string, image: Blob): Promise<{ photo: ListingPhoto | null }> {
-  return call<{ photo: ListingPhoto | null }>(`ad-space/spaces/${spaceId}/photo`, { method: "POST", file: image });
+type PhotoAnswer = { photo: ListingPhoto | null; viewPhotos?: Record<string, ListingPhoto> };
+
+const photoPath = (spaceId: string, view?: string | null) =>
+  `ad-space/spaces/${spaceId}/photo${view ? `?view=${encodeURIComponent(view)}` : ""}`;
+
+/**
+ * Upload or replace the photo of the product. PNG or JPEG: the X card draws it. The owner only.
+ * With `view`, the photo of that one side (`front`, `back`…), its spots placed on it.
+ */
+export function setListingPhoto(spaceId: string, image: Blob, view?: string | null): Promise<PhotoAnswer> {
+  return call<PhotoAnswer>(photoPath(spaceId, view), { method: "POST", file: image });
 }
 
-/** Take the photo down, and every square with it. Refused once a spot on it is sold. */
-export function clearListingPhoto(spaceId: string): Promise<{ photo: null }> {
-  return call<{ photo: null }>(`ad-space/spaces/${spaceId}/photo`, { method: "DELETE" });
+/** Take the photo down, and every square with it (with `view`, that side's). Refused once a spot on it is sold. */
+export function clearListingPhoto(spaceId: string, view?: string | null): Promise<PhotoAnswer> {
+  return call<PhotoAnswer>(photoPath(spaceId, view), { method: "DELETE" });
+}
+
+/** The product's colours: `{ body, accent }` as #RRGGBB, or null for the outline alone. */
+export function setListingProductLook(
+  spaceId: string,
+  productLook: { body: string; accent: string } | null,
+): Promise<{ productLook: { body: string; accent: string } | null }> {
+  return call(`ad-space/spaces/${spaceId}/look`, { method: "PATCH", json: { productLook } });
 }
 
 /** Place, move or take off squares. Spots not named keep theirs. */
@@ -327,6 +343,8 @@ export interface CreatorSettings {
   chosen: boolean;
   hasTeam: boolean;
   on: boolean;
+  /** The default ground of the creator's public pages: hold | app | night | white | #RRGGBB; null is HOLD blue. */
+  pageGround?: string | null;
 }
 
 export function getCreatorSettings(): Promise<{ settings: CreatorSettings }> {
@@ -335,6 +353,16 @@ export function getCreatorSettings(): Promise<{ settings: CreatorSettings }> {
 
 export function setAgencyMode(agencyMode: boolean): Promise<{ settings: CreatorSettings }> {
   return call<{ settings: CreatorSettings }>("ad-space/settings", { method: "PATCH", json: { agencyMode } });
+}
+
+/** The default ground of the creator's public pages (their profile and every listing without its own). */
+export function setPageGround(pageGround: string | null): Promise<{ settings: CreatorSettings }> {
+  return call<{ settings: CreatorSettings }>("ad-space/settings", { method: "PATCH", json: { pageGround } });
+}
+
+/** One listing's own ground, over the creator's default; null follows the default. */
+export function setListingPageGround(spaceId: string, pageGround: string | null): Promise<{ pageGroundOwn: string | null }> {
+  return call(`ad-space/spaces/${spaceId}/look`, { method: "PATCH", json: { pageGround } });
 }
 
 /** Everybody on this creator's team, invitations nobody has taken yet included. */

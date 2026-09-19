@@ -91,7 +91,7 @@ function Deadline({ iso, now }: { iso: string; now: number | null }) {
     <>
       <When iso={iso} />
       {left !== null && left > 0 && (
-        <span className="text-text-faint">
+        <span className="text-sp-ink/80">
           {" "}
           (<span className="font-mono">{timeLeft(left)}</span> left)
         </span>
@@ -197,11 +197,11 @@ export function OfferPanel({
       <section className={`${card} flex flex-col gap-4 p-5 md:p-6`} aria-label={bid ? "Your bid" : "Your offer"}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className={`${eyebrow} text-text-faint`}>{bid ? "Your bid" : "Your offer"}</p>
-            <h1 className="mt-2 break-words font-display text-h4 font-light text-text [overflow-wrap:anywhere] md:text-h3">
+            <p className={`${eyebrow} text-sp-ink/80`}>{bid ? "Your bid" : "Your offer"}</p>
+            <h1 className="mt-2 break-words font-display text-h4 font-light text-sp-ink [overflow-wrap:anywhere] md:text-h3">
               {what}, on {handle ? `@${handle}’s` : "the creator’s"} HiSpace
             </h1>
-            <p className="mt-1 break-words text-small text-text-muted [overflow-wrap:anywhere]">
+            <p className="mt-1 break-words text-small text-sp-ink/85 [overflow-wrap:anywhere]">
               {[summary.event?.name, summary.title || offer.spaceTitle].filter(Boolean).join(" · ")}
             </p>
           </div>
@@ -271,7 +271,7 @@ export function OfferPanel({
                 </button>
               </div>
             ) : (
-              <p className="text-small text-amber">
+              <p className="text-small text-sp-amber">
                 We couldn&rsquo;t load the payment just now. Refresh the page to pay.
               </p>
             )}
@@ -357,13 +357,13 @@ export function OfferPanel({
           </div>
         )}
         {confirmWithdraw && (
-          <p className="text-tiny text-text-faint">
+          <p className="text-tiny text-sp-ink/80">
             Withdrawing closes this {thing} for good. You can make a new one while the space is open.
           </p>
         )}
 
         {notice && (
-          <p className="rounded-card border border-amber/30 bg-amber/[0.05] px-4 py-3 text-small text-text-muted" role="status">
+          <p className="rounded-card border border-amber/30 bg-amber/[0.05] px-4 py-3 text-small text-sp-ink/85" role="status">
             {notice}
           </p>
         )}
@@ -372,22 +372,22 @@ export function OfferPanel({
       <Rounds offer={offer} who={who} />
 
       <section className={`${card} flex flex-col gap-2 p-5 text-small md:p-6`} aria-label="What you sent">
-        <h2 className={`${eyebrow} text-text-faint`}>What you sent</h2>
-        <p className="text-text-muted">
-          Name: <span className="text-text">{offer.sponsor.name}</span>
+        <h2 className={`${eyebrow} text-sp-ink/80`}>What you sent</h2>
+        <p className="text-sp-ink/85">
+          Name: <span className="text-sp-ink">{offer.sponsor.name}</span>
         </p>
         {offer.sponsor.contactKind && offer.sponsor.contactValue && (
-          <p className="text-text-muted">
-            {CONTACT_KIND_LABEL[offer.sponsor.contactKind]}: <span className="text-text">{offer.sponsor.contactValue}</span>
+          <p className="text-sp-ink/85">
+            {CONTACT_KIND_LABEL[offer.sponsor.contactKind]}: <span className="text-sp-ink">{offer.sponsor.contactValue}</span>
           </p>
         )}
         {offer.sponsor.message && (
-          <p className="whitespace-pre-line break-words text-text-muted [overflow-wrap:anywhere]">{offer.sponsor.message}</p>
+          <p className="whitespace-pre-line break-words text-sp-ink/85 [overflow-wrap:anywhere]">{offer.sponsor.message}</p>
         )}
-        <p className="text-text-muted">
+        <p className="text-sp-ink/85">
           {offer.sponsor.backed ? (
             <>
-              <span className="text-success">Funds checked</span> on {CHAIN_LABEL[offer.sponsor.backed.chain]},{" "}
+              <span className="text-sp-ok">Funds checked</span> on {CHAIN_LABEL[offer.sponsor.backed.chain]},{" "}
               <span className="font-mono">{shortAddress(offer.sponsor.backed.address)}</span>
             </>
           ) : (
@@ -395,7 +395,7 @@ export function OfferPanel({
           )}
         </p>
         {offer.sponsor.contactKind === "email" && (
-          <p className="text-tiny text-text-faint">We email this link to you with every change.</p>
+          <p className="text-tiny text-sp-ink/80">We email this link to you with every change.</p>
         )}
       </section>
 
@@ -435,8 +435,8 @@ function existingCheckoutKeySafe(positionId: string): boolean {
 function Figure({ label, value, tone }: { label: string; value: string; tone?: "attention" }) {
   return (
     <div>
-      <dt className="text-tiny text-text-faint">{label}</dt>
-      <dd className={`mt-1 font-mono ${tone === "attention" ? "text-amber" : "text-text"}`}>{value} USDC</dd>
+      <dt className="text-tiny text-sp-ink/80">{label}</dt>
+      <dd className={`mt-1 font-mono ${tone === "attention" ? "text-sp-amber" : "text-sp-ink"}`}>{value} USDC</dd>
     </div>
   );
 }
@@ -466,14 +466,14 @@ function Standing({
   const bid = offer.kind === "bid";
   const thing = bid ? "bid" : "offer";
   const po = thread.position?.offers ?? null;
-  const p = (text: ReactNode) => <p className="text-small text-text-muted">{text}</p>;
+  const p = (text: ReactNode) => <p className="text-small text-sp-ink/85">{text}</p>;
 
   switch (offer.status) {
     case "pending":
       if (bid) {
         return (
           <div className="flex flex-col gap-2">
-            <h2 className="text-body text-text">
+            <h2 className="text-body text-sp-ink">
               {offer.leading ? "You're the highest bid." : "You've been outbid."}
             </h2>
             {!offer.leading && po?.highestBidUsdc && p(<>The highest bid is now {po.highestBidUsdc} USDC{po.nextMinimumBidUsdc ? `, and the next has to be at least ${po.nextMinimumBidUsdc} USDC` : ""}.</>)}
@@ -497,7 +497,7 @@ function Standing({
       }
       return (
         <div className="flex flex-col gap-2">
-          <h2 className="text-body text-text">Waiting for {who}.</h2>
+          <h2 className="text-body text-sp-ink">Waiting for {who}.</h2>
           {p(
             <>
               They can accept, counter or decline
@@ -515,7 +515,7 @@ function Standing({
     case "countered":
       return (
         <div className="flex flex-col gap-2">
-          <h2 className="text-body text-text">
+          <h2 className="text-body text-sp-ink">
             {who} answered with {offer.counterUsdc} USDC.
           </h2>
           {p(
@@ -536,7 +536,7 @@ function Standing({
     case "accepted":
       return (
         <div className="flex flex-col gap-2">
-          <h2 className="text-body text-text">
+          <h2 className="text-body text-sp-ink">
             {who} accepted your {thing} at {offer.agreedUsdc} USDC.
           </h2>
           {p(
@@ -559,7 +559,7 @@ function Standing({
     case "paid":
       return (
         <div className="flex flex-col gap-2">
-          <h2 className="text-body text-text">Paid. It&rsquo;s yours.</h2>
+          <h2 className="text-body text-sp-ink">Paid. It&rsquo;s yours.</h2>
           {p(
             paidHere
               ? `Send ${who} what goes on it: your logo, a QR, a text or a photo.`
@@ -570,7 +570,7 @@ function Standing({
     case "declined":
       return (
         <div className="flex flex-col gap-2">
-          <h2 className="text-body text-text">
+          <h2 className="text-body text-sp-ink">
             {who} {offer.declineReason ? DECLINE_TEXT[offer.declineReason] : "declined it"}.
           </h2>
           {p(`This ${thing} is closed. You can make a new one while the space is open.`)}
@@ -594,11 +594,11 @@ function Rounds({ offer, who }: { offer: OfferView; who: string }) {
   const bid = offer.kind === "bid";
   return (
     <section className={`${card} flex flex-col gap-3 p-5 md:p-6`} aria-label="History">
-      <h2 className={`${eyebrow} text-text-faint`}>History</h2>
+      <h2 className={`${eyebrow} text-sp-ink/80`}>History</h2>
       <ol className="flex flex-col gap-2">
         {offer.rounds.map((r, i) => (
           <li key={`${r.at}-${i}`} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 text-small">
-            <span className="text-text-muted">
+            <span className="text-sp-ink/85">
               {r.by === "sponsor"
                 ? i === 0
                   ? bid
@@ -606,9 +606,9 @@ function Rounds({ offer, who }: { offer: OfferView; who: string }) {
                     : "You offered"
                   : "You raised to"
                 : `${who} countered with`}{" "}
-              <span className="font-mono text-text">{r.amountUsdc} USDC</span>
+              <span className="font-mono text-sp-ink">{r.amountUsdc} USDC</span>
             </span>
-            <span className="text-tiny text-text-faint">
+            <span className="text-tiny text-sp-ink/80">
               <When iso={r.at} />
             </span>
           </li>
@@ -705,15 +705,15 @@ function RaiseForm({
             disabled={busy}
           />
         ) : (
-          <p className="text-tiny text-text-faint">
+          <p className="text-tiny text-sp-ink/80">
             If the new bid is more than the wallet you checked holds, you&rsquo;ll be asked to check your funds again.{" "}
-            <button type="button" className="text-amber hover:underline" onClick={() => setWantsCheck(true)}>
+            <button type="button" className="text-sp-amber hover:underline" onClick={() => setWantsCheck(true)}>
               Check now
             </button>
           </p>
         ))}
       {problem && (
-        <p className="rounded-card border border-amber/30 bg-amber/[0.05] px-4 py-3 text-small text-text-muted" role="status">
+        <p className="rounded-card border border-amber/30 bg-amber/[0.05] px-4 py-3 text-small text-sp-ink/85" role="status">
           {problem}
         </p>
       )}

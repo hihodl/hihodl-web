@@ -51,7 +51,7 @@ import { btnPrimary, btnSmallSecondary, card, eyebrow } from "./ui";
 export function SlimHeader() {
   return (
     <header className="container-page flex h-16 items-center justify-between gap-4">
-      <Link href="/" className="flex items-center text-text" aria-label="Home">
+      <Link href="/" className="flex items-center text-sp-ink" aria-label="Home">
         <Wordmark className="h-5 w-auto" />
       </Link>
       <DownloadLink className={btnSmallSecondary}>Get HOLD</DownloadLink>
@@ -62,7 +62,7 @@ export function SlimHeader() {
 /** The links a page needs, and the HOLD logo at the very bottom. Nothing to read. */
 export function SpaceFooter({ space }: { space: Space }) {
   const report = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(`Report HiSpace ${space.id}`)}`;
-  const link = "text-text-faint transition-colors duration-180 hover:text-text";
+  const link = "text-sp-ink/80 transition-colors duration-180 hover:text-sp-ink";
   return (
     <footer className="hairline">
       <div className="container-page flex flex-col gap-6 py-10">
@@ -77,7 +77,7 @@ export function SpaceFooter({ space }: { space: Space }) {
             Privacy
           </Link>
         </nav>
-        <Link href="/" aria-label="HOLD" className="self-start text-text-muted transition-colors duration-180 hover:text-text">
+        <Link href="/" aria-label="HOLD" className="self-start text-sp-ink/85 transition-colors duration-180 hover:text-sp-ink">
           <Wordmark className="h-5 w-auto" />
         </Link>
       </div>
@@ -122,20 +122,20 @@ export function ListingHead({ space }: { space: Space }) {
         </Link>
       )}
       <div>
-        <p className={`${eyebrow} break-words text-amber [overflow-wrap:anywhere]`}>
+        <p className={`${eyebrow} break-words text-sp-amber [overflow-wrap:anywhere]`}>
           {[space.event?.name ?? space.eventName, what].filter(Boolean).join(" · ")}
         </p>
-        <h1 className="mt-3 max-w-4xl break-words font-display text-[40px] font-light leading-[1.05] text-text [overflow-wrap:anywhere] md:text-h1">
+        <h1 className="mt-3 max-w-4xl break-words font-display text-[40px] font-light leading-[1.05] text-sp-ink [overflow-wrap:anywhere] md:text-h1">
           {space.title}
         </h1>
         {space.reason && (
-          <p className="mt-4 max-w-2xl break-words text-body text-text-muted [overflow-wrap:anywhere] md:text-lead">
+          <p className="mt-4 max-w-2xl break-words text-body text-sp-ink/85 [overflow-wrap:anywhere] md:text-lead">
             {space.reason}
           </p>
         )}
       </div>
       <CreatorChip creator={space.creator} />
-      <SpaceSiblings siblings={space.siblings} />
+      <SpaceSiblings siblings={space.siblings} handle={space.creator.xHandle} eventName={space.event?.name ?? space.eventName} />
     </div>
   );
 }
@@ -147,17 +147,17 @@ function CreatorChip({ creator: c }: { creator: Creator }) {
       <Avatar creator={c} />
       <div className="min-w-0">
         <p className="flex min-w-0 flex-wrap items-baseline gap-x-2 text-small">
-          <span className="truncate text-text">{c.xName}</span>
+          <span className="truncate text-sp-ink">{c.xName}</span>
           <a
             href={`https://x.com/i/user/${encodeURIComponent(c.xUserId)}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-text-muted transition-colors duration-180 hover:text-amber"
+            className="text-sp-ink/85 transition-colors duration-180 hover:text-sp-amber"
           >
             @{c.xHandle}
           </a>
         </p>
-        <p className="text-tiny text-text-muted">
+        <p className="text-tiny text-sp-ink/85">
           {[
             `${compactNumber(c.xFollowers)} followers`,
             c.xVerifiedType ? VERIFIED_LABEL[c.xVerifiedType] : null,
@@ -166,8 +166,8 @@ function CreatorChip({ creator: c }: { creator: Creator }) {
             .filter(Boolean)
             .join(" · ")}
           {" · "}
-          <span className={attention ? "text-amber" : "text-text"}>{trackRecordText(c.trackRecord)}</span>
-          {onTimeText(c.trackRecord) ? <span className="text-text">{` · ${onTimeText(c.trackRecord)}`}</span> : null}
+          <span className={attention ? "text-sp-amber" : "text-sp-ink"}>{trackRecordText(c.trackRecord)}</span>
+          {onTimeText(c.trackRecord) ? <span className="text-sp-ink">{` · ${onTimeText(c.trackRecord)}`}</span> : null}
         </p>
       </div>
     </div>
@@ -190,7 +190,7 @@ function Avatar({ creator: c }: { creator: Creator }) {
   }
   return (
     <span
-      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-blue-deep text-body text-text"
+      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-blue-deep text-body text-sp-ink"
       aria-hidden
     >
       {(c.xName || c.xHandle).slice(0, 1).toUpperCase()}
@@ -270,7 +270,7 @@ export function SpaceStats({ space }: { space: Space }) {
   const money = funding
     ? { label: "Raised", value: funding.raised, sub: `of ${funding.goal} goal · ${funding.percent}%` }
     : !noTotal || totals.committedCents > 0
-      ? { label: "Committed", value: usdFromCents(totals.committedCents), sub: null }
+      ? { label: "Backed by brands", value: usdFromCents(totals.committedCents), sub: null }
       : null;
   const price = startingPrice(space);
   const segments = space.positions.map((p) => segmentTone(p, isTakeover));
@@ -284,7 +284,7 @@ export function SpaceStats({ space }: { space: Space }) {
     value: (
       <>
         {calendarDate(space.closesAt)}
-        <span className="block text-tiny text-text-faint">
+        <span className="block text-tiny text-sp-ink/80">
           {closed ? "Closed" : <ClosesCountdown closesAt={space.closesAt} closed={closed} />}
         </span>
       </>
@@ -335,7 +335,7 @@ export function SpaceStats({ space }: { space: Space }) {
           </div>
         )}
 
-        <ul className="-mt-4 flex flex-wrap gap-x-4 gap-y-1 text-tiny text-text-faint" aria-hidden>
+        <ul className="-mt-4 flex flex-wrap gap-x-4 gap-y-1 text-tiny text-sp-ink/80" aria-hidden>
           {(isTakeover
             ? ([["sold", "Settled"], ["takeable", "Taken, can be taken over"], ["held", "Being paid"], ["open", "Open"]] as const)
             : ([["sold", session ? "Booked" : "Sold"], ["held", "Being paid"], ["open", "Open"]] as const)
@@ -350,8 +350,8 @@ export function SpaceStats({ space }: { space: Space }) {
         <dl className="grid grid-cols-2 gap-x-6 gap-y-5 md:grid-cols-4">
           {facts.slice(0, 4).map((f) => (
             <div key={f.label} className="min-w-0">
-              <dt className={`${eyebrow} break-words text-text-faint`}>{f.label}</dt>
-              <dd className="mt-1 break-words text-body text-text [overflow-wrap:anywhere]">{f.value}</dd>
+              <dt className={`${eyebrow} break-words text-sp-ink/80`}>{f.label}</dt>
+              <dd className="mt-1 break-words text-body text-sp-ink [overflow-wrap:anywhere]">{f.value}</dd>
             </div>
           ))}
         </dl>
@@ -372,12 +372,12 @@ export function SpaceStats({ space }: { space: Space }) {
 function Stat({ label, value, of, sub }: { label: string; value: string; of?: string; sub: string | null }) {
   return (
     <div className="min-w-0">
-      <p className={`${eyebrow} text-text-faint`}>{label}</p>
-      <p className="mt-2 break-words font-display text-[40px] font-light leading-none text-text md:text-[64px]">
+      <p className={`${eyebrow} text-sp-ink/80`}>{label}</p>
+      <p className="mt-2 break-words font-display text-[40px] font-light leading-none text-sp-ink md:text-[64px]">
         {value}
-        {of && <span className="text-[24px] text-text-muted md:text-[32px]"> {of}</span>}
+        {of && <span className="text-[24px] text-sp-ink/85 md:text-[32px]"> {of}</span>}
       </p>
-      {sub && <p className="mt-2 text-small text-text-muted">{sub}</p>}
+      {sub && <p className="mt-2 text-small text-sp-ink/85">{sub}</p>}
     </div>
   );
 }
@@ -431,17 +431,17 @@ function ModeNote({ space }: { space: Space }) {
 export function Note({ line, children }: { line: string; children: ReactNode }) {
   return (
     <details className="group min-w-0 text-small">
-      <summary className="flex cursor-pointer list-none items-center gap-2 text-text [&::-webkit-details-marker]:hidden">
+      <summary className="flex cursor-pointer list-none items-center gap-2 text-sp-ink [&::-webkit-details-marker]:hidden">
         <span>{line}</span>
         <span
           aria-hidden
-          className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-[10px] border border-[color:var(--color-hairline-strong)] font-mono text-[11px] text-text-muted transition-colors duration-180 group-open:bg-white/10 group-open:text-text"
+          className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-[10px] border border-[color:var(--color-hairline-strong)] font-mono text-[11px] text-sp-ink/85 transition-colors duration-180 group-open:bg-sp-ink/10 group-open:text-sp-ink"
         >
           i
         </span>
         <span className="sr-only">How it works</span>
       </summary>
-      <div className="mt-3 flex max-w-xl flex-col gap-2 text-text-muted">{children}</div>
+      <div className="mt-3 flex max-w-xl flex-col gap-2 text-sp-ink/85">{children}</div>
     </details>
   );
 }
@@ -453,11 +453,13 @@ export function BeforeYouPay({ space }: { space: Space }) {
   const declares = space.attestations.map(attestationText);
   return (
     <section className="container-page py-12 md:py-16" aria-labelledby="what-you-get">
-      <p className={`${eyebrow} text-moonlight`}>Before you pay</p>
-      <h2 id="what-you-get" className="mt-3 font-display text-h3 font-light text-text md:text-h2">
+      <p className={`${eyebrow} text-sp-cool`}>Before you pay</p>
+      <h2 id="what-you-get" className="mt-3 font-display text-h3 font-light text-sp-ink md:text-h2">
         What you get
       </h2>
-      <div className="mt-8 grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+      {/* items-start: each card is as tall as what it says. Stretched to the
+          taller column, a two-line list was a big empty box. */}
+      <div className="mt-8 grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <WhatTheBrandGets space={space} />
         <div className="flex flex-col gap-5">
           <IfItDoesNotHappen space={space} />
@@ -465,20 +467,20 @@ export function BeforeYouPay({ space }: { space: Space }) {
             <ul className="flex flex-col gap-2.5">
               {space.keyDates.map((k, i) => (
                 <li key={`${k.date}-${i}`} className="flex items-baseline justify-between gap-4 text-small">
-                  <span className="min-w-0 break-words text-text [overflow-wrap:anywhere]">{k.label}</span>
-                  <span className="shrink-0 font-mono text-text-muted">{calendarDate(k.date)}</span>
+                  <span className="min-w-0 break-words text-sp-ink [overflow-wrap:anywhere]">{k.label}</span>
+                  <span className="shrink-0 font-mono text-sp-ink/85">{calendarDate(k.date)}</span>
                 </li>
               ))}
               <li className="flex items-baseline justify-between gap-4 text-small">
-                <span className="text-text">{session ? "Booking closes" : "Sales close"}</span>
-                <span className="shrink-0 font-mono text-text-muted">{calendarDate(space.closesAt)}</span>
+                <span className="text-sp-ink">{session ? "Booking closes" : "Sales close"}</span>
+                <span className="shrink-0 font-mono text-sp-ink/85">{calendarDate(space.closesAt)}</span>
               </li>
             </ul>
           </Block>
         </div>
       </div>
       {declares.length > 0 && (
-        <p className="mt-5 text-tiny text-text-faint">
+        <p className="mt-5 text-tiny text-sp-ink/80">
           @{space.creator.xHandle} declares that they {joinWords(declares)}.
         </p>
       )}
@@ -489,7 +491,7 @@ export function BeforeYouPay({ space }: { space: Space }) {
 function Block({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className={`${card} flex flex-col gap-4 p-5 md:p-6`}>
-      <h3 className={`${eyebrow} text-text-faint`}>{title}</h3>
+      <h3 className={`${eyebrow} text-sp-ink/80`}>{title}</h3>
       {children}
     </div>
   );
@@ -566,15 +568,15 @@ function steps(space: Space): Step[] {
 export function HowItWorks({ space }: { space: Space }) {
   return (
     <section className="container-page py-12 md:py-16" aria-labelledby="how-it-works">
-      <h2 id="how-it-works" className="font-display text-h3 font-light text-text md:text-h2">
+      <h2 id="how-it-works" className="font-display text-h3 font-light text-sp-ink md:text-h2">
         How it works
       </h2>
       <ol className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {steps(space).map((s, i) => (
           <li key={s.title} className={`${card} flex flex-col gap-2 p-5`}>
-            <span className="font-mono text-small text-amber">{String(i + 1).padStart(2, "0")}</span>
-            <p className="text-body text-text">{s.title}</p>
-            <p className="text-small text-text-muted">{s.body}</p>
+            <span className="font-mono text-small text-sp-amber">{String(i + 1).padStart(2, "0")}</span>
+            <p className="text-body text-sp-ink">{s.title}</p>
+            <p className="text-small text-sp-ink/85">{s.body}</p>
           </li>
         ))}
       </ol>
@@ -592,8 +594,8 @@ export function SpaceUpdates({ space }: { space: Space }) {
 
   return (
     <section className="container-page py-12 md:py-16">
-      <p className={`${eyebrow} text-amber`}>From @{space.creator.xHandle}</p>
-      <h2 className="mt-3 font-display text-h3 font-light text-text md:text-h2">Updates</h2>
+      <p className={`${eyebrow} text-sp-amber`}>From @{space.creator.xHandle}</p>
+      <h2 className="mt-3 font-display text-h3 font-light text-sp-ink md:text-h2">Updates</h2>
       <ol className="mt-8 flex max-w-2xl flex-col gap-5">
         {updates.map((u) => (
           <li key={u.id} className={`${card} overflow-hidden`}>
@@ -602,8 +604,8 @@ export function SpaceUpdates({ space }: { space: Space }) {
               <img src={u.imageUrl} alt="" loading="lazy" className="max-h-[420px] w-full object-cover" />
             )}
             <div className="flex flex-col gap-2 p-5">
-              {u.body && <p className="whitespace-pre-line break-words text-body text-text [overflow-wrap:anywhere]">{u.body}</p>}
-              <p className="text-tiny text-text-faint">
+              {u.body && <p className="whitespace-pre-line break-words text-body text-sp-ink [overflow-wrap:anywhere]">{u.body}</p>}
+              <p className="text-tiny text-sp-ink/80">
                 <time dateTime={u.createdAt}>{relativeTime(u.createdAt, now)}</time>
                 {u.positionId && labelOf.get(u.positionId) ? ` · Proof for ${labelOf.get(u.positionId)}` : ""}
               </p>
@@ -629,13 +631,13 @@ export function SpaceInvite({ space }: { space: Space }) {
   return (
     <section className="hairline" aria-label="Sell your own HiSpace">
       <div className="container-page flex flex-col gap-2 py-8 sm:flex-row sm:items-baseline sm:justify-between sm:gap-8">
-        <p className="text-small text-text-muted">
+        <p className="text-small text-sp-ink/85">
           {isSessionSpace(space) ? "Sell your time at events, like" : "Have an audience? Sell sponsorships, like"} @
           {space.creator.xHandle}.
         </p>
         <a
           href={invite.url}
-          className="self-start whitespace-nowrap text-small text-text-muted underline-offset-4 transition-colors duration-180 hover:text-text hover:underline"
+          className="self-start whitespace-nowrap text-small text-sp-ink/85 underline-offset-4 transition-colors duration-180 hover:text-sp-ink hover:underline"
         >
           Sell your own HiSpace
         </a>
@@ -649,11 +651,11 @@ export function SpaceInvite({ space }: { space: Space }) {
 export function SpaceUnavailable() {
   return (
     <section className="container-page flex min-h-[60vh] flex-col justify-center py-20">
-      <p className={`${eyebrow} text-amber`}>HiSpace</p>
-      <h1 className="mt-5 max-w-2xl font-display text-h3 font-light text-text md:text-h2">
+      <p className={`${eyebrow} text-sp-amber`}>HiSpace</p>
+      <h1 className="mt-5 max-w-2xl font-display text-h3 font-light text-sp-ink md:text-h2">
         We couldn&rsquo;t load this board just now.
       </h1>
-      <p className="mt-5 max-w-xl text-body text-text-muted">
+      <p className="mt-5 max-w-xl text-body text-sp-ink/85">
         This is on our side, not the link. Give it a moment and refresh the page.
       </p>
     </section>

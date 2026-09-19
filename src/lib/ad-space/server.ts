@@ -1,4 +1,5 @@
 // Server-only by construction: no "use client" file imports this module.
+import { lookOf } from "./product-look";
 import { AD_SPACE_API, HANDLE_RE, SLUG_RE } from "./config";
 import { defaultEventTab, openSpots } from "./format";
 import { gradientKey } from "./look";
@@ -166,12 +167,19 @@ function withEventFields(space: Space): Space {
   const raw = space as Partial<Space> & Space;
   const positions = (Array.isArray(raw.positions) ? raw.positions : []).map(withTierFields);
   const photo = usablePhoto(raw.photo, positions);
+  // One photo for the whole product wins; the two are never both set by the API.
+  const viewPhotos = photo ? {} : usableViewPhotos(raw.viewPhotos, raw.template, positions);
+  const onSides = new Set(
+    (raw.template?.zones ?? []).filter((z) => viewPhotos[z.viewKey]).map((z) => z.zoneKey),
+  );
   return {
     ...raw,
     // With no photo to draw them on, squares are dropped too, so nothing
     // downstream can place one on the catalog drawing by mistake.
-    positions: photo ? positions : positions.map((p) => ({ ...p, rect: null })),
+    positions: photo ? positions : positions.map((p) => (onSides.has(p.zoneKey) ? p : { ...p, rect: null })),
     photo,
+    viewPhotos,
+    productLook: lookOf(raw.productLook),
     event: raw.event ?? null,
     bannerUrl: raw.bannerUrl ?? null,
     bannerGradient: gradientKey(raw.bannerGradient),
@@ -224,6 +232,34 @@ function usablePhoto(raw: unknown, positions: Position[]): SpacePhoto | null {
   if (p.ready === false) return null;
   if (positions.length === 0 || positions.some((pos) => !usableRect(pos.rect))) return null;
   return { url: p.url, width: p.width, height: p.height };
+}
+
+/** A photo URL this page may draw: the API's public bucket is https. */
+function drawableUrl(url: unknown): url is string {
+  // DEMO BRANCH: the demo's photos are this site's own files (/demo/…).
+  return typeof url === "string" && (url.startsWith("https://") || url.startsWith("/demo/"));
+}
+
+/**
+ * The sides with their own photo that can be drawn whole: a URL, a real size
+ * and a square for every spot on that side. A side that is not ready keeps
+ * the drawing; the others show their photo.
+ */
+function usableViewPhotos(raw: unknown, template: Space["template"] | undefined, positions: Position[]): Record<string, SpacePhoto> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw) || !template) return {};
+  const out: Record<string, SpacePhoto> = {};
+  for (const [view, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (!v || typeof v !== "object") continue;
+    const p = v as Record<string, unknown>;
+    if (!drawableUrl(p.url)) continue;
+    if (typeof p.width !== "number" || typeof p.height !== "number" || p.width <= 0 || p.height <= 0) continue;
+    if (p.ready === false) continue;
+    const keys = new Set(template.zones.filter((z) => z.viewKey === view).map((z) => z.zoneKey));
+    const onSide = positions.filter((pos) => keys.has(pos.zoneKey));
+    if (onSide.length === 0 || onSide.some((pos) => !usableRect(pos.rect))) continue;
+    out[view] = { url: p.url, width: p.width, height: p.height };
+  }
+  return out;
 }
 
 /* ── Events ──────────────────────────────────────────────────────────── */

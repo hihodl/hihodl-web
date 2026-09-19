@@ -143,8 +143,8 @@ export function FundsCheck({
   if (usable && checked) {
     return (
       <div className="flex items-center justify-between gap-3 rounded-[14px] bg-success/[0.10] px-4 py-3" role="status">
-        <span className="flex min-w-0 items-center gap-2.5 text-small text-text">
-          <span className="text-success">
+        <span className="flex min-w-0 items-center gap-2.5 text-small text-sp-ink">
+          <span className="text-sp-ok">
             <Tick />
           </span>
           <span className="truncate">
@@ -157,7 +157,7 @@ export function FundsCheck({
         </span>
         <button
           type="button"
-          className="shrink-0 text-small font-medium text-amber hover:text-amber-glow disabled:opacity-50"
+          className="shrink-0 text-small font-medium text-sp-amber hover:text-amber-glow disabled:opacity-50"
           disabled={disabled}
           onClick={() => onChecked(null)}
         >
@@ -170,7 +170,7 @@ export function FundsCheck({
   return (
     <div className="flex flex-col gap-3">
       {stale && (
-        <p className="text-small text-amber" role="status">
+        <p className="text-small text-sp-amber" role="status">
           {checked && amountCents !== null && checked.amountCents !== amountCents
             ? "You changed the amount. Verify again for the new one."
             : "Your check expired. Verify again, then send."}
@@ -178,7 +178,7 @@ export function FundsCheck({
       )}
       {chains.length > 1 && (
         <div className="flex items-center justify-between gap-3">
-          <span className="text-small text-white/60">Wallet on</span>
+          <span className="text-small text-white/85">Wallet on</span>
           <NetworkPill
             chains={chains}
             chain={chain}
@@ -195,7 +195,7 @@ export function FundsCheck({
         <WalletRows wallets={here} selected={chosen?.id ?? null} onSelect={setPicked} disabled={Boolean(busy) || disabled} />
       ) : (
         <div className="flex flex-col gap-2">
-          <p className="px-1 text-small text-white/60">
+          <p className="px-1 text-small text-white/85">
             No {chain === "solana" ? "Solana wallet that can sign" : `${CHAIN_LABEL[chain]} wallet`} in this browser.
           </p>
           <OpenInWalletRow />

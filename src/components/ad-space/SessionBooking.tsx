@@ -97,12 +97,12 @@ export function ManageLinkBox({ token }: { token: string }) {
 
   return (
     <div className="flex flex-col gap-3 rounded-card border border-amber/40 bg-amber/[0.06] p-4">
-      <p className="text-body text-text">Save this link, it is how you confirm your session.</p>
-      <p className="text-small text-text-muted">
+      <p className="text-body text-sp-ink">Save this link, it is how you confirm your session.</p>
+      <p className="text-small text-sp-ink/85">
         You have no account here, so this link is your booking: it shows the time and place, and it is where you say
         whether the session happened. Anyone with it can manage the booking, so keep it to yourself.
       </p>
-      <p className="break-all rounded-input border border-[color:var(--color-hairline-strong)] bg-white/[0.04] px-3 py-2 font-mono text-tiny text-text">
+      <p className="break-all rounded-input border border-[color:var(--color-hairline-strong)] bg-sp-ink/[0.04] px-3 py-2 font-mono text-tiny text-sp-ink">
         {link}
       </p>
       <div className="flex flex-wrap gap-2">
@@ -173,15 +173,15 @@ export function SessionContactForm({
   return (
     <form onSubmit={submit} className="flex flex-col gap-5" noValidate>
       <div>
-        <h3 className="text-body text-text">{sent ? "Your contact and brief" : `How ${who} reaches you`}</h3>
-        <p className="mt-1 text-small text-text-muted">
+        <h3 className="text-body text-sp-ink">{sent ? "Your contact and brief" : `How ${who} reaches you`}</h3>
+        <p className="mt-1 text-small text-sp-ink/85">
           Only {who} sees these. They never appear on a public page. You can change them until you confirm
           the session.
         </p>
       </div>
 
       <fieldset className="flex flex-col gap-2">
-        <legend className="mb-2 text-small text-text-muted">Reach me on</legend>
+        <legend className="mb-2 text-small text-sp-ink/85">Reach me on</legend>
         <div className="flex flex-wrap gap-2">
           {CONTACT_KINDS.map((k) => (
             <button
@@ -194,8 +194,8 @@ export function SessionContactForm({
               aria-pressed={kind === k}
               className={`inline-flex h-10 items-center whitespace-nowrap rounded-[20px] border px-4 text-small transition-colors duration-180 ${
                 kind === k
-                  ? "border-amber bg-amber/10 text-text"
-                  : "border-[color:var(--color-hairline-strong)] text-text-muted hover:text-text"
+                  ? "border-amber bg-amber/10 text-sp-ink"
+                  : "border-[color:var(--color-hairline-strong)] text-sp-ink/85 hover:text-sp-ink"
               }`}
             >
               {CONTACT_KIND_LABEL[k]}
@@ -205,7 +205,7 @@ export function SessionContactForm({
       </fieldset>
 
       <label className="flex flex-col gap-2">
-        <span className="text-small text-text-muted">Your {CONTACT_KIND_LABEL[kind]}</span>
+        <span className="text-small text-sp-ink/85">Your {CONTACT_KIND_LABEL[kind]}</span>
         <input
           className={input}
           value={value}
@@ -219,9 +219,9 @@ export function SessionContactForm({
       </label>
 
       <label className="flex flex-col gap-2">
-        <span className="flex items-baseline justify-between gap-3 text-small text-text-muted">
+        <span className="flex items-baseline justify-between gap-3 text-small text-sp-ink/85">
           <span>What the session is for</span>
-          <span className={`text-tiny ${brief.length > SESSION_TEXT_MAX ? "text-amber" : "text-text-faint"}`}>
+          <span className={`text-tiny ${brief.length > SESSION_TEXT_MAX ? "text-sp-amber" : "text-sp-ink/80"}`}>
             {brief.length}/{SESSION_TEXT_MAX}
           </span>
         </span>
@@ -235,12 +235,12 @@ export function SessionContactForm({
       </label>
 
       {notice && (
-        <p className="rounded-card border border-amber/30 bg-amber/[0.05] px-4 py-3 text-small text-text-muted" role="status">
+        <p className="rounded-card border border-amber/30 bg-amber/[0.05] px-4 py-3 text-small text-sp-ink/85" role="status">
           {notice}
         </p>
       )}
       {saved && !notice && (
-        <p className="rounded-card border border-success/30 bg-success/[0.06] px-4 py-3 text-small text-text-muted" role="status">
+        <p className="rounded-card border border-success/30 bg-success/[0.06] px-4 py-3 text-small text-sp-ink/85" role="status">
           Sent. {creatorRef(creatorHandle, true)} can see it now.
         </p>
       )}
@@ -290,9 +290,9 @@ export function EventInstant({
       </time>
       {differs &&
         (inline ? (
-          <span className="text-text-faint"> ({local} your time)</span>
+          <span className="text-sp-ink/80"> ({local} your time)</span>
         ) : (
-          <span className="mt-1 block text-tiny text-text-faint">Your time: {local}</span>
+          <span className="mt-1 block text-tiny text-sp-ink/80">Your time: {local}</span>
         ))}
     </>
   );
@@ -334,11 +334,11 @@ export function BookingPanel({ token, initial, renderedAt }: { token: string; in
       <section className={`${card} flex flex-col gap-4 p-5 md:p-6`} aria-label="Booking">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className={`${eyebrow} text-text-faint`}>Your booking</p>
-            <h1 className="mt-2 break-words font-display text-h4 font-light text-text [overflow-wrap:anywhere] md:text-h3">
+            <p className={`${eyebrow} text-sp-ink/80`}>Your booking</p>
+            <h1 className="mt-2 break-words font-display text-h4 font-light text-sp-ink [overflow-wrap:anywhere] md:text-h3">
               {space.templateName ? `${space.templateName} with ${who}` : `Your session with ${who}`}
             </h1>
-            <p className="mt-1 break-words text-small text-text-muted [overflow-wrap:anywhere]">
+            <p className="mt-1 break-words text-small text-sp-ink/85 [overflow-wrap:anywhere]">
               {[space.event?.name, space.title, booking.positionLabel].filter(Boolean).join(" · ")}
             </p>
           </div>
@@ -350,12 +350,12 @@ export function BookingPanel({ token, initial, renderedAt }: { token: string; in
         </div>
         <dl className="grid grid-cols-1 gap-3 border-t border-[color:var(--color-hairline)] pt-4 text-small sm:grid-cols-2">
           <div>
-            <dt className="text-tiny text-text-faint">You paid</dt>
-            <dd className="mt-1 font-mono text-text">{order.sponsorPaysUsdc} USDC</dd>
+            <dt className="text-tiny text-sp-ink/80">You paid</dt>
+            <dd className="mt-1 font-mono text-sp-ink">{order.sponsorPaysUsdc} USDC</dd>
           </div>
           <div>
-            <dt className="text-tiny text-text-faint">{creatorRef(handle, true)} received</dt>
-            <dd className="mt-1 font-mono text-text">{order.creatorReceivesUsdc} USDC</dd>
+            <dt className="text-tiny text-sp-ink/80">{creatorRef(handle, true)} received</dt>
+            <dd className="mt-1 font-mono text-sp-ink">{order.creatorReceivesUsdc} USDC</dd>
           </div>
         </dl>
         <div className="flex flex-wrap gap-2">
@@ -373,7 +373,7 @@ export function BookingPanel({ token, initial, renderedAt }: { token: string; in
       </section>
 
       {!paid ? (
-        <p className={`${card} p-5 text-small text-text-muted`}>
+        <p className={`${card} p-5 text-small text-sp-ink/85`}>
           This payment hasn&rsquo;t confirmed. Once it does, this page lets you send your contact and confirm the
           session.
         </p>
@@ -396,24 +396,24 @@ export function BookingPanel({ token, initial, renderedAt }: { token: string; in
           )}
           {!CONTACT_EDITABLE.has(s.state) && s.contact && (
             <section className={`${card} flex flex-col gap-2 p-5 text-small md:p-6`}>
-              <h2 className={`${eyebrow} text-text-faint`}>What you sent</h2>
-              <p className="text-text-muted">
-                {CONTACT_KIND_LABEL[s.contact.kind]}: <span className="text-text">{s.contact.value}</span>
+              <h2 className={`${eyebrow} text-sp-ink/80`}>What you sent</h2>
+              <p className="text-sp-ink/85">
+                {CONTACT_KIND_LABEL[s.contact.kind]}: <span className="text-sp-ink">{s.contact.value}</span>
               </p>
-              {s.brief && <p className="whitespace-pre-line break-words text-text-muted [overflow-wrap:anywhere]">{s.brief}</p>}
+              {s.brief && <p className="whitespace-pre-line break-words text-sp-ink/85 [overflow-wrap:anywhere]">{s.brief}</p>}
             </section>
           )}
 
           <section className={`${card} flex flex-col gap-2 p-5 md:p-6`}>
-            <h2 className={`${eyebrow} text-text-faint`}>If the session can&rsquo;t happen</h2>
-            <p className="text-small text-text-muted">{SESSION_FALLBACK_TEXT[space.fallback]}</p>
+            <h2 className={`${eyebrow} text-sp-ink/80`}>If the session can&rsquo;t happen</h2>
+            <p className="text-small text-sp-ink/85">{SESSION_FALLBACK_TEXT[space.fallback]}</p>
             {space.fallbackNote && (
-              <p className="border-l-2 border-amber/40 pl-3 text-small text-text">
+              <p className="border-l-2 border-amber/40 pl-3 text-small text-sp-ink">
                 <span className="sr-only">The creator adds: </span>
                 {space.fallbackNote}
               </p>
             )}
-            <p className="text-small text-text-muted">
+            <p className="text-small text-sp-ink/85">
               You paid {who} directly. HOLD never held the money and can&rsquo;t refund it or rule on it.
             </p>
           </section>
@@ -437,36 +437,36 @@ function Schedule({
 }) {
   return (
     <section className={`${card} flex flex-col gap-3 p-5 md:p-6`} aria-label="When and where">
-      <h2 className={`${eyebrow} text-text-faint`}>When and where</h2>
+      <h2 className={`${eyebrow} text-sp-ink/80`}>When and where</h2>
       {s.sessionAt ? (
         <>
-          <p className="text-body text-text">
+          <p className="text-body text-sp-ink">
             <EventInstant iso={s.sessionAt} timeZone={timeZone} />
           </p>
           {s.sessionPlace && (
-            <p className="break-words text-small text-text-muted [overflow-wrap:anywhere]">{s.sessionPlace}</p>
+            <p className="break-words text-small text-sp-ink/85 [overflow-wrap:anywhere]">{s.sessionPlace}</p>
           )}
           {s.state === "scheduled" && (
-            <p className="text-tiny text-text-faint">
+            <p className="text-tiny text-sp-ink/80">
               {creatorRef(handle, true)} can still change this until the session starts. Check back here before you go.
               Once it starts, this page asks you whether it happened.
             </p>
           )}
         </>
       ) : ANSWERABLE.has(s.state) ? (
-        <p className="text-small text-text-muted">No time was set for this session.</p>
+        <p className="text-small text-sp-ink/85">No time was set for this session.</p>
       ) : (
         <>
           {s.state === "awaiting_contact" ? (
-            <p className="text-small text-text-muted">
+            <p className="text-small text-sp-ink/85">
               Send {creatorRef(handle)} your contact below, and they set a time and place with you.
             </p>
           ) : (
-            <p className="text-small text-text-muted">
+            <p className="text-small text-sp-ink/85">
               {creatorRef(handle, true)} hasn&rsquo;t set a time yet. It shows here as soon as they do.
             </p>
           )}
-          <p className="text-tiny text-text-faint">
+          <p className="text-tiny text-sp-ink/80">
             If no time is ever set, this page asks you whether the session happened once the event is over.
           </p>
         </>
@@ -537,12 +537,12 @@ function Outcome({
   if (s.state === "delivered") {
     return (
       <section className="rounded-card border border-success/30 bg-success/[0.06] p-5 md:p-6" aria-label="Outcome">
-        <p className="text-body text-text">Delivered.</p>
-        <p className="mt-1 text-small text-text-muted">
+        <p className="text-body text-sp-ink">Delivered.</p>
+        <p className="mt-1 text-small text-sp-ink/85">
           Nothing more to do here. A session its buyer confirms shows as delivered on {creatorPossessive(handle)} public
           track record.
         </p>
-        {notice && <p className="mt-3 text-small text-text-muted">{notice}</p>}
+        {notice && <p className="mt-3 text-small text-sp-ink/85">{notice}</p>}
       </section>
     );
   }
@@ -550,25 +550,25 @@ function Outcome({
   if (s.state === "disputed") {
     return (
       <section className={`${card} flex flex-col gap-3 p-5 md:p-6`} aria-label="Outcome">
-        <h2 className="text-body text-text">You said this session didn&rsquo;t happen.</h2>
-        <p className="text-small text-text-muted">
+        <h2 className="text-body text-sp-ink">You said this session didn&rsquo;t happen.</h2>
+        <p className="text-small text-sp-ink/85">
           It shows on {creatorPossessive(handle)} public track record as one disputed session. Your note isn&rsquo;t public.
         </p>
         {s.disputeNote && (
-          <p className="whitespace-pre-line break-words border-l-2 border-[color:var(--color-hairline-strong)] pl-3 text-small text-text-muted [overflow-wrap:anywhere]">
-            <span className="text-text-faint">Your note: </span>
+          <p className="whitespace-pre-line break-words border-l-2 border-[color:var(--color-hairline-strong)] pl-3 text-small text-sp-ink/85 [overflow-wrap:anywhere]">
+            <span className="text-sp-ink/80">Your note: </span>
             {s.disputeNote}
           </p>
         )}
         {s.creatorReply && (
-          <p className="whitespace-pre-line break-words border-l-2 border-amber/40 pl-3 text-small text-text [overflow-wrap:anywhere]">
-            <span className="text-text-faint">{creatorRef(handle, true)} replied: </span>
+          <p className="whitespace-pre-line break-words border-l-2 border-amber/40 pl-3 text-small text-sp-ink [overflow-wrap:anywhere]">
+            <span className="text-sp-ink/80">{creatorRef(handle, true)} replied: </span>
             {s.creatorReply}
           </p>
         )}
         {windowOpen && (
           <div className="flex flex-col gap-2 border-t border-[color:var(--color-hairline)] pt-4">
-            <p className="text-small text-text-muted">
+            <p className="text-small text-sp-ink/85">
               Got it wrong? You can still say it happened{confirmBy}. After that you can&rsquo;t change it back.
             </p>
             <div>
@@ -578,7 +578,7 @@ function Outcome({
             </div>
           </div>
         )}
-        {notice && <p className="text-small text-text-muted">{notice}</p>}
+        {notice && <p className="text-small text-sp-ink/85">{notice}</p>}
       </section>
     );
   }
@@ -587,7 +587,7 @@ function Outcome({
 
   if (!windowOpen) {
     return (
-      <section className={`${card} p-5 text-small text-text-muted md:p-6`} aria-label="Outcome">
+      <section className={`${card} p-5 text-small text-sp-ink/85 md:p-6`} aria-label="Outcome">
         The 7 days to answer have passed, so this booking is closed as delivered. Only a session you confirm shows as
         delivered on {creatorPossessive(handle)} public track record.
       </section>
@@ -597,8 +597,8 @@ function Outcome({
   return (
     <section className="flex flex-col gap-4 rounded-card border border-amber/40 bg-amber/[0.06] p-5 md:p-6" aria-label="Outcome">
       <div>
-        <h2 className="text-body text-text">Did your session with {who} happen?</h2>
-        <p className="mt-1 text-small text-text-muted">
+        <h2 className="text-body text-sp-ink">Did your session with {who} happen?</h2>
+        <p className="mt-1 text-small text-sp-ink/85">
           Answer{confirmBy}. Saying yes is what puts it on {creatorPossessive(handle)} public track record; if you say
           nothing, the booking closes as delivered but doesn&rsquo;t count there.
         </p>
@@ -615,14 +615,14 @@ function Outcome({
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          <p className="text-small text-text-muted">
+          <p className="text-small text-sp-ink/85">
             This counts as one disputed session on {creatorPossessive(handle)} public track record. Only the number is
             public; your note is seen by {who} and HOLD, nobody else. HOLD doesn&rsquo;t move or refund money either way.
           </p>
           <label className="flex flex-col gap-2">
-            <span className="flex items-baseline justify-between gap-3 text-small text-text-muted">
+            <span className="flex items-baseline justify-between gap-3 text-small text-sp-ink/85">
               <span>What happened (optional)</span>
-              <span className={`text-tiny ${note.length > SESSION_TEXT_MAX ? "text-amber" : "text-text-faint"}`}>
+              <span className={`text-tiny ${note.length > SESSION_TEXT_MAX ? "text-sp-amber" : "text-sp-ink/80"}`}>
                 {note.length}/{SESSION_TEXT_MAX}
               </span>
             </span>
@@ -645,11 +645,11 @@ function Outcome({
         </div>
       )}
 
-      <p className="text-tiny text-text-faint">
+      <p className="text-tiny text-sp-ink/80">
         Once you say it happened, you can&rsquo;t change that. If you say it didn&rsquo;t, you can still change it to
         delivered within the same 7 days.
       </p>
-      {notice && <p className="text-small text-text-muted">{notice}</p>}
+      {notice && <p className="text-small text-sp-ink/85">{notice}</p>}
     </section>
   );
 }

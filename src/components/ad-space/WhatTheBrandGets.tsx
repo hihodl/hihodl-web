@@ -107,18 +107,22 @@ export function WhatTheBrandGets({ space }: { space: Space }) {
     );
   }
 
-  const reach = reachLine(space);
+  // The creator's lines in their order; untouched, our two suggestions. A
+  // ladder's rungs each say what they are, so a ladder never shows "the spot".
+  const lines = (space.brandGets ?? [{ kind: "reach" }, { kind: "spot" }]).filter((l) => !(tiered && l.kind === "spot"));
+  const shown = lines.flatMap((l, i) => {
+    const text = l.kind === "text" ? l.text : l.kind === "reach" ? reachLine(space) : spotLine(space);
+    return text ? [<Item key={`${l.kind}-${i}`} text={text} strong />] : [];
+  });
   return (
     <div className={`${card} p-5 md:p-6`}>
       <ul className="flex flex-col gap-4">
-        {reach ? <Item text={reach} strong /> : null}
+        {shown}
         {tiered ? (
-          <li className="text-small text-text-muted">
+          <li className="text-small text-sp-ink/85">
             {items.length ? "Every package also includes:" : "Each package lists what it includes."}
           </li>
-        ) : (
-          <Item text={spotLine(space)} strong />
-        )}
+        ) : null}
         {items.map((d) => {
           const note = deliverableNote(d);
           const statePill = STATE_PILL[d.state];
@@ -126,13 +130,13 @@ export function WhatTheBrandGets({ space }: { space: Space }) {
             <li key={d.id} className="flex items-start gap-3">
               <Check />
               <div className="min-w-0 flex-1">
-                <p className="break-words text-body text-text [overflow-wrap:anywhere]">{deliverableText(d)}</p>
+                <p className="break-words text-body text-sp-ink [overflow-wrap:anywhere]">{deliverableText(d)}</p>
                 {note && (
-                  <p className="mt-0.5 break-words text-small text-text-muted [overflow-wrap:anywhere]">{note}</p>
+                  <p className="mt-0.5 break-words text-small text-sp-ink/85 [overflow-wrap:anywhere]">{note}</p>
                 )}
-                <p className="mt-0.5 text-tiny text-text-faint">
+                <p className="mt-0.5 text-tiny text-sp-ink/80">
                   {d.state === "delivered" && d.deliveredUrl ? (
-                    <a href={d.deliveredUrl} target="_blank" rel="noopener noreferrer" className="text-success hover:underline">
+                    <a href={d.deliveredUrl} target="_blank" rel="noopener noreferrer" className="text-sp-ok hover:underline">
                       See it
                     </a>
                   ) : (
@@ -144,6 +148,9 @@ export function WhatTheBrandGets({ space }: { space: Space }) {
             </li>
           );
         })}
+        {shown.length === 0 && items.length === 0 && !tiered ? (
+          <Item text={spotLine(space)} strong />
+        ) : null}
       </ul>
     </div>
   );
@@ -153,7 +160,7 @@ function Item({ text, strong = false }: { text: string; strong?: boolean }) {
   return (
     <li className="flex items-start gap-3">
       <Check />
-      <span className={`min-w-0 break-words [overflow-wrap:anywhere] ${strong ? "text-body text-text" : "text-body text-text-muted"}`}>
+      <span className={`min-w-0 break-words [overflow-wrap:anywhere] ${strong ? "text-body text-sp-ink" : "text-body text-sp-ink/85"}`}>
         {text}
       </span>
     </li>
@@ -162,7 +169,7 @@ function Item({ text, strong = false }: { text: string; strong?: boolean }) {
 
 function Check() {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="mt-[5px] shrink-0 text-moonlight">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="mt-[5px] shrink-0 text-sp-cool">
       <path d="M3.5 8.5l3 3 6-7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );

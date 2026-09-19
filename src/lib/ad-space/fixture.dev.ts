@@ -267,6 +267,13 @@ function suitcase(): Space {
     slug: "road-to-token2049",
     title: "Road to TOKEN2049",
     reason: "Funding my ticket, flight and stay. Your logo rides through Changi, the venue and every vlog.",
+    // The creator's own "What you get": two lines of theirs around our two suggestions.
+    brandGets: [
+      { kind: "reach" },
+      { kind: "text", text: "Your logo in the thumbnail of the packing vlog" },
+      { kind: "spot" },
+      { kind: "text", text: "A thank-you tag the day I land in Singapore" },
+    ],
     status: "live",
     kind: "placement",
     closesAt: new Date(Date.now() + 12 * DAY + 5 * 60 * 60 * 1000).toISOString(),
@@ -391,6 +398,70 @@ function suitcasePhoto(): Space {
   };
 }
 
+/**
+ * The same suitcase in the creator's own colours: a cream body with black
+ * handle and wheels. Every spot keeps its dark glass plate, so a light body
+ * reads as well as a dark one. `/s/demo_creator/road-to-token2049-colour`.
+ */
+function suitcaseColour(): Space {
+  const base = suitcase();
+  return {
+    ...base,
+    id: "11111111-1111-4111-8111-111111111113",
+    slug: "road-to-token2049-colour",
+    // A cream suitcase on a white page: the light theme, and the banner band as a dark block.
+    pageGround: "white",
+    title: "Road to TOKEN2049, in my colours",
+    productLook: { body: "#F2EBDD", accent: "#111418" },
+    siblings: [],
+  };
+}
+
+/**
+ * DEMO BRANCH: the same suitcase with a real photo of each side (Alex's
+ * pictures in /public/demo), each side's spots placed as squares on its own
+ * photo. The right side has no photo yet, so it keeps the drawing, in the
+ * creator's colours. `/s/demo_creator/road-to-token2049-sides`.
+ */
+function suitcaseSides(): Space {
+  const base = suitcase();
+  const face = [
+    { x: 0.3, y: 0.14, w: 0.4, h: 0.1 },
+    { x: 0.3, y: 0.3, w: 0.18, h: 0.14 },
+    { x: 0.52, y: 0.3, w: 0.18, h: 0.14 },
+    { x: 0.3, y: 0.5, w: 0.18, h: 0.14 },
+    { x: 0.52, y: 0.5, w: 0.18, h: 0.14 },
+  ];
+  const side = [
+    { x: 0.36, y: 0.5, w: 0.12, h: 0.09 },
+    { x: 0.52, y: 0.5, w: 0.12, h: 0.09 },
+    { x: 0.36, y: 0.62, w: 0.12, h: 0.09 },
+    { x: 0.52, y: 0.62, w: 0.12, h: 0.09 },
+  ];
+  const order = ["headline", "upper-left", "upper-right", "lower-left", "lower-right"];
+  const rectFor = (zoneKey: string) => {
+    const [view, ...rest] = zoneKey.split("-");
+    const key = rest.join("-");
+    if (view === "front" || view === "back") return face[order.indexOf(key)] ?? null;
+    if (view === "left") return side[order.indexOf(key) - 1] ?? null;
+    return null;
+  };
+  return {
+    ...base,
+    id: "11111111-1111-4111-8111-111111111114",
+    slug: "road-to-token2049-sides",
+    title: "My suitcase to TOKEN2049, every side",
+    productLook: { body: "#1E2A44", accent: "#B8C0CC" },
+    positions: base.positions.map((p) => ({ ...p, rect: rectFor(p.zoneKey) })),
+    viewPhotos: {
+      front: { url: "/demo/suitcase-front.jpg", width: 1100, height: 1100 },
+      back: { url: "/demo/suitcase-back.jpg", width: 447, height: 447 },
+      left: { url: "/demo/suitcase-side.jpg", width: 1100, height: 1100 },
+    },
+    siblings: [],
+  };
+}
+
 function videos(): Space {
   const base = suitcase();
   const slot = (n: number, over: Partial<Position> = {}) =>
@@ -403,8 +474,12 @@ function videos(): Space {
     ...base,
     id: "22222222-2222-4222-8222-222222222222",
     slug: "token2049-videos",
+    // The app's own dark shell (#0F0F1A), over the creator's default.
+    pageGround: "app",
     title: "TOKEN2049 short videos",
     reason: "Three dedicated videos from the floor, one sponsor each.",
+    // Never edited: the page shows our two suggestions, and the card is only as tall as they are.
+    brandGets: null,
     kind: "service",
     deliverBy: "2026-10-20",
     chains: ["solana", "base"],
@@ -587,6 +662,7 @@ function takeovers(): Space {
     ...base,
     id: "33333333-3333-4333-8333-333333333333",
     slug: "token2049-takeover",
+    pageGround: "night",
     title: "TOKEN2049 suitcase, open bidding",
     reason: "Every spot opens low. Sponsors outbid each other, and whoever is outbid gets their money straight back.",
     // Takeovers are Solana only: the refund is a leg of the very transaction
@@ -623,6 +699,8 @@ function customService(): Space {
     ...base,
     id: "55555555-5555-4555-8555-555555555555",
     slug: "token2049-afterparty-host",
+    // A custom light colour: dark ink chosen by contrast.
+    pageGround: "#F1E4CF",
     title: "Host my TOKEN2049 afterparty table",
     reason: null,
     serviceName: "Afterparty table host",
@@ -832,6 +910,8 @@ function pitchReviews(): Space {
     ...base,
     id: "44444444-4444-4444-8444-444444444444",
     slug: "token2049-pitch-reviews",
+    // A custom dark colour: light ink, coloured inks kept only where they pass 4.5:1.
+    pageGround: "#2E1F47",
     title: "Pitch reviews at TOKEN2049",
     reason: "Thirty minutes on your deck before you pitch, at the venue. I have judged four demo days this year.",
     keyDates: [],
@@ -1755,7 +1835,7 @@ export function fixtureOffer(token: string): OfferThread | null {
 export function fixtureSpace(handle: string, slug: string): Space | null {
   if (handle === "id")
     return (
-      [suitcase(), suitcasePhoto(), videos(), takeovers(), pitchReviews(), customService(), eventCoverage(), allYearService(), contentProduction(), ...offersFixtures()].find(
+      [suitcase(), suitcasePhoto(), suitcaseColour(), suitcaseSides(), videos(), takeovers(), pitchReviews(), customService(), eventCoverage(), allYearService(), contentProduction(), ...offersFixtures()].find(
         (s) => s.id === slug,
       ) ?? null
     );
@@ -1764,6 +1844,8 @@ export function fixtureSpace(handle: string, slug: string): Space | null {
     if (offered) return offered;
     if (slug === "road-to-token2049") return suitcase();
     if (slug === "road-to-token2049-photo") return suitcasePhoto();
+    if (slug === "road-to-token2049-colour") return suitcaseColour();
+    if (slug === "road-to-token2049-sides") return suitcaseSides();
     if (slug === "token2049-videos") return videos();
     if (slug === "token2049-takeover") return takeovers();
     if (slug === "token2049-pitch-reviews") return pitchReviews();

@@ -65,12 +65,14 @@ import {
 } from "@/lib/creator/listing";
 import {
   addUpdate,
+  getCreatorSettings,
   getListing,
   getSeries,
   listingOffers,
   listingTeam,
   removeUpdate,
   setListingFloor,
+  setListingPageGround,
   setPositionFloor,
   shareListing,
 } from "@/lib/creator/listings";
@@ -81,6 +83,8 @@ import { Notice } from "./parts";
 import { ListingBanner } from "./run/ListingBanner";
 import { Offers } from "./run/Offers";
 import { PhotoEditor } from "./run/PhotoEditor";
+import { ColourEditor, ProductHub, drawingOf } from "./run/ProductLook";
+import { GroundPicker, labelOf } from "./run/GroundPicker";
 import { Work } from "./run/Work";
 import { ListingSeries } from "./series/Series";
 import { ListingTeam } from "./team/ListingTeam";
@@ -90,14 +94,15 @@ const SCREEN_BODY = "lg:max-h-[calc(var(--app-vh,100dvh)-196px)] lg:overflow-y-a
 /** The same, inside a panel that has its own title and padding. */
 const PANEL_BODY = "lg:max-h-[calc(var(--app-vh,100dvh)-252px)] lg:overflow-y-auto";
 
-type Screen = "events" | "offers" | "floors" | "spots" | "photo" | "deliveries" | "updates" | "content" | "team";
+type Screen = "events" | "offers" | "floors" | "spots" | "photo" | "ground" | "deliveries" | "updates" | "content" | "team";
 
 const SCREEN_TITLE: Record<Screen, string> = {
   events: "Events",
   offers: "Offers & bids",
   floors: "Floor prices",
   spots: "Spots",
-  photo: "Photo",
+  photo: "Your product",
+  ground: "Page background",
   deliveries: "Deliveries",
   updates: "Updates",
   content: "Offer them content",
@@ -194,6 +199,8 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
     spots: true,
     // The creator's own photo with the spots on it: a product's, never a service's slots.
     photo: owner && space.kind === "placement" && space.status !== "delisted",
+    // What this listing's page stands on, over the creator's default. Any listing, the owner's alone.
+    ground: owner && space.status !== "delisted",
     deliveries: space.status !== "draft",
     updates: space.status !== "draft",
     content: leads.length > 0,
@@ -204,6 +211,21 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
 
   if (screen === "content") {
     return <ContentOfferScreen back={href(`/listings/${space.id}`)} crumb={space.serviceName || space.title} leads={leads} initial={item ?? null} />;
+  }
+
+  if (screen === "photo" && item) {
+    // One way of dressing the product, on its own screen, with Back to "Your product".
+    const back = href(`/listings/${space.id}?tab=photo`);
+    const side = item.startsWith("side-") ? decodeURIComponent(item.slice(5)) : null;
+    const sideLabel = side ? drawingOf(space).views.find((v) => v.key === side)?.label ?? side : null;
+    const title = item === "colour" ? "Colours" : item === "one" ? "One photo" : sideLabel ? `${sideLabel} photo` : "Your product";
+    return (
+      <ScreenFrame space={space} title={title} back={back}>
+        {item === "colour" ? <ColourEditor space={space} onChanged={changed} /> : null}
+        {item === "one" ? <PhotoEditor space={space} onChanged={changed} /> : null}
+        {side ? <PhotoEditor key={side} space={space} onChanged={changed} view={side} viewLabel={sideLabel} /> : null}
+      </ScreenFrame>
+    );
   }
 
   if (screen) {
@@ -221,7 +243,8 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
         ) : null}
         {screen === "floors" ? <Floors space={space} groups={floors} onChanged={changed} /> : null}
         {screen === "spots" ? <Spots space={space} /> : null}
-        {screen === "photo" ? <PhotoEditor space={space} onChanged={changed} /> : null}
+        {screen === "photo" ? <ProductHub space={space} /> : null}
+        {screen === "ground" ? <ListingGround space={space} onChanged={changed} /> : null}
         {screen === "deliveries" ? (
           <Panel title="Deliveries" bodyClassName={PANEL_BODY}>
             <Work space={space} onChanged={changed} />
@@ -245,6 +268,7 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
   const events = series?.spaces.length ?? (space.event ? 1 : 0);
   const floorsSet = floors.filter((g) => g.current !== null).length;
   const placedSquares = space.positions.filter((p) => p.rect).length;
+  const sidesLive = Object.values(space.viewPhotos ?? {}).filter((v) => v.ready).length;
 
   return (
     <div className="flex flex-col gap-4">
@@ -279,8 +303,37 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
             screen="photo"
             space={space}
             icon={IconImage}
-            value={!space.photo ? "–" : space.photo.ready ? "Live" : `${placedSquares}/${space.positions.length}`}
-            unit={!space.photo ? "use the drawing" : space.photo.ready ? "on your page" : "spots placed"}
+            value={
+              space.photo
+                ? space.photo.ready
+                  ? "Photo"
+                  : `${placedSquares}/${space.positions.length}`
+                : sidesLive > 0
+                  ? `${sidesLive} ${sidesLive === 1 ? "side" : "sides"}`
+                  : space.productLook
+                    ? "Colours"
+                    : "–"
+            }
+            unit={
+              space.photo
+                ? space.photo.ready
+                  ? "on your page"
+                  : "spots placed"
+                : sidesLive > 0
+                  ? "photographed"
+                  : space.productLook
+                    ? "on the drawing"
+                    : "colours or photos"
+            }
+          />
+        ) : null}
+        {shown.ground ? (
+          <HubCard
+            screen="ground"
+            space={space}
+            icon={IconImage}
+            value={labelOf(space.pageGround ?? null)}
+            unit={space.pageGroundOwn ? "this listing's own" : "your default"}
           />
         ) : null}
         {shown.deliveries ? (
@@ -402,13 +455,24 @@ function LinkCard({ share }: { share: { url: string; text: string } | null }) {
 
 /* ── A card's own screen ──────────────────────────────────────────── */
 
-function ScreenFrame({ space, title, children }: { space: SpaceView; title: string; children: ReactNode }) {
+function ScreenFrame({
+  space,
+  title,
+  back,
+  children,
+}: {
+  space: SpaceView;
+  title: string;
+  /** Where Back goes: the listing's hub unless this screen sits under another. */
+  back?: string;
+  children: ReactNode;
+}) {
   const href = useHref();
   return (
     <div className="flex flex-col gap-4">
       <div className="flex min-w-0 items-center gap-3">
         <Link
-          href={href(`/listings/${space.id}`)}
+          href={back ?? href(`/listings/${space.id}`)}
           className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-[10px] border border-white/10 bg-white/[0.05] px-3 text-tiny font-medium text-[#CFE3EC] transition-colors hover:bg-white/10 hover:text-text"
         >
           <IconArrowLeft className="h-3.5 w-3.5" />
@@ -420,6 +484,34 @@ function ScreenFrame({ space, title, children }: { space: SpaceView; title: stri
         </div>
       </div>
       {children}
+    </div>
+  );
+}
+
+/* ── Page background ──────────────────────────────────────────────── */
+
+/** This listing's own ground, or "Same as my default" (Spaces › Settings). */
+function ListingGround({ space, onChanged }: { space: SpaceView; onChanged: () => void }) {
+  const [fallback, setFallback] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    void getCreatorSettings()
+      .then(({ settings }) => setFallback(settings.pageGround ?? null))
+      .catch(() => setFallback(null));
+  }, []);
+  if (fallback === undefined) return <Skeleton className="h-[240px]" />;
+  return (
+    <div className={`${SCREEN_BODY} flex flex-col gap-3`}>
+      <p className="max-w-2xl text-small text-[#CFE3EC]">
+        What this listing&rsquo;s page stands on. &ldquo;Same as my default&rdquo; follows Spaces › Settings, so changing it there
+        changes this page too.
+      </p>
+      <GroundPicker
+        key={space.pageGroundOwn ?? "default"}
+        value={space.pageGroundOwn ?? null}
+        allowDefault
+        defaultValue={fallback}
+        onSave={(next) => setListingPageGround(space.id, next).then(onChanged)}
+      />
     </div>
   );
 }

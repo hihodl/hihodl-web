@@ -24,8 +24,8 @@ export function ClosesCountdown({ closesAt, closed }: { closesAt: string; closed
   if (closed || (left !== null && left <= 0)) {
     return (
       <span>
-        <span className="text-text">Closed</span>
-        <span className="text-text-faint"> · {instantUtc(closesAt)}</span>
+        <span className="text-sp-ink">Closed</span>
+        <span className="text-sp-ink/80"> · {instantUtc(closesAt)}</span>
       </span>
     );
   }
@@ -33,11 +33,11 @@ export function ClosesCountdown({ closesAt, closed }: { closesAt: string; closed
   return (
     <span title={instantUtc(closesAt)}>
       {left === null ? (
-        <span className="text-text">Closes {instantUtc(closesAt)}</span>
+        <span className="text-sp-ink">Closes {instantUtc(closesAt)}</span>
       ) : (
         <>
-          <span className="text-text-faint">Closes in </span>
-          <span className="font-mono text-text">{timeLeft(left)}</span>
+          <span className="text-sp-ink/80">Closes in </span>
+          <span className="font-mono text-sp-ink">{timeLeft(left)}</span>
         </>
       )}
     </span>

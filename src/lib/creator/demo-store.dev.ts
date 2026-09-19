@@ -123,6 +123,14 @@ interface SpaceRec {
   photo?: { url: string; width: number; height: number } | null;
   /** Content production: what a spot includes. */
   production?: ProductionPackage | null;
+  /** "What you get" in the creator's words (PATCH /spaces/:id, `brandGets`); null is never edited. */
+  brandGets?: { kind: "reach" | "spot" | "text"; text?: string }[] | null;
+  /** The product's colours (PATCH /spaces/:id/look, `productLook`). */
+  productLook?: { body: string; accent: string } | null;
+  /** A photo per side (POST /spaces/:id/photo?view=). */
+  viewPhotos?: Record<string, { url: string; width: number; height: number }>;
+  /** This listing's page ground (PATCH /spaces/:id/look, `pageGround`); null follows the default. */
+  pageGround?: string | null;
   id: string;
   ownerId: UserId;
   templateId: string;
@@ -242,6 +250,8 @@ interface Store {
   armed: ArmedError | null;
   /** Creator or Creative Director, per creator (GET/PATCH /ad-space/settings). */
   agency: Record<UserId, boolean | null>;
+  /** The default page ground, per creator (GET/PATCH /ad-space/settings, `pageGround`). */
+  grounds?: Record<UserId, string | null>;
   /** The id counter, kept with the store so ids made after a reload do not repeat. */
   idSeq: number;
 }
@@ -700,6 +710,8 @@ function seeded(): Store {
   const s: Store = {
     seed: "seeded",
     agency: {},
+    // The creator's pages stand on the app's own dark by default; one listing wears White.
+    grounds: { [OWNER]: "app" },
     idSeq: 0,
     accounts: new Map(),
     spaces: [],
@@ -912,6 +924,32 @@ function seeded(): Store {
     ],
   });
   kbwSpace.bannerUrl = "/demo/suitcase-front.jpg";
+  // Made the creator's own: cream with black trim, a real photo of the front and
+  // the back with their spots placed, the sides still drawn; its page on White.
+  kbwSpace.productLook = { body: "#F2EBDD", accent: "#111418" };
+  kbwSpace.viewPhotos = {
+    front: { url: "/demo/suitcase-front.jpg", width: 1100, height: 1100 },
+    back: { url: "/demo/suitcase-back.jpg", width: 447, height: 447 },
+  };
+  {
+    const face: Record<string, PhotoRect> = {
+      headline: { x: 0.3, y: 0.14, w: 0.4, h: 0.1 },
+      "upper-left": { x: 0.3, y: 0.3, w: 0.18, h: 0.14 },
+      "upper-right": { x: 0.52, y: 0.3, w: 0.18, h: 0.14 },
+      "lower-left": { x: 0.3, y: 0.5, w: 0.18, h: 0.14 },
+      "lower-right": { x: 0.52, y: 0.5, w: 0.18, h: 0.14 },
+    };
+    for (const q of kbwSpace.positions) {
+      const [view, ...rest] = q.zoneKey.split("-");
+      if (view === "front" || view === "back") q.rect = face[rest.join("-")] ?? null;
+    }
+  }
+  kbwSpace.pageGround = "white";
+  kbwSpace.brandGets = [
+    { kind: "reach" },
+    { kind: "text", text: "Your logo in the thumbnail of the packing vlog" },
+    { kind: "spot" },
+  ];
   s.spaces.push(kbwSpace);
   const kbwSales = ["Orbit", "Mesa", "Stackd", "Acme", "Nodeline", "Lumen"].map((name, i) => {
     const p = kbwSpace.positions[i];
@@ -1615,6 +1653,16 @@ function spaceView(s: Store, sp: SpaceRec, viewer: UserId, origin: string): Spac
       ? { ...sp.photo, ready: sp.positions.length > 0 && sp.positions.every((q) => !!q.rect) }
       : null,
     production: packageView(sp.production),
+    brandGets: (sp.brandGets ?? null) as SpaceView["brandGets"],
+    productLook: sp.productLook ?? null,
+    viewPhotos: Object.fromEntries(
+      Object.entries(sp.viewPhotos ?? {}).map(([view, ph]) => {
+        const onSide = sp.positions.filter((q) => t?.zones.find((z) => z.zoneKey === q.zoneKey)?.viewKey === view);
+        return [view, { ...ph, ready: onSide.length > 0 && onSide.every((q) => !!q.rect) }];
+      }),
+    ),
+    pageGround: sp.pageGround ?? s.grounds?.[sp.ownerId] ?? null,
+    pageGroundOwn: sp.pageGround ?? null,
   };
 }
 
@@ -1827,6 +1875,11 @@ function applyBody(s: Store, sp: SpaceRec, body: Body, t: Template): void {
   if ("deliverBy" in body) sp.deliverBy = str(body.deliverBy);
   if ("serviceName" in body) sp.serviceName = str(body.serviceName);
   if ("serviceSummary" in body) sp.serviceSummary = str(body.serviceSummary);
+  if ("brandGets" in body) {
+    const list = body.brandGets;
+    if (list !== null && (!Array.isArray(list) || list.length > 8)) throw new DemoError("policy_problems", 422, { problems: [{ code: "brand_gets_too_many", max: 8 }] });
+    sp.brandGets = list === null ? null : (list as SpaceRec["brandGets"]);
+  }
   if ("deliverables" in body && Array.isArray(body.deliverables)) {
     sp.deliverables = (body.deliverables as Body[]).map((d) => ({
       id: uuid(),
@@ -2245,19 +2298,48 @@ function route(req: DemoRequest): DemoResponse {
   /* The product photo and its squares. The mock keeps a stock photo: it does not read the bytes. */
   if ((p = is("POST", "ad-space/spaces/:/photo"))) {
     const sp = spaceFor(s, viewer, p[0], "own");
+    const side = req.query.get("view");
+    if (side) {
+      if (sp.photo) throw new DemoError("photo_mode_conflict", 409);
+      const stock: Record<string, { url: string; width: number; height: number }> = {
+        front: { url: "/demo/suitcase-front.jpg", width: 1100, height: 1100 },
+        back: { url: "/demo/suitcase-back.jpg", width: 447, height: 447 },
+        left: { url: "/demo/suitcase-side.jpg", width: 1100, height: 1100 },
+        right: { url: "/demo/suitcase-side-2.jpg", width: 922, height: 1048 },
+      };
+      sp.viewPhotos = { ...(sp.viewPhotos ?? {}), [side]: stock[side] ?? stock.front };
+      const view = spaceView(s, sp, viewer, req.origin);
+      return ok({ photo: view.photo, viewPhotos: view.viewPhotos }, 201);
+    }
+    if (Object.keys(sp.viewPhotos ?? {}).length > 0) throw new DemoError("photo_mode_conflict", 409);
     sp.photo = { url: "/demo/suitcase-side.jpg", width: 1100, height: 1100 };
     return ok({ photo: spaceView(s, sp, viewer, req.origin).photo }, 201);
   }
   if ((p = is("DELETE", "ad-space/spaces/:/photo"))) {
     const sp = spaceFor(s, viewer, p[0], "own");
-    if (sp.positions.some((q) => q.status === "sold" && q.rect)) throw new DemoError("photo_has_sold_squares", 409);
-    sp.photo = null;
-    for (const q of sp.positions) q.rect = null;
-    return ok({ photo: null });
+    const side = req.query.get("view");
+    const t = templateOf(sp.templateId);
+    const onSide = (q: PosRec) => !side || t?.zones.find((z) => z.zoneKey === q.zoneKey)?.viewKey === side;
+    if (sp.positions.some((q) => onSide(q) && q.status === "sold" && q.rect)) throw new DemoError("photo_frozen", 409);
+    if (side) {
+      const next = { ...(sp.viewPhotos ?? {}) };
+      delete next[side];
+      sp.viewPhotos = next;
+    } else sp.photo = null;
+    for (const q of sp.positions) if (onSide(q)) q.rect = null;
+    const view = spaceView(s, sp, viewer, req.origin);
+    return ok({ photo: view.photo, viewPhotos: view.viewPhotos });
+  }
+  if ((p = is("PATCH", "ad-space/spaces/:/look"))) {
+    const sp = spaceFor(s, viewer, p[0], "own");
+    const b = req.body ?? {};
+    if ("productLook" in b) sp.productLook = (b.productLook as SpaceRec["productLook"]) ?? null;
+    if ("pageGround" in b) sp.pageGround = str(b.pageGround);
+    return ok({ bannerGradient: "steel", bannerUrl: sp.bannerUrl ?? null, productLook: sp.productLook ?? null, pageGroundOwn: sp.pageGround ?? null });
   }
   if ((p = is("PUT", "ad-space/spaces/:/photo/squares"))) {
     const sp = spaceFor(s, viewer, p[0], "own");
-    if (!sp.photo) throw new DemoError("photo_required", 409);
+    if (!sp.photo && Object.keys(sp.viewPhotos ?? {}).length === 0) throw new DemoError("photo_required", 409);
     const list = Array.isArray(req.body?.squares) ? (req.body!.squares as { positionId?: string; rect?: PhotoRect | null }[]) : [];
     for (const sq of list) {
       const q = sp.positions.find((x) => x.id === sq.positionId);
@@ -2266,7 +2348,7 @@ function route(req: DemoRequest): DemoResponse {
       q.rect = sq.rect ?? null;
     }
     const view = spaceView(s, sp, viewer, req.origin);
-    return ok({ photo: view.photo, squares: sp.positions.map((q) => ({ positionId: q.id, rect: q.rect ?? null, frozen: q.status !== "open" })) });
+    return ok({ photo: view.photo, viewPhotos: view.viewPhotos, squares: sp.positions.map((q) => ({ positionId: q.id, rect: q.rect ?? null, frozen: q.status !== "open" })) });
   }
 
   /* Content production: the shoot day and the delivery */
@@ -2296,10 +2378,19 @@ function route(req: DemoRequest): DemoResponse {
 
   /* Spaces settings: Creator or Creative Director */
   if (is("GET", "ad-space/settings") || is("PATCH", "ad-space/settings")) {
-    if (method === "PATCH") s.agency[viewer] = req.body?.agencyMode === true;
+    if (method === "PATCH" && req.body && "agencyMode" in req.body) s.agency[viewer] = req.body.agencyMode === true;
+    if (method === "PATCH" && req.body && "pageGround" in req.body) (s.grounds ??= {})[viewer] = str(req.body.pageGround);
     const hasTeam = s.members.some((m) => m.ownerId === viewer && m.status !== "removed");
     const chosen = s.agency[viewer];
-    return ok({ settings: { agencyMode: chosen === true, chosen: chosen !== undefined && chosen !== null, hasTeam, on: chosen === true || hasTeam } });
+    return ok({
+      settings: {
+        agencyMode: chosen === true,
+        chosen: chosen !== undefined && chosen !== null,
+        hasTeam,
+        on: chosen === true || hasTeam,
+        pageGround: s.grounds?.[viewer] ?? null,
+      },
+    });
   }
 
   /* Insights: market data, the demo's own numbers */

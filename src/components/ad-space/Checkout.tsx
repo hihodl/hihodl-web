@@ -77,6 +77,7 @@ import { BriefForm, BriefReady, EMPTY_BRIEF, PackageLines, PaidProduction, type 
 import { QrCode } from "./qr";
 import { ManageLinkBox, SessionContactForm } from "./SessionBooking";
 import { SponsorContentForm } from "./SponsorContentForm";
+import { SpotPreview } from "./ProductBoard";
 
 /**
  * Paying for one spot from the public page, with no HOLD account.
@@ -599,13 +600,13 @@ export function Checkout({
           />
         )}
         {method === "scan" && phase.kind === "qr" && <StatusLine>Waiting for payment</StatusLine>}
-        <p className="flex items-center justify-center gap-2 text-center text-tiny text-white/60">
+        <p className="flex items-center justify-center gap-2 text-center text-tiny text-white/85">
           Paid straight to @{space.creator.xHandle}. HOLD never holds your money.
           <InfoTip label="About refunds">
             {session
               ? "HOLD can't refund a booking. If the session can't happen, the creator's policy applies: "
               : "HOLD can't refund a paid spot. If the plan changes, the creator's policy applies: "}
-            <span className="text-text">{FALLBACK_LABEL[space.fallback]}.</span>{" "}
+            <span className="text-sp-ink">{FALLBACK_LABEL[space.fallback]}.</span>{" "}
             {(production ? PRODUCTION_FALLBACK_TEXT : session ? SESSION_FALLBACK_TEXT : FALLBACK_TEXT)[space.fallback]}
             {space.fallbackNote ? ` ${space.fallbackNote}` : ""}
           </InfoTip>
@@ -627,8 +628,8 @@ export function Checkout({
         <Duplicate order={phase.order} />
       ) : phase.kind === "lapsed" ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 py-8 text-center">
-          <h3 className="font-display text-h4 font-light text-text">The hold ran out.</h3>
-          <p className="max-w-sm text-small text-white/60">Nothing left your wallet. The {subject} is back on the board.</p>
+          <h3 className="font-display text-h4 font-light text-sp-ink">The hold ran out.</h3>
+          <p className="max-w-sm text-small text-white/85">Nothing left your wallet. The {subject} is back on the board.</p>
           <button type="button" className={`${ctaPrimary} max-w-xs`} onClick={startAgain}>
             Start again
           </button>
@@ -637,12 +638,23 @@ export function Checkout({
         <>
           {/* Who is paid, how much, on what: Quick Send's head. */}
           <div className="flex flex-col items-center gap-4 pt-1 text-center">
+            {/* The spot itself, on the creator's own product: their photo or their colours. */}
+            {space.kind === "placement" && space.template ? (
+              <SpotPreview
+                template={space.template}
+                look={space.productLook ?? null}
+                viewPhotos={space.viewPhotos ?? null}
+                photo={space.photo ?? null}
+                positions={space.positions}
+                position={position}
+              />
+            ) : null}
             <CreatorChip creator={space.creator} />
             {/* One figure: what leaves the wallet. The fee is inside it, said once. */}
             <div className="flex flex-col items-center gap-1.5">
               <BigAmount value={dollars(figures.totalUsdc) ?? "—"} />
               {feeNote && (
-                <span className="flex items-center gap-1.5 text-tiny text-white/60">
+                <span className="flex items-center gap-1.5 text-tiny text-white/85">
                   {feeNote}
                   {figures.refundsUsdc ? (
                     <InfoTip label="Where a takeover's money goes">
@@ -672,7 +684,7 @@ export function Checkout({
           {phase.kind === "confirming" ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-3 py-6 text-center">
               <WaitMark />
-              <p className="text-body font-medium text-text" role="status">
+              <p className="text-body font-medium text-sp-ink" role="status">
                 Confirming on {CHAIN_LABEL[phase.order.chain]}…
               </p>
               <HoldLine ms={heldMs(phase.order)} subject={subject} />
@@ -828,7 +840,7 @@ function Included({ space, position: p, session }: { space: Space; position: Pos
       <ul className="flex flex-col gap-1.5">
         {short.slice(0, 3).map((line, i) => (
           <li key={i} className="flex items-start gap-2.5 text-small text-[#CFE3EC] [overflow-wrap:anywhere]">
-            <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-[3px] bg-white/40" aria-hidden />
+            <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-[3px] bg-sp-ink/40" aria-hidden />
             {line}
           </li>
         ))}
@@ -838,7 +850,7 @@ function Included({ space, position: p, session }: { space: Space; position: Pos
           {open && (
             <ul className="flex flex-col gap-1.5 pl-4">
               {more.map((line, i) => (
-                <li key={i} className="text-tiny text-white/55 [overflow-wrap:anywhere]">
+                <li key={i} className="text-tiny text-white/85 [overflow-wrap:anywhere]">
                   {line}
                 </li>
               ))}
@@ -846,7 +858,7 @@ function Included({ space, position: p, session }: { space: Space; position: Pos
           )}
           <button
             type="button"
-            className="self-start pl-4 text-tiny font-medium text-amber hover:text-amber-glow"
+            className="self-start pl-4 text-tiny font-medium text-sp-amber hover:text-amber-glow"
             aria-expanded={open}
             onClick={() => setOpen((o) => !o)}
           >
@@ -905,14 +917,14 @@ function WalletList({
   // A phone: the button below opens the wallet app itself, so the list has nothing to add.
   if (solana && mobile && mobileLink) {
     return (
-      <p className="px-1 text-center text-small text-white/60">
+      <p className="px-1 text-center text-small text-white/85">
         Opens Phantom, Solflare or any Solana wallet on this phone, with the amount filled in.
       </p>
     );
   }
   return (
     <div className="flex flex-col gap-2">
-      <p className="px-1 text-small text-white/60">No {solana ? "Solana" : CHAIN_LABEL[chain]} wallet in this browser.</p>
+      <p className="px-1 text-small text-white/85">No {solana ? "Solana" : CHAIN_LABEL[chain]} wallet in this browser.</p>
       {extra}
     </div>
   );
@@ -966,7 +978,7 @@ function WalletAction({
         Pay {total ?? ""} with {chosen?.name ?? "wallet"}
       </button>
       {evm && (
-        <p className="flex items-center justify-center gap-2 text-tiny text-white/60">
+        <p className="flex items-center justify-center gap-2 text-tiny text-white/85">
           Two signatures, no gas.
           <InfoTip label="Why two signatures">
             One pays the creator, one pays HOLD&rsquo;s fee. Both go through together in one transaction, or not at all.
@@ -1016,7 +1028,7 @@ function ScanPanel({
   if (chain !== "solana") {
     return (
       <div className={`${sheetCard} flex flex-col items-center gap-3 px-5 py-6 text-center`}>
-        <p className="text-small text-text">Scan to pay works on Solana.</p>
+        <p className="text-small text-sp-ink">Scan to pay works on Solana.</p>
         {canSwitch && (
           <button type="button" className={ctaGlass} onClick={onSolana}>
             Switch to Solana
@@ -1065,10 +1077,10 @@ function HoldPanel({ points, mobile, takeover }: { points: number | null; mobile
       style={{ background: "linear-gradient(135deg, rgba(255,183,3,0.16) 0%, rgba(255,183,3,0.04) 45%, #15313D 100%)" }}
     >
       <div className="min-w-0 flex-1">
-        <p className="text-[26px] font-medium leading-tight tracking-[-0.01em] text-text">
+        <p className="text-[26px] font-medium leading-tight tracking-[-0.01em] text-sp-ink">
           {worth ? (
             <>
-              Earn <span className="text-amber">{worth}</span> on this spot
+              Earn <span className="text-sp-amber">{worth}</span> on this spot
             </>
           ) : (
             "Pay from the HOLD app"
@@ -1116,24 +1128,24 @@ function HoldPanel({ points, mobile, takeover }: { points: number | null; mobile
 /** A Base/Polygon quote: valid until `validBefore`, holding nothing meanwhile. */
 function QuoteLine({ ms }: { ms: number }) {
   return ms > 0 ? (
-    <p className="flex items-center justify-center gap-2 text-tiny text-white/60">
-      Sign within <span className="tabular-nums text-white/75">{timeLeft(ms)}</span>
+    <p className="flex items-center justify-center gap-2 text-tiny text-white/85">
+      Sign within <span className="tabular-nums text-white/85">{timeLeft(ms)}</span>
       <InfoTip label="About the quote">
         The spot is held for you once both signatures are in. Until then another sponsor can still take it.
       </InfoTip>
     </p>
   ) : (
-    <p className="text-center text-tiny text-amber">This quote expired. Close your wallet and start again.</p>
+    <p className="text-center text-tiny text-sp-amber">This quote expired. Close your wallet and start again.</p>
   );
 }
 
 function HoldLine({ ms, subject }: { ms: number; subject: "spot" | "session" }) {
   return ms > 0 ? (
-    <p className="text-small text-white/55">
-      This {subject} is held for you for <span className="tabular-nums text-text">{timeLeft(ms)}</span>
+    <p className="text-small text-white/85">
+      This {subject} is held for you for <span className="tabular-nums text-sp-ink">{timeLeft(ms)}</span>
     </p>
   ) : (
-    <p className="max-w-sm text-small text-amber">
+    <p className="max-w-sm text-small text-sp-amber">
       The hold ran out. If you already approved, it can still confirm: this page keeps checking.
     </p>
   );
@@ -1145,11 +1157,11 @@ function PaidHead({ order, handle, title }: { order: Order; handle: string; titl
   return (
     <div className="flex flex-col items-center gap-3 pt-2 text-center">
       <PaidMark />
-      <p className="text-[40px] font-medium leading-none tracking-[-0.02em] text-text">
+      <p className="text-[40px] font-medium leading-none tracking-[-0.02em] text-sp-ink">
         {dollars(order.sponsorPaysUsdc) ?? `${order.sponsorPaysUsdc} USDC`}
       </p>
-      <p className="text-body text-text">{title}</p>
-      <p className="text-tiny text-white/60">
+      <p className="text-body text-sp-ink">{title}</p>
+      <p className="text-tiny text-white/85">
         {order.takeover
           ? `${dollars(order.takeover.refundsUsdc)} back to the previous sponsor · ${dollars(order.creatorReceivesUsdc)} to @${handle} · ${dollars(order.feeUsdc)} HOLD fee`
           : `${dollars(order.creatorReceivesUsdc)} to @${handle} · ${dollars(order.feeUsdc)} HOLD fee`}{" "}
@@ -1191,8 +1203,8 @@ function Paid({
           </a>
         )}
       </div>
-      {order.takeover && <p className="text-center text-tiny text-white/60">The spot is listed at {dollars(order.priceUsdc)} now.</p>}
-      <div className="border-t border-white/[0.08] pt-6">
+      {order.takeover && <p className="text-center text-tiny text-white/85">The spot is listed at {dollars(order.priceUsdc)} now.</p>}
+      <div className="border-t border-sp-ink/[0.08] pt-6">
         <SponsorContentForm order={order} checkoutKey={checkoutKey} accepts={position.accepts} creatorHandle={handle} />
       </div>
     </div>
@@ -1224,7 +1236,7 @@ function PaidSession({ order, space }: { order: Order; space: Space }) {
       {token ? (
         <>
           <ManageLinkBox token={token} />
-          <div className="border-t border-white/[0.08] pt-6">
+          <div className="border-t border-sp-ink/[0.08] pt-6">
             <SessionContactForm token={token} session={session} creatorHandle={handle} onSaved={onSaved} />
           </div>
         </>
@@ -1243,13 +1255,13 @@ function PaidSession({ order, space }: { order: Order; space: Space }) {
 function Duplicate({ order }: { order: Order }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 py-8 text-center">
-      <h3 className="font-display text-h4 font-light text-text">Someone else&rsquo;s payment landed first.</h3>
-      <p className="max-w-sm text-small text-white/60">
+      <h3 className="font-display text-h4 font-light text-sp-ink">Someone else&rsquo;s payment landed first.</h3>
+      <p className="max-w-sm text-small text-white/85">
         Your payment arrived after this spot sold. Our team has been alerted; email{" "}
-        <a className="text-amber hover:underline" href={`mailto:support@hihodl.xyz?subject=${encodeURIComponent(`HiSpace order ${order.id}`)}`}>
+        <a className="text-sp-amber hover:underline" href={`mailto:support@hihodl.xyz?subject=${encodeURIComponent(`HiSpace order ${order.id}`)}`}>
           support@hihodl.xyz
         </a>{" "}
-        with order <span className="font-mono text-text">{order.id.slice(0, 8)}</span> and we&rsquo;ll sort it out with the
+        with order <span className="font-mono text-sp-ink">{order.id.slice(0, 8)}</span> and we&rsquo;ll sort it out with the
         creator.
       </p>
       <div className="flex flex-wrap justify-center gap-2">

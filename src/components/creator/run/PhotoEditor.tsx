@@ -21,6 +21,13 @@
  * accepted offer) is drawn locked and cannot be dragged, and the photo under
  * it can no longer be replaced or removed.
  *
+ * ONE PHOTO, OR ONE PER SIDE
+ *
+ * With `view` the editor works on one side of the product (front, back…): its
+ * own photo, and only the spots on that side, seeded where the drawing has
+ * them. The two modes are never mixed (the server refuses it), so a side
+ * cannot be started while one photo covers the whole product, and back.
+ *
  * ONE SCREEN
  *
  * The photo is fitted to the room the screen has, never scrolled: a tall photo
@@ -122,14 +129,15 @@ type Drawing = {
   zones?: { zoneKey: string; viewKey: string; rect?: PhotoRect }[];
 };
 
-function seedRects(space: SpaceView): Map<string, PhotoRect> {
+function seedRects(space: SpaceView, positions: readonly PositionView[], view: string | null): Map<string, PhotoRect> {
   const out = new Map<string, PhotoRect>();
   const drawing = (space.template ?? {}) as Drawing;
-  const views = drawing.views ?? [];
+  // One side: its zones are already fractions of that side, which is what its photo shows.
+  const views = view ? [{ key: view }] : drawing.views ?? [];
   const zones = drawing.zones ?? [];
   const n = Math.max(1, views.length);
   const unplaced: PositionView[] = [];
-  for (const p of space.positions) {
+  for (const p of positions) {
     if (p.rect) {
       out.set(p.id, p.rect);
       continue;
@@ -171,6 +179,10 @@ function describePhotoError(e: unknown): string {
         return "That spot is sold, so its square stays where the sponsor saw it.";
       case "photo_required":
         return "Upload the photo first.";
+      case "photo_mode_conflict":
+        return "Use one photo for the whole product or a photo per side, not both. Remove the other one first.";
+      case "view_not_on_product":
+        return "That side is not part of this product.";
       case "photo_needs_a_product":
         return "A photo with squares is for a product. This listing sells a service.";
       case "squares_invalid":
@@ -188,26 +200,50 @@ function describePhotoError(e: unknown): string {
   return describeRunError(e);
 }
 
-export function PhotoEditor({ space, onChanged }: { space: SpaceView; onChanged: () => void }) {
-  const photo = space.photo ?? null;
+/** The side each zone is drawn on, from the drawing the API sends. */
+export function viewOfZones(space: SpaceView): Map<string, string> {
+  const zones = ((space.template ?? {}) as Drawing).zones ?? [];
+  return new Map(zones.map((z) => [z.zoneKey, z.viewKey]));
+}
+
+export function PhotoEditor({
+  space,
+  onChanged,
+  view = null,
+  viewLabel = null,
+}: {
+  space: SpaceView;
+  onChanged: () => void;
+  /** One side of the product, with its own photo. Absent: one photo for the whole product. */
+  view?: string | null;
+  viewLabel?: string | null;
+}) {
+  const photo = (view ? space.viewPhotos?.[view] : space.photo) ?? null;
+  const zoneView = useMemo(() => viewOfZones(space), [space]);
+  const positions = useMemo(
+    () => (view ? space.positions.filter((p) => zoneView.get(p.zoneKey) === view) : space.positions),
+    [space.positions, view, zoneView],
+  );
+  // The other mode is in use: a square is a fraction of ONE picture.
+  const conflict = view ? Boolean(space.photo) : Object.keys(space.viewPhotos ?? {}).length > 0;
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState<null | "upload" | "save" | "remove">(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
 
   const frozen = useMemo(
-    () => new Set(space.positions.filter((p) => p.rectFrozen).map((p) => p.id)),
-    [space.positions],
+    () => new Set(positions.filter((p) => p.rectFrozen).map((p) => p.id)),
+    [positions],
   );
-  const initial = useMemo(() => seedRects(space), [space]);
+  const initial = useMemo(() => seedRects(space, positions, view), [space, positions, view]);
   const [rects, setRects] = useState<Map<string, PhotoRect>>(initial);
   const [selected, setSelected] = useState<string | null>(null);
   useEffect(() => setRects(initial), [initial]);
 
   const trouble = useMemo(() => troubleOf(rects), [rects]);
-  const changed = space.positions.filter((p) => !frozen.has(p.id) && !same(p.rect, rects.get(p.id)));
+  const changed = positions.filter((p) => !frozen.has(p.id) && !same(p.rect, rects.get(p.id)));
   const dirty = changed.length > 0;
-  const placed = space.positions.every((p) => p.rect);
+  const placed = positions.every((p) => p.rect);
 
   function upload(file: File | undefined) {
     if (!file) return;
@@ -216,7 +252,7 @@ export function PhotoEditor({ space, onChanged }: { space: SpaceView; onChanged:
     // Drawn upright into a canvas and sent as JPEG: the server strips EXIF,
     // orientation included, and the X card reads JPEG and PNG only.
     void prepareImage(file, { keepTransparency: false })
-      .then((blob) => setListingPhoto(space.id, blob))
+      .then((blob) => setListingPhoto(space.id, blob, view))
       .then(onChanged)
       .catch((e) => setNotice(describePhotoError(e)))
       .finally(() => setBusy(null));
@@ -237,7 +273,7 @@ export function PhotoEditor({ space, onChanged }: { space: SpaceView; onChanged:
   function remove() {
     setNotice(null);
     setBusy("remove");
-    void clearListingPhoto(space.id)
+    void clearListingPhoto(space.id, view)
       .then(onChanged)
       .catch((e) => setNotice(describePhotoError(e)))
       .finally(() => {
@@ -260,18 +296,30 @@ export function PhotoEditor({ space, onChanged }: { space: SpaceView; onChanged:
   );
 
   if (!photo) {
+    const side = viewLabel ? viewLabel.toLowerCase() : "side";
     return (
       <section className={`${glass} flex h-[calc(var(--app-vh,100dvh)-220px)] min-h-[280px] flex-col items-center justify-center gap-4 p-6 text-center`}>
         <div className="flex max-w-[440px] flex-col gap-2">
-          <h3 className="text-body font-medium text-text">Show sponsors the real thing</h3>
+          <h3 className="text-body font-medium text-text">
+            {view ? `Your ${side}, as it really is` : "Show sponsors the real thing"}
+          </h3>
           <p className="text-small text-text-muted">
-            Upload a photo of what you are selling space on, then place each spot on it. Once every spot is placed, your
-            page and your X card show your photo instead of the drawing.
+            {view
+              ? `Upload a photo of the ${side} of your ${(space.template?.name ?? "product").toLowerCase()}, then place its ${positions.length} ${positions.length === 1 ? "spot" : "spots"} on it. Once they are placed, your page shows this photo for the ${side} and the drawing for any side without one.`
+              : "Upload a photo of what you are selling space on, then place each spot on it. Once every spot is placed, your page and your X card show your photo instead of the drawing."}
           </p>
         </div>
-        <button type="button" className={btnSmall} disabled={busy !== null} onClick={() => input.current?.click()}>
-          {busy === "upload" ? "Uploading…" : "Upload a photo"}
-        </button>
+        {conflict ? (
+          <p className="max-w-[440px] text-small text-amber">
+            {view
+              ? "This listing uses one photo for the whole product. Remove it first to give each side its own."
+              : "This listing has a photo per side. Remove those first to use one photo for the whole product."}
+          </p>
+        ) : (
+          <button type="button" className={btnSmall} disabled={busy !== null} onClick={() => input.current?.click()}>
+            {busy === "upload" ? "Uploading…" : "Upload a photo"}
+          </button>
+        )}
         <p className="text-tiny text-text-faint">JPG, PNG or WebP. We remove the location and camera details.</p>
         {chooser}
         {notice ? <Notice>{notice}</Notice> : null}
@@ -279,7 +327,7 @@ export function PhotoEditor({ space, onChanged }: { space: SpaceView; onChanged:
     );
   }
 
-  const selectedPosition = space.positions.find((p) => p.id === selected) ?? null;
+  const selectedPosition = positions.find((p) => p.id === selected) ?? null;
 
   return (
     <div className="flex flex-col gap-3">
@@ -333,7 +381,7 @@ export function PhotoEditor({ space, onChanged }: { space: SpaceView; onChanged:
         url={photo.url}
         width={photo.width}
         height={photo.height}
-        positions={space.positions}
+        positions={positions}
         rects={rects}
         frozen={frozen}
         trouble={trouble}
@@ -343,7 +391,7 @@ export function PhotoEditor({ space, onChanged }: { space: SpaceView; onChanged:
       />
 
       <div className="flex min-h-[40px] items-center gap-2 overflow-x-auto">
-        {space.positions.map((p) => {
+        {positions.map((p) => {
           const on = p.id === selected;
           const bad = trouble.has(p.id);
           return (

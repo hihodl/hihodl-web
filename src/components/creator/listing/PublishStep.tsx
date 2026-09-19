@@ -42,6 +42,7 @@ import {
 } from "@/lib/creator/listing";
 import { problemsAt, type Problem } from "@/lib/creator/rules";
 
+import { BrandGetsEditor } from "./BrandGetsEditor";
 import { Block, Choice, Count, Dropdown, Field, Paragraph, Problems, Text, Tick } from "./parts";
 
 const DELIVERABLE_LABEL: Record<DeliverableKind, string> = {
@@ -164,6 +165,15 @@ export function PublishStep({
           </Field>
         </Block>
       ) : null}
+
+      {session || isProductionTemplate(template) ? null : (
+        <Block
+          title="What you get"
+          why="The list a brand reads before paying, in your words and your order. The first line is the first thing they read. Our two suggestions are yours to keep, move or remove."
+        >
+          <BrandGetsEditor draft={draft} template={template} onChange={onChange} problems={problems} />
+        </Block>
+      )}
 
       {service ? (
         session ? (

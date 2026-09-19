@@ -58,6 +58,75 @@
   /* Layout */
   --page-max:     1200px;
   --section-gap:  128px;
+
+  /* Spaces (public creator pages): the ink everything on the page is written
+     in, as RGB channels so Tailwind's /opacity works (`text-sp-ink/85`).
+     Dark grounds by default; a light ground re-declares these on its wrapper
+     (see src/lib/ad-space/theme.ts). Secondary text is ink at 85%, small
+     uppercase labels ink at 80%: never the old #5A6068 grey. */
+  --sp-ink:        255 255 255;
+  --sp-amber-ink:  255 183 3;
+  --sp-ok-ink:     74 222 128;
+  --sp-cool-ink:   142 163 255;
+  --sp-outline:    rgba(244, 246, 250, 0.55);
+  --sp-idle:       rgba(255, 255, 255, 0.28);
+  --sp-zone-ink:   #F4F6FA;
+  --sp-zone-fill:  rgba(91, 124, 255, 0.10);
+  --sp-zone-fill-hover: rgba(91, 124, 255, 0.24);
+  --sp-zone-stroke: #5B7CFF;
+  --sp-active:     #F4F6FA;
+}
+
+/* Spaces grounds (src/lib/ad-space/theme.ts).
+   A light ground re-inks every token the public pages use. `.sp-dark` puts
+   the dark tokens back inside it: the pay sheets, and the listing's banner
+   band, which is a dark picture whatever the page's ground. */
+[data-sp-ground="light"] {
+  --sp-ink:        10 20 30;
+  --sp-amber-ink:  138 90 0;
+  --sp-ok-ink:     21 128 61;
+  --sp-cool-ink:   58 86 212;
+  --sp-outline:    rgba(10, 20, 30, 0.55);
+  --sp-idle:       rgba(10, 20, 30, 0.30);
+  --sp-zone-ink:   #0A141E;
+  --sp-zone-fill:  rgba(58, 86, 212, 0.10);
+  --sp-zone-fill-hover: rgba(58, 86, 212, 0.22);
+  --sp-zone-stroke: #3A56D4;
+  --sp-active:     #0A141E;
+  --color-hairline:        rgba(10, 20, 30, 0.10);
+  --color-hairline-strong: rgba(10, 20, 30, 0.20);
+  color-scheme: light;
+}
+.sp-dark,
+[data-sp-ground="light"] .sp-band {
+  --sp-ink:        255 255 255;
+  --sp-amber-ink:  255 183 3;
+  --sp-ok-ink:     74 222 128;
+  --sp-cool-ink:   142 163 255;
+  --sp-outline:    rgba(244, 246, 250, 0.55);
+  --sp-idle:       rgba(255, 255, 255, 0.28);
+  --sp-zone-ink:   #F4F6FA;
+  --sp-zone-fill:  rgba(91, 124, 255, 0.10);
+  --sp-zone-fill-hover: rgba(91, 124, 255, 0.24);
+  --sp-zone-stroke: #5B7CFF;
+  --sp-active:     #F4F6FA;
+  --color-hairline:        rgba(255, 255, 255, 0.08);
+  --color-hairline-strong: rgba(255, 255, 255, 0.14);
+  color-scheme: dark;
+}
+/* The listing's banner fades into a dark ground; on a light one it is a dark
+   block with a rounded foot instead, so its white ink never lands on white. */
+.sp-band-fade {
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 55%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 0%, #000 55%, transparent 100%);
+}
+[data-sp-ground="light"] .sp-band-fade {
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+[data-sp-ground="light"] .sp-band {
+  border-bottom-left-radius: 28px;
+  border-bottom-right-radius: 28px;
 }
 
 /* Base */

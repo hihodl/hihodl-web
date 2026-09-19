@@ -42,11 +42,11 @@ export default async function ProductionPage({ params }: { params: { token: stri
           <BrandProductionPanel token={params.token} initial={found.production} />
         ) : (
           <div className="flex min-h-[50vh] flex-col justify-center">
-            <p className={`${eyebrow} text-amber`}>HiSpace</p>
-            <h1 className="mt-5 font-display text-h3 font-light text-text md:text-h2">
+            <p className={`${eyebrow} text-sp-amber`}>HiSpace</p>
+            <h1 className="mt-5 font-display text-h3 font-light text-sp-ink md:text-h2">
               We couldn&rsquo;t load your delivery just now.
             </h1>
-            <p className="mt-5 max-w-xl text-body text-text-muted">
+            <p className="mt-5 max-w-xl text-body text-sp-ink/85">
               This is on our side, not your link. Give it a moment and refresh the page.
             </p>
           </div>
@@ -54,10 +54,10 @@ export default async function ProductionPage({ params }: { params: { token: stri
       </main>
       <footer className="hairline">
         <div className="container-page flex flex-col gap-6 py-10">
-          <p className="max-w-xl text-tiny text-text-faint">
+          <p className="max-w-xl text-tiny text-sp-ink/80">
             Keep this link to yourself: anyone who has it can accept this delivery or ask for its revision.
           </p>
-          <Wordmark className="h-5 w-auto self-start text-text-muted" />
+          <Wordmark className="h-5 w-auto self-start text-sp-ink/85" />
         </div>
       </footer>
     </SpacesGround>

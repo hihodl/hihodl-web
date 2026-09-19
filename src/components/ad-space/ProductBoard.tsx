@@ -3,6 +3,7 @@
 import type { CSSProperties, KeyboardEvent } from "react";
 
 import { STATUS_LABEL } from "@/lib/ad-space/format";
+import { inkOn, isClosedPath, type ProductLook } from "@/lib/ad-space/product-look";
 import type { PhotoRect, Position, SpacePhoto, Template, TemplateView, TemplateZone } from "@/lib/ad-space/types";
 
 import { qrModules } from "./qr";
@@ -22,6 +23,14 @@ import { ZONE } from "./ui";
  * edge (someone is paying right now), sold is solid amber, or the sponsor's
  * approved logo, QR or text on a white plate. Zones nobody is selling are a
  * faint dashed outline and are not interactive.
+ *
+ * The creator can make the product theirs (product-look-rules.ts): its colours
+ * (`look`: the body filled, handle, wheels and trim in the accent), or a real
+ * photo per side (`viewPhotos`), each side's spots squares on its own photo.
+ * On a coloured body or a photo an open spot sits on a dark glass plate with
+ * white figures, so it reads on any colour; the outline's ink follows the
+ * body's lightness. With neither, the outline takes the page's own ink
+ * (`--sp-outline`), so it reads on a light ground too.
  */
 
 /** Hover and focus change a colour, never a stroke width. */
@@ -39,6 +48,10 @@ const PHOTO_UNITS = 1000;
 
 type Props = {
   template: Template;
+  /** The product's colours, or null for the outline alone. */
+  look?: ProductLook | null;
+  /** A photo per side, keyed by view: that side is drawn as its photo with its squares. */
+  viewPhotos?: Record<string, SpacePhoto> | null;
   /**
    * The creator's own photo, with every position's `rect` on it. When given it
    * is drawn INSTEAD of the catalog views; `getPublicSpace` only passes one on
@@ -51,7 +64,7 @@ type Props = {
   onPick: (position: Position) => void;
 };
 
-export function ProductBoard({ template, photo, positions, activeId, onHover, onPick }: Props) {
+export function ProductBoard({ template, look = null, viewPhotos = null, photo, positions, activeId, onHover, onPick }: Props) {
   if (photo && positions.length > 0 && positions.every((p) => p.rect)) {
     return <PhotoFigure photo={photo} positions={positions} activeId={activeId} onHover={onHover} onPick={onPick} />;
   }
@@ -68,18 +81,91 @@ export function ProductBoard({ template, photo, positions, activeId, onHover, on
       className="flex flex-wrap items-end justify-center gap-x-4 gap-y-8 [--u:var(--u-sm)] md:gap-x-10 md:[--u:var(--u-md)]"
       style={scaleVars}
     >
-      {template.views.map((view) => (
-        <ViewFigure
-          key={view.key}
-          view={view}
-          zones={template.zones.filter((z) => z.viewKey === view.key)}
-          byZone={byZone}
-          activeId={activeId}
-          onHover={onHover}
-          onPick={onPick}
-        />
-      ))}
+      {template.views.map((view) => {
+        const zones = template.zones.filter((z) => z.viewKey === view.key);
+        const side = viewPhotos?.[view.key];
+        const onSide = zones.flatMap((z) => {
+          const p = byZone.get(z.zoneKey);
+          return p ? [p] : [];
+        });
+        if (side && onSide.length > 0 && onSide.every((p) => p.rect)) {
+          return (
+            <ViewPhotoFigure
+              key={view.key}
+              view={view}
+              photo={side}
+              positions={onSide}
+              activeId={activeId}
+              onHover={onHover}
+              onPick={onPick}
+            />
+          );
+        }
+        return (
+          <ViewFigure
+            key={view.key}
+            view={view}
+            zones={zones}
+            byZone={byZone}
+            look={look}
+            activeId={activeId}
+            onHover={onHover}
+            onPick={onPick}
+          />
+        );
+      })}
     </div>
+  );
+}
+
+/**
+ * The product's outline, in the creator's colours when they chose some: the
+ * first path is the body (filled with `body`), every other closed shape a part
+ * (handle grip, wheels, the laptop's base: filled with `accent`), and every
+ * open line (a handle's uprights, a seam) drawn in `accent`. Exported for the
+ * editor's live preview.
+ */
+export function ProductOutline({ view, look }: { view: TemplateView; look: ProductLook | null }) {
+  if (!look) {
+    return (
+      <>
+        {view.outline.map((d, i) => (
+          <path
+            key={i}
+            d={d}
+            fill="none"
+            style={{ stroke: "var(--sp-outline)" }}
+            strokeWidth={1.25}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            vectorEffect="non-scaling-stroke"
+          />
+        ))}
+      </>
+    );
+  }
+  const bodyInk = inkOn(look.body);
+  const accentInk = inkOn(look.accent);
+  return (
+    <>
+      {view.outline.map((d, i) => {
+        const body = i === 0;
+        const closed = body || isClosedPath(d);
+        return (
+          <path
+            key={i}
+            d={d}
+            fill={body ? look.body : closed ? look.accent : "none"}
+            stroke={body ? bodyInk : closed ? accentInk : look.accent}
+            strokeOpacity={body || closed ? 0.45 : 1}
+            strokeWidth={body || closed ? 1.25 : 2.5}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            vectorEffect="non-scaling-stroke"
+          />
+        );
+      })}
+    </>
   );
 }
 
@@ -87,6 +173,7 @@ function ViewFigure({
   view,
   zones,
   byZone,
+  look,
   activeId,
   onHover,
   onPick,
@@ -94,6 +181,7 @@ function ViewFigure({
   view: TemplateView;
   zones: TemplateZone[];
   byZone: Map<string, Position>;
+  look: ProductLook | null;
   activeId: string | null;
   onHover: (id: string | null) => void;
   onPick: (p: Position) => void;
@@ -111,18 +199,7 @@ function ViewFigure({
         role="group"
         aria-label={`${view.label} view`}
       >
-        {view.outline.map((d, i) => (
-          <path
-            key={i}
-            d={d}
-            fill="none"
-            stroke={ZONE.outline}
-            strokeWidth={1.25}
-            strokeLinejoin="round"
-            strokeLinecap="round"
-            vectorEffect="non-scaling-stroke"
-          />
-        ))}
+        <ProductOutline view={view} look={look} />
         {zones.map((z) => {
           const p = byZone.get(z.zoneKey);
           return p ? (
@@ -135,13 +212,72 @@ function ViewFigure({
               active={activeId === p.id}
               onHover={onHover}
               onPick={onPick}
+              onPhoto={Boolean(look)}
             />
           ) : (
-            <IdleZone key={z.zoneKey} zone={z} W={W} H={H} />
+            <IdleZone key={z.zoneKey} zone={z} W={W} H={H} ink={look ? inkOn(look.body) : null} />
           );
         })}
       </svg>
-      <figcaption className="text-tiny uppercase tracking-wider text-text-faint">{view.label}</figcaption>
+      <figcaption className="text-tiny uppercase tracking-wider text-sp-ink/80">{view.label}</figcaption>
+    </figure>
+  );
+}
+
+/**
+ * One side of the product as the creator's own photo, as tall as that side's
+ * drawing would be, with the spots on that side as squares on it.
+ */
+function ViewPhotoFigure({
+  view,
+  photo,
+  positions,
+  activeId,
+  onHover,
+  onPick,
+}: {
+  view: TemplateView;
+  photo: SpacePhoto;
+  positions: Position[];
+  activeId: string | null;
+  onHover: (id: string | null) => void;
+  onPick: (p: Position) => void;
+}) {
+  const W = PHOTO_UNITS;
+  const H = Math.max(1, Math.round((PHOTO_UNITS * photo.height) / photo.width));
+  const aspect = photo.width / photo.height;
+  return (
+    <figure
+      className="flex flex-col items-center gap-3"
+      style={{ width: `min(100%, calc(var(--u) * ${view.viewBox[1]} * ${aspect.toFixed(5)}))` }}
+    >
+      <div className="w-full overflow-hidden rounded-[14px] border border-sp-ink/10">
+        <svg
+          viewBox={`0 0 ${W} ${H}`}
+          className="block w-full"
+          style={{ aspectRatio: `${W} / ${H}` }}
+          role="group"
+          aria-label={`${view.label}, photographed by the creator`}
+        >
+          <image href={photo.url} x={0} y={0} width={W} height={H} preserveAspectRatio="xMidYMid slice" />
+          {positions.map((p) =>
+            p.rect ? (
+              <Zone
+                key={p.id}
+                rect={p.rect}
+                position={p}
+                W={W}
+                H={H}
+                active={activeId === p.id}
+                onHover={onHover}
+                onPick={onPick}
+                onPhoto
+              />
+            ) : null,
+          )}
+        </svg>
+      </div>
+      <figcaption className="text-tiny uppercase tracking-wider text-sp-ink/80">{view.label}</figcaption>
     </figure>
   );
 }
@@ -174,7 +310,7 @@ function PhotoFigure({
       className="mx-auto [--ph:300px] md:[--ph:440px]"
       style={{ width: `min(100%, calc(var(--ph) * ${aspect.toFixed(5)}))` }}
     >
-      <div className="overflow-hidden rounded-[18px] border border-white/10">
+      <div className="overflow-hidden rounded-[18px] border border-sp-ink/10">
         <svg
           viewBox={`0 0 ${W} ${H}`}
           className="block w-full"
@@ -204,7 +340,74 @@ function PhotoFigure({
   );
 }
 
-function IdleZone({ zone, W, H }: { zone: TemplateZone; W: number; H: number }) {
+const NOOP = () => {};
+
+/**
+ * The spot being bought, on the product as the page draws it: the side it is
+ * on, in the creator's photo of that side, or their one photo, or the drawing
+ * in their colours, with this spot lit and the rest as they are. A picture for
+ * the checkout, not a control.
+ */
+export function SpotPreview({
+  template,
+  look = null,
+  viewPhotos = null,
+  photo = null,
+  positions,
+  position,
+}: {
+  template: Template;
+  look?: ProductLook | null;
+  viewPhotos?: Record<string, SpacePhoto> | null;
+  photo?: SpacePhoto | null;
+  positions: Position[];
+  position: Position;
+}) {
+  const zone = template.zones.find((z) => z.zoneKey === position.zoneKey);
+  const view = zone ? template.views.find((v) => v.key === zone.viewKey) : undefined;
+  if (!view) return null;
+  const onView = template.zones.filter((z) => z.viewKey === view.key);
+  const byZone = new Map(positions.map((p) => [p.zoneKey, p]));
+  const sidePositions = onView.flatMap((z) => (byZone.get(z.zoneKey) ? [byZone.get(z.zoneKey)!] : []));
+  const side = viewPhotos?.[view.key];
+
+  const picture =
+    photo && position.rect ? { img: photo, list: positions } : side && position.rect ? { img: side, list: sidePositions } : null;
+
+  if (picture) {
+    const W = PHOTO_UNITS;
+    const H = Math.max(1, Math.round((PHOTO_UNITS * picture.img.height) / picture.img.width));
+    return (
+      <div className="overflow-hidden rounded-[12px] border border-white/10" style={{ height: 132, aspectRatio: `${W} / ${H}` }} aria-hidden>
+        <svg viewBox={`0 0 ${W} ${H}`} className="block h-full w-full">
+          <image href={picture.img.url} x={0} y={0} width={W} height={H} preserveAspectRatio="xMidYMid slice" />
+          {picture.list.map((p) =>
+            p.rect ? (
+              <Zone key={p.id} rect={p.rect} position={p} W={W} H={H} active={p.id === position.id} onHover={NOOP} onPick={NOOP} onPhoto still />
+            ) : null,
+          )}
+        </svg>
+      </div>
+    );
+  }
+
+  const [W, H] = view.viewBox;
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="overflow-visible" style={{ height: 132, width: "auto", aspectRatio: `${W} / ${H}` }} aria-hidden>
+      <ProductOutline view={view} look={look} />
+      {onView.map((z) => {
+        const p = byZone.get(z.zoneKey);
+        return p ? (
+          <Zone key={z.zoneKey} rect={z.rect} position={p} W={W} H={H} active={p.id === position.id} onHover={NOOP} onPick={NOOP} onPhoto={Boolean(look)} still />
+        ) : (
+          <IdleZone key={z.zoneKey} zone={z} W={W} H={H} ink={look ? inkOn(look.body) : null} />
+        );
+      })}
+    </svg>
+  );
+}
+
+function IdleZone({ zone, W, H, ink = null }: { zone: TemplateZone; W: number; H: number; ink?: string | null }) {
   const { x, y, w, h } = zone.rect;
   return (
     <rect
@@ -214,7 +417,8 @@ function IdleZone({ zone, W, H }: { zone: TemplateZone; W: number; H: number }) 
       height={h * H}
       rx={Math.min(w * W, h * H) * 0.12}
       fill="none"
-      stroke={ZONE.idleStroke}
+      style={{ stroke: ink ?? "var(--sp-idle)" }}
+      strokeOpacity={ink ? 0.4 : 1}
       strokeWidth={1}
       strokeDasharray="2 3"
       vectorEffect="non-scaling-stroke"
@@ -232,6 +436,7 @@ function Zone({
   onHover,
   onPick,
   onPhoto = false,
+  still = false,
 }: {
   rect: PhotoRect;
   position: Position;
@@ -241,6 +446,8 @@ function Zone({
   onHover: (id: string | null) => void;
   onPick: (p: Position) => void;
   onPhoto?: boolean;
+  /** A picture of the spot (the checkout's), not a control: no focus, no clicks. */
+  still?: boolean;
 }) {
   const rx = rect.x * W;
   const ry = rect.y * H;
@@ -265,10 +472,10 @@ function Zone({
 
   return (
     <g
-      role="button"
-      tabIndex={0}
-      aria-label={label}
-      className="cursor-pointer outline-none [&:focus-visible>rect:first-of-type]:stroke-text"
+      role={still ? undefined : "button"}
+      tabIndex={still ? -1 : 0}
+      aria-label={still ? undefined : label}
+      className="cursor-pointer outline-none [&:focus-visible>rect:first-of-type]:stroke-sp-ink"
       onPointerEnter={() => onHover(p.id)}
       onPointerLeave={() => onHover(null)}
       onFocus={() => onHover(p.id)}
