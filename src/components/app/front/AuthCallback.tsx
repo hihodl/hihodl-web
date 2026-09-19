@@ -8,7 +8,8 @@
  * verifier. This page only waits for that, then goes where the person was
  * going (lib/auth/providers `takeNext`, same-origin paths only) or to the
  * Dashboard. A provider that refused (`?error=`) or a code that
- * could not be exchanged says so in one line, with a way back.
+ * could not be exchanged says so in one line, with a way back. Drawn as the
+ * app's own callback (hihodl-wallet/app/auth/callback.tsx).
  */
 
 import { useEffect, useState } from "react";
@@ -17,7 +18,7 @@ import { clientProductBase } from "@/lib/app/paths";
 import { takeNext } from "@/lib/auth/providers";
 import { creatorAuth } from "@/lib/creator/session";
 
-import { btnPrimary, DoorCard, HoldMark, Note, Warn } from "./kit";
+import { ErrorBanner, Spinner } from "./step";
 
 export function AuthCallback() {
   const [failed, setFailed] = useState<string | null>(null);
@@ -51,26 +52,25 @@ export function AuthCallback() {
     };
   }, []);
 
+  // app/auth/callback.tsx: the amber spinner and one line on the welcome's ground.
   return (
-    <div className="flex min-h-[100dvh] w-full flex-col items-center justify-center px-4 py-10">
-      <DoorCard>
-        <HoldMark />
-        <div className="mt-8 flex flex-col gap-4">
-          {failed ? (
-            <>
-              <h1 className="text-h4 font-light text-text">Sign in</h1>
-              <Warn>{failed}</Warn>
-              <div>
-                <a href={clientProductBase() || "/"} className={btnPrimary}>
-                  Back to sign in
-                </a>
-              </div>
-            </>
-          ) : (
-            <Note>Signing you in…</Note>
-          )}
+    <div className="flex min-h-[100dvh] w-full flex-col items-center justify-center gap-5 px-6 py-10">
+      {failed ? (
+        <div className="flex w-full max-w-[400px] flex-col gap-4">
+          <ErrorBanner>{failed}</ErrorBanner>
+          <a
+            href={clientProductBase() || "/"}
+            className="flex h-[58px] w-full items-center justify-center rounded-[29px] bg-amber text-[17px] font-extrabold tracking-[-0.2px] text-[#0A1117] shadow-[0_6px_20px_rgba(255,183,3,0.2)] transition-colors hover:bg-amber-glow"
+          >
+            Back to sign in
+          </a>
         </div>
-      </DoorCard>
+      ) : (
+        <>
+          <Spinner color="#FFB703" size={36} />
+          <p className="text-center text-[17px] font-semibold text-white">Completing sign in...</p>
+        </>
+      )}
     </div>
   );
 }

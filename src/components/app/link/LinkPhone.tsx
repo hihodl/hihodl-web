@@ -41,7 +41,7 @@ import { explain } from "@/lib/wallet/explain";
 import { userSecretFrom } from "@/lib/wallet/flows";
 import { evaluatePrf } from "@/lib/wallet/passkey";
 
-import { btnGhost, btnPrimary, Note, Warn } from "../front/kit";
+import { ActionButton, Cta, ErrorBanner, ReadyBox, SkipButton, Spinner, StepDesc } from "../front/step";
 
 /* ── What the screen shows ────────────────────────────────────────── */
 
@@ -75,32 +75,31 @@ function useCountdown(until: number | null): string {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 
-/** The step's actions, always at the bottom of the card. */
-function Actions({ children }: { children: React.ReactNode }) {
-  return <div className="mt-auto flex flex-wrap items-center gap-2 pt-6">{children}</div>;
-}
-
+/**
+ * Drawn with the app's step pieces (../front/step), under the "Link your
+ * phone" title row onboarding puts above it. The app has no computer's side
+ * to copy; the QR sits on the app's white tile (hihodl-wallet/src/ui/HQR.tsx:
+ * padding 18, radius 28), and "linked" is the app's Ready check.
+ */
 export function LinkView({ phase, actions }: { phase: LinkPhase; actions: LinkActions }) {
   const left = useCountdown(phase.kind === "waiting" ? phase.expiresAt : null);
 
   if (phase.kind === "starting") {
     return (
-      <div className="flex flex-1 flex-col">
-        <Note>Your phone approves every withdrawal from your wallet. Getting a code for it…</Note>
-        <div className="mt-5 h-[200px] w-[200px] animate-pulse self-center rounded-[16px] bg-white/[0.06]" />
+      <div>
+        <StepDesc>Your phone approves every withdrawal from your wallet.</StepDesc>
+        <div className="mx-auto mt-3 h-[248px] w-[248px] animate-pulse rounded-[28px] bg-white/[0.06]" />
       </div>
     );
   }
 
   if (phase.kind === "failed") {
     return (
-      <div className="flex flex-1 flex-col">
-        <Warn>{phase.message}</Warn>
-        <Actions>
-          <button type="button" className={btnPrimary} onClick={actions.onRetry}>
-            Try again
-          </button>
-        </Actions>
+      <div>
+        <ErrorBanner>{phase.message}</ErrorBanner>
+        <Cta>
+          <ActionButton title="Try again" onClick={actions.onRetry} />
+        </Cta>
       </div>
     );
   }
@@ -108,56 +107,52 @@ export function LinkView({ phase, actions }: { phase: LinkPhase; actions: LinkAc
   if (phase.kind === "waiting") {
     if (phase.here === "ios") {
       return (
-        <div className="flex flex-1 flex-col">
-          <Note>
-            You are on your iPhone, so this is the phone we link. From now on it approves every withdrawal from your
-            wallet with your passkey.
-          </Note>
-          {phase.notice ? <div className="mt-4"><Warn>{phase.notice}</Warn></div> : null}
-          <Actions>
-            <button type="button" className={btnPrimary} disabled={phase.joining} onClick={actions.onJoinHere}>
-              {phase.joining ? "Linking…" : "Link this iPhone"}
-            </button>
-          </Actions>
+        <div>
+          {phase.notice ? <ErrorBanner>{phase.notice}</ErrorBanner> : null}
+          <StepDesc>You are on your iPhone, so this is the phone we link. It approves every withdrawal with your passkey.</StepDesc>
+          <Cta>
+            <ActionButton title={phase.joining ? "Linking..." : "Link this iPhone"} icon="phone-portrait-outline" disabled={phase.joining} onClick={actions.onJoinHere} />
+          </Cta>
         </div>
       );
     }
     if (phase.here === "android") {
       return (
-        <div className="flex flex-1 flex-col">
-          <Note>
-            You are on your Android phone. Open the HOLD app with this link: it shows a six-digit code, and you come back
-            here to check it matches.
-          </Note>
-          <p className="mt-4 text-tiny text-[#9FB7C2]">Code valid for {left}</p>
-          <Actions>
-            <a href={phase.url} className={btnPrimary}>
+        <div>
+          <StepDesc>Open the HOLD app with this link. It shows a six-digit code; come back here to check it matches.</StepDesc>
+          <p className="text-[13px] font-medium text-white/55">Code valid for {left}</p>
+          <Cta>
+            <a
+              href={phase.url}
+              className="flex h-[54px] w-full items-center justify-center gap-2 rounded-[27px] border border-white/10 bg-white/[0.05] text-[16px] font-bold text-white/85 transition-colors hover:bg-white/[0.09]"
+            >
               Open in HOLD
             </a>
-          </Actions>
+          </Cta>
         </div>
       );
     }
     return (
-      <div className="flex flex-1 flex-col">
-        <Note>Your phone approves every withdrawal from your wallet. Scan this code with its camera.</Note>
-        <div className="mt-5 flex flex-col items-center gap-5 sm:flex-row sm:items-center">
-          <div className="w-[184px] shrink-0 overflow-hidden rounded-[14px]">
+      <div>
+        <StepDesc>Your phone approves every withdrawal from your wallet. Scan this code with its camera.</StepDesc>
+        <div className="mt-3">
+          <div className="mx-auto w-[248px] rounded-[28px] bg-white p-[18px]">
             <QrCode text={phase.url} title="Scan with your phone" className="h-auto w-full" />
           </div>
-          <ul className="flex min-w-0 flex-col gap-3 text-small text-[#CFE3EC]">
-            <li>
-              <span className="block font-medium text-text">iPhone</span>
-              <span className="text-[#9FB7C2]">Opens in Safari. Sign in with this account.</span>
-            </li>
-            <li>
-              <span className="block font-medium text-text">Android</span>
-              <span className="text-[#9FB7C2]">Opens the HOLD app, or shows where to get it.</span>
-            </li>
-          </ul>
         </div>
-        <p className="mt-5 text-tiny text-[#9FB7C2]">
-          Waiting for your phone · code valid for <span className="tabular-nums">{left}</span>
+        <ul className="mt-4 flex flex-col gap-2 text-[14px]">
+          <li>
+            <span className="font-bold text-white">iPhone</span>
+            <span className="text-white/60"> opens it in Safari. Sign in with this account.</span>
+          </li>
+          <li>
+            <span className="font-bold text-white">Android</span>
+            <span className="text-white/60"> opens the HOLD app, or shows where to get it.</span>
+          </li>
+        </ul>
+        <p className="mt-4 flex items-center gap-2 text-[13px] font-medium text-white/55" role="status">
+          <Spinner size={14} color="rgba(255,255,255,0.55)" />
+          Waiting for your phone · <span className="tabular-nums">{left}</span>
         </p>
       </div>
     );
@@ -165,82 +160,66 @@ export function LinkView({ phase, actions }: { phase: LinkPhase; actions: LinkAc
 
   if (phase.kind === "confirm") {
     return (
-      <div className="flex flex-1 flex-col">
-        <Note>{phase.carries ? "Your phone joined. Before your wallet goes to it, check this is your phone." : "Your phone joined. Check this is your phone."}</Note>
-        <p className="mt-6 text-center font-mono text-[40px] font-medium tracking-[0.12em] text-text tabular-nums" aria-label={`Code ${phase.sas.split("").join(" ")}`}>
+      <div>
+        {phase.notice ? <ErrorBanner>{phase.notice}</ErrorBanner> : null}
+        <StepDesc>{phase.carries ? "Your phone joined. Before your wallet goes to it, check this is your phone." : "Your phone joined. Check this is your phone."}</StepDesc>
+        <p className="mt-4 text-center font-mono text-[40px] font-medium tracking-[0.12em] text-white tabular-nums" aria-label={`Code ${phase.sas.split("").join(" ")}`}>
           {formatSas(phase.sas)}
         </p>
-        <p className="mt-3 text-center text-body text-text">Does your phone show this code?</p>
-        {phase.notice ? <div className="mt-4"><Warn>{phase.notice}</Warn></div> : null}
-        <Actions>
-          <button type="button" className={btnPrimary} disabled={phase.busy} onClick={actions.onConfirm}>
-            {phase.busy ? (phase.carries ? "Waiting for your passkey…" : "Linking…") : "Yes, it matches"}
-          </button>
-          <button type="button" className={btnGhost} disabled={phase.busy} onClick={actions.onMismatch}>
-            No, it is different
-          </button>
-        </Actions>
+        <p className="mt-2 text-center text-[15px] font-semibold text-white/80">Does your phone show this code?</p>
+        <Cta>
+          <ActionButton
+            title={phase.busy ? (phase.carries ? "Waiting for your passkey..." : "Linking...") : "Yes, it matches"}
+            icon={phase.carries ? "key-outline" : undefined}
+            disabled={phase.busy}
+            onClick={actions.onConfirm}
+          />
+          <SkipButton label="No, it is different" disabled={phase.busy} onClick={actions.onMismatch} />
+        </Cta>
       </div>
     );
   }
 
   if (phase.kind === "mismatch") {
     return (
-      <div className="flex flex-1 flex-col">
-        <Note>
-          The codes were different, so nothing was sent. That can happen when another phone scanned the code. Start again
-          with a new one.
-        </Note>
-        <Actions>
-          <button type="button" className={btnPrimary} onClick={actions.onRetry}>
-            Show a new code
-          </button>
-        </Actions>
+      <div>
+        <ErrorBanner>The codes were different, so nothing was sent. That can happen when another phone scanned the code.</ErrorBanner>
+        <Cta>
+          <ActionButton title="Show a new code" onClick={actions.onRetry} />
+        </Cta>
       </div>
     );
   }
 
   if (phase.kind === "sending") {
     return (
-      <div className="flex flex-1 flex-col">
-        <Note>
-          {phase.carries
-            ? "Sending your wallet to your phone, locked so only your phone can open it. Finish on your phone."
-            : "Linking your phone. Finish on your phone."}
-        </Note>
-        <div className="mt-5 h-11 animate-pulse rounded-[12px] bg-white/[0.06]" />
+      <div className="flex items-center gap-3 py-5" role="status">
+        <Spinner color="#20D690" />
+        <span className="text-[16px] font-semibold text-white/60">{phase.carries ? "Sending your wallet to your phone..." : "Linking your phone..."}</span>
       </div>
     );
   }
 
   if (phase.kind === "expired") {
     return (
-      <div className="flex flex-1 flex-col">
-        <Note>That code expired. Codes last five minutes.</Note>
-        <Actions>
-          <button type="button" className={btnPrimary} onClick={actions.onRetry}>
-            Show a new code
-          </button>
-        </Actions>
+      <div>
+        <StepDesc>That code expired. Codes last five minutes.</StepDesc>
+        <Cta>
+          <ActionButton title="Show a new code" onClick={actions.onRetry} />
+        </Cta>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-1 flex-col">
-      <p className="text-small text-success">Your phone is linked.</p>
-      <Note>
-        <span className="mt-2 block">
-          {phase.platform === "android"
-            ? "Your Android phone approves every withdrawal in the HOLD app."
-            : "Your iPhone approves every withdrawal with your passkey."}
-        </span>
-      </Note>
-      <Actions>
-        <button type="button" className={btnPrimary} onClick={actions.onDone}>
-          Continue
-        </button>
-      </Actions>
+    <div>
+      <ReadyBox
+        title="Your phone is linked"
+        line={phase.platform === "android" ? "Your Android phone approves every withdrawal in the HOLD app." : "Your iPhone approves every withdrawal with your passkey."}
+      />
+      <Cta>
+        <ActionButton title="Continue" onClick={actions.onDone} />
+      </Cta>
     </div>
   );
 }
