@@ -49,7 +49,7 @@ const monthYear = (iso: string | null) =>
 /** "Brands paid our 5% on top" when they did on every sale, else what came out of your price. */
 export function feeLine(t: CreatorAnalytics["totals"]): string {
   if (t.orders === 0) return "Brands pay our 5% on top of your price";
-  if (t.fee.paidByYouCents === 0) return `Brands paid our 5% on top: you kept 100%`;
+  if (t.fee.paidByYouCents === 0) return "Brands paid the 5% · you kept 100%";
   if (t.fee.paidByBrandsCents === 0) return `${dollars(t.fee.paidByYouCents)} fee came out of your price`;
   return `Brands paid ${dollars(t.fee.paidByBrandsCents)} of our fee on top`;
 }
@@ -64,6 +64,7 @@ function Screen({
   big,
   bigNote,
   aside,
+  extra,
   children,
 }: {
   back: string;
@@ -71,6 +72,8 @@ function Screen({
   big: ReactNode;
   bigNote: ReactNode;
   aside?: ReactNode;
+  /** Under the big number: a short ranked list that belongs with it. */
+  extra?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -80,6 +83,7 @@ function Screen({
         <Panel>
           <p className="text-[40px] font-medium leading-none tracking-tight tabular-nums text-text">{big}</p>
           <p className="mt-3 text-small text-[#CFE3EC]">{bigNote}</p>
+          {extra ? <div className="mt-5 border-t border-white/[0.06] pt-4">{extra}</div> : null}
           {aside ? <div className="mt-5 border-t border-white/[0.06] pt-4 text-tiny leading-relaxed text-[#9FB7C2]">{aside}</div> : null}
         </Panel>
         <div className="flex min-w-0 flex-col gap-4">{children}</div>
@@ -142,7 +146,7 @@ function howPaid(b: BrandRelation): string {
 export function BrandsScreen({ data, back }: { data: CreatorAnalytics; back: string }) {
   const [filter, setFilter] = useState<"all" | "repeat">("all");
   const list = filter === "repeat" ? data.brands.filter((b) => b.repeat) : data.brands;
-  const paged = usePaged(list, filter, 6);
+  const paged = usePaged(list, filter, 5);
   const t = data.totals;
   const top = data.topBrands;
   const maxTop = Math.max(1, ...top.map((b) => b.receivedCents));
@@ -153,6 +157,24 @@ export function BrandsScreen({ data, back }: { data: CreatorAnalytics; back: str
       title="Brands you work with"
       big={String(t.brands)}
       bigNote={`${t.brands === 1 ? "brand has" : "brands have"} paid you`}
+      extra={
+        top.length ? (
+          <>
+            <p className="mb-3 text-tiny text-[#9FB7C2]">Top payers</p>
+            <ul className="flex flex-col gap-2.5">
+              {top.map((b) => (
+                <li key={b.key} className="flex min-w-0 flex-col gap-1">
+                  <div className="flex min-w-0 items-baseline justify-between gap-3">
+                    <p className="truncate text-tiny text-text">{b.name}</p>
+                    <p className="shrink-0 text-tiny tabular-nums text-text">{dollars(b.receivedCents)}</p>
+                  </div>
+                  <ProgressBar value={b.receivedCents} max={maxTop} />
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : null
+      }
       aside={
         <>
           {t.repeatBrands > 0
@@ -162,22 +184,6 @@ export function BrandsScreen({ data, back }: { data: CreatorAnalytics; back: str
         </>
       }
     >
-      {top.length ? (
-        <Panel title="Top payers" meta="what reached you">
-          <ul className="flex flex-col">
-            {top.map((b) => (
-              <BarLine
-                key={b.key}
-                label={b.name}
-                right={dollars(b.receivedCents)}
-                value={b.receivedCents}
-                max={maxTop}
-                sub={`${plural(b.orders, "order")} · ${plural(b.events.length || 1, "event")}`}
-              />
-            ))}
-          </ul>
-        </Panel>
-      ) : null}
       <Panel
         title="Every brand"
         meta={plural(list.length, "brand")}
@@ -224,7 +230,7 @@ export function BrandsScreen({ data, back }: { data: CreatorAnalytics; back: str
               ))}
             </ul>
             <div className="mt-3">
-              <Pager {...paged} size={6} />
+              <Pager {...paged} size={5} />
             </div>
           </>
         )}
