@@ -31,8 +31,11 @@ import { useListing, useListingSales, useSales } from "@/lib/app/spaces-data";
 import { useHref } from "../base";
 import { useShell } from "../Shell";
 import { IconSales } from "../icons";
-import { dollars, EmptyState, Panel, Skeleton } from "../ui";
+import { btnGlass } from "../hold";
+import { Ion } from "../ion";
+import { dollars, Skeleton } from "../ui";
 import { ReadError, shortDay } from "./common";
+import { Card, Empty, money, SectionLabel } from "./kit";
 import { ContentOfferScreen, midSentence, useOffersContent, useTemplateFormats, type ContentLead } from "./ContentOffer";
 import {
   CardGrid,
@@ -70,7 +73,7 @@ export function SalesScreen({ event, listing, offer = null }: { event: string | 
   const groups = byEvent(totals, (l) => l.spaceId, refs).sort(
     (a, b) => Number(a.key === NO_EVENT) - Number(b.key === NO_EVENT) || sumReceived(b.items) - sumReceived(a.items),
   );
-  return <EventGrid groups={groups} refOf={refOf} received={sales.data.receivedUsdc} orders={sales.data.orders} />;
+  return <EventGrid groups={groups} refOf={refOf} received={sales.data.receivedUsdc} spots={sales.data.soldSpots} spaces={sales.data.spaces} />;
 }
 
 type RefOf = (id: string, named?: { spaceTitle: string; serviceName: string | null }) => ReturnType<typeof unknownListing>;
@@ -79,29 +82,27 @@ function EventGrid({
   groups,
   refOf,
   received,
-  orders,
+  spots,
+  spaces,
 }: {
   groups: { key: string; items: SalesListing[] }[];
   refOf: RefOf;
   received: string;
-  orders: number;
+  spots: number;
+  spaces: number;
 }) {
   const href = useHref();
   const paged = usePaged(groups, groups.length);
 
-  if (groups.length === 0) {
-    return (
-      <Panel>
-        <EmptyState title="No sales yet." />
-      </Panel>
-    );
-  }
   return (
-    <div className="flex flex-col gap-4">
-      <p className="flex flex-wrap items-baseline gap-x-2 text-tiny text-[#9FB7C2]">
-        <span className="text-[18px] font-medium tabular-nums text-text">{dollars(cents(received))}</span>
-        received · {salesText(orders)}
-      </p>
+    <div className="flex flex-col gap-2.5">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-2.5 md:grid-cols-2">
+        <ReceivedCard received={received} sub={`${spots} ${spots === 1 ? "spot" : "spots"} sold across ${spaces} ${spaces === 1 ? "space" : "spaces"}`} />
+        <TeamRow />
+      </div>
+      {groups.length === 0 ? (
+        <Empty icon="cash-outline" title="No sales yet" body="When a brand pays for a spot on one of your spaces, it shows here." />
+      ) : null}
       <CardGrid>
         {paged.shown.map((g) => {
           const listings = g.items.map((l) => refOf(l.spaceId, l));
@@ -123,6 +124,39 @@ function EventGrid({
   );
 }
 
+/** SalesView's first card: what reached the wallet, not what sponsors were charged. */
+function ReceivedCard({ received, sub }: { received: string; sub: string }) {
+  return (
+    <Card>
+      <p className="text-[12px] font-strong uppercase tracking-[0.4px] text-white/55">Received</p>
+      <p className={money}>{dollars(cents(received))}</p>
+      <p className="text-[13px] font-strong leading-[18px] text-white/[0.62]">{sub}</p>
+      <p className="text-[12px] leading-4 text-white/55">USDC, straight to your wallet when each brand paid.</p>
+    </Card>
+  );
+}
+
+/** SalesView's TeamRow: the way into the team, under the money a share is paid from. */
+function TeamRow() {
+  const href = useHref();
+  return (
+    <Card href={href("/team")}>
+      <span className="flex items-center gap-3">
+        <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[17px] bg-white/[0.08] text-white">
+          <Ion name="people-outline" size={17} />
+        </span>
+        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <span className="text-[15px] font-strong tracking-[-0.2px] text-white">Your team</span>
+          <span className="text-[13px] font-strong leading-[18px] text-white/[0.62]">
+            Invite the people who sell for you or turn up at the event, and give them a share you pay yourself.
+          </span>
+        </span>
+        <Ion name="chevron-forward" size={16} className="shrink-0 text-white/55" />
+      </span>
+    </Card>
+  );
+}
+
 function EventSales({ eventKey, totals, refOf }: { eventKey: string; totals: SalesListing[]; refOf: RefOf }) {
   const href = useHref();
   const here = totals
@@ -140,9 +174,7 @@ function EventSales({ eventKey, totals, refOf }: { eventKey: string; totals: Sal
         right={here.length ? <p className="text-tiny tabular-nums text-[#9FB7C2]">{dollars(sumReceived(here))} received</p> : null}
       />
       {here.length === 0 ? (
-        <Panel>
-          <EmptyState title="No sales here." />
-        </Panel>
+        <Empty icon="cash-outline" title="No sales yet" body="When a brand pays for a spot on one of your spaces, it shows here." />
       ) : (
         <>
           <CardGrid>
@@ -219,17 +251,16 @@ function ListingSales({ spaceId, total, refOf, offer }: { spaceId: string; total
         crumb={eventName(ref.event)}
         title={ref.title}
       />
-      <Panel
-        className="w-full max-w-[760px]"
-        title="Sales"
-        meta={total ? `${salesText(total.orders)} · ${dollars(cents(total.receivedUsdc))} received` : ""}
-      >
+      <div className="flex w-full max-w-[760px] flex-col gap-2.5">
+        {total ? <ReceivedCard received={total.receivedUsdc} sub={salesText(total.orders)} /> : null}
         {!sales.data ? (
           sales.error ? <ReadError error={sales.error} /> : <Skeleton className="h-[200px]" />
         ) : rows.length === 0 ? (
-          <EmptyState title="No sales on this listing." />
+          <Empty icon="cash-outline" title="No sales yet" body="When a brand pays for a spot on one of your spaces, it shows here." />
         ) : (
-          <ul className="flex flex-col">
+          <>
+          <SectionLabel>Recent sales</SectionLabel>
+          <ul className="flex flex-col gap-2.5">
             {paged.shown.map((r) => (
               <SaleLine
                 key={r.orderId}
@@ -240,9 +271,8 @@ function ListingSales({ spaceId, total, refOf, offer }: { spaceId: string; total
               />
             ))}
           </ul>
+          </>
         )}
-      </Panel>
-      <div className="w-full max-w-[760px]">
         <Pager {...paged} />
       </div>
     </div>
@@ -266,25 +296,24 @@ function SaleLine({
   const outbid = row.status === "outbid";
   const sponsor = row.sponsorName ?? (outbid ? null : position?.sponsor?.name) ?? (loading && row.sponsorName === undefined ? "…" : "Sponsor");
   const what = position?.title ?? position?.label ?? row.zoneKey;
+  // The app's recent sale: who and what on the left, what reached you in green on the right.
   return (
-    <li className="flex min-w-0 items-center gap-3 border-t border-white/[0.06] py-3 first:border-t-0 first:pt-0">
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-small text-text">{sponsor}</p>
-        <p className="mt-0.5 truncate text-tiny text-[#9FB7C2]">{outbid ? `${what} · outbid since` : what}</p>
-      </div>
-      {offerHref ? (
-        <Link
-          href={offerHref}
-          scroll={false}
-          className="inline-flex h-8 shrink-0 items-center rounded-[10px] border border-white/10 bg-white/[0.05] px-3 text-tiny font-medium text-[#CFE3EC] transition-colors hover:bg-white/10 hover:text-text"
-        >
-          Offer them content
-        </Link>
-      ) : null}
-      <div className="shrink-0 text-right">
-        <p className="text-small tabular-nums text-text">{row.receivedUsdc} USDC</p>
-        <p className="mt-0.5 text-tiny text-[#9FB7C2]">{shortDay(row.paidAt)}</p>
-      </div>
+    <li>
+      <Card>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
+            <p className="truncate text-[15px] font-strong tracking-[-0.2px] text-white">{sponsor}</p>
+            <p className="truncate text-[12.5px] font-strong text-white/55">{[what, shortDay(row.paidAt)].filter(Boolean).join(" · ")}</p>
+          </div>
+          <p className="shrink-0 text-[15px] font-strong tabular-nums text-[#2FBE8A]">{row.receivedUsdc} USDC</p>
+        </div>
+        {outbid ? <p className="text-[12.5px] font-strong text-white/55">Taken over since: the next brand repaid this one</p> : null}
+        {offerHref ? (
+          <Link href={offerHref} scroll={false} className={`${btnGlass} self-start`}>
+            Offer them content
+          </Link>
+        ) : null}
+      </Card>
     </li>
   );
 }

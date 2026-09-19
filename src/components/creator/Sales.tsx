@@ -19,16 +19,15 @@
 
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { btnSmallSecondary, card, pill } from "@/components/ad-space/ui";
 import { relativeTime, timeLeft } from "@/lib/ad-space/format";
 import { describeCreatorError } from "@/lib/creator/api";
 import type { OfferView, SalesSummary } from "@/lib/creator/listing";
 import { getSales, receivedOffers } from "@/lib/creator/listings";
 
-import { Loading, Notice, Section } from "./parts";
+import { Notice as HoldNotice } from "../app/hold";
+import { Card, Empty, money, SectionLabel, SheetRow } from "../app/spaces/kit";
 
 export function Sales() {
   const [sales, setSales] = useState<SalesSummary | null>(null);
@@ -57,79 +56,61 @@ export function Sales() {
   }, []);
 
   if (sales === null && waiting === null) {
-    return (
-      <Section label="Your money" title="What has reached you">
-        <Loading what="your sales" />
-      </Section>
-    );
+    return <Empty icon="hourglass-outline" title="Loading…" />;
   }
 
+  // The app's SalesView: the Received card, then the threads waiting on you, then the latest sales.
   return (
-    <Section label="Your money" title="What has reached you">
-      <div className="flex flex-col gap-8">
-        {sales ? (
-          <div className="flex flex-col gap-3">
-            <p className="text-h4 font-light text-text">{sales.receivedUsdc} USDC</p>
-            <p className="text-small text-text-muted">
-              What arrived in your own wallet, across {sales.spaces} {sales.spaces === 1 ? "listing" : "listings"} and{" "}
-              {sales.soldSpots} {sales.soldSpots === 1 ? "spot" : "spots"}. Not what sponsors were charged: this is your
-              side of it, after our five percent wherever you were the one carrying it.
-            </p>
-            {sales.recent.length > 0 ? (
-              <ul className="mt-2 flex flex-col gap-2">
-                {sales.recent.slice(0, 6).map((r) => (
-                  <li key={r.orderId} className="flex flex-wrap items-baseline justify-between gap-2 text-small">
-                    <span className="min-w-0 text-text-muted">
-                      {r.serviceName || r.spaceTitle} · {r.chain}
-                      {r.paidAt ? ` · ${relativeTime(r.paidAt)}` : ""}
-                    </span>
-                    <span className="font-mono text-text">{r.receivedUsdc} USDC</span>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
-        ) : null}
+    <div className="flex flex-col gap-2.5">
+      {notice ? <HoldNotice>{notice}</HoldNotice> : null}
+      {sales ? (
+        <Card>
+          <p className="text-[12px] font-strong uppercase tracking-[0.4px] text-white/55">Received</p>
+          <p className={money}>{sales.receivedUsdc} USDC</p>
+          <p className="text-[13px] font-strong leading-[18px] text-white/[0.62]">
+            {sales.soldSpots} {sales.soldSpots === 1 ? "spot" : "spots"} sold across {sales.spaces} {sales.spaces === 1 ? "space" : "spaces"}
+          </p>
+          <p className="text-[12px] leading-4 text-white/55">USDC, straight to your wallet when each brand paid.</p>
+        </Card>
+      ) : null}
 
-        {waiting && waiting.length > 0 ? (
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              <h3 className="text-body text-text">Waiting on you</h3>
-              <p className="text-small text-text-muted">
-                Each of these runs out on its own clock, and a brand that hears nothing does not come back. Answering is
-                two clicks.
-              </p>
-            </div>
-            <ul className="flex flex-col gap-3">
-              {waiting.map((o) => {
-                const left = o.expiresAt ? new Date(o.expiresAt).getTime() - Date.now() : null;
-                return (
-                  <li key={o.id} className={`${card} flex flex-wrap items-center justify-between gap-3 p-4`}>
-                    <div className="min-w-0">
-                      <p className="text-small text-text">
-                        {o.amountUsdc} USDC from {o.sponsor.name}
-                      </p>
-                      <p className="mt-1 text-tiny text-text-muted">
-                        {o.serviceName || o.spaceTitle}
-                        {o.positionLabel ? ` · ${o.positionLabel}` : ""} ·{" "}
-                        {o.kind === "bid" ? "a bid" : "an offer"}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {left !== null && left > 0 ? <span className={pill.attention}>{timeLeft(left)} left</span> : null}
-                      <Link href={`/creator/listings/${o.spaceId}`} className={btnSmallSecondary}>
-                        Answer it
-                      </Link>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ) : null}
+      {waiting && waiting.length > 0 ? (
+        <>
+          <SectionLabel>Waiting on you</SectionLabel>
+          {waiting.map((o) => {
+            const left = o.expiresAt ? new Date(o.expiresAt).getTime() - Date.now() : null;
+            return (
+              <SheetRow
+                key={o.id}
+                href={`/creator/listings/${o.spaceId}`}
+                icon="pricetags-outline"
+                attention
+                title={`${o.kind === "bid" ? "Bid" : "Offer"} ${o.amountUsdc} USDC · ${o.sponsor.name}`}
+                meta={[o.serviceName || o.spaceTitle, o.positionLabel, left !== null && left > 0 ? `${timeLeft(left)} left to answer` : null].filter(Boolean).join(" · ")}
+              />
+            );
+          })}
+        </>
+      ) : null}
 
-        {notice ? <Notice>{notice}</Notice> : null}
-      </div>
-    </Section>
+      {sales && sales.recent.length > 0 ? (
+        <>
+          <SectionLabel>Recent sales</SectionLabel>
+          {sales.recent.slice(0, 6).map((r) => (
+            <Card key={r.orderId}>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
+                  <p className="truncate text-[15px] font-strong tracking-[-0.2px] text-white">{r.serviceName || r.spaceTitle}</p>
+                  <p className="truncate text-[12.5px] font-strong text-white/55">{[r.chain, r.paidAt ? relativeTime(r.paidAt) : null].filter(Boolean).join(" · ")}</p>
+                </div>
+                <p className="shrink-0 text-[15px] font-strong tabular-nums text-[#2FBE8A]">{r.receivedUsdc} USDC</p>
+              </div>
+            </Card>
+          ))}
+        </>
+      ) : sales ? (
+        <Empty icon="cash-outline" title="No sales yet" body="When a brand pays for a spot on one of your spaces, it shows here." />
+      ) : null}
+    </div>
   );
 }
