@@ -23,9 +23,13 @@ function originOf(url: string | undefined): string | null {
   }
 }
 
-/** Is this path a wallet page, on either host (`/wallet` on app.hihodl.xyz, `/app/wallet` elsewhere)? */
+/**
+ * Is this path a page where wallet keys can exist, on either host (`/wallet`
+ * on app.hihodl.xyz, `/app/wallet` elsewhere)? Onboarding (`/welcome`) counts:
+ * its last step can create the wallet.
+ */
 export function isWalletPath(pathname: string): boolean {
-  return /^\/(app\/)?wallet(\/|$)/.test(pathname);
+  return /^\/(app\/)?(wallet|welcome)(\/|$)/.test(pathname);
 }
 
 export function walletCsp(nonce: string, dev = process.env.NODE_ENV !== "production"): string {

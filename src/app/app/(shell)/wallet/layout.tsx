@@ -1,5 +1,5 @@
 /**
- * The wallet: the product's second module, in the same shell as Spaces.
+ * The wallet, in the product shell (../layout.tsx).
  *
  * Served at app.hihodl.xyz/wallet (and /app/wallet elsewhere). The middleware
  * gives every page under here a strict, nonce-based Content-Security-Policy
@@ -8,11 +8,7 @@
  */
 
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import type { ReactNode } from "react";
-
-import { SpacesApp } from "@/components/app/Shell";
-import { spacesBaseFor } from "@/lib/app/paths";
 
 export const metadata: Metadata = {
   title: { default: "Wallet", template: "%s · Wallet · HOLD" },
@@ -21,6 +17,5 @@ export const metadata: Metadata = {
 };
 
 export default function WalletLayout({ children }: { children: ReactNode }) {
-  const base = spacesBaseFor(headers().get("host"));
-  return <SpacesApp base={base}>{children}</SpacesApp>;
+  return children;
 }

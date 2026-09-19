@@ -28,7 +28,7 @@
 import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
 
-import { clientSpacesBase } from "@/lib/app/paths";
+import { clientProductBase } from "@/lib/app/paths";
 
 /** `undefined` = not built yet, `null` = not configured on this deploy. */
 let client: SupabaseClient | null | undefined;
@@ -51,6 +51,13 @@ export function creatorAuth(): SupabaseClient | null {
             // Our own key, so a session here is never confused with one a
             // future page on this origin stores under the library default.
             storageKey: "hold-creator-auth",
+            // PKCE, for "Continue with Apple / Google": the provider sends back
+            // a one-time code that only this browser (which holds the
+            // verifier) can exchange, instead of tokens in the URL fragment.
+            // The email code is unaffected (verifyOtp), and a magic link opened
+            // in this same browser still lands signed in (the code is
+            // exchanged on load by detectSessionInUrl).
+            flowType: "pkce",
           },
         })
       : null;
@@ -98,7 +105,7 @@ export function useCreatorSession(): CreatorSession {
  * is exactly who this console is for — the whole point is that they never had
  * to install the app. `emailRedirectTo` is where a link-style email lands, and
  * it has to be on the project's redirect allow-list for that half to work:
- * https://app.hihodl.xyz/spaces in production (see lib/app/paths).
+ * https://app.hihodl.xyz/ (the Dashboard) in production (see lib/app/paths).
  */
 export async function sendSignInCode(email: string): Promise<void> {
   const auth = creatorAuth();
@@ -107,7 +114,7 @@ export async function sendSignInCode(email: string): Promise<void> {
     email: email.trim(),
     options: {
       shouldCreateUser: true,
-      emailRedirectTo: typeof window === "undefined" ? undefined : `${window.location.origin}${clientSpacesBase()}`,
+      emailRedirectTo: typeof window === "undefined" ? undefined : `${window.location.origin}${clientProductBase() || "/"}`,
     },
   });
   if (error) throw error;

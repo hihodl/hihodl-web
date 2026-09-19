@@ -30,6 +30,9 @@ import {
   getTeam,
 } from "@/lib/creator/listings";
 import { useCreatorSession } from "@/lib/creator/session";
+import { getWalletStatus } from "@/lib/wallet/api";
+
+import { getMe, getMyAddresses } from "./me";
 
 /* ── When the numbers were read ───────────────────────────────────── */
 
@@ -110,6 +113,12 @@ export const useTeam = (on = true) => useRead(on ? "team" : null, async () => (a
 export const useX = () => useRead("x", getXAccount);
 export const usePayout = (on = true) => useRead(on ? "payout" : null, getPayoutAddress);
 export const useTemplates = (on = true) => useRead(on ? "templates" : null, getTemplates);
+/** The person: profile, username, photo (GET /me). */
+export const useMe = () => useRead("me", getMe);
+/** The web wallet's state and registered address (GET /wallet-backup/status). */
+export const useWalletStatus = (on = true) => useRead(on ? "wallet-status" : null, getWalletStatus);
+/** The app wallet's addresses (GET /me/addresses). */
+export const useMyAddresses = (on = true) => useRead(on ? "my-addresses" : null, getMyAddresses);
 
 /** One listing, whole. */
 export const useListing = (spaceId: string | null) =>

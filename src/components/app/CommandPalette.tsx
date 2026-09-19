@@ -8,11 +8,13 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
+import { isWalletPath } from "@/lib/wallet/csp";
+
 import { IconListings, IconOffers, IconPlus, IconSearch } from "./icons";
 
 export interface PaletteEntry {
   id: string;
-  group: "Pages" | "Listings" | "Offers" | "Actions";
+  group: "HOLD" | "Spaces" | "Listings" | "Offers";
   label: string;
   sub?: string;
   href: string;
@@ -34,7 +36,7 @@ export function CommandPalette({ entries, onClose }: { entries: readonly Palette
   }, [entries, query]);
 
   const groups = useMemo(() => {
-    const order: PaletteEntry["group"][] = ["Actions", "Pages", "Listings", "Offers"];
+    const order: PaletteEntry["group"][] = ["HOLD", "Spaces", "Listings", "Offers"];
     return order
       .map((g) => ({ group: g, items: matches.filter((m) => m.group === g) }))
       .filter((g) => g.items.length > 0);
@@ -57,7 +59,9 @@ export function CommandPalette({ entries, onClose }: { entries: readonly Palette
   function go(e: PaletteEntry | undefined) {
     if (!e) return;
     onClose();
-    router.push(e.href);
+    // To or from the Wallet: a full load, so its strict CSP is the response's (lib/wallet/csp).
+    if (isWalletPath(e.href) || isWalletPath(window.location.pathname)) window.location.assign(e.href);
+    else router.push(e.href);
   }
 
   return (
@@ -113,7 +117,7 @@ export function CommandPalette({ entries, onClose }: { entries: readonly Palette
                       }`}
                     >
                       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] border border-white/10 bg-white/5 text-[#9FB7C2]">
-                        {e.icon ?? (e.group === "Offers" ? <IconOffers /> : e.group === "Actions" ? <IconPlus /> : <IconListings />)}
+                        {e.icon ?? (e.group === "Offers" ? <IconOffers /> : e.id === "new" ? <IconPlus /> : <IconListings />)}
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-small text-text">{e.label}</span>

@@ -140,7 +140,7 @@ function Linked({
  * it is" is not "it is too new". Both end the same way, so the sentence says
  * the age we need rather than asserting anything about their account.
  */
-function refusalText(refusal: NonNullable<Extract<XAccountStatus, { linked: true }>["refusal"]>): string {
+export function refusalText(refusal: NonNullable<Extract<XAccountStatus, { linked: true }>["refusal"]>): string {
   switch (refusal) {
     case "x_not_verified":
       return "Needs a verified X account (Premium, business or government). Connect again once X shows the check mark.";

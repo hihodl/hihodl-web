@@ -74,6 +74,8 @@ export interface CreatedPasskey {
   credentialId: string;
   /** Some browsers (Chrome with Google Password Manager) evaluate PRF at creation; Safari only reports `enabled`. */
   prf: Uint8Array | null;
+  /** Whether the provider said this passkey does PRF (it can open a web wallet). */
+  prfEnabled: boolean;
   /** The registration, ready for POST /passkeys/register/complete. */
   registration: {
     id: string;
@@ -87,8 +89,15 @@ export interface CreatedPasskey {
  * Create a passkey asking for PRF. Refuses (no_prf) BEFORE anything is sent
  * to the server when the provider says PRF is off: that passkey could never
  * open a wallet, and the caller writes nothing.
+ *
+ * `requirePrf: false` is for a passkey that signs in and nothing more
+ * (onboarding's passkey step): it is still asked for PRF, and `prfEnabled`
+ * says whether it came, but a provider without PRF is not a refusal there.
  */
-export async function createPasskeyWithPrf(options: RegistrationOptionsJSON): Promise<CreatedPasskey> {
+export async function createPasskeyWithPrf(
+  options: RegistrationOptionsJSON,
+  { requirePrf = true }: { requirePrf?: boolean } = {},
+): Promise<CreatedPasskey> {
   if (!passkeysHere()) throw new PasskeyError("unavailable");
   const publicKey: PublicKeyCredentialCreationOptions = {
     challenge: fromBase64(options.challenge),
@@ -117,12 +126,14 @@ export async function createPasskeyWithPrf(options: RegistrationOptionsJSON): Pr
 
   const prf = prfOf(cred);
   const first = asBytes(prf?.results?.first);
-  if (prf?.enabled !== true && !first) throw new PasskeyError("no_prf");
+  const prfEnabled = prf?.enabled === true || !!first;
+  if (requirePrf && !prfEnabled) throw new PasskeyError("no_prf");
 
   const res = cred.response as AuthenticatorAttestationResponse;
   return {
     credentialId: cred.id,
     prf: first,
+    prfEnabled,
     registration: {
       id: cred.id,
       rawId: toBase64Url(new Uint8Array(cred.rawId)),

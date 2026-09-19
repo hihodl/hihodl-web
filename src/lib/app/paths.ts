@@ -80,3 +80,36 @@ export function productPathForCreator(pathname: string): string {
   if (rest === "/x" || rest.startsWith("/x/")) return "/spaces/x";
   return `/spaces${rest}`;
 }
+
+/** The product's own prefix on this host: `` on app.hihodl.xyz, `/app` elsewhere. */
+export function clientProductBase(): "" | "/app" {
+  if (typeof window === "undefined") return "/app";
+  return appPrefixFor(window.location.host);
+}
+
+/**
+ * A place to send somebody back to after signing in, or null.
+ *
+ * Only a path on THIS origin: `/spaces/listings?x=1` is kept, while
+ * `https://evil.example`, `//evil.example`, `/\evil.example` and anything
+ * with a scheme are refused, so a link carrying `next` can never turn the
+ * domain people sign in on into a redirect to somewhere else. The auth
+ * callback itself is refused too (it would loop).
+ */
+export function safeNext(raw: string | null | undefined, origin: string): string | null {
+  if (!raw || raw.length > 2048) return null;
+  if (!raw.startsWith("/") || raw.startsWith("//") || raw.startsWith("/\\")) return null;
+  // No control characters or whitespace: browsers strip tabs and newlines
+  // from URLs, so "/\t/evil.example" would otherwise read as "//evil.example".
+  if (/[\s\x00-\x1f\x7f]/.test(raw)) return null;
+  let url: URL;
+  try {
+    url = new URL(raw, origin);
+  } catch {
+    return null;
+  }
+  if (url.origin !== origin) return null;
+  if (/^\/(app\/)?auth\/callback\/?$/.test(url.pathname)) return null;
+  const path = url.pathname.replace(/^\/{2,}/, "/");
+  return `${path}${url.search}${url.hash}`;
+}

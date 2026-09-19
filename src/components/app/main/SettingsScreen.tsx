@@ -1,18 +1,19 @@
 "use client";
 
 /**
- * Spaces › Settings: the app itself. Who is signed in and signing out, how
- * the sidebar is drawn, and where help and the legal pages are. Nothing here
- * is stored on the server: the sidebar is remembered in this browser, as it
- * always was.
+ * Settings: the app itself. Who is signed in and signing out, how the sidebar
+ * is drawn, and where help and the legal pages are. Nothing here is stored on
+ * the server: the sidebar is remembered in this browser, as it always was.
  *
- * Who you are and how you get paid (the X account, the payout wallet, the
- * Creative Director plan) is Account, not here.
+ * Who you are and how you get paid is Account; Spaces' own switches (Creative
+ * Director) are in Spaces' settings.
  */
+
+import Link from "next/link";
 
 import { signOut } from "@/lib/creator/session";
 
-import { useSpacesBase } from "../base";
+import { useProductHref, useSpacesBase } from "../base";
 import { IconSignOut } from "../icons";
 import { useShell, useShellPrefs } from "../Shell";
 import { Panel, Segmented } from "../ui";
@@ -28,6 +29,7 @@ export function SettingsScreen() {
   const { collapsed, setCollapsed } = useShellPrefs();
   // On app.hihodl.xyz a bare /terms would be read as a page of the product.
   const site = useSpacesBase().startsWith("/app") ? "" : WEBSITE;
+  const productHref = useProductHref();
 
   const links = [
     { label: "Support", sub: "support@hihodl.xyz", href: "mailto:support@hihodl.xyz" },
@@ -42,6 +44,9 @@ export function SettingsScreen() {
           <div className="min-w-0">
             <p className="truncate text-small text-text">{session.user.email ?? "Signed in"}</p>
             {x?.linked ? <p className="mt-0.5 truncate text-tiny text-[#9FB7C2]">@{x.handle} on X</p> : null}
+            <Link href={productHref("/account")} className="mt-1 inline-block text-tiny text-amber hover:text-[#FFE2A1]">
+              Profile and payouts are in Account
+            </Link>
           </div>
           <button type="button" className={btn} onClick={() => void signOut()}>
             <IconSignOut className="h-3.5 w-3.5" />

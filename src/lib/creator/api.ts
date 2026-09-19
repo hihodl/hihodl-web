@@ -43,6 +43,8 @@ export class CreatorApiError extends Error {
     readonly code: string,
     readonly status: number,
     readonly details: Record<string, unknown> = {},
+    /** The server's own sentence, when it wrote one (shown only where a screen chooses to). */
+    readonly serverMessage: string | null = null,
   ) {
     super(code);
     this.name = "CreatorApiError";
@@ -104,7 +106,7 @@ export async function call<T>(
   if (!res.ok || !parsed || parsed.error || parsed.data === undefined) {
     const err = parsed?.error;
     const code = err?.code ?? (res.status === 429 ? "rate_limited" : res.status === 404 ? "not_found" : "server");
-    throw new CreatorApiError(code, res.status, err?.details ?? {});
+    throw new CreatorApiError(code, res.status, err?.details ?? {}, err?.message ?? null);
   }
   return parsed.data;
 }

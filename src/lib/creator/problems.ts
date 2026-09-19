@@ -24,7 +24,7 @@
  * exactly the same place on screen.
  */
 
-import { spacesPath } from "@/lib/app/paths";
+import { clientProductBase } from "@/lib/app/paths";
 
 import { CreatorApiError } from "./api";
 import { usd, LIMITS, type ListingDraft, type Template } from "./listing";
@@ -40,9 +40,12 @@ export interface Refusal {
   fix: { href: string; label: string } | null;
 }
 
-/** Built when a refusal is read, in the browser, so it points at this host's product. */
-function accountFix(): { href: string; label: string } {
-  return { href: spacesPath("/account"), label: "Open Account" };
+/**
+ * Built when a refusal is read, in the browser, so it points at this host's
+ * product. Account is the person's (/account), opened on the card that fixes it.
+ */
+function accountFix(view?: "x" | "payout"): { href: string; label: string } {
+  return { href: `${clientProductBase()}/account${view ? `?view=${view}` : ""}`, label: "Open Account" };
 }
 
 /**
@@ -282,7 +285,11 @@ function bareProblem(code: string, draft: ListingDraft | null): Problem | null {
  * it would be paid to. Each says where it is fixed, because it is not here.
  */
 function accountRefusal(code: string): Refusal | null {
-  const fixed = (message: string): Refusal => ({ problems: [], message, fix: accountFix() });
+  const fixed = (message: string): Refusal => ({
+    problems: [],
+    message,
+    fix: accountFix(code.startsWith("x_") ? "x" : "payout"),
+  });
   switch (code) {
     case "x_not_linked":
       return fixed(
@@ -309,7 +316,7 @@ function accountRefusal(code: string): Refusal | null {
         problems: [],
         message:
           "Your Solana wallet has no USDC account yet, so a sponsor paying from the HOLD app could pay and never reach you — our relayer is never allowed to open somebody else's token account. Two things fix it: publish on Base and Polygon instead, or have any amount of USDC sent to you on Solana once, which opens it for good.",
-        fix: accountFix(),
+        fix: accountFix("payout"),
       };
     default:
       return null;

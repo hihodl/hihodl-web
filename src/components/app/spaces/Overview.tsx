@@ -36,6 +36,7 @@ import { useHref } from "../base";
 import { useShell } from "../Shell";
 import { dollars, EmptyState, KpiTile, MiniMetric, Panel, ProgressBar, RowLink, Segmented, Skeleton, glass } from "../ui";
 import { dueText, ReadError, StatusPill } from "./common";
+import { ReadyToPublish } from "./ReadyToPublish";
 
 /**
  * The Overview is exactly as tall as the sidebar on a wide screen: the column
@@ -82,6 +83,7 @@ function CreatorOverview() {
 
   return (
     <div className={FILL}>
+      <ReadyToPublish compact />
       <section aria-label="Position" className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <KpiTile
           label="Received"

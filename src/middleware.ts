@@ -27,9 +27,6 @@ function route(request: NextRequest, init: Init): NextResponse | null {
   if (/\.[a-z0-9]+$/i.test(pathname)) return null;
 
   if (isAppHost(host)) {
-    if (pathname === '/') {
-      return NextResponse.redirect(new URL(`/spaces${search}`, request.url));
-    }
     // The prefix is an implementation detail; a link that carries it is
     // sent to the address it means.
     if (pathname === '/app' || pathname.startsWith('/app/')) {
@@ -37,10 +34,11 @@ function route(request: NextRequest, init: Init): NextResponse | null {
       // become `//evil.com`, which `new URL` reads as another host, an open
       // redirect on the domain people sign in on.
       const inner = pathname.slice(4).replace(/^\/{2,}/, '/');
-      return NextResponse.redirect(new URL(`${inner || '/spaces'}${search}`, request.url));
+      return NextResponse.redirect(new URL(`${inner || '/'}${search}`, request.url));
     }
+    // `/` is the Dashboard: the /app tree's own index.
     const url = request.nextUrl.clone();
-    url.pathname = `/app${pathname}`;
+    url.pathname = pathname === '/' ? '/app' : `/app${pathname}`;
     return NextResponse.rewrite(url, init);
   }
 
@@ -54,7 +52,7 @@ function route(request: NextRequest, init: Init): NextResponse | null {
   // In production the product has its own origin (sessions are per origin),
   // so the /app tree is not served under the website's.
   if (origin && (pathname === '/app' || pathname.startsWith('/app/'))) {
-    return NextResponse.redirect(`${origin}${pathname.slice(4) || '/spaces'}${search}`);
+    return NextResponse.redirect(`${origin}${pathname.slice(4).replace(/^\/{2,}/, '/') || '/'}${search}`);
   }
 
   return null;

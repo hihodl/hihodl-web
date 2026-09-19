@@ -24,3 +24,13 @@ export function useHref(): (path?: string) => string {
   const base = useSpacesBase();
   return useCallback((path = "") => `${base}${path}`, [base]);
 }
+
+/**
+ * `productHref("/account")` → the account page on this host; `productHref()`
+ * is the Dashboard. For links outside Spaces (Dashboard, Wallet, Benefits,
+ * Account, Settings).
+ */
+export function useProductHref(): (path?: string) => string {
+  const base = useSpacesBase();
+  return useCallback((path = "") => `${base.replace(/\/spaces$/, "")}${path}` || "/", [base]);
+}

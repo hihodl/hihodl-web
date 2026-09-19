@@ -23,7 +23,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { btnPrimary, btnSmallSecondary } from "@/components/ad-space/ui";
 import { glass } from "@/components/app/ui";
-import { useHref } from "@/components/app/base";
+import { useHref, useProductHref } from "@/components/app/base";
 import { completeXLink, describeCreatorError } from "@/lib/creator/api";
 import { useCreatorSession } from "@/lib/creator/session";
 import { isLinkResult, isTicket, type LinkResult } from "@/lib/creator/types";
@@ -85,6 +85,7 @@ function initialState(result?: string, ticket?: string): State {
 export function XReturn({ result, ticket }: { result?: string; ticket?: string }) {
   const { session } = useCreatorSession();
   const href = useHref();
+  const productHref = useProductHref();
   const [state, setState] = useState<State>(() => initialState(result, ticket));
   // A ticket is single use. React runs an effect twice in development, and a
   // reload would present a spent one, so it is redeemed at most once per load.
@@ -142,7 +143,7 @@ export function XReturn({ result, ticket }: { result?: string; ticket?: string }
         )}
 
         <div className="mt-6 flex flex-wrap gap-3">
-          <Link href={href("/account")} className={state.kind === "result" && state.result === "ok" ? btnPrimary : btnSmallSecondary}>
+          <Link href={productHref("/account?view=x")} className={state.kind === "result" && state.result === "ok" ? btnPrimary : btnSmallSecondary}>
             Open Account
           </Link>
         </div>

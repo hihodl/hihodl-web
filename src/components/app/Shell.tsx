@@ -1,16 +1,24 @@
 "use client";
 
 /**
- * The HOLD product shell: what a signed-in creator is inside of.
+ * The HOLD product shell: what a signed-in person is inside of.
  *
  * Built on the KPI dashboard's structure: a glass sidebar with grouped
  * navigation, the signed-in person at its foot, a sticky top bar with the page
  * title, ⌘K and the one primary action, and the page under it. On a phone
  * the sidebar is a drawer.
  *
- * Signed out, it is a centred sign-in and nothing else: no website header, no
- * footer. An invitation link (`/team?seat=…`) is the one page that renders
- * without the shell, because the person holding it may have no account yet.
+ * TWO LEVELS, LIKE THE APP
+ *
+ * The main column is HOLD: Dashboard, Wallet, Benefits and its products,
+ * Account, Settings. Opening a product with web screens (Spaces today) swaps
+ * the column for that product's menu, with a Back row at its top to the main
+ * menu and the Dashboard. See nav.ts.
+ *
+ * Signed out, it is HOLD's door (front/Door: welcome, or welcome back) and
+ * nothing else. An invitation link (`/spaces/team?seat=…`) is the one page
+ * that renders without the shell, because the person holding it may have no
+ * account yet.
  */
 
 import type { Session } from "@supabase/supabase-js";
@@ -19,30 +27,38 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { SpacesGround } from "@/components/ad-space/ground";
-import { SignIn } from "@/components/creator/SignIn";
 import { Wordmark } from "@/components/site/Wordmark";
+import { currentMethod, remember } from "@/lib/auth/remember";
 import { describeCreatorError } from "@/lib/creator/api";
 import type { SpaceCard } from "@/lib/creator/listing";
 import { signOut, useCreatorSession } from "@/lib/creator/session";
 import { creatorText, isSeatCode, pendingSeat, type TeamMember, type WorkListing } from "@/lib/creator/team";
 import type { XAccountStatus } from "@/lib/creator/types";
 import { useAgency, type Agency } from "@/lib/app/agency";
+import { chosenUsername } from "@/lib/app/me";
+import { useDoor } from "@/lib/app/onboarding";
 import { roleOf, waitingOnYou, type ShellRole } from "@/lib/app/spaces-model";
-import { useListings, useOffers, useSeats, useTeam, useWork, useX } from "@/lib/app/spaces-data";
+import { useListings, useMe, useOffers, useSeats, useTeam, useWork, useX } from "@/lib/app/spaces-data";
 import { useWalletEnabled } from "@/lib/wallet/enabled";
 
-import { SpacesBaseProvider, useHref, useSpacesBase } from "./base";
+import { SpacesBaseProvider, useHref, useProductHref, useSpacesBase } from "./base";
 import { CommandPalette, type PaletteEntry } from "./CommandPalette";
+import { Door as SignInDoor } from "./front/Door";
+import { Avatar } from "./front/kit";
+import { IconArrowLeft, IconClose, IconCollapse, IconExpand, IconMenu, IconPlus, IconSearch, IconSignOut } from "./icons";
 import {
-  IconClose,
-  IconCollapse,
-  IconExpand,
-  IconMenu,
-  IconPlus,
-  IconSearch,
-  IconSignOut,
-} from "./icons";
-import { activeKey, FOOT_ITEMS, hrefFor, itemsFor, NAV_GROUPS, titleFor, visible, type NavItem, type NavKey } from "./nav";
+  activeKey,
+  hrefFor,
+  itemsFor,
+  LEVELS,
+  levelOf,
+  productPrefix,
+  titleFor,
+  visible,
+  type Level,
+  type NavItem,
+  type NavKey,
+} from "./nav";
 import { Alert, glass } from "./ui";
 
 /* ── What every page inside can read ──────────────────────────────── */
@@ -77,13 +93,13 @@ const PrefsContext = createContext<ShellPrefs | null>(null);
 
 export function useShellPrefs(): ShellPrefs {
   const p = useContext(PrefsContext);
-  if (!p) throw new Error("useShellPrefs outside the Spaces shell");
+  if (!p) throw new Error("useShellPrefs outside the product shell");
   return p;
 }
 
 export function useShell(): ShellState {
   const s = useContext(ShellContext);
-  if (!s) throw new Error("useShell outside the Spaces shell");
+  if (!s) throw new Error("useShell outside the product shell");
   return s;
 }
 
@@ -101,46 +117,56 @@ export function SpacesApp({ base, badge, children }: { base: string; badge?: Rea
   );
 }
 
+/** The path relative to the product: `/spaces/listings`, `/wallet`, `` for the Dashboard. */
+export function productRel(pathname: string, base: string): string {
+  const prefix = productPrefix(base);
+  const rest = prefix && (pathname === prefix || pathname.startsWith(`${prefix}/`)) ? pathname.slice(prefix.length) : pathname;
+  return rest === "/" ? "" : rest;
+}
+
 function Gate({ children }: { children: ReactNode }) {
   const { session, configured } = useCreatorSession();
   const pathname = usePathname();
   const params = useSearchParams();
   const base = useSpacesBase();
-  const rel = pathname.startsWith(base) ? pathname.slice(base.length) : pathname;
+  const rel = productRel(pathname, base);
 
   // An invitation opens on its own: the page handles signing in with the
   // invitation beside the form.
-  if (/^\/team\/?$/.test(rel) && isSeatCode(params.get("seat"))) {
+  if (/^\/spaces\/team\/?$/.test(rel) && isSeatCode(params.get("seat"))) {
     return <Centered>{children}</Centered>;
   }
-  if (session === undefined) return <Centered><Mark /></Centered>;
-  if (session === null) {
-    return (
-      <Centered>
-        <div className={`${glass} w-full max-w-[440px] p-6 sm:p-8`}>
-          <Mark />
-          <div className="mt-8">
-            <SignIn configured={configured} />
-          </div>
-        </div>
-      </Centered>
-    );
-  }
-  return <SignedIn session={session}>{children}</SignedIn>;
+  if (session === undefined) return <Centered><Wordmark className="h-5 w-auto text-text" /></Centered>;
+  if (session === null) return <SignInDoor configured={configured} />;
+  // Coming back from X finishes that trip first; onboarding can wait a page.
+  return (
+    <Onboarded session={session} skip={/^\/spaces\/x\/?$/.test(rel)}>
+      <SignedIn session={session}>{children}</SignedIn>
+    </Onboarded>
+  );
+}
+
+/**
+ * Onboarding before the product, once: a person without a username, a
+ * passkey or recovery codes (or a web wallet they can make) is sent to
+ * /welcome, which brings them back here. Everybody else never sees it.
+ * A full load, not a client navigation: /welcome carries the wallet pages'
+ * strict CSP, which only a response can set.
+ */
+function Onboarded({ session, skip, children }: { session: Session; skip: boolean; children: ReactNode }) {
+  const door = useDoor(session, skip);
+  const base = useSpacesBase();
+  useEffect(() => {
+    if (door !== "onboarding") return;
+    const here = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    window.location.replace(`${productPrefix(base)}/welcome?next=${encodeURIComponent(here)}`);
+  }, [door, base]);
+  if (door !== "in") return <Centered><Wordmark className="h-5 w-auto text-text" /></Centered>;
+  return <>{children}</>;
 }
 
 export function Centered({ children }: { children: ReactNode }) {
   return <div className="flex min-h-[100dvh] w-full flex-col items-center justify-center gap-6 px-4 py-10">{children}</div>;
-}
-
-function Mark({ compact = false }: { compact?: boolean }) {
-  return (
-    <div className="flex items-center gap-2.5">
-      <Wordmark className={compact ? "h-4 w-auto text-text" : "h-5 w-auto text-text"} />
-      <span className="h-4 w-px bg-white/20" aria-hidden />
-      <span className={`${compact ? "text-small" : "text-body"} font-medium text-amber`}>Spaces</span>
-    </div>
-  );
 }
 
 /* ── Signed in ────────────────────────────────────────────────────── */
@@ -153,9 +179,20 @@ function SignedIn({ session, children }: { session: Session; children: ReactNode
   const x = useX();
   const work = useWork();
   const team = useTeam();
+  const me = useMe();
   const agency = useAgency(session.user.id, team.data);
   // Asked alongside, never waited for: the shell draws without it.
   const walletPage = useWalletEnabled(session.user.id);
+
+  // Who signed in here, for the next visit's "Welcome back" (lib/auth/remember).
+  useEffect(() => {
+    const m = me.data;
+    remember({
+      method: currentMethod(session.user.app_metadata?.provider),
+      email: session.user.email ?? null,
+      name: m?.profile.displayName?.trim() || (chosenUsername(m) ? `@${chosenUsername(m)}` : null),
+    });
+  }, [me.data, session.user.app_metadata?.provider, session.user.email]);
 
   // The team is read before the first paint so a Creative Director's Team item
   // is there from the start; a failed read only means no team is shown.
@@ -189,7 +226,7 @@ function SignedIn({ session, children }: { session: Session; children: ReactNode
     return (
       <Centered>
         <div className={`${glass} flex w-full max-w-[440px] flex-col gap-4 p-6`}>
-          <Mark />
+          <Wordmark className="h-5 w-auto text-text" />
           <Alert>{describeCreatorError(failed)}</Alert>
           <div className="flex gap-2">
             <button type="button" className={btnGhost} onClick={() => window.location.reload()}>
@@ -203,7 +240,7 @@ function SignedIn({ session, children }: { session: Session; children: ReactNode
       </Centered>
     );
   }
-  if (!state) return <Centered><Mark /></Centered>;
+  if (!state) return <Centered><Wordmark className="h-5 w-auto text-text" /></Centered>;
 
   return (
     <ShellContext.Provider value={state}>
@@ -220,8 +257,8 @@ function Frame({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const base = useSpacesBase();
-  const href = useHref();
-  const rel = relativeToProduct(pathname, base);
+  const rel = productRel(pathname, base);
+  const level = levelOf(rel);
   const active = activeKey(rel);
 
   const [collapsed, setCollapsed] = useState(false);
@@ -261,18 +298,20 @@ function Frame({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // A rep's whole product is Deliveries: the module's home sends them there.
-  const allowed = itemsFor(shell.role, shell.teamPage, shell.walletPage === true);
+  // A page this person cannot open sends them to the first one of its level
+  // they can (a rep's Spaces is Deliveries), or the Dashboard.
+  const allowed = itemsFor(level, shell.role, shell.teamPage, shell.walletPage === true);
   // While the wallet gate is still being asked, the Wallet page waits blank
   // rather than being sent away and back.
   const deciding = active === "wallet" && shell.walletPage === undefined;
   const here = active ? deciding || allowed.some((i) => i.key === active) : true;
   useEffect(() => {
-    if (!here) router.replace(allowed[0] ? hrefFor(allowed[0], base) : href("/deliveries"));
-  }, [here, router, href, allowed, base]);
+    if (here) return;
+    router.replace(level === "spaces" && allowed[0] ? hrefFor(allowed[0], base) : hrefFor({ path: "" }, base));
+  }, [here, router, allowed, base, level]);
 
   const badges = useBadges();
-  const entries = usePaletteEntries(allowed);
+  const entries = usePaletteEntries();
   const scale = useUiScale();
 
   return (
@@ -292,17 +331,13 @@ function Frame({ children }: { children: ReactNode }) {
         >
           <div className="hidden lg:block">
             <div className="sticky top-4 h-[calc(var(--app-vh,100dvh)-2rem)]">
-              <Sidebar collapsed={collapsed} onToggle={toggleCollapsed} active={active} badges={badges} />
+              <Sidebar collapsed={collapsed} onToggle={toggleCollapsed} level={level} active={active} badges={badges} />
             </div>
           </div>
 
           {/* As tall as the sidebar at least, so a screen that fills it ends where the sidebar ends. */}
           <div className="flex min-w-0 flex-col gap-4 lg:min-h-[calc(var(--app-vh,100dvh)-2rem)]">
-            <TopBar
-              title={titleFor(rel)}
-              onMenu={() => setDrawer(true)}
-              onSearch={() => setPalette(true)}
-            />
+            <TopBar title={titleFor(rel)} level={level} onMenu={() => setDrawer(true)} onSearch={() => setPalette(true)} />
             <main className="flex min-w-0 flex-1 flex-col">{here && !deciding ? children : null}</main>
           </div>
         </div>
@@ -311,24 +346,13 @@ function Frame({ children }: { children: ReactNode }) {
           <div className="fixed inset-0 z-[65] lg:hidden">
             <button aria-label="Close menu" className="absolute inset-0 bg-[#030b13]/70 backdrop-blur-sm" onClick={() => setDrawer(false)} />
             <div className="absolute inset-y-0 left-0 w-[min(86vw,300px)] p-3">
-              <Sidebar collapsed={false} active={active} badges={badges} onClose={() => setDrawer(false)} />
+              <Sidebar collapsed={false} level={level} active={active} badges={badges} onClose={() => setDrawer(false)} />
             </div>
           </div>
         ) : null}
       </PrefsContext.Provider>
     </div>
   );
-}
-
-/**
- * A path relative to where its module lives: Spaces pages to Spaces' base,
- * another module's (`/wallet`) to the product's prefix, which is that base
- * without `/spaces` (empty on app.hihodl.xyz, `/app` elsewhere).
- */
-export function relativeToProduct(pathname: string, base: string): string {
-  if (pathname.startsWith(base)) return pathname.slice(base.length);
-  const prefix = base.replace(/\/spaces$/, "");
-  return prefix && pathname.startsWith(prefix) ? pathname.slice(prefix.length) : pathname;
 }
 
 /* ── Big screens ──────────────────────────────────────────────────── */
@@ -364,31 +388,62 @@ function useBadges(): Partial<Record<NavKey, number>> {
   return useMemo(() => {
     const out: Partial<Record<NavKey, number>> = {};
     const waiting = offers.data ? waitingOnYou(offers.data).length : 0;
-    if (waiting) out.offers = waiting;
+    if (waiting) {
+      out.offers = waiting;
+      out.spaces = waiting;
+    }
     return out;
   }, [offers.data]);
+}
+
+/**
+ * The Wallet page carries a strict Content-Security-Policy that only a
+ * response can set, so the way in and the way out are full page loads, never
+ * a client-side navigation.
+ */
+function hardLink(key: NavKey, active: NavKey | null): boolean {
+  return key === "wallet" || active === "wallet";
 }
 
 function Sidebar({
   collapsed,
   onToggle,
   onClose,
+  level,
   active,
   badges,
 }: {
   collapsed: boolean;
   onToggle?: () => void;
   onClose?: () => void;
+  level: Level;
   active: NavKey | null;
   badges: Partial<Record<NavKey, number>>;
 }) {
   const { role, teamPage, walletPage } = useShell();
-  const href = useHref();
+  const productHref = useProductHref();
   const wallet = walletPage === true;
-  const groups = NAV_GROUPS.map((g) => ({ ...g, items: g.items.filter((i) => visible(i, role, teamPage, wallet)) })).filter(
-    (g) => g.items.length > 0,
-  );
-  const foot = FOOT_ITEMS.filter((i) => visible(i, role, teamPage, wallet));
+  const nav = LEVELS[level];
+  const groups = nav.groups
+    .map((g) => ({ ...g, items: g.items.filter((i) => visible(i, role, teamPage, wallet)) }))
+    .filter((g) => g.items.length > 0);
+  const foot = nav.foot.filter((i) => visible(i, role, teamPage, wallet));
+  const home = productHref();
+
+  const toggle = onClose ? (
+    <button type="button" aria-label="Close menu" onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-[8px] text-[#9FB7C2] hover:bg-white/10 hover:text-text">
+      <IconClose />
+    </button>
+  ) : onToggle ? (
+    <button
+      type="button"
+      aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+      onClick={onToggle}
+      className="flex h-8 w-8 items-center justify-center rounded-[8px] text-[#9FB7C2] hover:bg-white/10 hover:text-text"
+    >
+      {collapsed ? <IconExpand /> : <IconCollapse />}
+    </button>
+  ) : null;
 
   return (
     <aside
@@ -397,32 +452,42 @@ function Sidebar({
       }`}
     >
       <div className={`flex w-full items-center ${collapsed ? "flex-col gap-3" : "justify-between gap-2 px-1.5 pb-3 pt-1"}`}>
-        <Link href={href()} aria-label="Spaces overview" className="flex min-w-0 items-center">
-          {collapsed ? (
-            <span className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-white/10 bg-white/[0.06] text-[13px] font-semibold text-amber">
-              S
-            </span>
-          ) : (
-            <Mark compact />
-          )}
-        </Link>
-        {onClose ? (
-          <button type="button" aria-label="Close menu" onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-[8px] text-[#9FB7C2] hover:bg-white/10 hover:text-text">
-            <IconClose />
-          </button>
-        ) : onToggle ? (
-          <button
-            type="button"
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            onClick={onToggle}
-            className="flex h-8 w-8 items-center justify-center rounded-[8px] text-[#9FB7C2] hover:bg-white/10 hover:text-text"
+        {level === "main" ? (
+          <Link href={home} aria-label="Dashboard" className="flex min-w-0 items-center">
+            {collapsed ? (
+              <span className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-white/10 bg-white/[0.06] text-[13px] font-semibold text-amber">H</span>
+            ) : (
+              <Wordmark className="h-4 w-auto text-text" />
+            )}
+          </Link>
+        ) : (
+          // A product's column: its name, and the way back to HOLD's.
+          <Link
+            href={home}
+            aria-label="Back to HOLD"
+            title="Back to HOLD"
+            className={
+              collapsed
+                ? "flex h-9 w-9 items-center justify-center rounded-[10px] border border-white/10 bg-white/[0.06] text-[#CFE3EC] hover:bg-white/10"
+                : "flex h-9 min-w-0 items-center gap-2 rounded-[10px] px-1.5 text-small text-[#CFE3EC] transition-colors hover:bg-white/[0.07] hover:text-text"
+            }
           >
-            {collapsed ? <IconExpand /> : <IconCollapse />}
-          </button>
-        ) : null}
+            <IconArrowLeft />
+            {collapsed ? null : <span className="truncate">Back</span>}
+          </Link>
+        )}
+        {toggle}
       </div>
 
-      <nav aria-label="Spaces" className={`flex w-full flex-1 flex-col overflow-y-auto ${collapsed ? "items-center gap-1 pt-2" : "gap-4"}`}>
+      {level === "spaces" && !collapsed ? (
+        <div className="mb-3 flex items-center gap-2 border-b border-white/10 px-2.5 pb-3">
+          <Wordmark className="h-3 w-auto text-text" />
+          <span className="h-3.5 w-px bg-white/20" aria-hidden />
+          <span className="text-small font-medium text-amber">Spaces</span>
+        </div>
+      ) : null}
+
+      <nav aria-label={level === "main" ? "HOLD" : "Spaces"} className={`flex w-full flex-1 flex-col overflow-y-auto ${collapsed ? "items-center gap-1 pt-2" : "gap-4"}`}>
         {groups.map((g) => (
           <div key={g.title ?? "main"} className={collapsed ? "flex flex-col items-center gap-1" : "flex flex-col gap-1"}>
             {collapsed ? (
@@ -431,7 +496,7 @@ function Sidebar({
               <p className="px-2.5 pb-1 text-[10px] font-medium uppercase tracking-wider text-[#6B8A99]">{g.title}</p>
             ) : null}
             {g.items.map((i) => (
-              <NavLink key={i.key} item={i} active={active === i.key} badge={badges[i.key]} collapsed={collapsed} />
+              <NavLink key={i.key} item={i} active={active === i.key} badge={badges[i.key]} collapsed={collapsed} hard={hardLink(i.key, active)} />
             ))}
           </div>
         ))}
@@ -440,7 +505,7 @@ function Sidebar({
       <div className={`mt-3 flex w-full flex-col gap-2 border-t border-white/10 pt-3 ${collapsed ? "items-center" : ""}`}>
         <div className={`flex w-full flex-col gap-1 ${collapsed ? "items-center" : ""}`}>
           {foot.map((i) => (
-            <NavLink key={i.key} item={i} active={active === i.key} collapsed={collapsed} />
+            <NavLink key={i.key} item={i} active={active === i.key} collapsed={collapsed} hard={hardLink(i.key, active)} />
           ))}
         </div>
         <UserCard collapsed={collapsed} />
@@ -449,35 +514,41 @@ function Sidebar({
   );
 }
 
-function NavLink({ item, active, badge, collapsed }: { item: NavItem; active: boolean; badge?: number; collapsed: boolean }) {
+function NavLink({ item, active, badge, collapsed, hard }: { item: NavItem; active: boolean; badge?: number; collapsed: boolean; hard: boolean }) {
   const base = useSpacesBase();
   const Icon = item.icon;
-  if (collapsed) {
-    return (
-      <Link
-        href={hrefFor(item, base)}
-        aria-label={item.label}
-        title={item.label}
-        aria-current={active ? "page" : undefined}
-        className={`relative flex h-9 w-9 items-center justify-center rounded-[10px] transition-colors ${
-          active ? "bg-amber/25 text-[#FFE2A1]" : "text-[#9FB7C2] hover:bg-white/10 hover:text-text"
-        }`}
-      >
-        <Icon />
-        {badge ? <span className="absolute right-1 top-1 h-2 w-2 rounded-[4px] bg-amber" aria-hidden /> : null}
+  const href = hrefFor(item, base);
+  const current = active ? ("page" as const) : undefined;
+  const go = (className: string, children: ReactNode, label?: string) =>
+    hard ? (
+      <a href={href} aria-current={current} aria-label={label} title={label} className={className}>
+        {children}
+      </a>
+    ) : (
+      <Link href={href} aria-current={current} aria-label={label} title={label} className={className}>
+        {children}
       </Link>
     );
+
+  if (collapsed) {
+    return go(
+      `relative flex h-9 w-9 items-center justify-center rounded-[10px] transition-colors ${
+        active ? "bg-amber/25 text-[#FFE2A1]" : "text-[#9FB7C2] hover:bg-white/10 hover:text-text"
+      }`,
+      <>
+        <Icon />
+        {badge ? <span className="absolute right-1 top-1 h-2 w-2 rounded-[4px] bg-amber" aria-hidden /> : null}
+      </>,
+      item.label,
+    );
   }
-  return (
-    <Link
-      href={hrefFor(item, base)}
-      aria-current={active ? "page" : undefined}
-      className={`flex h-10 w-full items-center gap-2.5 rounded-[10px] border px-2.5 text-small transition-colors ${
-        active
-          ? "border-amber/45 bg-[linear-gradient(140deg,rgba(255,183,3,0.26),rgba(255,183,3,0.12))] text-text"
-          : "border-transparent text-[#CFE3EC] hover:bg-white/[0.07]"
-      }`}
-    >
+  return go(
+    `flex items-center gap-2.5 rounded-[10px] border px-2.5 transition-colors ${item.child ? "ml-4 h-9 w-[calc(100%-1rem)] text-tiny" : "h-10 w-full text-small"} ${
+      active
+        ? "border-amber/45 bg-[linear-gradient(140deg,rgba(255,183,3,0.26),rgba(255,183,3,0.12))] text-text"
+        : "border-transparent text-[#CFE3EC] hover:bg-white/[0.07]"
+    }`,
+    <>
       <span className={active ? "text-amber" : "text-[#9FB7C2]"}>
         <Icon />
       </span>
@@ -487,7 +558,7 @@ function NavLink({ item, active, badge, collapsed }: { item: NavItem; active: bo
           {badge > 9 ? "9+" : badge}
         </span>
       ) : null}
-    </Link>
+    </>,
   );
 }
 
@@ -495,29 +566,22 @@ const ROLE_LABEL: Record<ShellRole, string> = { creator: "Creator", manager: "Ma
 
 function UserCard({ collapsed }: { collapsed: boolean }) {
   const { session, x, role, seats, agency } = useShell();
-  const href = useHref();
+  const me = useMe();
+  const productHref = useProductHref();
   const linked = x?.linked ? x : null;
-  const name = linked ? `@${linked.handle}` : session.user.email ?? "Signed in";
+  const username = chosenUsername(me.data);
+  const name = me.data?.profile.displayName?.trim() || (username ? `@${username}` : linked ? `@${linked.handle}` : session.user.email ?? "Signed in");
   const seat = role !== "creator" ? seats.find((s) => s.status === "active" && s.role === role) : null;
   const title = role === "creator" && agency.on ? "Creative Director" : ROLE_LABEL[role];
-  const sub = seat ? `${title} · ${creatorText(seat) ?? "a creator"}` : title;
-  const upgrade = role === "creator" && !agency.on;
-  const initial = (linked?.handle ?? session.user.email ?? "?").slice(0, 1).toUpperCase();
-  const [broken, setBroken] = useState(false);
-
-  const avatar = linked?.avatarUrl && !broken ? (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={linked.avatarUrl} alt="" onError={() => setBroken(true)} className="h-9 w-9 shrink-0 rounded-[10px] object-cover" />
-  ) : (
-    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-white/10 bg-white/[0.08] text-small font-medium text-text">
-      {initial}
-    </span>
-  );
+  const sub = seat ? `${title} · ${creatorText(seat) ?? "a creator"}` : username && me.data?.profile.displayName ? `@${username}` : title;
+  const photo = me.data?.profile.avatarUrl ?? linked?.avatarUrl ?? null;
 
   if (collapsed) {
     return (
       <div className="flex flex-col items-center gap-1">
-        <span title={name}>{avatar}</span>
+        <Link href={productHref("/account")} title={name}>
+          <Avatar src={photo} name={name} size={36} />
+        </Link>
         <button type="button" aria-label="Sign out" title="Sign out" onClick={() => void signOut()} className="flex h-8 w-8 items-center justify-center rounded-[8px] text-[#9FB7C2] hover:bg-white/10 hover:text-text">
           <IconSignOut />
         </button>
@@ -526,18 +590,13 @@ function UserCard({ collapsed }: { collapsed: boolean }) {
   }
   return (
     <div className="flex items-center gap-2.5 rounded-[12px] border border-white/10 bg-white/[0.04] p-2">
-      {avatar}
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-small text-text">{name}</p>
-        <p className="flex min-w-0 items-center gap-1.5 text-[11px] text-[#9FB7C2]">
-          <span className="truncate">{sub}</span>
-          {upgrade ? (
-            <Link href={`${href("/account")}#team`} className="shrink-0 text-amber hover:text-[#FFE2A1]">
-              · Run a team
-            </Link>
-          ) : null}
-        </p>
-      </div>
+      <Link href={productHref("/account")} className="flex min-w-0 flex-1 items-center gap-2.5" title="Account">
+        <Avatar src={photo} name={name} size={36} />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-small text-text">{name}</p>
+          <p className="truncate text-[11px] text-[#9FB7C2]">{sub}</p>
+        </div>
+      </Link>
       <button
         type="button"
         aria-label="Sign out"
@@ -553,7 +612,7 @@ function UserCard({ collapsed }: { collapsed: boolean }) {
 
 /* ── Top bar ──────────────────────────────────────────────────────── */
 
-function TopBar({ title, onMenu, onSearch }: { title: string; onMenu: () => void; onSearch: () => void }) {
+function TopBar({ title, level, onMenu, onSearch }: { title: string; level: Level; onMenu: () => void; onSearch: () => void }) {
   const { role } = useShell();
   const href = useHref();
   return (
@@ -576,7 +635,7 @@ function TopBar({ title, onMenu, onSearch }: { title: string; onMenu: () => void
             <span className="hidden sm:inline">Search</span>
             <kbd className="ml-auto hidden rounded-[4px] border border-white/15 px-1 py-0.5 text-[9px] sm:inline">⌘K</kbd>
           </button>
-          {role === "creator" ? (
+          {level === "spaces" && role === "creator" ? (
             <Link
               href={href("/listings/new")}
               className="inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] bg-amber px-3 text-tiny font-medium text-text-on-amber transition-colors hover:bg-amber-glow"
@@ -593,16 +652,23 @@ function TopBar({ title, onMenu, onSearch }: { title: string; onMenu: () => void
 
 /* ── ⌘K entries ───────────────────────────────────────────────────── */
 
-function usePaletteEntries(items: readonly NavItem[]): PaletteEntry[] {
-  const { role, listings, managed } = useShell();
+/** The same two levels as the sidebar: HOLD's pages, then Spaces' pages and what is in them. */
+function usePaletteEntries(): PaletteEntry[] {
+  const { role, listings, managed, teamPage, walletPage } = useShell();
   const href = useHref();
   const base = useSpacesBase();
   const offers = useOffers(role === "creator");
 
   return useMemo(() => {
     const out: PaletteEntry[] = [];
-    if (role === "creator") out.push({ id: "new", group: "Actions", label: "New listing", href: href("/listings/new"), keywords: "create start" });
-    for (const i of items) out.push({ id: `page-${i.key}`, group: "Pages", label: i.label, href: hrefFor(i, base), keywords: i.keywords });
+    const wallet = walletPage === true;
+    for (const i of itemsFor("main", role, teamPage, wallet)) {
+      out.push({ id: `main-${i.key}`, group: "HOLD", label: i.label, href: hrefFor(i, base), keywords: i.keywords });
+    }
+    if (role === "creator") out.push({ id: "new", group: "Spaces", label: "New listing", href: href("/listings/new"), keywords: "create start" });
+    for (const i of itemsFor("spaces", role, teamPage, wallet)) {
+      out.push({ id: `spaces-${i.key}`, group: "Spaces", label: i.label, href: hrefFor(i, base), keywords: i.keywords });
+    }
     for (const l of listings) {
       out.push({
         id: `l-${l.id}`,
@@ -627,7 +693,7 @@ function usePaletteEntries(items: readonly NavItem[]): PaletteEntry[] {
     }
     // A remembered invitation is reachable from anywhere.
     const seat = typeof window !== "undefined" ? pendingSeat() : null;
-    if (seat) out.push({ id: "seat", group: "Actions", label: "Open team invitation", href: href(`/team?seat=${encodeURIComponent(seat.seat)}`) });
+    if (seat) out.push({ id: "seat", group: "Spaces", label: "Open team invitation", href: href(`/team?seat=${encodeURIComponent(seat.seat)}`) });
     return out;
-  }, [role, items, listings, managed, offers.data, href, base]);
+  }, [role, listings, managed, offers.data, href, base, teamPage, walletPage]);
 }

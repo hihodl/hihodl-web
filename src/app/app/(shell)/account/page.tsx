@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { AccountScreen } from "@/components/app/spaces/AccountScreen";
+import { AccountScreen } from "@/components/app/account/AccountScreen";
 
 export const metadata: Metadata = { title: "Account" };
 
