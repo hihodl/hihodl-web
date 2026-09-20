@@ -301,7 +301,14 @@ export async function accountAnswer(method: string, path: string, query: URLSear
     if (["taken", "alex", "hold", "demo"].includes(h)) return ok({ available: false, reason: "taken" });
     return ok({ available: true, reason: null });
   }
-  if (is("GET", "me/addresses")) return ok({ addresses: s.addresses });
+  if (is("GET", "me/addresses")) {
+    // A web wallet's Solana address is the one the backend registered for it,
+    // and the money screens ask Kamino about that address by name. Without it
+    // Savings would report nothing supplied for somebody who plainly has some.
+    await ensureBackup(s);
+    const registered = s.wallet.state === "web_wallet" ? s.wallet.registered : null;
+    return ok({ addresses: registered ? { ...s.addresses, solana: registered } : s.addresses });
+  }
   if (is("GET", "recovery-codes/status")) {
     return ok({ hasActiveCodes: s.codes, unusedCount: s.codes ? 8 : 0, generatedAt: s.codes ? iso(Date.now() - 30 * DAY) : null });
   }

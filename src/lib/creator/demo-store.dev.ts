@@ -28,6 +28,8 @@ import { fixtureEvents, fixtureSpace } from "@/lib/ad-space/fixture.dev";
 import type { Chain } from "@/lib/ad-space/types";
 import { demoInsights } from "@/lib/demo/insights";
 import { demoAnalytics, demoCreatorSearch } from "@/lib/demo/analytics";
+
+import { CATALOG, type CatalogTemplate, type CatalogView } from "./demo-catalog.dev";
 import { demoInspireCampaigns, demoInspireEvents } from "@/lib/demo/inspire";
 
 import { DEMO_INVITE_CODE, DEMO_PEOPLE, DEMO_SEAT_CODE, DEMO_WALLETS, demoState, isDemoRole, type DemoRole } from "./demo";
@@ -359,154 +361,84 @@ const COIN_X = {
 
 /* ── The catalogue ────────────────────────────────────────────────── */
 
-const EVERYWHERE = ["travel", "conference", "sports_event", "private_event", "everyday"] as const;
-const AT_AN_EVENT = ["conference", "sports_event", "travel"] as const;
-
-function contentService(
-  id: string,
-  name: string,
-  summary: string,
-  maxSlots: number,
-  deliverableKind: string,
-  venues: readonly string[] = EVERYWHERE,
-): Template {
-  return {
-    id,
-    productType: "service",
-    name,
-    kind: "service",
-    service: { summary, maxSlots, format: "content", deliverableKind },
-    allowedVenues: [...venues] as Template["allowedVenues"],
-    requiredAttestations: ["discloses_sponsorship"],
-    zones: [],
-  };
-}
-
-function sessionService(id: string, name: string, summary: string, maxSlots: number, suggestedPriceCents: number): Template {
-  return {
-    id,
-    productType: "session",
-    name,
-    kind: "service",
-    service: { summary, maxSlots, format: "session", suggestedPriceCents, deliverableKind: "in_person" },
-    allowedVenues: [...AT_AN_EVENT] as Template["allowedVenues"],
-    requiredAttestations: ["public_place", "no_investment_advice", "no_investor_intros"],
-    zones: [],
-  };
-}
-
 /**
- * The templates a creator picks from. The suitcase carries the public fixture's
- * own geometry (which is the backend catalogue's), so a listing built here and
- * the brand page render the same board.
+ * The templates a creator picks from: the backend's whole catalogue
+ * (./demo-catalog.dev, copied from `catalog-data.ts`), mapped to what the
+ * console reads. Every product, its zones and its policy come from there, so
+ * "Pick your hook" offers what the real console offers and an Inspire card
+ * about a dress opens the editor on the dress.
+ *
+ * Two things are carried past the console's own `Template`, because the pages
+ * under a listing draw the product and the console type does not describe it:
+ * `views` (the outlines) and each zone's `rect`. The brand page and Your
+ * product both read them off `space.template`, and a template without them
+ * draws nothing.
+ *
+ * The suitcase is the exception, and deliberately: its geometry comes from the
+ * public fixture, which is what the sponsor pages have been rendering all
+ * along, so a listing built here and the brand page show the same board.
  */
-function catalogue(): Template[] {
-  const suitcase = fixtureSpace("demo_creator", "road-to-token2049")?.template;
-  const suitcaseTemplate: Template = {
-    id: "carry-on-suitcase",
-    productType: "luggage",
-    name: "Carry-on suitcase",
-    kind: "placement",
-    service: null,
-    allowedVenues: ["travel", "conference", "everyday"],
-    requiredAttestations: [],
-    zones: (suitcase?.zones ?? []).map((z) => ({
-      ...z,
+type Drawn = Template & {
+  views?: CatalogView[];
+  zones: (Template["zones"][number] & { rect: { x: number; y: number; w: number; h: number } })[];
+};
+
+function fromCatalog(c: CatalogTemplate): Drawn {
+  return {
+    id: c.id,
+    productType: c.productType,
+    name: c.name,
+    kind: c.kind ?? "placement",
+    service: c.service ? { ...c.service } : null,
+    allowedVenues: [...c.allowedVenues] as Template["allowedVenues"],
+    requiredAttestations: [...c.requiredAttestations],
+    views: c.views,
+    zones: c.zones.map((z) => ({
+      zoneKey: z.zoneKey,
+      label: z.label,
+      viewKey: z.viewKey,
       sizeLabel: z.sizeLabel,
-      suggestedPriceCents: z.suggestedPriceCents ?? null,
+      suggestedPriceCents: z.suggestedPriceCents,
+      rect: { x: z.x, y: z.y, w: z.w, h: z.h },
     })),
   };
-  // The public Template also carries `views` (the outlines); the console ignores them but the brand page draws them.
-  (suitcaseTemplate as Template & { views?: unknown }).views = suitcase?.views ?? [];
-  const production: Template = {
-    id: "content-production",
-    productType: "production",
-    name: "Content production",
-    kind: "service",
-    service: {
-      deliverableKind: "video",
-      summary:
-        "You bring the brief, the creator brings the camera: interviews, short-form, b-roll and social assets filmed at the event, edited and delivered to you.",
-      maxSlots: 10,
-      format: "production",
-      suggestedPriceCents: 150_000,
-    },
-    allowedVenues: [...AT_AN_EVENT] as Template["allowedVenues"],
-    requiredAttestations: ["discloses_sponsorship", "no_investment_advice"],
-    zones: [],
-  };
-  return [
-    suitcaseTemplate,
-    production,
-    contentService(
-      "short-form-video",
-      "Short video",
-      "A short video about your brand, up to 60 seconds, on the creator's X, TikTok, Reels or Shorts.",
-      20,
-      "video",
-    ),
-    contentService(
-      "sponsored-x-post",
-      "Sponsored X post",
-      "A post about your brand on the creator's X, with your link or code, kept up for at least 30 days.",
-      20,
-      "photo_post",
-    ),
-    contentService(
-      "event-coverage",
-      "Cover an event for you",
-      "The creator is at the event with a pass and covers it for your brand: floor footage, interviews and daily posts on their own channels.",
-      20,
-      "video",
-      AT_AN_EVENT,
-    ),
-    contentService(
-      "interview",
-      "Interview",
-      "The creator interviews someone from your team on camera and publishes it on their channels.",
-      10,
-      "video",
-    ),
-    sessionService(
-      "booth-presence",
-      "Booth appearance",
-      "Two hours at your booth during the event, meeting visitors and posting from it.",
-      6,
-      30_000,
-    ),
-    sessionService(
-      "moderate-panel",
-      "Moderate your panel",
-      "The creator moderates one of your panels: prepares the questions with you and keeps it on time.",
-      5,
-      40_000,
-    ),
-    {
-      id: "custom-service",
-      productType: "service",
-      name: "Custom service",
-      kind: "service",
-      service: {
-        deliverableKind: "photo_post",
-        format: "content",
-        summary: "Something that isn't on the list. You name it and say exactly what the brand gets.",
-        maxSlots: 10,
-        custom: true,
-      },
-      allowedVenues: [...EVERYWHERE] as Template["allowedVenues"],
-      requiredAttestations: ["discloses_sponsorship", "no_investment_advice", "no_investor_intros"],
-      zones: [],
-    },
-  ];
+}
+
+function catalogue(): Template[] {
+  const fixture = fixtureSpace("demo_creator", "road-to-token2049")?.template;
+  return CATALOG.map((c) => {
+    const t = fromCatalog(c);
+    if (c.id !== "carry-on-suitcase" || !fixture) return t;
+    // The board the sponsor pages already draw wins for the suitcase.
+    return {
+      ...t,
+      views: (fixture.views ?? []) as unknown as CatalogView[],
+      zones: (fixture.zones ?? []).map((z) => ({ ...z, suggestedPriceCents: z.suggestedPriceCents ?? null })),
+    } as Drawn;
+  });
 }
 
 let CATALOGUE: Template[] | null = null;
-function templates(): Template[] {
+function allTemplates(): Template[] {
   CATALOGUE ??= catalogue();
   return CATALOGUE;
 }
+
+/** The ids `GET /ad-space/templates` offers: the backend's `listTemplates` sends the active ones. */
+const ACTIVE_IDS = new Set(CATALOG.filter((c) => c.active).map((c) => c.id));
+
+/** What the picker offers. */
+function templates(): Template[] {
+  return allTemplates().filter((t) => ACTIVE_IDS.has(t.id));
+}
+
+/**
+ * One template by id, retired or not — `getTemplate` on the backend. A space
+ * published on a product we have since taken off the shelf has to keep reading
+ * its own board.
+ */
 function templateOf(id: string): Template | null {
-  return templates().find((t) => t.id === id) ?? null;
+  return allTemplates().find((t) => t.id === id) ?? null;
 }
 
 const AVAILABLE_CHAINS: Chain[] = ["solana", "base", "polygon"];

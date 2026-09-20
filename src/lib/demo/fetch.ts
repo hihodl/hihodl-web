@@ -3,7 +3,7 @@
  * screen asks anything, that answers every call to the HOLD API and to
  * Supabase in this browser. Nothing leaves the page:
  *
- *   <API_BASE>/…, /api/creator-demo/…   the demo stores (account, public, Spaces)
+ *   <API_BASE>/…, /api/creator-demo/…   the demo stores (account, money, public, Spaces)
  *   Supabase                             its public settings; {} for anything else
  *   api.hihodl.xyz, any *.supabase.co    refused on the spot (never sent), and logged
  *
@@ -60,6 +60,10 @@ async function answer(method: string, path: string, query: URLSearchParams, inpu
   const { accountAnswer } = await import("./account");
   const acc = await accountAnswer(method, path, query, body, origin);
   if (acc) return json(acc.status, acc.body);
+
+  const { moneyAnswer } = await import("./money");
+  const mon = moneyAnswer(method, path, query);
+  if (mon) return json(mon.status, mon.body);
 
   const { handleDemo, saveDemo } = await import("@/lib/creator/demo-store.dev");
   const out = handleDemo({ method, path, query, body, authorization: headerOf(input, init, "authorization"), origin });

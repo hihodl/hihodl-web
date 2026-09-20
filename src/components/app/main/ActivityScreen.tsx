@@ -182,7 +182,11 @@ export function ActivityScreen() {
     return liquid + working;
   }, [inScopeRows, priceMap, scopes, selected, supplied.bySlug]);
 
-  const settled = balances.data !== undefined && prices.data !== undefined && supplied.loaded;
+  // Nothing to price counts as priced: an account holding nothing asks for no
+  // prices, and a read that is never made never resolves — the header would
+  // sit on its skeleton for ever. Same guard as Home's.
+  const priced = prices.data !== undefined || symbols.length + mints.length === 0;
+  const settled = balances.data !== undefined && priced && supplied.loaded;
 
   /**
    * The balance right after each row. Only when the list is the complete

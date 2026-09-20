@@ -158,17 +158,45 @@ function groups(p: string, ids: Ids | null): Group[] {
   });
 
   out.push({
-    title: "Dashboard and Benefits",
+    title: "Home and Benefits",
+    intro: "The money is one fixture person: Main, Savings and two pockets, with three months of history behind them.",
     entries: [
-      { label: "Dashboard: web wallet", href: at(`${p}/`) },
-      { label: "Dashboard: app wallet", href: at(`${p}/`, { wallet: "app" }) },
-      { label: "Dashboard: no wallet", href: at(`${p}/`, { wallet: "none" }) },
-      { label: "Dashboard: wallet on another account", href: at(`${p}/`, { wallet: "other" }) },
-      { label: "Dashboard: a manager on a creator's team", href: at(`${p}/`, { role: "manager" }) },
+      { label: "Home: web wallet", href: at(`${p}/`) },
+      { label: "Home: app wallet", href: at(`${p}/`, { wallet: "app" }) },
+      { label: "Home: no wallet, no money yet", href: at(`${p}/`, { wallet: "none" }), note: "The app's empty state" },
+      { label: "Home: wallet on another account", href: at(`${p}/`, { wallet: "other" }) },
+      { label: "Home: a manager on a creator's team", href: at(`${p}/`, { role: "manager" }) },
       { label: "Benefits", href: at(`${p}/benefits`) },
       { label: "Stays", href: at(`${p}/travel`) },
       { label: "eSIM", href: at(`${p}/esim`) },
-      { label: "Settings", href: at(`${p}/settings`) },
+    ],
+  });
+
+  const m = `${p}/menu`;
+  out.push({
+    title: "Money: the app's own screens",
+    intro: "View only: nothing here moves money. Every figure comes from the demo's own store (lib/demo/money).",
+    entries: [
+      { label: "Home: the Overview of your accounts", href: at(`${p}/`, {}, { "demo-open": "overview" }) },
+      { label: "Activity", href: at(`${p}/activity`) },
+      { label: "Activity: one row, what the server knows", href: at(`${p}/activity`, {}, { "demo-open": "received" }) },
+      { label: "Payments: the conversations", href: at(`${p}/payments`), note: "Scheduled payments and payouts sit under the list" },
+      { label: "Payments: one conversation", href: at(`${p}/payments`, {}, { "demo-open": "@mesa_labs" }) },
+      { label: "Payments: one payment, the details panel", href: at(`${p}/payments`, {}, { "demo-open": "@mesa_labs>received" }) },
+      { label: "Savings", href: at(`${p}/savings`) },
+      { label: "Invest", href: at(`${p}/invest`) },
+      { label: "Add money", href: at(`${p}/add`) },
+      { label: "Add money: Receive crypto", href: at(`${p}/add`, {}, { "demo-open": "receive crypto" }) },
+      { label: "Add money: Request link", href: at(`${p}/add`, {}, { "demo-open": "request link" }) },
+      { label: "Add money: Bank transfer", href: at(`${p}/add`, {}, { "demo-open": "bank transfer" }) },
+      { label: "Add money: Add cash", href: at(`${p}/add`, {}, { "demo-open": "add cash" }) },
+      { label: "Menu", href: at(m) },
+      { label: "Menu: Security", href: at(m, {}, { screen: "security" }) },
+      { label: "Menu: Account recovery", href: at(m, {}, { screen: "recovery" }) },
+      { label: "Menu: Passkeys", href: at(m, {}, { screen: "passkeys" }) },
+      { label: "Menu: Recovery codes", href: at(m, {}, { screen: "codes" }) },
+      { label: "Menu: Appearance", href: at(m, {}, { screen: "personalization" }) },
+      { label: "Menu: About HOLD", href: at(m, {}, { screen: "about" }) },
     ],
   });
 
@@ -261,8 +289,11 @@ function groups(p: string, ids: Ids | null): Group[] {
   out.push({
     title: "Spaces: the listing editor",
     entries: [
-      { label: "New listing: Pick your hook", href: at(`${S}/listings/new`) },
+      { label: "New listing: Pick your hook", href: at(`${S}/listings/new`), note: "The whole catalogue: 13 products, 13 services and sessions" },
       { label: "New listing: suitcase, name and dates", href: at(`${S}/listings/new`, {}, { template: "carry-on-suitcase" }) },
+      { label: "New listing: a long dress", href: at(`${S}/listings/new`, {}, { template: "long-dress" }) },
+      { label: "New listing: a car", href: at(`${S}/listings/new`, {}, { template: "car" }) },
+      { label: "New listing: race kit and helmet", href: at(`${S}/listings/new`, {}, { template: "race-kit" }) },
       { label: "New listing: content production, name and dates", href: at(`${S}/listings/new`, {}, { template: "content-production" }) },
       {
         label: "New listing: Inspired by a HOLD creator",

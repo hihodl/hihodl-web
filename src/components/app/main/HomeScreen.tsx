@@ -168,7 +168,14 @@ export function HomeScreen() {
   // The hero waits on BOTH halves. A scope that can hold supplied money and
   // prints its liquid half first shows a number that is about to change, which
   // is the "$3 then $16" bug written down.
-  const settled = balances.data !== undefined && prices.data !== undefined && supplied.loaded;
+  //
+  // A scope holding nothing asks for no prices, so the price read is never
+  // made and never resolves. Nothing to price has to count as priced, or a
+  // brand-new account's hero is a skeleton for ever — which is exactly the
+  // account the empty state below was written for. Invest guards this the same
+  // way (`symbols.length > 0 && !prices.data`).
+  const priced = prices.data !== undefined || symbols.length + mints.length === 0;
+  const settled = balances.data !== undefined && priced && supplied.loaded;
   const totalUsd = settled ? split.totalUsd : null;
   const readFailed = balances.error || prices.error;
 
