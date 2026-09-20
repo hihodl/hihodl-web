@@ -35,7 +35,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useProductHref } from "../base";
 import { Ion } from "../ion";
 
-import { Banner, Card, Cta, Empty, Ground, Photo, SectionLabel, Spinner } from "./kit";
+import { Banner, Card, Cta, Empty, Photo, Screen, SectionLabel, Spinner } from "./kit";
 import { P, boardLabel, count, guests as guestsWord, money, nights as nightsWord, nightsBetween, shortDate, stayRange } from "./look";
 import { sane, stayFromParams, stayToParams } from "./SearchControls";
 import { usePoints, useRates, useStay, useStaysConfig } from "@/lib/app/stays-data";
@@ -164,17 +164,17 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
 
   if (rates.isLoading || stay.isLoading) {
     return (
-      <Ground className="rounded-[20px] p-6">
+      <Screen className="py-8">
         <div className="flex justify-center py-20">
           <Spinner size={22} color={P.greenText} />
         </div>
-      </Ground>
+      </Screen>
     );
   }
 
   if (!rate) {
     return (
-      <Ground className="rounded-[20px] p-6">
+      <Screen className="py-8">
         <Empty
           icon="bed-outline"
           title="That rate has gone"
@@ -182,14 +182,14 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
           action="Back to the property"
           onAction={() => router.push(`${href(`/travel/stay/${hotelId}`)}?${stayToParams(search)}`)}
         />
-      </Ground>
+      </Screen>
     );
   }
 
   const board = boardLabel(rate.boardName);
 
   return (
-    <Ground className="gap-4 rounded-[20px] p-4 sm:p-6">
+    <Screen className="gap-4">
       {config.data?.sandbox ? <Banner icon="flask-outline">Test mode — nothing you book here is a real reservation</Banner> : null}
 
       <button
@@ -342,7 +342,7 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
           </div>
         </aside>
       </div>
-    </Ground>
+    </Screen>
   );
 }
 

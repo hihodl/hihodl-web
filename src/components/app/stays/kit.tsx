@@ -24,32 +24,22 @@ import type { Image } from "@/lib/app/stays";
 /* ── The ground ───────────────────────────────────────────────────── */
 
 /**
- * The travel screen's ground: navy, then the four gradients the app's
- * `SplashBackground` stacks over it.
+ * A Stays screen: a column, and nothing else.
  *
- * It is not flat and that is deliberate — the amber wash at the top right and
- * the blue one at the bottom left are what stop a screen of dark glass cards
- * reading as a spreadsheet. Drawn as one absolutely positioned layer so the
- * content above it needs to know nothing about it.
+ * It USED to paint the app's `SplashBackground` — navy plus four gradients —
+ * because in the app a screen is the whole window and owns what is behind it.
+ * On the web it is not: the shell already paints the ground, once, behind the
+ * sidebar and every product. Painting a second one here only drew a lighter
+ * blue box floating on the first, with its own rounded corners, and turned a
+ * screen into a panel.
+ *
+ * So there is no ground here, and no padding either: the frame already gutters
+ * the page (`px-[clamp(12px,1.6vw,28px)]`), and adding to it indented Stays
+ * further than Home or Payments for no reason. The cards keep their own glass;
+ * what is behind them belongs to the shell.
  */
-export function Ground({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return (
-    <div className={`relative isolate flex min-w-0 flex-1 flex-col ${className}`} style={{ background: P.bg }}>
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10"
-        style={{
-          backgroundImage: [
-            "linear-gradient(to bottom, #1a5276 0%, #0f3555 42%, #0a1929 75%)",
-            "linear-gradient(196deg, rgba(255,183,3,0.13) 0%, rgba(255,183,3,0.04) 30%, transparent 62%)",
-            "linear-gradient(107deg, rgba(142,202,230,0.09) 0%, rgba(142,202,230,0.03) 28%, transparent 60%)",
-            "linear-gradient(295deg, rgba(26,82,118,0.15) 0%, transparent 55%)",
-          ].join(","),
-        }}
-      />
-      {children}
-    </div>
-  );
+export function Screen({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return <div className={`relative isolate flex min-w-0 flex-1 flex-col ${className}`}>{children}</div>;
 }
 
 /* ── A photograph ─────────────────────────────────────────────────── */

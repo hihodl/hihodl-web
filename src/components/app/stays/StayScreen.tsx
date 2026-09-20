@@ -30,7 +30,7 @@ import { useMemo } from "react";
 import { useProductHref } from "../base";
 import { Ion } from "../ion";
 
-import { Cta, Empty, Ground, ScorePill, SectionLabel, Spinner } from "./kit";
+import { Cta, Empty, Screen, ScorePill, SectionLabel, Spinner } from "./kit";
 import { P, count, money, nights as nightsWord, nightsBetween, ratingLabel, stayRange } from "./look";
 import { sane, stayFromParams, stayToParams } from "./SearchControls";
 import { groupByRoom } from "./group";
@@ -65,7 +65,7 @@ export function StayScreen({ hotelId }: { hotelId: string }) {
 
   if (stay.error) {
     return (
-      <Ground className="rounded-[20px] p-6">
+      <Screen className="py-8">
         <Empty
           icon="cloud-offline-outline"
           title="Couldn't load this property"
@@ -73,12 +73,12 @@ export function StayScreen({ hotelId }: { hotelId: string }) {
           action="Try again"
           onAction={() => void stay.mutate()}
         />
-      </Ground>
+      </Screen>
     );
   }
 
   return (
-    <Ground className="gap-4 rounded-[20px] p-4 sm:p-6">
+    <Screen className="gap-4">
       <button
         type="button"
         onClick={() => router.back()}
@@ -202,6 +202,6 @@ export function StayScreen({ hotelId }: { hotelId: string }) {
           </div>
         </>
       )}
-    </Ground>
+    </Screen>
   );
 }

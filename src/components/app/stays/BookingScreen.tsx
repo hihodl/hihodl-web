@@ -33,7 +33,7 @@ import { useProductHref } from "../base";
 import { Ion } from "../ion";
 
 import { CancelSheet } from "./CancelSheet";
-import { Banner, Card, Empty, Ground, Photo, SectionLabel, Spinner } from "./kit";
+import { Banner, Card, Empty, Photo, Screen, SectionLabel, Spinner } from "./kit";
 import { P, count, daysUntil, guests as guestsWord, longDate, money, nights as nightsWord, nightsBetween, pointsEarned, shortDate } from "./look";
 import { refreshTrips, useBooking } from "@/lib/app/stays-data";
 import type { Booking } from "@/lib/app/stays";
@@ -49,18 +49,18 @@ export function BookingScreen({ bookingId }: { bookingId: string }) {
 
   if (isLoading) {
     return (
-      <Ground className="rounded-[20px] p-6">
+      <Screen className="py-8">
         <div className="flex justify-center py-20">
           <Spinner size={22} color={P.greenText} />
         </div>
-      </Ground>
+      </Screen>
     );
   }
   if (error || !booking) {
     return (
-      <Ground className="rounded-[20px] p-6">
+      <Screen className="py-8">
         <Empty icon="cloud-offline-outline" title="Couldn't load this booking" action="Try again" onAction={() => void mutate()} />
-      </Ground>
+      </Screen>
     );
   }
 
@@ -79,7 +79,7 @@ export function BookingScreen({ bookingId }: { bookingId: string }) {
   }
 
   return (
-    <Ground className="gap-3 rounded-[20px] p-4 sm:p-6">
+    <Screen className="gap-3">
       <button
         type="button"
         onClick={() => router.push(href("/travel/trips"))}
@@ -284,7 +284,7 @@ export function BookingScreen({ bookingId }: { bookingId: string }) {
           }}
         />
       ) : null}
-    </Ground>
+    </Screen>
   );
 }
 

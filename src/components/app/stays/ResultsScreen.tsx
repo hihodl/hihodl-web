@@ -25,7 +25,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useProductHref } from "../base";
 import { Ion } from "../ion";
 
-import { Cta, Empty, Ground, SectionLabel, Spinner } from "./kit";
+import { Cta, Empty, Screen, SectionLabel, Spinner } from "./kit";
 import { P, count, nights as nightsWord } from "./look";
 import { SearchBar, sane, stayFromParams, stayToParams, type Stay } from "./SearchControls";
 import { StayCard, StayCardSkeleton } from "./StayCard";
@@ -87,7 +87,7 @@ export function ResultsScreen() {
   }
 
   return (
-    <Ground className="gap-5 rounded-[20px] p-4 sm:p-6">
+    <Screen className="gap-5">
       <SearchBar
         value={draft}
         onChange={setDraft}
@@ -156,6 +156,6 @@ export function ResultsScreen() {
           </div>
         </section>
       )}
-    </Ground>
+    </Screen>
   );
 }
