@@ -1,15 +1,25 @@
 "use client";
 
 /**
- * The conversation, ported from the app's `src/payments/ThreadComposer.tsx`,
- * `GifPickerSheet.tsx` and the chat half of `PaymentsThread.tsx`.
+ * The thread, ported from the app's `PaymentsThread.tsx`, its
+ * `.components.tsx`, `ThreadComposer.tsx` and `GifPickerSheet.tsx`.
+ *
+ * PAYMENTS AND MESSAGES ARE ONE LIST
+ *
+ * This screen was built as a Payments card with a Conversation under it. That
+ * is not a thread — it is two lists about the same person, and it left a
+ * payment from July sitting below a message from an hour ago. The app renders
+ * `AnyMsg = TxMsg | RequestMsg | ChatMsg` in a single chronological run,
+ * because what happened between two people happened in one order. So does
+ * this: a payment is a bubble, a message is a bubble, and the day turns
+ * between them where the day actually turned.
  *
  * WHERE THE COMPOSER SITS, AND WHY
  *
- * Below the payments, not above them. The thread is a money screen: what
- * somebody opened it to see is the history, and a composer that pushed that
- * down would make this look like a chat that happens to move money rather than
- * the other way round. The app lands on the same order for the same reason.
+ * At the foot, under the history. The thread is a money screen: what somebody
+ * opened it to see is what happened, and a composer above it would make this
+ * look like a chat that happens to move money rather than the other way round.
+ * The app lands on the same order for the same reason.
  *
  * THE FOUR STATES OF THE BAR (the app's own list, unchanged)
  *
@@ -31,6 +41,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { maskTokenSymbol, type DisplayMode } from "@/lib/app/display-mode";
+import type { Transfer } from "@/lib/app/hold-api";
+import { tokenTicker, transferAmount } from "@/lib/app/payments";
 import {
   NOTE_MAX_LENGTH,
   gifUrl,
@@ -46,48 +59,175 @@ import {
 
 import { Ion } from "../ion";
 
-/* ── The conversation ─────────────────────────────────────────────── */
+/* ── The thread ───────────────────────────────────────────────────── */
 
-export function Conversation({ peerId, peerName }: { peerId: string | null; peerName: string }) {
+/**
+ * ONE list, not two.
+ *
+ * This screen first drew a Payments card and then a Conversation under it,
+ * which is not a thread — it is two lists about the same person, and it put a
+ * payment from July below a message from an hour ago. The app has never done
+ * that: `PaymentsThread` renders `AnyMsg = TxMsg | RequestMsg | ChatMsg` in
+ * one chronological run, because what happened between two people happened in
+ * one order.
+ *
+ * So a payment is a BUBBLE, on its own side, with the app's own colours: an
+ * outgoing one is amber at 15%, an incoming one white at 8%, and a note
+ * written on a payment sits INSIDE that bubble rather than in a bubble of its
+ * own — a message invites a reply and a note does not, it describes an amount.
+ */
+type Happened =
+  | { kind: "pay"; key: string; ts: number; row: Transfer }
+  | { kind: "msg"; key: string; ts: number; note: Note };
+type Row = Happened | { kind: "day"; key: string; label: string };
+
+export function Conversation({
+  peerId,
+  peerName,
+  payments,
+  mode,
+  onOpenTx,
+}: {
+  peerId: string | null;
+  peerName: string;
+  payments: readonly Transfer[];
+  mode: DisplayMode;
+  onOpenTx: (id: string) => void;
+}) {
   const notes = useThreadNotes(peerId);
   const state = useChatState(peerId);
   const messages = useMemo(() => looseMessages(notes.data), [notes.data]);
 
   useMarkSeen(messages, () => void notes.mutate());
 
-  if (!peerId) {
-    // State 1. A thread with an address, or with somebody who has never been
-    // on HOLD, has no user id anywhere in it — and a conversation needs one.
-    return (
-      <p className="mt-3 px-1 text-[12px] leading-[17px] text-white/70">
-        There is no HOLD account on the other side of this thread, so there is nobody to write to.
-      </p>
-    );
-  }
+  /* Oldest first, newest at the foot, where the composer is — the app inverts
+     its list to get the same order out of a phone's scroll. Day dividers are
+     inserted after sorting, so one is drawn only where the day actually turns. */
+  const rows = useMemo<Row[]>(() => {
+    const items: Happened[] = [
+      ...payments.map((t) => ({ kind: "pay" as const, key: `t:${t.id}`, ts: Date.parse(t.createdAt), row: t })),
+      ...messages.map((n) => ({ kind: "msg" as const, key: `n:${n.id}`, ts: Date.parse(n.createdAt), note: n })),
+    ]
+      .filter((i) => Number.isFinite(i.ts))
+      .sort((a, b) => a.ts - b.ts);
+
+    const out: Row[] = [];
+    let day = "";
+    for (const i of items) {
+      const label = dayLabel(i.ts);
+      if (label !== day) {
+        day = label;
+        out.push({ kind: "day", key: `d:${label}:${i.key}`, label });
+      }
+      out.push(i);
+    }
+    return out;
+  }, [payments, messages]);
+
+  const waiting = state.data?.status === "pending" && state.data.requestedByMe;
 
   return (
     <>
-      <div className="mt-5 flex flex-col gap-2">
-        {messages.length === 0 && notes.data !== undefined ? (
-          <p className="px-1 text-[13px] leading-[18px] text-white/70">
-            No messages yet. Say something to {peerName}.
+      <div className="mt-2 flex flex-col gap-2">
+        {rows.length === 0 ? (
+          <p className="px-1 py-6 text-center text-[13px] leading-[18px] text-white/70">
+            Nothing between you and {peerName} yet.
           </p>
         ) : null}
-        {messages.map((n) => (
-          <Bubble key={n.id} note={n} />
-        ))}
-        {state.data?.status === "pending" && state.data.requestedByMe ? <WaitingRow name={peerName} /> : null}
+
+        {rows.map((r) =>
+          r.kind === "day" ? (
+            <p key={r.key} className="mt-2 text-center text-[11.5px] text-white/45">
+              {r.label}
+            </p>
+          ) : r.kind === "pay" ? (
+            <PaymentBubble key={r.key} row={r.row} mode={mode} onOpen={() => onOpenTx(r.row.id)} />
+          ) : (
+            <Bubble key={r.key} note={r.note} requested={waiting && r.note.mine} />
+          ),
+        )}
+
+        {waiting ? <WaitingRow name={peerName} /> : null}
       </div>
-      <Composer
-        peerId={peerId}
-        status={state.data?.status ?? null}
-        onSent={() => {
-          void notes.mutate();
-          void state.mutate();
-        }}
-      />
+
+      {peerId ? (
+        <Composer
+          peerId={peerId}
+          status={state.data?.status ?? null}
+          onSent={() => {
+            void notes.mutate();
+            void state.mutate();
+          }}
+        />
+      ) : (
+        /* A thread with an address, or with somebody who has never been on
+           HOLD, has no user id anywhere in it — and a conversation needs one. */
+        <p className="mt-4 px-1 text-[12px] leading-[17px] text-white/70">
+          There is no HOLD account on the other side of this thread, so there is nobody to write to.
+        </p>
+      )}
     </>
   );
+}
+
+/**
+ * A payment, as a bubble.
+ *
+ * The app's own shape (`PaymentsThread` styles.bubble): radius 16, the sign
+ * and the figure at 16/900 with the ticker beside it, and the whole thing
+ * tinted amber when it went out and white when it came in — so which way the
+ * money moved is read from the side and the colour before any word is.
+ */
+function PaymentBubble({ row, mode, onOpen }: { row: Transfer; mode: DisplayMode; onOpen: () => void }) {
+  const out = row.direction === "out";
+  const amount = Math.abs(transferAmount(row));
+  const ticker = maskTokenSymbol(tokenTicker(row), mode);
+  const note = (row.note ?? "").trim();
+  const pending = row.status && row.status.toLowerCase() !== "confirmed" && row.status.toLowerCase() !== "completed";
+
+  return (
+    <div className={`flex ${out ? "justify-end" : "justify-start"}`}>
+      <button
+        type="button"
+        onClick={onOpen}
+        className={`max-w-[78%] rounded-[16px] border px-3.5 py-3 text-left transition-colors ${
+          out ? "border-white/10 bg-[rgba(255,183,3,0.15)] hover:bg-[rgba(255,183,3,0.2)]" : "border-white/10 bg-white/[0.08] hover:bg-white/[0.11]"
+        }`}
+      >
+        <span className="flex items-center gap-1.5">
+          <span className="text-[16px] font-extrabold tracking-[0.2px] text-white">{out ? "–" : "+"}</span>
+          <span className="text-[16px] font-extrabold tabular-nums tracking-[0.2px] text-white">{amount.toFixed(2)}</span>
+          <span className="pt-px text-[13px] font-bold text-white/90">{ticker}</span>
+        </span>
+
+        {/* The note is an ATTRIBUTE of this payment, so it is inside this
+            bubble and never a bubble of its own: a message invites a reply and
+            there is nothing to reply to an amount with. */}
+        {note ? <span className="mt-1.5 block whitespace-pre-wrap break-words text-[13.5px] leading-[19px] text-white/85">{note}</span> : null}
+
+        <span className="mt-1.5 flex items-center justify-end gap-2 text-[10.5px] text-white/60">
+          {pending ? <span className="capitalize">{row.status}</span> : null}
+          <span>{shortTime(row.createdAt)}</span>
+        </span>
+      </button>
+    </div>
+  );
+}
+
+/** "Today", "Yesterday", else the date — the app's `dayLabelFromEpoch`. */
+function dayLabel(ts: number): string {
+  const d = new Date(ts);
+  const today = new Date();
+  const same = (a: Date, b: Date) => a.toDateString() === b.toDateString();
+  if (same(d, today)) return "Today";
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  if (same(d, yesterday)) return "Yesterday";
+  return d.toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+    ...(d.getFullYear() === today.getFullYear() ? {} : { year: "numeric" }),
+  });
 }
 
 /**
@@ -116,49 +256,52 @@ function useMarkSeen(messages: Note[], onMarked: () => void) {
 }
 
 /**
- * One message.
+ * One message, in the app's own colours (`chatStyles`).
  *
- * Mine right and light, theirs left and dark — the app's own arrangement. A
- * withdrawn note keeps its place rather than vanishing: the reader's history
+ * Mine on the right in white at 14%; THEIRS on the left in near-white with
+ * dark ink — the light bubble is the incoming one, which is the opposite of
+ * what most dark UIs do and is what the app does, so the two sides of a
+ * conversation are told apart by lightness and not only by side.
+ *
+ * Radius 18, 15/21 text (loose, because this is the surface built for emoji
+ * and a tight ratio clips them), and the meta line right-aligned at 10.5.
+ *
+ * A withdrawn note keeps its place rather than vanishing: the reader's history
  * must not rearrange itself around something they have already read.
  */
-function Bubble({ note }: { note: Note }) {
+function Bubble({ note, requested = false }: { note: Note; requested?: boolean }) {
   const url = gifUrl(note.media);
   const mine = note.mine;
-
-  if (note.deleted) {
-    return (
-      <div className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-        <p className="rounded-[16px] border border-dashed border-white/[0.18] px-3.5 py-2 text-[13px] italic text-white/60">
-          Message withdrawn
-        </p>
-      </div>
-    );
-  }
+  const ink = mine ? "text-white/[0.92]" : "text-[rgba(13,24,32,0.92)]";
+  const muted = mine ? "text-white/45" : "text-[rgba(13,24,32,0.45)]";
 
   return (
     <div className={`flex ${mine ? "justify-end" : "justify-start"}`}>
       <div
-        className={`flex max-w-[78%] flex-col gap-1.5 rounded-[18px] px-3.5 py-2.5 ${
-          mine ? "bg-white/[0.16] text-white" : "bg-[#15313D] text-white"
-        }`}
+        className={`max-w-[78%] rounded-[18px] px-3.5 pb-[7px] pt-2.5 ${mine ? "bg-white/[0.14]" : "bg-[rgba(232,240,244,0.92)]"}`}
       >
-        {url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={url}
-            alt={note.body || "GIF"}
-            loading="lazy"
-            className="max-h-[220px] w-full rounded-[12px] object-cover"
-          />
-        ) : null}
-        {note.body ? (
-          <p className="whitespace-pre-wrap break-words text-[14.5px] leading-[20px]">{note.body}</p>
-        ) : null}
-        <span className="flex items-center gap-1.5 self-end text-[11px] text-white/70">
-          {note.edited ? <span>edited</span> : null}
+        {note.deleted ? (
+          <p className={`text-[15px] italic leading-[21px] ${muted}`}>Message removed</p>
+        ) : (
+          <>
+            {/* The URL is BUILT, never received: `gifUrl` composes it from a
+                fixed host and the opaque id the row carries. A URL from the
+                wire in `src` would let whoever sent the message make this
+                browser fetch anything — and the first message from a stranger
+                is exactly what this bubble renders. */}
+            {url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={url} alt={note.body || "GIF"} loading="lazy" className="max-h-[220px] w-full rounded-[12px] bg-black/15 object-cover" />
+            ) : null}
+            {note.body ? (
+              <p className={`whitespace-pre-wrap break-words text-[15px] leading-[21px] ${ink} ${url ? "mt-1.5" : ""}`}>{note.body}</p>
+            ) : null}
+          </>
+        )}
+        <span className={`mt-[3px] flex items-center justify-end gap-2 text-[10.5px] ${muted}`}>
           <span>{shortTime(note.createdAt)}</span>
-          {mine && note.seen ? <Ion name="checkmark-done" size={13} className="text-white/80" /> : null}
+          {note.edited && !note.deleted ? <span>Edited</span> : null}
+          {mine && requested ? <span>Requested</span> : mine && note.seen ? <span>Read</span> : null}
         </span>
       </div>
     </div>

@@ -38,8 +38,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { useConversations } from "@/lib/app/chat";
-import { maskTokenSymbol, type DisplayMode } from "@/lib/app/display-mode";
-import type { Transfer } from "@/lib/app/hold-api";
+import type { DisplayMode } from "@/lib/app/display-mode";
 import { useTransfers } from "@/lib/app/money";
 import {
   groupTransfersIntoThreads,
@@ -47,13 +46,11 @@ import {
   mergeInbox,
   peerRows,
   threadTime,
-  transferAmount,
-  tokenTicker,
   type InboxRow,
 } from "@/lib/app/payments";
 
 import { useProductHref } from "../base";
-import { BackHeader, Column, SectionTitle } from "../hold";
+import { BackHeader, Column } from "../hold";
 import { Ion, type IonName } from "../ion";
 import { useShellPrefs } from "../Shell";
 import { Skeleton } from "../ui";
@@ -436,47 +433,13 @@ function ThreadView({
         onBack={onBack}
       />
 
+      <Conversation peerId={row.peerId} peerName={row.name} payments={payments} mode={mode} onOpenTx={onOpenTx} />
+
       {payments.length ? (
-        <>
-          <SectionTitle first>Payments</SectionTitle>
-          <div className={`${cardClass} flex flex-col`}>
-            {payments.map((t, i) => (
-              <TransferRow key={t.id} row={t} first={i === 0} mode={mode} onOpen={() => onOpenTx(t.id)} />
-            ))}
-          </div>
-          <p className="mt-3 px-1 text-[12px] leading-[17px] text-white/70">
-            Paying {row.name} again happens in the HOLD app.
-          </p>
-        </>
+        <p className="mt-3 px-1 text-[12px] leading-[17px] text-white/70">
+          Paying {row.name} again happens in the HOLD app.
+        </p>
       ) : null}
-
-      <SectionTitle first={payments.length === 0}>Conversation</SectionTitle>
-      <Conversation peerId={row.peerId} peerName={row.name} />
     </>
-  );
-}
-
-function TransferRow({ row, first, mode, onOpen }: { row: Transfer; first: boolean; mode: DisplayMode; onOpen: () => void }) {
-  const amount = transferAmount(row);
-  const inbound = row.direction === "in";
-  const ticker = maskTokenSymbol(tokenTicker(row), mode);
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className={`flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-white/[0.03] ${first ? "" : "border-t border-white/[0.06]"}`}
-    >
-      <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-white/[0.06]">
-        <Ion name={inbound ? "arrow-down" : "arrow-up"} size={16} color={inbound ? "#20D690" : "#FFB703"} />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-[14px] font-strong text-white">{inbound ? "Received" : "Sent"}</span>
-        <span className="mt-0.5 block truncate text-[12px] text-white/55">{threadTime(Date.parse(row.createdAt))}</span>
-      </span>
-      <span className={`shrink-0 text-[14px] font-strong tabular-nums ${inbound ? "text-[#20D690]" : "text-white"}`}>
-        {inbound ? "+" : "-"}
-        {Math.abs(amount).toFixed(2)} {ticker}
-      </span>
-    </button>
   );
 }
