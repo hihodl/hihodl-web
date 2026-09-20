@@ -16,8 +16,7 @@
  *   the body          ScopeHoldings: Stables, Earning, Assets, each a card of
  *                     up to three rows that hides itself when it has none
  *   Activity          the card with its "See all" pill, then the recent rows
- *   the bento         MONEY OUT and GET PAID
- *   Benefits          the web's own row of products, last
+ *   the bento         MONEY OUT and GET PAID, last
  *
  * ── THE DISPLAY MODE DECIDES THE SHAPE OF THE BODY ──
  *
@@ -95,7 +94,6 @@ import { useShellPrefs } from "../Shell";
 import { glass, Skeleton } from "../ui";
 import { ActionsRow, HeroBalance, MiniAction, money, TokenIcon } from "../wallet/app-kit";
 import { ActivityRow, GREEN, readRow } from "./activity-parts";
-import { DoorRow, PRODUCTS } from "./products";
 
 /** The app's `RECENT_ACTIVITY_ROWS`. */
 const RECENT_ACTIVITY_ROWS = 4;
@@ -508,26 +506,13 @@ export function HomeScreen() {
         </>
       )}
 
-      {/* ── Benefits, under the app's own content ── */}
-      <section className={`${glass} mt-[18px] flex min-w-0 flex-col gap-3 p-5`} aria-label="Benefits">
-        <header className="flex items-center justify-between gap-2">
-          <span className="text-small font-medium text-text">Benefits</span>
-          <Link href={href("/benefits")} className="text-tiny text-[#9FB7C2] hover:text-text">
-            All products
-          </Link>
-        </header>
-        <div className="grid grid-cols-[minmax(0,1fr)] gap-2 sm:grid-cols-3">
-          {PRODUCTS.map((p) => (
-            <Link
-              key={p.key}
-              href={href(p.path)}
-              className="flex min-w-0 items-center gap-3 rounded-[14px] border border-white/[0.08] bg-white/[0.03] px-3.5 py-3 transition-colors hover:bg-white/[0.07]"
-            >
-              <DoorRow product={p} />
-            </Link>
-          ))}
-        </div>
-      </section>
+      {/*
+        There was a Benefits row of three product doors here. It is gone: the
+        navigation already lists Benefits, Stays, eSIM and Spaces, and three
+        doors squeezed into a third of the width each said "Find a …", "Data
+        a…", "Sell sp…" — a menu that cannot finish its own words is not a
+        menu, it is decoration over the one screen that should be about money.
+      */}
 
       {overview ? (
         <Overview
