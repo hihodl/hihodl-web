@@ -439,6 +439,141 @@ const ALIASES: AliasRecord[] = [
   { id: "alias-1", alias: "@demo_creator", targetChain: "solana", targetAddress: MINE.solana, isPublic: true, createdAt: at(120 * DAY) },
 ];
 
+/* ── The chat (/payment-notes) ────────────────────────────────────── */
+
+/**
+ * Payments has two halves, and the demo used to serve only the money.
+ *
+ * With no answer for `/payment-notes/conversations` every thread here resolved
+ * to no peer id, so each one said "there is no HOLD account on the other side"
+ * — about people the fixture pays every month. The conversations below are
+ * keyed to the same handles the transfers use, so the join in `mergeInbox`
+ * (on the handle) actually joins.
+ *
+ * @lumen_works is deliberately NOT here: a thread with somebody you have only
+ * ever paid is the state the composer's first branch is written for, and a
+ * demo where every row can chat never shows it.
+ */
+const PEERS = {
+  mesa: "peer-mesa-labs",
+  orbit: "peer-orbit-travels",
+  nodeline: "peer-nodeline-creator",
+  vela: "peer-vela-studio",
+};
+
+const CONVERSATIONS = [
+  {
+    peerId: PEERS.mesa, aliasHandle: "mesa_labs", displayName: "Mesa Labs", avatarUrl: null,
+    lastBody: "Perfect. Sending the brief over tonight.", lastHasMedia: false, lastFromMe: false,
+    lastAt: at(2 * 3600), unread: 2,
+  },
+  {
+    peerId: PEERS.vela, aliasHandle: "vela_studio", displayName: "Vela Studio", avatarUrl: null,
+    lastBody: "", lastHasMedia: true, lastFromMe: false, lastAt: at(20 * 3600), unread: 1,
+  },
+  {
+    peerId: PEERS.orbit, aliasHandle: "orbit_travels", displayName: "Orbit Travels", avatarUrl: null,
+    lastBody: "Thanks — invoice received.", lastHasMedia: false, lastFromMe: true,
+    lastAt: at(3 * DAY), unread: 0,
+  },
+  {
+    peerId: PEERS.nodeline, aliasHandle: "nodeline_creator", displayName: "Nodeline", avatarUrl: null,
+    lastBody: "Hey! Loved the suitcase post. Can we talk?", lastHasMedia: false, lastFromMe: false,
+    lastAt: at(6 * DAY), unread: 0,
+  },
+];
+
+const ME_ID = "demo-user";
+
+/** A loose message, in the shape `/payment-notes/thread/:peerId` returns. */
+function msg(
+  id: string,
+  peer: string,
+  mine: boolean,
+  body: string,
+  ago: number,
+  extra: { seen?: boolean; gifId?: string; deleted?: boolean; edited?: boolean } = {},
+) {
+  return {
+    id,
+    fromUserId: mine ? ME_ID : peer,
+    toUserId: mine ? peer : ME_ID,
+    body: extra.deleted ? "" : body,
+    mine,
+    deleted: !!extra.deleted,
+    edited: !!extra.edited,
+    createdAt: at(ago),
+    seen: extra.seen ?? !mine,
+    seenAt: extra.seen ? at(ago - 60) : null,
+    canEdit: mine && !extra.seen && !extra.deleted,
+    isMessage: true,
+    media: extra.gifId ? { provider: "giphy", id: extra.gifId } : null,
+  };
+}
+
+const THREADS: Record<string, ReturnType<typeof msg>[]> = {
+  [PEERS.mesa]: [
+    msg("n-m1", PEERS.mesa, false, "Hey — we'd like the carry-on spot again for the October event.", 30 * 3600),
+    msg("n-m2", PEERS.mesa, true, "Great, it's still open. Same two squares as last time?", 28 * 3600, { seen: true }),
+    msg("n-m3", PEERS.mesa, false, "Yes, and maybe the lid too if it's free.", 26 * 3600),
+    msg("n-m4", PEERS.mesa, true, "Lid is free. I'll hold all three until Friday.", 5 * 3600, { seen: true }),
+    msg("n-m5", PEERS.mesa, false, "Perfect. Sending the brief over tonight.", 2 * 3600),
+  ],
+  [PEERS.vela]: [
+    msg("n-v1", PEERS.vela, false, "Congrats on the TOKEN2049 run!", 22 * 3600),
+    msg("n-v2", PEERS.vela, false, "", 20 * 3600, { gifId: "3o7abKhOpu0NwenH3O" }),
+  ],
+  [PEERS.orbit]: [
+    msg("n-o1", PEERS.orbit, false, "Invoice for the August spots is on its way.", 4 * DAY),
+    msg("n-o2", PEERS.orbit, true, "Thanks — invoice received.", 3 * DAY, { seen: true }),
+  ],
+  [PEERS.nodeline]: [
+    msg("n-n1", PEERS.nodeline, false, "Hey! Loved the suitcase post. Can we talk?", 6 * DAY),
+  ],
+};
+
+/** `none` = a first message would be a request. Nodeline's is still unanswered. */
+const CHAT_STATE: Record<string, { status: string; requestedByMe: boolean; chatId: string | null }> = {
+  [PEERS.mesa]: { status: "accepted", requestedByMe: false, chatId: "chat-mesa" },
+  [PEERS.vela]: { status: "accepted", requestedByMe: false, chatId: "chat-vela" },
+  [PEERS.orbit]: { status: "accepted", requestedByMe: false, chatId: "chat-orbit" },
+  [PEERS.nodeline]: { status: "pending", requestedByMe: true, chatId: "chat-nodeline" },
+};
+
+/** Waiting on an answer from this person. The inbox draws these above the list. */
+const CHAT_REQUESTS = [
+  {
+    chatId: "chat-harbor",
+    fromUserId: "peer-harbor-frames",
+    fromHandle: "harbor_frames",
+    fromDisplayName: "Harbor Frames",
+    body: "Hi — we make aluminium frames and we'd love a square on your laptop lid for Q4. Budget is flexible.",
+    createdAt: at(9 * 3600),
+  },
+];
+
+/**
+ * GIFs, without Giphy.
+ *
+ * The picker renders `previewUrl` and sends the id; what a sent GIF renders
+ * from is built by `gifUrl()` off a fixed host. The demo sends nothing
+ * anywhere, so these are drawn locally as data URIs — a labelled block of
+ * colour, which is enough to review the grid, the attach chip and the bubble.
+ */
+function gifTile(label: string, from: string, to: string) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="240" height="180"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${from}"/><stop offset="1" stop-color="${to}"/></linearGradient></defs><rect width="240" height="180" fill="url(#g)"/><text x="120" y="98" font-family="system-ui,sans-serif" font-size="22" font-weight="700" fill="rgba(255,255,255,0.92)" text-anchor="middle">${label}</text></svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+const GIFS = [
+  { id: "3o7abKhOpu0NwenH3O", title: "Nice one", previewUrl: gifTile("nice one", "#1E40AF", "#0A1B3D"), width: 240, height: 180 },
+  { id: "l0MYt5jPR6QX5pnqM", title: "Thank you", previewUrl: gifTile("thank you", "#0E7C66", "#08201C"), width: 240, height: 180 },
+  { id: "26u4cqiYI30juCOGY", title: "Let us go", previewUrl: gifTile("let's go", "#7A3FF2", "#122E47"), width: 240, height: 180 },
+  { id: "xT0xezQGU5xCDJuCPe", title: "Deal", previewUrl: gifTile("deal", "#F7931A", "#3A1F05"), width: 240, height: 180 },
+  { id: "Ju7l5y9osyymQ", title: "Applause", previewUrl: gifTile("applause", "#2E4A7A", "#0D1A2E"), width: 240, height: 180 },
+  { id: "l3q2K5jinAlChoCLS", title: "On it", previewUrl: gifTile("on it", "#4B2E86", "#140F2C"), width: 240, height: 180 },
+];
+
 /* ── The price series ─────────────────────────────────────────────── */
 
 /**
@@ -587,6 +722,30 @@ export function moneyAnswer(method: string, path: string, query: URLSearchParams
   if (is("GET", "offramp", "orders")) return ok({ orders: empty ? [] : PAYOUTS, hasMore: false, nextBefore: null });
   if (is("GET", "rails", "accounts")) return ok({ accounts: empty ? [] : RAILS });
   if (is("GET", "alias")) return ok({ aliases: ALIASES });
+
+  /* The chat. Writes answer as the server does rather than mutating the
+     fixture: the demo is a screen review, and a thread that grew as you typed
+     would drift from the one the next reviewer opens. `sent: true` whatever
+     happened is the server's own rule, not a shortcut taken here. */
+  if (is("GET", "payment-notes", "conversations")) return ok({ conversations: empty ? [] : CONVERSATIONS });
+  if (is("GET", "payment-notes", "thread", ":")) {
+    const peer = decodeURIComponent(seg[2]);
+    return ok({ notes: empty ? [] : (THREADS[peer] ?? []) });
+  }
+  if (is("GET", "payment-notes", "chat", ":")) {
+    const peer = decodeURIComponent(seg[2]);
+    return ok({ chat: CHAT_STATE[peer] ?? { status: "none", requestedByMe: false, chatId: null } });
+  }
+  if (is("GET", "payment-notes", "requests")) return ok({ requests: empty ? [] : CHAT_REQUESTS });
+  if (is("POST", "payment-notes", "requests", ":")) return ok({ accepted: true });
+  if (is("GET", "payment-notes", "gifs")) {
+    const q = (query.get("q") ?? "").trim().toLowerCase();
+    return ok({ gifs: q ? GIFS.filter((g) => g.title.toLowerCase().includes(q)) : GIFS, available: true });
+  }
+  if (is("POST", "payment-notes", "messages")) return ok({ sent: true, note: { id: `n-${Date.now()}`, createdAt: at(0) }, state: "delivered" });
+  if (is("POST", "payment-notes", "seen")) return ok({ marked: 0 });
+  if (is("POST", "payment-notes", "chat", ":", "mute")) return ok({ muted: true });
+  if (is("GET", "payment-notes", "settings")) return ok({ chatRequestsFrom: "everyone" });
 
   return null;
 }
