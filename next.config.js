@@ -100,6 +100,27 @@ const nextConfig = {
           { key: "Referrer-Policy", value: "no-referrer" },
         ],
       },
+      // The creator's preview of their own page, framed by the console beside
+      // the picker that changes it. The catch-all above is X-Frame-Options:
+      // DENY, which refuses a frame even from our own origin, so this path
+      // says SAMEORIGIN instead — and only this path. Both spellings, because
+      // app.hihodl.xyz/preview/… is rewritten to /app/preview/… .
+      {
+        source: "/preview/:path*",
+        headers: [
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "Cache-Control", value: "private, no-store, max-age=0" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+        ],
+      },
+      {
+        source: "/app/preview/:path*",
+        headers: [
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "Cache-Control", value: "private, no-store, max-age=0" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+        ],
+      },
       {
         source: "/.well-known/apple-app-site-association",
         headers: [

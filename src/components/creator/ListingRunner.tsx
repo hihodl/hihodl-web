@@ -68,7 +68,8 @@ import { Money, Text } from "./listing/parts";
 import { Notice } from "./parts";
 import { ListingBanner } from "./run/ListingBanner";
 import { Offers } from "./run/Offers";
-import { PhotoEditor } from "./run/PhotoEditor";
+import { PagePreview } from "./run/PagePreview";
+import { PhotoEditor, viewOfZones } from "./run/PhotoEditor";
 import { ColourEditor, ProductHub, drawingOf } from "./run/ProductLook";
 import { GroundPicker, labelOf } from "./run/GroundPicker";
 import { Work } from "./run/Work";
@@ -227,7 +228,9 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
           </Panel>
         ) : null}
         {/* Keyed on what the server holds: a save reloads the listing and the card starts from it. */}
-        {screen === "floors" ? <Floors key={floorsKey(floors)} groups={floors} onChanged={changed} /> : null}
+        {screen === "floors" ? (
+          <Floors key={floorsKey(floors)} groups={floors} onChanged={changed} views={drawingOf(space).views} />
+        ) : null}
         {screen === "spots" ? <Spots space={space} /> : null}
         {screen === "photo" ? <ProductHub space={space} /> : null}
         {screen === "ground" ? <ListingGround space={space} onChanged={changed} /> : null}
@@ -486,28 +489,51 @@ function ScreenFrame({
 
 /* ── Page background ──────────────────────────────────────────────── */
 
-/** This listing's own ground, or "Same as my default" (Spaces › Settings). */
+/**
+ * This listing's own ground, or "Same as my default" (Spaces › Settings), with
+ * the page itself beside it.
+ *
+ * A background was picked from five small cards and a hex field, and the only
+ * way to see what it did was to save it and go and look — on a live listing,
+ * in front of sponsors. The page is here now, and it repaints on every pick,
+ * unsaved: `?ground=` on the preview route overrides the stored one for that
+ * render alone. Saving still saves; looking no longer costs anything.
+ */
 function ListingGround({ space, onChanged }: { space: SpaceView; onChanged: () => void }) {
   const [fallback, setFallback] = useState<string | null | undefined>(undefined);
+  const [picked, setPicked] = useState<string | null>(space.pageGroundOwn ?? null);
+  const [saved, setSaved] = useState(0);
   useEffect(() => {
     void getCreatorSettings()
       .then(({ settings }) => setFallback(settings.listingGround ?? settings.pageGround ?? null))
       .catch(() => setFallback(null));
   }, []);
   if (fallback === undefined) return <Skeleton className="h-[240px]" />;
+  // "Same as my default" is null on the listing, and the preview must then
+  // stand on the default itself, not on whatever the server last stored.
+  const showing = picked ?? fallback;
   return (
-    <div className={`${SCREEN_BODY} flex flex-col gap-3`}>
-      <Body dim>
-        What this listing&rsquo;s page stands on. &ldquo;Same as my default&rdquo; follows your listings&rsquo; default in Settings ›
-        Your pages.
-      </Body>
-      <GroundPicker
-        key={space.pageGroundOwn ?? "default"}
-        value={space.pageGroundOwn ?? null}
-        allowDefault
-        defaultValue={fallback}
-        onSave={(next) => setListingPageGround(space.id, next).then(onChanged)}
-      />
+    <div className={`${SCREEN_BODY} flex flex-col gap-4 xl:flex-row xl:items-start`}>
+      <div className="flex min-w-0 flex-1 flex-col gap-3">
+        <Body dim>
+          What this listing&rsquo;s page stands on. &ldquo;Same as my default&rdquo; follows your listings&rsquo; default in Settings ›
+          Your pages.
+        </Body>
+        <GroundPicker
+          key={space.pageGroundOwn ?? "default"}
+          value={space.pageGroundOwn ?? null}
+          allowDefault
+          defaultValue={fallback}
+          onPicked={setPicked}
+          onSave={(next) =>
+            setListingPageGround(space.id, next).then((r) => {
+              setSaved((n) => n + 1);
+              return onChanged(), r;
+            })
+          }
+        />
+      </div>
+      <PagePreview spaceId={space.id} ground={showing} reload={saved} className="xl:w-[420px]" />
     </div>
   );
 }
@@ -592,6 +618,8 @@ interface FloorGroup {
   /** Set on every one of these at once. */
   save: (cents: number | null) => Promise<unknown>;
   current: string | null;
+  /** The side of the product this one sits on, so eighteen floors read as four groups of four or five. */
+  view?: string | null;
 }
 
 function floorGroups(space: SpaceView): FloorGroup[] {
@@ -604,6 +632,7 @@ function floorGroups(space: SpaceView): FloorGroup[] {
       save: (cents) => setListingFloor(space.id, cents),
     });
   }
+  const zoneView = viewOfZones(space);
   for (const r of rungsOf(space.positions.filter((p) => p.offers?.minOfferUsdc !== undefined))) {
     out.push({
       key: r.key,
@@ -611,9 +640,35 @@ function floorGroups(space: SpaceView): FloorGroup[] {
       current: r.positions.find((p) => p.offers?.minOfferUsdc)?.offers?.minOfferUsdc ?? null,
       // The server keeps a floor per position: a rung's floor is set on each copy of it.
       save: (cents) => Promise.all(r.positions.map((p) => setPositionFloor(p.id, cents))),
+      view: zoneView.get(r.positions[0].zoneKey) ?? null,
     });
   }
   return out;
+}
+
+/**
+ * The floors split by the side they sit on, in the drawing's own order, with
+ * anything the drawing does not place last and unlabelled. One section when
+ * there is only one, so a service's slots never grow a heading for nothing.
+ */
+function floorSections(groups: readonly FloorGroup[], views: readonly { key: string; label: string }[]) {
+  const order = new Map(views.map((v, i) => [v.key, i]));
+  const byView = new Map<string, FloorGroup[]>();
+  for (const g of groups) {
+    const k = g.view ?? "";
+    const list = byView.get(k) ?? [];
+    list.push(g);
+    byView.set(k, list);
+  }
+  const sections = [...byView].map(([key, rows]) => ({
+    key,
+    label: views.find((v) => v.key === key)?.label ?? null,
+    rows,
+  }));
+  // The listing-wide floor ("Every slot") carries no side, and goes first.
+  const at = (key: string) => order.get(key) ?? (key === "" ? -1 : 99);
+  sections.sort((a, b) => at(a.key) - at(b.key));
+  return sections.length > 1 ? sections : [{ key: "", label: null, rows: [...groups] }];
 }
 
 /** What each row holds now, as typed. An empty string is "no floor". */
@@ -643,8 +698,18 @@ function floorsKey(groups: readonly FloorGroup[]): string {
  * saved. The rows are fields now. One Save writes every row that changed,
  * "Set the same floor for all" copies the first row's figure down the card,
  * and "Clear all" empties them (saving then takes every floor off).
+ *
+ * MINI-CARDS, GROUPED BY SIDE
+ *
+ * Eighteen full-width rows was a column three screens tall inside a box one
+ * screen tall, so the eighteenth was cut in half by the edge and the Save
+ * under it looked like it belonged to whatever row happened to be showing.
+ * Each floor is a small card in a grid instead — the same shape the Spots
+ * screen settled on — and the cards are grouped by the side of the product
+ * they sit on, which is how the creator thinks about them. Eighteen rows
+ * become four short groups, and nothing is cut.
  */
-function Floors({ groups, onChanged }: { groups: FloorGroup[]; onChanged: () => void }) {
+function Floors({ groups, onChanged, views = [] }: { groups: FloorGroup[]; onChanged: () => void; views?: readonly { key: string; label: string }[] }) {
   const [values, setValues] = useState<FloorValues>(() => typedNow(groups));
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -677,22 +742,30 @@ function Floors({ groups, onChanged }: { groups: FloorGroup[]; onChanged: () => 
 
   return (
     <Panel title="Floor prices" meta="Private">
-      <ul className={`flex flex-col divide-y divide-white/[0.08] ${SCREEN_BODY}`}>
-        {groups.map((g) => {
-          const current = centsFromUsdc(g.current);
-          return (
-            <li key={g.key} className="flex flex-col gap-2 py-2.5 first:pt-0 last:pb-0 lg:flex-row lg:items-center lg:gap-4">
-              <p className="min-w-0 flex-1 truncate text-[14.5px] font-bold text-white">
-                {g.title}
-                <span className="font-normal text-white/55"> · {current !== null ? usd(current) : "No floor"}</span>
-              </p>
-              <div className="w-full min-w-0 lg:w-[180px]">
-                <Money value={values[g.key] ?? ""} onChange={(text) => set(g.key, text)} placeholder={`Min ${usd(2_500)}`} />
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+      <div className={`flex flex-col gap-3 pb-1 ${SCREEN_BODY}`}>
+        {floorSections(groups, views).map((section) => (
+          <section key={section.key || "all"} className="flex flex-col gap-2">
+            {section.label ? <SectionLabel>{section.label}</SectionLabel> : null}
+            <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {section.rows.map((g) => {
+                const current = centsFromUsdc(g.current);
+                return (
+                  <li key={g.key} className="flex min-w-0 flex-col gap-2 rounded-[14px] bg-white/[0.04] p-2.5">
+                    <div className="flex min-w-0 flex-col gap-0.5">
+                      <p className="min-w-0 truncate text-[13.5px] font-bold text-white">{g.title}</p>
+                      {/* What the server holds now, so a typed figure that is not saved yet reads as a change. */}
+                      <p className="text-[12px] leading-4 text-white/55">
+                        {current !== null ? `Now ${usd(current)}` : "No floor"}
+                      </p>
+                    </div>
+                    <Money value={values[g.key] ?? ""} onChange={(text) => set(g.key, text)} placeholder={`Min ${usd(2_500)}`} />
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ))}
+      </div>
       <div className="flex flex-wrap items-center gap-2 border-t border-white/[0.08] pt-3">
         <Chip
           label={busy ? "Saving…" : changed.length ? `Save ${changed.length === 1 ? "1 change" : `${changed.length} changes`}` : "Save"}

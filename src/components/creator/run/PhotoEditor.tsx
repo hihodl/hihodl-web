@@ -37,8 +37,10 @@
 
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent, type PointerEvent } from "react";
 
+import { useHref } from "@/components/app/base";
 import { btnWhite as btnSmall, btnGlassPill as btnSmallSecondary } from "@/components/app/spaces/kit";
 import { cardBox as glass } from "@/components/app/spaces/kit";
 import { ImageProblem, prepareImage } from "@/lib/ad-space/image";
@@ -46,6 +48,17 @@ import { CreatorApiError } from "@/lib/creator/api";
 import type { PhotoRect, PositionView, SpaceView } from "@/lib/creator/listing";
 import { clearListingPhoto, setListingPhoto, setListingSquares } from "@/lib/creator/listings";
 import { describeRunError } from "@/lib/creator/problems";
+import {
+  LAYOUTS,
+  LAYOUT_LABEL,
+  arrange,
+  layoutFits,
+  readLayouts,
+  removeLayout,
+  writeLayout,
+  type LayoutKind,
+  type SavedLayout,
+} from "@/lib/creator/spot-layout";
 
 import { Notice } from "../parts";
 
@@ -118,48 +131,57 @@ function troubleOf(rects: Map<string, PhotoRect>): Map<string, string> {
   return out;
 }
 
-/**
- * Where a spot starts on a fresh photo: where it sits on the catalog drawing,
- * with the drawing's views laid side by side across the photo. Roughly right
- * for a photo of the same thing from the front, and never on top of another.
- */
 /** The drawing's geometry. The API sends it; the console's own Template type leaves it out. */
 type Drawing = {
-  views?: { key: string }[];
+  views?: { key: string; label?: string }[];
   zones?: { zoneKey: string; viewKey: string; rect?: PhotoRect }[];
 };
+
+/**
+ * Where a spot starts on a fresh photo.
+ *
+ * On ONE SIDE, where the drawing has it: a zone is already a fraction of that
+ * side, and the photo shows that side, so the drawing is simply right.
+ *
+ * On ONE PHOTO for the whole product, an even grid — see the comment in the
+ * body for what it replaced and why.
+ */
 
 function seedRects(space: SpaceView, positions: readonly PositionView[], view: string | null): Map<string, PhotoRect> {
   const out = new Map<string, PhotoRect>();
   const drawing = (space.template ?? {}) as Drawing;
-  // One side: its zones are already fractions of that side, which is what its photo shows.
-  const views = view ? [{ key: view }] : drawing.views ?? [];
   const zones = drawing.zones ?? [];
-  const n = Math.max(1, views.length);
   const unplaced: PositionView[] = [];
+
   for (const p of positions) {
     if (p.rect) {
       out.set(p.id, p.rect);
       continue;
     }
-    const z = zones.find((zone) => zone.zoneKey === p.zoneKey);
-    const i = z ? views.findIndex((v) => v.key === z.viewKey) : -1;
-    const zr = z?.rect;
-    if (!zr || i < 0) {
-      unplaced.push(p);
+    // ONE SIDE: the drawing's own geometry is right, because the zone is
+    // already a fraction of the side the photo shows. Nothing to invent.
+    const zr = view ? zones.find((zone) => zone.zoneKey === p.zoneKey)?.rect : undefined;
+    if (view && zr) {
+      const w = Math.max(MIN_SIDE, zr.w);
+      const h = Math.max(MIN_SIDE, zr.h);
+      out.set(p.id, round({ x: clamp(zr.x, 0, 1 - w), y: clamp(zr.y, 0, 1 - h), w, h }));
       continue;
     }
-    const w = Math.max(MIN_SIDE, zr.w / n);
-    const h = Math.max(MIN_SIDE, zr.h);
-    out.set(p.id, round({ x: clamp((i + zr.x) / n, 0, 1 - w), y: clamp(zr.y, 0, 1 - h), w, h }));
+    unplaced.push(p);
   }
-  // Anything the drawing cannot place goes in a row along the bottom.
-  unplaced.forEach((p, k) => {
-    const side = 0.12;
-    const perRow = Math.floor(1 / (side + 0.02));
-    const x = 0.02 + (k % perRow) * (side + 0.02);
-    const y = clamp(0.86 - Math.floor(k / perRow) * (side + 0.02), 0, 1 - side);
-    out.set(p.id, { x, y, w: side, h: side });
+
+  // ONE PHOTO FOR THE WHOLE PRODUCT, and anything the drawing cannot place:
+  // an even grid. The old seed put each side in its own vertical strip and
+  // squashed every square to a quarter of its width, which hits the 4% floor
+  // and lands them on top of one another — eighteen spots opened in amber
+  // before the creator had touched anything. A grid opens clean, and the
+  // squares that matter get dragged.
+  const order = new Map((drawing.views ?? []).map((v, i) => [v.key, i]));
+  const viewOf = new Map(zones.map((z) => [z.zoneKey, z.viewKey]));
+  unplaced.sort((a, b) => (order.get(viewOf.get(a.zoneKey) ?? "") ?? 99) - (order.get(viewOf.get(b.zoneKey) ?? "") ?? 99));
+  const grid = arrange(unplaced.length, "grid");
+  unplaced.forEach((p, i) => {
+    if (grid[i]) out.set(p.id, grid[i]);
   });
   return out;
 }
@@ -205,6 +227,213 @@ export function viewOfZones(space: SpaceView): Map<string, string> {
   const zones = ((space.template ?? {}) as Drawing).zones ?? [];
   return new Map(zones.map((z) => [z.zoneKey, z.viewKey]));
 }
+
+/**
+ * Every side of the product, and the one-photo mode, as one row of pills.
+ *
+ * The editor worked on one side and had no idea the others existed: to move
+ * from the front to the back you went back to the hub and in again, which is
+ * two clicks to say "and now the other side of the same suitcase". Each pill
+ * carries how far that side has got, so the row is also the progress.
+ *
+ * The mode in use wins: with one photo covering the whole product the sides
+ * are not offered, and with a photo per side the one-photo pill is not, because
+ * the server refuses the mix and an offer that can only be refused is a trap.
+ */
+function SideSwitcher({ space, view }: { space: SpaceView; view: string | null }) {
+  const href = useHref();
+  const base = `/listings/${space.id}?tab=photo`;
+  const drawing = (space.template ?? {}) as Drawing;
+  const views = drawing.views ?? [];
+  const zoneView = useMemo(() => viewOfZones(space), [space]);
+  const perSide = Object.keys(space.viewPhotos ?? {}).length > 0;
+  const whole = Boolean(space.photo);
+  if (views.length < 2) return null;
+
+  const items: { key: string | null; label: string; note: string; ready: boolean }[] = [];
+  if (!whole) {
+    for (const v of views) {
+      const on = space.positions.filter((p) => zoneView.get(p.zoneKey) === v.key);
+      const placed = on.filter((p) => p.rect).length;
+      const side = space.viewPhotos?.[v.key];
+      items.push({
+        key: v.key,
+        label: v.label ?? v.key,
+        note: !side ? "No photo" : side.ready ? "Done" : `${placed}/${on.length}`,
+        ready: Boolean(side?.ready),
+      });
+    }
+  }
+  if (!perSide) {
+    items.push({
+      key: null,
+      label: "One photo",
+      note: !space.photo ? "No photo" : space.photo.ready ? "Done" : `${space.positions.filter((p) => p.rect).length}/${space.positions.length}`,
+      ready: Boolean(space.photo?.ready),
+    });
+  }
+  if (items.length < 2) return null;
+
+  return (
+    <div className="flex min-h-[36px] items-center gap-2 overflow-x-auto">
+      {items.map((it) => {
+        const on = it.key === view;
+        return (
+          <Link
+            key={it.key ?? "one"}
+            href={href(it.key ? `${base}&item=side-${encodeURIComponent(it.key)}` : `${base}&item=one`)}
+            aria-current={on ? "page" : undefined}
+            className={`inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[16px] border px-3 text-[12.5px] transition-colors ${
+              on ? "border-text bg-white/15 text-white" : "border-white/10 bg-white/[0.05] text-white/[0.62] hover:bg-white/10"
+            }`}
+          >
+            {it.label}
+            <span className={it.ready ? "text-[#2FBE8A]" : "text-white/45"}>{it.note}</span>
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * Arrangements: a starting shape for every square at once, and the creator's
+ * own, saved by name.
+ *
+ * Placing eighteen squares by hand, none under 4% of a side and none more than
+ * 5% over another, is the kind of work people abandon. One click lays them all
+ * out legally; the drags that follow are the ones that actually matter.
+ *
+ * A saved arrangement is keyed by ZONE, so the one tuned for a suitcase front
+ * applies to the next suitcase. They live in this browser.
+ */
+function Arranger({
+  templateId,
+  view,
+  positions,
+  frozen,
+  rects,
+  onApply,
+}: {
+  templateId: string | null;
+  view: string | null;
+  positions: readonly PositionView[];
+  frozen: ReadonlySet<string>;
+  rects: Map<string, PhotoRect>;
+  onApply: (next: Map<string, PhotoRect>) => void;
+}) {
+  const [mine, setMine] = useState<SavedLayout[]>([]);
+  const [naming, setNaming] = useState(false);
+  const [name, setName] = useState("");
+  useEffect(() => setMine(readLayouts(templateId, view)), [templateId, view]);
+
+  // A sold square is where its sponsor saw it, so no arrangement moves it —
+  // and the free ones are laid out around it rather than under it.
+  const movable = positions.filter((p) => !frozen.has(p.id));
+  if (movable.length === 0) return null;
+
+  const apply = (kind: LayoutKind) => {
+    const held = positions.filter((p) => frozen.has(p.id)).map((p) => rects.get(p.id)).filter((r): r is PhotoRect => !!r);
+    // Room for the sold squares too, so the free ones can be laid out AROUND
+    // them: a sold square is where its sponsor saw it and does not move, and
+    // an arrangement that drops another square on top of it is amber on
+    // arrival, which is the thing this button exists to stop.
+    const shapes = arrange(movable.length + held.length, kind).filter(
+      (r) => !held.some((h) => overlapShare(r, h) > OVERLAP_TOLERANCE),
+    );
+    const next = new Map(rects);
+    movable.forEach((p, i) => {
+      if (shapes[i]) next.set(p.id, shapes[i]);
+    });
+    onApply(next);
+  };
+
+  const applySaved = (l: SavedLayout) => {
+    const next = new Map(rects);
+    for (const p of movable) {
+      const r = l.rects[p.zoneKey];
+      if (r) next.set(p.id, r);
+    }
+    onApply(next);
+  };
+
+  const save = () => {
+    const clean = name.trim().slice(0, 40);
+    if (!clean) return;
+    const out: Record<string, PhotoRect> = {};
+    for (const p of positions) {
+      const r = rects.get(p.id);
+      if (r) out[p.zoneKey] = r;
+    }
+    setMine(writeLayout(templateId, view, { name: clean, at: Date.now(), rects: out }));
+    setName("");
+    setNaming(false);
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-[12px] font-bold uppercase tracking-[0.4px] text-white/55">Arrange</span>
+        {LAYOUTS.filter((k) => layoutFits(movable.length, k)).map((k) => (
+          <button key={k} type="button" className={pill} onClick={() => apply(k)}>
+            {LAYOUT_LABEL[k]}
+          </button>
+        ))}
+        {mine.map((l) => (
+          <span key={l.name} className="inline-flex shrink-0 items-center">
+            <button
+              type="button"
+              className={`${pill} rounded-r-none border-r-0 pr-2`}
+              onClick={() => applySaved(l)}
+              title={`Your arrangement, saved ${new Date(l.at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`}
+            >
+              {l.name}
+            </button>
+            <button
+              type="button"
+              aria-label={`Forget ${l.name}`}
+              className={`${pill} rounded-l-none pl-1.5 pr-2.5 text-white/45`}
+              onClick={() => setMine(removeLayout(templateId, view, l.name))}
+            >
+              &times;
+            </button>
+          </span>
+        ))}
+        {naming ? null : (
+          <button type="button" className={pill} onClick={() => setNaming(true)}>
+            Save this one…
+          </button>
+        )}
+      </div>
+      {naming ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            autoFocus
+            value={name}
+            maxLength={40}
+            placeholder="Name it: My suitcase front"
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") save();
+              if (e.key === "Escape") setNaming(false);
+            }}
+            className="h-8 w-[220px] rounded-[16px] border border-white/15 bg-black/20 px-3 text-[12.5px] text-white outline-none focus:border-white/30"
+          />
+          <button type="button" className={pill} disabled={!name.trim()} onClick={save}>
+            Save
+          </button>
+          <button type="button" className={pill} onClick={() => setNaming(false)}>
+            Cancel
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** The small pill every control here wears. Radius is half the height, never 999. */
+const pill =
+  "inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[16px] border border-white/10 bg-white/[0.05] px-3 text-[12.5px] text-white/[0.78] transition-colors hover:bg-white/10 disabled:opacity-40";
 
 export function PhotoEditor({
   space,
@@ -295,10 +524,79 @@ export function PhotoEditor({
     />
   );
 
+  /**
+   * A photo arrives by being dropped on this screen or pasted into it, as well
+   * as through the file dialog. Nothing in this product could take a dropped
+   * file before — five upload buttons, five system dialogs — and pasting is
+   * what anybody does with a screenshot they have just taken.
+   *
+   * Closed while a spot is sold or the other mode is in use, because the photo
+   * under a sold square does not change and the server refuses a mix: an
+   * upload that can only be refused should not be invited.
+   */
+  const takes = busy === null && !conflict && frozen.size === 0;
+  const [over, setOver] = useState(false);
+
+  useEffect(() => {
+    if (!takes) return;
+    const onPaste = (e: ClipboardEvent) => {
+      // Not while they are typing a name into something: that paste is theirs.
+      const el = document.activeElement;
+      if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) return;
+      const file = [...(e.clipboardData?.items ?? [])]
+        .filter((i) => i.kind === "file" && i.type.startsWith("image/"))
+        .map((i) => i.getAsFile())
+        .find((f): f is File => !!f);
+      if (!file) return;
+      e.preventDefault();
+      upload(file);
+    };
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+    // `upload` closes over what it needs and is stable enough for this.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [takes, view, space.id]);
+
+  const dropProps = takes
+    ? {
+        onDragOver: (e: DragEvent<HTMLElement>) => {
+          if (![...e.dataTransfer.types].includes("Files")) return;
+          e.preventDefault();
+          setOver(true);
+        },
+        onDragLeave: (e: DragEvent<HTMLElement>) => {
+          // Only when the pointer has really left, not on every child crossed.
+          if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+          setOver(false);
+        },
+        onDrop: (e: DragEvent<HTMLElement>) => {
+          e.preventDefault();
+          setOver(false);
+          const file = [...e.dataTransfer.files].find((f) => f.type.startsWith("image/"));
+          if (file) upload(file);
+          else if (e.dataTransfer.files.length > 0) setNotice("Use a JPG, PNG or WebP photo.");
+        },
+      }
+    : {};
+
+  /** The line the whole editor wears while something is being dragged over it. */
+  const dropVeil = over ? (
+    <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-[16px] border-2 border-dashed border-[#5B7CFF] bg-[rgba(8,12,24,0.72)]">
+      <p className="text-[14.5px] font-bold text-white">Drop it here</p>
+    </div>
+  ) : null;
+
+  const switcher = <SideSwitcher space={space} view={view} />;
+
   if (!photo) {
     const side = viewLabel ? viewLabel.toLowerCase() : "side";
     return (
-      <section className={`${glass} flex h-[calc(var(--app-vh,100dvh)-220px)] min-h-[280px] flex-col items-center justify-center gap-4 p-6 text-center`}>
+      <div className="flex flex-col gap-3">
+        {switcher}
+        <section
+          {...dropProps}
+          className={`${glass} relative flex h-[calc(var(--app-vh,100dvh)-260px)] min-h-[280px] flex-col items-center justify-center gap-4 p-6 text-center`}
+        >
         <div className="flex max-w-[440px] flex-col gap-2">
           <h3 className="text-[15.5px] font-strong text-white">
             {view ? `Your ${side}, as it really is` : "Show sponsors the real thing"}
@@ -309,28 +607,34 @@ export function PhotoEditor({
               : "Upload a photo of what you are selling space on, then place each spot on it. Once every spot is placed, your page and your X card show your photo instead of the drawing."}
           </p>
         </div>
-        {conflict ? (
-          <p className="max-w-[440px] text-[14.5px] text-amber">
-            {view
-              ? "This listing uses one photo for the whole product. Remove it first to give each side its own."
-              : "This listing has a photo per side. Remove those first to use one photo for the whole product."}
+          {conflict ? (
+            <p className="max-w-[440px] text-[14.5px] text-amber">
+              {view
+                ? "This listing uses one photo for the whole product. Remove it first to give each side its own."
+                : "This listing has a photo per side. Remove those first to use one photo for the whole product."}
+            </p>
+          ) : (
+            <button type="button" className={btnSmall} disabled={busy !== null} onClick={() => input.current?.click()}>
+              {busy === "upload" ? "Uploading…" : "Choose a photo"}
+            </button>
+          )}
+          <p className="text-[12.5px] text-white/55">
+            {conflict ? "JPG, PNG or WebP." : "Or drop one here, or paste one. JPG, PNG or WebP."} We remove the location and
+            camera details.
           </p>
-        ) : (
-          <button type="button" className={btnSmall} disabled={busy !== null} onClick={() => input.current?.click()}>
-            {busy === "upload" ? "Uploading…" : "Upload a photo"}
-          </button>
-        )}
-        <p className="text-[12.5px] text-white/55">JPG, PNG or WebP. We remove the location and camera details.</p>
-        {chooser}
-        {notice ? <Notice>{notice}</Notice> : null}
-      </section>
+          {chooser}
+          {notice ? <Notice>{notice}</Notice> : null}
+          {dropVeil}
+        </section>
+      </div>
     );
   }
 
   const selectedPosition = positions.find((p) => p.id === selected) ?? null;
 
   return (
-    <div className="flex flex-col gap-3">
+    <div {...dropProps} className="relative flex flex-col gap-3">
+      {switcher}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="min-w-0 text-[12.5px] text-white/55">
           {trouble.size > 0
@@ -390,6 +694,15 @@ export function PhotoEditor({
         onMove={(id, r) => setRects((prev) => new Map(prev).set(id, r))}
       />
 
+      <Arranger
+        templateId={space.template?.id ?? null}
+        view={view}
+        positions={positions}
+        frozen={frozen}
+        rects={rects}
+        onApply={setRects}
+      />
+
       <div className="flex min-h-[40px] items-center gap-2 overflow-x-auto">
         {positions.map((p) => {
           const on = p.id === selected;
@@ -418,6 +731,7 @@ export function PhotoEditor({
           {selectedPosition.label} is {trouble.get(selectedPosition.id)}.
         </p>
       ) : null}
+      {dropVeil}
       {notice ? <Notice>{notice}</Notice> : null}
     </div>
   );
