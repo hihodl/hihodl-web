@@ -528,7 +528,13 @@ export interface Space {
    * Who the creator credits as the inspiration: a HOLD creator (linked to
    * their page) or an X handle (linked to x.com). Null or absent: nobody.
    */
-  inspiredBy?: { kind: "hold" | "x"; handle: string; name?: string | null; href?: string } | null;
+  /**
+   * `page` is whether the credit has anywhere to point: somebody on HOLD who
+   * has never linked X has no `/s/<handle>`, so their credit is their name and
+   * nothing more. Absent on a server older than that, which is the old
+   * behaviour — every HOLD credit linked.
+   */
+  inspiredBy?: { kind: "hold" | "x"; handle: string; name?: string | null; page?: boolean; href?: string | null } | null;
   /**
    * The product in the creator's colours: `body` fills the drawing, `accent`
    * its handle, wheels and trim. Null draws the outline alone.
