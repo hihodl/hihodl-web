@@ -312,16 +312,33 @@ export function useYieldAuthorization(chain: string | null, token = "usdc") {
   );
 }
 
+/**
+ * A rate on offer, with the venue that offers it written on.
+ *
+ * Neither endpoint says which protocol answered it — it has no need to, each
+ * one only ever answers for itself. Native mode DOES need it: there the shelf
+ * is one card per protocol ("Aave · Base"), and a venue derived at the point
+ * of drawing from the chain is a second spelling of a fact this read already
+ * knows, which is how two spellings come to disagree.
+ */
+export interface RatedReserve extends YieldReserve {
+  venue: Venue;
+}
+
 /** The rates on offer, for the line that says what money would earn. Open to anyone. */
 export function useYieldReserves() {
-  return useRead<YieldReserve[]>("yield-reserves", async () => {
+  return useRead<RatedReserve[]>("yield-reserves", async () => {
+    const tag = (venue: Venue) => (reserves: YieldReserve[]) => reserves.map((r) => ({ ...r, venue }));
     const [kamino, aave] = await Promise.all([
-      getKaminoReserves().then((a) => a.reserves, () => [] as YieldReserve[]),
-      getAaveReserves().then((a) => a.reserves, () => [] as YieldReserve[]),
+      getKaminoReserves().then((a) => tag("kamino")(a.reserves), () => [] as RatedReserve[]),
+      getAaveReserves().then((a) => tag("aave")(a.reserves), () => [] as RatedReserve[]),
     ]);
     return [...kamino, ...aave];
   });
 }
+
+/** What a venue is called on screen. */
+export const VENUE_NAME: Record<Venue, string> = { kamino: "Kamino", aave: "Aave" };
 
 /* ── What our cut of the interest is ──────────────────────────────── */
 

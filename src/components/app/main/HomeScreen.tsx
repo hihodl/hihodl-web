@@ -19,6 +19,25 @@
  *   the bento         MONEY OUT and GET PAID
  *   Benefits          the web's own row of products, last
  *
+ * ── THE DISPLAY MODE DECIDES THE SHAPE OF THE BODY ──
+ *
+ * The person's one choice, made in the Menu and read from the shell
+ * (lib/app/display-mode):
+ *
+ *   fintech  No Stables card and no Earning card. The hero IS the disclosure
+ *            there — every dollar stablecoin is already inside it — and a card
+ *            naming tickers would be the only place in the mode that admits
+ *            they exist. Assets survives, because SOL and BTC are genuine
+ *            separate holdings, and the BTC family collapses into one row.
+ *   hybrid   All three cards, one row per ticker across every chain.
+ *   native   All three cards, one row per ticker AND chain, each naming its
+ *            network.
+ *
+ * Copied from the app's own branch (`(tabs)/(home)/index.tsx`: "Null in
+ * Fintech: there the hero is the whole disclosure"), including the Overview's
+ * row-count wording, which says "balances" in fintech and "tokens" elsewhere
+ * because "token" is a crypto word.
+ *
  * ── WHAT IS NOT HERE, AND WHY ──
  *
  * The app's four actions are Add · Pay/Move · Move/Info · Accounts. Paying,
@@ -46,6 +65,16 @@ import {
   toPaymentItem,
   type PaymentItem,
 } from "@/lib/app/activity-rules";
+import {
+  btcFamilyDisplayName,
+  btcFamilySubtitle,
+  isBtcFamilySymbol,
+  maskTokenSymbol,
+  mergeBtcFamilyRows,
+  showChainContext,
+  stableFiat,
+  type DisplayMode,
+} from "@/lib/app/display-mode";
 import type { Balance, LedgerSubaccount } from "@/lib/app/hold-api";
 import {
   isStable,
@@ -58,9 +87,11 @@ import {
   useTransfers,
   usdOf,
 } from "@/lib/app/money";
+import { chainLabel } from "@/lib/app/payments";
 
 import { useProductHref } from "../base";
 import { Ion, type IonName } from "../ion";
+import { useShellPrefs } from "../Shell";
 import { glass, Skeleton } from "../ui";
 import { ActionsRow, HeroBalance, MiniAction, money, TokenIcon } from "../wallet/app-kit";
 import { ActivityRow, GREEN, readRow } from "./activity-parts";
@@ -80,12 +111,14 @@ interface Scope {
 
 interface Row {
   key: string;
+  /** The RAW ticker. Masking happens where the row is drawn. */
   symbol: string;
-  name: string;
   /** Token units held. */
   amount: number;
   /** Dollars, or null when we hold no price for it. */
   usd: number | null;
+  /** The chain, in native. Null when the row spans every chain it sits on. */
+  chain: string | null;
 }
 
 const NAMES: Record<string, string> = {
@@ -98,36 +131,74 @@ const NAMES: Record<string, string> = {
   POL: "Polygon",
 };
 
-function displayName(symbol: string): string {
+/** What a row is called, after the BTC family has had its say. */
+function displayName(symbol: string, mode: DisplayMode): string {
+  if (isBtcFamilySymbol(symbol)) return btcFamilyDisplayName(symbol, mode);
   return NAMES[symbol.toUpperCase()] ?? symbol.toUpperCase();
 }
 
-/** One row per ticker, across every chain it sits on — the app's `buildAggregatedRows`. */
-function aggregate(balances: readonly Balance[], prices: Record<string, number>): Row[] {
-  const byTicker = new Map<string, Row>();
+function tickerOf(b: Balance): string {
+  return (b.symbol ?? b.tokenId ?? "").split(".")[0].toUpperCase();
+}
+
+/**
+ * The rows one scope holds, in the shape the mode asks for.
+ *
+ * Native keeps one row per POSITION — a ticker on a chain — because there the
+ * chain is a fact the reader wants. Fintech and hybrid aggregate by ticker
+ * across every chain (the app's `buildAggregatedRows`), and fintech then folds
+ * native BTC and cbBTC into one Bitcoin.
+ *
+ * A row is only priced when every leg of it is: one unpriced leg makes the
+ * whole row unpriced rather than quietly smaller.
+ */
+function holdingRows(balances: readonly Balance[], prices: Record<string, number>, mode: DisplayMode): Row[] {
+  const byKey = new Map<string, Row>();
   for (const b of balances) {
-    const symbol = (b.symbol ?? b.tokenId ?? "").split(".")[0].toUpperCase();
+    const symbol = tickerOf(b);
     if (!symbol) continue;
     const amount = Number(b.balance);
     if (!Number.isFinite(amount) || amount <= 0) continue;
     const usd = usdOf(b, prices);
-    const found = byTicker.get(symbol);
+    const chain = showChainContext(mode) ? (b.chain ?? null) : null;
+    const key = chain ? `${symbol}|${chain}` : symbol;
+    const found = byKey.get(key);
     if (found) {
       found.amount += amount;
-      // A row is only priced when every chain it spans is. One unpriced leg
-      // makes the whole row unpriced rather than quietly smaller.
       found.usd = found.usd === null || usd === null ? null : found.usd + usd;
     } else {
-      byTicker.set(symbol, { key: symbol, symbol, name: displayName(symbol), amount, usd });
+      byKey.set(key, { key, symbol, amount, usd, chain });
     }
   }
-  return [...byTicker.values()].sort((a, b) => (b.usd ?? 0) - (a.usd ?? 0));
+  const rows = [...byKey.values()].sort((a, b) => (b.usd ?? 0) - (a.usd ?? 0));
+  return mergeBtcFamilyRows(rows, mode);
+}
+
+/**
+ * How many things the Overview says a vault holds, and what it calls them.
+ *
+ * The app's `buildVaultOverviewRows` + `vaultRowCountLabel`: fintech groups
+ * every pegged stablecoin under its fiat, so three dollar tokens on two chains
+ * are one "USD", and the word is "balances" rather than "tokens" — "token" is
+ * a crypto word and fintech does not use it.
+ */
+function overviewCount(rows: readonly Row[], mode: DisplayMode): number {
+  if (mode !== "fintech") return rows.length;
+  const groups = new Set<string>();
+  for (const r of rows) groups.add(stableFiat(r.symbol) ? `fiat:${stableFiat(r.symbol)}` : `sym:${r.symbol}`);
+  return groups.size;
+}
+
+function overviewCountLabel(n: number, mode: DisplayMode): string {
+  if (mode === "fintech") return `${n} ${n === 1 ? "balance" : "balances"}`;
+  return `${n} ${n === 1 ? "token" : "tokens"}`;
 }
 
 /* ── The screen ───────────────────────────────────────────────────── */
 
 export function HomeScreen() {
   const href = useProductHref();
+  const { displayMode } = useShellPrefs();
   const container = useContainer();
   const subaccounts = useMemo<LedgerSubaccount[]>(() => container.data?.subaccounts ?? [], [container.data]);
 
@@ -159,7 +230,7 @@ export function HomeScreen() {
   const transfers = useTransfers(100);
 
   const priceMap = useMemo(() => prices.data?.prices ?? {}, [prices.data]);
-  const rows = useMemo(() => aggregate(here, priceMap), [here, priceMap]);
+  const rows = useMemo(() => holdingRows(here, priceMap, displayMode), [here, priceMap, displayMode]);
 
   const liquid = rows.reduce((sum, r) => sum + (r.usd ?? 0), 0);
   const unpriced = rows.filter((r) => r.usd === null);
@@ -211,9 +282,9 @@ export function HomeScreen() {
 
   /* The rows of this scope's activity, after the app's own rules. */
   const payments = useMemo<PaymentItem[]>(() => {
-    const all = (transfers.data?.transfers ?? []).map(toPaymentItem);
-    return activityRows(all.filter((p) => rowInScope(p, scope.slug)));
-  }, [transfers.data, scope.slug]);
+    const all = (transfers.data?.transfers ?? []).map((t) => toPaymentItem(t, displayMode));
+    return activityRows(all.filter((p) => rowInScope(p, scope.slug)), displayMode);
+  }, [transfers.data, scope.slug, displayMode]);
 
   const inScope = useMemo(() => (slug: string) => slug === scope.slug, [scope.slug]);
 
@@ -223,7 +294,7 @@ export function HomeScreen() {
   const moneyOut = useMemo(() => {
     const now = new Date();
     let total = 0;
-    for (const p of (transfers.data?.transfers ?? []).map(toPaymentItem)) {
+    for (const p of (transfers.data?.transfers ?? []).map((t) => toPaymentItem(t, displayMode))) {
       if (p.type !== "out") continue;
       if (!isStable(p.tokenSymbol ?? "")) continue;
       const d = new Date(p.date);
@@ -232,7 +303,7 @@ export function HomeScreen() {
       total += Math.abs(p.tokenAmount ?? 0);
     }
     return total;
-  }, [transfers.data]);
+  }, [transfers.data, displayMode]);
 
   const stables = rows.filter((r) => isStable(r.symbol));
   const assets = rows.filter((r) => !isStable(r.symbol));
@@ -242,8 +313,14 @@ export function HomeScreen() {
      is the dollars it is: the venues we use hold stablecoins. */
   const earning: Row[] =
     split.workingUsd > 0
-      ? [{ key: "earning-usd", symbol: "USDC", name: "US Dollar", amount: split.workingUsd, usd: split.workingUsd }]
+      ? [{ key: "earning-usd", symbol: "USDC", amount: split.workingUsd, usd: split.workingUsd, chain: null }]
       : [];
+
+  /* Fintech draws no Stables and no Earning card: the hero above already holds
+     every dollar of both, and a card naming tickers would be the only place in
+     the mode that admits they exist. Assets stays — SOL and BTC are genuinely
+     separate holdings, not cash. (The app's own branch, `(home)/index.tsx`.) */
+  const cash = displayMode !== "fintech";
 
   const [overview, setOverview] = useState(false);
 
@@ -337,15 +414,25 @@ export function HomeScreen() {
           </div>
 
           {/* ── What this scope holds ── */}
+          {cash ? (
+            <>
+              <HoldingsCard
+                label="Stables"
+                rows={stables.slice(0, CARD_ROWS)}
+                viewAll={stables.length > CARD_ROWS}
+                loading={!settled}
+                mode={displayMode}
+              />
+              <HoldingsCard label="Earning" rows={earning} loading={false} mode={displayMode} />
+            </>
+          ) : null}
           <HoldingsCard
-            label="Stables"
-            rows={stables.slice(0, CARD_ROWS)}
-            viewAll={stables.length > CARD_ROWS}
-            loading={!settled}
-            first
+            label="Assets"
+            rows={assets.slice(0, CARD_ROWS)}
+            viewAll={assets.length > CARD_ROWS}
+            loading={cash ? false : !settled}
+            mode={displayMode}
           />
-          <HoldingsCard label="Earning" rows={earning} loading={false} />
-          <HoldingsCard label="Assets" rows={assets.slice(0, CARD_ROWS)} viewAll={assets.length > CARD_ROWS} loading={false} />
 
           {/* ── Activity ── */}
           <section className={`${glass} mt-[18px]`} aria-label="Activity">
@@ -378,7 +465,12 @@ export function HomeScreen() {
               payments.slice(0, RECENT_ACTIVITY_ROWS).map((item, i) => (
                 <div key={item.txHash || item.id}>
                   {i > 0 ? <div className="ml-[52px] h-px bg-white/[0.06]" /> : null}
-                  <ActivityRow item={item} reading={readRow(item, inScope, subaccounts, priceMap)} surface="flush" />
+                  <ActivityRow
+                    item={item}
+                    reading={readRow(item, inScope, subaccounts, priceMap, displayMode)}
+                    surface="flush"
+                    mode={displayMode}
+                  />
                 </div>
               ))
             )}
@@ -443,6 +535,7 @@ export function HomeScreen() {
           balances={balances.data}
           prices={priceMap}
           supplied={supplied.bySlug}
+          mode={displayMode}
           onClose={() => setOverview(false)}
         />
       ) : null}
@@ -506,17 +599,17 @@ function HoldingsCard({
   rows,
   viewAll,
   loading,
-  first,
+  mode,
 }: {
   label: string;
   rows: Row[];
   viewAll?: boolean;
   loading: boolean;
-  first?: boolean;
+  mode: DisplayMode;
 }) {
   if (loading) {
     return (
-      <div className={first ? "mt-[18px]" : "mt-[18px]"}>
+      <div className="mt-[18px]">
         <p className="mb-2 ml-1 text-[11px] font-bold uppercase tracking-[0.6px] text-white/55">{label}</p>
         <div className={`${glass} flex flex-col gap-2 p-4`}>
           <Skeleton className="h-12" />
@@ -533,7 +626,7 @@ function HoldingsCard({
         {rows.map((r, i) => (
           <div key={r.key}>
             {i > 0 ? <div className="ml-[52px] h-px bg-white/[0.06]" /> : null}
-            <HoldingRow row={r} />
+            <HoldingRow row={r} mode={mode} />
           </div>
         ))}
         {viewAll ? (
@@ -546,8 +639,18 @@ function HoldingsCard({
   );
 }
 
-function HoldingRow({ row }: { row: Row }) {
+/**
+ * The ticker under the name is the masked one, and the chain is beside it only
+ * in native — where the app puts it as a mini badge on the icon rather than
+ * grey text, for the reason it wrote down: saying the network quietly is still
+ * saying it, and a fintech reader has no use for the answer.
+ */
+function HoldingRow({ row, mode }: { row: Row; mode: DisplayMode }) {
+  const ticker = maskTokenSymbol(row.symbol, mode) || row.symbol;
   const known = row.symbol === "USDC" || row.symbol === "SOL";
+  const units = row.amount.toLocaleString("en-US", { maximumFractionDigits: isStable(row.symbol) ? 2 : 5 });
+  const fastBtc = btcFamilySubtitle(row.symbol, mode);
+  const under = [`${units} ${ticker}`, row.chain ? chainLabel(row.chain) : fastBtc].filter(Boolean).join(" · ");
   return (
     <div className="flex w-full items-center justify-between gap-3 px-4 py-3.5">
       <span className="flex min-w-0 flex-1 items-center gap-3">
@@ -555,14 +658,12 @@ function HoldingRow({ row }: { row: Row }) {
           <TokenIcon symbol={row.symbol as "USDC" | "SOL"} />
         ) : (
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/[0.14] bg-white/[0.08] text-[11px] font-strong text-white">
-            {row.symbol.slice(0, 3)}
+            {ticker.slice(0, 3)}
           </span>
         )}
         <span className="min-w-0">
-          <span className="block truncate text-[14px] font-strong text-white">{row.name}</span>
-          <span className="mt-0.5 block truncate text-[12px] tabular-nums text-white/55">
-            {`${row.amount.toLocaleString("en-US", { maximumFractionDigits: isStable(row.symbol) ? 2 : 5 })} ${row.symbol}`}
-          </span>
+          <span className="block truncate text-[14px] font-strong text-white">{displayName(row.symbol, mode)}</span>
+          <span className="mt-0.5 block truncate text-[12px] tabular-nums text-white/55">{under}</span>
         </span>
       </span>
       <span className="text-right text-[14px] font-bold tabular-nums text-white">
@@ -584,21 +685,27 @@ function Overview({
   balances,
   prices,
   supplied,
+  mode,
   onClose,
 }: {
   scopes: readonly Scope[];
   balances: Record<string, { balances: Balance[] }> | undefined;
   prices: Record<string, number>;
   supplied: Record<string, number>;
+  mode: DisplayMode;
   onClose: () => void;
 }) {
   const vaults = scopes.map((s) => {
-    const rows = aggregate(balances?.[s.slug]?.balances ?? [], prices);
+    const rows = holdingRows(balances?.[s.slug]?.balances ?? [], prices, mode);
     const liquid = rows.reduce((sum, r) => sum + (r.usd ?? 0), 0);
-    return { scope: s, rows, split: splitForContainer({ slug: s.slug, liquidUsd: liquid, suppliedBySlug: supplied }) };
+    return {
+      scope: s,
+      count: overviewCount(rows, mode),
+      split: splitForContainer({ slug: s.slug, liquidUsd: liquid, suppliedBySlug: supplied }),
+    };
   });
   const total = vaults.reduce((sum, v) => sum + v.split.totalUsd, 0);
-  const assets = vaults.reduce((sum, v) => sum + v.rows.length, 0);
+  const assets = vaults.reduce((sum, v) => sum + v.count, 0);
 
   return (
     <div className="fixed inset-0 z-[70] flex items-end justify-center sm:items-center">
@@ -609,7 +716,7 @@ function Overview({
           <p className="mt-1 text-[32px] font-strong leading-[38px] tabular-nums text-white">
             {balances === undefined ? "—" : money(total)}
           </p>
-          <p className="mt-1 text-[12px] text-white/55">{`${vaults.length} vaults · ${assets} assets`}</p>
+          <p className="mt-1 text-[12px] text-white/55">{`${vaults.length} vaults · ${overviewCountLabel(assets, mode)}`}</p>
         </div>
         <div className="mt-4 flex flex-col gap-2">
           {vaults.map((v) => (
@@ -617,7 +724,7 @@ function Overview({
               <span className="min-w-0">
                 <span className="block truncate text-[14px] font-strong text-white">{v.scope.label}</span>
                 <span className="mt-0.5 block truncate text-[12px] text-white/55">
-                  {`${v.rows.length} ${v.rows.length === 1 ? "balance" : "balances"}${v.split.isWorking ? " · Earning" : ""}`}
+                  {`${overviewCountLabel(v.count, mode)}${v.split.isWorking ? " · Earning" : ""}`}
                 </span>
               </span>
               <span className="text-right text-[14px] font-bold tabular-nums text-white">
