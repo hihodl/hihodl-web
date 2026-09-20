@@ -9,16 +9,19 @@
  *   payout* / PAYOUT_STATE_*        src/send/payoutHistory.ts
  *   formatScheduleAmount            src/features/scheduledPayments/schedule.ts
  *
- * Two things the web does differently, both because it has less, never more:
- * the chat half of the app's list (`/payment-notes/conversations`) is not
- * mounted on this backend, so a thread here is built from `/transfers` alone;
- * and symbols are printed as they are (`12.00 USDC`) rather than masked into
- * dollars, which is what every other money screen on the web already does.
+ * One thing the web does differently, because it has less and never more: the
+ * chat half of the app's list (`/payment-notes/conversations`) is not mounted
+ * on this backend, so a thread here is built from `/transfers` alone.
+ *
+ * Symbols follow the display mode like every other money screen — `12.00 USD`
+ * in fintech, `12.00 USDC` in hybrid and native. The mode arrives as a
+ * parameter; nothing here decides it.
  *
  * Nothing here writes. Payments on the web is view only: paying, requesting,
  * accepting, cancelling a schedule and funding a payout all stay in the app.
  */
 
+import { maskTokenSymbol, type DisplayMode } from "./display-mode";
 import type { OfframpOrder, PayoutState, Schedule, Transfer } from "./hold-api";
 import type { IonName } from "@/components/app/ion";
 
@@ -192,15 +195,17 @@ function transferMessage(t: Transfer): string {
 /**
  * The second line of a thread row: "You sent 12.00 USDC".
  *
- * The app's `formatLastActivity`, without the fiat masking — the web prints
- * the symbol it was paid in, like the rest of its money screens.
+ * The app's `formatLastActivity`. The ticker is masked here rather than where
+ * the line was built, so the same stored line reads as dollars or as its coin
+ * depending only on the mode the reader is in.
  */
-export function lastActivityLine(raw: string): string {
+export function lastActivityLine(raw: string, mode: DisplayMode): string {
   const msg = raw.trim();
+  const say = (verb: string, amount: string, symbol: string) => `You ${verb} ${amount} ${maskTokenSymbol(symbol, mode)}`;
   const minus = /^[–-]\s*([\d.,]+)\s*([A-Z]+)\b/.exec(msg);
-  if (minus) return `You sent ${minus[1]} ${minus[2]}`;
+  if (minus) return say("sent", minus[1], minus[2]);
   const plus = /^\+\s*([\d.,]+)\s*([A-Z]+)\b/.exec(msg);
-  if (plus) return `You received ${plus[1]} ${plus[2]}`;
+  if (plus) return say("received", plus[1], plus[2]);
   return msg;
 }
 

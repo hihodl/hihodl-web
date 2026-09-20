@@ -33,6 +33,7 @@ import {
   timeLabel,
   type PaymentItem,
 } from "@/lib/app/activity-rules";
+import type { DisplayMode } from "@/lib/app/display-mode";
 import { isStable } from "@/lib/app/money";
 import type { LedgerSubaccount } from "@/lib/app/hold-api";
 
@@ -137,8 +138,8 @@ function Disc({ className = "", style, children }: { className?: string; style?:
   );
 }
 
-/** A token's disc: the two we ship art for, then its own letters. */
-function TokenDisc({ symbol, size = 44 }: { symbol: string; size?: number }) {
+/** A token's disc: the two we ship art for, then its own letters, named for the mode. */
+function TokenDisc({ symbol, size = 44, mode }: { symbol: string; size?: number; mode: DisplayMode }) {
   const sym = (symbol || "").toUpperCase();
   const art = sym === "USDC" ? "/pay/usdc.png" : sym === "SOL" ? "/pay/solana.svg" : null;
   if (art) {
@@ -152,7 +153,7 @@ function TokenDisc({ symbol, size = 44 }: { symbol: string; size?: number }) {
       className="flex shrink-0 items-center justify-center rounded-full border border-white/[0.14] bg-white/[0.08] font-strong text-white"
       style={{ width: size, height: size, fontSize: Math.round(size * 0.3) }}
     >
-      {maskSymbol(sym).slice(0, 3) || "?"}
+      {maskSymbol(sym, mode).slice(0, 3) || "?"}
     </span>
   );
 }
@@ -161,7 +162,7 @@ function TokenDisc({ symbol, size = 44 }: { symbol: string; size?: number }) {
  * The row's face. Person first: the big circle is who, and the money is
  * demoted — on the web there is no mini badge yet, so the circle is all of it.
  */
-export function ActivityAvatar({ item, displayTitle }: { item: PaymentItem; displayTitle: string }) {
+export function ActivityAvatar({ item, displayTitle, mode }: { item: PaymentItem; displayTitle: string; mode: DisplayMode }) {
   if (item.type === "move") {
     // Asked of the kind, not of the slugs: only the server sees every leg of
     // the event, and a manual supply is labelled "Main → Savings" while
@@ -194,14 +195,14 @@ export function ActivityAvatar({ item, displayTitle }: { item: PaymentItem; disp
     return item.tokenSymbol && item.tokenSymbolTo ? (
       <span className="relative block h-11 w-11 shrink-0">
         <span className="absolute left-0 top-[7px]">
-          <TokenDisc symbol={item.tokenSymbol} size={30} />
+          <TokenDisc symbol={item.tokenSymbol} size={30} mode={mode} />
         </span>
         <span className="absolute right-0 top-[7px]">
-          <TokenDisc symbol={item.tokenSymbolTo} size={30} />
+          <TokenDisc symbol={item.tokenSymbolTo} size={30} mode={mode} />
         </span>
       </span>
     ) : (
-      <TokenDisc symbol={item.tokenSymbol ?? "?"} />
+      <TokenDisc symbol={item.tokenSymbol ?? "?"} mode={mode} />
     );
   }
 
@@ -275,12 +276,16 @@ export interface RowReading {
  * `prices` is used only for a volatile row with no frozen dollar value. A
  * price we do not have is not zero: the row falls back to the coin amount
  * rather than print a confident $0.00.
+ *
+ * `mode` decides what a coin is CALLED when it comes to that — "USD" in
+ * fintech, "USDC" in hybrid and native.
  */
 export function readRow(
   item: PaymentItem,
   inScope: (slug: string) => boolean,
   subaccounts: readonly LedgerSubaccount[],
   prices: Record<string, number>,
+  mode: DisplayMode,
 ): RowReading {
   const counterparty = item.type === "move" ? resolveMoveTitle(item.fromAddress, item.toAddress, subaccounts) : item.title;
   const processing = item.amount === "Processing…";
@@ -308,7 +313,7 @@ export function readRow(
       const frozen = Number.isFinite(item.usdValueAtTx)
         ? Math.abs(item.usdValueAtTx as number)
         : Math.abs(item.tokenAmount ?? 0) * (Number.isFinite(price) ? (price as number) : 0);
-      amount = frozen > 0 ? money(frozen) : `${fmtTokenAmount(Math.abs(item.tokenAmount ?? 0), sym)} ${maskSymbol(sym)}`;
+      amount = frozen > 0 ? money(frozen) : `${fmtTokenAmount(Math.abs(item.tokenAmount ?? 0), sym)} ${maskSymbol(sym, mode)}`;
     }
     if (sign) amount = `${sign} ${amount}`;
   }
@@ -330,12 +335,14 @@ export function ActivityRow({
   reading,
   onOpen,
   surface,
+  mode,
 }: {
   item: PaymentItem;
   reading: RowReading;
   onOpen?: () => void;
   /** "card" is the Activity screen's own plate; "flush" is a row inside the Home card. */
   surface: "card" | "flush";
+  mode: DisplayMode;
 }) {
   const plate =
     surface === "card"
@@ -353,7 +360,7 @@ export function ActivityRow({
   const body = (
     <>
       <span className="flex min-w-0 flex-1 items-center gap-3">
-        <ActivityAvatar item={item} displayTitle={reading.counterparty} />
+        <ActivityAvatar item={item} displayTitle={reading.counterparty} mode={mode} />
         <span className="min-w-0 flex-1">
           {/* The action headlines the row; the counterparty drops below it. */}
           <span className="block truncate text-[14px] font-strong text-white">{reading.action}</span>

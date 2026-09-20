@@ -35,6 +35,7 @@ import { signOut, useCreatorSession } from "@/lib/creator/session";
 import { creatorText, isSeatCode, pendingSeat, type TeamMember, type WorkListing } from "@/lib/creator/team";
 import type { XAccountStatus } from "@/lib/creator/types";
 import { useAgency, type Agency } from "@/lib/app/agency";
+import { asDisplayMode, DEFAULT_DISPLAY_MODE, type DisplayMode } from "@/lib/app/display-mode";
 import { chosenUsername } from "@/lib/app/me";
 import { useDoor } from "@/lib/app/onboarding";
 import { roleOf, waitingOnYou, type ShellRole } from "@/lib/app/spaces-model";
@@ -84,10 +85,23 @@ export interface ShellState {
 
 const ShellContext = createContext<ShellState | null>(null);
 
-/** How the shell is drawn, which Settings can change: only the sidebar, for now. */
+/**
+ * How the product is drawn, which Settings can change.
+ *
+ * `collapsed` is the sidebar's width and belongs to this browser. `displayMode`
+ * is the app's own `useUserPrefs.walletMode` — fintech, hybrid or native — and
+ * every money screen reads it from here rather than deciding for itself.
+ *
+ * Both live in `localStorage` for the same reason: the app persists the display
+ * mode to AsyncStorage, and `GET /settings` carries no field for it (see
+ * lib/app/display-mode). So the choice is remembered per browser, not per
+ * person, until the backend grows somewhere to put it.
+ */
 export interface ShellPrefs {
   collapsed: boolean;
   setCollapsed: (v: boolean) => void;
+  displayMode: DisplayMode;
+  setDisplayMode: (v: DisplayMode) => void;
 }
 
 const PrefsContext = createContext<ShellPrefs | null>(null);
@@ -173,6 +187,8 @@ export function Centered({ children }: { children: ReactNode }) {
 /* ── Signed in ────────────────────────────────────────────────────── */
 
 const COLLAPSE_KEY = "hold-shell-collapsed";
+/** The app's `walletMode`, kept where the app keeps it: on the device. */
+const DISPLAY_MODE_KEY = "hold-display-mode";
 
 function SignedIn({ session, children }: { session: Session; children: ReactNode }) {
   const listings = useListings();
@@ -265,14 +281,20 @@ function Frame({ children }: { children: ReactNode }) {
   const active = activeKey(rel);
 
   const [collapsed, setCollapsed] = useState(false);
+  const [displayMode, setDisplayMode] = useState<DisplayMode>(DEFAULT_DISPLAY_MODE);
   const [drawer, setDrawer] = useState(false);
   const [palette, setPalette] = useState(false);
 
+  // Read after the first paint, never during it: the server has no browser to
+  // ask, so a value read during render would be a hydration mismatch. Until it
+  // lands every screen draws the app's own default, which is fintech.
   useEffect(() => {
     try {
       setCollapsed(window.localStorage.getItem(COLLAPSE_KEY) === "1");
+      const stored = asDisplayMode(window.localStorage.getItem(DISPLAY_MODE_KEY));
+      if (stored) setDisplayMode(stored);
     } catch {
-      /* the sidebar opens expanded */
+      /* the sidebar opens expanded, and the view is the default one */
     }
   }, []);
 
@@ -284,8 +306,19 @@ function Frame({ children }: { children: ReactNode }) {
       /* remembered for this page only */
     }
   }, []);
+  const saveDisplayMode = useCallback((v: DisplayMode) => {
+    setDisplayMode(v);
+    try {
+      window.localStorage.setItem(DISPLAY_MODE_KEY, v);
+    } catch {
+      /* remembered for this page only */
+    }
+  }, []);
   const toggleCollapsed = () => saveCollapsed(!collapsed);
-  const prefs = useMemo(() => ({ collapsed, setCollapsed: saveCollapsed }), [collapsed, saveCollapsed]);
+  const prefs = useMemo(
+    () => ({ collapsed, setCollapsed: saveCollapsed, displayMode, setDisplayMode: saveDisplayMode }),
+    [collapsed, saveCollapsed, displayMode, saveDisplayMode],
+  );
 
   // Closing the drawer on every navigation, so a tap on a link is the whole gesture.
   useEffect(() => setDrawer(false), [pathname]);

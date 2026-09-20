@@ -13,10 +13,18 @@
  *
  * The app's sheet ends in a Repeat action (send again, swap again). The web
  * has no such button: paying is the app's.
+ *
+ * ── WHAT THE DISPLAY MODE TAKES OUT ──
+ *
+ * The same three lines the app's sheet drops (`TransactionDetailsSheet`): the
+ * network is named in NATIVE only, and the hash with its explorer in hybrid
+ * and native. In fintech a hash refers to a chain the reader has been told
+ * does not exist, so there is nowhere for it to point.
  */
 
 import { useState, type ReactNode } from "react";
 
+import { maskTokenSymbol, showChainContext, showTxReceipt, type DisplayMode } from "@/lib/app/display-mode";
 import type { Transfer } from "@/lib/app/hold-api";
 import { useTransferDetails } from "@/lib/app/money";
 import {
@@ -34,7 +42,7 @@ import { BackHeader } from "../hold";
 import { Ion } from "../ion";
 import { GREEN, SUB, TokenIcon } from "../wallet/app-kit";
 
-export function TxDetails({ id, row, onBack }: { id: string; row: Transfer | null; onBack: () => void }) {
+export function TxDetails({ id, row, mode, onBack }: { id: string; row: Transfer | null; mode: DisplayMode; onBack: () => void }) {
   const details = useTransferDetails(id);
   const d = details.data ?? null;
   const failed = !!details.error;
@@ -42,9 +50,10 @@ export function TxDetails({ id, row, onBack }: { id: string; row: Transfer | nul
   const direction = row?.direction ?? "out";
   const inbound = direction === "in";
   const symbol = row ? tokenTicker(row) : "";
+  const ticker = maskTokenSymbol(symbol, mode);
   const amount = row ? transferAmount(row) : null;
   const chain = row?.chain ?? d?.chain ?? null;
-  const hash = d?.txHash ?? row?.txHash ?? null;
+  const hash = showTxReceipt(mode) ? d?.txHash ?? row?.txHash ?? null : null;
   const status = statusWord(d?.status ?? row?.status);
   const when = d?.createdAt ?? row?.createdAt ?? null;
   const peer = row ? (inbound ? row.fromAlias || row.fromAddress : row.toAlias || row.toAddress) : null;
@@ -55,7 +64,7 @@ export function TxDetails({ id, row, onBack }: { id: string; row: Transfer | nul
       ? "—"
       : amount === 0
         ? "Processing…"
-        : `${inbound ? "+" : "-"}${Math.abs(amount).toLocaleString("en-US", { maximumFractionDigits: Math.abs(amount) >= 1 ? 2 : 6 })} ${symbol}`;
+        : `${inbound ? "+" : "-"}${Math.abs(amount).toLocaleString("en-US", { maximumFractionDigits: Math.abs(amount) >= 1 ? 2 : 6 })} ${ticker}`;
 
   return (
     <>
@@ -84,8 +93,8 @@ export function TxDetails({ id, row, onBack }: { id: string; row: Transfer | nul
 
       <Block className="mt-3">
         <KV label={inbound ? "From" : "To"} value={peer ? (peer.startsWith("@") ? peer : truncMid(peer)) : "—"} />
-        <KV label="Network" value={chainLabel(chain)} />
-        {d?.inbound?.confirmations ? <KV label="Confirmations" value={String(d.inbound.confirmations)} /> : null}
+        {showChainContext(mode) ? <KV label="Network" value={chainLabel(chain)} /> : null}
+        {showChainContext(mode) && d?.inbound?.confirmations ? <KV label="Confirmations" value={String(d.inbound.confirmations)} /> : null}
         {hash ? <KVCopy label="Transaction Hash" value={truncMid(hash)} raw={hash} /> : null}
       </Block>
 

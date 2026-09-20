@@ -30,6 +30,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import { maskTokenSymbol, type DisplayMode } from "@/lib/app/display-mode";
 import type { Transfer } from "@/lib/app/hold-api";
 import { useTransfers } from "@/lib/app/money";
 import {
@@ -46,6 +47,7 @@ import {
 import { useProductHref } from "../base";
 import { BackHeader, Column, SectionTitle } from "../hold";
 import { Ion, type IonName } from "../ion";
+import { useShellPrefs } from "../Shell";
 import { Skeleton } from "../ui";
 import { cardClass } from "../wallet/app-kit";
 import { PayoutsPanel, ScheduledPanel } from "./Standing";
@@ -59,6 +61,7 @@ type View = { kind: "list" } | { kind: "thread"; id: string } | { kind: "tx"; id
 const PHRASES = ["Search", "Search @username", "Search contact", "Paste wallet address"];
 
 export function PaymentsScreen() {
+  const { displayMode } = useShellPrefs();
   const transfers = useTransfers(100);
   const [view, setView] = useState<View>({ kind: "list" });
 
@@ -71,7 +74,12 @@ export function PaymentsScreen() {
     const thread = threads.find((t) => t.id === view.id) ?? null;
     return (
       <Column>
-        <ThreadView thread={thread} onBack={() => setView({ kind: "list" })} onOpenTx={(id) => setView({ kind: "tx", id })} />
+        <ThreadView
+          thread={thread}
+          mode={displayMode}
+          onBack={() => setView({ kind: "list" })}
+          onOpenTx={(id) => setView({ kind: "tx", id })}
+        />
       </Column>
     );
   }
@@ -80,7 +88,7 @@ export function PaymentsScreen() {
     const row = threads.flatMap((t) => t.transfers).find((t) => t.id === view.id) ?? null;
     return (
       <Column>
-        <TxDetails id={view.id} row={row} onBack={() => setView({ kind: "list" })} />
+        <TxDetails id={view.id} row={row} mode={displayMode} onBack={() => setView({ kind: "list" })} />
       </Column>
     );
   }
@@ -89,6 +97,7 @@ export function PaymentsScreen() {
     <Column>
       <List
         threads={threads}
+        mode={displayMode}
         loading={transfers.data === undefined && !transfers.error}
         failed={!!transfers.error}
         onRetry={() => void transfers.mutate()}
@@ -106,12 +115,14 @@ export function PaymentsScreen() {
 
 function List({
   threads,
+  mode,
   loading,
   failed,
   onRetry,
   onOpen,
 }: {
   threads: PaymentThread[];
+  mode: DisplayMode;
   loading: boolean;
   failed: boolean;
   onRetry: () => void;
@@ -199,7 +210,7 @@ function List({
       ) : null}
 
       {shown.map((t) => (
-        <ThreadRow key={t.id} thread={t} onOpen={() => onOpen(t.id)} />
+        <ThreadRow key={t.id} thread={t} mode={mode} onOpen={() => onOpen(t.id)} />
       ))}
     </div>
   );
@@ -243,7 +254,7 @@ function SearchRow({ value, onChange }: { value: string; onChange: (v: string) =
  * time. The card's ink is a colour and not a wash, so hover lifts that colour
  * — a white overlay would replace #15313D and read as a dimmer card.
  */
-function ThreadRow({ thread, onOpen }: { thread: PaymentThread; onOpen: () => void }) {
+function ThreadRow({ thread, mode, onOpen }: { thread: PaymentThread; mode: DisplayMode; onOpen: () => void }) {
   const name = threadDisplayName(thread);
   return (
     <button
@@ -254,7 +265,7 @@ function ThreadRow({ thread, onOpen }: { thread: PaymentThread; onOpen: () => vo
       <Avatar kind={thread.kind} />
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[15px] font-extrabold tracking-[-0.2px] text-white">{name}</span>
-        <span className="mt-0.5 block truncate text-[13px] text-white/75">{lastActivityLine(thread.lastLine)}</span>
+        <span className="mt-0.5 block truncate text-[13px] text-white/75">{lastActivityLine(thread.lastLine, mode)}</span>
       </span>
       <span className="shrink-0 text-[12px] text-white/55">{threadTime(thread.lastTs)}</span>
     </button>
@@ -356,10 +367,12 @@ function EmptyHistory() {
  */
 function ThreadView({
   thread,
+  mode,
   onBack,
   onOpenTx,
 }: {
   thread: PaymentThread | null;
+  mode: DisplayMode;
   onBack: () => void;
   onOpenTx: (id: string) => void;
 }) {
@@ -378,7 +391,7 @@ function ThreadView({
       <SectionTitle first>Payments</SectionTitle>
       <div className={`${cardClass} flex flex-col`}>
         {rows.map((t, i) => (
-          <TransferRow key={t.id} row={t} first={i === 0} onOpen={() => onOpenTx(t.id)} />
+          <TransferRow key={t.id} row={t} first={i === 0} mode={mode} onOpen={() => onOpenTx(t.id)} />
         ))}
       </div>
       <p className="mt-3 px-1 text-[12px] leading-[17px] text-white/55">
@@ -388,9 +401,10 @@ function ThreadView({
   );
 }
 
-function TransferRow({ row, first, onOpen }: { row: Transfer; first: boolean; onOpen: () => void }) {
+function TransferRow({ row, first, mode, onOpen }: { row: Transfer; first: boolean; mode: DisplayMode; onOpen: () => void }) {
   const amount = transferAmount(row);
   const inbound = row.direction === "in";
+  const ticker = maskTokenSymbol(tokenTicker(row), mode);
   return (
     <button
       type="button"
@@ -406,7 +420,7 @@ function TransferRow({ row, first, onOpen }: { row: Transfer; first: boolean; on
       </span>
       <span className={`shrink-0 text-[14px] font-strong tabular-nums ${inbound ? "text-[#20D690]" : "text-white"}`}>
         {inbound ? "+" : "-"}
-        {Math.abs(amount).toFixed(2)} {tokenTicker(row)}
+        {Math.abs(amount).toFixed(2)} {ticker}
       </span>
     </button>
   );
