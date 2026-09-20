@@ -18,11 +18,12 @@
  * those.
  */
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { Ion, type IonName } from "../ion";
 
 import { Photo, PointsPill } from "./kit";
+import { PhotoViewer } from "./PhotoViewer";
 import { P, boardLabel, count, distance, money, nights as nightsWord, roomSize, shortDate } from "./look";
 import type { GalleryImage, Rate, RoomInfo, StayDetail } from "@/lib/app/stays";
 
@@ -80,6 +81,8 @@ function Chip({ children }: { children: React.ReactNode }) {
  */
 export function Gallery({ images, alt }: { images: GalleryImage[]; alt: string }) {
   const [at, setAt] = useState(0);
+  /** null when closed; otherwise the photograph the viewer opens on. */
+  const [viewing, setViewing] = useState<number | null>(null);
   if (images.length === 0) {
     return (
       <div className="flex h-[280px] w-full items-center justify-center rounded-[18px]" style={{ background: "rgba(255,255,255,0.03)", color: P.textFaint }}>
@@ -92,7 +95,18 @@ export function Gallery({ images, alt }: { images: GalleryImage[]; alt: string }
   return (
     <div className="flex flex-col gap-2">
       <div className="relative h-[240px] w-full overflow-hidden rounded-[18px] sm:h-[340px]" style={{ background: "rgba(255,255,255,0.03)" }}>
-        <Photo image={shown} alt={shown.caption ?? alt} iconSize={28} priority sizes="(min-width: 1024px) 900px, 100vw" />
+        {/* The frame is the way in. A photograph you cannot open is a
+            thumbnail, and this one is 340px of a room somebody is deciding
+            four hundred euros on. The arrows and the counter sit above it and
+            stop the click, so paging is still paging. */}
+        <button
+          type="button"
+          aria-label="Open photographs"
+          onClick={() => setViewing(at)}
+          className="absolute inset-0 block h-full w-full cursor-zoom-in p-0"
+        >
+          <Photo image={shown} alt={shown.caption ?? alt} iconSize={28} priority sizes="(min-width: 1024px) 900px, 100vw" />
+        </button>
         {images.length > 1 ? (
           <>
             <Arrow side="left" onClick={() => setAt((i) => (i - 1 + images.length) % images.length)} />
@@ -130,6 +144,14 @@ export function Gallery({ images, alt }: { images: GalleryImage[]; alt: string }
           ))}
         </div>
       ) : null}
+
+      <PhotoViewer
+        images={images}
+        initialIndex={viewing ?? 0}
+        open={viewing !== null}
+        onClose={() => setViewing(null)}
+        title={alt}
+      />
     </div>
   );
 }
@@ -267,6 +289,97 @@ const AMENITY_HEADLINE = 4;
  * under it, so the group reads as "this room, these prices" rather than as a
  * box containing boxes.
  */
+/**
+ * A room's photographs: a strip that opens a viewer.
+ *
+ * TWO THINGS WERE MISSING AND THEY WERE THE SAME THING
+ *
+ * The thumbnails were `<span>`s — a dead strip. And the scrollbar is hidden
+ * (it is, everywhere in this file, because a grey bar under eight photographs
+ * is the ugliest thing on the page), which on a trackpad is fine and with a
+ * mouse leaves no way to move it at all. So the pictures open a viewer, and
+ * the strip gets arrows of its own for the pointer that cannot swipe.
+ *
+ * The strip shows eight; the viewer gets the WHOLE room. When there are more
+ * than eight the last tile says how many, because otherwise the ninth
+ * photograph is a room nobody knows exists.
+ */
+function RoomStrip({ photos, name }: { photos: GalleryImage[]; name: string }) {
+  const rail = useRef<HTMLDivElement>(null);
+  const [viewing, setViewing] = useState<number | null>(null);
+  const shown = photos.slice(0, STRIP_TILES);
+  const hidden = photos.length - shown.length;
+
+  // By a tile and a half, so the photograph the eye stopped on stays in frame
+  // and the move is clearly a move.
+  const nudge = (dir: 1 | -1) => rail.current?.scrollBy({ left: dir * 160, behavior: "smooth" });
+
+  return (
+    <div className="group/strip relative">
+      <div
+        ref={rail}
+        className="flex gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {shown.map((p, i) => (
+          <button
+            key={`${p.url}-${i}`}
+            type="button"
+            aria-label={`${name} — photograph ${i + 1}`}
+            onClick={() => setViewing(i)}
+            className="relative h-[70px] w-[104px] shrink-0 cursor-zoom-in overflow-hidden rounded-[12px] p-0"
+          >
+            <Photo image={p} alt={name} iconSize={16} sizes="104px" />
+            {hidden > 0 && i === shown.length - 1 ? (
+              <span
+                className="absolute inset-0 flex items-center justify-center text-[13px] font-extrabold tabular-nums"
+                style={{ background: "rgba(7,12,18,0.62)", color: P.text }}
+              >
+                {`+${hidden}`}
+              </span>
+            ) : null}
+          </button>
+        ))}
+      </div>
+
+      {/* Pointer only: a touch screen has the strip itself, and these would
+          sit on top of the photographs it is already dragging. */}
+      {photos.length > 2 ? (
+        <>
+          <StripArrow side="left" onClick={() => nudge(-1)} />
+          <StripArrow side="right" onClick={() => nudge(1)} />
+        </>
+      ) : null}
+
+      <PhotoViewer
+        images={photos}
+        initialIndex={viewing ?? 0}
+        open={viewing !== null}
+        onClose={() => setViewing(null)}
+        title={name}
+      />
+    </div>
+  );
+}
+
+/** How many tiles the strip lays out before it starts counting the rest. */
+const STRIP_TILES = 8;
+
+function StripArrow({ side, onClick }: { side: "left" | "right"; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-label={side === "left" ? "Scroll photographs left" : "Scroll photographs right"}
+      onClick={onClick}
+      className={`absolute top-[35px] hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-[999px] opacity-0 transition-opacity group-hover/strip:opacity-100 sm:flex ${
+        side === "left" ? "left-1" : "right-1"
+      }`}
+      style={{ background: "rgba(7,12,18,0.72)", color: P.text }}
+    >
+      <Ion name={side === "left" ? "chevron-back" : "chevron-forward"} size={16} />
+    </button>
+  );
+}
+
 export function RoomGroup({
   room,
   rates,
@@ -297,13 +410,7 @@ export function RoomGroup({
       </h3>
 
       {room && room.photos.length > 0 ? (
-        <div className="flex gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {room.photos.slice(0, 8).map((p, i) => (
-            <span key={`${p.url}-${i}`} className="h-[70px] w-[104px] shrink-0 overflow-hidden rounded-[12px]">
-              <Photo image={p} alt={name} iconSize={16} sizes="104px" />
-            </span>
-          ))}
-        </div>
+        <RoomStrip photos={room.photos} name={name} />
       ) : null}
 
       {size || beds || headline.length > 0 ? (

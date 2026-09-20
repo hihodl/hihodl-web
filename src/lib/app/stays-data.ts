@@ -275,12 +275,37 @@ export interface RatesQuery {
   currency: string;
 }
 
-export function useRates(hotelId: string | null, q: RatesQuery | null) {
+/**
+ * A property's rates.
+ *
+ * `frozen` IS NOT AN OPTIMISATION, IT IS THE CHECKOUT'S CORRECTNESS
+ *
+ * Every call to the supplier mints a FRESH set of `offerId`s. On the property
+ * page that is fine — the rows re-render with whatever came back. On the
+ * checkout it is fatal: that screen is holding one `offerId` pinned in the
+ * URL, and a revalidation replaces the list with offers that do not include
+ * it. The screen then finds no rate and says "That rate has gone" over an
+ * offer that had not gone anywhere.
+ *
+ * `revalidateOnFocus` made that a routine event rather than an edge case:
+ * alt-tab to check a date, take a screenshot, glance at another window, and
+ * the click that brings the tab back also fires the revalidation that throws
+ * the person out of a checkout they were halfway through filling in.
+ *
+ * So the checkout asks once. The header's reasoning — an `offerId` lives for
+ * minutes, so re-read it rather than carrying the price — is about the FIRST
+ * read, and it still holds: the screen re-reads on arrival and says so
+ * honestly if the offer is already gone. What it must not do is keep asking a
+ * question whose answer destroys its own state.
+ */
+export function useRates(hotelId: string | null, q: RatesQuery | null, frozen = false) {
   const who = useWho();
   return useSWR<{ hotelId: string; rates: Rate[] }>(
     hotelId && q && who ? [who, "stays/rates", hotelId, JSON.stringify(q)] : null,
     () => getRates(hotelId!, q!),
-    OPTIONS,
+    frozen
+      ? { ...OPTIONS, revalidateOnFocus: false, revalidateOnReconnect: false, revalidateIfStale: false }
+      : OPTIONS,
   );
 }
 

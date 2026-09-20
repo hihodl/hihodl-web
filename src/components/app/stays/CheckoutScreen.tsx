@@ -37,6 +37,7 @@ import { Ion } from "../ion";
 
 import { Banner, Card, Cta, Empty, Photo, Screen, SectionLabel, Spinner } from "./kit";
 import { P, boardLabel, count, guests as guestsWord, money, shortDate, stayRange } from "./look";
+import { PhotoViewer } from "./PhotoViewer";
 import { sane, stayFromParams, stayToParams } from "./SearchControls";
 import { usePoints, useRates, useStay, useStaysConfig } from "@/lib/app/stays-data";
 import { holdTripProvisionally, refreshTrips, releaseProvisionalTrip } from "@/lib/app/stays-data";
@@ -61,7 +62,7 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
     adults: search.adults,
     ...(search.children.length ? { children: search.children } : {}),
     currency: "EUR",
-  });
+  }, true);
   const points = usePoints();
   const { session } = useCreatorSession();
 
@@ -83,6 +84,8 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
   const from = wallet.data?.state === "web_wallet" ? (wallet.data.registered_address ?? null) : null;
 
   const rate = rates.data?.rates.find((r) => r.offerId === offerId) ?? null;
+  /** The property's photographs, over the checkout — never away from it. */
+  const [viewing, setViewing] = useState(false);
 
   /* ── What the person fills in ── */
   const [guest, setGuest] = useState<Guest>({ firstName: "", lastName: "", email: "", phone: "" });
@@ -215,9 +218,20 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
         {/* ── What am I booking ── */}
         <div className="mt-[22px] flex flex-col gap-3">
           <Card hero className="flex gap-3 p-[14px]">
-            <span className="h-[62px] w-[62px] shrink-0 overflow-hidden rounded-[12px]" style={{ background: P.card }}>
+            {/* The thumbnail is the ONE way back to the pictures from here.
+                Leaving the checkout to look at the room again costs the
+                offer — the property page mints new ids — so the pictures
+                open OVER this screen rather than instead of it. */}
+            <button
+              type="button"
+              aria-label="See the photographs"
+              disabled={!stay.data || stay.data.gallery.length === 0}
+              onClick={() => setViewing(true)}
+              className="h-[62px] w-[62px] shrink-0 cursor-zoom-in overflow-hidden rounded-[12px] p-0 disabled:cursor-default"
+              style={{ background: P.card }}
+            >
               <Photo image={stay.data?.gallery[0] ?? null} alt={stay.data?.name ?? ""} iconSize={18} sizes="62px" />
-            </span>
+            </button>
             <span className="min-w-0 flex-1">
               <span className="line-clamp-2 text-[14.5px] font-extrabold leading-[19px] tracking-[-0.3px]" style={{ color: P.text }}>
                 {stay.data?.name}
@@ -375,6 +389,14 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
             </p>
           </div>
       </div>
+
+      <PhotoViewer
+        images={stay.data?.gallery ?? []}
+        initialIndex={0}
+        open={viewing}
+        onClose={() => setViewing(false)}
+        title={stay.data?.name}
+      />
     </Screen>
   );
 }

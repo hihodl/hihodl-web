@@ -60,6 +60,7 @@ export function Photo({
   iconSize = 22,
   sizes,
   priority,
+  fit = "cover",
 }: {
   image: Image | null;
   alt: string;
@@ -68,6 +69,14 @@ export function Photo({
   iconSize?: number;
   sizes?: string;
   priority?: boolean;
+  /**
+   * `cover` fills the slot and crops, which is right everywhere a photograph
+   * is furniture. `contain` shows it whole, which is right only where LOOKING
+   * is the task — the full-screen viewer. It is a prop and not a class because
+   * two Tailwind `object-*` utilities in one string are decided by the order
+   * of the generated stylesheet, not the order they are written in.
+   */
+  fit?: "cover" | "contain";
 }) {
   // `step` is the rung of the ladder: 0 the resize, 1 the original, 2 the bed.
   const [step, setStep] = useState(0);
@@ -98,7 +107,7 @@ export function Photo({
       loading={priority ? "eager" : "lazy"}
       decoding="async"
       onError={() => setStep((s) => s + 1)}
-      className={`h-full w-full object-cover ${className}`}
+      className={`h-full w-full ${fit === "contain" ? "max-h-full max-w-full object-contain" : "object-cover"} ${className}`}
       style={{ transition: "opacity 160ms" }}
     />
   );

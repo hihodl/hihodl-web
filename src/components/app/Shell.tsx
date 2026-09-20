@@ -54,6 +54,7 @@ import { SpacesBaseProvider, useHref, useProductHref, useSpacesBase } from "./ba
 import { CommandPalette, type PaletteEntry } from "./CommandPalette";
 import { Door as SignInDoor } from "./front/Door";
 import { HeaderSlotContext, type HeaderSlot } from "./header-slot";
+import { HiPointsChip } from "./HiPointsChip";
 import { UserAvatar } from "./account/UserAvatar";
 import { IconArrowLeft, IconClose, IconCollapse, IconExpand, IconMenu, IconPlus, IconSearch, IconSignOut } from "./icons";
 import {
@@ -707,6 +708,7 @@ function UserCard({ collapsed }: { collapsed: boolean }) {
         <Link href={productHref("/menu")} title={name} aria-label={`${name} — menu`}>
           <UserAvatar size={36} fallbackName={name} />
         </Link>
+        <HiPointsChip compact />
         <button type="button" aria-label="Sign out" title="Sign out" onClick={() => void signOut()} className="flex h-8 w-8 items-center justify-center rounded-[8px] text-[#9FB7C2] hover:bg-white/10 hover:text-text">
           <IconSignOut />
         </button>
@@ -722,6 +724,10 @@ function UserCard({ collapsed }: { collapsed: boolean }) {
           <p className="truncate text-[11px] text-[#9FB7C2]">{sub}</p>
         </div>
       </Link>
+      {/* With the person, because that is what it belongs to, and because
+          this block is the one thing on a big screen that is never scrolled
+          away. */}
+      <HiPointsChip compact />
       <button
         type="button"
         aria-label="Sign out"
@@ -789,6 +795,9 @@ function TopBar({
           {screenHeader ? null : <h1 className="truncate pl-1 text-[17px] font-bold tracking-[-0.3px] text-text">{title}</h1>}
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
+          <span className="lg:hidden">
+            <HiPointsChip compact />
+          </span>
           <div ref={rightRef} className="flex items-center gap-1.5 empty:hidden" />
           <button type="button" onClick={onSearch} aria-label="Search" className={`${btnGhost} sm:justify-start`}>
             <IconSearch className="h-3.5 w-3.5" />
