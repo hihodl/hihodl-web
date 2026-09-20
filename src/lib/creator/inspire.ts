@@ -108,20 +108,38 @@ export function getInspireCampaigns(slug: string): Promise<InspireEventCampaigns
  * The index's product vocabulary is its own (`surfaces.js`, mirrored by the
  * backend's `PRODUCT_KIND`); ours is the Ad Space catalogue. This is the whole
  * bridge between the two, and it is deliberately kept here rather than read
- * from the server: the server's own table is a subset of it, and a row that
- * lands on the wrong product is worse than one that lands on the picker.
+ * from the server: a row that lands on the wrong product is worse than one
+ * that lands on the picker, so both halves are written by hand and checked
+ * against the seed (the server's own copy is services/inspire/rules.ts).
  *
- * Products with no line here are the ones we sell nothing like — a wall, a
- * pet, a fridge, a guitar, a bottle, a toilet, a pack of cigarettes, and the
- * index's catch-all "Other". Those open the picker and the card says so; they
- * never open the suitcase.
+ * Every product word the index has is in here, and that is the point: all 285
+ * seeded rows open the editor on a real product, none on the picker and none
+ * on the suitcase. The catalogue grew four products to make that true — the
+ * wall, the bottle, the pet's kit and the catch-all — which is what a creator
+ * pressing "Use this idea" on a dress and getting a suitcase was telling us.
+ *
+ * A template only counts while the catalogue still lists it: `templateForCampaign`
+ * checks the live ids, so a retired product reads as none. That is why `Phone`
+ * points at the wallpaper and not at the retired `phone-case`.
  */
 const TEMPLATE_FOR_PRODUCT: Record<string, string> = {
   // Objects
   Suitcase: "carry-on-suitcase",
   Bag: "backpack",
   Laptop: "laptop-lid",
-  Phone: "phone-case",
+  Phone: "phone-wallpaper",
+  Bottle: "bottle-or-mug",
+  // A wall, a garage door, a fridge door, a cubicle door and the board behind
+  // a desk are one flat panel sold by the square.
+  Wall: "wall-or-door",
+  Fridge: "wall-or-door",
+  Toilet: "wall-or-door",
+  Pet: "pet-vest",
+  // The long tail, and the index's own catch-all: six squares on the face of
+  // something the creator owns.
+  Guitar: "custom-object",
+  Cigarettes: "custom-object",
+  Other: "custom-object",
   // Vehicles. A motorcycle is sold on its frame like a bike; a van and a tank
   // are panels like a car's.
   Bike: "road-bike",
