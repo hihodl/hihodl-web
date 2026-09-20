@@ -18,7 +18,7 @@
  * those.
  */
 
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Ion, type IonName } from "../ion";
 
@@ -300,15 +300,49 @@ const AMENITY_HEADLINE = 4;
  * mouse leaves no way to move it at all. So the pictures open a viewer, and
  * the strip gets arrows of its own for the pointer that cannot swipe.
  *
- * The strip shows eight; the viewer gets the WHOLE room. When there are more
- * than eight the last tile says how many, because otherwise the ninth
- * photograph is a room nobody knows exists.
+ * THE "+3" WAS TRUE AND STILL MISLED
+ *
+ * It was painted OVER the eighth photograph, inside a strip that scrolls. It
+ * counted correctly — three more photographs did exist — but it read as "keep
+ * going right", and right was the end of the rail, because the strip lays out
+ * eight tiles and the other three were never in it. A label that is accurate
+ * about the number and wrong about the gesture is still a label that lies.
+ *
+ * So the count is its own tile, after the eight, reachable by the same scroll
+ * that runs out just before it, and it opens the viewer ON the ninth
+ * photograph — the first one the strip never showed. Every other tile is now
+ * just the photograph it is.
+ *
+ * And the arrows go when there is nothing that way. An arrow that does
+ * nothing teaches people that the arrows do nothing.
  */
 function RoomStrip({ photos, name }: { photos: GalleryImage[]; name: string }) {
   const rail = useRef<HTMLDivElement>(null);
   const [viewing, setViewing] = useState<number | null>(null);
+  const [ends, setEnds] = useState({ left: false, right: false });
   const shown = photos.slice(0, STRIP_TILES);
   const hidden = photos.length - shown.length;
+
+  // Which way there is still rail to travel. Read after layout and on every
+  // scroll; the 2px is the slack a fractional scroll width leaves behind, and
+  // without it the right arrow never quite goes away at the end.
+  const measure = useCallback(() => {
+    const el = rail.current;
+    if (!el) return;
+    setEnds({
+      left: el.scrollLeft > 2,
+      right: el.scrollLeft + el.clientWidth < el.scrollWidth - 2,
+    });
+  }, []);
+
+  useEffect(() => {
+    measure();
+    const el = rail.current;
+    if (!el) return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [measure, photos.length]);
 
   // By a tile and a half, so the photograph the eye stopped on stays in frame
   // and the move is clearly a move.
@@ -318,6 +352,7 @@ function RoomStrip({ photos, name }: { photos: GalleryImage[]; name: string }) {
     <div className="group/strip relative">
       <div
         ref={rail}
+        onScroll={measure}
         className="flex gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {shown.map((p, i) => (
@@ -326,29 +361,39 @@ function RoomStrip({ photos, name }: { photos: GalleryImage[]; name: string }) {
             type="button"
             aria-label={`${name} — photograph ${i + 1}`}
             onClick={() => setViewing(i)}
-            className="relative h-[70px] w-[104px] shrink-0 cursor-zoom-in overflow-hidden rounded-[12px] p-0"
+            className="h-[70px] w-[104px] shrink-0 cursor-zoom-in overflow-hidden rounded-[12px] p-0"
           >
             <Photo image={p} alt={name} iconSize={16} sizes="104px" />
-            {hidden > 0 && i === shown.length - 1 ? (
-              <span
-                className="absolute inset-0 flex items-center justify-center text-[13px] font-extrabold tabular-nums"
-                style={{ background: "rgba(7,12,18,0.62)", color: P.text }}
-              >
-                {`+${hidden}`}
-              </span>
-            ) : null}
           </button>
         ))}
+
+        {hidden > 0 ? (
+          <button
+            type="button"
+            aria-label={`See all ${photos.length} photographs of ${name}`}
+            onClick={() => setViewing(STRIP_TILES)}
+            className="relative h-[70px] w-[104px] shrink-0 cursor-zoom-in overflow-hidden rounded-[12px] p-0"
+          >
+            {/* The ninth photograph, behind its own count: the tile shows
+                what it opens. */}
+            <Photo image={photos[STRIP_TILES]} alt="" iconSize={16} sizes="104px" />
+            <span
+              className="absolute inset-0 flex flex-col items-center justify-center gap-px text-[13px] font-extrabold tabular-nums"
+              style={{ background: "rgba(7,12,18,0.66)", color: P.text }}
+            >
+              {`+${hidden}`}
+              <span className="text-[10px] font-semibold" style={{ color: P.textMuted }}>
+                more
+              </span>
+            </span>
+          </button>
+        ) : null}
       </div>
 
       {/* Pointer only: a touch screen has the strip itself, and these would
           sit on top of the photographs it is already dragging. */}
-      {photos.length > 2 ? (
-        <>
-          <StripArrow side="left" onClick={() => nudge(-1)} />
-          <StripArrow side="right" onClick={() => nudge(1)} />
-        </>
-      ) : null}
+      {ends.left ? <StripArrow side="left" onClick={() => nudge(-1)} /> : null}
+      {ends.right ? <StripArrow side="right" onClick={() => nudge(1)} /> : null}
 
       <PhotoViewer
         images={photos}
