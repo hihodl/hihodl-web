@@ -21,13 +21,18 @@ import { Ion } from "@/components/app/ion";
 import { Body, Card, Chip, ChipRow, SectionLabel } from "@/components/app/spaces/kit";
 import {
   DELIVERABLE_KINDS,
+  DELIVERY_WHENS,
   FALLBACKS,
   LIMITS,
+  deliveryDayFor,
   isCustomServiceTemplate,
   isProductionTemplate,
   isSessionTemplate,
+  windowOfDay,
   type DeliverableDraft,
   type DeliverableKind,
+  type DeliveryWhen,
+  type EventSummary,
   type Fallback,
   type ListingDraft,
   PLATFORMS,
@@ -40,6 +45,19 @@ import { BrandGetsEditor } from "./BrandGetsEditor";
 import { btnSmallGlass, Choice, Count, Dropdown, Field, Paragraph, Problems, Text } from "./parts";
 import { StepCard } from "./StepPager";
 import { DayField, dayPlus, today } from "./WhenField";
+
+/**
+ * The three windows, said from the promise's point of view.
+ *
+ * Shorter than the event card's wording because they sit in a row next to a
+ * date, not as a question on their own: "Before it starts" reads as a sentence,
+ * "Before" reads as a setting.
+ */
+const WHEN_LABEL: Record<DeliveryWhen, string> = {
+  before: "Before",
+  during: "During",
+  after: "After",
+};
 
 const DELIVERABLE_LABEL: Record<DeliverableKind, string> = {
   in_person: "In person",
@@ -75,11 +93,14 @@ const FALLBACK_BODY: Record<Fallback, string> = {
 export function PromiseStep({
   draft,
   template,
+  event,
   onChange,
   problems,
 }: {
   draft: ListingDraft;
   template: Template;
+  /** The event this listing sits in, so each promise can name its window. */
+  event: EventSummary | null;
   onChange: (next: ListingDraft) => void;
   problems: readonly Problem[];
 }) {
@@ -136,7 +157,7 @@ export function PromiseStep({
           />
         )
       ) : (
-        <Deliverables draft={draft} onChange={onChange} problems={problems} latestDue={latestDue} />
+        <Deliverables draft={draft} onChange={onChange} problems={problems} latestDue={latestDue} event={event} />
       )}
 
       <Field
@@ -182,11 +203,14 @@ function Deliverables({
   onChange,
   problems,
   latestDue,
+  event,
 }: {
   draft: ListingDraft;
   onChange: (next: ListingDraft) => void;
   problems: readonly Problem[];
   latestDue: string;
+  /** The event this listing sits in, when it sits in one. */
+  event: EventSummary | null;
 }) {
   const list = draft.deliverables;
   const set = (next: DeliverableDraft[]) => onChange({ ...draft, deliverables: next });
@@ -223,14 +247,35 @@ function Deliverables({
                 options={PLATFORMS.map((p) => ({ value: p, label: PLATFORM_LABEL[p] }))}
               />
             </Field>
-            <DayField
-              label="By when"
-              value={d.dueDate}
-              onChange={(dueDate) => patch(i, { dueDate })}
-              min={today()}
-              max={latestDue}
-              problems={problemsAt(problems, `deliverable:${i}:dueDate`)}
-            />
+            <div className="flex min-w-0 flex-col gap-2">
+              <DayField
+                label="By when"
+                value={d.dueDate}
+                onChange={(dueDate) => patch(i, { dueDate })}
+                min={today()}
+                max={latestDue}
+                problems={problemsAt(problems, `deliverable:${i}:dueDate`)}
+              />
+              {/*
+                The window, per promise — the whole point of this row.
+                It is a shortcut to a DATE and not a second thing to store: the
+                chip picks the day, the day is what is saved, and typing a date
+                by hand lights the chip it falls in. So the two can never
+                disagree, because there is only one of them.
+              */}
+              {event ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {DELIVERY_WHENS.map((w) => (
+                    <Chip
+                      key={w}
+                      label={WHEN_LABEL[w]}
+                      selected={windowOfDay(d.dueDate, event) === w}
+                      onClick={() => patch(i, { dueDate: deliveryDayFor(w, event) })}
+                    />
+                  ))}
+                </div>
+              ) : null}
+            </div>
           </div>
           <Field
             label={d.kind === "custom" ? "Say exactly what it is" : "Anything to add"}

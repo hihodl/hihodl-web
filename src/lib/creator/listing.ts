@@ -274,29 +274,45 @@ export function deliveryDayFor(when: DeliveryWhen, event: { startsOn: string; en
 }
 
 /**
- * The answer a draft already on disk implies, so reopening one does not ask
- * again: the day it promises, read against the event's own dates.
+ * Which window ONE day falls in, against the event's own dates.
+ *
+ * This is the unit the product actually has, and getting that wrong was a real
+ * bug. A listing does not deliver in one window: the suitcase is branded
+ * BEFORE the doors open, the photographs and the posts land WHILE it is on,
+ * and the thank-you goes out in the wrap-up AFTER. One answer for the whole
+ * listing forced a creator to pick the least wrong of three true ones, and
+ * then stamped that day onto every promise they had not dated yet.
+ *
+ * So the window belongs to a PROMISE, not to a listing.
  */
-export function deliveryWhenOf(draft: ListingDraft, event: { startsOn: string; endsOn: string } | null): DeliveryWhen | null {
-  if (!event) return null;
-  const days = [draft.deliverBy, ...draft.deliverables.map((d) => d.dueDate)].filter(Boolean).sort();
-  const day = days[days.length - 1];
-  if (!day) return null;
-  if (day < event.startsOn.slice(0, 10)) return "before";
-  if (day > (event.endsOn || event.startsOn).slice(0, 10)) return "after";
+export function windowOfDay(day: string, event: { startsOn: string; endsOn: string } | null): DeliveryWhen | null {
+  if (!event || !day) return null;
+  const d = day.slice(0, 10);
+  if (d < event.startsOn.slice(0, 10)) return "before";
+  if (d > (event.endsOn || event.startsOn).slice(0, 10)) return "after";
   return "during";
 }
 
 /**
- * The draft with every promise that has no day yet given one. Never an
- * overwrite: a date the creator has already typed is theirs.
+ * The answer a draft already on disk implies, for the one case where a listing
+ * really does have a single window: a SERVICE, which carries one `deliverBy`
+ * for every slot sold. A placement has a list of promises and is read one
+ * promise at a time, by `windowOfDay`.
+ */
+export function deliveryWhenOf(draft: ListingDraft, event: { startsOn: string; endsOn: string } | null): DeliveryWhen | null {
+  return windowOfDay(draft.deliverBy, event);
+}
+
+/**
+ * The draft with its ONE delivery date filled in, where it has none.
+ *
+ * Only `deliverBy`, and only a service has one. It used to stamp the same day
+ * onto every undated promise as well, which is how a suitcase listing ended up
+ * claiming its photographs, its posts and its wrap-up all landed on the same
+ * afternoon. Never an overwrite: a date the creator has typed is theirs.
  */
 export function withDeliveryDay(draft: ListingDraft, day: string): ListingDraft {
-  return {
-    ...draft,
-    deliverBy: draft.deliverBy || day,
-    deliverables: draft.deliverables.map((d) => (d.dueDate ? d : { ...d, dueDate: day })),
-  };
+  return { ...draft, deliverBy: draft.deliverBy || day };
 }
 
 /* ── What the API hands back ──────────────────────────────────────── */

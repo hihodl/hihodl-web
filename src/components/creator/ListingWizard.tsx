@@ -434,7 +434,7 @@ export function ListingWizard({
                 <SellStep key="sell" draft={draft} template={template} availableChains={chains} onChange={setDraft} problems={problems} />
               );
             case "promise":
-              return <PromiseStep key="promise" draft={draft} template={template} onChange={setDraft} problems={problems} />;
+              return <PromiseStep key="promise" draft={draft} template={template} event={pickedEvent} onChange={setDraft} problems={problems} />;
             default:
               return (
                 <PublishStep

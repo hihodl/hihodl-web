@@ -104,6 +104,8 @@ export function EventStep({
   const session = isSessionTemplate(template);
   const production = isProductionTemplate(template);
   const mustPick = session || production;
+  /** A service carries ONE `deliverBy` for every slot; a placement does not. */
+  const service = template.kind === "service";
   const kinds = (["public", "race", "private"] as const).filter((k) =>
     template.allowedVenues.includes(k === "public" ? "conference" : k === "race" ? "sports_event" : "private_event"),
   );
@@ -175,8 +177,15 @@ export function EventStep({
             </Field>
           ) : null}
 
-          {picked ? (
-            <Field label="When you deliver" hint="It fills in the days you promise. You can change any of them.">
+          {/*
+            One window, and ONLY where the listing really has one.
+            A service sells slots that are all delivered by the same date, so
+            asking once is asking the truth. A placement promises several
+            things that land in different weeks, and its windows are set one
+            promise at a time on the next card — see the note below.
+          */}
+          {picked && service ? (
+            <Field label="When you deliver" hint="It fills in the date every slot is delivered by. You can change it.">
               <Choice
                 name="delivery-when"
                 value={when ?? ""}
@@ -187,6 +196,13 @@ export function EventStep({
                 options={DELIVERY_WHENS.map((w) => ({ value: w, label: WHEN_LABEL[w] }))}
               />
             </Field>
+          ) : null}
+
+          {picked && !service ? (
+            <Notice tone="calm">
+              You will set a day for each thing you promise on the next card — the spot can go on before the doors open, the
+              photos land while it is on, and the thank-you in the wrap-up after.
+            </Notice>
           ) : null}
         </>
       ) : answer === "no" ? (
