@@ -299,7 +299,7 @@ function ListingDeliveries({
                           selectedRow ? "border-[rgba(241,245,249,0.45)] bg-white/[0.09]" : i.state === "overdue" ? "border-amber bg-white/[0.06]" : "border-white/10 bg-white/[0.06]"
                         }`}
                       >
-                        <Ion name={KIND_ICON[i.kind]} size={18} className={`shrink-0 ${i.state === "overdue" ? "text-amber" : "text-white/[0.62]"}`} />
+                        <Ion name={KIND_ICON[i.kind]} size={18} className={`shrink-0 ${i.state === "overdue" ? "text-amber" : "text-white/[0.82]"}`} />
                         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                           <span className="truncate text-[14.5px] font-bold text-white">{i.title}</span>
                           <span className="truncate text-[12.5px] text-white/55">{i.sub === KIND_TEXT[i.kind] ? i.sub : `${KIND_TEXT[i.kind]} · ${i.sub}`}</span>
@@ -340,7 +340,7 @@ function Detail({ item, backHref }: { item: DeliveryItem; backHref: string }) {
       <SectionLabel
         right={
           canOpen ? (
-            <Link href={href(`/listings/${item.spaceId}?tab=deliveries`)} className="inline-flex items-center gap-1 text-[13px] font-strong text-white/[0.62] hover:text-white">
+            <Link href={href(`/listings/${item.spaceId}?tab=deliveries`)} className="inline-flex items-center gap-1 text-[13px] font-strong text-white/[0.82] hover:text-white">
               Open listing
               <Ion name="chevron-forward" size={14} />
             </Link>

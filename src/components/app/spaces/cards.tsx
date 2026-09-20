@@ -222,7 +222,7 @@ export function EventCard({
         </div>
         <div className="flex min-w-0 flex-col gap-0.5">
           {lines.map((l, i) => (
-            <p key={i} className="truncate text-[13px] text-white/[0.62]">
+            <p key={i} className="truncate text-[13px] text-white/[0.82]">
               {l}
             </p>
           ))}

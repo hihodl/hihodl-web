@@ -44,12 +44,15 @@
  *
  * WHAT IS NOT HERE, AND WHY
  *
- * Performance, the realised-gains report and the cost-basis lot editor are not
- * built: `/portfolio/lots`, `/portfolio/realized` and `/stocks/availability`
- * are not mounted on this backend and would 404. The Fear & Greed card on
- * Performance is a third-party call from the device, which a page cannot make
- * either. `GET /portfolio/cost-basis` does exist, and it is what puts the move
- * against what you paid under each value.
+ * Performance, the realised-gains report and the cost-basis lot view are not
+ * built here yet. This note used to say `/portfolio/lots`,
+ * `/portfolio/realized` and `/stocks/availability` were not mounted and would
+ * 404; that was read off a stale checkout. All three answer in production, all
+ * three are plain authenticated reads, and the web may make them — so what is
+ * missing is the screens, not the data. The one genuine gap is the Fear & Greed
+ * card, a third-party call from the device that a page cannot make.
+ * `GET /portfolio/cost-basis` is what puts the move against what you paid under
+ * each value.
  *
  * VIEW ONLY. Buying, exchanging and supplying are signatures; every row that
  * offers one in the app says here where it happens.
@@ -579,9 +582,9 @@ function BuySection({ held }: { held: readonly Holding[] }) {
 
 /**
  * Tokenized US equities. The app gates this on `GET /stocks/availability`,
- * which is not mounted on this backend — so the web cannot know whether this
- * person is somewhere we are cleared to offer them, and it says that rather
- * than drawing a shelf of tickers it cannot stand behind.
+ * which IS mounted and answers without a token (it reads `cf-ipcountry`), so
+ * the web could gate on it too. Until the shelf itself is built there is
+ * nothing to gate, and the card points at the app, where buying happens.
  */
 function StocksSection() {
   return (
@@ -593,7 +596,7 @@ function StocksSection() {
           <Ion name="bar-chart-outline" size={19} className="text-white/80" />
         </span>
         <p className="min-w-0 flex-1 text-[13px] leading-[18px] text-white/[0.8]">
-          Browsing and buying stocks happens in the HOLD app, which is also where we can tell whether they are offered where you are.
+          Browsing and buying stocks happens in the HOLD app, where the order is signed.
         </p>
       </div>
     </section>

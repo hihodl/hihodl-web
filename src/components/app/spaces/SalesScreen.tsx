@@ -128,7 +128,7 @@ function ReceivedCard({ received, sub }: { received: string; sub: string }) {
     <Card>
       <p className="text-[12px] font-strong uppercase tracking-[0.4px] text-white/55">Received</p>
       <p className={money}>{dollars(cents(received))}</p>
-      <p className="text-[13px] font-strong leading-[18px] text-white/[0.62]">{sub}</p>
+      <p className="text-[13px] font-strong leading-[18px] text-white/[0.82]">{sub}</p>
       <p className="text-[12px] leading-4 text-white/55">USDC, straight to your wallet when each brand paid.</p>
     </Card>
   );
@@ -145,7 +145,7 @@ function TeamRow() {
         </span>
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className="text-[15px] font-strong tracking-[-0.2px] text-white">Your team</span>
-          <span className="text-[13px] font-strong leading-[18px] text-white/[0.62]">
+          <span className="text-[13px] font-strong leading-[18px] text-white/[0.82]">
             Invite the people who sell for you or turn up at the event, and give them a share you pay yourself.
           </span>
         </span>
@@ -169,7 +169,7 @@ function EventSales({ eventKey, totals, refOf }: { eventKey: string; totals: Sal
         back={href("/sales")}
         crumb="Sales"
         title={eventName(event)}
-        right={here.length ? <p className="text-[12.5px] font-strong tabular-nums text-white/[0.62]">{dollars(sumReceived(here))} received</p> : null}
+        right={here.length ? <p className="text-[12.5px] font-strong tabular-nums text-white/[0.82]">{dollars(sumReceived(here))} received</p> : null}
       />
       {here.length === 0 ? (
         <Empty icon="cash-outline" title="No sales yet" body="When a brand pays for a spot on one of your spaces, it shows here." />

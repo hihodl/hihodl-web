@@ -248,10 +248,10 @@ function HubCard({
     <li>
       <Link href={href} scroll={false} className={`${cardCls} gap-2.5 p-3.5 sm:min-h-[168px] xl:min-h-[190px]`}>
         <div className="flex min-w-0 items-center gap-2.5">
-          <Ion name={icon} size={18} className="shrink-0 text-white/[0.62]" />
+          <Ion name={icon} size={18} className="shrink-0 text-white/[0.82]" />
           <p className="truncate text-[14.5px] font-bold text-white">{title}</p>
         </div>
-        <p className="truncate text-[12.5px] font-strong text-white/[0.62]">{line}</p>
+        <p className="truncate text-[12.5px] font-strong text-white/[0.82]">{line}</p>
         <div className="mt-auto flex min-w-0 items-end justify-between gap-2">
           <p className={`${money} whitespace-nowrap leading-none`}>{value}</p>
           {note ? <p className="truncate text-[12.5px] font-strong tabular-nums text-white/55">{note}</p> : null}
@@ -287,7 +287,7 @@ function Screen({
       <div className="grid grid-cols-[minmax(0,1fr)] gap-3.5 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)] lg:items-start">
         <Card>
           <p className="text-[34px] font-extrabold leading-none tracking-[-0.6px] tabular-nums text-white">{big}</p>
-          <p className="text-[14px] leading-5 text-white/[0.62]">{bigNote}</p>
+          <p className="text-[14px] leading-5 text-white/[0.82]">{bigNote}</p>
           {aside ? <div className="mt-1 border-t border-white/[0.08] pt-3 text-[12px] leading-[17px] text-white/55">{aside}</div> : null}
         </Card>
         {children}
@@ -468,7 +468,7 @@ function HookScreen({ data, back }: { data: Insights; back: string }) {
           {rows.map((r) => (
             <li key={r.key} className="flex min-w-0 flex-col gap-1.5 border-t border-white/[0.08] py-3 first:border-t-0 first:pt-0">
               <p className="text-[14.5px] font-bold text-white">{r.title}</p>
-              <p className="text-[14px] leading-5 text-white/[0.62]">{r.body}</p>
+              <p className="text-[14px] leading-5 text-white/[0.82]">{r.body}</p>
               {r.data ? <p className="text-[12px] leading-4 text-white/55">{r.data}</p> : null}
               {r.action ? <div className="pt-1">{r.action}</div> : null}
             </li>
@@ -558,9 +558,9 @@ function YouScreen({ data, back }: { data: Insights; back: string }) {
               key={r.label}
               className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)] items-baseline gap-x-3 border-t border-white/[0.08] py-2.5 first:border-t-0"
             >
-              <span className="truncate text-[14px] leading-5 text-white/[0.62]">{r.label}</span>
+              <span className="truncate text-[14px] leading-5 text-white/[0.82]">{r.label}</span>
               <span className="truncate text-[14px] font-strong tabular-nums text-white">{r.you}</span>
-              <span className="truncate text-[14px] tabular-nums text-white/[0.62]">{r.median}</span>
+              <span className="truncate text-[14px] tabular-nums text-white/[0.82]">{r.median}</span>
             </li>
           ))}
         </ul>

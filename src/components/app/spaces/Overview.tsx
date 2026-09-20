@@ -76,7 +76,7 @@ const LEAD_DAYS = 7;
 const FILL = "flex flex-col gap-4 lg:flex-1";
 const BOTTOM = "grid grid-cols-[minmax(0,1fr)] gap-4 lg:flex-1 lg:grid-cols-2 lg:grid-rows-[minmax(0,1fr)]";
 /** A group's "see all": 12.5/600 muted, the app's link ink. */
-const seeAll = "text-[12.5px] font-strong normal-case tracking-normal text-white/[0.62] hover:text-white";
+const seeAll = "text-[12.5px] font-strong normal-case tracking-normal text-white/[0.82] hover:text-white";
 
 /** Rows in "Needs you" and "Live". */
 const ROWS = 3;
@@ -285,7 +285,7 @@ function HubCard({
           </span>
           <p className="truncate text-[16px] font-strong tracking-[-0.2px] text-white">{title}</p>
         </div>
-        <p className="truncate text-[13px] text-white/[0.62]">{line}</p>
+        <p className="truncate text-[13px] text-white/[0.82]">{line}</p>
         <div className="mt-auto flex min-w-0 items-end justify-between gap-2">
           <div className={`${money} min-w-0 whitespace-nowrap leading-none`}>{value}</div>
           {note ? <p className="truncate text-[12.5px] font-strong tabular-nums text-white/55">{note}</p> : null}
