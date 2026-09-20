@@ -19,9 +19,11 @@
  *
  * Two sources on the same cards: every published HOLD listing, marked "On
  * HOLD", and campaigns imported once from the public sponsor me index by
- * @emilylai, marked "via sponsorme index" and credited on every screen that
- * shows one. Those creators are not on HOLD and nothing here says they are.
- * No amounts raised, no spots left: what a campaign IS, never how it went.
+ * @emilylai, which wear the X mark — every one of them is a post on X, and the
+ * mark says so without spending a chip on the word "index". The index is
+ * credited once at the foot of each screen that shows one, which is where a
+ * credit belongs. Those creators are not on HOLD and nothing here says they
+ * are. No amounts raised, no spots left: what a campaign IS, never how it went.
  */
 
 import Link from "next/link";
@@ -94,9 +96,26 @@ function day(iso: string | null): string | null {
 
 /* ── Pieces ───────────────────────────────────────────────────────── */
 
-/** "On HOLD" or "via sponsorme index": where a campaign comes from, as the app's Tag. */
+/**
+ * Where a campaign comes from: "On HOLD", or the X mark.
+ *
+ * The imported half used to wear the words "via sponsorme index", which spent a
+ * whole chip on plumbing. Every one of those campaigns is a post on X, and the
+ * X mark says that in one glyph to anybody who has ever used it. The index
+ * itself is still credited, in the one place a credit belongs — the foot of the
+ * screen — rather than stamped on each card.
+ */
 function OriginTag({ origin }: { origin: InspireCampaign["origin"] }) {
-  return origin === "hold" ? <Tag label="On HOLD" tone="good" /> : <Tag label="via sponsorme index" />;
+  if (origin === "hold") return <Tag label="On HOLD" tone="good" />;
+  return (
+    <span
+      title="From X"
+      aria-label="From X"
+      className="inline-flex h-[22px] w-[22px] shrink-0 items-center justify-center self-start rounded-[11px] bg-white/[0.07] text-white/[0.82]"
+    >
+      <Ion name="logo-x" size={11} />
+    </span>
+  );
 }
 
 /**
@@ -241,8 +260,8 @@ function External({ href, children }: { href: string; children: ReactNode }) {
 /** The credit, wherever a campaign from the index is shown. */
 function Credit({ credit, children }: { credit: InspireCredit; children?: ReactNode }) {
   return (
-    <p className="text-[12px] leading-[17px] text-white/55">
-      Campaigns marked &ldquo;via sponsorme index&rdquo; are from the{" "}
+    <p className="text-[12px] leading-[17px] text-white/70">
+      Campaigns marked with the X mark were posted on X and gathered in the{" "}
       <a href={credit.url} target="_blank" rel="noreferrer noopener" className="text-white/[0.82] underline underline-offset-2 hover:text-white">
         {credit.name}
       </a>{" "}
@@ -303,7 +322,12 @@ function EventTile({ event, href }: { event: InspireEvent; href: string }) {
         </div>
         <div className="mt-auto flex min-w-0 flex-col gap-0.5 text-[12.5px] font-strong">
           {event.holdCount > 0 ? <p className="truncate text-white/[0.82]">{event.holdCount} on HOLD</p> : null}
-          {event.indexCount > 0 ? <p className="truncate text-white/55">{event.indexCount} via sponsorme index</p> : null}
+          {event.indexCount > 0 ? (
+            <p className="flex min-w-0 items-center gap-1.5 truncate text-white/70">
+              <Ion name="logo-x" size={10.5} className="shrink-0" />
+              {event.indexCount} from X
+            </p>
+          ) : null}
         </div>
       </Card>
     </li>
@@ -492,7 +516,7 @@ function CampaignScreen({ slug, id }: { slug: string; id: string }) {
               {c.links.post ? <External href={c.links.post}>See the post</External> : null}
               {c.links.website ? <External href={c.links.website}>Website</External> : null}
               {c.links.holdPage ? <External href={`${SITE_URL}${c.links.holdPage}`}>Their page on HOLD</External> : null}
-              {c.source ? <External href={c.source.url}>On the sponsor me index</External> : null}
+              {c.source ? <External href={c.source.url}>Where we found it</External> : null}
             </div>
             {c.origin === "sponsorme_index" ? (
               <>
