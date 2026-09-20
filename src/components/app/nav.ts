@@ -1,13 +1,20 @@
 /**
  * The product's navigation, on two levels, like the app.
  *
- * MAIN is HOLD itself, in the app's own order: Home, Wallet, Payments,
- * Savings, Invest, Activity, then Benefits and the products under it (Stays,
- * eSIM, Spaces), and Menu at the foot — the app's menu, which holds the
- * person, Settings, Security, recovery, help and signing out.
+ * MAIN is HOLD itself: Home, Payments, Invest, Activity, then Benefits and the
+ * products under it (Stays, eSIM, Spaces), and Menu at the foot — the app's
+ * menu, which holds the person, Settings, Security, recovery, help, the wallet
+ * and signing out.
+ *
+ * The column lists PLACES, and a place is somewhere Home cannot already take
+ * you. Savings is not one: Home's scope strip switches the whole page to that
+ * container, so Savings beside Home was the same money listed twice. Wallet is
+ * not one either — see MAIN_HIDDEN. Both keep their routes and their entry in
+ * search; neither takes a line in the column.
+ *
  * A PRODUCT level replaces the column when one is open: opening Spaces (or any
  * /spaces address) swaps the sidebar to the Spaces menu, with a "Back" row at
- * its top that returns to the main menu and the Dashboard. Every product that
+ * its top that returns to the main menu and Home. Every product that
  * gets web screens later is one more entry in PRODUCTS with its own groups.
  *
  * Every path here is relative to the PRODUCT (`/spaces/listings`, `/wallet`),
@@ -75,7 +82,7 @@ export type Level = "main" | "spaces";
 export interface NavItem {
   key: NavKey;
   label: string;
-  /** Relative to the product: "" is the Dashboard, "/spaces" is Spaces' home. */
+  /** Relative to the product: "" is Home, "/spaces" is Spaces' home. */
   path: string;
   icon: ComponentType<SVGProps<SVGSVGElement>>;
   /** Who sees it; absent means everybody. Spaces items only. */
@@ -98,9 +105,8 @@ export const MAIN_GROUPS: readonly NavGroup[] = [
   {
     title: null,
     items: [
-      { key: "home", label: "Home", path: "", icon: IconHome, keywords: "home dashboard balance summary pockets accounts move" },
+      { key: "home", label: "Home", path: "", icon: IconHome, keywords: "home dashboard balance summary pockets accounts savings earn move" },
       { key: "payments", label: "Payments", path: "/payments", icon: IconPayments, keywords: "sent received requests scheduled transactions history payouts pay links" },
-      { key: "savings", label: "Savings", path: "/savings", icon: IconSavings, keywords: "pockets goals yield interest apy earn aave kamino" },
       { key: "invest", label: "Invest", path: "/invest", icon: IconInvest, keywords: "portfolio holdings tokens coins performance profit loss" },
       { key: "activity", label: "Activity", path: "/activity", icon: IconActivity, keywords: "history everything that moved transactions receipts" },
       { key: "benefits", label: "Benefits", path: "/benefits", icon: IconGift, keywords: "products rewards points" },
@@ -142,6 +148,8 @@ export const MAIN_FOOT: readonly NavItem[] = [
 export const MAIN_HIDDEN: readonly NavItem[] = [
   { key: "account", label: "Account", path: "/account", icon: IconAccount, keywords: "profile photo name username email x twitter payout wallet address" },
   { key: "wallet", label: "Wallet", path: "/wallet", icon: IconWallet, keywords: "solana usdc address receive passkey recovery phrase words export balance withdraw" },
+  // Savings is a SCOPE of Home, not a place: /savings opens Home on that pill.
+  { key: "savings", label: "Savings", path: "/savings", icon: IconSavings, keywords: "savings pockets goals yield interest apy earn aave kamino ways to earn" },
   { key: "add", label: "Add money", path: "/add", icon: IconAdd, keywords: "receive crypto qr code address deposit top up add cash bank transfer" },
   // The app's pay links live behind a tile on Add money, not in a menu either.
   { key: "pay-links", label: "Pay links", path: "/pay-links", icon: IconPayments, keywords: "pay link get paid by anyone from any wallet usdc invoice charge someone without hold" },
