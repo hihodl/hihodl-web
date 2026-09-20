@@ -29,7 +29,7 @@ import { Ion, type IonName } from "../ion";
 
 export const P = {
   text: "text-white",
-  muted: "text-white/[0.62]",
+  muted: "text-white/[0.82]",
   /** textDim, lifted to 55% for small text. */
   dim: "text-white/55",
   caution: "text-amber",
@@ -99,7 +99,7 @@ export function Chip({
   count?: number;
 }) {
   const cls = `inline-flex h-[34px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[17px] border px-[13px] text-[13.5px] font-bold transition-colors ${
-    selected ? "border-[#F1F5F9] bg-[#F1F5F9] text-[#0A1420]" : "border-white/[0.14] bg-white/[0.06] text-white/[0.62] hover:bg-white/10"
+    selected ? "border-[#F1F5F9] bg-[#F1F5F9] text-[#0A1420]" : "border-white/[0.14] bg-white/[0.06] text-white/[0.82] hover:bg-white/10"
   } ${disabled ? "opacity-45" : ""}`;
   const inner = (
     <>
@@ -132,7 +132,7 @@ export function ChipRow({ children, label }: { children: ReactNode; label?: stri
 
 /** A 22-high tag, radius 11: calm, good (green), caution (amber) or dim. */
 export function Tag({ label, tone = "calm" }: { label: ReactNode; tone?: "calm" | "good" | "caution" | "dim" }) {
-  const ink = tone === "good" ? "text-[#2FBE8A]" : tone === "caution" ? "text-amber" : tone === "dim" ? "text-white/55" : "text-white/[0.62]";
+  const ink = tone === "good" ? "text-[#2FBE8A]" : tone === "caution" ? "text-amber" : tone === "dim" ? "text-white/55" : "text-white/[0.82]";
   const bg = tone === "good" ? "bg-[rgba(14,155,104,0.14)]" : tone === "caution" ? "bg-amber/[0.12]" : "bg-white/[0.07]";
   return <span className={`inline-flex h-[22px] shrink-0 items-center self-start whitespace-nowrap rounded-[11px] px-[9px] text-[11.5px] font-extrabold tracking-[0.1px] ${bg} ${ink}`}>{label}</span>;
 }
@@ -162,7 +162,7 @@ export function SheetRow({
   }`;
   const inner = (
     <>
-      {icon ? <Ion name={icon} size={18} className={`shrink-0 ${attention ? "text-amber" : "text-white/[0.62]"}`} /> : null}
+      {icon ? <Ion name={icon} size={18} className={`shrink-0 ${attention ? "text-amber" : "text-white/[0.82]"}`} /> : null}
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="truncate text-[14.5px] font-bold text-white">{title}</span>
         {meta ? <span className="truncate text-[12.5px] text-white/55">{meta}</span> : null}
@@ -188,7 +188,7 @@ export function SheetRow({
 export function KV({ k, v, strong }: { k: ReactNode; v: ReactNode; strong?: boolean }) {
   return (
     <div className="flex justify-between gap-3">
-      <span className="text-[14px] text-white/[0.62]">{k}</span>
+      <span className="text-[14px] text-white/[0.82]">{k}</span>
       <span className={`shrink text-right text-white ${strong ? "text-[15px] font-extrabold" : "text-[14px] font-strong"}`}>{v}</span>
     </div>
   );
@@ -200,9 +200,9 @@ export function Divider() {
 
 /* ── Fields ──────────────────────────────────────────────────────── */
 
-export const fieldLabel = "text-[12.5px] font-bold text-white/[0.62]";
+export const fieldLabel = "text-[12.5px] font-bold text-white/[0.82]";
 export const inputCls =
-  "min-h-12 w-full min-w-0 rounded-[16px] border border-white/[0.12] bg-white/[0.06] px-3.5 py-3 text-[15.5px] text-white outline-none transition-colors placeholder:text-white/[0.28] focus:border-white/30 disabled:opacity-60";
+  "min-h-12 w-full min-w-0 rounded-[16px] border border-white/[0.12] bg-white/[0.06] px-3.5 py-3 text-[15.5px] text-white outline-none transition-colors placeholder:text-white/[0.45] focus:border-white/30 disabled:opacity-60";
 export const inputAttention = "border-amber";
 
 export function Field({ label, hint, error, children, htmlFor }: { label: string; hint?: ReactNode; error?: ReactNode; children: ReactNode; htmlFor?: string }) {
@@ -278,8 +278,8 @@ export function Disclosure({ label, children, attention, summary }: { label: str
   return (
     <div className="flex flex-col gap-2">
       <button type="button" aria-expanded={shown} onClick={() => setOpen((v) => !v)} className="flex items-center gap-2 py-2 text-left">
-        <Ion name={shown ? "chevron-down" : "chevron-forward"} size={16} className={attention ? "text-amber" : "text-white/[0.62]"} />
-        <span className={`text-[13px] font-extrabold ${attention ? "text-amber" : "text-white/[0.62]"}`}>{label}</span>
+        <Ion name={shown ? "chevron-down" : "chevron-forward"} size={16} className={attention ? "text-amber" : "text-white/[0.82]"} />
+        <span className={`text-[13px] font-extrabold ${attention ? "text-amber" : "text-white/[0.82]"}`}>{label}</span>
         {!shown && summary ? <span className="flex-1 truncate text-right text-[12px] text-white/55">{summary}</span> : null}
       </button>
       {shown ? <div className="flex flex-col gap-3 pb-0.5">{children}</div> : null}
@@ -295,7 +295,7 @@ export function Empty({ icon, title, body, action }: { icon: IonName; title: str
         <Ion name={icon} size={24} />
       </span>
       <p className="text-[17px] font-bold tracking-[-0.3px] text-white">{title}</p>
-      {body ? <p className="max-w-[360px] text-[14px] leading-5 text-white/[0.62]">{body}</p> : null}
+      {body ? <p className="max-w-[360px] text-[14px] leading-5 text-white/[0.82]">{body}</p> : null}
       {action ? <div className="mt-2">{action}</div> : null}
     </div>
   );
@@ -353,8 +353,8 @@ export function EventLine({ event }: { event: { name: string; city?: string | nu
   const when = event.startsOn ? eventDatesText(event.startsOn, event.endsOn ?? event.startsOn) : "";
   return (
     <div className="flex min-w-0 items-center gap-1.5">
-      <Ion name="calendar-outline" size={13} className="shrink-0 text-white/[0.62]" />
-      <span className="min-w-0 flex-1 truncate text-[12.5px] font-strong text-white/[0.62]">{[event.name, event.city, when].filter(Boolean).join(" · ")}</span>
+      <Ion name="calendar-outline" size={13} className="shrink-0 text-white/[0.82]" />
+      <span className="min-w-0 flex-1 truncate text-[12.5px] font-strong text-white/[0.82]">{[event.name, event.city, when].filter(Boolean).join(" · ")}</span>
     </div>
   );
 }
@@ -465,8 +465,8 @@ export const cardBox = "rounded-[18px] border border-white/10 bg-white/[0.06]";
 /** The app's Tag as a class, by the old pill names: calm, good (green) or caution (amber). */
 const tagBase = "inline-flex h-[22px] shrink-0 items-center gap-1 whitespace-nowrap rounded-[11px] px-[9px] text-[11.5px] font-extrabold tracking-[0.1px]";
 export const tagCls = {
-  neutral: `${tagBase} bg-white/[0.07] text-white/[0.62]`,
-  open: `${tagBase} bg-white/[0.07] text-white/[0.62]`,
+  neutral: `${tagBase} bg-white/[0.07] text-white/[0.82]`,
+  open: `${tagBase} bg-white/[0.07] text-white/[0.82]`,
   held: `${tagBase} bg-amber/[0.12] text-amber`,
   sold: `${tagBase} bg-[rgba(14,155,104,0.14)] text-[#2FBE8A]`,
   attention: `${tagBase} bg-amber/[0.12] text-amber`,

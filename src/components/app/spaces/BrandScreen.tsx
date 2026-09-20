@@ -45,7 +45,7 @@ const SHOWN = 5;
 const SHOWN_SMALL = 3;
 
 /** A group's "see all": the app's link ink, as the Overview draws it. */
-const seeAll = "text-[12.5px] font-strong normal-case tracking-normal text-white/[0.62] hover:text-white";
+const seeAll = "text-[12.5px] font-strong normal-case tracking-normal text-white/[0.82] hover:text-white";
 
 /** Two brand names are the same brand when they are the same word: case, spaces and a leading @ aside. */
 function sameBrand(a: string | null | undefined, b: string | null | undefined): boolean {
@@ -121,16 +121,16 @@ function TheirActivity({ brand, back }: { brand: BrandRelation; back: string }) 
             <Logo brand={brand} />
             <div className="min-w-0 flex-1">
               <p className="truncate text-[15px] font-strong tracking-[-0.2px] text-white">{brand.name}</p>
-              {brand.handle ? <p className="truncate text-[12.5px] font-strong text-white/[0.62]">@{brand.handle}</p> : null}
+              {brand.handle ? <p className="truncate text-[12.5px] font-strong text-white/[0.82]">@{brand.handle}</p> : null}
             </div>
             {brand.repeat ? <Tag label="Repeat" tone="good" /> : null}
           </div>
           <p className="text-[40px] font-strong leading-none tracking-[-0.8px] tabular-nums text-white">{dollars(brand.receivedCents)}</p>
-          <p className="text-[14.5px] leading-5 text-white/[0.62]">
+          <p className="text-[14.5px] leading-5 text-white/[0.82]">
             reached you from {plural(brand.orders, "order")}
             {brand.firstPaidAt ? ` since ${monthYear(brand.firstPaidAt)}` : ""}
           </p>
-          <div className="mt-1.5 flex flex-col gap-1.5 border-t border-white/[0.08] pt-3 text-[12.5px] leading-[17px] text-white/[0.62]">
+          <div className="mt-1.5 flex flex-col gap-1.5 border-t border-white/[0.08] pt-3 text-[12.5px] leading-[17px] text-white/[0.82]">
             <p className="truncate">{brand.events.length ? brand.events.map((e) => e.name).join(", ") : "Not tied to an event"}</p>
             <p className="truncate">
               {[plural(brand.listings, "listing"), brand.chains.map((c) => c.label).join(" and "), brand.payFrom.map((p) => p.label).join(" and ")]

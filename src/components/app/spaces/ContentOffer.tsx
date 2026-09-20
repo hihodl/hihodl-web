@@ -162,7 +162,7 @@ export function ContentOfferScreen({
               {lead.bought} · {lead.listing}
             </p>
           ) : null}
-          <div className="flex flex-col gap-3 border-t border-white/[0.08] pt-3 text-[13px] leading-[18px] text-white/[0.62]">
+          <div className="flex flex-col gap-3 border-t border-white/[0.08] pt-3 text-[13px] leading-[18px] text-white/[0.82]">
             {production ? (
               <p>
                 {production.url ? "The message links your" : "Link X to add your"} Content production listing at {lead?.event?.name}.

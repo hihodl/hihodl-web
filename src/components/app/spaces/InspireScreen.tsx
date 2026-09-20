@@ -230,7 +230,7 @@ function External({ href, children }: { href: string; children: ReactNode }) {
       href={href}
       target="_blank"
       rel="noreferrer noopener"
-      className="inline-flex h-[34px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[17px] border border-white/[0.14] bg-white/[0.06] px-[13px] text-[13.5px] font-bold text-white/[0.62] transition-colors hover:bg-white/10"
+      className="inline-flex h-[34px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[17px] border border-white/[0.14] bg-white/[0.06] px-[13px] text-[13.5px] font-bold text-white/[0.82] transition-colors hover:bg-white/10"
     >
       <Ion name="open-outline" size={14} />
       {children}
@@ -243,11 +243,11 @@ function Credit({ credit, children }: { credit: InspireCredit; children?: ReactN
   return (
     <p className="text-[12px] leading-[17px] text-white/55">
       Campaigns marked &ldquo;via sponsorme index&rdquo; are from the{" "}
-      <a href={credit.url} target="_blank" rel="noreferrer noopener" className="text-white/[0.62] underline underline-offset-2 hover:text-white">
+      <a href={credit.url} target="_blank" rel="noreferrer noopener" className="text-white/[0.82] underline underline-offset-2 hover:text-white">
         {credit.name}
       </a>{" "}
       by{" "}
-      <a href={credit.byUrl} target="_blank" rel="noreferrer noopener" className="text-white/[0.62] underline underline-offset-2 hover:text-white">
+      <a href={credit.byUrl} target="_blank" rel="noreferrer noopener" className="text-white/[0.82] underline underline-offset-2 hover:text-white">
         {credit.by}
       </a>
       . Those creators are not on HOLD: we show what they offered, never how it went. {children}
@@ -294,7 +294,7 @@ function EventTile({ event, href }: { event: InspireEvent; href: string }) {
     <li>
       <Card href={href} className="h-full !gap-3 sm:min-h-[150px]">
         <div className="flex min-w-0 items-start gap-2.5">
-          <Ion name={event.slug === ANYTIME ? "bulb-outline" : "calendar-outline"} size={18} className="mt-0.5 shrink-0 text-white/[0.62]" />
+          <Ion name={event.slug === ANYTIME ? "bulb-outline" : "calendar-outline"} size={18} className="mt-0.5 shrink-0 text-white/[0.82]" />
           <div className="min-w-0 flex-1">
             <p className="truncate text-[14.5px] font-bold text-white">{event.name}</p>
             <p className="mt-0.5 truncate text-[12.5px] text-white/55">{where(event)}</p>
@@ -302,7 +302,7 @@ function EventTile({ event, href }: { event: InspireEvent; href: string }) {
           <Tag label={String(event.count)} />
         </div>
         <div className="mt-auto flex min-w-0 flex-col gap-0.5 text-[12.5px] font-strong">
-          {event.holdCount > 0 ? <p className="truncate text-white/[0.62]">{event.holdCount} on HOLD</p> : null}
+          {event.holdCount > 0 ? <p className="truncate text-white/[0.82]">{event.holdCount} on HOLD</p> : null}
           {event.indexCount > 0 ? <p className="truncate text-white/55">{event.indexCount} via sponsorme index</p> : null}
         </div>
       </Card>
@@ -397,11 +397,11 @@ function CampaignCard({ campaign: c, href, art }: { campaign: InspireCampaign; h
             <Avatar handle={c.creator.handle} url={c.creator.avatarUrl} />
             <div className="min-w-0 flex-1">
               <p className="truncate text-[14.5px] font-bold text-white">@{c.creator.handle}</p>
-              <p className="truncate text-[12.5px] text-white/[0.62]">{c.creator.name ?? "\u00a0"}</p>
+              <p className="truncate text-[12.5px] text-white/[0.82]">{c.creator.name ?? "\u00a0"}</p>
             </div>
           </div>
           <p className="line-clamp-2 min-h-[40px] text-[14.5px] leading-5 text-white">{c.title}</p>
-          <p className="mt-auto truncate text-[12.5px] font-strong text-white/[0.62]">
+          <p className="mt-auto truncate text-[12.5px] font-strong text-white/[0.82]">
             {[what, PRICING_LABEL[c.pricing.model]].filter(Boolean).join(" · ")}
           </p>
         </div>
@@ -457,7 +457,7 @@ function CampaignScreen({ slug, id }: { slug: string; id: string }) {
             <Avatar handle={c.creator.handle} url={c.creator.avatarUrl} big />
             <div className="min-w-0 flex-1">
               <p className="truncate text-[14.5px] font-bold text-white">@{c.creator.handle}</p>
-              {c.creator.name ? <p className="truncate text-[12.5px] text-white/[0.62]">{c.creator.name}</p> : null}
+              {c.creator.name ? <p className="truncate text-[12.5px] text-white/[0.82]">{c.creator.name}</p> : null}
             </div>
             <OriginTag origin={c.origin} />
           </div>

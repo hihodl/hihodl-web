@@ -95,7 +95,7 @@ function Screen({
         <div className="flex min-w-0 flex-col gap-2.5">
           <Card>
             <p className="text-[40px] font-strong leading-none tracking-[-0.8px] tabular-nums text-white">{big}</p>
-            <p className="text-[14.5px] leading-5 text-white/[0.62]">{bigNote}</p>
+            <p className="text-[14.5px] leading-5 text-white/[0.82]">{bigNote}</p>
             {extra ? <div className="mt-1.5 border-t border-white/[0.08] pt-3">{extra}</div> : null}
           </Card>
         </div>
@@ -158,7 +158,7 @@ export function BrandsScreen({ data, back, hrefOf }: { data: CreatorAnalytics; b
     <div className="flex flex-col gap-4">
       <DrillBar back={back} crumb={CROSS} title="Brands you work with" />
       <div className="flex flex-wrap items-center justify-between gap-2.5">
-        <p className="text-[14.5px] text-white/[0.62]">
+        <p className="text-[14.5px] text-white/[0.82]">
           <span className="text-[18px] font-extrabold tabular-nums text-white">{t.brands}</span>{" "}
           {t.brands === 1 ? "brand has" : "brands have"} paid you
         </p>
@@ -200,13 +200,13 @@ function BrandCard({ brand: b, href }: { brand: BrandRelation; href: string }) {
           <Logo brand={b} />
           <div className="min-w-0 flex-1">
             <p className="truncate text-[15px] font-strong tracking-[-0.2px] text-white">{b.name}</p>
-            <p className="truncate text-[12.5px] font-strong text-white/[0.62]">
+            <p className="truncate text-[12.5px] font-strong text-white/[0.82]">
               {b.handle ? `@${b.handle}` : b.firstPaidAt ? `since ${monthYear(b.firstPaidAt)}` : " "}
             </p>
           </div>
           {b.repeat ? <Tag>Repeat</Tag> : null}
         </div>
-        <p className="truncate text-[13px] text-white/[0.62]">
+        <p className="truncate text-[13px] text-white/[0.82]">
           {b.events.length ? b.events.map((e) => e.name).join(", ") : "Not tied to an event"}
         </p>
         <div className="mt-auto flex min-w-0 items-end justify-between gap-2">
@@ -394,7 +394,7 @@ export function PayScreen({ data, back }: { data: CreatorAnalytics; back: string
       bigNote={top ? `of your money came on ${top.label}` : "No payment yet"}
       // How to read "Paid from", not an observation about it: a QR scan and a
       // wallet connected in the browser are the same payment to us.
-      extra={<p className="text-[12.5px] leading-[17px] text-white/[0.62]">A QR scan and a connected wallet both show as External wallet.</p>}
+      extra={<p className="text-[12.5px] leading-[17px] text-white/[0.82]">A QR scan and a connected wallet both show as External wallet.</p>}
     >
       <div className="grid grid-cols-[minmax(0,1fr)] gap-4 xl:grid-cols-2">
         <MixPanel title="Network" rows={data.payMix.byChain} />
@@ -421,7 +421,7 @@ export function InspiredScreen({ data, back }: { data: CreatorAnalytics; back: s
         title="Who credited you"
         meta={plural(block.recent.length, "listing")}
         action={
-          <Link href={href("/listings/new")} className="text-[12.5px] font-strong normal-case tracking-normal text-white/[0.62] hover:text-white">
+          <Link href={href("/listings/new")} className="text-[12.5px] font-strong normal-case tracking-normal text-white/[0.82] hover:text-white">
             New listing
           </Link>
         }
@@ -440,7 +440,7 @@ export function InspiredScreen({ data, back }: { data: CreatorAnalytics; back: s
                   </p>
                 </div>
                 {l.path ? (
-                  <a href={`${SITE_URL}${l.path}`} target="_blank" rel="noopener noreferrer" className="inline-flex h-[34px] shrink-0 items-center rounded-[17px] border border-white/[0.14] bg-white/[0.06] px-[13px] text-[13.5px] font-bold text-white/[0.62] hover:bg-white/10">
+                  <a href={`${SITE_URL}${l.path}`} target="_blank" rel="noopener noreferrer" className="inline-flex h-[34px] shrink-0 items-center rounded-[17px] border border-white/[0.14] bg-white/[0.06] px-[13px] text-[13.5px] font-bold text-white/[0.82] hover:bg-white/10">
                     View
                   </a>
                 ) : null}

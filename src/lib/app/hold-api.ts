@@ -16,11 +16,16 @@
  *
  * WHAT THIS FILE IS NOT
  *
- * It is reads. Nothing here moves money, and nothing here writes. The two
- * POSTs are POSTs because the backend takes the owner address in a body; they
- * are reads all the same. `/ledger/my-container` is the one exception worth
- * knowing: it creates the person's Main and Savings rows the first time it is
- * asked, so it is a write wearing a GET.
+ * It is reads, and it moves no money. The two POSTs are POSTs because the
+ * backend takes the owner address in a body; they are reads all the same.
+ * `/ledger/my-container` is the one exception worth knowing: it creates the
+ * person's Main and Savings rows the first time it is asked, so it is a write
+ * wearing a GET.
+ *
+ * The chat (lib/app/chat.ts) is the one caller that genuinely writes, and it
+ * writes WORDS: a message, a read receipt, an answer to a request. It needs no
+ * key because there is no key in a sentence — which is exactly why it is the
+ * half of Payments the web can carry in full.
  *
  * Money on the web is otherwise view only. A withdrawal is approved on the
  * phone (Android) or signed with a passkey bound to that one transaction
@@ -51,17 +56,26 @@ export class HoldApiError extends Error {
  * the body used as it is when it is not — the same rule the app's apiClient
  * follows.
  */
-export async function read<T>(path: string, init: { json?: unknown; signal?: AbortSignal } = {}): Promise<T> {
+export async function read<T>(
+  path: string,
+  init: { json?: unknown; signal?: AbortSignal; method?: "GET" | "POST" | "PUT" | "DELETE" } = {},
+): Promise<T> {
   const token = await accessToken();
   if (!token) throw new HoldApiError("UNAUTHORIZED", 401);
 
   const headers: Record<string, string> = { accept: "application/json", authorization: `Bearer ${token}` };
   if (init.json !== undefined) headers["content-type"] = "application/json";
 
+  // A body means POST unless the caller names another verb. `method` exists for
+  // the chat, which is the one place on the web that genuinely writes: a note
+  // is withdrawn with DELETE and the privacy setting is saved with PUT, and
+  // neither can be spelled with the body rule alone.
+  const method = init.method ?? (init.json !== undefined ? "POST" : "GET");
+
   let res: Response;
   try {
     res = await fetch(`${API_BASE}/${path.replace(/^\/+/, "")}`, {
-      method: init.json !== undefined ? "POST" : "GET",
+      method,
       headers,
       body: init.json !== undefined ? JSON.stringify(init.json) : undefined,
       cache: "no-store",

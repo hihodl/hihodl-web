@@ -6,46 +6,50 @@
  * built by grouping `/transfers` — avatar or person placeholder, the name, the
  * last line, the time.
  *
- * WHAT IS MISSING, AND WHY
+ * BOTH HALVES
  *
- * The app's list is the merge of two halves: transfers, and conversations from
- * `/payment-notes/conversations`. The web builds it from the money alone, so
- * there is no chat, no thread composer and no pay links here yet.
+ * The app's list is the merge of transfers and conversations, and so is this
+ * one — see `mergeInbox`. For a while the web had only the money, because a
+ * stale checkout was read and the whole chat router was reported missing. It
+ * was never missing. Sixteen routes, Giphy behind one of them, all of it plain
+ * `requireAuth`, and none of it needing a key.
  *
- * That is a to-do, not a limit. This file used to say the chat half was not
- * mounted on the backend; it is mounted (401 in production, not 404), it is a
- * plain authenticated read, and the browser may make it. The claim came from a
- * stale checkout and it cost this screen half its shape.
+ * WHICH IS WHY THE CHAT IS THE ONE THING HERE THAT IS NOT A LESSER COPY
+ *
+ * Paying needs a signature and the signature needs the phone, so every money
+ * action on this screen is drawn and named and then handed to the app. A
+ * sentence needs no signature. The conversation on the web is the whole
+ * conversation: messages, GIFs, read receipts, requests.
  *
  * The app also gates its Payments tab behind `useMasterWalletsLinked()`, which
  * needs the app's keys to pass. The web skips that gate — it only guards the
  * verify screen that links a wallet, which the web cannot do — or the page
  * would dead-end on a read every signed-in person is allowed to make.
  *
- * VIEW ONLY
+ * VIEW ONLY, FOR THE MONEY
  *
- * Nothing here sends, requests, accepts, rejects, cancels a schedule, revokes
- * an allowance or funds a payout. Where the app offers such an action the row
- * is drawn and the action is named as the app's. The one money action the web
- * has is receiving (/add), and the withdrawal flow on the Wallet page, which
- * is approved on the phone or signed with a passkey bound to that transaction.
+ * Nothing here sends, requests, cancels a schedule, revokes an allowance or
+ * funds a payout. The one money action the web has is receiving (/add), and the
+ * withdrawal flow on the Wallet page, which is approved on the phone or signed
+ * with a passkey bound to that one transaction.
  */
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import { useConversations } from "@/lib/app/chat";
 import { maskTokenSymbol, type DisplayMode } from "@/lib/app/display-mode";
 import type { Transfer } from "@/lib/app/hold-api";
 import { useTransfers } from "@/lib/app/money";
 import {
   groupTransfersIntoThreads,
   lastActivityLine,
+  mergeInbox,
   peerRows,
-  threadDisplayName,
   threadTime,
   transferAmount,
   tokenTicker,
-  type PaymentThread,
+  type InboxRow,
 } from "@/lib/app/payments";
 
 import { useProductHref } from "../base";
@@ -54,6 +58,8 @@ import { Ion, type IonName } from "../ion";
 import { useShellPrefs } from "../Shell";
 import { Skeleton } from "../ui";
 import { cardClass } from "../wallet/app-kit";
+import { Conversation } from "./Chat";
+import { ChatRequests } from "./Requests";
 import { PayoutsPanel, ScheduledPanel } from "./Standing";
 import { TxDetails } from "./TxDetails";
 
@@ -67,19 +73,28 @@ const PHRASES = ["Search", "Search @username", "Search contact", "Paste wallet a
 export function PaymentsScreen() {
   const { displayMode } = useShellPrefs();
   const transfers = useTransfers(100);
+  const conversations = useConversations();
   const [view, setView] = useState<View>({ kind: "list" });
 
-  const threads = useMemo(
-    () => (transfers.data ? groupTransfersIntoThreads(peerRows(transfers.data.transfers)) : []),
-    [transfers.data],
+  /**
+   * The money half is what this screen waits for; the words half is allowed to
+   * be late or to fail. A chat read that 500s must not take the payment history
+   * down with it — somebody opened this to check a number.
+   */
+  const rows = useMemo(
+    () =>
+      transfers.data
+        ? mergeInbox(groupTransfersIntoThreads(peerRows(transfers.data.transfers)), conversations.data ?? [])
+        : [],
+    [transfers.data, conversations.data],
   );
 
   if (view.kind === "thread") {
-    const thread = threads.find((t) => t.id === view.id) ?? null;
+    const row = rows.find((r) => r.id === view.id) ?? null;
     return (
       <Column>
         <ThreadView
-          thread={thread}
+          row={row}
           mode={displayMode}
           onBack={() => setView({ kind: "list" })}
           onOpenTx={(id) => setView({ kind: "tx", id })}
@@ -89,7 +104,7 @@ export function PaymentsScreen() {
   }
 
   if (view.kind === "tx") {
-    const row = threads.flatMap((t) => t.transfers).find((t) => t.id === view.id) ?? null;
+    const row = rows.flatMap((r) => r.transfers).find((t) => t.id === view.id) ?? null;
     return (
       <Column>
         <TxDetails id={view.id} row={row} mode={displayMode} onBack={() => setView({ kind: "list" })} />
@@ -99,8 +114,9 @@ export function PaymentsScreen() {
 
   return (
     <Column>
+      <ChatRequests onAnswered={() => void conversations.mutate()} />
       <List
-        threads={threads}
+        rows={rows}
         mode={displayMode}
         loading={transfers.data === undefined && !transfers.error}
         failed={!!transfers.error}
@@ -118,14 +134,14 @@ export function PaymentsScreen() {
 /* ── The list ─────────────────────────────────────────────────────── */
 
 function List({
-  threads,
+  rows,
   mode,
   loading,
   failed,
   onRetry,
   onOpen,
 }: {
-  threads: PaymentThread[];
+  rows: InboxRow[];
   mode: DisplayMode;
   loading: boolean;
   failed: boolean;
@@ -137,16 +153,17 @@ function List({
 
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return threads.filter((t) => {
+    return rows.filter((r) => {
       // Groups and favourites are both the app's own state: a group is a
-      // `/groups` thread (not mounted here) and a favourite is a flag in the
-      // app's local store, on that phone. Neither can be read from here, so
-      // both filters land on their empty state rather than on a wrong list.
+      // `/groups` thread and a favourite is a flag in the app's local store, on
+      // that phone. Neither is readable from here, so both filters land on
+      // their empty state rather than on a wrong list.
       if (filter !== "all") return false;
       if (!q) return true;
-      return `${threadDisplayName(t)} ${t.alias} ${t.address ?? ""}`.toLowerCase().includes(q);
+      const t = r.thread;
+      return `${r.name} ${t?.alias ?? ""} ${t?.address ?? ""}`.toLowerCase().includes(q);
     });
-  }, [threads, filter, query]);
+  }, [rows, filter, query]);
 
   return (
     <div className="flex flex-col">
@@ -213,8 +230,8 @@ function List({
         )
       ) : null}
 
-      {shown.map((t) => (
-        <ThreadRow key={t.id} thread={t} mode={mode} onOpen={() => onOpen(t.id)} />
+      {shown.map((r) => (
+        <ThreadRow key={r.id} row={r} mode={mode} onOpen={() => onOpen(r.id)} />
       ))}
     </div>
   );
@@ -258,20 +275,29 @@ function SearchRow({ value, onChange }: { value: string; onChange: (v: string) =
  * time. The card's ink is a colour and not a wash, so hover lifts that colour
  * — a white overlay would replace #15313D and read as a dimmer card.
  */
-function ThreadRow({ thread, mode, onOpen }: { thread: PaymentThread; mode: DisplayMode; onOpen: () => void }) {
-  const name = threadDisplayName(thread);
+function ThreadRow({ row, mode, onOpen }: { row: InboxRow; mode: DisplayMode; onOpen: () => void }) {
   return (
     <button
       type="button"
       onClick={onOpen}
       className={`${cardClass} mb-3 flex w-full items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-[#1A3B49]`}
     >
-      <Avatar kind={thread.kind} />
+      <Avatar kind={row.kind} avatarUrl={row.avatarUrl} />
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[15px] font-extrabold tracking-[-0.2px] text-white">{name}</span>
-        <span className="mt-0.5 block truncate text-[13px] text-white/75">{lastActivityLine(thread.lastLine, mode)}</span>
+        <span className="block truncate text-[15px] font-extrabold tracking-[-0.2px] text-white">{row.name}</span>
+        <span className="mt-0.5 block truncate text-[13px] text-white/75">
+          {/* A message is already a sentence; a money line still has to be worded. */}
+          {row.lineIsMessage ? row.line : lastActivityLine(row.line, mode)}
+        </span>
       </span>
-      <span className="shrink-0 text-[12px] text-white/55">{threadTime(thread.lastTs)}</span>
+      <span className="flex shrink-0 flex-col items-end gap-1">
+        <span className="text-[12px] text-white/70">{threadTime(row.ts)}</span>
+        {row.unread > 0 ? (
+          <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-[9px] bg-amber px-1.5 text-[11px] font-extrabold tabular-nums text-[#0F0F1A]">
+            {row.unread > 99 ? "99+" : row.unread}
+          </span>
+        ) : null}
+      </span>
     </button>
   );
 }
@@ -281,7 +307,15 @@ function ThreadRow({ thread, mode, onOpen }: { thread: PaymentThread; mode: Disp
  * counterparty picture on this backend, so a HOLD person wears the app's mark
  * and everybody else the icon their kind gets on the phone.
  */
-function Avatar({ kind }: { kind: PaymentThread["kind"] }) {
+function Avatar({ kind, avatarUrl }: { kind: InboxRow["kind"]; avatarUrl?: string | null }) {
+  // The conversations half carries a picture where transfers never did, so a
+  // person you have talked to wears their own face instead of the app's mark.
+  if (avatarUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={avatarUrl} alt="" width={34} height={34} className="h-[34px] w-[34px] shrink-0 rounded-full object-cover" />
+    );
+  }
   if (kind === "hihodl") {
     return (
       // eslint-disable-next-line @next/next/no-img-element
@@ -363,24 +397,29 @@ function EmptyHistory() {
 /* ── One counterparty ─────────────────────────────────────────────── */
 
 /**
- * What the app's thread screen is once the chat is taken out of it: every
- * payment with this person, newest first. Tapping one opens the app's details.
+ * The app's thread screen: the payments with this person, and the conversation.
  *
- * The app's thread also composes messages and starts payments. Neither is
- * here: the composer is chat (not mounted) and paying is the app's.
+ * MONEY ABOVE, WORDS BELOW
+ *
+ * The app's order, and for the app's reason: this is a money screen, and a
+ * composer that pushed the history down would make it read as a chat that
+ * happens to move money rather than the other way round.
+ *
+ * Paying this person again is still the app's — that is a signature. Writing to
+ * them is not, so the composer is the real one and not a pointer to the phone.
  */
 function ThreadView({
-  thread,
+  row,
   mode,
   onBack,
   onOpenTx,
 }: {
-  thread: PaymentThread | null;
+  row: InboxRow | null;
   mode: DisplayMode;
   onBack: () => void;
   onOpenTx: (id: string) => void;
 }) {
-  if (!thread) {
+  if (!row) {
     return (
       <>
         <BackHeader title="Payments" onBack={onBack} />
@@ -388,19 +427,31 @@ function ThreadView({
       </>
     );
   }
-  const rows = [...thread.transfers].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+  const payments = [...row.transfers].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
   return (
     <>
-      <BackHeader title={threadDisplayName(thread)} subtitle={`${rows.length} ${rows.length === 1 ? "payment" : "payments"}`} onBack={onBack} />
-      <SectionTitle first>Payments</SectionTitle>
-      <div className={`${cardClass} flex flex-col`}>
-        {rows.map((t, i) => (
-          <TransferRow key={t.id} row={t} first={i === 0} mode={mode} onOpen={() => onOpenTx(t.id)} />
-        ))}
-      </div>
-      <p className="mt-3 px-1 text-[12px] leading-[17px] text-white/55">
-        Messages and paying this person again happen in the HOLD app.
-      </p>
+      <BackHeader
+        title={row.name}
+        subtitle={payments.length ? `${payments.length} ${payments.length === 1 ? "payment" : "payments"}` : "No payments yet"}
+        onBack={onBack}
+      />
+
+      {payments.length ? (
+        <>
+          <SectionTitle first>Payments</SectionTitle>
+          <div className={`${cardClass} flex flex-col`}>
+            {payments.map((t, i) => (
+              <TransferRow key={t.id} row={t} first={i === 0} mode={mode} onOpen={() => onOpenTx(t.id)} />
+            ))}
+          </div>
+          <p className="mt-3 px-1 text-[12px] leading-[17px] text-white/70">
+            Paying {row.name} again happens in the HOLD app.
+          </p>
+        </>
+      ) : null}
+
+      <SectionTitle first={payments.length === 0}>Conversation</SectionTitle>
+      <Conversation peerId={row.peerId} peerName={row.name} />
     </>
   );
 }

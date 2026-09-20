@@ -9,17 +9,20 @@
  *   payout* / PAYOUT_STATE_*        src/send/payoutHistory.ts
  *   formatScheduleAmount            src/features/scheduledPayments/schedule.ts
  *
- * One thing the web does differently, for now: a thread here is built from
- * `/transfers` alone. The app merges in the chat half from
- * `/payment-notes/conversations`, which IS mounted and which the browser may
- * read — it simply has not been built here yet. Not a limit, a to-do.
+ * The list has two halves and `mergeInbox` at the foot of this file puts them
+ * together: the money from `/transfers`, and the words from
+ * `/payment-notes/conversations`. Built from the money alone — as this screen
+ * was at first — a person you have only ever messaged has no row at all, and no
+ * message ever moves the order.
  *
  * Symbols follow the display mode like every other money screen — `12.00 USD`
  * in fintech, `12.00 USDC` in hybrid and native. The mode arrives as a
  * parameter; nothing here decides it.
  *
- * Nothing here writes. Payments on the web is view only: paying, requesting,
- * accepting, cancelling a schedule and funding a payout all stay in the app.
+ * No MONEY moves from here. Paying, requesting, cancelling a schedule and
+ * funding a payout all stay in the app, because each of them needs a key that
+ * never leaves the phone. Writing a message does not, which is why the chat is
+ * whole on the web and the money is not.
  */
 
 import { maskTokenSymbol, type DisplayMode } from "./display-mode";
@@ -485,4 +488,125 @@ export function scheduleDate(iso: string | null): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
   return d.toLocaleDateString("en-US", { day: "numeric", month: "short" });
+}
+
+/* ── The other half of the list: conversations ────────────────────── */
+
+/**
+ * A row in Payments, once the money and the words are put together.
+ *
+ * WHY THE LIST NEEDED A SECOND HALF
+ *
+ * Built from `/transfers` alone, this screen could not show a person you have
+ * only ever messaged — they had never appeared in a transfer, so they had no
+ * row — and no message ever changed its order. The backend's own note on
+ * `/payment-notes/conversations` says exactly that: "this is the missing half".
+ *
+ * WHAT JOINS THEM
+ *
+ * The handle. A transfer carries `fromAlias`/`toAlias` and no user id; a
+ * conversation carries the peer's user id and their handle. So the handle is
+ * the only key both sides hold, which is also why the app resolves threads
+ * through `/search/users` — same join, made at the other end.
+ *
+ * A thread with no conversation keeps its money row and gets no composer (there
+ * is no user id to write to). A conversation with no thread becomes a row of
+ * its own. Neither half is allowed to hide the other.
+ */
+export interface InboxRow {
+  id: string;
+  name: string;
+  /** The peer's user id, when the conversations half knows it. Null = no chat. */
+  peerId: string | null;
+  avatarUrl: string | null;
+  kind: CounterpartyKind;
+  /** The second line, already worded — money or words, whichever is newer. */
+  line: string;
+  /** True when `line` came from the conversation rather than from a transfer. */
+  lineIsMessage: boolean;
+  ts: number;
+  unread: number;
+  /** The payments with this person. Empty for a conversation that never paid. */
+  transfers: Transfer[];
+  thread: PaymentThread | null;
+}
+
+/** `@alex` and `alex` are the same person. */
+function handleKey(s: string | null | undefined): string {
+  return String(s ?? "").trim().replace(/^@/, "").toLowerCase();
+}
+
+export interface ConversationLike {
+  peerId: string;
+  aliasHandle: string | null;
+  displayName: string | null;
+  avatarUrl: string | null;
+  lastBody: string;
+  lastHasMedia: boolean;
+  lastFromMe: boolean;
+  lastAt: string;
+  unread: number;
+}
+
+/**
+ * One list out of two.
+ *
+ * The second line is whichever half spoke last, so a message moves a row up the
+ * list exactly as a payment does — the thing the money-only list could not do.
+ */
+export function mergeInbox(
+  threads: readonly PaymentThread[],
+  conversations: readonly ConversationLike[],
+): InboxRow[] {
+  const byHandle = new Map<string, ConversationLike>();
+  for (const c of conversations) {
+    const key = handleKey(c.aliasHandle);
+    if (key) byHandle.set(key, c);
+  }
+
+  const used = new Set<string>();
+  const rows: InboxRow[] = threads.map((t) => {
+    const key = handleKey(t.alias);
+    const c = key ? byHandle.get(key) : undefined;
+    if (c) used.add(c.peerId);
+
+    const chatTs = c ? Date.parse(c.lastAt) : NaN;
+    const chatNewer = c && Number.isFinite(chatTs) && chatTs > t.lastTs;
+    const body = c ? (c.lastHasMedia && !c.lastBody ? "GIF" : c.lastBody) : "";
+
+    return {
+      id: t.id,
+      name: threadDisplayName(t),
+      peerId: c?.peerId ?? null,
+      avatarUrl: c?.avatarUrl ?? null,
+      kind: t.kind,
+      line: chatNewer ? (c!.lastFromMe ? `You: ${body}` : body) : t.lastLine,
+      lineIsMessage: !!chatNewer,
+      ts: chatNewer ? chatTs : t.lastTs,
+      unread: c?.unread ?? 0,
+      transfers: t.transfers,
+      thread: t,
+    };
+  });
+
+  for (const c of conversations) {
+    if (used.has(c.peerId)) continue;
+    const body = c.lastHasMedia && !c.lastBody ? "GIF" : c.lastBody;
+    const ts = Date.parse(c.lastAt);
+    rows.push({
+      id: `peer:${c.peerId}`,
+      name: c.displayName?.trim() || (c.aliasHandle ? `@${c.aliasHandle}` : "Someone on HOLD"),
+      peerId: c.peerId,
+      avatarUrl: c.avatarUrl,
+      kind: "hihodl",
+      line: c.lastFromMe ? `You: ${body}` : body,
+      lineIsMessage: true,
+      ts: Number.isFinite(ts) ? ts : 0,
+      unread: c.unread,
+      transfers: [],
+      thread: null,
+    });
+  }
+
+  return rows.sort((a, b) => b.ts - a.ts);
 }
