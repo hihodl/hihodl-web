@@ -656,6 +656,14 @@ function NavLink({ item, active, badge, collapsed, hard }: { item: NavItem; acti
 
 const ROLE_LABEL: Record<ShellRole, string> = { creator: "Creator", manager: "Manager", rep: "Rep" };
 
+/**
+ * The person, at the foot of the column.
+ *
+ * It opens the MENU, not Account. Everything somebody comes down here looking
+ * for — their profile, security, recovery, statements, how the app looks,
+ * signing out — is one screen, and Account is the first thing on it. Landing
+ * on Account instead meant going back up a level to reach any of the rest.
+ */
 function UserCard({ collapsed }: { collapsed: boolean }) {
   const { session, x, role, seats, agency } = useShell();
   const me = useMe();
@@ -670,7 +678,7 @@ function UserCard({ collapsed }: { collapsed: boolean }) {
   if (collapsed) {
     return (
       <div className="flex flex-col items-center gap-1">
-        <Link href={productHref("/account")} title={name}>
+        <Link href={productHref("/menu")} title={name} aria-label={`${name} — menu`}>
           <UserAvatar size={36} fallbackName={name} />
         </Link>
         <button type="button" aria-label="Sign out" title="Sign out" onClick={() => void signOut()} className="flex h-8 w-8 items-center justify-center rounded-[8px] text-[#9FB7C2] hover:bg-white/10 hover:text-text">
@@ -681,7 +689,7 @@ function UserCard({ collapsed }: { collapsed: boolean }) {
   }
   return (
     <div className="flex items-center gap-2.5 rounded-[12px] border border-white/10 bg-white/[0.04] p-2">
-      <Link href={productHref("/account")} className="flex min-w-0 flex-1 items-center gap-2.5" title="Account">
+      <Link href={productHref("/menu")} className="flex min-w-0 flex-1 items-center gap-2.5" title="Menu">
         <UserAvatar size={36} fallbackName={name} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-small text-text">{name}</p>
@@ -769,7 +777,8 @@ function TopBar({
             </Link>
           ) : null}
           {/* On a phone the sidebar, and the person in it, is behind the menu. */}
-          <Link href={productHref("/account")} aria-label="Account" className="shrink-0 lg:hidden">
+          {/* Same destination as the column's person: the Menu, which opens on Account. */}
+          <Link href={productHref("/menu")} aria-label="Menu" className="shrink-0 lg:hidden">
             <UserAvatar size={36} fallbackName={session.user.email} />
           </Link>
         </div>
