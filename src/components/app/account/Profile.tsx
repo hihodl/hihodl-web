@@ -15,10 +15,21 @@
  * creator's public pages print it, and it sits on the avatar screen.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { CreatorApiError, describeCreatorError } from "@/lib/creator/api";
-import { checkUsername, chosenUsername, cleanUsername, removeAvatar, updateMe, uploadAvatar, type UsernameVerdict } from "@/lib/app/me";
+import {
+  checkUsername,
+  chosenUsername,
+  cleanUsername,
+  cropToJpeg,
+  loadImage,
+  removeAvatar,
+  updateMe,
+  uploadAvatar,
+  type CropRect,
+  type UsernameVerdict,
+} from "@/lib/app/me";
 import { useMe, useRefresh } from "@/lib/app/spaces-data";
 
 import { Avatar } from "../front/kit";
@@ -26,6 +37,7 @@ import { BackHeader, Column, ctaCommit, HoldCard, holdCard, MenuRow, Notice, Sec
 import { Ion } from "../ion";
 import { useShell } from "../Shell";
 import { Skeleton } from "../ui";
+import { AvatarCropper } from "./AvatarCropper";
 import { UserAvatar } from "./UserAvatar";
 
 function dayText(iso: string): string {
@@ -59,7 +71,8 @@ export function ProfileEdit({ onBack }: { onBack: () => void }) {
   const m = me.data;
 
   const [name, setName] = useState("");
-  const [file, setFile] = useState<File | null>(null);
+  /** The photo being cropped. Null until one is picked; cleared once uploaded. */
+  const [picked, setPicked] = useState<HTMLImageElement | null>(null);
   const [busy, setBusy] = useState<"save" | "photo" | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -72,9 +85,6 @@ export function ProfileEdit({ onBack }: { onBack: () => void }) {
     filled.current = true;
     setName(m.profile.displayName ?? "");
   }, [m]);
-
-  const preview = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
-  useEffect(() => () => void (preview && URL.revokeObjectURL(preview)), [preview]);
 
   if (!m) {
     return (
@@ -103,18 +113,31 @@ export function ProfileEdit({ onBack }: { onBack: () => void }) {
     }
   };
 
-  const photo = async (f: File | null) => {
-    setFile(f);
+  /**
+   * A picked file is DECODED, not uploaded. Nothing leaves until a square has
+   * been chosen — the old behaviour uploaded on pick and centre-cropped, which
+   * is how a portrait ended up cut off at the eyebrows with no way back.
+   */
+  const pick = async (f: File | null) => {
     if (!f) return;
+    setNotice(null);
+    try {
+      setPicked(await loadImage(f));
+    } catch {
+      setNotice("That file is not an image we can read. Try a JPEG or a PNG.");
+    }
+  };
+
+  const applyCrop = async (rect: CropRect) => {
+    if (!picked) return;
     setBusy("photo");
     setNotice(null);
     try {
-      await uploadAvatar(f, uid, m.profile.avatarUrl);
+      await uploadAvatar(await cropToJpeg(picked, rect), uid, m.profile.avatarUrl);
       await refresh("me");
-      setFile(null);
+      setPicked(null);
     } catch (e) {
-      setNotice(e instanceof CreatorApiError ? describeCreatorError(e) : "Couldn't load photo. Try again, or pick a different image.");
-      setFile(null);
+      setNotice(e instanceof CreatorApiError ? describeCreatorError(e) : "Couldn't save that photo. Try again, or pick a different image.");
     } finally {
       setBusy(null);
     }
@@ -137,31 +160,46 @@ export function ProfileEdit({ onBack }: { onBack: () => void }) {
   return (
     <Column>
       <BackHeader title="Avatar" onBack={onBack} />
-      <p className="mb-5 text-center text-[13px] text-[#9FB7C2]">Pick how your avatar should look.</p>
 
-      <div className="mb-6 flex justify-center">
-        <Avatar src={preview ?? m.profile.avatarUrl} name={shownName} size={96} round />
-      </div>
-
-      <HoldCard>
-        <MenuRow
-          icon="image-outline"
-          label={busy === "photo" ? "Saving photo…" : "Choose from library"}
-          sub="Pick a photo you already have."
-          disabled={busy !== null}
-          onClick={() => input.current?.click()}
+      {picked ? (
+        <AvatarCropper
+          image={picked}
+          busy={busy === "photo"}
+          onCancel={() => {
+            setPicked(null);
+            input.current?.click();
+          }}
+          onConfirm={(rect) => void applyCrop(rect)}
         />
-        {m.profile.avatarUrl ? (
-          <MenuRow icon="trash-outline" label="Remove photo" sub="Go back to your initial." disabled={busy !== null} onClick={() => void clearPhoto()} />
-        ) : null}
-      </HoldCard>
+      ) : (
+        <>
+          <p className="mb-5 text-center text-[13px] text-[#9FB7C2]">Pick how your avatar should look.</p>
+
+          <div className="mb-6 flex justify-center">
+            <Avatar src={m.profile.avatarUrl} name={shownName} size={96} round />
+          </div>
+
+          <HoldCard>
+            <MenuRow
+              icon="image-outline"
+              label="Choose from library"
+              sub="Pick a photo, then choose the part that shows."
+              disabled={busy !== null}
+              onClick={() => input.current?.click()}
+            />
+            {m.profile.avatarUrl ? (
+              <MenuRow icon="trash-outline" label="Remove photo" sub="Go back to your initial." disabled={busy !== null} onClick={() => void clearPhoto()} />
+            ) : null}
+          </HoldCard>
+        </>
+      )}
       <input
         ref={input}
         type="file"
         accept="image/jpeg,image/png,image/webp,image/heic"
         className="hidden"
         onChange={(e) => {
-          void photo(e.target.files?.[0] ?? null);
+          void pick(e.target.files?.[0] ?? null);
           e.target.value = "";
         }}
       />
