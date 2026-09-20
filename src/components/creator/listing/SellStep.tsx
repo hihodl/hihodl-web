@@ -13,6 +13,16 @@
  * It is the DEFAULT every rung starts from, not a rule over them. A creator
  * who never opens the question on a rung gets exactly this; one who does gets
  * their own answer on that rung and this one everywhere else. See Ladder.tsx.
+ *
+ * WHY THIS ONE CARD IS ALLOWED TO SCROLL
+ *
+ * Every other step in the editor fits. This one holds a ladder the creator
+ * builds rung by rung, and it cannot be split from the pricing question above
+ * it: the rule that a rung sold to the highest bid sells exactly one thing is
+ * fixed by changing either of them, and sending somebody to a card they cannot
+ * reach to fix the card they are on is worse than a scrollbar. So it degrades
+ * the way the app's own `WizardPage` degrades — it scrolls, and only when the
+ * content is taller than the card.
  */
 
 "use client";
@@ -43,7 +53,9 @@ import { MoreChainsLine } from "@/components/app/MoreChains";
 import { Ladder } from "./Ladder";
 import { Card, Checkbox, fieldLabel } from "@/components/app/spaces/kit";
 
-import { Block, Choice, Count, Field, Money, Paragraph, Problems, Text, Toggles } from "./parts";
+import { Block, Choice, Count, Field, Money, Paragraph, Problems, Toggles } from "./parts";
+import { StepCard } from "./StepPager";
+import { DayTimeField, dayPlus, today } from "./WhenField";
 
 const CONTENT_LABEL: Record<ContentKind, string> = {
   logo: "A logo",
@@ -112,12 +124,13 @@ export function SellStep({
 
   const current: string = draft.pricingMode === "fixed" && draft.acceptsOffers ? "fixed_with_offers" : draft.pricingMode;
 
+  // Bidding has to stop before the listing closes, so the calendar stops there too.
+  const closesDay = draft.closesAt.slice(0, 10);
+  const biddingMax = closesDay ? dayPlus(closesDay, -2) : dayPlus(today(), LIMITS.MAX_CAMPAIGN_DAYS);
+
   return (
-    <div className="flex flex-col gap-3.5">
-      <Block
-        title="How do you want to sell?"
-        why="This is where every part of it starts. On a ladder each rung can answer differently — the $50 logo first come first served, the one interview to the highest bid — so nothing here locks anything down."
-      >
+    <StepCard title="What you sell" help="On a ladder each rung can answer differently, so nothing here locks anything down.">
+      <Block title="How do you want to sell?">
         <Field label="The default for the whole listing" problems={problemsAt(problems, "pricing")}>
           <Choice
             name="pricing"
@@ -140,32 +153,19 @@ export function SellStep({
         </Field>
 
         {needsCountdown ? (
-          <Field
+          <DayTimeField
             label="Bidding ends"
+            value={draft.biddingEndsAt}
+            onChange={(biddingEndsAt) => set({ biddingEndsAt })}
+            min={dayPlus(today(), 1)}
+            max={biddingMax}
             problems={problemsAt(problems, "biddingEndsAt")}
-            htmlFor="bidding-ends"
-            hint={`At least ${LIMITS.BIDDING_MIN_AFTER_PUBLISH_HOURS} hours after it goes live, and at least ${LIMITS.BIDDING_MIN_BEFORE_CLOSE_HOURS} hours before it closes. That gap is the room the winner needs: a day for you to decide, a day for them to pay, and a little slack for a bid that lands in the last ten minutes and pushes the clock back.`}
-          >
-            <Text
-              id="bidding-ends"
-              type="datetime-local"
-              value={draft.biddingEndsAt}
-              onChange={(biddingEndsAt) => set({ biddingEndsAt })}
-            />
-          </Field>
+            hint={`At least ${LIMITS.BIDDING_MIN_BEFORE_CLOSE_HOURS} hours before it closes: the room the winner needs to pay.`}
+          />
         ) : null}
       </Block>
 
-      <Block
-        title={production ? "The spots" : service ? (draft.sells === "ladder" ? "The ladder" : "The slots") : "The spots"}
-        why={
-          production
-            ? "Each spot is one brand's package, at one price. Sell as many as you can film well at one event."
-            : service
-            ? "A ladder is several different things at several prices, on one listing — a $50 logo, a $200 placement, one $1,300 interview. Selling the same thing several times over is the other shape."
-            : "Each spot on the product is sold separately, to a different brand."
-        }
-      >
+      <Block title={production ? "The spots" : service ? (draft.sells === "ladder" ? "The ladder" : "The slots") : "The spots"}>
         {service ? (
           <>
             <Field label="What this listing is">
@@ -201,10 +201,7 @@ export function SellStep({
         )}
       </Block>
 
-      <Block
-        title="What we charge"
-        why="We take 5% of what a space sells for. Nothing to list it, and nothing if nothing sells."
-      >
+      <Block title="What we charge" why="5% of what a space sells for, and nothing if nothing sells.">
         <Choice
           name="feePayer"
           value={draft.feePayer}
@@ -226,10 +223,7 @@ export function SellStep({
         />
       </Block>
 
-      <Block
-        title="Get paid on"
-        why="A sponsor pays in USDC on Solana, straight to your own address. Nothing is bridged and nothing waits in between."
-      >
+      <Block title="Get paid on" why="USDC, straight to your own address.">
         <Field label="Networks" problems={problemsAt(problems, "chains")}>
           <Toggles
             values={draft.chains}
@@ -243,7 +237,7 @@ export function SellStep({
         </Field>
         <MoreChainsLine />
       </Block>
-    </div>
+    </StepCard>
   );
 }
 

@@ -26,6 +26,7 @@ import { Notice } from "@/components/app/hold";
 import { Card, Chip, ChipRow, Divider, Stepper } from "@/components/app/spaces/kit";
 
 import { Block, Choice, Problems } from "./parts";
+import { StepCard } from "./StepPager";
 
 const LINE_HINT: Record<ProductionDeliverable, string> = {
   interviews: "Someone from the brand, or people they name, on camera.",
@@ -50,11 +51,8 @@ export function IncludesStep({
     set({ deliverables: { ...pkg.deliverables, [key]: Math.max(0, Math.min(PRODUCTION_DELIVERABLE_MAX, n)) } });
 
   return (
-    <div className="flex flex-col gap-3.5">
-      <Block
-        title="What a spot includes"
-        why="Each brand that buys a spot gets this package, made for their own channels. Set a line to 0 to leave it out."
-      >
+    <StepCard title="What a spot includes" help="Every brand that buys a spot gets this package. Set a line to 0 to leave it out.">
+      <Block title="The package">
         <Card className="!gap-0 !py-1">
           {PRODUCTION_DELIVERABLES.map((key, i) => {
             const n = pkg.deliverables[key];
@@ -82,10 +80,7 @@ export function IncludesStep({
         <Problems list={problemsAt(problems, "production:deliverables")} />
       </Block>
 
-      <Block
-        title="Turnaround"
-        why="How soon after each shoot day the brand has everything. The countdown on your Deliveries runs from the end of the shoot day."
-      >
+      <Block title="Turnaround" why="How soon after each shoot day the brand has everything.">
         <Choice
           name="turnaround"
           value={String(pkg.turnaroundHours)}
@@ -99,7 +94,7 @@ export function IncludesStep({
         <Problems list={problemsAt(problems, "production:turnaround")} />
       </Block>
 
-      <Block title="Usage rights the brand gets" why="What the brand may do with what you deliver, printed on your page before they pay.">
+      <Block title="Usage rights the brand gets" why="What they may do with what you deliver.">
         <Choice
           name="usage-scope"
           value={pkg.usage.scope}
@@ -116,10 +111,7 @@ export function IncludesStep({
         </ChipRow>
       </Block>
 
-      <Notice tone="calm">
-        The brand fills in a brief before paying. You send a private link with a checklist; they accept it or ask for one round
-        of changes, and 72 hours of silence counts as accepted. The money reaches your wallet when they pay.
-      </Notice>
-    </div>
+      <Notice tone="calm">The brand briefs you before paying; 72 hours of silence on a delivery counts as accepted.</Notice>
+    </StepCard>
   );
 }

@@ -29,6 +29,7 @@ import { EVENT_CATEGORIES, type EventSummary } from "@/lib/creator/listing";
 import { createEvent, searchEvents } from "@/lib/creator/listings";
 
 import { Field, Problems, Text } from "./parts";
+import { DayField, dayPlus, today } from "./WhenField";
 
 const CATEGORY_LABEL: Record<string, string> = {
   crypto: "Crypto",
@@ -93,7 +94,9 @@ export function EventPicker({
     return () => clearTimeout(t);
   }, [query, run]);
 
-  const label = mustPick ? "Event" : "Event (optional)";
+  // Whether there is an event at all is the question before this one, so this
+  // field is never the place that says "optional".
+  const label = "Event";
   const typed = query.trim();
 
   if (eventId && picked) {
@@ -157,17 +160,11 @@ export function EventPicker({
             </button>
           </Card>
         ) : null}
-        {typed ? (
-          <p className="text-[12px] leading-4 text-white/55">Pick the event, or create it, so brands looking at that event find your space.</p>
-        ) : null}
+        {typed ? <p className="text-[12px] leading-4 text-white/55">Pick it, or create it, so brands looking at that event find you.</p> : null}
       </div>
 
       {!mustPick ? (
-        <Field
-          label="Event name (optional)"
-          hint="Only used if it is not in the list. A listing with a name and no event still publishes; it just does not show up on that event's page."
-          htmlFor="event-name"
-        >
+        <Field label="Or type its name" hint="Only if it is not in the list. It then shows on your page but not on an event page." htmlFor="event-name">
           <Text id="event-name" value={eventName} onChange={onName} maxLength={120} placeholder="Breakpoint London" />
         </Field>
       ) : null}
@@ -263,9 +260,7 @@ function AddEvent({
     return (
       <Card>
         <p className="text-[15px] font-extrabold text-white">Is it one of these?</p>
-        <p className="text-[14.5px] leading-5 text-white/[0.62]">
-          These events already exist. Joining one puts your space on the same event page as every other creator going.
-        </p>
+        <p className="text-[13px] leading-[18px] text-white/[0.62]">Joining one puts your space on the same event page as everyone else going.</p>
         <div className="flex flex-col">
           {candidates.map((e, i) => (
             <div key={e.id}>
@@ -293,7 +288,7 @@ function AddEvent({
           <Ion name="close" size={20} />
         </button>
       </div>
-      <p className="text-[14.5px] leading-5 text-white/[0.62]">It goes live as soon as you create it, and every creator going can join it.</p>
+      <p className="text-[13px] leading-[18px] text-white/[0.62]">It goes live as soon as you create it, and every creator going can join it.</p>
       <Field label="Name" htmlFor="new-event-name">
         <Text id="new-event-name" value={name} onChange={setName} maxLength={120} />
       </Field>
@@ -303,14 +298,10 @@ function AddEvent({
       <Field label="Country code (optional)" hint="Two letters, like SG." htmlFor="new-event-country">
         <Text id="new-event-country" value={country} onChange={setCountry} maxLength={2} />
       </Field>
-      <div className="grid grid-cols-2 gap-2.5">
-        <Field label="Starts" htmlFor="new-event-start">
-          <Text id="new-event-start" type="date" value={startsOn} onChange={setStartsOn} />
-        </Field>
-        <Field label="Ends" htmlFor="new-event-end">
-          <Text id="new-event-end" type="date" value={endsOn} onChange={setEndsOn} />
-        </Field>
-      </div>
+      {/* Our own month, not the browser's white sheet. An event is never in the
+          past, and two years out is a typo more often than a plan. */}
+      <DayField label="Starts" value={startsOn} onChange={setStartsOn} min={today()} max={dayPlus(today(), 730)} />
+      <DayField label="Ends" value={endsOn} onChange={setEndsOn} min={startsOn || today()} max={dayPlus(startsOn || today(), 31)} />
       <div className="flex flex-col gap-1.5">
         <span className={fieldLabel}>What kind of event</span>
         <ChipRow label="What kind of event">

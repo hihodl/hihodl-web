@@ -124,73 +124,73 @@ function detailedProblems(
 
       /* what you promise */
       case "venue_not_allowed_for_product":
-        at("venueType", "basics", "This product cannot be sold for that kind of occasion.");
+        at("venueType", "event", "This product cannot be sold at that kind of event.");
         break;
       case "event_name_required":
-        at("event", "basics", "Name the event. A sponsor buying a spot at a conference is buying that conference.");
+        at("event", "event", "Name the event. A sponsor buying a spot at a conference is buying that conference.");
         break;
       case "no_deliverables":
-        at("deliverables", "publish", "Promise at least one thing a venue cannot take away.");
+        at("deliverables", "promise", "Promise at least one thing a venue cannot take away.");
         break;
       case "no_content_deliverable":
-        at("deliverables", "publish", "At least one promise has to be something you post, not only being there in person.");
+        at("deliverables", "promise", "At least one promise has to be something you post, not only being there in person.");
         break;
       case "too_many_deliverables":
-        at("deliverables", "publish", `${max ?? LIMITS.DELIVERABLES_MAX} promises is the most one listing can carry.`);
+        at("deliverables", "promise", `${max ?? LIMITS.DELIVERABLES_MAX} promises is the most one listing can carry.`);
         break;
       case "unknown_deliverable_kind":
-        at(`deliverable:${index}:kind`, "publish", "That is not something a listing can promise.");
+        at(`deliverable:${index}:kind`, "promise", "That is not something a listing can promise.");
         break;
       case "unknown_platform":
-        at(`deliverable:${index}:platform`, "publish", "That is not a platform we know.");
+        at(`deliverable:${index}:platform`, "promise", "That is not a platform we know.");
         break;
       case "deliverable_count_out_of_range":
-        at(`deliverable:${index}:count`, "publish", `Between 1 and ${LIMITS.DELIVERABLE_COUNT_MAX} of them.`);
+        at(`deliverable:${index}:count`, "promise", `Between 1 and ${LIMITS.DELIVERABLE_COUNT_MAX} of them.`);
         break;
       case "deliverable_date_out_of_range":
         at(
           `deliverable:${index}:dueDate`,
-          "publish",
+          "promise",
           `Pick a day between today and ${LIMITS.DELIVERABLE_DAYS_AFTER_CLOSE} days after the listing closes.`,
         );
         break;
       case "deliverable_note_required":
         at(
           `deliverable:${index}:note`,
-          "publish",
+          "promise",
           `Say what this is, in ${LIMITS.NOTE_MIN} to ${LIMITS.NOTE_MAX} characters.`,
         );
         break;
       case "deliver_by_required":
-        at("deliverBy", "publish", "Say the day every sponsor has their work by.");
+        at("deliverBy", "promise", "Say the day every sponsor has their work by.");
         break;
       case "deliver_by_out_of_range":
         at(
           "deliverBy",
-          "publish",
+          "promise",
           `Pick a day between today and ${LIMITS.DELIVERABLE_DAYS_AFTER_CLOSE} days after the listing closes.`,
         );
         break;
       case "funding_goal_out_of_range":
-        at("goal", "basics", `A goal runs from ${usd(LIMITS.GOAL_MIN_CENTS)} to ${usd(LIMITS.GOAL_MAX_CENTS)}.`);
+        at("goal", "name", `A goal runs from ${usd(LIMITS.GOAL_MIN_CENTS)} to ${usd(LIMITS.GOAL_MAX_CENTS)}.`);
         break;
       case "service_name_required":
-        at("serviceName", "publish", `Name what you are selling, in ${LIMITS.SERVICE_NAME_MIN} to ${LIMITS.SERVICE_NAME_MAX} characters.`);
+        at("serviceName", "promise", `Name what you are selling, in ${LIMITS.SERVICE_NAME_MIN} to ${LIMITS.SERVICE_NAME_MAX} characters.`);
         break;
       case "service_summary_required":
         at(
           "serviceSummary",
-          "publish",
+          "promise",
           `Say what a brand gets, in ${LIMITS.SERVICE_SUMMARY_MIN} to ${LIMITS.SERVICE_SUMMARY_MAX} characters.`,
         );
         break;
       case "brand_gets_too_many":
       case "brand_gets_invalid":
-        at("brandGets", "publish", "Up to 8 lines, each one thing a brand gets.");
+        at("brandGets", "promise", "Up to 8 lines, each one thing a brand gets.");
         break;
       case "brand_gets_line_invalid":
       case "brand_gets_line_length":
-        at(`brandGets:${index}`, "publish", "3 to 120 characters.");
+        at(`brandGets:${index}`, "promise", "3 to 120 characters.");
         break;
       case "text_not_allowed": {
         const field2 =
@@ -203,16 +203,16 @@ function detailedProblems(
                 : `deliverable:${index}:note`;
         at(
           field2,
-          "publish",
+          "promise",
           "Those words are ones HiSpace does not carry: no investment advice, no introductions to investors, no token deals. Say what you make and post instead.",
         );
         break;
       }
       case "unknown_fallback":
-        at("fallback", "publish", "Pick one of the three answers.");
+        at("fallback", "promise", "Pick one of the three answers.");
         break;
       case "fallback_needs_details":
-        at("fallbackNote", "publish", "Name the event you would carry sponsors to, and when it is.");
+        at("fallbackNote", "promise", "Name the event you would carry sponsors to, and when it is.");
         break;
       case "missing_attestation":
         at("attestations", "publish", "Tick every line. Each one is something you are telling sponsors is true.");
@@ -266,17 +266,17 @@ function bareProblem(code: string, draft: ListingDraft | null): Problem | null {
       );
     case "inspired_by_invalid":
     case "inspired_by_handle_invalid":
-      return { where: "inspiredBy", step: "basics", message: "That is not a handle we can credit. Letters, numbers and underscores, as on X." };
+      return { where: "inspiredBy", step: "name", message: "That is not a handle we can credit. Letters, numbers and underscores, as on X." };
     case "inspired_by_not_found":
-      return { where: "inspiredBy", step: "basics", message: "No HOLD creator has that username. Pick one from the list, or credit their X handle instead." };
+      return { where: "inspiredBy", step: "name", message: "No HOLD creator has that username. Pick one from the list, or credit their X handle instead." };
     case "inspired_by_self":
-      return { where: "inspiredBy", step: "basics", message: "That is you. Credit somebody else, or leave it empty." };
+      return { where: "inspiredBy", step: "name", message: "That is you. Credit somebody else, or leave it empty." };
     case "closes_too_soon":
-      return { where: "closesAt", step: "basics", message: `A listing runs for at least ${LIMITS.MIN_CAMPAIGN_HOURS} hours.` };
+      return { where: "closesAt", step: "dates", message: `A listing runs for at least ${LIMITS.MIN_CAMPAIGN_HOURS} hours.` };
     case "closes_too_late":
-      return { where: "closesAt", step: "basics", message: `A listing runs for at most ${LIMITS.MAX_CAMPAIGN_DAYS} days.` };
+      return { where: "closesAt", step: "dates", message: `A listing runs for at most ${LIMITS.MAX_CAMPAIGN_DAYS} days.` };
     case "production_needs_an_event":
-      return { where: "event", step: "basics", message: "Content production is filmed at an event. Pick one from the list." };
+      return { where: "event", step: "event", message: "Content production is filmed at an event. Pick one from the list." };
     case "production_package_invalid":
     case "production_package_empty":
       return {
@@ -289,21 +289,21 @@ function bareProblem(code: string, draft: ListingDraft | null): Problem | null {
     case "fallback_not_for_production":
       return {
         where: "fallback",
-        step: "publish",
+        step: "promise",
         message: "Without the event there is nothing to film, so the answer has to be a refund from you or the same spot at your next event.",
       };
     case "production_closes_after_event":
       return {
         where: "closesAt",
-        step: "basics",
+        step: "dates",
         message: "This closes after the event is over, when there is nothing left to film. Close it by the event's last day.",
       };
     case "room_needs_an_event":
-      return { where: "event", step: "basics", message: "Time in person is always sold at an event. Pick one from the list." };
+      return { where: "event", step: "event", message: "Time in person is always sold at an event. Pick one from the list." };
     case "fallback_not_for_sessions":
       return {
         where: "fallback",
-        step: "publish",
+        step: "promise",
         message: "Time in person leaves nothing behind if it does not happen, so the answer has to be a refund from you or the same session at your next event.",
       };
     case "takeover_not_for_sessions":
@@ -313,7 +313,7 @@ function bareProblem(code: string, draft: ListingDraft | null): Problem | null {
     case "session_closes_after_event":
       return {
         where: "closesAt",
-        step: "basics",
+        step: "dates",
         message: "This closes after the event is over, and a slot sold then is time that no longer exists. Close it by the day after the event ends.",
       };
     case "no_positions":

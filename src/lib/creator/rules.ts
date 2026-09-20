@@ -43,8 +43,18 @@ import {
   type Template,
 } from "./listing";
 
-/** Which step of the wizard a problem belongs to, so the shell can point at it. */
-export type Step = "basics" | "includes" | "sell" | "publish";
+/**
+ * Which card of the editor a problem belongs to, so the pager can point at it.
+ *
+ * One step is one card, and a card is meant to fit on a screen. That is why
+ * there are seven of these and not four: "name and dates" was three questions
+ * in a wall, and "go live" was everything a listing promises plus everything
+ * it declares.
+ */
+export type Step = "name" | "event" | "dates" | "includes" | "sell" | "promise" | "publish";
+
+/** The cards in the order they are swiped through. */
+export const STEP_ORDER: readonly Step[] = ["name", "event", "dates", "includes", "sell", "promise", "publish"];
 
 export interface Problem {
   /** The field this sits next to: "title", "rung:tier-2:price", "attestations". */
@@ -87,54 +97,57 @@ export function listingProblems(draft: ListingDraft, template: Template, now = D
 
   const title = draft.title.trim();
   if (title.length < LIMITS.TITLE_MIN) {
-    add("title", "basics", `Give the listing a name of at least ${LIMITS.TITLE_MIN} characters. It is the headline a brand reads first.`);
+    add("title", "name", `Give the listing a name of at least ${LIMITS.TITLE_MIN} characters. It is the headline a brand reads first.`);
   } else if (title.length > LIMITS.TITLE_MAX) {
-    add("title", "basics", `That name is ${title.length} characters. ${LIMITS.TITLE_MAX} is the most a listing can carry.`);
+    add("title", "name", `That name is ${title.length} characters. ${LIMITS.TITLE_MAX} is the most a listing can carry.`);
   }
   if (draft.reason.trim().length > LIMITS.REASON_MAX) {
-    add("reason", "basics", `Keep this under ${LIMITS.REASON_MAX} characters.`);
+    add("reason", "name", `Keep this under ${LIMITS.REASON_MAX} characters.`);
   }
 
   const goal = amount(draft.fundingGoalDollars);
   if (goal === "bad") {
-    add("goal", "basics", "Write the goal as an amount in dollars, like 2400.");
+    add("goal", "name", "Write the goal as an amount in dollars, like 2400.");
   } else if (goal !== null && (goal < LIMITS.GOAL_MIN_CENTS || goal > LIMITS.GOAL_MAX_CENTS)) {
     add(
       "goal",
-      "basics",
+      "name",
       `A goal runs from ${usd(LIMITS.GOAL_MIN_CENTS)} to ${usd(LIMITS.GOAL_MAX_CENTS)}. We do not round it into range — a page asking for a figure you did not type would be worse than this line.`,
     );
   }
 
   const closesMs = draft.closesAt ? new Date(draft.closesAt).getTime() : NaN;
   if (!Number.isFinite(closesMs)) {
-    add("closesAt", "basics", "Say when the listing stops taking sponsors.");
+    add("closesAt", "dates", "Say when the listing stops taking sponsors.");
   } else if (closesMs - now < LIMITS.MIN_CAMPAIGN_HOURS * HOUR) {
-    add("closesAt", "basics", `A listing runs for at least ${LIMITS.MIN_CAMPAIGN_HOURS} hours, so pick a time at least a day from now.`);
+    add("closesAt", "dates", `A listing runs for at least ${LIMITS.MIN_CAMPAIGN_HOURS} hours, so pick a time at least a day from now.`);
   } else if (closesMs - now > LIMITS.MAX_CAMPAIGN_DAYS * DAY) {
-    add("closesAt", "basics", `A listing runs for at most ${LIMITS.MAX_CAMPAIGN_DAYS} days.`);
+    add("closesAt", "dates", `A listing runs for at most ${LIMITS.MAX_CAMPAIGN_DAYS} days.`);
   }
 
   if (draft.keyDates.length > LIMITS.KEY_DATES_MAX) {
-    add("keyDates", "basics", `${LIMITS.KEY_DATES_MAX} dates is the most a listing shows.`);
+    add("keyDates", "dates", `${LIMITS.KEY_DATES_MAX} dates is the most a listing shows.`);
   }
   draft.keyDates.forEach((k, i) => {
-    if (k.label.trim() && !k.date) add(`keyDate:${i}`, "basics", "Give this date a day.");
-    if (k.date && !k.label.trim()) add(`keyDate:${i}`, "basics", "Say what happens on this day.");
+    if (k.label.trim() && !k.date) add(`keyDate:${i}`, "dates", "Give this date a day.");
+    if (k.date && !k.label.trim()) add(`keyDate:${i}`, "dates", "Say what happens on this day.");
   });
 
-  /* ── Where it happens ──────────────────────────────────────────── */
+  /* ── The event ─────────────────────────────────────────────────── */
 
+  // The venue is derived from the event answers (`venueFor`), so this only
+  // fires for a draft saved before those answers existed, or one whose product
+  // was swapped underneath it.
   if (!template.allowedVenues.includes(draft.venueType)) {
-    add("venueType", "basics", "This product cannot be sold for that kind of occasion.");
+    add("venueType", "event", "This product cannot be sold at that kind of event. Answer the event question again.");
   }
   if (VENUES_WITH_RULES.includes(draft.venueType) && !draft.eventId && !draft.eventName.trim()) {
-    add("event", "basics", "Name the event. A sponsor buying a spot at a conference is buying that conference.");
+    add("event", "event", "Name the event. A sponsor buying a spot at a conference is buying that conference.");
   }
   if (session && !draft.eventId) {
     add(
       "event",
-      "basics",
+      "event",
       "Time in person is always sold at an event, and it has to be one from the list — the last day of the event is what sets your delivery date.",
     );
   }
@@ -142,7 +155,7 @@ export function listingProblems(draft: ListingDraft, template: Template, now = D
   if (production && !draft.eventId) {
     add(
       "event",
-      "basics",
+      "event",
       "Content production is filmed at an event, and it has to be one from the list: its dates are your shoot window.",
     );
   }
@@ -274,11 +287,11 @@ export function listingProblems(draft: ListingDraft, template: Template, now = D
     if (!session && !production) {
       const by = draft.deliverBy ? dayStart(draft.deliverBy) : null;
       if (!draft.deliverBy) {
-        add("deliverBy", "publish", "Say the day every sponsor has their work by. It is the promise the whole listing rests on.");
+        add("deliverBy", "promise", "Say the day every sponsor has their work by. It is the promise the whole listing rests on.");
       } else if (by === null || by < todayStart || by > latestDue) {
         add(
           "deliverBy",
-          "publish",
+          "promise",
           `Pick a day between today and ${LIMITS.DELIVERABLE_DAYS_AFTER_CLOSE} days after the listing closes.`,
         );
       }
@@ -287,28 +300,28 @@ export function listingProblems(draft: ListingDraft, template: Template, now = D
     if (draft.deliverables.length === 0) {
       add(
         "deliverables",
-        "publish",
+        "promise",
         "Promise at least one thing a venue cannot take away. A sponsor who bought a spot on your suitcase and nothing else has bought something the organiser can cancel.",
       );
     } else if (!draft.deliverables.some((d) => d.kind !== "in_person")) {
       add(
         "deliverables",
-        "publish",
+        "promise",
         "At least one of these has to be something you post — a photo, a video, a story, a mention. Being there in person is not something a sponsor can be shown afterwards.",
       );
     }
     if (draft.deliverables.length > LIMITS.DELIVERABLES_MAX) {
-      add("deliverables", "publish", `${LIMITS.DELIVERABLES_MAX} promises is the most one listing can carry.`);
+      add("deliverables", "promise", `${LIMITS.DELIVERABLES_MAX} promises is the most one listing can carry.`);
     }
     draft.deliverables.forEach((d, i) => {
       if (!Number.isInteger(d.count) || d.count < 1 || d.count > LIMITS.DELIVERABLE_COUNT_MAX) {
-        add(`deliverable:${i}:count`, "publish", `Between 1 and ${LIMITS.DELIVERABLE_COUNT_MAX} of them.`);
+        add(`deliverable:${i}:count`, "promise", `Between 1 and ${LIMITS.DELIVERABLE_COUNT_MAX} of them.`);
       }
       const due = d.dueDate ? dayStart(d.dueDate) : null;
       if (due === null || due < todayStart || due > latestDue) {
         add(
           `deliverable:${i}:dueDate`,
-          "publish",
+          "promise",
           `Pick a day between today and ${LIMITS.DELIVERABLE_DAYS_AFTER_CLOSE} days after the listing closes.`,
         );
       }
@@ -316,12 +329,12 @@ export function listingProblems(draft: ListingDraft, template: Template, now = D
       if (d.kind === "custom" && (note.length < LIMITS.NOTE_MIN || note.length > LIMITS.NOTE_MAX)) {
         add(
           `deliverable:${i}:note`,
-          "publish",
+          "promise",
           `Say what this is, in ${LIMITS.NOTE_MIN} to ${LIMITS.NOTE_MAX} characters. "Something custom" is not a promise anybody can check.`,
         );
       }
       if (note.length > LIMITS.NOTE_MAX) {
-        add(`deliverable:${i}:note`, "publish", `Keep this under ${LIMITS.NOTE_MAX} characters.`);
+        add(`deliverable:${i}:note`, "promise", `Keep this under ${LIMITS.NOTE_MAX} characters.`);
       }
     });
   }
@@ -329,34 +342,34 @@ export function listingProblems(draft: ListingDraft, template: Template, now = D
   if (production && draft.fallback !== "creator_refund" && draft.fallback !== "next_event") {
     add(
       "fallback",
-      "publish",
+      "promise",
       "Without the event there is nothing to film, so the answer has to be a refund from you or the same spot at your next event.",
     );
   }
   if (session && draft.fallback !== "creator_refund" && draft.fallback !== "next_event") {
     add(
       "fallback",
-      "publish",
+      "promise",
       "Time in person leaves nothing behind if it does not happen, so the answer has to be a refund from you or the same session at your next event.",
     );
   }
   if (draft.fallback === "next_event" && draft.fallbackNote.trim().length < 5) {
-    add("fallbackNote", "publish", "Name the event you would carry sponsors to, and when it is. Otherwise it promises nothing.");
+    add("fallbackNote", "promise", "Name the event you would carry sponsors to, and when it is. Otherwise it promises nothing.");
   }
   if (draft.fallbackNote.trim().length > LIMITS.REASON_MAX) {
-    add("fallbackNote", "publish", `Keep this under ${LIMITS.REASON_MAX} characters.`);
+    add("fallbackNote", "promise", `Keep this under ${LIMITS.REASON_MAX} characters.`);
   }
 
   if (isCustomServiceTemplate(template)) {
     const name = draft.serviceName.trim();
     const summary = draft.serviceSummary.trim();
     if (name.length < LIMITS.SERVICE_NAME_MIN || name.length > LIMITS.SERVICE_NAME_MAX) {
-      add("serviceName", "publish", `Name what you are selling, in ${LIMITS.SERVICE_NAME_MIN} to ${LIMITS.SERVICE_NAME_MAX} characters.`);
+      add("serviceName", "promise", `Name what you are selling, in ${LIMITS.SERVICE_NAME_MIN} to ${LIMITS.SERVICE_NAME_MAX} characters.`);
     }
     if (summary.length < LIMITS.SERVICE_SUMMARY_MIN || summary.length > LIMITS.SERVICE_SUMMARY_MAX) {
       add(
         "serviceSummary",
-        "publish",
+        "promise",
         `Say what a brand gets, in ${LIMITS.SERVICE_SUMMARY_MIN} to ${LIMITS.SERVICE_SUMMARY_MAX} characters. This is not in our catalogue, so your words are the only description there is.`,
       );
     }
@@ -364,13 +377,13 @@ export function listingProblems(draft: ListingDraft, template: Template, now = D
 
   if (draft.brandGets) {
     if (draft.brandGets.length > BRAND_GETS_LIMITS.MAX_LINES) {
-      add("brandGets", "publish", `${BRAND_GETS_LIMITS.MAX_LINES} lines is the most the list can carry.`);
+      add("brandGets", "promise", `${BRAND_GETS_LIMITS.MAX_LINES} lines is the most the list can carry.`);
     }
     draft.brandGets.forEach((l, i) => {
       if (l.kind !== "text") return;
       const text = l.text.trim();
       if (text && (text.length < BRAND_GETS_LIMITS.TEXT_MIN || text.length > BRAND_GETS_LIMITS.TEXT_MAX)) {
-        add(`brandGets:${i}`, "publish", `${BRAND_GETS_LIMITS.TEXT_MIN} to ${BRAND_GETS_LIMITS.TEXT_MAX} characters.`);
+        add(`brandGets:${i}`, "promise", `${BRAND_GETS_LIMITS.TEXT_MIN} to ${BRAND_GETS_LIMITS.TEXT_MAX} characters.`);
       }
     });
   }
@@ -521,7 +534,7 @@ function priceProblems(args: {
 
 /** The first step that still has something wrong on it, or null. */
 export function firstStepWithProblem(problems: readonly Problem[]): Step | null {
-  for (const step of ["basics", "includes", "sell", "publish"] as const) {
+  for (const step of STEP_ORDER) {
     if (problems.some((p) => p.step === step)) return step;
   }
   return null;

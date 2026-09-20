@@ -180,6 +180,125 @@ export function requiredAttestations(
   return ATTESTATIONS.filter((a) => out.has(a));
 }
 
+/* ── The venue, read off the event instead of asked ───────────────── */
+
+/**
+ * WHY NOBODY IS ASKED TO CLASSIFY THEIR OWN LIFE
+ *
+ * The editor used to ask "where this happens" and offer "While travelling",
+ * "At a conference", "Everyday life". It is the wrong question. The product is
+ * the hook — a suitcase, a blazer — and what the creator actually delivers is
+ * content: an interview, a video, a wrap-up. Where their body is standing is
+ * not what a sponsor is buying, and it is not what the creator is thinking
+ * about when they build the listing.
+ *
+ * What the venue is really for is the declarations: a conference has rules on
+ * branded items, a race has rules on logos, somebody's private party has a
+ * host who must have agreed. All three of those are facts about the EVENT, and
+ * the editor already asks about the event. So the venue is derived from that
+ * answer, and the only thing still asked is the one bit an event we do not
+ * hold cannot tell us: what kind of event it is.
+ *
+ * The derivation never trades a rule-carrying venue for a quiet one. A
+ * listing tied to an event lands on `conference` at the softest, so every
+ * declaration the server asked for before it is still collected here.
+ */
+
+/** Whether this listing is offered inside an event. The creator's own yes or no. */
+export type EventAnswer = "yes" | "no";
+
+/** What kind of event it is, in the creator's words. */
+export const EVENT_KINDS = ["public", "race", "private"] as const;
+export type EventKind = (typeof EVENT_KINDS)[number];
+
+const KIND_VENUE: Record<EventKind, VenueType> = {
+  public: "conference",
+  race: "sports_event",
+  private: "private_event",
+};
+
+/** Event categories that make an event a race or a match rather than a conference. */
+const RACE_CATEGORIES: readonly string[] = ["motorsport", "sports"];
+
+/** The kind of an event we hold, read off its category. Null when there is no event. */
+export function eventKindOf(picked: { category: string } | null): EventKind | null {
+  if (!picked) return null;
+  return RACE_CATEGORIES.includes(picked.category) ? "race" : "public";
+}
+
+/**
+ * Whether the creator still has to say what kind of event it is: only when the
+ * event was typed by hand (so we hold no category) and this product can be
+ * sold at more than one kind of rule-carrying event.
+ */
+export function asksEventKind(template: Template, answer: EventAnswer | null, picked: unknown | null): boolean {
+  if (answer !== "yes" || picked) return false;
+  return template.allowedVenues.filter((v) => VENUES_WITH_RULES.includes(v)).length > 1;
+}
+
+/** The venue this listing is sent with, from the event answers and nothing else. */
+export function venueFor(template: Template, answer: EventAnswer, kind: EventKind | null): VenueType {
+  const allowed = template.allowedVenues;
+  const pick = (order: readonly VenueType[]) => order.find((v) => allowed.includes(v)) ?? allowed[0] ?? "everyday";
+  // "No event" must never be the cheap way past a rule. A race bib and a race
+  // number are sold for a race whatever the creator answers here, and their
+  // catalogue entry leads with `sports_event` for that reason — so a template
+  // whose first allowed venue carries rules keeps it, and the creator is still
+  // asked to confirm them. Everything else falls to everyday life.
+  if (answer === "no") {
+    const first = allowed[0];
+    return first === "sports_event" || first === "private_event" ? first : pick(["everyday", "travel"]);
+  }
+  return pick([kind ? KIND_VENUE[kind] : "conference", "conference", "sports_event", "private_event", "travel", "everyday"]);
+}
+
+/* ── When the content lands, relative to the event ────────────────── */
+
+export const DELIVERY_WHENS = ["before", "during", "after"] as const;
+/** When the content the brand is buying is delivered, against the event's own dates. */
+export type DeliveryWhen = (typeof DELIVERY_WHENS)[number];
+
+const DAY_MS = 86_400_000;
+
+function shiftDay(day: string, days: number): string {
+  const ms = Date.parse(`${day.slice(0, 10)}T00:00:00Z`);
+  if (!Number.isFinite(ms)) return day.slice(0, 10);
+  return new Date(ms + days * DAY_MS).toISOString().slice(0, 10);
+}
+
+/** The day a promise falls due when the creator says they deliver before, during or after. */
+export function deliveryDayFor(when: DeliveryWhen, event: { startsOn: string; endsOn: string }): string {
+  if (when === "before") return shiftDay(event.startsOn, -1);
+  if (when === "during") return (event.endsOn || event.startsOn).slice(0, 10);
+  return shiftDay(event.endsOn || event.startsOn, 7);
+}
+
+/**
+ * The answer a draft already on disk implies, so reopening one does not ask
+ * again: the day it promises, read against the event's own dates.
+ */
+export function deliveryWhenOf(draft: ListingDraft, event: { startsOn: string; endsOn: string } | null): DeliveryWhen | null {
+  if (!event) return null;
+  const days = [draft.deliverBy, ...draft.deliverables.map((d) => d.dueDate)].filter(Boolean).sort();
+  const day = days[days.length - 1];
+  if (!day) return null;
+  if (day < event.startsOn.slice(0, 10)) return "before";
+  if (day > (event.endsOn || event.startsOn).slice(0, 10)) return "after";
+  return "during";
+}
+
+/**
+ * The draft with every promise that has no day yet given one. Never an
+ * overwrite: a date the creator has already typed is theirs.
+ */
+export function withDeliveryDay(draft: ListingDraft, day: string): ListingDraft {
+  return {
+    ...draft,
+    deliverBy: draft.deliverBy || day,
+    deliverables: draft.deliverables.map((d) => (d.dueDate ? d : { ...d, dueDate: day })),
+  };
+}
+
 /* ── What the API hands back ──────────────────────────────────────── */
 
 export type TemplateKind = "placement" | "service";
