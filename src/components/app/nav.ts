@@ -52,6 +52,7 @@ export type NavKey =
   | "invest"
   | "activity"
   | "add"
+  | "pay-links"
   | "menu"
   | "benefits"
   | "stays"
@@ -133,6 +134,8 @@ export const MAIN_FOOT: readonly NavItem[] = [
 export const MAIN_HIDDEN: readonly NavItem[] = [
   { key: "account", label: "Account", path: "/account", icon: IconAccount, keywords: "profile photo name username email x twitter payout wallet address" },
   { key: "add", label: "Add money", path: "/add", icon: IconAdd, keywords: "receive crypto qr code address deposit top up add cash bank transfer" },
+  // The app's pay links live behind a tile on Add money, not in a menu either.
+  { key: "pay-links", label: "Pay links", path: "/pay-links", icon: IconPayments, keywords: "pay link get paid by anyone from any wallet usdc invoice charge someone without hold" },
 ];
 
 /* ── Spaces ───────────────────────────────────────────────────────── */
