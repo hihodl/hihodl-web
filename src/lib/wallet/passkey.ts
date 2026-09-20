@@ -32,12 +32,72 @@ export class PasskeyError extends Error {
       | "cancelled" // the person closed the sheet, or it timed out
       | "exists" // this authenticator already holds a passkey for the account
       | "no_prf" // the passkey provider does not do PRF: nothing may be wrapped with it
+      | "os_too_old" // an Apple OS whose PRF is not trustworthy for a wallet (below 18.4)
       | "failed",
     message?: string,
   ) {
     super(message ?? code);
     this.name = "PasskeyError";
   }
+}
+
+/**
+ * The Apple release whose PRF we will lock a wallet with.
+ *
+ * WebAuthn's PRF works from iOS 18.0, and the HOLD app still refuses below
+ * 18.4: 18.0 to 18.3 shipped a cross-device-authentication bug where PRF
+ * returned a DIFFERENT output depending on how the person authenticated.
+ * Everywhere else that is a failed login; here the PRF output is what unwraps
+ * the key, so it is a wallet nobody can open. The app has had this floor since
+ * it shipped; the web did not, and its own copy said "iOS 18 or later".
+ */
+const MIN_APPLE_OS_FOR_PRF: readonly [number, number] = [18, 4];
+
+/**
+ * The Apple OS version, when this browser will say it. Null means "not an
+ * Apple device, or one that will not tell us".
+ *
+ * Two places carry it, and a device may only have one:
+ *   `CPU iPhone OS 18_4 like Mac OS X`  every browser on iPhone and iPad
+ *   `Version/18.4 Safari/…`             Safari, including an iPad claiming to
+ *                                       be a Mac, where the first is absent
+ *
+ * Safari's own version has tracked the OS release since 15, so on an Apple
+ * device it answers the same question. It is read only to REFUSE a version we
+ * know is broken — never to allow one — so a browser that hides it is treated
+ * as it was before this existed.
+ */
+export function appleOsVersion(
+  ua = typeof navigator === "undefined" ? "" : navigator.userAgent,
+): readonly [number, number] | null {
+  // Major and minor kept apart, never joined into a number: 18.10 as a decimal
+  // is 18.1, which would read a later release as an earlier one.
+  const ios = /\b(?:iPhone|CPU) OS (\d+)_(\d+)/.exec(ua);
+  if (ios) return [Number(ios[1]), Number(ios[2])];
+  if (!/Macintosh|iPad|iPhone|iPod/i.test(ua)) return null;
+  const safari = /\bVersion\/(\d+)\.(\d+)/.exec(ua);
+  return safari ? [Number(safari[1]), Number(safari[2])] : null;
+}
+
+/**
+ * May this device's PRF be trusted to lock a wallet?
+ *
+ * Only ever false for an Apple OS we can READ and know is broken. A device
+ * that will not name its version is allowed through, because refusing on a
+ * guess would strand people with no way to fix it, and the ceremony still has
+ * to produce a PRF output before anything is written.
+ *
+ * This is a VERSION check and nothing more: it does not prove the password
+ * manager will honour the extension, which is what `no_prf` is for.
+ */
+export function prfTrustedHere(ua?: string): boolean {
+  const v = appleOsVersion(ua);
+  const [minMajor, minMinor] = MIN_APPLE_OS_FOR_PRF;
+  // An iPad pretending to be a Mac reports Safari's version and no OS, so a
+  // Mac cannot be told from an iPad here. The floor is applied to both: the
+  // bug is in the shared platform authenticator, and macOS 15.0-15.3 is the
+  // same release train as iOS 18.0-18.3.
+  return v === null || v[0] > minMajor || (v[0] === minMajor && v[1] >= minMinor);
 }
 
 /** Can a ceremony for rpId hihodl.xyz run on this page at all? */
@@ -99,6 +159,11 @@ export async function createPasskeyWithPrf(
   { requirePrf = true }: { requirePrf?: boolean } = {},
 ): Promise<CreatedPasskey> {
   if (!passkeysHere()) throw new PasskeyError("unavailable");
+  // Before the sheet opens, not after: a passkey made here could hold a wallet
+  // that later refuses to open, and the person would have paid two Face ID
+  // prompts to get it. Only a wallet is refused — a passkey that just signs in
+  // (`requirePrf: false`) is fine on any version.
+  if (requirePrf && !prfTrustedHere()) throw new PasskeyError("os_too_old");
   const publicKey: PublicKeyCredentialCreationOptions = {
     challenge: fromBase64(options.challenge),
     rp: { name: options.rp.name, id: RP_ID },

@@ -53,7 +53,7 @@ import {
   WalletFlowError,
   wrapForPasskey,
 } from "@/lib/wallet/flows";
-import { createPasskeyWithPrf, evaluatePrf, normalizeCredentialId, PasskeyError, passkeysHere } from "@/lib/wallet/passkey";
+import { createPasskeyWithPrf, evaluatePrf, normalizeCredentialId, PasskeyError, passkeysHere, prfTrustedHere } from "@/lib/wallet/passkey";
 import { lock, unlockWith, useVault } from "@/lib/wallet/vault";
 
 import { UserAvatar } from "../account/UserAvatar";
@@ -171,6 +171,17 @@ export function WalletScreen() {
       <AppScreen title="Wallet">
         <div className="pt-4">
           <InfoBox>{explain(new PasskeyError("unavailable"))}</InfoBox>
+        </div>
+      </AppScreen>
+    );
+  } else if (status.state === "none" && !prfTrustedHere()) {
+    // Said instead of the Create screen, not after it: on this OS a wallet
+    // made here could later refuse to open, and there is nothing on the
+    // screen that would fix it.
+    body = (
+      <AppScreen title="Wallet">
+        <div className="pt-4">
+          <InfoBox>{explain(new PasskeyError("os_too_old"))}</InfoBox>
         </div>
       </AppScreen>
     );

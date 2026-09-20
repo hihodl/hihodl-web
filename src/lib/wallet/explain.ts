@@ -22,7 +22,12 @@ export function explain(e: unknown): string {
       case "exists":
         return "This device already has a passkey for your account. Use that one instead.";
       case "no_prf":
-        return "This passkey cannot protect a wallet: its password manager does not support the PRF extension. Nothing was saved, and a passkey just created for it was not added to your account (you can delete it from your password manager). Use Safari with iCloud Keychain (macOS 15 / iOS 18 or later) or Chrome with Google Password Manager.";
+        return "This passkey cannot protect a wallet: its password manager does not support the PRF extension. Nothing was saved, and a passkey just created for it was not added to your account (you can delete it from your password manager). Use Safari with iCloud Keychain (iOS 18.4 / macOS 15.4 or later) or Chrome with Google Password Manager.";
+      // Said BEFORE any prompt: nothing was created, so there is nothing to
+      // delete and nothing to undo. The version is the fix, and it is theirs
+      // to make, so it is named.
+      case "os_too_old":
+        return "Update this device before making a wallet here. iOS 18.0 to 18.3 can hand back a different key depending on how you unlock, which would leave a wallet nobody can open — Apple fixed it in 18.4. Nothing was created. You can still sign in, and you can make your wallet in the HOLD app or on a device that is up to date.";
       case "unavailable":
         return "Passkeys for HOLD only work on app.hihodl.xyz, in a browser that supports them.";
       default:

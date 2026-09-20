@@ -707,8 +707,10 @@ function WalletStep({
     );
   }
 
-  const noPrf = error instanceof PasskeyError && error.code === "no_prf";
-  const useExisting = ids.length > 0 && !noPrf;
+  // Neither of these is fixed by reaching for another passkey: one is the
+  // password manager, the other is the operating system under all of them.
+  const cannotWrap = error instanceof PasskeyError && (error.code === "no_prf" || error.code === "os_too_old");
+  const useExisting = ids.length > 0 && !cannotWrap;
   return (
     <div>
       {head}
