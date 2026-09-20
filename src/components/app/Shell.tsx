@@ -4,16 +4,24 @@
  * The HOLD product shell: what a signed-in person is inside of.
  *
  * Built on the KPI dashboard's structure: a glass sidebar with grouped
- * navigation, the signed-in person at its foot, a sticky top bar with the page
- * title, ⌘K and the one primary action, and the page under it. On a phone
- * the sidebar is a drawer.
+ * navigation, Search under the wordmark, the signed-in person at its foot, and
+ * the page beside it. On a phone the sidebar is a drawer.
+ *
+ * THERE IS NO TOP BAR ON A WIDE SCREEN
+ *
+ * There was: the section's name, ⌘K and the one primary action. The name was
+ * the word the sidebar was already highlighting a few pixels to its left, so
+ * the row spent its whole height saying nothing, on every page. It survives in
+ * two places that are not furniture — on a phone, where it is the only way to
+ * the menu and to the person, and on any screen with its own header, where it
+ * is what the back chevron is drawn into (header-slot.tsx).
  *
  * TWO LEVELS, LIKE THE APP
  *
- * The main column is HOLD: Dashboard, Wallet, Benefits and its products,
- * Account, Settings. Opening a product with web screens (Spaces today) swaps
+ * The main column is HOLD: Home, Payments, Invest, Activity, Benefits and its
+ * products, and Menu. Opening a product with web screens (Spaces today) swaps
  * the column for that product's menu, with a Back row at its top to the main
- * menu and the Dashboard. See nav.ts.
+ * menu and Home. See nav.ts.
  *
  * Signed out, it is HOLD's door (front/Door: welcome, or welcome back) and
  * nothing else. An invitation link (`/spaces/team?seat=…`) is the one page
@@ -378,7 +386,7 @@ function Frame({ children }: { children: ReactNode }) {
         >
           <div className="hidden lg:block">
             <div className="sticky top-4 h-[calc(var(--app-vh,100dvh)-2rem)]">
-              <Sidebar collapsed={collapsed} onToggle={toggleCollapsed} level={level} active={active} badges={badges} />
+              <Sidebar collapsed={collapsed} onToggle={toggleCollapsed} level={level} active={active} badges={badges} onSearch={() => setPalette(true)} />
             </div>
           </div>
 
@@ -468,6 +476,7 @@ function Sidebar({
   level,
   active,
   badges,
+  onSearch,
 }: {
   collapsed: boolean;
   onToggle?: () => void;
@@ -475,6 +484,8 @@ function Sidebar({
   level: Level;
   active: NavKey | null;
   badges: Partial<Record<NavKey, number>>;
+  /** Absent in the phone drawer, where the top bar still carries Search. */
+  onSearch?: () => void;
 }) {
   const { role, teamPage, walletPage } = useShell();
   const productHref = useProductHref();
@@ -541,6 +552,31 @@ function Sidebar({
           <span className="h-3.5 w-px bg-white/20" aria-hidden />
           <span className="text-small font-medium text-amber">Spaces</span>
         </div>
+      ) : null}
+
+      {/* Search lives here now that the top bar is gone on wide screens. Under
+          the wordmark and above the pages, which is where every column that
+          has one puts it. */}
+      {onSearch ? (
+        <button
+          type="button"
+          onClick={onSearch}
+          aria-label="Search"
+          title="Search (⌘K)"
+          className={
+            collapsed
+              ? "mb-1 flex h-9 w-9 items-center justify-center rounded-[10px] border border-white/10 bg-white/[0.05] text-[#CFE3EC] transition-colors hover:bg-white/10 hover:text-text"
+              : "mb-2 flex h-9 w-full items-center gap-2 rounded-[10px] border border-white/10 bg-white/[0.05] px-2.5 text-small text-[#9FB7C2] transition-colors hover:bg-white/10 hover:text-text"
+          }
+        >
+          <IconSearch className="h-3.5 w-3.5 shrink-0" />
+          {collapsed ? null : (
+            <>
+              <span>Search</span>
+              <kbd className="ml-auto rounded-[4px] border border-white/15 px-1 py-0.5 text-[9px]">⌘K</kbd>
+            </>
+          )}
+        </button>
       ) : null}
 
       <nav aria-label={level === "main" ? "HOLD" : "Spaces"} className={`flex w-full flex-1 flex-col overflow-y-auto ${collapsed ? "items-center gap-1 pt-2" : "gap-4"}`}>
@@ -689,7 +725,22 @@ function TopBar({
   const href = useHref();
   const productHref = useProductHref();
   return (
-    <header className="sticky top-2 z-40 rounded-[18px] border border-white/10 bg-[linear-gradient(145deg,rgba(8,23,36,0.9),rgba(6,16,27,0.88))] p-2 shadow-[0_18px_35px_rgba(0,0,0,0.32)] backdrop-blur-xl">
+    /*
+      ON A WIDE SCREEN THIS BAR ONLY EXISTS WHEN IT CARRIES A BACK BUTTON.
+      With no screen header it said the section's name and offered Search —
+      and the sidebar beside it already highlights the section, so the name
+      was the same word twice and the row was a strip of furniture over every
+      page. Search moved into the column, where it is still one click and one
+      ⌘K away.
+
+      On a phone it always shows, and it is not furniture there: it is the
+      only way to the menu and to the person.
+    */
+    <header
+      className={`sticky top-2 z-40 rounded-[18px] border border-white/10 bg-[linear-gradient(145deg,rgba(8,23,36,0.9),rgba(6,16,27,0.88))] p-2 shadow-[0_18px_35px_rgba(0,0,0,0.32)] backdrop-blur-xl ${
+        screenHeader ? "" : "lg:hidden"
+      }`}
+    >
       <div className="flex items-center justify-between gap-2">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <button
@@ -705,10 +756,8 @@ function TopBar({
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           <div ref={rightRef} className="flex items-center gap-1.5 empty:hidden" />
-          <button type="button" onClick={onSearch} aria-label="Search" className={`${btnGhost} sm:w-[180px] sm:justify-start xl:w-[220px]`}>
+          <button type="button" onClick={onSearch} aria-label="Search" className={`${btnGhost} sm:justify-start`}>
             <IconSearch className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Search</span>
-            <kbd className="ml-auto hidden rounded-[4px] border border-white/15 px-1 py-0.5 text-[9px] sm:inline">⌘K</kbd>
           </button>
           {level === "spaces" && role === "creator" ? (
             <Link
