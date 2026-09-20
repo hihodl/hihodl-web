@@ -432,11 +432,39 @@ export function getOfframpOrders(limit = 20): Promise<{ orders: OfframpOrder[]; 
  * The virtual accounts money can arrive into. The server returns only rows
  * that are alive, so a row existing IS "this person has a working account".
  */
+/**
+ * A virtual account: a bank account in this person's name that pays into their
+ * HOLD balance.
+ *
+ * `/rails/accounts` returns the whole row and then attaches `fieldLabels` from
+ * the rail catalogue, so the deposit details ARE here — this type used to
+ * declare four of them and the web showed none. The labels matter as much as
+ * the values: the same column is "Account number" on an ACH rail and "CLABE"
+ * in Mexico, and a screen that hardcodes the US words is wrong everywhere else.
+ * They are looked up rather than stored, so correcting one is an UPDATE and not
+ * an app release.
+ */
 export interface RailAccount {
   id?: string;
   currency?: string;
   provider?: string;
   railType?: string;
+  status?: string;
+  /** SEPA. */
+  iban?: string | null;
+  bic?: string | null;
+  /** US ACH and wire. */
+  accountNumber?: string | null;
+  routingNumber?: string | null;
+  sortCode?: string | null;
+  /** Rails whose whole identifier is one string: Pix's BR Code, Bre-B's key. */
+  paymentCode?: string | null;
+  reference?: string | null;
+  bankName?: string | null;
+  bankCountry?: string | null;
+  accountHolderName?: string | null;
+  /** What this rail calls each field. Null when the catalogue read failed. */
+  fieldLabels?: Record<string, string> | null;
 }
 
 export function getRailAccounts(): Promise<{ accounts: RailAccount[] }> {

@@ -8,9 +8,20 @@
  *
  * Receiving is the one money thing the web can genuinely do, so those two
  * tiles open the real screens: the app's Receive (its token list, its QR, its
- * address chip) and the app's hi.me link. The other two are drawn and then say
- * where they happen — an on-ramp is a card charge and a virtual account is a
- * KYC'd rail, and neither is started from here.
+ * address chip) and the app's hi.me link.
+ *
+ * BANK TRANSFER IS TWO SCREENS, NOT A DEAD END
+ *
+ * Somebody who already has a virtual account SEES IT here — the deposit
+ * details are a plain read, and a bank account you cannot look up on the
+ * machine you are sitting at is half an account. Somebody who has none is sent
+ * to the app, and told why: opening one starts with an identity check that
+ * reads a document and matches it to a face, and that scanner is native. It is
+ * the one piece of this flow a browser genuinely cannot do; everything else
+ * about a virtual account is an ordinary authenticated call.
+ *
+ * Add Cash still points at the app, and that one IS a choice rather than a
+ * limit — the on-ramp's checkout is itself a web widget.
  *
  * ONLY NETWORKS WE CAN BE PAID ON
  *
@@ -34,6 +45,7 @@ import { useState } from "react";
 
 import { chosenUsername } from "@/lib/app/me";
 import { useHoldWallet } from "@/lib/app/hold-wallet";
+import type { RailAccount } from "@/lib/app/hold-api";
 import { useAliases, useRailAccounts } from "@/lib/app/money";
 import { useMe, useMyAddresses } from "@/lib/app/spaces-data";
 
@@ -54,16 +66,7 @@ export function AddMoneyScreen() {
 
   if (screen === "receive") return <ReceiveMoney onBack={back} />;
   if (screen === "link") return <RequestLink onBack={back} />;
-  if (screen === "bank")
-    return (
-      <InTheApp
-        onBack={back}
-        icon="business-outline"
-        title="Bank transfer"
-        sub="Wire or ACH to your account"
-        about="An account number of your own, in your name. What arrives in it lands in your HOLD balance. Opening one asks for your identity documents, which is a flow the app carries."
-      />
-    );
+  if (screen === "bank") return <BankTransfer onBack={back} />;
   if (screen === "cash")
     return (
       <InTheApp
@@ -314,6 +317,125 @@ function RequestLink({ onBack }: { onBack: () => void }) {
  * the app for now, and the way to the app. No pretend form, no rate we did
  * not quote.
  */
+/* ── Bank transfer ────────────────────────────────────────────────── */
+
+/**
+ * Two different screens behind one tile, and the difference is whether this
+ * person already has a virtual account.
+ *
+ * HAS ONE: show it. The account is a READ — `/rails/accounts` returns the
+ * deposit details and the rail's own words for them — and a bank account you
+ * cannot look up on the machine you are sitting at is half an account. The web
+ * showed nobody their own IBAN until now.
+ *
+ * HAS NONE: the app, and say why rather than just where. Opening one means an
+ * identity check, and ours runs through a native scanner that reads a document
+ * and matches it to a face. That module exists only in the app — it is not a
+ * rule we chose, it is the one piece of this flow a browser genuinely cannot
+ * do. Everything else about a virtual account is an ordinary authenticated
+ * call.
+ */
+function BankTransfer({ onBack }: { onBack: () => void }) {
+  const rails = useRailAccounts();
+  const accounts = rails.data?.accounts ?? [];
+
+  if (rails.data === undefined && !rails.error) {
+    return (
+      <Column>
+        <BackHeader title="Bank transfer" onBack={onBack} />
+        <Skeleton className="h-[220px] rounded-[18px]" />
+      </Column>
+    );
+  }
+
+  if (accounts.length === 0) {
+    return (
+      <InTheApp
+        onBack={onBack}
+        icon="business-outline"
+        title="Bank transfer"
+        sub="Get a personal bank account"
+        about="An account number of your own, in your name. What arrives in it lands in your HOLD balance. Opening one starts with an identity check that reads your document and matches it to your face — that scanner only exists in the app, so this is the one thing here a browser cannot finish."
+      />
+    );
+  }
+
+  return (
+    <Column>
+      <BackHeader title="Bank transfer" onBack={onBack} />
+      <p className="mb-4 px-1 text-[13px] leading-[19px] text-[#9FB7C2]">
+        {accounts.length === 1 ? "Your account. " : "Your accounts. "}
+        Money sent here lands in your HOLD balance.
+      </p>
+      <div className="flex flex-col gap-3">
+        {accounts.map((a, i) => (
+          <RailAccountCard key={a.id ?? i} account={a} />
+        ))}
+      </div>
+      <p className="mt-4 px-1 text-[12px] leading-[17px] text-white/70">
+        Opening another currency happens in the app, where the identity check runs.
+      </p>
+    </Column>
+  );
+}
+
+/**
+ * One virtual account.
+ *
+ * Every field takes its name from `fieldLabels` when the rail supplies one, so
+ * the same row reads "Account number" on ACH and "CLABE" in Mexico. Only the
+ * fields that carry a value are drawn — a rail with an IBAN has no routing
+ * number, and an empty labelled row reads as something broken.
+ */
+function RailAccountCard({ account }: { account: RailAccount }) {
+  const labels = account.fieldLabels ?? {};
+  const name = (key: string, fallback: string) => labels[key] ?? fallback;
+  const fields: { label: string; value: string }[] = [];
+  const push = (key: string, fallback: string, value: string | null | undefined) => {
+    if (value) fields.push({ label: name(key, fallback), value });
+  };
+  push("accountHolderName", "Account holder", account.accountHolderName);
+  push("iban", "IBAN", account.iban);
+  push("bic", "BIC", account.bic);
+  push("accountNumber", "Account number", account.accountNumber);
+  push("routingNumber", "Routing number", account.routingNumber);
+  push("sortCode", "Sort code", account.sortCode);
+  push("paymentCode", "Payment code", account.paymentCode);
+  push("reference", "Reference", account.reference);
+  push("bankName", "Bank", account.bankName);
+
+  return (
+    <section className="flex flex-col gap-3 rounded-[18px] border border-white/10 bg-white/[0.06] p-5">
+      <div className="flex items-center gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] border border-white/[0.18] bg-white/10">
+          <Ion name="business-outline" size={19} color="#FFB703" />
+        </span>
+        <div className="min-w-0">
+          <h2 className="text-[17px] font-strong text-white">
+            {(account.currency ?? "").toUpperCase()} {account.railType ? `· ${account.railType.toUpperCase()}` : ""}
+          </h2>
+          {account.bankCountry ? <p className="text-[12.5px] text-[#9FB7C2]">{account.bankCountry}</p> : null}
+        </div>
+      </div>
+
+      {fields.length === 0 ? (
+        <p className="text-[13px] leading-[18px] text-[#CFE3EC]">
+          This account is open, but its deposit details have not come back from the provider yet. They appear here as soon as they do.
+        </p>
+      ) : (
+        <dl className="flex flex-col">
+          {fields.map((f, i) => (
+            <div key={f.label} className={`flex items-start justify-between gap-4 py-2.5 ${i ? "border-t border-white/[0.07]" : ""}`}>
+              <dt className="shrink-0 text-[12.5px] text-[#9FB7C2]">{f.label}</dt>
+              <dd className="min-w-0 break-all text-right text-[13.5px] font-strong tabular-nums text-white">{f.value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </section>
+  );
+}
+
 function InTheApp({ onBack, icon, title, sub, about }: { onBack: () => void; icon: IonName; title: string; sub: string; about: string }) {
   return (
     <Column>
