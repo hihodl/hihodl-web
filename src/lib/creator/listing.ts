@@ -240,7 +240,15 @@ export function asksEventKind(template: Template, answer: EventAnswer | null, pi
 export function venueFor(template: Template, answer: EventAnswer, kind: EventKind | null): VenueType {
   const allowed = template.allowedVenues;
   const pick = (order: readonly VenueType[]) => order.find((v) => allowed.includes(v)) ?? allowed[0] ?? "everyday";
-  if (answer === "no") return pick(["everyday", "travel"]);
+  // "No event" must never be the cheap way past a rule. A race bib and a race
+  // number are sold for a race whatever the creator answers here, and their
+  // catalogue entry leads with `sports_event` for that reason — so a template
+  // whose first allowed venue carries rules keeps it, and the creator is still
+  // asked to confirm them. Everything else falls to everyday life.
+  if (answer === "no") {
+    const first = allowed[0];
+    return first === "sports_event" || first === "private_event" ? first : pick(["everyday", "travel"]);
+  }
   return pick([kind ? KIND_VENUE[kind] : "conference", "conference", "sports_event", "private_event", "travel", "everyday"]);
 }
 
