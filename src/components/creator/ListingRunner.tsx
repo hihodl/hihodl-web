@@ -68,6 +68,7 @@ import { Money, Text } from "./listing/parts";
 import { Notice } from "./parts";
 import { ListingBanner } from "./run/ListingBanner";
 import { Offers } from "./run/Offers";
+import { PagePreview } from "./run/PagePreview";
 import { PhotoEditor, viewOfZones } from "./run/PhotoEditor";
 import { ColourEditor, ProductHub, drawingOf } from "./run/ProductLook";
 import { GroundPicker, labelOf } from "./run/GroundPicker";
@@ -488,28 +489,51 @@ function ScreenFrame({
 
 /* ── Page background ──────────────────────────────────────────────── */
 
-/** This listing's own ground, or "Same as my default" (Spaces › Settings). */
+/**
+ * This listing's own ground, or "Same as my default" (Spaces › Settings), with
+ * the page itself beside it.
+ *
+ * A background was picked from five small cards and a hex field, and the only
+ * way to see what it did was to save it and go and look — on a live listing,
+ * in front of sponsors. The page is here now, and it repaints on every pick,
+ * unsaved: `?ground=` on the preview route overrides the stored one for that
+ * render alone. Saving still saves; looking no longer costs anything.
+ */
 function ListingGround({ space, onChanged }: { space: SpaceView; onChanged: () => void }) {
   const [fallback, setFallback] = useState<string | null | undefined>(undefined);
+  const [picked, setPicked] = useState<string | null>(space.pageGroundOwn ?? null);
+  const [saved, setSaved] = useState(0);
   useEffect(() => {
     void getCreatorSettings()
       .then(({ settings }) => setFallback(settings.listingGround ?? settings.pageGround ?? null))
       .catch(() => setFallback(null));
   }, []);
   if (fallback === undefined) return <Skeleton className="h-[240px]" />;
+  // "Same as my default" is null on the listing, and the preview must then
+  // stand on the default itself, not on whatever the server last stored.
+  const showing = picked ?? fallback;
   return (
-    <div className={`${SCREEN_BODY} flex flex-col gap-3`}>
-      <Body dim>
-        What this listing&rsquo;s page stands on. &ldquo;Same as my default&rdquo; follows your listings&rsquo; default in Settings ›
-        Your pages.
-      </Body>
-      <GroundPicker
-        key={space.pageGroundOwn ?? "default"}
-        value={space.pageGroundOwn ?? null}
-        allowDefault
-        defaultValue={fallback}
-        onSave={(next) => setListingPageGround(space.id, next).then(onChanged)}
-      />
+    <div className={`${SCREEN_BODY} flex flex-col gap-4 xl:flex-row xl:items-start`}>
+      <div className="flex min-w-0 flex-1 flex-col gap-3">
+        <Body dim>
+          What this listing&rsquo;s page stands on. &ldquo;Same as my default&rdquo; follows your listings&rsquo; default in Settings ›
+          Your pages.
+        </Body>
+        <GroundPicker
+          key={space.pageGroundOwn ?? "default"}
+          value={space.pageGroundOwn ?? null}
+          allowDefault
+          defaultValue={fallback}
+          onPicked={setPicked}
+          onSave={(next) =>
+            setListingPageGround(space.id, next).then((r) => {
+              setSaved((n) => n + 1);
+              return onChanged(), r;
+            })
+          }
+        />
+      </div>
+      <PagePreview spaceId={space.id} ground={showing} reload={saved} className="xl:w-[420px]" />
     </div>
   );
 }

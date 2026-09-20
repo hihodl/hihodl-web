@@ -10,7 +10,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { btnWhite as btnSmall } from "@/components/app/spaces/kit";
 import { cardBox as glass } from "@/components/app/spaces/kit";
@@ -54,6 +54,7 @@ export function GroundPicker({
   allowDefault = false,
   defaultValue = null,
   defaultLabel = "Same as my default",
+  onPicked,
 }: {
   /** What is saved now: a preset, a #RRGGBB, or null (HOLD blue; on a listing, "same as my default"). */
   value: string | null;
@@ -64,6 +65,11 @@ export function GroundPicker({
   defaultValue?: string | null;
   /** What that card is called. */
   defaultLabel?: string;
+  /**
+   * Every change of mind, saved or not, so a preview beside this can show the
+   * pick before it is committed. You choose a background by looking at it.
+   */
+  onPicked?: (value: string | null) => void;
 }) {
   // With no default to fall back to, a stored "hold" and null are the same card.
   const start = !allowDefault && value === "hold" ? null : value;
@@ -73,6 +79,12 @@ export function GroundPicker({
   const [notice, setNotice] = useState<string | null>(null);
   const customHex = normalHex(typed);
   const dirty = picked !== start;
+
+  useEffect(() => {
+    onPicked?.(picked);
+    // The callback is the caller's business; this fires on the pick alone.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [picked]);
 
   const option = (key: string | null, title: string, note: string, swatch: string | null) => {
     const on = picked === key;
