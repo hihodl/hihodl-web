@@ -89,6 +89,12 @@ export interface ShellState {
   teamPage: boolean;
   /** Whether the Wallet module exists for this person (rollout gate); undefined while asking. */
   walletPage: boolean | undefined;
+  /**
+   * HiSpace could not be read, so `listings` and `seats` are empty because we
+   * do not know, not because there is nothing. Anything that would tell the
+   * person they have no listings must check this first.
+   */
+  spacesDown: boolean;
 }
 
 const ShellContext = createContext<ShellState | null>(null);
@@ -199,6 +205,7 @@ const COLLAPSE_KEY = "hold-shell-collapsed";
 const DISPLAY_MODE_KEY = "hold-display-mode";
 
 function SignedIn({ session, children }: { session: Session; children: ReactNode }) {
+  const onSpacesPage = productRel(usePathname(), useSpacesBase()).startsWith("/spaces");
   const listings = useListings();
   const seats = useSeats();
   const x = useX();
@@ -220,59 +227,78 @@ function SignedIn({ session, children }: { session: Session; children: ReactNode
     });
   }, [me.data, session.user.app_metadata?.provider, session.user.email]);
 
-  // The team is read before the first paint so a Creative Director's Team item
-  // is there from the start; a failed read only means no team is shown.
+  // Every one of these is SETTLED when it has either answered or failed. None
+  // of them is allowed to be fatal, Spaces included.
+  //
+  // It used to be: a failed `listings` or `seats` read replaced the whole
+  // product with one error card. Those two are HiSpace reads, and Home, Wallet,
+  // Payments, Savings and Stays have nothing to do with HiSpace — so a single
+  // /ad-space route answering badly took down five products that were working
+  // perfectly, for everybody. One section being unreachable is not the same
+  // event as the account being unreachable, and only the section may say so.
   const ready =
-    listings.data !== undefined &&
-    seats.data !== undefined &&
+    (listings.data !== undefined || listings.error) &&
+    (seats.data !== undefined || seats.error) &&
     (x.data !== undefined || x.error) &&
     (team.data !== undefined || team.error) &&
     (settings.data !== undefined || settings.error);
-  const failed = listings.error ?? seats.error;
+
+  /**
+   * HiSpace could not be read. Kept apart from "this person has no listings",
+   * because they look identical in the data and mean opposite things: one is
+   * an empty shelf, the other is a shelf we could not see. Only Spaces pages
+   * are told, and they say so rather than draw an empty shelf.
+   */
+  const spacesDown = listings.error ?? seats.error ?? null;
 
   const state = useMemo<ShellState | null>(() => {
-    if (!ready || !listings.data || !seats.data) return null;
-    const role = roleOf(listings.data, seats.data, x.data ?? null);
+    if (!ready) return null;
+    const spaces = listings.data ?? [];
+    const mine = seats.data ?? [];
+    const role = roleOf(spaces, mine, x.data ?? null);
     const w = work.data ?? [];
-    const onTeams = seats.data.some((s) => s.status === "active");
+    const onTeams = mine.some((s) => s.status === "active");
     return {
       session,
       role,
-      listings: listings.data,
-      seats: seats.data,
+      listings: spaces,
+      seats: mine,
       x: x.data ?? null,
       work: w,
       managed: w.filter((l) => l.role === "manager"),
       agency,
       teamPage: role !== "creator" || agency.on || onTeams,
       walletPage,
+      spacesDown: spacesDown !== null,
     };
-  }, [ready, listings.data, seats.data, x.data, work.data, session, agency, walletPage]);
+  }, [ready, listings.data, seats.data, x.data, work.data, session, agency, walletPage, spacesDown]);
 
-  if (failed && !state) {
-    return (
-      <Centered>
-        <div className={`${glass} flex w-full max-w-[440px] flex-col gap-4 p-6`}>
-          <Wordmark className="h-5 w-auto text-text" />
-          <Alert>{describeCreatorError(failed)}</Alert>
-          <div className="flex gap-2">
-            <button type="button" className={btnGhost} onClick={() => window.location.reload()}>
-              Try again
-            </button>
-            <button type="button" className={btnGhost} onClick={() => void signOut()}>
-              Sign out
-            </button>
-          </div>
-        </div>
-      </Centered>
-    );
-  }
   if (!state) return <Centered><Wordmark className="h-5 w-auto text-text" /></Centered>;
 
   return (
     <ShellContext.Provider value={state}>
-      <Frame>{children}</Frame>
+      <Frame>{spacesDown && onSpacesPage ? <SpacesUnreachable error={spacesDown} /> : children}</Frame>
     </ShellContext.Provider>
+  );
+}
+
+/**
+ * What a Spaces page says when HiSpace itself could not be read.
+ *
+ * Inside the Frame on purpose: the sidebar stays, so the way out — Home,
+ * Wallet, Stays — is one click away instead of a dead end. "Sign out" is not
+ * offered any more either: the session is fine, and offering to end it invites
+ * somebody to throw away a working sign-in over a section being down.
+ */
+function SpacesUnreachable({ error }: { error: unknown }) {
+  return (
+    <div className={`${glass} flex w-full max-w-[440px] flex-col gap-4 p-6`}>
+      <Wordmark className="h-5 w-auto text-text" />
+      <Alert>{describeCreatorError(error)}</Alert>
+      <button type="button" className={`${btnGhost} self-start`} onClick={() => window.location.reload()}>
+        Try again
+      </button>
+    </div>
   );
 }
 
