@@ -41,7 +41,7 @@ export const PRODUCTS: readonly Product[] = [
     door: "Find a stay",
     sub: "Search hotels wherever you're going",
     about: "Hotels wherever you're going, priced in the app, and HiPoints back on the nights you book.",
-    web: false,
+    web: true,
   },
   {
     key: "esim",

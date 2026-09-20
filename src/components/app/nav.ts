@@ -259,6 +259,13 @@ export function activeKey(rel: string): NavKey | null {
 
 /** The top bar's title for a product-relative path. */
 export function titleFor(rel: string): string {
+  // Stays' own pages. They are sub-paths of one nav entry, so the entry's own
+  // label ("Stays") would sit over a booking, a checkout and a property alike.
+  if (/^\/travel\/trips\/[^/]+/.test(rel)) return "Booking";
+  if (/^\/travel\/trips\/?$/.test(rel)) return "Your trips";
+  if (/^\/travel\/stay\/[^/]+\/book\/?$/.test(rel)) return "Confirm and pay";
+  if (/^\/travel\/stay\/[^/]+/.test(rel)) return "Stay";
+  if (/^\/travel\/search\/?$/.test(rel)) return "Stays";
   if (/^\/spaces\/listings\/new\/?$/.test(rel)) return "New listing";
   if (/^\/spaces\/listings\/[^/]+\/edit\/?$/.test(rel)) return "Edit draft";
   if (/^\/spaces\/listings\/[^/]+/.test(rel)) return "Listing";

@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 
-import { InTheAppScreen } from "@/components/app/main/InTheAppScreen";
+import { StaysScreen } from "@/components/app/stays/StaysScreen";
 
 export const metadata: Metadata = { title: "Stays" };
 
-export default function TravelPage() {
-  return <InTheAppScreen product="stays" />;
+export default function StaysPage() {
+  return <StaysScreen />;
 }
