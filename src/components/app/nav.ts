@@ -45,7 +45,7 @@ import {
 
 export type NavKey =
   // main
-  | "dashboard"
+  | "home"
   | "wallet"
   | "payments"
   | "savings"
@@ -98,8 +98,7 @@ export const MAIN_GROUPS: readonly NavGroup[] = [
   {
     title: null,
     items: [
-      { key: "dashboard", label: "Home", path: "", icon: IconHome, keywords: "dashboard balance summary pockets accounts move" },
-      { key: "wallet", label: "Wallet", path: "/wallet", icon: IconWallet, keywords: "solana usdc address receive passkey recovery phrase words export balance" },
+      { key: "home", label: "Home", path: "", icon: IconHome, keywords: "home dashboard balance summary pockets accounts move" },
       { key: "payments", label: "Payments", path: "/payments", icon: IconPayments, keywords: "sent received requests scheduled transactions history payouts pay links" },
       { key: "savings", label: "Savings", path: "/savings", icon: IconSavings, keywords: "pockets goals yield interest apy earn aave kamino" },
       { key: "invest", label: "Invest", path: "/invest", icon: IconInvest, keywords: "portfolio holdings tokens coins performance profit loss" },
@@ -130,9 +129,19 @@ export const MAIN_FOOT: readonly NavItem[] = [
  * Menu, Settings and the rest are rows inside it, and Add money is an action
  * on the Home screen, not a place. They are here so the top bar can still name
  * them and ⌘K can still find them.
+ *
+ * WALLET IS HERE AND NOT IN THE COLUMN
+ *
+ * Next to Home it read as a second money screen, and it is not one: Home is
+ * every account and what they are worth, and there is nothing on Wallet that
+ * Home does not already say better. What lives there is the three things that
+ * happen ONCE — making the web wallet, unlocking it, and reading the recovery
+ * words — plus the withdrawal those unlock. Those belong where Security and
+ * Account recovery already are, which is the Menu, not beside the balance.
  */
 export const MAIN_HIDDEN: readonly NavItem[] = [
   { key: "account", label: "Account", path: "/account", icon: IconAccount, keywords: "profile photo name username email x twitter payout wallet address" },
+  { key: "wallet", label: "Wallet", path: "/wallet", icon: IconWallet, keywords: "solana usdc address receive passkey recovery phrase words export balance withdraw" },
   { key: "add", label: "Add money", path: "/add", icon: IconAdd, keywords: "receive crypto qr code address deposit top up add cash bank transfer" },
   // The app's pay links live behind a tile on Add money, not in a menu either.
   { key: "pay-links", label: "Pay links", path: "/pay-links", icon: IconPayments, keywords: "pay link get paid by anyone from any wallet usdc invoice charge someone without hold" },
@@ -223,7 +232,7 @@ export function hrefFor(item: Pick<NavItem, "path">, spacesBase: string): string
 /** Which item a product-relative path belongs to. */
 export function activeKey(rel: string): NavKey | null {
   const path = rel.replace(/\/+$/, "");
-  if (path === "") return "dashboard";
+  if (path === "") return "home";
   if (levelOf(path) === "spaces") {
     const second = path.split("/")[2] ?? "";
     if (second === "") return "overview";

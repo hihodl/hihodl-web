@@ -101,31 +101,67 @@ export async function checkUsername(v: string): Promise<UsernameVerdict> {
 const AVATAR_BUCKET = "user-avatars";
 const AVATAR_SIDE = 512;
 
-/** A square JPEG, centre-cropped, at most 512 px: what the app uploads after its 1:1 crop. */
-export async function squareJpeg(file: Blob): Promise<Blob> {
+/** Decode a file into an image we can measure and draw. */
+export function loadImage(file: Blob): Promise<HTMLImageElement> {
   const url = URL.createObjectURL(file);
-  try {
-    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const i = new Image();
-      i.onload = () => resolve(i);
-      i.onerror = () => reject(new Error("not_an_image"));
-      i.src = url;
-    });
-    const side = Math.min(img.naturalWidth, img.naturalHeight);
-    if (!side) throw new Error("not_an_image");
-    const out = Math.min(AVATAR_SIDE, side);
-    const canvas = document.createElement("canvas");
-    canvas.width = out;
-    canvas.height = out;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) throw new Error("no_canvas");
-    ctx.drawImage(img, (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side, 0, 0, out, out);
-    return await new Promise<Blob>((resolve, reject) =>
-      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("encode_failed"))), "image/jpeg", 0.88),
-    );
-  } finally {
-    URL.revokeObjectURL(url);
-  }
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const i = new Image();
+    i.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(i);
+    };
+    i.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("not_an_image"));
+    };
+    i.src = url;
+  });
+}
+
+/** A square of the source image, in its own pixels. */
+export interface CropRect {
+  sx: number;
+  sy: number;
+  side: number;
+}
+
+/**
+ * The chosen square, as a JPEG at most 512 px.
+ *
+ * The rectangle is clamped to the image before it is drawn: a crop that runs
+ * off the edge would be padded with transparent black, which a JPEG then
+ * flattens to a black wedge across somebody's face.
+ */
+export async function cropToJpeg(img: HTMLImageElement, rect: CropRect): Promise<Blob> {
+  const max = Math.min(img.naturalWidth, img.naturalHeight);
+  const side = Math.max(1, Math.min(rect.side, max));
+  const sx = Math.max(0, Math.min(rect.sx, img.naturalWidth - side));
+  const sy = Math.max(0, Math.min(rect.sy, img.naturalHeight - side));
+  const out = Math.min(AVATAR_SIDE, Math.round(side));
+  const canvas = document.createElement("canvas");
+  canvas.width = out;
+  canvas.height = out;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("no_canvas");
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(img, sx, sy, side, side, 0, 0, out, out);
+  return await new Promise<Blob>((resolve, reject) =>
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("encode_failed"))), "image/jpeg", 0.88),
+  );
+}
+
+/**
+ * A square JPEG, centre-cropped, at most 512 px.
+ *
+ * The fallback for anything that hands over a file without a chosen crop. The
+ * avatar screen does not: it opens the cropper, because the middle of a
+ * photograph is very rarely the middle of a face.
+ */
+export async function squareJpeg(file: Blob): Promise<Blob> {
+  const img = await loadImage(file);
+  const side = Math.min(img.naturalWidth, img.naturalHeight);
+  if (!side) throw new Error("not_an_image");
+  return cropToJpeg(img, { sx: (img.naturalWidth - side) / 2, sy: (img.naturalHeight - side) / 2, side });
 }
 
 /** The storage path inside a signed or public URL of our bucket, or the path itself. */

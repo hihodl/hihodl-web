@@ -126,6 +126,7 @@ function useCodes(): [CodesStatus | null | undefined, () => void] {
 
 function MenuHome({ open }: { open: (s: Screen) => void }) {
   const productHref = useProductHref();
+  const { walletPage } = useShell();
   const [codes] = useCodes();
   // The app's badge on Account recovery: recovery codes never made.
   const recoveryBadge = codes && !codes.hasActiveCodes ? 1 : 0;
@@ -135,6 +136,15 @@ function MenuHome({ open }: { open: (s: Screen) => void }) {
       <MenuTiles open={open} />
       <HoldCard className="mt-1.5">
         <MenuRow icon="person-outline" label="Account" sub="Profile, X account, where you get paid" href={productHref("/account")} />
+        {/*
+          Wallet sits here and no longer in the side column. Beside Home it
+          read as a second money screen; it is not one. It is where the wallet
+          is made, unlocked and its recovery words read — which is this list's
+          subject, next to Security and Account recovery.
+        */}
+        {walletPage === true ? (
+          <MenuRow icon="wallet-outline" label="Wallet" sub="Your Solana address, recovery words and withdrawals" href={productHref("/wallet")} />
+        ) : null}
         <MenuRow icon="shield-checkmark-outline" label="Security" onClick={() => open("security")} />
         <MenuRow icon="key-outline" label="Account recovery" badge={recoveryBadge} onClick={() => open("recovery")} />
         <MenuRow icon="document-text-outline" label="Statements" onClick={() => open("statements")} />
