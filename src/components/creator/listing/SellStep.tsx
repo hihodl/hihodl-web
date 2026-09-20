@@ -284,7 +284,7 @@ function Slots({
             label={mode === "bids" ? "Opening bid (USD)" : "Price for each (USD)"}
             problems={problemsAt(problems, "slotPrice")}
             htmlFor="slot-price"
-            hint={split ? `The sponsor pays ${usd(split.sponsorPaysCents)} and you receive ${usd(split.creatorGetsCents)}.` : undefined}
+            hint={split ? `You receive ${usd(split.creatorGetsCents)}.` : undefined}
           >
             <Money id="slot-price" value={draft.slotPriceDollars} onChange={(slotPriceDollars) => set({ slotPriceDollars })} />
           </Field>
@@ -368,9 +368,7 @@ function Zones({
                     label={mode === "bids" ? "Opening bid (USD)" : "Price (USD)"}
                     problems={problemsAt(problems, `zone:${zone.zoneKey}:price`)}
                     htmlFor={`zone-${zone.zoneKey}-price`}
-                    hint={
-                      split ? `The sponsor pays ${usd(split.sponsorPaysCents)} and you receive ${usd(split.creatorGetsCents)}.` : undefined
-                    }
+                    hint={split ? `You receive ${usd(split.creatorGetsCents)}.` : undefined}
                   >
                     <Money
                       id={`zone-${zone.zoneKey}-price`}

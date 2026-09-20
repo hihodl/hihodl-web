@@ -26,18 +26,21 @@
  * English and in dollars), statements and invite.
  */
 
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 import { describeCreatorError } from "@/lib/creator/api";
 import { signOut } from "@/lib/creator/session";
-import { emailRecoveryCodes, recoveryCodesStatus } from "@/lib/app/me";
+import { chosenUsername, emailRecoveryCodes, recoveryCodesStatus } from "@/lib/app/me";
+import { useMe } from "@/lib/app/spaces-data";
 import { useHoldWallet } from "@/lib/app/hold-wallet";
 import { listPasskeys, type RegisteredPasskey } from "@/lib/wallet/api";
 
 import { useLinkedPhones } from "../account/PhoneScreen";
+import { UserAvatar } from "../account/UserAvatar";
 import { useProductHref, useSpacesBase } from "../base";
-import { BackHeader, Column, ctaPrimary, ctaSecondary, HoldCard, MenuRow, Notice, SectionTitle, Switch } from "../hold";
+import { BackHeader, Column, ctaPrimary, ctaSecondary, holdCard, HoldCard, MenuRow, Notice, SectionTitle, Switch } from "../hold";
 import { Ion, type IonName } from "../ion";
 import { useShell, useShellPrefs } from "../Shell";
 import { YourPagesCard, YourPagesScreen } from "../spaces/YourPages";
@@ -48,7 +51,7 @@ const WEBSITE = "https://hihodl.xyz";
 
 type Screen = "home" | "security" | "recovery" | "passkeys" | "codes" | "personalization" | "about";
 
-export function SettingsScreen({ screen, item }: { screen?: string; item?: string } = {}) {
+export function MenuScreen({ screen, item }: { screen?: string; item?: string } = {}) {
   const router = useRouter();
   const pathname = usePathname();
   const productHref = useProductHref();
@@ -64,14 +67,14 @@ export function SettingsScreen({ screen, item }: { screen?: string; item?: strin
     // Your pages, one level under Appearance (../spaces/YourPages).
     return (
       <YourPagesScreen
-        base={productHref("/settings?screen=pages")}
-        back={productHref("/settings?screen=personalization")}
+        base={productHref("/menu?screen=pages")}
+        back={productHref("/menu?screen=personalization")}
         backLabel="Appearance"
         item={item}
       />
     );
   }
-  return <SettingsHome open={open} />;
+  return <MenuHome open={open} />;
 }
 
 /* ── Data ─────────────────────────────────────────────────────────── */
@@ -105,14 +108,17 @@ function useCodes(): [CodesStatus | null | undefined, () => void] {
 
 /* ── Home: the app's menu card ────────────────────────────────────── */
 
-function SettingsHome({ open }: { open: (s: Screen) => void }) {
+function MenuHome({ open }: { open: (s: Screen) => void }) {
   const productHref = useProductHref();
   const [codes] = useCodes();
   // The app's badge on Account recovery: recovery codes never made.
   const recoveryBadge = codes && !codes.hasActiveCodes ? 1 : 0;
   return (
     <Column>
+      <MenuHero />
+      <MenuTiles />
       <HoldCard className="mt-1.5">
+        <MenuRow icon="person-outline" label="Account" sub="Profile, X account, where you get paid" href={productHref("/account")} />
         <MenuRow icon="shield-checkmark-outline" label="Security" onClick={() => open("security")} />
         <MenuRow icon="key-outline" label="Account recovery" badge={recoveryBadge} onClick={() => open("recovery")} />
         <MenuRow icon="log-in-outline" label="Sign-in" href={productHref("/account?view=account")} />
@@ -134,6 +140,49 @@ function SettingsHome({ open }: { open: (s: Screen) => void }) {
       <p className="mt-[18px] text-center text-[12px] text-[#9FB7C2]">Need something else? We&apos;re here to help.</p>
       <p className="mt-8 text-center text-[11px] font-strong tracking-[1.2px] text-white/55">HIHODL TECHNOLOGIES OÜ</p>
     </Column>
+  );
+}
+
+/* ── The menu's head (MenuContent's hero and tiles) ───────────────── */
+
+/**
+ * The app's hero: the avatar big and centred, the username under it, the whole
+ * thing a door to the profile. No chips, no switcher — the app dropped those.
+ */
+function MenuHero() {
+  const me = useMe();
+  const { session } = useShell();
+  const productHref = useProductHref();
+  const username = chosenUsername(me.data);
+  const name = username ? `@${username}` : me.data?.profile.displayName?.trim() || session.user.email || "You";
+  return (
+    <Link href={productHref("/account")} className="mt-1 flex flex-col items-center gap-3 rounded-[18px] py-5 transition-opacity hover:opacity-80">
+      <UserAvatar size={96} fallbackName={name} />
+      <span className="max-w-full truncate text-[22px] font-extrabold leading-7 text-white">{name}</span>
+    </Link>
+  );
+}
+
+/** The app's two tiles. Plan is the app's; Invite friends lives in Benefits. */
+function MenuTiles() {
+  const productHref = useProductHref();
+  return (
+    <div className="mt-1 grid grid-cols-2 gap-2.5">
+      <Tile icon="person-add-outline" title="Invite friends" sub="Earn rewards together" href={productHref("/benefits")} />
+      <Tile icon="phone-portrait-outline" title="Link your phone" sub="Approve from the app" href={productHref("/account?view=phone")} />
+    </div>
+  );
+}
+
+function Tile({ icon, title, sub, href }: { icon: IonName; title: string; sub: string; href: string }) {
+  return (
+    <Link href={href} className={`${holdCard} flex flex-col gap-2 p-3.5 transition-colors hover:bg-white/[0.06]`}>
+      <span className="flex h-9 w-9 items-center justify-center rounded-[11px] bg-white/[0.08] text-white">
+        <Ion name={icon} size={18} />
+      </span>
+      <span className="block truncate text-[14px] font-bold leading-5 text-white">{title}</span>
+      <span className="block truncate text-[12px] leading-4 text-white/55">{sub}</span>
+    </Link>
   );
 }
 
@@ -517,7 +566,7 @@ function PersonalizationScreen({ onBack }: { onBack: () => void }) {
       {role === "creator" ? (
         <>
           <SectionTitle>Your pages</SectionTitle>
-          <YourPagesCard href={productHref("/settings?screen=pages")} />
+          <YourPagesCard href={productHref("/menu?screen=pages")} />
         </>
       ) : null}
     </Column>

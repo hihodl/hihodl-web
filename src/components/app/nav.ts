@@ -1,8 +1,10 @@
 /**
  * The product's navigation, on two levels, like the app.
  *
- * MAIN is HOLD itself: Dashboard, Wallet, Benefits and the products under it
- * (Stays, eSIM, Spaces, in the app's order), then Account and Settings.
+ * MAIN is HOLD itself, in the app's own order: Home, Wallet, Payments,
+ * Savings, Invest, Activity, then Benefits and the products under it (Stays,
+ * eSIM, Spaces), and Menu at the foot — the app's menu, which holds the
+ * person, Settings, Security, recovery, help and signing out.
  * A PRODUCT level replaces the column when one is open: opening Spaces (or any
  * /spaces address) swaps the sidebar to the Spaces menu, with a "Back" row at
  * its top that returns to the main menu and the Dashboard. Every product that
@@ -18,17 +20,23 @@ import type { ShellRole } from "@/lib/app/spaces-model";
 
 import {
   IconAccount,
+  IconActivity,
+  IconAdd,
   IconBed,
   IconDeliveries,
   IconGift,
   IconHome,
   IconInsights,
   IconInspire,
+  IconInvest,
   IconListings,
   IconMegaphone,
+  IconMenuDots,
   IconOffers,
   IconOverview,
+  IconPayments,
   IconSales,
+  IconSavings,
   IconSettings,
   IconSim,
   IconTeam,
@@ -39,12 +47,17 @@ export type NavKey =
   // main
   | "dashboard"
   | "wallet"
+  | "payments"
+  | "savings"
+  | "invest"
+  | "activity"
+  | "add"
+  | "menu"
   | "benefits"
   | "stays"
   | "esim"
   | "spaces"
   | "account"
-  | "settings"
   // Spaces
   | "overview"
   | "listings"
@@ -84,8 +97,12 @@ export const MAIN_GROUPS: readonly NavGroup[] = [
   {
     title: null,
     items: [
-      { key: "dashboard", label: "Dashboard", path: "", icon: IconHome, keywords: "home balance summary" },
+      { key: "dashboard", label: "Home", path: "", icon: IconHome, keywords: "dashboard balance summary pockets accounts move" },
       { key: "wallet", label: "Wallet", path: "/wallet", icon: IconWallet, keywords: "solana usdc address receive passkey recovery phrase words export balance" },
+      { key: "payments", label: "Payments", path: "/payments", icon: IconPayments, keywords: "sent received requests scheduled transactions history payouts pay links" },
+      { key: "savings", label: "Savings", path: "/savings", icon: IconSavings, keywords: "pockets goals yield interest apy earn aave kamino" },
+      { key: "invest", label: "Invest", path: "/invest", icon: IconInvest, keywords: "portfolio holdings tokens coins performance profit loss" },
+      { key: "activity", label: "Activity", path: "/activity", icon: IconActivity, keywords: "history everything that moved transactions receipts" },
       { key: "benefits", label: "Benefits", path: "/benefits", icon: IconGift, keywords: "products rewards points" },
       // The app's Benefits products, in the app's order (benefits/index.tsx productTiles).
       { key: "stays", label: "Stays", path: "/travel", icon: IconBed, keywords: "travel hotels hi travel", child: true },
@@ -96,8 +113,26 @@ export const MAIN_GROUPS: readonly NavGroup[] = [
 ];
 
 export const MAIN_FOOT: readonly NavItem[] = [
+  {
+    key: "menu",
+    label: "Menu",
+    path: "/menu",
+    icon: IconMenuDots,
+    keywords: "account profile settings security account recovery sign-in help about statements plan invite friends sign out log out",
+  },
+];
+
+/**
+ * Pages of the main level that the column does not list.
+ *
+ * The app does not list them either: Account is the avatar at the top of the
+ * Menu, Settings and the rest are rows inside it, and Add money is an action
+ * on the Home screen, not a place. They are here so the top bar can still name
+ * them and ⌘K can still find them.
+ */
+export const MAIN_HIDDEN: readonly NavItem[] = [
   { key: "account", label: "Account", path: "/account", icon: IconAccount, keywords: "profile photo name username email x twitter payout wallet address" },
-  { key: "settings", label: "Settings", path: "/settings", icon: IconSettings, keywords: "sign out log out terms privacy support help sidebar display security passkeys recovery codes personalization your pages payout x account profile" },
+  { key: "add", label: "Add money", path: "/add", icon: IconAdd, keywords: "receive crypto qr code address deposit top up add cash bank transfer" },
 ];
 
 /* ── Spaces ───────────────────────────────────────────────────────── */
@@ -164,7 +199,8 @@ export function visible(item: NavItem, role: ShellRole, team: boolean, wallet = 
 
 function every(level: Level): NavItem[] {
   const l = LEVELS[level];
-  return [...l.groups.flatMap((g) => g.items), ...l.foot];
+  const hidden = level === "main" ? MAIN_HIDDEN : [];
+  return [...l.groups.flatMap((g) => g.items), ...l.foot, ...hidden];
 }
 
 export function itemsFor(level: Level, role: ShellRole, team = true, wallet = false): NavItem[] {

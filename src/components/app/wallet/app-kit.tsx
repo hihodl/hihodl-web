@@ -249,12 +249,29 @@ export function ActionsRow({ children }: { children: ReactNode }) {
 
 /* ── Tokens ───────────────────────────────────────────────────────── */
 
-const TOKEN_ICON = { USDC: "/pay/usdc.png", SOL: "/pay/solana.svg" } as const;
+const TOKEN_ICON: Record<string, string> = { USDC: "/pay/usdc.png", SOL: "/pay/solana.svg" };
 
-export function TokenIcon({ symbol, size = 36 }: { symbol: "USDC" | "SOL"; size?: number }) {
+/**
+ * A token's mark. The app reads its icon registry; the web has the two marks
+ * it ships, and anything else falls back the way the app itself falls back
+ * when the registry has nothing — the ticker, in its `heroTicker` weight.
+ */
+export function TokenIcon({ symbol, size = 36 }: { symbol: string; size?: number }) {
+  const src = TOKEN_ICON[symbol.toUpperCase()];
+  if (!src) {
+    return (
+      <span
+        className="flex shrink-0 items-center justify-center rounded-full border border-white/[0.18] bg-white/[0.08] font-black tracking-[0.5px] text-[#CFE3EC]"
+        style={{ width: size, height: size, fontSize: Math.max(9, Math.round(size * 0.3)) }}
+        aria-hidden
+      >
+        {symbol.toUpperCase().slice(0, 4)}
+      </span>
+    );
+  }
   return (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={TOKEN_ICON[symbol]} alt="" width={size} height={size} className="shrink-0 rounded-full" style={{ width: size, height: size }} />
+    <img src={src} alt="" width={size} height={size} className="shrink-0 rounded-full" style={{ width: size, height: size }} />
   );
 }
 

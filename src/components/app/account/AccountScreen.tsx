@@ -70,7 +70,7 @@ export function AccountScreen() {
   if (view === "phone") {
     const linkHref = `${productHref("/welcome")}?next=${encodeURIComponent(`${productHref("/account")}?view=phone`)}`;
     // Its row is in Settings › Security, as in the app, so Back goes there.
-    return <PhoneScreen onBack={() => router.push(productHref("/settings?screen=security"), { scroll: false })} linkHref={linkHref} />;
+    return <PhoneScreen onBack={() => router.push(productHref("/menu?screen=security"), { scroll: false })} linkHref={linkHref} />;
   }
   return <AccountHome open={open} />;
 }

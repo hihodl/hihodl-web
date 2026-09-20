@@ -10,7 +10,8 @@
  * card opens its own screen with Back (OverviewScreens.tsx):
  *
  *   /spaces                  the hub
- *   /spaces?view=brands      Brands you work with
+ *   /spaces?view=brands      Brands you work with: one card per brand
+ *   /spaces?view=brand&brand= one brand's activity with you, and nothing else
  *   /spaces?view=events      By event
  *   /spaces?view=sells       What sells for you
  *   /spaces?view=pay         How brands pay
@@ -51,10 +52,10 @@ import { useHref } from "../base";
 import { Ion, type IonName } from "../ion";
 import { useShell } from "../Shell";
 import { dollars, Skeleton } from "../ui";
+import { BrandScreen, brandParam } from "./BrandScreen";
 import { CardGrid, DrillBar } from "./cards";
 import { dueText, ReadError, StatusPill } from "./common";
 import { Card, Empty, emptyBtn, Group as Panel, ListRow as RowLink, money, ProgressBar, Stat as KpiTile, Tag } from "./kit";
-import { ReadyToPublish } from "./ReadyToPublish";
 import { useOffersContent } from "./ContentOffer";
 import {
   BrandsScreen,
@@ -80,14 +81,14 @@ const seeAll = "text-[12.5px] font-strong normal-case tracking-normal text-white
 /** Rows in "Needs you" and "Live". */
 const ROWS = 3;
 
-export function Overview({ view = null }: { view?: string | null }) {
+export function Overview({ view = null, brand = null }: { view?: string | null; brand?: string | null }) {
   const { role } = useShell();
-  return role === "manager" ? <ManagerOverview /> : <CreatorOverview view={view} />;
+  return role === "manager" ? <ManagerOverview /> : <CreatorOverview view={view} brand={brand} />;
 }
 
 /* ── Creator ──────────────────────────────────────────────────────── */
 
-function CreatorOverview({ view }: { view: string | null }) {
+function CreatorOverview({ view, brand }: { view: string | null; brand: string | null }) {
   const { listings, work, agency } = useShell();
   const href = useHref();
   const analytics = useAnalytics();
@@ -134,7 +135,9 @@ function CreatorOverview({ view }: { view: string | null }) {
   }
   if (current) {
     if (!data) return analytics.error ? <ReadError error={analytics.error} /> : <Skeleton className="h-[320px]" />;
-    if (current === "brands") return <BrandsScreen data={data} back={back} />;
+    // One brand alone: back to the grid of brands, never to the hub.
+    if (current === "brand") return <BrandScreen data={data} brandKey={brand ?? ""} back={`${back}?view=brands`} />;
+    if (current === "brands") return <BrandsScreen data={data} back={back} hrefOf={(key) => `${back}?${brandParam(key)}`} />;
     if (current === "events") return <EventsScreen data={data} back={back} />;
     if (current === "sells") return <SellsScreen data={data} back={back} />;
     if (current === "pay") return <PayScreen data={data} back={back} />;
@@ -148,7 +151,6 @@ function CreatorOverview({ view }: { view: string | null }) {
 
   return (
     <div className={FILL}>
-      <ReadyToPublish compact />
       <section aria-label="Your business" className="grid grid-cols-2 gap-2.5 xl:grid-cols-4">
         <KpiTile label="Earned" value={v(dollars(t?.receivedCents ?? 0))} note={t ? (t.orders && t.fee.paidByYouCents === 0 ? "5% paid by brands" : feeLine(t)) : " "} href={href("/sales")} />
         <KpiTile

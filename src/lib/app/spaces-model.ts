@@ -297,6 +297,8 @@ export interface EventRef {
   key: string;
   name: string;
   city: string | null;
+  /** ISO 3166-1 alpha-2, for the flag on the event's card. Null when nobody told us. */
+  country: string | null;
   startsOn: string | null;
   endsOn: string | null;
 }
@@ -335,14 +337,15 @@ export function listingRefs(
   others: readonly WorkListing[] = [],
 ): Map<string, ListingRef> {
   const out = new Map<string, ListingRef>();
-  const byName = new Map<string, string>();
+  // The event's slug and country, by name: what a team seat's listing is missing.
+  const byName = new Map<string, { slug: string; country: string | null }>();
   for (const l of own) {
     const e = l.event;
-    if (e) byName.set(e.name.toLowerCase(), e.slug);
+    if (e) byName.set(e.name.toLowerCase(), { slug: e.slug, country: e.country ?? null });
     out.set(l.id, {
       id: l.id,
       title: l.serviceName || l.title,
-      event: e ? { key: e.slug, name: e.name, city: e.city, startsOn: e.startsOn, endsOn: e.endsOn } : null,
+      event: e ? { key: e.slug, name: e.name, city: e.city, country: e.country ?? null, startsOn: e.startsOn, endsOn: e.endsOn } : null,
       kind: kindOf(l),
       status: l.status,
       bannerUrl: l.bannerUrl ?? null,
@@ -352,11 +355,19 @@ export function listingRefs(
   for (const w of others) {
     if (out.has(w.spaceId)) continue;
     const name = w.eventName?.trim() || null;
+    const known = name ? byName.get(name.toLowerCase()) ?? null : null;
     out.set(w.spaceId, {
       id: w.spaceId,
       title: w.title,
       event: name
-        ? { key: byName.get(name.toLowerCase()) ?? eventSlug(name), name, city: null, startsOn: w.eventStartsOn, endsOn: w.eventEndsOn }
+        ? {
+            key: known?.slug ?? eventSlug(name),
+            name,
+            city: null,
+            country: known?.country ?? null,
+            startsOn: w.eventStartsOn,
+            endsOn: w.eventEndsOn,
+          }
         : null,
       kind: null,
       status: w.status,
