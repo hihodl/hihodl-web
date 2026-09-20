@@ -42,7 +42,20 @@ import { BackHeader } from "../hold";
 import { Ion } from "../ion";
 import { GREEN, SUB, TokenIcon } from "../wallet/app-kit";
 
-export function TxDetails({ id, row, mode, onBack }: { id: string; row: Transfer | null; mode: DisplayMode; onBack: () => void }) {
+export function TxDetails({
+  id,
+  row,
+  mode,
+  backTo,
+  onBack,
+}: {
+  id: string;
+  row: Transfer | null;
+  mode: DisplayMode;
+  /** The conversation this was opened from, so the header says where Back goes. */
+  backTo?: string | null;
+  onBack: () => void;
+}) {
   const details = useTransferDetails(id);
   const d = details.data ?? null;
   const failed = !!details.error;
@@ -68,7 +81,7 @@ export function TxDetails({ id, row, mode, onBack }: { id: string; row: Transfer
 
   return (
     <>
-      <BackHeader title={actionTitle(direction)} onBack={onBack} />
+      <BackHeader title={actionTitle(direction)} subtitle={backTo ? `Back to ${backTo}` : undefined} onBack={onBack} />
 
       <div className="flex flex-col items-center gap-2 pb-2 pt-1">
         <div className="relative flex h-[132px] w-[132px] items-center justify-center">

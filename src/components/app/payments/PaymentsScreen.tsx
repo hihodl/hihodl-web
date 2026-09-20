@@ -62,7 +62,12 @@ import { TxDetails } from "./TxDetails";
 
 type Filter = "all" | "groups" | "favs";
 
-type View = { kind: "list" } | { kind: "thread"; id: string } | { kind: "tx"; id: string };
+/**
+ * A transaction is opened FROM somewhere, and back means that somewhere. It is
+ * reached from inside a thread, so `from` carries the thread it was tapped in
+ * and Back returns to the conversation, not to the list of conversations.
+ */
+type View = { kind: "list" } | { kind: "thread"; id: string } | { kind: "tx"; id: string; from: string | null };
 
 /** The app's rotating placeholders (payments:searchPh and its siblings). */
 const PHRASES = ["Search", "Search @username", "Search contact", "Paste wallet address"];
@@ -94,7 +99,7 @@ export function PaymentsScreen() {
           row={row}
           mode={displayMode}
           onBack={() => setView({ kind: "list" })}
-          onOpenTx={(id) => setView({ kind: "tx", id })}
+          onOpenTx={(id) => setView({ kind: "tx", id, from: view.id })}
         />
       </Column>
     );
@@ -102,9 +107,13 @@ export function PaymentsScreen() {
 
   if (view.kind === "tx") {
     const row = rows.flatMap((r) => r.transfers).find((t) => t.id === view.id) ?? null;
+    const from = view.from;
+    /** The thread can have gone (a reload that lands straight here): then back is the list. */
+    const back = from && rows.some((r) => r.id === from) ? { kind: "thread" as const, id: from } : { kind: "list" as const };
+    const backTo = back.kind === "thread" ? rows.find((r) => r.id === back.id)?.name ?? null : null;
     return (
       <Column>
-        <TxDetails id={view.id} row={row} mode={displayMode} onBack={() => setView({ kind: "list" })} />
+        <TxDetails id={view.id} row={row} mode={displayMode} backTo={backTo} onBack={() => setView(back)} />
       </Column>
     );
   }
