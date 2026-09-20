@@ -300,18 +300,19 @@ const AMENITY_HEADLINE = 4;
  * mouse leaves no way to move it at all. So the pictures open a viewer, and
  * the strip gets arrows of its own for the pointer that cannot swipe.
  *
- * THE "+3" WAS TRUE AND STILL MISLED
+ * THE STRIP HOLDS THE WHOLE ROOM, AND THAT IS THE FIX
  *
- * It was painted OVER the eighth photograph, inside a strip that scrolls. It
- * counted correctly — three more photographs did exist — but it read as "keep
- * going right", and right was the end of the rail, because the strip lays out
- * eight tiles and the other three were never in it. A label that is accurate
- * about the number and wrong about the gesture is still a label that lies.
+ * It used to lay out eight tiles and report the remainder as "+3". The count
+ * was arithmetically right and useless: the other three were never in the
+ * rail, so scrolling to the end of it still ended three photographs short,
+ * and the arrow that stopped there looked broken. Moving the count into its
+ * own tile made the label honest and the rail no less short.
  *
- * So the count is its own tile, after the eight, reachable by the same scroll
- * that runs out just before it, and it opens the viewer ON the ninth
- * photograph — the first one the strip never showed. Every other tile is now
- * just the photograph it is.
+ * A room is not a property. The gallery upstairs is 56 to 257 photographs and
+ * has to be capped; a room has a handful, and they are lazy 104px thumbnails.
+ * So the strip carries all of them and there is nothing left to count — the
+ * end of the rail is the end of the photographs, which is the only thing the
+ * arrow can honestly promise.
  *
  * And the arrows go when there is nothing that way. An arrow that does
  * nothing teaches people that the arrows do nothing.
@@ -320,8 +321,6 @@ function RoomStrip({ photos, name }: { photos: GalleryImage[]; name: string }) {
   const rail = useRef<HTMLDivElement>(null);
   const [viewing, setViewing] = useState<number | null>(null);
   const [ends, setEnds] = useState({ left: false, right: false });
-  const shown = photos.slice(0, STRIP_TILES);
-  const hidden = photos.length - shown.length;
 
   // Which way there is still rail to travel. Read after layout and on every
   // scroll; the 2px is the slack a fractional scroll width leaves behind, and
@@ -344,9 +343,14 @@ function RoomStrip({ photos, name }: { photos: GalleryImage[]; name: string }) {
     return () => ro.disconnect();
   }, [measure, photos.length]);
 
-  // By a tile and a half, so the photograph the eye stopped on stays in frame
-  // and the move is clearly a move.
-  const nudge = (dir: 1 | -1) => rail.current?.scrollBy({ left: dir * 160, behavior: "smooth" });
+  // Most of a frame's width, tile-aligned, so the move is clearly a move and
+  // the photograph the eye stopped on is still on screen after it.
+  const nudge = (dir: 1 | -1) => {
+    const el = rail.current;
+    if (!el) return;
+    const step = Math.max(TILE, Math.floor(el.clientWidth * 0.8 / TILE) * TILE);
+    el.scrollBy({ left: dir * step, behavior: "smooth" });
+  };
 
   return (
     <div className="group/strip relative">
@@ -355,39 +359,17 @@ function RoomStrip({ photos, name }: { photos: GalleryImage[]; name: string }) {
         onScroll={measure}
         className="flex gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
-        {shown.map((p, i) => (
+        {photos.map((p, i) => (
           <button
             key={`${p.url}-${i}`}
             type="button"
-            aria-label={`${name} — photograph ${i + 1}`}
+            aria-label={`${name} — photograph ${i + 1} of ${photos.length}`}
             onClick={() => setViewing(i)}
             className="h-[70px] w-[104px] shrink-0 cursor-zoom-in overflow-hidden rounded-[12px] p-0"
           >
             <Photo image={p} alt={name} iconSize={16} sizes="104px" />
           </button>
         ))}
-
-        {hidden > 0 ? (
-          <button
-            type="button"
-            aria-label={`See all ${photos.length} photographs of ${name}`}
-            onClick={() => setViewing(STRIP_TILES)}
-            className="relative h-[70px] w-[104px] shrink-0 cursor-zoom-in overflow-hidden rounded-[12px] p-0"
-          >
-            {/* The ninth photograph, behind its own count: the tile shows
-                what it opens. */}
-            <Photo image={photos[STRIP_TILES]} alt="" iconSize={16} sizes="104px" />
-            <span
-              className="absolute inset-0 flex flex-col items-center justify-center gap-px text-[13px] font-extrabold tabular-nums"
-              style={{ background: "rgba(7,12,18,0.66)", color: P.text }}
-            >
-              {`+${hidden}`}
-              <span className="text-[10px] font-semibold" style={{ color: P.textMuted }}>
-                more
-              </span>
-            </span>
-          </button>
-        ) : null}
       </div>
 
       {/* Pointer only: a touch screen has the strip itself, and these would
@@ -406,8 +388,8 @@ function RoomStrip({ photos, name }: { photos: GalleryImage[]; name: string }) {
   );
 }
 
-/** How many tiles the strip lays out before it starts counting the rest. */
-const STRIP_TILES = 8;
+/** One tile plus its gap: what the arrows move in whole multiples of. */
+const TILE = 110;
 
 function StripArrow({ side, onClick }: { side: "left" | "right"; onClick: () => void }) {
   return (
