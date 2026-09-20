@@ -12,7 +12,7 @@
  *                     offered: a pocket is made in the app.
  *   the hero          HeroBalance 48/800, DeltaBadge under it, HeroEarningLine
  *                     under that, then the Overview bubble
- *   quick actions     MiniAction — Add, Send, Accounts (see below)
+ *   quick actions     MiniAction — Add, Send, Activity (see below)
  *   the body          ScopeHoldings: Stables, Earning, Assets, each a card of
  *                     up to three rows that hides itself when it has none
  *   Activity          the card with its "See all" pill, then the recent rows
@@ -49,8 +49,13 @@
  * moving between accounts and supplying to a venue all move money and all
  * happen in the app, so the row is three: Add money, Send (which the Wallet
  * page approves on the phone or with a passkey bound to the transaction), and
- * Accounts, which opens the app's own Overview of the vaults. Nothing here is
- * drawn dead.
+ * Activity. Nothing here is drawn dead.
+ *
+ * The third was Accounts, and it opened the Overview — the same panel as the
+ * bubble sitting two controls above it, so one of the two was always spare.
+ * The bubble keeps the job, because it is beside the balance it is about.
+ * Activity took the slot: it is no longer in the column, and the card further
+ * down shows four rows, so this is the one-click way to the rest.
  *
  * ── THE TOTAL IS LIQUID PLUS SUPPLIED ──
  *
@@ -420,7 +425,11 @@ export function HomeScreen({ initialScope = "main" }: { initialScope?: string } 
             <ActionsRow>
               <MiniAction icon="add-circle-outline" label="Add" href={href("/add")} />
               <MiniAction icon="send-outline" label="Send" href={`${href("/wallet")}?open=send`} />
-              <MiniAction icon="wallet-outline" label="Accounts" onClick={() => setOverview(true)} />
+              {/* Was "Accounts", which opened the Overview — the same panel the
+                  bubble under the balance opens, two controls apart. Activity
+                  takes the place: it left the column, and the card below shows
+                  four rows of it, so this is the one-click way to the rest. */}
+              <MiniAction icon="time-outline" label="Activity" href={href("/activity")} />
             </ActionsRow>
           </div>
 
