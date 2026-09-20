@@ -324,24 +324,48 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
 
             <Progress state={pay} />
 
-            {wallet.data && !from ? (
+            {/*
+             * No address to pay from means the button cannot work, and the
+             * screen has to say WHY rather than sit there disabled.
+             *
+             * The condition used to be `wallet.data && !from`, which covered
+             * two of the three reasons and silently dropped the third: if the
+             * wallet status could not be READ at all, `wallet.data` is
+             * undefined, so this card never appeared and the Pay button
+             * rendered permanently disabled with nothing explaining it. That
+             * is not hypothetical — `/wallet-backup/status` answers 404 in
+             * production today, because the route ships with the backend
+             * integration branch. Somebody fills the whole form, and the only
+             * button on the screen never lights up.
+             */}
+            {!from ? (
               <Card hero className="flex flex-col gap-2 p-[14px]">
                 <p className="text-[13px] font-bold" style={{ color: P.text }}>
-                  {wallet.data.state === "app_wallet" ? "Pay for this one in the app" : "You need a wallet here first"}
+                  {!wallet.data
+                    ? "We couldn't read your wallet"
+                    : wallet.data.state === "app_wallet"
+                      ? "Pay for this one in the app"
+                      : "You need a wallet here first"}
                 </p>
                 <p className="text-[12.5px] leading-[18px]" style={{ color: P.textMuted }}>
-                  {wallet.data.state === "app_wallet"
-                    ? "Your wallet lives on your phone, and that is where it signs. Search and hold a room here; pay there."
-                    : "A HOLD wallet in this browser, made once with a passkey. Then this page can pay on its own."}
+                  {!wallet.data
+                    ? "Nothing has been charged, and the room is not held. This page has to know which wallet pays before it can ask you to."
+                    : wallet.data.state === "app_wallet"
+                      ? "Your wallet lives on your phone, and that is where it signs. Search and hold a room here; pay there."
+                      : "A HOLD wallet in this browser, made once with a passkey. Then this page can pay on its own."}
                 </p>
-                <Cta label={wallet.data.state === "app_wallet" ? "How it works" : "Set up the wallet"} variant="secondary" onClick={() => router.push(href("/wallet"))} />
+                <Cta
+                  label={!wallet.data ? "Try again" : wallet.data.state === "app_wallet" ? "How it works" : "Set up the wallet"}
+                  variant="secondary"
+                  onClick={() => (wallet.data ? router.push(href("/wallet")) : void wallet.mutate())}
+                />
               </Card>
             ) : (
               <Cta
                 label={pay?.phase === "stopped" && pay.bookingId ? "Try again" : `Pay ${money(total, rate.currency)}`}
                 variant="commit"
                 working={running}
-                disabled={!filled || running || !from}
+                disabled={!filled || running}
                 onClick={() => void start()}
               />
             )}
