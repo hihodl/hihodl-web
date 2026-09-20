@@ -25,6 +25,7 @@
 import {
   BRAND_GETS_LIMITS,
   LIMITS,
+  WHOLE_ZONE_KEY,
   anyRungBids,
   centsFromDollars,
   isCustomServiceTemplate,
@@ -256,8 +257,41 @@ export function listingProblems(draft: ListingDraft, template: Template, now = D
       add("zones", "sell", `${LIMITS.MAX_POSITIONS} spots is the most one listing can carry.`);
     }
     const mode = saleModeOf(draft, null);
+
+    /* One brand takes everything (ad-space-whole-listing-v0.md), mirrored from
+       `draftProblems` in the backend's rules.ts so the creator reads it while
+       they type instead of when they publish. Both rules are about the whole
+       listing NEXT TO the squares it replaces, so neither has anything to say
+       on a listing that does not sell one. */
+    const whole = on.find((z) => z.zoneKey === WHOLE_ZONE_KEY) ?? null;
+    const squares = on.filter((z) => z.zoneKey !== WHOLE_ZONE_KEY);
+    if (whole && squares.length === 0) {
+      add(
+        "zones",
+        "sell",
+        `Pick the spots a brand could buy one at a time as well. On its own, "one brand takes everything" is a single spot with a long name — there is nothing for it to take.`,
+      );
+    }
+    if (whole) {
+      // Skipped where the board shows no prices (offers, bids): there is
+      // nothing to compare, exactly as the server skips it.
+      const all = centsFromDollars(whole.priceDollars);
+      const each = squares.map((z) => centsFromDollars(z.priceDollars));
+      const parts = each.every((c) => c !== null) ? each.reduce<number>((sum, c) => sum + (c ?? 0), 0) : null;
+      if (all !== null && parts !== null && squares.length > 0 && all < parts) {
+        add(
+          `zone:${WHOLE_ZONE_KEY}:price`,
+          "sell",
+          `All of it has to cost at least ${usd(parts)}, what the spots come to together. The brand going all in should never pay less than the brand buying one spot.`,
+        );
+      }
+    }
+
     for (const zone of on) {
-      const label = template.zones.find((z) => z.zoneKey === zone.zoneKey)?.label ?? zone.zoneKey;
+      const label =
+        zone.zoneKey === WHOLE_ZONE_KEY
+          ? "all of it"
+          : (template.zones.find((z) => z.zoneKey === zone.zoneKey)?.label ?? zone.zoneKey);
       if (zone.accepts.length === 0) {
         add(`zone:${zone.zoneKey}:accepts`, "sell", `Say what a sponsor may put on the ${label.toLowerCase()}.`);
       }

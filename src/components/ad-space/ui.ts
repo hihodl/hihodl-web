@@ -30,6 +30,9 @@ export const pill = {
   held: `${pillBase} border-dashed border-amber/60 bg-amber/10 text-sp-amber`,
   // Finished, so quiet: one amber in the palette, and filled amber is only ever the action.
   sold: `${pillBase} border-[color:var(--color-hairline-strong)] bg-sp-ink/[0.06] text-sp-ink/85`,
+  // A square retired because one brand took the whole listing. Quieter than
+  // sold, because nothing was sold here.
+  closed: `${pillBase} border-[color:var(--color-hairline)] bg-sp-ink/[0.04] text-sp-ink/70`,
   attention: `${pillBase} border-amber/40 bg-amber/10 text-sp-amber`,
   done: `${pillBase} border-success/40 bg-success/10 text-sp-ok`,
 } as const;

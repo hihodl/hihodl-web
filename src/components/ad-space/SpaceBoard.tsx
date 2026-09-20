@@ -20,6 +20,7 @@ import type { OfferKind, OfferMode, Order, Position, PositionOffers, Space } fro
 import { Checkout } from "./Checkout";
 import { OfferSheet } from "./OfferSheet";
 import { PositionCard } from "./PositionCard";
+import { WholeListing, squaresOf, wholeOf } from "./WholeListing";
 import { ProductBoard } from "./ProductBoard";
 import { TierLadder } from "./TierLadder";
 import { btnSmall, btnSmallSecondary, pill } from "./ui";
@@ -164,10 +165,30 @@ export function SpaceBoard({
   const sizeOf = (p: Position) => space.template.zones.find((z) => z.zoneKey === p.zoneKey)?.sizeLabel ?? null;
   const session = isSessionSpace(space);
 
+  /* The position that sells the WHOLE listing to one brand is not a spot on
+     the board: it is another way to buy the same board, so it is lifted out of
+     the list and said once, above it. Null on every listing that does not sell
+     one, which is every listing that predates the feature. */
+  const whole = wholeOf(space.positions);
+  const squares = squaresOf(space.positions);
+  const partsSold = squares.some((p) => p.status === "sold");
+
   /* Everything the ladder does not already show. Without a ladder that is every
      position, whatever the positions carry, so a placement or an untiered
      service is the board exactly as it has always been. */
-  const loose = tiered ? space.positions.filter((p) => !p.tierKey) : space.positions;
+  const loose = tiered ? squares.filter((p) => !p.tierKey) : squares;
+  const wholeCard = whole ? (
+    <WholeListing
+      position={whole}
+      productName={(space.template.name ?? "listing").toLowerCase()}
+      buyable={buyable}
+      offerMode={modeOf(whole)}
+      partsSold={partsSold}
+      onSponsor={setCheckoutFor}
+      onOffer={isService && !tiered ? undefined : openOffer}
+    />
+  ) : null;
+
   const cardList = loose.length === 0 ? null : (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {loose.map((p) => (
@@ -265,6 +286,7 @@ export function SpaceBoard({
                 onOffer={openOffer}
               />
             )}
+            {wholeCard && <div className="mb-8">{wholeCard}</div>}
             {cardList}
           </div>
         </section>
@@ -272,12 +294,13 @@ export function SpaceBoard({
 
       {details}
 
-      {!isService && cardList && (
+      {!isService && (cardList || wholeCard) && (
         <section className="container-page py-12 md:py-16" aria-labelledby="every-spot">
           <h2 id="every-spot" className="font-display text-h3 font-light text-sp-ink md:text-h2">
-            Pick your spot
+            {whole ? "Take a spot, or take all of it" : "Pick your spot"}
           </h2>
-          <div className="mt-8">{cardList}</div>
+          {wholeCard && <div className="mt-8">{wholeCard}</div>}
+          {cardList && <div className="mt-8">{cardList}</div>}
         </section>
       )}
 

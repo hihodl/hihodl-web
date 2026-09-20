@@ -228,7 +228,12 @@ function usablePhoto(raw: unknown, positions: Position[]): SpacePhoto | null {
   if (typeof p.url !== "string" || !p.url.startsWith("https://")) return null;
   if (typeof p.width !== "number" || typeof p.height !== "number" || p.width <= 0 || p.height <= 0) return null;
   if (p.ready === false) return null;
-  if (positions.length === 0 || positions.some((pos) => !usableRect(pos.rect))) return null;
+  // The position that sells the WHOLE listing has no square on the product by
+  // design — what it sells IS the product. Asking it for a rectangle would
+  // throw away the creator's real photo on exactly the listings this feature
+  // exists for (ad-space-whole-listing-v0.md).
+  const squares = positions.filter((pos) => !pos.takesEverything);
+  if (squares.length === 0 || squares.some((pos) => !usableRect(pos.rect))) return null;
   return { url: p.url, width: p.width, height: p.height };
 }
 

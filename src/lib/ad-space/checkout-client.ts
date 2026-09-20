@@ -468,6 +468,13 @@ export function describeAuthorizationRefusal(e: unknown, chain: Chain, subject: 
         : "Another sponsor signed for this spot a moment before you. Nothing was paid.";
     case "position_sold":
       return `This ${subject} ${session ? "was booked" : "sold"} while you were signing. Nothing was paid.`;
+    // One brand takes everything (ad-space-whole-listing-v0.md): the listing
+    // and its spots refuse each other, and the sponsor is told which way round
+    // it went — "sold" would be a lie about a square nobody bought.
+    case "whole_listing_taken":
+      return `A brand took this whole listing while you were signing, so its ${subject}s aren't for sale. Nothing was paid.`;
+    case "parts_already_sold":
+      return `A ${subject} on this listing sold while you were signing, so it can't be bought whole any more. Nothing was paid.`;
     case "space_closed":
       return "This HiSpace closed while you were signing. Nothing was paid.";
     case "insufficient_funds":
@@ -532,6 +539,12 @@ export function describeError(e: unknown, chain?: Chain | null, subject: Subject
         ? `An accepted offer holds this ${subject} until ${clockTime(until)}. If it isn't paid by then, it opens again.`
         : `An accepted offer holds this ${subject} while it waits for its payment. If it isn't paid in time, it opens again.`;
     }
+    // A brand that came for one square, on a listing somebody is taking whole.
+    case "whole_listing_taken":
+      return `One brand is taking this whole listing, so no single ${subject} on it is for sale.`;
+    // And the other way round: a brand that came for all of it, too late.
+    case "parts_already_sold":
+      return `A ${subject} on this listing has already gone, so it can't be bought whole any more. You can still take the ${subject}s that are left.`;
     case "space_closed":
     case "space_not_live":
       return `This HiSpace has closed, so its ${subject}s can't be ${session ? "booked" : "bought"} any more.`;

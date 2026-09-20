@@ -34,8 +34,8 @@ import type {
 
 /** Every offer, counter and bid is at least $25 … */
 export const OFFER_MIN_CENTS = 2_500;
-/** … and at most the existing price ceiling, $25,000. */
-export const OFFER_MAX_CENTS = 2_500_000;
+/** … and at most the existing price ceiling, $250,000 (AD_SPACE.PRICE_MAX_CENTS). */
+export const OFFER_MAX_CENTS = 25_000_000;
 /** A session keeps its own $50 floor (`price_below_minimum`). */
 export const SESSION_MIN_CENTS = 5_000;
 export const OFFER_NAME_MAX = 60;
@@ -433,6 +433,13 @@ export function describeOfferError(e: unknown, ctx: OfferErrorContext = {}): str
       return "This HiSpace has closed, so it takes no more offers or bids.";
     case "position_sold":
       return subject === "session" ? "Every session here has been booked." : "This spot has just sold.";
+    // One brand takes everything (ad-space-whole-listing-v0.md). An acceptance
+    // is refused by the same two rules a payment is, so the creator hears the
+    // same two sentences the sponsor would.
+    case "whole_listing_taken":
+      return `One brand is taking this whole listing, so no single ${subject} on it can be sold or accepted.`;
+    case "parts_already_sold":
+      return `A ${subject} on this listing has already gone, so it can't be sold whole any more.`;
     case "own_space":
       return "This is your own space, so you can't sponsor it, make an offer or bid on it.";
     case "too_many_offers":
