@@ -20,6 +20,23 @@
  * as a panel. Nothing on this screen writes: the filters, the search, the
  * rewind and the fold rules are all client-side, and the only writes the app
  * makes here (dismissing an intent bubble, analytics) are not ported.
+ *
+ * ── WHAT THE DISPLAY MODE CHANGES HERE ──
+ *
+ * The person's one choice, from the Menu (lib/app/display-mode):
+ *
+ *   the balance   Fintech counts dollars only, because Activity's figure is
+ *                 the spendable dollar balance. Hybrid and native count every
+ *                 holding, which is what the app does.
+ *   the rewind    Fintech only. Rewinding needs the list to be the COMPLETE
+ *                 ledger for ONE currency; with volatile assets in the total
+ *                 the walk-back would be a walk-back through live prices, so
+ *                 there the header stays the current balance.
+ *   the rows      A bridge leg is dropped in fintech and kept elsewhere; a
+ *                 swap reads as Bought/Sold outside native; a ticker reads as
+ *                 its fiat in fintech.
+ *   the receipt   The network is named in native only, and the hash and its
+ *                 explorer in hybrid and native.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -33,6 +50,7 @@ import {
   toPaymentItem,
   type PaymentItem,
 } from "@/lib/app/activity-rules";
+import { showChainContext, showTxReceipt, type DisplayMode } from "@/lib/app/display-mode";
 import { getTransferDetails, type LedgerSubaccount, type Transfer } from "@/lib/app/hold-api";
 import {
   isStable,
@@ -46,6 +64,7 @@ import {
 } from "@/lib/app/money";
 
 import { Ion } from "../ion";
+import { useShellPrefs } from "../Shell";
 import { Alert, glass, Skeleton } from "../ui";
 import { money } from "../wallet/app-kit";
 import { ActivityRow, DayDivider, readRow } from "./activity-parts";
@@ -57,6 +76,7 @@ const PAGE_SIZE = 40;
 const ALL = "__all__";
 
 export function ActivityScreen() {
+  const { displayMode } = useShellPrefs();
   const container = useContainer();
   const subaccounts = useMemo<LedgerSubaccount[]>(() => container.data?.subaccounts ?? [], [container.data]);
 
@@ -126,11 +146,11 @@ export function ActivityScreen() {
   }, [hasMore, loadMore]);
 
   /* ── The rows ── */
-  const all = useMemo(() => raw.map(toPaymentItem), [raw]);
+  const all = useMemo(() => raw.map((t) => toPaymentItem(t, displayMode)), [raw, displayMode]);
 
   const filtered = useMemo(() => {
     const scoped = selected === ALL ? all : all.filter((p) => rowInScope(p, selected));
-    const folded = activityRows(scoped);
+    const folded = activityRows(scoped, displayMode);
     const needle = q.trim().toLowerCase();
     if (!needle) return folded;
     return folded.filter(
@@ -140,7 +160,7 @@ export function ActivityScreen() {
         (p.tokenSymbol ?? "").toLowerCase().includes(needle) ||
         p.amount.toLowerCase().includes(needle),
     );
-  }, [all, selected, q]);
+  }, [all, selected, q, displayMode]);
 
   /* ── The balance above them ── */
   const balances = useAllBalances(scopes.map((s) => s.slug));
@@ -162,43 +182,51 @@ export function ActivityScreen() {
   /**
    * The anchor: what the selected accounts hold right now.
    *
-   * Dollars only, which is what the app does in fintech — Activity's balance
-   * is the spendable dollar balance, distinct from the Home total, and
+   * Dollars only in FINTECH, which is what the app does — Activity's balance
+   * is the spendable dollar balance there, distinct from the Home total, and
    * excluding volatile assets is also what makes the rewind exact ($1 legs, no
-   * live price). Supplied money is added in: supplied dollars are still cash,
+   * live price). Hybrid and native count every holding, because in those modes
+   * the reader can see the assets on Home and a figure that silently drops
+   * them is a figure about somebody else's money.
+   *
+   * Supplied money is added in either way: supplied dollars are still cash,
    * and leaving them out is why this header used to read $0 in Savings right
    * after a move.
    */
+  const dollarsOnly = displayMode === "fintech";
   const anchorUsd = useMemo(() => {
     let liquid = 0;
     for (const b of inScopeRows) {
       const sym = (b.symbol ?? b.tokenId ?? "").split(".")[0].toUpperCase();
-      if (!isStable(sym)) continue;
+      if (dollarsOnly && !isStable(sym)) continue;
       liquid += usdOf(b, priceMap) ?? 0;
     }
     const working = scopes
       .filter((s) => selected === ALL || s.slug === selected)
       .reduce((sum, s) => sum + splitForContainer({ slug: s.slug, liquidUsd: 0, suppliedBySlug: supplied.bySlug }).workingUsd, 0);
     return liquid + working;
-  }, [inScopeRows, priceMap, scopes, selected, supplied.bySlug]);
+  }, [inScopeRows, priceMap, scopes, selected, supplied.bySlug, dollarsOnly]);
 
   const settled = balances.data !== undefined && prices.data !== undefined && supplied.loaded;
 
   /**
    * The balance right after each row. Only when the list is the complete
-   * ledger for one currency: a search that filters the list cannot
-   * reconstruct a running total, so the rewind is off while one is typed.
+   * ledger for ONE currency — the app's own condition, and both halves of it
+   * matter: a search that filters the list cannot reconstruct a running total,
+   * and outside fintech the total carries assets whose value moved for reasons
+   * no row records, so the walk-back would drift by the market.
    */
+  const canRewind = dollarsOnly && !q.trim();
   const balanceById = useMemo(() => {
     const map = new Map<string, number>();
-    if (!settled || q.trim()) return map;
+    if (!settled || !canRewind) return map;
     let running = anchorUsd;
     for (const p of filtered) {
       map.set(p.id, running);
       running -= paymentUsdDelta(p, inScope);
     }
     return map;
-  }, [settled, q, anchorUsd, filtered, inScope]);
+  }, [settled, canRewind, anchorUsd, filtered, inScope]);
 
   /** The topmost row on screen, which is the point in time the header stands at. */
   const [topId, setTopId] = useState<string | null>(null);
@@ -351,6 +379,7 @@ export function ActivityScreen() {
                 subaccounts={subaccounts}
                 prices={priceMap}
                 inScope={inScope}
+                mode={displayMode}
                 onTop={setTopId}
                 onOpen={() => setOpen(s.item)}
               />
@@ -378,7 +407,7 @@ export function ActivityScreen() {
         <p className="py-5 text-center text-[12px] font-strong tracking-[0.3px] text-white/55">End of activity</p>
       ) : null}
 
-      {open ? <Details item={open} onClose={() => setOpen(null)} /> : null}
+      {open ? <Details item={open} mode={displayMode} onClose={() => setOpen(null)} /> : null}
     </div>
   );
 }
@@ -392,6 +421,7 @@ function TrackedRow({
   subaccounts,
   prices,
   inScope,
+  mode,
   onTop,
   onOpen,
 }: {
@@ -399,6 +429,7 @@ function TrackedRow({
   subaccounts: readonly LedgerSubaccount[];
   prices: Record<string, number>;
   inScope: (slug: string) => boolean;
+  mode: DisplayMode;
   onTop: (id: string) => void;
   onOpen: () => void;
 }) {
@@ -420,7 +451,13 @@ function TrackedRow({
 
   return (
     <div ref={ref}>
-      <ActivityRow item={item} reading={readRow(item, inScope, subaccounts, prices)} surface="card" onOpen={onOpen} />
+      <ActivityRow
+        item={item}
+        reading={readRow(item, inScope, subaccounts, prices, mode)}
+        surface="card"
+        mode={mode}
+        onOpen={onOpen}
+      />
     </div>
   );
 }
@@ -434,8 +471,13 @@ function TrackedRow({
  * Whatever comes back is drawn as the server named it rather than renamed
  * here: a receipt that quietly relabels a field is a receipt that can be
  * wrong about one.
+ *
+ * The mode decides which fields exist at all, exactly as the app's
+ * `TransactionDetailsSheet` does: the network is named in native only, and the
+ * hash — which is a fact about a chain — in hybrid and native. In fintech
+ * neither has anything to refer to.
  */
-function Details({ item, onClose }: { item: PaymentItem; onClose: () => void }) {
+function Details({ item, mode, onClose }: { item: PaymentItem; mode: DisplayMode; onClose: () => void }) {
   const [detail, setDetail] = useState<Record<string, unknown> | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -463,8 +505,8 @@ function Details({ item, onClose }: { item: PaymentItem; onClose: () => void }) 
   push("Status", item.status);
   push("When", `${dayLabel(item.date)}, ${timeLabel(item.date)}`);
   push("Amount", item.amount);
-  push("Network", source.chain ?? item.chain);
-  push("Transaction", source.txHash ?? item.txHash);
+  if (showChainContext(mode)) push("Network", source.chain ?? item.chain);
+  if (showTxReceipt(mode)) push("Transaction", source.txHash ?? item.txHash);
   push("Note", source.note);
   push("Method", source.method);
 
@@ -497,9 +539,13 @@ function Details({ item, onClose }: { item: PaymentItem; onClose: () => void }) 
           <div className="mt-4 rounded-[18px] bg-white/[0.04] p-4">
             <p className="text-[12px] font-bold uppercase tracking-[0.3px] text-white/55">Paid in {item.foldedLegs.length} parts</p>
             <div className="mt-2.5 flex flex-col gap-2.5">
-              {item.foldedLegs.map((leg) => (
+              {item.foldedLegs.map((leg, i) => (
                 <div key={leg.id} className="flex items-center justify-between gap-3">
-                  <span className="text-[14px] font-strong text-white/65">{leg.chain ?? "—"}</span>
+                  {/* The chain is what tells two legs apart — in native. Elsewhere
+                      they are simply the parts the one payment was made of. */}
+                  <span className="text-[14px] font-strong text-white/65">
+                    {showChainContext(mode) ? leg.chain ?? "—" : `Part ${i + 1}`}
+                  </span>
                   <span className="text-[14px] font-bold tabular-nums text-white">{money(Math.abs(leg.tokenAmount))}</span>
                 </div>
               ))}

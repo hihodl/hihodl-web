@@ -30,6 +30,18 @@
  * 7, 30, 90 or 365 and nothing else; and an asset with no series is disclosed
  * under the chart rather than folded into the line.
  *
+ * WHAT THE DISPLAY MODE CHANGES
+ *
+ * The person's one choice, from the Menu (lib/app/display-mode). The app puts
+ * the chain on the icon as a mini badge in NATIVE only — Alex, 30-Aug-2026:
+ * "creo que no entienden de chain y solo en native mode podriamos ponerlo".
+ * So here:
+ *
+ *   fintech  One row per ticker across every chain, cbBTC read as BTC, and
+ *            native BTC folded into it so Bitcoin is one holding.
+ *   hybrid   One row per ticker across every chain, real symbols.
+ *   native   One row per ticker AND chain, each naming its network.
+ *
  * WHAT IS NOT HERE, AND WHY
  *
  * Performance, the realised-gains report and the cost-basis lot editor are not
@@ -45,6 +57,15 @@
 
 import { useMemo, useState } from "react";
 
+import {
+  btcFamilyDisplayName,
+  btcFamilySubtitle,
+  isBtcFamilySymbol,
+  maskTokenSymbol,
+  mergeBtcFamilyRows,
+  showChainContext,
+  type DisplayMode,
+} from "@/lib/app/display-mode";
 import type { Balance } from "@/lib/app/hold-api";
 import {
   formatApy,
@@ -61,8 +82,10 @@ import {
   usdOf,
   type CurvePoint,
 } from "@/lib/app/money";
+import { chainLabel } from "@/lib/app/payments";
 
 import { Ion } from "../ion";
+import { useShellPrefs } from "../Shell";
 import { Skeleton } from "../ui";
 import { money } from "../wallet/app-kit";
 import { DISCOVER_COINS, tileSubtitle, discoverableFor } from "./discover-coins";
@@ -87,12 +110,20 @@ const RANGES = [
 
 type Range = (typeof RANGES)[number];
 
-/** One holding, aggregated across chains and accounts the way a fintech view reads it. */
+/**
+ * One holding, aggregated across accounts — and across chains too, unless the
+ * mode is native, where the chain is part of what the row is about.
+ */
 interface Holding {
+  /** Identity for React and for the BTC-family merge. */
+  key: string;
+  /** The RAW ticker. Masking happens where the row is drawn. */
   symbol: string;
   amount: number;
   /** Null when no feed answered. Not zero — that is a different claim. */
   usd: number | null;
+  /** The chain, in native. Null when the row spans every chain it sits on. */
+  chain: string | null;
 }
 
 /** Token units: more precision under 1, tidy for whole coins. */
@@ -105,6 +136,7 @@ function symbolOf(b: Balance): string {
 }
 
 export function InvestScreen() {
+  const { displayMode } = useShellPrefs();
   const container = useContainer();
   const accounts = useMemo(() => (container.data?.subaccounts ?? []).map((s) => s.slug), [container.data]);
   const balances = useAllBalances(accounts);
@@ -144,25 +176,31 @@ export function InvestScreen() {
    * A holding we could not VALUE is not a holding worth nothing, so the dust
    * threshold only applies where a price actually answered. */
   const holdings = useMemo<Holding[]>(() => {
-    const bySymbol = new Map<string, { amount: number; usd: number; priced: boolean }>();
+    const perChain = showChainContext(displayMode);
+    const byKey = new Map<string, { symbol: string; chain: string | null; amount: number; usd: number; priced: boolean }>();
     for (const b of rows) {
       const symbol = symbolOf(b);
       if (!symbol || isStable(symbol)) continue;
       const amount = Number(b.balance);
       if (!Number.isFinite(amount)) continue;
       const usd = prices.data ? usdOf(b, prices.data.prices) : null;
-      const prev = bySymbol.get(symbol) ?? { amount: 0, usd: 0, priced: true };
-      bySymbol.set(symbol, {
+      const chain = perChain ? (b.chain ?? null) : null;
+      const key = chain ? `${symbol}|${chain}` : symbol;
+      const prev = byKey.get(key) ?? { symbol, chain, amount: 0, usd: 0, priced: true };
+      byKey.set(key, {
+        symbol,
+        chain,
         amount: prev.amount + amount,
         usd: prev.usd + (usd ?? 0),
         priced: prev.priced && usd !== null,
       });
     }
-    return [...bySymbol]
-      .map(([symbol, v]) => ({ symbol, amount: v.amount, usd: v.priced ? v.usd : null }))
+    const built = [...byKey]
+      .map(([key, v]) => ({ key, symbol: v.symbol, chain: v.chain, amount: v.amount, usd: v.priced ? v.usd : null }))
       .filter((h) => (h.usd === null ? h.amount > 0 : h.usd >= INVEST_DUST_USD))
       .sort((a, b) => (b.usd ?? 0) - (a.usd ?? 0));
-  }, [rows, prices.data]);
+    return mergeBtcFamilyRows(built, displayMode);
+  }, [rows, prices.data, displayMode]);
 
   const unvalued = holdings.filter((h) => h.usd === null).length;
   const investValue = holdings.reduce((s, h) => s + (h.usd ?? 0), 0) + working.usd;
@@ -186,6 +224,9 @@ export function InvestScreen() {
       if (!p.hasBasis || p.wacUsd == null || !(p.wacUsd > 0)) continue;
       wac.set(`${p.chain.toLowerCase()}|${p.tokenId.toUpperCase()}`, p.wacUsd);
     }
+    // Keyed exactly as the holdings above are, so a native per-chain row shows
+    // the move of THAT chain's position rather than the whole ticker's.
+    const perChain = showChainContext(displayMode);
     const out = new Map<string, number>();
     const incomplete = new Set<string>();
     for (const b of rows) {
@@ -193,17 +234,27 @@ export function InvestScreen() {
       if (!symbol || isStable(symbol)) continue;
       const amount = Number(b.balance);
       if (!Number.isFinite(amount) || amount <= 0) continue;
+      const chain = perChain ? (b.chain ?? null) : null;
+      const key = chain ? `${symbol}|${chain}` : symbol;
       const paid = wac.get(`${(b.chain ?? "").toLowerCase()}|${symbol}`) ?? wac.get(`${(b.chainLegacy ?? "").toLowerCase()}|${symbol}`);
       const usd = prices.data ? usdOf(b, prices.data.prices) : null;
       if (paid === undefined || usd === null) {
-        incomplete.add(symbol);
+        incomplete.add(key);
         continue;
       }
-      out.set(symbol, (out.get(symbol) ?? 0) + (usd - amount * paid));
+      out.set(key, (out.get(key) ?? 0) + (usd - amount * paid));
     }
-    for (const symbol of incomplete) out.delete(symbol);
+    for (const key of incomplete) out.delete(key);
+    // Fintech folds the two Bitcoin legs into one row, so their moves fold too
+    // — and only when BOTH are measurable, because half a move is a wrong
+    // number rather than a smaller one.
+    if (!perChain) {
+      const legs = [...out.keys()].filter(isBtcFamilySymbol);
+      const missing = [...incomplete].some(isBtcFamilySymbol);
+      if (legs.length > 0 && !missing) out.set("btc-family", legs.reduce((sum, k) => sum + (out.get(k) ?? 0), 0));
+    }
     return out;
-  }, [basis.data, rows, prices.data]);
+  }, [basis.data, rows, prices.data, displayMode]);
 
   /* Loading until every read that can change the total has answered one way or
    * the other. A failed read is an answer; a read still out is not, and
@@ -262,9 +313,9 @@ export function InvestScreen() {
             <h2 className="px-1 text-[22px] font-bold tracking-[-0.4px] text-white">Assets</h2>
             <div className="mt-3 overflow-hidden rounded-[18px] border border-white/10 bg-[linear-gradient(145deg,rgba(9,27,40,0.72),rgba(6,18,30,0.64))] shadow-[0_18px_36px_rgba(0,0,0,0.28)] backdrop-blur-xl">
               {holdings.map((h, i) => (
-                <div key={h.symbol}>
+                <div key={h.key}>
                   {i > 0 ? <div className="ml-16 h-px bg-white/[0.06]" /> : null}
-                  <AssetRow holding={h} move={moveFor.get(h.symbol) ?? null} />
+                  <AssetRow holding={h} move={moveFor.get(h.key) ?? null} mode={displayMode} />
                 </div>
               ))}
             </div>
@@ -432,12 +483,18 @@ function EmptyHero() {
  * holding with no tracked basis shows nothing rather than a guess, and a loss is
  * neutral white, never red.
  */
-function AssetRow({ holding, move }: { holding: Holding; move: number | null }) {
+function AssetRow({ holding, move, mode }: { holding: Holding; move: number | null; mode: DisplayMode }) {
+  const ticker = maskTokenSymbol(holding.symbol, mode) || holding.symbol;
+  const label = isBtcFamilySymbol(holding.symbol) ? btcFamilyDisplayName(holding.symbol, mode) : ticker;
+  // The network, in native only — and the cbBTC note in the two modes that
+  // tell the Bitcoin family apart at all.
+  const under = holding.chain ? chainLabel(holding.chain) : btcFamilySubtitle(holding.symbol, mode);
   return (
     <div className="flex min-h-[56px] items-center gap-3 px-4 py-3.5">
       <AssetMark symbol={holding.symbol} />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[15px] font-bold tracking-[-0.2px] text-white">{holding.symbol}</p>
+        <p className="truncate text-[15px] font-bold tracking-[-0.2px] text-white">{label}</p>
+        {under ? <p className="mt-px truncate text-[12.5px] text-white/[0.8]">{under}</p> : null}
       </div>
       <div className="flex flex-col items-end gap-0.5">
         {/* An em dash, never "$0.00": a zero here is a claim about somebody's

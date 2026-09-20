@@ -23,6 +23,19 @@
  * "$0.00 · Earns X% automatically". A zero is a claim, and we only make it
  * when we have an answer.
  *
+ * WHAT THE DISPLAY MODE CHANGES
+ *
+ * The app's `useSavings` keeps one bit off the mode — `masked = walletMode !==
+ * "native"` — and it decides what the shelf is made of:
+ *
+ *   fintech, hybrid  One card per ASSET GROUP. Every USD stablecoin collapses
+ *                    into a single "Dollars" card with the best rate in the
+ *                    group, because the savings story is dollars and a card
+ *                    per stablecoin is a list of plumbing.
+ *   native           One card per PROTOCOL OFFER — "Aave · Base", "Kamino ·
+ *                    Solana" — at that offer's own rate. A native reader
+ *                    chose the networks; the venue is the product.
+ *
  * VIEW ONLY
  *
  * Nothing here supplies, withdraws or renews. Depositing into Savings is a
@@ -38,6 +51,7 @@
 
 import { useMemo } from "react";
 
+import { showChainContext, type DisplayMode } from "@/lib/app/display-mode";
 import {
   formatApy,
   netApy,
@@ -46,11 +60,14 @@ import {
   useYieldAuthorization,
   useYieldPositions,
   useYieldReserves,
+  VENUE_NAME,
+  type RatedReserve,
 } from "@/lib/app/money";
-import type { YieldReserve } from "@/lib/app/hold-api";
+import { chainLabel } from "@/lib/app/payments";
 
 import { Notice } from "../hold";
 import { Ion, type IonName } from "../ion";
+import { useShellPrefs } from "../Shell";
 import { Skeleton } from "../ui";
 import { money } from "../wallet/app-kit";
 import { InAppNote } from "./kit";
@@ -66,6 +83,12 @@ const ASSET_GRADIENT: Record<string, [string, string]> = {
   btc: ["#F7931A", "#3A1F05"],
 };
 const ASSET_FALLBACK: [string, string] = ["#22303C", "#0C1620"];
+
+/** Native's cards are per protocol, so they wear the protocol's own colours. */
+const VENUE_GRADIENT: Record<string, [string, string]> = {
+  aave: ["#2E4A7A", "#0D1A2E"],
+  kamino: ["#4B2E86", "#140F2C"],
+};
 
 const DOLLAR_TOKENS = new Set(["usdc", "usdt", "usdg", "usds", "pyusd"]);
 
@@ -119,7 +142,7 @@ interface EarnProduct {
  * rate. The web has only the live reserves, which is the half that is a
  * promise: an offer with no reserve behind it is a rate nobody can earn.
  */
-function productsFrom(reserves: readonly YieldReserve[]): EarnProduct[] {
+function maskedProducts(reserves: readonly RatedReserve[]): EarnProduct[] {
   const byGroup = new Map<string, { token: string; apy: number }[]>();
   for (const r of reserves) {
     const token = (r.token || r.symbol || "").toLowerCase();
@@ -152,7 +175,34 @@ function productsFrom(reserves: readonly YieldReserve[]): EarnProduct[] {
   });
 }
 
+/**
+ * The app's `perProtocol`: one card per offer, best rate first, each naming
+ * the venue and the network it runs on. No "up to" here — a single offer has
+ * exactly one rate, so the ceiling IS the rate.
+ */
+function nativeProducts(reserves: readonly RatedReserve[]): EarnProduct[] {
+  return reserves
+    .filter((r) => (r.token || r.symbol) && r.supplyApy > 0)
+    .map((r) => {
+      const token = (r.token || r.symbol || "").toLowerCase();
+      return {
+        id: `${r.venue}-${token}-${(r.chain ?? "").toLowerCase()}`,
+        token,
+        title: VENUE_NAME[r.venue],
+        subtitle: `Lending · ${chainLabel(r.chain)} · ${token.toUpperCase()}`,
+        apy: netApy(r.supplyApy),
+        gradient: VENUE_GRADIENT[r.venue] ?? ASSET_FALLBACK,
+      };
+    })
+    .sort((a, b) => b.apy - a.apy);
+}
+
+function productsFrom(reserves: readonly RatedReserve[], mode: DisplayMode): EarnProduct[] {
+  return showChainContext(mode) ? nativeProducts(reserves) : maskedProducts(reserves);
+}
+
 export function SavingsScreen() {
+  const { displayMode } = useShellPrefs();
   const yieldRead = useYieldPositions();
   // The read names the venue that did not answer; the rows are what it did get.
   const positions = { ...yieldRead, data: yieldRead.data?.positions };
@@ -160,7 +210,7 @@ export function SavingsScreen() {
   const reserves = useYieldReserves();
   const { bySlug, rows } = useSuppliedBySlug();
 
-  const products = useMemo(() => productsFrom(reserves.data ?? []), [reserves.data]);
+  const products = useMemo(() => productsFrom(reserves.data ?? [], displayMode), [reserves.data, displayMode]);
   const maxApy = products.reduce((m, p) => Math.max(m, p.apy), 0);
 
   /* The rate this money actually earns, weighted by what is at each venue and

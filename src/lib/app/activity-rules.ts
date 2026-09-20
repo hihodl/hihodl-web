@@ -14,21 +14,31 @@
  *   resolveMoveTitle     src/utils/resolveAccountName.ts
  *   activityAction       activity/index.tsx
  *
- * ── THE MODE, STATED ONCE ──
+ * ── THE MODE IS AN ARGUMENT, NOT A CONSTANT ──
  *
  * The app has three display modes and they change the shape of the page:
  * `fintech` collapses every stablecoin into one dollar figure and admits no
  * chains, `hybrid` shows the cards without chain badges, `native` shows
- * everything. The fold rules above are fintech-only in the app.
+ * everything. Several of the rules below are fintech-only in the app — the
+ * ticker mask, the Bought/Sold titles, and dropping a bridge leg.
  *
- * The web is FINTECH, and it says so here rather than in each screen. It is
- * the mode the product sells (dollars, no chain vocabulary), it is the mode
- * the fold rules were written for, and picking it explicitly is what stops
- * half a screen behaving like one mode and half like another.
+ * This file used to pick fintech for the whole web. It no longer picks: the
+ * person picks once, in the Menu, and the mode arrives here as a parameter
+ * (lib/app/display-mode). Nothing has a default, deliberately — a rule that
+ * could quietly fall back to one mode is how half a screen comes to behave
+ * like one and half like another.
  */
 
 import type { Transfer, LedgerSubaccount } from "./hold-api";
+import {
+  hideBridgesInFintech,
+  maskTokenSymbol,
+  swapActivityTitle,
+  type DisplayMode,
+} from "./display-mode";
 import { isStable } from "./money";
+
+export type { DisplayMode };
 
 /* ── What a row is, once it is a row ──────────────────────────────── */
 
@@ -84,19 +94,6 @@ export interface PaymentItem {
 
 /* ── Reading the wire ─────────────────────────────────────────────── */
 
-/** The fiat a pegged token is a unit of. Fintech prints this instead of the ticker. */
-const STABLE_FIAT: Record<string, string> = {
-  USDC: "USD",
-  USDT: "USD",
-  HUSD: "USD",
-  DAI: "USD",
-  PYUSD: "USD",
-  USDS: "USD",
-  FDUSD: "USD",
-  USDG: "USD",
-  EURC: "EUR",
-};
-
 /** `usdc.circle` → `USDC`; an unknown id keeps its own head. The app's `tokenTickerFromId`. */
 export function tickerOf(tokenId?: string | null): string {
   const raw = (tokenId ?? "usdc").trim();
@@ -104,12 +101,13 @@ export function tickerOf(tokenId?: string | null): string {
   return head && head.length <= 12 ? head : "USDC";
 }
 
-/** Fintech's display ticker: a dollar is called a dollar. The app's `maskTokenSymbol`. */
-export function maskSymbol(symbol: string): string {
-  const sym = symbol.toUpperCase();
-  if (isStable(sym)) return STABLE_FIAT[sym] ?? sym;
-  if (sym === "CBBTC") return "BTC";
-  return symbol;
+/**
+ * The display ticker for the mode in hand: in fintech a dollar is called a
+ * dollar, everywhere else the coin keeps its own name. The app's
+ * `maskTokenSymbol`, re-exported under the name this file's callers use.
+ */
+export function maskSymbol(symbol: string, mode: DisplayMode): string {
+  return maskTokenSymbol(symbol, mode);
 }
 
 /**
@@ -148,16 +146,6 @@ function shortAddress(address?: string | null): string | null {
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
 }
 
-/** The app's `swapActivityTitle`: in fintech a swap reads as Bought or Sold. */
-function swapTitle(from: string, to: string | undefined, displayTo: string | undefined): string {
-  if (!to) return "Swapped";
-  const fromStable = isStable(from);
-  const toStable = isStable(to);
-  if (fromStable && !toStable) return `Bought ${displayTo ?? to}`;
-  if (!fromStable && toStable) return `Sold ${maskSymbol(from)}`;
-  return "Swapped";
-}
-
 /**
  * One transfer, as a row.
  *
@@ -166,12 +154,12 @@ function swapTitle(from: string, to: string | undefined, displayTo: string | und
  * cannot know which one the reader is standing in. `moveSignForScope` decides
  * it at render, where the scope is known.
  */
-export function toPaymentItem(t: Transfer): PaymentItem {
+export function toPaymentItem(t: Transfer, mode: DisplayMode): PaymentItem {
   const direction = t.direction ?? "out";
   const symbol = tickerOf(t.tokenId ?? t.symbol);
   const symbolTo = t.symbolTo ? tickerOf(t.symbolTo) : undefined;
-  const displaySym = maskSymbol(symbol);
-  const displaySymTo = symbolTo ? maskSymbol(symbolTo) : undefined;
+  const displaySym = maskSymbol(symbol, mode);
+  const displaySymTo = symbolTo ? maskSymbol(symbolTo, mode) : undefined;
   const amount = parseTransferAmount(t.amount, t.chain, t.tokenId ?? t.symbol);
   const valid = Number.isFinite(amount) && amount > 0;
   const amountText = valid ? fmtTokenAmount(amount, symbol) : "";
@@ -201,7 +189,7 @@ export function toPaymentItem(t: Transfer): PaymentItem {
     const received = toValid && !!symbolTo && symbolTo !== "UNKNOWN";
     return {
       ...common,
-      title: swapTitle(symbol, symbolTo, displaySymTo),
+      title: swapActivityTitle({ fromSym: symbol, toSym: symbolTo, displayFrom: displaySym, displayTo: displaySymTo, mode }),
       type: "exchange",
       amount: received
         ? `+ ${amountTo.toFixed(amountTo < 1 ? 5 : 2)} ${displaySymTo}`
@@ -412,8 +400,8 @@ function groupKey(item: PaymentItem): string | null {
   return [act, (item.tokenSymbol ?? "").toUpperCase(), (item.title ?? "").trim().toLowerCase()].join("|");
 }
 
-function amountDisplay(sample: PaymentItem, total: number): string {
-  const symbol = maskSymbol(sample.tokenSymbol ?? "");
+function amountDisplay(sample: PaymentItem, total: number, mode: DisplayMode): string {
+  const symbol = maskSymbol(sample.tokenSymbol ?? "", mode);
   const magnitude = Math.abs(total).toFixed(2);
   // A move is deliberately unsigned — see moveSignForScope.
   if (sample.type === "move") return symbol ? `${symbol} ${magnitude}` : magnitude;
@@ -438,7 +426,7 @@ function amountDisplay(sample: PaymentItem, total: number): string {
  *
  * Order is preserved and the surviving row takes the place of its FIRST leg.
  */
-export function foldActivityRows(items: readonly PaymentItem[]): PaymentItem[] {
+export function foldActivityRows(items: readonly PaymentItem[], mode: DisplayMode): PaymentItem[] {
   if (items.length < 2) return items as PaymentItem[];
 
   const out: PaymentItem[] = [];
@@ -493,7 +481,7 @@ export function foldActivityRows(items: readonly PaymentItem[]): PaymentItem[] {
         ? { txHash: item.txHash, chain: item.chain }
         : {}),
       tokenAmount: total,
-      amount: amountDisplay(host!, total),
+      amount: amountDisplay(host!, total, mode),
       usdValueAtTx: bothPriced ? (host!.usdValueAtTx ?? 0) + (item.usdValueAtTx ?? 0) : undefined,
       foldedLegs: legs.slice(),
     };
@@ -608,19 +596,13 @@ export function hideUnspentWithdrawals(rows: readonly PaymentItem[]): PaymentIte
 }
 
 /**
- * A bridge leg is not an event here.
- *
- * The app's `hideBridgesInFintech`: with no chains on the page there is
- * nowhere for the money to have moved between, so the row describes nothing
- * the reader can perceive.
+ * The three rules, in the order the app runs them, over rows already
+ * newest-first. The bridge rule is fintech's alone — see
+ * `hideBridgesInFintech`: in native the chains exist, the money is on a
+ * different one than it was, and the person asked for that.
  */
-export function hideBridges(rows: readonly PaymentItem[]): PaymentItem[] {
-  return rows.filter((r) => r.moveKind !== "bridge");
-}
-
-/** The three rules, in the order the app runs them, over rows already newest-first. */
-export function activityRows(items: readonly PaymentItem[]): PaymentItem[] {
-  return hideBridges(hideUnspentWithdrawals(foldActivityRows(items)));
+export function activityRows(items: readonly PaymentItem[], mode: DisplayMode): PaymentItem[] {
+  return hideBridgesInFintech(hideUnspentWithdrawals(foldActivityRows(items, mode)), mode);
 }
 
 /* ── Which scope a row belongs to ─────────────────────────────────── */

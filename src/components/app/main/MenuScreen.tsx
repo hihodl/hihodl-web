@@ -12,18 +12,26 @@
  *                          get back in": Passkey, Recovery codes
  *                          → ?screen=passkeys       passkeys.tsx
  *                          → ?screen=codes          recovery-codes.tsx
+ *   Statements         → ?screen=statements statements/index.tsx, drawn and
+ *                          honest: the server issues the document and the app
+ *                          asks it to (see the screen's own note)
  *   Sign-in            → Account › Account (the AccountSheet)
  *   Appearance         → ?screen=personalization   settings/index.tsx's
- *                          Appearance section, with the web's own rows
- *                          (sidebar; a creator's pages → ?screen=pages)
+ *                          Appearance section: View (the app's display mode),
+ *                          the sidebar, and a creator's pages → ?screen=pages
  *   Help & Support     → an email to support
  *   About HOLD         → ?screen=about      about.tsx: Website, Follow us, Legal
  *
- * Left out on purpose, because the web has nothing real behind them yet:
- * notifications (the backend keeps an email switch nothing reads), sessions
- * (`/sessions` is the app's and not open to the web), PIN, Face ID, auto-lock
- * and the authenticator (the phone's), language and currency (the web is in
- * English and in dollars), statements and invite.
+ * The two tiles at the head are the app's: the plan, and Invite friends. The
+ * plan tile says which plan this person is on and opens where the plan is
+ * actually bought — hihodl.xyz — which is what the app's own tile does on
+ * every platform but iOS.
+ *
+ * Left out on purpose, because the web has nothing real behind them: PIN, Face
+ * ID, auto-lock and the authenticator (all the phone's), sessions (`/sessions`
+ * is the app's and not open to the web), notifications (the backend keeps an
+ * email switch nothing reads), and language and currency (the web is in
+ * English and in dollars).
  */
 
 import Link from "next/link";
@@ -32,6 +40,12 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 import { describeCreatorError } from "@/lib/creator/api";
 import { signOut } from "@/lib/creator/session";
+import {
+  DISPLAY_MODE_INTRO,
+  DISPLAY_MODE_OPTIONS,
+  DISPLAY_MODE_TITLE,
+  type DisplayMode,
+} from "@/lib/app/display-mode";
 import { chosenUsername, emailRecoveryCodes, recoveryCodesStatus } from "@/lib/app/me";
 import { useMe } from "@/lib/app/spaces-data";
 import { useHoldWallet } from "@/lib/app/hold-wallet";
@@ -49,7 +63,7 @@ import { Skeleton } from "../ui";
 /** The product's own host serves only the product; the website's pages live on the website. */
 const WEBSITE = "https://hihodl.xyz";
 
-type Screen = "home" | "security" | "recovery" | "passkeys" | "codes" | "personalization" | "about";
+type Screen = "home" | "plan" | "security" | "recovery" | "passkeys" | "codes" | "statements" | "personalization" | "about";
 
 export function MenuScreen({ screen, item }: { screen?: string; item?: string } = {}) {
   const router = useRouter();
@@ -57,10 +71,12 @@ export function MenuScreen({ screen, item }: { screen?: string; item?: string } 
   const productHref = useProductHref();
   const open = useCallback((s: Screen) => router.push(s === "home" ? pathname : `${pathname}?screen=${s}`, { scroll: false }), [router, pathname]);
   const home = () => open("home");
+  if (screen === "plan") return <PlanScreen onBack={home} />;
   if (screen === "security") return <SecurityScreen onBack={home} open={open} />;
   if (screen === "recovery") return <RecoveryScreen onBack={home} open={open} />;
   if (screen === "passkeys") return <PasskeysScreen onBack={() => open("recovery")} />;
   if (screen === "codes") return <CodesScreen onBack={() => open("recovery")} />;
+  if (screen === "statements") return <StatementsScreen onBack={home} />;
   if (screen === "personalization") return <PersonalizationScreen onBack={home} />;
   if (screen === "about") return <AboutScreen onBack={home} />;
   if (screen === "pages") {
@@ -116,11 +132,12 @@ function MenuHome({ open }: { open: (s: Screen) => void }) {
   return (
     <Column>
       <MenuHero />
-      <MenuTiles />
+      <MenuTiles open={open} />
       <HoldCard className="mt-1.5">
         <MenuRow icon="person-outline" label="Account" sub="Profile, X account, where you get paid" href={productHref("/account")} />
         <MenuRow icon="shield-checkmark-outline" label="Security" onClick={() => open("security")} />
         <MenuRow icon="key-outline" label="Account recovery" badge={recoveryBadge} onClick={() => open("recovery")} />
+        <MenuRow icon="document-text-outline" label="Statements" onClick={() => open("statements")} />
         <MenuRow icon="log-in-outline" label="Sign-in" href={productHref("/account?view=account")} />
         <MenuRow icon="contrast-outline" label="Appearance" onClick={() => open("personalization")} />
         <MenuRow icon="help-circle-outline" label="Help & Support" href="mailto:support@hihodl.xyz" external />
@@ -163,26 +180,149 @@ function MenuHero() {
   );
 }
 
-/** The app's two tiles. Plan is the app's; Invite friends lives in Benefits. */
-function MenuTiles() {
+/**
+ * The app's tiles: the plan, and Invite friends — plus the web's own third,
+ * Link your phone, which is how a browser gets an approval onto a device that
+ * holds keys.
+ *
+ * The plan tile carries the app's own words (`menu:tiles.standard` /
+ * `menu:tiles.pro`) over the plan this person is actually on, read from `GET
+ * /me`. Tapping it opens the one thing the web can honestly say about it:
+ * which plan, and that changing it is done in the app. It names no rate —
+ * each of those belongs to the one product page that charges it
+ * (rates.config), and a tile that collected them would be the aggregate fee
+ * page this product has decided not to have.
+ */
+function MenuTiles({ open }: { open: (s: Screen) => void }) {
   const productHref = useProductHref();
+  const me = useMe();
+  const pro = me.data?.profile.plan === "pro";
   return (
-    <div className="mt-1 grid grid-cols-2 gap-2.5">
+    <div className="mt-1 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+      <Tile
+        icon="card-outline"
+        title={me.data ? (pro ? "Pro" : "Standard") : "Your plan"}
+        sub={me.data ? (pro ? "Gasless transfers" : "Your plan") : "Loading…"}
+        onClick={() => open("plan")}
+      />
       <Tile icon="person-add-outline" title="Invite friends" sub="Earn rewards together" href={productHref("/benefits")} />
       <Tile icon="phone-portrait-outline" title="Link your phone" sub="Approve from the app" href={productHref("/account?view=phone")} />
     </div>
   );
 }
 
-function Tile({ icon, title, sub, href }: { icon: IonName; title: string; sub: string; href: string }) {
-  return (
-    <Link href={href} className={`${holdCard} flex flex-col gap-2 p-3.5 transition-colors hover:bg-white/[0.06]`}>
+function Tile({ icon, title, sub, href, onClick }: { icon: IonName; title: string; sub: string; href?: string; onClick?: () => void }) {
+  const cls = `${holdCard} flex flex-col gap-2 p-3.5 text-left transition-colors hover:bg-white/[0.06]`;
+  const inner = (
+    <>
       <span className="flex h-9 w-9 items-center justify-center rounded-[11px] bg-white/[0.08] text-white">
         <Ion name={icon} size={18} />
       </span>
       <span className="block truncate text-[14px] font-bold leading-5 text-white">{title}</span>
       <span className="block truncate text-[12px] leading-4 text-white/55">{sub}</span>
-    </Link>
+    </>
+  );
+  if (href) {
+    return (
+      <Link href={href} className={cls}>
+        {inner}
+      </Link>
+    );
+  }
+  return (
+    <button type="button" onClick={onClick} className={cls}>
+      {inner}
+    </button>
+  );
+}
+
+/* ── Plan ((paywall)/plans, as much of it as the web can say) ─────── */
+
+/**
+ * Which plan, and where it changes.
+ *
+ * The app's tile opens its paywall, which is a purchase. A purchase is not
+ * something this page can finish — the plan is bought on hihodl.xyz through
+ * Stripe and applied to the account by the backend — so the row is drawn, the
+ * plan is stated from `GET /me`, and the action is named as the app's rather
+ * than dressed as a button that stops halfway.
+ *
+ * No rates here, deliberately. Every take we charge belongs to the one product
+ * page that charges it (lib/rates.config, rule 2: no aggregated fee page), so
+ * a plan screen listing them would be exactly the index that rule exists to
+ * prevent.
+ */
+function PlanScreen({ onBack }: { onBack: () => void }) {
+  const me = useMe();
+  const pro = me.data?.profile.plan === "pro";
+  return (
+    <Column>
+      <BackHeader title="Your plan" onBack={onBack} />
+      <HoldCard className="mt-4 flex flex-col items-center gap-3 px-5 py-7 text-center">
+        <span className="flex h-[60px] w-[60px] items-center justify-center rounded-[30px] bg-amber/[0.12] text-amber">
+          <Ion name="card-outline" size={28} />
+        </span>
+        {me.data === undefined ? (
+          <Skeleton className="h-7 w-32" />
+        ) : (
+          <p className="text-[24px] font-strong text-white">{pro ? "Pro" : "Standard"}</p>
+        )}
+        <p className="text-[14px] leading-[21px] text-white/[0.72]">
+          {pro
+            ? "You are on Pro. Transfers are gasless and conversions carry no base markup."
+            : "You are on Standard. Everything in HOLD works; Pro removes the base markup on conversions and makes transfers gasless."}
+        </p>
+      </HoldCard>
+      <div className="mt-4">
+        <Notice icon="phone-portrait-outline" tone="calm">
+          Changing your plan happens in the HOLD app, where the purchase is made and applied to your account.
+        </Notice>
+      </div>
+      <HoldCard className="mt-4">
+        <MenuRow icon="globe-outline" label="What each plan includes" sub="hihodl.xyz" href={WEBSITE} external />
+      </HoldCard>
+    </Column>
+  );
+}
+
+/* ── Statements (statements/index.tsx) ────────────────────────────── */
+
+/**
+ * A document somebody else will read — a landlord, a consulate, a bank.
+ *
+ * The SERVER issues it: only there can a verification code be recorded before
+ * the page is rendered, and only there can it be REFUSED when the journal does
+ * not reconcile. The app asks for it and saves the bytes. A browser could
+ * download a file, but it cannot hold the account's key material or the share
+ * sheet the app finishes this in — so this screen says what a statement is,
+ * where it is requested, and how the one you already hold is checked.
+ *
+ * Drawn rather than omitted, because a menu that silently lacks a row a person
+ * remembers from their phone reads as a product that lost it.
+ */
+function StatementsScreen({ onBack }: { onBack: () => void }) {
+  return (
+    <Column>
+      <BackHeader title="Statements" onBack={onBack} />
+      <HoldCard className="mt-4 flex flex-col items-center gap-3 px-5 py-7 text-center">
+        <span className="flex h-[60px] w-[60px] items-center justify-center rounded-[30px] bg-amber/[0.12] text-amber">
+          <Ion name="document-text-outline" size={28} />
+        </span>
+        <p className="text-[20px] font-strong text-white">Paper for somebody else</p>
+        <p className="text-[14px] leading-[21px] text-white/[0.72]">
+          An account statement is a document a landlord, a consulate or a bank will read. We issue it with a verification code on it, so
+          whoever receives it can confirm it came from us and has not been altered.
+        </p>
+      </HoldCard>
+      <div className="mt-4">
+        <Notice icon="phone-portrait-outline" tone="calm">
+          Requesting a statement happens in the HOLD app: Menu › Statements, where you pick the account, the period and the format.
+        </Notice>
+      </div>
+      <p className="mt-4 px-4 text-center text-[13px] leading-[18px] text-[#9FB7C2]">
+        Holding one already? The QR on it opens the verification page here on the web.
+      </p>
+    </Column>
   );
 }
 
@@ -541,15 +681,83 @@ function CodesScreen({ onBack }: { onBack: () => void }) {
   );
 }
 
-/* ── Appearance (settings/index.tsx › Appearance, the web's rows) ──── */
+/* ── Appearance (settings/index.tsx › Appearance) ─────────────────── */
+
+/**
+ * One row of the display-mode picker — the app's DisplayModeSheet row.
+ *
+ * Choosing changes a COLOUR and nothing structural: the border is a hairline
+ * in both states, because a border that thickens on selection is how a pill
+ * ends up square. The selected ink is the amber TINT (attention), never the
+ * filled amber plate, which is reserved for the one action that commits.
+ */
+function ViewOption({
+  option,
+  selected,
+  onChoose,
+}: {
+  option: (typeof DISPLAY_MODE_OPTIONS)[number];
+  selected: boolean;
+  onChoose: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={selected}
+      aria-label={option.title}
+      onClick={onChoose}
+      className={`flex w-full items-start gap-3.5 rounded-[16px] border px-4 py-[18px] text-left transition-colors ${
+        selected ? "border-amber/[0.28] bg-amber/[0.06]" : "border-white/[0.08] bg-white/[0.06] hover:bg-white/[0.10]"
+      }`}
+    >
+      <span
+        className={`mt-px flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] ${
+          selected ? "bg-amber/[0.12] text-amber" : "bg-[rgba(143,211,227,0.10)] text-[#8FD3E3]"
+        }`}
+      >
+        <Ion name={option.icon} size={20} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[16px] font-bold leading-5 text-white">{option.title}</span>
+        <span className="mt-[5px] block text-[14px] leading-5 text-white/[0.72]">{option.body}</span>
+      </span>
+      <Ion
+        name={selected ? "radio-button-on" : "radio-button-off"}
+        size={20}
+        className={`mt-0.5 shrink-0 ${selected ? "text-amber" : "text-white/45"}`}
+      />
+    </button>
+  );
+}
 
 function PersonalizationScreen({ onBack }: { onBack: () => void }) {
   const { role } = useShell();
-  const { collapsed, setCollapsed } = useShellPrefs();
+  const { collapsed, setCollapsed, displayMode, setDisplayMode } = useShellPrefs();
   const productHref = useProductHref();
   return (
     <Column>
       <BackHeader title="Appearance" onBack={onBack} />
+
+      {/* The app's "View" row, opened out: on the phone it is a sheet, and a
+          page has the room to simply show the three and their reasons. Words
+          are the app's own (settings:displayMode.*), unchanged. */}
+      <SectionTitle first>View</SectionTitle>
+      <p className="mb-3 px-1 text-[14px] leading-5 text-white/[0.72]">{DISPLAY_MODE_INTRO}</p>
+      <div className="flex flex-col gap-2.5" role="radiogroup" aria-label={DISPLAY_MODE_TITLE}>
+        {DISPLAY_MODE_OPTIONS.map((o) => (
+          <ViewOption
+            key={o.id}
+            option={o}
+            selected={displayMode === o.id}
+            onChoose={() => setDisplayMode(o.id as DisplayMode)}
+          />
+        ))}
+      </div>
+      <p className="mt-3 px-1 text-[12px] leading-[17px] text-[#9FB7C2]">
+        Remembered in this browser. The app keeps its own copy, so setting it here does not change it on your phone.
+      </p>
+
       <SectionTitle>Sidebar</SectionTitle>
       <HoldCard>
         <div className="flex items-center gap-3 px-3 py-5">
