@@ -9,9 +9,10 @@
  *   payout* / PAYOUT_STATE_*        src/send/payoutHistory.ts
  *   formatScheduleAmount            src/features/scheduledPayments/schedule.ts
  *
- * One thing the web does differently, because it has less and never more: the
- * chat half of the app's list (`/payment-notes/conversations`) is not mounted
- * on this backend, so a thread here is built from `/transfers` alone.
+ * One thing the web does differently, for now: a thread here is built from
+ * `/transfers` alone. The app merges in the chat half from
+ * `/payment-notes/conversations`, which IS mounted and which the browser may
+ * read — it simply has not been built here yet. Not a limit, a to-do.
  *
  * Symbols follow the display mode like every other money screen — `12.00 USD`
  * in fintech, `12.00 USDC` in hybrid and native. The mode arrives as a

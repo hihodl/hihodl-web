@@ -465,16 +465,17 @@ export function getVerificationStatus(): Promise<unknown> {
 }
 
 /**
- * Routes the app calls that this backend does not mount (they 404): pay links,
- * payment notes and the whole chat shape, `/portfolio/lots`,
- * `/portfolio/realized`, `/groups`, `/stocks/availability`. Nothing on the web
- * may be built on them until they exist.
+ * There used to be a `NOT_ON_THE_SERVER` list here naming `pay-links`,
+ * `payment-notes`, `portfolio/lots`, `portfolio/realized`, `groups` and
+ * `stocks/availability` as routes this backend does not mount. It was wrong:
+ * it came from reading the plain `hihodl-backend` checkout, which lags the
+ * integration branch. All six are mounted, and production says so —
+ *
+ *   curl -s -o /dev/null -w '%{http_code}' https://api.hihodl.xyz/api/v1/portfolio/lots
+ *   401   # mounted, wants a token. 404 would mean missing.
+ *
+ * (`stocks/availability` answers 200 with no token at all.) Three screens were
+ * built around the claim and shipped smaller than they had to be. Before
+ * writing "this route does not exist" anywhere, read
+ * `.worktrees/backend-together` and settle it with the curl above.
  */
-export const NOT_ON_THE_SERVER = [
-  "pay-links",
-  "payment-notes",
-  "portfolio/lots",
-  "portfolio/realized",
-  "groups",
-  "stocks/availability",
-] as const;

@@ -19,8 +19,9 @@
  * offered, because the promise of a receive screen is that money sent to what
  * it shows arrives.
  *
- * The app's Pay link tile is not here: `/pay-links` is not mounted on this
- * backend.
+ * The app's Pay link tile is not here yet. `/pay-links` is mounted and the
+ * public half already serves /pay/[code] in this same repo; listing a person's
+ * own links is simply unbuilt.
  */
 
 import Link from "next/link";

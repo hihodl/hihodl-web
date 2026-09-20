@@ -6,12 +6,16 @@
  * built by grouping `/transfers` — avatar or person placeholder, the name, the
  * last line, the time.
  *
- * WHAT IS MISSING AND WHY
+ * WHAT IS MISSING, AND WHY
  *
  * The app's list is the merge of two halves: transfers, and conversations from
- * `/payment-notes/conversations`. That half is NOT mounted on this backend (it
- * 404s), so the web builds the list from the money alone. Nothing pretends
- * otherwise: there is no chat, no thread composer and no pay links.
+ * `/payment-notes/conversations`. The web builds it from the money alone, so
+ * there is no chat, no thread composer and no pay links here yet.
+ *
+ * That is a to-do, not a limit. This file used to say the chat half was not
+ * mounted on the backend; it is mounted (401 in production, not 404), it is a
+ * plain authenticated read, and the browser may make it. The claim came from a
+ * stale checkout and it cost this screen half its shape.
  *
  * The app also gates its Payments tab behind `useMasterWalletsLinked()`, which
  * needs the app's keys to pass. The web skips that gate — it only guards the
