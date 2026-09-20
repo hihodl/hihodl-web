@@ -1,16 +1,20 @@
 /**
  * The product's navigation, on two levels, like the app.
  *
- * MAIN is HOLD itself: Home, Payments, Invest, Activity, then Benefits and the
- * products under it (Stays, eSIM, Spaces), and Menu at the foot — the app's
- * menu, which holds the person, Settings, Security, recovery, help, the wallet
- * and signing out.
+ * MAIN is HOLD itself — Home, Invest, Payments, Benefits and the products
+ * under it (Stays, eSIM, Spaces) — and Menu at the foot, which holds the
+ * person, Settings, Security, recovery, help, the wallet and signing out.
  *
- * The column lists PLACES, and a place is somewhere Home cannot already take
- * you. Savings is not one: Home's scope strip switches the whole page to that
- * container, so Savings beside Home was the same money listed twice. Wallet is
- * not one either — see MAIN_HIDDEN. Both keep their routes and their entry in
- * search; neither takes a line in the column.
+ * THE COLUMN LISTS PLACES, AND A PLACE IS SOMEWHERE HOME CANNOT ALREADY TAKE
+ * YOU. Three entries failed that test and left:
+ *
+ *   Savings   Home's scope strip switches the whole page to that container
+ *   Activity  Home draws it as a card, and its "See all" pill opens it in full
+ *   Wallet    a second money screen beside the one that has every account
+ *
+ * All three keep their route and their place in ⌘K (MAIN_HIDDEN); none takes a
+ * line in the column. Four entries is not minimalism for its own sake — it is
+ * what is left once nothing is listed twice.
  *
  * A PRODUCT level replaces the column when one is open: opening Spaces (or any
  * /spaces address) swaps the sidebar to the Spaces menu, with a "Back" row at
@@ -106,9 +110,8 @@ export const MAIN_GROUPS: readonly NavGroup[] = [
     title: null,
     items: [
       { key: "home", label: "Home", path: "", icon: IconHome, keywords: "home dashboard balance summary pockets accounts savings earn move" },
-      { key: "payments", label: "Payments", path: "/payments", icon: IconPayments, keywords: "sent received requests scheduled transactions history payouts pay links" },
       { key: "invest", label: "Invest", path: "/invest", icon: IconInvest, keywords: "portfolio holdings tokens coins performance profit loss" },
-      { key: "activity", label: "Activity", path: "/activity", icon: IconActivity, keywords: "history everything that moved transactions receipts" },
+      { key: "payments", label: "Payments", path: "/payments", icon: IconPayments, keywords: "sent received requests scheduled transactions history payouts pay links chat messages" },
       { key: "benefits", label: "Benefits", path: "/benefits", icon: IconGift, keywords: "products rewards points" },
       // The app's Benefits products, in the app's order (benefits/index.tsx productTiles).
       { key: "stays", label: "Stays", path: "/travel", icon: IconBed, keywords: "travel hotels hi travel", child: true },
@@ -150,6 +153,8 @@ export const MAIN_HIDDEN: readonly NavItem[] = [
   { key: "wallet", label: "Wallet", path: "/wallet", icon: IconWallet, keywords: "solana usdc address receive passkey recovery phrase words export balance withdraw" },
   // Savings is a SCOPE of Home, not a place: /savings opens Home on that pill.
   { key: "savings", label: "Savings", path: "/savings", icon: IconSavings, keywords: "savings pockets goals yield interest apy earn aave kamino ways to earn" },
+  // Activity is Home's own card, opened in full: its "See all" pill goes here.
+  { key: "activity", label: "Activity", path: "/activity", icon: IconActivity, keywords: "activity history everything that moved transactions receipts" },
   { key: "add", label: "Add money", path: "/add", icon: IconAdd, keywords: "receive crypto qr code address deposit top up add cash bank transfer" },
   // The app's pay links live behind a tile on Add money, not in a menu either.
   { key: "pay-links", label: "Pay links", path: "/pay-links", icon: IconPayments, keywords: "pay link get paid by anyone from any wallet usdc invoice charge someone without hold" },
