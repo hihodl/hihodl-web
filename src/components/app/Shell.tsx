@@ -39,7 +39,7 @@ import { Wordmark } from "@/components/site/Wordmark";
 import { currentMethod, remember } from "@/lib/auth/remember";
 import { describeCreatorError } from "@/lib/creator/api";
 import type { SpaceCard } from "@/lib/creator/listing";
-import { signOut, useCreatorSession } from "@/lib/creator/session";
+import { useCreatorSession } from "@/lib/creator/session";
 import { creatorText, isSeatCode, pendingSeat, type TeamMember, type WorkListing } from "@/lib/creator/team";
 import type { XAccountStatus } from "@/lib/creator/types";
 import { useAgency, type Agency } from "@/lib/app/agency";
@@ -56,7 +56,7 @@ import { Door as SignInDoor } from "./front/Door";
 import { HeaderSlotContext, type HeaderSlot } from "./header-slot";
 import { HiPointsChip } from "./HiPointsChip";
 import { UserAvatar } from "./account/UserAvatar";
-import { IconArrowLeft, IconClose, IconCollapse, IconExpand, IconMenu, IconPlus, IconSearch, IconSignOut } from "./icons";
+import { IconArrowLeft, IconClose, IconCollapse, IconExpand, IconMenu, IconPlus, IconSearch } from "./icons";
 import {
   activeKey,
   hrefFor,
@@ -626,6 +626,9 @@ function Sidebar({
           {foot.map((i) => (
             <NavLink key={i.key} item={i} active={active === i.key} collapsed={collapsed} hard={hardLink(i.key, active)} />
           ))}
+          {/* Above the person, not beside them: in the card it ate the
+              username down to "@he…". */}
+          {collapsed ? null : <HiPointsChip row />}
         </div>
         <UserCard collapsed={collapsed} />
       </div>
@@ -690,6 +693,14 @@ const ROLE_LABEL: Record<ShellRole, string> = { creator: "Creator", manager: "Ma
  * for — their profile, security, recovery, statements, how the app looks,
  * signing out — is one screen, and Account is the first thing on it. Landing
  * on Account instead meant going back up a level to reach any of the rest.
+ *
+ * AND IT IS THE NAME THAT GETS THE ROOM
+ *
+ * There was a sign-out button on this row. In 248px of column, beside a 36px
+ * avatar and a role line, it cost the username enough characters to turn it
+ * into "@he…" — and it was a second door to a screen this card already opens,
+ * where signing out is the last thing on the list. So the row carries the
+ * person and nothing else.
  */
 function UserCard({ collapsed }: { collapsed: boolean }) {
   const { session, x, role, seats, agency } = useShell();
@@ -709,9 +720,6 @@ function UserCard({ collapsed }: { collapsed: boolean }) {
           <UserAvatar size={36} fallbackName={name} />
         </Link>
         <HiPointsChip compact />
-        <button type="button" aria-label="Sign out" title="Sign out" onClick={() => void signOut()} className="flex h-8 w-8 items-center justify-center rounded-[8px] text-[#9FB7C2] hover:bg-white/10 hover:text-text">
-          <IconSignOut />
-        </button>
       </div>
     );
   }
@@ -724,19 +732,6 @@ function UserCard({ collapsed }: { collapsed: boolean }) {
           <p className="truncate text-[11px] text-[#9FB7C2]">{sub}</p>
         </div>
       </Link>
-      {/* With the person, because that is what it belongs to, and because
-          this block is the one thing on a big screen that is never scrolled
-          away. */}
-      <HiPointsChip compact />
-      <button
-        type="button"
-        aria-label="Sign out"
-        title="Sign out"
-        onClick={() => void signOut()}
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] text-[#9FB7C2] hover:bg-white/10 hover:text-text"
-      >
-        <IconSignOut />
-      </button>
     </div>
   );
 }
