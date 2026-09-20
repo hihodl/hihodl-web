@@ -19,9 +19,14 @@
  * offered, because the promise of a receive screen is that money sent to what
  * it shows arrives.
  *
- * The app's Pay link tile is not here yet. `/pay-links` is mounted and the
- * public half already serves /pay/[code] in this same repo; listing a person's
- * own links is simply unbuilt.
+ * THE FIFTH TILE
+ *
+ * Pay link is the app's own fifth tile (its row 3: "Pay link / Get paid from
+ * any wallet"), and it opens the person's own links at /pay-links. That whole
+ * screen is a read of `/api/v1/pay-links`, which is mounted and needs nothing
+ * but the bearer this page holds — a token-less GET answers 401 on production,
+ * checked 2026-09-20. Making a new link still happens in the app; the screen
+ * says so.
  */
 
 import Link from "next/link";
@@ -77,6 +82,7 @@ export function AddMoneyScreen() {
 
 function Grid({ onOpen }: { onOpen: (s: Screen) => void }) {
   const rails = useRailAccounts();
+  const href = useProductHref();
   const hasVA = (rails.data?.accounts?.length ?? 0) > 0;
 
   return (
@@ -92,19 +98,36 @@ function Grid({ onOpen }: { onOpen: (s: Screen) => void }) {
         <Tile icon="wallet-outline" title="Add Cash" sub="Debit or credit card" onClick={() => onOpen("cash")} />
         <Tile icon="qr-code-outline" title="Receive Crypto" sub="QR & wallet addresses" onClick={() => onOpen("receive")} />
         <Tile icon="link-outline" title="Request Link" sub="Share your hi.me link" onClick={() => onOpen("link")} />
+        {/* The app's row 3: a way to be paid by somebody with no HOLD account,
+            from any wallet, free. A page of its own rather than a panel here,
+            because a link is opened again and again after it is made. */}
+        <Tile icon="card-outline" title="Pay link" sub="Get paid from any wallet" href={href("/pay-links")} />
       </div>
     </Column>
   );
 }
 
 /** PremiumTile: radius 22, the amber glyph in a 44pt glass squircle, 16/800 over a 13/17 line. */
-function Tile({ icon, title, sub, badge, onClick }: { icon: IonName; title: string; sub: string; badge?: string; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="relative flex flex-col items-start overflow-hidden rounded-[22px] border border-white/10 bg-white/[0.05] px-[18px] pb-[18px] pt-5 text-left backdrop-blur-xl transition-colors hover:bg-white/[0.09]"
-    >
+function Tile({
+  icon,
+  title,
+  sub,
+  badge,
+  onClick,
+  href,
+}: {
+  icon: IonName;
+  title: string;
+  sub: string;
+  badge?: string;
+  onClick?: () => void;
+  /** A tile that opens a page of its own instead of a panel on this screen. */
+  href?: string;
+}) {
+  const cls =
+    "relative flex flex-col items-start overflow-hidden rounded-[22px] border border-white/10 bg-white/[0.05] px-[18px] pb-[18px] pt-5 text-left backdrop-blur-xl transition-colors hover:bg-white/[0.09]";
+  const inner = (
+    <>
       <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/[0.12]" />
       {badge ? (
         <span className="absolute right-3.5 top-3.5 rounded-[6px] border border-[rgba(255,183,3,0.22)] bg-[rgba(255,183,3,0.12)] px-[7px] py-[3px] text-[9px] font-extrabold uppercase tracking-[0.5px] text-amber">
@@ -116,6 +139,15 @@ function Tile({ icon, title, sub, badge, onClick }: { icon: IonName; title: stri
       </span>
       <span className="block text-[16px] font-extrabold tracking-[-0.3px] text-white">{title}</span>
       <span className="mt-1 block text-[13px] font-medium leading-[17px] text-white/55">{sub}</span>
+    </>
+  );
+  return href ? (
+    <Link href={href} className={cls}>
+      {inner}
+    </Link>
+  ) : (
+    <button type="button" onClick={onClick} className={cls}>
+      {inner}
     </button>
   );
 }
