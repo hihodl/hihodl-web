@@ -135,7 +135,6 @@ function MenuHome({ open }: { open: (s: Screen) => void }) {
       <MenuHero />
       <MenuTiles open={open} />
       <HoldCard className="mt-1.5">
-        <MenuRow icon="person-outline" label="Account" sub="Profile, X account, where you get paid" href={productHref("/account")} />
         {/*
           Wallet sits here and no longer in the side column. Beside Home it
           read as a second money screen; it is not one. It is where the wallet
@@ -186,6 +185,13 @@ function MenuHero() {
     <Link href={productHref("/account")} className="mt-1 flex flex-col items-center gap-3 rounded-[18px] py-5 transition-opacity hover:opacity-80">
       <UserAvatar size={96} fallbackName={name} />
       <span className="max-w-full truncate text-[22px] font-extrabold leading-7 text-white">{name}</span>
+      {/* The hero IS the Account row. There was one in the list below as well,
+          under the photograph that opens the same page — so the list now
+          starts at Wallet and this line says where the photograph goes. */}
+      <span className="flex items-center gap-1 text-[12.5px] text-[#9FB7C2]">
+        Profile, X account, where you get paid
+        <Ion name="chevron-forward" size={12} className="text-white/45" />
+      </span>
     </Link>
   );
 }
