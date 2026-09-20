@@ -69,7 +69,13 @@ export function Problems({ list }: { list: readonly string[] }) {
 
 export const inputClass = inputCls;
 
-/** A box for words. */
+/**
+ * A box for words.
+ *
+ * Deliberately not a date or a time: `date` and `datetime-local` open the
+ * browser's own picker, a white sheet with blue buttons in the middle of a
+ * navy card. Days and moments are picked on our own month — see WhenField.
+ */
 export function Text({
   id,
   value,
@@ -83,7 +89,7 @@ export function Text({
   onChange: (v: string) => void;
   placeholder?: string;
   maxLength?: number;
-  type?: "text" | "url" | "email" | "date" | "datetime-local";
+  type?: "text" | "url" | "email";
 }) {
   return (
     <input
