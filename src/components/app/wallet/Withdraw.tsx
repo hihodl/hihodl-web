@@ -13,16 +13,23 @@
  *               the summary card, the amber Send
  *   result      tx-confirm: "Payment sent", "To … • amount", Close
  *
- * Every send is approved by the linked phone
- * (documentation/link-your-phone-and-approved-withdrawals.md). The server
- * picks how, from what is linked:
+ * Every send is approved, and the server picks how
+ * (documentation/link-your-phone-and-approved-withdrawals.md):
  *
- *   app           an Android phone: it gets a push, the person approves and
- *                 the app signs. This screen waits: "Approve on your phone".
- *   web_passkey   an iPhone: approved here, with ONE passkey prompt that both
- *                 answers the server's challenge (bound to the exact bytes of
- *                 this transfer) and opens the wallet (PRF) to sign them.
- *   409 LINK_YOUR_PHONE_FIRST   no phone yet: go and link one.
+ *   app           an Android phone is linked: it gets a push, the person
+ *                 approves and the app signs, on a SECOND device. This screen
+ *                 waits: "Approve on your phone".
+ *   web_passkey   everybody else — an iPhone, a laptop, a browser that never
+ *                 met the app. Approved here, with ONE passkey prompt that
+ *                 both answers the server's challenge (bound to the exact
+ *                 bytes of this transfer) and opens the wallet (PRF) to sign
+ *                 them.
+ *
+ * There is no third answer any more. This used to end in a 409
+ * LINK_YOUR_PHONE_FIRST for anyone with nothing linked, which meant a wallet
+ * made in a browser could be filled and never spent — and it bought nothing,
+ * because the passkey approval never read a linked device. See the note on
+ * `chooseChannel`.
  *
  * The backend contract is the withdrawal one, unchanged: only the screens
  * took the app's shape.
@@ -556,6 +563,10 @@ function describe(e: unknown): string {
     if (e.code === "WITHDRAWAL_NEEDS_APPROVAL") return "That withdrawal was not approved. Nothing was sent. Start again.";
     if (e.code === "WITHDRAWAL_EXPIRED" || e.status === 410) return "That withdrawal expired. Nothing was sent. Start again.";
     if (e.code === "INSUFFICIENT_FUNDS" || e.code === "INSUFFICIENT_BALANCE") return "Your wallet does not hold enough for that. Nothing was sent.";
+    // The two refusals that used to arrive as a bare 409 and be read as
+    // "link your phone". Each says the thing this person actually has to do.
+    if (e.code === "NO_PASSKEY") return "This account has no passkey, and a passkey is what approves a send. Add one from Menu → Passkeys. Nothing was sent.";
+    if (e.code === "NO_WEB_WALLET") return "This account has no wallet on the web yet. Open Wallet to make one. Nothing was sent.";
   }
   if (e instanceof Error && e.message === "challenge_mismatch") return "HOLD asked the passkey to approve something other than this transfer, so we stopped. Nothing was sent.";
   if (e instanceof Error && e.message === "wrong_key") return "That passkey opened a different wallet. Nothing was sent.";
@@ -632,7 +643,15 @@ export function Withdraw({ uid, from, balances, onBack }: { uid: string; from: s
     try {
       w = await createWithdrawal({ token: draft.token, amount, to: draft.to });
     } catch (e) {
-      if (e instanceof WalletApiError && (e.code === "LINK_YOUR_PHONE_FIRST" || e.status === 409)) return setPhase({ kind: "link-first" });
+      /*
+       * A bare 409 used to mean "link your phone", because that was the only
+       * one this route could answer. It is not any more — the server refuses
+       * a missing passkey with 409 NO_PASSKEY, and a missing web wallet with
+       * 409 NO_WEB_WALLET — so catching the STATUS would put "link your
+       * phone" in front of somebody whose phone has nothing to do with it.
+       * Every refusal now says its own name.
+       */
+      if (e instanceof WalletApiError && e.code === "LINK_YOUR_PHONE_FIRST") return setPhase({ kind: "link-first" });
       return setPhase({ kind: "review", busy: false, notice: describe(e) });
     }
     if (w.channel === "app") return setPhase({ kind: "on-phone", withdrawal: w });

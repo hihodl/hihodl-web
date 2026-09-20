@@ -411,8 +411,21 @@ function EmptyHistory() {
  * composer that pushed the history down would make it read as a chat that
  * happens to move money rather than the other way round.
  *
- * Paying this person again is still the app's — that is a signature. Writing to
- * them is not, so the composer is the real one and not a pointer to the phone.
+ * PAYING FROM HERE IS NOT THE APP'S ANY MORE
+ *
+ * It was, and the screen said so: "Paying X again happens in the HOLD app."
+ * That sentence was written when a signature meant the phone. It is now wrong
+ * for most people and dead for the rest — the web wallet signs with its
+ * passkey, and a withdrawal is approved by a passkey bound to it unless an
+ * Android phone is linked, in which case the app approves on a second device
+ * (chooseChannel, server-side). Send is a screen this product already has, in
+ * both channels: components/app/wallet/Withdraw.tsx.
+ *
+ * So the dead end becomes the door. It does not carry the recipient yet — a
+ * thread knows a person, and Send wants a Solana address, and nothing here
+ * resolves one — so it opens Send rather than pretending to prefill it. What
+ * it must never do again is tell somebody to go and fetch an app to do a
+ * thing their browser can do.
  */
 function ThreadView({
   row,
@@ -425,6 +438,7 @@ function ThreadView({
   onBack: () => void;
   onOpenTx: (id: string) => void;
 }) {
+  const productHref = useProductHref();
   if (!row) {
     return (
       <>
@@ -444,11 +458,18 @@ function ThreadView({
 
       <Conversation peerId={row.peerId} peerName={row.name} payments={payments} mode={mode} onOpenTx={onOpenTx} />
 
-      {payments.length ? (
-        <p className="mt-3 px-1 text-[12px] leading-[17px] text-white/70">
-          Paying {row.name} again happens in the HOLD app.
+      <div className="mt-3 flex items-center gap-2 px-1">
+        <Link
+          href={`${productHref("/wallet")}?open=send`}
+          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-[10px] bg-amber px-3.5 text-[12.5px] font-bold text-text-on-amber transition-colors hover:bg-amber-glow"
+        >
+          <Ion name="arrow-up" size={14} />
+          Send
+        </Link>
+        <p className="min-w-0 flex-1 text-[12px] leading-[17px] text-white/60">
+          Approved with your passkey, or on your phone if you have linked one.
         </p>
-      ) : null}
+      </div>
     </>
   );
 }
