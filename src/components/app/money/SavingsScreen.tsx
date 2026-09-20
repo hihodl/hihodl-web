@@ -1,27 +1,30 @@
 "use client";
 
 /**
- * Savings, as the HOLD app draws it.
+ * Savings — the parts of it Home does not already draw.
  *
- * Ported from `app/(drawer)/(internal)/savings/index.tsx` in its own order —
- * the balance hero, the renewal notice when there is one, the credit-card
- * hero, the "Earn more" row, the trust note — with the app's `earn-more.tsx`
- * folded in underneath as a section rather than a second screen, because a
- * wide page has the room the phone did not. The cards and the words are the
- * app's (`SavingsBalanceHero`, `SavingsCreditCardHero`, `SavingsEarnMoreRow`,
- * `SavingsHero`, `SavingsCard`); nothing here was designed for the web.
+ * NOT A SCREEN ANY MORE
  *
- * TWO THINGS THE APP DOES THAT THIS MUST NOT LOSE
+ * Home's scope strip has a Savings pill that switches the whole page to that
+ * container, so a Savings entry beside Home in the column listed the same
+ * money twice and opened a second page to say it. What that page had and Home
+ * did not is everything in this file: the RATE and what it is a month, the
+ * renewal notice, the shelf of offers, the credit card and the trust note.
+ * Home renders `SavingsRateLine` under its balance and `SavingsPanel` under
+ * its cards, both only when the scope is Savings. `/savings` still resolves —
+ * it opens Home on that pill.
+ *
+ * The cards and the words are the app's (`SavingsBalanceHero`,
+ * `SavingsCreditCardHero`, `SavingsEarnMoreRow`, `SavingsHero`,
+ * `SavingsCard`); nothing here was designed for the web.
+ *
+ * WHAT THE APP DOES THAT THIS MUST NOT LOSE
  *
  * The figure is what THIS CONTAINER holds — `suppliedBySlug.savings`, from
  * `/ledger/containers/:id/balances` — and not the pooled protocol read. A
  * venue reports one balance for the whole address, so the pooled number is
- * Savings plus every pocket, and printing it here is printing somebody else's
- * money as this person's Savings.
- *
- * And a failed read renders "—", never "$0.00". An empty position renders
- * "$0.00 · Earns X% automatically". A zero is a claim, and we only make it
- * when we have an answer.
+ * Savings plus every pocket, and printing it as Savings is printing somebody
+ * else's money as this person's.
  *
  * WHAT THE DISPLAY MODE CHANGES
  *
@@ -201,21 +204,26 @@ function productsFrom(reserves: readonly RatedReserve[], mode: DisplayMode): Ear
   return showChainContext(mode) ? nativeProducts(reserves) : maskedProducts(reserves);
 }
 
-export function SavingsScreen() {
+/**
+ * Everything Savings knows, for whoever draws it.
+ *
+ * Pulled out of the screen when Savings stopped being a screen. Home's scope
+ * strip already has a Savings pill that switches the whole page to this
+ * container, so a separate Savings entry in the column was the same money
+ * twice — and the balance it showed was the one Home was already showing.
+ * What was NOT on Home is everything else here: the rate, the projection, the
+ * renewal notice, the shelf of offers, the card and the trust note.
+ */
+export function useSavingsFigures() {
   const { displayMode } = useShellPrefs();
   const yieldRead = useYieldPositions();
-  // The read names the venue that did not answer; the rows are what it did get.
   const positions = { ...yieldRead, data: yieldRead.data?.positions };
-  const venuesDown = yieldRead.data?.failed ?? [];
   const reserves = useYieldReserves();
   const { bySlug, rows } = useSuppliedBySlug();
 
   const products = useMemo(() => productsFrom(reserves.data ?? [], displayMode), [reserves.data, displayMode]);
   const maxApy = products.reduce((m, p) => Math.max(m, p.apy), 0);
 
-  /* The rate this money actually earns, weighted by what is at each venue and
-   * priced by the container that owns it — Main and Savings are not priced the
-   * same, and a flat rate here charges one at the other's price. */
   const priced = useMemo(
     () =>
       (positions.data ?? []).map((p) => {
@@ -231,22 +239,64 @@ export function SavingsScreen() {
   );
 
   const hasPositions = (positions.data?.length ?? 0) > 0;
-  /* Three states, never two. A read still in flight is a skeleton; a read that
-   * FAILED is "—"; an answer of nothing is "$0.00". Collapsing the first two
-   * into a dash makes every first paint look like a failure, and collapsing
-   * either into a zero is a claim about somebody's money we cannot make. */
-  const loading = !positions.data && !positions.error;
-  const balanceUnknown = !!positions.error;
   const pooledUsd = priced.reduce((s, p) => s + p.usd, 0);
   const blendedApy = hasPositions && pooledUsd > 0 ? priced.reduce((s, p) => s + p.apy * p.usd, 0) / pooledUsd : null;
-
   const savingsSuppliedUsd = bySlug.savings ?? 0;
-  /* The app projects from the POOLED balance, which is the whole address. Here
-   * the figure above is this container's, so the projection is this
-   * container's too: the same arithmetic on the number actually on screen,
-   * rather than a month's interest on a pocket's money printed under a Savings
-   * balance of zero. */
-  const projectedMonthlyUsd = blendedApy != null ? (savingsSuppliedUsd * blendedApy) / 12 : 0;
+
+  return {
+    products,
+    maxApy,
+    hasPositions,
+    blendedApy,
+    savingsSuppliedUsd,
+    /** The app projects from the pooled balance; this projects from the figure
+     *  actually on screen, so a pocket's interest is never printed under a
+     *  Savings balance of zero. */
+    projectedMonthlyUsd: blendedApy != null ? (savingsSuppliedUsd * blendedApy) / 12 : 0,
+    reservesLoading: reserves.isLoading && !reserves.data,
+    loading: !positions.data && !positions.error,
+    balanceUnknown: !!positions.error,
+    reserves,
+  };
+}
+
+/**
+ * The line under Home's balance when the scope is Savings: what this money
+ * earns, and what that is a month. The rate is the BLENDED one once there is
+ * something supplied, and the best offer on the shelf as a promise when there
+ * is not — the app's own rule, and the same words.
+ */
+export function SavingsRateLine() {
+  const { hasPositions, blendedApy, maxApy, projectedMonthlyUsd } = useSavingsFigures();
+  const apy = blendedApy ?? maxApy;
+  const apyText = apy > 0 ? formatApy(apy) : null;
+  if (!apyText && !hasPositions) return null;
+  return (
+    <div className="mt-2 flex items-center gap-2">
+      <span className="h-[7px] w-[7px] rounded-[4px]" style={{ backgroundColor: EARNING, boxShadow: `0 0 6px ${EARNING}` }} aria-hidden />
+      <p className="text-[14px] font-strong text-white/[0.8]">
+        {hasPositions ? `Earning ${apyText ?? ""}`.trim() : apyText ? `Earns ${apyText} automatically` : "Earns automatically"}
+      </p>
+      {hasPositions && projectedMonthlyUsd > 0 ? (
+        <>
+          <span className="text-[14px] text-white/35" aria-hidden>
+            ·
+          </span>
+          <p className="text-[14px] font-bold tabular-nums" style={{ color: EARNING }}>
+            ≈ {money(projectedMonthlyUsd)}/mo
+          </p>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * The rest of Savings, under Home's own cards: the renewal notice when there
+ * is one, the shelf of offers, the card, the trust note.
+ */
+export function SavingsPanel() {
+  const { products, maxApy, reservesLoading, reserves } = useSavingsFigures();
 
   /* One notice per chain a Smart Account can exist on. Solana is not one of
    * them: the standing authorization there is a deployed program whose
@@ -262,50 +312,33 @@ export function SavingsScreen() {
   }, [reserves.data]);
 
   return (
-    <div className="flex flex-1 flex-col">
-      <div className="mx-auto flex w-full max-w-[1040px] flex-col gap-4">
-        <BalanceHero
-          hasPositions={hasPositions}
-          loading={loading}
-          balanceUnknown={balanceUnknown}
-          earningBalanceUsd={savingsSuppliedUsd}
-          blendedApy={blendedApy}
-          maxApy={maxApy}
-          projectedMonthlyUsd={projectedMonthlyUsd}
-        />
+    <div className="mt-5 flex flex-col gap-4">
+      {aaveChains.map((chain) => (
+        <RenewalNotice key={chain} chain={chain} />
+      ))}
 
-        {aaveChains.map((chain) => (
-          <RenewalNotice key={chain} chain={chain} />
-        ))}
+      <EarnMoreRow maxApy={maxApy} />
 
-        <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-2 lg:items-start">
-          <CreditCardHero />
-
-          <div className="flex min-w-0 flex-col gap-4">
-            <EarnMoreRow maxApy={maxApy} />
-
-            <section className="flex min-w-0 flex-col">
-              <h2 className="mb-3.5 px-0.5 text-[15px] font-bold tracking-[-0.2px] text-white">Ways to earn</h2>
-              {reserves.isLoading && !reserves.data ? (
-                <Skeleton className="h-[132px]" />
-              ) : products.length ? (
-                <div className="flex flex-col gap-3">
-                  {products.map((p) => (
-                    <EarnCard key={p.id} product={p} />
-                  ))}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center gap-2.5 py-10">
-                  <Ion name="leaf-outline" size={26} className="text-white/30" />
-                  <p className="text-[14px] font-bold text-white/[0.8]">Savings is coming soon.</p>
-                </div>
-              )}
-            </section>
+      <section className="flex min-w-0 flex-col">
+        <h2 className="mb-3.5 px-0.5 text-[15px] font-bold tracking-[-0.2px] text-white">Ways to earn</h2>
+        {reservesLoading ? (
+          <Skeleton className="h-[132px]" />
+        ) : products.length ? (
+          <div className="flex flex-col gap-3">
+            {products.map((p) => (
+              <EarnCard key={p.id} product={p} />
+            ))}
           </div>
-        </div>
+        ) : (
+          <div className="flex flex-col items-center gap-2.5 py-10">
+            <Ion name="leaf-outline" size={26} className="text-white/30" />
+            <p className="text-[14px] font-bold text-white/[0.8]">Savings is coming soon.</p>
+          </div>
+        )}
+      </section>
 
-        <TrustNote />
-      </div>
+      <CreditCardHero />
+      <TrustNote />
     </div>
   );
 }

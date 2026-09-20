@@ -16,6 +16,12 @@
  *   the body          ScopeHoldings: Stables, Earning, Assets, each a card of
  *                     up to three rows that hides itself when it has none
  *   Activity          the card with its "See all" pill, then the recent rows
+ *   Savings           when THAT is the scope: the rate under the balance, and
+ *                     the offers, renewal notice, card and trust note beneath
+ *                     (components/app/money/SavingsScreen). It was a screen of
+ *                     its own until the column listed it beside Home and showed
+ *                     the same money twice -- the Savings pill already switches
+ *                     this whole page to that container.
  *   the bento         MONEY OUT and GET PAID, last
  *
  * ── THE DISPLAY MODE DECIDES THE SHAPE OF THE BODY ──
@@ -93,6 +99,7 @@ import { Ion, type IonName } from "../ion";
 import { useShellPrefs } from "../Shell";
 import { glass, Skeleton } from "../ui";
 import { ActionsRow, HeroBalance, MiniAction, money, TokenIcon } from "../wallet/app-kit";
+import { SavingsPanel, SavingsRateLine } from "../money/SavingsScreen";
 import { ActivityRow, GREEN, readRow } from "./activity-parts";
 
 /** The app's `RECENT_ACTIVITY_ROWS`. */
@@ -194,7 +201,7 @@ function overviewCountLabel(n: number, mode: DisplayMode): string {
 
 /* ── The screen ───────────────────────────────────────────────────── */
 
-export function HomeScreen() {
+export function HomeScreen({ initialScope = "main" }: { initialScope?: string } = {}) {
   const href = useProductHref();
   const { displayMode } = useShellPrefs();
   const container = useContainer();
@@ -209,8 +216,10 @@ export function HomeScreen() {
     ];
   }, [subaccounts]);
 
-  const [activeSlug, setActiveSlug] = useState("main");
+  const [activeSlug, setActiveSlug] = useState(initialScope);
   const scope = scopes.find((s) => s.slug === activeSlug) ?? scopes[0];
+  /** Savings is a scope of this screen, not a screen of its own. */
+  const onSavings = scope.slug === "savings";
 
   // One call per account, as the app does: asking once with no account answers
   // for Main alone and the aggregate is wrong.
@@ -377,6 +386,10 @@ export function HomeScreen() {
 
             <EarningLine earnedUsd={earned} />
 
+            {/* On Savings the rate and what it is a month, which the app put
+                under its own balance hero. Elsewhere the earned line is enough. */}
+            {onSavings ? <SavingsRateLine /> : null}
+
             {/* What the total leaves out, said rather than hidden. */}
             {settled && supplied.failed.length > 0 ? (
               <p className="mt-2 px-4 text-center text-[12px] leading-[17px] text-amber">
@@ -473,6 +486,12 @@ export function HomeScreen() {
               ))
             )}
           </section>
+
+          {/* ── Savings, when that is the scope ──
+              The offers, the renewal notice, the card and the trust note. They
+              were a screen of their own until the column listed Savings next to
+              Home and showed the same money twice. */}
+          {onSavings ? <SavingsPanel /> : null}
 
           {/* ── The bento ── */}
           <div className="mt-[18px] grid grid-cols-2 gap-2.5">
