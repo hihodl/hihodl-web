@@ -152,12 +152,18 @@ export function ListingHead({ space }: { space: Space }) {
 function InspiredByCredit({ credit }: { credit: NonNullable<Space["inspiredBy"]> | null }) {
   if (!credit || !/^[A-Za-z0-9_.]{1,40}$/.test(credit.handle)) return null;
   const hold = credit.kind === "hold";
+  // Somebody on HOLD who has never linked X has no page of their own, and a
+  // link to one that 404s is worse than plain text. The server says which;
+  // an older one says nothing, and every HOLD credit linked back then.
+  const somewhere = credit.page !== false;
   const href = hold ? creatorPath(credit.handle) : `https://x.com/${encodeURIComponent(credit.handle)}`;
   const cls = "text-sp-ink transition-colors duration-180 hover:text-sp-amber";
   return (
     <p className="-mt-2 text-tiny text-sp-ink/85">
       Inspired by{" "}
-      {hold ? (
+      {!somewhere ? (
+        <span className="text-sp-ink">@{credit.handle}</span>
+      ) : hold ? (
         <Link href={href} className={cls}>
           @{credit.handle}
         </Link>
