@@ -360,7 +360,20 @@ function Composer({
   }, [canSend, peerId, text, gif, onSent]);
 
   return (
-    <div className="sticky bottom-0 mt-4 bg-gradient-to-t from-[#0A1B24] via-[#0A1B24] to-transparent pb-1 pt-3">
+    /*
+      NO GROUND OF ITS OWN.
+
+      This used to fade to #0A1B24 — a flat navy that exists nowhere else in
+      the product. The page behind it is a gradient, so a single colour is
+      wrong at every scroll position except one, and what it drew was a dark
+      band with a visible edge sitting under the bar.
+
+      A sticky bar does not need to repaint the floor; it needs the floor not
+      to read through it. So the wrapper carries no background at all and the
+      bar itself blurs what passes behind, which is what the top bar already
+      does at the other end of the screen.
+    */
+    <div className="sticky bottom-0 mt-4 pb-1 pt-3">
       {refused ? (
         <p className="mb-2 px-1 text-[12px] leading-[17px] text-white/75">
           That did not go through. The GIF may have been refused — try it without one.
@@ -383,14 +396,23 @@ function Composer({
         </div>
       ) : null}
 
-      <div className="flex items-end gap-2 rounded-[20px] border border-white/[0.12] bg-white/10 px-2 py-1.5">
+      <div className="flex items-end gap-2 rounded-[20px] border border-white/[0.12] bg-white/10 px-2 py-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.28)] backdrop-blur-xl">
+        {/* It says GIF.
+
+            It was a smiley, which on every keyboard anyone has used opens
+            emoji — so the one control on this bar that is not typing looked
+            like the one thing this bar cannot do, and the GIFs read as
+            missing. The word is three characters and it is unambiguous. */}
         <button
           type="button"
           onClick={() => setPicking(true)}
           aria-label="Add a GIF"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white/75 transition-colors hover:bg-white/10 hover:text-white"
+          title="Add a GIF"
+          className={`flex h-9 shrink-0 items-center justify-center rounded-full px-2.5 text-[11.5px] font-extrabold tracking-[0.3px] transition-colors ${
+            gif ? "bg-amber text-[#0F0F1A]" : "text-white/75 hover:bg-white/10 hover:text-white"
+          }`}
         >
-          <Ion name="happy-outline" size={20} />
+          GIF
         </button>
         <textarea
           id="chat-composer"
