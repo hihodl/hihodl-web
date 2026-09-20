@@ -52,6 +52,13 @@ import { Ion } from "@/components/app/ion";
 const PEEK = 16;
 const GAP = 6;
 
+/**
+ * A scrollbar inside a card is a line down the card, and on a phone it lands
+ * on top of the content. The track hides its own; so does everything that
+ * scrolls in here, for the same reason.
+ */
+const NO_SCROLLBAR = "[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
+
 /** How long after the last scroll event a landing counts as settled. */
 const SETTLE_MS = 110;
 
@@ -146,7 +153,7 @@ export function StepPager({
         onScroll={onScroll}
         role="group"
         aria-label="The steps of this listing"
-        className="flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className={`flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain ${NO_SCROLLBAR}`}
         // The track carries the peek as padding, so the first and last cards
         // sit the same distance in as every other one, and the snap lands on
         // that same inset rather than on the track's own edge.
@@ -156,7 +163,19 @@ export function StepPager({
           <div
             key={i}
             className="h-full shrink-0 snap-start"
-            style={{ width: `calc(100% - ${PEEK * 2}px)`, scrollMarginLeft: PEEK }}
+            // 100% of the track's CONTENT box, which the padding above has
+            // already made `clientWidth - PEEK * 2` wide — so the card is
+            // exactly one PEEK in from each edge and the neighbour shows
+            // `PEEK - GAP` of itself, as designed.
+            //
+            // This said `calc(100% - PEEK * 2)`, which takes the peek off
+            // TWICE: a percentage on a flex item resolves against the content
+            // box, not the border box. The card came out 2 × PEEK too narrow,
+            // the strip of the next card was four times what it should be, and
+            // worse, `interval` below is computed for the correct width — so
+            // every card compounded the error and the pager started landing on
+            // the wrong step further right.
+            style={{ width: "100%", scrollMarginLeft: PEEK }}
           >
             {card}
           </div>
@@ -218,7 +237,9 @@ export function StepCard({
   children?: ReactNode;
 }) {
   return (
-    <section className="flex h-full min-w-0 flex-col gap-3.5 overflow-y-auto overscroll-contain rounded-[20px] border border-white/10 bg-white/[0.045] p-4">
+    <section
+      className={`flex h-full min-w-0 flex-col gap-3.5 overflow-y-auto overscroll-contain rounded-[20px] border border-white/10 bg-white/[0.045] p-4 ${NO_SCROLLBAR}`}
+    >
       <div className="flex flex-col gap-1">
         <h2 className="text-[17px] font-extrabold tracking-[-0.3px] text-white">{title}</h2>
         {help ? <p className="text-[13px] leading-[18px] text-white/[0.62]">{help}</p> : null}
