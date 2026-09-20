@@ -54,7 +54,8 @@ import { addToSeries } from "@/lib/creator/listings";
 import { describeSeriesError, seriesRefusalError } from "@/lib/creator/problems";
 
 import { EventPicker } from "../listing/EventPicker";
-import { Field, Problems, Text } from "../listing/parts";
+import { Problems } from "../listing/parts";
+import { DayTimeField, dayPlus, today } from "../listing/WhenField";
 
 const HOUR = 3_600_000;
 const DAY = 86_400_000;
@@ -267,21 +268,15 @@ export function PickEvents({
               {refusals[row.event.id] ? (
                 <p className="text-[14.5px] text-amber">{refusals[row.event.id]}</p>
               ) : null}
-              <Field
+              <DayTimeField
                 label="This one stops selling"
-                hint="The day the event starts, unless you say otherwise. Every date you set on the original — the countdown, the day you deliver by — moves with it."
+                hint="The day the event starts, unless you say otherwise. Every other date moves with it."
                 problems={problemsByEvent.get(row.event.id) ?? []}
-                htmlFor={`series-closes-${row.event.id}`}
-              >
-                <Text
-                  id={`series-closes-${row.event.id}`}
-                  type="datetime-local"
-                  value={row.closesAt}
-                  onChange={(closesAt) =>
-                    setRows((list) => list.map((r) => (r.event.id === row.event.id ? { ...r, closesAt } : r)))
-                  }
-                />
-              </Field>
+                value={row.closesAt}
+                min={dayPlus(today(), 1)}
+                max={dayPlus(today(), LIMITS.MAX_CAMPAIGN_DAYS)}
+                onChange={(closesAt) => setRows((list) => list.map((r) => (r.event.id === row.event.id ? { ...r, closesAt } : r)))}
+              />
             </li>
           ))}
         </ul>
