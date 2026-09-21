@@ -226,6 +226,17 @@ export function relayerQuote(body: { tokenId: string; amount: string; to: string
   return send<RelayerQuote>("relayer/solana/quote", { json: { ...body, sponsored: true } });
 }
 
-export function relayerSubmit(body: { serializedTx: string; idempotencyKey: string; withdrawalId: string }): Promise<{ signature: string; status: string }> {
+/**
+ * `withdrawalId` is optional because it is only one of the three ways past the
+ * gate. A withdrawal names itself here; a transaction the SERVER built — a
+ * bridge deposit, a spot bought on Spaces — is let through by the passkey
+ * approval over its own bytes instead, which was taken before this call and
+ * needs nothing in the body. See `txApprovalChallenge` above.
+ */
+export function relayerSubmit(body: {
+  serializedTx: string;
+  idempotencyKey: string;
+  withdrawalId?: string;
+}): Promise<{ signature: string; status: string }> {
   return send("relayer/solana/submit", { json: body });
 }

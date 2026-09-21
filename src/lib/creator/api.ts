@@ -71,7 +71,7 @@ export type Method = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
  */
 export async function call<T>(
   path: string,
-  init: { method?: Method; json?: unknown; file?: Blob } = {},
+  init: { method?: Method; json?: unknown; file?: Blob; headers?: Record<string, string> } = {},
 ): Promise<T> {
   const token = await accessToken();
   if (!token) throw new CreatorApiError("UNAUTHORIZED", 401);
@@ -86,6 +86,9 @@ export async function call<T>(
         accept: "application/json",
         authorization: `Bearer ${token}`,
         ...(file ? { "content-type": file.type } : hasBody ? { "content-type": "application/json" } : {}),
+        // `Idempotency-Key` on the routes that create something a second call
+        // must not create twice. The Worker in front of the API allows it.
+        ...(init.headers ?? {}),
       },
       body: file ?? (hasBody ? JSON.stringify(init.json) : undefined),
       cache: "no-store",

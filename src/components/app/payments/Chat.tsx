@@ -59,6 +59,7 @@ import {
   type Gif,
   type Note,
 } from "@/lib/app/chat";
+import type { SpotBought } from "@/lib/app/sponsor";
 import {
   cancelRequest,
   openRequestsWith,
@@ -91,7 +92,8 @@ import { Ion } from "../ion";
 type Happened =
   | { kind: "pay"; key: string; ts: number; row: Transfer }
   | { kind: "msg"; key: string; ts: number; note: Note }
-  | { kind: "req"; key: string; ts: number; request: PaymentRequest };
+  | { kind: "req"; key: string; ts: number; request: PaymentRequest }
+  | { kind: "spot"; key: string; ts: number; spot: SpotBought };
 type Row = Happened | { kind: "day"; key: string; label: string };
 
 export function Conversation({
@@ -101,6 +103,7 @@ export function Conversation({
   mode,
   onOpenTx,
   onPayRequest,
+  spots = [],
 }: {
   peerId: string | null;
   peerName: string;
@@ -109,6 +112,8 @@ export function Conversation({
   onOpenTx: (id: string) => void;
   /** Pay one of their requests: the thread hands it up, the screen opens Send. */
   onPayRequest: (request: PaymentRequest) => void;
+  /** Spots bought from this creator, derived by the screen above. */
+  spots?: readonly SpotBought[];
 }) {
   const notes = useThreadNotes(peerId);
   const state = useChatState(peerId);
@@ -128,12 +133,15 @@ export function Conversation({
       // A request is a third thing that happened between two people, so it
       // takes its place in the same run rather than sitting in a panel above.
       ...open.map((r) => ({ kind: "req" as const, key: `r:${r.id}`, ts: Date.parse(r.createdAt), request: r })),
+      // A spot bought from this creator. Derived, never written: see
+      // `useSpotsBoughtFrom`. A fact does not get an edit button.
+      ...spots.map((s) => ({ kind: "spot" as const, key: `s:${s.orderId}`, ts: s.ts, spot: s })),
     ]
       .filter((i) => Number.isFinite(i.ts))
       .sort((a, b) => a.ts - b.ts);
 
     return withDays(items);
-  }, [payments, messages, open]);
+  }, [payments, messages, open, spots]);
 
   const waiting = state.data?.status === "pending" && state.data.requestedByMe;
 
@@ -153,6 +161,8 @@ export function Conversation({
             </p>
           ) : r.kind === "pay" ? (
             <PaymentBubble key={r.key} row={r.row} mode={mode} onOpen={() => onOpenTx(r.row.id)} />
+          ) : r.kind === "spot" ? (
+            <SpotBubble key={r.key} spot={r.spot} peerName={peerName} />
           ) : r.kind === "req" ? (
             <RequestBubble
               key={r.key}
@@ -306,6 +316,48 @@ export function WordsOnly({ peerId, peerName, intro }: { peerId: string; peerNam
         }}
       />
     </>
+  );
+}
+
+/**
+ * A spot bought from this creator, as a bubble.
+ *
+ * ── WHY IT IS ON THE RIGHT AND WHY IT IS QUIET ──
+ *
+ * It is something the VIEWER did, so it sits on the viewer's side like their
+ * own messages. And it is a receipt, not an announcement: no amber fill, no
+ * icon shouting. The conversation is what is being read; this is the moment
+ * the conversation turned into a deal, marked where it happened.
+ *
+ * `outbid` is here too, and says so. Somebody doubled the price and took the
+ * spot — the brand was repaid in full, and a thread that quietly dropped the
+ * row would leave a creator and a brand reading two different histories.
+ */
+function SpotBubble({ spot, peerName }: { spot: SpotBought; peerName: string }) {
+  const outbid = spot.status === "outbid";
+  const amount = Number(spot.amountUsdc);
+  return (
+    <div className="flex justify-end">
+      <div className="max-w-[78%] rounded-[16px] border border-white/[0.12] bg-white/[0.07] px-3.5 py-2.5">
+        <span className="flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-[0.5px] text-white/60">
+          <Ion name="megaphone-outline" size={13} />
+          {outbid ? "Spot taken over" : "Spot booked"}
+        </span>
+        <p className="mt-1 text-[13.5px] leading-[19px] text-white/85">
+          {outbid
+            ? `Somebody doubled the price on this one. You were repaid in full.`
+            : `You booked a spot with ${peerName}${Number.isFinite(amount) ? ` for $${amount.toFixed(2)}` : ""}.`}
+        </p>
+        <span className="mt-1.5 flex items-center justify-end gap-2 text-[10.5px] text-white/55">
+          {spot.explorerUrl ? (
+            <a href={spot.explorerUrl} target="_blank" rel="noopener noreferrer" className="hover:text-white">
+              Receipt
+            </a>
+          ) : null}
+          <span>{shortTime(new Date(spot.ts).toISOString())}</span>
+        </span>
+      </div>
+    </div>
   );
 }
 

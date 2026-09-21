@@ -40,6 +40,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useConversations } from "@/lib/app/chat";
 import type { DisplayMode } from "@/lib/app/display-mode";
 import { askFor, requestAmount, resolveHandle, usePaymentRequests, type PaymentRequest } from "@/lib/app/payment-requests";
+import { storefrontOf, useSpotsBoughtFrom } from "@/lib/app/sponsor";
 import { useTransfers } from "@/lib/app/money";
 import {
   groupTransfersIntoThreads,
@@ -50,10 +51,11 @@ import {
   type InboxRow,
 } from "@/lib/app/payments";
 
+import { SponsorFlow } from "../sponsor/SponsorFlow";
 import { useProductHref } from "../base";
 import { BackHeader, Column } from "../hold";
 import { Ion, type IonName } from "../ion";
-import { useShellPrefs } from "../Shell";
+import { useShell, useShellPrefs } from "../Shell";
 import { Skeleton } from "../ui";
 import { cardClass } from "../wallet/app-kit";
 import { Conversation, SafetyMenu } from "./Chat";
@@ -452,7 +454,33 @@ function ThreadView({
 }) {
   const productHref = useProductHref();
   const requests = usePaymentRequests();
+  const { session } = useShell();
   const [asking, setAsking] = useState(false);
+  const spots = useSpotsBoughtFrom(row?.peerId ?? null);
+  /*
+   * THE THIRD DOOR, AND ONLY THE THIRD.
+   *
+   * A brand's home is the board (Spaces › Find a spot), and the offer card is
+   * where a price is already on screen. This is a shortcut for the one case
+   * neither covers: you are mid-conversation with somebody and you decide now.
+   *
+   * It appears only when they actually sell something — `storefrontOf` answers
+   * null otherwise — so it is never a button that opens an empty page.
+   */
+  const [shop, setShop] = useState<{ handle: string; live: number } | null>(null);
+  const [booking, setBooking] = useState(false);
+  const peerId = row?.peerId ?? null;
+  useEffect(() => {
+    if (!peerId) return;
+    let alive = true;
+    storefrontOf(peerId).then(
+      (r) => alive && setShop(r.storefront),
+      () => undefined,
+    );
+    return () => {
+      alive = false;
+    };
+  }, [peerId]);
   if (!row) {
     return (
       <>
@@ -503,6 +531,7 @@ function ThreadView({
         mode={mode}
         onOpenTx={onOpenTx}
         onPayRequest={payTheirRequest}
+        spots={spots}
       />
 
       {/* The app's own row, in the app's own order: Request on the left in the
@@ -528,10 +557,30 @@ function ThreadView({
           <Ion name="arrow-up" size={14} />
           Send
         </button>
+        {shop ? (
+          <button
+            type="button"
+            onClick={() => setBooking(true)}
+            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-[10px] bg-white/10 px-3.5 text-[12.5px] font-strong text-white transition-colors hover:bg-white/[0.16]"
+          >
+            <Ion name="megaphone-outline" size={14} />
+            Book a spot
+          </button>
+        ) : null}
         <p className="min-w-0 flex-1 text-[12px] leading-[17px] text-white/60">
           Approved with your passkey, or on your phone if you have linked one.
         </p>
       </div>
+
+      {booking && shop ? (
+        <SponsorFlow
+          uid={session.user.id}
+          handle={shop.handle}
+          creatorName={row.name}
+          onClose={() => setBooking(false)}
+          onBought={() => setBooking(false)}
+        />
+      ) : null}
 
       {asking && row.peerId ? (
         <AskSheet
