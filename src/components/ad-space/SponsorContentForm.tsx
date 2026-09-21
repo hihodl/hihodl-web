@@ -8,8 +8,16 @@ import {
   putContent,
   spaceForCheckout,
   uploadMedia,
-  type ContentBody,
 } from "@/lib/ad-space/checkout-client";
+import {
+  KIND_HINT,
+  NAME_MAX,
+  TEXT_MAX,
+  buildContentBody,
+  describeImageProblem,
+  needsImage as kindNeedsImage,
+  validateContent,
+} from "@/lib/ad-space/content-form";
 import { CONTENT_KIND_LABEL } from "@/lib/ad-space/format";
 import { ImageProblem, prepareImage } from "@/lib/ad-space/image";
 import type { ContentKind, Order, Position, Sponsor } from "@/lib/ad-space/types";
@@ -34,18 +42,11 @@ import { btnPrimary, input } from "./ui";
 
 type Review = NonNullable<Position["content"]>;
 
-const KIND_HINT: Record<ContentKind, string> = {
-  logo: "Your logo, printed on the spot. PNG with a transparent background works best.",
-  qr: "A QR code that opens your link. We draw the code; you give us the link.",
-  text: "A short line printed on the spot, like a promo code.",
-  photo: "A photo printed on the spot.",
-};
-
-// TODO(contract): no maximum lengths are published for sponsorName or
-// contentText. These are generous guesses; the server's validation is the
-// real limit.
-const NAME_MAX = 60;
-const TEXT_MAX = 140;
+/*
+ * The rules, the body shape and the wording all live in
+ * `@/lib/ad-space/content-form`, because the brand console asks for exactly
+ * the same thing on a different ground. Only the markup below is this page's.
+ */
 
 export function SponsorContentForm({
   order,
@@ -92,7 +93,7 @@ export function SponsorContentForm({
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [loadReview]);
 
-  const needsImage = kind === "logo" || kind === "photo";
+  const needsImage = kindNeedsImage(kind);
 
   useEffect(() => {
     if (!file) {
@@ -104,26 +105,12 @@ export function SponsorContentForm({
     return () => URL.revokeObjectURL(u);
   }, [file]);
 
-  function validate(): string | null {
-    if (!name.trim()) return "Add the name the creator should credit.";
-    if (url.trim() && !/^https?:\/\/\S+\.\S+/i.test(url.trim())) {
-      return "The link should start with https:// and be a full web address.";
-    }
-    if (xHandle.trim() && !/^@?[A-Za-z0-9_]{1,15}$/.test(xHandle.trim())) {
-      return "An X handle is up to 15 letters, numbers or underscores.";
-    }
-    if (needsImage && !file) return `Choose the ${kind === "logo" ? "logo" : "photo"} to print.`;
-    if (kind === "qr" && !/^https?:\/\/\S+\.\S+/i.test(text.trim())) {
-      return "Give the QR code a full link that starts with https://.";
-    }
-    if (kind === "text" && !text.trim()) return "Write the line to print.";
-    return null;
-  }
+  const draft = { kind, name, url, xHandle, text, hasFile: file !== null };
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     setNotice(null);
-    const problem = validate();
+    const problem = validateContent(draft);
     if (problem) {
       setNotice(problem);
       return;
@@ -138,27 +125,13 @@ export function SponsorContentForm({
         // path is kept. The preview comes back through `loadReview`.
         imagePath = (await uploadMedia(order.id, checkoutKey, blob)).path;
       }
-      const body: ContentBody = {
-        sponsorName: name.trim(),
-        contentKind: kind,
-        ...(url.trim() ? { sponsorUrl: url.trim() } : {}),
-        ...(xHandle.trim() ? { xHandle: xHandle.trim().replace(/^@/, "") } : {}),
-        ...(kind === "qr" || kind === "text" ? { contentText: text.trim() } : {}),
-        ...(imagePath ? { imagePath } : {}),
-      };
-      const res = await putContent(order.id, checkoutKey, body);
+      const res = await putContent(order.id, checkoutKey, buildContentBody(draft, imagePath));
       setReview({ status: res.content?.status ?? "pending", rejectedReason: res.content?.rejectedReason ?? null });
       setImageRetried(false);
       void loadReview();
     } catch (err) {
       if (err instanceof ImageProblem) {
-        setNotice(
-          err.reason === "type"
-            ? "Use a PNG, JPEG or WebP image."
-            : err.reason === "too_big"
-              ? "That image is too large even after shrinking it. Try a smaller one."
-              : "We couldn't read that image. Try another file.",
-        );
+        setNotice(describeImageProblem(err.reason));
       } else if (err instanceof CheckoutError && err.status === 422) {
         // TODO(contract): content validation codes are not listed in the
         // contract. Until they are, a 422 here gets one honest sentence.

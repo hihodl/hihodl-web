@@ -9,25 +9,26 @@
  * localStorage, so "your spots" was a list that only existed on the device
  * that bought them. With an account it is a list that follows the account.
  *
- * WHAT THIS DOES NOT DO YET, AND SAYS SO
+ * AND WHAT HAPPENS AFTER PAYING
  *
- * Sending the creator your artwork — `PUT /ad-space/orders/:id/content` and
- * the image upload beside it — is the brand's next job after paying, and it
- * has no screen here yet. Rather than a button that goes nowhere, a paid spot
- * links to the listing's own public page, where the flow the anonymous sponsor
- * uses already works. A promise we cannot keep on this screen is worse than a
- * link to the one that can.
+ * Paying is not the last step: a spot is a promise to print something, and an
+ * unfilled one is an empty square somebody has already been charged for. That
+ * hand-over used to live only on the listing's own public page, which proves
+ * the spot is yours with a checkout key in one browser's localStorage — so a
+ * brand who paid on a laptop could not finish on a phone. Here the order is
+ * the proof, and `contentStatus` (which `GET /orders/mine` has always
+ * answered, and nothing ever read) says where it stands.
  */
 
 import { useEffect, useState } from "react";
 
-import type { Order } from "@/lib/ad-space/types";
-import { myOrders } from "@/lib/app/sponsor";
+import { myOrders, type MyOrder } from "@/lib/app/sponsor";
 
 import { Column } from "../hold";
 import { Ion } from "../ion";
 import { Skeleton } from "../ui";
 import { Card, Empty, SectionLabel, Tag } from "../spaces/kit";
+import { ArtworkSheet } from "./ArtworkSheet";
 
 const money = (usdc: string) => {
   const n = Number(usdc);
@@ -39,7 +40,7 @@ const money = (usdc: string) => {
  * the creator. `paid_duplicate` is the one that has to be said plainly: money
  * arrived that could not buy the spot, and somebody has to give it back.
  */
-function statusOf(o: Order): { label: string; tone: "good" | "caution" | "calm" } {
+function statusOf(o: MyOrder): { label: string; tone: "good" | "caution" | "calm" } {
   switch (o.status) {
     case "paid":
       return { label: "Yours", tone: "good" };
@@ -59,8 +60,9 @@ function statusOf(o: Order): { label: string; tone: "good" | "caution" | "calm" 
 }
 
 export function BoughtScreen() {
-  const [orders, setOrders] = useState<Order[] | null>(null);
+  const [orders, setOrders] = useState<MyOrder[] | null>(null);
   const [failed, setFailed] = useState(false);
+  const [sending, setSending] = useState<MyOrder | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -110,7 +112,10 @@ export function BoughtScreen() {
                     {o.chain}
                   </span>
                 </span>
-                <Tag label={st.label} tone={st.tone} />
+                <span className="flex shrink-0 flex-col items-end gap-1.5">
+                  <Tag label={st.label} tone={st.tone} />
+                  {contentTag(o) ? <Tag label={contentTag(o)!.label} tone={contentTag(o)!.tone} /> : null}
+                </span>
               </div>
 
               <div className="mt-2.5 flex items-center gap-3 border-t border-white/[0.08] pt-2.5">
@@ -125,24 +130,60 @@ export function BoughtScreen() {
                     Receipt
                   </a>
                 ) : null}
-                {/* The artwork flow lives on the listing's own page for now —
-                    see the note at the top of this file. */}
-                {o.status === "paid" && o.share?.url ? (
-                  <a
-                    href={o.share.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-[12.5px] font-strong text-white/70 transition-colors hover:text-white"
+                {o.status === "paid" ? (
+                  <button
+                    type="button"
+                    onClick={() => setSending(o)}
+                    className="inline-flex items-center gap-1.5 text-[12.5px] font-strong text-amber transition-colors hover:text-amber-glow"
                   >
                     <Ion name="image-outline" size={14} />
-                    Send your artwork
-                  </a>
+                    {artworkCta(o.contentStatus)}
+                  </button>
                 ) : null}
               </div>
             </Card>
           );
         })}
       </div>
+
+      {sending ? (
+        <ArtworkSheet
+          order={sending}
+          onClose={() => setSending(null)}
+          onSent={(status) =>
+            setOrders((prev) => prev?.map((o) => (o.id === sending.id ? { ...o, contentStatus: status } : o)) ?? prev)
+          }
+        />
+      ) : null}
     </Column>
   );
+}
+
+/**
+ * What the button says, which is the shortest honest description of the next
+ * thing to do. A spot with nothing sent yet is the one that needs a nudge; one
+ * already approved still opens, because a brand is allowed to change its mind
+ * and the creator approves the new version too.
+ */
+function artworkCta(status: MyOrder["contentStatus"]): string {
+  if (status === "rejected") return "Send a new version";
+  if (status === "pending") return "Waiting for approval";
+  if (status === "approved") return "Change your artwork";
+  return "Send your artwork";
+}
+
+/**
+ * The content's state, beside the order's own. Deliberately absent on anything
+ * unpaid: `contentStatus` is null there, and a second tag saying nothing has
+ * been sent for a spot nobody holds is noise.
+ *
+ * `rejected` reads as "caution", never as a failure. The creator asking for a
+ * different logo is an ordinary step, not something going wrong.
+ */
+function contentTag(o: MyOrder): { label: string; tone: "good" | "caution" | "calm" } | null {
+  if (o.status !== "paid") return null;
+  if (o.contentStatus === "approved") return { label: "On the board", tone: "good" };
+  if (o.contentStatus === "pending") return { label: "Artwork sent", tone: "calm" };
+  if (o.contentStatus === "rejected") return { label: "Change asked for", tone: "caution" };
+  return { label: "No artwork yet", tone: "caution" };
 }

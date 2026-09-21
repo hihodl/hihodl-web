@@ -169,7 +169,12 @@ export function BuyFromListing({
  * scanning a board — and a navigation would end the thing you were doing to
  * start this one, then leave you nowhere to go back to.
  */
-function Sheet({
+/**
+ * Exported because the artwork hand-over is the step AFTER this flow ends and
+ * has to open on the same ground, from a different screen. A second sheet that
+ * merely looked like this one would drift the first time either was touched.
+ */
+export function Sheet({
   title,
   crumb,
   onBack,

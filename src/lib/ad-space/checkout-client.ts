@@ -22,11 +22,11 @@ import type {
   Chain,
   ConfirmOutcome,
   ContactKind,
-  ContentKind,
   EvmPayload,
   Order,
   Space,
 } from "./types";
+import type { ContentBody } from "./content-form";
 
 /* ── The checkout key ─────────────────────────────────────────────── */
 
@@ -250,14 +250,12 @@ export function uploadMedia(orderId: string, key: string, image: Blob): Promise<
   return call(`/public/orders/${encodeURIComponent(orderId)}/media`, key, { raw: image });
 }
 
-export interface ContentBody {
-  sponsorName: string;
-  sponsorUrl?: string;
-  xHandle?: string;
-  contentKind: ContentKind;
-  contentText?: string;
-  imagePath?: string;
-}
+/**
+ * Declared with the rules that build it, so the shape and the validation that
+ * fills it can never drift apart. Re-exported here because this is the module
+ * everything on the public page already imports from.
+ */
+export type { ContentBody };
 
 export function putContent(
   orderId: string,

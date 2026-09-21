@@ -60,6 +60,7 @@
 
 import { useEffect, useState } from "react";
 
+import type { ContentBody } from "@/lib/ad-space/content-form";
 import type { Order } from "@/lib/ad-space/types";
 import { call } from "@/lib/creator/api";
 import { authorizeTxPasskey, relayerSubmit, txApprovalChallenge } from "@/lib/link/api";
@@ -174,9 +175,59 @@ export function boardListings(opts: { kind?: "placement" | "service"; limit?: nu
   return call(`ad-space/board?${q.toString()}`);
 }
 
+/**
+ * One of this account's orders, with the three things `listMyOrders` joins on
+ * that a bare `Order` does not carry.
+ *
+ * `contentStatus` is the whole reason the brand console can now finish the
+ * job: the server has always answered it and nothing ever read it, so "have I
+ * sent my artwork, and did they take it?" was a question only the public
+ * listing page could answer. It is null on anything not yet paid, because
+ * there is nothing to hand over for a spot you do not hold.
+ */
+export interface MyOrder extends Order {
+  spaceTitle: string;
+  serviceName: string | null;
+  serviceSummary: string | null;
+  zoneKey: string;
+  contentStatus: "pending" | "approved" | "rejected" | null;
+}
+
 /** The spots this account has bought, newest first. */
-export function myOrders(): Promise<{ orders: Order[] }> {
+export function myOrders(): Promise<{ orders: MyOrder[] }> {
   return call("ad-space/orders/mine");
+}
+
+/* ── What goes ON the spot, once it is yours ──────────────────────── */
+
+/**
+ * Upload the image for an order, as the account that paid for it.
+ *
+ * The anonymous sponsor does this with a checkout key against
+ * `/public/orders/:id/media`; this is the same store behind the same rules
+ * (PNG, JPEG or WebP, sniffed by magic bytes, metadata stripped, private
+ * until the creator approves it) reached with a session instead.
+ *
+ * The `url` that comes back is a SIGNED link that dies within the hour, so it
+ * is good for showing the brand what it just sent and worth nothing saved.
+ * Only `path` goes into the content body.
+ */
+export function uploadOrderImage(orderId: string, image: Blob): Promise<{ path: string; url: string }> {
+  return call(`ad-space/orders/${encodeURIComponent(orderId)}/media`, { file: image });
+}
+
+/**
+ * Hand the artwork over for the creator to approve.
+ *
+ * Idempotent in the way that matters: sending again replaces what is pending,
+ * which is what a brand does after a rejection, so there is no separate
+ * "amend" call and no way to end up with two submissions racing.
+ */
+export function sendArtwork(
+  orderId: string,
+  body: ContentBody,
+): Promise<{ content: { status: "pending" | "approved" | "rejected"; rejectedReason?: string | null } }> {
+  return call(`ad-space/orders/${encodeURIComponent(orderId)}/content`, { method: "PUT", json: body });
 }
 
 /** Where to buy from somebody, or null when they sell nothing. */
