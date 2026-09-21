@@ -36,6 +36,7 @@ import {
   applyToBrief,
   briefUrl,
   createBrief,
+  declineApplicant,
   FALLBACK_LABEL,
   paysText,
   pickApplicant,
@@ -449,6 +450,19 @@ function Queue({ brief }: { brief: BriefView }) {
     }
   }
 
+  async function decline(a: ApplicantView) {
+    setBusy(a.id);
+    setError(null);
+    try {
+      await declineApplicant(a.id);
+      await refresh("brief", "brief-applications");
+    } catch (e) {
+      setError(refusalText(e));
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function takeDown() {
     setBusy("brief");
     setError(null);
@@ -508,9 +522,19 @@ function Queue({ brief }: { brief: BriefView }) {
                 <Applicant
                   a={a}
                   action={
-                    <button type="button" className={btnAmberPill} disabled={!!busy} onClick={() => void pick(a)}>
-                      {busy === a.id ? "Picking…" : "Pick"}
-                    </button>
+                    <span className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        className="text-[12.5px] font-strong text-white/[0.82] hover:text-white disabled:opacity-45"
+                        disabled={!!busy}
+                        onClick={() => void decline(a)}
+                      >
+                        Not this time
+                      </button>
+                      <button type="button" className={btnAmberPill} disabled={!!busy} onClick={() => void pick(a)}>
+                        {busy === a.id ? "Picking…" : "Pick"}
+                      </button>
+                    </span>
                   }
                 />
               </li>

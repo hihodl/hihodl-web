@@ -155,6 +155,10 @@ export const applyToBrief = (briefId: string, message: string | null, link: stri
 export const withdrawApplication = (applicationId: string) =>
   call<{ application: ApplicationView }>(`ad-space/brief-applications/${applicationId}/withdraw`, { method: "POST" });
 
+/** The brand says no, so nobody is left waiting on an answer that is not coming. */
+export const declineApplicant = (applicationId: string) =>
+  call<{ application: ApplicationView }>(`ad-space/brief-applications/${applicationId}/decline`, { method: "POST" });
+
 /**
  * The brand picks. What comes back is the creator's DRAFT space, which only
  * they can publish — and nothing at all when the brief pays in kind, because
