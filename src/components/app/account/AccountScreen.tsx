@@ -33,14 +33,15 @@ import { useProductHref } from "../base";
 import { Column, HoldCard, MenuRow, SectionTitle } from "../hold";
 import { useShell } from "../Shell";
 import { AccountDetails } from "./AccountDetails";
+import { MessagesSettings } from "./Messages";
 import { OtherWallet, PayoutScreen, usePayoutSummary } from "./Payout";
 import { PhoneScreen } from "./PhoneScreen";
 import { ProfileEdit, ProfileHero, UsernameScreen } from "./Profile";
 import { XScreen } from "./XScreen";
 
-export type AccountView = "home" | "profile" | "username" | "account" | "x" | "payout" | "other-wallet" | "phone";
+export type AccountView = "home" | "profile" | "username" | "account" | "x" | "payout" | "other-wallet" | "phone" | "messages";
 
-const VIEWS: readonly AccountView[] = ["profile", "username", "account", "x", "payout", "other-wallet", "phone"];
+const VIEWS: readonly AccountView[] = ["profile", "username", "account", "x", "payout", "other-wallet", "phone", "messages"];
 
 export function useAccountView(): [AccountView, (v: AccountView) => void, () => void] {
   const params = useSearchParams();
@@ -67,6 +68,7 @@ export function AccountScreen() {
   if (view === "x") return <XScreen onBack={back} />;
   if (view === "payout") return <PayoutScreen onBack={back} onOther={() => open("other-wallet")} walletHref={productHref("/wallet")} />;
   if (view === "other-wallet") return <OtherWallet onBack={back} />;
+  if (view === "messages") return <MessagesSettings onBack={back} />;
   if (view === "phone") {
     const linkHref = `${productHref("/welcome")}?next=${encodeURIComponent(`${productHref("/account")}?view=phone`)}`;
     // Its row is in Settings › Security, as in the app, so Back goes there.
@@ -115,6 +117,14 @@ function AccountHome({ open }: { open: (v: AccountView) => void }) {
           chevron={payout.value === null}
           onClick={() => open("payout")}
         />
+      </HoldCard>
+
+      {/* `payment-notes/settings` has answered this the whole time and nothing
+          asked it, so the only way to change it was the app. It matters more
+          now: Spaces opens a second door into the same inbox. */}
+      <SectionTitle>Messages</SectionTitle>
+      <HoldCard>
+        <MenuRow icon="chatbubble-ellipses-outline" label="Who can message you" chevron onClick={() => open("messages")} />
       </HoldCard>
     </Column>
   );

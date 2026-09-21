@@ -1,0 +1,188 @@
+"use client";
+
+/**
+ * Who can put something in your inbox.
+ *
+ * `GET/PUT /payment-notes/settings` has answered this the whole time and no
+ * screen asked it, so the setting existed and could only be changed from the
+ * app. It matters more now than it did: Spaces opens a second door into the
+ * same inbox, and a creator with a listing on a busy event is exactly the
+ * person a stranger has a reason to write to.
+ *
+ * THE THREE ANSWERS ARE THE SERVER'S, AND SO IS WHAT THEY MEAN
+ *
+ *   everyone   a first message from a stranger arrives as a request, which
+ *              you accept or decline. Not "anyone can reach you" — the gate
+ *              is still there; this is who may knock.
+ *   paid       only people you have already paid or been paid by. A request
+ *              from anybody else is refused, silently, on their side.
+ *   nobody     no new conversations at all. The ones you already have carry
+ *              on: this closes the door, it does not empty the room.
+ *
+ * A DECLINE IS SILENT, AND THAT IS WHY THIS PAGE SAYS SO
+ *
+ * `POST /messages` answers the same whether the message was delivered,
+ * declined, blocked or refused by this setting — on purpose, so nobody can
+ * probe who has shut them out. Which means the only place this setting is ever
+ * explained is here, on the screen of the person who set it.
+ */
+
+import { useEffect, useState } from "react";
+
+import { getChatSettings, listBlocked, setChatSettings, unblockUser, type ChatRequestsFrom } from "@/lib/app/chat";
+
+import { BackHeader, Column, HoldCard, SectionTitle } from "../hold";
+import { Ion } from "../ion";
+
+const CHOICES: { key: ChatRequestsFrom; label: string; body: string }[] = [
+  { key: "everyone", label: "Everyone", body: "A first message from somebody new arrives as a request you can accept or decline." },
+  { key: "paid", label: "People you have paid", body: "Only people you have sent money to or been paid by can start a conversation." },
+  { key: "nobody", label: "Nobody new", body: "No new conversations. The ones you already have carry on as they are." },
+];
+
+export function MessagesSettings({ onBack }: { onBack: () => void }) {
+  const [value, setValue] = useState<ChatRequestsFrom | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [saving, setSaving] = useState<ChatRequestsFrom | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    getChatSettings().then(
+      (s) => alive && setValue(s.chatRequestsFrom),
+      () => alive && setFailed(true),
+    );
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  /*
+   * The choice moves as soon as it is tapped and goes back if the save fails.
+   * A radio that waits for a round trip before it fills reads as broken, and
+   * a radio that stays put after a failure lies about what the server holds.
+   */
+  const choose = async (next: ChatRequestsFrom) => {
+    if (next === value || saving) return;
+    const before = value;
+    setValue(next);
+    setSaving(next);
+    setFailed(false);
+    try {
+      await setChatSettings(next);
+    } catch {
+      setValue(before);
+      setFailed(true);
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  return (
+    <Column>
+      <BackHeader title="Who can message you" onBack={onBack} />
+
+      <HoldCard>
+        {CHOICES.map((c) => {
+          const on = value === c.key;
+          return (
+            <button
+              key={c.key}
+              type="button"
+              disabled={value === null}
+              onClick={() => void choose(c.key)}
+              aria-pressed={on}
+              className="flex w-full items-start gap-3 px-3.5 py-3.5 text-left transition-colors hover:bg-white/[0.05] disabled:opacity-60"
+            >
+              <span
+                className={`mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border ${
+                  on ? "border-amber bg-[rgba(255,183,3,0.18)]" : "border-white/25"
+                }`}
+              >
+                {on ? <Ion name="checkmark" size={12} color="#FFB703" /> : null}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[14.5px] font-strong text-white">{c.label}</span>
+                <span className="mt-0.5 block text-[12.5px] leading-[17px] text-white/[0.62]">{c.body}</span>
+              </span>
+            </button>
+          );
+        })}
+      </HoldCard>
+
+      {failed ? (
+        <p className="mt-3 px-1 text-[12.5px] leading-[17px] text-white/70">
+          That did not save. Try it again in a moment.
+        </p>
+      ) : null}
+
+      <p className="mt-3 px-1 text-[12.5px] leading-[17px] text-white/[0.55]">
+        Whoever is turned away is never told: a message that does not arrive looks to the sender exactly like one that
+        did. Nobody can work out who has shut them out.
+      </p>
+
+      <Blocked />
+    </Column>
+  );
+}
+
+/**
+ * Who you have blocked, and the way back.
+ *
+ * This list is the reason the block confirmation can promise an undo. A
+ * product that lets somebody be shut out with one tap and gives no screen
+ * where that can be seen or reversed has made a decision permanent that was
+ * never meant to be.
+ *
+ * It draws nothing when the list is empty: a "Blocked (0)" heading on an
+ * account that has never blocked anybody is a suggestion.
+ */
+function Blocked() {
+  const [rows, setRows] = useState<{ userId: string; aliasHandle: string | null; displayName: string | null }[] | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    listBlocked().then(
+      (r) => alive && setRows(r.blocked ?? []),
+      () => alive && setRows([]),
+    );
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const undo = async (userId: string) => {
+    setBusy(userId);
+    try {
+      await unblockUser(userId);
+      setRows((prev) => (prev ?? []).filter((b) => b.userId !== userId));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  if (!rows || rows.length === 0) return null;
+
+  return (
+    <>
+      <SectionTitle>Blocked</SectionTitle>
+      <HoldCard>
+        {rows.map((b) => (
+          <div key={b.userId} className="flex items-center gap-3 px-3.5 py-3">
+            <span className="min-w-0 flex-1 truncate text-[14.5px] font-strong text-white">
+              {b.displayName?.trim() || (b.aliasHandle ? `@${b.aliasHandle}` : "Someone on HOLD")}
+            </span>
+            <button
+              type="button"
+              disabled={busy === b.userId}
+              onClick={() => void undo(b.userId)}
+              className="shrink-0 rounded-[10px] bg-white/10 px-3 py-1.5 text-[12.5px] font-strong text-white/85 transition-colors hover:bg-white/[0.16] disabled:opacity-50"
+            >
+              {busy === b.userId ? "…" : "Unblock"}
+            </button>
+          </div>
+        ))}
+      </HoldCard>
+    </>
+  );
+}

@@ -37,6 +37,7 @@ import { describeRunError } from "@/lib/creator/problems";
 import { ctaCommit, ctaPrimary, ctaSecondary, Notice } from "../../app/hold";
 import { Ion, type IonName } from "../../app/ion";
 import { Card, Chip, ChipRow, Divider, Empty, Field, inputCls, P, SectionLabel, Tag } from "../../app/spaces/kit";
+import { OfferChat } from "./OfferChat";
 
 const OPEN: readonly string[] = ["pending", "countered", "accepted"];
 
@@ -320,6 +321,14 @@ function OfferThread({ offer: o, space, rank, onChanged }: { offer: OfferView; s
           </p>
         )
       ) : null}
+      {/* Words, beside the numbers.
+
+          The rounds above are the negotiation and stay the record; this is
+          the half a price cannot carry — the shot, the date, the product. It
+          opens on demand: the Offers screen draws a dozen of these and a
+          lookup per card on mount would be twelve calls nobody asked for. */}
+      <OfferChat offerId={o.id} sponsorName={o.sponsor.name} />
+
       {o.status === "declined" && o.declineReason ? (
         <p className={meta}>Declined: {DECLINE_LABEL[o.declineReason as DeclineReason] ?? "Other"}</p>
       ) : null}

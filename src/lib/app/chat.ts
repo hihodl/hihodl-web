@@ -21,9 +21,15 @@
  * TWO FRONTS, ONE ENGINE
  *
  * The brand ↔ creator chat in Spaces is this same engine — same rows, same
- * request gate, same GIFs — with a different front. Nothing here is shaped for
- * Payments specifically, which is why it lives in `lib/app` and not in
+ * request gate, same GIFs — with a different front
+ * (components/creator/run/OfferChat.tsx). Nothing here is shaped for Payments
+ * specifically, which is why it lives in `lib/app` and not in
  * `components/app/payments`.
+ *
+ * That second front is why blocking and reporting are here rather than on a
+ * list of things the app can do and the web cannot: a creator with a listing
+ * on a busy event is exactly the person a stranger has a reason to write to,
+ * and the door Spaces opens must come with the way to close it.
  *
  * THE RULES THIS FILE OBEYS, AND WHY THEY ARE THE SERVER'S
  *
@@ -171,6 +177,37 @@ export function listRequests(): Promise<{ requests: ChatRequest[] }> {
 
 export function answerRequest(chatId: string, accept: boolean): Promise<{ accepted: boolean }> {
   return read(`payment-notes/requests/${encodeURIComponent(chatId)}`, { json: { accept } });
+}
+
+/**
+ * Block somebody, and undo it.
+ *
+ * A block is about the PERSON — it covers their notes on payments too — where
+ * mute is about one thread. Undoing a block that is not there is success: the
+ * end state is what was asked.
+ */
+export function blockUser(userId: string): Promise<{ blocked: boolean }> {
+  return read("payment-notes/blocks", { json: { userId } });
+}
+
+export function unblockUser(userId: string): Promise<{ blocked: boolean }> {
+  return read(`payment-notes/blocks/${encodeURIComponent(userId)}`, { method: "DELETE" });
+}
+
+export function listBlocked(): Promise<{ blocked: { userId: string; aliasHandle: string | null; displayName: string | null }[] }> {
+  return read("payment-notes/blocks");
+}
+
+/**
+ * File a report.
+ *
+ * It deliberately does NOT block — the server says so — because reporting and
+ * blocking are separate acts and doing the second on somebody's behalf takes
+ * a decision away from them. A screen that wants both calls both, and ours
+ * asks first.
+ */
+export function reportUser(args: { userId: string; noteId?: string; reason?: string; detail?: string }): Promise<{ reported: boolean }> {
+  return read("payment-notes/reports", { json: args });
 }
 
 export function muteChat(peerId: string): Promise<{ muted: boolean }> {

@@ -573,8 +573,30 @@ function describe(e: unknown): string {
   return explain(e);
 }
 
-export function Withdraw({ uid, from, balances, onBack }: { uid: string; from: string; balances: Balances | null; onBack: () => void }) {
-  const [draft, setDraft] = useState<Draft>({ token: "USDC", amount: "", to: "" });
+export function Withdraw({
+  uid,
+  from,
+  balances,
+  onBack,
+  prefill,
+}: {
+  uid: string;
+  from: string;
+  balances: Balances | null;
+  onBack: () => void;
+  /**
+   * What another screen already knows: Pay on a request, or Send from a
+   * thread whose handle resolved. Read once, into the first draft — after
+   * that the person owns the form, and a prop that kept writing into it would
+   * undo their typing on every re-render.
+   */
+  prefill?: { to?: string; amount?: string; token?: WithdrawToken };
+}) {
+  const [draft, setDraft] = useState<Draft>({
+    token: prefill?.token ?? "USDC",
+    amount: prefill?.amount ?? "",
+    to: prefill?.to ?? "",
+  });
   const [phase, setPhase] = useState<WithdrawPhase>({ kind: "form" });
   const backup = useRef<WalletBackup | null>(null);
   const prepared = useRef<{ built: BuiltWithdrawal; options: AssertionOptionsJSON } | null>(null);

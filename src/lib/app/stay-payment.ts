@@ -7,7 +7,9 @@
  *   1. hold     POST /travel/prebook          the room, at a locked rate
  *   2. open     POST /travel/bookings/:id/pay what is owed, and where it goes
  *   3. quote    POST /cross-chain/quote       priced BEFORE anything is signed
- *   4. sign     the passkey, then the deposit
+ *   4. sign     the passkey: one ceremony that approves these exact bytes
+ *               (POST /withdrawals/tx-challenge + /tx-authorize) and opens the
+ *               wallet that signs them
  *   5. send     POST /cross-chain/gasless/submit
  *   6. report   POST /settlement/intent/:id/leg
  *   7. settle   GET  /travel/bookings/:id/payment, until funded
@@ -43,9 +45,10 @@
 
 import { openWallet } from "@/lib/wallet/flows";
 import { getWalletBackup } from "@/lib/wallet/api";
-import { evaluatePrf } from "@/lib/wallet/passkey";
+import { assertWithPrf } from "@/lib/wallet/passkey";
 import { wipe } from "@/lib/wallet/core";
-import { signSerializedTx } from "@/lib/wallet/sign-tx";
+import { messageOf, signSerializedTx } from "@/lib/wallet/sign-tx";
+import { authorizeTxPasskey, txApprovalChallenge } from "@/lib/link/api";
 
 import { BridgeRefused, prepareGasless, quoteCovering, submitGasless } from "./bridge";
 import { bookIt, openPayment, prebook, readPayment, reportLeg, type Booking, type PrebookQuery, type SettlementIntent } from "./stays";
@@ -242,13 +245,30 @@ export async function payForStay(args: PayArgs): Promise<PayState> {
     const rebuilt = await prepareGasless(priced.quote);
     const backup = await getWalletBackup();
     if (backup.wrappings.length === 0) throw new Error("no_passkey");
-    // `evaluatePrf` and not `assertWithPrf`: the latter carries a challenge the
-    // SERVER issued, and there is no server-side approval for a bridge deposit
-    // to carry. What authorises this money is the Solana signature over the
-    // transaction, which needs the seed, which needs this passkey. The
-    // ceremony is the gate.
-    const bound = await evaluatePrf(backup.wrappings.map((w) => w.credential_id));
+
+    /*
+     * ONE CEREMONY, TWO THINGS — and now the server is told about it.
+     *
+     * This used to be a bare `evaluatePrf`, with a comment saying there was no
+     * server-side approval a bridge deposit could carry. There is one now:
+     * `/withdrawals/tx-challenge` issues a challenge that IS this
+     * transaction's digest, so the same Face ID that opens the wallet also
+     * signs the assertion that lets these exact bytes through
+     * `/cross-chain/gasless/submit`. One prompt, as before.
+     *
+     * The order matters. The approval is taken BEFORE the wallet is opened, so
+     * a refusal costs a prompt and nothing else, and it is written down before
+     * anything is signed — a signed transaction with no approval behind it is
+     * a transaction we would have to decide what to do with.
+     */
+    const message = await messageOf(rebuilt.serializedTx);
+    const challenge = await txApprovalChallenge(message);
+    const bound = await assertWithPrf(
+      challenge.options,
+      backup.wrappings.map((w) => w.credential_id),
+    );
     prf = bound.prf;
+    await authorizeTxPasskey(message, bound.assertion);
     const key = await openWallet({ uid: args.uid, backup, credentialId: bound.credentialId, prf });
     seed = key.seed;
     signed = await signSerializedTx(rebuilt.serializedTx, seed, args.from);

@@ -39,6 +39,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useConversations } from "@/lib/app/chat";
 import type { DisplayMode } from "@/lib/app/display-mode";
+import { askFor, requestAmount, resolveHandle, usePaymentRequests, type PaymentRequest } from "@/lib/app/payment-requests";
 import { useTransfers } from "@/lib/app/money";
 import {
   groupTransfersIntoThreads,
@@ -55,7 +56,7 @@ import { Ion, type IonName } from "../ion";
 import { useShellPrefs } from "../Shell";
 import { Skeleton } from "../ui";
 import { cardClass } from "../wallet/app-kit";
-import { Conversation } from "./Chat";
+import { Conversation, SafetyMenu } from "./Chat";
 import { ChatRequests } from "./Requests";
 import { PayoutsPanel, ScheduledPanel } from "./Standing";
 import { TxDetails } from "./TxDetails";
@@ -421,11 +422,22 @@ function EmptyHistory() {
  * (chooseChannel, server-side). Send is a screen this product already has, in
  * both channels: components/app/wallet/Withdraw.tsx.
  *
- * So the dead end becomes the door. It does not carry the recipient yet — a
- * thread knows a person, and Send wants a Solana address, and nothing here
- * resolves one — so it opens Send rather than pretending to prefill it. What
- * it must never do again is tell somebody to go and fetch an app to do a
- * thing their browser can do.
+ * REQUEST IS THE OTHER HALF, AND IT WAS SIMPLY MISSING
+ *
+ * The app's thread has had Request beside Send since the beginning; the web
+ * had Send alone. `POST /payments/request` has existed the whole time — the
+ * gap was here, not on the server. A request moves no money and needs no key,
+ * so it is the one MONEY write a browser can make on its own: it writes a row
+ * and puts a Pay button on somebody else's screen.
+ *
+ * THE RECIPIENT IS RESOLVED NOW, WHEN IT CAN BE
+ *
+ * A thread knows a person and Send wants a Solana address. `GET /alias/
+ * resolve/:handle` turns the one into the other for anybody with a public
+ * handle, so Send opens filled in. When it does not resolve — a private alias,
+ * somebody who never chose one — Send opens empty rather than guessing. What
+ * this screen must never do again is tell somebody to go and fetch an app to
+ * do a thing their browser can do.
  */
 function ThreadView({
   row,
@@ -439,6 +451,8 @@ function ThreadView({
   onOpenTx: (id: string) => void;
 }) {
   const productHref = useProductHref();
+  const requests = usePaymentRequests();
+  const [asking, setAsking] = useState(false);
   if (!row) {
     return (
       <>
@@ -448,28 +462,177 @@ function ThreadView({
     );
   }
   const payments = [...row.transfers].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+  const handle = row.thread?.alias ?? null;
+
+  /**
+   * Send, with as much of the answer as we honestly have.
+   *
+   * The handle resolves to an address for anybody who chose a public one; when
+   * it does not, Send opens on its own first step and asks. Never a guess: the
+   * one thing worse than typing an address is being handed the wrong one.
+   */
+  const openSend = async (prefill?: { amount?: string; token?: string }) => {
+    const resolved = handle ? await resolveHandle(handle) : null;
+    const q = new URLSearchParams({ open: "send" });
+    if (resolved?.chain === "solana" && resolved.address) q.set("to", resolved.address);
+    if (prefill?.amount) q.set("amount", prefill.amount);
+    if (prefill?.token) q.set("token", prefill.token.toUpperCase());
+    window.location.assign(`${productHref("/wallet")}?${q.toString()}`);
+  };
+
+  const payTheirRequest = (r: PaymentRequest) => {
+    const amount = requestAmount(r);
+    void openSend({ amount: amount === null ? undefined : String(amount), token: r.tokenId });
+  };
+
   return (
     <>
       <BackHeader
         title={row.name}
         subtitle={payments.length ? `${payments.length} ${payments.length === 1 ? "payment" : "payments"}` : "No payments yet"}
         onBack={onBack}
+        // Only where there is somebody to block: a thread that is an address
+        // and nothing else has no account on the other side.
+        right={row.peerId ? <SafetyMenu peerId={row.peerId} peerName={row.name} onBlocked={onBack} /> : undefined}
       />
 
-      <Conversation peerId={row.peerId} peerName={row.name} payments={payments} mode={mode} onOpenTx={onOpenTx} />
+      <Conversation
+        peerId={row.peerId}
+        peerName={row.name}
+        payments={payments}
+        mode={mode}
+        onOpenTx={onOpenTx}
+        onPayRequest={payTheirRequest}
+      />
 
+      {/* The app's own row, in the app's own order: Request on the left in the
+          quieter shape, Send on the right as the filled amber. Both are real
+          here now — a request needs no key, and a send is approved with the
+          passkey or on a linked phone. */}
       <div className="mt-3 flex items-center gap-2 px-1">
-        <Link
-          href={`${productHref("/wallet")}?open=send`}
+        <button
+          type="button"
+          disabled={!row.peerId}
+          title={row.peerId ? undefined : "There is no HOLD account on the other side of this thread."}
+          onClick={() => setAsking(true)}
+          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-[10px] bg-white/10 px-3.5 text-[12.5px] font-strong text-white transition-colors hover:bg-white/[0.16] disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <Ion name="download-outline" size={14} />
+          Request
+        </button>
+        <button
+          type="button"
+          onClick={() => void openSend()}
           className="inline-flex h-9 items-center justify-center gap-1.5 rounded-[10px] bg-amber px-3.5 text-[12.5px] font-bold text-text-on-amber transition-colors hover:bg-amber-glow"
         >
           <Ion name="arrow-up" size={14} />
           Send
-        </Link>
+        </button>
         <p className="min-w-0 flex-1 text-[12px] leading-[17px] text-white/60">
           Approved with your passkey, or on your phone if you have linked one.
         </p>
       </div>
+
+      {asking && row.peerId ? (
+        <AskSheet
+          peerId={row.peerId}
+          peerName={row.name}
+          onClose={() => setAsking(false)}
+          onAsked={() => {
+            setAsking(false);
+            void requests.mutate();
+          }}
+        />
+      ) : null}
     </>
+  );
+}
+
+/**
+ * "How much?" — and nothing else.
+ *
+ * The app's QuickRequestScreen picks a token and a chain from the balances,
+ * because on a phone somebody may be holding five things. Here the wallet is
+ * Solana USDC, so asking which one would be a question with one answer. If
+ * that stops being true this grows a picker; until then it does not pretend.
+ */
+function AskSheet({
+  peerId,
+  peerName,
+  onClose,
+  onAsked,
+}: {
+  peerId: string;
+  peerName: string;
+  onClose: () => void;
+  onAsked: () => void;
+}) {
+  const [amount, setAmount] = useState("");
+  const [sending, setSending] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const value = Number(amount.replace(",", "."));
+  const ok = Number.isFinite(value) && value > 0;
+
+  const submit = async () => {
+    if (!ok || sending) return;
+    setSending(true);
+    setFailed(false);
+    try {
+      await askFor({ payerUserId: peerId, amount: String(value) });
+      onAsked();
+    } catch {
+      setFailed(true);
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center" role="dialog" aria-modal="true">
+      {/* The backdrop closes it; the sheet must not, or every tap inside shuts it. */}
+      <button type="button" aria-label="Close" onClick={onClose} className="absolute inset-0 cursor-default" />
+      <div className="relative w-full max-w-[420px] rounded-[20px] border border-white/[0.12] bg-[#0E2430] p-4 shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
+        <p className="text-[15px] font-extrabold tracking-[-0.2px] text-white">Ask {peerName} for</p>
+        <p className="mt-1 text-[12.5px] leading-[17px] text-white/65">
+          They see it in this conversation with a Pay button. Nothing moves until they pay it.
+        </p>
+
+        <label className="mt-3 flex h-12 items-center gap-2 rounded-[16px] border border-white/[0.15] bg-white/[0.06] px-3.5 focus-within:border-white/30">
+          <input
+            autoFocus
+            inputMode="decimal"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value.replace(/[^0-9.,]/g, "").slice(0, 12))}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void submit();
+              if (e.key === "Escape") onClose();
+            }}
+            placeholder="0.00"
+            aria-label="Amount in USDC"
+            className="h-full min-w-0 flex-1 bg-transparent text-[20px] font-extrabold tabular-nums text-white outline-none placeholder:text-white/40"
+          />
+          <span className="shrink-0 text-[13px] font-bold text-white/80">USDC</span>
+        </label>
+
+        {failed ? <p className="mt-2 text-[12px] leading-[17px] text-white/75">That did not go through. Try again.</p> : null}
+
+        <div className="mt-3 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void submit()}
+            disabled={!ok || sending}
+            className="inline-flex h-10 flex-1 items-center justify-center rounded-[12px] bg-amber text-[14px] font-bold text-text-on-amber transition-colors hover:bg-amber-glow disabled:bg-white/[0.12] disabled:text-white/50"
+          >
+            {sending ? "Asking…" : "Send request"}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-10 items-center justify-center rounded-[12px] bg-white/10 px-4 text-[14px] font-strong text-white/85 transition-colors hover:bg-white/[0.16]"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

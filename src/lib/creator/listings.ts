@@ -228,6 +228,29 @@ export function receivedOffers(): Promise<{ offers: OfferView[] }> {
   return call<{ offers: OfferView[] }>("ad-space/offers/received");
 }
 
+/**
+ * Who to write to about this offer.
+ *
+ * A brand and a creator negotiating a spot can hold the same conversation any
+ * two HOLD accounts hold (`lib/app/chat.ts`), and this is the only thing that
+ * front needs from the server: the other side's user id. It is asked for ONE
+ * offer and answered only for its two parties, which is why it is a route of
+ * its own rather than a field on the offer — `OfferView` is also what a web
+ * sponsor's manage link reads.
+ *
+ * `peerId` is null when the sponsor came through a public page and has no
+ * HOLD account. Then there is nothing to open, and the contact they left is
+ * the way to reach them.
+ */
+export function offerChat(offerId: string): Promise<{
+  peerId: string | null;
+  peerName: string;
+  via: "app" | "web";
+  side: "creator" | "sponsor";
+}> {
+  return call(`ad-space/offers/${offerId}/chat`);
+}
+
 export function listingOffers(spaceId: string): Promise<{ offers: OfferView[] }> {
   return call<{ offers: OfferView[] }>(`ad-space/spaces/${spaceId}/offers`);
 }
