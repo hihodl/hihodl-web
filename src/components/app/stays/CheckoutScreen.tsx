@@ -35,8 +35,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useProductHref } from "../base";
 import { Ion } from "../ion";
 
-import { Banner, Card, Cta, Empty, Ground, Photo, SectionLabel, Spinner } from "./kit";
-import { P, boardLabel, count, guests as guestsWord, money, nights as nightsWord, nightsBetween, shortDate, stayRange } from "./look";
+import { Banner, Card, Cta, Empty, Photo, Screen, SectionLabel, Spinner } from "./kit";
+import { P, boardLabel, count, guests as guestsWord, money, shortDate, stayRange } from "./look";
+import { PhotoViewer } from "./PhotoViewer";
 import { sane, stayFromParams, stayToParams } from "./SearchControls";
 import { usePoints, useRates, useStay, useStaysConfig } from "@/lib/app/stays-data";
 import { holdTripProvisionally, refreshTrips, releaseProvisionalTrip } from "@/lib/app/stays-data";
@@ -52,7 +53,6 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
   const params = useSearchParams();
   const search = useMemo(() => sane(stayFromParams(new URLSearchParams(params.toString()))), [params]);
   const offerId = params.get("offer");
-  const nights = nightsBetween(search.checkin, search.checkout);
 
   const config = useStaysConfig();
   const stay = useStay(hotelId);
@@ -62,7 +62,7 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
     adults: search.adults,
     ...(search.children.length ? { children: search.children } : {}),
     currency: "EUR",
-  });
+  }, true);
   const points = usePoints();
   const { session } = useCreatorSession();
 
@@ -84,6 +84,8 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
   const from = wallet.data?.state === "web_wallet" ? (wallet.data.registered_address ?? null) : null;
 
   const rate = rates.data?.rates.find((r) => r.offerId === offerId) ?? null;
+  /** The property's photographs, over the checkout — never away from it. */
+  const [viewing, setViewing] = useState(false);
 
   /* ── What the person fills in ── */
   const [guest, setGuest] = useState<Guest>({ firstName: "", lastName: "", email: "", phone: "" });
@@ -164,17 +166,17 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
 
   if (rates.isLoading || stay.isLoading) {
     return (
-      <Ground className="rounded-[20px] p-6">
+      <Screen className="py-8">
         <div className="flex justify-center py-20">
           <Spinner size={22} color={P.greenText} />
         </div>
-      </Ground>
+      </Screen>
     );
   }
 
   if (!rate) {
     return (
-      <Ground className="rounded-[20px] p-6">
+      <Screen className="py-8">
         <Empty
           icon="bed-outline"
           title="That rate has gone"
@@ -182,14 +184,14 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
           action="Back to the property"
           onAction={() => router.push(`${href(`/travel/stay/${hotelId}`)}?${stayToParams(search)}`)}
         />
-      </Ground>
+      </Screen>
     );
   }
 
   const board = boardLabel(rate.boardName);
 
   return (
-    <Ground className="gap-4 rounded-[20px] p-4 sm:p-6">
+    <Screen className="gap-4">
       {config.data?.sandbox ? <Banner icon="flask-outline">Test mode — nothing you book here is a real reservation</Banner> : null}
 
       <button
@@ -207,10 +209,63 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
         Confirm and pay
       </h1>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_400px]">
-        <div className="flex min-w-0 flex-col">
-          {/* ── Who is staying ── */}
-          <SectionLabel className="mb-2.5 mt-[22px]">Lead guest</SectionLabel>
+      {/* One column, in the app's order: what am I booking · can I still
+          cancel · how am I paying · what it comes to. Every choice sits ABOVE
+          the total and the total is the last thing before the button, which
+          two columns cannot do — there the points band ends up BESIDE the
+          total and somebody pays without ever having seen it. */}
+      <div className="mx-auto flex w-full min-w-0 max-w-[560px] flex-col">
+        {/* ── What am I booking ── */}
+        <div className="mt-[22px] flex flex-col gap-3">
+          <Card hero className="flex gap-3 p-[14px]">
+            {/* The thumbnail is the ONE way back to the pictures from here.
+                Leaving the checkout to look at the room again costs the
+                offer — the property page mints new ids — so the pictures
+                open OVER this screen rather than instead of it. */}
+            <button
+              type="button"
+              aria-label="See the photographs"
+              disabled={!stay.data || stay.data.gallery.length === 0}
+              onClick={() => setViewing(true)}
+              className="h-[62px] w-[62px] shrink-0 cursor-zoom-in overflow-hidden rounded-[12px] p-0 disabled:cursor-default"
+              style={{ background: P.card }}
+            >
+              <Photo image={stay.data?.gallery[0] ?? null} alt={stay.data?.name ?? ""} iconSize={18} sizes="62px" />
+            </button>
+            <span className="min-w-0 flex-1">
+              <span className="line-clamp-2 text-[14.5px] font-extrabold leading-[19px] tracking-[-0.3px]" style={{ color: P.text }}>
+                {stay.data?.name}
+              </span>
+              {/* One line for the dates AND the party, which is what retires
+                  the "Guests" and "Nights" rows the total used to carry. */}
+              <span className="mt-0.5 block truncate text-[12.5px] font-medium" style={{ color: P.textMuted }}>
+                {`${stayRange(search.checkin, search.checkout)} · ${guestsWord(search.adults, search.children.length)}`}
+              </span>
+              <span className="mt-px block truncate text-[12px]" style={{ color: P.textDim }}>
+                {[rate.roomName, board].filter(Boolean).join(" · ")}
+              </span>
+            </span>
+          </Card>
+
+          {/* ── Can I still cancel ── said once, up here with the booking it
+              describes. Never again above the button: that is the screen
+              talking somebody out of a purchase they had already decided on. */}
+          <Card hero className="flex items-start gap-2.5 px-[14px] py-3">
+            <span className="mt-px shrink-0" style={{ color: rate.refundable ? P.greenText : P.textMuted }} aria-hidden>
+              <Ion name={rate.refundable ? "shield-checkmark-outline" : "information-circle-outline"} size={17} />
+            </span>
+            <p className="text-[13px] font-medium leading-[19px]" style={{ color: P.text }}>
+              {rate.refundable && rate.freeCancellationUntil
+                ? `Cancel free until ${shortDate(rate.freeCancellationUntil.slice(0, 10))}. We refund you in full, back to the account you paid from.`
+                : rate.refundable
+                  ? "Free cancellation. We refund you in full, back to the account you paid from."
+                  : "This rate can't be cancelled or changed once it's booked. It's the reason it's priced the way it is."}
+            </p>
+          </Card>
+        </div>
+
+        {/* ── Who is staying ── */}
+        <SectionLabel className="mb-2.5 mt-[22px]">Lead guest</SectionLabel>
           <Card hero className="flex flex-col gap-3 p-[14px]">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label="First name" value={guest.firstName} onChange={(v) => setGuest({ ...guest, firstName: v })} autoComplete="given-name" disabled={running} />
@@ -247,38 +302,21 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
               <PointsBand balance={balance} ceiling={ceiling} value={spend} onChange={setSpend} pointUsd={config.data?.pointsUsdValue ?? 0.01} disabled={running} />
             </>
           ) : null}
-        </div>
 
-        {/* ── The money ── */}
-        <aside className="lg:sticky lg:top-4 lg:self-start">
-          <div className="flex flex-col gap-3">
-            <Card hero className="flex gap-3 p-[14px]">
-              <span className="h-[62px] w-[62px] shrink-0 overflow-hidden rounded-[12px]" style={{ background: P.card }}>
-                <Photo image={stay.data?.gallery[0] ?? null} alt={stay.data?.name ?? ""} iconSize={18} sizes="62px" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="line-clamp-2 text-[14.5px] font-extrabold leading-[19px] tracking-[-0.3px]" style={{ color: P.text }}>
-                  {stay.data?.name}
-                </span>
-                <span className="mt-0.5 block truncate text-[12.5px] font-medium" style={{ color: P.textMuted }}>
-                  {stayRange(search.checkin, search.checkout)}
-                </span>
-                <span className="mt-px block truncate text-[12px]" style={{ color: P.textDim }}>
-                  {[rate.roomName, board].filter(Boolean).join(" · ")}
-                </span>
-              </span>
-            </Card>
-
+          {/* ── What it comes to ── last, under every choice that changes it. */}
+          <div className="mt-[22px] flex flex-col gap-3">
             <Card hero className="flex flex-col px-[14px] py-1.5">
               <Row label="Stay" value={money(rate.price, rate.currency)} />
-              <Row label="Guests" value={guestsWord(search.adults, search.children.length)} />
-              <Row label="Nights" value={nightsWord(nights)} />
               {spend > 0 ? <Row label="Points discount" value={`− ${money(discount, rate.currency)}`} tone={P.caution} /> : null}
               <div className="my-2 h-[0.5px]" style={{ background: P.divider }} />
               <Row label="You pay now" value={money(total, rate.currency)} strong />
               {rate.pointsEarned > 0 ? <Row label="Points earned" value={`+ ${count(rate.pointsEarned)}`} tone={P.caution} /> : null}
             </Card>
 
+            {/* Under the total and never folded into it: the app's
+                `CheckoutSummary` puts it here too. The property sets this and
+                the property collects it, so a grand total that swallowed it
+                would be us quoting a price we do not charge. */}
             {rate.payAtProperty !== null && rate.payAtProperty > 0 ? (
               <Card hero className="px-[14px] py-[13px]">
                 <div className="flex items-center gap-2">
@@ -298,40 +336,50 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
               </Card>
             ) : null}
 
-            {/* ── Cancellation ── */}
-            <Card hero className="flex items-start gap-2.5 px-[14px] py-3">
-              <span className="mt-px shrink-0" style={{ color: rate.refundable ? P.greenText : P.textMuted }} aria-hidden>
-                <Ion name={rate.refundable ? "shield-checkmark-outline" : "information-circle-outline"} size={17} />
-              </span>
-              <p className="text-[13px] font-medium leading-[19px]" style={{ color: P.text }}>
-                {rate.refundable && rate.freeCancellationUntil
-                  ? `Cancel free until ${shortDate(rate.freeCancellationUntil.slice(0, 10))}. We refund you in full, back to the account you paid from.`
-                  : rate.refundable
-                    ? "Free cancellation. We refund you in full, back to the account you paid from."
-                    : "This rate can't be cancelled or changed once it's booked. It's the reason it's priced the way it is."}
-              </p>
-            </Card>
-
             <Progress state={pay} />
 
-            {wallet.data && !from ? (
+            {/*
+             * No address to pay from means the button cannot work, and the
+             * screen has to say WHY rather than sit there disabled.
+             *
+             * The condition used to be `wallet.data && !from`, which covered
+             * two of the three reasons and silently dropped the third: if the
+             * wallet status could not be READ at all, `wallet.data` is
+             * undefined, so this card never appeared and the Pay button
+             * rendered permanently disabled with nothing explaining it. That
+             * is not hypothetical — `/wallet-backup/status` answers 404 in
+             * production today, because the route ships with the backend
+             * integration branch. Somebody fills the whole form, and the only
+             * button on the screen never lights up.
+             */}
+            {!from ? (
               <Card hero className="flex flex-col gap-2 p-[14px]">
                 <p className="text-[13px] font-bold" style={{ color: P.text }}>
-                  {wallet.data.state === "app_wallet" ? "Pay for this one in the app" : "You need a wallet here first"}
+                  {!wallet.data
+                    ? "We couldn't read your wallet"
+                    : wallet.data.state === "app_wallet"
+                      ? "Pay for this one in the app"
+                      : "You need a wallet here first"}
                 </p>
                 <p className="text-[12.5px] leading-[18px]" style={{ color: P.textMuted }}>
-                  {wallet.data.state === "app_wallet"
-                    ? "Your wallet lives on your phone, and that is where it signs. Search and hold a room here; pay there."
-                    : "A HOLD wallet in this browser, made once with a passkey. Then this page can pay on its own."}
+                  {!wallet.data
+                    ? "Nothing has been charged, and the room is not held. This page has to know which wallet pays before it can ask you to."
+                    : wallet.data.state === "app_wallet"
+                      ? "Your wallet lives on your phone, and that is where it signs. Search and hold a room here; pay there."
+                      : "A HOLD wallet in this browser, made once with a passkey. Then this page can pay on its own."}
                 </p>
-                <Cta label={wallet.data.state === "app_wallet" ? "How it works" : "Set up the wallet"} variant="secondary" onClick={() => router.push(href("/wallet"))} />
+                <Cta
+                  label={!wallet.data ? "Try again" : wallet.data.state === "app_wallet" ? "How it works" : "Set up the wallet"}
+                  variant="secondary"
+                  onClick={() => (wallet.data ? router.push(href("/wallet")) : void wallet.mutate())}
+                />
               </Card>
             ) : (
               <Cta
                 label={pay?.phase === "stopped" && pay.bookingId ? "Try again" : `Pay ${money(total, rate.currency)}`}
                 variant="commit"
                 working={running}
-                disabled={!filled || running || !from}
+                disabled={!filled || running}
                 onClick={() => void start()}
               />
             )}
@@ -340,9 +388,16 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
               Paid in USDC from your HOLD wallet. Rooms are supplied and reserved by our booking partner; the stay is provided by the property under its own terms.
             </p>
           </div>
-        </aside>
       </div>
-    </Ground>
+
+      <PhotoViewer
+        images={stay.data?.gallery ?? []}
+        initialIndex={0}
+        open={viewing}
+        onClose={() => setViewing(false)}
+        title={stay.data?.name}
+      />
+    </Screen>
   );
 }
 

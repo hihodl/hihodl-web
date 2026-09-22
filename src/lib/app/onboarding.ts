@@ -124,12 +124,25 @@ export async function readFacts(): Promise<Facts> {
 }
 
 /**
- * Linking a phone is mandatory only once the Android build that can link is
- * on Play: before that, an Android user could never finish onboarding. Until
- * then it is offered from Account → Your phone, and Withdraw still asks for it
- * (the server answers LINK_YOUR_PHONE_FIRST). Set to "1" with that release.
+ * Linking a phone is an UPGRADE, never a toll.
+ *
+ * This was going to become mandatory with the Play release — the server
+ * answered LINK_YOUR_PHONE_FIRST, so onboarding made sure everybody had one.
+ * That reasoning died with the server's: a withdrawal is now approved by a
+ * passkey bound to it, and a linked Android phone only buys the stronger
+ * version of an approval everybody can already give (chooseChannel, and the
+ * note above it).
+ *
+ * Turning it on now would re-lock the exact people the server just let in:
+ * somebody who made their wallet in the browser, on a laptop, with no HOLD
+ * app anywhere — who cannot link, because linking needs the app on the phone
+ * they do not have. They would be stopped at the last step of onboarding with
+ * nothing to do about it.
+ *
+ * So it is not required. It still rides along when onboarding is running for
+ * another reason — on Android that step is how the phone receives the wallet
+ * made moments before — and it is offered for good from Account → Your phone.
  */
-const LINK_REQUIRED = process.env.NEXT_PUBLIC_LINK_REQUIRED === "1";
 
 /** Whether the web wallet is one this person should be offered now. */
 export function walletToMake(f: Facts): boolean {
@@ -150,7 +163,6 @@ export function stepsFor(f: Facts, c: Choices): StepKey[] {
   if (f.canPasskey && !f.hasPasskey) required.push("passkey");
   if (!f.hasCodes) required.push("recovery");
   if (walletToMake(f) && !c.wallet) required.push("wallet");
-  if (LINK_REQUIRED && f.linkedPhones === 0) required.push("link");
   if (required.length === 0) return [];
 
   const out: StepKey[] = [];
@@ -160,8 +172,11 @@ export function stepsFor(f: Facts, c: Choices): StepKey[] {
   if (required.includes("recovery")) out.push("recovery");
   if (required.includes("wallet")) out.push("wallet");
   else if (f.wallet?.state === "app_wallet" && f.wallet.enabled !== false && !c.appWallet) out.push("app-wallet");
-  // Last: on Android the phone receives the wallet made just before.
-  if (required.includes("link")) out.push("link");
+  // Last, and only while we are here anyway: on Android this step is how the
+  // phone receives the wallet made moments before. Nobody is held up by it —
+  // if it were the only thing left, `required` would have been empty and this
+  // function would already have returned.
+  if (f.linkedPhones === 0) out.push("link");
   return out;
 }
 

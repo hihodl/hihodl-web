@@ -32,6 +32,7 @@ import type { Chain } from "@/lib/ad-space/types";
 import {
   CONTENT_KINDS,
   LIMITS,
+  WHOLE_ZONE_KEY,
   anyRungBids,
   centsFromDollars,
   feeSplit,
@@ -45,6 +46,8 @@ import {
   type Template,
   isProductionTemplate,
   isSessionTemplate,
+  squareZonesOf,
+  wholeZoneOf,
 } from "@/lib/creator/listing";
 import { problemsAt, type Problem } from "@/lib/creator/rules";
 
@@ -328,10 +331,100 @@ function Zones({
   const mode = saleModeOf(draft, null);
   const set = (zoneKey: string, change: Partial<ListingDraft["zones"][number]>) =>
     onChange({ ...draft, zones: draft.zones.map((z) => (z.zoneKey === zoneKey ? { ...z, ...change } : z)) });
+  const wholeCents = centsFromDollars(wholeZoneOf(draft)?.priceDollars ?? "");
+  const wholeSplit = wholeCents !== null ? feeSplit(wholeCents, draft.feePayer) : null;
+
+  const whole = wholeZoneOf(draft);
+  const squaresOn = squareZonesOf(draft).filter((z) => z.on);
+  const partsCents = squaresOn.reduce((sum, z) => sum + (centsFromDollars(z.priceDollars) ?? 0), 0);
 
   return (
     <div className="flex flex-col gap-2.5">
       <Problems list={problemsAt(problems, "zones")} />
+
+      {whole && (
+        <Card className={whole.on ? "" : "opacity-90"}>
+          <Checkbox
+            checked={whole.on}
+            onChange={(on) => set(WHOLE_ZONE_KEY, { on })}
+            label={
+              <span className="flex flex-col gap-0.5">
+                <span className="text-[14.5px] font-extrabold tracking-[-0.2px] text-white">
+                  One brand takes everything
+                </span>
+                <span className="text-[12px] leading-4 text-white/55">
+                  Sell the whole {template.name.toLowerCase()} to one brand, with nobody else on it
+                  {partsCents ? ` · at least ${usd(partsCents)}, the spots together` : ""}
+                </span>
+              </span>
+            }
+          />
+
+          {whole.on ? (
+            <div className="flex flex-col gap-3.5 pl-[34px]">
+              {modeShowsPrice(mode) ? (
+                <Field
+                  label={mode === "bids" ? "Opening bid for all of it (USD)" : "Price for all of it (USD)"}
+                  problems={problemsAt(problems, `zone:${WHOLE_ZONE_KEY}:price`)}
+                  htmlFor={`zone-${WHOLE_ZONE_KEY}-price`}
+                  hint={
+                    wholeSplit
+                      ? `You receive ${usd(wholeSplit.creatorGetsCents)}. While it is being paid for, no spot sells.`
+                      : "While it is being paid for, no spot sells."
+                  }
+                >
+                  <Money
+                    id={`zone-${WHOLE_ZONE_KEY}-price`}
+                    value={whole.priceDollars}
+                    onChange={(priceDollars) => set(WHOLE_ZONE_KEY, { priceDollars })}
+                  />
+                </Field>
+              ) : null}
+
+              {modeKeepsFloor(mode) ? (
+                <Field
+                  label={mode === "bids" ? "Reserve (optional, USD)" : "Hidden minimum (optional, USD)"}
+                  problems={problemsAt(problems, `zone:${WHOLE_ZONE_KEY}:floor`)}
+                  htmlFor={`zone-${WHOLE_ZONE_KEY}-floor`}
+                >
+                  <Money
+                    id={`zone-${WHOLE_ZONE_KEY}-floor`}
+                    value={whole.minOfferDollars}
+                    onChange={(minOfferDollars) => set(WHOLE_ZONE_KEY, { minOfferDollars })}
+                  />
+                </Field>
+              ) : null}
+
+              <Field
+                label="What a brand can send"
+                problems={problemsAt(problems, `zone:${WHOLE_ZONE_KEY}:accepts`)}
+              >
+                <Toggles
+                  values={whole.accepts}
+                  onChange={(accepts) => set(WHOLE_ZONE_KEY, { accepts: accepts as ContentKind[] })}
+                  options={CONTENT_KINDS.map((k) => ({ value: k, label: CONTENT_LABEL[k] }))}
+                />
+              </Field>
+
+              <Field
+                label="Pitch (optional)"
+                problems={problemsAt(problems, `zone:${WHOLE_ZONE_KEY}:pitch`)}
+                htmlFor={`zone-${WHOLE_ZONE_KEY}-pitch`}
+              >
+                <Paragraph
+                  id={`zone-${WHOLE_ZONE_KEY}-pitch`}
+                  value={whole.pitch}
+                  onChange={(pitch) => set(WHOLE_ZONE_KEY, { pitch })}
+                  maxLength={LIMITS.PITCH_MAX}
+                  placeholder="The whole piece is yours, and nobody else is on it"
+                  rows={2}
+                />
+              </Field>
+            </div>
+          ) : null}
+        </Card>
+      )}
+
       {template.zones.map((zone, index) => {
         const own = draft.zones.find((z) => z.zoneKey === zone.zoneKey);
         if (!own) return null;

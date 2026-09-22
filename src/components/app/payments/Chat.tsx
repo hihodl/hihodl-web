@@ -46,9 +46,12 @@ import type { Transfer } from "@/lib/app/hold-api";
 import { tokenTicker, transferAmount } from "@/lib/app/payments";
 import {
   NOTE_MAX_LENGTH,
+  blockUser,
+  deleteNote,
   gifUrl,
   looseMessages,
   markSeen,
+  reportUser,
   searchGifs,
   sendMessage,
   useChatState,
@@ -56,6 +59,16 @@ import {
   type Gif,
   type Note,
 } from "@/lib/app/chat";
+import type { SpotBought } from "@/lib/app/sponsor";
+import {
+  cancelRequest,
+  openRequestsWith,
+  rejectRequest,
+  requestAmount,
+  theyAsked,
+  usePaymentRequests,
+  type PaymentRequest,
+} from "@/lib/app/payment-requests";
 
 import { Ion } from "../ion";
 
@@ -78,7 +91,9 @@ import { Ion } from "../ion";
  */
 type Happened =
   | { kind: "pay"; key: string; ts: number; row: Transfer }
-  | { kind: "msg"; key: string; ts: number; note: Note };
+  | { kind: "msg"; key: string; ts: number; note: Note }
+  | { kind: "req"; key: string; ts: number; request: PaymentRequest }
+  | { kind: "spot"; key: string; ts: number; spot: SpotBought };
 type Row = Happened | { kind: "day"; key: string; label: string };
 
 export function Conversation({
@@ -87,16 +102,24 @@ export function Conversation({
   payments,
   mode,
   onOpenTx,
+  onPayRequest,
+  spots = [],
 }: {
   peerId: string | null;
   peerName: string;
   payments: readonly Transfer[];
   mode: DisplayMode;
   onOpenTx: (id: string) => void;
+  /** Pay one of their requests: the thread hands it up, the screen opens Send. */
+  onPayRequest: (request: PaymentRequest) => void;
+  /** Spots bought from this creator, derived by the screen above. */
+  spots?: readonly SpotBought[];
 }) {
   const notes = useThreadNotes(peerId);
   const state = useChatState(peerId);
+  const requests = usePaymentRequests();
   const messages = useMemo(() => looseMessages(notes.data), [notes.data]);
+  const open = useMemo(() => openRequestsWith(requests.data, peerId), [requests.data, peerId]);
 
   useMarkSeen(messages, () => void notes.mutate());
 
@@ -107,22 +130,18 @@ export function Conversation({
     const items: Happened[] = [
       ...payments.map((t) => ({ kind: "pay" as const, key: `t:${t.id}`, ts: Date.parse(t.createdAt), row: t })),
       ...messages.map((n) => ({ kind: "msg" as const, key: `n:${n.id}`, ts: Date.parse(n.createdAt), note: n })),
+      // A request is a third thing that happened between two people, so it
+      // takes its place in the same run rather than sitting in a panel above.
+      ...open.map((r) => ({ kind: "req" as const, key: `r:${r.id}`, ts: Date.parse(r.createdAt), request: r })),
+      // A spot bought from this creator. Derived, never written: see
+      // `useSpotsBoughtFrom`. A fact does not get an edit button.
+      ...spots.map((s) => ({ kind: "spot" as const, key: `s:${s.orderId}`, ts: s.ts, spot: s })),
     ]
       .filter((i) => Number.isFinite(i.ts))
       .sort((a, b) => a.ts - b.ts);
 
-    const out: Row[] = [];
-    let day = "";
-    for (const i of items) {
-      const label = dayLabel(i.ts);
-      if (label !== day) {
-        day = label;
-        out.push({ kind: "day", key: `d:${label}:${i.key}`, label });
-      }
-      out.push(i);
-    }
-    return out;
-  }, [payments, messages]);
+    return withDays(items);
+  }, [payments, messages, open, spots]);
 
   const waiting = state.data?.status === "pending" && state.data.requestedByMe;
 
@@ -142,8 +161,19 @@ export function Conversation({
             </p>
           ) : r.kind === "pay" ? (
             <PaymentBubble key={r.key} row={r.row} mode={mode} onOpen={() => onOpenTx(r.row.id)} />
+          ) : r.kind === "spot" ? (
+            <SpotBubble key={r.key} spot={r.spot} peerName={peerName} />
+          ) : r.kind === "req" ? (
+            <RequestBubble
+              key={r.key}
+              request={r.request}
+              incoming={!!peerId && theyAsked(r.request, peerId)}
+              peerName={peerName}
+              onPay={() => onPayRequest(r.request)}
+              onAnswered={() => void requests.mutate()}
+            />
           ) : (
-            <Bubble key={r.key} note={r.note} requested={waiting && r.note.mine} />
+            <Bubble key={r.key} note={r.note} requested={waiting && r.note.mine} onWithdrawn={() => void notes.mutate()} />
           ),
         )}
 
@@ -214,6 +244,225 @@ function PaymentBubble({ row, mode, onOpen }: { row: Transfer; mode: DisplayMode
   );
 }
 
+/**
+ * Oldest first, with a divider only where the day actually turns.
+ *
+ * Inserted AFTER sorting, never during: a divider decided while items are
+ * still out of order draws "Today" in the middle of last week.
+ */
+function withDays(items: Happened[]): Row[] {
+  const sorted = [...items].filter((i) => Number.isFinite(i.ts)).sort((a, b) => a.ts - b.ts);
+  const out: Row[] = [];
+  let day = "";
+  for (const i of sorted) {
+    const label = dayLabel(i.ts);
+    if (label !== day) {
+      day = label;
+      out.push({ kind: "day", key: `d:${label}:${i.key}`, label });
+    }
+    out.push(i);
+  }
+  return out;
+}
+
+/**
+ * THE SAME CONVERSATION, WITHOUT THE MONEY.
+ *
+ * Spaces needs a brand and a creator to be able to talk, and that is this
+ * engine with a different front: same rows, same request gate, same GIFs, same
+ * read receipts. What it is NOT is a Payments thread — there are no transfers
+ * between a sponsor and a creator to interleave, and a listing's offers are
+ * already a negotiation with its own history on its own card. So this renders
+ * the words and nothing else.
+ *
+ * `intro` is what stands in for "nothing here yet", because on this front the
+ * empty state is the point: it is where a creator writes the first message.
+ */
+export function WordsOnly({ peerId, peerName, intro }: { peerId: string; peerName: string; intro: string }) {
+  const notes = useThreadNotes(peerId);
+  const state = useChatState(peerId);
+  const messages = useMemo(() => looseMessages(notes.data), [notes.data]);
+
+  useMarkSeen(messages, () => void notes.mutate());
+
+  const rows = useMemo(
+    () => withDays(messages.map((n) => ({ kind: "msg" as const, key: `n:${n.id}`, ts: Date.parse(n.createdAt), note: n }))),
+    [messages],
+  );
+  const waiting = state.data?.status === "pending" && state.data.requestedByMe;
+
+  return (
+    <>
+      <div className="flex flex-col gap-2">
+        {rows.length === 0 ? <p className="px-1 py-5 text-center text-[13px] leading-[18px] text-white/70">{intro}</p> : null}
+        {rows.map((r) =>
+          r.kind === "day" ? (
+            <p key={r.key} className="mt-2 text-center text-[11.5px] text-white/45">
+              {r.label}
+            </p>
+          ) : r.kind === "msg" ? (
+            <Bubble key={r.key} note={r.note} requested={waiting && r.note.mine} onWithdrawn={() => void notes.mutate()} />
+          ) : null,
+        )}
+        {waiting ? <WaitingRow name={peerName} /> : null}
+      </div>
+
+      <Composer
+        peerId={peerId}
+        status={state.data?.status ?? null}
+        onSent={() => {
+          void notes.mutate();
+          void state.mutate();
+        }}
+      />
+    </>
+  );
+}
+
+/**
+ * A spot bought from this creator, as a bubble.
+ *
+ * ── WHY IT IS ON THE RIGHT AND WHY IT IS QUIET ──
+ *
+ * It is something the VIEWER did, so it sits on the viewer's side like their
+ * own messages. And it is a receipt, not an announcement: no amber fill, no
+ * icon shouting. The conversation is what is being read; this is the moment
+ * the conversation turned into a deal, marked where it happened.
+ *
+ * `outbid` is here too, and says so. Somebody doubled the price and took the
+ * spot — the brand was repaid in full, and a thread that quietly dropped the
+ * row would leave a creator and a brand reading two different histories.
+ */
+function SpotBubble({ spot, peerName }: { spot: SpotBought; peerName: string }) {
+  const outbid = spot.status === "outbid";
+  const amount = Number(spot.amountUsdc);
+  return (
+    <div className="flex justify-end">
+      <div className="max-w-[78%] rounded-[16px] border border-white/[0.12] bg-white/[0.07] px-3.5 py-2.5">
+        <span className="flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-[0.5px] text-white/60">
+          <Ion name="megaphone-outline" size={13} />
+          {outbid ? "Spot taken over" : "Spot booked"}
+        </span>
+        <p className="mt-1 text-[13.5px] leading-[19px] text-white/85">
+          {outbid
+            ? `Somebody doubled the price on this one. You were repaid in full.`
+            : `You booked a spot with ${peerName}${Number.isFinite(amount) ? ` for $${amount.toFixed(2)}` : ""}.`}
+        </p>
+        <span className="mt-1.5 flex items-center justify-end gap-2 text-[10.5px] text-white/55">
+          {spot.explorerUrl ? (
+            <a href={spot.explorerUrl} target="_blank" rel="noopener noreferrer" className="hover:text-white">
+              Receipt
+            </a>
+          ) : null}
+          <span>{shortTime(new Date(spot.ts).toISOString())}</span>
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * A request, as a bubble.
+ *
+ * THE TWO SIDES ARE NOT THE SAME BUBBLE
+ *
+ * The app's `RequestMsg` decides its buttons from `meta.isIncoming`, and so
+ * does this: a request somebody made OF you carries Pay and Decline; one you
+ * made of them carries Cancel and says nothing else, because there is nothing
+ * you can do about it except wait or take it back.
+ *
+ * It wears the amber TINT and not the fill. Filled amber is the CTA on this
+ * product — the Pay button inside is the action, and a bubble that shouted
+ * the same colour would compete with it.
+ *
+ * WHAT PAY DOES, AND WHAT IT DOES NOT
+ *
+ * It opens Send with the amount and, when the handle resolves, the address.
+ * It does not settle the request: the server's `/settle` only flips a status,
+ * and flipping it before the money moved would tell the person who asked that
+ * they had been paid. That row closes when the payment does.
+ */
+function RequestBubble({
+  request,
+  incoming,
+  peerName,
+  onPay,
+  onAnswered,
+}: {
+  request: PaymentRequest;
+  incoming: boolean;
+  peerName: string;
+  onPay: () => void;
+  onAnswered: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const amount = requestAmount(request);
+  if (amount === null) return null;
+  const ticker = request.tokenId.toUpperCase();
+
+  const answer = async (fn: () => Promise<unknown>) => {
+    setBusy(true);
+    try {
+      await fn();
+      onAnswered();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className={`flex ${incoming ? "justify-start" : "justify-end"}`}>
+      <div className="max-w-[78%] rounded-[16px] border border-[rgba(255,183,3,0.35)] bg-[rgba(255,183,3,0.10)] px-3.5 py-3">
+        <span className="flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-[0.5px] text-amber">
+          <Ion name="download-outline" size={13} />
+          {incoming ? "Payment request" : "Request sent"}
+        </span>
+
+        <span className="mt-1.5 flex items-baseline gap-1.5">
+          <span className="text-[18px] font-extrabold tabular-nums tracking-[0.2px] text-white">{amount.toFixed(2)}</span>
+          <span className="text-[13px] font-bold text-white/90">{ticker}</span>
+        </span>
+
+        <p className="mt-1 text-[12.5px] leading-[17px] text-white/70">
+          {incoming ? `${peerName} asked you for this.` : `Waiting for ${peerName}.`}
+        </p>
+
+        <div className="mt-2.5 flex items-center gap-2">
+          {incoming ? (
+            <>
+              <button
+                type="button"
+                onClick={onPay}
+                className="inline-flex h-8 items-center rounded-[10px] bg-amber px-3.5 text-[12.5px] font-bold text-text-on-amber transition-colors hover:bg-amber-glow"
+              >
+                Pay
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void answer(() => rejectRequest(request.id))}
+                className="inline-flex h-8 items-center rounded-[10px] bg-white/10 px-3 text-[12.5px] font-strong text-white/85 transition-colors hover:bg-white/[0.16] disabled:opacity-50"
+              >
+                Decline
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void answer(() => cancelRequest(request.id))}
+              className="inline-flex h-8 items-center rounded-[10px] bg-white/10 px-3 text-[12.5px] font-strong text-white/85 transition-colors hover:bg-white/[0.16] disabled:opacity-50"
+            >
+              Cancel
+            </button>
+          )}
+          <span className="ml-auto text-[10.5px] text-white/60">{shortTime(request.createdAt)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** "Today", "Yesterday", else the date — the app's `dayLabelFromEpoch`. */
 function dayLabel(ts: number): string {
   const d = new Date(ts);
@@ -269,14 +518,51 @@ function useMarkSeen(messages: Note[], onMarked: () => void) {
  * A withdrawn note keeps its place rather than vanishing: the reader's history
  * must not rearrange itself around something they have already read.
  */
-function Bubble({ note, requested = false }: { note: Note; requested?: boolean }) {
+function Bubble({ note, requested = false, onWithdrawn }: { note: Note; requested?: boolean; onWithdrawn?: () => void }) {
   const url = gifUrl(note.media);
   const mine = note.mine;
   const ink = mine ? "text-white/[0.92]" : "text-[rgba(13,24,32,0.92)]";
   const muted = mine ? "text-white/45" : "text-[rgba(13,24,32,0.45)]";
+  const [withdrawing, setWithdrawing] = useState(false);
+
+  /*
+   * TAKING A MESSAGE BACK, WHILE IT IS STILL YOURS TO TAKE.
+   *
+   * `canEdit` is the SERVER's answer and never ours to derive: it goes false
+   * the moment the reader opens the thread, because `markSeen` freezes what
+   * they have read. So the control disappears exactly when the sentence stops
+   * being only yours, and nothing here has to guess where that line is.
+   *
+   * The row keeps its place afterwards and reads "Message removed". A history
+   * that rearranges itself around something somebody has already read is worse
+   * than one that admits the gap.
+   */
+  const canWithdraw = mine && note.canEdit && !note.deleted;
+  const withdraw = async () => {
+    if (withdrawing) return;
+    setWithdrawing(true);
+    try {
+      await deleteNote(note.id);
+      onWithdrawn?.();
+    } finally {
+      setWithdrawing(false);
+    }
+  };
 
   return (
-    <div className={`flex ${mine ? "justify-end" : "justify-start"}`}>
+    <div className={`group flex ${mine ? "justify-end" : "justify-start"}`}>
+      {canWithdraw ? (
+        <button
+          type="button"
+          onClick={() => void withdraw()}
+          disabled={withdrawing}
+          aria-label="Take this message back"
+          title="Take this message back"
+          className="mr-1.5 mt-auto mb-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-white/0 transition-colors hover:bg-white/10 hover:text-white/80 focus-visible:text-white/80 group-hover:text-white/45"
+        >
+          <Ion name="close-circle" size={16} />
+        </button>
+      ) : null}
       <div
         className={`max-w-[78%] rounded-[18px] px-3.5 pb-[7px] pt-2.5 ${mine ? "bg-white/[0.14]" : "bg-[rgba(232,240,244,0.92)]"}`}
       >
@@ -322,6 +608,200 @@ function WaitingRow({ name }: { name: string }) {
   );
 }
 
+/* ── Closing the door ─────────────────────────────────────────────── */
+
+/**
+ * BLOCK AND REPORT, ON BOTH FRONTS.
+ *
+ * `/payment-notes/blocks` and `/payment-notes/reports` have existed the whole
+ * time and no screen on the web called either, which was survivable while the
+ * only way into somebody's inbox was a payment. It stopped being survivable
+ * the moment Spaces let a brand write to a creator: the door that was opened
+ * has to come with the way to close it, on the same screen, in the same
+ * session.
+ *
+ * THEY ARE TWO ACTS AND STAY TWO ACTS
+ *
+ * The server files a report WITHOUT blocking, deliberately — blocking on
+ * somebody's behalf takes their decision away from them. So this offers the
+ * second after the first rather than doing it quietly, and somebody who wants
+ * only one gets only one.
+ *
+ * BLOCKING IS ABOUT THE PERSON, NOT THE THREAD
+ *
+ * It covers their notes on payments too, which is why the confirmation says so
+ * rather than "you will stop seeing messages". Mute is the thread-sized
+ * version and is not here: the server has no unmute, and a one-tap,
+ * irreversible "stop this conversation" with no way back is worse on a screen
+ * than not having it at all.
+ */
+export function SafetyMenu({ peerId, peerName, onBlocked }: { peerId: string; peerName: string; onBlocked?: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<"menu" | "block" | "report" | "done">("menu");
+  const [detail, setDetail] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  const close = () => {
+    setOpen(false);
+    setMode("menu");
+    setDetail("");
+    setFailed(false);
+  };
+
+  const run = async (fn: () => Promise<unknown>, then: () => void) => {
+    setBusy(true);
+    setFailed(false);
+    try {
+      await fn();
+      then();
+    } catch {
+      setFailed(true);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label={`More about ${peerName}`}
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[18px] text-white/75 transition-colors hover:bg-white/10 hover:text-white"
+      >
+        <Ion name="ellipsis-horizontal" size={20} />
+      </button>
+
+      {open ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center" role="dialog" aria-modal="true">
+          <button type="button" aria-label="Close" onClick={close} className="absolute inset-0 cursor-default" />
+          <div className="relative w-full max-w-[420px] rounded-[20px] border border-white/[0.12] bg-[#0E2430] p-4 shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
+            {mode === "menu" ? (
+              <>
+                <p className="text-[15px] font-extrabold tracking-[-0.2px] text-white">{peerName}</p>
+                <div className="mt-3 flex flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setMode("report")}
+                    className="flex h-11 items-center gap-2.5 rounded-[14px] bg-white/[0.06] px-3.5 text-left text-[14px] font-strong text-white transition-colors hover:bg-white/[0.12]"
+                  >
+                    <Ion name="flag-outline" size={17} />
+                    Report this conversation
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMode("block")}
+                    className="flex h-11 items-center gap-2.5 rounded-[14px] bg-white/[0.06] px-3.5 text-left text-[14px] font-strong text-white transition-colors hover:bg-white/[0.12]"
+                  >
+                    <Ion name="ban-outline" size={17} />
+                    Block {peerName}
+                  </button>
+                </div>
+              </>
+            ) : null}
+
+            {mode === "block" ? (
+              <>
+                <p className="text-[15px] font-extrabold tracking-[-0.2px] text-white">Block {peerName}?</p>
+                <p className="mt-1.5 text-[13px] leading-[18px] text-white/70">
+                  They can no longer write to you, here or on a payment. You can undo it from Account → Who can message
+                  you.
+                </p>
+                <div className="mt-3 flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void run(() => blockUser(peerId), () => { onBlocked?.(); close(); })}
+                    className="inline-flex h-10 flex-1 items-center justify-center rounded-[12px] bg-white/[0.16] text-[14px] font-bold text-white transition-colors hover:bg-white/[0.22] disabled:opacity-60"
+                  >
+                    {busy ? "Blocking…" : "Block"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMode("menu")}
+                    className="inline-flex h-10 items-center justify-center rounded-[12px] bg-white/10 px-4 text-[14px] font-strong text-white/85 transition-colors hover:bg-white/[0.16]"
+                  >
+                    Back
+                  </button>
+                </div>
+              </>
+            ) : null}
+
+            {mode === "report" ? (
+              <>
+                <p className="text-[15px] font-extrabold tracking-[-0.2px] text-white">Report {peerName}</p>
+                <p className="mt-1.5 text-[13px] leading-[18px] text-white/70">
+                  Tell us what happened. This does not block them — you are asked about that next.
+                </p>
+                <textarea
+                  autoFocus
+                  rows={3}
+                  value={detail}
+                  onChange={(e) => setDetail(e.target.value.slice(0, 280))}
+                  placeholder="What happened?"
+                  aria-label="What happened"
+                  className="mt-2.5 w-full resize-none rounded-[14px] border border-white/[0.15] bg-white/[0.06] px-3 py-2.5 text-[14px] leading-[20px] text-white outline-none placeholder:text-white/50 focus:border-white/30"
+                />
+                <div className="mt-2.5 flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() =>
+                      void run(
+                        () => reportUser({ userId: peerId, ...(detail.trim() ? { detail: detail.trim() } : {}) }),
+                        () => setMode("done"),
+                      )
+                    }
+                    className="inline-flex h-10 flex-1 items-center justify-center rounded-[12px] bg-amber text-[14px] font-bold text-text-on-amber transition-colors hover:bg-amber-glow disabled:bg-white/[0.12] disabled:text-white/50"
+                  >
+                    {busy ? "Sending…" : "Send report"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMode("menu")}
+                    className="inline-flex h-10 items-center justify-center rounded-[12px] bg-white/10 px-4 text-[14px] font-strong text-white/85 transition-colors hover:bg-white/[0.16]"
+                  >
+                    Back
+                  </button>
+                </div>
+              </>
+            ) : null}
+
+            {mode === "done" ? (
+              <>
+                <p className="text-[15px] font-extrabold tracking-[-0.2px] text-white">Report sent</p>
+                <p className="mt-1.5 text-[13px] leading-[18px] text-white/70">
+                  We will look at it. Do you also want to block {peerName}?
+                </p>
+                <div className="mt-3 flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void run(() => blockUser(peerId), () => { onBlocked?.(); close(); })}
+                    className="inline-flex h-10 flex-1 items-center justify-center rounded-[12px] bg-white/[0.16] text-[14px] font-bold text-white transition-colors hover:bg-white/[0.22] disabled:opacity-60"
+                  >
+                    {busy ? "Blocking…" : "Block them too"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={close}
+                    className="inline-flex h-10 items-center justify-center rounded-[12px] bg-white/10 px-4 text-[14px] font-strong text-white/85 transition-colors hover:bg-white/[0.16]"
+                  >
+                    No, thanks
+                  </button>
+                </div>
+              </>
+            ) : null}
+
+            {failed ? <p className="mt-2 text-[12px] leading-[17px] text-white/75">That did not go through. Try again.</p> : null}
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
 /* ── The bar ──────────────────────────────────────────────────────── */
 
 function Composer({
@@ -360,7 +840,20 @@ function Composer({
   }, [canSend, peerId, text, gif, onSent]);
 
   return (
-    <div className="sticky bottom-0 mt-4 bg-gradient-to-t from-[#0A1B24] via-[#0A1B24] to-transparent pb-1 pt-3">
+    /*
+      NO GROUND OF ITS OWN.
+
+      This used to fade to #0A1B24 — a flat navy that exists nowhere else in
+      the product. The page behind it is a gradient, so a single colour is
+      wrong at every scroll position except one, and what it drew was a dark
+      band with a visible edge sitting under the bar.
+
+      A sticky bar does not need to repaint the floor; it needs the floor not
+      to read through it. So the wrapper carries no background at all and the
+      bar itself blurs what passes behind, which is what the top bar already
+      does at the other end of the screen.
+    */
+    <div className="sticky bottom-0 mt-4 pb-1 pt-3">
       {refused ? (
         <p className="mb-2 px-1 text-[12px] leading-[17px] text-white/75">
           That did not go through. The GIF may have been refused — try it without one.
@@ -383,14 +876,23 @@ function Composer({
         </div>
       ) : null}
 
-      <div className="flex items-end gap-2 rounded-[20px] border border-white/[0.12] bg-white/10 px-2 py-1.5">
+      <div className="flex items-end gap-2 rounded-[20px] border border-white/[0.12] bg-white/10 px-2 py-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.28)] backdrop-blur-xl">
+        {/* It says GIF.
+
+            It was a smiley, which on every keyboard anyone has used opens
+            emoji — so the one control on this bar that is not typing looked
+            like the one thing this bar cannot do, and the GIFs read as
+            missing. The word is three characters and it is unambiguous. */}
         <button
           type="button"
           onClick={() => setPicking(true)}
           aria-label="Add a GIF"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white/75 transition-colors hover:bg-white/10 hover:text-white"
+          title="Add a GIF"
+          className={`flex h-9 shrink-0 items-center justify-center rounded-full px-2.5 text-[11.5px] font-extrabold tracking-[0.3px] transition-colors ${
+            gif ? "bg-amber text-[#0F0F1A]" : "text-white/75 hover:bg-white/10 hover:text-white"
+          }`}
         >
-          <Ion name="happy-outline" size={20} />
+          GIF
         </button>
         <textarea
           id="chat-composer"

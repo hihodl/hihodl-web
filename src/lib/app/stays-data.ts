@@ -138,6 +138,31 @@ export interface SearchState {
   error: unknown;
   hasMore: boolean;
   loadMore: () => void;
+  /** Identifies THIS search, for whoever wants to remember something about it. */
+  pageKey: string | null;
+}
+
+/**
+ * The pages after the first, kept outside React.
+ *
+ * They used to be component state, and that is why opening a hotel and
+ * pressing Back gave you page one again: `ResultsScreen` unmounts on the way
+ * out and takes them with it, while SWR only ever cached the first page. Six
+ * "Show more" presses, gone, on the one journey where going back and forth is
+ * the whole point of the screen.
+ *
+ * So they live here, keyed by the search they belong to. Four searches is
+ * plenty — it covers going back, changing your mind, and going back again —
+ * and the oldest is dropped rather than letting a long session keep every
+ * hotel it ever listed.
+ */
+const pages = new Map<string, { extra: StayResult[]; offset: number | null }>();
+const PAGES_KEPT = 4;
+
+function remember(stamp: string, extra: StayResult[], offset: number | null): void {
+  pages.delete(stamp);
+  pages.set(stamp, { extra, offset });
+  while (pages.size > PAGES_KEPT) pages.delete(pages.keys().next().value as string);
 }
 
 /**
@@ -151,31 +176,35 @@ export interface SearchState {
 export function useSearch(query: SearchQuery | null): SearchState {
   const who = useWho();
   const key = query ? [who, "stays/search", JSON.stringify(query)] : null;
+  const stamp = key ? JSON.stringify(key) : null;
 
   const first = useSWR<SearchAnswer>(query && who ? key : null, () => searchStays({ ...query!, limit: PAGE_SIZE, offset: 0 }), {
     ...OPTIONS,
     keepPreviousData: false,
   });
 
-  const [extra, setExtra] = useState<StayResult[]>([]);
-  const [offset, setOffset] = useState<number | null>(null);
+  // Mounted straight from the store, not from empty: a remount that started
+  // blank would paint page one, then jump as the rest arrived.
+  const held = stamp ? pages.get(stamp) : undefined;
+  const [extra, setExtra] = useState<StayResult[]>(held?.extra ?? []);
+  const [offset, setOffset] = useState<number | null>(held?.offset ?? null);
   const [more, setMore] = useState(false);
   // Which search the appended pages belong to. A changed query throws them
   // away — appending Lisbon's page two onto Madrid's page one is the bug this
   // guards, and it is invisible until somebody books the wrong city.
-  const belongsTo = useRef<string | null>(null);
+  const belongsTo = useRef<string | null>(stamp);
 
-  const stamp = key ? JSON.stringify(key) : null;
   useEffect(() => {
     if (belongsTo.current === stamp) return;
     belongsTo.current = stamp;
-    setExtra([]);
-    setOffset(null);
+    const kept = stamp ? pages.get(stamp) : undefined;
+    setExtra(kept?.extra ?? []);
+    setOffset(kept?.offset ?? null);
     setMore(false);
   }, [stamp]);
 
   const loadMore = useCallback(() => {
-    if (!query || more) return;
+    if (!query || more || !stamp) return;
     const next = offset ?? first.data?.nextOffset ?? null;
     const token = first.data?.resolution?.token;
     if (next === null) return;
@@ -185,7 +214,10 @@ export function useSearch(query: SearchQuery | null): SearchState {
       .then((page) => {
         // The person searched something else while this was in the air.
         if (belongsTo.current !== mine) return;
-        setExtra((was) => [...was, ...page.stays]);
+        // The store is what is true; the state is the copy React draws from.
+        const grown = [...(pages.get(mine)?.extra ?? []), ...page.stays];
+        remember(mine, grown, page.nextOffset);
+        setExtra(grown);
         setOffset(page.nextOffset);
       })
       // A page that fails stops the paging rather than retrying forever: the
@@ -214,6 +246,7 @@ export function useSearch(query: SearchQuery | null): SearchState {
     error: first.error,
     hasMore: nextOffset !== null && Boolean(first.data?.hasMore || extra.length),
     loadMore,
+    pageKey: stamp,
   };
 }
 
@@ -242,12 +275,37 @@ export interface RatesQuery {
   currency: string;
 }
 
-export function useRates(hotelId: string | null, q: RatesQuery | null) {
+/**
+ * A property's rates.
+ *
+ * `frozen` IS NOT AN OPTIMISATION, IT IS THE CHECKOUT'S CORRECTNESS
+ *
+ * Every call to the supplier mints a FRESH set of `offerId`s. On the property
+ * page that is fine — the rows re-render with whatever came back. On the
+ * checkout it is fatal: that screen is holding one `offerId` pinned in the
+ * URL, and a revalidation replaces the list with offers that do not include
+ * it. The screen then finds no rate and says "That rate has gone" over an
+ * offer that had not gone anywhere.
+ *
+ * `revalidateOnFocus` made that a routine event rather than an edge case:
+ * alt-tab to check a date, take a screenshot, glance at another window, and
+ * the click that brings the tab back also fires the revalidation that throws
+ * the person out of a checkout they were halfway through filling in.
+ *
+ * So the checkout asks once. The header's reasoning — an `offerId` lives for
+ * minutes, so re-read it rather than carrying the price — is about the FIRST
+ * read, and it still holds: the screen re-reads on arrival and says so
+ * honestly if the offer is already gone. What it must not do is keep asking a
+ * question whose answer destroys its own state.
+ */
+export function useRates(hotelId: string | null, q: RatesQuery | null, frozen = false) {
   const who = useWho();
   return useSWR<{ hotelId: string; rates: Rate[] }>(
     hotelId && q && who ? [who, "stays/rates", hotelId, JSON.stringify(q)] : null,
     () => getRates(hotelId!, q!),
-    OPTIONS,
+    frozen
+      ? { ...OPTIONS, revalidateOnFocus: false, revalidateOnReconnect: false, revalidateIfStale: false }
+      : OPTIONS,
   );
 }
 

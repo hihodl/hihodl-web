@@ -30,11 +30,11 @@ import { useMemo } from "react";
 import { useProductHref } from "../base";
 import { Ion } from "../ion";
 
-import { Cta, Empty, Ground, ScorePill, SectionLabel, Spinner } from "./kit";
-import { P, count, money, nights as nightsWord, nightsBetween, ratingLabel, stayRange } from "./look";
+import { Empty, Screen, ScorePill, Spinner } from "./kit";
+import { P, count, nightsBetween, ratingLabel, stayRange } from "./look";
 import { sane, stayFromParams, stayToParams } from "./SearchControls";
 import { groupByRoom } from "./group";
-import { About, CheckinTimes, Facilities, Gallery, GoodToKnow, Nearby, RateRow, ReviewSummary, RoomGroup } from "./StayParts";
+import { About, CheckinTimes, Facilities, Gallery, GoodToKnow, Nearby, ReviewSummary, RoomGroup } from "./StayParts";
 import { useRates, useStay } from "@/lib/app/stays-data";
 import type { Rate } from "@/lib/app/stays";
 
@@ -61,11 +61,10 @@ export function StayScreen({ hotelId }: { hotelId: string }) {
   }
 
   const groups = useMemo(() => groupByRoom(rates.data?.rates ?? [], stay.data?.rooms ?? []), [rates.data, stay.data]);
-  const cheapest = rates.data?.rates[0] ?? null;
 
   if (stay.error) {
     return (
-      <Ground className="rounded-[20px] p-6">
+      <Screen className="py-8">
         <Empty
           icon="cloud-offline-outline"
           title="Couldn't load this property"
@@ -73,12 +72,12 @@ export function StayScreen({ hotelId }: { hotelId: string }) {
           action="Try again"
           onAction={() => void stay.mutate()}
         />
-      </Ground>
+      </Screen>
     );
   }
 
   return (
-    <Ground className="gap-4 rounded-[20px] p-4 sm:p-6">
+    <Screen className="gap-4">
       <button
         type="button"
         onClick={() => router.back()}
@@ -129,7 +128,14 @@ export function StayScreen({ hotelId }: { hotelId: string }) {
             </p>
           </header>
 
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
+          {/* One column. There WAS a sticky "From … / Book this rate" card
+              here, and it was three affordances for one action: every rate row
+              already books, so the card repeated a row and then put a button
+              under the repeat. Worse, it always showed the CHEAPEST rate,
+              which is rarely the one being read — so the most prominent
+              button on the page booked something other than what the eye was
+              on. A price you cannot act on wrongly beats a shortcut you can. */}
+          <div className="mx-auto w-full max-w-[720px]">
             <div className="min-w-0">
               <section className="mt-[22px] flex flex-col gap-2.5">
                 <h2 className="text-[13.5px] font-extrabold tracking-[-0.1px]" style={{ color: P.text }}>
@@ -176,32 +182,16 @@ export function StayScreen({ hotelId }: { hotelId: string }) {
               <Nearby places={stay.data.nearby} />
               <CheckinTimes stay={stay.data} />
               <GoodToKnow stay={stay.data} />
-            </div>
 
-            {/* The price, kept in view while the page is read. */}
-            {cheapest ? (
-              <aside className="lg:sticky lg:top-4 lg:self-start">
-                <div className="flex flex-col gap-3 rounded-[24px] border-[0.5px] border-white/10 bg-white/[0.04] p-4">
-                  <SectionLabel className="!px-0">From</SectionLabel>
-                  <div>
-                    <p className="text-[26px] font-extrabold tabular-nums leading-none tracking-[-0.7px]" style={{ color: P.text }}>
-                      {money(cheapest.price, cheapest.currency)}
-                    </p>
-                    <p className="mt-1 text-[11.5px] font-medium" style={{ color: P.textDim }}>
-                      {`total for ${nightsWord(nights)}`}
-                    </p>
-                  </div>
-                  <RateRow rate={cheapest} nights={nights} onPick={() => book(cheapest)} />
-                  <Cta label="Book this rate" variant="primary" onClick={() => book(cheapest)} />
-                  <p className="text-[11.5px] leading-[17px]" style={{ color: P.textFaint }}>
-                    Rooms are supplied and reserved by our booking partner. You pay HOLD, and the stay is provided by the property under its own terms.
-                  </p>
-                </div>
-              </aside>
-            ) : null}
+              {/* Who actually sells the room. It rode in the price card; with
+                  that gone it belongs at the foot of the page it qualifies. */}
+              <p className="mt-6 text-[11.5px] leading-[17px]" style={{ color: P.textFaint }}>
+                Rooms are supplied and reserved by our booking partner. You pay HOLD, and the stay is provided by the property under its own terms.
+              </p>
+            </div>
           </div>
         </>
       )}
-    </Ground>
+    </Screen>
   );
 }

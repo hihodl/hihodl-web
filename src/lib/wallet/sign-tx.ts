@@ -57,3 +57,17 @@ export async function signSerializedTx(serializedTxB64: string, seed: Uint8Array
   tx.signatures[index] = ed25519.sign(tx.message.serialize(), seed);
   return toBase64(tx.serialize());
 }
+
+/**
+ * The compiled MESSAGE of a serialized transaction, base64.
+ *
+ * What a Solana signature covers, what the backend's gate hashes, and so what
+ * an approval has to be taken over. Signing does not change it — the
+ * signatures are a header in front of it — so this may be read before or after
+ * `signSerializedTx` and gives the same bytes either way.
+ */
+export async function messageOf(serializedTxB64: string): Promise<string> {
+  const { VersionedTransaction } = await import("@solana/web3.js");
+  const raw = Uint8Array.from(atob(serializedTxB64), (c) => c.charCodeAt(0));
+  return toBase64(VersionedTransaction.deserialize(raw).message.serialize());
+}

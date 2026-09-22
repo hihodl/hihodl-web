@@ -260,6 +260,21 @@ function suitcase(): Space {
     }),
     position(pid(17), byKey["right-lower-left"]),
     position(pid(18), byKey["right-lower-right"]),
+    /* One brand takes everything (ad-space-whole-listing-v0.md). It belongs to
+       no zone, so the board never draws a square for it: the piece IS the
+       square. Priced at what the eighteen squares come to together, which is
+       the floor the server holds it to, and left OUT of `totals` — it is
+       another way to buy the same board, not a nineteenth spot on it. */
+    position(
+      pid(19),
+      { zoneKey: "whole", label: "One brand takes everything", suggestedPriceCents: 420000 },
+      {
+        takesEverything: true,
+        rect: null,
+        pitch: "The whole suitcase is yours through Changi, the venue and every vlog, and nobody else is on it.",
+        accepts: ["logo", "qr", "photo"],
+      },
+    ),
   ];
 
   return {

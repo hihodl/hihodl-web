@@ -24,7 +24,7 @@ import { useState } from "react";
 import { useProductHref } from "../base";
 import { Ion } from "../ion";
 
-import { Banner, Card, Empty, Ground, Photo, PointsHeadline, SectionLabel, Spinner } from "./kit";
+import { Banner, Card, Empty, Photo, PointsHeadline, Screen, SectionLabel, Spinner } from "./kit";
 import { P, dateRange, money, nights as nightsWord, stayRange } from "./look";
 import { SearchBar, blankStay, sane, stayToParams, type Stay } from "./SearchControls";
 import { useFeatured, useStaysConfig, useTrips } from "@/lib/app/stays-data";
@@ -44,18 +44,18 @@ export function StaysScreen() {
   // search box that answers nothing.
   if (config.data && !config.data.available) {
     return (
-      <Ground className="rounded-[20px] p-6">
+      <Screen className="py-8">
         <Empty
           icon="bed-outline"
           title="Stays isn't live yet"
           body="We're finishing the connection to our booking partner. It'll be here soon."
         />
-      </Ground>
+      </Screen>
     );
   }
 
   return (
-    <Ground className="gap-5 rounded-[20px] p-4 sm:p-6">
+    <Screen className="gap-5">
       {config.data?.sandbox ? (
         <Banner icon="flask-outline">Test mode — nothing you book here is a real reservation</Banner>
       ) : null}
@@ -104,7 +104,7 @@ export function StaysScreen() {
       />
 
       <YourTrips />
-    </Ground>
+    </Screen>
   );
 }
 

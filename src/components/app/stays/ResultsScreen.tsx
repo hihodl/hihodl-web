@@ -25,12 +25,17 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useProductHref } from "../base";
 import { Ion } from "../ion";
 
-import { Cta, Empty, Ground, SectionLabel, Spinner } from "./kit";
+import { Cta, Empty, Screen, SectionLabel, Spinner } from "./kit";
 import { P, count, nights as nightsWord } from "./look";
 import { SearchBar, sane, stayFromParams, stayToParams, type Stay } from "./SearchControls";
 import { StayCard, StayCardSkeleton } from "./StayCard";
 import { useSearch } from "@/lib/app/stays-data";
 import type { SearchQuery } from "@/lib/app/stays";
+
+/** Where the reader was in each search, so Back can put them back there. */
+const scrollFor = new Map<string, number>();
+/** Every hotel opened this session, so the fade survives the round trip. */
+const opened = new Set<string>();
 
 export function ResultsScreen() {
   const href = useProductHref();
@@ -56,12 +61,36 @@ export function ResultsScreen() {
       }
     : null;
 
-  const { stays, nights, loading, loadingMore, error, hasMore, loadMore, resolution } = useSearch(query);
+  const { stays, nights, loading, loadingMore, error, hasMore, loadMore, resolution, pageKey } = useSearch(query);
 
   // Which results have already been opened this session. The app fades them,
   // and on the fourth pass down forty hotels that is the only question left.
-  const [seen, setSeen] = useState<Set<string>>(() => new Set());
+  // Module-level, like the pages themselves: the whole point of the mark is
+  // that it survives opening a hotel, which is precisely when this unmounts.
+  const [seen, setSeen] = useState<Set<string>>(() => new Set(opened));
   const foot = useRef<HTMLDivElement>(null);
+
+  /*
+   * Back should land where you left, not at the top of page one.
+   *
+   * The browser restores scroll by itself, but it does it before the appended
+   * pages have rendered — the document is still one page tall at that moment,
+   * so the restore is clamped to the bottom of page one and the position is
+   * silently lost. So the offset is remembered on the way out and reapplied
+   * once the list is at least as long as it was, and once only: after that the
+   * reader owns the scrollbar again.
+   */
+  const restored = useRef(false);
+  useEffect(() => {
+    if (restored.current || !pageKey) return;
+    const mark = scrollFor.get(pageKey);
+    if (mark === undefined) return;
+    if (!stays.length) return;
+    restored.current = true;
+    scrollFor.delete(pageKey);
+    // After paint, so the list has its real height.
+    requestAnimationFrame(() => window.scrollTo({ top: mark, behavior: "instant" as ScrollBehavior }));
+  }, [pageKey, stays.length]);
 
   // The next page loads when the foot of the list comes into view. `hasMore`
   // and `loadingMore` are in the deps so the observer is rebuilt when either
@@ -77,7 +106,9 @@ export function ResultsScreen() {
   }, [hasMore, loadingMore, loadMore]);
 
   function open(hotelId: string) {
+    opened.add(hotelId);
     setSeen((was) => new Set(was).add(hotelId));
+    if (pageKey) scrollFor.set(pageKey, window.scrollY);
     const q = stayToParams(committed);
     q.delete("where");
     q.delete("place");
@@ -87,7 +118,7 @@ export function ResultsScreen() {
   }
 
   return (
-    <Ground className="gap-5 rounded-[20px] p-4 sm:p-6">
+    <Screen className="gap-5">
       <SearchBar
         value={draft}
         onChange={setDraft}
@@ -156,6 +187,6 @@ export function ResultsScreen() {
           </div>
         </section>
       )}
-    </Ground>
+    </Screen>
   );
 }

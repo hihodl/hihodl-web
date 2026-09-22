@@ -48,6 +48,8 @@ import {
   IconPayments,
   IconSales,
   IconSavings,
+  IconSearch,
+  IconGrid,
   IconSettings,
   IconSim,
   IconTeam,
@@ -82,6 +84,8 @@ export type NavKey =
   | "crew"
   | "inspire"
   | "insights"
+  | "board"
+  | "bought"
   | "spaces-settings";
 
 export type Level = "main" | "spaces";
@@ -176,6 +180,37 @@ export const SPACES_GROUPS: readonly NavGroup[] = [
       { key: "offers", label: "Offers & bids", path: "/spaces/offers", icon: IconOffers, roles: ["creator", "manager"], keywords: "inbox bids counter accept decline" },
       { key: "sales", label: "Sales", path: "/spaces/sales", icon: IconSales, roles: ["creator"], keywords: "orders money received usdc" },
       { key: "deliveries", label: "Deliveries", path: "/spaces/deliveries", icon: IconDeliveries, roles: ALL, keywords: "work artwork approve deliver due promises" },
+    ],
+  },
+  /*
+   * SPACES HAS TWO SIDES, AND ONLY ONE OF THEM HAD A MENU.
+   *
+   * Everything above sells. This buys — and it is not a lesser mode of the
+   * same job: a brand looking for a creator and a creator running listings
+   * want opposite things from the same rows.
+   *
+   * No `roles`, on purpose. The rest of this column is gated on being a
+   * creator or sitting on somebody's team; buying a spot asks nothing of you
+   * but an account, and a brand that has never listed anything is exactly who
+   * these two are for.
+   */
+  {
+    title: "Sponsor",
+    items: [
+      {
+        key: "board",
+        label: "Find a spot",
+        path: "/spaces/board",
+        icon: IconSearch,
+        keywords: "buy sponsor book a spot brand board marketplace what creators sell advertise place my logo",
+      },
+      {
+        key: "bought",
+        label: "Your spots",
+        path: "/spaces/bought",
+        icon: IconGrid,
+        keywords: "bought orders sponsored paid receipts artwork my sponsorships",
+      },
     ],
   },
   {

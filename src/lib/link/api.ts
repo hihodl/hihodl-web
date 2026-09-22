@@ -175,6 +175,35 @@ export async function authorizeWithdrawalPasskey(id: string, assertion: unknown)
   return toWithdrawal(await send<Raw>(`withdrawals/${encodeURIComponent(id)}/authorize-passkey`, { json: { assertion } }));
 }
 
+/* ── Approving bytes the server did not write ─────────────────────── */
+
+/**
+ * A BRIDGE DEPOSIT'S APPROVAL.
+ *
+ * `withdrawalPasskeyChallenge` above binds a passkey to a transfer the server
+ * described first — token, amount, recipient — and the server refuses any
+ * bytes that are not exactly that. A bridge deposit has no such description:
+ * the provider builds it, lookup tables and its own program included, and the
+ * transfer check refuses all of it by design.
+ *
+ * So these two bind the one thing a deposit does have: its hash. The challenge
+ * is sha256("hihodl/tx/v1" ‖ sha256(message)) — the same digest a linked phone
+ * signs — and `POST /cross-chain/gasless/submit` spends the approval once.
+ *
+ * `message` is the COMPILED MESSAGE, base64: `tx.message.serialize()`, not the
+ * transaction. That is what a Solana signature covers and what the gate hashes.
+ */
+export async function txApprovalChallenge(message: string): Promise<{ options: AssertionOptionsJSON; messageHash: string | null }> {
+  const r = await send<Raw>("withdrawals/tx-challenge", { json: { message } });
+  const options = (r.publicKey as AssertionOptionsJSON | undefined) ?? (r.options as AssertionOptionsJSON | undefined) ?? (r as unknown as AssertionOptionsJSON);
+  return { options, messageHash: str(r, "messageHash", "message_hash") };
+}
+
+export async function authorizeTxPasskey(message: string, assertion: unknown): Promise<{ approved: boolean }> {
+  const r = await send<Raw>("withdrawals/tx-authorize", { json: { message, assertion } });
+  return { approved: r.approved === true };
+}
+
 /* ── The relayer (POST /relayer/solana/quote and /submit) ─────────── */
 
 export interface RelayerQuote {
@@ -197,6 +226,17 @@ export function relayerQuote(body: { tokenId: string; amount: string; to: string
   return send<RelayerQuote>("relayer/solana/quote", { json: { ...body, sponsored: true } });
 }
 
-export function relayerSubmit(body: { serializedTx: string; idempotencyKey: string; withdrawalId: string }): Promise<{ signature: string; status: string }> {
+/**
+ * `withdrawalId` is optional because it is only one of the three ways past the
+ * gate. A withdrawal names itself here; a transaction the SERVER built — a
+ * bridge deposit, a spot bought on Spaces — is let through by the passkey
+ * approval over its own bytes instead, which was taken before this call and
+ * needs nothing in the body. See `txApprovalChallenge` above.
+ */
+export function relayerSubmit(body: {
+  serializedTx: string;
+  idempotencyKey: string;
+  withdrawalId?: string;
+}): Promise<{ signature: string; status: string }> {
   return send("relayer/solana/submit", { json: body });
 }

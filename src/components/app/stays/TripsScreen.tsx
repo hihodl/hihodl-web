@@ -28,7 +28,7 @@ import { useProductHref } from "../base";
 import { Ion } from "../ion";
 
 import { CancelSheet } from "./CancelSheet";
-import { Empty, Ground, Photo, SectionLabel, Spinner } from "./kit";
+import { Empty, Photo, Screen, SectionLabel, Spinner } from "./kit";
 import { P, money, pointsEarned, shortDate, stayRange } from "./look";
 import { refreshTrips, useTrips } from "@/lib/app/stays-data";
 import type { Booking } from "@/lib/app/stays";
@@ -46,7 +46,7 @@ export function TripsScreen() {
   const past = bookings.filter((b) => b.checkout < today || b.status === "cancelled");
 
   return (
-    <Ground className="gap-4 rounded-[20px] p-4 sm:p-6">
+    <Screen className="gap-4">
       <h1 className="text-[25px] font-extrabold leading-tight tracking-[-0.7px]" style={{ color: P.text }}>
         Your trips
       </h1>
@@ -110,7 +110,7 @@ export function TripsScreen() {
           }}
         />
       ) : null}
-    </Ground>
+    </Screen>
   );
 }
 

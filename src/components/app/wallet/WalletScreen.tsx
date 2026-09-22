@@ -433,6 +433,22 @@ function Home({ address, status, onChanged }: { address: string; status: WalletS
     const open = typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("open");
     return open === "receive" ? "receive" : open === "send" ? "withdraw" : open === "security" ? "security" : "home";
   });
+  /*
+   * …and Payments lands here with the answer already in hand: Pay on a request
+   * carries the amount, and a thread whose handle resolved carries the
+   * address. Read ONCE, at mount, so a later render can never write over what
+   * the person has typed since.
+   */
+  const [prefill] = useState<{ to?: string; amount?: string; token?: "USDC" | "SOL" }>(() => {
+    if (typeof window === "undefined") return {};
+    const q = new URLSearchParams(window.location.search);
+    const token = (q.get("token") ?? "").toUpperCase();
+    return {
+      ...(q.get("to") ? { to: q.get("to")! } : {}),
+      ...(q.get("amount") ? { amount: q.get("amount")! } : {}),
+      ...(token === "USDC" || token === "SOL" ? { token } : {}),
+    };
+  });
   const [balances, setBalances] = useState<Balances | null>(null);
   const [balanceError, setBalanceError] = useState(false);
   const name = useDisplayName();
@@ -449,7 +465,8 @@ function Home({ address, status, onChanged }: { address: string; status: WalletS
   const toPasskeys = () => setScreen("passkeys");
 
   if (screen === "receive") return <Receive address={address} onBack={back} />;
-  if (screen === "withdraw") return <Withdraw uid={session.user.id} from={address} balances={balances} onBack={back} />;
+  if (screen === "withdraw")
+    return <Withdraw uid={session.user.id} from={address} balances={balances} onBack={back} prefill={prefill} />;
   if (screen === "security") return <Security onBack={back} onPhrase={() => setScreen("export")} onPasskeys={toPasskeys} />;
   if (screen === "passkeys")
     return <Passkeys wrappings={status.wrappings} onBack={toSecurity} onAdd={() => setScreen("add")} onChanged={onChanged} />;

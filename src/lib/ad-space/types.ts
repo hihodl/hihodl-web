@@ -12,7 +12,12 @@ import type { PackageView as ProductionPackageView, ProductionView as Production
 export type Chain = "solana" | "base" | "polygon";
 
 export type SpaceStatus = "draft" | "live" | "closed" | "delisted";
-export type PositionStatus = "open" | "held" | "sold";
+/**
+ * `closed` is a square retired because one brand bought the WHOLE listing. It
+ * was never sold and it is not for sale: nobody delivers against it and no
+ * money is counted off it.
+ */
+export type PositionStatus = "open" | "held" | "sold" | "closed";
 export type ContentKind = "logo" | "qr" | "text" | "photo";
 export type VerifiedType = "blue" | "business" | "government" | null;
 export type DeliverableState = "upcoming" | "overdue" | "delivered" | "missed";
@@ -180,6 +185,15 @@ export interface SpacePhoto {
 export interface Position {
   id: string;
   zoneKey: string;
+  /**
+   * This position sells the WHOLE listing to ONE brand: while it is being paid
+   * for or sold, nothing else on the listing is for sale, and it cannot itself
+   * be bought once a square is gone. It belongs to no zone, so the board never
+   * draws a square for it: the piece IS the square.
+   *
+   * Optional, because a server older than it sends no key.
+   */
+  takesEverything?: boolean;
   /** This spot's square on `Space.photo`, or null. Only drawn when the space has a photo. */
   rect?: PhotoRect | null;
   /** The tier's name when this position sells one, else the zone's label or the slot number. */
