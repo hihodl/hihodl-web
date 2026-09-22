@@ -38,9 +38,16 @@ import type { Chain } from "@/lib/ad-space/types";
  * `server/services/ad-space/rules.ts` or `offers-rules.ts`, it moves here too.
  */
 export const LIMITS = {
-  /** A spot's listed price: $5 to $25,000. */
+  /**
+   * A spot's listed price: $5 to $250,000.
+   *
+   * The ceiling is high because one of the things a listing can sell is the
+   * WHOLE listing, to one brand (`WHOLE_ZONE_KEY`): a look worn on a stage at
+   * a conference is not a logo on a suitcase, and $25,000 sat below the thing
+   * we were asking a brand to buy.
+   */
   PRICE_MIN_CENTS: 500,
-  PRICE_MAX_CENTS: 2_500_000,
+  PRICE_MAX_CENTS: 25_000_000,
   /** No offer, counter or bid under $25 — so no price on a rung that takes them. */
   OFFER_MIN_CENTS: 2_500,
   /** A session slot is at least $50. */
@@ -959,6 +966,26 @@ export interface ListingDraft {
   zones: ZoneDraft[];
 }
 
+/**
+ * The zone key of the position that sells the WHOLE listing to ONE brand.
+ *
+ * It is a zone draft like any other, so the payload, the reload and the price
+ * fields all work on it unchanged — it simply has no rectangle on the product,
+ * because what it sells is the product. Off by default: a creator who wants a
+ * board of squares should get one without being asked about exclusivity.
+ */
+export const WHOLE_ZONE_KEY = "whole";
+
+/** The whole-listing draft of a form, or null when the template has none. */
+export function wholeZoneOf(draft: ListingDraft) {
+  return draft.zones.find((z) => z.zoneKey === WHOLE_ZONE_KEY) ?? null;
+}
+
+/** The squares: every zone the product actually declares. */
+export function squareZonesOf(draft: ListingDraft) {
+  return draft.zones.filter((z) => z.zoneKey !== WHOLE_ZONE_KEY);
+}
+
 /** A key nothing else on this ladder has, stable for as long as the rung lives. */
 export function newRungKey(existing: readonly RungDraft[]): string {
   for (let n = 1; ; n += 1) {
@@ -1027,14 +1054,29 @@ export function draftFor(template: Template): ListingDraft {
     slotPriceDollars: dollarsFromCents(suggested),
     slotMinOfferDollars: "",
     slotPitch: "",
-    zones: template.zones.map((z) => ({
-      zoneKey: z.zoneKey,
-      on: true,
-      priceDollars: dollarsFromCents(z.suggestedPriceCents),
-      minOfferDollars: "",
-      pitch: "",
-      accepts: ["logo"],
-    })),
+    zones: [
+      ...template.zones.map((z) => ({
+        zoneKey: z.zoneKey,
+        on: true,
+        priceDollars: dollarsFromCents(z.suggestedPriceCents),
+        minOfferDollars: "",
+        pitch: "",
+        accepts: ["logo"] as ContentKind[],
+      })),
+      {
+        zoneKey: WHOLE_ZONE_KEY,
+        // Off until the creator asks for it.
+        on: false,
+        // The sum of the squares, which is the floor the backend holds it to:
+        // the brand going all in never pays less than the brand buying one.
+        priceDollars: dollarsFromCents(
+          template.zones.reduce((sum, z) => sum + (z.suggestedPriceCents ?? 0), 0) || null,
+        ),
+        minOfferDollars: "",
+        pitch: "",
+        accepts: ["logo"] as ContentKind[],
+      },
+    ],
   };
 }
 
@@ -1119,12 +1161,16 @@ export function draftFromSpace(space: SpaceView, template: Template): ListingDra
     slotPriceDollars: dollarsFromCents(first?.priceCents ?? null),
     slotMinOfferDollars: dollarsFromCents(centsFromUsdc(space.spaceOffers?.minOfferUsdc)),
     slotPitch: first?.pitch ?? "",
-    zones: template.zones.map((z) => {
-      const own = space.positions.find((p) => p.zoneKey === z.zoneKey);
+    zones: [...template.zones.map((z) => z.zoneKey), WHOLE_ZONE_KEY].map((zoneKey) => {
+      const own = space.positions.find((p) => p.zoneKey === zoneKey);
+      const suggested =
+        zoneKey === WHOLE_ZONE_KEY
+          ? template.zones.reduce((sum, z) => sum + (z.suggestedPriceCents ?? 0), 0) || null
+          : null;
       return {
-        zoneKey: z.zoneKey,
+        zoneKey,
         on: !!own,
-        priceDollars: dollarsFromCents(own?.priceCents ?? null),
+        priceDollars: dollarsFromCents(own?.priceCents ?? suggested),
         minOfferDollars: dollarsFromCents(centsFromUsdc(own?.offers?.minOfferUsdc)),
         pitch: own?.pitch ?? "",
         accepts: own?.accepts?.length ? own.accepts : (["logo"] as ContentKind[]),

@@ -536,6 +536,24 @@ function Zone({
       )}
 
       {p.status === "sold" && <SoldZone p={p} x={rx} y={ry} w={rw} h={rh} radius={radius} active={active} />}
+
+      {/* One brand bought the whole piece, so this square was never sold and
+          carries nobody's logo. A quiet plate: it is not for sale, and it is
+          not an achievement to shout about either. */}
+      {p.status === "closed" && (
+        <rect
+          x={rx}
+          y={ry}
+          width={rw}
+          height={rh}
+          rx={radius}
+          fill={ZONE.soldFill}
+          opacity={0.45}
+          stroke={ZONE.idleStroke}
+          strokeWidth={1}
+          vectorEffect="non-scaling-stroke"
+        />
+      )}
     </g>
   );
 }

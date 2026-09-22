@@ -197,6 +197,9 @@ export const STATUS_LABEL: Record<PositionStatus, string> = {
   open: "Available",
   held: "Being paid",
   sold: "Sold",
+  // One brand bought the whole listing, so this square was never sold and is
+  // not for sale. Saying "Sold" would credit it with money it never took.
+  closed: "Taken",
 };
 
 export const DELIVERABLE_STATE_LABEL: Record<DeliverableState, string> = {
@@ -218,6 +221,7 @@ export const SESSION_STATUS_LABEL: Record<PositionStatus, string> = {
   open: "Available",
   held: "Being booked",
   sold: "Booked",
+  closed: "Taken",
 };
 
 /**
