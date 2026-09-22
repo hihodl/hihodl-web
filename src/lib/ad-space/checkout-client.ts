@@ -511,6 +511,13 @@ export function describeError(e: unknown, chain?: Chain | null, subject: Subject
 
   const d = e.details;
   switch (e.code) {
+    case "crew_not_ready":
+      return "This crew is still agreeing its terms, so it can't be bought yet. Nothing was paid; try again soon.";
+    case "crew_pays_on_solana":
+      return "A crew is paid on Solana, so every creator in it gets their part in one payment. Pay with a Solana wallet.";
+    case "crew_member_cannot_receive":
+    case "crew_wallets_not_distinct":
+      return "One of the creators in this crew can't be paid right now. Nothing was paid; try again later.";
     case "brief_required":
       return "Fill in the brief first: the creator films from it. Nothing was paid.";
     case "brief_invalid":

@@ -51,6 +51,7 @@ import {
   IconSettings,
   IconSim,
   IconTeam,
+  IconCrew,
   IconWallet,
 } from "./icons";
 
@@ -77,6 +78,7 @@ export type NavKey =
   | "sales"
   | "deliveries"
   | "team"
+  | "crew"
   | "inspire"
   | "insights"
   | "spaces-settings";
@@ -177,6 +179,14 @@ export const SPACES_GROUPS: readonly NavGroup[] = [
     title: "Grow",
     items: [
       { key: "team", label: "Team", path: "/spaces/team", icon: IconTeam, roles: ALL, keywords: "members invite shares owed paid teams" },
+      {
+        key: "crew",
+        label: "Crew",
+        path: "/spaces/crew",
+        icon: IconCrew,
+        roles: ALL,
+        keywords: "crew collab package together split creators featuring expenses group",
+      },
       { key: "insights", label: "Insights", path: "/spaces/insights", icon: IconInsights, roles: ["creator"], keywords: "market data what sells pricing timing brands buying pitch a brand" },
       { key: "inspire", label: "Inspire", path: "/spaces/inspire", icon: IconInspire, roles: ["creator"], keywords: "templates ideas new listing" },
     ],
