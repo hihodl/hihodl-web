@@ -53,6 +53,17 @@ export function spacesPath(path = ""): string {
  * `VERCEL_ENV`) means app.hihodl.xyz, and anything else (local, previews)
  * keeps the product on the same origin under `/app`.
  */
+/**
+ * A link from the website into the product, where people sign in and sign up.
+ * Off production it stays on this origin under /app; in production the
+ * middleware also sends /app on to app.hihodl.xyz, so the fallback is safe even
+ * where the origin cannot be read (a client component without VERCEL_ENV).
+ */
+export function productHref(path = ""): string {
+  const origin = productOrigin();
+  return origin ? `${origin}${path || "/"}` : `/app${path}`;
+}
+
 export function productOrigin(): string {
   const set = process.env.NEXT_PUBLIC_APP_ORIGIN;
   if (set) return set.replace(/\/+$/, "");

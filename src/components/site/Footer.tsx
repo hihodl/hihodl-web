@@ -20,6 +20,7 @@ const PRODUCT = [
   { href: "/hipoints",      label: "HiPoints" },
   { href: "/travel",        label: "Stays" },
   { href: "/esim",          label: "eSIM" },
+  { href: "/spaces",        label: "Spaces" },
   { href: "/#ai",           label: "AI (soon)" },
   { href: "/#husd",         label: "HUSD" },
 ];
