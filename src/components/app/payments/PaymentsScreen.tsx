@@ -21,6 +21,14 @@
  * sentence needs no signature. The conversation on the web is the whole
  * conversation: messages, GIFs, read receipts, requests.
  *
+ * GROUPS ARE THE OTHER HALF OF THE CHIPS
+ *
+ * `Groups` used to land on an empty state that sent people to the app. A group
+ * is a conversation with its money in it (lib/app/groups.ts), and its words,
+ * expenses and people need no key, so the chip now lists them and each opens
+ * its thread at /payments/groups/<id>. Settling up is the one part the web
+ * hands to the app (see GroupThread).
+ *
  * The app also gates its Payments tab behind `useMasterWalletsLinked()`, which
  * needs the app's keys to pass. The web skips that gate — it only guards the
  * verify screen that links a wallet, which the web cannot do — or the page
@@ -56,6 +64,7 @@ import { useShellPrefs } from "../Shell";
 import { Skeleton } from "../ui";
 import { cardClass } from "../wallet/app-kit";
 import { Conversation } from "./Chat";
+import { GroupsList } from "./Groups";
 import { ChatRequests } from "./Requests";
 import { PayoutsPanel, ScheduledPanel } from "./Standing";
 import { TxDetails } from "./TxDetails";
@@ -72,7 +81,7 @@ type View = { kind: "list" } | { kind: "thread"; id: string } | { kind: "tx"; id
 /** The app's rotating placeholders (payments:searchPh and its siblings). */
 const PHRASES = ["Search", "Search @username", "Search contact", "Paste wallet address"];
 
-export function PaymentsScreen() {
+export function PaymentsScreen({ initialFilter = "all" }: { initialFilter?: Filter } = {}) {
   const { displayMode } = useShellPrefs();
   const transfers = useTransfers(100);
   const conversations = useConversations();
@@ -122,6 +131,7 @@ export function PaymentsScreen() {
     <Column>
       <ChatRequests onAnswered={() => void conversations.mutate()} />
       <List
+        initialFilter={initialFilter}
         rows={rows}
         mode={displayMode}
         loading={transfers.data === undefined && !transfers.error}
@@ -140,6 +150,7 @@ export function PaymentsScreen() {
 /* ── The list ─────────────────────────────────────────────────────── */
 
 function List({
+  initialFilter,
   rows,
   mode,
   loading,
@@ -147,6 +158,7 @@ function List({
   onRetry,
   onOpen,
 }: {
+  initialFilter: Filter;
   rows: InboxRow[];
   mode: DisplayMode;
   loading: boolean;
@@ -154,16 +166,16 @@ function List({
   onRetry: () => void;
   onOpen: (id: string) => void;
 }) {
-  const [filter, setFilter] = useState<Filter>("all");
+  const [filter, setFilter] = useState<Filter>(initialFilter);
   const [query, setQuery] = useState("");
 
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
     return rows.filter((r) => {
-      // Groups and favourites are both the app's own state: a group is a
-      // `/groups` thread and a favourite is a flag in the app's local store, on
-      // that phone. Neither is readable from here, so both filters land on
-      // their empty state rather than on a wrong list.
+      // A favourite is a flag in the app's local store, on that phone, and is
+      // not readable from here, so that filter lands on its empty state rather
+      // than on a wrong list. Groups are not rows of this list at all: that
+      // chip draws GroupsList instead.
       if (filter !== "all") return false;
       if (!q) return true;
       const t = r.thread;
@@ -199,9 +211,11 @@ function List({
 
       <div className="my-3 h-px rounded-[1px] bg-white/[0.08]" />
 
-      {loading ? <RowSkeletons /> : null}
+      {filter === "groups" ? <GroupsList /> : null}
 
-      {!loading && failed ? (
+      {loading && filter !== "groups" ? <RowSkeletons /> : null}
+
+      {!loading && failed && filter !== "groups" ? (
         <div className="flex flex-col items-center px-4 pt-12 text-center">
           <Ion name="alert-circle-outline" size={48} className="text-white/40" />
           <p className="mt-3 text-[14px] text-white/[0.62]">Could not load payment history</p>
@@ -222,10 +236,6 @@ function List({
           title="No favourites yet"
           body="Favourites are marked in the HOLD app."
         />
-      ) : null}
-
-      {!loading && !failed && shown.length === 0 && filter === "groups" ? (
-        <Empty icon="people-outline" title="No groups yet" body="Groups are made in the HOLD app." />
       ) : null}
 
       {!loading && !failed && shown.length === 0 && filter === "all" ? (

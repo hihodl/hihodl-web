@@ -6,8 +6,9 @@
  * One brings marketing and short form, one brings the cameras, one brings the
  * interviews. The sponsor pays once, and that one payment reaches every
  * member's wallet with their part: nobody collects and forwards, and HOLD
- * holds none of it. The crew also shares an expenses group in the app, for the
- * coffee at the event.
+ * holds none of it. The crew also shares an expenses group, for the coffee at
+ * the event: "Expenses & chat" opens that group's thread, the same screen
+ * Payments › Groups opens (components/app/payments/GroupThread), never a copy.
  *
  * WHAT THIS SCREEN DOES
  *
@@ -57,7 +58,7 @@ import {
   type CrewSale,
 } from "@/lib/creator/crew";
 
-import { useHref } from "../base";
+import { useHref, useProductHref } from "../base";
 import { Body, Card, Divider, Empty, Field, inputCls, P, SectionLabel, SheetRow, Tag } from "./kit";
 
 const fine = `text-[12px] leading-[17px] ${P.dim}`;
@@ -443,6 +444,7 @@ function Avatar({ member }: { member: CrewMember }) {
 
 function CrewDetail({ crew, onChanged, onLeft }: { crew: Crew; onChanged: (c: Crew) => void; onLeft: () => void }) {
   const href = useHref();
+  const productHref = useProductHref();
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [adding, setAdding] = useState<"none" | "creator" | "link">("none");
@@ -547,15 +549,20 @@ function CrewDetail({ crew, onChanged, onLeft }: { crew: Crew; onChanged: (c: Cr
         />
       )}
 
-      <SectionLabel>Split costs</SectionLabel>
-      <Card>
-        <p className="text-[15px] font-strong text-white">{crew.groupId ? `“${crew.name}” is a group in the HOLD app` : "Expenses group"}</p>
-        <Body dim>
-          {crew.groupId
-            ? "Everyone who joins is added to it. Put the coffee, the taxi or the hotel there, and everyone settles their part in the app."
-            : "This crew has no expenses group yet. Make one in the HOLD app under Payments › Groups."}
-        </Body>
-      </Card>
+      <SectionLabel>Expenses</SectionLabel>
+      {crew.groupId ? (
+        <SheetRow
+          icon="chatbubbles-outline"
+          title="Expenses & chat"
+          meta="The coffee, the taxi, the hotel: split it and settle up"
+          href={productHref(`/payments/groups/${encodeURIComponent(crew.groupId)}?crew=${crew.id}`)}
+        />
+      ) : (
+        <Card>
+          <p className="text-[15px] font-strong text-white">Expenses group</p>
+          <Body dim>This crew has no expenses group yet. Make a group under Payments › Groups and add the crew to it.</Body>
+        </Card>
+      )}
 
       <Sales crewId={crew.id} />
 
