@@ -104,6 +104,7 @@ import { Ion, type IonName } from "../ion";
 import { useShellPrefs } from "../Shell";
 import { glass, Skeleton } from "../ui";
 import { ActionsRow, HeroBalance, MiniAction, money, TokenIcon } from "../wallet/app-kit";
+import { ReadFailed } from "../money/kit";
 import { SavingsPanel, SavingsRateLine } from "../money/SavingsScreen";
 import { ActivityRow, GREEN, readRow } from "./activity-parts";
 
@@ -467,7 +468,9 @@ export function HomeScreen({ initialScope = "main" }: { initialScope?: string } 
                 </Link>
               ) : null}
             </header>
-            {transfers.data === undefined ? (
+            {transfers.data === undefined && transfers.error ? (
+              <ReadFailed compact title="We couldn't load your activity" onRetry={() => void transfers.mutate()} />
+            ) : transfers.data === undefined ? (
               <div className="flex flex-col gap-2 p-4">
                 <Skeleton className="h-12" />
                 <Skeleton className="h-12" />
