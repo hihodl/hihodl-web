@@ -103,4 +103,29 @@ eq("calc = whole", R.pressKey("2*3", "=", "EUR"), "6");
 eq("calc JPY", R.evaluate("1000/3", "JPY"), 333n);
 eq("calc display", R.displayExpression("1234.5*2", ","), "1234,5 × 2");
 eq("calc hasOperator", [R.hasOperator("12+"), R.hasOperator("12+3")], [false, true]);
+// §10.3 rates: one USD is 0.92 EUR; one JPY is 0.0061 EUR
+const RATES = { USD: "0.9200000000", JPY: "0.0061000000", KWD: "3.0000000000" };
+eq("fx same currency", R.convertMinor("1234", "EUR", "EUR", RATES), "1234");
+eq("fx USD->EUR", R.convertMinor("1000", "USD", "EUR", RATES), "920");
+eq("fx JPY (0 decimals) -> EUR", R.convertMinor("1000", "JPY", "EUR", RATES), "610");
+eq("fx KWD (3 decimals) -> EUR", R.convertMinor("1500", "KWD", "EUR", RATES), "450");
+eq("fx half up", R.convertMinor("1", "USD", "EUR", { USD: "0.5" }), "1");
+eq("fx no rate", R.convertMinor("1000", "GBP", "EUR", RATES), null);
+eq("fx bad rate", R.parseRate("-1"), null);
+// §10.1 several bills
+const BB = (currency: string, amountMinor: string, usdCents?: string | null, kind: R.Bill["kind"] = "custom"): R.Bill => ({ key: `${currency}${amountMinor}${Math.random()}`, kind, label: "x", amountMinor, currency, usdCents, ...(kind !== "custom" ? { ref: "r1" } : {}) });
+eq("bills one currency, not the group's", R.billsTotal([BB("USD", "4500"), BB("USD", "1200")], "EUR", null), { ok: true, amountMinor: "5700", currency: "USD", basis: "same", converted: ["4500", "1200"] });
+const mixed = R.billsTotal([BB("EUR", "4500"), BB("USD", "1000"), BB("USD", "1")], "EUR", RATES);
+eq("bills mixed via fx, one rounding", mixed, { ok: true, amountMinor: "5421", currency: "EUR", basis: "fx", converted: ["4500", "920", "1"] });
+const halves = R.billsTotal([BB("USD", "1"), BB("USD", "1"), BB("EUR", "3")], "EUR", { USD: "0.5" });
+eq("bills: each rounded, the last takes the unit, the sum is the total", halves.ok ? [halves.amountMinor, halves.converted] : null, ["4", ["1", "1", "2"]]);
+eq("bills mixed, no rate, dollar fallback", R.billsTotal([BB("USD", "500", "500"), BB("GBP", "1000", "1270")], "EUR", {}), { ok: true, amountMinor: "1770", currency: "USD", basis: "usd", converted: ["500", "1270"] });
+eq("bills mixed, no rate, no dollars: name the currency", R.billsTotal([BB("EUR", "500"), BB("GBP", "1000")], "EUR", RATES), { ok: false, reason: "mixed_currencies", currencies: ["GBP"] });
+eq("items body", R.itemsBody([{ key: "k", kind: "stay", ref: "st_9", label: " Hotel ", amountMinor: "21000", currency: "usd" }, { key: "c", kind: "custom", label: "", amountMinor: "1200", currency: "EUR" }]), [
+  { label: "Hotel", amountMinor: "21000", currency: "USD", sourceKind: "stay", sourceRef: "st_9" },
+  { label: "Bill", amountMinor: "1200", currency: "EUR" },
+]);
+eq("bills title", [R.billsTitle([BB("EUR", "1")].map((b) => ({ ...b, label: "Dinner" }))), R.billsTitle(["Dinner", "Taxi"].map((l) => ({ ...BB("EUR", "1"), label: l }))), R.billsTitle(["Dinner", "Taxi", "Museum", "Bus"].map((l) => ({ ...BB("EUR", "1"), label: l }))), R.billsTitle([{ ...BB("EUR", "1"), label: "Custom bill" }])], ["Dinner", "Dinner and Taxi", "Dinner, Taxi and 2 more", null]);
+// §10.2
+eq("category", [R.asCategory("food"), R.asCategory("spa"), R.asCategory(null)], ["food", null, null]);
 if (fails) { console.log(fails, "FAILED"); process.exit(1); } else console.log("all passed");

@@ -27,4 +27,7 @@ eq("newest first, once each", all.map((r) => r.key), ["transfer:y", "transfer:x"
 const now = new Date(2026, 8, 23, 23, 0);
 eq("days", B.groupByDay([{ occurredAt: new Date(2026, 8, 23, 18).toISOString() }, { occurredAt: new Date(2026, 8, 22, 9).toISOString() }, { occurredAt: new Date(2026, 8, 21, 9).toISOString() }], now).map((g) => g.label), ["Today", "Yesterday", "21 September"]);
 eq("search", B.searchBills(all, "casa").map((r) => r.key), ["stay:b1"]);
+eq("classify: SOL with no value is unpriced", B.classifyTransfer(t({ symbol: "SOL", tokenId: "sol", amount: "0.1" })).kind, "unpriced");
+eq("classify: money in is not a bill at all", B.classifyTransfer(t({ direction: "in", symbol: "SOL", tokenId: "sol" })).kind, "no");
+eq("unpriced count, each once", B.unpricedCount([t({ id: "s1", symbol: "SOL", tokenId: "sol" }), t({ id: "s1", symbol: "SOL", tokenId: "sol" }), t({ id: "s2", symbol: "BONK", tokenId: "bonk" }), t({ id: "u" }), t({ id: "i", direction: "in", symbol: "SOL", tokenId: "sol" })]), 2);
 if (fails) { console.log(fails, "FAILED"); process.exit(1); } else console.log("all passed");

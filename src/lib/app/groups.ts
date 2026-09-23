@@ -47,9 +47,11 @@ import useSWR from "swr";
 import { useCreatorSession } from "@/lib/creator/session";
 
 import { HoldApiError, read } from "./hold-api";
-import { moneyText, type SourceKind, type SplitMode } from "./groups-rules";
+import { asCategory, moneyText, type ExpenseCategory, type ItemBody, type Rates, type SourceKind, type SplitMode } from "./groups-rules";
+import { normaliseAllStats, normaliseGroupStats, type AllGroupsStats, type GroupStats } from "./group-insights";
 
 export * from "./groups-rules";
+export * from "./group-insights";
 
 /* ── What the server says ─────────────────────────────────────────── */
 
@@ -87,7 +89,22 @@ export type ExpenseItem = {
   deleted: boolean;
   /** What was split: the payer's own transfers, stays or card spend, when it came from them. */
   sources?: ExpenseSource[];
+  /** Several bills in one expense (§10.1); absent or [] for a single amount. */
+  items?: ExpenseBill[];
+  /** §10.2; absent on an older answer, null for none (shown as Other). */
+  category?: ExpenseCategory | string | null;
 };
+
+/** One bill inside an expense (§10.1), in its own currency and converted into the expense's. */
+export interface ExpenseBill {
+  label: string;
+  amountMinor: string;
+  currency: string;
+  /** In the expense's currency; the items' converted values sum exactly to its amount. */
+  convertedMinor?: string | null;
+  sourceKind?: SourceKind | null;
+  sourceRef?: string | null;
+}
 
 /** A thing from the payer's own activity that an expense splits (POST expense `sources`). */
 export interface ExpenseSource {
@@ -134,7 +151,8 @@ export type EventItem = {
   userId: string;
   event: string;
   subjectId: string | null;
-  data: { changed?: string[]; description?: string | null } | null;
+  /** expense_edited: changed, description. member_left: userId. member_removed: userId, byUserId (§10.4). */
+  data: { changed?: string[]; description?: string | null; userId?: string | null; byUserId?: string | null } | null;
 };
 
 export type ThreadItem = MessageItem | ExpenseItem | SettlementItem | EventItem;
@@ -222,6 +240,18 @@ export interface Expense {
   receiptUrl: string | null;
   shares: { userId: string; shareMinor: string }[];
   sources?: ExpenseSource[];
+  items?: ExpenseBill[];
+  category?: ExpenseCategory | string | null;
+}
+
+/** The bills of an expense as the server sent them, [] when it is a single amount or the answer is older. */
+export function expenseBills(e: { items?: ExpenseBill[] | null }): ExpenseBill[] {
+  return Array.isArray(e.items) ? e.items.filter((i) => i && typeof i.label === "string" && typeof i.amountMinor === "string") : [];
+}
+
+/** The category an expense shows: its own, else none (drawn as Other). */
+export function expenseCategory(e: { category?: unknown }): ExpenseCategory | null {
+  return asCategory(e.category);
 }
 
 export type SplitBody =
@@ -253,13 +283,18 @@ export function shortName(m: { aliasHandle: string | null; displayName: string |
 
 export type NameOf = (userId: string) => string;
 
-/** A lookup that says "You" for the viewer. `subject` for the start of a sentence. */
+/**
+ * A lookup that says "You" for the viewer. `subject` for the start of a
+ * sentence. Somebody no longer in the group (they left, or were removed) is
+ * "a former member" once the member list has loaded, and "Someone" before.
+ */
 export function namer(members: readonly GroupMember[] | undefined, meId: string | null): { name: NameOf; subject: NameOf; short: NameOf } {
   const by = new Map((members ?? []).map((m) => [m.userId, m]));
+  const gone = (id: string) => !!members && !by.has(id);
   return {
-    name: (id) => (id === meId ? "you" : memberName(by.get(id))),
-    subject: (id) => (id === meId ? "You" : memberName(by.get(id))),
-    short: (id) => (id === meId ? "You" : shortName(by.get(id))),
+    name: (id) => (id === meId ? "you" : gone(id) ? "a former member" : memberName(by.get(id))),
+    subject: (id) => (id === meId ? "You" : gone(id) ? "A former member" : memberName(by.get(id))),
+    short: (id) => (id === meId ? "You" : gone(id) ? "Former member" : shortName(by.get(id))),
   };
 }
 
@@ -328,9 +363,18 @@ const CHANGED_WORDS: Record<string, string> = {
   spentAt: "the date",
 };
 
-/** "Ana edited Dinner", with what changed when it says. */
+/** "Ana edited Dinner", with what changed when it says; "Bea left the group"; "Ana removed Bea". */
 export function eventText(item: EventItem, names: Names): string {
   const who = names.subject(item.userId);
+  if (item.event === "member_left") {
+    const gone = item.data?.userId || item.userId;
+    return `${names.subject(gone)} left the group`;
+  }
+  if (item.event === "member_removed") {
+    const by = item.data?.byUserId || item.userId;
+    const gone = item.data?.userId || item.subjectId || "";
+    return `${names.subject(by)} removed ${gone ? names.name(gone) : "someone"}`;
+  }
   if (item.event === "expense_edited") {
     const what = item.data?.description?.trim() || "an expense";
     const changed = (item.data?.changed ?? []).map((c) => CHANGED_WORDS[c]).filter(Boolean);
@@ -476,8 +520,13 @@ export const hideMessage = (groupId: string, messageId: string) =>
 export const markRead = (groupId: string) => read<{ read: boolean }>(`${g(groupId)}/read`, { json: {} });
 
 export interface ExpenseBody {
+  /** With `items` the server derives it; it is still sent, as the preview total, for an older server that ignores items. */
   amountMinor: string;
   currency: string;
+  /** Several bills (§10.1), 1 to 50. [] on an edit turns it back into a single amount. */
+  items?: ItemBody[];
+  /** §10.2. */
+  category?: ExpenseCategory | null;
   description?: string | null;
   place?: string | null;
   /** YYYY-MM-DD. */
@@ -496,7 +545,7 @@ export const addExpense = (groupId: string, body: ExpenseBody, key: string) =>
 
 export const getExpense = (groupId: string, expenseId: string) => read<{ expense: Expense }>(`${g(groupId)}/expenses/${enc(expenseId)}`);
 
-export const updateExpense = (groupId: string, expenseId: string, body: Partial<Omit<ExpenseBody, "payerUserId" | "sources">>) =>
+export const updateExpense = (groupId: string, expenseId: string, body: Partial<Omit<ExpenseBody, "payerUserId">>) =>
   read<{ expense: Expense; changed: string[] }>(`${g(groupId)}/expenses/${enc(expenseId)}`, { method: "PATCH", json: body });
 
 export const deleteExpense = (groupId: string, expenseId: string) =>
@@ -530,6 +579,17 @@ export interface RemindAnswer {
 
 /** One push to the debtor, at most once a day per pair. Never written to the thread. */
 export const remind = (groupId: string, toUserId: string) => read<RemindAnswer>(`${g(groupId)}/remind`, { json: { toUserId } });
+
+/** Today's rates into `base` (§10.3): `rates[X]` turns one X into base. Unknown symbols are left out. */
+export const getFx = (base: string, symbols: readonly string[]) =>
+  read<{ base: string; asOf: string | null; rates: Record<string, string> }>(`groups/fx?base=${enc(base)}&symbols=${enc(symbols.slice(0, 20).join(","))}`);
+
+/** A group's numbers (§10.5), read tolerantly. `from` and `to` are YYYY-MM; absent, the server's last 12 months. */
+export const getGroupStats = async (groupId: string, range?: { from: string; to: string } | null, groupCurrency?: string): Promise<GroupStats> =>
+  normaliseGroupStats(await read<unknown>(`${g(groupId)}/stats${range ? `?from=${enc(range.from)}&to=${enc(range.to)}` : ""}`), groupCurrency);
+
+/** You across every group, per currency (§10.5). */
+export const getAllGroupsStats = async (): Promise<AllGroupsStats> => normaliseAllStats(await read<unknown>("groups/stats"));
 
 /** The directory: everyone whose handle or name matches, ranked, never resolved. */
 export const searchDirectory = (q: string, signal?: AbortSignal) =>
@@ -598,6 +658,12 @@ const WORDS: Record<string, string> = {
   storage_unavailable: "Images can't be saved right now. Try again in a moment.",
   storage_not_configured: "Images can't be saved right now. Try again later.",
   transfer_not_found: "That payment couldn't be found.",
+  too_many_items: "One expense holds up to 50 bills. Add the rest as another expense: there's no limit on how many you add.",
+  invalid_item: "Each bill needs a name and an amount above zero.",
+  item_source_unknown: "One bill points at a payment that isn't in this expense. Take it out and add it again.",
+  too_many_sources: "One expense can name up to 20 of your payments. Add the rest as another expense.",
+  invalid_category: "That category isn't one HOLD knows. Pick another.",
+  invalid_range: "Pick a range of up to 36 months.",
 };
 
 /** What went wrong with a group call, in words. */
@@ -640,6 +706,22 @@ export const useGroupInfo = (groupId: string | null) =>
 /** Already-split sources, for greying them out in the bill picker. A failure reads as "none known", never as a block. */
 export const useUsedSources = (on: boolean) =>
   useGroupRead(on ? "sources-used" : null, async () => (await getUsedSources(new Date(Date.now() - 400 * 86_400_000).toISOString())).used ?? []);
+
+/**
+ * Rates into `base` for the currencies given, for the "≈" preview of several
+ * bills. Nothing is read for none. A failure (an older server has no
+ * /groups/fx, or the rate source is down) is an error, never a made-up rate.
+ */
+export function useFxRates(base: string, symbols: readonly string[]) {
+  const list = [...new Set(symbols.map((s) => s.toUpperCase()).filter((s) => s !== base.toUpperCase()))].sort();
+  const r = useGroupRead(list.length ? "fx" : null, async () => (await getFx(base.toUpperCase(), list)).rates ?? {}, `${base.toUpperCase()}:${list.join(",")}`);
+  return { rates: (r.data ?? null) as Rates | null, loading: list.length > 0 && r.data === undefined && !r.error, error: r.error as unknown, needed: list };
+}
+
+export const useGroupStats = (groupId: string | null, range: { from: string; to: string } | null, groupCurrency?: string) =>
+  useGroupRead(groupId ? "stats" : null, () => getGroupStats(groupId!, range, groupCurrency), `${groupId ?? ""}:${range ? `${range.from}..${range.to}` : "default"}`);
+
+export const useAllGroupsStats = (on = true) => useGroupRead(on ? "stats-all" : null, getAllGroupsStats, "", 60_000);
 
 export const useExpense = (groupId: string, expenseId: string | null) =>
   useGroupRead(expenseId ? "expense" : null, async () => (await getExpense(groupId, expenseId!)).expense, `${groupId}:${expenseId ?? ""}`);

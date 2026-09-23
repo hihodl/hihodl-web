@@ -51,14 +51,21 @@ function tickerOf(tokenId: string | null | undefined): string {
   return (tokenId ?? "").split(".")[0]?.toUpperCase() ?? "";
 }
 
-/** One transfer as a bill, or null when it is not money you spent. */
-export function billFromTransfer(t: Transfer): BillRow | null {
-  if (t.direction !== "out") return null;
-  if (DEAD.has((t.status ?? "").toLowerCase())) return null;
-  if (t.moveKind) return null;
+/**
+ * What a transfer is to the picker:
+ *   bill      money you spent, with a value
+ *   unpriced  money you spent in a token that is not a stablecoin and has no
+ *             frozen dollar value: left out, never priced by a guess, and
+ *             counted so the screen can say how many
+ *   no        not money you spent (in, a move, a swap, failed)
+ */
+export function classifyTransfer(t: Transfer): { kind: "bill"; bill: BillRow } | { kind: "unpriced" } | { kind: "no" } {
+  if (t.direction !== "out") return { kind: "no" };
+  if (DEAD.has((t.status ?? "").toLowerCase())) return { kind: "no" };
+  if (t.moveKind) return { kind: "no" };
 
   const amount = parseAmt(t as unknown as SpendTransfer);
-  if (!Number.isFinite(amount) || amount <= 0) return null;
+  if (!Number.isFinite(amount) || amount <= 0) return { kind: "no" };
   const peg = getStableFiatCurrency(t.symbol || tickerOf(t.tokenId));
   const usd = typeof t.usdValueAtTx === "number" && Number.isFinite(t.usdValueAtTx) && t.usdValueAtTx > 0 ? Math.abs(t.usdValueAtTx) : null;
 
@@ -70,8 +77,8 @@ export function billFromTransfer(t: Transfer): BillRow | null {
   } else if (usd !== null) {
     currency = "USD";
     amountMinor = decimalToMinor(usd.toFixed(8), "USD");
-  } else return null;
-  if (!amountMinor) return null;
+  } else return { kind: "unpriced" };
+  if (!amountMinor) return { kind: "unpriced" };
 
   const usdCents = currency === "USD" ? amountMinor : usd !== null ? decimalToMinor(usd.toFixed(8), "USD") : null;
   const card = t.counterpartyType === "card";
@@ -79,7 +86,7 @@ export function billFromTransfer(t: Transfer): BillRow | null {
   const label = t.merchantName?.trim() || who || shortAddress(t.toAddress) || "Payment";
   const sub = card ? "Card" : t.note?.trim() || (t.actionLabel?.trim() || (who ? "Sent" : "Payment"));
 
-  return {
+  const bill: BillRow = {
     key: `${card ? "card" : "transfer"}:${t.id}`,
     kind: card ? "card" : "transfer",
     ref: t.id,
@@ -92,6 +99,25 @@ export function billFromTransfer(t: Transfer): BillRow | null {
     avatarUrl: t.counterpartyAvatar ?? null,
     emoji: t.profileEmoji ?? null,
   };
+  return { kind: "bill", bill };
+}
+
+/** One transfer as a bill, or null when it is not money you spent (or has no value to split). */
+export function billFromTransfer(t: Transfer): BillRow | null {
+  const c = classifyTransfer(t);
+  return c.kind === "bill" ? c.bill : null;
+}
+
+/** How many of these are money you spent in a token with no recorded value: the picker says so rather than hiding it. */
+export function unpricedCount(transfers: readonly Transfer[]): number {
+  const seen = new Set<string>();
+  let n = 0;
+  for (const t of transfers) {
+    if (seen.has(t.id)) continue;
+    seen.add(t.id);
+    if (classifyTransfer(t).kind === "unpriced") n++;
+  }
+  return n;
 }
 
 /** A paid booking as a bill. */

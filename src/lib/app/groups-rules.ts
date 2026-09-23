@@ -315,12 +315,10 @@ export type BillTotal =
   | { ok: false; reason: "none" | "mixed_currencies"; currencies: string[] };
 
 /**
- * One expense from many bills. In one currency they add up in it. In several,
- * they add up in dollars when every one of them has a dollar value (the web
- * has no rate table of its own, and a sum of euros and dollars is not a
- * number); otherwise the person is asked to split them one currency at a time.
- * The server then converts the one total into the group's currency, at the
- * day's rate, as it does for any expense.
+ * The dollar fallback for `billsTotal`: in one currency the bills add up in
+ * it; in several, in dollars when every one of them has a frozen dollar value.
+ * Used only when GET /groups/fx has no rate to give (an older server, or the
+ * rate source down).
  */
 export function billTotal(bills: readonly Bill[]): BillTotal {
   if (!bills.length) return { ok: false, reason: "none", currencies: [] };
@@ -332,6 +330,145 @@ export function billTotal(bills: readonly Bill[]): BillTotal {
     return { ok: true, amountMinor: bills.reduce((a, b) => a + toBig(b.usdCents!), 0n).toString(), currency: "USD", converted: true };
   }
   return { ok: false, reason: "mixed_currencies", currencies };
+}
+
+/* ── Rates (GET /groups/fx, contract §10.3) ───────────────────────── */
+
+/** `rates[X]` turns one unit of X into the base currency, as a decimal string. */
+export type Rates = Readonly<Record<string, string>>;
+
+type Ratio = { n: bigint; d: bigint };
+
+/** "0.9200000000" as an exact fraction; null for anything that is not a positive decimal. */
+export function parseRate(text: string | null | undefined): Ratio | null {
+  const m = /^(\d+)(?:\.(\d+))?$/.exec((text ?? "").trim());
+  if (!m) return null;
+  const f = m[2] ?? "";
+  const n = BigInt(`${m[1]}${f}`);
+  return n > 0n ? { n, d: 10n ** BigInt(f.length) } : null;
+}
+
+/** n/d to the nearest whole unit, half up. */
+export function roundHalfUp(n: bigint, d: bigint): bigint {
+  return (n * 2n + d) / (2n * d);
+}
+
+/** An amount in `from` minor units as an exact fraction of `to` minor units, or null without a rate. */
+function convertExact(amountMinor: string, from: string, to: string, rates: Rates | null | undefined): Ratio | null {
+  const a = toBig(amountMinor);
+  if (from.toUpperCase() === to.toUpperCase()) return { n: a, d: 1n };
+  const r = parseRate(rates?.[from.toUpperCase()]);
+  if (!r) return null;
+  return { n: a * r.n * 10n ** BigInt(minorExponent(to)), d: r.d * 10n ** BigInt(minorExponent(from)) };
+}
+
+/**
+ * An amount in one currency as minor units of another, at the rate the server
+ * quoted, rounded half up. The server converts with the same rate, so this is
+ * a preview to within the last unit: the screen puts "≈" in front of it.
+ */
+export function convertMinor(amountMinor: string, from: string, to: string, rates: Rates | null | undefined): string | null {
+  const x = convertExact(amountMinor, from, to, rates);
+  return x ? roundHalfUp(x.n, x.d).toString() : null;
+}
+
+export type BillsTotal =
+  | {
+      ok: true;
+      amountMinor: string;
+      currency: string;
+      /** same: one currency; fx: converted into the group's at the day's rate; usd: added up from frozen dollar values (no rate to be had). */
+      basis: "same" | "fx" | "usd";
+      /** Each bill in `currency`, in order; they sum exactly to `amountMinor` (the last takes the rounding unit). */
+      converted: string[];
+    }
+  | { ok: false; reason: "none" | "mixed_currencies"; currencies: string[] };
+
+/**
+ * Several bills as one expense (contract §10.1). One currency adds up in it.
+ * Several are converted into the group's currency with the rates from
+ * GET /groups/fx, the exact sum rounded once. Without a rate for some
+ * currency, the frozen dollar values are the fallback when every bill has
+ * one; otherwise the currencies with no rate are named and nothing is guessed.
+ */
+export function billsTotal(bills: readonly Bill[], groupCurrency: string, rates: Rates | null | undefined): BillsTotal {
+  if (!bills.length) return { ok: false, reason: "none", currencies: [] };
+  const currencies = [...new Set(bills.map((b) => b.currency.toUpperCase()))];
+  if (currencies.length === 1) {
+    return { ok: true, amountMinor: bills.reduce((a, b) => a + toBig(b.amountMinor), 0n).toString(), currency: currencies[0], basis: "same", converted: bills.map((b) => toBig(b.amountMinor).toString()) };
+  }
+  const target = groupCurrency.toUpperCase();
+  const exact = bills.map((b) => convertExact(b.amountMinor, b.currency, target, rates));
+  const missing = [...new Set(bills.filter((_, i) => !exact[i]).map((b) => b.currency.toUpperCase()))];
+  if (!missing.length) {
+    let n = 0n;
+    let d = 1n;
+    for (const x of exact as Ratio[]) {
+      n = n * x.d + x.n * d;
+      d = d * x.d;
+    }
+    const total = roundHalfUp(n, d);
+    const each = (exact as Ratio[]).map((x) => roundHalfUp(x.n, x.d));
+    const head = each.slice(0, -1).reduce((a, x) => a + x, 0n);
+    each[each.length - 1] = total - head;
+    return { ok: true, amountMinor: total.toString(), currency: target, basis: "fx", converted: each.map(String) };
+  }
+  const usd = billTotal(bills);
+  if (usd.ok) return { ok: true, amountMinor: usd.amountMinor, currency: usd.currency, basis: "usd", converted: bills.map((b) => toBig(b.usdCents ?? "0").toString()) };
+  return { ok: false, reason: "mixed_currencies", currencies: missing };
+}
+
+/** An expense holds at most 50 bills and names at most 20 of your own payments (contract §10.1, §9.2). */
+export const MAX_ITEMS = 50;
+export const MAX_SOURCES = 20;
+
+/** One bill as POST/PATCH `items` carries it. */
+export interface ItemBody {
+  label: string;
+  amountMinor: string;
+  currency: string;
+  sourceKind?: SourceKind;
+  sourceRef?: string;
+}
+
+/** The bills as the server's `items`, each in its own currency, a picked one naming its source. */
+export function itemsBody(bills: readonly Bill[]): ItemBody[] {
+  return bills.map((b) => ({
+    label: b.label.trim().slice(0, 120) || "Bill",
+    amountMinor: toBig(b.amountMinor).toString(),
+    currency: b.currency.toUpperCase(),
+    ...(b.kind !== "custom" && b.ref ? { sourceKind: b.kind, sourceRef: b.ref } : {}),
+  }));
+}
+
+/** A title for several bills nobody named: "Dinner", "Dinner and Taxi", "Dinner, Taxi and 2 more". */
+export function billsTitle(bills: readonly Bill[]): string | null {
+  const labels = bills.map((b) => b.label.trim()).filter((l) => l && l !== "Custom bill");
+  if (!labels.length) return null;
+  const out = labels.length === 1 ? labels[0] : labels.length === 2 ? `${labels[0]} and ${labels[1]}` : `${labels[0]}, ${labels[1]} and ${labels.length - 2} more`;
+  return out.slice(0, 120);
+}
+
+/* ── Categories (contract §10.2) ──────────────────────────────────── */
+
+export type ExpenseCategory = "food" | "drinks" | "transport" | "stay" | "activities" | "groceries" | "shopping" | "other";
+
+export const EXPENSE_CATEGORIES: readonly ExpenseCategory[] = ["food", "drinks", "transport", "stay", "activities", "groceries", "shopping", "other"];
+
+export const CATEGORY_LABEL: Readonly<Record<ExpenseCategory, string>> = {
+  food: "Food",
+  drinks: "Drinks",
+  transport: "Transport",
+  stay: "Stay",
+  activities: "Activities",
+  groceries: "Groceries",
+  shopping: "Shopping",
+  other: "Other",
+};
+
+/** A category from the wire, or null: an older response, or one this build doesn't know, reads as none. */
+export function asCategory(v: unknown): ExpenseCategory | null {
+  return typeof v === "string" && (EXPENSE_CATEGORIES as readonly string[]).includes(v) ? (v as ExpenseCategory) : null;
 }
 
 /** "12.3456" of a token as minor units of `currency`, rounded half up. Null for anything that is not a positive number. */
