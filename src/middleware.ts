@@ -23,8 +23,19 @@ function route(request: NextRequest, init: Init): NextResponse | null {
   const { pathname, search } = request.nextUrl;
   const host = request.headers.get('host');
 
-  // Files from /public (logos, icons) are the same on both hosts.
-  if (/\.[a-z0-9]+$/i.test(pathname)) return null;
+  // The product is not for search engines. Its robots.txt closes the whole
+  // host; the website's (app/robots.ts) would otherwise answer for it, since
+  // a file path is never rewritten into the /app tree.
+  if (isAppHost(host) && pathname === '/robots.txt') {
+    return new NextResponse('User-agent: *\nDisallow: /\n', {
+      headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'public, max-age=3600' },
+    });
+  }
+
+  // Files from /public (logos, icons) are the same on both hosts. So is
+  // /.well-known: apple-app-site-association has no extension, and rewritten
+  // into /app it would be a 404 on the host passkeys are made on.
+  if (/\.[a-z0-9]+$/i.test(pathname) || pathname.startsWith('/.well-known/')) return null;
 
   if (isAppHost(host)) {
     // The prefix is an implementation detail; a link that carries it is
