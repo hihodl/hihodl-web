@@ -160,6 +160,36 @@ export function registerAddress(body: { address: string; nonce: string; signatur
   return send("wallet-backup/address", { json: body });
 }
 
+/**
+ * The EVM side of a web-made wallet (ethereum, base, polygon), registered the
+ * way the app's completeWalletSetup registers it: the server runs the same
+ * code as the app's POST /xpubs. The challenge says, per chain, whether the
+ * xpub is there, missing (with a single-use nonce) or another xpub's.
+ */
+export type EvmChain = "ethereum" | "base" | "polygon";
+export type EvmChainState = "registered" | "to_register" | "conflict";
+
+export interface EvmChallenge {
+  account_id: string;
+  path_prefix: string;
+  address: string;
+  timestamp: number;
+  chains: { chain: EvmChain; state: EvmChainState; nonce: string | null }[];
+}
+
+export function evmChallenge(body: { xpub: string; address: string }): Promise<EvmChallenge> {
+  return send("wallet-backup/evm/challenge", { json: body });
+}
+
+export function registerEvm(body: {
+  xpub: string;
+  signed_by_address: string;
+  timestamp: number;
+  registrations: { chain: EvmChain; nonce: string; signature: string }[];
+}): Promise<{ address: string; results: { chain: EvmChain; ok: boolean; status: number; idempotent: boolean; code: string | null }[] }> {
+  return send("wallet-backup/evm", { json: body });
+}
+
 /** The per-person pepper (half of v1's key, one of three inputs to v2's). */
 export async function getPepper(): Promise<string> {
   const d = await send<{ pepper: string }>("security/pepper");

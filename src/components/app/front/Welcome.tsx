@@ -51,7 +51,7 @@ import {
 } from "@/lib/wallet/api";
 import { wipe } from "@/lib/wallet/core";
 import { explain, LOSS_WARNING } from "@/lib/wallet/explain";
-import { registerWalletAddress, sealNewWallet } from "@/lib/wallet/flows";
+import { registerEvmSide, registerWalletAddress, sealNewWallet } from "@/lib/wallet/flows";
 import { createPasskeyWithPrf, evaluatePrf, PasskeyError } from "@/lib/wallet/passkey";
 import { lock, unlockWith } from "@/lib/wallet/vault";
 
@@ -639,8 +639,13 @@ function WalletStep({
     try {
       const key = await sealNewWallet({ uid: session.user.id, credentialId, prf, label });
       unlockWith(key);
-      // So the backend watches it for deposits, as the Wallet page does after an unlock.
-      await registerWalletAddress(key.address, null).catch(() => undefined);
+      // So the backend watches it for deposits on every chain from day one, as
+      // the app registers it: Solana, and the EVM xpub on Ethereum, Base and
+      // Polygon (registerEvmSide wipes its key).
+      await Promise.all([
+        registerWalletAddress(key.address, null).catch(() => undefined),
+        registerEvmSide(key.evm),
+      ]);
       lock();
       setPhase({ kind: "ready" });
       onReady(true);

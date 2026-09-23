@@ -29,7 +29,7 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
-import { chosenUsername } from "@/lib/app/me";
+import { chosenUsername, getMyAddresses } from "@/lib/app/me";
 import { useBalances, useHoldWallet } from "@/lib/app/hold-wallet";
 import { useMe } from "@/lib/app/spaces-data";
 import { useShell } from "@/components/app/Shell";
@@ -55,7 +55,8 @@ import { wipe } from "@/lib/wallet/core";
 import { explain, LOSS_WARNING } from "@/lib/wallet/explain";
 import {
   openMnemonic,
-  openWallet,
+  openWalletWithEvm,
+  registerEvmSide,
   registerWalletAddress,
   sealNewWallet,
   userSecretFrom,
@@ -379,6 +380,8 @@ function Create({ status, onCreated }: { status: WalletStatus; onCreated: () => 
       const key = await sealNewWallet({ uid: session.user.id, credentialId, prf, label });
       const address = key.address;
       unlockWith(key);
+      // Every chain from day one: the app's EVM xpub on Ethereum, Base and Polygon. It wipes its key.
+      void registerEvmSide(key.evm);
       setStep({ kind: "done", address });
     } catch (e) {
       setError(e);
@@ -507,7 +510,12 @@ function Unlock() {
     try {
       const a = await evaluatePrf(backup.wrappings.map((w) => w.credential_id));
       prf = a.prf;
-      unlockWith(await openWallet({ uid: session.user.id, backup, credentialId: a.credentialId, prf }));
+      const { key, evm } = await openWalletWithEvm({ uid: session.user.id, backup, credentialId: a.credentialId, prf });
+      unlockWith(key);
+      // An older web wallet registers its EVM side on this unlock; one that has it asks nothing.
+      void getMyAddresses()
+        .catch(() => null)
+        .then((known) => registerEvmSide(evm, known));
     } catch (e) {
       setError(e);
     } finally {
