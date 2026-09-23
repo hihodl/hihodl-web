@@ -11,9 +11,21 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 
+/**
+ * Everything the website's root layout sets for sharing and search is unset
+ * here: a canonical pointing at hihodl.xyz and the website's link card would
+ * tell a crawler (and anyone pasting a link into a chat) that an account page
+ * is the homepage. The host's robots.txt is disallow-all (middleware), so the
+ * root layout's JSON-LD, which a metadata export cannot remove, is never
+ * crawled here.
+ */
 export const metadata: Metadata = {
   title: { default: "HOLD", template: "%s · HOLD" },
-  robots: { index: false, follow: false },
+  description: "Your HOLD account.",
+  robots: { index: false, follow: false, nocache: true, googleBot: { index: false, follow: false } },
+  alternates: { canonical: null },
+  openGraph: null,
+  twitter: null,
 };
 
 /**
