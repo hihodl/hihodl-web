@@ -110,7 +110,17 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
 
   const balance = Number(points.data?.balance ?? 0);
   const ceiling = Math.min(balance, rate?.maxPointsRedeemable ?? 0);
-  const discount = spend * (config.data?.pointsUsdValue ?? 0.01);
+  /*
+   * What a point takes off, in the RATE's currency. The server's quote
+   * (travel/pricing.service.ts `quote`) takes `points × pointsUsdValue` off
+   * the price in whatever currency the stay is quoted in, with no FX, so a
+   * MXN stay loses MXN 1 per 100 points. This preview says the same number in
+   * the same currency the summary and the Pay button use, and never a "$" the
+   * hold would not honour. (Valuing a point at a real dollar in every
+   * currency is a server change, in that same `quote`.)
+   */
+  const pointValue = config.data?.pointsUsdValue ?? 0.01;
+  const discount = spend * pointValue;
   const total = rate ? Math.max(0, rate.price - discount) : 0;
 
   /* ── Paying ── */
@@ -376,7 +386,7 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
           {ceiling > 0 ? (
             <>
               <SectionLabel className="mb-2.5 mt-[22px]">Pay with points</SectionLabel>
-              <PointsBand balance={balance} ceiling={ceiling} value={spend} onChange={setSpend} pointUsd={config.data?.pointsUsdValue ?? 0.01} disabled={locked} />
+              <PointsBand balance={balance} ceiling={ceiling} value={spend} onChange={setSpend} pointValue={pointValue} currency={rate.currency} disabled={locked} />
             </>
           ) : null}
 
@@ -620,14 +630,17 @@ function PointsBand({
   ceiling,
   value,
   onChange,
-  pointUsd,
+  pointValue,
+  currency,
   disabled,
 }: {
   balance: number;
   ceiling: number;
   value: number;
   onChange: (n: number) => void;
-  pointUsd: number;
+  /** What one point takes off, in `currency` (see the checkout's `discount`). */
+  pointValue: number;
+  currency: string;
   disabled?: boolean;
 }) {
   const steps = [0, 0.25, 0.5, 0.75, 1].map((share) => Math.round(ceiling * share));
@@ -652,7 +665,7 @@ function PointsBand({
                 {n === 0 ? "None" : count(n)}
               </span>
               <span className="text-[11.5px] font-semibold" style={{ color: on ? "rgba(255,255,255,0.82)" : "rgba(255,255,255,0.55)" }}>
-                {n === 0 ? "keep them" : `− $${(n * pointUsd).toFixed(2)}`}
+                {n === 0 ? "keep them" : `− ${money(n * pointValue, currency)}`}
               </span>
             </button>
           );
