@@ -129,10 +129,35 @@ export function Door({ configured }: { configured: boolean }) {
               Email
             </Row>
             {notice ? <Warn>{notice}</Warn> : null}
+            <Consent />
           </div>
         </SheetPanel>
       ) : null}
     </Stage>
+  );
+}
+
+/**
+ * Said where an account is made: every row in this sheet creates one for
+ * somebody new. Shown, not recorded — the backend has no sign-up field for it
+ * (its one consent route, /verification/consent, is the KYC documents' own).
+ * Absolute links: the product lives on app.hihodl.xyz, the documents on the
+ * site, and a new tab keeps the sheet where it was.
+ */
+function Consent() {
+  const link = "text-white/80 underline underline-offset-2 hover:text-text";
+  return (
+    <p className="mt-1 px-2 text-center text-[12px] leading-[17px] text-white/60">
+      By continuing you agree to the{" "}
+      <a href="https://hihodl.xyz/terms" target="_blank" rel="noopener noreferrer" className={link}>
+        Terms
+      </a>{" "}
+      and{" "}
+      <a href="https://hihodl.xyz/privacy" target="_blank" rel="noopener noreferrer" className={link}>
+        Privacy Policy
+      </a>
+      .
+    </p>
   );
 }
 
