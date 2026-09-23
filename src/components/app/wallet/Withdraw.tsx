@@ -36,6 +36,7 @@
 
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 
+import { recordSentPayment } from "@/lib/app/groups";
 import { settleRequest } from "@/lib/app/payment-requests";
 import {
   authorizeWithdrawalPasskey,
@@ -69,7 +70,22 @@ import {
 
 import { AMBER, AppScreen, BackspaceIcon, ContinueButton, FooterNote, HeroBody, HeroCard, PrimaryButton, StatusLine, SUB, TokenIcon, useCountdown, WarningNote } from "./app-kit";
 import { Ion } from "../ion";
+import { useProductHref } from "../base";
 import { hereNow, useLinkGate } from "../link/LinkGate";
+
+/**
+ * What another screen already knows when it opens Send. `group` is Pay on a
+ * group debt (contract §11.2): once the send confirms, it is recorded against
+ * that group. `back` is the group thread to return to.
+ */
+export interface WithdrawPrefill {
+  to?: string;
+  amount?: string;
+  token?: WithdrawToken;
+  requestId?: string;
+  group?: { groupId: string; toUserId: string; amountMinor: string };
+  back?: string;
+}
 
 /* ── Parts ────────────────────────────────────────────────────────── */
 
@@ -595,8 +611,11 @@ export function Withdraw({
    * that the person owns the form, and a prop that kept writing into it would
    * undo their typing on every re-render.
    */
-  prefill?: { to?: string; amount?: string; token?: WithdrawToken; requestId?: string };
+  prefill?: WithdrawPrefill;
 }) {
+  const productHref = useProductHref();
+  // Opened from a group's Pay: Back and Close return to that group.
+  const leave = prefill?.back ? () => window.location.assign(productHref(prefill.back!)) : onBack;
   const [draft, setDraft] = useState<Draft>({
     token: prefill?.token ?? "USDC",
     amount: prefill?.amount ?? "",
@@ -655,6 +674,21 @@ export function Withdraw({
     if (!paysTheRequest(prefill, confirmed)) return;
     settled.current = true;
     void settleRequest(requestId, confirmed.signature ? { txHash: confirmed.signature } : undefined).catch(() => undefined);
+  }, [confirmed, prefill]);
+
+  /*
+   * Pay on a group debt: once the money is confirmed, and only when what went
+   * out is what the debt asked (same address, token and amount), record it in
+   * the group. Once per page; a failure leaves the debt showing in the group,
+   * where "Paid another way" still records it.
+   */
+  const groupRecorded = useRef(false);
+  useEffect(() => {
+    const g = prefill?.group;
+    if (!confirmed || !g || groupRecorded.current) return;
+    if (!paysTheRequest(prefill, confirmed)) return;
+    groupRecorded.current = true;
+    void recordSentPayment(g.groupId, { toUserId: g.toUserId, amountMinor: g.amountMinor }, confirmed.id).catch(() => undefined);
   }, [confirmed, prefill]);
 
   /** Quote, build, and ask the server for the challenge bound to those exact bytes. */
@@ -792,12 +826,12 @@ export function Withdraw({
         approver={approver}
         here={here}
         actions={{
-          onBack,
+          onBack: leave,
           onReview: () => setPhase({ kind: "review", busy: false }),
           onRequest: () => void request(),
           onConfirmPasskey: () => void approve(),
           onCancel: () => void cancel(),
-          onDone: onBack,
+          onDone: leave,
           onEdit: () => setPhase({ kind: "form" }),
         }}
       />

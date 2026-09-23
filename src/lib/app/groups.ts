@@ -148,8 +148,18 @@ export type EventItem = {
   userId: string;
   event: string;
   subjectId: string | null;
-  /** expense_edited: changed, description. member_left: userId. member_removed: userId, byUserId (§10.4). */
-  data: { changed?: string[]; description?: string | null; userId?: string | null; byUserId?: string | null } | null;
+  /** expense_edited: changed, description. member_left: userId. member_removed: userId, byUserId (§10.4). crew_sale: spaceTitle, grossMinor, currency (§12). */
+  data: {
+    changed?: string[];
+    description?: string | null;
+    userId?: string | null;
+    byUserId?: string | null;
+    spaceId?: string | null;
+    spaceTitle?: string | null;
+    orderId?: string | null;
+    grossMinor?: string | null;
+    currency?: string | null;
+  } | null;
 };
 
 export type ThreadItem = MessageItem | ExpenseItem | SettlementItem | EventItem;
@@ -171,7 +181,10 @@ export interface GroupRow {
   /** What the book is kept in. */
   currency?: string | null;
   smartSettle?: boolean;
-  crew?: { id: string; name: string } | null;
+  /** §11.4: the daily friendly reminder; absent on an older server, which reads as on (its default). */
+  autoRemind?: boolean;
+  /** A crew's group (§12): the group object says `crewId`, the list row said `id`. */
+  crew?: { id?: string; crewId?: string; name: string } | null;
   last?: ThreadItem | null;
   lastAt?: string | null;
   unread?: number;
@@ -372,6 +385,11 @@ export function eventText(item: EventItem, names: Names): string {
     const gone = item.data?.userId || item.subjectId || "";
     return `${names.subject(by)} removed ${gone ? names.name(gone) : "someone"}`;
   }
+  if (item.event === "crew_sale") {
+    const title = item.data?.spaceTitle?.trim() || "a spot";
+    const gross = item.data?.grossMinor && /^\d+$/.test(item.data.grossMinor) ? `, ${moneyText(item.data.grossMinor, item.data.currency || "USD")}` : "";
+    return `Sold: ${title} to a brand${gross}`;
+  }
   if (item.event === "expense_edited") {
     const what = item.data?.description?.trim() || "an expense";
     const changed = (item.data?.changed ?? []).map((c) => CHANGED_WORDS[c]).filter(Boolean);
@@ -458,7 +476,7 @@ export const createGroup = (body: { name: string; emoji?: string | null; currenc
 
 export const getGroup = (groupId: string) => read<{ group: GroupRow }>(g(groupId));
 
-export const updateGroup = (groupId: string, body: { name?: string; emoji?: string | null; currency?: string; smartSettle?: boolean }) =>
+export const updateGroup = (groupId: string, body: { name?: string; emoji?: string | null; currency?: string; smartSettle?: boolean; autoRemind?: boolean }) =>
   read<{ group: GroupRow }>(g(groupId), { method: "PATCH", json: body });
 
 export const uploadGroupPhoto = (groupId: string, image: Blob) => read<{ group: GroupRow }>(`${g(groupId)}/photo`, { raw: image });
@@ -556,6 +574,37 @@ export const deleteReceipt = (groupId: string, expenseId: string) =>
  */
 export const recordPaidElsewhere = (groupId: string, body: { toUserId: string; amountMinor: string }, key: string) =>
   read<{ settlement: { id: string } }>(`${g(groupId)}/settlements`, { json: body, headers: withKey(key) });
+
+/**
+ * After a send from the web confirmed (the Pay on a debt, §11.2): record it
+ * against the group with the payment's id, so it can say "Paid in HOLD".
+ *
+ * The web's send is a withdrawal, and today's server checks `transferId`
+ * against payment intents only, so it answers `transfer_not_found`; the money
+ * did go, so it is then recorded as the payer's word ("says they paid"), which
+ * is true. `transfer_not_confirmed` is asked again a few times. One key per
+ * withdrawal, so a reload never records it twice.
+ */
+export async function recordSentPayment(groupId: string, body: { toUserId: string; amountMinor: string }, withdrawalId: string): Promise<"checked" | "word" | "already"> {
+  const url = `${g(groupId)}/settlements`;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    try {
+      await read<{ settlement: { id: string } }>(url, { json: { ...body, transferId: withdrawalId }, headers: withKey(`web-settle-${withdrawalId}`.slice(0, 128)) });
+      return "checked";
+    } catch (e) {
+      if (!(e instanceof HoldApiError)) throw e;
+      if (e.detail === "transfer_already_used") return "already";
+      if (e.detail === "transfer_not_confirmed" && attempt < 3) {
+        await new Promise((r) => setTimeout(r, 4000));
+        continue;
+      }
+      if (e.detail === "transfer_not_found" || e.detail === "transfer_not_to_them" || e.detail === "transfer_not_confirmed") break;
+      throw e;
+    }
+  }
+  await recordPaidElsewhere(groupId, body, `web-settle-word-${withdrawalId}`.slice(0, 128));
+  return "word";
+}
 
 /** The creditor says a debt to them was paid another way. Capped by what the plan says is owed. */
 export const markPaid = (groupId: string, body: { fromUserId: string; amountMinor: string }, key: string) =>

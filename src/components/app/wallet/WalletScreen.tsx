@@ -92,7 +92,7 @@ import {
 } from "./app-kit";
 import { Ion, type IonName } from "../ion";
 import { Receive } from "./Receive";
-import { Withdraw } from "./Withdraw";
+import { Withdraw, type WithdrawPrefill } from "./Withdraw";
 
 /* ── Small parts ──────────────────────────────────────────────────── */
 
@@ -128,16 +128,24 @@ function useRegistrationOptions(active: boolean) {
 /* ── The screen ───────────────────────────────────────────────────── */
 
 /** What Payments already knows when it opens Send: ?to, ?amount, ?token. Read once. */
-function prefillFromUrl(): { to?: string; amount?: string; token?: "USDC" | "SOL"; requestId?: string } {
+function prefillFromUrl(): WithdrawPrefill {
   if (typeof window === "undefined") return {};
   const q = new URLSearchParams(window.location.search);
   const token = (q.get("token") ?? "").toUpperCase();
+  const group = q.get("group") ?? "";
+  const groupTo = q.get("groupTo") ?? "";
+  const groupOwe = q.get("groupOwe") ?? "";
+  const back = q.get("back") ?? "";
   return {
     ...(q.get("to") ? { to: q.get("to")! } : {}),
     ...(q.get("amount") ? { amount: q.get("amount")! } : {}),
     ...(token === "USDC" || token === "SOL" ? { token } : {}),
     // Pay on a payment request: Withdraw settles it once the send confirms.
     ...(q.get("request") ? { requestId: q.get("request")! } : {}),
+    // Pay on a group debt (§11.2): Withdraw records it against the group once the send confirms.
+    ...(/^[A-Za-z0-9_-]{1,64}$/.test(group) && /^[A-Za-z0-9_-]{1,64}$/.test(groupTo) && /^\d{1,20}$/.test(groupOwe) ? { group: { groupId: group, toUserId: groupTo, amountMinor: groupOwe } } : {}),
+    // Only back into a group thread: never an address somebody else chose.
+    ...(/^\/payments\/groups\/[A-Za-z0-9_-]{1,64}$/.test(back) ? { back } : {}),
   };
 }
 

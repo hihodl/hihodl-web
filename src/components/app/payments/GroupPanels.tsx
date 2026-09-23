@@ -17,16 +17,28 @@
  *                  never written to the thread. After it is sent, or when it is
  *                  too soon, the line says when it can be sent again.
  *
- * What YOU owe keeps today's two honest ways (see GroupThread's header): pay
- * in the HOLD app, which checks the payment, or record that you paid another
- * way. The web does not send a group payment.
+ * What YOU owe has two ways (contract §11.2):
+ *
+ *   Pay            the web's own Send (/wallet/send), prefilled with their
+ *                  HOLD address and the amount in USDC (converted with today's
+ *                  rate when the group keeps another currency), behind the same
+ *                  LinkGate every payment passes. Once the send confirms, Send
+ *                  records it against the group (recordSentPayment). Only for
+ *                  somebody HOLD can pay into: a person whose handle doesn't
+ *                  resolve to a Solana address gets "Paid another way" alone.
+ *   Paid another way  the payer's word, after a confirm.
+ *
+ * The same rows sit in the card above the thread's composer (DebtCard).
  */
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import {
   addMember,
   absMinor,
+  bareHandle,
+  convertMinor,
+  getFx,
   deleteGroup,
   deleteGroupPhoto,
   describeGroupError,
@@ -49,6 +61,10 @@ import {
   type Person,
 } from "@/lib/app/groups";
 import { HoldApiError } from "@/lib/app/hold-api";
+import { resolveHandle } from "@/lib/app/payment-requests";
+
+import { useProductHref } from "../base";
+import { useLinkGate } from "../link/LinkGate";
 
 import { btnGlass, Notice, Switch } from "../hold";
 import { Ion } from "../ion";
@@ -59,6 +75,10 @@ import { DirectoryPicker } from "./DirectoryPicker";
 import { CurrencyInput, FacePicker, LoadFailed, PersonFace, pillGlass, pillWhite, plateCaution, plateWhite, sectionLabel, Sheet } from "./group-kit";
 
 type Names = { name: NameOf; subject: NameOf };
+
+/** Pay: the screen's one amber plate. */
+const pillAmber =
+  "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[18px] bg-amber px-4 text-[13.5px] font-extrabold text-[#0F0F1A] transition-opacity hover:opacity-90";
 type Transfer = GroupBalances["transfers"][number];
 
 /* ── Balances ─────────────────────────────────────────────────────── */
@@ -148,7 +168,7 @@ function whenText(iso: string): string {
 }
 
 /** "@bea owes you 15.00": Mark as paid, and Remind. */
-function OwedRow({
+export function OwedRow({
   groupId,
   currency,
   transfer,
@@ -274,11 +294,70 @@ function OwedRow({
   );
 }
 
+type PayState = { kind: "checking" } | { kind: "ready"; to: string; usdc: string; approx: boolean } | { kind: "no_wallet" } | { kind: "no_rate" };
+
 /**
- * One payment the viewer owes. The web offers the app (where HOLD checks the
- * payment) and "another way", and never a send.
+ * Whether the web can pay this debt, and how: their HOLD Solana address (a
+ * public handle resolves; anything else can't be paid from here) and the
+ * amount in USDC, the web Send's dollar token. A group kept in dollars pays
+ * the amount itself; another currency is converted with today's rate and
+ * said with "≈". No rate, no Pay: an amount is never guessed.
  */
-function OweRow({
+export function usePayDebt(groupId: string, currency: string, transfer: Transfer, person: GroupMember | undefined) {
+  const productHref = useProductHref();
+  const gate = useLinkGate();
+  const [state, setState] = useState<PayState>({ kind: "checking" });
+  const handle = bareHandle(person?.aliasHandle);
+  const cur = currency.toUpperCase();
+
+  useEffect(() => {
+    let alive = true;
+    setState({ kind: "checking" });
+    (async () => {
+      if (!handle) return setState({ kind: "no_wallet" });
+      const to = await resolveHandle(handle);
+      if (!alive) return;
+      if (!to || (to.chain !== "solana" && to.chain !== "sol")) return setState({ kind: "no_wallet" });
+      if (cur === "USD") return setState({ kind: "ready", to: to.address, usdc: minorToInput(transfer.amountMinor, "USD"), approx: false });
+      try {
+        const fx = await getFx("USD", [cur]);
+        const usd = convertMinor(transfer.amountMinor, cur, "USD", fx.rates ?? {});
+        if (!alive) return;
+        setState(usd && toBig(usd) > 0n ? { kind: "ready", to: to.address, usdc: minorToInput(usd, "USD"), approx: true } : { kind: "no_rate" });
+      } catch {
+        if (alive) setState({ kind: "no_rate" });
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [handle, cur, transfer.amountMinor]);
+
+  const pay = () => {
+    if (state.kind !== "ready") return;
+    const q = new URLSearchParams({
+      to: state.to,
+      amount: state.usdc,
+      token: "USDC",
+      group: groupId,
+      groupTo: transfer.toUserId,
+      groupOwe: transfer.amountMinor,
+      back: `/payments/groups/${groupId}`,
+    });
+    const url = `${productHref("/wallet/send")}?${q.toString()}`;
+    // A wallet made in the app with no phone linked: the one sheet, which comes back to this send.
+    if (gate.blocked) return gate.ask(url);
+    window.location.assign(url);
+  };
+
+  return { state, pay, gateSheet: gate.sheet };
+}
+
+/**
+ * One payment the viewer owes: Pay from the web (when HOLD can pay into
+ * them), or "Paid another way", the payer's word.
+ */
+export function OweRow({
   groupId,
   currency,
   transfer,
@@ -293,12 +372,14 @@ function OweRow({
   names: Names;
   onRecorded: () => void;
 }) {
-  const [step, setStep] = useState<"idle" | "app" | "confirm">("idle");
+  const [step, setStep] = useState<"idle" | "confirm">("idle");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [key] = useState(() => newClientKey("settle"));
   const who = names.name(transfer.toUserId);
   const amount = moneyText(transfer.amountMinor, currency);
+  const payer = usePayDebt(groupId, currency, transfer, person);
+  const ps = payer.state;
 
   const record = () => {
     setBusy(true);
@@ -323,28 +404,27 @@ function OweRow({
       </div>
 
       {step === "idle" ? (
-        <div className="flex flex-wrap gap-2">
-          <button type="button" className={pillWhite} onClick={() => setStep("app")}>
-            <Ion name="phone-portrait-outline" size={14} />
-            Pay in the HOLD app
-          </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {ps.kind === "ready" ? (
+            <button type="button" className={pillAmber} onClick={payer.pay}>
+              Pay {ps.approx ? "≈ " : ""}
+              {ps.usdc} USDC
+            </button>
+          ) : ps.kind === "checking" ? (
+            <span className="inline-flex h-9 items-center px-1 text-[12.5px] text-white/55">Checking how to pay…</span>
+          ) : null}
           <button type="button" className={pillGlass} onClick={() => setStep("confirm")}>
-            I paid another way
+            Paid another way
           </button>
         </div>
       ) : null}
-
-      {step === "app" ? (
-        <>
-          <p className="text-[13px] leading-[18px] text-white/[0.82]">
-            Open this group in the HOLD app and tap Settle up. The app sends {amount} to {who} and records it here as Paid in HOLD, checked against the payment.
-          </p>
-          <p className="text-[12px] leading-[17px] text-white/55">Sending from the web isn&apos;t connected to groups yet, so a payment made here couldn&apos;t be checked against this group.</p>
-          <button type="button" className={`${pillGlass} self-start`} onClick={() => setStep("idle")}>
-            Back
-          </button>
-        </>
+      {step === "idle" && ps.kind === "no_wallet" ? (
+        <p className="text-[12px] leading-[17px] text-white/55">{who === "a former member" ? "They" : who} can&apos;t be paid into from here, so Paid another way is the one way to record it.</p>
       ) : null}
+      {step === "idle" && ps.kind === "no_rate" ? (
+        <p className="text-[12px] leading-[17px] text-white/55">Today&apos;s rate from {currency} to USDC didn&apos;t load, so Pay isn&apos;t offered. Try again later, or record it as paid another way.</p>
+      ) : null}
+      {payer.gateSheet}
 
       {step === "confirm" ? (
         <>
@@ -651,6 +731,8 @@ export function SettingsSheet({ groupId, group, onClose, onSaved }: { groupId: s
   const [removePhoto, setRemovePhoto] = useState(false);
   const [currency, setCurrency] = useState((group.currency ?? "USD").toUpperCase());
   const [smart, setSmart] = useState(!!group.smartSettle);
+  // §11.4: on by default, and an older group object without the field reads as on.
+  const [autoRemind, setAutoRemind] = useState(group.autoRemind !== false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -668,6 +750,7 @@ export function SettingsSheet({ groupId, group, onClose, onSaved }: { groupId: s
     if (name.trim() !== group.name) patch.name = name.trim();
     if (emoji !== (group.emoji ?? "")) patch.emoji = emoji;
     if (smart !== !!group.smartSettle) patch.smartSettle = smart;
+    if (autoRemind !== (group.autoRemind !== false)) patch.autoRemind = autoRemind;
     const currencyChanged = currency !== (group.currency ?? "USD").toUpperCase();
     try {
       if (Object.keys(patch).length) await updateGroup(groupId, patch);
@@ -729,6 +812,14 @@ export function SettingsSheet({ groupId, group, onClose, onSaved }: { groupId: s
           <span className="text-[12px] text-white/55">Fewer payments, netted across the group.</span>
         </span>
         <Switch checked={smart} onChange={setSmart} label="Simplify debts" disabled={busy} />
+      </div>
+
+      <div className="flex items-center gap-3 rounded-[14px] bg-white/[0.04] px-3 py-2.5">
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="text-[14px] font-bold text-white">Friendly reminders</span>
+          <span className="text-[12px] leading-[17px] text-white/55">A gentle nudge, at most once a week, to anyone with something pending for 3 days or more. Never in the chat, and nobody is made to pay.</span>
+        </span>
+        <Switch checked={autoRemind} onChange={setAutoRemind} label="Friendly reminders" disabled={busy} />
       </div>
 
       {notice ? <Notice>{notice}</Notice> : null}
