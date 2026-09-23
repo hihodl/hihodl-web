@@ -225,8 +225,20 @@ export async function uploadAvatar(file: Blob, supabaseUid: string, previous: st
   }
 }
 
-/** Back to the initial. The stored object is removed too, best effort. */
+/**
+ * Back to the emoji. `DELETE /me/avatar` clears the photo and removes the
+ * stored object on the server, where the app's own delete lives too. A backend
+ * that predates the route answers 404, and then the old way still works: clear
+ * the path with PATCH /me and remove the object from this person's own folder,
+ * best effort.
+ */
 export async function removeAvatar(supabaseUid: string, previous: string | null): Promise<void> {
+  try {
+    await call<{ removed: boolean }>("me/avatar", { method: "DELETE" });
+    return;
+  } catch (e) {
+    if (!(e instanceof CreatorApiError) || (e.status !== 404 && e.status !== 405)) throw e;
+  }
   await updateMe({ avatarUrl: "" });
   const old = storagePathOf(previous);
   const auth = creatorAuth();
