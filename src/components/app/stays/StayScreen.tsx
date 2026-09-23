@@ -37,6 +37,7 @@ import { groupByRoom } from "./group";
 import { About, CheckinTimes, Facilities, Gallery, GoodToKnow, Nearby, ReviewSummary, RoomGroup } from "./StayParts";
 import { useRates, useStay } from "@/lib/app/stays-data";
 import type { Rate } from "@/lib/app/stays";
+import { staysCurrency } from "@/lib/app/display-currency";
 
 export function StayScreen({ hotelId }: { hotelId: string }) {
   const href = useProductHref();
@@ -51,7 +52,7 @@ export function StayScreen({ hotelId }: { hotelId: string }) {
     checkout: search.checkout,
     adults: search.adults,
     ...(search.children.length ? { children: search.children } : {}),
-    currency: "EUR",
+    currency: staysCurrency(),
   });
 
   function book(rate: Rate) {

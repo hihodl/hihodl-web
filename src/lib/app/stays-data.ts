@@ -51,6 +51,7 @@ import {
   type StayResult,
   type StaysConfig,
 } from "./stays";
+import { staysCurrency } from "./display-currency";
 
 /**
  * A stay's photographs and description keep; its prices do not.
@@ -89,7 +90,7 @@ export function usePoints() {
   return useSWR<HiPoints>(who ? [who, "hipoints"] : null, () => getPoints(), OPTIONS);
 }
 
-export function useFeatured(set: "near" | "longhaul", currency = "EUR") {
+export function useFeatured(set: "near" | "longhaul", currency = staysCurrency()) {
   const who = useWho();
   return useSWR<FeaturedAnswer>(
     who ? [who, "stays/featured", set, currency] : null,
