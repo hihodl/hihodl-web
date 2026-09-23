@@ -216,7 +216,9 @@ export function money(n: number): string {
 
 export function HeroBalance({ value, loading }: { value: string | null; loading?: boolean }) {
   if (loading || value === null) return <span className="block h-[52px] w-[200px] animate-pulse rounded-[12px] bg-white/[0.08]" aria-hidden />;
-  return <span className="block text-[48px] font-strong leading-[52px] tabular-nums text-white">{value}</span>;
+  // Shrinks with the screen rather than cutting the number: at 48px a seven
+  // figure balance is wider than a phone, and a truncated balance is a wrong one.
+  return <span className="block max-w-full whitespace-nowrap text-[clamp(32px,11vw,48px)] font-strong leading-[52px] tabular-nums text-white">{value}</span>;
 }
 
 /** MiniAction: the dashboard's quick action. */
