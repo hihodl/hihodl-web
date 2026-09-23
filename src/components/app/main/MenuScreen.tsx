@@ -55,7 +55,7 @@ import { chosenUsername, emailRecoveryCodes, recoveryCodesStatus } from "@/lib/a
 import { useMe } from "@/lib/app/spaces-data";
 import { useHoldWallet } from "@/lib/app/hold-wallet";
 import { thisDevice, type Phone } from "@/lib/link/ua";
-import { listSessions, type ActiveSession } from "@/lib/app/sessions";
+import { listSessions, revokeSession, thisBrowserSessionId, type ActiveSession } from "@/lib/app/sessions";
 import { listPasskeys, type RegisteredPasskey } from "@/lib/wallet/api";
 
 import { useLinkedPhones } from "../account/PhoneScreen";
@@ -862,7 +862,7 @@ function PersonalizationScreen({ onBack }: { onBack: () => void }) {
  */
 function SettingsScreen({ onBack, open }: { onBack: () => void; open: (s: Screen) => void }) {
   const { hideBalances, setHideBalances } = useShellPrefs();
-  const sessions = useSessions();
+  const [sessions] = useSessions();
   const sessionsValue = sessions === undefined ? undefined : sessions === null ? "Unavailable" : String(sessions.length);
   return (
     <Column>
@@ -954,15 +954,16 @@ function bugReportHref(): string {
   return `mailto:support@hihodl.xyz?subject=${encodeURIComponent("Bug report (web)")}&body=${encodeURIComponent(body)}`;
 }
 
-/** undefined while reading, null when it could not be read. */
-function useSessions(): ActiveSession[] | null | undefined {
+/** undefined while reading, null when it could not be read. `reload` reads again. */
+function useSessions(): [ActiveSession[] | null | undefined, () => void] {
   const [list, setList] = useState<ActiveSession[] | null | undefined>(undefined);
+  const [round, setRound] = useState(0);
   useEffect(() => {
     const ctl = new AbortController();
     listSessions(ctl.signal).then(setList, () => !ctl.signal.aborted && setList(null));
     return () => ctl.abort();
-  }, []);
-  return list;
+  }, [round]);
+  return [list, useCallback(() => setRound((n) => n + 1), [])];
 }
 
 function lastSeen(iso: string): string {
@@ -975,51 +976,114 @@ function lastSeen(iso: string): string {
   return ago(iso).replace(/^./, (c) => c.toUpperCase());
 }
 
+/** The app's deviceIcon, from the glyphs this kit carries: a phone, or a browser on a computer. */
+function sessionIcon(type: ActiveSession["deviceType"]): IonName {
+  return type === "desktop" ? "globe-outline" : "phone-portrait-outline";
+}
+
 /**
- * Security › Active sessions, read-only. The same list the app shows; ending
- * one is done there, on a device that is signed in and can prove it.
+ * Security › Active sessions, as the app's (app/(drawer)/(internal)/sessions.tsx):
+ * this browser first, marked, and a trash on every other device that asks
+ * "Remove this device?" before `DELETE /sessions/:id`. This browser's own row
+ * has no trash; ending it is Sign out.
  */
 function SessionsScreen({ onBack }: { onBack: () => void }) {
-  const sessions = useSessions();
+  const [sessions, reload] = useSessions();
+  const mine = thisBrowserSessionId();
+  const isCurrent = (x: ActiveSession) => x.id === mine;
+  const ordered = sessions ? [...sessions].sort((a, b) => Number(isCurrent(b)) - Number(isCurrent(a))) : sessions;
+  const [pending, setPending] = useState<ActiveSession | null>(null);
+  const [removing, setRemoving] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  const remove = async () => {
+    if (!pending || removing) return;
+    setRemoving(true);
+    setFailed(false);
+    try {
+      await revokeSession(pending.id);
+      setPending(null);
+    } catch {
+      setFailed(true);
+    } finally {
+      setRemoving(false);
+      reload();
+    }
+  };
+
   return (
     <Column>
       <BackHeader title="Active sessions" onBack={onBack} />
       <p className="mt-4 px-1 text-[14px] leading-5 text-white/[0.72]">
-        The phones signed in to your HOLD account. This browser signs in on its own and is not one of them.
+        The phones and browsers signed in to your HOLD account.
       </p>
       <HoldCard className="mt-3">
-        {sessions === undefined ? (
+        {ordered === undefined ? (
           <div className="flex flex-col gap-2 p-4">
             <Skeleton className="h-12" />
             <Skeleton className="h-12" />
           </div>
-        ) : sessions === null ? (
+        ) : ordered === null ? (
           <div className="p-4">
             <Notice tone="calm">We could not read your sessions just now. Try again in a moment.</Notice>
           </div>
-        ) : sessions.length === 0 ? (
-          <p className="px-[18px] py-[18px] text-[14px] text-white/[0.72]">No phone is signed in to HOLD right now.</p>
+        ) : ordered.length === 0 ? (
+          <p className="px-[18px] py-[18px] text-[14px] text-white/[0.72]">No device is signed in to HOLD right now.</p>
         ) : (
-          sessions.map((x) => {
+          ordered.map((x) => {
+            const current = isCurrent(x);
             const place = [x.city, x.country].filter(Boolean).join(", ");
-            const sub = [lastSeen(x.lastActiveAt), place].filter(Boolean).join(" · ");
+            const sub = [current ? "This browser" : lastSeen(x.lastActiveAt), place].filter(Boolean).join(" · ");
+            const asking = pending?.id === x.id;
             return (
-              <div key={x.id} className="flex w-full min-w-0 items-center gap-3 px-[18px] py-[18px]">
-                <Ion name="phone-portrait-outline" size={18} className="mt-[2px] shrink-0 self-start text-white" />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[14px] font-bold leading-5 text-white">{x.deviceName}</span>
-                  {sub ? <span className="mt-0.5 block truncate text-[12px] leading-4 text-[#9FB7C2]">{sub}</span> : null}
-                </span>
+              <div key={x.id} className="flex w-full min-w-0 flex-col px-[18px] py-[18px]">
+                <div className="flex w-full min-w-0 items-center gap-3">
+                  <Ion name={sessionIcon(x.deviceType)} size={18} className="mt-[2px] shrink-0 self-start text-white" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[14px] font-bold leading-5 text-white">{x.deviceName}</span>
+                    {sub ? <span className="mt-0.5 block truncate text-[12px] leading-4 text-[#9FB7C2]">{sub}</span> : null}
+                  </span>
+                  {current ? (
+                    <span className="shrink-0 rounded-[10px] bg-white/10 px-2 py-1 text-[11px] font-extrabold tracking-[0.4px] text-white">
+                      THIS BROWSER
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      aria-label={`Remove ${x.deviceName}`}
+                      onClick={() => {
+                        setFailed(false);
+                        setPending(asking ? null : x);
+                      }}
+                      disabled={removing}
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[18px] text-[#9FB7C2] transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
+                    >
+                      <Ion name="trash-outline" size={19} />
+                    </button>
+                  )}
+                </div>
+                {asking ? (
+                  <div className="mt-3 flex flex-col gap-3 rounded-[14px] bg-white/[0.04] p-3.5">
+                    <p className="text-[15px] font-extrabold leading-5 text-white">Remove this device?</p>
+                    <p className="text-[13px] leading-[18px] text-white/[0.72]">
+                      This device will be signed out immediately. It&apos;ll need to sign in again to access your account.
+                    </p>
+                    {failed ? <Notice>Could not remove. Try again.</Notice> : null}
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <button type="button" className={ctaPrimary} disabled={removing} onClick={() => void remove()}>
+                        {removing ? "Removing..." : "Remove device"}
+                      </button>
+                      <button type="button" className={ctaSecondary} disabled={removing} onClick={() => setPending(null)}>
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             );
           })
         )}
       </HoldCard>
-      <div className="mt-4">
-        <Notice icon="phone-portrait-outline" tone="calm">
-          To sign a phone out, open HOLD on a signed-in phone: Menu, Security, Active sessions.
-        </Notice>
-      </div>
     </Column>
   );
 }
