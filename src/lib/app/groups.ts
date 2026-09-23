@@ -43,6 +43,8 @@ import useSWR from "swr";
 
 import { useCreatorSession } from "@/lib/creator/session";
 
+import { getWithdrawal } from "@/lib/link/api";
+
 import { HoldApiError, read } from "./hold-api";
 import { asCategory, moneyText, type ExpenseCategory, type ItemBody, type Rates, type SourceKind, type SplitMode } from "./groups-rules";
 import { normaliseAllStats, normaliseGroupStats, type AllGroupsStats, type GroupStats } from "./group-insights";
@@ -588,12 +590,20 @@ export const recordPaidElsewhere = (groupId: string, body: { toUserId: string; a
  *                                recorded as the payer's word ("says they
  *                                paid"), which is true: the money did go
  *
+ * Before every attempt it reads GET /withdrawals/:id: that read is what
+ * checks the chain and moves the withdrawal from `submitted` to confirmed on
+ * the server, and the passkey path of Send never makes it (it learns of the
+ * confirmation from the relayer). Without it the proof would stay "not
+ * confirmed" for the whole minute. A failed read is ignored; the settlement
+ * answers for itself.
+ *
  * One key per withdrawal, so a reload never records it twice.
  */
 export async function recordSentPayment(groupId: string, body: { toUserId: string; amountMinor: string }, withdrawalId: string): Promise<"checked" | "word" | "already"> {
   const url = `${g(groupId)}/settlements`;
   const deadline = Date.now() + 60_000;
   for (;;) {
+    await getWithdrawal(withdrawalId).catch(() => undefined);
     try {
       await read<{ settlement: { id: string } }>(url, { json: { ...body, withdrawalId }, headers: withKey(`web-settle-${withdrawalId}`.slice(0, 128)) });
       return "checked";
