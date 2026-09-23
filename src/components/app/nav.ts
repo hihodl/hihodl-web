@@ -63,6 +63,7 @@ export type NavKey =
   | "payments"
   | "savings"
   | "invest"
+  | "analytics"
   | "activity"
   | "add"
   | "pay-links"
@@ -157,6 +158,11 @@ export const MAIN_HIDDEN: readonly NavItem[] = [
   { key: "wallet", label: "Wallet", path: "/wallet", icon: IconWallet, keywords: "solana usdc address receive passkey recovery phrase words export balance withdraw" },
   // Savings is a SCOPE of Home, not a place: /savings opens Home on that pill.
   { key: "savings", label: "Savings", path: "/savings", icon: IconSavings, keywords: "savings pockets goals yield interest apy earn aave kamino ways to earn" },
+  // Analytics is the app's header disc on Home (the round button beside
+  // Search), not a menu row: the app lists it nowhere else either. On a phone
+  // the shell draws that disc; everywhere, ⌘K finds it. Invest keeps its line
+  // in the column, and Analytics' Assets card opens it.
+  { key: "analytics", label: "Analytics", path: "/analytics", icon: IconInsights, keywords: "spending analytics spent income cashflow net saved categories budgets month recurring subscriptions where my money goes" },
   // Activity is Home's own card, opened in full: its "See all" pill goes here.
   { key: "activity", label: "Activity", path: "/activity", icon: IconActivity, keywords: "activity history everything that moved transactions receipts" },
   { key: "add", label: "Add money", path: "/add", icon: IconAdd, keywords: "receive crypto qr code address deposit top up add cash bank transfer" },
