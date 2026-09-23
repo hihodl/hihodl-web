@@ -5,19 +5,21 @@
  * phone's top bar, Account, the Dashboard, Settings.
  *
  * The photo is the profile's (`GET /me` → `profile.avatarUrl`, the one the app
- * shows); a creator who never set one but linked X is shown X's. Only with no
- * photo at all is it the initial, never a role's icon.
+ * shows); a creator who never set one but linked X is shown X's. With no
+ * photo at all it is what the app shows (src/ui/UserAvatar): the emoji the
+ * person chose (`profile.avatarEmoji`), else the app's default, 🚀. Never an
+ * initial, never a role's icon.
  *
  * /me signs the photo for an hour, so a tab left open outlives it: when the
  * image fails, /me is read once more for a fresh signature.
  */
 
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 
 import { chosenUsername } from "@/lib/app/me";
 import { useMe, useRefresh, useX } from "@/lib/app/spaces-data";
 
-import { Avatar } from "../front/kit";
+import { Avatar, DEFAULT_AVATAR_EMOJI, EmojiAvatar } from "../front/kit";
 
 export function useUserPhoto(): { photo: string | null; name: string | null } {
   const me = useMe();
@@ -37,5 +39,23 @@ export function UserAvatar({ size = 36, fallbackName, round = false }: { size?: 
     retried.current = true;
     void refresh("me");
   }, [refresh]);
-  return <Avatar src={photo} name={name ?? fallbackName ?? "?"} size={size} onError={onError} round={round} />;
+  const me = useMe();
+  const [broken, setBroken] = useState<string | null>(null);
+  if (photo && broken !== photo) {
+    return (
+      <Avatar
+        src={photo}
+        name={name ?? fallbackName ?? "?"}
+        size={size}
+        round={round}
+        onError={() => {
+          setBroken(photo);
+          onError();
+        }}
+      />
+    );
+  }
+  // Still reading /me: the disk, empty, rather than a face that then changes.
+  const emoji = me.data ? me.data.profile.avatarEmoji?.trim() || DEFAULT_AVATAR_EMOJI : me.error ? DEFAULT_AVATAR_EMOJI : null;
+  return <EmojiAvatar emoji={emoji} size={size} round={round} />;
 }

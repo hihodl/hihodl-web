@@ -101,6 +101,22 @@ export function Avatar({
   );
 }
 
+/** The app's avatar when nobody chose one (src/store/profile.ts). */
+export const DEFAULT_AVATAR_EMOJI = "🚀";
+
+/** The face with no photo: an emoji on the app's glass disk. `emoji` null draws the disk alone (still loading). */
+export function EmojiAvatar({ emoji, size, round = true, ring = false }: { emoji: string | null; size: number; round?: boolean; ring?: boolean }) {
+  return (
+    <span
+      style={{ width: size, height: size, borderRadius: round ? size / 2 : Math.round(size * 0.28), borderWidth: ring ? (size >= 48 ? 2 : 1.5) : 1 }}
+      className={`flex shrink-0 items-center justify-center bg-black/[0.28] ${ring ? "border-[rgba(236,240,244,0.55)]" : "border-white/10"}`}
+      aria-hidden
+    >
+      {emoji ? <span style={{ fontSize: Math.round(size / 2), lineHeight: 1 }}>{emoji}</span> : null}
+    </span>
+  );
+}
+
 /** "4Hn2…9xQe". */
 export function shortAddress(addr: string): string {
   return addr.length > 12 ? `${addr.slice(0, 4)}…${addr.slice(-4)}` : addr;

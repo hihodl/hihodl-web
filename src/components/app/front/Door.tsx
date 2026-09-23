@@ -23,14 +23,14 @@
 import { useEffect, useState } from "react";
 
 import type { OAuthProvider } from "@/lib/auth/providers";
-import { forgetRemembered, readRemembered, type Remembered } from "@/lib/auth/remember";
+import { forgetRemembered, readFace, readRemembered, type Remembered, type RememberedFace } from "@/lib/auth/remember";
 import { takeSignedOutElsewhereNote } from "@/lib/app/sessions";
 import { noteTermsShown, TERMS_VERSION } from "@/lib/app/terms";
 
 import { goWith, NotConfigured, PROVIDER_NAME, ProviderLogo, useProviders } from "@/components/creator/SignIn";
 
 import { EmailSignIn } from "./EmailSignIn";
-import { btnLink, HoldMark, Warn } from "./kit";
+import { btnLink, DEFAULT_AVATAR_EMOJI, EmojiAvatar, HoldMark, Warn } from "./kit";
 
 type Sheet = null | "choose" | "email";
 
@@ -213,7 +213,10 @@ function WelcomeBack({
   onNotYou: () => void;
 }) {
   const name = known.name?.trim() || null;
-  const initial = (name ?? known.email ?? "?").replace(/^@/, "").charAt(0).toUpperCase();
+  // Read after mount: localStorage is not there on the server.
+  const [face, setFace] = useState<RememberedFace | null | undefined>(undefined);
+  useEffect(() => setFace(readFace(known.email)), [known.email]);
+  const [photoBroken, setPhotoBroken] = useState(false);
   const how = known.method === "email" ? "Email me a code" : `Continue with ${PROVIDER_NAME[known.method]}`;
   return (
     <div className="flex min-h-[70dvh] w-full max-w-[400px] flex-col">
@@ -221,9 +224,20 @@ function WelcomeBack({
       <div className="flex flex-1 flex-col items-center pb-10 pt-4 text-center">
         <h1 className="text-[24px] font-semibold text-text">{name ? `Welcome Back, ${name}` : "Welcome Back"}</h1>
         {/* A circle: 100 px with a radius of half of it, as the app draws it. */}
-        <span className="mt-6 flex h-[100px] w-[100px] items-center justify-center rounded-[50px] border-2 border-[rgba(236,240,244,0.55)] bg-white/[0.08] text-[44px] font-medium text-text" aria-hidden>
-          {initial}
-        </span>
+        {face?.photo && !photoBroken ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={face.photo}
+            alt=""
+            onError={() => setPhotoBroken(true)}
+            className="mt-6 h-[100px] w-[100px] rounded-[50px] border-2 border-[rgba(236,240,244,0.55)] bg-black/[0.28] object-cover"
+          />
+        ) : (
+          // No photo: the emoji they chose in the app, else the app's default.
+          <span className="mt-6">
+            <EmojiAvatar emoji={face === undefined ? null : face?.emoji || DEFAULT_AVATAR_EMOJI} size={100} ring />
+          </span>
+        )}
         {known.email ? <p className="mt-4 break-all text-small text-[#9FB7C2]">{known.email}</p> : null}
       </div>
       <button

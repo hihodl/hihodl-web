@@ -35,6 +35,8 @@ export interface Me {
   profile: {
     displayName: string | null;
     avatarUrl: string | null;
+    /** The emoji the person chose in the app ("🚀"); absent from an API that predates it. */
+    avatarEmoji?: string | null;
     country: string | null;
     railsRegion: string | null;
     plan: string;
