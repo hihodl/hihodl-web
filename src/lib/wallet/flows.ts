@@ -9,12 +9,16 @@
  *                   never touched.
  *   registerWalletAddress  the address, proved by a signed message, so the
  *                   backend watches it for deposits.
+ *   registerEvmSide the app's EVM xpub on ethereum, base and polygon, so the
+ *                   wallet receives on every chain from the day it is made.
  */
 
 "use client";
 
 import {
+  EVM_PATH_PREFIX,
   decryptSeedV2,
+  deriveEvmKey,
   deriveSolanaKey,
   encryptSeedV2,
   fromBase64,
@@ -24,10 +28,22 @@ import {
   unwrapUserSecret,
   wipe,
   wrapUserSecret,
+  signXpubRegistration,
+  type EvmKey,
   type SolanaKey,
   type WrappedSecret,
 } from "./core";
-import { addressChallenge, createWalletBackup, getPepper, registerAddress, WalletApiError, type WalletBackup } from "./api";
+import {
+  addressChallenge,
+  createWalletBackup,
+  evmChallenge,
+  getPepper,
+  registerAddress,
+  registerEvm,
+  WalletApiError,
+  type EvmChain,
+  type WalletBackup,
+} from "./api";
 import { normalizeCredentialId } from "./passkey";
 import { signChallenge } from "./vault";
 
@@ -55,7 +71,7 @@ export async function sealNewWallet(args: {
   credentialId: string;
   prf: Uint8Array;
   label: string | null;
-}): Promise<SolanaKey> {
+}): Promise<SolanaKey & { evm: EvmKey | null }> {
   const mnemonic = generateMnemonic();
   const userSecret = newUserSecret();
   const pepper = await pepperBytes();
@@ -69,6 +85,10 @@ export async function sealNewWallet(args: {
     if (reopened !== mnemonic) throw new WalletFlowError("self_check_failed");
 
     const key = await deriveSolanaKey(mnemonic);
+    // The EVM side, for registerEvmSide right after: derived now, while the
+    // words are here, because nothing keeps them. Null if it fails: the
+    // wallet is still made, and the next unlock registers it.
+    const evm = await deriveEvmKey(mnemonic).catch(() => null);
 
     // The same blob sent again is an idempotent success, so a dropped
     // response is retried rather than reported as a failure.
@@ -79,14 +99,14 @@ export async function sealNewWallet(args: {
           cipher_blob: blob,
           wrapping: { credential_id: normalizeCredentialId(args.credentialId), wrapped, label: args.label },
         });
-        return key;
+        return { ...key, evm };
       } catch (e) {
         lastError = e;
         if (!(e instanceof WalletApiError) || (e.status !== 0 && e.status < 500)) break;
         await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
       }
     }
-    wipe(key.seed);
+    wipe(key.seed, evm?.privateKey);
     throw lastError instanceof WalletApiError ? lastError : new WalletFlowError("upload_failed", lastError);
   } finally {
     wipe(userSecret, pepper, check);
@@ -132,6 +152,23 @@ export async function openWallet(args: {
 }
 
 /**
+ * The same, plus the EVM side for registerEvmSide: the Wallet page's unlock,
+ * which is where an older web wallet that never registered it catches up.
+ * The caller hands `evm` to registerEvmSide, which wipes its key.
+ */
+export async function openWalletWithEvm(args: {
+  uid: string;
+  backup: WalletBackup;
+  credentialId: string;
+  prf: Uint8Array;
+}): Promise<{ key: SolanaKey; evm: EvmKey | null }> {
+  const mnemonic = await openMnemonic(args);
+  const key = await deriveSolanaKey(mnemonic);
+  const evm = await deriveEvmKey(mnemonic).catch(() => null);
+  return { key, evm };
+}
+
+/**
  * The wrapping for one more passkey, checked before it is returned: it must
  * unwrap to the same secret with the new passkey's PRF output.
  */
@@ -164,5 +201,48 @@ export async function registerWalletAddress(address: string, registered: string 
     return "registered";
   } catch {
     return "failed";
+  }
+}
+
+/**
+ * Register the wallet's EVM side (ethereum, base, polygon) exactly as the
+ * app's completeWalletSetup does: the xpub at m/44'/60'/0' and, per chain,
+ * an EIP-191 signature by the primary over the app's own words with a
+ * single-use nonce. The server runs the app's POST /xpubs for each.
+ *
+ * The words are built HERE from the challenge's fields (account id, chain,
+ * timestamp) and this key's own xpub and address; nothing the server sends is
+ * signed as given. That registration is the only EVM signature the web ever
+ * makes: it never signs an EVM transaction.
+ *
+ * `known` are the addresses the backend already shows (GET /me/addresses):
+ * when all three chains have this address, nothing is asked. Best effort,
+ * like registerWalletAddress: a failure changes nothing and the next unlock
+ * tries again. Always wipes the key.
+ */
+export async function registerEvmSide(
+  evm: EvmKey | null,
+  known?: Partial<Record<string, string | null | undefined>> | null,
+): Promise<"registered" | "already" | "conflict" | "failed"> {
+  if (!evm) return "failed";
+  try {
+    const chains: EvmChain[] = ["ethereum", "base", "polygon"];
+    if (known && chains.every((c) => (known[c] ?? "").toLowerCase() === evm.address.toLowerCase())) return "already";
+    const ch = await evmChallenge({ xpub: evm.xpub, address: evm.address });
+    if (ch.path_prefix !== EVM_PATH_PREFIX || ch.address.toLowerCase() !== evm.address.toLowerCase()) return "failed";
+    const todo = ch.chains.filter((c) => c.state === "to_register" && c.nonce);
+    if (todo.length === 0) return ch.chains.some((c) => c.state === "conflict") ? "conflict" : "already";
+    const registrations = todo.map((c) => ({
+      chain: c.chain,
+      nonce: c.nonce as string,
+      signature: signXpubRegistration(evm, { accountId: ch.account_id, chain: c.chain, timestamp: ch.timestamp }),
+    }));
+    const out = await registerEvm({ xpub: evm.xpub, signed_by_address: evm.address, timestamp: ch.timestamp, registrations });
+    if (out.results.some((r) => !r.ok)) return "failed";
+    return ch.chains.some((c) => c.state === "conflict") ? "conflict" : "registered";
+  } catch {
+    return "failed";
+  } finally {
+    wipe(evm.privateKey);
   }
 }

@@ -28,16 +28,29 @@
  * `deriveSolanaKeypair(mnemonic, 0, 0)` in solana-addresses.service.ts, the
  * one address the app registers and signs with. The check script derives it
  * both ways and compares.
+ *
+ * THE EVM SIDE (registered, never used to sign a transaction)
+ *
+ * The app's `deriveXpub(mnemonic)` (hihodl-wallet src/lib/xpub.ts): the BIP-32
+ * account key at m/44'/60'/0' as an `xpub…` (the app's @scure/bip32
+ * `publicExtendedKey`), and the primary address m/44'/60'/0'/0/0, EIP-55
+ * checksummed (the app's ethers `HDNodeWallet.fromPhrase(m, undefined, path)`).
+ * The one EVM signature the web makes is the app's xpub-registration words,
+ * EIP-191 personal_sign, so the backend registers ethereum, base and polygon
+ * exactly as it does for the app. The check script derives both ways.
  */
 
 import { ed25519 } from "@noble/curves/ed25519";
+import { secp256k1 } from "@noble/curves/secp256k1";
 import { hkdf } from "@noble/hashes/hkdf";
 import { hmac } from "@noble/hashes/hmac";
 import { pbkdf2Async } from "@noble/hashes/pbkdf2";
 import { scryptAsync } from "@noble/hashes/scrypt";
 import { sha256 } from "@noble/hashes/sha256";
 import { sha512 } from "@noble/hashes/sha512";
+import { keccak_256 } from "@noble/hashes/sha3";
 import { base58 } from "@scure/base";
+import { HDKey } from "@scure/bip32";
 
 import { BIP39_ENGLISH } from "./bip39-english";
 
@@ -54,6 +67,9 @@ export const BACKUP_INFO_V2 = "hihodl/seed-backup/v2";
 export const WRAP_INFO_V2 = "hihodl/seed-backup/v2/wrap";
 export const SCRYPT_PARAMS = { N: 16384, r: 8, p: 1 } as const;
 export const SOLANA_PATH = "m/44'/501'/0'/0'/0'";
+/** The app's EVM account (deriveXpub: account index 0) and its primary address. */
+export const EVM_PATH_PREFIX = "m/44'/60'/0'";
+export const EVM_PRIMARY_PATH = "m/44'/60'/0'/0/0";
 
 export type ScryptParams = { N: number; r: number; p: number };
 
@@ -249,6 +265,92 @@ export function verifyMessage(address: string, message: string, signature: Uint8
   } catch {
     return false;
   }
+}
+
+/* ── EVM (registration only) ──────────────────────────────────────── */
+
+const hexOf = (u: Uint8Array) => Array.from(u, (b) => b.toString(16).padStart(2, "0")).join("");
+
+/** EIP-55: the address's own keccak decides which letters are upper case. */
+export function checksumAddress(address: string): string {
+  const lower = address.toLowerCase().replace(/^0x/, "");
+  if (!/^[0-9a-f]{40}$/.test(lower)) throw new Error("bad address");
+  const hash = hexOf(keccak_256(utf8.encode(lower)));
+  let out = "0x";
+  for (let i = 0; i < 40; i++) out += parseInt(hash[i], 16) >= 8 ? lower[i].toUpperCase() : lower[i];
+  return out;
+}
+
+/** The address of a secp256k1 public key (compressed or not): keccak of the 64-byte point, last 20 bytes. */
+export function evmAddressOf(publicKey: Uint8Array): string {
+  const point = secp256k1.ProjectivePoint.fromHex(publicKey).toRawBytes(false).slice(1);
+  return checksumAddress(hexOf(keccak_256(point).slice(-20)));
+}
+
+export interface EvmKey {
+  /** BIP-32 account key at m/44'/60'/0', `xpub…`: what the backend derives receive addresses from. */
+  xpub: string;
+  /** m/44'/60'/0'/0/0, checksummed: the same address on Ethereum, Base and Polygon. */
+  address: string;
+  /** The primary's private key. Only ever signs the registration words; the caller wipes it. */
+  privateKey: Uint8Array;
+}
+
+/** The app's deriveXpub(mnemonic), from the BIP-39 seed. */
+export function deriveEvmKeyFromSeed(bip39Seed: Uint8Array): EvmKey {
+  const master = HDKey.fromMasterSeed(bip39Seed);
+  const account = master.derive(EVM_PATH_PREFIX);
+  const primary = account.deriveChild(0).deriveChild(0);
+  if (!primary.privateKey || !primary.publicKey) throw new WalletCryptoError("bad_seed");
+  const out = { xpub: account.publicExtendedKey, address: evmAddressOf(primary.publicKey), privateKey: primary.privateKey.slice() };
+  master.wipePrivateData();
+  account.wipePrivateData();
+  primary.wipePrivateData();
+  return out;
+}
+
+export async function deriveEvmKey(mnemonic: string): Promise<EvmKey> {
+  const bip39Seed = await mnemonicToSeed(normalizeMnemonic(mnemonic));
+  try {
+    return deriveEvmKeyFromSeed(bip39Seed);
+  } finally {
+    wipe(bip39Seed);
+  }
+}
+
+/**
+ * The app's createXpubRegistrationMessage, word for word (hihodl-wallet
+ * src/lib/xpub.ts); the backend's verifier rebuilds the same.
+ */
+export function xpubRegistrationMessage(args: {
+  xpub: string;
+  accountId: string;
+  chain: string;
+  timestamp: number;
+  pathPrefix: string;
+  signedBy: string;
+}): string {
+  return `Register xpub ${args.xpub} for account ${args.accountId} on chain ${args.chain} at ${args.timestamp}
+Path prefix: ${args.pathPrefix}
+Signed by: ${checksumAddress(args.signedBy)}`;
+}
+
+/** EIP-191 personal_sign, as ethers' signMessageSync: 0x ‖ r ‖ s ‖ v (27/28), RFC 6979, low s. */
+export function personalSign(privateKey: Uint8Array, message: string): string {
+  const bytes = utf8.encode(message);
+  const digest = keccak_256(concatBytes(utf8.encode(`\x19Ethereum Signed Message:\n${bytes.length}`), bytes));
+  const sig = secp256k1.sign(digest, privateKey, { lowS: true });
+  return `0x${hexOf(sig.toCompactRawBytes())}${(27 + sig.recovery).toString(16)}`;
+}
+
+/**
+ * Sign ONLY the xpub-registration words for this key's own xpub and address:
+ * whatever a response carries, this cannot be turned into a transaction or a
+ * typed-data signature.
+ */
+export function signXpubRegistration(key: EvmKey, args: { accountId: string; chain: string; timestamp: number }): string {
+  const message = xpubRegistrationMessage({ xpub: key.xpub, accountId: args.accountId, chain: args.chain, timestamp: args.timestamp, pathPrefix: EVM_PATH_PREFIX, signedBy: key.address });
+  return personalSign(key.privateKey, message);
 }
 
 /* ── AES-256-GCM (WebCrypto; output ct ‖ 16-byte tag, as the app's @noble/ciphers gcm) ── */

@@ -21,6 +21,18 @@
  *      BACKEND's own verifier (server/services/web-wallet-address.ts, found
  *      via HIHODL_BACKEND_DIR or a hihodl-backend checkout nearby) accepts it
  *      for this address and refuses it for another nonce.
+ *   6. EVM: the same mnemonic gives the same xpub (m/44'/60'/0') and primary
+ *      address (m/44'/60'/0'/0/0) as the APP's own libraries (ethers
+ *      HDNodeWallet, @scure/bip32 over bip39's seed, i.e. deriveXpub in
+ *      src/lib/xpub.ts); the registration words equal the app's
+ *      createXpubRegistrationMessage (lifted from its source); the web's
+ *      personal_sign equals ethers' signMessageSync byte for byte; and the
+ *      BACKEND derives the same primary from the xpub and recovers the signer
+ *      from its own canonical words (server/services/web-wallet-evm.ts,
+ *      evm-derivation.service.ts), for ethereum, base and polygon.
+ *
+ *   HIHODL_WALLET_DIR / HIHODL_BACKEND_DIR pick the checkouts (a worktree
+ *   with the branch under test); otherwise the nearest ones are used.
  *
  * The app parts need the hihodl-wallet repo beside this one (or
  * HIHODL_WALLET_DIR). Without it they are reported as SKIPPED, never passed.
@@ -32,7 +44,12 @@ import { dirname, join, resolve } from "path";
 
 import {
   BACKUP_INFO_V2,
+  EVM_PATH_PREFIX,
   concatBytes,
+  deriveEvmKey,
+  personalSign,
+  signXpubRegistration,
+  xpubRegistrationMessage,
   decryptSeedV2,
   deriveSolanaKey,
   encryptSeedV2,
@@ -81,6 +98,18 @@ function findBackendFile(): string | null {
     dir = dirname(dir);
   }
   for (const r of roots) if (existsSync(join(r, rel))) return join(r, rel);
+  return null;
+}
+
+function findBackendRoot(rel: string): string | null {
+  const roots: string[] = [];
+  if (process.env.HIHODL_BACKEND_DIR) roots.push(process.env.HIHODL_BACKEND_DIR);
+  let dir = resolve(__dirname);
+  for (let i = 0; i < 8; i++) {
+    roots.push(join(dir, "hihodl-backend"));
+    dir = dirname(dir);
+  }
+  for (const r of roots) if (existsSync(join(r, rel))) return r;
   return null;
 }
 
@@ -237,6 +266,88 @@ async function main() {
   } else {
     skipped++;
     console.log("  SKIP  backend verifier (hihodl-backend not found)");
+  }
+
+
+  console.log("6. EVM = the app's (registration only; the web never signs an EVM transaction)");
+  const EVM_CHAINS = ["ethereum", "base", "polygon"] as const;
+  if (appRequire && APP && existsSync(join(APP, "src/lib/xpub.ts"))) {
+    const bip39 = appRequire("bip39");
+    const { HDNodeWallet, getAddress } = appRequire("ethers");
+    const { HDKey } = appRequire("@scure/bip32");
+    // The app's createXpubRegistrationMessage, lifted from its source like deriveEd25519Key above.
+    const src = readFileSync(join(APP, "src/lib/xpub.ts"), "utf8");
+    const start = src.indexOf("export function createXpubRegistrationMessage(");
+    const end = src.indexOf("/**", start);
+    const { transform } = require("sucrase");
+    const js = transform(src.slice(start, end).replace(/^export /, ""), { transforms: ["typescript"] }).code;
+    const appMessage = new Function("getAddress", `${js}\nreturn createXpubRegistrationMessage;`)(getAddress);
+    // The app's deriveXpub(mnemonic): deriveBIP44Key(m, 0, 0) and generateXpub(m, 0).
+    const appDerive = (m: string) => ({
+      address: HDNodeWallet.fromPhrase(m.trim(), undefined, "m/44'/60'/0'/0/0").address as string,
+      xpub: HDKey.fromMasterSeed(new Uint8Array(bip39.mnemonicToSeedSync(m))).derive("m/44'/60'/0'").publicExtendedKey as string,
+      wallet: HDNodeWallet.fromPhrase(m.trim(), undefined, "m/44'/60'/0'/0/0"),
+    });
+
+    const fixed = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+    const web = await deriveEvmKey(fixed);
+    const app = appDerive(fixed);
+    console.log(`        fixed mnemonic → web ${web.address} · app ${app.address}`);
+    console.log(`        xpub web ${web.xpub}`);
+    console.log(`        xpub app ${app.xpub}`);
+    ok(web.address === app.address, "fixed test mnemonic: same primary address (m/44'/60'/0'/0/0)");
+    ok(web.address === "0x9858EfFD232B4033E47d90003D41EC34EcaEda94", "and it is the published BIP-44 vector");
+    ok(web.xpub === app.xpub, "fixed test mnemonic: same xpub (m/44'/60'/0')");
+    ok(hex(web.privateKey) === app.wallet.privateKey.slice(2), "same private key (never leaves the tab; compared here only)");
+    ok(EVM_PATH_PREFIX === "m/44'/60'/0'", "path prefix is the app's (account index 0)");
+
+    const accountId = "7f1c2a9e-3b4d-4e5f-8a6b-1c2d3e4f5a6b";
+    const timestamp = 1_700_000_000_000;
+    let wordsSame = true;
+    let sigsSame = true;
+    for (const chain of EVM_CHAINS) {
+      const ours = xpubRegistrationMessage({ xpub: web.xpub, accountId, chain, timestamp, pathPrefix: EVM_PATH_PREFIX, signedBy: web.address.toLowerCase() });
+      const theirs = appMessage(app.xpub, accountId, chain, timestamp, "m/44'/60'/0'", app.address);
+      if (ours !== theirs) wordsSame = false;
+      const sigWeb = signXpubRegistration(web, { accountId, chain, timestamp });
+      const sigApp = app.wallet.signMessageSync(theirs);
+      if (sigWeb !== sigApp) sigsSame = false;
+      if (chain === "base") console.log(`        base signature web ${sigWeb.slice(0, 22)}… app ${sigApp.slice(0, 22)}…`);
+    }
+    ok(wordsSame, "ethereum, base, polygon: the same registration words as the app's createXpubRegistrationMessage");
+    ok(sigsSame, "ethereum, base, polygon: personal_sign identical to the app's ethers signMessageSync");
+
+    let all = true;
+    for (let i = 0; i < 5; i++) {
+      const m = generateMnemonic();
+      const w = await deriveEvmKey(m);
+      const a = appDerive(m);
+      if (w.address !== a.address || w.xpub !== a.xpub) all = false;
+    }
+    ok(all, "5 random mnemonics: same xpub and address");
+
+    const BACKEND = findBackendRoot("server/services/web-wallet-evm.ts");
+    if (BACKEND) {
+      const { evmDerivation } = require(join(BACKEND, "server/services/evm-derivation.service.ts"));
+      const backendEvm = require(join(BACKEND, "server/services/web-wallet-evm.ts"));
+      const { verifyMessage } = require(require.resolve("ethers", { paths: [BACKEND] }));
+      ok(evmDerivation.deriveAddress(web.xpub, 0) === web.address, "the BACKEND derives the same primary from the web's xpub");
+      let recovered = true;
+      for (const chain of EVM_CHAINS) {
+        const words = backendEvm.xpubRegistrationMessage({ xpub: web.xpub, accountId, chain, timestamp, pathPrefix: backendEvm.WEB_EVM_PATH_PREFIX, signedBy: web.address });
+        if (verifyMessage(words, signXpubRegistration(web, { accountId, chain, timestamp })) !== web.address) recovered = false;
+      }
+      ok(recovered, "the BACKEND's words + ethers.verifyMessage recover the primary, for all three chains");
+      const other = xpubRegistrationMessage({ xpub: web.xpub, accountId, chain: "polygon", timestamp, pathPrefix: EVM_PATH_PREFIX, signedBy: web.address });
+      ok(verifyMessage(other, signXpubRegistration(web, { accountId, chain: "base", timestamp })) !== web.address, "a base signature does not register polygon");
+    } else {
+      skipped++;
+      console.log("  SKIP  backend EVM check (a hihodl-backend with server/services/web-wallet-evm.ts not found)");
+    }
+    ok(personalSign(web.privateKey, "hello") === app.wallet.signMessageSync("hello"), "personal_sign of arbitrary bytes matches ethers too");
+  } else {
+    skipped++;
+    console.log("  SKIP  app EVM derivation (hihodl-wallet with src/lib/xpub.ts not found)");
   }
 
   console.log(failures ? `\n${failures} FAILED` : `\nall passed${skipped ? ` (${skipped} skipped)` : ""}`);
