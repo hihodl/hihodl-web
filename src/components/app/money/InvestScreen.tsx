@@ -92,7 +92,7 @@ import { useShellPrefs } from "../Shell";
 import { Skeleton } from "../ui";
 import { money } from "../wallet/app-kit";
 import { DISCOVER_COINS, tileSubtitle, discoverableFor } from "./discover-coins";
-import { AssetMark, InAppNote } from "./kit";
+import { AssetMark, InAppNote, ReadFailed } from "./kit";
 
 /** theme/colors `invest`: gain green, and a loss in neutral white. Never red. */
 const UP = "#3DDC84";
@@ -268,11 +268,25 @@ export function InvestScreen() {
     (accounts.length > 0 && !balances.data && !balances.error) ||
     (symbols.length > 0 && !prices.data && !prices.error);
 
+  /* A read that failed is not an empty portfolio. Drawing "Grow your wealth"
+   * over a balance we could not read tells someone with coins they have none. */
+  const failed =
+    (!!container.error && !container.data) ||
+    (!!balances.error && !balances.data) ||
+    (symbols.length > 0 && !!prices.error && !prices.data);
+  const retry = () => {
+    void container.mutate();
+    void balances.mutate();
+    void prices.mutate();
+  };
+
   return (
     <div className="flex flex-1 flex-col">
       <div className="mx-auto flex w-full max-w-[1040px] flex-col">
         {loading ? (
           <Skeleton className="h-[248px]" />
+        ) : failed ? (
+          <ReadFailed title="We couldn't load your investments" onRetry={retry} />
         ) : hasInvestments ? (
           <Hero
             totalValue={investValue}
@@ -289,7 +303,7 @@ export function InvestScreen() {
         {/* Says what the total leaves out. Only when something is missing, and
             only ever about the feed — never about the holding, which is
             perfectly real and sitting on chain. */}
-        {!loading && unvalued > 0 ? (
+        {!loading && !failed && unvalued > 0 ? (
           <p className="mt-2.5 px-1 text-[13px] font-strong text-white/[0.8]">
             {unvalued === 1
               ? "1 holding is not in this total — no price available right now."

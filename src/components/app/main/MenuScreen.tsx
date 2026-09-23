@@ -38,6 +38,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 
+import { APP_STORE_URL, PLAY_STORE_URL } from "@/lib/appLinks";
 import { describeCreatorError } from "@/lib/creator/api";
 import { signOut } from "@/lib/creator/session";
 import {
@@ -49,6 +50,7 @@ import {
 import { chosenUsername, emailRecoveryCodes, recoveryCodesStatus } from "@/lib/app/me";
 import { useMe } from "@/lib/app/spaces-data";
 import { useHoldWallet } from "@/lib/app/hold-wallet";
+import { thisDevice, type Phone } from "@/lib/link/ua";
 import { listPasskeys, type RegisteredPasskey } from "@/lib/wallet/api";
 
 import { useLinkedPhones } from "../account/PhoneScreen";
@@ -60,11 +62,12 @@ import { Ion, type IonName } from "../ion";
 import { useShell, useShellPrefs } from "../Shell";
 import { YourPagesCard, YourPagesScreen } from "../spaces/YourPages";
 import { Skeleton } from "../ui";
+import { InviteScreen } from "./InviteScreen";
 
 /** The product's own host serves only the product; the website's pages live on the website. */
 const WEBSITE = "https://hihodl.xyz";
 
-type Screen = "home" | "plan" | "security" | "recovery" | "passkeys" | "codes" | "statements" | "personalization" | "about";
+type Screen = "home" | "plan" | "invite" | "security" | "recovery" | "passkeys" | "codes" | "statements" | "personalization" | "about";
 
 export function MenuScreen({ screen, item }: { screen?: string; item?: string } = {}) {
   const router = useRouter();
@@ -73,6 +76,7 @@ export function MenuScreen({ screen, item }: { screen?: string; item?: string } 
   const open = useCallback((s: Screen) => router.push(s === "home" ? pathname : `${pathname}?screen=${s}`, { scroll: false }), [router, pathname]);
   const home = () => open("home");
   if (screen === "plan") return <PlanScreen onBack={home} />;
+  if (screen === "invite") return <InviteScreen onBack={home} />;
   if (screen === "security") return <SecurityScreen onBack={home} open={open} />;
   if (screen === "recovery") return <RecoveryScreen onBack={home} open={open} />;
   if (screen === "passkeys") return <PasskeysScreen onBack={() => open("recovery")} />;
@@ -143,7 +147,7 @@ function MenuHome({ open }: { open: (s: Screen) => void }) {
           subject, next to Security and Account recovery.
         */}
         {walletPage === true ? (
-          <MenuRow icon="wallet-outline" label="Wallet" sub="Your Solana address, recovery words and withdrawals" href={productHref("/wallet")} />
+          <MenuRow icon="wallet-outline" label="Wallet" sub="Your Solana address, recovery words and withdrawals" href={productHref("/wallet")} reload />
         ) : null}
         <MenuRow icon="shield-checkmark-outline" label="Security" onClick={() => open("security")} />
         <MenuRow icon="key-outline" label="Account recovery" badge={recoveryBadge} onClick={() => open("recovery")} />
@@ -152,6 +156,9 @@ function MenuHome({ open }: { open: (s: Screen) => void }) {
         <MenuRow icon="contrast-outline" label="Appearance" onClick={() => open("personalization")} />
         <MenuRow icon="help-circle-outline" label="Help & Support" href="mailto:support@hihodl.xyz" external />
         <MenuRow icon="information-circle-outline" label="About HOLD" onClick={() => open("about")} />
+        {/* The app's last settings row, in its calm words. Closing is done on
+            the website's page, which says what closing does before it asks. */}
+        <MenuRow icon="heart-dislike-outline" label="Close account" href={`${WEBSITE}/delete-account`} external />
       </HoldCard>
 
       {/* Sign Out: quieter than a row, on purpose (the app's signOutRow). */}
@@ -222,7 +229,7 @@ function MenuTiles({ open }: { open: (s: Screen) => void }) {
         sub={me.data ? (pro ? "Gasless transfers" : "Your plan") : "Loading…"}
         onClick={() => open("plan")}
       />
-      <Tile icon="person-add-outline" title="Invite friends" sub="Earn rewards together" href={productHref("/benefits")} />
+      <Tile icon="person-add-outline" title="Invite friends" sub="Earn rewards together" onClick={() => open("invite")} />
       {/* The link screen itself: a full load, it carries the wallet pages' CSP. */}
       <Tile icon="phone-portrait-outline" title="Link your phone" sub="Android approves payments" href={linkHref(productHref, productHref("/menu"))} reload />
     </div>
@@ -263,11 +270,12 @@ function Tile({ icon, title, sub, href, reload, onClick }: { icon: IonName; titl
 /**
  * Which plan, and where it changes.
  *
- * The app's tile opens its paywall, which is a purchase. A purchase is not
- * something this page can finish — the plan is bought on hihodl.xyz through
- * Stripe and applied to the account by the backend — so the row is drawn, the
- * plan is stated from `GET /me`, and the action is named as the app's rather
- * than dressed as a button that stops halfway.
+ * The app's tile opens its paywall, which is a purchase: `POST
+ * /subscriptions/create` raises a payment request that the wallet approves on
+ * the phone. The web has no plan checkout of its own (the website's only
+ * Stripe checkout is the Founder Pass), so the plan is stated from `GET /me`
+ * and the action is the way into the app's plans screen, never a link back to
+ * the website that would send the person round in a loop.
  *
  * No rates here, deliberately. Every take we charge belongs to the one product
  * page that charges it (lib/rates.config, rule 2: no aggregated fee page), so
@@ -297,13 +305,34 @@ function PlanScreen({ onBack }: { onBack: () => void }) {
       </HoldCard>
       <div className="mt-4">
         <Notice icon="phone-portrait-outline" tone="calm">
-          Changing your plan happens in the HOLD app, where the purchase is made and applied to your account.
+          Your plan is changed in the HOLD app: Menu, then your plan. It is paid from your wallet there and applies to this account as soon as it clears.
         </Notice>
       </div>
       <HoldCard className="mt-4">
-        <MenuRow icon="globe-outline" label="What each plan includes" sub="hihodl.xyz" href={WEBSITE} external />
+        <PlanInTheApp />
+        <MenuRow icon="globe-outline" label="What each plan includes" sub="hihodl.xyz/hipoints" href={`${WEBSITE}/hipoints`} external />
       </HoldCard>
     </Column>
+  );
+}
+
+/**
+ * The way to the app's plans screen from this device. A phone opens it
+ * (`hihodl://plans` through /open, which falls back to the store when the app
+ * is not there). A computer cannot open an app on a phone, so it says where to
+ * look and offers both stores rather than a link that lands on the homepage.
+ */
+function PlanInTheApp() {
+  const [phone, setPhone] = useState<Phone | null>(null);
+  useEffect(() => setPhone(thisDevice().phone), []);
+  if (phone) {
+    return <MenuRow icon="open-outline" label="Open plans in the app" href={`${WEBSITE}/open?to=plans`} external chevron />;
+  }
+  return (
+    <>
+      <MenuRow icon="logo-apple" label="HOLD on the App Store" sub="Open HOLD on your phone to change plan" href={APP_STORE_URL} external chevron />
+      <MenuRow icon="logo-google" label="HOLD on Google Play" href={PLAY_STORE_URL} external chevron />
+    </>
   );
 }
 

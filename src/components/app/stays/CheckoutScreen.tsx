@@ -47,6 +47,7 @@ import { getBalances, getWalletStatus, type WalletStatus } from "@/lib/wallet/ap
 import { useCreatorSession } from "@/lib/creator/session";
 import useSWR from "swr";
 import type { Booking, Guest, Rate } from "@/lib/app/stays";
+import { staysCurrency } from "@/lib/app/display-currency";
 
 export function CheckoutScreen({ hotelId }: { hotelId: string }) {
   const href = useProductHref();
@@ -62,7 +63,7 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
     checkout: search.checkout,
     adults: search.adults,
     ...(search.children.length ? { children: search.children } : {}),
-    currency: "EUR",
+    currency: staysCurrency(),
   }, true);
   const points = usePoints();
   const { session } = useCreatorSession();

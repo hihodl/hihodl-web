@@ -8,7 +8,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
-import { isWalletPath } from "@/lib/wallet/csp";
+import { crossesKeyPage } from "@/lib/wallet/csp";
 
 import { IconListings, IconOffers, IconPlus, IconSearch } from "./icons";
 
@@ -59,8 +59,8 @@ export function CommandPalette({ entries, onClose }: { entries: readonly Palette
   function go(e: PaletteEntry | undefined) {
     if (!e) return;
     onClose();
-    // To or from the Wallet: a full load, so its strict CSP is the response's (lib/wallet/csp).
-    if (isWalletPath(e.href) || isWalletPath(window.location.pathname)) window.location.assign(e.href);
+    // To or from a page that unlocks keys: a full load, so its strict CSP is the response's (lib/wallet/csp).
+    if (crossesKeyPage(e.href, window.location.pathname)) window.location.assign(e.href);
     else router.push(e.href);
   }
 

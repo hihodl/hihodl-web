@@ -66,6 +66,7 @@ import {
 import { Ion } from "../ion";
 import { useShellPrefs } from "../Shell";
 import { Alert, glass, Skeleton } from "../ui";
+import { ReadFailed } from "../money/kit";
 import { money } from "../wallet/app-kit";
 import { ActivityRow, DayDivider, readRow } from "./activity-parts";
 
@@ -359,9 +360,9 @@ export function ActivityScreen() {
       ) : null}
 
       {/* ── The list ── */}
-      {first.error ? (
-        <div className="mt-4">
-          <Alert>We could not read your activity just now. Reload the page to try again.</Alert>
+      {first.error && first.data === undefined ? (
+        <div className={`${glass} mt-4`}>
+          <ReadFailed title="We couldn't load your activity" onRetry={() => void first.mutate()} />
         </div>
       ) : first.data === undefined ? (
         <div className="mt-4 flex flex-col gap-2">

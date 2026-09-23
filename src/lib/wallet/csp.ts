@@ -25,11 +25,33 @@ function originOf(url: string | undefined): string | null {
 
 /**
  * Is this path a page where wallet keys can exist, on either host (`/wallet`
- * on app.hihodl.xyz, `/app/wallet` elsewhere)? Onboarding (`/welcome`) counts:
- * its last step can create the wallet.
+ * on app.hihodl.xyz, `/app/wallet` elsewhere)?
+ *
+ * Not only the Wallet. Every page that decrypts the seed to sign counts:
+ * - `/welcome`: its last step can create the wallet.
+ * - `/travel/stay/<id>/book`: paying for a stay (lib/app/stay-payment.ts).
+ * - `/spaces/board`, `/spaces/bought`, `/payments`: buying a spot
+ *   (lib/app/sponsor.ts `payForSpot`, from SponsorFlow; Payments opens it from
+ *   a chat with somebody who sells).
+ *
+ * A page added to this list must be reached by a full page load: the policy
+ * is a response header, and a client-side navigation keeps the document of
+ * the page it came from. `crossesKeyPage` is the check for a link.
  */
+const KEY_PAGE = /^\/(app\/)?(wallet|welcome|payments|spaces\/board|spaces\/bought|travel\/stay\/[^/]+\/book)(\/|$)/;
+
 export function isWalletPath(pathname: string): boolean {
-  return /^\/(app\/)?(wallet|welcome)(\/|$)/.test(pathname);
+  return KEY_PAGE.test(pathname);
+}
+
+/**
+ * Does following this link cross into or out of a key page? Then it has to be
+ * a full page load (`<a href>`, `window.location.assign`), never `<Link>` or
+ * `router.push`. `from` is the current pathname, when there is one.
+ */
+export function crossesKeyPage(href: string, from?: string): boolean {
+  const path = href.split(/[?#]/)[0] || "/";
+  return isWalletPath(path) || (from !== undefined && isWalletPath(from));
 }
 
 export function walletCsp(nonce: string, dev = process.env.NODE_ENV !== "production"): string {

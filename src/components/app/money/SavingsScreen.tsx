@@ -73,7 +73,7 @@ import { Ion, type IonName } from "../ion";
 import { useShellPrefs } from "../Shell";
 import { Skeleton } from "../ui";
 import { money } from "../wallet/app-kit";
-import { InAppNote } from "./kit";
+import { InAppNote, ReadFailed } from "./kit";
 
 /* ── The app's palette (src/features/savings/palette.ts) ──────────── */
 
@@ -323,6 +323,8 @@ export function SavingsPanel() {
         <h2 className="mb-3.5 px-0.5 text-[15px] font-bold tracking-[-0.2px] text-white">Ways to earn</h2>
         {reservesLoading ? (
           <Skeleton className="h-[132px]" />
+        ) : reserves.error && !reserves.data ? (
+          <ReadFailed title="We couldn't load the rates" onRetry={() => void reserves.mutate()} />
         ) : products.length ? (
           <div className="flex flex-col gap-3">
             {products.map((p) => (

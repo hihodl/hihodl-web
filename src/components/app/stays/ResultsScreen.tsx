@@ -31,6 +31,7 @@ import { SearchBar, sane, stayFromParams, stayToParams, type Stay } from "./Sear
 import { StayCard, StayCardSkeleton } from "./StayCard";
 import { useSearch } from "@/lib/app/stays-data";
 import type { SearchQuery } from "@/lib/app/stays";
+import { staysCurrency } from "@/lib/app/display-currency";
 
 /** Where the reader was in each search, so Back can put them back there. */
 const scrollFor = new Map<string, number>();
@@ -57,7 +58,7 @@ export function ResultsScreen() {
         checkout: committed.checkout,
         adults: committed.adults,
         ...(committed.children.length ? { children: committed.children } : {}),
-        currency: "EUR",
+        currency: staysCurrency(),
       }
     : null;
 

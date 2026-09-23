@@ -37,6 +37,7 @@ import { groupByRoom } from "./group";
 import { About, CheckinTimes, Facilities, Gallery, GoodToKnow, Nearby, ReviewSummary, RoomGroup } from "./StayParts";
 import { useRates, useStay } from "@/lib/app/stays-data";
 import type { Rate } from "@/lib/app/stays";
+import { staysCurrency } from "@/lib/app/display-currency";
 
 export function StayScreen({ hotelId }: { hotelId: string }) {
   const href = useProductHref();
@@ -51,13 +52,14 @@ export function StayScreen({ hotelId }: { hotelId: string }) {
     checkout: search.checkout,
     adults: search.adults,
     ...(search.children.length ? { children: search.children } : {}),
-    currency: "EUR",
+    currency: staysCurrency(),
   });
 
   function book(rate: Rate) {
     const q = stayToParams(search);
     q.set("offer", rate.offerId);
-    router.push(`${href(`/travel/stay/${hotelId}/book`)}?${q}`);
+    // A full load: the book page signs, under the key pages' strict CSP (lib/wallet/csp).
+    window.location.assign(`${href(`/travel/stay/${hotelId}/book`)}?${q}`);
   }
 
   const groups = useMemo(() => groupByRoom(rates.data?.rates ?? [], stay.data?.rooms ?? []), [rates.data, stay.data]);
