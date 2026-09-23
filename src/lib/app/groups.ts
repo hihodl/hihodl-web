@@ -373,6 +373,9 @@ const CHANGED_WORDS: Record<string, string> = {
   description: "the title",
   place: "the place",
   spentAt: "the date",
+  sources: "the bills it came from",
+  items: "the bills",
+  category: "the category",
 };
 
 /** "Ana edited Dinner", with what changed when it says; "Bea left the group"; "Ana removed Bea". */
@@ -597,19 +600,42 @@ export const recordPaidElsewhere = (groupId: string, body: { toUserId: string; a
  * confirmed" for the whole minute. A failed read is ignored; the settlement
  * answers for itself.
  *
- * One key per withdrawal, so a reload never records it twice.
+ * The amount (§13.1):
+ *   422 transfer_amount_short    the payment proves less than the debt (a
+ *                                converted USDC amount a little under, say):
+ *                                recorded once more for `details.provenMinor`,
+ *                                with the same proof, and the rest stays owed
+ *   422 transfer_amount_unknown  the token paid can't be valued: the payer's
+ *                                word, for the whole amount
+ *
+ * One key per withdrawal and amount, so a reload never records it twice.
  */
 export async function recordSentPayment(groupId: string, body: { toUserId: string; amountMinor: string }, withdrawalId: string): Promise<"checked" | "word" | "already"> {
   const url = `${g(groupId)}/settlements`;
   const deadline = Date.now() + 60_000;
+  let amountMinor = body.amountMinor;
+  let shortened = false;
   for (;;) {
     await getWithdrawal(withdrawalId).catch(() => undefined);
     try {
-      await read<{ settlement: { id: string } }>(url, { json: { ...body, withdrawalId }, headers: withKey(`web-settle-${withdrawalId}`.slice(0, 128)) });
+      await read<{ settlement: { id: string } }>(url, {
+        json: { toUserId: body.toUserId, amountMinor, withdrawalId },
+        headers: withKey(`web-settle-${withdrawalId}${shortened ? `-${amountMinor}` : ""}`.slice(0, 128)),
+      });
       return "checked";
     } catch (e) {
       if (!(e instanceof HoldApiError)) throw e;
       if (e.detail === "transfer_already_used") return "already";
+      if (e.detail === "transfer_amount_short" && !shortened) {
+        const proven = e.details?.provenMinor;
+        if (typeof proven === "string" && /^\d+$/.test(proven) && BigInt(proven) > 0n && BigInt(proven) < BigInt(amountMinor)) {
+          amountMinor = proven;
+          shortened = true;
+          continue;
+        }
+        break;
+      }
+      if (e.detail === "transfer_amount_unknown") break;
       if (e.detail === "transfer_not_confirmed" && Date.now() < deadline) {
         await new Promise((r) => setTimeout(r, 3000));
         continue;
