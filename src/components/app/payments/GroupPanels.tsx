@@ -23,7 +23,8 @@
  *                  HOLD address and the amount in USDC (converted with today's
  *                  rate when the group keeps another currency), behind the same
  *                  LinkGate every payment passes. Once the send confirms, Send
- *                  records it against the group (recordSentPayment). Only for
+ *                  records it against the group with the withdrawal as proof
+ *                  (recordSentPayment, §13), so it reads "Paid in HOLD". Only for
  *                  somebody HOLD can pay into: a person whose handle doesn't
  *                  resolve to a Solana address gets "Paid another way" alone.
  *   Paid another way  the payer's word, after a confirm.

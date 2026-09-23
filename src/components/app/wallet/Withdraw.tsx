@@ -614,8 +614,16 @@ export function Withdraw({
   prefill?: WithdrawPrefill;
 }) {
   const productHref = useProductHref();
+  // Recording a group payment in flight: leaving waits a little for it, so a quick Close doesn't drop it.
+  const recording = useRef<Promise<unknown> | null>(null);
   // Opened from a group's Pay: Back and Close return to that group.
-  const leave = prefill?.back ? () => window.location.assign(productHref(prefill.back!)) : onBack;
+  const leave = prefill?.back
+    ? () => {
+        const go = () => window.location.assign(productHref(prefill.back!));
+        if (!recording.current) return go();
+        void Promise.race([recording.current.catch(() => undefined), new Promise((r) => setTimeout(r, 8000))]).then(go);
+      }
+    : onBack;
   const [draft, setDraft] = useState<Draft>({
     token: prefill?.token ?? "USDC",
     amount: prefill?.amount ?? "",
@@ -688,7 +696,11 @@ export function Withdraw({
     if (!confirmed || !g || groupRecorded.current) return;
     if (!paysTheRequest(prefill, confirmed)) return;
     groupRecorded.current = true;
-    void recordSentPayment(g.groupId, { toUserId: g.toUserId, amountMinor: g.amountMinor }, confirmed.id).catch(() => undefined);
+    const p = recordSentPayment(g.groupId, { toUserId: g.toUserId, amountMinor: g.amountMinor }, confirmed.id).catch(() => undefined);
+    recording.current = p;
+    void p.finally(() => {
+      if (recording.current === p) recording.current = null;
+    });
   }, [confirmed, prefill]);
 
   /** Quote, build, and ask the server for the challenge bound to those exact bytes. */

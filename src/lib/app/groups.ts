@@ -577,28 +577,34 @@ export const recordPaidElsewhere = (groupId: string, body: { toUserId: string; a
 
 /**
  * After a send from the web confirmed (the Pay on a debt, §11.2): record it
- * against the group with the payment's id, so it can say "Paid in HOLD".
+ * against the group with the withdrawal's id as proof (§13), so the thread
+ * says "Paid in HOLD" (`viaHold: true`), as for an app payment.
  *
- * The web's send is a withdrawal, and today's server checks `transferId`
- * against payment intents only, so it answers `transfer_not_found`; the money
- * did go, so it is then recorded as the payer's word ("says they paid"), which
- * is true. `transfer_not_confirmed` is asked again a few times. One key per
- * withdrawal, so a reload never records it twice.
+ *   409 transfer_not_confirmed   asked again every 3 s for about a minute,
+ *                                as the app does
+ *   transfer_already_used        already recorded: nothing to do
+ *   400 (an older server that doesn't know `withdrawalId`), not_found,
+ *   not_to_them, or still unconfirmed after a minute
+ *                                recorded as the payer's word ("says they
+ *                                paid"), which is true: the money did go
+ *
+ * One key per withdrawal, so a reload never records it twice.
  */
 export async function recordSentPayment(groupId: string, body: { toUserId: string; amountMinor: string }, withdrawalId: string): Promise<"checked" | "word" | "already"> {
   const url = `${g(groupId)}/settlements`;
-  for (let attempt = 0; attempt < 4; attempt++) {
+  const deadline = Date.now() + 60_000;
+  for (;;) {
     try {
-      await read<{ settlement: { id: string } }>(url, { json: { ...body, transferId: withdrawalId }, headers: withKey(`web-settle-${withdrawalId}`.slice(0, 128)) });
+      await read<{ settlement: { id: string } }>(url, { json: { ...body, withdrawalId }, headers: withKey(`web-settle-${withdrawalId}`.slice(0, 128)) });
       return "checked";
     } catch (e) {
       if (!(e instanceof HoldApiError)) throw e;
       if (e.detail === "transfer_already_used") return "already";
-      if (e.detail === "transfer_not_confirmed" && attempt < 3) {
-        await new Promise((r) => setTimeout(r, 4000));
+      if (e.detail === "transfer_not_confirmed" && Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 3000));
         continue;
       }
-      if (e.detail === "transfer_not_found" || e.detail === "transfer_not_to_them" || e.detail === "transfer_not_confirmed") break;
+      if (e.status === 400 || e.detail === "transfer_not_found" || e.detail === "transfer_not_to_them" || e.detail === "transfer_not_confirmed") break;
       throw e;
     }
   }
