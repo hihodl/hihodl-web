@@ -1,7 +1,7 @@
 /**
  * The product's navigation, on two levels, like the app.
  *
- * MAIN is HOLD itself — Home, Invest, Payments, Benefits and the products
+ * MAIN is HOLD itself — Home, Invest, Analytics, Payments, Benefits and the products
  * under it (Stays, eSIM, Spaces) — and Menu at the foot, which holds the
  * person, Settings, Security, recovery, help, the wallet and signing out.
  *
@@ -119,6 +119,10 @@ export const MAIN_GROUPS: readonly NavGroup[] = [
     items: [
       { key: "home", label: "Home", path: "", icon: IconHome, keywords: "home dashboard balance summary pockets accounts savings earn move" },
       { key: "invest", label: "Invest", path: "/invest", icon: IconInvest, keywords: "portfolio holdings tokens coins performance profit loss" },
+      // Analytics has its own line, right under Invest. In the app it is the
+      // round disc beside Search on Home, and the phone web draws that disc
+      // too; but a wide screen has no such header, so without this line the
+      // desktop had no door into it at all.
       { key: "analytics", label: "Analytics", path: "/analytics", icon: IconInsights, keywords: "spending analytics spent income cashflow net saved categories budgets month recurring subscriptions where my money goes" },
       { key: "payments", label: "Payments", path: "/payments", icon: IconPayments, keywords: "sent received requests scheduled transactions history payouts pay links chat messages" },
       { key: "benefits", label: "Benefits", path: "/benefits", icon: IconGift, keywords: "products rewards points" },
@@ -162,10 +166,6 @@ export const MAIN_HIDDEN: readonly NavItem[] = [
   { key: "wallet", label: "Wallet", path: "/wallet", icon: IconWallet, keywords: "solana usdc address receive passkey recovery phrase words export balance withdraw" },
   // Savings is a SCOPE of Home, not a place: /savings opens Home on that pill.
   { key: "savings", label: "Savings", path: "/savings", icon: IconSavings, keywords: "savings pockets goals yield interest apy earn aave kamino ways to earn" },
-  // Analytics is the app's header disc on Home (the round button beside
-  // Search), not a menu row: the app lists it nowhere else either. On a phone
-  // the shell draws that disc; everywhere, ⌘K finds it. Invest keeps its line
-  // in the column, and Analytics' Assets card opens it.
   // Activity is Home's own card, opened in full: its "See all" pill goes here.
   { key: "activity", label: "Activity", path: "/activity", icon: IconActivity, keywords: "activity history everything that moved transactions receipts" },
   { key: "add", label: "Add money", path: "/add", icon: IconAdd, keywords: "receive crypto qr code address deposit top up add cash bank transfer" },
