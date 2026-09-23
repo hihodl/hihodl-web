@@ -107,6 +107,7 @@ import { ActionsRow, HeroBalance, MiniAction, money, TokenIcon } from "../wallet
 import { ReadFailed } from "../money/kit";
 import { SavingsPanel, SavingsRateLine } from "../money/SavingsScreen";
 import { ActivityRow, GREEN, readRow } from "./activity-parts";
+import { LinkPhoneCard, LinkPhoneSheet, useLinkNudge } from "./LinkPhoneNudge";
 
 /** The app's `RECENT_ACTIVITY_ROWS`. */
 const RECENT_ACTIVITY_ROWS = 4;
@@ -223,6 +224,8 @@ export function HomeScreen({ initialScope = "main" }: { initialScope?: string } 
   const href = useProductHref();
   const { displayMode, hideBalances, setHideBalances } = useShellPrefs();
   const amount = useAmount();
+  // Link your phone: one card, and once a sheet, only when a read says so (LinkPhoneNudge).
+  const linkNudge = useLinkNudge();
   const container = useContainer();
   const subaccounts = useMemo<LedgerSubaccount[]>(() => container.data?.subaccounts ?? [], [container.data]);
 
@@ -383,7 +386,10 @@ export function HomeScreen({ initialScope = "main" }: { initialScope?: string } 
       </div>
 
       {nothingAtAll ? (
-        <EmptyState addHref={href("/add")} />
+        <>
+          <EmptyState addHref={href("/add")} />
+          <LinkPhoneCard nudge={linkNudge} />
+        </>
       ) : (
         <>
           {/* ── The balance ── */}
@@ -456,6 +462,9 @@ export function HomeScreen({ initialScope = "main" }: { initialScope?: string } 
               <MiniAction icon="time-outline" label="Activity" href={href("/activity")} />
             </ActionsRow>
           </div>
+
+          {/* ── Link your phone, when nothing approves payments from here yet ── */}
+          <LinkPhoneCard nudge={linkNudge} />
 
           {/* ── What this scope holds ── */}
           {cash ? (
@@ -567,6 +576,8 @@ export function HomeScreen({ initialScope = "main" }: { initialScope?: string } 
         a…", "Sell sp…" — a menu that cannot finish its own words is not a
         menu, it is decoration over the one screen that should be about money.
       */}
+
+      <LinkPhoneSheet nudge={linkNudge} />
 
       {overview ? (
         <Overview

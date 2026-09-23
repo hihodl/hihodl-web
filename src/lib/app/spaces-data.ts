@@ -34,6 +34,7 @@ import { useCreatorSession } from "@/lib/creator/session";
 import { getInsights } from "@/lib/creator/insights";
 import { getAnalytics } from "@/lib/creator/analytics";
 import { getInspireCampaigns, getInspireEvents } from "@/lib/creator/inspire";
+import { activeLinkedDevices } from "@/lib/link/api";
 import { getWalletStatus } from "@/lib/wallet/api";
 
 import { getMe, getMyAddresses } from "./me";
@@ -127,6 +128,8 @@ export const useMe = () => useRead("me", getMe);
 export const useWalletStatus = (on = true) => useRead(on ? "wallet-status" : null, getWalletStatus);
 /** The app wallet's addresses (GET /me/addresses). */
 export const useMyAddresses = (on = true) => useRead(on ? "my-addresses" : null, getMyAddresses);
+/** The phones linked to this account that still count (GET /device-link/devices, revoked ones dropped). */
+export const useLinkedPhones = (on = true) => useRead(on ? "linked-phones" : null, activeLinkedDevices);
 
 /** Market data for an event (a slug), all of Spaces (`all`), or the creator's nearest event (null). */
 export const useInsights = (event: string | null) =>
