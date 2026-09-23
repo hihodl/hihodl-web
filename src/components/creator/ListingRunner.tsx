@@ -75,7 +75,7 @@ import { GroundPicker, labelOf } from "./run/GroundPicker";
 import { Work } from "./run/Work";
 import { ListingSeries } from "./series/Series";
 import { ListingTeam } from "./team/ListingTeam";
-import { ListingCrew } from "./crew/ListingCrew";
+import { ListingPackage } from "./crew/ListingPackage";
 
 /** A screen's body scrolls inside itself on a wide screen, so the page stays one screen. */
 const SCREEN_BODY = "lg:max-h-[calc(var(--app-vh,100dvh)-196px)] lg:overflow-y-auto";
@@ -93,7 +93,7 @@ const SCREEN_TITLE: Record<Screen, string> = {
   updates: "Updates",
   content: "Offer them content",
   team: "Who works it",
-  together: "Sell as a crew",
+  together: "Sell with other creators",
 };
 
 export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: string; item?: string }) {
@@ -253,7 +253,7 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
         ) : null}
         {screen === "together" ? (
           <div className={SCREEN_BODY}>
-            <ListingCrew spaceId={space.id} onChanged={changed} />
+            <ListingPackage spaceId={space.id} title={space.title} offersSolana={space.chains.includes("solana")} onChanged={changed} />
           </div>
         ) : null}
       </ScreenFrame>
