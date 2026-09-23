@@ -339,7 +339,7 @@ function BalanceStrip({
   const line = n > 0n ? `You're owed ${moneyText(absMinor(net!), currency)}` : n < 0n ? `You owe ${moneyText(absMinor(net!), currency)}` : "All settled up";
   return (
     <div className={`sticky ${UNDER_TOP_BAR} z-30 -mx-1 mb-2 px-1 pb-1`}>
-      <div className="flex min-h-[56px] items-center gap-3 rounded-[18px] border border-white/10 bg-[rgba(10,27,36,0.94)] px-3.5 py-2.5 backdrop-blur-xl">
+      <div className="flex min-h-[56px] items-center gap-3 rounded-[18px] border border-white/[0.12] bg-white/10 px-3.5 py-2.5 shadow-[0_10px_30px_rgba(0,0,0,0.28)] backdrop-blur-xl">
         {loading ? (
           <Skeleton className="h-4 w-40 rounded-[8px]" />
         ) : failed ? (
@@ -887,7 +887,7 @@ function ExpenseCard({
   return (
     <Side mine={mine}>
       <div className={`flex w-full min-w-0 items-stretch gap-2 rounded-[16px] border border-white/10 transition-colors ${item.deleted ? "bg-white/[0.03]" : "bg-white/[0.08] hover:bg-white/[0.11]"}`}>
-        <button type="button" onClick={onOpen} disabled={item.deleted} className="flex min-w-0 flex-1 flex-col gap-1.5 px-3.5 py-3 text-left">
+        <button type="button" onClick={onOpen} disabled={item.deleted} className="flex min-w-0 flex-1 flex-col gap-1.5 rounded-[16px] px-3.5 py-3 text-left [-webkit-tap-highlight-color:transparent]">
           <span className="flex w-full min-w-0 items-center gap-2.5">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[16px] bg-white/[0.08]">
               <Ion name="receipt-outline" size={16} className="text-white/[0.82]" />
@@ -1016,9 +1016,12 @@ function Composer({
   };
 
   return (
-    <div className="sticky bottom-0 mt-4 bg-gradient-to-t from-[#0A1B24] via-[#0A1B24] to-transparent pb-1 pt-3">
+    // No floor under the bar: the page is a gradient, and a wrapper that faded
+    // to one flat navy drew a dark square band behind the rounded bar (the 1:1
+    // chat's Composer fixed the same thing). The bar blurs what passes under it.
+    <div className="sticky bottom-0 mt-4 pb-1 pt-3">
       {body.length > MESSAGE_MAX ? <p className="mb-2 px-1 text-[12px] text-amber">Keep it under {MESSAGE_MAX} characters.</p> : null}
-      <div className="flex items-end gap-2 rounded-[20px] border border-white/[0.12] bg-white/10 px-2 py-1.5">
+      <div className="flex items-end gap-2 rounded-[20px] border border-white/[0.12] bg-white/10 px-2 py-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.28)] backdrop-blur-xl">
         <button
           type="button"
           onClick={onToggleAdd}
