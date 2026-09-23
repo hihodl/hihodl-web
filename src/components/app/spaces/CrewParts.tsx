@@ -28,7 +28,7 @@ import {
 } from "@/lib/creator/crew";
 import { packageBlockers, suggestShareBps } from "@/lib/creator/crew-package";
 
-import { Body, Card, Divider, Field, inputCls, P, Tag } from "./kit";
+import { Card, Divider, Field, inputCls, P, Tag } from "./kit";
 
 export const fine = `text-[12px] leading-[17px] ${P.dim}`;
 export const sheetCls = "flex flex-col gap-3 rounded-[18px] border border-white/10 bg-white/[0.04] p-3.5";
