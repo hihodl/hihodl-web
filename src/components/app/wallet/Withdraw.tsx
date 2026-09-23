@@ -1,7 +1,8 @@
 "use client";
 
 /**
- * Send from the web wallet: USDC or SOL, on Solana, to a Solana address.
+ * Send from the web: USDC or SOL, on Solana, to a Solana address. From a
+ * wallet made on the web, or one made in the HOLD app with its phone linked.
  *
  * It looks like the HOLD app's Send, screen for screen
  * (documentation/web-copies-the-app-wallet.md):
@@ -13,26 +14,24 @@
  *               the summary card, the amber Send
  *   result      tx-confirm: "Payment sent", "To … • amount", Close
  *
- * Every send is approved, and the server picks how
- * (documentation/link-your-phone-and-approved-withdrawals.md):
+ * Every send is approved on the strongest device the person has, and the
+ * server picks it (documentation/one-wallet-every-device.md, rule 4):
  *
  *   app           an Android phone is linked: it gets a push, the person
  *                 approves and the app signs, on a SECOND device. This screen
- *                 waits: "Approve on your phone".
- *   web_passkey   everybody else — an iPhone, a laptop, a browser that never
- *                 met the app. Approved here, with ONE passkey prompt that
- *                 both answers the server's challenge (bound to the exact
- *                 bytes of this transfer) and opens the wallet (PRF) to sign
- *                 them.
+ *                 waits: "Approve on your phone", with Open HOLD (an intent on
+ *                 Android), the inbox hint and Cancel. Every wallet, including
+ *                 one made in the app.
+ *   web_passkey   a web wallet with no Android phone (an iPhone, a laptop).
+ *                 Approved here, with ONE passkey prompt that both answers
+ *                 the server's challenge (bound to the exact bytes of this
+ *                 transfer) and opens the wallet (PRF) to sign them.
+ *   409 LINK_YOUR_PHONE_FIRST
+ *                 a wallet made in the app with no Android phone linked: the
+ *                 web holds no key for it, so the answer is the link screen.
  *
- * There is no third answer any more. This used to end in a 409
- * LINK_YOUR_PHONE_FIRST for anyone with nothing linked, which meant a wallet
- * made in a browser could be filled and never spent — and it bought nothing,
- * because the passkey approval never read a linked device. See the note on
- * `chooseChannel`.
- *
- * The backend contract is the withdrawal one, unchanged: only the screens
- * took the app's shape.
+ * The backend contract is the withdrawal one: only the screens took the
+ * app's shape.
  */
 
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
@@ -42,6 +41,7 @@ import {
   authorizeWithdrawalPasskey,
   createWithdrawal,
   getWithdrawal,
+  rejectWithdrawal,
   relayerQuote,
   relayerSubmit,
   withdrawalPasskeyChallenge,
@@ -49,6 +49,8 @@ import {
   type Withdrawal,
   type WithdrawalStatus,
 } from "@/lib/link/api";
+import { withdrawalIntent } from "@/lib/link/intent";
+import { phoneOf, type Phone } from "@/lib/link/ua";
 import { getWalletBackup, WalletApiError, type Balances, type WalletBackup } from "@/lib/wallet/api";
 import { fromBase64, wipe } from "@/lib/wallet/core";
 import { explain } from "@/lib/wallet/explain";
@@ -225,7 +227,7 @@ export type WithdrawPhase =
   | { kind: "form"; notice?: string | null }
   | { kind: "review"; busy: boolean; notice?: string | null }
   | { kind: "link-first" }
-  | { kind: "on-phone"; withdrawal: Withdrawal }
+  | { kind: "on-phone"; withdrawal: Withdrawal; cancelling?: boolean; notice?: string | null }
   | { kind: "preparing"; withdrawal: Withdrawal }
   | { kind: "passkey"; withdrawal: Withdrawal; busy: boolean; notice?: string | null }
   | { kind: "sending"; withdrawal: Withdrawal }
@@ -245,23 +247,37 @@ const ON_PHONE: Partial<Record<WithdrawalStatus, string>> = {
   submitted: "Approved. Sending…",
 };
 
+/** Review's last line: who approves next, when that is known before the server answers. */
+const NEXT: Record<"phone" | "passkey" | "unknown", string> = {
+  phone: "A payment cannot be undone. Your linked phone approves and signs it next, in the HOLD app.",
+  passkey: "A payment cannot be undone. You approve it with your passkey next.",
+  unknown: "A payment cannot be undone. You approve it in the next step.",
+};
+
 export function WithdrawView({
   phase,
   draft,
   balances,
   setDraft,
+  approver,
+  here = null,
   actions,
 }: {
   phase: WithdrawPhase;
   draft: Draft;
   balances: Balances | null;
   setDraft: (d: Draft) => void;
+  /** Who approves, when the server said so up front (canPayFromWeb). */
+  approver?: "phone" | "passkey";
+  /** The phone this page is on: an Android phone gets Open HOLD as an intent. */
+  here?: Phone | null;
   actions: {
     onBack: () => void;
     onReview: () => void;
     onRequest: () => void;
     onConfirmPasskey: () => void;
     onLink: () => void;
+    onCancel: () => void;
     onDone: () => void;
     onEdit: () => void;
   };
@@ -434,7 +450,7 @@ export function WithdrawView({
               {phase.busy ? "Preparing…" : "Send"}
             </PrimaryButton>
           </div>
-          <FooterNote icon="phone-portrait-outline">A payment cannot be undone. Your phone approves it next.</FooterNote>
+          <FooterNote icon={approver === "passkey" ? "finger-print" : "phone-portrait-outline"}>{NEXT[approver ?? "unknown"]}</FooterNote>
         </div>
       </AppScreen>
     );
@@ -444,8 +460,11 @@ export function WithdrawView({
     return (
       <AppScreen title="Confirm payment" onBack={actions.onEdit}>
         <div className="flex flex-col gap-4 pt-4">
-          <HeroCard icon="phone-portrait-outline" title="Link your phone first">
-            <HeroBody>Every payment from this wallet is approved on your phone, and none is linked yet.</HeroBody>
+          <HeroCard icon="phone-portrait-outline" title="Link your phone to pay from here">
+            <HeroBody>
+              This wallet was made in the HOLD app, and its keys stay on your phone. Link the phone once, and it approves and
+              signs every payment you start here. Nothing was sent.
+            </HeroBody>
           </HeroCard>
           <PrimaryButton icon="phone-portrait-outline" onClick={actions.onLink}>
             Link your phone
@@ -464,8 +483,34 @@ export function WithdrawView({
           <StatusLine>{ON_PHONE[w.status] ?? "Approve on your phone"}</StatusLine>
           <RecipientCard to={w.to} />
           <Summary token={w.token} amount={w.amount} />
+          {phase.notice ? <WarningNote>{phase.notice}</WarningNote> : null}
+          {w.status === "pending" ? (
+            <div className="flex flex-col gap-2 pt-2">
+              {here === "android" ? (
+                // A new tab: this page keeps following the withdrawal while the app opens on it.
+                <a
+                  href={withdrawalIntent(w.id)}
+                  target="_blank"
+                  rel="noopener"
+                  className="flex h-[52px] w-full items-center justify-center gap-2 rounded-[16px] bg-[#FFB703] px-5 text-[15px] font-strong text-[#0A0F14] transition-opacity hover:opacity-90"
+                >
+                  <Ion name="open-outline" size={18} color="#0A0F14" />
+                  Open HOLD
+                </a>
+              ) : null}
+              <button
+                type="button"
+                onClick={actions.onCancel}
+                disabled={phase.cancelling}
+                className="flex min-h-[50px] w-full items-center justify-center rounded-[14px] border border-white/10 bg-white/[0.06] px-5 py-3.5 text-[15px] font-strong text-white transition-colors hover:bg-white/[0.12] disabled:opacity-60"
+              >
+                {phase.cancelling ? "Cancelling…" : "Cancel"}
+              </button>
+            </div>
+          ) : null}
           <FooterNote icon="phone-portrait-outline">
-            A notification in the HOLD app on your phone asks you to approve it. It expires in <span className="tabular-nums">{left}</span>.
+            A notification in the HOLD app on your phone asks you to approve it. No notification? Open HOLD and go to Withdrawals.
+            It expires in <span className="tabular-nums">{left}</span>.
           </FooterNote>
         </div>
       </AppScreen>
@@ -566,7 +611,7 @@ function describe(e: unknown): string {
     // The two refusals that used to arrive as a bare 409 and be read as
     // "link your phone". Each says the thing this person actually has to do.
     if (e.code === "NO_PASSKEY") return "This account has no passkey, and a passkey is what approves a send. Add one from Menu → Passkeys. Nothing was sent.";
-    if (e.code === "NO_WEB_WALLET") return "This account has no wallet on the web yet. Open Wallet to make one. Nothing was sent.";
+    if (e.code === "NO_WEB_WALLET") return "This wallet was made in the HOLD app, which sends it for now. Nothing was sent.";
   }
   if (e instanceof Error && e.message === "challenge_mismatch") return "HOLD asked the passkey to approve something other than this transfer, so we stopped. Nothing was sent.";
   if (e instanceof Error && e.message === "wrong_key") return "That passkey opened a different wallet. Nothing was sent.";
@@ -577,12 +622,15 @@ export function Withdraw({
   uid,
   from,
   balances,
+  approver,
   onBack,
   prefill,
 }: {
   uid: string;
   from: string;
   balances: Balances | null;
+  /** Who approves, when the server said so up front (canPayFromWeb). Only changes a sentence: the server's channel decides. */
+  approver?: "phone" | "passkey";
   onBack: () => void;
   /**
    * What another screen already knows: Pay on a request, or Send from a
@@ -598,14 +646,17 @@ export function Withdraw({
     to: prefill?.to ?? "",
   });
   const [phase, setPhase] = useState<WithdrawPhase>({ kind: "form" });
+  const [here, setHere] = useState<Phone | null>(null);
+  useEffect(() => setHere(phoneOf(navigator.userAgent, navigator.maxTouchPoints ?? 0)), []);
   const backup = useRef<WalletBackup | null>(null);
   const prepared = useRef<{ built: BuiltWithdrawal; options: AssertionOptionsJSON } | null>(null);
   // The withdrawal the server already approved: its bytes are fixed from then on.
   const authorized = useRef<string | null>(null);
 
   useEffect(() => {
-    getWalletBackup().then((b) => (backup.current = b), () => undefined);
-  }, []);
+    // A wallet made in the app has no backup here, and needs none: its phone signs.
+    if (approver !== "phone") getWalletBackup().then((b) => (backup.current = b), () => undefined);
+  }, [approver]);
 
   // Follow a withdrawal the server is deciding: the phone's approval, then the chain.
   const following = phase.kind === "on-phone" || phase.kind === "sending" ? phase.withdrawal.id : null;
@@ -686,6 +737,24 @@ export function Withdraw({
     }
   };
 
+  /** Cancel while the phone has not decided: the server's reject, so the phone cannot approve it after. */
+  const cancel = async () => {
+    if (phase.kind !== "on-phone") return;
+    const w = phase.withdrawal;
+    setPhase({ ...phase, cancelling: true, notice: null });
+    try {
+      await rejectWithdrawal(w.id);
+      setPhase({ kind: "form", notice: "Cancelled. Nothing was sent." });
+    } catch (e) {
+      const decided = e instanceof WalletApiError && e.code === "NOT_PENDING";
+      setPhase((p) =>
+        p.kind === "on-phone"
+          ? { ...p, cancelling: false, notice: decided ? "Your phone already decided on this one, so it can no longer be cancelled." : describe(e) }
+          : p,
+      );
+    }
+  };
+
   const approve = async () => {
     if (phase.kind !== "passkey") return;
     const w = phase.withdrawal;
@@ -736,16 +805,19 @@ export function Withdraw({
       draft={draft}
       balances={balances}
       setDraft={setDraft}
+      approver={approver}
+      here={here}
       actions={{
         onBack,
         onReview: () => setPhase({ kind: "review", busy: false }),
         onRequest: () => void request(),
         onConfirmPasskey: () => void approve(),
         onLink: () => {
-          const base = clientProductBase();
-          // A full load: /welcome has the wallet pages' strict CSP.
-          window.location.assign(`${base}/welcome?next=${encodeURIComponent(`${base}/wallet`)}`);
+          // The link screen, then back here. A full load: it carries the wallet pages' strict CSP.
+          const back = `${window.location.pathname}${window.location.search}`;
+          window.location.assign(`${clientProductBase()}/wallet/link?next=${encodeURIComponent(back)}`);
         },
+        onCancel: () => void cancel(),
         onDone: onBack,
         onEdit: () => setPhase({ kind: "form" }),
       }}

@@ -93,6 +93,28 @@ export interface WalletStatus {
   current_blob_hash: string | null;
   wrappings: WrappingMeta[];
   email_verified: boolean;
+  /**
+   * Who approves a payment started on the web (documentation/one-wallet-every-device.md):
+   *   web_passkey  a web wallet with no Android phone: a passkey here
+   *   app          an Android phone is linked: it approves and signs
+   *   link_first   a wallet made in the app, no Android phone: link it first
+   *   none         nothing to pay from
+   * An older backend does not send it: read it through `payerOf`.
+   */
+  canPayFromWeb?: CanPayFromWeb;
+}
+
+export type CanPayFromWeb = "web_passkey" | "app" | "link_first" | "none";
+
+/**
+ * `canPayFromWeb`, or what the web did before the server said it: a web
+ * wallet pays with the passkey (the server still picks the phone when one is
+ * linked), and a wallet made in the app is paid from the app.
+ */
+export function payerOf(s: Pick<WalletStatus, "state" | "canPayFromWeb"> | null | undefined): CanPayFromWeb {
+  const said = s?.canPayFromWeb ?? (s as { can_pay_from_web?: unknown } | null | undefined)?.can_pay_from_web;
+  if (said === "web_passkey" || said === "app" || said === "link_first" || said === "none") return said;
+  return s?.state === "web_wallet" ? "web_passkey" : "none";
 }
 
 export interface WalletBackup {

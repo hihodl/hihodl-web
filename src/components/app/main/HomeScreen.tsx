@@ -424,7 +424,8 @@ export function HomeScreen({ initialScope = "main" }: { initialScope?: string } 
           <div className="mt-7">
             <ActionsRow>
               <MiniAction icon="add-circle-outline" label="Add" href={href("/add")} />
-              <MiniAction icon="send-outline" label="Send" href={`${href("/wallet")}?open=send`} />
+              {/* /wallet/send answers everybody: a web wallet, one made in the app, or none yet. */}
+              <MiniAction icon="send-outline" label="Send" href={href("/wallet/send")} />
               {/* Was "Accounts", which opened the Overview — the same panel the
                   bubble under the balance opens, two controls apart. Activity
                   takes the place: it left the column, and the card below shows

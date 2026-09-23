@@ -501,11 +501,13 @@ function ThreadView({
    */
   const openSend = async (prefill?: { amount?: string; token?: string }) => {
     const resolved = handle ? await resolveHandle(handle) : null;
-    const q = new URLSearchParams({ open: "send" });
+    const q = new URLSearchParams();
     if (resolved?.chain === "solana" && resolved.address) q.set("to", resolved.address);
     if (prefill?.amount) q.set("amount", prefill.amount);
     if (prefill?.token) q.set("token", prefill.token.toUpperCase());
-    window.location.assign(`${productHref("/wallet")}?${q.toString()}`);
+    // /wallet/send, a full load (the wallet pages' CSP): it answers a wallet made in the app, and no wallet, too.
+    const query = q.toString();
+    window.location.assign(`${productHref("/wallet/send")}${query ? `?${query}` : ""}`);
   };
 
   const payTheirRequest = (r: PaymentRequest) => {

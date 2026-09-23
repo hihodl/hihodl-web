@@ -152,6 +152,14 @@ export async function getWithdrawal(id: string): Promise<Withdrawal> {
   return toWithdrawal(await send<Raw>(`withdrawals/${encodeURIComponent(id)}`));
 }
 
+/**
+ * Say no to a withdrawal still pending: the app's decline, and the web's
+ * Cancel while it waits for the phone. 409 NOT_PENDING once the phone decided.
+ */
+export async function rejectWithdrawal(id: string): Promise<unknown> {
+  return send(`withdrawals/${encodeURIComponent(id)}/reject`, { json: {} });
+}
+
 /** WebAuthn request options, JSON-encoded the way @simplewebauthn/server writes them. */
 export interface AssertionOptionsJSON {
   challenge: string;

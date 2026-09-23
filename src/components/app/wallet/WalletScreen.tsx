@@ -9,11 +9,19 @@
  * Account recovery, Passkeys and Recovery Phrase. One screen at a time, each
  * with the app's back chevron:
  *
- *   no wallet anywhere        → Create (passkey with PRF, then the wallet)
- *   a wallet in the HOLD app  → "Open the HOLD app" (we never make a second one)
+ *   no wallet anywhere        → Create (passkey with PRF, then the wallet);
+ *                               with the rollout gate closed, how to get one
+ *   a wallet in the HOLD app  → its Receive, and Send through the linked
+ *                               phone (canPayFromWeb "app"), or "Link your
+ *                               phone to pay from here" ("link_first"). We
+ *                               never make a second wallet
  *   a web wallet, locked      → Unlock with passkey
  *   unlocked                  → Home: balance · Receive · Send · Security
- *   Send                      → approved on the linked phone (Withdraw.tsx)
+ *   Send                      → approved on the linked Android phone, or
+ *                               with the passkey (Withdraw.tsx)
+ *
+ * /wallet/send renders this with `send`: straight to Send, for everybody,
+ * gate or not (nav.openToAll). Home and a Payments thread send from there.
  *   Security                  → Recovery phrase (12 words) · Passkeys (add, remove)
  *
  * Design and threat model: documentation/web-wallet-passkey-phase-1.md.
@@ -22,7 +30,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { chosenUsername } from "@/lib/app/me";
-import { useHoldWallet } from "@/lib/app/hold-wallet";
+import { useBalances, useHoldWallet } from "@/lib/app/hold-wallet";
 import { useMe } from "@/lib/app/spaces-data";
 import { useShell } from "@/components/app/Shell";
 import { Skeleton } from "@/components/app/ui";
@@ -34,6 +42,7 @@ import {
   getWalletBackup,
   getWalletStatus,
   listPasskeys,
+  payerOf,
   removeWrapping,
   WalletApiError,
   type Balances,
@@ -57,6 +66,8 @@ import { createPasskeyWithPrf, evaluatePrf, normalizeCredentialId, PasskeyError,
 import { lock, unlockWith, useVault } from "@/lib/wallet/vault";
 
 import { UserAvatar } from "../account/UserAvatar";
+import { useProductHref } from "../base";
+import { inAppHref, linkHref, playHref, usePhone } from "../link/in-app";
 import {
   ActionsRow,
   AppScreen,
@@ -114,7 +125,25 @@ function useRegistrationOptions(active: boolean) {
 
 /* ── The screen ───────────────────────────────────────────────────── */
 
-export function WalletScreen() {
+/** What Payments already knows when it opens Send: ?to, ?amount, ?token. Read once. */
+function prefillFromUrl(): { to?: string; amount?: string; token?: "USDC" | "SOL" } {
+  if (typeof window === "undefined") return {};
+  const q = new URLSearchParams(window.location.search);
+  const token = (q.get("token") ?? "").toUpperCase();
+  return {
+    ...(q.get("to") ? { to: q.get("to")! } : {}),
+    ...(q.get("amount") ? { amount: q.get("amount")! } : {}),
+    ...(token === "USDC" || token === "SOL" ? { token } : {}),
+  };
+}
+
+/** Who approves a web wallet's send, when the server has said; undefined when it has not. */
+function approverOf(status: WalletStatus): "phone" | "passkey" | undefined {
+  if (!status.canPayFromWeb) return undefined;
+  return status.canPayFromWeb === "app" ? "phone" : "passkey";
+}
+
+export function WalletScreen({ send = false }: { send?: boolean } = {}) {
   const vault = useVault();
   const [status, setStatus] = useState<WalletStatus | null>(null);
   const [loadError, setLoadError] = useState<unknown>(null);
@@ -145,9 +174,6 @@ export function WalletScreen() {
     });
   }, [unlockedAddress, status]);
 
-  // The rollout gate: not enabled means no wallet here at all, not an error.
-  if (status && status.enabled === false) return null;
-
   let body: ReactNode;
   if (loadError) {
     body = (
@@ -163,7 +189,12 @@ export function WalletScreen() {
   } else if (!status) {
     body = <Skeleton className="mx-auto h-[320px] w-full max-w-[460px]" />;
   } else if (status.state === "app_wallet") {
-    body = <AppWallet />;
+    // A wallet made in the app shows whatever the gate says: the gate is about
+    // making one here, and this one is already made.
+    body = <AppWallet status={status} send={send} />;
+  } else if (status.state === "none" && status.enabled === false) {
+    // The rollout gate: no wallet is made on the web for this account yet. Said, not a blank page.
+    body = <NoWalletHere />;
   } else if (status.state === "web_wallet" && !status.current_blob_hash) {
     body = <WalletOnAnotherAccount />;
   } else if (!passkeysHere()) {
@@ -188,7 +219,7 @@ export function WalletScreen() {
   } else if (status.state === "none") {
     body = <Create status={status} onCreated={() => void load()} />;
   } else if (vault.status === "unlocked" && vault.address) {
-    body = <Home address={vault.address} status={status} onChanged={() => void load()} />;
+    body = <Home address={vault.address} status={status} send={send} onChanged={() => void load()} />;
   } else {
     body = <Unlock />;
   }
@@ -215,16 +246,108 @@ function WalletOnAnotherAccount() {
 
 /* ── An app user ──────────────────────────────────────────────────── */
 
-function AppWallet() {
+/**
+ * A wallet made in the HOLD app. The web holds no key for it, so what it can
+ * do here is what `canPayFromWeb` says (documentation/one-wallet-every-device.md):
+ *
+ *   app         an Android phone is linked: Send creates the withdrawal here,
+ *               and the phone approves and signs it
+ *   link_first  no Android phone yet: "Link your phone to pay from here"
+ *   none        an older backend that cannot take it: send from the app
+ */
+function AppWallet({ status, send }: { status: WalletStatus; send: boolean }) {
   const w = useHoldWallet();
+  const { session } = useShell();
+  const productHref = useProductHref();
+  const phone = usePhone();
+  const payer = payerOf(status);
+  const [sending, setSending] = useState(send && payer === "app");
+  const [prefill] = useState(prefillFromUrl);
+  const balances = useBalances(payer === "app" ? w.solana : null);
+
   if (w.loading) return <Skeleton className="mx-auto h-[320px] w-full max-w-[460px]" />;
+  if (sending && w.solana) {
+    return (
+      <Withdraw
+        uid={session.user.id}
+        from={w.solana}
+        balances={balances.data ?? null}
+        approver="phone"
+        onBack={() => setSending(false)}
+        prefill={prefill}
+      />
+    );
+  }
+
+  const openApp = inAppHref("", phone);
+  const pay =
+    payer === "app" ? (
+      <>
+        <PrimaryButton icon="send-outline" disabled={!w.solana} onClick={() => setSending(true)}>
+          Send
+        </PrimaryButton>
+        <FooterNote icon="phone-portrait-outline">
+          This wallet was made in the HOLD app. Your linked phone approves and signs every payment you start here.
+        </FooterNote>
+      </>
+    ) : payer === "link_first" ? (
+      <>
+        <HeroCard icon="phone-portrait-outline" title="Link your phone to pay from here">
+          <HeroBody>
+            This wallet was made in the HOLD app, and its keys stay on your phone. Link the phone once, and every payment you
+            start here is approved and signed there.
+          </HeroBody>
+        </HeroCard>
+        <PrimaryButton icon="qr-code-outline" onClick={() => window.location.assign(linkHref(productHref, productHref(send ? "/wallet/send" : "/wallet")))}>
+          Link your phone
+        </PrimaryButton>
+      </>
+    ) : (
+      <>
+        <FooterNote icon="phone-portrait-outline">This wallet was made in the HOLD app, which keeps its keys. Send and swap there.</FooterNote>
+        {openApp ? (
+          <SecondaryButton icon="open-outline" onClick={() => window.location.assign(openApp)}>
+            Open HOLD
+          </SecondaryButton>
+        ) : null}
+      </>
+    );
+
   return (
     <div className="flex flex-col gap-4">
+      {send ? <div className="mx-auto flex w-full max-w-[460px] flex-col gap-3 pt-2">{pay}</div> : null}
       {w.solana ? <Receive address={w.solana} /> : null}
-      <div className="mx-auto w-full max-w-[460px]">
-        <FooterNote icon="phone-portrait-outline">This wallet was made in the HOLD app, which keeps its keys. Send and swap there.</FooterNote>
-      </div>
+      {!send ? <div className="mx-auto flex w-full max-w-[460px] flex-col gap-3">{pay}</div> : null}
     </div>
+  );
+}
+
+/* ── No wallet, and the web does not make one for this account yet ── */
+
+function NoWalletHere() {
+  const phone = usePhone();
+  return (
+    <AppScreen title="Wallet">
+      <div className="flex flex-col gap-4 pt-4">
+        {phone === "ios" ? (
+          <HeroCard icon="wallet-outline" title="No wallet yet">
+            <HeroBody>Making a wallet on the web is not open for this account yet. Nothing is lost: when it opens, it is made here with your passkey.</HeroBody>
+          </HeroCard>
+        ) : (
+          <>
+            <HeroCard icon="wallet-outline" title="Make your wallet in the HOLD app">
+              <HeroBody>
+                The HOLD app on Google Play makes your wallet with every chain. Sign in there with this account, and it shows here
+                too.
+              </HeroBody>
+            </HeroCard>
+            <PrimaryButton icon="logo-google" onClick={() => window.open(playHref(phone), "_blank", "noopener")}>
+              Get HOLD on Google Play
+            </PrimaryButton>
+          </>
+        )}
+      </div>
+    </AppScreen>
   );
 }
 
@@ -426,10 +549,11 @@ function useDisplayName(): string {
 
 type HomeScreen = "home" | "withdraw" | "receive" | "security" | "passkeys" | "export" | "add";
 
-function Home({ address, status, onChanged }: { address: string; status: WalletStatus; onChanged: () => void }) {
+function Home({ address, status, send, onChanged }: { address: string; status: WalletStatus; send: boolean; onChanged: () => void }) {
   const { session } = useShell();
-  // The Dashboard's quick actions land here as ?open=receive|send|security.
+  // The Dashboard's quick actions land here as ?open=receive|send|security; /wallet/send as `send`.
   const [screen, setScreen] = useState<HomeScreen>(() => {
+    if (send) return "withdraw";
     const open = typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("open");
     return open === "receive" ? "receive" : open === "send" ? "withdraw" : open === "security" ? "security" : "home";
   });
@@ -439,16 +563,7 @@ function Home({ address, status, onChanged }: { address: string; status: WalletS
    * address. Read ONCE, at mount, so a later render can never write over what
    * the person has typed since.
    */
-  const [prefill] = useState<{ to?: string; amount?: string; token?: "USDC" | "SOL" }>(() => {
-    if (typeof window === "undefined") return {};
-    const q = new URLSearchParams(window.location.search);
-    const token = (q.get("token") ?? "").toUpperCase();
-    return {
-      ...(q.get("to") ? { to: q.get("to")! } : {}),
-      ...(q.get("amount") ? { amount: q.get("amount")! } : {}),
-      ...(token === "USDC" || token === "SOL" ? { token } : {}),
-    };
-  });
+  const [prefill] = useState(prefillFromUrl);
   const [balances, setBalances] = useState<Balances | null>(null);
   const [balanceError, setBalanceError] = useState(false);
   const name = useDisplayName();
@@ -466,7 +581,7 @@ function Home({ address, status, onChanged }: { address: string; status: WalletS
 
   if (screen === "receive") return <Receive address={address} onBack={back} />;
   if (screen === "withdraw")
-    return <Withdraw uid={session.user.id} from={address} balances={balances} onBack={back} prefill={prefill} />;
+    return <Withdraw uid={session.user.id} from={address} balances={balances} approver={approverOf(status)} onBack={back} prefill={prefill} />;
   if (screen === "security") return <Security onBack={back} onPhrase={() => setScreen("export")} onPasskeys={toPasskeys} />;
   if (screen === "passkeys")
     return <Passkeys wrappings={status.wrappings} onBack={toSecurity} onAdd={() => setScreen("add")} onChanged={onChanged} />;
