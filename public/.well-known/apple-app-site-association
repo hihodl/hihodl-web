@@ -5,13 +5,12 @@
       {
         "appIDs": ["VLV25ZF66P.com.sayhihodl.hihodlyes"],
         "components": [
+          { "/": "/p/*", "exclude": true, "comment": "A brand's delivery link (the web's /p/[token]), opened by brands with no HOLD account. The app has no /p/ screen, so claiming it sent anybody with HOLD installed to its not-found page. Excluded explicitly so the next edit cannot re-add it by accident" },
           { "/": "/open", "comment": "Universal Link entry point" },
           { "/": "/open/*", "comment": "Universal Link with sub-path" },
           { "/": "/auth/callback", "comment": "OAuth + magic link callback" },
           { "/": "/auth/confirm", "comment": "Email verification (token_hash)" },
-          { "/": "/p/*", "comment": "Payment claim links" },
-          { "/": "/invite/*", "comment": "Referral invite links — the path the app and the backend actually use" },
-          { "/": "/r/*", "comment": "Reserved. Listed here since the first build and never built: the web serves no /r/ page and nothing links to one. Kept so a link sent while it was listed still opens the app rather than the browser." }
+          { "/": "/invite/*", "comment": "Referral invite links — the path the app and the backend actually use" }
         ]
       }
     ]

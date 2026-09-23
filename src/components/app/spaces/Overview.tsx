@@ -45,6 +45,7 @@ import {
   useOwed,
   useSales,
 } from "@/lib/app/spaces-data";
+import { feePctText } from "@/lib/ad-space/fee";
 import type { CreatorAnalytics } from "@/lib/creator/analytics";
 import type { OfferView, SalesSummary } from "@/lib/creator/listing";
 
@@ -152,7 +153,7 @@ function CreatorOverview({ view, brand }: { view: string | null; brand: string |
   return (
     <div className={FILL}>
       <section aria-label="Your business" className="grid grid-cols-2 gap-2.5 xl:grid-cols-4">
-        <KpiTile label="Earned" value={v(dollars(t?.receivedCents ?? 0))} note={t ? (t.orders && t.fee.paidByYouCents === 0 ? "5% paid by brands" : feeLine(t)) : " "} href={href("/sales")} />
+        <KpiTile label="Earned" value={v(dollars(t?.receivedCents ?? 0))} note={t ? (t.orders && t.fee.paidByYouCents === 0 ? `${feePctText()} paid by brands` : feeLine(t)) : " "} href={href("/sales")} />
         <KpiTile
           label="Brands that paid you"
           value={v(t?.brands ?? 0)}

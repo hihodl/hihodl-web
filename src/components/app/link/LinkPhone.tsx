@@ -38,7 +38,7 @@ import {
 import { computeSas, formatSas } from "@/lib/link/sas";
 import { newLinkKeyPair, sealSecret, type LinkKeyPair } from "@/lib/link/seal";
 import { androidIntentFor } from "@/lib/link/intent";
-import { thisDevice, type Phone } from "@/lib/link/ua";
+import { thisDevice, type AppleDevice, type Phone } from "@/lib/link/ua";
 import { PLAY_STORE_URL } from "@/lib/appLinks";
 import { getWalletBackup, getWalletStatus, WalletApiError, type WalletBackup, type WalletStatus } from "@/lib/wallet/api";
 import { fromBase64, toBase64, toBase64Url, wipe } from "@/lib/wallet/core";
@@ -65,12 +65,12 @@ function intentOr(url: string): string {
 export type LinkPhase =
   | { kind: "starting" }
   | { kind: "failed"; message: string }
-  | { kind: "waiting"; url: string; expiresAt: number; here: Phone | null; joining?: boolean; notice?: string | null }
+  | { kind: "waiting"; url: string; expiresAt: number; here: Phone | null; name?: AppleDevice | null; joining?: boolean; notice?: string | null }
   | { kind: "confirm"; sas: string; carries: boolean; busy: boolean; notice?: string | null }
   | { kind: "mismatch" }
   | { kind: "sending"; carries: boolean }
   | { kind: "expired" }
-  | { kind: "done"; platform: Phone };
+  | { kind: "done"; platform: Phone; name?: AppleDevice | null };
 
 export interface LinkActions {
   onRetry: () => void;
@@ -128,12 +128,13 @@ export function LinkView({ phase, actions }: { phase: LinkPhase; actions: LinkAc
 
   if (phase.kind === "waiting") {
     if (phase.here === "ios") {
+      const name = phase.name ?? "iPhone";
       return (
         <div>
           {phase.notice ? <ErrorBanner>{phase.notice}</ErrorBanner> : null}
-          <StepDesc>You are on your iPhone, so this is the phone we link. Payments are still approved with your passkey, on this phone.</StepDesc>
+          <StepDesc>{`You are on your ${name}, so this is the ${name} we link. Payments are still approved with your passkey, on this ${name}.`}</StepDesc>
           <Cta>
-            <ActionButton title={phase.joining ? "Linking..." : "Link this iPhone"} icon="phone-portrait-outline" disabled={phase.joining} onClick={actions.onJoinHere} />
+            <ActionButton title={phase.joining ? "Linking..." : `Link this ${name}`} icon="phone-portrait-outline" disabled={phase.joining} onClick={actions.onJoinHere} />
             {later}
           </Cta>
         </div>
@@ -255,7 +256,7 @@ export function LinkView({ phase, actions }: { phase: LinkPhase; actions: LinkAc
         line={
           phase.platform === "android"
             ? "Payments you start on the web are now approved and signed in the HOLD app on this phone."
-            : "Your iPhone is on your account. Payments are still approved with your passkey."
+            : `${phase.name ? `This ${phase.name}` : "Your iPhone"} is on your account. Payments are still approved with your passkey.`
         }
       />
       <Cta>
@@ -312,7 +313,7 @@ export function LinkPhone({ onDone, onLater }: { onDone: () => void; onLater?: (
       }
       const url = s.url || `${window.location.origin}/link/${encodeURIComponent(s.sessionId)}?k=${webPub}`;
       const expiresAt = Date.parse(s.expiresAt) || Date.now() + FIVE_MINUTES;
-      setPhase({ kind: "waiting", url, expiresAt, here: device.phone });
+      setPhase({ kind: "waiting", url, expiresAt, here: device.phone, name: device.apple });
     } catch (e) {
       if (mine === run.current) setPhase({ kind: "failed", message: explain(e) });
     }
@@ -347,7 +348,10 @@ export function LinkPhone({ onDone, onLater }: { onDone: () => void; onLater?: (
     const onStatus = (status: LinkStatus, platform: Phone | null, pub: string | null, carriesSecret: boolean | null) => {
       if (status === "done") {
         forget();
-        setPhase({ kind: "done", platform: platform ?? "ios" });
+        // On an iPhone or iPad there was no code to scan: the device that
+        // joined is this one, and it is named as what it is.
+        const here = thisDevice();
+        setPhase({ kind: "done", platform: platform ?? "ios", name: here.phone === "ios" ? here.apple : null });
       } else if (status === "expired") {
         forget();
         setPhase({ kind: "expired" });

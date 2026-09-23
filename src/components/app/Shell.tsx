@@ -97,6 +97,13 @@ export interface ShellState {
    * person they have no listings must check this first.
    */
   spacesDown: boolean;
+  /**
+   * The Spaces reads (listings, seats, X, team, settings) have not all
+   * settled yet. Home, Wallet, Payments, Savings and Stays draw without them;
+   * until this is false `role`, `listings` and `seats` are provisional (a
+   * creator with nothing), and only Spaces pages wait for them.
+   */
+  spacesLoading: boolean;
 }
 
 const ShellContext = createContext<ShellState | null>(null);
@@ -118,6 +125,13 @@ export interface ShellPrefs {
   setCollapsed: (v: boolean) => void;
   displayMode: DisplayMode;
   setDisplayMode: (v: DisplayMode) => void;
+  /**
+   * The app's Settings › Privacy › Hide balances (`showBalances` in its
+   * settings store, inverted): amounts on Home drawn as dots. Kept like
+   * `displayMode`, in this browser, because the app keeps it on the phone.
+   */
+  hideBalances: boolean;
+  setHideBalances: (v: boolean) => void;
 }
 
 const PrefsContext = createContext<ShellPrefs | null>(null);
@@ -205,6 +219,8 @@ export function Centered({ children }: { children: ReactNode }) {
 const COLLAPSE_KEY = "hold-shell-collapsed";
 /** The app's `walletMode`, kept where the app keeps it: on the device. */
 const DISPLAY_MODE_KEY = "hold-display-mode";
+/** The app's Hide balances, per browser like the view. */
+const HIDE_BALANCES_KEY = "hold-hide-balances";
 
 function SignedIn({ session, children }: { session: Session; children: ReactNode }) {
   const onSpacesPage = productRel(usePathname(), useSpacesBase()).startsWith("/spaces");
@@ -230,7 +246,9 @@ function SignedIn({ session, children }: { session: Session; children: ReactNode
   }, [me.data, session.user.app_metadata?.provider, session.user.email]);
 
   // Every one of these is SETTLED when it has either answered or failed. None
-  // of them is allowed to be fatal, Spaces included.
+  // of them is allowed to be fatal, Spaces included, and none of them is
+  // waited for outside Spaces: they are all HiSpace's, and Home's first paint
+  // used to sit behind five of them.
   //
   // It used to be: a failed `listings` or `seats` read replaced the whole
   // product with one error card. Those two are HiSpace reads, and Home, Wallet,
@@ -238,7 +256,7 @@ function SignedIn({ session, children }: { session: Session; children: ReactNode
   // /ad-space route answering badly took down five products that were working
   // perfectly, for everybody. One section being unreachable is not the same
   // event as the account being unreachable, and only the section may say so.
-  const ready =
+  const spacesReady =
     (listings.data !== undefined || listings.error) &&
     (seats.data !== undefined || seats.error) &&
     (x.data !== undefined || x.error) &&
@@ -253,8 +271,7 @@ function SignedIn({ session, children }: { session: Session; children: ReactNode
    */
   const spacesDown = listings.error ?? seats.error ?? null;
 
-  const state = useMemo<ShellState | null>(() => {
-    if (!ready) return null;
+  const state = useMemo<ShellState>(() => {
     const spaces = listings.data ?? [];
     const mine = seats.data ?? [];
     const role = roleOf(spaces, mine, x.data ?? null);
@@ -272,14 +289,19 @@ function SignedIn({ session, children }: { session: Session; children: ReactNode
       teamPage: role !== "creator" || agency.on || onTeams,
       walletPage,
       spacesDown: spacesDown !== null,
+      spacesLoading: !spacesReady,
     };
-  }, [ready, listings.data, seats.data, x.data, work.data, session, agency, walletPage, spacesDown]);
+  }, [spacesReady, listings.data, seats.data, x.data, work.data, session, agency, walletPage, spacesDown]);
 
-  if (!state) return <Centered><Wordmark className="h-5 w-auto text-text" /></Centered>;
+  // Only a Spaces page waits for Spaces, and it waits inside the Frame, so the
+  // way to Home, Wallet and Stays is on screen the whole time.
+  let page: ReactNode = children;
+  if (onSpacesPage && spacesDown) page = <SpacesUnreachable error={spacesDown} />;
+  else if (onSpacesPage && !spacesReady) page = <div className="flex min-h-[40vh] w-full items-center justify-center"><Wordmark className="h-5 w-auto text-text" /></div>;
 
   return (
     <ShellContext.Provider value={state}>
-      <Frame>{spacesDown && onSpacesPage ? <SpacesUnreachable error={spacesDown} /> : children}</Frame>
+      <Frame>{page}</Frame>
     </ShellContext.Provider>
   );
 }
@@ -318,6 +340,7 @@ function Frame({ children }: { children: ReactNode }) {
 
   const [collapsed, setCollapsed] = useState(false);
   const [displayMode, setDisplayMode] = useState<DisplayMode>(DEFAULT_DISPLAY_MODE);
+  const [hideBalances, setHideBalances] = useState(false);
   const [drawer, setDrawer] = useState(false);
   const [palette, setPalette] = useState(false);
 
@@ -329,6 +352,7 @@ function Frame({ children }: { children: ReactNode }) {
       setCollapsed(window.localStorage.getItem(COLLAPSE_KEY) === "1");
       const stored = asDisplayMode(window.localStorage.getItem(DISPLAY_MODE_KEY));
       if (stored) setDisplayMode(stored);
+      setHideBalances(window.localStorage.getItem(HIDE_BALANCES_KEY) === "1");
     } catch {
       /* the sidebar opens expanded, and the view is the default one */
     }
@@ -350,10 +374,25 @@ function Frame({ children }: { children: ReactNode }) {
       /* remembered for this page only */
     }
   }, []);
+  const saveHideBalances = useCallback((v: boolean) => {
+    setHideBalances(v);
+    try {
+      window.localStorage.setItem(HIDE_BALANCES_KEY, v ? "1" : "0");
+    } catch {
+      /* remembered for this page only */
+    }
+  }, []);
   const toggleCollapsed = () => saveCollapsed(!collapsed);
   const prefs = useMemo(
-    () => ({ collapsed, setCollapsed: saveCollapsed, displayMode, setDisplayMode: saveDisplayMode }),
-    [collapsed, saveCollapsed, displayMode, saveDisplayMode],
+    () => ({
+      collapsed,
+      setCollapsed: saveCollapsed,
+      displayMode,
+      setDisplayMode: saveDisplayMode,
+      hideBalances,
+      setHideBalances: saveHideBalances,
+    }),
+    [collapsed, saveCollapsed, displayMode, saveDisplayMode, hideBalances, saveHideBalances],
   );
 
   // Closing the drawer on every navigation, so a tap on a link is the whole gesture.
@@ -377,7 +416,9 @@ function Frame({ children }: { children: ReactNode }) {
   // rather than being sent away and back.
   const deciding = active === "wallet" && !openToAll(rel) && shell.walletPage === undefined;
   // /wallet/link and /wallet/send answer everybody, gate or not (nav.openToAll).
-  const here = active ? deciding || openToAll(rel) || allowed.some((i) => i.key === active) : true;
+  // Nor is a Spaces page judged on a role that is still a guess.
+  const settling = level === "spaces" && shell.spacesLoading;
+  const here = active ? deciding || settling || openToAll(rel) || allowed.some((i) => i.key === active) : true;
   useEffect(() => {
     if (here) return;
     router.replace(level === "spaces" && allowed[0] ? hrefFor(allowed[0], base) : hrefFor({ path: "" }, base));

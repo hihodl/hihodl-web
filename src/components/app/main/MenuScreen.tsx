@@ -27,11 +27,15 @@
  * actually bought — hihodl.xyz — which is what the app's own tile does on
  * every platform but iOS.
  *
+ *   Settings           → ?screen=settings   settings/index.tsx, what the web
+ *                          can honour: Hide balances (this browser), Appearance,
+ *                          Active sessions (read-only → ?screen=sessions),
+ *                          Report a bug; notifications, the authenticator and
+ *                          payment protection are named and sent to the app
+ *
  * Left out on purpose, because the web has nothing real behind them: PIN, Face
- * ID, auto-lock and the authenticator (all the phone's), sessions (`/sessions`
- * is the app's and not open to the web), notifications (the backend keeps an
- * email switch nothing reads), and language and currency (the web is in
- * English and in dollars).
+ * ID and auto-lock (the phone's), and language and currency (the web is in
+ * English and in dollars, and has no exchange rates to show another).
  */
 
 import Link from "next/link";
@@ -51,6 +55,7 @@ import { chosenUsername, emailRecoveryCodes, recoveryCodesStatus } from "@/lib/a
 import { useMe } from "@/lib/app/spaces-data";
 import { useHoldWallet } from "@/lib/app/hold-wallet";
 import { thisDevice, type Phone } from "@/lib/link/ua";
+import { listSessions, type ActiveSession } from "@/lib/app/sessions";
 import { listPasskeys, type RegisteredPasskey } from "@/lib/wallet/api";
 
 import { useLinkedPhones } from "../account/PhoneScreen";
@@ -67,7 +72,7 @@ import { InviteScreen } from "./InviteScreen";
 /** The product's own host serves only the product; the website's pages live on the website. */
 const WEBSITE = "https://hihodl.xyz";
 
-type Screen = "home" | "plan" | "invite" | "security" | "recovery" | "passkeys" | "codes" | "statements" | "personalization" | "about";
+type Screen = "home" | "plan" | "invite" | "security" | "recovery" | "passkeys" | "codes" | "statements" | "settings" | "sessions" | "personalization" | "about";
 
 export function MenuScreen({ screen, item }: { screen?: string; item?: string } = {}) {
   const router = useRouter();
@@ -82,7 +87,10 @@ export function MenuScreen({ screen, item }: { screen?: string; item?: string } 
   if (screen === "passkeys") return <PasskeysScreen onBack={() => open("recovery")} />;
   if (screen === "codes") return <CodesScreen onBack={() => open("recovery")} />;
   if (screen === "statements") return <StatementsScreen onBack={home} />;
-  if (screen === "personalization") return <PersonalizationScreen onBack={home} />;
+  if (screen === "settings") return <SettingsScreen onBack={home} open={open} />;
+  if (screen === "sessions") return <SessionsScreen onBack={() => open("settings")} />;
+  // Appearance is a row of Settings, as in the app.
+  if (screen === "personalization") return <PersonalizationScreen onBack={() => open("settings")} />;
   if (screen === "about") return <AboutScreen onBack={home} />;
   if (screen === "pages") {
     // Your pages, one level under Appearance (../spaces/YourPages).
@@ -153,7 +161,7 @@ function MenuHome({ open }: { open: (s: Screen) => void }) {
         <MenuRow icon="key-outline" label="Account recovery" badge={recoveryBadge} onClick={() => open("recovery")} />
         <MenuRow icon="document-text-outline" label="Statements" onClick={() => open("statements")} />
         <MenuRow icon="log-in-outline" label="Sign-in" href={productHref("/account?view=account")} />
-        <MenuRow icon="contrast-outline" label="Appearance" onClick={() => open("personalization")} />
+        <MenuRow icon="settings-outline" label="Settings" onClick={() => open("settings")} />
         <MenuRow icon="help-circle-outline" label="Help & Support" href="mailto:support@hihodl.xyz" external />
         <MenuRow icon="information-circle-outline" label="About HOLD" onClick={() => open("about")} />
         {/* The app's last settings row, in its calm words. Closing is done on
@@ -836,6 +844,182 @@ function PersonalizationScreen({ onBack }: { onBack: () => void }) {
           <YourPagesCard href={productHref("/menu?screen=pages")} />
         </>
       ) : null}
+    </Column>
+  );
+}
+
+/* ── Settings (settings/index.tsx) ────────────────────────────────── */
+
+/**
+ * The app's Settings, with what a browser can honour and the rest named.
+ *
+ * Hide balances is real here: the same switch, kept in this browser like the
+ * view, and Home's figures go to dots. Active sessions is read from the same
+ * `GET /sessions` the app lists, read-only. Notifications, the authenticator
+ * and payment protection act on the phone (a push token, a TOTP factor asked
+ * for at send time, guards evaluated before a send is signed), so they are
+ * said to be there and opened there, never drawn as switches that do nothing.
+ */
+function SettingsScreen({ onBack, open }: { onBack: () => void; open: (s: Screen) => void }) {
+  const { hideBalances, setHideBalances } = useShellPrefs();
+  const sessions = useSessions();
+  const sessionsValue = sessions === undefined ? undefined : sessions === null ? "Unavailable" : String(sessions.length);
+  return (
+    <Column>
+      <BackHeader title="Settings" onBack={onBack} />
+
+      <SectionTitle>Privacy</SectionTitle>
+      <HoldCard>
+        <div className="flex items-center gap-3 px-[18px] py-[18px]">
+          <Ion name="eye-off-outline" size={18} className="mt-[2px] shrink-0 self-start text-white" />
+          <span className="min-w-0 flex-1 pr-3">
+            <span className="block text-[14px] font-bold leading-5 text-white">Hide balances</span>
+            <span className="mt-0.5 block text-[12px] leading-4 text-[#9FB7C2]">Mask the amounts on Home. Tapping the balance does it too. Remembered in this browser.</span>
+          </span>
+          <Switch checked={hideBalances} onChange={setHideBalances} label="Hide balances" />
+        </div>
+      </HoldCard>
+
+      <SectionTitle>Appearance</SectionTitle>
+      <HoldCard>
+        <MenuRow icon="contrast-outline" label="Appearance" sub="View, sidebar and your pages" chevron onClick={() => open("personalization")} />
+      </HoldCard>
+
+      <SectionTitle>Security</SectionTitle>
+      <HoldCard>
+        <MenuRow icon="phone-portrait-outline" label="Active sessions" value={sessionsValue} chevron={sessionsValue === undefined} onClick={() => open("sessions")} />
+      </HoldCard>
+
+      <SectionTitle>In the HOLD app</SectionTitle>
+      <InTheApp
+        items={[
+          { icon: "notifications-outline", label: "Notifications", where: "Menu › Settings › Notifications", to: "notifications" },
+          { icon: "keypad-outline", label: "Two-factor authentication", where: "Menu › Security › Google Authenticator", to: "security" },
+          { icon: "shield-outline", label: "Payment protection", where: "Menu › Security › Payment protection", to: "send-protection" },
+        ]}
+      />
+
+      <SectionTitle>Support</SectionTitle>
+      <HoldCard>
+        <MenuRow icon="bug-outline" label="Report a bug" sub="An email to support, with this browser filled in" href={bugReportHref()} external />
+      </HoldCard>
+    </Column>
+  );
+}
+
+/**
+ * Settings that live on the phone. On a phone each opens its screen in the
+ * app (`hihodl://<to>` through /open, which falls back to the store). A
+ * computer cannot open an app on a phone, so the rows say where each one is,
+ * drawn as text rather than as buttons, and the stores follow.
+ */
+function InTheApp({ items }: { items: { icon: IonName; label: string; where: string; to: string }[] }) {
+  const [phone, setPhone] = useState<Phone | null>(null);
+  useEffect(() => setPhone(thisDevice().phone), []);
+  if (phone) {
+    return (
+      <HoldCard>
+        {items.map((i) => (
+          <MenuRow key={i.to} icon={i.icon} label={i.label} value="Open in the app" href={`${WEBSITE}/open?to=${i.to}`} external />
+        ))}
+      </HoldCard>
+    );
+  }
+  return (
+    <HoldCard>
+      {items.map((i) => (
+        <div key={i.to} className="flex w-full min-w-0 items-center gap-3 px-[18px] py-[18px]">
+          <Ion name={i.icon} size={18} className="mt-[2px] shrink-0 self-start text-white" />
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[14px] font-bold leading-5 text-white">{i.label}</span>
+            <span className="mt-0.5 block text-[12px] leading-4 text-[#9FB7C2]">{`On your phone: ${i.where}`}</span>
+          </span>
+        </div>
+      ))}
+      <MenuRow icon="logo-apple" label="HOLD on the App Store" href={APP_STORE_URL} external chevron />
+      <MenuRow icon="logo-google" label="HOLD on Google Play" href={PLAY_STORE_URL} external chevron />
+    </HoldCard>
+  );
+}
+
+/**
+ * The app's Report a bug writes a row to its own table from the phone. The
+ * web has no route for that, so it is an email to the same support inbox,
+ * with the page and the browser already written in.
+ */
+function bugReportHref(): string {
+  const where = typeof window === "undefined" ? "" : window.location.href;
+  const ua = typeof navigator === "undefined" ? "" : navigator.userAgent;
+  const body = `What happened:\n\n\nWhat you expected:\n\n\n---\nPage: ${where}\nBrowser: ${ua}\n`;
+  return `mailto:support@hihodl.xyz?subject=${encodeURIComponent("Bug report (web)")}&body=${encodeURIComponent(body)}`;
+}
+
+/** undefined while reading, null when it could not be read. */
+function useSessions(): ActiveSession[] | null | undefined {
+  const [list, setList] = useState<ActiveSession[] | null | undefined>(undefined);
+  useEffect(() => {
+    const ctl = new AbortController();
+    listSessions(ctl.signal).then(setList, () => !ctl.signal.aborted && setList(null));
+    return () => ctl.abort();
+  }, []);
+  return list;
+}
+
+function lastSeen(iso: string): string {
+  const mins = Math.floor((Date.now() - Date.parse(iso)) / 60_000);
+  if (!Number.isFinite(mins)) return "";
+  if (mins < 5) return "Active now";
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return hours === 1 ? "1 hour ago" : `${hours} hours ago`;
+  return ago(iso).replace(/^./, (c) => c.toUpperCase());
+}
+
+/**
+ * Security › Active sessions, read-only. The same list the app shows; ending
+ * one is done there, on a device that is signed in and can prove it.
+ */
+function SessionsScreen({ onBack }: { onBack: () => void }) {
+  const sessions = useSessions();
+  return (
+    <Column>
+      <BackHeader title="Active sessions" onBack={onBack} />
+      <p className="mt-4 px-1 text-[14px] leading-5 text-white/[0.72]">
+        The phones signed in to your HOLD account. This browser signs in on its own and is not one of them.
+      </p>
+      <HoldCard className="mt-3">
+        {sessions === undefined ? (
+          <div className="flex flex-col gap-2 p-4">
+            <Skeleton className="h-12" />
+            <Skeleton className="h-12" />
+          </div>
+        ) : sessions === null ? (
+          <div className="p-4">
+            <Notice tone="calm">We could not read your sessions just now. Try again in a moment.</Notice>
+          </div>
+        ) : sessions.length === 0 ? (
+          <p className="px-[18px] py-[18px] text-[14px] text-white/[0.72]">No phone is signed in to HOLD right now.</p>
+        ) : (
+          sessions.map((x) => {
+            const place = [x.city, x.country].filter(Boolean).join(", ");
+            const sub = [lastSeen(x.lastActiveAt), place].filter(Boolean).join(" · ");
+            return (
+              <div key={x.id} className="flex w-full min-w-0 items-center gap-3 px-[18px] py-[18px]">
+                <Ion name="phone-portrait-outline" size={18} className="mt-[2px] shrink-0 self-start text-white" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[14px] font-bold leading-5 text-white">{x.deviceName}</span>
+                  {sub ? <span className="mt-0.5 block truncate text-[12px] leading-4 text-[#9FB7C2]">{sub}</span> : null}
+                </span>
+              </div>
+            );
+          })
+        )}
+      </HoldCard>
+      <div className="mt-4">
+        <Notice icon="phone-portrait-outline" tone="calm">
+          To sign a phone out, open HOLD on a signed-in phone: Menu, Security, Active sessions.
+        </Notice>
+      </div>
     </Column>
   );
 }

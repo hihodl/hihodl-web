@@ -63,7 +63,7 @@ import {
   WalletFlowError,
   wrapForPasskey,
 } from "@/lib/wallet/flows";
-import { createPasskeyWithPrf, evaluatePrf, normalizeCredentialId, PasskeyError, passkeysHere, prfTrustedHere } from "@/lib/wallet/passkey";
+import { createPasskeyWithPrf, evaluatePrf, normalizeCredentialId, PasskeyError, passkeysHere, prfSupportedByBrowser, prfTrustedHere } from "@/lib/wallet/passkey";
 import { lock, unlockWith, useVault } from "@/lib/wallet/vault";
 
 import { UserAvatar } from "../account/UserAvatar";
@@ -127,7 +127,7 @@ function useRegistrationOptions(active: boolean) {
 /* ── The screen ───────────────────────────────────────────────────── */
 
 /** What Payments already knows when it opens Send: ?to, ?amount, ?token. Read once. */
-function prefillFromUrl(): { to?: string; amount?: string; token?: "USDC" | "SOL" } {
+function prefillFromUrl(): { to?: string; amount?: string; token?: "USDC" | "SOL"; requestId?: string } {
   if (typeof window === "undefined") return {};
   const q = new URLSearchParams(window.location.search);
   const token = (q.get("token") ?? "").toUpperCase();
@@ -135,6 +135,8 @@ function prefillFromUrl(): { to?: string; amount?: string; token?: "USDC" | "SOL
     ...(q.get("to") ? { to: q.get("to")! } : {}),
     ...(q.get("amount") ? { amount: q.get("amount")! } : {}),
     ...(token === "USDC" || token === "SOL" ? { token } : {}),
+    // Pay on a payment request: Withdraw settles it once the send confirms.
+    ...(q.get("request") ? { requestId: q.get("request")! } : {}),
   };
 }
 
@@ -158,6 +160,17 @@ export function WalletScreen({ send = false }: { send?: boolean } = {}) {
     }
   }, []);
   useEffect(() => void load(), [load]);
+  // Whether this browser says it can do PRF at all. Asked once, before the
+  // Create screen: a "no" here means the prompt would only leave an orphan
+  // passkey. Null (unknown, or not asked yet) shows Create as before.
+  const [prfBrowser, setPrfBrowser] = useState<boolean | null>(null);
+  useEffect(() => {
+    let live = true;
+    void prfSupportedByBrowser().then((v) => live && setPrfBrowser(v));
+    return () => {
+      live = false;
+    };
+  }, []);
   // Leaving the wallet locks it: another page of the product, signing out, or
   // another person signing in on this tab never finds it open.
   useEffect(() => () => lock(), []);
@@ -214,6 +227,14 @@ export function WalletScreen({ send = false }: { send?: boolean } = {}) {
       <AppScreen title="Wallet">
         <div className="pt-4">
           <InfoBox>{explain(new PasskeyError("os_too_old"))}</InfoBox>
+        </div>
+      </AppScreen>
+    );
+  } else if (status.state === "none" && prfBrowser === false) {
+    body = (
+      <AppScreen title="Wallet">
+        <div className="pt-4">
+          <InfoBox>{explain(new PasskeyError("no_prf_here"))}</InfoBox>
         </div>
       </AppScreen>
     );

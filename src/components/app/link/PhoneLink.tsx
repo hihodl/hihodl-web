@@ -22,7 +22,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { getLinkState, joinLinkSession } from "@/lib/link/api";
 import { androidIntentFor } from "@/lib/link/intent";
-import { phoneOf, type Phone } from "@/lib/link/ua";
+import { appleDeviceOf, phoneOf, type AppleDevice, type Phone } from "@/lib/link/ua";
 import { PLAY_STORE_URL } from "@/lib/appLinks";
 import { signOut, useCreatorSession } from "@/lib/creator/session";
 import { WalletApiError } from "@/lib/wallet/api";
@@ -36,7 +36,7 @@ export type PhonePhase =
   | { kind: "reading" }
   | { kind: "android"; intent: string }
   | { kind: "computer" }
-  | { kind: "ios-ready"; self: boolean; busy: boolean; notice?: string | null }
+  | { kind: "ios-ready"; self: boolean; busy: boolean; notice?: string | null; name?: AppleDevice | null }
   | { kind: "ios-done" }
   | { kind: "expired" }
   | { kind: "other-account"; email: string | null };
@@ -69,22 +69,24 @@ export function PhoneLinkView({ phase, onJoin, onSignOut }: { phase: PhonePhase;
     case "computer":
       body = <Note>This page is for your phone. Scan the code on your computer with your phone&apos;s camera.</Note>;
       break;
-    case "ios-ready":
-      title = "Link this iPhone";
+    case "ios-ready": {
+      const name = phase.name ?? "iPhone";
+      title = `Link this ${name}`;
       body = (
         <>
           <Note>
             {phase.self
-              ? "This is the iPhone you started on. Link it to your HOLD account. Payments are still approved with your passkey."
-              : "Link this iPhone to your HOLD account. Payments are still approved with your passkey."}
+              ? `This is the ${name} you started on. Link it to your HOLD account. Payments are still approved with your passkey.`
+              : `Link this ${name} to your HOLD account. Payments are still approved with your passkey.`}
           </Note>
           {phase.notice ? <Warn>{phase.notice}</Warn> : null}
           <button type="button" className={`${btnPrimary} w-full`} disabled={phase.busy} onClick={onJoin}>
-            {phase.busy ? "Linking…" : "Link this iPhone"}
+            {phase.busy ? "Linking…" : `Link this ${name}`}
           </button>
         </>
       );
       break;
+    }
     case "ios-done":
       title = "Linked";
       body = <p className="text-small text-success">Linked. You can close this.</p>;
@@ -157,14 +159,15 @@ function IPhone({ sessionId }: { sessionId: string }) {
     } catch {
       self = false;
     }
+    const name = appleDeviceOf(navigator.userAgent, navigator.maxTouchPoints ?? 0);
     getLinkState(sessionId).then(
       (s) => {
         if (!alive) return;
         if (s.status === "expired" || (s.expiresAt && Date.parse(s.expiresAt) < Date.now())) setPhase({ kind: "expired" });
         else if (s.status === "done" && s.platform === "ios") setPhase({ kind: "ios-done" });
-        else setPhase({ kind: "ios-ready", self, busy: false });
+        else setPhase({ kind: "ios-ready", self, busy: false, name });
       },
-      (e) => alive && setPhase(refuse(e) ?? { kind: "ios-ready", self, busy: false }),
+      (e) => alive && setPhase(refuse(e) ?? { kind: "ios-ready", self, busy: false, name }),
     );
     return () => {
       alive = false;

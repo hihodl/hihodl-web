@@ -99,3 +99,23 @@ export function canonicalAmount(amount: string, token: WithdrawToken): string | 
   const u = toBaseUnits(amount, token);
   return u === null ? null : fromBaseUnits(u, token);
 }
+
+/**
+ * Did this send pay the request it was opened for?
+ *
+ * Pay on a payment request opens Send filled in, and the person may change
+ * any of it. Only a send to the same address, in the same token, for the same
+ * amount closes the request: settling one after they sent something else, or
+ * to somebody else, would tell the person who asked that they were paid.
+ * Compared in base units, so "25" and "25.000000" are the same amount.
+ */
+export function paysTheRequest(
+  asked: { to?: string; amount?: string; token?: WithdrawToken },
+  sent: { to: string; amount: string; token: WithdrawToken },
+): boolean {
+  if (!asked.to || !asked.amount) return false;
+  if (asked.to !== sent.to || (asked.token ?? "USDC") !== sent.token) return false;
+  const a = toBaseUnits(asked.amount, sent.token);
+  const b = toBaseUnits(sent.amount, sent.token);
+  return a !== null && b !== null && a === b;
+}

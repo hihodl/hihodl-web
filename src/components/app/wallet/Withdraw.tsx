@@ -36,6 +36,7 @@
 
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 
+import { settleRequest } from "@/lib/app/payment-requests";
 import { clientProductBase } from "@/lib/app/paths";
 import {
   authorizeWithdrawalPasskey,
@@ -60,6 +61,7 @@ import { buildWithdrawal, messageHash, signWithdrawal, type BuiltWithdrawal } fr
 import {
   canonicalAmount,
   isSolanaAddress,
+  paysTheRequest,
   sameBytes,
   toBaseUnits,
   withdrawalChallenge,
@@ -613,7 +615,7 @@ export function Withdraw({
    * that the person owns the form, and a prop that kept writing into it would
    * undo their typing on every re-render.
    */
-  prefill?: { to?: string; amount?: string; token?: WithdrawToken };
+  prefill?: { to?: string; amount?: string; token?: WithdrawToken; requestId?: string };
 }) {
   const [draft, setDraft] = useState<Draft>({
     token: prefill?.token ?? "USDC",
@@ -655,6 +657,24 @@ export function Withdraw({
       clearInterval(t);
     };
   }, [following]);
+
+  /*
+   * Pay on a payment request: once the money is confirmed, close the request
+   * the way the app does (_QuickSendScreen.send.ts), with POST
+   * /payments/requests/:id/settle. After the send, never before it; only when
+   * what went out is what was asked (paysTheRequest); once per page; and
+   * silent on failure — the payment happened, and an open request is a stale
+   * row, not lost money.
+   */
+  const settled = useRef(false);
+  const confirmed = phase.kind === "result" && phase.status === "confirmed" ? phase.withdrawal : null;
+  useEffect(() => {
+    const requestId = prefill?.requestId;
+    if (!confirmed || !requestId || settled.current) return;
+    if (!paysTheRequest(prefill, confirmed)) return;
+    settled.current = true;
+    void settleRequest(requestId, confirmed.signature ? { txHash: confirmed.signature } : undefined).catch(() => undefined);
+  }, [confirmed, prefill]);
 
   /** Quote, build, and ask the server for the challenge bound to those exact bytes. */
   const prepare = useCallback(

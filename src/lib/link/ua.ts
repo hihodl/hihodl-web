@@ -22,6 +22,21 @@ export function phoneOf(ua: string, maxTouchPoints = 0): Phone | null {
   return null;
 }
 
+export type AppleDevice = "iPhone" | "iPad";
+
+/**
+ * Which Apple device, by the name the person knows it by, for copy only.
+ * `phoneOf` files an iPad under "ios" because it behaves like one (Safari,
+ * passkeys, no QR to scan), but "You are on your iPhone" on an iPad is wrong.
+ * iPadOS 13+ says "Macintosh"; touch points give it away.
+ */
+export function appleDeviceOf(ua: string, maxTouchPoints = 0): AppleDevice | null {
+  if (/iPad/i.test(ua)) return "iPad";
+  if (/iPhone|iPod/i.test(ua)) return "iPhone";
+  if (/Macintosh/i.test(ua) && maxTouchPoints > 1) return "iPad";
+  return null;
+}
+
 export function platformOf(ua: string, maxTouchPoints = 0): DesktopPlatform {
   if (phoneOf(ua, maxTouchPoints)) return "phone";
   if (/Macintosh|Mac OS X/i.test(ua)) return "mac";
@@ -45,9 +60,9 @@ export function browserOf(ua: string, maxTouchPoints = 0): string {
 }
 
 /** Read in the browser; `other` on the server. */
-export function thisDevice(): { platform: DesktopPlatform; browser: string; phone: Phone | null } {
-  if (typeof navigator === "undefined") return { platform: "other", browser: "other", phone: null };
+export function thisDevice(): { platform: DesktopPlatform; browser: string; phone: Phone | null; apple: AppleDevice | null } {
+  if (typeof navigator === "undefined") return { platform: "other", browser: "other", phone: null, apple: null };
   const ua = navigator.userAgent;
   const touch = navigator.maxTouchPoints ?? 0;
-  return { platform: platformOf(ua, touch), browser: browserOf(ua, touch), phone: phoneOf(ua, touch) };
+  return { platform: platformOf(ua, touch), browser: browserOf(ua, touch), phone: phoneOf(ua, touch), apple: appleDeviceOf(ua, touch) };
 }
