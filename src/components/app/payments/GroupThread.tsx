@@ -2,37 +2,41 @@
 
 /**
  * One group, on one screen: the chat and the money together
- * (documentation/groups-thread-v0.md, and the shared UI spec the app is built
- * to at the same time).
+ * (documentation/groups-splitwise-grade.md, and the app's group-expenses).
  *
- *   header        the emoji and name, "N people", "Crew"; People on the right
+ *   header        the name, "N people", "Crew"; Settings and People on the right
  *   balance strip "You're owed 12.00 USD" / "You owe 4.00 USD" / "All settled
- *                 up", stuck under the header so it never scrolls away, with
- *                 Settle up when you owe
+ *                 up", stuck under the header so it never scrolls away; it
+ *                 opens Balances, where debts are requests (GroupPanels)
  *   timeline      oldest at the top, newest at the foot, a day line where the
  *                 day turns; messages as bubbles (the payment chat's own
- *                 colours, Chat.tsx), expenses and settlements as cards
+ *                 colours, Chat.tsx), expenses and settlements as cards, an
+ *                 edit to an expense as a quiet line
  *   composer      text and Send, and "+" for an expense
  *
  * It polls every ten seconds while it is open (there is no socket for groups),
  * marks the thread read when it opens and whenever something new arrives while
  * it is on screen, and loads older items when the top of the thread is reached.
  *
+ * A MESSAGE'S MENU
+ *
+ * The dots beside a bubble on hover, a right click, or a long press on a
+ * touch screen open it: Edit (your own), Delete, which asks "Delete for me" or
+ * "Delete for everyone" (everyone only on your own), and Seen by. An edited
+ * message says "Edited" in small type under the bubble. Under your latest
+ * message, the faces and names of who has seen it, from the thread's `reads`
+ * (seen = read position at or after the message, author excluded).
+ *
  * SETTLE UP ON THE WEB, AND WHY IT DOES NOT SEND
  *
- * The spec's Settle up sends the money with the normal HOLD send to the
+ * The app's Settle up sends the money with the normal HOLD send to the
  * person's @handle and then records the settlement with that payment intent's
- * id, which the server checks. The web cannot do the first half. Its only send
- * is the web wallet's withdrawal (Wallet › Send): Solana only, to an address,
- * approved on a linked phone or with an iPhone passkey, and recorded as a
- * `withdrawal_requests` row. A settlement needs a `payment_intents` id, so the
- * server would refuse a withdrawal's id as `transfer_not_found`, and nothing on
- * the web makes a payment intent that a real transfer stands behind.
- *
- * So each row says so, and offers the two honest things: pay in the HOLD app,
- * where the send and the record are one tap, or record that you paid another
- * way, after a confirm, which the thread then shows as your word and never as
- * "Paid in HOLD". The web never sends a settlement with a transferId.
+ * id, which the server checks. The web cannot do the first half: its only send
+ * is the web wallet's withdrawal, a `withdrawal_requests` row and not a
+ * payment intent, so the server would refuse it as `transfer_not_found`. So
+ * what you owe offers the two honest things: pay in the HOLD app, or record
+ * that you paid another way, which the thread shows as your word. The web
+ * never sends a settlement with a transferId.
  */
 
 import Link from "next/link";
@@ -40,25 +44,30 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 
 import {
   absMinor,
-  addExpense,
   describeGroupError,
+  eventText,
   expenseForMe,
+  formatMinor,
   markRead,
   memberName,
   moneyText,
-  formatMinor,
   namer,
   newClientKey,
-  parseMajorToMinor,
-  recordPaidElsewhere,
+  seenBy,
+  seenLine,
   settlementText,
   useGroupBalances,
   useGroupInfo,
   useGroupMembers,
   useGroups,
   useGroupThread,
+  type EventItem,
+  type ExpenseItem,
   type GroupMember,
+  type MessageItem,
   type Outgoing,
+  type ReadMark,
+  type SettlementItem,
   type ThreadItem,
 } from "@/lib/app/groups";
 import { HoldApiError } from "@/lib/app/hold-api";
@@ -67,30 +76,24 @@ import { useMe } from "@/lib/app/spaces-data";
 import { useProductHref } from "../base";
 import { BackHeader, btnGlass, Column, Notice } from "../hold";
 import { Ion } from "../ion";
-import { Chip, ChipRow, inputCls, Tag } from "../spaces/kit";
+import { Tag } from "../spaces/kit";
 import { Skeleton } from "../ui";
-import { AddPeople } from "./Groups";
+import { ExpenseDetail, ExpenseForm } from "./GroupExpense";
+import { BalancesSheet, PeopleSheet, SettingsSheet } from "./GroupPanels";
+import { FaceStack, GroupFace, PersonFace, pillGlass, plateCaution, plateWhite, Sheet } from "./group-kit";
 
 type Names = ReturnType<typeof namer>;
-type Expense = Extract<ThreadItem, { kind: "expense" }>;
-type Settlement = Extract<ThreadItem, { kind: "settlement" }>;
 
 /** The shell's top bar is sticky at 8px and 52px tall; the strip sits 8px under it. */
 const UNDER_TOP_BAR = "top-[68px]";
 const MESSAGE_MAX = 1000;
+const LONG_PRESS_MS = 450;
 
-/* Buttons at the sizes this screen needs, each with its radius at half its
-   height where it is a pill, written whole rather than by overriding the kit's
-   (two height classes on one element is a coin toss on which one wins). */
 /** Settle up: the screen's one amber plate. */
 const pillAmber =
   "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[18px] bg-amber px-4 text-[13.5px] font-extrabold text-[#0F0F1A] transition-opacity hover:opacity-90";
-/** A white plate the height of the kit's btnGlass, to sit beside it. */
-const plateWhite =
-  "inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-[12px] bg-[#F1F5F9] px-4 text-[14px] font-extrabold text-[#0A1420] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:bg-white/[0.07] disabled:text-white/60";
-/** A small glass pill: Load older. */
-const pillGlass =
-  "inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-[18px] border border-white/[0.22] bg-white/10 px-4 text-[13px] font-bold text-white transition-colors hover:bg-white/[0.14] disabled:opacity-50";
+
+type Panel = "none" | "people" | "balances" | "settings" | "add" | { expense: string } | { message: string };
 
 export function GroupThread({ groupId, backPath, backLabel }: { groupId: string; backPath: string; backLabel?: string }) {
   const productHref = useProductHref();
@@ -105,14 +108,16 @@ export function GroupThread({ groupId, backPath, backLabel }: { groupId: string;
   const names = useMemo(() => namer(members.data, meId), [members.data, meId]);
 
   const row = list.data?.find((g) => g.id === groupId) ?? null;
-  const name = row?.name ?? info.data?.name ?? "Group";
-  const emoji = row?.emoji ?? info.data?.emoji ?? null;
+  // The group read is the fresher one for the face (a photo link lasts an hour); the list row fills in while it loads.
+  const group = info.data ? { ...row, ...info.data } : row;
+  const name = group?.name ?? "Group";
+  const emoji = group?.emoji ?? null;
   const crew = row?.crew ?? null;
-  const currency = (balances.data?.currency ?? row?.currency ?? info.data?.currency ?? "USD").toUpperCase();
+  const currency = (balances.data?.currency ?? group?.currency ?? "USD").toUpperCase();
   const count = members.data?.length ?? 0;
 
-  const [panel, setPanel] = useState<"none" | "people" | "settle">("none");
-  const [adding, setAdding] = useState(false);
+  const [panel, setPanel] = useState<Panel>("none");
+  const close = useCallback(() => setPanel("none"), []);
 
   /* Read when it opens, and again whenever something new lands while it is
      open and the tab is in front. The list's unread count follows. */
@@ -137,25 +142,26 @@ export function GroupThread({ groupId, backPath, backLabel }: { groupId: string;
     void thread.refresh();
     void balances.mutate();
     void list.mutate();
-  }, [thread, balances, list]);
+    void info.mutate();
+  }, [thread, balances, list, info]);
 
+  const headerBtn = "flex h-9 items-center gap-1.5 rounded-[18px] px-2.5 text-[13px] font-bold text-white transition-colors hover:bg-white/10";
   const header = (
     <BackHeader
-      title={`${emoji ? `${emoji} ` : ""}${name}`}
+      title={`${emoji && !group?.photoUrl ? `${emoji} ` : ""}${name}`}
       subtitle={notFound ? undefined : `${count || "…"} ${count === 1 ? "person" : "people"}${crew ? " · Crew" : ""}`}
       backHref={backHref}
       right={
         notFound ? undefined : (
-          <button
-            type="button"
-            onClick={() => setPanel((p) => (p === "people" ? "none" : "people"))}
-            aria-label="People"
-            aria-expanded={panel === "people"}
-            className="flex h-9 items-center gap-1.5 rounded-[18px] px-3 text-[13px] font-bold text-white transition-colors hover:bg-white/10"
-          >
-            <Ion name="people-outline" size={18} />
-            <span className="hidden sm:inline">People</span>
-          </button>
+          <span className="flex items-center">
+            <button type="button" onClick={() => setPanel("settings")} aria-label="Group settings" className={headerBtn} disabled={!group}>
+              {group?.photoUrl ? <GroupFace name={name} emoji={emoji} photoUrl={group.photoUrl} size={24} /> : <Ion name="settings-outline" size={18} />}
+            </button>
+            <button type="button" onClick={() => setPanel("people")} aria-label="People" className={headerBtn}>
+              <Ion name="people-outline" size={18} />
+              <span className="hidden sm:inline">People</span>
+            </button>
+          </span>
         )
       }
     />
@@ -176,17 +182,19 @@ export function GroupThread({ groupId, backPath, backLabel }: { groupId: string;
     );
   }
 
+  const openItem = typeof panel === "object" && "message" in panel ? thread.items.find((i): i is MessageItem => i.kind === "message" && i.id === panel.message) : undefined;
+
   return (
     <Column>
       {header}
 
       <BalanceStrip
         loading={balances.data === undefined && !balances.error}
+        failed={!!balances.error && balances.data === undefined}
+        onRetry={() => void balances.mutate()}
         net={balances.data?.balances.find((b) => b.userId === meId)?.netMinor ?? null}
         currency={currency}
-        canSettle={!!meId && !!balances.data?.transfers.some((t) => t.fromUserId === meId)}
-        settling={panel === "settle"}
-        onSettle={() => setPanel((p) => (p === "settle" ? "none" : "settle"))}
+        onOpen={() => setPanel("balances")}
         crew={crew?.name ?? null}
       />
 
@@ -194,8 +202,10 @@ export function GroupThread({ groupId, backPath, backLabel }: { groupId: string;
         <PeopleSheet
           groupId={groupId}
           members={members.data}
+          membersError={members.error}
+          onRetry={() => void members.mutate()}
           meId={meId}
-          onClose={() => setPanel("none")}
+          onClose={close}
           onAdded={() => {
             void members.mutate();
             refreshAll();
@@ -203,22 +213,69 @@ export function GroupThread({ groupId, backPath, backLabel }: { groupId: string;
         />
       ) : null}
 
-      {panel === "settle" && balances.data && meId ? (
-        <SettleUp
+      {panel === "balances" ? (
+        <BalancesSheet
           groupId={groupId}
-          currency={balances.data.currency}
-          transfers={balances.data.transfers.filter((t) => t.fromUserId === meId)}
+          balances={balances.data}
+          loadError={balances.error}
+          onRetry={() => void balances.mutate()}
+          members={members.data}
+          meId={meId}
           names={names}
-          onClose={() => setPanel("none")}
-          onRecorded={() => {
-            setPanel("none");
+          onClose={close}
+          onChanged={refreshAll}
+        />
+      ) : null}
+
+      {panel === "settings" && group ? (
+        <SettingsSheet
+          groupId={groupId}
+          group={{ ...group, id: groupId, name, emoji }}
+          onClose={close}
+          onSaved={() => {
+            void info.mutate();
+            void list.mutate();
+            void balances.mutate();
+          }}
+        />
+      ) : null}
+
+      {panel === "add" && members.data ? (
+        <ExpenseForm
+          groupId={groupId}
+          groupCurrency={currency}
+          members={members.data}
+          meId={meId}
+          onCancel={close}
+          onSaved={() => {
+            close();
             refreshAll();
           }}
         />
       ) : null}
 
+      {typeof panel === "object" && "expense" in panel && members.data ? (
+        <ExpenseDetail groupId={groupId} expenseId={panel.expense} groupCurrency={currency} members={members.data} meId={meId} onClose={close} onChanged={refreshAll} />
+      ) : null}
+
+      {openItem ? (
+        <MessageActions
+          item={openItem}
+          mine={openItem.userId === meId}
+          reads={thread.reads}
+          members={members.data ?? []}
+          names={names}
+          onClose={close}
+          onEdit={thread.edit}
+          onDeleteForEveryone={thread.remove}
+          onDeleteForMe={thread.hide}
+        />
+      ) : null}
+
       <Timeline
         items={thread.items}
+        reads={thread.reads}
+        members={members.data ?? []}
         outgoing={thread.outgoing}
         loading={thread.loading || me.data === undefined}
         failed={!!thread.error}
@@ -230,27 +287,16 @@ export function GroupThread({ groupId, backPath, backLabel }: { groupId: string;
         loadingOlder={thread.loadingOlder}
         onLoadOlder={() => void thread.loadOlder()}
         onRetry={(key) => thread.retry(key, meId)}
-        onDelete={thread.remove}
+        onDiscard={thread.discard}
+        onOpenMessage={(id) => setPanel({ message: id })}
+        onOpenExpense={(id) => setPanel({ expense: id })}
       />
-
-      {adding && members.data ? (
-        <AddExpense
-          groupId={groupId}
-          currency={currency}
-          members={members.data}
-          meId={meId}
-          onCancel={() => setAdding(false)}
-          onAdded={() => {
-            setAdding(false);
-            refreshAll();
-          }}
-        />
-      ) : null}
 
       <Composer
         disabled={!meId}
-        adding={adding}
-        onToggleAdd={() => setAdding((a) => !a)}
+        adding={panel === "add"}
+        canAdd={!!members.data}
+        onToggleAdd={() => setPanel((p) => (p === "add" ? "none" : "add"))}
         onSend={(body) => void thread.send(body, newClientKey("msg"), meId)}
       />
     </Column>
@@ -261,19 +307,19 @@ export function GroupThread({ groupId, backPath, backLabel }: { groupId: string;
 
 function BalanceStrip({
   loading,
+  failed,
+  onRetry,
   net,
   currency,
-  canSettle,
-  settling,
-  onSettle,
+  onOpen,
   crew,
 }: {
   loading: boolean;
+  failed: boolean;
+  onRetry: () => void;
   net: string | null;
   currency: string;
-  canSettle: boolean;
-  settling: boolean;
-  onSettle: () => void;
+  onOpen: () => void;
   crew: string | null;
 }) {
   const n = net && /^-?\d+$/.test(net) ? BigInt(net) : 0n;
@@ -283,195 +329,26 @@ function BalanceStrip({
       <div className="flex min-h-[56px] items-center gap-3 rounded-[18px] border border-white/10 bg-[rgba(10,27,36,0.94)] px-3.5 py-2.5 backdrop-blur-xl">
         {loading ? (
           <Skeleton className="h-4 w-40 rounded-[8px]" />
+        ) : failed ? (
+          <>
+            <span className="min-w-0 flex-1 truncate text-[13.5px] text-white/70">Balances didn&apos;t load</span>
+            <button type="button" onClick={onRetry} className={pillGlass}>
+              Retry
+            </button>
+          </>
         ) : (
-          <span className="flex min-w-0 flex-1 flex-col">
-            <span className="truncate text-[15px] font-extrabold tabular-nums tracking-[-0.2px] text-white">{line}</span>
-            {crew ? <span className="truncate text-[12px] text-white/55">Crew · {crew}</span> : null}
-          </span>
+          <>
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="truncate text-[15px] font-extrabold tabular-nums tracking-[-0.2px] text-white">{line}</span>
+              {crew ? <span className="truncate text-[12px] text-white/55">Crew · {crew}</span> : null}
+            </span>
+            <button type="button" onClick={onOpen} className={n < 0n ? pillAmber : pillGlass}>
+              {n < 0n ? "Settle up" : "Balances"}
+            </button>
+          </>
         )}
-        {!loading && n < 0n && canSettle ? (
-          <button type="button" onClick={onSettle} aria-expanded={settling} className={pillAmber}>
-            Settle up
-          </button>
-        ) : null}
       </div>
     </div>
-  );
-}
-
-/* ── Settle up ────────────────────────────────────────────────────── */
-
-const sheetCls = "mb-3 flex flex-col gap-3 rounded-[18px] border border-white/10 bg-white/[0.04] p-3.5";
-const sheetTitle = "text-[18px] font-extrabold tracking-[-0.3px] text-white";
-
-function SettleUp({
-  groupId,
-  currency,
-  transfers,
-  names,
-  onClose,
-  onRecorded,
-}: {
-  groupId: string;
-  currency: string;
-  transfers: { fromUserId: string; toUserId: string; amountMinor: string }[];
-  names: Names;
-  onClose: () => void;
-  onRecorded: () => void;
-}) {
-  return (
-    <div className={sheetCls}>
-      <div className="flex items-center justify-between gap-2">
-        <p className={sheetTitle}>Settle up</p>
-        <button type="button" onClick={onClose} aria-label="Close" className="flex h-9 w-9 items-center justify-center rounded-[18px] text-white/75 hover:bg-white/10 hover:text-white">
-          <Ion name="close" size={20} />
-        </button>
-      </div>
-      {transfers.length === 0 ? <p className="text-[13.5px] text-white/[0.82]">You don&apos;t owe anyone in this group.</p> : null}
-      {transfers.map((t) => (
-        <SettleRow key={`${t.toUserId}:${t.amountMinor}`} groupId={groupId} currency={currency} transfer={t} names={names} onRecorded={onRecorded} />
-      ))}
-    </div>
-  );
-}
-
-/**
- * One payment the viewer owes. See the file header for why the web offers the
- * app and "another way" here, and never a send.
- */
-function SettleRow({
-  groupId,
-  currency,
-  transfer,
-  names,
-  onRecorded,
-}: {
-  groupId: string;
-  currency: string;
-  transfer: { toUserId: string; amountMinor: string };
-  names: Names;
-  onRecorded: () => void;
-}) {
-  const [step, setStep] = useState<"idle" | "app" | "confirm">("idle");
-  const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
-  // One key per row for as long as the row is open: a second tap after a lost
-  // answer is the same settlement, not a second one.
-  const [key] = useState(() => newClientKey("settle"));
-  const who = names.name(transfer.toUserId);
-  const amount = moneyText(transfer.amountMinor, currency);
-
-  const record = () => {
-    setBusy(true);
-    setNotice(null);
-    recordPaidElsewhere(groupId, { toUserId: transfer.toUserId, amountMinor: transfer.amountMinor }, key)
-      .then(onRecorded)
-      .catch((e) => setNotice(describeGroupError(e)))
-      .finally(() => setBusy(false));
-  };
-
-  return (
-    <div className="flex flex-col gap-2.5 rounded-[14px] border border-white/10 bg-white/[0.06] px-3 py-3">
-      <p className="text-[15px] font-extrabold tabular-nums text-white">
-        Pay {who} {amount}
-      </p>
-
-      {step === "idle" ? (
-        <div className="flex flex-wrap gap-2">
-          <button type="button" className={plateWhite} onClick={() => setStep("app")}>
-            <Ion name="phone-portrait-outline" size={16} />
-            Pay in the HOLD app
-          </button>
-          <button type="button" className={btnGlass} onClick={() => setStep("confirm")}>
-            I paid another way
-          </button>
-        </div>
-      ) : null}
-
-      {step === "app" ? (
-        <>
-          <p className="text-[13.5px] leading-[19px] text-white/[0.82]">
-            Open this group in the HOLD app and tap Settle up. The app sends {amount} to {who} and records it here as Paid in HOLD, checked against
-            the payment.
-          </p>
-          <p className="text-[12px] leading-[17px] text-white/55">
-            Sending from the web isn&apos;t connected to groups yet, so a payment made here couldn&apos;t be checked against this group.
-          </p>
-          <button type="button" className={`${btnGlass} self-start`} onClick={() => setStep("idle")}>
-            Back
-          </button>
-        </>
-      ) : null}
-
-      {step === "confirm" ? (
-        <>
-          <p className="text-[13.5px] leading-[19px] text-white/[0.82]">
-            Record that you paid {who} {amount} outside HOLD, in cash or another app? Everyone in the group sees it as your word, not as a payment
-            HOLD checked, and {who} is told.
-          </p>
-          {notice ? <Notice>{notice}</Notice> : null}
-          <div className="flex gap-2">
-            <button type="button" className={`${btnGlass} flex-1`} disabled={busy} onClick={() => setStep("idle")}>
-              Cancel
-            </button>
-            <button type="button" className={`${plateWhite} flex-1`} disabled={busy} onClick={record}>
-              {busy ? "Recording…" : "Record it"}
-            </button>
-          </div>
-        </>
-      ) : null}
-    </div>
-  );
-}
-
-/* ── People ───────────────────────────────────────────────────────── */
-
-function PeopleSheet({
-  groupId,
-  members,
-  meId,
-  onClose,
-  onAdded,
-}: {
-  groupId: string;
-  members: GroupMember[] | undefined;
-  meId: string | null;
-  onClose: () => void;
-  onAdded: () => void;
-}) {
-  return (
-    <div className={sheetCls}>
-      <div className="flex items-center justify-between gap-2">
-        <p className={sheetTitle}>People</p>
-        <button type="button" onClick={onClose} aria-label="Close" className="flex h-9 w-9 items-center justify-center rounded-[18px] text-white/75 hover:bg-white/10 hover:text-white">
-          <Ion name="close" size={20} />
-        </button>
-      </div>
-      {members === undefined ? <Skeleton className="h-10 rounded-[12px]" /> : null}
-      <div className="flex flex-col gap-2">
-        {members?.map((m) => (
-          <div key={m.userId} className="flex items-center gap-2.5">
-            <Face member={m} />
-            <span className="min-w-0 flex-1 truncate text-[14.5px] font-bold text-white">{memberName(m)}</span>
-            {m.userId === meId ? <Tag label="You" tone="dim" /> : null}
-          </div>
-        ))}
-      </div>
-      <p className="-mb-1 text-[12.5px] font-bold text-white/[0.82]">Add by @username</p>
-      <AddPeople groupId={groupId} onAdded={onAdded} />
-    </div>
-  );
-}
-
-function Face({ member }: { member: GroupMember }) {
-  if (member.avatarUrl) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={member.avatarUrl} alt="" width={30} height={30} className="h-[30px] w-[30px] shrink-0 rounded-[15px] object-cover" />;
-  }
-  return (
-    <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[15px] bg-white/[0.08]">
-      <Ion name="person-outline" size={15} className="text-white/60" />
-    </span>
   );
 }
 
@@ -481,6 +358,8 @@ type Row = { kind: "day"; key: string; label: string } | { kind: "item"; key: st
 
 function Timeline({
   items,
+  reads,
+  members,
   outgoing,
   loading,
   failed,
@@ -492,9 +371,13 @@ function Timeline({
   loadingOlder,
   onLoadOlder,
   onRetry,
-  onDelete,
+  onDiscard,
+  onOpenMessage,
+  onOpenExpense,
 }: {
   items: ThreadItem[];
+  reads: ReadMark[];
+  members: GroupMember[];
   outgoing: Outgoing[];
   loading: boolean;
   failed: boolean;
@@ -506,7 +389,9 @@ function Timeline({
   loadingOlder: boolean;
   onLoadOlder: () => void;
   onRetry: (key: string) => void;
-  onDelete: (messageId: string) => Promise<void>;
+  onDiscard: (key: string) => void;
+  onOpenMessage: (id: string) => void;
+  onOpenExpense: (id: string) => void;
 }) {
   const rows = useMemo<Row[]>(() => {
     const out: Row[] = [];
@@ -522,6 +407,16 @@ function Timeline({
     }
     return out;
   }, [items]);
+
+  // "Seen by" sits under your latest message that still has words in it.
+  const lastMine = useMemo(() => {
+    for (let i = items.length - 1; i >= 0; i--) {
+      const it = items[i];
+      if (it.kind === "message" && it.userId === meId && !it.deleted && it.body !== null) return it;
+    }
+    return null;
+  }, [items, meId]);
+  const byId = useMemo(() => new Map(members.map((m) => [m.userId, m])), [members]);
 
   useScrollKeeper(items, outgoing.length, onLoadOlder, !!nextBefore && !loadingOlder);
 
@@ -548,35 +443,54 @@ function Timeline({
   }
 
   return (
-    <div className="mt-1 flex flex-col gap-2">
+    <div className="mt-1 flex min-w-0 flex-col gap-2">
       {nextBefore ? (
         <button type="button" data-load-older onClick={onLoadOlder} disabled={loadingOlder} className={`${pillGlass} self-center`}>
           {loadingOlder ? "Loading…" : "Load older"}
         </button>
       ) : null}
-
-      {rows.length === 0 && outgoing.length === 0 ? (
-        <p className="px-1 py-8 text-center text-[13px] leading-[18px] text-white/70">
-          Nothing here yet. Say hello, or add the first expense with +.
-        </p>
+      {failed ? (
+        <div className="flex items-center justify-center gap-2 text-[12.5px] text-white/60">
+          New messages didn&apos;t load.
+          <button type="button" onClick={onRetryLoad} className="rounded-[10px] px-2 py-1 font-bold text-white hover:bg-white/10">
+            Retry
+          </button>
+        </div>
       ) : null}
 
-      {rows.map((r) =>
-        r.kind === "day" ? (
-          <p key={r.key} className="mt-2 text-center text-[11.5px] text-white/45">
-            {r.label}
-          </p>
-        ) : r.item.kind === "message" ? (
-          <MessageBubble key={r.key} item={r.item} mine={r.item.userId === meId} names={names} onDelete={onDelete} />
-        ) : r.item.kind === "expense" ? (
-          <ExpenseCard key={r.key} item={r.item} meId={meId} names={names} groupCurrency={groupCurrency} />
-        ) : (
-          <SettlementCard key={r.key} item={r.item} mine={r.item.userId === meId} names={names} />
-        ),
-      )}
+      {rows.length === 0 && outgoing.length === 0 ? (
+        <p className="px-1 py-8 text-center text-[13px] leading-[18px] text-white/70">Nothing here yet. Say hello, or add the first expense with +.</p>
+      ) : null}
+
+      {rows.map((r) => {
+        if (r.kind === "day") {
+          return (
+            <p key={r.key} className="mt-2 text-center text-[11.5px] text-white/45">
+              {r.label}
+            </p>
+          );
+        }
+        const it = r.item;
+        if (it.kind === "message") {
+          const seen = lastMine && it.id === lastMine.id ? seenBy(it, reads) : null;
+          return (
+            <MessageBubble
+              key={r.key}
+              item={it}
+              mine={it.userId === meId}
+              names={names}
+              onOpen={() => onOpenMessage(it.id)}
+              seen={seen ? { ids: seen, people: seen.map((id) => byId.get(id)), line: seenLine(seen, Math.max(0, members.length - 1), names.short) } : null}
+            />
+          );
+        }
+        if (it.kind === "expense") return <ExpenseCard key={r.key} item={it} meId={meId} names={names} groupCurrency={groupCurrency} onOpen={() => onOpenExpense(it.id)} />;
+        if (it.kind === "settlement") return <SettlementCard key={r.key} item={it} mine={it.userId === meId} names={names} />;
+        return <EventLine key={r.key} item={it} names={names} onOpen={it.subjectId ? () => onOpenExpense(it.subjectId!) : undefined} />;
+      })}
 
       {outgoing.map((o) => (
-        <PendingBubble key={o.key} item={o} onRetry={() => onRetry(o.key)} />
+        <PendingBubble key={o.key} item={o} onRetry={() => onRetry(o.key)} onDiscard={() => onDiscard(o.key)} />
       ))}
 
       <div data-thread-end />
@@ -656,38 +570,37 @@ function scrollToEnd() {
 /**
  * A message, in the payment chat's colours (Chat.tsx `Bubble`): mine on the
  * right in white at 14%, theirs on the left in near-white with dark ink and
- * their name on top. A deleted one keeps its place.
- *
- * My own message has a menu (the dots beside it, or a right click / long
- * press on the bubble) with Delete, which asks once.
+ * their name on top. A deleted one keeps its place. The menu opens from the
+ * dots (hover), a right click, or a long press on a touch screen.
  */
 function MessageBubble({
   item,
   mine,
   names,
-  onDelete,
+  onOpen,
+  seen,
 }: {
-  item: Extract<ThreadItem, { kind: "message" }>;
+  item: MessageItem;
   mine: boolean;
   names: Names;
-  onDelete: (messageId: string) => Promise<void>;
+  onOpen: () => void;
+  seen: { ids: string[]; people: (GroupMember | undefined)[]; line: string | null } | null;
 }) {
-  const [menu, setMenu] = useState<"closed" | "open" | "busy" | "failed">("closed");
   const deleted = item.deleted || item.body === null;
   const ink = mine ? "text-white/[0.92]" : "text-[rgba(13,24,32,0.92)]";
   const muted = mine ? "text-white/45" : "text-[rgba(13,24,32,0.5)]";
-  const canMenu = mine && !deleted;
+  const press = useLongPress(onOpen);
 
   return (
-    <div className={`group flex flex-col ${mine ? "items-end" : "items-start"}`}>
-      <div className={`flex max-w-[78%] items-center gap-1 ${mine ? "flex-row-reverse" : ""}`}>
+    <div className={`group flex min-w-0 flex-col ${mine ? "items-end" : "items-start"}`}>
+      <div className={`flex max-w-[86%] min-w-0 items-center gap-1 sm:max-w-[78%] ${mine ? "flex-row-reverse" : ""}`}>
         <div
+          {...press}
           onContextMenu={(e) => {
-            if (!canMenu) return;
             e.preventDefault();
-            setMenu("open");
+            onOpen();
           }}
-          className={`min-w-0 rounded-[18px] px-3.5 pb-[7px] pt-2.5 ${mine ? "bg-white/[0.14]" : "bg-[rgba(232,240,244,0.92)]"}`}
+          className={`min-w-0 select-text rounded-[18px] px-3.5 pb-[7px] pt-2.5 [-webkit-touch-callout:none] ${mine ? "bg-white/[0.14]" : "bg-[rgba(232,240,244,0.92)]"}`}
         >
           {!mine ? <p className="mb-0.5 truncate text-[12px] font-bold text-[rgba(13,24,32,0.62)]">{names.subject(item.userId)}</p> : null}
           {deleted ? (
@@ -697,46 +610,218 @@ function MessageBubble({
           )}
           <span className={`mt-[3px] flex justify-end text-[10.5px] ${muted}`}>{shortTime(item.at)}</span>
         </div>
-        {canMenu && menu === "closed" ? (
-          <button
-            type="button"
-            onClick={() => setMenu("open")}
-            aria-label="Message options"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[16px] text-white/55 opacity-60 transition-opacity hover:bg-white/10 hover:text-white group-hover:opacity-100 focus:opacity-100"
-          >
-            <Ion name="ellipsis-horizontal" size={16} />
-          </button>
-        ) : null}
+        <button
+          type="button"
+          onClick={onOpen}
+          aria-label="Message options"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[16px] text-white/55 opacity-0 transition-opacity hover:bg-white/10 hover:text-white focus:opacity-100 group-hover:opacity-100 [@media(hover:none)]:hidden"
+        >
+          <Ion name="ellipsis-horizontal" size={16} />
+        </button>
       </div>
-      {canMenu && menu !== "closed" ? (
-        <div className="mt-1 flex items-center gap-2 text-[12.5px]">
-          <span className="text-white/[0.82]">{menu === "failed" ? "Could not delete it." : "Delete this message?"}</span>
-          <button type="button" onClick={() => setMenu("closed")} className="rounded-[10px] px-2 py-1 font-bold text-white/75 hover:bg-white/10 hover:text-white">
-            Cancel
-          </button>
-          <button
-            type="button"
-            disabled={menu === "busy"}
-            onClick={() => {
-              setMenu("busy");
-              onDelete(item.id).then(
-                () => setMenu("closed"),
-                () => setMenu("failed"),
-              );
-            }}
-            className="inline-flex items-center gap-1 rounded-[10px] bg-white/10 px-2 py-1 font-bold text-white hover:bg-white/[0.16] disabled:opacity-50"
-          >
-            <Ion name="trash-outline" size={13} />
-            {menu === "busy" ? "Deleting…" : "Delete"}
-          </button>
-        </div>
+      {item.edited && !deleted ? <span className="mt-0.5 px-2 text-[10.5px] text-white/50">Edited</span> : null}
+      {seen && seen.line ? (
+        <button type="button" onClick={onOpen} className="mt-1 flex max-w-full items-center gap-1.5 rounded-[10px] px-1.5 py-0.5 text-[11px] text-white/55 hover:bg-white/[0.06]">
+          <FaceStack people={seen.people} size={16} />
+          <span className="truncate">{seen.line}</span>
+        </button>
       ) : null}
     </div>
   );
 }
 
+/** A long press on a touch screen, without stealing a scroll: moving the finger cancels it. */
+function useLongPress(fn: () => void) {
+  const timer = useRef<number | null>(null);
+  const start = useRef<{ x: number; y: number } | null>(null);
+  const clear = () => {
+    if (timer.current !== null) window.clearTimeout(timer.current);
+    timer.current = null;
+    start.current = null;
+  };
+  useEffect(() => clear, []);
+  return {
+    onPointerDown: (e: React.PointerEvent) => {
+      if (e.pointerType === "mouse") return;
+      start.current = { x: e.clientX, y: e.clientY };
+      timer.current = window.setTimeout(() => {
+        clear();
+        fn();
+      }, LONG_PRESS_MS);
+    },
+    onPointerMove: (e: React.PointerEvent) => {
+      if (start.current && Math.hypot(e.clientX - start.current.x, e.clientY - start.current.y) > 10) clear();
+    },
+    onPointerUp: clear,
+    onPointerCancel: clear,
+    onPointerLeave: clear,
+  };
+}
+
+/**
+ * What can be done with one message.
+ *
+ *   Edit                  your own, not deleted; "Edited" shows under it after
+ *   Delete                asks: "Delete for me" (any message, gone from your
+ *                         thread only, no undo) or "Delete for everyone" (your
+ *                         own; it stays in its place as "Message deleted")
+ *   Seen by               everyone whose read position is at or after it
+ */
+function MessageActions({
+  item,
+  mine,
+  reads,
+  members,
+  names,
+  onClose,
+  onEdit,
+  onDeleteForEveryone,
+  onDeleteForMe,
+}: {
+  item: MessageItem;
+  mine: boolean;
+  reads: ReadMark[];
+  members: GroupMember[];
+  names: Names;
+  onClose: () => void;
+  onEdit: (id: string, body: string) => Promise<void>;
+  onDeleteForEveryone: (id: string) => Promise<void>;
+  onDeleteForMe: (id: string) => Promise<void>;
+}) {
+  const deleted = item.deleted || item.body === null;
+  const [mode, setMode] = useState<"menu" | "edit" | "delete">("menu");
+  const [text, setText] = useState(item.body ?? "");
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const seen = seenBy(item, reads);
+  const byId = new Map(members.map((m) => [m.userId, m]));
+  const others = members.filter((m) => m.userId !== item.userId);
+  const notSeen = others.filter((m) => !seen.includes(m.userId));
+  const body = text.trim();
+
+  const run = (fn: () => Promise<void>) => {
+    setBusy(true);
+    setNotice(null);
+    fn()
+      .then(onClose)
+      .catch((e) => setNotice(describeGroupError(e)))
+      .finally(() => setBusy(false));
+  };
+
+  const rowCls = "flex h-12 w-full items-center gap-3 rounded-[12px] px-3 text-left text-[14.5px] font-bold text-white transition-colors hover:bg-white/[0.08] disabled:opacity-50";
+
+  return (
+    <Sheet title={mode === "edit" ? "Edit message" : mode === "delete" ? "Delete message?" : "Message"} onClose={onClose} busy={busy}>
+      {mode !== "edit" ? (
+        <p className="line-clamp-3 whitespace-pre-wrap break-words rounded-[12px] bg-white/[0.05] px-3 py-2 text-[13.5px] text-white/[0.82]">
+          {deleted ? <span className="italic text-white/55">Message deleted</span> : item.body}
+        </p>
+      ) : null}
+
+      {mode === "menu" ? (
+        <>
+          <div className="flex flex-col">
+            {mine && !deleted ? (
+              <button type="button" className={rowCls} onClick={() => setMode("edit")}>
+                <Ion name="create-outline" size={18} />
+                Edit
+              </button>
+            ) : null}
+            {!deleted && typeof navigator !== "undefined" && navigator.clipboard ? (
+              <button
+                type="button"
+                className={rowCls}
+                onClick={() => {
+                  void navigator.clipboard.writeText(item.body ?? "").then(onClose, () => setNotice("Couldn't copy it."));
+                }}
+              >
+                <Ion name="copy-outline" size={18} />
+                Copy
+              </button>
+            ) : null}
+            <button type="button" className={rowCls} onClick={() => setMode("delete")}>
+              <Ion name="trash-outline" size={18} />
+              Delete
+            </button>
+          </div>
+
+          {mine || seen.length ? (
+            <div className="flex flex-col gap-1.5 border-t border-white/10 pt-3">
+              <p className="text-[12.5px] font-bold text-white/[0.82]">{seen.length && seen.length >= others.length && others.length > 1 ? "Seen by everyone" : "Seen by"}</p>
+              {seen.length === 0 ? <p className="text-[13px] text-white/55">No one yet.</p> : null}
+              {seen.map((id) => (
+                <div key={id} className="flex min-w-0 items-center gap-2.5">
+                  <PersonFace person={byId.get(id)} size={26} />
+                  <span className="min-w-0 flex-1 truncate text-[14px] text-white">{names.subject(id)}</span>
+                  <Ion name="checkmark-done" size={16} className="text-white/55" />
+                </div>
+              ))}
+              {mine && seen.length && notSeen.length ? <p className="text-[12px] text-white/50">Not yet: {notSeen.map((m) => names.subject(m.userId)).join(", ")}</p> : null}
+            </div>
+          ) : null}
+        </>
+      ) : null}
+
+      {mode === "edit" ? (
+        <>
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value.slice(0, MESSAGE_MAX + 200))}
+            rows={3}
+            autoFocus
+            aria-label="Message"
+            disabled={busy}
+            className="min-h-[88px] w-full resize-none rounded-[14px] border border-white/[0.12] bg-white/[0.06] px-3 py-2.5 text-[15px] leading-[21px] text-white outline-none focus:border-white/30"
+          />
+          {body.length > MESSAGE_MAX ? <p className="text-[12px] text-amber">Keep it under {MESSAGE_MAX} characters.</p> : null}
+          {notice ? <Notice>{notice}</Notice> : null}
+          <div className="flex gap-2">
+            <button type="button" className={`${btnGlass} flex-1`} disabled={busy} onClick={() => setMode("menu")}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className={`${plateWhite} flex-1`}
+              disabled={busy || !body || body.length > MESSAGE_MAX || body === (item.body ?? "").trim()}
+              onClick={() => run(() => onEdit(item.id, body))}
+            >
+              {busy ? "Saving…" : "Save"}
+            </button>
+          </div>
+        </>
+      ) : null}
+
+      {mode === "delete" ? (
+        <>
+          <p className="text-[13px] leading-[18px] text-white/[0.72]">
+            {mine && !deleted
+              ? "Delete for everyone leaves “Message deleted” in its place for the whole group. Delete for me takes it out of your thread only."
+              : "It goes from your thread only. Everyone else still sees it. This can't be undone."}
+          </p>
+          {notice ? <Notice>{notice}</Notice> : null}
+          <div className="flex flex-col gap-2">
+            {mine && !deleted ? (
+              <button type="button" className={plateCaution} disabled={busy} onClick={() => run(() => onDeleteForEveryone(item.id))}>
+                {busy ? "Deleting…" : "Delete for everyone"}
+              </button>
+            ) : null}
+            <button type="button" className={mine && !deleted ? btnGlass : plateCaution} disabled={busy} onClick={() => run(() => onDeleteForMe(item.id))}>
+              Delete for me
+            </button>
+            <button type="button" className={btnGlass} disabled={busy} onClick={() => setMode("menu")}>
+              Cancel
+            </button>
+          </div>
+        </>
+      ) : null}
+
+      {mode === "menu" && notice ? <Notice>{notice}</Notice> : null}
+    </Sheet>
+  );
+}
+
 /** A message on its way, or refused: "Sending…", or "Not sent · Retry". */
-function PendingBubble({ item, onRetry }: { item: Outgoing; onRetry: () => void }) {
+function PendingBubble({ item, onRetry, onDiscard }: { item: Outgoing; onRetry: () => void; onDiscard: () => void }) {
   return (
     <div className="flex flex-col items-end">
       <div className={`max-w-[78%] rounded-[18px] bg-white/[0.14] px-3.5 pb-[7px] pt-2.5 ${item.state === "sending" ? "opacity-70" : ""}`}>
@@ -744,62 +829,85 @@ function PendingBubble({ item, onRetry }: { item: Outgoing; onRetry: () => void 
         <span className="mt-[3px] flex justify-end text-[10.5px] text-white/45">{item.state === "sending" ? "Sending…" : shortTime(item.at)}</span>
       </div>
       {item.state === "failed" ? (
-        <button type="button" onClick={onRetry} className="mt-1 inline-flex items-center gap-1 rounded-[10px] px-2 py-1 text-[12.5px] font-bold text-amber hover:bg-amber/[0.12]">
-          <Ion name="refresh" size={13} />
-          Not sent · Retry
-        </button>
+        <span className="mt-1 flex items-center gap-1">
+          <button type="button" onClick={onRetry} className="inline-flex items-center gap-1 rounded-[10px] px-2 py-1 text-[12.5px] font-bold text-amber hover:bg-amber/[0.12]">
+            <Ion name="refresh" size={13} />
+            Not sent · Retry
+          </button>
+          <button type="button" onClick={onDiscard} className="rounded-[10px] px-2 py-1 text-[12.5px] font-bold text-white/60 hover:bg-white/10 hover:text-white">
+            Discard
+          </button>
+        </span>
       ) : null}
     </div>
   );
 }
 
-/** The card an expense makes in the conversation, on the payer's side. */
-function ExpenseCard({ item, meId, names, groupCurrency }: { item: Expense; meId: string | null; names: Names; groupCurrency: string }) {
+/** The card an expense makes in the conversation, on the payer's side. It opens the expense. */
+function ExpenseCard({ item, meId, names, groupCurrency, onOpen }: { item: ExpenseItem; meId: string | null; names: Names; groupCurrency: string; onOpen: () => void }) {
   const mine = item.userId === meId;
   const part = expenseForMe(item, meId);
   const converted = item.currency.toUpperCase() !== groupCurrency ? ` (${moneyText(item.groupMinor, groupCurrency)})` : "";
   return (
     <Side mine={mine}>
-      <div className={`flex flex-col gap-1.5 rounded-[16px] border border-white/10 px-3.5 py-3 ${item.deleted ? "bg-white/[0.03]" : "bg-white/[0.08]"}`}>
-        <div className="flex items-center gap-2.5">
+      <button
+        type="button"
+        onClick={onOpen}
+        disabled={item.deleted}
+        className={`flex w-full min-w-0 flex-col gap-1.5 rounded-[16px] border border-white/10 px-3.5 py-3 text-left transition-colors ${item.deleted ? "bg-white/[0.03]" : "bg-white/[0.08] hover:bg-white/[0.11]"}`}
+      >
+        <span className="flex w-full min-w-0 items-center gap-2.5">
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[16px] bg-white/[0.08]">
             <Ion name="receipt-outline" size={16} className="text-white/[0.82]" />
           </span>
           <span className={`min-w-0 flex-1 truncate text-[15px] font-extrabold tracking-[-0.2px] ${item.deleted ? "text-white/55 line-through" : "text-white"}`}>
             {item.description?.trim() || "Expense"}
           </span>
-          {item.deleted ? <Tag label="Removed" tone="dim" /> : null}
-        </div>
-        <p className={`text-[13.5px] tabular-nums ${item.deleted ? "text-white/45 line-through" : "text-white/[0.82]"}`}>
+          {item.deleted ? <Tag label="Removed" tone="dim" /> : item.edited ? <Tag label="Edited" tone="dim" /> : null}
+          {!item.deleted ? <Ion name="chevron-forward" size={16} className="shrink-0 text-white/45" /> : null}
+        </span>
+        <span className={`text-[13.5px] tabular-nums ${item.deleted ? "text-white/45 line-through" : "text-white/[0.82]"}`}>
           {names.subject(item.userId)} paid {moneyText(item.amountMinor, item.currency)}
           {converted}
-        </p>
+        </span>
+        {!item.deleted && (item.place || item.receiptUrl) ? (
+          <span className="flex min-w-0 items-center gap-3 text-[12px] text-white/60">
+            {item.place ? (
+              <span className="inline-flex min-w-0 items-center gap-1">
+                <Ion name="location-outline" size={13} className="shrink-0" />
+                <span className="truncate">{item.place}</span>
+              </span>
+            ) : null}
+            {item.receiptUrl ? (
+              <span className="inline-flex shrink-0 items-center gap-1">
+                <Ion name="image-outline" size={13} />
+                Receipt
+              </span>
+            ) : null}
+          </span>
+        ) : null}
         {!item.deleted ? (
-          <p className="text-[14px] font-bold tabular-nums text-white">
-            {part.kind === "share"
-              ? `Your part ${formatMinor(part.minor, groupCurrency)}`
-              : part.kind === "lent"
-                ? `You lent ${formatMinor(part.minor, groupCurrency)}`
-                : "Not part of this"}
-          </p>
+          <span className="text-[14px] font-bold tabular-nums text-white">
+            {part.kind === "share" ? `Your part ${formatMinor(part.minor, groupCurrency)}` : part.kind === "lent" ? `You lent ${formatMinor(part.minor, groupCurrency)}` : "Not part of this"}
+          </span>
         ) : null}
         <span className="flex justify-end text-[10.5px] text-white/55">{shortTime(item.at)}</span>
-      </div>
+      </button>
     </Side>
   );
 }
 
 /**
- * A settlement. Paid through HOLD carries a check and says so; the payer's
- * word says whose word it is. The two must never look alike.
+ * A settlement. Paid through HOLD carries a check and says so; the creditor's
+ * word and the payer's word say whose word they are. The three never look alike.
  */
-function SettlementCard({ item, mine, names }: { item: Settlement; mine: boolean; names: Names }) {
+function SettlementCard({ item, mine, names }: { item: SettlementItem; mine: boolean; names: Names }) {
   return (
     <Side mine={mine}>
       <div className="flex flex-col gap-1.5 rounded-[16px] border border-white/10 bg-white/[0.08] px-3.5 py-3">
         <div className="flex items-start gap-2.5">
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[16px] bg-white/[0.08]">
-            <Ion name={item.viaHold ? "swap-horizontal" : "cash-outline"} size={16} className="text-white/[0.82]" />
+            <Ion name={item.viaHold ? "swap-horizontal" : item.markedByCreditor ? "checkmark-done" : "cash-outline"} size={16} className="text-white/[0.82]" />
           </span>
           <p className="min-w-0 flex-1 pt-1 text-[14px] font-bold leading-[19px] tabular-nums text-white">{settlementText(item, names)}</p>
         </div>
@@ -808,177 +916,38 @@ function SettlementCard({ item, mine, names }: { item: Settlement; mine: boolean
             <Ion name="checkmark-circle" size={15} />
             Paid in HOLD
           </span>
-        ) : null}
+        ) : (
+          <span className="text-[12px] text-white/55">{item.markedByCreditor ? "Marked as paid, outside HOLD" : "Their word, outside HOLD"}</span>
+        )}
         <span className="flex justify-end text-[10.5px] text-white/55">{shortTime(item.at)}</span>
       </div>
     </Side>
   );
 }
 
-function Side({ mine, children }: { mine: boolean; children: ReactNode }) {
-  return (
-    <div className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-      <div className="w-full max-w-[86%] sm:max-w-[78%]">{children}</div>
-    </div>
+/** "Ana edited Dinner: the amount and the split", a quiet line in the middle. */
+function EventLine({ item, names, onOpen }: { item: EventItem; names: Names; onOpen?: () => void }) {
+  const inner = (
+    <>
+      <Ion name="create-outline" size={12} className="shrink-0" />
+      <span className="min-w-0 truncate">{eventText(item, names)}</span>
+      <span className="shrink-0 text-white/40">· {shortTime(item.at)}</span>
+    </>
+  );
+  const cls = "mx-auto flex max-w-full items-center gap-1.5 rounded-[12px] px-2.5 py-1 text-[12px] text-white/60";
+  return onOpen ? (
+    <button type="button" onClick={onOpen} className={`${cls} hover:bg-white/[0.06]`}>
+      {inner}
+    </button>
+  ) : (
+    <p className={cls}>{inner}</p>
   );
 }
 
-/* ── Add expense ──────────────────────────────────────────────────── */
-
-/**
- * Amount, currency (the group's by default), what it was for, who paid (me by
- * default), and split equally among everyone or among the people chosen.
- *
- * The split itself is the server's: it divides in minor units and gives the
- * remainder to the payer, so nothing is lost to rounding. The "about X each"
- * line is only a preview, and it is only drawn when the amount is in the
- * group's own currency, where it is the same arithmetic.
- */
-function AddExpense({
-  groupId,
-  currency: groupCurrency,
-  members,
-  meId,
-  onCancel,
-  onAdded,
-}: {
-  groupId: string;
-  currency: string;
-  members: GroupMember[];
-  meId: string | null;
-  onCancel: () => void;
-  onAdded: () => void;
-}) {
-  const [amount, setAmount] = useState("");
-  const [currency, setCurrency] = useState(groupCurrency);
-  const [what, setWhat] = useState("");
-  const [payer, setPayer] = useState<string | null>(meId);
-  const [everyone, setEveryone] = useState(true);
-  const [chosen, setChosen] = useState<Set<string>>(() => new Set(members.map((m) => m.userId)));
-  const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [key] = useState(() => newClientKey("expense"));
-
-  const cur = currency.trim().toUpperCase();
-  const curOk = /^[A-Z]{3,8}$/.test(cur);
-  const minor = curOk ? parseMajorToMinor(amount, cur) : null;
-  const people = everyone ? members.map((m) => m.userId) : members.map((m) => m.userId).filter((id) => chosen.has(id));
-  const each = minor && cur === groupCurrency && people.length > 0 ? (BigInt(minor) / BigInt(people.length)).toString() : null;
-  const ready = !!minor && !!payer && people.length > 0 && !busy;
-
-  const submit = () => {
-    if (!ready || !minor || !payer) return;
-    setBusy(true);
-    setNotice(null);
-    addExpense(
-      groupId,
-      {
-        amountMinor: minor,
-        currency: cur,
-        description: what.trim() || null,
-        ...(payer !== meId ? { payerUserId: payer } : {}),
-        ...(everyone ? {} : { participants: people }),
-      },
-      key,
-    )
-      .then(onAdded)
-      .catch((e) => setNotice(describeGroupError(e)))
-      .finally(() => setBusy(false));
-  };
-
+function Side({ mine, children }: { mine: boolean; children: ReactNode }) {
   return (
-    <div className={`${sheetCls} mt-3`}>
-      <div className="flex items-center justify-between gap-2">
-        <p className={sheetTitle}>Add expense</p>
-        <button type="button" onClick={onCancel} aria-label="Close" className="flex h-9 w-9 items-center justify-center rounded-[18px] text-white/75 hover:bg-white/10 hover:text-white">
-          <Ion name="close" size={20} />
-        </button>
-      </div>
-
-      <div className="flex gap-2">
-        <div className="min-w-0 flex-1">
-          <input
-            value={amount}
-            onChange={(e) => setAmount(e.target.value.replace(/[^\d.,]/g, "").slice(0, 18))}
-            inputMode="decimal"
-            placeholder="0.00"
-            aria-label="Amount"
-            autoFocus
-            className={`${inputCls} font-extrabold tabular-nums`}
-          />
-        </div>
-        <div className="w-[92px] shrink-0">
-          <input
-            value={currency}
-            onChange={(e) => setCurrency(e.target.value.replace(/[^A-Za-z]/g, "").slice(0, 8).toUpperCase())}
-            aria-label="Currency"
-            className={`${inputCls} text-center font-bold uppercase`}
-          />
-        </div>
-      </div>
-      {amount && !minor ? (
-        <p className="-mt-1 text-[12px] text-amber">
-          {curOk ? `Type an amount in ${cur}, with at most the decimals it has.` : "A currency is a code like USD or EUR."}
-        </p>
-      ) : null}
-
-      <input
-        value={what}
-        onChange={(e) => setWhat(e.target.value.slice(0, 120))}
-        placeholder="What for? (optional)"
-        aria-label="What for?"
-        className={inputCls}
-      />
-
-      <p className="-mb-1 text-[12.5px] font-bold text-white/[0.82]">Who paid</p>
-      <ChipRow label="Who paid">
-        {members.map((m) => (
-          <Chip key={m.userId} label={m.userId === meId ? "Me" : memberName(m)} selected={payer === m.userId} onClick={() => setPayer(m.userId)} />
-        ))}
-      </ChipRow>
-
-      <p className="-mb-1 text-[12.5px] font-bold text-white/[0.82]">Split equally</p>
-      <ChipRow label="Split">
-        <Chip label="Everyone" selected={everyone} onClick={() => setEveryone(true)} />
-        <Chip label="Choose people" selected={!everyone} onClick={() => setEveryone(false)} />
-      </ChipRow>
-      {!everyone ? (
-        <ChipRow label="Who shares it">
-          {members.map((m) => (
-            <Chip
-              key={m.userId}
-              icon={chosen.has(m.userId) ? "checkmark" : undefined}
-              label={m.userId === meId ? "Me" : memberName(m)}
-              selected={chosen.has(m.userId)}
-              onClick={() =>
-                setChosen((c) => {
-                  const next = new Set(c);
-                  if (next.has(m.userId)) next.delete(m.userId);
-                  else next.add(m.userId);
-                  return next;
-                })
-              }
-            />
-          ))}
-        </ChipRow>
-      ) : null}
-      <p className="text-[12.5px] text-white/55">
-        {people.length === 0
-          ? "Choose at least one person."
-          : each
-            ? `${people.length} ${people.length === 1 ? "person" : "people"}, about ${moneyText(each, groupCurrency)} each.`
-            : `Split between ${people.length} ${people.length === 1 ? "person" : "people"}${cur !== groupCurrency ? `, in ${groupCurrency} at today's rate` : ""}.`}
-      </p>
-
-      {notice ? <Notice>{notice}</Notice> : null}
-      <div className="flex gap-2">
-        <button type="button" className={`${btnGlass} flex-1`} onClick={onCancel} disabled={busy}>
-          Cancel
-        </button>
-        <button type="button" className={`${plateWhite} flex-1`} onClick={submit} disabled={!ready}>
-          {busy ? "Adding…" : "Add expense"}
-        </button>
-      </div>
+    <div className={`flex min-w-0 ${mine ? "justify-end" : "justify-start"}`}>
+      <div className="w-full min-w-0 max-w-[86%] sm:max-w-[78%]">{children}</div>
     </div>
   );
 }
@@ -990,7 +959,19 @@ function AddExpense({
  * has the GIF button. Enter sends, Shift+Enter breaks the line. Send is a
  * white plate here, not amber: on this screen the amber is Settle up's.
  */
-function Composer({ disabled, adding, onToggleAdd, onSend }: { disabled: boolean; adding: boolean; onToggleAdd: () => void; onSend: (body: string) => void }) {
+function Composer({
+  disabled,
+  adding,
+  canAdd,
+  onToggleAdd,
+  onSend,
+}: {
+  disabled: boolean;
+  adding: boolean;
+  canAdd: boolean;
+  onToggleAdd: () => void;
+  onSend: (body: string) => void;
+}) {
   const [text, setText] = useState("");
   const body = text.trim();
   const canSend = !disabled && body.length > 0 && body.length <= MESSAGE_MAX;
@@ -1010,7 +991,7 @@ function Composer({ disabled, adding, onToggleAdd, onSend }: { disabled: boolean
           onClick={onToggleAdd}
           aria-label={adding ? "Close add expense" : "Add expense"}
           aria-expanded={adding}
-          disabled={disabled}
+          disabled={disabled || !canAdd}
           className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[18px] transition-colors hover:bg-white/10 hover:text-white disabled:opacity-45 ${adding ? "bg-white/[0.14] text-white" : "text-white/75"}`}
         >
           <Ion name="add" size={22} />
