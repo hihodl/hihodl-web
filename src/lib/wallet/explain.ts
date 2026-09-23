@@ -23,6 +23,8 @@ export function explain(e: unknown): string {
         return "This device already has a passkey for your account. Use that one instead.";
       case "no_prf":
         return "This passkey cannot protect a wallet: its password manager does not support the PRF extension. Nothing was saved, and a passkey just created for it was not added to your account (you can delete it from your password manager). Use Safari with iCloud Keychain (iOS 18.4 / macOS 15.4 or later) or Chrome with Google Password Manager.";
+      case "no_prf_here":
+        return "This browser cannot protect a wallet with a passkey: it does not support the PRF extension. Nothing was created. Use Safari with iCloud Keychain (iOS 18.4 / macOS 15.4 or later) or Chrome with Google Password Manager, or make your wallet in the HOLD app.";
       // Said BEFORE any prompt: nothing was created, so there is nothing to
       // delete and nothing to undo. The version is the fix, and it is theirs
       // to make, so it is named.

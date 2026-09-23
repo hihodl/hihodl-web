@@ -32,6 +32,7 @@ export class PasskeyError extends Error {
       | "cancelled" // the person closed the sheet, or it timed out
       | "exists" // this authenticator already holds a passkey for the account
       | "no_prf" // the passkey provider does not do PRF: nothing may be wrapped with it
+      | "no_prf_here" // this browser says, before any prompt, that it cannot do PRF: nothing was created
       | "os_too_old" // an Apple OS whose PRF is not trustworthy for a wallet (below 18.4)
       | "failed",
     message?: string,
@@ -100,6 +101,32 @@ export function prfTrustedHere(ua?: string): boolean {
   return v === null || v[0] > minMajor || (v[0] === minMajor && v[1] >= minMinor);
 }
 
+/**
+ * Does this browser say it can do PRF, before any prompt?
+ *
+ * `PublicKeyCredential.getClientCapabilities()` (Chrome 133+, Safari 17.4+)
+ * reports `extension:prf`. It answers for the BROWSER, not the password manager
+ * the person will pick, so it can only rule out, never promise: `false` means
+ * no passkey made here could ever carry a PRF output, and asking would leave an
+ * orphan passkey in their password manager. `null` means the browser will not
+ * say (older, or the call failed), and the ceremony goes ahead as before, still
+ * checked after the fact by `no_prf`.
+ */
+export async function prfSupportedByBrowser(): Promise<boolean | null> {
+  if (typeof window === "undefined" || !window.PublicKeyCredential) return null;
+  const pkc = window.PublicKeyCredential as unknown as {
+    getClientCapabilities?: () => Promise<Record<string, boolean | undefined>>;
+  };
+  if (typeof pkc.getClientCapabilities !== "function") return null;
+  try {
+    const caps = await pkc.getClientCapabilities();
+    const v = caps?.["extension:prf"];
+    return typeof v === "boolean" ? v : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Can a ceremony for rpId hihodl.xyz run on this page at all? */
 export function passkeysHere(): boolean {
   if (typeof window === "undefined" || !window.PublicKeyCredential || !navigator.credentials) return false;
@@ -164,6 +191,10 @@ export async function createPasskeyWithPrf(
   // prompts to get it. Only a wallet is refused — a passkey that just signs in
   // (`requirePrf: false`) is fine on any version.
   if (requirePrf && !prfTrustedHere()) throw new PasskeyError("os_too_old");
+  // Same reason, asked of the browser itself: when it says outright that PRF
+  // is not there, the prompt would only leave a passkey that can never open a
+  // wallet sitting in their password manager. Unknown goes ahead as before.
+  if (requirePrf && (await prfSupportedByBrowser()) === false) throw new PasskeyError("no_prf_here");
   const publicKey: PublicKeyCredentialCreationOptions = {
     challenge: fromBase64(options.challenge),
     rp: { name: options.rp.name, id: RP_ID },
