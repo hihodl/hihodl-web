@@ -45,7 +45,8 @@ import { claimableSpots, creatorStorefront, listingSpots, spotPrice } from "@/li
 
 import { useProductHref } from "../base";
 import { Ion } from "../ion";
-import { linkHref, playHref, usePhone } from "../link/in-app";
+import { playHref, usePhone } from "../link/in-app";
+import { hereNow, useLinkGate } from "../link/LinkGate";
 import { PhoneApproval } from "../link/PhoneApproval";
 
 type Step =
@@ -381,6 +382,17 @@ function Pay({
   const productHref = useProductHref();
   const phone = usePhone();
 
+  // A wallet made in the app with no phone linked: Pay opens the sheet every
+  // payment opens (link/LinkGate), up front when the status already says so,
+  // and whenever the flow finds out on the way (prepareSpot → link-first).
+  const gate = useLinkGate();
+  const { ask } = gate;
+  useEffect(() => {
+    if (phase.kind !== "link-first") return;
+    setPhase({ kind: "idle" });
+    ask(hereNow());
+  }, [phase.kind, ask]);
+
   /*
    * Following the phone ends with this sheet. A pending approval is cancelled
    * as it closes, so the phone cannot approve a payment nobody is here to
@@ -409,6 +421,7 @@ function Pay({
   // the passkey is asked on the second, inside its click, so Safari lets it
   // start. With a linked phone, Pay holds the spot and asks the phone.
   const buy = () => {
+    if (gate.blocked) return ask(hereNow());
     setCancel({ busy: false, notice: null });
     void prepareSpot({
       positionId: spot.id,
@@ -483,18 +496,14 @@ function Pay({
 
   // A wallet made in the app, no phone linked: link it once and it approves
   // every payment started here. A full load: the link screen's strict CSP.
-  if (phase.kind === "link-first" || phase.kind === "no-wallet") {
-    const link = phase.kind === "link-first";
-    const canMake = phase.kind === "no-wallet" && phase.canMake;
-    const title = link ? "Link your phone to pay from here" : canMake ? "Make your wallet first" : "Get HOLD to pay";
-    const body = link
-      ? "Your wallet was made in the HOLD app, and its keys stay on your phone. Link the phone once, and it approves and signs every payment you start here. Nothing has been charged."
-      : canMake
-        ? "Paying from HOLD needs a wallet on this account. Make one on the Wallet page with your passkey, then come back to this spot."
-        : "Paying from HOLD needs a wallet on this account, and the HOLD app on Google Play makes one with every chain.";
-    const here = typeof window === "undefined" ? undefined : `${window.location.pathname}${window.location.search}`;
-    const href = link ? linkHref(productHref, here) : canMake ? productHref("/wallet") : playHref(phone);
-    const label = link ? "Link your phone" : canMake ? "Make your wallet" : "Get HOLD on Google Play";
+  if (phase.kind === "no-wallet") {
+    const canMake = phase.canMake;
+    const title = canMake ? "Make your wallet first" : "Get HOLD to pay";
+    const body = canMake
+      ? "Paying from HOLD needs a wallet on this account. Make one on the Wallet page with your passkey, then come back to this spot."
+      : "Paying from HOLD needs a wallet on this account, and the HOLD app on Google Play makes one with every chain.";
+    const href = canMake ? productHref("/wallet") : playHref(phone);
+    const label = canMake ? "Make your wallet" : "Get HOLD on Google Play";
     return (
       <div className="flex flex-col gap-3">
         <div className="rounded-[16px] border border-white/10 bg-white/[0.05] p-3.5">
@@ -504,7 +513,7 @@ function Pay({
         {href ? (
           <a
             href={href}
-            target={!link && !canMake ? "_blank" : undefined}
+            target={!canMake ? "_blank" : undefined}
             rel="noopener"
             className="mt-1 inline-flex h-12 items-center justify-center rounded-[14px] bg-white/10 text-[15px] font-strong text-white transition-colors hover:bg-white/[0.16]"
           >
@@ -522,6 +531,7 @@ function Pay({
 
   return (
     <div className="flex flex-col gap-3">
+      {gate.sheet}
       <div className="rounded-[16px] border border-white/10 bg-white/[0.05] p-3.5">
         <p className="text-[13px] text-white/60">{space.title}</p>
         <p className="mt-0.5 text-[15px] font-strong text-white">{spot.title?.trim() || spot.label}</p>

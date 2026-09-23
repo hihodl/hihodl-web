@@ -68,7 +68,8 @@ import { lock, unlockWith, useVault } from "@/lib/wallet/vault";
 
 import { UserAvatar } from "../account/UserAvatar";
 import { useProductHref } from "../base";
-import { inAppHref, linkHref, playHref, usePhone } from "../link/in-app";
+import { inAppHref, playHref, usePhone } from "../link/in-app";
+import { hereNow, useLinkGate } from "../link/LinkGate";
 import {
   ActionsRow,
   AppScreen,
@@ -286,6 +287,12 @@ function AppWallet({ status, send }: { status: WalletStatus; send: boolean }) {
   const [sending, setSending] = useState(send && payer === "app");
   const [prefill] = useState(prefillFromUrl);
   const balances = useBalances(payer === "app" ? w.solana : null);
+  const gate = useLinkGate();
+  // Arrived to send (Home, a thread, a request, a typed /wallet/send): the sheet opens at once.
+  const { ask } = gate;
+  useEffect(() => {
+    if (send && payer === "link_first") ask(hereNow());
+  }, [send, payer, ask]);
 
   if (w.loading) return <Skeleton className="mx-auto h-[320px] w-full max-w-[460px]" />;
   if (sending && w.solana) {
@@ -314,15 +321,13 @@ function AppWallet({ status, send }: { status: WalletStatus; send: boolean }) {
       </>
     ) : payer === "link_first" ? (
       <>
-        <HeroCard icon="phone-portrait-outline" title="Link your phone to pay from here">
-          <HeroBody>
-            This wallet was made in the HOLD app, and its keys stay on your phone. Link the phone once, and every payment you
-            start here is approved and signed there.
-          </HeroBody>
-        </HeroCard>
-        <PrimaryButton icon="qr-code-outline" onClick={() => window.location.assign(linkHref(productHref, productHref(send ? "/wallet/send" : "/wallet")))}>
-          Link your phone
+        {/* Send asks, in the sheet every payment opens (link/LinkGate), and linking comes back to the send. */}
+        <PrimaryButton icon="send-outline" onClick={() => gate.ask(send ? hereNow() : productHref("/wallet/send"))}>
+          Send
         </PrimaryButton>
+        <FooterNote icon="phone-portrait-outline">
+          This wallet was made in the HOLD app, and its keys stay on your phone. Link the phone once to pay from here.
+        </FooterNote>
       </>
     ) : (
       <>
@@ -337,6 +342,7 @@ function AppWallet({ status, send }: { status: WalletStatus; send: boolean }) {
 
   return (
     <div className="flex flex-col gap-4">
+      {gate.sheet}
       {send ? <div className="mx-auto flex w-full max-w-[460px] flex-col gap-3 pt-2">{pay}</div> : null}
       {w.solana ? <Receive address={w.solana} /> : null}
       {!send ? <div className="mx-auto flex w-full max-w-[460px] flex-col gap-3">{pay}</div> : null}

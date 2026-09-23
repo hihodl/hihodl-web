@@ -107,6 +107,7 @@ import { ActionsRow, HeroBalance, MiniAction, money, TokenIcon } from "../wallet
 import { ReadFailed } from "../money/kit";
 import { SavingsPanel, SavingsRateLine } from "../money/SavingsScreen";
 import { ActivityRow, GREEN, readRow } from "./activity-parts";
+import { useLinkGate } from "../link/LinkGate";
 import { LinkPhoneCard, LinkPhoneSheet, useLinkNudge } from "./LinkPhoneNudge";
 
 /** The app's `RECENT_ACTIVITY_ROWS`. */
@@ -226,6 +227,8 @@ export function HomeScreen({ initialScope = "main" }: { initialScope?: string } 
   const amount = useAmount();
   // Link your phone: one card, and once a sheet, only when a read says so (LinkPhoneNudge).
   const linkNudge = useLinkNudge();
+  // Send from a wallet made in the app with no phone linked: the sheet, not the Wallet page (link/LinkGate).
+  const gate = useLinkGate();
   const container = useContainer();
   const subaccounts = useMemo<LedgerSubaccount[]>(() => container.data?.subaccounts ?? [], [container.data]);
 
@@ -454,7 +457,11 @@ export function HomeScreen({ initialScope = "main" }: { initialScope?: string } 
             <ActionsRow>
               <MiniAction icon="add-circle-outline" label="Add" href={href("/add")} />
               {/* /wallet/send answers everybody: a web wallet, one made in the app, or none yet. */}
-              <MiniAction icon="send-outline" label="Send" href={href("/wallet/send")} />
+              {gate.blocked ? (
+                <MiniAction icon="send-outline" label="Send" onClick={() => gate.ask(href("/wallet/send"))} />
+              ) : (
+                <MiniAction icon="send-outline" label="Send" href={href("/wallet/send")} />
+              )}
               {/* Was "Accounts", which opened the Overview — the same panel the
                   bubble under the balance opens, two controls apart. Activity
                   takes the place: it left the column, and the card below shows
@@ -578,6 +585,7 @@ export function HomeScreen({ initialScope = "main" }: { initialScope?: string } 
       */}
 
       <LinkPhoneSheet nudge={linkNudge} />
+      {gate.sheet}
 
       {overview ? (
         <Overview

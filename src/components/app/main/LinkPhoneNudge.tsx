@@ -40,6 +40,7 @@ import { payerOf } from "@/lib/wallet/api";
 
 import { useProductHref } from "../base";
 import { Ion } from "../ion";
+import { LinkToPaySheet } from "../link/LinkGate";
 import { linkHref, playHref, usePhone } from "../link/in-app";
 import { useShell } from "../Shell";
 
@@ -286,50 +287,10 @@ export function LinkPhoneCard({ nudge }: { nudge: LinkNudge }) {
 /* ── The one-time sheet ────────────────────────────────────────────── */
 
 /**
- * The app's AccountProtectionSheet, for a wallet made in the app: the first
- * time Home opens on the web, say plainly that paying from here needs the
- * phone linked. Shown once; the card stays for later.
+ * The first time Home opens on the web for a wallet made in the app: the
+ * same sheet every payment opens (link/LinkGate), coming back to Home. Shown
+ * once; the card stays for later.
  */
 export function LinkPhoneSheet({ nudge }: { nudge: LinkNudge }) {
-  const { closeSheet } = nudge;
-  useEffect(() => {
-    if (!nudge.sheet) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") closeSheet();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [nudge.sheet, closeSheet]);
-
-  if (!nudge.sheet) return null;
-  const w = wordsFor("pay", nudge.device);
-
-  return (
-    <div className="fixed inset-0 z-[70] flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-labelledby="link-sheet-title">
-      <button aria-label="Close" className="absolute inset-0 bg-black/55 backdrop-blur-sm" onClick={closeSheet} />
-      <div className="relative w-full max-w-[460px] overflow-hidden rounded-t-[28px] bg-[linear-gradient(180deg,#12324a,#0a1929)] px-6 pb-5 pt-3 sm:m-3 sm:rounded-[28px]">
-        <div className="mx-auto mb-5 h-1 w-10 rounded-[2px] bg-white/25 sm:hidden" />
-        <span className="mx-auto flex h-[60px] w-[60px] items-center justify-center rounded-full bg-[rgba(255,183,3,0.18)] text-amber">
-          <Ion name="phone-portrait-outline" size={28} />
-        </span>
-        <h2 id="link-sheet-title" className="mt-4 text-center text-[22px] font-bold text-white">
-          {w.title}
-        </h2>
-        <p className="mt-2.5 text-center text-[15px] leading-[21px] text-white/65">{w.body}</p>
-        <a
-          href={nudge.href}
-          className="mt-6 flex h-[52px] items-center justify-center rounded-[16px] bg-amber text-[16px] font-bold text-[#0F0F1A] transition-opacity hover:opacity-90"
-        >
-          {nudge.device === "iPhone" || nudge.device === "iPad" ? "Link your Android phone" : "Link your phone"}
-        </a>
-        <button
-          type="button"
-          onClick={closeSheet}
-          className="flex w-full items-center justify-center py-3.5 text-[15px] font-semibold text-white/55 transition-colors hover:text-white/80"
-        >
-          Not now
-        </button>
-      </div>
-    </div>
-  );
+  return <LinkToPaySheet open={nudge.sheet} device={nudge.device} href={nudge.href} onClose={nudge.closeSheet} />;
 }

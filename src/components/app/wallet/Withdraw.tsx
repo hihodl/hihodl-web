@@ -37,7 +37,6 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 
 import { settleRequest } from "@/lib/app/payment-requests";
-import { clientProductBase } from "@/lib/app/paths";
 import {
   authorizeWithdrawalPasskey,
   createWithdrawal,
@@ -70,6 +69,7 @@ import {
 
 import { AMBER, AppScreen, BackspaceIcon, ContinueButton, FooterNote, HeroBody, HeroCard, PrimaryButton, StatusLine, SUB, TokenIcon, useCountdown, WarningNote } from "./app-kit";
 import { Ion } from "../ion";
+import { hereNow, useLinkGate } from "../link/LinkGate";
 
 /* ── Parts ────────────────────────────────────────────────────────── */
 
@@ -203,7 +203,6 @@ export interface Draft {
 export type WithdrawPhase =
   | { kind: "form"; notice?: string | null }
   | { kind: "review"; busy: boolean; notice?: string | null }
-  | { kind: "link-first" }
   | { kind: "on-phone"; withdrawal: Withdrawal; cancelling?: boolean; notice?: string | null }
   | { kind: "preparing"; withdrawal: Withdrawal }
   | { kind: "passkey"; withdrawal: Withdrawal; busy: boolean; notice?: string | null }
@@ -253,7 +252,6 @@ export function WithdrawView({
     onReview: () => void;
     onRequest: () => void;
     onConfirmPasskey: () => void;
-    onLink: () => void;
     onCancel: () => void;
     onDone: () => void;
     onEdit: () => void;
@@ -433,24 +431,6 @@ export function WithdrawView({
     );
   }
 
-  if (phase.kind === "link-first") {
-    return (
-      <AppScreen title="Confirm payment" onBack={actions.onEdit}>
-        <div className="flex flex-col gap-4 pt-4">
-          <HeroCard icon="phone-portrait-outline" title="Link your phone to pay from here">
-            <HeroBody>
-              This wallet was made in the HOLD app, and its keys stay on your phone. Link the phone once, and it approves and
-              signs every payment you start here. Nothing was sent.
-            </HeroBody>
-          </HeroCard>
-          <PrimaryButton icon="phone-portrait-outline" onClick={actions.onLink}>
-            Link your phone
-          </PrimaryButton>
-        </div>
-      </AppScreen>
-    );
-  }
-
   if (phase.kind === "on-phone") {
     const w = phase.withdrawal;
     return (
@@ -623,6 +603,7 @@ export function Withdraw({
     to: prefill?.to ?? "",
   });
   const [phase, setPhase] = useState<WithdrawPhase>({ kind: "form" });
+  const gate = useLinkGate();
   const [here, setHere] = useState<Phone | null>(null);
   useEffect(() => setHere(phoneOf(navigator.userAgent, navigator.maxTouchPoints ?? 0)), []);
   const backup = useRef<WalletBackup | null>(null);
@@ -719,7 +700,13 @@ export function Withdraw({
        * phone" in front of somebody whose phone has nothing to do with it.
        * Every refusal now says its own name.
        */
-      if (e instanceof WalletApiError && e.code === "LINK_YOUR_PHONE_FIRST") return setPhase({ kind: "link-first" });
+      if (e instanceof WalletApiError && e.code === "LINK_YOUR_PHONE_FIRST") {
+        // The server says so (the phone was removed since this page read the
+        // status): the same sheet as every other payment, coming back to this
+        // send. Nothing was sent; the review stays under it.
+        setPhase({ kind: "review", busy: false });
+        return gate.ask(hereNow());
+      }
       return setPhase({ kind: "review", busy: false, notice: describe(e) });
     }
     if (w.channel === "app") return setPhase({ kind: "on-phone", withdrawal: w });
@@ -795,27 +782,25 @@ export function Withdraw({
   };
 
   return (
-    <WithdrawView
-      phase={phase}
-      draft={draft}
-      balances={balances}
-      setDraft={setDraft}
-      approver={approver}
-      here={here}
-      actions={{
-        onBack,
-        onReview: () => setPhase({ kind: "review", busy: false }),
-        onRequest: () => void request(),
-        onConfirmPasskey: () => void approve(),
-        onLink: () => {
-          // The link screen, then back here. A full load: it carries the wallet pages' strict CSP.
-          const back = `${window.location.pathname}${window.location.search}`;
-          window.location.assign(`${clientProductBase()}/wallet/link?next=${encodeURIComponent(back)}`);
-        },
-        onCancel: () => void cancel(),
-        onDone: onBack,
-        onEdit: () => setPhase({ kind: "form" }),
-      }}
-    />
+    <>
+      {gate.sheet}
+      <WithdrawView
+        phase={phase}
+        draft={draft}
+        balances={balances}
+        setDraft={setDraft}
+        approver={approver}
+        here={here}
+        actions={{
+          onBack,
+          onReview: () => setPhase({ kind: "review", busy: false }),
+          onRequest: () => void request(),
+          onConfirmPasskey: () => void approve(),
+          onCancel: () => void cancel(),
+          onDone: onBack,
+          onEdit: () => setPhase({ kind: "form" }),
+        }}
+      />
+    </>
   );
 }

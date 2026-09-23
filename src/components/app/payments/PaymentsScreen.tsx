@@ -63,6 +63,7 @@ import { SponsorFlow } from "../sponsor/SponsorFlow";
 import { useProductHref } from "../base";
 import { BackHeader, Column } from "../hold";
 import { Ion, type IonName } from "../ion";
+import { useLinkGate } from "../link/LinkGate";
 import { useShell, useShellPrefs } from "../Shell";
 import { Skeleton } from "../ui";
 import { cardClass } from "../wallet/app-kit";
@@ -467,6 +468,8 @@ function ThreadView({
   const { session } = useShell();
   const [asking, setAsking] = useState(false);
   const spots = useSpotsBoughtFrom(row?.peerId ?? null);
+  // A wallet made in the app with no phone linked: Send and Pay open the sheet (link/LinkGate).
+  const gate = useLinkGate();
   /*
    * THE THIRD DOOR, AND ONLY THE THIRD.
    *
@@ -519,7 +522,10 @@ function ThreadView({
     if (prefill?.requestId) q.set("request", prefill.requestId);
     // /wallet/send, a full load (the wallet pages' CSP): it answers a wallet made in the app, and no wallet, too.
     const query = q.toString();
-    window.location.assign(`${productHref("/wallet/send")}${query ? `?${query}` : ""}`);
+    const to = `${productHref("/wallet/send")}${query ? `?${query}` : ""}`;
+    // Linking comes back to this very send, filled in, and it carries on there.
+    if (gate.blocked) return gate.ask(to);
+    window.location.assign(to);
   };
 
   const payTheirRequest = (r: PaymentRequest) => {
@@ -585,6 +591,8 @@ function ThreadView({
           Approved with your passkey, or on your phone if you have linked one.
         </p>
       </div>
+
+      {gate.sheet}
 
       {booking && shop ? (
         <SponsorFlow

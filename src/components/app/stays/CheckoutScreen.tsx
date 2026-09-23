@@ -35,6 +35,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useProductHref } from "../base";
 import { Ion } from "../ion";
 import { linkHref, playHref, usePhone } from "../link/in-app";
+import { hereNow, useLinkGate } from "../link/LinkGate";
 import { PhoneApproval } from "../link/PhoneApproval";
 
 import { Banner, Card, Cta, Empty, Photo, Screen, SectionLabel, Spinner } from "./kit";
@@ -43,7 +44,7 @@ import { PhotoViewer } from "./PhotoViewer";
 import { sane, stayFromParams, stayToParams } from "./SearchControls";
 import { usePoints, useRates, useStay, useStaysConfig } from "@/lib/app/stays-data";
 import { holdTripProvisionally, refreshTrips, releaseProvisionalTrip } from "@/lib/app/stays-data";
-import { approveStay, payForStay, type PayState } from "@/lib/app/stay-payment";
+import { approveStay, NO_PHONE_ANY_MORE, payForStay, type PayState } from "@/lib/app/stay-payment";
 import { getBalances, getWalletStatus, payerOf, WalletApiError, type WalletStatus } from "@/lib/wallet/api";
 import { cancelPaymentApproval } from "@/lib/link/payment-approvals";
 import { useCreatorSession } from "@/lib/creator/session";
@@ -131,6 +132,27 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
   const approving = pay?.phase === "approve";
   const locked = running || approving;
   const phone = usePhone();
+
+  /*
+   * A wallet made in the app with no phone linked cannot pay from here at
+   * all: the sheet every payment opens (link/LinkGate) says so as the
+   * checkout opens, before a form is filled for nothing, and again on Pay.
+   * Linking comes back to this checkout. The phone removed mid-payment
+   * (NO_PHONE_ANY_MORE) asks the same way.
+   */
+  const gate = useLinkGate();
+  const { ask } = gate;
+  const linkFirst = payer === "link_first";
+  const askedOnOpen = useRef(false);
+  useEffect(() => {
+    if (!linkFirst || askedOnOpen.current) return;
+    askedOnOpen.current = true;
+    ask(hereNow());
+  }, [linkFirst, ask]);
+  const phoneGone = pay?.phase === "stopped" && pay.message === NO_PHONE_ANY_MORE;
+  useEffect(() => {
+    if (phoneGone) ask(hereNow());
+  }, [phoneGone, ask]);
 
   /*
    * Following the phone ends with this page. A pending approval is cancelled
@@ -440,7 +462,9 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
              * integration branch. Somebody fills the whole form, and the only
              * button on the screen never lights up.
              */}
-            {!from ? (
+            {!from && linkFirst ? (
+              <Cta label={`Pay ${money(total, rate.currency)}`} variant="commit" onClick={() => ask(hereNow())} />
+            ) : !from ? (
               <NoPayer
                 wallet={wallet.data ?? null}
                 phone={phone}
@@ -474,6 +498,8 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
             </p>
           </div>
       </div>
+
+      {gate.sheet}
 
       <PhotoViewer
         images={stay.data?.gallery ?? []}

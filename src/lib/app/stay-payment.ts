@@ -434,7 +434,7 @@ export async function approveStay(args: {
 
 /* ── The phone ────────────────────────────────────────────────────── */
 
-const NO_PHONE_ANY_MORE = "Your phone is no longer linked. Link it again to pay from here. Nothing has been charged. Your room is still held.";
+export const NO_PHONE_ANY_MORE = "Your phone is no longer linked. Link it again to pay from here. Nothing has been charged. Your room is still held.";
 
 /**
  * Ask the linked phone, wait, and send what it signed: steps 3 to 6 when the
