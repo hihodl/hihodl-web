@@ -142,7 +142,7 @@ function MenuHome({ open }: { open: (s: Screen) => void }) {
           subject, next to Security and Account recovery.
         */}
         {walletPage === true ? (
-          <MenuRow icon="wallet-outline" label="Wallet" sub="Your Solana address, recovery words and withdrawals" href={productHref("/wallet")} />
+          <MenuRow icon="wallet-outline" label="Wallet" sub="Your Solana address, recovery words and withdrawals" href={productHref("/wallet")} reload />
         ) : null}
         <MenuRow icon="shield-checkmark-outline" label="Security" onClick={() => open("security")} />
         <MenuRow icon="key-outline" label="Account recovery" badge={recoveryBadge} onClick={() => open("recovery")} />

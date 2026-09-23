@@ -24,6 +24,7 @@ import Link from "next/link";
 import { MIN_X_ACCOUNT_AGE_DAYS, type XAccountStatus } from "@/lib/creator/types";
 import { useHoldWallet, useUsdcAccount } from "@/lib/app/hold-wallet";
 import { usePayout } from "@/lib/app/spaces-data";
+import { crossesKeyPage } from "@/lib/wallet/csp";
 
 import { useProductHref } from "../base";
 import { CopyButton } from "../front/kit";
@@ -155,6 +156,14 @@ const actionCls =
 
 function ActionButton({ action }: { action: Action }) {
   if (action.copy) return <CopyButton value={action.copy} label={action.label} className={actionCls} />;
+  // Into the Wallet: a full load, so its strict CSP is the response's (lib/wallet/csp).
+  if (action.href && crossesKeyPage(action.href)) {
+    return (
+      <a href={action.href} className={actionCls}>
+        {action.label}
+      </a>
+    );
+  }
   return (
     <Link href={action.href ?? "#"} className={actionCls}>
       {action.label}

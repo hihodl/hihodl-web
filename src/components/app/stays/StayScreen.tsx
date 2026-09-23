@@ -57,7 +57,8 @@ export function StayScreen({ hotelId }: { hotelId: string }) {
   function book(rate: Rate) {
     const q = stayToParams(search);
     q.set("offer", rate.offerId);
-    router.push(`${href(`/travel/stay/${hotelId}/book`)}?${q}`);
+    // A full load: the book page signs, under the key pages' strict CSP (lib/wallet/csp).
+    window.location.assign(`${href(`/travel/stay/${hotelId}/book`)}?${q}`);
   }
 
   const groups = useMemo(() => groupByRoom(rates.data?.rates ?? [], stay.data?.rooms ?? []), [rates.data, stay.data]);

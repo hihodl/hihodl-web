@@ -48,6 +48,7 @@ import { chosenUsername } from "@/lib/app/me";
 import { useDoor } from "@/lib/app/onboarding";
 import { roleOf, waitingOnYou, type ShellRole } from "@/lib/app/spaces-model";
 import { useCreatorSettings, useListings, useMe, useOffers, useSeats, useTeam, useWork, useX } from "@/lib/app/spaces-data";
+import { crossesKeyPage } from "@/lib/wallet/csp";
 import { useWalletEnabled } from "@/lib/wallet/enabled";
 
 import { SpacesBaseProvider, useHref, useProductHref, useSpacesBase } from "./base";
@@ -492,7 +493,8 @@ function useBadges(): Partial<Record<NavKey, number>> {
 /**
  * The Wallet page carries a strict Content-Security-Policy that only a
  * response can set, so the way in and the way out are full page loads, never
- * a client-side navigation.
+ * a client-side navigation. The other pages that unlock keys (buying a spot,
+ * paying for a stay) are caught by `crossesKeyPage` in NavLink.
  */
 function hardLink(key: NavKey, active: NavKey | null): boolean {
   return key === "wallet" || active === "wallet";
@@ -642,9 +644,11 @@ function NavLink({ item, active, badge, collapsed, hard }: { item: NavItem; acti
   const base = useSpacesBase();
   const Icon = item.icon;
   const href = hrefFor(item, base);
+  const pathname = usePathname();
+  const full = hard || crossesKeyPage(href, pathname ?? undefined);
   const current = active ? ("page" as const) : undefined;
   const go = (className: string, children: ReactNode, label?: string) =>
-    hard ? (
+    full ? (
       <a href={href} aria-current={current} aria-label={label} title={label} className={className}>
         {children}
       </a>
