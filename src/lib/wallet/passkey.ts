@@ -321,3 +321,41 @@ export async function assertWithPrf(options: ServerAssertionOptions, onlyIds: re
     },
   };
 }
+
+/**
+ * A plain assertion over the SERVER's challenge, no PRF: approving something
+ * that opens no wallet (removing a linked phone). Any passkey registered on
+ * the account may answer, so the server's list is used as given. Call it
+ * first thing in the click, with options fetched before it.
+ */
+export async function assertChallenge(options: ServerAssertionOptions): Promise<BoundAssertion["assertion"]> {
+  if (!passkeysHere()) throw new PasskeyError("unavailable");
+  const publicKey: PublicKeyCredentialRequestOptions = {
+    challenge: fromBase64(options.challenge),
+    rpId: RP_ID,
+    allowCredentials: (options.allowCredentials ?? []).map((c) => ({ type: "public-key" as const, id: fromBase64(normalizeCredentialId(c.id)) })),
+    userVerification: "required",
+    timeout: options.timeout ?? 60000,
+  };
+  let cred: PublicKeyCredential;
+  try {
+    const got = await navigator.credentials.get({ publicKey });
+    if (!got) throw new PasskeyError("cancelled");
+    cred = got as PublicKeyCredential;
+  } catch (e) {
+    throw e instanceof PasskeyError ? e : mapError(e);
+  }
+  const res = cred.response as AuthenticatorAssertionResponse;
+  return {
+    id: cred.id,
+    rawId: toBase64Url(new Uint8Array(cred.rawId)),
+    type: "public-key",
+    response: {
+      clientDataJSON: toBase64Url(new Uint8Array(res.clientDataJSON)),
+      authenticatorData: toBase64Url(new Uint8Array(res.authenticatorData)),
+      signature: toBase64Url(new Uint8Array(res.signature)),
+      ...(res.userHandle ? { userHandle: toBase64Url(new Uint8Array(res.userHandle)) } : {}),
+    },
+    clientExtensionResults: {},
+  };
+}

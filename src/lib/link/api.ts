@@ -110,8 +110,45 @@ export async function activeLinkedDevices(): Promise<LinkedDevice[]> {
   return (await listLinkedDevices()).filter((d) => !d.revokedAt);
 }
 
-export function revokeLinkedDevice(id: string): Promise<unknown> {
-  return send(`device-link/devices/${encodeURIComponent(id)}`, { method: "DELETE" });
+/**
+ * REMOVING A PHONE NEEDS THE PASSKEY (or the phone itself, from the app).
+ *
+ * The session alone used to remove a phone, and a linked Android phone is the
+ * approver of every web payment. Now:
+ *
+ *   1. `removalChallenge(id)` BEFORE the tap: a nonce, and WebAuthn options
+ *      whose challenge is sha256("hihodl/unlink/v1" ‖ deviceId ‖ nonce).
+ *      `proofs` says who can remove this phone: "passkey" when the account
+ *      has one, "device" when the phone has a device key (the app signs it).
+ *   2. the passkey prompt, first thing in the click (Safari's user activation)
+ *   3. `removeLinkedDevice(id, nonce, assertion)`.
+ *
+ * The old DELETE answers 410 UNLINK_NEEDS_APPROVAL. Contract:
+ * documentation/one-wallet-every-device.md, "Removing a phone".
+ */
+export interface RemovalChallenge {
+  nonce: string;
+  expiresAt: string | null;
+  proofs: ("passkey" | "device")[];
+  options: AssertionOptionsJSON | null;
+  /** When this tab asked; the server keeps the nonce five minutes. */
+  fetchedAt: number;
+}
+
+export async function removalChallenge(id: string): Promise<RemovalChallenge> {
+  const r = await send<Raw>(`device-link/devices/${encodeURIComponent(id)}/remove-challenge`, { json: {} });
+  const proofs = Array.isArray(r.proofs) ? (r.proofs as unknown[]).filter((p): p is "passkey" | "device" => p === "passkey" || p === "device") : [];
+  return {
+    nonce: str(r, "nonce") ?? "",
+    expiresAt: str(r, "expiresAt", "expires_at"),
+    proofs,
+    options: (r.publicKey as AssertionOptionsJSON | null | undefined) ?? null,
+    fetchedAt: Date.now(),
+  };
+}
+
+export function removeLinkedDevice(id: string, body: { nonce: string; assertion: unknown }): Promise<unknown> {
+  return send(`device-link/devices/${encodeURIComponent(id)}/remove`, { json: body });
 }
 
 /* ── Withdrawals ──────────────────────────────────────────────────── */
