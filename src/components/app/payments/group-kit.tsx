@@ -18,6 +18,7 @@ import { IMAGE_ACCEPT, uprightImage } from "@/lib/app/image-upright";
 
 import { EmojiAvatar } from "../front/kit";
 import { Ion } from "../ion";
+import { Modal } from "../Modal";
 
 /* ── Buttons this family of screens uses (a pill's radius is half its height) ── */
 
@@ -38,9 +39,9 @@ export const sectionLabel = "text-[12.5px] font-bold text-white/[0.82]";
 /* ── The sheet ────────────────────────────────────────────────────── */
 
 /**
- * A dialog: from the foot on a phone, in the middle on a desktop (the payment
- * chat's own, Chat.tsx). Escape and the backdrop close it, except while
- * `busy`: a request in the air is not something to close over.
+ * A group sheet: the product's one Modal (../Modal), a sheet from the foot on
+ * a phone and a centred dialog on a desktop. Kept under this name so every
+ * group screen opens the same surface.
  */
 export function Sheet({
   title,
@@ -48,45 +49,19 @@ export function Sheet({
   busy = false,
   children,
   wide = false,
+  footer,
 }: {
   title: ReactNode;
   onClose: () => void;
   busy?: boolean;
   children: ReactNode;
   wide?: boolean;
+  footer?: ReactNode;
 }) {
-  const titleId = useId();
-  useEffect(() => {
-    const key = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !busy) onClose();
-    };
-    document.addEventListener("keydown", key);
-    return () => document.removeEventListener("keydown", key);
-  }, [busy, onClose]);
-
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-3 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby={titleId}>
-      <button type="button" aria-label="Close" onClick={() => !busy && onClose()} className="absolute inset-0 cursor-default" />
-      <div
-        className={`relative flex max-h-[88dvh] w-full ${wide ? "max-w-[520px]" : "max-w-[440px]"} flex-col rounded-[20px] border border-white/[0.12] bg-[#0E2430] shadow-[0_20px_60px_rgba(0,0,0,0.45)]`}
-      >
-        <div className="flex shrink-0 items-center justify-between gap-2 px-4 pb-2 pt-3.5">
-          <h2 id={titleId} className="min-w-0 truncate text-[18px] font-extrabold tracking-[-0.3px] text-white">
-            {title}
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={busy}
-            aria-label="Close"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[18px] text-white/75 hover:bg-white/10 hover:text-white disabled:opacity-40"
-          >
-            <Ion name="close" size={20} />
-          </button>
-        </div>
-        <div className="flex min-h-0 flex-col gap-3 overflow-y-auto overflow-x-hidden px-4 pb-4">{children}</div>
-      </div>
-    </div>
+    <Modal title={title} onClose={onClose} busy={busy} size={wide ? "lg" : "md"} footer={footer}>
+      {children}
+    </Modal>
   );
 }
 
