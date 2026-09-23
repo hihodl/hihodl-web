@@ -133,17 +133,58 @@ export function getBalances(account = "main", chains?: readonly string[]): Promi
   return read<BalancesAnswer>(`balances?${q}`);
 }
 
-/** Dollar prices by symbol and by mint. Open to anyone, but sent with the token like the rest. */
-export function getPrices(symbols: readonly string[], mints: readonly string[] = []): Promise<{ prices: Record<string, number> }> {
+/**
+ * Dollar prices by symbol and by mint. Open to anyone, but sent with the token like the rest.
+ *
+ * THE WIRE IS A LIST, THE SCREENS WANT A MAP. Production answers
+ * `{ prices: [{ symbol, price, fiat, updatedAt }] }` — a mint comes back as
+ * its own row with the mint in `symbol` — and every reader here indexes
+ * `prices[symbol]`. Read raw, that index is `undefined` for every coin, so
+ * every non-dollar holding drew "—" and Invest said none of them had a price.
+ * Normalised once, here, and a map is still accepted if the server ever
+ * answers with one.
+ */
+export async function getPrices(symbols: readonly string[], mints: readonly string[] = []): Promise<{ prices: Record<string, number> }> {
   const q = new URLSearchParams();
   if (symbols.length) q.set("symbols", symbols.join(","));
   if (mints.length) q.set("mints", mints.join(","));
-  return read<{ prices: Record<string, number> }>(`prices?${q}`);
+  const raw = await read<{ prices: unknown }>(`prices?${q}`);
+  return { prices: priceMap(raw?.prices) };
 }
 
-/** A price series for one symbol: `[[msSinceEpoch, price], …]`. */
-export function getPriceHistory(symbol: string, days: 7 | 30 | 90 | 365): Promise<{ symbol: string; prices: [number, number][] }> {
-  return read(`prices/history?symbol=${encodeURIComponent(symbol)}&days=${days}`);
+function priceMap(raw: unknown): Record<string, number> {
+  const out: Record<string, number> = {};
+  if (Array.isArray(raw)) {
+    for (const row of raw as { symbol?: string; price?: number }[]) {
+      if (!row?.symbol || typeof row.price !== "number" || !Number.isFinite(row.price)) continue;
+      // A mint is case-sensitive base58; a ticker is not.
+      out[row.symbol] = row.price;
+      out[row.symbol.toUpperCase()] = row.price;
+    }
+  } else if (raw && typeof raw === "object") {
+    for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+      if (typeof v === "number" && Number.isFinite(v)) out[k] = v;
+    }
+  }
+  return out;
+}
+
+/**
+ * A price series for one symbol: `[[msSinceEpoch, price], …]`.
+ *
+ * Production sends `[{ timestamp, price }]`; the curve and the 24h move both
+ * read tuples, and read the objects as `undefined`. Normalised here so that
+ * neither can.
+ */
+export async function getPriceHistory(symbol: string, days: 7 | 30 | 90 | 365): Promise<{ symbol: string; prices: [number, number][] }> {
+  const raw = await read<{ symbol?: string; prices?: unknown }>(`prices/history?symbol=${encodeURIComponent(symbol)}&days=${days}`);
+  const prices: [number, number][] = [];
+  for (const p of Array.isArray(raw?.prices) ? (raw.prices as unknown[]) : []) {
+    const t = Array.isArray(p) ? p[0] : (p as { timestamp?: number })?.timestamp;
+    const v = Array.isArray(p) ? p[1] : (p as { price?: number })?.price;
+    if (typeof t === "number" && typeof v === "number" && Number.isFinite(t) && Number.isFinite(v)) prices.push([t, v]);
+  }
+  return { symbol: raw?.symbol ?? symbol, prices };
 }
 
 /* ── What moved ───────────────────────────────────────────────────── */
