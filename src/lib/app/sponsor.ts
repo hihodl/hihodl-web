@@ -368,6 +368,30 @@ function newKey(): string {
 }
 
 /**
+ * ONE KEY PER SPOT, FOR AS LONG AS THIS PAGE LIVES.
+ *
+ * Pay is two taps now, and a payment left unapproved past FRESH_MS is
+ * prepared again. With a new key each time that second claim was a second
+ * order: a second hold on a spot this person already holds, counted against
+ * their holds for the day. The same key makes the server answer with the
+ * order it already made, and a fresh transaction for it when the old one's
+ * blockhash has lapsed (orders.service `openOrder` → `solanaHandoff`).
+ *
+ * The key is per spot, offer and points share, because the server refuses a
+ * replay that changes any of them (`idempotency_key_reused`).
+ */
+const claimKeys = new Map<string, string>();
+function claimKeyFor(positionId: string, offerId: string | null, share: PointsFeeShare | undefined): string {
+  const id = `${positionId}|${offerId ?? ""}|${share ?? ""}`;
+  let key = claimKeys.get(id);
+  if (!key) {
+    key = newKey();
+    claimKeys.set(id, key);
+  }
+  return key;
+}
+
+/**
  * Buy one spot, first half: whose wallet, hold the spot, and get the passkey
  * ready. Ends in `ready` (then `approveSpot`, on its own tap), or in a phase
  * that says why not.
@@ -401,14 +425,26 @@ export async function prepareSpot(args: {
   /* 2 ── hold the spot */
   say({ kind: "holding" });
   let handoff: RelayedHandoff;
-  try {
-    handoff = await claimSpot({
+  const claim = () =>
+    claimSpot({
       positionId: args.positionId,
       sponsorAddress: from,
-      idempotencyKey: newKey(),
+      idempotencyKey: claimKeyFor(args.positionId, args.offerId ?? null, args.pointsFeeShare),
       offerId: args.offerId ?? null,
       pointsFeeShare: args.pointsFeeShare,
     });
+  try {
+    try {
+      handoff = await claim();
+    } catch (e) {
+      // The order this key made is over (its hold lapsed), or the key no
+      // longer fits it: that key can only ever answer the same refusal. Drop
+      // it and ask once more with a new one.
+      const code = codeOf(e);
+      if (code !== "hold_expired" && code !== "idempotency_key_reused") throw e;
+      claimKeys.delete(`${args.positionId}|${args.offerId ?? ""}|${args.pointsFeeShare ?? ""}`);
+      handoff = await claim();
+    }
   } catch (e) {
     return say({ kind: "stopped", message: describeClaim(e) });
   }
