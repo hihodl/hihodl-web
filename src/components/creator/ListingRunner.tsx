@@ -75,11 +75,12 @@ import { GroundPicker, labelOf } from "./run/GroundPicker";
 import { Work } from "./run/Work";
 import { ListingSeries } from "./series/Series";
 import { ListingTeam } from "./team/ListingTeam";
+import { ListingCrew } from "./crew/ListingCrew";
 
 /** A screen's body scrolls inside itself on a wide screen, so the page stays one screen. */
 const SCREEN_BODY = "lg:max-h-[calc(var(--app-vh,100dvh)-196px)] lg:overflow-y-auto";
 
-type Screen = "events" | "offers" | "floors" | "spots" | "photo" | "ground" | "deliveries" | "updates" | "content" | "team";
+type Screen = "events" | "offers" | "floors" | "spots" | "photo" | "ground" | "deliveries" | "updates" | "content" | "team" | "together";
 
 const SCREEN_TITLE: Record<Screen, string> = {
   events: "Events",
@@ -92,6 +93,7 @@ const SCREEN_TITLE: Record<Screen, string> = {
   updates: "Updates",
   content: "Offer them content",
   team: "Who works it",
+  together: "Sell as a crew",
 };
 
 export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: string; item?: string }) {
@@ -191,6 +193,8 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
     updates: space.status !== "draft",
     content: leads.length > 0,
     team: owner && agency.on,
+    // A package several creators sell together, each paid in the brand's one payment.
+    together: owner && space.status !== "delisted" && space.status !== "closed",
   };
 
   const screen = (Object.keys(shown) as Screen[]).find((k) => k === tab && shown[k]) ?? null;
@@ -245,6 +249,11 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
         {screen === "team" ? (
           <div className={SCREEN_BODY}>
             <ListingTeam spaceId={space.id} />
+          </div>
+        ) : null}
+        {screen === "together" ? (
+          <div className={SCREEN_BODY}>
+            <ListingCrew spaceId={space.id} onChanged={changed} />
           </div>
         ) : null}
       </ScreenFrame>
@@ -353,6 +362,16 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
         ) : null}
         {shown.team ? (
           <HubCard screen="team" space={space} icon="people-outline" value={crew ?? "–"} unit={crew === 1 ? "person" : "people"} />
+        ) : null}
+        {shown.together ? (
+          <HubCard
+            screen="together"
+            space={space}
+            icon="people-outline"
+            value={space.crew ? space.crew.name : "–"}
+            unit={space.crew ? (space.crew.ready ? `${space.crew.members.length} creators` : "waiting for a yes") : "sell with other creators"}
+            attention={Boolean(space.crew && !space.crew.ready)}
+          />
         ) : null}
       </ul>
     </div>

@@ -136,8 +136,59 @@ export function ListingHead({ space }: { space: Space }) {
         )}
       </div>
       <CreatorChip creator={space.creator} />
+      <CrewBlock crew={space.crew ?? null} />
       <InspiredByCredit credit={space.inspiredBy ?? null} />
       <SpaceSiblings siblings={space.siblings} handle={space.creator.xHandle} eventName={space.event?.name ?? space.eventName} />
+    </div>
+  );
+}
+
+/**
+ * A crew: the people this package is made by, and what each of them brings.
+ *
+ * It sells the package, so nobody here is a link off the page: they are part
+ * of what the brand is buying, not somewhere else to go. The split is theirs
+ * and never shown; that one payment reaches all of them is the part a brand
+ * cares about, and it is said once.
+ */
+function CrewBlock({ crew }: { crew: NonNullable<Space["crew"]> | null }) {
+  if (!crew || crew.members.length < 2) return null;
+  return (
+    <div className="flex max-w-2xl flex-col gap-3 rounded-[18px] border border-[color:var(--color-hairline-strong)] bg-[#141F2E]/40 p-4">
+      <p className={`${eyebrow} text-sp-amber`}>{`${crew.name} · ${crew.members.length} creators, one package`}</p>
+      <ul className="flex flex-col gap-2.5">
+        {crew.members.map((m, i) => (
+          <li key={`${m.handle ?? "m"}-${i}`} className="flex min-w-0 items-center gap-3">
+            {m.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element -- X avatar, served by X
+              <img
+                src={m.avatarUrl}
+                alt=""
+                width={36}
+                height={36}
+                referrerPolicy="no-referrer"
+                className="h-9 w-9 shrink-0 rounded-full border border-[color:var(--color-hairline-strong)] object-cover"
+              />
+            ) : (
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-blue-deep text-small text-sp-ink" aria-hidden>
+                {(m.name || m.handle || "?").slice(0, 1).toUpperCase()}
+              </span>
+            )}
+            <div className="min-w-0">
+              <p className="truncate text-small text-sp-ink">
+                {m.handle ? `@${m.handle}` : m.name ?? "A creator"}
+                {m.isLead ? <span className="text-sp-ink/85"> · lead</span> : null}
+              </p>
+              <p className="break-words text-tiny text-sp-ink/85 [overflow-wrap:anywhere]">{m.service}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
+      <p className="text-tiny text-sp-ink/85">
+        {crew.ready
+          ? "You pay once. That one payment reaches every creator in the crew, straight to their own wallets."
+          : "This crew is still agreeing its terms. Spots open for sale as soon as everyone has said yes."}
+      </p>
     </div>
   );
 }

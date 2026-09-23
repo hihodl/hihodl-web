@@ -42,6 +42,13 @@ export class HoldApiError extends Error {
   constructor(
     readonly code: string,
     readonly status: number,
+    /**
+     * The server's `error.message`, when it sent one. Groups answer with a
+     * generic code (`VALIDATION_ERROR`, `NOT_FOUND`) and put the reason
+     * (`transfer_not_to_them`, `user_not_found`) here, so a screen that has to
+     * tell those apart reads this and not `code`.
+     */
+    readonly detail: string | null = null,
   ) {
     super(code);
     this.name = "HoldApiError";
@@ -58,12 +65,18 @@ export class HoldApiError extends Error {
  */
 export async function read<T>(
   path: string,
-  init: { json?: unknown; signal?: AbortSignal; method?: "GET" | "POST" | "PUT" | "DELETE" } = {},
+  init: {
+    json?: unknown;
+    signal?: AbortSignal;
+    method?: "GET" | "POST" | "PUT" | "DELETE";
+    /** Extra request headers. Anything beyond Content-Type and Authorization must be allowed by the Worker's preflight (see lib/app/groups). */
+    headers?: Record<string, string>;
+  } = {},
 ): Promise<T> {
   const token = await accessToken();
   if (!token) throw new HoldApiError("UNAUTHORIZED", 401);
 
-  const headers: Record<string, string> = { accept: "application/json", authorization: `Bearer ${token}` };
+  const headers: Record<string, string> = { ...init.headers, accept: "application/json", authorization: `Bearer ${token}` };
   if (init.json !== undefined) headers["content-type"] = "application/json";
 
   // A body means POST unless the caller names another verb. `method` exists for
@@ -94,8 +107,9 @@ export async function read<T>(
   }
 
   if (!res.ok) {
-    const code = (body as { error?: { code?: string } } | null)?.error?.code ?? `HTTP_${res.status}`;
-    throw new HoldApiError(code, res.status);
+    const err = (body as { error?: { code?: string; message?: string } } | null)?.error;
+    const code = err?.code ?? `HTTP_${res.status}`;
+    throw new HoldApiError(code, res.status, typeof err?.message === "string" ? err.message : null);
   }
 
   const envelope = body as { success?: boolean; data?: unknown } | null;

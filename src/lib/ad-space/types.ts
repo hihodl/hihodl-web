@@ -550,6 +550,17 @@ export interface Space {
    */
   inspiredBy?: { kind: "hold" | "x"; handle: string; name?: string | null; page?: boolean; href?: string | null } | null;
   /**
+   * Sold as a crew: several creators, one package, and the one payment reaches
+   * each of them. Who is in it and what each brings, never the split. `ready`
+   * false means the crew is still agreeing and buying is refused
+   * (`crew_not_ready`). Null or absent: one creator.
+   */
+  crew?: {
+    name: string;
+    ready: boolean;
+    members: { isLead: boolean; service: string; handle: string | null; name: string | null; avatarUrl: string | null }[];
+  } | null;
+  /**
    * The product in the creator's colours: `body` fills the drawing, `accent`
    * its handle, wheels and trim. Null draws the outline alone.
    */

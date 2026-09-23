@@ -76,6 +76,15 @@ export const IconTeam = (p: P) => (
   </Icon>
 );
 
+export const IconCrew = (p: P) => (
+  <Icon {...p}>
+    <circle cx="12" cy="6.5" r="3" />
+    <circle cx="5" cy="10" r="2.4" />
+    <circle cx="19" cy="10" r="2.4" />
+    <path d="M7.5 20v-1.5a4.5 4.5 0 0 1 9 0V20M1.5 20v-1a3.5 3.5 0 0 1 4.8-3.25M22.5 20v-1a3.5 3.5 0 0 0-4.8-3.25" />
+  </Icon>
+);
+
 export const IconInspire = (p: P) => (
   <Icon {...p}>
     <path d="M9 18h6M10 22h4" />
