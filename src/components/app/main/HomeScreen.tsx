@@ -67,7 +67,7 @@
  */
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import {
   activityRows,
@@ -207,9 +207,22 @@ function overviewCountLabel(n: number, mode: DisplayMode): string {
 
 /* ── The screen ───────────────────────────────────────────────────── */
 
+/** What an amount hidden by Hide balances reads as. */
+const HIDDEN = "••••••";
+
+/**
+ * `money`, or dots when the person turned on Hide balances (Menu › Settings ›
+ * Privacy, the app's own switch). Every figure on this screen goes through it.
+ */
+function useAmount(): (usd: number) => string {
+  const { hideBalances } = useShellPrefs();
+  return useCallback((usd: number) => (hideBalances ? HIDDEN : money(usd)), [hideBalances]);
+}
+
 export function HomeScreen({ initialScope = "main" }: { initialScope?: string } = {}) {
   const href = useProductHref();
-  const { displayMode } = useShellPrefs();
+  const { displayMode, hideBalances, setHideBalances } = useShellPrefs();
+  const amount = useAmount();
   const container = useContainer();
   const subaccounts = useMemo<LedgerSubaccount[]>(() => container.data?.subaccounts ?? [], [container.data]);
 
@@ -381,7 +394,16 @@ export function HomeScreen({ initialScope = "main" }: { initialScope?: string } 
                 <p className="mt-2 text-[13px] text-[#9FB7C2]">We could not read your balance just now.</p>
               </>
             ) : (
-              <HeroBalance value={totalUsd === null ? null : money(totalUsd)} />
+              // The app's hero: tapping the amount hides it, and shows it again.
+              <button
+                type="button"
+                onClick={() => setHideBalances(!hideBalances)}
+                aria-label={hideBalances ? "Show balances" : "Hide balances"}
+                aria-pressed={hideBalances}
+                className="max-w-full"
+              >
+                <HeroBalance value={totalUsd === null ? null : amount(totalUsd)} />
+              </button>
             )}
 
             {delta ? (
@@ -517,7 +539,7 @@ export function HomeScreen({ initialScope = "main" }: { initialScope?: string } 
               </span>
               <span className="block">
                 <span className="mt-2.5 block text-[22px] font-strong tracking-[-0.4px] tabular-nums text-white">
-                  {transfers.data === undefined ? "—" : money(moneyOut)}
+                  {transfers.data === undefined ? "—" : amount(moneyOut)}
                 </span>
                 <span className="mt-[3px] block text-[12px] text-white/55">This month</span>
               </span>
@@ -594,10 +616,11 @@ function DeltaBadge({ usd, pct }: { usd: number; pct: number }) {
  * line sits under a real balance where the reader takes everything as fact.
  */
 function EarningLine({ earnedUsd }: { earnedUsd: number }) {
+  const amount = useAmount();
   if (!(earnedUsd >= 0.01)) return null;
   return (
     <p className="mt-2 text-[14px] font-bold tracking-[-0.1px]" style={{ color: GREEN }}>
-      {`+${money(earnedUsd)} earned`}
+      {`+${amount(earnedUsd)} earned`}
     </p>
   );
 }
@@ -663,9 +686,11 @@ function HoldingsCard({
  * saying it, and a fintech reader has no use for the answer.
  */
 function HoldingRow({ row, mode }: { row: Row; mode: DisplayMode }) {
+  const amount = useAmount();
+  const { hideBalances } = useShellPrefs();
   const ticker = maskTokenSymbol(row.symbol, mode) || row.symbol;
   const known = row.symbol === "USDC" || row.symbol === "SOL";
-  const units = row.amount.toLocaleString("en-US", { maximumFractionDigits: isStable(row.symbol) ? 2 : 5 });
+  const units = hideBalances ? HIDDEN : row.amount.toLocaleString("en-US", { maximumFractionDigits: isStable(row.symbol) ? 2 : 5 });
   const fastBtc = btcFamilySubtitle(row.symbol, mode);
   const under = [`${units} ${ticker}`, row.chain ? chainLabel(row.chain) : fastBtc].filter(Boolean).join(" · ");
   return (
@@ -684,7 +709,7 @@ function HoldingRow({ row, mode }: { row: Row; mode: DisplayMode }) {
         </span>
       </span>
       <span className="text-right text-[14px] font-bold tabular-nums text-white">
-        {row.usd === null ? "—" : money(row.usd)}
+        {row.usd === null ? "—" : amount(row.usd)}
       </span>
     </div>
   );
@@ -712,6 +737,7 @@ function Overview({
   mode: DisplayMode;
   onClose: () => void;
 }) {
+  const amount = useAmount();
   const vaults = scopes.map((s) => {
     const rows = holdingRows(balances?.[s.slug]?.balances ?? [], prices, mode);
     const liquid = rows.reduce((sum, r) => sum + (r.usd ?? 0), 0);
@@ -731,7 +757,7 @@ function Overview({
         <div className="flex flex-col items-center">
           <p className="text-[11px] font-bold uppercase tracking-[0.6px] text-white/55">Overview</p>
           <p className="mt-1 text-[32px] font-strong leading-[38px] tabular-nums text-white">
-            {balances === undefined ? "—" : money(total)}
+            {balances === undefined ? "—" : amount(total)}
           </p>
           <p className="mt-1 text-[12px] text-white/55">{`${vaults.length} vaults · ${overviewCountLabel(assets, mode)}`}</p>
         </div>
@@ -745,7 +771,7 @@ function Overview({
                 </span>
               </span>
               <span className="text-right text-[14px] font-bold tabular-nums text-white">
-                {balances === undefined ? "—" : money(v.split.totalUsd)}
+                {balances === undefined ? "—" : amount(v.split.totalUsd)}
               </span>
             </div>
           ))}

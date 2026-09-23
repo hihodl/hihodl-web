@@ -125,6 +125,13 @@ export interface ShellPrefs {
   setCollapsed: (v: boolean) => void;
   displayMode: DisplayMode;
   setDisplayMode: (v: DisplayMode) => void;
+  /**
+   * The app's Settings › Privacy › Hide balances (`showBalances` in its
+   * settings store, inverted): amounts on Home drawn as dots. Kept like
+   * `displayMode`, in this browser, because the app keeps it on the phone.
+   */
+  hideBalances: boolean;
+  setHideBalances: (v: boolean) => void;
 }
 
 const PrefsContext = createContext<ShellPrefs | null>(null);
@@ -212,6 +219,8 @@ export function Centered({ children }: { children: ReactNode }) {
 const COLLAPSE_KEY = "hold-shell-collapsed";
 /** The app's `walletMode`, kept where the app keeps it: on the device. */
 const DISPLAY_MODE_KEY = "hold-display-mode";
+/** The app's Hide balances, per browser like the view. */
+const HIDE_BALANCES_KEY = "hold-hide-balances";
 
 function SignedIn({ session, children }: { session: Session; children: ReactNode }) {
   const onSpacesPage = productRel(usePathname(), useSpacesBase()).startsWith("/spaces");
@@ -331,6 +340,7 @@ function Frame({ children }: { children: ReactNode }) {
 
   const [collapsed, setCollapsed] = useState(false);
   const [displayMode, setDisplayMode] = useState<DisplayMode>(DEFAULT_DISPLAY_MODE);
+  const [hideBalances, setHideBalances] = useState(false);
   const [drawer, setDrawer] = useState(false);
   const [palette, setPalette] = useState(false);
 
@@ -342,6 +352,7 @@ function Frame({ children }: { children: ReactNode }) {
       setCollapsed(window.localStorage.getItem(COLLAPSE_KEY) === "1");
       const stored = asDisplayMode(window.localStorage.getItem(DISPLAY_MODE_KEY));
       if (stored) setDisplayMode(stored);
+      setHideBalances(window.localStorage.getItem(HIDE_BALANCES_KEY) === "1");
     } catch {
       /* the sidebar opens expanded, and the view is the default one */
     }
@@ -363,10 +374,25 @@ function Frame({ children }: { children: ReactNode }) {
       /* remembered for this page only */
     }
   }, []);
+  const saveHideBalances = useCallback((v: boolean) => {
+    setHideBalances(v);
+    try {
+      window.localStorage.setItem(HIDE_BALANCES_KEY, v ? "1" : "0");
+    } catch {
+      /* remembered for this page only */
+    }
+  }, []);
   const toggleCollapsed = () => saveCollapsed(!collapsed);
   const prefs = useMemo(
-    () => ({ collapsed, setCollapsed: saveCollapsed, displayMode, setDisplayMode: saveDisplayMode }),
-    [collapsed, saveCollapsed, displayMode, saveDisplayMode],
+    () => ({
+      collapsed,
+      setCollapsed: saveCollapsed,
+      displayMode,
+      setDisplayMode: saveDisplayMode,
+      hideBalances,
+      setHideBalances: saveHideBalances,
+    }),
+    [collapsed, saveCollapsed, displayMode, saveDisplayMode, hideBalances, saveHideBalances],
   );
 
   // Closing the drawer on every navigation, so a tap on a link is the whole gesture.
