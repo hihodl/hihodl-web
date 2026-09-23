@@ -9,6 +9,11 @@
  * here like any other, with a "Crew" tag, and opens the same thread Spaces ›
  * Crew opens.
  *
+ * Over the list, "Across your groups" (GET /groups/stats, contract §10.5):
+ * per currency what you owe, what you're owed, your share and what you paid,
+ * with your share month by month. Currencies are never added together. It is
+ * left out when the answer is empty or the server has no such route yet.
+ *
  * The list is the server's order, most recent first. The unread count is a
  * neutral glass badge, not amber and never red: a group that has news is not
  * a group that needs the person.
@@ -27,7 +32,23 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { createGroup, describeGroupError, lastLine, namer, uploadGroupPhoto, useGroupMembers, useGroups, type GroupRow, type Person } from "@/lib/app/groups";
+import {
+  createGroup,
+  describeGroupError,
+  fractions,
+  lastLine,
+  monthLabel,
+  monthsOf,
+  namer,
+  toBig,
+  uploadGroupPhoto,
+  useAllGroupsStats,
+  useGroupMembers,
+  useGroups,
+  type AllGroupsStats,
+  type GroupRow,
+  type Person,
+} from "@/lib/app/groups";
 import { threadTime } from "@/lib/app/payments";
 import { useMe } from "@/lib/app/spaces-data";
 
@@ -37,6 +58,7 @@ import { Ion } from "../ion";
 import { inputCls, Tag } from "../spaces/kit";
 import { Skeleton } from "../ui";
 import { cardClass } from "../wallet/app-kit";
+import { money } from "./AddExpense";
 import { DirectoryPicker } from "./DirectoryPicker";
 import { CurrencyInput, FacePicker, GroupFace, LoadFailed, plateWhite, sectionLabel, Sheet } from "./group-kit";
 
@@ -53,6 +75,8 @@ export function GroupsList() {
         New group
       </button>
       {making ? <NewGroup onClose={() => setMaking(false)} onMade={() => void groups.mutate()} /> : null}
+
+      {groups.data && groups.data.length ? <AcrossGroups /> : null}
 
       {groups.data === undefined && !groups.error ? (
         <div className="flex flex-col gap-3">
@@ -75,6 +99,70 @@ export function GroupsList() {
       ) : null}
 
       {groups.data?.map((g) => <GroupRowView key={g.id} group={g} />)}
+    </div>
+  );
+}
+
+/** You across every group, one card per currency. Quiet when there is nothing to say or the read fails. */
+function AcrossGroups() {
+  const stats = useAllGroupsStats();
+  const totals = (stats.data?.totals ?? []).filter((t) => [t.youOweMinor, t.owedToYouMinor, t.yourShareMinor, t.paidMinor].some((v) => toBig(v) !== 0n));
+  if (!totals.length) return null;
+  return (
+    <section className="mb-3 flex flex-col gap-2" aria-label="Across your groups">
+      <p className="px-1 text-[12px] font-bold tracking-[1.4px] text-white/55">ACROSS YOUR GROUPS</p>
+      <div className="-mx-1 flex snap-x gap-2.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {totals.map((t) => (
+          <CurrencyCard key={t.currency} t={t} months={monthsOf(stats.data!.byMonth, t.currency)} single={totals.length === 1} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function CurrencyCard({ t, months, single }: { t: AllGroupsStats["totals"][number]; months: { month: string; yourShareMinor: string }[]; single: boolean }) {
+  const f = fractions(months.map((m) => m.yourShareMinor));
+  const owe = toBig(t.youOweMinor) > 0n;
+  const owed = toBig(t.owedToYouMinor) > 0n;
+  return (
+    <div className={`${cardClass} flex shrink-0 snap-start flex-col gap-2.5 p-3.5 ${single ? "w-full" : "w-[min(300px,82vw)]"}`}>
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="text-[12px] font-bold text-white/60">{t.currency}</span>
+        <span className="text-[12px] text-white/55">
+          Your share <b className="tabular-nums text-white">{money(t.yourShareMinor, t.currency)}</b> · you paid <b className="tabular-nums text-white">{money(t.paidMinor, t.currency)}</b>
+        </span>
+      </div>
+      <div className="flex gap-4">
+        <div className="min-w-0 flex-1">
+          <p className="text-[11.5px] font-semibold text-white/55">You owe</p>
+          <p className="truncate text-[18px] font-bold tabular-nums text-white">{owe ? money(t.youOweMinor, t.currency) : "Nothing"}</p>
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[11.5px] font-semibold text-white/55">You&apos;re owed</p>
+          <p className="truncate text-[18px] font-bold tabular-nums" style={{ color: owed ? "#4ADE80" : "#fff" }}>
+            {owed ? money(t.owedToYouMinor, t.currency) : "Nothing"}
+          </p>
+        </div>
+      </div>
+      {months.length > 1 ? (
+        <div>
+          <div className="flex h-9 items-end gap-[2px]" role="img" aria-label={`Your share per month in ${t.currency}`}>
+            {months.map((m, i) => (
+              <span
+                key={m.month}
+                title={`${monthLabel(m.month, true)}: ${money(m.yourShareMinor, t.currency)}`}
+                className="min-w-0 flex-1 rounded-t-[3px] bg-[#4ADE80]/80"
+                style={{ height: `${Math.max(f[i] * 100, toBig(m.yourShareMinor) > 0n ? 4 : 0)}%` }}
+              />
+            ))}
+          </div>
+          <p className="mt-1 flex justify-between text-[10.5px] font-semibold text-white/45">
+            <span>{monthLabel(months[0].month)}</span>
+            <span>Your share by month</span>
+            <span>{monthLabel(months[months.length - 1].month)}</span>
+          </p>
+        </div>
+      ) : null}
     </div>
   );
 }
