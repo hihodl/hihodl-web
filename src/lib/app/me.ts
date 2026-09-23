@@ -7,6 +7,7 @@
  *
  *   GET   /me                              profile (avatarUrl comes back signed, 1 h)
  *   PATCH /me                              { displayName } { aliasHandle } { avatarUrl: storage path }
+ *                                          { avatarEmoji } { profileVisibility }
  *   GET   /me/check-handle?handle=         { available, reason }
  *   GET   /me/addresses                    the app wallet's addresses
  *   GET   /recovery-codes/status           { hasActiveCodes }
@@ -21,8 +22,11 @@
 
 "use client";
 
-import { call } from "@/lib/creator/api";
+import { call, CreatorApiError } from "@/lib/creator/api";
 import { creatorAuth } from "@/lib/creator/session";
+
+/** Who can find the person (the app's Profile visibility sheet). */
+export type ProfileVisibility = "public" | "private" | "invisible";
 
 export interface Me {
   id: string;
@@ -37,6 +41,8 @@ export interface Me {
     avatarUrl: string | null;
     /** The emoji the person chose in the app ("🚀"); absent from an API that predates it. */
     avatarEmoji?: string | null;
+    /** Absent from an API that predates it: the web then offers no control for it. */
+    profileVisibility?: ProfileVisibility | null;
     country: string | null;
     railsRegion: string | null;
     plan: string;
@@ -47,8 +53,28 @@ export interface Me {
 export const getMe = () => call<Me>("me");
 
 /** The answer carries no signed photo and no username window: read GET /me again after it. */
-export const updateMe = (patch: { displayName?: string; aliasHandle?: string; avatarUrl?: string }) =>
-  call<unknown>("me", { method: "PATCH", json: patch }).then(() => undefined);
+export const updateMe = (patch: {
+  displayName?: string;
+  aliasHandle?: string;
+  avatarUrl?: string;
+  /** One emoji, up to 16 UTF-16 units; "" or null clears it. */
+  avatarEmoji?: string | null;
+  profileVisibility?: ProfileVisibility;
+}) => call<unknown>("me", { method: "PATCH", json: patch }).then(() => undefined);
+
+/**
+ * Why an emoji or a visibility choice was not kept, said plainly: the screen
+ * has already put the old value back, so every sentence says nothing changed.
+ * A backend that predates these fields answers 400 "No fields to update".
+ */
+export function describeProfileError(e: unknown, fallback: (e: unknown) => string): string {
+  if (e instanceof CreatorApiError) {
+    if (e.code === "avatar_emoji_invalid") return "HOLD did not accept that emoji. Your avatar was not changed; pick another one.";
+    if (e.code === "avatar_emoji_too_long") return "That emoji is too long to keep. Your avatar was not changed; pick another one.";
+    if (e.status === 400) return "HOLD could not save this yet, so nothing was changed. Try again later.";
+  }
+  return `${fallback(e)} Nothing was changed.`;
+}
 
 /**
  * The HOLD wallet's addresses as the app registered them, by chain

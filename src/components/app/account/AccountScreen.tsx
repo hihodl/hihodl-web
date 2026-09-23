@@ -24,7 +24,7 @@
  */
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 
 import { chosenUsername } from "@/lib/app/me";
 import { useMe, useX } from "@/lib/app/spaces-data";
@@ -37,12 +37,12 @@ import { MessagesSettings } from "./Messages";
 import { OtherWallet, PayoutScreen, usePayoutSummary } from "./Payout";
 import { linkHref as linkHrefFor } from "../link/in-app";
 import { PhoneScreen } from "./PhoneScreen";
-import { ProfileEdit, ProfileHero, UsernameScreen } from "./Profile";
+import { EmojiScreen, ProfileEdit, ProfileHero, UsernameScreen, VisibilitySheet, visibilityLabel } from "./Profile";
 import { XScreen } from "./XScreen";
 
-export type AccountView = "home" | "profile" | "username" | "account" | "x" | "payout" | "other-wallet" | "phone" | "messages";
+export type AccountView = "home" | "profile" | "emoji" | "username" | "account" | "x" | "payout" | "other-wallet" | "phone" | "messages";
 
-const VIEWS: readonly AccountView[] = ["profile", "username", "account", "x", "payout", "other-wallet", "phone", "messages"];
+const VIEWS: readonly AccountView[] = ["profile", "emoji", "username", "account", "x", "payout", "other-wallet", "phone", "messages"];
 
 export function useAccountView(): [AccountView, (v: AccountView) => void, () => void] {
   const params = useSearchParams();
@@ -53,7 +53,7 @@ export function useAccountView(): [AccountView, (v: AccountView) => void, () => 
   const open = useCallback((v: AccountView) => router.push(v === "home" ? pathname : `${pathname}?view=${v}`, { scroll: false }), [router, pathname]);
   const back = useCallback(() => {
     // One level up: another wallet's screen belongs to Payout's.
-    open(view === "other-wallet" ? "payout" : "home");
+    open(view === "other-wallet" ? "payout" : view === "emoji" ? "profile" : "home");
   }, [open, view]);
   return [view, open, back];
 }
@@ -63,7 +63,8 @@ export function AccountScreen() {
   const productHref = useProductHref();
   const router = useRouter();
 
-  if (view === "profile") return <ProfileEdit onBack={back} />;
+  if (view === "profile") return <ProfileEdit onBack={back} onEmoji={() => open("emoji")} />;
+  if (view === "emoji") return <EmojiScreen onBack={back} />;
   if (view === "username") return <UsernameScreen onBack={back} />;
   if (view === "account") return <AccountDetails onBack={back} />;
   if (view === "x") return <XScreen onBack={back} />;
@@ -88,6 +89,9 @@ function AccountHome({ open }: { open: (v: AccountView) => void }) {
   const handle = username ? `@${username}` : "@—";
   const linked = x.data?.linked ? x.data : null;
   const email = me.data?.email ?? session.user.email ?? null;
+  // Shown only when /me carries the field: an older API refuses to save it.
+  const visibilityKnown = !!me.data && "profileVisibility" in me.data.profile;
+  const [visibilityOpen, setVisibilityOpen] = useState(false);
 
   return (
     <Column>
@@ -98,7 +102,11 @@ function AccountHome({ open }: { open: (v: AccountView) => void }) {
         <MenuRow icon="at-outline" label="Username" value={me.data ? handle : undefined} onClick={() => open("username")} />
         {/* Web only: the name a creator's public pages print. */}
         <MenuRow icon="id-card-outline" label="Display name" value={me.data ? me.data.profile.displayName || "Add your name" : undefined} onClick={() => open("profile")} />
+        {visibilityKnown ? (
+          <MenuRow icon="eye-outline" label="Profile visibility" value={visibilityLabel(me.data?.profile.profileVisibility)} onClick={() => setVisibilityOpen(true)} />
+        ) : null}
       </HoldCard>
+      {visibilityOpen ? <VisibilitySheet onClose={() => setVisibilityOpen(false)} /> : null}
 
       <SectionTitle>Account</SectionTitle>
       <HoldCard>

@@ -15,7 +15,7 @@
  * creator's public pages print it, and it sits on the avatar screen.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CreatorApiError, describeCreatorError } from "@/lib/creator/api";
 import {
@@ -23,18 +23,22 @@ import {
   chosenUsername,
   cleanUsername,
   cropToJpeg,
+  describeProfileError,
   loadImage,
   removeAvatar,
   updateMe,
   uploadAvatar,
   type CropRect,
+  type Me,
+  type ProfileVisibility,
   type UsernameVerdict,
 } from "@/lib/app/me";
 import { useMe, useRefresh } from "@/lib/app/spaces-data";
 
-import { Avatar } from "../front/kit";
+import { DEFAULT_AVATAR_EMOJI, EmojiAvatar } from "../front/kit";
 import { BackHeader, Column, ctaCommit, HoldCard, holdCard, MenuRow, Notice, SectionTitle } from "../hold";
-import { Ion } from "../ion";
+import { Ion, type IonName } from "../ion";
+import { Sheet } from "../payments/group-kit";
 import { useShell } from "../Shell";
 import { Skeleton } from "../ui";
 import { AvatarCropper } from "./AvatarCropper";
@@ -64,7 +68,7 @@ export function ProfileHero({ onAvatar }: { onAvatar: () => void }) {
 
 /* ── Avatar and name (AvatarSheet) ────────────────────────────────── */
 
-export function ProfileEdit({ onBack }: { onBack: () => void }) {
+export function ProfileEdit({ onBack, onEmoji }: { onBack: () => void; onEmoji: () => void }) {
   const me = useMe();
   const { session } = useShell();
   const refresh = useRefresh();
@@ -95,7 +99,6 @@ export function ProfileEdit({ onBack }: { onBack: () => void }) {
     );
   }
   const uid = m.supabaseUid ?? session.user.id;
-  const current = chosenUsername(m);
 
   const nameChanged = name.trim() !== (m.profile.displayName ?? "") && name.trim() !== "";
 
@@ -156,7 +159,8 @@ export function ProfileEdit({ onBack }: { onBack: () => void }) {
     }
   };
 
-  const shownName = name.trim() || (current ? `@${current}` : "?");
+  // An API that predates the emoji avatar sends no `avatarEmoji` key at all.
+  const emojiSupported = "avatarEmoji" in m.profile;
   return (
     <Column>
       <BackHeader title="Avatar" onBack={onBack} />
@@ -176,7 +180,7 @@ export function ProfileEdit({ onBack }: { onBack: () => void }) {
           <p className="mb-5 text-center text-[13px] text-[#9FB7C2]">Pick how your avatar should look.</p>
 
           <div className="mb-6 flex justify-center">
-            <Avatar src={m.profile.avatarUrl} name={shownName} size={96} round />
+            <UserAvatar size={96} round />
           </div>
 
           <HoldCard>
@@ -187,8 +191,9 @@ export function ProfileEdit({ onBack }: { onBack: () => void }) {
               disabled={busy !== null}
               onClick={() => input.current?.click()}
             />
+            {emojiSupported ? <MenuRow icon="happy-outline" label="Pick emoji" sub="Shown whenever there is no photo." disabled={busy !== null} onClick={onEmoji} /> : null}
             {m.profile.avatarUrl ? (
-              <MenuRow icon="trash-outline" label="Remove photo" sub="Go back to your initial." disabled={busy !== null} onClick={() => void clearPhoto()} />
+              <MenuRow icon="trash-outline" label="Remove photo" sub="Go back to your emoji." disabled={busy !== null} onClick={() => void clearPhoto()} />
             ) : null}
           </HoldCard>
         </>
@@ -235,6 +240,246 @@ export function ProfileEdit({ onBack }: { onBack: () => void }) {
         </button>
       </div>
     </Column>
+  );
+}
+
+/* ── Emoji and visibility: saved at once, put back if HOLD refuses ── */
+
+type ProfileChoice = Partial<Pick<Me["profile"], "avatarEmoji" | "profileVisibility">>;
+
+/**
+ * Save one choice the way the app does (tap and it applies), but honestly:
+ * the /me cache shows the choice at once, is put back as it was if PATCH /me
+ * refuses, and is read again after a success so every face (UserAvatar, the
+ * sign-in door's remembered face, group lists) follows.
+ */
+function useSaveProfileChoice(): (patch: ProfileChoice) => Promise<void> {
+  const me = useMe();
+  const refresh = useRefresh();
+  const { data, mutate } = me;
+  return useCallback(
+    async (patch: ProfileChoice) => {
+      if (!data) return;
+      const before: Me = data;
+      await mutate({ ...before, profile: { ...before.profile, ...patch } }, { revalidate: false });
+      try {
+        await updateMe({ avatarEmoji: patch.avatarEmoji, profileVisibility: patch.profileVisibility ?? undefined });
+      } catch (e) {
+        await mutate(before, { revalidate: false });
+        throw e;
+      }
+      await refresh("me");
+    },
+    [data, mutate, refresh],
+  );
+}
+
+/** profile/avatar-emoji.tsx's set, in its order. */
+const AVATAR_EMOJIS: readonly string[] = [
+  "🚀", "🔥", "🔒", "🔮", "🖼️", "💯", "🔌", "⛓️", "🌙", "👻",
+  "👾", "🤖", "😎", "💎", "🙌", "🧠", "📱", "🤑", "🪙", "🧭",
+  "🏴‍☠️", "🛡️", "⚡️", "🌐", "🦊", "🐼", "🐳", "🦄", "🐵", "🐉",
+  "🐯", "🐻", "🦁", "🕊️", "🌈", "🌋", "🌊", "🌪️", "🌟", "✨",
+  "🛰️", "🪐", "🌌", "🗝️",
+];
+
+/** The app's keyword search: a hit moves to the front, the rest of the grid stays. */
+const EMOJI_KEYWORDS: Record<string, readonly string[]> = {
+  rocket: ["🚀"],
+  fire: ["🔥"],
+  lock: ["🔒"],
+  crystal: ["🔮"],
+  diamond: ["💎"],
+  moon: ["🌙"],
+  ghost: ["👻"],
+  robot: ["🤖"],
+  fox: ["🦊"],
+  coin: ["🪙"],
+  brain: ["🧠"],
+  phone: ["📱"],
+  star: ["🌟", "✨"],
+  wave: ["🌊"],
+};
+
+/** profile/avatar-emoji.tsx: the preview, the search, the grid. A tap saves and goes back. */
+export function EmojiScreen({ onBack }: { onBack: () => void }) {
+  const me = useMe();
+  const save = useSaveProfileChoice();
+  const [search, setSearch] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const m = me.data;
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return AVATAR_EMOJIS;
+    return Array.from(new Set([...(EMOJI_KEYWORDS[q] ?? []), ...AVATAR_EMOJIS]));
+  }, [search]);
+
+  if (!m) {
+    return (
+      <Column>
+        <BackHeader title="Pick emoji" onBack={onBack} />
+        {me.error ? <Notice>{describeCreatorError(me.error)}</Notice> : <Skeleton className="h-[320px] rounded-[28px]" />}
+      </Column>
+    );
+  }
+  if (!("avatarEmoji" in m.profile)) {
+    return (
+      <Column>
+        <BackHeader title="Pick emoji" onBack={onBack} />
+        <Notice tone="calm">Emoji avatars are not available on the web yet. You can pick one in the HOLD app.</Notice>
+      </Column>
+    );
+  }
+  const current = m.profile.avatarEmoji?.trim() || DEFAULT_AVATAR_EMOJI;
+
+  const pick = async (emoji: string) => {
+    if (busy) return;
+    if (emoji === current) return onBack();
+    setBusy(true);
+    setNotice(null);
+    try {
+      await save({ avatarEmoji: emoji });
+      onBack();
+    } catch (e) {
+      setNotice(describeProfileError(e, describeCreatorError));
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Column>
+      <BackHeader title="Pick emoji" onBack={onBack} />
+      <div className="mb-4 mt-1 flex justify-center">
+        <EmojiAvatar emoji={current} size={96} />
+      </div>
+      {m.profile.avatarUrl ? <p className="mb-4 text-center text-[13px] text-[#9FB7C2]">Your photo shows while you have one. This emoji takes its place when you remove it.</p> : null}
+
+      <label className="mb-2 flex items-center rounded-[16px] border border-white/[0.08] bg-white/[0.06] px-3.5 py-3">
+        <Ion name="search" size={16} className="mr-2 shrink-0 text-white/65" />
+        <span className="sr-only">Search emoji</span>
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search… rocket, moon, diamond…"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          className="min-w-0 flex-1 bg-transparent text-[14px] text-white outline-none placeholder:text-white/65"
+        />
+      </label>
+
+      {notice ? (
+        <div className="mb-2">
+          <Notice>{notice}</Notice>
+        </div>
+      ) : null}
+
+      <div role="listbox" aria-label="Emoji" aria-busy={busy} className="grid grid-cols-6 gap-1.5">
+        {filtered.map((e) => {
+          const selected = e === current;
+          return (
+            <button
+              key={e}
+              type="button"
+              role="option"
+              aria-selected={selected}
+              aria-label={`Select ${e}`}
+              disabled={busy}
+              onClick={() => void pick(e)}
+              className={`flex aspect-square items-center justify-center rounded-[14px] border text-[28px] transition-colors disabled:cursor-wait ${
+                selected ? "border-[rgba(255,183,3,0.45)] bg-[rgba(255,183,3,0.12)]" : "border-transparent bg-white/[0.03] hover:bg-white/[0.08]"
+              }`}
+            >
+              {e}
+            </button>
+          );
+        })}
+      </div>
+    </Column>
+  );
+}
+
+/** The row's value on the Profile hub. */
+export function visibilityLabel(v: ProfileVisibility | null | undefined): string {
+  return v === "private" ? "Private" : v === "invisible" ? "Invisible" : "Public";
+}
+
+const VISIBILITY_OPTIONS: { id: ProfileVisibility; icon: IonName; title: string; body: string }[] = [
+  { id: "public", icon: "globe-outline", title: "Public", body: "Anyone on HOLD can find you in search. Your profile photo is visible." },
+  {
+    id: "private",
+    icon: "shield-outline",
+    title: "Private",
+    body: "Only people who know your exact @username can find you. Photo is hidden — you appear with the HOLD logo.",
+  },
+  {
+    id: "invisible",
+    icon: "eye-off-outline",
+    title: "Invisible",
+    body: "Your @username is off. Nobody can find you on HOLD. You still receive money at your virtual accounts (IBAN, US bank, PIX, CLABE) and your on-chain address.",
+  },
+];
+
+/** profile/_components/VisibilitySheet.tsx: three rows, a tap saves and closes. */
+export function VisibilitySheet({ onClose }: { onClose: () => void }) {
+  const me = useMe();
+  const save = useSaveProfileChoice();
+  const [busy, setBusy] = useState<ProfileVisibility | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const current: ProfileVisibility = me.data?.profile.profileVisibility ?? "public";
+
+  const choose = async (id: ProfileVisibility) => {
+    if (busy) return;
+    if (id === current) return onClose();
+    setBusy(id);
+    setNotice(null);
+    try {
+      await save({ profileVisibility: id });
+      onClose();
+    } catch (e) {
+      setNotice(describeProfileError(e, describeCreatorError));
+      setBusy(null);
+    }
+  };
+
+  return (
+    <Sheet title="Profile visibility" onClose={onClose} busy={busy !== null} wide>
+      <p className="text-[14px] leading-5 text-white/65">Control how other people find you on HOLD. You can change this any time.</p>
+      {notice ? <Notice>{notice}</Notice> : null}
+      <div role="radiogroup" aria-label="Profile visibility" className="flex flex-col gap-3">
+        {VISIBILITY_OPTIONS.map((opt) => {
+          const selected = current === opt.id;
+          return (
+            <button
+              key={opt.id}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              disabled={busy !== null}
+              onClick={() => void choose(opt.id)}
+              className={`flex items-start gap-3.5 rounded-[16px] border px-4 py-[18px] text-left transition-colors disabled:cursor-wait ${
+                selected ? "border-[rgba(255,183,3,0.28)] bg-[rgba(255,183,3,0.06)]" : "border-white/[0.08] bg-white/[0.06] hover:bg-white/10"
+              }`}
+            >
+              <span className={`mt-px flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] ${selected ? "bg-[rgba(255,183,3,0.12)] text-[#FFB703]" : "bg-[rgba(143,211,227,0.10)] text-[#8FD3E3]"}`}>
+                <Ion name={opt.icon} size={20} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[16px] font-bold text-white">{opt.title}</span>
+                <span className="mt-[5px] block text-[14px] leading-5 text-white/65">{opt.body}</span>
+              </span>
+              {busy === opt.id ? (
+                <span className="mt-0.5 h-5 w-5 shrink-0 animate-spin rounded-[10px] border-2 border-white/30 border-t-white/80" aria-hidden />
+              ) : (
+                <Ion name={selected ? "radio-button-on" : "radio-button-off"} size={20} className={`mt-0.5 shrink-0 ${selected ? "text-[#FFB703]" : "text-white/45"}`} />
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </Sheet>
   );
 }
 
