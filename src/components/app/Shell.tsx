@@ -836,10 +836,10 @@ function TopBar({
               <span className="hidden sm:inline">New listing</span>
             </Link>
           ) : null}
-          {/* The app's Analytics disc. The web has no Spending Analytics yet,
-              so it opens what the app opens without that flag: Invest. */}
+          {/* The app's Analytics disc: Spending Analytics (/analytics), what
+              the app opens with its SPENDING_ANALYTICS flag on. */}
           {screenHeader ? null : (
-            <Link href={productHref("/invest")} aria-label="Analytics" className={`${iconDisc} lg:hidden`}>
+            <Link href={productHref("/analytics")} aria-label="Analytics" className={`${iconDisc} lg:hidden`}>
               <IconInsights className="h-4 w-4" />
             </Link>
           )}
