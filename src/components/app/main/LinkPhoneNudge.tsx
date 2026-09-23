@@ -1,0 +1,343 @@
+"use client";
+
+/**
+ * Home asks to link a phone, once it matters and never while it is unsure.
+ *
+ * Until now the web only asked inside onboarding and in the Menu, so somebody
+ * signed in with no linked phone was never asked again
+ * (documentation/one-wallet-every-device.md, rules 4 and 5).
+ *
+ * WHEN. The person has a wallet (web or app kind, lib/app/hold-wallet) and:
+ *
+ *   link_first   a wallet made in the app with no Android phone. The web holds
+ *                no key for it, so it cannot pay from here at all: the strong
+ *                card (amber), and a one-time sheet the first time Home opens.
+ *   web_passkey  a web wallet, and GET /device-link/devices lists no active
+ *                phone: the calm card. On an iPhone it shows once, softer: the
+ *                passkey already approves there, and linking only records the
+ *                device.
+ *   app          a phone approves already: nothing.
+ *
+ * Nothing is drawn while any read is loading, or when one failed: a nudge
+ * built on a guess is a nudge that lies.
+ *
+ * HOW. The card copies the app's AccountProtectionBanner (calm or amber,
+ * icon tile, title, subtitle, chevron); the sheet copies its
+ * AccountProtectionSheet (badge, title, subtitle, amber CTA, "Not now").
+ * The action is the link screen, as a full page load (it carries the wallet
+ * pages' strict CSP), coming back to Home. On an Android phone the card also
+ * leads to the app itself (an intent that falls back to Google Play, in a new
+ * tab, as LinkPhone does). "Later" hides the card for seven days in this
+ * browser.
+ */
+
+import { useCallback, useEffect, useState } from "react";
+
+import { useHoldWallet } from "@/lib/app/hold-wallet";
+import { useLinkedPhones, useWalletStatus } from "@/lib/app/spaces-data";
+import { thisDevice, type AppleDevice } from "@/lib/link/ua";
+import { payerOf } from "@/lib/wallet/api";
+
+import { useProductHref } from "../base";
+import { Ion } from "../ion";
+import { linkHref, playHref, usePhone } from "../link/in-app";
+import { useShell } from "../Shell";
+
+const WEEK = 7 * 24 * 60 * 60 * 1000;
+
+/* ── This browser's memory of what was asked ─────────────────────── */
+
+const laterKey = (uid: string) => `hold.linkNudge.later.${uid}`;
+const seenKey = (uid: string) => `hold.linkNudge.iphoneSeen.${uid}`;
+const sheetKey = (uid: string) => `hold.linkNudge.sheet.${uid}`;
+
+function readItem(key: string): string | null {
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeItem(key: string, value: string): void {
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // Private mode or blocked storage: it asks again next time, which is fine.
+  }
+}
+
+interface Memory {
+  /** "Later" was tapped less than a week ago. */
+  snoozed: boolean;
+  /** The iPhone's one showing has happened. */
+  iphoneSeen: boolean;
+  /** The link_first sheet has been shown. */
+  sheetSeen: boolean;
+}
+
+/* ── What to ask, if anything ─────────────────────────────────────── */
+
+export type LinkNudgeCase = "pay" | "approve";
+
+export interface LinkNudge {
+  /** null: ask nothing (loading, a read failed, a phone approves already, or put off). */
+  kind: LinkNudgeCase | null;
+  /** The device this page is on: Android, iPhone or iPad, or a computer. */
+  device: "android" | AppleDevice | "computer";
+  /** Where the card and the sheet go: the link screen, back to Home after. */
+  href: string;
+  /** Show the one-time sheet now. */
+  sheet: boolean;
+  later: () => void;
+  closeSheet: () => void;
+}
+
+export function useLinkNudge(): LinkNudge {
+  const { session } = useShell();
+  const uid = session.user.id;
+  const productHref = useProductHref();
+  const wallet = useHoldWallet();
+  const status = useWalletStatus();
+  const phones = useLinkedPhones(wallet.kind !== "none" && !wallet.loading);
+  const phone = usePhone();
+
+  const [memory, setMemory] = useState<Memory | null>(null);
+  const [apple, setApple] = useState<AppleDevice | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [hidden, setHidden] = useState(false);
+
+  useEffect(() => {
+    const at = Number(readItem(laterKey(uid)));
+    setMemory({
+      snoozed: Number.isFinite(at) && at > 0 && Date.now() - at < WEEK,
+      iphoneSeen: readItem(seenKey(uid)) === "1",
+      sheetSeen: readItem(sheetKey(uid)) === "1",
+    });
+    setApple(thisDevice().apple);
+  }, [uid]);
+
+  const payer = payerOf(status.data);
+  const settled =
+    !wallet.loading &&
+    status.data !== undefined &&
+    !status.error &&
+    phones.data !== undefined &&
+    !phones.error &&
+    phone !== undefined &&
+    memory !== null;
+
+  let which: LinkNudgeCase | null = null;
+  if (settled) {
+    if (wallet.kind === "app" && payer === "link_first") which = "pay";
+    else if (wallet.kind === "web" && payer === "web_passkey" && phones.data!.length === 0) which = "approve";
+  }
+
+  const device: LinkNudge["device"] = phone === "android" ? "android" : phone === "ios" ? (apple ?? "iPhone") : "computer";
+  const onApple = device === "iPhone" || device === "iPad";
+
+  // An iPhone with a web wallet is asked once: the passkey there already approves.
+  const onceOnly = which === "approve" && onApple;
+  const cardKind = which && !hidden && !memory?.snoozed && !(onceOnly && memory?.iphoneSeen) ? which : null;
+
+  // The iPhone's one showing is spent the moment it is drawn.
+  useEffect(() => {
+    if (cardKind && onceOnly) writeItem(seenKey(uid), "1");
+  }, [cardKind, onceOnly, uid]);
+
+  // The sheet, once, for a wallet that cannot pay from here until it links.
+  useEffect(() => {
+    if (which === "pay" && memory && !memory.sheetSeen) {
+      writeItem(sheetKey(uid), "1");
+      setMemory((m) => (m ? { ...m, sheetSeen: true } : m));
+      setSheetOpen(true);
+    }
+  }, [which, memory, uid]);
+
+  const later = useCallback(() => {
+    writeItem(laterKey(uid), String(Date.now()));
+    setHidden(true);
+  }, [uid]);
+
+  return {
+    kind: cardKind,
+    device,
+    href: linkHref(productHref, productHref()),
+    sheet: sheetOpen,
+    later,
+    closeSheet: useCallback(() => setSheetOpen(false), []),
+  };
+}
+
+/* ── The words ─────────────────────────────────────────────────────── */
+
+interface Words {
+  title: string;
+  body: string;
+  /** false: this device cannot link the phone that matters, so the card only informs. */
+  actionable: boolean;
+}
+
+function wordsFor(kind: LinkNudgeCase, device: LinkNudge["device"]): Words {
+  if (kind === "pay") {
+    if (device === "android") {
+      return {
+        title: "Link your phone to pay from here",
+        body: "Open HOLD on this phone to link it. From then on, the app approves every payment you start here.",
+        actionable: true,
+      };
+    }
+    if (device === "iPhone" || device === "iPad") {
+      // Linking this iPhone adds no approver: the wallet's keys are on the Android phone.
+      return {
+        title: "Link your phone to pay from here",
+        body: "This wallet's keys are in the HOLD app on your Android phone. Open app.hihodl.xyz there, or on a computer, to link it.",
+        actionable: false,
+      };
+    }
+    return {
+      title: "Link your phone to pay from here",
+      body: "This wallet was made in the HOLD app and its keys stay on your phone. Link it once and you can pay from here.",
+      actionable: true,
+    };
+  }
+  if (device === "iPhone" || device === "iPad") {
+    return {
+      title: `Link this ${device}`,
+      body: `Your passkey already approves payments on this ${device}. Linking only records it as one of your devices.`,
+      actionable: true,
+    };
+  }
+  if (device === "android") {
+    return {
+      title: "Approve payments on your phone",
+      body: "Get HOLD on this phone and it approves every payment you start here. Until then, your passkey does.",
+      actionable: true,
+    };
+  }
+  return {
+    title: "Approve payments on your phone",
+    body: "Link your Android phone and the HOLD app approves every payment you start here. Until then, your passkey does.",
+    actionable: true,
+  };
+}
+
+/* ── The card ──────────────────────────────────────────────────────── */
+
+/**
+ * The app's AccountProtectionBanner: amber when the web cannot pay without
+ * it, calm otherwise. "Later" and, on Android, Google Play sit under the text.
+ */
+export function LinkPhoneCard({ nudge }: { nudge: LinkNudge }) {
+  if (!nudge.kind) return null;
+  const strong = nudge.kind === "pay";
+  const w = wordsFor(nudge.kind, nudge.device);
+
+  const face = (
+    <>
+      <span
+        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] ${
+          strong ? "bg-[rgba(255,183,3,0.14)] text-amber" : "bg-white/[0.08] text-white"
+        }`}
+      >
+        <Ion name="phone-portrait-outline" size={22} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[15px] font-bold text-white">{w.title}</span>
+        <span className="mt-0.5 block text-[13px] leading-[18px] text-white/60">{w.body}</span>
+      </span>
+      {w.actionable ? <Ion name="chevron-forward" size={20} color="rgba(255,255,255,0.5)" /> : null}
+    </>
+  );
+
+  return (
+    <section
+      aria-label={w.title}
+      className={`mt-[18px] rounded-[18px] border p-3.5 ${
+        strong ? "border-[rgba(255,183,3,0.28)] bg-[rgba(255,183,3,0.09)]" : "border-white/10 bg-white/[0.05]"
+      }`}
+    >
+      {w.actionable ? (
+        // A plain anchor: the link screen is a full page load, for its CSP.
+        <a href={nudge.href} className="flex items-center gap-3 transition-opacity hover:opacity-90">
+          {face}
+        </a>
+      ) : (
+        <div className="flex items-center gap-3">{face}</div>
+      )}
+      <div className="mt-2.5 flex flex-wrap items-center gap-2 pl-14">
+        {nudge.device === "android" ? (
+          // A new tab: the intent opens HOLD when it is installed and Google Play when it is not.
+          <a
+            href={playHref("android")}
+            target="_blank"
+            rel="noopener"
+            className="inline-flex h-8 items-center rounded-[16px] border border-white/[0.14] bg-white/[0.08] px-3.5 text-[13px] font-bold text-white transition-colors hover:bg-white/[0.12]"
+          >
+            Get HOLD on Google Play
+          </a>
+        ) : null}
+        <button
+          type="button"
+          onClick={nudge.later}
+          className="inline-flex h-8 items-center rounded-[16px] px-3 text-[13px] font-bold text-white/55 transition-colors hover:text-white/80"
+        >
+          Later
+        </button>
+      </div>
+    </section>
+  );
+}
+
+/* ── The one-time sheet ────────────────────────────────────────────── */
+
+/**
+ * The app's AccountProtectionSheet, for a wallet made in the app: the first
+ * time Home opens on the web, say plainly that paying from here needs the
+ * phone linked. Shown once; the card stays for later.
+ */
+export function LinkPhoneSheet({ nudge }: { nudge: LinkNudge }) {
+  const { closeSheet } = nudge;
+  useEffect(() => {
+    if (!nudge.sheet) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeSheet();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [nudge.sheet, closeSheet]);
+
+  if (!nudge.sheet) return null;
+  const w = wordsFor("pay", nudge.device);
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-labelledby="link-sheet-title">
+      <button aria-label="Close" className="absolute inset-0 bg-black/55 backdrop-blur-sm" onClick={closeSheet} />
+      <div className="relative w-full max-w-[460px] overflow-hidden rounded-t-[28px] bg-[linear-gradient(180deg,#12324a,#0a1929)] px-6 pb-5 pt-3 sm:m-3 sm:rounded-[28px]">
+        <div className="mx-auto mb-5 h-1 w-10 rounded-[2px] bg-white/25 sm:hidden" />
+        <span className="mx-auto flex h-[60px] w-[60px] items-center justify-center rounded-full bg-[rgba(255,183,3,0.18)] text-amber">
+          <Ion name="phone-portrait-outline" size={28} />
+        </span>
+        <h2 id="link-sheet-title" className="mt-4 text-center text-[22px] font-bold text-white">
+          {w.title}
+        </h2>
+        <p className="mt-2.5 text-center text-[15px] leading-[21px] text-white/65">{w.body}</p>
+        {w.actionable ? (
+          <a
+            href={nudge.href}
+            className="mt-6 flex h-[52px] items-center justify-center rounded-[16px] bg-amber text-[16px] font-bold text-[#0F0F1A] transition-opacity hover:opacity-90"
+          >
+            Link your phone
+          </a>
+        ) : null}
+        <button
+          type="button"
+          onClick={closeSheet}
+          className={`${w.actionable ? "" : "mt-6 "}flex w-full items-center justify-center py-3.5 text-[15px] font-semibold text-white/55 transition-colors hover:text-white/80`}
+        >
+          {w.actionable ? "Not now" : "Got it"}
+        </button>
+      </div>
+    </div>
+  );
+}
