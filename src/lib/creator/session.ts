@@ -61,7 +61,38 @@ export function creatorAuth(): SupabaseClient | null {
           },
         })
       : null;
+  if (client && typeof window !== "undefined") watchSignIns(client);
   return client;
+}
+
+/**
+ * What the product records when somebody signs in here, the way the app does
+ * on its own genuine SIGNED_IN (hihodl-wallet src/store/auth.ts):
+ *
+ *   - this browser's session, `POST /sessions/track` (lib/app/sessions), on
+ *     a sign-in and on the first load of a session registered before this
+ *     existed, once per person per browser;
+ *   - the Terms the sign-in line showed, `POST /me/terms` (lib/app/terms), on
+ *     a sign-in only: a restored session did not just read that line.
+ *
+ * Deferred a tick: supabase-js warns that awaiting its own auth calls inside
+ * this callback can deadlock, and both calls read the token through it.
+ * Imported lazily, because lib/app reads its token from this file.
+ */
+function watchSignIns(auth: SupabaseClient): void {
+  auth.auth.onAuthStateChange((event, next) => {
+    if (event === "SIGNED_OUT") {
+      void import("@/lib/app/sessions").then((m) => m.forgetThisBrowser());
+      return;
+    }
+    if (!next?.user || (event !== "SIGNED_IN" && event !== "INITIAL_SESSION")) return;
+    const userId = next.user.id;
+    const refresh = next.refresh_token;
+    setTimeout(() => {
+      void import("@/lib/app/sessions").then((m) => m.registerThisBrowser(userId, refresh));
+      if (event === "SIGNED_IN") void import("@/lib/app/terms").then((m) => m.recordTermsAcceptance(userId));
+    }, 0);
+  });
 }
 
 export interface CreatorSession {
@@ -130,6 +161,9 @@ export async function verifySignInCode(email: string, token: string): Promise<vo
 
 export async function signOut(): Promise<void> {
   await creatorAuth()?.auth.signOut();
+  // SIGNED_OUT forgets it too; said here as well so a sign-out that fails to
+  // reach Supabase still leaves no row claimed as this browser's.
+  void import("@/lib/app/sessions").then((m) => m.forgetThisBrowser());
 }
 
 /**

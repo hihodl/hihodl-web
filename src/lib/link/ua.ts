@@ -66,3 +66,34 @@ export function thisDevice(): { platform: DesktopPlatform; browser: string; phon
   const touch = navigator.maxTouchPoints ?? 0;
   return { platform: platformOf(ua, touch), browser: browserOf(ua, touch), phone: phoneOf(ua, touch), apple: appleDeviceOf(ua, touch) };
 }
+
+/* ── A session's device name, as the app names its own ──────────── */
+
+const BROWSER_NAME: Record<string, string> = {
+  chrome: "Chrome",
+  safari: "Safari",
+  firefox: "Firefox",
+  edge: "Edge",
+  opera: "Opera",
+  samsung: "Samsung Internet",
+};
+
+const PLATFORM_NAME: Record<string, string> = {
+  mac: "Mac",
+  windows: "Windows",
+  linux: "Linux",
+  chromeos: "ChromeOS",
+};
+
+/** "Chrome on Mac", "Safari on iPhone", "Chrome on Android". Pure, for the check script. */
+export function browserDeviceName(ua: string, maxTouchPoints = 0): { name: string; type: "mobile" | "tablet" | "desktop" } {
+  const browser = BROWSER_NAME[browserOf(ua, maxTouchPoints).split("-")[0]] ?? "Browser";
+  const apple = appleDeviceOf(ua, maxTouchPoints);
+  if (apple) return { name: `${browser} on ${apple}`, type: apple === "iPad" ? "tablet" : "mobile" };
+  if (phoneOf(ua, maxTouchPoints) === "android") {
+    // An Android tablet's UA drops "Mobile".
+    return { name: `${browser} on Android`, type: /Mobile/i.test(ua) ? "mobile" : "tablet" };
+  }
+  const platform = PLATFORM_NAME[platformOf(ua, maxTouchPoints)];
+  return { name: platform ? `${browser} on ${platform}` : `${browser}`, type: "desktop" };
+}

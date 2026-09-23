@@ -24,6 +24,7 @@ import { useEffect, useState } from "react";
 
 import type { OAuthProvider } from "@/lib/auth/providers";
 import { forgetRemembered, readRemembered, type Remembered } from "@/lib/auth/remember";
+import { noteTermsShown, TERMS_VERSION } from "@/lib/app/terms";
 
 import { goWith, NotConfigured, PROVIDER_NAME, ProviderLogo, useProviders } from "@/components/creator/SignIn";
 
@@ -139,12 +140,15 @@ export function Door({ configured }: { configured: boolean }) {
 
 /**
  * Said where an account is made: every row in this sheet creates one for
- * somebody new. Shown, not recorded — the backend has no sign-up field for it
- * (its one consent route, /verification/consent, is the KYC documents' own).
+ * somebody new. Recorded after the sign-in succeeds, with the version these
+ * links point at (`POST /me/terms`, lib/app/terms `TERMS_VERSION`, sent from
+ * lib/creator/session on SIGNED_IN). Not /verification/consent, which is the
+ * KYC documents' own.
  * Absolute links: the product lives on app.hihodl.xyz, the documents on the
  * site, and a new tab keeps the sheet where it was.
  */
 function Consent() {
+  useEffect(() => noteTermsShown(TERMS_VERSION), []);
   const link = "text-white/80 underline underline-offset-2 hover:text-text";
   return (
     <p className="mt-1 px-2 text-center text-[12px] leading-[17px] text-white/60">
