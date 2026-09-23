@@ -59,6 +59,9 @@ import { Card, Checkbox, fieldLabel } from "@/components/app/spaces/kit";
 import { Block, Choice, Count, Field, Money, Paragraph, Problems, Toggles } from "./parts";
 import { StepCard } from "./StepPager";
 import { DayTimeField, dayPlus, today } from "./WhenField";
+import { feePctText } from "@/lib/ad-space/fee";
+
+const FEE = feePctText();
 
 const CONTENT_LABEL: Record<ContentKind, string> = {
   logo: "A logo",
@@ -204,7 +207,7 @@ export function SellStep({
         )}
       </Block>
 
-      <Block title="What we charge" why="5% of what a space sells for, and nothing if nothing sells.">
+      <Block title="What we charge" why={`${FEE} of what a space sells for, and nothing if nothing sells.`}>
         <Choice
           name="feePayer"
           value={draft.feePayer}
@@ -214,13 +217,13 @@ export function SellStep({
               value: "sponsor",
               label: session ? "On top, paid by the client" : "On top, paid by the brand",
               body: session
-                ? "You receive exactly the price you set. The client pays it plus 5%."
-                : "You receive exactly the price you set. The brand pays it plus 5%.",
+                ? `You receive exactly the price you set. The client pays it plus ${FEE}.`
+                : `You receive exactly the price you set. The brand pays it plus ${FEE}.`,
             },
             {
               value: "creator",
               label: "Out of the price, paid by me",
-              body: session ? "The client pays the price you set. You receive it minus 5%." : "The brand pays the price you set. You receive it minus 5%.",
+              body: session ? `The client pays the price you set. You receive it minus ${FEE}.` : `The brand pays the price you set. You receive it minus ${FEE}.`,
             },
           ]}
         />

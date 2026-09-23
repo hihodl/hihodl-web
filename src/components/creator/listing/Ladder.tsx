@@ -49,6 +49,9 @@ import {
 import { problemsAt, type Problem } from "@/lib/creator/rules";
 
 import { btnSmallGlass, Count, Field, Money, Paragraph, Problems, Text } from "./parts";
+import { feePctText } from "@/lib/ad-space/fee";
+
+const FEE = feePctText();
 
 const iconBtn = `${btnSmallGlass} !w-9 !px-0`;
 
@@ -280,7 +283,7 @@ function Rung({
               split
                 ? draft.feePayer === "sponsor"
                   ? `You receive ${usd(split.creatorGetsCents)}.`
-                  : `You receive ${usd(split.creatorGetsCents)} after our 5%.`
+                  : `You receive ${usd(split.creatorGetsCents)} after our ${FEE}.`
                 : undefined
             }
           >
