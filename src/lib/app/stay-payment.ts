@@ -9,7 +9,11 @@
  *   3. quote    POST /cross-chain/quote       priced BEFORE anything is signed
  *   4. sign     the passkey: one ceremony that approves these exact bytes
  *               (POST /withdrawals/tx-challenge + /tx-authorize) and opens the
- *               wallet that signs them
+ *               wallet that signs them. On its OWN tap: `payForStay` stops at
+ *               `approve` with everything read and the challenge checked
+ *               against our digest, and `approveStay` starts the prompt as
+ *               its first step. Safari refuses a passkey prompt that comes
+ *               after several network calls, because the tap no longer counts
  *   5. send     POST /cross-chain/gasless/submit
  *   6. report   POST /settlement/intent/:id/leg
  *   7. settle   GET  /travel/bookings/:id/payment, until funded
@@ -48,7 +52,11 @@ import { getWalletBackup } from "@/lib/wallet/api";
 import { assertWithPrf } from "@/lib/wallet/passkey";
 import { wipe } from "@/lib/wallet/core";
 import { messageOf, signSerializedTx } from "@/lib/wallet/sign-tx";
-import { authorizeTxPasskey, txApprovalChallenge } from "@/lib/link/api";
+import { authorizeTxPasskey, txApprovalChallenge, type AssertionOptionsJSON } from "@/lib/link/api";
+import { type WalletBackup } from "@/lib/wallet/api";
+import { fromBase64 } from "@/lib/wallet/core";
+import { sameBytes, txChallenge } from "@/lib/wallet/withdraw-core";
+import { sha256 } from "@noble/hashes/sha256";
 
 import { BridgeRefused, prepareGasless, quoteCovering, submitGasless } from "./bridge";
 import { bookIt, openPayment, prebook, readPayment, reportLeg, type Booking, type PrebookQuery, type SettlementIntent } from "./stays";
@@ -71,7 +79,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /* ── What the screen watches ──────────────────────────────────────── */
 
-export type Phase = "idle" | "holding" | "opening" | "paying" | "settling" | "booking" | "booked" | "stopped";
+/** `approve`: held, priced and built; the passkey is asked on the next tap (`approveStay`). */
+export type Phase = "idle" | "holding" | "opening" | "approve" | "paying" | "settling" | "booking" | "booked" | "stopped";
 
 export interface PayState {
   phase: Phase;
@@ -98,14 +107,32 @@ const intents = new Map<string, SettlementIntent>();
 /** One deposit per booking. A retry must never re-send a leg that landed. */
 const sent = new Map<string, string>();
 
+/** The deposit, built and ready for the passkey: what `approveStay` signs. */
+interface PreparedDeposit {
+  intentId: string;
+  priced: Awaited<ReturnType<typeof quoteCovering>>;
+  serializedTx: string;
+  backup: WalletBackup;
+  /** base64 of the compiled message: what the approval is bound to. */
+  message: string;
+  options: AssertionOptionsJSON;
+  preparedAt: number;
+}
+const ready = new Map<string, PreparedDeposit>();
+
+/** A built deposit's blockhash lasts about a minute: past this it is built again rather than prompted for. */
+const FRESH_MS = 60_000;
+
 export function forgetPayment(bookingId?: string) {
   if (bookingId) {
     intents.delete(bookingId);
     sent.delete(bookingId);
+    ready.delete(bookingId);
     return;
   }
   intents.clear();
   sent.clear();
+  ready.clear();
 }
 
 /* ── The run ──────────────────────────────────────────────────────── */
@@ -127,7 +154,8 @@ export interface PayArgs {
 }
 
 /**
- * Hold, pay, and buy the room.
+ * Hold, open the payment, price it and build the deposit, ending on
+ * `approve` (then `approveStay`, on its own tap) or on why not.
  *
  * Resolves with the final state — it does not reject. Every refusal is a
  * `PayState` the screen can render, because a thrown error at any point past
@@ -218,7 +246,7 @@ export async function payForStay(args: PayArgs): Promise<PayState> {
     });
   }
 
-  set({ phase: "paying" });
+  // Still "opening": pricing and building move nothing. "paying" starts with the passkey (approveStay).
   let priced: Awaited<ReturnType<typeof quoteCovering>>;
   try {
     priced = await quoteCovering({
@@ -237,51 +265,94 @@ export async function payForStay(args: PayArgs): Promise<PayState> {
     });
   }
 
-  /* 4 ── the passkey, then the deposit */
-  let signed: string;
-  let prf: Uint8Array | null = null;
-  let seed: Uint8Array | null = null;
+  /* 4a ── build the deposit and read what the passkey needs, BEFORE the tap that asks */
   try {
     const rebuilt = await prepareGasless(priced.quote);
     const backup = await getWalletBackup();
     if (backup.wrappings.length === 0) throw new Error("no_passkey");
-
-    /*
-     * ONE CEREMONY, TWO THINGS — and now the server is told about it.
-     *
-     * This used to be a bare `evaluatePrf`, with a comment saying there was no
-     * server-side approval a bridge deposit could carry. There is one now:
-     * `/withdrawals/tx-challenge` issues a challenge that IS this
-     * transaction's digest, so the same Face ID that opens the wallet also
-     * signs the assertion that lets these exact bytes through
-     * `/cross-chain/gasless/submit`. One prompt, as before.
-     *
-     * The order matters. The approval is taken BEFORE the wallet is opened, so
-     * a refusal costs a prompt and nothing else, and it is written down before
-     * anything is signed — a signed transaction with no approval behind it is
-     * a transaction we would have to decide what to do with.
-     */
     const message = await messageOf(rebuilt.serializedTx);
     const challenge = await txApprovalChallenge(message);
-    const bound = await assertWithPrf(
-      challenge.options,
-      backup.wrappings.map((w) => w.credential_id),
+    // The passkey approves only what this page built: the server's challenge must be our own digest.
+    const bytes = fromBase64(message);
+    if (!sameBytes(fromBase64(challenge.options.challenge), txChallenge(bytes))) throw new Error("challenge_mismatch");
+    if (challenge.messageHash && !sameDigest(challenge.messageHash, sha256(bytes))) throw new Error("challenge_mismatch");
+    ready.set(bookingId, {
+      intentId: intent.id,
+      priced,
+      serializedTx: rebuilt.serializedTx,
+      backup,
+      message,
+      options: challenge.options,
+      preparedAt: Date.now(),
+    });
+  } catch {
+    return set({ phase: "stopped", message: "We couldn't prepare the payment. Nothing has been charged. Your room is still held." });
+  }
+  return set({ phase: "approve" });
+}
+
+/**
+ * The passkey, then the deposit, then the room: `payForStay`'s second half.
+ * Call it straight from the "Approve with passkey" click, with the state the
+ * first half ended on. The prompt is the first thing it starts.
+ */
+export async function approveStay(args: { uid: string; from: string; current: PayState; onState: (next: PayState) => void }): Promise<PayState> {
+  let state: PayState = args.current;
+  const set = (next: Partial<PayState>) => {
+    state = { ...state, ...next };
+    args.onState(state);
+    return state;
+  };
+  const bookingId = state.bookingId;
+  const p = bookingId ? ready.get(bookingId) : undefined;
+  if (!bookingId || !p) return set({ phase: "stopped", message: "Nothing has been charged. Tap Try again to prepare the payment." });
+  if (sent.get(bookingId)) {
+    // A leg is out. Never send a second; wait for the first.
+    ready.delete(bookingId);
+    set({ paid: true });
+    return finish(bookingId, set);
+  }
+  if (Date.now() - p.preparedAt > FRESH_MS) {
+    ready.delete(bookingId);
+    return set({ phase: "stopped", message: "That waited too long to be sent, so it was not. Nothing has been charged. Tap Try again." });
+  }
+
+  /* 4b ── ONE CEREMONY, TWO THINGS
+   *
+   * `/withdrawals/tx-challenge` issued a challenge that IS this transaction's
+   * digest, so the same Face ID that opens the wallet also signs the
+   * assertion that lets these exact bytes through `/cross-chain/gasless/submit`.
+   *
+   * The approval is taken BEFORE the wallet is opened, so a refusal costs a
+   * prompt and nothing else, and it is written down before anything is
+   * signed.
+   */
+  let signed: string;
+  let prf: Uint8Array | null = null;
+  let seed: Uint8Array | null = null;
+  try {
+    const pending = assertWithPrf(
+      p.options,
+      p.backup.wrappings.map((w) => w.credential_id),
     );
+    set({ phase: "paying", message: null });
+    const bound = await pending;
     prf = bound.prf;
-    await authorizeTxPasskey(message, bound.assertion);
-    const key = await openWallet({ uid: args.uid, backup, credentialId: bound.credentialId, prf });
+    await authorizeTxPasskey(p.message, bound.assertion);
+    const key = await openWallet({ uid: args.uid, backup: p.backup, credentialId: bound.credentialId, prf });
     seed = key.seed;
-    signed = await signSerializedTx(rebuilt.serializedTx, seed, args.from);
+    signed = await signSerializedTx(p.serializedTx, seed, args.from);
   } catch {
     return set({ phase: "stopped", message: "We couldn't approve the payment. Nothing has been charged." });
   } finally {
     wipe(prf, seed);
   }
+  ready.delete(bookingId);
 
   /* 5 ── send it. PAST THIS LINE NOTHING THROWS AND NOTHING RE-SENDS. */
   let deposit: string | null = null;
   try {
-    const out = await submitGasless({ quote: priced.quote, signedTx: signed, idempotencyKey: `stay:${bookingId}` });
+    const out = await submitGasless({ quote: p.priced.quote, signedTx: signed, idempotencyKey: `stay:${bookingId}` });
     deposit = out.depositTxHash ?? null;
   } catch (e) {
     // A 409 here means the same key is already in flight — the money may well
@@ -291,14 +362,14 @@ export async function payForStay(args: PayArgs): Promise<PayState> {
       set({ paid: true });
       return finish(bookingId, set);
     }
-    return set({ phase: "stopped", message: "We couldn't send the payment. Nothing has been charged — try again." });
+    return set({ phase: "stopped", message: "We couldn't send the payment. Nothing has been charged. Try again." });
   }
   sent.set(bookingId, deposit ?? "in_flight");
   set({ paid: true });
 
   /* 6 ── name the leg, so the arrival scan knows what to look for */
   if (deposit) {
-    await reportLeg(intent.id, { kind: "bridge", chain: "solana", txHash: deposit, amount: priced.deposit }).catch(
+    await reportLeg(p.intentId, { kind: "bridge", chain: "solana", txHash: deposit, amount: p.priced.deposit }).catch(
       // A leg we fail to report still lands; the scan finds it by amount
       // instead. This is a hint, not a record.
       () => undefined,
@@ -306,6 +377,17 @@ export async function payForStay(args: PayArgs): Promise<PayState> {
   }
 
   return finish(bookingId, set);
+}
+
+/** The server's `messageHash` (hex or base64) against our own sha256 of the bytes. */
+function sameDigest(given: string, mine: Uint8Array): boolean {
+  const hex = Array.from(mine, (b) => b.toString(16).padStart(2, "0")).join("");
+  if (/^[0-9a-f]{64}$/i.test(given)) return given.toLowerCase() === hex;
+  try {
+    return sameBytes(fromBase64(given), mine);
+  } catch {
+    return false;
+  }
 }
 
 /**

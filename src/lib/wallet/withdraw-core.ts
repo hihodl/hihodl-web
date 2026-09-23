@@ -33,6 +33,26 @@ export function withdrawalChallenge(id: string, message: Uint8Array): Uint8Array
   return sha256(all);
 }
 
+/**
+ * The challenge `POST /withdrawals/tx-challenge` must answer for bytes the
+ * SERVER built (a spot, a stay's bridge deposit):
+ *
+ *   challenge = sha256(utf8("hihodl/tx/v1") ‖ sha256(message))
+ *
+ * Checked here before the passkey is asked, as a withdrawal's is: the prompt
+ * only ever approves the transaction this page is holding.
+ */
+export const TX_DOMAIN = "hihodl/tx/v1";
+
+export function txChallenge(message: Uint8Array): Uint8Array {
+  const a = new TextEncoder().encode(TX_DOMAIN);
+  const c = sha256(message);
+  const all = new Uint8Array(a.length + c.length);
+  all.set(a, 0);
+  all.set(c, a.length);
+  return sha256(all);
+}
+
 export function sameBytes(a: Uint8Array, b: Uint8Array): boolean {
   if (a.length !== b.length) return false;
   let d = 0;

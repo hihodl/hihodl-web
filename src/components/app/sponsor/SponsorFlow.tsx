@@ -39,10 +39,12 @@
 import { useEffect, useState } from "react";
 
 import type { CreatorGroup, CreatorPage, Position, SpaceCard, Space } from "@/lib/ad-space/types";
-import { payForSpot, type PayPhase, type PointsFeeShare } from "@/lib/app/sponsor";
+import { approveSpot, prepareSpot, type PayPhase, type PointsFeeShare } from "@/lib/app/sponsor";
 import { claimableSpots, creatorStorefront, listingSpots, spotPrice } from "@/lib/app/storefront";
 
+import { useProductHref } from "../base";
 import { Ion } from "../ion";
+import { inAppHref, playHref, usePhone } from "../link/in-app";
 
 type Step =
   | { at: "events" }
@@ -374,15 +376,23 @@ function Pay({
   const price = spotPrice(spot);
   const creatorGets = Number(spot.creatorReceivesUsdc ?? "");
 
+  const productHref = useProductHref();
+  const phone = usePhone();
+
+  // Two taps: Pay holds the spot and gets everything ready; the passkey is
+  // asked on the second, inside its click, so Safari lets it start.
   const buy = () =>
-    void payForSpot({
-      uid,
+    void prepareSpot({
       positionId: spot.id,
       pointsFeeShare: share,
       onPhase: setPhase,
-    }).then((end) => {
+    });
+  const approve = () => {
+    if (phase.kind !== "ready") return;
+    void approveSpot({ uid, prepared: phase.prepared, onPhase: setPhase }).then((end) => {
       if (end.kind === "bought" || end.kind === "in-flight") onBought();
     });
+  };
 
   if (phase.kind === "bought") {
     return (
@@ -421,7 +431,44 @@ function Pay({
     );
   }
 
-  const working = phase.kind !== "idle" && phase.kind !== "stopped";
+  // A wallet made in the app pays in the app: the web holds no key for it.
+  if (phase.kind === "in-app" || phase.kind === "no-wallet") {
+    const openApp = inAppHref(`ad-space/${encodeURIComponent(space.id)}`, phone);
+    const inApp = phase.kind === "in-app";
+    const title = inApp ? "Pay for this spot in the HOLD app" : phase.canMake ? "Make your wallet first" : "Get HOLD to pay";
+    const body = inApp
+      ? openApp
+        ? "Your wallet was made in the HOLD app and its keys stay there. Open this listing in the app and book the spot there. Nothing has been charged."
+        : "Your wallet was made in the HOLD app and its keys stay there. Open HOLD on your phone, find this listing in Spaces and book the spot there. Nothing has been charged."
+      : phase.canMake
+        ? "Paying from HOLD needs a wallet on this account. Make one on the Wallet page with your passkey, then come back to this spot."
+        : "Paying from HOLD needs a wallet on this account, and the HOLD app on Google Play makes one with every chain.";
+    const href = inApp ? openApp : phase.canMake ? productHref("/wallet") : playHref(phone);
+    const label = inApp ? "Open in HOLD" : phase.canMake ? "Make your wallet" : "Get HOLD on Google Play";
+    return (
+      <div className="flex flex-col gap-3">
+        <div className="rounded-[16px] border border-white/10 bg-white/[0.05] p-3.5">
+          <p className="text-[15px] font-strong text-white">{title}</p>
+          <p className="mt-1 text-[13px] leading-[19px] text-white/70">{body}</p>
+        </div>
+        {href ? (
+          <a
+            href={href}
+            target={inApp || !phase.canMake ? "_blank" : undefined}
+            rel="noopener"
+            className="mt-1 inline-flex h-12 items-center justify-center rounded-[14px] bg-white/10 text-[15px] font-strong text-white transition-colors hover:bg-white/[0.16]"
+          >
+            {label}
+          </a>
+        ) : null}
+        <button type="button" onClick={() => setPhase({ kind: "idle" })} className="self-center rounded-[10px] px-4 py-2 text-[13px] font-semibold text-white/60 hover:text-white/85">
+          Back
+        </button>
+      </div>
+    );
+  }
+
+  const working = phase.kind !== "idle" && phase.kind !== "stopped" && phase.kind !== "ready";
 
   return (
     <div className="flex flex-col gap-3">
@@ -460,7 +507,7 @@ function Pay({
               <button
                 key={s}
                 type="button"
-                disabled={working}
+                disabled={working || phase.kind === "ready"}
                 aria-pressed={share === s}
                 onClick={() => setShare(s)}
                 className={`inline-flex h-9 shrink-0 items-center rounded-[10px] px-3.5 text-[12.5px] tabular-nums transition-colors disabled:opacity-50 ${
@@ -482,12 +529,16 @@ function Pay({
 
       <button
         type="button"
-        onClick={buy}
+        onClick={phase.kind === "ready" ? approve : buy}
         disabled={working || price === null}
-        className="mt-1 inline-flex h-12 items-center justify-center rounded-[14px] bg-amber text-[15px] font-bold text-text-on-amber transition-colors hover:bg-amber-glow disabled:bg-white/[0.12] disabled:text-white/50"
+        className="mt-1 inline-flex h-12 items-center justify-center gap-2 rounded-[14px] bg-amber text-[15px] font-bold text-text-on-amber transition-colors hover:bg-amber-glow disabled:bg-white/[0.12] disabled:text-white/50"
       >
-        {working ? working_label(phase) : price === null ? "Not for sale at a price" : `Pay ${money(price)}`}
+        {phase.kind === "ready" ? <Ion name="finger-print" size={17} /> : null}
+        {working ? working_label(phase) : price === null ? "Not for sale at a price" : phase.kind === "ready" ? "Approve with passkey" : `Pay ${money(price)}`}
       </button>
+      {phase.kind === "ready" ? (
+        <p className="px-1 text-[11.5px] leading-[16px] text-white/60">The spot is held for you. Your passkey approves exactly this payment and signs it.</p>
+      ) : null}
 
       <p className="px-1 text-[11.5px] leading-[16px] text-white/50">
         Paid in USDC from your HOLD wallet, approved with your passkey. It goes straight to {creatorName} — we never hold
@@ -503,7 +554,7 @@ function working_label(p: PayPhase): string {
     case "holding":
       return "Holding the spot…";
     case "approving":
-      return "Approve with your passkey…";
+      return "Waiting for your passkey…";
     case "signing":
       return "Signing…";
     case "sending":

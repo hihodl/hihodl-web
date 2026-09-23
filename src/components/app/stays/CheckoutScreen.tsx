@@ -30,10 +30,11 @@
  */
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { useProductHref } from "../base";
 import { Ion } from "../ion";
+import { inAppHref, playHref, usePhone } from "../link/in-app";
 
 import { Banner, Card, Cta, Empty, Photo, Screen, SectionLabel, Spinner } from "./kit";
 import { P, boardLabel, count, guests as guestsWord, money, shortDate, stayRange } from "./look";
@@ -41,7 +42,7 @@ import { PhotoViewer } from "./PhotoViewer";
 import { sane, stayFromParams, stayToParams } from "./SearchControls";
 import { usePoints, useRates, useStay, useStaysConfig } from "@/lib/app/stays-data";
 import { holdTripProvisionally, refreshTrips, releaseProvisionalTrip } from "@/lib/app/stays-data";
-import { payForStay, type PayState } from "@/lib/app/stay-payment";
+import { approveStay, payForStay, type PayState } from "@/lib/app/stay-payment";
 import { getBalances, getWalletStatus, type WalletStatus } from "@/lib/wallet/api";
 import { useCreatorSession } from "@/lib/creator/session";
 import useSWR from "swr";
@@ -105,7 +106,11 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
 
   /* ── Paying ── */
   const [pay, setPay] = useState<PayState | null>(null);
-  const running = pay !== null && !["booked", "stopped", "idle"].includes(pay.phase);
+  const running = pay !== null && !["booked", "stopped", "idle", "approve"].includes(pay.phase);
+  // Held and built, waiting for the passkey's tap: nothing on the form may change under it.
+  const approving = pay?.phase === "approve";
+  const locked = running || approving;
+  const phone = usePhone();
 
   const filled =
     guest.firstName.trim().length > 0 &&
@@ -153,13 +158,33 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
       },
     });
 
+    after(out);
+  }
+
+  /** What the tap on "Approve with passkey" does: straight into the prompt, nothing awaited first. */
+  function approve() {
+    if (!pay || pay.phase !== "approve" || !from || !session?.user?.id || !rate || !stay.data) return;
+    const r = rate;
+    const s = stay.data;
+    void approveStay({
+      uid: session.user.id,
+      from,
+      current: pay,
+      onState: (next) => {
+        setPay(next);
+        if (next.paid && next.bookingId) holdTripProvisionally(placeholder(next.bookingId, s.name, s.city, r, search, guest));
+      },
+    }).then(after);
+  }
+
+  function after(out: PayState) {
     if (out.phase === "booked" && out.booking) {
       void refreshTrips();
       router.push(href(`/travel/trips/${out.booking.id}`));
       return;
     }
     // Nothing left the wallet, so nothing should be pretending to be a trip.
-    if (!out.paid && out.bookingId) releaseProvisionalTrip(out.bookingId);
+    if (!out.paid && out.bookingId && out.phase !== "approve") releaseProvisionalTrip(out.bookingId);
   }
 
   /* ── What to draw ── */
@@ -268,11 +293,11 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
         <SectionLabel className="mb-2.5 mt-[22px]">Lead guest</SectionLabel>
           <Card hero className="flex flex-col gap-3 p-[14px]">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Field label="First name" value={guest.firstName} onChange={(v) => setGuest({ ...guest, firstName: v })} autoComplete="given-name" disabled={running} />
-              <Field label="Last name" value={guest.lastName} onChange={(v) => setGuest({ ...guest, lastName: v })} autoComplete="family-name" disabled={running} />
+              <Field label="First name" value={guest.firstName} onChange={(v) => setGuest({ ...guest, firstName: v })} autoComplete="given-name" disabled={locked} />
+              <Field label="Last name" value={guest.lastName} onChange={(v) => setGuest({ ...guest, lastName: v })} autoComplete="family-name" disabled={locked} />
             </div>
-            <Field label="Email" value={guest.email} onChange={(v) => setGuest({ ...guest, email: v })} type="email" autoComplete="email" disabled={running} />
-            <Field label="Phone (optional)" value={guest.phone ?? ""} onChange={(v) => setGuest({ ...guest, phone: v })} type="tel" autoComplete="tel" disabled={running} />
+            <Field label="Email" value={guest.email} onChange={(v) => setGuest({ ...guest, email: v })} type="email" autoComplete="email" disabled={locked} />
+            <Field label="Phone (optional)" value={guest.phone ?? ""} onChange={(v) => setGuest({ ...guest, phone: v })} type="tel" autoComplete="tel" disabled={locked} />
             <p className="text-[11.5px] leading-[17px]" style={{ color: P.textFaint }}>
               The property gets this name and it has to match the passport or ID at the desk.
             </p>
@@ -284,7 +309,7 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
             <textarea
               value={request}
               onChange={(e) => setRequest(e.target.value.slice(0, 500))}
-              disabled={running}
+              disabled={locked}
               rows={3}
               placeholder="A late arrival, a cot, a quiet room. We pass it on — the property decides."
               className="w-full resize-none bg-transparent text-[13.5px] leading-[19px] outline-none placeholder:text-[13px]"
@@ -299,7 +324,7 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
           {ceiling > 0 ? (
             <>
               <SectionLabel className="mb-2.5 mt-[22px]">Pay with points</SectionLabel>
-              <PointsBand balance={balance} ceiling={ceiling} value={spend} onChange={setSpend} pointUsd={config.data?.pointsUsdValue ?? 0.01} disabled={running} />
+              <PointsBand balance={balance} ceiling={ceiling} value={spend} onChange={setSpend} pointUsd={config.data?.pointsUsdValue ?? 0.01} disabled={locked} />
             </>
           ) : null}
 
@@ -353,27 +378,15 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
              * button on the screen never lights up.
              */}
             {!from ? (
-              <Card hero className="flex flex-col gap-2 p-[14px]">
-                <p className="text-[13px] font-bold" style={{ color: P.text }}>
-                  {!wallet.data
-                    ? "We couldn't read your wallet"
-                    : wallet.data.state === "app_wallet"
-                      ? "Pay for this one in the app"
-                      : "You need a wallet here first"}
+              <NoPayer wallet={wallet.data ?? null} phone={phone} onRetry={() => void wallet.mutate()} walletHref={href("/wallet")} />
+            ) : approving ? (
+              <>
+                {/* The second tap: Safari starts a passkey prompt only inside a click. */}
+                <Cta label="Approve with passkey" icon="finger-print" variant="commit" onClick={approve} />
+                <p className="text-[11.5px] leading-[17px]" style={{ color: P.textMuted }}>
+                  Your room is held. Your passkey approves exactly this payment and signs it.
                 </p>
-                <p className="text-[12.5px] leading-[18px]" style={{ color: P.textMuted }}>
-                  {!wallet.data
-                    ? "Nothing has been charged, and the room is not held. This page has to know which wallet pays before it can ask you to."
-                    : wallet.data.state === "app_wallet"
-                      ? "Your wallet lives on your phone, and that is where it signs. Search and hold a room here; pay there."
-                      : "A HOLD wallet in this browser, made once with a passkey. Then this page can pay on its own."}
-                </p>
-                <Cta
-                  label={!wallet.data ? "Try again" : wallet.data.state === "app_wallet" ? "How it works" : "Set up the wallet"}
-                  variant="secondary"
-                  onClick={() => (wallet.data ? router.push(href("/wallet")) : void wallet.mutate())}
-                />
-              </Card>
+              </>
             ) : (
               <Cta
                 label={pay?.phase === "stopped" && pay.bookingId ? "Try again" : `Pay ${money(total, rate.currency)}`}
@@ -402,6 +415,88 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
 }
 
 /* ── The bits ─────────────────────────────────────────────────────── */
+
+/**
+ * Why this page cannot pay, and the way forward. Never a dead end
+ * (documentation/one-wallet-every-device.md, rule 4):
+ *
+ *   unread      try again
+ *   app wallet  the app pays a stay: its keys are on the phone, and a phone
+ *               has no inbox for a transaction the server built yet. On a
+ *               phone, a link into the app's Stays; on a computer, where to look
+ *   no wallet   the Wallet page makes one (a full load: its CSP), or, with
+ *               the rollout gate closed, the HOLD app does
+ */
+function NoPayer({
+  wallet,
+  phone,
+  walletHref,
+  onRetry,
+}: {
+  wallet: WalletStatus | null;
+  phone: ReturnType<typeof usePhone>;
+  walletHref: string;
+  onRetry: () => void;
+}) {
+  const app = wallet?.state === "app_wallet";
+  const web = wallet?.state === "web_wallet";
+  const gateOpen = wallet?.enabled !== false;
+  const openApp = inAppHref("travel", phone);
+
+  const title = !wallet
+    ? "We couldn't read your wallet"
+    : app
+      ? "Pay for this stay in the HOLD app"
+      : web
+        ? "Open your wallet once first"
+        : gateOpen
+          ? "You need a wallet here first"
+          : "Get HOLD to pay";
+  const body = !wallet
+    ? "Nothing has been charged, and the room is not held. This page has to know which wallet pays before it can ask you to."
+    : app
+      ? openApp
+        ? "Your wallet was made in the HOLD app, and its keys stay on your phone. Open Stays in the app and book this room there. Nothing has been charged."
+        : "Your wallet was made in the HOLD app, and its keys stay on your phone. Open HOLD on your phone, go to Stays and book this room there. Nothing has been charged."
+      : web
+        ? "Unlock your wallet on the Wallet page once, so HOLD knows its address. Then this page can pay."
+        : gateOpen
+          ? "A HOLD wallet in this browser, made once with a passkey. Then this page can pay on its own."
+          : "Paying for a stay needs a HOLD wallet, and the HOLD app on Google Play makes one with every chain. Nothing has been charged.";
+
+  let action: ReactNode;
+  if (!wallet) action = <Cta label="Try again" variant="secondary" onClick={onRetry} />;
+  else if (app) action = openApp ? <LinkCta href={openApp} label="Open in HOLD" newTab /> : null;
+  else if (web || gateOpen) action = <LinkCta href={walletHref} label={web ? "Open Wallet" : "Set up the wallet"} />;
+  else action = <LinkCta href={playHref(phone)} label="Get HOLD on Google Play" newTab />;
+
+  return (
+    <Card hero className="flex flex-col gap-2 p-[14px]">
+      <p className="text-[13px] font-bold" style={{ color: P.text }}>
+        {title}
+      </p>
+      <p className="text-[12.5px] leading-[18px]" style={{ color: P.textMuted }}>
+        {body}
+      </p>
+      {action}
+    </Card>
+  );
+}
+
+/** The kit's secondary Cta, as a link: the Wallet page is a full load (its CSP), the app a new tab. */
+function LinkCta({ href, label, newTab = false }: { href: string; label: string; newTab?: boolean }) {
+  return (
+    <a
+      href={href}
+      target={newTab ? "_blank" : undefined}
+      rel={newTab ? "noopener" : undefined}
+      className="flex h-[52px] items-center justify-center gap-[9px] rounded-[26px] px-5 text-[16px] font-bold tracking-[-0.2px] transition-opacity active:opacity-85"
+      style={{ background: "rgba(255,255,255,0.10)", color: P.text }}
+    >
+      {label}
+    </a>
+  );
+}
 
 function Field({
   label,
@@ -516,12 +611,14 @@ function PointsBand({
  * step is honest and says more.
  */
 function Progress({ state }: { state: PayState | null }) {
-  if (!state || state.phase === "idle") return null;
+  // Waiting on the passkey's tap is said under its own button.
+  if (!state || state.phase === "idle" || state.phase === "approve") return null;
 
   const said: Record<PayState["phase"], string | null> = {
     idle: null,
     holding: "Holding your room…",
     opening: "Opening the payment…",
+    approve: null,
     paying: "Sending your payment…",
     settling: "Waiting for the payment to land…",
     booking: "Buying the room…",

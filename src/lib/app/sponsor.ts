@@ -49,6 +49,15 @@
  * `assertWithPrf` signs the server's challenge and evaluates PRF in the same
  * ceremony.
  *
+ * It takes two taps. Steps 1 and 2 (and reading what the prompt needs) run on
+ * "Pay" (`prepareSpot`); the prompt is the first thing the second tap does,
+ * "Approve with passkey" (`approveSpot`). Safari refuses a passkey prompt that
+ * starts after several network calls, because the tap no longer counts.
+ *
+ * A wallet made in the HOLD app is sent to the app: the web holds no key for
+ * it, and a phone has no inbox for a transaction the server built yet
+ * (documentation/one-wallet-every-device.md, rule 4).
+ *
  * ── THE LINE ──
  *
  * `submitted` is the line. Before it, nothing has left and saying so is
@@ -63,12 +72,15 @@ import { useEffect, useState } from "react";
 import type { ContentBody } from "@/lib/ad-space/content-form";
 import type { Order } from "@/lib/ad-space/types";
 import { call } from "@/lib/creator/api";
-import { authorizeTxPasskey, relayerSubmit, txApprovalChallenge } from "@/lib/link/api";
-import { getWalletBackup, getWalletStatus } from "@/lib/wallet/api";
-import { wipe } from "@/lib/wallet/core";
+import { sha256 } from "@noble/hashes/sha256";
+
+import { authorizeTxPasskey, relayerSubmit, txApprovalChallenge, type AssertionOptionsJSON } from "@/lib/link/api";
+import { getWalletBackup, getWalletStatus, type WalletBackup } from "@/lib/wallet/api";
+import { fromBase64, wipe } from "@/lib/wallet/core";
 import { openWallet } from "@/lib/wallet/flows";
 import { assertWithPrf } from "@/lib/wallet/passkey";
 import { messageOf, signSerializedTx } from "@/lib/wallet/sign-tx";
+import { sameBytes, txChallenge } from "@/lib/wallet/withdraw-core";
 
 import { creatorStorefront } from "./storefront";
 
@@ -306,6 +318,8 @@ export function useSpotsBoughtFrom(peerId: string | null): SpotBought[] {
 export type PayPhase =
   | { kind: "idle" }
   | { kind: "holding" }
+  /** Held and built: the passkey is asked on the NEXT tap ("Approve with passkey"). */
+  | { kind: "ready"; prepared: PreparedSpot }
   | { kind: "approving" }
   | { kind: "signing" }
   | { kind: "sending" }
@@ -314,7 +328,37 @@ export type PayPhase =
   /** Nothing left the wallet. Saying so is only allowed before `sending` returns. */
   | { kind: "stopped"; message: string }
   /** Money is on its way and we lost the thread. Never retried from here. */
-  | { kind: "in-flight"; orderId: string; message: string };
+  | { kind: "in-flight"; orderId: string; message: string }
+  /**
+   * A wallet made in the HOLD app: the web holds no key for it, and a phone
+   * has no inbox for a transaction the server built yet, so the app pays.
+   * documentation/one-wallet-every-device.md, rule 4.
+   */
+  | { kind: "in-app" }
+  /** No wallet at all. `canMake`: the web can make one now (the rollout gate is open). */
+  | { kind: "no-wallet"; canMake: boolean };
+
+/**
+ * Everything the passkey needs, read BEFORE the tap that asks for it.
+ *
+ * Safari only lets a page start a passkey prompt inside a user gesture, and a
+ * gesture does not survive several network calls. So the spot is held, the
+ * transaction built, the backup read and the challenge fetched (and checked
+ * against our own digest of the bytes) first; the prompt is then the very
+ * first thing the second tap does, as Withdraw.tsx does it.
+ */
+export interface PreparedSpot {
+  from: string;
+  handoff: RelayedHandoff;
+  backup: WalletBackup;
+  /** base64 of the compiled message: what the approval is bound to. */
+  message: string;
+  options: AssertionOptionsJSON;
+  preparedAt: number;
+}
+
+/** The transaction's blockhash is good for about a minute: past this, prepare again rather than prompt. */
+const FRESH_MS = 60_000;
 
 /** A fresh idempotency key: the header wants 10 to 128 characters. */
 function newKey(): string {
@@ -324,16 +368,13 @@ function newKey(): string {
 }
 
 /**
- * Buy one spot, start to finish, reporting each step.
+ * Buy one spot, first half: whose wallet, hold the spot, and get the passkey
+ * ready. Ends in `ready` (then `approveSpot`, on its own tap), or in a phase
+ * that says why not.
  *
- * `uid` is the signed-in person; `onPhase` is called as it goes so a screen can
- * say what is happening without this file knowing anything about a screen.
- *
- * Every refusal before the submit says "nothing has been charged", because
- * nothing has. After it, nothing is ever re-sent — see THE LINE above.
+ * Every refusal here says "nothing has been charged", because nothing has.
  */
-export async function payForSpot(args: {
-  uid: string;
+export async function prepareSpot(args: {
   positionId: string;
   offerId?: string | null;
   pointsFeeShare?: PointsFeeShare;
@@ -346,12 +387,15 @@ export async function payForSpot(args: {
 
   /* 1 ── whose wallet, and does it exist */
   const status = await getWalletStatus().catch(() => null);
-  const from = status?.registered_address ?? null;
+  if (!status) return say({ kind: "stopped", message: "We couldn't read your wallet. Nothing has been charged. Try again." });
+  if (status.state === "app_wallet") return say({ kind: "in-app" });
+  const from = status.state === "web_wallet" ? (status.registered_address ?? null) : null;
   if (!from) {
-    return say({
-      kind: "stopped",
-      message: "This account has no HOLD wallet on the web yet. Make one from Wallet, then buy from here.",
-    });
+    if (status.state === "web_wallet") {
+      // Made, but the backend does not watch it yet: one unlock on Wallet registers it.
+      return say({ kind: "stopped", message: "Open Wallet and unlock it once, then buy from here. Nothing has been charged." });
+    }
+    return say({ kind: "no-wallet", canMake: status.enabled !== false });
   }
 
   /* 2 ── hold the spot */
@@ -375,20 +419,49 @@ export async function payForSpot(args: {
     return say({ kind: "stopped", message: "We could not prepare that payment. Nothing has been charged." });
   }
 
-  /* 3 ── one ceremony: approve these exact bytes, and open the wallet */
-  let prf: Uint8Array | null = null;
-  let seed: Uint8Array | null = null;
-  let signed: string;
+  /* 3 ── the approval's challenge, bound to these exact bytes and checked here */
   try {
-    say({ kind: "approving" });
     const backup = await getWalletBackup();
     if (backup.wrappings.length === 0) throw new Error("no_passkey");
     const message = await messageOf(handoff.transaction);
     const challenge = await txApprovalChallenge(message);
-    const bound = await assertWithPrf(
-      challenge.options,
+    // The passkey approves only what this page is holding: the server's challenge must be our own digest.
+    const bytes = fromBase64(message);
+    if (!sameBytes(fromBase64(challenge.options.challenge), txChallenge(bytes))) throw new Error("challenge_mismatch");
+    if (challenge.messageHash && !sameDigest(challenge.messageHash, sha256(bytes))) throw new Error("challenge_mismatch");
+    return say({ kind: "ready", prepared: { from, handoff, backup, message, options: challenge.options, preparedAt: Date.now() } });
+  } catch {
+    return say({ kind: "stopped", message: "We couldn't prepare the approval for that payment. Nothing has been charged." });
+  }
+}
+
+/**
+ * Buy one spot, second half: the passkey, then send. Call it straight from
+ * the click: the prompt is its first await, so Safari sees the tap.
+ *
+ * Past `submitted` nothing is ever re-sent (THE LINE above).
+ */
+export async function approveSpot(args: { uid: string; prepared: PreparedSpot; onPhase: (p: PayPhase) => void }): Promise<PayPhase> {
+  const say = (p: PayPhase) => {
+    args.onPhase(p);
+    return p;
+  };
+  const { from, handoff, backup, message, options } = args.prepared;
+  if (Date.now() - args.prepared.preparedAt > FRESH_MS) {
+    return say({ kind: "stopped", message: "That waited too long to be sent, so it was not. Nothing has been charged. Tap Pay again." });
+  }
+
+  /* 4 ── one ceremony: approve these exact bytes, and open the wallet */
+  let prf: Uint8Array | null = null;
+  let seed: Uint8Array | null = null;
+  let signed: string;
+  try {
+    const pending = assertWithPrf(
+      options,
       backup.wrappings.map((w) => w.credential_id),
     );
+    say({ kind: "approving" });
+    const bound = await pending;
     prf = bound.prf;
     await authorizeTxPasskey(message, bound.assertion);
 
@@ -402,7 +475,7 @@ export async function payForSpot(args: {
     wipe(prf, seed);
   }
 
-  /* 4 ── send it. PAST THIS LINE NOTHING IS RE-SENT. */
+  /* 5 ── send it. PAST THIS LINE NOTHING IS RE-SENT. */
   say({ kind: "sending" });
   let signature: string;
   try {
@@ -419,10 +492,10 @@ export async function payForSpot(args: {
         message: "This payment is already going through. Give it a moment and check the spot.",
       });
     }
-    return say({ kind: "stopped", message: "We couldn't send that payment. Nothing has been charged — try again." });
+    return say({ kind: "stopped", message: "We couldn't send that payment. Nothing has been charged. Try again." });
   }
 
-  /* 5 ── tell Spaces, which is what turns the spot over */
+  /* 6 ── tell Spaces, which is what turns the spot over */
   say({ kind: "confirming", order: handoff.order });
   try {
     const done = await confirmSpot(handoff.order.id, signature);
@@ -435,6 +508,17 @@ export async function payForSpot(args: {
       orderId: handoff.order.id,
       message: "Your payment is on the network. The spot turns over as soon as it settles.",
     });
+  }
+}
+
+/** The server's `messageHash` (hex or base64) against our own sha256 of the bytes. */
+function sameDigest(given: string, mine: Uint8Array): boolean {
+  const hex = Array.from(mine, (b) => b.toString(16).padStart(2, "0")).join("");
+  if (/^[0-9a-f]{64}$/i.test(given)) return given.toLowerCase() === hex;
+  try {
+    return sameBytes(fromBase64(given), mine);
+  } catch {
+    return false;
   }
 }
 
