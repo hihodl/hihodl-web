@@ -31,15 +31,18 @@ import {
   getCostBasis,
   getKaminoPositions,
   getKaminoReserves,
+  getLots,
   getOfframpOrders,
   getPriceHistory,
   getPrices,
   getRailAccounts,
+  getRealized,
   getScheduledPayments,
   getTransferDetails,
   getTransfers,
   getYieldAuthorization,
   pocketsOf,
+  type AcquisitionLot,
   type AliasRecord,
   type Balance,
   type BalancesAnswer,
@@ -47,6 +50,7 @@ import {
   type LedgerSubaccount,
   type OfframpOrder,
   type RailAccount,
+  type RealizedReport,
   type Schedule,
   type SubaccountBalanceRow,
   type TransferDetails,
@@ -379,6 +383,19 @@ export function formatApy(apy: number): string {
 
 export function useCostBasis() {
   return useRead("cost-basis", getCostBasis);
+}
+
+/**
+ * Realised disposals for one tax year, or all of them (`"all"`) — the second
+ * is what the year picker and the Performance "Sold" card read.
+ */
+export function useRealized(year: number | "all") {
+  return useRead<RealizedReport>("realized", () => getRealized(year === "all" ? null : year), String(year));
+}
+
+/** The acquisitions behind one ticker, or every lot when `token` is omitted. */
+export function useLots(token?: string) {
+  return useRead<AcquisitionLot[]>("lots", () => getLots(token ? { token } : {}), token ?? "*");
 }
 
 /* ── Standing payments ────────────────────────────────────────────── */

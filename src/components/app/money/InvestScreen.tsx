@@ -42,22 +42,34 @@
  *   hybrid   One row per ticker across every chain, real symbols.
  *   native   One row per ticker AND chain, each naming its network.
  *
- * WHAT IS NOT HERE, AND WHY
+ * WHERE THE DEPTH LIVES
  *
- * Performance, the realised-gains report and the cost-basis lot view are not
- * built here yet. This note used to say `/portfolio/lots`,
- * `/portfolio/realized` and `/stocks/availability` were not mounted and would
- * 404; that was read off a stale checkout. All three answer in production, all
- * three are plain authenticated reads, and the web may make them — so what is
- * missing is the screens, not the data. The one genuine gap is the Fear & Greed
- * card, a third-party call from the device that a page cannot make.
- * `GET /portfolio/cost-basis` is what puts the move against what you paid under
- * each value.
+ * The pie disc in the header opens Performance (PerformanceScreen, the app's
+ * `invest/performance`), exactly as the app's does: unrealised gain per
+ * holding and the allocation ring, what the SOL at work has earned, and what
+ * was sold. From there, Realised gains (`invest/report`, with the server's PDF
+ * and CSV) and What you paid (`invest/cost/[symbol]`, the lots, read only).
+ * All of it is `/portfolio/*` — cost-basis, realized, realized/download, lots —
+ * plain authenticated reads the API Worker answers with CORS `*` and
+ * `Authorization` allowed (preflighted from app.hihodl.xyz, 23-Sep-2026).
+ * The one card the web does not draw is Fear & Greed: alternative.me, called
+ * from the device, and not this person's money.
+ *
+ * WHAT A ROW SAYS
+ *
+ * The app's row is a value and what the last 24 hours did to it, in dollars.
+ * The web reads the same move off our own `/prices/history` (the 7-day series,
+ * the point at or before 24 hours ago — `usePrices24hAgo`, which Home's hero
+ * already uses), and keeps under the ticker what the app keeps on its cost
+ * screen: the move against what this person paid, from
+ * `GET /portfolio/cost-basis`. Either line is absent, never a guessed zero,
+ * when its data is.
  *
  * VIEW ONLY. Buying, exchanging and supplying are signatures; every row that
  * offers one in the app says here where it happens.
  */
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import {
@@ -79,6 +91,7 @@ import {
   useCostBasis,
   usePortfolioHistory,
   usePrices,
+  usePrices24hAgo,
   useSuppliedBySlug,
   useYieldPositions,
   useYieldReserves,
@@ -86,7 +99,9 @@ import {
   type CurvePoint,
 } from "@/lib/app/money";
 import { chainLabel } from "@/lib/app/payments";
+import { useMyAddresses } from "@/lib/app/spaces-data";
 
+import { useProductHref } from "../base";
 import { Ion } from "../ion";
 import { useShellPrefs } from "../Shell";
 import { Skeleton } from "../ui";
@@ -153,27 +168,7 @@ export function InvestScreen() {
   /* Supplied money is not in `/balances`, which is liquid by design. The app
    * folds the working SOL back into the hero for exactly that reason: without
    * it the two screens print different totals for the same money. */
-  const yieldRead = useYieldPositions();
-  // The read names the venue that did not answer; the rows are what it did get.
-  const positions = { ...yieldRead, data: yieldRead.data?.positions };
-  const venuesDown = yieldRead.data?.failed ?? [];
-  const reserves = useYieldReserves();
-  const { rows: placementRows } = useSuppliedBySlug();
-  const working = useMemo(() => {
-    const invested = (positions.data ?? []).filter((p) => !isStable(p.token));
-    const usd = invested.reduce((s, p) => s + p.suppliedUsd, 0);
-    const sol = invested
-      .filter((p) => p.token.toUpperCase() === "SOL")
-      .reduce((s, p) => s + Number(p.suppliedBaseUnits) / 1e9, 0);
-    const rated = invested
-      .map((p) => {
-        const reserve = (reserves.data ?? []).find((r) => (r.token || r.symbol || "").toLowerCase() === p.token.toLowerCase());
-        return { usd: p.suppliedUsd, apy: (reserve?.supplyApy ?? 0) * (1 - perfFeeForPosition({ rows: placementRows, chain: p.chain ?? null, token: p.token })) };
-      })
-      .filter((r) => r.apy > 0 && r.usd > 0);
-    const apy = rated.length ? rated.reduce((s, r) => s + r.apy * r.usd, 0) / rated.reduce((s, r) => s + r.usd, 0) : null;
-    return { usd, sol, apy, failed: !!positions.error };
-  }, [positions.data, positions.error, reserves.data, placementRows]);
+  const working = useWorkingSol();
 
   /* Investable holdings: real balances, stablecoins excluded, biggest first.
    * A holding we could not VALUE is not a holding worth nothing, so the dust
@@ -259,6 +254,42 @@ export function InvestScreen() {
     return out;
   }, [basis.data, rows, prices.data, displayMode]);
 
+  /* What the last 24 hours did to each holding, in dollars — the app's row
+   * line. Same grain and the same rule as the move above: a holding where any
+   * leg has no price a day ago shows no 24h figure at all. */
+  const yesterday = usePrices24hAgo(symbols);
+  const dayFor = useMemo(() => {
+    const out = new Map<string, number>();
+    const ago = yesterday.data;
+    if (!ago || !prices.data) return out;
+    const perChain = showChainContext(displayMode);
+    const incomplete = new Set<string>();
+    for (const b of rows) {
+      const symbol = symbolOf(b);
+      if (!symbol || isStable(symbol)) continue;
+      const amount = Number(b.balance);
+      if (!Number.isFinite(amount) || amount <= 0) continue;
+      const chain = perChain ? (b.chain ?? null) : null;
+      const key = chain ? `${symbol}|${chain}` : symbol;
+      const then = ago[symbol];
+      const now = usdOf(b, prices.data.prices);
+      if (then === undefined || now === null) {
+        incomplete.add(key);
+        continue;
+      }
+      out.set(key, (out.get(key) ?? 0) + (now - amount * then));
+    }
+    for (const key of incomplete) out.delete(key);
+    if (!perChain) {
+      const legs = [...out.keys()].filter(isBtcFamilySymbol);
+      const missing = [...incomplete].some(isBtcFamilySymbol);
+      if (legs.length > 0 && !missing) out.set("btc-family", legs.reduce((sum, k) => sum + (out.get(k) ?? 0), 0));
+    }
+    return out;
+  }, [yesterday.data, rows, prices.data, displayMode]);
+
+  const href = useProductHref();
+
   /* Loading until every read that can change the total has answered one way or
    * the other. A failed read is an answer; a read still out is not, and
    * drawing a total before the prices land prints a portfolio of em dashes for
@@ -283,6 +314,19 @@ export function InvestScreen() {
   return (
     <div className="flex flex-1 flex-col">
       <div className="mx-auto flex w-full max-w-[1040px] flex-col">
+        {/* The app's header: the title, and the disc that opens Performance. */}
+        <div className="flex items-center justify-between px-1 pb-2.5">
+          <h1 className="text-[28px] font-bold tracking-[-0.6px] text-white">Invest</h1>
+          <Link
+            href={href("/invest/performance")}
+            aria-label="Performance"
+            title="Performance"
+            className="flex h-[38px] w-[38px] items-center justify-center rounded-[19px] bg-white/[0.06] text-white/[0.75] transition-colors hover:bg-white/[0.12] hover:text-white"
+          >
+            <Ion name="pie-chart-outline" size={19} />
+          </Link>
+        </div>
+
         {loading ? (
           <Skeleton className="h-[248px]" />
         ) : failed ? (
@@ -332,7 +376,7 @@ export function InvestScreen() {
               {holdings.map((h, i) => (
                 <div key={h.key}>
                   {i > 0 ? <div className="ml-16 h-px bg-white/[0.06]" /> : null}
-                  <AssetRow holding={h} move={moveFor.get(h.key) ?? null} mode={displayMode} />
+                  <AssetRow holding={h} move={moveFor.get(h.key) ?? null} day={dayFor.get(h.key) ?? null} mode={displayMode} />
                 </div>
               ))}
             </div>
@@ -344,6 +388,49 @@ export function InvestScreen() {
       </div>
     </div>
   );
+}
+
+/* ── What is supplied to a venue ──────────────────────────────────── */
+
+/**
+ * The invested (non-dollar) money sitting at a venue, and the rate it earns
+ * net of our cut. Shared with Performance so the two screens cannot print
+ * different totals for the same supplied SOL.
+ *
+ * `earnedSol` is supplied minus principal — the app's "SOL earned so far" —
+ * and null when we were not tracking the principal, which is not zero.
+ */
+export function useWorkingSol() {
+  const addrs = useMyAddresses();
+  const yieldRead = useYieldPositions();
+  const reserves = useYieldReserves();
+  const { rows: placementRows } = useSuppliedBySlug();
+  const positions = yieldRead.data?.positions;
+  const error = yieldRead.error;
+  return useMemo(() => {
+    const invested = (positions ?? []).filter((p) => !isStable(p.token));
+    const usd = invested.reduce((s, p) => s + p.suppliedUsd, 0);
+    const solRows = invested.filter((p) => p.token.toUpperCase() === "SOL");
+    const sol = solRows.reduce((s, p) => s + Number(p.suppliedBaseUnits) / 1e9, 0);
+    const solUsd = solRows.reduce((s, p) => s + p.suppliedUsd, 0);
+    const tracked = solRows.length > 0 && solRows.every((p) => p.principalBaseUnits != null);
+    const earnedSol = tracked
+      ? Math.max(0, solRows.reduce((s, p) => s + (Number(p.suppliedBaseUnits) - Number(p.principalBaseUnits)) / 1e9, 0))
+      : null;
+    const rated = invested
+      .map((p) => {
+        const reserve = (reserves.data ?? []).find((r) => (r.token || r.symbol || "").toLowerCase() === p.token.toLowerCase());
+        return { usd: p.suppliedUsd, apy: (reserve?.supplyApy ?? 0) * (1 - perfFeeForPosition({ rows: placementRows, chain: p.chain ?? null, token: p.token })) };
+      })
+      .filter((r) => r.apy > 0 && r.usd > 0);
+    const apy = rated.length ? rated.reduce((s, r) => s + r.apy * r.usd, 0) / rated.reduce((s, r) => s + r.usd, 0) : null;
+    // A venue that did not answer is not a venue holding nothing.
+    const failed = !!error || (yieldRead.data?.failed ?? []).includes("kamino");
+    // Still out while the owner address is, and while the venues are. A
+    // failed address read is an answer: nothing can be read without it.
+    const loading = (!addrs.data && !addrs.error) || yieldRead.isLoading;
+    return { usd, sol, solUsd, earnedSol, apy, failed, loading };
+  }, [positions, error, yieldRead.data, yieldRead.isLoading, addrs.data, addrs.error, reserves.data, placementRows]);
 }
 
 /* ── EarnHero ─────────────────────────────────────────────────────── */
@@ -489,40 +576,50 @@ function EmptyHero() {
 /* ── AssetRow ─────────────────────────────────────────────────────── */
 
 /**
- * One ticker, one number, and what the money did — the app's row, cut to two
- * facts on purpose.
- *
- * The app's second line is the last 24 hours in dollars, off the same series
- * its hero draws. Our own history endpoint starts at seven days, so there is no
- * 24h window to read and inventing one is not an option. What the line carries
- * instead is the other figure the app puts under a holding, on its cost screen:
- * the move against what this person paid, from `GET /portfolio/cost-basis`. A
- * holding with no tracked basis shows nothing rather than a guess, and a loss is
- * neutral white, never red.
+ * One ticker, its value, and what the last 24 hours did to it — the app's
+ * row. The 24h line sits under the value it is about, in dollars, as the app
+ * draws it (`features/invest/gain24h`). Under the ticker, where the app says
+ * nothing, the web keeps the move against what this person paid ("since you
+ * bought"), because the web has no asset sheet to carry it. Either is absent,
+ * never "+$0.00", when its data is; a loss is neutral white, never red.
  */
-function AssetRow({ holding, move, mode }: { holding: Holding; move: number | null; mode: DisplayMode }) {
+function AssetRow({ holding, move, day, mode }: { holding: Holding; move: number | null; day: number | null; mode: DisplayMode }) {
   const ticker = maskTokenSymbol(holding.symbol, mode) || holding.symbol;
   const label = isBtcFamilySymbol(holding.symbol) ? btcFamilyDisplayName(holding.symbol, mode) : ticker;
   // The network, in native only — and the cbBTC note in the two modes that
   // tell the Bitcoin family apart at all.
   const under = holding.chain ? chainLabel(holding.chain) : btcFamilySubtitle(holding.symbol, mode);
+  const signed = (n: number) => `${n >= 0 ? "+" : "−"}${money(Math.abs(n))}`;
   return (
     <div className="flex min-h-[56px] items-center gap-3 px-4 py-3.5">
       <AssetMark symbol={holding.symbol} />
       <div className="min-w-0 flex-1">
         <p className="truncate text-[15px] font-bold tracking-[-0.2px] text-white">{label}</p>
-        {under ? <p className="mt-px truncate text-[12.5px] text-white/[0.8]">{under}</p> : null}
+        {under || move !== null ? (
+          <p className="mt-px truncate text-[12.5px] tabular-nums text-white/[0.8]">
+            {under}
+            {under && move !== null ? " · " : ""}
+            {move !== null ? (
+              <span className="font-strong" style={{ color: move >= 0 ? UP : DOWN }}>
+                {signed(move)} since you bought
+              </span>
+            ) : null}
+          </p>
+        ) : null}
       </div>
-      <div className="flex flex-col items-end gap-0.5">
+      <div className="flex shrink-0 flex-col items-end gap-0.5">
         {/* An em dash, never "$0.00": a zero here is a claim about somebody's
             money and we do not have the price to make it. */}
         <p className="text-[15px] font-bold tracking-[-0.2px] tabular-nums text-white">
           {holding.usd === null ? "—" : money(holding.usd)}
         </p>
-        {move !== null ? (
-          <p className="truncate text-[12.5px] font-strong tracking-[-0.1px] tabular-nums" style={{ color: move >= 0 ? UP : DOWN }}>
-            {move >= 0 ? "+" : "−"}
-            {money(Math.abs(move))} since you bought
+        {day !== null && holding.usd !== null ? (
+          <p
+            className="truncate text-[12.5px] font-strong tracking-[-0.1px] tabular-nums"
+            style={{ color: day >= 0 ? UP : DOWN }}
+            aria-label={`${day >= 0 ? "up" : "down"} ${money(Math.abs(day))} in 24 hours`}
+          >
+            {signed(day)} <span className="text-white/[0.6]">24h</span>
           </p>
         ) : (
           <p className="truncate text-[12.5px] tabular-nums text-white/[0.8]">{units(holding.amount)}</p>
@@ -537,7 +634,7 @@ function AssetRow({ holding, move, mode }: { holding: Holding; move: number | nu
 /** SOL amounts at a width that does not move. */
 const sol = (n: number) => n.toFixed(4);
 
-function SolEarnRow({ workingSol, apy, failed }: { workingSol: number; apy: number | null; failed: boolean }) {
+export function SolEarnRow({ workingSol, apy, failed }: { workingSol: number; apy: number | null; failed: boolean }) {
   const working = workingSol > 0;
   // A zero we cannot vouch for. The row must not pitch over it.
   const standing = working ? `${sol(workingSol)} earning` : failed ? "Couldn't check your position" : "Put your Solana to work";

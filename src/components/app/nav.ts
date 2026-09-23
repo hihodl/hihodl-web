@@ -316,6 +316,9 @@ export function titleFor(rel: string): string {
   if (/^\/spaces\/listings\/[^/]+\/edit\/?$/.test(rel)) return "Edit draft";
   if (/^\/spaces\/listings\/[^/]+/.test(rel)) return "Listing";
   if (/^\/spaces\/x\/?$/.test(rel)) return "X account";
+  if (/^\/invest\/performance\/?$/.test(rel)) return "Portfolio";
+  if (/^\/invest\/report\/?$/.test(rel)) return "Realised gains";
+  if (/^\/invest\/cost\/[^/]+/.test(rel)) return "What you paid";
   if (/^\/wallet\/link\/?$/.test(rel)) return "Link your phone";
   if (/^\/wallet\/send\/?$/.test(rel)) return "Send";
   const key = activeKey(rel);

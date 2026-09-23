@@ -400,6 +400,116 @@ export function getCostBasis(): Promise<{ positions: CostBasisPosition[] }> {
   return read("portfolio/cost-basis");
 }
 
+/** One disposal, exactly as `/portfolio/realized` returns it (the app's taxYear.ts). */
+export interface RealizedDisposal {
+  at: string;
+  chain: string;
+  tokenId: string;
+  units: number | null;
+  proceedsUsd: number | null;
+  costUsd: number | null;
+  gainUsd: number | null;
+  txType: string;
+  transactionId: string;
+  referenceId: string | null;
+}
+
+export interface RealizedIncome {
+  at: string;
+  chain: string;
+  tokenId: string;
+  units: number | null;
+  amountUsd: number | null;
+  transactionId: string;
+}
+
+export interface RealizedReport {
+  disposals: RealizedDisposal[];
+  income: RealizedIncome[];
+  gainUsd: number;
+  proceedsUsd: number;
+  costUsd: number;
+  incomeUsd: number;
+  unvalued: { count: number; reasons: Record<string, number> };
+}
+
+/**
+ * Realised disposals: one tax year, or every one ever when `year` is null
+ * (which is how the year picker learns which years exist). No fallback to an
+ * empty report — an empty year says "you owe nothing", a failed read does not.
+ */
+export function getRealized(year: number | null): Promise<RealizedReport> {
+  return read<RealizedReport>(year == null ? "portfolio/realized" : `portfolio/realized?year=${year}`);
+}
+
+/** One acquisition, as the person who made it would recognise it. */
+export interface AcquisitionLot {
+  entryId: string;
+  chain: string;
+  tokenId: string;
+  units: number | null;
+  /** When it landed in HOLD. Ours, never editable. */
+  arrivedAt: string;
+  /** When the owner says they actually bought it, if that differs. */
+  acquiredAt: string | null;
+  unitPriceUsd: number | null;
+  arrivalPriceUsd: number | null;
+  confirmed: boolean;
+  external: boolean;
+  fromAddress: string | null;
+  note: string | null;
+  transactionId: string;
+}
+
+/** The acquisitions behind a holding. Read only here: correcting a price is the app's. */
+export async function getLots(params: { chain?: string; token?: string } = {}): Promise<AcquisitionLot[]> {
+  const q = new URLSearchParams();
+  if (params.chain) q.set("chain", params.chain);
+  if (params.token) q.set("token", params.token);
+  const suffix = q.toString() ? `?${q}` : "";
+  const res = await read<{ lots?: AcquisitionLot[] }>(`portfolio/lots${suffix}`);
+  return res.lots ?? [];
+}
+
+export type ReportFormat = "pdf" | "csv";
+
+/**
+ * The tax year as a file, built by the server — the same file the app shares.
+ *
+ * A plain `<a href>` cannot carry the bearer token, so it is fetched with the
+ * token and handed to the browser as a blob. The Worker in front of the API
+ * allows `Authorization` from any origin, and it does not expose
+ * `Content-Disposition`, so the file is named here, as the app names it.
+ */
+export async function downloadRealized(year: number, format: ReportFormat): Promise<void> {
+  const token = await accessToken();
+  if (!token) throw new HoldApiError("UNAUTHORIZED", 401);
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/portfolio/realized/download?year=${year}&format=${format}`, {
+      headers: { authorization: `Bearer ${token}` },
+      cache: "no-store",
+      credentials: "omit",
+    });
+  } catch {
+    throw new HoldApiError("NETWORK", 0);
+  }
+  if (!res.ok) throw new HoldApiError(`HTTP_${res.status}`, res.status);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  try {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `HOLD-realised-gains-${year}.${format}`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } finally {
+    // Late enough for the browser to have started the save.
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  }
+}
+
 /* ── Payments the person is owed, owes, or has standing ───────────── */
 
 /**
