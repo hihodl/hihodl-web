@@ -36,15 +36,17 @@
  * sponsor and it does not belong in a list of things to buy.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { CreatorGroup, CreatorPage, Position, SpaceCard, Space } from "@/lib/ad-space/types";
-import { approveSpot, prepareSpot, type PayPhase, type PointsFeeShare } from "@/lib/app/sponsor";
+import { approveSpot, cancelSpotApproval, prepareSpot, type PayPhase, type PointsFeeShare } from "@/lib/app/sponsor";
+import { WalletApiError } from "@/lib/wallet/api";
 import { claimableSpots, creatorStorefront, listingSpots, spotPrice } from "@/lib/app/storefront";
 
 import { useProductHref } from "../base";
 import { Ion } from "../ion";
-import { inAppHref, playHref, usePhone } from "../link/in-app";
+import { linkHref, playHref, usePhone } from "../link/in-app";
+import { PhoneApproval } from "../link/PhoneApproval";
 
 type Step =
   | { at: "events" }
@@ -379,19 +381,62 @@ function Pay({
   const productHref = useProductHref();
   const phone = usePhone();
 
-  // Two taps: Pay holds the spot and gets everything ready; the passkey is
-  // asked on the second, inside its click, so Safari lets it start.
-  const buy = () =>
+  /*
+   * Following the phone ends with this sheet. A pending approval is cancelled
+   * as it closes, so the phone cannot approve a payment nobody is here to
+   * send; an approved one is left to finish, because its submit is already
+   * under way.
+   */
+  // Made in the effect, not the ref's initial value: strict mode mounts twice, and a controller aborted by the first unmount would stay aborted.
+  const stop = useRef<AbortController>(new AbortController());
+  const waiting = useRef<string | null>(null);
+  waiting.current = phase.kind === "on-phone" && phase.approval.status === "pending" ? phase.approval.id : null;
+  useEffect(() => {
+    const ctl = new AbortController();
+    stop.current = ctl;
+    return () => {
+      ctl.abort();
+      if (waiting.current) void cancelSpotApproval(waiting.current).catch(() => undefined);
+    };
+  }, []);
+  const [cancel, setCancel] = useState<{ busy: boolean; notice: string | null }>({ busy: false, notice: null });
+
+  const landed = (end: PayPhase) => {
+    if (end.kind === "bought" || end.kind === "in-flight") onBought();
+  };
+
+  // Two taps with a passkey: Pay holds the spot and gets everything ready;
+  // the passkey is asked on the second, inside its click, so Safari lets it
+  // start. With a linked phone, Pay holds the spot and asks the phone.
+  const buy = () => {
+    setCancel({ busy: false, notice: null });
     void prepareSpot({
       positionId: spot.id,
       pointsFeeShare: share,
       onPhase: setPhase,
-    });
+      signal: stop.current.signal,
+    }).then(landed);
+  };
   const approve = () => {
     if (phase.kind !== "ready") return;
-    void approveSpot({ uid, prepared: phase.prepared, onPhase: setPhase }).then((end) => {
-      if (end.kind === "bought" || end.kind === "in-flight") onBought();
-    });
+    void approveSpot({ uid, prepared: phase.prepared, onPhase: setPhase, signal: stop.current.signal }).then(landed);
+  };
+  /** The server's cancel: the wait then ends on "cancelled" at the next poll. */
+  const cancelOnPhone = async () => {
+    if (phase.kind !== "on-phone") return;
+    setCancel({ busy: true, notice: null });
+    try {
+      await cancelSpotApproval(phase.approval.id);
+      setCancel({ busy: true, notice: null });
+    } catch (e) {
+      const decided = e instanceof WalletApiError && e.code === "NOT_PENDING";
+      setCancel({
+        busy: false,
+        notice: decided
+          ? "Your phone already answered this one, so it can no longer be cancelled."
+          : "We couldn't cancel it. Try again, or decline it on your phone.",
+      });
+    }
   };
 
   if (phase.kind === "bought") {
@@ -431,20 +476,25 @@ function Pay({
     );
   }
 
-  // A wallet made in the app pays in the app: the web holds no key for it.
-  if (phase.kind === "in-app" || phase.kind === "no-wallet") {
-    const openApp = inAppHref(`ad-space/${encodeURIComponent(space.id)}`, phone);
-    const inApp = phase.kind === "in-app";
-    const title = inApp ? "Pay for this spot in the HOLD app" : phase.canMake ? "Make your wallet first" : "Get HOLD to pay";
-    const body = inApp
-      ? openApp
-        ? "Your wallet was made in the HOLD app and its keys stay there. Open this listing in the app and book the spot there. Nothing has been charged."
-        : "Your wallet was made in the HOLD app and its keys stay there. Open HOLD on your phone, find this listing in Spaces and book the spot there. Nothing has been charged."
-      : phase.canMake
+  // The linked phone approves and signs: this sheet waits, and sends what comes back.
+  if (phase.kind === "on-phone") {
+    return <PhoneApproval approval={phase.approval} cancelling={cancel.busy} notice={cancel.notice} onCancel={() => void cancelOnPhone()} />;
+  }
+
+  // A wallet made in the app, no phone linked: link it once and it approves
+  // every payment started here. A full load: the link screen's strict CSP.
+  if (phase.kind === "link-first" || phase.kind === "no-wallet") {
+    const link = phase.kind === "link-first";
+    const canMake = phase.kind === "no-wallet" && phase.canMake;
+    const title = link ? "Link your phone to pay from here" : canMake ? "Make your wallet first" : "Get HOLD to pay";
+    const body = link
+      ? "Your wallet was made in the HOLD app, and its keys stay on your phone. Link the phone once, and it approves and signs every payment you start here. Nothing has been charged."
+      : canMake
         ? "Paying from HOLD needs a wallet on this account. Make one on the Wallet page with your passkey, then come back to this spot."
         : "Paying from HOLD needs a wallet on this account, and the HOLD app on Google Play makes one with every chain.";
-    const href = inApp ? openApp : phase.canMake ? productHref("/wallet") : playHref(phone);
-    const label = inApp ? "Open in HOLD" : phase.canMake ? "Make your wallet" : "Get HOLD on Google Play";
+    const here = typeof window === "undefined" ? undefined : `${window.location.pathname}${window.location.search}`;
+    const href = link ? linkHref(productHref, here) : canMake ? productHref("/wallet") : playHref(phone);
+    const label = link ? "Link your phone" : canMake ? "Make your wallet" : "Get HOLD on Google Play";
     return (
       <div className="flex flex-col gap-3">
         <div className="rounded-[16px] border border-white/10 bg-white/[0.05] p-3.5">
@@ -454,7 +504,7 @@ function Pay({
         {href ? (
           <a
             href={href}
-            target={inApp || !phase.canMake ? "_blank" : undefined}
+            target={!link && !canMake ? "_blank" : undefined}
             rel="noopener"
             className="mt-1 inline-flex h-12 items-center justify-center rounded-[14px] bg-white/10 text-[15px] font-strong text-white transition-colors hover:bg-white/[0.16]"
           >
@@ -534,15 +584,15 @@ function Pay({
         className="mt-1 inline-flex h-12 items-center justify-center gap-2 rounded-[14px] bg-amber text-[15px] font-bold text-text-on-amber transition-colors hover:bg-amber-glow disabled:bg-white/[0.12] disabled:text-white/50"
       >
         {phase.kind === "ready" ? <Ion name="finger-print" size={17} /> : null}
-        {working ? working_label(phase) : price === null ? "Not for sale at a price" : phase.kind === "ready" ? "Approve with passkey" : `Pay ${money(price)}`}
+        {working ? working_label(phase) : price === null ? "Not for sale at a price" : phase.kind === "ready" ? "Approve with passkey" : phase.kind === "stopped" ? "Try again" : `Pay ${money(price)}`}
       </button>
       {phase.kind === "ready" ? (
         <p className="px-1 text-[11.5px] leading-[16px] text-white/60">The spot is held for you. Your passkey approves exactly this payment and signs it.</p>
       ) : null}
 
       <p className="px-1 text-[11.5px] leading-[16px] text-white/50">
-        Paid in USDC from your HOLD wallet, approved with your passkey. It goes straight to {creatorName} — we never hold
-        it.
+        Paid in USDC from your HOLD wallet, approved with your passkey or on your linked phone. It goes straight to{" "}
+        {creatorName} — we never hold it.
       </p>
     </div>
   );
@@ -553,6 +603,8 @@ function working_label(p: PayPhase): string {
   switch (p.kind) {
     case "holding":
       return "Holding the spot…";
+    case "asking-phone":
+      return "Asking your phone…";
     case "approving":
       return "Waiting for your passkey…";
     case "signing":

@@ -10,7 +10,7 @@ import { createHash } from "crypto";
 
 import { PLAY_STORE_URL } from "../appLinks";
 import { txChallenge } from "../wallet/withdraw-core";
-import { androidIntentFor, appIntent, openInAppUrl, withdrawalIntent } from "./intent";
+import { androidIntentFor, appIntent, openInAppUrl, paymentApprovalIntent, withdrawalIntent } from "./intent";
 
 let failures = 0;
 function check(name: string, ok: boolean, detail = "") {
@@ -28,6 +28,12 @@ check(
   "withdrawal intent",
   w === `intent://withdrawals/11111111-2222-3333-4444-555555555555#Intent;scheme=hihodl;package=com.sayhihodl.hihodlai;S.browser_fallback_url=${play};end`,
   w,
+);
+const pa = paymentApprovalIntent("11111111-2222-3333-4444-555555555555");
+check(
+  "payment approval intent",
+  pa === `intent://payments/approve/11111111-2222-3333-4444-555555555555#Intent;scheme=hihodl;package=com.sayhihodl.hihodlai;S.browser_fallback_url=${play};end`,
+  pa,
 );
 check("app intent strips a leading slash", appIntent("/travel") === appIntent("travel"));
 check("open url", openInAppUrl("ad-space/s1") === "https://hihodl.xyz/open?to=ad-space%2Fs1", openInAppUrl("ad-space/s1"));

@@ -66,7 +66,7 @@ import {
   type WithdrawToken,
 } from "@/lib/wallet/withdraw-core";
 
-import { AMBER, AppScreen, BackspaceIcon, ContinueButton, FooterNote, HeroBody, HeroCard, PrimaryButton, SUB, TokenIcon, WarningNote } from "./app-kit";
+import { AMBER, AppScreen, BackspaceIcon, ContinueButton, FooterNote, HeroBody, HeroCard, PrimaryButton, StatusLine, SUB, TokenIcon, useCountdown, WarningNote } from "./app-kit";
 import { Ion } from "../ion";
 
 /* ── Parts ────────────────────────────────────────────────────────── */
@@ -148,31 +148,6 @@ function Summary({ token, amount }: { token: WithdrawToken; amount: string }) {
       <Row label="Network">Solana</Row>
     </div>
   );
-}
-
-/** The one line that says what is happening now, amber-tinted while it waits. */
-function StatusLine({ children, pulse = true }: { children: ReactNode; pulse?: boolean }) {
-  return (
-    <div className="flex items-center gap-3 rounded-[16px] border border-[rgba(255,183,3,0.22)] bg-[rgba(255,183,3,0.06)] px-4 py-3">
-      {pulse ? <span className="h-2 w-2 shrink-0 animate-pulse rounded-[4px] bg-[#FFB703]" aria-hidden /> : null}
-      <p className="text-[14px] font-strong text-white" role="status">
-        {children}
-      </p>
-    </div>
-  );
-}
-
-function useCountdown(until: string | null): string {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    if (!until) return;
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, [until]);
-  const end = until ? Date.parse(until) : NaN;
-  if (!Number.isFinite(end)) return "";
-  const s = Math.max(0, Math.round((end - now) / 1000));
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 
 /** QuickAmountPad: presets over a 3×4 keypad, keys on white/6, radius 12. */

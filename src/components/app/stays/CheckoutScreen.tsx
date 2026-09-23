@@ -30,11 +30,12 @@
  */
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { useProductHref } from "../base";
 import { Ion } from "../ion";
-import { inAppHref, playHref, usePhone } from "../link/in-app";
+import { linkHref, playHref, usePhone } from "../link/in-app";
+import { PhoneApproval } from "../link/PhoneApproval";
 
 import { Banner, Card, Cta, Empty, Photo, Screen, SectionLabel, Spinner } from "./kit";
 import { P, boardLabel, count, guests as guestsWord, money, shortDate, stayRange } from "./look";
@@ -43,7 +44,8 @@ import { sane, stayFromParams, stayToParams } from "./SearchControls";
 import { usePoints, useRates, useStay, useStaysConfig } from "@/lib/app/stays-data";
 import { holdTripProvisionally, refreshTrips, releaseProvisionalTrip } from "@/lib/app/stays-data";
 import { approveStay, payForStay, type PayState } from "@/lib/app/stay-payment";
-import { getBalances, getWalletStatus, type WalletStatus } from "@/lib/wallet/api";
+import { getBalances, getWalletStatus, payerOf, WalletApiError, type WalletStatus } from "@/lib/wallet/api";
+import { cancelPaymentApproval } from "@/lib/link/payment-approvals";
 import { useCreatorSession } from "@/lib/creator/session";
 import useSWR from "swr";
 import type { Booking, Guest, Rate } from "@/lib/app/stays";
@@ -83,7 +85,13 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
     revalidateOnFocus: false,
     shouldRetryOnError: false,
   });
-  const from = wallet.data?.state === "web_wallet" ? (wallet.data.registered_address ?? null) : null;
+  /*
+   * Who approves (documentation/one-wallet-every-device.md, rule 4): a linked
+   * Android phone for every wallet, including one made in the app; otherwise
+   * the passkey here for a web wallet; otherwise "Link your phone".
+   */
+  const payer = payerOf(wallet.data ?? null);
+  const from = payer === "app" || payer === "web_passkey" ? (wallet.data?.registered_address ?? null) : null;
 
   const rate = rates.data?.rates.find((r) => r.offerId === offerId) ?? null;
   /** The property's photographs, over the checkout — never away from it. */
@@ -113,6 +121,42 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
   const locked = running || approving;
   const phone = usePhone();
 
+  /*
+   * Following the phone ends with this page. A pending approval is cancelled
+   * as it goes, so the phone cannot approve a deposit nobody is here to send;
+   * an approved one is being sent already and is left alone.
+   */
+  // Made in the effect, not the ref's initial value: strict mode mounts twice, and a controller aborted by the first unmount would stay aborted.
+  const stop = useRef<AbortController>(new AbortController());
+  const waiting = useRef<string | null>(null);
+  waiting.current = pay?.phase === "phone" && pay.approval?.status === "pending" ? pay.approval.id : null;
+  useEffect(() => {
+    const ctl = new AbortController();
+    stop.current = ctl;
+    return () => {
+      ctl.abort();
+      if (waiting.current) void cancelPaymentApproval(waiting.current).catch(() => undefined);
+    };
+  }, []);
+  const [cancel, setCancel] = useState<{ busy: boolean; notice: string | null }>({ busy: false, notice: null });
+
+  /** The server's cancel: the wait then ends on "cancelled" at the next poll. */
+  async function cancelOnPhone() {
+    if (pay?.phase !== "phone" || !pay.approval) return;
+    setCancel({ busy: true, notice: null });
+    try {
+      await cancelPaymentApproval(pay.approval.id);
+    } catch (e) {
+      const decided = e instanceof WalletApiError && e.code === "NOT_PENDING";
+      setCancel({
+        busy: false,
+        notice: decided
+          ? "Your phone already answered this one, so it can no longer be cancelled."
+          : "We couldn't cancel it. Try again, or decline it on your phone.",
+      });
+    }
+  }
+
   const filled =
     guest.firstName.trim().length > 0 &&
     guest.lastName.trim().length > 0 &&
@@ -120,9 +164,11 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
 
   async function start() {
     if (!rate || !stay.data || !from || !session?.user?.id) return;
+    setCancel({ busy: false, notice: null });
     let available = 0;
     try {
-      available = (await getBalances(from)).usdc;
+      // With a linked phone the server prices the deposit, and nothing here reads this.
+      available = payer === "app" ? Number.POSITIVE_INFINITY : (await getBalances(from)).usdc;
     } catch {
       // A balance we cannot read is not a reason to refuse a payment that may
       // be perfectly fundable — an RPC hiccup would block it. So we let the
@@ -150,6 +196,8 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
       available,
       uid: session.user.id,
       bookingId: held,
+      payer: payer === "app" ? "app" : "web_passkey",
+      signal: stop.current.signal,
       onState: (s) => {
         setPay(s);
         // The server will not list an unpaid hold, and rightly so. But between
@@ -171,6 +219,7 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
       uid: session.user.id,
       from,
       current: pay,
+      signal: stop.current.signal,
       onState: (next) => {
         setPay(next);
         if (next.paid && next.bookingId) holdTripProvisionally(placeholder(next.bookingId, s.name, s.city, r, search, guest));
@@ -186,6 +235,8 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
     }
     // Nothing left the wallet, so nothing should be pretending to be a trip.
     if (!out.paid && out.bookingId && out.phase !== "approve") releaseProvisionalTrip(out.bookingId);
+    // Who approves may have changed under us (a phone linked or removed): ask again.
+    if (out.phase === "stopped") void wallet.mutate();
   }
 
   /* ── What to draw ── */
@@ -379,7 +430,15 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
              * button on the screen never lights up.
              */}
             {!from ? (
-              <NoPayer wallet={wallet.data ?? null} phone={phone} onRetry={() => void wallet.mutate()} walletHref={href("/wallet")} />
+              <NoPayer
+                wallet={wallet.data ?? null}
+                phone={phone}
+                onRetry={() => void wallet.mutate()}
+                walletHref={href("/wallet")}
+                linkHref={linkHref(href, typeof window === "undefined" ? undefined : `${window.location.pathname}${window.location.search}`)}
+              />
+            ) : pay?.phase === "phone" && pay.approval ? (
+              <PhoneApproval approval={pay.approval} cancelling={cancel.busy} notice={cancel.notice} onCancel={() => void cancelOnPhone()} />
             ) : approving ? (
               <>
                 {/* The second tap: Safari starts a passkey prompt only inside a click. */}
@@ -399,7 +458,8 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
             )}
 
             <p className="text-[11.5px] leading-[17px]" style={{ color: P.textFaint }}>
-              Paid in USDC from your HOLD wallet. Rooms are supplied and reserved by our booking partner; the stay is provided by the property under its own terms.
+              {payer === "app" ? "Paid in USDC from your HOLD wallet, approved and signed on your linked phone. " : "Paid in USDC from your HOLD wallet. "}
+              Rooms are supplied and reserved by our booking partner; the stay is provided by the property under its own terms.
             </p>
           </div>
       </div>
@@ -422,9 +482,9 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
  * (documentation/one-wallet-every-device.md, rule 4):
  *
  *   unread      try again
- *   app wallet  the app pays a stay: its keys are on the phone, and a phone
- *               has no inbox for a transaction the server built yet. On a
- *               phone, a link into the app's Stays; on a computer, where to look
+ *   link first  a wallet made in the app with no Android phone linked: its
+ *               keys are on the phone, so link it once and it approves and
+ *               signs every stay paid here (/wallet/link, a full load)
  *   no wallet   the Wallet page makes one (a full load: its CSP), or, with
  *               the rollout gate closed, the HOLD app does
  */
@@ -432,22 +492,25 @@ function NoPayer({
   wallet,
   phone,
   walletHref,
+  linkHref,
   onRetry,
 }: {
   wallet: WalletStatus | null;
   phone: ReturnType<typeof usePhone>;
   walletHref: string;
+  /** The link screen, coming back here. */
+  linkHref: string;
   onRetry: () => void;
 }) {
-  const app = wallet?.state === "app_wallet";
+  const payer = payerOf(wallet);
+  const app = payer === "link_first" || (wallet?.state === "app_wallet" && payer === "none");
   const web = wallet?.state === "web_wallet";
   const gateOpen = wallet?.enabled !== false;
-  const openApp = inAppHref("travel", phone);
 
   const title = !wallet
     ? "We couldn't read your wallet"
     : app
-      ? "Pay for this stay in the HOLD app"
+      ? "Link your phone to pay from here"
       : web
         ? "Open your wallet once first"
         : gateOpen
@@ -456,9 +519,7 @@ function NoPayer({
   const body = !wallet
     ? "Nothing has been charged, and the room is not held. This page has to know which wallet pays before it can ask you to."
     : app
-      ? openApp
-        ? "Your wallet was made in the HOLD app, and its keys stay on your phone. Open Stays in the app and book this room there. Nothing has been charged."
-        : "Your wallet was made in the HOLD app, and its keys stay on your phone. Open HOLD on your phone, go to Stays and book this room there. Nothing has been charged."
+      ? "Your wallet was made in the HOLD app, and its keys stay on your phone. Link the phone once, and it approves and signs every payment you start here. Nothing has been charged."
       : web
         ? "Unlock your wallet on the Wallet page once, so HOLD knows its address. Then this page can pay."
         : gateOpen
@@ -467,7 +528,7 @@ function NoPayer({
 
   let action: ReactNode;
   if (!wallet) action = <Cta label="Try again" variant="secondary" onClick={onRetry} />;
-  else if (app) action = openApp ? <LinkCta href={openApp} label="Open in HOLD" newTab /> : null;
+  else if (app) action = <LinkCta href={linkHref} label="Link your phone" />;
   else if (web || gateOpen) action = <LinkCta href={walletHref} label={web ? "Open Wallet" : "Set up the wallet"} />;
   else action = <LinkCta href={playHref(phone)} label="Get HOLD on Google Play" newTab />;
 
@@ -612,14 +673,15 @@ function PointsBand({
  * step is honest and says more.
  */
 function Progress({ state }: { state: PayState | null }) {
-  // Waiting on the passkey's tap is said under its own button.
-  if (!state || state.phase === "idle" || state.phase === "approve") return null;
+  // Waiting on the passkey's tap is said under its own button, and waiting on the phone by its own screen.
+  if (!state || state.phase === "idle" || state.phase === "approve" || state.phase === "phone") return null;
 
   const said: Record<PayState["phase"], string | null> = {
     idle: null,
     holding: "Holding your room…",
     opening: "Opening the payment…",
     approve: null,
+    phone: null,
     paying: "Sending your payment…",
     settling: "Waiting for the payment to land…",
     booking: "Buying the room…",

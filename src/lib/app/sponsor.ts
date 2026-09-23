@@ -54,9 +54,22 @@
  * "Approve with passkey" (`approveSpot`). Safari refuses a passkey prompt that
  * starts after several network calls, because the tap no longer counts.
  *
- * A wallet made in the HOLD app is sent to the app: the web holds no key for
- * it, and a phone has no inbox for a transaction the server built yet
- * (documentation/one-wallet-every-device.md, rule 4).
+ * ── WHO APPROVES ──
+ *
+ * `GET /wallet-backup/status` → `canPayFromWeb` picks it
+ * (documentation/one-wallet-every-device.md, rule 4 and "Payments built by
+ * the server, approved on the phone"):
+ *
+ *   app          an Android phone is linked. After the claim, `POST
+ *                /payment-approvals { kind: "spot", ref: { orderId } }`; the
+ *                phone approves AND signs, and this page submits what comes
+ *                back signed. Every wallet, including one made in the app,
+ *                whose key the web never holds. The passkey is never opened.
+ *   web_passkey  the two taps above, unchanged. A 409 APPROVE_ON_YOUR_PHONE
+ *                from the passkey doors (a phone linked meanwhile) switches
+ *                to the phone.
+ *   link_first   a wallet made in the app with no Android phone: "Link your
+ *                phone to pay from here". Never a dead end.
  *
  * ── THE LINE ──
  *
@@ -75,7 +88,15 @@ import { call } from "@/lib/creator/api";
 import { sha256 } from "@noble/hashes/sha256";
 
 import { authorizeTxPasskey, relayerSubmit, txApprovalChallenge, type AssertionOptionsJSON } from "@/lib/link/api";
-import { getWalletBackup, getWalletStatus, type WalletBackup } from "@/lib/wallet/api";
+import {
+  cancelPaymentApproval,
+  describeApprovalRefusal,
+  endedWithoutPaying,
+  requestPaymentApproval,
+  waitForPhone,
+  type PaymentApproval,
+} from "@/lib/link/payment-approvals";
+import { getWalletBackup, getWalletStatus, payerOf, type WalletBackup } from "@/lib/wallet/api";
 import { fromBase64, wipe } from "@/lib/wallet/core";
 import { openWallet } from "@/lib/wallet/flows";
 import { assertWithPrf } from "@/lib/wallet/passkey";
@@ -329,12 +350,19 @@ export type PayPhase =
   | { kind: "stopped"; message: string }
   /** Money is on its way and we lost the thread. Never retried from here. */
   | { kind: "in-flight"; orderId: string; message: string }
+  /** Asking the linked phone (POST /payment-approvals). */
+  | { kind: "asking-phone" }
   /**
-   * A wallet made in the HOLD app: the web holds no key for it, and a phone
-   * has no inbox for a transaction the server built yet, so the app pays.
+   * The linked phone approves and signs; this page polls and submits. `order`
+   * is the held order, confirmed once the phone's transaction is sent.
+   */
+  | { kind: "on-phone"; approval: PaymentApproval; order: Order }
+  /**
+   * A wallet made in the HOLD app with no Android phone linked: the web holds
+   * no key for it, so the way to pay from here is to link the phone once.
    * documentation/one-wallet-every-device.md, rule 4.
    */
-  | { kind: "in-app" }
+  | { kind: "link-first" }
   /** No wallet at all. `canMake`: the web can make one now (the rollout gate is open). */
   | { kind: "no-wallet"; canMake: boolean };
 
@@ -403,18 +431,26 @@ export async function prepareSpot(args: {
   offerId?: string | null;
   pointsFeeShare?: PointsFeeShare;
   onPhase: (p: PayPhase) => void;
+  /** Stops following the phone (the sheet closed). Nothing is sent after it. */
+  signal?: AbortSignal;
 }): Promise<PayPhase> {
   const say = (p: PayPhase) => {
     args.onPhase(p);
     return p;
   };
 
-  /* 1 ── whose wallet, and does it exist */
+  /* 1 ── whose wallet, and who approves */
   const status = await getWalletStatus().catch(() => null);
   if (!status) return say({ kind: "stopped", message: "We couldn't read your wallet. Nothing has been charged. Try again." });
-  if (status.state === "app_wallet") return say({ kind: "in-app" });
-  const from = status.state === "web_wallet" ? (status.registered_address ?? null) : null;
+  const payer = payerOf(status);
+  // A wallet made in the app, with no Android phone to approve on (or a
+  // backend too old to say): linking the phone is the way to pay from here.
+  if (payer === "link_first" || (status.state === "app_wallet" && payer === "none")) return say({ kind: "link-first" });
+  const from = payer === "app" || payer === "web_passkey" ? (status.registered_address ?? null) : null;
   if (!from) {
+    if (status.state === "app_wallet") {
+      return say({ kind: "stopped", message: "We couldn't read your wallet's address. Nothing has been charged. Try again in a moment." });
+    }
     if (status.state === "web_wallet") {
       // Made, but the backend does not watch it yet: one unlock on Wallet registers it.
       return say({ kind: "stopped", message: "Open Wallet and unlock it once, then buy from here. Nothing has been charged." });
@@ -455,7 +491,16 @@ export async function prepareSpot(args: {
     return say({ kind: "stopped", message: "We could not prepare that payment. Nothing has been charged." });
   }
 
-  /* 3 ── the approval's challenge, bound to these exact bytes and checked here */
+  /* 3a ── a linked phone approves and signs: the passkey is never opened */
+  if (payer === "app") {
+    const onPhone = await payOnPhone({ order: handoff.order, say, signal: args.signal });
+    if (onPhone !== "no_phone") return onPhone;
+    // The phone was removed meanwhile: read who approves now, and fall back.
+    const now = payerOf(await getWalletStatus().catch(() => null));
+    if (now !== "web_passkey") return say({ kind: "link-first" });
+  }
+
+  /* 3b ── the passkey's challenge, bound to these exact bytes and checked here */
   try {
     const backup = await getWalletBackup();
     if (backup.wrappings.length === 0) throw new Error("no_passkey");
@@ -466,7 +511,9 @@ export async function prepareSpot(args: {
     if (!sameBytes(fromBase64(challenge.options.challenge), txChallenge(bytes))) throw new Error("challenge_mismatch");
     if (challenge.messageHash && !sameDigest(challenge.messageHash, sha256(bytes))) throw new Error("challenge_mismatch");
     return say({ kind: "ready", prepared: { from, handoff, backup, message, options: challenge.options, preparedAt: Date.now() } });
-  } catch {
+  } catch (e) {
+    // A phone was linked meanwhile: it is the approver now, never the passkey.
+    if (codeOf(e) === "APPROVE_ON_YOUR_PHONE") return phoneOrLink(handoff.order, say, args.signal);
     return say({ kind: "stopped", message: "We couldn't prepare the approval for that payment. Nothing has been charged." });
   }
 }
@@ -477,7 +524,12 @@ export async function prepareSpot(args: {
  *
  * Past `submitted` nothing is ever re-sent (THE LINE above).
  */
-export async function approveSpot(args: { uid: string; prepared: PreparedSpot; onPhase: (p: PayPhase) => void }): Promise<PayPhase> {
+export async function approveSpot(args: {
+  uid: string;
+  prepared: PreparedSpot;
+  onPhase: (p: PayPhase) => void;
+  signal?: AbortSignal;
+}): Promise<PayPhase> {
   const say = (p: PayPhase) => {
     args.onPhase(p);
     return p;
@@ -505,11 +557,30 @@ export async function approveSpot(args: { uid: string; prepared: PreparedSpot; o
     const key = await openWallet({ uid: args.uid, backup, credentialId: bound.credentialId, prf });
     seed = key.seed;
     signed = await signSerializedTx(handoff.transaction, seed, from);
-  } catch {
+  } catch (e) {
+    // A phone was linked between the two taps: it approves now, not the passkey.
+    if (codeOf(e) === "APPROVE_ON_YOUR_PHONE") return phoneOrLink(handoff.order, say, args.signal);
     return say({ kind: "stopped", message: "We couldn't approve that payment. Nothing has been charged." });
   } finally {
     wipe(prf, seed);
   }
+
+  return sendAndConfirm({ signed, submitIdempotencyKey: handoff.submitIdempotencyKey, order: handoff.order, say });
+}
+
+/**
+ * Send a signed spot, then tell Spaces. Shared by the passkey and the phone:
+ * both end with the same bytes-plus-key, and past the submit there is one
+ * way to behave. PAST THE SUBMIT NOTHING IS RE-SENT.
+ */
+async function sendAndConfirm(args: {
+  signed: string;
+  submitIdempotencyKey: string;
+  order: Order;
+  say: (p: PayPhase) => PayPhase;
+}): Promise<PayPhase> {
+  const { signed, order, say } = args;
+  const handoff = { order, submitIdempotencyKey: args.submitIdempotencyKey };
 
   /* 5 ── send it. PAST THIS LINE NOTHING IS RE-SENT. */
   say({ kind: "sending" });
@@ -545,6 +616,75 @@ export async function approveSpot(args: { uid: string; prepared: PreparedSpot; o
       message: "Your payment is on the network. The spot turns over as soon as it settles.",
     });
   }
+}
+
+/* ── The phone ────────────────────────────────────────────────────── */
+
+/**
+ * Ask the linked phone for a held order, wait for it, and send what it signed.
+ *
+ * "no_phone" is the one answer that is not a phase: the server says no
+ * Android phone is linked any more (409 NO_PHONE_LINKED), and the caller
+ * reads the status again to pick the passkey or the link screen.
+ *
+ * Every end before the submit says "nothing has been charged", because until
+ * this page submits, nothing has: the phone only signs, and the gate's
+ * approval is withdrawn on a cancel.
+ */
+async function payOnPhone(args: { order: Order; say: (p: PayPhase) => PayPhase; signal?: AbortSignal }): Promise<PayPhase | "no_phone"> {
+  const { order, say } = args;
+  say({ kind: "asking-phone" });
+  let approval: PaymentApproval;
+  try {
+    approval = await requestPaymentApproval({ kind: "spot", orderId: order.id });
+  } catch (e) {
+    const code = codeOf(e);
+    if (code === "NO_PHONE_LINKED") return "no_phone";
+    if (code === "ALREADY_PAID") {
+      return say({ kind: "in-flight", orderId: order.id, message: "This spot is already paid for. It turns over as soon as the payment settles." });
+    }
+    return say({ kind: "stopped", message: describeApprovalRefusal(code, "spot") });
+  }
+  say({ kind: "on-phone", approval, order });
+
+  const end = await waitForPhone(approval, {
+    signal: args.signal,
+    onUpdate: (a) => {
+      if (a.status === "pending") say({ kind: "on-phone", approval: a, order });
+    },
+  });
+  if (!end) return say({ kind: "stopped", message: "We stopped waiting for your phone. Nothing has been charged." });
+
+  switch (end.status) {
+    case "rejected":
+    case "expired":
+    case "cancelled":
+      return say({ kind: "stopped", message: endedWithoutPaying(end.status) });
+    case "submitted":
+      // Sent already (another tab of this page, most likely). Never a second time.
+      return say({ kind: "in-flight", orderId: order.id, message: "This payment is already going through. Give it a moment and check the spot." });
+    case "approved": {
+      const c = end.continuation;
+      if (!end.signedTx || !c || c.kind !== "spot" || !c.submitIdempotencyKey) {
+        return say({ kind: "stopped", message: "Your phone approved it, but we couldn't read what it signed. Nothing has been charged. Try again." });
+      }
+      say({ kind: "on-phone", approval: end, order });
+      return sendAndConfirm({ signed: end.signedTx, submitIdempotencyKey: c.submitIdempotencyKey, order, say });
+    }
+    default:
+      return say({ kind: "stopped", message: "We stopped waiting for your phone. Nothing has been charged." });
+  }
+}
+
+/** The passkey was refused for a linked phone: ask the phone, or send to the link screen when it has gone since. */
+async function phoneOrLink(order: Order, say: (p: PayPhase) => PayPhase, signal?: AbortSignal): Promise<PayPhase> {
+  const out = await payOnPhone({ order, say, signal });
+  return out === "no_phone" ? say({ kind: "link-first" }) : out;
+}
+
+/** Cancel what the phone has not decided: the phone cannot approve it after, and the wait ends on "cancelled". */
+export function cancelSpotApproval(id: string): Promise<PaymentApproval> {
+  return cancelPaymentApproval(id);
 }
 
 /** The server's `messageHash` (hex or base64) against our own sha256 of the bytes. */

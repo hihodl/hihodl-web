@@ -39,6 +39,14 @@ export function withdrawalIntent(id: string): string {
   return appIntent(`withdrawals/${encodeURIComponent(id)}`);
 }
 
+/**
+ * The app's payment approval screen: a spot or a stay started on the web,
+ * approved and signed on the linked phone (hihodl://payments/approve/<id>).
+ */
+export function paymentApprovalIntent(id: string): string {
+  return appIntent(`payments/approve/${encodeURIComponent(id)}`);
+}
+
 /** The site's opener for `hihodl://<path>` (src/app/open/page.tsx). Phones only. */
 export function openInAppUrl(path: string): string {
   return `https://hihodl.xyz/open?to=${encodeURIComponent(path.replace(/^\/+/, ""))}`;
