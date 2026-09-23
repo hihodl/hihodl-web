@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SiteJsonLd } from "@/components/site/SiteJsonLd";
 import { TopNav } from "@/components/site/TopNav";
 import { Footer } from "@/components/site/Footer";
 
@@ -110,6 +111,7 @@ const FAQS: { q: string; a: string }[] = [
 export default function FaqPage() {
   return (
     <>
+      <SiteJsonLd />
       <TopNav />
       <main>
         <section className="bg-night relative overflow-hidden">

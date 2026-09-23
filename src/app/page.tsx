@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SiteJsonLd } from "@/components/site/SiteJsonLd";
 import { TopNav } from "@/components/site/TopNav";
 import { Footer } from "@/components/site/Footer";
 import { Hero } from "@/components/site/Hero";
@@ -17,6 +18,7 @@ import { FREE_ALLOWANCE, HOLD_KEEPS, usd } from "@/lib/rates.config";
 export default function Home() {
   return (
     <>
+      <SiteJsonLd />
       <TopNav />
 
       <main>
