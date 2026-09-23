@@ -23,6 +23,10 @@
  *
  * On a phone (a "phone only" web user) there is no QR to scan: an iPhone
  * links itself here; an Android phone opens the same link in the app.
+ * An iPhone or iPad can also show the QR on its own screen for the Android
+ * app to scan ("Link my Android phone"). That is where it starts for a
+ * wallet made in the app (canPayFromWeb link_first, or ?show=android from
+ * Home), since linking the iPhone itself approves nothing for that wallet.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -40,7 +44,7 @@ import { newLinkKeyPair, sealSecret, type LinkKeyPair } from "@/lib/link/seal";
 import { androidIntentFor } from "@/lib/link/intent";
 import { thisDevice, type AppleDevice, type Phone } from "@/lib/link/ua";
 import { PLAY_STORE_URL } from "@/lib/appLinks";
-import { getWalletBackup, getWalletStatus, WalletApiError, type WalletBackup, type WalletStatus } from "@/lib/wallet/api";
+import { getWalletBackup, getWalletStatus, payerOf, WalletApiError, type WalletBackup, type WalletStatus } from "@/lib/wallet/api";
 import { fromBase64, toBase64, toBase64Url, wipe } from "@/lib/wallet/core";
 import { explain } from "@/lib/wallet/explain";
 import { userSecretFrom } from "@/lib/wallet/flows";
@@ -65,7 +69,23 @@ function intentOr(url: string): string {
 export type LinkPhase =
   | { kind: "starting" }
   | { kind: "failed"; message: string }
-  | { kind: "waiting"; url: string; expiresAt: number; here: Phone | null; name?: AppleDevice | null; joining?: boolean; notice?: string | null }
+  | {
+      kind: "waiting";
+      url: string;
+      expiresAt: number;
+      here: Phone | null;
+      name?: AppleDevice | null;
+      joining?: boolean;
+      notice?: string | null;
+      /**
+       * On an iPhone or iPad: show the QR on this screen for the Android app
+       * to scan, instead of linking this device. The default for a wallet made
+       * in the app (link_first), where linking the iPhone approves nothing.
+       */
+      qr?: boolean;
+      /** On an iPhone or iPad: "Link this iPhone" is offered (not for a wallet made in the app). */
+      offerHere?: boolean;
+    }
   | { kind: "confirm"; sas: string; carries: boolean; busy: boolean; notice?: string | null }
   | { kind: "mismatch" }
   | { kind: "sending"; carries: boolean }
@@ -80,6 +100,8 @@ export interface LinkActions {
   onDone: () => void;
   /** Onboarding's "Later". Absent on the standalone screen, which has Back. */
   onLater?: () => void;
+  /** On an iPhone or iPad: show the QR for an Android phone (true), or link this device (false). */
+  onChooseQr?: (qr: boolean) => void;
 }
 
 function useCountdown(until: number | null): string {
@@ -127,6 +149,32 @@ export function LinkView({ phase, actions }: { phase: LinkPhase; actions: LinkAc
   }
 
   if (phase.kind === "waiting") {
+    if (phase.here === "ios" && phase.qr) {
+      // The Android app scans this iPhone's own screen.
+      const name = phase.name ?? "iPhone";
+      return (
+        <div>
+          <StepDesc>Open HOLD on your Android phone and scan this code.</StepDesc>
+          <div className="mt-3">
+            <div className="mx-auto w-[248px] max-w-full rounded-[28px] bg-white p-[18px]">
+              <QrCode text={phase.url} title="Scan with the HOLD app on your Android phone" className="h-auto w-full" />
+            </div>
+          </div>
+          <p className="mt-4 flex items-center gap-2 text-[13px] font-medium text-white/[0.55]" role="status">
+            <Spinner size={14} color="rgba(255,255,255,0.55)" />
+            Waiting for your phone · <span className="tabular-nums">{left}</span>
+          </p>
+          {phase.offerHere || later ? (
+            <Cta>
+              {phase.offerHere && actions.onChooseQr ? (
+                <SkipButton label={`Link this ${name} instead`} onClick={() => actions.onChooseQr?.(false)} />
+              ) : null}
+              {later}
+            </Cta>
+          ) : null}
+        </div>
+      );
+    }
     if (phase.here === "ios") {
       const name = phase.name ?? "iPhone";
       return (
@@ -135,6 +183,9 @@ export function LinkView({ phase, actions }: { phase: LinkPhase; actions: LinkAc
           <StepDesc>{`You are on your ${name}, so this is the ${name} we link. Payments are still approved with your passkey, on this ${name}.`}</StepDesc>
           <Cta>
             <ActionButton title={phase.joining ? "Linking..." : `Link this ${name}`} icon="phone-portrait-outline" disabled={phase.joining} onClick={actions.onJoinHere} />
+            {actions.onChooseQr ? (
+              <SkipButton label="Link my Android phone" disabled={phase.joining} onClick={() => actions.onChooseQr?.(true)} />
+            ) : null}
             {later}
           </Cta>
         </div>
@@ -279,6 +330,15 @@ export function LinkPhone({ onDone, onLater }: { onDone: () => void; onLater?: (
   useEffect(() => {
     getWalletStatus().then(setWallet, () => setWallet(null));
   }, []);
+  // On an iPhone or iPad: the person's own pick between "Link this iPhone" and
+  // the QR for an Android phone. Until they pick, `?show=android` (Home's card
+  // for a wallet made in the app) or the wallet itself decides.
+  const [qrChoice, setQrChoice] = useState<boolean | null>(null);
+  const [askedForQr, setAskedForQr] = useState(false);
+  useEffect(() => {
+    setAskedForQr(new URLSearchParams(window.location.search).get("show") === "android");
+  }, []);
+  const appMade = payerOf(wallet) === "link_first";
   const keys = useRef<LinkKeyPair | null>(null);
   const session = useRef<{ id: string; webPub: Uint8Array } | null>(null);
   const backup = useRef<WalletBackup | null>(null);
@@ -427,9 +487,16 @@ export function LinkPhone({ onDone, onLater }: { onDone: () => void; onLater?: (
     }
   };
 
+  // A wallet made in the app is only approved by an Android phone: linking
+  // the iPhone itself is not offered, and the QR is what the screen leads with.
+  const shown: LinkPhase =
+    phase.kind === "waiting" && phase.here === "ios"
+      ? { ...phase, qr: appMade || (qrChoice ?? askedForQr), offerHere: !appMade }
+      : phase;
+
   return (
     <LinkView
-      phase={phase}
+      phase={shown}
       actions={{
         onRetry: () => void start(),
         onJoinHere: () => void joinHere(),
@@ -441,6 +508,7 @@ export function LinkPhone({ onDone, onLater }: { onDone: () => void; onLater?: (
         },
         onDone,
         onLater,
+        onChooseQr: setQrChoice,
       }}
     />
   );

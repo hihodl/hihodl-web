@@ -159,10 +159,15 @@ export function useLinkNudge(): LinkNudge {
     setHidden(true);
   }, [uid]);
 
+  // A wallet made in the app, seen on an iPhone or iPad: the link screen opens
+  // on its QR, for the Android app to scan off this screen.
+  const base = linkHref(productHref, productHref());
+  const href = which === "pay" && onApple ? `${base}&show=android` : base;
+
   return {
     kind: cardKind,
     device,
-    href: linkHref(productHref, productHref()),
+    href,
     sheet: sheetOpen,
     later,
     closeSheet: useCallback(() => setSheetOpen(false), []),
@@ -174,8 +179,6 @@ export function useLinkNudge(): LinkNudge {
 interface Words {
   title: string;
   body: string;
-  /** false: this device cannot link the phone that matters, so the card only informs. */
-  actionable: boolean;
 }
 
 function wordsFor(kind: LinkNudgeCase, device: LinkNudge["device"]): Words {
@@ -184,41 +187,36 @@ function wordsFor(kind: LinkNudgeCase, device: LinkNudge["device"]): Words {
       return {
         title: "Link your phone to pay from here",
         body: "Open HOLD on this phone to link it. From then on, the app approves every payment you start here.",
-        actionable: true,
       };
     }
     if (device === "iPhone" || device === "iPad") {
-      // Linking this iPhone adds no approver: the wallet's keys are on the Android phone.
+      // Linking this iPhone adds no approver: the wallet's keys are on the
+      // Android phone, which scans the code this screen shows (?show=android).
       return {
         title: "Link your phone to pay from here",
-        body: "This wallet's keys are in the HOLD app on your Android phone. Open app.hihodl.xyz there, or on a computer, to link it.",
-        actionable: false,
+        body: "This wallet was made in the HOLD app on your Android phone. Show a code here, then open HOLD on your Android phone and scan it.",
       };
     }
     return {
       title: "Link your phone to pay from here",
       body: "This wallet was made in the HOLD app and its keys stay on your phone. Link it once and you can pay from here.",
-      actionable: true,
     };
   }
   if (device === "iPhone" || device === "iPad") {
     return {
       title: `Link this ${device}`,
       body: `Your passkey already approves payments on this ${device}. Linking only records it as one of your devices.`,
-      actionable: true,
     };
   }
   if (device === "android") {
     return {
       title: "Approve payments on your phone",
       body: "Get HOLD on this phone and it approves every payment you start here. Until then, your passkey does.",
-      actionable: true,
     };
   }
   return {
     title: "Approve payments on your phone",
     body: "Link your Android phone and the HOLD app approves every payment you start here. Until then, your passkey does.",
-    actionable: true,
   };
 }
 
@@ -246,7 +244,7 @@ export function LinkPhoneCard({ nudge }: { nudge: LinkNudge }) {
         <span className="block text-[15px] font-bold text-white">{w.title}</span>
         <span className="mt-0.5 block text-[13px] leading-[18px] text-white/60">{w.body}</span>
       </span>
-      {w.actionable ? <Ion name="chevron-forward" size={20} color="rgba(255,255,255,0.5)" /> : null}
+      <Ion name="chevron-forward" size={20} color="rgba(255,255,255,0.5)" />
     </>
   );
 
@@ -257,14 +255,10 @@ export function LinkPhoneCard({ nudge }: { nudge: LinkNudge }) {
         strong ? "border-[rgba(255,183,3,0.28)] bg-[rgba(255,183,3,0.09)]" : "border-white/10 bg-white/[0.05]"
       }`}
     >
-      {w.actionable ? (
-        // A plain anchor: the link screen is a full page load, for its CSP.
-        <a href={nudge.href} className="flex items-center gap-3 transition-opacity hover:opacity-90">
-          {face}
-        </a>
-      ) : (
-        <div className="flex items-center gap-3">{face}</div>
-      )}
+      {/* A plain anchor: the link screen is a full page load, for its CSP. */}
+      <a href={nudge.href} className="flex items-center gap-3 transition-opacity hover:opacity-90">
+        {face}
+      </a>
       <div className="mt-2.5 flex flex-wrap items-center gap-2 pl-14">
         {nudge.device === "android" ? (
           // A new tab: the intent opens HOLD when it is installed and Google Play when it is not.
@@ -322,20 +316,18 @@ export function LinkPhoneSheet({ nudge }: { nudge: LinkNudge }) {
           {w.title}
         </h2>
         <p className="mt-2.5 text-center text-[15px] leading-[21px] text-white/65">{w.body}</p>
-        {w.actionable ? (
-          <a
-            href={nudge.href}
-            className="mt-6 flex h-[52px] items-center justify-center rounded-[16px] bg-amber text-[16px] font-bold text-[#0F0F1A] transition-opacity hover:opacity-90"
-          >
-            Link your phone
-          </a>
-        ) : null}
+        <a
+          href={nudge.href}
+          className="mt-6 flex h-[52px] items-center justify-center rounded-[16px] bg-amber text-[16px] font-bold text-[#0F0F1A] transition-opacity hover:opacity-90"
+        >
+          {nudge.device === "iPhone" || nudge.device === "iPad" ? "Link your Android phone" : "Link your phone"}
+        </a>
         <button
           type="button"
           onClick={closeSheet}
-          className={`${w.actionable ? "" : "mt-6 "}flex w-full items-center justify-center py-3.5 text-[15px] font-semibold text-white/55 transition-colors hover:text-white/80`}
+          className="flex w-full items-center justify-center py-3.5 text-[15px] font-semibold text-white/55 transition-colors hover:text-white/80"
         >
-          {w.actionable ? "Not now" : "Got it"}
+          Not now
         </button>
       </div>
     </div>
