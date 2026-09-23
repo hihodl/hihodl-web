@@ -10,6 +10,7 @@
 "use client";
 
 import { call, CreatorApiError } from "./api";
+import type { Blocker } from "./crew-package";
 
 export const CREW_LIMITS = {
   MAX_MEMBERS: 6,
@@ -113,12 +114,7 @@ export const setListingCrew = (spaceId: string, crewId: string | null) =>
 
 /** "40%" from basis points, for a field the creator types in percent. */
 export const pctText = (bps: number) => `${Number.isInteger(bps / 100) ? bps / 100 : (bps / 100).toFixed(1)}%`;
-/** Percent typed by a person, to basis points; null when it is not a number. */
-export function bpsFromPct(text: string): number | null {
-  const n = Number(text.replace(",", ".").replace("%", "").trim());
-  if (!Number.isFinite(n)) return null;
-  return Math.round(n * 100);
-}
+export { bpsFromPct, leadKeepsBps, othersBps, shareOk } from "./crew-package";
 
 /** Why the crew cannot sell yet, said to its members. */
 export function notReadyText(reason: CrewNotReady | null): string | null {
@@ -133,6 +129,21 @@ export function notReadyText(reason: CrewNotReady | null): string | null {
       return "Someone in the crew has nowhere to be paid yet.";
     default:
       return null;
+  }
+}
+
+/** The one line about the crew's group, wherever somebody is about to say yes or add people. */
+export const CREW_GROUP_LINE = "Everyone who says yes joins the crew's group for shared costs at the event.";
+
+/** Why one member is holding the package up, next to their name. */
+export function blockerText(reason: Blocker): string {
+  switch (reason) {
+    case "invited":
+      return "Invited";
+    case "not_agreed":
+      return "Hasn't said yes";
+    case "no_payout":
+      return "No Solana payout";
   }
 }
 
