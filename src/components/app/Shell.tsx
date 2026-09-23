@@ -56,7 +56,7 @@ import { Door as SignInDoor } from "./front/Door";
 import { HeaderSlotContext, type HeaderSlot } from "./header-slot";
 import { HiPointsChip } from "./HiPointsChip";
 import { UserAvatar } from "./account/UserAvatar";
-import { IconArrowLeft, IconClose, IconCollapse, IconExpand, IconMenu, IconPlus, IconSearch } from "./icons";
+import { IconArrowLeft, IconClose, IconCollapse, IconExpand, IconInsights, IconPlus, IconSearch } from "./icons";
 import {
   activeKey,
   hrefFor,
@@ -64,7 +64,6 @@ import {
   LEVELS,
   levelOf,
   productPrefix,
-  titleFor,
   visible,
   type Level,
   type NavItem,
@@ -397,7 +396,11 @@ function Frame({ children }: { children: ReactNode }) {
 
   return (
     <div
-      className="w-full px-[clamp(12px,1.6vw,28px)] py-3 lg:py-4"
+      // Clipped sideways, never scrolled: on a phone the page moves up and
+      // down and nothing else. A row wider than the screen used to make the
+      // whole product draggable left and right. `clip`, not `hidden`, so this
+      // is not a scroll container and the sticky header still sticks.
+      className="w-full max-w-full overflow-x-clip px-[clamp(12px,1.6vw,28px)] py-3 lg:py-4"
       // The dashboard's way to big screens: the whole product drawn larger,
       // and anything sized by the viewport divided back (--app-vh).
       style={{ zoom: scale, ["--ui-scale" as string]: scale, ["--app-vh" as string]: `calc(100dvh / ${scale})` }}
@@ -420,7 +423,6 @@ function Frame({ children }: { children: ReactNode }) {
           {/* As tall as the sidebar at least, so a screen that fills it ends where the sidebar ends. */}
           <div className="flex min-w-0 flex-col gap-4 lg:min-h-[calc(var(--app-vh,100dvh)-2rem)]">
             <TopBar
-              title={titleFor(rel)}
               screenHeader={claims > 0}
               titleRef={setTitleEl}
               rightRef={setRightEl}
@@ -738,8 +740,25 @@ function UserCard({ collapsed }: { collapsed: boolean }) {
 
 /* ── Top bar ──────────────────────────────────────────────────────── */
 
+/** Past this many pixels of scroll the phone's header grows its glass, as the app's does. */
+const GLASS_AFTER = 12;
+
+function useScrolled(): boolean {
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const read = () => setScrolled(window.scrollY > GLASS_AFTER);
+    read();
+    window.addEventListener("scroll", read, { passive: true });
+    return () => window.removeEventListener("scroll", read);
+  }, []);
+  return scrolled;
+}
+
+/** The app's header disc: 30px, flat secondary glass (DashboardHeader.iconDisc). */
+const iconDisc =
+  "flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[15px] border border-white/10 bg-white/[0.08] text-white transition-colors hover:bg-white/[0.14]";
+
 function TopBar({
-  title,
   screenHeader,
   titleRef,
   rightRef,
@@ -747,8 +766,7 @@ function TopBar({
   onMenu,
   onSearch,
 }: {
-  title: string;
-  /** A screen's own header (a chevron back and its title) is drawn here instead of the section title. */
+  /** A screen's own header (a chevron back and its title) is drawn here instead of the person. */
   screenHeader: boolean;
   titleRef: (el: HTMLElement | null) => void;
   rightRef: (el: HTMLElement | null) => void;
@@ -757,60 +775,68 @@ function TopBar({
   onSearch: () => void;
 }) {
   const { role, session } = useShell();
+  const me = useMe();
   const href = useHref();
   const productHref = useProductHref();
+  const scrolled = useScrolled();
+  const username = chosenUsername(me.data);
   return (
     /*
       ON A WIDE SCREEN THIS BAR ONLY EXISTS WHEN IT CARRIES A BACK BUTTON.
-      With no screen header it said the section's name and offered Search —
-      and the sidebar beside it already highlights the section, so the name
-      was the same word twice and the row was a strip of furniture over every
-      page. Search moved into the column, where it is still one click and one
-      ⌘K away.
+      The sidebar already names the section and holds Search, so without a
+      screen header the row would be furniture over every page.
 
-      On a phone it always shows, and it is not furniture there: it is the
-      only way to the menu and to the person.
+      ON A PHONE IT IS THE APP'S DASHBOARD HEADER, NOT A BAR.
+      It was a boxed strip with a hamburger, the section's name and the
+      avatar on the right: a website's menu, on a product whose app has none.
+      The app puts the person on the left (avatar and @username, which opens
+      the menu), and on the right Search and Analytics, on no surface at all
+      until the page scrolls under it. So does this. A screen with its own
+      header (a chevron back and a title) takes the left side instead, as the
+      app's internal screens do.
     */
     <header
-      className={`sticky top-2 z-40 rounded-[18px] border border-white/10 bg-[linear-gradient(145deg,rgba(8,23,36,0.9),rgba(6,16,27,0.88))] p-2 shadow-[0_18px_35px_rgba(0,0,0,0.32)] backdrop-blur-xl ${
+      className={`sticky top-0 z-40 -mx-[clamp(12px,1.6vw,28px)] -mt-3 px-[clamp(12px,1.6vw,28px)] pb-2 pt-3 transition-colors duration-200 ${
+        scrolled ? "border-b border-white/[0.08] bg-[#06121c]/70 backdrop-blur-xl" : "border-b border-transparent"
+      } lg:top-2 lg:mx-0 lg:mt-0 lg:rounded-[18px] lg:border lg:border-white/10 lg:bg-[linear-gradient(145deg,rgba(8,23,36,0.9),rgba(6,16,27,0.88))] lg:p-2 lg:shadow-[0_18px_35px_rgba(0,0,0,0.32)] lg:backdrop-blur-xl ${
         screenHeader ? "" : "lg:hidden"
       }`}
     >
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex h-11 items-center justify-between gap-2 lg:h-auto">
         <div className="flex min-w-0 flex-1 items-center gap-2">
-          <button
-            type="button"
-            aria-label="Open menu"
-            onClick={onMenu}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-white/10 bg-white/[0.05] text-[#CFE3EC] lg:hidden"
-          >
-            <IconMenu />
-          </button>
           <div ref={titleRef} className={screenHeader ? "flex min-w-0 flex-1 items-center" : "hidden"} />
-          {screenHeader ? null : <h1 className="truncate pl-1 text-[17px] font-bold tracking-[-0.3px] text-text">{title}</h1>}
+          {screenHeader ? null : (
+            <button type="button" aria-label="Open menu" onClick={onMenu} className="flex min-w-0 items-center gap-2 rounded-[18px] pr-2">
+              <UserAvatar size={32} round fallbackName={session.user.email} />
+              <span className="truncate text-[14px] font-semibold text-white">{username ? `@${username}` : "Menu"}</span>
+            </button>
+          )}
         </div>
-        <div className="flex shrink-0 items-center gap-1.5">
-          <span className="lg:hidden">
-            <HiPointsChip compact />
-          </span>
+        <div className="flex shrink-0 items-center gap-2.5 lg:gap-1.5">
           <div ref={rightRef} className="flex items-center gap-1.5 empty:hidden" />
-          <button type="button" onClick={onSearch} aria-label="Search" className={`${btnGhost} sm:justify-start`}>
+          <button type="button" onClick={onSearch} aria-label="Search" className={`${iconDisc} lg:hidden`}>
+            <IconSearch className="h-4 w-4" />
+          </button>
+          <button type="button" onClick={onSearch} aria-label="Search" className={`${btnGhost} hidden lg:inline-flex`}>
             <IconSearch className="h-3.5 w-3.5" />
           </button>
           {level === "spaces" && role === "creator" ? (
             <Link
               href={href("/listings/new")}
-              className={`${screenHeader ? "hidden sm:inline-flex" : "inline-flex"} h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] bg-amber px-3 text-tiny font-medium text-text-on-amber transition-colors hover:bg-amber-glow`}
+              aria-label="New listing"
+              className={`${screenHeader ? "hidden sm:inline-flex" : "inline-flex"} h-[30px] items-center justify-center gap-1.5 whitespace-nowrap rounded-[15px] bg-amber px-2.5 text-tiny font-medium text-text-on-amber transition-colors hover:bg-amber-glow lg:h-9 lg:rounded-[10px] lg:px-3`}
             >
               <IconPlus className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">New listing</span>
             </Link>
           ) : null}
-          {/* On a phone the sidebar, and the person in it, is behind the menu. */}
-          {/* Same destination as the column's person: the Menu, which opens on Account. */}
-          <Link href={productHref("/menu")} aria-label="Menu" className="shrink-0 lg:hidden">
-            <UserAvatar size={36} fallbackName={session.user.email} />
-          </Link>
+          {/* The app's Analytics disc. The web has no Spending Analytics yet,
+              so it opens what the app opens without that flag: Invest. */}
+          {screenHeader ? null : (
+            <Link href={productHref("/invest")} aria-label="Analytics" className={`${iconDisc} lg:hidden`}>
+              <IconInsights className="h-4 w-4" />
+            </Link>
+          )}
         </div>
       </div>
     </header>
