@@ -23,31 +23,60 @@
  *                    optional receipt photo. "Split with group" wakes only when
  *                    the split adds up
  *
- * Several bills make ONE expense: their total (billTotal: one currency adds up
- * in it; several add up in dollars when each has a dollar value, else the
- * person is asked to split one currency at a time), with `sources` naming each
- * so nothing is split twice. The server converts the total into the group's
- * currency at the day's rate, as for any expense.
+ * SEVERAL BILLS, ONE EXPENSE (contract §10.1)
+ *
+ * The person who paid everything adds it all at once: bills picked from their
+ * activity, and as many typed ones as they like ("Add another bill" on Split
+ * bill opens the keypad and comes back). Split bill lists every bill with its
+ * amount, a × to take it out, and the running total. One currency adds up in
+ * it; several are converted into the group's currency with GET /groups/fx and
+ * shown with "≈" (billsTotal), the server having the last word. They go as
+ * `items`, a picked one naming its `sources` entry so nothing is split twice.
+ * An expense holds up to 50 bills and names up to 20 payments; past that the
+ * screen says to add another expense, of which there is no limit.
+ *
+ * Select bill reads your activity 200 at a time with "Load older" for more,
+ * and says how many payments in a token with no recorded dollar value were
+ * left out rather than priced by a guess.
+ *
+ * A category (§10.2) is a row of chips on Split bill; a stay bill makes it
+ * Stay until somebody picks another.
  *
  * Amount, the Revolut way: a typed amount stays, and what is left is shared
  * equally between the rest (autoFillAmounts). Untouched, it is sent as an
  * equal split (so the server's own remainder rule applies); touched, as exact
  * amounts. Percent must reach 100; Share is whole-number weights.
  *
- * Editing opens straight on Split bill, prefilled from `splitInputs`; the
- * amount opens the keypad. Only the payer edits, and the payer is fixed. A lock
- * by settlement (`409 expense_locked_by_settlement`) is explained in a sheet
- * that offers to delete it and add it again with what was typed.
+ * Editing opens straight on Split bill, prefilled from `splitInputs` and its
+ * bills (`items`); the same list, keypad and activity picker change it. Only
+ * the payer edits, and the payer is fixed. A lock by settlement (`409
+ * expense_locked_by_settlement`) is explained in a sheet that offers to delete
+ * it and add it again with what was typed.
+ *
+ * The three screens stay mounted once seen (only the one in front is shown),
+ * so going to the keypad for another bill and back keeps the split, the
+ * details and the older activity already loaded.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
-import { billsFrom, groupByDay, searchBills, type BillRow } from "@/lib/app/group-bills";
+import { billsFrom, groupByDay, searchBills, unpricedCount, type BillRow } from "@/lib/app/group-bills";
 import {
   addExpense,
   autoFillAmounts,
-  billTotal,
+  billsTitle,
+  billsTotal,
   bpText,
+  CATEGORY_LABEL,
+  EXPENSE_CATEGORIES,
+  expenseBills,
+  expenseCategory,
+  itemsBody,
+  MAX_ITEMS,
+  MAX_SOURCES,
+  useFxRates,
+  type BillsTotal,
+  type ExpenseCategory,
   checkSplit,
   deleteExpense,
   describeGroupError,
@@ -78,7 +107,7 @@ import {
   type SplitMode,
   type UsedSource,
 } from "@/lib/app/groups";
-import { HoldApiError } from "@/lib/app/hold-api";
+import { getTransfers, HoldApiError, type Transfer } from "@/lib/app/hold-api";
 import { useTransfers } from "@/lib/app/money";
 import { useTrips } from "@/lib/app/stays-data";
 
@@ -86,7 +115,10 @@ import { Notice } from "../hold";
 import { Ion, type IonName } from "../ion";
 import { Modal, ModalChoice } from "../Modal";
 import { Skeleton } from "../ui";
-import { COMMON_CURRENCIES, PersonFace, PhotoButton, plateCaution, plateWhite, useObjectUrl } from "./group-kit";
+import { CATEGORY_ICON, COMMON_CURRENCIES, PersonFace, PhotoButton, pillGlass, plateCaution, plateWhite, useObjectUrl } from "./group-kit";
+
+/** Your activity is read this many at a time; "Load older" reads the next. */
+const PAGE = 200;
 
 /* ── Money on screen ──────────────────────────────────────────────── */
 
@@ -182,6 +214,29 @@ function BillFace({ bill, size = 48 }: { bill: Bill & { avatarUrl?: string | nul
 
 type Step = "select" | "custom" | "split";
 
+/** An expense's bills, as the flow holds them: its items, else its one amount as a typed bill. */
+function billsOfExpense(e: Expense): Bill[] {
+  const items = expenseBills(e);
+  if (!items.length) {
+    return [{ key: "custom:edit", kind: "custom", label: e.description?.trim() || "Expense", amountMinor: e.amountMinor, currency: e.currency.toUpperCase() }];
+  }
+  return items.map((it, i): Bill => {
+    if (it.sourceKind && it.sourceRef) {
+      const src = (e.sources ?? []).find((s) => s.kind === it.sourceKind && s.ref === it.sourceRef);
+      return { key: `${it.sourceKind}:${it.sourceRef}`, kind: it.sourceKind, ref: it.sourceRef, label: it.label, amountMinor: it.amountMinor, currency: it.currency.toUpperCase(), occurredAt: src?.occurredAt ?? undefined };
+    }
+    return { key: `custom:item${i}`, kind: "custom", label: it.label, amountMinor: it.amountMinor, currency: it.currency.toUpperCase() };
+  });
+}
+
+/** The bills' total, converted with today's rates when they are in several currencies. */
+function useBillsTotal(bills: readonly Bill[], groupCurrency: string): { total: BillsTotal; converting: boolean; fxFailed: boolean } {
+  const currencies = [...new Set(bills.map((b) => b.currency.toUpperCase()))];
+  const fx = useFxRates(groupCurrency, currencies.length > 1 ? currencies : []);
+  const total = billsTotal(bills, groupCurrency, fx.rates);
+  return { total, converting: fx.loading, fxFailed: currencies.length > 1 && !!fx.error };
+}
+
 export function AddExpenseFlow({
   groupId,
   groupCurrency,
@@ -203,15 +258,23 @@ export function AddExpenseFlow({
 }) {
   const [editing, setEditing] = useState<Expense | undefined>(existing);
   const [step, setStep] = useState<Step>(existing ? "split" : "select");
-  const [bills, setBills] = useState<Bill[]>(() =>
-    existing ? [{ key: "custom:edit", kind: "custom", label: existing.description?.trim() || "Expense", amountMinor: existing.amountMinor, currency: existing.currency.toUpperCase() }] : [],
-  );
-  /** The custom bill being typed or changed; null for a new one. */
+  const [bills, setBills] = useState<Bill[]>(() => (existing ? billsOfExpense(existing) : []));
+  /** The typed bill being changed; null for a new one. */
   const [customKey, setCustomKey] = useState<string | null>(null);
+  /** Where the keypad and the activity picker go back to. */
+  const [customReturn, setCustomReturn] = useState<"select" | "split">(existing ? "split" : "select");
+  const [selectReturn, setSelectReturn] = useState<"close" | "split">(existing ? "split" : "close");
+  const [seen, setSeen] = useState<{ select: boolean; split: boolean }>({ select: !existing, split: !!existing });
   const [busy, setBusy] = useState(false);
   const counter = useRef(0);
   const [taken, setTaken] = useState<UsedSource[]>([]);
   const [selectNotice, setSelectNotice] = useState<string | null>(null);
+  const totals = useBillsTotal(bills, groupCurrency);
+
+  const go = (next: Step) => {
+    setStep(next);
+    if (next === "select" || next === "split") setSeen((v) => ({ ...v, [next]: true }));
+  };
 
   const saveCustom = (b: { amountMinor: string; currency: string; label: string }) => {
     if (customKey) setBills((xs) => xs.map((x) => (x.key === customKey ? { ...x, ...b } : x)));
@@ -220,75 +283,86 @@ export function AddExpenseFlow({
       setBills((xs) => [...xs, { key: `custom:${counter.current}`, kind: "custom", ...b }]);
     }
     setCustomKey(null);
-    setStep(editing ? "split" : "select");
+    go(customReturn);
+  };
+
+  const openCustom = (key: string | null, from: "select" | "split") => {
+    setCustomKey(key);
+    setCustomReturn(from);
+    go("custom");
   };
 
   const back = () => {
     if (busy) return;
-    if (step === "custom") setStep(editing ? "split" : "select");
-    else if (step === "split" && !editing) setStep("select");
+    if (step === "custom") go(customReturn);
+    else if (step === "select") (selectReturn === "split" ? go("split") : onClose());
+    else if (step === "split" && !editing) go("select");
     else onClose();
   };
 
   const editingCustom = customKey ? bills.find((b) => b.key === customKey) : undefined;
+  const toggle = (b: Bill) => setBills((xs) => (xs.some((x) => x.key === b.key) ? xs.filter((x) => x.key !== b.key) : [...xs, b]));
+  const remove = (key: string) => setBills((xs) => xs.filter((x) => x.key !== key));
 
   return (
     <Modal onClose={onClose} title={editing ? "Edit expense" : "Add expense"} hideTitle size="full" showClose={false} busy={busy}>
-      {step === "select" ? (
-        <SelectBill
-          picked={bills}
-          onToggle={(b) => setBills((xs) => (xs.some((x) => x.key === b.key) ? xs.filter((x) => x.key !== b.key) : [...xs, b]))}
-          onRemove={(key) => setBills((xs) => xs.filter((x) => x.key !== key))}
-          onCustom={(key) => {
-            setCustomKey(key);
-            setStep("custom");
-          }}
-          onBack={onClose}
-          onContinue={() => setStep("split")}
-          taken={taken}
-          notice={selectNotice}
-        />
+      {seen.select ? (
+        <div className={step === "select" ? "flex shrink-0 flex-1 flex-col" : "hidden"}>
+          <SelectBill
+            picked={bills}
+            onToggle={toggle}
+            onRemove={remove}
+            onCustom={(key) => openCustom(key, "select")}
+            onBack={back}
+            backLabel={selectReturn === "split" ? "Back" : "Close"}
+            onContinue={() => go("split")}
+            taken={taken}
+            notice={selectNotice}
+            ownExpenseId={editing?.id ?? null}
+            totals={totals}
+          />
+        </div>
       ) : null}
       {step === "custom" ? (
         <CustomBill
-          initial={editingCustom ?? (editing ? bills[0] : undefined)}
-          defaultCurrency={groupCurrency}
-          editingExpense={!!editing}
+          initial={editingCustom}
+          defaultCurrency={bills[bills.length - 1]?.currency ?? groupCurrency}
+          title={editingCustom ? (editing && bills.length === 1 ? "Amount" : "Change bill") : bills.length ? "Add another bill" : "Create custom bill"}
           onBack={back}
-          onDone={(b) => {
-            if (editing) {
-              setBills([{ key: "custom:edit", kind: "custom", ...b }]);
-              setStep("split");
-            } else saveCustom(b);
-          }}
+          onDone={saveCustom}
         />
       ) : null}
-      {step === "split" ? (
-        <SplitBill
-          groupId={groupId}
-          groupCurrency={groupCurrency}
-          members={members}
-          meId={meId}
-          bills={bills}
-          editing={editing}
-          onBack={back}
-          onEditAmount={() => {
-            if (editing) setCustomKey(null);
-            else if (bills.length === 1 && bills[0].kind === "custom") setCustomKey(bills[0].key);
-            else return;
-            setStep("custom");
-          }}
-          busy={busy}
-          setBusy={setBusy}
-          onSaved={onSaved}
-          onReAdd={() => setEditing(undefined)}
-          onSourceTaken={(used) => {
-            setTaken((t) => [...t, used]);
-            setBills((xs) => xs.filter((x) => x.ref !== used.ref));
-            setSelectNotice("One of those was just split in a group, so it's been taken out. Pick again.");
-            setStep("select");
-          }}
-        />
+      {seen.split ? (
+        <div className={step === "split" ? "flex shrink-0 flex-1 flex-col" : "hidden"}>
+          <SplitBill
+            groupId={groupId}
+            groupCurrency={groupCurrency}
+            members={members}
+            meId={meId}
+            bills={bills}
+            totals={totals}
+            editing={editing}
+            onBack={back}
+            onChangeBill={(key) => openCustom(key, "split")}
+            onAddBill={() => openCustom(null, "split")}
+            onAddFromActivity={() => {
+              setSelectReturn("split");
+              setSelectNotice(null);
+              go("select");
+            }}
+            onRemoveBill={remove}
+            busy={busy}
+            setBusy={setBusy}
+            onSaved={onSaved}
+            onReAdd={() => setEditing(undefined)}
+            onSourceTaken={(used) => {
+              setTaken((t) => [...t, used]);
+              setBills((xs) => xs.filter((x) => x.ref !== used.ref));
+              setSelectNotice("One of those was just split in a group, so it's been taken out. Pick again.");
+              go("select");
+            }}
+          />
+        </div>
       ) : null}
     </Modal>
   );
@@ -296,46 +370,118 @@ export function AddExpenseFlow({
 
 /* ── 1. Select bill ───────────────────────────────────────────────── */
 
+/**
+ * Your activity, the first page from the shared read and every older page
+ * this screen asked for with "Load older". Pages are by offset, so a payment
+ * that lands meanwhile can show twice across pages: billsFrom keeps each once.
+ */
+function useActivityPages() {
+  const first = useTransfers(PAGE, 0);
+  const [older, setOlder] = useState<{ transfers: Transfer[]; hasMore: boolean; next: number } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const all = useMemo(() => [...(first.data?.transfers ?? []), ...(older?.transfers ?? [])], [first.data, older]);
+  const hasMore = older ? older.hasMore : !!first.data?.hasMore;
+  const loadOlder = useCallback(async () => {
+    if (loading) return;
+    setLoading(true);
+    setFailed(false);
+    const offset = older?.next ?? PAGE;
+    try {
+      const page = await getTransfers(PAGE, offset);
+      setOlder((o) => ({ transfers: [...(o?.transfers ?? []), ...(page.transfers ?? [])], hasMore: !!page.hasMore && (page.transfers ?? []).length > 0, next: offset + PAGE }));
+    } catch {
+      setFailed(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [loading, older]);
+  return { first, all, hasMore, loadOlder, loadingOlder: loading, olderFailed: failed };
+}
+
+/** What stops Continue, in words, or null. Nothing limits how many expenses anybody adds. */
+function limitsText(bills: readonly Bill[]): string | null {
+  if (bills.length > MAX_ITEMS) return `One expense holds up to ${MAX_ITEMS} bills, and this has ${bills.length}. Take some out and add them as another expense: there's no limit on expenses.`;
+  const sources = bills.filter((b) => b.kind !== "custom").length;
+  if (sources > MAX_SOURCES) return `One expense can name up to ${MAX_SOURCES} of your payments, and this names ${sources}. Add the rest as another expense.`;
+  return null;
+}
+
+/** "Total ≈ 54.21 €" under a list of bills, or why there is no total yet. */
+function TotalLine({ totals, bills }: { totals: ReturnType<typeof useBillsTotal>; bills: readonly Bill[] }) {
+  const t = totals.total;
+  if (!bills.length) return null;
+  if (t.ok) {
+    return (
+      <p className="flex items-baseline justify-between gap-3 px-1 text-[15px] font-extrabold tabular-nums text-white">
+        <span className="text-white/70">Total{bills.length > 1 ? ` · ${bills.length} bills` : ""}</span>
+        <span>
+          {t.basis !== "same" ? "≈ " : ""}
+          {money(t.amountMinor, t.currency)}
+        </span>
+      </p>
+    );
+  }
+  if (totals.converting) return <p className="px-1 text-[13px] text-white/60">Converting the bills to one currency…</p>;
+  if (t.reason === "mixed_currencies") {
+    return (
+      <p className="rounded-[14px] bg-amber/[0.12] px-3 py-2 text-[12.5px] leading-[17px] text-amber">
+        {totals.fxFailed ? "Today\u2019s rates didn\u2019t load" : "There\u2019s no rate today"} for {t.currencies.join(" and ")}, so these can&apos;t be added up. Try again in a moment, or split them one currency at a time.
+      </p>
+    );
+  }
+  return null;
+}
+
 function SelectBill({
   picked,
   onToggle,
   onRemove,
   onCustom,
   onBack,
+  backLabel,
   onContinue,
   taken,
   notice,
+  ownExpenseId,
+  totals,
 }: {
   picked: Bill[];
   onToggle: (b: Bill) => void;
   onRemove: (key: string) => void;
   onCustom: (key: string | null) => void;
   onBack: () => void;
+  backLabel: string;
   onContinue: () => void;
   /** Sources this flow was just told are taken (409), on top of what the read says. */
   taken: UsedSource[];
   notice: string | null;
+  /** Editing: this expense's own bills are not "split elsewhere". */
+  ownExpenseId: string | null;
+  totals: ReturnType<typeof useBillsTotal>;
 }) {
   const [q, setQ] = useState("");
-  const transfers = useTransfers(200, 0);
+  const activity = useActivityPages();
   const trips = useTrips();
   const used = useUsedSources(true);
 
-  const rows = useMemo(() => billsFrom(transfers.data?.transfers ?? [], trips.bookings), [transfers.data, trips.bookings]);
+  const rows = useMemo(() => billsFrom(activity.all, trips.bookings), [activity.all, trips.bookings]);
+  const unpriced = useMemo(() => unpricedCount(activity.all), [activity.all]);
   const usedBy = useMemo(() => {
     const m = new Map<string, UsedSource>();
-    for (const u of [...(used.data ?? []), ...taken]) m.set(`${u.kind}:${u.ref}`, u);
+    for (const u of [...(used.data ?? []), ...taken]) if (!ownExpenseId || u.expenseId !== ownExpenseId) m.set(`${u.kind}:${u.ref}`, u);
     return m;
-  }, [used.data, taken]);
+  }, [used.data, taken, ownExpenseId]);
   const shown = useMemo(() => groupByDay(searchBills(rows, q)), [rows, q]);
   const pickedKeys = new Set(picked.map((b) => b.key));
-  const total = billTotal(picked);
-  const loading = transfers.data === undefined && !transfers.error;
-  const failed = !!transfers.error && transfers.data === undefined;
+  const loading = activity.first.data === undefined && !activity.first.error;
+  const failed = !!activity.first.error && activity.first.data === undefined;
+  const limit = limitsText(picked);
+  const canGo = totals.total.ok && !limit;
 
   return (
     <div className="relative flex shrink-0 flex-1 flex-col pb-4">
-      <Top onBack={onBack} backLabel="Close" />
+      <Top onBack={onBack} backLabel={backLabel} />
       <h2 className={`${bigTitle} mt-3`}>Select bill</h2>
 
       <label className="mt-5 flex h-12 items-center gap-2.5 rounded-[24px] border border-white/[0.1] bg-white/[0.05] px-4 focus-within:border-white/30">
@@ -388,7 +534,10 @@ function SelectBill({
         <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[24px] bg-amber/[0.14] text-amber">
           <Ion name="document-text-outline" size={22} />
         </span>
-        <span className="text-[17px] font-extrabold text-amber">Create a custom bill</span>
+        <span className="flex min-w-0 flex-col">
+          <span className="text-[17px] font-extrabold text-amber">{picked.length ? "Add another bill" : "Create a custom bill"}</span>
+          <span className="text-[13px] text-white/55">Anything you paid outside HOLD. Add as many as you like.</span>
+        </span>
       </button>
 
       {notice ? (
@@ -407,16 +556,16 @@ function SelectBill({
         <div className="mt-6">
           <Notice>
             Your activity didn&apos;t load, so there is nothing to pick from right now. A custom bill still works.{" "}
-            <button type="button" className="font-extrabold underline" onClick={() => void transfers.mutate()}>
+            <button type="button" className="font-extrabold underline" onClick={() => void activity.first.mutate()}>
               Retry
             </button>
           </Notice>
         </div>
       ) : null}
-      {!loading && !failed && rows.length === 0 ? (
+      {!loading && !failed && rows.length === 0 && !activity.hasMore ? (
         <p className="mt-8 px-2 text-center text-[14px] text-white/60">Nothing you paid shows up yet. Create a custom bill for anything you paid outside HOLD.</p>
       ) : null}
-      {!loading && rows.length > 0 && shown.length === 0 ? <p className="mt-8 text-center text-[14px] text-white/60">Nothing matches “{q}”.</p> : null}
+      {!loading && rows.length > 0 && shown.length === 0 ? <p className="mt-8 text-center text-[14px] text-white/60">Nothing matches “{q}” in what&apos;s loaded.</p> : null}
 
       {shown.map((day) => (
         <section key={day.label} className="mt-7">
@@ -428,16 +577,32 @@ function SelectBill({
           </ul>
         </section>
       ))}
-      {transfers.data?.hasMore && !q ? <p className="mt-4 text-center text-[12.5px] text-white/50">Showing your latest 200 payments.</p> : null}
+
+      {!loading && !failed ? (
+        <div className="mt-5 flex flex-col items-center gap-2">
+          {activity.hasMore ? (
+            <button type="button" onClick={() => void activity.loadOlder()} disabled={activity.loadingOlder} className={pillGlass}>
+              {activity.loadingOlder ? "Loading…" : "Load older"}
+            </button>
+          ) : null}
+          {activity.olderFailed ? <p className="text-[12.5px] text-white/60">Older activity didn&apos;t load. Try again.</p> : null}
+          {unpriced > 0 ? (
+            <p className="max-w-[420px] px-2 text-center text-[12.5px] leading-[17px] text-white/55">
+              {unpriced === 1 ? "1 payment" : `${unpriced} payments`} in a token with no recorded dollar value {unpriced === 1 ? "isn't" : "aren't"} listed: HOLD doesn&apos;t guess a price. Add {unpriced === 1 ? "it" : "them"} as a custom bill.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="pointer-events-none sticky bottom-0 -mx-4 mt-auto bg-[linear-gradient(180deg,transparent,#08151C_40%)] px-4 pb-1 pt-8">
-        {picked.length && !total.ok && total.reason === "mixed_currencies" ? (
-          <p className="pointer-events-auto mb-2 rounded-[14px] bg-amber/[0.12] px-3 py-2 text-[12.5px] leading-[17px] text-amber">
-            These are in {total.currencies.join(" and ")}, and not all of them have a dollar value to add up in. Split one currency at a time.
-          </p>
+        {picked.length ? (
+          <div className="pointer-events-auto mb-2 flex flex-col gap-2">
+            <TotalLine totals={totals} bills={picked} />
+            {limit ? <p className="rounded-[14px] bg-amber/[0.12] px-3 py-2 text-[12.5px] leading-[17px] text-amber">{limit}</p> : null}
+          </div>
         ) : null}
         {picked.length ? (
-          <button type="button" onClick={onContinue} disabled={!total.ok} className={`${plateBig} pointer-events-auto shadow-[0_10px_30px_rgba(0,0,0,0.45)]`}>
+          <button type="button" onClick={onContinue} disabled={!canGo} className={`${plateBig} pointer-events-auto shadow-[0_10px_30px_rgba(0,0,0,0.45)]`}>
             Continue · {picked.length}
           </button>
         ) : null}
@@ -491,13 +656,13 @@ const MORE_CURRENCIES = ["NZD", "HKD", "CNY", "KRW", "INR", "SEK", "NOK", "DKK",
 function CustomBill({
   initial,
   defaultCurrency,
-  editingExpense,
+  title,
   onBack,
   onDone,
 }: {
   initial?: Bill;
   defaultCurrency: string;
-  editingExpense: boolean;
+  title: string;
   onBack: () => void;
   onDone: (b: { amountMinor: string; currency: string; label: string }) => void;
 }) {
@@ -561,7 +726,7 @@ function CustomBill({
 
   return (
     <div className="flex shrink-0 flex-1 flex-col">
-      <Top onBack={onBack} title={editingExpense ? "Amount" : initial ? "Change bill" : "Create custom bill"} />
+      <Top onBack={onBack} title={title} />
 
       <div className="flex flex-1 flex-col items-center justify-center py-6">
         <p className="flex max-w-full items-baseline justify-center gap-1 px-2" aria-live="polite" aria-label={`Amount ${shown} ${currency}`}>
@@ -726,9 +891,13 @@ function SplitBill({
   members,
   meId,
   bills,
+  totals,
   editing,
   onBack,
-  onEditAmount,
+  onChangeBill,
+  onAddBill,
+  onAddFromActivity,
+  onRemoveBill,
   busy,
   setBusy,
   onSaved,
@@ -740,9 +909,14 @@ function SplitBill({
   members: GroupMember[];
   meId: string | null;
   bills: Bill[];
+  totals: ReturnType<typeof useBillsTotal>;
   editing?: Expense;
   onBack: () => void;
-  onEditAmount: () => void;
+  /** Open a typed bill on the keypad. */
+  onChangeBill: (key: string) => void;
+  onAddBill: () => void;
+  onAddFromActivity: () => void;
+  onRemoveBill: (key: string) => void;
   busy: boolean;
   setBusy: (b: boolean) => void;
   onSaved: (id: string) => void;
@@ -752,9 +926,11 @@ function SplitBill({
   const decimal = useDecimal();
   const ids = members.map((m) => m.userId);
   const byId = useMemo(() => new Map(members.map((m) => [m.userId, m])), [members]);
-  const total = billTotal(bills);
+  const total = totals.total;
   const currency = total.ok ? total.currency : groupCurrency;
   const totalMinor = total.ok ? toBig(total.amountMinor) : 0n;
+  const approx = total.ok && total.basis !== "same";
+  const limit = limitsText(bills);
 
   const initial = useMemo<SplitState>(
     () => (editing ? stateFrom(editing, members, groupCurrency) : { tab: "amount", people: ids, typed: {}, percents: evenPercents(ids), weights: Object.fromEntries(ids.map((id) => [id, "1"])) }),
@@ -764,8 +940,12 @@ function SplitBill({
   );
   const [st, setSt] = useState<SplitState>(initial);
   const [payer, setPayer] = useState<string | null>(editing?.payerUserId ?? meId);
-  const firstLabel = bills.length === 1 ? bills[0].label : `${bills.length} bills`;
-  const [description, setDescription] = useState(editing ? (editing.description ?? "") : bills.length === 1 && bills[0].label !== "Custom bill" ? bills[0].label : "");
+  const suggested = billsTitle(bills);
+  const [description, setDescription] = useState(editing ? (editing.description ?? "") : "");
+  // A category somebody picked wins; untouched, a stay bill makes it Stay (the server does the same when none is sent).
+  const [category, setCategory] = useState<{ touched: boolean; value: ExpenseCategory | null }>({ touched: false, value: editing ? expenseCategory(editing) : null });
+  const hasStay = bills.some((b) => b.kind === "stay");
+  const effectiveCategory: ExpenseCategory | null = category.touched ? category.value : (category.value ?? (hasStay ? "stay" : null));
   const [place, setPlace] = useState(editing?.place ?? "");
   const [date, setDate] = useState(editing ? isoToDateInput(editing.spentAt) : latestDay(bills));
   const [receipt, setReceipt] = useState<Blob | null>(null);
@@ -797,10 +977,11 @@ function SplitBill({
   const check = checkSplit({ mode, totalMinor: total.ok ? total.amountMinor : null, currency, payerUserId: payer, people, inputs });
   const preview = new Map(check.shares.map((s) => [s.userId, s.shareMinor]));
   const dateOk = /^\d{4}-\d{2}-\d{2}$/.test(date);
-  const valid = total.ok && totalMinor > 0n && !!payer && check.ok && dateOk && badTyped.length === 0;
+  const valid = total.ok && totalMinor > 0n && !!payer && check.ok && dateOk && badTyped.length === 0 && !limit && bills.length > 0;
 
   const left = (() => {
-    if (!total.ok) return { text: "The bills can't be added up.", warn: true };
+    if (!bills.length) return { text: "Add a bill first.", warn: true };
+    if (!total.ok) return { text: totals.converting ? "Converting the bills…" : "The bills can't be added up yet.", warn: true };
     if (!people.length) return { text: "Pick at least one person.", warn: true };
     if (check.ok) return { text: `All ${money(totalMinor, currency)} assigned`, warn: false };
     switch (check.reason) {
@@ -842,19 +1023,25 @@ function SplitBill({
     );
   };
 
+  const multi = bills.length > 1;
+  const hadItems = !!editing && expenseBills(editing).length > 0;
+
   const body = () => {
     const everyone = mode === "equal" && !editing && people.length === ids.length && ids.every((id) => people.includes(id));
     const sources: ExpenseSource[] = bills
       .filter((b) => b.kind !== "custom" && b.ref)
-      .map((b) => ({ kind: b.kind as ExpenseSource["kind"], ref: b.ref!, label: b.label, amountMinor: b.amountMinor, currency: b.currency, occurredAt: b.occurredAt ?? null }));
+      .map((b) => ({ kind: b.kind as ExpenseSource["kind"], ref: b.ref!, label: b.label.slice(0, 120), amountMinor: b.amountMinor, currency: b.currency, occurredAt: b.occurredAt ?? null }));
     return {
+      // With items the server derives the amount; this preview total is what an older server, which ignores items, keeps.
       amountMinor: totalMinor.toString(),
       currency,
-      description: description.trim() || (bills.length === 1 && bills[0].label !== "Custom bill" ? bills[0].label : null),
+      description: editing ? description.trim() || null : description.trim() || suggested,
       place: place.trim() || null,
       spentAt: date,
       split: splitBody({ mode, totalMinor: totalMinor.toString(), currency, payerUserId: payer, people, inputs }, everyone),
-      ...(sources.length ? { sources: sources.slice(0, 20) } : {}),
+      ...(multi ? { items: itemsBody(bills) } : {}),
+      ...(sources.length ? { sources } : {}),
+      ...(effectiveCategory ? { category: effectiveCategory } : {}),
     };
   };
 
@@ -882,16 +1069,28 @@ function SplitBill({
         return;
       }
       const was = stateFrom(editing, members, groupCurrency);
+      const wasItems = hadItems ? JSON.stringify(itemsBody(billsOfExpense(editing))) : "[]";
+      const nowItems = multi ? JSON.stringify(itemsBody(bills)) : "[]";
+      const itemsChanged = wasItems !== nowItems;
       const moneyChanged =
-        b.amountMinor !== editing.amountMinor || b.currency !== editing.currency.toUpperCase() || canonical(b.split) !== canonical(splitOf(was, editing, payer)) || st.tab !== was.tab;
+        itemsChanged ||
+        b.amountMinor !== editing.amountMinor ||
+        b.currency !== editing.currency.toUpperCase() ||
+        canonical(b.split) !== canonical(splitOf(was, editing, payer)) ||
+        st.tab !== was.tab;
       const patch: Parameters<typeof updateExpense>[2] = {};
       if ((editing.description ?? "") !== (b.description ?? "")) patch.description = b.description;
       if ((editing.place ?? "") !== (b.place ?? "")) patch.place = b.place;
       if (isoToDateInput(editing.spentAt) !== b.spentAt) patch.spentAt = b.spentAt;
+      if ((expenseCategory(editing) ?? null) !== (effectiveCategory ?? null)) patch.category = effectiveCategory;
       if (moneyChanged) {
         patch.amountMinor = b.amountMinor;
         patch.currency = b.currency;
         patch.split = b.split;
+        // Several bills replace the list; back to one bill, items: [] makes it a single amount again.
+        if (multi || hadItems) patch.items = multi ? itemsBody(bills) : [];
+        // A bill that names a payment must find it in `sources` in the same request (§10.1).
+        if (multi && b.sources?.length) patch.sources = b.sources;
       }
       if (Object.keys(patch).length) await updateExpense(groupId, editing.id, patch);
       await putReceipt(editing.id);
@@ -905,6 +1104,8 @@ function SplitBill({
           return;
         }
         setNotice(describeGroupError(e));
+      } else if (e instanceof HoldApiError && e.detail === "amounts_do_not_sum" && approx) {
+        setNotice(`The bills are converted at today's rate, and HOLD's total came out a cent away from ${money(totalMinor, currency)}. Use Percent or Share, which always add up, or check the amounts.`);
       } else setNotice(describeGroupError(e));
     } finally {
       setBusy(false);
@@ -930,14 +1131,14 @@ function SplitBill({
 
   const payerName = payer === meId ? "you" : memberName(byId.get(payer ?? ""));
   const canPickPayer = !editing && members.length > 1;
-  const canEditAmount = !!editing || (bills.length === 1 && bills[0].kind === "custom");
+  const canEditAmount = bills.length === 1 && bills[0].kind === "custom";
 
   return (
     <div className="relative flex shrink-0 flex-1 flex-col pb-4">
       <Top onBack={onBack} backLabel={editing ? "Close" : "Back"} />
       <h2 className={`${bigTitle} mt-3`}>{editing ? "Edit expense" : "Split bill"}</h2>
 
-      {/* The bill */}
+      {/* The bill, or the bills */}
       <div className={`${card} mt-5 flex items-center gap-3.5 px-4 py-4`}>
         {bills.length > 1 ? (
           <span className="relative h-12 w-12 shrink-0">
@@ -951,7 +1152,7 @@ function SplitBill({
           <BillFace bill={bills[0] ?? { key: "x", kind: "custom", label: "", amountMinor: "0", currency }} size={48} />
         )}
         <span className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-[17px] font-extrabold text-white">{description.trim() || firstLabel}</span>
+          <span className="truncate text-[17px] font-extrabold text-white">{description.trim() || suggested || (bills.length > 1 ? `${bills.length} bills` : "Expense")}</span>
           {canPickPayer ? (
             <button type="button" onClick={() => setSheet("payer")} className="inline-flex items-center gap-1 self-start text-[15px] font-bold text-amber hover:opacity-85" aria-haspopup="dialog">
               Paid by {payerName}
@@ -962,17 +1163,101 @@ function SplitBill({
           )}
         </span>
         {canEditAmount ? (
-          <button type="button" onClick={onEditAmount} className="shrink-0 rounded-[10px] px-1 text-right text-[17px] font-bold tabular-nums text-white underline decoration-white/30 underline-offset-4 hover:decoration-white/70" aria-label="Change the amount">
+          <button type="button" onClick={() => onChangeBill(bills[0].key)} className="shrink-0 rounded-[10px] px-1 text-right text-[17px] font-bold tabular-nums text-white underline decoration-white/30 underline-offset-4 hover:decoration-white/70" aria-label="Change the amount">
             {total.ok ? money(totalMinor, currency) : "–"}
           </button>
         ) : (
-          <span className="shrink-0 text-[17px] font-bold tabular-nums text-white">{total.ok ? money(totalMinor, currency) : "–"}</span>
+          <span className="shrink-0 text-[17px] font-bold tabular-nums text-white">{total.ok ? `${approx ? "≈ " : ""}${money(totalMinor, currency)}` : "–"}</span>
         )}
       </div>
-      {total.ok && total.converted ? <p className="mt-2 px-1 text-[12.5px] text-white/55">Added up in dollars, from each payment&apos;s value when it was made.</p> : null}
+
+      {/* Every bill, the running total, and more */}
+      {bills.length > 1 ? (
+        <div className={`${card} mt-3 flex flex-col py-1.5`}>
+          <ul aria-label="Bills" className="flex flex-col">
+            {bills.map((b, i) => {
+              const conv = total.ok && b.currency.toUpperCase() !== total.currency ? total.converted[i] : null;
+              return (
+                <li key={b.key} className="flex min-h-[56px] items-center gap-3 px-4 py-1.5">
+                  <BillFace bill={b} size={32} />
+                  {b.kind === "custom" ? (
+                    <button type="button" onClick={() => onChangeBill(b.key)} disabled={busy} className="flex min-w-0 flex-1 flex-col text-left" aria-label={`Change ${b.label}`}>
+                      <span className="truncate text-[15px] font-bold text-white">{b.label}</span>
+                      <span className="text-[12px] text-white/50">Typed · tap to change</span>
+                    </button>
+                  ) : (
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="truncate text-[15px] font-bold text-white">{b.label}</span>
+                      <span className="text-[12px] text-white/50">{b.kind === "stay" ? "Stay" : b.kind === "card" ? "Card" : "Payment"}</span>
+                    </span>
+                  )}
+                  <span className="flex shrink-0 flex-col items-end">
+                    <span className="text-[15px] font-bold tabular-nums text-white">{money(b.amountMinor, b.currency)}</span>
+                    {conv !== null ? <span className="text-[12px] tabular-nums text-white/50">≈ {money(conv, total.ok ? total.currency : currency)}</span> : null}
+                  </span>
+                  <button type="button" onClick={() => onRemoveBill(b.key)} disabled={busy} aria-label={`Take out ${b.label}`} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[16px] text-white/55 hover:bg-white/10 hover:text-white">
+                    <Ion name="close" size={16} />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="mx-4 mt-1 border-t border-white/[0.08] pt-2.5 pb-1.5">
+            <TotalLine totals={totals} bills={bills} />
+          </div>
+        </div>
+      ) : null}
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button type="button" onClick={onAddBill} disabled={busy} className={pillGlass}>
+          <Ion name="add" size={15} />
+          Add another bill
+        </button>
+        <button type="button" onClick={onAddFromActivity} disabled={busy} className={pillGlass}>
+          <Ion name="list-outline" size={15} />
+          From your activity
+        </button>
+      </div>
+      {limit ? <p className="mt-2 rounded-[14px] bg-amber/[0.12] px-3 py-2 text-[12.5px] leading-[17px] text-amber">{limit}</p> : null}
+      {bills.length <= 1 && !total.ok ? (
+        <div className="mt-2">
+          <TotalLine totals={totals} bills={bills} />
+        </div>
+      ) : null}
+      {total.ok && total.basis === "fx" ? (
+        <p className="mt-2 px-1 text-[12.5px] text-white/55">Converted to {total.currency} at today&apos;s rate. HOLD works out the exact total when it&apos;s added.</p>
+      ) : null}
+      {total.ok && total.basis === "usd" ? (
+        <p className="mt-2 px-1 text-[12.5px] text-white/55">No rate today for one of these, so they&apos;re added up in dollars, from each payment&apos;s value when it was made.</p>
+      ) : null}
       {total.ok && currency !== groupCurrency.toUpperCase() ? (
         <p className="mt-2 px-1 text-[12.5px] text-white/55">The group keeps {groupCurrency}. HOLD converts this once, at the rate of the day it is added.</p>
       ) : null}
+
+      {/* Category */}
+      <div className="mt-5">
+        <p className="px-1 pb-2 text-[13px] font-bold text-white/60">Category</p>
+        <div role="radiogroup" aria-label="Category" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {EXPENSE_CATEGORIES.map((c) => {
+            const on = effectiveCategory === c;
+            return (
+              <button
+                key={c}
+                type="button"
+                role="radio"
+                aria-checked={on}
+                disabled={busy}
+                onClick={() => setCategory({ touched: true, value: on ? null : c })}
+                className={`inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[18px] px-3.5 text-[13.5px] font-bold transition-colors ${
+                  on ? "bg-[#F1F5F9] text-[#0A1420]" : "bg-white/[0.08] text-white/80 hover:bg-white/[0.12]"
+                }`}
+              >
+                <Ion name={CATEGORY_ICON[c]} size={15} />
+                {CATEGORY_LABEL[c]}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Amount | Percent | Share */}
       <div role="tablist" aria-label="How to split" className="mt-5 flex gap-1">
@@ -1035,7 +1320,7 @@ function SplitBill({
       <div className="mt-6 flex flex-col gap-2.5">
         <p className="px-1 text-[13px] font-bold text-white/60">Details (optional)</p>
         {bills.length > 1 || editing ? (
-          <input value={description} onChange={(e) => setDescription(e.target.value.slice(0, 120))} placeholder={bills.length > 1 ? `Description, like ${firstLabel === `${bills.length} bills` ? "Weekend in Lisbon" : firstLabel}` : "Description"} aria-label="Description" disabled={busy} className={fieldCls} />
+          <input value={description} onChange={(e) => setDescription(e.target.value.slice(0, 120))} placeholder={suggested ? `Description, like ${suggested}` : "Description, like Weekend in Lisbon"} aria-label="Description" disabled={busy} className={fieldCls} />
         ) : null}
         <div className="flex gap-2.5">
           <label className={`${fieldCls} flex flex-1 items-center gap-2`}>

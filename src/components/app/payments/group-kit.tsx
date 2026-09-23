@@ -13,12 +13,24 @@
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
-import { faceOf, type GroupMember, type Person } from "@/lib/app/groups";
+import { faceOf, type ExpenseCategory, type GroupMember, type Person } from "@/lib/app/groups";
 import { IMAGE_ACCEPT, uprightImage } from "@/lib/app/image-upright";
 
 import { EmojiAvatar } from "../front/kit";
-import { Ion } from "../ion";
+import { Ion, type IonName } from "../ion";
 import { Modal } from "../Modal";
+
+/** An expense's category, as the chips, the rows and Insights draw it (contract §10.2). None is drawn as Other. */
+export const CATEGORY_ICON: Readonly<Record<ExpenseCategory, IonName>> = {
+  food: "restaurant-outline",
+  drinks: "wine-outline",
+  transport: "car-outline",
+  stay: "bed-outline",
+  activities: "compass-outline",
+  groceries: "cart-outline",
+  shopping: "bag-handle-outline",
+  other: "pricetag-outline",
+};
 
 /* ── Buttons this family of screens uses (a pill's radius is half its height) ── */
 
