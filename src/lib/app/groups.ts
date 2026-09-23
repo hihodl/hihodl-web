@@ -31,14 +31,11 @@
  * carries a client key made per user action, and the optimistic bubble is
  * matched by it. Whether it travels as the `Idempotency-Key` header is a
  * separate question, answered by the Cloudflare Worker in front of
- * api.hihodl.xyz. The backend's groupsRouter now answers its own CORS and
- * allows the header, but until the Worker is re-pasted with `/api/v1/groups`
- * in `APP_ANSWERS_CORS` it overwrites the preflight with `Content-Type,
- * Authorization`, and a browser that sends a header the preflight did not
- * allow never sends the request at all. Turning this on early would break
- * every message. `SEND_IDEMPOTENCY_HEADER` is the one switch: flip it to true
- * once `curl -X OPTIONS` on /api/v1/groups from https://app.hihodl.xyz lists
- * Idempotency-Key in Access-Control-Allow-Headers.
+ * api.hihodl.xyz: its preflight allowed only `Content-Type, Authorization`
+ * until 2026-09-23, when `Idempotency-Key` was added (checked with an OPTIONS
+ * on /api/v1/groups). A browser that sends a header the preflight did not
+ * allow never sends the request at all, so if the Worker ever drops it again,
+ * set `SEND_IDEMPOTENCY_HEADER` back to false or every message breaks.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -444,12 +441,8 @@ export function newClientKey(prefix: string): string {
 
 /* ── Calls ────────────────────────────────────────────────────────── */
 
-/**
- * The one switch. See the header: flip to true once the Cloudflare Worker is
- * re-pasted with /api/v1/groups in APP_ANSWERS_CORS and its preflight allows
- * `Idempotency-Key`. Until then every keyed write goes without the header.
- */
-export const SEND_IDEMPOTENCY_HEADER = false;
+/** See the header: on because the Worker's preflight allows `Idempotency-Key`. */
+export const SEND_IDEMPOTENCY_HEADER = true;
 
 function withKey(key: string | undefined): Record<string, string> | undefined {
   return SEND_IDEMPOTENCY_HEADER && key ? { "Idempotency-Key": key } : undefined;
