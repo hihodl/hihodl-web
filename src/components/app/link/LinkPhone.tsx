@@ -327,8 +327,12 @@ export function LinkPhone({ onDone, onLater }: { onDone: () => void; onLater?: (
   const [phase, setPhase] = useState<LinkPhase>({ kind: "starting" });
   // Read here, not handed down: a wallet made one step earlier must count.
   const [wallet, setWallet] = useState<WalletStatus | null>(null);
+  // Answered or failed: until then an iPhone cannot know which view to lead with.
+  const [walletRead, setWalletRead] = useState(false);
   useEffect(() => {
-    getWalletStatus().then(setWallet, () => setWallet(null));
+    getWalletStatus()
+      .then(setWallet, () => setWallet(null))
+      .finally(() => setWalletRead(true));
   }, []);
   // On an iPhone or iPad: the person's own pick between "Link this iPhone" and
   // the QR for an Android phone. Until they pick, `?show=android` (Home's card
@@ -489,8 +493,14 @@ export function LinkPhone({ onDone, onLater }: { onDone: () => void; onLater?: (
 
   // A wallet made in the app is only approved by an Android phone: linking
   // the iPhone itself is not offered, and the QR is what the screen leads with.
-  const shown: LinkPhase =
-    phase.kind === "waiting" && phase.here === "ios"
+  //
+  // Until the wallet is read, an iPhone with no pick yet waits rather than
+  // flashing "Link this iPhone" at somebody whose wallet only an Android phone
+  // can approve (the Menu's way in carries no `?show=android`).
+  const undecided = phase.kind === "waiting" && phase.here === "ios" && !walletRead && qrChoice === null && !askedForQr;
+  const shown: LinkPhase = undecided
+    ? { kind: "starting" }
+    : phase.kind === "waiting" && phase.here === "ios"
       ? { ...phase, qr: appMade || (qrChoice ?? askedForQr), offerHere: !appMade }
       : phase;
 
