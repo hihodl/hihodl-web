@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * A Benefits product that has no web screens yet (Stays, eSIM): one honest
- * card. What it is, that it lives in the HOLD app for now, and the way to the
+ * A Benefits product that has no web screens yet (eSIM; Stays has its own
+ * now, under /travel): one honest card. What it is, that it lives in the HOLD app for now, and the way to the
  * app. No pretend search box, no prices we did not quote.
  */
 
