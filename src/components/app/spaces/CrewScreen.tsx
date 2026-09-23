@@ -298,17 +298,7 @@ function Invitation({ crew, onDone }: { crew: Crew; onDone: () => void }) {
       <p className={sheetTitle}>{crew.name}</p>
       <Body dim>{lead ? `${whoText(lead)} wants you in their crew.` : "A creator wants you in their crew."}</Body>
       {me ? <Terms service={me.service} share={me.share} /> : null}
-      {crew.spaces.length ? (
-        <Card>
-          <p className="text-[12px] font-strong text-white/55">{crew.spaces.length === 1 ? "Sells" : `Sells ${crew.spaces.length} listings`}</p>
-          {crew.spaces.map((sp) => (
-            <p key={sp.id} className="flex items-center gap-2 text-[14px] font-strong text-white">
-              <Ion name="pricetag-outline" size={14} className="shrink-0 text-white/55" />
-              <span className="truncate">{sp.title}</span>
-            </p>
-          ))}
-        </Card>
-      ) : null}
+      {crew.spaces.length ? <ListingsSold spaces={crew.spaces} /> : null}
       <Roster members={crew.members} />
       <PaidLine />
       <p className={fine}>{CREW_GROUP_LINE}</p>
@@ -347,15 +337,24 @@ function JoinByLink({ code, onJoined }: { code: string; onJoined: (c: Crew) => v
       <p className={sheetTitle}>Join {invite.name}</p>
       <Body dim>{invite.leadHandle ? `@${invite.leadHandle} wants you in their crew.` : "A creator wants you in their crew."}</Body>
       <Terms service={invite.service} share={invite.share} />
+      {invite.spaces?.length ? <ListingsSold spaces={invite.spaces} /> : null}
       {invite.members.length ? (
         <Card>
           {invite.members.map((m, i) => (
-            <div key={i} className="flex flex-col gap-0.5">
+            <div key={i} className="flex flex-col gap-2.5">
               {i > 0 ? <Divider /> : null}
-              <p className="text-[14px] font-strong text-white">
-                {m.handle ? `@${m.handle}` : "A creator"} {m.isLead ? <Tag label="Lead" /> : null}
-              </p>
-              <p className={fine}>{m.service}</p>
+              <div className="flex items-center gap-3">
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <p className="truncate text-[14px] font-strong text-white">
+                      {m.isThisInvite ? "You" : m.handle ? `@${m.handle}` : m.name ?? "A creator"}
+                    </p>
+                    {m.isLead ? <Tag label="Lead" /> : null}
+                  </div>
+                  <p className={fine}>{m.service}</p>
+                </div>
+                {m.share ? <p className="shrink-0 text-[15px] font-extrabold tabular-nums text-white">{m.share}</p> : null}
+              </div>
             </div>
           ))}
         </Card>
@@ -383,6 +382,21 @@ function JoinByLink({ code, onJoined }: { code: string; onJoined: (c: Crew) => v
         {busy ? "Joining…" : "Say yes and join"}
       </button>
     </div>
+  );
+}
+
+/** The listings a crew sells, for somebody about to say yes to it. */
+function ListingsSold({ spaces }: { spaces: { id: string; title: string }[] }) {
+  return (
+    <Card>
+      <p className="text-[12px] font-strong text-white/55">{spaces.length === 1 ? "Sells" : `Sells ${spaces.length} listings`}</p>
+      {spaces.map((sp) => (
+        <p key={sp.id} className="flex items-center gap-2 text-[14px] font-strong text-white">
+          <Ion name="pricetag-outline" size={14} className="shrink-0 text-white/55" />
+          <span className="truncate">{sp.title}</span>
+        </p>
+      ))}
+    </Card>
   );
 }
 

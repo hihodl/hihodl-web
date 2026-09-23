@@ -66,7 +66,24 @@ export interface CrewInvitePreview {
   service: string;
   shareBps: number;
   share: string;
-  members: { handle: string | null; service: string; isLead: boolean }[];
+  /**
+   * Everyone in the crew. Servers from before 24 September send only
+   * `handle`, `service` and `isLead`, and only people who are in; newer ones
+   * send the whole split, this invitation's own seat included.
+   */
+  members: {
+    handle: string | null;
+    service: string;
+    isLead: boolean;
+    shareBps?: number;
+    share?: string;
+    name?: string | null;
+    avatarUrl?: string | null;
+    agreed?: boolean;
+    isThisInvite?: boolean;
+  }[];
+  /** The crew's live listings; absent from older servers. */
+  spaces?: { id: string; slug: string; title: string; status: string }[];
   expiresAt: string | null;
 }
 
