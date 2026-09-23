@@ -60,7 +60,11 @@ import { useMyAddresses } from "./spaces-data";
 const OPTIONS: SWRConfiguration = {
   revalidateOnFocus: true,
   focusThrottleInterval: 30_000,
-  shouldRetryOnError: false,
+  /* A couple of retries so a cold start on the API does not stick as an
+   * error; after that the screen says so and offers its own Retry. */
+  shouldRetryOnError: true,
+  errorRetryCount: 2,
+  errorRetryInterval: 3_000,
   dedupingInterval: 10_000,
 };
 
@@ -329,11 +333,17 @@ export interface RatedReserve extends YieldReserve {
 export function useYieldReserves() {
   return useRead<RatedReserve[]>("yield-reserves", async () => {
     const tag = (venue: Venue) => (reserves: YieldReserve[]) => reserves.map((r) => ({ ...r, venue }));
-    const [kamino, aave] = await Promise.all([
-      getKaminoReserves().then((a) => tag("kamino")(a.reserves), () => [] as RatedReserve[]),
-      getAaveReserves().then((a) => tag("aave")(a.reserves), () => [] as RatedReserve[]),
+    const [kamino, aave] = await Promise.allSettled([
+      getKaminoReserves().then((a) => tag("kamino")(a.reserves)),
+      getAaveReserves().then((a) => tag("aave")(a.reserves)),
     ]);
-    return [...kamino, ...aave];
+    /* One venue down still shows the other. Both down is a failed read, never
+     * an empty shelf: an empty shelf reads as "Savings is coming soon". */
+    if (kamino.status === "rejected" && aave.status === "rejected") throw kamino.reason;
+    return [
+      ...(kamino.status === "fulfilled" ? kamino.value : []),
+      ...(aave.status === "fulfilled" ? aave.value : []),
+    ];
   });
 }
 
