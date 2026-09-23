@@ -52,6 +52,7 @@ import { useHoldWallet } from "@/lib/app/hold-wallet";
 import { listPasskeys, type RegisteredPasskey } from "@/lib/wallet/api";
 
 import { useLinkedPhones } from "../account/PhoneScreen";
+import { linkHref } from "../link/in-app";
 import { UserAvatar } from "../account/UserAvatar";
 import { useProductHref, useSpacesBase } from "../base";
 import { BackHeader, Column, ctaPrimary, ctaSecondary, holdCard, HoldCard, MenuRow, Notice, SectionTitle, Switch } from "../hold";
@@ -222,12 +223,13 @@ function MenuTiles({ open }: { open: (s: Screen) => void }) {
         onClick={() => open("plan")}
       />
       <Tile icon="person-add-outline" title="Invite friends" sub="Earn rewards together" href={productHref("/benefits")} />
-      <Tile icon="phone-portrait-outline" title="Link your phone" sub="Approve from the app" href={productHref("/account?view=phone")} />
+      {/* The link screen itself: a full load, it carries the wallet pages' CSP. */}
+      <Tile icon="phone-portrait-outline" title="Link your phone" sub="Android approves payments" href={linkHref(productHref, productHref("/menu"))} reload />
     </div>
   );
 }
 
-function Tile({ icon, title, sub, href, onClick }: { icon: IonName; title: string; sub: string; href?: string; onClick?: () => void }) {
+function Tile({ icon, title, sub, href, reload, onClick }: { icon: IonName; title: string; sub: string; href?: string; reload?: boolean; onClick?: () => void }) {
   const cls = `${holdCard} flex flex-col gap-2 p-3.5 text-left transition-colors hover:bg-white/[0.06]`;
   const inner = (
     <>
@@ -239,7 +241,11 @@ function Tile({ icon, title, sub, href, onClick }: { icon: IonName; title: strin
     </>
   );
   if (href) {
-    return (
+    return reload ? (
+      <a href={href} className={cls}>
+        {inner}
+      </a>
+    ) : (
       <Link href={href} className={cls}>
         {inner}
       </Link>
@@ -354,8 +360,16 @@ function SecurityScreen({ onBack, open }: { onBack: () => void; open: (s: Screen
     <Column>
       <BackHeader title="Security" onBack={onBack} />
       <HoldCard className="mt-4">
-        {/* The app's "Link with the web", from this side: the phones that approve withdrawals. */}
-        <MenuRow icon="qr-code-outline" label="Link your phone" value={phoneValue} href={productHref("/account?view=phone")} />
+        {/* The app's "Link with the web", from this side. With nothing linked it opens
+            the link screen itself (a full load, for the wallet pages' CSP); with a phone
+            linked, the list of phones, which links another from there. */}
+        <MenuRow
+          icon="qr-code-outline"
+          label="Link your phone"
+          value={phoneValue}
+          href={phones.devices && n === 0 ? linkHref(productHref, productHref("/menu?screen=security")) : productHref("/account?view=phone")}
+          reload={!!phones.devices && n === 0}
+        />
         <MenuRow
           icon="finger-print-outline"
           label="Passkeys"

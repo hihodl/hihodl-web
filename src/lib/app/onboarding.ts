@@ -10,12 +10,17 @@
  *   passkey    registered through /passkeys/register/* with the session
  *   recovery   /recovery-codes/generate-and-email, only when /status says the
  *              account has no active codes (never re-emails somebody's codes)
- *   wallet     the Solana web wallet, only when /wallet-backup/status says
- *              enabled and state none; `app_wallet` shows a note; a closed
- *              rollout gate skips it silently
+ *   wallet     where the wallet is made depends on the phone
+ *              (documentation/one-wallet-every-device.md, rule 2): an iPhone
+ *              or a computer makes the Solana web wallet here with a passkey,
+ *              when /wallet-backup/status says enabled and state none; an
+ *              Android phone is offered the Google Play app first (it makes
+ *              the wallet with every chain), with "Make it here instead".
+ *              `app_wallet` shows a note; a closed gate skips it, except on
+ *              Android, where the app is still the way to a wallet
  *   link       link your phone (documentation/link-your-phone-and-approved-
- *              withdrawals.md): required, no skip, for everybody with no
- *              linked phone; the phone is what approves every withdrawal
+ *              withdrawals.md): offered with "Later", never a toll, and only
+ *              while onboarding runs for something else
  *
  * Every "is it done" is read from the server, so a person who finished these
  * in the app goes straight in, and somebody who closed the tab half-way
@@ -29,6 +34,7 @@ import type { Session } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
 
 import { activeLinkedDevices } from "@/lib/link/api";
+import { thisDevice, type Phone } from "@/lib/link/ua";
 import { getWalletStatus, listPasskeys, type WalletStatus } from "@/lib/wallet/api";
 import { passkeysHere } from "@/lib/wallet/passkey";
 
@@ -52,6 +58,8 @@ export interface Facts {
    * asked of a server that cannot finish it.
    */
   linkedPhones: number | null;
+  /** The phone this page is on (lib/link/ua); null on a computer. */
+  phone: Phone | null;
 }
 
 export interface Choices {
@@ -120,6 +128,7 @@ export async function readFacts(): Promise<Facts> {
     wallet,
     canPasskey,
     linkedPhones: phones,
+    phone: thisDevice().phone,
   };
 }
 
@@ -151,6 +160,15 @@ export function walletToMake(f: Facts): boolean {
 }
 
 /**
+ * Whether the wallet step leads with "Get HOLD on Google Play": an Android
+ * phone with no wallet anywhere. Asked even when the web cannot make one
+ * (a closed gate, no passkey here), because the app can.
+ */
+export function playFirst(f: Facts): boolean {
+  return f.phone === "android" && !!f.wallet && f.wallet.state === "none";
+}
+
+/**
  * The steps still to do, in order. Empty means straight in.
  *
  * Name and photo ride along only when there is something else to do anyway,
@@ -162,7 +180,7 @@ export function stepsFor(f: Facts, c: Choices): StepKey[] {
   if (!f.username) required.push("username");
   if (f.canPasskey && !f.hasPasskey) required.push("passkey");
   if (!f.hasCodes) required.push("recovery");
-  if (walletToMake(f) && !c.wallet) required.push("wallet");
+  if ((walletToMake(f) || playFirst(f)) && !c.wallet) required.push("wallet");
   if (required.length === 0) return [];
 
   const out: StepKey[] = [];

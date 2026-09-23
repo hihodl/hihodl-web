@@ -1,7 +1,10 @@
 "use client";
 
 /**
- * "Link your phone": the computer's side (onboarding's last step, required).
+ * "Link your phone": the computer's side. Onboarding's last step, with
+ * "Later" (linking is never a toll), and the standalone screen at
+ * /wallet/link (LinkScreen), reachable any time from Menu → Security and
+ * Account → Your phone.
  *
  * documentation/link-your-phone-and-approved-withdrawals.md. One QR for
  * both phones, `app.hihodl.xyz/link/<sessionId>?k=<webPub>`:
@@ -34,7 +37,9 @@ import {
 } from "@/lib/link/api";
 import { computeSas, formatSas } from "@/lib/link/sas";
 import { newLinkKeyPair, sealSecret, type LinkKeyPair } from "@/lib/link/seal";
+import { androidIntentFor } from "@/lib/link/intent";
 import { thisDevice, type Phone } from "@/lib/link/ua";
+import { PLAY_STORE_URL } from "@/lib/appLinks";
 import { getWalletBackup, getWalletStatus, WalletApiError, type WalletBackup, type WalletStatus } from "@/lib/wallet/api";
 import { fromBase64, toBase64, toBase64Url, wipe } from "@/lib/wallet/core";
 import { explain } from "@/lib/wallet/explain";
@@ -44,6 +49,18 @@ import { evaluatePrf } from "@/lib/wallet/passkey";
 import { ActionButton, Cta, ErrorBanner, ReadyBox, SkipButton, Spinner, StepDesc } from "../front/step";
 
 /* ── What the screen shows ────────────────────────────────────────── */
+
+/** What linking buys, said the same way wherever it is asked. */
+const WHY = "A linked Android phone approves and signs, in the HOLD app, the payments you start on the web.";
+
+/** An Android intent for the link (the app, or Google Play); the plain address if it cannot be read. */
+function intentOr(url: string): string {
+  try {
+    return androidIntentFor(url);
+  } catch {
+    return url;
+  }
+}
 
 export type LinkPhase =
   | { kind: "starting" }
@@ -61,6 +78,8 @@ export interface LinkActions {
   onConfirm: () => void;
   onMismatch: () => void;
   onDone: () => void;
+  /** Onboarding's "Later". Absent on the standalone screen, which has Back. */
+  onLater?: () => void;
 }
 
 function useCountdown(until: number | null): string {
@@ -83,12 +102,14 @@ function useCountdown(until: number | null): string {
  */
 export function LinkView({ phase, actions }: { phase: LinkPhase; actions: LinkActions }) {
   const left = useCountdown(phase.kind === "waiting" ? phase.expiresAt : null);
+  const later = actions.onLater ? <SkipButton label="Later" onClick={actions.onLater} /> : null;
 
   if (phase.kind === "starting") {
     return (
       <div>
-        <StepDesc>Your phone approves every withdrawal from your wallet.</StepDesc>
+        <StepDesc>{WHY}</StepDesc>
         <div className="mx-auto mt-3 h-[248px] w-[248px] animate-pulse rounded-[28px] bg-white/[0.06]" />
+        {later ? <Cta>{later}</Cta> : null}
       </div>
     );
   }
@@ -99,6 +120,7 @@ export function LinkView({ phase, actions }: { phase: LinkPhase; actions: LinkAc
         <ErrorBanner>{phase.message}</ErrorBanner>
         <Cta>
           <ActionButton title="Try again" onClick={actions.onRetry} />
+          {later}
         </Cta>
       </div>
     );
@@ -109,9 +131,10 @@ export function LinkView({ phase, actions }: { phase: LinkPhase; actions: LinkAc
       return (
         <div>
           {phase.notice ? <ErrorBanner>{phase.notice}</ErrorBanner> : null}
-          <StepDesc>You are on your iPhone, so this is the phone we link. It approves every withdrawal with your passkey.</StepDesc>
+          <StepDesc>You are on your iPhone, so this is the phone we link. Payments are still approved with your passkey, on this phone.</StepDesc>
           <Cta>
             <ActionButton title={phase.joining ? "Linking..." : "Link this iPhone"} icon="phone-portrait-outline" disabled={phase.joining} onClick={actions.onJoinHere} />
+            {later}
           </Cta>
         </div>
       );
@@ -119,22 +142,34 @@ export function LinkView({ phase, actions }: { phase: LinkPhase; actions: LinkAc
     if (phase.here === "android") {
       return (
         <div>
-          <StepDesc>Open the HOLD app with this link. It shows a six-digit code; come back here to check it matches.</StepDesc>
+          <StepDesc>Open the HOLD app with this link. It shows a six-digit code: come back to this page to check it matches.</StepDesc>
           <p className="text-[13px] font-medium text-white/[0.55]">Code valid for {left}</p>
           <Cta>
+            {/* A new tab: the intent leaves this page alive, and this page is where the code is confirmed. */}
             <a
-              href={phase.url}
+              href={intentOr(phase.url)}
+              target="_blank"
+              rel="noopener"
               className="flex h-[54px] w-full items-center justify-center gap-2 rounded-[27px] border border-white/10 bg-white/[0.05] text-[16px] font-bold text-white/[0.85] transition-colors hover:bg-white/[0.09]"
             >
               Open in HOLD
             </a>
+            <a
+              href={PLAY_STORE_URL}
+              target="_blank"
+              rel="noopener"
+              className="self-center rounded-[10px] px-5 py-3 text-[14px] font-semibold text-white/[0.55] transition-colors hover:text-white/80"
+            >
+              Get HOLD on Google Play
+            </a>
+            {later}
           </Cta>
         </div>
       );
     }
     return (
       <div>
-        <StepDesc>Your phone approves every withdrawal from your wallet. Scan this code with its camera.</StepDesc>
+        <StepDesc>{WHY} Scan this code with its camera.</StepDesc>
         <div className="mt-3">
           <div className="mx-auto w-[248px] rounded-[28px] bg-white p-[18px]">
             <QrCode text={phase.url} title="Scan with your phone" className="h-auto w-full" />
@@ -143,7 +178,7 @@ export function LinkView({ phase, actions }: { phase: LinkPhase; actions: LinkAc
         <ul className="mt-4 flex flex-col gap-2 text-[14px]">
           <li>
             <span className="font-bold text-white">iPhone</span>
-            <span className="text-white/60"> opens it in Safari. Sign in with this account.</span>
+            <span className="text-white/60"> opens it in Safari. Sign in with this account. Your passkey keeps approving payments.</span>
           </li>
           <li>
             <span className="font-bold text-white">Android</span>
@@ -154,6 +189,7 @@ export function LinkView({ phase, actions }: { phase: LinkPhase; actions: LinkAc
           <Spinner size={14} color="rgba(255,255,255,0.55)" />
           Waiting for your phone · <span className="tabular-nums">{left}</span>
         </p>
+        {later ? <Cta>{later}</Cta> : null}
       </div>
     );
   }
@@ -206,6 +242,7 @@ export function LinkView({ phase, actions }: { phase: LinkPhase; actions: LinkAc
         <StepDesc>That code expired. Codes last five minutes.</StepDesc>
         <Cta>
           <ActionButton title="Show a new code" onClick={actions.onRetry} />
+          {later}
         </Cta>
       </div>
     );
@@ -215,7 +252,11 @@ export function LinkView({ phase, actions }: { phase: LinkPhase; actions: LinkAc
     <div>
       <ReadyBox
         title="Your phone is linked"
-        line={phase.platform === "android" ? "Your Android phone approves every withdrawal in the HOLD app." : "Your iPhone approves every withdrawal with your passkey."}
+        line={
+          phase.platform === "android"
+            ? "Payments you start on the web are now approved and signed in the HOLD app on this phone."
+            : "Your iPhone is on your account. Payments are still approved with your passkey."
+        }
       />
       <Cta>
         <ActionButton title="Continue" onClick={actions.onDone} />
@@ -229,8 +270,8 @@ export function LinkView({ phase, actions }: { phase: LinkPhase; actions: LinkAc
 const POLL_MS = 2000;
 const FIVE_MINUTES = 5 * 60 * 1000;
 
-/** Onboarding's link step: opens a session, waits for the phone, seals on Android. */
-export function LinkPhone({ onDone }: { onDone: () => void }) {
+/** Opens a session, waits for the phone, seals on Android. Onboarding's step and the standalone screen. */
+export function LinkPhone({ onDone, onLater }: { onDone: () => void; onLater?: () => void }) {
   const [phase, setPhase] = useState<LinkPhase>({ kind: "starting" });
   // Read here, not handed down: a wallet made one step earlier must count.
   const [wallet, setWallet] = useState<WalletStatus | null>(null);
@@ -395,6 +436,7 @@ export function LinkPhone({ onDone }: { onDone: () => void }) {
           setPhase({ kind: "mismatch" });
         },
         onDone,
+        onLater,
       }}
     />
   );

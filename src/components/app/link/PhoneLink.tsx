@@ -12,14 +12,16 @@
  *             installing and signing in, the app finds the same session
  *             through GET /device-link/pending.
  *   iPhone    sign in (the same door as everywhere), then "Link this iPhone"
- *             joins with platform ios. No secret moves: an iPhone approves
- *             withdrawals with a passkey on the web.
+ *             joins with platform ios. No secret moves and no approver is
+ *             added: the passkey keeps approving payments on the web
+ *             (documentation/one-wallet-every-device.md, scenario 1).
  *   Computer  this page is for a phone: say so.
  */
 
 import { useCallback, useEffect, useState } from "react";
 
 import { getLinkState, joinLinkSession } from "@/lib/link/api";
+import { androidIntentFor } from "@/lib/link/intent";
 import { phoneOf, type Phone } from "@/lib/link/ua";
 import { PLAY_STORE_URL } from "@/lib/appLinks";
 import { signOut, useCreatorSession } from "@/lib/creator/session";
@@ -28,14 +30,7 @@ import { WalletApiError } from "@/lib/wallet/api";
 import { Door } from "../front/Door";
 import { btnGhost, btnLink, btnPrimary, DoorCard, HoldMark, Note, Warn } from "../front/kit";
 
-const ANDROID_PACKAGE = "com.sayhihodl.hihodlai";
-
-/** An Android intent for this exact https address: the app if installed, Google Play if not. */
-export function androidIntentFor(href: string): string {
-  const u = new URL(href);
-  const fallback = encodeURIComponent(PLAY_STORE_URL);
-  return `intent://${u.host}${u.pathname}${u.search}#Intent;scheme=https;package=${ANDROID_PACKAGE};S.browser_fallback_url=${fallback};end`;
-}
+export { androidIntentFor };
 
 export type PhonePhase =
   | { kind: "reading" }
@@ -80,8 +75,8 @@ export function PhoneLinkView({ phase, onJoin, onSignOut }: { phase: PhonePhase;
         <>
           <Note>
             {phase.self
-              ? "This is the iPhone you started on. Link it, and it approves every withdrawal from your wallet with your passkey."
-              : "Link this iPhone to your HOLD account. From now on it approves every withdrawal from your wallet with your passkey."}
+              ? "This is the iPhone you started on. Link it to your HOLD account. Payments are still approved with your passkey."
+              : "Link this iPhone to your HOLD account. Payments are still approved with your passkey."}
           </Note>
           {phase.notice ? <Warn>{phase.notice}</Warn> : null}
           <button type="button" className={`${btnPrimary} w-full`} disabled={phase.busy} onClick={onJoin}>

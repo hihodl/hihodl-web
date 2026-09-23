@@ -1,16 +1,18 @@
 "use client";
 
 /**
- * Your phone: the phones linked to this account, which approve every
- * withdrawal (documentation/link-your-phone-and-approved-withdrawals.md).
+ * Your phone: the phones linked to this account. A linked Android phone
+ * approves and signs the payments started on the web; an iPhone is recorded,
+ * and the passkey keeps approving (documentation/one-wallet-every-device.md).
  *
  *   rows     how many, on Settings › Security (where the app keeps "Link
  *            with the web")
  *   screen   each phone, when it was linked, Remove     → Account ?view=phone
  *
- * With none, "Link your phone" goes to onboarding's link step (a full load:
- * /welcome carries the wallet pages' strict CSP, and on Android the wallet's
- * secret is sealed there).
+ * "Link your phone" opens the link screen, /wallet/link (a full load: it
+ * carries the wallet pages' strict CSP, and on Android with a web wallet the
+ * wallet's secret is sealed there). It is there whatever is linked already:
+ * an iPhone linked first does not stop an Android phone joining.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -18,15 +20,15 @@ import { useCallback, useEffect, useState } from "react";
 import { activeLinkedDevices, revokeLinkedDevice, type LinkedDevice } from "@/lib/link/api";
 import { explain } from "@/lib/wallet/explain";
 
-import { BackHeader, Column, ctaCommit, HoldCard, Notice, SectionTitle } from "../hold";
+import { BackHeader, Column, ctaCommit, ctaSecondary, HoldCard, Notice, SectionTitle } from "../hold";
 import { Ion } from "../ion";
 import { Skeleton } from "../ui";
 
 const PLATFORM: Record<LinkedDevice["platform"], string> = { android: "Android phone", ios: "iPhone", other: "Phone" };
 const HOW: Record<LinkedDevice["platform"], string> = {
-  android: "Approves withdrawals in the HOLD app",
-  ios: "Approves withdrawals with your passkey",
-  other: "Approves withdrawals",
+  android: "Approves and signs payments in the HOLD app",
+  ios: "On your account. Your passkey approves payments",
+  other: "On your account",
 };
 
 function when(iso: string | null): string {
@@ -81,7 +83,7 @@ export function PhoneScreenView({
       ) : (
         <>
           <p className="mb-2 px-1 text-[15px] font-medium leading-[21px] text-white/[0.72]">
-            Your phone approves every withdrawal from your wallet. An Android phone approves in the HOLD app; an iPhone approves on the web with your passkey.
+            A linked Android phone approves and signs, in the HOLD app, the payments you start on the web. Without one, your passkey approves them here.
           </p>
           {devices && devices.length > 0 ? (
             <>
@@ -118,7 +120,7 @@ export function PhoneScreenView({
           ) : null}
           {confirming ? (
             <p className="mt-3 px-1 text-[12px] leading-[17px] text-[#9FB7C2]">
-              Once removed, that phone approves nothing. With no phone linked, you link one again before your next withdrawal.
+              Once removed, that phone approves nothing. A wallet made on the web goes back to your passkey. A wallet made in the app needs a phone linked again to pay from the web.
             </p>
           ) : null}
           {error ? (
@@ -126,12 +128,12 @@ export function PhoneScreenView({
               <Notice>{explain(error)}</Notice>
             </div>
           ) : null}
-          {devices && devices.length === 0 ? (
+          {devices ? (
             <div className="mt-6">
-              {/* A full load: the link step lives on /welcome, under the wallet pages' strict CSP. */}
-              <a href={linkHref} className={ctaCommit}>
+              {/* A full load: the link screen carries the wallet pages' strict CSP. */}
+              <a href={linkHref} className={devices.length === 0 ? ctaCommit : ctaSecondary}>
                 <Ion name="qr-code-outline" size={16} />
-                Link your phone
+                {devices.length === 0 ? "Link your phone" : devices.some((d) => d.platform === "android") ? "Link another phone" : "Link an Android phone"}
               </a>
             </div>
           ) : null}

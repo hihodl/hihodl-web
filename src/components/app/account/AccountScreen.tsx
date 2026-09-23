@@ -35,6 +35,7 @@ import { useShell } from "../Shell";
 import { AccountDetails } from "./AccountDetails";
 import { MessagesSettings } from "./Messages";
 import { OtherWallet, PayoutScreen, usePayoutSummary } from "./Payout";
+import { linkHref as linkHrefFor } from "../link/in-app";
 import { PhoneScreen } from "./PhoneScreen";
 import { ProfileEdit, ProfileHero, UsernameScreen } from "./Profile";
 import { XScreen } from "./XScreen";
@@ -70,7 +71,8 @@ export function AccountScreen() {
   if (view === "other-wallet") return <OtherWallet onBack={back} />;
   if (view === "messages") return <MessagesSettings onBack={back} />;
   if (view === "phone") {
-    const linkHref = `${productHref("/welcome")}?next=${encodeURIComponent(`${productHref("/account")}?view=phone`)}`;
+    // The link screen itself, and back here after (a full load: it carries the wallet pages' CSP).
+    const linkHref = linkHrefFor(productHref, `${productHref("/account")}?view=phone`);
     // Its row is in Settings › Security, as in the app, so Back goes there.
     return <PhoneScreen onBack={() => router.push(productHref("/menu?screen=security"), { scroll: false })} linkHref={linkHref} />;
   }

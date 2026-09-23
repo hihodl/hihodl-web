@@ -63,6 +63,7 @@ import {
   itemsFor,
   LEVELS,
   levelOf,
+  openToAll,
   productPrefix,
   visible,
   type Level,
@@ -373,8 +374,9 @@ function Frame({ children }: { children: ReactNode }) {
   const allowed = itemsFor(level, shell.role, shell.teamPage, shell.walletPage === true);
   // While the wallet gate is still being asked, the Wallet page waits blank
   // rather than being sent away and back.
-  const deciding = active === "wallet" && shell.walletPage === undefined;
-  const here = active ? deciding || allowed.some((i) => i.key === active) : true;
+  const deciding = active === "wallet" && !openToAll(rel) && shell.walletPage === undefined;
+  // /wallet/link and /wallet/send answer everybody, gate or not (nav.openToAll).
+  const here = active ? deciding || openToAll(rel) || allowed.some((i) => i.key === active) : true;
   useEffect(() => {
     if (here) return;
     router.replace(level === "spaces" && allowed[0] ? hrefFor(allowed[0], base) : hrefFor({ path: "" }, base));

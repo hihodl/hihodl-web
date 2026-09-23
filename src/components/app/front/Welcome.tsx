@@ -12,10 +12,15 @@
  *   Profile         name and photo, optional, "Skip" (the app has no such step)
  *   Passkey         /passkeys/register/* with the session
  *   Recovery Key    the codes emailed, only when the account has none
- *   Wallet          the Solana web wallet, when the rollout gate lets it be made;
+ *   Wallet          by device (documentation/one-wallet-every-device.md):
+ *                   an iPhone or a computer makes the Solana web wallet here
+ *                   with a passkey, when the rollout gate lets it be made; an
+ *                   Android phone leads with "Get HOLD on Google Play" (the app
+ *                   makes it with every chain) and "Make it here instead".
  *                   "your wallet is in the HOLD app" when the app made one.
  *                   Made, it shows the app's Ready: "Your wallet is ready"
- *   Link your phone required, no skip, while no phone is linked (link/LinkPhone)
+ *   Link your phone offered with "Later" while no phone is linked
+ *                   (link/LinkPhone); Menu → Security links one any time
  *
  * What to ask is decided from the server once, when the page opens
  * (lib/app/onboarding), so closing the tab half-way means coming back to the
@@ -37,7 +42,7 @@ import {
   uploadAvatar,
   type UsernameVerdict,
 } from "@/lib/app/me";
-import { markOnboarded, readChoices, readFacts, saveChoice, stepsFor, type Facts, type StepKey } from "@/lib/app/onboarding";
+import { markOnboarded, playFirst, readChoices, readFacts, saveChoice, stepsFor, walletToMake, type Facts, type StepKey } from "@/lib/app/onboarding";
 import {
   beginPasskeyRegistration,
   completePasskeyRegistration,
@@ -50,6 +55,7 @@ import { registerWalletAddress, sealNewWallet } from "@/lib/wallet/flows";
 import { createPasskeyWithPrf, evaluatePrf, PasskeyError } from "@/lib/wallet/passkey";
 import { lock, unlockWith } from "@/lib/wallet/vault";
 
+import { playHref } from "../link/in-app";
 import { LinkPhone } from "../link/LinkPhone";
 import { Door } from "./Door";
 import { HoldMark } from "./kit";
@@ -127,7 +133,7 @@ const STEP: Record<StepKey, { title: string; icon: IonName; tone: StepTone; info
     title: "Link your phone",
     icon: "phone-portrait-outline",
     tone: "passkey",
-    info: "Your phone approves every withdrawal from your wallet.",
+    info: "A linked Android phone approves and signs, in the HOLD app, the payments you start on the web. Without one, your passkey approves them. You can link one later from Menu, Security.",
   },
 };
 
@@ -254,7 +260,7 @@ function Flow({ session }: { session: Session }) {
       {key === "link" ? (
         <>
           {head}
-          <LinkPhone onDone={() => { facts.linkedPhones = 1; complete(key); }} />
+          <LinkPhone onDone={() => { facts.linkedPhones = 1; complete(key); }} onLater={() => complete(key)} />
         </>
       ) : null}
 
@@ -596,7 +602,12 @@ function RecoveryStep({ facts, session, done, onDone, head, hint }: StepProps) {
 
 /* ── Wallet ───────────────────────────────────────────────────────── */
 
-type WalletPhase = { kind: "intro" } | { kind: "confirm"; credentialId: string } | { kind: "sealing" } | { kind: "ready" };
+type WalletPhase =
+  | { kind: "play"; went: boolean }
+  | { kind: "intro" }
+  | { kind: "confirm"; credentialId: string }
+  | { kind: "sealing" }
+  | { kind: "ready" };
 
 function WalletStep({
   facts,
@@ -608,7 +619,9 @@ function WalletStep({
   head,
   hint,
 }: StepProps & { onSkip: () => void; onReady: (ready: boolean) => void; last: boolean }) {
-  const [phase, setPhase] = useState<WalletPhase>({ kind: "intro" });
+  // An Android phone is offered the Play app first; an iPhone and a computer make the wallet here.
+  const [phase, setPhase] = useState<WalletPhase>(() => (playFirst(facts) ? { kind: "play", went: false } : { kind: "intro" }));
+  const canMakeHere = walletToMake(facts);
   const [ids, setIds] = useState<string[]>(facts.passkeyIds);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -668,6 +681,39 @@ function WalletStep({
       setBusy(false);
     }
   };
+
+  // Android: the Play app makes the wallet with every chain. A new tab, so this page is still here after.
+  if (phase.kind === "play") {
+    return (
+      <div>
+        {head}
+        {phase.went ? (
+          <StepDesc>Once HOLD is installed, sign in there with this account and make your wallet. It shows here too, with every chain.</StepDesc>
+        ) : (
+          <StepDesc>HOLD on Google Play makes your wallet with every chain: Solana, Base, Polygon and Ethereum. Sign in there with this account, and it shows here too.</StepDesc>
+        )}
+        {hint}
+        <Cta>
+          {phase.went ? (
+            <ActionButton title="Continue" onClick={onSkip} />
+          ) : (
+            <a
+              href={playHref("android")}
+              target="_blank"
+              rel="noopener"
+              onClick={() => setPhase({ kind: "play", went: true })}
+              className="flex h-[54px] w-full items-center justify-center gap-2 rounded-[27px] border border-white/10 bg-white/[0.05] text-[16px] font-bold text-white/[0.85] transition-[background-color,transform] hover:bg-white/[0.09] active:scale-[0.98]"
+            >
+              <Ion name="logo-google" size={18} />
+              Get HOLD on Google Play
+            </a>
+          )}
+          {canMakeHere ? <SkipButton label="Make it here instead" onClick={() => setPhase({ kind: "intro" })} /> : null}
+          {phase.went ? null : <SkipButton label="Not now" onClick={onSkip} />}
+        </Cta>
+      </div>
+    );
+  }
 
   // setup.tsx's Ready, what the app shows once the wallet is set up (and after a restore).
   if (phase.kind === "ready") {

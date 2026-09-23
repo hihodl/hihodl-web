@@ -292,6 +292,17 @@ export function activeKey(rel: string): NavKey | null {
   return every("main").find((i) => i.path === `/${first}`)?.key ?? null;
 }
 
+/**
+ * Pages under /wallet that are open to everybody, whatever the web wallet's
+ * rollout gate says: linking a phone (/wallet/link) and Send (/wallet/send),
+ * which a wallet made in the app, or no wallet yet, still needs an answer
+ * from. They sit under /wallet for its strict CSP (the link can seal the
+ * wallet's secret; Send can open it).
+ */
+export function openToAll(rel: string): boolean {
+  return /^\/wallet\/(link|send)\/?$/.test(rel.replace(/\/+$/, "") || "/");
+}
+
 /** The top bar's title for a product-relative path. */
 export function titleFor(rel: string): string {
   // Stays' own pages. They are sub-paths of one nav entry, so the entry's own
@@ -305,6 +316,8 @@ export function titleFor(rel: string): string {
   if (/^\/spaces\/listings\/[^/]+\/edit\/?$/.test(rel)) return "Edit draft";
   if (/^\/spaces\/listings\/[^/]+/.test(rel)) return "Listing";
   if (/^\/spaces\/x\/?$/.test(rel)) return "X account";
+  if (/^\/wallet\/link\/?$/.test(rel)) return "Link your phone";
+  if (/^\/wallet\/send\/?$/.test(rel)) return "Send";
   const key = activeKey(rel);
   const all = [...every("main"), ...every("spaces")];
   return all.find((i) => i.key === key)?.label ?? "HOLD";
