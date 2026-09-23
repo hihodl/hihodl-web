@@ -22,10 +22,12 @@
  * way. The web does not send a group payment.
  */
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import {
   addMember,
+  absMinor,
+  deleteGroup,
   deleteGroupPhoto,
   describeGroupError,
   markPaid,
@@ -36,6 +38,7 @@ import {
   parseMajorToMinor,
   recordPaidElsewhere,
   remind,
+  removeMember,
   toBig,
   updateGroup,
   uploadGroupPhoto,
@@ -49,10 +52,11 @@ import { HoldApiError } from "@/lib/app/hold-api";
 
 import { btnGlass, Notice, Switch } from "../hold";
 import { Ion } from "../ion";
+import { Modal } from "../Modal";
 import { inputCls, Tag } from "../spaces/kit";
 import { Skeleton } from "../ui";
 import { DirectoryPicker } from "./DirectoryPicker";
-import { CurrencyInput, FacePicker, LoadFailed, PersonFace, pillGlass, pillWhite, plateWhite, sectionLabel, Sheet } from "./group-kit";
+import { CurrencyInput, FacePicker, LoadFailed, PersonFace, pillGlass, pillWhite, plateCaution, plateWhite, sectionLabel, Sheet } from "./group-kit";
 
 type Names = { name: NameOf; subject: NameOf };
 type Transfer = GroupBalances["transfers"][number];
@@ -364,27 +368,55 @@ function OweRow({
 
 /* ── People ───────────────────────────────────────────────────────── */
 
+/**
+ * Who is in the group, adding people, and leaving.
+ *
+ * THE RULES, SAID WHERE THEY APPLY
+ *
+ *   The group admin is the person who made the group (the API's "creator";
+ *   never called that on screen, where "creator" is the Spaces product). The
+ *   admin row carries an "Admin" badge.
+ *   Only the admin sees Remove on other people's rows (`403 only_creator_removes`).
+ *   Anyone else can leave; the admin can't (`409 creator_cannot_leave`), and is
+ *   offered Delete group instead.
+ *   Nobody goes while their balance is not zero (`409 member_has_balance`):
+ *   a sheet explains it, with the amount, and points at Balances.
+ */
 export function PeopleSheet({
   groupId,
+  groupName,
   members,
   membersError,
   onRetry,
   meId,
+  adminId,
   onClose,
   onAdded,
+  onLeft,
+  onOpenBalances,
 }: {
   groupId: string;
+  groupName: string;
   members: GroupMember[] | undefined;
   membersError: unknown;
   onRetry: () => void;
   meId: string | null;
+  /** The person who made the group. */
+  adminId: string | null;
   onClose: () => void;
   onAdded: () => void;
+  /** You left, or deleted the group: the thread is no longer yours. */
+  onLeft: () => void;
+  onOpenBalances: () => void;
 }) {
   const [picked, setPicked] = useState<Person[]>([]);
   const [busy, setBusy] = useState(false);
   const [lines, setLines] = useState<{ text: string; good: boolean }[]>([]);
+  const [ask, setAsk] = useState<null | { kind: "remove"; member: GroupMember } | { kind: "leave" } | { kind: "delete" } | { kind: "balance"; who: string; you: boolean; minor: string | null; currency: string | null }>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const exclude = [...(members ?? []).map((m) => m.userId), ...(meId ? [meId] : [])];
+  const iAmAdmin = !!meId && meId === adminId;
+  const byId = new Map((members ?? []).map((m) => [m.userId, m]));
 
   const add = async () => {
     if (!picked.length || busy) return;
@@ -407,23 +439,100 @@ export function PeopleSheet({
     if (out.some((l) => l.good)) onAdded();
   };
 
+  /** Remove somebody (the admin), or leave (your own id). */
+  const takeOut = async (userId: string) => {
+    setBusy(true);
+    setNotice(null);
+    const you = userId === meId;
+    try {
+      await removeMember(groupId, userId);
+      setAsk(null);
+      if (you) onLeft();
+      else {
+        setLines([{ text: `${memberName(byId.get(userId))} is out of the group.`, good: true }]);
+        onAdded();
+      }
+    } catch (e) {
+      if (e instanceof HoldApiError && e.detail === "member_has_balance") {
+        const d = (e.details ?? {}) as { balanceMinor?: string; currency?: string };
+        setAsk({ kind: "balance", who: you ? "You" : memberName(byId.get(userId)), you, minor: typeof d.balanceMinor === "string" ? d.balanceMinor : null, currency: typeof d.currency === "string" ? d.currency : null });
+      } else {
+        setAsk(null);
+        setNotice(describeGroupError(e));
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const removeGroup = async () => {
+    setBusy(true);
+    setNotice(null);
+    try {
+      await deleteGroup(groupId);
+      setAsk(null);
+      onLeft();
+    } catch (e) {
+      setAsk(null);
+      setNotice(describeGroupError(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const confirm = (title: string, body: ReactNode, action: string, run: () => void) => (
+    <Modal
+      title={title}
+      onClose={() => setAsk(null)}
+      busy={busy}
+      size="sm"
+      footer={
+        <div className="flex gap-2">
+          <button type="button" className={`${btnGlass} flex-1`} disabled={busy} onClick={() => setAsk(null)}>
+            Cancel
+          </button>
+          <button type="button" className={`${plateCaution} flex-1`} disabled={busy} onClick={run}>
+            {busy ? "One moment…" : action}
+          </button>
+        </div>
+      }
+    >
+      {body}
+    </Modal>
+  );
+
   return (
     <Sheet title="People" onClose={onClose} busy={busy} wide>
       {members === undefined && !membersError ? <Skeleton className="h-10 rounded-[12px]" /> : null}
       {membersError && !members ? <LoadFailed words="Could not load who's in the group." onRetry={onRetry} /> : null}
       <div className="flex flex-col gap-2">
-        {members?.map((m) => (
-          <div key={m.userId} className="flex min-w-0 items-center gap-2.5">
-            <PersonFace person={m} size={32} />
-            <span className="flex min-w-0 flex-1 flex-col">
-              <span className="truncate text-[14.5px] font-bold text-white">{m.displayName?.trim() || memberName(m)}</span>
-              {m.aliasHandle ? <span className="truncate text-[12px] text-white/55">@{m.aliasHandle.replace(/^@+/, "")}</span> : null}
-            </span>
-            {m.isCreator ? <Tag label="Made it" tone="dim" /> : null}
-            {m.userId === meId ? <Tag label="You" tone="dim" /> : null}
-          </div>
-        ))}
+        {members?.map((m) => {
+          const admin = m.userId === adminId || !!m.isCreator;
+          return (
+            <div key={m.userId} className="flex min-h-[44px] min-w-0 items-center gap-2.5">
+              <PersonFace person={m} size={36} />
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="truncate text-[14.5px] font-bold text-white">{m.displayName?.trim() || memberName(m)}</span>
+                {m.aliasHandle ? <span className="truncate text-[12px] text-white/55">@{m.aliasHandle.replace(/^@+/, "")}</span> : null}
+              </span>
+              {admin ? <Tag label="Admin" tone="dim" /> : null}
+              {m.userId === meId ? <Tag label="You" tone="dim" /> : null}
+              {iAmAdmin && m.userId !== meId ? (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setAsk({ kind: "remove", member: m })}
+                  className="rounded-[12px] px-2.5 py-1.5 text-[12.5px] font-bold text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+                  aria-label={`Remove ${memberName(m)}`}
+                >
+                  Remove
+                </button>
+              ) : null}
+            </div>
+          );
+        })}
       </div>
+      {!iAmAdmin && members?.length ? <p className="text-[12px] text-white/50">Only the group admin can remove people.</p> : null}
 
       <p className={`${sectionLabel} pt-1`}>Add people</p>
       <DirectoryPicker selected={picked} onChange={setPicked} exclude={exclude} disabled={busy} />
@@ -440,6 +549,88 @@ export function PeopleSheet({
         <button type="button" className={plateWhite} disabled={busy} onClick={() => void add()}>
           {busy ? "Adding…" : `Add ${picked.length === 1 ? memberName(picked[0]) : `${picked.length} people`}`}
         </button>
+      ) : null}
+
+      {notice ? <Notice>{notice}</Notice> : null}
+
+      {members && meId ? (
+        <div className="mt-2 flex flex-col gap-2 border-t border-white/10 pt-3">
+          {iAmAdmin ? (
+            <>
+              <p className="text-[12.5px] leading-[17px] text-white/55">You&apos;re the group admin. The admin can&apos;t leave; delete the group instead.</p>
+              <button type="button" className={plateCaution} disabled={busy} onClick={() => setAsk({ kind: "delete" })}>
+                <Ion name="trash-outline" size={16} />
+                Delete group
+              </button>
+            </>
+          ) : (
+            <button type="button" className={plateCaution} disabled={busy} onClick={() => setAsk({ kind: "leave" })}>
+              <Ion name="log-out-outline" size={16} />
+              Leave group
+            </button>
+          )}
+        </div>
+      ) : null}
+
+      {ask?.kind === "remove"
+        ? confirm(
+            `Remove ${memberName(ask.member)}?`,
+            <p className="text-[14px] leading-[20px] text-white/[0.78]">They leave {groupName} and stop seeing it. Their expenses stay in the conversation. Someone who still owes or is owed money can&apos;t be removed until it&apos;s settled.</p>,
+            "Remove",
+            () => void takeOut(ask.member.userId),
+          )
+        : null}
+      {ask?.kind === "leave"
+        ? confirm(
+            "Leave the group?",
+            <p className="text-[14px] leading-[20px] text-white/[0.78]">You stop seeing {groupName}. You can only leave once your balance here is zero. Someone in it can add you back.</p>,
+            "Leave",
+            () => meId && void takeOut(meId),
+          )
+        : null}
+      {ask?.kind === "delete"
+        ? confirm(
+            "Delete the group?",
+            <p className="text-[14px] leading-[20px] text-white/[0.78]">{groupName} goes for everyone: the conversation, the expenses and the balances. This can&apos;t be undone.</p>,
+            "Delete group",
+            () => void removeGroup(),
+          )
+        : null}
+      {ask?.kind === "balance" ? (
+        <Modal
+          title={ask.you ? "Settle up before you leave" : "Settle up first"}
+          onClose={() => setAsk(null)}
+          size="sm"
+          footer={
+            <div className="flex gap-2">
+              <button type="button" className={`${btnGlass} flex-1`} onClick={() => setAsk(null)}>
+                OK
+              </button>
+              <button
+                type="button"
+                className={`${plateWhite} flex-1`}
+                onClick={() => {
+                  setAsk(null);
+                  onOpenBalances();
+                }}
+              >
+                See balances
+              </button>
+            </div>
+          }
+        >
+          <p className="text-[14px] leading-[20px] text-white/[0.78]">
+            {ask.you ? "You" : ask.who}{" "}
+            {ask.minor && ask.currency
+              ? toBig(ask.minor) < 0n
+                ? `${ask.you ? "still owe" : "still owes"} ${moneyText(absMinor(ask.minor), ask.currency)} in this group.`
+                : `${ask.you ? "are" : "is"} still owed ${moneyText(absMinor(ask.minor), ask.currency)} in this group.`
+              : `${ask.you ? "still have" : "still has"} money owed in this group, one way or the other.`}
+          </p>
+          <p className="text-[14px] leading-[20px] text-white/[0.78]">
+            Nobody leaves a group with an open balance, so nothing is lost. Once it&apos;s settled (paid in HOLD, or marked as paid by the person owed) it&apos;s one tap.
+          </p>
+        </Modal>
       ) : null}
     </Sheet>
   );

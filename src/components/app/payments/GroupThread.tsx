@@ -40,6 +40,7 @@
  */
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import {
@@ -78,7 +79,8 @@ import { BackHeader, btnGlass, Column, Notice } from "../hold";
 import { Ion } from "../ion";
 import { Tag } from "../spaces/kit";
 import { Skeleton } from "../ui";
-import { ExpenseDetail, ExpenseForm } from "./GroupExpense";
+import { AddExpenseFlow } from "./AddExpense";
+import { ExpenseDetail, ReceiptViewer } from "./GroupExpense";
 import { BalancesSheet, PeopleSheet, SettingsSheet } from "./GroupPanels";
 import { FaceStack, GroupFace, PersonFace, pillGlass, plateCaution, plateWhite, Sheet } from "./group-kit";
 
@@ -93,10 +95,11 @@ const LONG_PRESS_MS = 450;
 const pillAmber =
   "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[18px] bg-amber px-4 text-[13.5px] font-extrabold text-[#0F0F1A] transition-opacity hover:opacity-90";
 
-type Panel = "none" | "people" | "balances" | "settings" | "add" | { expense: string } | { message: string };
+type Panel = "none" | "people" | "balances" | "settings" | "add" | { expense: string } | { message: string } | { receipt: string; title: string | null };
 
 export function GroupThread({ groupId, backPath, backLabel }: { groupId: string; backPath: string; backLabel?: string }) {
   const productHref = useProductHref();
+  const router = useRouter();
   const backHref = productHref(backPath);
   const me = useMe();
   const meId = me.data?.id ?? null;
@@ -201,6 +204,13 @@ export function GroupThread({ groupId, backPath, backLabel }: { groupId: string;
       {panel === "people" ? (
         <PeopleSheet
           groupId={groupId}
+          groupName={name}
+          adminId={members.data?.find((m) => m.isCreator)?.userId ?? group?.userId ?? null}
+          onLeft={() => {
+            void list.mutate();
+            router.push(backHref);
+          }}
+          onOpenBalances={() => setPanel("balances")}
           members={members.data}
           membersError={members.error}
           onRetry={() => void members.mutate()}
@@ -241,12 +251,12 @@ export function GroupThread({ groupId, backPath, backLabel }: { groupId: string;
       ) : null}
 
       {panel === "add" && members.data ? (
-        <ExpenseForm
+        <AddExpenseFlow
           groupId={groupId}
           groupCurrency={currency}
           members={members.data}
           meId={meId}
-          onCancel={close}
+          onClose={close}
           onSaved={() => {
             close();
             refreshAll();
@@ -290,7 +300,10 @@ export function GroupThread({ groupId, backPath, backLabel }: { groupId: string;
         onDiscard={thread.discard}
         onOpenMessage={(id) => setPanel({ message: id })}
         onOpenExpense={(id) => setPanel({ expense: id })}
+        onOpenReceipt={(url, title) => setPanel({ receipt: url, title })}
       />
+
+      {typeof panel === "object" && "receipt" in panel ? <ReceiptViewer url={panel.receipt} title={panel.title} onClose={close} /> : null}
 
       <Composer
         disabled={!meId}
@@ -374,7 +387,9 @@ function Timeline({
   onDiscard,
   onOpenMessage,
   onOpenExpense,
+  onOpenReceipt,
 }: {
+  onOpenReceipt: (url: string, title: string | null) => void;
   items: ThreadItem[];
   reads: ReadMark[];
   members: GroupMember[];
@@ -484,7 +499,7 @@ function Timeline({
             />
           );
         }
-        if (it.kind === "expense") return <ExpenseCard key={r.key} item={it} meId={meId} names={names} groupCurrency={groupCurrency} onOpen={() => onOpenExpense(it.id)} />;
+        if (it.kind === "expense") return <ExpenseCard key={r.key} item={it} meId={meId} names={names} groupCurrency={groupCurrency} onOpen={() => onOpenExpense(it.id)} onReceipt={() => it.receiptUrl && onOpenReceipt(it.receiptUrl, it.description)} />;
         if (it.kind === "settlement") return <SettlementCard key={r.key} item={it} mine={it.userId === meId} names={names} />;
         return <EventLine key={r.key} item={it} names={names} onOpen={it.subjectId ? () => onOpenExpense(it.subjectId!) : undefined} />;
       })}
@@ -843,56 +858,74 @@ function PendingBubble({ item, onRetry, onDiscard }: { item: Outgoing; onRetry: 
   );
 }
 
-/** The card an expense makes in the conversation, on the payer's side. It opens the expense. */
-function ExpenseCard({ item, meId, names, groupCurrency, onOpen }: { item: ExpenseItem; meId: string | null; names: Names; groupCurrency: string; onOpen: () => void }) {
+/**
+ * The card an expense makes in the conversation, on the payer's side. It opens
+ * the expense; its receipt, when there is one, shows as a thumbnail that opens
+ * the receipt full screen.
+ */
+function ExpenseCard({
+  item,
+  meId,
+  names,
+  groupCurrency,
+  onOpen,
+  onReceipt,
+}: {
+  item: ExpenseItem;
+  meId: string | null;
+  names: Names;
+  groupCurrency: string;
+  onOpen: () => void;
+  onReceipt: () => void;
+}) {
   const mine = item.userId === meId;
   const part = expenseForMe(item, meId);
   const converted = item.currency.toUpperCase() !== groupCurrency ? ` (${moneyText(item.groupMinor, groupCurrency)})` : "";
+  const [thumbBroken, setThumbBroken] = useState(false);
+  const receipt = !item.deleted && item.receiptUrl && !thumbBroken ? item.receiptUrl : null;
+  const sources = item.sources?.length ?? 0;
   return (
     <Side mine={mine}>
-      <button
-        type="button"
-        onClick={onOpen}
-        disabled={item.deleted}
-        className={`flex w-full min-w-0 flex-col gap-1.5 rounded-[16px] border border-white/10 px-3.5 py-3 text-left transition-colors ${item.deleted ? "bg-white/[0.03]" : "bg-white/[0.08] hover:bg-white/[0.11]"}`}
-      >
-        <span className="flex w-full min-w-0 items-center gap-2.5">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[16px] bg-white/[0.08]">
-            <Ion name="receipt-outline" size={16} className="text-white/[0.82]" />
+      <div className={`flex w-full min-w-0 items-stretch gap-2 rounded-[16px] border border-white/10 transition-colors ${item.deleted ? "bg-white/[0.03]" : "bg-white/[0.08] hover:bg-white/[0.11]"}`}>
+        <button type="button" onClick={onOpen} disabled={item.deleted} className="flex min-w-0 flex-1 flex-col gap-1.5 px-3.5 py-3 text-left">
+          <span className="flex w-full min-w-0 items-center gap-2.5">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[16px] bg-white/[0.08]">
+              <Ion name="receipt-outline" size={16} className="text-white/[0.82]" />
+            </span>
+            <span className={`min-w-0 flex-1 truncate text-[15px] font-extrabold tracking-[-0.2px] ${item.deleted ? "text-white/55 line-through" : "text-white"}`}>
+              {item.description?.trim() || "Expense"}
+            </span>
+            {item.deleted ? <Tag label="Removed" tone="dim" /> : item.edited ? <Tag label="Edited" tone="dim" /> : null}
           </span>
-          <span className={`min-w-0 flex-1 truncate text-[15px] font-extrabold tracking-[-0.2px] ${item.deleted ? "text-white/55 line-through" : "text-white"}`}>
-            {item.description?.trim() || "Expense"}
+          <span className={`text-[13.5px] tabular-nums ${item.deleted ? "text-white/45 line-through" : "text-white/[0.82]"}`}>
+            {names.subject(item.userId)} paid {moneyText(item.amountMinor, item.currency)}
+            {converted}
           </span>
-          {item.deleted ? <Tag label="Removed" tone="dim" /> : item.edited ? <Tag label="Edited" tone="dim" /> : null}
-          {!item.deleted ? <Ion name="chevron-forward" size={16} className="shrink-0 text-white/45" /> : null}
-        </span>
-        <span className={`text-[13.5px] tabular-nums ${item.deleted ? "text-white/45 line-through" : "text-white/[0.82]"}`}>
-          {names.subject(item.userId)} paid {moneyText(item.amountMinor, item.currency)}
-          {converted}
-        </span>
-        {!item.deleted && (item.place || item.receiptUrl) ? (
-          <span className="flex min-w-0 items-center gap-3 text-[12px] text-white/60">
-            {item.place ? (
-              <span className="inline-flex min-w-0 items-center gap-1">
-                <Ion name="location-outline" size={13} className="shrink-0" />
-                <span className="truncate">{item.place}</span>
-              </span>
-            ) : null}
-            {item.receiptUrl ? (
-              <span className="inline-flex shrink-0 items-center gap-1">
-                <Ion name="image-outline" size={13} />
-                Receipt
-              </span>
-            ) : null}
-          </span>
+          {!item.deleted && (item.place || sources > 1) ? (
+            <span className="flex min-w-0 items-center gap-3 text-[12px] text-white/60">
+              {item.place ? (
+                <span className="inline-flex min-w-0 items-center gap-1">
+                  <Ion name="location-outline" size={13} className="shrink-0" />
+                  <span className="truncate">{item.place}</span>
+                </span>
+              ) : null}
+              {sources > 1 ? <span className="shrink-0">{sources} bills</span> : null}
+            </span>
+          ) : null}
+          {!item.deleted ? (
+            <span className="text-[14px] font-bold tabular-nums text-white">
+              {part.kind === "share" ? `Your part ${formatMinor(part.minor, groupCurrency)}` : part.kind === "lent" ? `You lent ${formatMinor(part.minor, groupCurrency)}` : "Not part of this"}
+            </span>
+          ) : null}
+          <span className="flex justify-end text-[10.5px] text-white/55">{shortTime(item.at)}</span>
+        </button>
+        {receipt ? (
+          <button type="button" onClick={onReceipt} aria-label="Open the receipt" className="my-3 mr-3 shrink-0 self-start overflow-hidden rounded-[12px] ring-1 ring-white/15 transition-opacity hover:opacity-90">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={receipt} alt="" onError={() => setThumbBroken(true)} className="h-[64px] w-[52px] object-cover" />
+          </button>
         ) : null}
-        {!item.deleted ? (
-          <span className="text-[14px] font-bold tabular-nums text-white">
-            {part.kind === "share" ? `Your part ${formatMinor(part.minor, groupCurrency)}` : part.kind === "lent" ? `You lent ${formatMinor(part.minor, groupCurrency)}` : "Not part of this"}
-          </span>
-        ) : null}
-        <span className="flex justify-end text-[10.5px] text-white/55">{shortTime(item.at)}</span>
-      </button>
+      </div>
     </Side>
   );
 }
