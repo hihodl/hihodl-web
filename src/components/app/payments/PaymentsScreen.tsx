@@ -499,12 +499,14 @@ function ThreadView({
    * it does not, Send opens on its own first step and asks. Never a guess: the
    * one thing worse than typing an address is being handed the wrong one.
    */
-  const openSend = async (prefill?: { amount?: string; token?: string }) => {
+  const openSend = async (prefill?: { amount?: string; token?: string; requestId?: string }) => {
     const resolved = handle ? await resolveHandle(handle) : null;
     const q = new URLSearchParams();
     if (resolved?.chain === "solana" && resolved.address) q.set("to", resolved.address);
     if (prefill?.amount) q.set("amount", prefill.amount);
     if (prefill?.token) q.set("token", prefill.token.toUpperCase());
+    // So the send, once confirmed, closes this request (Withdraw → /payments/requests/:id/settle).
+    if (prefill?.requestId) q.set("request", prefill.requestId);
     // /wallet/send, a full load (the wallet pages' CSP): it answers a wallet made in the app, and no wallet, too.
     const query = q.toString();
     window.location.assign(`${productHref("/wallet/send")}${query ? `?${query}` : ""}`);
@@ -512,7 +514,7 @@ function ThreadView({
 
   const payTheirRequest = (r: PaymentRequest) => {
     const amount = requestAmount(r);
-    void openSend({ amount: amount === null ? undefined : String(amount), token: r.tokenId });
+    void openSend({ amount: amount === null ? undefined : String(amount), token: r.tokenId, requestId: r.id });
   };
 
   return (
