@@ -2,34 +2,46 @@
 
 /**
  * An expense, opened (groups-splitwise-grade.md §4): the amount, who paid,
- * each person's part, what it was split from, and the receipt, which opens
- * full screen in the receipt viewer. The payer edits it (the add-expense flow,
- * opened on Split bill: AddExpense.tsx) or deletes it, after a sheet that says
- * what deleting does.
+ * its category, each person's part, what it was split from, and the receipt,
+ * which opens full screen in the receipt viewer. The payer edits it (the
+ * add-expense flow, opened on Split bill: AddExpense.tsx) or deletes it, after
+ * a sheet that says what deleting does.
+ *
+ * An expense of several bills (§10.1) says "N bills", which opens BillsModal:
+ * every bill with its amount, the total, and what each person owes, yours
+ * picked out. The thread's card opens the same modal.
  */
 
 import { useState } from "react";
 
 import {
+  CATEGORY_LABEL,
   deleteExpense,
   deleteReceipt,
   describeGroupError,
+  expenseBills,
+  expenseCategory,
   expenseForMe,
   memberName,
   moneyText,
+  toBig,
   uploadReceipt,
   useExpense,
+  type Expense,
+  type ExpenseBill,
+  type ExpenseItem,
+  type ExpenseSource,
   type GroupMember,
 } from "@/lib/app/groups";
 import { HoldApiError } from "@/lib/app/hold-api";
 
 import { btnGlass, Notice } from "../hold";
-import { Ion } from "../ion";
+import { Ion, type IonName } from "../ion";
 import { Modal } from "../Modal";
 import { Tag } from "../spaces/kit";
 import { Skeleton } from "../ui";
 import { AddExpenseFlow } from "./AddExpense";
-import { LoadFailed, PersonFace, PhotoButton, plateCaution, plateWhite, Sheet } from "./group-kit";
+import { CATEGORY_ICON, LoadFailed, PersonFace, PhotoButton, plateCaution, plateWhite, Sheet } from "./group-kit";
 
 /* ── The receipt, full screen ─────────────────────────────────────── */
 
@@ -65,6 +77,162 @@ export function ReceiptViewer({ url, title, onClose }: { url: string; title?: st
   );
 }
 
+/* ── The bills of one expense ─────────────────────────────────────── */
+
+/** What the bills modal needs, from the thread's item or the full expense. */
+export interface BillsSeed {
+  description: string | null;
+  payerUserId: string;
+  amountMinor: string;
+  currency: string;
+  groupMinor: string;
+  shares: { userId: string; shareMinor: string }[];
+  items?: ExpenseBill[];
+  sources?: ExpenseSource[];
+  spentAt?: string | null;
+}
+
+export function seedOf(e: ExpenseItem | Expense): BillsSeed {
+  return {
+    description: e.description,
+    payerUserId: "payerUserId" in e ? e.payerUserId : e.userId,
+    amountMinor: e.amountMinor,
+    currency: e.currency,
+    groupMinor: e.groupMinor,
+    shares: e.shares,
+    items: e.items,
+    sources: e.sources,
+    spentAt: e.spentAt,
+  };
+}
+
+/** How many bills an expense is made of: its items, else (an older expense) its sources; 0 or 1 is a single amount. */
+export function billCount(e: { items?: ExpenseBill[] | null; sources?: ExpenseSource[] | null }): number {
+  const items = expenseBills(e).length;
+  return items || (e.sources?.length ?? 0);
+}
+
+const SOURCE_ICON = { transfer: "arrow-forward", card: "card-outline", stay: "bed-outline" } as const;
+
+/**
+ * Every bill of one expense, the total, and what each person owes the payer
+ * for it, yours picked out. Opens straight from what the thread already holds
+ * and refreshes from GET expense (the thread item may carry no items on an
+ * older server, the full expense does).
+ */
+export function BillsModal({
+  groupId,
+  expenseId,
+  seed,
+  groupCurrency,
+  members,
+  meId,
+  onClose,
+}: {
+  groupId: string;
+  expenseId: string;
+  seed?: BillsSeed;
+  groupCurrency: string;
+  members: GroupMember[];
+  meId: string | null;
+  onClose: () => void;
+}) {
+  const ex = useExpense(groupId, expenseId);
+  const e: BillsSeed | undefined = ex.data ? seedOf(ex.data) : seed;
+  const byId = new Map(members.map((m) => [m.userId, m]));
+  const nameOf = (id: string) => (id === meId ? "You" : byId.get(id) ? memberName(byId.get(id)) : "A former member");
+
+  if (!e) {
+    return (
+      <Modal title="Bills" onClose={onClose} size="md">
+        {ex.error ? <LoadFailed words={describeGroupError(ex.error)} onRetry={() => void ex.mutate()} /> : <Skeleton className="h-40 rounded-[14px]" />}
+      </Modal>
+    );
+  }
+
+  const cur = e.currency.toUpperCase();
+  const items = expenseBills(e);
+  const rows: { key: string; label: string; icon: IonName; amount: string | null; ccy: string | null; converted: string | null }[] = items.length
+    ? items.map((it, i) => ({
+        key: `i${i}`,
+        label: it.label,
+        icon: it.sourceKind ? SOURCE_ICON[it.sourceKind] : "document-text-outline",
+        amount: it.amountMinor,
+        ccy: it.currency.toUpperCase(),
+        converted: it.currency.toUpperCase() !== cur && it.convertedMinor ? it.convertedMinor : null,
+      }))
+    : (e.sources ?? []).map((src) => ({
+        key: `${src.kind}:${src.ref}`,
+        label: src.label?.trim() || SOURCE_WORDS[src.kind] || "Payment",
+        icon: SOURCE_ICON[src.kind] ?? "arrow-forward",
+        amount: src.amountMinor ?? null,
+        ccy: src.currency ? src.currency.toUpperCase() : null,
+        converted: null,
+      }));
+  const payer = e.payerUserId;
+  const mine = e.shares.find((x) => x.userId === meId);
+  const part = expenseForMe({ userId: payer, groupMinor: e.groupMinor, shares: e.shares }, meId);
+  const sorted = [...e.shares].sort((a, b) => (a.userId === meId ? -1 : b.userId === meId ? 1 : a.userId === payer ? -1 : b.userId === payer ? 1 : 0));
+
+  return (
+    <Modal title={e.description?.trim() || "Bills"} onClose={onClose} size="md">
+      <p className="-mt-1 text-center text-[13px] text-white/60">
+        {nameOf(payer)} paid {rows.length} {rows.length === 1 ? "bill" : "bills"}
+        {e.spentAt ? ` · ${new Date(e.spentAt).toLocaleDateString(undefined, { day: "numeric", month: "short" })}` : ""}
+      </p>
+
+      <ul className="flex flex-col rounded-[16px] bg-white/[0.05] py-1" aria-label="Bills">
+        {rows.map((r) => (
+          <li key={r.key} className="flex min-h-[52px] items-center gap-3 px-3.5 py-1.5">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[16px] bg-white/[0.08] text-white/80">
+              <Ion name={r.icon} size={15} />
+            </span>
+            <span className="min-w-0 flex-1 truncate text-[14.5px] font-bold text-white">{r.label}</span>
+            <span className="flex shrink-0 flex-col items-end">
+              <span className="text-[14.5px] tabular-nums text-white">{r.amount && r.ccy ? moneyText(r.amount, r.ccy) : "–"}</span>
+              {r.converted ? <span className="text-[12px] tabular-nums text-white/50">≈ {moneyText(r.converted, cur)}</span> : null}
+            </span>
+          </li>
+        ))}
+        <li className="mx-3.5 mt-1 flex items-baseline justify-between gap-3 border-t border-white/[0.08] pb-2 pt-2.5">
+          <span className="text-[14px] font-bold text-white/70">Total</span>
+          <span className="text-right">
+            <span className="block text-[17px] font-extrabold tabular-nums text-white">{moneyText(e.amountMinor, cur)}</span>
+            {cur !== groupCurrency.toUpperCase() ? <span className="block text-[12px] tabular-nums text-white/55">{moneyText(e.groupMinor, groupCurrency)} in the group</span> : null}
+          </span>
+        </li>
+      </ul>
+
+      <div className="flex flex-col gap-1.5">
+        <p className="px-1 text-[12.5px] font-bold text-white/[0.82]">What each person owes</p>
+        {part.kind !== "none" ? (
+          <p className="rounded-[14px] bg-amber/[0.12] px-3.5 py-2.5 text-[14px] font-bold tabular-nums text-amber">
+            {part.kind === "share" ? `You owe ${nameOf(payer)} ${moneyText(part.minor, groupCurrency)} for this` : `The others owe you ${moneyText(part.minor, groupCurrency)} for this`}
+          </p>
+        ) : (
+          <p className="px-1 text-[13px] text-white/60">{mine ? "Your part of this is nothing." : "You're not part of this one."}</p>
+        )}
+        <ul className="flex flex-col gap-1" aria-label="Shares">
+          {sorted.map((sh) => {
+            const you = sh.userId === meId;
+            const isPayer = sh.userId === payer;
+            return (
+              <li key={sh.userId} className={`flex min-w-0 items-center gap-2.5 rounded-[12px] px-2.5 py-2 ${you ? "bg-white/[0.1]" : ""}`}>
+                <PersonFace person={byId.get(sh.userId)} size={28} />
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className={`truncate text-[14px] text-white ${you ? "font-extrabold" : "font-bold"}`}>{nameOf(sh.userId)}</span>
+                  <span className="text-[12px] text-white/55">{isPayer ? "Paid, and keeps their part" : toBig(sh.shareMinor) > 0n ? `Owes ${payer === meId ? "you" : nameOf(payer)}` : "Nothing to pay"}</span>
+                </span>
+                <span className={`shrink-0 text-[14px] tabular-nums ${you ? "font-extrabold text-white" : "text-white/90"}`}>{moneyText(sh.shareMinor, groupCurrency)}</span>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </Modal>
+  );
+}
+
 /* ── The detail ───────────────────────────────────────────────────── */
 
 const MODE_WORDS: Record<string, string> = { equal: "Split equally", percent: "Split by percent", exact: "Split by amount", shares: "Split by shares" };
@@ -89,7 +257,7 @@ export function ExpenseDetail({
   onChanged: () => void;
 }) {
   const ex = useExpense(groupId, expenseId);
-  const [mode, setMode] = useState<"view" | "edit" | "delete" | "receipt">("view");
+  const [mode, setMode] = useState<"view" | "edit" | "delete" | "receipt" | "bills">("view");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const byId = new Map(members.map((m) => [m.userId, m]));
@@ -161,6 +329,15 @@ export function ExpenseDetail({
               ) : null}
               {e.edited ? <Tag label="Edited" tone="dim" /> : null}
             </p>
+            {(() => {
+              const c = expenseCategory(e) ?? "other";
+              return (
+                <span className="mt-1 inline-flex items-center gap-1.5 self-start rounded-[12px] bg-white/[0.08] px-2.5 py-1 text-[12.5px] font-bold text-white/80">
+                  <Ion name={CATEGORY_ICON[c]} size={13} />
+                  {CATEGORY_LABEL[c]}
+                </span>
+              );
+            })()}
             {part && part.kind !== "none" ? (
               <p className="mt-1 text-[14px] font-bold tabular-nums text-white">
                 {part.kind === "share" ? `Your part ${moneyText(part.minor, groupCurrency)}` : `You lent ${moneyText(part.minor, groupCurrency)}`}
@@ -183,7 +360,23 @@ export function ExpenseDetail({
             })}
           </div>
 
-          {e.sources?.length ? (
+          {billCount(e) > 1 ? (
+            <button
+              type="button"
+              onClick={() => setMode("bills")}
+              className="flex min-h-[52px] items-center gap-3 rounded-[14px] border border-white/10 bg-white/[0.06] px-3 text-left transition-colors hover:bg-white/[0.1]"
+            >
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[16px] bg-white/[0.08] text-white/80">
+                <Ion name="receipt-outline" size={15} />
+              </span>
+              <span className="min-w-0 flex-1 text-[14.5px] font-bold text-white">{billCount(e)} bills</span>
+              <span className="text-[13px] text-white/60">See each one</span>
+              <Ion name="chevron-forward" size={15} className="text-white/45" />
+            </button>
+          ) : null}
+          {mode === "bills" ? <BillsModal groupId={groupId} expenseId={e.id} seed={seedOf(e)} groupCurrency={groupCurrency} members={members} meId={meId} onClose={() => setMode("view")} /> : null}
+
+          {e.sources?.length && !expenseBills(e).length ? (
             <div className="flex flex-col gap-1 rounded-[14px] border border-white/10 bg-white/[0.04] p-2">
               <p className="px-1 pb-1 text-[12px] font-bold text-white/60">Split from</p>
               {e.sources.map((src) => (

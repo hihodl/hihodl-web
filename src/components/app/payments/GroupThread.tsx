@@ -4,7 +4,8 @@
  * One group, on one screen: the chat and the money together
  * (documentation/groups-splitwise-grade.md, and the app's group-expenses).
  *
- *   header        the name, "N people", "Crew"; Settings and People on the right
+ *   header        the name, "N people", a Crew chip for a crew's group (it
+ *                 opens the crew); Insights, Settings and People on the right
  *   balance strip "You're owed 12.00 USD" / "You owe 4.00 USD" / "All settled
  *                 up", stuck under the header so it never scrolls away; it
  *                 opens Balances, where debts are requests (GroupPanels)
@@ -12,7 +13,13 @@
  *                 day turns; messages as bubbles (the payment chat's own
  *                 colours, Chat.tsx), expenses and settlements as cards, an
  *                 edit to an expense as a quiet line
- *   composer      text and Send, and "+" for an expense
+ *   composer      text and Send, and "+" for an expense, pinned to the foot
+ *                 of the screen while the thread scrolls, above the phone's
+ *                 keyboard and safe area (§11.1). Over it, the debt card
+ *                 (§11.2): what you owe with Pay and Paid another way, or what
+ *                 you're owed with Remind and Mark as paid, the biggest one
+ *                 and "+N more" for Balances. It folds away and never blocks
+ *                 anything
  *
  * It polls every ten seconds while it is open (there is no socket for groups),
  * marks the thread read when it opens and whenever something new arrives while
@@ -47,6 +54,7 @@ import {
   absMinor,
   describeGroupError,
   eventText,
+  expenseCategory,
   expenseForMe,
   formatMinor,
   markRead,
@@ -75,14 +83,15 @@ import { HoldApiError } from "@/lib/app/hold-api";
 import { useMe } from "@/lib/app/spaces-data";
 
 import { useProductHref } from "../base";
+import { OwedRow, OweRow } from "./GroupPanels";
 import { BackHeader, btnGlass, Column, Notice } from "../hold";
-import { Ion } from "../ion";
+import { Ion, type IonName } from "../ion";
 import { Tag } from "../spaces/kit";
 import { Skeleton } from "../ui";
 import { AddExpenseFlow } from "./AddExpense";
-import { ExpenseDetail, ReceiptViewer } from "./GroupExpense";
+import { billCount, BillsModal, ExpenseDetail, ReceiptViewer, seedOf, type BillsSeed } from "./GroupExpense";
 import { BalancesSheet, PeopleSheet, SettingsSheet } from "./GroupPanels";
-import { FaceStack, GroupFace, PersonFace, pillGlass, plateCaution, plateWhite, Sheet } from "./group-kit";
+import { CATEGORY_ICON, FaceStack, GroupFace, PersonFace, pillGlass, plateCaution, plateWhite, Sheet } from "./group-kit";
 
 type Names = ReturnType<typeof namer>;
 
@@ -91,11 +100,17 @@ const UNDER_TOP_BAR = "top-[68px]";
 const MESSAGE_MAX = 1000;
 const LONG_PRESS_MS = 450;
 
-/** Settle up: the screen's one amber plate. */
-const pillAmber =
-  "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[18px] bg-amber px-4 text-[13.5px] font-extrabold text-[#0F0F1A] transition-opacity hover:opacity-90";
 
-type Panel = "none" | "people" | "balances" | "settings" | "add" | { expense: string } | { message: string } | { receipt: string; title: string | null };
+type Panel =
+  | "none"
+  | "people"
+  | "balances"
+  | "settings"
+  | "add"
+  | { expense: string }
+  | { bills: string; seed?: BillsSeed }
+  | { message: string }
+  | { receipt: string; title: string | null };
 
 export function GroupThread({ groupId, backPath, backLabel }: { groupId: string; backPath: string; backLabel?: string }) {
   const productHref = useProductHref();
@@ -115,7 +130,9 @@ export function GroupThread({ groupId, backPath, backLabel }: { groupId: string;
   const group = info.data ? { ...row, ...info.data } : row;
   const name = group?.name ?? "Group";
   const emoji = group?.emoji ?? null;
-  const crew = row?.crew ?? null;
+  // A crew's group (§12): the group object's `crew`, else the list row's.
+  const crew = group?.crew ?? row?.crew ?? null;
+  const crewId = crew?.crewId ?? crew?.id ?? null;
   const currency = (balances.data?.currency ?? group?.currency ?? "USD").toUpperCase();
   const count = members.data?.length ?? 0;
 
@@ -152,11 +169,25 @@ export function GroupThread({ groupId, backPath, backLabel }: { groupId: string;
   const header = (
     <BackHeader
       title={`${emoji && !group?.photoUrl ? `${emoji} ` : ""}${name}`}
-      subtitle={notFound ? undefined : `${count || "…"} ${count === 1 ? "person" : "people"}${crew ? " · Crew" : ""}`}
+      subtitle={notFound ? undefined : `${count || "…"} ${count === 1 ? "person" : "people"}`}
       backHref={backHref}
       right={
         notFound ? undefined : (
           <span className="flex items-center">
+            {crewId ? (
+              <Link
+                href={productHref(`/spaces/crew?crew=${encodeURIComponent(crewId)}`)}
+                className="mr-1 inline-flex h-7 items-center gap-1 rounded-[14px] bg-white/10 px-2.5 text-[12px] font-bold text-white hover:bg-white/[0.16]"
+                aria-label={`Open the crew${crew?.name ? ` ${crew.name}` : ""}`}
+              >
+                <Ion name="people-outline" size={13} />
+                Crew
+              </Link>
+            ) : null}
+            <Link href={productHref(`/payments/groups/${encodeURIComponent(groupId)}/insights`)} aria-label="Insights" className={headerBtn}>
+              <Ion name="stats-chart-outline" size={18} />
+              <span className="hidden sm:inline">Insights</span>
+            </Link>
             <button type="button" onClick={() => setPanel("settings")} aria-label="Group settings" className={headerBtn} disabled={!group}>
               {group?.photoUrl ? <GroupFace name={name} emoji={emoji} photoUrl={group.photoUrl} size={24} /> : <Ion name="settings-outline" size={18} />}
             </button>
@@ -264,6 +295,10 @@ export function GroupThread({ groupId, backPath, backLabel }: { groupId: string;
         />
       ) : null}
 
+      {typeof panel === "object" && "bills" in panel && members.data ? (
+        <BillsModal groupId={groupId} expenseId={panel.bills} seed={panel.seed} groupCurrency={currency} members={members.data} meId={meId} onClose={close} />
+      ) : null}
+
       {typeof panel === "object" && "expense" in panel && members.data ? (
         <ExpenseDetail groupId={groupId} expenseId={panel.expense} groupCurrency={currency} members={members.data} meId={meId} onClose={close} onChanged={refreshAll} />
       ) : null}
@@ -301,6 +336,7 @@ export function GroupThread({ groupId, backPath, backLabel }: { groupId: string;
         onOpenMessage={(id) => setPanel({ message: id })}
         onOpenExpense={(id) => setPanel({ expense: id })}
         onOpenReceipt={(url, title) => setPanel({ receipt: url, title })}
+        onOpenBills={(item) => setPanel({ bills: item.id, seed: seedOf(item) })}
       />
 
       {typeof panel === "object" && "receipt" in panel ? <ReceiptViewer url={panel.receipt} title={panel.title} onClose={close} /> : null}
@@ -311,6 +347,19 @@ export function GroupThread({ groupId, backPath, backLabel }: { groupId: string;
         canAdd={!!members.data}
         onToggleAdd={() => setPanel((p) => (p === "add" ? "none" : "add"))}
         onSend={(body) => void thread.send(body, newClientKey("msg"), meId)}
+        above={
+          balances.data && meId ? (
+            <DebtCard
+              groupId={groupId}
+              balances={balances.data}
+              members={members.data ?? []}
+              meId={meId}
+              names={names}
+              onChanged={refreshAll}
+              onOpenBalances={() => setPanel("balances")}
+            />
+          ) : null
+        }
       />
     </Column>
   );
@@ -355,7 +404,8 @@ function BalanceStrip({
               <span className="truncate text-[15px] font-extrabold tabular-nums tracking-[-0.2px] text-white">{line}</span>
               {crew ? <span className="truncate text-[12px] text-white/55">Crew · {crew}</span> : null}
             </span>
-            <button type="button" onClick={onOpen} className={n < 0n ? pillAmber : pillGlass}>
+            {/* Glass, not amber: the one amber plate is Pay, in the card over the composer. */}
+            <button type="button" onClick={onOpen} className={pillGlass}>
               {n < 0n ? "Settle up" : "Balances"}
             </button>
           </>
@@ -388,8 +438,10 @@ function Timeline({
   onOpenMessage,
   onOpenExpense,
   onOpenReceipt,
+  onOpenBills,
 }: {
   onOpenReceipt: (url: string, title: string | null) => void;
+  onOpenBills: (item: ExpenseItem) => void;
   items: ThreadItem[];
   reads: ReadMark[];
   members: GroupMember[];
@@ -458,7 +510,8 @@ function Timeline({
   }
 
   return (
-    <div className="mt-1 flex min-w-0 flex-col gap-2">
+    // At least a screen tall, so the composer after it sits at the foot even when the thread is short.
+    <div className="mt-1 flex min-h-[calc(100dvh-230px)] min-w-0 flex-col gap-2">
       {nextBefore ? (
         <button type="button" data-load-older onClick={onLoadOlder} disabled={loadingOlder} className={`${pillGlass} self-center`}>
           {loadingOlder ? "Loading…" : "Load older"}
@@ -499,9 +552,21 @@ function Timeline({
             />
           );
         }
-        if (it.kind === "expense") return <ExpenseCard key={r.key} item={it} meId={meId} names={names} groupCurrency={groupCurrency} onOpen={() => onOpenExpense(it.id)} onReceipt={() => it.receiptUrl && onOpenReceipt(it.receiptUrl, it.description)} />;
+        if (it.kind === "expense")
+          return (
+            <ExpenseCard
+              key={r.key}
+              item={it}
+              meId={meId}
+              names={names}
+              groupCurrency={groupCurrency}
+              onOpen={() => onOpenExpense(it.id)}
+              onReceipt={() => it.receiptUrl && onOpenReceipt(it.receiptUrl, it.description)}
+              onBills={() => onOpenBills(it)}
+            />
+          );
         if (it.kind === "settlement") return <SettlementCard key={r.key} item={it} mine={it.userId === meId} names={names} />;
-        return <EventLine key={r.key} item={it} names={names} onOpen={it.subjectId ? () => onOpenExpense(it.subjectId!) : undefined} />;
+        return <EventLine key={r.key} item={it} names={names} onOpen={it.event === "expense_edited" && it.subjectId ? () => onOpenExpense(it.subjectId!) : undefined} />;
       })}
 
       {outgoing.map((o) => (
@@ -870,6 +935,7 @@ function ExpenseCard({
   groupCurrency,
   onOpen,
   onReceipt,
+  onBills,
 }: {
   item: ExpenseItem;
   meId: string | null;
@@ -877,20 +943,23 @@ function ExpenseCard({
   groupCurrency: string;
   onOpen: () => void;
   onReceipt: () => void;
+  onBills: () => void;
 }) {
   const mine = item.userId === meId;
   const part = expenseForMe(item, meId);
   const converted = item.currency.toUpperCase() !== groupCurrency ? ` (${moneyText(item.groupMinor, groupCurrency)})` : "";
   const [thumbBroken, setThumbBroken] = useState(false);
   const receipt = !item.deleted && item.receiptUrl && !thumbBroken ? item.receiptUrl : null;
-  const sources = item.sources?.length ?? 0;
+  const bills = billCount(item);
+  const category = expenseCategory(item);
   return (
     <Side mine={mine}>
-      <div className={`flex w-full min-w-0 items-stretch gap-2 rounded-[16px] border border-white/10 transition-colors ${item.deleted ? "bg-white/[0.03]" : "bg-white/[0.08] hover:bg-white/[0.11]"}`}>
+      <div className={`flex w-full min-w-0 flex-col rounded-[16px] border border-white/10 transition-colors ${item.deleted ? "bg-white/[0.03]" : "bg-white/[0.08] hover:bg-white/[0.11]"}`}>
+      <div className="flex w-full min-w-0 items-stretch gap-2">
         <button type="button" onClick={onOpen} disabled={item.deleted} className="flex min-w-0 flex-1 flex-col gap-1.5 rounded-[16px] px-3.5 py-3 text-left [-webkit-tap-highlight-color:transparent]">
           <span className="flex w-full min-w-0 items-center gap-2.5">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[16px] bg-white/[0.08]">
-              <Ion name="receipt-outline" size={16} className="text-white/[0.82]" />
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[16px] bg-white/[0.08]" title={category ? undefined : "Expense"}>
+              <Ion name={category ? CATEGORY_ICON[category] : "receipt-outline"} size={16} className="text-white/[0.82]" />
             </span>
             <span className={`min-w-0 flex-1 truncate text-[15px] font-extrabold tracking-[-0.2px] ${item.deleted ? "text-white/55 line-through" : "text-white"}`}>
               {item.description?.trim() || "Expense"}
@@ -901,15 +970,10 @@ function ExpenseCard({
             {names.subject(item.userId)} paid {moneyText(item.amountMinor, item.currency)}
             {converted}
           </span>
-          {!item.deleted && (item.place || sources > 1) ? (
-            <span className="flex min-w-0 items-center gap-3 text-[12px] text-white/60">
-              {item.place ? (
-                <span className="inline-flex min-w-0 items-center gap-1">
-                  <Ion name="location-outline" size={13} className="shrink-0" />
-                  <span className="truncate">{item.place}</span>
-                </span>
-              ) : null}
-              {sources > 1 ? <span className="shrink-0">{sources} bills</span> : null}
+          {!item.deleted && item.place ? (
+            <span className="flex min-w-0 items-center gap-1 text-[12px] text-white/60">
+              <Ion name="location-outline" size={13} className="shrink-0" />
+              <span className="truncate">{item.place}</span>
             </span>
           ) : null}
           {!item.deleted ? (
@@ -925,6 +989,17 @@ function ExpenseCard({
             <img src={receipt} alt="" onError={() => setThumbBroken(true)} className="h-[64px] w-[52px] object-cover" />
           </button>
         ) : null}
+      </div>
+      {!item.deleted && bills > 1 ? (
+        <button
+          type="button"
+          onClick={onBills}
+          className="mx-3 mb-3 -mt-1 inline-flex h-8 items-center gap-1.5 self-start rounded-[16px] bg-white/[0.08] px-3 text-[12.5px] font-bold text-white/85 transition-colors hover:bg-white/[0.14] [-webkit-tap-highlight-color:transparent]"
+        >
+          <Ion name="receipt-outline" size={13} />
+          {bills} bills · see each
+        </button>
+      ) : null}
       </div>
     </Side>
   );
@@ -959,10 +1034,17 @@ function SettlementCard({ item, mine, names }: { item: SettlementItem; mine: boo
 }
 
 /** "Ana edited Dinner: the amount and the split", a quiet line in the middle. */
+const EVENT_ICON: Record<string, IonName> = {
+  expense_edited: "create-outline",
+  member_left: "log-out-outline",
+  member_removed: "person-remove-outline",
+  crew_sale: "pricetag-outline",
+};
+
 function EventLine({ item, names, onOpen }: { item: EventItem; names: Names; onOpen?: () => void }) {
   const inner = (
     <>
-      <Ion name="create-outline" size={12} className="shrink-0" />
+      <Ion name={EVENT_ICON[item.event] ?? "information-circle-outline"} size={12} className="shrink-0" />
       <span className="min-w-0 truncate">{eventText(item, names)}</span>
       <span className="shrink-0 text-white/40">· {shortTime(item.at)}</span>
     </>
@@ -985,6 +1067,128 @@ function Side({ mine, children }: { mine: boolean; children: ReactNode }) {
   );
 }
 
+/* ── What you owe, or are owed, over the composer (§11.2) ─────────── */
+
+const FOLD_KEY = (groupId: string) => `hold.group.debtcard.folded.${groupId}`;
+
+/**
+ * The plan's lines that are yours, above the composer: the biggest thing you
+ * owe (Pay, Paid another way) or, with nothing owed, the biggest thing owed
+ * to you (Remind, Mark as paid), and "+N more" for the rest in Balances. It
+ * folds to one line, remembered on this browser, and never stands between
+ * anyone and writing: nobody is made to pay.
+ */
+function DebtCard({
+  groupId,
+  balances,
+  members,
+  meId,
+  names,
+  onChanged,
+  onOpenBalances,
+}: {
+  groupId: string;
+  balances: { currency: string; transfers: { fromUserId: string; toUserId: string; amountMinor: string }[] };
+  members: GroupMember[];
+  meId: string;
+  names: Names;
+  onChanged: () => void;
+  onOpenBalances: () => void;
+}) {
+  const [folded, setFolded] = useState(false);
+  useEffect(() => {
+    try {
+      setFolded(window.localStorage.getItem(FOLD_KEY(groupId)) === "1");
+    } catch {
+      /* no storage: open */
+    }
+  }, [groupId]);
+  const fold = (v: boolean) => {
+    setFolded(v);
+    try {
+      if (v) window.localStorage.setItem(FOLD_KEY(groupId), "1");
+      else window.localStorage.removeItem(FOLD_KEY(groupId));
+    } catch {
+      /* per browser only */
+    }
+  };
+
+  const cur = balances.currency.toUpperCase();
+  const big = (a: { amountMinor: string }, b: { amountMinor: string }) => {
+    const x = BigInt(/^\d+$/.test(a.amountMinor) ? a.amountMinor : "0");
+    const y = BigInt(/^\d+$/.test(b.amountMinor) ? b.amountMinor : "0");
+    return x === y ? 0 : x > y ? -1 : 1;
+  };
+  const iOwe = balances.transfers.filter((t) => t.fromUserId === meId).sort(big);
+  const owedMe = balances.transfers.filter((t) => t.toUserId === meId).sort(big);
+  const total = iOwe.length + owedMe.length;
+  if (!total) return null;
+  const byId = new Map(members.map((m) => [m.userId, m]));
+  const top = iOwe[0] ?? owedMe[0];
+  const owe = !!iOwe[0];
+  const sum = (xs: { amountMinor: string }[]) => xs.reduce((a, t) => a + BigInt(/^\d+$/.test(t.amountMinor) ? t.amountMinor : "0"), 0n).toString();
+  const summary = owe ? `You owe ${moneyText(sum(iOwe), cur)}` : `You're owed ${moneyText(sum(owedMe), cur)}`;
+  const more = total - 1;
+
+  return (
+    <div className="mb-2 rounded-[18px] border border-white/[0.12] bg-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.28)] backdrop-blur-xl">
+      <div className="flex min-h-[40px] items-center gap-2 px-3">
+        <Ion name={owe ? "wallet-outline" : "cash-outline"} size={15} className="shrink-0 text-white/70" />
+        <span className="min-w-0 flex-1 truncate text-[13px] font-bold tabular-nums text-white">{summary}</span>
+        {more > 0 ? (
+          <button type="button" onClick={onOpenBalances} className="shrink-0 rounded-[12px] px-2 py-1 text-[12.5px] font-bold text-white/80 hover:bg-white/10 hover:text-white">
+            +{more} more
+          </button>
+        ) : null}
+        <button
+          type="button"
+          onClick={() => fold(!folded)}
+          aria-expanded={!folded}
+          aria-label={folded ? "Show" : "Fold away"}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[16px] text-white/65 hover:bg-white/10 hover:text-white"
+        >
+          <Ion name={folded ? "chevron-up" : "chevron-down"} size={16} />
+        </button>
+      </div>
+      {!folded ? (
+        <div className="px-2 pb-2">
+          {owe ? (
+            <OweRow key={`i:${top.toUserId}`} groupId={groupId} currency={cur} transfer={top} person={byId.get(top.toUserId)} names={names} onRecorded={onChanged} />
+          ) : (
+            <OwedRow key={`o:${top.fromUserId}`} groupId={groupId} currency={cur} transfer={top} person={byId.get(top.fromUserId)} names={names} onChanged={onChanged} />
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * How far the phone's keyboard covers the page, where the browser does not
+ * resize the layout for it (iOS Safari), so a sticky bar can sit above it.
+ * Zero on a desktop, on Android Chrome (which resizes), and while zoomed.
+ */
+function useKeyboardInset(): number {
+  const [inset, setInset] = useState(0);
+  useEffect(() => {
+    const vv = typeof window !== "undefined" ? window.visualViewport : null;
+    if (!vv) return;
+    const on = () => {
+      if (vv.scale > 1.01) return setInset(0);
+      const covered = Math.round(window.innerHeight - vv.height - vv.offsetTop);
+      setInset(covered > 60 ? covered : 0);
+    };
+    on();
+    vv.addEventListener("resize", on);
+    vv.addEventListener("scroll", on);
+    return () => {
+      vv.removeEventListener("resize", on);
+      vv.removeEventListener("scroll", on);
+    };
+  }, []);
+  return inset;
+}
+
 /* ── The composer ─────────────────────────────────────────────────── */
 
 /**
@@ -998,14 +1202,18 @@ function Composer({
   canAdd,
   onToggleAdd,
   onSend,
+  above,
 }: {
   disabled: boolean;
   adding: boolean;
   canAdd: boolean;
   onToggleAdd: () => void;
   onSend: (body: string) => void;
+  /** The debt card, over the bar. */
+  above?: ReactNode;
 }) {
   const [text, setText] = useState("");
+  const keyboard = useKeyboardInset();
   const body = text.trim();
   const canSend = !disabled && body.length > 0 && body.length <= MESSAGE_MAX;
 
@@ -1019,7 +1227,11 @@ function Composer({
     // No floor under the bar: the page is a gradient, and a wrapper that faded
     // to one flat navy drew a dark square band behind the rounded bar (the 1:1
     // chat's Composer fixed the same thing). The bar blurs what passes under it.
-    <div className="sticky bottom-0 mt-4 pb-1 pt-3">
+    // Pinned to the foot while the thread scrolls (§11.1): lifted by the phone's
+    // keyboard where the browser doesn't resize the page for it (iOS Safari),
+    // and clear of the home indicator.
+    <div className="sticky bottom-0 z-20 mt-4 pb-[max(4px,env(safe-area-inset-bottom))] pt-3" style={keyboard ? { bottom: keyboard } : undefined}>
+      {above}
       {body.length > MESSAGE_MAX ? <p className="mb-2 px-1 text-[12px] text-amber">Keep it under {MESSAGE_MAX} characters.</p> : null}
       <div className="flex items-end gap-2 rounded-[20px] border border-white/[0.12] bg-white/10 px-2 py-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.28)] backdrop-blur-xl">
         <button
