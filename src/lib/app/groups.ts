@@ -35,12 +35,11 @@
  * Every write here carries a client key, and the key is what the optimistic
  * bubble is matched by. Whether it travels as the `Idempotency-Key` header is
  * a separate question, answered by the Cloudflare Worker in front of
- * api.hihodl.xyz: its preflight allows `Content-Type, Authorization` and
- * nothing else (checked with an OPTIONS on /api/v1/groups, 2026-09-22). A
- * browser that sends a header the preflight did not allow never sends the
- * request at all, so turning this on before the Worker allows the header would
- * break every message. `SEND_IDEMPOTENCY_HEADER` flips it once the Worker's
- * Allow-Headers carries `Idempotency-Key`.
+ * api.hihodl.xyz: its preflight allowed only `Content-Type, Authorization`
+ * until 2026-09-23, when `Idempotency-Key` was added (checked with an OPTIONS
+ * on /api/v1/groups). A browser that sends a header the preflight did not
+ * allow never sends the request at all, so if the Worker ever drops it again,
+ * set `SEND_IDEMPOTENCY_HEADER` back to false or every message breaks.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -278,8 +277,8 @@ export function newClientKey(prefix: string): string {
 
 /* ── Calls ────────────────────────────────────────────────────────── */
 
-/** See the header: flip once the Worker's preflight allows `Idempotency-Key`. */
-export const SEND_IDEMPOTENCY_HEADER = false;
+/** See the header: on because the Worker's preflight allows `Idempotency-Key`. */
+export const SEND_IDEMPOTENCY_HEADER = true;
 
 function withKey(key: string | undefined): Record<string, string> | undefined {
   return SEND_IDEMPOTENCY_HEADER && key ? { "Idempotency-Key": key } : undefined;
