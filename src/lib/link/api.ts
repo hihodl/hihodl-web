@@ -10,7 +10,7 @@
 
 "use client";
 
-import { send } from "@/lib/wallet/api";
+import { send, WalletApiError } from "@/lib/wallet/api";
 import type { WithdrawToken } from "@/lib/wallet/withdraw-core";
 
 import type { DesktopPlatform, Phone } from "./ua";
@@ -53,8 +53,11 @@ export interface LinkState {
 export async function createLinkSession(body: { webPub: string; desktopPlatform: DesktopPlatform; desktopBrowser: string }): Promise<LinkSession> {
   const r = await send<Raw>("device-link/sessions", { json: body });
   const s = (r.session as Raw | undefined) ?? r;
+  const sessionId = str(s, "sessionId", "session_id", "id");
+  // No id is no session: a QR for `/link/` would lead the phone nowhere.
+  if (!sessionId) throw new WalletApiError("server", 502);
   return {
-    sessionId: str(s, "sessionId", "session_id", "id") ?? "",
+    sessionId,
     expiresAt: str(s, "expiresAt", "expires_at") ?? "",
     url: str(s, "url") ?? "",
   };

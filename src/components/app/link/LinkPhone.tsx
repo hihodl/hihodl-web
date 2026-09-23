@@ -395,6 +395,19 @@ export function LinkPhone({ onDone, onLater }: { onDone: () => void; onLater?: (
 
   // Follow the session while it is open.
   const waitingFor = phase.kind === "waiting" || phase.kind === "confirm" || phase.kind === "sending" ? phase.kind : null;
+
+  // A code on screen past its time, with the server unreachable, still ends:
+  // the countdown at 0:00 never sits there waiting.
+  const waitingUntil = phase.kind === "waiting" ? phase.expiresAt : null;
+  useEffect(() => {
+    if (!waitingUntil) return;
+    const t = setTimeout(() => {
+      run.current++;
+      forget();
+      setPhase({ kind: "expired" });
+    }, Math.max(0, waitingUntil - Date.now()) + 10_000);
+    return () => clearTimeout(t);
+  }, [waitingUntil, forget]);
   useEffect(() => {
     if (!waitingFor || !session.current) return;
     const mine = run.current;
@@ -405,8 +418,15 @@ export function LinkPhone({ onDone, onLater }: { onDone: () => void; onLater?: (
         const s = await getLinkState(id);
         if (stopped || mine !== run.current) return;
         onStatus(s.status, s.platform, s.appPub, s.carriesSecret);
-      } catch {
-        /* the next tick asks again */
+      } catch (e) {
+        if (stopped || mine !== run.current) return;
+        // The session is gone (another tab showed a newer code, or it was
+        // swept): say so, rather than wait on a code nobody can use.
+        if (e instanceof WalletApiError && (e.status === 404 || e.status === 410)) {
+          forget();
+          setPhase({ kind: "expired" });
+        }
+        /* anything else: the next tick asks again */
       }
     };
     const onStatus = (status: LinkStatus, platform: Phone | null, pub: string | null, carriesSecret: boolean | null) => {
@@ -462,6 +482,9 @@ export function LinkPhone({ onDone, onLater }: { onDone: () => void; onLater?: (
           // There is a web wallet after all: it goes to the phone, with the passkey.
           void getWalletBackup().then((x) => (backup.current = x), () => undefined);
           setPhase({ ...phase, carries: true, busy: false, notice: "Your wallet goes to this phone too. Confirm again with your passkey." });
+        } else if (e instanceof WalletApiError && e.status === 410) {
+          forget();
+          setPhase({ kind: "expired" });
         } else setPhase({ ...phase, busy: false, notice: explain(e) });
       }
       return;
@@ -485,7 +508,10 @@ export function LinkPhone({ onDone, onLater }: { onDone: () => void; onLater?: (
       wipe(keys.current.secretKey);
       setPhase({ kind: "sending", carries: true });
     } catch (e) {
-      setPhase({ ...phase, busy: false, notice: explain(e) });
+      if (e instanceof WalletApiError && e.status === 410) {
+        forget();
+        setPhase({ kind: "expired" });
+      } else setPhase({ ...phase, busy: false, notice: explain(e) });
     } finally {
       wipe(prf, secret);
     }
