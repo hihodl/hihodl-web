@@ -57,4 +57,50 @@ eq("format", [R.formatMinor("123456", "USD"), R.formatMinor("1200", "JPY"), R.fo
 eq("minorToInput", R.minorToInput("123456", "USD"), "1234.56");
 eq("parseAllowZero", [R.parseMajorAllowZero("0", "USD"), R.parseMajorAllowZero("", "USD"), R.parseMajorToMinor("0", "USD")], ["0", null, null]);
 eq("todayLocal", R.todayLocal(new Date(2026, 8, 3, 23, 59)), "2026-09-03");
+
+// shares
+const shw = R.checkSplit({ mode: "shares", totalMinor: "1000", currency: "EUR", payerUserId: "a", people: ["a", "b", "c"], inputs: { a: "2", b: "1", c: "1" } });
+eq("shares 2:1:1 of 10.00", [shw.ok, sh(shw)], [true, { a: "500", b: "250", c: "250" }]);
+const sh3 = R.checkSplit({ mode: "shares", totalMinor: "100", currency: "USD", payerUserId: "a", people: ["a", "b", "c"], inputs: { a: "1", b: "1", c: "1" } });
+eq("shares thirds: odd unit by largest remainder, lowest id", sh(sh3), { a: "34", b: "33", c: "33" });
+eq("shares sum exact", sh3.shares.reduce((x, s) => x + s.shareMinor, 0n), 100n);
+const shz = R.checkSplit({ mode: "shares", totalMinor: "100", currency: "USD", payerUserId: "a", people: ["a", "b"], inputs: { a: "0", b: "" } });
+eq("shares all zero -> split_is_empty", shz.ok ? null : shz.reason, "all_zero");
+const shb = R.checkSplit({ mode: "shares", totalMinor: "100", currency: "USD", payerUserId: "a", people: ["a", "b"], inputs: { a: "1001", b: "1.5" } });
+eq("shares over 1000 or decimal refused", shb.ok ? null : shb.badUserIds, ["a", "b"]);
+eq("shares zero weight keeps a 0 share", sh(R.checkSplit({ mode: "shares", totalMinor: "999", currency: "USD", payerUserId: "a", people: ["a", "b"], inputs: { a: "3", b: "0" } })), { a: "999", b: "0" });
+eq("body shares", R.splitBody({ mode: "shares", totalMinor: "1", currency: "USD", payerUserId: "a", people: ["a", "b"], inputs: { a: "2", b: "" } }, false), { mode: "shares", weights: [{ userId: "a", weight: 2 }, { userId: "b", weight: 0 }] });
+// the Amount tab's autofill
+eq("autofill nothing typed = equal", R.autoFillAmounts(1000n, ["a", "b", "c"], {}, "b"), { a: 333n, b: 334n, c: 333n });
+eq("autofill rest shared", R.autoFillAmounts(1000n, ["a", "b", "c"], { a: 400n }, "a"), { a: 400n, b: 300n, c: 300n });
+eq("autofill over leaves 0", R.autoFillAmounts(1000n, ["a", "b"], { a: 1200n }, "a"), { a: 1200n, b: 0n });
+// bills
+const B = (currency: string, amountMinor: string, usdCents?: string | null): R.Bill => ({ key: Math.random().toString(), kind: "transfer", label: "x", amountMinor, currency, usdCents });
+eq("bills one currency", R.billTotal([B("EUR", "129"), B("EUR", "1032")]), { ok: true, amountMinor: "1161", currency: "EUR", converted: false });
+eq("bills mixed with dollar values", R.billTotal([B("USD", "500", "500"), B("EUR", "1000", "1080")]), { ok: true, amountMinor: "1580", currency: "USD", converted: true });
+eq("bills mixed without", R.billTotal([B("USD", "500", "500"), B("EUR", "1000", null)]), { ok: false, reason: "mixed_currencies", currencies: ["USD", "EUR"] });
+eq("bills none", R.billTotal([]).ok, false);
+eq("decimalToMinor rounds half up", [R.decimalToMinor("12.345", "USD"), R.decimalToMinor("12.344999", "USD"), R.decimalToMinor("0.004", "USD"), R.decimalToMinor("1200.6", "JPY")], ["1235", "1234", null, "1201"]);
+// the calculator
+const type = (keys: string, cur = "EUR") => [...keys].reduce((e, k) => R.pressKey(e, (k === "<" ? "back" : k) as R.CalcKey, cur), "");
+eq("calc digits", type("125"), "125");
+eq("calc leading zero replaced", type("05"), "5");
+eq("calc decimal capped", type("1.2345"), "1.23");
+eq("calc point starts 0.", type(".5"), "0.5");
+eq("calc one point per number", type("1..5+2.5.1"), "1.5+2.51");
+eq("calc operator replaces operator", type("5+*2"), "5*2");
+eq("calc no leading operator", type("+5"), "5");
+eq("calc JPY has no point", type("12.5", "JPY"), "125");
+eq("calc backspace", type("12<3"), "13");
+eq("calc precedence", R.evaluate("2+3*4", "EUR"), 1400n);
+eq("calc division rounds half up", R.evaluate("10/3", "EUR"), 333n);
+eq("calc 2/3", R.evaluate("2/3", "EUR"), 67n);
+eq("calc trailing operator ignored", R.evaluate("12.5+", "EUR"), 1250n);
+eq("calc divide by zero", R.evaluate("5/0", "EUR"), null);
+eq("calc negative refused", R.evaluate("5-8", "EUR"), null);
+eq("calc = collapses", R.pressKey("12.5+7.25", "=", "EUR"), "19.75");
+eq("calc = whole", R.pressKey("2*3", "=", "EUR"), "6");
+eq("calc JPY", R.evaluate("1000/3", "JPY"), 333n);
+eq("calc display", R.displayExpression("1234.5*2", ","), "1234,5 × 2");
+eq("calc hasOperator", [R.hasOperator("12+"), R.hasOperator("12+3")], [false, true]);
 if (fails) { console.log(fails, "FAILED"); process.exit(1); } else console.log("all passed");

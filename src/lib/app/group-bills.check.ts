@@ -1,0 +1,30 @@
+import * as B from "./group-bills";
+import type { Transfer } from "./hold-api";
+import type { Booking } from "./stays";
+let fails = 0;
+function eq(name: string, a: unknown, b: unknown) {
+  const ja = JSON.stringify(a);
+  const jb = JSON.stringify(b);
+  if (ja !== jb) { fails++; console.log("FAIL", name, ja, "!=", jb); } else console.log("ok  ", name);
+}
+const t = (p: Partial<Transfer>): Transfer => ({ id: "t1", direction: "out", chain: "solana", tokenId: "usdc.circle", symbol: "USDC", amount: "12.345678", status: "confirmed", createdAt: "2026-09-23T18:02:00Z", ...p }) as Transfer;
+const usdc = B.billFromTransfer(t({ toAlias: "demo_creator" }));
+eq("USDC out is dollars, rounded", [usdc?.currency, usdc?.amountMinor, usdc?.usdCents, usdc?.label, usdc?.kind], ["USD", "1235", "1235", "@demo_creator", "transfer"]);
+eq("EURC is euros with a dollar value when frozen", (() => { const b = B.billFromTransfer(t({ symbol: "EURC", tokenId: "eurc", amount: "10", usdValueAtTx: 10.8 })); return [b?.currency, b?.amountMinor, b?.usdCents]; })(), ["EUR", "1000", "1080"]);
+eq("SOL uses its frozen dollar value", (() => { const b = B.billFromTransfer(t({ symbol: "SOL", tokenId: "sol", amount: "0.1", usdValueAtTx: 15.2 })); return [b?.currency, b?.amountMinor]; })(), ["USD", "1520"]);
+eq("SOL with no value is left out", B.billFromTransfer(t({ symbol: "SOL", tokenId: "sol", amount: "0.1" })), null);
+eq("money in is not a bill", B.billFromTransfer(t({ direction: "in" })), null);
+eq("a move is not a bill", B.billFromTransfer(t({ direction: "move" as Transfer["direction"] })), null);
+eq("a yield placement is not a bill", B.billFromTransfer(t({ moveKind: "yield" })), null);
+eq("failed is not a bill", B.billFromTransfer(t({ status: "failed" })), null);
+eq("card", B.billFromTransfer(t({ counterpartyType: "card", merchantName: "Corner Shop" }))?.kind, "card");
+const bk = (p: Partial<Booking>): Booking => ({ id: "b1", status: "confirmed", currency: "EUR", price: 212.4, isSandbox: false, createdAt: "2026-09-21T19:02:00Z", hotel: { name: "Casa Demo", city: "Lisbon", photo: null } as Booking["hotel"], ...p }) as Booking;
+eq("stay", (() => { const b = B.billFromBooking(bk({})); return [b?.kind, b?.amountMinor, b?.currency, b?.sub]; })(), ["stay", "21240", "EUR", "Stay · Lisbon"]);
+eq("pending stay is not a bill", B.billFromBooking(bk({ status: "pending" })), null);
+eq("sandbox stay is not a bill", B.billFromBooking(bk({ isSandbox: true })), null);
+const all = B.billsFrom([t({ id: "x", createdAt: "2026-09-22T10:00:00Z" }), t({ id: "y", createdAt: "2026-09-23T10:00:00Z" }), t({ id: "y", createdAt: "2026-09-23T10:00:00Z" })], [bk({})]);
+eq("newest first, once each", all.map((r) => r.key), ["transfer:y", "transfer:x", "stay:b1"]);
+const now = new Date(2026, 8, 23, 23, 0);
+eq("days", B.groupByDay([{ occurredAt: new Date(2026, 8, 23, 18).toISOString() }, { occurredAt: new Date(2026, 8, 22, 9).toISOString() }, { occurredAt: new Date(2026, 8, 21, 9).toISOString() }], now).map((g) => g.label), ["Today", "Yesterday", "21 September"]);
+eq("search", B.searchBills(all, "casa").map((r) => r.key), ["stay:b1"]);
+if (fails) { console.log(fails, "FAILED"); process.exit(1); } else console.log("all passed");

@@ -85,7 +85,7 @@ export function absMinor(minor: string): string {
 
 /* ── Splits (the server's rules, copied) ──────────────────────────── */
 
-export type SplitMode = "equal" | "percent" | "exact";
+export type SplitMode = "equal" | "percent" | "exact" | "shares";
 export type PreviewShare = { userId: string; shareMinor: bigint };
 
 /** Each person gets floor(total·w/W); the units left go one each to the largest remainders, ties to the lowest userId. */
@@ -127,6 +127,15 @@ export function parsePercent(text: string): bigint | null {
   return bp > 10000n ? null : bp;
 }
 
+/** A share weight: a whole number 0 to 1000. Empty is 0; anything else is null. */
+export function parseWeight(text: string): bigint | null {
+  const s = text.trim();
+  if (!s) return 0n;
+  if (!/^\d{1,4}$/.test(s)) return null;
+  const n = BigInt(s);
+  return n > 1000n ? null : n;
+}
+
 /** 3333 hundredths as "33.33", 5000 as "50". */
 export function bpText(bp: bigint): string {
   const neg = bp < 0n;
@@ -144,7 +153,7 @@ export interface SplitDraft {
   payerUserId: string | null;
   /** Who shares it, in the order the form lists them. */
   people: readonly string[];
-  /** Per person, what was typed: a percent in percent mode, an amount in exact mode. */
+  /** Per person, what was typed: a percent in percent mode, an amount in exact mode, a whole-number weight in shares mode. */
   inputs: Readonly<Record<string, string>>;
 }
 
@@ -158,6 +167,8 @@ export type SplitCheck =
  *   equal    the people chosen, the server's remainder rule
  *   percent  must total exactly 100.00; shares by largest remainder
  *   exact    must total exactly the amount; the shares ARE the amounts
+ *   shares   whole-number weights 0 to 1000, at least one above 0; shares by
+ *            largest remainder, the same rule as percent
  *
  * A different paid currency is converted on the server; the preview is then
  * in the paid currency, and the screen says so.
@@ -189,6 +200,19 @@ export function checkSplit(d: SplitDraft): SplitCheck {
     return { ok: true, shares: largestRemainder(total, weights) };
   }
 
+  if (d.mode === "shares") {
+    const bad: string[] = [];
+    const weights = d.people.map((userId) => {
+      const w = parseWeight(d.inputs[userId] ?? "");
+      if (w === null) bad.push(userId);
+      return { userId, weight: w ?? 0n };
+    });
+    if (bad.length) return { ok: false, reason: "bad_input", shares: [], badUserIds: bad };
+    if (weights.every((w) => w.weight === 0n)) return { ok: false, reason: "all_zero", shares: [] };
+    if (total === null || total <= 0n) return { ok: false, reason: "no_amount", shares: [] };
+    return { ok: true, shares: largestRemainder(total, weights) };
+  }
+
   const bad: string[] = [];
   const amounts = d.people.map((userId) => {
     const raw = (d.inputs[userId] ?? "").trim();
@@ -209,8 +233,12 @@ export function checkSplit(d: SplitDraft): SplitCheck {
 export function splitBody(d: SplitDraft, everyone: boolean):
   | { mode: "equal"; participants?: string[] }
   | { mode: "percent"; percents: { userId: string; percent: string }[] }
-  | { mode: "exact"; amounts: { userId: string; amountMinor: string }[] } {
+  | { mode: "exact"; amounts: { userId: string; amountMinor: string }[] }
+  | { mode: "shares"; weights: { userId: string; weight: number }[] } {
   if (d.mode === "equal") return everyone ? { mode: "equal" } : { mode: "equal", participants: [...d.people] };
+  if (d.mode === "shares") {
+    return { mode: "shares", weights: d.people.map((userId) => ({ userId, weight: Number(parseWeight(d.inputs[userId] ?? "") ?? 0n) })) };
+  }
   if (d.mode === "percent") {
     return { mode: "percent", percents: d.people.map((userId) => ({ userId, percent: bpText(parsePercent(d.inputs[userId] ?? "") ?? 0n) })) };
   }
@@ -233,6 +261,215 @@ export function evenPercents(people: readonly string[]): Record<string, string> 
     out[id] = bpText(base + extra);
   }
   return out;
+}
+
+
+/**
+ * The Amount tab, as Revolut fills it: every amount somebody typed stays, and
+ * what is left of the total is shared equally between the people nobody typed
+ * for (the server's equal rule: the odd unit to the payer when they are among
+ * them, else to the first by id). Typed amounts that already pass the total
+ * leave the others at 0, and the check says by how much it is over.
+ */
+export function autoFillAmounts(total: bigint, people: readonly string[], typed: Readonly<Record<string, bigint>>, payerUserId: string): Record<string, bigint> {
+  const out: Record<string, bigint> = {};
+  let used = 0n;
+  const free: string[] = [];
+  for (const id of people) {
+    const t = typed[id];
+    if (t !== undefined) {
+      out[id] = t;
+      used += t;
+    } else free.push(id);
+  }
+  const left = total - used;
+  if (free.length) {
+    if (left <= 0n) for (const id of free) out[id] = 0n;
+    else for (const s of splitEqual(left, free, payerUserId)) out[s.userId] = s.shareMinor;
+  }
+  return out;
+}
+
+/* ── Bills (what is being split) ──────────────────────────────────── */
+
+export type SourceKind = "transfer" | "stay" | "card";
+
+/** One thing from the person's own activity, or a bill they typed, ready to split. */
+export interface Bill {
+  /** `custom:<n>` for a typed bill; the source's own id otherwise. */
+  key: string;
+  kind: SourceKind | "custom";
+  /** The transfer id or booking id. Absent on a custom bill. */
+  ref?: string;
+  label: string;
+  /** In `currency`, minor units. */
+  amountMinor: string;
+  currency: string;
+  /** Its dollar value in cents, when it has one (a stablecoin, or a frozen price). */
+  usdCents?: string | null;
+  occurredAt?: string;
+}
+
+export type BillTotal =
+  | { ok: true; amountMinor: string; currency: string; converted: boolean }
+  | { ok: false; reason: "none" | "mixed_currencies"; currencies: string[] };
+
+/**
+ * One expense from many bills. In one currency they add up in it. In several,
+ * they add up in dollars when every one of them has a dollar value (the web
+ * has no rate table of its own, and a sum of euros and dollars is not a
+ * number); otherwise the person is asked to split them one currency at a time.
+ * The server then converts the one total into the group's currency, at the
+ * day's rate, as it does for any expense.
+ */
+export function billTotal(bills: readonly Bill[]): BillTotal {
+  if (!bills.length) return { ok: false, reason: "none", currencies: [] };
+  const currencies = [...new Set(bills.map((b) => b.currency.toUpperCase()))];
+  if (currencies.length === 1) {
+    return { ok: true, amountMinor: bills.reduce((a, b) => a + toBig(b.amountMinor), 0n).toString(), currency: currencies[0], converted: false };
+  }
+  if (bills.every((b) => b.usdCents && /^\d+$/.test(b.usdCents))) {
+    return { ok: true, amountMinor: bills.reduce((a, b) => a + toBig(b.usdCents!), 0n).toString(), currency: "USD", converted: true };
+  }
+  return { ok: false, reason: "mixed_currencies", currencies };
+}
+
+/** "12.3456" of a token as minor units of `currency`, rounded half up. Null for anything that is not a positive number. */
+export function decimalToMinor(text: string, currency: string): string | null {
+  const m = /^(\d+)(?:\.(\d+))?$/.exec(text.trim());
+  if (!m) return null;
+  const exp = minorExponent(currency);
+  const frac = m[2] ?? "";
+  const kept = frac.slice(0, exp).padEnd(exp, "0");
+  let n = BigInt(`${m[1]}${kept}`);
+  if (frac.length > exp && Number(frac[exp]) >= 5) n += 1n;
+  return n > 0n ? n.toString() : null;
+}
+
+/* ── The calculator keypad ────────────────────────────────────────── */
+
+/**
+ * The custom bill's keypad: digits, the decimal point, + − × ÷ and =.
+ *
+ * The expression is kept with "." and ASCII operators (`+ - * /`) whatever the
+ * locale; the screen prints the locale's decimal separator. Arithmetic is exact
+ * (fractions of BigInts), and only the result is rounded, half up, to the
+ * currency's decimals. Each number may have at most the decimals the currency
+ * has, so "0,005" can't be typed in euros.
+ */
+export type CalcKey = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "." | "+" | "-" | "*" | "/" | "=" | "back" | "clear";
+
+const OPS = new Set(["+", "-", "*", "/"]);
+const MAX_EXPR = 40;
+
+export function pressKey(expr: string, key: CalcKey, currency: string): string {
+  const exp = minorExponent(currency);
+  if (key === "clear") return "";
+  if (key === "back") return expr.slice(0, -1);
+  if (key === "=") {
+    const v = evaluate(expr, currency);
+    return v === null ? expr : minorToPlain(v, currency);
+  }
+  const last = expr.slice(-1);
+  if (OPS.has(key)) {
+    if (!expr) return "";
+    if (OPS.has(last)) return expr.slice(0, -1) + key;
+    if (last === ".") return expr.slice(0, -1) + key;
+    return expr.length >= MAX_EXPR ? expr : expr + key;
+  }
+  if (expr.length >= MAX_EXPR) return expr;
+  const current = expr.split(/[+\-*/]/).pop() ?? "";
+  if (key === ".") {
+    if (exp === 0 || current.includes(".")) return expr;
+    return expr + (current === "" ? "0." : ".");
+  }
+  // A digit.
+  if (current.includes(".") && current.split(".")[1].length >= exp) return expr;
+  if (current === "0") return expr.slice(0, -1) + key;
+  if (current.replace(".", "").length >= 12) return expr;
+  return expr + key;
+}
+
+type Frac = { n: bigint; d: bigint };
+
+function frac(text: string): Frac | null {
+  const m = /^(\d+)(?:\.(\d*))?$/.exec(text);
+  if (!m) return null;
+  const f = m[2] ?? "";
+  return { n: BigInt(`${m[1]}${f}` || "0"), d: 10n ** BigInt(f.length) };
+}
+
+/**
+ * The expression's value in minor units, or null when it is not a number yet
+ * (empty, or ends on an operator), divides by zero, or comes out negative.
+ * × and ÷ bind before + and −, as on any calculator people trust.
+ */
+export function evaluate(expr: string, currency: string): bigint | null {
+  const e = expr.replace(/[+\-*/]$/, "");
+  if (!e) return null;
+  const tokens = e.match(/\d+(?:\.\d*)?|[+\-*/]/g);
+  if (!tokens || tokens.join("") !== e) return null;
+  // Terms joined by + and −, each a product of factors.
+  const terms: { sign: 1n | -1n; value: Frac }[] = [];
+  let sign: 1n | -1n = 1n;
+  let acc: Frac | null = null;
+  let pending: "*" | "/" | null = null;
+  for (const t of tokens) {
+    if (t === "+" || t === "-") {
+      if (!acc) return null;
+      terms.push({ sign, value: acc });
+      sign = t === "+" ? 1n : -1n;
+      acc = null;
+      continue;
+    }
+    if (t === "*" || t === "/") {
+      if (!acc) return null;
+      pending = t;
+      continue;
+    }
+    const v = frac(t);
+    if (!v) return null;
+    if (!acc) acc = v;
+    else if (pending === "*") acc = { n: acc.n * v.n, d: acc.d * v.d };
+    else if (pending === "/") {
+      if (v.n === 0n) return null;
+      acc = { n: acc.n * v.d, d: acc.d * v.n };
+    } else return null;
+    pending = null;
+  }
+  if (!acc) return null;
+  terms.push({ sign, value: acc });
+  // Sum as one fraction, then to minor units, half up.
+  let n = 0n;
+  let d = 1n;
+  for (const t of terms) {
+    n = n * t.value.d + t.sign * t.value.n * d;
+    d = d * t.value.d;
+  }
+  if (n < 0n) return null;
+  const scale = 10n ** BigInt(minorExponent(currency));
+  const scaled = n * scale;
+  return (scaled * 2n + d) / (2n * d);
+}
+
+/** 1250 minor units in EUR as "12.5", in JPY as "1250": what "=" leaves on the display. */
+export function minorToPlain(minor: bigint, currency: string): string {
+  const exp = minorExponent(currency);
+  if (!exp) return minor.toString();
+  const s = minor.toString().padStart(exp + 1, "0");
+  const whole = s.slice(0, -exp);
+  const f = s.slice(-exp).replace(/0+$/, "");
+  return f ? `${whole}.${f}` : whole;
+}
+
+/** The expression as the screen prints it: the locale's decimal separator, × and ÷. */
+export function displayExpression(expr: string, decimal: string): string {
+  return expr.replace(/\./g, decimal).replace(/\*/g, " × ").replace(/\//g, " ÷ ").replace(/\+/g, " + ").replace(/-/g, " − ");
+}
+
+/** True when the expression has an operator in it, so "=" means something. */
+export function hasOperator(expr: string): boolean {
+  return /[+\-*/]/.test(expr.replace(/[+\-*/]$/, ""));
 }
 
 /* ── The thread ───────────────────────────────────────────────────── */

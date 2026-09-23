@@ -47,7 +47,7 @@ import useSWR from "swr";
 import { useCreatorSession } from "@/lib/creator/session";
 
 import { HoldApiError, read } from "./hold-api";
-import { moneyText, type SplitMode } from "./groups-rules";
+import { moneyText, type SourceKind, type SplitMode } from "./groups-rules";
 
 export * from "./groups-rules";
 
@@ -85,7 +85,29 @@ export type ExpenseItem = {
   edited?: boolean;
   editedAt?: string | null;
   deleted: boolean;
+  /** What was split: the payer's own transfers, stays or card spend, when it came from them. */
+  sources?: ExpenseSource[];
 };
+
+/** A thing from the payer's own activity that an expense splits (POST expense `sources`). */
+export interface ExpenseSource {
+  kind: SourceKind;
+  /** The transfer id or booking id. */
+  ref: string;
+  label?: string | null;
+  amountMinor?: string | null;
+  currency?: string | null;
+  occurredAt?: string | null;
+}
+
+/** A source already split somewhere, so the picker greys it out ("Split in Lisbon trip"). */
+export interface UsedSource {
+  kind: SourceKind;
+  ref: string;
+  groupId: string;
+  groupName: string;
+  expenseId: string;
+}
 
 export type SettlementItem = {
   kind: "settlement";
@@ -195,15 +217,18 @@ export interface Expense {
     | { participants: string[] }
     | { percents: { userId: string; percent: string }[] }
     | { amounts: { userId: string; amountMinor: string }[] }
+    | { weights: { userId: string; weight: number }[] }
     | null;
   receiptUrl: string | null;
   shares: { userId: string; shareMinor: string }[];
+  sources?: ExpenseSource[];
 }
 
 export type SplitBody =
   | { mode: "equal"; participants?: string[] }
   | { mode: "percent"; percents: { userId: string; percent: string }[] }
-  | { mode: "exact"; amounts: { userId: string; amountMinor: string }[] };
+  | { mode: "exact"; amounts: { userId: string; amountMinor: string }[] }
+  | { mode: "shares"; weights: { userId: string; weight: number }[] };
 
 /* ── People ───────────────────────────────────────────────────────── */
 
@@ -412,8 +437,18 @@ export const addMember = (groupId: string, userId: string) => read<{ added: bool
 export const addMemberByHandle = (groupId: string, handle: string) =>
   read<{ userId: string; added: boolean }>(`${g(groupId)}/members/by-handle`, { json: { handle: handle.trim().replace(/^@+/, "") } });
 
+/**
+ * Take somebody out, or leave (your own id). Only the group admin (the person
+ * who made it) removes others (`403 only_creator_removes`); the admin can't
+ * leave (`409 creator_cannot_leave`); and nobody goes while their balance is
+ * not zero (`409 member_has_balance`, with `balanceMinor` and `currency`).
+ */
 export const removeMember = (groupId: string, userId: string) =>
   read<{ removed: boolean }>(`${g(groupId)}/members/${enc(userId)}`, { method: "DELETE" });
+
+/** Every source of yours already split, in any group, since a day (ISO). */
+export const getUsedSources = (since?: string | null) =>
+  read<{ used: UsedSource[] }>(`groups/sources/used${since ? `?since=${enc(since)}` : ""}`);
 
 export const getThread = (groupId: string, before?: string | null, limit = 50) =>
   read<{ items: ThreadItem[]; nextBefore: string | null; reads?: ReadMark[] }>(
@@ -449,6 +484,8 @@ export interface ExpenseBody {
   spentAt?: string;
   payerUserId?: string;
   split: SplitBody;
+  /** At most 20. A source split before answers `409 source_already_split`. */
+  sources?: ExpenseSource[];
 }
 
 export const addExpense = (groupId: string, body: ExpenseBody, key: string) =>
@@ -459,7 +496,7 @@ export const addExpense = (groupId: string, body: ExpenseBody, key: string) =>
 
 export const getExpense = (groupId: string, expenseId: string) => read<{ expense: Expense }>(`${g(groupId)}/expenses/${enc(expenseId)}`);
 
-export const updateExpense = (groupId: string, expenseId: string, body: Partial<Omit<ExpenseBody, "payerUserId">>) =>
+export const updateExpense = (groupId: string, expenseId: string, body: Partial<Omit<ExpenseBody, "payerUserId" | "sources">>) =>
   read<{ expense: Expense; changed: string[] }>(`${g(groupId)}/expenses/${enc(expenseId)}`, { method: "PATCH", json: body });
 
 export const deleteExpense = (groupId: string, expenseId: string) =>
@@ -518,8 +555,13 @@ const WORDS: Record<string, string> = {
   invalid_currency: "A currency is a three-letter code, like USD or EUR.",
   too_many_members: "You can add up to 20 people when you make a group. Add the rest from the group.",
   currency_locked: "The currency can't change once the group has an expense or a settlement.",
-  not_the_creator: "Only the person who made the group can delete it.",
-  cannot_remove_creator: "The person who made the group can't be removed.",
+  not_the_creator: "Only the group admin can delete the group.",
+  cannot_remove_creator: "The group admin can't be removed.",
+  only_creator_removes: "Only the group admin can remove people.",
+  creator_cannot_leave: "The admin can't leave the group. Delete the group instead.",
+  member_has_balance: "They can't leave while they owe or are owed money here. Settle up first.",
+  source_already_split: "One of these was already split in a group. Take it out and try again.",
+  invalid_weight: "A share is a whole number from 0 to 1000.",
   message_empty: "Write something first.",
   message_too_long: "That message is too long.",
   message_not_found: "That message isn't here any more.",
@@ -594,6 +636,10 @@ export const useGroupBalances = (groupId: string | null) =>
 
 export const useGroupInfo = (groupId: string | null) =>
   useGroupRead(groupId ? "group" : null, async () => (await getGroup(groupId!)).group, groupId ?? "");
+
+/** Already-split sources, for greying them out in the bill picker. A failure reads as "none known", never as a block. */
+export const useUsedSources = (on: boolean) =>
+  useGroupRead(on ? "sources-used" : null, async () => (await getUsedSources(new Date(Date.now() - 400 * 86_400_000).toISOString())).used ?? []);
 
 export const useExpense = (groupId: string, expenseId: string | null) =>
   useGroupRead(expenseId ? "expense" : null, async () => (await getExpense(groupId, expenseId!)).expense, `${groupId}:${expenseId ?? ""}`);
