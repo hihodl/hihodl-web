@@ -24,6 +24,7 @@ import { useEffect, useState } from "react";
 
 import type { OAuthProvider } from "@/lib/auth/providers";
 import { forgetRemembered, readRemembered, type Remembered } from "@/lib/auth/remember";
+import { takeSignedOutElsewhereNote } from "@/lib/app/sessions";
 import { noteTermsShown, TERMS_VERSION } from "@/lib/app/terms";
 
 import { goWith, NotConfigured, PROVIDER_NAME, ProviderLogo, useProviders } from "@/components/creator/SignIn";
@@ -50,6 +51,11 @@ export function Door({ configured }: { configured: boolean }) {
   const [emailNow, setEmailNow] = useState(false);
   const [busy, setBusy] = useState<OAuthProvider | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // Read after mount, like `known`: set by the shell when this browser's
+  // session was removed from another device (lib/app/sessions).
+  useEffect(() => {
+    if (takeSignedOutElsewhereNote()) setNotice("This browser was signed out from another device");
+  }, []);
   const providers = useProviders();
 
   if (!configured) {

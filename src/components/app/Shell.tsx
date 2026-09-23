@@ -46,6 +46,7 @@ import { useAgency, type Agency } from "@/lib/app/agency";
 import { asDisplayMode, DEFAULT_DISPLAY_MODE, type DisplayMode } from "@/lib/app/display-mode";
 import { chosenUsername } from "@/lib/app/me";
 import { useDoor } from "@/lib/app/onboarding";
+import { useSignOutWhenRemovedElsewhere } from "@/lib/app/sessions";
 import { roleOf, waitingOnYou, type ShellRole } from "@/lib/app/spaces-model";
 import { useCreatorSettings, useListings, useMe, useOffers, useSeats, useTeam, useWork, useX } from "@/lib/app/spaces-data";
 import { crossesKeyPage } from "@/lib/wallet/csp";
@@ -171,6 +172,8 @@ export function productRel(pathname: string, base: string): string {
 
 function Gate({ children }: { children: ReactNode }) {
   const { session, configured } = useCreatorSession();
+  // Removed from another device: signs this browser out, and the Door says why.
+  useSignOutWhenRemovedElsewhere(session?.user.id);
   const pathname = usePathname();
   const params = useSearchParams();
   const base = useSpacesBase();
