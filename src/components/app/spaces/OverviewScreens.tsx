@@ -27,6 +27,7 @@ import Link from "next/link";
 import { useState, type ReactNode } from "react";
 
 import { SITE_URL } from "@/lib/ad-space/config";
+import { feePctText } from "@/lib/ad-space/fee";
 import { eventDates } from "@/lib/ad-space/format";
 import type { BrandRelation, CreatorAnalytics, GroupRow, ListingRow, MixRow } from "@/lib/creator/analytics";
 
@@ -62,8 +63,8 @@ export const monthYear = (iso: string | null) =>
 
 /** "Brands paid our 5% on top" when they did on every sale, else what came out of your price. */
 export function feeLine(t: CreatorAnalytics["totals"]): string {
-  if (t.orders === 0) return "Brands pay our 5% on top of your price";
-  if (t.fee.paidByYouCents === 0) return "Brands paid the 5% · you kept 100%";
+  if (t.orders === 0) return `Brands pay our ${feePctText()} on top of your price`;
+  if (t.fee.paidByYouCents === 0) return `Brands paid the ${feePctText()} · you kept 100%`;
   if (t.fee.paidByBrandsCents === 0) return `${dollars(t.fee.paidByYouCents)} fee came out of your price`;
   return `Brands paid ${dollars(t.fee.paidByBrandsCents)} of our fee on top`;
 }
