@@ -49,6 +49,8 @@ export class HoldApiError extends Error {
      * tell those apart reads this and not `code`.
      */
     readonly detail: string | null = null,
+    /** The server's `error.details`, where a route sends one (`nextAllowedAt` on a reminder, `owedMinor` on mark-paid). */
+    readonly details: Record<string, unknown> | null = null,
   ) {
     super(code);
     this.name = "HoldApiError";
@@ -68,7 +70,12 @@ export async function read<T>(
   init: {
     json?: unknown;
     signal?: AbortSignal;
-    method?: "GET" | "POST" | "PUT" | "DELETE";
+    method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+    /**
+     * Raw bytes as the body (a group photo, a receipt): sent as they are with
+     * the blob's own type, never multipart and never base64. POST by default.
+     */
+    raw?: Blob;
     /** Extra request headers. Anything beyond Content-Type and Authorization must be allowed by the Worker's preflight (see lib/app/groups). */
     headers?: Record<string, string>;
   } = {},
@@ -77,20 +84,21 @@ export async function read<T>(
   if (!token) throw new HoldApiError("UNAUTHORIZED", 401);
 
   const headers: Record<string, string> = { ...init.headers, accept: "application/json", authorization: `Bearer ${token}` };
-  if (init.json !== undefined) headers["content-type"] = "application/json";
+  if (init.raw !== undefined) headers["content-type"] = init.raw.type || "application/octet-stream";
+  else if (init.json !== undefined) headers["content-type"] = "application/json";
 
   // A body means POST unless the caller names another verb. `method` exists for
   // the chat, which is the one place on the web that genuinely writes: a note
   // is withdrawn with DELETE and the privacy setting is saved with PUT, and
   // neither can be spelled with the body rule alone.
-  const method = init.method ?? (init.json !== undefined ? "POST" : "GET");
+  const method = init.method ?? (init.json !== undefined || init.raw !== undefined ? "POST" : "GET");
 
   let res: Response;
   try {
     res = await fetch(`${API_BASE}/${path.replace(/^\/+/, "")}`, {
       method,
       headers,
-      body: init.json !== undefined ? JSON.stringify(init.json) : undefined,
+      body: init.raw !== undefined ? init.raw : init.json !== undefined ? JSON.stringify(init.json) : undefined,
       cache: "no-store",
       credentials: "omit",
       signal: init.signal,
@@ -107,9 +115,10 @@ export async function read<T>(
   }
 
   if (!res.ok) {
-    const err = (body as { error?: { code?: string; message?: string } } | null)?.error;
+    const err = (body as { error?: { code?: string; message?: string; details?: unknown } } | null)?.error;
     const code = err?.code ?? `HTTP_${res.status}`;
-    throw new HoldApiError(code, res.status, typeof err?.message === "string" ? err.message : null);
+    const details = err?.details && typeof err.details === "object" && !Array.isArray(err.details) ? (err.details as Record<string, unknown>) : null;
+    throw new HoldApiError(code, res.status, typeof err?.message === "string" ? err.message : null, details);
   }
 
   const envelope = body as { success?: boolean; data?: unknown } | null;
