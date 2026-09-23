@@ -26,6 +26,7 @@
  */
 
 import type { Chain } from "@/lib/ad-space/types";
+import type { PublicCrew } from "./crew";
 
 /* ── What the backend allows, mirrored ────────────────────────────── */
 
@@ -610,6 +611,8 @@ export interface SpaceView {
   pageGroundOwn?: string | null;
   /** Who the creator credits as the inspiration; null or absent is nobody. */
   inspiredBy?: InspiredBy | null;
+  /** Sold as a crew: who is in it and what each brings, never the split. Null or absent: an ordinary listing. */
+  crew?: PublicCrew | null;
 }
 
 /**

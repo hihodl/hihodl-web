@@ -21,6 +21,15 @@ export default function InviteRedirect() {
     // seat alone says whose invitation it is; the invite code is not passed on.
     // Read from `location` rather than `useSearchParams`: this runs once, after
     // mount, and needs no Suspense boundary around the whole page for it.
+    // A crew invitation is the lead's link with `?crew=<code>`: same reasoning
+    // as a seat, taken in the browser at app.hihodl.xyz/spaces/crew.
+    const crew = new URLSearchParams(window.location.search).get("crew");
+    if (crew && /^[A-Za-z0-9_-]{16,128}$/.test(crew)) {
+      const q = new URLSearchParams({ join: crew });
+      window.location.replace(productUrl(`/spaces/crew?${q.toString()}`));
+      return;
+    }
+
     const seat = new URLSearchParams(window.location.search).get("seat");
     if (seat && /^[A-Za-z0-9_-]{16,128}$/.test(seat)) {
       const q = new URLSearchParams({ seat });

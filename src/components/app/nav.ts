@@ -53,6 +53,7 @@ import {
   IconSettings,
   IconSim,
   IconTeam,
+  IconCrew,
   IconWallet,
 } from "./icons";
 
@@ -61,6 +62,7 @@ export type NavKey =
   | "home"
   | "wallet"
   | "payments"
+  | "groups"
   | "savings"
   | "invest"
   | "analytics"
@@ -80,6 +82,7 @@ export type NavKey =
   | "sales"
   | "deliveries"
   | "team"
+  | "crew"
   | "inspire"
   | "insights"
   | "board"
@@ -166,6 +169,8 @@ export const MAIN_HIDDEN: readonly NavItem[] = [
   // Activity is Home's own card, opened in full: its "See all" pill goes here.
   { key: "activity", label: "Activity", path: "/activity", icon: IconActivity, keywords: "activity history everything that moved transactions receipts" },
   { key: "add", label: "Add money", path: "/add", icon: IconAdd, keywords: "receive crypto qr code address deposit top up add cash bank transfer" },
+  // Groups are a chip on Payments, as in the app; listed here so ⌘K finds them.
+  { key: "groups", label: "Groups", path: "/payments/groups", icon: IconTeam, keywords: "groups split expenses bills share costs settle up owe owed trip flatmates crew chat" },
   // The app's pay links live behind a tile on Add money, not in a menu either.
   { key: "pay-links", label: "Pay links", path: "/pay-links", icon: IconPayments, keywords: "pay link get paid by anyone from any wallet usdc invoice charge someone without hold" },
 ];
@@ -218,6 +223,14 @@ export const SPACES_GROUPS: readonly NavGroup[] = [
     title: "Grow",
     items: [
       { key: "team", label: "Team", path: "/spaces/team", icon: IconTeam, roles: ALL, keywords: "members invite shares owed paid teams" },
+      {
+        key: "crew",
+        label: "Crew",
+        path: "/spaces/crew",
+        icon: IconCrew,
+        roles: ALL,
+        keywords: "crew collab package together split creators featuring expenses group",
+      },
       { key: "insights", label: "Insights", path: "/spaces/insights", icon: IconInsights, roles: ["creator"], keywords: "market data what sells pricing timing brands buying pitch a brand" },
       { key: "inspire", label: "Inspire", path: "/spaces/inspire", icon: IconInspire, roles: ["creator"], keywords: "templates ideas new listing" },
     ],
@@ -318,6 +331,8 @@ export function titleFor(rel: string): string {
   if (/^\/travel\/stay\/[^/]+\/book\/?$/.test(rel)) return "Confirm and pay";
   if (/^\/travel\/stay\/[^/]+/.test(rel)) return "Stay";
   if (/^\/travel\/search\/?$/.test(rel)) return "Stays";
+  if (/^\/payments\/groups\/[^/]+/.test(rel)) return "Group";
+  if (/^\/payments\/groups\/?$/.test(rel)) return "Groups";
   if (/^\/spaces\/listings\/new\/?$/.test(rel)) return "New listing";
   if (/^\/spaces\/listings\/[^/]+\/edit\/?$/.test(rel)) return "Edit draft";
   if (/^\/spaces\/listings\/[^/]+/.test(rel)) return "Listing";

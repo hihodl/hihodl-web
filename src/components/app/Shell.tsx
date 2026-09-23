@@ -41,6 +41,7 @@ import { describeCreatorError } from "@/lib/creator/api";
 import type { SpaceCard } from "@/lib/creator/listing";
 import { useCreatorSession } from "@/lib/creator/session";
 import { creatorText, isSeatCode, pendingSeat, type TeamMember, type WorkListing } from "@/lib/creator/team";
+import { keepPendingJoin } from "@/lib/creator/crew";
 import type { XAccountStatus } from "@/lib/creator/types";
 import { useAgency, type Agency } from "@/lib/app/agency";
 import { asDisplayMode, DEFAULT_DISPLAY_MODE, type DisplayMode } from "@/lib/app/display-mode";
@@ -178,6 +179,13 @@ function Gate({ children }: { children: ReactNode }) {
   const params = useSearchParams();
   const base = useSpacesBase();
   const rel = productRel(pathname, base);
+
+  // A crew invitation opened signed out: kept in this browser, because the
+  // sign-in round trip lands without the query. The crew screen reopens it.
+  const crewJoin = /^\/spaces\/crew\/?$/.test(rel) ? params.get("join") : null;
+  useEffect(() => {
+    if (session === null && crewJoin && /^[A-Za-z0-9_-]{16,128}$/.test(crewJoin)) keepPendingJoin(crewJoin);
+  }, [session, crewJoin]);
 
   // An invitation opens on its own: the page handles signing in with the
   // invitation beside the form.
