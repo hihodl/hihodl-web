@@ -66,7 +66,7 @@
   "add.bank.pendingDetails": "Questo conto è aperto, ma i dati per il deposito non sono ancora arrivati dal fornitore. Compariranno qui appena disponibili.",
   "add.bank.field.accountHolder": "Intestatario",
   "add.bank.field.accountNumber": "Numero di conto",
-  "add.bank.field.routingNumber": "Routing number",
+  "add.bank.field.routingNumber": "Numero di routing (ABA)",
   "add.bank.field.sortCode": "Sort code",
   "add.bank.field.paymentCode": "Codice di pagamento",
   "add.bank.field.reference": "Causale",

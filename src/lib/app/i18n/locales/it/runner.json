@@ -58,7 +58,7 @@
   "floors.private": "Privato",
   "floors.now": "Ora {amount}",
   "floors.none": "Nessun minimo",
-  "floors.min": "Min {amount}",
+  "floors.min": "Min. {amount}",
   "floors.saveChanges": "{count, plural, one {Salva 1 modifica} other {Salva # modifiche}}",
   "floors.sameForAll": "Imposta lo stesso minimo per tutti",
   "floors.clearAll": "Cancella tutto",

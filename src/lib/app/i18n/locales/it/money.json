@@ -42,7 +42,7 @@
   "stocks.inApp": "Sfogliare e comprare azioni si fa nell'app HOLD, dove l'ordine viene firmato.",
   "savings.dollars": "Dollari",
   "savings.earnUpTo": "Guadagna fino al {apy}",
-  "savings.lending": "Lending · {chain} · {token}",
+  "savings.lending": "Prestito · {chain} · {token}",
   "savings.earning": "Sta rendendo",
   "savings.earningApy": "Rende il {apy}",
   "savings.earnsApy": "Rende il {apy} in automatico",
