@@ -16,12 +16,16 @@ import groupThread from "./groupThread.json";
 import analytics from "./analytics.json";
 import spaces from "./spaces.json";
 import listings from "./listings.json";
+import creator from "./creator.json";
+import runner from "./runner.json";
+import board from "./board.json";
+import offers from "./offers.json";
 import sponsor from "./sponsor.json";
 import stays from "./stays.json";
 import trips from "./trips.json";
 
 import { prefix } from "../prefix";
 
-const dict = prefix({ common, shell, front, link, menu, prefs, account, home, activity, wallet, money, payments, groups, groupThread, analytics, spaces, listings, sponsor, stays, trips });
+const dict = prefix({ common, shell, front, link, menu, prefs, account, home, activity, wallet, money, payments, groups, groupThread, analytics, spaces, listings, creator, runner, board, offers, sponsor, stays, trips });
 
 export default dict;

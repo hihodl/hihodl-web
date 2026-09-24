@@ -10,7 +10,9 @@
 import account from "./account";
 import activity from "./activity";
 import analytics from "./analytics";
+import board from "./board";
 import common from "./common";
+import creator from "./creator";
 import front from "./front";
 import groupThread from "./groupThread";
 import groups from "./groups";
@@ -19,8 +21,10 @@ import link from "./link";
 import listings from "./listings";
 import menu from "./menu";
 import money from "./money";
+import offers from "./offers";
 import payments from "./payments";
 import prefs from "./prefs";
+import runner from "./runner";
 import shell from "./shell";
 import spaces from "./spaces";
 import sponsor from "./sponsor";
@@ -46,6 +50,10 @@ export const NAMESPACES = {
   analytics,
   spaces,
   listings,
+  creator,
+  runner,
+  board,
+  offers,
   sponsor,
   stays,
   trips,
