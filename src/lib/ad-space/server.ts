@@ -6,6 +6,7 @@ import { gradientKey } from "./look";
 import type {
   Booking,
   BrandProduction,
+  PublicBrief,
   CreatorPage,
   EventPage,
   EventSummary,
@@ -568,4 +569,69 @@ export async function getOffer(token: string, from: Headers | null): Promise<Off
 /** The full public space by id, for paying an accepted offer with the page's checkout. */
 export function getPublicSpaceById(spaceId: string): Promise<SpaceLookup> {
   return getPublicSpace("id", spaceId);
+}
+
+
+/* ── Briefs: the page a brand posts the link to ────────────────────── */
+
+/**
+ * Reading one brief on the server.
+ *
+ * Ten seconds of cache, the same as a space: what changes here is somebody
+ * entering and the winner being named, and both are worth showing quickly.
+ *
+ * A withdrawn brief is `missing` — the backend answers 404 for it, because a
+ * brand that takes its call down must be able to take the page down with it.
+ * `unreachable` is never turned into `missing`: telling somebody who followed
+ * the link that the campaign does not exist, when the truth is that our API
+ * timed out, is the one thing this page must not say.
+ */
+export type BriefLookup =
+  | { kind: "found"; brief: PublicBrief }
+  | { kind: "missing" }
+  | { kind: "unreachable" };
+
+/** The shape of a brief's public address: words, then the tail that keeps it unique. */
+export const BRIEF_SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{0,88}[a-z0-9])?$/i;
+
+export async function getPublicBrief(slug: string, revalidate = 10): Promise<BriefLookup> {
+  if (!BRIEF_SLUG_RE.test(slug)) return { kind: "missing" };
+  try {
+    const res = await fetch(`${AD_SPACE_API}/public/briefs/${encodeURIComponent(slug.toLowerCase())}`, {
+      headers: upstreamHeaders(null),
+      next: { revalidate },
+      signal: AbortSignal.timeout(6_000),
+    });
+    if (res.status === 404) return { kind: "missing" };
+    if (!res.ok) return { kind: "unreachable" };
+    const body: { data?: { brief?: PublicBrief } } = await res.json();
+    const brief = body?.data?.brief;
+    // A brief with no title is not a brief we can draw a page from, and it is
+    // an answer we did not understand rather than one that said "gone".
+    if (!brief?.slug || !brief.title) return { kind: "unreachable" };
+    return { kind: "found", brief };
+  } catch {
+    return { kind: "unreachable" };
+  }
+}
+
+/**
+ * The open briefs, for the sitemap and any board that lists them.
+ *
+ * An empty list on any failure, on purpose: the sitemap ships without them
+ * rather than not at all.
+ */
+export async function listPublicBriefs(limit = 50): Promise<PublicBrief[]> {
+  try {
+    const res = await fetch(`${AD_SPACE_API}/public/briefs?limit=${Math.min(Math.max(limit, 1), 50)}`, {
+      headers: upstreamHeaders(null),
+      next: { revalidate: 300 },
+      signal: AbortSignal.timeout(6_000),
+    });
+    if (!res.ok) return [];
+    const body: { data?: { briefs?: PublicBrief[] } } = await res.json();
+    return (body?.data?.briefs ?? []).filter((b) => !!b?.slug);
+  } catch {
+    return [];
+  }
 }

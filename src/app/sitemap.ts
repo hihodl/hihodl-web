@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-import { listPublicEvents } from "@/lib/ad-space/server";
+import { listPublicBriefs, listPublicEvents } from "@/lib/ad-space/server";
 
 /**
  * The sitemap.
@@ -96,5 +96,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
-  return [...pages, ...eventPages];
+  // Open briefs: a brand's call is written to be found, and unlike a creator's
+  // space it is not reachable from an event page. Only the open ones — a
+  // decided brief keeps working as a link, but it is not somewhere to send
+  // anybody new.
+  const briefs = await listPublicBriefs(50);
+  const briefPages: MetadataRoute.Sitemap = briefs.map((b) => ({
+    url: `${SITE}/brief/${encodeURIComponent(b.slug)}`,
+    lastModified,
+    changeFrequency: "daily",
+    priority: 0.6,
+  }));
+
+  return [...pages, ...eventPages, ...briefPages];
 }

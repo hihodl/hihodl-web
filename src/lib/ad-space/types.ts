@@ -902,3 +902,58 @@ export interface ApiErrorBody {
   message: string;
   details?: Record<string, unknown>;
 }
+
+/* ── Briefs: the brand asking in public ──────────────────────────── */
+
+/** One creator a brand picked, as the announcement names them. */
+export interface BriefWinner {
+  handle: string | null;
+  name: string | null;
+  avatarUrl: string | null;
+  verifiedType: string | null;
+  followers: number | null;
+  /** The entry they won with, when they applied with one. */
+  link: string | null;
+  pickedAt: string;
+  /** Their listing, once it is live. Null when the brief paid in kind. */
+  space: { slug: string } | null;
+}
+
+/** What a brand's word has been worth. Counted, never scored. */
+export interface BrandRecord {
+  briefsPosted: number;
+  creatorsPicked: number;
+  endedWithNobody: number;
+  paidCents: number;
+  awaitingPayment: number;
+}
+
+/** A brief as anybody with the link reads it. Never the queue. */
+export interface PublicBrief {
+  /** Public only so the page can link into the product to apply. */
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  brand: { name: string | null; handle: string | null };
+  city: string | null;
+  event: EventSummary | null;
+  budgetCents: number;
+  payMode: "split" | "upfront";
+  positions: { label: string; priceCents: number }[];
+  perks: string | null;
+  inKindOnly: boolean;
+  peopleWanted: number;
+  pickedCount: number;
+  applicantCount: number;
+  fallback: string;
+  fallbackNote: string | null;
+  status: string;
+  applicationsCloseAt: string | null;
+  applicationsOpen: boolean;
+  decideBy: string | null;
+  decidedAt: string | null;
+  createdAt: string;
+  winners: BriefWinner[];
+  record: BrandRecord;
+}

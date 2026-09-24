@@ -21,6 +21,7 @@ const shell = {
   "nav.overview": "Overview",
   "nav.listings": "Listings",
   "nav.offers": "Offers & bids",
+  "nav.briefs": "Briefs",
   "nav.sales": "Sales",
   "nav.deliveries": "Deliveries",
   "nav.board": "Find a spot",

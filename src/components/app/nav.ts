@@ -35,6 +35,7 @@ import {
   IconActivity,
   IconAdd,
   IconBed,
+  IconBriefs,
   IconDeliveries,
   IconGift,
   IconHome,
@@ -80,6 +81,7 @@ export type NavKey =
   | "overview"
   | "listings"
   | "offers"
+  | "briefs"
   | "sales"
   | "deliveries"
   | "team"
@@ -197,6 +199,10 @@ export const SPACES_GROUPS: readonly NavGroup[] = [
       { key: "overview", labelKey: "shell.nav.overview", path: "/spaces", icon: IconOverview, roles: ["creator", "manager"], keywords: "home kpi summary" },
       { key: "listings", labelKey: "shell.nav.listings", path: "/spaces/listings", icon: IconListings, roles: ["creator", "manager"], keywords: "my spaces services drafts live" },
       { key: "offers", labelKey: "shell.nav.offers", path: "/spaces/offers", icon: IconOffers, roles: ["creator", "manager"], keywords: "inbox bids counter accept decline" },
+      // The other direction: a brand writes what it wants and creators apply.
+      // Everybody, because it is the same person on both sides — anybody may
+      // write a brief and anybody may apply to somebody else's.
+      { key: "briefs", labelKey: "shell.nav.briefs", path: "/spaces/briefs", icon: IconBriefs, roles: ALL, keywords: "brand asks open call campaign apply applications brief write a brief flight hotel covered winner" },
       { key: "sales", labelKey: "shell.nav.sales", path: "/spaces/sales", icon: IconSales, roles: ["creator"], keywords: "orders money received usdc" },
       { key: "deliveries", labelKey: "shell.nav.deliveries", path: "/spaces/deliveries", icon: IconDeliveries, roles: ALL, keywords: "work artwork approve deliver due promises" },
     ],
