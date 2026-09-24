@@ -1,1 +1,13 @@
-{}
+{
+  "language": "Ngôn ngữ",
+  "currency": "Tiền tệ",
+  "recentLanguages": "Ngôn ngữ gần đây",
+  "allLanguages": "Tất cả ngôn ngữ",
+  "searchLanguage": "Tìm ngôn ngữ",
+  "recentCurrencies": "Tiền tệ gần đây",
+  "allCurrencies": "Tất cả tiền tệ",
+  "searchCurrency": "Tìm tiền tệ hoặc quốc gia",
+  "currencyIntro": "Số dư, tổng và giá được hiển thị bằng tiền tệ này. Số tiền bạn thực trả vẫn tính bằng token, và mỗi nhóm giữ tiền tệ riêng.",
+  "currencyNoRate": "* Chưa có tỷ giá trực tiếp, nên số tiền vẫn hiển thị bằng đô la Mỹ.",
+  "currencyNoRateLabel": "{code} {name}, chưa có tỷ giá trực tiếp"
+}
