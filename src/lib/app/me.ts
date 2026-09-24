@@ -36,6 +36,13 @@ export interface Me {
   /** When the username may change next (14-day rule); null or absent when it may now. */
   aliasChangeableAt?: string | null;
   email: string | null;
+  /**
+   * The language chosen in the app or here (`users.locale`, "es-ES"); absent
+   * from an API that does not send it yet, and then this browser decides.
+   */
+  locale?: string | null;
+  /** ISO 4217 display currency (`users.display_currency`); absent or null = not chosen. */
+  displayCurrency?: string | null;
   profile: {
     displayName: string | null;
     avatarUrl: string | null;
@@ -60,6 +67,10 @@ export const updateMe = (patch: {
   /** One emoji, up to 16 UTF-16 units; "" or null clears it. */
   avatarEmoji?: string | null;
   profileVisibility?: ProfileVisibility;
+  /** One of the 19 language codes. An API that does not take it yet answers 400; the choice still holds in this browser. */
+  locale?: string;
+  /** ISO 4217 from the supported list; otherwise 422 unsupported_currency. */
+  displayCurrency?: string;
 }) => call<unknown>("me", { method: "PATCH", json: patch }).then(() => undefined);
 
 /**

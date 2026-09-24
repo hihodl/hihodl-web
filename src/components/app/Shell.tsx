@@ -44,6 +44,7 @@ import { creatorText, isSeatCode, pendingSeat, type TeamMember, type WorkListing
 import { keepPendingJoin } from "@/lib/creator/crew";
 import type { XAccountStatus } from "@/lib/creator/types";
 import { useAgency, type Agency } from "@/lib/app/agency";
+import { useRatesRefresh, useServerPrefs } from "@/lib/app/i18n/react";
 import { asDisplayMode, DEFAULT_DISPLAY_MODE, type DisplayMode } from "@/lib/app/display-mode";
 import { chosenUsername } from "@/lib/app/me";
 import { useDoor } from "@/lib/app/onboarding";
@@ -245,6 +246,11 @@ function SignedIn({ session, children }: { session: Session; children: ReactNode
   const agency = useAgency(session.user.id, team.data);
   // Asked alongside, never waited for: the shell draws without it.
   const walletPage = useWalletEnabled(session.user.id);
+
+  // The language and display currency the person chose, in the app or here,
+  // win over this browser's guess once /me has answered (lib/app/i18n/react).
+  useServerPrefs(me.data);
+  useRatesRefresh();
 
   // Who signed in here, for the next visit's "Welcome back" (lib/auth/remember).
   useEffect(() => {

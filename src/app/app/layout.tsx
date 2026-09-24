@@ -11,6 +11,8 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 
+import { I18nProvider } from "@/lib/app/i18n/react";
+
 /**
  * Everything the website's root layout sets for sharing and search is unset
  * here: a canonical pointing at hihodl.xyz and the website's link card would
@@ -37,5 +39,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = { width: "device-width", initialScale: 1, maximumScale: 1 };
 
 export default function ProductLayout({ children }: { children: ReactNode }) {
-  return children;
+  // The person's language and display currency (lib/app/i18n): every page of
+  // the product, signed in or not, speaks the same one.
+  return <I18nProvider>{children}</I18nProvider>;
 }
