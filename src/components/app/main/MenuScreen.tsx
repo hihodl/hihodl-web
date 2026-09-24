@@ -33,9 +33,12 @@
  *                          Report a bug; notifications, the authenticator and
  *                          payment protection are named and sent to the app
  *
+ *   Language           → ?screen=language   settings/language.tsx
+ *   Currency           → ?screen=currency   settings/currency.tsx, both rows of
+ *                          Settings › Appearance as in the app (PrefsScreens)
+ *
  * Left out on purpose, because the web has nothing real behind them: PIN, Face
- * ID and auto-lock (the phone's), and language and currency (the web is in
- * English and in dollars, and has no exchange rates to show another).
+ * ID and auto-lock (the phone's).
  */
 
 import Link from "next/link";
@@ -68,11 +71,13 @@ import { useShell, useShellPrefs } from "../Shell";
 import { YourPagesCard, YourPagesScreen } from "../spaces/YourPages";
 import { Skeleton } from "../ui";
 import { InviteScreen } from "./InviteScreen";
+import { CurrencyScreen, LanguageScreen, languageName } from "./PrefsScreens";
+import { useDisplayCurrency, useLocale, useT } from "@/lib/app/i18n/react";
 
 /** The product's own host serves only the product; the website's pages live on the website. */
 const WEBSITE = "https://hihodl.xyz";
 
-type Screen = "home" | "plan" | "invite" | "security" | "recovery" | "passkeys" | "codes" | "statements" | "settings" | "sessions" | "personalization" | "about";
+type Screen = "home" | "plan" | "invite" | "security" | "recovery" | "passkeys" | "codes" | "statements" | "settings" | "sessions" | "personalization" | "about" | "language" | "currency";
 
 export function MenuScreen({ screen, item }: { screen?: string; item?: string } = {}) {
   const router = useRouter();
@@ -92,6 +97,8 @@ export function MenuScreen({ screen, item }: { screen?: string; item?: string } 
   // Appearance is a row of Settings, as in the app.
   if (screen === "personalization") return <PersonalizationScreen onBack={() => open("settings")} />;
   if (screen === "about") return <AboutScreen onBack={home} />;
+  if (screen === "language") return <LanguageScreen onBack={() => open("settings")} />;
+  if (screen === "currency") return <CurrencyScreen onBack={() => open("settings")} />;
   if (screen === "pages") {
     // Your pages, one level under Appearance (../spaces/YourPages).
     return (
@@ -862,6 +869,9 @@ function PersonalizationScreen({ onBack }: { onBack: () => void }) {
  */
 function SettingsScreen({ onBack, open }: { onBack: () => void; open: (s: Screen) => void }) {
   const { hideBalances, setHideBalances } = useShellPrefs();
+  const t = useT();
+  const locale = useLocale();
+  const { currency } = useDisplayCurrency();
   const [sessions] = useSessions();
   const sessionsValue = sessions === undefined ? undefined : sessions === null ? "Unavailable" : String(sessions.length);
   return (
@@ -882,6 +892,8 @@ function SettingsScreen({ onBack, open }: { onBack: () => void; open: (s: Screen
 
       <SectionTitle>Appearance</SectionTitle>
       <HoldCard>
+        <MenuRow icon="cash-outline" label={t("prefs.currency")} value={currency} onClick={() => open("currency")} />
+        <MenuRow icon="language-outline" label={t("prefs.language")} value={languageName(locale)} onClick={() => open("language")} />
         <MenuRow icon="contrast-outline" label="Appearance" sub="View, sidebar and your pages" chevron onClick={() => open("personalization")} />
       </HoldCard>
 
