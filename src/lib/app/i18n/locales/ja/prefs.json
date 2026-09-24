@@ -1,1 +1,13 @@
-{}
+{
+  "language": "言語",
+  "currency": "通貨",
+  "recentLanguages": "最近使った言語",
+  "allLanguages": "すべての言語",
+  "searchLanguage": "言語を検索",
+  "recentCurrencies": "最近使った通貨",
+  "allCurrencies": "すべての通貨",
+  "searchCurrency": "通貨または国を検索",
+  "currencyIntro": "残高、合計、価格はこの通貨で表示されます。実際の支払いはトークンのままで、グループはそれぞれの通貨を使います。",
+  "currencyNoRate": "* リアルタイムの為替レートがまだないため、金額は米ドルのまま表示されます。",
+  "currencyNoRateLabel": "{code} {name}、リアルタイムの為替レートは利用できません"
+}
