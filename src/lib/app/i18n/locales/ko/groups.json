@@ -46,7 +46,7 @@
   "list.loadFailed": "그룹을 불러오지 못했어요.",
   "list.empty": "아직 그룹이 없어요",
   "list.emptyBody": "그룹은 돈까지 함께하는 채팅이에요. 저녁, 택시, 집세를 나누고 정산하세요.",
-  "list.crew": "크루",
+  "list.crew": "Crew",
   "list.unread": "새 메시지 {count}개",
   "across.title": "전체 그룹",
   "across.shareAndPaid": "내 몫 <b>{share}</b> · 내가 낸 돈 <b>{paid}</b>",
