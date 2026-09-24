@@ -1,1 +1,13 @@
-{}
+{
+  "language": "भाषा",
+  "currency": "करेंसी",
+  "recentLanguages": "हाल की भाषाएँ",
+  "allLanguages": "सभी भाषाएँ",
+  "searchLanguage": "भाषा खोजें",
+  "recentCurrencies": "हाल की करेंसी",
+  "allCurrencies": "सभी करेंसी",
+  "searchCurrency": "करेंसी या देश खोजें",
+  "currencyIntro": "बैलेंस, कुल रकम और कीमतें इसी करेंसी में दिखती हैं। असल में आप टोकन में ही पे करते हैं, और ग्रुप अपनी करेंसी रखता है।",
+  "currencyNoRate": "* अभी लाइव एक्सचेंज रेट नहीं है, इसलिए रकम US डॉलर में ही दिखती है।",
+  "currencyNoRateLabel": "{code} {name}, लाइव एक्सचेंज रेट उपलब्ध नहीं"
+}
