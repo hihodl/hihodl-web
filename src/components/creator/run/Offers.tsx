@@ -30,6 +30,8 @@ import { useState } from "react";
 
 import { relativeTime } from "@/lib/ad-space/format";
 import { offerFigures } from "@/lib/ad-space/offers-client";
+import { t as tl } from "@/lib/app/i18n";
+import { useT } from "@/lib/app/i18n/react";
 import { centsFromDollars, centsFromUsdc, type OfferView, type OffersBlock, type SpaceView } from "@/lib/creator/listing";
 import { acceptOffer, counterOffer, declineOffer, type DeclineReason } from "@/lib/creator/listings";
 import { describeRunError } from "@/lib/creator/problems";
@@ -47,40 +49,44 @@ const OPEN: readonly string[] = ["pending", "countered", "accepted"];
 export function offerStatusText(status: string, kind: "offer" | "bid" = "offer"): string {
   switch (status) {
     case "pending":
-      return kind === "bid" ? "Bid placed" : "Waiting for the creator";
+      return kind === "bid" ? tl("runner.offers.status.bidPlaced") : tl("runner.offers.status.pending");
     case "countered":
-      return "Countered";
+      return tl("runner.offers.status.countered");
     case "accepted":
-      return "Accepted, waiting for payment";
+      return tl("runner.offers.status.accepted");
     case "paid":
-      return "Paid";
+      return tl("runner.offers.status.paid");
     case "declined":
-      return "Declined";
+      return tl("runner.offers.status.declined");
     case "expired":
-      return "Expired";
+      return tl("runner.offers.status.expired");
     case "withdrawn":
-      return "Withdrawn";
+      return tl("runner.offers.status.withdrawn");
     case "lapsed":
-      return "Not paid in time";
+      return tl("runner.offers.status.lapsed");
     case "superseded":
-      return "Closed, the spot went to someone else";
+      return tl("runner.offers.status.superseded");
     default:
       return status;
   }
 }
 
-const DECLINE_LABEL: Record<DeclineReason, string> = {
-  too_low: "Too low",
-  not_a_fit: "Not a fit",
-  other: "Other",
-};
+const DECLINE_LABEL = {
+  too_low: "runner.offers.decline.too_low",
+  not_a_fit: "runner.offers.decline.not_a_fit",
+  other: "runner.offers.decline.other",
+} as const satisfies Record<DeclineReason, string>;
 
-const CONTACT_LABEL: Record<string, string> = { x: "X", telegram: "Telegram", email: "Email" };
+/** How the sponsor's contact is named: X and Telegram are names, "Email" is a word. */
+function contactLabel(kind: string): string {
+  if (kind === "x") return "X";
+  if (kind === "telegram") return "Telegram";
+  if (kind === "email") return tl("runner.offers.contact.email");
+  return kind;
+}
 
 /** formatUsdc: "300.00 USDC". */
 export const usdc = (amount: string | null | undefined) => (amount ? `${amount} USDC` : "—");
-
-const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
 
 /** countdownParts: "2d 4h", "5h 12m", "9m", the two largest units. */
 export function countdownText(ms: number): string {
@@ -88,22 +94,24 @@ export function countdownText(ms: number): string {
   const d = Math.floor(total / 1_440);
   const h = Math.floor((total % 1_440) / 60);
   const m = total % 60;
-  if (d > 0) return `${d}d ${h}h`;
-  if (h > 0) return `${h}h ${m}m`;
-  return `${Math.max(1, m)}m`;
+  if (d > 0) return tl("runner.countdown.days", { d, h });
+  if (h > 0) return tl("runner.countdown.hours", { h, m });
+  return tl("runner.countdown.minutes", { m: Math.max(1, m) });
 }
 
 /** DeadlineText: the sentence around the time left, or "Time's up" once it has passed. */
-export function Deadline({ iso, label, ended = "Time's up. Refreshing…" }: { iso: string | null | undefined; label: (time: string) => string; ended?: string }) {
+export function Deadline({ iso, label, ended }: { iso: string | null | undefined; label: (time: string) => string; ended?: string }) {
+  const t = useT();
   if (!iso) return null;
   const at = Date.parse(iso);
   if (Number.isNaN(at)) return null;
   const left = at - Date.now();
-  return <p className={meta}>{left <= 0 ? ended : label(countdownText(left))}</p>;
+  return <p className={meta}>{left <= 0 ? (ended ?? t("runner.offers.timesUp")) : label(countdownText(left))}</p>;
 }
 
 export function FundsChecked() {
-  return <Tag label="Funds checked" tone="good" />;
+  const t = useT();
+  return <Tag label={t("runner.offers.fundsChecked")} tone="good" />;
 }
 
 const meta = `text-[12.5px] leading-[17px] ${P.dim}`;
@@ -111,49 +119,54 @@ const strong = "text-[13.5px] font-bold leading-[18px] text-white";
 
 /** PositionOffersLines, the creator's reading: bidding, open offers, the reserve or hidden minimum only they see. */
 export function PositionOffersLines({ offers }: { offers: OffersBlock | null | undefined }) {
+  const t = useT();
   if (!offers) return null;
   const lines: React.ReactNode[] = [];
   if (offers.mode === "bids") {
     if (offers.highestBidUsdc) {
       lines.push(
         <p key="high" className={strong}>
-          {offers.leaderName ? `Highest bid ${usdc(offers.highestBidUsdc)} by ${offers.leaderName}` : `Highest bid ${usdc(offers.highestBidUsdc)}`}
+          {offers.leaderName
+            ? t("runner.offers.highestBidBy", { amount: usdc(offers.highestBidUsdc), name: offers.leaderName })
+            : t("runner.offers.highestBid", { amount: usdc(offers.highestBidUsdc) })}
         </p>,
       );
     } else if (offers.openingBidUsdc) {
       lines.push(
         <p key="open" className={strong}>
-          Bidding opens at {usdc(offers.openingBidUsdc)}
+          {t("runner.offers.biddingOpensAt", { amount: usdc(offers.openingBidUsdc) })}
         </p>,
       );
     }
     const facts: string[] = [];
-    if (offers.bidCount != null) facts.push(`${offers.bidCount} ${plural(offers.bidCount, "bid", "bids")}`);
-    if (offers.reserveMet === true) facts.push("Reserve met");
-    if (offers.reserveMet === false) facts.push("Reserve not met");
+    if (offers.bidCount != null) facts.push(t("runner.offers.bids", { count: offers.bidCount }));
+    if (offers.reserveMet === true) facts.push(t("runner.offers.reserveMet"));
+    if (offers.reserveMet === false) facts.push(t("runner.offers.reserveNotMet"));
     if (facts.length) lines.push(<p key="facts" className={meta}>{facts.join(" · ")}</p>);
     if (offers.biddingEndsAt) {
-      lines.push(<Deadline key="ends" iso={offers.biddingEndsAt} label={(t) => `Bidding ends in ${t}`} ended="Bidding has ended" />);
+      lines.push(<Deadline key="ends" iso={offers.biddingEndsAt} label={(time) => t("runner.offers.biddingEndsIn", { time })} ended={t("runner.offers.biddingEnded")} />);
     } else if (offers.biddingOpen === false) {
-      lines.push(<p key="ended" className={meta}>Bidding has ended</p>);
+      lines.push(<p key="ended" className={meta}>{t("runner.offers.biddingEnded")}</p>);
     }
   } else {
-    if (offers.mode === "fixed_with_offers") lines.push(<p key="accepts" className={meta}>Accepts offers</p>);
+    if (offers.mode === "fixed_with_offers") lines.push(<p key="accepts" className={meta}>{t("runner.offers.acceptsOffers")}</p>);
     if (offers.openCount) {
       lines.push(
         <p key="count" className={meta}>
-          {offers.openCount} {plural(offers.openCount, "open offer", "open offers")}
+          {t("runner.offers.openOffers", { count: offers.openCount })}
         </p>,
       );
     }
   }
   if (offers.reservedUntil) {
-    lines.push(<Deadline key="reserved" iso={offers.reservedUntil} label={(t) => `Reserved for an accepted offer, ${t} to pay`} />);
+    lines.push(<Deadline key="reserved" iso={offers.reservedUntil} label={(time) => t("runner.offers.reserved", { time })} />);
   }
   if (offers.minOfferUsdc) {
     lines.push(
       <p key="min" className={meta}>
-        {offers.mode === "bids" ? `Reserve ${usdc(offers.minOfferUsdc)}, only you see it` : `Hidden minimum ${usdc(offers.minOfferUsdc)}, only you see it`}
+        {offers.mode === "bids"
+          ? t("runner.offers.reserve", { amount: usdc(offers.minOfferUsdc) })
+          : t("runner.offers.hiddenMin", { amount: usdc(offers.minOfferUsdc) })}
       </p>,
     );
   }
@@ -164,6 +177,7 @@ export function PositionOffersLines({ offers }: { offers: OffersBlock | null | u
 /* ── The section ──────────────────────────────────────────────────── */
 
 export function Offers({ space, offers, onChanged }: { space: SpaceView; offers: readonly OfferView[]; onChanged: () => void }) {
+  const t = useT();
   const [showClosed, setShowClosed] = useState<Record<string, boolean>>({});
   const isService = space.kind === "service";
   const bidsMode = space.pricingMode === "bids";
@@ -191,12 +205,12 @@ export function Offers({ space, offers, onChanged }: { space: SpaceView; offers:
   const openCount = offers.filter((o) => OPEN.includes(o.status)).length;
 
   if (offers.length === 0 && groups.every((g) => !g.open.length && !g.closed.length) && !groups.some((g) => g.positionId && positions.get(g.positionId)?.offers)) {
-    return <Empty icon="pricetags-outline" title="No offers yet" body="When a brand makes an offer or a bid on one of your spaces, it lands here to accept, counter or decline." />;
+    return <Empty icon="pricetags-outline" title={t("runner.offers.emptyTitle")} body={t("runner.offers.emptyBody")} />;
   }
 
   return (
     <div className="flex flex-col gap-2.5">
-      <SectionLabel>{bidsMode ? "Bids" : `Offers (${openCount})`}</SectionLabel>
+      <SectionLabel>{bidsMode ? t("runner.price.bids") : t("runner.offers.sectionOffers", { count: openCount })}</SectionLabel>
       {groups.map((g) => {
         const position = g.positionId ? positions.get(g.positionId) : null;
         const summary = position ? position.offers : null;
@@ -206,17 +220,17 @@ export function Offers({ space, offers, onChanged }: { space: SpaceView; offers:
         return (
           <Card key={key}>
             <div className="flex items-center justify-between gap-2.5">
-              <p className="flex-1 truncate text-[15px] font-strong text-white">{position ? (position.title ?? position.label) : "Any slot"}</p>
+              <p className="flex-1 truncate text-[15px] font-strong text-white">{position ? (position.title ?? position.label) : t("runner.offers.anySlot")}</p>
               {position ? (
                 <Tag
-                  label={position.status === "sold" ? "Sold" : position.status === "held" ? "Being paid" : "Open"}
+                  label={position.status === "sold" ? t("runner.spots.sold") : position.status === "held" ? t("runner.spots.beingPaid") : t("runner.spots.open")}
                   tone={position.status === "sold" ? "good" : "calm"}
                 />
               ) : null}
             </div>
             <PositionOffersLines offers={summary} />
             {open.length === 0 ? (
-              <p className={meta}>{bids ? "No bids yet." : "No open offers."}</p>
+              <p className={meta}>{bids ? t("runner.offers.noBids") : t("runner.offers.noOpen")}</p>
             ) : (
               open.map((o, i) => (
                 <div key={o.id} className="flex flex-col gap-2.5">
@@ -232,7 +246,7 @@ export function Offers({ space, offers, onChanged }: { space: SpaceView; offers:
                   onClick={() => setShowClosed((c) => ({ ...c, [key]: !c[key] }))}
                   className="flex items-center gap-1 self-start py-1 text-[13px] font-strong text-white/[0.62] hover:text-white"
                 >
-                  {showClosed[key] ? `Hide earlier (${g.closed.length})` : `Earlier (${g.closed.length})`}
+                  {showClosed[key] ? t("runner.offers.hideEarlier", { count: g.closed.length }) : t("runner.offers.earlier", { count: g.closed.length })}
                   <Ion name={showClosed[key] ? "chevron-up" : "chevron-down"} size={14} />
                 </button>
                 {showClosed[key]
@@ -259,6 +273,7 @@ export function OfferCard({ offer, space, onChanged }: { offer: OfferView; space
 }
 
 function OfferThread({ offer: o, space, rank, onChanged }: { offer: OfferView; space: SpaceView; rank: number | null; onChanged: () => void }) {
+  const t = useT();
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [mode, setMode] = useState<"none" | "counter" | "decline">("none");
@@ -285,11 +300,14 @@ function OfferThread({ offer: o, space, rank, onChanged }: { offer: OfferView; s
     <div className="flex flex-col gap-[5px] rounded-[12px] border border-transparent p-0.5">
       <div className="flex items-center justify-between gap-2.5">
         <p className="flex-1 text-[15px] font-strong tabular-nums text-white">
-          {rank ? `${rank}. ` : ""}
-          {o.kind === "bid" ? `Bid ${usdc(o.amountUsdc)}` : `Offer ${usdc(o.amountUsdc)}`}
+          {(() => {
+            const label =
+              o.kind === "bid" ? t("runner.offers.bidAmount", { amount: usdc(o.amountUsdc) }) : t("runner.offers.offerAmount", { amount: usdc(o.amountUsdc) });
+            return rank ? t("runner.offers.ranked", { rank, label }) : label;
+          })()}
         </p>
         <Tag
-          label={o.leading ? "Leading" : offerStatusText(o.status, o.kind)}
+          label={o.leading ? t("runner.offers.leading") : offerStatusText(o.status, o.kind)}
           tone={o.status === "accepted" || o.status === "paid" || o.leading ? "good" : o.status === "countered" ? "caution" : "calm"}
         />
       </div>
@@ -298,25 +316,25 @@ function OfferThread({ offer: o, space, rank, onChanged }: { offer: OfferView; s
         {o.sponsor.backed ? <FundsChecked /> : null}
       </div>
       {o.status === "countered" && o.counterUsdc ? (
-        <p className={meta}>Your counter: {usdc(o.counterUsdc)}, waiting for their answer</p>
+        <p className={meta}>{t("runner.offers.yourCounter", { amount: usdc(o.counterUsdc) })}</p>
       ) : null}
       {o.status === "accepted" && o.agreedUsdc ? (
-        <p className={meta}>Agreed {usdc(o.agreedUsdc)}</p>
+        <p className={meta}>{t("runner.offers.agreed", { amount: usdc(o.agreedUsdc) })}</p>
       ) : null}
-      {o.sponsor.message ? <p className="text-[13.5px] italic leading-[19px] text-white/[0.62]">“{o.sponsor.message}”</p> : null}
+      {o.sponsor.message ? <p className="text-[13.5px] italic leading-[19px] text-white/[0.62]">{t("runner.offers.quote", { message: o.sponsor.message })}</p> : null}
       {contact ? (
         contactHref ? (
           <a href={contactHref} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-[13px] font-strong text-white/[0.62] hover:text-white">
             <Ion name={contactIcon} size={14} />
             <span className="truncate">
-              {CONTACT_LABEL[contact.kind] ?? contact.kind} · {contact.value}
+              {contactLabel(contact.kind)} · {contact.value}
             </span>
           </a>
         ) : (
           <p className="flex items-center gap-1.5 text-[13px] font-strong text-white/[0.62]">
             <Ion name={contactIcon} size={14} />
             <span className="truncate">
-              {CONTACT_LABEL[contact.kind] ?? contact.kind} · {contact.value}
+              {contactLabel(contact.kind)} · {contact.value}
             </span>
           </p>
         )
@@ -330,41 +348,45 @@ function OfferThread({ offer: o, space, rank, onChanged }: { offer: OfferView; s
       <OfferChat offerId={o.id} sponsorName={o.sponsor.name} />
 
       {o.status === "declined" && o.declineReason ? (
-        <p className={meta}>Declined: {DECLINE_LABEL[o.declineReason as DeclineReason] ?? "Other"}</p>
+        <p className={meta}>
+          {t("runner.offers.declinedReason", {
+            reason: t(DECLINE_LABEL[o.declineReason as DeclineReason] ?? "runner.offers.decline.other"),
+          })}
+        </p>
       ) : null}
       {OPEN.includes(o.status) ? (
         <Deadline
           iso={o.expiresAt}
           label={(time) =>
             o.status === "pending"
-              ? `${time} left to answer`
+              ? t("runner.offers.leftToAnswer", { time })
               : o.status === "countered"
-                ? `${time} left for the sponsor to answer`
-                : `${time} left for the sponsor to pay`
+                ? t("runner.offers.leftSponsorAnswer", { time })
+                : t("runner.offers.leftSponsorPay", { time })
           }
         />
       ) : (
         <p className={meta}>{relativeTime(o.updatedAt)}</p>
       )}
-      {o.status === "accepted" ? <p className={meta}>If it isn&apos;t paid in time, the acceptance lapses and the spot opens again.</p> : null}
+      {o.status === "accepted" ? <p className={meta}>{t("runner.offers.lapseNote")}</p> : null}
       {canCounter ? (
         <p className={meta}>
-          {o.countersLeft} {plural(o.countersLeft, "counter", "counters")} left
+          {t("runner.offers.countersLeft", { count: o.countersLeft })}
         </p>
       ) : null}
 
       {canAnswer && mode === "none" ? (
         <div className="mt-1 flex gap-2">
           <button type="button" className={`${ctaCommit} flex-1`} disabled={busy} onClick={() => void run(() => acceptOffer(o.id, o.updatedAt)).catch((e) => setNotice(describeRunError(e)))}>
-            {busy ? "Working…" : o.status === "countered" ? `Accept ${usdc(o.amountUsdc)}` : "Accept"}
+            {busy ? t("runner.working") : o.status === "countered" ? t("runner.offers.acceptAmount", { amount: usdc(o.amountUsdc) }) : t("runner.offers.accept")}
           </button>
           {canCounter ? (
             <button type="button" className={`${ctaSecondary} flex-1`} disabled={busy} onClick={() => setMode("counter")}>
-              Counter
+              {t("runner.offers.counter")}
             </button>
           ) : null}
           <button type="button" className={`${ctaSecondary} flex-1`} disabled={busy} onClick={() => setMode("decline")}>
-            Decline
+            {t("runner.offers.decline")}
           </button>
         </div>
       ) : null}
@@ -403,6 +425,7 @@ const formBody = "text-[13.5px] leading-[19px] text-white/[0.62]";
 
 /** AmountSheet, for a counter: the amount, what the sponsor would pay and what reaches you, worked out as it is typed. */
 function CounterForm({ offer, space, onCancel, onSubmit }: { offer: OfferView; space: SpaceView; onCancel: () => void; onSubmit: (cents: number) => Promise<unknown> }) {
+  const t = useT();
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -412,7 +435,7 @@ function CounterForm({ offer, space, onCancel, onSubmit }: { offer: OfferView; s
 
   const submit = async () => {
     if (cents === null) {
-      setError("Type an amount.");
+      setError(t("runner.offers.typeAmount"));
       return;
     }
     setBusy(true);
@@ -428,11 +451,11 @@ function CounterForm({ offer, space, onCancel, onSubmit }: { offer: OfferView; s
 
   return (
     <div className={formCls}>
-      <p className={formTitle}>Counter</p>
+      <p className={formTitle}>{t("runner.offers.counter")}</p>
       <p className={formBody}>
-        {offer.sponsor.name} offered {usdc(offer.amountUsdc)}. Name your price: they can accept it, raise, or walk away.
+        {t("runner.offers.counterBody", { name: offer.sponsor.name, amount: usdc(offer.amountUsdc) })}
       </p>
-      <Field label="Your counter (USD)" htmlFor={`counter-${offer.id}`}>
+      <Field label={t("runner.offers.counterLabel")} htmlFor={`counter-${offer.id}`}>
         <input
           id={`counter-${offer.id}`}
           type="text"
@@ -445,17 +468,17 @@ function CounterForm({ offer, space, onCancel, onSubmit }: { offer: OfferView; s
         />
       </Field>
       {preview ? (
-        <p className="text-[13.5px] font-bold leading-[19px] text-white">You receive {usdc(preview.creatorReceivesUsdc)}</p>
+        <p className="text-[13.5px] font-bold leading-[19px] text-white">{t("runner.offers.youReceive", { amount: usdc(preview.creatorReceivesUsdc) })}</p>
       ) : null}
       <p className={meta}>
-        {left} {plural(left, "counter", "counters")} left on this offer after this one
+        {t("runner.offers.countersLeftAfter", { count: left })}
       </p>
       {error ? <Notice>{error}</Notice> : null}
       <button type="button" className={ctaPrimary} disabled={!value.trim() || busy} onClick={() => void submit()}>
-        {busy ? "Sending…" : "Send counter"}
+        {busy ? t("runner.sending") : t("runner.offers.sendCounter")}
       </button>
       <button type="button" className={ctaSecondary} disabled={busy} onClick={onCancel}>
-        Cancel
+        {t("common.cancel")}
       </button>
     </div>
   );
@@ -463,6 +486,7 @@ function CounterForm({ offer, space, onCancel, onSubmit }: { offer: OfferView; s
 
 /** DeclineSheet: a reason, told to the sponsor in these words and nothing more. */
 function DeclineForm({ onCancel, onSubmit }: { onCancel: () => void; onSubmit: (reason: DeclineReason) => Promise<unknown> }) {
+  const t = useT();
   const [reason, setReason] = useState<DeclineReason | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -482,19 +506,19 @@ function DeclineForm({ onCancel, onSubmit }: { onCancel: () => void; onSubmit: (
 
   return (
     <div className={formCls}>
-      <p className={formTitle}>Decline this offer</p>
-      <p className={formBody}>The sponsor is told it was declined and why, in these words and nothing more.</p>
-      <ChipRow label="Reason">
+      <p className={formTitle}>{t("runner.offers.declineTitle")}</p>
+      <p className={formBody}>{t("runner.offers.declineBody")}</p>
+      <ChipRow label={t("runner.offers.reason")}>
         {(["too_low", "not_a_fit", "other"] as DeclineReason[]).map((r) => (
-          <Chip key={r} label={DECLINE_LABEL[r]} selected={reason === r} onClick={() => setReason(r)} />
+          <Chip key={r} label={t(DECLINE_LABEL[r])} selected={reason === r} onClick={() => setReason(r)} />
         ))}
       </ChipRow>
       {error ? <Notice>{error}</Notice> : null}
       <button type="button" className={ctaPrimary} disabled={!reason || busy} onClick={() => void submit()}>
-        {busy ? "Working…" : "Decline"}
+        {busy ? t("runner.working") : t("runner.offers.decline")}
       </button>
       <button type="button" className={ctaSecondary} disabled={busy} onClick={onCancel}>
-        Cancel
+        {t("common.cancel")}
       </button>
     </div>
   );

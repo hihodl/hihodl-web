@@ -20,6 +20,9 @@ import { ctaPrimary, ctaSecondary, Notice } from "@/components/app/hold";
 import { Ion } from "@/components/app/ion";
 import { countdownText } from "@/components/app/spaces/common";
 import { Card, Divider, Field, inputCls, KV, P, SectionLabel, SheetRow, Tag } from "@/components/app/spaces/kit";
+import { tMaybe, t as tl } from "@/lib/app/i18n";
+import { fmtDate } from "@/lib/app/i18n/format";
+import { useT } from "@/lib/app/i18n/react";
 import {
   PRODUCTION_DELIVERABLE_LABEL,
   USAGE_SCOPE_LABEL,
@@ -32,38 +35,37 @@ import { describeRunError } from "@/lib/creator/problems";
 
 type Screen = "spot" | "brief" | "deliver";
 
-const GOAL: Record<string, string> = {
-  awareness: "Awareness",
-  product_launch: "Product launch",
-  hiring: "Hiring",
-  community: "Community",
-};
+/** The brand's goal, in words; a goal this screen does not know reads as the server sent it. */
+function goalText(goal: string): string {
+  return tMaybe(`runner.production.goal.${goal}`, goal);
+}
 
-/** "Fri 10 Oct, 02:00" in the reader's own clock. */
+/** A package line's name (lib/creator/listing's label, in the person's language). */
+function deliverableText(key: keyof typeof PRODUCTION_DELIVERABLE_LABEL): string {
+  return tMaybe(`runner.production.deliverable.${key}`, PRODUCTION_DELIVERABLE_LABEL[key]);
+}
+
+/** "Fri, 10 Oct, 02:00" in the reader's own clock and language. */
 function when(iso: string): string {
-  const d = new Date(iso);
-  return `${d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}, ${d.toLocaleTimeString("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-  })}`;
+  return fmtDate(iso, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
 function day(date: string): string {
-  return new Date(`${date}T12:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+  return fmtDate(new Date(`${date}T12:00:00Z`), { weekday: "short", day: "numeric", month: "short" });
 }
 
 export function stateOf(p: ProductionView): { label: string; tone: "calm" | "good" | "caution" } {
   switch (p.state) {
     case "accepted":
-      return { label: "Accepted", tone: "good" };
+      return { label: tl("runner.production.state.accepted"), tone: "good" };
     case "delivered":
-      return { label: "With the brand", tone: "calm" };
+      return { label: tl("runner.production.state.delivered"), tone: "calm" };
     case "revision_requested":
-      return { label: "Revision asked", tone: "caution" };
+      return { label: tl("runner.production.state.revision"), tone: "caution" };
     case "overdue":
-      return { label: "Late", tone: "caution" };
+      return { label: tl("runner.production.state.late"), tone: "caution" };
     default:
-      return { label: "To deliver", tone: "caution" };
+      return { label: tl("runner.production.state.toDeliver"), tone: "caution" };
   }
 }
 
@@ -119,6 +121,7 @@ function SpotScreen({
   onOpen: (s: Screen) => void;
   onChanged: (p: ProductionView) => void;
 }) {
+  const t = useT();
   const state = stateOf(p);
   const owed = p.state === "awaiting_delivery" || p.state === "overdue" || p.state === "revision_requested";
   const canMoveShoot = canDeliver && !p.delivery;
@@ -131,21 +134,28 @@ function SpotScreen({
     <div className="flex flex-col gap-2.5">
       <Card>
         <div className="flex items-center justify-between gap-2.5">
-          <p className="text-[12px] font-strong uppercase tracking-[0.4px] text-white/55">Production spot</p>
+          <p className="text-[12px] font-strong uppercase tracking-[0.4px] text-white/55">{t("runner.production.spot")}</p>
           <Tag label={state.label} tone={state.tone} />
         </div>
         <p className={`text-[28px] font-extrabold tracking-[-0.6px] tabular-nums ${p.state === "overdue" ? "text-amber" : "text-white"}`}>
-          {p.state === "accepted" ? "Accepted" : p.state === "delivered" ? "With the brand" : countdownText(p.dueAt)}
+          {p.state === "accepted"
+            ? t("runner.production.state.accepted")
+            : p.state === "delivered"
+              ? t("runner.production.state.delivered")
+              : countdownText(p.dueAt)}
         </p>
         <p className={meta}>
-          Due {when(p.dueAt)} · {p.package?.turnaroundHours ?? ""} h after the shoot day
+          {t("runner.production.due", { when: when(p.dueAt), hours: p.package?.turnaroundHours ?? "" })}
         </p>
         <Divider />
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 flex-col gap-0.5">
-            <p className="text-[14px] font-strong text-white">Shoot day · {day(p.shootOn)}</p>
+            <p className="text-[14px] font-strong text-white">{t("runner.production.shootDay", { day: day(p.shootOn) })}</p>
             <p className={meta}>
-              {p.shootOnSet ? "Set by you." : "The event's last day, until you pick one."} The event runs {day(p.event.startsOn)} to {day(p.event.endsOn)}.
+              {t(p.shootOnSet ? "runner.production.shootNoteSet" : "runner.production.shootNoteDefault", {
+                start: day(p.event.startsOn),
+                end: day(p.event.endsOn),
+              })}
             </p>
           </div>
           {canMoveShoot && !editingDay ? (
@@ -155,18 +165,18 @@ function SpotScreen({
               className="inline-flex h-[34px] shrink-0 items-center gap-1.5 rounded-[17px] border border-white/[0.14] bg-white/[0.06] px-[13px] text-[13.5px] font-bold text-white/[0.62] hover:bg-white/10"
             >
               <Ion name="calendar-outline" size={14} />
-              Change
+              {t("runner.production.change")}
             </button>
           ) : null}
         </div>
         {editingDay ? (
           <div className="flex flex-col gap-2.5">
-            <Field label="Day" htmlFor={`shoot-${positionId}`}>
+            <Field label={t("runner.production.day")} htmlFor={`shoot-${positionId}`}>
               <input id={`shoot-${positionId}`} type="date" className={inputCls} value={shootOn} onChange={(e) => setShootOn(e.target.value)} />
             </Field>
             <div className="flex gap-2">
               <button type="button" className={`${ctaSecondary} flex-1`} disabled={busy} onClick={() => setEditingDay(false)}>
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 type="button"
@@ -184,7 +194,7 @@ function SpotScreen({
                     .finally(() => setBusy(false));
                 }}
               >
-                {busy ? "Saving…" : "Save day"}
+                {busy ? t("common.saving") : t("runner.production.saveDay")}
               </button>
             </div>
           </div>
@@ -193,19 +203,23 @@ function SpotScreen({
 
       {p.state === "revision_requested" && p.revision ? (
         <Notice icon="alert-circle-outline">
-          <span className="block">The brand asked for one revision</span>
+          <span className="block">{t("runner.production.revisionAsked")}</span>
           <span className="mt-1 block whitespace-pre-line font-normal text-white">{p.revision.note}</span>
-          <span className="mt-1 block font-normal text-white/[0.62]">Deliver the new cut with a fresh link. This is their only round.</span>
+          <span className="mt-1 block font-normal text-white/[0.62]">{t("runner.production.revisionHint")}</span>
         </Notice>
       ) : null}
 
       <SheetRow
         icon="document-text-outline"
-        title="The brief"
+        title={t("runner.production.brief")}
         meta={
           p.brief
-            ? `${GOAL[p.brief.goal] ?? p.brief.goal} · ${p.brief.keyMessages.length} key ${p.brief.keyMessages.length === 1 ? "message" : "messages"} · ${p.brief.shootContact.value}`
-            : "No brief on this spot."
+            ? t("runner.production.briefMeta", {
+                goal: goalText(p.brief.goal),
+                count: p.brief.keyMessages.length,
+                contact: p.brief.shootContact.value,
+              })
+            : t("runner.production.noBrief")
         }
         onClick={() => onOpen("brief")}
       />
@@ -213,8 +227,8 @@ function SpotScreen({
       {p.delivery ? (
         <Card>
           <div className="flex items-center justify-between gap-2.5">
-            <p className="text-[15px] font-strong text-white">Delivered {when(p.delivery.deliveredAt)}</p>
-            {p.onTime === null ? null : <Tag label={p.onTime ? "On time" : "Late"} tone={p.onTime ? "good" : "caution"} />}
+            <p className="text-[15px] font-strong text-white">{t("runner.production.delivered", { when: when(p.delivery.deliveredAt) })}</p>
+            {p.onTime === null ? null : <Tag label={p.onTime ? t("runner.production.onTime") : t("runner.production.state.late")} tone={p.onTime ? "good" : "caution"} />}
           </div>
           <a href={p.delivery.url} target="_blank" rel="noreferrer" className="break-all text-[13px] font-strong text-white/[0.62] hover:text-white">
             {p.delivery.url}
@@ -222,21 +236,25 @@ function SpotScreen({
           <Divider />
           <ChecklistSummary checklist={p.delivery.checklist} production={p} />
           <p className={meta}>
-            {p.accepted
-              ? p.accepted.auto
-                ? "Accepted after 72 hours without an answer."
-                : `Accepted by the brand ${when(p.accepted.at)}.`
-              : p.autoAcceptAt
-                ? `If the brand says nothing, it is accepted ${when(p.autoAcceptAt)}.`
-                : ""}
-            {p.onTime === null ? "" : p.onTime ? " Delivered on time." : " Delivered after the due time."}
+            {[
+              p.accepted
+                ? p.accepted.auto
+                  ? t("runner.production.autoAccepted")
+                  : t("runner.production.acceptedBy", { when: when(p.accepted.at) })
+                : p.autoAcceptAt
+                  ? t("runner.production.autoAcceptAt", { when: when(p.autoAcceptAt) })
+                  : "",
+              p.onTime === null ? "" : p.onTime ? t("runner.production.deliveredOnTime") : t("runner.production.deliveredLate"),
+            ]
+              .filter(Boolean)
+              .join(" ")}
           </p>
         </Card>
       ) : null}
 
       {canDeliver && owed ? (
         <button type="button" className={ctaPrimary} onClick={() => onOpen("deliver")}>
-          {p.delivery ? "Deliver the revision" : "Deliver"}
+          {p.delivery ? t("runner.production.deliverRevision") : t("runner.production.deliver")}
         </button>
       ) : null}
 
@@ -246,6 +264,7 @@ function SpotScreen({
 }
 
 function ChecklistSummary({ checklist, production }: { checklist: readonly ChecklistItem[]; production: ProductionView }) {
+  const t = useT();
   const lines = production.package?.lines ?? [];
   return (
     <div className="flex flex-col gap-1.5">
@@ -254,8 +273,8 @@ function ChecklistSummary({ checklist, production }: { checklist: readonly Check
         return (
           <KV
             key={l.key}
-            k={PRODUCTION_DELIVERABLE_LABEL[l.key]}
-            v={<span className={`tabular-nums ${got >= l.count ? P.good : P.caution}`}>{`${got} of ${l.count}`}</span>}
+            k={deliverableText(l.key)}
+            v={<span className={`tabular-nums ${got >= l.count ? P.good : P.caution}`}>{t("runner.xOfY", { n: got, total: l.count })}</span>}
           />
         );
       })}
@@ -266,43 +285,47 @@ function ChecklistSummary({ checklist, production }: { checklist: readonly Check
 /* ── The brief ────────────────────────────────────────────────────── */
 
 function BriefScreen({ production: p, onBack }: { production: ProductionView; onBack: () => void }) {
+  const t = useT();
   const b = p.brief;
   return (
     <div className="flex flex-col gap-2.5">
-      <Back onBack={onBack} title="The brief" />
-      <p className={meta}>Private to you, your team and the brand.</p>
+      <Back onBack={onBack} title={t("runner.production.brief")} />
+      <p className={meta}>{t("runner.production.private")}</p>
       {b ? (
         <Card>
-          <Row label="Goal">{GOAL[b.goal] ?? b.goal}</Row>
-          <Row label="Key messages">
+          <Row label={t("runner.production.row.goal")}>{goalText(b.goal)}</Row>
+          <Row label={t("runner.production.row.keyMessages")}>
             <ol className="flex list-decimal flex-col gap-1 pl-5">
               {b.keyMessages.map((m) => (
                 <li key={m}>{m}</li>
               ))}
             </ol>
           </Row>
-          {b.interviewees ? <Row label="Who to interview">{b.interviewees}</Row> : null}
+          {b.interviewees ? <Row label={t("runner.production.row.interviewees")}>{b.interviewees}</Row> : null}
           {b.assetsUrl ? (
-            <Row label="Brand assets">
+            <Row label={t("runner.production.row.assets")}>
               <a href={b.assetsUrl} target="_blank" rel="noreferrer" className="break-all text-white/[0.62] hover:text-white">
                 {b.assetsUrl}
               </a>
             </Row>
           ) : null}
-          {b.dos ? <Row label="Do">{b.dos}</Row> : null}
-          {b.donts ? <Row label="Don't">{b.donts}</Row> : null}
-          <Row label="Shoot-day contact">
-            {b.shootContact.value} on {b.shootContact.kind === "x" ? "X" : "Telegram"}
+          {b.dos ? <Row label={t("runner.production.row.dos")}>{b.dos}</Row> : null}
+          {b.donts ? <Row label={t("runner.production.row.donts")}>{b.donts}</Row> : null}
+          <Row label={t("runner.production.row.contact")}>
+            {t("runner.production.contactOn", { value: b.shootContact.value, network: b.shootContact.kind === "x" ? "X" : "Telegram" })}
           </Row>
           {p.package ? (
-            <Row label="Usage rights">
-              {USAGE_SCOPE_LABEL[p.package.usage.scope]}, {USAGE_TERM_LABEL[p.package.usage.term].toLowerCase()}
+            <Row label={t("runner.production.row.usage")}>
+              {t("runner.production.usage", {
+                scope: tMaybe(`runner.production.scope.${p.package.usage.scope}`, USAGE_SCOPE_LABEL[p.package.usage.scope]),
+                term: tMaybe(`runner.production.term.${p.package.usage.term}`, USAGE_TERM_LABEL[p.package.usage.term].toLowerCase()),
+              })}
             </Row>
           ) : null}
         </Card>
       ) : (
         <Card>
-          <p className={meta}>No brief on this spot.</p>
+          <p className={meta}>{t("runner.production.noBrief")}</p>
         </Card>
       )}
     </div>
@@ -331,6 +354,7 @@ function DeliverScreen({
   onBack: () => void;
   onDelivered: (p: ProductionView) => void;
 }) {
+  const t = useT();
   const lines = p.package?.lines ?? [];
   const [url, setUrl] = useState(p.delivery?.url ?? "");
   const [counts, setCounts] = useState<Record<string, number>>(() =>
@@ -341,12 +365,12 @@ function DeliverScreen({
 
   return (
     <div className="flex flex-col gap-2.5">
-      <Back onBack={onBack} title={p.delivery ? "Deliver the revision" : "Deliver"} />
+      <Back onBack={onBack} title={p.delivery ? t("runner.production.deliverRevision") : t("runner.production.deliver")} />
       <Card>
         <p className="text-[13.5px] leading-[19px] text-white/[0.62]">
-          A private link the brand opens: a Drive, Frame.io or Dropbox folder. Only the brand, you and HOLD support see it.
+          {t("runner.production.deliverIntro")}
         </p>
-        <Field label="Link to the files" htmlFor={`deliver-${positionId}`}>
+        <Field label={t("runner.production.linkLabel")} htmlFor={`deliver-${positionId}`}>
           <input
             id={`deliver-${positionId}`}
             type="url"
@@ -358,7 +382,7 @@ function DeliverScreen({
         </Field>
       </Card>
 
-      <SectionLabel>What is in it</SectionLabel>
+      <SectionLabel>{t("runner.production.whatsIn")}</SectionLabel>
       <Card>
         {lines.map((l, i) => {
           const n = counts[l.key] ?? 0;
@@ -368,14 +392,14 @@ function DeliverScreen({
               <div className="flex items-center justify-between gap-3">
                 <span className="flex min-w-0 items-center gap-2 text-[14.5px] font-bold text-white">
                   {n >= l.count ? <Ion name="checkmark-circle" size={16} className="shrink-0 text-[#2FBE8A]" /> : null}
-                  {PRODUCTION_DELIVERABLE_LABEL[l.key]}
+                  {deliverableText(l.key)}
                 </span>
                 <span className="flex items-center gap-2">
-                  <StepButton label={`Fewer: ${l.label}`} disabled={n <= 0} onClick={() => setCounts({ ...counts, [l.key]: n - 1 })} icon="remove" />
+                  <StepButton label={t("runner.production.fewer", { label: l.label })} disabled={n <= 0} onClick={() => setCounts({ ...counts, [l.key]: n - 1 })} icon="remove" />
                   <span className="w-14 text-center text-[14px] font-strong tabular-nums text-white">
-                    {n} of {l.count}
+                    {t("runner.xOfY", { n, total: l.count })}
                   </span>
-                  <StepButton label={`More: ${l.label}`} disabled={n >= l.count} onClick={() => setCounts({ ...counts, [l.key]: n + 1 })} icon="add" />
+                  <StepButton label={t("runner.production.more", { label: l.label })} disabled={n >= l.count} onClick={() => setCounts({ ...counts, [l.key]: n + 1 })} icon="add" />
                 </span>
               </div>
             </div>
@@ -383,7 +407,7 @@ function DeliverScreen({
         })}
       </Card>
 
-      <p className={meta}>The brand then accepts it or asks for one revision. If they say nothing for 72 hours, it counts as accepted.</p>
+      <p className={meta}>{t("runner.production.deliverNote")}</p>
 
       {notice ? <Notice>{notice}</Notice> : null}
       <button
@@ -400,7 +424,7 @@ function DeliverScreen({
             .finally(() => setBusy(false));
         }}
       >
-        {busy ? "Sending…" : "Send to the brand"}
+        {busy ? t("runner.sending") : t("runner.production.send")}
       </button>
     </div>
   );
@@ -422,9 +446,10 @@ function StepButton({ label, disabled, onClick, icon }: { label: string; disable
 
 /** A screen inside the spot: the app's header, a chevron back and the title. */
 function Back({ onBack, title }: { onBack: () => void; title: string }) {
+  const t = useT();
   return (
     <div className="flex items-center gap-1">
-      <button type="button" onClick={onBack} aria-label="Back" className="flex h-9 w-9 items-center justify-center rounded-[18px] text-white transition-colors hover:bg-white/10">
+      <button type="button" onClick={onBack} aria-label={t("common.back")} className="flex h-9 w-9 items-center justify-center rounded-[18px] text-white transition-colors hover:bg-white/10">
         <Ion name="chevron-back" size={22} />
       </button>
       <p className="truncate text-[18px] font-extrabold tracking-[-0.3px] text-white">{title}</p>

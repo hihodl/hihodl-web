@@ -36,6 +36,7 @@ import { ctaSecondary, Notice } from "@/components/app/hold";
 import { StatusPill } from "@/components/app/spaces/common";
 import { btnWhite as btnSmall, btnGlassPill as btnSmallSecondary, Card, EventLine, SectionLabel, SheetRow } from "@/components/app/spaces/kit";
 import { closesText } from "@/lib/ad-space/format";
+import { useT } from "@/lib/app/i18n/react";
 import { spacesPath } from "@/lib/app/paths";
 import { describeCreatorError } from "@/lib/creator/api";
 import { LIMITS, type SeriesView, type SpaceView } from "@/lib/creator/listing";
@@ -52,6 +53,7 @@ interface Outcome {
 }
 
 export function ListingSeries({ space, onChanged }: { space: SpaceView; onChanged: () => void }) {
+  const t = useT();
   const [series, setSeries] = useState<SeriesView | null>(null);
   const [loading, setLoading] = useState(true);
   const [picking, setPicking] = useState(false);
@@ -129,7 +131,7 @@ export function ListingSeries({ space, onChanged }: { space: SpaceView; onChange
   return (
     <section className="flex flex-col gap-2.5">
       {loading ? (
-        <Loading what="your other events" />
+        <Loading what={t("runner.series.loadingWhat")} />
       ) : picking ? (
         <PickEvents
           space={space}
@@ -148,25 +150,25 @@ export function ListingSeries({ space, onChanged }: { space: SpaceView; onChange
       ) : spaces.length < 2 ? (
         // The app's SeriesPanel with no series yet: the invitation.
         <>
-          <SectionLabel>More events</SectionLabel>
+          <SectionLabel>{t("runner.series.more")}</SectionLabel>
           <SheetRow
             icon="calendar-outline"
-            title="Take this listing to other events"
-            meta="One listing per event, each with its own link and its own spots."
+            title={t("runner.series.takeTo")}
+            meta={t("runner.series.oneEach")}
             onClick={() => setPicking(true)}
           />
         </>
       ) : (
         <>
-          <SectionLabel>{`This listing is at ${spaces.length} events`}</SectionLabel>
+          <SectionLabel>{t("runner.series.atEvents", { count: spaces.length })}</SectionLabel>
           <p className="text-[12px] leading-[17px] text-white/55">
-            One listing per event, each with its own link, its own spots and its own close. What sells at one doesn&apos;t come out of another.
+            {t("runner.series.explain")}
           </p>
           {Object.keys(outcomes).length ? (
             <Notice tone={drafts.length ? "caution" : "good"}>
               {drafts.length === 0
-                ? `All ${spaces.length} are live, each with its own link.`
-                : `${live} of ${spaces.length} are live. The rest are still drafts — each says why.`}
+                ? t("runner.series.allLive", { count: spaces.length })
+                : t("runner.series.someLive", { live, total: spaces.length })}
             </Notice>
           ) : null}
 
@@ -182,10 +184,17 @@ export function ListingSeries({ space, onChanged }: { space: SpaceView; onChange
                 </div>
                 {s.event ? <EventLine event={s.event} /> : null}
                 <p className="text-[12.5px] leading-[17px] text-white/55">
-                  {here ? "The one you're looking at" : s.status === "draft" ? "Continue editing" : closesText(s.closesAt, s.status === "closed")}
-                  {` · ${s.totals.sold} of ${s.totals.positions} sold`}
+                  {t("runner.series.rowLine", {
+                    status: here
+                      ? t("runner.series.here")
+                      : s.status === "draft"
+                        ? t("runner.banner.continueEditing")
+                        : closesText(s.closesAt, s.status === "closed"),
+                    sold: s.totals.sold,
+                    total: s.totals.positions,
+                  })}
                 </p>
-                {outcome && !outcome.live ? <p className="text-[12.5px] leading-[17px] text-amber">Still a draft: {outcome.message}</p> : null}
+                {outcome && !outcome.live ? <p className="text-[12.5px] leading-[17px] text-amber">{t("runner.series.stillDraft", { reason: outcome.message })}</p> : null}
               </>
             );
             return here ? (
@@ -199,15 +208,15 @@ export function ListingSeries({ space, onChanged }: { space: SpaceView; onChange
 
           {drafts.length > 0 ? (
             <button type="button" className={ctaSecondary} disabled={publishing} onClick={() => void publishDrafts()}>
-              {publishing ? "Publishing…" : drafts.length === 1 ? "Publish the draft" : `Publish the ${drafts.length} drafts`}
+              {publishing ? t("runner.series.publishing") : t("runner.series.publish", { count: drafts.length })}
             </button>
           ) : null}
 
           {full ? null : (
             <SheetRow
               icon="add-circle-outline"
-              title="Another event"
-              meta={`Room for ${Math.max(0, LIMITS.SERIES_MAX - held)} more`}
+              title={t("runner.series.another")}
+              meta={t("runner.series.room", { count: Math.max(0, LIMITS.SERIES_MAX - held) })}
               onClick={() => setPicking(true)}
             />
           )}
@@ -219,19 +228,19 @@ export function ListingSeries({ space, onChanged }: { space: SpaceView; onChange
           */}
           {leaving ? (
             <Card>
-              <p className="text-[14.5px] leading-5 text-white">Take this one out of the series? It keeps its link and spots.</p>
+              <p className="text-[14.5px] leading-5 text-white">{t("runner.series.leaveQuestion")}</p>
               <div className="flex flex-wrap gap-2">
                 <button type="button" className={btnSmall} onClick={() => void leave()}>
-                  Take it out
+                  {t("runner.series.takeOut")}
                 </button>
                 <button type="button" className={btnSmallSecondary} onClick={() => setLeaving(false)}>
-                  Cancel
+                  {t("common.cancel")}
                 </button>
               </div>
             </Card>
           ) : (
             <button type="button" className="self-center py-1 text-[13px] font-strong text-white/[0.62] hover:text-white" onClick={() => setLeaving(true)}>
-              Take this one out of the series
+              {t("runner.series.leave")}
             </button>
           )}
         </>

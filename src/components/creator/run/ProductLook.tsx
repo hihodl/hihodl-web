@@ -34,6 +34,8 @@ import {
   type ProductLook,
 } from "@/lib/ad-space/product-look";
 import type { TemplateView } from "@/lib/ad-space/types";
+import { fmtNumber } from "@/lib/app/i18n/format";
+import { useT } from "@/lib/app/i18n/react";
 import type { SpaceView } from "@/lib/creator/listing";
 import { setListingProductLook } from "@/lib/creator/listings";
 import { describeRunError } from "@/lib/creator/problems";
@@ -55,6 +57,7 @@ export function drawingOf(space: SpaceView): { views: TemplateView[]; zones: Non
 /* ── The hub: one card per way ─────────────────────────────────────── */
 
 export function ProductHub({ space }: { space: SpaceView }) {
+  const t = useT();
   const href = useHref();
   const base = `/listings/${space.id}?tab=photo`;
   const { views } = drawingOf(space);
@@ -69,10 +72,10 @@ export function ProductHub({ space }: { space: SpaceView }) {
   return (
     <div className="flex flex-col gap-5">
       <section className="flex flex-col gap-3">
-        <h3 className="mt-1.5 text-[12px] font-bold uppercase tracking-[0.4px] text-white/55">The drawing</h3>
+        <h3 className="mt-1.5 text-[12px] font-bold uppercase tracking-[0.4px] text-white/55">{t("runner.look.drawing")}</h3>
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <li>
-            <HubLink href={href(`${base}&item=colour`)} title="Colours" note={look ? "Your colours, on your page" : "Outline only"}>
+            <HubLink href={href(`${base}&item=colour`)} title={t("runner.photo.colours")} note={look ? t("runner.look.yourColours") : t("runner.look.outlineOnly")}>
               <LookPreview views={views.slice(0, 2)} look={look} height={72} />
             </HubLink>
           </li>
@@ -81,10 +84,9 @@ export function ProductHub({ space }: { space: SpaceView }) {
 
       <section className="flex flex-col gap-3">
         <div className="flex flex-col gap-1">
-          <h3 className="mt-1.5 text-[12px] font-bold uppercase tracking-[0.4px] text-white/55">Real photos, one per side</h3>
+          <h3 className="mt-1.5 text-[12px] font-bold uppercase tracking-[0.4px] text-white/55">{t("runner.look.realPhotos")}</h3>
           <p className="text-[12.5px] text-white/[0.62]">
-            Upload each side of your own {(space.template?.name ?? "product").toLowerCase()} and place its spots on it. A side
-            without a photo keeps the drawing.
+            {t("runner.look.realPhotosBody", { product: (space.template?.name ?? t("runner.photo.product")).toLowerCase() })}
           </p>
         </div>
         <ul className="grid grid-cols-2 gap-3 xl:grid-cols-4">
@@ -95,7 +97,7 @@ export function ProductHub({ space }: { space: SpaceView }) {
                 <HubLink
                   href={href(`${base}&item=side-${encodeURIComponent(v.key)}`)}
                   title={v.label}
-                  note={!side ? "Add a photo" : side.ready ? "On your page" : `${placedOn(v.key)} spots placed`}
+                  note={!side ? t("runner.look.addPhoto") : side.ready ? t("runner.look.onYourPage") : t("runner.look.spotsPlaced", { placed: placedOn(v.key) })}
                   live={Boolean(side?.ready)}
                 >
                   {side?.url ? (
@@ -112,13 +114,13 @@ export function ProductHub({ space }: { space: SpaceView }) {
       </section>
 
       <section className="flex flex-col gap-3">
-        <h3 className="mt-1.5 text-[12px] font-bold uppercase tracking-[0.4px] text-white/55">Or one photo for the whole product</h3>
+        <h3 className="mt-1.5 text-[12px] font-bold uppercase tracking-[0.4px] text-white/55">{t("runner.look.onePhotoWhole")}</h3>
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <li>
             <HubLink
               href={href(`${base}&item=one`)}
-              title="One photo"
-              note={!space.photo ? "For a product with no clear sides" : space.photo.ready ? "On your page" : "Spots to place"}
+              title={t("runner.photo.onePhoto")}
+              note={!space.photo ? t("runner.look.noSides") : space.photo.ready ? t("runner.look.onYourPage") : t("runner.look.spotsToPlace")}
               live={Boolean(space.photo?.ready)}
             >
               {space.photo?.url ? (
@@ -183,6 +185,7 @@ export function LookPreview({ views, look, height }: { views: TemplateView[]; lo
 /* ── Colours ───────────────────────────────────────────────────────── */
 
 export function ColourEditor({ space, onChanged }: { space: SpaceView; onChanged: () => void }) {
+  const t = useT();
   const saved = space.productLook ?? null;
   const [look, setLook] = useState<ProductLook>(saved ?? DEFAULT_LOOK);
   const [busy, setBusy] = useState<null | "save" | "clear">(null);
@@ -235,20 +238,24 @@ export function ColourEditor({ space, onChanged }: { space: SpaceView; onChanged
           })}
         </div>
         <p className="text-center text-[12.5px] text-white/[0.62]">
-          Spots sit on a dark glass plate with white figures, so they read on any colour. Outline ink: {ink === "#0A141E" ? "dark" : "light"}{" "}
-          ({contrast(look.body, ink).toFixed(1)}:1).
+          {t("runner.look.plateNote", {
+            ink: ink === "#0A141E" ? "dark" : "light",
+            ratio: fmtNumber(contrast(look.body, ink), { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
+          })}
         </p>
       </section>
 
       <section className={`${glass} flex flex-col gap-5 p-5`}>
         <Swatches
-          title="Body"
+          id="hex-body"
+          title={t("runner.look.body")}
           palette={BODY_PALETTE}
           value={look.body}
           onChange={(body) => setLook((l) => ({ ...l, body }))}
         />
         <Swatches
-          title="Handle, wheels and trim"
+          id="hex-handle-wheels-and-trim"
+          title={t("runner.look.accent")}
           palette={ACCENT_PALETTE}
           value={look.accent}
           onChange={(accent) => setLook((l) => ({ ...l, accent }))}
@@ -256,11 +263,11 @@ export function ColourEditor({ space, onChanged }: { space: SpaceView; onChanged
         {notice ? <Notice>{notice}</Notice> : null}
         <div className="mt-auto flex flex-wrap items-center gap-2">
           <button type="button" className={btnSmall} disabled={busy !== null || !dirty} onClick={() => save(look)}>
-            {busy === "save" ? "Saving…" : saved && !dirty ? "Saved" : "Save colours"}
+            {busy === "save" ? t("common.saving") : saved && !dirty ? t("common.saved") : t("runner.look.save")}
           </button>
           {saved ? (
             <button type="button" className={btnSmallSecondary} disabled={busy !== null} onClick={() => save(null)}>
-              {busy === "clear" ? "Removing…" : "Back to the outline"}
+              {busy === "clear" ? t("runner.removing") : t("runner.look.backToOutline")}
             </button>
           ) : null}
         </div>
@@ -270,19 +277,22 @@ export function ColourEditor({ space, onChanged }: { space: SpaceView; onChanged
 }
 
 function Swatches({
+  id,
   title,
   palette,
   value,
   onChange,
 }: {
+  /** The hex field's id: fixed, so it does not change with the language of the title. */
+  id: string;
   title: string;
   palette: readonly { name: string; hex: string }[];
   value: string;
   onChange: (hex: string) => void;
 }) {
   const [typed, setTyped] = useState(value);
+  const t = useT();
   const custom = !palette.some((c) => c.hex.toUpperCase() === value.toUpperCase());
-  const id = `hex-${title.replace(/\W+/g, "-").toLowerCase()}`;
   return (
     <fieldset className="flex flex-col gap-2.5">
       <legend className="mb-1 text-[14.5px] font-bold text-white">{title}</legend>
@@ -308,11 +318,11 @@ function Swatches({
       </div>
       <div className="flex items-center gap-2">
         <label htmlFor={id} className="text-[12.5px] text-white/[0.62]">
-          Custom
+          {t("runner.look.custom")}
         </label>
         <input
           type="color"
-          aria-label={`${title}: pick any colour`}
+          aria-label={t("runner.look.pickAny", { title })}
           value={normalHex(value) ?? "#000000"}
           onChange={(e) => {
             const hex = normalHex(e.target.value);

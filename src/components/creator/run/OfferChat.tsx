@@ -40,6 +40,7 @@ import { useEffect, useState } from "react";
 
 import { SafetyMenu, WordsOnly } from "@/components/app/payments/Chat";
 import { Ion } from "@/components/app/ion";
+import { useT } from "@/lib/app/i18n/react";
 import { offerChat } from "@/lib/creator/listings";
 
 type Peer =
@@ -50,6 +51,7 @@ type Peer =
   | { state: "failed" };
 
 export function OfferChat({ offerId, sponsorName }: { offerId: string; sponsorName: string }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [peer, setPeer] = useState<Peer>({ state: "idle" });
 
@@ -86,7 +88,7 @@ export function OfferChat({ offerId, sponsorName }: { offerId: string; sponsorNa
         className="mt-1 inline-flex h-8 w-fit items-center gap-1.5 rounded-[10px] bg-white/[0.08] px-3 text-[12.5px] font-strong text-white/85 transition-colors hover:bg-white/[0.14]"
       >
         <Ion name="chatbubble-ellipses-outline" size={14} />
-        Message
+        {t("runner.chat.message")}
       </button>
     );
   }
@@ -105,22 +107,21 @@ export function OfferChat({ offerId, sponsorName }: { offerId: string; sponsorNa
           onClick={() => setOpen(false)}
           className="shrink-0 rounded-[10px] px-2.5 py-1.5 text-[12.5px] font-strong text-white/70 transition-colors hover:text-white"
         >
-          Close
+          {t("common.close")}
         </button>
       </div>
 
       {peer.state === "loading" || peer.state === "idle" ? (
-        <p className="py-4 text-center text-[13px] text-white/60">Opening…</p>
+        <p className="py-4 text-center text-[13px] text-white/60">{t("runner.chat.opening")}</p>
       ) : null}
 
       {peer.state === "failed" ? (
-        <p className="py-4 text-center text-[13px] text-white/70">That did not open. Close it and try again.</p>
+        <p className="py-4 text-center text-[13px] text-white/70">{t("runner.chat.failed")}</p>
       ) : null}
 
       {peer.state === "no-account" ? (
         <p className="py-3 text-[13px] leading-[19px] text-white/70">
-          {peer.peerName} made this offer from the web and has no HOLD account, so there is no conversation to open. The
-          contact they left on the offer is the way to reach them.
+          {t("runner.chat.noAccount", { name: peer.peerName })}
         </p>
       ) : null}
 
@@ -128,7 +129,7 @@ export function OfferChat({ offerId, sponsorName }: { offerId: string; sponsorNa
         <WordsOnly
           peerId={peer.peerId}
           peerName={peer.peerName}
-          intro={`Nothing said yet. Your first message reaches ${peer.peerName} as a request.`}
+          intro={t("runner.chat.intro", { name: peer.peerName })}
         />
       ) : null}
     </div>

@@ -44,13 +44,15 @@ import { useHref } from "@/components/app/base";
 import { btnWhite as btnSmall, btnGlassPill as btnSmallSecondary } from "@/components/app/spaces/kit";
 import { cardBox as glass } from "@/components/app/spaces/kit";
 import { ImageProblem, prepareImage } from "@/lib/ad-space/image";
+import { t as tl } from "@/lib/app/i18n";
+import { fmtDate } from "@/lib/app/i18n/format";
+import { useT } from "@/lib/app/i18n/react";
 import { CreatorApiError } from "@/lib/creator/api";
 import type { PhotoRect, PositionView, SpaceView } from "@/lib/creator/listing";
 import { clearListingPhoto, setListingPhoto, setListingSquares } from "@/lib/creator/listings";
 import { describeRunError } from "@/lib/creator/problems";
 import {
   LAYOUTS,
-  LAYOUT_LABEL,
   arrange,
   layoutFits,
   readLayouts,
@@ -113,18 +115,29 @@ function overlapShare(a: PhotoRect, b: PhotoRect): number {
   return (w * h) / Math.min(a.w * a.h, b.w * b.h);
 }
 
+/** Why a square cannot be saved as it is. */
+type Trouble = "small" | "overlap";
+
+/** The words for each arrangement (lib/creator/spot-layout's LAYOUT_LABEL, in the person's language). */
+const LAYOUT_KEY = {
+  grid: "runner.photo.layout.grid",
+  band: "runner.photo.layout.band",
+  column: "runner.photo.layout.column",
+  corners: "runner.photo.layout.corners",
+} as const satisfies Record<LayoutKind, string>;
+
 /** Why each square cannot be saved as it is, by position id. */
-function troubleOf(rects: Map<string, PhotoRect>): Map<string, string> {
-  const out = new Map<string, string>();
+function troubleOf(rects: Map<string, PhotoRect>): Map<string, Trouble> {
+  const out = new Map<string, Trouble>();
   const list = [...rects];
   for (const [id, r] of list) {
-    if (r.w < MIN_SIDE - 1e-6 || r.h < MIN_SIDE - 1e-6) out.set(id, "too small to find on a phone");
+    if (r.w < MIN_SIDE - 1e-6 || r.h < MIN_SIDE - 1e-6) out.set(id, "small");
   }
   for (let i = 0; i < list.length; i++) {
     for (let j = i + 1; j < list.length; j++) {
       if (overlapShare(list[i][1], list[j][1]) > OVERLAP_TOLERANCE) {
-        out.set(list[i][0], "on top of another spot");
-        out.set(list[j][0], "on top of another spot");
+        out.set(list[i][0], "overlap");
+        out.set(list[j][0], "overlap");
       }
     }
   }
@@ -189,34 +202,34 @@ function seedRects(space: SpaceView, positions: readonly PositionView[], view: s
 /** The server's refusals, in words. */
 function describePhotoError(e: unknown): string {
   if (e instanceof ImageProblem) {
-    if (e.reason === "type") return "Use a JPG, PNG or WebP photo.";
-    if (e.reason === "too_big") return "That photo is too large even after shrinking it. Try a smaller one.";
-    return "We could not read that photo. Try another.";
+    if (e.reason === "type") return tl("runner.photo.err.type");
+    if (e.reason === "too_big") return tl("runner.photo.err.tooBig");
+    return tl("runner.photo.err.unreadable");
   }
   if (e instanceof CreatorApiError) {
     switch (e.code) {
       case "photo_frozen":
-        return "A spot on this photo is sold, so the photo stays: the sponsor bought the place they saw on it.";
+        return tl("runner.photo.err.frozen");
       case "square_frozen":
-        return "That spot is sold, so its square stays where the sponsor saw it.";
+        return tl("runner.photo.err.squareFrozen");
       case "photo_required":
-        return "Upload the photo first.";
+        return tl("runner.photo.err.required");
       case "photo_mode_conflict":
-        return "Use one photo for the whole product or a photo per side, not both. Remove the other one first.";
+        return tl("runner.photo.err.modeConflict");
       case "view_not_on_product":
-        return "That side is not part of this product.";
+        return tl("runner.photo.err.viewNotOnProduct");
       case "photo_needs_a_product":
-        return "A photo with squares is for a product. This listing sells a service.";
+        return tl("runner.photo.err.needsProduct");
       case "squares_invalid":
-        return "Some squares are too small or on top of each other. Fix the ones marked in amber and save again.";
+        return tl("runner.photo.err.squaresInvalid");
       case "image_too_large":
-        return "Up to 3 MB.";
+        return tl("runner.photo.err.tooLarge");
       case "image_type_not_supported":
-        return "Use a JPG or PNG photo.";
+        return tl("runner.photo.err.jpgPng");
       case "image_unreadable":
-        return "We could not read that photo. Try another.";
+        return tl("runner.photo.err.unreadable");
       case "space_delisted":
-        return "This listing is off HiSpace, so it cannot be changed.";
+        return tl("runner.photo.err.delisted");
     }
   }
   return describeRunError(e);
@@ -241,6 +254,7 @@ export function viewOfZones(space: SpaceView): Map<string, string> {
  * the server refuses the mix and an offer that can only be refused is a trap.
  */
 function SideSwitcher({ space, view }: { space: SpaceView; view: string | null }) {
+  const t = useT();
   const href = useHref();
   const base = `/listings/${space.id}?tab=photo`;
   const drawing = (space.template ?? {}) as Drawing;
@@ -259,7 +273,7 @@ function SideSwitcher({ space, view }: { space: SpaceView; view: string | null }
       items.push({
         key: v.key,
         label: v.label ?? v.key,
-        note: !side ? "No photo" : side.ready ? "Done" : `${placed}/${on.length}`,
+        note: !side ? t("runner.photo.noPhoto") : side.ready ? t("runner.photo.done") : `${placed}/${on.length}`,
         ready: Boolean(side?.ready),
       });
     }
@@ -267,8 +281,8 @@ function SideSwitcher({ space, view }: { space: SpaceView; view: string | null }
   if (!perSide) {
     items.push({
       key: null,
-      label: "One photo",
-      note: !space.photo ? "No photo" : space.photo.ready ? "Done" : `${space.positions.filter((p) => p.rect).length}/${space.positions.length}`,
+      label: t("runner.photo.onePhoto"),
+      note: !space.photo ? t("runner.photo.noPhoto") : space.photo.ready ? t("runner.photo.done") : `${space.positions.filter((p) => p.rect).length}/${space.positions.length}`,
       ready: Boolean(space.photo?.ready),
     });
   }
@@ -322,6 +336,7 @@ function Arranger({
   rects: Map<string, PhotoRect>;
   onApply: (next: Map<string, PhotoRect>) => void;
 }) {
+  const t = useT();
   const [mine, setMine] = useState<SavedLayout[]>([]);
   const [naming, setNaming] = useState(false);
   const [name, setName] = useState("");
@@ -373,10 +388,10 @@ function Arranger({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[12px] font-bold uppercase tracking-[0.4px] text-white/55">Arrange</span>
+        <span className="text-[12px] font-bold uppercase tracking-[0.4px] text-white/55">{t("runner.photo.arrange")}</span>
         {LAYOUTS.filter((k) => layoutFits(movable.length, k)).map((k) => (
           <button key={k} type="button" className={pill} onClick={() => apply(k)}>
-            {LAYOUT_LABEL[k]}
+            {t(LAYOUT_KEY[k])}
           </button>
         ))}
         {mine.map((l) => (
@@ -385,13 +400,13 @@ function Arranger({
               type="button"
               className={`${pill} rounded-r-none border-r-0 pr-2`}
               onClick={() => applySaved(l)}
-              title={`Your arrangement, saved ${new Date(l.at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`}
+              title={t("runner.photo.savedOn", { date: fmtDate(l.at, { day: "numeric", month: "short" }) })}
             >
               {l.name}
             </button>
             <button
               type="button"
-              aria-label={`Forget ${l.name}`}
+              aria-label={t("runner.photo.forget", { name: l.name })}
               className={`${pill} rounded-l-none pl-1.5 pr-2.5 text-white/45`}
               onClick={() => setMine(removeLayout(templateId, view, l.name))}
             >
@@ -401,7 +416,7 @@ function Arranger({
         ))}
         {naming ? null : (
           <button type="button" className={pill} onClick={() => setNaming(true)}>
-            Save this one…
+            {t("runner.photo.saveThis")}
           </button>
         )}
       </div>
@@ -411,7 +426,7 @@ function Arranger({
             autoFocus
             value={name}
             maxLength={40}
-            placeholder="Name it: My suitcase front"
+            placeholder={t("runner.photo.namePlaceholder")}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") save();
@@ -420,10 +435,10 @@ function Arranger({
             className="h-8 w-[220px] rounded-[16px] border border-white/15 bg-black/20 px-3 text-[12.5px] text-white outline-none focus:border-white/30"
           />
           <button type="button" className={pill} disabled={!name.trim()} onClick={save}>
-            Save
+            {t("common.save")}
           </button>
           <button type="button" className={pill} onClick={() => setNaming(false)}>
-            Cancel
+            {t("common.cancel")}
           </button>
         </div>
       ) : null}
@@ -447,6 +462,7 @@ export function PhotoEditor({
   view?: string | null;
   viewLabel?: string | null;
 }) {
+  const t = useT();
   const photo = (view ? space.viewPhotos?.[view] : space.photo) ?? null;
   const zoneView = useMemo(() => viewOfZones(space), [space]);
   const positions = useMemo(
@@ -574,7 +590,7 @@ export function PhotoEditor({
           setOver(false);
           const file = [...e.dataTransfer.files].find((f) => f.type.startsWith("image/"));
           if (file) upload(file);
-          else if (e.dataTransfer.files.length > 0) setNotice("Use a JPG, PNG or WebP photo.");
+          else if (e.dataTransfer.files.length > 0) setNotice(t("runner.photo.err.type"));
         },
       }
     : {};
@@ -582,14 +598,14 @@ export function PhotoEditor({
   /** The line the whole editor wears while something is being dragged over it. */
   const dropVeil = over ? (
     <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-[16px] border-2 border-dashed border-[#5B7CFF] bg-[rgba(8,12,24,0.72)]">
-      <p className="text-[14.5px] font-bold text-white">Drop it here</p>
+      <p className="text-[14.5px] font-bold text-white">{t("runner.photo.dropHere")}</p>
     </div>
   ) : null;
 
   const switcher = <SideSwitcher space={space} view={view} />;
 
   if (!photo) {
-    const side = viewLabel ? viewLabel.toLowerCase() : "side";
+    const side = viewLabel ? viewLabel.toLowerCase() : t("runner.photo.side");
     return (
       <div className="flex flex-col gap-3">
         {switcher}
@@ -599,28 +615,29 @@ export function PhotoEditor({
         >
         <div className="flex max-w-[440px] flex-col gap-2">
           <h3 className="text-[15.5px] font-strong text-white">
-            {view ? `Your ${side}, as it really is` : "Show sponsors the real thing"}
+            {view ? t("runner.photo.sideTitle", { side }) : t("runner.photo.showReal")}
           </h3>
           <p className="text-[14.5px] text-white/[0.62]">
             {view
-              ? `Upload a photo of the ${side} of your ${(space.template?.name ?? "product").toLowerCase()}, then place its ${positions.length} ${positions.length === 1 ? "spot" : "spots"} on it. Once they are placed, your page shows this photo for the ${side} and the drawing for any side without one.`
-              : "Upload a photo of what you are selling space on, then place each spot on it. Once every spot is placed, your page and your X card show your photo instead of the drawing."}
+              ? t("runner.photo.sideBody", {
+                  side,
+                  product: (space.template?.name ?? t("runner.photo.product")).toLowerCase(),
+                  count: positions.length,
+                })
+              : t("runner.photo.wholeBody")}
           </p>
         </div>
           {conflict ? (
             <p className="max-w-[440px] text-[14.5px] text-amber">
-              {view
-                ? "This listing uses one photo for the whole product. Remove it first to give each side its own."
-                : "This listing has a photo per side. Remove those first to use one photo for the whole product."}
+              {view ? t("runner.photo.conflictSide") : t("runner.photo.conflictWhole")}
             </p>
           ) : (
             <button type="button" className={btnSmall} disabled={busy !== null} onClick={() => input.current?.click()}>
-              {busy === "upload" ? "Uploading…" : "Choose a photo"}
+              {busy === "upload" ? t("runner.uploading") : t("runner.photo.choose")}
             </button>
           )}
           <p className="text-[12.5px] text-white/55">
-            {conflict ? "JPG, PNG or WebP." : "Or drop one here, or paste one. JPG, PNG or WebP."} We remove the location and
-            camera details.
+            {conflict ? t("runner.photo.formats") : t("runner.photo.formatsDrop")}
           </p>
           {chooser}
           {notice ? <Notice>{notice}</Notice> : null}
@@ -638,26 +655,26 @@ export function PhotoEditor({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="min-w-0 text-[12.5px] text-white/55">
           {trouble.size > 0
-            ? "Fix the squares in amber before saving."
+            ? t("runner.photo.fixAmber")
             : dirty
-              ? "Unsaved changes."
+              ? t("runner.photo.unsaved")
               : placed && photo.ready
-                ? "On your page and your X card."
-                : "Place every spot and save to show the photo on your page."}
+                ? t("runner.photo.live")
+                : t("runner.photo.placeEvery")}
         </p>
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             className={btnSmallSecondary}
             disabled={busy !== null || frozen.size > 0}
-            title={frozen.size > 0 ? "A spot on this photo is sold" : undefined}
+            title={frozen.size > 0 ? t("runner.photo.soldHint") : undefined}
             onClick={() => input.current?.click()}
           >
-            {busy === "upload" ? "Uploading…" : "Replace photo"}
+            {busy === "upload" ? t("runner.uploading") : t("runner.photo.replace")}
           </button>
           {confirmRemove ? (
             <button type="button" className={btnSmallSecondary} disabled={busy !== null} onClick={remove}>
-              {busy === "remove" ? "Removing…" : "Remove it and every square"}
+              {busy === "remove" ? t("runner.removing") : t("runner.photo.removeAll")}
             </button>
           ) : (
             <button
@@ -666,7 +683,7 @@ export function PhotoEditor({
               disabled={busy !== null || frozen.size > 0}
               onClick={() => setConfirmRemove(true)}
             >
-              Remove photo
+              {t("runner.photo.remove")}
             </button>
           )}
           <button
@@ -675,7 +692,7 @@ export function PhotoEditor({
             disabled={busy !== null || trouble.size > 0 || (!dirty && placed)}
             onClick={save}
           >
-            {busy === "save" ? "Saving…" : "Save"}
+            {busy === "save" ? t("common.saving") : t("common.save")}
           </button>
         </div>
       </div>
@@ -721,14 +738,14 @@ export function PhotoEditor({
               }`}
             >
               {p.label}
-              {frozen.has(p.id) ? <span className="text-amber">Sold</span> : null}
+              {frozen.has(p.id) ? <span className="text-amber">{t("runner.spots.sold")}</span> : null}
             </button>
           );
         })}
       </div>
       {selectedPosition && trouble.has(selectedPosition.id) ? (
         <p className="text-[12.5px] text-amber">
-          {selectedPosition.label} is {trouble.get(selectedPosition.id)}.
+          {t("runner.photo.trouble", { label: selectedPosition.label, kind: trouble.get(selectedPosition.id) })}
         </p>
       ) : null}
       {dropVeil}
@@ -760,11 +777,12 @@ function Stage({
   positions: PositionView[];
   rects: Map<string, PhotoRect>;
   frozen: Set<string>;
-  trouble: Map<string, string>;
+  trouble: Map<string, Trouble>;
   selected: string | null;
   onSelect: (id: string | null) => void;
   onMove: (id: string, r: PhotoRect) => void;
 }) {
+  const t = useT();
   const box = useRef<HTMLDivElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const [fit, setFit] = useState<{ w: number; h: number } | null>(null);
@@ -888,7 +906,7 @@ function Stage({
                 key={p.id}
                 role="button"
                 tabIndex={0}
-                aria-label={`${p.label}${locked ? ", sold, cannot move" : ""}`}
+                aria-label={locked ? t("runner.photo.squareSoldAria", { label: p.label }) : p.label}
                 onPointerDown={(e) => begin(e, p.id, "move")}
                 onPointerMove={move}
                 onPointerUp={end}
@@ -909,7 +927,7 @@ function Stage({
                 }}
               >
                 <span className="pointer-events-none truncate px-1 text-[11px] font-strong text-white">
-                  {locked ? `${p.label} · Sold` : p.label}
+                  {locked ? t("runner.photo.squareSold", { label: p.label }) : p.label}
                 </span>
                 {on && !locked
                   ? (["nw", "ne", "sw", "se"] as const).map((c) => (

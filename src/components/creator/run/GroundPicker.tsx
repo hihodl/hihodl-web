@@ -15,14 +15,25 @@ import { useEffect, useState } from "react";
 import { btnWhite as btnSmall } from "@/components/app/spaces/kit";
 import { cardBox as glass } from "@/components/app/spaces/kit";
 import { contrast, inkOn, normalHex } from "@/lib/ad-space/product-look";
-import { PAGE_GROUND_LABEL, PAGE_GROUND_PRESETS, groundOf, type PageGroundPreset } from "@/lib/ad-space/theme";
+import { PAGE_GROUND_PRESETS, groundOf, type PageGroundPreset } from "@/lib/ad-space/theme";
+import { t as tl } from "@/lib/app/i18n";
+import { fmtNumber } from "@/lib/app/i18n/format";
+import { useT } from "@/lib/app/i18n/react";
 
-const NOTE: Record<PageGroundPreset, string> = {
-  hold: "The HOLD app's Benefits blue",
-  app: "The app's own dark, #0F0F1A",
-  night: "Black, for photos that pop",
-  white: "A light page, every colour re-inked",
-};
+const NOTE = {
+  hold: "runner.ground.note.hold",
+  app: "runner.ground.note.app",
+  night: "runner.ground.note.night",
+  white: "runner.ground.note.white",
+} as const satisfies Record<PageGroundPreset, string>;
+
+/** A preset's name (lib/ad-space/theme's PAGE_GROUND_LABEL, in the person's language). */
+const LABEL = {
+  hold: "runner.ground.label.hold",
+  app: "runner.ground.label.app",
+  night: "runner.ground.label.night",
+  white: "runner.ground.label.white",
+} as const satisfies Record<PageGroundPreset, string>;
 
 /** A tiny page in a ground: its background, a title, a line of text, a card and the amber button. */
 export function GroundSwatch({ value, height = 88 }: { value: string | null; height?: number }) {
@@ -53,7 +64,7 @@ export function GroundPicker({
   onSave,
   allowDefault = false,
   defaultValue = null,
-  defaultLabel = "Same as my default",
+  defaultLabel,
   onPicked,
 }: {
   /** What is saved now: a preset, a #RRGGBB, or null (HOLD blue; on a listing, "same as my default"). */
@@ -71,6 +82,7 @@ export function GroundPicker({
    */
   onPicked?: (value: string | null) => void;
 }) {
+  const t = useT();
   // With no default to fall back to, a stored "hold" and null are the same card.
   const start = !allowDefault && value === "hold" ? null : value;
   const [picked, setPicked] = useState<string | null>(start);
@@ -113,7 +125,7 @@ export function GroundPicker({
     setBusy(true);
     setNotice(null);
     void onSave(picked)
-      .catch(() => setNotice("That did not save. Try again in a moment."))
+      .catch(() => setNotice(t("runner.ground.saveFailed")))
       .finally(() => setBusy(false));
   }
 
@@ -122,13 +134,13 @@ export function GroundPicker({
 
   return (
     <div className="flex flex-col gap-4">
-      <ul role="radiogroup" aria-label="Page background" className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+      <ul role="radiogroup" aria-label={t("runner.screen.ground")} className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
         {allowDefault
-          ? option(null, defaultLabel, defaultValue ? labelOf(defaultValue) : PAGE_GROUND_LABEL.hold, defaultValue)
+          ? option(null, defaultLabel ?? t("runner.ground.sameAsDefault"), defaultValue ? labelOf(defaultValue) : t(LABEL.hold), defaultValue)
           : null}
         {PAGE_GROUND_PRESETS.map((k) =>
           // With no default to fall back to, HOLD blue is what null means: one card for both.
-          option(!allowDefault && k === "hold" ? null : k, PAGE_GROUND_LABEL[k], NOTE[k], k),
+          option(!allowDefault && k === "hold" ? null : k, t(LABEL[k]), t(NOTE[k]), k),
         )}
       </ul>
 
@@ -144,11 +156,11 @@ export function GroundPicker({
             }`}
           >
             <span className="h-5 w-5 rounded-[6px] border border-white/20" style={{ background: customHex ?? "transparent" }} aria-hidden />
-            Your own colour
+            {t("runner.ground.ownColour")}
           </button>
           <input
             type="color"
-            aria-label="Pick any colour"
+            aria-label={t("runner.ground.pickAny")}
             value={customHex ?? "#000000"}
             onChange={(e) => {
               const hex = normalHex(e.target.value);
@@ -160,7 +172,7 @@ export function GroundPicker({
             className="h-10 w-10 cursor-pointer rounded-[12px] border-2 border-white/15 bg-transparent p-0.5"
           />
           <input
-            aria-label="Colour as hex"
+            aria-label={t("runner.ground.hex")}
             value={typed}
             maxLength={7}
             spellCheck={false}
@@ -174,18 +186,21 @@ export function GroundPicker({
         </div>
         {customHex && ink ? (
           <p className="text-[12.5px] text-white/[0.62]">
-            Text goes {ink === "#0A141E" ? "dark" : "white"} on this colour ({contrast(customHex, ink).toFixed(1)}:1), chosen for you.
+            {t("runner.ground.textGoes", {
+              ink: ink === "#0A141E" ? "dark" : "white",
+              ratio: fmtNumber(contrast(customHex, ink), { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
+            })}
           </p>
         ) : (
-          <p className="text-[12.5px] text-amber">Write a colour as #RRGGBB.</p>
+          <p className="text-[12.5px] text-amber">{t("runner.ground.writeHex")}</p>
         )}
       </section>
 
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" className={btnSmall} disabled={busy || !dirty} onClick={save}>
-          {busy ? "Saving…" : dirty ? "Save background" : "Saved"}
+          {busy ? t("common.saving") : dirty ? t("runner.ground.save") : t("common.saved")}
         </button>
-        <p className="text-[12.5px] text-white/[0.62]">The payment sheet keeps the app&rsquo;s dark on every background.</p>
+        <p className="text-[12.5px] text-white/[0.62]">{t("runner.ground.paymentNote")}</p>
       </div>
       {notice ? <p className="text-[12.5px] text-amber">{notice}</p> : null}
     </div>
@@ -193,6 +208,6 @@ export function GroundPicker({
 }
 
 export function labelOf(value: string | null | undefined): string {
-  if (!value) return PAGE_GROUND_LABEL.hold;
-  return (PAGE_GROUND_PRESETS as readonly string[]).includes(value) ? PAGE_GROUND_LABEL[value as PageGroundPreset] : value;
+  if (!value) return tl(LABEL.hold);
+  return (PAGE_GROUND_PRESETS as readonly string[]).includes(value) ? tl(LABEL[value as PageGroundPreset]) : value;
 }

@@ -37,6 +37,8 @@ import { ContentOfferScreen, midSentence, useOffersContent, type ContentLead } f
 import { Body, Card, Chip, dateTimeText, Group as Panel, SectionLabel, SheetRow, Tag } from "@/components/app/spaces/kit";
 import { useShell } from "@/components/app/Shell";
 import { Skeleton } from "@/components/app/ui";
+import { t as tl } from "@/lib/app/i18n";
+import { useT } from "@/lib/app/i18n/react";
 import { useRefresh } from "@/lib/app/spaces-data";
 import { describeCreatorError } from "@/lib/creator/api";
 import {
@@ -82,21 +84,22 @@ const SCREEN_BODY = "lg:max-h-[calc(var(--app-vh,100dvh)-196px)] lg:overflow-y-a
 
 type Screen = "events" | "offers" | "floors" | "spots" | "photo" | "ground" | "deliveries" | "updates" | "content" | "team" | "together";
 
-const SCREEN_TITLE: Record<Screen, string> = {
-  events: "Events",
-  offers: "Offers & bids",
-  floors: "Floor prices",
-  spots: "Spots",
-  photo: "Your product",
-  ground: "Page background",
-  deliveries: "Deliveries",
-  updates: "Updates",
-  content: "Offer them content",
-  team: "Who works it",
-  together: "Sell as a crew",
-};
+const SCREEN_TITLE = {
+  events: "runner.screen.events",
+  offers: "runner.screen.offers",
+  floors: "runner.screen.floors",
+  spots: "runner.screen.spots",
+  photo: "runner.screen.photo",
+  ground: "runner.screen.ground",
+  deliveries: "runner.screen.deliveries",
+  updates: "runner.screen.updates",
+  content: "runner.screen.content",
+  team: "runner.screen.team",
+  together: "runner.screen.together",
+} as const satisfies Record<Screen, string>;
 
 export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: string; item?: string }) {
+  const t = useT();
   const href = useHref();
   const { listings, agency, role } = useShell();
   const refresh = useRefresh();
@@ -119,7 +122,7 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
       // Offers only exist on a listing that takes them, and a draft has no
       // page to share; neither is worth a call that can only answer no.
       const wants = next.pricingMode !== "fixed" || next.acceptsOffers || next.positions.some((p) => p.saleMode);
-      const [o, s, sr, t] = await Promise.all([
+      const [o, s, sr, tm] = await Promise.all([
         wants ? listingOffers(spaceId).catch(() => ({ offers: [] as OfferView[] })) : Promise.resolve({ offers: [] as OfferView[] }),
         next.status === "draft" ? Promise.resolve(null) : shareListing(spaceId).catch(() => null),
         owner && next.status !== "delisted" ? getSeries(spaceId).catch(() => ({ series: null })) : Promise.resolve({ series: null }),
@@ -128,7 +131,7 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
       setOffers(o.offers);
       setShare(s);
       setSeries(sr.series);
-      setCrew(t ? t.assignments.length : null);
+      setCrew(tm ? tm.assignments.length : null);
     } catch (e) {
       setError(describeCreatorError(e));
     } finally {
@@ -158,7 +161,7 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
       </div>
     );
   }
-  if (error || !space) return <HoldNotice icon="cloud-offline-outline">{error ?? "This space isn't loading"}</HoldNotice>;
+  if (error || !space) return <HoldNotice icon="cloud-offline-outline">{error ?? t("runner.hub.notLoading")}</HoldNotice>;
 
   const takesOffers = space.pricingMode !== "fixed" || space.acceptsOffers || space.positions.some((p) => p.saleMode);
   const floors = floorGroups(space);
@@ -208,7 +211,14 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
     const back = href(`/listings/${space.id}?tab=photo`);
     const side = item.startsWith("side-") ? decodeURIComponent(item.slice(5)) : null;
     const sideLabel = side ? drawingOf(space).views.find((v) => v.key === side)?.label ?? side : null;
-    const title = item === "colour" ? "Colours" : item === "one" ? "One photo" : sideLabel ? `${sideLabel} photo` : "Your product";
+    const title =
+      item === "colour"
+        ? t("runner.photo.colours")
+        : item === "one"
+          ? t("runner.photo.onePhoto")
+          : sideLabel
+            ? t("runner.hub.sidePhoto", { side: sideLabel })
+            : t("runner.screen.photo");
     return (
       <ScreenFrame space={space} title={title} back={back}>
         {item === "colour" ? <ColourEditor space={space} onChanged={changed} /> : null}
@@ -220,14 +230,14 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
 
   if (screen) {
     return (
-      <ScreenFrame space={space} title={SCREEN_TITLE[screen]}>
+      <ScreenFrame space={space} title={t(SCREEN_TITLE[screen])}>
         {screen === "events" ? (
           <div className={SCREEN_BODY}>
             <ListingSeries space={space} onChanged={changed} />
           </div>
         ) : null}
         {screen === "offers" ? (
-          <Panel title="Offers & bids" meta={`${offers.length}`}>
+          <Panel title={t("runner.screen.offers")} meta={`${offers.length}`}>
             <Offers space={space} offers={offers} onChanged={changed} />
           </Panel>
         ) : null}
@@ -239,7 +249,7 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
         {screen === "photo" ? <ProductHub space={space} /> : null}
         {screen === "ground" ? <ListingGround space={space} onChanged={changed} /> : null}
         {screen === "deliveries" ? (
-          <Panel title="Deliveries">
+          <Panel title={t("runner.screen.deliveries")}>
             <div className={SCREEN_BODY}>
               <Work space={space} onChanged={changed} />
             </div>
@@ -275,10 +285,10 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
       <BackHeader title={space.serviceName || space.title} backHref={href("/listings")} right={<ShareButton share={share} />} />
 
       {space.status === "delisted" ? (
-        <HoldNotice icon="eye-off-outline">This space was taken down after a review. It isn&apos;t public and takes no new sponsors.</HoldNotice>
+        <HoldNotice icon="eye-off-outline">{t("runner.hub.delisted")}</HoldNotice>
       ) : space.status === "closed" ? (
         <HoldNotice icon="lock-closed-outline" tone="calm">
-          This space is closed. Unsold spots stay unsold.
+          {t("runner.hub.closed")}
         </HoldNotice>
       ) : null}
 
@@ -288,7 +298,7 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
 
       <ul className="flex flex-col gap-2">
         {shown.events ? (
-          <HubCard screen="events" space={space} icon="calendar-outline" value={events} unit={events === 1 ? "event" : "events"} />
+          <HubCard screen="events" space={space} icon="calendar-outline" value={events} unit={t("runner.hub.events", { count: events })} />
         ) : null}
         {shown.offers ? (
           <HubCard
@@ -298,14 +308,14 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
             to={role === "rep" ? undefined : `/offers?listing=${encodeURIComponent(space.id)}&from=listing`}
             icon="pricetags-outline"
             value={waiting}
-            unit={waiting ? "waiting on you" : offers.length ? `${offers.length} in total` : "none yet"}
+            unit={waiting ? t("runner.hub.waiting") : offers.length ? t("runner.hub.inTotal", { count: offers.length }) : t("runner.hub.noneYet")}
             attention={waiting > 0}
           />
         ) : null}
         {shown.floors ? (
-          <HubCard screen="floors" space={space} icon="cash-outline" value={floorsSet} unit={`of ${floors.length} set`} />
+          <HubCard screen="floors" space={space} icon="cash-outline" value={floorsSet} unit={t("runner.hub.ofSet", { count: floors.length })} />
         ) : null}
-        <HubCard screen="spots" space={space} icon="grid-outline" value={`${space.totals.sold} of ${space.totals.positions}`} unit="sold" />
+        <HubCard screen="spots" space={space} icon="grid-outline" value={t("runner.xOfY", { n: space.totals.sold, total: space.totals.positions })} unit={t("runner.hub.sold")} />
         {shown.photo ? (
           <HubCard
             screen="photo"
@@ -314,24 +324,24 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
             value={
               space.photo
                 ? space.photo.ready
-                  ? "Photo"
-                  : `${placedSquares} of ${space.positions.length}`
+                  ? t("runner.hub.photo")
+                  : t("runner.xOfY", { n: placedSquares, total: space.positions.length })
                 : sidesLive > 0
-                  ? `${sidesLive} ${sidesLive === 1 ? "side" : "sides"}`
+                  ? t("runner.hub.sides", { count: sidesLive })
                   : space.productLook
-                    ? "Colours"
+                    ? t("runner.photo.colours")
                     : "–"
             }
             unit={
               space.photo
                 ? space.photo.ready
-                  ? "on your page"
-                  : "spots placed"
+                  ? t("runner.hub.onYourPage")
+                  : t("runner.hub.spotsPlaced")
                 : sidesLive > 0
-                  ? "photographed"
+                  ? t("runner.hub.photographed")
                   : space.productLook
-                    ? "on the drawing"
-                    : "colours or photos"
+                    ? t("runner.hub.onTheDrawing")
+                    : t("runner.hub.coloursOrPhotos")
             }
           />
         ) : null}
@@ -341,7 +351,7 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
             space={space}
             icon="color-palette-outline"
             value={labelOf(space.pageGround ?? null)}
-            unit={space.pageGroundOwn ? "this listing's own" : "your default"}
+            unit={space.pageGroundOwn ? t("runner.hub.listingOwn") : t("runner.hub.yourDefault")}
           />
         ) : null}
         {shown.deliveries ? (
@@ -350,18 +360,18 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
             space={space}
             icon="checkbox-outline"
             value={artwork + toDeliver}
-            unit={artwork ? `to do · ${artwork} artwork` : "to do"}
+            unit={artwork ? t("runner.hub.toDoArtwork", { count: artwork }) : t("runner.hub.toDo")}
             attention={artwork + toDeliver > 0}
           />
         ) : null}
         {shown.updates ? (
-          <HubCard screen="updates" space={space} icon="megaphone-outline" value={space.updates.length} unit="posted" />
+          <HubCard screen="updates" space={space} icon="megaphone-outline" value={space.updates.length} unit={t("runner.hub.posted")} />
         ) : null}
         {shown.content ? (
-          <HubCard screen="content" space={space} icon="chatbubble-ellipses-outline" value={leads.length} unit={leads.length === 1 ? "brand to offer content" : "brands to offer content"} />
+          <HubCard screen="content" space={space} icon="chatbubble-ellipses-outline" value={leads.length} unit={t("runner.hub.brands", { count: leads.length })} />
         ) : null}
         {shown.team ? (
-          <HubCard screen="team" space={space} icon="people-outline" value={crew ?? "–"} unit={crew === 1 ? "person" : "people"} />
+          <HubCard screen="team" space={space} icon="people-outline" value={crew ?? "–"} unit={t("runner.hub.people", { count: crew ?? 0 })} />
         ) : null}
         {shown.together ? (
           <HubCard
@@ -369,7 +379,13 @@ export function ListingRunner({ spaceId, tab, item }: { spaceId: string; tab?: s
             space={space}
             icon="people-outline"
             value={space.crew ? space.crew.name : "–"}
-            unit={space.crew ? (space.crew.ready ? `${space.crew.members.length} creators` : "waiting for a yes") : "sell with other creators"}
+            unit={
+              space.crew
+                ? space.crew.ready
+                  ? t("runner.hub.creators", { count: space.crew.members.length })
+                  : t("runner.hub.waitingYes")
+                : t("runner.hub.sellWithOthers")
+            }
             attention={Boolean(space.crew && !space.crew.ready)}
           />
         ) : null}
@@ -402,16 +418,17 @@ function HubCard({
   unit: string;
   attention?: boolean;
 }) {
+  const t = useT();
   const href = useHref();
   return (
     <li>
       <SheetRow
         href={href(to ?? `/listings/${space.id}?tab=${screen}`)}
         icon={icon}
-        title={SCREEN_TITLE[screen]}
+        title={t(SCREEN_TITLE[screen])}
         meta={
           <span className={attention ? "text-amber" : undefined}>
-            {value === "–" ? unit : typeof value === "string" && !/\d/.test(value) ? `${value} · ${unit}` : <>{value} {unit}</>}
+            {value === "–" ? unit : typeof value === "string" && !/\p{Nd}/u.test(value) ? `${value} · ${unit}` : <>{value} {unit}</>}
           </span>
         }
         attention={attention}
@@ -432,11 +449,12 @@ function sendShare(share: { url: string; text: string }) {
 
 /** The header's share icon, as the app's creator header carries it. */
 function ShareButton({ share }: { share: { url: string; text: string } | null }) {
+  const t = useT();
   if (!share) return null;
   return (
     <button
       type="button"
-      aria-label="Share progress"
+      aria-label={t("runner.share.progress")}
       onClick={() => sendShare(share)}
       className="flex h-9 w-9 items-center justify-center rounded-[18px] text-white transition-colors hover:bg-white/10"
     >
@@ -447,12 +465,13 @@ function ShareButton({ share }: { share: { url: string; text: string } | null })
 
 /** "Share progress" (the app's TravelCta) and the link under it, copied on a tap. */
 function LinkCard({ share }: { share: { url: string; text: string } | null }) {
+  const t = useT();
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!copied) return;
-    const t = setTimeout(() => setCopied(false), 2000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setCopied(false), 2000);
+    return () => clearTimeout(timer);
   }, [copied]);
 
   function copy() {
@@ -465,19 +484,19 @@ function LinkCard({ share }: { share: { url: string; text: string } | null }) {
     <div className="flex flex-col gap-2">
       <button type="button" className={ctaPrimary} disabled={!share} onClick={() => share && sendShare(share)}>
         <Ion name="share-outline" size={20} />
-        Share progress
+        {t("runner.share.progress")}
       </button>
       {share ? (
         <button type="button" onClick={copy} className="flex max-w-full items-center gap-1.5 self-center py-1 text-white/55 hover:text-white">
           <Ion name={copied ? "checkmark" : "link-outline"} size={14} />
           <span className="truncate text-[13px] font-strong text-white/[0.62]">
-            {copied ? "Link copied." : share.url.replace(/^https:\/\//, "").replace(/\?.*$/, "")}
+            {copied ? t("runner.share.copied") : share.url.replace(/^https:\/\//, "").replace(/\?.*$/, "")}
           </span>
           {copied ? null : <Ion name="copy-outline" size={14} />}
         </button>
       ) : null}
       <p className="text-center text-[12px] leading-[17px] text-white/55">
-        The link card on X shows your board as it is right now. We never post for you.
+        {t("runner.share.note")}
       </p>
     </div>
   );
@@ -519,6 +538,7 @@ function ScreenFrame({
  * render alone. Saving still saves; looking no longer costs anything.
  */
 function ListingGround({ space, onChanged }: { space: SpaceView; onChanged: () => void }) {
+  const t = useT();
   const [fallback, setFallback] = useState<string | null | undefined>(undefined);
   const [picked, setPicked] = useState<string | null>(space.pageGroundOwn ?? null);
   const [saved, setSaved] = useState(0);
@@ -534,10 +554,7 @@ function ListingGround({ space, onChanged }: { space: SpaceView; onChanged: () =
   return (
     <div className={`${SCREEN_BODY} flex flex-col gap-4 xl:flex-row xl:items-start`}>
       <div className="flex min-w-0 flex-1 flex-col gap-3">
-        <Body dim>
-          What this listing&rsquo;s page stands on. &ldquo;Same as my default&rdquo; follows your listings&rsquo; default in Settings ›
-          Your pages.
-        </Body>
+        <Body dim>{t("runner.ground.intro")}</Body>
         <GroundPicker
           key={space.pageGroundOwn ?? "default"}
           value={space.pageGroundOwn ?? null}
@@ -583,7 +600,7 @@ function rungsOf(positions: readonly PositionView[]): Rung[] {
 
 function priceText(p: PositionView): string {
   if (p.priceCents !== null) return usd(p.priceCents);
-  return p.offers?.mode === "bids" ? "Bids" : "Offers";
+  return p.offers?.mode === "bids" ? tl("runner.price.bids") : tl("runner.price.offers");
 }
 
 /* ── Spots ────────────────────────────────────────────────────────── */
@@ -597,11 +614,12 @@ function priceText(p: PositionView): string {
  * of them fit a screen.
  */
 function Spots({ space }: { space: SpaceView }) {
+  const t = useT();
   const rungs = rungsOf(space.positions);
   return (
     <section className="flex flex-col gap-2">
-      <SectionLabel right={<span className="text-[12.5px] font-strong normal-case tracking-normal text-white/55">{`${space.totals.sold} of ${space.totals.positions} sold`}</span>}>
-        {space.kind === "service" ? "Slots" : "Spots"}
+      <SectionLabel right={<span className="text-[12.5px] font-strong normal-case tracking-normal text-white/55">{t("runner.spots.soldOf", { sold: space.totals.sold, total: space.totals.positions })}</span>}>
+        {space.kind === "service" ? t("runner.spots.slots") : t("runner.screen.spots")}
       </SectionLabel>
       {/* Three to a row, not four: the screen is 720 wide, and a fourth column
           would cut "Front face, large" in half. */}
@@ -617,7 +635,17 @@ function Spots({ space }: { space: SpaceView }) {
               <p className="min-w-0 truncate text-[13.5px] font-bold text-white">{r.title}</p>
               <p className="text-[13.5px] font-bold tabular-nums text-white">{priceText(r.positions[0])}</p>
               <Tag
-                label={r.positions.length > 1 ? `${sold} of ${r.positions.length} sold${held ? ` · ${held} being paid` : ""}` : all ? "Sold" : held ? "Being paid" : "Open"}
+                label={
+                  r.positions.length > 1
+                    ? held
+                      ? t("runner.spots.soldOfHeld", { sold, total: r.positions.length, held })
+                      : t("runner.spots.soldOf", { sold, total: r.positions.length })
+                    : all
+                      ? t("runner.spots.sold")
+                      : held
+                        ? t("runner.spots.beingPaid")
+                        : t("runner.spots.open")
+                }
                 tone={all ? "good" : held ? "caution" : "calm"}
               />
               {sponsors.length ? <p className="min-w-0 truncate text-[12px] leading-4 text-white/55">{sponsors.join(", ")}</p> : null}
@@ -646,7 +674,7 @@ function floorGroups(space: SpaceView): FloorGroup[] {
   if (space.spaceOffers?.minOfferUsdc !== undefined) {
     out.push({
       key: "listing",
-      title: "Every slot",
+      title: tl("runner.floors.everySlot"),
       current: space.spaceOffers.minOfferUsdc ?? null,
       save: (cents) => setListingFloor(space.id, cents),
     });
@@ -729,6 +757,7 @@ function floorsKey(groups: readonly FloorGroup[]): string {
  * become four short groups, and nothing is cut.
  */
 function Floors({ groups, onChanged, views = [] }: { groups: FloorGroup[]; onChanged: () => void; views?: readonly { key: string; label: string }[] }) {
+  const t = useT();
   const [values, setValues] = useState<FloorValues>(() => typedNow(groups));
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -760,7 +789,7 @@ function Floors({ groups, onChanged, views = [] }: { groups: FloorGroup[]; onCha
   }
 
   return (
-    <Panel title="Floor prices" meta="Private">
+    <Panel title={t("runner.screen.floors")} meta={t("runner.floors.private")}>
       <div className={`flex flex-col gap-3 pb-1 ${SCREEN_BODY}`}>
         {floorSections(groups, views).map((section) => (
           <section key={section.key || "all"} className="flex flex-col gap-2">
@@ -774,10 +803,10 @@ function Floors({ groups, onChanged, views = [] }: { groups: FloorGroup[]; onCha
                       <p className="min-w-0 truncate text-[13.5px] font-bold text-white">{g.title}</p>
                       {/* What the server holds now, so a typed figure that is not saved yet reads as a change. */}
                       <p className="text-[12px] leading-4 text-white/55">
-                        {current !== null ? `Now ${usd(current)}` : "No floor"}
+                        {current !== null ? t("runner.floors.now", { amount: usd(current) }) : t("runner.floors.none")}
                       </p>
                     </div>
-                    <Money value={values[g.key] ?? ""} onChange={(text) => set(g.key, text)} placeholder={`Min ${usd(2_500)}`} />
+                    <Money value={values[g.key] ?? ""} onChange={(text) => set(g.key, text)} placeholder={t("runner.floors.min", { amount: usd(2_500) })} />
                   </li>
                 );
               })}
@@ -787,14 +816,14 @@ function Floors({ groups, onChanged, views = [] }: { groups: FloorGroup[]; onCha
       </div>
       <div className="flex flex-wrap items-center gap-2 border-t border-white/[0.08] pt-3">
         <Chip
-          label={busy ? "Saving…" : changed.length ? `Save ${changed.length === 1 ? "1 change" : `${changed.length} changes`}` : "Save"}
+          label={busy ? t("common.saving") : changed.length ? t("runner.floors.saveChanges", { count: changed.length }) : t("common.save")}
           selected
           disabled={busy || bad || changed.length === 0}
           onClick={() => void saveAll()}
         />
-        <Chip label="Set the same floor for all" disabled={busy || groups.length < 2 || first === ""} onClick={() => fill(first)} />
-        <Chip label="Clear all" disabled={busy || groups.every((g) => (values[g.key] ?? "") === "")} onClick={() => fill("")} />
-        {bad ? <span className="text-[12.5px] font-strong text-amber">One of these is not an amount.</span> : null}
+        <Chip label={t("runner.floors.sameForAll")} disabled={busy || groups.length < 2 || first === ""} onClick={() => fill(first)} />
+        <Chip label={t("runner.floors.clearAll")} disabled={busy || groups.every((g) => (values[g.key] ?? "") === "")} onClick={() => fill("")} />
+        {bad ? <span className="text-[12.5px] font-strong text-amber">{t("runner.floors.bad")}</span> : null}
       </div>
       {notice ? <Notice>{notice}</Notice> : null}
     </Panel>
@@ -804,6 +833,7 @@ function Floors({ groups, onChanged, views = [] }: { groups: FloorGroup[]; onCha
 /* ── Updates ──────────────────────────────────────────────────────── */
 
 function Updates({ space, onChanged }: { space: SpaceView; onChanged: () => void }) {
+  const t = useT();
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -811,13 +841,13 @@ function Updates({ space, onChanged }: { space: SpaceView; onChanged: () => void
 
   return (
     <section className="flex flex-col gap-2.5">
-      <SectionLabel>Post an update</SectionLabel>
+      <SectionLabel>{t("runner.updates.post")}</SectionLabel>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <div className="min-w-0 flex-1">
-          <Text value={body} onChange={setBody} maxLength={280} placeholder="The mini strip is printed and on the case" />
+          <Text value={body} onChange={setBody} maxLength={280} placeholder={t("runner.updates.placeholder")} />
         </div>
         <Chip
-          label={busy ? "Posting…" : "Post"}
+          label={busy ? t("runner.updates.posting") : t("runner.updates.postButton")}
           icon="send-outline"
           selected
           disabled={busy || !body.trim()}
@@ -836,7 +866,7 @@ function Updates({ space, onChanged }: { space: SpaceView; onChanged: () => void
       </div>
       {notice ? <Notice>{notice}</Notice> : null}
 
-      <SectionLabel>Updates</SectionLabel>
+      <SectionLabel>{t("runner.screen.updates")}</SectionLabel>
       {space.updates.length > 0 ? (
         // The app's UpdatesList: one Card per update, the words, then when and which spot, and Delete.
         <ul className="flex flex-col gap-2.5">
@@ -858,7 +888,7 @@ function Updates({ space, onChanged }: { space: SpaceView; onChanged: () => void
                         .catch((e) => setNotice(describeRunError(e)));
                     }}
                   >
-                    Delete update
+                    {t("runner.updates.delete")}
                   </button>
                 </div>
               </Card>
@@ -866,7 +896,7 @@ function Updates({ space, onChanged }: { space: SpaceView; onChanged: () => void
           ))}
         </ul>
       ) : (
-        <p className="text-[12px] leading-[17px] text-white/55">Photos from the road go here. Pinned to a sold spot, a photo is its delivery proof.</p>
+        <p className="text-[12px] leading-[17px] text-white/55">{t("runner.updates.empty")}</p>
       )}
     </section>
   );
