@@ -34,6 +34,7 @@
 "use client";
 
 import { API_BASE } from "@/lib/ad-space/config";
+import { t } from "@/lib/app/i18n";
 
 import { accessToken } from "./session";
 import type { PayoutAddressView, PayoutChain, PayoutChallenge, XAccountStatus } from "./types";
@@ -167,27 +168,27 @@ export function completeXLink(ticket: string): Promise<{ result: string; account
  * are about, which is `describeProblem` in ./problems.
  */
 export function describeCreatorError(e: unknown): string {
-  if (!(e instanceof CreatorApiError)) return "Something went wrong. Try again.";
+  if (!(e instanceof CreatorApiError)) return t("common.somethingWentWrong");
   switch (e.code) {
     case "network":
-      return "We could not reach HOLD. Check your connection and try again.";
+      return t("shell.error.network");
     case "UNAUTHORIZED":
     case "ACCOUNT_DELETED":
-      return "Your sign-in has expired. Sign in again and pick up where you left off.";
+      return t("shell.error.signInExpired");
     case "rate_limited":
     case "RATE_LIMIT_EXCEEDED":
-      return "That is more tries than we allow in a minute. Wait a moment and try again.";
+      return t("shell.error.rateLimited");
     case "payout_address_invalid":
-      return "That is not an address we can pay. Copy it again from your wallet.";
+      return t("shell.error.payoutAddressInvalid");
     case "payout_chain_unknown":
-      return "That network is not one HiSpace pays on.";
+      return t("shell.error.payoutChainUnknown");
     case "payout_nonce_invalid":
-      return "That request timed out or was already used. Start again and sign the new message.";
+      return t("shell.error.payoutNonceInvalid");
     case "payout_signature_invalid":
-      return "That signature was not this address's. Make sure the wallet you signed with is the one you connected, and try again.";
+      return t("shell.error.payoutSignatureInvalid");
     case "x_fronts_a_live_space":
-      return "This X account is on a live listing, so it stays connected until that listing closes. Sponsors paid for that handle.";
+      return t("shell.error.xFrontsALiveSpace");
     default:
-      return "Something went wrong. Try again.";
+      return t("common.somethingWentWrong");
   }
 }

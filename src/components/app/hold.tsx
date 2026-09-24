@@ -32,6 +32,8 @@ import Link from "next/link";
 import { useEffect, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
+import { useT } from "@/lib/app/i18n/react";
+
 import { useHeaderSlot } from "./header-slot";
 import { Ion, type IonName } from "./ion";
 
@@ -90,10 +92,11 @@ export interface MenuRowProps {
 
 /** src/ui/MenuRow: one trailing element wins, right > badge > value > chevron. */
 export function MenuRow({ icon, label, sub, value, badge, right, chevron, href, external, reload, onClick, disabled, attention }: MenuRowProps) {
+  const t = useT();
   const trailing = right ? (
     right
   ) : badge && badge > 0 ? (
-    <span className="inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-[11px] border border-white/[0.18] bg-white/10 px-[7px] text-[12px] font-bold text-white" aria-label={`${badge} pending`}>
+    <span className="inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-[11px] border border-white/[0.18] bg-white/10 px-[7px] text-[12px] font-bold text-white" aria-label={t("shell.hold.badgePending", { count: badge })}>
       {badge}
     </span>
   ) : value !== undefined && value !== null ? (
@@ -225,17 +228,18 @@ export function BackHeader({
   backHref?: string;
   right?: ReactNode;
 }) {
+  const t = useT();
   const slot = useHeaderSlot();
   const claim = slot?.claim;
   useEffect(() => (claim ? claim() : undefined), [claim]);
 
   const btn = "flex h-9 w-9 shrink-0 items-center justify-center rounded-[18px] text-white transition-colors hover:bg-white/10";
   const back = backHref ? (
-    <Link href={backHref} aria-label="Back" className={btn}>
+    <Link href={backHref} aria-label={t("common.back")} className={btn}>
       <Ion name="chevron-back" size={22} />
     </Link>
   ) : onBack ? (
-    <button type="button" onClick={onBack} aria-label="Back" className={btn}>
+    <button type="button" onClick={onBack} aria-label={t("common.back")} className={btn}>
       <Ion name="chevron-back" size={22} />
     </button>
   ) : null;

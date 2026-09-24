@@ -25,6 +25,8 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
+import { useT } from "@/lib/app/i18n/react";
+
 import { Ion } from "./ion";
 
 const EASE = "cubic-bezier(0.32,0.72,0,1)";
@@ -74,6 +76,7 @@ export function Modal({
   /** The accessible name when there is no title. */
   label?: string;
 }) {
+  const t = useT();
   const id = useId();
   const titleId = `${id}-title`;
   const panel = useRef<HTMLDivElement>(null);
@@ -218,7 +221,7 @@ export function Modal({
           type="button"
           onClick={close}
           disabled={busy}
-          aria-label="Close"
+          aria-label={t("common.close")}
           className={`absolute right-3 ${full ? "top-3" : "top-4 sm:top-3.5"} flex h-9 w-9 items-center justify-center rounded-[18px] bg-white/[0.06] text-white/75 transition-colors hover:bg-white/[0.12] hover:text-white disabled:opacity-40 ${full ? "" : "max-sm:hidden"}`}
         >
           <Ion name="close" size={19} />
@@ -235,7 +238,7 @@ export function Modal({
       <button
         type="button"
         tabIndex={-1}
-        aria-label="Close"
+        aria-label={t("common.close")}
         onClick={close}
         className={`absolute inset-0 cursor-default bg-[#02070c]/60 backdrop-blur-[3px] transition-opacity duration-300 ${shown ? "opacity-100" : "opacity-0"}`}
       />

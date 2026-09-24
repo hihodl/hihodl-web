@@ -8,6 +8,8 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
+import type { MessageKey } from "@/lib/app/i18n";
+import { useT } from "@/lib/app/i18n/react";
 import { crossesKeyPage } from "@/lib/wallet/csp";
 
 import { IconListings, IconOffers, IconPlus, IconSearch } from "./icons";
@@ -22,7 +24,16 @@ export interface PaletteEntry {
   icon?: ReactNode;
 }
 
+/** A group's heading: HOLD is the brand and stays as it is; the rest are words. */
+const GROUP_TITLE: Record<PaletteEntry["group"], MessageKey | null> = {
+  HOLD: null,
+  Spaces: "shell.nav.spaces",
+  Listings: "shell.palette.group.listings",
+  Offers: "shell.palette.group.offers",
+};
+
 export function CommandPalette({ entries, onClose }: { entries: readonly PaletteEntry[]; onClose: () => void }) {
+  const t = useT();
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [cursor, setCursor] = useState(0);
@@ -66,10 +77,10 @@ export function CommandPalette({ entries, onClose }: { entries: readonly Palette
 
   return (
     <div className="fixed inset-0 z-[70] flex items-start justify-center px-4 pt-[12vh]">
-      <button aria-label="Close search" className="absolute inset-0 bg-[#030b13]/70 backdrop-blur-sm" onClick={onClose} />
+      <button aria-label={t("shell.palette.closeSearch")} className="absolute inset-0 bg-[#030b13]/70 backdrop-blur-sm" onClick={onClose} />
       <div
         role="dialog"
-        aria-label="Search"
+        aria-label={t("common.search")}
         className="relative z-10 w-full max-w-[560px] overflow-hidden rounded-[18px] border border-white/15 bg-[linear-gradient(155deg,rgba(8,20,32,0.98),rgba(5,13,22,0.98))] shadow-[0_32px_64px_rgba(0,0,0,0.6)]"
       >
         <div className="flex items-center gap-3 border-b border-white/10 px-4 py-3.5">
@@ -90,8 +101,8 @@ export function CommandPalette({ entries, onClose }: { entries: readonly Palette
                 go(flat[cursor]);
               }
             }}
-            placeholder="Search listings, offers, pages"
-            aria-label="Search"
+            placeholder={t("shell.palette.placeholder")}
+            aria-label={t("common.search")}
             className="min-w-0 flex-1 bg-transparent text-small text-text placeholder:text-[#6B8A99] outline-none"
           />
           <kbd className="hidden rounded-[4px] border border-white/15 px-1.5 py-0.5 text-[10px] text-[#9FB7C2] sm:block">ESC</kbd>
@@ -99,11 +110,11 @@ export function CommandPalette({ entries, onClose }: { entries: readonly Palette
 
         <div ref={list} className="max-h-[calc(var(--app-vh,100dvh)*0.6)] overflow-y-auto p-2">
           {flat.length === 0 ? (
-            <p className="px-4 py-8 text-center text-small text-[#9FB7C2]">No match for “{query}”</p>
+            <p className="px-4 py-8 text-center text-small text-[#9FB7C2]">{t("shell.palette.noMatch", { query })}</p>
           ) : (
             groups.map((g) => (
               <div key={g.group} className="mb-2">
-                <p className="mb-1 px-3 text-[10px] font-medium uppercase tracking-wider text-[#6B8A99]">{g.group}</p>
+                <p className="mb-1 px-3 text-[10px] font-medium uppercase tracking-wider text-[#6B8A99]">{GROUP_TITLE[g.group] ? t(GROUP_TITLE[g.group] as MessageKey) : g.group}</p>
                 {g.items.map((e) => {
                   const i = flat.indexOf(e);
                   return (
@@ -132,9 +143,9 @@ export function CommandPalette({ entries, onClose }: { entries: readonly Palette
         </div>
 
         <div className="flex items-center gap-3 border-t border-white/[0.08] px-4 py-2 text-[10px] text-[#6B8A99]">
-          <span>↑↓ move</span>
-          <span>↵ open</span>
-          <span>ESC close</span>
+          <span>{t("shell.palette.hintMove")}</span>
+          <span>{t("shell.palette.hintOpen")}</span>
+          <span>{t("shell.palette.hintClose")}</span>
         </div>
       </div>
     </div>

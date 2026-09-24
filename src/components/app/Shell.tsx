@@ -44,7 +44,8 @@ import { creatorText, isSeatCode, pendingSeat, type TeamMember, type WorkListing
 import { keepPendingJoin } from "@/lib/creator/crew";
 import type { XAccountStatus } from "@/lib/creator/types";
 import { useAgency, type Agency } from "@/lib/app/agency";
-import { useRatesRefresh, useServerPrefs } from "@/lib/app/i18n/react";
+import type { MessageKey } from "@/lib/app/i18n";
+import { useLocale, useRatesRefresh, useServerPrefs, useT } from "@/lib/app/i18n/react";
 import { asDisplayMode, DEFAULT_DISPLAY_MODE, type DisplayMode } from "@/lib/app/display-mode";
 import { chosenUsername } from "@/lib/app/me";
 import { useDoor } from "@/lib/app/onboarding";
@@ -67,6 +68,8 @@ import {
   itemsFor,
   LEVELS,
   levelOf,
+  navGroupTitle,
+  navLabel,
   openToAll,
   productPrefix,
   visible,
@@ -343,12 +346,13 @@ function SignedIn({ session, children }: { session: Session; children: ReactNode
  * somebody to throw away a working sign-in over a section being down.
  */
 function SpacesUnreachable({ error }: { error: unknown }) {
+  const t = useT();
   return (
     <div className={`${glass} flex w-full max-w-[440px] flex-col gap-4 p-6`}>
       <Wordmark className="h-5 w-auto text-text" />
       <Alert>{describeCreatorError(error)}</Alert>
       <button type="button" className={`${btnGhost} self-start`} onClick={() => window.location.reload()}>
-        Try again
+        {t("common.tryAgain")}
       </button>
     </div>
   );
@@ -365,6 +369,7 @@ function Frame({ children }: { children: ReactNode }) {
   const rel = productRel(pathname, base);
   const level = levelOf(rel);
   const active = activeKey(rel);
+  const t = useT();
 
   const [collapsed, setCollapsed] = useState(false);
   const [displayMode, setDisplayMode] = useState<DisplayMode>(DEFAULT_DISPLAY_MODE);
@@ -508,7 +513,7 @@ function Frame({ children }: { children: ReactNode }) {
 
         {drawer ? (
           <div className="fixed inset-0 z-[65] lg:hidden">
-            <button aria-label="Close menu" className="absolute inset-0 bg-[#030b13]/70 backdrop-blur-sm" onClick={() => setDrawer(false)} />
+            <button aria-label={t("shell.sidebar.closeMenu")} className="absolute inset-0 bg-[#030b13]/70 backdrop-blur-sm" onClick={() => setDrawer(false)} />
             <div className="absolute inset-y-0 left-0 w-[min(86vw,300px)] p-3">
               <Sidebar collapsed={false} level={level} active={active} badges={badges} onClose={() => setDrawer(false)} />
             </div>
@@ -589,24 +594,25 @@ function Sidebar({
   /** Absent in the phone drawer, where the top bar still carries Search. */
   onSearch?: () => void;
 }) {
+  const t = useT();
   const { role, teamPage, walletPage } = useShell();
   const productHref = useProductHref();
   const wallet = walletPage === true;
   const nav = LEVELS[level];
   const groups = nav.groups
-    .map((g) => ({ ...g, items: g.items.filter((i) => visible(i, role, teamPage, wallet)) }))
+    .map((g) => ({ title: navGroupTitle(g), items: g.items.filter((i) => visible(i, role, teamPage, wallet)) }))
     .filter((g) => g.items.length > 0);
   const foot = nav.foot.filter((i) => visible(i, role, teamPage, wallet));
   const home = productHref();
 
   const toggle = onClose ? (
-    <button type="button" aria-label="Close menu" onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-[8px] text-[#9FB7C2] hover:bg-white/10 hover:text-text">
+    <button type="button" aria-label={t("shell.sidebar.closeMenu")} onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-[8px] text-[#9FB7C2] hover:bg-white/10 hover:text-text">
       <IconClose />
     </button>
   ) : onToggle ? (
     <button
       type="button"
-      aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+      aria-label={collapsed ? t("shell.sidebar.expand") : t("shell.sidebar.collapse")}
       onClick={onToggle}
       className="flex h-8 w-8 items-center justify-center rounded-[8px] text-[#9FB7C2] hover:bg-white/10 hover:text-text"
     >
@@ -622,7 +628,7 @@ function Sidebar({
     >
       <div className={`flex w-full items-center ${collapsed ? "flex-col gap-3" : "justify-between gap-2 px-1.5 pb-3 pt-1"}`}>
         {level === "main" ? (
-          <Link href={home} aria-label="Dashboard" className="flex min-w-0 items-center">
+          <Link href={home} aria-label={t("shell.sidebar.dashboard")} className="flex min-w-0 items-center">
             {collapsed ? (
               <span className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-white/10 bg-white/[0.06] text-[13px] font-semibold text-amber">H</span>
             ) : (
@@ -633,8 +639,8 @@ function Sidebar({
           // A product's column: its name, and the way back to HOLD's.
           <Link
             href={home}
-            aria-label="Back to HOLD"
-            title="Back to HOLD"
+            aria-label={t("shell.sidebar.backToHold")}
+            title={t("shell.sidebar.backToHold")}
             className={
               collapsed
                 ? "flex h-9 w-9 items-center justify-center rounded-[10px] border border-white/10 bg-white/[0.06] text-[#CFE3EC] hover:bg-white/10"
@@ -642,7 +648,7 @@ function Sidebar({
             }
           >
             <IconArrowLeft />
-            {collapsed ? null : <span className="truncate">Back</span>}
+            {collapsed ? null : <span className="truncate">{t("common.back")}</span>}
           </Link>
         )}
         {toggle}
@@ -652,7 +658,7 @@ function Sidebar({
         <div className="mb-3 flex items-center gap-2 border-b border-white/10 px-2.5 pb-3">
           <Wordmark className="h-3 w-auto text-text" />
           <span className="h-3.5 w-px bg-white/20" aria-hidden />
-          <span className="text-small font-medium text-amber">Spaces</span>
+          <span className="text-small font-medium text-amber">{t("shell.nav.spaces")}</span>
         </div>
       ) : null}
 
@@ -663,8 +669,8 @@ function Sidebar({
         <button
           type="button"
           onClick={onSearch}
-          aria-label="Search"
-          title="Search (⌘K)"
+          aria-label={t("common.search")}
+          title={t("shell.sidebar.searchShortcut")}
           className={
             collapsed
               ? "mb-1 flex h-9 w-9 items-center justify-center rounded-[10px] border border-white/10 bg-white/[0.05] text-[#CFE3EC] transition-colors hover:bg-white/10 hover:text-text"
@@ -674,14 +680,14 @@ function Sidebar({
           <IconSearch className="h-3.5 w-3.5 shrink-0" />
           {collapsed ? null : (
             <>
-              <span>Search</span>
+              <span>{t("common.search")}</span>
               <kbd className="ml-auto rounded-[4px] border border-white/15 px-1 py-0.5 text-[9px]">⌘K</kbd>
             </>
           )}
         </button>
       ) : null}
 
-      <nav aria-label={level === "main" ? "HOLD" : "Spaces"} className={`flex w-full flex-1 flex-col overflow-y-auto ${collapsed ? "items-center gap-1 pt-2" : "gap-4"}`}>
+      <nav aria-label={level === "main" ? "HOLD" : t("shell.nav.spaces")} className={`flex w-full flex-1 flex-col overflow-y-auto ${collapsed ? "items-center gap-1 pt-2" : "gap-4"}`}>
         {groups.map((g) => (
           <div key={g.title ?? "main"} className={collapsed ? "flex flex-col items-center gap-1" : "flex flex-col gap-1"}>
             {collapsed ? (
@@ -712,8 +718,10 @@ function Sidebar({
 }
 
 function NavLink({ item, active, badge, collapsed, hard }: { item: NavItem; active: boolean; badge?: number; collapsed: boolean; hard: boolean }) {
+  useT();
   const base = useSpacesBase();
   const Icon = item.icon;
+  const label = navLabel(item);
   const href = hrefFor(item, base);
   const pathname = usePathname();
   const full = hard || crossesKeyPage(href, pathname ?? undefined);
@@ -738,7 +746,7 @@ function NavLink({ item, active, badge, collapsed, hard }: { item: NavItem; acti
         <Icon />
         {badge ? <span className="absolute right-1 top-1 h-2 w-2 rounded-[4px] bg-amber" aria-hidden /> : null}
       </>,
-      item.label,
+      label,
     );
   }
   return go(
@@ -751,7 +759,7 @@ function NavLink({ item, active, badge, collapsed, hard }: { item: NavItem; acti
       <span className={active ? "text-amber" : "text-[#9FB7C2]"}>
         <Icon />
       </span>
-      <span className="min-w-0 flex-1 truncate">{item.label}</span>
+      <span className="min-w-0 flex-1 truncate">{label}</span>
       {badge ? (
         <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-[10px] bg-amber px-1.5 text-[11px] font-medium text-text-on-amber">
           {badge > 9 ? "9+" : badge}
@@ -761,7 +769,7 @@ function NavLink({ item, active, badge, collapsed, hard }: { item: NavItem; acti
   );
 }
 
-const ROLE_LABEL: Record<ShellRole, string> = { creator: "Creator", manager: "Manager", rep: "Rep" };
+const ROLE_LABEL: Record<ShellRole, MessageKey> = { creator: "shell.role.creator", manager: "shell.role.manager", rep: "shell.role.rep" };
 
 /**
  * The person, at the foot of the column.
@@ -780,20 +788,25 @@ const ROLE_LABEL: Record<ShellRole, string> = { creator: "Creator", manager: "Ma
  * person and nothing else.
  */
 function UserCard({ collapsed }: { collapsed: boolean }) {
+  const t = useT();
   const { session, x, role, seats, agency } = useShell();
   const me = useMe();
   const productHref = useProductHref();
   const linked = x?.linked ? x : null;
   const username = chosenUsername(me.data);
-  const name = me.data?.profile.displayName?.trim() || (username ? `@${username}` : linked ? `@${linked.handle}` : session.user.email ?? "Signed in");
+  const name = me.data?.profile.displayName?.trim() || (username ? `@${username}` : linked ? `@${linked.handle}` : session.user.email ?? t("shell.user.signedIn"));
   const seat = role !== "creator" ? seats.find((s) => s.status === "active" && s.role === role) : null;
-  const title = role === "creator" && agency.on ? "Creative Director" : ROLE_LABEL[role];
-  const sub = seat ? `${title} · ${creatorText(seat) ?? "a creator"}` : username && me.data?.profile.displayName ? `@${username}` : title;
+  const title = role === "creator" && agency.on ? t("shell.role.creativeDirector") : t(ROLE_LABEL[role]);
+  const sub = seat
+    ? t("shell.user.roleFor", { role: title, creator: creatorText(seat) ?? t("shell.user.aCreator") })
+    : username && me.data?.profile.displayName
+      ? `@${username}`
+      : title;
 
   if (collapsed) {
     return (
       <div className="flex flex-col items-center gap-1">
-        <Link href={productHref("/menu")} title={name} aria-label={`${name} — menu`}>
+        <Link href={productHref("/menu")} title={name} aria-label={t("shell.user.menuFor", { name })}>
           <UserAvatar size={36} fallbackName={name} />
         </Link>
         <HiPointsChip compact />
@@ -802,7 +815,7 @@ function UserCard({ collapsed }: { collapsed: boolean }) {
   }
   return (
     <div className="flex items-center gap-2.5 rounded-[12px] border border-white/10 bg-white/[0.04] p-2">
-      <Link href={productHref("/menu")} className="flex min-w-0 flex-1 items-center gap-2.5" title="Menu">
+      <Link href={productHref("/menu")} className="flex min-w-0 flex-1 items-center gap-2.5" title={t("shell.nav.menu")}>
         <UserAvatar size={36} fallbackName={name} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-small text-text">{name}</p>
@@ -849,6 +862,7 @@ function TopBar({
   onMenu: () => void;
   onSearch: () => void;
 }) {
+  const t = useT();
   const { role, session } = useShell();
   const me = useMe();
   const href = useHref();
@@ -881,34 +895,34 @@ function TopBar({
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <div ref={titleRef} className={screenHeader ? "flex min-w-0 flex-1 items-center" : "hidden"} />
           {screenHeader ? null : (
-            <button type="button" aria-label="Open menu" onClick={onMenu} className="flex min-w-0 items-center gap-2 rounded-[18px] pr-2">
+            <button type="button" aria-label={t("shell.topBar.openMenu")} onClick={onMenu} className="flex min-w-0 items-center gap-2 rounded-[18px] pr-2">
               <UserAvatar size={32} round fallbackName={session.user.email} />
-              <span className="truncate text-[14px] font-semibold text-white">{username ? `@${username}` : "Menu"}</span>
+              <span className="truncate text-[14px] font-semibold text-white">{username ? `@${username}` : t("shell.nav.menu")}</span>
             </button>
           )}
         </div>
         <div className="flex shrink-0 items-center gap-2.5 lg:gap-1.5">
           <div ref={rightRef} className="flex items-center gap-1.5 empty:hidden" />
-          <button type="button" onClick={onSearch} aria-label="Search" className={`${iconDisc} lg:hidden`}>
+          <button type="button" onClick={onSearch} aria-label={t("common.search")} className={`${iconDisc} lg:hidden`}>
             <IconSearch className="h-4 w-4" />
           </button>
-          <button type="button" onClick={onSearch} aria-label="Search" className={`${btnGhost} hidden lg:inline-flex`}>
+          <button type="button" onClick={onSearch} aria-label={t("common.search")} className={`${btnGhost} hidden lg:inline-flex`}>
             <IconSearch className="h-3.5 w-3.5" />
           </button>
           {level === "spaces" && role === "creator" ? (
             <Link
               href={href("/listings/new")}
-              aria-label="New listing"
+              aria-label={t("shell.title.newListing")}
               className={`${screenHeader ? "hidden sm:inline-flex" : "inline-flex"} h-[30px] items-center justify-center gap-1.5 whitespace-nowrap rounded-[15px] bg-amber px-2.5 text-tiny font-medium text-text-on-amber transition-colors hover:bg-amber-glow lg:h-9 lg:rounded-[10px] lg:px-3`}
             >
               <IconPlus className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">New listing</span>
+              <span className="hidden sm:inline">{t("shell.title.newListing")}</span>
             </Link>
           ) : null}
           {/* The app's Analytics disc: Spending Analytics (/analytics), what
               the app opens with its SPENDING_ANALYTICS flag on. */}
           {screenHeader ? null : (
-            <Link href={productHref("/analytics")} aria-label="Analytics" className={`${iconDisc} lg:hidden`}>
+            <Link href={productHref("/analytics")} aria-label={t("shell.nav.analytics")} className={`${iconDisc} lg:hidden`}>
               <IconInsights className="h-4 w-4" />
             </Link>
           )}
@@ -926,16 +940,20 @@ function usePaletteEntries(): PaletteEntry[] {
   const href = useHref();
   const base = useSpacesBase();
   const offers = useOffers(role === "creator");
+  const t = useT();
+  // The entries hold translated words, so they are rebuilt when the language changes.
+  const locale = useLocale();
 
   return useMemo(() => {
+    void locale;
     const out: PaletteEntry[] = [];
     const wallet = walletPage === true;
     for (const i of itemsFor("main", role, teamPage, wallet)) {
-      out.push({ id: `main-${i.key}`, group: "HOLD", label: i.label, href: hrefFor(i, base), keywords: i.keywords });
+      out.push({ id: `main-${i.key}`, group: "HOLD", label: navLabel(i), href: hrefFor(i, base), keywords: i.keywords });
     }
-    if (role === "creator") out.push({ id: "new", group: "Spaces", label: "New listing", href: href("/listings/new"), keywords: "create start" });
+    if (role === "creator") out.push({ id: "new", group: "Spaces", label: t("shell.title.newListing"), href: href("/listings/new"), keywords: "create start" });
     for (const i of itemsFor("spaces", role, teamPage, wallet)) {
-      out.push({ id: `spaces-${i.key}`, group: "Spaces", label: i.label, href: hrefFor(i, base), keywords: i.keywords });
+      out.push({ id: `spaces-${i.key}`, group: "Spaces", label: navLabel(i), href: hrefFor(i, base), keywords: i.keywords });
     }
     for (const l of listings) {
       out.push({
@@ -955,13 +973,13 @@ function usePaletteEntries(): PaletteEntry[] {
         id: `o-${o.id}`,
         group: "Offers",
         label: `${o.sponsor.name} · ${o.amountUsdc} USDC`,
-        sub: `${o.kind === "bid" ? "Bid" : "Offer"} · ${o.serviceName || o.spaceTitle} · ${o.status}`,
+        sub: `${o.kind === "bid" ? t("shell.palette.bid") : t("shell.palette.offer")} · ${o.serviceName || o.spaceTitle} · ${o.status}`,
         href: href(`/offers?id=${o.id}`),
       });
     }
     // A remembered invitation is reachable from anywhere.
     const seat = typeof window !== "undefined" ? pendingSeat() : null;
-    if (seat) out.push({ id: "seat", group: "Spaces", label: "Open team invitation", href: href(`/team?seat=${encodeURIComponent(seat.seat)}`) });
+    if (seat) out.push({ id: "seat", group: "Spaces", label: t("shell.palette.openInvitation"), href: href(`/team?seat=${encodeURIComponent(seat.seat)}`) });
     return out;
-  }, [role, listings, managed, offers.data, href, base, teamPage, walletPage]);
+  }, [role, listings, managed, offers.data, href, base, teamPage, walletPage, t, locale]);
 }
