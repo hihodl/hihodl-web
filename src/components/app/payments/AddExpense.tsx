@@ -66,8 +66,7 @@ import {
   autoFillAmounts,
   billsTitle,
   billsTotal,
-  bpText,
-  CATEGORY_LABEL,
+  categoryLabel,
   EXPENSE_CATEGORIES,
   expenseBills,
   expenseCategory,
@@ -108,6 +107,9 @@ import {
   type UsedSource,
 } from "@/lib/app/groups";
 import { getTransfers, HoldApiError, type Transfer } from "@/lib/app/hold-api";
+import { currentIntl, listText, t as tr } from "@/lib/app/i18n";
+import { currencySymbol as symbolOf, fmtFiat, fmtNumber, fmtPercent, fmtTime } from "@/lib/app/i18n/format";
+import { useT } from "@/lib/app/i18n/react";
 import { useTransfers } from "@/lib/app/money";
 import { useTrips } from "@/lib/app/stays-data";
 
@@ -122,35 +124,27 @@ const PAGE = 200;
 
 /* ── Money on screen ──────────────────────────────────────────────── */
 
-/** The browser's decimal separator: "," in Spain, "." in the US. */
+/**
+ * The language's decimal separator: "," in Spain, "." in the US. Read on
+ * every render (the caller calls useT), so a change of language follows.
+ */
 function useDecimal(): string {
-  return useMemo(() => {
-    try {
-      return new Intl.NumberFormat(undefined).formatToParts(1.5).find((p) => p.type === "decimal")?.value ?? ".";
-    } catch {
-      return ".";
-    }
-  }, []);
+  useT();
+  return fmtNumber(1.5).replace(/\d/g, "") || ".";
 }
 
 /** "€", "$", "MX$": the narrow symbol, else the code. */
 export function currencySymbol(currency: string): string {
-  try {
-    return new Intl.NumberFormat(undefined, { style: "currency", currency, currencyDisplay: "narrowSymbol" }).formatToParts(0).find((p) => p.type === "currency")?.value ?? currency;
-  } catch {
-    return currency;
-  }
+  return symbolOf(currency);
 }
 
-/** Minor units in the viewer's own format: "1,29 €" in Spain, "€1.29" in the US. */
+/**
+ * Minor units in the group's (or the bill's) own currency, never converted,
+ * in the viewer's language: "1,29 €" in Spain, "€1.29" in the US.
+ */
 export function money(minor: string | bigint, currency: string, sign = ""): string {
   const plain = formatMinor(minor, currency).replace(/,/g, "");
-  const exp = minorExponent(currency);
-  try {
-    return `${sign}${new Intl.NumberFormat(undefined, { style: "currency", currency, minimumFractionDigits: exp, maximumFractionDigits: exp }).format(Number(plain))}`;
-  } catch {
-    return `${sign}${plain} ${currency}`;
-  }
+  return `${sign}${fmtFiat(Number(plain), currency, { digits: minorExponent(currency) })}`;
 }
 
 /* ── Pieces the three screens share ───────────────────────────────── */
@@ -161,10 +155,11 @@ const card = "rounded-[24px] bg-white/[0.06]";
 const plateBig =
   "inline-flex h-14 w-full items-center justify-center gap-2 rounded-[28px] bg-[#F1F5F9] text-[16.5px] font-extrabold text-[#0A1420] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:bg-white/[0.12] disabled:text-white/45";
 
-function Top({ onBack, title, backLabel = "Back" }: { onBack: () => void; title?: string; backLabel?: string }) {
+function Top({ onBack, title, backLabel }: { onBack: () => void; title?: string; backLabel?: string }) {
+  const t = useT();
   return (
     <div className="relative flex h-14 shrink-0 items-center">
-      <button type="button" onClick={onBack} aria-label={backLabel} className={backBtn}>
+      <button type="button" onClick={onBack} aria-label={backLabel ?? t("common.back")} className={backBtn}>
         <Ion name="arrow-back" size={20} />
       </button>
       {title ? <p className="pointer-events-none absolute inset-x-14 truncate text-center text-[16.5px] font-extrabold text-white">{title}</p> : null}
@@ -218,7 +213,7 @@ type Step = "select" | "custom" | "split";
 function billsOfExpense(e: Expense): Bill[] {
   const items = expenseBills(e);
   if (!items.length) {
-    return [{ key: "custom:edit", kind: "custom", label: e.description?.trim() || "Expense", amountMinor: e.amountMinor, currency: e.currency.toUpperCase() }];
+    return [{ key: "custom:edit", kind: "custom", label: e.description?.trim() || tr("groups.common.expense"), amountMinor: e.amountMinor, currency: e.currency.toUpperCase() }];
   }
   return items.map((it, i): Bill => {
     if (it.sourceKind && it.sourceRef) {
@@ -256,6 +251,7 @@ export function AddExpenseFlow({
   /** Saved: the expense's id (a new one after delete-and-re-add). */
   onSaved: (expenseId: string) => void;
 }) {
+  const t = useT();
   const [editing, setEditing] = useState<Expense | undefined>(existing);
   const [step, setStep] = useState<Step>(existing ? "split" : "select");
   const [bills, setBills] = useState<Bill[]>(() => (existing ? billsOfExpense(existing) : []));
@@ -305,7 +301,7 @@ export function AddExpenseFlow({
   const remove = (key: string) => setBills((xs) => xs.filter((x) => x.key !== key));
 
   return (
-    <Modal onClose={onClose} title={editing ? "Edit expense" : "Add expense"} hideTitle size="full" showClose={false} busy={busy}>
+    <Modal onClose={onClose} title={editing ? t("groups.add.editTitle") : t("groups.add.addTitle")} hideTitle size="full" showClose={false} busy={busy}>
       {seen.select ? (
         <div className={step === "select" ? "flex shrink-0 flex-1 flex-col" : "hidden"}>
           <SelectBill
@@ -314,7 +310,7 @@ export function AddExpenseFlow({
             onRemove={remove}
             onCustom={(key) => openCustom(key, "select")}
             onBack={back}
-            backLabel={selectReturn === "split" ? "Back" : "Close"}
+            backLabel={selectReturn === "split" ? t("common.back") : t("common.close")}
             onContinue={() => go("split")}
             taken={taken}
             notice={selectNotice}
@@ -327,7 +323,7 @@ export function AddExpenseFlow({
         <CustomBill
           initial={editingCustom}
           defaultCurrency={bills[bills.length - 1]?.currency ?? groupCurrency}
-          title={editingCustom ? (editing && bills.length === 1 ? "Amount" : "Change bill") : bills.length ? "Add another bill" : "Create custom bill"}
+          title={editingCustom ? (editing && bills.length === 1 ? t("groups.add.amountTitle") : t("groups.add.changeBill")) : bills.length ? t("groups.add.addAnother") : t("groups.add.createCustom")}
           onBack={back}
           onDone={saveCustom}
         />
@@ -358,7 +354,7 @@ export function AddExpenseFlow({
             onSourceTaken={(used) => {
               setTaken((t) => [...t, used]);
               setBills((xs) => xs.filter((x) => x.ref !== used.ref));
-              setSelectNotice("One of those was just split in a group, so it's been taken out. Pick again.");
+              setSelectNotice(t("groups.add.sourceTaken"));
               go("select");
             }}
           />
@@ -401,20 +397,21 @@ function useActivityPages() {
 
 /** What stops Continue, in words, or null. Nothing limits how many expenses anybody adds. */
 function limitsText(bills: readonly Bill[]): string | null {
-  if (bills.length > MAX_ITEMS) return `One expense holds up to ${MAX_ITEMS} bills, and this has ${bills.length}. Take some out and add them as another expense: there's no limit on expenses.`;
+  if (bills.length > MAX_ITEMS) return tr("groups.add.limitItems", { max: MAX_ITEMS, count: bills.length });
   const sources = bills.filter((b) => b.kind !== "custom").length;
-  if (sources > MAX_SOURCES) return `One expense can name up to ${MAX_SOURCES} of your payments, and this names ${sources}. Add the rest as another expense.`;
+  if (sources > MAX_SOURCES) return tr("groups.add.limitSources", { max: MAX_SOURCES, count: sources });
   return null;
 }
 
 /** "Total ≈ 54.21 €" under a list of bills, or why there is no total yet. */
 function TotalLine({ totals, bills }: { totals: ReturnType<typeof useBillsTotal>; bills: readonly Bill[] }) {
+  const tt = useT();
   const t = totals.total;
   if (!bills.length) return null;
   if (t.ok) {
     return (
       <p className="flex items-baseline justify-between gap-3 px-1 text-[15px] font-extrabold tabular-nums text-white">
-        <span className="text-white/70">Total{bills.length > 1 ? ` · ${bills.length} bills` : ""}</span>
+        <span className="text-white/70">{bills.length > 1 ? tt("groups.total.bills", { count: bills.length }) : tt("common.total")}</span>
         <span>
           {t.basis !== "same" ? "≈ " : ""}
           {money(t.amountMinor, t.currency)}
@@ -422,11 +419,11 @@ function TotalLine({ totals, bills }: { totals: ReturnType<typeof useBillsTotal>
       </p>
     );
   }
-  if (totals.converting) return <p className="px-1 text-[13px] text-white/60">Converting the bills to one currency…</p>;
+  if (totals.converting) return <p className="px-1 text-[13px] text-white/60">{tt("groups.total.converting")}</p>;
   if (t.reason === "mixed_currencies") {
     return (
       <p className="rounded-[14px] bg-amber/[0.12] px-3 py-2 text-[12.5px] leading-[17px] text-amber">
-        {totals.fxFailed ? "Today\u2019s rates didn\u2019t load" : "There\u2019s no rate today"} for {t.currencies.join(" and ")}, so these can&apos;t be added up. Try again in a moment, or split them one currency at a time.
+        {tt(totals.fxFailed ? "groups.total.noRatesLoaded" : "groups.total.noRate", { currencies: listText(t.currencies) })}
       </p>
     );
   }
@@ -460,6 +457,7 @@ function SelectBill({
   ownExpenseId: string | null;
   totals: ReturnType<typeof useBillsTotal>;
 }) {
+  const t = useT();
   const [q, setQ] = useState("");
   const activity = useActivityPages();
   const trips = useTrips();
@@ -482,33 +480,33 @@ function SelectBill({
   return (
     <div className="relative flex shrink-0 flex-1 flex-col pb-4">
       <Top onBack={onBack} backLabel={backLabel} />
-      <h2 className={`${bigTitle} mt-3`}>Select bill</h2>
+      <h2 className={`${bigTitle} mt-3`}>{t("groups.select.title")}</h2>
 
       <label className="mt-5 flex h-12 items-center gap-2.5 rounded-[24px] border border-white/[0.1] bg-white/[0.05] px-4 focus-within:border-white/30">
         <Ion name="search" size={19} className="shrink-0 text-white/70" />
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search"
-          aria-label="Search your activity"
+          placeholder={t("common.search")}
+          aria-label={t("groups.select.searchA11y")}
           className="min-w-0 flex-1 bg-transparent text-[16px] text-white outline-none placeholder:text-white/55"
         />
         {q ? (
-          <button type="button" onClick={() => setQ("")} aria-label="Clear search" className="text-white/60 hover:text-white">
+          <button type="button" onClick={() => setQ("")} aria-label={t("common.clearSearch")} className="text-white/60 hover:text-white">
             <Ion name="close" size={17} />
           </button>
         ) : null}
       </label>
 
       {picked.length ? (
-        <div className="-mx-4 mt-4 flex gap-4 overflow-x-auto px-4 pb-1 pt-2" aria-label="Picked">
+        <div className="-mx-4 mt-4 flex gap-4 overflow-x-auto px-4 pb-1 pt-2" aria-label={t("groups.select.picked")}>
           {picked.map((b) => (
             <div key={b.key} className="flex w-[76px] shrink-0 flex-col items-center text-center">
               <span className="relative">
                 <button
                   type="button"
                   onClick={() => (b.kind === "custom" ? onCustom(b.key) : undefined)}
-                  aria-label={b.kind === "custom" ? `Change ${b.label}` : b.label}
+                  aria-label={b.kind === "custom" ? t("groups.select.change", { label: b.label }) : b.label}
                   className="rounded-[32px]"
                   tabIndex={b.kind === "custom" ? 0 : -1}
                 >
@@ -517,7 +515,7 @@ function SelectBill({
                 <button
                   type="button"
                   onClick={() => onRemove(b.key)}
-                  aria-label={`Take out ${b.label}`}
+                  aria-label={t("groups.select.takeOut", { label: b.label })}
                   className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-[12px] bg-[#F1F5F9] text-[#0A1420] shadow-[0_2px_6px_rgba(0,0,0,0.35)]"
                 >
                   <Ion name="close" size={14} />
@@ -535,8 +533,8 @@ function SelectBill({
           <Ion name="document-text-outline" size={22} />
         </span>
         <span className="flex min-w-0 flex-col">
-          <span className="text-[17px] font-extrabold text-amber">{picked.length ? "Add another bill" : "Create a custom bill"}</span>
-          <span className="text-[13px] text-white/55">Anything you paid outside HOLD. Add as many as you like.</span>
+          <span className="text-[17px] font-extrabold text-amber">{picked.length ? t("groups.add.addAnother") : t("groups.select.createCustom")}</span>
+          <span className="text-[13px] text-white/55">{t("groups.select.customSub")}</span>
         </span>
       </button>
 
@@ -555,17 +553,17 @@ function SelectBill({
       {failed ? (
         <div className="mt-6">
           <Notice>
-            Your activity didn&apos;t load, so there is nothing to pick from right now. A custom bill still works.{" "}
+            {t("groups.select.loadFailed")}{" "}
             <button type="button" className="font-extrabold underline" onClick={() => void activity.first.mutate()}>
-              Retry
+              {t("common.retry")}
             </button>
           </Notice>
         </div>
       ) : null}
       {!loading && !failed && rows.length === 0 && !activity.hasMore ? (
-        <p className="mt-8 px-2 text-center text-[14px] text-white/60">Nothing you paid shows up yet. Create a custom bill for anything you paid outside HOLD.</p>
+        <p className="mt-8 px-2 text-center text-[14px] text-white/60">{t("groups.select.nothingYet")}</p>
       ) : null}
-      {!loading && rows.length > 0 && shown.length === 0 ? <p className="mt-8 text-center text-[14px] text-white/60">Nothing matches “{q}” in what&apos;s loaded.</p> : null}
+      {!loading && rows.length > 0 && shown.length === 0 ? <p className="mt-8 text-center text-[14px] text-white/60">{t("groups.select.noMatch", { query: q })}</p> : null}
 
       {shown.map((day) => (
         <section key={day.label} className="mt-7">
@@ -582,13 +580,13 @@ function SelectBill({
         <div className="mt-5 flex flex-col items-center gap-2">
           {activity.hasMore ? (
             <button type="button" onClick={() => void activity.loadOlder()} disabled={activity.loadingOlder} className={pillGlass}>
-              {activity.loadingOlder ? "Loading…" : "Load older"}
+              {activity.loadingOlder ? t("common.loading") : t("groups.select.loadOlder")}
             </button>
           ) : null}
-          {activity.olderFailed ? <p className="text-[12.5px] text-white/60">Older activity didn&apos;t load. Try again.</p> : null}
+          {activity.olderFailed ? <p className="text-[12.5px] text-white/60">{t("groups.select.olderFailed")}</p> : null}
           {unpriced > 0 ? (
             <p className="max-w-[420px] px-2 text-center text-[12.5px] leading-[17px] text-white/55">
-              {unpriced === 1 ? "1 payment" : `${unpriced} payments`} in a token with no recorded dollar value {unpriced === 1 ? "isn't" : "aren't"} listed: HOLD doesn&apos;t guess a price. Add {unpriced === 1 ? "it" : "them"} as a custom bill.
+              {t("groups.select.unpriced", { count: unpriced })}
             </p>
           ) : null}
         </div>
@@ -603,7 +601,7 @@ function SelectBill({
         ) : null}
         {picked.length ? (
           <button type="button" onClick={onContinue} disabled={!canGo} className={`${plateBig} pointer-events-auto shadow-[0_10px_30px_rgba(0,0,0,0.45)]`}>
-            Continue · {picked.length}
+            {t("groups.select.continue", { count: picked.length })}
           </button>
         ) : null}
       </div>
@@ -612,7 +610,8 @@ function SelectBill({
 }
 
 function BillLine({ row, on, used, onToggle }: { row: BillRow; on: boolean; used?: UsedSource; onToggle: () => void }) {
-  const time = new Date(row.occurredAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  const t = useT();
+  const time = fmtTime(row.occurredAt, { hour: "2-digit", minute: "2-digit" });
   const disabled = !!used && !on;
   return (
     <li>
@@ -639,7 +638,7 @@ function BillLine({ row, on, used, onToggle }: { row: BillRow; on: boolean; used
           {used ? (
             <span className="mt-1 inline-flex items-center gap-1 self-start rounded-[10px] bg-white/[0.08] px-2 py-0.5 text-[12px] font-bold text-white/75">
               <Ion name="people-outline" size={12} />
-              Split in {used.groupName}
+              {t("groups.select.splitIn", { group: used.groupName })}
             </span>
           ) : null}
         </span>
@@ -666,10 +665,11 @@ function CustomBill({
   onBack: () => void;
   onDone: (b: { amountMinor: string; currency: string; label: string }) => void;
 }) {
+  const t = useT();
   const decimal = useDecimal();
   const [currency, setCurrency] = useState((initial?.currency ?? defaultCurrency).toUpperCase());
   const [expr, setExpr] = useState(() => (initial ? minorToPlain(toBig(initial.amountMinor), initial.currency) : ""));
-  const [label, setLabel] = useState(initial && initial.label !== "Custom bill" ? initial.label : "");
+  const [label, setLabel] = useState(initial && initial.label !== tr("groups.bills.custom") && initial.label !== "Custom bill" ? initial.label : "");
   const [picking, setPicking] = useState(false);
   const descRef = useRef<HTMLInputElement>(null);
 
@@ -687,8 +687,8 @@ function CustomBill({
 
   const done = useCallback(() => {
     if (!ready || value === null) return;
-    onDone({ amountMinor: value.toString(), currency, label: label.trim() || "Custom bill" });
-  }, [ready, value, currency, label, onDone]);
+    onDone({ amountMinor: value.toString(), currency, label: label.trim() || t("groups.bills.custom") });
+  }, [ready, value, currency, label, onDone, t]);
 
   // The keyboard on a desktop: digits, both decimal marks, the four operators, = and Enter, Backspace.
   useEffect(() => {
@@ -729,7 +729,7 @@ function CustomBill({
       <Top onBack={onBack} title={title} />
 
       <div className="flex flex-1 flex-col items-center justify-center py-6">
-        <p className="flex max-w-full items-baseline justify-center gap-1 px-2" aria-live="polite" aria-label={`Amount ${shown} ${currency}`}>
+        <p className="flex max-w-full items-baseline justify-center gap-1 px-2" aria-live="polite" aria-label={t("groups.custom.amountA11y", { amount: shown, currency })}>
           <span className={`min-w-0 truncate font-extrabold tabular-nums tracking-[-1.5px] ${expr ? "text-white" : "text-white/45"} ${shown.length > 12 ? "text-[36px]" : "text-[56px]"} leading-none`}>
             {shown}
           </span>
@@ -741,7 +741,7 @@ function CustomBill({
           type="button"
           onClick={() => setPicking(true)}
           className="mt-4 inline-flex h-11 items-center gap-2 rounded-[22px] bg-white/[0.08] px-4 text-[16px] font-extrabold text-white transition-colors hover:bg-white/[0.12]"
-          aria-label={`Currency ${currency}. Change it`}
+          aria-label={t("groups.custom.currencyA11y", { currency })}
         >
           <span className="flex h-6 w-6 items-center justify-center rounded-[12px] bg-white/[0.12] text-[12px]">{sym.length <= 2 ? sym : currency.slice(0, 1)}</span>
           {currency}
@@ -753,23 +753,23 @@ function CustomBill({
         ref={descRef}
         value={label}
         onChange={(e) => setLabel(e.target.value.slice(0, 120))}
-        placeholder="Add description"
-        aria-label="Description"
+        placeholder={t("groups.custom.addDescription")}
+        aria-label={t("groups.custom.description")}
         className="h-14 w-full rounded-[28px] bg-white/[0.07] px-5 text-[16.5px] text-white outline-none transition-colors placeholder:text-white/50 focus:bg-white/[0.1]"
       />
 
       <button type="button" onClick={done} disabled={!ready} className={`${plateBig} mt-5`}>
-        Continue
+        {t("common.continue")}
       </button>
 
-      <div className="mt-5 grid grid-cols-5 gap-2" role="group" aria-label="Calculator">
+      <div className="mt-5 grid grid-cols-5 gap-2" role="group" aria-label={t("groups.custom.calculator")}>
         {(
           [
-            ["+", "+", "Plus"],
-            ["-", "−", "Minus"],
-            ["*", "×", "Times"],
-            ["/", "÷", "Divided by"],
-            ["=", "=", "Equals"],
+            ["+", "+", t("groups.custom.plus")],
+            ["-", "−", t("groups.custom.minus")],
+            ["*", "×", t("groups.custom.times")],
+            ["/", "÷", t("groups.custom.dividedBy")],
+            ["=", "=", t("groups.custom.equals")],
           ] as const
         ).map(([k, glyph, name]) => (
           <button key={k} type="button" className={opCls} onClick={() => press(k)} aria-label={name}>
@@ -777,19 +777,19 @@ function CustomBill({
           </button>
         ))}
       </div>
-      <div className="mt-2 grid grid-cols-3 gap-1" role="group" aria-label="Digits">
+      <div className="mt-2 grid grid-cols-3 gap-1" role="group" aria-label={t("groups.custom.digits")}>
         {(["1", "2", "3", "4", "5", "6", "7", "8", "9"] as const).map((d) => (
           <button key={d} type="button" className={keyCls} onClick={() => press(d)}>
             {d}
           </button>
         ))}
-        <button type="button" className={keyCls} onClick={() => press(".")} aria-label="Decimal point" disabled={minorExponent(currency) === 0}>
+        <button type="button" className={keyCls} onClick={() => press(".")} aria-label={t("groups.custom.decimalPoint")} disabled={minorExponent(currency) === 0}>
           {minorExponent(currency) === 0 ? "" : decimal}
         </button>
         <button type="button" className={keyCls} onClick={() => press("0")}>
           0
         </button>
-        <button type="button" className={keyCls} onClick={() => press("back")} aria-label="Delete">
+        <button type="button" className={keyCls} onClick={() => press("back")} aria-label={t("groups.custom.backspace")}>
           <svg width="30" height="24" viewBox="0 0 30 24" fill="none" aria-hidden>
             <path d="M9.5 3h16A2.5 2.5 0 0 1 28 5.5v13a2.5 2.5 0 0 1-2.5 2.5h-16L2 12l7.5-9Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
             <path d="m13.5 8 8 8m0-8-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -803,16 +803,18 @@ function CustomBill({
 }
 
 function CurrencyPicker({ value, onPick, onClose }: { value: string; onPick: (c: string) => void; onClose: () => void }) {
+  const t = useT();
   const [q, setQ] = useState("");
   const all = useMemo(() => [...new Set([value, ...COMMON_CURRENCIES, ...MORE_CURRENCIES])], [value]);
+  const intl = currentIntl();
   const nameOf = useMemo(() => {
     try {
-      const dn = new Intl.DisplayNames(undefined, { type: "currency" });
+      const dn = new Intl.DisplayNames(intl, { type: "currency" });
       return (c: string) => dn.of(c) ?? c;
     } catch {
       return (c: string) => c;
     }
-  }, []);
+  }, [intl]);
   const s = q.trim().toUpperCase();
   const list = all.filter((c) => !s || c.includes(s) || nameOf(c).toUpperCase().includes(s));
   const typed = /^[A-Z]{3}$/.test(s) && !all.includes(s) ? s : null;
@@ -821,21 +823,21 @@ function CurrencyPicker({ value, onPick, onClose }: { value: string; onPick: (c:
     onClose();
   };
   return (
-    <Modal title="Currency" onClose={onClose} size="sm">
+    <Modal title={t("groups.currency.title")} onClose={onClose} size="sm">
       <label className="flex h-11 items-center gap-2 rounded-[22px] bg-white/[0.07] px-3.5">
         <Ion name="search" size={17} className="text-white/60" />
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search, or type a code"
-          aria-label="Search currencies"
+          placeholder={t("groups.currency.searchPlaceholder")}
+          aria-label={t("groups.currency.searchA11y")}
           data-autofocus
           className="min-w-0 flex-1 bg-transparent text-[15px] text-white outline-none placeholder:text-white/50"
         />
       </label>
-      <div role="listbox" aria-label="Currencies" className="flex flex-col gap-1.5">
+      <div role="listbox" aria-label={t("groups.currency.list")} className="flex flex-col gap-1.5">
         {typed ? (
-          <ModalChoice selected={false} onClick={() => choose(typed)} leading={<CurrencyDisc c={typed} />} label={typed} sub="Use this code" />
+          <ModalChoice selected={false} onClick={() => choose(typed)} leading={<CurrencyDisc c={typed} />} label={typed} sub={t("groups.currency.useCode")} />
         ) : null}
         {list.map((c) => (
           <ModalChoice key={c} selected={c === value} onClick={() => choose(c)} leading={<CurrencyDisc c={c} />} label={c} sub={nameOf(c)} />
@@ -846,6 +848,7 @@ function CurrencyPicker({ value, onPick, onClose }: { value: string; onPick: (c:
 }
 
 function CurrencyDisc({ c }: { c: string }) {
+  useT();
   const sym = currencySymbol(c);
   return <span className="flex h-10 w-10 items-center justify-center rounded-[20px] bg-white/[0.1] text-[15px] font-extrabold text-white">{sym.length <= 2 ? sym : c.slice(0, 2)}</span>;
 }
@@ -853,11 +856,11 @@ function CurrencyDisc({ c }: { c: string }) {
 /* ── 3. Split bill ────────────────────────────────────────────────── */
 
 type Tab = "amount" | "percent" | "shares";
-const TABS: { value: Tab; label: string }[] = [
-  { value: "amount", label: "Amount" },
-  { value: "percent", label: "Percent" },
-  { value: "shares", label: "Share" },
-];
+const TABS = [
+  { value: "amount", labelKey: "groups.split.tab.amount" },
+  { value: "percent", labelKey: "groups.split.tab.percent" },
+  { value: "shares", labelKey: "groups.split.tab.shares" },
+] as const satisfies readonly { value: Tab; labelKey: string }[];
 
 interface SplitState {
   tab: Tab;
@@ -923,6 +926,7 @@ function SplitBill({
   onReAdd: () => void;
   onSourceTaken: (u: UsedSource) => void;
 }) {
+  const t = useT();
   const decimal = useDecimal();
   const ids = members.map((m) => m.userId);
   const byId = useMemo(() => new Map(members.map((m) => [m.userId, m])), [members]);
@@ -980,23 +984,32 @@ function SplitBill({
   const valid = total.ok && totalMinor > 0n && !!payer && check.ok && dateOk && badTyped.length === 0 && !limit && bills.length > 0;
 
   const left = (() => {
-    if (!bills.length) return { text: "Add a bill first.", warn: true };
-    if (!total.ok) return { text: totals.converting ? "Converting the bills…" : "The bills can't be added up yet.", warn: true };
-    if (!people.length) return { text: "Pick at least one person.", warn: true };
-    if (check.ok) return { text: `All ${money(totalMinor, currency)} assigned`, warn: false };
+    if (!bills.length) return { text: t("groups.split.addBillFirst"), warn: true };
+    if (!total.ok) return { text: totals.converting ? t("groups.split.converting") : t("groups.split.cantAdd"), warn: true };
+    if (!people.length) return { text: t("groups.split.pickPerson"), warn: true };
+    if (check.ok) return { text: t("groups.split.allAssigned", { amount: money(totalMinor, currency) }), warn: false };
     switch (check.reason) {
       case "amount_left":
-        return { text: `${money(check.leftMinor ?? 0n, currency)} left to assign`, warn: true };
+        return { text: t("groups.split.leftToAssign", { amount: money(check.leftMinor ?? 0n, currency) }), warn: true };
       case "amount_over":
-        return { text: `${money(-(check.leftMinor ?? 0n), currency)} over the total`, warn: true };
+        return { text: t("groups.split.overTotal", { amount: money(-(check.leftMinor ?? 0n), currency) }), warn: true };
       case "percent_left":
-        return { text: `${bpText(check.leftBp ?? 0n)}% left to assign`, warn: true };
+        return { text: t("groups.split.leftToAssign", { amount: bpPercent(check.leftBp ?? 0n) }), warn: true };
       case "percent_over":
-        return { text: `${bpText(-(check.leftBp ?? 0n))}% over 100%`, warn: true };
+        return { text: t("groups.split.percentOver", { percent: bpPercent(-(check.leftBp ?? 0n)), full: fmtPercent(1) }), warn: true };
       case "all_zero":
-        return { text: st.tab === "shares" ? "Give at least one person a share." : st.tab === "percent" ? "100% left to assign" : `${money(totalMinor, currency)} left to assign`, warn: true };
+        return {
+          text:
+            st.tab === "shares"
+              ? t("groups.split.giveShare")
+              : t("groups.split.leftToAssign", { amount: st.tab === "percent" ? fmtPercent(1) : money(totalMinor, currency) }),
+          warn: true,
+        };
       case "bad_input":
-        return { text: st.tab === "percent" ? "A percentage is 0 to 100, with at most two decimals." : st.tab === "shares" ? "A share is a whole number from 0 to 1000." : `Amounts in ${currency} have at most ${minorExponent(currency)} decimals.`, warn: true };
+        return {
+          text: st.tab === "percent" ? t("groups.split.badPercent") : st.tab === "shares" ? t("groups.split.badShare") : t("groups.split.badAmount", { currency, count: minorExponent(currency) }),
+          warn: true,
+        };
       default:
         return { text: "", warn: false };
     }
@@ -1100,12 +1113,12 @@ function SplitBill({
         const d = (e.details ?? {}) as { ref?: string; kind?: UsedSource["kind"]; expenseId?: string };
         if (d.ref) {
           setBusy(false);
-          onSourceTaken({ kind: d.kind ?? "transfer", ref: d.ref, groupId: "", groupName: "a group", expenseId: d.expenseId ?? "" });
+          onSourceTaken({ kind: d.kind ?? "transfer", ref: d.ref, groupId: "", groupName: t("groups.add.aGroup"), expenseId: d.expenseId ?? "" });
           return;
         }
         setNotice(describeGroupError(e));
       } else if (e instanceof HoldApiError && e.detail === "amounts_do_not_sum" && approx) {
-        setNotice(`The bills are converted at today's rate, and HOLD's total came out a cent away from ${money(totalMinor, currency)}. Use Percent or Share, which always add up, or check the amounts.`);
+        setNotice(t("groups.split.notSum", { amount: money(totalMinor, currency) }));
       } else setNotice(describeGroupError(e));
     } finally {
       setBusy(false);
@@ -1129,14 +1142,14 @@ function SplitBill({
     }
   };
 
-  const payerName = payer === meId ? "you" : memberName(byId.get(payer ?? ""));
+  const paidBy = payer === meId ? t("groups.split.paidByYou") : t("groups.split.paidBy", { name: memberName(byId.get(payer ?? "")) });
   const canPickPayer = !editing && members.length > 1;
   const canEditAmount = bills.length === 1 && bills[0].kind === "custom";
 
   return (
     <div className="relative flex shrink-0 flex-1 flex-col pb-4">
-      <Top onBack={onBack} backLabel={editing ? "Close" : "Back"} />
-      <h2 className={`${bigTitle} mt-3`}>{editing ? "Edit expense" : "Split bill"}</h2>
+      <Top onBack={onBack} backLabel={editing ? t("common.close") : t("common.back")} />
+      <h2 className={`${bigTitle} mt-3`}>{editing ? t("groups.add.editTitle") : t("groups.split.title")}</h2>
 
       {/* The bill, or the bills */}
       <div className={`${card} mt-5 flex items-center gap-3.5 px-4 py-4`}>
@@ -1152,18 +1165,18 @@ function SplitBill({
           <BillFace bill={bills[0] ?? { key: "x", kind: "custom", label: "", amountMinor: "0", currency }} size={48} />
         )}
         <span className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-[17px] font-extrabold text-white">{description.trim() || suggested || (bills.length > 1 ? `${bills.length} bills` : "Expense")}</span>
+          <span className="truncate text-[17px] font-extrabold text-white">{description.trim() || suggested || (bills.length > 1 ? t("groups.common.billCount", { count: bills.length }) : t("groups.common.expense"))}</span>
           {canPickPayer ? (
             <button type="button" onClick={() => setSheet("payer")} className="inline-flex items-center gap-1 self-start text-[15px] font-bold text-amber hover:opacity-85" aria-haspopup="dialog">
-              Paid by {payerName}
+              {paidBy}
               <Ion name="chevron-down" size={15} />
             </button>
           ) : (
-            <span className="text-[14.5px] text-white/60">Paid by {payerName}</span>
+            <span className="text-[14.5px] text-white/60">{paidBy}</span>
           )}
         </span>
         {canEditAmount ? (
-          <button type="button" onClick={() => onChangeBill(bills[0].key)} className="shrink-0 rounded-[10px] px-1 text-right text-[17px] font-bold tabular-nums text-white underline decoration-white/30 underline-offset-4 hover:decoration-white/70" aria-label="Change the amount">
+          <button type="button" onClick={() => onChangeBill(bills[0].key)} className="shrink-0 rounded-[10px] px-1 text-right text-[17px] font-bold tabular-nums text-white underline decoration-white/30 underline-offset-4 hover:decoration-white/70" aria-label={t("groups.split.changeAmount")}>
             {total.ok ? money(totalMinor, currency) : "–"}
           </button>
         ) : (
@@ -1174,28 +1187,28 @@ function SplitBill({
       {/* Every bill, the running total, and more */}
       {bills.length > 1 ? (
         <div className={`${card} mt-3 flex flex-col py-1.5`}>
-          <ul aria-label="Bills" className="flex flex-col">
+          <ul aria-label={t("groups.common.bills")} className="flex flex-col">
             {bills.map((b, i) => {
               const conv = total.ok && b.currency.toUpperCase() !== total.currency ? total.converted[i] : null;
               return (
                 <li key={b.key} className="flex min-h-[56px] items-center gap-3 px-4 py-1.5">
                   <BillFace bill={b} size={32} />
                   {b.kind === "custom" ? (
-                    <button type="button" onClick={() => onChangeBill(b.key)} disabled={busy} className="flex min-w-0 flex-1 flex-col text-left" aria-label={`Change ${b.label}`}>
+                    <button type="button" onClick={() => onChangeBill(b.key)} disabled={busy} className="flex min-w-0 flex-1 flex-col text-left" aria-label={t("groups.select.change", { label: b.label })}>
                       <span className="truncate text-[15px] font-bold text-white">{b.label}</span>
-                      <span className="text-[12px] text-white/50">Typed · tap to change</span>
+                      <span className="text-[12px] text-white/50">{t("groups.split.typed")}</span>
                     </button>
                   ) : (
                     <span className="flex min-w-0 flex-1 flex-col">
                       <span className="truncate text-[15px] font-bold text-white">{b.label}</span>
-                      <span className="text-[12px] text-white/50">{b.kind === "stay" ? "Stay" : b.kind === "card" ? "Card" : "Payment"}</span>
+                      <span className="text-[12px] text-white/50">{b.kind === "stay" ? t("groups.source.stay") : b.kind === "card" ? t("groups.source.card") : t("groups.source.payment")}</span>
                     </span>
                   )}
                   <span className="flex shrink-0 flex-col items-end">
                     <span className="text-[15px] font-bold tabular-nums text-white">{money(b.amountMinor, b.currency)}</span>
                     {conv !== null ? <span className="text-[12px] tabular-nums text-white/50">≈ {money(conv, total.ok ? total.currency : currency)}</span> : null}
                   </span>
-                  <button type="button" onClick={() => onRemoveBill(b.key)} disabled={busy} aria-label={`Take out ${b.label}`} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[16px] text-white/55 hover:bg-white/10 hover:text-white">
+                  <button type="button" onClick={() => onRemoveBill(b.key)} disabled={busy} aria-label={t("groups.select.takeOut", { label: b.label })} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[16px] text-white/55 hover:bg-white/10 hover:text-white">
                     <Ion name="close" size={16} />
                   </button>
                 </li>
@@ -1210,11 +1223,11 @@ function SplitBill({
       <div className="mt-3 flex flex-wrap gap-2">
         <button type="button" onClick={onAddBill} disabled={busy} className={pillGlass}>
           <Ion name="add" size={15} />
-          Add another bill
+          {t("groups.add.addAnother")}
         </button>
         <button type="button" onClick={onAddFromActivity} disabled={busy} className={pillGlass}>
           <Ion name="list-outline" size={15} />
-          From your activity
+          {t("groups.split.fromActivity")}
         </button>
       </div>
       {limit ? <p className="mt-2 rounded-[14px] bg-amber/[0.12] px-3 py-2 text-[12.5px] leading-[17px] text-amber">{limit}</p> : null}
@@ -1224,19 +1237,19 @@ function SplitBill({
         </div>
       ) : null}
       {total.ok && total.basis === "fx" ? (
-        <p className="mt-2 px-1 text-[12.5px] text-white/55">Converted to {total.currency} at today&apos;s rate. HOLD works out the exact total when it&apos;s added.</p>
+        <p className="mt-2 px-1 text-[12.5px] text-white/55">{t("groups.split.fxNote", { currency: total.currency })}</p>
       ) : null}
       {total.ok && total.basis === "usd" ? (
-        <p className="mt-2 px-1 text-[12.5px] text-white/55">No rate today for one of these, so they&apos;re added up in dollars, from each payment&apos;s value when it was made.</p>
+        <p className="mt-2 px-1 text-[12.5px] text-white/55">{t("groups.split.usdNote")}</p>
       ) : null}
       {total.ok && currency !== groupCurrency.toUpperCase() ? (
-        <p className="mt-2 px-1 text-[12.5px] text-white/55">The group keeps {groupCurrency}. HOLD converts this once, at the rate of the day it is added.</p>
+        <p className="mt-2 px-1 text-[12.5px] text-white/55">{t("groups.split.groupKeeps", { currency: groupCurrency })}</p>
       ) : null}
 
       {/* Category */}
       <div className="mt-5">
-        <p className="px-1 pb-2 text-[13px] font-bold text-white/60">Category</p>
-        <div role="radiogroup" aria-label="Category" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <p className="px-1 pb-2 text-[13px] font-bold text-white/60">{t("groups.split.category")}</p>
+        <div role="radiogroup" aria-label={t("groups.split.category")} className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {EXPENSE_CATEGORIES.map((c) => {
             const on = effectiveCategory === c;
             return (
@@ -1252,7 +1265,7 @@ function SplitBill({
                 }`}
               >
                 <Ion name={CATEGORY_ICON[c]} size={15} />
-                {CATEGORY_LABEL[c]}
+                {categoryLabel(c)}
               </button>
             );
           })}
@@ -1260,31 +1273,31 @@ function SplitBill({
       </div>
 
       {/* Amount | Percent | Share */}
-      <div role="tablist" aria-label="How to split" className="mt-5 flex gap-1">
-        {TABS.map((t) => (
+      <div role="tablist" aria-label={t("groups.split.howToSplit")} className="mt-5 flex gap-1">
+        {TABS.map((tab) => (
           <button
-            key={t.value}
+            key={tab.value}
             type="button"
             role="tab"
-            aria-selected={st.tab === t.value}
-            onClick={() => setSt((s) => ({ ...s, tab: t.value, percents: t.value === "percent" && s.tab !== "percent" ? evenPercents(people) : s.percents }))}
-            className={`h-11 rounded-[22px] px-5 text-[16px] font-bold transition-colors ${st.tab === t.value ? "bg-white/[0.1] text-white ring-1 ring-inset ring-white/[0.14]" : "text-white/60 hover:text-white"}`}
+            aria-selected={st.tab === tab.value}
+            onClick={() => setSt((s) => ({ ...s, tab: tab.value, percents: tab.value === "percent" && s.tab !== "percent" ? evenPercents(people) : s.percents }))}
+            className={`h-11 rounded-[22px] px-5 text-[16px] font-bold transition-colors ${st.tab === tab.value ? "bg-white/[0.1] text-white ring-1 ring-inset ring-white/[0.14]" : "text-white/60 hover:text-white"}`}
           >
-            {t.label}
+            {t(tab.labelKey)}
           </button>
         ))}
       </div>
 
-      <ul className={`${card} mt-4 flex flex-col py-1.5`} aria-label="Members">
+      <ul className={`${card} mt-4 flex flex-col py-1.5`} aria-label={t("groups.split.members")}>
         {rowsIds.map((id) => {
           const m = byId.get(id);
           const inSplit = people.includes(id);
-          const name = id === meId ? "You" : m ? memberName(m) : "Left the group";
+          const name = id === meId ? t("common.you") : m ? memberName(m) : t("groups.common.leftGroup");
           const bad = (!check.ok && check.reason === "bad_input" && check.badUserIds?.includes(id)) || badTyped.includes(id);
           const share = preview.get(id);
           return (
             <li key={id} className="flex min-h-[72px] items-center gap-3.5 px-4 py-2">
-              <button type="button" role="checkbox" aria-checked={inSplit} aria-label={`${inSplit ? "Leave out" : "Include"} ${name}`} onClick={() => toggle(id)} disabled={busy}>
+              <button type="button" role="checkbox" aria-checked={inSplit} aria-label={inSplit ? t("groups.split.leaveOut", { name }) : t("groups.split.include", { name })} onClick={() => toggle(id)} disabled={busy}>
                 <Tick on={inSplit} />
               </button>
               <span className={inSplit ? "" : "opacity-45"}>
@@ -1302,7 +1315,7 @@ function SplitBill({
                   bad={bad}
                   decimal={decimal}
                   suffix={st.tab === "amount" ? currencySymbol(currency) : st.tab === "percent" ? "%" : "×"}
-                  label={`${st.tab === "amount" ? "Amount" : st.tab === "percent" ? "Percent" : "Shares"} for ${name}`}
+                  label={t("groups.split.valueA11y", { tab: st.tab, name })}
                   onChange={(v) => setValue(id, v)}
                   onReset={st.tab === "amount" && st.typed[id] !== undefined ? () => setSt((s) => { const typed = { ...s.typed }; delete typed[id]; return { ...s, typed }; }) : undefined}
                   disabled={busy}
@@ -1318,35 +1331,35 @@ function SplitBill({
 
       {/* Details */}
       <div className="mt-6 flex flex-col gap-2.5">
-        <p className="px-1 text-[13px] font-bold text-white/60">Details (optional)</p>
+        <p className="px-1 text-[13px] font-bold text-white/60">{t("groups.split.details")}</p>
         {bills.length > 1 || editing ? (
-          <input value={description} onChange={(e) => setDescription(e.target.value.slice(0, 120))} placeholder={suggested ? `Description, like ${suggested}` : "Description, like Weekend in Lisbon"} aria-label="Description" disabled={busy} className={fieldCls} />
+          <input value={description} onChange={(e) => setDescription(e.target.value.slice(0, 120))} placeholder={suggested ? t("groups.split.descriptionLike", { example: suggested }) : t("groups.split.descriptionExample")} aria-label={t("groups.custom.description")} disabled={busy} className={fieldCls} />
         ) : null}
         <div className="flex gap-2.5">
           <label className={`${fieldCls} flex flex-1 items-center gap-2`}>
             <Ion name="location-outline" size={17} className="shrink-0 text-white/55" />
-            <input value={place} onChange={(e) => setPlace(e.target.value.slice(0, 120))} placeholder="Place" aria-label="Place" disabled={busy} className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-white/50" />
+            <input value={place} onChange={(e) => setPlace(e.target.value.slice(0, 120))} placeholder={t("groups.split.place")} aria-label={t("groups.split.place")} disabled={busy} className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-white/50" />
           </label>
           <label className={`${fieldCls} flex w-[168px] shrink-0 items-center gap-2`}>
             <Ion name="calendar-outline" size={17} className="shrink-0 text-white/55" />
-            <input type="date" value={date} max={todayLocal()} onChange={(e) => setDate(e.target.value)} aria-label="Date" disabled={busy} className="min-w-0 flex-1 bg-transparent outline-none [color-scheme:dark]" />
+            <input type="date" value={date} max={todayLocal()} onChange={(e) => setDate(e.target.value)} aria-label={t("common.date")} disabled={busy} className="min-w-0 flex-1 bg-transparent outline-none [color-scheme:dark]" />
           </label>
         </div>
         <div className="flex items-center gap-3">
           {receiptUrl ? (
             <>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={receiptUrl} alt="Receipt" className="h-12 w-12 rounded-[12px] object-cover" />
-              <PhotoButton label="Change receipt" icon="receipt-outline" onPicked={setReceipt} onError={setNotice} disabled={busy} />
+              <img src={receiptUrl} alt={t("groups.common.receipt")} className="h-12 w-12 rounded-[12px] object-cover" />
+              <PhotoButton label={t("groups.split.changeReceipt")} icon="receipt-outline" onPicked={setReceipt} onError={setNotice} disabled={busy} />
               <button type="button" onClick={() => setReceipt(null)} className="rounded-[10px] px-2 py-1 text-[13px] font-bold text-white/65 hover:bg-white/10 hover:text-white">
-                Remove
+                {t("common.remove")}
               </button>
             </>
           ) : (
-            <PhotoButton label={editing?.receiptUrl ? "Replace receipt photo" : "Add receipt photo"} icon="receipt-outline" onPicked={setReceipt} onError={setNotice} disabled={busy} />
+            <PhotoButton label={editing?.receiptUrl ? t("groups.split.replaceReceiptPhoto") : t("groups.common.addReceiptPhoto")} icon="receipt-outline" onPicked={setReceipt} onError={setNotice} disabled={busy} />
           )}
         </div>
-        <p className="px-1 text-[12px] text-white/45">A receipt is proof for the group. Only its members can see it.</p>
+        <p className="px-1 text-[12px] text-white/45">{t("groups.split.receiptNote")}</p>
       </div>
 
       {notice && sheet === "none" ? (
@@ -1357,13 +1370,13 @@ function SplitBill({
 
       <div className="pointer-events-none sticky bottom-0 -mx-4 mt-auto bg-[linear-gradient(180deg,transparent,#08151C_40%)] px-4 pb-1 pt-8">
         <button type="button" onClick={() => void submit()} disabled={!valid || busy} className={`${plateBig} pointer-events-auto shadow-[0_10px_30px_rgba(0,0,0,0.45)]`}>
-          {busy ? "Saving…" : editing ? "Save" : "Split with group"}
+          {busy ? t("common.saving") : editing ? t("common.save") : t("groups.split.submit")}
         </button>
       </div>
 
       {sheet === "payer" ? (
-        <Modal title="Paid by" onClose={() => setSheet("none")} size="sm">
-          <div role="listbox" aria-label="Paid by" className="flex flex-col gap-1.5">
+        <Modal title={t("groups.split.paidByTitle")} onClose={() => setSheet("none")} size="sm">
+          <div role="listbox" aria-label={t("groups.split.paidByTitle")} className="flex flex-col gap-1.5">
             {members.map((m) => (
               <ModalChoice
                 key={m.userId}
@@ -1373,7 +1386,7 @@ function SplitBill({
                   setSheet("none");
                 }}
                 leading={<PersonFace person={m} size={48} />}
-                label={m.userId === meId ? "You" : memberName(m)}
+                label={m.userId === meId ? t("common.you") : memberName(m)}
                 sub={m.userId !== meId && m.displayName?.trim() ? m.displayName : undefined}
               />
             ))}
@@ -1383,7 +1396,7 @@ function SplitBill({
 
       {sheet === "locked" && editing ? (
         <Modal
-          title="This amount is settled against"
+          title={t("groups.split.lockedTitle")}
           onClose={() => setSheet("none")}
           busy={busy}
           size="sm"
@@ -1391,31 +1404,31 @@ function SplitBill({
             <div className="flex flex-col gap-2">
               <button type="button" className={plateCaution} disabled={busy} onClick={() => void deleteAndReAdd()}>
                 <Ion name="trash-outline" size={16} />
-                {busy ? "Deleting…" : "Delete it and add it again"}
+                {busy ? t("groups.common.deleting") : t("groups.split.deleteAndReAdd")}
               </button>
               <button type="button" className={plateWhite} disabled={busy} onClick={() => setSheet("none")}>
-                Keep it as it is
+                {t("groups.split.keepAsIs")}
               </button>
             </div>
           }
         >
           <p className="text-[14px] leading-[20px] text-white/[0.78]">
-            Someone settled up against this expense after it was added, so its amount and split can&apos;t change: that payment was made against it as it was. The description, place and date still can.
+            {t("groups.split.lockedBody")}
           </p>
-          <p className="text-[14px] leading-[20px] text-white/[0.78]">If the amount is wrong, delete it and add it again. What you typed stays on this screen.</p>
+          <p className="text-[14px] leading-[20px] text-white/[0.78]">{t("groups.split.lockedBody2")}</p>
         </Modal>
       ) : null}
 
       {sheet === "receipt-failed" && savedId ? (
         <Modal
-          title="Split, without the receipt"
+          title={t("groups.split.receiptFailedTitle")}
           onClose={() => onSaved(savedId)}
           busy={busy}
           size="sm"
           footer={
             <div className="flex gap-2">
               <button type="button" className={`${plateCaution} flex-1`} disabled={busy} onClick={() => onSaved(savedId)}>
-                Skip it
+                {t("groups.split.skipIt")}
               </button>
               <button
                 type="button"
@@ -1427,12 +1440,12 @@ function SplitBill({
                   void putReceipt(savedId).finally(() => setBusy(false));
                 }}
               >
-                Try again
+                {t("common.tryAgain")}
               </button>
             </div>
           }
         >
-          <p className="text-[14px] leading-[20px] text-white/[0.78]">The expense is in the group. The receipt photo didn&apos;t upload: {notice}</p>
+          <p className="text-[14px] leading-[20px] text-white/[0.78]">{t("groups.split.receiptFailedBody", { notice })}</p>
         </Modal>
       ) : null}
     </div>
@@ -1440,6 +1453,11 @@ function SplitBill({
 }
 
 const fieldCls = "h-12 w-full rounded-[16px] bg-white/[0.06] px-3.5 text-[15px] text-white outline-none transition-colors placeholder:text-white/50 focus-within:bg-white/[0.09] focus:bg-white/[0.09]";
+
+/** Hundredths of a percent as the language writes a percent: 3000 is "30%". */
+function bpPercent(bp: bigint): string {
+  return fmtPercent(Number(bp) / 10000);
+}
 
 /** The newest day among the bills, or today: an expense is dated when it was paid. */
 function latestDay(bills: readonly Bill[]): string {
@@ -1492,11 +1510,12 @@ function ValueInput({
   onReset?: () => void;
   disabled?: boolean;
 }) {
+  const t = useT();
   const shown = tab === "shares" ? value : value.replace(".", decimal);
   return (
     <span className="flex shrink-0 items-center gap-1">
       {onReset ? (
-        <button type="button" onClick={onReset} aria-label="Share the rest equally again" title="Share equally again" className="flex h-7 w-7 items-center justify-center rounded-[14px] text-white/45 hover:bg-white/10 hover:text-white">
+        <button type="button" onClick={onReset} aria-label={t("groups.split.shareEquallyA11y")} title={t("groups.split.shareEquallyTitle")} className="flex h-7 w-7 items-center justify-center rounded-[14px] text-white/45 hover:bg-white/10 hover:text-white">
           <Ion name="refresh" size={14} />
         </button>
       ) : null}

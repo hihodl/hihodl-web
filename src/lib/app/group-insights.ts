@@ -7,10 +7,12 @@
  * Every amount is minor units in ONE currency: the group's for a group, and
  * per currency across groups. Nothing here ever adds two currencies together.
  *
- * Nothing React and only type imports, so `npx sucrase-node` can check it.
+ * Nothing React and only relative imports, so `npx sucrase-node` can check it.
  */
 
 import { asCategory, toBig, type ExpenseCategory } from "./groups-rules";
+import { t } from "./i18n";
+import { monthName } from "./i18n/format";
 
 export interface MonthRow {
   /** YYYY-MM, UTC. */
@@ -168,7 +170,7 @@ export function normaliseAllStats(raw: unknown): AllGroupsStats {
     groups: arr(r.groups)
       .map(obj)
       .filter((g) => str(g.groupId))
-      .map((g) => ({ groupId: g.groupId as string, name: str(g.name) ?? "Group", currency: ccy(g.currency), netMinor: minor(g.netMinor), lastActivityAt: str(g.lastActivityAt) })),
+      .map((g) => ({ groupId: g.groupId as string, name: str(g.name) ?? t("groupThread.insights.groupFallback"), currency: ccy(g.currency), netMinor: minor(g.netMinor), lastActivityAt: str(g.lastActivityAt) })),
     byMonth: arr(r.byMonth)
       .map(obj)
       .filter((m) => monthKey(m.month) && typeof m.currency === "string")
@@ -193,14 +195,13 @@ export function fractions(values: readonly (string | bigint)[]): number[] {
   return big.map((v) => (v <= 0n ? 0 : Number((v * 10000n) / max) / 10000));
 }
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-/** "2026-09" as "Sep", or "Sep 2026" with the year. */
+/** "2026-09" as "Sep", or "Sep 2026" with the year, in the language. */
 export function monthLabel(month: string, withYear = false): string {
   const m = /^(\d{4})-(\d{2})$/.exec(month);
   if (!m) return month;
-  const name = MONTHS[Number(m[2]) - 1] ?? m[2];
-  return withYear ? `${name} ${m[1]}` : name;
+  const i = Number(m[2]) - 1;
+  const name = i >= 0 && i < 12 ? monthName(i, "short") : m[2];
+  return withYear ? t("groupThread.insights.monthYear", { month: name, year: m[1] }) : name;
 }
 
 /** The range the pills ask for: the last `months` months, this one included, as the server's YYYY-MM. */

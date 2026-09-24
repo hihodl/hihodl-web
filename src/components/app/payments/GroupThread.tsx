@@ -56,10 +56,8 @@ import {
   eventText,
   expenseCategory,
   expenseForMe,
-  formatMinor,
+  groupMoney,
   markRead,
-  memberName,
-  moneyText,
   namer,
   newClientKey,
   seenBy,
@@ -80,6 +78,9 @@ import {
   type ThreadItem,
 } from "@/lib/app/groups";
 import { HoldApiError } from "@/lib/app/hold-api";
+import { t as i18nT } from "@/lib/app/i18n";
+import { useLocale, useT } from "@/lib/app/i18n/react";
+import { fmtDate, fmtTime } from "@/lib/app/i18n/format";
 import { useMe } from "@/lib/app/spaces-data";
 
 import { useProductHref } from "../base";
@@ -113,6 +114,7 @@ type Panel =
   | { receipt: string; title: string | null };
 
 export function GroupThread({ groupId, backPath, backLabel }: { groupId: string; backPath: string; backLabel?: string }) {
+  const t = useT();
   const productHref = useProductHref();
   const router = useRouter();
   const backHref = productHref(backPath);
@@ -128,7 +130,7 @@ export function GroupThread({ groupId, backPath, backLabel }: { groupId: string;
   const row = list.data?.find((g) => g.id === groupId) ?? null;
   // The group read is the fresher one for the face (a photo link lasts an hour); the list row fills in while it loads.
   const group = info.data ? { ...row, ...info.data } : row;
-  const name = group?.name ?? "Group";
+  const name = group?.name ?? t("groupThread.thread.groupFallback");
   const emoji = group?.emoji ?? null;
   // A crew's group (§12): the group object's `crew`, else the list row's.
   const crew = group?.crew ?? row?.crew ?? null;
@@ -169,7 +171,7 @@ export function GroupThread({ groupId, backPath, backLabel }: { groupId: string;
   const header = (
     <BackHeader
       title={`${emoji && !group?.photoUrl ? `${emoji} ` : ""}${name}`}
-      subtitle={notFound ? undefined : `${count || "…"} ${count === 1 ? "person" : "people"}`}
+      subtitle={notFound ? undefined : count ? t("groupThread.thread.people", { count }) : t("groupThread.thread.peopleLoading")}
       backHref={backHref}
       right={
         notFound ? undefined : (
@@ -178,22 +180,22 @@ export function GroupThread({ groupId, backPath, backLabel }: { groupId: string;
               <Link
                 href={productHref(`/spaces/crew?crew=${encodeURIComponent(crewId)}`)}
                 className="mr-1 inline-flex h-7 items-center gap-1 rounded-[14px] bg-white/10 px-2.5 text-[12px] font-bold text-white hover:bg-white/[0.16]"
-                aria-label={`Open the crew${crew?.name ? ` ${crew.name}` : ""}`}
+                aria-label={crew?.name ? t("groupThread.thread.openCrewNamed", { name: crew.name }) : t("groupThread.thread.openCrew")}
               >
                 <Ion name="people-outline" size={13} />
-                Crew
+                {t("groupThread.thread.crew")}
               </Link>
             ) : null}
-            <Link href={productHref(`/payments/groups/${encodeURIComponent(groupId)}/insights`)} aria-label="Insights" className={headerBtn}>
+            <Link href={productHref(`/payments/groups/${encodeURIComponent(groupId)}/insights`)} aria-label={t("groupThread.thread.insights")} className={headerBtn}>
               <Ion name="stats-chart-outline" size={18} />
-              <span className="hidden sm:inline">Insights</span>
+              <span className="hidden sm:inline">{t("groupThread.thread.insights")}</span>
             </Link>
-            <button type="button" onClick={() => setPanel("settings")} aria-label="Group settings" className={headerBtn} disabled={!group}>
+            <button type="button" onClick={() => setPanel("settings")} aria-label={t("groupThread.thread.settingsA11y")} className={headerBtn} disabled={!group}>
               {group?.photoUrl ? <GroupFace name={name} emoji={emoji} photoUrl={group.photoUrl} size={24} /> : <Ion name="settings-outline" size={18} />}
             </button>
-            <button type="button" onClick={() => setPanel("people")} aria-label="People" className={headerBtn}>
+            <button type="button" onClick={() => setPanel("people")} aria-label={t("groupThread.people.title")} className={headerBtn}>
               <Ion name="people-outline" size={18} />
-              <span className="hidden sm:inline">People</span>
+              <span className="hidden sm:inline">{t("groupThread.people.title")}</span>
             </button>
           </span>
         )
@@ -207,9 +209,9 @@ export function GroupThread({ groupId, backPath, backLabel }: { groupId: string;
         {header}
         <div className="flex flex-col items-center px-4 pt-12 text-center">
           <Ion name="people-outline" size={48} className="text-white/40" />
-          <p className="mt-3 text-[14px] text-white/[0.62]">This group isn&apos;t here any more, or you&apos;re not in it.</p>
+          <p className="mt-3 text-[14px] text-white/[0.62]">{t("groupThread.thread.notFound")}</p>
           <Link href={backHref} className={`${btnGlass} mt-4`}>
-            {backLabel ? `Back to ${backLabel}` : "Back"}
+            {backLabel ? t("groupThread.thread.backTo", { label: backLabel }) : t("common.back")}
           </Link>
         </div>
       </Column>
@@ -384,8 +386,14 @@ function BalanceStrip({
   onOpen: () => void;
   crew: string | null;
 }) {
+  const t = useT();
   const n = net && /^-?\d+$/.test(net) ? BigInt(net) : 0n;
-  const line = n > 0n ? `You're owed ${moneyText(absMinor(net!), currency)}` : n < 0n ? `You owe ${moneyText(absMinor(net!), currency)}` : "All settled up";
+  const line =
+    n > 0n
+      ? t("groupThread.balance.youreOwed", { amount: groupMoney(absMinor(net!), currency) })
+      : n < 0n
+        ? t("groupThread.balance.youOwe", { amount: groupMoney(absMinor(net!), currency) })
+        : t("groupThread.balance.settled");
   return (
     <div className={`sticky ${UNDER_TOP_BAR} z-30 -mx-1 mb-2 px-1 pb-1`}>
       <div className="flex min-h-[56px] items-center gap-3 rounded-[18px] border border-white/[0.12] bg-white/10 px-3.5 py-2.5 shadow-[0_10px_30px_rgba(0,0,0,0.28)] backdrop-blur-xl">
@@ -393,20 +401,20 @@ function BalanceStrip({
           <Skeleton className="h-4 w-40 rounded-[8px]" />
         ) : failed ? (
           <>
-            <span className="min-w-0 flex-1 truncate text-[13.5px] text-white/70">Balances didn&apos;t load</span>
+            <span className="min-w-0 flex-1 truncate text-[13.5px] text-white/70">{t("groupThread.thread.balancesFailed")}</span>
             <button type="button" onClick={onRetry} className={pillGlass}>
-              Retry
+              {t("common.retry")}
             </button>
           </>
         ) : (
           <>
             <span className="flex min-w-0 flex-1 flex-col">
               <span className="truncate text-[15px] font-extrabold tabular-nums tracking-[-0.2px] text-white">{line}</span>
-              {crew ? <span className="truncate text-[12px] text-white/55">Crew · {crew}</span> : null}
+              {crew ? <span className="truncate text-[12px] text-white/55">{t("groupThread.thread.crewLine", { name: crew })}</span> : null}
             </span>
             {/* Glass, not amber: the one amber plate is Pay, in the card over the composer. */}
             <button type="button" onClick={onOpen} className={pillGlass}>
-              {n < 0n ? "Settle up" : "Balances"}
+              {n < 0n ? t("groupThread.thread.settleUp") : t("groupThread.thread.balances")}
             </button>
           </>
         )}
@@ -460,6 +468,9 @@ function Timeline({
   onOpenMessage: (id: string) => void;
   onOpenExpense: (id: string) => void;
 }) {
+  const t = useT();
+  // The day lines are words and dates in the language: made again when it changes.
+  const locale = useLocale();
   const rows = useMemo<Row[]>(() => {
     const out: Row[] = [];
     let day = "";
@@ -473,7 +484,9 @@ function Timeline({
       out.push({ kind: "item", key: `${item.kind}:${item.id}`, item });
     }
     return out;
-  }, [items]);
+    // `locale` is not read inside, but the day words and dates are in it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, locale]);
 
   // "Seen by" sits under your latest message that still has words in it.
   const lastMine = useMemo(() => {
@@ -501,9 +514,9 @@ function Timeline({
     return (
       <div className="flex flex-col items-center px-4 pt-10 text-center">
         <Ion name="alert-circle-outline" size={48} className="text-white/40" />
-        <p className="mt-3 text-[14px] text-white/[0.62]">Could not load this group</p>
+        <p className="mt-3 text-[14px] text-white/[0.62]">{t("groupThread.thread.loadFailed")}</p>
         <button type="button" onClick={onRetryLoad} className={`${btnGlass} mt-4`}>
-          Retry
+          {t("common.retry")}
         </button>
       </div>
     );
@@ -514,20 +527,20 @@ function Timeline({
     <div className="mt-1 flex min-h-[calc(100dvh-230px)] min-w-0 flex-col gap-2">
       {nextBefore ? (
         <button type="button" data-load-older onClick={onLoadOlder} disabled={loadingOlder} className={`${pillGlass} self-center`}>
-          {loadingOlder ? "Loading…" : "Load older"}
+          {loadingOlder ? t("common.loading") : t("groupThread.thread.loadOlder")}
         </button>
       ) : null}
       {failed ? (
         <div className="flex items-center justify-center gap-2 text-[12.5px] text-white/60">
-          New messages didn&apos;t load.
+          {t("groupThread.thread.newFailed")}
           <button type="button" onClick={onRetryLoad} className="rounded-[10px] px-2 py-1 font-bold text-white hover:bg-white/10">
-            Retry
+            {t("common.retry")}
           </button>
         </div>
       ) : null}
 
       {rows.length === 0 && outgoing.length === 0 ? (
-        <p className="px-1 py-8 text-center text-[13px] leading-[18px] text-white/70">Nothing here yet. Say hello, or add the first expense with +.</p>
+        <p className="px-1 py-8 text-center text-[13px] leading-[18px] text-white/70">{t("groupThread.thread.empty")}</p>
       ) : null}
 
       {rows.map((r) => {
@@ -670,6 +683,7 @@ function MessageBubble({
   const ink = mine ? "text-white/[0.92]" : "text-[rgba(13,24,32,0.92)]";
   const muted = mine ? "text-white/45" : "text-[rgba(13,24,32,0.5)]";
   const press = useLongPress(onOpen);
+  const t = useT();
 
   return (
     <div className={`group flex min-w-0 flex-col ${mine ? "items-end" : "items-start"}`}>
@@ -684,7 +698,7 @@ function MessageBubble({
         >
           {!mine ? <p className="mb-0.5 truncate text-[12px] font-bold text-[rgba(13,24,32,0.62)]">{names.subject(item.userId)}</p> : null}
           {deleted ? (
-            <p className={`text-[15px] italic leading-[21px] ${muted}`}>Message deleted</p>
+            <p className={`text-[15px] italic leading-[21px] ${muted}`}>{t("groupThread.thread.messageDeleted")}</p>
           ) : (
             <p className={`whitespace-pre-wrap break-words text-[15px] leading-[21px] ${ink}`}>{item.body}</p>
           )}
@@ -693,13 +707,13 @@ function MessageBubble({
         <button
           type="button"
           onClick={onOpen}
-          aria-label="Message options"
+          aria-label={t("groupThread.thread.messageOptions")}
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[16px] text-white/55 opacity-0 transition-opacity hover:bg-white/10 hover:text-white focus:opacity-100 group-hover:opacity-100 [@media(hover:none)]:hidden"
         >
           <Ion name="ellipsis-horizontal" size={16} />
         </button>
       </div>
-      {item.edited && !deleted ? <span className="mt-0.5 px-2 text-[10.5px] text-white/50">Edited</span> : null}
+      {item.edited && !deleted ? <span className="mt-0.5 px-2 text-[10.5px] text-white/50">{t("groupThread.thread.edited")}</span> : null}
       {seen && seen.line ? (
         <button type="button" onClick={onOpen} className="mt-1 flex max-w-full items-center gap-1.5 rounded-[10px] px-1.5 py-0.5 text-[11px] text-white/55 hover:bg-white/[0.06]">
           <FaceStack people={seen.people} size={16} />
@@ -768,6 +782,7 @@ function MessageActions({
   onDeleteForEveryone: (id: string) => Promise<void>;
   onDeleteForMe: (id: string) => Promise<void>;
 }) {
+  const t = useT();
   const deleted = item.deleted || item.body === null;
   const [mode, setMode] = useState<"menu" | "edit" | "delete">("menu");
   const [text, setText] = useState(item.body ?? "");
@@ -791,10 +806,10 @@ function MessageActions({
   const rowCls = "flex h-12 w-full items-center gap-3 rounded-[12px] px-3 text-left text-[14.5px] font-bold text-white transition-colors hover:bg-white/[0.08] disabled:opacity-50";
 
   return (
-    <Sheet title={mode === "edit" ? "Edit message" : mode === "delete" ? "Delete message?" : "Message"} onClose={onClose} busy={busy}>
+    <Sheet title={mode === "edit" ? t("groupThread.message.editTitle") : mode === "delete" ? t("groupThread.message.deleteTitle") : t("groupThread.message.title")} onClose={onClose} busy={busy}>
       {mode !== "edit" ? (
         <p className="line-clamp-3 whitespace-pre-wrap break-words rounded-[12px] bg-white/[0.05] px-3 py-2 text-[13.5px] text-white/[0.82]">
-          {deleted ? <span className="italic text-white/55">Message deleted</span> : item.body}
+          {deleted ? <span className="italic text-white/55">{t("groupThread.thread.messageDeleted")}</span> : item.body}
         </p>
       ) : null}
 
@@ -804,7 +819,7 @@ function MessageActions({
             {mine && !deleted ? (
               <button type="button" className={rowCls} onClick={() => setMode("edit")}>
                 <Ion name="create-outline" size={18} />
-                Edit
+                {t("common.edit")}
               </button>
             ) : null}
             {!deleted && typeof navigator !== "undefined" && navigator.clipboard ? (
@@ -812,23 +827,23 @@ function MessageActions({
                 type="button"
                 className={rowCls}
                 onClick={() => {
-                  void navigator.clipboard.writeText(item.body ?? "").then(onClose, () => setNotice("Couldn't copy it."));
+                  void navigator.clipboard.writeText(item.body ?? "").then(onClose, () => setNotice(t("groupThread.message.copyFailed")));
                 }}
               >
                 <Ion name="copy-outline" size={18} />
-                Copy
+                {t("common.copy")}
               </button>
             ) : null}
             <button type="button" className={rowCls} onClick={() => setMode("delete")}>
               <Ion name="trash-outline" size={18} />
-              Delete
+              {t("common.delete")}
             </button>
           </div>
 
           {mine || seen.length ? (
             <div className="flex flex-col gap-1.5 border-t border-white/10 pt-3">
-              <p className="text-[12.5px] font-bold text-white/[0.82]">{seen.length && seen.length >= others.length && others.length > 1 ? "Seen by everyone" : "Seen by"}</p>
-              {seen.length === 0 ? <p className="text-[13px] text-white/55">No one yet.</p> : null}
+              <p className="text-[12.5px] font-bold text-white/[0.82]">{seen.length && seen.length >= others.length && others.length > 1 ? t("groupThread.message.seenByEveryone") : t("groupThread.message.seenBy")}</p>
+              {seen.length === 0 ? <p className="text-[13px] text-white/55">{t("groupThread.message.noOneYet")}</p> : null}
               {seen.map((id) => (
                 <div key={id} className="flex min-w-0 items-center gap-2.5">
                   <PersonFace person={byId.get(id)} size={26} />
@@ -836,7 +851,7 @@ function MessageActions({
                   <Ion name="checkmark-done" size={16} className="text-white/55" />
                 </div>
               ))}
-              {mine && seen.length && notSeen.length ? <p className="text-[12px] text-white/50">Not yet: {notSeen.map((m) => names.subject(m.userId)).join(", ")}</p> : null}
+              {mine && seen.length && notSeen.length ? <p className="text-[12px] text-white/50">{t("groupThread.message.notYet", { names: notSeen.map((m) => names.subject(m.userId)).join(", ") })}</p> : null}
             </div>
           ) : null}
         </>
@@ -849,15 +864,15 @@ function MessageActions({
             onChange={(e) => setText(e.target.value.slice(0, MESSAGE_MAX + 200))}
             rows={3}
             autoFocus
-            aria-label="Message"
+            aria-label={t("groupThread.thread.messageA11y")}
             disabled={busy}
             className="min-h-[88px] w-full resize-none rounded-[14px] border border-white/[0.12] bg-white/[0.06] px-3 py-2.5 text-[15px] leading-[21px] text-white outline-none focus:border-white/30"
           />
-          {body.length > MESSAGE_MAX ? <p className="text-[12px] text-amber">Keep it under {MESSAGE_MAX} characters.</p> : null}
+          {body.length > MESSAGE_MAX ? <p className="text-[12px] text-amber">{t("groupThread.thread.tooLong", { max: MESSAGE_MAX })}</p> : null}
           {notice ? <Notice>{notice}</Notice> : null}
           <div className="flex gap-2">
             <button type="button" className={`${btnGlass} flex-1`} disabled={busy} onClick={() => setMode("menu")}>
-              Cancel
+              {t("common.cancel")}
             </button>
             <button
               type="button"
@@ -865,7 +880,7 @@ function MessageActions({
               disabled={busy || !body || body.length > MESSAGE_MAX || body === (item.body ?? "").trim()}
               onClick={() => run(() => onEdit(item.id, body))}
             >
-              {busy ? "Saving…" : "Save"}
+              {busy ? t("common.saving") : t("common.save")}
             </button>
           </div>
         </>
@@ -874,22 +889,20 @@ function MessageActions({
       {mode === "delete" ? (
         <>
           <p className="text-[13px] leading-[18px] text-white/[0.72]">
-            {mine && !deleted
-              ? "Delete for everyone leaves “Message deleted” in its place for the whole group. Delete for me takes it out of your thread only."
-              : "It goes from your thread only. Everyone else still sees it. This can't be undone."}
+            {mine && !deleted ? t("groupThread.message.deleteMineHint") : t("groupThread.message.deleteOtherHint")}
           </p>
           {notice ? <Notice>{notice}</Notice> : null}
           <div className="flex flex-col gap-2">
             {mine && !deleted ? (
               <button type="button" className={plateCaution} disabled={busy} onClick={() => run(() => onDeleteForEveryone(item.id))}>
-                {busy ? "Deleting…" : "Delete for everyone"}
+                {busy ? t("groupThread.message.deleting") : t("groupThread.message.deleteForEveryone")}
               </button>
             ) : null}
             <button type="button" className={mine && !deleted ? btnGlass : plateCaution} disabled={busy} onClick={() => run(() => onDeleteForMe(item.id))}>
-              Delete for me
+              {t("groupThread.message.deleteForMe")}
             </button>
             <button type="button" className={btnGlass} disabled={busy} onClick={() => setMode("menu")}>
-              Cancel
+              {t("common.cancel")}
             </button>
           </div>
         </>
@@ -902,20 +915,21 @@ function MessageActions({
 
 /** A message on its way, or refused: "Sending…", or "Not sent · Retry". */
 function PendingBubble({ item, onRetry, onDiscard }: { item: Outgoing; onRetry: () => void; onDiscard: () => void }) {
+  const t = useT();
   return (
     <div className="flex flex-col items-end">
       <div className={`max-w-[78%] rounded-[18px] bg-white/[0.14] px-3.5 pb-[7px] pt-2.5 ${item.state === "sending" ? "opacity-70" : ""}`}>
         <p className="whitespace-pre-wrap break-words text-[15px] leading-[21px] text-white/[0.92]">{item.body}</p>
-        <span className="mt-[3px] flex justify-end text-[10.5px] text-white/45">{item.state === "sending" ? "Sending…" : shortTime(item.at)}</span>
+        <span className="mt-[3px] flex justify-end text-[10.5px] text-white/45">{item.state === "sending" ? t("groupThread.thread.sending") : shortTime(item.at)}</span>
       </div>
       {item.state === "failed" ? (
         <span className="mt-1 flex items-center gap-1">
           <button type="button" onClick={onRetry} className="inline-flex items-center gap-1 rounded-[10px] px-2 py-1 text-[12.5px] font-bold text-amber hover:bg-amber/[0.12]">
             <Ion name="refresh" size={13} />
-            Not sent · Retry
+            {t("groupThread.thread.notSent")}
           </button>
           <button type="button" onClick={onDiscard} className="rounded-[10px] px-2 py-1 text-[12.5px] font-bold text-white/60 hover:bg-white/10 hover:text-white">
-            Discard
+            {t("groupThread.thread.discard")}
           </button>
         </span>
       ) : null}
@@ -945,9 +959,10 @@ function ExpenseCard({
   onReceipt: () => void;
   onBills: () => void;
 }) {
+  const t = useT();
   const mine = item.userId === meId;
   const part = expenseForMe(item, meId);
-  const converted = item.currency.toUpperCase() !== groupCurrency ? ` (${moneyText(item.groupMinor, groupCurrency)})` : "";
+  const converted = item.currency.toUpperCase() !== groupCurrency ? groupMoney(item.groupMinor, groupCurrency) : null;
   const [thumbBroken, setThumbBroken] = useState(false);
   const receipt = !item.deleted && item.receiptUrl && !thumbBroken ? item.receiptUrl : null;
   const bills = billCount(item);
@@ -958,17 +973,18 @@ function ExpenseCard({
       <div className="flex w-full min-w-0 items-stretch gap-2">
         <button type="button" onClick={onOpen} disabled={item.deleted} className="flex min-w-0 flex-1 flex-col gap-1.5 rounded-[16px] px-3.5 py-3 text-left [-webkit-tap-highlight-color:transparent]">
           <span className="flex w-full min-w-0 items-center gap-2.5">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[16px] bg-white/[0.08]" title={category ? undefined : "Expense"}>
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[16px] bg-white/[0.08]" title={category ? undefined : t("groupThread.expense.fallbackTitle")}>
               <Ion name={category ? CATEGORY_ICON[category] : "receipt-outline"} size={16} className="text-white/[0.82]" />
             </span>
             <span className={`min-w-0 flex-1 truncate text-[15px] font-extrabold tracking-[-0.2px] ${item.deleted ? "text-white/55 line-through" : "text-white"}`}>
-              {item.description?.trim() || "Expense"}
+              {item.description?.trim() || t("groupThread.expense.fallbackTitle")}
             </span>
-            {item.deleted ? <Tag label="Removed" tone="dim" /> : item.edited ? <Tag label="Edited" tone="dim" /> : null}
+            {item.deleted ? <Tag label={t("groupThread.expense.removed")} tone="dim" /> : item.edited ? <Tag label={t("groupThread.thread.edited")} tone="dim" /> : null}
           </span>
           <span className={`text-[13.5px] tabular-nums ${item.deleted ? "text-white/45 line-through" : "text-white/[0.82]"}`}>
-            {names.subject(item.userId)} paid {moneyText(item.amountMinor, item.currency)}
-            {converted}
+            {converted
+              ? t("groupThread.expense.paidConverted", { name: names.subject(item.userId), amount: groupMoney(item.amountMinor, item.currency), converted })
+              : t("groupThread.expense.paid", { name: names.subject(item.userId), amount: groupMoney(item.amountMinor, item.currency) })}
           </span>
           {!item.deleted && item.place ? (
             <span className="flex min-w-0 items-center gap-1 text-[12px] text-white/60">
@@ -978,13 +994,17 @@ function ExpenseCard({
           ) : null}
           {!item.deleted ? (
             <span className="text-[14px] font-bold tabular-nums text-white">
-              {part.kind === "share" ? `Your part ${formatMinor(part.minor, groupCurrency)}` : part.kind === "lent" ? `You lent ${formatMinor(part.minor, groupCurrency)}` : "Not part of this"}
+              {part.kind === "share"
+                ? t("groupThread.expense.yourPart", { amount: groupMoney(part.minor, groupCurrency) })
+                : part.kind === "lent"
+                  ? t("groupThread.expense.youLent", { amount: groupMoney(part.minor, groupCurrency) })
+                  : t("groupThread.expense.notPartOfThis")}
             </span>
           ) : null}
           <span className="flex justify-end text-[10.5px] text-white/55">{shortTime(item.at)}</span>
         </button>
         {receipt ? (
-          <button type="button" onClick={onReceipt} aria-label="Open the receipt" className="my-3 mr-3 shrink-0 self-start overflow-hidden rounded-[12px] ring-1 ring-white/15 transition-opacity hover:opacity-90">
+          <button type="button" onClick={onReceipt} aria-label={t("groupThread.expense.openReceipt")} className="my-3 mr-3 shrink-0 self-start overflow-hidden rounded-[12px] ring-1 ring-white/15 transition-opacity hover:opacity-90">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={receipt} alt="" onError={() => setThumbBroken(true)} className="h-[64px] w-[52px] object-cover" />
           </button>
@@ -997,7 +1017,7 @@ function ExpenseCard({
           className="mx-3 mb-3 -mt-1 inline-flex h-8 items-center gap-1.5 self-start rounded-[16px] bg-white/[0.08] px-3 text-[12.5px] font-bold text-white/85 transition-colors hover:bg-white/[0.14] [-webkit-tap-highlight-color:transparent]"
         >
           <Ion name="receipt-outline" size={13} />
-          {bills} bills · see each
+          {t("groupThread.expense.bills", { count: bills })}
         </button>
       ) : null}
       </div>
@@ -1010,6 +1030,7 @@ function ExpenseCard({
  * word and the payer's word say whose word they are. The three never look alike.
  */
 function SettlementCard({ item, mine, names }: { item: SettlementItem; mine: boolean; names: Names }) {
+  const t = useT();
   return (
     <Side mine={mine}>
       <div className="flex flex-col gap-1.5 rounded-[16px] border border-white/10 bg-white/[0.08] px-3.5 py-3">
@@ -1022,10 +1043,10 @@ function SettlementCard({ item, mine, names }: { item: SettlementItem; mine: boo
         {item.viaHold ? (
           <span className="flex items-center gap-1.5 text-[12.5px] font-bold text-[#2FBE8A]">
             <Ion name="checkmark-circle" size={15} />
-            Paid in HOLD
+            {t("groupThread.settlement.paidInHold")}
           </span>
         ) : (
-          <span className="text-[12px] text-white/55">{item.markedByCreditor ? "Marked as paid, outside HOLD" : "Their word, outside HOLD"}</span>
+          <span className="text-[12px] text-white/55">{item.markedByCreditor ? t("groupThread.settlement.markedOutside") : t("groupThread.settlement.theirWord")}</span>
         )}
         <span className="flex justify-end text-[10.5px] text-white/55">{shortTime(item.at)}</span>
       </div>
@@ -1042,6 +1063,7 @@ const EVENT_ICON: Record<string, IonName> = {
 };
 
 function EventLine({ item, names, onOpen }: { item: EventItem; names: Names; onOpen?: () => void }) {
+  useT();
   const inner = (
     <>
       <Ion name={EVENT_ICON[item.event] ?? "information-circle-outline"} size={12} className="shrink-0" />
@@ -1095,6 +1117,7 @@ function DebtCard({
   onChanged: () => void;
   onOpenBalances: () => void;
 }) {
+  const t = useT();
   const [folded, setFolded] = useState(false);
   useEffect(() => {
     try {
@@ -1119,15 +1142,17 @@ function DebtCard({
     const y = BigInt(/^\d+$/.test(b.amountMinor) ? b.amountMinor : "0");
     return x === y ? 0 : x > y ? -1 : 1;
   };
-  const iOwe = balances.transfers.filter((t) => t.fromUserId === meId).sort(big);
-  const owedMe = balances.transfers.filter((t) => t.toUserId === meId).sort(big);
+  const iOwe = balances.transfers.filter((x) => x.fromUserId === meId).sort(big);
+  const owedMe = balances.transfers.filter((x) => x.toUserId === meId).sort(big);
   const total = iOwe.length + owedMe.length;
   if (!total) return null;
   const byId = new Map(members.map((m) => [m.userId, m]));
   const top = iOwe[0] ?? owedMe[0];
   const owe = !!iOwe[0];
-  const sum = (xs: { amountMinor: string }[]) => xs.reduce((a, t) => a + BigInt(/^\d+$/.test(t.amountMinor) ? t.amountMinor : "0"), 0n).toString();
-  const summary = owe ? `You owe ${moneyText(sum(iOwe), cur)}` : `You're owed ${moneyText(sum(owedMe), cur)}`;
+  const sum = (xs: { amountMinor: string }[]) => xs.reduce((a, x) => a + BigInt(/^\d+$/.test(x.amountMinor) ? x.amountMinor : "0"), 0n).toString();
+  const summary = owe
+    ? t("groupThread.balance.youOwe", { amount: groupMoney(sum(iOwe), cur) })
+    : t("groupThread.balance.youreOwed", { amount: groupMoney(sum(owedMe), cur) });
   const more = total - 1;
 
   return (
@@ -1137,14 +1162,14 @@ function DebtCard({
         <span className="min-w-0 flex-1 truncate text-[13px] font-bold tabular-nums text-white">{summary}</span>
         {more > 0 ? (
           <button type="button" onClick={onOpenBalances} className="shrink-0 rounded-[12px] px-2 py-1 text-[12.5px] font-bold text-white/80 hover:bg-white/10 hover:text-white">
-            +{more} more
+            {t("groupThread.debt.more", { count: more })}
           </button>
         ) : null}
         <button
           type="button"
           onClick={() => fold(!folded)}
           aria-expanded={!folded}
-          aria-label={folded ? "Show" : "Fold away"}
+          aria-label={folded ? t("groupThread.debt.show") : t("groupThread.debt.fold")}
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[16px] text-white/65 hover:bg-white/10 hover:text-white"
         >
           <Ion name={folded ? "chevron-up" : "chevron-down"} size={16} />
@@ -1212,6 +1237,7 @@ function Composer({
   /** The debt card, over the bar. */
   above?: ReactNode;
 }) {
+  const t = useT();
   const [text, setText] = useState("");
   const keyboard = useKeyboardInset();
   const body = text.trim();
@@ -1232,12 +1258,12 @@ function Composer({
     // and clear of the home indicator.
     <div className="sticky bottom-0 z-20 mt-4 pb-[max(4px,env(safe-area-inset-bottom))] pt-3" style={keyboard ? { bottom: keyboard } : undefined}>
       {above}
-      {body.length > MESSAGE_MAX ? <p className="mb-2 px-1 text-[12px] text-amber">Keep it under {MESSAGE_MAX} characters.</p> : null}
+      {body.length > MESSAGE_MAX ? <p className="mb-2 px-1 text-[12px] text-amber">{t("groupThread.thread.tooLong", { max: MESSAGE_MAX })}</p> : null}
       <div className="flex items-end gap-2 rounded-[20px] border border-white/[0.12] bg-white/10 px-2 py-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.28)] backdrop-blur-xl">
         <button
           type="button"
           onClick={onToggleAdd}
-          aria-label={adding ? "Close add expense" : "Add expense"}
+          aria-label={adding ? t("groupThread.thread.closeAddExpense") : t("groupThread.thread.addExpense")}
           aria-expanded={adding}
           disabled={disabled || !canAdd}
           className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[18px] transition-colors hover:bg-white/10 hover:text-white disabled:opacity-45 ${adding ? "bg-white/[0.14] text-white" : "text-white/75"}`}
@@ -1254,8 +1280,8 @@ function Composer({
             }
           }}
           rows={1}
-          placeholder="Message the group…"
-          aria-label="Message"
+          placeholder={t("groupThread.thread.messagePlaceholder")}
+          aria-label={t("groupThread.thread.messageA11y")}
           disabled={disabled}
           className="max-h-32 min-h-[36px] min-w-0 flex-1 resize-none bg-transparent py-2 text-[14.5px] leading-[20px] text-white outline-none placeholder:text-white/60"
         />
@@ -1263,7 +1289,7 @@ function Composer({
           type="button"
           onClick={submit}
           disabled={!canSend}
-          aria-label="Send"
+          aria-label={t("common.send")}
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[18px] bg-[#F1F5F9] text-[#0A1420] transition-opacity disabled:bg-white/[0.12] disabled:text-white/50"
         >
           <Ion name="arrow-up" size={18} />
@@ -1277,14 +1303,15 @@ function Composer({
 
 /** "Today", "Yesterday", else the date: the payment chat's day line. */
 function dayLabel(ts: number): string {
+  const t = i18nT;
   const d = new Date(ts);
   const today = new Date();
   const same = (a: Date, b: Date) => a.toDateString() === b.toDateString();
-  if (same(d, today)) return "Today";
+  if (same(d, today)) return t("common.today");
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
-  if (same(d, yesterday)) return "Yesterday";
-  return d.toLocaleDateString(undefined, {
+  if (same(d, yesterday)) return t("common.yesterday");
+  return fmtDate(d, {
     day: "numeric",
     month: "short",
     ...(d.getFullYear() === today.getFullYear() ? {} : { year: "numeric" }),
@@ -1294,5 +1321,5 @@ function dayLabel(ts: number): string {
 function shortTime(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  return fmtTime(d, { hour: "2-digit", minute: "2-digit" });
 }

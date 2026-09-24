@@ -163,7 +163,7 @@ export interface MoneyOptions {
 export function fmtFiat(amount: number, currency: string, o: MoneyOptions = {}): string {
   const value = o.abs ? Math.abs(amount) : amount;
   const code = (currency || "USD").toUpperCase();
-  const options: Intl.NumberFormatOptions = { style: "currency", currency: code, currencyDisplay: "narrowSymbol" };
+  const options: Intl.NumberFormatOptions = { style: "currency", currency: code, currencyDisplay: "symbol" };
   if (o.compact) {
     options.notation = "compact";
     options.maximumFractionDigits = 1;
@@ -247,7 +247,7 @@ export function fmtToken(amount: number, symbol: string, maxDigits = 6): string 
 /** The symbol the display currency is written with: "$", "€", "R$". */
 export function currencySymbol(currency: string = effectiveCurrency()): string {
   try {
-    const part = nf({ style: "currency", currency, currencyDisplay: "narrowSymbol" })
+    const part = nf({ style: "currency", currency, currencyDisplay: "symbol" })
       .formatToParts(0)
       .find((p) => p.type === "currency");
     return part?.value ?? currency;

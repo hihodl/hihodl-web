@@ -22,6 +22,8 @@ import type { Booking } from "./stays";
 import { getStableFiatCurrency, parseAmt } from "./spending/amounts";
 import type { SpendTransfer } from "./spending/types";
 import { decimalToMinor, minorExponent, type Bill, type SourceKind } from "./groups-rules";
+import { t as tr } from "./i18n";
+import { fmtDate } from "./i18n/format";
 
 /** A bill the person can pick, with what the row prints under its name. */
 export interface BillRow extends Bill {
@@ -83,8 +85,8 @@ export function classifyTransfer(t: Transfer): { kind: "bill"; bill: BillRow } |
   const usdCents = currency === "USD" ? amountMinor : usd !== null ? decimalToMinor(usd.toFixed(8), "USD") : null;
   const card = t.counterpartyType === "card";
   const who = handle(t.toAlias);
-  const label = t.merchantName?.trim() || who || shortAddress(t.toAddress) || "Payment";
-  const sub = card ? "Card" : t.note?.trim() || (t.actionLabel?.trim() || (who ? "Sent" : "Payment"));
+  const label = t.merchantName?.trim() || who || shortAddress(t.toAddress) || tr("groups.source.payment");
+  const sub = card ? tr("groups.source.card") : t.note?.trim() || (t.actionLabel?.trim() || (who ? tr("groups.source.sent") : tr("groups.source.payment")));
 
   const bill: BillRow = {
     key: `${card ? "card" : "transfer"}:${t.id}`,
@@ -137,7 +139,7 @@ export function billFromBooking(b: Booking): BillRow | null {
     currency,
     usdCents: currency === "USD" ? amountMinor : null,
     occurredAt: b.createdAt,
-    sub: b.hotel.city ? `Stay · ${b.hotel.city}` : "Stay",
+    sub: b.hotel.city ? tr("groups.source.stayIn", { city: b.hotel.city }) : tr("groups.source.stay"),
     avatarUrl: b.hotel.photo?.url ?? null,
   };
 }
@@ -161,7 +163,7 @@ export function searchBills<T extends BillRow>(rows: readonly T[], q: string): T
   return rows.filter((r) => `${r.label} ${r.sub}`.toLowerCase().includes(s) || r.amountMinor.includes(s.replace(/[.,]/g, "")));
 }
 
-/** Rows grouped under "Today", "Yesterday", or the day ("21 September"), in order. */
+/** Rows grouped under "Today", "Yesterday", or the day ("September 21" / "21 de septiembre"), in order. */
 export function groupByDay<T extends { occurredAt: string }>(rows: readonly T[], now: Date = new Date()): { label: string; rows: T[] }[] {
   const out: { label: string; rows: T[] }[] = [];
   const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
@@ -174,10 +176,10 @@ export function groupByDay<T extends { occurredAt: string }>(rows: readonly T[],
     const k = dayKey(d);
     const label =
       k === today
-        ? "Today"
+        ? tr("common.today")
         : k === yesterday
-          ? "Yesterday"
-          : d.toLocaleDateString("en-GB", { day: "numeric", month: "long", ...(d.getFullYear() !== now.getFullYear() ? { year: "numeric" } : {}) });
+          ? tr("common.yesterday")
+          : fmtDate(d, { day: "numeric", month: "long", ...(d.getFullYear() !== now.getFullYear() ? { year: "numeric" } : {}) });
     const last = out[out.length - 1];
     if (last && last.label === label) last.rows.push(r);
     else out.push({ label, rows: [r] });

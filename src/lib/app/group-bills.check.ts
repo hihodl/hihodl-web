@@ -25,7 +25,7 @@ eq("sandbox stay is not a bill", B.billFromBooking(bk({ isSandbox: true })), nul
 const all = B.billsFrom([t({ id: "x", createdAt: "2026-09-22T10:00:00Z" }), t({ id: "y", createdAt: "2026-09-23T10:00:00Z" }), t({ id: "y", createdAt: "2026-09-23T10:00:00Z" })], [bk({})]);
 eq("newest first, once each", all.map((r) => r.key), ["transfer:y", "transfer:x", "stay:b1"]);
 const now = new Date(2026, 8, 23, 23, 0);
-eq("days", B.groupByDay([{ occurredAt: new Date(2026, 8, 23, 18).toISOString() }, { occurredAt: new Date(2026, 8, 22, 9).toISOString() }, { occurredAt: new Date(2026, 8, 21, 9).toISOString() }], now).map((g) => g.label), ["Today", "Yesterday", "21 September"]);
+eq("days", B.groupByDay([{ occurredAt: new Date(2026, 8, 23, 18).toISOString() }, { occurredAt: new Date(2026, 8, 22, 9).toISOString() }, { occurredAt: new Date(2026, 8, 21, 9).toISOString() }], now).map((g) => g.label), ["Today", "Yesterday", "September 21"]);
 eq("search", B.searchBills(all, "casa").map((r) => r.key), ["stay:b1"]);
 eq("classify: SOL with no value is unpriced", B.classifyTransfer(t({ symbol: "SOL", tokenId: "sol", amount: "0.1" })).kind, "unpriced");
 eq("classify: money in is not a bill at all", B.classifyTransfer(t({ direction: "in", symbol: "SOL", tokenId: "sol" })).kind, "no");

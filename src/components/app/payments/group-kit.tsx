@@ -14,6 +14,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 import { faceOf, type ExpenseCategory, type GroupMember, type Person } from "@/lib/app/groups";
+import { useT } from "@/lib/app/i18n/react";
 import { IMAGE_ACCEPT, uprightImage } from "@/lib/app/image-upright";
 
 import { EmojiAvatar } from "../front/kit";
@@ -155,8 +156,9 @@ export const GROUP_EMOJIS: readonly string[] = [
 
 /** A tappable grid of emojis. The chosen one is a white plate; nothing changes a border width. */
 export function EmojiGrid({ value, onPick }: { value: string; onPick: (emoji: string) => void }) {
+  const t = useT();
   return (
-    <div role="listbox" aria-label="Emoji" className="grid grid-cols-8 gap-1">
+    <div role="listbox" aria-label={t("groups.kit.emoji")} className="grid grid-cols-8 gap-1">
       {GROUP_EMOJIS.map((e) => (
         <button
           key={e}
@@ -199,6 +201,7 @@ export function FacePicker({
   onRemovePhoto?: () => void;
   disabled?: boolean;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const preview = useObjectUrl(photo);
   const shown = preview ?? photoUrl ?? null;
@@ -210,16 +213,16 @@ export function FacePicker({
           onClick={() => setOpen((o) => !o)}
           disabled={disabled}
           aria-expanded={open}
-          aria-label="Choose an emoji"
+          aria-label={t("groups.kit.chooseEmoji")}
           className="relative shrink-0 rounded-[32px] transition-opacity hover:opacity-90"
         >
-          <GroupFace name={name || "Group"} emoji={emoji} photoUrl={shown} size={64} />
+          <GroupFace name={name || t("groups.kit.groupFallback")} emoji={emoji} photoUrl={shown} size={64} />
           <span className="absolute -bottom-0.5 -right-0.5 flex h-6 w-6 items-center justify-center rounded-[12px] bg-[#F1F5F9] text-[#0A1420]">
             <Ion name="create-outline" size={13} />
           </span>
         </button>
         <div className="flex min-w-0 flex-col gap-1.5">
-          <PhotoButton label={shown ? "Change photo" : "Add a photo"} onPicked={onPhoto} disabled={disabled} />
+          <PhotoButton label={shown ? t("groups.kit.changePhoto") : t("groups.kit.addPhoto")} onPicked={onPhoto} disabled={disabled} />
           {shown ? (
             <button
               type="button"
@@ -227,10 +230,10 @@ export function FacePicker({
               onClick={() => (photo ? onPhoto(null) : onRemovePhoto?.())}
               className="self-start rounded-[10px] px-2 py-1 text-[12.5px] font-bold text-white/70 hover:bg-white/10 hover:text-white"
             >
-              Remove photo
+              {t("groups.kit.removePhoto")}
             </button>
           ) : (
-            <span className="px-0.5 text-[12px] text-white/55">Optional. The emoji shows when there is no photo.</span>
+            <span className="px-0.5 text-[12px] text-white/55">{t("groups.kit.photoOptional")}</span>
           )}
         </div>
       </div>
@@ -265,6 +268,7 @@ export function PhotoButton({
   className?: string;
   icon?: "camera-outline" | "image-outline" | "receipt-outline";
 }) {
+  const t = useT();
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
@@ -272,7 +276,7 @@ export function PhotoButton({
     <>
       <button type="button" className={`${className} self-start`} disabled={disabled || busy} onClick={() => input.current?.click()}>
         <Ion name={icon} size={15} />
-        {busy ? "Preparing…" : label}
+        {busy ? t("groups.kit.preparing") : label}
       </button>
       <input
         ref={input}
@@ -288,7 +292,7 @@ export function PhotoButton({
           uprightImage(file)
             .then(onPicked)
             .catch((err: unknown) => {
-              const words = err instanceof Error && err.message.startsWith("image:") ? err.message.slice(6) : "That image couldn't be used. Try another one.";
+              const words = err instanceof Error && err.message.startsWith("image:") ? err.message.slice(6) : t("groups.kit.imageUnusable");
               if (onError) onError(words);
               else setProblem(words);
             })
@@ -317,13 +321,14 @@ export function useObjectUrl(blob: Blob | null): string | null {
 
 /** An honest failure with a way back: the words and Retry. */
 export function LoadFailed({ words, onRetry }: { words: string; onRetry: () => void }) {
+  const t = useT();
   return (
     <div className="flex flex-col items-center px-4 py-6 text-center">
       <Ion name="alert-circle-outline" size={40} className="text-white/40" />
       <p className="mt-2 text-[13.5px] text-white/[0.72]">{words}</p>
       <button type="button" onClick={onRetry} className={`${pillGlass} mt-3`}>
         <Ion name="refresh" size={14} />
-        Retry
+        {t("common.retry")}
       </button>
     </div>
   );
@@ -334,7 +339,8 @@ export function LoadFailed({ words, onRetry }: { words: string; onRetry: () => v
 export const COMMON_CURRENCIES = ["USD", "EUR", "GBP", "MXN", "BRL", "ARS", "COP", "CLP", "PEN", "CAD", "AUD", "CHF", "JPY", "SGD", "AED"] as const;
 
 /** A three-letter code, typed or picked from the common ones. */
-export function CurrencyInput({ value, onChange, disabled, label = "Currency", className = "" }: { value: string; onChange: (v: string) => void; disabled?: boolean; label?: string; className?: string }) {
+export function CurrencyInput({ value, onChange, disabled, label, className = "" }: { value: string; onChange: (v: string) => void; disabled?: boolean; label?: string; className?: string }) {
+  const t = useT();
   const listId = useId();
   return (
     <>
@@ -342,7 +348,7 @@ export function CurrencyInput({ value, onChange, disabled, label = "Currency", c
         value={value}
         onChange={(e) => onChange(e.target.value.replace(/[^A-Za-z]/g, "").slice(0, 3).toUpperCase())}
         list={listId}
-        aria-label={label}
+        aria-label={label ?? t("groups.kit.currency")}
         disabled={disabled}
         autoCapitalize="characters"
         spellCheck={false}

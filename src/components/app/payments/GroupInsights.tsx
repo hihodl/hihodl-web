@@ -23,12 +23,13 @@
  */
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 
 import {
   absMinor,
   CATEGORY_LABEL,
   fractions,
+  groupMoney,
   labelledMonths,
   lastMonths,
   memberName,
@@ -41,6 +42,9 @@ import {
   type GroupMember,
   type GroupStats,
 } from "@/lib/app/groups";
+import type { MessageKey } from "@/lib/app/i18n";
+import { fmtDate } from "@/lib/app/i18n/format";
+import { Rich, useT } from "@/lib/app/i18n/react";
 import { rampColor } from "@/lib/app/spending/categories";
 import { useMe } from "@/lib/app/spaces-data";
 
@@ -49,20 +53,23 @@ import { useProductHref } from "../base";
 import { BackHeader, Column } from "../hold";
 import { Ion } from "../ion";
 import { Skeleton } from "../ui";
-import { money } from "./AddExpense";
 import { ExpenseDetail } from "./GroupExpense";
 import { CATEGORY_ICON, LoadFailed, PersonFace } from "./group-kit";
 
-const RANGES = [
-  { months: 3, label: "3 months" },
-  { months: 6, label: "6 months" },
-  { months: 12, label: "1 year" },
-  { months: 36, label: "3 years" },
-] as const;
+const RANGES: readonly { months: number; labelKey: MessageKey }[] = [
+  { months: 3, labelKey: "groupThread.insights.range.threeMonths" },
+  { months: 6, labelKey: "groupThread.insights.range.sixMonths" },
+  { months: 12, labelKey: "groupThread.insights.range.oneYear" },
+  { months: 36, labelKey: "groupThread.insights.range.threeYears" },
+];
+
+/** A group's amount in the group's own currency (never converted). */
+const money = (minor: string | bigint, currency: string) => groupMoney(minor, currency);
 
 const TOTAL_BAR = "rgba(255,255,255,0.22)";
 
 export function GroupInsights({ groupId }: { groupId: string }) {
+  const t = useT();
   const href = useProductHref();
   const me = useMe();
   const meId = me.data?.id ?? null;
@@ -74,15 +81,22 @@ export function GroupInsights({ groupId }: { groupId: string }) {
   const [open, setOpen] = useState<string | null>(null);
 
   const byId = useMemo(() => new Map((members.data ?? []).map((m) => [m.userId, m])), [members.data]);
-  const nameOf = (id: string) => (id === meId ? "You" : byId.get(id) ? memberName(byId.get(id)) : members.data ? "Former member" : "Someone");
+  const nameOf = (id: string) =>
+    id === meId
+      ? t("groupThread.names.youSubject")
+      : byId.get(id)
+        ? memberName(byId.get(id))
+        : members.data
+          ? t("groupThread.names.formerMemberShort")
+          : t("groupThread.names.someone");
   const s = stats.data;
   const cur = s?.currency ?? (info.data?.currency ?? "USD").toUpperCase();
 
   return (
     <Column>
-      <BackHeader title="Insights" subtitle={info.data?.name ?? undefined} backHref={href(`/payments/groups/${encodeURIComponent(groupId)}`)} />
+      <BackHeader title={t("groupThread.insights.title")} subtitle={info.data?.name ?? undefined} backHref={href(`/payments/groups/${encodeURIComponent(groupId)}`)} />
 
-      <div role="radiogroup" aria-label="Range" className="mt-1 flex gap-2">
+      <div role="radiogroup" aria-label={t("groupThread.insights.rangeA11y")} className="mt-1 flex gap-2">
         {RANGES.map((r) => {
           const on = months === r.months;
           return (
@@ -96,7 +110,7 @@ export function GroupInsights({ groupId }: { groupId: string }) {
                 on ? "bg-[#F1F5F9] text-[#0A1420]" : "bg-white/[0.07] text-white/70 hover:bg-white/[0.1]"
               }`}
             >
-              {r.label}
+              {t(r.labelKey)}
             </button>
           );
         })}
@@ -111,7 +125,7 @@ export function GroupInsights({ groupId }: { groupId: string }) {
       ) : null}
       {stats.error && !s ? (
         <div className="mt-4">
-          <LoadFailed words="Insights didn't load. If this keeps happening, HOLD's servers may not have them yet." onRetry={() => void stats.mutate()} />
+          <LoadFailed words={t("groupThread.insights.failed")} onRetry={() => void stats.mutate()} />
         </div>
       ) : null}
 
@@ -127,13 +141,13 @@ export function GroupInsights({ groupId }: { groupId: string }) {
             </>
           ) : (
             <SectionCard>
-              <p className="py-4 text-center text-[13.5px] text-white/60">No expenses in this range yet.</p>
+              <p className="py-4 text-center text-[13.5px] text-white/60">{t("groupThread.insights.empty")}</p>
             </SectionCard>
           )}
           <Plan s={s} cur={cur} byId={byId} nameOf={nameOf} meId={meId} threadHref={href(`/payments/groups/${encodeURIComponent(groupId)}`)} />
           {s.topExpenses.length ? (
             <SectionCard>
-              <SectionLabel>BIGGEST EXPENSES</SectionLabel>
+              <SectionLabel>{t("groupThread.insights.top")}</SectionLabel>
               <ul className="mt-2 flex flex-col">
                 {s.topExpenses.map((e) => {
                   const c = e.category ?? "other";
@@ -144,9 +158,11 @@ export function GroupInsights({ groupId }: { groupId: string }) {
                           <Ion name={CATEGORY_ICON[c]} size={16} />
                         </span>
                         <span className="flex min-w-0 flex-1 flex-col">
-                          <span className="truncate text-[14px] font-bold text-white">{e.description?.trim() || "Expense"}</span>
+                          <span className="truncate text-[14px] font-bold text-white">{e.description?.trim() || t("groupThread.expense.fallbackTitle")}</span>
                           <span className="truncate text-[12px] text-white/55">
-                            {nameOf(e.payerUserId)} paid{e.spentAt ? ` · ${new Date(e.spentAt).toLocaleDateString(undefined, { day: "numeric", month: "short" })}` : ""}
+                            {e.spentAt
+                              ? t("groupThread.insights.paidByOn", { name: nameOf(e.payerUserId), date: fmtDate(e.spentAt, { day: "numeric", month: "short" }) })
+                              : t("groupThread.insights.paidBy", { name: nameOf(e.payerUserId) })}
                           </span>
                         </span>
                         <span className="shrink-0 text-[14px] font-bold tabular-nums text-white">{money(e.groupMinor, cur)}</span>
@@ -157,7 +173,7 @@ export function GroupInsights({ groupId }: { groupId: string }) {
               </ul>
             </SectionCard>
           ) : null}
-          <Note>Every amount is in {cur}, from live expenses and settlements. Balances are all time; the rest is the range above.</Note>
+          <Note>{t("groupThread.insights.note", { currency: cur })}</Note>
         </>
       ) : null}
 
@@ -171,20 +187,21 @@ export function GroupInsights({ groupId }: { groupId: string }) {
 /* ── Hero ────────────────────────────────────────────────────────── */
 
 function Hero({ s, cur }: { s: GroupStats; cur: string }) {
+  const t = useT();
   return (
     <>
       <section className={`${glassHero} mt-3 rounded-[24px] px-5 py-5`}>
         <p className="text-[11px] font-bold tracking-[1.5px] text-white/65">
-          {s.from && s.to ? `${monthLabel(s.from, true)} – ${monthLabel(s.to, true)}`.toUpperCase() : "SPENT"}
+          {s.from && s.to ? t("groupThread.insights.heroRange", { from: monthLabel(s.from, true), to: monthLabel(s.to, true) }).toUpperCase() : t("groupThread.insights.heroSpent")}
         </p>
         <p className="mt-2 whitespace-nowrap text-[clamp(32px,11vw,44px)] font-bold leading-[1.1] tabular-nums text-white">{money(s.totalMinor, cur)}</p>
         <p className="mt-0.5 text-[12px] font-semibold text-white/55">
-          Spent together · {s.expenseCount} {s.expenseCount === 1 ? "expense" : "expenses"}
+          {t("groupThread.insights.spentTogether", { count: s.expenseCount })}
         </p>
       </section>
       <div className="mt-3 grid grid-cols-2 gap-2.5">
-        <Tile label="Average per person" value={money(s.averagePerPersonMinor, cur)} />
-        <Tile label="Biggest month" value={s.biggestMonth ? monthLabel(s.biggestMonth, true) : "–"} />
+        <Tile label={t("groupThread.insights.averagePerPerson")} value={money(s.averagePerPersonMinor, cur)} />
+        <Tile label={t("groupThread.insights.biggestMonth")} value={s.biggestMonth ? monthLabel(s.biggestMonth, true) : "–"} />
       </div>
     </>
   );
@@ -204,21 +221,26 @@ function Tile({ label, value }: { label: string; value: string }) {
 type NameOf = (id: string) => string;
 
 function YouCard({ s, cur, byId, nameOf }: { s: GroupStats; cur: string; byId: Map<string, GroupMember>; nameOf: NameOf }) {
+  const t = useT();
   const net = toBig(s.you.netMinor);
   const pairs = pairLines(s.you.withEach);
   return (
     <SectionCard>
-      <SectionLabel>YOU</SectionLabel>
+      <SectionLabel>{t("groupThread.insights.you")}</SectionLabel>
       <p className="mt-2 text-[24px] font-bold tracking-[-0.5px] tabular-nums" style={{ color: net > 0n ? GREEN : "#fff" }}>
-        {net > 0n ? `You're owed ${money(s.you.netMinor, cur)}` : net < 0n ? `You owe ${money(absMinor(s.you.netMinor), cur)}` : "All settled up"}
+        {net > 0n
+          ? t("groupThread.balance.youreOwed", { amount: money(s.you.netMinor, cur) })
+          : net < 0n
+            ? t("groupThread.balance.youOwe", { amount: money(absMinor(s.you.netMinor), cur) })
+            : t("groupThread.balance.settled")}
       </p>
       <div className="mt-2 flex justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[11.5px] font-semibold text-white/55">You paid</p>
+          <p className="text-[11.5px] font-semibold text-white/55">{t("groupThread.insights.youPaid")}</p>
           <p className="mt-px truncate text-[15px] font-bold tabular-nums text-white">{money(s.you.paidMinor, cur)}</p>
         </div>
         <div className="min-w-0 text-right">
-          <p className="text-[11.5px] font-semibold text-white/55">Your share</p>
+          <p className="text-[11.5px] font-semibold text-white/55">{t("groupThread.insights.yourShare")}</p>
           <p className="mt-px truncate text-[15px] font-bold tabular-nums text-white">{money(s.you.shareMinor, cur)}</p>
         </div>
       </div>
@@ -226,10 +248,10 @@ function YouCard({ s, cur, byId, nameOf }: { s: GroupStats; cur: string; byId: M
       {pairs.owesYou.length || pairs.youOwe.length ? (
         <div className="mt-4 flex flex-col gap-3 border-t border-white/[0.08] pt-3">
           {pairs.owesYou.length ? (
-            <PairList title={`Owe you · ${money(pairs.owed, cur)}`} rows={pairs.owesYou} cur={cur} byId={byId} nameOf={nameOf} green />
+            <PairList title={t("groupThread.insights.oweYou", { amount: money(pairs.owed, cur) })} rows={pairs.owesYou} cur={cur} byId={byId} nameOf={nameOf} green />
           ) : null}
-          {pairs.youOwe.length ? <PairList title={`You owe · ${money(pairs.owe, cur)}`} rows={pairs.youOwe} cur={cur} byId={byId} nameOf={nameOf} /> : null}
-          <p className="text-[12px] leading-[17px] text-white/50">Pair by pair, between you and each person. Settling up may net these across the group.</p>
+          {pairs.youOwe.length ? <PairList title={t("groupThread.insights.youOwe", { amount: money(pairs.owe, cur) })} rows={pairs.youOwe} cur={cur} byId={byId} nameOf={nameOf} /> : null}
+          <p className="text-[12px] leading-[17px] text-white/50">{t("groupThread.insights.pairNote")}</p>
         </div>
       ) : null}
     </SectionCard>
@@ -237,6 +259,7 @@ function YouCard({ s, cur, byId, nameOf }: { s: GroupStats; cur: string; byId: M
 }
 
 function PairList({ title, rows, cur, byId, nameOf, green = false }: { title: string; rows: { userId: string; minor: string }[]; cur: string; byId: Map<string, GroupMember>; nameOf: NameOf; green?: boolean }) {
+  useT();
   return (
     <div>
       <p className="mb-1 text-[12.5px] font-bold text-white/70">{title}</p>
@@ -258,6 +281,7 @@ function PairList({ title, rows, cur, byId, nameOf, green = false }: { title: st
 /* ── By month ────────────────────────────────────────────────────── */
 
 function Months({ s, cur }: { s: GroupStats; cur: string }) {
+  const t = useT();
   const [hover, setHover] = useState<number | null>(null);
   const [asList, setAsList] = useState(false);
   const rows = s.byMonth;
@@ -272,19 +296,19 @@ function Months({ s, cur }: { s: GroupStats; cur: string }) {
   return (
     <SectionCard>
       <div className="flex items-center justify-between">
-        <SectionLabel>BY MONTH</SectionLabel>
+        <SectionLabel>{t("groupThread.insights.byMonth")}</SectionLabel>
         <button type="button" onClick={() => setAsList((v) => !v)} className="text-[12px] font-bold text-white/70 hover:text-white">
-          {asList ? "Chart" : "List"}
+          {asList ? t("groupThread.insights.chart") : t("groupThread.insights.list")}
         </button>
       </div>
       <div className="mt-2 flex items-center gap-4 text-[11.5px] font-semibold text-white/65">
         <span className="inline-flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: TOTAL_BAR }} />
-          The group
+          {t("groupThread.insights.theGroup")}
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: GREEN }} />
-          Your share
+          {t("groupThread.insights.yourShare")}
         </span>
       </div>
 
@@ -293,10 +317,10 @@ function Months({ s, cur }: { s: GroupStats; cur: string }) {
           {[...rows].reverse().map((m) => (
             <li key={m.month} className="flex min-h-[36px] items-center gap-3 border-b border-white/[0.06] text-[13px] last:border-0">
               <span className="w-20 shrink-0 font-semibold text-white/80">{monthLabel(m.month, true)}</span>
-              <span className="min-w-0 flex-1 text-white/55">{m.count} {m.count === 1 ? "expense" : "expenses"}</span>
+              <span className="min-w-0 flex-1 text-white/55">{t("groupThread.insights.expenses", { count: m.count })}</span>
               <span className="shrink-0 text-right tabular-nums">
                 <span className="block font-bold text-white">{money(m.totalMinor, cur)}</span>
-                <span className="block text-[11.5px] text-white/55">yours {money(m.yourShareMinor, cur)}</span>
+                <span className="block text-[11.5px] text-white/55">{t("groupThread.insights.yours", { amount: money(m.yourShareMinor, cur) })}</span>
               </span>
             </li>
           ))}
@@ -306,13 +330,17 @@ function Months({ s, cur }: { s: GroupStats; cur: string }) {
           <div className="relative mt-3 h-5 text-[12px] tabular-nums text-white/80" aria-live="polite">
             {shown ? (
               <span>
-                <b className="text-white">{monthLabel(shown.month, true)}</b> · {money(shown.totalMinor, cur)} · yours {money(shown.yourShareMinor, cur)} · {shown.count} {shown.count === 1 ? "expense" : "expenses"}
+                <Rich
+                  k="groupThread.insights.monthLine"
+                  vars={{ month: monthLabel(shown.month, true), total: money(shown.totalMinor, cur), yours: money(shown.yourShareMinor, cur), count: shown.count }}
+                  tags={{ b: (c) => <b className="text-white">{c}</b> }}
+                />
               </span>
             ) : (
-              <span className="text-white/45">Tap a month for its numbers</span>
+              <span className="text-white/45">{t("groupThread.insights.tapAMonth")}</span>
             )}
           </div>
-          <div className="mt-2 flex items-end gap-[2px] border-b border-white/[0.1]" style={{ height: H }} onPointerLeave={() => setHover(null)} role="img" aria-label="Spent per month, with your share">
+          <div className="mt-2 flex items-end gap-[2px] border-b border-white/[0.1]" style={{ height: H }} onPointerLeave={() => setHover(null)} role="img" aria-label={t("groupThread.insights.chartA11y")}>
             {rows.map((m, i) => (
               <button
                 key={m.month}
@@ -320,7 +348,7 @@ function Months({ s, cur }: { s: GroupStats; cur: string }) {
                 onPointerEnter={() => setHover(i)}
                 onFocus={() => setHover(i)}
                 onClick={() => setHover(i)}
-                aria-label={`${monthLabel(m.month, true)}: ${money(m.totalMinor, cur)}, your share ${money(m.yourShareMinor, cur)}`}
+                aria-label={t("groupThread.insights.barA11y", { month: monthLabel(m.month, true), total: money(m.totalMinor, cur), yours: money(m.yourShareMinor, cur) })}
                 className="relative flex h-full min-w-0 flex-1 items-end justify-center"
               >
                 <span
@@ -348,6 +376,7 @@ function Months({ s, cur }: { s: GroupStats; cur: string }) {
 /* ── By category ─────────────────────────────────────────────────── */
 
 function Categories({ s, cur }: { s: GroupStats; cur: string }) {
+  const t = useT();
   const [sel, setSel] = useState<string | null>(null);
   const total = toBig(s.totalMinor);
   const cats = s.byCategory;
@@ -360,9 +389,9 @@ function Categories({ s, cur }: { s: GroupStats; cur: string }) {
   }));
   return (
     <SectionCard>
-      <SectionLabel>BY CATEGORY</SectionLabel>
+      <SectionLabel>{t("groupThread.insights.byCategory")}</SectionLabel>
       <div className="mt-3 flex items-center gap-[18px]">
-        <SpendingDonut slices={slices} size={112} thickness={24} centerValue={money(s.totalMinor, cur)} centerLabel="Spent" selectedId={sel} onSlicePress={(id) => setSel((c) => (c === id ? null : id))} />
+        <SpendingDonut slices={slices} size={112} thickness={24} centerValue={money(s.totalMinor, cur)} centerLabel={t("groupThread.insights.spent")} selectedId={sel} onSlicePress={(id) => setSel((c) => (c === id ? null : id))} />
         <ul className="flex min-w-0 flex-1 flex-col gap-[7px]">
           {cats.map((c, i) => {
             const dim = sel !== null && sel !== c.category;
@@ -379,7 +408,7 @@ function Categories({ s, cur }: { s: GroupStats; cur: string }) {
           })}
         </ul>
       </div>
-      <Note className="!mt-3">Expenses with no category count as Other.</Note>
+      <Note className="!mt-3">{t("groupThread.insights.otherNote")}</Note>
     </SectionCard>
   );
 }
@@ -387,20 +416,21 @@ function Categories({ s, cur }: { s: GroupStats; cur: string }) {
 /* ── People ──────────────────────────────────────────────────────── */
 
 function People({ s, cur, byId, nameOf, meId }: { s: GroupStats; cur: string; byId: Map<string, GroupMember>; nameOf: NameOf; meId: string | null }) {
+  const t = useT();
   const rows = [...s.byMember].sort((a, b) => (a.userId === meId ? -1 : b.userId === meId ? 1 : toBig(b.paidMinor) > toBig(a.paidMinor) ? 1 : -1));
   const f = fractions(rows.flatMap((r) => [r.paidMinor, r.shareMinor]));
   if (!rows.length) return null;
   return (
     <SectionCard>
-      <SectionLabel>WHO PAID, WHO SHARED</SectionLabel>
+      <SectionLabel>{t("groupThread.insights.byPerson")}</SectionLabel>
       <div className="mt-2 flex items-center gap-4 text-[11.5px] font-semibold text-white/65">
         <span className="inline-flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-[3px] bg-white/85" />
-          Paid
+          {t("groupThread.insights.paid")}
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: GREEN }} />
-          Their share
+          {t("groupThread.insights.theirShare")}
         </span>
       </div>
       <ul className="mt-3 flex flex-col gap-3.5">
@@ -413,11 +443,15 @@ function People({ s, cur, byId, nameOf, meId }: { s: GroupStats; cur: string; by
                 <span className="flex min-w-0 items-baseline justify-between gap-2">
                   <span className={`truncate text-[14px] text-white ${r.userId === meId ? "font-extrabold" : "font-bold"}`}>{nameOf(r.userId)}</span>
                   <span className="shrink-0 text-[12px] tabular-nums text-white/60">
-                    {net > 0n ? `is owed ${money(r.netMinor, cur)}` : net < 0n ? `owes ${money(absMinor(r.netMinor), cur)}` : "settled"}
+                    {net > 0n
+                      ? t("groupThread.insights.isOwed", { amount: money(r.netMinor, cur) })
+                      : net < 0n
+                        ? t("groupThread.insights.owes", { amount: money(absMinor(r.netMinor), cur) })
+                        : t("groupThread.insights.settled")}
                   </span>
                 </span>
-                <Bar frac={f[i * 2]} color="rgba(255,255,255,0.85)" label={`Paid ${money(r.paidMinor, cur)}`} />
-                <Bar frac={f[i * 2 + 1]} color={GREEN} label={`Share ${money(r.shareMinor, cur)}`} />
+                <Bar frac={f[i * 2]} color="rgba(255,255,255,0.85)" label={t("groupThread.insights.paidAmount", { amount: money(r.paidMinor, cur) })} />
+                <Bar frac={f[i * 2 + 1]} color={GREEN} label={t("groupThread.insights.shareAmount", { amount: money(r.shareMinor, cur) })} />
               </span>
             </li>
           );
@@ -441,13 +475,15 @@ function Bar({ frac, color, label }: { frac: number; color: string; label: strin
 /* ── Settle plan ─────────────────────────────────────────────────── */
 
 function Plan({ s, cur, byId, nameOf, meId, threadHref }: { s: GroupStats; cur: string; byId: Map<string, GroupMember>; nameOf: NameOf; meId: string | null; threadHref: string }) {
+  const t = useT();
+  const bold = { b: (c: ReactNode) => <b className="text-white">{c}</b> };
   return (
     <SectionCard>
       <div className="flex items-center justify-between">
-        <SectionLabel>TO SETTLE UP</SectionLabel>
+        <SectionLabel>{t("groupThread.insights.plan")}</SectionLabel>
         {s.plan.length ? (
           <Link href={threadHref} className="inline-flex items-center gap-1 text-[12px] font-bold text-white/70 hover:text-white">
-            In the group
+            {t("groupThread.insights.inTheGroup")}
             <Ion name="chevron-forward" size={13} />
           </Link>
         ) : null}
@@ -460,7 +496,13 @@ function Plan({ s, cur, byId, nameOf, meId, threadHref }: { s: GroupStats; cur: 
               <li key={`${p.fromUserId}:${p.toUserId}`} className={`-mx-1.5 flex min-h-[42px] items-center gap-2 rounded-[10px] px-1.5 ${mine ? "bg-white/[0.07]" : ""}`}>
                 <PersonFace person={byId.get(p.fromUserId)} size={24} />
                 <span className="min-w-0 flex-1 truncate text-[13.5px] text-white/85">
-                  <b className="text-white">{nameOf(p.fromUserId)}</b> {p.fromUserId === meId ? "pay" : "pays"} <b className="text-white">{p.toUserId === meId ? "you" : nameOf(p.toUserId)}</b>
+                  {p.fromUserId === meId ? (
+                    <Rich k="groupThread.insights.youPay" vars={{ from: nameOf(p.fromUserId), to: nameOf(p.toUserId) }} tags={bold} />
+                  ) : p.toUserId === meId ? (
+                    <Rich k="groupThread.insights.paysYou" vars={{ from: nameOf(p.fromUserId) }} tags={bold} />
+                  ) : (
+                    <Rich k="groupThread.insights.pays" vars={{ from: nameOf(p.fromUserId), to: nameOf(p.toUserId) }} tags={bold} />
+                  )}
                 </span>
                 <span className="shrink-0 text-[13.5px] font-bold tabular-nums text-white">{money(p.amountMinor, cur)}</span>
               </li>
@@ -470,10 +512,10 @@ function Plan({ s, cur, byId, nameOf, meId, threadHref }: { s: GroupStats; cur: 
       ) : (
         <p className="mt-2 flex items-center gap-2 text-[13.5px] text-white/70">
           <Ion name="checkmark-circle-outline" size={17} style={{ color: GREEN }} />
-          Everyone is settled up.
+          {t("groupThread.insights.planEmpty")}
         </p>
       )}
-      {s.plan.length ? <p className="mt-2 text-[12px] text-white/50">Nobody is made to pay: these are requests until paid or marked as paid.</p> : null}
+      {s.plan.length ? <p className="mt-2 text-[12px] text-white/50">{t("groupThread.insights.planNote")}</p> : null}
     </SectionCard>
   );
 }

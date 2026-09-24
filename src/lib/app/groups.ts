@@ -45,8 +45,11 @@ import { useCreatorSession } from "@/lib/creator/session";
 
 import { getWithdrawal } from "@/lib/link/api";
 
+import { listText, t, type MessageKey } from "@/lib/app/i18n";
+import { fmtFiat, type MoneyOptions } from "@/lib/app/i18n/format";
+
 import { HoldApiError, read } from "./hold-api";
-import { asCategory, moneyText, type ExpenseCategory, type ItemBody, type Rates, type SourceKind, type SplitMode } from "./groups-rules";
+import { asCategory, minorExponent, moneyText, toBig, type ExpenseCategory, type ItemBody, type Rates, type SourceKind, type SplitMode } from "./groups-rules";
 import { normaliseAllStats, normaliseGroupStats, type AllGroupsStats, type GroupStats } from "./group-insights";
 
 export * from "./groups-rules";
@@ -272,6 +275,19 @@ export type SplitBody =
   | { mode: "exact"; amounts: { userId: string; amountMinor: string }[] }
   | { mode: "shares"; weights: { userId: string; weight: number }[] };
 
+/* ── Money ──────────────────────────────────────────────────────────── */
+
+/**
+ * A group's amount (minor units) in its own currency, for the language:
+ * "€12.00", "12,00 €". Never converted (fmtFiat). The minor digits are the
+ * backend's for the currency, so nothing is rounded away.
+ */
+export function groupMoney(minor: string | bigint, currency: string, o: MoneyOptions = {}): string {
+  const code = (currency || "USD").toUpperCase();
+  const exp = minorExponent(code);
+  return fmtFiat(Number(toBig(minor)) / 10 ** exp, code, { digits: exp, ...o });
+}
+
 /* ── People ───────────────────────────────────────────────────────── */
 
 export function bareHandle(h: string | null | undefined): string | null {
@@ -281,14 +297,14 @@ export function bareHandle(h: string | null | undefined): string | null {
 
 /** "@bea", else the display name, else a word that does not pretend to know. */
 export function memberName(m: { aliasHandle: string | null; displayName: string | null } | undefined): string {
-  if (!m) return "Someone";
+  if (!m) return t("groupThread.names.someone");
   const h = bareHandle(m.aliasHandle);
-  return h ? `@${h}` : m.displayName?.trim() || "Someone on HOLD";
+  return h ? `@${h}` : m.displayName?.trim() || t("groupThread.names.someoneOnHold");
 }
 
 /** "Ana", the first word of the display name, else "@ana": for "Seen by Ana, Luis". */
 export function shortName(m: { aliasHandle: string | null; displayName: string | null } | undefined): string {
-  if (!m) return "Someone";
+  if (!m) return t("groupThread.names.someone");
   const first = m.displayName?.trim().split(/\s+/)[0];
   return first || memberName(m);
 }
@@ -304,9 +320,9 @@ export function namer(members: readonly GroupMember[] | undefined, meId: string 
   const by = new Map((members ?? []).map((m) => [m.userId, m]));
   const gone = (id: string) => !!members && !by.has(id);
   return {
-    name: (id) => (id === meId ? "you" : gone(id) ? "a former member" : memberName(by.get(id))),
-    subject: (id) => (id === meId ? "You" : gone(id) ? "A former member" : memberName(by.get(id))),
-    short: (id) => (id === meId ? "You" : gone(id) ? "Former member" : shortName(by.get(id))),
+    name: (id) => (id === meId ? t("groupThread.names.you") : gone(id) ? t("groupThread.names.formerMember") : memberName(by.get(id))),
+    subject: (id) => (id === meId ? t("groupThread.names.youSubject") : gone(id) ? t("groupThread.names.formerMemberSubject") : memberName(by.get(id))),
+    short: (id) => (id === meId ? t("groupThread.names.youSubject") : gone(id) ? t("groupThread.names.formerMemberShort") : shortName(by.get(id))),
   };
 }
 
@@ -335,12 +351,17 @@ type Names = { name: NameOf; subject: NameOf };
 
 /** The list row's one line: "@bea: see you at 8", "Coffee · 12.00 USD", "@ana sent @bea 4.00 USD". */
 export function lastLine(item: ThreadItem | null | undefined, names: Names): string {
-  if (!item) return "No messages yet";
+  if (!item) return t("groupThread.preview.noMessages");
   switch (item.kind) {
     case "message":
-      return item.deleted || item.body === null ? `${names.subject(item.userId)}: Message deleted` : `${names.subject(item.userId)}: ${item.body}`;
+      return item.deleted || item.body === null
+        ? t("groupThread.preview.messageDeleted", { name: names.subject(item.userId) })
+        : t("groupThread.preview.message", { name: names.subject(item.userId), body: item.body });
     case "expense":
-      return `${item.description?.trim() || "Expense"} · ${moneyText(item.amountMinor, item.currency)}${item.deleted ? " · Removed" : ""}`;
+      return t(item.deleted ? "groupThread.preview.expenseRemoved" : "groupThread.preview.expense", {
+        what: item.description?.trim() || t("groupThread.expense.fallbackTitle"),
+        amount: groupMoney(item.amountMinor, item.currency),
+      });
     case "settlement":
       return settlementText(item, names);
     case "event":
@@ -355,27 +376,29 @@ export function lastLine(item: ThreadItem | null | undefined, names: Names): str
  *   "@ana says they paid @bea 4.00 USD outside HOLD" the payer's word
  */
 export function settlementText(item: SettlementItem, names: Names): string {
-  const amount = moneyText(item.amountMinor, item.currency);
+  const amount = groupMoney(item.amountMinor, item.currency);
   const who = names.subject(item.userId);
   const to = names.name(item.toUserId);
-  if (item.viaHold) return `${who} sent ${to} ${amount}`;
+  if (item.viaHold) return t("groupThread.settlement.sent", { from: who, to, amount });
   if (item.markedByCreditor) {
     const creditor = names.subject(item.toUserId);
-    return `${creditor} marked ${amount} from ${names.name(item.userId)} as paid`;
+    return t("groupThread.settlement.marked", { creditor, amount, debtor: names.name(item.userId) });
   }
-  return who === "You" ? `You said you paid ${to} ${amount} outside HOLD` : `${who} says they paid ${to} ${amount} outside HOLD`;
+  return who === t("groupThread.names.youSubject")
+    ? t("groupThread.settlement.youSaidYouPaid", { to, amount })
+    : t("groupThread.settlement.saysPaid", { from: who, to, amount });
 }
 
-const CHANGED_WORDS: Record<string, string> = {
-  amount: "the amount",
-  currency: "the currency",
-  split: "the split",
-  description: "the title",
-  place: "the place",
-  spentAt: "the date",
-  sources: "the bills it came from",
-  items: "the bills",
-  category: "the category",
+const CHANGED_WORDS: Record<string, MessageKey> = {
+  amount: "groupThread.event.changed.amount",
+  currency: "groupThread.event.changed.currency",
+  split: "groupThread.event.changed.split",
+  description: "groupThread.event.changed.description",
+  place: "groupThread.event.changed.place",
+  spentAt: "groupThread.event.changed.spentAt",
+  sources: "groupThread.event.changed.sources",
+  items: "groupThread.event.changed.items",
+  category: "groupThread.event.changed.category",
 };
 
 /** "Ana edited Dinner", with what changed when it says; "Bea left the group"; "Ana removed Bea". */
@@ -383,29 +406,26 @@ export function eventText(item: EventItem, names: Names): string {
   const who = names.subject(item.userId);
   if (item.event === "member_left") {
     const gone = item.data?.userId || item.userId;
-    return `${names.subject(gone)} left the group`;
+    return t("groupThread.event.left", { name: names.subject(gone) });
   }
   if (item.event === "member_removed") {
     const by = item.data?.byUserId || item.userId;
     const gone = item.data?.userId || item.subjectId || "";
-    return `${names.subject(by)} removed ${gone ? names.name(gone) : "someone"}`;
+    return t("groupThread.event.removed", { by: names.subject(by), name: gone ? names.name(gone) : t("groupThread.event.someone") });
   }
   if (item.event === "crew_sale") {
-    const title = item.data?.spaceTitle?.trim() || "a spot";
-    const gross = item.data?.grossMinor && /^\d+$/.test(item.data.grossMinor) ? `, ${moneyText(item.data.grossMinor, item.data.currency || "USD")}` : "";
-    return `Sold: ${title} to a brand${gross}`;
+    const title = item.data?.spaceTitle?.trim() || t("groupThread.event.aSpot");
+    // A crew sale is a Spaces price paid in USDC: said as paid ("25.00 USD"), never converted.
+    return item.data?.grossMinor && /^\d+$/.test(item.data.grossMinor)
+      ? t("groupThread.event.crewSale", { title, amount: moneyText(item.data.grossMinor, item.data.currency || "USD") })
+      : t("groupThread.event.crewSaleNoAmount", { title });
   }
   if (item.event === "expense_edited") {
-    const what = item.data?.description?.trim() || "an expense";
-    const changed = (item.data?.changed ?? []).map((c) => CHANGED_WORDS[c]).filter(Boolean);
-    return changed.length ? `${who} edited ${what}: ${joinWords(changed)}` : `${who} edited ${what}`;
+    const what = item.data?.description?.trim() || t("groupThread.event.anExpense");
+    const changed = (item.data?.changed ?? []).map((c) => CHANGED_WORDS[c]).filter((k): k is MessageKey => !!k).map((k) => t(k));
+    return changed.length ? t("groupThread.event.editedWhat", { name: who, what, changes: listText(changed) }) : t("groupThread.event.edited", { name: who, what });
   }
-  return `${who} updated the group`;
-}
-
-function joinWords(words: string[]): string {
-  if (words.length <= 1) return words[0] ?? "";
-  return `${words.slice(0, -1).join(", ")} and ${words[words.length - 1]}`;
+  return t("groupThread.event.updated", { name: who });
 }
 
 /**
@@ -692,72 +712,71 @@ export async function resolveExactHandle(handle: string): Promise<Person | null>
 
 /* ── Errors, in words ─────────────────────────────────────────────── */
 
-const WORDS: Record<string, string> = {
-  user_not_found: "No one on HOLD goes by that username. Check the spelling.",
-  group_not_found: "This group isn't here any more, or you're not in it.",
-  name_required: "Give the group a name.",
-  invalid_currency: "A currency is a three-letter code, like USD or EUR.",
-  too_many_members: "You can add up to 20 people when you make a group. Add the rest from the group.",
-  currency_locked: "The currency can't change once the group has an expense or a settlement.",
-  not_the_creator: "Only the group admin can delete the group.",
-  cannot_remove_creator: "The group admin can't be removed.",
-  only_creator_removes: "Only the group admin can remove people.",
-  creator_cannot_leave: "The admin can't leave the group. Delete the group instead.",
-  member_has_balance: "They can't leave while they owe or are owed money here. Settle up first.",
-  source_already_split: "One of these was already split in a group. Take it out and try again.",
-  invalid_weight: "A share is a whole number from 0 to 1000.",
-  message_empty: "Write something first.",
-  message_too_long: "That message is too long.",
-  message_not_found: "That message isn't here any more.",
-  message_deleted: "That message was deleted.",
-  message_is_a_caption: "That line belongs to an expense. Edit the expense instead.",
-  not_your_message: "You can only change your own messages.",
-  description_too_long: "Keep the title under 120 characters.",
-  not_a_member: "Everyone on an expense has to be in the group now.",
-  fx_unavailable: "We can't convert that currency right now. Try the group's currency, or again in a moment.",
-  cannot_settle_with_yourself: "You can't settle up with yourself.",
-  percents_do_not_sum: "The percentages have to add up to exactly 100%.",
-  invalid_percent: "A percentage is 0 to 100, with at most two decimals.",
-  amounts_do_not_sum: "The amounts have to add up to exactly the total.",
-  duplicate_participant: "Someone is in the split twice.",
-  no_participants: "Choose at least one person to split with.",
-  split_is_empty: "Give at least one person a share.",
-  negative_share: "A share can't be negative.",
-  shares_do_not_sum: "The shares have to add up to the total.",
-  amount_must_be_positive: "Type an amount above zero.",
-  amount_too_small_after_conversion: "That amount is too small once converted to the group's currency.",
-  not_the_payer: "Only the person who paid can change this expense.",
-  expense_not_found: "That expense isn't here any more.",
-  expense_deleted: "That expense was deleted.",
-  expense_locked_by_settlement:
-    "Someone has settled up against this expense since it was added, so its amount and split can't change. The title, place and date still can. If the amount is wrong, delete it and add it again.",
-  split_required: "Choose how to split the new amount.",
-  nothing_owed: "Nothing is owed there any more.",
-  amount_exceeds_debt: "That's more than they owe you.",
-  cannot_remind_yourself: "You can't remind yourself.",
-  reminder_too_soon: "You already reminded them today.",
-  image_too_large: "That image is over 3 MB. Choose a smaller one.",
-  image_type_not_supported: "Use a PNG, JPEG or WebP image.",
-  image_required: "Choose an image first.",
-  storage_unavailable: "Images can't be saved right now. Try again in a moment.",
-  storage_not_configured: "Images can't be saved right now. Try again later.",
-  transfer_not_found: "That payment couldn't be found.",
-  too_many_items: "One expense holds up to 50 bills. Add the rest as another expense: there's no limit on how many you add.",
-  invalid_item: "Each bill needs a name and an amount above zero.",
-  item_source_unknown: "One bill points at a payment that isn't in this expense. Take it out and add it again.",
-  too_many_sources: "One expense can name up to 20 of your payments. Add the rest as another expense.",
-  invalid_category: "That category isn't one HOLD knows. Pick another.",
-  invalid_range: "Pick a range of up to 36 months.",
+const WORDS: Record<string, MessageKey> = {
+  user_not_found: "groupThread.errors.userNotFound",
+  group_not_found: "groupThread.errors.groupNotFound",
+  name_required: "groupThread.errors.nameRequired",
+  invalid_currency: "groupThread.errors.invalidCurrency",
+  too_many_members: "groupThread.errors.tooManyMembers",
+  currency_locked: "groupThread.errors.currencyLocked",
+  not_the_creator: "groupThread.errors.notTheCreator",
+  cannot_remove_creator: "groupThread.errors.cannotRemoveCreator",
+  only_creator_removes: "groupThread.errors.onlyCreatorRemoves",
+  creator_cannot_leave: "groupThread.errors.creatorCannotLeave",
+  member_has_balance: "groupThread.errors.memberHasBalance",
+  source_already_split: "groupThread.errors.sourceAlreadySplit",
+  invalid_weight: "groupThread.errors.invalidWeight",
+  message_empty: "groupThread.errors.messageEmpty",
+  message_too_long: "groupThread.errors.messageTooLong",
+  message_not_found: "groupThread.errors.messageNotFound",
+  message_deleted: "groupThread.errors.messageDeleted",
+  message_is_a_caption: "groupThread.errors.messageIsACaption",
+  not_your_message: "groupThread.errors.notYourMessage",
+  description_too_long: "groupThread.errors.descriptionTooLong",
+  not_a_member: "groupThread.errors.notAMember",
+  fx_unavailable: "groupThread.errors.fxUnavailable",
+  cannot_settle_with_yourself: "groupThread.errors.cannotSettleWithYourself",
+  percents_do_not_sum: "groupThread.errors.percentsDoNotSum",
+  invalid_percent: "groupThread.errors.invalidPercent",
+  amounts_do_not_sum: "groupThread.errors.amountsDoNotSum",
+  duplicate_participant: "groupThread.errors.duplicateParticipant",
+  no_participants: "groupThread.errors.noParticipants",
+  split_is_empty: "groupThread.errors.splitIsEmpty",
+  negative_share: "groupThread.errors.negativeShare",
+  shares_do_not_sum: "groupThread.errors.sharesDoNotSum",
+  amount_must_be_positive: "groupThread.errors.amountMustBePositive",
+  amount_too_small_after_conversion: "groupThread.errors.amountTooSmallAfterConversion",
+  not_the_payer: "groupThread.errors.notThePayer",
+  expense_not_found: "groupThread.errors.expenseNotFound",
+  expense_deleted: "groupThread.errors.expenseDeleted",
+  expense_locked_by_settlement: "groupThread.errors.expenseLockedBySettlement",
+  split_required: "groupThread.errors.splitRequired",
+  nothing_owed: "groupThread.errors.nothingOwed",
+  amount_exceeds_debt: "groupThread.errors.amountExceedsDebt",
+  cannot_remind_yourself: "groupThread.errors.cannotRemindYourself",
+  reminder_too_soon: "groupThread.errors.reminderTooSoon",
+  image_too_large: "groupThread.errors.imageTooLarge",
+  image_type_not_supported: "groupThread.errors.imageTypeNotSupported",
+  image_required: "groupThread.errors.imageRequired",
+  storage_unavailable: "groupThread.errors.storageUnavailable",
+  storage_not_configured: "groupThread.errors.storageNotConfigured",
+  transfer_not_found: "groupThread.errors.transferNotFound",
+  too_many_items: "groupThread.errors.tooManyItems",
+  invalid_item: "groupThread.errors.invalidItem",
+  item_source_unknown: "groupThread.errors.itemSourceUnknown",
+  too_many_sources: "groupThread.errors.tooManySources",
+  invalid_category: "groupThread.errors.invalidCategory",
+  invalid_range: "groupThread.errors.invalidRange",
 };
 
 /** What went wrong with a group call, in words. */
 export function describeGroupError(e: unknown): string {
-  if (!(e instanceof HoldApiError)) return e instanceof Error && e.message.startsWith("image:") ? e.message.slice(6) : "Something went wrong. Try again.";
-  if (e.status === 0) return "We could not reach HOLD. Check your connection and try again.";
-  if (e.detail && WORDS[e.detail]) return WORDS[e.detail];
-  if (e.status === 429) return "Too many at once. Wait a moment and try again.";
-  if (e.status === 401) return "Your session ended. Sign in again.";
-  return "Something went wrong. Try again.";
+  if (!(e instanceof HoldApiError)) return e instanceof Error && e.message.startsWith("image:") ? e.message.slice(6) : t("common.somethingWentWrong");
+  if (e.status === 0) return t("groupThread.errors.unreachable");
+  if (e.detail && WORDS[e.detail]) return t(WORDS[e.detail]);
+  if (e.status === 429) return t("groupThread.errors.tooMany");
+  if (e.status === 401) return t("groupThread.errors.sessionEnded");
+  return t("common.somethingWentWrong");
 }
 
 /* ── Hooks ────────────────────────────────────────────────────────── */

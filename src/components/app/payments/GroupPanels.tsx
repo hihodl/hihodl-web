@@ -43,9 +43,9 @@ import {
   deleteGroup,
   deleteGroupPhoto,
   describeGroupError,
+  groupMoney,
   markPaid,
   memberName,
-  moneyText,
   minorToInput,
   newClientKey,
   parseMajorToMinor,
@@ -62,6 +62,9 @@ import {
   type Person,
 } from "@/lib/app/groups";
 import { HoldApiError } from "@/lib/app/hold-api";
+import { t as i18nT } from "@/lib/app/i18n";
+import { fmtDate, fmtTime } from "@/lib/app/i18n/format";
+import { Rich, useT } from "@/lib/app/i18n/react";
 import { resolveHandle } from "@/lib/app/payment-requests";
 
 import { useProductHref } from "../base";
@@ -105,14 +108,15 @@ export function BalancesSheet({
   onClose: () => void;
   onChanged: () => void;
 }) {
+  const t = useT();
   const byId = new Map((members ?? []).map((m) => [m.userId, m]));
   const cur = balances?.currency ?? "USD";
-  const iOwe = balances?.transfers.filter((t) => t.fromUserId === meId) ?? [];
-  const owedMe = balances?.transfers.filter((t) => t.toUserId === meId) ?? [];
-  const others = balances?.transfers.filter((t) => t.fromUserId !== meId && t.toUserId !== meId) ?? [];
+  const iOwe = balances?.transfers.filter((x) => x.fromUserId === meId) ?? [];
+  const owedMe = balances?.transfers.filter((x) => x.toUserId === meId) ?? [];
+  const others = balances?.transfers.filter((x) => x.fromUserId !== meId && x.toUserId !== meId) ?? [];
 
   return (
-    <Sheet title="Balances" onClose={onClose} wide>
+    <Sheet title={t("groupThread.balances.title")} onClose={onClose} wide>
       {balances === undefined && !loadError ? (
         <div className="flex flex-col gap-2">
           <Skeleton className="h-16 rounded-[14px]" />
@@ -126,33 +130,37 @@ export function BalancesSheet({
           {balances.transfers.length === 0 ? (
             <div className="flex items-center gap-2.5 rounded-[14px] bg-white/[0.05] px-3 py-3">
               <Ion name="checkmark-circle-outline" size={20} className="text-[#2FBE8A]" />
-              <p className="text-[14px] font-bold text-white">Everyone is settled up.</p>
+              <p className="text-[14px] font-bold text-white">{t("groupThread.balances.everyoneSettled")}</p>
             </div>
           ) : null}
 
-          {owedMe.length ? <p className={sectionLabel}>Owed to you</p> : null}
-          {owedMe.map((t) => (
-            <OwedRow key={`o:${t.fromUserId}`} groupId={groupId} currency={cur} transfer={t} person={byId.get(t.fromUserId)} names={names} onChanged={onChanged} />
+          {owedMe.length ? <p className={sectionLabel}>{t("groupThread.balances.owedToYou")}</p> : null}
+          {owedMe.map((x) => (
+            <OwedRow key={`o:${x.fromUserId}`} groupId={groupId} currency={cur} transfer={x} person={byId.get(x.fromUserId)} names={names} onChanged={onChanged} />
           ))}
 
-          {iOwe.length ? <p className={sectionLabel}>You owe</p> : null}
-          {iOwe.map((t) => (
-            <OweRow key={`i:${t.toUserId}`} groupId={groupId} currency={cur} transfer={t} person={byId.get(t.toUserId)} names={names} onRecorded={onChanged} />
+          {iOwe.length ? <p className={sectionLabel}>{t("groupThread.balances.youOwe")}</p> : null}
+          {iOwe.map((x) => (
+            <OweRow key={`i:${x.toUserId}`} groupId={groupId} currency={cur} transfer={x} person={byId.get(x.toUserId)} names={names} onRecorded={onChanged} />
           ))}
 
-          {others.length ? <p className={sectionLabel}>Between others</p> : null}
-          {others.map((t) => (
-            <div key={`x:${t.fromUserId}:${t.toUserId}`} className="flex min-w-0 items-center gap-2.5 rounded-[14px] bg-white/[0.04] px-3 py-2.5">
-              <PersonFace person={byId.get(t.fromUserId)} size={26} />
+          {others.length ? <p className={sectionLabel}>{t("groupThread.balances.betweenOthers")}</p> : null}
+          {others.map((x) => (
+            <div key={`x:${x.fromUserId}:${x.toUserId}`} className="flex min-w-0 items-center gap-2.5 rounded-[14px] bg-white/[0.04] px-3 py-2.5">
+              <PersonFace person={byId.get(x.fromUserId)} size={26} />
               <p className="min-w-0 flex-1 text-[13.5px] text-white/[0.82]">
-                {names.subject(t.fromUserId)} owes {names.name(t.toUserId)} <span className="font-bold tabular-nums text-white">{moneyText(t.amountMinor, cur)}</span>
+                <Rich
+                  k="groupThread.balances.owes"
+                  vars={{ from: names.subject(x.fromUserId), to: names.name(x.toUserId), amount: groupMoney(x.amountMinor, cur) }}
+                  tags={{ b: (c) => <span className="font-bold tabular-nums text-white">{c}</span> }}
+                />
               </p>
             </div>
           ))}
 
           <p className="px-1 text-[12px] leading-[17px] text-white/55">
-            {balances.smartSettle ? "Debts are simplified across the group, so there are as few payments as possible. " : ""}
-            Nobody is made to pay. A debt stays a request until it is paid or marked as paid.
+            {balances.smartSettle ? t("groupThread.balances.smartNote") : ""}
+            {t("groupThread.balances.nobodyMade")}
           </p>
         </>
       ) : null}
@@ -162,10 +170,10 @@ export function BalancesSheet({
 
 function whenText(iso: string): string {
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "tomorrow";
+  if (Number.isNaN(d.getTime())) return i18nT("groupThread.owed.tomorrow");
   const sameDay = d.toDateString() === new Date().toDateString();
-  const time = d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
-  return sameDay ? time : `${d.toLocaleDateString(undefined, { weekday: "short" })} ${time}`;
+  const time = fmtTime(d, { hour: "2-digit", minute: "2-digit" });
+  return sameDay ? time : i18nT("groupThread.owed.dayTime", { day: fmtDate(d, { weekday: "short" }), time });
 }
 
 /** "@bea owes you 15.00": Mark as paid, and Remind. */
@@ -184,6 +192,7 @@ export function OwedRow({
   names: Names;
   onChanged: () => void;
 }) {
+  const t = useT();
   const [step, setStep] = useState<"idle" | "mark">("idle");
   const [amount, setAmount] = useState(() => minorToInput(transfer.amountMinor, currency));
   const [busy, setBusy] = useState<"mark" | "remind" | null>(null);
@@ -207,7 +216,7 @@ export function OwedRow({
       })
       .catch((e) => {
         if (e instanceof HoldApiError && e.detail === "amount_exceeds_debt" && typeof e.details?.owedMinor === "string") {
-          setNotice(`That's more than they owe you now, which is ${moneyText(e.details.owedMinor, currency)}.`);
+          setNotice(t("groupThread.owed.overNow", { amount: groupMoney(e.details.owedMinor, currency) }));
           setAmount(minorToInput(e.details.owedMinor, currency));
         } else setNotice(describeGroupError(e));
         if (e instanceof HoldApiError && e.detail === "nothing_owed") onChanged();
@@ -234,57 +243,61 @@ export function OwedRow({
       <div className="flex min-w-0 items-center gap-2.5">
         <PersonFace person={person} size={30} />
         <p className="min-w-0 flex-1 text-[14.5px] font-bold text-white">
-          {names.subject(transfer.fromUserId)} owes you <span className="tabular-nums">{moneyText(transfer.amountMinor, currency)}</span>
+          <Rich
+            k="groupThread.owed.owesYou"
+            vars={{ name: names.subject(transfer.fromUserId), amount: groupMoney(transfer.amountMinor, currency) }}
+            tags={{ amount: (c) => <span className="tabular-nums">{c}</span> }}
+          />
         </p>
-        <Tag label="Pending" tone="dim" />
+        <Tag label={t("groupThread.owed.pending")} tone="dim" />
       </div>
 
       {step === "idle" ? (
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" className={pillWhite} disabled={!!busy} onClick={() => setStep("mark")}>
             <Ion name="checkmark" size={14} />
-            Mark as paid
+            {t("groupThread.owed.markAsPaid")}
           </button>
           {reminded ? (
             <span className="inline-flex h-9 items-center gap-1.5 rounded-[18px] bg-white/[0.05] px-3 text-[12.5px] text-white/70">
               <Ion name="notifications-outline" size={14} />
-              Reminded · again after {whenText(reminded.next)}
+              {t("groupThread.owed.reminded", { when: whenText(reminded.next) })}
             </span>
           ) : (
             <button type="button" className={pillGlass} disabled={!!busy} onClick={doRemind}>
               <Ion name="notifications-outline" size={14} />
-              {busy === "remind" ? "Sending…" : "Remind"}
+              {busy === "remind" ? t("groupThread.thread.sending") : t("groupThread.owed.remind")}
             </button>
           )}
         </div>
       ) : null}
       {reminded && reminded.delivered === false ? (
-        <p className="text-[12px] text-white/55">{who} has no device that takes HOLD notifications right now, so they may not see it. It still counts for today.</p>
+        <p className="text-[12px] text-white/55">{t("groupThread.owed.notDelivered", { name: who })}</p>
       ) : null}
 
       {step === "mark" ? (
         <div className="flex flex-col gap-2">
           <p className="text-[13px] leading-[18px] text-white/[0.82]">
-            {who === "Someone" ? "They" : who} paid you another way, in cash or by transfer? Everyone sees it as your word, and they&apos;re told. Less than the full amount is fine.
+            {t("groupThread.owed.paidAnotherWay", { name: who === t("groupThread.names.someone") ? t("groupThread.names.they") : who })}
           </p>
           <div className="flex gap-2">
             <input
               value={amount}
               onChange={(e) => setAmount(e.target.value.replace(/[^\d.,]/g, "").slice(0, 18))}
               inputMode="decimal"
-              aria-label="Amount paid"
+              aria-label={t("groupThread.owed.amountA11y")}
               disabled={!!busy}
               className={`${inputCls} font-extrabold tabular-nums`}
             />
             <span className="flex w-[64px] shrink-0 items-center justify-center text-[14px] font-bold text-white/75">{currency}</span>
           </div>
-          {over ? <p className="text-[12px] text-amber">That&apos;s more than {moneyText(transfer.amountMinor, currency)}, what they owe you.</p> : null}
+          {over ? <p className="text-[12px] text-amber">{t("groupThread.owed.over", { amount: groupMoney(transfer.amountMinor, currency) })}</p> : null}
           <div className="flex gap-2">
             <button type="button" className={`${btnGlass} flex-1`} disabled={!!busy} onClick={() => setStep("idle")}>
-              Cancel
+              {t("common.cancel")}
             </button>
             <button type="button" className={`${plateWhite} flex-1`} disabled={!!busy || !minor || over} onClick={doMark}>
-              {busy === "mark" ? "Saving…" : "Mark as paid"}
+              {busy === "mark" ? t("common.saving") : t("groupThread.owed.markAsPaid")}
             </button>
           </div>
         </div>
@@ -373,12 +386,13 @@ export function OweRow({
   names: Names;
   onRecorded: () => void;
 }) {
+  const t = useT();
   const [step, setStep] = useState<"idle" | "confirm">("idle");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [key] = useState(() => newClientKey("settle"));
   const who = names.name(transfer.toUserId);
-  const amount = moneyText(transfer.amountMinor, currency);
+  const amount = groupMoney(transfer.amountMinor, currency);
   const payer = usePayDebt(groupId, currency, transfer, person);
   const ps = payer.state;
 
@@ -399,46 +413,45 @@ export function OweRow({
       <div className="flex min-w-0 items-center gap-2.5">
         <PersonFace person={person} size={30} />
         <p className="min-w-0 flex-1 text-[14.5px] font-bold text-white">
-          You owe {who} <span className="tabular-nums">{amount}</span>
+          <Rich k="groupThread.owe.youOwe" vars={{ name: who, amount }} tags={{ amount: (c) => <span className="tabular-nums">{c}</span> }} />
         </p>
-        <Tag label="Request" tone="dim" />
+        <Tag label={t("groupThread.owe.request")} tone="dim" />
       </div>
 
       {step === "idle" ? (
         <div className="flex flex-wrap items-center gap-2">
           {ps.kind === "ready" ? (
             <button type="button" className={pillAmber} onClick={payer.pay}>
-              Pay {ps.approx ? "≈ " : ""}
-              {ps.usdc} USDC
+              {t(ps.approx ? "groupThread.owe.payApprox" : "groupThread.owe.pay", { amount: ps.usdc })}
             </button>
           ) : ps.kind === "checking" ? (
-            <span className="inline-flex h-9 items-center px-1 text-[12.5px] text-white/55">Checking how to pay…</span>
+            <span className="inline-flex h-9 items-center px-1 text-[12.5px] text-white/55">{t("groupThread.owe.checking")}</span>
           ) : null}
           <button type="button" className={pillGlass} onClick={() => setStep("confirm")}>
-            Paid another way
+            {t("groupThread.owe.paidAnotherWay")}
           </button>
         </div>
       ) : null}
       {step === "idle" && ps.kind === "no_wallet" ? (
-        <p className="text-[12px] leading-[17px] text-white/55">{who === "a former member" ? "They" : who} can&apos;t be paid into from here, so Paid another way is the one way to record it.</p>
+        <p className="text-[12px] leading-[17px] text-white/55">{t("groupThread.owe.noWallet", { name: who === t("groupThread.names.formerMember") ? t("groupThread.names.they") : who })}</p>
       ) : null}
       {step === "idle" && ps.kind === "no_rate" ? (
-        <p className="text-[12px] leading-[17px] text-white/55">Today&apos;s rate from {currency} to USDC didn&apos;t load, so Pay isn&apos;t offered. Try again later, or record it as paid another way.</p>
+        <p className="text-[12px] leading-[17px] text-white/55">{t("groupThread.owe.noRate", { currency })}</p>
       ) : null}
       {payer.gateSheet}
 
       {step === "confirm" ? (
         <>
           <p className="text-[13px] leading-[18px] text-white/[0.82]">
-            Record that you paid {who} {amount} outside HOLD, in cash or another app? Everyone in the group sees it as your word, not as a payment HOLD checked, and {who} is told.
+            {t("groupThread.owe.confirm", { name: who, amount })}
           </p>
           {notice ? <Notice>{notice}</Notice> : null}
           <div className="flex gap-2">
             <button type="button" className={`${btnGlass} flex-1`} disabled={busy} onClick={() => setStep("idle")}>
-              Cancel
+              {t("common.cancel")}
             </button>
             <button type="button" className={`${plateWhite} flex-1`} disabled={busy} onClick={record}>
-              {busy ? "Recording…" : "Record it"}
+              {busy ? t("groupThread.owe.recording") : t("groupThread.owe.recordIt")}
             </button>
           </div>
         </>
@@ -490,6 +503,7 @@ export function PeopleSheet({
   onLeft: () => void;
   onOpenBalances: () => void;
 }) {
+  const t = useT();
   const [picked, setPicked] = useState<Person[]>([]);
   const [busy, setBusy] = useState(false);
   const [lines, setLines] = useState<{ text: string; good: boolean }[]>([]);
@@ -508,9 +522,9 @@ export function PeopleSheet({
     for (const p of picked) {
       try {
         await addMember(groupId, p.id);
-        out.push({ text: `${memberName(p)} is in the group.`, good: true });
+        out.push({ text: t("groupThread.people.isIn", { name: memberName(p) }), good: true });
       } catch (e) {
-        out.push({ text: `${memberName(p)}: ${describeGroupError(e)}`, good: false });
+        out.push({ text: t("groupThread.people.failedFor", { name: memberName(p), error: describeGroupError(e) }), good: false });
         left.push(p);
       }
     }
@@ -530,13 +544,13 @@ export function PeopleSheet({
       setAsk(null);
       if (you) onLeft();
       else {
-        setLines([{ text: `${memberName(byId.get(userId))} is out of the group.`, good: true }]);
+        setLines([{ text: t("groupThread.people.isOut", { name: memberName(byId.get(userId)) }), good: true }]);
         onAdded();
       }
     } catch (e) {
       if (e instanceof HoldApiError && e.detail === "member_has_balance") {
         const d = (e.details ?? {}) as { balanceMinor?: string; currency?: string };
-        setAsk({ kind: "balance", who: you ? "You" : memberName(byId.get(userId)), you, minor: typeof d.balanceMinor === "string" ? d.balanceMinor : null, currency: typeof d.currency === "string" ? d.currency : null });
+        setAsk({ kind: "balance", who: you ? t("groupThread.names.youSubject") : memberName(byId.get(userId)), you, minor: typeof d.balanceMinor === "string" ? d.balanceMinor : null, currency: typeof d.currency === "string" ? d.currency : null });
       } else {
         setAsk(null);
         setNotice(describeGroupError(e));
@@ -570,10 +584,10 @@ export function PeopleSheet({
       footer={
         <div className="flex gap-2">
           <button type="button" className={`${btnGlass} flex-1`} disabled={busy} onClick={() => setAsk(null)}>
-            Cancel
+            {t("common.cancel")}
           </button>
           <button type="button" className={`${plateCaution} flex-1`} disabled={busy} onClick={run}>
-            {busy ? "One moment…" : action}
+            {busy ? t("groupThread.people.oneMoment") : action}
           </button>
         </div>
       }
@@ -583,9 +597,9 @@ export function PeopleSheet({
   );
 
   return (
-    <Sheet title="People" onClose={onClose} busy={busy} wide>
+    <Sheet title={t("groupThread.people.title")} onClose={onClose} busy={busy} wide>
       {members === undefined && !membersError ? <Skeleton className="h-10 rounded-[12px]" /> : null}
-      {membersError && !members ? <LoadFailed words="Could not load who's in the group." onRetry={onRetry} /> : null}
+      {membersError && !members ? <LoadFailed words={t("groupThread.people.loadFailed")} onRetry={onRetry} /> : null}
       <div className="flex flex-col gap-2">
         {members?.map((m) => {
           const admin = m.userId === adminId || !!m.isCreator;
@@ -596,26 +610,26 @@ export function PeopleSheet({
                 <span className="truncate text-[14.5px] font-bold text-white">{m.displayName?.trim() || memberName(m)}</span>
                 {m.aliasHandle ? <span className="truncate text-[12px] text-white/55">@{m.aliasHandle.replace(/^@+/, "")}</span> : null}
               </span>
-              {admin ? <Tag label="Admin" tone="dim" /> : null}
-              {m.userId === meId ? <Tag label="You" tone="dim" /> : null}
+              {admin ? <Tag label={t("groupThread.people.admin")} tone="dim" /> : null}
+              {m.userId === meId ? <Tag label={t("groupThread.people.you")} tone="dim" /> : null}
               {iAmAdmin && m.userId !== meId ? (
                 <button
                   type="button"
                   disabled={busy}
                   onClick={() => setAsk({ kind: "remove", member: m })}
                   className="rounded-[12px] px-2.5 py-1.5 text-[12.5px] font-bold text-white/70 transition-colors hover:bg-white/10 hover:text-white"
-                  aria-label={`Remove ${memberName(m)}`}
+                  aria-label={t("groupThread.people.removeA11y", { name: memberName(m) })}
                 >
-                  Remove
+                  {t("groupThread.people.remove")}
                 </button>
               ) : null}
             </div>
           );
         })}
       </div>
-      {!iAmAdmin && members?.length ? <p className="text-[12px] text-white/50">Only the group admin can remove people.</p> : null}
+      {!iAmAdmin && members?.length ? <p className="text-[12px] text-white/50">{t("groupThread.people.onlyAdminRemoves")}</p> : null}
 
-      <p className={`${sectionLabel} pt-1`}>Add people</p>
+      <p className={`${sectionLabel} pt-1`}>{t("groupThread.people.addPeople")}</p>
       <DirectoryPicker selected={picked} onChange={setPicked} exclude={exclude} disabled={busy} />
       {lines.map((l, i) =>
         l.good ? (
@@ -628,7 +642,11 @@ export function PeopleSheet({
       )}
       {picked.length ? (
         <button type="button" className={plateWhite} disabled={busy} onClick={() => void add()}>
-          {busy ? "Adding…" : `Add ${picked.length === 1 ? memberName(picked[0]) : `${picked.length} people`}`}
+          {busy
+            ? t("groupThread.people.adding")
+            : picked.length === 1
+              ? t("groupThread.people.addOne", { name: memberName(picked[0]) })
+              : t("groupThread.people.addCount", { count: picked.length })}
         </button>
       ) : null}
 
@@ -638,16 +656,16 @@ export function PeopleSheet({
         <div className="mt-2 flex flex-col gap-2 border-t border-white/10 pt-3">
           {iAmAdmin ? (
             <>
-              <p className="text-[12.5px] leading-[17px] text-white/55">You&apos;re the group admin. The admin can&apos;t leave; delete the group instead.</p>
+              <p className="text-[12.5px] leading-[17px] text-white/55">{t("groupThread.people.youAreAdmin")}</p>
               <button type="button" className={plateCaution} disabled={busy} onClick={() => setAsk({ kind: "delete" })}>
                 <Ion name="trash-outline" size={16} />
-                Delete group
+                {t("groupThread.people.deleteGroup")}
               </button>
             </>
           ) : (
             <button type="button" className={plateCaution} disabled={busy} onClick={() => setAsk({ kind: "leave" })}>
               <Ion name="log-out-outline" size={16} />
-              Leave group
+              {t("groupThread.people.leaveGroup")}
             </button>
           )}
         </div>
@@ -655,37 +673,37 @@ export function PeopleSheet({
 
       {ask?.kind === "remove"
         ? confirm(
-            `Remove ${memberName(ask.member)}?`,
-            <p className="text-[14px] leading-[20px] text-white/[0.78]">They leave {groupName} and stop seeing it. Their expenses stay in the conversation. Someone who still owes or is owed money can&apos;t be removed until it&apos;s settled.</p>,
-            "Remove",
+            t("groupThread.people.removeTitle", { name: memberName(ask.member) }),
+            <p className="text-[14px] leading-[20px] text-white/[0.78]">{t("groupThread.people.removeBody", { group: groupName })}</p>,
+            t("groupThread.people.remove"),
             () => void takeOut(ask.member.userId),
           )
         : null}
       {ask?.kind === "leave"
         ? confirm(
-            "Leave the group?",
-            <p className="text-[14px] leading-[20px] text-white/[0.78]">You stop seeing {groupName}. You can only leave once your balance here is zero. Someone in it can add you back.</p>,
-            "Leave",
+            t("groupThread.people.leaveTitle"),
+            <p className="text-[14px] leading-[20px] text-white/[0.78]">{t("groupThread.people.leaveBody", { group: groupName })}</p>,
+            t("groupThread.people.leave"),
             () => meId && void takeOut(meId),
           )
         : null}
       {ask?.kind === "delete"
         ? confirm(
-            "Delete the group?",
-            <p className="text-[14px] leading-[20px] text-white/[0.78]">{groupName} goes for everyone: the conversation, the expenses and the balances. This can&apos;t be undone.</p>,
-            "Delete group",
+            t("groupThread.people.deleteTitle"),
+            <p className="text-[14px] leading-[20px] text-white/[0.78]">{t("groupThread.people.deleteBody", { group: groupName })}</p>,
+            t("groupThread.people.deleteGroup"),
             () => void removeGroup(),
           )
         : null}
       {ask?.kind === "balance" ? (
         <Modal
-          title={ask.you ? "Settle up before you leave" : "Settle up first"}
+          title={ask.you ? t("groupThread.people.settleBeforeLeave") : t("groupThread.people.settleFirst")}
           onClose={() => setAsk(null)}
           size="sm"
           footer={
             <div className="flex gap-2">
               <button type="button" className={`${btnGlass} flex-1`} onClick={() => setAsk(null)}>
-                OK
+                {t("common.ok")}
               </button>
               <button
                 type="button"
@@ -695,21 +713,20 @@ export function PeopleSheet({
                   onOpenBalances();
                 }}
               >
-                See balances
+                {t("groupThread.people.seeBalances")}
               </button>
             </div>
           }
         >
           <p className="text-[14px] leading-[20px] text-white/[0.78]">
-            {ask.you ? "You" : ask.who}{" "}
             {ask.minor && ask.currency
               ? toBig(ask.minor) < 0n
-                ? `${ask.you ? "still owe" : "still owes"} ${moneyText(absMinor(ask.minor), ask.currency)} in this group.`
-                : `${ask.you ? "are" : "is"} still owed ${moneyText(absMinor(ask.minor), ask.currency)} in this group.`
-              : `${ask.you ? "still have" : "still has"} money owed in this group, one way or the other.`}
+                ? t(ask.you ? "groupThread.people.youStillOwe" : "groupThread.people.theyStillOwe", { name: ask.who, amount: groupMoney(absMinor(ask.minor), ask.currency) })
+                : t(ask.you ? "groupThread.people.youAreOwed" : "groupThread.people.theyAreOwed", { name: ask.who, amount: groupMoney(absMinor(ask.minor), ask.currency) })
+              : t(ask.you ? "groupThread.people.youStillHave" : "groupThread.people.theyStillHave", { name: ask.who })}
           </p>
           <p className="text-[14px] leading-[20px] text-white/[0.78]">
-            Nobody leaves a group with an open balance, so nothing is lost. Once it&apos;s settled (paid in HOLD, or marked as paid by the person owed) it&apos;s one tap.
+            {t("groupThread.people.balanceNote")}
           </p>
         </Modal>
       ) : null}
@@ -726,6 +743,7 @@ export function PeopleSheet({
  * words and the rest of the change still saves.
  */
 export function SettingsSheet({ groupId, group, onClose, onSaved }: { groupId: string; group: GroupRow; onClose: () => void; onSaved: () => void }) {
+  const t = useT();
   const [name, setName] = useState(group.name);
   const [emoji, setEmoji] = useState(group.emoji ?? "👥");
   const [photo, setPhoto] = useState<Blob | null>(null);
@@ -771,7 +789,7 @@ export function SettingsSheet({ groupId, group, onClose, onSaved }: { groupId: s
       if (photo) await uploadGroupPhoto(groupId, photo);
       else if (removePhoto && group.photoUrl) await deleteGroupPhoto(groupId);
     } catch (e) {
-      problems.push(`The photo: ${describeGroupError(e)}`);
+      problems.push(t("groupThread.settings.photoProblem", { error: describeGroupError(e) }));
     }
     setBusy(false);
     onSaved();
@@ -784,7 +802,7 @@ export function SettingsSheet({ groupId, group, onClose, onSaved }: { groupId: s
   };
 
   return (
-    <Sheet title="Group settings" onClose={onClose} busy={busy} wide>
+    <Sheet title={t("groupThread.settings.title")} onClose={onClose} busy={busy} wide>
       <FacePicker
         name={name}
         emoji={emoji}
@@ -798,43 +816,43 @@ export function SettingsSheet({ groupId, group, onClose, onSaved }: { groupId: s
         onRemovePhoto={() => setRemovePhoto(true)}
         disabled={busy}
       />
-      <input value={name} onChange={(e) => setName(e.target.value.slice(0, 80))} aria-label="Group name" disabled={busy} className={inputCls} />
+      <input value={name} onChange={(e) => setName(e.target.value.slice(0, 80))} aria-label={t("groupThread.settings.nameA11y")} disabled={busy} className={inputCls} />
 
       <div className="flex items-center gap-3">
         <div className="w-[84px] shrink-0">
-          <CurrencyInput value={currency} onChange={setCurrency} disabled={busy} label="The group's currency" />
+          <CurrencyInput value={currency} onChange={setCurrency} disabled={busy} label={t("groupThread.settings.currencyLabel")} />
         </div>
-        <p className="min-w-0 flex-1 text-[12px] leading-[17px] text-white/55">The currency balances are kept in. It can change until the first expense or settlement.</p>
+        <p className="min-w-0 flex-1 text-[12px] leading-[17px] text-white/55">{t("groupThread.settings.currencyHint")}</p>
       </div>
 
       <div className="flex items-center gap-3 rounded-[14px] bg-white/[0.04] px-3 py-2.5">
         <span className="flex min-w-0 flex-1 flex-col">
-          <span className="text-[14px] font-bold text-white">Simplify debts</span>
-          <span className="text-[12px] text-white/55">Fewer payments, netted across the group.</span>
+          <span className="text-[14px] font-bold text-white">{t("groupThread.settings.simplify")}</span>
+          <span className="text-[12px] text-white/55">{t("groupThread.settings.simplifyHint")}</span>
         </span>
-        <Switch checked={smart} onChange={setSmart} label="Simplify debts" disabled={busy} />
+        <Switch checked={smart} onChange={setSmart} label={t("groupThread.settings.simplify")} disabled={busy} />
       </div>
 
       <div className="flex items-center gap-3 rounded-[14px] bg-white/[0.04] px-3 py-2.5">
         <span className="flex min-w-0 flex-1 flex-col">
-          <span className="text-[14px] font-bold text-white">Friendly reminders</span>
-          <span className="text-[12px] leading-[17px] text-white/55">A gentle nudge, at most once a week, to anyone with something pending for 3 days or more. Never in the chat, and nobody is made to pay.</span>
+          <span className="text-[14px] font-bold text-white">{t("groupThread.settings.reminders")}</span>
+          <span className="text-[12px] leading-[17px] text-white/55">{t("groupThread.settings.remindersHint")}</span>
         </span>
-        <Switch checked={autoRemind} onChange={setAutoRemind} label="Friendly reminders" disabled={busy} />
+        <Switch checked={autoRemind} onChange={setAutoRemind} label={t("groupThread.settings.reminders")} disabled={busy} />
       </div>
 
       {notice ? <Notice>{notice}</Notice> : null}
       {saved ? (
         <Notice tone="good" icon="checkmark-circle-outline">
-          Saved.
+          {t("groupThread.settings.saved")}
         </Notice>
       ) : null}
       <div className="flex gap-2 pt-1">
         <button type="button" className={`${btnGlass} flex-1`} onClick={onClose} disabled={busy}>
-          Close
+          {t("common.close")}
         </button>
         <button type="button" className={`${plateWhite} flex-1`} onClick={() => void save()} disabled={!ready}>
-          {busy ? "Saving…" : "Save"}
+          {busy ? t("common.saving") : t("common.save")}
         </button>
       </div>
     </Sheet>

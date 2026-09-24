@@ -12,6 +12,9 @@
  * `formatMinor`, never through a float.
  */
 
+import { t } from "./i18n";
+import { fmtFiat } from "./i18n/format";
+
 /* ── Minor units ──────────────────────────────────────────────────── */
 
 /** The backend's MINOR_EXPONENT table (group-expenses.service.ts), unchanged. */
@@ -45,9 +48,15 @@ export function formatMinor(minor: string | bigint, currency: string): string {
   return `${neg ? "-" : ""}${grouped}${frac ? `.${frac}` : ""}`;
 }
 
-/** "12.00 USD". */
+/**
+ * An amount in its own currency, in the viewer's language: "$12.00",
+ * "12,00 €". Never converted (a group keeps its currency). The float only
+ * carries the value to Intl; the digits are the currency's own.
+ */
 export function moneyText(minor: string | bigint, currency: string): string {
-  return `${formatMinor(minor, currency)} ${currency.toUpperCase()}`;
+  const code = currency.toUpperCase();
+  const exp = minorExponent(code);
+  return fmtFiat(Number(formatMinor(minor, code).replace(/,/g, "")), code, { digits: exp });
 }
 
 /** "1200" in USD as "12.00" with no grouping, to prefill an input. */
@@ -434,7 +443,7 @@ export interface ItemBody {
 /** The bills as the server's `items`, each in its own currency, a picked one naming its source. */
 export function itemsBody(bills: readonly Bill[]): ItemBody[] {
   return bills.map((b) => ({
-    label: b.label.trim().slice(0, 120) || "Bill",
+    label: b.label.trim().slice(0, 120) || t("groups.bills.fallbackLabel"),
     amountMinor: toBig(b.amountMinor).toString(),
     currency: b.currency.toUpperCase(),
     ...(b.kind !== "custom" && b.ref ? { sourceKind: b.kind, sourceRef: b.ref } : {}),
@@ -443,9 +452,15 @@ export function itemsBody(bills: readonly Bill[]): ItemBody[] {
 
 /** A title for several bills nobody named: "Dinner", "Dinner and Taxi", "Dinner, Taxi and 2 more". */
 export function billsTitle(bills: readonly Bill[]): string | null {
-  const labels = bills.map((b) => b.label.trim()).filter((l) => l && l !== "Custom bill");
+  const custom = t("groups.bills.custom");
+  const labels = bills.map((b) => b.label.trim()).filter((l) => l && l !== custom && l !== "Custom bill");
   if (!labels.length) return null;
-  const out = labels.length === 1 ? labels[0] : labels.length === 2 ? `${labels[0]} and ${labels[1]}` : `${labels[0]}, ${labels[1]} and ${labels.length - 2} more`;
+  const out =
+    labels.length === 1
+      ? labels[0]
+      : labels.length === 2
+        ? t("groups.bills.titleTwo", { a: labels[0], b: labels[1] })
+        : t("groups.bills.titleMany", { a: labels[0], b: labels[1], count: labels.length - 2 });
   return out.slice(0, 120);
 }
 
@@ -455,15 +470,38 @@ export type ExpenseCategory = "food" | "drinks" | "transport" | "stay" | "activi
 
 export const EXPENSE_CATEGORIES: readonly ExpenseCategory[] = ["food", "drinks", "transport", "stay", "activities", "groceries", "shopping", "other"];
 
+/** A category's name, in the viewer's language. */
+export function categoryLabel(c: ExpenseCategory): string {
+  switch (c) {
+    case "food":
+      return t("groups.category.food");
+    case "drinks":
+      return t("groups.category.drinks");
+    case "transport":
+      return t("groups.category.transport");
+    case "stay":
+      return t("groups.category.stay");
+    case "activities":
+      return t("groups.category.activities");
+    case "groceries":
+      return t("groups.category.groceries");
+    case "shopping":
+      return t("groups.category.shopping");
+    default:
+      return t("groups.category.other");
+  }
+}
+
+/** Kept for the screens that index it: each entry reads the language when it is read. */
 export const CATEGORY_LABEL: Readonly<Record<ExpenseCategory, string>> = {
-  food: "Food",
-  drinks: "Drinks",
-  transport: "Transport",
-  stay: "Stay",
-  activities: "Activities",
-  groceries: "Groceries",
-  shopping: "Shopping",
-  other: "Other",
+  get food() { return categoryLabel("food"); },
+  get drinks() { return categoryLabel("drinks"); },
+  get transport() { return categoryLabel("transport"); },
+  get stay() { return categoryLabel("stay"); },
+  get activities() { return categoryLabel("activities"); },
+  get groceries() { return categoryLabel("groceries"); },
+  get shopping() { return categoryLabel("shopping"); },
+  get other() { return categoryLabel("other"); },
 };
 
 /** A category from the wire, or null: an older response, or one this build doesn't know, reads as none. */
@@ -627,11 +665,11 @@ export function seenBy(item: { userId: string; at: string }, reads: readonly { u
 /** "Seen by Ana", "Seen by Ana and Luis", "Seen by Ana, Luis and 2 more", "Seen by everyone". */
 export function seenLine(seen: readonly string[], othersCount: number, name: (id: string) => string): string | null {
   if (!seen.length) return null;
-  if (othersCount > 1 && seen.length >= othersCount) return "Seen by everyone";
+  if (othersCount > 1 && seen.length >= othersCount) return t("groups.seen.everyone");
   const names = seen.map(name);
-  if (names.length === 1) return `Seen by ${names[0]}`;
-  if (names.length === 2) return `Seen by ${names[0]} and ${names[1]}`;
-  return `Seen by ${names[0]}, ${names[1]} and ${names.length - 2} more`;
+  if (names.length === 1) return t("groups.seen.one", { name: names[0] });
+  if (names.length === 2) return t("groups.seen.two", { a: names[0], b: names[1] });
+  return t("groups.seen.many", { a: names[0], b: names[1], count: names.length - 2 });
 }
 
 /* ── Faces ────────────────────────────────────────────────────────── */
