@@ -11,6 +11,8 @@
   "promiseKind.thankYouPost": "โพสต์ขอบคุณ",
   "promiseKind.mention": "การเมนชัน",
   "promiseKind.custom": "กำหนดเอง",
+  "delivery.promiseTitle": "{count} × {kind}",
+  "delivery.promiseTitlePlatform": "{count} × {kind} · {platform}",
   "delivery.artworkTitle": "อาร์ตเวิร์ก · {sponsor}",
   "delivery.sponsor": "สปอนเซอร์",
   "delivery.sold": "ขายแล้ว",

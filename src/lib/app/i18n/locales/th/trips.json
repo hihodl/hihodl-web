@@ -33,6 +33,7 @@
   "photos.showCaptions": "แสดงคำบรรยาย",
   "photos.previous": "รูปก่อนหน้า",
   "photos.next": "รูปถัดไป",
+  "photos.counter": "{index} / {total}",
   "list.title": "ทริปของคุณ",
   "list.errorTitle": "โหลดทริปของคุณไม่สำเร็จ",
   "list.emptyTitle": "ยังไม่มีทริป",
