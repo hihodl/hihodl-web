@@ -127,7 +127,7 @@ function useRegistrationOptions(active: boolean) {
 
 /* ── The screen ───────────────────────────────────────────────────── */
 
-/** What Payments already knows when it opens Send: ?to, ?amount, ?token. Read once. */
+/** What Payments already knows when it opens Send: ?to, ?amount, ?token, ?peer, ?request, ?lock, ?back. Read once. */
 function prefillFromUrl(): WithdrawPrefill {
   if (typeof window === "undefined") return {};
   const q = new URLSearchParams(window.location.search);
@@ -136,6 +136,8 @@ function prefillFromUrl(): WithdrawPrefill {
   const groupTo = q.get("groupTo") ?? "";
   const groupOwe = q.get("groupOwe") ?? "";
   const back = q.get("back") ?? "";
+  // Quick Send's locked recipient: a name to SHOW, never a thing to route by (`to` routes).
+  const peer = (q.get("peer") ?? "").replace(/[\u0000-\u001f\u007f]/g, "").trim().slice(0, 64);
   return {
     ...(q.get("to") ? { to: q.get("to")! } : {}),
     ...(q.get("amount") ? { amount: q.get("amount")! } : {}),
@@ -144,8 +146,11 @@ function prefillFromUrl(): WithdrawPrefill {
     ...(q.get("request") ? { requestId: q.get("request")! } : {}),
     // Pay on a group debt (§11.2): Withdraw records it against the group once the send confirms.
     ...(/^[A-Za-z0-9_-]{1,64}$/.test(group) && /^[A-Za-z0-9_-]{1,64}$/.test(groupTo) && /^\d{1,20}$/.test(groupOwe) ? { group: { groupId: group, toUserId: groupTo, amountMinor: groupOwe } } : {}),
-    // Only back into a group thread: never an address somebody else chose.
-    ...(/^\/payments\/groups\/[A-Za-z0-9_-]{1,64}$/.test(back) ? { back } : {}),
+    // Only back into a group thread or a 1:1 thread: never an address somebody else chose.
+    ...(/^\/payments\/groups\/[A-Za-z0-9_-]{1,64}$/.test(back) || /^\/payments\?thread=[A-Za-z0-9%._~-]{1,200}$/.test(back) ? { back } : {}),
+    // Quick Send from a thread, and Pay on a request (its amount locked).
+    ...(peer && q.get("to") ? { peer } : {}),
+    ...(q.get("lock") === "1" && q.get("request") && q.get("amount") ? { lock: true } : {}),
   };
 }
 

@@ -34,10 +34,11 @@
  * app's shape.
  */
 
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { recordSentPayment } from "@/lib/app/groups";
-import { settleRequest } from "@/lib/app/payment-requests";
+import { moneyText } from "@/lib/app/groups-rules";
+import { settleWithWithdrawal, type SettleOutcome } from "@/lib/app/payment-requests";
 import {
   authorizeWithdrawalPasskey,
   createWithdrawal,
@@ -68,7 +69,8 @@ import {
   type WithdrawToken,
 } from "@/lib/wallet/withdraw-core";
 
-import { AMBER, AppScreen, BackspaceIcon, ContinueButton, FooterNote, HeroBody, HeroCard, PrimaryButton, StatusLine, SUB, TokenIcon, useCountdown, WarningNote } from "./app-kit";
+import { AppScreen, FooterNote, PrimaryButton, StatusLine, SUB, useCountdown, WarningNote } from "./app-kit";
+import { QuickSendView } from "./QuickSend";
 import { Ion } from "../ion";
 import { useProductHref } from "../base";
 import { hereNow, useLinkGate } from "../link/LinkGate";
@@ -85,12 +87,44 @@ export interface WithdrawPrefill {
   requestId?: string;
   group?: { groupId: string; toUserId: string; amountMinor: string };
   back?: string;
+  /**
+   * Quick Send from a 1:1 thread: the person's name, shown in the header with
+   * a lock. The recipient is not asked for again, and Back goes to the thread.
+   */
+  peer?: string;
+  /** Paying a request: the amount and the token are the request's, not editable here. */
+  lock?: boolean;
 }
 
 /* ── Parts ────────────────────────────────────────────────────────── */
 
 const DECIMALS: Record<WithdrawToken, number> = { USDC: 6, SOL: 9 };
-const TOKEN_NAME: Record<WithdrawToken, string> = { USDC: "USD Coin", SOL: "Solana" };
+
+/** The small strings of Send's own, together. */
+const S = {
+  payingRequest: (name: string) => `Paying ${name}'s request`,
+  settling: "Marking their request as paid…",
+  settled: "Their request is marked as paid.",
+  closed: "Their request was already closed.",
+  short: (proven: string | null) =>
+    proven
+      ? `Your payment covered ${proven} of what they asked, so their request stays open.`
+      : "Your payment covered less than they asked, so their request stays open.",
+  unknown: "HOLD couldn't put a value on what you paid in, so their request stays open. They can see your payment in your conversation.",
+  unproven: "We couldn't match this payment to their request, so it stays open. They can still see your payment in your conversation.",
+};
+
+/** What became of the request, said once the payment is on the result screen. */
+function settleLine(o: SettleOutcome | "pending"): string {
+  if (o === "pending") return S.settling;
+  if (o.kind === "settled") return S.settled;
+  if (o.kind === "closed") return S.closed;
+  if (o.kind === "short") {
+    const cur = o.currency && /^[A-Z]{3}$/.test(o.currency.toUpperCase()) ? o.currency.toUpperCase() : null;
+    return S.short(o.provenMinor && /^\d+$/.test(o.provenMinor) && cur ? moneyText(o.provenMinor, cur) : null);
+  }
+  return o.kind === "unknown" ? S.unknown : S.unproven;
+}
 
 /** Confirm's short recipient: six, an ellipsis, four. */
 function shortTo(a: string): string {
@@ -119,7 +153,7 @@ function Hero({ label = "Recipient gets", amount, token }: { label?: string; amo
 const confirmCard = "rounded-[16px] border border-white/[0.08] bg-white/[0.05] px-4 py-3";
 
 /** Confirm's recipient card: the wallet avatar, the short address, (i) for the whole one. */
-function RecipientCard({ to }: { to: string }) {
+function RecipientCard({ to, name = null }: { to: string; name?: string | null }) {
   const [open, setOpen] = useState(false);
   return (
     <div className={confirmCard}>
@@ -127,7 +161,15 @@ function RecipientCard({ to }: { to: string }) {
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[rgba(124,198,232,0.25)] bg-[rgba(124,198,232,0.12)]">
           <Ion name="wallet-outline" size={20} color="#7CC6E8" />
         </span>
-        <span className="min-w-0 flex-1 truncate text-[15px] font-strong tracking-[-0.2px] text-white">{shortTo(to)}</span>
+        <span className="min-w-0 flex-1 truncate text-[15px] font-strong tracking-[-0.2px] text-white">
+          {name ? (
+            <>
+              {name} <span className="font-normal text-white/55">· {shortTo(to)}</span>
+            </>
+          ) : (
+            shortTo(to)
+          )}
+        </span>
         <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-label="Recipient wallet" className="rounded-[10px] p-1 hover:bg-white/[0.06]">
           <Ion name="information-circle-outline" size={20} color="rgba(255,255,255,0.55)" />
         </button>
@@ -164,46 +206,6 @@ function Summary({ token, amount }: { token: WithdrawToken; amount: string }) {
       </Row>
       <div className="h-px bg-white/[0.08]" />
       <Row label="Network">Solana</Row>
-    </div>
-  );
-}
-
-/** QuickAmountPad: presets over a 3×4 keypad, keys on white/6, radius 12. */
-function AmountPad({ onKey, onPreset, onBackspace }: { onKey: (k: string) => void; onPreset: (n: number) => void; onBackspace: () => void }) {
-  const key = "flex h-[46px] flex-1 items-center justify-center rounded-[12px] bg-white/[0.06] text-[16px] font-strong text-white transition-colors hover:bg-white/[0.1] active:bg-white/[0.14]";
-  const rows = [
-    ["1", "2", "3"],
-    ["4", "5", "6"],
-    ["7", "8", "9"],
-    [".", "0", "back"],
-  ];
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="flex gap-2">
-        {[10, 20, 50, 100].map((v) => (
-          <button key={v} type="button" onClick={() => onPreset(v)} className="flex h-9 flex-1 items-center justify-center rounded-[12px] bg-white/[0.08] text-[14px] font-strong text-white hover:bg-white/[0.12]">
-            +{v}
-          </button>
-        ))}
-        <button type="button" onClick={() => onPreset(Number.POSITIVE_INFINITY)} className="flex h-9 flex-[1.2] items-center justify-center rounded-[12px] bg-white/[0.08] text-[14px] font-strong text-white hover:bg-white/[0.12]">
-          MAX
-        </button>
-      </div>
-      {rows.map((r) => (
-        <div key={r.join("")} className="flex gap-2">
-          {r.map((k) =>
-            k === "back" ? (
-              <button key={k} type="button" onClick={onBackspace} aria-label="Delete" className={key}>
-                <BackspaceIcon />
-              </button>
-            ) : (
-              <button key={k} type="button" onClick={() => onKey(k)} className={key}>
-                {k}
-              </button>
-            ),
-          )}
-        </div>
-      ))}
     </div>
   );
 }
@@ -253,12 +255,21 @@ export function WithdrawView({
   setDraft,
   approver,
   here = null,
+  peer = null,
+  locked = false,
+  settle = null,
   actions,
 }: {
   phase: WithdrawPhase;
   draft: Draft;
   balances: Balances | null;
   setDraft: (d: Draft) => void;
+  /** Quick Send from a thread: the person, locked in. */
+  peer?: string | null;
+  /** Paying a request: the amount and token are fixed. */
+  locked?: boolean;
+  /** Paying a request: what closing it came to, once the money moved ("pending" while it is asked). */
+  settle?: SettleOutcome | "pending" | null;
   /** Who approves, when the server said so up front (canPayFromWeb). */
   approver?: "phone" | "passkey";
   /** The phone this page is on: an Android phone gets Open HOLD as an intent. */
@@ -277,7 +288,6 @@ export function WithdrawView({
   const left = useCountdown(phase.kind === "on-phone" || phase.kind === "passkey" ? (withdrawal?.expiresAt ?? null) : null);
   // The form is the app's two screens: who (send/search), then how much (QuickSend).
   const [step, setStep] = useState<"to" | "amount">(() => (isSolanaAddress(draft.to) ? "amount" : "to"));
-  const [picking, setPicking] = useState(false);
 
   if (phase.kind === "form" && step === "to") {
     const toOk = isSolanaAddress(draft.to);
@@ -336,95 +346,29 @@ export function WithdrawView({
     const have = balances ? (draft.token === "USDC" ? balances.usdc : balances.sol) : null;
     const tooMuch = units !== null && have !== null && Number(draft.amount) > have;
     const toOk = isSolanaAddress(draft.to);
-    const maxDigits = DECIMALS[draft.token];
-    const fmtHave = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: draft.token === "USDC" ? 2 : 6 });
-    const line = tooMuch && have !== null ? `Most you can send is ${fmtHave(have)} ${draft.token}` : have !== null ? `Available: ${fmtHave(have)} ${draft.token}` : "";
-
-    const append = (k: string) => {
-      const prev = draft.amount;
-      if (k === ".") {
-        if (prev.includes(".")) return;
-        return setDraft({ ...draft, amount: prev ? `${prev}.` : "0." });
-      }
-      const dot = prev.indexOf(".");
-      if (dot >= 0 && prev.length - dot - 1 >= maxDigits) return;
-      setDraft({ ...draft, amount: prev === "0" ? k : prev + k });
-    };
-    const backspace = () => setDraft({ ...draft, amount: draft.amount.slice(0, -1) });
-    const preset = (n: number) => setDraft({ ...draft, amount: n === Number.POSITIVE_INFINITY ? String(have ?? 0) : String(n) });
-    const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-      if (/^[0-9]$/.test(e.key)) append(e.key);
-      else if (e.key === "." || e.key === ",") append(".");
-      else if (e.key === "Backspace") backspace();
-      else if (e.key === "Enter" && units !== null && !tooMuch && toOk) actions.onReview();
-      else return;
-      e.preventDefault();
-    };
+    const holding = (t: WithdrawToken) => (balances ? (t === "USDC" ? balances.usdc : balances.sol) : null);
+    const options = (["USDC", "SOL"] as const)
+      .filter((t) => !locked || t === draft.token)
+      .map((t) => ({ token: t, chain: "solana", balance: holding(t) }));
 
     return (
-      <AppScreen onBack={() => setStep("to")} title={null}>
-        <div tabIndex={0} onKeyDown={onKeyDown} className="flex flex-col outline-none" aria-label="Amount">
-          {/* The amount block */}
-          <div className="flex flex-col items-center pt-8">
-            <p className="flex items-center gap-2">
-              <span className="text-[54px] font-strong leading-tight tracking-[0.5px] tabular-nums text-white">{draft.amount || "0"}</span>
-              <span className="text-[30px] font-strong text-white">{draft.token}</span>
-            </p>
-            <p className={`mt-2 h-5 text-[13px] ${tooMuch ? "text-[#FFB703]" : "text-[#9FB7C2]"}`}>{line}</p>
-            {phase.notice ? (
-              <div className="mt-3 w-full">
-                <WarningNote>{phase.notice}</WarningNote>
-              </div>
-            ) : null}
-          </div>
-
-          {/* The source chip, and its picker (SourceTokenSheet) */}
-          <div className="relative mt-8 flex justify-center">
-            <button type="button" onClick={() => setPicking((v) => !v)} aria-expanded={picking} className="flex items-center gap-2 rounded-[12px] px-2 py-1 hover:bg-white/[0.05]">
-              <TokenIcon symbol={draft.token} size={36} />
-              <span className="text-[15px] font-strong text-white">{draft.token}</span>
-              <Ion name="chevron-down" size={13} color="#AFC9D6" />
-            </button>
-            {picking ? (
-              <div className="absolute top-full z-10 mt-2 w-full max-w-[320px] rounded-[18px] border border-white/[0.12] bg-[#15313D] p-2 shadow-[0_18px_36px_rgba(0,0,0,0.4)]">
-                {(["USDC", "SOL"] as const).map((t) => {
-                  const on = t === draft.token;
-                  const bal = balances ? (t === "USDC" ? balances.usdc : balances.sol) : null;
-                  return (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => {
-                        setDraft({ ...draft, token: t, amount: "" });
-                        setPicking(false);
-                      }}
-                      aria-pressed={on}
-                      className={`flex w-full items-center gap-3 rounded-[14px] px-3 py-2.5 text-left transition-colors ${on ? "bg-[rgba(255,183,3,0.10)]" : "hover:bg-white/[0.06]"}`}
-                    >
-                      <TokenIcon symbol={t} size={32} />
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-[15px] font-strong text-white">{TOKEN_NAME[t]}</span>
-                        <span className="block text-[12px] tabular-nums text-white/60">{bal !== null ? `${bal.toLocaleString("en-US", { maximumFractionDigits: t === "USDC" ? 2 : 6 })} ${t}` : t}</span>
-                      </span>
-                      {on ? <Ion name="checkmark-circle" size={20} color={AMBER} /> : <span className="w-5" />}
-                    </button>
-                  );
-                })}
-              </div>
-            ) : null}
-          </div>
-
-          {/* The bottom bloc: Continue above the keypad */}
-          <div className="mt-6 rounded-[20px] bg-[rgba(12,16,20,0.94)] px-4 pb-4 pt-2">
-            <div className="mb-[18px] mt-2">
-              <ContinueButton disabled={units === null || tooMuch || !toOk} onClick={actions.onReview}>
-                Continue
-              </ContinueButton>
-            </div>
-            <AmountPad onKey={append} onPreset={preset} onBackspace={backspace} />
-          </div>
-        </div>
-      </AppScreen>
+      <QuickSendView
+        mode="send"
+        recipient={{ name: peer ?? shortTo(draft.to), locked: !!peer }}
+        // From a thread there is no "who" step to go back to: Back is the thread.
+        onBack={peer ? actions.onBack : () => setStep("to")}
+        amount={draft.amount}
+        onAmount={(amount) => setDraft({ ...draft, amount })}
+        amountLocked={locked}
+        decimals={DECIMALS[draft.token]}
+        option={{ token: draft.token, chain: "solana" }}
+        options={options}
+        onOption={(o) => setDraft({ ...draft, token: o.token === "SOL" ? "SOL" : "USDC", amount: "" })}
+        available={have}
+        notice={phase.notice}
+        lockedLine={locked ? S.payingRequest(peer ?? shortTo(draft.to)) : null}
+        cta={{ label: "Continue", disabled: units === null || tooMuch || !toOk, onClick: actions.onReview }}
+      />
     );
   }
 
@@ -433,7 +377,7 @@ export function WithdrawView({
       <AppScreen title="Confirm payment" onBack={actions.onEdit}>
         <Hero amount={draft.amount} token={draft.token} />
         <div className="flex flex-col gap-3">
-          <RecipientCard to={draft.to} />
+          <RecipientCard to={draft.to} name={peer} />
           <Summary token={draft.token} amount={draft.amount} />
           {phase.notice ? <WarningNote>{phase.notice}</WarningNote> : null}
           <div className="pt-4">
@@ -454,7 +398,7 @@ export function WithdrawView({
         <Hero amount={w.amount} token={w.token} />
         <div className="flex flex-col gap-3">
           <StatusLine>{ON_PHONE[w.status] ?? "Approve on your phone"}</StatusLine>
-          <RecipientCard to={w.to} />
+          <RecipientCard to={w.to} name={peer} />
           <Summary token={w.token} amount={w.amount} />
           {phase.notice ? <WarningNote>{phase.notice}</WarningNote> : null}
           {w.status === "pending" ? (
@@ -497,7 +441,7 @@ export function WithdrawView({
       <AppScreen title="Confirm payment">
         <Hero amount={w.amount} token={w.token} />
         <div className="flex flex-col gap-3">
-          <RecipientCard to={w.to} />
+          <RecipientCard to={w.to} name={peer} />
           <Summary token={w.token} amount={w.amount} />
           {phase.kind === "passkey" && phase.notice ? <WarningNote>{phase.notice}</WarningNote> : null}
           <div className="pt-4">
@@ -522,7 +466,7 @@ export function WithdrawView({
         <Hero amount={w.amount} token={w.token} />
         <div className="flex flex-col gap-3">
           <StatusLine>Sending payment</StatusLine>
-          <RecipientCard to={w.to} />
+          <RecipientCard to={w.to} name={peer} />
           <Summary token={w.token} amount={w.amount} />
         </div>
       </AppScreen>
@@ -536,9 +480,10 @@ export function WithdrawView({
       <div className="mt-10 rounded-[16px] border border-white/[0.08] bg-[#0A1A24] p-[18px]">
         <h2 className="mb-1.5 text-[20px] font-strong text-white">{r.title}</h2>
         <p className="text-[14px] text-[#CFE3EC]">
-          To {shortTo(w.to)} • {fmtAmount(w.amount)} {w.token}
+          To {peer ?? shortTo(w.to)} • {fmtAmount(w.amount)} {w.token}
         </p>
         <p className={`mt-2.5 text-[13px] ${r.ok ? "text-[#20D690]" : "text-[#CFE3EC]"}`}>{r.text}</p>
+        {r.ok && settle ? <p className="mt-1.5 text-[13px] leading-[18px] text-[#CFE3EC]">{settleLine(settle)}</p> : null}
         {w.signature ? (
           <a
             className="mt-2.5 inline-flex items-center gap-1 text-[13px] text-[#9FB7C2] underline decoration-white/20 underline-offset-2 hover:text-white"
@@ -614,9 +559,9 @@ export function Withdraw({
   prefill?: WithdrawPrefill;
 }) {
   const productHref = useProductHref();
-  // Recording a group payment in flight: leaving waits a little for it, so a quick Close doesn't drop it.
+  // Recording a group payment, or closing a request, in flight: leaving waits a little for it, so a quick Close doesn't drop it.
   const recording = useRef<Promise<unknown> | null>(null);
-  // Opened from a group's Pay: Back and Close return to that group.
+  // Opened from a group's Pay or a thread's Quick Send: Back and Close return there.
   const leave = prefill?.back
     ? () => {
         const go = () => window.location.assign(productHref(prefill.back!));
@@ -668,20 +613,29 @@ export function Withdraw({
 
   /*
    * Pay on a payment request: once the money is confirmed, close the request
-   * the way the app does (_QuickSendScreen.send.ts), with POST
-   * /payments/requests/:id/settle. After the send, never before it; only when
-   * what went out is what was asked (paysTheRequest); once per page; and
-   * silent on failure — the payment happened, and an open request is a stale
-   * row, not lost money.
+   * with the withdrawal as proof (contract §1, `settle {withdrawalId}`).
+   * After the send, never before it, and once per page.
+   *
+   * It is no longer gated on what went out matching what was asked: the
+   * server checks the proof (the payer's wallet to the requester's, and an
+   * amount that covers it) and says `transfer_amount_short` when it does not,
+   * which is an answer this screen can SAY, where a silent client-side gate
+   * left the request open with no word as to why. So the outcome is shown on
+   * the result, under "Payment sent" — the payment happened either way.
    */
   const settled = useRef(false);
+  const [settle, setSettle] = useState<SettleOutcome | "pending" | null>(null);
   const confirmed = phase.kind === "result" && phase.status === "confirmed" ? phase.withdrawal : null;
   useEffect(() => {
     const requestId = prefill?.requestId;
     if (!confirmed || !requestId || settled.current) return;
-    if (!paysTheRequest(prefill, confirmed)) return;
     settled.current = true;
-    void settleRequest(requestId, confirmed.signature ? { txHash: confirmed.signature } : undefined).catch(() => undefined);
+    setSettle("pending");
+    const p = settleWithWithdrawal(requestId, confirmed.id).then(setSettle, () => setSettle({ kind: "unproven" }));
+    recording.current = p;
+    void p.finally(() => {
+      if (recording.current === p) recording.current = null;
+    });
   }, [confirmed, prefill]);
 
   /*
@@ -837,6 +791,9 @@ export function Withdraw({
         setDraft={setDraft}
         approver={approver}
         here={here}
+        peer={prefill?.peer ?? null}
+        locked={!!prefill?.lock}
+        settle={settle}
         actions={{
           onBack: leave,
           onReview: () => setPhase({ kind: "review", busy: false }),
