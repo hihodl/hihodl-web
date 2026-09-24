@@ -64,7 +64,7 @@
   "username.connectionError": "Kesalahan koneksi",
   "username.notAvailable": "Tidak tersedia",
   "username.rateLimited": "Kamu baru saja mengganti username. Coba lagi nanti.",
-  "username.placeholder": "username",
+  "username.placeholder": "nama pengguna",
   "profile.photoFailed": "Foto itu tidak bisa dipakai. Coba foto lain, atau lewati dulu.",
   "profile.choosePhoto": "Pilih foto lain",
   "profile.addPhoto": "Tambah foto",
