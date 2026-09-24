@@ -161,8 +161,8 @@ export function GroupInsights({ groupId }: { groupId: string }) {
                           <span className="truncate text-[14px] font-bold text-white">{e.description?.trim() || t("groupThread.expense.fallbackTitle")}</span>
                           <span className="truncate text-[12px] text-white/55">
                             {e.spentAt
-                              ? t("groupThread.insights.paidByOn", { name: nameOf(e.payerUserId), date: fmtDate(e.spentAt, { day: "numeric", month: "short" }) })
-                              : t("groupThread.insights.paidBy", { name: nameOf(e.payerUserId) })}
+                              ? t("groupThread.insights.paidByOn", { self: e.payerUserId === meId ? "yes" : "no", name: nameOf(e.payerUserId), date: fmtDate(e.spentAt, { day: "numeric", month: "short" }) })
+                              : t("groupThread.insights.paidBy", { self: e.payerUserId === meId ? "yes" : "no", name: nameOf(e.payerUserId) })}
                           </span>
                         </span>
                         <span className="shrink-0 text-[14px] font-bold tabular-nums text-white">{money(e.groupMinor, cur)}</span>

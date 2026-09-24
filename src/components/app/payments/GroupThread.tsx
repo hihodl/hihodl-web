@@ -983,8 +983,8 @@ function ExpenseCard({
           </span>
           <span className={`text-[13.5px] tabular-nums ${item.deleted ? "text-white/45 line-through" : "text-white/[0.82]"}`}>
             {converted
-              ? t("groupThread.expense.paidConverted", { name: names.subject(item.userId), amount: groupMoney(item.amountMinor, item.currency), converted })
-              : t("groupThread.expense.paid", { name: names.subject(item.userId), amount: groupMoney(item.amountMinor, item.currency) })}
+              ? t("groupThread.expense.paidConverted", { self: item.userId === meId ? "yes" : "no", name: names.subject(item.userId), amount: groupMoney(item.amountMinor, item.currency), converted })
+              : t("groupThread.expense.paid", { self: item.userId === meId ? "yes" : "no", name: names.subject(item.userId), amount: groupMoney(item.amountMinor, item.currency) })}
           </span>
           {!item.deleted && item.place ? (
             <span className="flex min-w-0 items-center gap-1 text-[12px] text-white/60">

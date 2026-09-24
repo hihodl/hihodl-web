@@ -349,6 +349,15 @@ export function expenseForMe(
 
 type Names = { name: NameOf; subject: NameOf };
 
+/**
+ * "yes" when a name is the viewer's own "You": the `self` of a message whose
+ * verb agrees with its subject ("You sent" / "Ana sent", "Hai inviato" /
+ * "Ana ha inviato"), so no language has to say "You sends".
+ */
+export function selfOf(name: string): "yes" | "no" {
+  return name === t("groupThread.names.youSubject") || name === t("groupThread.names.you") || name === t("common.you") ? "yes" : "no";
+}
+
 /** The list row's one line: "@bea: see you at 8", "Coffee · 12.00 USD", "@ana sent @bea 4.00 USD". */
 export function lastLine(item: ThreadItem | null | undefined, names: Names): string {
   if (!item) return t("groupThread.preview.noMessages");
@@ -379,10 +388,10 @@ export function settlementText(item: SettlementItem, names: Names): string {
   const amount = groupMoney(item.amountMinor, item.currency);
   const who = names.subject(item.userId);
   const to = names.name(item.toUserId);
-  if (item.viaHold) return t("groupThread.settlement.sent", { from: who, to, amount });
+  if (item.viaHold) return t("groupThread.settlement.sent", { self: selfOf(who), from: who, to, amount });
   if (item.markedByCreditor) {
     const creditor = names.subject(item.toUserId);
-    return t("groupThread.settlement.marked", { creditor, amount, debtor: names.name(item.userId) });
+    return t("groupThread.settlement.marked", { self: selfOf(creditor), creditor, amount, debtor: names.name(item.userId) });
   }
   return who === t("groupThread.names.youSubject")
     ? t("groupThread.settlement.youSaidYouPaid", { to, amount })
@@ -406,12 +415,13 @@ export function eventText(item: EventItem, names: Names): string {
   const who = names.subject(item.userId);
   if (item.event === "member_left") {
     const gone = item.data?.userId || item.userId;
-    return t("groupThread.event.left", { name: names.subject(gone) });
+    const name = names.subject(gone);
+    return t("groupThread.event.left", { self: selfOf(name), name });
   }
   if (item.event === "member_removed") {
     const by = item.data?.byUserId || item.userId;
     const gone = item.data?.userId || item.subjectId || "";
-    return t("groupThread.event.removed", { by: names.subject(by), name: gone ? names.name(gone) : t("groupThread.event.someone") });
+    return t("groupThread.event.removed", { self: selfOf(names.subject(by)), by: names.subject(by), name: gone ? names.name(gone) : t("groupThread.event.someone") });
   }
   if (item.event === "crew_sale") {
     const title = item.data?.spaceTitle?.trim() || t("groupThread.event.aSpot");
@@ -423,9 +433,9 @@ export function eventText(item: EventItem, names: Names): string {
   if (item.event === "expense_edited") {
     const what = item.data?.description?.trim() || t("groupThread.event.anExpense");
     const changed = (item.data?.changed ?? []).map((c) => CHANGED_WORDS[c]).filter((k): k is MessageKey => !!k).map((k) => t(k));
-    return changed.length ? t("groupThread.event.editedWhat", { name: who, what, changes: listText(changed) }) : t("groupThread.event.edited", { name: who, what });
+    return changed.length ? t("groupThread.event.editedWhat", { self: selfOf(who), name: who, what, changes: listText(changed) }) : t("groupThread.event.edited", { self: selfOf(who), name: who, what });
   }
-  return t("groupThread.event.updated", { name: who });
+  return t("groupThread.event.updated", { self: selfOf(who), name: who });
 }
 
 /**

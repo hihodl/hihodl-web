@@ -96,7 +96,7 @@ const groups = {
   "receipt.altOf": "Receipt for {title}",
 
   /* The bills of one expense */
-  "billsModal.paid": "{name} paid {count, plural, one {# bill} other {# bills}}",
+  "billsModal.paid": "{self, select, yes {You paid {count, plural, one {# bill} other {# bills}}} other {{name} paid {count, plural, one {# bill} other {# bills}}}}",
   "billsModal.whatEachOwes": "What each person owes",
   "billsModal.youOwe": "You owe {name} {amount} for this",
   "billsModal.othersOwe": "The others owe you {amount} for this",
@@ -111,7 +111,7 @@ const groups = {
   /* An expense, opened */
   "detail.deleted": "This expense was deleted.",
   "detail.inGroupAt": "{amount} in the group, at the rate of {date}",
-  "detail.paidOn": "{name} paid · {date}",
+  "detail.paidOn": "{self, select, yes {You paid · {date}} other {{name} paid · {date}}}",
   "detail.mode.equal": "Split equally",
   "detail.mode.percent": "Split by percent",
   "detail.mode.exact": "Split by amount",

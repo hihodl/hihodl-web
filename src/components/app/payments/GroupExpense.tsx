@@ -182,7 +182,7 @@ export function BillsModal({
   return (
     <Modal title={e.description?.trim() || t("groups.common.bills")} onClose={onClose} size="md">
       <p className="-mt-1 text-center text-[13px] text-white/60">
-        {t("groups.billsModal.paid", { name: nameOf(payer), count: rows.length })}
+        {t("groups.billsModal.paid", { self: payer === meId ? "yes" : "no", name: nameOf(payer), count: rows.length })}
         {e.spentAt ? ` · ${fmtDate(e.spentAt, { day: "numeric", month: "short" })}` : ""}
       </p>
 
@@ -353,7 +353,7 @@ export function ExpenseDetail({
             ) : null}
             <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-white/75">
               <span>
-                {t("groups.detail.paidOn", { name: e.payerUserId === meId ? t("common.you") : memberName(byId.get(e.payerUserId)), date: fmtDate(e.spentAt) })}
+                {t("groups.detail.paidOn", { self: e.payerUserId === meId ? "yes" : "no", name: e.payerUserId === meId ? t("common.you") : memberName(byId.get(e.payerUserId)), date: fmtDate(e.spentAt) })}
               </span>
               {e.place ? (
                 <span className="inline-flex items-center gap-1">
