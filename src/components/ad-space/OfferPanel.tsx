@@ -677,6 +677,7 @@ function RaiseForm({
   return (
     <form onSubmit={submit} className="flex flex-col gap-5 border-t border-[color:var(--color-hairline)] pt-4" noValidate>
       <AmountField
+        kind={bid ? "bid" : "offer"}
         label={bid ? "Your new bid" : "Your new offer"}
         value={amount}
         onChange={(v) => {

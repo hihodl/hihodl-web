@@ -21,6 +21,9 @@ import {
 } from "@/lib/ad-space/format";
 import { CONTACT_KINDS, CONTACT_PLACEHOLDER, contactProblem, normaliseContact } from "@/lib/ad-space/contact";
 import type { Booking, ContactKind, SessionState, SessionView } from "@/lib/ad-space/types";
+import { t as tNow } from "@/lib/app/i18n";
+import { fmtNumber } from "@/lib/app/i18n/format";
+import { Rich, useT } from "@/lib/app/i18n/react";
 
 import { btnPrimary, btnSecondary, btnSmallSecondary, card, eyebrow, input, pill } from "./ui";
 
@@ -44,11 +47,11 @@ import { btnPrimary, btnSecondary, btnSmallSecondary, card, eyebrow, input, pill
  */
 function creatorRef(handle: string | null | undefined, sentenceStart = false): string {
   if (handle) return `@${handle}`;
-  return sentenceStart ? "The creator" : "the creator";
+  return sentenceStart ? tNow("offers.booking.theCreatorStart") : tNow("offers.booking.theCreator");
 }
 
 function creatorPossessive(handle: string | null | undefined): string {
-  return handle ? `@${handle}\u2019s` : "the creator\u2019s";
+  return handle ? tNow("offers.booking.handlePossessive", { handle }) : tNow("offers.booking.theCreatorPossessive");
 }
 
 /**
@@ -81,6 +84,7 @@ export function manageLinkFor(token: string): string {
  * without an account has no other way back to their booking.
  */
 export function ManageLinkBox({ token }: { token: string }) {
+  const t = useT();
   const [copied, setCopied] = useState(false);
   const [link, setLink] = useState(`https://hihodl.xyz/b/${token}`);
   useEffect(() => setLink(manageLinkFor(token)), [token]);
@@ -97,20 +101,17 @@ export function ManageLinkBox({ token }: { token: string }) {
 
   return (
     <div className="flex flex-col gap-3 rounded-card border border-amber/40 bg-amber/[0.06] p-4">
-      <p className="text-body text-sp-ink">Save this link, it is how you confirm your session.</p>
-      <p className="text-small text-sp-ink/85">
-        You have no account here, so this link is your booking: it shows the time and place, and it is where you say
-        whether the session happened. Anyone with it can manage the booking, so keep it to yourself.
-      </p>
+      <p className="text-body text-sp-ink">{t("offers.booking.link.save")}</p>
+      <p className="text-small text-sp-ink/85">{t("offers.booking.link.body")}</p>
       <p className="break-all rounded-input border border-[color:var(--color-hairline-strong)] bg-sp-ink/[0.04] px-3 py-2 font-mono text-tiny text-sp-ink">
         {link}
       </p>
       <div className="flex flex-wrap gap-2">
         <button type="button" className={btnSmallSecondary} onClick={() => void copy()}>
-          {copied ? "Copied" : "Copy the link"}
+          {copied ? t("common.copied") : t("offers.link.copy")}
         </button>
         <a href={`/b/${token}`} target="_blank" rel="noreferrer" className={btnSmallSecondary}>
-          Open it
+          {t("offers.link.open")}
         </a>
       </div>
     </div>
@@ -130,6 +131,7 @@ export function SessionContactForm({
   creatorHandle: string | null;
   onSaved: (booking: Booking) => void;
 }) {
+  const t = useT();
   const who = creatorRef(creatorHandle);
   const [kind, setKind] = useState<ContactKind>(session?.contact?.kind ?? "telegram");
   const [value, setValue] = useState(session?.contact?.value ?? "");
@@ -145,8 +147,8 @@ export function SessionContactForm({
     setSaved(false);
     const problem = contactProblem(kind, value);
     if (problem) return setNotice(problem);
-    if (!brief.trim()) return setNotice("Say in a line or two what the session is for.");
-    if (brief.trim().length > SESSION_TEXT_MAX) return setNotice(`Keep it to ${SESSION_TEXT_MAX} characters.`);
+    if (!brief.trim()) return setNotice(t("offers.booking.contact.briefEmpty"));
+    if (brief.trim().length > SESSION_TEXT_MAX) return setNotice(t("offers.booking.contact.briefMax", { max: SESSION_TEXT_MAX }));
 
     setBusy(true);
     try {
@@ -173,15 +175,14 @@ export function SessionContactForm({
   return (
     <form onSubmit={submit} className="flex flex-col gap-5" noValidate>
       <div>
-        <h3 className="text-body text-sp-ink">{sent ? "Your contact and brief" : `How ${who} reaches you`}</h3>
+        <h3 className="text-body text-sp-ink">{sent ? t("offers.booking.contact.titleSent") : t("offers.booking.contact.title", { who })}</h3>
         <p className="mt-1 text-small text-sp-ink/85">
-          Only {who} sees these. They never appear on a public page. You can change them until you confirm
-          the session.
+          {t("offers.booking.contact.private", { who })}
         </p>
       </div>
 
       <fieldset className="flex flex-col gap-2">
-        <legend className="mb-2 text-small text-sp-ink/85">Reach me on</legend>
+        <legend className="mb-2 text-small text-sp-ink/85">{t("offers.booking.contact.reachMeOn")}</legend>
         <div className="flex flex-wrap gap-2">
           {CONTACT_KINDS.map((k) => (
             <button
@@ -205,7 +206,7 @@ export function SessionContactForm({
       </fieldset>
 
       <label className="flex flex-col gap-2">
-        <span className="text-small text-sp-ink/85">Your {CONTACT_KIND_LABEL[kind]}</span>
+        <span className="text-small text-sp-ink/85">{t("offers.booking.contact.your", { kind: CONTACT_KIND_LABEL[kind] })}</span>
         <input
           className={input}
           value={value}
@@ -220,9 +221,9 @@ export function SessionContactForm({
 
       <label className="flex flex-col gap-2">
         <span className="flex items-baseline justify-between gap-3 text-small text-sp-ink/85">
-          <span>What the session is for</span>
+          <span>{t("offers.booking.contact.briefLabel")}</span>
           <span className={`text-tiny ${brief.length > SESSION_TEXT_MAX ? "text-sp-amber" : "text-sp-ink/80"}`}>
-            {brief.length}/{SESSION_TEXT_MAX}
+            {fmtNumber(brief.length)}/{fmtNumber(SESSION_TEXT_MAX)}
           </span>
         </span>
         <textarea
@@ -230,7 +231,7 @@ export function SessionContactForm({
           value={brief}
           maxLength={SESSION_TEXT_MAX}
           onChange={(e) => setBrief(e.target.value)}
-          placeholder="We launch on day 2 and want our pitch reviewed before the demo stage."
+          placeholder={t("offers.booking.contact.briefPlaceholder")}
         />
       </label>
 
@@ -241,13 +242,13 @@ export function SessionContactForm({
       )}
       {saved && !notice && (
         <p className="rounded-card border border-success/30 bg-success/[0.06] px-4 py-3 text-small text-sp-ink/85" role="status">
-          Sent. {creatorRef(creatorHandle, true)} can see it now.
+          {t("offers.booking.contact.sent", { who: creatorRef(creatorHandle, true) })}
         </p>
       )}
 
       <div>
         <button type="submit" className={btnPrimary} disabled={busy}>
-          {busy ? "Sending…" : sent ? "Save changes" : `Send to ${who}`}
+          {busy ? t("offers.sheet.sending") : sent ? t("offers.booking.contact.saveChanges") : t("offers.booking.contact.sendTo", { who })}
         </button>
       </div>
     </form>
@@ -275,6 +276,7 @@ export function EventInstant({
   /** Inside a sentence: the reader's time goes in brackets, not on its own line. */
   inline?: boolean;
 }) {
+  const t = useT();
   const zone = knownTimeZone(timeZone);
   const inEvent = zone ? instantIn(iso, zone) : null;
   const [local, setLocal] = useState<string | null>(null);
@@ -290,9 +292,9 @@ export function EventInstant({
       </time>
       {differs &&
         (inline ? (
-          <span className="text-sp-ink/80"> ({local} your time)</span>
+          <span className="text-sp-ink/80"> {t("offers.booking.yourTimeInline", { time: local })}</span>
         ) : (
-          <span className="mt-1 block text-tiny text-sp-ink/80">Your time: {local}</span>
+          <span className="mt-1 block text-tiny text-sp-ink/80">{t("offers.booking.yourTime", { time: local })}</span>
         ))}
     </>
   );
@@ -310,14 +312,15 @@ const STATE_PILL: Record<SessionState, string> = {
 /* ── The whole booking, for /b/<token> ─────────────────────────────── */
 
 export function BookingPanel({ token, initial, renderedAt }: { token: string; initial: Booking; renderedAt: number }) {
+  const t = useT();
   const [booking, setBooking] = useState(initial);
   // The server's clock until the browser's takes over, so the first paint
   // already knows whether the window to answer has closed.
   const [now, setNow] = useState<number>(renderedAt);
   useEffect(() => {
     setNow(Date.now());
-    const t = setInterval(() => setNow(Date.now()), 30_000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(timer);
   }, []);
 
   const { order, space } = booking;
@@ -331,12 +334,14 @@ export function BookingPanel({ token, initial, renderedAt }: { token: string; in
 
   return (
     <div className="flex flex-col gap-6">
-      <section className={`${card} flex flex-col gap-4 p-5 md:p-6`} aria-label="Booking">
+      <section className={`${card} flex flex-col gap-4 p-5 md:p-6`} aria-label={t("offers.booking.aria")}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className={`${eyebrow} text-sp-ink/80`}>Your booking</p>
+            <p className={`${eyebrow} text-sp-ink/80`}>{t("offers.booking.eyebrow")}</p>
             <h1 className="mt-2 break-words font-display text-h4 font-light text-sp-ink [overflow-wrap:anywhere] md:text-h3">
-              {space.templateName ? `${space.templateName} with ${who}` : `Your session with ${who}`}
+              {space.templateName
+                ? t("offers.booking.titleWith", { what: space.templateName, who })
+                : t("offers.booking.titleSession", { who })}
             </h1>
             <p className="mt-1 break-words text-small text-sp-ink/85 [overflow-wrap:anywhere]">
               {[space.event?.name, space.title, booking.positionLabel].filter(Boolean).join(" · ")}
@@ -345,28 +350,28 @@ export function BookingPanel({ token, initial, renderedAt }: { token: string; in
           {paid ? (
             <span className={STATE_PILL[s.state]}>{SESSION_STATE_LABEL[s.state]}</span>
           ) : (
-            <span className={pill.neutral}>Payment not confirmed</span>
+            <span className={pill.neutral}>{t("offers.booking.paymentNotConfirmed")}</span>
           )}
         </div>
         <dl className="grid grid-cols-1 gap-3 border-t border-[color:var(--color-hairline)] pt-4 text-small sm:grid-cols-2">
           <div>
-            <dt className="text-tiny text-sp-ink/80">You paid</dt>
+            <dt className="text-tiny text-sp-ink/80">{t("offers.booking.youPaid")}</dt>
             <dd className="mt-1 font-mono text-sp-ink">{order.sponsorPaysUsdc} USDC</dd>
           </div>
           <div>
-            <dt className="text-tiny text-sp-ink/80">{creatorRef(handle, true)} received</dt>
+            <dt className="text-tiny text-sp-ink/80">{t("offers.booking.received", { who: creatorRef(handle, true) })}</dt>
             <dd className="mt-1 font-mono text-sp-ink">{order.creatorReceivesUsdc} USDC</dd>
           </div>
         </dl>
         <div className="flex flex-wrap gap-2">
           {order.explorerUrl && (
             <a href={order.explorerUrl} target="_blank" rel="noopener noreferrer" className={btnSmallSecondary}>
-              View the transaction
+              {t("offers.booking.viewTx")}
             </a>
           )}
           {space.path && (
             <a href={space.path} className={btnSmallSecondary}>
-              See {creatorPossessive(handle)} space
+              {t("offers.booking.seeSpace", { whose: creatorPossessive(handle) })}
             </a>
           )}
         </div>
@@ -374,8 +379,7 @@ export function BookingPanel({ token, initial, renderedAt }: { token: string; in
 
       {!paid ? (
         <p className={`${card} p-5 text-small text-sp-ink/85`}>
-          This payment hasn&rsquo;t confirmed. Once it does, this page lets you send your contact and confirm the
-          session.
+          {t("offers.booking.notConfirmed")}
         </p>
       ) : (
         <>
@@ -396,7 +400,7 @@ export function BookingPanel({ token, initial, renderedAt }: { token: string; in
           )}
           {!CONTACT_EDITABLE.has(s.state) && s.contact && (
             <section className={`${card} flex flex-col gap-2 p-5 text-small md:p-6`}>
-              <h2 className={`${eyebrow} text-sp-ink/80`}>What you sent</h2>
+              <h2 className={`${eyebrow} text-sp-ink/80`}>{t("offers.booking.whatYouSent")}</h2>
               <p className="text-sp-ink/85">
                 {CONTACT_KIND_LABEL[s.contact.kind]}: <span className="text-sp-ink">{s.contact.value}</span>
               </p>
@@ -405,16 +409,16 @@ export function BookingPanel({ token, initial, renderedAt }: { token: string; in
           )}
 
           <section className={`${card} flex flex-col gap-2 p-5 md:p-6`}>
-            <h2 className={`${eyebrow} text-sp-ink/80`}>If the session can&rsquo;t happen</h2>
+            <h2 className={`${eyebrow} text-sp-ink/80`}>{t("offers.booking.fallbackTitle")}</h2>
             <p className="text-small text-sp-ink/85">{SESSION_FALLBACK_TEXT[space.fallback]}</p>
             {space.fallbackNote && (
               <p className="border-l-2 border-amber/40 pl-3 text-small text-sp-ink">
-                <span className="sr-only">The creator adds: </span>
+                <span className="sr-only">{t("offers.booking.creatorAdds")} </span>
                 {space.fallbackNote}
               </p>
             )}
             <p className="text-small text-sp-ink/85">
-              You paid {who} directly. HOLD never held the money and can&rsquo;t refund it or rule on it.
+              {t("offers.booking.paidDirectly", { who })}
             </p>
           </section>
         </>
@@ -435,9 +439,10 @@ function Schedule({
   handle: string | null;
   timeZone: string | null;
 }) {
+  const t = useT();
   return (
-    <section className={`${card} flex flex-col gap-3 p-5 md:p-6`} aria-label="When and where">
-      <h2 className={`${eyebrow} text-sp-ink/80`}>When and where</h2>
+    <section className={`${card} flex flex-col gap-3 p-5 md:p-6`} aria-label={t("offers.booking.whenWhere")}>
+      <h2 className={`${eyebrow} text-sp-ink/80`}>{t("offers.booking.whenWhere")}</h2>
       {s.sessionAt ? (
         <>
           <p className="text-body text-sp-ink">
@@ -448,26 +453,25 @@ function Schedule({
           )}
           {s.state === "scheduled" && (
             <p className="text-tiny text-sp-ink/80">
-              {creatorRef(handle, true)} can still change this until the session starts. Check back here before you go.
-              Once it starts, this page asks you whether it happened.
+              {t("offers.booking.canChange", { who: creatorRef(handle, true) })}
             </p>
           )}
         </>
       ) : ANSWERABLE.has(s.state) ? (
-        <p className="text-small text-sp-ink/85">No time was set for this session.</p>
+        <p className="text-small text-sp-ink/85">{t("offers.booking.noTimeSet")}</p>
       ) : (
         <>
           {s.state === "awaiting_contact" ? (
             <p className="text-small text-sp-ink/85">
-              Send {creatorRef(handle)} your contact below, and they set a time and place with you.
+              {t("offers.booking.sendContact", { who: creatorRef(handle) })}
             </p>
           ) : (
             <p className="text-small text-sp-ink/85">
-              {creatorRef(handle, true)} hasn&rsquo;t set a time yet. It shows here as soon as they do.
+              {t("offers.booking.noTimeYet", { who: creatorRef(handle, true) })}
             </p>
           )}
           <p className="text-tiny text-sp-ink/80">
-            If no time is ever set, this page asks you whether the session happened once the event is over.
+            {t("offers.booking.neverSet")}
           </p>
         </>
       )}
@@ -488,6 +492,7 @@ function Outcome({
   timeZone: string | null;
   onChange: (b: Booking) => void;
 }) {
+  const t = useT();
   const s = booking.order.session;
   const handle = booking.space.creator.xHandle;
   const who = creatorRef(handle);
@@ -499,7 +504,7 @@ function Outcome({
   async function answer(outcome: "delivered" | "didnt_happen") {
     setNotice(null);
     if (outcome === "didnt_happen" && note.trim().length > SESSION_TEXT_MAX) {
-      return setNotice(`Keep the note to ${SESSION_TEXT_MAX} characters.`);
+      return setNotice(t("offers.booking.noteMax", { max: SESSION_TEXT_MAX }));
     }
     setBusy(true);
     try {
@@ -527,21 +532,14 @@ function Outcome({
     }
   }
 
-  const confirmBy = s.confirmBy ? (
-    <>
-      {" "}
-      by <EventInstant iso={s.confirmBy} timeZone={timeZone} inline />
-    </>
-  ) : null;
+  const confirmBy = s.confirmBy;
+  const byTag = { time: () => (confirmBy ? <EventInstant iso={confirmBy} timeZone={timeZone} inline /> : null) };
 
   if (s.state === "delivered") {
     return (
-      <section className="rounded-card border border-success/30 bg-success/[0.06] p-5 md:p-6" aria-label="Outcome">
-        <p className="text-body text-sp-ink">Delivered.</p>
-        <p className="mt-1 text-small text-sp-ink/85">
-          Nothing more to do here. A session its buyer confirms shows as delivered on {creatorPossessive(handle)} public
-          track record.
-        </p>
+      <section className="rounded-card border border-success/30 bg-success/[0.06] p-5 md:p-6" aria-label={t("offers.booking.outcome")}>
+        <p className="text-body text-sp-ink">{t("offers.booking.delivered")}</p>
+        <p className="mt-1 text-small text-sp-ink/85">{t("offers.booking.deliveredBody", { whose: creatorPossessive(handle) })}</p>
         {notice && <p className="mt-3 text-small text-sp-ink/85">{notice}</p>}
       </section>
     );
@@ -549,31 +547,33 @@ function Outcome({
 
   if (s.state === "disputed") {
     return (
-      <section className={`${card} flex flex-col gap-3 p-5 md:p-6`} aria-label="Outcome">
-        <h2 className="text-body text-sp-ink">You said this session didn&rsquo;t happen.</h2>
-        <p className="text-small text-sp-ink/85">
-          It shows on {creatorPossessive(handle)} public track record as one disputed session. Your note isn&rsquo;t public.
-        </p>
+      <section className={`${card} flex flex-col gap-3 p-5 md:p-6`} aria-label={t("offers.booking.outcome")}>
+        <h2 className="text-body text-sp-ink">{t("offers.booking.disputedTitle")}</h2>
+        <p className="text-small text-sp-ink/85">{t("offers.booking.disputedBody", { whose: creatorPossessive(handle) })}</p>
         {s.disputeNote && (
           <p className="whitespace-pre-line break-words border-l-2 border-[color:var(--color-hairline-strong)] pl-3 text-small text-sp-ink/85 [overflow-wrap:anywhere]">
-            <span className="text-sp-ink/80">Your note: </span>
+            <span className="text-sp-ink/80">{t("offers.booking.yourNote")} </span>
             {s.disputeNote}
           </p>
         )}
         {s.creatorReply && (
           <p className="whitespace-pre-line break-words border-l-2 border-amber/40 pl-3 text-small text-sp-ink [overflow-wrap:anywhere]">
-            <span className="text-sp-ink/80">{creatorRef(handle, true)} replied: </span>
+            <span className="text-sp-ink/80">{t("offers.booking.replied", { who: creatorRef(handle, true) })} </span>
             {s.creatorReply}
           </p>
         )}
         {windowOpen && (
           <div className="flex flex-col gap-2 border-t border-[color:var(--color-hairline)] pt-4">
             <p className="text-small text-sp-ink/85">
-              Got it wrong? You can still say it happened{confirmBy}. After that you can&rsquo;t change it back.
+              {confirmBy ? (
+                <Rich k="offers.booking.gotItWrongBy" tags={byTag} />
+              ) : (
+                t("offers.booking.gotItWrong")
+              )}
             </p>
             <div>
               <button type="button" className={btnSecondary} disabled={busy} onClick={() => void answer("delivered")}>
-                {busy ? "Sending…" : "It did happen"}
+                {busy ? t("offers.sheet.sending") : t("offers.booking.itDidHappen")}
               </button>
             </div>
           </div>
@@ -587,43 +587,44 @@ function Outcome({
 
   if (!windowOpen) {
     return (
-      <section className={`${card} p-5 text-small text-sp-ink/85 md:p-6`} aria-label="Outcome">
-        The 7 days to answer have passed, so this booking is closed as delivered. Only a session you confirm shows as
-        delivered on {creatorPossessive(handle)} public track record.
+      <section className={`${card} p-5 text-small text-sp-ink/85 md:p-6`} aria-label={t("offers.booking.outcome")}>
+        {t("offers.booking.windowPassed", { whose: creatorPossessive(handle) })}
       </section>
     );
   }
 
   return (
-    <section className="flex flex-col gap-4 rounded-card border border-amber/40 bg-amber/[0.06] p-5 md:p-6" aria-label="Outcome">
+    <section className="flex flex-col gap-4 rounded-card border border-amber/40 bg-amber/[0.06] p-5 md:p-6" aria-label={t("offers.booking.outcome")}>
       <div>
-        <h2 className="text-body text-sp-ink">Did your session with {who} happen?</h2>
+        <h2 className="text-body text-sp-ink">{t("offers.booking.didItHappen", { who })}</h2>
         <p className="mt-1 text-small text-sp-ink/85">
-          Answer{confirmBy}. Saying yes is what puts it on {creatorPossessive(handle)} public track record; if you say
-          nothing, the booking closes as delivered but doesn&rsquo;t count there.
+          {confirmBy ? (
+            <Rich k="offers.booking.answerBy" vars={{ whose: creatorPossessive(handle) }} tags={byTag} />
+          ) : (
+            t("offers.booking.answer", { whose: creatorPossessive(handle) })
+          )}
         </p>
       </div>
 
       {!disputing ? (
         <div className="flex flex-col gap-3 sm:flex-row">
           <button type="button" className={btnPrimary} disabled={busy} onClick={() => void answer("delivered")}>
-            {busy ? "Sending…" : "Yes, it happened"}
+            {busy ? t("offers.sheet.sending") : t("offers.booking.yesHappened")}
           </button>
           <button type="button" className={btnSecondary} disabled={busy} onClick={() => setDisputing(true)}>
-            It didn&rsquo;t happen
+            {t("offers.booking.didntHappen")}
           </button>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
           <p className="text-small text-sp-ink/85">
-            This counts as one disputed session on {creatorPossessive(handle)} public track record. Only the number is
-            public; your note is seen by {who} and HOLD, nobody else. HOLD doesn&rsquo;t move or refund money either way.
+            {t("offers.booking.disputeWarning", { whose: creatorPossessive(handle), who })}
           </p>
           <label className="flex flex-col gap-2">
             <span className="flex items-baseline justify-between gap-3 text-small text-sp-ink/85">
-              <span>What happened (optional)</span>
+              <span>{t("offers.booking.whatHappened")}</span>
               <span className={`text-tiny ${note.length > SESSION_TEXT_MAX ? "text-sp-amber" : "text-sp-ink/80"}`}>
-                {note.length}/{SESSION_TEXT_MAX}
+                {fmtNumber(note.length)}/{fmtNumber(SESSION_TEXT_MAX)}
               </span>
             </span>
             <textarea
@@ -631,23 +632,22 @@ function Outcome({
               value={note}
               maxLength={SESSION_TEXT_MAX}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="They didn't turn up at the time we agreed."
+              placeholder={t("offers.booking.notePlaceholder")}
             />
           </label>
           <div className="flex flex-col gap-3 sm:flex-row">
             <button type="button" className={btnPrimary} disabled={busy} onClick={() => void answer("didnt_happen")}>
-              {busy ? "Sending…" : "Say it didn't happen"}
+              {busy ? t("offers.sheet.sending") : t("offers.booking.sayDidntHappen")}
             </button>
             <button type="button" className={btnSecondary} disabled={busy} onClick={() => setDisputing(false)}>
-              Back
+              {t("common.back")}
             </button>
           </div>
         </div>
       )}
 
       <p className="text-tiny text-sp-ink/80">
-        Once you say it happened, you can&rsquo;t change that. If you say it didn&rsquo;t, you can still change it to
-        delivered within the same 7 days.
+        {t("offers.booking.finalNote")}
       </p>
       {notice && <p className="text-small text-sp-ink/85">{notice}</p>}
     </section>

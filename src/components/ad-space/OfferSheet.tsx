@@ -27,6 +27,9 @@ import {
 } from "@/lib/ad-space/offers-client";
 import { earnPointsLine, pointsForOfferAmount } from "@/lib/ad-space/points";
 import type { ContactKind, OfferKind, OfferView, Position, Space } from "@/lib/ad-space/types";
+import { t as tNow } from "@/lib/app/i18n";
+import { fmtNumber } from "@/lib/app/i18n/format";
+import { useT } from "@/lib/app/i18n/react";
 
 import { AppPrompt } from "./AppPrompt";
 import { Spinner } from "./checkout-parts";
@@ -84,6 +87,7 @@ export function AmountField({
   creatorHandle: _creatorHandle,
   hint,
   disabled = false,
+  kind,
 }: {
   label: string;
   value: string;
@@ -93,7 +97,11 @@ export function AmountField({
   creatorHandle: string;
   hint?: string | null;
   disabled?: boolean;
+  /** Offer or bid, for the fee's line. Without it, read from an English label. */
+  kind?: OfferKind;
 }) {
+  const t = useT();
+  const bidKind = kind ? kind === "bid" : label.toLowerCase().includes("bid");
   const cents = parseUsdToCents(value);
   // The server's own arithmetic, to the sixth decimal it writes (offerFigures).
   const figures = cents !== null && cents > 0 ? offerFigures(cents, feeBps, feePayer) : null;
@@ -131,13 +139,12 @@ export function AmountField({
       </label>
       <div id="offer-amount-figures" aria-live="polite">
         <TotalRow
-          label="You pay if accepted"
+          label={t("offers.sheet.youPayIfAccepted")}
           totalUsdc={figures?.sponsorPaysUsdc ?? null}
-          note={feeBps > 0 ? `includes ${feePercent(feeBps)} HOLD fee` : null}
+          note={feeBps > 0 ? t("offers.sheet.includesFee", { fee: feePercent(feeBps) }) : null}
           info={
-            <InfoTip label="About the fee">
-              HOLD&rsquo;s {feePercent(feeBps)} fee is only charged if your {label.toLowerCase().includes("bid") ? "bid" : "offer"}{" "}
-              is accepted and paid. Nothing is paid now.
+            <InfoTip label={t("offers.sheet.aboutFee")}>
+              {t("offers.sheet.aboutFeeBody", { fee: feePercent(feeBps), kind: bidKind ? "bid" : "offer" })}
             </InfoTip>
           }
         />
@@ -158,22 +165,22 @@ export function amountProblem(
     counterCents?: number | null;
   },
 ): string | null {
-  const thing = opts.kind === "bid" ? "bid" : "offer";
-  if (cents === null || cents <= 0) return `Type your ${thing} in dollars, like 300 or 300.50.`;
+  const kind = opts.kind === "bid" ? "bid" : "offer";
+  if (cents === null || cents <= 0) return tNow("offers.sheet.problem.typeAmount", { kind });
   if (opts.aboveCents != null && cents <= opts.aboveCents) {
-    return `A raise has to be more than your last ${thing} of $${usdcFromCents(opts.aboveCents)}.`;
+    return tNow("offers.sheet.problem.raiseAbove", { kind, amount: `$${usdcFromCents(opts.aboveCents)}` });
   }
   if (opts.counterCents != null && cents >= opts.counterCents) {
-    return `That's the counter-offer of $${usdcFromCents(opts.counterCents)} or more. To pay the counter, accept it instead of raising.`;
+    return tNow("offers.sheet.problem.counterOrMore", { amount: `$${usdcFromCents(opts.counterCents)}` });
   }
   if (cents < opts.minimum) {
     return opts.kind === "bid"
-      ? `The next bid has to be at least $${usdcFromCents(opts.minimum)}.`
-      : `An offer starts at ${usdFromCents(opts.minimum)}.`;
+      ? tNow("offers.sheet.problem.nextBid", { amount: `$${usdcFromCents(opts.minimum)}` })
+      : tNow("offers.sheet.problem.offerStarts", { amount: usdFromCents(opts.minimum) });
   }
-  if (cents > OFFER_MAX_CENTS) return `That's more than any spot can cost (${usdFromCents(OFFER_MAX_CENTS)}).`;
+  if (cents > OFFER_MAX_CENTS) return tNow("offers.sheet.problem.tooHigh", { amount: usdFromCents(OFFER_MAX_CENTS) });
   if (opts.belowCents !== null && cents >= opts.belowCents) {
-    return `That's the listed price or more, so use Buy now instead. An offer has to be under $${usdcFromCents(opts.belowCents)}.`;
+    return tNow("offers.sheet.problem.listedOrMore", { amount: `$${usdcFromCents(opts.belowCents)}` });
   }
   return null;
 }
@@ -201,6 +208,7 @@ export function OfferSheet({
   onClose: () => void;
   onSent: () => void;
 }) {
+  const t = useT();
   const session = isSessionSpace(space);
   const offers = offersFor(space, position);
   const mode = offerModeOf(space, position);
@@ -248,18 +256,18 @@ export function OfferSheet({
     const problem =
       amountProblem(amountCents, { kind, minimum, belowCents }) ??
       (name.trim().length === 0
-        ? "Add the name the creator will see."
+        ? t("offers.sheet.problem.name")
         : name.trim().length > OFFER_NAME_MAX
-          ? `A name is up to ${OFFER_NAME_MAX} characters.`
+          ? t("offers.sheet.problem.nameMax", { max: OFFER_NAME_MAX })
           : null) ??
       contactProblem(contactKind, contactValue, `@${handle}`) ??
-      (message.trim().length > OFFER_MESSAGE_MAX ? `Keep the message to ${OFFER_MESSAGE_MAX} characters.` : null);
+      (message.trim().length > OFFER_MESSAGE_MAX ? t("offers.sheet.problem.messageMax", { max: OFFER_MESSAGE_MAX }) : null);
     if (problem) return setNotice(problem);
 
     const proofOk = usableProof(checked, amountCents, now);
     if (kind === "bid" && !proofOk) {
       setWantsCheck(true);
-      return setNotice("A bid has to be backed: check your funds for this amount first.");
+      return setNotice(t("offers.sheet.problem.bidBacked"));
     }
 
     sending.current = true;
@@ -312,11 +320,11 @@ export function OfferSheet({
   const hint =
     kind === "bid"
       ? highest !== null
-        ? `Highest ${money(highest)} · next bid from ${money(minimum)}`
-        : `No bids yet · bidding opens at ${money(minimum)}`
+        ? t("offers.sheet.hint.highest", { highest: money(highest), minimum: money(minimum) })
+        : t("offers.sheet.hint.noBids", { minimum: money(minimum) })
       : belowCents !== null
-        ? `Listed at ${money(belowCents)} · offers from ${money(minimum)}`
-        : `Offers from ${money(minimum)}`;
+        ? t("offers.sheet.hint.listed", { price: money(belowCents), minimum: money(minimum) })
+        : t("offers.sheet.hint.offersFrom", { minimum: money(minimum) });
 
   const footer = sent ? null : (
     <>
@@ -324,20 +332,17 @@ export function OfferSheet({
         {busy ? (
           <>
             <Spinner />
-            Sending…
+            {t("offers.sheet.sending")}
           </>
         ) : kind === "bid" ? (
-          "Place my bid"
+          t("offers.sheet.placeBid")
         ) : (
-          "Send my offer"
+          t("offers.sheet.sendOffer")
         )}
       </button>
       <p className="flex items-center justify-center gap-2 text-center text-tiny text-white/85">
-        Nothing is paid now.
-        <InfoTip label="What happens next">
-          Nothing is paid and nothing is locked. If @{handle} accepts your {thing}, you have 24 hours to pay it from any
-          wallet, straight to the creator. Neither of you is bound to go ahead.
-        </InfoTip>
+        {t("offers.sheet.nothingPaid")}
+        <InfoTip label={t("offers.sheet.whatNext")}>{t("offers.sheet.whatNextBody", { handle, kind: thing })}</InfoTip>
       </p>
     </>
   );
@@ -345,7 +350,7 @@ export function OfferSheet({
   return (
     <PaySheet
       labelledBy="offer-title"
-      eyebrow={kind === "bid" ? "Place a bid" : "Make an offer"}
+      eyebrow={kind === "bid" ? t("offers.sheet.eyebrowBid") : t("offers.sheet.eyebrowOffer")}
       title={what}
       onClose={onClose}
       footer={footer}
@@ -358,7 +363,8 @@ export function OfferSheet({
             <CreatorChip creator={space.creator} />
           </div>
           <AmountField
-            label={kind === "bid" ? "Your bid" : "Your offer"}
+            label={kind === "bid" ? t("offers.sheet.yourBid") : t("offers.sheet.yourOffer")}
+            kind={kind}
             value={amount}
             onChange={(v) => {
               setAmount(v);
@@ -387,13 +393,13 @@ export function OfferSheet({
 
           <div className="flex flex-col gap-3">
             <label className="flex flex-col gap-2">
-              <span className={fieldLabel}>{kind === "bid" ? "Name or brand, shown if you lead" : "Name or brand"}</span>
+              <span className={fieldLabel}>{kind === "bid" ? t("offers.sheet.nameBid") : t("offers.sheet.name")}</span>
               <input
                 className={sheetInput}
                 value={name}
                 maxLength={OFFER_NAME_MAX}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Acme"
+                placeholder={t("offers.sheet.namePlaceholder")}
                 autoComplete="organization"
                 disabled={busy}
               />
@@ -402,17 +408,15 @@ export function OfferSheet({
             <div className="flex flex-col gap-2">
               <span className="flex items-center gap-2">
                 <span className={fieldLabel} id="offer-contact-label">
-                  Where we send the answer
+                  {t("offers.sheet.contactLabel")}
                 </span>
-                <InfoTip label="Who sees your contact">
-                  {contactKind === "email"
-                    ? "Only the creator sees it. We email you the link to this offer with every change."
-                    : "Only the creator sees it. We don't message X or Telegram: the link you get next is how you follow it."}
+                <InfoTip label={t("offers.sheet.whoSeesContact")}>
+                  {contactKind === "email" ? t("offers.sheet.contactEmail") : t("offers.sheet.contactHandle")}
                 </InfoTip>
               </span>
               <div className="flex items-stretch overflow-hidden rounded-[14px] bg-black/25 ring-1 ring-inset ring-sp-ink/[0.08] focus-within:ring-amber/60">
                 <select
-                  aria-label="Contact type"
+                  aria-label={t("offers.sheet.contactType")}
                   value={contactKind}
                   onChange={(e) => {
                     setContactKind(e.target.value as ContactKind);
@@ -451,9 +455,9 @@ export function OfferSheet({
             {wantsMessage || message ? (
               <label className="flex flex-col gap-2">
                 <span className="flex items-baseline justify-between gap-3">
-                  <span className={fieldLabel}>Message to @{handle}</span>
+                  <span className={fieldLabel}>{t("offers.sheet.messageTo", { handle })}</span>
                   <span className={`text-tiny ${message.length > OFFER_MESSAGE_MAX ? "text-sp-amber" : "text-white/85"}`}>
-                    {message.length}/{OFFER_MESSAGE_MAX}
+                    {fmtNumber(message.length)}/{fmtNumber(OFFER_MESSAGE_MAX)}
                   </span>
                 </span>
                 <textarea
@@ -461,7 +465,7 @@ export function OfferSheet({
                   value={message}
                   maxLength={OFFER_MESSAGE_MAX}
                   onChange={(e) => setMessage(e.target.value)}
-                  placeholder="We launch on day 2 and would love the front of the suitcase."
+                  placeholder={t("offers.sheet.messagePlaceholder")}
                   disabled={busy}
                   autoFocus
                 />
@@ -472,7 +476,7 @@ export function OfferSheet({
                 className="self-start px-1 text-small font-medium text-sp-amber hover:text-amber-glow"
                 onClick={() => setWantsMessage(true)}
               >
-                + Add a message
+                {t("offers.sheet.addMessage")}
               </button>
             )}
           </div>
@@ -485,19 +489,14 @@ export function OfferSheet({
             <div className="flex items-center justify-between gap-3">
               <span className="flex min-w-0 items-center gap-2">
                 <span id="verify-title" className="text-body font-medium text-sp-ink">
-                  Verify you can pay
+                  {t("offers.sheet.verifyTitle")}
                 </span>
-                {kind !== "bid" && <span className="text-tiny text-white/85">Optional</span>}
-                <InfoTip label="About verifying">
-                  {kind === "bid"
-                    ? "A bid counts only if a wallet of yours holds what you'd pay. "
-                    : "A verified offer shows the creator a Funds checked badge and goes to the top of their list. "}
-                  You sign a message: it costs nothing and moves no money. We only read that wallet&rsquo;s USDC.
-                </InfoTip>
+                {kind !== "bid" && <span className="text-tiny text-white/85">{t("common.optional")}</span>}
+                <InfoTip label={t("offers.sheet.aboutVerifying")}>{t("offers.sheet.aboutVerifyingBody", { kind: thing })}</InfoTip>
               </span>
               {!wantsCheck && (
                 <button type="button" className={`${ctaGlass} h-10 px-4`} onClick={openCheck}>
-                  Verify
+                  {t("offers.sheet.verify")}
                 </button>
               )}
             </div>
@@ -530,13 +529,14 @@ export function OfferSheet({
 /* ── After sending ────────────────────────────────────────────────────── */
 
 function OfferSent({ sent, space, what }: { sent: Sent; space: Space; what: string }) {
+  const t = useT();
   const { offer } = sent;
   const bid = offer.kind === "bid";
   const handle = space.creator.xHandle;
   const cents = usdcToCents(offer.amountUsdc);
   const shown = cents !== null ? usdFromCents(cents) : `${offer.amountUsdc} USDC`;
   const spaceUrl = `${SITE_URL}/s/${encodeURIComponent(handle)}/${encodeURIComponent(space.slug)}`;
-  const shareText = `I just ${bid ? "bid" : "offered"} ${shown} for @${handle}'s ${what} 👇`;
+  const shareText = t("offers.sent.shareText", { kind: bid ? "bid" : "offer", amount: shown, handle, what });
   // Nothing is paid on sending, so nothing is earned yet: the promise is for
   // paying it with HOLD once accepted (spaces-sponsor-points-v0.md).
   const points = pointsForOfferAmount(offer.amountUsdc, space, offer);
@@ -549,23 +549,23 @@ function OfferSent({ sent, space, what }: { sent: Sent; space: Space; what: stri
           {dollars(offer.amountUsdc) ?? `${offer.amountUsdc} USDC`}
         </p>
         <p className="text-body text-sp-ink">
-          {bid ? (offer.leading ? "You're the highest bid." : "Your bid is in.") : `Your offer is with @${handle}.`}
+          {bid ? (offer.leading ? t("offers.sent.highest") : t("offers.sent.bidIn")) : t("offers.sent.offerWith", { handle })}
         </p>
         <p className="max-w-sm text-small text-white/85">
           {offer.status === "countered" && offer.counterUsdc
-            ? `@${handle} already answered with ${dollars(offer.counterUsdc) ?? offer.counterUsdc}: open your link to accept, raise or withdraw.`
+            ? t("offers.sent.countered", { handle, amount: dollars(offer.counterUsdc) ?? offer.counterUsdc })
             : bid
-              ? "Still highest when bidding ends and accepted? You have 24 hours to pay."
-              : "The creator has 48 hours to accept, counter or decline."}
+              ? t("offers.sent.bidNext")
+              : t("offers.sent.offerNext")}
         </p>
         {offer.sponsor.backed ? (
           <p className="flex items-center gap-1.5 text-small text-sp-ok">
-            <Tick /> Funds checked
+            <Tick /> {t("offers.sent.fundsChecked")}
           </p>
         ) : (
           sent.proofSent && (
             <p className="max-w-sm text-small text-sp-amber">
-              We couldn&rsquo;t confirm the USDC in that wallet, so it went in without the Funds checked badge.
+              {t("offers.sent.notConfirmed")}
             </p>
           )
         )}
@@ -575,11 +575,9 @@ function OfferSent({ sent, space, what }: { sent: Sent; space: Space; what: stri
 
       <AppPrompt
         title={
-          bid
-            ? "Get notified the moment someone outbids you: follow it in HOLD"
-            : "Get notified the moment the creator answers: follow it in HOLD"
+          bid ? t("offers.sent.appPromptBid") : t("offers.sent.appPromptOffer")
         }
-        body={points !== null ? `${earnPointsLine(points)} if it's accepted.` : undefined}
+        body={points !== null ? t("offers.sent.pointsIfAccepted", { points: earnPointsLine(points) }) : undefined}
       />
 
       <ShareButton text={shareText} url={spaceUrl} />
@@ -592,6 +590,7 @@ function OfferSent({ sent, space, what }: { sent: Sent; space: Space; what: stri
  * no other way back to their offer, so it says so.
  */
 export function OfferLinkBox({ token, manageUrl, kind }: { token: string | null; manageUrl: string; kind: OfferKind }) {
+  const t = useT();
   const [copied, setCopied] = useState(false);
   const [link, setLink] = useState(token ? `${SITE_URL}${offerPath(token)}` : manageUrl);
   useEffect(() => {
@@ -611,22 +610,18 @@ export function OfferLinkBox({ token, manageUrl, kind }: { token: string | null;
 
   return (
     <div className="flex flex-col gap-3 rounded-card border border-amber/40 bg-amber/[0.06] p-4">
-      <p className="text-body text-sp-ink">Save this link</p>
-      <p className="text-small text-sp-ink/85">
-        It is your {thing}: where you see the creator&rsquo;s answer, accept a counter-offer, raise, withdraw, and pay
-        if it&rsquo;s accepted. This browser keeps it too. Anyone with it can manage your {thing}, so keep it to
-        yourself.
-      </p>
+      <p className="text-body text-sp-ink">{t("offers.link.save")}</p>
+      <p className="text-small text-sp-ink/85">{t("offers.link.body", { kind: thing })}</p>
       <p className="break-all rounded-input border border-[color:var(--color-hairline-strong)] bg-sp-ink/[0.04] px-3 py-2 font-mono text-tiny text-sp-ink">
         {link}
       </p>
       <div className="flex flex-wrap gap-2">
         <button type="button" className={btnSmallSecondary} onClick={() => void copy()}>
-          {copied ? "Copied" : "Copy the link"}
+          {copied ? t("common.copied") : t("offers.link.copy")}
         </button>
         {token && (
           <a href={offerPath(token)} target="_blank" rel="noreferrer" className={btnSmallSecondary}>
-            Open it
+            {t("offers.link.open")}
           </a>
         )}
       </div>
@@ -635,6 +630,7 @@ export function OfferLinkBox({ token, manageUrl, kind }: { token: string | null;
 }
 
 function ShareButton({ text, url }: { text: string; url: string }) {
+  const t = useT();
   const [native, setNative] = useState(false);
   useEffect(() => setNative(typeof navigator !== "undefined" && typeof navigator.share === "function"), []);
   const intent = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
@@ -651,7 +647,7 @@ function ShareButton({ text, url }: { text: string; url: string }) {
             });
           }}
         >
-          Share it
+          {t("offers.share.native")}
         </button>
       </div>
     );
@@ -659,7 +655,7 @@ function ShareButton({ text, url }: { text: string; url: string }) {
   return (
     <div>
       <a href={intent} target="_blank" rel="noopener noreferrer" className={btnSmallSecondary}>
-        Share on X
+        {t("offers.share.x")}
       </a>
     </div>
   );

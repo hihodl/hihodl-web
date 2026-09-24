@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 
 import { DownloadLink } from "@/components/site/DownloadLink";
 import {
@@ -16,6 +16,9 @@ import {
 } from "@/lib/ad-space/format";
 import { type Banner, bannerFor, categoryLabel, gradientCss, gradientKey, gradientOverPhotoCss } from "@/lib/ad-space/look";
 import type { EventSummary, SpaceCard, SpaceSibling, SpaceTab, VerifiedType } from "@/lib/ad-space/types";
+import { currentIntl, rawMessage, t, type MessageKey, type Vars } from "@/lib/app/i18n";
+import { fmtNumber } from "@/lib/app/i18n/format";
+import { formatMessage, splitTags } from "@/lib/app/i18n/icu";
 
 import { btnSmallSecondary, card as cardClass, eyebrow, pill } from "./ui";
 
@@ -92,7 +95,7 @@ export function EventMiniCard({
               : "inline-flex h-6 items-center whitespace-nowrap rounded-[12px] bg-sp-ink/[0.12] px-2.5 text-tiny text-white/85"
           }
         >
-          {countdown.phase === "upcoming" ? `Starts ${countdown.text}` : capitalise(countdown.text)}
+          {countdown.phase === "upcoming" ? t("offers.events.starts", { when: countdown.text }) : capitalise(countdown.text)}
         </span>
       </div>
       <Heading className="mt-3 break-words font-display text-h4 font-light leading-tight text-white [overflow-wrap:anywhere]">{event.name}</Heading>
@@ -175,7 +178,7 @@ export function SpaceBanner({
             <span aria-hidden className="mr-1.5">
               &larr;
             </span>
-            <span className="truncate">View all spaces for {event.name}</span>
+            <span className="truncate">{t("offers.events.viewAll", { event: event.name })}</span>
           </Link>
           <EventMiniCard event={event} now={now} href={eventPath(event.slug)} />
         </div>
@@ -184,17 +187,32 @@ export function SpaceBanner({
   );
 }
 
-export const TAB_NAME: Record<SpaceTab, string> = { ground: "On the ground", feed: "On the feed", room: "In the room" };
+/** Read at render: each name is a getter, so it is in the language on screen. */
+export const TAB_NAME: Record<SpaceTab, string> = {
+  get ground() {
+    return t("offers.events.tab.ground");
+  },
+  get feed() {
+    return t("offers.events.tab.feed");
+  },
+  get room() {
+    return t("offers.events.tab.room");
+  },
+};
 
 /** Each tab's line under its name, named from the buyer's side. */
 export function tabSubtitle(tab: SpaceTab, eventName: string): string {
-  if (tab === "ground") return `Your logo, walking ${eventName}`;
-  if (tab === "feed") return `Content from inside ${eventName}`;
-  return `Time with creators at ${eventName}`;
+  if (tab === "ground") return t("offers.events.tabSubtitle.ground", { event: eventName });
+  if (tab === "feed") return t("offers.events.tabSubtitle.feed", { event: eventName });
+  return t("offers.events.tabSubtitle.room", { event: eventName });
 }
 
 /** What a sibling is, in the brand's words: a spot to wear their logo, content, or time in person. */
-const SIBLING_KIND: Record<SpaceTab, string> = { ground: "Spot", feed: "Content", room: "In person" };
+function siblingKind(tab: SpaceTab): string {
+  if (tab === "ground") return t("offers.events.sibling.ground");
+  if (tab === "feed") return t("offers.events.sibling.feed");
+  return t("offers.events.sibling.room");
+}
 
 /**
  * "More from @demo_creator at TOKEN2049": the same creator's other listings at
@@ -213,10 +231,9 @@ export function SpaceSiblings({
 }) {
   if (siblings.length === 0) return null;
   return (
-    <nav aria-label={`More from @${handle}`} className="mb-6 flex min-w-0 flex-col gap-2.5">
+    <nav aria-label={t("offers.events.moreFrom", { handle })} className="mb-6 flex min-w-0 flex-col gap-2.5">
       <p className="text-tiny uppercase tracking-wider text-sp-ink/80">
-        More from @{handle}
-        {eventName ? ` at ${eventName}` : ""}
+        {eventName ? t("offers.events.moreFromAt", { handle, event: eventName }) : t("offers.events.moreFrom", { handle })}
       </p>
       <ul className="flex min-w-0 flex-wrap gap-2">
         {siblings.map((s) => (
@@ -225,7 +242,7 @@ export function SpaceSiblings({
               href={s.path}
               className="group inline-flex h-10 max-w-full items-center gap-2 whitespace-nowrap rounded-[20px] border border-[color:var(--color-hairline-strong)] bg-sp-ink/[0.06] pl-3 pr-3.5 text-small text-sp-ink transition-colors duration-180 hover:bg-sp-ink/[0.12]"
             >
-              <span className="shrink-0 text-tiny uppercase tracking-wider text-sp-ink/80">{SIBLING_KIND[s.tab]}</span>
+              <span className="shrink-0 text-tiny uppercase tracking-wider text-sp-ink/80">{siblingKind(s.tab)}</span>
               <span className="min-w-0 truncate">{s.title}</span>
               <span aria-hidden className="shrink-0 text-sp-ink/80 transition-transform duration-180 group-hover:translate-x-0.5">
                 &rarr;
@@ -255,7 +272,7 @@ export function EventTabs({
     <div>
       {/* Three across at every width. Below sm the subtitles would not fit in a
           third of a phone, so only the active one is shown, under the row. */}
-      <nav aria-label="Kinds of space" className="grid grid-cols-3 gap-2 sm:gap-3">
+      <nav aria-label={t("offers.events.kindsOfSpace")} className="grid grid-cols-3 gap-2 sm:gap-3">
         {EVENT_TABS.map((tab) => {
           const on = tab === active;
           const n = tabs[tab].length;
@@ -275,7 +292,7 @@ export function EventTabs({
               <span className="flex flex-col gap-x-3 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between">
                 <span className={`text-small sm:text-body ${on ? "text-sp-amber" : "text-sp-ink"}`}>{TAB_NAME[tab]}</span>
                 <span className="text-tiny text-sp-ink/80">
-                  {n} {n === 1 ? "space" : "spaces"}
+                  {t("offers.events.spaceCount", { count: n })}
                 </span>
               </span>
               <span className="hidden break-words text-small text-sp-ink/85 [overflow-wrap:anywhere] sm:block">
@@ -435,12 +452,12 @@ function SpaceCardTile({
   const handleLine = [
     // Without a name the handle is already the line above.
     xHandle && xName ? `@${xHandle}` : null,
-    typeof xFollowers === "number" ? `${compactNumber(xFollowers)} followers` : null,
+    typeof xFollowers === "number" ? t("offers.events.followers", { count: compactNumber(xFollowers) }) : null,
   ]
     .filter(Boolean)
     .join(" · ");
   const status = closed ? (
-    <span className={pill.neutral}>{c.totals.sold > 0 && c.totals.sold >= c.totals.positions ? "Sold out" : "Closed"}</span>
+    <span className={pill.neutral}>{c.totals.sold > 0 && c.totals.sold >= c.totals.positions ? t("offers.events.soldOut") : t("offers.events.closed")}</span>
   ) : chip ? (
     <span className={pill.open}>{chip}</span>
   ) : null;
@@ -462,7 +479,7 @@ function SpaceCardTile({
 
             <div className="mt-3 min-w-0">
               <p className="flex min-w-0 items-center gap-1.5 text-body text-sp-ink">
-                <span className="truncate">{xName || (xHandle ? `@${xHandle}` : "A creator")}</span>
+                <span className="truncate">{xName || (xHandle ? `@${xHandle}` : t("offers.events.aCreator"))}</span>
                 <VerifiedTick type={c.creator.xVerifiedType} />
               </p>
               {handleLine && <p className="truncate text-small text-sp-ink/85">{handleLine}</p>}
@@ -484,30 +501,49 @@ function SpaceCardTile({
           {/* A closed space sells nothing more, so it says what it sold and names no price. */}
           {!closed && c.fromPriceCents !== null ? (
             <span className="min-w-0">
-              <span className="block text-tiny text-sp-ink/80">{room ? "Book from" : "From"}</span>
+              <span className="block text-tiny text-sp-ink/80">{room ? t("offers.events.bookFrom") : t("offers.events.from")}</span>
               <span className="font-display text-h4 font-light tabular-nums text-sp-ink">{usdFromCents(c.fromPriceCents)}</span>
             </span>
           ) : (
             <span className="text-small">
-              <span className="tabular-nums text-sp-ink">
-                {closed ? c.totals.sold : c.totals.open} of {c.totals.positions}
-              </span>
-              <span className="text-sp-ink/85">{closed ? (room ? " booked" : " sold") : room ? " sessions open" : " open"}</span>
+              {richText(
+                closed ? (room ? "offers.events.tally.booked" : "offers.events.tally.sold") : room ? "offers.events.tally.sessionsOpen" : "offers.events.tally.open",
+                { n: fmtNumber(closed ? c.totals.sold : c.totals.open), total: fmtNumber(c.totals.positions) },
+                {
+                  n: (x) => <span className="tabular-nums text-sp-ink">{x}</span>,
+                  rest: (x) => <span className="text-sp-ink/85">{x}</span>,
+                },
+              )}
             </span>
           )}
           {status}
         </div>
         {!closed && (
           <p className="mt-2 text-tiny text-sp-ink/80">
-            <span className="tabular-nums">
-              {c.totals.open} of {c.totals.positions}
-            </span>
-            {room ? " sessions open" : " open"} · {closesText(c.closesAt, closed, now)}
+            {richText(
+              room ? "offers.events.tally.sessionsOpen" : "offers.events.tally.open",
+              { n: fmtNumber(c.totals.open), total: fmtNumber(c.totals.positions) },
+              { n: (x) => <span className="tabular-nums">{x}</span> },
+            )}{" "}
+            · {closesText(c.closesAt, closed, now)}
           </p>
         )}
       </div>
     </Link>
   );
+}
+
+/**
+ * `<Rich>` for a server component: the same message split into tagged chunks,
+ * but no hook (these render on the server) and no functions sent to a client.
+ */
+function richText(k: MessageKey, vars: Vars, tags: Record<string, (chunk: string) => ReactNode>): ReactNode {
+  const locale = currentIntl();
+  return splitTags(rawMessage(k)).map((c, i) => {
+    const text = formatMessage(c.text, vars, locale);
+    const wrap = c.tag ? tags[c.tag] : undefined;
+    return <Fragment key={i}>{wrap ? wrap(text) : text}</Fragment>;
+  });
 }
 
 function CreatorAvatar({ name, url }: { name: string; url: string | null }) {
@@ -537,11 +573,11 @@ const TICK_INK: Record<Exclude<VerifiedType, null>, string> = {
   government: "#0A0500",
 };
 
-const TICK_LABEL: Record<Exclude<VerifiedType, null>, string> = {
-  blue: "Verified on X",
-  business: "Verified business on X",
-  government: "Verified government on X",
-};
+function tickLabel(type: Exclude<VerifiedType, null>): string {
+  if (type === "business") return t("offers.events.tick.business");
+  if (type === "government") return t("offers.events.tick.government");
+  return t("offers.events.tick.blue");
+}
 
 function isVerifiedType(type: string | null): type is Exclude<VerifiedType, null> {
   return type === "blue" || type === "business" || type === "government";
@@ -551,7 +587,7 @@ function isVerifiedType(type: string | null): type is Exclude<VerifiedType, null
 export function VerifiedTick({ type }: { type: string | null }) {
   if (!isVerifiedType(type)) return null;
   return (
-    <svg viewBox="0 0 16 16" width={16} height={16} className="shrink-0" role="img" aria-label={TICK_LABEL[type]}>
+    <svg viewBox="0 0 16 16" width={16} height={16} className="shrink-0" role="img" aria-label={tickLabel(type)}>
       <circle cx="8" cy="8" r="8" fill={TICK_COLOR[type]} />
       <path d="M4.6 8.2 7 10.5l4.4-4.8" fill="none" stroke={TICK_INK[type]} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -559,22 +595,23 @@ export function VerifiedTick({ type }: { type: string | null }) {
 }
 
 function EmptyTab({ event, tab }: { event: EventSummary; tab: SpaceTab }) {
-  const what: Record<SpaceTab, string> = {
-    ground: "Sell spots on what you carry there, from a suitcase to a blazer, and let sponsors pay for the trip.",
-    feed: "Sell interviews, short videos or a wrap of the event to sponsors who can’t be there.",
-    room: "Sell your time there: host a side event, moderate a panel, review pitches or hold office hours.",
-  };
-  const paidBy = tab === "room" ? "Clients pay you directly in USDC." : "Sponsors pay you directly in USDC.";
+  const what =
+    tab === "ground"
+      ? t("offers.events.empty.ground")
+      : tab === "feed"
+        ? t("offers.events.empty.feed")
+        : t("offers.events.empty.room");
+  const paidBy = tab === "room" ? t("offers.events.empty.clientsPay") : t("offers.events.empty.sponsorsPay");
   return (
     <div className={`${cardClass} flex flex-col items-start gap-4 p-6 md:p-8`}>
-      <p className={`${eyebrow} text-sp-ink/80`}>No spaces here yet</p>
+      <p className={`${eyebrow} text-sp-ink/80`}>{t("offers.events.empty.eyebrow")}</p>
       <h3 className="max-w-xl break-words font-display text-h4 font-light text-sp-ink [overflow-wrap:anywhere]">
-        Going to {event.name}? Open your space in the HOLD app.
+        {t("offers.events.empty.title", { event: event.name })}
       </h3>
       <p className="max-w-xl text-small text-sp-ink/85">
-        {what[tab]} {paidBy}
+        {what} {paidBy}
       </p>
-      <DownloadLink className={btnSmallSecondary}>Get HOLD</DownloadLink>
+      <DownloadLink className={btnSmallSecondary}>{t("offers.events.empty.getHold")}</DownloadLink>
     </div>
   );
 }

@@ -18,6 +18,8 @@
  * the brand hears about it before the request, not after.
  */
 
+import { t } from "@/lib/app/i18n";
+
 import type { ContentKind } from "./types";
 
 /** Exactly the body `PUT /ad-space/orders/:orderId/content` takes. */
@@ -36,11 +38,20 @@ export interface ContentBody {
 export const NAME_MAX = 60;
 export const TEXT_MAX = 140;
 
+/** Read at render: each hint is a getter, so it is in the language on screen. */
 export const KIND_HINT: Record<ContentKind, string> = {
-  logo: "Your logo, printed on the spot. PNG with a transparent background works best.",
-  qr: "A QR code that opens your link. We draw the code; you give us the link.",
-  text: "A short line printed on the spot, like a promo code.",
-  photo: "A photo printed on the spot.",
+  get logo() {
+    return t("offers.content.hint.logo");
+  },
+  get qr() {
+    return t("offers.content.hint.qr");
+  },
+  get text() {
+    return t("offers.content.hint.text");
+  },
+  get photo() {
+    return t("offers.content.hint.photo");
+  },
 };
 
 /** The two kinds that cannot be sent without a file. */
@@ -65,20 +76,20 @@ export interface ContentDraft {
  * whichever kind they picked.
  */
 export function validateContent(d: ContentDraft): string | null {
-  if (!d.name.trim()) return "Add the name the creator should credit.";
+  if (!d.name.trim()) return t("offers.content.problem.name");
   if (d.url.trim() && !/^https?:\/\/\S+\.\S+/i.test(d.url.trim())) {
-    return "The link should start with https:// and be a full web address.";
+    return t("offers.content.problem.url");
   }
   if (d.xHandle.trim() && !/^@?[A-Za-z0-9_]{1,15}$/.test(d.xHandle.trim())) {
-    return "An X handle is up to 15 letters, numbers or underscores.";
+    return t("offers.content.problem.xHandle");
   }
   if (needsImage(d.kind) && !d.hasFile) {
-    return `Choose the ${d.kind === "logo" ? "logo" : "photo"} to print.`;
+    return t("offers.content.problem.file", { kind: d.kind === "logo" ? "logo" : "photo" });
   }
   if (d.kind === "qr" && !/^https?:\/\/\S+\.\S+/i.test(d.text.trim())) {
-    return "Give the QR code a full link that starts with https://.";
+    return t("offers.content.problem.qr");
   }
-  if (d.kind === "text" && !d.text.trim()) return "Write the line to print.";
+  if (d.kind === "text" && !d.text.trim()) return t("offers.content.problem.text");
   return null;
 }
 
@@ -101,8 +112,8 @@ export function buildContentBody(d: ContentDraft, imagePath?: string): ContentBo
 /** What went wrong with the file, in the brand's words. */
 export function describeImageProblem(reason: string): string {
   return reason === "type"
-    ? "Use a PNG, JPEG or WebP image."
+    ? t("offers.content.image.type")
     : reason === "too_big"
-      ? "That image is too large even after shrinking it. Try a smaller one."
-      : "We couldn't read that image. Try another file.";
+      ? t("offers.content.image.tooBig")
+      : t("offers.content.image.unreadable");
 }
