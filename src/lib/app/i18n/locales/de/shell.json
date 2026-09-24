@@ -93,6 +93,8 @@
   "getApp.makeOnce": "Erstell sie einmal in der App. Komm dann hierher zurück und prüf nochmal.",
   "getApp.checkAgain": "Ich hab sie erstellt, nochmal prüfen",
   "getApp.goToSpaces": "Zu Spaces",
+  "getApp.createTitle": "Erstelle einen Space in der HOLD-App",
+  "getApp.createBody": "Im Web siehst du deine Spaces, deine Verkäufe und das Board der Marken. Neue Spaces erstellst du in der HOLD-App auf deinem iPhone oder Android-Handy, mit demselben Konto.",
   "stores.downloadOnThe": "Laden im",
   "stores.getItOn": "Jetzt bei"
 }

@@ -115,6 +115,8 @@ const shell = {
   "getApp.makeOnce": "Make it once in the app. Then come back here and check again.",
   "getApp.checkAgain": "I've made it, check again",
   "getApp.goToSpaces": "Go to Spaces",
+  "getApp.createTitle": "Create a space in the HOLD app",
+  "getApp.createBody": "On the web you can see your spaces, your sales and the brand board. New spaces are made in the HOLD app on your iPhone or Android phone, with this same account.",
   "stores.downloadOnThe": "Download on the",
   "stores.getItOn": "Get it on",
 } satisfies Record<string, string>;

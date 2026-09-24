@@ -188,6 +188,9 @@ export function describeCreatorError(e: unknown): string {
       return t("shell.error.payoutSignatureInvalid");
     case "x_fronts_a_live_space":
       return t("shell.error.xFrontsALiveSpace");
+    // Without the HOLD app Spaces is view only (backend: services/ad-space/app-required.ts).
+    case "APP_REQUIRED_TO_CREATE_A_SPACE":
+      return t("shell.getApp.createTitle");
     default:
       return t("common.somethingWentWrong");
   }

@@ -11,9 +11,14 @@
  *
  *   GetTheAppScreen   the whole page, in the shell's gate (Shell.tsx): the
  *                     look of InTheAppScreen, "I've made it, check again",
- *                     Sign out, and Spaces while it stays open without the app
+ *                     Sign out, and Spaces while it stays viewable without
+ *                     the app. On a page that makes a space
+ *                     (/spaces/listings/new) it says "Create a space in the
+ *                     HOLD app" instead
  *   GetTheAppCard     the same words in a card, for a sheet or a screen that
  *                     needed a wallet (a spot's checkout, a stay's, Payout)
+ *   CreateInTheAppCard  that card where Spaces would offer to make a space,
+ *                     for somebody without the app (Spaces is view only then)
  */
 
 import Link from "next/link";
@@ -46,22 +51,31 @@ export function GetTheAppCard({ title, body }: { title?: string; body?: string }
   );
 }
 
+/** Where a "create a space" button stood, for somebody without the app. */
+export function CreateInTheAppCard() {
+  const t = useT();
+  return <GetTheAppCard title={t("shell.getApp.createTitle")} body={t("shell.getApp.createBody")} />;
+}
+
 export function GetTheAppScreen({
   checking = false,
   failed = false,
   onCheck,
   spacesHref,
+  creating = false,
 }: {
   /** "Check again" is reading the status. */
   checking?: boolean;
   /** The status could not be read: the screen asks to retry, and lets nobody in. */
   failed?: boolean;
   onCheck: () => void;
-  /** Spaces, while it stays open without the app (SPACES_OPEN_WITHOUT_APP). */
+  /** Spaces, while it stays viewable without the app (SPACES_WITHOUT_APP). */
   spacesHref?: string | null;
+  /** The page makes a new space: "Create a space in the HOLD app". */
+  creating?: boolean;
 }) {
   const t = useT();
-  const words = getTheApp();
+  const words = creating ? { title: t("shell.getApp.createTitle"), body: t("shell.getApp.createBody") } : getTheApp();
   const small = "rounded-[8px] px-2 py-1 text-small text-[#9FB7C2] hover:bg-white/10 hover:text-text";
   return (
     <div className="flex min-h-[100dvh] w-full flex-col items-center justify-center px-4 py-10">

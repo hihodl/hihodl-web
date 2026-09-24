@@ -93,6 +93,8 @@
   "getApp.makeOnce": "สร้างครั้งเดียวในแอป แล้วกลับมาที่นี่และตรวจสอบอีกครั้ง",
   "getApp.checkAgain": "สร้างแล้ว ตรวจสอบอีกครั้ง",
   "getApp.goToSpaces": "ไปที่ Spaces",
+  "getApp.createTitle": "สร้าง space ในแอป HOLD",
+  "getApp.createBody": "บนเว็บ คุณดู space ยอดขาย และบอร์ดของแบรนด์ได้ ส่วน space ใหม่สร้างในแอป HOLD บน iPhone หรือโทรศัพท์ Android ด้วยบัญชีเดียวกันนี้",
   "stores.downloadOnThe": "ดาวน์โหลดบน",
   "stores.getItOn": "ดาวน์โหลดได้ที่"
 }

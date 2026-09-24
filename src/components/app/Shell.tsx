@@ -26,7 +26,8 @@
  * Signed out, it is HOLD's door (front/Door: welcome, or welcome back) and
  * nothing else. Signed in, it needs a wallet made in the HOLD app: anything
  * else gets "Get the HOLD app" (main/GetTheApp), except the pages that open
- * without it (lib/app/app-wallet-gate: Spaces, while SPACES_OPEN_WITHOUT_APP). An invitation link (`/spaces/team?seat=…`) is the one page
+ * without it (lib/app/app-wallet-gate: Spaces, view only while SPACES_WITHOUT_APP
+ * is "view"; making a space needs the app). An invitation link (`/spaces/team?seat=…`) is the one page
  * that renders without the shell, because the person holding it may have no
  * account yet.
  */
@@ -50,11 +51,11 @@ import type { MessageKey } from "@/lib/app/i18n";
 import { useLocale, useRatesRefresh, useServerPrefs, useT } from "@/lib/app/i18n/react";
 import { asDisplayMode, DEFAULT_DISPLAY_MODE, type DisplayMode } from "@/lib/app/display-mode";
 import { chosenUsername } from "@/lib/app/me";
-import { openWithoutApp, SPACES_OPEN_WITHOUT_APP } from "@/lib/app/app-wallet-gate";
+import { createsASpace, openWithoutApp, SPACES_WITHOUT_APP } from "@/lib/app/app-wallet-gate";
 import { useDoor } from "@/lib/app/onboarding";
 import { useSignOutWhenRemovedElsewhere } from "@/lib/app/sessions";
 import { roleOf, waitingOnYou, type ShellRole } from "@/lib/app/spaces-model";
-import { useCreatorSettings, useListings, useMe, useOffers, useSeats, useTeam, useWork, useX } from "@/lib/app/spaces-data";
+import { useCreatorSettings, useListings, useMayCreateSpace, useMe, useOffers, useSeats, useTeam, useWork, useX } from "@/lib/app/spaces-data";
 import { crossesKeyPage } from "@/lib/wallet/csp";
 import { useWalletEnabled } from "@/lib/wallet/enabled";
 
@@ -204,7 +205,7 @@ function Gate({ children }: { children: ReactNode }) {
   if (session === null) return <SignInDoor configured={configured} />;
   // Coming back from X finishes that trip first; onboarding can wait a page.
   return (
-    <Onboarded session={session} skip={/^\/spaces\/x\/?$/.test(rel)} needsApp={!openWithoutApp(rel)}>
+    <Onboarded session={session} skip={/^\/spaces\/x\/?$/.test(rel)} needsApp={!openWithoutApp(rel)} creating={createsASpace(rel)}>
       <SignedIn session={session}>{children}</SignedIn>
     </Onboarded>
   );
@@ -220,7 +221,20 @@ function Gate({ children }: { children: ReactNode }) {
  *      else never sees it. A full load, not a client navigation: /welcome
  *      carries the wallet pages' strict CSP, which only a response can set
  */
-function Onboarded({ session, skip, needsApp, children }: { session: Session; skip: boolean; needsApp: boolean; children: ReactNode }) {
+function Onboarded({
+  session,
+  skip,
+  needsApp,
+  creating,
+  children,
+}: {
+  session: Session;
+  skip: boolean;
+  needsApp: boolean;
+  /** The page makes a new space (/spaces/listings/new): without the app it says to create it there. */
+  creating: boolean;
+  children: ReactNode;
+}) {
   const { door, checking, recheck } = useDoor(session, skip, needsApp);
   const base = useSpacesBase();
   const productHref = useProductHref();
@@ -235,7 +249,8 @@ function Onboarded({ session, skip, needsApp, children }: { session: Session; sk
         failed={door === "failed"}
         checking={checking}
         onCheck={recheck}
-        spacesHref={SPACES_OPEN_WITHOUT_APP ? productHref("/spaces") : null}
+        spacesHref={SPACES_WITHOUT_APP === "view" ? productHref("/spaces") : null}
+        creating={creating}
       />
     );
   }
@@ -887,6 +902,8 @@ function TopBar({
   const productHref = useProductHref();
   const scrolled = useScrolled();
   const username = chosenUsername(me.data);
+  // New listing only for somebody with the HOLD app: without it Spaces is view only.
+  const mayCreate = useMayCreateSpace();
   return (
     /*
       ON A WIDE SCREEN THIS BAR ONLY EXISTS WHEN IT CARRIES A BACK BUTTON.
@@ -927,7 +944,7 @@ function TopBar({
           <button type="button" onClick={onSearch} aria-label={t("common.search")} className={`${btnGhost} hidden lg:inline-flex`}>
             <IconSearch className="h-3.5 w-3.5" />
           </button>
-          {level === "spaces" && role === "creator" ? (
+          {level === "spaces" && role === "creator" && mayCreate === true ? (
             <Link
               href={href("/listings/new")}
               aria-label={t("shell.title.newListing")}
@@ -958,6 +975,7 @@ function usePaletteEntries(): PaletteEntry[] {
   const href = useHref();
   const base = useSpacesBase();
   const offers = useOffers(role === "creator");
+  const mayCreate = useMayCreateSpace();
   const t = useT();
   // The entries hold translated words, so they are rebuilt when the language changes.
   const locale = useLocale();
@@ -969,7 +987,7 @@ function usePaletteEntries(): PaletteEntry[] {
     for (const i of itemsFor("main", role, teamPage, wallet)) {
       out.push({ id: `main-${i.key}`, group: "HOLD", label: navLabel(i), href: hrefFor(i, base), keywords: i.keywords });
     }
-    if (role === "creator") out.push({ id: "new", group: "Spaces", label: t("shell.title.newListing"), href: href("/listings/new"), keywords: "create start" });
+    if (role === "creator" && mayCreate === true) out.push({ id: "new", group: "Spaces", label: t("shell.title.newListing"), href: href("/listings/new"), keywords: "create start" });
     for (const i of itemsFor("spaces", role, teamPage, wallet)) {
       out.push({ id: `spaces-${i.key}`, group: "Spaces", label: navLabel(i), href: hrefFor(i, base), keywords: i.keywords });
     }
@@ -999,5 +1017,5 @@ function usePaletteEntries(): PaletteEntry[] {
     const seat = typeof window !== "undefined" ? pendingSeat() : null;
     if (seat) out.push({ id: "seat", group: "Spaces", label: t("shell.palette.openInvitation"), href: href(`/team?seat=${encodeURIComponent(seat.seat)}`) });
     return out;
-  }, [role, listings, managed, offers.data, href, base, teamPage, walletPage, t, locale]);
+  }, [role, mayCreate, listings, managed, offers.data, href, base, teamPage, walletPage, t, locale]);
 }

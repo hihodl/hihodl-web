@@ -12,9 +12,15 @@
  *
  * What stays reachable WITHOUT a wallet from the app:
  *
- *   inside the shell   every Spaces route (the creator's console, a brand's
- *                      /spaces/board and /spaces/bought, /spaces/team?seat=),
- *                      while SPACES_OPEN_WITHOUT_APP is true
+ *   inside the shell   Spaces, VIEW ONLY (SPACES_WITHOUT_APP = "view"): the
+ *                      creator's console, their spaces and sales, a brand's
+ *                      /spaces/board and /spaces/bought, /spaces/team?seat=.
+ *                      Making or publishing a space is not: /spaces/listings/new
+ *                      gets the get-the-app screen, and every "create a space"
+ *                      and Publish button is hidden or says to create it in
+ *                      the HOLD app (mayCreateSpace). A draft can still be
+ *                      edited. The backend refuses the same with 403
+ *                      APP_REQUIRED_TO_CREATE_A_SPACE (create, series, publish).
  *   outside the shell  /app/preview/*, /app/link/*, /auth/callback, /welcome,
  *                      and every public token page (/p/ /b/ /o/ /pay/ /s/
  *                      /events/ /invite/): none of them is drawn by the shell,
@@ -22,18 +28,43 @@
  */
 
 /**
- * Spaces is open to creators and brands who have no wallet from the app yet.
- * Set to false to close Spaces behind the app too: every Spaces page then
- * asks for the app like the rest of the product. A money action inside Spaces
- * already shows "Get the HOLD app" to someone without a wallet.
+ * What Spaces is for somebody with no wallet from the app (Alex, 2026-09-24):
+ *
+ *   view     they can open Spaces and see everything in it, but not create a
+ *            space: that is done in the HOLD app
+ *   closed   every Spaces page asks for the app, like the rest of the product
+ *
+ * A money action inside Spaces already shows "Get the HOLD app" to someone
+ * without a wallet, in either mode.
  */
-export const SPACES_OPEN_WITHOUT_APP = true;
+export type SpacesWithoutApp = "view" | "closed";
+
+export const SPACES_WITHOUT_APP: SpacesWithoutApp = "view";
+
+/** The product-relative paths that make a new space: only the app may. */
+export function createsASpace(rel: string): boolean {
+  const path = rel.split(/[?#]/)[0];
+  return /^\/spaces\/listings\/new\/?$/.test(path);
+}
 
 /** Whether this product-relative path (`/spaces/listings`, `/wallet`, `` for Home) opens without a wallet from the app. */
-export function openWithoutApp(rel: string, spacesOpen: boolean = SPACES_OPEN_WITHOUT_APP): boolean {
-  if (!spacesOpen) return false;
+export function openWithoutApp(rel: string, mode: SpacesWithoutApp = SPACES_WITHOUT_APP): boolean {
+  if (mode !== "view") return false;
   const path = rel.split(/[?#]/)[0];
+  if (createsASpace(path)) return false;
   return path === "/spaces" || path.startsWith("/spaces/");
+}
+
+/**
+ * May this person see the ways to make a new space? Only with a wallet from
+ * the app. `undefined` while the status is being read, so a button neither
+ * flashes in nor out. A read that failed with nothing read before is false,
+ * never permission; one that failed on a later refresh keeps what was read
+ * (the backend refuses a create without the app either way).
+ */
+export function mayCreateSpace(status: { state?: string } | null | undefined, failed = false): boolean | undefined {
+  if (status !== undefined) return hasAppWallet(status);
+  return failed ? false : undefined;
 }
 
 /**

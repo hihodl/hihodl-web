@@ -19,10 +19,12 @@ import { useState } from "react";
 import type { SpaceCard as Listing, SpaceStatus } from "@/lib/creator/listing";
 import type { MessageKey } from "@/lib/app/i18n";
 import { useT } from "@/lib/app/i18n/react";
+import { useMayCreateSpace } from "@/lib/app/spaces-data";
 
 import { useHref } from "../base";
 import { ctaPrimary } from "../hold";
 import { Ion } from "../ion";
+import { CreateInTheAppCard } from "../main/GetTheApp";
 import { useShell } from "../Shell";
 import { StatusPill } from "./common";
 import { useListingKind } from "./cards";
@@ -54,10 +56,22 @@ export function ListingsScreen() {
   return role === "manager" ? <ManagedListings /> : <OwnListings />;
 }
 
-/** "Create a space": the app's TravelCta with the add icon. */
+/**
+ * "Create a space": the app's TravelCta with the add icon. Without the HOLD
+ * app, Spaces is view only: "Create a space in the HOLD app" and the stores.
+ */
 function CreateCta() {
   const t = useT();
   const href = useHref();
+  const mayCreate = useMayCreateSpace();
+  if (mayCreate === undefined) return null;
+  if (!mayCreate) {
+    return (
+      <div className="sm:max-w-[360px]">
+        <CreateInTheAppCard />
+      </div>
+    );
+  }
   return (
     <div className="sm:max-w-[360px]">
       <Link href={href("/listings/new")} className={ctaPrimary}>
@@ -71,6 +85,7 @@ function CreateCta() {
 function OwnListings() {
   const t = useT();
   const { listings } = useShell();
+  const mayCreate = useMayCreateSpace();
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -88,7 +103,8 @@ function OwnListings() {
 
   return (
     <div className="flex flex-col gap-3.5">
-      <ReadyToPublish compact />
+      {/* The publish checklist only for somebody who can publish here. */}
+      {mayCreate ? <ReadyToPublish compact /> : null}
 
       <CreateCta />
 

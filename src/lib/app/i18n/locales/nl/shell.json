@@ -93,6 +93,8 @@
   "getApp.makeOnce": "Maak hem één keer aan in de app. Kom dan hier terug en controleer opnieuw.",
   "getApp.checkAgain": "Ik heb hem gemaakt, opnieuw controleren",
   "getApp.goToSpaces": "Naar Spaces",
+  "getApp.createTitle": "Maak een space in de HOLD-app",
+  "getApp.createBody": "Op het web zie je je spaces, je verkopen en het merkenbord. Nieuwe spaces maak je in de HOLD-app op je iPhone of Android-telefoon, met hetzelfde account.",
   "stores.downloadOnThe": "Download in de",
   "stores.getItOn": "Ontdek het op"
 }

@@ -33,7 +33,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { SITE_URL } from "@/lib/ad-space/config";
 import { eventDates } from "@/lib/ad-space/format";
 import type { Brand, HookBlock, Insights, InsightsEvent, Median, SellRow } from "@/lib/creator/insights";
-import { useInsights } from "@/lib/app/spaces-data";
+import { useInsights, useMayCreateSpace } from "@/lib/app/spaces-data";
 import { currentIntl, listText, t as tr } from "@/lib/app/i18n";
 import { fmtCompact, fmtNumber, fmtPercent } from "@/lib/app/i18n/format";
 import { useT } from "@/lib/app/i18n/react";
@@ -410,6 +410,8 @@ function HookScreen({ data, back }: { data: Insights; back: string }) {
   const mine = firstOfMine(hook);
   const production = useProductionAt(data.event?.slug ?? null);
   const event = data.event;
+  // Without the HOLD app Spaces is view only: the "list one" chips go.
+  const mayCreate = useMayCreateSpace();
 
   const early = hook?.early ?? null;
   const earlyData = !early
@@ -459,7 +461,7 @@ function HookScreen({ data, back }: { data: Insights; back: string }) {
           })
         : t("spaces.insights.hook.stopFor"),
       data: hook ? sampleText(hook.sample) : null,
-      action: hook?.leastCrowded[0] ? (
+      action: hook?.leastCrowded[0] && mayCreate ? (
         <Link href={href(`/listings/new?template=${encodeURIComponent(hook.leastCrowded[0].key)}`)} className={chipLink}>
           {t("spaces.insights.hook.listA", { product: hook.leastCrowded[0].label.toLowerCase() })}
         </Link>
@@ -474,11 +476,11 @@ function HookScreen({ data, back }: { data: Insights; back: string }) {
         <Link href={href("/sales")} className={chipLink}>
           {t("spaces.insights.hook.yourSales")}
         </Link>
-      ) : (
+      ) : mayCreate ? (
         <Link href={href(`/listings/new?template=${PRODUCTION_TEMPLATE}`)} className={chipLink}>
           {t("spaces.insights.hook.createProduction")}
         </Link>
-      ),
+      ) : null,
     },
   ];
 
@@ -526,6 +528,7 @@ function YouScreen({ data, back }: { data: Insights; back: string }) {
   const href = useHref();
   const y = data.you;
   const m = y.median;
+  const mayCreate = useMayCreateSpace();
   if (y.listings === 0) {
     return (
       <Screen
@@ -540,9 +543,11 @@ function YouScreen({ data, back }: { data: Insights; back: string }) {
           <EmptyState
             title={t("spaces.insights.you.publishToCompare")}
             action={
-              <Link href={href("/listings/new")} className={`${ctaPrimary} !w-auto`}>
-                {t("spaces.overview.createSpace")}
-              </Link>
+              mayCreate ? (
+                <Link href={href("/listings/new")} className={`${ctaPrimary} !w-auto`}>
+                  {t("spaces.overview.createSpace")}
+                </Link>
+              ) : undefined
             }
           />
         </Panel>

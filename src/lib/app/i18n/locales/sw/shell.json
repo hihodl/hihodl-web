@@ -93,6 +93,8 @@
   "getApp.makeOnce": "Iunde mara moja kwenye programu. Kisha rudi hapa na ukague tena.",
   "getApp.checkAgain": "Nimeiunda, kagua tena",
   "getApp.goToSpaces": "Nenda kwenye Spaces",
+  "getApp.createTitle": "Unda space kwenye programu ya HOLD",
+  "getApp.createBody": "Kwenye wavuti unaweza kuona spaces zako, mauzo yako na ubao wa chapa. Spaces mpya huundwa kwenye programu ya HOLD kwenye iPhone au simu yako ya Android, kwa akaunti hii hii.",
   "stores.downloadOnThe": "Pakua kwenye",
   "stores.getItOn": "Ipate kwenye"
 }

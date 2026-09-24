@@ -93,6 +93,8 @@
   "getApp.makeOnce": "Uygulamada bir kez oluştur. Sonra buraya dön ve tekrar kontrol et.",
   "getApp.checkAgain": "Oluşturdum, tekrar kontrol et",
   "getApp.goToSpaces": "Spaces'e git",
+  "getApp.createTitle": "HOLD uygulamasında bir space oluştur",
+  "getApp.createBody": "Web'de space'lerini, satışlarını ve marka panosunu görebilirsin. Yeni space'ler aynı hesapla iPhone'undaki ya da Android telefonundaki HOLD uygulamasında oluşturulur.",
   "stores.downloadOnThe": "Hemen indir",
   "stores.getItOn": "Şimdi edinin"
 }

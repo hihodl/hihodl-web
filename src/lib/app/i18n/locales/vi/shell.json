@@ -93,6 +93,8 @@
   "getApp.makeOnce": "Tạo ví một lần trong ứng dụng. Sau đó quay lại đây và kiểm tra lại.",
   "getApp.checkAgain": "Tôi đã tạo rồi, kiểm tra lại",
   "getApp.goToSpaces": "Đến Spaces",
+  "getApp.createTitle": "Tạo space trong ứng dụng HOLD",
+  "getApp.createBody": "Trên web, bạn xem được các space, doanh số và bảng thương hiệu của mình. Space mới được tạo trong ứng dụng HOLD trên iPhone hoặc điện thoại Android, bằng chính tài khoản này.",
   "stores.downloadOnThe": "Tải về trên",
   "stores.getItOn": "Tải trên"
 }

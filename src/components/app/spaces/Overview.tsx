@@ -43,6 +43,7 @@ import {
   useManagedOffers,
   useOffers,
   useOwed,
+  useMayCreateSpace,
   useSales,
 } from "@/lib/app/spaces-data";
 import { feePctText } from "@/lib/ad-space/fee";
@@ -346,6 +347,8 @@ function WeekBars({ sales }: { sales: SalesSummary | undefined }) {
 function LivePanel({ live, rows = ROWS }: { live: ReturnType<typeof useShell>["listings"]; rows?: number }) {
   const t = useT();
   const href = useHref();
+  // Without the HOLD app Spaces is view only: no way in to a new space.
+  const mayCreate = useMayCreateSpace();
   return (
     <Panel
       title={t("spaces.overview.live")}
@@ -361,9 +364,11 @@ function LivePanel({ live, rows = ROWS }: { live: ReturnType<typeof useShell>["l
           icon="megaphone-outline"
           title={t("spaces.overview.nothingLive")}
           action={
-            <Link href={href("/listings/new")} className={emptyBtn}>
-              {t("spaces.overview.createSpace")}
-            </Link>
+            mayCreate ? (
+              <Link href={href("/listings/new")} className={emptyBtn}>
+                {t("spaces.overview.createSpace")}
+              </Link>
+            ) : undefined
           }
         />
       ) : (

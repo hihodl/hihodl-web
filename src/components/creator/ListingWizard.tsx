@@ -50,7 +50,8 @@ import { Ion, type IonName } from "@/components/app/ion";
 import { Body, Empty, SectionLabel } from "@/components/app/spaces/kit";
 import type { MessageKey } from "@/lib/app/i18n";
 import { useT } from "@/lib/app/i18n/react";
-import { useRefresh } from "@/lib/app/spaces-data";
+import { useMayCreateSpace, useRefresh } from "@/lib/app/spaces-data";
+import { CreateInTheAppCard } from "@/components/app/main/GetTheApp";
 import type { Chain } from "@/lib/ad-space/types";
 import { describeCreatorError } from "@/lib/creator/api";
 import {
@@ -146,6 +147,10 @@ export function ListingWizard({
   const router = useRouter();
   const href = useHref();
   const refresh = useRefresh();
+  // Without the HOLD app Spaces is view only: a draft can be edited and saved
+  // here, but it goes live from the app (the backend answers 403
+  // APP_REQUIRED_TO_CREATE_A_SPACE to a publish otherwise).
+  const mayCreate = useMayCreateSpace();
   const [templates, setTemplates] = useState<Template[] | null>(null);
   const [chains, setChains] = useState<Chain[]>([]);
   const [template, setTemplate] = useState<Template | null>(null);
@@ -345,8 +350,15 @@ export function ListingWizard({
       }
       footer={
         <>
-          {onLast ? (
-            <button type="button" className={ctaCommit} disabled={problems.length > 0 || busy !== null} onClick={() => void publish()}>
+          {onLast && mayCreate === false ? (
+            <CreateInTheAppCard />
+          ) : onLast ? (
+            <button
+              type="button"
+              className={ctaCommit}
+              disabled={problems.length > 0 || busy !== null || mayCreate !== true}
+              onClick={() => void publish()}
+            >
               {busy === "publishing" ? t("listings.wizard.publishing") : t("listings.wizard.publish")}
             </button>
           ) : (

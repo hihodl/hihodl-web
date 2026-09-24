@@ -33,6 +33,7 @@ import type { BrandRelation, CreatorAnalytics, GroupRow, ListingRow, MixRow } fr
 import { t as tr } from "@/lib/app/i18n";
 import { fmtDate, fmtPercent } from "@/lib/app/i18n/format";
 import { Rich, useT } from "@/lib/app/i18n/react";
+import { useMayCreateSpace } from "@/lib/app/spaces-data";
 
 import { useHref } from "../base";
 import { dollars } from "../ui";
@@ -431,6 +432,7 @@ export function InspiredScreen({ data, back }: { data: CreatorAnalytics; back: s
   const block = data.inspired ?? { listings: 0, creators: 0, recent: [] };
   const href = useHref();
   const t = useT();
+  const mayCreate = useMayCreateSpace();
   return (
     <Screen
       back={back}
@@ -442,9 +444,11 @@ export function InspiredScreen({ data, back }: { data: CreatorAnalytics; back: s
         title={t("spaces.overview.inspired.panel")}
         meta={t("spaces.n.listings", { count: block.recent.length })}
         action={
-          <Link href={href("/listings/new")} className="text-[12.5px] font-strong normal-case tracking-normal text-white/[0.82] hover:text-white">
-            {t("spaces.overview.inspired.newListing")}
-          </Link>
+          mayCreate ? (
+            <Link href={href("/listings/new")} className="text-[12.5px] font-strong normal-case tracking-normal text-white/[0.82] hover:text-white">
+              {t("spaces.overview.inspired.newListing")}
+            </Link>
+          ) : undefined
         }
       >
         {block.recent.length === 0 ? (

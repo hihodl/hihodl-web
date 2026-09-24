@@ -93,6 +93,8 @@
   "getApp.makeOnce": "Buat sekali di aplikasi. Lalu kembali ke sini dan cek lagi.",
   "getApp.checkAgain": "Sudah kubuat, cek lagi",
   "getApp.goToSpaces": "Masuk ke Spaces",
+  "getApp.createTitle": "Buat space di aplikasi HOLD",
+  "getApp.createBody": "Di web kamu bisa melihat space, penjualan, dan papan brand milikmu. Space baru dibuat di aplikasi HOLD di iPhone atau ponsel Android kamu, dengan akun yang sama.",
   "stores.downloadOnThe": "Unduh di",
   "stores.getItOn": "Dapatkan di"
 }

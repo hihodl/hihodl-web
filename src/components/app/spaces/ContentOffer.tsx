@@ -22,7 +22,7 @@ import { useCallback, useMemo, useState } from "react";
 import { SITE_URL } from "@/lib/ad-space/config";
 import { eventDates } from "@/lib/ad-space/format";
 import type { SpaceCard } from "@/lib/creator/listing";
-import { useTemplates } from "@/lib/app/spaces-data";
+import { useMayCreateSpace, useTemplates } from "@/lib/app/spaces-data";
 import { t } from "@/lib/app/i18n";
 import { useT } from "@/lib/app/i18n/react";
 
@@ -147,6 +147,8 @@ export function ContentOfferScreen({
   const t = useT();
   const href = useHref();
   const { x } = useShell();
+  // Without the HOLD app Spaces is view only: no "create one" here.
+  const mayCreate = useMayCreateSpace();
   // What was opened stays chosen even when the sales arrive after the screen does.
   const [picked, setKey] = useState<string | null>(null);
   const key = picked ?? initial ?? null;
@@ -184,9 +186,11 @@ export function ContentOfferScreen({
                     ? t("creator.content.noProductionAt", { event: lead.event.name })
                     : t("creator.content.withProduction")}
                 </p>
-                <Link href={href(`/listings/new?template=${PRODUCTION_TEMPLATE}`)} className={emptyBtn}>
-                  {t("creator.content.createOne")}
-                </Link>
+                {mayCreate ? (
+                  <Link href={href(`/listings/new?template=${PRODUCTION_TEMPLATE}`)} className={emptyBtn}>
+                    {t("creator.content.createOne")}
+                  </Link>
+                ) : null}
               </div>
             )}
             <Notice tone="calm" icon="chatbubble-ellipses-outline">

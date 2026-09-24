@@ -36,7 +36,7 @@ import { eventLook, tintRgba } from "@/lib/app/event-look";
 import { t as tr } from "@/lib/app/i18n";
 import { fmtDate, fmtNumber } from "@/lib/app/i18n/format";
 import { Rich, useT } from "@/lib/app/i18n/react";
-import { useInspireCampaigns, useInspireEvents, useTemplates } from "@/lib/app/spaces-data";
+import { useInspireCampaigns, useInspireEvents, useMayCreateSpace, useTemplates } from "@/lib/app/spaces-data";
 import {
   ANYTIME,
   ideaQuery,
@@ -54,6 +54,7 @@ import type { Template } from "@/lib/creator/listing";
 import { useHref } from "../base";
 import { ctaPrimary } from "../hold";
 import { Ion, type IonName } from "../ion";
+import { CreateInTheAppCard } from "../main/GetTheApp";
 import { Skeleton } from "../ui";
 import { cardCls, CardGrid, DrillBar, Pager, usePaged } from "./cards";
 import { ReadError } from "./common";
@@ -457,6 +458,7 @@ function CampaignScreen({ slug, id }: { slug: string; id: string }) {
   const t = useT();
   const read = useInspireCampaigns(slug);
   const links = useInspireHref();
+  const mayCreate = useMayCreateSpace();
   const artOf = useProductArt();
 
   if (read.error) {
@@ -527,9 +529,14 @@ function CampaignScreen({ slug, id }: { slug: string; id: string }) {
                 handle: c.creator.handle,
               })}
             </Body>
-            <Link href={links.idea(c, art.templateId)} className={ctaPrimary}>
-              {t("spaces.inspire.useThisIdea")}
-            </Link>
+            {mayCreate ? (
+              <Link href={links.idea(c, art.templateId)} className={ctaPrimary}>
+                {t("spaces.inspire.useThisIdea")}
+              </Link>
+            ) : mayCreate === false ? (
+              // Without the HOLD app Spaces is view only: the idea is made in the app.
+              <CreateInTheAppCard />
+            ) : null}
             <div className="flex flex-wrap gap-2">
               {c.links.post ? <External href={c.links.post}>{t("spaces.inspire.seePost")}</External> : null}
               {c.links.website ? <External href={c.links.website}>{t("spaces.inspire.website")}</External> : null}

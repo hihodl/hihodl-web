@@ -93,6 +93,8 @@
   "getApp.makeOnce": "まずアプリで一度作成してください。それからここに戻って、もう一度確認してください。",
   "getApp.checkAgain": "作成しました。もう一度確認",
   "getApp.goToSpaces": "Spaces に移動",
+  "getApp.createTitle": "HOLD アプリでスペースを作成",
+  "getApp.createBody": "Web ではスペース、売上、ブランドボードを確認できます。新しいスペースは、同じアカウントで iPhone または Android の HOLD アプリから作成します。",
   "stores.downloadOnThe": "ダウンロード",
   "stores.getItOn": "入手先"
 }

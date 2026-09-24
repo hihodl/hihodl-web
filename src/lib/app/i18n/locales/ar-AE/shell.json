@@ -93,6 +93,8 @@
   "getApp.makeOnce": "أنشئها مرة واحدة في التطبيق. ثم عد إلى هنا وتحقّق مجدداً.",
   "getApp.checkAgain": "أنشأتها، تحقّق مجدداً",
   "getApp.goToSpaces": "انتقل إلى Spaces",
+  "getApp.createTitle": "أنشئ مساحة في تطبيق HOLD",
+  "getApp.createBody": "على الويب يمكنك رؤية مساحاتك ومبيعاتك ولوحة العلامات التجارية. تُنشأ المساحات الجديدة في تطبيق HOLD على هاتف iPhone أو Android، بالحساب نفسه.",
   "stores.downloadOnThe": "حمّله من",
   "stores.getItOn": "احصل عليه من"
 }

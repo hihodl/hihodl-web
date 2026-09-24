@@ -93,6 +93,8 @@
   "getApp.makeOnce": "इसे ऐप में एक बार बनाएँ। फिर यहाँ वापस आएँ और फिर से जाँचें।",
   "getApp.checkAgain": "मैंने बना ली, फिर से जाँचें",
   "getApp.goToSpaces": "Spaces में जाएँ",
+  "getApp.createTitle": "HOLD ऐप में space बनाएँ",
+  "getApp.createBody": "वेब पर आप अपने spaces, अपनी बिक्री और ब्रांड बोर्ड देख सकते हैं। नए spaces इसी खाते से, आपके iPhone या Android फ़ोन पर HOLD ऐप में बनाए जाते हैं।",
   "stores.downloadOnThe": "यहाँ से डाउनलोड करें",
   "stores.getItOn": "यहाँ पाएँ"
 }

@@ -37,6 +37,7 @@ import { getInspireCampaigns, getInspireEvents } from "@/lib/creator/inspire";
 import { activeLinkedDevices } from "@/lib/link/api";
 import { getWalletStatus } from "@/lib/wallet/api";
 
+import { mayCreateSpace } from "./app-wallet-gate";
 import { getMe, getMyAddresses } from "./me";
 
 /* ── When the numbers were read ───────────────────────────────────── */
@@ -126,6 +127,15 @@ export const useTemplates = (on = true) => useRead(on ? "templates" : null, getT
 export const useMe = () => useRead("me", getMe);
 /** The web wallet's state and registered address (GET /wallet-backup/status). */
 export const useWalletStatus = (on = true) => useRead(on ? "wallet-status" : null, getWalletStatus);
+/**
+ * May this person make a new space here? Only with a wallet from the HOLD app
+ * (lib/app/app-wallet-gate, mayCreateSpace): undefined while it is read, false
+ * without one or on a failed read. Without the app, Spaces is view only.
+ */
+export function useMayCreateSpace(): boolean | undefined {
+  const status = useWalletStatus();
+  return mayCreateSpace(status.data, !!status.error);
+}
 /** The app wallet's addresses (GET /me/addresses). */
 export const useMyAddresses = (on = true) => useRead(on ? "my-addresses" : null, getMyAddresses);
 /** The phones linked to this account that still count (GET /device-link/devices, revoked ones dropped). */

@@ -37,6 +37,7 @@ import { StatusPill } from "@/components/app/spaces/common";
 import { btnWhite as btnSmall, btnGlassPill as btnSmallSecondary, Card, EventLine, SectionLabel, SheetRow } from "@/components/app/spaces/kit";
 import { closesText } from "@/lib/ad-space/format";
 import { useT } from "@/lib/app/i18n/react";
+import { useMayCreateSpace } from "@/lib/app/spaces-data";
 import { spacesPath } from "@/lib/app/paths";
 import { describeCreatorError } from "@/lib/creator/api";
 import { LIMITS, type SeriesView, type SpaceView } from "@/lib/creator/listing";
@@ -61,6 +62,9 @@ export function ListingSeries({ space, onChanged }: { space: SpaceView; onChange
   const [publishing, setPublishing] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [outcomes, setOutcomes] = useState<Record<string, Outcome>>({});
+  // Copies onto more events and publishing them are new spaces: only with
+  // the HOLD app. Without it the set is still shown and can be left.
+  const mayCreate = useMayCreateSpace() === true;
 
   const load = useCallback(async () => {
     try {
@@ -148,16 +152,18 @@ export function ListingSeries({ space, onChanged }: { space: SpaceView; onChange
           onCancel={() => setPicking(false)}
         />
       ) : spaces.length < 2 ? (
-        // The app's SeriesPanel with no series yet: the invitation.
-        <>
-          <SectionLabel>{t("runner.series.more")}</SectionLabel>
-          <SheetRow
-            icon="calendar-outline"
-            title={t("runner.series.takeTo")}
-            meta={t("runner.series.oneEach")}
-            onClick={() => setPicking(true)}
-          />
-        </>
+        // The app's SeriesPanel with no series yet: the invitation. Only with the HOLD app.
+        mayCreate ? (
+          <>
+            <SectionLabel>{t("runner.series.more")}</SectionLabel>
+            <SheetRow
+              icon="calendar-outline"
+              title={t("runner.series.takeTo")}
+              meta={t("runner.series.oneEach")}
+              onClick={() => setPicking(true)}
+            />
+          </>
+        ) : null
       ) : (
         <>
           <SectionLabel>{t("runner.series.atEvents", { count: spaces.length })}</SectionLabel>
@@ -206,13 +212,13 @@ export function ListingSeries({ space, onChanged }: { space: SpaceView; onChange
             );
           })}
 
-          {drafts.length > 0 ? (
+          {drafts.length > 0 && mayCreate ? (
             <button type="button" className={ctaSecondary} disabled={publishing} onClick={() => void publishDrafts()}>
               {publishing ? t("runner.series.publishing") : t("runner.series.publish", { count: drafts.length })}
             </button>
           ) : null}
 
-          {full ? null : (
+          {full || !mayCreate ? null : (
             <SheetRow
               icon="add-circle-outline"
               title={t("runner.series.another")}

@@ -93,6 +93,8 @@
   "getApp.makeOnce": "请先在应用中创建一次。然后回到这里再次检查。",
   "getApp.checkAgain": "我已创建，重新检查",
   "getApp.goToSpaces": "前往 Spaces",
+  "getApp.createTitle": "在 HOLD 应用中创建 Space",
+  "getApp.createBody": "在网页上，你可以查看自己的 Space、销售记录和品牌看板。新的 Space 需使用同一账户，在 iPhone 或 Android 手机上的 HOLD 应用中创建。",
   "stores.downloadOnThe": "下载于",
   "stores.getItOn": "立即获取"
 }
