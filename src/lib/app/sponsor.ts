@@ -84,6 +84,7 @@ import { useEffect, useState } from "react";
 
 import type { ContentBody } from "@/lib/ad-space/content-form";
 import type { Order } from "@/lib/ad-space/types";
+import { t } from "@/lib/app/i18n";
 import { call } from "@/lib/creator/api";
 import { sha256 } from "@noble/hashes/sha256";
 
@@ -441,7 +442,7 @@ export async function prepareSpot(args: {
 
   /* 1 ── whose wallet, and who approves */
   const status = await getWalletStatus().catch(() => null);
-  if (!status) return say({ kind: "stopped", message: "We couldn't read your wallet. Nothing has been charged. Try again." });
+  if (!status) return say({ kind: "stopped", message: t("sponsor.pay.walletUnreadable") });
   const payer = payerOf(status);
   // A wallet made in the app, with no Android phone to approve on (or a
   // backend too old to say): linking the phone is the way to pay from here.
@@ -449,11 +450,11 @@ export async function prepareSpot(args: {
   const from = payer === "app" || payer === "web_passkey" ? (status.registered_address ?? null) : null;
   if (!from) {
     if (status.state === "app_wallet") {
-      return say({ kind: "stopped", message: "We couldn't read your wallet's address. Nothing has been charged. Try again in a moment." });
+      return say({ kind: "stopped", message: t("sponsor.pay.addressUnreadable") });
     }
     if (status.state === "web_wallet") {
       // Made, but the backend does not watch it yet: one unlock on Wallet registers it.
-      return say({ kind: "stopped", message: "Open Wallet and unlock it once, then buy from here. Nothing has been charged." });
+      return say({ kind: "stopped", message: t("sponsor.pay.unlockFirst") });
     }
     return say({ kind: "no-wallet", canMake: status.enabled !== false });
   }
@@ -488,7 +489,7 @@ export async function prepareSpot(args: {
   // here: the fee payer would be this wallet, which has no SOL and never
   // agreed to pay one.
   if (!handoff?.transaction || !handoff.relayerPublicKey) {
-    return say({ kind: "stopped", message: "We could not prepare that payment. Nothing has been charged." });
+    return say({ kind: "stopped", message: t("sponsor.pay.notPrepared") });
   }
 
   /* 3a ── a linked phone approves and signs: the passkey is never opened */
@@ -514,7 +515,7 @@ export async function prepareSpot(args: {
   } catch (e) {
     // A phone was linked meanwhile: it is the approver now, never the passkey.
     if (codeOf(e) === "APPROVE_ON_YOUR_PHONE") return phoneOrLink(handoff.order, say, args.signal);
-    return say({ kind: "stopped", message: "We couldn't prepare the approval for that payment. Nothing has been charged." });
+    return say({ kind: "stopped", message: t("sponsor.pay.approvalNotPrepared") });
   }
 }
 
@@ -536,7 +537,7 @@ export async function approveSpot(args: {
   };
   const { from, handoff, backup, message, options } = args.prepared;
   if (Date.now() - args.prepared.preparedAt > FRESH_MS) {
-    return say({ kind: "stopped", message: "That waited too long to be sent, so it was not. Nothing has been charged. Tap Pay again." });
+    return say({ kind: "stopped", message: t("sponsor.pay.tooLate") });
   }
 
   /* 4 ── one ceremony: approve these exact bytes, and open the wallet */
@@ -560,7 +561,7 @@ export async function approveSpot(args: {
   } catch (e) {
     // A phone was linked between the two taps: it approves now, not the passkey.
     if (codeOf(e) === "APPROVE_ON_YOUR_PHONE") return phoneOrLink(handoff.order, say, args.signal);
-    return say({ kind: "stopped", message: "We couldn't approve that payment. Nothing has been charged." });
+    return say({ kind: "stopped", message: t("sponsor.pay.notApproved") });
   } finally {
     wipe(prf, seed);
   }
@@ -596,10 +597,10 @@ async function sendAndConfirm(args: {
       return say({
         kind: "in-flight",
         orderId: handoff.order.id,
-        message: "This payment is already going through. Give it a moment and check the spot.",
+        message: t("sponsor.pay.alreadyGoing"),
       });
     }
-    return say({ kind: "stopped", message: "We couldn't send that payment. Nothing has been charged. Try again." });
+    return say({ kind: "stopped", message: t("sponsor.pay.notSent") });
   }
 
   /* 6 ── tell Spaces, which is what turns the spot over */
@@ -613,7 +614,7 @@ async function sendAndConfirm(args: {
     return say({
       kind: "in-flight",
       orderId: handoff.order.id,
-      message: "Your payment is on the network. The spot turns over as soon as it settles.",
+      message: t("sponsor.pay.onNetwork"),
     });
   }
 }
@@ -641,7 +642,7 @@ async function payOnPhone(args: { order: Order; say: (p: PayPhase) => PayPhase; 
     const code = codeOf(e);
     if (code === "NO_PHONE_LINKED") return "no_phone";
     if (code === "ALREADY_PAID") {
-      return say({ kind: "in-flight", orderId: order.id, message: "This spot is already paid for. It turns over as soon as the payment settles." });
+      return say({ kind: "in-flight", orderId: order.id, message: t("sponsor.pay.alreadyPaid") });
     }
     return say({ kind: "stopped", message: describeApprovalRefusal(code, "spot") });
   }
@@ -653,7 +654,7 @@ async function payOnPhone(args: { order: Order; say: (p: PayPhase) => PayPhase; 
       if (a.status === "pending") say({ kind: "on-phone", approval: a, order });
     },
   });
-  if (!end) return say({ kind: "stopped", message: "We stopped waiting for your phone. Nothing has been charged." });
+  if (!end) return say({ kind: "stopped", message: t("sponsor.pay.stoppedWaiting") });
 
   switch (end.status) {
     case "rejected":
@@ -662,17 +663,17 @@ async function payOnPhone(args: { order: Order; say: (p: PayPhase) => PayPhase; 
       return say({ kind: "stopped", message: endedWithoutPaying(end.status) });
     case "submitted":
       // Sent already (another tab of this page, most likely). Never a second time.
-      return say({ kind: "in-flight", orderId: order.id, message: "This payment is already going through. Give it a moment and check the spot." });
+      return say({ kind: "in-flight", orderId: order.id, message: t("sponsor.pay.alreadyGoing") });
     case "approved": {
       const c = end.continuation;
       if (!end.signedTx || !c || c.kind !== "spot" || !c.submitIdempotencyKey) {
-        return say({ kind: "stopped", message: "Your phone approved it, but we couldn't read what it signed. Nothing has been charged. Try again." });
+        return say({ kind: "stopped", message: t("sponsor.pay.phoneUnreadable") });
       }
       say({ kind: "on-phone", approval: end, order });
       return sendAndConfirm({ signed: end.signedTx, submitIdempotencyKey: c.submitIdempotencyKey, order, say });
     }
     default:
-      return say({ kind: "stopped", message: "We stopped waiting for your phone. Nothing has been charged." });
+      return say({ kind: "stopped", message: t("sponsor.pay.stoppedWaiting") });
   }
 }
 
@@ -720,20 +721,20 @@ function describeClaim(e: unknown): string {
   switch (codeOf(e)) {
     case "position_taken":
     case "position_not_available":
-      return "Somebody took that spot first. Nothing has been charged.";
+      return t("sponsor.claim.taken");
     case "position_held":
-      return "Somebody is paying for that spot right now. Try again in a few minutes.";
+      return t("sponsor.claim.held");
     case "own_space":
-      return "That is your own listing, so there is nothing to buy on it.";
+      return t("sponsor.claim.ownSpace");
     case "space_closed":
-      return "That listing has closed. Nothing has been charged.";
+      return t("sponsor.claim.closed");
     case "offer_not_payable":
-      return "That offer can no longer be paid — it may have expired. Nothing has been charged.";
+      return t("sponsor.claim.offerNotPayable");
     case "relayer_not_configured":
-      return "Payments are briefly unavailable. Nothing has been charged.";
+      return t("sponsor.claim.unavailable");
     case "not_enough_points":
-      return "You do not have enough HiPoints for that share of the fee. Choose a smaller one.";
+      return t("sponsor.claim.notEnoughPoints");
     default:
-      return "We could not hold that spot. Nothing has been charged.";
+      return t("sponsor.claim.other");
   }
 }

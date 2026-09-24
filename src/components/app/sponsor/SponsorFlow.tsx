@@ -43,6 +43,9 @@ import { approveSpot, cancelSpotApproval, prepareSpot, type PayPhase, type Point
 import { WalletApiError } from "@/lib/wallet/api";
 import { claimableSpots, creatorStorefront, listingSpots, spotPrice } from "@/lib/app/storefront";
 
+import { useT } from "@/lib/app/i18n/react";
+import { fmtNumber, fmtPercent } from "@/lib/app/i18n/format";
+
 import { useProductHref } from "../base";
 import { Ion } from "../ion";
 import { playHref, usePhone } from "../link/in-app";
@@ -55,7 +58,10 @@ type Step =
   | { at: "spots"; group: CreatorGroup; card: SpaceCard }
   | { at: "pay"; group: CreatorGroup; card: SpaceCard; space: Space; spot: Position };
 
-const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+// Prices paid in USDC: dollars, never converted; separators follow the language.
+const money = (n: number) => `$${fmtNumber(n, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+type T = ReturnType<typeof useT>;
 
 export function SponsorFlow({
   uid,
@@ -71,6 +77,7 @@ export function SponsorFlow({
   /** The purchase landed: the chat reloads and draws it. */
   onBought: () => void;
 }) {
+  const t = useT();
   const [page, setPage] = useState<CreatorPage | null>(null);
   const [failed, setFailed] = useState(false);
   const [step, setStep] = useState<Step>({ at: "events" });
@@ -98,13 +105,13 @@ export function SponsorFlow({
 
   return (
     <Sheet
-      title={title(step, creatorName)}
-      crumb={crumb(step)}
+      title={title(t, step, creatorName)}
+      crumb={crumb(t, step)}
       onBack={step.at === "events" ? null : back}
       onClose={onClose}
     >
-      {failed ? <Note>We could not open {creatorName}&apos;s listings. Close this and try again.</Note> : null}
-      {!page && !failed ? <Note>Opening…</Note> : null}
+      {failed ? <Note>{t("sponsor.flow.couldNotOpenListings", { name: creatorName })}</Note> : null}
+      {!page && !failed ? <Note>{t("sponsor.flow.opening")}</Note> : null}
 
       {page && step.at === "events" ? <Events page={page} onPick={(group) => setStep({ at: "listings", group })} /> : null}
 
@@ -149,11 +156,12 @@ export function BuyFromListing({
   onClose: () => void;
   onBought: () => void;
 }) {
+  const t = useT();
   const [picked, setPicked] = useState<{ space: Space; spot: Position } | null>(null);
   return (
     <Sheet
-      title={picked ? "Checkout" : listingTitle}
-      crumb={picked ? picked.spot.title || picked.spot.label : "Pick a spot"}
+      title={picked ? t("sponsor.flow.checkout") : listingTitle}
+      crumb={picked ? picked.spot.title || picked.spot.label : t("sponsor.flow.pickSpot")}
       onBack={picked ? () => setPicked(null) : null}
       onClose={onClose}
     >
@@ -192,16 +200,17 @@ export function Sheet({
   onClose: () => void;
   children: React.ReactNode;
 }) {
+  const t = useT();
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/65 p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true">
-      <button type="button" aria-label="Close" onClick={onClose} className="absolute inset-0 cursor-default" />
+      <button type="button" aria-label={t("common.close")} onClick={onClose} className="absolute inset-0 cursor-default" />
       <div className="relative flex max-h-[92vh] w-full max-w-[520px] flex-col overflow-hidden rounded-t-[22px] border border-white/[0.12] bg-[#0E2430] shadow-[0_24px_70px_rgba(0,0,0,0.5)] sm:rounded-[22px]">
         <header className="flex items-center gap-2 border-b border-white/[0.08] px-4 py-3">
           {onBack ? (
             <button
               type="button"
               onClick={onBack}
-              aria-label="Back"
+              aria-label={t("common.back")}
               className="flex h-9 w-9 items-center justify-center rounded-[18px] text-white transition-colors hover:bg-white/10"
             >
               <Ion name="chevron-back" size={21} />
@@ -220,7 +229,7 @@ export function Sheet({
             onClick={onClose}
             className="shrink-0 rounded-[10px] px-2.5 py-1.5 text-[12.5px] font-strong text-white/70 transition-colors hover:text-white"
           >
-            Close
+            {t("common.close")}
           </button>
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3.5">{children}</div>
@@ -229,21 +238,21 @@ export function Sheet({
   );
 }
 
-function title(step: Step, creatorName: string): string {
-  if (step.at === "events") return `Book with ${creatorName}`;
-  if (step.at === "listings") return groupName(step.group);
+function title(t: T, step: Step, creatorName: string): string {
+  if (step.at === "events") return t("sponsor.flow.bookWith", { name: creatorName });
+  if (step.at === "listings") return groupName(t, step.group);
   if (step.at === "spots") return step.card.title;
-  return "Checkout";
+  return t("sponsor.flow.checkout");
 }
 
-function crumb(step: Step): string {
-  if (step.at === "events") return "Where do you want to be?";
-  if (step.at === "listings") return "What they sell here";
-  if (step.at === "spots") return "Pick a spot";
+function crumb(t: T, step: Step): string {
+  if (step.at === "events") return t("sponsor.flow.whereCrumb");
+  if (step.at === "listings") return t("sponsor.flow.listingsCrumb");
+  if (step.at === "spots") return t("sponsor.flow.pickSpot");
   return step.spot.title || step.spot.label;
 }
 
-const groupName = (g: CreatorGroup) => g.event?.name ?? "All year round";
+const groupName = (t: T, g: CreatorGroup) => g.event?.name ?? t("sponsor.flow.allYearRound");
 
 function Note({ children }: { children: React.ReactNode }) {
   return <p className="py-8 text-center text-[13px] leading-[19px] text-white/65">{children}</p>;
@@ -258,8 +267,9 @@ function Note({ children }: { children: React.ReactNode }) {
  * how one creator comes to look like two.
  */
 function Events({ page, onPick }: { page: CreatorPage; onPick: (g: CreatorGroup) => void }) {
+  const t = useT();
   const groups = page.groups.filter((g) => g.cards.length > 0);
-  if (groups.length === 0) return <Note>There is nothing on sale here right now.</Note>;
+  if (groups.length === 0) return <Note>{t("sponsor.flow.nothingOnSale")}</Note>;
 
   return (
     <div className="flex flex-col gap-2">
@@ -268,8 +278,8 @@ function Events({ page, onPick }: { page: CreatorPage; onPick: (g: CreatorGroup)
         return (
           <Row
             key={g.event?.slug ?? `all-${i}`}
-            title={groupName(g)}
-            sub={`${g.cards.length} ${g.cards.length === 1 ? "listing" : "listings"} · ${open} ${open === 1 ? "spot" : "spots"} open`}
+            title={groupName(t, g)}
+            sub={t("sponsor.flow.eventSub", { listings: g.cards.length, open })}
             onClick={() => onPick(g)}
           />
         );
@@ -281,6 +291,7 @@ function Events({ page, onPick }: { page: CreatorPage; onPick: (g: CreatorGroup)
 /* ── What ─────────────────────────────────────────────────────────── */
 
 function Listings({ group, onPick }: { group: CreatorGroup; onPick: (c: SpaceCard) => void }) {
+  const t = useT();
   return (
     <div className="flex flex-col gap-2">
       {group.cards.map((c) => (
@@ -289,10 +300,14 @@ function Listings({ group, onPick }: { group: CreatorGroup; onPick: (c: SpaceCar
           title={c.serviceName?.trim() || c.title}
           sub={
             c.totals.open > 0
-              ? `${c.totals.open} of ${c.totals.positions} open${
-                  c.fromPriceCents === null ? "" : ` · from ${money(c.fromPriceCents / 100)}`
-                }`
-              : "Nothing open on this one"
+              ? c.fromPriceCents === null
+                ? t("sponsor.flow.listingOpen", { open: fmtNumber(c.totals.open), total: fmtNumber(c.totals.positions) })
+                : t("sponsor.flow.listingOpenFrom", {
+                    open: fmtNumber(c.totals.open),
+                    total: fmtNumber(c.totals.positions),
+                    price: money(c.fromPriceCents / 100),
+                  })
+              : t("sponsor.flow.nothingOpen")
           }
           disabled={c.totals.open === 0}
           onClick={() => onPick(c)}
@@ -305,6 +320,7 @@ function Listings({ group, onPick }: { group: CreatorGroup; onPick: (c: SpaceCar
 /* ── Which ────────────────────────────────────────────────────────── */
 
 function Spots({ spaceId, onPick }: { spaceId: string; onPick: (space: Space, spot: Position) => void }) {
+  const t = useT();
   const [space, setSpace] = useState<Space | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -319,8 +335,8 @@ function Spots({ spaceId, onPick }: { spaceId: string; onPick: (space: Space, sp
     };
   }, [spaceId]);
 
-  if (failed) return <Note>We could not open that listing. Go back and try again.</Note>;
-  if (!space) return <Note>Opening…</Note>;
+  if (failed) return <Note>{t("sponsor.flow.couldNotOpenListing")}</Note>;
+  if (!space) return <Note>{t("sponsor.flow.opening")}</Note>;
 
   const spots = claimableSpots(space);
   if (spots.length === 0) {
@@ -330,8 +346,8 @@ function Spots({ spaceId, onPick }: { spaceId: string; onPick: (space: Space, sp
     return (
       <Note>
         {negotiated
-          ? "Every spot on this listing sells by offer, so there is no price to pay here. Make an offer from the listing page and pick it up in the chat."
-          : "Every spot on this listing has gone."}
+          ? t("sponsor.flow.allByOffer")
+          : t("sponsor.flow.allGone")}
       </Note>
     );
   }
@@ -344,7 +360,7 @@ function Spots({ spaceId, onPick }: { spaceId: string; onPick: (space: Space, sp
           <Row
             key={p.id}
             title={p.title?.trim() || p.label}
-            sub={[price === null ? null : money(price), p.pitch?.trim() || null].filter(Boolean).join(" · ") || "Spot"}
+            sub={[price === null ? null : money(price), p.pitch?.trim() || null].filter(Boolean).join(" · ") || t("sponsor.flow.spot")}
             right={price === null ? undefined : money(price)}
             onClick={() => onPick(space, p)}
           />
@@ -374,6 +390,7 @@ function Pay({
   onBought: () => void;
   onClose: () => void;
 }) {
+  const t = useT();
   const [share, setShare] = useState<PointsFeeShare>(0);
   const [phase, setPhase] = useState<PayPhase>({ kind: "idle" });
   const price = spotPrice(spot);
@@ -446,8 +463,8 @@ function Pay({
       setCancel({
         busy: false,
         notice: decided
-          ? "Your phone already answered this one, so it can no longer be cancelled."
-          : "We couldn't cancel it. Try again, or decline it on your phone.",
+          ? t("sponsor.flow.cancel.alreadyAnswered")
+          : t("sponsor.flow.cancel.failed"),
       });
     }
   };
@@ -458,16 +475,16 @@ function Pay({
         <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[rgba(255,183,3,0.14)]">
           <Ion name="checkmark" size={24} color="#FFB703" />
         </span>
-        <p className="mt-3 text-[16px] font-extrabold tracking-[-0.2px] text-white">The spot is yours</p>
+        <p className="mt-3 text-[16px] font-extrabold tracking-[-0.2px] text-white">{t("sponsor.flow.bought.title")}</p>
         <p className="mt-1.5 max-w-[320px] text-[13px] leading-[19px] text-white/70">
-          {creatorName} has it now. Send them your artwork from Spaces when you are ready.
+          {t("sponsor.flow.bought.body", { name: creatorName })}
         </p>
         <button
           type="button"
           onClick={onClose}
           className="mt-5 rounded-[14px] bg-amber px-6 py-3 text-[15px] font-bold text-text-on-amber transition-colors hover:bg-amber-glow"
         >
-          Back to the chat
+          {t("sponsor.flow.backToChat")}
         </button>
       </div>
     );
@@ -476,14 +493,14 @@ function Pay({
   if (phase.kind === "in-flight") {
     return (
       <div className="flex flex-col items-center py-6 text-center">
-        <p className="text-[16px] font-extrabold tracking-[-0.2px] text-white">On its way</p>
+        <p className="text-[16px] font-extrabold tracking-[-0.2px] text-white">{t("sponsor.flow.onItsWay")}</p>
         <p className="mt-1.5 max-w-[320px] text-[13px] leading-[19px] text-white/70">{phase.message}</p>
         <button
           type="button"
           onClick={onClose}
           className="mt-5 rounded-[14px] bg-white/10 px-6 py-3 text-[15px] font-strong text-white transition-colors hover:bg-white/[0.16]"
         >
-          Back to the chat
+          {t("sponsor.flow.backToChat")}
         </button>
       </div>
     );
@@ -498,12 +515,10 @@ function Pay({
   // every payment started here. A full load: the link screen's strict CSP.
   if (phase.kind === "no-wallet") {
     const canMake = phase.canMake;
-    const title = canMake ? "Make your wallet first" : "Get HOLD to pay";
-    const body = canMake
-      ? "Paying from HOLD needs a wallet on this account. Make one on the Wallet page with your passkey, then come back to this spot."
-      : "Paying from HOLD needs a wallet on this account, and the HOLD app on Google Play makes one with every chain.";
+    const title = canMake ? t("sponsor.flow.noWallet.makeTitle") : t("sponsor.flow.noWallet.getTitle");
+    const body = canMake ? t("sponsor.flow.noWallet.makeBody") : t("sponsor.flow.noWallet.getBody");
     const href = canMake ? productHref("/wallet") : playHref(phone);
-    const label = canMake ? "Make your wallet" : "Get HOLD on Google Play";
+    const label = canMake ? t("sponsor.flow.noWallet.makeCta") : t("sponsor.flow.noWallet.getCta");
     return (
       <div className="flex flex-col gap-3">
         <div className="rounded-[16px] border border-white/10 bg-white/[0.05] p-3.5">
@@ -521,7 +536,7 @@ function Pay({
           </a>
         ) : null}
         <button type="button" onClick={() => setPhase({ kind: "idle" })} className="self-center rounded-[10px] px-4 py-2 text-[13px] font-semibold text-white/60 hover:text-white/85">
-          Back
+          {t("common.back")}
         </button>
       </div>
     );
@@ -546,11 +561,11 @@ function Pay({
           </ul>
         ) : null}
         <div className="mt-3 flex items-baseline justify-between gap-3 border-t border-white/[0.08] pt-2.5">
-          <span className="text-[13px] text-white/70">You pay</span>
+          <span className="text-[13px] text-white/70">{t("sponsor.flow.youPay")}</span>
           <span className="text-[19px] font-extrabold tabular-nums text-white">{price === null ? "—" : money(price)}</span>
         </div>
         {Number.isFinite(creatorGets) && creatorGets > 0 ? (
-          <p className="mt-1 text-right text-[11.5px] text-white/55">{money(creatorGets)} reaches {creatorName}</p>
+          <p className="mt-1 text-right text-[11.5px] text-white/55">{t("sponsor.flow.reaches", { amount: money(creatorGets), name: creatorName })}</p>
         ) : null}
       </div>
 
@@ -561,7 +576,7 @@ function Pay({
       */}
       {space.sponsorPointsShareBps ? (
         <div>
-          <p className="px-1 text-[12px] font-strong text-white/60">Pay our fee with HiPoints</p>
+          <p className="px-1 text-[12px] font-strong text-white/60">{t("sponsor.flow.payFeeWithPoints")}</p>
           <div className="mt-1.5 flex items-center gap-1.5 overflow-x-auto pb-0.5">
             {SHARES.map((s) => (
               <button
@@ -576,7 +591,7 @@ function Pay({
                     : "bg-white/10 text-white/80 hover:bg-white/[0.15]"
                 }`}
               >
-                {s}%
+                {fmtPercent(s / 100, 0)}
               </button>
             ))}
           </div>
@@ -594,37 +609,44 @@ function Pay({
         className="mt-1 inline-flex h-12 items-center justify-center gap-2 rounded-[14px] bg-amber text-[15px] font-bold text-text-on-amber transition-colors hover:bg-amber-glow disabled:bg-white/[0.12] disabled:text-white/50"
       >
         {phase.kind === "ready" ? <Ion name="finger-print" size={17} /> : null}
-        {working ? working_label(phase) : price === null ? "Not for sale at a price" : phase.kind === "ready" ? "Approve with passkey" : phase.kind === "stopped" ? "Try again" : `Pay ${money(price)}`}
+        {working
+          ? working_label(t, phase)
+          : price === null
+            ? t("sponsor.flow.notForSale")
+            : phase.kind === "ready"
+              ? t("sponsor.flow.approvePasskey")
+              : phase.kind === "stopped"
+                ? t("common.tryAgain")
+                : t("sponsor.flow.pay", { amount: money(price) })}
       </button>
       {phase.kind === "ready" ? (
-        <p className="px-1 text-[11.5px] leading-[16px] text-white/60">The spot is held for you. Your passkey approves exactly this payment and signs it.</p>
+        <p className="px-1 text-[11.5px] leading-[16px] text-white/60">{t("sponsor.flow.heldForYou")}</p>
       ) : null}
 
       <p className="px-1 text-[11.5px] leading-[16px] text-white/50">
-        Paid in USDC from your HOLD wallet, approved with your passkey or on your linked phone. It goes straight to{" "}
-        {creatorName} — we never hold it.
+        {t("sponsor.flow.paidFooter", { name: creatorName })}
       </p>
     </div>
   );
 }
 
 /** What the button says while it works. Each one is a real step, not a spinner. */
-function working_label(p: PayPhase): string {
+function working_label(t: T, p: PayPhase): string {
   switch (p.kind) {
     case "holding":
-      return "Holding the spot…";
+      return t("sponsor.flow.working.holding");
     case "asking-phone":
-      return "Asking your phone…";
+      return t("sponsor.flow.working.askingPhone");
     case "approving":
-      return "Waiting for your passkey…";
+      return t("sponsor.flow.working.approving");
     case "signing":
-      return "Signing…";
+      return t("sponsor.flow.working.signing");
     case "sending":
-      return "Sending…";
+      return t("sponsor.flow.working.sending");
     case "confirming":
-      return "Almost there…";
+      return t("sponsor.flow.working.confirming");
     default:
-      return "Working…";
+      return t("sponsor.flow.working.working");
   }
 }
 

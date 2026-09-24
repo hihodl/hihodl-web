@@ -12,6 +12,8 @@
  * Clients switch on `error.code`, never on the message (see the contract).
  */
 
+import { t } from "@/lib/app/i18n";
+
 import { AD_SPACE_API } from "./config";
 import { CHAIN_LABEL, clockTime, takeoverClosedText } from "./format";
 import type {
@@ -389,54 +391,54 @@ export function describeSessionError(e: unknown): string | null {
   if (!(e instanceof CheckoutError)) return null;
   switch (e.code) {
     case "not_a_session":
-      return "This booking isn't a session, so there is nothing to confirm here.";
+      return t("sponsor.checkoutError.session.notASession");
     case "session_not_started":
-      return "The session hasn't started yet. You can answer once its time comes.";
+      return t("sponsor.checkoutError.session.notStarted");
     case "confirm_window_closed":
-      return "The 7 days to answer have passed, so this booking is closed and your answer can't change any more.";
+      return t("sponsor.checkoutError.session.windowClosed");
     case "already_confirmed":
-      return "This session has already been answered, so it can't be changed any more. The page now shows where it stands.";
+      return t("sponsor.checkoutError.session.alreadyConfirmed");
     case "order_not_paid":
-      return "This payment hasn't confirmed yet. Once it does, you can send your contact and confirm the session here.";
+      return t("sponsor.checkoutError.session.orderNotPaid");
     case "session_event_over":
-      return "This event has ended, so its sessions can't be booked any more. Nothing was paid.";
+      return t("sponsor.checkoutError.session.eventOver");
     case "session_already_started":
-      return "The session has already started, so its time and place can't change any more.";
+      return t("sponsor.checkoutError.session.alreadyStarted");
     case "session_in_the_past":
-      return "That time has already passed. Pick a time that's still to come.";
+      return t("sponsor.checkoutError.session.inThePast");
     // The next three come from the creator's side (scheduling, publishing,
     // creating an event in the app); no call this site makes can get them.
     // Mapped anyway so a sentence never falls back to a raw code.
     case "confirm_window_open":
-      return "The buyer can already say whether the session happened, so its time and place can't change any more.";
+      return t("sponsor.checkoutError.session.windowOpen");
     case "session_closes_after_event":
-      return "A session space has to close by the end of the day after its event.";
+      return t("sponsor.checkoutError.session.closesAfterEvent");
     case "time_zone_invalid":
-      return "That time zone isn't one we recognise. Use a name like \"Asia/Singapore\".";
+      return t("sponsor.checkoutError.session.timeZoneInvalid");
     case "session_place_invalid":
-      return "Say where the session is in up to 120 characters, like \"TOKEN2049 venue, Level 4 lounge\".";
+      return t("sponsor.checkoutError.session.placeInvalid");
     case "no_dispute":
-      return "The buyer hasn't said this session didn't happen, so there is nothing to reply to.";
+      return t("sponsor.checkoutError.session.noDispute");
     case "already_replied":
-      return "There is already a reply on this dispute, and there can only be one.";
+      return t("sponsor.checkoutError.session.alreadyReplied");
     case "reply_invalid":
-      return "A reply is 1 to 280 characters.";
+      return t("sponsor.checkoutError.session.replyInvalid");
     case "not_for_sessions":
-      return "A session is confirmed by the person who booked it, so there is no link to send for it.";
+      return t("sponsor.checkoutError.session.notForSessions");
     case "takeover_not_for_sessions":
-      return "A booked session can't be taken over by paying more.";
+      return t("sponsor.checkoutError.session.takeoverNotForSessions");
     case "session_outside_event":
-      return "That time is outside the event's dates. A session has to fall between the day before the event and the day after it.";
+      return t("sponsor.checkoutError.session.outsideEvent");
     case "contact_invalid":
-      return "That contact doesn't look right. An X or Telegram handle, or a full email address.";
+      return t("sponsor.checkoutError.session.contactInvalid");
     case "room_needs_an_event":
-      return "A session is always at an event, so this space needs one.";
+      return t("sponsor.checkoutError.session.roomNeedsEvent");
     case "fallback_not_for_sessions":
-      return "For a session the creator can refund you or offer their next event; delivering content instead doesn't apply.";
+      return t("sponsor.checkoutError.session.fallbackNotForSessions");
     case "price_below_minimum":
-      return "A session costs at least $50.";
+      return t("sponsor.checkoutError.session.priceBelowMinimum");
     case "not_found":
-      return "This booking link doesn't work. Check you copied all of it.";
+      return t("sponsor.checkoutError.session.bookingNotFound");
     default:
       return null;
   }
@@ -458,29 +460,26 @@ export type Subject = "spot" | "session";
 export function describeAuthorizationRefusal(e: unknown, chain: Chain, subject: Subject = "spot"): string | null {
   if (!(e instanceof CheckoutError)) return null;
   const net = CHAIN_LABEL[chain];
-  const session = subject === "session";
   switch (e.code) {
     case "position_held":
-      return session
-        ? "Someone else signed for this session a moment before you. Nothing was paid."
-        : "Another sponsor signed for this spot a moment before you. Nothing was paid.";
+      return t("sponsor.checkoutError.auth.held", { subject });
     case "position_sold":
-      return `This ${subject} ${session ? "was booked" : "sold"} while you were signing. Nothing was paid.`;
+      return t("sponsor.checkoutError.auth.sold", { subject });
     // One brand takes everything (ad-space-whole-listing-v0.md): the listing
     // and its spots refuse each other, and the sponsor is told which way round
     // it went — "sold" would be a lie about a square nobody bought.
     case "whole_listing_taken":
-      return `A brand took this whole listing while you were signing, so its ${subject}s aren't for sale. Nothing was paid.`;
+      return t("sponsor.checkoutError.auth.wholeTaken", { subject });
     case "parts_already_sold":
-      return `A ${subject} on this listing sold while you were signing, so it can't be bought whole any more. Nothing was paid.`;
+      return t("sponsor.checkoutError.auth.partsSold", { subject });
     case "space_closed":
-      return "This HiSpace closed while you were signing. Nothing was paid.";
+      return t("sponsor.checkoutError.auth.closed");
     case "insufficient_funds":
-      return `This wallet no longer has enough USDC on ${net} for this ${subject}. Nothing was paid.`;
+      return t("sponsor.checkoutError.auth.insufficientFunds", { subject, net });
     case "bad_signature":
-      return "Those signatures didn't match the payment, so we didn't send it. Nothing was paid.";
+      return t("sponsor.checkoutError.auth.badSignature");
     case "would_revert":
-      return `That payment would fail on ${net}, so we didn't send it. Nothing was paid.`;
+      return t("sponsor.checkoutError.auth.wouldRevert", { net });
     default:
       return null;
   }
@@ -495,20 +494,19 @@ function str(v: unknown): string | null {
  * server's message is never shown: it is written for developers.
  */
 export function describeError(e: unknown, chain?: Chain | null, subject: Subject = "spot"): string {
-  const net = chain ? CHAIN_LABEL[chain] : "this network";
-  const session = subject === "session";
+  const net = chain ? CHAIN_LABEL[chain] : t("sponsor.checkoutError.thisNetwork");
 
   // Wallets reject with EIP-1193 code 4001 or a message; Solana wallets differ.
   const walletCode = (e as { code?: unknown })?.code;
   if (walletCode === 4001 || walletCode === "ACTION_REJECTED") {
-    return "You closed your wallet without signing. Nothing was paid.";
+    return t("sponsor.checkoutError.walletClosed");
   }
   if (!(e instanceof CheckoutError)) {
     const msg = String((e as { message?: unknown })?.message ?? "").toLowerCase();
     if (msg.includes("reject") || msg.includes("denied") || msg.includes("cancel")) {
-      return "You closed your wallet without signing. Nothing was paid.";
+      return t("sponsor.checkoutError.walletClosed");
     }
-    return "Your wallet could not finish that. Nothing was paid; try again, or pay another way.";
+    return t("sponsor.checkoutError.walletFailed");
   }
 
   const sessionText = describeSessionError(e);
@@ -517,108 +515,106 @@ export function describeError(e: unknown, chain?: Chain | null, subject: Subject
   const d = e.details;
   switch (e.code) {
     case "crew_not_ready":
-      return "This crew is still agreeing its terms, so it can't be bought yet. Nothing was paid; try again soon.";
+      return t("sponsor.checkoutError.crewNotReady");
     case "crew_pays_on_solana":
-      return "A crew is paid on Solana, so every creator in it gets their part in one payment. Pay with a Solana wallet.";
+      return t("sponsor.checkoutError.crewPaysOnSolana");
     case "crew_member_cannot_receive":
     case "crew_wallets_not_distinct":
-      return "One of the creators in this crew can't be paid right now. Nothing was paid; try again later.";
+      return t("sponsor.checkoutError.crewMember");
     case "brief_required":
-      return "Fill in the brief first: the creator films from it. Nothing was paid.";
+      return t("sponsor.checkoutError.briefRequired");
     case "brief_invalid":
-      return "Something in the brief doesn't fit. Check the key messages, the assets link (https://) and the contact handle.";
+      return t("sponsor.checkoutError.briefInvalid");
     case "position_sold":
-      return session
-        ? "Someone has just booked this session. Pick another one."
-        : "Someone has just bought this spot. Pick another one on the board.";
+      return t("sponsor.checkoutError.positionSold", { subject });
     case "position_held": {
       const until = str(d.heldUntil);
       return until
-        ? `Someone is paying for this ${subject} right now. It frees up at ${clockTime(until)} if they don't.`
-        : `Someone is paying for this ${subject} right now. It frees up in a few minutes if they don't.`;
+        ? t("sponsor.checkoutError.heldUntil", { subject, time: clockTime(until) })
+        : t("sponsor.checkoutError.held", { subject });
     }
     case "position_reserved": {
       // hispace-offers-v0.md: an accepted offer holds the spot for its sponsor.
       const until = str(d.reservedUntil);
       return until
-        ? `An accepted offer holds this ${subject} until ${clockTime(until)}. If it isn't paid by then, it opens again.`
-        : `An accepted offer holds this ${subject} while it waits for its payment. If it isn't paid in time, it opens again.`;
+        ? t("sponsor.checkoutError.reservedUntil", { subject, time: clockTime(until) })
+        : t("sponsor.checkoutError.reserved", { subject });
     }
     // A brand that came for one square, on a listing somebody is taking whole.
     case "whole_listing_taken":
-      return `One brand is taking this whole listing, so no single ${subject} on it is for sale.`;
+      return t("sponsor.checkoutError.wholeTaken", { subject });
     // And the other way round: a brand that came for all of it, too late.
     case "parts_already_sold":
-      return `A ${subject} on this listing has already gone, so it can't be bought whole any more. You can still take the ${subject}s that are left.`;
+      return t("sponsor.checkoutError.partsSold", { subject });
     case "space_closed":
     case "space_not_live":
-      return `This HiSpace has closed, so its ${subject}s can't be ${session ? "booked" : "bought"} any more.`;
+      return t("sponsor.checkoutError.spaceClosed", { subject });
     case "insufficient_funds": {
       const need = str(d.neededUsdc);
       const have = str(d.balanceUsdc);
       return need && have
-        ? `This wallet has ${have} USDC on ${net} and this ${subject} needs ${need}. Add USDC or pay from another wallet.`
-        : `This wallet doesn't have enough USDC on ${net} for this ${subject}. Add USDC or pay from another wallet.`;
+        ? t("sponsor.checkoutError.insufficientHave", { subject, have, net, need })
+        : t("sponsor.checkoutError.insufficient", { subject, net });
     }
     case "chain_not_accepted":
-      return `This creator doesn't take payments on ${net}. Pick one of the other networks.`;
+      return t("sponsor.checkoutError.chainNotAccepted", { net });
     case "takeover_chain_unsupported":
-      return `A sold spot can't be taken over on ${net} yet. Pay on Solana to take it.`;
+      return t("sponsor.checkoutError.takeoverChainUnsupported", { net });
     case "wrong_chain": {
       const was = str(d.chain);
       const label = was && was in CHAIN_LABEL ? CHAIN_LABEL[was as Chain] : null;
       return label
-        ? `This spot was bought on ${label}, so it can only be taken over on ${label}: the sponsor who holds it is repaid in the same payment. Pay on ${label} instead.`
-        : "This spot was bought on another network, and it can only be taken over on that one. Pick that network instead.";
+        ? t("sponsor.checkoutError.wrongChain", { label })
+        : t("sponsor.checkoutError.wrongChainUnknown");
     }
     case "already_yours":
-      return "This wallet already holds this spot, so there is nothing to take over. Nothing was paid.";
+      return t("sponsor.checkoutError.alreadyYours");
     case "creator_cannot_bid":
-      return "That wallet belongs to the creator of this HiSpace, so it can't take over a spot here. Use a different wallet.";
+      return t("sponsor.checkoutError.creatorCannotBid");
     case "nothing_to_take_over":
-      return "This spot isn't held by a sponsor right now, so there is nothing to take over. Refresh the page to see it as it is.";
+      return t("sponsor.checkoutError.nothingToTakeOver");
     case "too_many_takeovers":
     case "price_ceiling":
       return takeoverClosedText(e.code);
     case "own_address":
-      return `That wallet belongs to the creator of this HiSpace. ${session ? "Book" : "Sponsor"} from a different wallet.`;
+      return t("sponsor.checkoutError.ownAddress", { subject });
     case "invalid_address":
-      return `Your wallet gave us an address we can't use on ${net}. Reconnect it and try again.`;
+      return t("sponsor.checkoutError.invalidAddress", { net });
     case "bad_signature":
-      return "Those signatures didn't match the payment. Sign again with the same wallet you connected.";
+      return t("sponsor.checkoutError.badSignature");
     case "too_many_holds":
-      return `This connection is already holding ${subject}s that aren't paid. Finish those, or wait for them to lapse.`;
+      return t("sponsor.checkoutError.tooManyHolds", { subject });
     case "too_many_lapsed_holds":
-      return "Too many unpaid holds from this connection lately. Try again later today.";
+      return t("sponsor.checkoutError.tooManyLapsedHolds");
     case "space_busy":
-      return `Two other people are paying for ${subject}s here right now. Try again in a few minutes.`;
+      return t("sponsor.checkoutError.spaceBusy", { subject });
     case "would_revert":
-      return `That payment would fail on ${net}, so we didn't send it. Nothing was paid. Check the wallet's USDC, or try another wallet.`;
+      return t("sponsor.checkoutError.wouldRevert", { net });
     case "chain_unavailable":
-      return `Payments on ${net} are paused right now. Pick another network, or try again shortly.`;
+      return t("sponsor.checkoutError.chainUnavailable", { net });
     case "relayer_not_configured":
-      return `Payments on ${net} aren't switched on yet. Pick another network.`;
+      return t("sponsor.checkoutError.relayerNotConfigured", { net });
     case "gas_too_expensive":
-      return `${net} fees are unusually high right now. Try again in a few minutes, or pick another network.`;
+      return t("sponsor.checkoutError.gasTooExpensive", { net });
     case "hold_expired":
     case "checkout_key_reused":
-      return `Your hold on this ${subject} ran out before the payment arrived. Start again to hold it for you.`;
+      return t("sponsor.checkoutError.holdExpired", { subject });
     case "already_paid":
-      return "This order is already paid.";
+      return t("sponsor.checkoutError.alreadyPaid");
     case "payment_pending":
-      return "Your payment is still on its way. This page updates on its own.";
+      return t("sponsor.checkoutError.paymentPending");
     case "order_uses_another_wallet":
-      return "This order was started with a different wallet. Connect that one, or start again.";
+      return t("sponsor.checkoutError.otherWallet");
     case "rate_limited":
       // 503 means our limiter is down and checkout fails closed; 429 is a burst.
       return e.status === 503
-        ? "Checkout is paused for a moment on our side. Nothing was paid; try again in a minute."
-        : "Too many requests from this connection. Wait a moment and try again.";
+        ? t("sponsor.checkoutError.limiterDown")
+        : t("sponsor.checkoutError.rateLimited");
     case "not_found":
-      return `We can't find this ${subject} or order any more. Refresh the page.`;
+      return t("sponsor.checkoutError.notFound", { subject });
     case "network":
-      return "We couldn't reach HOLD. Check your connection and try again.";
+      return t("sponsor.checkoutError.network");
     default:
-      return "Something went wrong on our side. Try again in a moment.";
+      return t("sponsor.checkoutError.other");
   }
 }

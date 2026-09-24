@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { APP_STORE_URL, PLAY_STORE_URL, SMART_LINK_URL } from "@/lib/appLinks";
 import { isMobile } from "@/lib/ad-space/wallets";
+import { useT } from "@/lib/app/i18n/react";
 
 import { QrCode } from "./qr";
 import { btnSmallSecondary } from "./ui";
@@ -17,6 +18,7 @@ import { btnSmallSecondary } from "./ui";
  * mount, so the two renders never disagree during hydration.
  */
 export function AppPrompt({ title, body }: { title: string; body?: string }) {
+  const t = useT();
   const [mobile, setMobile] = useState(false);
   useEffect(() => setMobile(isMobile()), []);
 
@@ -39,9 +41,9 @@ export function AppPrompt({ title, body }: { title: string; body?: string }) {
       {!mobile && (
         <div className="flex shrink-0 flex-col items-center gap-1.5">
           <div className="w-[112px] rounded-tight bg-white p-1.5">
-            <QrCode text={SMART_LINK_URL} title="QR code to get the HOLD app" className="h-auto w-full" />
+            <QrCode text={SMART_LINK_URL} title={t("sponsor.appPrompt.qrTitle")} className="h-auto w-full" />
           </div>
-          <p className="text-tiny text-sp-ink/80">Scan with your phone</p>
+          <p className="text-tiny text-sp-ink/80">{t("sponsor.appPrompt.scan")}</p>
         </div>
       )}
     </div>

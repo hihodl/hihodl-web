@@ -3,6 +3,7 @@
 import type { Chain } from "@/lib/ad-space/types";
 import { CHAIN_LABEL } from "@/lib/ad-space/format";
 import type { SolanaWallet } from "@/lib/ad-space/wallets";
+import { useT } from "@/lib/app/i18n/react";
 
 import { btnPrimary, btnSecondary } from "./ui";
 
@@ -16,16 +17,17 @@ export function ChainPicker({
   chains,
   chain,
   onChange,
-  legend = "Pay with USDC on",
+  legend,
 }: {
   chains: Chain[];
   chain: Chain;
   onChange: (c: Chain) => void;
   legend?: string;
 }) {
+  const t = useT();
   return (
     <fieldset>
-      <legend className="mb-3 text-small text-sp-ink/85">{legend}</legend>
+      <legend className="mb-3 text-small text-sp-ink/85">{legend ?? t("sponsor.parts.payOn")}</legend>
       <div className="flex flex-wrap gap-2">
         {chains.map((c) => (
           <button
@@ -65,6 +67,7 @@ export function SolanaOptions({
   /** Every way to pay is shown but can't be pressed, e.g. while the server asks the payer to wait. */
   disabled?: boolean;
 }) {
+  const t = useT();
   return (
     <div className="flex flex-col gap-3">
       {wallets.map((w, i) => (
@@ -75,7 +78,7 @@ export function SolanaOptions({
           disabled={disabled}
           onClick={() => onWallet(w)}
         >
-          Pay with {w.name}
+          {t("sponsor.parts.payWith", { name: w.name })}
         </button>
       ))}
 
@@ -87,7 +90,7 @@ export function SolanaOptions({
           className={`${wallets.length ? btnSecondary : btnPrimary}${disabled ? " pointer-events-none opacity-50" : ""}`}
           onClick={onMobileLink}
         >
-          Open in my wallet app
+          {t("sponsor.parts.openWalletApp")}
         </a>
       )}
 
@@ -97,12 +100,12 @@ export function SolanaOptions({
         disabled={disabled}
         onClick={onQr}
       >
-        Pay with QR
+        {t("sponsor.parts.payWithQr")}
       </button>
 
       {wallets.length === 0 && !mobile && (
         <p className="text-tiny text-sp-ink/80">
-          No Solana wallet in this browser. Scan the QR with the wallet on your phone.
+          {t("sponsor.parts.noSolanaWallet")}
         </p>
       )}
     </div>

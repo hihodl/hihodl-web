@@ -41,6 +41,10 @@ import { useCallback, useEffect, useState } from "react";
 
 import { boardListings, type BoardCard } from "@/lib/app/sponsor";
 
+import { t as tr } from "@/lib/app/i18n";
+import { fmtNumber } from "@/lib/app/i18n/format";
+import { useT } from "@/lib/app/i18n/react";
+
 import { useShell } from "../Shell";
 import { Column } from "../hold";
 import { Ion } from "../ion";
@@ -50,9 +54,11 @@ import { BuyFromListing } from "./SponsorFlow";
 
 type Kind = "all" | "placement" | "service";
 
-const money = (cents: number) => `$${(cents / 100).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+// A price paid in USDC: dollars, never converted; separators follow the language.
+const money = (cents: number) => `$${fmtNumber(cents / 100, { maximumFractionDigits: 0 })}`;
 
 export function BoardScreen() {
+  const t = useT();
   const { session } = useShell();
   const [kind, setKind] = useState<Kind>("all");
   const [cards, setCards] = useState<BoardCard[] | null>(null);
@@ -72,18 +78,18 @@ export function BoardScreen() {
 
   return (
     <Column>
-      <SectionLabel>What creators are selling</SectionLabel>
+      <SectionLabel>{t("sponsor.board.title")}</SectionLabel>
       <p className="mt-1 px-1 text-[13px] leading-[19px] text-white/[0.62]">
-        Pay from your HOLD wallet and it goes straight to the creator. No gas, and you earn HiPoints on our fee.
+        {t("sponsor.board.intro")}
       </p>
 
       <div className="mt-3">
       <ChipRow>
         {(
           [
-            { k: "all", label: "Everything" },
-            { k: "placement", label: "On a product" },
-            { k: "service", label: "Services" },
+            { k: "all", label: t("sponsor.board.kind.all") },
+            { k: "placement", label: t("sponsor.board.kind.placement") },
+            { k: "service", label: t("sponsor.board.kind.service") },
           ] as { k: Kind; label: string }[]
         ).map((c) => (
           <Chip key={c.k} label={c.label} selected={kind === c.k} onClick={() => setKind(c.k)} />
@@ -97,13 +103,13 @@ export function BoardScreen() {
         {failed ? (
           <div className="flex flex-col items-center px-4 pt-10 text-center">
             <Ion name="alert-circle-outline" size={44} className="text-white/40" />
-            <p className="mt-3 text-[14px] text-white/[0.62]">Could not load what is for sale</p>
+            <p className="mt-3 text-[14px] text-white/[0.62]">{t("sponsor.board.loadFailed")}</p>
             <button
               type="button"
               onClick={load}
               className="mt-4 rounded-[12px] bg-white/10 px-5 py-2.5 text-[14px] font-strong text-white transition-colors hover:bg-white/[0.16]"
             >
-              Retry
+              {t("common.retry")}
             </button>
           </div>
         ) : null}
@@ -111,8 +117,8 @@ export function BoardScreen() {
         {cards?.length === 0 ? (
           <Empty
             icon="megaphone-outline"
-            title="Nothing listed here yet"
-            body={kind === "all" ? "Creators are still building their first listings." : "Try another kind."}
+            title={t("sponsor.board.empty.title")}
+            body={kind === "all" ? t("sponsor.board.empty.all") : t("sponsor.board.empty.kind")}
           />
         ) : null}
 
@@ -126,7 +132,7 @@ export function BoardScreen() {
           uid={session.user.id}
           spaceId={buying.id}
           listingTitle={buying.serviceName?.trim() || buying.title}
-          creatorName={buying.creator.xHandle ? `@${buying.creator.xHandle}` : "the creator"}
+          creatorName={buying.creator.xHandle ? `@${buying.creator.xHandle}` : t("sponsor.board.theCreator")}
           onClose={() => setBuying(null)}
           onBought={() => {
             setBuying(null);
@@ -147,7 +153,8 @@ export function BoardScreen() {
  * would then have to stand behind.
  */
 function Listing({ card, onBuy }: { card: BoardCard; onBuy: () => void }) {
-  const handle = card.creator.xHandle ? `@${card.creator.xHandle}` : "A creator on HOLD";
+  const t = useT();
+  const handle = card.creator.xHandle ? `@${card.creator.xHandle}` : t("sponsor.board.aCreator");
   const record = card.creator.trackRecord;
   const closes = daysLeft(card.closesAt);
   const priced = card.fromCents !== null && card.openCount > 0;
@@ -178,7 +185,9 @@ function Listing({ card, onBuy }: { card: BoardCard; onBuy: () => void }) {
           </p>
           {record.delivered + record.missed > 0 ? (
             <p className="mt-0.5 text-[11.5px] text-white/50">
-              {record.delivered} delivered{record.missed > 0 ? ` · ${record.missed} missed` : ""}
+              {record.missed > 0
+                ? t("sponsor.board.recordMissed", { delivered: fmtNumber(record.delivered), missed: fmtNumber(record.missed) })
+                : t("sponsor.board.record", { delivered: fmtNumber(record.delivered) })}
             </p>
           ) : null}
         </div>
@@ -190,17 +199,17 @@ function Listing({ card, onBuy }: { card: BoardCard; onBuy: () => void }) {
 
       <div className="mt-3 flex items-center gap-2 border-t border-white/[0.08] pt-2.5">
         <span className="min-w-0 flex-1 text-[12.5px] text-white/[0.62]">
-          {card.openCount > 0 ? `${card.openCount} ${card.openCount === 1 ? "spot" : "spots"} open` : "Fully booked"}
+          {card.openCount > 0 ? t("sponsor.board.spotsOpen", { count: card.openCount }) : t("sponsor.board.fullyBooked")}
           {closes ? ` · ${closes}` : ""}
         </span>
         <button
           type="button"
           onClick={onBuy}
           disabled={!priced}
-          title={priced ? undefined : "Nothing on this listing has a price to pay right now."}
+          title={priced ? undefined : t("sponsor.board.noPrice")}
           className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-[10px] bg-amber px-3.5 text-[12.5px] font-bold text-text-on-amber transition-colors hover:bg-amber-glow disabled:cursor-not-allowed disabled:bg-white/[0.12] disabled:text-white/50"
         >
-          {priced ? `Book from ${money(card.fromCents!)}` : "Not on sale"}
+          {priced ? t("sponsor.board.bookFrom", { amount: money(card.fromCents!) }) : t("sponsor.board.notOnSale")}
         </button>
       </div>
     </Card>
@@ -210,10 +219,10 @@ function Listing({ card, onBuy }: { card: BoardCard; onBuy: () => void }) {
 /** "3 days left", and nothing at all once it is a month away: a deadline is only news when it is near. */
 function daysLeft(iso: string): string | null {
   const ms = Date.parse(iso) - Date.now();
-  if (!Number.isFinite(ms) || ms <= 0) return "closed";
+  if (!Number.isFinite(ms) || ms <= 0) return tr("sponsor.board.closed");
   const days = Math.ceil(ms / 86_400_000);
   if (days > 30) return null;
-  return days === 1 ? "1 day left" : `${days} days left`;
+  return tr("sponsor.board.daysLeft", { count: days });
 }
 
 function BoardSkeleton() {

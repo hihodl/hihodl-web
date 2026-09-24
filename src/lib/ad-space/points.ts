@@ -12,6 +12,8 @@
  * and the page then shows nothing rather than a guess.
  */
 
+import { t } from "@/lib/app/i18n";
+
 import { usdFromCents } from "./format";
 import type { OfferView, Position, Space } from "./types";
 
@@ -67,7 +69,7 @@ export function pointsForPosition(position: Position, space: Pick<Space, "sponso
 
 /** "Pay with HOLD and earn 500 points". */
 export function earnPointsLine(points: number): string {
-  return `Pay with HOLD and earn ${points.toLocaleString("en-US")} ${points === 1 ? "point" : "points"}`;
+  return t("sponsor.points.earn", { count: points });
 }
 
 /** What the points are worth, one point being $0.01: 500 to "$5". */

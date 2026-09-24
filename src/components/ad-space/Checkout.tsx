@@ -38,6 +38,8 @@ import { describeOfferError, offerSolanaPayLink, startOfferCheckout } from "@/li
 import { pointsForOfferAmount, pointsForPosition, pointsWorth } from "@/lib/ad-space/points";
 import { APP_STORE_URL, PLAY_STORE_URL, SMART_LINK_URL } from "@/lib/appLinks";
 import { PUBLIC_CHAINS } from "@/lib/orders/chains.public";
+import { fmtNumber } from "@/lib/app/i18n/format";
+import { Rich, useT } from "@/lib/app/i18n/react";
 import type { Booking, BriefBody, Chain, EvmPayload, OfferView, Order, Position, Space } from "@/lib/ad-space/types";
 
 import {
@@ -157,6 +159,7 @@ export function Checkout({
   // possible on the chains takeovers work on; the position view does not say
   // which chain the holder paid on, so the backend's `wrong_chain` still
   // catches a spot bought elsewhere.
+  const t = useT();
   const takingOver = position.status === "sold" && position.takeover !== null;
   const offered = payChainsOf(space);
   const takeoverChains = offered.filter((c) => TAKEOVER_CHAINS.includes(c));
@@ -279,8 +282,8 @@ export function Checkout({
   const ticking = phase.kind === "qr" || phase.kind === "confirming" || phase.kind === "evm-sign";
   useEffect(() => {
     if (!ticking) return;
-    const t = setInterval(() => setNow(Date.now()), 1_000);
-    return () => clearInterval(t);
+    const id = setInterval(() => setNow(Date.now()), 1_000);
+    return () => clearInterval(id);
   }, [ticking]);
 
   /* Confirm poll: every 3 s while an order is waiting. */
@@ -391,17 +394,17 @@ export function Checkout({
     setNotice(null);
     setOfferOtherSpot(false);
     try {
-      setPhase({ kind: "busy", label: `Connecting ${wallet.name}…` });
+      setPhase({ kind: "busy", label: t("sponsor.funds.connecting", { name: wallet.name }) });
       const connected = (await wallet.provider.connect()) as { publicKey?: { toString(): string } } | undefined;
       const sponsorAddress = (connected?.publicKey ?? wallet.provider.publicKey)?.toString();
       if (!sponsorAddress) throw new Error("no_account");
 
-      setPhase({ kind: "busy", label: "Preparing the payment…" });
+      setPhase({ kind: "busy", label: t("sponsor.checkout.preparingPayment") });
       const checkout = () =>
         withFreshKey((key) => beginSolana(key, sponsorAddress));
       let [res, web3] = await Promise.all([checkout(), import("@solana/web3.js")]);
 
-      setPhase({ kind: "busy", label: `Approve it in ${wallet.name}` });
+      setPhase({ kind: "busy", label: t("sponsor.checkout.approveIn", { name: wallet.name }) });
       let sent: unknown;
       try {
         sent = await wallet.provider.signAndSendTransaction(
@@ -411,7 +414,7 @@ export function Checkout({
         // Approving took long enough for the blockhash to expire. The same key
         // gets a fresh transaction for the same order: ask once more.
         if (!blockhashExpired(e)) throw e;
-        setPhase({ kind: "busy", label: `That took a while. Approve the fresh one in ${wallet.name}` });
+        setPhase({ kind: "busy", label: t("sponsor.checkout.approveFresh", { name: wallet.name }) });
         res = await checkout();
         sent = await wallet.provider.signAndSendTransaction(
           web3.VersionedTransaction.deserialize(base64ToBytes(res.solana.transaction)),
@@ -449,7 +452,7 @@ export function Checkout({
       return;
     }
     // An accepted offer: the server binds this key to the offer and answers the link.
-    setPhase({ kind: "busy", label: "Preparing the QR…" });
+    setPhase({ kind: "busy", label: t("sponsor.checkout.preparingQr") });
     try {
       const link = await withFreshKey(async (key) => {
         if (briefRef.current) await fileBrief(position.id, key, briefRef.current);
@@ -470,15 +473,15 @@ export function Checkout({
     const provider = wallet.provider;
     const meta = PUBLIC_CHAINS[evmChain];
     try {
-      setPhase({ kind: "busy", label: `Connecting ${wallet.name}…` });
+      setPhase({ kind: "busy", label: t("sponsor.funds.connecting", { name: wallet.name }) });
       const accounts = (await provider.request({ method: "eth_requestAccounts" })) as string[];
       const sponsorAddress = accounts?.[0];
       if (!sponsorAddress) throw new Error("no_account");
 
-      setPhase({ kind: "busy", label: `Switching ${wallet.name} to ${meta.label}…` });
+      setPhase({ kind: "busy", label: t("sponsor.checkout.switching", { name: wallet.name, chain: meta.label }) });
       await switchEvmChain(provider, meta);
 
-      setPhase({ kind: "busy", label: "Preparing the payment…" });
+      setPhase({ kind: "busy", label: t("sponsor.checkout.preparingPayment") });
       const res = await withFreshKey((key) => beginEvm(key, evmChain, sponsorAddress));
       const creatorAuth = res.evm.authorizations.find((a) => a.role === "creator");
       const feeAuth = res.evm.authorizations.find((a) => a.role === "fee");
@@ -548,26 +551,30 @@ export function Checkout({
 
   const figures = amountsOf(position, offer?.view ?? null);
   const total = dollars(figures.totalUsdc);
-  const feeNote = space.feeBps > 0 ? `${feePercent(space.feeBps)} HOLD fee included` : null;
+  const feeNote = space.feeBps > 0 ? t("sponsor.checkout.feeIncluded", { pct: feePercent(space.feeBps) }) : null;
   const busy = phase.kind === "busy" || phase.kind === "evm-sign";
   const heldMs = (o: Order) => new Date(o.reservedUntil).getTime() - now;
 
   const eyebrow = offer
     ? offer.view.kind === "bid"
-      ? "Pay your winning bid"
-      : "Pay your accepted offer"
+      ? t("sponsor.checkout.eyebrow.bid")
+      : t("sponsor.checkout.eyebrow.offer")
     : session
-      ? "Book a session"
+      ? t("sponsor.checkout.eyebrow.session")
       : production
-        ? "Book a production spot"
+        ? t("sponsor.checkout.eyebrow.production")
         : takingOver
-          ? "Take this spot"
-          : "Sponsor a spot";
+          ? t("sponsor.checkout.eyebrow.takeover")
+          : t("sponsor.checkout.eyebrow.spot");
 
   const methods = [
-    { id: "wallet" as const, label: "Wallet" },
-    ...(scanWorks ? [{ id: "scan" as const, label: "Scan to pay" }] : []),
-    { id: "hold" as const, label: "HOLD app", badge: holdPoints !== null ? `Earn ${pointsWorth(holdPoints)}` : null },
+    { id: "wallet" as const, label: t("sponsor.checkout.method.wallet") },
+    ...(scanWorks ? [{ id: "scan" as const, label: t("sponsor.checkout.method.scan") }] : []),
+    {
+      id: "hold" as const,
+      label: t("sponsor.checkout.method.hold"),
+      badge: holdPoints !== null ? t("sponsor.checkout.method.earn", { amount: pointsWorth(holdPoints) }) : null,
+    },
   ];
 
   const payNow = () => {
@@ -599,16 +606,19 @@ export function Checkout({
             onPhoneLink={() => void startQr()}
           />
         )}
-        {method === "scan" && phase.kind === "qr" && <StatusLine>Waiting for payment</StatusLine>}
+        {method === "scan" && phase.kind === "qr" && <StatusLine>{t("sponsor.checkout.waitingForPayment")}</StatusLine>}
         <p className="flex items-center justify-center gap-2 text-center text-tiny text-white/85">
-          Paid straight to @{space.creator.xHandle}. HOLD never holds your money.
-          <InfoTip label="About refunds">
-            {session
-              ? "HOLD can't refund a booking. If the session can't happen, the creator's policy applies: "
-              : "HOLD can't refund a paid spot. If the plan changes, the creator's policy applies: "}
-            <span className="text-sp-ink">{FALLBACK_LABEL[space.fallback]}.</span>{" "}
-            {(production ? PRODUCTION_FALLBACK_TEXT : session ? SESSION_FALLBACK_TEXT : FALLBACK_TEXT)[space.fallback]}
-            {space.fallbackNote ? ` ${space.fallbackNote}` : ""}
+          {t("sponsor.checkout.paidStraight", { handle: space.creator.xHandle })}
+          <InfoTip label={t("sponsor.checkout.aboutRefunds")}>
+            <Rich
+              k={session ? "sponsor.checkout.refund.session" : "sponsor.checkout.refund.spot"}
+              vars={{
+                policy: FALLBACK_LABEL[space.fallback],
+                hint: (production ? PRODUCTION_FALLBACK_TEXT : session ? SESSION_FALLBACK_TEXT : FALLBACK_TEXT)[space.fallback],
+                note: space.fallbackNote ? ` ${space.fallbackNote}` : "",
+              }}
+              tags={{ b: (c) => <span className="text-sp-ink">{c}</span> }}
+            />
           </InfoTip>
         </p>
       </>
@@ -628,10 +638,10 @@ export function Checkout({
         <Duplicate order={phase.order} />
       ) : phase.kind === "lapsed" ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 py-8 text-center">
-          <h3 className="font-display text-h4 font-light text-sp-ink">The hold ran out.</h3>
-          <p className="max-w-sm text-small text-white/85">Nothing left your wallet. The {subject} is back on the board.</p>
+          <h3 className="font-display text-h4 font-light text-sp-ink">{t("sponsor.checkout.lapsed.title")}</h3>
+          <p className="max-w-sm text-small text-white/85">{t("sponsor.checkout.lapsed.body", { subject })}</p>
           <button type="button" className={`${ctaPrimary} max-w-xs`} onClick={startAgain}>
-            Start again
+            {t("sponsor.checkout.startAgain")}
           </button>
         </div>
       ) : (
@@ -657,9 +667,8 @@ export function Checkout({
                 <span className="flex items-center gap-1.5 text-tiny text-white/85">
                   {feeNote}
                   {figures.refundsUsdc ? (
-                    <InfoTip label="Where a takeover's money goes">
-                      {dollars(figures.refundsUsdc)} of it goes straight back to the sponsor who holds this spot now, in the
-                      same transaction. The rest is the creator&rsquo;s, and HOLD&rsquo;s fee.
+                    <InfoTip label={t("sponsor.checkout.takeoverMoney")}>
+                      {t("sponsor.checkout.takeoverMoneyBody", { amount: dollars(figures.refundsUsdc) })}
                     </InfoTip>
                   ) : null}
                 </span>
@@ -679,13 +688,13 @@ export function Checkout({
           </div>
 
 
-          {phase.kind === "loading" && <StatusLine>One moment</StatusLine>}
+          {phase.kind === "loading" && <StatusLine>{t("sponsor.checkout.oneMoment")}</StatusLine>}
 
           {phase.kind === "confirming" ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-3 py-6 text-center">
               <WaitMark />
               <p className="text-body font-medium text-sp-ink" role="status">
-                Confirming on {CHAIN_LABEL[phase.order.chain]}…
+                {t("sponsor.checkout.confirmingOn", { chain: CHAIN_LABEL[phase.order.chain] })}
               </p>
               <HoldLine ms={heldMs(phase.order)} subject={subject} />
             </div>
@@ -693,12 +702,12 @@ export function Checkout({
             <>
               {space.production ? (
                 <div className={`${sheetCard} flex flex-col gap-2 p-4`}>
-                  <p className={fieldLabel}>What you get</p>
+                  <p className={fieldLabel}>{t("sponsor.checkout.whatYouGet")}</p>
                   <PackageLines pkg={space.production} />
                 </div>
               ) : null}
               <div className="flex flex-col gap-4">
-                <p className={fieldLabel}>Step 1 of 2 · Your brief</p>
+                <p className={fieldLabel}>{t("sponsor.checkout.briefStep")}</p>
                 <BriefForm
                   draft={briefDraft}
                   onChange={setBriefDraft}
@@ -769,7 +778,7 @@ export function Checkout({
               {offerOtherSpot && (
                 <div>
                   <button type="button" className={ctaGlass} onClick={onClose}>
-                    Pick another {subject}
+                    {t("sponsor.checkout.pickAnother", { subject })}
                   </button>
                 </div>
               )}
@@ -805,24 +814,34 @@ function amountsOf(
 /* ── What you get, in three short lines ────────────────────────────── */
 
 function Included({ space, position: p, session }: { space: Space; position: Position; session: boolean }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const zone = space.template.zones.find((z) => z.zoneKey === p.zoneKey);
   const perks = p.perks ?? [];
   const c = space.creator;
-  const reach = c?.xHandle && c.xFollowers > 0 ? `Seen by ${compactNumber(c.xFollowers)} followers on X` : null;
-  const where = space.event ? ` at ${space.event.name}` : "";
+  const followers = c?.xHandle && c.xFollowers > 0 ? compactNumber(c.xFollowers) : null;
+  const reach = followers ? t("sponsor.checkout.included.reach", { count: followers }) : null;
+  const event = space.event?.name ?? null;
   // Short first: what the brand is, who sees it, what is promised. The rung's
   // own list, when it has one, is the creator's words and leads.
   const short: string[] = perks.length
     ? perks.slice(0, 2).concat(reach ? [reach] : [])
     : session
-      ? [`${serviceName(space)} with @${c.xHandle}${where}`, ...(reach ? [reach] : [])]
+      ? [
+          event
+            ? t("sponsor.checkout.included.sessionAt", { service: serviceName(space), handle: c.xHandle, event })
+            : t("sponsor.checkout.included.session", { service: serviceName(space), handle: c.xHandle }),
+          ...(reach ? [reach] : []),
+        ]
       : space.kind === "placement"
         ? [
-            `Your brand on the ${p.label.charAt(0).toLowerCase()}${p.label.slice(1)} of the ${serviceName(space).toLowerCase()}`,
-            ...(reach ? [`${reach}${where}`] : []),
+            t("sponsor.checkout.included.yourBrand", {
+              part: `${p.label.charAt(0).toLowerCase()}${p.label.slice(1)}`,
+              product: serviceName(space).toLowerCase(),
+            }),
+            ...(followers && reach ? [event ? t("sponsor.checkout.included.reachAt", { count: followers, event }) : reach] : []),
             ...(space.deliverables.length
-              ? [`${space.deliverables.length} ${space.deliverables.length === 1 ? "post" : "posts"} promised, with dates`]
+              ? [t("sponsor.checkout.included.posts", { count: space.deliverables.length })]
               : []),
           ]
         : reach
@@ -831,7 +850,7 @@ function Included({ space, position: p, session }: { space: Space; position: Pos
   const more: string[] = [
     ...perks.slice(2),
     ...space.deliverables.map((d) => deliverableText(d)),
-    ...(!session && zone ? [[zone.sizeLabel, `Takes ${p.accepts.map((k) => CONTENT_KIND_LABEL[k]).join(", ")}`].filter(Boolean).join(" · ")] : []),
+    ...(!session && zone ? [[zone.sizeLabel, t("sponsor.checkout.included.takes", { kinds: p.accepts.map((k) => CONTENT_KIND_LABEL[k]).join(", ") })].filter(Boolean).join(" · ")] : []),
   ];
   if (short.length === 0 && more.length === 0) return null;
 
@@ -862,7 +881,7 @@ function Included({ space, position: p, session }: { space: Space; position: Pos
             aria-expanded={open}
             onClick={() => setOpen((o) => !o)}
           >
-            {open ? "Show less" : "See what's included"}
+            {open ? t("common.showLess") : t("sponsor.checkout.included.seeMore")}
           </button>
         </>
       )}
@@ -897,17 +916,25 @@ function WalletList({
   onSolana: () => void;
   onPhoneLink: () => void;
 }) {
+  const t = useT();
   const solana = chain === "solana";
   const extra = busy ? null : solana ? (
     mobile && mobileLink ? (
-      <ExtraRow title="Open in my wallet app" sub="Phantom, Solflare or any Solana wallet" href={mobileLink} onClick={onPhoneLink} />
+      <ExtraRow
+        title={t("sponsor.parts.openWalletApp")}
+        sub={t("sponsor.checkout.wallets.anySolana")}
+        href={mobileLink}
+        onClick={onPhoneLink}
+      />
     ) : (
-      <ExtraRow title="Another wallet" sub="Scan a QR with any Solana wallet" onClick={onScan} />
+      <ExtraRow title={t("sponsor.checkout.wallets.another")} sub={t("sponsor.checkout.wallets.scanAny")} onClick={onScan} />
     )
   ) : (
     <>
       <CopyLinkRow />
-      {chains.includes("solana") && <ExtraRow title="Pay on Solana instead" sub="Scan a QR with any Solana wallet" onClick={onSolana} />}
+      {chains.includes("solana") && (
+        <ExtraRow title={t("sponsor.checkout.wallets.solanaInstead")} sub={t("sponsor.checkout.wallets.scanAny")} onClick={onSolana} />
+      )}
     </>
   );
 
@@ -918,13 +945,13 @@ function WalletList({
   if (solana && mobile && mobileLink) {
     return (
       <p className="px-1 text-center text-small text-white/85">
-        Opens Phantom, Solflare or any Solana wallet on this phone, with the amount filled in.
+        {t("sponsor.checkout.wallets.opensOnPhone")}
       </p>
     );
   }
   return (
     <div className="flex flex-col gap-2">
-      <p className="px-1 text-small text-white/85">No {solana ? "Solana" : CHAIN_LABEL[chain]} wallet in this browser.</p>
+      <p className="px-1 text-small text-white/85">{t("sponsor.funds.noWallet", { chain: solana ? "Solana" : CHAIN_LABEL[chain] })}</p>
       {extra}
     </div>
   );
@@ -954,13 +981,18 @@ function WalletAction({
   /** The page starts watching for the order the wallet app will open. */
   onPhoneLink: () => void;
 }) {
+  const t = useT();
   // The wallet app was opened from here: watch for its payment, as the QR does.
-  if (phase.kind === "qr") return <StatusLine>Waiting for payment</StatusLine>;
+  if (phase.kind === "qr") return <StatusLine>{t("sponsor.checkout.waitingForPayment")}</StatusLine>;
   if (phase.kind === "busy") return <StatusLine>{phase.label}</StatusLine>;
   if (phase.kind === "evm-sign") {
     return (
       <div className="flex flex-col gap-2">
-        <StatusLine>{phase.step === 2 ? "Sending both payments…" : `Sign ${phase.step + 1} of 2 in ${phase.wallet}`}</StatusLine>
+        <StatusLine>
+          {phase.step === 2
+            ? t("sponsor.checkout.evm.sendingBoth")
+            : t("sponsor.checkout.evm.sign", { step: phase.step + 1, wallet: phase.wallet })}
+        </StatusLine>
         <QuoteLine ms={phase.evm.validBefore * 1000 - now} />
       </div>
     );
@@ -968,22 +1000,21 @@ function WalletAction({
   if (!hasWallets) {
     return phoneLink && phase.kind === "choose" ? (
       <a href={phoneLink} className={ctaPrimary} onClick={onPhoneLink}>
-        Pay {total ?? ""} in my wallet app
+        {t("sponsor.checkout.payInWalletApp", { total: total ?? "" })}
       </a>
     ) : null;
   }
   return (
     <div className="flex flex-col gap-2">
       <button type="button" className={ctaPrimary} disabled={!chosen || phase.kind !== "choose"} onClick={onPay}>
-        Pay {total ?? ""} with {chosen?.name ?? "wallet"}
+        {chosen
+          ? t("sponsor.checkout.payWith", { total: total ?? "", name: chosen.name })
+          : t("sponsor.checkout.payWithWallet", { total: total ?? "" })}
       </button>
       {evm && (
         <p className="flex items-center justify-center gap-2 text-tiny text-white/85">
-          Two signatures, no gas.
-          <InfoTip label="Why two signatures">
-            One pays the creator, one pays HOLD&rsquo;s fee. Both go through together in one transaction, or not at all.
-            Our relayer pays the gas.
-          </InfoTip>
+          {t("sponsor.checkout.evm.twoSignatures")}
+          <InfoTip label={t("sponsor.checkout.evm.whyTwo")}>{t("sponsor.checkout.evm.whyTwoBody")}</InfoTip>
         </p>
       )}
     </div>
@@ -992,11 +1023,12 @@ function WalletAction({
 
 /** For an EVM wallet this browser does not have: open the page inside that wallet. */
 function CopyLinkRow() {
+  const t = useT();
   const [copied, setCopied] = useState(false);
   return (
     <ExtraRow
-      title={copied ? "Link copied" : "Use another wallet"}
-      sub="Copy this page's link and open it in your wallet's browser"
+      title={copied ? t("sponsor.funds.linkCopied") : t("sponsor.funds.useAnother")}
+      sub={t("sponsor.funds.useAnotherSub")}
       onClick={() => {
         void navigator.clipboard
           .writeText(window.location.href)
@@ -1025,36 +1057,34 @@ function ScanPanel({
   canSwitch: boolean;
   onSolana: () => void;
 }) {
+  const t = useT();
   if (chain !== "solana") {
     return (
       <div className={`${sheetCard} flex flex-col items-center gap-3 px-5 py-6 text-center`}>
-        <p className="text-small text-sp-ink">Scan to pay works on Solana.</p>
+        <p className="text-small text-sp-ink">{t("sponsor.checkout.scan.onlySolana")}</p>
         {canSwitch && (
           <button type="button" className={ctaGlass} onClick={onSolana}>
-            Switch to Solana
+            {t("sponsor.checkout.scan.switch")}
           </button>
         )}
       </div>
     );
   }
   if (phase.kind !== "qr") {
-    return phase.kind === "busy" ? <StatusLine>{phase.label}</StatusLine> : <StatusLine>Drawing your QR</StatusLine>;
+    return phase.kind === "busy" ? <StatusLine>{phase.label}</StatusLine> : <StatusLine>{t("sponsor.checkout.scan.drawing")}</StatusLine>;
   }
   return (
     <div className="flex flex-col items-center gap-4 text-center">
       <div className="w-full max-w-[232px] rounded-[20px] bg-white p-3 shadow-[0_12px_32px_rgba(0,0,0,0.35)]">
-        <QrCode text={phase.link} title="Solana Pay QR code" className="h-auto w-full" />
+        <QrCode text={phase.link} title={t("sponsor.checkout.scan.qrTitle")} className="h-auto w-full" />
       </div>
       <p className="flex items-center gap-2 text-small text-[#CFE3EC]">
-        Scan with Phantom, Solflare or any Solana wallet
-        <InfoTip label="How scanning works">
-          Your wallet shows the exact amount, the creator and HOLD&rsquo;s fee before you approve. One transaction pays
-          both; this page updates on its own.
-        </InfoTip>
+        {t("sponsor.checkout.scan.with")}
+        <InfoTip label={t("sponsor.checkout.scan.how")}>{t("sponsor.checkout.scan.howBody")}</InfoTip>
       </p>
       {mobile && (
         <a href={phase.link} className={ctaGlass}>
-          Open in my wallet app
+          {t("sponsor.parts.openWalletApp")}
         </a>
       )}
     </div>
@@ -1070,6 +1100,7 @@ function ScanPanel({
  * page says so where it matters: behind the (i).
  */
 function HoldPanel({ points, mobile, takeover }: { points: number | null; mobile: boolean; takeover: boolean }) {
+  const t = useT();
   const worth = points !== null ? pointsWorth(points) : null;
   return (
     <div
@@ -1079,27 +1110,25 @@ function HoldPanel({ points, mobile, takeover }: { points: number | null; mobile
       <div className="min-w-0 flex-1">
         <p className="text-[26px] font-medium leading-tight tracking-[-0.01em] text-sp-ink">
           {worth ? (
-            <>
-              Earn <span className="text-sp-amber">{worth}</span> on this spot
-            </>
+            <Rich k="sponsor.checkout.hold.earn" vars={{ worth }} tags={{ amber: (c) => <span className="text-sp-amber">{c}</span> }} />
           ) : (
-            "Pay from the HOLD app"
+            t("sponsor.checkout.hold.title")
           )}
         </p>
         <p className="mt-2 flex items-center gap-2 text-small text-[#CFE3EC]">
           {worth
             ? mobile
-              ? "In HiPoints, when you pay from the HOLD app."
-              : "In HiPoints, when you pay from the HOLD app. Scan to get it."
+              ? t("sponsor.checkout.hold.inPoints")
+              : t("sponsor.checkout.hold.inPointsScan")
             : mobile
-              ? "Get HOLD, then pay this spot in the app."
-              : "Scan with your phone, get HOLD, pay in the app."}
+              ? t("sponsor.checkout.hold.getHold")
+              : t("sponsor.checkout.hold.scanGetHold")}
           {worth && (
-            <InfoTip label="About HiPoints">
-              {(points ?? 0).toLocaleString("en-US")} HiPoints, worth {worth} (1 point = $0.01). They come out of HOLD&rsquo;s
-              fee, never the creator&rsquo;s price, and are credited once your payment confirms. Spend them in HOLD on
-              hotels, eSIMs or your next spot&rsquo;s fee.
-              {takeover ? " If someone takes the spot over, the points go back." : ""}
+            <InfoTip label={t("sponsor.checkout.hold.about")}>
+              {t(takeover ? "sponsor.checkout.hold.aboutBodyTakeover" : "sponsor.checkout.hold.aboutBody", {
+                points: fmtNumber(points ?? 0),
+                worth,
+              })}
             </InfoTip>
           )}
         </p>
@@ -1116,7 +1145,7 @@ function HoldPanel({ points, mobile, takeover }: { points: number | null; mobile
       </div>
       {!mobile && (
         <div className="w-[132px] shrink-0 self-center rounded-[16px] bg-white p-2 shadow-[0_12px_32px_rgba(0,0,0,0.35)]">
-          <QrCode text={SMART_LINK_URL} title="QR code to get the HOLD app" className="h-auto w-full" />
+          <QrCode text={SMART_LINK_URL} title={t("sponsor.appPrompt.qrTitle")} className="h-auto w-full" />
         </div>
       )}
     </div>
@@ -1127,33 +1156,42 @@ function HoldPanel({ points, mobile, takeover }: { points: number | null; mobile
 
 /** A Base/Polygon quote: valid until `validBefore`, holding nothing meanwhile. */
 function QuoteLine({ ms }: { ms: number }) {
+  const t = useT();
   return ms > 0 ? (
     <p className="flex items-center justify-center gap-2 text-tiny text-white/85">
-      Sign within <span className="tabular-nums text-white/85">{timeLeft(ms)}</span>
-      <InfoTip label="About the quote">
-        The spot is held for you once both signatures are in. Until then another sponsor can still take it.
-      </InfoTip>
+      <span>
+        <Rich
+          k="sponsor.checkout.quote.signWithin"
+          vars={{ time: timeLeft(ms) }}
+          tags={{ n: (c) => <span className="tabular-nums text-white/85">{c}</span> }}
+        />
+      </span>
+      <InfoTip label={t("sponsor.checkout.quote.about")}>{t("sponsor.checkout.quote.aboutBody")}</InfoTip>
     </p>
   ) : (
-    <p className="text-center text-tiny text-sp-amber">This quote expired. Close your wallet and start again.</p>
+    <p className="text-center text-tiny text-sp-amber">{t("sponsor.checkout.quote.expired")}</p>
   );
 }
 
 function HoldLine({ ms, subject }: { ms: number; subject: "spot" | "session" }) {
+  const t = useT();
   return ms > 0 ? (
     <p className="text-small text-white/85">
-      This {subject} is held for you for <span className="tabular-nums text-sp-ink">{timeLeft(ms)}</span>
+      <Rich
+        k="sponsor.checkout.holdLine"
+        vars={{ subject, time: timeLeft(ms) }}
+        tags={{ n: (c) => <span className="tabular-nums text-sp-ink">{c}</span> }}
+      />
     </p>
   ) : (
-    <p className="max-w-sm text-small text-sp-amber">
-      The hold ran out. If you already approved, it can still confirm: this page keeps checking.
-    </p>
+    <p className="max-w-sm text-small text-sp-amber">{t("sponsor.checkout.holdRanOut")}</p>
   );
 }
 
 /* ── After paying ──────────────────────────────────────────────────── */
 
 function PaidHead({ order, handle, title }: { order: Order; handle: string; title: string }) {
+  const t = useT();
   return (
     <div className="flex flex-col items-center gap-3 pt-2 text-center">
       <PaidMark />
@@ -1163,9 +1201,19 @@ function PaidHead({ order, handle, title }: { order: Order; handle: string; titl
       <p className="text-body text-sp-ink">{title}</p>
       <p className="text-tiny text-white/85">
         {order.takeover
-          ? `${dollars(order.takeover.refundsUsdc)} back to the previous sponsor · ${dollars(order.creatorReceivesUsdc)} to @${handle} · ${dollars(order.feeUsdc)} HOLD fee`
-          : `${dollars(order.creatorReceivesUsdc)} to @${handle} · ${dollars(order.feeUsdc)} HOLD fee`}{" "}
-        · {CHAIN_LABEL[order.chain]}
+          ? t("sponsor.checkout.paid.splitTakeover", {
+              refunds: dollars(order.takeover.refundsUsdc),
+              creator: dollars(order.creatorReceivesUsdc),
+              handle,
+              fee: dollars(order.feeUsdc),
+              chain: CHAIN_LABEL[order.chain],
+            })
+          : t("sponsor.checkout.paid.split", {
+              creator: dollars(order.creatorReceivesUsdc),
+              handle,
+              fee: dollars(order.feeUsdc),
+              chain: CHAIN_LABEL[order.chain],
+            })}
       </p>
     </div>
   );
@@ -1182,14 +1230,15 @@ function Paid({
   position: Position;
   checkoutKey: string;
 }) {
+  const t = useT();
   const handle = space.creator.xHandle;
   return (
     <div className="flex flex-col gap-6">
-      <PaidHead order={order} handle={handle} title={`You're sponsoring ${position.label.toLowerCase()}.`} />
+      <PaidHead order={order} handle={handle} title={t("sponsor.checkout.paid.sponsoring", { label: position.label.toLowerCase() })} />
       <div className="flex flex-wrap justify-center gap-2">
         {order.explorerUrl && (
           <a href={order.explorerUrl} target="_blank" rel="noopener noreferrer" className={ctaGlass}>
-            View the transaction
+            {t("sponsor.checkout.paid.viewTx")}
           </a>
         )}
         {order.share && (
@@ -1199,11 +1248,13 @@ function Paid({
             rel="noopener noreferrer"
             className={ctaGlass}
           >
-            Share on X
+            {t("sponsor.checkout.paid.shareOnX")}
           </a>
         )}
       </div>
-      {order.takeover && <p className="text-center text-tiny text-white/85">The spot is listed at {dollars(order.priceUsdc)} now.</p>}
+      {order.takeover && <p className="text-center text-tiny text-white/85">
+          {t("sponsor.checkout.paid.listedAt", { amount: dollars(order.priceUsdc) })}
+        </p>}
       <div className="border-t border-sp-ink/[0.08] pt-6">
         <SponsorContentForm order={order} checkoutKey={checkoutKey} accepts={position.accepts} creatorHandle={handle} />
       </div>
@@ -1217,6 +1268,7 @@ function Paid({
  * logo form. Nothing else is asked before paying.
  */
 function PaidSession({ order, space }: { order: Order; space: Space }) {
+  const t = useT();
   const handle = space.creator.xHandle;
   const [token, setToken] = useState<string | null>(null);
   const [session, setSession] = useState(order.session ?? null);
@@ -1225,11 +1277,11 @@ function PaidSession({ order, space }: { order: Order; space: Space }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <PaidHead order={order} handle={handle} title="Your session is booked." />
+      <PaidHead order={order} handle={handle} title={t("sponsor.checkout.paid.sessionBooked")} />
       {order.explorerUrl && (
         <div className="flex justify-center">
           <a href={order.explorerUrl} target="_blank" rel="noopener noreferrer" className={ctaGlass}>
-            View the transaction
+            {t("sponsor.checkout.paid.viewTx")}
           </a>
         </div>
       )}
@@ -1242,10 +1294,7 @@ function PaidSession({ order, space }: { order: Order; space: Space }) {
         </>
       ) : (
         <SheetNotice>
-          <p>
-            Your booking link hasn&rsquo;t reached this page yet. Reload it in this browser: it is how you send @{handle}{" "}
-            your contact.
-          </p>
+          <p>{t("sponsor.checkout.paid.noBookingLink", { handle })}</p>
         </SheetNotice>
       )}
     </div>
@@ -1253,24 +1302,34 @@ function PaidSession({ order, space }: { order: Order; space: Space }) {
 }
 
 function Duplicate({ order }: { order: Order }) {
+  const t = useT();
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 py-8 text-center">
-      <h3 className="font-display text-h4 font-light text-sp-ink">Someone else&rsquo;s payment landed first.</h3>
+      <h3 className="font-display text-h4 font-light text-sp-ink">{t("sponsor.checkout.duplicate.title")}</h3>
       <p className="max-w-sm text-small text-white/85">
-        Your payment arrived after this spot sold. Our team has been alerted; email{" "}
-        <a className="text-sp-amber hover:underline" href={`mailto:support@hihodl.xyz?subject=${encodeURIComponent(`HiSpace order ${order.id}`)}`}>
-          support@hihodl.xyz
-        </a>{" "}
-        with order <span className="font-mono text-sp-ink">{order.id.slice(0, 8)}</span> and we&rsquo;ll sort it out with the
-        creator.
+        <Rich
+          k="sponsor.checkout.duplicate.body"
+          vars={{ email: "support@hihodl.xyz", order: order.id.slice(0, 8) }}
+          tags={{
+            link: (c) => (
+              <a
+                className="text-sp-amber hover:underline"
+                href={`mailto:support@hihodl.xyz?subject=${encodeURIComponent(t("sponsor.checkout.duplicate.subject", { id: order.id }))}`}
+              >
+                {c}
+              </a>
+            ),
+            mono: (c) => <span className="font-mono text-sp-ink">{c}</span>,
+          }}
+        />
       </p>
       <div className="flex flex-wrap justify-center gap-2">
         {order.explorerUrl && (
           <a href={order.explorerUrl} target="_blank" rel="noopener noreferrer" className={ctaGlass}>
-            View the transaction
+            {t("sponsor.checkout.paid.viewTx")}
           </a>
         )}
-        <CopyButton value={order.id} label="Copy order id" />
+        <CopyButton value={order.id} label={t("sponsor.checkout.duplicate.copyId")} />
       </div>
     </div>
   );

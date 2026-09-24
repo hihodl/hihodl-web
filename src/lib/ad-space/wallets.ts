@@ -4,6 +4,8 @@
  * Shared by the HiSpace checkout and pay links. Client side only.
  */
 
+import { t } from "@/lib/app/i18n";
+
 import type { EvmPayload } from "./types";
 
 export interface SolanaProvider {
@@ -55,7 +57,7 @@ export function detectSolanaWallets(): SolanaWallet[] {
   const generic = w.solana;
   if (generic) {
     add(
-      generic.isPhantom ? "Phantom" : generic.isSolflare ? "Solflare" : generic.isBackpack ? "Backpack" : "your wallet",
+      generic.isPhantom ? "Phantom" : generic.isSolflare ? "Solflare" : generic.isBackpack ? "Backpack" : t("sponsor.wallets.yourWallet"),
       generic,
     );
   }
@@ -302,7 +304,7 @@ export function watchSolanaWallets(onChange: (wallets: SolanaWallet[]) => void):
     }
     // An unnamed injected `window.solana` is one of the wallets that announced
     // itself by name; listing both would show the same wallet twice.
-    onChange(added ? out.filter((w) => w.name !== "your wallet") : out);
+    onChange(added ? out.filter((w) => w.name !== t("sponsor.wallets.yourWallet")) : out);
   };
   const api = {
     register(...wallets: StandardWallet[]) {
@@ -340,7 +342,7 @@ function injectedEvmName(p: Eip1193Provider): string {
   if (f.isRabby) return "Rabby";
   if (f.isCoinbaseWallet) return "Coinbase Wallet";
   if (f.isMetaMask) return "MetaMask";
-  return "Browser wallet";
+  return t("sponsor.wallets.browserWallet");
 }
 
 /**
@@ -360,7 +362,7 @@ export function watchEvmWallets(onChange: (wallets: EvmWallet[]) => void): () =>
     if (!d?.provider || typeof d.provider.request !== "function") return;
     const id = d.info?.uuid ?? d.info?.rdns ?? d.info?.name ?? String(announced.size);
     // One wallet announcing twice (reloads, several frames) is still one wallet.
-    const name = d.info?.name ?? "Browser wallet";
+    const name = d.info?.name ?? t("sponsor.wallets.browserWallet");
     for (const [k, w] of announced) if (w.name === name) announced.delete(k);
     announced.set(id, { id, name, icon: d.info?.icon ?? null, provider: d.provider });
     emit();

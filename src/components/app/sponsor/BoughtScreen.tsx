@@ -24,6 +24,10 @@ import { useEffect, useState } from "react";
 
 import { myOrders, type MyOrder } from "@/lib/app/sponsor";
 
+import { t } from "@/lib/app/i18n";
+import { fmtDate, fmtNumber } from "@/lib/app/i18n/format";
+import { useT } from "@/lib/app/i18n/react";
+
 import { Column } from "../hold";
 import { Ion } from "../ion";
 import { Skeleton } from "../ui";
@@ -32,7 +36,8 @@ import { ArtworkSheet } from "./ArtworkSheet";
 
 const money = (usdc: string) => {
   const n = Number(usdc);
-  return Number.isFinite(n) ? `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—";
+  // Paid in USDC: dollars, never converted; separators follow the language.
+  return Number.isFinite(n) ? `$${fmtNumber(n, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—";
 };
 
 /**
@@ -43,23 +48,24 @@ const money = (usdc: string) => {
 function statusOf(o: MyOrder): { label: string; tone: "good" | "caution" | "calm" } {
   switch (o.status) {
     case "paid":
-      return { label: "Yours", tone: "good" };
+      return { label: t("sponsor.bought.status.paid"), tone: "good" };
     case "awaiting_payment":
-      return { label: "Not paid yet", tone: "caution" };
+      return { label: t("sponsor.bought.status.notPaidYet"), tone: "caution" };
     case "quoted":
-      return { label: "Not paid yet", tone: "caution" };
+      return { label: t("sponsor.bought.status.notPaidYet"), tone: "caution" };
     case "outbid":
-      return { label: "Taken over — you were repaid", tone: "calm" };
+      return { label: t("sponsor.bought.status.outbid"), tone: "calm" };
     case "paid_duplicate":
-      return { label: "Paid twice — we are on it", tone: "caution" };
+      return { label: t("sponsor.bought.status.paidDuplicate"), tone: "caution" };
     case "expired":
-      return { label: "The hold ran out", tone: "calm" };
+      return { label: t("sponsor.bought.status.expired"), tone: "calm" };
     default:
-      return { label: "Cancelled", tone: "calm" };
+      return { label: t("sponsor.bought.status.cancelled"), tone: "calm" };
   }
 }
 
 export function BoughtScreen() {
+  useT();
   const [orders, setOrders] = useState<MyOrder[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [sending, setSending] = useState<MyOrder | null>(null);
@@ -77,7 +83,7 @@ export function BoughtScreen() {
 
   return (
     <Column>
-      <SectionLabel>Spots you have bought</SectionLabel>
+      <SectionLabel>{t("sponsor.bought.title")}</SectionLabel>
 
       <div className="mt-3 flex flex-col gap-3">
         {orders === null && !failed ? (
@@ -91,10 +97,10 @@ export function BoughtScreen() {
           </>
         ) : null}
 
-        {failed ? <Empty icon="alert-circle-outline" title="Could not load your spots" body="Reload the page to try again." /> : null}
+        {failed ? <Empty icon="alert-circle-outline" title={t("sponsor.bought.loadFailed.title")} body={t("sponsor.bought.loadFailed.body")} /> : null}
 
         {orders?.length === 0 ? (
-          <Empty icon="megaphone-outline" title="No spots yet" body="Find one on the board and it lands here." />
+          <Empty icon="megaphone-outline" title={t("sponsor.bought.empty.title")} body={t("sponsor.bought.empty.body")} />
         ) : null}
 
         {orders?.map((o) => {
@@ -107,7 +113,7 @@ export function BoughtScreen() {
                     {money(o.sponsorPaysUsdc)}
                   </span>
                   <span className="mt-0.5 block truncate text-[12.5px] text-white/[0.62]">
-                    {o.paidAt ? new Date(o.paidAt).toLocaleDateString(undefined, { day: "numeric", month: "short" }) : "Not paid"}
+                    {o.paidAt ? fmtDate(o.paidAt, { day: "numeric", month: "short" }) : t("sponsor.bought.notPaid")}
                     {" · "}
                     {o.chain}
                   </span>
@@ -127,7 +133,7 @@ export function BoughtScreen() {
                     className="inline-flex items-center gap-1.5 text-[12.5px] font-strong text-white/70 transition-colors hover:text-white"
                   >
                     <Ion name="open-outline" size={14} />
-                    Receipt
+                    {t("sponsor.bought.receipt")}
                   </a>
                 ) : null}
                 {o.status === "paid" ? (
@@ -166,10 +172,10 @@ export function BoughtScreen() {
  * and the creator approves the new version too.
  */
 function artworkCta(status: MyOrder["contentStatus"]): string {
-  if (status === "rejected") return "Send a new version";
-  if (status === "pending") return "Waiting for approval";
-  if (status === "approved") return "Change your artwork";
-  return "Send your artwork";
+  if (status === "rejected") return t("sponsor.bought.cta.rejected");
+  if (status === "pending") return t("sponsor.bought.cta.pending");
+  if (status === "approved") return t("sponsor.bought.cta.approved");
+  return t("sponsor.bought.cta.none");
 }
 
 /**
@@ -182,8 +188,8 @@ function artworkCta(status: MyOrder["contentStatus"]): string {
  */
 function contentTag(o: MyOrder): { label: string; tone: "good" | "caution" | "calm" } | null {
   if (o.status !== "paid") return null;
-  if (o.contentStatus === "approved") return { label: "On the board", tone: "good" };
-  if (o.contentStatus === "pending") return { label: "Artwork sent", tone: "calm" };
-  if (o.contentStatus === "rejected") return { label: "Change asked for", tone: "caution" };
-  return { label: "No artwork yet", tone: "caution" };
+  if (o.contentStatus === "approved") return { label: t("sponsor.bought.content.approved"), tone: "good" };
+  if (o.contentStatus === "pending") return { label: t("sponsor.bought.content.pending"), tone: "calm" };
+  if (o.contentStatus === "rejected") return { label: t("sponsor.bought.content.rejected"), tone: "caution" };
+  return { label: t("sponsor.bought.content.none"), tone: "caution" };
 }

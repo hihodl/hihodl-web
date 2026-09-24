@@ -1,5 +1,6 @@
 import { FALLBACK_LABEL, FALLBACK_TEXT, SESSION_FALLBACK_TEXT, isSessionSpace } from "@/lib/ad-space/format";
 import type { Space } from "@/lib/ad-space/types";
+import { t } from "@/lib/app/i18n";
 
 import { card, eyebrow } from "./ui";
 
@@ -25,7 +26,7 @@ export function IfItDoesNotHappen({ space }: { space: Space }) {
   return (
     <section className={`${card} flex flex-col gap-4 p-5 md:p-6`} aria-labelledby="if-it-does-not-happen">
       <h3 id="if-it-does-not-happen" className={`${eyebrow} text-sp-ink/80`}>
-        {session ? <>If the session can&rsquo;t happen</> : <>If it doesn&rsquo;t happen</>}
+        {session ? t("sponsor.fallback.titleSession") : t("sponsor.fallback.title")}
       </h3>
       <div>
         <p className="break-words text-body text-sp-ink [overflow-wrap:anywhere]">{label}</p>

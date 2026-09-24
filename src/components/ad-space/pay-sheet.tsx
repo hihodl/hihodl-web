@@ -13,6 +13,8 @@ import {
   watchEvmWallets,
   watchSolanaWallets,
 } from "@/lib/ad-space/wallets";
+import { fmtPercent } from "@/lib/app/i18n/format";
+import { useT } from "@/lib/app/i18n/react";
 
 import { Spinner } from "./checkout-parts";
 
@@ -60,7 +62,7 @@ export function dollars(usdc: string | null | undefined): string | null {
 
 /** 500 bps to "5%", 250 to "2.5%". */
 export function feePercent(bps: number): string {
-  return `${Number((bps / 100).toFixed(2))}%`;
+  return fmtPercent(Number((bps / 10_000).toFixed(4)));
 }
 
 // Pure, so server-rendered sections can say the same networks: lib/ad-space/format.
@@ -84,6 +86,7 @@ export function PaySheet({
   /** The one action and the line under it, pinned to the bottom like the app's CTA bloc. */
   footer?: ReactNode;
 }) {
+  const t = useT();
   /* Escape closes, and the page behind does not scroll. */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -106,7 +109,7 @@ export function PaySheet({
       aria-modal="true"
       aria-labelledby={labelledBy}
     >
-      <button type="button" aria-label="Close" className="absolute inset-0 bg-[#03080B]/75 backdrop-blur-md" onClick={onClose} />
+      <button type="button" aria-label={t("common.close")} className="absolute inset-0 bg-[#03080B]/75 backdrop-blur-md" onClick={onClose} />
       <div
         className="relative flex h-[calc(100dvh-10px)] w-full flex-col overflow-hidden rounded-t-[28px] border-t border-sp-ink/[0.16] shadow-[0_-12px_48px_rgba(0,0,0,0.45)] sm:m-6 sm:h-auto sm:max-h-[min(92dvh,880px)] sm:min-h-[min(640px,92dvh)] sm:w-[560px] sm:rounded-[28px] sm:border sm:border-sp-ink/[0.10] sm:shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
         style={{ background: SHEET_FALL }}
@@ -123,7 +126,7 @@ export function PaySheet({
             type="button"
             onClick={onClose}
             className="-mr-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-[20px] bg-sp-ink/[0.06] text-white/85 transition-colors duration-180 hover:bg-sp-ink/[0.12] hover:text-sp-ink"
-            aria-label="Close"
+            aria-label={t("common.close")}
           >
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
               <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
@@ -208,6 +211,7 @@ export function NetworkPill({
   onChange: (c: Chain) => void;
   disabled?: boolean;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
@@ -239,7 +243,7 @@ export function NetworkPill({
     return (
       <span className="inline-flex h-8 items-center gap-2 text-small text-white/85">
         <ChainIcon chain={chain} size={16} />
-        USDC on {CHAIN_LABEL[chain]}
+        {t("sponsor.sheet.usdcOn", { chain: CHAIN_LABEL[chain] })}
       </span>
     );
   }
@@ -251,7 +255,7 @@ export function NetworkPill({
         type="button"
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-label={`Network: ${CHAIN_LABEL[chain]}. Change`}
+        aria-label={t("sponsor.sheet.networkChange", { chain: CHAIN_LABEL[chain] })}
         disabled={disabled}
         onClick={() => setOpen((o) => !o)}
         className="inline-flex h-9 items-center gap-2 rounded-[18px] bg-sp-ink/[0.08] pl-2 pr-3 text-small font-medium text-sp-ink transition-colors duration-180 hover:bg-sp-ink/[0.14] disabled:opacity-50"
@@ -266,7 +270,7 @@ export function NetworkPill({
         <ul
           ref={menu}
           role="listbox"
-          aria-label="Network"
+          aria-label={t("common.network")}
           className="fixed z-[80] overflow-y-auto rounded-[18px] bg-[#1A3946] p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.5)]"
           style={{ left: place.left, top: place.top, width: place.width, maxHeight: place.maxHeight }}
         >
@@ -285,7 +289,7 @@ export function NetworkPill({
                 }`}
               >
                 <ChainIcon chain={c} size={22} />
-                <span className="flex-1">USDC on {CHAIN_LABEL[c]}</span>
+                <span className="flex-1">{t("sponsor.sheet.usdcOn", { chain: CHAIN_LABEL[c] })}</span>
                 {c === chain && <Tick className="text-sp-amber" />}
               </button>
             </li>
@@ -348,7 +352,7 @@ function useMenuPlace(
 
 /** The one row that says what leaves the wallet. */
 export function TotalRow({
-  label = "Total",
+  label,
   totalUsdc,
   note,
   info,
@@ -359,10 +363,11 @@ export function TotalRow({
   note?: string | null;
   info?: ReactNode;
 }) {
+  const t = useT();
   return (
     <div className={`${sheetCard} flex items-center justify-between gap-3 px-4 py-3.5`}>
       <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-        <span className="text-small text-sp-ink">{label}</span>
+        <span className="text-small text-sp-ink">{label ?? t("common.total")}</span>
         {note && <span className="text-tiny text-white/85">({note})</span>}
         {info}
       </span>
@@ -454,10 +459,11 @@ export function MethodTabs<T extends string>({
   onChange: (v: T) => void;
   disabled?: boolean;
 }) {
+  const t = useT();
   return (
     <div
       role="tablist"
-      aria-label="How to pay"
+      aria-label={t("sponsor.sheet.howToPay")}
       className="grid gap-1 rounded-[18px] bg-black/25 p-1"
       style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
     >
@@ -538,8 +544,9 @@ export function WalletRows({
   /** The last row: another way in (a phone wallet, another browser). */
   extra?: ReactNode;
 }) {
+  const t = useT();
   return (
-    <div role="radiogroup" aria-label="Wallet" className="flex flex-col gap-2">
+    <div role="radiogroup" aria-label={t("sponsor.sheet.wallet")} className="flex flex-col gap-2">
       {wallets.map((w) => {
         const on = w.id === selected;
         return (
@@ -556,7 +563,7 @@ export function WalletRows({
           >
             <WalletIcon wallet={w} size={30} />
             <span className="min-w-0 flex-1 truncate text-body font-medium text-sp-ink">{w.name}</span>
-            <span className="shrink-0 text-tiny text-white/85">Detected</span>
+            <span className="shrink-0 text-tiny text-white/85">{t("sponsor.sheet.detected")}</span>
             <span
               className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-[10px] border-2 transition-colors duration-180 ${
                 on ? "border-amber" : "border-sp-ink/25"
@@ -642,7 +649,8 @@ export function SheetNotice({ children }: { children: ReactNode }) {
 }
 
 /** Copy a value, saying "Copied" for two seconds. */
-export function CopyButton({ value, label = "Copy", className = ctaGlass }: { value: string; label?: string; className?: string }) {
+export function CopyButton({ value, label, className = ctaGlass }: { value: string; label?: string; className?: string }) {
+  const t = useT();
   const [copied, setCopied] = useState(false);
   return (
     <button
@@ -658,7 +666,7 @@ export function CopyButton({ value, label = "Copy", className = ctaGlass }: { va
           .catch(() => setCopied(false));
       }}
     >
-      {copied ? "Copied" : label}
+      {copied ? t("common.copied") : (label ?? t("common.copy"))}
     </button>
   );
 }
