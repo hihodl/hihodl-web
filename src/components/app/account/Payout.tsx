@@ -27,6 +27,7 @@ import { usePayout, useRefresh } from "@/lib/app/spaces-data";
 
 import { CopyButton, shortAddress } from "../front/kit";
 import { BackHeader, Column, HoldCard, MenuRow, Notice } from "../hold";
+import { StoreButtons } from "../main/products";
 import { MoreChainsLine } from "../MoreChains";
 import { Card, Tag } from "../spaces/kit";
 import { Skeleton } from "../ui";
@@ -64,9 +65,7 @@ function linesOf(view: PayoutAddressView, w: ReturnType<typeof useHoldWallet>): 
               tone: "neutral",
               chip: "One step left",
             }
-          : w.canCreate
-            ? { title: "Make your HOLD wallet", address: null, text: "Sponsors pay your HOLD wallet. Make it in Wallet: a passkey and a minute.", tone: "neutral", chip: "No wallet yet" }
-            : { title: "No wallet yet", address: null, text: "Make your wallet in the HOLD app, or use another wallet.", tone: "neutral", chip: "No wallet yet" };
+          : { title: "No wallet yet", address: null, text: "Get the HOLD app: it makes your wallet, and sponsors pay it from then on. Or use another wallet.", tone: "neutral", chip: "No wallet yet" };
 
   const e = view.evm;
   // Read-only here: Base and Polygon are set up in the HOLD app.
@@ -124,6 +123,7 @@ export function PayoutScreen({ onBack, onOther, walletHref }: { onBack: () => vo
               <p className="text-[12.5px] leading-[17px] text-white/55">{l.text}</p>
             </Card>
           ))}
+          {w.kind === "none" && !lines.solana.address ? <StoreButtons /> : null}
           {lines.evm ? null : <MoreChainsLine />}
           <HoldCard className="mt-1">
             {w.walletPage ? (

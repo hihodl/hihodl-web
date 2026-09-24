@@ -1,12 +1,12 @@
 "use client";
 
 /**
- * Paying from a wallet made in the app, with no phone linked: one sheet,
- * wherever the payment starts.
+ * Paying with no phone linked: one sheet, wherever the payment starts.
  *
- * Such a wallet's keys are on the Android phone, so the web cannot pay from it
- * at all until that phone is linked (`canPayFromWeb` link_first on
- * GET /wallet-backup/status; documentation/one-wallet-every-device.md). Every
+ * The web does not pay by itself (Alex, 2026-09-24): the linked phone, an
+ * iPhone or an Android phone, approves and signs every payment started here.
+ * Until one is linked (`canPayFromWeb` link_first on GET /wallet-backup/status;
+ * documentation/one-wallet-every-device.md) nothing can be paid here. Every
  * way into a payment (Home's Send, the Wallet's Send, Payments' Send and "Pay"
  * on a request, a Spaces spot, a Stay's checkout) asks through this sheet
  * instead of an inline card or a button that does nothing:
@@ -15,12 +15,12 @@
  *
  * "Link your phone" is a full page load to /wallet/link (the link screen
  * carries the wallet pages' strict CSP) with `?next=` the page the payment was
- * started from, so the person comes back to it and carries on; on an iPhone or
- * iPad with `&show=android`, since only the Android phone approves this
- * wallet and it scans the code off this screen.
+ * started from, so the person comes back to it and carries on. On a phone the
+ * link screen opens the HOLD app on that same phone; on a computer it shows a
+ * code to scan with HOLD on the phone.
  *
- * A web wallet (web_passkey) or a phone that approves already (app) is never
- * blocked: `blocked` is false and nothing is drawn. Neither while the status
+ * A phone that approves already (app) is never blocked: `blocked` is false
+ * and nothing is drawn. Neither while the status
  * is still loading or failed to load: the payment screen then answers for
  * itself, as it did before.
  *
@@ -55,31 +55,23 @@ export function hereNow(): string | undefined {
   return `${window.location.pathname}${window.location.search}`;
 }
 
-/**
- * The link screen, coming back to `next`. On an iPhone or iPad the screen opens
- * on its QR (`show=android`), for the Android app to scan.
- */
-export function linkToPay(productHref: (p?: string) => string, next: string | undefined, device: GateDevice): string {
-  const base = linkHref(productHref, next ?? productHref("/"));
-  return device === "iPhone" || device === "iPad" ? `${base}&show=android` : base;
+/** The link screen, coming back to `next`. */
+export function linkToPay(productHref: (p?: string) => string, next: string | undefined): string {
+  return linkHref(productHref, next ?? productHref("/"));
 }
 
 /** The words, by device. */
 export function payWords(device: GateDevice): { title: string; body: string } {
   const title = "Link your phone to pay from here";
-  if (device === "android") {
-    return { title, body: "Your wallet was made in the HOLD app. Link this phone once, and the app approves every payment you start here. Until then, nothing can be paid from here." };
-  }
-  if (device === "iPhone" || device === "iPad") {
-    // Linking this iPhone adds no approver: the keys are on the Android phone.
+  if (device === "computer") {
     return {
       title,
-      body: "Your wallet was made in the HOLD app on your Android phone, and its keys stay there. Show a code here, scan it with HOLD on that phone, and you can pay from here. Until then, nothing can be paid from here.",
+      body: "Your wallet's keys stay on your phone. Link it once, and the HOLD app approves and signs every payment you start here. Until then, nothing can be paid from here.",
     };
   }
   return {
     title,
-    body: "Your wallet was made in the HOLD app, and its keys stay on your phone. Link the phone once, and it approves and signs every payment you start here. Until then, nothing can be paid from here.",
+    body: "Link this phone once, and the HOLD app approves and signs every payment you start here. Until then, nothing can be paid from here.",
   };
 }
 
@@ -173,6 +165,6 @@ export function useLinkGate(): LinkGate {
     blocked,
     ask,
     guard,
-    sheet: <LinkToPaySheet open={next !== null} device={device} href={linkToPay(productHref, next ?? undefined, device)} onClose={close} />,
+    sheet: <LinkToPaySheet open={next !== null} device={device} href={linkToPay(productHref, next ?? undefined)} onClose={close} />,
   };
 }

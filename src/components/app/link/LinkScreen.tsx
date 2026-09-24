@@ -8,7 +8,7 @@
  * anybody with nothing left to onboard), no gate (a wallet made in the app
  * links its phone here too). documentation/one-wallet-every-device.md, rule 5.
  *
- * It lives under /wallet for that page's strict CSP: on Android with a web
+ * It lives under /wallet for that page's strict CSP: with an older web
  * wallet, this screen opens the wallet's secret with the passkey and seals it
  * to the phone. So the way in and the way out are full page loads.
  *

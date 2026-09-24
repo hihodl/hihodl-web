@@ -1,9 +1,9 @@
 /**
- * The web wallet's three operations, each one ordered so that a failure at
- * any step leaves nothing half-written:
+ * The web wallet's operations, each one ordered so that a failure at any
+ * step leaves nothing half-written. The web no longer makes a wallet (Alex,
+ * 2026-09-24: it is made in the HOLD app, and `PUT /wallet-backup` answers
+ * 410 WEB_WALLETS_CLOSED); what is left opens one made here before:
  *
- *   sealNewWallet   make the mnemonic, prove the whole chain opens in memory,
- *                   THEN upload blob + first wrapping in one call (CAS null).
  *   openWallet      PRF → userSecret → K → mnemonic → Solana key.
  *   wrapForPasskey  the same userSecret under one more passkey; the blob is
  *                   never touched.
@@ -20,10 +20,7 @@ import {
   decryptSeedV2,
   deriveEvmKey,
   deriveSolanaKey,
-  encryptSeedV2,
   fromBase64,
-  generateMnemonic,
-  newUserSecret,
   toBase64,
   unwrapUserSecret,
   wipe,
@@ -35,12 +32,10 @@ import {
 } from "./core";
 import {
   addressChallenge,
-  createWalletBackup,
   evmChallenge,
   getPepper,
   registerAddress,
   registerEvm,
-  WalletApiError,
   type EvmChain,
   type WalletBackup,
 } from "./api";
@@ -56,61 +51,6 @@ export class WalletFlowError extends Error {
 
 async function pepperBytes(): Promise<Uint8Array> {
   return fromBase64(await getPepper());
-}
-
-/**
- * Create the wallet. The caller has already checked the account has no
- * wallet of any kind; the server checks again and refuses to overwrite.
- *
- * The self-check before the upload is the point: the blob is stored only
- * after this tab has opened it with the passkey's own PRF output, so a
- * wallet we could not open is never the one we save.
- */
-export async function sealNewWallet(args: {
-  uid: string;
-  credentialId: string;
-  prf: Uint8Array;
-  label: string | null;
-}): Promise<SolanaKey & { evm: EvmKey | null }> {
-  const mnemonic = generateMnemonic();
-  const userSecret = newUserSecret();
-  const pepper = await pepperBytes();
-  let check: Uint8Array | null = null;
-  try {
-    const blob = await encryptSeedV2({ uid: args.uid, pepper, userSecret, mnemonic });
-    const wrapped = await wrapUserSecret(args.prf, userSecret);
-
-    check = await unwrapUserSecret(args.prf, wrapped);
-    const reopened = await decryptSeedV2({ uid: args.uid, pepper, userSecret: check, blob });
-    if (reopened !== mnemonic) throw new WalletFlowError("self_check_failed");
-
-    const key = await deriveSolanaKey(mnemonic);
-    // The EVM side, for registerEvmSide right after: derived now, while the
-    // words are here, because nothing keeps them. Null if it fails: the
-    // wallet is still made, and the next unlock registers it.
-    const evm = await deriveEvmKey(mnemonic).catch(() => null);
-
-    // The same blob sent again is an idempotent success, so a dropped
-    // response is retried rather than reported as a failure.
-    let lastError: unknown = null;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        await createWalletBackup({
-          cipher_blob: blob,
-          wrapping: { credential_id: normalizeCredentialId(args.credentialId), wrapped, label: args.label },
-        });
-        return { ...key, evm };
-      } catch (e) {
-        lastError = e;
-        if (!(e instanceof WalletApiError) || (e.status !== 0 && e.status < 500)) break;
-        await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
-      }
-    }
-    wipe(key.seed, evm?.privateKey);
-    throw lastError instanceof WalletApiError ? lastError : new WalletFlowError("upload_failed", lastError);
-  } finally {
-    wipe(userSecret, pepper, check);
-  }
 }
 
 function wrappingFor(backup: WalletBackup, credentialId: string): WrappedSecret {

@@ -64,7 +64,7 @@ import { useProductHref } from "../base";
 import { BackHeader, Column } from "../hold";
 import { Ion, type IonName } from "../ion";
 import { useLinkGate } from "../link/LinkGate";
-import { useShell, useShellPrefs } from "../Shell";
+import { useShellPrefs } from "../Shell";
 import { Skeleton } from "../ui";
 import { cardClass } from "../wallet/app-kit";
 import { Conversation, SafetyMenu } from "./Chat";
@@ -428,12 +428,9 @@ function EmptyHistory() {
  * PAYING FROM HERE IS NOT THE APP'S ANY MORE
  *
  * It was, and the screen said so: "Paying X again happens in the HOLD app."
- * That sentence was written when a signature meant the phone. It is now wrong
- * for most people and dead for the rest — the web wallet signs with its
- * passkey, and a withdrawal is approved by a passkey bound to it unless an
- * Android phone is linked, in which case the app approves on a second device
- * (chooseChannel, server-side). Send is a screen this product already has, in
- * both channels: components/app/wallet/Withdraw.tsx.
+ * A payment started here is approved and signed on the linked phone, iPhone
+ * or Android, in the HOLD app (2026-09-24: the web never pays by itself).
+ * Send is a screen this product already has: components/app/wallet/Withdraw.tsx.
  *
  * REQUEST IS THE OTHER HALF, AND IT WAS SIMPLY MISSING
  *
@@ -465,7 +462,6 @@ function ThreadView({
 }) {
   const productHref = useProductHref();
   const requests = usePaymentRequests();
-  const { session } = useShell();
   const [asking, setAsking] = useState(false);
   const spots = useSpotsBoughtFrom(row?.peerId ?? null);
   // A wallet made in the app with no phone linked: Send and Pay open the sheet (link/LinkGate).
@@ -588,7 +584,7 @@ function ThreadView({
           </button>
         ) : null}
         <p className="min-w-0 flex-1 text-[12px] leading-[17px] text-white/60">
-          Approved with your passkey, or on your phone if you have linked one.
+          Approved and signed on your linked phone, in the HOLD app.
         </p>
       </div>
 
@@ -596,7 +592,6 @@ function ThreadView({
 
       {booking && shop ? (
         <SponsorFlow
-          uid={session.user.id}
           handle={shop.handle}
           creatorName={row.name}
           onClose={() => setBooking(false)}

@@ -52,6 +52,8 @@ for (const s of ["rejected", "expired", "cancelled"] as const) {
 const codes = [
   "VALIDATION_ERROR",
   "NO_PHONE_LINKED",
+  "LINK_YOUR_PHONE_FIRST",
+  "APPROVE_ON_YOUR_PHONE",
   "NO_WALLET",
   "NOT_FOUND",
   "ALREADY_PAID",

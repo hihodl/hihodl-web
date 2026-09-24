@@ -39,15 +39,14 @@
 import { useEffect, useRef, useState } from "react";
 
 import type { CreatorGroup, CreatorPage, Position, SpaceCard, Space } from "@/lib/ad-space/types";
-import { approveSpot, cancelSpotApproval, prepareSpot, type PayPhase, type PointsFeeShare } from "@/lib/app/sponsor";
+import { cancelSpotApproval, payForSpot, type PayPhase, type PointsFeeShare } from "@/lib/app/sponsor";
 import { WalletApiError } from "@/lib/wallet/api";
 import { claimableSpots, creatorStorefront, listingSpots, spotPrice } from "@/lib/app/storefront";
 
-import { useProductHref } from "../base";
 import { Ion } from "../ion";
-import { playHref, usePhone } from "../link/in-app";
 import { hereNow, useLinkGate } from "../link/LinkGate";
 import { PhoneApproval } from "../link/PhoneApproval";
+import { GetTheAppCard } from "../main/GetTheApp";
 
 type Step =
   | { at: "events" }
@@ -58,13 +57,11 @@ type Step =
 const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export function SponsorFlow({
-  uid,
   handle,
   creatorName,
   onClose,
   onBought,
 }: {
-  uid: string;
   handle: string;
   creatorName: string;
   onClose: () => void;
@@ -120,7 +117,7 @@ export function SponsorFlow({
       ) : null}
 
       {step.at === "pay" ? (
-        <Pay uid={uid} space={step.space} spot={step.spot} creatorName={creatorName} onBought={onBought} onClose={onClose} />
+        <Pay space={step.space} spot={step.spot} creatorName={creatorName} onBought={onBought} onClose={onClose} />
       ) : null}
     </Sheet>
   );
@@ -135,14 +132,12 @@ export function SponsorFlow({
  * asking them again would be a screen that exists only to be passed through.
  */
 export function BuyFromListing({
-  uid,
   spaceId,
   listingTitle,
   creatorName,
   onClose,
   onBought,
 }: {
-  uid: string;
   spaceId: string;
   listingTitle: string;
   creatorName: string;
@@ -158,7 +153,7 @@ export function BuyFromListing({
       onClose={onClose}
     >
       {picked ? (
-        <Pay uid={uid} space={picked.space} spot={picked.spot} creatorName={creatorName} onBought={onBought} onClose={onClose} />
+        <Pay space={picked.space} spot={picked.spot} creatorName={creatorName} onBought={onBought} onClose={onClose} />
       ) : (
         <Spots spaceId={spaceId} onPick={(space, spot) => setPicked({ space, spot })} />
       )}
@@ -360,14 +355,12 @@ function Spots({ spaceId, onPick }: { spaceId: string; onPick: (space: Space, sp
 const SHARES: PointsFeeShare[] = [0, 25, 50, 75, 100];
 
 function Pay({
-  uid,
   space,
   spot,
   creatorName,
   onBought,
   onClose,
 }: {
-  uid: string;
   space: Space;
   spot: Position;
   creatorName: string;
@@ -379,12 +372,9 @@ function Pay({
   const price = spotPrice(spot);
   const creatorGets = Number(spot.creatorReceivesUsdc ?? "");
 
-  const productHref = useProductHref();
-  const phone = usePhone();
-
   // A wallet made in the app with no phone linked: Pay opens the sheet every
   // payment opens (link/LinkGate), up front when the status already says so,
-  // and whenever the flow finds out on the way (prepareSpot → link-first).
+  // and whenever the flow finds out on the way (payForSpot → link-first).
   const gate = useLinkGate();
   const { ask } = gate;
   useEffect(() => {
@@ -417,22 +407,16 @@ function Pay({
     if (end.kind === "bought" || end.kind === "in-flight") onBought();
   };
 
-  // Two taps with a passkey: Pay holds the spot and gets everything ready;
-  // the passkey is asked on the second, inside its click, so Safari lets it
-  // start. With a linked phone, Pay holds the spot and asks the phone.
+  // Pay holds the spot and asks the linked phone, which approves and signs.
   const buy = () => {
     if (gate.blocked) return ask(hereNow());
     setCancel({ busy: false, notice: null });
-    void prepareSpot({
+    void payForSpot({
       positionId: spot.id,
       pointsFeeShare: share,
       onPhase: setPhase,
       signal: stop.current.signal,
     }).then(landed);
-  };
-  const approve = () => {
-    if (phase.kind !== "ready") return;
-    void approveSpot({ uid, prepared: phase.prepared, onPhase: setPhase, signal: stop.current.signal }).then(landed);
   };
   /** The server's cancel: the wait then ends on "cancelled" at the next poll. */
   const cancelOnPhone = async () => {
@@ -494,32 +478,11 @@ function Pay({
     return <PhoneApproval approval={phase.approval} cancelling={cancel.busy} notice={cancel.notice} onCancel={() => void cancelOnPhone()} />;
   }
 
-  // A wallet made in the app, no phone linked: link it once and it approves
-  // every payment started here. A full load: the link screen's strict CSP.
+  // No wallet on this account: it is made in the HOLD app, never here.
   if (phase.kind === "no-wallet") {
-    const canMake = phase.canMake;
-    const title = canMake ? "Make your wallet first" : "Get HOLD to pay";
-    const body = canMake
-      ? "Paying from HOLD needs a wallet on this account. Make one on the Wallet page with your passkey, then come back to this spot."
-      : "Paying from HOLD needs a wallet on this account, and the HOLD app on Google Play makes one with every chain.";
-    const href = canMake ? productHref("/wallet") : playHref(phone);
-    const label = canMake ? "Make your wallet" : "Get HOLD on Google Play";
     return (
       <div className="flex flex-col gap-3">
-        <div className="rounded-[16px] border border-white/10 bg-white/[0.05] p-3.5">
-          <p className="text-[15px] font-strong text-white">{title}</p>
-          <p className="mt-1 text-[13px] leading-[19px] text-white/70">{body}</p>
-        </div>
-        {href ? (
-          <a
-            href={href}
-            target={!canMake ? "_blank" : undefined}
-            rel="noopener"
-            className="mt-1 inline-flex h-12 items-center justify-center rounded-[14px] bg-white/10 text-[15px] font-strong text-white transition-colors hover:bg-white/[0.16]"
-          >
-            {label}
-          </a>
-        ) : null}
+        <GetTheAppCard body="Paying for a spot needs a HOLD wallet, and it is made in the HOLD app on your iPhone or Android phone. Sign in there with this account, link the phone, and pay from here." />
         <button type="button" onClick={() => setPhase({ kind: "idle" })} className="self-center rounded-[10px] px-4 py-2 text-[13px] font-semibold text-white/60 hover:text-white/85">
           Back
         </button>
@@ -527,7 +490,7 @@ function Pay({
     );
   }
 
-  const working = phase.kind !== "idle" && phase.kind !== "stopped" && phase.kind !== "ready";
+  const working = phase.kind !== "idle" && phase.kind !== "stopped";
 
   return (
     <div className="flex flex-col gap-3">
@@ -567,7 +530,7 @@ function Pay({
               <button
                 key={s}
                 type="button"
-                disabled={working || phase.kind === "ready"}
+                disabled={working}
                 aria-pressed={share === s}
                 onClick={() => setShare(s)}
                 className={`inline-flex h-9 shrink-0 items-center rounded-[10px] px-3.5 text-[12.5px] tabular-nums transition-colors disabled:opacity-50 ${
@@ -589,19 +552,15 @@ function Pay({
 
       <button
         type="button"
-        onClick={phase.kind === "ready" ? approve : buy}
+        onClick={buy}
         disabled={working || price === null}
         className="mt-1 inline-flex h-12 items-center justify-center gap-2 rounded-[14px] bg-amber text-[15px] font-bold text-text-on-amber transition-colors hover:bg-amber-glow disabled:bg-white/[0.12] disabled:text-white/50"
       >
-        {phase.kind === "ready" ? <Ion name="finger-print" size={17} /> : null}
-        {working ? working_label(phase) : price === null ? "Not for sale at a price" : phase.kind === "ready" ? "Approve with passkey" : phase.kind === "stopped" ? "Try again" : `Pay ${money(price)}`}
+        {working ? working_label(phase) : price === null ? "Not for sale at a price" : phase.kind === "stopped" ? "Try again" : `Pay ${money(price)}`}
       </button>
-      {phase.kind === "ready" ? (
-        <p className="px-1 text-[11.5px] leading-[16px] text-white/60">The spot is held for you. Your passkey approves exactly this payment and signs it.</p>
-      ) : null}
 
       <p className="px-1 text-[11.5px] leading-[16px] text-white/50">
-        Paid in USDC from your HOLD wallet, approved with your passkey or on your linked phone. It goes straight to{" "}
+        Paid in USDC from your HOLD wallet, approved on your linked phone. It goes straight to{" "}
         {creatorName} — we never hold it.
       </p>
     </div>
@@ -615,10 +574,6 @@ function working_label(p: PayPhase): string {
       return "Holding the spot…";
     case "asking-phone":
       return "Asking your phone…";
-    case "approving":
-      return "Waiting for your passkey…";
-    case "signing":
-      return "Signing…";
     case "sending":
       return "Sending…";
     case "confirming":

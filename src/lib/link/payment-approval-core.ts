@@ -118,9 +118,12 @@ export function describeApprovalRefusal(code: string, kind: PaymentKind): string
     case "VALIDATION_ERROR":
       return `We couldn't ask your phone about this ${thing}. Nothing has been charged. Try again.`;
     case "NO_PHONE_LINKED":
-      return "Your phone is no longer linked. Nothing has been charged.";
+    case "LINK_YOUR_PHONE_FIRST":
+      return "Link your phone to pay from here. Nothing has been charged.";
+    case "APPROVE_ON_YOUR_PHONE":
+      return "Your phone is linked: approve it in the HOLD app. Nothing has been charged.";
     case "NO_WALLET":
-      return "This account has no wallet to pay from yet. Nothing has been charged.";
+      return "This account has no wallet to pay from yet. Get the HOLD app to make one. Nothing has been charged.";
     case "NOT_FOUND":
     case "not_found":
       return kind === "spot"

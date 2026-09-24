@@ -7,15 +7,11 @@
  * signed in with no linked phone was never asked again
  * (documentation/one-wallet-every-device.md, rules 4 and 5).
  *
- * WHEN. The person has a wallet (web or app kind, lib/app/hold-wallet) and:
+ * WHEN. The person has a wallet (lib/app/hold-wallet) and:
  *
- *   link_first   a wallet made in the app with no Android phone. The web holds
- *                no key for it, so it cannot pay from here at all: the strong
+ *   link_first   no phone linked (iPhone or Android). The web does not pay by
+ *                itself, so nothing can be paid from here at all: the strong
  *                card (amber), and a one-time sheet the first time Home opens.
- *   web_passkey  a web wallet, and GET /device-link/devices lists no active
- *                phone: the calm card. On an iPhone it shows once, softer: the
- *                passkey already approves there, and linking only records the
- *                device.
  *   app          a phone approves already: nothing.
  *
  * Nothing is drawn while any read is loading, or when one failed: a nudge
@@ -25,23 +21,22 @@
  * icon tile, title, subtitle, chevron); the sheet copies its
  * AccountProtectionSheet (badge, title, subtitle, amber CTA, "Not now").
  * The action is the link screen, as a full page load (it carries the wallet
- * pages' strict CSP), coming back to Home. On an Android phone the card also
- * leads to the app itself (an intent that falls back to Google Play, in a new
- * tab, as LinkPhone does). "Later" hides the card for seven days in this
- * browser.
+ * pages' strict CSP), coming back to Home, where a phone opens the HOLD app
+ * on itself and a computer shows a code to scan. "Later" hides the card for
+ * seven days in this browser.
  */
 
 import { useCallback, useEffect, useState } from "react";
 
 import { useHoldWallet } from "@/lib/app/hold-wallet";
-import { useLinkedPhones, useWalletStatus } from "@/lib/app/spaces-data";
+import { useWalletStatus } from "@/lib/app/spaces-data";
 import { thisDevice, type AppleDevice } from "@/lib/link/ua";
 import { payerOf } from "@/lib/wallet/api";
 
 import { useProductHref } from "../base";
 import { Ion } from "../ion";
 import { LinkToPaySheet } from "../link/LinkGate";
-import { linkHref, playHref, usePhone } from "../link/in-app";
+import { linkHref, usePhone } from "../link/in-app";
 import { useShell } from "../Shell";
 
 const WEEK = 7 * 24 * 60 * 60 * 1000;
@@ -49,7 +44,6 @@ const WEEK = 7 * 24 * 60 * 60 * 1000;
 /* ── This browser's memory of what was asked ─────────────────────── */
 
 const laterKey = (uid: string) => `hold.linkNudge.later.${uid}`;
-const seenKey = (uid: string) => `hold.linkNudge.iphoneSeen.${uid}`;
 const sheetKey = (uid: string) => `hold.linkNudge.sheet.${uid}`;
 
 function readItem(key: string): string | null {
@@ -71,15 +65,13 @@ function writeItem(key: string, value: string): void {
 interface Memory {
   /** "Later" was tapped less than a week ago. */
   snoozed: boolean;
-  /** The iPhone's one showing has happened. */
-  iphoneSeen: boolean;
   /** The link_first sheet has been shown. */
   sheetSeen: boolean;
 }
 
 /* ── What to ask, if anything ─────────────────────────────────────── */
 
-export type LinkNudgeCase = "pay" | "approve";
+export type LinkNudgeCase = "pay";
 
 export interface LinkNudge {
   /** null: ask nothing (loading, a read failed, a phone approves already, or put off). */
@@ -100,7 +92,6 @@ export function useLinkNudge(): LinkNudge {
   const productHref = useProductHref();
   const wallet = useHoldWallet();
   const status = useWalletStatus();
-  const phones = useLinkedPhones(wallet.kind !== "none" && !wallet.loading);
   const phone = usePhone();
 
   const [memory, setMemory] = useState<Memory | null>(null);
@@ -112,7 +103,6 @@ export function useLinkNudge(): LinkNudge {
     const at = Number(readItem(laterKey(uid)));
     setMemory({
       snoozed: Number.isFinite(at) && at > 0 && Date.now() - at < WEEK,
-      iphoneSeen: readItem(seenKey(uid)) === "1",
       sheetSeen: readItem(sheetKey(uid)) === "1",
     });
     setApple(thisDevice().apple);
@@ -123,28 +113,16 @@ export function useLinkNudge(): LinkNudge {
     !wallet.loading &&
     status.data !== undefined &&
     !status.error &&
-    phones.data !== undefined &&
-    !phones.error &&
     phone !== undefined &&
     memory !== null;
 
   let which: LinkNudgeCase | null = null;
   if (settled) {
-    if (wallet.kind === "app" && payer === "link_first") which = "pay";
-    else if (wallet.kind === "web" && payer === "web_passkey" && phones.data!.length === 0) which = "approve";
+    if (wallet.kind !== "none" && payer === "link_first") which = "pay";
   }
 
   const device: LinkNudge["device"] = phone === "android" ? "android" : phone === "ios" ? (apple ?? "iPhone") : "computer";
-  const onApple = device === "iPhone" || device === "iPad";
-
-  // An iPhone with a web wallet is asked once: the passkey there already approves.
-  const onceOnly = which === "approve" && onApple;
-  const cardKind = which && !hidden && !memory?.snoozed && !(onceOnly && memory?.iphoneSeen) ? which : null;
-
-  // The iPhone's one showing is spent the moment it is drawn.
-  useEffect(() => {
-    if (cardKind && onceOnly) writeItem(seenKey(uid), "1");
-  }, [cardKind, onceOnly, uid]);
+  const cardKind = which && !hidden && !memory?.snoozed ? which : null;
 
   // The sheet, once, for a wallet that cannot pay from here until it links.
   useEffect(() => {
@@ -160,10 +138,7 @@ export function useLinkNudge(): LinkNudge {
     setHidden(true);
   }, [uid]);
 
-  // A wallet made in the app, seen on an iPhone or iPad: the link screen opens
-  // on its QR, for the Android app to scan off this screen.
-  const base = linkHref(productHref, productHref());
-  const href = which === "pay" && onApple ? `${base}&show=android` : base;
+  const href = linkHref(productHref, productHref());
 
   return {
     kind: cardKind,
@@ -182,55 +157,29 @@ interface Words {
   body: string;
 }
 
-function wordsFor(kind: LinkNudgeCase, device: LinkNudge["device"]): Words {
-  if (kind === "pay") {
-    if (device === "android") {
-      return {
-        title: "Link your phone to pay from here",
-        body: "Open HOLD on this phone to link it. From then on, the app approves every payment you start here.",
-      };
-    }
-    if (device === "iPhone" || device === "iPad") {
-      // Linking this iPhone adds no approver: the wallet's keys are on the
-      // Android phone, which scans the code this screen shows (?show=android).
-      return {
-        title: "Link your phone to pay from here",
-        body: "This wallet was made in the HOLD app on your Android phone. Show a code here, then open HOLD on your Android phone and scan it.",
-      };
-    }
+function wordsFor(device: LinkNudge["device"]): Words {
+  if (device === "computer") {
     return {
       title: "Link your phone to pay from here",
-      body: "This wallet was made in the HOLD app and its keys stay on your phone. Link it once and you can pay from here.",
-    };
-  }
-  if (device === "iPhone" || device === "iPad") {
-    return {
-      title: `Link this ${device}`,
-      body: `Your passkey already approves payments on this ${device}. Linking only records it as one of your devices.`,
-    };
-  }
-  if (device === "android") {
-    return {
-      title: "Approve payments on your phone",
-      body: "Get HOLD on this phone and it approves every payment you start here. Until then, your passkey does.",
+      body: "Your wallet's keys stay on your phone. Link it once and the HOLD app approves every payment you start here.",
     };
   }
   return {
-    title: "Approve payments on your phone",
-    body: "Link your Android phone and the HOLD app approves every payment you start here. Until then, your passkey does.",
+    title: "Link your phone to pay from here",
+    body: "Open HOLD on this phone to link it. From then on, the app approves every payment you start here.",
   };
 }
 
 /* ── The card ──────────────────────────────────────────────────────── */
 
 /**
- * The app's AccountProtectionBanner: amber when the web cannot pay without
- * it, calm otherwise. "Later" and, on Android, Google Play sit under the text.
+ * The app's AccountProtectionBanner, amber: the web cannot pay without it.
+ * "Later" sits under the text.
  */
 export function LinkPhoneCard({ nudge }: { nudge: LinkNudge }) {
   if (!nudge.kind) return null;
   const strong = nudge.kind === "pay";
-  const w = wordsFor(nudge.kind, nudge.device);
+  const w = wordsFor(nudge.device);
 
   const face = (
     <>
@@ -261,17 +210,6 @@ export function LinkPhoneCard({ nudge }: { nudge: LinkNudge }) {
         {face}
       </a>
       <div className="mt-2.5 flex flex-wrap items-center gap-2 pl-14">
-        {nudge.device === "android" ? (
-          // A new tab: the intent opens HOLD when it is installed and Google Play when it is not.
-          <a
-            href={playHref("android")}
-            target="_blank"
-            rel="noopener"
-            className="inline-flex h-8 items-center rounded-[16px] border border-white/[0.14] bg-white/[0.08] px-3.5 text-[13px] font-bold text-white transition-colors hover:bg-white/[0.12]"
-          >
-            Get HOLD on Google Play
-          </a>
-        ) : null}
         <button
           type="button"
           onClick={nudge.later}

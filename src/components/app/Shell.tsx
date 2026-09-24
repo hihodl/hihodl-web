@@ -24,7 +24,9 @@
  * menu and Home. See nav.ts.
  *
  * Signed out, it is HOLD's door (front/Door: welcome, or welcome back) and
- * nothing else. An invitation link (`/spaces/team?seat=…`) is the one page
+ * nothing else. Signed in, it needs a wallet made in the HOLD app: anything
+ * else gets "Get the HOLD app" (main/GetTheApp), except the pages that open
+ * without it (lib/app/app-wallet-gate: Spaces, while SPACES_OPEN_WITHOUT_APP). An invitation link (`/spaces/team?seat=…`) is the one page
  * that renders without the shell, because the person holding it may have no
  * account yet.
  */
@@ -46,6 +48,7 @@ import type { XAccountStatus } from "@/lib/creator/types";
 import { useAgency, type Agency } from "@/lib/app/agency";
 import { asDisplayMode, DEFAULT_DISPLAY_MODE, type DisplayMode } from "@/lib/app/display-mode";
 import { chosenUsername } from "@/lib/app/me";
+import { openWithoutApp, SPACES_OPEN_WITHOUT_APP } from "@/lib/app/app-wallet-gate";
 import { useDoor } from "@/lib/app/onboarding";
 import { useSignOutWhenRemovedElsewhere } from "@/lib/app/sessions";
 import { roleOf, waitingOnYou, type ShellRole } from "@/lib/app/spaces-model";
@@ -56,6 +59,7 @@ import { useWalletEnabled } from "@/lib/wallet/enabled";
 import { SpacesBaseProvider, useHref, useProductHref, useSpacesBase } from "./base";
 import { CommandPalette, type PaletteEntry } from "./CommandPalette";
 import { Door as SignInDoor } from "./front/Door";
+import { GetTheAppScreen } from "./main/GetTheApp";
 import { HeaderSlotContext, type HeaderSlot } from "./header-slot";
 import { HiPointsChip } from "./HiPointsChip";
 import { UserAvatar, useUserPhoto } from "./account/UserAvatar";
@@ -196,27 +200,42 @@ function Gate({ children }: { children: ReactNode }) {
   if (session === null) return <SignInDoor configured={configured} />;
   // Coming back from X finishes that trip first; onboarding can wait a page.
   return (
-    <Onboarded session={session} skip={/^\/spaces\/x\/?$/.test(rel)}>
+    <Onboarded session={session} skip={/^\/spaces\/x\/?$/.test(rel)} needsApp={!openWithoutApp(rel)}>
       <SignedIn session={session}>{children}</SignedIn>
     </Onboarded>
   );
 }
 
 /**
- * Onboarding before the product, once: a person without a username, a
- * passkey or recovery codes (or a web wallet they can make) is sent to
- * /welcome, which brings them back here. Everybody else never sees it.
- * A full load, not a client navigation: /welcome carries the wallet pages'
- * strict CSP, which only a response can set.
+ * The way in, after sign-in:
+ *
+ *   1. a wallet made in the HOLD app, on every page that needs one
+ *      (`needsApp`): read from the server on every load, never from this
+ *      browser's memory. Without one, "Get the HOLD app"; a failed read, Retry
+ *   2. onboarding, once: a person without a username, a passkey or recovery
+ *      codes is sent to /welcome, which brings them back here. Everybody
+ *      else never sees it. A full load, not a client navigation: /welcome
+ *      carries the wallet pages' strict CSP, which only a response can set
  */
-function Onboarded({ session, skip, children }: { session: Session; skip: boolean; children: ReactNode }) {
-  const door = useDoor(session, skip);
+function Onboarded({ session, skip, needsApp, children }: { session: Session; skip: boolean; needsApp: boolean; children: ReactNode }) {
+  const { door, checking, recheck } = useDoor(session, skip, needsApp);
   const base = useSpacesBase();
+  const productHref = useProductHref();
   useEffect(() => {
     if (door !== "onboarding") return;
     const here = `${window.location.pathname}${window.location.search}${window.location.hash}`;
     window.location.replace(`${productPrefix(base)}/welcome?next=${encodeURIComponent(here)}`);
   }, [door, base]);
+  if (door === "get-app" || door === "failed") {
+    return (
+      <GetTheAppScreen
+        failed={door === "failed"}
+        checking={checking}
+        onCheck={recheck}
+        spacesHref={SPACES_OPEN_WITHOUT_APP ? productHref("/spaces") : null}
+      />
+    );
+  }
   if (door !== "in") return <Centered><Wordmark className="h-5 w-auto text-text" /></Centered>;
   return <>{children}</>;
 }

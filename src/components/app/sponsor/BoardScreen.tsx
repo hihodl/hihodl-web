@@ -41,7 +41,6 @@ import { useCallback, useEffect, useState } from "react";
 
 import { boardListings, type BoardCard } from "@/lib/app/sponsor";
 
-import { useShell } from "../Shell";
 import { Column } from "../hold";
 import { Ion } from "../ion";
 import { Skeleton } from "../ui";
@@ -53,7 +52,6 @@ type Kind = "all" | "placement" | "service";
 const money = (cents: number) => `$${(cents / 100).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 
 export function BoardScreen() {
-  const { session } = useShell();
   const [kind, setKind] = useState<Kind>("all");
   const [cards, setCards] = useState<BoardCard[] | null>(null);
   const [failed, setFailed] = useState(false);
@@ -123,7 +121,6 @@ export function BoardScreen() {
 
       {buying ? (
         <BuyFromListing
-          uid={session.user.id}
           spaceId={buying.id}
           listingTitle={buying.serviceName?.trim() || buying.title}
           creatorName={buying.creator.xHandle ? `@${buying.creator.xHandle}` : "the creator"}

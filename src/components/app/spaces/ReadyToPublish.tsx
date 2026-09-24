@@ -101,8 +101,9 @@ function useItems(): Item[] | null {
     const action: Action =
       w.kind === "web" && w.unregistered
         ? { label: "Unlock wallet", href: href("/wallet") }
-        : w.canCreate
-          ? { label: "Make wallet", href: href("/wallet") }
+        : w.kind === "none"
+          ? // No wallet: it is made in the HOLD app. Where you get paid shows the stores.
+            { label: "Get the HOLD app", href: href("/account?view=payout") }
           : { label: "Set up", href: href("/account?view=payout") };
     items.push({ key: "wallet", state: "todo", label: "Solana wallet", sub: "Where sponsors pay you, in USDC", action });
   }

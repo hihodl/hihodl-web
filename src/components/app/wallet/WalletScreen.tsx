@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * The web wallet (phase 1: Solana, read-only), protected by a passkey.
+ * The Wallet page: the wallet made in the HOLD app, opened on the web.
  *
  * Every screen is the HOLD app's own, ported (documentation/web-copies-the-app-wallet.md):
  * the home is the app's balance hero and quick actions, Receive is the app's
@@ -9,16 +9,18 @@
  * Account recovery, Passkeys and Recovery Phrase. One screen at a time, each
  * with the app's back chevron:
  *
- *   no wallet anywhere        → Create (passkey with PRF, then the wallet);
- *                               with the rollout gate closed, how to get one
+ *   no wallet anywhere        → "Get the HOLD app": the web makes no wallet
+ *                               (Alex, 2026-09-24). The shell's gate keeps
+ *                               such an account out already; this is the
+ *                               answer if it gets here anyway
  *   a wallet in the HOLD app  → its Receive, and Send through the linked
  *                               phone (canPayFromWeb "app"), or "Link your
- *                               phone to pay from here" ("link_first"). We
- *                               never make a second wallet
- *   a web wallet, locked      → Unlock with passkey
+ *                               phone to pay from here" ("link_first")
+ *   an older web wallet       → Unlock with passkey, to read it; Send is
+ *                               still approved on the linked phone
  *   unlocked                  → Home: balance · Receive · Send · Security
- *   Send                      → approved on the linked Android phone, or
- *                               with the passkey (Withdraw.tsx)
+ *   Send                      → approved and signed on the linked phone,
+ *                               iPhone or Android (Withdraw.tsx)
  *
  * /wallet/send renders this with `send`: straight to Send, for everybody,
  * gate or not (nav.openToAll). Home and a Payments thread send from there.
@@ -41,10 +43,8 @@ import {
   getBalances,
   getWalletBackup,
   getWalletStatus,
-  listPasskeys,
   payerOf,
   removeWrapping,
-  WalletApiError,
   type Balances,
   type RegistrationOptionsJSON,
   type WalletBackup,
@@ -58,17 +58,16 @@ import {
   openWalletWithEvm,
   registerEvmSide,
   registerWalletAddress,
-  sealNewWallet,
   userSecretFrom,
   WalletFlowError,
   wrapForPasskey,
 } from "@/lib/wallet/flows";
-import { createPasskeyWithPrf, evaluatePrf, normalizeCredentialId, PasskeyError, passkeysHere, prfSupportedByBrowser, prfTrustedHere } from "@/lib/wallet/passkey";
+import { createPasskeyWithPrf, evaluatePrf, normalizeCredentialId, PasskeyError, passkeysHere } from "@/lib/wallet/passkey";
 import { lock, unlockWith, useVault } from "@/lib/wallet/vault";
 
 import { UserAvatar } from "../account/UserAvatar";
 import { useProductHref } from "../base";
-import { inAppHref, playHref, usePhone } from "../link/in-app";
+import { inAppHref, usePhone } from "../link/in-app";
 import { hereNow, useLinkGate } from "../link/LinkGate";
 import {
   ActionsRow,
@@ -91,6 +90,7 @@ import {
   GREEN,
 } from "./app-kit";
 import { Ion, type IonName } from "../ion";
+import { GetTheAppCard } from "../main/GetTheApp";
 import { Receive } from "./Receive";
 import { Withdraw } from "./Withdraw";
 
@@ -141,12 +141,6 @@ function prefillFromUrl(): { to?: string; amount?: string; token?: "USDC" | "SOL
   };
 }
 
-/** Who approves a web wallet's send, when the server has said; undefined when it has not. */
-function approverOf(status: WalletStatus): "phone" | "passkey" | undefined {
-  if (!status.canPayFromWeb) return undefined;
-  return status.canPayFromWeb === "app" ? "phone" : "passkey";
-}
-
 export function WalletScreen({ send = false }: { send?: boolean } = {}) {
   const vault = useVault();
   const [status, setStatus] = useState<WalletStatus | null>(null);
@@ -161,22 +155,11 @@ export function WalletScreen({ send = false }: { send?: boolean } = {}) {
     }
   }, []);
   useEffect(() => void load(), [load]);
-  // Whether this browser says it can do PRF at all. Asked once, before the
-  // Create screen: a "no" here means the prompt would only leave an orphan
-  // passkey. Null (unknown, or not asked yet) shows Create as before.
-  const [prfBrowser, setPrfBrowser] = useState<boolean | null>(null);
-  useEffect(() => {
-    let live = true;
-    void prfSupportedByBrowser().then((v) => live && setPrfBrowser(v));
-    return () => {
-      live = false;
-    };
-  }, []);
   // Leaving the wallet locks it: another page of the product, signing out, or
   // another person signing in on this tab never finds it open.
   useEffect(() => () => lock(), []);
 
-  // Once unlocked (or just created), make sure the backend watches this
+  // Once unlocked, make sure the backend watches this
   // address for deposits. One attempt per address per page visit; a failure
   // is retried on the next unlock.
   const tried = useRef<string | null>(null);
@@ -204,11 +187,9 @@ export function WalletScreen({ send = false }: { send?: boolean } = {}) {
   } else if (!status) {
     body = <Skeleton className="mx-auto h-[320px] w-full max-w-[460px]" />;
   } else if (status.state === "app_wallet") {
-    // A wallet made in the app shows whatever the gate says: the gate is about
-    // making one here, and this one is already made.
     body = <AppWallet status={status} send={send} />;
-  } else if (status.state === "none" && status.enabled === false) {
-    // The rollout gate: no wallet is made on the web for this account yet. Said, not a blank page.
+  } else if (status.state === "none") {
+    // No wallet: it is made in the HOLD app, never here.
     body = <NoWalletHere />;
   } else if (status.state === "web_wallet" && !status.current_blob_hash) {
     body = <WalletOnAnotherAccount />;
@@ -220,27 +201,6 @@ export function WalletScreen({ send = false }: { send?: boolean } = {}) {
         </div>
       </AppScreen>
     );
-  } else if (status.state === "none" && !prfTrustedHere()) {
-    // Said instead of the Create screen, not after it: on this OS a wallet
-    // made here could later refuse to open, and there is nothing on the
-    // screen that would fix it.
-    body = (
-      <AppScreen title="Wallet">
-        <div className="pt-4">
-          <InfoBox>{explain(new PasskeyError("os_too_old"))}</InfoBox>
-        </div>
-      </AppScreen>
-    );
-  } else if (status.state === "none" && prfBrowser === false) {
-    body = (
-      <AppScreen title="Wallet">
-        <div className="pt-4">
-          <InfoBox>{explain(new PasskeyError("no_prf_here"))}</InfoBox>
-        </div>
-      </AppScreen>
-    );
-  } else if (status.state === "none") {
-    body = <Create status={status} onCreated={() => void load()} />;
   } else if (vault.status === "unlocked" && vault.address) {
     body = <Home address={vault.address} status={status} send={send} onChanged={() => void load()} />;
   } else {
@@ -273,14 +233,13 @@ function WalletOnAnotherAccount() {
  * A wallet made in the HOLD app. The web holds no key for it, so what it can
  * do here is what `canPayFromWeb` says (documentation/one-wallet-every-device.md):
  *
- *   app         an Android phone is linked: Send creates the withdrawal here,
+ *   app         a phone (iPhone or Android) is linked: Send creates the withdrawal here,
  *               and the phone approves and signs it
- *   link_first  no Android phone yet: "Link your phone to pay from here"
+ *   link_first  no phone yet: "Link your phone to pay from here"
  *   none        an older backend that cannot take it: send from the app
  */
 function AppWallet({ status, send }: { status: WalletStatus; send: boolean }) {
   const w = useHoldWallet();
-  const { session } = useShell();
   const productHref = useProductHref();
   const phone = usePhone();
   const payer = payerOf(status);
@@ -297,14 +256,7 @@ function AppWallet({ status, send }: { status: WalletStatus; send: boolean }) {
   if (w.loading) return <Skeleton className="mx-auto h-[320px] w-full max-w-[460px]" />;
   if (sending && w.solana) {
     return (
-      <Withdraw
-        uid={session.user.id}
-        from={w.solana}
-        balances={balances.data ?? null}
-        approver="phone"
-        onBack={() => setSending(false)}
-        prefill={prefill}
-      />
+      <Withdraw balances={balances.data ?? null} onBack={() => setSending(false)} prefill={prefill} />
     );
   }
 
@@ -350,168 +302,13 @@ function AppWallet({ status, send }: { status: WalletStatus; send: boolean }) {
   );
 }
 
-/* ── No wallet, and the web does not make one for this account yet ── */
+/* ── No wallet: it is made in the HOLD app ─────────────────────────── */
 
 function NoWalletHere() {
-  const phone = usePhone();
   return (
     <AppScreen title="Wallet">
       <div className="flex flex-col gap-4 pt-4">
-        {phone === "ios" ? (
-          <HeroCard icon="wallet-outline" title="No wallet yet">
-            <HeroBody>Making a wallet on the web is not open for this account yet. Nothing is lost: when it opens, it is made here with your passkey.</HeroBody>
-          </HeroCard>
-        ) : (
-          <>
-            <HeroCard icon="wallet-outline" title="Make your wallet in the HOLD app">
-              <HeroBody>
-                The HOLD app on Google Play makes your wallet with every chain. Sign in there with this account, and it shows here
-                too.
-              </HeroBody>
-            </HeroCard>
-            <PrimaryButton icon="logo-google" onClick={() => window.open(playHref(phone), "_blank", "noopener")}>
-              Get HOLD on Google Play
-            </PrimaryButton>
-          </>
-        )}
-      </div>
-    </AppScreen>
-  );
-}
-
-/* ── Create ───────────────────────────────────────────────────────── */
-
-type CreateStep =
-  | { kind: "intro" }
-  | { kind: "confirm"; credentialId: string } // passkey made, PRF not yet evaluated
-  | { kind: "sealing" }
-  | { kind: "done"; address: string };
-
-function Create({ status, onCreated }: { status: WalletStatus; onCreated: () => void }) {
-  const { session } = useShell();
-  const [step, setStep] = useState<CreateStep>({ kind: "intro" });
-  const [error, setError] = useState<unknown>(null);
-  const [busy, setBusy] = useState(false);
-  const [existing, setExisting] = useState<string[]>([]);
-  const reg = useRegistrationOptions(step.kind === "intro");
-
-  useEffect(() => {
-    listPasskeys()
-      .then((p) => setExisting(p.map((x) => normalizeCredentialId(x.id))))
-      .catch(() => setExisting([]));
-  }, []);
-
-  const seal = async (credentialId: string, prf: Uint8Array, label: string | null) => {
-    setStep({ kind: "sealing" });
-    try {
-      const key = await sealNewWallet({ uid: session.user.id, credentialId, prf, label });
-      const address = key.address;
-      unlockWith(key);
-      // Every chain from day one: the app's EVM xpub on Ethereum, Base and Polygon. It wipes its key.
-      void registerEvmSide(key.evm);
-      setStep({ kind: "done", address });
-    } catch (e) {
-      setError(e);
-      setStep({ kind: "intro" });
-    } finally {
-      wipe(prf);
-    }
-  };
-
-  const createNew = async () => {
-    if (!reg.options) return;
-    setBusy(true);
-    setError(null);
-    try {
-      // PRF is checked before anything reaches the server: a passkey that
-      // cannot protect a wallet is never registered and nothing is written.
-      const made = await createPasskeyWithPrf(reg.options);
-      await completePasskeyRegistration(made.registration);
-      if (made.prf) await seal(made.credentialId, made.prf, "This browser");
-      else setStep({ kind: "confirm", credentialId: made.credentialId });
-    } catch (e) {
-      setError(e);
-      void reg.refresh();
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const confirm = async (credentialIds: string[], label: string | null) => {
-    setBusy(true);
-    setError(null);
-    try {
-      const a = await evaluatePrf(credentialIds);
-      await seal(a.credentialId, a.prf, label);
-    } catch (e) {
-      setError(e);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  if (step.kind === "done") {
-    return (
-      <AppScreen title="Wallet">
-        <div className="flex flex-col gap-4 pt-4">
-          <HeroCard icon="shield-checkmark" title="Your wallet is ready">
-            <HeroBody>Your Solana address:</HeroBody>
-            <p className="break-all px-1 text-center font-mono text-[13px] leading-[19px] text-white">{step.address}</p>
-          </HeroCard>
-          <PrimaryButton onClick={onCreated}>Open wallet</PrimaryButton>
-          <FooterNote icon="lock-closed-outline">Write down your 12 words from Security. They are the only way back if every passkey is lost.</FooterNote>
-        </div>
-      </AppScreen>
-    );
-  }
-
-  if (step.kind === "sealing") {
-    return (
-      <AppScreen title="Wallet">
-        <div className="flex flex-col gap-4 pt-4">
-          <HeroCard icon="hourglass-outline" title="Creating your wallet">
-            <HeroBody>Making it in this browser and sealing it with your passkey.</HeroBody>
-          </HeroCard>
-          <Skeleton className="h-[52px] w-full" />
-        </div>
-      </AppScreen>
-    );
-  }
-
-  if (step.kind === "confirm") {
-    return (
-      <AppScreen title="Wallet">
-        <div className="flex flex-col gap-4 pt-4">
-          <HeroCard icon="finger-print" title="Confirm your new passkey">
-            <HeroBody>Once more, so it can seal your wallet.</HeroBody>
-          </HeroCard>
-          {error ? <Problem>{explain(error)}</Problem> : null}
-          <PrimaryButton icon="finger-print" disabled={busy} onClick={() => void confirm([step.credentialId], "This browser")}>
-            Confirm with passkey
-          </PrimaryButton>
-        </div>
-      </AppScreen>
-    );
-  }
-
-  return (
-    <AppScreen title="Wallet">
-      <div className="flex flex-col gap-4 pt-4">
-        <HeroCard icon="finger-print" title="Create your wallet">
-          <HeroBody>A Solana wallet for USDC and SOL, locked by a passkey: Face ID, Touch ID or your device PIN.</HeroBody>
-        </HeroCard>
-        {!status.email_verified ? <Problem>{explain(new WalletApiError("EMAIL_NOT_VERIFIED", 403))}</Problem> : null}
-        {error ? <Problem>{explain(error)}</Problem> : null}
-        {reg.error ? <Problem>{explain(reg.error)}</Problem> : null}
-        <PrimaryButton icon="add" disabled={busy || !reg.options || !status.email_verified} onClick={() => void createNew()}>
-          Create with a new passkey
-        </PrimaryButton>
-        {existing.length > 0 ? (
-          <SecondaryButton icon="finger-print" disabled={busy || !status.email_verified} onClick={() => void confirm(existing, null)}>
-            Use a passkey I already have
-          </SecondaryButton>
-        ) : null}
-        <FooterNote icon="lock-closed-outline">{LOSS_WARNING}</FooterNote>
+        <GetTheAppCard />
       </div>
     </AppScreen>
   );
@@ -585,7 +382,6 @@ function useDisplayName(): string {
 type HomeScreen = "home" | "withdraw" | "receive" | "security" | "passkeys" | "export" | "add";
 
 function Home({ address, status, send, onChanged }: { address: string; status: WalletStatus; send: boolean; onChanged: () => void }) {
-  const { session } = useShell();
   // The Dashboard's quick actions land here as ?open=receive|send|security; /wallet/send as `send`.
   const [screen, setScreen] = useState<HomeScreen>(() => {
     if (send) return "withdraw";
@@ -616,7 +412,7 @@ function Home({ address, status, send, onChanged }: { address: string; status: W
 
   if (screen === "receive") return <Receive address={address} onBack={back} />;
   if (screen === "withdraw")
-    return <Withdraw uid={session.user.id} from={address} balances={balances} approver={approverOf(status)} onBack={back} prefill={prefill} />;
+    return <Withdraw balances={balances} onBack={back} prefill={prefill} />;
   if (screen === "security") return <Security onBack={back} onPhrase={() => setScreen("export")} onPasskeys={toPasskeys} />;
   if (screen === "passkeys")
     return <Passkeys wrappings={status.wrappings} onBack={toSecurity} onAdd={() => setScreen("add")} onChanged={onChanged} />;

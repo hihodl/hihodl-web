@@ -26,7 +26,7 @@
  * ONLY NETWORKS WE CAN BE PAID ON
  *
  * The token list and the network picker are built from `GET /me/addresses` and
- * the web wallet's own Solana address. A chain we have no address for is never
+ * the wallet's registered Solana address. A chain we have no address for is never
  * offered, because the promise of a receive screen is that money sent to what
  * it shows arrives.
  *
@@ -158,7 +158,7 @@ function Tile({
 /* ── Receive crypto ───────────────────────────────────────────────── */
 
 /**
- * The app's Receive, over every address this person actually has: the web
+ * The app's Receive, over every address this person actually has: the
  * wallet's Solana one, and whatever the app registered for them on the other
  * chains.
  */
@@ -190,7 +190,7 @@ function ReceiveMoney({ onBack }: { onBack: () => void }) {
         <p className="px-1 pt-2 text-[13.5px] leading-[19px] text-[#9FB7C2]">
           {addrs.error
             ? "We could not read your addresses just now. Nothing has changed — try again in a moment."
-            : "There is no address to be paid on yet. Make your wallet and it appears here."}
+            : "There is no address to be paid on yet. Your wallet is made in the HOLD app: get it, and the address appears here."}
         </p>
       </Column>
     );
