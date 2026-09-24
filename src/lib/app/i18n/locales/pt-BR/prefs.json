@@ -1,1 +1,13 @@
-{}
+{
+  "language": "Idioma",
+  "currency": "Moeda",
+  "recentLanguages": "Idiomas recentes",
+  "allLanguages": "Todos os idiomas",
+  "searchLanguage": "Buscar idioma",
+  "recentCurrencies": "Moedas recentes",
+  "allCurrencies": "Todas as moedas",
+  "searchCurrency": "Buscar moeda ou país",
+  "currencyIntro": "Saldos, totais e preços aparecem nesta moeda. O que você paga de fato continua no token, e cada grupo mantém a própria moeda.",
+  "currencyNoRate": "* Ainda sem cotação ao vivo, então os valores ficam em dólares americanos.",
+  "currencyNoRateLabel": "{code} {name}, cotação ao vivo indisponível"
+}

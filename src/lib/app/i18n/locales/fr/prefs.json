@@ -1,1 +1,13 @@
-{}
+{
+  "language": "Langue",
+  "currency": "Devise",
+  "recentLanguages": "Langues récentes",
+  "allLanguages": "Toutes les langues",
+  "searchLanguage": "Rechercher une langue",
+  "recentCurrencies": "Devises récentes",
+  "allCurrencies": "Toutes les devises",
+  "searchCurrency": "Rechercher une devise ou un pays",
+  "currencyIntro": "Les soldes, totaux et prix s'affichent dans cette devise. Ce que vous payez réellement reste dans le token, et un groupe garde sa propre devise.",
+  "currencyNoRate": "* Pas encore de taux de change en direct, les montants restent donc en dollars US.",
+  "currencyNoRateLabel": "{code} {name}, taux de change en direct indisponible"
+}
