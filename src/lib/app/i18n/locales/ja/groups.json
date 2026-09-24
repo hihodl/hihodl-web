@@ -46,7 +46,7 @@
   "list.loadFailed": "グループを読み込めませんでした。",
   "list.empty": "グループはまだありません",
   "list.emptyBody": "グループは、お金のやり取りもできるチャットです。ディナー、タクシー、家賃を割り勘して、精算しましょう。",
-  "list.crew": "Crew",
+  "list.crew": "クルー",
   "list.unread": "新着 {count} 件",
   "across.title": "すべてのグループ",
   "across.shareAndPaid": "あなたの負担分 <b>{share}</b> · 支払い済み <b>{paid}</b>",
