@@ -75,7 +75,10 @@ import {
   type PaymentRequest,
 } from "@/lib/app/payment-requests";
 
+import { btnGlass } from "../hold";
 import { Ion } from "../ion";
+import { Modal } from "../Modal";
+import { plateCaution } from "./group-kit";
 
 /* ── The thread ───────────────────────────────────────────────────── */
 
@@ -175,6 +178,7 @@ export function Conversation({
               request={r.request}
               incoming={!!peerId && theyAsked(r.request, peerId)}
               mode={mode}
+              peerName={peerName}
               onPay={() => onPayRequest(r.request)}
               onAnswered={() => void requests.mutate()}
             />
@@ -407,6 +411,13 @@ const RQ = {
   decline: "Decline",
   remind: "Remind",
   cancel: "Cancel",
+  keep: "Keep it",
+  declineTitle: "Decline this request?",
+  declineBody: (name: string) => `${name} will see that you declined it.`,
+  declineIt: "Decline",
+  cancelTitle: "Cancel this request?",
+  cancelBody: (name: string) => `${name} won't be able to pay it any more.`,
+  cancelIt: "Cancel request",
   reminded: "Reminded. They got a friendly nudge.",
   inApp: (chain: string) => `This one is on ${chain}. Pay it in the HOLD app.`,
 };
@@ -415,17 +426,22 @@ function RequestBubble({
   request,
   incoming,
   mode,
+  peerName,
   onPay,
   onAnswered,
 }: {
   request: PaymentRequest;
   incoming: boolean;
   mode: DisplayMode;
+  peerName: string;
   onPay: () => void;
   onAnswered: () => void;
 }) {
   const [busy, setBusy] = useState<"decline" | "cancel" | "remind" | null>(null);
   const [said, setSaid] = useState<string | null>(null);
+  // Decline and Cancel close the request for both sides, so each asks first,
+  // as the app does. Remind is harmless and goes straight away.
+  const [ask, setAsk] = useState<"decline" | "cancel" | null>(null);
   const amount = requestAmount(request);
   if (amount === null) return null;
   const ticker = maskTokenSymbol(request.tokenId.split(".")[0].toUpperCase(), mode);
@@ -480,7 +496,7 @@ function RequestBubble({
                 >
                   {RQ.pay}
                 </button>
-                <button type="button" disabled={!!busy} onClick={() => void act("decline", () => rejectRequest(request.id))} className={glass}>
+                <button type="button" disabled={!!busy} onClick={() => setAsk("decline")} className={glass}>
                   {RQ.decline}
                 </button>
               </>
@@ -489,7 +505,7 @@ function RequestBubble({
                 <button type="button" disabled={!!busy} onClick={() => void act("remind", () => remindRequest(request.id), RQ.reminded)} className={glass}>
                   {RQ.remind}
                 </button>
-                <button type="button" disabled={!!busy} onClick={() => void act("cancel", () => cancelRequest(request.id))} className={glass}>
+                <button type="button" disabled={!!busy} onClick={() => setAsk("cancel")} className={glass}>
                   {RQ.cancel}
                 </button>
               </>
@@ -504,6 +520,35 @@ function RequestBubble({
           <span>{shortTime(request.createdAt)}</span>
         </span>
       </div>
+
+      {ask ? (
+        <Modal
+          title={ask === "decline" ? RQ.declineTitle : RQ.cancelTitle}
+          onClose={() => setAsk(null)}
+          busy={!!busy}
+          size="sm"
+          footer={
+            <div className="flex gap-2">
+              <button type="button" className={`${btnGlass} flex-1`} disabled={!!busy} onClick={() => setAsk(null)}>
+                {RQ.keep}
+              </button>
+              <button
+                type="button"
+                className={`${plateCaution} flex-1`}
+                disabled={!!busy}
+                onClick={() => {
+                  const which = ask;
+                  void act(which, () => (which === "decline" ? rejectRequest(request.id) : cancelRequest(request.id))).then(() => setAsk(null));
+                }}
+              >
+                {busy ? "One moment…" : ask === "decline" ? RQ.declineIt : RQ.cancelIt}
+              </button>
+            </div>
+          }
+        >
+          <p className="text-[14px] leading-[20px] text-white/[0.78]">{ask === "decline" ? RQ.declineBody(peerName) : RQ.cancelBody(peerName)}</p>
+        </Modal>
+      ) : null}
     </div>
   );
 }
