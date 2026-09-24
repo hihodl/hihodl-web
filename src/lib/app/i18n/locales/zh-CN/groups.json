@@ -46,7 +46,7 @@
   "list.loadFailed": "无法加载你的群组。",
   "list.empty": "还没有群组",
   "list.emptyBody": "群组就是一个把钱也放进来的聊天：分摊晚餐、打车、房租，然后结清。",
-  "list.crew": "创作小队",
+  "list.crew": "Crew",
   "list.unread": "{count} 条新消息",
   "across.title": "你所有的群组",
   "across.shareAndPaid": "你的分摊 <b>{share}</b> · 你已付 <b>{paid}</b>",
