@@ -115,6 +115,8 @@ const shell = {
   "getApp.makeOnce": "Make it once in the app. Then come back here and check again.",
   "getApp.checkAgain": "I've made it, check again",
   "getApp.goToSpaces": "Go to Spaces",
+  "stores.downloadOnThe": "Download on the",
+  "stores.getItOn": "Get it on",
 } satisfies Record<string, string>;
 
 export default shell;

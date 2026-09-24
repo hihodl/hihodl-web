@@ -92,5 +92,7 @@
   "getApp.noWebWallet": "Nenhuma carteira foi criada na web",
   "getApp.makeOnce": "Crie-a uma vez no app. Depois volte aqui e verifique de novo.",
   "getApp.checkAgain": "Já criei, verificar de novo",
-  "getApp.goToSpaces": "Ir para Spaces"
+  "getApp.goToSpaces": "Ir para Spaces",
+  "stores.downloadOnThe": "Baixar na",
+  "stores.getItOn": "Disponível no"
 }

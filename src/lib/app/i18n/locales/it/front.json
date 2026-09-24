@@ -74,5 +74,6 @@
   "signIn.sending": "Invio…",
   "signIn.anotherEmail": "Usa un'altra email",
   "signIn.newCode": "Invia un nuovo codice",
-  "steps.linkInfoEvery": "Il tuo telefono collegato, iPhone o Android, approva e firma nell'app HOLD ogni pagamento che avvii sul web. Finché non ne colleghi uno, non si può pagare nulla dal web. Puoi collegarne uno più tardi da Menu, Sicurezza."
+  "steps.linkInfoEvery": "Il tuo telefono collegato, iPhone o Android, approva e firma nell'app HOLD ogni pagamento che avvii sul web. Finché non ne colleghi uno, non si può pagare nulla dal web. Puoi collegarne uno più tardi da Menu, Sicurezza.",
+  "door.newGetApp": "Nuovo su HOLD? Il tuo account e il tuo portafoglio si creano nell'app HOLD. Scaricala, poi accedi qui con lo stesso account."
 }

@@ -92,6 +92,7 @@ const front = {
   "signIn.anotherEmail": "Use another email",
   "signIn.newCode": "Send a new code",
   "steps.linkInfoEvery": "Your linked phone, iPhone or Android, approves and signs in the HOLD app every payment you start on the web. Until one is linked, nothing can be paid from the web. You can link one later from Menu, Security.",
+  "door.newGetApp": "New to HOLD? Your account and your wallet are made in the HOLD app. Get it, then sign in here with the same account.",
 } satisfies Record<string, string>;
 
 export default front;

@@ -74,5 +74,6 @@
   "signIn.sending": "发送中…",
   "signIn.anotherEmail": "使用其他邮箱",
   "signIn.newCode": "发送新验证码",
-  "steps.linkInfoEvery": "已关联的手机（iPhone 或 Android）会在 HOLD 应用中批准并签署你在网页版发起的每一笔付款。在关联手机之前，无法在网页版付款。你也可以稍后在“菜单”的“安全”中关联。"
+  "steps.linkInfoEvery": "已关联的手机（iPhone 或 Android）会在 HOLD 应用中批准并签署你在网页版发起的每一笔付款。在关联手机之前，无法在网页版付款。你也可以稍后在“菜单”的“安全”中关联。",
+  "door.newGetApp": "初次使用 HOLD？你的账户和钱包需在 HOLD 应用中创建。先下载应用，再用同一账户在这里登录。"
 }

@@ -92,5 +92,7 @@
   "getApp.noWebWallet": "Er is geen wallet gemaakt op het web",
   "getApp.makeOnce": "Maak hem één keer aan in de app. Kom dan hier terug en controleer opnieuw.",
   "getApp.checkAgain": "Ik heb hem gemaakt, opnieuw controleren",
-  "getApp.goToSpaces": "Naar Spaces"
+  "getApp.goToSpaces": "Naar Spaces",
+  "stores.downloadOnThe": "Download in de",
+  "stores.getItOn": "Ontdek het op"
 }

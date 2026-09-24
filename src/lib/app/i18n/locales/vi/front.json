@@ -74,5 +74,6 @@
   "signIn.sending": "Đang gửi…",
   "signIn.anotherEmail": "Dùng email khác",
   "signIn.newCode": "Gửi mã mới",
-  "steps.linkInfoEvery": "Điện thoại đã liên kết của bạn, iPhone hoặc Android, duyệt và ký trong ứng dụng HOLD mọi khoản thanh toán bạn bắt đầu trên web. Cho đến khi liên kết một điện thoại, không thể thanh toán từ web. Bạn có thể liên kết sau, từ Menu, Bảo mật."
+  "steps.linkInfoEvery": "Điện thoại đã liên kết của bạn, iPhone hoặc Android, duyệt và ký trong ứng dụng HOLD mọi khoản thanh toán bạn bắt đầu trên web. Cho đến khi liên kết một điện thoại, không thể thanh toán từ web. Bạn có thể liên kết sau, từ Menu, Bảo mật.",
+  "door.newGetApp": "Mới dùng HOLD? Tài khoản và ví của bạn được tạo trong ứng dụng HOLD. Hãy tải ứng dụng, rồi đăng nhập tại đây bằng cùng tài khoản."
 }

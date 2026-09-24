@@ -92,5 +92,7 @@
   "getApp.noWebWallet": "Tidak ada dompet yang dibuat di web",
   "getApp.makeOnce": "Buat sekali di aplikasi. Lalu kembali ke sini dan cek lagi.",
   "getApp.checkAgain": "Sudah kubuat, cek lagi",
-  "getApp.goToSpaces": "Masuk ke Spaces"
+  "getApp.goToSpaces": "Masuk ke Spaces",
+  "stores.downloadOnThe": "Unduh di",
+  "stores.getItOn": "Dapatkan di"
 }

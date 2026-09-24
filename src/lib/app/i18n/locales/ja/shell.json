@@ -92,5 +92,7 @@
   "getApp.noWebWallet": "ウェブではウォレットが作成されていません",
   "getApp.makeOnce": "まずアプリで一度作成してください。それからここに戻って、もう一度確認してください。",
   "getApp.checkAgain": "作成しました。もう一度確認",
-  "getApp.goToSpaces": "Spaces に移動"
+  "getApp.goToSpaces": "Spaces に移動",
+  "stores.downloadOnThe": "ダウンロード",
+  "stores.getItOn": "入手先"
 }

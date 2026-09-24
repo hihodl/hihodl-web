@@ -92,5 +92,7 @@
   "getApp.noWebWallet": "ยังไม่มีการสร้างกระเป๋าบนเว็บ",
   "getApp.makeOnce": "สร้างครั้งเดียวในแอป แล้วกลับมาที่นี่และตรวจสอบอีกครั้ง",
   "getApp.checkAgain": "สร้างแล้ว ตรวจสอบอีกครั้ง",
-  "getApp.goToSpaces": "ไปที่ Spaces"
+  "getApp.goToSpaces": "ไปที่ Spaces",
+  "stores.downloadOnThe": "ดาวน์โหลดบน",
+  "stores.getItOn": "ดาวน์โหลดได้ที่"
 }

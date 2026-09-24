@@ -92,5 +92,7 @@
   "getApp.noWebWallet": "网页版还没有创建钱包",
   "getApp.makeOnce": "请先在应用中创建一次。然后回到这里再次检查。",
   "getApp.checkAgain": "我已创建，重新检查",
-  "getApp.goToSpaces": "前往 Spaces"
+  "getApp.goToSpaces": "前往 Spaces",
+  "stores.downloadOnThe": "下载于",
+  "stores.getItOn": "立即获取"
 }

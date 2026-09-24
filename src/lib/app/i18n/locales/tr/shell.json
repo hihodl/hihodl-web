@@ -92,5 +92,7 @@
   "getApp.noWebWallet": "Web'de oluşturulmuş bir cüzdan yok",
   "getApp.makeOnce": "Uygulamada bir kez oluştur. Sonra buraya dön ve tekrar kontrol et.",
   "getApp.checkAgain": "Oluşturdum, tekrar kontrol et",
-  "getApp.goToSpaces": "Spaces'e git"
+  "getApp.goToSpaces": "Spaces'e git",
+  "stores.downloadOnThe": "Hemen indir",
+  "stores.getItOn": "Şimdi edinin"
 }

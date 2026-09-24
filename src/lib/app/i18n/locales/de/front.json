@@ -74,5 +74,6 @@
   "signIn.sending": "Wird gesendet…",
   "signIn.anotherEmail": "Andere E-Mail verwenden",
   "signIn.newCode": "Neuen Code senden",
-  "steps.linkInfoEvery": "Dein verknüpftes Handy, iPhone oder Android, bestätigt und signiert in der HOLD-App jede Zahlung, die du im Web startest. Bis eins verknüpft ist, kann im Web nichts bezahlt werden. Du kannst später eins verknüpfen, unter Menü, Sicherheit."
+  "steps.linkInfoEvery": "Dein verknüpftes Handy, iPhone oder Android, bestätigt und signiert in der HOLD-App jede Zahlung, die du im Web startest. Bis eins verknüpft ist, kann im Web nichts bezahlt werden. Du kannst später eins verknüpfen, unter Menü, Sicherheit.",
+  "door.newGetApp": "Neu bei HOLD? Dein Konto und deine Wallet erstellst du in der HOLD-App. Hol sie dir und melde dich dann hier mit demselben Konto an."
 }

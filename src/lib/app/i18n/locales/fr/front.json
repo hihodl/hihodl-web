@@ -74,5 +74,6 @@
   "signIn.sending": "Envoi…",
   "signIn.anotherEmail": "Utiliser un autre e-mail",
   "signIn.newCode": "Envoyer un nouveau code",
-  "steps.linkInfoEvery": "Votre téléphone associé, iPhone ou Android, approuve et signe dans l'app HOLD chaque paiement que vous lancez sur le web. Tant qu'aucun n'est associé, rien ne peut être payé depuis le web. Vous pouvez en associer un plus tard depuis Menu, Sécurité."
+  "steps.linkInfoEvery": "Votre téléphone associé, iPhone ou Android, approuve et signe dans l'app HOLD chaque paiement que vous lancez sur le web. Tant qu'aucun n'est associé, rien ne peut être payé depuis le web. Vous pouvez en associer un plus tard depuis Menu, Sécurité.",
+  "door.newGetApp": "Nouveau sur HOLD ? Votre compte et votre wallet se créent dans l'app HOLD. Téléchargez-la, puis connectez-vous ici avec le même compte."
 }

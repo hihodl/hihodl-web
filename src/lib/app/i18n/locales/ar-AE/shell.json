@@ -92,5 +92,7 @@
   "getApp.noWebWallet": "لا محفظة منشأة على الويب",
   "getApp.makeOnce": "أنشئها مرة واحدة في التطبيق. ثم عد إلى هنا وتحقّق مجدداً.",
   "getApp.checkAgain": "أنشأتها، تحقّق مجدداً",
-  "getApp.goToSpaces": "انتقل إلى Spaces"
+  "getApp.goToSpaces": "انتقل إلى Spaces",
+  "stores.downloadOnThe": "حمّله من",
+  "stores.getItOn": "احصل عليه من"
 }

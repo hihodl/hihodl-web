@@ -92,5 +92,7 @@
   "getApp.noWebWallet": "Chưa có ví nào được tạo trên web",
   "getApp.makeOnce": "Tạo ví một lần trong ứng dụng. Sau đó quay lại đây và kiểm tra lại.",
   "getApp.checkAgain": "Tôi đã tạo rồi, kiểm tra lại",
-  "getApp.goToSpaces": "Đến Spaces"
+  "getApp.goToSpaces": "Đến Spaces",
+  "stores.downloadOnThe": "Tải về trên",
+  "stores.getItOn": "Tải trên"
 }

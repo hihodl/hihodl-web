@@ -19,6 +19,7 @@ import { t } from "@/lib/app/i18n";
 import { useT } from "@/lib/app/i18n/react";
 
 import { IconBed, IconChevronRight, IconMegaphone, IconSim } from "../icons";
+import { Ion } from "../ion";
 
 export type ProductKey = "stays" | "esim" | "spaces";
 
@@ -128,17 +129,29 @@ export function DoorRow({ product, right }: { product: Product; right?: ReactNod
 }
 
 /** The two store buttons. Real links from lib/appLinks, never a guessed one. */
-export function StoreButtons() {
+/**
+ * The App Store and Google Play badges, as the website draws them (its
+ * StoreButton, app/page.tsx): the store's mark, "Download on the" or "Get it
+ * on", and the store's name, white on the dark ground. The store names are
+ * the stores' own and are never translated.
+ */
+export function StoreButtons({ className = "" }: { className?: string } = {}) {
+  const t = useT();
   const cls =
-    "inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-[12px] border border-white/10 bg-white/[0.06] px-4 text-small font-medium text-text transition-colors hover:bg-white/10";
+    "inline-flex h-[52px] items-center gap-3 whitespace-nowrap rounded-[14px] bg-white px-4 text-[#0A0500] transition-opacity hover:opacity-90";
+  const badge = (icon: "logo-apple" | "logo-google", eyebrow: string, label: string, href: string) => (
+    <a href={href} target="_blank" rel="noopener noreferrer" className={cls} aria-label={`${eyebrow} ${label}`}>
+      <Ion name={icon} size={22} />
+      <span className="flex flex-col items-start leading-none">
+        <span className="text-[11px] opacity-70">{eyebrow}</span>
+        <span className="mt-0.5 text-[16px] font-medium">{label}</span>
+      </span>
+    </a>
+  );
   return (
-    <div className="flex flex-wrap gap-2">
-      <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer" className={cls}>
-        App Store
-      </a>
-      <a href={PLAY_STORE_URL} target="_blank" rel="noopener noreferrer" className={cls}>
-        Google Play
-      </a>
+    <div className={`flex flex-wrap gap-2 ${className}`}>
+      {badge("logo-apple", t("shell.stores.downloadOnThe"), "App Store", APP_STORE_URL)}
+      {badge("logo-google", t("shell.stores.getItOn"), "Google Play", PLAY_STORE_URL)}
     </div>
   );
 }

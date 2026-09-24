@@ -92,5 +92,7 @@
   "getApp.noWebWallet": "Hakuna pochi iliyoundwa kwenye wavuti",
   "getApp.makeOnce": "Iunde mara moja kwenye programu. Kisha rudi hapa na ukague tena.",
   "getApp.checkAgain": "Nimeiunda, kagua tena",
-  "getApp.goToSpaces": "Nenda kwenye Spaces"
+  "getApp.goToSpaces": "Nenda kwenye Spaces",
+  "stores.downloadOnThe": "Pakua kwenye",
+  "stores.getItOn": "Ipate kwenye"
 }

@@ -74,5 +74,6 @@
   "signIn.sending": "Mengirim…",
   "signIn.anotherEmail": "Pakai email lain",
   "signIn.newCode": "Kirim kode baru",
-  "steps.linkInfoEvery": "Ponselmu yang tertaut, iPhone atau Android, menyetujui dan menandatangani di aplikasi HOLD setiap pembayaran yang kamu mulai di web. Sampai ada yang tertaut, tidak ada pembayaran yang bisa dilakukan dari web. Kamu bisa menautkannya nanti dari Menu, Keamanan."
+  "steps.linkInfoEvery": "Ponselmu yang tertaut, iPhone atau Android, menyetujui dan menandatangani di aplikasi HOLD setiap pembayaran yang kamu mulai di web. Sampai ada yang tertaut, tidak ada pembayaran yang bisa dilakukan dari web. Kamu bisa menautkannya nanti dari Menu, Keamanan.",
+  "door.newGetApp": "Baru di HOLD? Akun dan dompetmu dibuat di aplikasi HOLD. Unduh aplikasinya, lalu masuk di sini dengan akun yang sama."
 }

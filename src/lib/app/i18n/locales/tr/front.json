@@ -74,5 +74,6 @@
   "signIn.sending": "Gönderiliyor…",
   "signIn.anotherEmail": "Başka bir e-posta kullan",
   "signIn.newCode": "Yeni kod gönder",
-  "steps.linkInfoEvery": "Bağlı telefonun, iPhone veya Android, HOLD uygulamasında web'de başlattığın her ödemeyi onaylar ve imzalar. Bir telefon bağlanana kadar web'den hiçbir ödeme yapılamaz. Daha sonra Menü, Güvenlik'ten bir telefon bağlayabilirsin."
+  "steps.linkInfoEvery": "Bağlı telefonun, iPhone veya Android, HOLD uygulamasında web'de başlattığın her ödemeyi onaylar ve imzalar. Bir telefon bağlanana kadar web'den hiçbir ödeme yapılamaz. Daha sonra Menü, Güvenlik'ten bir telefon bağlayabilirsin.",
+  "door.newGetApp": "HOLD'da yeni misin? Hesabın ve cüzdanın HOLD uygulamasında oluşturulur. Uygulamayı indir, sonra burada aynı hesapla giriş yap."
 }

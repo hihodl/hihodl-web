@@ -74,5 +74,6 @@
   "signIn.sending": "Verzenden…",
   "signIn.anotherEmail": "Ander e-mailadres gebruiken",
   "signIn.newCode": "Nieuwe code sturen",
-  "steps.linkInfoEvery": "Je gekoppelde telefoon, iPhone of Android, keurt in de HOLD-app elke betaling die je op het web start goed, en ondertekent hem. Tot je er een koppelt, kan er niets vanaf het web worden betaald. Je kunt er later een koppelen via Menu, Beveiliging."
+  "steps.linkInfoEvery": "Je gekoppelde telefoon, iPhone of Android, keurt in de HOLD-app elke betaling die je op het web start goed, en ondertekent hem. Tot je er een koppelt, kan er niets vanaf het web worden betaald. Je kunt er later een koppelen via Menu, Beveiliging.",
+  "door.newGetApp": "Nieuw bij HOLD? Je account en je wallet maak je in de HOLD-app. Download hem en log hier daarna in met hetzelfde account."
 }

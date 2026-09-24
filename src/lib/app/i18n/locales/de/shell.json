@@ -92,5 +92,7 @@
   "getApp.noWebWallet": "Im Web ist keine Wallet erstellt",
   "getApp.makeOnce": "Erstell sie einmal in der App. Komm dann hierher zurück und prüf nochmal.",
   "getApp.checkAgain": "Ich hab sie erstellt, nochmal prüfen",
-  "getApp.goToSpaces": "Zu Spaces"
+  "getApp.goToSpaces": "Zu Spaces",
+  "stores.downloadOnThe": "Laden im",
+  "stores.getItOn": "Jetzt bei"
 }

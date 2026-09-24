@@ -92,5 +92,7 @@
   "getApp.noWebWallet": "Nessun portafoglio è stato creato sul web",
   "getApp.makeOnce": "Crealo una volta nell'app. Poi torna qui e verifica di nuovo.",
   "getApp.checkAgain": "L'ho creato, verifica di nuovo",
-  "getApp.goToSpaces": "Vai a Spaces"
+  "getApp.goToSpaces": "Vai a Spaces",
+  "stores.downloadOnThe": "Scarica su",
+  "stores.getItOn": "Disponibile su"
 }

@@ -31,6 +31,7 @@ import { noteTermsShown, TERMS_VERSION } from "@/lib/app/terms";
 
 import { goWith, NotConfigured, PROVIDER_NAME, ProviderLogo, useProviders } from "@/components/creator/SignIn";
 
+import { StoreButtons } from "../main/products";
 import { EmailSignIn } from "./EmailSignIn";
 import { btnLink, DEFAULT_AVATAR_EMOJI, EmojiAvatar, HoldMark, Warn } from "./kit";
 
@@ -206,6 +207,11 @@ function Welcome({ onGo }: { onGo: () => void }) {
       >
         {t("front.door.letsGo")}
       </button>
+      {/* Somebody without a HOLD account starts in the app: the account and the wallet are made there. */}
+      <div className="mt-6 flex flex-col items-center gap-3 text-center">
+        <p className="text-[13px] leading-[18px] text-white/60">{t("front.door.newGetApp")}</p>
+        <StoreButtons className="justify-center" />
+      </div>
     </div>
   );
 }
