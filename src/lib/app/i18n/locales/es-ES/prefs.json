@@ -1,1 +1,13 @@
-{}
+{
+  "language": "Idioma",
+  "currency": "Moneda",
+  "recentLanguages": "Idiomas recientes",
+  "allLanguages": "Todos los idiomas",
+  "searchLanguage": "Buscar idioma",
+  "recentCurrencies": "Monedas recientes",
+  "allCurrencies": "Todas las monedas",
+  "searchCurrency": "Buscar moneda o país",
+  "currencyIntro": "Los saldos, totales y precios se muestran en esta moneda. Lo que pagas de verdad sigue en el token, y cada grupo mantiene su propia moneda.",
+  "currencyNoRate": "* Aún no hay tipo de cambio en directo, así que los importes se quedan en dólares estadounidenses.",
+  "currencyNoRateLabel": "{code} {name}, tipo de cambio en directo no disponible"
+}
