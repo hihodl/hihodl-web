@@ -81,7 +81,6 @@ export async function sendFounderReceipt(receipt: FounderReceipt): Promise<void>
     <div style="border-top:1px solid rgba(255,255,255,.08);padding-top:24px;">
       <p style="margin:0 0 16px;font-size:14px;color:#9BA3B0;">Working today:</p>
       <ul style="margin:0 0 32px;padding-left:20px;font-size:15px;line-height:1.8;color:#F4F6FA;">
-        <li>The paid plan, for life. It will never bill you.</li>
         <li>No fee on what your savings earn, on balances up to $${waiver}.</li>
         <li>No FX markup, in every corridor.</li>
         <li>A permanent ${share}% share of the revenue anyone you introduce generates for us.</li>

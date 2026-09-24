@@ -53,7 +53,6 @@ export const metadata: Metadata = {
 
 /** What the buyer keeps of the spread. The page renders this, never our share. */
 const userShareBps = 10_000 - HOLD_KEEPS.esim.marginShareBps;
-const userShareProBps = 10_000 - HOLD_KEEPS.esim.marginShareProBps;
 
 export default function EsimPage() {
   return (
@@ -215,8 +214,7 @@ export default function EsimPage() {
                 </p>
                 <p className="text-text">
                   Then {bps(userShareBps)} of what we make on the sale goes back to you as
-                  HiPoints, credited when the order completes — {bps(userShareProBps)} on
-                  Pro. We keep the rest. That is why the cheaper the plan, the smaller the
+                  HiPoints, credited when the order completes. We keep the rest. That is why the cheaper the plan, the smaller the
                   reward: it is a share of a real margin rather than a number chosen to
                   look generous on a screen.
                 </p>

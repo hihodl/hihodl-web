@@ -414,6 +414,15 @@ export const TIERS: Tier[] = [
   },
 ];
 
+/**
+ * The tiers the site may show a reader. Pro is left out: HOLD Pro does not
+ * launch now (decision of 24-sep-2026), so no page offers, prices or promises
+ * it. It stays in TIERS because the backend still knows the plan and an
+ * account already on it must still read correctly; putting it back on the
+ * site is deleting this filter, not re-typing the tier.
+ */
+export const PUBLIC_TIERS: Tier[] = TIERS.filter((t) => t.id !== "pro");
+
 export const TIER_BY_ID: Record<TierId, Tier> = Object.fromEntries(
   TIERS.map((t) => [t.id, t]),
 ) as Record<TierId, Tier>;

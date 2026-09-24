@@ -215,7 +215,7 @@ function MenuHero() {
  * The plan tile carries the app's own words (`menu:tiles.standard` /
  * `menu:tiles.pro`) over the plan this person is actually on, read from `GET
  * /me`. Tapping it opens the one thing the web can honestly say about it:
- * which plan, and that changing it is done in the app. It names no rate —
+ * which plan, and nothing to upgrade to. It names no rate —
  * each of those belongs to the one product page that charges it
  * (rates.config), and a tile that collected them would be the aggregate fee
  * page this product has decided not to have.
@@ -272,14 +272,13 @@ function Tile({ icon, title, sub, href, reload, onClick }: { icon: IonName; titl
 /* ── Plan ((paywall)/plans, as much of it as the web can say) ─────── */
 
 /**
- * Which plan, and where it changes.
+ * Which plan, and nothing to buy.
  *
- * The app's tile opens its paywall, which is a purchase: `POST
- * /subscriptions/create` raises a payment request that the wallet approves on
- * the phone. The web has no plan checkout of its own (the website's only
- * Stripe checkout is the Founder Pass), so the plan is stated from `GET /me`
- * and the action is the way into the app's plans screen, never a link back to
- * the website that would send the person round in a loop.
+ * The plan is stated from `GET /me`. HOLD Pro does not launch now (decision
+ * of 24-sep-2026), so this screen offers no upgrade, no way into the app's
+ * plans screen and no line about what Pro would add. An account already on
+ * Pro still reads its own plan here, because that is a fact about the
+ * account, not an offer.
  *
  * No rates here, deliberately. Every take we charge belongs to the one product
  * page that charges it (lib/rates.config, rule 2: no aggregated fee page), so
@@ -306,37 +305,7 @@ function PlanScreen({ onBack }: { onBack: () => void }) {
           {pro ? t("menu.plan.proBody") : t("menu.plan.standardBody")}
         </p>
       </HoldCard>
-      <div className="mt-4">
-        <Notice icon="phone-portrait-outline" tone="calm">
-          {t("menu.plan.changeInApp")}
-        </Notice>
-      </div>
-      <HoldCard className="mt-4">
-        <PlanInTheApp />
-        <MenuRow icon="globe-outline" label={t("menu.plan.includes")} sub="hihodl.xyz/hipoints" href={`${WEBSITE}/hipoints`} external />
-      </HoldCard>
     </Column>
-  );
-}
-
-/**
- * The way to the app's plans screen from this device. A phone opens it
- * (`hihodl://plans` through /open, which falls back to the store when the app
- * is not there). A computer cannot open an app on a phone, so it says where to
- * look and offers both stores rather than a link that lands on the homepage.
- */
-function PlanInTheApp() {
-  const [phone, setPhone] = useState<Phone | null>(null);
-  const t = useT();
-  useEffect(() => setPhone(thisDevice().phone), []);
-  if (phone) {
-    return <MenuRow icon="open-outline" label={t("menu.plan.openInApp")} href={`${WEBSITE}/open?to=plans`} external chevron />;
-  }
-  return (
-    <>
-      <MenuRow icon="logo-apple" label={t("menu.stores.appStore")} sub={t("menu.plan.appStoreSub")} href={APP_STORE_URL} external chevron />
-      <MenuRow icon="logo-google" label={t("menu.stores.googlePlay")} href={PLAY_STORE_URL} external chevron />
-    </>
   );
 }
 

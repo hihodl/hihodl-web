@@ -104,8 +104,8 @@ export default function InviteRedirect() {
           maxWidth: 400,
         }}
       >
-        Your friend invited you to join HOLD — the gasless stablecoin wallet.
-        Sign up and swap $5+ to earn them a free month of Pro.
+        Your friend invited you to join HOLD, the gasless stablecoin wallet.
+        Sign up and swap $50 or more within 14 days, and you both get HiPoints.
       </p>
       <p style={{ fontSize: 14, color: "rgba(255,255,255,0.4)" }}>
         Redirecting to the app...

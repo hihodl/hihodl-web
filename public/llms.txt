@@ -17,19 +17,19 @@
 - Ethereum
 
 ## Pricing
-| Plan | Price | Free swaps/mo | After cap | Min swap |
-|------|-------|---------------|-----------|----------|
-| Free | $0 | $500 | 0.50% all-in | $2 |
-| Pro  | $9.99/mo | $2,000 | 0.15% all-in | $2 |
+One plan, free.
 
-Solana swaps are always gasless on both plans. EVM gas is smart-detected on Pro. No hidden spread, no tier games, cancel anytime. Invite 1 friend → 1 month Pro free, up to 3 months.
+| Plan | Price | Network fee covered on | After that | Min swap |
+|------|-------|------------------------|------------|----------|
+| Free | $0 | first $500 converted each month | 0.50% all-in on the excess | $2 |
+
+Solana swaps are always gasless. No hidden spread, no tier games. Invite a friend: when they make a swap of $50 or more within 14 days, you get 2,500 HiPoints and they get 1,000, up to 3 rewarded invites (https://hihodl.xyz/legal/referral-terms).
 
 ## Core features
 - **Username payments** — send stablecoins to @username, no addresses to copy.
 - **Income Rails** — virtual USD account with IBAN/SWIFT to receive salary or client payments; lands as stablecoins.
-- **Pockets** — split balance across labelled pockets (Travel, Rent, Savings, etc.) from a single wallet. Free plan = 3 pockets, Pro = unlimited.
+- **Pockets** — split balance across labelled pockets (Travel, Rent, Savings, etc.) from a single wallet. 3 pockets per account.
 - **Gasless swaps** — Solana always, EVM smart-detected.
-- **Stealth payments** — incoming addresses rotate per payer for privacy.
 - **HUSD (coming 2027)** — HOLD's native stablecoin for the remote economy.
 - **AI layer (coming soon)** — conversational interface: "send 200 USDC to Lucía", "split paycheck 60/30/10", "move savings to highest yield". The AI proposes, the user signs every transaction.
 

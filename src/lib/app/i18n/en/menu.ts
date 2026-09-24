@@ -26,12 +26,7 @@ const menu = {
   /* Plan */
   "plan.title": "Your plan",
   "plan.proBody": "You are on Pro. Transfers are gasless and conversions carry no base markup.",
-  "plan.standardBody": "You are on Standard. Everything in HOLD works; Pro removes the base markup on conversions and makes transfers gasless.",
-  "plan.changeInApp":
-    "Your plan is changed in the HOLD app: Menu, then your plan. It is paid from your wallet there and applies to this account as soon as it clears.",
-  "plan.includes": "What each plan includes",
-  "plan.openInApp": "Open plans in the app",
-  "plan.appStoreSub": "Open HOLD on your phone to change plan",
+  "plan.standardBody": "You are on Standard. Everything in HOLD works.",
   "stores.appStore": "HOLD on the App Store",
   "stores.googlePlay": "HOLD on Google Play",
 

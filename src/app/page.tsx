@@ -149,31 +149,26 @@ export default function Home() {
           />
           <SectionHairline tone="blue" />
           <div className="container-page section text-center relative">
-            <p className="text-tiny uppercase tracking-wider text-text-faint">Two plans. Zero surprises.</p>
+            <p className="text-tiny uppercase tracking-wider text-text-faint">One plan. Zero surprises.</p>
             <h2 className="mt-6 font-display text-h2 md:text-h1 font-light text-text max-w-3xl mx-auto">
               Start free.
               <br />
-              <span className="text-text-muted">Go Pro when your money does more.</span>
+              <span className="text-text-muted">Everything in HOLD is on it.</span>
             </h2>
             <p className="mt-8 text-lead text-text-muted max-w-2xl mx-auto">
-              Savings, investing and benefits are on both plans. Pro buys you
-              room, not access. No hidden spread, no tier games, cancel anytime.
+              Savings, investing and benefits are all included. No hidden spread,
+              no tier games.
             </p>
 
             {/*
               Every line below is a live constant, not a plan we would like to
-              sell. Two that were wrong until 16-aug-2026:
-
-              — Address rotation is Pro. plans.service.ts sets the free pool to
-                0 and getAddressRotation() returns enabled: poolSize > 0, so a
-                free account receives at one address. The site sold rotation as
-                if everyone had it, which is the worst kind of claim to get
-                wrong: a privacy promise the product does not keep.
-              — "Premium support" told the reader nothing. The real Pro benefits
-                are the caps: 3 income accounts against 1, 3 handles against 1,
-                unlimited pockets against 3.
+              sell. HOLD sells one plan: the paid plan does not launch now
+              (decision of 24-sep-2026), so nothing on the site offers, prices
+              or promises it. A fresh receiving address per payment belongs to
+              that plan (plans.service.ts sets the free address pool to 0), so
+              it is not claimed here either.
             */}
-            <div className="mt-16 grid grid-cols-1 md:grid-cols-2 gap-5 max-w-4xl mx-auto text-left">
+            <div className="mt-16 max-w-md mx-auto text-left">
               <PlanCard
                 name="Free"
                 price="$0"
@@ -181,32 +176,21 @@ export default function Home() {
                 features={[
                   `First ${usd(FREE_ALLOWANCE.monthlyVolumeUsd)}/month converted: network fee on us`,
                   `Above that, ${HOLD_KEEPS.swapMarkupFreeBps / 100}% all-in · $2 minimum`,
-                  "Savings and Benefits, same as Pro",
-                  "One USD account — IBAN and SWIFT",
+                  "Savings and Benefits included",
+                  "One USD account with IBAN and SWIFT",
                   "3 pockets · one @username",
                   "Self-custody · Face ID",
                 ]}
                 cta={{ label: "Download free", href: DOWNLOAD_ANCHOR }}
               />
-              <PlanCard
-                name="Pro"
-                price="$9.99"
-                priceSub="per month"
-                highlight
-                features={[
-                  "Network fee covered, with no monthly cap",
-                  "No markup on what you convert, at any volume",
-                  "A fresh receiving address on every payment",
-                  "Up to 3 USD accounts · 3 @usernames",
-                  "Unlimited pockets",
-                  "Priority access to HUSD at launch",
-                ]}
-                cta={{ label: "Get Pro", href: DOWNLOAD_ANCHOR }}
-              />
             </div>
 
             <p className="mt-10 text-small text-text-faint max-w-xl mx-auto">
-              Invite 1 friend, get 1 month Pro free. Up to 3 months.
+              Invite a friend: when they swap $50 or more, you get 2,500 HiPoints
+              and they get 1,000. Up to 3 rewarded invites.{" "}
+              <Link href="/legal/referral-terms" className="underline underline-offset-2 hover:text-text-muted">
+                Terms
+              </Link>
             </p>
           </div>
         </section>

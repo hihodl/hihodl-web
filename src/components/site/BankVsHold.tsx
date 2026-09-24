@@ -35,11 +35,6 @@ export function BankVsHold() {
       hold: "You hold it. The key is on your phone. We can't touch it.",
     },
     {
-      topic: "Who can see your income",
-      bank: "Your bank, its partners, and anyone with the right paperwork.",
-      hold: "On Pro, every payment lands at a new address. Nobody can add up what you earn.",
-    },
-    {
       topic: "When you travel",
       bank: "Card declined. App requires home wifi. Support closed.",
       hold: "Same balance. Same app. Same speed. Anywhere.",

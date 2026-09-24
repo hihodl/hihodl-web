@@ -1,4 +1,4 @@
-import { FREE_ALLOWANCE, usd } from "@/lib/rates.config";
+import { FREE_ALLOWANCE, HOLD_KEEPS, usd } from "@/lib/rates.config";
 
 /**
  * WhyFree — kills the "what's the catch" objection.
@@ -44,8 +44,8 @@ export function WhyFree() {
         <ol className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-px bg-[color:var(--color-hairline)] border border-[color:var(--color-hairline)] rounded-card overflow-hidden">
           <Reason
             n="01"
-            title="Pro subscriptions"
-            body="Power users move more than $500/month and switch to Pro at $9.99. They subsidize the gas for everyone else. Fair trade — Pro gets unlimited."
+            title="A small fee above the free allowance"
+            body={`Move more than ${usd(FREE_ALLOWANCE.monthlyVolumeUsd)} in a month and what you convert above that carries ${HOLD_KEEPS.swapMarkupFreeBps / 100}% all-in, shown before you tap. The people who move the most pay for the network fees we cover for everyone else.`}
           />
           <Reason
             n="02"

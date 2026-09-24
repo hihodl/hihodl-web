@@ -67,7 +67,7 @@ export default function ReferralTermsPage() {
               Referral program terms
             </h1>
             <p className="text-base sm:text-lg text-[#94a3b8ff] font-['Inter'] font-[400]">
-              Last updated: August 13, 2026
+              Last updated: September 24, 2026
             </p>
           </div>
 
@@ -132,9 +132,8 @@ export default function ReferralTermsPage() {
                 cash, and have no value outside HOLD. They are redeemable inside
                 the app at a rate of{" "}
                 <span className="text-[#eaf6ffff] font-[600]">$0.01 per point</span>.
-                Rewards are not a free month of any paid plan — earlier versions
-                of this program paid Pro months, and that is no longer how it
-                works.
+                Rewards are paid in HiPoints only. A referral does not earn a
+                paid plan or any time on one.
               </p>
               <p className="text-[#94a3b8ff]">
                 HiPoints and the places you can spend them are rolling out

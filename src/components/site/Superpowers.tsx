@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { FREE_ALLOWANCE, usd } from "@/lib/rates.config";
 
 /**
- * The four mechanics, AFTER the four products.
+ * The three mechanics, AFTER the four products.
  *
  * This section used to open the argument: no seed phrase, stealth addresses,
  * gasless swaps. That is a wallet pitch, and it asks a stranger to care about
@@ -14,8 +14,12 @@ import { FREE_ALLOWANCE, usd } from "@/lib/rates.config";
  * leads with what the reader gets rather than with the machinery.
  *
  * Layout:
- *   Row 1: 2 cards (Opening an account · Who can see your income)
- *   Row 2: 2 cards (Sending · Cost of moving money)
+ *   Row 1: 2 cards (Opening an account · Sending)
+ *   Row 2: 1 card across both columns (Cost of moving money)
+ *
+ * "Who can see your income" was a fourth card until 24-sep-2026. It sold a
+ * fresh receiving address per payment, which only the paid plan has, and the
+ * paid plan does not launch now, so the card went with it.
  *
  * Every card has a distinct micro-animation. No two feel the same.
  * Anti-slop discipline: motion is restrained, never loops continuously
@@ -31,7 +35,7 @@ export function Superpowers() {
         <div className="max-w-2xl">
           <p className="text-tiny uppercase tracking-wider text-text-faint">Under the hood</p>
           <h2 className="mt-6 font-display text-h2 md:text-h1 font-light text-text">
-            Four things that
+            Three things that
             <br />
             make the rest possible.
           </h2>
@@ -45,9 +49,10 @@ export function Superpowers() {
         {/* Cards grid */}
         <div className="mt-16 md:mt-24 grid grid-cols-1 md:grid-cols-2 gap-6">
           <SocialLoginCard />
-          <PrivacyCard />
           <SmartPaymentsCard />
-          <GaslessSwapCard />
+          <div className="md:col-span-2">
+            <GaslessSwapCard />
+          </div>
         </div>
       </div>
     </section>
@@ -198,62 +203,6 @@ function CheckIcon() {
 }
 
 /* ─────────────────────────────────────────────────────────────
- * 2 · Privacy
- * Visual: One token symbol → multiple addresses radiating, fading in/out
- * ───────────────────────────────────────────────────────────── */
-
-function PrivacyCard() {
-  return (
-    <Card
-      accent="moonlight"
-      eyebrow="Who can see your income"
-      title="Your salary is nobody else's business."
-      body="On Pro, every payment you receive lands at a fresh address, so a client who paid you once cannot go back and watch what you earn afterwards. Nobody can add it up — including us."
-      proof="Automatic address rotation, on Pro. Each receive is unlinkable on-chain. Reveal it selectively when you actually need to: taxes, audits, your own records."
-      visual={<PrivacyVisual />}
-    />
-  );
-}
-
-function PrivacyVisual() {
-  const addresses = ["0x4a2...8f3", "0x9b1...c47", "0xe27...112", "0x3d8...fb6", "0x7c4...2a9"];
-  return (
-    <div className="absolute inset-0">
-      <div className="absolute inset-0 bg-moonlight-glow opacity-25" aria-hidden />
-      {/* Center token */}
-      <div className="absolute inset-0 flex items-center justify-center">
-        <div className="relative w-12 h-12 rounded-full bg-white/[0.08] border border-moonlight/30 flex items-center justify-center">
-          <div className="w-2.5 h-2.5 rounded-full bg-moonlight" />
-        </div>
-      </div>
-      {/* Floating addresses */}
-      {addresses.map((addr, i) => {
-        const positions = [
-          { top: "12%", left: "15%" },
-          { top: "20%", right: "18%" },
-          { bottom: "18%", left: "12%" },
-          { bottom: "25%", right: "14%" },
-          { top: "50%", left: "8%" },
-        ];
-        return (
-          <div
-            key={addr}
-            className="absolute font-mono text-tiny text-text-muted"
-            style={{
-              ...positions[i],
-              animation: `addr-fade 5s ease-in-out infinite`,
-              animationDelay: `${i * 0.7}s`,
-            }}
-          >
-            {addr}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-/* ─────────────────────────────────────────────────────────────
  * 3 · Smart payments
  * Visual: Chat bubble with 5s undo countdown, then ✓ Sent
  * ───────────────────────────────────────────────────────────── */
@@ -335,7 +284,7 @@ function GaslessSwapCard() {
       eyebrow={`The first ${usd(FREE_ALLOWANCE.monthlyVolumeUsd)} is on us`}
       title="Moving your money costs you nothing."
       body={`Every network charges a fee to move money across it. We pay it for you on the first ${usd(FREE_ALLOWANCE.monthlyVolumeUsd)} you convert each month, up to ${usd(FREE_ALLOWANCE.networkFeeCeilingUsd)} a time — you do not need to hold anything to cover it, and there is nothing to top up.`}
-      proof="Powered by Jupiter. Above the cap: real network cost + 0.50%, shown as one combined Network fee. No hidden spread. Pro: always gasless."
+      proof="Powered by Jupiter. Above the cap: real network cost + 0.50%, shown as one combined Network fee. No hidden spread."
       visual={
         <div className="absolute inset-0 flex flex-col items-center justify-center px-8">
           {/* Subtle warm wash, never blinding */}

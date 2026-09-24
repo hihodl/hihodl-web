@@ -64,14 +64,6 @@ const jsonLd = {
           description:
             "$500/month of conversions with the network fee covered. 0.50% all-in above the cap. 3 pockets. Savings and Benefits included. Self-custody.",
         },
-        {
-          "@type": "Offer",
-          name: "Pro",
-          price: "9.99",
-          priceCurrency: "USD",
-          description:
-            "Network fee covered with no monthly cap and no markup at any volume. Unlimited pockets. Savings and Benefits included. Priority HUSD access.",
-        },
       ],
       featureList: [
         "Virtual USD account with IBAN/SWIFT",
@@ -81,7 +73,6 @@ const jsonLd = {
         "Benefits — HiPoints, hotel stays and eSIM data paid from your balance",
         "Non-custodial — keys generated on your device, with encrypted cloud recovery",
         "Network fee covered on the first $500 you convert each month",
-        "Stealth incoming addresses — automatic rotation on Pro",
         "Pockets — split one balance into labelled buckets",
         "AI conversational layer (coming soon)",
       ],
@@ -119,7 +110,7 @@ const jsonLd = {
           name: "What are HiPoints?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "HiPoints are earned inside HOLD — referrals that activate, challenges, and fees you would otherwise have paid — and spent on things that cost real money, such as a hotel booking made in the app or your Pro subscription. A point is worth the same wherever it is spent; the rate does not vary by product.",
+            text: "HiPoints are earned inside HOLD — referrals that activate, challenges, and fees you would otherwise have paid — and spent on things that cost real money, such as a hotel booking made in the app. A point is worth the same wherever it is spent; the rate does not vary by product.",
           },
         },
         {
@@ -135,7 +126,7 @@ const jsonLd = {
           name: "How much does HOLD cost?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Free is $0/month. On the first $500 you convert each month HOLD covers the network fee for you, up to $0.10 per conversion; if the network is congested and the real cost is higher, you pay only the excess. Above $500/month it is 0.50% all-in on the excess. Pro is $9.99/month: the network fee is covered with no monthly cap and there is no markup at any volume. Both plans have a $2 minimum conversion, and Savings and Benefits are included on both.",
+            text: "Free is $0/month. On the first $500 you convert each month HOLD covers the network fee for you, up to $0.10 per conversion; if the network is congested and the real cost is higher, you pay only the excess. Above $500/month it is 0.50% all-in on the excess. There is a $2 minimum conversion, and Savings and Benefits are included.",
           },
         },
         {
@@ -143,7 +134,7 @@ const jsonLd = {
           name: "What chains does HOLD support?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "HOLD supports Solana, Polygon, Base and Ethereum. Solana swaps are always gasless. EVM chains use smart gas detection on Pro.",
+            text: "HOLD supports Solana, Polygon, Base and Ethereum. Solana swaps are always gasless.",
           },
         },
         {
@@ -175,7 +166,7 @@ const jsonLd = {
           name: "What is HUSD?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "HUSD is HOLD's native stablecoin, designed for people who earn in one country and live in another. Launching in 2027. Newsletter subscribers and Pro users get priority access.",
+            text: "HUSD is HOLD's native stablecoin, designed for people who earn in one country and live in another. Launching in 2027. Newsletter subscribers get priority access.",
           },
         },
         {
