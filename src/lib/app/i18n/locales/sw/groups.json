@@ -46,7 +46,7 @@
   "list.loadFailed": "Imeshindwa kupakia vikundi vyako.",
   "list.empty": "Bado hakuna vikundi",
   "list.emptyBody": "Kikundi ni mazungumzo ambamo pesa ni sehemu yake: gawaneni chakula cha jioni, teksi, nyumba, kisha malizeni hesabu.",
-  "list.crew": "Kikosi",
+  "list.crew": "Crew",
   "list.unread": "{count} mpya",
   "across.title": "Kwenye vikundi vyako vyote",
   "across.shareAndPaid": "Sehemu yako <b>{share}</b> · ulilipa <b>{paid}</b>",
