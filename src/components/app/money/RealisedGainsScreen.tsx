@@ -21,8 +21,10 @@
 import { useMemo, useState } from "react";
 
 import { downloadRealized, type RealizedDisposal, type ReportFormat } from "@/lib/app/hold-api";
+import { fmtNumber, fmtUsd } from "@/lib/app/i18n/format";
+import { useLocale, useT } from "@/lib/app/i18n/react";
 import { useRealized } from "@/lib/app/money";
-import { shortDate, summariseTaxYear, taxYearsAvailable, tokenUnits, unitPrice, usd } from "@/lib/app/portfolio";
+import { shortDate, signedUsd, summariseTaxYear, taxYearsAvailable, tokenUnits, unitPrice, usd } from "@/lib/app/portfolio";
 
 import { useProductHref } from "../base";
 import { Ion } from "../ion";
@@ -31,6 +33,9 @@ import { ReadFailed } from "./kit";
 import { HeaderDisc, NoteCard, PortfolioHeader, SectionTitle, UP, glassCard } from "./portfolio-kit";
 
 export function RealisedGainsScreen() {
+  const t = useT();
+  // The exclusion sentences are words: a new language rebuilds them.
+  const locale = useLocale();
   const href = useProductHref();
   const thisYear = new Date().getUTCFullYear();
   const all = useRealized("all");
@@ -39,7 +44,8 @@ export function RealisedGainsScreen() {
   const years = useMemo(() => (all.data ? taxYearsAvailable(all.data.disposals ?? []) : [thisYear]), [all.data, thisYear]);
   const [year, setYear] = useState(thisYear);
   const report = useRealized(year);
-  const summary = useMemo(() => (report.data ? summariseTaxYear(year, report.data) : null), [report.data, year]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const summary = useMemo(() => (report.data ? summariseTaxYear(year, report.data) : null), [report.data, year, locale]);
 
   const [busy, setBusy] = useState<ReportFormat | null>(null);
   const [downloadFailed, setDownloadFailed] = useState<ReportFormat | null>(null);
@@ -64,24 +70,24 @@ export function RealisedGainsScreen() {
   return (
     <div className="mx-auto flex w-full max-w-[640px] flex-1 flex-col">
       <PortfolioHeader
-        title="Realised gains"
+        title={t("money.realised.title")}
         back={href("/invest/performance")}
-        right={<HeaderDisc icon="download-outline" label="Download as PDF" onClick={() => void download("pdf")} disabled={!summary || !!busy} />}
+        right={<HeaderDisc icon="download-outline" label={t("money.realised.downloadPdf")} onClick={() => void download("pdf")} disabled={!summary || !!busy} />}
       />
 
       <div className="flex items-center justify-center gap-[18px] pb-3.5 pt-0.5">
         {years.length > 1 ? (
           <>
-            <button type="button" onClick={() => older && setYear(older)} disabled={!older} aria-label="Previous year" className="text-white disabled:opacity-25">
+            <button type="button" onClick={() => older && setYear(older)} disabled={!older} aria-label={t("money.realised.previousYear")} className="text-white disabled:opacity-25">
               <Ion name="chevron-back" size={18} />
             </button>
             <span className="min-w-[64px] text-center text-[17px] font-bold tabular-nums text-white">{year}</span>
-            <button type="button" onClick={() => newer && setYear(newer)} disabled={!newer} aria-label="Next year" className="text-white disabled:opacity-25">
+            <button type="button" onClick={() => newer && setYear(newer)} disabled={!newer} aria-label={t("money.realised.nextYear")} className="text-white disabled:opacity-25">
               <Ion name="chevron-forward" size={18} />
             </button>
           </>
         ) : (
-          <span className="text-[13px] font-strong tracking-[0.2px] text-white/[0.7]">Tax year {year}</span>
+          <span className="text-[13px] font-strong tracking-[0.2px] text-white/[0.7]">{t("money.realised.taxYear", { year })}</span>
         )}
       </div>
 
@@ -93,8 +99,8 @@ export function RealisedGainsScreen() {
       ) : report.error && !report.data ? (
         <div className={glassCard}>
           <ReadFailed
-            title={`We couldn't load ${year}`}
-            body="That's not the same as having sold nothing — we just couldn't reach the figures."
+            title={t("money.realised.readFailed", { year })}
+            body={t("money.realised.readFailedBody")}
             onRetry={() => void report.mutate()}
           />
         </div>
@@ -103,7 +109,7 @@ export function RealisedGainsScreen() {
           {/* Above the number, deliberately: by the time you have read the
               figure it is too late to learn what it leaves out. */}
           {summary.exclusions.length > 0 ? (
-            <NoteCard tone="notice" title={`${summary.excludedCount} not counted below`}>
+            <NoteCard tone="notice" title={t("money.realised.notCounted", { count: fmtNumber(summary.excludedCount) })}>
               {summary.exclusions.map((line) => (
                 <p key={line} className="mb-[3px]">
                   {line}
@@ -114,30 +120,19 @@ export function RealisedGainsScreen() {
 
           <div className={`${glassCard} mb-1 p-[22px]`}>
             <p className="text-[14px] font-strong text-white/[0.8]">
-              {h.kind === "nothing"
-                ? `You sold nothing in ${year}`
-                : h.kind === "dollarsOnly"
-                  ? `Nothing to declare for ${year}`
-                  : h.kind === "even"
-                    ? `In ${year} you broke even`
-                    : h.kind === "made"
-                      ? `In ${year} you made`
-                      : `In ${year} you lost`}
+              {t("money.realised.headline", { kind: h.kind, year })}
             </p>
             {h.kind === "nothing" ? (
-              <p className="mt-2.5 text-[14px] leading-[21px] text-white/[0.8]">
-                Anything you still hold is in your portfolio. A gain only becomes real when something leaves.
-              </p>
+              <p className="mt-2.5 text-[14px] leading-[21px] text-white/[0.8]">{t("money.realised.nothingBody")}</p>
             ) : h.kind === "dollarsOnly" ? (
               <p className="mt-2.5 text-[14px] leading-[21px] text-white/[0.8]">
-                You moved {usd(summary.spending.amountUsd)} this year, all of it in dollars. A dollar is worth a dollar when you spend it, so there&apos;s no
-                gain or loss to report. That starts the day you sell something whose price moves.
+                {t("money.realised.dollarsOnlyBody", { amount: usd(summary.spending.amountUsd) })}
               </p>
             ) : h.kind === "even" ? (
               <>
-                <p className="mt-1 text-[44px] font-bold leading-[1.1] tracking-[-1.4px] text-white">Broke even</p>
+                <p className="mt-1 text-[44px] font-bold leading-[1.1] tracking-[-1.4px] text-white">{t("money.realised.brokeEven")}</p>
                 <p className="mt-1.5 text-[13px] font-strong text-white/[0.7]">
-                  across {h.sales} {h.sales === 1 ? "sale" : "sales"} — what you sold was worth what you paid for it
+                  {t("money.realised.evenSub", { count: h.sales })}
                 </p>
               </>
             ) : (
@@ -146,19 +141,19 @@ export function RealisedGainsScreen() {
                   {usd(h.amountUsd)}
                 </p>
                 <p className="mt-1.5 text-[13px] font-strong text-white/[0.7]">
-                  across {h.sales} {h.sales === 1 ? "sale" : "sales"}
-                  {summary.fees.count > 0 ? ` · ${usd(summary.fees.costUsd)} of network fees` : ""}
+                  {t("money.acrossSales", { count: h.sales })}
+                  {summary.fees.count > 0 ? ` · ${t("money.realised.feesOf", { amount: usd(summary.fees.costUsd) })}` : ""}
                 </p>
                 {/* The split, only with something on both sides. */}
                 {summary.gainsUsd > 0 && summary.lossesUsd > 0 ? (
                   <>
-                    <div className="mt-[18px] flex h-1.5 gap-0.5 overflow-hidden rounded-[3px] bg-white/[0.08]" role="img" aria-label={`${usd(summary.gainsUsd)} up, ${usd(summary.lossesUsd)} down`}>
+                    <div className="mt-[18px] flex h-1.5 gap-0.5 overflow-hidden rounded-[3px] bg-white/[0.08]" role="img" aria-label={t("money.realised.splitAria", { up: usd(summary.gainsUsd), down: usd(summary.lossesUsd) })}>
                       <span style={{ flex: summary.gainsUsd, backgroundColor: UP }} />
                       <span style={{ flex: summary.lossesUsd, backgroundColor: "rgba(255,255,255,0.35)" }} />
                     </div>
                     <div className="mt-2 flex justify-between text-[12px] font-strong tabular-nums">
-                      <span style={{ color: UP }}>{usd(summary.gainsUsd)} up</span>
-                      <span className="text-white/[0.7]">{usd(summary.lossesUsd)} down</span>
+                      <span style={{ color: UP }}>{t("money.realised.up", { amount: usd(summary.gainsUsd) })}</span>
+                      <span className="text-white/[0.7]">{t("money.realised.down", { amount: usd(summary.lossesUsd) })}</span>
                     </div>
                   </>
                 ) : null}
@@ -167,14 +162,12 @@ export function RealisedGainsScreen() {
           </div>
 
           {summary.incomeUsd > 0 ? (
-            <NoteCard title={`Plus ${usd(summary.incomeUsd)} earned`}>
-              Interest paid to you while you held. Most tax returns treat that as income rather than a gain, so it&apos;s kept separate.
-            </NoteCard>
+            <NoteCard title={t("money.realised.incomeTitle", { amount: usd(summary.incomeUsd) })}>{t("money.realised.incomeBody")}</NoteCard>
           ) : null}
 
           {summary.sales.length > 0 ? (
             <div>
-              <SectionTitle>What you sold</SectionTitle>
+              <SectionTitle>{t("money.realised.whatYouSold")}</SectionTitle>
               <div className={`${glassCard} px-4`}>
                 {summary.sales.map((d, i) => (
                   <SaleRow key={`${d.transactionId}-${i}`} sale={d} first={i === 0} />
@@ -186,22 +179,20 @@ export function RealisedGainsScreen() {
           {summary.spending.count > 0 ? (
             <div className={`${glassCard} flex items-center px-4 py-[13px]`}>
               <div className="min-w-0 flex-1 pr-2.5">
-                <p className="text-[15px] font-bold text-white">{usd(summary.spending.amountUsd)} paid in dollars</p>
-                <p className="mt-0.5 text-[12px] font-strong text-white/[0.7]">
-                  {summary.spending.count} {summary.spending.count === 1 ? "payment" : "payments"} · a dollar is worth a dollar, so nothing to declare
-                </p>
+                <p className="text-[15px] font-bold text-white">{t("money.realised.paidInDollars", { amount: usd(summary.spending.amountUsd) })}</p>
+                <p className="mt-0.5 text-[12px] font-strong text-white/[0.7]">{t("money.realised.paymentsSub", { count: summary.spending.count })}</p>
               </div>
-              <span className="text-[15px] font-bold text-white/[0.45]">$0.00</span>
+              <span className="text-[15px] font-bold text-white/[0.45]">{fmtUsd(0)}</span>
             </div>
           ) : null}
 
           {summary.fees.count > 0 ? (
             <div className={`${glassCard} flex items-center px-4 py-[13px]`}>
               <div className="min-w-0 flex-1 pr-2.5">
-                <p className="text-[15px] font-bold text-white">Network fees</p>
-                <p className="mt-0.5 text-[12px] font-strong text-white/[0.7]">{summary.fees.count} paid to the blockchain, not to us</p>
+                <p className="text-[15px] font-bold text-white">{t("money.realised.networkFees")}</p>
+                <p className="mt-0.5 text-[12px] font-strong text-white/[0.7]">{t("money.realised.feesSub", { count: fmtNumber(summary.fees.count) })}</p>
               </div>
-              <span className="text-[15px] font-bold tabular-nums text-white">−{usd(summary.fees.costUsd)}</span>
+              <span className="text-[15px] font-bold tabular-nums text-white">{fmtUsd(summary.fees.costUsd > 0 ? -summary.fees.costUsd : 0)}</span>
             </div>
           ) : null}
 
@@ -212,11 +203,11 @@ export function RealisedGainsScreen() {
             className="mt-2 flex h-12 items-center justify-center gap-[7px] rounded-[16px] bg-white/[0.06] text-[13px] font-strong text-white/[0.9] transition-colors hover:bg-white/[0.1] disabled:opacity-60"
           >
             <Ion name="grid-outline" size={17} />
-            {busy === "csv" ? "Preparing…" : busy === "pdf" ? "Preparing the PDF…" : "Export as a spreadsheet"}
+            {busy === "csv" ? t("money.realised.preparing") : busy === "pdf" ? t("money.realised.preparingPdf") : t("money.realised.exportCsv")}
           </button>
           {downloadFailed ? (
             <p role="status" className="px-1 text-center text-[12.5px] leading-[17px] text-white/[0.8]">
-              We couldn&apos;t build the {downloadFailed.toUpperCase()} just now. The figures above are the same ones — try again in a moment.
+              {t("money.realised.downloadFailed", { format: downloadFailed.toUpperCase() })}
             </p>
           ) : null}
         </div>
@@ -227,14 +218,15 @@ export function RealisedGainsScreen() {
 
 /** One sale: what left, both prices PER UNIT, and what it made. */
 function SaleRow({ sale, first }: { sale: RealizedDisposal; first: boolean }) {
+  const t = useT();
   const u = sale.units && sale.units > 0 ? sale.units : null;
   const soldAt = u && sale.proceedsUsd != null ? sale.proceedsUsd / u : null;
   const costAt = u && sale.costUsd != null ? sale.costUsd / u : null;
   const detail =
     soldAt != null && costAt != null
-      ? `sold at ${unitPrice(soldAt)}, cost ${unitPrice(costAt)}`
+      ? t("money.realised.soldAtCost", { sold: unitPrice(soldAt), cost: unitPrice(costAt) })
       : soldAt != null
-        ? `sold at ${unitPrice(soldAt)}`
+        ? t("money.realised.soldAt", { sold: unitPrice(soldAt) })
         : sale.proceedsUsd != null
           ? usd(sale.proceedsUsd)
           : "";
@@ -254,8 +246,7 @@ function SaleRow({ sale, first }: { sale: RealizedDisposal; first: boolean }) {
         <span className="text-[15px] font-bold text-white/[0.45]">—</span>
       ) : (
         <span className="text-[15px] font-bold tabular-nums" style={{ color: g > 0 ? UP : "#FFFFFF" }}>
-          {g > 0 ? "+" : g < 0 ? "−" : ""}
-          {usd(g)}
+          {signedUsd(g)}
         </span>
       )}
     </div>

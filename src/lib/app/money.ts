@@ -19,6 +19,7 @@
 import useSWR, { type SWRConfiguration } from "swr";
 
 import { useCreatorSession } from "@/lib/creator/session";
+import { fmtPercent } from "@/lib/app/i18n/format";
 import { HOLD_KEEPS } from "@/lib/rates.config";
 
 import {
@@ -376,7 +377,7 @@ export function netApy(grossApy: number): number {
 
 /** 0.051 → "5.1%". The app's `formatApy`. */
 export function formatApy(apy: number): string {
-  return `${(apy * 100).toFixed(1)}%`;
+  return fmtPercent(apy, 1);
 }
 
 /* ── What it cost ─────────────────────────────────────────────────── */

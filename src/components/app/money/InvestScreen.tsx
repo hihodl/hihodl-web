@@ -82,6 +82,8 @@ import {
   type DisplayMode,
 } from "@/lib/app/display-mode";
 import type { Balance } from "@/lib/app/hold-api";
+import { fmtNumber, fmtPercent, fmtUsd } from "@/lib/app/i18n/format";
+import { useT } from "@/lib/app/i18n/react";
 import {
   formatApy,
   isStable,
@@ -105,7 +107,6 @@ import { useProductHref } from "../base";
 import { Ion } from "../ion";
 import { useShellPrefs } from "../Shell";
 import { Skeleton } from "../ui";
-import { money } from "../wallet/app-kit";
 import { DISCOVER_COINS, tileSubtitle, discoverableFor } from "./discover-coins";
 import { AssetMark, InAppNote, ReadFailed } from "./kit";
 
@@ -120,10 +121,10 @@ const FLAT_PCT = 0.005;
 const INVEST_DUST_USD = 0.01;
 
 const RANGES = [
-  { label: "7D", short: "7d", days: 7 },
-  { label: "30D", short: "30d", days: 30 },
-  { label: "90D", short: "90d", days: 90 },
-  { label: "1Y", short: "1y", days: 365 },
+  { label: "7D", labelKey: "money.invest.range.7d", shortKey: "money.invest.range.7dShort", days: 7 },
+  { label: "30D", labelKey: "money.invest.range.30d", shortKey: "money.invest.range.30dShort", days: 30 },
+  { label: "90D", labelKey: "money.invest.range.90d", shortKey: "money.invest.range.90dShort", days: 90 },
+  { label: "1Y", labelKey: "money.invest.range.1y", shortKey: "money.invest.range.1yShort", days: 365 },
 ] as const;
 
 type Range = (typeof RANGES)[number];
@@ -146,7 +147,7 @@ interface Holding {
 
 /** Token units: more precision under 1, tidy for whole coins. */
 function units(n: number): string {
-  return (Number.isFinite(n) ? n : 0).toLocaleString("en-US", { maximumFractionDigits: n >= 1 ? 4 : 6 });
+  return fmtNumber(Number.isFinite(n) ? n : 0, { maximumFractionDigits: n >= 1 ? 4 : 6 });
 }
 
 function symbolOf(b: Balance): string {
@@ -154,6 +155,7 @@ function symbolOf(b: Balance): string {
 }
 
 export function InvestScreen() {
+  const t = useT();
   const { displayMode } = useShellPrefs();
   const container = useContainer();
   const accounts = useMemo(() => (container.data?.subaccounts ?? []).map((s) => s.slug), [container.data]);
@@ -316,11 +318,11 @@ export function InvestScreen() {
       <div className="mx-auto flex w-full max-w-[1040px] flex-col">
         {/* The app's header: the title, and the disc that opens Performance. */}
         <div className="flex items-center justify-between px-1 pb-2.5">
-          <h1 className="text-[28px] font-bold tracking-[-0.6px] text-white">Invest</h1>
+          <h1 className="text-[28px] font-bold tracking-[-0.6px] text-white">{t("money.invest.title")}</h1>
           <Link
             href={href("/invest/performance")}
-            aria-label="Performance"
-            title="Performance"
+            aria-label={t("money.invest.performance")}
+            title={t("money.invest.performance")}
             className="flex h-[38px] w-[38px] items-center justify-center rounded-[19px] bg-white/[0.06] text-white/[0.75] transition-colors hover:bg-white/[0.12] hover:text-white"
           >
             <Ion name="pie-chart-outline" size={19} />
@@ -330,7 +332,7 @@ export function InvestScreen() {
         {loading ? (
           <Skeleton className="h-[248px]" />
         ) : failed ? (
-          <ReadFailed title="We couldn't load your investments" onRetry={retry} />
+          <ReadFailed title={t("money.invest.readFailed")} onRetry={retry} />
         ) : hasInvestments ? (
           <Hero
             totalValue={investValue}
@@ -349,9 +351,7 @@ export function InvestScreen() {
             perfectly real and sitting on chain. */}
         {!loading && !failed && unvalued > 0 ? (
           <p className="mt-2.5 px-1 text-[13px] font-strong text-white/[0.8]">
-            {unvalued === 1
-              ? "1 holding is not in this total — no price available right now."
-              : `${unvalued} holdings are not in this total — no price available right now.`}
+            {t("money.invest.unvalued", { count: unvalued })}
           </p>
         ) : null}
 
@@ -359,10 +359,10 @@ export function InvestScreen() {
             web it is a statement rather than a tap: an exchange is a signature. */}
         <div className="mt-3.5 flex h-[52px] w-full items-center justify-center gap-2 rounded-[26px] border border-white/[0.22] bg-white/10">
           <Ion name="trending-up-outline" size={18} className="text-white" />
-          <span className="text-[16px] font-extrabold tracking-[-0.2px] text-white">Invest</span>
+          <span className="text-[16px] font-extrabold tracking-[-0.2px] text-white">{t("money.invest.action")}</span>
         </div>
         <div className="mt-2.5">
-          <InAppNote>Buying and exchanging happen in the HOLD app, where the trade is signed on your own device.</InAppNote>
+          <InAppNote>{t("money.invest.inApp")}</InAppNote>
         </div>
 
         {working.sol > 0 || working.failed ? (
@@ -371,7 +371,7 @@ export function InvestScreen() {
 
         {!loading && holdings.length ? (
           <section className="mt-[26px]">
-            <h2 className="px-1 text-[22px] font-bold tracking-[-0.4px] text-white">Assets</h2>
+            <h2 className="px-1 text-[22px] font-bold tracking-[-0.4px] text-white">{t("money.invest.assets")}</h2>
             <div className="mt-3 overflow-hidden rounded-[18px] border border-white/10 bg-[linear-gradient(145deg,rgba(9,27,40,0.72),rgba(6,18,30,0.64))] shadow-[0_18px_36px_rgba(0,0,0,0.28)] backdrop-blur-xl">
               {holdings.map((h, i) => (
                 <div key={h.key}>
@@ -469,18 +469,25 @@ function Hero({
 }) {
   // The delta comes off the real curve and nowhere else: a percentage read off
   // an invented series would be an invented percentage. No curve, no delta.
+  const t = useT();
   const delta = deltaOverRange(points);
   const arrow = delta ? (delta.dir > 0 ? " ▲" : delta.dir < 0 ? " ▼" : "") : "";
-  const sign = (n: number) => `${n >= 0 ? "+" : "−"}${money(Math.abs(n))}`;
-  const deltaText = delta ? `${range.short}  ${sign(delta.abs)}${arrow} ${Math.abs(delta.pct).toFixed(2)}%` : "";
+  const deltaText = delta
+    ? t("money.invest.hero.delta", {
+        range: t(range.shortKey),
+        amount: fmtUsd(delta.abs, { signed: true }),
+        arrow,
+        percent: fmtPercent(Math.abs(delta.pct) / 100, 2),
+      })
+    : "";
 
   return (
     <section
       className="min-h-[248px] rounded-[18px] border border-white/10 bg-[linear-gradient(145deg,rgba(9,27,40,0.72),rgba(6,18,30,0.64))] px-[22px] pb-4 pt-[22px] shadow-[0_18px_36px_rgba(0,0,0,0.28)] backdrop-blur-xl"
-      aria-label="Invested value"
+      aria-label={t("money.invest.hero.label")}
     >
-      <p className="text-[11px] font-bold uppercase tracking-[1.4px] text-white/[0.55]">Invested value</p>
-      <p className="mt-1 truncate text-[44px] font-strong leading-[1.1] tracking-[-1.2px] tabular-nums text-white">{money(totalValue)}</p>
+      <p className="text-[11px] font-bold uppercase tracking-[1.4px] text-white/[0.55]">{t("money.invest.hero.label")}</p>
+      <p className="mt-1 truncate text-[44px] font-strong leading-[1.1] tracking-[-1.2px] tabular-nums text-white">{fmtUsd(totalValue)}</p>
 
       {/* One sub-line at a fixed height, so it never nudges the chart. Green
           only for a real gain: flat and down are both neutral white. */}
@@ -497,7 +504,7 @@ function Hero({
         ) : (
           <div className="flex h-full items-center justify-center">
             <p className="text-[14px] font-strong text-white/[0.55]">
-              {loading ? "Loading…" : "No price history for these assets"}
+              {loading ? t("common.loading") : t("money.invest.hero.noHistory")}
             </p>
           </div>
         )}
@@ -505,7 +512,7 @@ function Hero({
 
       {unchartedUsd > 0.01 ? (
         <p className="mt-2 truncate text-[11.5px] font-strong tracking-[-0.1px] text-white/[0.8]">
-          Chart excludes {money(unchartedUsd)} with no price history
+          {t("money.invest.hero.uncharted", { amount: fmtUsd(unchartedUsd) })}
         </p>
       ) : null}
 
@@ -524,7 +531,7 @@ function Hero({
                 on ? "border-white/[0.28] bg-white/[0.16] font-bold text-white" : "border-transparent font-strong text-white/[0.55] hover:text-white"
               }`}
             >
-              {r.label}
+              {t(r.labelKey)}
             </button>
           );
         })}
@@ -535,6 +542,7 @@ function Hero({
 
 /** The portfolio line: one path over a soft fill, in the colour of the move. */
 function Curve({ points, up }: { points: readonly CurvePoint[]; up: boolean }) {
+  const t = useT();
   const W = 1000;
   const H = 160;
   const ys = points.map((p) => p.y);
@@ -547,7 +555,7 @@ function Curve({ points, up }: { points: readonly CurvePoint[]; up: boolean }) {
   const ink = up ? UP : DOWN;
   const id = `curve-${up ? "up" : "flat"}`;
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="h-full w-full" role="img" aria-label="Portfolio value over the chosen range">
+    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="h-full w-full" role="img" aria-label={t("money.invest.hero.curveAria")}>
       <defs>
         <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={ink} stopOpacity="0.22" />
@@ -563,12 +571,11 @@ function Curve({ points, up }: { points: readonly CurvePoint[]; up: boolean }) {
 /* ── EmptyHero ────────────────────────────────────────────────────── */
 
 function EmptyHero() {
+  const t = useT();
   return (
     <section className="flex min-h-[150px] flex-col justify-center rounded-[18px] border border-white/10 bg-[linear-gradient(145deg,rgba(9,27,40,0.72),rgba(6,18,30,0.64))] p-[22px] shadow-[0_18px_36px_rgba(0,0,0,0.28)] backdrop-blur-xl">
-      <h2 className="text-[26px] font-bold tracking-[-0.6px] text-white">Grow your wealth</h2>
-      <p className="mt-2 text-[14px] leading-5 text-white/[0.8]">
-        Turn your dollars into Bitcoin, Solana and more — right from your balance.
-      </p>
+      <h2 className="text-[26px] font-bold tracking-[-0.6px] text-white">{t("money.invest.empty.title")}</h2>
+      <p className="mt-2 text-[14px] leading-5 text-white/[0.8]">{t("money.invest.empty.body")}</p>
     </section>
   );
 }
@@ -584,12 +591,13 @@ function EmptyHero() {
  * never "+$0.00", when its data is; a loss is neutral white, never red.
  */
 function AssetRow({ holding, move, day, mode }: { holding: Holding; move: number | null; day: number | null; mode: DisplayMode }) {
+  const t = useT();
   const ticker = maskTokenSymbol(holding.symbol, mode) || holding.symbol;
   const label = isBtcFamilySymbol(holding.symbol) ? btcFamilyDisplayName(holding.symbol, mode) : ticker;
   // The network, in native only — and the cbBTC note in the two modes that
   // tell the Bitcoin family apart at all.
   const under = holding.chain ? chainLabel(holding.chain) : btcFamilySubtitle(holding.symbol, mode);
-  const signed = (n: number) => `${n >= 0 ? "+" : "−"}${money(Math.abs(n))}`;
+  const signed = (n: number) => fmtUsd(n, { signed: true });
   return (
     <div className="flex min-h-[56px] items-center gap-3 px-4 py-3.5">
       <AssetMark symbol={holding.symbol} />
@@ -601,7 +609,7 @@ function AssetRow({ holding, move, day, mode }: { holding: Holding; move: number
             {under && move !== null ? " · " : ""}
             {move !== null ? (
               <span className="font-strong" style={{ color: move >= 0 ? UP : DOWN }}>
-                {signed(move)} since you bought
+                {t("money.invest.row.sinceBought", { amount: signed(move) })}
               </span>
             ) : null}
           </p>
@@ -611,15 +619,15 @@ function AssetRow({ holding, move, day, mode }: { holding: Holding; move: number
         {/* An em dash, never "$0.00": a zero here is a claim about somebody's
             money and we do not have the price to make it. */}
         <p className="text-[15px] font-bold tracking-[-0.2px] tabular-nums text-white">
-          {holding.usd === null ? "—" : money(holding.usd)}
+          {holding.usd === null ? "—" : fmtUsd(holding.usd)}
         </p>
         {day !== null && holding.usd !== null ? (
           <p
             className="truncate text-[12.5px] font-strong tracking-[-0.1px] tabular-nums"
             style={{ color: day >= 0 ? UP : DOWN }}
-            aria-label={`${day >= 0 ? "up" : "down"} ${money(Math.abs(day))} in 24 hours`}
+            aria-label={t("money.invest.row.dayAria", { dir: day >= 0 ? "up" : "down", amount: fmtUsd(day, { abs: true }) })}
           >
-            {signed(day)} <span className="text-white/[0.6]">24h</span>
+            {signed(day)} <span className="text-white/[0.6]">{t("money.invest.row.day")}</span>
           </p>
         ) : (
           <p className="truncate text-[12.5px] tabular-nums text-white/[0.8]">{units(holding.amount)}</p>
@@ -632,12 +640,17 @@ function AssetRow({ holding, move, day, mode }: { holding: Holding; move: number
 /* ── SolEarnRow ───────────────────────────────────────────────────── */
 
 /** SOL amounts at a width that does not move. */
-const sol = (n: number) => n.toFixed(4);
+const sol = (n: number) => fmtNumber(n, { minimumFractionDigits: 4, maximumFractionDigits: 4 });
 
 export function SolEarnRow({ workingSol, apy, failed }: { workingSol: number; apy: number | null; failed: boolean }) {
+  const t = useT();
   const working = workingSol > 0;
   // A zero we cannot vouch for. The row must not pitch over it.
-  const standing = working ? `${sol(workingSol)} earning` : failed ? "Couldn't check your position" : "Put your Solana to work";
+  const standing = working
+    ? t("money.solEarn.earning", { amount: sol(workingSol) })
+    : failed
+      ? t("money.solEarn.couldNotCheck")
+      : t("money.solEarn.putToWork");
   return (
     <div className="mt-3 flex items-center gap-3 rounded-[18px] border border-white/[0.08] bg-white/[0.04] p-3.5">
       <AssetMark symbol="SOL" />
@@ -648,7 +661,7 @@ export function SolEarnRow({ workingSol, apy, failed }: { workingSol: number; ap
       <div className="flex flex-col items-end">
         {/* A rate we could not read is a dash, never 0.0%. */}
         <p className="text-[15px] font-bold tabular-nums text-white">{apy != null && apy > 0 ? formatApy(apy) : "—"}</p>
-        <p className="text-[11px] text-white/[0.8]">a year</p>
+        <p className="text-[11px] text-white/[0.8]">{t("money.solEarn.aYear")}</p>
       </div>
     </div>
   );
@@ -662,17 +675,18 @@ export function SolEarnRow({ workingSol, apy, failed }: { workingSol: number; ap
  * a tile offering to discover something you own reads as a bug.
  */
 function BuySection({ held }: { held: readonly Holding[] }) {
+  const t = useT();
   const coins = useMemo(() => discoverableFor(held, DISCOVER_COINS), [held]);
   if (!coins.length) return null;
   return (
     <section className="mt-[26px]">
-      <h2 className="px-1 text-[22px] font-bold tracking-[-0.4px] text-white">Buy</h2>
+      <h2 className="px-1 text-[22px] font-bold tracking-[-0.4px] text-white">{t("money.buy.title")}</h2>
       <div className="-mx-1 mt-3.5 flex gap-3 overflow-x-auto px-1 pb-1">
         {coins.map((c) => (
           <div
             key={c.id}
             className="flex h-32 w-32 shrink-0 flex-col justify-between rounded-[18px] border border-white/10 bg-white/[0.05] p-3.5"
-            aria-label={c.wrappedBy ? `${c.name}, wrapped by ${c.wrappedBy}` : c.name}
+            aria-label={c.wrappedBy ? t("money.buy.wrappedAria", { name: c.name, issuer: c.wrappedBy }) : c.name}
           >
             <AssetMark symbol={c.symbol} size={38} />
             <div className="min-w-0">
@@ -683,7 +697,7 @@ function BuySection({ held }: { held: readonly Holding[] }) {
         ))}
       </div>
       <div className="mt-2.5">
-        <InAppNote>Every one of these is one tap from a filled order in the HOLD app. The trade is signed on your phone.</InAppNote>
+        <InAppNote>{t("money.buy.inApp")}</InAppNote>
       </div>
     </section>
   );
@@ -698,17 +712,16 @@ function BuySection({ held }: { held: readonly Holding[] }) {
  * nothing to gate, and the card points at the app, where buying happens.
  */
 function StocksSection() {
+  const t = useT();
   return (
     <section className="mt-[26px]">
-      <h2 className="px-1 text-[22px] font-bold tracking-[-0.4px] text-white">Stocks</h2>
-      <p className="mt-0.5 px-1 text-[13px] font-strong text-white/[0.8]">Tokenized US stocks · buy with your dollars</p>
+      <h2 className="px-1 text-[22px] font-bold tracking-[-0.4px] text-white">{t("money.stocks.title")}</h2>
+      <p className="mt-0.5 px-1 text-[13px] font-strong text-white/[0.8]">{t("money.stocks.subtitle")}</p>
       <div className="mt-3.5 flex items-center gap-3.5 rounded-[18px] border border-white/[0.08] bg-white/[0.04] p-3.5">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-white/[0.07]">
           <Ion name="bar-chart-outline" size={19} className="text-white/80" />
         </span>
-        <p className="min-w-0 flex-1 text-[13px] leading-[18px] text-white/[0.8]">
-          Browsing and buying stocks happens in the HOLD app, where the order is signed.
-        </p>
+        <p className="min-w-0 flex-1 text-[13px] leading-[18px] text-white/[0.8]">{t("money.stocks.inApp")}</p>
       </div>
     </section>
   );

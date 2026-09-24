@@ -16,6 +16,8 @@
  */
 
 import type { RealizedDisposal, RealizedReport } from "./hold-api";
+import { t } from "./i18n";
+import { effectiveCurrency, fmtDate, fmtNumber, fmtUsd, usdToDisplay } from "./i18n/format";
 
 /* ── Unrealised ───────────────────────────────────────────────────── */
 
@@ -204,7 +206,7 @@ export function ringSlices(rows: ReadonlyArray<{ key: string; symbol: string; sh
   // One over the line is not a crowd: five holdings show five names.
   if (visible.length <= namedMax + 1) return visible.map((r) => ({ key: r.key, label: r.symbol, share: r.share, others: false }));
   const out: RingSlice[] = visible.slice(0, namedMax).map((r) => ({ key: r.key, label: r.symbol, share: r.share, others: false }));
-  out.push({ key: "__others__", label: "Others", share: visible.slice(namedMax).reduce((s, r) => s + r.share, 0), others: true });
+  out.push({ key: "__others__", label: t("money.performance.ringOthers"), share: visible.slice(namedMax).reduce((s, r) => s + r.share, 0), others: true });
   return out;
 }
 
@@ -311,11 +313,9 @@ export function taxYearsAvailable(disposals: readonly Pick<RealizedDisposal, "at
 }
 
 const EXCLUSION_COPY: Record<string, (n: number) => string> = {
-  "unknown-decimals": (n) =>
-    `${n} ${n === 1 ? "disposal is" : "disposals are"} of a token we can't measure precisely enough to value. Excluded rather than reported at the wrong scale.`,
-  "incomplete-basis": (n) =>
-    `${n} ${n === 1 ? "disposal has" : "disposals have"} no complete purchase history behind ${n === 1 ? "it" : "them"}, so there is nothing to measure the result against.`,
-  "unpriced-disposal": (n) => `${n} ${n === 1 ? "disposal" : "disposals"} went out without a recorded market price.`,
+  "unknown-decimals": (n) => t("money.exclusion.unknownDecimals", { count: n }),
+  "incomplete-basis": (n) => t("money.exclusion.incompleteBasis", { count: n }),
+  "unpriced-disposal": (n) => t("money.exclusion.unpricedDisposal", { count: n }),
 };
 
 /** One sentence per reason. An unrecognised reason is still reported. */
@@ -324,7 +324,7 @@ export function exclusionSentences(reasons: Record<string, number>): string[] {
   for (const [reason, n] of Object.entries(reasons ?? {})) {
     if (!n) continue;
     const copy = EXCLUSION_COPY[reason];
-    out.push(copy ? copy(n) : `${n} excluded (${reason}).`);
+    out.push(copy ? copy(n) : t("money.exclusion.other", { count: fmtNumber(n), reason }));
   }
   return out;
 }
@@ -368,33 +368,38 @@ export function summariseTaxYear(year: number, report: RealizedReport): TaxYearS
 
 /* ── Formatting the app uses on these three screens ──────────────── */
 
-/** "$1,234.56", unsigned: the sign is always written by the caller. */
-export const usd = (n: number) => `$${Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+/** "$1,234.56", unsigned: the sign is always written by the caller. In the display currency. */
+export const usd = (n: number) => fmtUsd(n, { abs: true });
+
+/** A dollar gain or loss, signed: "+$12.00" / "-$3.40", "$0.00" when flat. */
+export const signedUsd = (n: number) => fmtUsd(n, { signed: true });
 
 /** A price needs finer resolution than a balance: $0.09 hides a 6% move in POL. */
-export const unitPrice = (n: number) =>
-  n >= 1 ? `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `$${Number(n.toPrecision(3))}`;
+export const unitPrice = (n: number) => {
+  const shown = usdToDisplay(n);
+  if (shown >= 1) return fmtUsd(n, { digits: 2 });
+  return fmtNumber(shown, { style: "currency", currency: effectiveCurrency(), currencyDisplay: "narrowSymbol", maximumSignificantDigits: 3 });
+};
 
-export const pct = (f: number) => `${f >= 0 ? "+" : "−"}${(Math.abs(f) * 100).toFixed(1)}%`;
+export const pct = (f: number) =>
+  fmtNumber(f, { style: "percent", minimumFractionDigits: 1, maximumFractionDigits: 1, signDisplay: "always" });
 
 /** "0.3 SOL", not "0.300000 SOL". */
 export function tokenUnits(n: number | null, wide = false): string {
   if (n == null) return "";
-  if (!Number.isFinite(n) || n === 0) return "0";
+  if (!Number.isFinite(n) || n === 0) return fmtNumber(0);
   const dp = wide ? (Math.abs(n) >= 1 ? 4 : 6) : Math.abs(n) >= 1 ? 2 : Math.abs(n) >= 0.01 ? 4 : 6;
-  return String(Number(n.toFixed(dp)));
+  return fmtNumber(Number(n.toFixed(dp)), { maximumFractionDigits: dp, useGrouping: false });
 }
-
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 export function shortDate(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
+  return fmtDate(d, { day: "numeric", month: "short", timeZone: "UTC" });
 }
 
 export function longDate(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+  return fmtDate(d, { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 }

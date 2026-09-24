@@ -21,6 +21,8 @@ import { useState } from "react";
 
 import { maskTokenSymbol } from "@/lib/app/display-mode";
 import type { AcquisitionLot } from "@/lib/app/hold-api";
+import { fmtFiat, fmtNumber } from "@/lib/app/i18n/format";
+import { useT } from "@/lib/app/i18n/react";
 import { useLots } from "@/lib/app/money";
 import { longDate, tokenUnits, unitPrice, usd } from "@/lib/app/portfolio";
 
@@ -35,6 +37,7 @@ import { NoteCard, PortfolioHeader, glassCard } from "./portfolio-kit";
 const shortAddress = (a: string) => (a.length > 12 ? `${a.slice(0, 4)}…${a.slice(-4)}` : a);
 
 export function CostBasisScreen({ symbol }: { symbol: string }) {
+  const t = useT();
   const href = useProductHref();
   const { displayMode } = useShellPrefs();
   const ticker = decodeURIComponent(symbol).toUpperCase();
@@ -48,7 +51,7 @@ export function CostBasisScreen({ symbol }: { symbol: string }) {
 
   return (
     <div className="mx-auto flex w-full max-w-[640px] flex-1 flex-col">
-      <PortfolioHeader title="What you paid" back={href("/invest/performance")} />
+      <PortfolioHeader title={t("money.cost.title")} back={href("/invest/performance")} />
 
       {!lots.data && !lots.error ? (
         <div className="flex flex-col gap-2.5">
@@ -58,18 +61,24 @@ export function CostBasisScreen({ symbol }: { symbol: string }) {
         </div>
       ) : lots.error && !lots.data ? (
         <div className={glassCard}>
-          <ReadFailed title={`We couldn't load your ${shown}`} body="That's not the same as having bought none." onRetry={() => void lots.mutate()} />
+          <ReadFailed
+            title={t("money.cost.readFailed", { asset: shown })}
+            body={t("money.cost.readFailedBody")}
+            onRetry={() => void lots.mutate()}
+          />
         </div>
       ) : list.length === 0 ? (
-        <NoteCard title={`Nothing to show for ${shown}`}>
-          This is where every {shown} you received turns up, with what we think it cost you.
-        </NoteCard>
+        <NoteCard title={t("money.cost.emptyTitle", { asset: shown })}>{t("money.cost.emptyBody", { asset: shown })}</NoteCard>
       ) : (
         <>
           <NoteCard
-            title={provisional === 0 ? `All ${confirmed} checked` : `${provisional} ${provisional === 1 ? "price is" : "prices are"} provisional`}
+            title={
+              provisional === 0
+                ? t("money.cost.allChecked", { count: fmtNumber(confirmed) })
+                : t("money.cost.provisionalCount", { count: provisional })
+            }
           >
-            {provisional === 0 ? "Every price here is one you gave us." : "Priced at what it was worth when it reached HOLD."}
+            {provisional === 0 ? t("money.cost.allYours") : t("money.cost.pricedOnArrival")}
           </NoteCard>
 
           {list.map((lot) => (
@@ -77,7 +86,7 @@ export function CostBasisScreen({ symbol }: { symbol: string }) {
           ))}
 
           <div className="mt-3">
-            <InAppNote>Change what you paid in the HOLD app. Only the price moves — everything else here is an on-chain fact.</InAppNote>
+            <InAppNote>{t("money.cost.inApp")}</InAppNote>
           </div>
 
           <button
@@ -86,27 +95,23 @@ export function CostBasisScreen({ symbol }: { symbol: string }) {
             aria-expanded={info}
             className="mt-[18px] flex items-center gap-1.5 self-start pl-1 text-[12.5px] font-bold text-white/[0.8] hover:text-white"
           >
-            How this works
+            {t("money.cost.howItWorks")}
             <Ion name={info ? "chevron-up" : "chevron-down"} size={14} />
           </button>
           {info ? (
             <div className={`${glassCard} mt-2 flex flex-col gap-3 p-4 text-[13px] leading-[19px] text-white/[0.8]`}>
-              <Info title="Why we ask">
-                Every cost figure is the market price the moment your coin arrived here. For a swap we ran, that is the truth. For a coin you bought
-                elsewhere and withdrew to HOLD, it is not — buy at $60,000, move it here at $78,000, sell at $80,000, and we would report a $2,000 gain on a
-                $20,000 one.
+              <Info title={t("money.cost.info.whyTitle")}>
+                {t("money.cost.info.whyBody", {
+                  bought: example(60000),
+                  moved: example(78000),
+                  sold: example(80000),
+                  reported: example(2000),
+                  real: example(20000),
+                })}
               </Info>
-              <Info title="Nothing here is required">
-                Leave a price alone and we keep the one from the day it arrived. It is usable, it is in every total, and very often it is right.
-              </Info>
-              <Info title="Only the price moves">
-                What arrived, when it landed and on which network are on-chain facts, and nothing can edit them. The one number the chain never had is the
-                one you are allowed to correct.
-              </Info>
-              <Info title="Your export knows the difference">
-                The tax file says line by line which prices came from the chain and which came from you, and carries both dates — the day you bought and
-                the day it reached us.
-              </Info>
+              <Info title={t("money.cost.info.optionalTitle")}>{t("money.cost.info.optionalBody")}</Info>
+              <Info title={t("money.cost.info.priceTitle")}>{t("money.cost.info.priceBody")}</Info>
+              <Info title={t("money.cost.info.exportTitle")}>{t("money.cost.info.exportBody")}</Info>
             </div>
           ) : null}
         </>
@@ -114,6 +119,9 @@ export function CostBasisScreen({ symbol }: { symbol: string }) {
     </div>
   );
 }
+
+/** The explainer's worked example is in dollars, as written: an illustration, not anybody's money. */
+const example = (n: number) => fmtFiat(n, "USD", { whole: true });
 
 function Info({ title, children }: { title: string; children: string | string[] }) {
   return (
@@ -125,6 +133,7 @@ function Info({ title, children }: { title: string; children: string | string[] 
 }
 
 function LotCard({ lot, label }: { lot: AcquisitionLot; label: string }) {
+  const t = useT();
   const lineTotal = lot.units != null && lot.unitPriceUsd != null ? lot.units * lot.unitPriceUsd : null;
   return (
     <div className={`${glassCard} mt-2.5 p-4`}>
@@ -134,25 +143,26 @@ function LotCard({ lot, label }: { lot: AcquisitionLot; label: string }) {
             {tokenUnits(lot.units, true)} {label}
           </p>
           {/* One date, and it is the owner's; ours goes out bare. */}
-          <p className="mt-0.5 text-[12px] font-strong text-white/[0.7]">{lot.acquiredAt ? `Bought ${longDate(lot.acquiredAt)}` : longDate(lot.arrivedAt)}</p>
+          <p className="mt-0.5 text-[12px] font-strong text-white/[0.7]">{lot.acquiredAt ? t("money.cost.bought", { date: longDate(lot.acquiredAt) }) : longDate(lot.arrivedAt)}</p>
           {lot.external ? (
             <p className="mt-0.5 truncate text-[12px] font-strong text-white/[0.7]">
-              From outside HOLD{lot.fromAddress ? ` · ${shortAddress(lot.fromAddress)}` : ""}
+              {t("money.cost.fromOutside")}
+              {lot.fromAddress ? ` · ${shortAddress(lot.fromAddress)}` : ""}
             </p>
           ) : null}
         </div>
         <div className="flex shrink-0 flex-col items-end">
           <p className="text-[15px] font-bold tabular-nums text-white">{lot.unitPriceUsd != null ? unitPrice(lot.unitPriceUsd) : "—"}</p>
-          <p className="mt-0.5 text-[12px] font-strong tabular-nums text-white/[0.7]">{lineTotal != null ? `${usd(lineTotal)} in total` : "each"}</p>
+          <p className="mt-0.5 text-[12px] font-strong tabular-nums text-white/[0.7]">{lineTotal != null ? t("money.cost.inTotal", { amount: usd(lineTotal) }) : t("money.cost.each")}</p>
         </div>
       </div>
       {/* One state is marked, not two: the glass pill sits on the lines that are still ours to answer for. */}
       <div className="mt-3 flex items-center">
         {lot.confirmed ? (
-          <span className="text-[11px] font-strong tracking-[0.3px] text-white/[0.6]">Your price</span>
+          <span className="text-[11px] font-strong tracking-[0.3px] text-white/[0.6]">{t("money.cost.yourPrice")}</span>
         ) : (
           <span className="inline-flex h-6 items-center justify-center rounded-[12px] border border-white/[0.16] bg-white/[0.07] px-2.5 text-[11px] font-bold tracking-[0.3px] text-white/[0.75]">
-            Provisional
+            {t("money.cost.provisional")}
           </span>
         )}
       </div>

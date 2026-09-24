@@ -66,13 +66,15 @@ import {
   VENUE_NAME,
   type RatedReserve,
 } from "@/lib/app/money";
+import { t as tr } from "@/lib/app/i18n";
+import { fmtUsd } from "@/lib/app/i18n/format";
+import { useLocale, useT } from "@/lib/app/i18n/react";
 import { chainLabel } from "@/lib/app/payments";
 
 import { Notice } from "../hold";
 import { Ion, type IonName } from "../ion";
 import { useShellPrefs } from "../Shell";
 import { Skeleton } from "../ui";
-import { money } from "../wallet/app-kit";
 import { InAppNote, ReadFailed } from "./kit";
 
 /* ── The app's palette (src/features/savings/palette.ts) ──────────── */
@@ -106,7 +108,7 @@ function maskedGroupId(token: string): string {
 
 function assetMaskLabel(token: string): string {
   const t = token.toLowerCase();
-  if (isDollarToken(t)) return "Dollars";
+  if (isDollarToken(t)) return tr("money.savings.dollars");
   if (t === "eth") return "Ethereum";
   if (t === "sol") return "Solana";
   if (t === "btc") return "Bitcoin";
@@ -165,7 +167,7 @@ function maskedProducts(reserves: readonly RatedReserve[]): EarnProduct[] {
       token: repToken,
       title: assetMaskLabel(best.token),
       // "up to", because a collapsed group spans several rates — the honest ceiling.
-      subtitle: `Earn up to ${formatApy(best.apy)}`,
+      subtitle: tr("money.savings.earnUpTo", { apy: formatApy(best.apy) }),
       apy: best.apy,
       gradient: ASSET_GRADIENT[repToken] ?? ASSET_FALLBACK,
     });
@@ -192,7 +194,7 @@ function nativeProducts(reserves: readonly RatedReserve[]): EarnProduct[] {
         id: `${r.venue}-${token}-${(r.chain ?? "").toLowerCase()}`,
         token,
         title: VENUE_NAME[r.venue],
-        subtitle: `Lending · ${chainLabel(r.chain)} · ${token.toUpperCase()}`,
+        subtitle: tr("money.savings.lending", { chain: chainLabel(r.chain), token: token.toUpperCase() }),
         apy: netApy(r.supplyApy),
         gradient: VENUE_GRADIENT[r.venue] ?? ASSET_FALLBACK,
       };
@@ -216,12 +218,15 @@ function productsFrom(reserves: readonly RatedReserve[], mode: DisplayMode): Ear
  */
 export function useSavingsFigures() {
   const { displayMode } = useShellPrefs();
+  // The shelf's titles are words: a new language rebuilds them.
+  const locale = useLocale();
   const yieldRead = useYieldPositions();
   const positions = { ...yieldRead, data: yieldRead.data?.positions };
   const reserves = useYieldReserves();
   const { bySlug, rows } = useSuppliedBySlug();
 
-  const products = useMemo(() => productsFrom(reserves.data ?? [], displayMode), [reserves.data, displayMode]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const products = useMemo(() => productsFrom(reserves.data ?? [], displayMode), [reserves.data, displayMode, locale]);
   const maxApy = products.reduce((m, p) => Math.max(m, p.apy), 0);
 
   const priced = useMemo(
@@ -267,6 +272,7 @@ export function useSavingsFigures() {
  * is not — the app's own rule, and the same words.
  */
 export function SavingsRateLine() {
+  const t = useT();
   const { hasPositions, blendedApy, maxApy, projectedMonthlyUsd } = useSavingsFigures();
   const apy = blendedApy ?? maxApy;
   const apyText = apy > 0 ? formatApy(apy) : null;
@@ -275,7 +281,13 @@ export function SavingsRateLine() {
     <div className="mt-2 flex items-center gap-2">
       <span className="h-[7px] w-[7px] rounded-[4px]" style={{ backgroundColor: EARNING, boxShadow: `0 0 6px ${EARNING}` }} aria-hidden />
       <p className="text-[14px] font-strong text-white/[0.8]">
-        {hasPositions ? `Earning ${apyText ?? ""}`.trim() : apyText ? `Earns ${apyText} automatically` : "Earns automatically"}
+        {hasPositions
+          ? apyText
+            ? t("money.savings.earningApy", { apy: apyText })
+            : t("money.savings.earning")
+          : apyText
+            ? t("money.savings.earnsApy", { apy: apyText })
+            : t("money.savings.earnsAutomatically")}
       </p>
       {hasPositions && projectedMonthlyUsd > 0 ? (
         <>
@@ -283,7 +295,7 @@ export function SavingsRateLine() {
             ·
           </span>
           <p className="text-[14px] font-bold tabular-nums" style={{ color: EARNING }}>
-            ≈ {money(projectedMonthlyUsd)}/mo
+            {t("money.savings.perMonth", { amount: fmtUsd(projectedMonthlyUsd) })}
           </p>
         </>
       ) : null}
@@ -296,6 +308,7 @@ export function SavingsRateLine() {
  * is one, the shelf of offers, the card, the trust note.
  */
 export function SavingsPanel() {
+  const t = useT();
   const { products, maxApy, reservesLoading, reserves } = useSavingsFigures();
 
   /* One notice per chain a Smart Account can exist on. Solana is not one of
@@ -320,11 +333,11 @@ export function SavingsPanel() {
       <EarnMoreRow maxApy={maxApy} />
 
       <section className="flex min-w-0 flex-col">
-        <h2 className="mb-3.5 px-0.5 text-[15px] font-bold tracking-[-0.2px] text-white">Ways to earn</h2>
+        <h2 className="mb-3.5 px-0.5 text-[15px] font-bold tracking-[-0.2px] text-white">{t("money.savings.waysToEarn")}</h2>
         {reservesLoading ? (
           <Skeleton className="h-[132px]" />
         ) : reserves.error && !reserves.data ? (
-          <ReadFailed title="We couldn't load the rates" onRetry={() => void reserves.mutate()} />
+          <ReadFailed title={t("money.savings.ratesFailed")} onRetry={() => void reserves.mutate()} />
         ) : products.length ? (
           <div className="flex flex-col gap-3">
             {products.map((p) => (
@@ -334,7 +347,7 @@ export function SavingsPanel() {
         ) : (
           <div className="flex flex-col items-center gap-2.5 py-10">
             <Ion name="leaf-outline" size={26} className="text-white/30" />
-            <p className="text-[14px] font-bold text-white/[0.8]">Savings is coming soon.</p>
+            <p className="text-[14px] font-bold text-white/[0.8]">{t("money.savings.comingSoon")}</p>
           </div>
         )}
       </section>
@@ -370,16 +383,17 @@ function BalanceHero({
   maxApy: number;
   projectedMonthlyUsd: number;
 }) {
+  const t = useT();
   // The rate shown is what the money actually earns once it is funded, and the
   // best offer on the shelf as a promise when it is not.
   const apy = blendedApy ?? maxApy;
   const apyText = apy > 0 ? formatApy(apy) : null;
   const showUnknown = balanceUnknown && !hasPositions;
-  const { major, minor } = splitAmount(money(hasPositions ? earningBalanceUsd : 0));
+  const { major, minor } = splitAmount(fmtUsd(hasPositions ? earningBalanceUsd : 0));
 
   return (
-    <section className="flex flex-col items-center px-4 pt-6" aria-label="Savings balance">
-      <p className="text-[12px] font-bold uppercase tracking-[1.6px] text-white/[0.55]">Savings balance</p>
+    <section className="flex flex-col items-center px-4 pt-6" aria-label={t("money.savings.balance")}>
+      <p className="text-[12px] font-bold uppercase tracking-[1.6px] text-white/[0.55]">{t("money.savings.balance")}</p>
 
       {loading ? (
         <Skeleton className="mt-3 h-[58px] w-[240px]" />
@@ -394,16 +408,18 @@ function BalanceHero({
 
       <div className="mt-4 flex items-center gap-2">
         {loading ? null : showUnknown ? (
-          <p className="text-[13px] font-bold text-white/[0.8]">Couldn&apos;t refresh — reload to retry</p>
+          <p className="text-[13px] font-bold text-white/[0.8]">{t("money.savings.couldNotRefresh")}</p>
         ) : (
           <>
             <span className="h-[7px] w-[7px] rounded-[4px]" style={{ backgroundColor: EARNING, boxShadow: `0 0 6px ${EARNING}` }} aria-hidden />
             <p className="text-[14px] font-strong text-white/[0.8]">
               {hasPositions
-                ? `Earning ${apyText ?? ""}`.trim()
+                ? apyText
+                  ? t("money.savings.earningApy", { apy: apyText })
+                  : t("money.savings.earning")
                 : apyText
-                  ? `Earns ${apyText} automatically`
-                  : "Earns automatically"}
+                  ? t("money.savings.earnsApy", { apy: apyText })
+                  : t("money.savings.earnsAutomatically")}
             </p>
             {hasPositions && projectedMonthlyUsd > 0 ? (
               <>
@@ -411,7 +427,7 @@ function BalanceHero({
                   ·
                 </span>
                 <p className="text-[14px] font-bold tabular-nums" style={{ color: EARNING }}>
-                  ≈ {money(projectedMonthlyUsd)}/mo
+                  {t("money.savings.perMonth", { amount: fmtUsd(projectedMonthlyUsd) })}
                 </p>
               </>
             ) : null}
@@ -434,10 +450,11 @@ function BalanceHero({
  * a button that cannot finish.
  */
 function RenewalNotice({ chain }: { chain: string }) {
+  const t = useT();
   const auth = useYieldAuthorization(chain);
   const copy = auth.data?.copy;
   if (!copy || auth.data?.mode !== "expired") return null;
-  return <Notice icon="time-outline">{copy.line} Renew it in the HOLD app — it is a signature, so it happens on your phone.</Notice>;
+  return <Notice icon="time-outline">{t("money.savings.renewal", { line: copy.line })}</Notice>;
 }
 
 /* ── SavingsCreditCardHero ────────────────────────────────────────── */
@@ -451,11 +468,12 @@ function RenewalNotice({ chain }: { chain: string }) {
  * move. Here it is the explainer and the door to the app.
  */
 function CreditCardHero() {
+  const t = useT();
   return (
     <section
       className="relative flex flex-col overflow-hidden rounded-[26px] border border-white/[0.12] p-[18px]"
       style={{ background: "linear-gradient(180deg,#16273A 0%,#0E1B29 55%,#0B1622 100%)" }}
-      aria-label="Credit card"
+      aria-label={t("money.card.aria")}
     >
       <span className="pointer-events-none absolute inset-x-[18px] top-0 h-px bg-white/[0.22]" aria-hidden />
 
@@ -478,28 +496,23 @@ function CreditCardHero() {
         </div>
       </div>
 
-      <h2 className="text-center text-[21px] font-extrabold tracking-[-0.5px] text-white">Unlock your credit card</h2>
-      <p className="mt-2 px-2 text-center text-[14px] leading-[21px] text-white/[0.8]">
-        Spend against your savings without selling. Your balance keeps earning while you tap.
-      </p>
+      <h2 className="text-center text-[21px] font-extrabold tracking-[-0.5px] text-white">{t("money.card.title")}</h2>
+      <p className="mt-2 px-2 text-center text-[14px] leading-[21px] text-white/[0.8]">{t("money.card.body")}</p>
 
       {/* The app's two paths, both of which move money. */}
       <ul className="mt-4 flex flex-col gap-2.5">
-        <PathRow icon="cash-outline" title="Deposit dollars" sub="Move dollars into Savings. They earn interest and back your credit line." />
-        <PathRow icon="link-outline" title="Connect assets from Invest" sub="Put the SOL or BTC you already hold to work as collateral — without selling." />
+        <PathRow icon="cash-outline" title={t("money.card.depositTitle")} sub={t("money.card.depositSub")} />
+        <PathRow icon="link-outline" title={t("money.card.connectTitle")} sub={t("money.card.connectSub")} />
       </ul>
 
       <div className="mt-4">
-        <InAppNote>Getting the card, and putting money behind it, happens in the HOLD app.</InAppNote>
+        <InAppNote>{t("money.card.inApp")}</InAppNote>
       </div>
 
       {/* Amber, never red, and framed as the buffer it is. */}
       <p role="status" className="mt-3 flex gap-2.5 rounded-[14px] border border-[rgba(245,166,35,0.22)] bg-[rgba(245,166,35,0.08)] p-3">
         <Ion name="information-circle-outline" size={16} className="mt-px shrink-0 text-[#F5A623]" />
-        <span className="flex-1 text-[12px] leading-[17px] text-white/[0.8]">
-          If your collateral drops in value, HOLD eases your spending first to keep a safe buffer — so a market dip doesn&apos;t force a sale.
-          Rates are variable and this isn&apos;t a bank product.
-        </span>
+        <span className="flex-1 text-[12px] leading-[17px] text-white/[0.8]">{t("money.card.buffer")}</span>
       </p>
     </section>
   );
@@ -527,15 +540,17 @@ function PathRow({ icon, title, sub }: { icon: IonName; title: string; sub: stri
  * says what is on offer and the cards are already there.
  */
 function EarnMoreRow({ maxApy }: { maxApy: number }) {
-  const upTo = maxApy > 0 ? ` · up to ${formatApy(maxApy)}` : "";
+  const t = useT();
   return (
     <div className="flex items-center gap-3.5 rounded-[18px] border border-white/[0.08] bg-white/[0.04] p-3.5">
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-white/[0.07]">
         <Ion name="trending-up-outline" size={19} className="text-white/80" />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[15px] font-bold text-white">Earn more</span>
-        <span className="mt-px block truncate text-[12.5px] text-white/[0.8]">Advanced yield &amp; staking{upTo}</span>
+        <span className="block text-[15px] font-bold text-white">{t("money.savings.earnMore")}</span>
+        <span className="mt-px block truncate text-[12.5px] text-white/[0.8]">
+          {maxApy > 0 ? t("money.savings.advancedUpTo", { apy: formatApy(maxApy) }) : t("money.savings.advanced")}
+        </span>
       </span>
     </div>
   );
@@ -550,11 +565,12 @@ function EarnMoreRow({ maxApy }: { maxApy: number }) {
  * Move, and a second decorative route into a deposit is the thing worth losing.
  */
 function EarnCard({ product }: { product: EarnProduct }) {
+  const t = useT();
   return (
     <article
       className="relative flex min-h-[132px] flex-col justify-between overflow-hidden rounded-[22px] border border-white/[0.12] p-4"
       style={{ background: `linear-gradient(135deg, ${product.gradient[0]} 0%, ${product.gradient[1]} 100%)` }}
-      aria-label={`${product.title}, earn ${formatApy(product.apy)}`}
+      aria-label={t("money.savings.cardAria", { title: product.title, apy: formatApy(product.apy) })}
     >
       <span className="pointer-events-none absolute inset-x-4 top-0 h-px bg-white/[0.22]" aria-hidden />
       <div className="flex items-center gap-3">
@@ -568,7 +584,7 @@ function EarnCard({ product }: { product: EarnProduct }) {
       </div>
       <div className="mt-3 flex items-baseline gap-[7px]">
         <span className="text-[30px] font-extrabold tracking-[-1px] tabular-nums text-white">{formatApy(product.apy)}</span>
-        <span className="text-[10.5px] font-extrabold uppercase tracking-[0.5px] text-white/[0.8]">APY · variable</span>
+        <span className="text-[10.5px] font-extrabold uppercase tracking-[0.5px] text-white/[0.8]">{t("money.savings.apyVariable")}</span>
       </div>
     </article>
   );
@@ -577,12 +593,11 @@ function EarnCard({ product }: { product: EarnProduct }) {
 /* ── The trust line ───────────────────────────────────────────────── */
 
 function TrustNote() {
+  const t = useT();
   return (
     <p className="mt-1 flex items-start gap-2.5 rounded-[14px] border border-white/[0.07] bg-white/[0.04] p-[13px]">
       <Ion name="shield-checkmark-outline" size={16} className="mt-px shrink-0 text-white/[0.55]" />
-      <span className="flex-1 text-[12px] leading-[17px] text-white/[0.8]">
-        Your money stays in your own wallet — HOLD never holds it. This isn&apos;t a bank deposit, and rates are variable.
-      </span>
+      <span className="flex-1 text-[12px] leading-[17px] text-white/[0.8]">{t("money.savings.trust")}</span>
     </p>
   );
 }

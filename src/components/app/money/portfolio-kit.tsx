@@ -9,6 +9,9 @@
 import Link from "next/link";
 import { useMemo, useState, type ReactNode } from "react";
 
+import { useT } from "@/lib/app/i18n/react";
+import { fmtPercent } from "@/lib/app/i18n/format";
+
 import { Ion, type IonName } from "../ion";
 
 /** theme/colors `invest`: gain green, and a loss in neutral white. Never red. */
@@ -25,9 +28,10 @@ const disc =
 
 /** Back, a centred title, and one optional disc on the right — the app's internal header. */
 export function PortfolioHeader({ title, back, right }: { title: string; back: string; right?: ReactNode }) {
+  const t = useT();
   return (
     <header className="grid grid-cols-[34px_minmax(0,1fr)_34px] items-center gap-2 pb-4">
-      <Link href={back} aria-label="Back" className={disc}>
+      <Link href={back} aria-label={t("common.back")} className={disc}>
         <Ion name="chevron-back" size={20} />
       </Link>
       <h1 className="truncate text-center text-[20px] font-bold tracking-[-0.4px] text-white">{title}</h1>
@@ -80,7 +84,7 @@ export interface DonutSlice {
 export function Donut({
   slices,
   centerValue,
-  centerLabel = "invested",
+  centerLabel,
   size = 124,
   thickness = 18,
   active,
@@ -94,6 +98,7 @@ export function Donut({
   active: string | null;
   onActive: (id: string | null) => void;
 }) {
+  const t = useT();
   const r = (size - thickness) / 2;
   const c = size / 2;
   const C = 2 * Math.PI * r;
@@ -112,7 +117,7 @@ export function Donut({
 
   return (
     <div className="relative shrink-0" style={{ width: size, height: size }}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label="Allocation by asset">
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={t("money.donut.aria")}>
         <circle cx={c} cy={c} r={r} stroke="rgba(255,255,255,0.06)" strokeWidth={thickness} fill="none" />
         {segments.map((seg) => (
           <circle
@@ -130,15 +135,15 @@ export function Donut({
             onMouseLeave={() => onActive(null)}
             className="cursor-default transition-[stroke-opacity,stroke-width] duration-150"
           >
-            <title>{`${seg.label} ${(seg.pct * 100).toFixed(0)}%`}</title>
+            <title>{t("money.donut.sliceTitle", { label: seg.label, share: fmtPercent(seg.pct, 0) })}</title>
           </circle>
         ))}
       </svg>
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-3 text-center">
         <p className="max-w-full truncate text-[15px] font-bold tracking-[-0.4px] tabular-nums text-white">
-          {on ? `${(on.pct * 100).toFixed(0)}%` : centerValue}
+          {on ? fmtPercent(on.pct, 0) : centerValue}
         </p>
-        <p className="mt-0.5 max-w-full truncate text-[9px] font-bold uppercase tracking-[0.6px] text-white/[0.6]">{on ? on.label : centerLabel}</p>
+        <p className="mt-0.5 max-w-full truncate text-[9px] font-bold uppercase tracking-[0.6px] text-white/[0.6]">{on ? on.label : (centerLabel ?? t("money.donut.invested"))}</p>
       </div>
     </div>
   );
@@ -146,6 +151,7 @@ export function Donut({
 
 /** Ring and legend with one shared hover, the way the app pairs them. */
 export function AllocationCard({ slices, centerValue }: { slices: readonly DonutSlice[]; centerValue: string }) {
+  useT();
   const [active, setActive] = useState<string | null>(null);
   return (
     <div className={`${glassCard} mb-4 flex items-center gap-[18px] p-[18px]`}>
@@ -160,7 +166,7 @@ export function AllocationCard({ slices, centerValue }: { slices: readonly Donut
           >
             <span aria-hidden className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: sl.color }} />
             <span className="min-w-0 flex-1 truncate text-[13px] font-strong text-white/[0.85]">{sl.label}</span>
-            <span className="min-w-[34px] text-right text-[12px] font-strong tabular-nums text-white/[0.7]">{(sl.pct * 100).toFixed(0)}%</span>
+            <span className="min-w-[34px] text-right text-[12px] font-strong tabular-nums text-white/[0.7]">{fmtPercent(sl.pct, 0)}</span>
           </li>
         ))}
       </ul>
