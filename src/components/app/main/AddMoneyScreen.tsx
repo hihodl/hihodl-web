@@ -52,6 +52,7 @@ import { useMe, useMyAddresses } from "@/lib/app/spaces-data";
 import { Rich, useT } from "@/lib/app/i18n/react";
 
 import { useProductHref } from "../base";
+import { InfoSheet } from "../front/step";
 import { BackHeader, Column } from "../hold";
 import { Ion, type IonName } from "../ion";
 import { Skeleton } from "../ui";
@@ -408,9 +409,9 @@ function RailAccountCard({ account }: { account: RailAccount }) {
   const t = useT();
   const labels = account.fieldLabels ?? {};
   const name = (key: string, fallback: string) => labels[key] ?? fallback;
-  const fields: { label: string; value: string }[] = [];
+  const fields: { key: string; label: string; value: string }[] = [];
   const push = (key: string, fallback: string, value: string | null | undefined) => {
-    if (value) fields.push({ label: name(key, fallback), value });
+    if (value) fields.push({ key, label: name(key, fallback), value });
   };
   // The rail's own words win; ours are the fallback. IBAN and BIC are codes, the same everywhere.
   push("accountHolderName", t("home.add.bank.field.accountHolder"), account.accountHolderName);
@@ -445,7 +446,10 @@ function RailAccountCard({ account }: { account: RailAccount }) {
         <dl className="flex flex-col">
           {fields.map((f, i) => (
             <div key={f.label} className={`flex items-start justify-between gap-4 py-2.5 ${i ? "border-t border-white/[0.07]" : ""}`}>
-              <dt className="shrink-0 text-[12.5px] text-[#9FB7C2]">{f.label}</dt>
+              <dt className="flex shrink-0 items-center gap-1.5 text-[12.5px] text-[#9FB7C2]">
+                {f.label}
+                {f.key === "accountHolderName" ? <HolderInfoButton account={account} /> : null}
+              </dt>
               <dd className="min-w-0 break-all text-right text-[13.5px] font-strong tabular-nums text-white">{f.value}</dd>
             </div>
           ))}
@@ -458,27 +462,45 @@ function RailAccountCard({ account }: { account: RailAccount }) {
 }
 
 /**
- * Whose name the payer's bank will see. A pooled account (held in the
- * provider's name) warns in amber, because a salary sent to it is refused by
- * Verification of Payee; a named euro account says, in neutral, who can pay
- * into it. The decision is holder-disclosure.ts; the app draws the same thing.
+ * Who can pay into a euro IBAN held in this person's own name, one tap away
+ * beside the holder: Bridge refuses SEPA deposits from other individuals. A
+ * paragraph between the details to copy is noise (Alex, 25-Sep), so it lives
+ * in the sheet. The app does the same (HolderInfoButton).
+ */
+function HolderInfoButton({ account }: { account: RailAccount }) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  if (holderDisclosureFor(account.currency, account.heldInYourName) !== "named") return null;
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label={t("home.add.bank.holder.named.title")}
+        className="inline-flex h-5 w-5 items-center justify-center rounded-full text-white/75 hover:text-white"
+      >
+        <Ion name="information-circle-outline" size={16} color="currentColor" />
+      </button>
+      {open ? (
+        <InfoSheet
+          title={t("home.add.bank.holder.named.title")}
+          body={t("home.add.bank.holder.named.body")}
+          onClose={() => setOpen(false)}
+        />
+      ) : null}
+    </>
+  );
+}
+
+/**
+ * An account held in the provider's name, not this person's. Said in amber on
+ * the card and never behind a tap: a salary sent to it is refused by
+ * Verification of Payee, and the warning has to be read before the IBAN is
+ * copied. The decision is holder-disclosure.ts; the app draws the same thing.
  */
 function HolderNote({ account }: { account: RailAccount }) {
   const t = useT();
-  const kind = holderDisclosureFor(account.currency, account.heldInYourName);
-  if (kind === "none") return null;
-
-  if (kind === "named") {
-    return (
-      <div className="flex gap-2.5 rounded-[12px] border border-white/[0.14] bg-white/[0.06] p-3">
-        <Ion name="person-circle-outline" size={18} color="rgba(255,255,255,0.92)" />
-        <div className="min-w-0">
-          <p className="text-[13px] font-strong text-white/[0.92]">{t("home.add.bank.holder.named.title")}</p>
-          <p className="mt-1 text-[12px] leading-[16px] text-white/70">{t("home.add.bank.holder.named.body")}</p>
-        </div>
-      </div>
-    );
-  }
+  if (holderDisclosureFor(account.currency, account.heldInYourName) !== "pooled") return null;
 
   const currency = (account.currency ?? "").toUpperCase();
   const holder = (account.accountHolderName ?? "").trim();
