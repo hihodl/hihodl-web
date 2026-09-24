@@ -338,7 +338,7 @@
   "content.form.link": "链接（可选）",
   "content.form.xHandle": "X 用户名（可选）",
   "content.form.whatToPrint": "印刷内容",
-  "content.form.logo": "Logo",
+  "content.form.logo": "标志",
   "content.form.photo": "照片",
   "content.form.fileHint": "PNG、JPEG 或 WebP。发送前我们会矫正并压缩图片。",
   "content.form.qrLink": "二维码打开的链接",
