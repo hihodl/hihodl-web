@@ -107,7 +107,7 @@
   "displayMode.fintechBody": "En basit. Paran düz para birimi olarak görünür: USD. Coin yok, ağ yok. Sadece harcayıp gönderebileceğin bakiyeler.",
   "displayMode.hybridTitle": "Hibrit",
   "displayMode.hybridBody": "Stablecoin'lerini (USDC, USDT) tüm ağlarda birleştirilmiş olarak gör. Ağlarla uğraşmadan hangi coin'e sahip olduğunu bilirsin.",
-  "displayMode.nativeTitle": "Native",
+  "displayMode.nativeTitle": "Yerel",
   "displayMode.nativeBody": "Tam kontrol. Her coin ağ bazında gösterilir (Solana, Ethereum, Polygon, Base); ağ rozetleri ve gönderirken Akıllı yönlendirme seçeneğiyle.",
   "displayMode.swapped": "Takas edildi",
   "displayMode.bought": "{symbol} alındı",

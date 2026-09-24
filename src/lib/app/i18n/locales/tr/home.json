@@ -67,7 +67,7 @@
   "add.bank.field.accountHolder": "Hesap sahibi",
   "add.bank.field.accountNumber": "Hesap numarası",
   "add.bank.field.routingNumber": "Routing numarası",
-  "add.bank.field.sortCode": "Sort code",
+  "add.bank.field.sortCode": "Sort code (banka kodu)",
   "add.bank.field.paymentCode": "Ödeme kodu",
   "add.bank.field.reference": "Referans",
   "add.bank.field.bank": "Banka",
