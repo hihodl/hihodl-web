@@ -397,7 +397,7 @@
   "crew.splitChanged": "बँटवारा बदल गया",
   "crew.splitChangedBody": "अब आपको हर बिक्री का {share} मिलता है। हाँ कहें ताकि क्रू बेचता रहे।",
   "crew.sayYesTo": "{share} के लिए हाँ कहें",
-  "crew.theCrew": "क्रू",
+  "crew.theCrew": "Crew",
   "crew.sharesNote": "हिस्से उस रकम के हैं जो क्रू को हर बिक्री से मिलती है। लीड को वह मिलता है जो बाकियों को नहीं मिलता, और राउंडिंग भी वही रखता है।",
   "crew.addCreator": "क्रिएटर जोड़ें",
   "crew.inviteNotOnHold": "HOLD पर न होने वाले किसी को इनवाइट करें",

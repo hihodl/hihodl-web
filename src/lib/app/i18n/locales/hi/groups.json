@@ -46,7 +46,7 @@
   "list.loadFailed": "आपके ग्रुप लोड नहीं हो सके।",
   "list.empty": "अभी कोई ग्रुप नहीं",
   "list.emptyBody": "ग्रुप एक चैट है जिसमें पैसा भी शामिल है: डिनर, टैक्सी, फ़्लैट का खर्च बाँटें, और हिसाब चुकाएँ।",
-  "list.crew": "क्रू",
+  "list.crew": "Crew",
   "list.unread": "{count} नए",
   "across.title": "आपके सभी ग्रुप में",
   "across.shareAndPaid": "आपका हिस्सा <b>{share}</b> · आपने दिए <b>{paid}</b>",
