@@ -75,6 +75,7 @@
   "thread.request": "İste",
   "thread.bookSpot": "Yer ayırt",
   "thread.approvedWith": "Geçiş anahtarınla ya da bağladıysan telefonunda onaylanır.",
+  "thread.opening": "Açılıyor…",
   "didNotGoThrough": "Bu işlem tamamlanamadı. Tekrar dene.",
   "chat.nothingYet": "{name} ile aranızda henüz bir şey yok.",
   "chat.nobodyToWrite": "Bu konuşmanın diğer tarafında bir HOLD hesabı yok, bu yüzden yazılacak kimse yok.",

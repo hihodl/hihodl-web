@@ -75,6 +75,7 @@
   "thread.request": "طلب",
   "thread.bookSpot": "احجز مساحة",
   "thread.approvedWith": "تتم الموافقة بمفتاح المرور، أو من هاتفك إذا كنت قد ربطته.",
+  "thread.opening": "جارٍ الفتح…",
   "didNotGoThrough": "لم تكتمل العملية. حاول مرة أخرى.",
   "chat.nothingYet": "لا شيء بينك وبين {name} بعد.",
   "chat.nobodyToWrite": "لا يوجد حساب HOLD على الطرف الآخر من هذه المحادثة، لذا لا يوجد من تكتب إليه.",

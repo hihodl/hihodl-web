@@ -75,6 +75,7 @@
   "thread.request": "Yêu cầu",
   "thread.bookSpot": "Đặt vị trí",
   "thread.approvedWith": "Duyệt bằng passkey, hoặc trên điện thoại nếu bạn đã liên kết.",
+  "thread.opening": "Đang mở…",
   "didNotGoThrough": "Không thành công. Hãy thử lại.",
   "chat.nothingYet": "Bạn và {name} chưa có gì với nhau.",
   "chat.nobodyToWrite": "Không có tài khoản HOLD nào ở phía bên kia cuộc trò chuyện, nên không có ai để nhắn.",

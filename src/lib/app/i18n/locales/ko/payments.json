@@ -75,6 +75,7 @@
   "thread.request": "요청",
   "thread.bookSpot": "자리 예약",
   "thread.approvedWith": "패스키로 승인하거나, 휴대폰을 연결했다면 휴대폰에서 승인해요.",
+  "thread.opening": "여는 중…",
   "didNotGoThrough": "처리되지 않았어요. 다시 시도하세요.",
   "chat.nothingYet": "아직 {name}님과 주고받은 게 없어요.",
   "chat.nobodyToWrite": "이 대화의 상대방은 HOLD 계정이 없어서 메시지를 보낼 수 없어요.",

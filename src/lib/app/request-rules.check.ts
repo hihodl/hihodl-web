@@ -1,4 +1,6 @@
 import * as R from "./request-rules";
+import esES from "./i18n/locales/es-ES";
+import { setPrefs } from "./i18n/store";
 let fails = 0;
 function eq(name: string, a: unknown, b: unknown) {
   const ja = JSON.stringify(a);
@@ -68,5 +70,12 @@ eq("one row per peer", peers.map((p) => p.peerId).sort(), ["asker", "someone"]);
 eq("newest line, reader's voice", peers.find((p) => p.peerId === "asker")!.lastBody, "Asked you for 12.50 USDC");
 eq("the asker's side", R.requestPeers(rows, "asker").map((p) => [p.peerId, p.lastBody, p.aliasHandle]), [["payer", "Requested 12.50 USDC", "demo_payer"]]);
 eq("no me, no rows", R.requestPeers(rows, null), []);
+
+// in another language: the words and the figure follow it, and the voice stays the reader's
+setPrefs({ locale: "es-ES", dict: esES });
+eq("es: they asked you", R.requestPeers(rows, "payer").find((p) => p.peerId === "asker")!.lastBody, "Te ha pedido 12,50 USDC");
+eq("es: you asked", R.requestPeers(rows, "asker")[0].lastBody, "Has pedido 12,50 USDC");
+eq("es: error", R.describeRequestError({ status: 422, detail: "request_to_self" }), "No puedes pedirte dinero a ti mismo.");
+setPrefs({ locale: "en", dict: {} });
 
 if (fails) { console.log(`${fails} failed`); process.exit(1); } else console.log("all passed");

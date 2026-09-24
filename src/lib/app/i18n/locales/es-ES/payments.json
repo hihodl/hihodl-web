@@ -75,6 +75,7 @@
   "thread.request": "Solicitar",
   "thread.bookSpot": "Contratar una posición",
   "thread.approvedWith": "Se aprueba con tu llave de acceso, o en tu móvil si has vinculado uno.",
+  "thread.opening": "Abriendo…",
   "didNotGoThrough": "No ha funcionado. Vuelve a intentarlo.",
   "chat.nothingYet": "Aún no hay nada entre tú y {name}.",
   "chat.nobodyToWrite": "No hay ninguna cuenta de HOLD al otro lado de esta conversación, así que no hay nadie a quien escribir.",

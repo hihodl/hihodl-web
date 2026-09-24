@@ -75,6 +75,7 @@
   "thread.request": "Omba",
   "thread.bookSpot": "Hifadhi nafasi",
   "thread.approvedWith": "Yanaidhinishwa kwa passkey yako, au kwenye simu yako kama umeunganisha moja.",
+  "thread.opening": "Inafungua…",
   "didNotGoThrough": "Hilo halikufanikiwa. Jaribu tena.",
   "chat.nothingYet": "Bado hakuna chochote kati yako na {name}.",
   "chat.nobodyToWrite": "Hakuna akaunti ya HOLD upande mwingine wa mazungumzo haya, kwa hiyo hakuna wa kumwandikia.",

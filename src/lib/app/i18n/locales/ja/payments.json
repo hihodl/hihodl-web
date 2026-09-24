@@ -75,6 +75,7 @@
   "thread.request": "リクエスト",
   "thread.bookSpot": "枠を予約",
   "thread.approvedWith": "パスキー、またはスマホを連携している場合はスマホで承認します。",
+  "thread.opening": "開いています…",
   "didNotGoThrough": "うまくいきませんでした。もう一度お試しください。",
   "chat.nothingYet": "{name}さんとのやり取りはまだありません。",
   "chat.nobodyToWrite": "このスレッドの相手には HOLD アカウントがないため、メッセージを送る相手がいません。",

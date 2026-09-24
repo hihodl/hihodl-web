@@ -75,6 +75,7 @@
   "thread.request": "Minta",
   "thread.bookSpot": "Pesan spot",
   "thread.approvedWith": "Disetujui dengan passkey-mu, atau di ponselmu jika sudah kamu tautkan.",
+  "thread.opening": "Membuka…",
   "didNotGoThrough": "Itu tidak berhasil. Coba lagi.",
   "chat.nothingYet": "Belum ada apa-apa antara kamu dan {name}.",
   "chat.nobodyToWrite": "Tidak ada akun HOLD di sisi lain percakapan ini, jadi tidak ada yang bisa dikirimi pesan.",

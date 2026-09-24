@@ -75,6 +75,7 @@
   "thread.request": "Verzoeken",
   "thread.bookSpot": "Plek boeken",
   "thread.approvedWith": "Goedgekeurd met je passkey, of op je telefoon als je er een hebt gekoppeld.",
+  "thread.opening": "Openen…",
   "didNotGoThrough": "Dat is niet gelukt. Probeer het opnieuw.",
   "chat.nothingYet": "Nog niets tussen jou en {name}.",
   "chat.nobodyToWrite": "Er zit geen HOLD-account aan de andere kant van dit gesprek, dus er is niemand om te schrijven.",

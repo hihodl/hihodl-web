@@ -75,6 +75,7 @@
   "thread.request": "ขอเงิน",
   "thread.bookSpot": "จองตำแหน่ง",
   "thread.approvedWith": "อนุมัติด้วยพาสคีย์ของคุณ หรือบนโทรศัพท์หากคุณเชื่อมไว้",
+  "thread.opening": "กำลังเปิด…",
   "didNotGoThrough": "ไม่สำเร็จ ลองอีกครั้ง",
   "chat.nothingYet": "ยังไม่มีอะไรระหว่างคุณกับ {name}",
   "chat.nobodyToWrite": "อีกฝ่ายของบทสนทนานี้ไม่มีบัญชี HOLD จึงไม่มีใครให้ส่งข้อความถึง",

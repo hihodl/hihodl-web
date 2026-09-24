@@ -75,6 +75,7 @@
   "thread.request": "Anfordern",
   "thread.bookSpot": "Spot buchen",
   "thread.approvedWith": "Bestätigt mit deinem Passkey oder auf deinem Handy, falls du eins verknüpft hast.",
+  "thread.opening": "Wird geöffnet…",
   "didNotGoThrough": "Das hat nicht geklappt. Versuch es nochmal.",
   "chat.nothingYet": "Zwischen dir und {name} gibt es noch nichts.",
   "chat.nobodyToWrite": "Auf der anderen Seite dieser Unterhaltung gibt es kein HOLD-Konto, also niemanden, dem du schreiben kannst.",
