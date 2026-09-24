@@ -23,12 +23,25 @@
  *
  * WHERE THE CURVE COMES FROM
  *
- * The app calls DefiLlama straight from the device. A browser cannot — CORS
- * and the rate limit are both in the way — so this draws the same shape from
- * our own `GET /prices/history` (see `usePortfolioHistory`). Two consequences,
- * both deliberate: there is no 24H range here, because the backend's `days` is
- * 7, 30, 90 or 365 and nothing else; and an asset with no series is disclosed
- * under the chart rather than folded into the line.
+ * The app calls DefiLlama straight from the device; the web draws the same
+ * shape from our own `GET /prices/history` (see `usePortfolioHistory` and the
+ * arithmetic in lib/app/portfolio-curve). Consequences, all deliberate:
+ *
+ *   - There is no 24H or All range here, because the backend's `days` is 7,
+ *     30, 90 or 365 and nothing else.
+ *   - The line is built from the raw balance rows, one leg per ticker, and
+ *     does not change with the display mode: cbBTC is charted as cbBTC even
+ *     where fintech folds it into one Bitcoin row.
+ *   - SOL at work in a venue is in the hero total, so it is in the line too,
+ *     as SOL. Any other supplied token has no amount to price backwards and
+ *     is disclosed instead.
+ *   - An asset whose series failed, is missing, stopped, or is plainly a
+ *     different coin from the one we hold is left out of the line and named
+ *     under it. A line that looks complete and is not is worse than a note.
+ *   - A line that starts later than its range (a coin younger than a year)
+ *     labels its move "since <date>", never "1y".
+ *   - The line is drawn against TIME, not sample index, so the live right
+ *     edge an hour after the last hourly sample sits an hour to the right.
  *
  * WHAT THE DISPLAY MODE CHANGES
  *
@@ -96,8 +109,11 @@ import {
   useYieldPositions,
   useYieldReserves,
   usdOf,
+  type ChartLeg,
   type CurvePoint,
+  type PortfolioCurve,
 } from "@/lib/app/money";
+import { coversRange, sameCoin, UNCHARTED_DUST_USD } from "@/lib/app/portfolio-curve";
 import { chainLabel } from "@/lib/app/payments";
 import { useMyAddresses } from "@/lib/app/spaces-data";
 
@@ -205,11 +221,32 @@ export function InvestScreen() {
   const hasInvestments = holdings.length > 0 || working.usd > 0;
 
   const [range, setRange] = useState<Range>(RANGES[0]);
-  const charted = useMemo(
-    () => holdings.filter((h) => h.usd !== null).map((h) => ({ symbol: h.symbol, amount: h.amount, usd: h.usd ?? 0 })),
-    [holdings],
-  );
-  const history = usePortfolioHistory(charted, range.days);
+
+  /* The line's legs: one per ticker, straight off the balance rows, so the
+   * display mode cannot change what is charted. Only money that is in the
+   * hero total goes in (a row no feed priced is not in the total, so it is
+   * not in the line either), and the SOL at work joins its liquid SOL. */
+  const legs = useMemo<ChartLeg[]>(() => {
+    const bySymbol = new Map<string, ChartLeg>();
+    const add = (symbol: string, amount: number, liveUsd: number) => {
+      const prev = bySymbol.get(symbol) ?? { symbol, amount: 0, liveUsd: 0 };
+      bySymbol.set(symbol, { symbol, amount: prev.amount + amount, liveUsd: prev.liveUsd + liveUsd });
+    };
+    for (const b of rows) {
+      const symbol = symbolOf(b);
+      if (!symbol || isStable(symbol)) continue;
+      const amount = Number(b.balance);
+      const usd = prices.data ? usdOf(b, prices.data.prices) : null;
+      if (!Number.isFinite(amount) || amount <= 0 || usd === null) continue;
+      add(symbol, amount, usd);
+    }
+    if (working.sol > 0 && working.solUsd > 0) add("SOL", working.sol, working.solUsd);
+    // Dust is left out of the line as it is left out of the list.
+    return [...bySymbol.values()].filter((l) => l.liveUsd >= INVEST_DUST_USD).sort((a, b) => a.symbol.localeCompare(b.symbol));
+  }, [rows, prices.data, working.sol, working.solUsd]);
+  // Supplied money that is not SOL: in the total, with no amount to chart.
+  const suppliedUncharted = Math.max(0, working.usd - working.solUsd);
+  const history = usePortfolioHistory(legs, range.days, suppliedUncharted);
 
   /* What the person paid, from our own ledger — the move against weighted
    * average cost, summed per (chain, token) because that is the grain the
@@ -273,7 +310,9 @@ export function InvestScreen() {
       const key = chain ? `${symbol}|${chain}` : symbol;
       const then = ago[symbol];
       const now = usdOf(b, prices.data.prices);
-      if (then === undefined || now === null) {
+      // A price a day ago from a feed that is a different coin (JUP, today)
+      // would print the whole holding as a 24h gain. No figure beats that one.
+      if (then === undefined || now === null || !sameCoin(now / amount, then)) {
         incomplete.add(key);
         continue;
       }
@@ -334,9 +373,10 @@ export function InvestScreen() {
         ) : hasInvestments ? (
           <Hero
             totalValue={investValue}
-            points={history.data?.points ?? []}
-            loading={history.isLoading && !history.data}
-            unchartedUsd={history.data?.unchartedUsd ?? 0}
+            curve={history.data ?? null}
+            loading={legs.length > 0 && !history.data && !history.error}
+            failed={!!history.error && !history.data}
+            onRetry={() => void history.mutate()}
             range={range}
             onRange={setRange}
           />
@@ -452,27 +492,51 @@ function deltaOverRange(points: readonly CurvePoint[]): Delta | null {
   return { abs, pct, dir: pct > FLAT_PCT ? 1 : pct < -FLAT_PCT ? -1 : 0 };
 }
 
+/** "Mar 3" — the day a line that starts late really starts. */
+function shortDate(t: number): string {
+  return new Date(t).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+/**
+ * The one line under the chart that says what it leaves out, naming up to
+ * three tickers. Every reason reads as a fact about the feed, never about
+ * the holding, which is real and on chain whatever the chart can say.
+ */
+function leftOutNote(curve: PortfolioCurve | null): string | null {
+  if (!curve || curve.unchartedUsd <= UNCHARTED_DUST_USD) return null;
+  const names = [...new Set(curve.leftOut.map((l) => l.symbol))];
+  const who = names.length === 0 ? "" : names.length <= 3 ? ` (${names.join(", ")})` : ` (${names.slice(0, 3).join(", ")} and ${names.length - 3} more)`;
+  return `Chart leaves out ${money(curve.unchartedUsd)}${who}: no reliable price history`;
+}
+
 function Hero({
   totalValue,
-  points,
+  curve,
   loading,
-  unchartedUsd,
+  failed,
+  onRetry,
   range,
   onRange,
 }: {
   totalValue: number;
-  points: CurvePoint[];
+  curve: PortfolioCurve | null;
   loading: boolean;
-  unchartedUsd: number;
+  failed: boolean;
+  onRetry: () => void;
   range: Range;
   onRange: (r: Range) => void;
 }) {
+  const points = curve?.points ?? [];
   // The delta comes off the real curve and nowhere else: a percentage read off
   // an invented series would be an invented percentage. No curve, no delta.
+  // It is the move of what the line holds, which is the whole total unless the
+  // note under the chart says otherwise.
   const delta = deltaOverRange(points);
   const arrow = delta ? (delta.dir > 0 ? " ▲" : delta.dir < 0 ? " ▼" : "") : "";
   const sign = (n: number) => `${n >= 0 ? "+" : "−"}${money(Math.abs(n))}`;
-  const deltaText = delta ? `${range.short}  ${sign(delta.abs)}${arrow} ${Math.abs(delta.pct).toFixed(2)}%` : "";
+  const label = points.length > 1 && !coversRange(points, range.days, points[points.length - 1].t) ? `since ${shortDate(points[0].t)}` : range.short;
+  const deltaText = delta ? `${label}  ${sign(delta.abs)}${arrow} ${Math.abs(delta.pct).toFixed(2)}%` : "";
+  const note = leftOutNote(curve);
 
   return (
     <section
@@ -494,18 +558,32 @@ function Hero({
       <div className="relative mt-2.5 h-[160px]">
         {points.length > 1 ? (
           <Curve points={points} up={!delta || delta.dir >= 0} />
+        ) : loading ? (
+          <div className="flex h-full items-center justify-center">
+            <p className="text-[14px] font-strong text-white/[0.55]">Loading…</p>
+          </div>
+        ) : failed || curve?.allFailed ? (
+          // Could not ask is not nothing to draw: it gets a Retry, not a verdict.
+          <div className="flex h-full flex-col items-center justify-center gap-2.5">
+            <p className="text-[14px] font-strong text-white/[0.7]">We couldn&apos;t load the price history</p>
+            <button
+              type="button"
+              onClick={onRetry}
+              className="h-8 rounded-[16px] bg-white/10 px-3.5 text-[12.5px] font-bold text-white transition-colors hover:bg-white/[0.16]"
+            >
+              Retry
+            </button>
+          </div>
         ) : (
           <div className="flex h-full items-center justify-center">
-            <p className="text-[14px] font-strong text-white/[0.55]">
-              {loading ? "Loading…" : "No price history for these assets"}
-            </p>
+            <p className="text-[14px] font-strong text-white/[0.55]">No price history for these assets</p>
           </div>
         )}
       </div>
 
-      {unchartedUsd > 0.01 ? (
-        <p className="mt-2 truncate text-[11.5px] font-strong tracking-[-0.1px] text-white/[0.8]">
-          Chart excludes {money(unchartedUsd)} with no price history
+      {note ? (
+        <p className="mt-2 truncate text-[11.5px] font-strong tracking-[-0.1px] text-white/[0.8]" title={note}>
+          {note}
         </p>
       ) : null}
 
@@ -537,13 +615,21 @@ function Hero({
 function Curve({ points, up }: { points: readonly CurvePoint[]; up: boolean }) {
   const W = 1000;
   const H = 160;
-  const ys = points.map((p) => p.y);
-  const lo = Math.min(...ys);
-  const hi = Math.max(...ys);
+  // A loop, not Math.min(...ys): 90 days hourly is 2,160 points per leg.
+  let lo = Infinity;
+  let hi = -Infinity;
+  for (const p of points) {
+    if (p.y < lo) lo = p.y;
+    if (p.y > hi) hi = p.y;
+  }
   const span = hi - lo || 1;
-  const x = (i: number) => (i / (points.length - 1)) * W;
+  // Against time, not sample index: the live right edge can sit an hour or
+  // five after the last feed sample, and hourly feeds skip the odd hour.
+  const t0 = points[0].t;
+  const tSpan = points[points.length - 1].t - t0 || 1;
+  const x = (t: number) => ((t - t0) / tSpan) * W;
   const y = (v: number) => H - 6 - ((v - lo) / span) * (H - 16);
-  const line = points.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)} ${y(p.y).toFixed(1)}`).join(" ");
+  const line = points.map((p, i) => `${i ? "L" : "M"}${x(p.t).toFixed(1)} ${y(p.y).toFixed(1)}`).join(" ");
   const ink = up ? UP : DOWN;
   const id = `curve-${up ? "up" : "flat"}`;
   return (
