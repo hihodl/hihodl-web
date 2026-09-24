@@ -38,6 +38,8 @@
 import { API_BASE } from "@/lib/ad-space/config";
 import { accessToken } from "@/lib/creator/session";
 
+import { normalisePriceSeries } from "./portfolio-curve";
+
 export class HoldApiError extends Error {
   constructor(
     readonly code: string,
@@ -195,19 +197,15 @@ function priceMap(raw: unknown): Record<string, number> {
 /**
  * A price series for one symbol: `[[msSinceEpoch, price], …]`.
  *
- * Production sends `[{ timestamp, price }]`; the curve and the 24h move both
- * read tuples, and read the objects as `undefined`. Normalised here so that
- * neither can.
+ * Production sends `[{ timestamp, price }]` with the timestamp in ms; the
+ * curve and the 24h move both read tuples, and read the objects as
+ * `undefined`. Normalised here — seconds, numeric strings, disorder and
+ * duplicate instants included — by `normalisePriceSeries`, which says what
+ * the wire has been seen to carry and why each case is taken.
  */
 export async function getPriceHistory(symbol: string, days: 7 | 30 | 90 | 365): Promise<{ symbol: string; prices: [number, number][] }> {
   const raw = await read<{ symbol?: string; prices?: unknown }>(`prices/history?symbol=${encodeURIComponent(symbol)}&days=${days}`);
-  const prices: [number, number][] = [];
-  for (const p of Array.isArray(raw?.prices) ? (raw.prices as unknown[]) : []) {
-    const t = Array.isArray(p) ? p[0] : (p as { timestamp?: number })?.timestamp;
-    const v = Array.isArray(p) ? p[1] : (p as { price?: number })?.price;
-    if (typeof t === "number" && typeof v === "number" && Number.isFinite(t) && Number.isFinite(v)) prices.push([t, v]);
-  }
-  return { symbol: raw?.symbol ?? symbol, prices };
+  return { symbol: raw?.symbol ?? symbol, prices: normalisePriceSeries(raw?.prices) };
 }
 
 /* ── What moved ───────────────────────────────────────────────────── */

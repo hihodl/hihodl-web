@@ -63,17 +63,25 @@ import {
   type Note,
 } from "@/lib/app/chat";
 import type { SpotBought } from "@/lib/app/sponsor";
+import { HoldApiError } from "@/lib/app/hold-api";
 import {
   cancelRequest,
-  openRequestsWith,
+  describeRequestError,
   rejectRequest,
+  remindRequest,
   requestAmount,
+  requestTag,
+  requestsWith,
   theyAsked,
   usePaymentRequests,
+  webCanPay,
   type PaymentRequest,
 } from "@/lib/app/payment-requests";
 
+import { btnGlass } from "../hold";
 import { Ion } from "../ion";
+import { Modal } from "../Modal";
+import { plateCaution } from "./group-kit";
 
 /* ── The thread ───────────────────────────────────────────────────── */
 
@@ -113,7 +121,7 @@ export function Conversation({
   payments: readonly Transfer[];
   mode: DisplayMode;
   onOpenTx: (id: string) => void;
-  /** Pay one of their requests: the thread hands it up, the screen opens Send. */
+  /** Pay one of their requests: the thread hands it up, the screen opens Quick Send with it locked. */
   onPayRequest: (request: PaymentRequest) => void;
   /** Spots bought from this creator, derived by the screen above. */
   spots?: readonly SpotBought[];
@@ -125,7 +133,7 @@ export function Conversation({
   const state = useChatState(peerId);
   const requests = usePaymentRequests();
   const messages = useMemo(() => looseMessages(notes.data), [notes.data]);
-  const open = useMemo(() => openRequestsWith(requests.data, peerId), [requests.data, peerId]);
+  const asked = useMemo(() => requestsWith(requests.data, peerId), [requests.data, peerId]);
 
   useMarkSeen(messages, () => void notes.mutate());
 
@@ -138,7 +146,8 @@ export function Conversation({
       ...messages.map((n) => ({ kind: "msg" as const, key: `n:${n.id}`, ts: Date.parse(n.createdAt), note: n })),
       // A request is a third thing that happened between two people, so it
       // takes its place in the same run rather than sitting in a panel above.
-      ...open.map((r) => ({ kind: "req" as const, key: `r:${r.id}`, ts: Date.parse(r.createdAt), request: r })),
+      // Closed ones stay, their tag turned to Paid, Declined or Cancelled.
+      ...asked.map((r) => ({ kind: "req" as const, key: `r:${r.id}`, ts: Date.parse(r.createdAt), request: r })),
       // A spot bought from this creator. Derived, never written: see
       // `useSpotsBoughtFrom`. A fact does not get an edit button.
       ...spots.map((s) => ({ kind: "spot" as const, key: `s:${s.orderId}`, ts: s.ts, spot: s })),
@@ -148,7 +157,7 @@ export function Conversation({
 
     return withDays(items);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [payments, messages, open, spots, locale]);
+  }, [payments, messages, asked, spots, locale]);
 
   const waiting = state.data?.status === "pending" && state.data.requestedByMe;
 
@@ -175,6 +184,7 @@ export function Conversation({
               key={r.key}
               request={r.request}
               incoming={!!peerId && theyAsked(r.request, peerId)}
+              mode={mode}
               peerName={peerName}
               onPay={() => onPayRequest(r.request)}
               onAnswered={() => void requests.mutate()}
@@ -379,104 +389,184 @@ function SpotBubble({ spot, peerName }: { spot: SpotBought; peerName: string }) 
 }
 
 /**
- * A request, as a bubble.
+ * A request, as a bubble: the SAME bubble as a payment, with a tag.
  *
- * THE TWO SIDES ARE NOT THE SAME BUBBLE
+ * It used to be a card of its own, amber-bordered, with "Payment request" in
+ * capitals over it. That read as a notification sitting in the conversation,
+ * and a request is not a notification: it is a payment that has not happened
+ * yet (contract §1, "the thread"). So it takes the payment's shape — radius
+ * 16, the figure at 16/900 with the ticker beside it, the note inside, the
+ * time at the foot, the glass tint and no ground of its own — and says what
+ * it is in a small tag: `Requested`, and later `Paid`, `Declined` or
+ * `Cancelled`.
  *
- * The app's `RequestMsg` decides its buttons from `meta.isIncoming`, and so
- * does this: a request somebody made OF you carries Pay and Decline; one you
- * made of them carries Cancel and says nothing else, because there is nothing
- * you can do about it except wait or take it back.
+ * Its side is the side of whoever ASKED, as a message's is its writer's: one
+ * you asked for is on your side in your tint, one they asked of you is on
+ * theirs.
  *
- * It wears the amber TINT and not the fill. Filled amber is the CTA on this
- * product — the Pay button inside is the action, and a bubble that shouted
- * the same colour would compete with it.
+ * THE TWO SIDES DO NOT GET THE SAME BUTTONS
  *
- * WHAT PAY DOES, AND WHAT IT DOES NOT
+ *   they asked you   Pay and Decline. Pay opens Quick Send with the person and
+ *                    the amount locked in; the request is settled with the
+ *                    withdrawal once the money is confirmed, never before.
+ *   you asked        Remind and Cancel. Remind is once a day per request; a
+ *                    second one gets the server's `retryAt`, said as a time.
  *
- * It opens Send with the amount and, when the handle resolves, the address.
- * It does not settle the request: the server's `/settle` only flips a status,
- * and flipping it before the money moved would tell the person who asked that
- * they had been paid. That row closes when the payment does.
+ * A closed request keeps its place and loses its buttons: the history must
+ * not rearrange itself around something already read.
  */
+const TAG_TONE: Record<ReturnType<typeof requestTag>, string> = {
+  Requested: "bg-[rgba(255,183,3,0.16)] text-amber",
+  Paid: "bg-[rgba(32,214,144,0.14)] text-[#20D690]",
+  Declined: "bg-white/[0.08] text-white/65",
+  Cancelled: "bg-white/[0.08] text-white/65",
+};
+
+/** The bubble's small strings, together. */
+const RQ = {
+  pay: "Pay",
+  decline: "Decline",
+  remind: "Remind",
+  cancel: "Cancel",
+  keep: "Keep it",
+  declineTitle: "Decline this request?",
+  declineBody: (name: string) => `${name} will see that you declined it.`,
+  declineIt: "Decline",
+  cancelTitle: "Cancel this request?",
+  cancelBody: (name: string) => `${name} won't be able to pay it any more.`,
+  cancelIt: "Cancel request",
+  reminded: "Reminded. They got a friendly nudge.",
+  inApp: (chain: string) => `This one is on ${chain}. Pay it in the HOLD app.`,
+};
+
 function RequestBubble({
   request,
   incoming,
+  mode,
   peerName,
   onPay,
   onAnswered,
 }: {
   request: PaymentRequest;
   incoming: boolean;
+  mode: DisplayMode;
   peerName: string;
   onPay: () => void;
   onAnswered: () => void;
 }) {
   const t = useT();
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<"decline" | "cancel" | "remind" | null>(null);
+  const [said, setSaid] = useState<string | null>(null);
+  // Decline and Cancel close the request for both sides, so each asks first,
+  // as the app does. Remind is harmless and goes straight away.
+  const [ask, setAsk] = useState<"decline" | "cancel" | null>(null);
   const amount = requestAmount(request);
   if (amount === null) return null;
-  const ticker = request.tokenId.toUpperCase();
+  const ticker = maskTokenSymbol(request.tokenId.split(".")[0].toUpperCase(), mode);
+  const tag = requestTag(request.status);
+  const open = request.status === "requested";
+  const payable = webCanPay(request);
 
-  const answer = async (fn: () => Promise<unknown>) => {
-    setBusy(true);
+  const act = async (which: "decline" | "cancel" | "remind", fn: () => Promise<unknown>, done?: string) => {
+    setBusy(which);
+    setSaid(null);
     try {
       await fn();
+      if (done) setSaid(done);
       onAnswered();
+    } catch (e) {
+      setSaid(e instanceof HoldApiError ? describeRequestError(e) : describeRequestError({ status: -1 }));
+      // A request that closed meanwhile is a fact to show, not an error to keep.
+      if (e instanceof HoldApiError && (e.detail === "request_not_open" || e.code === "request_not_open")) onAnswered();
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   };
 
+  const plate =
+    "inline-flex h-8 items-center justify-center rounded-[10px] px-3.5 text-[12.5px] transition-colors disabled:opacity-50 [-webkit-tap-highlight-color:transparent]";
+  const glass = `${plate} bg-white/10 font-strong text-white/85 hover:bg-white/[0.16]`;
+
   return (
     <div className={`flex ${incoming ? "justify-start" : "justify-end"}`}>
-      <div className="max-w-[78%] rounded-[16px] border border-[rgba(255,183,3,0.35)] bg-[rgba(255,183,3,0.10)] px-3.5 py-3">
-        <span className="flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-[0.5px] text-amber">
-          <Ion name="download-outline" size={13} />
-          {incoming ? t("payments.chat.paymentRequest") : t("payments.chat.requestSent")}
+      <div
+        className={`max-w-[78%] min-w-0 rounded-[16px] border border-white/10 px-3.5 py-3 ${
+          incoming ? "bg-white/[0.08]" : "bg-[rgba(255,183,3,0.15)]"
+        }`}
+      >
+        <span className="flex items-center gap-1.5">
+          <span className="text-[16px] font-extrabold tabular-nums tracking-[0.2px] text-white">{fmtNumber(amount, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          <span className="pt-px text-[13px] font-bold text-white/90">{ticker}</span>
         </span>
 
-        <span className="mt-1.5 flex items-baseline gap-1.5">
-          <span className="text-[18px] font-extrabold tabular-nums tracking-[0.2px] text-white">{fmtNumber(amount, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-          <span className="text-[13px] font-bold text-white/90">{ticker}</span>
+        {request.note ? (
+          <span className="mt-1.5 block whitespace-pre-wrap break-words text-[13.5px] leading-[19px] text-white/85">{request.note}</span>
+        ) : null}
+
+        {open ? (
+          <span className="mt-2.5 flex flex-wrap items-center gap-2">
+            {incoming ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => ("token" in payable ? onPay() : setSaid(RQ.inApp(payable.app)))}
+                  className={`${plate} bg-amber font-bold text-text-on-amber hover:bg-amber-glow`}
+                >
+                  {RQ.pay}
+                </button>
+                <button type="button" disabled={!!busy} onClick={() => setAsk("decline")} className={glass}>
+                  {RQ.decline}
+                </button>
+              </>
+            ) : (
+              <>
+                <button type="button" disabled={!!busy} onClick={() => void act("remind", () => remindRequest(request.id), RQ.reminded)} className={glass}>
+                  {RQ.remind}
+                </button>
+                <button type="button" disabled={!!busy} onClick={() => setAsk("cancel")} className={glass}>
+                  {RQ.cancel}
+                </button>
+              </>
+            )}
+          </span>
+        ) : null}
+
+        {said ? <span className="mt-2 block text-[12px] leading-[17px] text-white/75">{said}</span> : null}
+
+        <span className="mt-1.5 flex items-center justify-end gap-2 text-[10.5px] text-white/60">
+          <span className={`inline-flex h-4 items-center rounded-[8px] px-1.5 text-[10px] font-extrabold uppercase tracking-[0.4px] ${TAG_TONE[tag]}`}>{tag}</span>
+          <span>{shortTime(request.createdAt)}</span>
         </span>
-
-        <p className="mt-1 text-[12.5px] leading-[17px] text-white/70">
-          {incoming ? t("payments.chat.theyAsked", { name: peerName }) : t("payments.chat.waitingFor", { name: peerName })}
-        </p>
-
-        <div className="mt-2.5 flex items-center gap-2">
-          {incoming ? (
-            <>
-              <button
-                type="button"
-                onClick={onPay}
-                className="inline-flex h-8 items-center rounded-[10px] bg-amber px-3.5 text-[12.5px] font-bold text-text-on-amber transition-colors hover:bg-amber-glow"
-              >
-                {t("payments.chat.pay")}
-              </button>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => void answer(() => rejectRequest(request.id))}
-                className="inline-flex h-8 items-center rounded-[10px] bg-white/10 px-3 text-[12.5px] font-strong text-white/85 transition-colors hover:bg-white/[0.16] disabled:opacity-50"
-              >
-                {t("payments.chat.decline")}
-              </button>
-            </>
-          ) : (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void answer(() => cancelRequest(request.id))}
-              className="inline-flex h-8 items-center rounded-[10px] bg-white/10 px-3 text-[12.5px] font-strong text-white/85 transition-colors hover:bg-white/[0.16] disabled:opacity-50"
-            >
-              {t("common.cancel")}
-            </button>
-          )}
-          <span className="ml-auto text-[10.5px] text-white/60">{shortTime(request.createdAt)}</span>
-        </div>
       </div>
+
+      {ask ? (
+        <Modal
+          title={ask === "decline" ? RQ.declineTitle : RQ.cancelTitle}
+          onClose={() => setAsk(null)}
+          busy={!!busy}
+          size="sm"
+          footer={
+            <div className="flex gap-2">
+              <button type="button" className={`${btnGlass} flex-1`} disabled={!!busy} onClick={() => setAsk(null)}>
+                {RQ.keep}
+              </button>
+              <button
+                type="button"
+                className={`${plateCaution} flex-1`}
+                disabled={!!busy}
+                onClick={() => {
+                  const which = ask;
+                  void act(which, () => (which === "decline" ? rejectRequest(request.id) : cancelRequest(request.id))).then(() => setAsk(null));
+                }}
+              >
+                {busy ? "One moment…" : ask === "decline" ? RQ.declineIt : RQ.cancelIt}
+              </button>
+            </div>
+          }
+        >
+          <p className="text-[14px] leading-[20px] text-white/[0.78]">{ask === "decline" ? RQ.declineBody(peerName) : RQ.cancelBody(peerName)}</p>
+        </Modal>
+      ) : null}
     </div>
   );
 }

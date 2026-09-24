@@ -16,6 +16,7 @@
 
 "use client";
 
+import { useMemo } from "react";
 import useSWR, { type SWRConfiguration } from "swr";
 
 import { useCreatorSession } from "@/lib/creator/session";
@@ -60,6 +61,7 @@ import {
   type YieldPosition,
   type YieldReserve,
 } from "./hold-api";
+import { buildPortfolioCurve, priceADayAgo, type ChartLeg, type PortfolioCurve, type SeriesAnswer } from "./portfolio-curve";
 import { useMyAddresses } from "./spaces-data";
 
 const OPTIONS: SWRConfiguration = {
@@ -154,76 +156,63 @@ export function usePriceHistory(symbol: string | null, days: 7 | 30 | 90 | 365) 
   return useRead(symbol ? "price-history" : null, () => getPriceHistory(symbol!, days), `${symbol}:${days}`);
 }
 
-/** What the portfolio was worth at one moment, for the Invest hero's curve. */
-export interface CurvePoint {
-  t: number;
-  y: number;
-}
+export type { ChartLeg, CurvePoint, LeftOutReason, PortfolioCurve } from "./portfolio-curve";
 
-export interface PortfolioCurve {
-  points: CurvePoint[];
-  /** Holdings no series answered for. They are in the total and not in the line. */
-  uncharted: number;
-  unchartedUsd: number;
+/**
+ * Every symbol's price series over one range, keyed by upper-case symbol.
+ *
+ * Keyed on the SET of symbols and the range, never on the amounts: a balance
+ * that moves by a lamport re-draws the curve from what is cached instead of
+ * asking for thirty series again. A request that fails is written down as
+ * `"failed"` rather than as an empty history, because "we could not ask" and
+ * "there is nothing to draw" are different things to tell somebody; when
+ * every one of them fails the read itself fails, so the hero can offer Retry.
+ */
+export function usePriceSeries(symbols: readonly string[], days: 7 | 30 | 90 | 365) {
+  const wanted = [...new Set(symbols.map((s) => s.toUpperCase()).filter(Boolean))].sort();
+  return useRead<Record<string, SeriesAnswer>>(
+    wanted.length ? "price-series" : null,
+    async () => {
+      const answers = await Promise.allSettled(wanted.map((s) => getPriceHistory(s, days)));
+      if (answers.every((a) => a.status === "rejected")) throw (answers[0] as PromiseRejectedResult).reason;
+      return Object.fromEntries(wanted.map((s, i) => {
+        const a = answers[i];
+        return [s, a.status === "fulfilled" ? a.value.prices : "failed"] as const;
+      }));
+    },
+    `${wanted.join(",")}|${days}`,
+  );
 }
 
 /**
  * The Invest hero's curve: Σ (amount held now × what that asset cost then).
  *
- * The app draws this from DefiLlama, called straight from the device. A browser
- * cannot — CORS and the rate limit are both in the way — so the web draws it
- * from our own `GET /prices/history`, which is the same shape one symbol at a
- * time. `days` is 7, 30, 90 or 365 and nothing else, which is the backend's own
- * enum, so the web has no 24H range where the app has one.
+ * The app draws this from DefiLlama, called from the device. The web draws it
+ * from our own `GET /prices/history`, one symbol at a time, whose `days` is
+ * 7, 30, 90 or 365 and nothing else — the backend's own zod enum — so the web
+ * has no 1H, 24H or All where the app has them. (DefiLlama itself does answer
+ * a browser: `coins.llama.fi/chart` returns `access-control-allow-origin` for
+ * app.hihodl.xyz, checked 24-Sep-2026. What keeps the web on our own route is
+ * one source of truth for prices, not CORS.)
  *
- * Each asset's series is sampled at its own instants, so the longest one is the
- * clock and every other is read at its last price at or before each tick. A
- * symbol no series answered for is NOT dropped into the line at zero: it is
- * counted, and the hero says how much of the total the line leaves out.
+ * The arithmetic — alignment, what is left out and why, the pinned right
+ * edge — lives in `portfolio-curve.ts`, where it can be checked without a
+ * browser. `extraUnchartedUsd` is hero money the caller cannot put in the line
+ * at all, so the disclosure under the chart covers it too.
  *
  * It is what is held NOW priced backwards, the same honest caveat the app
  * carries: an asset bought this morning did not live through the whole range.
  */
-export function usePortfolioHistory(holdings: readonly { symbol: string; amount: number; usd: number }[], days: 7 | 30 | 90 | 365) {
-  const key = holdings.map((h) => `${h.symbol}:${h.amount}`).sort().join(",");
-  return useRead<PortfolioCurve>(
-    holdings.length ? "portfolio-history" : null,
-    async () => {
-      const answers = await Promise.allSettled(holdings.map((h) => getPriceHistory(h.symbol, days)));
-      const series: { amount: number; prices: [number, number][] }[] = [];
-      let uncharted = 0;
-      let unchartedUsd = 0;
-      answers.forEach((a, i) => {
-        const prices = a.status === "fulfilled" ? a.value.prices : [];
-        if (!prices || prices.length < 2) {
-          uncharted += 1;
-          unchartedUsd += holdings[i].usd;
-          return;
-        }
-        series.push({ amount: holdings[i].amount, prices: [...prices].sort((x, y) => x[0] - y[0]) });
-      });
-      if (!series.length) return { points: [], uncharted, unchartedUsd };
-
-      const clock = series.reduce((longest, s) => (s.prices.length > longest.prices.length ? s : longest), series[0]);
-      const cursors = series.map(() => 0);
-      const points: CurvePoint[] = [];
-      for (const [t] of clock.prices) {
-        let y = 0;
-        let complete = true;
-        series.forEach((s, i) => {
-          while (cursors[i] + 1 < s.prices.length && s.prices[cursors[i] + 1][0] <= t) cursors[i] += 1;
-          const sample = s.prices[cursors[i]];
-          // Before this asset's series begins there is no price to use, and a
-          // zero would draw a step that never happened.
-          if (sample[0] > t) complete = false;
-          else y += s.amount * sample[1];
-        });
-        if (complete && Number.isFinite(y)) points.push({ t, y });
-      }
-      return { points, uncharted, unchartedUsd };
-    },
-    `${key}|${days}`,
+export function usePortfolioHistory(legs: readonly ChartLeg[], days: 7 | 30 | 90 | 365, extraUnchartedUsd = 0) {
+  const series = usePriceSeries(
+    legs.map((l) => l.symbol),
+    days,
   );
+  const data = useMemo<PortfolioCurve | undefined>(
+    () => (series.data ? buildPortfolioCurve(legs, series.data, Date.now(), extraUnchartedUsd) : undefined),
+    [series.data, legs, extraUnchartedUsd],
+  );
+  return { data, error: series.error as unknown, isLoading: series.isLoading, mutate: series.mutate };
 }
 
 /* ── What moved ───────────────────────────────────────────────────── */
@@ -661,39 +650,30 @@ export function useSuppliedBySlug(): SuppliedAnswer {
 
 /* ── What a holding was worth yesterday ───────────────────────────── */
 
-/** Twenty-four hours, in milliseconds. */
-const DAY_MS = 24 * 60 * 60 * 1000;
-
 /**
  * Each symbol's price a day ago, for the hero's 24h delta.
  *
  * `/prices/history` is one call per symbol, so only the volatile ones are
  * asked: a dollar was a dollar yesterday. A symbol whose series does not come
- * back is left OUT of the answer rather than defaulted to today's price — the
- * caller reads a missing symbol as "we cannot say", and a delta that silently
- * treats an unknown as unchanged is a delta that lies about the one holding it
- * could not read.
+ * back (a 502 UPSTREAM_UNAVAILABLE, say), or comes back with nothing near 24
+ * hours ago (a stale cache, a coin younger than a day), is left OUT of the
+ * answer rather than defaulted to today's price or to the oldest sample on
+ * offer — the caller reads a missing symbol as "we cannot say", and leaves
+ * that holding out of the move (`dayMove`).
  */
 export function usePrices24hAgo(symbols: readonly string[]) {
   const volatile = [...new Set(symbols.map((s) => s.toUpperCase()).filter((s) => !isStable(s)))].sort();
   return useRead<Record<string, number>>(
     volatile.length ? "prices-24h" : null,
     async () => {
-      const cutoff = Date.now() - DAY_MS;
+      const now = Date.now();
       const series = await Promise.all(
         volatile.map((symbol) => getPriceHistory(symbol, 7).then((a) => [symbol, a.prices] as const, () => [symbol, null] as const)),
       );
       const out: Record<string, number> = {};
       for (const [symbol, points] of series) {
-        if (!points?.length) continue;
-        // The last point at or before the cutoff; failing that the oldest we
-        // were given, which is the closest thing to "a day ago" on offer.
-        let best: [number, number] | null = null;
-        for (const point of points) {
-          if (point[0] <= cutoff && (!best || point[0] > best[0])) best = point;
-        }
-        const chosen = best ?? points[0];
-        if (Number.isFinite(chosen[1])) out[symbol] = chosen[1];
+        const price = points ? priceADayAgo(points, now) : null;
+        if (price !== null) out[symbol] = price;
       }
       return out;
     },

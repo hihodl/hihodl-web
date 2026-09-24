@@ -1,111 +1,170 @@
 "use client";
 
 /**
- * Asking somebody for money: `/payments/request` and `/payments/requests/*`.
+ * Asking somebody on HOLD for money: `/payments/request` and
+ * `/payments/requests/*`, to the contract in
+ * documentation/hold-users-request-money.md (§1).
  *
- * WHY THIS IS THE ONE MONEY WRITE THE WEB CAN MAKE
+ * A REQUEST IS A MESSAGE, NOT A PAYMENT
  *
- * Every other money action needs a key, and the key is in the browser only
- * behind a passkey ceremony bound to one transaction. A request moves nothing.
- * It is a row that says "@alex asked you for 25 USDC" and a button on the
- * other person's screen. The money still leaves the way it always does —
- * their signature, their approval — so this can be written from here with no
- * more authority than a sentence needs.
- *
- * Which is why it was the honest gap on this screen. The thread had Send and
- * nothing beside it, and the app has had both since the beginning.
- *
- * ── WHAT THE SERVER CALLS THINGS, AND WHY IT READS BACKWARDS ──
- *
- * `POST /payments/request` takes `from`: the person the money is being asked
- * FROM. The row it writes has `fromUserId` = the caller (who asked) and
- * `toUserId` = that person (who is being asked). So on a row, "from" is the
- * asker and on the body, "from" is the payer. We take the body's word once,
- * here, and everything else in this file speaks in `asker` and `payer`.
+ * Creating, declining, cancelling and reminding never sign anything and never
+ * ask for a passkey or the phone. They write a row and put a bubble on
+ * somebody's screen, with the session and nothing more. Only PAYING a request
+ * moves money, and that goes the way every web payment goes: /wallet/send,
+ * approved with the passkey or on the linked phone.
  *
  * ── SETTLING IS NOT PAYING ──
  *
- * `POST /requests/:id/settle` only flips a status. It is called AFTER money
- * has moved by the usual road, and it is idempotent on purpose: by then the
- * payment is irreversible, so a retry must never read as a failure. The
- * server deleted its old `/accept` — which tried to send from a wallet it does
- * not hold — for exactly this reason.
+ * `POST /requests/:id/settle` is called AFTER the money moved, with the
+ * withdrawal's id as proof, and the server checks that proof: the payment went
+ * from the payer to the requester's wallet and covers the amount. So nothing
+ * here can mark a request paid on somebody's word.
+ *
+ * The rules that need neither React nor a network live in `request-rules.ts`,
+ * where `request-rules.check.ts` runs them.
  */
 
 import useSWR from "swr";
 
 import { useCreatorSession } from "@/lib/creator/session";
+import { getWithdrawal } from "@/lib/link/api";
 
-import { read } from "./hold-api";
+import { HoldApiError, read } from "./hold-api";
+import { toRequest, toRequests, type PaymentRequest } from "./request-rules";
 
-/** The four the column's own CHECK allows. */
-export type RequestStatus = "requested" | "pending" | "paid" | "cancelled";
-
-/** A row of `payment_requests`, as `GET /payments/requests` hands it over. */
-export interface PaymentRequest {
-  id: string;
-  /** Who asked. */
-  fromUserId: string;
-  /** Who was asked. Null when the request names a bare address instead. */
-  toUserId: string | null;
-  toAddress: string | null;
-  tokenId: string;
-  chain: string;
-  amount: string;
-  status: RequestStatus;
-  createdAt: string;
-}
+export {
+  describeRequestError,
+  isOpen,
+  remindAgainText,
+  requestAmount,
+  requestTag,
+  requestsWith,
+  theyAsked,
+  webCanPay,
+  type PaymentRequest,
+  type RequestPerson,
+  type RequestStatus,
+} from "./request-rules";
 
 /* ── Calls ────────────────────────────────────────────────────────── */
 
-export function listRequests(): Promise<{ requests: PaymentRequest[]; total: number }> {
-  return read("payments/requests?limit=100");
+export async function listRequests(): Promise<PaymentRequest[]> {
+  return toRequests(await read<unknown>("payments/requests?type=all&limit=100"));
 }
 
 /**
- * Ask `payerUserId` for `amount`.
+ * Ask `payerUserId` for `amount` of `tokenId` on `chain`.
  *
- * The body's `from` is the PAYER — see the note at the top. A bare user id is
- * passed through as it is; the server looks it up and falls back to treating
- * an unknown string as an external address, which is not something this screen
- * ever wants, so only real peer ids reach here.
+ * The body's `from` is the PAYER (the contract keeps the old name), and
+ * `toUserId` is sent beside it so the server resolves the person by id and
+ * never by a handle that could have changed hands.
  */
-export function askFor(args: {
+export async function askFor(args: {
   payerUserId: string;
   amount: string;
-  tokenId?: string;
-  chain?: string;
-}): Promise<{ requestId: string; status: "requested"; ts: number }> {
-  return read("payments/request", {
+  tokenId: string;
+  chain: string;
+  note?: string | null;
+}): Promise<{ requestId: string; status: "requested"; ts: number; request: PaymentRequest | null }> {
+  const note = (args.note ?? "").trim();
+  const r = await read<{ requestId: string; status: "requested"; ts: number; request?: unknown }>("payments/request", {
     json: {
       from: args.payerUserId,
-      tokenId: (args.tokenId ?? "usdc").toLowerCase(),
-      chain: args.chain ?? "solana",
+      toUserId: args.payerUserId,
+      tokenId: args.tokenId.toLowerCase(),
+      chain: args.chain.toLowerCase(),
       amount: args.amount,
       account: "main",
+      ...(note ? { note } : {}),
     },
   });
+  return { ...r, request: toRequest(r?.request) };
 }
 
-/** "I have paid this." After the money moved, never instead of it. */
-export function settleRequest(id: string, proof?: { transferId?: string; txHash?: string }): Promise<{ settled: boolean }> {
-  return read(`payments/requests/${encodeURIComponent(id)}/settle`, { json: proof ?? {} });
-}
-
-/** "No." The person who asked finds out; the app used to keep this on one phone. */
-export function rejectRequest(id: string): Promise<{ rejected: boolean }> {
+/** "No." Only the payer can. No push: the requester sees `Declined` in the thread. */
+export function rejectRequest(id: string): Promise<unknown> {
   return read(`payments/requests/${encodeURIComponent(id)}/reject`, { json: {} });
 }
 
-/** Withdrawing one you raised yourself. */
-export function cancelRequest(id: string): Promise<{ cancelled: boolean }> {
+/** Taking back one you asked for. Only the requester can. */
+export function cancelRequest(id: string): Promise<unknown> {
   return read(`payments/requests/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+/** A friendly push to the payer. Once a day per request, otherwise `429 remind_too_soon {retryAt}`. */
+export function remindRequest(id: string): Promise<unknown> {
+  return read(`payments/requests/${encodeURIComponent(id)}/remind`, { json: {} });
+}
+
+/** What became of paying a request, once the money moved. */
+export type SettleOutcome =
+  | { kind: "settled" }
+  /** Already closed: settled by an earlier try, or cancelled meanwhile. */
+  | { kind: "closed" }
+  /** The payment proves less than was asked; the request stays open. */
+  | { kind: "short"; provenMinor: string | null; currency: string | null }
+  /** The token paid can't be valued; the request stays open. */
+  | { kind: "unknown" }
+  /** The server couldn't match the payment to the request, or never saw it confirmed. */
+  | { kind: "unproven" };
+
+/**
+ * After a send from the web confirmed: close the request with the withdrawal
+ * as proof. The same shape as `recordSentPayment` in groups.ts, for the same
+ * reasons:
+ *
+ *   GET /withdrawals/:id first, every time: that read is what checks the chain
+ *   and moves the withdrawal from `submitted` to confirmed on the server, and
+ *   the passkey path of Send never makes it. Without it the proof could read
+ *   "not confirmed" for the whole minute.
+ *
+ *   not confirmed yet            asked again every 3 s for about a minute
+ *   409 request_not_open         nothing to do: it is closed already
+ *   422 transfer_amount_short    the payment covered less; the request stays
+ *                                open and the screen says what was proven
+ *   422 transfer_amount_unknown  the token can't be valued; it stays open
+ *   422 proof_required, 400, not found, not to them
+ *                                it stays open, and the screen says so
+ *
+ * Unlike a group there is no "payer's word" to fall back on: a request is
+ * closed by proof or not at all, so the honest answer is that it stays open.
+ */
+export async function settleWithWithdrawal(requestId: string, withdrawalId: string): Promise<SettleOutcome> {
+  const url = `payments/requests/${encodeURIComponent(requestId)}/settle`;
+  const deadline = Date.now() + 60_000;
+  for (;;) {
+    await getWithdrawal(withdrawalId).catch(() => undefined);
+    try {
+      await read(url, { json: { withdrawalId } });
+      return { kind: "settled" };
+    } catch (e) {
+      if (!(e instanceof HoldApiError)) throw e;
+      const why = e.detail ?? e.code;
+      if (why === "request_not_open") return { kind: "closed" };
+      if (why === "transfer_amount_short") {
+        const proven = e.details?.provenMinor;
+        const currency = e.details?.currency;
+        return { kind: "short", provenMinor: typeof proven === "string" ? proven : null, currency: typeof currency === "string" ? currency : null };
+      }
+      if (why === "transfer_amount_unknown") return { kind: "unknown" };
+      if (why === "transfer_not_confirmed" && Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 3000));
+        continue;
+      }
+      if (e.status === 0 && Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 3000));
+        continue;
+      }
+      if (e.status === 400 || e.status === 404 || e.status === 409 || e.status === 422) return { kind: "unproven" };
+      throw e;
+    }
+  }
 }
 
 /* ── Hooks ────────────────────────────────────────────────────────── */
 
 /**
- * Every request this account raised or was sent.
+ * Every request this account raised or was sent, open and closed.
  *
  * Keyed by the person, like every other money hook, so signing out cannot
  * leave one account's requests in another's cache. One read for the whole
@@ -115,20 +174,21 @@ export function cancelRequest(id: string): Promise<{ cancelled: boolean }> {
 export function usePaymentRequests() {
   const { session } = useCreatorSession();
   const uid = session?.user?.id ?? null;
-  return useSWR<PaymentRequest[]>(
-    uid ? ["payment-requests", uid] : null,
-    async () => (await listRequests()).requests,
-    { revalidateOnFocus: true, focusThrottleInterval: 15_000, shouldRetryOnError: false },
-  );
+  return useSWR<PaymentRequest[]>(uid ? ["payment-requests", uid] : null, listRequests, {
+    revalidateOnFocus: true,
+    focusThrottleInterval: 15_000,
+    refreshInterval: 20_000,
+    shouldRetryOnError: false,
+  });
 }
 
 /**
- * A handle's Solana address, so Pay can open Send already filled in.
+ * A handle's Solana address, so Send can open with the person locked in.
  *
  * `GET /alias/resolve/:alias` is the app's own lookup and answers for a public
  * alias only. A private one, or a person who never chose a handle, 404s — and
- * Pay then opens Send empty rather than guessing, because the one thing worse
- * than typing an address is being handed the wrong one.
+ * Send then opens on its own first step rather than guessing, because the one
+ * thing worse than typing an address is being handed the wrong one.
  */
 export async function resolveHandle(handle: string): Promise<{ address: string; chain: string } | null> {
   const clean = handle.trim().replace(/^@/, "");
@@ -139,40 +199,4 @@ export async function resolveHandle(handle: string): Promise<{ address: string; 
   } catch {
     return null;
   }
-}
-
-/* ── Reading the rows ─────────────────────────────────────────────── */
-
-/**
- * The still-open requests between you and one person, oldest first.
- *
- * `peerId` is the whole filter and it is enough: a row in this thread has the
- * peer on exactly one of its two sides, and whichever side that is tells you
- * who is waiting on whom. There is no need to know your own id.
- *
- * Settled and cancelled rows are dropped. They are history, and a thread that
- * re-reads them on every poll would resurrect a closed bubble for ever.
- */
-export function openRequestsWith(rows: PaymentRequest[] | undefined, peerId: string | null): PaymentRequest[] {
-  if (!peerId) return [];
-  return (rows ?? [])
-    .filter((r) => r.status === "requested" && (r.fromUserId === peerId || r.toUserId === peerId))
-    .sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt));
-}
-
-/** True when THEY asked YOU: the only direction that gets Pay and Decline. */
-export function theyAsked(r: PaymentRequest, peerId: string): boolean {
-  return r.fromUserId === peerId;
-}
-
-/**
- * The figure, as the row spells it.
- *
- * A row whose amount does not read as a positive number is not one a Pay
- * button can be drawn for, so `openRequestsWith`'s callers use this to drop it
- * rather than render "NaN USDC".
- */
-export function requestAmount(r: PaymentRequest): number | null {
-  const n = Number(String(r.amount ?? "").replace(",", "."));
-  return Number.isFinite(n) && n > 0 ? n : null;
 }
