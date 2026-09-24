@@ -1,1 +1,13 @@
-{}
+{
+  "language": "언어",
+  "currency": "통화",
+  "recentLanguages": "최근 사용한 언어",
+  "allLanguages": "모든 언어",
+  "searchLanguage": "언어 검색",
+  "recentCurrencies": "최근 사용한 통화",
+  "allCurrencies": "모든 통화",
+  "searchCurrency": "통화 또는 국가 검색",
+  "currencyIntro": "잔액, 합계, 가격이 이 통화로 표시돼요. 실제 결제는 토큰으로 이뤄지고, 그룹은 자체 통화를 유지해요.",
+  "currencyNoRate": "* 아직 실시간 환율이 없어서 금액은 미국 달러로 표시돼요.",
+  "currencyNoRateLabel": "{code} {name}, 실시간 환율을 사용할 수 없어요"
+}
