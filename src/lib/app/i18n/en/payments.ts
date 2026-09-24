@@ -84,7 +84,6 @@ const payments = {
   "thread.noAccount": "There is no HOLD account on the other side of this thread.",
   "thread.request": "Request",
   "thread.bookSpot": "Book a spot",
-  "thread.approvedWith": "Approved with your passkey, or on your phone if you have linked one.",
   "thread.opening": "Opening…",
   "didNotGoThrough": "That did not go through. Try again.",
 
@@ -164,6 +163,7 @@ const payments = {
   "picker.looking": "Looking…",
   "picker.addHandle": "Add @{handle}",
   "picker.byExactHandle": "By their exact HOLD username",
+  "thread.approvedOnPhone": "Approved and signed on your linked phone, in the HOLD app.",
 } satisfies Record<string, string>;
 
 export default payments;

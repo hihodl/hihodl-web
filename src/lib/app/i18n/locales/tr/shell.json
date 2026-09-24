@@ -82,5 +82,15 @@
   "error.payoutChainUnknown": "Bu ağ, HiSpace'in ödeme yaptığı ağlardan biri değil.",
   "error.payoutNonceInvalid": "Bu isteğin süresi doldu veya zaten kullanıldı. Baştan başla ve yeni mesajı imzala.",
   "error.payoutSignatureInvalid": "Bu imza bu adrese ait değil. İmzaladığın cüzdanın bağladığın cüzdan olduğundan emin ol ve tekrar dene.",
-  "error.xFrontsALiveSpace": "Bu X hesabı yayında olan bir ilanda kullanılıyor, bu yüzden ilan kapanana kadar bağlı kalır. Sponsorlar bu kullanıcı adı için ödeme yaptı."
+  "error.xFrontsALiveSpace": "Bu X hesabı yayında olan bir ilanda kullanılıyor, bu yüzden ilan kapanana kadar bağlı kalır. Sponsorlar bu kullanıcı adı için ödeme yaptı.",
+  "getApp.title": "HOLD uygulamasını indir",
+  "getApp.body": "Cüzdanın, iPhone'unda veya Android telefonunda HOLD uygulamasında oluşturulur. Orada bu hesapla giriş yap, web de aynı cüzdanı açar. Telefonun her ödemeyi onaylar.",
+  "getApp.failedTitle": "Hesabını açamadık",
+  "getApp.failedBody": "Bağlantını kontrol edip tekrar dene.",
+  "getApp.checking": "Kontrol ediliyor…",
+  "getApp.retry": "Tekrar dene",
+  "getApp.noWebWallet": "Web'de oluşturulmuş bir cüzdan yok",
+  "getApp.makeOnce": "Uygulamada bir kez oluştur. Sonra buraya dön ve tekrar kontrol et.",
+  "getApp.checkAgain": "Oluşturdum, tekrar kontrol et",
+  "getApp.goToSpaces": "Spaces'e git"
 }

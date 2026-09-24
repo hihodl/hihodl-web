@@ -69,7 +69,6 @@ const creator = {
   "publish.yourHoldWallet": "Your HOLD wallet",
   "publish.anotherWallet": "Another wallet, proved by signature",
   "publish.unlockWallet": "Unlock wallet",
-  "publish.makeWallet": "Make wallet",
   "publish.setUp": "Set up",
   "publish.wherePaid": "Where sponsors pay you, in USDC",
   "publish.usdcAccount": "USDC account",
@@ -331,6 +330,7 @@ const creator = {
   "wallet.noEvm": "No Ethereum wallet found in this browser. Install MetaMask, or open this page in your wallet's own browser.",
   "wallet.rejected": "You turned that down in {name}. Nothing was sent, and nothing moved either way.",
   "wallet.failed": "{name} could not complete that. Try again.",
+  "publish.getApp": "Get the HOLD app",
 } satisfies Record<string, string>;
 
 export default creator;

@@ -74,7 +74,6 @@
   "thread.noAccount": "इस थ्रेड के दूसरी तरफ़ कोई HOLD अकाउंट नहीं है।",
   "thread.request": "अनुरोध",
   "thread.bookSpot": "स्पॉट बुक करें",
-  "thread.approvedWith": "आपकी पासकी से मंज़ूर, या अगर आपने फ़ोन लिंक किया है तो फ़ोन पर।",
   "thread.opening": "खुल रहा है…",
   "didNotGoThrough": "यह नहीं हो पाया। फिर कोशिश करें।",
   "chat.nothingYet": "आपके और {name} के बीच अभी कुछ नहीं है।",
@@ -143,5 +142,6 @@
   "picker.alreadyChosen": "@{handle} पहले से चुना गया है।",
   "picker.looking": "खोज रहे हैं…",
   "picker.addHandle": "@{handle} जोड़ें",
-  "picker.byExactHandle": "उनके सटीक HOLD यूज़रनेम से"
+  "picker.byExactHandle": "उनके सटीक HOLD यूज़रनेम से",
+  "thread.approvedOnPhone": "आपके लिंक किए गए फ़ोन पर, HOLD ऐप में मंज़ूर और साइन हुआ।"
 }

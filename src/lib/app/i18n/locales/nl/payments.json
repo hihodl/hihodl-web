@@ -74,7 +74,6 @@
   "thread.noAccount": "Er zit geen HOLD-account aan de andere kant van dit gesprek.",
   "thread.request": "Verzoeken",
   "thread.bookSpot": "Plek boeken",
-  "thread.approvedWith": "Goedgekeurd met je passkey, of op je telefoon als je er een hebt gekoppeld.",
   "thread.opening": "Openen…",
   "didNotGoThrough": "Dat is niet gelukt. Probeer het opnieuw.",
   "chat.nothingYet": "Nog niets tussen jou en {name}.",
@@ -143,5 +142,6 @@
   "picker.alreadyChosen": "@{handle} is al gekozen.",
   "picker.looking": "Zoeken…",
   "picker.addHandle": "@{handle} toevoegen",
-  "picker.byExactHandle": "Op hun exacte HOLD-gebruikersnaam"
+  "picker.byExactHandle": "Op hun exacte HOLD-gebruikersnaam",
+  "thread.approvedOnPhone": "Goedgekeurd en ondertekend op je gekoppelde telefoon, in de HOLD-app."
 }

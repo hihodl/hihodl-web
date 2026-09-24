@@ -74,7 +74,6 @@
   "thread.noAccount": "このスレッドの相手には HOLD アカウントがありません。",
   "thread.request": "リクエスト",
   "thread.bookSpot": "枠を予約",
-  "thread.approvedWith": "パスキー、またはスマホを連携している場合はスマホで承認します。",
   "thread.opening": "開いています…",
   "didNotGoThrough": "うまくいきませんでした。もう一度お試しください。",
   "chat.nothingYet": "{name}さんとのやり取りはまだありません。",
@@ -143,5 +142,6 @@
   "picker.alreadyChosen": "@{handle} はすでに選択されています。",
   "picker.looking": "検索中…",
   "picker.addHandle": "@{handle} を追加",
-  "picker.byExactHandle": "HOLD のユーザー名を正確に入力"
+  "picker.byExactHandle": "HOLD のユーザー名を正確に入力",
+  "thread.approvedOnPhone": "連携したスマホの HOLD アプリで承認・署名されました。"
 }

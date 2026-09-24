@@ -1,6 +1,5 @@
 {
   "home.wallet": "钱包",
-  "home.walletSub": "你的 Solana 地址、恢复短语和提现",
   "home.security": "安全",
   "home.recovery": "备份与恢复",
   "home.statements": "账单报表",
@@ -19,7 +18,6 @@
   "tiles.invite": "邀请好友",
   "tiles.inviteSub": "一起赚取奖励",
   "tiles.link": "关联你的手机",
-  "tiles.linkSub": "由 Android 批准付款",
   "plan.title": "你的方案",
   "plan.proBody": "你正在使用 Pro。转账无需 Gas，兑换不收基础加价。",
   "plan.standardBody": "你正在使用标准版。HOLD 的所有功能都可使用；Pro 可免除兑换的基础加价，并让转账无需 Gas。",
@@ -52,8 +50,6 @@
   "recovery.setUp": "设置",
   "recovery.foot": "请至少设置两种。你可以随时更改。",
   "passkeys.title": "通行密钥",
-  "passkeys.addAnother": "添加其他设备",
-  "passkeys.add": "添加通行密钥",
   "passkeys.what": "什么是通行密钥？",
   "passkeys.infoBody1": "通行密钥让你使用面容 ID 或指纹登录，无需输入密码或恢复短语。",
   "passkeys.infoBody2": "你登录使用的每台设备都会注册自己的通行密钥，可在此处独立添加或移除。",
@@ -183,5 +179,8 @@
   "invite.friend": "好友",
   "inTheApp.back": "← 权益",
   "inTheApp.title": "目前仅在 HOLD 应用中提供",
-  "inTheApp.body": "用同一账户在应用中登录。网页版即将支持。"
+  "inTheApp.body": "用同一账户在应用中登录。网页版即将支持。",
+  "home.walletSubPhone": "你的地址和转账，由手机批准",
+  "tiles.linkSubEvery": "它会批准每一笔付款",
+  "passkeys.addInApp": "在手机上的 HOLD 应用中添加通行密钥。"
 }

@@ -1,6 +1,5 @@
 {
   "home.wallet": "Dompet",
-  "home.walletSub": "Alamat Solana, kata pemulihan, dan penarikanmu",
   "home.security": "Keamanan",
   "home.recovery": "Pemulihan akun",
   "home.statements": "Laporan rekening",
@@ -19,7 +18,6 @@
   "tiles.invite": "Undang teman",
   "tiles.inviteSub": "Dapatkan hadiah bersama",
   "tiles.link": "Tautkan ponselmu",
-  "tiles.linkSub": "Android menyetujui pembayaran",
   "plan.title": "Paketmu",
   "plan.proBody": "Kamu memakai Pro. Transfer tanpa gas dan konversi tanpa markup dasar.",
   "plan.standardBody": "Kamu memakai Standard. Semua fitur HOLD berfungsi; Pro menghapus markup dasar pada konversi dan membuat transfer tanpa gas.",
@@ -52,8 +50,6 @@
   "recovery.setUp": "Atur",
   "recovery.foot": "Atur setidaknya dua. Kamu bisa mengubahnya kapan saja.",
   "passkeys.title": "Passkey",
-  "passkeys.addAnother": "Tambah perangkat lain",
-  "passkeys.add": "Tambah passkey",
   "passkeys.what": "Apa itu passkey?",
   "passkeys.infoBody1": "Passkey memungkinkanmu masuk dengan Face ID atau sidik jari — tanpa kata sandi dan tanpa frasa pemulihan yang perlu diketik.",
   "passkeys.infoBody2": "Setiap perangkat yang kamu pakai untuk masuk mendaftarkan passkey-nya sendiri, jadi kamu bisa menambah atau menghapusnya satu per satu di sini.",
@@ -183,5 +179,8 @@
   "invite.friend": "Teman",
   "inTheApp.back": "← Benefit",
   "inTheApp.title": "Untuk saat ini tersedia di aplikasi HOLD",
-  "inTheApp.body": "Masuk di sana dengan akun yang sama. Fitur ini segera hadir di web."
+  "inTheApp.body": "Masuk di sana dengan akun yang sama. Fitur ini segera hadir di web.",
+  "home.walletSubPhone": "Alamat dan pengirimanmu, disetujui di ponselmu",
+  "tiles.linkSubEvery": "Ini menyetujui setiap pembayaran",
+  "passkeys.addInApp": "Tambahkan passkey di aplikasi HOLD di ponselmu."
 }

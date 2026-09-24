@@ -52,7 +52,6 @@
   "add.cash.title": "Ajouter des fonds",
   "add.cash.about": "L'achat par carte passe par notre prestataire d'on-ramp et son paiement. Ce parcours se trouve dans l'app ; le web ne lance jamais de débit de carte.",
   "add.receive.readFailed": "Impossible de lire vos adresses pour le moment. Rien n'a changé : réessayez dans un instant.",
-  "add.receive.none": "Il n'y a pas encore d'adresse pour recevoir. Créez votre wallet et elle apparaîtra ici.",
   "add.request.title": "Demander via un lien",
   "add.request.lead": "Partagez votre lien Hi.me pour que n'importe qui puisse vous payer",
   "add.request.copyLink": "Copier le lien",
@@ -90,14 +89,6 @@
   "products.spaces.sub": "Sur votre matériel ou votre contenu, payés en USDC directement à vous",
   "linkPhone.pay.title": "Associez votre téléphone pour payer d'ici",
   "linkPhone.pay.bodyAndroid": "Ouvrez HOLD sur ce téléphone pour l'associer. Ensuite, l'app approuvera chaque paiement que vous lancez ici.",
-  "linkPhone.pay.bodyApple": "Ce wallet a été créé dans l'app HOLD sur votre téléphone Android. Affichez un code ici, puis ouvrez HOLD sur votre téléphone Android et scannez-le.",
-  "linkPhone.pay.body": "Ce wallet a été créé dans l'app HOLD et ses clés restent sur votre téléphone. Associez-le une fois et vous pourrez payer d'ici.",
-  "linkPhone.approve.titleApple": "Associer cet {device}",
-  "linkPhone.approve.bodyApple": "Votre clé d'accès approuve déjà les paiements sur cet {device}. L'association l'enregistre simplement parmi vos appareils.",
-  "linkPhone.approve.title": "Approuver les paiements sur votre téléphone",
-  "linkPhone.approve.bodyAndroid": "Installez HOLD sur ce téléphone et il approuvera chaque paiement que vous lancez ici. D'ici là, c'est votre clé d'accès qui s'en charge.",
-  "linkPhone.approve.body": "Associez votre téléphone Android et l'app HOLD approuvera chaque paiement que vous lancez ici. D'ici là, c'est votre clé d'accès qui s'en charge.",
-  "linkPhone.getOnPlay": "Télécharger HOLD sur Google Play",
   "linkPhone.later": "Plus tard",
   "payLinks.title": "Liens de paiement",
   "payLinks.introTitle": "Soyez payé par n'importe qui, depuis n'importe quel wallet",
@@ -181,5 +172,7 @@
   "payLinks.pay.cantStart": "Ce paiement n'a pas pu être lancé depuis cette page. Rien n'a été payé ; actualisez la page et réessayez.",
   "payLinks.pay.mismatch": "Le paiement reçu ne correspondait pas à ce qu'affiche cette page, rien n'a donc été envoyé à votre wallet. Rien n'a été payé ; actualisez la page et réessayez.",
   "payLinks.pay.notFound": "Ce lien ou ce paiement est introuvable. Actualisez la page.",
-  "payLinks.pay.badRequest": "Ce lien ou ce paiement est introuvable. Vérifiez le lien et actualisez la page."
+  "payLinks.pay.badRequest": "Ce lien ou ce paiement est introuvable. Vérifiez le lien et actualisez la page.",
+  "add.receive.noneGetApp": "Il n'y a pas encore d'adresse pour être payé. Votre wallet est créé dans l'app HOLD : téléchargez-le, et l'adresse apparaîtra ici.",
+  "linkPhone.pay.bodyComputer": "Les clés de votre wallet restent sur votre téléphone. Associez-le une fois et l'app HOLD approuve chaque paiement que vous lancez ici."
 }

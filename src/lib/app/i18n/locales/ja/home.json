@@ -52,7 +52,6 @@
   "add.cash.title": "現金を追加",
   "add.cash.about": "カードでの購入は、オンランププロバイダーとその決済画面を通じて行われます。この手続きはアプリで行い、ウェブでカード請求が始まることはありません。",
   "add.receive.readFailed": "現在、アドレスを読み込めませんでした。何も変更されていません。少ししてからもう一度お試しください。",
-  "add.receive.none": "受け取り用のアドレスがまだありません。ウォレットを作成すると、ここに表示されます。",
   "add.request.title": "リンクでリクエスト",
   "add.request.lead": "Hi.me リンクを共有すれば、誰でもあなたに支払えます",
   "add.request.copyLink": "リンクをコピー",
@@ -90,14 +89,6 @@
   "products.spaces.sub": "あなたの持ち物やコンテンツで。USDC で直接あなたに支払われます",
   "linkPhone.pay.title": "ここから支払うにはスマホを連携してください",
   "linkPhone.pay.bodyAndroid": "このスマホで HOLD を開いて連携してください。以降、ここで始めた支払いはすべてアプリで承認されます。",
-  "linkPhone.pay.bodyApple": "このウォレットは Android スマホの HOLD アプリで作成されました。ここにコードを表示して、Android スマホで HOLD を開いてスキャンしてください。",
-  "linkPhone.pay.body": "このウォレットは HOLD アプリで作成され、鍵はスマホに保管されています。一度連携すれば、ここから支払えます。",
-  "linkPhone.approve.titleApple": "この {device} を連携",
-  "linkPhone.approve.bodyApple": "この {device} では、すでにパスキーで支払いを承認しています。連携すると、あなたのデバイスの 1 つとして記録されるだけです。",
-  "linkPhone.approve.title": "スマホで支払いを承認",
-  "linkPhone.approve.bodyAndroid": "このスマホに HOLD を入れれば、ここで始めた支払いはすべてアプリで承認されます。それまではパスキーで承認します。",
-  "linkPhone.approve.body": "Android スマホを連携すれば、ここで始めた支払いはすべて HOLD アプリで承認されます。それまではパスキーで承認します。",
-  "linkPhone.getOnPlay": "Google Play で HOLD を入手",
   "linkPhone.later": "後で",
   "payLinks.title": "支払いリンク",
   "payLinks.introTitle": "誰からでも、どのウォレットからでも受け取れる",
@@ -181,5 +172,7 @@
   "payLinks.pay.cantStart": "このページから支払いを開始できませんでした。何も支払われていません。ページを更新して、もう一度お試しください。",
   "payLinks.pay.mismatch": "受け取った支払い内容がこのページの表示と一致しなかったため、ウォレットには何も送られていません。何も支払われていません。ページを更新して、もう一度お試しください。",
   "payLinks.pay.notFound": "このリンクまたは支払いが見つかりません。ページを更新してください。",
-  "payLinks.pay.badRequest": "このリンクまたは支払いが見つかりません。リンクを確認して、ページを更新してください。"
+  "payLinks.pay.badRequest": "このリンクまたは支払いが見つかりません。リンクを確認して、ページを更新してください。",
+  "add.receive.noneGetApp": "まだ支払いを受け取るアドレスがありません。ウォレットは HOLD アプリで作成されます。入手すると、ここにアドレスが表示されます。",
+  "linkPhone.pay.bodyComputer": "ウォレットの鍵はスマホに保管されます。一度連携すれば、ここで始めたすべての支払いを HOLD アプリが承認します。"
 }

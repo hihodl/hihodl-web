@@ -1,6 +1,5 @@
 {
   "home.wallet": "Cüzdan",
-  "home.walletSub": "Solana adresin, kurtarma kelimelerin ve çekimlerin",
   "home.security": "Güvenlik",
   "home.recovery": "Yedekleme ve kurtarma",
   "home.statements": "Hesap özetleri",
@@ -19,7 +18,6 @@
   "tiles.invite": "Arkadaş davet et",
   "tiles.inviteSub": "Birlikte ödül kazanın",
   "tiles.link": "Telefonunu bağla",
-  "tiles.linkSub": "Ödemeleri Android onaylar",
   "plan.title": "Planın",
   "plan.proBody": "Pro plandasın. Transferler gas'sız ve dönüşümlerde temel marj yok.",
   "plan.standardBody": "Standart plandasın. HOLD'daki her şey çalışır; Pro, dönüşümlerdeki temel marjı kaldırır ve transferleri gas'sız yapar.",
@@ -52,8 +50,6 @@
   "recovery.setUp": "Ayarla",
   "recovery.foot": "En az iki tane ayarla. Bunları istediğin zaman değiştirebilirsin.",
   "passkeys.title": "Geçiş anahtarları",
-  "passkeys.addAnother": "Başka cihaz ekle",
-  "passkeys.add": "Geçiş anahtarı ekle",
   "passkeys.what": "Geçiş anahtarı nedir?",
   "passkeys.infoBody1": "Geçiş anahtarları, parola veya kurtarma cümlesi yazmadan Face ID ya da parmak izi ile giriş yapmanı sağlar.",
   "passkeys.infoBody2": "Giriş yaptığın her cihaz kendi geçiş anahtarını kaydeder; buradan bağımsız olarak ekleyebilir veya kaldırabilirsin.",
@@ -183,5 +179,8 @@
   "invite.friend": "Arkadaş",
   "inTheApp.back": "← Avantajlar",
   "inTheApp.title": "Şimdilik HOLD uygulamasında",
-  "inTheApp.body": "Orada aynı hesapla giriş yap. Sırada web var."
+  "inTheApp.body": "Orada aynı hesapla giriş yap. Sırada web var.",
+  "home.walletSubPhone": "Adreslerin ve gönderimlerin, telefonunda onaylanır",
+  "tiles.linkSubEvery": "Her ödemeyi onaylar",
+  "passkeys.addInApp": "Telefonundaki HOLD uygulamasından bir geçiş anahtarı ekle."
 }

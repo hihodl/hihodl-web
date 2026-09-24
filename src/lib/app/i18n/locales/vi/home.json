@@ -52,7 +52,6 @@
   "add.cash.title": "Nạp tiền mặt",
   "add.cash.about": "Mua bằng thẻ đi qua nhà cung cấp on-ramp và trang thanh toán của họ. Luồng đó nằm trong ứng dụng; web không bao giờ khởi tạo giao dịch thẻ.",
   "add.receive.readFailed": "Hiện không đọc được địa chỉ của bạn. Không có gì thay đổi — thử lại sau giây lát.",
-  "add.receive.none": "Chưa có địa chỉ nào để nhận tiền. Tạo ví và địa chỉ sẽ hiện ở đây.",
   "add.request.title": "Yêu cầu qua link",
   "add.request.lead": "Chia sẻ link Hi.me để bất kỳ ai cũng có thể trả tiền cho bạn",
   "add.request.copyLink": "Sao chép link",
@@ -90,14 +89,6 @@
   "products.spaces.sub": "Trên đồ dùng hoặc nội dung của bạn, nhận USDC thẳng về ví",
   "linkPhone.pay.title": "Liên kết điện thoại để thanh toán từ đây",
   "linkPhone.pay.bodyAndroid": "Mở HOLD trên điện thoại này để liên kết. Từ đó, ứng dụng sẽ duyệt mọi khoản thanh toán bạn bắt đầu ở đây.",
-  "linkPhone.pay.bodyApple": "Ví này được tạo trong ứng dụng HOLD trên điện thoại Android của bạn. Hiện mã ở đây, rồi mở HOLD trên điện thoại Android và quét mã.",
-  "linkPhone.pay.body": "Ví này được tạo trong ứng dụng HOLD và khoá của ví nằm trên điện thoại. Liên kết một lần là bạn có thể thanh toán từ đây.",
-  "linkPhone.approve.titleApple": "Liên kết {device} này",
-  "linkPhone.approve.bodyApple": "Passkey của bạn đã duyệt thanh toán trên {device} này. Liên kết chỉ ghi nhận đây là một thiết bị của bạn.",
-  "linkPhone.approve.title": "Duyệt thanh toán trên điện thoại",
-  "linkPhone.approve.bodyAndroid": "Cài HOLD trên điện thoại này và ứng dụng sẽ duyệt mọi khoản thanh toán bạn bắt đầu ở đây. Trước đó, passkey sẽ duyệt.",
-  "linkPhone.approve.body": "Liên kết điện thoại Android và ứng dụng HOLD sẽ duyệt mọi khoản thanh toán bạn bắt đầu ở đây. Trước đó, passkey sẽ duyệt.",
-  "linkPhone.getOnPlay": "Tải HOLD trên Google Play",
   "linkPhone.later": "Để sau",
   "payLinks.title": "Link thanh toán",
   "payLinks.introTitle": "Nhận tiền từ bất kỳ ai, từ bất kỳ ví nào",
@@ -181,5 +172,7 @@
   "payLinks.pay.cantStart": "Không bắt đầu được khoản thanh toán từ trang này. Chưa có gì được trả; hãy tải lại trang và thử lại.",
   "payLinks.pay.mismatch": "Khoản thanh toán nhận được không khớp với nội dung trang hiển thị, nên chưa có gì được gửi đến ví của bạn. Chưa có gì được trả; hãy tải lại trang và thử lại.",
   "payLinks.pay.notFound": "Không còn tìm thấy link hoặc khoản thanh toán này. Hãy tải lại trang.",
-  "payLinks.pay.badRequest": "Không tìm thấy link hoặc khoản thanh toán này. Hãy kiểm tra link và tải lại trang."
+  "payLinks.pay.badRequest": "Không tìm thấy link hoặc khoản thanh toán này. Hãy kiểm tra link và tải lại trang.",
+  "add.receive.noneGetApp": "Chưa có địa chỉ nào để nhận thanh toán. Ví của bạn được tạo trong ứng dụng HOLD: hãy tải ứng dụng, địa chỉ sẽ xuất hiện ở đây.",
+  "linkPhone.pay.bodyComputer": "Khoá của ví bạn nằm trên điện thoại. Liên kết một lần và ứng dụng HOLD sẽ duyệt mọi khoản thanh toán bạn bắt đầu ở đây."
 }

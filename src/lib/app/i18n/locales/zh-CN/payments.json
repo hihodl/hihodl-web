@@ -74,7 +74,6 @@
   "thread.noAccount": "此对话的另一方没有 HOLD 账户。",
   "thread.request": "请求",
   "thread.bookSpot": "预订广告位",
-  "thread.approvedWith": "通过你的通行密钥批准；如果你关联了手机，则在手机上批准。",
   "thread.opening": "正在打开…",
   "didNotGoThrough": "操作未成功，请重试。",
   "chat.nothingYet": "你和 {name} 之间还没有任何往来。",
@@ -143,5 +142,6 @@
   "picker.alreadyChosen": "@{handle} 已被选择。",
   "picker.looking": "查找中…",
   "picker.addHandle": "添加 @{handle}",
-  "picker.byExactHandle": "按准确的 HOLD 用户名"
+  "picker.byExactHandle": "按准确的 HOLD 用户名",
+  "thread.approvedOnPhone": "已在你关联的手机上，通过 HOLD 应用批准并签署。"
 }

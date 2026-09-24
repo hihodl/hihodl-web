@@ -52,7 +52,6 @@
   "add.cash.title": "Tambah dana",
   "add.cash.about": "Membeli dengan kartu diproses lewat penyedia on-ramp kami dan halaman pembayarannya. Alur itu ada di aplikasi; web tidak pernah memulai tagihan kartu.",
   "add.receive.readFailed": "Kami tidak bisa membaca alamatmu barusan. Tidak ada yang berubah — coba lagi sebentar lagi.",
-  "add.receive.none": "Belum ada alamat untuk menerima pembayaran. Buat dompetmu dan alamatnya akan muncul di sini.",
   "add.request.title": "Minta lewat link",
   "add.request.lead": "Bagikan link Hi.me-mu agar siapa pun bisa membayarmu",
   "add.request.copyLink": "Salin link",
@@ -90,14 +89,6 @@
   "products.spaces.sub": "Di barang atau kontenmu, dibayar dalam USDC langsung ke kamu",
   "linkPhone.pay.title": "Tautkan ponselmu untuk membayar dari sini",
   "linkPhone.pay.bodyAndroid": "Buka HOLD di ponsel ini untuk menautkannya. Setelah itu, aplikasinya menyetujui setiap pembayaran yang kamu mulai di sini.",
-  "linkPhone.pay.bodyApple": "Dompet ini dibuat di aplikasi HOLD di ponsel Android-mu. Tampilkan kode di sini, lalu buka HOLD di ponsel Android-mu dan pindai.",
-  "linkPhone.pay.body": "Dompet ini dibuat di aplikasi HOLD dan kuncinya tetap di ponselmu. Tautkan sekali dan kamu bisa membayar dari sini.",
-  "linkPhone.approve.titleApple": "Tautkan {device} ini",
-  "linkPhone.approve.bodyApple": "Passkey-mu sudah menyetujui pembayaran di {device} ini. Menautkan hanya mencatatnya sebagai salah satu perangkatmu.",
-  "linkPhone.approve.title": "Setujui pembayaran di ponselmu",
-  "linkPhone.approve.bodyAndroid": "Pasang HOLD di ponsel ini dan aplikasinya akan menyetujui setiap pembayaran yang kamu mulai di sini. Sampai saat itu, passkey-mu yang menyetujuinya.",
-  "linkPhone.approve.body": "Tautkan ponsel Android-mu dan aplikasi HOLD akan menyetujui setiap pembayaran yang kamu mulai di sini. Sampai saat itu, passkey-mu yang menyetujuinya.",
-  "linkPhone.getOnPlay": "Unduh HOLD di Google Play",
   "linkPhone.later": "Nanti",
   "payLinks.title": "Link pembayaran",
   "payLinks.introTitle": "Terima bayaran dari siapa pun, dari dompet mana pun",
@@ -181,5 +172,7 @@
   "payLinks.pay.cantStart": "Pembayaran ini tidak bisa dimulai dari halaman ini. Tidak ada yang dibayar; muat ulang halaman lalu coba lagi.",
   "payLinks.pay.mismatch": "Pembayaran yang kami terima tidak cocok dengan yang ditampilkan halaman ini, jadi tidak ada yang dikirim ke dompetmu. Tidak ada yang dibayar; muat ulang halaman lalu coba lagi.",
   "payLinks.pay.notFound": "Kami tidak bisa menemukan link atau pembayaran ini lagi. Muat ulang halaman.",
-  "payLinks.pay.badRequest": "Kami tidak bisa menemukan link atau pembayaran ini. Cek link-nya lalu muat ulang halaman."
+  "payLinks.pay.badRequest": "Kami tidak bisa menemukan link atau pembayaran ini. Cek link-nya lalu muat ulang halaman.",
+  "add.receive.noneGetApp": "Belum ada alamat untuk dibayar. Dompetmu dibuat di aplikasi HOLD: unduh, dan alamatnya akan muncul di sini.",
+  "linkPhone.pay.bodyComputer": "Kunci dompetmu tetap di ponselmu. Tautkan sekali dan aplikasi HOLD akan menyetujui setiap pembayaran yang kamu mulai di sini."
 }

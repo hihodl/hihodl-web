@@ -30,13 +30,13 @@
  */
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useProductHref } from "../base";
 import { Ion } from "../ion";
-import { linkHref, playHref, usePhone } from "../link/in-app";
 import { hereNow, useLinkGate } from "../link/LinkGate";
 import { PhoneApproval } from "../link/PhoneApproval";
+import { GetTheAppCard } from "../main/GetTheApp";
 
 import { Banner, Card, Cta, Empty, Photo, Screen, SectionLabel, Spinner } from "./kit";
 import { P, boardLabel, count, guests as guestsWord, money, shortDate, stayRange } from "./look";
@@ -44,8 +44,8 @@ import { PhotoViewer } from "./PhotoViewer";
 import { sane, stayFromParams, stayToParams } from "./SearchControls";
 import { usePoints, useRates, useStay, useStaysConfig } from "@/lib/app/stays-data";
 import { holdTripProvisionally, refreshTrips, releaseProvisionalTrip } from "@/lib/app/stays-data";
-import { approveStay, noPhoneAnyMore, payForStay, type PayState } from "@/lib/app/stay-payment";
-import { getBalances, getWalletStatus, payerOf, WalletApiError, type WalletStatus } from "@/lib/wallet/api";
+import { payForStay, type PayState } from "@/lib/app/stay-payment";
+import { getWalletStatus, payerOf, WalletApiError, type WalletStatus } from "@/lib/wallet/api";
 import { cancelPaymentApproval } from "@/lib/link/payment-approvals";
 import { useCreatorSession } from "@/lib/creator/session";
 import useSWR from "swr";
@@ -75,27 +75,21 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
   const { session } = useCreatorSession();
 
   /*
-   * The wallet, read rather than unlocked.
-   *
-   * Paying needs two things from it: the address the deposit leaves from, and
-   * a passkey to sign with. `registered_address` gives the first without
-   * opening anything, and the passkey ceremony at the moment of paying gives
-   * the second. Asking somebody to unlock the vault FIRST and then produce a
-   * passkey anyway is one ceremony too many for one payment — and the unlock
-   * would buy nothing, because the vault deliberately never hands its seed to
-   * anyone.
+   * The wallet, read: only to know who can approve. The linked phone approves
+   * and signs every stay paid here, and the server builds the deposit from
+   * the wallet it knows, so nothing is opened in this browser.
    */
   const wallet = useSWR<WalletStatus>(session?.user?.id ? [session.user.id, "wallet/status"] : null, () => getWalletStatus(), {
     revalidateOnFocus: false,
     shouldRetryOnError: false,
   });
   /*
-   * Who approves (documentation/one-wallet-every-device.md, rule 4): a linked
-   * Android phone for every wallet, including one made in the app; otherwise
-   * the passkey here for a web wallet; otherwise "Link your phone".
+   * Who approves (documentation/one-wallet-every-device.md): the linked phone,
+   * iPhone or Android, always. No phone yet: "Link your phone". No wallet:
+   * "Get the HOLD app", where it is made.
    */
   const payer = payerOf(wallet.data ?? null);
-  const from = payer === "app" || payer === "web_passkey" ? (wallet.data?.registered_address ?? null) : null;
+  const canPay = payer === "app";
 
   const rate = rates.data?.rates.find((r) => r.offerId === offerId) ?? null;
   /** The property's photographs, over the checkout — never away from it. */
@@ -130,18 +124,15 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
 
   /* ── Paying ── */
   const [pay, setPay] = useState<PayState | null>(null);
-  const running = pay !== null && !["booked", "stopped", "idle", "approve"].includes(pay.phase);
-  // Held and built, waiting for the passkey's tap: nothing on the form may change under it.
-  const approving = pay?.phase === "approve";
-  const locked = running || approving;
-  const phone = usePhone();
+  const running = pay !== null && !["booked", "stopped", "idle"].includes(pay.phase);
+  const locked = running;
 
   /*
    * A wallet made in the app with no phone linked cannot pay from here at
    * all: the sheet every payment opens (link/LinkGate) says so as the
    * checkout opens, before a form is filled for nothing, and again on Pay.
-   * Linking comes back to this checkout. The phone removed mid-payment
-   * (noPhoneAnyMore) asks the same way.
+   * Linking comes back to this checkout. No phone found mid-payment
+   * (`linkFirst` on the run's state) asks the same way.
    */
   const gate = useLinkGate();
   const { ask } = gate;
@@ -152,7 +143,7 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
     askedOnOpen.current = true;
     ask(hereNow());
   }, [linkFirst, ask]);
-  const phoneGone = pay?.phase === "stopped" && pay.message === noPhoneAnyMore();
+  const phoneGone = pay?.phase === "stopped" && pay.linkFirst === true;
   useEffect(() => {
     if (phoneGone) ask(hereNow());
   }, [phoneGone, ask]);
@@ -199,20 +190,8 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
     /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(guest.email.trim());
 
   async function start() {
-    if (!rate || !stay.data || !from || !session?.user?.id) return;
+    if (!rate || !stay.data || !canPay || !session?.user?.id) return;
     setCancel({ busy: false, notice: null });
-    let available = 0;
-    try {
-      // With a linked phone the server prices the deposit, and nothing here reads this.
-      available = payer === "app" ? Number.POSITIVE_INFINITY : (await getBalances(from)).usdc;
-    } catch {
-      // A balance we cannot read is not a reason to refuse a payment that may
-      // be perfectly fundable — an RPC hiccup would block it. So we let the
-      // run continue: the transfer then fails at the point of sending, which
-      // is still BEFORE anything is broadcast, and nothing moves either way.
-      // The only cost is a vaguer message than the balance check would give.
-      available = Number.POSITIVE_INFINITY;
-    }
 
     const held = pay?.bookingId ?? null;
     const out = await payForStay({
@@ -228,11 +207,7 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
         ...(request.trim() ? { specialRequest: request.trim() } : {}),
       },
       quotedPrice: rate.price,
-      from,
-      available,
-      uid: session.user.id,
       bookingId: held,
-      payer: payer === "app" ? "app" : "web_passkey",
       signal: stop.current.signal,
       onState: (s) => {
         setPay(s);
@@ -246,23 +221,6 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
     after(out);
   }
 
-  /** What the tap on "Approve with passkey" does: straight into the prompt, nothing awaited first. */
-  function approve() {
-    if (!pay || pay.phase !== "approve" || !from || !session?.user?.id || !rate || !stay.data) return;
-    const r = rate;
-    const s = stay.data;
-    void approveStay({
-      uid: session.user.id,
-      from,
-      current: pay,
-      signal: stop.current.signal,
-      onState: (next) => {
-        setPay(next);
-        if (next.paid && next.bookingId) holdTripProvisionally(placeholder(next.bookingId, s.name, s.city, r, search, guest));
-      },
-    }).then(after);
-  }
-
   function after(out: PayState) {
     if (out.phase === "booked" && out.booking) {
       void refreshTrips();
@@ -270,7 +228,7 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
       return;
     }
     // Nothing left the wallet, so nothing should be pretending to be a trip.
-    if (!out.paid && out.bookingId && out.phase !== "approve") releaseProvisionalTrip(out.bookingId);
+    if (!out.paid && out.bookingId) releaseProvisionalTrip(out.bookingId);
     // Who approves may have changed under us (a phone linked or removed): ask again.
     if (out.phase === "stopped") void wallet.mutate();
   }
@@ -465,26 +423,12 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
              * integration branch. Somebody fills the whole form, and the only
              * button on the screen never lights up.
              */}
-            {!from && linkFirst ? (
+            {!canPay && linkFirst ? (
               <Cta label={t("stays.checkout.pay", { amount: money(total, rate.currency) })} variant="commit" onClick={() => ask(hereNow())} />
-            ) : !from ? (
-              <NoPayer
-                wallet={wallet.data ?? null}
-                phone={phone}
-                onRetry={() => void wallet.mutate()}
-                walletHref={href("/wallet")}
-                linkHref={linkHref(href, typeof window === "undefined" ? undefined : `${window.location.pathname}${window.location.search}`)}
-              />
+            ) : !canPay ? (
+              <NoPayer wallet={wallet.data ?? null} onRetry={() => void wallet.mutate()} onLink={() => ask(hereNow())} />
             ) : pay?.phase === "phone" && pay.approval ? (
               <PhoneApproval approval={pay.approval} cancelling={cancel.busy} notice={cancel.notice} onCancel={() => void cancelOnPhone()} />
-            ) : approving ? (
-              <>
-                {/* The second tap: Safari starts a passkey prompt only inside a click. */}
-                <Cta label={t("stays.checkout.approveWithPasskey")} icon="finger-print" variant="commit" onClick={approve} />
-                <p className="text-[11.5px] leading-[17px]" style={{ color: P.textMuted }}>
-                  {t("stays.checkout.heldNote")}
-                </p>
-              </>
             ) : (
               <Cta
                 label={pay?.phase === "stopped" && pay.bookingId ? t("common.tryAgain") : t("stays.checkout.pay", { amount: money(total, rate.currency) })}
@@ -496,7 +440,7 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
             )}
 
             <p className="text-[11.5px] leading-[17px]" style={{ color: P.textFaint }}>
-              {payer === "app" ? t("stays.checkout.footerPhone") : t("stays.checkout.footerWallet")}
+              {t("stays.checkout.footerPhone")}
             </p>
           </div>
       </div>
@@ -518,60 +462,19 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
 
 /**
  * Why this page cannot pay, and the way forward. Never a dead end
- * (documentation/one-wallet-every-device.md, rule 4):
+ * (documentation/one-wallet-every-device.md):
  *
  *   unread      try again
- *   link first  a wallet made in the app with no Android phone linked: its
- *               keys are on the phone, so link it once and it approves and
- *               signs every stay paid here (/wallet/link, a full load)
- *   no wallet   the Wallet page makes one (a full load: its CSP), or, with
- *               the rollout gate closed, the HOLD app does
+ *   no wallet   it is made in the HOLD app: "Get the HOLD app"
+ *   otherwise   a wallet with no phone to approve on: link the phone
  */
-function NoPayer({
-  wallet,
-  phone,
-  walletHref,
-  linkHref,
-  onRetry,
-}: {
-  wallet: WalletStatus | null;
-  phone: ReturnType<typeof usePhone>;
-  walletHref: string;
-  /** The link screen, coming back here. */
-  linkHref: string;
-  onRetry: () => void;
-}) {
+function NoPayer({ wallet, onRetry, onLink }: { wallet: WalletStatus | null; onRetry: () => void; onLink: () => void }) {
   const t = useT();
-  const payer = payerOf(wallet);
-  const app = payer === "link_first" || (wallet?.state === "app_wallet" && payer === "none");
-  const web = wallet?.state === "web_wallet";
-  const gateOpen = wallet?.enabled !== false;
-
-  const title = !wallet
-    ? t("stays.noPayer.unreadTitle")
-    : app
-      ? t("stays.noPayer.appTitle")
-      : web
-        ? t("stays.noPayer.webTitle")
-        : gateOpen
-          ? t("stays.noPayer.noneTitle")
-          : t("stays.noPayer.closedTitle");
-  const body = !wallet
-    ? t("stays.noPayer.unreadBody")
-    : app
-      ? t("stays.noPayer.appBody")
-      : web
-        ? t("stays.noPayer.webBody")
-        : gateOpen
-          ? t("stays.noPayer.noneBody")
-          : t("stays.noPayer.closedBody");
-
-  let action: ReactNode;
-  if (!wallet) action = <Cta label={t("common.tryAgain")} variant="secondary" onClick={onRetry} />;
-  else if (app) action = <LinkCta href={linkHref} label={t("stays.noPayer.linkPhone")} />;
-  else if (web || gateOpen) action = <LinkCta href={walletHref} label={web ? t("stays.noPayer.openWallet") : t("stays.noPayer.setUpWallet")} />;
-  else action = <LinkCta href={playHref(phone)} label={t("stays.noPayer.getOnPlay")} newTab />;
-
+  if (wallet && wallet.state === "none") {
+    return <GetTheAppCard body={t("stays.noPayer.getAppBody")} />;
+  }
+  const title = !wallet ? t("stays.noPayer.unreadTitle") : t("stays.noPayer.appTitle");
+  const body = !wallet ? t("stays.noPayer.unreadBody") : t("stays.noPayer.linkBody");
   return (
     <Card hero className="flex flex-col gap-2 p-[14px]">
       <p className="text-[13px] font-bold" style={{ color: P.text }}>
@@ -580,23 +483,8 @@ function NoPayer({
       <p className="text-[12.5px] leading-[18px]" style={{ color: P.textMuted }}>
         {body}
       </p>
-      {action}
+      {!wallet ? <Cta label={t("common.tryAgain")} variant="secondary" onClick={onRetry} /> : <Cta label={t("stays.noPayer.linkPhone")} variant="secondary" onClick={onLink} />}
     </Card>
-  );
-}
-
-/** The kit's secondary Cta, as a link: the Wallet page is a full load (its CSP), the app a new tab. */
-function LinkCta({ href, label, newTab = false }: { href: string; label: string; newTab?: boolean }) {
-  return (
-    <a
-      href={href}
-      target={newTab ? "_blank" : undefined}
-      rel={newTab ? "noopener" : undefined}
-      className="flex h-[52px] items-center justify-center gap-[9px] rounded-[26px] px-5 text-[16px] font-bold tracking-[-0.2px] transition-opacity active:opacity-85"
-      style={{ background: "rgba(255,255,255,0.10)", color: P.text }}
-    >
-      {label}
-    </a>
   );
 }
 
@@ -718,14 +606,13 @@ function PointsBand({
  */
 function Progress({ state }: { state: PayState | null }) {
   const t = useT();
-  // Waiting on the passkey's tap is said under its own button, and waiting on the phone by its own screen.
-  if (!state || state.phase === "idle" || state.phase === "approve" || state.phase === "phone") return null;
+  // Waiting on the phone is said by its own screen.
+  if (!state || state.phase === "idle" || state.phase === "phone") return null;
 
   const said: Record<PayState["phase"], string | null> = {
     idle: null,
     holding: t("stays.progress.holding"),
     opening: t("stays.progress.opening"),
-    approve: null,
     phone: null,
     paying: t("stays.progress.paying"),
     settling: t("stays.progress.settling"),

@@ -52,7 +52,6 @@
   "add.cash.title": "Ongeza pesa taslimu",
   "add.cash.about": "Kununua kwa kadi hupitia mtoa huduma wetu wa on-ramp na malipo yake. Mchakato huo uko kwenye programu; wavuti haianzishi kamwe malipo ya kadi.",
   "add.receive.readFailed": "Hatukuweza kusoma anwani zako kwa sasa. Hakuna kilichobadilika — jaribu tena baada ya muda mfupi.",
-  "add.receive.none": "Bado hakuna anwani ya kulipwa. Unda pochi yako nayo itaonekana hapa.",
   "add.request.title": "Omba kwa kiungo",
   "add.request.lead": "Shiriki kiungo chako cha Hi.me ili mtu yeyote akulipe",
   "add.request.copyLink": "Nakili kiungo",
@@ -90,14 +89,6 @@
   "products.spaces.sub": "Kwenye vifaa vyako au maudhui yako, unalipwa kwa USDC moja kwa moja",
   "linkPhone.pay.title": "Unganisha simu yako ili ulipe kutoka hapa",
   "linkPhone.pay.bodyAndroid": "Fungua HOLD kwenye simu hii ili uiunganishe. Kuanzia hapo, programu itaidhinisha kila malipo unayoanzisha hapa.",
-  "linkPhone.pay.bodyApple": "Pochi hii iliundwa kwenye programu ya HOLD kwenye simu yako ya Android. Onyesha msimbo hapa, kisha ufungue HOLD kwenye simu yako ya Android na uuchanganue.",
-  "linkPhone.pay.body": "Pochi hii iliundwa kwenye programu ya HOLD na funguo zake hubaki kwenye simu yako. Iunganishe mara moja na utaweza kulipa kutoka hapa.",
-  "linkPhone.approve.titleApple": "Unganisha {device} hii",
-  "linkPhone.approve.bodyApple": "Passkey yako tayari inaidhinisha malipo kwenye {device} hii. Kuunganisha kunairekodi tu kama moja ya vifaa vyako.",
-  "linkPhone.approve.title": "Idhinisha malipo kwenye simu yako",
-  "linkPhone.approve.bodyAndroid": "Pakua HOLD kwenye simu hii nayo itaidhinisha kila malipo unayoanzisha hapa. Hadi hapo, passkey yako ndiyo inaidhinisha.",
-  "linkPhone.approve.body": "Unganisha simu yako ya Android na programu ya HOLD itaidhinisha kila malipo unayoanzisha hapa. Hadi hapo, passkey yako ndiyo inaidhinisha.",
-  "linkPhone.getOnPlay": "Pakua HOLD kwenye Google Play",
   "linkPhone.later": "Baadaye",
   "payLinks.title": "Viungo vya malipo",
   "payLinks.introTitle": "Lipwa na mtu yeyote, kutoka pochi yoyote",
@@ -181,5 +172,7 @@
   "payLinks.pay.cantStart": "Malipo haya hayakuweza kuanzishwa kutoka kwenye ukurasa huu. Hakuna kilicholipwa; onyesha upya ukurasa kisha ujaribu tena.",
   "payLinks.pay.mismatch": "Malipo tuliyopewa hayakulingana na kinachoonyeshwa kwenye ukurasa huu, kwa hiyo hakuna kilichotumwa kwenye pochi yako. Hakuna kilicholipwa; onyesha upya ukurasa kisha ujaribu tena.",
   "payLinks.pay.notFound": "Hatupati tena kiungo au malipo haya. Onyesha upya ukurasa.",
-  "payLinks.pay.badRequest": "Hatupati kiungo au malipo haya. Angalia kiungo kisha uonyeshe upya ukurasa."
+  "payLinks.pay.badRequest": "Hatupati kiungo au malipo haya. Angalia kiungo kisha uonyeshe upya ukurasa.",
+  "add.receive.noneGetApp": "Bado hakuna anwani ya kulipiwa. Pochi yako inaundwa kwenye programu ya HOLD: ipakue, na anwani itaonekana hapa.",
+  "linkPhone.pay.bodyComputer": "Funguo za pochi yako zinabaki kwenye simu yako. Iunganishe mara moja, na programu ya HOLD itaidhinisha kila malipo unayoanzisha hapa."
 }

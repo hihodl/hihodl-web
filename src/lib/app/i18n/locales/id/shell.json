@@ -82,5 +82,15 @@
   "error.payoutChainUnknown": "HiSpace tidak membayar di jaringan itu.",
   "error.payoutNonceInvalid": "Permintaan itu sudah kedaluwarsa atau sudah dipakai. Mulai lagi dan tanda tangani pesan yang baru.",
   "error.payoutSignatureInvalid": "Tanda tangan itu bukan dari alamat ini. Pastikan dompet yang kamu pakai untuk menandatangani sama dengan yang kamu hubungkan, lalu coba lagi.",
-  "error.xFrontsALiveSpace": "Akun X ini dipakai di listing yang sedang aktif, jadi tetap terhubung sampai listing itu ditutup. Sponsor sudah membayar untuk handle itu."
+  "error.xFrontsALiveSpace": "Akun X ini dipakai di listing yang sedang aktif, jadi tetap terhubung sampai listing itu ditutup. Sponsor sudah membayar untuk handle itu.",
+  "getApp.title": "Unduh aplikasi HOLD",
+  "getApp.body": "Dompetmu dibuat di aplikasi HOLD, di iPhone atau ponsel Android-mu. Masuk di sana dengan akun ini, dan web akan membuka dompet yang sama. Ponselmu menyetujui setiap pembayaran.",
+  "getApp.failedTitle": "Kami tidak bisa membuka akunmu",
+  "getApp.failedBody": "Cek koneksimu lalu coba lagi.",
+  "getApp.checking": "Memeriksa…",
+  "getApp.retry": "Coba lagi",
+  "getApp.noWebWallet": "Tidak ada dompet yang dibuat di web",
+  "getApp.makeOnce": "Buat sekali di aplikasi. Lalu kembali ke sini dan cek lagi.",
+  "getApp.checkAgain": "Sudah kubuat, cek lagi",
+  "getApp.goToSpaces": "Masuk ke Spaces"
 }

@@ -82,5 +82,15 @@
   "error.payoutChainUnknown": "HiSpace không thanh toán trên mạng này.",
   "error.payoutNonceInvalid": "Yêu cầu đã hết hạn hoặc đã được dùng. Hãy bắt đầu lại và ký tin nhắn mới.",
   "error.payoutSignatureInvalid": "Chữ ký này không thuộc về địa chỉ đó. Hãy đảm bảo ví bạn dùng để ký chính là ví đã kết nối, rồi thử lại.",
-  "error.xFrontsALiveSpace": "Tài khoản X này đang gắn với một tin đăng đang chạy, nên sẽ giữ kết nối cho đến khi tin đăng đó đóng. Nhà tài trợ đã trả tiền cho tài khoản đó."
+  "error.xFrontsALiveSpace": "Tài khoản X này đang gắn với một tin đăng đang chạy, nên sẽ giữ kết nối cho đến khi tin đăng đó đóng. Nhà tài trợ đã trả tiền cho tài khoản đó.",
+  "getApp.title": "Tải ứng dụng HOLD",
+  "getApp.body": "Ví của bạn được tạo trong ứng dụng HOLD, trên iPhone hoặc điện thoại Android của bạn. Hãy đăng nhập ở đó bằng tài khoản này, và web sẽ mở cùng một ví. Điện thoại của bạn duyệt mọi khoản thanh toán.",
+  "getApp.failedTitle": "Chúng tôi không mở được tài khoản của bạn",
+  "getApp.failedBody": "Hãy kiểm tra kết nối và thử lại.",
+  "getApp.checking": "Đang kiểm tra…",
+  "getApp.retry": "Thử lại",
+  "getApp.noWebWallet": "Chưa có ví nào được tạo trên web",
+  "getApp.makeOnce": "Tạo ví một lần trong ứng dụng. Sau đó quay lại đây và kiểm tra lại.",
+  "getApp.checkAgain": "Tôi đã tạo rồi, kiểm tra lại",
+  "getApp.goToSpaces": "Đến Spaces"
 }

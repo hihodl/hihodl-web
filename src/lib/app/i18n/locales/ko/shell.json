@@ -82,5 +82,15 @@
   "error.payoutChainUnknown": "HiSpace가 지급하지 않는 네트워크예요.",
   "error.payoutNonceInvalid": "요청이 만료됐거나 이미 사용됐어요. 처음부터 다시 시작해서 새 메시지에 서명해 주세요.",
   "error.payoutSignatureInvalid": "이 주소의 서명이 아니에요. 서명한 지갑이 연결한 지갑과 같은지 확인하고 다시 시도해 주세요.",
-  "error.xFrontsALiveSpace": "이 X 계정은 진행 중인 리스팅에 사용되고 있어서 그 리스팅이 끝날 때까지 연결이 유지돼요. 스폰서가 이 핸들에 비용을 냈거든요."
+  "error.xFrontsALiveSpace": "이 X 계정은 진행 중인 리스팅에 사용되고 있어서 그 리스팅이 끝날 때까지 연결이 유지돼요. 스폰서가 이 핸들에 비용을 냈거든요.",
+  "getApp.title": "HOLD 앱 받기",
+  "getApp.body": "지갑은 iPhone이나 Android 휴대폰의 HOLD 앱에서 만들어져요. 그곳에서 이 계정으로 로그인하면 웹에서도 같은 지갑이 열려요. 모든 결제는 휴대폰이 승인해요.",
+  "getApp.failedTitle": "계정을 열지 못했어요",
+  "getApp.failedBody": "연결을 확인하고 다시 시도하세요.",
+  "getApp.checking": "확인 중…",
+  "getApp.retry": "다시 시도",
+  "getApp.noWebWallet": "웹에는 아직 지갑이 없어요",
+  "getApp.makeOnce": "앱에서 한 번 만드세요. 그런 다음 여기로 돌아와 다시 확인하세요.",
+  "getApp.checkAgain": "만들었어요, 다시 확인",
+  "getApp.goToSpaces": "Spaces로 이동"
 }

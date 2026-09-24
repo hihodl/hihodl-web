@@ -68,7 +68,6 @@
   "publish.yourHoldWallet": "Dompet HOLD-mu",
   "publish.anotherWallet": "Dompet lain, dibuktikan dengan tanda tangan",
   "publish.unlockWallet": "Buka kunci dompet",
-  "publish.makeWallet": "Buat dompet",
   "publish.setUp": "Atur",
   "publish.wherePaid": "Tempat sponsor membayarmu, dalam USDC",
   "publish.usdcAccount": "Akun USDC",
@@ -329,5 +328,6 @@
   "wallet.noSolana": "Tidak ada dompet Solana di browser ini. Instal Phantom, atau buka halaman ini di browser bawaan Phantom.",
   "wallet.noEvm": "Tidak ada dompet Ethereum di browser ini. Instal MetaMask, atau buka halaman ini di browser bawaan dompetmu.",
   "wallet.rejected": "Kamu menolaknya di {name}. Tidak ada yang dikirim, dan tidak ada yang berpindah.",
-  "wallet.failed": "{name} tidak bisa menyelesaikannya. Coba lagi."
+  "wallet.failed": "{name} tidak bisa menyelesaikannya. Coba lagi.",
+  "publish.getApp": "Unduh aplikasi HOLD"
 }

@@ -68,7 +68,6 @@
   "publish.yourHoldWallet": "HOLD cüzdanın",
   "publish.anotherWallet": "İmzayla kanıtlanan başka bir cüzdan",
   "publish.unlockWallet": "Cüzdanın kilidini aç",
-  "publish.makeWallet": "Cüzdan oluştur",
   "publish.setUp": "Kur",
   "publish.wherePaid": "Sponsorların sana USDC ile ödeme yaptığı yer",
   "publish.usdcAccount": "USDC hesabı",
@@ -329,5 +328,6 @@
   "wallet.noSolana": "Bu tarayıcıda Solana cüzdanı bulunamadı. Phantom'u yükle veya bu sayfayı Phantom'un kendi tarayıcısında aç.",
   "wallet.noEvm": "Bu tarayıcıda Ethereum cüzdanı bulunamadı. MetaMask'i yükle veya bu sayfayı cüzdanının kendi tarayıcısında aç.",
   "wallet.rejected": "Bunu {name} üzerinde reddettin. Hiçbir şey gönderilmedi ve hiçbir şey hareket etmedi.",
-  "wallet.failed": "{name} bunu tamamlayamadı. Tekrar dene."
+  "wallet.failed": "{name} bunu tamamlayamadı. Tekrar dene.",
+  "publish.getApp": "HOLD uygulamasını indir"
 }

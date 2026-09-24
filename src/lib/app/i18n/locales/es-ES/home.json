@@ -52,7 +52,6 @@
   "add.cash.title": "Añadir efectivo",
   "add.cash.about": "Comprar con tarjeta pasa por nuestro proveedor de on-ramp y su pantalla de pago. Ese proceso está en la app; la web nunca inicia un cargo con tarjeta.",
   "add.receive.readFailed": "Ahora mismo no hemos podido leer tus direcciones. No ha cambiado nada: vuelve a intentarlo en un momento.",
-  "add.receive.none": "Aún no hay ninguna dirección en la que recibir pagos. Crea tu wallet y aparecerá aquí.",
   "add.request.title": "Cobrar con un enlace",
   "add.request.lead": "Comparte tu enlace Hi.me para que cualquiera pueda pagarte",
   "add.request.copyLink": "Copiar enlace",
@@ -90,14 +89,6 @@
   "products.spaces.sub": "En tu equipo o tu contenido, cobradas en USDC directamente a ti",
   "linkPhone.pay.title": "Vincula tu móvil para pagar desde aquí",
   "linkPhone.pay.bodyAndroid": "Abre HOLD en este móvil para vincularlo. A partir de entonces, la app aprobará cada pago que empieces aquí.",
-  "linkPhone.pay.bodyApple": "Esta wallet se creó en la app HOLD de tu móvil Android. Muestra un código aquí, abre HOLD en tu móvil Android y escanéalo.",
-  "linkPhone.pay.body": "Esta wallet se creó en la app HOLD y sus claves se quedan en tu móvil. Vincúlalo una vez y podrás pagar desde aquí.",
-  "linkPhone.approve.titleApple": "Vincular este {device}",
-  "linkPhone.approve.bodyApple": "Tu llave de acceso ya aprueba los pagos en este {device}. Vincularlo solo lo registra como uno de tus dispositivos.",
-  "linkPhone.approve.title": "Aprueba los pagos en tu móvil",
-  "linkPhone.approve.bodyAndroid": "Descarga HOLD en este móvil y aprobará cada pago que empieces aquí. Hasta entonces, lo hace tu llave de acceso.",
-  "linkPhone.approve.body": "Vincula tu móvil Android y la app HOLD aprobará cada pago que empieces aquí. Hasta entonces, lo hace tu llave de acceso.",
-  "linkPhone.getOnPlay": "Descargar HOLD en Google Play",
   "linkPhone.later": "Más tarde",
   "payLinks.title": "Enlaces de pago",
   "payLinks.introTitle": "Cobra a cualquiera, desde cualquier wallet",
@@ -181,5 +172,7 @@
   "payLinks.pay.cantStart": "No se ha podido iniciar este pago desde esta página. No se ha pagado nada; recarga la página y vuelve a intentarlo.",
   "payLinks.pay.mismatch": "El pago que recibimos no coincidía con lo que muestra esta página, así que no se ha enviado nada a tu wallet. No se ha pagado nada; recarga la página y vuelve a intentarlo.",
   "payLinks.pay.notFound": "Ya no encontramos este enlace o este pago. Recarga la página.",
-  "payLinks.pay.badRequest": "No encontramos este enlace o este pago. Revisa el enlace y recarga la página."
+  "payLinks.pay.badRequest": "No encontramos este enlace o este pago. Revisa el enlace y recarga la página.",
+  "add.receive.noneGetApp": "Aún no hay ninguna dirección en la que recibir pagos. Tu wallet se crea en la app HOLD: consíguela y la dirección aparecerá aquí.",
+  "linkPhone.pay.bodyComputer": "Las claves de tu wallet se quedan en tu móvil. Vincúlalo una vez y la app HOLD aprueba cada pago que empiezas aquí."
 }

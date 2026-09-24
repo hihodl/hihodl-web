@@ -74,7 +74,6 @@
   "thread.noAccount": "Auf der anderen Seite dieser Unterhaltung gibt es kein HOLD-Konto.",
   "thread.request": "Anfordern",
   "thread.bookSpot": "Spot buchen",
-  "thread.approvedWith": "Bestätigt mit deinem Passkey oder auf deinem Handy, falls du eins verknüpft hast.",
   "thread.opening": "Wird geöffnet…",
   "didNotGoThrough": "Das hat nicht geklappt. Versuch es nochmal.",
   "chat.nothingYet": "Zwischen dir und {name} gibt es noch nichts.",
@@ -143,5 +142,6 @@
   "picker.alreadyChosen": "@{handle} ist schon ausgewählt.",
   "picker.looking": "Wird gesucht…",
   "picker.addHandle": "@{handle} hinzufügen",
-  "picker.byExactHandle": "Über den genauen HOLD-Benutzernamen"
+  "picker.byExactHandle": "Über den genauen HOLD-Benutzernamen",
+  "thread.approvedOnPhone": "Bestätigt und signiert auf deinem verknüpften Handy, in der HOLD-App."
 }

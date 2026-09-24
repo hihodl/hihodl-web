@@ -68,7 +68,6 @@
   "publish.yourHoldWallet": "محفظة HOLD الخاصة بك",
   "publish.anotherWallet": "محفظة أخرى، مثبتة بالتوقيع",
   "publish.unlockWallet": "فتح قفل المحفظة",
-  "publish.makeWallet": "إنشاء محفظة",
   "publish.setUp": "إعداد",
   "publish.wherePaid": "حيث يدفع لك الرعاة، بعملة USDC",
   "publish.usdcAccount": "حساب USDC",
@@ -329,5 +328,6 @@
   "wallet.noSolana": "لم يُعثر على محفظة Solana في هذا المتصفح. ثبّت Phantom، أو افتح هذه الصفحة في متصفح Phantom.",
   "wallet.noEvm": "لم يُعثر على محفظة Ethereum في هذا المتصفح. ثبّت MetaMask، أو افتح هذه الصفحة في متصفح محفظتك.",
   "wallet.rejected": "رفضت ذلك في {name}. لم يُرسل شيء، ولم يتحرك شيء في أي اتجاه.",
-  "wallet.failed": "تعذّر على {name} إكمال ذلك. حاول مجددًا."
+  "wallet.failed": "تعذّر على {name} إكمال ذلك. حاول مجددًا.",
+  "publish.getApp": "احصل على تطبيق HOLD"
 }

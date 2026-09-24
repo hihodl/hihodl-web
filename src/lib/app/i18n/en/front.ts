@@ -59,10 +59,7 @@ const front = {
   "steps.passkeyInfo": "A secure key stored on your device. Uses Face ID or fingerprint to verify your identity — no passwords needed.",
   "steps.recovery": "Recovery Key",
   "steps.recoveryInfo": "We'll send 8 recovery codes to your email. These codes are the ONLY way to recover your account if you lose access to Google or Apple. Save them somewhere safe — each code works only once.",
-  "steps.wallet": "Wallet",
-  "steps.walletInfo": "A Solana wallet for USDC, made in this browser and locked by your passkey. HOLD keeps only an encrypted backup it cannot open.",
   "steps.link": "Link your phone",
-  "steps.linkInfo": "A linked Android phone approves and signs, in the HOLD app, the payments you start on the web. Without one, your passkey approves them. You can link one later from Menu, Security.",
 
   // The onboarding flow
   "flow.title": "Protect\nyour wallet",
@@ -70,7 +67,6 @@ const front = {
   "flow.checkConnection": "Check your connection and try again.",
   "flow.skipForNow": "Skip for now",
   "flow.slow": "Connection seems slow. Hang on…",
-  "flow.allSet": "All set!",
 
   "username.checking": "Checking...",
   "username.available": "Available",
@@ -92,21 +88,6 @@ const front = {
   "recovery.emailLabel": "Email for your recovery codes",
   "recovery.sent": "Sent",
 
-  "wallet.playWent": "Once HOLD is installed, sign in there with this account and make your wallet. It shows here too, with every chain.",
-  "wallet.play": "HOLD on Google Play makes your wallet with every chain: Solana, Base, Polygon and Ethereum. Sign in there with this account, and it shows here too.",
-  "wallet.getOnPlay": "Get HOLD on Google Play",
-  "wallet.makeHere": "Make it here instead",
-  "wallet.readyTitle": "Your wallet is ready",
-  "wallet.readyLine": "You're all set to start using HOLD.",
-  "wallet.goToDashboard": "Go to Dashboard",
-  "wallet.settingUp": "Setting up your wallet...",
-  "wallet.confirmDesc": "Your new passkey was created. Confirm it once more so it can lock your wallet.",
-  "wallet.confirm": "Confirm with passkey",
-  "wallet.desc": "A Solana wallet for USDC, locked by your passkey.",
-  "wallet.create": "Create Wallet",
-  "wallet.useNewPasskey": "Use a new passkey",
-  "wallet.inApp": "Your account already has a wallet, made in the HOLD app. Open the HOLD app to turn it on here too.",
-
   // The compact sign-in form (a team invitation)
   "signIn.providerFailed": "We could not open {provider} sign-in. Try again, or use your email.",
   "signIn.title": "Sign in to HOLD",
@@ -118,6 +99,7 @@ const front = {
   "signIn.sending": "Sending…",
   "signIn.anotherEmail": "Use another email",
   "signIn.newCode": "Send a new code",
+  "steps.linkInfoEvery": "Your linked phone, iPhone or Android, approves and signs in the HOLD app every payment you start on the web. Until one is linked, nothing can be paid from the web. You can link one later from Menu, Security.",
 } satisfies Record<string, string>;
 
 export default front;

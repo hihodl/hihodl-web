@@ -52,7 +52,6 @@
   "add.cash.title": "현금 추가",
   "add.cash.about": "카드 구매는 온램프 제공업체와 그 결제창을 거쳐요. 이 과정은 앱에서 진행되며, 웹에서는 카드 결제를 시작하지 않아요.",
   "add.receive.readFailed": "지금은 주소를 읽지 못했어요. 바뀐 건 없어요. 잠시 후 다시 시도하세요.",
-  "add.receive.none": "아직 받을 주소가 없어요. 지갑을 만들면 여기에 표시돼요.",
   "add.request.title": "링크로 요청하기",
   "add.request.lead": "Hi.me 링크를 공유하면 누구나 나에게 돈을 보낼 수 있어요",
   "add.request.copyLink": "링크 복사",
@@ -90,14 +89,6 @@
   "products.spaces.sub": "내 장비나 콘텐츠에, USDC로 바로 받아요",
   "linkPhone.pay.title": "여기서 결제하려면 휴대폰을 연결하세요",
   "linkPhone.pay.bodyAndroid": "이 휴대폰에서 HOLD를 열어 연결하세요. 그 후로는 여기서 시작한 모든 결제를 앱이 승인해요.",
-  "linkPhone.pay.bodyApple": "이 지갑은 Android 휴대폰의 HOLD 앱에서 만들어졌어요. 여기에 코드를 띄운 뒤 Android 휴대폰에서 HOLD를 열고 스캔하세요.",
-  "linkPhone.pay.body": "이 지갑은 HOLD 앱에서 만들어졌고 키는 휴대폰에 있어요. 한 번 연결하면 여기서 결제할 수 있어요.",
-  "linkPhone.approve.titleApple": "이 {device} 연결하기",
-  "linkPhone.approve.bodyApple": "이 {device}에서는 이미 패스키로 결제를 승인하고 있어요. 연결하면 내 기기 중 하나로 기록될 뿐이에요.",
-  "linkPhone.approve.title": "휴대폰에서 결제 승인하기",
-  "linkPhone.approve.bodyAndroid": "이 휴대폰에 HOLD를 설치하면 여기서 시작한 모든 결제를 앱이 승인해요. 그 전에는 패스키로 승인해요.",
-  "linkPhone.approve.body": "Android 휴대폰을 연결하면 여기서 시작한 모든 결제를 HOLD 앱이 승인해요. 그 전에는 패스키로 승인해요.",
-  "linkPhone.getOnPlay": "Google Play에서 HOLD 받기",
   "linkPhone.later": "나중에",
   "payLinks.title": "결제 링크",
   "payLinks.introTitle": "누구에게서든, 어떤 지갑에서든 돈 받기",
@@ -181,5 +172,7 @@
   "payLinks.pay.cantStart": "이 페이지에서 결제를 시작할 수 없어요. 결제된 금액은 없어요. 페이지를 새로 고치고 다시 시도하세요.",
   "payLinks.pay.mismatch": "받은 결제 정보가 이 페이지에 표시된 내용과 달라서 지갑에 아무것도 보내지 않았어요. 결제된 금액은 없어요. 페이지를 새로 고치고 다시 시도하세요.",
   "payLinks.pay.notFound": "이 링크나 결제를 더 이상 찾을 수 없어요. 페이지를 새로 고치세요.",
-  "payLinks.pay.badRequest": "이 링크나 결제를 찾을 수 없어요. 링크를 확인하고 페이지를 새로 고치세요."
+  "payLinks.pay.badRequest": "이 링크나 결제를 찾을 수 없어요. 링크를 확인하고 페이지를 새로 고치세요.",
+  "add.receive.noneGetApp": "아직 결제받을 주소가 없어요. 지갑은 HOLD 앱에서 만들어져요. 앱을 받으면 여기에 주소가 표시돼요.",
+  "linkPhone.pay.bodyComputer": "지갑의 키는 휴대폰에 있어요. 한 번 연결하면 여기서 시작하는 모든 결제를 HOLD 앱이 승인해요."
 }

@@ -68,7 +68,6 @@
   "publish.yourHoldWallet": "आपका HOLD वॉलेट",
   "publish.anotherWallet": "कोई दूसरा वॉलेट, सिग्नेचर से साबित",
   "publish.unlockWallet": "वॉलेट अनलॉक करें",
-  "publish.makeWallet": "वॉलेट बनाएँ",
   "publish.setUp": "सेट अप करें",
   "publish.wherePaid": "स्पॉन्सर आपको USDC में कहाँ पे करते हैं",
   "publish.usdcAccount": "USDC अकाउंट",
@@ -329,5 +328,6 @@
   "wallet.noSolana": "इस ब्राउज़र में कोई Solana वॉलेट नहीं मिला। Phantom इंस्टॉल करें, या यह पेज Phantom के अपने ब्राउज़र में खोलें।",
   "wallet.noEvm": "इस ब्राउज़र में कोई Ethereum वॉलेट नहीं मिला। MetaMask इंस्टॉल करें, या यह पेज अपने वॉलेट के अपने ब्राउज़र में खोलें।",
   "wallet.rejected": "आपने {name} में इसे अस्वीकार कर दिया। कुछ भी नहीं भेजा गया, और किसी भी तरफ़ कुछ नहीं हिला।",
-  "wallet.failed": "{name} इसे पूरा नहीं कर पाया। फिर से कोशिश करें।"
+  "wallet.failed": "{name} इसे पूरा नहीं कर पाया। फिर से कोशिश करें।",
+  "publish.getApp": "HOLD ऐप पाएँ"
 }

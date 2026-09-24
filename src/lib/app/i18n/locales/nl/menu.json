@@ -1,6 +1,5 @@
 {
   "home.wallet": "Wallet",
-  "home.walletSub": "Je Solana-adres, herstelwoorden en opnames",
   "home.security": "Beveiliging",
   "home.recovery": "Accountherstel",
   "home.statements": "Afschriften",
@@ -19,7 +18,6 @@
   "tiles.invite": "Vrienden uitnodigen",
   "tiles.inviteSub": "Verdien samen beloningen",
   "tiles.link": "Koppel je telefoon",
-  "tiles.linkSub": "Android keurt betalingen goed",
   "plan.title": "Je abonnement",
   "plan.proBody": "Je zit op Pro. Overboekingen zijn zonder gas en omwisselingen hebben geen basisopslag.",
   "plan.standardBody": "Je zit op Standard. Alles in HOLD werkt; Pro haalt de basisopslag op omwisselingen weg en maakt overboekingen gasloos.",
@@ -52,8 +50,6 @@
   "recovery.setUp": "Instellen",
   "recovery.foot": "Stel er minstens twee in. Je kunt ze altijd wijzigen.",
   "passkeys.title": "Passkeys",
-  "passkeys.addAnother": "Nog een apparaat toevoegen",
-  "passkeys.add": "Passkey toevoegen",
   "passkeys.what": "Wat zijn passkeys?",
   "passkeys.infoBody1": "Met passkeys log je in met Face ID of je vingerafdruk — geen wachtwoord en geen herstelfrase om te typen.",
   "passkeys.infoBody2": "Elk apparaat waarop je inlogt registreert een eigen passkey, dus je kunt ze hier los toevoegen of verwijderen.",
@@ -183,5 +179,8 @@
   "invite.friend": "Vriend",
   "inTheApp.back": "← Voordelen",
   "inTheApp.title": "Voorlopig beschikbaar in de HOLD-app",
-  "inTheApp.body": "Log daar in met hetzelfde account. Het komt binnenkort naar het web."
+  "inTheApp.body": "Log daar in met hetzelfde account. Het komt binnenkort naar het web.",
+  "home.walletSubPhone": "Je adressen en verzendingen, goedgekeurd op je telefoon",
+  "tiles.linkSubEvery": "Hij keurt elke betaling goed",
+  "passkeys.addInApp": "Voeg een passkey toe in de HOLD-app op je telefoon."
 }

@@ -74,7 +74,6 @@
   "thread.noAccount": "Bu konuşmanın diğer tarafında bir HOLD hesabı yok.",
   "thread.request": "İste",
   "thread.bookSpot": "Yer ayırt",
-  "thread.approvedWith": "Geçiş anahtarınla ya da bağladıysan telefonunda onaylanır.",
   "thread.opening": "Açılıyor…",
   "didNotGoThrough": "Bu işlem tamamlanamadı. Tekrar dene.",
   "chat.nothingYet": "{name} ile aranızda henüz bir şey yok.",
@@ -143,5 +142,6 @@
   "picker.alreadyChosen": "@{handle} zaten seçildi.",
   "picker.looking": "Aranıyor…",
   "picker.addHandle": "@{handle} ekle",
-  "picker.byExactHandle": "Tam HOLD kullanıcı adıyla"
+  "picker.byExactHandle": "Tam HOLD kullanıcı adıyla",
+  "thread.approvedOnPhone": "Bağlı telefonunda, HOLD uygulamasında onaylandı ve imzalandı."
 }

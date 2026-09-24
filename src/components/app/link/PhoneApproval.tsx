@@ -7,7 +7,8 @@
  *   the status line   amber, pulsing while the phone decides
  *   the summary       the server's own words (title, dates, amount); the web
  *                     never writes these, so they match the phone's screen
- *   Open HOLD         Android only: the app's approval screen as an intent,
+ *   Open HOLD         on a phone: the app's approval screen, as an intent on
+ *                     Android and as the site's universal link on an iPhone,
  *                     in a NEW tab so this page keeps following the approval
  *   Cancel            the server's cancel, so the phone cannot approve after
  *   the foot          the inbox hint and the countdown to `expiresAt`
@@ -18,7 +19,7 @@
 
 import type { MessageKey } from "@/lib/app/i18n";
 import { Rich, useT } from "@/lib/app/i18n/react";
-import { paymentApprovalIntent } from "@/lib/link/intent";
+import { openOnPhone } from "@/lib/link/intent";
 import type { PaymentApproval } from "@/lib/link/payment-approval-core";
 
 import { FooterNote, StatusLine, useCountdown, WarningNote } from "../wallet/app-kit";
@@ -47,6 +48,7 @@ export function PhoneApproval({
   const pending = approval.status === "pending";
   const left = useCountdown(pending ? approval.expiresAt || null : null);
   const s = approval.summary;
+  const open = openOnPhone(`payments/approve/${encodeURIComponent(approval.id)}`, here);
 
   return (
     <div className="flex flex-col gap-3">
@@ -72,10 +74,10 @@ export function PhoneApproval({
       {notice ? <WarningNote>{notice}</WarningNote> : null}
       {pending ? (
         <div className="flex flex-col gap-2 pt-2">
-          {here === "android" ? (
+          {open ? (
             // A new tab: this page keeps following the approval while the app opens on it.
             <a
-              href={paymentApprovalIntent(approval.id)}
+              href={open}
               target="_blank"
               rel="noopener"
               className="flex h-[52px] w-full items-center justify-center gap-2 rounded-[16px] bg-[#FFB703] px-5 text-[15px] font-strong text-[#0A0F14] transition-opacity hover:opacity-90"

@@ -16,25 +16,8 @@ const wallet = {
   "appWallet.openHold": "Open HOLD",
 
   /* No wallet, and the web does not make one yet */
-  "noWallet.iosTitle": "No wallet yet",
-  "noWallet.iosBody": "Making a wallet on the web is not open for this account yet. Nothing is lost: when it opens, it is made here with your passkey.",
-  "noWallet.title": "Make your wallet in the HOLD app",
-  "noWallet.body": "The HOLD app on Google Play makes your wallet with every chain. Sign in there with this account, and it shows here too.",
-  "noWallet.getOnPlay": "Get HOLD on Google Play",
 
   /* Create */
-  "create.readyTitle": "Your wallet is ready",
-  "create.readyAddress": "Your Solana address:",
-  "create.openWallet": "Open wallet",
-  "create.readyNote": "Write down your 12 words from Security. They are the only way back if every passkey is lost.",
-  "create.sealingTitle": "Creating your wallet",
-  "create.sealingBody": "Making it in this browser and sealing it with your passkey.",
-  "create.confirmTitle": "Confirm your new passkey",
-  "create.confirmBody": "Once more, so it can seal your wallet.",
-  "create.title": "Create your wallet",
-  "create.body": "A Solana wallet for USDC and SOL, locked by a passkey: Face ID, Touch ID or your device PIN.",
-  "create.newPasskey": "Create with a new passkey",
-  "create.existingPasskey": "Use a passkey I already have",
 
   /* Unlock */
   "unlock.welcome": "Welcome Back, {name}",
@@ -114,9 +97,6 @@ const wallet = {
   "send.openHold": "Open HOLD",
   "send.phoneNote":
     "A notification in the HOLD app on your phone asks you to approve it. No notification? Open HOLD and go to Withdrawals. It expires in <n>{left}</n>.",
-  "send.waitingPasskey": "Waiting for your passkey…",
-  "send.approveWithPasskey": "Approve with passkey",
-  "send.passkeyNote": "Your passkey approves exactly this payment and signs it, in one step. Expires in <n>{left}</n>.",
   "send.sendingPayment": "Sending payment",
   "send.resultTo": "To {to} • {amount}",
   "send.seeOnSolscan": "See it on Solscan",
@@ -124,8 +104,6 @@ const wallet = {
   "send.onPhone.approved": "Approved on your phone. Sending…",
   "send.onPhone.submitted": "Approved. Sending…",
   "send.next.phone": "A payment cannot be undone. Your linked phone approves and signs it next, in the HOLD app.",
-  "send.next.passkey": "A payment cannot be undone. You approve it with your passkey next.",
-  "send.next.unknown": "A payment cannot be undone. You approve it in the next step.",
   "send.result.confirmedTitle": "Payment sent",
   "send.result.confirmedText": "Confirmed on Solana",
   "send.result.rejectedTitle": "Declined on your phone",
@@ -136,14 +114,9 @@ const wallet = {
   "send.result.failedText": "The network did not take it. Nothing left your wallet.",
   "send.cancelled": "Cancelled. Nothing was sent.",
   "send.alreadyDecided": "Your phone already decided on this one, so it can no longer be cancelled.",
-  "send.stillPreparing": "Still preparing. Try again in a moment.",
   "send.error.needsApproval": "That withdrawal was not approved. Nothing was sent. Start again.",
   "send.error.expired": "That withdrawal expired. Nothing was sent. Start again.",
   "send.error.insufficient": "Your wallet does not hold enough for that. Nothing was sent.",
-  "send.error.noPasskey": "This account has no passkey, and a passkey is what approves a send. Add one from Menu → Passkeys. Nothing was sent.",
-  "send.error.noWebWallet": "This wallet was made in the HOLD app, which sends it for now. Nothing was sent.",
-  "send.error.challengeMismatch": "HOLD asked the passkey to approve something other than this transfer, so we stopped. Nothing was sent.",
-  "send.error.wrongKey": "That passkey opened a different wallet. Nothing was sent.",
 
   /* Receive */
   "receive.selectTitle": "Select crypto",
@@ -188,6 +161,7 @@ const wallet = {
   "explain.api.offline": "Could not reach HOLD. Check your connection and try again.",
   "explain.api.server": "Something went wrong on our side. Nothing was changed.",
   "explain.unknown": "Something went wrong. Nothing was changed.",
+  "send.error.noWalletGetApp": "This account has no wallet yet. Make it in the HOLD app, then send from here. Nothing was sent.",
 } satisfies Record<string, string>;
 
 export default wallet;

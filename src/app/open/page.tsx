@@ -36,8 +36,9 @@ function OpenContent() {
     const to = searchParams?.get("to") ?? "";
     const deepLink = `${DEEP_LINK_SCHEME}${to}`;
 
+    // A computer has no app to open: the product, on the web.
     if (detected === "desktop") {
-      window.location.href = "https://hihodl.xyz";
+      window.location.href = "https://app.hihodl.xyz";
       return;
     }
 

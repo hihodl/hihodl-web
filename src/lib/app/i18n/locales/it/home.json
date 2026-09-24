@@ -52,7 +52,6 @@
   "add.cash.title": "Aggiungi contanti",
   "add.cash.about": "L'acquisto con carta passa dal nostro fornitore di on-ramp e dal suo checkout. Questo flusso è nell'app; il web non avvia mai un addebito su carta.",
   "add.receive.readFailed": "Al momento non riusciamo a leggere i tuoi indirizzi. Non è cambiato nulla: riprova tra un attimo.",
-  "add.receive.none": "Non c'è ancora un indirizzo su cui ricevere. Crea il tuo portafoglio e comparirà qui.",
   "add.request.title": "Richiedi con un link",
   "add.request.lead": "Condividi il tuo link Hi.me così chiunque può pagarti",
   "add.request.copyLink": "Copia link",
@@ -90,14 +89,6 @@
   "products.spaces.sub": "Sulla tua attrezzatura o sui tuoi contenuti, pagati in USDC direttamente a te",
   "linkPhone.pay.title": "Collega il telefono per pagare da qui",
   "linkPhone.pay.bodyAndroid": "Apri HOLD su questo telefono per collegarlo. Da quel momento, l'app approverà ogni pagamento che avvii qui.",
-  "linkPhone.pay.bodyApple": "Questo portafoglio è stato creato nell'app HOLD sul tuo telefono Android. Mostra un codice qui, poi apri HOLD sul telefono Android e scansionalo.",
-  "linkPhone.pay.body": "Questo portafoglio è stato creato nell'app HOLD e le sue chiavi restano sul tuo telefono. Collegalo una volta e potrai pagare da qui.",
-  "linkPhone.approve.titleApple": "Collega questo {device}",
-  "linkPhone.approve.bodyApple": "La tua passkey approva già i pagamenti su questo {device}. Il collegamento lo registra solo come uno dei tuoi dispositivi.",
-  "linkPhone.approve.title": "Approva i pagamenti sul telefono",
-  "linkPhone.approve.bodyAndroid": "Scarica HOLD su questo telefono e approverà ogni pagamento che avvii qui. Fino ad allora, li approva la tua passkey.",
-  "linkPhone.approve.body": "Collega il tuo telefono Android e l'app HOLD approverà ogni pagamento che avvii qui. Fino ad allora, li approva la tua passkey.",
-  "linkPhone.getOnPlay": "Scarica HOLD da Google Play",
   "linkPhone.later": "Più tardi",
   "payLinks.title": "Link di pagamento",
   "payLinks.introTitle": "Fatti pagare da chiunque, da qualsiasi portafoglio",
@@ -181,5 +172,7 @@
   "payLinks.pay.cantStart": "Non è stato possibile avviare questo pagamento da questa pagina. Non è stato pagato nulla; ricarica la pagina e riprova.",
   "payLinks.pay.mismatch": "Il pagamento che abbiamo ricevuto non corrispondeva a quello mostrato in questa pagina, quindi non è stato inviato nulla al tuo portafoglio. Non è stato pagato nulla; ricarica la pagina e riprova.",
   "payLinks.pay.notFound": "Non troviamo più questo link o pagamento. Ricarica la pagina.",
-  "payLinks.pay.badRequest": "Non troviamo questo link o pagamento. Controlla il link e ricarica la pagina."
+  "payLinks.pay.badRequest": "Non troviamo questo link o pagamento. Controlla il link e ricarica la pagina.",
+  "add.receive.noneGetApp": "Non c'è ancora un indirizzo su cui essere pagato. Il tuo portafoglio si crea nell'app HOLD: scaricala, e l'indirizzo comparirà qui.",
+  "linkPhone.pay.bodyComputer": "Le chiavi del tuo portafoglio restano sul tuo telefono. Collegalo una volta e l'app HOLD approva ogni pagamento che avvii qui."
 }

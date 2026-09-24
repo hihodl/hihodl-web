@@ -6,7 +6,7 @@
  *         `registered_address` once an unlock has registered it
  *   app   `app_wallet` (or any address /me/addresses knows): the app made it,
  *         and /me/addresses has its Solana and EVM addresses
- * `canCreate` is the rollout gate saying a web wallet may be made here now.
+ * No wallet: it is made in the HOLD app (the web makes none since 2026-09-24).
  *
  * Balances are read-only, from the public address, through the backend's
  * authed Solana RPC proxy: no unlock, no key.
@@ -29,8 +29,6 @@ export interface HoldWallet {
   evm: string | null;
   /** A web wallet whose address the backend does not watch yet: one unlock on the Wallet page registers it. */
   unregistered: boolean;
-  /** No wallet, and the rollout gate lets the web make one. */
-  canCreate: boolean;
   /** The Wallet page exists for this person. */
   walletPage: boolean;
 }
@@ -47,12 +45,12 @@ export function useHoldWallet(): HoldWallet {
 
   if (s?.state === "web_wallet") {
     const solana = s.registered_address ?? appSolana;
-    return { loading, kind: "web", solana, evm, unregistered: !s.registered_address, canCreate: false, walletPage };
+    return { loading, kind: "web", solana, evm, unregistered: !s.registered_address, walletPage };
   }
   if (s?.state === "app_wallet" || appSolana || evm) {
-    return { loading, kind: "app", solana: appSolana, evm, unregistered: false, canCreate: false, walletPage };
+    return { loading, kind: "app", solana: appSolana, evm, unregistered: false, walletPage };
   }
-  return { loading, kind: "none", solana: null, evm: null, unregistered: false, canCreate: walletPage && s?.state === "none", walletPage };
+  return { loading, kind: "none", solana: null, evm: null, unregistered: false, walletPage };
 }
 
 export function useBalances(address: string | null) {

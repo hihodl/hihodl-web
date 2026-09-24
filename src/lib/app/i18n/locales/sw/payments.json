@@ -74,7 +74,6 @@
   "thread.noAccount": "Hakuna akaunti ya HOLD upande mwingine wa mazungumzo haya.",
   "thread.request": "Omba",
   "thread.bookSpot": "Hifadhi nafasi",
-  "thread.approvedWith": "Yanaidhinishwa kwa passkey yako, au kwenye simu yako kama umeunganisha moja.",
   "thread.opening": "Inafungua…",
   "didNotGoThrough": "Hilo halikufanikiwa. Jaribu tena.",
   "chat.nothingYet": "Bado hakuna chochote kati yako na {name}.",
@@ -143,5 +142,6 @@
   "picker.alreadyChosen": "@{handle} tayari amechaguliwa.",
   "picker.looking": "Inatafuta…",
   "picker.addHandle": "Ongeza @{handle}",
-  "picker.byExactHandle": "Kwa jina lake kamili la mtumiaji wa HOLD"
+  "picker.byExactHandle": "Kwa jina lake kamili la mtumiaji wa HOLD",
+  "thread.approvedOnPhone": "Imeidhinishwa na kutiwa sahihi kwenye simu yako iliyounganishwa, kwenye programu ya HOLD."
 }

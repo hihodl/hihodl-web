@@ -1,6 +1,5 @@
 {
   "home.wallet": "Carteira",
-  "home.walletSub": "Seu endereço Solana, palavras de recuperação e saques",
   "home.security": "Segurança",
   "home.recovery": "Recuperação da conta",
   "home.statements": "Extratos",
@@ -19,7 +18,6 @@
   "tiles.invite": "Convidar amigos",
   "tiles.inviteSub": "Ganhem recompensas juntos",
   "tiles.link": "Vincular seu celular",
-  "tiles.linkSub": "O Android aprova pagamentos",
   "plan.title": "Seu plano",
   "plan.proBody": "Você está no Pro. As transferências são sem gas e as conversões não têm margem base.",
   "plan.standardBody": "Você está no Standard. Tudo no HOLD funciona; o Pro remove a margem base nas conversões e deixa as transferências sem gas.",
@@ -52,8 +50,6 @@
   "recovery.setUp": "Configurar",
   "recovery.foot": "Configure pelo menos duas. Você pode mudar quando quiser.",
   "passkeys.title": "Passkeys",
-  "passkeys.addAnother": "Adicionar outro dispositivo",
-  "passkeys.add": "Adicionar passkey",
   "passkeys.what": "O que são passkeys?",
   "passkeys.infoBody1": "Passkeys permitem entrar com Face ID ou impressão digital — sem senha e sem frase de recuperação para digitar.",
   "passkeys.infoBody2": "Cada dispositivo de onde você entra registra a sua própria passkey, então pode adicioná-las ou removê-las de forma independente aqui.",
@@ -183,5 +179,8 @@
   "invite.friend": "Amigo",
   "inTheApp.back": "← Benefícios",
   "inTheApp.title": "Disponível no app HOLD por enquanto",
-  "inTheApp.body": "Entre lá com a mesma conta. Em breve chega à web."
+  "inTheApp.body": "Entre lá com a mesma conta. Em breve chega à web.",
+  "home.walletSubPhone": "Seus endereços e envios, aprovados no seu celular",
+  "tiles.linkSubEvery": "Ele aprova cada pagamento",
+  "passkeys.addInApp": "Adicione uma passkey no app HOLD do seu celular."
 }

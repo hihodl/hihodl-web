@@ -1,5 +1,5 @@
 /**
- * The box that carries the wallet to an Android phone.
+ * The box that carries an older web wallet to the phone being linked.
  *
  * X25519 + XSalsa20-Poly1305 (`nacl.box`), both key pairs ephemeral: the web
  * pair is made when the link session opens and lives only in this tab's

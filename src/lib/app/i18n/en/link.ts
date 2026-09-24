@@ -14,25 +14,13 @@ const link = {
 
   // Paying from a wallet made in the app, with no phone linked
   "pay.title": "Link your phone to pay from here",
-  "pay.bodyAndroid": "Your wallet was made in the HOLD app. Link this phone once, and the app approves every payment you start here. Until then, nothing can be paid from here.",
-  "pay.bodyApple": "Your wallet was made in the HOLD app on your Android phone, and its keys stay there. Show a code here, scan it with HOLD on that phone, and you can pay from here. Until then, nothing can be paid from here.",
-  "pay.bodyComputer": "Your wallet was made in the HOLD app, and its keys stay on your phone. Link the phone once, and it approves and signs every payment you start here. Until then, nothing can be paid from here.",
 
   // The computer's side, waiting for the phone ({name} is iPhone or iPad)
-  "waiting.scanOnAndroid": "Open HOLD on your Android phone and scan this code.",
-  "waiting.qrAndroid": "Scan with the HOLD app on your Android phone",
   "waiting.qrPhone": "Scan with your phone",
   "waiting.status": "Waiting for your phone · <n>{left}</n>",
-  "waiting.linkThisInstead": "Link this {name} instead",
-  "waiting.linkThis": "Link this {name}",
-  "waiting.appleHere": "You are on your {name}, so this is the {name} we link. Payments are still approved with your passkey, on this {name}.",
-  "waiting.linkMyAndroid": "Link my Android phone",
   "waiting.androidHere": "Open the HOLD app with this link. It shows a six-digit code: come back to this page to check it matches.",
   "waiting.validFor": "Code valid for {left}",
   "waiting.openInHold": "Open in HOLD",
-  "waiting.scanWithCamera": "A linked Android phone approves and signs, in the HOLD app, the payments you start on the web. Scan this code with its camera.",
-  "waiting.iphoneRow": "<b>iPhone</b> opens it in Safari. Sign in with this account. Your passkey keeps approving payments.",
-  "waiting.androidRow": "<b>Android</b> opens the HOLD app, or shows where to get it.",
 
   // Checking the six-digit code
   "confirm.joinedCarries": "Your phone joined. Before your wallet goes to it, check this is your phone.",
@@ -47,24 +35,11 @@ const link = {
 
   "done.title": "Your phone is linked",
   "done.android": "Payments you start on the web are now approved and signed in the HOLD app on this phone.",
-  "done.appleNamed": "This {name} is on your account. Payments are still approved with your passkey.",
-  "done.apple": "Your iPhone is on your account. Payments are still approved with your passkey.",
 
   // The phone's side (/link/<sessionId>)
   "phone.androidBody": "Your phone links in the HOLD app. It opens on a six-digit code: check it matches the one on your computer.",
   "phone.noApp": "No HOLD app yet? Install it, sign in with the same account, and it picks up this link where you left it.",
   "phone.computer": "This page is for your phone. Scan the code on your computer with your phone's camera.",
-  "phone.appleSelf": "This is the {name} you started on. Link it to your HOLD account. Payments are still approved with your passkey.",
-  "phone.appleOther": "Link this {name} to your HOLD account. Payments are still approved with your passkey.",
-  "phone.linking": "Linking…",
-  "phone.linked": "Linked",
-  "phone.linkedBody": "Linked. You can close this.",
-  "phone.expiredTitle": "This code expired",
-  "phone.expiredBody": "Codes last five minutes. Show a new one on your computer and scan it again.",
-  "phone.otherAccountTitle": "Another account",
-  "phone.otherAccount": "This code belongs to another HOLD account. Sign in with the account you use on your computer.",
-  "phone.otherAccountEmail": "This code belongs to another HOLD account, not {email}. Sign in with the account you use on your computer.",
-  "phone.joinFailed": "That did not go through. Try again.",
 
   // Approving a spot or a stay on the phone
   "approval.pending": "Approve on your phone",
@@ -84,8 +59,6 @@ const link = {
   "refusal.cancelled": "Cancelled. Nothing has been charged.",
   "refusal.validationSpot": "We couldn't ask your phone about this spot. Nothing has been charged. Try again.",
   "refusal.validationStay": "We couldn't ask your phone about this stay. Nothing has been charged. Try again.",
-  "refusal.noPhone": "Your phone is no longer linked. Nothing has been charged.",
-  "refusal.noWallet": "This account has no wallet to pay from yet. Nothing has been charged.",
   "refusal.notFoundSpot": "We couldn't find that order any more. Nothing has been charged. Pick the spot again.",
   "refusal.notFoundStay": "We couldn't find that booking any more. Nothing has been charged. Pick the room again.",
   "refusal.alreadyPaidSpot": "This spot is already paid for.",
@@ -105,6 +78,14 @@ const link = {
   "refusal.network": "We couldn't reach HOLD. Nothing has been charged. Check your connection and try again.",
   "refusal.defaultSpot": "We couldn't ask your phone to approve this spot. Nothing has been charged. Try again.",
   "refusal.defaultStay": "We couldn't ask your phone to approve this stay. Nothing has been charged. Try again.",
+  "refusal.linkFirst": "Link your phone to pay from here. Nothing has been charged.",
+  "refusal.approveOnPhone": "Your phone is linked: approve it in the HOLD app. Nothing has been charged.",
+  "refusal.noWalletGetApp": "This account has no wallet to pay from yet. Get the HOLD app to make one. Nothing has been charged.",
+  "pay.bodyComputerKeys": "Your wallet's keys stay on your phone. Link it once, and the HOLD app approves and signs every payment you start here. Until then, nothing can be paid from here.",
+  "pay.bodyThisPhone": "Link this phone once, and the HOLD app approves and signs every payment you start here. Until then, nothing can be paid from here.",
+  "getOnAppStore": "Get HOLD on the App Store",
+  "waiting.scanAnyPhone": "Your linked phone approves and signs, in the HOLD app, every payment you start on the web. Scan this code with your phone's camera, or from the HOLD app.",
+  "waiting.opensOnPhone": "HOLD opens on your iPhone or Android phone and shows a six-digit code. No HOLD yet? The code shows where to get it.",
 } satisfies Record<string, string>;
 
 export default link;

@@ -82,5 +82,15 @@
   "error.payoutChainUnknown": "HiSpace hailipi kwenye mtandao huo.",
   "error.payoutNonceInvalid": "Ombi hilo limeisha muda au tayari limetumika. Anza upya na utie sahihi ujumbe mpya.",
   "error.payoutSignatureInvalid": "Sahihi hiyo si ya anwani hii. Hakikisha pochi uliyotumia kutia sahihi ndiyo uliyounganisha, kisha ujaribu tena.",
-  "error.xFrontsALiveSpace": "Akaunti hii ya X iko kwenye tangazo linaloendelea, kwa hiyo itabaki imeunganishwa hadi tangazo hilo lifungwe. Wafadhili walilipia jina hilo."
+  "error.xFrontsALiveSpace": "Akaunti hii ya X iko kwenye tangazo linaloendelea, kwa hiyo itabaki imeunganishwa hadi tangazo hilo lifungwe. Wafadhili walilipia jina hilo.",
+  "getApp.title": "Pakua programu ya HOLD",
+  "getApp.body": "Pochi yako inaundwa kwenye programu ya HOLD, kwenye iPhone au simu yako ya Android. Ingia huko kwa akaunti hii, na wavuti itafungua pochi hiyo hiyo. Simu yako huidhinisha kila malipo.",
+  "getApp.failedTitle": "Hatukuweza kufungua akaunti yako",
+  "getApp.failedBody": "Angalia muunganisho wako kisha ujaribu tena.",
+  "getApp.checking": "Inakagua…",
+  "getApp.retry": "Jaribu tena",
+  "getApp.noWebWallet": "Hakuna pochi iliyoundwa kwenye wavuti",
+  "getApp.makeOnce": "Iunde mara moja kwenye programu. Kisha rudi hapa na ukague tena.",
+  "getApp.checkAgain": "Nimeiunda, kagua tena",
+  "getApp.goToSpaces": "Nenda kwenye Spaces"
 }

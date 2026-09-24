@@ -1,6 +1,5 @@
 {
   "home.wallet": "Wallet",
-  "home.walletSub": "Deine Solana-Adresse, Wiederherstellungswörter und Auszahlungen",
   "home.security": "Sicherheit",
   "home.recovery": "Kontowiederherstellung",
   "home.statements": "Kontoauszüge",
@@ -19,7 +18,6 @@
   "tiles.invite": "Freunde einladen",
   "tiles.inviteSub": "Gemeinsam Prämien verdienen",
   "tiles.link": "Handy verknüpfen",
-  "tiles.linkSub": "Android bestätigt Zahlungen",
   "plan.title": "Dein Tarif",
   "plan.proBody": "Du hast Pro. Überweisungen sind ohne Gas, und Umrechnungen haben keinen Basisaufschlag.",
   "plan.standardBody": "Du hast Standard. Alles in HOLD funktioniert; Pro entfernt den Basisaufschlag bei Umrechnungen und macht Überweisungen gasfrei.",
@@ -52,8 +50,6 @@
   "recovery.setUp": "Einrichten",
   "recovery.foot": "Richte mindestens zwei ein. Du kannst sie jederzeit ändern.",
   "passkeys.title": "Passkeys",
-  "passkeys.addAnother": "Weiteres Gerät hinzufügen",
-  "passkeys.add": "Passkey hinzufügen",
   "passkeys.what": "Was sind Passkeys?",
   "passkeys.infoBody1": "Mit Passkeys meldest du dich per Face ID oder Fingerabdruck an – ohne Passwort und ohne Wiederherstellungsphrase.",
   "passkeys.infoBody2": "Jedes Gerät, mit dem du dich anmeldest, registriert seinen eigenen Passkey, sodass du sie hier einzeln hinzufügen oder entfernen kannst.",
@@ -183,5 +179,8 @@
   "invite.friend": "Freund",
   "inTheApp.back": "← Vorteile",
   "inTheApp.title": "Vorerst in der HOLD-App verfügbar",
-  "inTheApp.body": "Melde dich dort mit demselben Konto an. Als Nächstes kommt es ins Web."
+  "inTheApp.body": "Melde dich dort mit demselben Konto an. Als Nächstes kommt es ins Web.",
+  "home.walletSubPhone": "Deine Adressen und Sendungen, bestätigt auf deinem Handy",
+  "tiles.linkSubEvery": "Bestätigt jede Zahlung",
+  "passkeys.addInApp": "Füg in der HOLD-App auf deinem Handy einen Passkey hinzu."
 }

@@ -57,7 +57,6 @@ import {
 } from "@/lib/app/display-mode";
 import { chosenUsername, emailRecoveryCodes, recoveryCodesStatus } from "@/lib/app/me";
 import { useMe } from "@/lib/app/spaces-data";
-import { useHoldWallet } from "@/lib/app/hold-wallet";
 import { thisDevice, type Phone } from "@/lib/link/ua";
 import { listSessions, revokeSession, thisBrowserSessionId, type ActiveSession } from "@/lib/app/sessions";
 import { listPasskeys, type RegisteredPasskey } from "@/lib/wallet/api";
@@ -163,11 +162,11 @@ function MenuHome({ open }: { open: (s: Screen) => void }) {
         {/*
           Wallet sits here and no longer in the side column. Beside Home it
           read as a second money screen; it is not one. It is where the wallet
-          is made, unlocked and its recovery words read — which is this list's
-          subject, next to Security and Account recovery.
+          made in the HOLD app is read and sent from, approved on the phone —
+          which is this list's subject, next to Security and Account recovery.
         */}
         {walletPage === true ? (
-          <MenuRow icon="wallet-outline" label={t("menu.home.wallet")} sub={t("menu.home.walletSub")} href={productHref("/wallet")} reload />
+          <MenuRow icon="wallet-outline" label={t("menu.home.wallet")} sub={t("menu.home.walletSubPhone")} href={productHref("/wallet")} reload />
         ) : null}
         <MenuRow icon="shield-checkmark-outline" label={t("menu.home.security")} onClick={() => open("security")} />
         <MenuRow icon="key-outline" label={t("menu.home.recovery")} badge={recoveryBadge} onClick={() => open("recovery")} />
@@ -253,7 +252,7 @@ function MenuTiles({ open }: { open: (s: Screen) => void }) {
       />
       <Tile icon="person-add-outline" title={t("menu.tiles.invite")} sub={t("menu.tiles.inviteSub")} onClick={() => open("invite")} />
       {/* The link screen itself: a full load, it carries the wallet pages' CSP. */}
-      <Tile icon="phone-portrait-outline" title={t("menu.tiles.link")} sub={t("menu.tiles.linkSub")} href={linkHref(productHref, productHref("/menu"))} reload />
+      <Tile icon="phone-portrait-outline" title={t("menu.tiles.link")} sub={t("menu.tiles.linkSubEvery")} href={linkHref(productHref, productHref("/menu"))} reload />
     </div>
   );
 }
@@ -530,18 +529,11 @@ function added(iso: string): string {
 }
 
 function PasskeysScreen({ onBack }: { onBack: () => void }) {
-  const productHref = useProductHref();
-  const w = useHoldWallet();
   const passkeys = usePasskeys();
   const [info, setInfo] = useState(false);
   const t = useT();
-  // Adding a passkey happens in the Wallet, which carries a strict CSP only a full page load can set.
-  const add = w.walletPage ? (
-    <a href={productHref("/wallet")} className={passkeys && passkeys.length > 0 ? ctaSecondary : ctaPrimary}>
-      <Ion name="add" size={18} />
-      {passkeys && passkeys.length > 0 ? t("menu.passkeys.addAnother") : t("menu.passkeys.add")}
-    </a>
-  ) : null;
+  // Passkeys are added in the HOLD app: adding one here meant unlocking a web wallet, and the web makes none.
+  const add = <p className="text-[12.5px] leading-[18px] text-white/60">{t("menu.passkeys.addInApp")}</p>;
   return (
     <Column>
       <BackHeader

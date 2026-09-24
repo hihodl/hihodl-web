@@ -120,9 +120,12 @@ export function describeApprovalRefusal(code: string, kind: PaymentKind): string
     case "VALIDATION_ERROR":
       return spot ? t("link.refusal.validationSpot") : t("link.refusal.validationStay");
     case "NO_PHONE_LINKED":
-      return t("link.refusal.noPhone");
+    case "LINK_YOUR_PHONE_FIRST":
+      return t("link.refusal.linkFirst");
+    case "APPROVE_ON_YOUR_PHONE":
+      return t("link.refusal.approveOnPhone");
     case "NO_WALLET":
-      return t("link.refusal.noWallet");
+      return t("link.refusal.noWalletGetApp");
     case "NOT_FOUND":
     case "not_found":
       return spot ? t("link.refusal.notFoundSpot") : t("link.refusal.notFoundStay");

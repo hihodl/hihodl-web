@@ -2,7 +2,6 @@
 const menu = {
   /* Home: the menu card */
   "home.wallet": "Wallet",
-  "home.walletSub": "Your Solana address, recovery words and withdrawals",
   "home.security": "Security",
   "home.recovery": "Account recovery",
   "home.statements": "Statements",
@@ -23,7 +22,6 @@ const menu = {
   "tiles.invite": "Invite friends",
   "tiles.inviteSub": "Earn rewards together",
   "tiles.link": "Link your phone",
-  "tiles.linkSub": "Android approves payments",
 
   /* Plan */
   "plan.title": "Your plan",
@@ -69,8 +67,6 @@ const menu = {
 
   /* Passkeys */
   "passkeys.title": "Passkeys",
-  "passkeys.addAnother": "Add another device",
-  "passkeys.add": "Add a passkey",
   "passkeys.what": "What are passkeys?",
   "passkeys.infoBody1": "Passkeys let you sign in with Face ID or your fingerprint — no password and no recovery phrase to type.",
   "passkeys.infoBody2": "Each device you sign in from registers its own passkey, so you can add or remove them independently here.",
@@ -221,6 +217,9 @@ const menu = {
   "inTheApp.back": "← Benefits",
   "inTheApp.title": "Available in the HOLD app for now",
   "inTheApp.body": "Sign in there with the same account. It comes to the web next.",
+  "home.walletSubPhone": "Your addresses and sends, approved on your phone",
+  "tiles.linkSubEvery": "It approves every payment",
+  "passkeys.addInApp": "Add a passkey in the HOLD app on your phone.",
 } satisfies Record<string, string>;
 
 export default menu;

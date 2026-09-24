@@ -74,7 +74,6 @@
   "thread.noAccount": "Não há uma conta HOLD do outro lado desta conversa.",
   "thread.request": "Solicitar",
   "thread.bookSpot": "Reservar um spot",
-  "thread.approvedWith": "Aprovado com sua passkey, ou no seu celular se você tiver vinculado um.",
   "thread.opening": "Abrindo…",
   "didNotGoThrough": "Não deu certo. Tente de novo.",
   "chat.nothingYet": "Nada entre você e {name} ainda.",
@@ -143,5 +142,6 @@
   "picker.alreadyChosen": "@{handle} já foi escolhido.",
   "picker.looking": "Buscando…",
   "picker.addHandle": "Adicionar @{handle}",
-  "picker.byExactHandle": "Pelo usuário exato no HOLD"
+  "picker.byExactHandle": "Pelo usuário exato no HOLD",
+  "thread.approvedOnPhone": "Aprovado e assinado no seu celular vinculado, no app HOLD."
 }

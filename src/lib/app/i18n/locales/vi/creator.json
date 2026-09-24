@@ -68,7 +68,6 @@
   "publish.yourHoldWallet": "Ví HOLD của bạn",
   "publish.anotherWallet": "Ví khác, xác minh bằng chữ ký",
   "publish.unlockWallet": "Mở khoá ví",
-  "publish.makeWallet": "Tạo ví",
   "publish.setUp": "Thiết lập",
   "publish.wherePaid": "Nơi nhà tài trợ trả cho bạn, bằng USDC",
   "publish.usdcAccount": "Tài khoản USDC",
@@ -329,5 +328,6 @@
   "wallet.noSolana": "Không tìm thấy ví Solana trong trình duyệt này. Hãy cài Phantom, hoặc mở trang này trong trình duyệt của Phantom.",
   "wallet.noEvm": "Không tìm thấy ví Ethereum trong trình duyệt này. Hãy cài MetaMask, hoặc mở trang này trong trình duyệt của ví.",
   "wallet.rejected": "Bạn đã từ chối trong {name}. Chưa có gì được gửi, và không có gì di chuyển.",
-  "wallet.failed": "{name} không hoàn tất được. Hãy thử lại."
+  "wallet.failed": "{name} không hoàn tất được. Hãy thử lại.",
+  "publish.getApp": "Tải ứng dụng HOLD"
 }

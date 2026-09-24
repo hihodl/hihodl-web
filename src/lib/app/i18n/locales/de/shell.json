@@ -82,5 +82,15 @@
   "error.payoutChainUnknown": "Auf diesem Netzwerk zahlt HiSpace nicht aus.",
   "error.payoutNonceInvalid": "Diese Anfrage ist abgelaufen oder wurde schon verwendet. Fang nochmal an und signiere die neue Nachricht.",
   "error.payoutSignatureInvalid": "Diese Signatur stammt nicht von dieser Adresse. Achte darauf, dass du mit der verbundenen Wallet signierst, und versuch es nochmal.",
-  "error.xFrontsALiveSpace": "Dieses X-Konto gehört zu einem aktiven Inserat und bleibt verbunden, bis das Inserat endet. Sponsoren haben für diesen Handle bezahlt."
+  "error.xFrontsALiveSpace": "Dieses X-Konto gehört zu einem aktiven Inserat und bleibt verbunden, bis das Inserat endet. Sponsoren haben für diesen Handle bezahlt.",
+  "getApp.title": "Hol dir die HOLD-App",
+  "getApp.body": "Deine Wallet wird in der HOLD-App erstellt, auf deinem iPhone oder Android-Handy. Melde dich dort mit diesem Konto an, und das Web öffnet dieselbe Wallet. Dein Handy bestätigt jede Zahlung.",
+  "getApp.failedTitle": "Wir konnten dein Konto nicht öffnen",
+  "getApp.failedBody": "Prüf deine Verbindung und versuch es nochmal.",
+  "getApp.checking": "Wird geprüft…",
+  "getApp.retry": "Erneut versuchen",
+  "getApp.noWebWallet": "Im Web ist keine Wallet erstellt",
+  "getApp.makeOnce": "Erstell sie einmal in der App. Komm dann hierher zurück und prüf nochmal.",
+  "getApp.checkAgain": "Ich hab sie erstellt, nochmal prüfen",
+  "getApp.goToSpaces": "Zu Spaces"
 }

@@ -68,7 +68,6 @@
   "publish.yourHoldWallet": "내 HOLD 지갑",
   "publish.anotherWallet": "서명으로 확인한 다른 지갑",
   "publish.unlockWallet": "지갑 잠금 해제",
-  "publish.makeWallet": "지갑 만들기",
   "publish.setUp": "설정",
   "publish.wherePaid": "스폰서가 USDC로 결제하는 곳",
   "publish.usdcAccount": "USDC 계정",
@@ -329,5 +328,6 @@
   "wallet.noSolana": "이 브라우저에 Solana 지갑이 없어요. Phantom을 설치하거나 Phantom 앱 내 브라우저에서 이 페이지를 여세요.",
   "wallet.noEvm": "이 브라우저에 Ethereum 지갑이 없어요. MetaMask를 설치하거나 지갑 앱 내 브라우저에서 이 페이지를 여세요.",
   "wallet.rejected": "{name}에서 거절했어요. 아무것도 전송되지 않았고, 이동한 돈도 없어요.",
-  "wallet.failed": "{name}에서 완료하지 못했어요. 다시 시도하세요."
+  "wallet.failed": "{name}에서 완료하지 못했어요. 다시 시도하세요.",
+  "publish.getApp": "HOLD 앱 받기"
 }

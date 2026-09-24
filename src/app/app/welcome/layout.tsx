@@ -2,9 +2,10 @@
  * Onboarding: app.hihodl.xyz/welcome (and /app/welcome elsewhere).
  *
  * Outside the shell (no sidebar: one step, one card), on the same ground.
- * It can create the web wallet, so the middleware gives it the wallet pages'
- * strict nonce-based Content-Security-Policy (lib/wallet/csp.ts): keys are
- * made in this page's memory.
+ * It makes no wallet any more, but its link step can open an older web
+ * wallet's secret to seal it to the phone, so the middleware still gives it
+ * the wallet pages' strict nonce-based Content-Security-Policy
+ * (lib/wallet/csp.ts).
  */
 
 import type { Metadata } from "next";

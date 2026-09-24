@@ -82,5 +82,15 @@
   "error.payoutChainUnknown": "HiSpace 不在该网络上付款。",
   "error.payoutNonceInvalid": "该请求已超时或已被使用。请重新开始并签署新消息。",
   "error.payoutSignatureInvalid": "该签名不属于此地址。请确认你签名所用的钱包就是你关联的那个，然后重试。",
-  "error.xFrontsALiveSpace": "此 X 账户正用于一个进行中的刊登，在该刊登结束前会保持关联。赞助商已为这个账号付费。"
+  "error.xFrontsALiveSpace": "此 X 账户正用于一个进行中的刊登，在该刊登结束前会保持关联。赞助商已为这个账号付费。",
+  "getApp.title": "获取 HOLD 应用",
+  "getApp.body": "你的钱包由 iPhone 或 Android 手机上的 HOLD 应用创建。在那里用此账户登录后，网页版会打开同一个钱包。你的手机会批准每一笔付款。",
+  "getApp.failedTitle": "我们无法打开你的账户",
+  "getApp.failedBody": "请检查网络连接后重试。",
+  "getApp.checking": "检查中…",
+  "getApp.retry": "重试",
+  "getApp.noWebWallet": "网页版还没有创建钱包",
+  "getApp.makeOnce": "请先在应用中创建一次。然后回到这里再次检查。",
+  "getApp.checkAgain": "我已创建，重新检查",
+  "getApp.goToSpaces": "前往 Spaces"
 }

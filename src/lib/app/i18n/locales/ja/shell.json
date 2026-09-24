@@ -82,5 +82,15 @@
   "error.payoutChainUnknown": "このネットワークは HiSpace の支払いに対応していません。",
   "error.payoutNonceInvalid": "このリクエストは期限切れか、すでに使用されています。最初からやり直して、新しいメッセージに署名してください。",
   "error.payoutSignatureInvalid": "この署名はこのアドレスのものではありません。署名したウォレットが接続したウォレットと同じか確認して、もう一度お試しください。",
-  "error.xFrontsALiveSpace": "この X アカウントは公開中の出品に使われているため、その出品が終了するまで接続されたままになります。スポンサーはこのハンドルに対して支払いました。"
+  "error.xFrontsALiveSpace": "この X アカウントは公開中の出品に使われているため、その出品が終了するまで接続されたままになります。スポンサーはこのハンドルに対して支払いました。",
+  "getApp.title": "HOLD アプリを入手",
+  "getApp.body": "ウォレットは iPhone または Android スマホの HOLD アプリで作成されます。このアカウントでサインインすると、ウェブでも同じウォレットが開きます。すべての支払いはスマホが承認します。",
+  "getApp.failedTitle": "アカウントを開けませんでした",
+  "getApp.failedBody": "接続を確認して、もう一度お試しください。",
+  "getApp.checking": "確認中…",
+  "getApp.retry": "再試行",
+  "getApp.noWebWallet": "ウェブではウォレットが作成されていません",
+  "getApp.makeOnce": "まずアプリで一度作成してください。それからここに戻って、もう一度確認してください。",
+  "getApp.checkAgain": "作成しました。もう一度確認",
+  "getApp.goToSpaces": "Spaces に移動"
 }

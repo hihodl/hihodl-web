@@ -82,5 +82,15 @@
   "error.payoutChainUnknown": "HiSpace betaalt niet uit op dat netwerk.",
   "error.payoutNonceInvalid": "Dat verzoek is verlopen of al gebruikt. Begin opnieuw en onderteken het nieuwe bericht.",
   "error.payoutSignatureInvalid": "Die handtekening hoort niet bij dit adres. Controleer of je ondertekende met de wallet die je hebt gekoppeld en probeer het opnieuw.",
-  "error.xFrontsALiveSpace": "Dit X-account staat op een actieve advertentie, dus het blijft gekoppeld tot die advertentie sluit. Sponsors hebben voor die handle betaald."
+  "error.xFrontsALiveSpace": "Dit X-account staat op een actieve advertentie, dus het blijft gekoppeld tot die advertentie sluit. Sponsors hebben voor die handle betaald.",
+  "getApp.title": "Download de HOLD-app",
+  "getApp.body": "Je wallet wordt gemaakt in de HOLD-app, op je iPhone of Android-telefoon. Log daar in met dit account, en het web opent dezelfde wallet. Je telefoon keurt elke betaling goed.",
+  "getApp.failedTitle": "We konden je account niet openen",
+  "getApp.failedBody": "Controleer je verbinding en probeer het opnieuw.",
+  "getApp.checking": "Controleren…",
+  "getApp.retry": "Opnieuw",
+  "getApp.noWebWallet": "Er is geen wallet gemaakt op het web",
+  "getApp.makeOnce": "Maak hem één keer aan in de app. Kom dan hier terug en controleer opnieuw.",
+  "getApp.checkAgain": "Ik heb hem gemaakt, opnieuw controleren",
+  "getApp.goToSpaces": "Naar Spaces"
 }

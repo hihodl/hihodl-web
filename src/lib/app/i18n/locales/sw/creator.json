@@ -68,7 +68,6 @@
   "publish.yourHoldWallet": "Pochi yako ya HOLD",
   "publish.anotherWallet": "Pochi nyingine, iliyothibitishwa kwa sahihi",
   "publish.unlockWallet": "Fungua pochi",
-  "publish.makeWallet": "Unda pochi",
   "publish.setUp": "Andaa",
   "publish.wherePaid": "Wafadhili wanapokulipa, kwa USDC",
   "publish.usdcAccount": "Akaunti ya USDC",
@@ -329,5 +328,6 @@
   "wallet.noSolana": "Hakuna pochi ya Solana iliyopatikana kwenye kivinjari hiki. Sakinisha Phantom, au fungua ukurasa huu kwenye kivinjari cha Phantom chenyewe.",
   "wallet.noEvm": "Hakuna pochi ya Ethereum iliyopatikana kwenye kivinjari hiki. Sakinisha MetaMask, au fungua ukurasa huu kwenye kivinjari cha pochi yako chenyewe.",
   "wallet.rejected": "Ulikataa hilo kwenye {name}. Hakuna kilichotumwa, na hakuna kilichohamishwa upande wowote.",
-  "wallet.failed": "{name} haikuweza kukamilisha hilo. Jaribu tena."
+  "wallet.failed": "{name} haikuweza kukamilisha hilo. Jaribu tena.",
+  "publish.getApp": "Pakua programu ya HOLD"
 }

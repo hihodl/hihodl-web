@@ -105,6 +105,16 @@ const shell = {
     "That signature was not this address's. Make sure the wallet you signed with is the one you connected, and try again.",
   "error.xFrontsALiveSpace":
     "This X account is on a live listing, so it stays connected until that listing closes. Sponsors paid for that handle.",
+  "getApp.title": "Get the HOLD app",
+  "getApp.body": "Your wallet is made in the HOLD app, on your iPhone or Android phone. Sign in there with this account, and the web opens the same wallet. Your phone approves every payment.",
+  "getApp.failedTitle": "We couldn't open your account",
+  "getApp.failedBody": "Check your connection and try again.",
+  "getApp.checking": "Checking…",
+  "getApp.retry": "Retry",
+  "getApp.noWebWallet": "No wallet is made on the web",
+  "getApp.makeOnce": "Make it once in the app. Then come back here and check again.",
+  "getApp.checkAgain": "I've made it, check again",
+  "getApp.goToSpaces": "Go to Spaces",
 } satisfies Record<string, string>;
 
 export default shell;

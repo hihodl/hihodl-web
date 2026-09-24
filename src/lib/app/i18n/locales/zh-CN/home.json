@@ -52,7 +52,6 @@
   "add.cash.title": "现金充值",
   "add.cash.about": "用银行卡购买需通过我们的入金服务商及其结账页面完成。该流程在应用中进行；网页版不会发起任何银行卡扣款。",
   "add.receive.readFailed": "暂时无法读取你的地址。没有任何变化——请稍后再试。",
-  "add.receive.none": "还没有可用于收款的地址。创建钱包后，地址就会显示在这里。",
   "add.request.title": "通过链接收款",
   "add.request.lead": "分享你的 Hi.me 链接，任何人都能向你付款",
   "add.request.copyLink": "复制链接",
@@ -90,14 +89,6 @@
   "products.spaces.sub": "在你的装备或内容上，以 USDC 直接付给你",
   "linkPhone.pay.title": "关联你的手机，即可在这里付款",
   "linkPhone.pay.bodyAndroid": "在这部手机上打开 HOLD 进行关联。此后，应用会批准你在这里发起的每一笔付款。",
-  "linkPhone.pay.bodyApple": "此钱包是在你 Android 手机上的 HOLD 应用中创建的。在这里显示验证码，然后在 Android 手机上打开 HOLD 扫描。",
-  "linkPhone.pay.body": "此钱包是在 HOLD 应用中创建的，密钥保存在你的手机上。关联一次，即可在这里付款。",
-  "linkPhone.approve.titleApple": "关联这台 {device}",
-  "linkPhone.approve.bodyApple": "你的通行密钥已经可以在这台 {device} 上批准付款。关联只是把它记录为你的设备之一。",
-  "linkPhone.approve.title": "在手机上批准付款",
-  "linkPhone.approve.bodyAndroid": "在这部手机上安装 HOLD，它会批准你在这里发起的每一笔付款。在此之前，由你的通行密钥批准。",
-  "linkPhone.approve.body": "关联你的 Android 手机后，HOLD 应用会批准你在这里发起的每一笔付款。在此之前，由你的通行密钥批准。",
-  "linkPhone.getOnPlay": "在 Google Play 获取 HOLD",
   "linkPhone.later": "稍后",
   "payLinks.title": "付款链接",
   "payLinks.introTitle": "任何人都能从任意钱包向你付款",
@@ -181,5 +172,7 @@
   "payLinks.pay.cantStart": "无法从此页面发起这笔付款。未支付任何款项；请刷新页面后重试。",
   "payLinks.pay.mismatch": "我们收到的付款与此页面显示的不符，因此没有向你的钱包发送任何内容。未支付任何款项；请刷新页面后重试。",
   "payLinks.pay.notFound": "找不到此链接或付款了。请刷新页面。",
-  "payLinks.pay.badRequest": "找不到此链接或付款。请检查链接并刷新页面。"
+  "payLinks.pay.badRequest": "找不到此链接或付款。请检查链接并刷新页面。",
+  "add.receive.noneGetApp": "目前还没有可收款的地址。你的钱包由 HOLD 应用创建：获取应用后，地址就会显示在这里。",
+  "linkPhone.pay.bodyComputer": "你钱包的密钥保存在手机上。关联一次后，HOLD 应用会批准你在这里发起的每一笔付款。"
 }

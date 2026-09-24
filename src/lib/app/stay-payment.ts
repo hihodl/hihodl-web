@@ -6,15 +6,13 @@
  *
  *   1. hold     POST /travel/prebook          the room, at a locked rate
  *   2. open     POST /travel/bookings/:id/pay what is owed, and where it goes
- *   3. quote    POST /cross-chain/quote       priced BEFORE anything is signed
- *   4. sign     the passkey: one ceremony that approves these exact bytes
- *               (POST /withdrawals/tx-challenge + /tx-authorize) and opens the
- *               wallet that signs them. On its OWN tap: `payForStay` stops at
- *               `approve` with everything read and the challenge checked
- *               against our digest, and `approveStay` starts the prompt as
- *               its first step. Safari refuses a passkey prompt that comes
- *               after several network calls, because the tap no longer counts
- *   5. send     POST /cross-chain/gasless/submit
+ *   3. ask      POST /payment-approvals { kind: "stay", ref: { bookingId } }:
+ *               the linked phone. When the person taps Approve there, the
+ *               SERVER quotes and builds the deposit (priced BEFORE anything
+ *               is signed) and the phone signs it
+ *   4. (the phone)
+ *   5. send     POST /cross-chain/gasless/submit, with the server's own
+ *               quote and key
  *   6. report   POST /settlement/intent/:id/leg
  *   7. settle   GET  /travel/bookings/:id/payment, until funded
  *   8. book     POST /travel/book
@@ -44,32 +42,18 @@
  * not in a component: a screen that unmounts must not be able to open a second
  * intent or re-send a leg that already landed.
  *
- * ── WITH A LINKED PHONE ──
+ * ── THE PHONE APPROVES, ALWAYS ──
  *
- * When `canPayFromWeb` is `app`, steps 3 and 4 are not the web's. After the
- * payment is open, `POST /payment-approvals { kind: "stay", ref: { bookingId } }`
- * asks the phone; the SERVER quotes and builds the deposit when the person
- * taps Approve, the phone signs it, and this page submits it (5) with the
- * server's own quote and key, reports the leg (6) and carries on (7, 8). The
- * build lives about 30 seconds, so the submit starts the moment the poll sees
- * `approved`. A 409 APPROVE_ON_YOUR_PHONE from the passkey doors (a phone
- * linked meanwhile) switches to this path too.
+ * The web does not pay by itself any more (Alex, 2026-09-24): no passkey and
+ * no key is opened here. The build lives about 30 seconds, so the submit
+ * starts the moment the poll sees `approved`. With no phone linked
+ * (409 NO_PHONE_LINKED or LINK_YOUR_PHONE_FIRST) the run stops on
+ * `linkFirst`, and the screen opens the link sheet.
  * documentation/one-wallet-every-device.md, "Payments built by the server,
  * approved on the phone".
  */
 
 "use client";
-
-import { openWallet } from "@/lib/wallet/flows";
-import { getWalletBackup } from "@/lib/wallet/api";
-import { assertWithPrf } from "@/lib/wallet/passkey";
-import { wipe } from "@/lib/wallet/core";
-import { messageOf, signSerializedTx } from "@/lib/wallet/sign-tx";
-import { authorizeTxPasskey, txApprovalChallenge, type AssertionOptionsJSON } from "@/lib/link/api";
-import { type WalletBackup } from "@/lib/wallet/api";
-import { fromBase64 } from "@/lib/wallet/core";
-import { sameBytes, txChallenge } from "@/lib/wallet/withdraw-core";
-import { sha256 } from "@noble/hashes/sha256";
 
 import {
   describeApprovalRefusal,
@@ -78,11 +62,10 @@ import {
   waitForPhone,
   type PaymentApproval,
 } from "@/lib/link/payment-approvals";
-import { getWalletStatus, payerOf } from "@/lib/wallet/api";
 
 import { t } from "@/lib/app/i18n";
 
-import { BridgeRefused, prepareGasless, quoteCovering, submitGasless, type BridgeQuote } from "./bridge";
+import { submitGasless, type BridgeQuote } from "./bridge";
 import { bookIt, openPayment, prebook, readPayment, reportLeg, type Booking, type PrebookQuery, type SettlementIntent } from "./stays";
 
 /* ── How long we wait, and how often ──────────────────────────────── */
@@ -103,11 +86,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /* ── What the screen watches ──────────────────────────────────────── */
 
-/**
- * `approve`: held, priced and built; the passkey is asked on the next tap (`approveStay`).
- * `phone`: the linked phone is asked; `approval` is what it is deciding.
- */
-export type Phase = "idle" | "holding" | "opening" | "approve" | "phone" | "paying" | "settling" | "booking" | "booked" | "stopped";
+/** `phone`: the linked phone is asked; `approval` is what it is deciding. */
+export type Phase = "idle" | "holding" | "opening" | "phone" | "paying" | "settling" | "booking" | "booked" | "stopped";
 
 export interface PayState {
   phase: Phase;
@@ -125,9 +105,11 @@ export interface PayState {
   repriced: { was: number; now: number; currency: string } | null;
   /** While `phone`: the approval the linked phone is deciding. */
   approval: PaymentApproval | null;
+  /** Stopped because no phone is linked: the screen opens the link sheet. */
+  linkFirst?: boolean;
 }
 
-const IDLE: PayState = { phase: "idle", bookingId: null, booking: null, paid: false, message: null, repriced: null, approval: null };
+const IDLE: PayState = { phase: "idle", bookingId: null, booking: null, paid: false, message: null, repriced: null, approval: null, linkFirst: false };
 
 /* ── State that must outlive the screen ───────────────────────────── */
 
@@ -136,32 +118,14 @@ const intents = new Map<string, SettlementIntent>();
 /** One deposit per booking. A retry must never re-send a leg that landed. */
 const sent = new Map<string, string>();
 
-/** The deposit, built and ready for the passkey: what `approveStay` signs. */
-interface PreparedDeposit {
-  intentId: string;
-  priced: Awaited<ReturnType<typeof quoteCovering>>;
-  serializedTx: string;
-  backup: WalletBackup;
-  /** base64 of the compiled message: what the approval is bound to. */
-  message: string;
-  options: AssertionOptionsJSON;
-  preparedAt: number;
-}
-const ready = new Map<string, PreparedDeposit>();
-
-/** A built deposit's blockhash lasts about a minute: past this it is built again rather than prompted for. */
-const FRESH_MS = 60_000;
-
 export function forgetPayment(bookingId?: string) {
   if (bookingId) {
     intents.delete(bookingId);
     sent.delete(bookingId);
-    ready.delete(bookingId);
     return;
   }
   intents.clear();
   sent.clear();
-  ready.clear();
 }
 
 /* ── The run ──────────────────────────────────────────────────────── */
@@ -171,24 +135,15 @@ export interface PayArgs {
   hold: PrebookQuery;
   /** The price the person agreed to, in the booking's currency. */
   quotedPrice: number;
-  /** The wallet's Solana address, already unlocked or about to be. */
-  from: string;
-  /** Their USDC balance on Solana, so a leg that cannot be funded is refused early. */
-  available: number;
-  /** The signed-in person's id, for the passkey ceremony. */
-  uid: string;
   /** Where the room is held, when it already is. */
   bookingId?: string | null;
-  /** Who approves (canPayFromWeb): the passkey here, or the linked phone. */
-  payer?: "web_passkey" | "app";
   /** Stops following the phone (the page went away). Nothing is sent after it. */
   signal?: AbortSignal;
   onState: (next: PayState) => void;
 }
 
 /**
- * Hold, open the payment, price it and build the deposit, ending on
- * `approve` (then `approveStay`, on its own tap) or on why not.
+ * Hold, open the payment, ask the phone, send what it signed, buy the room.
  *
  * Resolves with the final state — it does not reject. Every refusal is a
  * `PayState` the screen can render, because a thrown error at any point past
@@ -279,172 +234,22 @@ export async function payForStay(args: PayArgs): Promise<PayState> {
     });
   }
 
-  /* 3–4 with a linked phone: the server prices and builds, the phone signs */
-  if (args.payer === "app") {
-    const onPhone = await payOnPhone(bookingId, set, args.signal);
-    if (onPhone !== "no_phone") return onPhone;
-    // The phone was removed meanwhile: read who approves now, and fall back.
-    const now = payerOf(await getWalletStatus().catch(() => null));
-    if (now !== "web_passkey") return set({ phase: "stopped", message: noPhoneAnyMore() });
-  }
-
-  // Still "opening": pricing and building move nothing. "paying" starts with the passkey (approveStay).
-  let priced: Awaited<ReturnType<typeof quoteCovering>>;
-  try {
-    priced = await quoteCovering({
-      sourceChain: "solana",
-      destChain: intent.target.chain as "base",
-      tokenSymbol: "USDC",
-      sourceAddress: args.from,
-      destAddress: intent.target.address,
-      arrival: owed,
-      available: args.available,
-    });
-  } catch (e) {
-    return set({
-      phase: "stopped",
-      message: e instanceof BridgeRefused ? t("stays.pay.bridgeRefused", { reason: e.message }) : t("stays.pay.cantPrice"),
-    });
-  }
-
-  /* 4a ── build the deposit and read what the passkey needs, BEFORE the tap that asks */
-  try {
-    const rebuilt = await prepareGasless(priced.quote);
-    const backup = await getWalletBackup();
-    if (backup.wrappings.length === 0) throw new Error("no_passkey");
-    const message = await messageOf(rebuilt.serializedTx);
-    const challenge = await txApprovalChallenge(message);
-    // The passkey approves only what this page built: the server's challenge must be our own digest.
-    const bytes = fromBase64(message);
-    if (!sameBytes(fromBase64(challenge.options.challenge), txChallenge(bytes))) throw new Error("challenge_mismatch");
-    if (challenge.messageHash && !sameDigest(challenge.messageHash, sha256(bytes))) throw new Error("challenge_mismatch");
-    ready.set(bookingId, {
-      intentId: intent.id,
-      priced,
-      serializedTx: rebuilt.serializedTx,
-      backup,
-      message,
-      options: challenge.options,
-      preparedAt: Date.now(),
-    });
-  } catch (e) {
-    // A phone was linked meanwhile: it is the approver now, never the passkey.
-    if (codeOf(e) === "APPROVE_ON_YOUR_PHONE") return phoneOrStop(bookingId, set, args.signal);
-    return set({ phase: "stopped", message: t("stays.pay.cantPrepare") });
-  }
-  return set({ phase: "approve" });
-}
-
-/**
- * The passkey, then the deposit, then the room: `payForStay`'s second half.
- * Call it straight from the "Approve with passkey" click, with the state the
- * first half ended on. The prompt is the first thing it starts.
- */
-export async function approveStay(args: {
-  uid: string;
-  from: string;
-  current: PayState;
-  onState: (next: PayState) => void;
-  signal?: AbortSignal;
-}): Promise<PayState> {
-  let state: PayState = args.current;
-  const set = (next: Partial<PayState>) => {
-    state = { ...state, ...next };
-    args.onState(state);
-    return state;
-  };
-  const bookingId = state.bookingId;
-  const p = bookingId ? ready.get(bookingId) : undefined;
-  if (!bookingId || !p) return set({ phase: "stopped", message: t("stays.pay.notPrepared") });
-  if (sent.get(bookingId)) {
-    // A leg is out. Never send a second; wait for the first.
-    ready.delete(bookingId);
-    set({ paid: true });
-    return finish(bookingId, set);
-  }
-  if (Date.now() - p.preparedAt > FRESH_MS) {
-    ready.delete(bookingId);
-    return set({ phase: "stopped", message: t("stays.pay.tooLate") });
-  }
-
-  /* 4b ── ONE CEREMONY, TWO THINGS
-   *
-   * `/withdrawals/tx-challenge` issued a challenge that IS this transaction's
-   * digest, so the same Face ID that opens the wallet also signs the
-   * assertion that lets these exact bytes through `/cross-chain/gasless/submit`.
-   *
-   * The approval is taken BEFORE the wallet is opened, so a refusal costs a
-   * prompt and nothing else, and it is written down before anything is
-   * signed.
-   */
-  let signed: string;
-  let prf: Uint8Array | null = null;
-  let seed: Uint8Array | null = null;
-  try {
-    const pending = assertWithPrf(
-      p.options,
-      p.backup.wrappings.map((w) => w.credential_id),
-    );
-    set({ phase: "paying", message: null });
-    const bound = await pending;
-    prf = bound.prf;
-    await authorizeTxPasskey(p.message, bound.assertion);
-    const key = await openWallet({ uid: args.uid, backup: p.backup, credentialId: bound.credentialId, prf });
-    seed = key.seed;
-    signed = await signSerializedTx(p.serializedTx, seed, args.from);
-  } catch (e) {
-    // A phone was linked between the two taps: it approves now, not the passkey.
-    if (codeOf(e) === "APPROVE_ON_YOUR_PHONE") {
-      ready.delete(bookingId);
-      return phoneOrStop(bookingId, set, args.signal);
-    }
-    return set({ phase: "stopped", message: t("stays.pay.cantApprove") });
-  } finally {
-    wipe(prf, seed);
-  }
-  ready.delete(bookingId);
-
-  /* 5 ── send it. PAST THIS LINE NOTHING THROWS AND NOTHING RE-SENDS. */
-  let deposit: string | null = null;
-  try {
-    const out = await submitGasless({ quote: p.priced.quote, signedTx: signed, idempotencyKey: `stay:${bookingId}` });
-    deposit = out.depositTxHash ?? null;
-  } catch (e) {
-    // A 409 here means the same key is already in flight — the money may well
-    // be going. We do NOT say "nothing has been charged", and we do not resend.
-    if (status(e) === 409) {
-      sent.set(bookingId, "in_flight");
-      set({ paid: true });
-      return finish(bookingId, set);
-    }
-    return set({ phase: "stopped", message: t("stays.pay.cantSend") });
-  }
-  sent.set(bookingId, deposit ?? "in_flight");
-  set({ paid: true });
-
-  /* 6 ── name the leg, so the arrival scan knows what to look for */
-  if (deposit) {
-    await reportLeg(p.intentId, { kind: "bridge", chain: "solana", txHash: deposit, amount: p.priced.deposit }).catch(
-      // A leg we fail to report still lands; the scan finds it by amount
-      // instead. This is a hint, not a record.
-      () => undefined,
-    );
-  }
-
-  return finish(bookingId, set);
+  /* 3–6 ── the phone approves; the server prices and builds, the phone signs */
+  const onPhone = await payOnPhone(bookingId, set, args.signal);
+  return onPhone === "no_phone" ? set({ phase: "stopped", message: noPhoneAnyMore(), linkFirst: true }) : onPhone;
 }
 
 /* ── The phone ────────────────────────────────────────────────────── */
 
-/** The stop that means the linked phone has gone: the checkout asks to link again when it sees it. */
+/** The stop that means no phone is linked any more: the checkout asks to link one when it sees it. */
 export function noPhoneAnyMore(): string {
-  return t("stays.pay.noPhoneAnyMore");
+  return t("stays.pay.linkToPay");
 }
 
 /**
  * Ask the linked phone, wait, and send what it signed: steps 3 to 6 when the
- * phone approves. "no_phone" is the server saying no Android phone is linked
- * any more (409 NO_PHONE_LINKED); the caller reads the status again.
+ * phone approves. "no_phone" is the server saying no phone is linked
+ * (409 NO_PHONE_LINKED or LINK_YOUR_PHONE_FIRST).
  *
  * The deposit the phone signed was built by the server from its own quote,
  * which lives about 30 seconds, so the submit starts the moment `approved` is
@@ -460,7 +265,7 @@ async function payOnPhone(
     approval = await requestPaymentApproval({ kind: "stay", bookingId });
   } catch (e) {
     const code = codeOf(e);
-    if (code === "NO_PHONE_LINKED") return "no_phone";
+    if (code === "NO_PHONE_LINKED" || code === "LINK_YOUR_PHONE_FIRST") return "no_phone";
     // Booked, or nothing owed: the room is bought (or about to be), not paid twice.
     if (code === "ALREADY_PAID") return finish(bookingId, set);
     return set({ phase: "stopped", message: t("stays.pay.stillHeld", { reason: describeApprovalRefusal(code, "stay") }) });
@@ -527,23 +332,6 @@ async function payOnPhone(
     await reportLeg(c.intentId, { kind: "bridge", chain: "solana", txHash: deposit, amount: Number(c.deposit) }).catch(() => undefined);
   }
   return finish(bookingId, set);
-}
-
-/** The passkey was refused for a linked phone: ask the phone, or stop when it has gone since. */
-async function phoneOrStop(bookingId: string, set: (n: Partial<PayState>) => PayState, signal?: AbortSignal): Promise<PayState> {
-  const out = await payOnPhone(bookingId, set, signal);
-  return out === "no_phone" ? set({ phase: "stopped", message: noPhoneAnyMore() }) : out;
-}
-
-/** The server's `messageHash` (hex or base64) against our own sha256 of the bytes. */
-function sameDigest(given: string, mine: Uint8Array): boolean {
-  const hex = Array.from(mine, (b) => b.toString(16).padStart(2, "0")).join("");
-  if (/^[0-9a-f]{64}$/i.test(given)) return given.toLowerCase() === hex;
-  try {
-    return sameBytes(fromBase64(given), mine);
-  } catch {
-    return false;
-  }
 }
 
 /**

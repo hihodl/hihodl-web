@@ -1,6 +1,5 @@
 {
   "home.wallet": "지갑",
-  "home.walletSub": "Solana 주소, 복구 단어, 출금",
   "home.security": "보안",
   "home.recovery": "계정 복구",
   "home.statements": "거래 내역서",
@@ -19,7 +18,6 @@
   "tiles.invite": "친구 초대",
   "tiles.inviteSub": "함께 보상 받기",
   "tiles.link": "휴대폰 연결",
-  "tiles.linkSub": "Android로 결제 승인",
   "plan.title": "내 요금제",
   "plan.proBody": "Pro 요금제를 이용 중이에요. 송금은 가스비가 없고 환전에는 기본 마크업이 붙지 않아요.",
   "plan.standardBody": "Standard 요금제를 이용 중이에요. HOLD의 모든 기능을 쓸 수 있어요. Pro는 환전의 기본 마크업을 없애고 송금을 가스비 없이 해줘요.",
@@ -52,8 +50,6 @@
   "recovery.setUp": "설정",
   "recovery.foot": "두 가지 이상 설정하세요. 언제든 바꿀 수 있어요.",
   "passkeys.title": "패스키",
-  "passkeys.addAnother": "다른 기기 추가",
-  "passkeys.add": "패스키 추가",
   "passkeys.what": "패스키란?",
   "passkeys.infoBody1": "패스키로 Face ID나 지문을 사용해 로그인할 수 있어요. 비밀번호도 복구 문구도 입력할 필요 없어요.",
   "passkeys.infoBody2": "로그인하는 기기마다 자체 패스키를 등록하므로 여기서 각각 추가하거나 삭제할 수 있어요.",
@@ -183,5 +179,8 @@
   "invite.friend": "친구",
   "inTheApp.back": "← 혜택",
   "inTheApp.title": "지금은 HOLD 앱에서 이용할 수 있어요",
-  "inTheApp.body": "같은 계정으로 앱에 로그인하세요. 곧 웹에서도 이용할 수 있어요."
+  "inTheApp.body": "같은 계정으로 앱에 로그인하세요. 곧 웹에서도 이용할 수 있어요.",
+  "home.walletSubPhone": "내 주소와 송금, 휴대폰에서 승인해요",
+  "tiles.linkSubEvery": "모든 결제를 승인해요",
+  "passkeys.addInApp": "휴대폰의 HOLD 앱에서 패스키를 추가하세요."
 }

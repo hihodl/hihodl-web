@@ -45,7 +45,6 @@ import { t as tr } from "@/lib/app/i18n";
 import { fmtNumber } from "@/lib/app/i18n/format";
 import { useT } from "@/lib/app/i18n/react";
 
-import { useShell } from "../Shell";
 import { Column } from "../hold";
 import { Ion } from "../ion";
 import { Skeleton } from "../ui";
@@ -59,7 +58,6 @@ const money = (cents: number) => `$${fmtNumber(cents / 100, { maximumFractionDig
 
 export function BoardScreen() {
   const t = useT();
-  const { session } = useShell();
   const [kind, setKind] = useState<Kind>("all");
   const [cards, setCards] = useState<BoardCard[] | null>(null);
   const [failed, setFailed] = useState(false);
@@ -129,7 +127,6 @@ export function BoardScreen() {
 
       {buying ? (
         <BuyFromListing
-          uid={session.user.id}
           spaceId={buying.id}
           listingTitle={buying.serviceName?.trim() || buying.title}
           creatorName={buying.creator.xHandle ? `@${buying.creator.xHandle}` : t("sponsor.board.theCreator")}

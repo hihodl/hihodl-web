@@ -68,7 +68,6 @@
   "publish.yourHoldWallet": "你的 HOLD 钱包",
   "publish.anotherWallet": "其他钱包，经签名验证",
   "publish.unlockWallet": "解锁钱包",
-  "publish.makeWallet": "创建钱包",
   "publish.setUp": "设置",
   "publish.wherePaid": "赞助商以 USDC 付款到这里",
   "publish.usdcAccount": "USDC 账户",
@@ -329,5 +328,6 @@
   "wallet.noSolana": "此浏览器中未找到 Solana 钱包。请安装 Phantom，或在 Phantom 自带的浏览器中打开此页面。",
   "wallet.noEvm": "此浏览器中未找到以太坊钱包。请安装 MetaMask，或在你钱包自带的浏览器中打开此页面。",
   "wallet.rejected": "你在 {name} 中拒绝了该操作。没有发送任何内容，也没有转移任何资金。",
-  "wallet.failed": "{name} 无法完成该操作。请重试。"
+  "wallet.failed": "{name} 无法完成该操作。请重试。",
+  "publish.getApp": "获取 HOLD 应用"
 }

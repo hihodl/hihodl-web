@@ -74,7 +74,6 @@
   "thread.noAccount": "No hay ninguna cuenta de HOLD al otro lado de esta conversación.",
   "thread.request": "Solicitar",
   "thread.bookSpot": "Contratar una posición",
-  "thread.approvedWith": "Se aprueba con tu llave de acceso, o en tu móvil si has vinculado uno.",
   "thread.opening": "Abriendo…",
   "didNotGoThrough": "No ha funcionado. Vuelve a intentarlo.",
   "chat.nothingYet": "Aún no hay nada entre tú y {name}.",
@@ -143,5 +142,6 @@
   "picker.alreadyChosen": "@{handle} ya está elegido.",
   "picker.looking": "Buscando…",
   "picker.addHandle": "Añadir a @{handle}",
-  "picker.byExactHandle": "Por su usuario exacto de HOLD"
+  "picker.byExactHandle": "Por su usuario exacto de HOLD",
+  "thread.approvedOnPhone": "Aprobado y firmado en tu móvil vinculado, en la app HOLD."
 }

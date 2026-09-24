@@ -68,7 +68,6 @@
   "publish.yourHoldWallet": "あなたの HOLD ウォレット",
   "publish.anotherWallet": "署名で確認した別のウォレット",
   "publish.unlockWallet": "ウォレットのロックを解除",
-  "publish.makeWallet": "ウォレットを作成",
   "publish.setUp": "設定する",
   "publish.wherePaid": "スポンサーが USDC で支払う先",
   "publish.usdcAccount": "USDC アカウント",
@@ -329,5 +328,6 @@
   "wallet.noSolana": "このブラウザに Solana ウォレットが見つかりません。Phantom をインストールするか、Phantom のアプリ内ブラウザでこのページを開いてください。",
   "wallet.noEvm": "このブラウザに Ethereum ウォレットが見つかりません。MetaMask をインストールするか、ウォレットのアプリ内ブラウザでこのページを開いてください。",
   "wallet.rejected": "{name} で拒否しました。何も送信されておらず、どちらにもお金は動いていません。",
-  "wallet.failed": "{name} で完了できませんでした。もう一度お試しください。"
+  "wallet.failed": "{name} で完了できませんでした。もう一度お試しください。",
+  "publish.getApp": "HOLD アプリを入手"
 }

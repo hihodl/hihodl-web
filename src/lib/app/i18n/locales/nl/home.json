@@ -52,7 +52,6 @@
   "add.cash.title": "Geld storten",
   "add.cash.about": "Kopen met een kaart loopt via onze on-ramp-provider en zijn checkout. Die flow zit in de app; het web start nooit een kaartbetaling.",
   "add.receive.readFailed": "We konden je adressen nu niet lezen. Er is niets veranderd — probeer het zo opnieuw.",
-  "add.receive.none": "Er is nog geen adres om op te ontvangen. Maak je wallet aan en het verschijnt hier.",
   "add.request.title": "Verzoek via link",
   "add.request.lead": "Deel je Hi.me-link zodat iedereen je kan betalen",
   "add.request.copyLink": "Link kopiëren",
@@ -90,14 +89,6 @@
   "products.spaces.sub": "Op je spullen of je content, betaald in USDC rechtstreeks aan jou",
   "linkPhone.pay.title": "Koppel je telefoon om hier te betalen",
   "linkPhone.pay.bodyAndroid": "Open HOLD op deze telefoon om hem te koppelen. Vanaf dan keurt de app elke betaling goed die je hier start.",
-  "linkPhone.pay.bodyApple": "Deze wallet is gemaakt in de HOLD-app op je Android-telefoon. Toon hier een code, open dan HOLD op je Android-telefoon en scan hem.",
-  "linkPhone.pay.body": "Deze wallet is gemaakt in de HOLD-app en de sleutels blijven op je telefoon. Koppel hem één keer en je kunt hier betalen.",
-  "linkPhone.approve.titleApple": "Koppel deze {device}",
-  "linkPhone.approve.bodyApple": "Je passkey keurt al betalingen goed op deze {device}. Koppelen legt hem alleen vast als een van je apparaten.",
-  "linkPhone.approve.title": "Keur betalingen goed op je telefoon",
-  "linkPhone.approve.bodyAndroid": "Download HOLD op deze telefoon en hij keurt elke betaling goed die je hier start. Tot die tijd doet je passkey dat.",
-  "linkPhone.approve.body": "Koppel je Android-telefoon en de HOLD-app keurt elke betaling goed die je hier start. Tot die tijd doet je passkey dat.",
-  "linkPhone.getOnPlay": "Download HOLD op Google Play",
   "linkPhone.later": "Later",
   "payLinks.title": "Betaallinks",
   "payLinks.introTitle": "Word betaald door iedereen, vanuit elke wallet",
@@ -181,5 +172,7 @@
   "payLinks.pay.cantStart": "Deze betaling kon niet vanaf deze pagina worden gestart. Er is niets betaald; vernieuw de pagina en probeer het opnieuw.",
   "payLinks.pay.mismatch": "De betaling die we kregen kwam niet overeen met wat deze pagina toont, dus er is niets naar je wallet gestuurd. Er is niets betaald; vernieuw de pagina en probeer het opnieuw.",
   "payLinks.pay.notFound": "We kunnen deze link of betaling niet meer vinden. Vernieuw de pagina.",
-  "payLinks.pay.badRequest": "We kunnen deze link of betaling niet vinden. Controleer de link en vernieuw de pagina."
+  "payLinks.pay.badRequest": "We kunnen deze link of betaling niet vinden. Controleer de link en vernieuw de pagina.",
+  "add.receive.noneGetApp": "Er is nog geen adres om naartoe te betalen. Je wallet wordt gemaakt in de HOLD-app: download hem, en het adres verschijnt hier.",
+  "linkPhone.pay.bodyComputer": "De keys van je wallet blijven op je telefoon. Koppel hem één keer en de HOLD-app keurt elke betaling goed die je hier start."
 }

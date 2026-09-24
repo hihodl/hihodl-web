@@ -82,5 +82,15 @@
   "error.payoutChainUnknown": "HiSpace non paga su questa rete.",
   "error.payoutNonceInvalid": "La richiesta è scaduta o è già stata usata. Ricomincia e firma il nuovo messaggio.",
   "error.payoutSignatureInvalid": "Questa firma non appartiene a questo indirizzo. Assicurati che il portafoglio con cui hai firmato sia quello che hai collegato e riprova.",
-  "error.xFrontsALiveSpace": "Questo account X è su un annuncio attivo, quindi resta collegato finché l'annuncio non si chiude. Gli sponsor hanno pagato per quell'handle."
+  "error.xFrontsALiveSpace": "Questo account X è su un annuncio attivo, quindi resta collegato finché l'annuncio non si chiude. Gli sponsor hanno pagato per quell'handle.",
+  "getApp.title": "Scarica l'app HOLD",
+  "getApp.body": "Il tuo portafoglio viene creato nell'app HOLD, sul tuo iPhone o telefono Android. Accedi lì con questo account, e il web aprirà lo stesso portafoglio. Il tuo telefono approva ogni pagamento.",
+  "getApp.failedTitle": "Non siamo riusciti ad aprire il tuo account",
+  "getApp.failedBody": "Controlla la connessione e riprova.",
+  "getApp.checking": "Verifica…",
+  "getApp.retry": "Riprova",
+  "getApp.noWebWallet": "Nessun portafoglio è stato creato sul web",
+  "getApp.makeOnce": "Crealo una volta nell'app. Poi torna qui e verifica di nuovo.",
+  "getApp.checkAgain": "L'ho creato, verifica di nuovo",
+  "getApp.goToSpaces": "Vai a Spaces"
 }

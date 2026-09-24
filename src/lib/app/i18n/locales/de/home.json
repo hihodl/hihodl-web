@@ -52,7 +52,6 @@
   "add.cash.title": "Bargeld hinzufügen",
   "add.cash.about": "Der Kauf per Karte läuft über unseren On-Ramp-Anbieter und dessen Checkout. Dieser Ablauf lebt in der App; das Web startet nie eine Kartenbelastung.",
   "add.receive.readFailed": "Wir konnten deine Adressen gerade nicht lesen. Nichts hat sich geändert – versuch es gleich nochmal.",
-  "add.receive.none": "Es gibt noch keine Adresse zum Empfangen. Erstelle deine Wallet, dann erscheint sie hier.",
   "add.request.title": "Per Link anfordern",
   "add.request.lead": "Teile deinen Hi.me-Link, damit dich jeder bezahlen kann",
   "add.request.copyLink": "Link kopieren",
@@ -90,14 +89,6 @@
   "products.spaces.sub": "Auf deiner Ausrüstung oder deinem Content, bezahlt in USDC direkt an dich",
   "linkPhone.pay.title": "Verknüpf dein Handy, um hier zu bezahlen",
   "linkPhone.pay.bodyAndroid": "Öffne HOLD auf diesem Handy, um es zu verknüpfen. Ab dann bestätigt die App jede Zahlung, die du hier startest.",
-  "linkPhone.pay.bodyApple": "Diese Wallet wurde in der HOLD-App auf deinem Android-Handy erstellt. Zeig hier einen Code an, öffne dann HOLD auf deinem Android-Handy und scann ihn.",
-  "linkPhone.pay.body": "Diese Wallet wurde in der HOLD-App erstellt, und ihre Schlüssel bleiben auf deinem Handy. Verknüpf es einmal, dann kannst du hier bezahlen.",
-  "linkPhone.approve.titleApple": "Dieses {device} verknüpfen",
-  "linkPhone.approve.bodyApple": "Dein Passkey bestätigt Zahlungen auf diesem {device} bereits. Durch das Verknüpfen wird es nur als eines deiner Geräte erfasst.",
-  "linkPhone.approve.title": "Zahlungen auf deinem Handy bestätigen",
-  "linkPhone.approve.bodyAndroid": "Hol dir HOLD auf dieses Handy, dann bestätigt es jede Zahlung, die du hier startest. Bis dahin macht das dein Passkey.",
-  "linkPhone.approve.body": "Verknüpf dein Android-Handy, dann bestätigt die HOLD-App jede Zahlung, die du hier startest. Bis dahin macht das dein Passkey.",
-  "linkPhone.getOnPlay": "HOLD bei Google Play holen",
   "linkPhone.later": "Später",
   "payLinks.title": "Zahlungslinks",
   "payLinks.introTitle": "Lass dich von allen bezahlen, aus jeder Wallet",
@@ -181,5 +172,7 @@
   "payLinks.pay.cantStart": "Diese Zahlung konnte von dieser Seite aus nicht gestartet werden. Es wurde nichts bezahlt; lade die Seite neu und versuch es nochmal.",
   "payLinks.pay.mismatch": "Die Zahlung, die wir bekommen haben, passte nicht zu dem, was diese Seite anzeigt, daher wurde nichts an deine Wallet gesendet. Es wurde nichts bezahlt; lade die Seite neu und versuch es nochmal.",
   "payLinks.pay.notFound": "Wir finden diesen Link oder diese Zahlung nicht mehr. Lade die Seite neu.",
-  "payLinks.pay.badRequest": "Wir finden diesen Link oder diese Zahlung nicht. Prüf den Link und lade die Seite neu."
+  "payLinks.pay.badRequest": "Wir finden diesen Link oder diese Zahlung nicht. Prüf den Link und lade die Seite neu.",
+  "add.receive.noneGetApp": "Es gibt noch keine Adresse zum Bezahlen. Deine Wallet wird in der HOLD-App erstellt: Hol sie dir, dann erscheint die Adresse hier.",
+  "linkPhone.pay.bodyComputer": "Die Schlüssel deiner Wallet bleiben auf deinem Handy. Verknüpf es einmal, und die HOLD-App bestätigt jede Zahlung, die du hier startest."
 }

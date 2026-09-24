@@ -1,6 +1,5 @@
 {
   "home.wallet": "Wallet",
-  "home.walletSub": "Tu dirección de Solana, palabras de recuperación y retiradas",
   "home.security": "Seguridad",
   "home.recovery": "Backup y recuperación",
   "home.statements": "Extractos",
@@ -19,7 +18,6 @@
   "tiles.invite": "Invita amigos",
   "tiles.inviteSub": "Gana recompensas juntos",
   "tiles.link": "Vincula tu móvil",
-  "tiles.linkSub": "Android aprueba los pagos",
   "plan.title": "Tu plan",
   "plan.proBody": "Tienes Pro. Las transferencias son sin gas y las conversiones no llevan margen base.",
   "plan.standardBody": "Tienes Standard. Todo HOLD funciona; Pro elimina el margen base en las conversiones y hace que las transferencias sean sin gas.",
@@ -52,8 +50,6 @@
   "recovery.setUp": "Configurar",
   "recovery.foot": "Configura al menos dos. Puedes cambiarlas cuando quieras.",
   "passkeys.title": "Llaves de acceso",
-  "passkeys.addAnother": "Añadir otro dispositivo",
-  "passkeys.add": "Añadir llave de acceso",
   "passkeys.what": "¿Qué son las llaves de acceso?",
   "passkeys.infoBody1": "Las llaves te permiten iniciar sesión con Face ID o tu huella, sin contraseña ni frase de recuperación que escribir.",
   "passkeys.infoBody2": "Cada dispositivo desde el que inicies sesión registra su propia llave, así que puedes añadirlas o eliminarlas de forma independiente desde aquí.",
@@ -183,5 +179,8 @@
   "invite.friend": "Amigo",
   "inTheApp.back": "← Beneficios",
   "inTheApp.title": "Disponible en la app HOLD por ahora",
-  "inTheApp.body": "Inicia sesión allí con la misma cuenta. Pronto llegará a la web."
+  "inTheApp.body": "Inicia sesión allí con la misma cuenta. Pronto llegará a la web.",
+  "home.walletSubPhone": "Tus direcciones y envíos, aprobados en tu móvil",
+  "tiles.linkSubEvery": "Aprueba cada pago",
+  "passkeys.addInApp": "Añade una llave de acceso en la app HOLD de tu móvil."
 }

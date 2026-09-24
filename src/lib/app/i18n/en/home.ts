@@ -66,7 +66,6 @@ const home = {
     "Buying with a card goes through our on-ramp provider and its checkout. That flow lives in the app; the web never starts a card charge.",
 
   "add.receive.readFailed": "We could not read your addresses just now. Nothing has changed — try again in a moment.",
-  "add.receive.none": "There is no address to be paid on yet. Make your wallet and it appears here.",
 
   "add.request.title": "Request via link",
   "add.request.lead": "Share your Hi.me link so anyone can pay you",
@@ -115,16 +114,6 @@ const home = {
   /* ── Link your phone ── */
   "linkPhone.pay.title": "Link your phone to pay from here",
   "linkPhone.pay.bodyAndroid": "Open HOLD on this phone to link it. From then on, the app approves every payment you start here.",
-  "linkPhone.pay.bodyApple":
-    "This wallet was made in the HOLD app on your Android phone. Show a code here, then open HOLD on your Android phone and scan it.",
-  "linkPhone.pay.body": "This wallet was made in the HOLD app and its keys stay on your phone. Link it once and you can pay from here.",
-  "linkPhone.approve.titleApple": "Link this {device}",
-  "linkPhone.approve.bodyApple": "Your passkey already approves payments on this {device}. Linking only records it as one of your devices.",
-  "linkPhone.approve.title": "Approve payments on your phone",
-  "linkPhone.approve.bodyAndroid": "Get HOLD on this phone and it approves every payment you start here. Until then, your passkey does.",
-  "linkPhone.approve.body":
-    "Link your Android phone and the HOLD app approves every payment you start here. Until then, your passkey does.",
-  "linkPhone.getOnPlay": "Get HOLD on Google Play",
   "linkPhone.later": "Later",
 
   /* ── Pay links (the owner's side) ── */
@@ -225,6 +214,8 @@ const home = {
     "The payment we were given didn't match what this page shows, so nothing was sent to your wallet. Nothing was paid; refresh the page and try again.",
   "payLinks.pay.notFound": "We can't find this link or payment any more. Refresh the page.",
   "payLinks.pay.badRequest": "We can't find this link or payment. Check the link and refresh the page.",
+  "add.receive.noneGetApp": "There is no address to be paid on yet. Your wallet is made in the HOLD app: get it, and the address appears here.",
+  "linkPhone.pay.bodyComputer": "Your wallet's keys stay on your phone. Link it once and the HOLD app approves every payment you start here.",
 } satisfies Record<string, string>;
 
 export default home;

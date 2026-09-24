@@ -74,7 +74,6 @@
   "thread.noAccount": "لا يوجد حساب HOLD على الطرف الآخر من هذه المحادثة.",
   "thread.request": "طلب",
   "thread.bookSpot": "احجز مساحة",
-  "thread.approvedWith": "تتم الموافقة بمفتاح المرور، أو من هاتفك إذا كنت قد ربطته.",
   "thread.opening": "جارٍ الفتح…",
   "didNotGoThrough": "لم تكتمل العملية. حاول مرة أخرى.",
   "chat.nothingYet": "لا شيء بينك وبين {name} بعد.",
@@ -143,5 +142,6 @@
   "picker.alreadyChosen": "‎@{handle} مختار بالفعل.",
   "picker.looking": "جارٍ البحث…",
   "picker.addHandle": "إضافة ‎@{handle}",
-  "picker.byExactHandle": "باسم المستخدم الدقيق على HOLD"
+  "picker.byExactHandle": "باسم المستخدم الدقيق على HOLD",
+  "thread.approvedOnPhone": "تمت الموافقة عليها وتوقيعها على هاتفك المرتبط، في تطبيق HOLD."
 }

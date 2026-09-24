@@ -68,7 +68,6 @@
   "publish.yourHoldWallet": "กระเป๋า HOLD ของคุณ",
   "publish.anotherWallet": "กระเป๋าอื่น พิสูจน์ด้วยลายเซ็น",
   "publish.unlockWallet": "ปลดล็อกกระเป๋า",
-  "publish.makeWallet": "สร้างกระเป๋า",
   "publish.setUp": "ตั้งค่า",
   "publish.wherePaid": "ที่ที่สปอนเซอร์จ่ายให้คุณเป็น USDC",
   "publish.usdcAccount": "บัญชี USDC",
@@ -329,5 +328,6 @@
   "wallet.noSolana": "ไม่พบกระเป๋า Solana ในเบราว์เซอร์นี้ ติดตั้ง Phantom หรือเปิดหน้านี้ในเบราว์เซอร์ของ Phantom",
   "wallet.noEvm": "ไม่พบกระเป๋า Ethereum ในเบราว์เซอร์นี้ ติดตั้ง MetaMask หรือเปิดหน้านี้ในเบราว์เซอร์ของกระเป๋าคุณ",
   "wallet.rejected": "คุณปฏิเสธใน {name} ไม่มีอะไรถูกส่ง และไม่มีเงินเคลื่อนไหว",
-  "wallet.failed": "{name} ดำเนินการไม่สำเร็จ ลองอีกครั้ง"
+  "wallet.failed": "{name} ดำเนินการไม่สำเร็จ ลองอีกครั้ง",
+  "publish.getApp": "ดาวน์โหลดแอป HOLD"
 }

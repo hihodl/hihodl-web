@@ -479,12 +479,9 @@ function EmptyHistory() {
  * PAYING FROM HERE IS NOT THE APP'S ANY MORE
  *
  * It was, and the screen said so: "Paying X again happens in the HOLD app."
- * That sentence was written when a signature meant the phone. It is now wrong
- * for most people and dead for the rest — the web wallet signs with its
- * passkey, and a withdrawal is approved by a passkey bound to it unless an
- * Android phone is linked, in which case the app approves on a second device
- * (chooseChannel, server-side). Send is a screen this product already has, in
- * both channels: components/app/wallet/Withdraw.tsx.
+ * A payment started here is approved and signed on the linked phone, iPhone
+ * or Android, in the HOLD app (2026-09-24: the web never pays by itself).
+ * Send is a screen this product already has: components/app/wallet/Withdraw.tsx.
  *
  * REQUEST IS THE OTHER HALF, AND IT WAS SIMPLY MISSING
  *
@@ -517,7 +514,6 @@ function ThreadView({
   const t = useT();
   const productHref = useProductHref();
   const requests = usePaymentRequests();
-  const { session } = useShell();
   const [asking, setAsking] = useState(false);
   const [opening, setOpening] = useState(false);
   const spots = useSpotsBoughtFrom(row?.peerId ?? null);
@@ -675,8 +671,8 @@ function ThreadView({
             {t("payments.thread.bookSpot")}
           </button>
         ) : null}
-        <p className="min-w-[160px] flex-1 text-[12px] leading-[17px] text-white/60">
-          {t("payments.thread.approvedWith")}
+        <p className="min-w-0 flex-1 text-[12px] leading-[17px] text-white/60">
+          {t("payments.thread.approvedOnPhone")}
         </p>
       </div>
 
@@ -684,7 +680,6 @@ function ThreadView({
 
       {booking && shop ? (
         <SponsorFlow
-          uid={session.user.id}
           handle={shop.handle}
           creatorName={row.name}
           onClose={() => setBooking(false)}

@@ -10,17 +10,14 @@
  *
  *   Username        the app's claim and rules (PATCH /me aliasHandle)
  *   Profile         name and photo, optional, "Skip" (the app has no such step)
- *   Passkey         /passkeys/register/* with the session
+ *   Passkey         /passkeys/register/* with the session (a sign-in key; it
+ *                   makes no wallet)
  *   Recovery Key    the codes emailed, only when the account has none
- *   Wallet          by device (documentation/one-wallet-every-device.md):
- *                   an iPhone or a computer makes the Solana web wallet here
- *                   with a passkey, when the rollout gate lets it be made; an
- *                   Android phone leads with "Get HOLD on Google Play" (the app
- *                   makes it with every chain) and "Make it here instead".
- *                   "your wallet is in the HOLD app" when the app made one.
- *                   Made, it shows the app's Ready: "Your wallet is ready"
  *   Link your phone offered with "Later" while no phone is linked
  *                   (link/LinkPhone); Menu → Security links one any time
+ *
+ * No wallet is made here (Alex, 2026-09-24): it is made in the HOLD app, and
+ * the product's gate asks for it (lib/app/app-wallet-gate).
  *
  * What to ask is decided from the server once, when the page opens
  * (lib/app/onboarding), so closing the tab half-way means coming back to the
@@ -44,20 +41,12 @@ import {
   uploadAvatar,
   type UsernameVerdict,
 } from "@/lib/app/me";
-import { markOnboarded, playFirst, readChoices, readFacts, saveChoice, stepsFor, walletToMake, type Facts, type StepKey } from "@/lib/app/onboarding";
-import {
-  beginPasskeyRegistration,
-  completePasskeyRegistration,
-  listPasskeys,
-  type RegistrationOptionsJSON,
-} from "@/lib/wallet/api";
+import { markOnboarded, readChoices, readFacts, saveChoice, stepsFor, type Facts, type StepKey } from "@/lib/app/onboarding";
+import { beginPasskeyRegistration, completePasskeyRegistration, type RegistrationOptionsJSON } from "@/lib/wallet/api";
 import { wipe } from "@/lib/wallet/core";
-import { explain, lossWarning } from "@/lib/wallet/explain";
-import { registerEvmSide, registerWalletAddress, sealNewWallet } from "@/lib/wallet/flows";
-import { createPasskeyWithPrf, evaluatePrf, PasskeyError } from "@/lib/wallet/passkey";
-import { lock, unlockWith } from "@/lib/wallet/vault";
+import { explain } from "@/lib/wallet/explain";
+import { createPasskeyWithPrf, PasskeyError } from "@/lib/wallet/passkey";
 
-import { playHref } from "../link/in-app";
 import { LinkPhone } from "../link/LinkPhone";
 import { Door } from "./Door";
 import { HoldMark } from "./kit";
@@ -72,7 +61,6 @@ import {
   inputFieldCls,
   Ion,
   NextHint,
-  ReadyBox,
   SkipButton,
   Spinner,
   StatusLine,
@@ -124,18 +112,11 @@ const STEP: Record<StepKey, { title: MessageKey; icon: IonName; tone: StepTone; 
     tone: "recovery",
     info: "front.steps.recoveryInfo",
   },
-  wallet: {
-    title: "front.steps.wallet",
-    icon: "wallet-outline",
-    tone: "ready",
-    info: "front.steps.walletInfo",
-  },
-  "app-wallet": { title: "front.steps.wallet", icon: "wallet-outline", tone: "ready" },
   link: {
     title: "front.steps.link",
     icon: "phone-portrait-outline",
     tone: "passkey",
-    info: "front.steps.linkInfo",
+    info: "front.steps.linkInfoEvery",
   },
 };
 
@@ -159,8 +140,6 @@ function Flow({ session }: { session: Session }) {
   // What this visit finished, so Back to a done step shows it done.
   const [done, setDone] = useState<Set<StepKey>>(new Set());
   const [info, setInfo] = useState<StepKey | null>(null);
-  // The wallet step's Ready takes the whole foot, as the app's does.
-  const [ready, setReady] = useState(false);
   const slow = useSlow(!facts && !error);
 
   const load = useCallback(async () => {
@@ -180,11 +159,8 @@ function Flow({ session }: { session: Session }) {
   }, [uid]);
 
   useEffect(() => void load(), [load]);
-  // Nothing made here stays open once the person moves on.
-  useEffect(() => () => lock(), []);
 
   const finish = useCallback(() => {
-    lock();
     markOnboarded(uid);
     window.location.replace(destination());
   }, [uid]);
@@ -192,7 +168,6 @@ function Flow({ session }: { session: Session }) {
   const complete = useCallback(
     (key: StepKey) => {
       setDone((d) => new Set(d).add(key));
-      setReady(false);
       if (!steps) return;
       if (at + 1 >= steps.length) finish();
       else setAt(at + 1);
@@ -233,7 +208,7 @@ function Flow({ session }: { session: Session }) {
   const key = steps[at];
   const meta = STEP[key];
   const last = at + 1 >= steps.length;
-  const back = at > 0 ? () => { setReady(false); setAt(at - 1); } : undefined;
+  const back = at > 0 ? () => setAt(at - 1) : undefined;
   const next = !last ? STEP[steps[at + 1]] : null;
 
   const head = (
@@ -247,20 +222,11 @@ function Flow({ session }: { session: Session }) {
   const props = { facts, session, done: done.has(key), onDone: () => complete(key), head, hint };
 
   return (
-    <StepScreen
-      tone={ready ? "ready" : meta.tone}
-      title={ready && last ? t("front.flow.allSet") : t("front.flow.title")}
-      onClose={ready && last ? undefined : close}
-      closeLabel={t("common.signOut")}
-    >
+    <StepScreen tone={meta.tone} title={t("front.flow.title")} onClose={close} closeLabel={t("common.signOut")}>
       {key === "username" ? <UsernameStep {...props} /> : null}
       {key === "profile" ? <ProfileStep {...props} onSkip={() => { saveChoice(session.user.id, "profile"); complete(key); }} /> : null}
       {key === "passkey" ? <PasskeyStep {...props} /> : null}
       {key === "recovery" ? <RecoveryStep {...props} /> : null}
-      {key === "wallet" ? (
-        <WalletStep {...props} last={last} onReady={setReady} onSkip={() => { saveChoice(session.user.id, "wallet"); complete(key); }} />
-      ) : null}
-      {key === "app-wallet" ? <AppWalletStep {...props} onDone={() => { saveChoice(session.user.id, "appWallet"); complete(key); }} /> : null}
       {key === "link" ? (
         <>
           {head}
@@ -606,207 +572,5 @@ function RecoveryStep({ facts, session, done, onDone, head, hint }: StepProps) {
         <ActionButton type="submit" title={busy ? t("front.sending") : t("common.continue")} disabled={busy || !email.trim()} />
       </Cta>
     </form>
-  );
-}
-
-/* ── Wallet ───────────────────────────────────────────────────────── */
-
-type WalletPhase =
-  | { kind: "play"; went: boolean }
-  | { kind: "intro" }
-  | { kind: "confirm"; credentialId: string }
-  | { kind: "sealing" }
-  | { kind: "ready" };
-
-function WalletStep({
-  facts,
-  session,
-  onDone,
-  onSkip,
-  onReady,
-  last,
-  head,
-  hint,
-}: StepProps & { onSkip: () => void; onReady: (ready: boolean) => void; last: boolean }) {
-  const t = useT();
-  // An Android phone is offered the Play app first; an iPhone and a computer make the wallet here.
-  const [phase, setPhase] = useState<WalletPhase>(() => (playFirst(facts) ? { kind: "play", went: false } : { kind: "intro" }));
-  const canMakeHere = walletToMake(facts);
-  const [ids, setIds] = useState<string[]>(facts.passkeyIds);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<unknown>(null);
-  const reg = useRegistrationOptions(session, phase.kind === "intro");
-
-  useEffect(() => {
-    listPasskeys().then(
-      (p) => setIds(p.map((x) => x.id)),
-      () => undefined,
-    );
-  }, []);
-
-  const seal = async (credentialId: string, prf: Uint8Array, label: string | null) => {
-    setPhase({ kind: "sealing" });
-    try {
-      const key = await sealNewWallet({ uid: session.user.id, credentialId, prf, label });
-      unlockWith(key);
-      // So the backend watches it for deposits on every chain from day one, as
-      // the app registers it: Solana, and the EVM xpub on Ethereum, Base and
-      // Polygon (registerEvmSide wipes its key).
-      await Promise.all([
-        registerWalletAddress(key.address, null).catch(() => undefined),
-        registerEvmSide(key.evm),
-      ]);
-      lock();
-      setPhase({ kind: "ready" });
-      onReady(true);
-    } catch (e) {
-      setError(e);
-      setPhase({ kind: "intro" });
-    } finally {
-      wipe(prf);
-    }
-  };
-
-  const withExisting = async (only?: string[]) => {
-    setBusy(true);
-    setError(null);
-    try {
-      const a = await evaluatePrf(only ?? ids);
-      await seal(a.credentialId, a.prf, only ? "This browser" : null);
-    } catch (e) {
-      if (!cancelled(e)) setError(e);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const withNew = async () => {
-    if (!reg.options) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const made = await createPasskeyWithPrf(reg.options);
-      await completePasskeyRegistration(made.registration);
-      if (made.prf) await seal(made.credentialId, made.prf, "This browser");
-      else setPhase({ kind: "confirm", credentialId: made.credentialId });
-    } catch (e) {
-      if (!cancelled(e)) setError(e);
-      void reg.refresh();
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  // Android: the Play app makes the wallet with every chain. A new tab, so this page is still here after.
-  if (phase.kind === "play") {
-    return (
-      <div>
-        {head}
-        {phase.went ? (
-          <StepDesc>{t("front.wallet.playWent")}</StepDesc>
-        ) : (
-          <StepDesc>{t("front.wallet.play")}</StepDesc>
-        )}
-        {hint}
-        <Cta>
-          {phase.went ? (
-            <ActionButton title={t("common.continue")} onClick={onSkip} />
-          ) : (
-            <a
-              href={playHref("android")}
-              target="_blank"
-              rel="noopener"
-              onClick={() => setPhase({ kind: "play", went: true })}
-              className="flex h-[54px] w-full items-center justify-center gap-2 rounded-[27px] border border-white/10 bg-white/[0.05] text-[16px] font-bold text-white/[0.85] transition-[background-color,transform] hover:bg-white/[0.09] active:scale-[0.98]"
-            >
-              <Ion name="logo-google" size={18} />
-              {t("front.wallet.getOnPlay")}
-            </a>
-          )}
-          {canMakeHere ? <SkipButton label={t("front.wallet.makeHere")} onClick={() => setPhase({ kind: "intro" })} /> : null}
-          {phase.went ? null : <SkipButton label={t("front.notNow")} onClick={onSkip} />}
-        </Cta>
-      </div>
-    );
-  }
-
-  // setup.tsx's Ready, what the app shows once the wallet is set up (and after a restore).
-  if (phase.kind === "ready") {
-    return (
-      <div>
-        <ReadyBox title={t("front.wallet.readyTitle")} line={t("front.wallet.readyLine")} />
-        <Cta>
-          <ActionButton title={last ? t("front.wallet.goToDashboard") : t("common.continue")} onClick={onDone} />
-        </Cta>
-      </div>
-    );
-  }
-
-  if (phase.kind === "sealing") {
-    return (
-      <div>
-        {head}
-        <div className="flex items-center gap-3 py-5" role="status">
-          <Spinner color="#20D690" />
-          <span className="text-[16px] font-semibold text-white/60">{t("front.wallet.settingUp")}</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (phase.kind === "confirm") {
-    return (
-      <div>
-        {head}
-        {error ? <ErrorBanner onDismiss={() => setError(null)}>{explain(error)}</ErrorBanner> : null}
-        <StepDesc>{t("front.wallet.confirmDesc")}</StepDesc>
-        {hint}
-        <Cta>
-          <ActionButton title={busy ? t("front.creating") : t("front.wallet.confirm")} icon="key-outline" disabled={busy} onClick={() => void withExisting([phase.credentialId])} />
-        </Cta>
-      </div>
-    );
-  }
-
-  // Neither of these is fixed by reaching for another passkey: one is the
-  // password manager, the other is the operating system under all of them.
-  const cannotWrap = error instanceof PasskeyError && (error.code === "no_prf" || error.code === "no_prf_here" || error.code === "os_too_old");
-  const useExisting = ids.length > 0 && !cannotWrap;
-  return (
-    <div>
-      {head}
-      {error ? <ErrorBanner onDismiss={() => setError(null)}>{explain(error)}</ErrorBanner> : null}
-      <StepDesc>{t("front.wallet.desc")}</StepDesc>
-      {/* A disclosure, not filler: the web wallet has no seed in a keychain behind it. */}
-      <div className="mt-1 flex gap-2 rounded-[12px] border border-[rgba(245,158,11,0.15)] bg-[rgba(245,158,11,0.08)] p-2.5">
-        <Ion name="warning-outline" size={16} className="mt-px shrink-0 text-[#F59E0B]" />
-        <p className="text-[13px] font-medium leading-[18px] text-white/75">{lossWarning()}</p>
-      </div>
-      {hint}
-      <Cta>
-        <ActionButton
-          title={busy ? t("front.creating") : t("front.wallet.create")}
-          icon="key-outline"
-          disabled={busy || (!useExisting && !reg.options)}
-          onClick={() => void (useExisting ? withExisting() : withNew())}
-        />
-        {useExisting ? <SkipButton label={t("front.wallet.useNewPasskey")} disabled={busy || !reg.options} onClick={() => void withNew()} /> : null}
-        <SkipButton label={t("front.notNow")} disabled={busy} onClick={onSkip} />
-      </Cta>
-    </div>
-  );
-}
-
-function AppWalletStep({ onDone, head, hint }: StepProps) {
-  const t = useT();
-  return (
-    <div>
-      {head}
-      <StepDesc>{t("front.wallet.inApp")}</StepDesc>
-      {hint}
-      <Cta>
-        <ActionButton title={t("common.continue")} onClick={onDone} />
-      </Cta>
-    </div>
   );
 }

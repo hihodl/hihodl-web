@@ -1,6 +1,5 @@
 {
   "home.wallet": "Pochi",
-  "home.walletSub": "Anwani yako ya Solana, maneno ya urejeshaji na utoaji",
   "home.security": "Usalama",
   "home.recovery": "Urejeshaji wa akaunti",
   "home.statements": "Taarifa za akaunti",
@@ -19,7 +18,6 @@
   "tiles.invite": "Alika marafiki",
   "tiles.inviteSub": "Pateni zawadi pamoja",
   "tiles.link": "Unganisha simu yako",
-  "tiles.linkSub": "Android huidhinisha malipo",
   "plan.title": "Mpango wako",
   "plan.proBody": "Uko kwenye Pro. Uhamisho hauna ada ya gesi na ubadilishaji hauna nyongeza ya msingi.",
   "plan.standardBody": "Uko kwenye Standard. Kila kitu kwenye HOLD kinafanya kazi; Pro huondoa nyongeza ya msingi kwenye ubadilishaji na kufanya uhamisho usiwe na ada ya gesi.",
@@ -52,8 +50,6 @@
   "recovery.setUp": "Weka",
   "recovery.foot": "Weka angalau mbili. Unaweza kuzibadilisha wakati wowote.",
   "passkeys.title": "Passkey",
-  "passkeys.addAnother": "Ongeza kifaa kingine",
-  "passkeys.add": "Ongeza passkey",
   "passkeys.what": "Passkey ni nini?",
   "passkeys.infoBody1": "Passkey hukuwezesha kuingia kwa Face ID au alama ya kidole chako — hakuna nenosiri wala maneno ya urejeshaji ya kuandika.",
   "passkeys.infoBody2": "Kila kifaa unachoingilia husajili passkey yake, kwa hiyo unaweza kuziongeza au kuziondoa moja moja hapa.",
@@ -183,5 +179,8 @@
   "invite.friend": "Rafiki",
   "inTheApp.back": "← Manufaa",
   "inTheApp.title": "Inapatikana kwenye programu ya HOLD kwa sasa",
-  "inTheApp.body": "Ingia huko kwa akaunti ile ile. Itakuja kwenye wavuti hivi karibuni."
+  "inTheApp.body": "Ingia huko kwa akaunti ile ile. Itakuja kwenye wavuti hivi karibuni.",
+  "home.walletSubPhone": "Anwani na miamala yako ya kutuma, iliyoidhinishwa kwenye simu yako",
+  "tiles.linkSubEvery": "Inaidhinisha kila malipo",
+  "passkeys.addInApp": "Ongeza passkey kwenye programu ya HOLD iliyo kwenye simu yako."
 }

@@ -82,5 +82,15 @@
   "error.payoutChainUnknown": "O HiSpace não paga nessa rede.",
   "error.payoutNonceInvalid": "Essa solicitação expirou ou já foi usada. Comece de novo e assine a nova mensagem.",
   "error.payoutSignatureInvalid": "Essa assinatura não é deste endereço. Confira se a carteira com que você assinou é a mesma que conectou e tente de novo.",
-  "error.xFrontsALiveSpace": "Esta conta do X está em um anúncio ativo, então continua conectada até ele encerrar. Os patrocinadores pagaram por esse perfil."
+  "error.xFrontsALiveSpace": "Esta conta do X está em um anúncio ativo, então continua conectada até ele encerrar. Os patrocinadores pagaram por esse perfil.",
+  "getApp.title": "Baixe o app HOLD",
+  "getApp.body": "Sua carteira é criada no app HOLD, no seu iPhone ou celular Android. Entre lá com esta conta, e a web abre a mesma carteira. Seu celular aprova cada pagamento.",
+  "getApp.failedTitle": "Não conseguimos abrir sua conta",
+  "getApp.failedBody": "Confira sua conexão e tente de novo.",
+  "getApp.checking": "Verificando…",
+  "getApp.retry": "Tentar de novo",
+  "getApp.noWebWallet": "Nenhuma carteira foi criada na web",
+  "getApp.makeOnce": "Crie-a uma vez no app. Depois volte aqui e verifique de novo.",
+  "getApp.checkAgain": "Já criei, verificar de novo",
+  "getApp.goToSpaces": "Ir para Spaces"
 }

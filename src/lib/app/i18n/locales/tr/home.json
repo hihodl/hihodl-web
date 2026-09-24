@@ -52,7 +52,6 @@
   "add.cash.title": "Nakit ekle",
   "add.cash.about": "Kartla alım, para yükleme sağlayıcımız ve onun ödeme sayfası üzerinden yapılır. Bu akış uygulamada; web asla kart ödemesi başlatmaz.",
   "add.receive.readFailed": "Adreslerini şu anda okuyamadık. Hiçbir şey değişmedi, birazdan tekrar dene.",
-  "add.receive.none": "Henüz ödeme alınabilecek bir adres yok. Cüzdanını oluştur, burada görünsün.",
   "add.request.title": "Bağlantıyla iste",
   "add.request.lead": "Herkesin sana ödeme yapabilmesi için Hi.me bağlantını paylaş",
   "add.request.copyLink": "Bağlantıyı kopyala",
@@ -90,14 +89,6 @@
   "products.spaces.sub": "Ekipmanında veya içeriğinde, doğrudan sana USDC olarak ödenir",
   "linkPhone.pay.title": "Buradan ödemek için telefonunu bağla",
   "linkPhone.pay.bodyAndroid": "Bağlamak için bu telefonda HOLD'u aç. Bundan sonra burada başlattığın her ödemeyi uygulama onaylar.",
-  "linkPhone.pay.bodyApple": "Bu cüzdan Android telefonundaki HOLD uygulamasında oluşturuldu. Burada bir kod göster, ardından Android telefonunda HOLD'u açıp tara.",
-  "linkPhone.pay.body": "Bu cüzdan HOLD uygulamasında oluşturuldu ve anahtarları telefonunda kalır. Bir kez bağla, buradan ödeme yapabilirsin.",
-  "linkPhone.approve.titleApple": "Bu {device} cihazını bağla",
-  "linkPhone.approve.bodyApple": "Geçiş anahtarın bu {device} üzerinde ödemeleri zaten onaylıyor. Bağlamak onu yalnızca cihazlarından biri olarak kaydeder.",
-  "linkPhone.approve.title": "Ödemeleri telefonunda onayla",
-  "linkPhone.approve.bodyAndroid": "Bu telefona HOLD'u yükle, burada başlattığın her ödemeyi o onaylasın. O zamana kadar geçiş anahtarın onaylar.",
-  "linkPhone.approve.body": "Android telefonunu bağla, burada başlattığın her ödemeyi HOLD uygulaması onaylasın. O zamana kadar geçiş anahtarın onaylar.",
-  "linkPhone.getOnPlay": "HOLD'u Google Play'den indir",
   "linkPhone.later": "Sonra",
   "payLinks.title": "Ödeme bağlantıları",
   "payLinks.introTitle": "Herkesten, her cüzdandan ödeme al",
@@ -181,5 +172,7 @@
   "payLinks.pay.cantStart": "Bu ödeme bu sayfadan başlatılamadı. Hiçbir şey ödenmedi; sayfayı yenileyip tekrar dene.",
   "payLinks.pay.mismatch": "Bize verilen ödeme bu sayfada gösterilenle eşleşmedi, bu yüzden cüzdanına hiçbir şey gönderilmedi. Hiçbir şey ödenmedi; sayfayı yenileyip tekrar dene.",
   "payLinks.pay.notFound": "Bu bağlantıyı veya ödemeyi artık bulamıyoruz. Sayfayı yenile.",
-  "payLinks.pay.badRequest": "Bu bağlantıyı veya ödemeyi bulamıyoruz. Bağlantıyı kontrol et ve sayfayı yenile."
+  "payLinks.pay.badRequest": "Bu bağlantıyı veya ödemeyi bulamıyoruz. Bağlantıyı kontrol et ve sayfayı yenile.",
+  "add.receive.noneGetApp": "Henüz ödeme alınacak bir adres yok. Cüzdanın HOLD uygulamasında oluşturulur: uygulamayı indir, adres burada görünür.",
+  "linkPhone.pay.bodyComputer": "Cüzdanının anahtarları telefonunda kalır. Bir kez bağla, HOLD uygulaması burada başlattığın her ödemeyi onaylar."
 }

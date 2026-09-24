@@ -74,7 +74,6 @@
   "thread.noAccount": "อีกฝ่ายของบทสนทนานี้ไม่มีบัญชี HOLD",
   "thread.request": "ขอเงิน",
   "thread.bookSpot": "จองตำแหน่ง",
-  "thread.approvedWith": "อนุมัติด้วยพาสคีย์ของคุณ หรือบนโทรศัพท์หากคุณเชื่อมไว้",
   "thread.opening": "กำลังเปิด…",
   "didNotGoThrough": "ไม่สำเร็จ ลองอีกครั้ง",
   "chat.nothingYet": "ยังไม่มีอะไรระหว่างคุณกับ {name}",
@@ -143,5 +142,6 @@
   "picker.alreadyChosen": "เลือก @{handle} ไว้แล้ว",
   "picker.looking": "กำลังค้นหา…",
   "picker.addHandle": "เพิ่ม @{handle}",
-  "picker.byExactHandle": "ด้วยชื่อผู้ใช้ HOLD ที่ตรงกันทุกตัว"
+  "picker.byExactHandle": "ด้วยชื่อผู้ใช้ HOLD ที่ตรงกันทุกตัว",
+  "thread.approvedOnPhone": "อนุมัติและเซ็นบนโทรศัพท์ที่เชื่อมไว้ของคุณ ในแอป HOLD"
 }

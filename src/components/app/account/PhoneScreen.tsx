@@ -1,20 +1,19 @@
 "use client";
 
 /**
- * Your phone: the phones linked to this account. A linked Android phone
- * approves and signs the payments started on the web; an iPhone is recorded,
- * and the passkey keeps approving (documentation/one-wallet-every-device.md).
+ * Your phone: the phones linked to this account. A linked phone, iPhone or
+ * Android, approves and signs in the HOLD app every payment started on the
+ * web; the web never pays by itself (documentation/one-wallet-every-device.md).
  *
  *   rows     how many, on Settings › Security (where the app keeps "Link
  *            with the web")
  *   screen   each phone, when it was linked, Remove     → Account ?view=phone
  *
  * "Link your phone" opens the link screen, /wallet/link (a full load: it
- * carries the wallet pages' strict CSP, and on Android with a web wallet the
- * wallet's secret is sealed there). It is there whatever is linked already:
- * an iPhone linked first does not stop an Android phone joining.
+ * carries the wallet pages' strict CSP, and an older web wallet's secret is
+ * sealed there). It is there whatever is linked already.
  *
- * REMOVING A PHONE NEEDS THE PASSKEY. A linked Android phone approves every
+ * REMOVING A PHONE NEEDS THE PASSKEY. A linked phone approves every
  * payment the web starts, so the session alone does not remove it: the
  * server's challenge (sha256("hihodl/unlink/v1" ‖ deviceId ‖ nonce)) is
  * fetched when Remove is first tapped, and the second tap, "Remove with
@@ -41,7 +40,7 @@ import { Skeleton } from "../ui";
 const PLATFORM: Record<LinkedDevice["platform"], MessageKey> = { android: "account.phone.android", ios: "account.phone.iphone", other: "account.phone.other" };
 const HOW: Record<LinkedDevice["platform"], MessageKey> = {
   android: "account.phone.howAndroid",
-  ios: "account.phone.howIos",
+  ios: "account.phone.howAndroid",
   other: "account.phone.howOther",
 };
 
@@ -125,7 +124,7 @@ export function PhoneScreenView({
       ) : (
         <>
           <p className="mb-2 px-1 text-[15px] font-medium leading-[21px] text-white/[0.72]">
-            {t("account.phone.intro")}
+            {t("account.phone.introEvery")}
           </p>
           {devices && devices.length > 0 ? (
             <>
@@ -178,7 +177,7 @@ export function PhoneScreenView({
               {/* A full load: the link screen carries the wallet pages' strict CSP. */}
               <a href={linkHref} className={devices.length === 0 ? ctaCommit : ctaSecondary}>
                 <Ion name="qr-code-outline" size={16} />
-                {devices.length === 0 ? t("account.phone.link") : devices.some((d) => d.platform === "android") ? t("account.phone.linkAnother") : t("account.phone.linkAndroid")}
+                {devices.length === 0 ? t("account.phone.link") : t("account.phone.linkAnother")}
               </a>
             </div>
           ) : null}

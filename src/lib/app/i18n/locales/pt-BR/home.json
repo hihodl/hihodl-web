@@ -52,7 +52,6 @@
   "add.cash.title": "Adicionar dinheiro",
   "add.cash.about": "Comprar com cartão passa pelo nosso provedor de on-ramp e pelo checkout dele. Esse fluxo fica no app; a web nunca inicia uma cobrança no cartão.",
   "add.receive.readFailed": "Não conseguimos ler seus endereços agora. Nada mudou — tente de novo em instantes.",
-  "add.receive.none": "Ainda não há um endereço para receber. Crie sua carteira e ele aparece aqui.",
   "add.request.title": "Cobrar por link",
   "add.request.lead": "Compartilhe seu link Hi.me para qualquer pessoa te pagar",
   "add.request.copyLink": "Copiar link",
@@ -90,14 +89,6 @@
   "products.spaces.sub": "No seu equipamento ou no seu conteúdo, pagos em USDC direto para você",
   "linkPhone.pay.title": "Vincule seu celular para pagar daqui",
   "linkPhone.pay.bodyAndroid": "Abra o HOLD neste celular para vinculá-lo. A partir daí, o app aprova cada pagamento que você começar aqui.",
-  "linkPhone.pay.bodyApple": "Esta carteira foi criada no app HOLD no seu celular Android. Mostre um código aqui, depois abra o HOLD no seu Android e escaneie.",
-  "linkPhone.pay.body": "Esta carteira foi criada no app HOLD e as chaves ficam no seu celular. Vincule uma vez e você pode pagar daqui.",
-  "linkPhone.approve.titleApple": "Vincular este {device}",
-  "linkPhone.approve.bodyApple": "Sua passkey já aprova pagamentos neste {device}. Vincular só o registra como um dos seus dispositivos.",
-  "linkPhone.approve.title": "Aprove pagamentos no seu celular",
-  "linkPhone.approve.bodyAndroid": "Baixe o HOLD neste celular e ele aprova cada pagamento que você começar aqui. Até lá, sua passkey aprova.",
-  "linkPhone.approve.body": "Vincule seu celular Android e o app HOLD aprova cada pagamento que você começar aqui. Até lá, sua passkey aprova.",
-  "linkPhone.getOnPlay": "Baixar o HOLD no Google Play",
   "linkPhone.later": "Depois",
   "payLinks.title": "Links de pagamento",
   "payLinks.introTitle": "Receba de qualquer pessoa, de qualquer carteira",
@@ -181,5 +172,7 @@
   "payLinks.pay.cantStart": "Não foi possível iniciar este pagamento nesta página. Nada foi pago; atualize a página e tente de novo.",
   "payLinks.pay.mismatch": "O pagamento que recebemos não bateu com o que esta página mostra, então nada foi enviado para sua carteira. Nada foi pago; atualize a página e tente de novo.",
   "payLinks.pay.notFound": "Não encontramos mais este link ou pagamento. Atualize a página.",
-  "payLinks.pay.badRequest": "Não encontramos este link ou pagamento. Confira o link e atualize a página."
+  "payLinks.pay.badRequest": "Não encontramos este link ou pagamento. Confira o link e atualize a página.",
+  "add.receive.noneGetApp": "Ainda não há um endereço para receber. Sua carteira é criada no app HOLD: baixe-o, e o endereço aparece aqui.",
+  "linkPhone.pay.bodyComputer": "As chaves da sua carteira ficam no seu celular. Vincule-o uma vez e o app HOLD aprova cada pagamento que você começar aqui."
 }

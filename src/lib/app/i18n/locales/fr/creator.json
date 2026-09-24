@@ -68,7 +68,6 @@
   "publish.yourHoldWallet": "Votre wallet HOLD",
   "publish.anotherWallet": "Un autre wallet, prouvé par signature",
   "publish.unlockWallet": "Déverrouiller le wallet",
-  "publish.makeWallet": "Créer le wallet",
   "publish.setUp": "Configurer",
   "publish.wherePaid": "Là où les sponsors vous paient, en USDC",
   "publish.usdcAccount": "Compte USDC",
@@ -329,5 +328,6 @@
   "wallet.noSolana": "Aucun wallet Solana trouvé dans ce navigateur. Installez Phantom, ou ouvrez cette page dans le navigateur intégré de Phantom.",
   "wallet.noEvm": "Aucun wallet Ethereum trouvé dans ce navigateur. Installez MetaMask, ou ouvrez cette page dans le navigateur intégré de votre wallet.",
   "wallet.rejected": "Vous avez refusé dans {name}. Rien n'a été envoyé, et rien n'a bougé.",
-  "wallet.failed": "{name} n'a pas pu aller au bout. Réessayez."
+  "wallet.failed": "{name} n'a pas pu aller au bout. Réessayez.",
+  "publish.getApp": "Télécharger l'app HOLD"
 }
