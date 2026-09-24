@@ -1,1 +1,13 @@
-{}
+{
+  "language": "语言",
+  "currency": "货币",
+  "recentLanguages": "最近使用的语言",
+  "allLanguages": "全部语言",
+  "searchLanguage": "搜索语言",
+  "recentCurrencies": "最近使用的货币",
+  "allCurrencies": "全部货币",
+  "searchCurrency": "搜索货币或国家/地区",
+  "currencyIntro": "余额、总额和价格将以此货币显示。实际付款仍以代币结算，群组也保留自己的货币。",
+  "currencyNoRate": "* 暂无实时汇率，金额仍以美元显示。",
+  "currencyNoRateLabel": "{code} {name}，实时汇率不可用"
+}
