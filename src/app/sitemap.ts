@@ -16,13 +16,12 @@ import { listPublicEvents } from "@/lib/ad-space/server";
  *    exists and is worth indexing; a 404 in here is a crawl-budget leak and a
  *    quality signal against the whole domain.
  * 2. Nothing transactional. Checkouts and order confirmations carry a reference
- *    in the URL and have nothing to offer a search engine — /founders/checkout
- *    already sets robots noindex for the same reason.
+ *    in the URL and have nothing to offer a search engine.
  * 3. Legal pages stay, at low priority. People do search for them, and a
  *    company whose terms are hard to find looks like it wants them to be.
  *
- * /founders is deliberately absent: it is a live Stripe checkout that needs its
- * table and its keys before it is published at all.
+ * /founders is deliberately absent: the Founder Pass is closed (24 Sep 2026)
+ * and the URL redirects home.
  */
 
 // The apex, not www. Measured 07-aug-2026: www 307s to the apex, so anything

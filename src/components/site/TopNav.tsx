@@ -16,7 +16,7 @@ import { productHref } from "@/lib/app/paths";
  *
  * The two entries with a second floor get a popup; Savings and Invest are one
  * page each and a menu holding a single link is a menu that wastes a click.
- * Everything one question further down — Founder Pass, security, FAQ — stays in
+ * Everything one question further down (security, FAQ) stays in
  * the footer. Five is the ceiling for a nav anybody actually reads.
  */
 type NavItem = {

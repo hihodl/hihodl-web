@@ -4,7 +4,7 @@
  * ═══════════════════════════════════════════════════════════════════════════
  *
  * Every number rendered on /hipoints, /savings, /smart-account, /invest,
- * /founders and /travel comes from this file. No page hardcodes a percentage, a price or a cap. Change a value
+ * and /travel comes from this file. No page hardcodes a percentage, a price or a cap. Change a value
  * here and every surface moves together — that is the whole point, because the
  * failure mode we are avoiding is a marketing page quoting a rate the product
  * stopped charging six weeks ago.
@@ -640,6 +640,11 @@ export const FX_CORRIDORS: FxCorridor[] = [
 
 /* ══════════════════════════════════════════════════════════════════════════
  * 5. FOUNDER PASS
+ *
+ * Closed to new buyers since 24 Sep 2026: no page sells it and
+ * POST /api/founders/orders answers 410. These values stay because orders that
+ * already exist still settle through lib/orders, and their receipt email
+ * quotes the terms the buyer paid for.
  * ══════════════════════════════════════════════════════════════════════════ */
 
 export const FOUNDER_PASS = {

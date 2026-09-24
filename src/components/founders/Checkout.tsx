@@ -12,7 +12,11 @@ import {
 } from "@/lib/orders/chains.public";
 
 /**
- * Founder Pass checkout — three rails, one order.
+ * Founder Pass order status. The pass is closed to new buyers (24 Sep 2026):
+ * this component only resumes an order that already exists, so a buyer who
+ * paid or is mid payment still sees it settle. It cannot open a new order.
+ *
+ * Three rails, one order.
  *
  * The rails differ only in how money arrives. The order underneath is the same
  * row in the same table with the same state machine, and in every case the
@@ -69,27 +73,17 @@ declare global {
 export function Checkout() {
   const [order, setOrder] = useState<PublicOrder | null>(null);
   const [qrSvg, setQrSvg] = useState<string | null>(null);
-  const [email, setEmail] = useState("");
-  const [rail, setRail] = useState<Rail>("stripe");
-  const [chain, setChain] = useState<ChainKey>("base");
-  const [busy, setBusy] = useState(false);
+  const [lookup, setLookup] = useState<"loading" | "missing">("loading");
   const [notice, setNotice] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
-
-  // Resume an order from the URL — the Stripe return trip lands here, and so
-  // does anyone who refreshed the page mid-payment.
-  const resumedRef = useRef(false);
-  useEffect(() => {
-    if (resumedRef.current) return;
-    resumedRef.current = true;
-    const ref = new URLSearchParams(window.location.search).get("order");
-    if (ref) void refresh(ref);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const refresh = useCallback(async (reference: string) => {
     try {
       const res = await fetch(`/api/founders/orders/${reference}`, { cache: "no-store" });
+      if (res.status === 404) {
+        setLookup("missing");
+        return;
+      }
       if (!res.ok) return;
       const data = (await res.json()) as { order: PublicOrder; qrSvg: string | null };
       setOrder(data.order);
@@ -99,11 +93,23 @@ export function Checkout() {
     }
   }, []);
 
+  // Resume an order from the URL. The Stripe return trip lands here, and so
+  // does anyone who refreshed the page mid payment. The page only renders this
+  // component when the URL carries an order reference.
+  const resumedRef = useRef(false);
+  useEffect(() => {
+    if (resumedRef.current) return;
+    resumedRef.current = true;
+    const ref = new URLSearchParams(window.location.search).get("order");
+    if (ref) void refresh(ref);
+    else setLookup("missing");
+  }, [refresh]);
+
   // Poll while the order can still change, and tick the countdown every second.
   //
   // `expired` is in the polling set on purpose. A transfer that lands just after
-  // the quote lapsed still settles server-side, so we keep watching — at a
-  // slower cadence — rather than leaving somebody who paid staring at an expiry
+  // the quote lapsed still settles server side, so we keep watching (at a
+  // slower cadence) rather than leaving somebody who paid staring at an expiry
   // notice. `paid` and `refunded` are terminal and stop everything.
   const pollEvery =
     order?.state === "awaiting_payment" || order?.state === "confirming"
@@ -126,49 +132,6 @@ export function Checkout() {
     ? Math.max(0, Math.floor((new Date(order.expiresAt).getTime() - now) / 1000))
     : 0;
 
-  async function startOrder() {
-    setNotice(null);
-    setBusy(true);
-    try {
-      const res = await fetch("/api/founders/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, rail, chain }),
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        setNotice(
-          data?.message ??
-            (data?.error === "sold_out"
-              ? "All 500 seats are taken."
-              : "We could not start your order. Try again."),
-        );
-        return;
-      }
-
-      if (data.checkoutUrl) {
-        window.location.href = data.checkoutUrl as string;
-        return;
-      }
-
-      setOrder(data.order as PublicOrder);
-      // Ask once immediately so the QR is there before the first poll.
-      void refresh((data.order as PublicOrder).reference);
-    } catch {
-      setNotice("We could not reach the server. Check your connection and try again.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  function startOver() {
-    setOrder(null);
-    setQrSvg(null);
-    setNotice(null);
-    window.history.replaceState({}, "", "/founders/checkout");
-  }
-
   /* ── Settled ─────────────────────────────────────────────────── */
   if (order?.state === "paid") {
     return (
@@ -182,8 +145,7 @@ export function Checkout() {
           </span>
         </h1>
         <p className="mt-8 text-lead text-text-muted max-w-xl">
-          Your terms are fixed from today. Your receipt is on its way to your email; the
-          founders room invite follows separately.
+          Your terms are fixed from today. Your receipt is on its way to your email.
         </p>
         <dl className="mt-10 flex flex-col gap-3 max-w-md">
           <Row label="Founder number" value={`#${order.seatNumber}`} />
@@ -206,11 +168,28 @@ export function Checkout() {
           )}
         </dl>
         <Link
-          href="/founders"
+          href="/"
           className="mt-12 inline-flex items-center justify-center px-7 py-4 rounded-pill border border-[color:var(--color-hairline-strong)] text-text font-medium text-body hover:bg-white/5 transition-colors duration-180"
         >
-          Back to the Founder Pass
+          Back to HOLD
         </Link>
+      </Panel>
+    );
+  }
+
+  /* ── Refunded ────────────────────────────────────────────────── */
+  if (order?.state === "refunded") {
+    return (
+      <Panel>
+        <p className="text-tiny uppercase tracking-wider text-moonlight">Refunded</p>
+        <h1 className="mt-6 font-display text-h2 font-light text-text leading-tight">
+          This order was refunded.
+        </h1>
+        <p className="mt-8 text-small text-text-faint max-w-xl">
+          Order reference{" "}
+          <span className="font-mono text-text-muted">{order.reference}</span>. Questions go
+          to hello@hihodl.xyz.
+        </p>
       </Panel>
     );
   }
@@ -224,21 +203,14 @@ export function Checkout() {
           That address is closed.
         </h1>
         <p className="mt-8 text-lead text-text-muted max-w-xl">
-          Quotes hold for {FOUNDER_PASS.quoteValidMinutes} minutes. Starting again issues a
-          brand new address — we never reuse one, so the old address is retired for good.
+          Quotes hold for {FOUNDER_PASS.quoteValidMinutes} minutes. The address is retired
+          for good and will never be issued again.
         </p>
         <p className="mt-6 text-small text-text-faint max-w-xl">
           If you sent money to it anyway, email hello@hihodl.xyz with your order reference{" "}
           <span className="font-mono text-text-muted">{order.reference}</span> and we will
           sort it out by hand.
         </p>
-        <button
-          type="button"
-          onClick={startOver}
-          className="mt-12 inline-flex items-center justify-center px-7 py-4 rounded-pill bg-amber text-text-on-amber font-medium text-body hover:bg-amber-glow transition-all duration-180 ease-out-soft"
-        >
-          Start again
-        </button>
       </Panel>
     );
   }
@@ -252,114 +224,39 @@ export function Checkout() {
         secondsLeft={secondsLeft}
         notice={notice}
         setNotice={setNotice}
-        onStartOver={startOver}
       />
     );
   }
 
-  /* ── Step one ────────────────────────────────────────────────── */
+  /* ── A card order still waiting on Stripe ────────────────────── */
+  if (order) {
+    return (
+      <Panel>
+        <p className="text-tiny uppercase tracking-wider text-moonlight">Waiting for Stripe</p>
+        <h1 className="mt-6 font-display text-h2 font-light text-text leading-tight">
+          We have not heard from your card yet.
+        </h1>
+        <p className="mt-8 text-small text-text-faint max-w-xl">
+          Order reference{" "}
+          <span className="font-mono text-text-muted">{order.reference}</span>. If you were
+          charged, the receipt reaches your email as soon as Stripe confirms it.
+        </p>
+      </Panel>
+    );
+  }
+
+  /* ── Looking the order up, or no order to show ───────────────── */
   return (
     <Panel>
-      <p className="text-tiny uppercase tracking-wider text-moonlight">Founder Pass</p>
-      <h1 className="mt-6 font-display text-h2 md:text-h1 font-light text-text leading-tight">
-        One payment.
-        <br />
-        <span className="text-text-muted">Then it is yours.</span>
+      <p className="text-tiny uppercase tracking-wider text-moonlight">Your order</p>
+      <h1 className="mt-6 font-display text-h2 font-light text-text leading-tight">
+        {lookup === "loading" ? "One moment." : "We could not find that order."}
       </h1>
-
-      <form
-        className="mt-12 flex flex-col gap-10 max-w-xl"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void startOrder();
-        }}
-      >
-        <div className="flex flex-col gap-3">
-          <label htmlFor="founder-email" className="text-small text-text-muted">
-            Where should the pass go?
-          </label>
-          <input
-            id="founder-email"
-            type="email"
-            required
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            className="w-full rounded-input bg-white/[0.04] border border-[color:var(--color-hairline-strong)] px-5 py-4 text-body text-text placeholder:text-text-faint outline-none focus:border-amber/60 transition-colors duration-180"
-          />
-          <p className="text-tiny text-text-faint">
-            Your receipt, your founder number and the founders room invite go here.
-          </p>
-        </div>
-
-        <fieldset className="flex flex-col gap-3">
-          <legend className="text-small text-text-muted mb-3">How do you want to pay?</legend>
-
-          <RailOption
-            id="stripe"
-            selected={rail === "stripe"}
-            onSelect={() => setRail("stripe")}
-            title="Card"
-            body="Visa, Mastercard or Amex. Handled by Stripe — we never see your card number."
-          />
-          <RailOption
-            id="external_wallet"
-            selected={rail === "external_wallet"}
-            onSelect={() => setRail("external_wallet")}
-            title="Connect a wallet"
-            body="MetaMask or Phantom. Approve one transfer and the pass confirms itself."
-          />
-          <RailOption
-            id="onchain_transfer"
-            selected={rail === "onchain_transfer"}
-            onSelect={() => setRail("onchain_transfer")}
-            title="Send dollars yourself"
-            body="We show a QR code and an address. Send from any wallet you already use."
-          />
-        </fieldset>
-
-        {rail !== "stripe" && (
-          <fieldset className="flex flex-col gap-3">
-            <legend className="text-small text-text-muted mb-3">Which network?</legend>
-            <div className="flex gap-3">
-              {(["base", "polygon"] as ChainKey[]).map((key) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setChain(key)}
-                  className={`px-5 py-3 rounded-pill text-small font-medium transition-all duration-180 ${
-                    chain === key
-                      ? "bg-amber text-text-on-amber"
-                      : "border border-[color:var(--color-hairline-strong)] text-text-muted hover:text-text hover:bg-white/5"
-                  }`}
-                >
-                  {PUBLIC_CHAINS[key].label}
-                </button>
-              ))}
-            </div>
-            <p className="text-tiny text-text-faint">
-              Pick the one your dollars are already on. Both settle the same pass.
-            </p>
-          </fieldset>
-        )}
-
-        {notice && <Notice>{notice}</Notice>}
-
-        <div>
-          <button
-            type="submit"
-            disabled={busy || email.trim().length === 0}
-            className="inline-flex items-center justify-center px-8 py-4 rounded-pill bg-amber text-text-on-amber font-medium text-body hover:bg-amber-glow transition-all duration-180 ease-out-soft hover:scale-[1.02] disabled:opacity-40 disabled:hover:scale-100 disabled:cursor-not-allowed"
-          >
-            {busy ? "One moment…" : "Continue"}
-          </button>
-          <p className="mt-6 text-small text-text-faint max-w-md">
-            Full refund if the card has not shipped within {FOUNDER_PASS.refundWindowMonths}{" "}
-            months. One-time price, nothing recurring.
-          </p>
-        </div>
-      </form>
+      {lookup === "missing" && (
+        <p className="mt-8 text-small text-text-faint max-w-xl">
+          Email hello@hihodl.xyz with your order reference and we will look it up by hand.
+        </p>
+      )}
     </Panel>
   );
 }
@@ -372,14 +269,12 @@ function PayOnChain({
   secondsLeft,
   notice,
   setNotice,
-  onStartOver,
 }: {
   order: PublicOrder;
   qrSvg: string | null;
   secondsLeft: number;
   notice: string | null;
   setNotice: (s: string | null) => void;
-  onStartOver: () => void;
 }) {
   const chain = PUBLIC_CHAINS[order.chain as ChainKey];
   const confirming = order.state === "confirming";
@@ -475,14 +370,6 @@ function PayOnChain({
       )}
 
       {notice && <Notice className="mt-8">{notice}</Notice>}
-
-      <button
-        type="button"
-        onClick={onStartOver}
-        className="mt-10 text-small text-text-faint hover:text-text-muted transition-colors duration-180 underline"
-      >
-        Start a different order
-      </button>
     </Panel>
   );
 }
@@ -621,50 +508,6 @@ function Panel({ children }: { children: React.ReactNode }) {
       <div className="absolute inset-0 bg-moonlight-glow opacity-30 pointer-events-none" aria-hidden />
       <div className="container-page section relative">{children}</div>
     </section>
-  );
-}
-
-function RailOption({
-  id,
-  selected,
-  onSelect,
-  title,
-  body,
-}: {
-  id: string;
-  selected: boolean;
-  onSelect: () => void;
-  title: string;
-  body: string;
-}) {
-  return (
-    <label
-      htmlFor={`rail-${id}`}
-      className={`cursor-pointer rounded-card border p-5 flex items-start gap-4 transition-all duration-180 ${
-        selected
-          ? "border-amber/50 bg-amber/[0.05]"
-          : "border-[color:var(--color-hairline)] bg-white/[0.02] hover:bg-white/[0.04]"
-      }`}
-    >
-      <input
-        id={`rail-${id}`}
-        type="radio"
-        name="rail"
-        checked={selected}
-        onChange={onSelect}
-        className="sr-only"
-      />
-      <span
-        className={`mt-1.5 w-3 h-3 rounded-full shrink-0 border transition-colors duration-180 ${
-          selected ? "bg-amber border-amber" : "border-[color:var(--color-hairline-strong)]"
-        }`}
-        aria-hidden
-      />
-      <span className="flex flex-col gap-1.5">
-        <span className="text-body text-text">{title}</span>
-        <span className="text-small text-text-muted">{body}</span>
-      </span>
-    </label>
   );
 }
 

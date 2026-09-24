@@ -42,10 +42,6 @@ const LEARN = [
   { href: "/how-it-works/modes",        label: "Display modes" },
 ];
 
-// "Founder Pass" belongs here and is deliberately absent until /founders is
-// published. That page is a live Stripe checkout, not an explainer: it needs the
-// founder_orders table and the payment keys in place first, and a footer link to
-// a checkout that 500s is worse than no link at all.
 const COMPANY = [
   { href: "/#how",      label: "How it works" },
   { href: "/faq",       label: "FAQ" },
