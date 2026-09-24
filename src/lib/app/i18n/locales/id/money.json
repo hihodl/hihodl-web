@@ -22,7 +22,6 @@
   "invest.hero.label": "Nilai investasi",
   "invest.hero.delta": "{range}  {amount}{arrow} {percent}",
   "invest.hero.noHistory": "Tidak ada riwayat harga untuk aset ini",
-  "invest.hero.uncharted": "Grafik tidak menyertakan {amount} tanpa riwayat harga",
   "invest.hero.curveAria": "Nilai portofolio dalam rentang yang dipilih",
   "invest.empty.title": "Kembangkan kekayaanmu",
   "invest.empty.body": "Ubah dolarmu menjadi Bitcoin, Solana, dan lainnya — langsung dari saldomu.",

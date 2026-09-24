@@ -22,7 +22,6 @@
   "invest.hero.label": "Investierter Wert",
   "invest.hero.delta": "{range}  {amount}{arrow} {percent}",
   "invest.hero.noHistory": "Kein Preisverlauf für diese Assets",
-  "invest.hero.uncharted": "Das Diagramm enthält {amount} ohne Preisverlauf nicht",
   "invest.hero.curveAria": "Portfoliowert im gewählten Zeitraum",
   "invest.empty.title": "Lass dein Vermögen wachsen",
   "invest.empty.body": "Mach aus deinen Dollar Bitcoin, Solana und mehr – direkt aus deinem Guthaben.",

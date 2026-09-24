@@ -29,7 +29,6 @@ const money = {
   "invest.hero.label": "Invested value",
   "invest.hero.delta": "{range}  {amount}{arrow} {percent}",
   "invest.hero.noHistory": "No price history for these assets",
-  "invest.hero.uncharted": "Chart excludes {amount} with no price history",
   "invest.hero.curveAria": "Portfolio value over the chosen range",
   "invest.hero.since": "since {date}",
   "invest.hero.historyFailed": "We couldn't load the price history",

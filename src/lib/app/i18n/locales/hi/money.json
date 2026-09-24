@@ -22,7 +22,6 @@
   "invest.hero.label": "निवेश की वैल्यू",
   "invest.hero.delta": "{range}  {amount}{arrow} {percent}",
   "invest.hero.noHistory": "इन एसेट की कोई प्राइस हिस्ट्री नहीं",
-  "invest.hero.uncharted": "चार्ट में बिना प्राइस हिस्ट्री वाले {amount} शामिल नहीं",
   "invest.hero.curveAria": "चुनी गई अवधि में पोर्टफ़ोलियो की वैल्यू",
   "invest.empty.title": "अपनी संपत्ति बढ़ाएँ",
   "invest.empty.body": "अपने डॉलर को Bitcoin, Solana और बहुत कुछ में बदलें — सीधे अपने बैलेंस से।",

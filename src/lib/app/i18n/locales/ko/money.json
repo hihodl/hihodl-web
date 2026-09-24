@@ -22,7 +22,6 @@
   "invest.hero.label": "투자 가치",
   "invest.hero.delta": "{range}  {amount}{arrow} {percent}",
   "invest.hero.noHistory": "이 자산들의 가격 기록이 없어요",
-  "invest.hero.uncharted": "가격 기록이 없는 {amount}은(는) 차트에서 제외했어요",
   "invest.hero.curveAria": "선택한 기간의 포트폴리오 가치",
   "invest.empty.title": "자산을 키워 보세요",
   "invest.empty.body": "잔액에서 바로 달러를 Bitcoin, Solana 등으로 바꿔 보세요.",

@@ -22,7 +22,6 @@
   "invest.hero.label": "投资价值",
   "invest.hero.delta": "{range}  {amount}{arrow} {percent}",
   "invest.hero.noHistory": "这些资产没有价格历史",
-  "invest.hero.uncharted": "图表未包含无价格历史的 {amount}",
   "invest.hero.curveAria": "所选时间范围内的投资组合价值",
   "invest.empty.title": "让你的财富增长",
   "invest.empty.body": "直接用余额把美元换成比特币、Solana 等资产。",

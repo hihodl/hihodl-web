@@ -22,7 +22,6 @@
   "invest.hero.label": "Valor invertido",
   "invest.hero.delta": "{range}  {amount}{arrow} {percent}",
   "invest.hero.noHistory": "No hay historial de precios para estos activos",
-  "invest.hero.uncharted": "El gráfico no incluye {amount} sin historial de precios",
   "invest.hero.curveAria": "Valor de la cartera en el periodo elegido",
   "invest.empty.title": "Haz crecer tu dinero",
   "invest.empty.body": "Convierte tus dólares en Bitcoin, Solana y más, directamente desde tu saldo.",

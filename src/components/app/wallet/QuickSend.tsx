@@ -31,6 +31,9 @@
 
 import { type KeyboardEvent, type ReactNode, useState } from "react";
 
+import { fmtNumber } from "@/lib/app/i18n/format";
+import { Rich, useT } from "@/lib/app/i18n/react";
+
 import { Ion } from "../ion";
 import { AMBER, AppScreen, BackspaceIcon, ContinueButton, SUB, TokenIcon, WarningNote } from "./app-kit";
 
@@ -49,19 +52,6 @@ const TOKEN_NAME: Record<string, string> = { USDC: "USD Coin", SOL: "Solana" };
 export function chainLabel(chain: string): string {
   return CHAIN_LABEL[chain.toLowerCase()] ?? chain;
 }
-
-/** The small strings, together, so they are easy to find and to translate. */
-const S = {
-  noFee: "No network fee. HOLD pays it.",
-  choose: "Choose",
-  pickTitle: "Token and network",
-  notePlaceholder: "Add a note (optional)",
-  noteLabel: "Note",
-  locked: "Locked",
-  requestingFrom: (name: string) => `Requesting from ${name}`,
-  available: (n: string, t: string) => `Available: ${n} ${t}`,
-  most: (n: string, t: string) => `Most you can send is ${n} ${t}`,
-};
 
 export const NOTE_MAX = 140;
 
@@ -96,6 +86,7 @@ function AmountPad({
   /** Request mode: there is no "most" to ask for, as in the app, where MAX is dead there. */
   maxOff?: boolean;
 }) {
+  const t = useT();
   const key = "flex h-[46px] min-w-0 flex-1 items-center justify-center rounded-[12px] bg-white/[0.06] text-[16px] font-strong text-white transition-colors hover:bg-white/[0.1] active:bg-white/[0.14]";
   const rows = [
     ["1", "2", "3"],
@@ -109,18 +100,18 @@ function AmountPad({
       <div className="flex gap-2">
         {[10, 20, 50, 100].map((v) => (
           <button key={v} type="button" onClick={() => onPreset(v)} className={chip}>
-            +{v}
+            +{fmtNumber(v)}
           </button>
         ))}
         <button type="button" disabled={maxOff} onClick={() => onPreset(Number.POSITIVE_INFINITY)} className={`${chip} flex-[1.2]`}>
-          MAX
+          {t("wallet.send.max")}
         </button>
       </div>
       {rows.map((r) => (
         <div key={r.join("")} className="flex gap-2">
           {r.map((k) =>
             k === "back" ? (
-              <button key={k} type="button" onClick={onBackspace} aria-label="Delete" className={key}>
+              <button key={k} type="button" onClick={onBackspace} aria-label={t("wallet.send.deleteKey")} className={key}>
                 <BackspaceIcon />
               </button>
             ) : (
@@ -135,12 +126,17 @@ function AmountPad({
   );
 }
 
-/** "1,234.5" while typing: the integer part grouped, the decimals as typed (the app's displayAmount). */
+/**
+ * "1,234.5" / "1.234,5" while typing: the integer part grouped and the
+ * decimal mark as the language writes them, the decimals as typed (the app's
+ * displayAmount). The draft itself always keeps a "." — this is only the look.
+ */
 function displayAmount(s: string): string {
-  if (!s) return "0";
+  if (!s) return fmtNumber(0);
   const [int, dec] = s.split(".");
-  const grouped = Number(int || 0).toLocaleString("en-US");
-  return s.includes(".") ? `${grouped}.${dec ?? ""}` : grouped;
+  const grouped = fmtNumber(Number(int || 0), { maximumFractionDigits: 0 });
+  const mark = fmtNumber(1.5, { minimumFractionDigits: 1 }).replace(/[0-9\u0660-\u0669\u06F0-\u06F9\u0966-\u096F]/g, "") || ".";
+  return s.includes(".") ? `${grouped}${mark}${dec ?? ""}` : grouped;
 }
 
 export function QuickSendView({
@@ -183,17 +179,18 @@ export function QuickSendView({
   lockedLine?: string | null;
   cta: { label: string; disabled: boolean; onClick: () => void };
 }) {
+  const t = useT();
   const [picking, setPicking] = useState(false);
   const n = Number(amount);
   const tooMuch = mode === "send" && available !== null && Number.isFinite(n) && n > available;
-  const fmtHave = (x: number) => x.toLocaleString("en-US", { maximumFractionDigits: option.token === "USDC" ? 2 : 6 });
+  const fmtHave = (x: number) => fmtNumber(x, { maximumFractionDigits: option.token === "USDC" ? 2 : 6 });
   const line =
     mode === "request"
-      ? S.requestingFrom(recipient.name)
+      ? t("requests.requestingFrom", { name: recipient.name })
       : tooMuch && available !== null
-        ? S.most(fmtHave(available), option.token)
+        ? t("wallet.send.mostYouCanSend", { amount: `${fmtHave(available)} ${option.token}` })
         : available !== null
-          ? S.available(fmtHave(available), option.token)
+          ? t("wallet.send.available", { amount: `${fmtHave(available)} ${option.token}` })
           : "";
 
   const append = (k: string) => {
@@ -231,13 +228,13 @@ export function QuickSendView({
   const title = (
     <span className="inline-flex max-w-full items-center justify-center gap-1.5">
       <span className="truncate">{recipient.name}</span>
-      {recipient.locked ? <Ion name="lock-closed-outline" size={13} color={SUB} aria-label={S.locked} /> : null}
+      {recipient.locked ? <Ion name="lock-closed-outline" size={13} color={SUB} aria-label={t("wallet.quick.locked")} /> : null}
     </span>
   );
 
   return (
     <AppScreen onBack={onBack} title={title}>
-      <div tabIndex={0} onKeyDown={onKeyDown} className="flex min-w-0 flex-col outline-none" aria-label="Amount">
+      <div tabIndex={0} onKeyDown={onKeyDown} className="flex min-w-0 flex-col outline-none" aria-label={t("common.amount")}>
         {/* The amount block */}
         <div className="flex min-w-0 flex-col items-center px-1 pt-8 text-center">
           <p className="flex max-w-full items-center gap-2">
@@ -249,7 +246,7 @@ export function QuickSendView({
           {mode === "send" ? (
             <p className="mt-1.5 flex items-center gap-[5px] text-[13px] font-strong" style={{ color: SUB }}>
               <Ion name="information-circle-outline" size={14} color="rgba(255,255,255,0.45)" />
-              {S.noFee}
+              {t("wallet.quick.noFee")}
             </p>
           ) : null}
           {notice ? (
@@ -271,7 +268,7 @@ export function QuickSendView({
             <TokenWithMini token={option.token} chain={option.chain} />
             <span className="flex flex-col items-start">
               <span className="flex items-center gap-0.5 text-[15px] font-strong text-white">
-                {option.token || S.choose}
+                {option.token || t("wallet.quick.choose")}
                 {amountLocked && options.length <= 1 ? null : <Ion name="chevron-down" size={13} color="#AFC9D6" />}
               </span>
               <span className="text-[11px] text-white/55">{chainLabel(option.chain)}</span>
@@ -279,7 +276,7 @@ export function QuickSendView({
           </button>
           {picking ? (
             <div className="absolute top-full z-10 mt-2 w-full max-w-[340px] rounded-[18px] border border-white/[0.12] bg-[#15313D] p-2 shadow-[0_18px_36px_rgba(0,0,0,0.4)]">
-              <p className="px-3 pb-1 pt-1.5 text-[11px] font-strong uppercase tracking-[0.5px] text-white/55">{S.pickTitle}</p>
+              <p className="px-3 pb-1 pt-1.5 text-[11px] font-strong uppercase tracking-[0.5px] text-white/55">{t("wallet.quick.pickTitle")}</p>
               {options.map((o) => {
                 const on = o.token === option.token && o.chain === option.chain;
                 return (
@@ -296,11 +293,15 @@ export function QuickSendView({
                     <TokenWithMini token={o.token} chain={o.chain} size={32} />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[15px] font-strong text-white">
-                        {TOKEN_NAME[o.token] ?? o.token} <span className="font-normal text-white/60">on {chainLabel(o.chain)}</span>
+                        <Rich
+                          k="wallet.quick.tokenOn"
+                          vars={{ token: TOKEN_NAME[o.token] ?? o.token, chain: chainLabel(o.chain) }}
+                          tags={{ muted: (c) => <span className="font-normal text-white/60">{c}</span> }}
+                        />
                       </span>
                       <span className="block text-[12px] tabular-nums text-white/60">
                         {o.balance !== undefined && o.balance !== null
-                          ? `${o.balance.toLocaleString("en-US", { maximumFractionDigits: o.token === "USDC" ? 2 : 6 })} ${o.token}`
+                          ? `${fmtNumber(o.balance, { maximumFractionDigits: o.token === "USDC" ? 2 : 6 })} ${o.token}`
                           : o.token}
                       </span>
                     </span>
@@ -318,8 +319,8 @@ export function QuickSendView({
             <input
               value={note}
               onChange={(e) => onNote(e.target.value.slice(0, NOTE_MAX))}
-              placeholder={S.notePlaceholder}
-              aria-label={S.noteLabel}
+              placeholder={t("wallet.quick.notePlaceholder")}
+              aria-label={t("wallet.quick.noteLabel")}
               maxLength={NOTE_MAX}
               className="h-full min-w-0 flex-1 bg-transparent text-[14.5px] text-white outline-none placeholder:text-white/55"
             />

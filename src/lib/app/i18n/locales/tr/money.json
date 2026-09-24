@@ -22,7 +22,6 @@
   "invest.hero.label": "Yatırım değeri",
   "invest.hero.delta": "{range}  {amount}{arrow} {percent}",
   "invest.hero.noHistory": "Bu varlıklar için fiyat geçmişi yok",
-  "invest.hero.uncharted": "Grafik, fiyat geçmişi olmayan {amount} tutarı içermiyor",
   "invest.hero.curveAria": "Seçilen aralıkta portföy değeri",
   "invest.empty.title": "Servetini büyüt",
   "invest.empty.body": "Dolarlarını doğrudan bakiyenden Bitcoin, Solana ve daha fazlasına dönüştür.",

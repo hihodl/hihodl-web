@@ -24,6 +24,7 @@ import money from "./money";
 import offers from "./offers";
 import payments from "./payments";
 import prefs from "./prefs";
+import requests from "./requests";
 import runner from "./runner";
 import shell from "./shell";
 import spaces from "./spaces";
@@ -47,6 +48,7 @@ export const NAMESPACES = {
   wallet,
   money,
   payments,
+  requests,
   groups,
   groupThread,
   analytics,

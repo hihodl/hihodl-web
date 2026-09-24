@@ -22,7 +22,6 @@
   "invest.hero.label": "Valor investido",
   "invest.hero.delta": "{range}  {amount}{arrow} {percent}",
   "invest.hero.noHistory": "Sem histórico de preço para estes ativos",
-  "invest.hero.uncharted": "O gráfico exclui {amount} sem histórico de preço",
   "invest.hero.curveAria": "Valor da carteira no período escolhido",
   "invest.empty.title": "Faça seu dinheiro crescer",
   "invest.empty.body": "Transforme seus dólares em Bitcoin, Solana e mais — direto do seu saldo.",

@@ -663,7 +663,7 @@ function ThreadView({
           className="inline-flex h-9 items-center justify-center gap-1.5 rounded-[10px] bg-amber px-3.5 text-[12.5px] font-bold text-text-on-amber transition-colors hover:bg-amber-glow disabled:opacity-60"
         >
           <Ion name="arrow-up" size={14} />
-          {opening ? "Opening…" : t("common.send")}
+          {opening ? t("payments.thread.opening") : t("common.send")}
         </button>
         {shop ? (
           <button
@@ -768,7 +768,7 @@ function RequestScreen({
       note={note}
       onNote={setNote}
       notice={notice}
-      cta={{ label: sending ? "Requesting…" : "Request", disabled: !ok || sending, onClick: () => void submit() }}
+      cta={{ label: sending ? t("requests.requesting") : t("requests.cta"), disabled: !ok || sending, onClick: () => void submit() }}
     />
   );
 }

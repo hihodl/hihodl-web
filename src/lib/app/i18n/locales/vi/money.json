@@ -22,7 +22,6 @@
   "invest.hero.label": "Giá trị đầu tư",
   "invest.hero.delta": "{range}  {amount}{arrow} {percent}",
   "invest.hero.noHistory": "Chưa có lịch sử giá cho các tài sản này",
-  "invest.hero.uncharted": "Biểu đồ không gồm {amount} chưa có lịch sử giá",
   "invest.hero.curveAria": "Giá trị danh mục trong khoảng thời gian đã chọn",
   "invest.empty.title": "Gia tăng tài sản",
   "invest.empty.body": "Đổi đô la của bạn sang Bitcoin, Solana và nhiều hơn nữa — ngay từ số dư.",

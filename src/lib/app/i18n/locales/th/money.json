@@ -22,7 +22,6 @@
   "invest.hero.label": "มูลค่าการลงทุน",
   "invest.hero.delta": "{range}  {amount}{arrow} {percent}",
   "invest.hero.noHistory": "ไม่มีประวัติราคาของสินทรัพย์เหล่านี้",
-  "invest.hero.uncharted": "กราฟไม่รวม {amount} ที่ไม่มีประวัติราคา",
   "invest.hero.curveAria": "มูลค่าพอร์ตในช่วงเวลาที่เลือก",
   "invest.empty.title": "สร้างความมั่งคั่งของคุณ",
   "invest.empty.body": "เปลี่ยนดอลลาร์ของคุณเป็น Bitcoin, Solana และอื่นๆ ได้จากยอดเงินของคุณเลย",

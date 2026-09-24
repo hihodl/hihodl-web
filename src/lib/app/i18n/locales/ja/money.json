@@ -22,7 +22,6 @@
   "invest.hero.label": "投資評価額",
   "invest.hero.delta": "{range}  {amount}{arrow} {percent}",
   "invest.hero.noHistory": "これらの資産の価格履歴はありません",
-  "invest.hero.uncharted": "価格履歴のない {amount} はチャートから除外しています",
   "invest.hero.curveAria": "選択した期間のポートフォリオ評価額",
   "invest.empty.title": "資産を増やそう",
   "invest.empty.body": "残高のドルを、そのままビットコインや Solana などに換えられます。",

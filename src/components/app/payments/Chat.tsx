@@ -43,7 +43,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { maskTokenSymbol, type DisplayMode } from "@/lib/app/display-mode";
 import type { Transfer } from "@/lib/app/hold-api";
-import { t as tNow } from "@/lib/app/i18n";
+import { t as tNow, type MessageKey } from "@/lib/app/i18n";
 import { fmtDate, fmtNumber, fmtTime } from "@/lib/app/i18n/format";
 import { useLocale, useT } from "@/lib/app/i18n/react";
 import { tokenTicker, transferAmount } from "@/lib/app/payments";
@@ -422,22 +422,13 @@ const TAG_TONE: Record<ReturnType<typeof requestTag>, string> = {
   Cancelled: "bg-white/[0.08] text-white/65",
 };
 
-/** The bubble's small strings, together. */
-const RQ = {
-  pay: "Pay",
-  decline: "Decline",
-  remind: "Remind",
-  cancel: "Cancel",
-  keep: "Keep it",
-  declineTitle: "Decline this request?",
-  declineBody: (name: string) => `${name} will see that you declined it.`,
-  declineIt: "Decline",
-  cancelTitle: "Cancel this request?",
-  cancelBody: (name: string) => `${name} won't be able to pay it any more.`,
-  cancelIt: "Cancel request",
-  reminded: "Reminded. They got a friendly nudge.",
-  inApp: (chain: string) => `This one is on ${chain}. Pay it in the HOLD app.`,
-};
+/** The word on the tag, per `requestTag`. */
+const TAG_KEY = {
+  Requested: "requests.tag.requested",
+  Paid: "requests.tag.paid",
+  Declined: "requests.tag.declined",
+  Cancelled: "requests.tag.cancelled",
+} as const satisfies Record<ReturnType<typeof requestTag>, MessageKey>;
 
 function RequestBubble({
   request,
@@ -509,22 +500,22 @@ function RequestBubble({
               <>
                 <button
                   type="button"
-                  onClick={() => ("token" in payable ? onPay() : setSaid(RQ.inApp(payable.app)))}
+                  onClick={() => ("token" in payable ? onPay() : setSaid(t("requests.payInApp", { chain: payable.app })))}
                   className={`${plate} bg-amber font-bold text-text-on-amber hover:bg-amber-glow`}
                 >
-                  {RQ.pay}
+                  {t("requests.pay")}
                 </button>
                 <button type="button" disabled={!!busy} onClick={() => setAsk("decline")} className={glass}>
-                  {RQ.decline}
+                  {t("requests.decline")}
                 </button>
               </>
             ) : (
               <>
-                <button type="button" disabled={!!busy} onClick={() => void act("remind", () => remindRequest(request.id), RQ.reminded)} className={glass}>
-                  {RQ.remind}
+                <button type="button" disabled={!!busy} onClick={() => void act("remind", () => remindRequest(request.id), t("requests.reminded"))} className={glass}>
+                  {t("requests.remind")}
                 </button>
                 <button type="button" disabled={!!busy} onClick={() => setAsk("cancel")} className={glass}>
-                  {RQ.cancel}
+                  {t("requests.cancel")}
                 </button>
               </>
             )}
@@ -534,21 +525,21 @@ function RequestBubble({
         {said ? <span className="mt-2 block text-[12px] leading-[17px] text-white/75">{said}</span> : null}
 
         <span className="mt-1.5 flex items-center justify-end gap-2 text-[10.5px] text-white/60">
-          <span className={`inline-flex h-4 items-center rounded-[8px] px-1.5 text-[10px] font-extrabold uppercase tracking-[0.4px] ${TAG_TONE[tag]}`}>{tag}</span>
+          <span className={`inline-flex h-4 items-center rounded-[8px] px-1.5 text-[10px] font-extrabold uppercase tracking-[0.4px] ${TAG_TONE[tag]}`}>{t(TAG_KEY[tag])}</span>
           <span>{shortTime(request.createdAt)}</span>
         </span>
       </div>
 
       {ask ? (
         <Modal
-          title={ask === "decline" ? RQ.declineTitle : RQ.cancelTitle}
+          title={ask === "decline" ? t("requests.declineTitle") : t("requests.cancelTitle")}
           onClose={() => setAsk(null)}
           busy={!!busy}
           size="sm"
           footer={
             <div className="flex gap-2">
               <button type="button" className={`${btnGlass} flex-1`} disabled={!!busy} onClick={() => setAsk(null)}>
-                {RQ.keep}
+                {t("requests.keep")}
               </button>
               <button
                 type="button"
@@ -559,12 +550,12 @@ function RequestBubble({
                   void act(which, () => (which === "decline" ? rejectRequest(request.id) : cancelRequest(request.id))).then(() => setAsk(null));
                 }}
               >
-                {busy ? "One moment…" : ask === "decline" ? RQ.declineIt : RQ.cancelIt}
+                {busy ? t("requests.oneMoment") : ask === "decline" ? t("requests.declineIt") : t("requests.cancelIt")}
               </button>
             </div>
           }
         >
-          <p className="text-[14px] leading-[20px] text-white/[0.78]">{ask === "decline" ? RQ.declineBody(peerName) : RQ.cancelBody(peerName)}</p>
+          <p className="text-[14px] leading-[20px] text-white/[0.78]">{ask === "decline" ? t("requests.declineBody", { name: peerName }) : t("requests.cancelBody", { name: peerName })}</p>
         </Modal>
       ) : null}
     </div>

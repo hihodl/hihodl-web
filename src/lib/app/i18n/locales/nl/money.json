@@ -22,7 +22,6 @@
   "invest.hero.label": "Belegde waarde",
   "invest.hero.delta": "{range}  {amount}{arrow} {percent}",
   "invest.hero.noHistory": "Geen prijsgeschiedenis voor deze assets",
-  "invest.hero.uncharted": "Grafiek zonder {amount} zonder prijsgeschiedenis",
   "invest.hero.curveAria": "Waarde van je portefeuille over de gekozen periode",
   "invest.empty.title": "Laat je vermogen groeien",
   "invest.empty.body": "Zet je dollars om in Bitcoin, Solana en meer — rechtstreeks vanuit je saldo.",

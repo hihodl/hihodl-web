@@ -11,7 +11,14 @@
  * asked to pay. On the create body, `from` is the person the money is asked
  * FROM. Everything below speaks in `requester` and `payer` and never in
  * from/to, so the backwards naming is paid for here and nowhere else.
+ *
+ * The words are the `requests` namespace (i18n/en/requests.ts), read in the
+ * language on screen when a line is made. Pure apart from that: no React and
+ * no `@/` imports.
  */
+
+import { t, type MessageKey } from "./i18n";
+import { fmtDate, fmtTime, fmtToken } from "./i18n/format";
 
 /** `cancelled` and `declined` are both closed; an old row can say `cancelled` after a decline. */
 export type RequestStatus = "requested" | "paid" | "cancelled" | "declined";
@@ -179,26 +186,27 @@ export const CHAIN_NAME: Record<string, string> = { solana: "Solana", sol: "Sola
  * never a countdown: a reminder is a nudge between friends, not a timer.
  */
 export function remindAgainText(retryAt: string | null | undefined, now: Date = new Date()): string {
-  const t = retryAt ? new Date(retryAt) : null;
-  if (!t || Number.isNaN(t.getTime())) return "You already reminded them today. You can remind them again tomorrow.";
-  const time = t.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  const at = retryAt ? new Date(retryAt) : null;
+  if (!at || Number.isNaN(at.getTime())) return t("requests.remind.tomorrow");
+  const time = fmtTime(at, { hour: "2-digit", minute: "2-digit" });
   const day = new Date(now);
   const sameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
   const tomorrow = new Date(day);
   tomorrow.setDate(day.getDate() + 1);
-  const when = sameDay(t, day) ? `at ${time}` : sameDay(t, tomorrow) ? `tomorrow at ${time}` : `on ${t.toLocaleDateString(undefined, { day: "numeric", month: "short" })} at ${time}`;
-  return `You already reminded them. You can remind them again ${when}.`;
+  if (sameDay(at, day)) return t("requests.remind.at", { time });
+  if (sameDay(at, tomorrow)) return t("requests.remind.tomorrowAt", { time });
+  return t("requests.remind.on", { date: fmtDate(at, { day: "numeric", month: "short" }), time });
 }
 
-const WORDS: Record<string, string> = {
-  request_needs_a_hold_user: "You can only ask someone who is on HOLD.",
-  request_to_self: "You can't ask yourself for money.",
-  invalid_amount: "Type an amount above zero.",
-  too_many_open_requests: "You already have 3 open requests with them. Wait for one to be paid, or cancel one.",
-  request_rate_limited: "You've sent a lot of requests today. Try again tomorrow.",
-  request_not_open: "This request isn't open any more.",
-  proof_required: "We couldn't match your payment to this request.",
-  transfer_amount_unknown: "We couldn't value the token you paid in, so the request stays open.",
+const WORDS: Record<string, MessageKey> = {
+  request_needs_a_hold_user: "requests.error.needsHoldUser",
+  request_to_self: "requests.error.toSelf",
+  invalid_amount: "requests.error.invalidAmount",
+  too_many_open_requests: "requests.error.tooManyOpen",
+  request_rate_limited: "requests.error.rateLimited",
+  request_not_open: "requests.error.notOpen",
+  proof_required: "requests.error.proofRequired",
+  transfer_amount_unknown: "requests.error.amountUnknown",
 };
 
 /**
@@ -210,12 +218,12 @@ const WORDS: Record<string, string> = {
 export function describeRequestError(e: { status: number; code?: string | null; detail?: string | null; details?: Record<string, unknown> | null }): string {
   const name = [e.detail, e.code].find((c) => c && (c in WORDS || c === "remind_too_soon"));
   if (name === "remind_too_soon") return remindAgainText(typeof e.details?.retryAt === "string" ? e.details.retryAt : null);
-  if (name) return WORDS[name];
-  if (e.status === 0) return "We could not reach HOLD. Check your connection and try again.";
-  if (e.status === 404) return "No one on HOLD goes by that name.";
-  if (e.status === 401) return "Your session ended. Sign in again.";
-  if (e.status === 429) return "Too many at once. Wait a moment and try again.";
-  return "That did not go through. Try again.";
+  if (name) return t(WORDS[name]);
+  if (e.status === 0) return t("requests.error.offline");
+  if (e.status === 404) return t("requests.error.notFound");
+  if (e.status === 401) return t("requests.error.sessionEnded");
+  if (e.status === 429) return t("requests.error.tooMany");
+  return t("requests.error.generic");
 }
 
 /* ── The inbox ────────────────────────────────────────────────────── */
@@ -258,13 +266,14 @@ export function requestPeers(
     const mine = r.fromUserId === meId;
     const who = mine ? r.payer : r.requester;
     const amount = requestAmount(r);
-    const figure = `${amount === null ? r.amount : amount.toFixed(2)} ${r.tokenId.split(".")[0].toUpperCase()}`;
+    const ticker = r.tokenId.split(".")[0].toUpperCase();
+    const figure = amount === null ? `${r.amount} ${ticker}` : fmtToken(amount, ticker);
     return {
       peerId,
       aliasHandle: who?.username ?? null,
       displayName: who?.displayName ?? null,
       avatarUrl: who?.avatarUrl ?? null,
-      lastBody: mine ? `Requested ${figure}` : `Asked you for ${figure}`,
+      lastBody: mine ? t("requests.inbox.youRequested", { amount: figure }) : t("requests.inbox.theyAsked", { amount: figure }),
       lastHasMedia: false,
       // "You: Requested…" would say it twice; the body already has the voice.
       lastFromMe: false,

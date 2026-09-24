@@ -22,7 +22,6 @@
   "invest.hero.label": "القيمة المستثمرة",
   "invest.hero.delta": "{range}  {amount}{arrow} {percent}",
   "invest.hero.noHistory": "لا يوجد سجل أسعار لهذه الأصول",
-  "invest.hero.uncharted": "الرسم البياني يستثني {amount} بلا سجل أسعار",
   "invest.hero.curveAria": "قيمة المحفظة خلال الفترة المختارة",
   "invest.empty.title": "نمِّ ثروتك",
   "invest.empty.body": "حوّل دولاراتك إلى Bitcoin وSolana وغيرها، مباشرة من رصيدك.",

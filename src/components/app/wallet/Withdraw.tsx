@@ -103,30 +103,17 @@ export interface WithdrawPrefill {
 
 const DECIMALS: Record<WithdrawToken, number> = { USDC: 6, SOL: 9 };
 
-/** The small strings of Send's own, together. */
-const S = {
-  payingRequest: (name: string) => `Paying ${name}'s request`,
-  settling: "Marking their request as paid…",
-  settled: "Their request is marked as paid.",
-  closed: "Their request was already closed.",
-  short: (proven: string | null) =>
-    proven
-      ? `Your payment covered ${proven} of what they asked, so their request stays open.`
-      : "Your payment covered less than they asked, so their request stays open.",
-  unknown: "HOLD couldn't put a value on what you paid in, so their request stays open. They can see your payment in your conversation.",
-  unproven: "We couldn't match this payment to their request, so it stays open. They can still see your payment in your conversation.",
-};
-
 /** What became of the request, said once the payment is on the result screen. */
 function settleLine(o: SettleOutcome | "pending"): string {
-  if (o === "pending") return S.settling;
-  if (o.kind === "settled") return S.settled;
-  if (o.kind === "closed") return S.closed;
+  if (o === "pending") return t("requests.settle.pending");
+  if (o.kind === "settled") return t("requests.settle.done");
+  if (o.kind === "closed") return t("requests.settle.closed");
   if (o.kind === "short") {
     const cur = o.currency && /^[A-Z]{3}$/.test(o.currency.toUpperCase()) ? o.currency.toUpperCase() : null;
-    return S.short(o.provenMinor && /^\d+$/.test(o.provenMinor) && cur ? moneyText(o.provenMinor, cur) : null);
+    const proven = o.provenMinor && /^\d+$/.test(o.provenMinor) && cur ? moneyText(o.provenMinor, cur) : null;
+    return proven ? t("requests.settle.shortBy", { amount: proven }) : t("requests.settle.short");
   }
-  return o.kind === "unknown" ? S.unknown : S.unproven;
+  return o.kind === "unknown" ? t("requests.settle.unknown") : t("requests.settle.unproven");
 }
 
 /** Confirm's short recipient: six, an ellipsis, four. */
@@ -376,7 +363,7 @@ export function WithdrawView({
         onOption={(o) => setDraft({ ...draft, token: o.token === "SOL" ? "SOL" : "USDC", amount: "" })}
         available={have}
         notice={phase.notice}
-        lockedLine={locked ? S.payingRequest(peer ?? shortTo(draft.to)) : null}
+        lockedLine={locked ? t("requests.payingRequest", { name: peer ?? shortTo(draft.to) }) : null}
         cta={{ label: t("common.continue"), disabled: units === null || tooMuch || !toOk, onClick: actions.onReview }}
       />
     );
