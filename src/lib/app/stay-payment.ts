@@ -44,8 +44,8 @@
  *
  * ── THE PHONE APPROVES, ALWAYS ──
  *
- * The web does not pay by itself any more (Alex, 2026-09-24): no passkey and
- * no key is opened here. The build lives about 30 seconds, so the submit
+ * The web does not pay by itself any more (Alex, 2026-09-24): no key is
+ * opened here. The build lives about 30 seconds, so the submit
  * starts the moment the poll sees `approved`. With no phone linked
  * (409 NO_PHONE_LINKED or LINK_YOUR_PHONE_FIRST) the run stops on
  * `linkFirst`, and the screen opens the link sheet.

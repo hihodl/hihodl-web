@@ -59,15 +59,7 @@ function linesOf(view: PayoutAddressView, w: ReturnType<typeof useHoldWallet>): 
             tone: "done",
             chip: tr("account.payout.chipAnother"),
           }
-        : w.kind === "web" && w.unregistered
-          ? {
-              title: tr("account.payout.almostTitle"),
-              address: null,
-              text: tr("account.payout.almostText"),
-              tone: "neutral",
-              chip: tr("account.payout.chipOneStep"),
-            }
-          : { title: tr("account.payout.noWalletTitle"), address: null, text: tr("account.payout.getAppText"), tone: "neutral", chip: tr("account.payout.chipNoWallet") };
+        : { title: tr("account.payout.noWalletTitle"), address: null, text: tr("account.payout.getAppText"), tone: "neutral", chip: tr("account.payout.chipNoWallet") };
 
   const e = view.evm;
   // Read-only here: Base and Polygon are set up in the HOLD app.

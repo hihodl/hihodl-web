@@ -121,7 +121,7 @@ export function ContinueButton({ children, onClick, disabled }: { children: Reac
   );
 }
 
-/** Passkeys' "Add another device": glass plate, amber words. */
+/** The app's secondary button: glass plate, amber words. */
 export function SecondaryButton({
   children,
   icon,
@@ -156,14 +156,13 @@ export function Card({ children, className = "" }: { children: ReactNode; classN
   return <div className={`${cardClass} ${className}`}>{children}</div>;
 }
 
-/** The passkeys / backup section label: 12/700, uppercase, tracked. */
+/** The app's section label: 12/700, uppercase, tracked. */
 export function SectionLabel({ children }: { children: ReactNode }) {
   return <p className="mb-3 px-0.5 text-[12px] font-strong uppercase tracking-[0.6px] text-white/55">{children}</p>;
 }
 
 /**
- * The app's hero card (Passkeys "Protect this device", Backup "Your safety
- * net"): amber-tinted plate, an icon in a 54pt amber disc, a 17/800 title,
+ * The app's hero card (Backup "Your safety net"): amber-tinted plate, an icon in a 54pt amber disc, a 17/800 title,
  * a centred 13/19 line, then whatever it asks the person to do.
  */
 export function HeroCard({ icon, title, children }: { icon: IonName; title: ReactNode; children?: ReactNode }) {
@@ -227,7 +226,7 @@ export function WarningNote({ children }: { children: ReactNode }) {
   );
 }
 
-/** The app's quiet info box (Passkeys, unsupported device). */
+/** The app's quiet info box. */
 export function InfoBox({ icon = "alert-circle-outline", children }: { icon?: IonName; children: ReactNode }) {
   return (
     <div className="flex items-start gap-3 rounded-[12px] bg-white/[0.05] p-4">

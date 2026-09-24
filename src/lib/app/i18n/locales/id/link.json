@@ -4,7 +4,6 @@
   "later": "Nanti",
   "linking": "Menautkan...",
   "linkingPhone": "Menautkan ponselmu...",
-  "sendingWallet": "Mengirim dompetmu ke ponselmu...",
   "getOnPlay": "Unduh HOLD di Google Play",
   "newCode": "Tampilkan kode baru",
   "why": "Ponsel Android yang ditautkan menyetujui dan menandatangani, di aplikasi HOLD, pembayaran yang kamu mulai di web.",
@@ -16,15 +15,11 @@
   "waiting.androidHere": "Buka aplikasi HOLD dengan link ini. Aplikasinya akan menampilkan kode enam digit: kembali ke halaman ini untuk memastikan kodenya sama.",
   "waiting.validFor": "Kode berlaku {left}",
   "waiting.openInHold": "Buka di HOLD",
-  "confirm.joinedCarries": "Ponselmu sudah terhubung. Sebelum dompetmu dikirim ke sana, pastikan ini ponselmu.",
   "confirm.joined": "Ponselmu sudah terhubung. Pastikan ini ponselmu.",
   "confirm.codeLabel": "Kode {digits}",
   "confirm.question": "Apakah ponselmu menampilkan kode ini?",
-  "confirm.waitingPasskey": "Menunggu passkey-mu...",
   "confirm.yes": "Ya, sama",
   "confirm.no": "Tidak, berbeda",
-  "confirm.secretRequired": "Dompetmu juga akan dikirim ke ponsel ini. Konfirmasi lagi dengan passkey-mu.",
-  "confirm.stillReading": "Masih membaca dompetmu. Coba lagi sebentar lagi.",
   "done.title": "Ponselmu sudah tertaut",
   "done.android": "Pembayaran yang kamu mulai di web sekarang disetujui dan ditandatangani di aplikasi HOLD di ponsel ini.",
   "phone.androidBody": "Ponselmu ditautkan di aplikasi HOLD. Aplikasinya terbuka dengan kode enam digit: pastikan sama dengan yang ada di komputermu.",
@@ -71,5 +66,6 @@
   "pay.bodyThisPhone": "Tautkan ponsel ini sekali, dan aplikasi HOLD akan menyetujui dan menandatangani setiap pembayaran yang kamu mulai di sini. Sampai saat itu, tidak ada pembayaran yang bisa dilakukan dari sini.",
   "getOnAppStore": "Unduh HOLD di App Store",
   "waiting.scanAnyPhone": "Ponselmu yang tertaut menyetujui dan menandatangani, di aplikasi HOLD, setiap pembayaran yang kamu mulai di web. Pindai kode ini dengan kamera ponselmu, atau dari aplikasi HOLD.",
-  "waiting.opensOnPhone": "HOLD terbuka di iPhone atau ponsel Android-mu dan menampilkan kode enam digit. Belum punya HOLD? Kodenya menunjukkan tempat mendapatkannya."
+  "waiting.opensOnPhone": "HOLD terbuka di iPhone atau ponsel Android-mu dan menampilkan kode enam digit. Belum punya HOLD? Kodenya menunjukkan tempat mendapatkannya.",
+  "confirm.webWalletClosed": "Dompet akun ini dibuat di web, dan web tidak lagi membuka dompet, jadi tidak ada yang bisa dikirim ke ponselmu dari sini. Buat dompetmu di aplikasi HOLD."
 }

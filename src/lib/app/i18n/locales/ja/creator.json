@@ -67,7 +67,6 @@
   "publish.solanaWallet": "Solana ウォレット",
   "publish.yourHoldWallet": "あなたの HOLD ウォレット",
   "publish.anotherWallet": "署名で確認した別のウォレット",
-  "publish.unlockWallet": "ウォレットのロックを解除",
   "publish.setUp": "設定する",
   "publish.wherePaid": "スポンサーが USDC で支払う先",
   "publish.usdcAccount": "USDC アカウント",

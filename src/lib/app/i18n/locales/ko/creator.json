@@ -67,7 +67,6 @@
   "publish.solanaWallet": "Solana 지갑",
   "publish.yourHoldWallet": "내 HOLD 지갑",
   "publish.anotherWallet": "서명으로 확인한 다른 지갑",
-  "publish.unlockWallet": "지갑 잠금 해제",
   "publish.setUp": "설정",
   "publish.wherePaid": "스폰서가 USDC로 결제하는 곳",
   "publish.usdcAccount": "USDC 계정",

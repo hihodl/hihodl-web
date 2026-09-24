@@ -47,8 +47,8 @@
  *
  * The app's four actions are Add · Pay/Move · Move/Info · Accounts. Paying,
  * moving between accounts and supplying to a venue all move money and all
- * happen in the app, so the row is three: Add money, Send (which the Wallet
- * page approves on the phone or with a passkey bound to the transaction), and
+ * happen in the app, so the row is three: Add money, Send (which the linked
+ * phone approves and signs), and
  * Activity. Nothing here is drawn dead.
  *
  * The third was Accounts, and it opened the Overview — the same panel as the

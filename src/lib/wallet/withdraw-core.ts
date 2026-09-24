@@ -1,64 +1,14 @@
 /**
- * The pure half of a withdrawal from the web wallet: amounts, addresses and
- * the hash a passkey assertion is bound to. No DOM, no network, no web3.js,
- * so `npx sucrase-node src/lib/link/sas.check.ts` proves it too.
- *
- * documentation/link-your-phone-and-approved-withdrawals.md:
- *
- *   challenge = sha256(utf8("hihodl/withdrawal/v1") ‖ utf8(id) ‖ sha256(message))
- *
- * The web computes it itself and refuses to prompt for a passkey when the
- * server's options carry anything else: an assertion is then only ever
- * about the transfer this screen built and showed.
+ * The pure half of a send from the web: amounts and addresses. No DOM, no
+ * network, no web3.js, so `npx sucrase-node src/lib/link/sas.check.ts` proves
+ * it too. The send itself is approved and signed on the linked phone.
  */
 
-import { sha256 } from "@noble/hashes/sha256";
 import { base58 } from "@scure/base";
 
 export type WithdrawToken = "USDC" | "SOL";
 
 export const DECIMALS: Record<WithdrawToken, number> = { USDC: 6, SOL: 9 };
-
-export const WITHDRAWAL_DOMAIN = "hihodl/withdrawal/v1";
-
-export function withdrawalChallenge(id: string, message: Uint8Array): Uint8Array {
-  const enc = new TextEncoder();
-  const a = enc.encode(WITHDRAWAL_DOMAIN);
-  const b = enc.encode(id);
-  const c = sha256(message);
-  const all = new Uint8Array(a.length + b.length + c.length);
-  all.set(a, 0);
-  all.set(b, a.length);
-  all.set(c, a.length + b.length);
-  return sha256(all);
-}
-
-/**
- * The challenge `POST /withdrawals/tx-challenge` must answer for bytes the
- * SERVER built (a spot, a stay's bridge deposit):
- *
- *   challenge = sha256(utf8("hihodl/tx/v1") ‖ sha256(message))
- *
- * Checked here before the passkey is asked, as a withdrawal's is: the prompt
- * only ever approves the transaction this page is holding.
- */
-export const TX_DOMAIN = "hihodl/tx/v1";
-
-export function txChallenge(message: Uint8Array): Uint8Array {
-  const a = new TextEncoder().encode(TX_DOMAIN);
-  const c = sha256(message);
-  const all = new Uint8Array(a.length + c.length);
-  all.set(a, 0);
-  all.set(c, a.length);
-  return sha256(all);
-}
-
-export function sameBytes(a: Uint8Array, b: Uint8Array): boolean {
-  if (a.length !== b.length) return false;
-  let d = 0;
-  for (let i = 0; i < a.length; i++) d |= a[i] ^ b[i];
-  return d === 0;
-}
 
 /** A Solana address: base58 of exactly 32 bytes. Not an 0x address, not a token account check. */
 export function isSolanaAddress(s: string): boolean {

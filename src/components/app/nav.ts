@@ -172,7 +172,7 @@ export const MAIN_FOOT: readonly NavItem[] = [
  */
 export const MAIN_HIDDEN: readonly NavItem[] = [
   { key: "account", labelKey: "shell.nav.account", path: "/account", icon: IconAccount, keywords: "profile photo name username email x twitter payout wallet address" },
-  { key: "wallet", labelKey: "shell.nav.wallet", path: "/wallet", icon: IconWallet, keywords: "solana usdc address receive passkey recovery phrase words export balance withdraw" },
+  { key: "wallet", labelKey: "shell.nav.wallet", path: "/wallet", icon: IconWallet, keywords: "solana usdc address receive balance withdraw" },
   // Savings is a SCOPE of Home, not a place: /savings opens Home on that pill.
   { key: "savings", labelKey: "shell.nav.savings", path: "/savings", icon: IconSavings, keywords: "savings pockets goals yield interest apy earn aave kamino ways to earn" },
   // Analytics is the app's header disc on Home (the round button beside

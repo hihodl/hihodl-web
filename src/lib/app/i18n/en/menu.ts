@@ -47,40 +47,15 @@ const menu = {
   "security.title": "Security",
   "security.linkPhone": "Link your phone",
   "security.phones": "{count, plural, =0 {Not linked} one {Linked} other {# phones}}",
-  "security.passkeys": "Passkeys",
 
   /* Account recovery */
   "recovery.title": "Account recovery",
-  "recovery.intro": "If you ever lose your phone, any of these brings your account back.",
   "recovery.infoAria": "How recovery works",
   "recovery.infoTitle": "How you get back in",
-  "recovery.infoBody1":
-    "Your money lives in your wallet, not with us, so we can never move it on our own. To make sure you can always get back in, set up at least two ways below.",
   "recovery.infoBody2": "Recovery codes are one-time backups. Save them somewhere that is not your email, like your password manager.",
-  "recovery.infoBody3": "The more ways you set up, the safer you are.",
-  "recovery.passkey": "Passkey",
-  "recovery.passkeySub": "Unlock with your face. Works on your new phone automatically.",
   "recovery.codes": "Recovery codes",
   "recovery.codesSub": "One-time codes. Save them somewhere that is not your email.",
   "recovery.setUp": "Set up",
-  "recovery.foot": "Set up at least two. You can change these anytime.",
-
-  /* Passkeys */
-  "passkeys.title": "Passkeys",
-  "passkeys.what": "What are passkeys?",
-  "passkeys.infoBody1": "Passkeys let you sign in with Face ID or your fingerprint — no password and no recovery phrase to type.",
-  "passkeys.infoBody2": "Each device you sign in from registers its own passkey, so you can add or remove them independently here.",
-  "passkeys.loadFailed": "Failed to load passkeys",
-  "passkeys.protectTitle": "Protect this device",
-  "passkeys.protectBody": "This device doesn't have a passkey yet. Add one to sign in with Face ID or your fingerprint — no password needed.",
-  "passkeys.all": "All passkeys",
-  "passkeys.unnamed": "Passkey",
-  "passkeys.added": "Added {when}",
-  "passkeys.addedToday": "today",
-  "passkeys.addedYesterday": "yesterday",
-  "passkeys.addedDays": "{count}d ago",
-  "passkeys.addedMonths": "{count}mo ago",
-  "passkeys.lastNote": "Removing the last passkey is not allowed. To replace it, add a new one first, then remove the old.",
 
   /* Recovery codes */
   "codes.title": "Recovery Codes",
@@ -219,7 +194,8 @@ const menu = {
   "inTheApp.body": "Sign in there with the same account. It comes to the web next.",
   "home.walletSubPhone": "Your addresses and sends, approved on your phone",
   "tiles.linkSubEvery": "It approves every payment",
-  "passkeys.addInApp": "Add a passkey in the HOLD app on your phone.",
+  "recovery.introCodes": "If you ever lose your phone, your recovery codes bring your account back.",
+  "recovery.infoBody1Codes": "Your money lives in your wallet, not with us, so we can never move it on our own. Recovery codes make sure you can always get back in.",
 } satisfies Record<string, string>;
 
 export default menu;

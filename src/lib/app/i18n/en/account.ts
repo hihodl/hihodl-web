@@ -49,9 +49,6 @@ const account = {
   "payout.declaredTitle": "Paid to another wallet",
   "payout.declaredText": "Proved by your signature. A HOLD wallet, once you have one, takes over.",
   "payout.chipAnother": "Another wallet",
-  "payout.almostTitle": "Your HOLD wallet is almost ready",
-  "payout.almostText": "Open your Wallet and unlock it once: that tells HOLD its address, and sponsors pay it from then on.",
-  "payout.chipOneStep": "One step left",
   "payout.chipNoWallet": "No wallet yet",
   "payout.noWalletTitle": "No wallet yet",
   "payout.evmTitle": "Base and Polygon",
@@ -95,22 +92,8 @@ const account = {
   "phone.howOther": "On your account",
   "phone.howLinked": "{how} · linked {date}",
   "phone.linked": "Linked",
-  "phone.removing": "Removing…",
-  "phone.preparing": "Preparing…",
-  "phone.removeWithPasskey": "Remove with passkey",
-  "phone.keep": "Keep",
-  "phone.noPasskey": "Your account has no passkey, so this phone can only be removed from the HOLD app on it.",
-  "phone.passkeyConfirms":
-    "Your passkey confirms the removal. Once removed, that phone approves nothing. A wallet made on the web goes back to your passkey. A wallet made in the app needs a phone linked again to pay from the web.",
   "phone.link": "Link your phone",
   "phone.linkAnother": "Link another phone",
-  "phone.stillPreparing": "Still preparing. Try again in a moment.",
-  "phone.errCancelled": "The passkey prompt was closed. The phone is still linked.",
-  "phone.errNeedsPasskey": "Add a passkey to this account to remove this phone. It is still linked.",
-  "phone.errProofNotAllowed": "This account has no passkey. Remove the phone from the HOLD app on that phone.",
-  "phone.errVerifyFailed": "That passkey did not confirm the removal. The phone is still linked.",
-  "phone.errExpired": "That took too long. Tap Remove with passkey again.",
-  "phone.errNotFound": "That phone is no longer linked.",
 
   /* Profile: avatar and name */
   "profile.editAvatar": "Edit avatar",
@@ -223,6 +206,7 @@ const account = {
   "xReturn.open": "Open Account",
   "payout.getAppText": "Get the HOLD app: it makes your wallet, and sponsors pay it from then on. Or use another wallet.",
   "phone.introEvery": "Your linked phone approves and signs, in the HOLD app, every payment you start on the web. Without one, nothing can be paid from the web.",
+  "phone.removeInApp": "To remove a phone, open the HOLD app: Settings › Devices.",
 } satisfies Record<string, string>;
 
 export default account;

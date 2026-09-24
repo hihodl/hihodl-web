@@ -1,15 +1,12 @@
 /**
- * Proof for the app intents and the tx-challenge digest (no test runner here):
+ * Proof for the app intents (no test runner here):
  *
  *   npx sucrase-node src/lib/link/intent.check.ts
  *
  * Exits 1 on the first failure.
  */
 
-import { createHash } from "crypto";
-
 import { PLAY_STORE_URL } from "../appLinks";
-import { txChallenge } from "../wallet/withdraw-core";
 import { androidIntentFor, appIntent, linkUniversalUrl, openLinkFromBrowser, openInAppUrl, openOnPhone, paymentApprovalIntent, withdrawalIntent } from "./intent";
 
 let failures = 0;
@@ -53,13 +50,6 @@ const fromSafari = openLinkFromBrowser("https://app.hihodl.xyz/link/abc?k=xyz", 
 check("link page on iPhone goes through the opener", new URL(fromSafari).host === "hihodl.xyz" && new URL(fromSafari).searchParams.get("to") === "link/abc?k=xyz", fromSafari);
 check("link page under /app on iPhone", new URL(openLinkFromBrowser("https://hihodl.xyz/app/link/abc?k=xyz", "ios")).searchParams.get("to") === "link/abc?k=xyz");
 check("link page on Android is the intent", openLinkFromBrowser("https://app.hihodl.xyz/link/abc?k=xyz", "android") === link);
-
-// sha256(utf8("hihodl/tx/v1") ‖ sha256(message)), straight from the contract's words.
-for (const msg of [new Uint8Array([]), new Uint8Array([1, 2, 3]), new Uint8Array(300).fill(7)]) {
-  const inner = createHash("sha256").update(Buffer.from(msg)).digest();
-  const ref = createHash("sha256").update(Buffer.from("hihodl/tx/v1", "utf8")).update(inner).digest();
-  check(`tx challenge (${msg.length} bytes)`, Buffer.from(txChallenge(msg)).equals(ref));
-}
 
 if (failures) {
   console.error(`${failures} failed`);

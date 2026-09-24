@@ -216,8 +216,7 @@ function Gate({ children }: { children: ReactNode }) {
  *   1. a wallet made in the HOLD app, on every page that needs one
  *      (`needsApp`): read from the server on every load, never from this
  *      browser's memory. Without one, "Get the HOLD app"; a failed read, Retry
- *   2. onboarding, once: a person without a username, a passkey or recovery
- *      codes is sent to /welcome, which brings them back here. Everybody
+ *   2. onboarding, once: a person without a username or recovery codes is sent to /welcome, which brings them back here. Everybody
  *      else never sees it. A full load, not a client navigation: /welcome
  *      carries the wallet pages' strict CSP, which only a response can set
  */

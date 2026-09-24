@@ -8,20 +8,15 @@
  *   1. SAS: computed here with Node's own sha256 straight from the contract's
  *      words, and compared with computeSas on random keys; plus one fixed
  *      vector anyone can recompute (keys 0x01…, 0x02…, session "s-1").
- *   2. The box: what sealSecret seals, the app's side (openSecret with the
- *      app's secret and the web's public key) opens; a wrong key does not.
- *   3. The withdrawal challenge: the same bytes as the contract's formula.
- *   4. Amounts and addresses: exact base units, refusals.
- *   5. User agents: desktop platform, browser, phone.
+ *   2. Amounts and addresses: exact base units, refusals.
+ *   3. User agents: desktop platform, browser, phone.
  */
 
 import { createHash, randomBytes } from "crypto";
-import nacl from "tweetnacl";
 
 import { computeSas } from "./sas";
-import { newLinkKeyPair, openSecret, sealSecret } from "./seal";
 import { browserOf, phoneOf, platformOf } from "./ua";
-import { canonicalAmount, isSolanaAddress, toBaseUnits, withdrawalChallenge } from "../wallet/withdraw-core";
+import { canonicalAmount, isSolanaAddress, toBaseUnits } from "../wallet/withdraw-core";
 
 let failures = 0;
 function check(name: string, ok: boolean, detail = "") {
@@ -69,28 +64,7 @@ try {
 }
 check("sas refuses a key that is not 32 bytes", threw);
 
-// 2. The box
-const web = newLinkKeyPair();
-const app = nacl.box.keyPair();
-const secret = new Uint8Array(randomBytes(32));
-const { box, nonce } = sealSecret(secret, app.publicKey, web.secretKey);
-const opened = openSecret(box, nonce, web.publicKey, app.secretKey);
-check("the app opens the box to the same 32 bytes", !!opened && Buffer.from(opened).equals(Buffer.from(secret)));
-check("the box is 48 bytes (32 + Poly1305 tag), the nonce 24", box.length === 48 && nonce.length === 24);
-const intruder = nacl.box.keyPair();
-check("a swapped app key cannot open it", openSecret(box, nonce, web.publicKey, intruder.secretKey) === null);
-const tampered = box.slice();
-tampered[0] ^= 1;
-check("a changed byte does not open", openSecret(tampered, nonce, web.publicKey, app.secretKey) === null);
-
-// 3. The withdrawal challenge
-const msg = new Uint8Array(randomBytes(200));
-const wid = "3f0c2a8e-8a1b-4c62-9a55-0c1f5b1f0e11";
-const inner = createHash("sha256").update(Buffer.from(msg)).digest();
-const ref = createHash("sha256").update(Buffer.from("hihodl/withdrawal/v1", "utf8")).update(Buffer.from(wid, "utf8")).update(inner).digest();
-check("withdrawal challenge matches the contract", Buffer.from(withdrawalChallenge(wid, msg)).equals(ref));
-
-// 4. Amounts and addresses
+// 2. Amounts and addresses
 check("12.5 USDC = 12500000", toBaseUnits("12.5", "USDC") === 12_500_000n);
 check("0.000000001 SOL = 1 lamport", toBaseUnits("0.000000001", "SOL") === 1n);
 check("7 decimals of USDC refused", toBaseUnits("1.0000001", "USDC") === null);
@@ -100,7 +74,7 @@ check("a real Solana address passes", isSolanaAddress("EPjFWdd5AufqSSqeM2qN1xzyb
 check("an EVM address fails", !isSolanaAddress("0x52908400098527886E0F7030069857D2E4169EE7"));
 check("a 0 or l in base58 fails", !isSolanaAddress("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt10"));
 
-// 5. User agents
+// 3. User agents
 const UA = {
   mac: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15",
   win: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 Edg/128.0.0.0",

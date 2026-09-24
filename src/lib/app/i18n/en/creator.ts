@@ -68,7 +68,6 @@ const creator = {
   "publish.solanaWallet": "Solana wallet",
   "publish.yourHoldWallet": "Your HOLD wallet",
   "publish.anotherWallet": "Another wallet, proved by signature",
-  "publish.unlockWallet": "Unlock wallet",
   "publish.setUp": "Set up",
   "publish.wherePaid": "Where sponsors pay you, in USDC",
   "publish.usdcAccount": "USDC account",

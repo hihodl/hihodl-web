@@ -34,7 +34,7 @@ function route(request: NextRequest, init: Init): NextResponse | null {
 
   // Files from /public (logos, icons) are the same on both hosts. So is
   // /.well-known: apple-app-site-association has no extension, and rewritten
-  // into /app it would be a 404 on the host passkeys are made on.
+  // into /app it would be a 404 on the app host.
   if (/\.[a-z0-9]+$/i.test(pathname) || pathname.startsWith('/.well-known/')) return null;
 
   if (isAppHost(host)) {

@@ -4,7 +4,6 @@
   "later": "Más tarde",
   "linking": "Vinculando...",
   "linkingPhone": "Vinculando tu móvil...",
-  "sendingWallet": "Enviando tu wallet a tu móvil...",
   "getOnPlay": "Descargar HOLD en Google Play",
   "newCode": "Mostrar un código nuevo",
   "why": "Un móvil Android vinculado aprueba y firma, en la app HOLD, los pagos que empiezas en la web.",
@@ -16,15 +15,11 @@
   "waiting.androidHere": "Abre la app HOLD con este enlace. Te mostrará un código de seis dígitos: vuelve a esta página para comprobar que coincide.",
   "waiting.validFor": "Código válido durante {left}",
   "waiting.openInHold": "Abrir en HOLD",
-  "confirm.joinedCarries": "Tu móvil se ha conectado. Antes de enviarle tu wallet, comprueba que es tu móvil.",
   "confirm.joined": "Tu móvil se ha conectado. Comprueba que es tu móvil.",
   "confirm.codeLabel": "Código {digits}",
   "confirm.question": "¿Tu móvil muestra este código?",
-  "confirm.waitingPasskey": "Esperando a tu llave de acceso...",
   "confirm.yes": "Sí, coincide",
   "confirm.no": "No, es distinto",
-  "confirm.secretRequired": "Tu wallet también va a este móvil. Vuelve a confirmar con tu llave de acceso.",
-  "confirm.stillReading": "Todavía estamos leyendo tu wallet. Vuelve a intentarlo en un momento.",
   "done.title": "Tu móvil está vinculado",
   "done.android": "Los pagos que empiezas en la web ahora se aprueban y firman en la app HOLD de este móvil.",
   "phone.androidBody": "Tu móvil se vincula en la app HOLD. Se abre con un código de seis dígitos: comprueba que coincide con el de tu ordenador.",
@@ -71,5 +66,6 @@
   "pay.bodyThisPhone": "Vincula este móvil una vez, y la app HOLD aprueba y firma cada pago que empiezas aquí. Hasta entonces, no se puede pagar nada desde aquí.",
   "getOnAppStore": "Descargar HOLD en la App Store",
   "waiting.scanAnyPhone": "Tu móvil vinculado aprueba y firma, en la app HOLD, cada pago que empiezas en la web. Escanea este código con la cámara de tu móvil, o desde la app HOLD.",
-  "waiting.opensOnPhone": "HOLD se abre en tu iPhone o móvil Android y muestra un código de seis dígitos. ¿Aún no tienes HOLD? El código te dice dónde conseguirla."
+  "waiting.opensOnPhone": "HOLD se abre en tu iPhone o móvil Android y muestra un código de seis dígitos. ¿Aún no tienes HOLD? El código te dice dónde conseguirla.",
+  "confirm.webWalletClosed": "La wallet de esta cuenta se creó en la web, que ya no abre wallets, así que desde aquí no se puede enviar nada a tu móvil. Crea tu wallet en la app HOLD."
 }

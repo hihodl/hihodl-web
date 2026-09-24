@@ -6,11 +6,11 @@
  * under it, and the help line and the company at the foot. Each row opens its
  * own screen with Back (`?screen=`, so the browser's Back works too).
  *
- *   Security           → ?screen=security   security.tsx: the rows the web has
- *                          (Link your phone, Passkeys)
+ *   Security           → ?screen=security   security.tsx: the row the web has
+ *                          (Link your phone)
  *   Account recovery   → ?screen=recovery   backup.tsx, the fintech "ways to
- *                          get back in": Passkey, Recovery codes
- *                          → ?screen=passkeys       passkeys.tsx
+ *                          get back in": Recovery codes (the web has no
+ *                          passkey anywhere, Alex 2026-09-24)
  *                          → ?screen=codes          recovery-codes.tsx
  *   Statements         → ?screen=statements statements/index.tsx, drawn and
  *                          honest: the server issues the document and the app
@@ -59,7 +59,6 @@ import { chosenUsername, emailRecoveryCodes, recoveryCodesStatus } from "@/lib/a
 import { useMe } from "@/lib/app/spaces-data";
 import { thisDevice, type Phone } from "@/lib/link/ua";
 import { listSessions, revokeSession, thisBrowserSessionId, type ActiveSession } from "@/lib/app/sessions";
-import { listPasskeys, type RegisteredPasskey } from "@/lib/wallet/api";
 
 import { useLinkedPhones } from "../account/PhoneScreen";
 import { linkHref } from "../link/in-app";
@@ -79,7 +78,7 @@ import { useDisplayCurrency, useLocale, useT } from "@/lib/app/i18n/react";
 /** The product's own host serves only the product; the website's pages live on the website. */
 const WEBSITE = "https://hihodl.xyz";
 
-type Screen = "home" | "plan" | "invite" | "security" | "recovery" | "passkeys" | "codes" | "statements" | "settings" | "sessions" | "personalization" | "about" | "language" | "currency";
+type Screen = "home" | "plan" | "invite" | "security" | "recovery" | "codes" | "statements" | "settings" | "sessions" | "personalization" | "about" | "language" | "currency";
 
 export function MenuScreen({ screen, item }: { screen?: string; item?: string } = {}) {
   const router = useRouter();
@@ -90,9 +89,8 @@ export function MenuScreen({ screen, item }: { screen?: string; item?: string } 
   const home = () => open("home");
   if (screen === "plan") return <PlanScreen onBack={home} />;
   if (screen === "invite") return <InviteScreen onBack={home} />;
-  if (screen === "security") return <SecurityScreen onBack={home} open={open} />;
+  if (screen === "security") return <SecurityScreen onBack={home} />;
   if (screen === "recovery") return <RecoveryScreen onBack={home} open={open} />;
-  if (screen === "passkeys") return <PasskeysScreen onBack={() => open("recovery")} />;
   if (screen === "codes") return <CodesScreen onBack={() => open("recovery")} />;
   if (screen === "statements") return <StatementsScreen onBack={home} />;
   if (screen === "settings") return <SettingsScreen onBack={home} open={open} />;
@@ -118,21 +116,6 @@ export function MenuScreen({ screen, item }: { screen?: string; item?: string } 
 
 /* ── Data ─────────────────────────────────────────────────────────── */
 
-/** undefined while reading, null when it could not be read. */
-function usePasskeys(): RegisteredPasskey[] | null | undefined {
-  const [list, setList] = useState<RegisteredPasskey[] | null | undefined>(undefined);
-  useEffect(() => {
-    let alive = true;
-    listPasskeys().then(
-      (l) => alive && setList(l),
-      () => alive && setList(null),
-    );
-    return () => {
-      alive = false;
-    };
-  }, []);
-  return list;
-}
 
 type CodesStatus = { hasActiveCodes: boolean; unusedCount: number; generatedAt: string | null };
 
@@ -400,9 +383,8 @@ function StatementsScreen({ onBack }: { onBack: () => void }) {
 
 /* ── Security (security.tsx) ──────────────────────────────────────── */
 
-function SecurityScreen({ onBack, open }: { onBack: () => void; open: (s: Screen) => void }) {
+function SecurityScreen({ onBack }: { onBack: () => void }) {
   const productHref = useProductHref();
-  const passkeys = usePasskeys();
   const phones = useLinkedPhones();
   const n = phones.devices?.length ?? 0;
   const t = useT();
@@ -420,12 +402,6 @@ function SecurityScreen({ onBack, open }: { onBack: () => void; open: (s: Screen
           value={phoneValue}
           href={phones.devices && n === 0 ? linkHref(productHref, productHref("/menu?screen=security")) : productHref("/account?view=phone")}
           reload={!!phones.devices && n === 0}
-        />
-        <MenuRow
-          icon="finger-print-outline"
-          label={t("menu.security.passkeys")}
-          value={passkeys === undefined ? undefined : passkeys === null ? t("common.unavailable") : fmtNumber(passkeys.length)}
-          onClick={() => open("passkeys")}
         />
       </HoldCard>
     </Column>
@@ -463,7 +439,6 @@ function FactorRow({ icon, title, subtitle, active, divider, onClick }: { icon: 
 }
 
 function RecoveryScreen({ onBack, open }: { onBack: () => void; open: (s: Screen) => void }) {
-  const passkeys = usePasskeys();
   const [codes] = useCodes();
   const [info, setInfo] = useState(false);
   const t = useT();
@@ -471,7 +446,7 @@ function RecoveryScreen({ onBack, open }: { onBack: () => void; open: (s: Screen
     <Column>
       <BackHeader title={t("menu.recovery.title")} onBack={onBack} />
       <div className="mt-4 flex items-start gap-2 px-1">
-        <p className="flex-1 text-[15px] font-medium leading-[21px] text-white/[0.72]">{t("menu.recovery.intro")}</p>
+        <p className="flex-1 text-[15px] font-medium leading-[21px] text-white/[0.72]">{t("menu.recovery.introCodes")}</p>
         <button type="button" aria-label={t("menu.recovery.infoAria")} aria-expanded={info} onClick={() => setInfo((v) => !v)} className="mt-px text-amber">
           <Ion name="information-circle-outline" size={20} />
         </button>
@@ -484,128 +459,24 @@ function RecoveryScreen({ onBack, open }: { onBack: () => void; open: (s: Screen
           </span>
           <p className="text-[19px] font-strong text-white">{t("menu.recovery.infoTitle")}</p>
           <p className="text-[14px] leading-5 text-white/[0.72]">
-            {t("menu.recovery.infoBody1")}
+            {t("menu.recovery.infoBody1Codes")}
           </p>
           <p className="text-[14px] leading-5 text-white/[0.72]">
             {t("menu.recovery.infoBody2")}
           </p>
-          <p className="text-[13px] text-white/55">{t("menu.recovery.infoBody3")}</p>
         </HoldCard>
       ) : null}
 
       <HoldCard className="mt-[18px]">
         <FactorRow
-          icon="finger-print-outline"
-          title={t("menu.recovery.passkey")}
-          subtitle={t("menu.recovery.passkeySub")}
-          active={passkeys === undefined ? null : !!passkeys && passkeys.length > 0}
-          divider={false}
-          onClick={() => open("passkeys")}
-        />
-        <FactorRow
           icon="grid-outline"
           title={t("menu.recovery.codes")}
           subtitle={t("menu.recovery.codesSub")}
           active={codes === undefined ? null : !!codes?.hasActiveCodes}
-          divider
+          divider={false}
           onClick={() => open("codes")}
         />
       </HoldCard>
-      <p className="mt-4 px-4 text-center text-[13px] leading-[18px] text-[#9FB7C2]">{t("menu.recovery.foot")}</p>
-    </Column>
-  );
-}
-
-/* ── Passkeys (passkeys.tsx) ──────────────────────────────────────── */
-
-function added(iso: string): string {
-  const days = Math.floor((Date.now() - Date.parse(iso)) / 86_400_000);
-  if (!Number.isFinite(days)) return "";
-  if (days < 1) return tr("menu.passkeys.addedToday");
-  if (days === 1) return tr("menu.passkeys.addedYesterday");
-  if (days < 30) return tr("menu.passkeys.addedDays", { count: days });
-  const months = Math.floor(days / 30);
-  return tr("menu.passkeys.addedMonths", { count: months });
-}
-
-function PasskeysScreen({ onBack }: { onBack: () => void }) {
-  const passkeys = usePasskeys();
-  const [info, setInfo] = useState(false);
-  const t = useT();
-  // Passkeys are added in the HOLD app: adding one here meant unlocking a web wallet, and the web makes none.
-  const add = <p className="text-[12.5px] leading-[18px] text-white/60">{t("menu.passkeys.addInApp")}</p>;
-  return (
-    <Column>
-      <BackHeader
-        title={t("menu.passkeys.title")}
-        onBack={onBack}
-        right={
-          <button type="button" aria-label={t("menu.passkeys.what")} aria-expanded={info} onClick={() => setInfo((v) => !v)} className="flex h-9 w-9 items-center justify-center text-white/70 hover:text-white">
-            <Ion name="information-circle-outline" size={24} />
-          </button>
-        }
-      />
-      {info ? (
-        <HoldCard className="mb-4 mt-2 flex flex-col items-center gap-3 px-5 py-6 text-center">
-          <span className="flex h-[60px] w-[60px] items-center justify-center rounded-[30px] bg-amber/[0.12] text-amber">
-            <Ion name="finger-print" size={30} />
-          </span>
-          <p className="text-[20px] font-strong text-white">{t("menu.passkeys.what")}</p>
-          <p className="text-[14px] leading-[21px] text-white/65">{t("menu.passkeys.infoBody1")}</p>
-          <p className="text-[14px] leading-[21px] text-white/65">
-            {t("menu.passkeys.infoBody2")}
-          </p>
-        </HoldCard>
-      ) : null}
-
-      {passkeys === undefined ? (
-        <div className="mt-4 flex flex-col gap-3">
-          <Skeleton className="h-[74px] rounded-[16px]" />
-          <Skeleton className="h-[74px] rounded-[16px]" />
-        </div>
-      ) : passkeys === null ? (
-        <div className="mt-4">
-          <Notice icon="alert-circle-outline" tone="calm">
-            {t("menu.passkeys.loadFailed")}
-          </Notice>
-        </div>
-      ) : passkeys.length === 0 ? (
-        <div className="mt-4 flex flex-col items-center gap-2 rounded-[18px] border border-amber/[0.22] bg-amber/[0.06] p-5 text-center">
-          <span className="mb-0.5 flex h-[54px] w-[54px] items-center justify-center rounded-[27px] bg-amber/[0.12] text-amber">
-            <Ion name="finger-print" size={26} />
-          </span>
-          <p className="text-[17px] font-strong text-white">{t("menu.passkeys.protectTitle")}</p>
-          <p className="mb-2 px-1 text-[13px] leading-[19px] text-white/60">
-            {t("menu.passkeys.protectBody")}
-          </p>
-          {add ? <div className="w-full">{add}</div> : null}
-        </div>
-      ) : (
-        <>
-          <p className="mb-3 mt-4 px-0.5 text-[12px] font-strong uppercase tracking-[0.6px] text-white/55">{t("menu.passkeys.all")}</p>
-          <div className="mb-4 flex flex-col gap-3">
-            {passkeys.map((p) => (
-              <div key={p.id} className="flex items-center gap-3 rounded-[16px] border border-white/[0.08] bg-white/[0.05] p-3.5">
-                <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[10px] bg-amber/10 text-amber">
-                  <Ion name={p.deviceType === "singleDevice" ? "phone-portrait-outline" : "key-outline"} size={20} />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[15px] font-strong text-white">{p.name || t("menu.passkeys.unnamed")}</span>
-                  <span className="mt-[3px] block text-[12px] font-medium text-white/55">{t("menu.passkeys.added", { when: added(p.createdAt) })}</span>
-                </span>
-              </div>
-            ))}
-          </div>
-          {add}
-        </>
-      )}
-
-      <div className="flex items-start gap-2.5 px-1 pt-[18px]">
-        <Ion name="shield-checkmark-outline" size={18} className="shrink-0 text-white/55" />
-        <p className="flex-1 text-[12px] leading-[17px] text-white/55">
-          {t("menu.passkeys.lastNote")}
-        </p>
-      </div>
     </Column>
   );
 }

@@ -4,7 +4,6 @@
   "later": "Later",
   "linking": "Koppelen...",
   "linkingPhone": "Je telefoon wordt gekoppeld...",
-  "sendingWallet": "Je wallet wordt naar je telefoon gestuurd...",
   "getOnPlay": "Download HOLD op Google Play",
   "newCode": "Nieuwe code tonen",
   "why": "Een gekoppelde Android-telefoon keurt de betalingen die je op het web start goed en ondertekent ze in de HOLD-app.",
@@ -16,15 +15,11 @@
   "waiting.androidHere": "Open de HOLD-app met deze link. Die toont een code van zes cijfers: kom terug naar deze pagina om te checken of hij overeenkomt.",
   "waiting.validFor": "Code geldig voor {left}",
   "waiting.openInHold": "Openen in HOLD",
-  "confirm.joinedCarries": "Je telefoon is verbonden. Controleer of dit jouw telefoon is voordat je wallet ernaartoe gaat.",
   "confirm.joined": "Je telefoon is verbonden. Controleer of dit jouw telefoon is.",
   "confirm.codeLabel": "Code {digits}",
   "confirm.question": "Toont je telefoon deze code?",
-  "confirm.waitingPasskey": "Wachten op je passkey...",
   "confirm.yes": "Ja, hij klopt",
   "confirm.no": "Nee, hij is anders",
-  "confirm.secretRequired": "Je wallet gaat ook naar deze telefoon. Bevestig nog een keer met je passkey.",
-  "confirm.stillReading": "Je wallet wordt nog gelezen. Probeer het zo opnieuw.",
   "done.title": "Je telefoon is gekoppeld",
   "done.android": "Betalingen die je op het web start, worden nu goedgekeurd en ondertekend in de HOLD-app op deze telefoon.",
   "phone.androidBody": "Je telefoon koppel je in de HOLD-app. Die opent met een code van zes cijfers: check of hij overeenkomt met die op je computer.",
@@ -71,5 +66,6 @@
   "pay.bodyThisPhone": "Koppel deze telefoon één keer, en de HOLD-app keurt goed en ondertekent elke betaling die je hier start. Tot dan kan er niets vanaf hier worden betaald.",
   "getOnAppStore": "Download HOLD in de App Store",
   "waiting.scanAnyPhone": "Je gekoppelde telefoon keurt in de HOLD-app elke betaling die je op het web start goed, en ondertekent hem. Scan deze code met de camera van je telefoon, of vanuit de HOLD-app.",
-  "waiting.opensOnPhone": "HOLD gaat open op je iPhone of Android-telefoon en toont een code van zes cijfers. Nog geen HOLD? De code laat zien waar je hem kunt downloaden."
+  "waiting.opensOnPhone": "HOLD gaat open op je iPhone of Android-telefoon en toont een code van zes cijfers. Nog geen HOLD? De code laat zien waar je hem kunt downloaden.",
+  "confirm.webWalletClosed": "De wallet van dit account is op het web gemaakt, en het web opent geen wallets meer, dus van hieruit kan niets naar je telefoon. Maak je wallet in de HOLD-app."
 }

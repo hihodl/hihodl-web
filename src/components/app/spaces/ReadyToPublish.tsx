@@ -111,12 +111,10 @@ function useItems(): Item[] | null {
     });
   } else {
     const action: Action =
-      w.kind === "web" && w.unregistered
-        ? { label: t("creator.publish.unlockWallet"), href: href("/wallet") }
-        : w.kind === "none"
-          ? // No wallet: it is made in the HOLD app. Where you get paid shows the stores.
-            { label: t("creator.publish.getApp"), href: href("/account?view=payout") }
-          : { label: t("creator.publish.setUp"), href: href("/account?view=payout") };
+      w.kind === "none"
+        ? // No wallet: it is made in the HOLD app. Where you get paid shows the stores.
+          { label: t("creator.publish.getApp"), href: href("/account?view=payout") }
+        : { label: t("creator.publish.setUp"), href: href("/account?view=payout") };
     items.push({ key: "wallet", state: "todo", label: t("creator.publish.solanaWallet"), sub: t("creator.publish.wherePaid"), action });
   }
 

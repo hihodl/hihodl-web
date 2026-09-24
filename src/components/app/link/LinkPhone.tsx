@@ -14,11 +14,10 @@
  *   the phone  the HOLD app opens the address (an App Link on Android, a
  *              universal link on iPhone) and joins with its device key
  *   this page  shows the six-digit code both screens compute, and only when
- *              the person says they match does it seal and finish. A wallet
- *              made in the app seals nothing (`carriesSecret: false`, box and
- *              nonce null): the app already holds the seed. An older web
- *              wallet is unlocked with the passkey and its secret sealed to
- *              the phone's key, as before
+ *              the person says they match does it seal and finish. The
+ *              seal carries nothing (box and nonce null): the wallet is made
+ *              in the app, which already holds the seed, and the web holds no
+ *              secret to send (Alex, 2026-09-24)
  *
  * The linked phone then approves and signs every payment started on the web.
  *
@@ -39,15 +38,13 @@ import { t as tNow } from "@/lib/app/i18n";
 import { Rich, useT } from "@/lib/app/i18n/react";
 import { createLinkSession, getLinkState, sealLinkSession, type LinkStatus } from "@/lib/link/api";
 import { computeSas, formatSas } from "@/lib/link/sas";
-import { newLinkKeyPair, sealSecret, type LinkKeyPair } from "@/lib/link/seal";
+import { newLinkKeyPair, type LinkKeyPair } from "@/lib/link/seal";
 import { androidIntentFor, linkUniversalUrl } from "@/lib/link/intent";
 import { thisDevice, type Phone } from "@/lib/link/ua";
 import { APP_STORE_URL, PLAY_STORE_URL } from "@/lib/appLinks";
-import { getWalletBackup, getWalletStatus, WalletApiError, type WalletBackup, type WalletStatus } from "@/lib/wallet/api";
-import { fromBase64, toBase64, toBase64Url, wipe } from "@/lib/wallet/core";
+import { WalletApiError } from "@/lib/wallet/api";
+import { fromBase64, toBase64Url, wipe } from "@/lib/wallet/core";
 import { explain } from "@/lib/wallet/explain";
-import { userSecretFrom } from "@/lib/wallet/flows";
-import { evaluatePrf } from "@/lib/wallet/passkey";
 
 import { ActionButton, Cta, ErrorBanner, ReadyBox, SkipButton, Spinner, StepDesc } from "../front/step";
 
@@ -76,9 +73,9 @@ export type LinkPhase =
       expiresAt: number;
       here: Phone | null;
     }
-  | { kind: "confirm"; sas: string; carries: boolean; busy: boolean; notice?: string | null }
+  | { kind: "confirm"; sas: string; busy: boolean; notice?: string | null }
   | { kind: "mismatch" }
-  | { kind: "sending"; carries: boolean }
+  | { kind: "sending" }
   | { kind: "expired" }
   | { kind: "done"; platform: Phone };
 
@@ -190,15 +187,14 @@ export function LinkView({ phase, actions }: { phase: LinkPhase; actions: LinkAc
     return (
       <div>
         {phase.notice ? <ErrorBanner>{phase.notice}</ErrorBanner> : null}
-        <StepDesc>{phase.carries ? t("link.confirm.joinedCarries") : t("link.confirm.joined")}</StepDesc>
+        <StepDesc>{t("link.confirm.joined")}</StepDesc>
         <p className="mt-4 text-center font-mono text-[40px] font-medium tracking-[0.12em] text-white tabular-nums" aria-label={t("link.confirm.codeLabel", { digits: phase.sas.split("").join(" ") })}>
           {formatSas(phase.sas)}
         </p>
         <p className="mt-2 text-center text-[15px] font-semibold text-white/80">{t("link.confirm.question")}</p>
         <Cta>
           <ActionButton
-            title={phase.busy ? (phase.carries ? t("link.confirm.waitingPasskey") : t("link.linking")) : t("link.confirm.yes")}
-            icon={phase.carries ? "key-outline" : undefined}
+            title={phase.busy ? t("link.linking") : t("link.confirm.yes")}
             disabled={phase.busy}
             onClick={actions.onConfirm}
           />
@@ -223,7 +219,7 @@ export function LinkView({ phase, actions }: { phase: LinkPhase; actions: LinkAc
     return (
       <div className="flex items-center gap-3 py-5" role="status">
         <Spinner color="#20D690" />
-        <span className="text-[16px] font-semibold text-white/60">{phase.carries ? t("link.sendingWallet") : t("link.linkingPhone")}</span>
+        <span className="text-[16px] font-semibold text-white/60">{t("link.linkingPhone")}</span>
       </div>
     );
   }
@@ -258,14 +254,8 @@ const FIVE_MINUTES = 5 * 60 * 1000;
 /** Opens a session, waits for the phone, confirms the code and seals. Onboarding's step and the standalone screen. */
 export function LinkPhone({ onDone, onLater }: { onDone: () => void; onLater?: () => void }) {
   const [phase, setPhase] = useState<LinkPhase>({ kind: "starting" });
-  // Only for an older backend that does not say whether the seal carries a secret.
-  const [wallet, setWallet] = useState<WalletStatus | null>(null);
-  useEffect(() => {
-    getWalletStatus().then(setWallet, () => setWallet(null));
-  }, []);
   const keys = useRef<LinkKeyPair | null>(null);
   const session = useRef<{ id: string; webPub: Uint8Array } | null>(null);
-  const backup = useRef<WalletBackup | null>(null);
   const appPub = useRef<Uint8Array | null>(null);
   // Which run of the flow a poll belongs to: a new code ends the old poll.
   const run = useRef(0);
@@ -331,7 +321,7 @@ export function LinkPhone({ onDone, onLater }: { onDone: () => void; onLater?: (
       try {
         const s = await getLinkState(id);
         if (stopped || mine !== run.current) return;
-        onStatus(s.status, s.platform, s.appPub, s.carriesSecret);
+        onStatus(s.status, s.platform, s.appPub);
       } catch (e) {
         if (stopped || mine !== run.current) return;
         // The session is gone (another tab showed a newer code, or it was
@@ -343,7 +333,7 @@ export function LinkPhone({ onDone, onLater }: { onDone: () => void; onLater?: (
         /* anything else: the next tick asks again */
       }
     };
-    const onStatus = (status: LinkStatus, platform: Phone | null, pub: string | null, carriesSecret: boolean | null) => {
+    const onStatus = (status: LinkStatus, platform: Phone | null, pub: string | null) => {
       if (status === "done") {
         forget();
         setPhase({ kind: "done", platform: platform ?? "android" });
@@ -354,11 +344,7 @@ export function LinkPhone({ onDone, onLater }: { onDone: () => void; onLater?: (
         const raw = fromBase64(pub);
         if (raw.length !== 32 || !session.current) return;
         appPub.current = raw;
-        // The server says; an older one that does not, read from the wallet itself.
-        const carries = carriesSecret ?? (!!wallet && wallet.state === "web_wallet" && !!wallet.current_blob_hash);
-        // Read ahead: the passkey prompt must start inside the click.
-        if (carries) getWalletBackup().then((b) => (backup.current = b), () => undefined);
-        setPhase({ kind: "confirm", sas: computeSas(id, session.current.webPub, raw), carries, busy: false });
+        setPhase({ kind: "confirm", sas: computeSas(id, session.current.webPub, raw), busy: false });
       }
     };
     void tick();
@@ -367,54 +353,24 @@ export function LinkPhone({ onDone, onLater }: { onDone: () => void; onLater?: (
       stopped = true;
       clearInterval(t);
     };
-  }, [waitingFor, wallet, forget]);
+  }, [waitingFor, forget]);
 
   const confirm = async () => {
     if (phase.kind !== "confirm" || !session.current || !keys.current || !appPub.current) return;
-    if (!phase.carries) {
-      // No web wallet: the phone links, and nothing is sealed.
-      setPhase({ ...phase, busy: true, notice: null });
-      try {
-        await sealLinkSession(session.current.id, { box: null, nonce: null });
-        wipe(keys.current.secretKey);
-        setPhase({ kind: "sending", carries: false });
-      } catch (e) {
-        if (e instanceof WalletApiError && e.code === "SECRET_REQUIRED") {
-          // There is a web wallet after all: it goes to the phone, with the passkey.
-          void getWalletBackup().then((x) => (backup.current = x), () => undefined);
-          setPhase({ ...phase, carries: true, busy: false, notice: tNow("link.confirm.secretRequired") });
-        } else if (e instanceof WalletApiError && e.status === 410) {
-          forget();
-          setPhase({ kind: "expired" });
-        } else setPhase({ ...phase, busy: false, notice: explain(e) });
-      }
-      return;
-    }
-    const b = backup.current;
-    if (!b) {
-      setPhase({ ...phase, notice: tNow("link.confirm.stillReading") });
-      void getWalletBackup().then((x) => (backup.current = x), () => undefined);
-      return;
-    }
+    // The phone links, and nothing is sealed: the web holds no wallet secret.
     setPhase({ ...phase, busy: true, notice: null });
-    let prf: Uint8Array | null = null;
-    let secret: Uint8Array | null = null;
     try {
-      const a = await evaluatePrf(b.wrappings.map((w) => w.credential_id));
-      prf = a.prf;
-      secret = await userSecretFrom(b, a.credentialId, prf);
-      const { box, nonce } = sealSecret(secret, appPub.current, keys.current.secretKey);
-      await sealLinkSession(session.current.id, { box: toBase64(box), nonce: toBase64(nonce) });
-      // The web's part is over: its secret key is no longer needed.
+      await sealLinkSession(session.current.id, { box: null, nonce: null });
       wipe(keys.current.secretKey);
-      setPhase({ kind: "sending", carries: true });
+      setPhase({ kind: "sending" });
     } catch (e) {
-      if (e instanceof WalletApiError && e.status === 410) {
+      if (e instanceof WalletApiError && e.code === "SECRET_REQUIRED") {
+        // A wallet made on the web before: the web no longer opens it, so nothing can go to the phone from here.
+        setPhase({ ...phase, busy: false, notice: tNow("link.confirm.webWalletClosed") });
+      } else if (e instanceof WalletApiError && e.status === 410) {
         forget();
         setPhase({ kind: "expired" });
       } else setPhase({ ...phase, busy: false, notice: explain(e) });
-    } finally {
-      wipe(prf, secret);
     }
   };
 

@@ -67,7 +67,6 @@
   "publish.solanaWallet": "กระเป๋า Solana",
   "publish.yourHoldWallet": "กระเป๋า HOLD ของคุณ",
   "publish.anotherWallet": "กระเป๋าอื่น พิสูจน์ด้วยลายเซ็น",
-  "publish.unlockWallet": "ปลดล็อกกระเป๋า",
   "publish.setUp": "ตั้งค่า",
   "publish.wherePaid": "ที่ที่สปอนเซอร์จ่ายให้คุณเป็น USDC",
   "publish.usdcAccount": "บัญชี USDC",

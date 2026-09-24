@@ -39,7 +39,7 @@
  * A thread's Send and Request are Quick Send (wallet/QuickSend), with the
  * person locked in. Request writes a row with the session and moves nothing;
  * Send, and Pay on a request made of you, go through the web's one payment
- * path, /wallet/send, approved with the passkey or on the linked phone. The
+ * path, /wallet/send, approved and signed on the linked phone. The
  * rest of the money here (schedules, allowances, payouts) is still read only.
  */
 
@@ -566,7 +566,7 @@ function ThreadView({
    * than typing an address is being handed the wrong one.
    *
    * It is /wallet/send and a full load (the wallet pages' CSP), because that is
-   * where the web's one payment path lives: the passkey, or the linked phone.
+   * where the web's one payment path lives: the linked phone approves it.
    */
   const openSend = async (prefill?: { amount?: string; token?: string; requestId?: string; handle?: string | null }) => {
     const who = prefill?.handle ?? handle;
@@ -597,7 +597,7 @@ function ThreadView({
     void openSend({ amount: r.amount, token: can.token, requestId: r.id, handle: r.requester?.username ?? handle });
   };
 
-  // Request is Quick Send in request mode, drawn in place of the thread: no wallet, no passkey, no phone.
+  // Request is Quick Send in request mode, drawn in place of the thread: no wallet, no key, no phone.
   if (asking && row.peerId) {
     return (
       <RequestScreen
@@ -636,8 +636,7 @@ function ThreadView({
       {/* The app's own row, in the app's own order: Request on the left in the
           quieter shape, Send on the right as the filled amber. Both open Quick
           Send with this person locked in: Request in request mode, here, with
-          no key; Send on /wallet/send, approved with the passkey or on a
-          linked phone. It wraps on a phone rather than scrolling sideways. */}
+          no key; Send on /wallet/send, approved on the linked phone. It wraps on a phone rather than scrolling sideways. */}
       <div className="mt-3 flex flex-wrap items-center gap-2 px-1">
         <button
           type="button"
@@ -697,7 +696,7 @@ function ThreadView({
  * The same keypad and the same token and network selector, with a note the
  * other person reads on the bubble, and a Request button. It writes
  * `POST /payments/request` with the session and nothing else: there is no
- * passkey, no approval on the phone and no signature, because no money moves.
+ * approval on the phone and no signature, because no money moves.
  * The money moves later, when they press Pay on the bubble.
  *
  * WHICH TOKENS

@@ -4,7 +4,6 @@
   "later": "Để sau",
   "linking": "Đang liên kết...",
   "linkingPhone": "Đang liên kết điện thoại...",
-  "sendingWallet": "Đang gửi ví sang điện thoại...",
   "getOnPlay": "Tải HOLD trên Google Play",
   "newCode": "Hiện mã mới",
   "why": "Một điện thoại Android đã liên kết sẽ duyệt và ký, trong ứng dụng HOLD, các khoản thanh toán bạn bắt đầu trên web.",
@@ -16,15 +15,11 @@
   "waiting.androidHere": "Mở ứng dụng HOLD bằng link này. Ứng dụng sẽ hiện mã sáu chữ số: quay lại trang này để kiểm tra mã có khớp không.",
   "waiting.validFor": "Mã có hiệu lực trong {left}",
   "waiting.openInHold": "Mở trong HOLD",
-  "confirm.joinedCarries": "Điện thoại của bạn đã kết nối. Trước khi ví được gửi sang, hãy kiểm tra đây đúng là điện thoại của bạn.",
   "confirm.joined": "Điện thoại của bạn đã kết nối. Hãy kiểm tra đây đúng là điện thoại của bạn.",
   "confirm.codeLabel": "Mã {digits}",
   "confirm.question": "Điện thoại của bạn có hiện mã này không?",
-  "confirm.waitingPasskey": "Đang chờ passkey...",
   "confirm.yes": "Có, khớp",
   "confirm.no": "Không, khác",
-  "confirm.secretRequired": "Ví của bạn cũng sẽ được gửi sang điện thoại này. Hãy xác nhận lại bằng passkey.",
-  "confirm.stillReading": "Vẫn đang đọc ví của bạn. Thử lại sau giây lát.",
   "done.title": "Điện thoại đã được liên kết",
   "done.android": "Các khoản thanh toán bạn bắt đầu trên web giờ sẽ được duyệt và ký trong ứng dụng HOLD trên điện thoại này.",
   "phone.androidBody": "Điện thoại được liên kết trong ứng dụng HOLD. Ứng dụng mở ra với mã sáu chữ số: hãy kiểm tra mã khớp với mã trên máy tính.",
@@ -71,5 +66,6 @@
   "pay.bodyThisPhone": "Liên kết điện thoại này một lần, và ứng dụng HOLD sẽ duyệt và ký mọi khoản thanh toán bạn bắt đầu ở đây. Trước đó, không thể thanh toán từ đây.",
   "getOnAppStore": "Tải HOLD trên App Store",
   "waiting.scanAnyPhone": "Điện thoại đã liên kết sẽ duyệt và ký, trong ứng dụng HOLD, mọi khoản thanh toán bạn bắt đầu trên web. Quét mã này bằng camera điện thoại, hoặc từ ứng dụng HOLD.",
-  "waiting.opensOnPhone": "HOLD sẽ mở trên iPhone hoặc điện thoại Android của bạn và hiện mã sáu chữ số. Chưa có HOLD? Mã này sẽ chỉ cho bạn cách tải."
+  "waiting.opensOnPhone": "HOLD sẽ mở trên iPhone hoặc điện thoại Android của bạn và hiện mã sáu chữ số. Chưa có HOLD? Mã này sẽ chỉ cho bạn cách tải.",
+  "confirm.webWalletClosed": "Ví của tài khoản này được tạo trên web, mà web không còn mở ví nữa, nên không thể gửi gì đến điện thoại của bạn từ đây. Hãy tạo ví trong ứng dụng HOLD."
 }

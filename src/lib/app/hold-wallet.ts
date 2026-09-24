@@ -2,8 +2,9 @@
  * The person's HOLD wallet, as the Dashboard and Account describe it.
  *
  * Two places it can come from, and the server's own words for each:
- *   web   /wallet-backup/status says `web_wallet`; its Solana address is
- *         `registered_address` once an unlock has registered it
+ *   web   /wallet-backup/status says `web_wallet` (made on the web before
+ *         2026-09-24); its Solana address is `registered_address`, if the
+ *         backend watches it
  *   app   `app_wallet` (or any address /me/addresses knows): the app made it,
  *         and /me/addresses has its Solana and EVM addresses
  * No wallet: it is made in the HOLD app (the web makes none since 2026-09-24).
@@ -27,8 +28,6 @@ export interface HoldWallet {
   solana: string | null;
   /** The app wallet's EVM address (Base, Polygon, Ethereum), when it has one. */
   evm: string | null;
-  /** A web wallet whose address the backend does not watch yet: one unlock on the Wallet page registers it. */
-  unregistered: boolean;
   /** The Wallet page exists for this person. */
   walletPage: boolean;
 }
@@ -45,12 +44,12 @@ export function useHoldWallet(): HoldWallet {
 
   if (s?.state === "web_wallet") {
     const solana = s.registered_address ?? appSolana;
-    return { loading, kind: "web", solana, evm, unregistered: !s.registered_address, walletPage };
+    return { loading, kind: "web", solana, evm, walletPage };
   }
   if (s?.state === "app_wallet" || appSolana || evm) {
-    return { loading, kind: "app", solana: appSolana, evm, unregistered: false, walletPage };
+    return { loading, kind: "app", solana: appSolana, evm, walletPage };
   }
-  return { loading, kind: "none", solana: null, evm: null, unregistered: false, walletPage };
+  return { loading, kind: "none", solana: null, evm: null, walletPage };
 }
 
 export function useBalances(address: string | null) {

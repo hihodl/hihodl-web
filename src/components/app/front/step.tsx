@@ -24,18 +24,18 @@ import { Ion, type IonName } from "../ion";
 
 /* ── The step's colours (setup.tsx STEP_GRADIENTS / STEP_ACCENTS) ─── */
 
-export type StepTone = "username" | "passkey" | "recovery" | "ready";
+export type StepTone = "username" | "link" | "recovery" | "ready";
 
 const GRADIENTS: Record<StepTone, [string, string]> = {
   username: ["#1a5276", "#0f3555"],
-  passkey: ["#0077E6", "#004DAA"],
+  link: ["#0077E6", "#004DAA"],
   recovery: ["#7C3AED", "#5B21B6"],
   ready: ["#059669", "#047857"],
 };
 
 export const ACCENTS: Record<StepTone, string> = {
   username: "#FFB703",
-  passkey: "#00C2FF",
+  link: "#00C2FF",
   recovery: "#A78BFA",
   ready: "#34D399",
 };

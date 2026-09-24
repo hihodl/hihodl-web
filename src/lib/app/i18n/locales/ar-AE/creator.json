@@ -67,7 +67,6 @@
   "publish.solanaWallet": "محفظة Solana",
   "publish.yourHoldWallet": "محفظة HOLD الخاصة بك",
   "publish.anotherWallet": "محفظة أخرى، مثبتة بالتوقيع",
-  "publish.unlockWallet": "فتح قفل المحفظة",
   "publish.setUp": "إعداد",
   "publish.wherePaid": "حيث يدفع لك الرعاة، بعملة USDC",
   "publish.usdcAccount": "حساب USDC",

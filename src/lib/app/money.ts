@@ -11,7 +11,7 @@
  * action that moves money: paying, moving, supplying to a venue, creating a
  * pocket and editing a cost all stay in the app. The one thing the web does
  * do is receive (an address and its QR) and start a withdrawal, which is
- * approved on the phone or signed with a passkey bound to that transaction.
+ * approved and signed on the linked phone.
  */
 
 "use client";

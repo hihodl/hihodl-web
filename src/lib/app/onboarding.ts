@@ -4,16 +4,14 @@
  *
  * The app's setup (hihodl-wallet/app/onboarding/setup.tsx) asks for a
  * username, a passkey, the recovery codes by email, a PIN, notifications and
- * the smart account, and it makes the wallet. The web makes no wallet (Alex,
+ * the smart account, and it makes the wallet. The passkey is the app's: the
+ * web has none anywhere (Alex, 2026-09-24). The web makes no wallet (Alex,
  * 2026-09-24): the wallet is made in the HOLD app, and the signed-in product
  * asks for it first (lib/app/app-wallet-gate, the shell's gate). What the web
  * still asks, for an account that lacks it:
  *
  *   username   the same claim (PATCH /me aliasHandle) and rules; then name and
  *              photo, optional
- *   passkey    registered through /passkeys/register/* with the session: a
- *              sign-in key, and what removes a linked phone from the web. It
- *              makes no wallet
  *   recovery   /recovery-codes/generate-and-email, only when /status says the
  *              account has no active codes (never re-emails somebody's codes)
  *   link       link your phone (documentation/link-your-phone-and-approved-
@@ -33,22 +31,17 @@ import { useCallback, useEffect, useState } from "react";
 
 import { activeLinkedDevices } from "@/lib/link/api";
 import { thisDevice, type Phone } from "@/lib/link/ua";
-import { getWalletStatus, listPasskeys } from "@/lib/wallet/api";
-import { passkeysHere } from "@/lib/wallet/passkey";
+import { getWalletStatus } from "@/lib/wallet/api";
 
 import { hasAppWallet } from "./app-wallet-gate";
 import { chosenUsername, getMe, recoveryCodesStatus, type Me } from "./me";
 
-export type StepKey = "username" | "profile" | "passkey" | "recovery" | "link";
+export type StepKey = "username" | "profile" | "recovery" | "link";
 
 export interface Facts {
   me: Me;
   username: string | null;
-  hasPasskey: boolean;
-  passkeyIds: string[];
   hasCodes: boolean;
-  /** Can this page run a passkey ceremony at all (an origin under hihodl.xyz, a browser that does WebAuthn)? */
-  canPasskey: boolean;
   /**
    * How many phones are linked and not revoked. null when it could not be
    * read (an older backend): then the link step is not asked, rather than
@@ -102,10 +95,8 @@ function isOnboarded(uid: string): boolean {
 }
 
 export async function readFacts(): Promise<Facts> {
-  const canPasskey = passkeysHere();
-  const [me, passkeys, codes, phones] = await Promise.all([
+  const [me, codes, phones] = await Promise.all([
     getMe(),
-    listPasskeys(),
     recoveryCodesStatus(),
     activeLinkedDevices().then(
       (d) => d.length,
@@ -115,10 +106,7 @@ export async function readFacts(): Promise<Facts> {
   return {
     me,
     username: chosenUsername(me),
-    hasPasskey: passkeys.length > 0,
-    passkeyIds: passkeys.map((p) => p.id),
     hasCodes: codes.hasActiveCodes,
-    canPasskey,
     linkedPhones: phones,
     phone: thisDevice().phone,
   };
@@ -141,14 +129,12 @@ export async function readFacts(): Promise<Facts> {
 export function stepsFor(f: Facts, c: Choices): StepKey[] {
   const required: StepKey[] = [];
   if (!f.username) required.push("username");
-  if (f.canPasskey && !f.hasPasskey) required.push("passkey");
   if (!f.hasCodes) required.push("recovery");
   if (required.length === 0) return [];
 
   const out: StepKey[] = [];
   if (required.includes("username")) out.push("username");
   if (!f.me.profile.displayName && !f.me.profile.avatarUrl && !c.profile) out.push("profile");
-  if (required.includes("passkey")) out.push("passkey");
   if (required.includes("recovery")) out.push("recovery");
   // Last, and only while we are here anyway. Nobody is held up by it: if it
   // were the only thing left, `required` would have been empty and this

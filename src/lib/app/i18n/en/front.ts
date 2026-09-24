@@ -3,8 +3,6 @@ const front = {
   // Shared by the step screens
   "saving": "Saving...",
   "sending": "Sending...",
-  "creating": "Creating...",
-  "notNow": "Not now",
   "step.about": "About {title}",
   "step.dismiss": "Dismiss",
   "step.skip": "Skip",
@@ -55,8 +53,6 @@ const front = {
   "steps.usernameInfo": "Your unique @handle for receiving payments and being found by friends on HOLD.",
   "steps.profile": "Profile",
   "steps.profileInfo": "Your name and photo, shown to the people you pay and sell to. Both are optional.",
-  "steps.passkey": "Passkey",
-  "steps.passkeyInfo": "A secure key stored on your device. Uses Face ID or fingerprint to verify your identity — no passwords needed.",
   "steps.recovery": "Recovery Key",
   "steps.recoveryInfo": "We'll send 8 recovery codes to your email. These codes are the ONLY way to recover your account if you lose access to Google or Apple. Save them somewhere safe — each code works only once.",
   "steps.link": "Link your phone",
@@ -79,10 +75,6 @@ const front = {
   "profile.choosePhoto": "Choose another photo",
   "profile.addPhoto": "Add a photo",
   "profile.name": "Your name",
-
-  "passkey.set": "Your passkey is set.",
-  "passkey.desc": "Uses Face ID or fingerprint — no passwords needed.",
-  "passkey.create": "Create Passkey",
 
   "recovery.sendFailed": "Failed to send recovery codes. Please check your email and try again.",
   "recovery.emailLabel": "Email for your recovery codes",

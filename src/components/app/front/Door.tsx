@@ -7,8 +7,8 @@
  * WELCOME is hihodl-wallet/app/auth/choose.tsx: the HOLD wordmark in the
  * middle of the Benefits ground, "Your money, your rules" between two amber
  * hairlines, one amber "Let's go", and behind it a "Continue with" sheet of
- * Apple, Google and Email rows. The app's Passkey row and Import wallet are
- * not here: the web signs in with a passkey nowhere yet, and a wallet is
+ * Apple, Google and Email rows. The app's other sign-in row and Import wallet
+ * are not here: the web signs in only with these three, and a wallet is
  * imported in the app.
  *
  * WELCOME BACK is the app's lock screen (app/auth/lock.tsx) without the PIN:

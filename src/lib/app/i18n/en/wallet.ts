@@ -2,70 +2,12 @@
 const wallet = {
   /* The screen */
   "screen.title": "Wallet",
-  confirmWithPasskey: "Confirm with passkey",
-
-  /* A web wallet kept under an older account */
-  "anotherAccount.title": "Your wallet is on your previous account",
-  "anotherAccount.body":
-    "This email already has a web wallet, made under an earlier HOLD account, and the web never makes a second one. Write to support from this email and we will move you back to that account.",
 
   /* A wallet made in the app */
   "appWallet.linkedNote": "This wallet was made in the HOLD app. Your linked phone approves and signs every payment you start here.",
   "appWallet.linkFirstNote": "This wallet was made in the HOLD app, and its keys stay on your phone. Link the phone once to pay from here.",
   "appWallet.appOnlyNote": "This wallet was made in the HOLD app, which keeps its keys. Send and swap there.",
   "appWallet.openHold": "Open HOLD",
-
-  /* No wallet, and the web does not make one yet */
-
-  /* Create */
-
-  /* Unlock */
-  "unlock.welcome": "Welcome Back, {name}",
-  "unlock.button": "Unlock with passkey",
-
-  /* Home */
-  "home.fallbackName": "you",
-  "home.lock": "Lock",
-  "home.security": "Security",
-  "home.networkFees": "Network fees",
-
-  /* Security (Account recovery) */
-  "security.title": "Account recovery",
-  "security.heroTitle": "Your safety net",
-  "security.heroBody":
-    "HOLD is non-custodial — we cannot recover your funds if you lose access. Keep at least one backup factor active and stored somewhere safe.",
-  "security.backupFactors": "Backup factors",
-  "security.recoveryPhrase": "Recovery phrase",
-  "security.passkeys": "Passkeys",
-
-  /* Passkeys */
-  "passkeys.title": "Passkeys",
-  "passkeys.all": "All passkeys",
-  "passkeys.defaultName": "Passkey {n}",
-  "passkeys.added": "Added {date}",
-  "passkeys.removeAria": "Remove {name}",
-  "passkeys.removeConfirm": "Remove {name}? It won't open this wallet anymore. You can add it back any time from this screen.",
-  "passkeys.add": "Add a passkey",
-  "passkeys.lastNote": "Removing the last passkey is not allowed. To replace it, add a new one first, then remove the old.",
-
-  /* Recovery Phrase */
-  "export.title": "Recovery Phrase",
-  "export.warning": "Never share your recovery phrase with anyone. Anyone with access to these words can control your wallet.",
-  "export.hide": "I wrote them down, hide them",
-  "export.paperNote": "Write them on paper, in order. They are never copied to your clipboard.",
-  "export.heroTitle": "Recovery phrase",
-  "export.heroBody": "Your 12 words open this wallet anywhere. Show them only where nobody can see your screen.",
-
-  /* Add a passkey */
-  "add.title": "Add passkey",
-  "add.done": "That passkey now opens your wallet too.",
-  "add.heroTitle": "Add a passkey",
-  "add.heroBody": "One in another password manager too means losing one of them does not lock you out.",
-  "add.stepCurrent": "Confirm with a passkey that opens your wallet",
-  "add.stepCreate": "Create the new passkey",
-  "add.stepConfirm": "Confirm the new passkey",
-  "add.createNew": "Create new passkey",
-  "add.confirmNew": "Confirm new passkey",
 
   /* Send (Withdraw) */
   "send.recipientGets": "Recipient gets",
@@ -134,29 +76,6 @@ const wallet = {
   "receive.mayLose": "Sending on another network may lose your funds.",
 
   /* What the flows say (lib/wallet/explain.ts) */
-  "explain.lossWarning":
-    "If you lose every passkey on this wallet and never exported your 12 words, the funds in it cannot be recovered by anyone, including us. Your HOLD account can be; the money cannot.",
-  "explain.passkey.cancelled": "The passkey prompt was closed before it finished. Nothing was saved.",
-  "explain.passkey.exists": "This device already has a passkey for your account. Use that one instead.",
-  "explain.passkey.noPrf":
-    "This passkey cannot protect a wallet: its password manager does not support the PRF extension. Nothing was saved, and a passkey just created for it was not added to your account (you can delete it from your password manager). Use Safari with iCloud Keychain (iOS 18.4 / macOS 15.4 or later) or Chrome with Google Password Manager.",
-  "explain.passkey.noPrfHere":
-    "This browser cannot protect a wallet with a passkey: it does not support the PRF extension. Nothing was created. Use Safari with iCloud Keychain (iOS 18.4 / macOS 15.4 or later) or Chrome with Google Password Manager, or make your wallet in the HOLD app.",
-  "explain.passkey.osTooOld":
-    "Update this device before making a wallet here. iOS 18.0 to 18.3 can hand back a different key depending on how you unlock, which would leave a wallet nobody can open — Apple fixed it in 18.4. Nothing was created. You can still sign in, and you can make your wallet in the HOLD app or on a device that is up to date.",
-  "explain.passkey.unavailable": "Passkeys for HOLD only work on app.hihodl.xyz, in a browser that supports them.",
-  "explain.passkey.failed": "The passkey did not answer. Try again.",
-  "explain.crypto.decryptFailed": "That passkey did not open this wallet. Nothing was changed.",
-  "explain.crypto.unreadable": "The wallet backup could not be read. Nothing was changed.",
-  "explain.flow.unknownPasskey": "That passkey is not one that opens this wallet. Choose another.",
-  "explain.flow.selfCheckFailed": "A safety check failed before anything was saved. Nothing was written. Try again.",
-  "explain.flow.notSaved": "The wallet could not be saved. Try again.",
-  "explain.api.appWalletExists": "This account already has a wallet in the HOLD app. Nothing was saved.",
-  "explain.api.seedBackupExists": "This account already has a web wallet. Nothing was overwritten.",
-  "explain.api.emailNotVerified": "Confirm your email address before creating a wallet.",
-  "explain.api.notEnabled": "The web wallet is not available on your account yet. Nothing was saved.",
-  "explain.api.lastWrapping": "This is the only passkey that opens your wallet. Add another first.",
-  "explain.api.wrappingExists": "That passkey already opens your wallet.",
   "explain.api.rateLimited": "Too many attempts. Wait a few minutes and try again.",
   "explain.api.offline": "Could not reach HOLD. Check your connection and try again.",
   "explain.api.server": "Something went wrong on our side. Nothing was changed.",

@@ -38,7 +38,7 @@
  * ── WHO APPROVES ──
  *
  * The phone, always (Alex, 2026-09-24: the web does not pay any more). The
- * web never opens a passkey or a key for a spot. `GET /wallet-backup/status`
+ * web never opens a key for a spot. `GET /wallet-backup/status`
  * → `canPayFromWeb` says whether it can be asked
  * (documentation/one-wallet-every-device.md, "Payments built by the server,
  * approved on the phone"):

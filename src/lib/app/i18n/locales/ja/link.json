@@ -4,7 +4,6 @@
   "later": "後で",
   "linking": "連携中...",
   "linkingPhone": "スマホを連携しています...",
-  "sendingWallet": "ウォレットをスマホに送っています...",
   "getOnPlay": "Google Play で HOLD を入手",
   "newCode": "新しいコードを表示",
   "why": "連携した Android スマホが、ウェブで始めた支払いを HOLD アプリで承認して署名します。",
@@ -16,15 +15,11 @@
   "waiting.androidHere": "このリンクで HOLD アプリを開いてください。6 桁のコードが表示されるので、このページに戻って一致するか確認してください。",
   "waiting.validFor": "コードの有効期間：{left}",
   "waiting.openInHold": "HOLD で開く",
-  "confirm.joinedCarries": "スマホが接続されました。ウォレットを送る前に、あなたのスマホか確認してください。",
   "confirm.joined": "スマホが接続されました。あなたのスマホか確認してください。",
   "confirm.codeLabel": "コード {digits}",
   "confirm.question": "スマホにこのコードが表示されていますか？",
-  "confirm.waitingPasskey": "パスキーを待っています...",
   "confirm.yes": "はい、一致しています",
   "confirm.no": "いいえ、違います",
-  "confirm.secretRequired": "ウォレットもこのスマホに送られます。もう一度パスキーで確認してください。",
-  "confirm.stillReading": "まだウォレットを読み込んでいます。少ししてからもう一度お試しください。",
   "done.title": "スマホを連携しました",
   "done.android": "ウェブで始めた支払いは、このスマホの HOLD アプリで承認・署名されるようになりました。",
   "phone.androidBody": "スマホの連携は HOLD アプリで行います。6 桁のコードが表示されるので、パソコンのコードと一致するか確認してください。",
@@ -71,5 +66,6 @@
   "pay.bodyThisPhone": "このスマホを一度連携すれば、ここで始めた支払いはすべて HOLD アプリが承認して署名します。それまでは、ここから支払うことはできません。",
   "getOnAppStore": "App Store で HOLD を入手",
   "waiting.scanAnyPhone": "連携したスマホが、ウェブで始めたすべての支払いを HOLD アプリで承認・署名します。このコードをスマホのカメラでスキャンするか、HOLD アプリから読み取ってください。",
-  "waiting.opensOnPhone": "iPhone または Android スマホで HOLD が開き、6 桁のコードが表示されます。まだ HOLD をお持ちでない場合は、そのコードから入手先がわかります。"
+  "waiting.opensOnPhone": "iPhone または Android スマホで HOLD が開き、6 桁のコードが表示されます。まだ HOLD をお持ちでない場合は、そのコードから入手先がわかります。",
+  "confirm.webWalletClosed": "このアカウントのウォレットはウェブで作成されましたが、ウェブではもうウォレットを開けないため、ここからスマホには何も送れません。HOLD アプリでウォレットを作成してください。"
 }

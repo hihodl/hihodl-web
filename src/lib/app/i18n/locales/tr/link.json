@@ -4,7 +4,6 @@
   "later": "Sonra",
   "linking": "Bağlanıyor...",
   "linkingPhone": "Telefonun bağlanıyor...",
-  "sendingWallet": "Cüzdanın telefonuna gönderiliyor...",
   "getOnPlay": "HOLD'u Google Play'den indir",
   "newCode": "Yeni kod göster",
   "why": "Bağlı bir Android telefon, web'de başlattığın ödemeleri HOLD uygulamasında onaylar ve imzalar.",
@@ -16,15 +15,11 @@
   "waiting.androidHere": "HOLD uygulamasını bu bağlantıyla aç. Altı haneli bir kod gösterir: eşleştiğini kontrol etmek için bu sayfaya geri dön.",
   "waiting.validFor": "Kod {left} geçerli",
   "waiting.openInHold": "HOLD'da aç",
-  "confirm.joinedCarries": "Telefonun katıldı. Cüzdanın ona gitmeden önce bunun senin telefonun olduğunu kontrol et.",
   "confirm.joined": "Telefonun katıldı. Bunun senin telefonun olduğunu kontrol et.",
   "confirm.codeLabel": "Kod {digits}",
   "confirm.question": "Telefonun bu kodu gösteriyor mu?",
-  "confirm.waitingPasskey": "Geçiş anahtarın bekleniyor...",
   "confirm.yes": "Evet, eşleşiyor",
   "confirm.no": "Hayır, farklı",
-  "confirm.secretRequired": "Cüzdanın bu telefona da gidecek. Geçiş anahtarınla tekrar onayla.",
-  "confirm.stillReading": "Cüzdanın hâlâ okunuyor. Birazdan tekrar dene.",
   "done.title": "Telefonun bağlandı",
   "done.android": "Web'de başlattığın ödemeler artık bu telefondaki HOLD uygulamasında onaylanıp imzalanıyor.",
   "phone.androidBody": "Telefonun HOLD uygulamasında bağlanır. Altı haneli bir kodla açılır: bilgisayarındaki kodla eşleştiğini kontrol et.",
@@ -71,5 +66,6 @@
   "pay.bodyThisPhone": "Bu telefonu bir kez bağla, HOLD uygulaması burada başlattığın her ödemeyi onaylar ve imzalar. O zamana kadar buradan hiçbir ödeme yapılamaz.",
   "getOnAppStore": "HOLD'u App Store'dan indir",
   "waiting.scanAnyPhone": "Bağlı telefonun, HOLD uygulamasında, web'de başlattığın her ödemeyi onaylar ve imzalar. Bu kodu telefonunun kamerasıyla veya HOLD uygulamasından tara.",
-  "waiting.opensOnPhone": "HOLD, iPhone'unda veya Android telefonunda açılır ve altı haneli bir kod gösterir. Henüz HOLD yok mu? Kod, nereden edinebileceğini gösterir."
+  "waiting.opensOnPhone": "HOLD, iPhone'unda veya Android telefonunda açılır ve altı haneli bir kod gösterir. Henüz HOLD yok mu? Kod, nereden edinebileceğini gösterir.",
+  "confirm.webWalletClosed": "Bu hesabın cüzdanı web'de oluşturuldu ve web artık cüzdan açmıyor, bu yüzden buradan telefonuna hiçbir şey gönderilemez. Cüzdanını HOLD uygulamasında oluştur."
 }

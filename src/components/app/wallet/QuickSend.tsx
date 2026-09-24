@@ -25,7 +25,7 @@
  *
  * It does not move money and it does not write a request. It is the screen:
  * the caller owns the draft and says what the CTA does. Send hands it to the
- * web's withdrawal path (Withdraw.tsx, passkey or linked phone); Request calls
+ * web's withdrawal path (Withdraw.tsx, approved on the linked phone); Request calls
  * `POST /payments/request` with the session and nothing else.
  */
 

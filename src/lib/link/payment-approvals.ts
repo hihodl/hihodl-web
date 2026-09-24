@@ -7,8 +7,7 @@
  *
  * The web sends a ref and nothing else: never a title, an amount or bytes.
  * The server builds the transaction when the person taps Approve on the
- * phone, and the web only submits what comes back signed, exactly as it
- * would after a passkey.
+ * phone, and the web only submits what comes back signed.
  *
  * documentation/one-wallet-every-device.md, "Payments built by the server,
  * approved on the phone".

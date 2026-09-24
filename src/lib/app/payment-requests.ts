@@ -8,10 +8,10 @@
  * A REQUEST IS A MESSAGE, NOT A PAYMENT
  *
  * Creating, declining, cancelling and reminding never sign anything and never
- * ask for a passkey or the phone. They write a row and put a bubble on
+ * ask the phone. They write a row and put a bubble on
  * somebody's screen, with the session and nothing more. Only PAYING a request
  * moves money, and that goes the way every web payment goes: /wallet/send,
- * approved with the passkey or on the linked phone.
+ * approved and signed on the linked phone.
  *
  * ── SETTLING IS NOT PAYING ──
  *
@@ -115,7 +115,7 @@ export type SettleOutcome =
  *
  *   GET /withdrawals/:id first, every time: that read is what checks the chain
  *   and moves the withdrawal from `submitted` to confirmed on the server, and
- *   the passkey path of Send never makes it. Without it the proof could read
+ *   nothing else in Send is sure to make it. Without it the proof could read
  *   "not confirmed" for the whole minute.
  *
  *   not confirmed yet            asked again every 3 s for about a minute

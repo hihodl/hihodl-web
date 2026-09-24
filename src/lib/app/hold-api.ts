@@ -27,10 +27,9 @@
  * key because there is no key in a sentence — which is exactly why it is the
  * half of Payments the web can carry in full.
  *
- * Money on the web is otherwise view only. A withdrawal is approved on the
- * phone (Android) or signed with a passkey bound to that one transaction
- * (iPhone) — see lib/wallet and documentation/link-your-phone-and-approved-
- * withdrawals.md — and nothing on these screens bypasses that.
+ * Money on the web is otherwise view only. A withdrawal is approved and
+ * signed on the linked phone — see documentation/link-your-phone-and-
+ * approved-withdrawals.md — and nothing on these screens bypasses that.
  */
 
 "use client";

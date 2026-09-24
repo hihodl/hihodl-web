@@ -625,8 +625,7 @@ export const recordPaidElsewhere = (groupId: string, body: { toUserId: string; a
  *
  * Before every attempt it reads GET /withdrawals/:id: that read is what
  * checks the chain and moves the withdrawal from `submitted` to confirmed on
- * the server, and the passkey path of Send never makes it (it learns of the
- * confirmation from the relayer). Without it the proof would stay "not
+ * the server, and nothing else in Send is sure to make it. Without it the proof would stay "not
  * confirmed" for the whole minute. A failed read is ignored; the settlement
  * answers for itself.
  *

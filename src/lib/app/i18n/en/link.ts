@@ -5,7 +5,6 @@ const link = {
   "later": "Later",
   "linking": "Linking...",
   "linkingPhone": "Linking your phone...",
-  "sendingWallet": "Sending your wallet to your phone...",
   "getOnPlay": "Get HOLD on Google Play",
   "newCode": "Show a new code",
   "why": "A linked Android phone approves and signs, in the HOLD app, the payments you start on the web.",
@@ -23,15 +22,11 @@ const link = {
   "waiting.openInHold": "Open in HOLD",
 
   // Checking the six-digit code
-  "confirm.joinedCarries": "Your phone joined. Before your wallet goes to it, check this is your phone.",
   "confirm.joined": "Your phone joined. Check this is your phone.",
   "confirm.codeLabel": "Code {digits}",
   "confirm.question": "Does your phone show this code?",
-  "confirm.waitingPasskey": "Waiting for your passkey...",
   "confirm.yes": "Yes, it matches",
   "confirm.no": "No, it is different",
-  "confirm.secretRequired": "Your wallet goes to this phone too. Confirm again with your passkey.",
-  "confirm.stillReading": "Still reading your wallet. Try again in a moment.",
 
   "done.title": "Your phone is linked",
   "done.android": "Payments you start on the web are now approved and signed in the HOLD app on this phone.",
@@ -86,6 +81,7 @@ const link = {
   "getOnAppStore": "Get HOLD on the App Store",
   "waiting.scanAnyPhone": "Your linked phone approves and signs, in the HOLD app, every payment you start on the web. Scan this code with your phone's camera, or from the HOLD app.",
   "waiting.opensOnPhone": "HOLD opens on your iPhone or Android phone and shows a six-digit code. No HOLD yet? The code shows where to get it.",
+  "confirm.webWalletClosed": "This account's wallet was made on the web, which no longer opens wallets, so nothing can go to your phone from here. Make your wallet in the HOLD app.",
 } satisfies Record<string, string>;
 
 export default link;

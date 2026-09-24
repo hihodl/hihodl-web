@@ -4,7 +4,6 @@
   "later": "Baadaye",
   "linking": "Inaunganisha...",
   "linkingPhone": "Inaunganisha simu yako...",
-  "sendingWallet": "Inatuma pochi yako kwenye simu yako...",
   "getOnPlay": "Pakua HOLD kwenye Google Play",
   "newCode": "Onyesha msimbo mpya",
   "why": "Simu ya Android iliyounganishwa huidhinisha na kutia sahihi, kwenye programu ya HOLD, malipo unayoanzisha kwenye wavuti.",
@@ -16,15 +15,11 @@
   "waiting.androidHere": "Fungua programu ya HOLD kwa kiungo hiki. Itaonyesha msimbo wa tarakimu sita: rudi kwenye ukurasa huu kuhakikisha unalingana.",
   "waiting.validFor": "Msimbo ni halali kwa {left}",
   "waiting.openInHold": "Fungua kwenye HOLD",
-  "confirm.joinedCarries": "Simu yako imejiunga. Kabla pochi yako haijaenda kwake, hakikisha hii ni simu yako.",
   "confirm.joined": "Simu yako imejiunga. Hakikisha hii ni simu yako.",
   "confirm.codeLabel": "Msimbo {digits}",
   "confirm.question": "Je, simu yako inaonyesha msimbo huu?",
-  "confirm.waitingPasskey": "Inasubiri passkey yako...",
   "confirm.yes": "Ndiyo, unalingana",
   "confirm.no": "Hapana, ni tofauti",
-  "confirm.secretRequired": "Pochi yako itaenda kwenye simu hii pia. Thibitisha tena kwa passkey yako.",
-  "confirm.stillReading": "Bado inasoma pochi yako. Jaribu tena baada ya muda mfupi.",
   "done.title": "Simu yako imeunganishwa",
   "done.android": "Malipo unayoanzisha kwenye wavuti sasa yanaidhinishwa na kutiwa sahihi kwenye programu ya HOLD kwenye simu hii.",
   "phone.androidBody": "Simu yako inaunganishwa kwenye programu ya HOLD. Inafunguka kwenye msimbo wa tarakimu sita: hakikisha unalingana na ule ulio kwenye kompyuta yako.",
@@ -71,5 +66,6 @@
   "pay.bodyThisPhone": "Unganisha simu hii mara moja, na programu ya HOLD itaidhinisha na kutia sahihi kila malipo unayoanzisha hapa. Hadi wakati huo, hakuna kinachoweza kulipwa kutoka hapa.",
   "getOnAppStore": "Pakua HOLD kwenye App Store",
   "waiting.scanAnyPhone": "Simu yako iliyounganishwa huidhinisha na kutia sahihi, kwenye programu ya HOLD, kila malipo unayoanzisha kwenye wavuti. Changanua msimbo huu kwa kamera ya simu yako, au kutoka kwenye programu ya HOLD.",
-  "waiting.opensOnPhone": "HOLD hufunguka kwenye iPhone au simu yako ya Android na kuonyesha msimbo wa tarakimu sita. Bado huna HOLD? Msimbo unaonyesha mahali pa kuupakua."
+  "waiting.opensOnPhone": "HOLD hufunguka kwenye iPhone au simu yako ya Android na kuonyesha msimbo wa tarakimu sita. Bado huna HOLD? Msimbo unaonyesha mahali pa kuupakua.",
+  "confirm.webWalletClosed": "Pochi ya akaunti hii iliundwa kwenye wavuti, ambayo haifungui pochi tena, kwa hivyo hakuna kinachoweza kwenda kwenye simu yako kutoka hapa. Unda pochi yako kwenye programu ya HOLD."
 }

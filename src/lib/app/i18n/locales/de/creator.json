@@ -67,7 +67,6 @@
   "publish.solanaWallet": "Solana-Wallet",
   "publish.yourHoldWallet": "Deine HOLD-Wallet",
   "publish.anotherWallet": "Eine andere Wallet, per Signatur nachgewiesen",
-  "publish.unlockWallet": "Wallet entsperren",
   "publish.setUp": "Einrichten",
   "publish.wherePaid": "Wohin Sponsoren dich bezahlen, in USDC",
   "publish.usdcAccount": "USDC-Konto",

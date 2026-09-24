@@ -67,7 +67,6 @@
   "publish.solanaWallet": "Solana 钱包",
   "publish.yourHoldWallet": "你的 HOLD 钱包",
   "publish.anotherWallet": "其他钱包，经签名验证",
-  "publish.unlockWallet": "解锁钱包",
   "publish.setUp": "设置",
   "publish.wherePaid": "赞助商以 USDC 付款到这里",
   "publish.usdcAccount": "USDC 账户",

@@ -10,8 +10,6 @@
  *
  *   Username        the app's claim and rules (PATCH /me aliasHandle)
  *   Profile         name and photo, optional, "Skip" (the app has no such step)
- *   Passkey         /passkeys/register/* with the session (a sign-in key; it
- *                   makes no wallet)
  *   Recovery Key    the codes emailed, only when the account has none
  *   Link your phone offered with "Later" while no phone is linked
  *                   (link/LinkPhone); Menu → Security links one any time
@@ -42,10 +40,7 @@ import {
   type UsernameVerdict,
 } from "@/lib/app/me";
 import { markOnboarded, readChoices, readFacts, saveChoice, stepsFor, type Facts, type StepKey } from "@/lib/app/onboarding";
-import { beginPasskeyRegistration, completePasskeyRegistration, type RegistrationOptionsJSON } from "@/lib/wallet/api";
-import { wipe } from "@/lib/wallet/core";
 import { explain } from "@/lib/wallet/explain";
-import { createPasskeyWithPrf, PasskeyError } from "@/lib/wallet/passkey";
 
 import { LinkPhone } from "../link/LinkPhone";
 import { Door } from "./Door";
@@ -100,12 +95,6 @@ const STEP: Record<StepKey, { title: MessageKey; icon: IonName; tone: StepTone; 
     tone: "username",
     info: "front.steps.profileInfo",
   },
-  passkey: {
-    title: "front.steps.passkey",
-    icon: "key-outline",
-    tone: "passkey",
-    info: "front.steps.passkeyInfo",
-  },
   recovery: {
     title: "front.steps.recovery",
     icon: "mail-outline",
@@ -115,7 +104,7 @@ const STEP: Record<StepKey, { title: MessageKey; icon: IonName; tone: StepTone; 
   link: {
     title: "front.steps.link",
     icon: "phone-portrait-outline",
-    tone: "passkey",
+    tone: "link",
     info: "front.steps.linkInfoEvery",
   },
 };
@@ -225,7 +214,6 @@ function Flow({ session }: { session: Session }) {
     <StepScreen tone={meta.tone} title={t("front.flow.title")} onClose={close} closeLabel={t("common.signOut")}>
       {key === "username" ? <UsernameStep {...props} /> : null}
       {key === "profile" ? <ProfileStep {...props} onSkip={() => { saveChoice(session.user.id, "profile"); complete(key); }} /> : null}
-      {key === "passkey" ? <PasskeyStep {...props} /> : null}
       {key === "recovery" ? <RecoveryStep {...props} /> : null}
       {key === "link" ? (
         <>
@@ -432,89 +420,6 @@ function ProfileStep({ facts, session, onDone, onSkip, head, hint }: StepProps &
       <Cta>
         <ActionButton title={busy ? t("front.saving") : t("common.continue")} disabled={busy || (!file && !name.trim())} onClick={() => void save()} />
         <SkipButton onClick={onSkip} disabled={busy} />
-      </Cta>
-    </div>
-  );
-}
-
-/* ── Passkey ──────────────────────────────────────────────────────── */
-
-/** Registration options, fetched ahead of the click (Safari wants the ceremony inside it) and kept fresh. */
-function useRegistrationOptions(session: Session, active: boolean) {
-  const [options, setOptions] = useState<RegistrationOptionsJSON | null>(null);
-  const [error, setError] = useState<unknown>(null);
-  const refresh = useCallback(async () => {
-    setOptions(null);
-    setError(null);
-    try {
-      setOptions(await beginPasskeyRegistration(session.user.email ?? "", session.user.id));
-    } catch (e) {
-      setError(e);
-    }
-  }, [session.user.email, session.user.id]);
-  useEffect(() => {
-    if (!active) return;
-    void refresh();
-    const timer = setInterval(() => void refresh(), 4 * 60 * 1000);
-    return () => clearInterval(timer);
-  }, [active, refresh]);
-  return { options, error, refresh };
-}
-
-/** A closed prompt is the person's call, not a failure: the app says nothing. */
-const cancelled = (e: unknown) => e instanceof PasskeyError && e.code === "cancelled";
-
-function PasskeyStep({ facts, session, done, onDone, head, hint }: StepProps) {
-  const t = useT();
-  const [made, setMade] = useState(done || facts.hasPasskey);
-  const reg = useRegistrationOptions(session, !made);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<unknown>(null);
-
-  const create = async () => {
-    if (!reg.options) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const p = await createPasskeyWithPrf(reg.options, { requirePrf: false });
-      wipe(p.prf);
-      await completePasskeyRegistration(p.registration);
-      facts.hasPasskey = true;
-      facts.passkeyIds = [...facts.passkeyIds, p.credentialId];
-      setMade(true);
-      onDone();
-    } catch (e) {
-      // This device already holds one of the account's passkeys: that is the passkey.
-      if (e instanceof PasskeyError && e.code === "exists") {
-        setMade(true);
-        onDone();
-        return;
-      }
-      if (!cancelled(e)) setError(e);
-      void reg.refresh();
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const problem = error ?? (!made ? reg.error : null);
-  return (
-    <div>
-      {head}
-      {problem ? (
-        <ErrorBanner onDismiss={() => setError(null)}>{explain(problem)}</ErrorBanner>
-      ) : made ? (
-        <StepDesc>{t("front.passkey.set")}</StepDesc>
-      ) : (
-        <StepDesc>{t("front.passkey.desc")}</StepDesc>
-      )}
-      {hint}
-      <Cta>
-        {made ? (
-          <ActionButton title={t("common.continue")} onClick={onDone} />
-        ) : (
-          <ActionButton title={busy ? t("front.creating") : t("front.passkey.create")} icon="key-outline" disabled={busy || !reg.options} onClick={() => void create()} />
-        )}
       </Cta>
     </div>
   );
