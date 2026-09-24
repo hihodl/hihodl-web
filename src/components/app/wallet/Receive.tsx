@@ -25,6 +25,7 @@
 
 import { useState } from "react";
 
+import { useT } from "@/lib/app/i18n/react";
 import { chosenUsername } from "@/lib/app/me";
 import { useMe } from "@/lib/app/spaces-data";
 
@@ -88,27 +89,26 @@ export function Receive({
 }
 
 function SelectCrypto({ tokens, onBack, onPick }: { tokens: readonly Token[]; onBack?: () => void; onPick: (t: Token) => void }) {
+  const t = useT();
   return (
-    <AppScreen title="Select crypto" onBack={onBack}>
+    <AppScreen title={t("wallet.receive.selectTitle")} onBack={onBack}>
       <div className="px-1 pt-2">
-        <p className="mb-3.5 px-1 text-[13.5px] text-[#9FB7C2]">Choose which crypto you want to receive.</p>
+        <p className="mb-3.5 px-1 text-[13.5px] text-[#9FB7C2]">{t("wallet.receive.selectHint")}</p>
         {tokens.length === 0 ? (
-          <p className="px-1 text-[13px] leading-[18px] text-white/55">
-            There is no address to be paid on yet. Open your wallet once and it appears here.
-          </p>
+          <p className="px-1 text-[13px] leading-[18px] text-white/55">{t("wallet.receive.noAddress")}</p>
         ) : null}
-        {tokens.map((t) => (
+        {tokens.map((tok) => (
           <button
-            key={t.symbol}
+            key={tok.symbol}
             type="button"
-            onClick={() => onPick(t)}
-            aria-label={`Receive ${t.symbol}`}
+            onClick={() => onPick(tok)}
+            aria-label={t("wallet.receive.tokenAria", { symbol: tok.symbol })}
             className="mb-2.5 flex w-full items-center gap-3.5 rounded-[18px] border border-white/10 bg-white/[0.05] p-3.5 text-left transition-colors hover:bg-white/[0.09]"
           >
-            <TokenIcon symbol={t.symbol} size={40} />
+            <TokenIcon symbol={tok.symbol} size={40} />
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-[16px] font-strong text-white">{t.symbol}</span>
-              <span className="mt-0.5 block truncate text-[13px] text-[#9FB7C2]">{t.name}</span>
+              <span className="block truncate text-[16px] font-strong text-white">{tok.symbol}</span>
+              <span className="mt-0.5 block truncate text-[13px] text-[#9FB7C2]">{tok.name}</span>
             </span>
           </button>
         ))}
@@ -135,6 +135,7 @@ function useCopied(): [boolean, (v: string) => void] {
 }
 
 function ReceiveQr({ byNet, token, onBack }: { byNet: ReceiveAddresses; token: Token; onBack: () => void }) {
+  const t = useT();
   const nets = token.networks.filter((n) => byNet[n]);
   const [net, setNet] = useState<ReceiveNet>(nets[0] ?? token.networks[0]);
   const [picking, setPicking] = useState(false);
@@ -164,13 +165,13 @@ function ReceiveQr({ byNet, token, onBack }: { byNet: ReceiveAddresses; token: T
   };
 
   return (
-    <AppScreen title="Receive" onBack={onBack}>
+    <AppScreen title={t("common.receive")} onBack={onBack}>
       <div className="flex flex-col items-center px-6 pb-6 pt-2">
         {handle ? (
           <button
             type="button"
             onClick={() => copyHandle(handle)}
-            aria-label="Copy username"
+            aria-label={t("wallet.receive.copyUsername")}
             className="mb-3 flex items-center gap-2 rounded-[16px] px-2.5 py-1.5 transition-colors hover:bg-white/[0.06]"
           >
             <UserAvatar size={32} fallbackName={handle} />
@@ -182,13 +183,13 @@ function ReceiveQr({ byNet, token, onBack }: { byNet: ReceiveAddresses; token: T
         )}
 
         {address ? (
-          <HQR value={address} title={`Your ${token.symbol} address on ${NET_LABEL[net]}`} />
+          <HQR value={address} title={t("wallet.receive.qrTitle", { symbol: token.symbol, network: NET_LABEL[net] })} />
         ) : (
           // Addresses loaded and this rail has none yet: a calm "not ready"
           // beats a spinner that never ends.
           <div className="flex h-[248px] w-[248px] flex-col items-center justify-center gap-2.5 rounded-[28px] bg-white px-6 text-center">
             <Ion name="time-outline" size={30} color="#0A0F14" />
-            <p className="text-[14px] font-bold text-[#0A0F14]">{NET_LABEL[net]} isn&apos;t available yet</p>
+            <p className="text-[14px] font-bold text-[#0A0F14]">{t("wallet.receive.notAvailable", { network: NET_LABEL[net] })}</p>
           </div>
         )}
 
@@ -201,7 +202,7 @@ function ReceiveQr({ byNet, token, onBack }: { byNet: ReceiveAddresses; token: T
           type="button"
           onClick={() => copy(address)}
           disabled={!address}
-          aria-label="Copy address"
+          aria-label={t("wallet.receive.copyAddress")}
           title={address}
           className="mt-3.5 flex h-[38px] items-center gap-2 rounded-[19px] border border-white/[0.12] bg-white/[0.05] px-3.5 transition-colors hover:bg-white/[0.09] disabled:opacity-50"
         >
@@ -217,15 +218,15 @@ function ReceiveQr({ byNet, token, onBack }: { byNet: ReceiveAddresses; token: T
             onClick={() => setPicking(true)}
             className="mt-4 flex items-center gap-1 px-2 py-1.5 text-[14px] font-strong text-white transition-opacity hover:opacity-70"
           >
-            Receiving on another network?
+            {t("wallet.receive.anotherNetwork")}
             <Ion name="chevron-forward" size={15} color={SUB} />
           </button>
         ) : null}
 
         {picking ? (
           <div className="mt-4 w-full">
-            <p className="text-center text-[18px] font-extrabold text-white">Receive {token.symbol} on</p>
-            <p className="mb-4 mt-1.5 text-center text-[13px] text-[#9FB7C2]">Pick the network your sender is using.</p>
+            <p className="text-center text-[18px] font-extrabold text-white">{t("wallet.receive.on", { symbol: token.symbol })}</p>
+            <p className="mb-4 mt-1.5 text-center text-[13px] text-[#9FB7C2]">{t("wallet.receive.pickNetwork")}</p>
             {nets.map((k) => {
               const active = k === net;
               return (
@@ -249,14 +250,14 @@ function ReceiveQr({ byNet, token, onBack }: { byNet: ReceiveAddresses; token: T
         ) : null}
 
         <p className="mt-3 px-2 text-center text-[12.5px] leading-[18px] text-[#9FB7C2]">
-          Only send {token.symbol} on {NET_LABEL[net]}.
+          {t("wallet.receive.onlySend", { symbol: token.symbol, network: NET_LABEL[net] })}
           <br />
-          Sending on another network may lose your funds.
+          {t("wallet.receive.mayLose")}
         </p>
 
         <div className="mt-6 w-full">
           <PrimaryButton icon="share-outline" onClick={() => void share()} disabled={!address}>
-            {shared ? "Copied" : "Share"}
+            {shared ? t("common.copied") : t("common.share")}
           </PrimaryButton>
         </div>
       </div>

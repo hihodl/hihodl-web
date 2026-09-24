@@ -37,6 +37,9 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 
 import { recordSentPayment } from "@/lib/app/groups";
+import { t, type MessageKey } from "@/lib/app/i18n";
+import { fmtNumber } from "@/lib/app/i18n/format";
+import { Rich, useT } from "@/lib/app/i18n/react";
 import { settleRequest } from "@/lib/app/payment-requests";
 import {
   authorizeWithdrawalPasskey,
@@ -100,14 +103,15 @@ function shortTo(a: string): string {
 function fmtAmount(amount: string): string {
   const n = Number(amount);
   if (!Number.isFinite(n)) return amount;
-  return n.toLocaleString("en-US", { maximumFractionDigits: n < 1 ? 6 : 4 });
+  return fmtNumber(n, { maximumFractionDigits: n < 1 ? 6 : 4 });
 }
 
 /** Confirm's hero: "RECIPIENT GETS", the amount at 44/800, the symbol at 22/600. */
-function Hero({ label = "Recipient gets", amount, token }: { label?: string; amount: string; token: WithdrawToken }) {
+function Hero({ label, amount, token }: { label?: string; amount: string; token: WithdrawToken }) {
+  const t = useT();
   return (
     <div className="flex flex-col items-center gap-1.5 pb-[18px] pt-8">
-      <p className="text-[12px] font-strong uppercase tracking-[0.8px] text-white/55">{label}</p>
+      <p className="text-[12px] font-strong uppercase tracking-[0.8px] text-white/55">{label ?? t("wallet.send.recipientGets")}</p>
       <p className="flex items-end gap-2.5 pb-0.5">
         <span className="text-[44px] font-strong leading-none tracking-[-0.8px] tabular-nums text-white">{fmtAmount(amount)}</span>
         <span className="mb-1 text-[22px] font-strong text-white/55">{token}</span>
@@ -120,6 +124,7 @@ const confirmCard = "rounded-[16px] border border-white/[0.08] bg-white/[0.05] p
 
 /** Confirm's recipient card: the wallet avatar, the short address, (i) for the whole one. */
 function RecipientCard({ to }: { to: string }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   return (
     <div className={confirmCard}>
@@ -128,13 +133,13 @@ function RecipientCard({ to }: { to: string }) {
           <Ion name="wallet-outline" size={20} color="#7CC6E8" />
         </span>
         <span className="min-w-0 flex-1 truncate text-[15px] font-strong tracking-[-0.2px] text-white">{shortTo(to)}</span>
-        <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-label="Recipient wallet" className="rounded-[10px] p-1 hover:bg-white/[0.06]">
+        <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-label={t("wallet.send.recipientWallet")} className="rounded-[10px] p-1 hover:bg-white/[0.06]">
           <Ion name="information-circle-outline" size={20} color="rgba(255,255,255,0.55)" />
         </button>
       </div>
       {open ? (
         <div className="mt-3 border-t border-white/10 pt-3">
-          <p className="text-[11px] font-strong uppercase tracking-[0.5px] text-white/55">Recipient wallet</p>
+          <p className="text-[11px] font-strong uppercase tracking-[0.5px] text-white/55">{t("wallet.send.recipientWallet")}</p>
           <p className="mt-2 break-all font-mono text-[13px] leading-[19px] text-white">{to}</p>
         </div>
       ) : null}
@@ -153,23 +158,25 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 
 /** Confirm's summary card: You send, Network fee, Network. */
 function Summary({ token, amount }: { token: WithdrawToken; amount: string }) {
+  const t = useT();
   return (
     <div className={confirmCard}>
-      <Row label="You send">
+      <Row label={t("wallet.send.youSend")}>
         {fmtAmount(amount)} {token}
       </Row>
       <div className="h-px bg-white/[0.08]" />
-      <Row label="Network fee">
-        <span className="text-[#22C55E]">Free</span>
+      <Row label={t("wallet.send.networkFee")}>
+        <span className="text-[#22C55E]">{t("wallet.send.free")}</span>
       </Row>
       <div className="h-px bg-white/[0.08]" />
-      <Row label="Network">Solana</Row>
+      <Row label={t("common.network")}>Solana</Row>
     </div>
   );
 }
 
 /** QuickAmountPad: presets over a 3×4 keypad, keys on white/6, radius 12. */
 function AmountPad({ onKey, onPreset, onBackspace }: { onKey: (k: string) => void; onPreset: (n: number) => void; onBackspace: () => void }) {
+  const t = useT();
   const key = "flex h-[46px] flex-1 items-center justify-center rounded-[12px] bg-white/[0.06] text-[16px] font-strong text-white transition-colors hover:bg-white/[0.1] active:bg-white/[0.14]";
   const rows = [
     ["1", "2", "3"],
@@ -182,18 +189,18 @@ function AmountPad({ onKey, onPreset, onBackspace }: { onKey: (k: string) => voi
       <div className="flex gap-2">
         {[10, 20, 50, 100].map((v) => (
           <button key={v} type="button" onClick={() => onPreset(v)} className="flex h-9 flex-1 items-center justify-center rounded-[12px] bg-white/[0.08] text-[14px] font-strong text-white hover:bg-white/[0.12]">
-            +{v}
+            +{fmtNumber(v)}
           </button>
         ))}
         <button type="button" onClick={() => onPreset(Number.POSITIVE_INFINITY)} className="flex h-9 flex-[1.2] items-center justify-center rounded-[12px] bg-white/[0.08] text-[14px] font-strong text-white hover:bg-white/[0.12]">
-          MAX
+          {t("wallet.send.max")}
         </button>
       </div>
       {rows.map((r) => (
         <div key={r.join("")} className="flex gap-2">
           {r.map((k) =>
             k === "back" ? (
-              <button key={k} type="button" onClick={onBackspace} aria-label="Delete" className={key}>
+              <button key={k} type="button" onClick={onBackspace} aria-label={t("wallet.send.deleteKey")} className={key}>
                 <BackspaceIcon />
               </button>
             ) : (
@@ -226,25 +233,28 @@ export type WithdrawPhase =
   | { kind: "result"; withdrawal: Withdrawal; status: WithdrawalStatus };
 
 /** tx-confirm's headings, and the web's own for the ways a phone approval ends without a send. */
-const RESULT: Partial<Record<WithdrawalStatus, { title: string; text: string; ok: boolean }>> = {
-  confirmed: { title: "Payment sent", text: "Confirmed on Solana", ok: true },
-  rejected: { title: "Declined on your phone", text: "Nothing was sent.", ok: false },
-  expired: { title: "Not approved in time", text: "It was not approved within ten minutes. Nothing was sent.", ok: false },
-  failed: { title: "Payment failed", text: "The network did not take it. Nothing left your wallet.", ok: false },
+const RESULT: Partial<Record<WithdrawalStatus, { title: MessageKey; text: MessageKey; ok: boolean }>> = {
+  confirmed: { title: "wallet.send.result.confirmedTitle", text: "wallet.send.result.confirmedText", ok: true },
+  rejected: { title: "wallet.send.result.rejectedTitle", text: "wallet.send.result.rejectedText", ok: false },
+  expired: { title: "wallet.send.result.expiredTitle", text: "wallet.send.result.expiredText", ok: false },
+  failed: { title: "wallet.send.result.failedTitle", text: "wallet.send.result.failedText", ok: false },
 };
 
-const ON_PHONE: Partial<Record<WithdrawalStatus, string>> = {
-  pending: "Approve on your phone",
-  approved: "Approved on your phone. Sending…",
-  submitted: "Approved. Sending…",
+const ON_PHONE: Partial<Record<WithdrawalStatus, MessageKey>> = {
+  pending: "wallet.send.onPhone.pending",
+  approved: "wallet.send.onPhone.approved",
+  submitted: "wallet.send.onPhone.submitted",
 };
 
 /** Review's last line: who approves next, when that is known before the server answers. */
-const NEXT: Record<"phone" | "passkey" | "unknown", string> = {
-  phone: "A payment cannot be undone. Your linked phone approves and signs it next, in the HOLD app.",
-  passkey: "A payment cannot be undone. You approve it with your passkey next.",
-  unknown: "A payment cannot be undone. You approve it in the next step.",
+const NEXT: Record<"phone" | "passkey" | "unknown", MessageKey> = {
+  phone: "wallet.send.next.phone",
+  passkey: "wallet.send.next.passkey",
+  unknown: "wallet.send.next.unknown",
 };
+
+/** The countdown inside a sentence, kept in tabular figures. */
+const tabular = { n: (c: ReactNode) => <span className="tabular-nums">{c}</span> };
 
 export function WithdrawView({
   phase,
@@ -273,6 +283,7 @@ export function WithdrawView({
     onEdit: () => void;
   };
 }) {
+  const t = useT();
   const withdrawal = "withdrawal" in phase ? phase.withdrawal : null;
   const left = useCountdown(phase.kind === "on-phone" || phase.kind === "passkey" ? (withdrawal?.expiresAt ?? null) : null);
   // The form is the app's two screens: who (send/search), then how much (QuickSend).
@@ -281,7 +292,7 @@ export function WithdrawView({
 
   if (phase.kind === "form" && step === "to") {
     const toOk = isSolanaAddress(draft.to);
-    const toHint = draft.to && !toOk ? (draft.to.trim().startsWith("0x") ? "That is not a Solana address. Only Solana is supported." : "That is not a valid Solana address.") : "";
+    const toHint = draft.to && !toOk ? (draft.to.trim().startsWith("0x") ? t("wallet.send.notSolanaEvm") : t("wallet.send.notSolana")) : "";
     return (
       <AppScreen onBack={actions.onBack} title={null}>
         <div className="flex flex-col gap-3 pt-2">
@@ -293,8 +304,8 @@ export function WithdrawView({
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
-              placeholder="Paste wallet address"
-              aria-label="Recipient wallet address"
+              placeholder={t("wallet.send.pasteAddress")}
+              aria-label={t("wallet.send.recipientAddressAria")}
               value={draft.to}
               onChange={(e) => setDraft({ ...draft, to: e.target.value.trim() })}
               onKeyDown={(e) => {
@@ -304,7 +315,7 @@ export function WithdrawView({
           </label>
           {toOk ? (
             <>
-              <p className="px-1 pt-2 text-[13px] font-strong text-white/60">Detected</p>
+              <p className="px-1 pt-2 text-[13px] font-strong text-white/60">{t("wallet.send.detected")}</p>
               <button
                 type="button"
                 onClick={() => setStep("amount")}
@@ -313,7 +324,7 @@ export function WithdrawView({
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[rgba(124,198,232,0.12)]">
                   <Ion name="wallet-outline" size={16} color="#7CC6E8" />
                 </span>
-                <span className="min-w-0 flex-1 truncate text-[15px] font-strong text-white">Wallet · {shortTo(draft.to)}</span>
+                <span className="min-w-0 flex-1 truncate text-[15px] font-strong text-white">{t("wallet.send.walletRow", { address: shortTo(draft.to) })}</span>
                 <Ion name="chevron-forward" size={18} color="rgba(255,255,255,0.55)" />
               </button>
             </>
@@ -322,8 +333,8 @@ export function WithdrawView({
           ) : (
             <div className="flex flex-col items-center px-8 pt-16 text-center">
               <Ion name="wallet-outline" size={48} color={SUB} />
-              <p className="mt-4 text-[15px] font-strong text-[#9FB7C2]">Paste wallet address</p>
-              <p className="mt-2 text-[13px] text-[#9FB7C2]">A Solana address, for USDC or SOL.</p>
+              <p className="mt-4 text-[15px] font-strong text-[#9FB7C2]">{t("wallet.send.pasteAddress")}</p>
+              <p className="mt-2 text-[13px] text-[#9FB7C2]">{t("wallet.send.emptyHint")}</p>
             </div>
           )}
         </div>
@@ -337,8 +348,13 @@ export function WithdrawView({
     const tooMuch = units !== null && have !== null && Number(draft.amount) > have;
     const toOk = isSolanaAddress(draft.to);
     const maxDigits = DECIMALS[draft.token];
-    const fmtHave = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: draft.token === "USDC" ? 2 : 6 });
-    const line = tooMuch && have !== null ? `Most you can send is ${fmtHave(have)} ${draft.token}` : have !== null ? `Available: ${fmtHave(have)} ${draft.token}` : "";
+    const fmtHave = (n: number) => fmtNumber(n, { maximumFractionDigits: draft.token === "USDC" ? 2 : 6 });
+    const line =
+      tooMuch && have !== null
+        ? t("wallet.send.mostYouCanSend", { amount: `${fmtHave(have)} ${draft.token}` })
+        : have !== null
+          ? t("wallet.send.available", { amount: `${fmtHave(have)} ${draft.token}` })
+          : "";
 
     const append = (k: string) => {
       const prev = draft.amount;
@@ -363,7 +379,7 @@ export function WithdrawView({
 
     return (
       <AppScreen onBack={() => setStep("to")} title={null}>
-        <div tabIndex={0} onKeyDown={onKeyDown} className="flex flex-col outline-none" aria-label="Amount">
+        <div tabIndex={0} onKeyDown={onKeyDown} className="flex flex-col outline-none" aria-label={t("common.amount")}>
           {/* The amount block */}
           <div className="flex flex-col items-center pt-8">
             <p className="flex items-center gap-2">
@@ -387,24 +403,24 @@ export function WithdrawView({
             </button>
             {picking ? (
               <div className="absolute top-full z-10 mt-2 w-full max-w-[320px] rounded-[18px] border border-white/[0.12] bg-[#15313D] p-2 shadow-[0_18px_36px_rgba(0,0,0,0.4)]">
-                {(["USDC", "SOL"] as const).map((t) => {
-                  const on = t === draft.token;
-                  const bal = balances ? (t === "USDC" ? balances.usdc : balances.sol) : null;
+                {(["USDC", "SOL"] as const).map((tok) => {
+                  const on = tok === draft.token;
+                  const bal = balances ? (tok === "USDC" ? balances.usdc : balances.sol) : null;
                   return (
                     <button
-                      key={t}
+                      key={tok}
                       type="button"
                       onClick={() => {
-                        setDraft({ ...draft, token: t, amount: "" });
+                        setDraft({ ...draft, token: tok, amount: "" });
                         setPicking(false);
                       }}
                       aria-pressed={on}
                       className={`flex w-full items-center gap-3 rounded-[14px] px-3 py-2.5 text-left transition-colors ${on ? "bg-[rgba(255,183,3,0.10)]" : "hover:bg-white/[0.06]"}`}
                     >
-                      <TokenIcon symbol={t} size={32} />
+                      <TokenIcon symbol={tok} size={32} />
                       <span className="min-w-0 flex-1">
-                        <span className="block text-[15px] font-strong text-white">{TOKEN_NAME[t]}</span>
-                        <span className="block text-[12px] tabular-nums text-white/60">{bal !== null ? `${bal.toLocaleString("en-US", { maximumFractionDigits: t === "USDC" ? 2 : 6 })} ${t}` : t}</span>
+                        <span className="block text-[15px] font-strong text-white">{TOKEN_NAME[tok]}</span>
+                        <span className="block text-[12px] tabular-nums text-white/60">{bal !== null ? `${fmtNumber(bal, { maximumFractionDigits: tok === "USDC" ? 2 : 6 })} ${tok}` : tok}</span>
                       </span>
                       {on ? <Ion name="checkmark-circle" size={20} color={AMBER} /> : <span className="w-5" />}
                     </button>
@@ -418,7 +434,7 @@ export function WithdrawView({
           <div className="mt-6 rounded-[20px] bg-[rgba(12,16,20,0.94)] px-4 pb-4 pt-2">
             <div className="mb-[18px] mt-2">
               <ContinueButton disabled={units === null || tooMuch || !toOk} onClick={actions.onReview}>
-                Continue
+                {t("common.continue")}
               </ContinueButton>
             </div>
             <AmountPad onKey={append} onPreset={preset} onBackspace={backspace} />
@@ -430,7 +446,7 @@ export function WithdrawView({
 
   if (phase.kind === "review") {
     return (
-      <AppScreen title="Confirm payment" onBack={actions.onEdit}>
+      <AppScreen title={t("wallet.send.confirmTitle")} onBack={actions.onEdit}>
         <Hero amount={draft.amount} token={draft.token} />
         <div className="flex flex-col gap-3">
           <RecipientCard to={draft.to} />
@@ -438,10 +454,10 @@ export function WithdrawView({
           {phase.notice ? <WarningNote>{phase.notice}</WarningNote> : null}
           <div className="pt-4">
             <PrimaryButton disabled={phase.busy} onClick={actions.onRequest}>
-              {phase.busy ? "Preparing…" : "Send"}
+              {phase.busy ? t("wallet.send.preparing") : t("common.send")}
             </PrimaryButton>
           </div>
-          <FooterNote icon={approver === "passkey" ? "finger-print" : "phone-portrait-outline"}>{NEXT[approver ?? "unknown"]}</FooterNote>
+          <FooterNote icon={approver === "passkey" ? "finger-print" : "phone-portrait-outline"}>{t(NEXT[approver ?? "unknown"])}</FooterNote>
         </div>
       </AppScreen>
     );
@@ -450,10 +466,10 @@ export function WithdrawView({
   if (phase.kind === "on-phone") {
     const w = phase.withdrawal;
     return (
-      <AppScreen title="Confirm payment">
+      <AppScreen title={t("wallet.send.confirmTitle")}>
         <Hero amount={w.amount} token={w.token} />
         <div className="flex flex-col gap-3">
-          <StatusLine>{ON_PHONE[w.status] ?? "Approve on your phone"}</StatusLine>
+          <StatusLine>{t(ON_PHONE[w.status] ?? "wallet.send.onPhone.pending")}</StatusLine>
           <RecipientCard to={w.to} />
           <Summary token={w.token} amount={w.amount} />
           {phase.notice ? <WarningNote>{phase.notice}</WarningNote> : null}
@@ -468,7 +484,7 @@ export function WithdrawView({
                   className="flex h-[52px] w-full items-center justify-center gap-2 rounded-[16px] bg-[#FFB703] px-5 text-[15px] font-strong text-[#0A0F14] transition-opacity hover:opacity-90"
                 >
                   <Ion name="open-outline" size={18} color="#0A0F14" />
-                  Open HOLD
+                  {t("wallet.send.openHold")}
                 </a>
               ) : null}
               <button
@@ -477,13 +493,12 @@ export function WithdrawView({
                 disabled={phase.cancelling}
                 className="flex min-h-[50px] w-full items-center justify-center rounded-[14px] border border-white/10 bg-white/[0.06] px-5 py-3.5 text-[15px] font-strong text-white transition-colors hover:bg-white/[0.12] disabled:opacity-60"
               >
-                {phase.cancelling ? "Cancelling…" : "Cancel"}
+                {phase.cancelling ? t("wallet.send.cancelling") : t("common.cancel")}
               </button>
             </div>
           ) : null}
           <FooterNote icon="phone-portrait-outline">
-            A notification in the HOLD app on your phone asks you to approve it. No notification? Open HOLD and go to Withdrawals.
-            It expires in <span className="tabular-nums">{left}</span>.
+            <Rich k="wallet.send.phoneNote" vars={{ left }} tags={tabular} />
           </FooterNote>
         </div>
       </AppScreen>
@@ -494,7 +509,7 @@ export function WithdrawView({
     const w = phase.withdrawal;
     const busy = phase.kind === "preparing" || phase.busy;
     return (
-      <AppScreen title="Confirm payment">
+      <AppScreen title={t("wallet.send.confirmTitle")}>
         <Hero amount={w.amount} token={w.token} />
         <div className="flex flex-col gap-3">
           <RecipientCard to={w.to} />
@@ -502,12 +517,12 @@ export function WithdrawView({
           {phase.kind === "passkey" && phase.notice ? <WarningNote>{phase.notice}</WarningNote> : null}
           <div className="pt-4">
             <PrimaryButton icon="finger-print" disabled={busy} onClick={actions.onConfirmPasskey}>
-              {phase.kind === "preparing" ? "Preparing…" : phase.busy ? "Waiting for your passkey…" : "Approve with passkey"}
+              {phase.kind === "preparing" ? t("wallet.send.preparing") : phase.busy ? t("wallet.send.waitingPasskey") : t("wallet.send.approveWithPasskey")}
             </PrimaryButton>
           </div>
           {phase.kind === "passkey" ? (
             <FooterNote icon="finger-print">
-              Your passkey approves exactly this payment and signs it, in one step. Expires in <span className="tabular-nums">{left}</span>.
+              <Rich k="wallet.send.passkeyNote" vars={{ left }} tags={tabular} />
             </FooterNote>
           ) : null}
         </div>
@@ -518,10 +533,10 @@ export function WithdrawView({
   if (phase.kind === "sending") {
     const w = phase.withdrawal;
     return (
-      <AppScreen title="Confirm payment">
+      <AppScreen title={t("wallet.send.confirmTitle")}>
         <Hero amount={w.amount} token={w.token} />
         <div className="flex flex-col gap-3">
-          <StatusLine>Sending payment</StatusLine>
+          <StatusLine>{t("wallet.send.sendingPayment")}</StatusLine>
           <RecipientCard to={w.to} />
           <Summary token={w.token} amount={w.amount} />
         </div>
@@ -534,11 +549,9 @@ export function WithdrawView({
   return (
     <AppScreen>
       <div className="mt-10 rounded-[16px] border border-white/[0.08] bg-[#0A1A24] p-[18px]">
-        <h2 className="mb-1.5 text-[20px] font-strong text-white">{r.title}</h2>
-        <p className="text-[14px] text-[#CFE3EC]">
-          To {shortTo(w.to)} • {fmtAmount(w.amount)} {w.token}
-        </p>
-        <p className={`mt-2.5 text-[13px] ${r.ok ? "text-[#20D690]" : "text-[#CFE3EC]"}`}>{r.text}</p>
+        <h2 className="mb-1.5 text-[20px] font-strong text-white">{t(r.title)}</h2>
+        <p className="text-[14px] text-[#CFE3EC]">{t("wallet.send.resultTo", { to: shortTo(w.to), amount: `${fmtAmount(w.amount)} ${w.token}` })}</p>
+        <p className={`mt-2.5 text-[13px] ${r.ok ? "text-[#20D690]" : "text-[#CFE3EC]"}`}>{t(r.text)}</p>
         {w.signature ? (
           <a
             className="mt-2.5 inline-flex items-center gap-1 text-[13px] text-[#9FB7C2] underline decoration-white/20 underline-offset-2 hover:text-white"
@@ -546,11 +559,11 @@ export function WithdrawView({
             target="_blank"
             rel="noopener noreferrer"
           >
-            See it on Solscan <Ion name="open-outline" size={13} color={SUB} />
+            {t("wallet.send.seeOnSolscan")} <Ion name="open-outline" size={13} color={SUB} />
           </a>
         ) : null}
         <button type="button" onClick={actions.onDone} className="mt-[18px] flex h-12 w-full items-center justify-center rounded-[12px] bg-[#FFB703] text-[15px] font-strong text-[#0A1A24] hover:opacity-90">
-          Close
+          {t("common.close")}
         </button>
       </div>
     </AppScreen>
@@ -578,16 +591,16 @@ function sameHash(given: string, message: Uint8Array): boolean {
 
 function describe(e: unknown): string {
   if (e instanceof WalletApiError) {
-    if (e.code === "WITHDRAWAL_NEEDS_APPROVAL") return "That withdrawal was not approved. Nothing was sent. Start again.";
-    if (e.code === "WITHDRAWAL_EXPIRED" || e.status === 410) return "That withdrawal expired. Nothing was sent. Start again.";
-    if (e.code === "INSUFFICIENT_FUNDS" || e.code === "INSUFFICIENT_BALANCE") return "Your wallet does not hold enough for that. Nothing was sent.";
+    if (e.code === "WITHDRAWAL_NEEDS_APPROVAL") return t("wallet.send.error.needsApproval");
+    if (e.code === "WITHDRAWAL_EXPIRED" || e.status === 410) return t("wallet.send.error.expired");
+    if (e.code === "INSUFFICIENT_FUNDS" || e.code === "INSUFFICIENT_BALANCE") return t("wallet.send.error.insufficient");
     // The two refusals that used to arrive as a bare 409 and be read as
     // "link your phone". Each says the thing this person actually has to do.
-    if (e.code === "NO_PASSKEY") return "This account has no passkey, and a passkey is what approves a send. Add one from Menu → Passkeys. Nothing was sent.";
-    if (e.code === "NO_WEB_WALLET") return "This wallet was made in the HOLD app, which sends it for now. Nothing was sent.";
+    if (e.code === "NO_PASSKEY") return t("wallet.send.error.noPasskey");
+    if (e.code === "NO_WEB_WALLET") return t("wallet.send.error.noWebWallet");
   }
-  if (e instanceof Error && e.message === "challenge_mismatch") return "HOLD asked the passkey to approve something other than this transfer, so we stopped. Nothing was sent.";
-  if (e instanceof Error && e.message === "wrong_key") return "That passkey opened a different wallet. Nothing was sent.";
+  if (e instanceof Error && e.message === "challenge_mismatch") return t("wallet.send.error.challengeMismatch");
+  if (e instanceof Error && e.message === "wrong_key") return t("wallet.send.error.wrongKey");
   return explain(e);
 }
 
@@ -772,12 +785,12 @@ export function Withdraw({
     setPhase({ ...phase, cancelling: true, notice: null });
     try {
       await rejectWithdrawal(w.id);
-      setPhase({ kind: "form", notice: "Cancelled. Nothing was sent." });
+      setPhase({ kind: "form", notice: t("wallet.send.cancelled") });
     } catch (e) {
       const decided = e instanceof WalletApiError && e.code === "NOT_PENDING";
       setPhase((p) =>
         p.kind === "on-phone"
-          ? { ...p, cancelling: false, notice: decided ? "Your phone already decided on this one, so it can no longer be cancelled." : describe(e) }
+          ? { ...p, cancelling: false, notice: decided ? t("wallet.send.alreadyDecided") : describe(e) }
           : p,
       );
     }
@@ -789,7 +802,7 @@ export function Withdraw({
     const p = prepared.current;
     const b = backup.current;
     if (!p || !b) {
-      setPhase({ ...phase, notice: "Still preparing. Try again in a moment." });
+      setPhase({ ...phase, notice: t("wallet.send.stillPreparing") });
       if (!b) void getWalletBackup().then((x) => (backup.current = x), () => undefined);
       if (!p) void prepare(w).catch(() => undefined);
       return;

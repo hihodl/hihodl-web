@@ -5,57 +5,66 @@
  * anything was saved.
  */
 
+import { t } from "@/lib/app/i18n";
+
 import { WalletCryptoError } from "./core";
 import { WalletApiError } from "./api";
 import { WalletFlowError } from "./flows";
 import { PasskeyError } from "./passkey";
 
+/**
+ * The English line, for importers that read it at module load. Prefer
+ * lossWarning(): it is read in the person's language when it is called.
+ */
 export const LOSS_WARNING =
   "If you lose every passkey on this wallet and never exported your 12 words, the funds in it cannot be recovered by anyone, including us. Your HOLD account can be; the money cannot.";
+
+/** The loss warning, in the person's language. */
+export function lossWarning(): string {
+  return t("wallet.explain.lossWarning");
+}
 
 /** What to tell the person, for anything a flow can throw. Never red. */
 export function explain(e: unknown): string {
   if (e instanceof PasskeyError) {
     switch (e.code) {
       case "cancelled":
-        return "The passkey prompt was closed before it finished. Nothing was saved.";
+        return t("wallet.explain.passkey.cancelled");
       case "exists":
-        return "This device already has a passkey for your account. Use that one instead.";
+        return t("wallet.explain.passkey.exists");
       case "no_prf":
-        return "This passkey cannot protect a wallet: its password manager does not support the PRF extension. Nothing was saved, and a passkey just created for it was not added to your account (you can delete it from your password manager). Use Safari with iCloud Keychain (iOS 18.4 / macOS 15.4 or later) or Chrome with Google Password Manager.";
+        return t("wallet.explain.passkey.noPrf");
       case "no_prf_here":
-        return "This browser cannot protect a wallet with a passkey: it does not support the PRF extension. Nothing was created. Use Safari with iCloud Keychain (iOS 18.4 / macOS 15.4 or later) or Chrome with Google Password Manager, or make your wallet in the HOLD app.";
+        return t("wallet.explain.passkey.noPrfHere");
       // Said BEFORE any prompt: nothing was created, so there is nothing to
       // delete and nothing to undo. The version is the fix, and it is theirs
       // to make, so it is named.
       case "os_too_old":
-        return "Update this device before making a wallet here. iOS 18.0 to 18.3 can hand back a different key depending on how you unlock, which would leave a wallet nobody can open — Apple fixed it in 18.4. Nothing was created. You can still sign in, and you can make your wallet in the HOLD app or on a device that is up to date.";
+        return t("wallet.explain.passkey.osTooOld");
       case "unavailable":
-        return "Passkeys for HOLD only work on app.hihodl.xyz, in a browser that supports them.";
+        return t("wallet.explain.passkey.unavailable");
       default:
-        return "The passkey did not answer. Try again.";
+        return t("wallet.explain.passkey.failed");
     }
   }
   if (e instanceof WalletCryptoError) {
-    return e.code === "decrypt_failed"
-      ? "That passkey did not open this wallet. Nothing was changed."
-      : "The wallet backup could not be read. Nothing was changed.";
+    return e.code === "decrypt_failed" ? t("wallet.explain.crypto.decryptFailed") : t("wallet.explain.crypto.unreadable");
   }
   if (e instanceof WalletFlowError) {
-    if (e.code === "unknown_passkey") return "That passkey is not one that opens this wallet. Choose another.";
-    if (e.code === "self_check_failed") return "A safety check failed before anything was saved. Nothing was written. Try again.";
-    return "The wallet could not be saved. Try again.";
+    if (e.code === "unknown_passkey") return t("wallet.explain.flow.unknownPasskey");
+    if (e.code === "self_check_failed") return t("wallet.explain.flow.selfCheckFailed");
+    return t("wallet.explain.flow.notSaved");
   }
   if (e instanceof WalletApiError) {
-    if (e.code === "APP_WALLET_EXISTS") return "This account already has a wallet in the HOLD app. Nothing was saved.";
-    if (e.code === "SEED_BACKUP_EXISTS") return "This account already has a web wallet. Nothing was overwritten.";
-    if (e.code === "EMAIL_NOT_VERIFIED") return "Confirm your email address before creating a wallet.";
-    if (e.code === "WEB_WALLET_NOT_ENABLED") return "The web wallet is not available on your account yet. Nothing was saved.";
-    if (e.code === "LAST_WRAPPING") return "This is the only passkey that opens your wallet. Add another first.";
-    if (e.code === "WRAPPING_EXISTS") return "That passkey already opens your wallet.";
-    if (e.code === "rate_limited" || e.status === 429) return "Too many attempts. Wait a few minutes and try again.";
-    if (e.status === 0) return "Could not reach HOLD. Check your connection and try again.";
-    return "Something went wrong on our side. Nothing was changed.";
+    if (e.code === "APP_WALLET_EXISTS") return t("wallet.explain.api.appWalletExists");
+    if (e.code === "SEED_BACKUP_EXISTS") return t("wallet.explain.api.seedBackupExists");
+    if (e.code === "EMAIL_NOT_VERIFIED") return t("wallet.explain.api.emailNotVerified");
+    if (e.code === "WEB_WALLET_NOT_ENABLED") return t("wallet.explain.api.notEnabled");
+    if (e.code === "LAST_WRAPPING") return t("wallet.explain.api.lastWrapping");
+    if (e.code === "WRAPPING_EXISTS") return t("wallet.explain.api.wrappingExists");
+    if (e.code === "rate_limited" || e.status === 429) return t("wallet.explain.api.rateLimited");
+    if (e.status === 0) return t("wallet.explain.api.offline");
+    return t("wallet.explain.api.server");
   }
-  return "Something went wrong. Nothing was changed.";
+  return t("wallet.explain.unknown");
 }

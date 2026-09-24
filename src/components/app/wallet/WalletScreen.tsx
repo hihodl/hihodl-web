@@ -29,6 +29,8 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
+import { fmtDate, fmtNumber } from "@/lib/app/i18n/format";
+import { useT } from "@/lib/app/i18n/react";
 import { chosenUsername, getMyAddresses } from "@/lib/app/me";
 import { useBalances, useHoldWallet } from "@/lib/app/hold-wallet";
 import { useMe } from "@/lib/app/spaces-data";
@@ -52,7 +54,7 @@ import {
   type WrappingMeta,
 } from "@/lib/wallet/api";
 import { wipe } from "@/lib/wallet/core";
-import { explain, LOSS_WARNING } from "@/lib/wallet/explain";
+import { explain, lossWarning } from "@/lib/wallet/explain";
 import {
   openMnemonic,
   openWalletWithEvm,
@@ -156,6 +158,7 @@ function approverOf(status: WalletStatus): "phone" | "passkey" | undefined {
 }
 
 export function WalletScreen({ send = false }: { send?: boolean } = {}) {
+  const t = useT();
   const vault = useVault();
   const [status, setStatus] = useState<WalletStatus | null>(null);
   const [loadError, setLoadError] = useState<unknown>(null);
@@ -200,11 +203,11 @@ export function WalletScreen({ send = false }: { send?: boolean } = {}) {
   let body: ReactNode;
   if (loadError) {
     body = (
-      <AppScreen title="Wallet">
+      <AppScreen title={t("wallet.screen.title")}>
         <div className="flex flex-col gap-4 pt-4">
           <Problem>{explain(loadError)}</Problem>
           <SecondaryButton onClick={() => void load()}>
-            Try again
+            {t("common.tryAgain")}
           </SecondaryButton>
         </div>
       </AppScreen>
@@ -222,7 +225,7 @@ export function WalletScreen({ send = false }: { send?: boolean } = {}) {
     body = <WalletOnAnotherAccount />;
   } else if (!passkeysHere()) {
     body = (
-      <AppScreen title="Wallet">
+      <AppScreen title={t("wallet.screen.title")}>
         <div className="pt-4">
           <InfoBox>{explain(new PasskeyError("unavailable"))}</InfoBox>
         </div>
@@ -233,7 +236,7 @@ export function WalletScreen({ send = false }: { send?: boolean } = {}) {
     // made here could later refuse to open, and there is nothing on the
     // screen that would fix it.
     body = (
-      <AppScreen title="Wallet">
+      <AppScreen title={t("wallet.screen.title")}>
         <div className="pt-4">
           <InfoBox>{explain(new PasskeyError("os_too_old"))}</InfoBox>
         </div>
@@ -241,7 +244,7 @@ export function WalletScreen({ send = false }: { send?: boolean } = {}) {
     );
   } else if (status.state === "none" && prfBrowser === false) {
     body = (
-      <AppScreen title="Wallet">
+      <AppScreen title={t("wallet.screen.title")}>
         <div className="pt-4">
           <InfoBox>{explain(new PasskeyError("no_prf_here"))}</InfoBox>
         </div>
@@ -261,14 +264,12 @@ export function WalletScreen({ send = false }: { send?: boolean } = {}) {
 /* ── A web wallet kept under an older account with this email ────── */
 
 function WalletOnAnotherAccount() {
+  const t = useT();
   return (
-    <AppScreen title="Wallet">
+    <AppScreen title={t("wallet.screen.title")}>
       <div className="pt-4">
-        <HeroCard icon="wallet-outline" title="Your wallet is on your previous account">
-          <HeroBody>
-            This email already has a web wallet, made under an earlier HOLD account, and the web never makes a second one.
-            Write to support from this email and we will move you back to that account.
-          </HeroBody>
+        <HeroCard icon="wallet-outline" title={t("wallet.anotherAccount.title")}>
+          <HeroBody>{t("wallet.anotherAccount.body")}</HeroBody>
         </HeroCard>
       </div>
     </AppScreen>
@@ -287,6 +288,7 @@ function WalletOnAnotherAccount() {
  *   none        an older backend that cannot take it: send from the app
  */
 function AppWallet({ status, send }: { status: WalletStatus; send: boolean }) {
+  const t = useT();
   const w = useHoldWallet();
   const { session } = useShell();
   const productHref = useProductHref();
@@ -321,28 +323,24 @@ function AppWallet({ status, send }: { status: WalletStatus; send: boolean }) {
     payer === "app" ? (
       <>
         <PrimaryButton icon="send-outline" disabled={!w.solana} onClick={() => setSending(true)}>
-          Send
+          {t("common.send")}
         </PrimaryButton>
-        <FooterNote icon="phone-portrait-outline">
-          This wallet was made in the HOLD app. Your linked phone approves and signs every payment you start here.
-        </FooterNote>
+        <FooterNote icon="phone-portrait-outline">{t("wallet.appWallet.linkedNote")}</FooterNote>
       </>
     ) : payer === "link_first" ? (
       <>
         {/* Send asks, in the sheet every payment opens (link/LinkGate), and linking comes back to the send. */}
         <PrimaryButton icon="send-outline" onClick={() => gate.ask(send ? hereNow() : productHref("/wallet/send"))}>
-          Send
+          {t("common.send")}
         </PrimaryButton>
-        <FooterNote icon="phone-portrait-outline">
-          This wallet was made in the HOLD app, and its keys stay on your phone. Link the phone once to pay from here.
-        </FooterNote>
+        <FooterNote icon="phone-portrait-outline">{t("wallet.appWallet.linkFirstNote")}</FooterNote>
       </>
     ) : (
       <>
-        <FooterNote icon="phone-portrait-outline">This wallet was made in the HOLD app, which keeps its keys. Send and swap there.</FooterNote>
+        <FooterNote icon="phone-portrait-outline">{t("wallet.appWallet.appOnlyNote")}</FooterNote>
         {openApp ? (
           <SecondaryButton icon="open-outline" onClick={() => window.location.assign(openApp)}>
-            Open HOLD
+            {t("wallet.appWallet.openHold")}
           </SecondaryButton>
         ) : null}
       </>
@@ -361,24 +359,22 @@ function AppWallet({ status, send }: { status: WalletStatus; send: boolean }) {
 /* ── No wallet, and the web does not make one for this account yet ── */
 
 function NoWalletHere() {
+  const t = useT();
   const phone = usePhone();
   return (
-    <AppScreen title="Wallet">
+    <AppScreen title={t("wallet.screen.title")}>
       <div className="flex flex-col gap-4 pt-4">
         {phone === "ios" ? (
-          <HeroCard icon="wallet-outline" title="No wallet yet">
-            <HeroBody>Making a wallet on the web is not open for this account yet. Nothing is lost: when it opens, it is made here with your passkey.</HeroBody>
+          <HeroCard icon="wallet-outline" title={t("wallet.noWallet.iosTitle")}>
+            <HeroBody>{t("wallet.noWallet.iosBody")}</HeroBody>
           </HeroCard>
         ) : (
           <>
-            <HeroCard icon="wallet-outline" title="Make your wallet in the HOLD app">
-              <HeroBody>
-                The HOLD app on Google Play makes your wallet with every chain. Sign in there with this account, and it shows here
-                too.
-              </HeroBody>
+            <HeroCard icon="wallet-outline" title={t("wallet.noWallet.title")}>
+              <HeroBody>{t("wallet.noWallet.body")}</HeroBody>
             </HeroCard>
             <PrimaryButton icon="logo-google" onClick={() => window.open(playHref(phone), "_blank", "noopener")}>
-              Get HOLD on Google Play
+              {t("wallet.noWallet.getOnPlay")}
             </PrimaryButton>
           </>
         )}
@@ -396,6 +392,7 @@ type CreateStep =
   | { kind: "done"; address: string };
 
 function Create({ status, onCreated }: { status: WalletStatus; onCreated: () => void }) {
+  const t = useT();
   const { session } = useShell();
   const [step, setStep] = useState<CreateStep>({ kind: "intro" });
   const [error, setError] = useState<unknown>(null);
@@ -460,14 +457,14 @@ function Create({ status, onCreated }: { status: WalletStatus; onCreated: () => 
 
   if (step.kind === "done") {
     return (
-      <AppScreen title="Wallet">
+      <AppScreen title={t("wallet.screen.title")}>
         <div className="flex flex-col gap-4 pt-4">
-          <HeroCard icon="shield-checkmark" title="Your wallet is ready">
-            <HeroBody>Your Solana address:</HeroBody>
+          <HeroCard icon="shield-checkmark" title={t("wallet.create.readyTitle")}>
+            <HeroBody>{t("wallet.create.readyAddress")}</HeroBody>
             <p className="break-all px-1 text-center font-mono text-[13px] leading-[19px] text-white">{step.address}</p>
           </HeroCard>
-          <PrimaryButton onClick={onCreated}>Open wallet</PrimaryButton>
-          <FooterNote icon="lock-closed-outline">Write down your 12 words from Security. They are the only way back if every passkey is lost.</FooterNote>
+          <PrimaryButton onClick={onCreated}>{t("wallet.create.openWallet")}</PrimaryButton>
+          <FooterNote icon="lock-closed-outline">{t("wallet.create.readyNote")}</FooterNote>
         </div>
       </AppScreen>
     );
@@ -475,10 +472,10 @@ function Create({ status, onCreated }: { status: WalletStatus; onCreated: () => 
 
   if (step.kind === "sealing") {
     return (
-      <AppScreen title="Wallet">
+      <AppScreen title={t("wallet.screen.title")}>
         <div className="flex flex-col gap-4 pt-4">
-          <HeroCard icon="hourglass-outline" title="Creating your wallet">
-            <HeroBody>Making it in this browser and sealing it with your passkey.</HeroBody>
+          <HeroCard icon="hourglass-outline" title={t("wallet.create.sealingTitle")}>
+            <HeroBody>{t("wallet.create.sealingBody")}</HeroBody>
           </HeroCard>
           <Skeleton className="h-[52px] w-full" />
         </div>
@@ -488,14 +485,14 @@ function Create({ status, onCreated }: { status: WalletStatus; onCreated: () => 
 
   if (step.kind === "confirm") {
     return (
-      <AppScreen title="Wallet">
+      <AppScreen title={t("wallet.screen.title")}>
         <div className="flex flex-col gap-4 pt-4">
-          <HeroCard icon="finger-print" title="Confirm your new passkey">
-            <HeroBody>Once more, so it can seal your wallet.</HeroBody>
+          <HeroCard icon="finger-print" title={t("wallet.create.confirmTitle")}>
+            <HeroBody>{t("wallet.create.confirmBody")}</HeroBody>
           </HeroCard>
           {error ? <Problem>{explain(error)}</Problem> : null}
           <PrimaryButton icon="finger-print" disabled={busy} onClick={() => void confirm([step.credentialId], "This browser")}>
-            Confirm with passkey
+            {t("wallet.confirmWithPasskey")}
           </PrimaryButton>
         </div>
       </AppScreen>
@@ -503,23 +500,23 @@ function Create({ status, onCreated }: { status: WalletStatus; onCreated: () => 
   }
 
   return (
-    <AppScreen title="Wallet">
+    <AppScreen title={t("wallet.screen.title")}>
       <div className="flex flex-col gap-4 pt-4">
-        <HeroCard icon="finger-print" title="Create your wallet">
-          <HeroBody>A Solana wallet for USDC and SOL, locked by a passkey: Face ID, Touch ID or your device PIN.</HeroBody>
+        <HeroCard icon="finger-print" title={t("wallet.create.title")}>
+          <HeroBody>{t("wallet.create.body")}</HeroBody>
         </HeroCard>
         {!status.email_verified ? <Problem>{explain(new WalletApiError("EMAIL_NOT_VERIFIED", 403))}</Problem> : null}
         {error ? <Problem>{explain(error)}</Problem> : null}
         {reg.error ? <Problem>{explain(reg.error)}</Problem> : null}
         <PrimaryButton icon="add" disabled={busy || !reg.options || !status.email_verified} onClick={() => void createNew()}>
-          Create with a new passkey
+          {t("wallet.create.newPasskey")}
         </PrimaryButton>
         {existing.length > 0 ? (
           <SecondaryButton icon="finger-print" disabled={busy || !status.email_verified} onClick={() => void confirm(existing, null)}>
-            Use a passkey I already have
+            {t("wallet.create.existingPasskey")}
           </SecondaryButton>
         ) : null}
-        <FooterNote icon="lock-closed-outline">{LOSS_WARNING}</FooterNote>
+        <FooterNote icon="lock-closed-outline">{lossWarning()}</FooterNote>
       </div>
     </AppScreen>
   );
@@ -528,6 +525,7 @@ function Create({ status, onCreated }: { status: WalletStatus; onCreated: () => 
 /* ── Unlock ───────────────────────────────────────────────────────── */
 
 function Unlock() {
+  const t = useT();
   const { session } = useShell();
   const [backup, setBackup] = useState<WalletBackup | null>(null);
   const [error, setError] = useState<unknown>(null);
@@ -563,7 +561,7 @@ function Unlock() {
   return (
     <AppScreen>
       <div className="flex flex-col items-center px-6 pt-10">
-        <p className="mb-6 text-center text-[24px] font-strong text-white">Welcome Back, {name}</p>
+        <p className="mb-6 text-center text-[24px] font-strong text-white">{t("wallet.unlock.welcome", { name })}</p>
         <span className="mb-8">
           <UserAvatar size={100} fallbackName={name} />
         </span>
@@ -573,7 +571,7 @@ function Unlock() {
           </div>
         ) : null}
         <PrimaryButton icon="finger-print" disabled={busy || !backup} onClick={() => void unlock()}>
-          Unlock with passkey
+          {t("wallet.unlock.button")}
         </PrimaryButton>
       </div>
     </AppScreen>
@@ -584,15 +582,17 @@ function Unlock() {
 
 /** The name the app greets with: the @username, else the display name, else the email. */
 function useDisplayName(): string {
+  const t = useT();
   const me = useMe();
   const { session } = useShell();
   const username = chosenUsername(me.data);
-  return username ? `@${username}` : me.data?.profile.displayName?.trim() || session.user.email || "you";
+  return username ? `@${username}` : me.data?.profile.displayName?.trim() || session.user.email || t("wallet.home.fallbackName");
 }
 
 type HomeScreen = "home" | "withdraw" | "receive" | "security" | "passkeys" | "export" | "add";
 
 function Home({ address, status, send, onChanged }: { address: string; status: WalletStatus; send: boolean; onChanged: () => void }) {
+  const t = useT();
   const { session } = useShell();
   // The Dashboard's quick actions land here as ?open=receive|send|security; /wallet/send as `send`.
   const [screen, setScreen] = useState<HomeScreen>(() => {
@@ -631,7 +631,7 @@ function Home({ address, status, send, onChanged }: { address: string; status: W
   if (screen === "export") return <Export onBack={toSecurity} />;
   if (screen === "add") return <AddPasskey onBack={toPasskeys} onAdded={onChanged} />;
 
-  const fmt = (n: number, d: number) => n.toLocaleString("en-US", { minimumFractionDigits: d === 2 ? 2 : 0, maximumFractionDigits: d });
+  const fmt = (n: number, d: number) => fmtNumber(n, { minimumFractionDigits: d === 2 ? 2 : 0, maximumFractionDigits: d });
   const sol = balances ? `${fmt(balances.sol, 4)} SOL` : balanceError ? "–" : "…";
   return (
     <AppScreen>
@@ -644,8 +644,8 @@ function Home({ address, status, send, onChanged }: { address: string; status: W
         <button
           type="button"
           onClick={lock}
-          aria-label="Lock"
-          title="Lock"
+          aria-label={t("wallet.home.lock")}
+          title={t("wallet.home.lock")}
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] border border-white/[0.15] bg-white/10 transition-colors hover:bg-white/[0.16]"
         >
           <Ion name="lock-closed-outline" size={18} color="#FFFFFF" />
@@ -662,9 +662,9 @@ function Home({ address, status, send, onChanged }: { address: string; status: W
       </div>
       <div className="mt-7">
         <ActionsRow>
-          <MiniAction icon="add-circle-outline" label="Receive" onClick={() => setScreen("receive")} />
-          <MiniAction icon="send-outline" label="Send" onClick={() => setScreen("withdraw")} />
-          <MiniAction icon="shield-checkmark-outline" label="Security" onClick={toSecurity} />
+          <MiniAction icon="add-circle-outline" label={t("common.receive")} onClick={() => setScreen("receive")} />
+          <MiniAction icon="send-outline" label={t("common.send")} onClick={() => setScreen("withdraw")} />
+          <MiniAction icon="shield-checkmark-outline" label={t("wallet.home.security")} onClick={toSecurity} />
         </ActionsRow>
       </div>
 
@@ -679,7 +679,7 @@ function Home({ address, status, send, onChanged }: { address: string; status: W
             valueSub={balances ? `${fmt(balances.usdc, 2)} USDC` : undefined}
           />
           <RowSeparator />
-          <TokenRow symbol="SOL" name="Solana" sub="Network fees" value={sol} />
+          <TokenRow symbol="SOL" name="Solana" sub={t("wallet.home.networkFees")} value={sol} />
         </Card>
       </div>
     </AppScreen>
@@ -706,23 +706,21 @@ function MenuRow({ icon, label, sub, onClick, divider }: { icon: IonName; label:
 }
 
 function Security({ onBack, onPhrase, onPasskeys }: { onBack: () => void; onPhrase: () => void; onPasskeys: () => void }) {
+  const t = useT();
   return (
-    <AppScreen title="Account recovery" onBack={onBack}>
+    <AppScreen title={t("wallet.security.title")} onBack={onBack}>
       <div className="flex flex-col pt-2">
-        <HeroCard icon="shield-checkmark" title="Your safety net">
-          <HeroBody>
-            HOLD is non-custodial — we cannot recover your funds if you lose access. Keep at least one backup factor active and
-            stored somewhere safe.
-          </HeroBody>
+        <HeroCard icon="shield-checkmark" title={t("wallet.security.heroTitle")}>
+          <HeroBody>{t("wallet.security.heroBody")}</HeroBody>
         </HeroCard>
         <div className="mt-6">
-          <SectionLabel>Backup factors</SectionLabel>
+          <SectionLabel>{t("wallet.security.backupFactors")}</SectionLabel>
           <Card className="overflow-hidden">
-            <MenuRow icon="key-outline" label="Recovery phrase" onClick={onPhrase} />
-            <MenuRow icon="finger-print" label="Passkeys" onClick={onPasskeys} divider />
+            <MenuRow icon="key-outline" label={t("wallet.security.recoveryPhrase")} onClick={onPhrase} />
+            <MenuRow icon="finger-print" label={t("wallet.security.passkeys")} onClick={onPasskeys} divider />
           </Card>
         </div>
-        <FooterNote icon="lock-closed-outline">{LOSS_WARNING}</FooterNote>
+        <FooterNote icon="lock-closed-outline">{lossWarning()}</FooterNote>
       </div>
     </AppScreen>
   );
@@ -741,6 +739,7 @@ function Passkeys({
   onAdd: () => void;
   onChanged: () => void;
 }) {
+  const t = useT();
   const [error, setError] = useState<unknown>(null);
   const [confirming, setConfirming] = useState<string | null>(null);
 
@@ -756,12 +755,12 @@ function Passkeys({
   };
 
   return (
-    <AppScreen title="Passkeys" onBack={onBack}>
+    <AppScreen title={t("wallet.passkeys.title")} onBack={onBack}>
       <div className="flex flex-col pt-3">
-        <SectionLabel>All passkeys</SectionLabel>
+        <SectionLabel>{t("wallet.passkeys.all")}</SectionLabel>
         <div className="mb-4 flex flex-col gap-3">
           {wrappings.map((w, i) => {
-            const name = w.label ?? `Passkey ${i + 1}`;
+            const name = w.label ?? t("wallet.passkeys.defaultName", { n: i + 1 });
             const asking = confirming === w.credential_id;
             return (
               <div key={w.credential_id} className="flex flex-col gap-3 rounded-[16px] border border-white/[0.08] bg-white/[0.05] p-3.5">
@@ -772,14 +771,14 @@ function Passkeys({
                   <span className="flex min-w-0 flex-1 flex-col gap-[3px]">
                     <span className="truncate text-[15px] font-strong text-white">{name}</span>
                     <span className="truncate text-[12px] font-medium text-white/55">
-                      Added {new Date(w.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                      {t("wallet.passkeys.added", { date: fmtDate(w.created_at) })}
                     </span>
                   </span>
                   {wrappings.length > 1 && !asking ? (
                     <button
                       type="button"
                       onClick={() => setConfirming(w.credential_id)}
-                      aria-label={`Remove ${name}`}
+                      aria-label={t("wallet.passkeys.removeAria", { name })}
                       className="flex h-[34px] w-[34px] items-center justify-center rounded-[17px] transition-colors hover:bg-white/[0.12]"
                     >
                       <Ion name="trash-outline" size={18} color="rgba(255,255,255,0.55)" />
@@ -788,23 +787,21 @@ function Passkeys({
                 </div>
                 {asking ? (
                   <div className="flex flex-col gap-2 border-t border-white/[0.07] pt-2.5">
-                    <p className="text-[13px] leading-[18px] text-white/65">
-                      Remove {name}? It won&apos;t open this wallet anymore. You can add it back any time from this screen.
-                    </p>
+                    <p className="text-[13px] leading-[18px] text-white/65">{t("wallet.passkeys.removeConfirm", { name })}</p>
                     <div className="flex gap-2">
                       <button
                         type="button"
                         onClick={() => void remove(w.credential_id)}
                         className="h-9 flex-1 rounded-[12px] border border-white/10 bg-white/[0.06] text-[14px] font-strong text-[#FFB703] hover:bg-white/[0.12]"
                       >
-                        Remove
+                        {t("common.remove")}
                       </button>
                       <button
                         type="button"
                         onClick={() => setConfirming(null)}
                         className="h-9 flex-1 rounded-[12px] border border-white/10 bg-white/[0.06] text-[14px] font-strong text-white hover:bg-white/[0.12]"
                       >
-                        Cancel
+                        {t("common.cancel")}
                       </button>
                     </div>
                   </div>
@@ -819,11 +816,9 @@ function Passkeys({
           </div>
         ) : null}
         <SecondaryButton icon="add" onClick={onAdd}>
-          Add a passkey
+          {t("wallet.passkeys.add")}
         </SecondaryButton>
-        <FooterNote icon="shield-checkmark-outline">
-          Removing the last passkey is not allowed. To replace it, add a new one first, then remove the old.
-        </FooterNote>
+        <FooterNote icon="shield-checkmark-outline">{t("wallet.passkeys.lastNote")}</FooterNote>
       </div>
     </AppScreen>
   );
@@ -832,6 +827,7 @@ function Passkeys({
 /* ── Recovery Phrase (view-recovery.tsx) ──────────────────────────── */
 
 function Export({ onBack }: { onBack: () => void }) {
+  const t = useT();
   const { session } = useShell();
   const [backup, setBackup] = useState<WalletBackup | null>(null);
   const [words, setWords] = useState<string[] | null>(null);
@@ -868,7 +864,7 @@ function Export({ onBack }: { onBack: () => void }) {
 
   return (
     <AppScreen
-      title="Recovery Phrase"
+      title={t("wallet.export.title")}
       onBack={() => {
         setWords(null);
         onBack();
@@ -877,7 +873,7 @@ function Export({ onBack }: { onBack: () => void }) {
       <div className="flex flex-col pt-4">
         {words ? (
           <>
-            <WarningNote>Never share your recovery phrase with anyone. Anyone with access to these words can control your wallet.</WarningNote>
+            <WarningNote>{t("wallet.export.warning")}</WarningNote>
             <ol className="my-6 grid grid-cols-2 gap-3">
               {words.map((w, i) => (
                 <li key={i} className="flex items-center rounded-[12px] border border-white/[0.08] bg-[rgba(3,12,16,0.35)] p-3.5">
@@ -887,18 +883,18 @@ function Export({ onBack }: { onBack: () => void }) {
               ))}
             </ol>
             <SecondaryButton icon="checkmark" onClick={() => setWords(null)}>
-              I wrote them down, hide them
+              {t("wallet.export.hide")}
             </SecondaryButton>
-            <FooterNote icon="lock-closed-outline">Write them on paper, in order. They are never copied to your clipboard.</FooterNote>
+            <FooterNote icon="lock-closed-outline">{t("wallet.export.paperNote")}</FooterNote>
           </>
         ) : (
           <div className="flex flex-col gap-4">
-            <HeroCard icon="key-outline" title="Recovery phrase">
-              <HeroBody>Your 12 words open this wallet anywhere. Show them only where nobody can see your screen.</HeroBody>
+            <HeroCard icon="key-outline" title={t("wallet.export.heroTitle")}>
+              <HeroBody>{t("wallet.export.heroBody")}</HeroBody>
             </HeroCard>
             {error ? <Problem>{explain(error)}</Problem> : null}
             <PrimaryButton icon="finger-print" disabled={busy || !backup} onClick={() => void reveal()}>
-              Confirm with passkey
+              {t("wallet.confirmWithPasskey")}
             </PrimaryButton>
           </div>
         )}
@@ -912,6 +908,7 @@ function Export({ onBack }: { onBack: () => void }) {
 type AddStep = "current" | "create" | "confirm" | "done";
 
 function AddPasskey({ onBack, onAdded }: { onBack: () => void; onAdded: () => void }) {
+  const t = useT();
   const [step, setStep] = useState<AddStep>("current");
   const [backup, setBackup] = useState<WalletBackup | null>(null);
   const [error, setError] = useState<unknown>(null);
@@ -999,26 +996,26 @@ function AddPasskey({ onBack, onAdded }: { onBack: () => void; onAdded: () => vo
   };
 
   const steps: { key: AddStep; label: string }[] = [
-    { key: "current", label: "Confirm with a passkey that opens your wallet" },
-    { key: "create", label: "Create the new passkey" },
-    { key: "confirm", label: "Confirm the new passkey" },
+    { key: "current", label: t("wallet.add.stepCurrent") },
+    { key: "create", label: t("wallet.add.stepCreate") },
+    { key: "confirm", label: t("wallet.add.stepConfirm") },
   ];
   const at = steps.findIndex((x) => x.key === step);
 
   return (
-    <AppScreen title="Add passkey" onBack={onBack}>
+    <AppScreen title={t("wallet.add.title")} onBack={onBack}>
       <div className="flex flex-col gap-4 pt-3">
         {step === "done" ? (
           <div className="flex items-center gap-3 rounded-[16px] border border-[rgba(52,199,89,0.28)] bg-[rgba(52,199,89,0.06)] p-3.5">
             <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[10px] bg-[rgba(52,199,89,0.12)]">
               <Ion name="shield-checkmark" size={20} color={GREEN} />
             </span>
-            <span className="text-[15px] font-strong text-white">That passkey now opens your wallet too.</span>
+            <span className="text-[15px] font-strong text-white">{t("wallet.add.done")}</span>
           </div>
         ) : (
           <>
-            <HeroCard icon="finger-print" title="Add a passkey">
-              <HeroBody>One in another password manager too means losing one of them does not lock you out.</HeroBody>
+            <HeroCard icon="finger-print" title={t("wallet.add.heroTitle")}>
+              <HeroBody>{t("wallet.add.heroBody")}</HeroBody>
             </HeroCard>
             <Card className="overflow-hidden">
               {steps.map((x, i) => (
@@ -1038,15 +1035,15 @@ function AddPasskey({ onBack, onAdded }: { onBack: () => void; onAdded: () => vo
             {reg.error && step === "create" ? <Problem>{explain(reg.error)}</Problem> : null}
             {step === "current" ? (
               <PrimaryButton icon="finger-print" disabled={busy || !backup} onClick={() => void current()}>
-                Confirm with passkey
+                {t("wallet.confirmWithPasskey")}
               </PrimaryButton>
             ) : step === "create" ? (
               <PrimaryButton icon="add" disabled={busy || !reg.options} onClick={() => void create()}>
-                Create new passkey
+                {t("wallet.add.createNew")}
               </PrimaryButton>
             ) : (
               <PrimaryButton icon="finger-print" disabled={busy} onClick={() => void confirm()}>
-                Confirm new passkey
+                {t("wallet.add.confirmNew")}
               </PrimaryButton>
             )}
           </>

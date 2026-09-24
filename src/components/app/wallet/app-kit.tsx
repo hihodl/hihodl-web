@@ -20,6 +20,9 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 
+import { useT } from "@/lib/app/i18n/react";
+import { fmtUsd } from "@/lib/app/i18n/format";
+
 import { qrMatrix } from "./qr-matrix";
 import { Ion, type IonName } from "../ion";
 
@@ -52,13 +55,14 @@ export function AppScreen({
   children: ReactNode;
   className?: string;
 }) {
+  const t = useT();
   return (
     <section className={`mx-auto flex w-full max-w-[460px] flex-col text-white ${className}`}>
       {title !== undefined || onBack || right ? (
         <header className="grid h-[42px] grid-cols-[45px_minmax(0,1fr)_45px] items-center">
           <div className="flex items-center">
             {onBack ? (
-              <button type="button" onClick={onBack} aria-label="Back" className="flex h-9 w-9 items-center justify-center rounded-[10px] text-white transition-colors hover:bg-white/[0.06]">
+              <button type="button" onClick={onBack} aria-label={t("common.back")} className="flex h-9 w-9 items-center justify-center rounded-[10px] text-white transition-colors hover:bg-white/[0.06]">
                 <Ion name="chevron-back" size={22} />
               </button>
             ) : null}
@@ -235,9 +239,15 @@ export function InfoBox({ icon = "alert-circle-outline", children }: { icon?: Io
 
 /* ── Dashboard ────────────────────────────────────────────────────── */
 
-/** HeroBalance: "$" + en-US grouping + two decimals, 48/800, line-height 52. */
+/**
+ * HeroBalance: a dollar value in the person's display currency, with the
+ * currency's own decimals ("$1,234.56" in English and dollars), 48/800,
+ * line-height 52. Every caller shows a value the product knows in dollars
+ * (a balance, an activity row's USD value, savings, invest, analytics):
+ * nothing paid goes through here. A component that shows it calls useT().
+ */
 export function money(n: number): string {
-  return "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return fmtUsd(n);
 }
 
 export function HeroBalance({ value, loading }: { value: string | null; loading?: boolean }) {
