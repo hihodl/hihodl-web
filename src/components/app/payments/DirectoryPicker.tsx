@@ -20,6 +20,7 @@
 import { useState } from "react";
 
 import { describeGroupError, memberName, resolveExactHandle, useDirectorySearch, type Person } from "@/lib/app/groups";
+import { useT } from "@/lib/app/i18n/react";
 
 import { Ion } from "../ion";
 import { Skeleton } from "../ui";
@@ -41,6 +42,7 @@ export function DirectoryPicker({
   max?: number;
   disabled?: boolean;
 }) {
+  const t = useT();
   const [query, setQuery] = useState("");
   const search = useDirectorySearch(query, MIN);
   const bare = query.trim().replace(/^@+/, "");
@@ -60,14 +62,14 @@ export function DirectoryPicker({
   return (
     <div className="flex min-w-0 flex-col gap-2.5">
       {selected.length ? (
-        <div className="flex flex-wrap gap-1.5" aria-label="Chosen">
+        <div className="flex flex-wrap gap-1.5" aria-label={t("payments.picker.chosenAria")}>
           {selected.map((p) => (
             <button
               key={p.id}
               type="button"
               disabled={disabled}
               onClick={() => toggle(p)}
-              aria-label={`Remove ${memberName(p)}`}
+              aria-label={t("payments.picker.remove", { name: memberName(p) })}
               className="inline-flex h-8 max-w-full items-center gap-1.5 rounded-[16px] bg-[#F1F5F9] pl-1 pr-2.5 text-[13px] font-bold text-[#0A1420]"
             >
               <PersonFace person={p} size={24} />
@@ -83,8 +85,8 @@ export function DirectoryPicker({
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value.slice(0, 100))}
-          placeholder="Search by name or @username"
-          aria-label="Search people on HOLD"
+          placeholder={t("payments.picker.placeholder")}
+          aria-label={t("payments.picker.searchAria")}
           autoCapitalize="none"
           autoCorrect="off"
           spellCheck={false}
@@ -92,16 +94,16 @@ export function DirectoryPicker({
           className="min-w-0 flex-1 bg-transparent py-2.5 outline-none placeholder:text-white/[0.45]"
         />
         {query ? (
-          <button type="button" onClick={() => setQuery("")} aria-label="Clear" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[14px] text-white/55 hover:bg-white/10 hover:text-white">
+          <button type="button" onClick={() => setQuery("")} aria-label={t("payments.search.clear")} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[14px] text-white/55 hover:bg-white/10 hover:text-white">
             <Ion name="close-circle" size={17} />
           </button>
         ) : null}
       </div>
 
-      {full ? <p className="px-1 text-[12.5px] text-white/60">That&apos;s {max}, the most a new group can start with. Add the rest from the group.</p> : null}
+      {full ? <p className="px-1 text-[12.5px] text-white/60">{t("payments.picker.full", { max })}</p> : null}
 
       {!search.active && bare.length > 0 && bare.length < MIN ? (
-        <p className="px-1 text-[12.5px] text-white/55">Type at least {MIN} letters to search everyone.</p>
+        <p className="px-1 text-[12.5px] text-white/55">{t("payments.picker.minLetters", { count: MIN })}</p>
       ) : null}
 
       {search.active && search.loading && search.users === null ? (
@@ -115,14 +117,14 @@ export function DirectoryPicker({
         <div className="flex items-center gap-2 rounded-[12px] bg-amber/[0.12] px-3 py-2">
           <span className="min-w-0 flex-1 text-[13px] text-amber">{describeGroupError(search.error)}</span>
           <button type="button" className={pillGlass} onClick={search.retry}>
-            Retry
+            {t("common.retry")}
           </button>
         </div>
       ) : null}
 
       {search.active && search.users !== null ? (
-        <div role="listbox" aria-multiselectable="true" aria-label="People on HOLD" className="flex flex-col gap-1">
-          {rows.length === 0 ? <p className="px-1 text-[13px] text-white/60">No one on HOLD matches &ldquo;{bare}&rdquo;.</p> : null}
+        <div role="listbox" aria-multiselectable="true" aria-label={t("payments.picker.listAria")} className="flex flex-col gap-1">
+          {rows.length === 0 ? <p className="px-1 text-[13px] text-white/60">{t("payments.picker.noMatch", { query: bare })}</p> : null}
           {rows.map((p) => {
             const on = chosen.has(p.id);
             return (
@@ -175,6 +177,7 @@ function ExactHandleRow({
   chosen: ReadonlySet<string>;
   onFound: (p: Person) => void;
 }) {
+  const t = useT();
   const [state, setState] = useState<{ for: string; busy: boolean; words: string | null }>({ for: handle, busy: false, words: null });
   const words = state.for === handle ? state.words : null;
   const busy = state.for === handle && state.busy;
@@ -183,9 +186,9 @@ function ExactHandleRow({
     setState({ for: handle, busy: true, words: null });
     resolveExactHandle(handle).then(
       (p) => {
-        if (!p) setState({ for: handle, busy: false, words: `No one on HOLD goes by @${handle}. Check the spelling.` });
-        else if (exclude.has(p.id)) setState({ for: handle, busy: false, words: `@${handle} is already in the group.` });
-        else if (chosen.has(p.id)) setState({ for: handle, busy: false, words: `@${handle} is already chosen.` });
+        if (!p) setState({ for: handle, busy: false, words: t("payments.picker.noSuchHandle", { handle }) });
+        else if (exclude.has(p.id)) setState({ for: handle, busy: false, words: t("payments.picker.alreadyInGroup", { handle }) });
+        else if (chosen.has(p.id)) setState({ for: handle, busy: false, words: t("payments.picker.alreadyChosen", { handle }) });
         else {
           setState({ for: handle, busy: false, words: null });
           onFound(p);
@@ -207,8 +210,8 @@ function ExactHandleRow({
           <Ion name="at-outline" size={17} className="text-white/75" />
         </span>
         <span className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-[14.5px] font-bold text-white">{busy ? "Looking…" : `Add @${handle}`}</span>
-          <span className="truncate text-[12.5px] text-white/60">By their exact HOLD username</span>
+          <span className="truncate text-[14.5px] font-bold text-white">{busy ? t("payments.picker.looking") : t("payments.picker.addHandle", { handle })}</span>
+          <span className="truncate text-[12.5px] text-white/60">{t("payments.picker.byExactHandle")}</span>
         </span>
       </button>
       {words ? <p className="px-1 text-[12.5px] text-amber">{words}</p> : null}

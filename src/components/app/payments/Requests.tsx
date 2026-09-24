@@ -23,11 +23,13 @@
 import { useState } from "react";
 
 import { answerRequest, useChatRequests, type ChatRequest } from "@/lib/app/chat";
+import { useT } from "@/lib/app/i18n/react";
 
 import { Ion } from "../ion";
 import { cardClass } from "../wallet/app-kit";
 
 export function ChatRequests({ onAnswered }: { onAnswered?: () => void }) {
+  const t = useT();
   const requests = useChatRequests();
   const [busy, setBusy] = useState<string | null>(null);
   const [gone, setGone] = useState<Set<string>>(new Set());
@@ -54,7 +56,7 @@ export function ChatRequests({ onAnswered }: { onAnswered?: () => void }) {
   return (
     <section className="mb-4 flex flex-col gap-2.5">
       <h2 className="px-1 text-[12px] font-extrabold uppercase tracking-[0.6px] text-white/70">
-        {shown.length === 1 ? "Message request" : `${shown.length} message requests`}
+        {t("payments.chat.messageRequests", { count: shown.length })}
       </h2>
       {shown.map((r) => (
         <div key={r.chatId} className={`${cardClass} flex flex-col gap-2.5 px-3.5 py-3`}>
@@ -64,7 +66,7 @@ export function ChatRequests({ onAnswered }: { onAnswered?: () => void }) {
             </span>
             <div className="min-w-0 flex-1">
               <p className="truncate text-[14.5px] font-extrabold tracking-[-0.2px] text-white">
-                {r.fromDisplayName?.trim() || (r.fromHandle ? `@${r.fromHandle}` : "Someone on HOLD")}
+                {r.fromDisplayName?.trim() || (r.fromHandle ? `@${r.fromHandle}` : t("payments.someoneOnHold"))}
               </p>
               <p className="mt-1 whitespace-pre-wrap break-words text-[13.5px] leading-[19px] text-white/85">
                 {r.body}
@@ -78,7 +80,7 @@ export function ChatRequests({ onAnswered }: { onAnswered?: () => void }) {
               onClick={() => void answer(r, true)}
               className="h-9 flex-1 rounded-[12px] bg-amber text-[13.5px] font-extrabold text-[#0F0F1A] transition-opacity hover:opacity-90 disabled:opacity-60"
             >
-              Accept
+              {t("payments.chat.accept")}
             </button>
             <button
               type="button"
@@ -86,7 +88,7 @@ export function ChatRequests({ onAnswered }: { onAnswered?: () => void }) {
               onClick={() => void answer(r, false)}
               className="h-9 flex-1 rounded-[12px] border border-white/[0.22] bg-white/10 text-[13.5px] font-bold text-white transition-colors hover:bg-white/[0.16] disabled:opacity-60"
             >
-              Decline
+              {t("payments.chat.decline")}
             </button>
           </div>
         </div>

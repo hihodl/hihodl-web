@@ -47,6 +47,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useConversations } from "@/lib/app/chat";
 import type { DisplayMode } from "@/lib/app/display-mode";
+import { useLocale, useT } from "@/lib/app/i18n/react";
 import { askFor, requestAmount, resolveHandle, usePaymentRequests, type PaymentRequest } from "@/lib/app/payment-requests";
 import { storefrontOf, useSpotsBoughtFrom } from "@/lib/app/sponsor";
 import { useTransfers } from "@/lib/app/money";
@@ -83,10 +84,17 @@ type Filter = "all" | "groups" | "favs";
 type View = { kind: "list" } | { kind: "thread"; id: string } | { kind: "tx"; id: string; from: string | null };
 
 /** The app's rotating placeholders (payments:searchPh and its siblings). */
-const PHRASES = ["Search", "Search @username", "Search contact", "Paste wallet address"];
+const PHRASES = [
+  "payments.search.phrase.search",
+  "payments.search.phrase.username",
+  "payments.search.phrase.contact",
+  "payments.search.phrase.address",
+] as const;
 
 export function PaymentsScreen({ initialFilter = "all" }: { initialFilter?: Filter } = {}) {
   const { displayMode } = useShellPrefs();
+  // The rows carry worded names ("Wallet • …", "You: …"), so they are rebuilt in a new language.
+  const locale = useLocale();
   const transfers = useTransfers(100);
   const conversations = useConversations();
   const [view, setView] = useState<View>({ kind: "list" });
@@ -101,7 +109,8 @@ export function PaymentsScreen({ initialFilter = "all" }: { initialFilter?: Filt
       transfers.data
         ? mergeInbox(groupTransfersIntoThreads(peerRows(transfers.data.transfers)), conversations.data ?? [])
         : [],
-    [transfers.data, conversations.data],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [transfers.data, conversations.data, locale],
   );
 
   if (view.kind === "thread") {
@@ -170,6 +179,7 @@ function List({
   onRetry: () => void;
   onOpen: (id: string) => void;
 }) {
+  const t = useT();
   const [filter, setFilter] = useState<Filter>(initialFilter);
   const [query, setQuery] = useState("");
 
@@ -182,8 +192,8 @@ function List({
       // chip draws GroupsList instead.
       if (filter !== "all") return false;
       if (!q) return true;
-      const t = r.thread;
-      return `${r.name} ${t?.alias ?? ""} ${t?.address ?? ""}`.toLowerCase().includes(q);
+      const th = r.thread;
+      return `${r.name} ${th?.alias ?? ""} ${th?.address ?? ""}`.toLowerCase().includes(q);
     });
   }, [rows, filter, query]);
 
@@ -194,9 +204,9 @@ function List({
       <div className="mt-3 flex items-center gap-2 overflow-x-auto pb-0.5">
         {(
           [
-            { k: "all", label: "All" },
-            { k: "groups", label: "Groups" },
-            { k: "favs", label: "Favourites" },
+            { k: "all", label: t("common.all") },
+            { k: "groups", label: t("payments.filter.groups") },
+            { k: "favs", label: t("payments.filter.favourites") },
           ] as { k: Filter; label: string }[]
         ).map((c) => (
           <button
@@ -222,13 +232,13 @@ function List({
       {!loading && failed && filter !== "groups" ? (
         <div className="flex flex-col items-center px-4 pt-12 text-center">
           <Ion name="alert-circle-outline" size={48} className="text-white/40" />
-          <p className="mt-3 text-[14px] text-white/[0.62]">Could not load payment history</p>
+          <p className="mt-3 text-[14px] text-white/[0.62]">{t("payments.list.loadFailed")}</p>
           <button
             type="button"
             onClick={onRetry}
             className="mt-4 rounded-[12px] bg-white/10 px-5 py-2.5 text-[14px] font-strong text-white transition-colors hover:bg-white/[0.16]"
           >
-            Retry
+            {t("common.retry")}
           </button>
         </div>
       ) : null}
@@ -237,14 +247,14 @@ function List({
         <Empty
           icon="star-outline"
           iconClass="text-amber/40"
-          title="No favourites yet"
-          body="Favourites are marked in the HOLD app."
+          title={t("payments.list.noFavouritesTitle")}
+          body={t("payments.list.noFavouritesBody")}
         />
       ) : null}
 
       {!loading && !failed && shown.length === 0 && filter === "all" ? (
         query.trim() ? (
-          <Empty icon="search-outline" title="Nothing matches that" body="Try a name, a username or an address." />
+          <Empty icon="search-outline" title={t("payments.list.noMatchTitle")} body={t("payments.list.noMatchBody")} />
         ) : (
           <EmptyHistory />
         )
@@ -265,6 +275,7 @@ function List({
  * the shell has ⌘K — so it filters the list where it stands.
  */
 function SearchRow({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const t = useT();
   const [phrase, setPhrase] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setPhrase((i) => (i + 1) % PHRASES.length), 2000);
@@ -277,12 +288,12 @@ function SearchRow({ value, onChange }: { value: string; onChange: (v: string) =
         type="search"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder={value ? PHRASES[0] : PHRASES[phrase]}
-        aria-label="Search payments"
+        placeholder={t(value ? PHRASES[0] : PHRASES[phrase])}
+        aria-label={t("payments.search.aria")}
         className="min-w-0 flex-1 bg-transparent text-[14px] tracking-[-0.2px] text-white outline-none placeholder:text-white/55"
       />
       {value ? (
-        <button type="button" onClick={() => onChange("")} aria-label="Clear" className="shrink-0 text-white/60 hover:text-white">
+        <button type="button" onClick={() => onChange("")} aria-label={t("payments.search.clear")} className="shrink-0 text-white/60 hover:text-white">
           <Ion name="close-circle" size={16} />
         </button>
       ) : null}
@@ -296,6 +307,7 @@ function SearchRow({ value, onChange }: { value: string; onChange: (v: string) =
  * — a white overlay would replace #15313D and read as a dimmer card.
  */
 function ThreadRow({ row, mode, onOpen }: { row: InboxRow; mode: DisplayMode; onOpen: () => void }) {
+  useT();
   return (
     <button
       type="button"
@@ -398,17 +410,18 @@ function Empty({ icon, iconClass = "text-white/40", title, body }: { icon: IonNa
 
 /** The app's global empty state: chat bubbles, and the way to put money in. */
 function EmptyHistory() {
+  const t = useT();
   const href = useProductHref();
   return (
     <div className="flex flex-col items-center px-4 pt-12 text-center">
       <Ion name="chatbubbles-outline" size={48} className="text-white/40" />
-      <p className="mt-3 text-[14px] text-white/[0.62]">No payment history yet</p>
-      <p className="mt-1 text-[13px] text-white/55">Top up your account to start sending and receiving.</p>
+      <p className="mt-3 text-[14px] text-white/[0.62]">{t("payments.list.emptyTitle")}</p>
+      <p className="mt-1 text-[13px] text-white/55">{t("payments.list.emptyBody")}</p>
       <Link
         href={href("/add")}
         className="mt-5 rounded-[14px] bg-amber px-6 py-3 text-[15px] font-bold text-[#070C12] transition-opacity hover:opacity-90"
       >
-        Add money
+        {t("payments.list.addMoney")}
       </Link>
     </div>
   );
@@ -463,6 +476,7 @@ function ThreadView({
   onBack: () => void;
   onOpenTx: (id: string) => void;
 }) {
+  const t = useT();
   const productHref = useProductHref();
   const requests = usePaymentRequests();
   const { session } = useShell();
@@ -497,8 +511,8 @@ function ThreadView({
   if (!row) {
     return (
       <>
-        <BackHeader title="Payments" onBack={onBack} />
-        <Empty icon="cloud-offline-outline" title="That conversation is not loaded" body="Go back and open it again." />
+        <BackHeader title={t("payments.thread.title")} onBack={onBack} />
+        <Empty icon="cloud-offline-outline" title={t("payments.thread.notLoadedTitle")} body={t("payments.thread.notLoadedBody")} />
       </>
     );
   }
@@ -537,7 +551,7 @@ function ThreadView({
     <>
       <BackHeader
         title={row.name}
-        subtitle={payments.length ? `${payments.length} ${payments.length === 1 ? "payment" : "payments"}` : "No payments yet"}
+        subtitle={payments.length ? t("payments.thread.paymentCount", { count: payments.length }) : t("payments.thread.noPayments")}
         onBack={onBack}
         // Only where there is somebody to block: a thread that is an address
         // and nothing else has no account on the other side.
@@ -562,12 +576,12 @@ function ThreadView({
         <button
           type="button"
           disabled={!row.peerId}
-          title={row.peerId ? undefined : "There is no HOLD account on the other side of this thread."}
+          title={row.peerId ? undefined : t("payments.thread.noAccount")}
           onClick={() => setAsking(true)}
           className="inline-flex h-9 items-center justify-center gap-1.5 rounded-[10px] bg-white/10 px-3.5 text-[12.5px] font-strong text-white transition-colors hover:bg-white/[0.16] disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Ion name="download-outline" size={14} />
-          Request
+          {t("payments.thread.request")}
         </button>
         <button
           type="button"
@@ -575,7 +589,7 @@ function ThreadView({
           className="inline-flex h-9 items-center justify-center gap-1.5 rounded-[10px] bg-amber px-3.5 text-[12.5px] font-bold text-text-on-amber transition-colors hover:bg-amber-glow"
         >
           <Ion name="arrow-up" size={14} />
-          Send
+          {t("common.send")}
         </button>
         {shop ? (
           <button
@@ -584,11 +598,11 @@ function ThreadView({
             className="inline-flex h-9 items-center justify-center gap-1.5 rounded-[10px] bg-white/10 px-3.5 text-[12.5px] font-strong text-white transition-colors hover:bg-white/[0.16]"
           >
             <Ion name="megaphone-outline" size={14} />
-            Book a spot
+            {t("payments.thread.bookSpot")}
           </button>
         ) : null}
         <p className="min-w-0 flex-1 text-[12px] leading-[17px] text-white/60">
-          Approved with your passkey, or on your phone if you have linked one.
+          {t("payments.thread.approvedWith")}
         </p>
       </div>
 
@@ -638,6 +652,7 @@ function AskSheet({
   onClose: () => void;
   onAsked: () => void;
 }) {
+  const t = useT();
   const [amount, setAmount] = useState("");
   const [sending, setSending] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -660,11 +675,11 @@ function AskSheet({
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center" role="dialog" aria-modal="true">
       {/* The backdrop closes it; the sheet must not, or every tap inside shuts it. */}
-      <button type="button" aria-label="Close" onClick={onClose} className="absolute inset-0 cursor-default" />
+      <button type="button" aria-label={t("common.close")} onClick={onClose} className="absolute inset-0 cursor-default" />
       <div className="relative w-full max-w-[420px] rounded-[20px] border border-white/[0.12] bg-[#0E2430] p-4 shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
-        <p className="text-[15px] font-extrabold tracking-[-0.2px] text-white">Ask {peerName} for</p>
+        <p className="text-[15px] font-extrabold tracking-[-0.2px] text-white">{t("payments.ask.title", { name: peerName })}</p>
         <p className="mt-1 text-[12.5px] leading-[17px] text-white/65">
-          They see it in this conversation with a Pay button. Nothing moves until they pay it.
+          {t("payments.ask.body")}
         </p>
 
         <label className="mt-3 flex h-12 items-center gap-2 rounded-[16px] border border-white/[0.15] bg-white/[0.06] px-3.5 focus-within:border-white/30">
@@ -678,13 +693,13 @@ function AskSheet({
               if (e.key === "Escape") onClose();
             }}
             placeholder="0.00"
-            aria-label="Amount in USDC"
+            aria-label={t("payments.ask.amountAria")}
             className="h-full min-w-0 flex-1 bg-transparent text-[20px] font-extrabold tabular-nums text-white outline-none placeholder:text-white/40"
           />
           <span className="shrink-0 text-[13px] font-bold text-white/80">USDC</span>
         </label>
 
-        {failed ? <p className="mt-2 text-[12px] leading-[17px] text-white/75">That did not go through. Try again.</p> : null}
+        {failed ? <p className="mt-2 text-[12px] leading-[17px] text-white/75">{t("payments.didNotGoThrough")}</p> : null}
 
         <div className="mt-3 flex items-center gap-2">
           <button
@@ -693,14 +708,14 @@ function AskSheet({
             disabled={!ok || sending}
             className="inline-flex h-10 flex-1 items-center justify-center rounded-[12px] bg-amber text-[14px] font-bold text-text-on-amber transition-colors hover:bg-amber-glow disabled:bg-white/[0.12] disabled:text-white/50"
           >
-            {sending ? "Asking…" : "Send request"}
+            {sending ? t("payments.ask.asking") : t("payments.ask.send")}
           </button>
           <button
             type="button"
             onClick={onClose}
             className="inline-flex h-10 items-center justify-center rounded-[12px] bg-white/10 px-4 text-[14px] font-strong text-white/85 transition-colors hover:bg-white/[0.16]"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
         </div>
       </div>

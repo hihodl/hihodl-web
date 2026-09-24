@@ -49,6 +49,7 @@ import useSWR from "swr";
 import { useCreatorSession } from "@/lib/creator/session";
 
 import { read } from "./hold-api";
+import { t } from "./i18n";
 
 /* ── What the server says ─────────────────────────────────────────── */
 
@@ -318,12 +319,12 @@ export function useChatRequests() {
 /** What the inbox row says under the name. "You: " is the app's own prefix. */
 export function conversationLine(c: Conversation): string {
   const body = c.lastHasMedia && !c.lastBody ? "GIF" : c.lastBody;
-  return c.lastFromMe ? `You: ${body}` : body;
+  return c.lastFromMe ? t("payments.line.youPrefix", { text: body }) : body;
 }
 
 /** The name to show, in the order the app resolves it. */
 export function conversationName(c: Conversation): string {
-  return c.displayName?.trim() || (c.aliasHandle ? `@${c.aliasHandle}` : "Someone on HOLD");
+  return c.displayName?.trim() || (c.aliasHandle ? `@${c.aliasHandle}` : t("payments.someoneOnHold"));
 }
 
 /**

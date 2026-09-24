@@ -26,11 +26,14 @@ import { useState, type ReactNode } from "react";
 
 import { maskTokenSymbol, showChainContext, showTxReceipt, type DisplayMode } from "@/lib/app/display-mode";
 import type { Transfer } from "@/lib/app/hold-api";
+import { fmtNumber } from "@/lib/app/i18n/format";
+import { useT } from "@/lib/app/i18n/react";
 import { useTransferDetails } from "@/lib/app/money";
 import {
   actionTitle,
   chainLabel,
   explorerFor,
+  statusKind,
   statusWord,
   transferAmount,
   tokenTicker,
@@ -56,6 +59,7 @@ export function TxDetails({
   backTo?: string | null;
   onBack: () => void;
 }) {
+  const t = useT();
   const details = useTransferDetails(id);
   const d = details.data ?? null;
   const failed = !!details.error;
@@ -68,20 +72,22 @@ export function TxDetails({
   const chain = row?.chain ?? d?.chain ?? null;
   const hash = showTxReceipt(mode) ? d?.txHash ?? row?.txHash ?? null : null;
   const status = statusWord(d?.status ?? row?.status);
+  const statusIs = statusKind(d?.status ?? row?.status);
   const when = d?.createdAt ?? row?.createdAt ?? null;
   const peer = row ? (inbound ? row.fromAlias || row.fromAddress : row.toAlias || row.toAddress) : null;
   const explorer = explorerFor(chain, hash);
 
+  const processing = amount === 0;
   const amountText =
     amount === null
       ? "—"
       : amount === 0
-        ? "Processing…"
-        : `${inbound ? "+" : "-"}${Math.abs(amount).toLocaleString("en-US", { maximumFractionDigits: Math.abs(amount) >= 1 ? 2 : 6 })} ${ticker}`;
+        ? t("payments.tx.processing")
+        : `${inbound ? "+" : "-"}${fmtNumber(Math.abs(amount), { maximumFractionDigits: Math.abs(amount) >= 1 ? 2 : 6 })} ${ticker}`;
 
   return (
     <>
-      <BackHeader title={actionTitle(direction)} subtitle={backTo ? `Back to ${backTo}` : undefined} onBack={onBack} />
+      <BackHeader title={actionTitle(direction)} subtitle={backTo ? t("payments.tx.backTo", { name: backTo }) : undefined} onBack={onBack} />
 
       <div className="flex flex-col items-center gap-2 pb-2 pt-1">
         <div className="relative flex h-[132px] w-[132px] items-center justify-center">
@@ -92,7 +98,7 @@ export function TxDetails({
         </div>
         <p
           className={`text-[34px] font-black tracking-[-0.3px] tabular-nums ${
-            amountText === "Processing…" ? "text-[22px] italic text-[#9FB7C2]" : inbound ? "text-[#20D690]" : "text-white"
+            processing ? "text-[22px] italic text-[#9FB7C2]" : inbound ? "text-[#20D690]" : "text-white"
           }`}
         >
           {amountText}
@@ -100,20 +106,20 @@ export function TxDetails({
       </div>
 
       <Block>
-        <KV label="Date" value={when ? whenLine(when) : "—"} />
-        <KV label="Status" value={status} valueClass={status === "Succeeded" ? "text-[#20d690]" : status === "Canceled" ? "text-[#9FB7C2]" : "text-[#CFE3EC]"} />
+        <KV label={t("common.date")} value={when ? whenLine(when) : "—"} />
+        <KV label={t("common.status")} value={status} valueClass={statusIs === "succeeded" ? "text-[#20d690]" : statusIs === "canceled" ? "text-[#9FB7C2]" : "text-[#CFE3EC]"} />
       </Block>
 
       <Block className="mt-3">
-        <KV label={inbound ? "From" : "To"} value={peer ? (peer.startsWith("@") ? peer : truncMid(peer)) : "—"} />
-        {showChainContext(mode) ? <KV label="Network" value={chainLabel(chain)} /> : null}
-        {showChainContext(mode) && d?.inbound?.confirmations ? <KV label="Confirmations" value={String(d.inbound.confirmations)} /> : null}
-        {hash ? <KVCopy label="Transaction Hash" value={truncMid(hash)} raw={hash} /> : null}
+        <KV label={inbound ? t("common.from") : t("common.to")} value={peer ? (peer.startsWith("@") ? peer : truncMid(peer)) : "—"} />
+        {showChainContext(mode) ? <KV label={t("common.network")} value={chainLabel(chain)} /> : null}
+        {showChainContext(mode) && d?.inbound?.confirmations ? <KV label={t("payments.tx.confirmations")} value={fmtNumber(d.inbound.confirmations)} /> : null}
+        {hash ? <KVCopy label={t("payments.tx.hash")} value={truncMid(hash)} raw={hash} /> : null}
       </Block>
 
       {row?.note ? (
         <Block className="mt-3">
-          <p className="text-[14px] font-extrabold text-white/75">Note</p>
+          <p className="text-[14px] font-extrabold text-white/75">{t("payments.tx.note")}</p>
           <p className="mt-1.5 text-[15px] font-medium leading-[21px] text-[#E6F0F5]">{row.note}</p>
         </Block>
       ) : null}
@@ -131,13 +137,13 @@ export function TxDetails({
           rel="noopener noreferrer"
           className="mt-4 inline-flex items-center gap-1.5 self-center text-[13px] text-[#9FB7C2] underline decoration-white/20 underline-offset-2 transition-colors hover:text-white"
         >
-          View on {explorer.name} <Ion name="open-outline" size={13} color={SUB} />
+          {t("payments.tx.viewOn", { explorer: explorer.name })} <Ion name="open-outline" size={13} color={SUB} />
         </a>
       ) : null}
 
       {failed ? (
         <p className="mt-4 px-1 text-center text-[12px] leading-[17px] text-white/55">
-          We could not reach the rest of this transaction. What is here comes from your history and is unchanged.
+          {t("payments.tx.partial")}
         </p>
       ) : null}
     </>
@@ -159,6 +165,7 @@ function KV({ label, value, valueClass = "text-[#CFE3EC]" }: { label: string; va
 }
 
 function KVCopy({ label, value, raw }: { label: string; value: string; raw: string }) {
+  const t = useT();
   const [copied, setCopied] = useState(false);
   const copy = () => {
     const p = navigator.clipboard?.writeText(raw);
@@ -172,7 +179,7 @@ function KVCopy({ label, value, raw }: { label: string; value: string; raw: stri
     );
   };
   return (
-    <button type="button" onClick={copy} aria-label={`Copy ${label}`} className="flex w-full items-center justify-between gap-4 py-3 text-left">
+    <button type="button" onClick={copy} aria-label={t("payments.tx.copyLabel", { label })} className="flex w-full items-center justify-between gap-4 py-3 text-left">
       <span className="text-[14px] font-extrabold text-white/75">{label}</span>
       <span className="flex min-w-0 items-center gap-2">
         <span className="truncate text-[14px] font-bold text-[#CFE3EC]">{value}</span>

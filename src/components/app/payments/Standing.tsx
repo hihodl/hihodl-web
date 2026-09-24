@@ -19,6 +19,7 @@
  * telling them the screen could not reach them.
  */
 
+import { useT } from "@/lib/app/i18n/react";
 import { usePayouts, useScheduledPayments } from "@/lib/app/money";
 import type { OfframpOrder, Schedule } from "@/lib/app/hold-api";
 import {
@@ -29,7 +30,7 @@ import {
   payoutRecipientName,
   payoutState,
   payoutStatusText,
-  PAYOUT_METHOD_LINE,
+  payoutMethodLine,
   PAYOUT_STATE_ICON,
   PAYOUT_STATE_TINT,
   scheduleDate,
@@ -44,24 +45,25 @@ import { cardClass } from "../wallet/app-kit";
 /* ── Scheduled payments ───────────────────────────────────────────── */
 
 export function ScheduledPanel() {
+  const t = useT();
   const schedules = useScheduledPayments();
   const rows = schedules.data?.schedules ?? [];
 
   return (
-    <section aria-label="Scheduled payments">
-      <SectionTitle first>Scheduled payments</SectionTitle>
+    <section aria-label={t("payments.scheduled.title")}>
+      <SectionTitle first>{t("payments.scheduled.title")}</SectionTitle>
       {schedules.data === undefined && !schedules.error ? <Skeleton className="h-[112px]" /> : null}
 
       {schedules.error ? (
         <Failed
           icon="cloud-offline-outline"
-          body="We could not load your scheduled payments. They are unchanged — this screen just could not reach them."
+          body={t("payments.scheduled.failedBody")}
           onRetry={() => void schedules.mutate()}
         />
       ) : null}
 
       {schedules.data && rows.length === 0 ? (
-        <Quiet icon="calendar-outline" body="Nothing scheduled yet. A standing payment is set up in the HOLD app, from any payment with the calendar button." />
+        <Quiet icon="calendar-outline" body={t("payments.scheduled.emptyBody")} />
       ) : null}
 
       {rows.length > 0 ? (
@@ -76,6 +78,7 @@ export function ScheduledPanel() {
 }
 
 function ScheduleCard({ schedule }: { schedule: Schedule }) {
+  const t = useT();
   const status = scheduleStatus(schedule);
   const cancellable = schedule.status === "active" || schedule.status === "pending_authorization";
   return (
@@ -91,12 +94,12 @@ function ScheduleCard({ schedule }: { schedule: Schedule }) {
         </span>
       </div>
 
-      <p className="truncate text-[14px] text-[#9FB7C2]">{schedule.recipientLabel ?? "Saved destination"}</p>
+      <p className="truncate text-[14px] text-[#9FB7C2]">{schedule.recipientLabel ?? t("payments.scheduled.savedDestination")}</p>
 
       <div className="flex flex-wrap items-center gap-1.5 text-[12px] text-white/55">
         <span>{cadenceLabel(schedule.cadence)}</span>
         <span className="text-white/25">·</span>
-        <span>Next {scheduleDate(schedule.nextRunAt)}</span>
+        <span>{t("payments.scheduled.next", { date: scheduleDate(schedule.nextRunAt) })}</span>
       </div>
 
       {/* The honest failure state: `consecutiveFailures` counts DATES, so one
@@ -104,15 +107,15 @@ function ScheduleCard({ schedule }: { schedule: Schedule }) {
       {schedule.consecutiveFailures > 0 && schedule.status === "active" ? (
         <p className="mt-0.5 text-[12px] leading-[17px] text-amber">
           {schedule.consecutiveFailures === 1
-            ? "Last payment did not go out. One more and this will stop."
-            : "This schedule has stopped after repeated failures."}
+            ? t("payments.scheduled.oneMissed")
+            : t("payments.scheduled.stopped")}
         </p>
       ) : null}
 
       {/* Where the app's Cancel is. Cancelling freezes the order and leaves an
           on-chain allowance to revoke, which is a signature the web cannot
           take. */}
-      {cancellable ? <p className="pt-1.5 text-[13px] font-bold text-white/55">Cancel this in the HOLD app</p> : null}
+      {cancellable ? <p className="pt-1.5 text-[13px] font-bold text-white/55">{t("payments.scheduled.cancelInApp")}</p> : null}
     </article>
   );
 }
@@ -120,25 +123,26 @@ function ScheduleCard({ schedule }: { schedule: Schedule }) {
 /* ── Payouts ──────────────────────────────────────────────────────── */
 
 export function PayoutsPanel() {
+  const t = useT();
   const payouts = usePayouts();
   const orders = payouts.data ? newestFirst(payouts.data.orders ?? []) : [];
 
   return (
-    <section aria-label="Payouts">
-      <SectionTitle first>Payouts</SectionTitle>
+    <section aria-label={t("payments.payouts.title")}>
+      <SectionTitle first>{t("payments.payouts.title")}</SectionTitle>
       {payouts.data === undefined && !payouts.error ? <Skeleton className="h-[92px]" /> : null}
 
       {payouts.error ? (
         <Failed
           icon="cloud-offline-outline"
-          title="We couldn't load your payouts"
-          body="Nothing has changed — this screen only reads."
+          title={t("payments.payouts.failedTitle")}
+          body={t("payments.payouts.failedBody")}
           onRetry={() => void payouts.mutate()}
         />
       ) : null}
 
       {payouts.data && orders.length === 0 ? (
-        <Quiet icon="receipt-outline" title="No payouts yet" body="Money you send to a bank account shows up here, with where it got to." />
+        <Quiet icon="receipt-outline" title={t("payments.payouts.emptyTitle")} body={t("payments.payouts.emptyBody")} />
       ) : null}
 
       {orders.length > 0 ? (
@@ -153,6 +157,7 @@ export function PayoutsPanel() {
 }
 
 function PayoutRow({ order, first }: { order: OfframpOrder; first: boolean }) {
+  useT();
   const state = payoutState(order);
   const tint = PAYOUT_STATE_TINT[state];
   const last4 = (order.beneficiary?.accountLast4 ?? "").trim();
@@ -167,7 +172,7 @@ function PayoutRow({ order, first }: { order: OfframpOrder; first: boolean }) {
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[15px] font-bold text-white">{payoutRecipientName(order)}</span>
         <span className="mt-0.5 block truncate text-[12px] font-strong text-white/55">
-          {last4 ? `${PAYOUT_METHOD_LINE} · ••${last4}` : PAYOUT_METHOD_LINE}
+          {payoutMethodLine(last4)}
         </span>
       </span>
       <span className="flex shrink-0 flex-col items-end">
@@ -183,6 +188,7 @@ function PayoutRow({ order, first }: { order: OfframpOrder; first: boolean }) {
 /* ── The two states a list can be in besides having rows ──────────── */
 
 function Failed({ icon, title, body, onRetry }: { icon: IonName; title?: string; body: string; onRetry: () => void }) {
+  const t = useT();
   return (
     <div className="flex flex-col items-center gap-2.5 px-8 py-8 text-center">
       <Ion name={icon} size={28} className="text-white/25" />
@@ -193,7 +199,7 @@ function Failed({ icon, title, body, onRetry }: { icon: IonName; title?: string;
         onClick={onRetry}
         className="mt-1.5 rounded-[999px] bg-white/10 px-4 py-2 text-[13px] font-bold text-white transition-colors hover:bg-white/[0.16]"
       >
-        Try again
+        {t("common.tryAgain")}
       </button>
     </div>
   );

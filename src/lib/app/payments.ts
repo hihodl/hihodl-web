@@ -26,6 +26,8 @@
  */
 
 import { maskTokenSymbol, type DisplayMode } from "./display-mode";
+import { t as tr } from "@/lib/app/i18n";
+import { fmtDate, fmtNumber, fmtTime } from "@/lib/app/i18n/format";
 import type { OfframpOrder, PayoutState, Schedule, Transfer } from "./hold-api";
 import type { IonName } from "@/components/app/ion";
 
@@ -151,18 +153,18 @@ function counterpartyName(t: Transfer): string {
   if (t.direction !== "in" && t.toAlias?.startsWith("@")) return t.toAlias;
   const addr = t.direction === "in" ? t.fromAddress : t.toAddress;
   if (addr) {
-    if (addr.startsWith("0x")) return "Wallet";
-    if (addr.length >= 32 && addr.length <= 44) return "Wallet";
+    if (addr.startsWith("0x")) return tr("payments.counterparty.wallet");
+    if (addr.length >= 32 && addr.length <= 44) return tr("payments.counterparty.wallet");
     if (/^[A-Z]{2}\d{2}/.test(addr)) return "IBAN";
-    if (/^\d{13,19}$/.test(addr)) return "Card";
+    if (/^\d{13,19}$/.test(addr)) return tr("payments.counterparty.card");
   }
-  return "Unknown";
+  return tr("payments.counterparty.unknown");
 }
 
 /** `0x378B87…A9B6`, never a bare 42-character address. */
 function shortenCounterparty(addr: string | null | undefined): string {
   const a = (addr ?? "").trim();
-  if (!a) return "Unknown";
+  if (!a) return tr("payments.counterparty.unknown");
   if (a.length <= 12) return a;
   return `${a.slice(0, 6)}…${a.slice(-4)}`;
 }
@@ -205,11 +207,16 @@ function transferMessage(t: Transfer): string {
  */
 export function lastActivityLine(raw: string, mode: DisplayMode): string {
   const msg = raw.trim();
-  const say = (verb: string, amount: string, symbol: string) => `You ${verb} ${amount} ${maskTokenSymbol(symbol, mode)}`;
+  // The stored line is `–12.00 USDC` (a machine shape, see transferMessage):
+  // the figure is re-drawn with the language's separators, the ticker kept.
+  const figure = (raw: string) => {
+    const n = Number(raw);
+    return Number.isFinite(n) && /^\d+(\.\d+)?$/.test(raw) ? fmtNumber(n, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : raw;
+  };
   const minus = /^[–-]\s*([\d.,]+)\s*([A-Z]+)\b/.exec(msg);
-  if (minus) return say("sent", minus[1], minus[2]);
+  if (minus) return tr("payments.line.youSent", { amount: figure(minus[1]), symbol: maskTokenSymbol(minus[2], mode) });
   const plus = /^\+\s*([\d.,]+)\s*([A-Z]+)\b/.exec(msg);
-  if (plus) return say("received", plus[1], plus[2]);
+  if (plus) return tr("payments.line.youReceived", { amount: figure(plus[1]), symbol: maskTokenSymbol(plus[2], mode) });
   return msg;
 }
 
@@ -257,17 +264,17 @@ export function threadDisplayName(thread: PaymentThread): string {
   if (thread.kind === "merchant") return thread.name;
   if (thread.kind === "evm" || thread.kind === "sol") {
     const addr = thread.address || thread.alias || "";
-    return addr.length > 10 ? `Wallet • ${addr.slice(0, 6)}...${addr.slice(-4)}` : `Wallet • ${addr}`;
+    return tr("payments.counterparty.walletShort", { address: addr.length > 10 ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : addr });
   }
   if (thread.kind === "iban") {
     const iban = thread.address || thread.alias || "";
-    return iban.length > 8 ? `IBAN • ${iban.slice(0, 2)}...${iban.slice(-4)}` : `IBAN • ${iban}`;
+    return tr("payments.counterparty.ibanShort", { iban: iban.length > 8 ? `${iban.slice(0, 2)}...${iban.slice(-4)}` : iban });
   }
   if (thread.kind === "card") {
     const card = thread.address || thread.alias || "";
-    return card.length >= 4 ? `Card • •••• ${card.slice(-4)}` : `Card • ${card}`;
+    return tr("payments.counterparty.cardShort", { card: card.length >= 4 ? `•••• ${card.slice(-4)}` : card });
   }
-  return thread.name || thread.alias || "Unknown";
+  return thread.name || thread.alias || tr("payments.counterparty.unknown");
 }
 
 /** Today a time, yesterday the word, this week the weekday, then the date. */
@@ -278,50 +285,61 @@ export function threadTime(ts: number): string {
   const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const startDay = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
   const days = Math.round((startToday - startDay) / 86_400_000);
-  if (days === 0) return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
-  if (days === 1) return "Yesterday";
-  if (days > 1 && days < 7) return d.toLocaleDateString("en-US", { weekday: "short" });
-  if (d.getFullYear() === now.getFullYear()) return d.toLocaleDateString("en-US", { day: "2-digit", month: "short" });
-  return d.toLocaleDateString("en-US", { day: "2-digit", month: "short", year: "numeric" });
+  if (days === 0) return fmtTime(d, { hour: "2-digit", minute: "2-digit" });
+  if (days === 1) return tr("common.yesterday");
+  if (days > 1 && days < 7) return fmtDate(d, { weekday: "short" });
+  if (d.getFullYear() === now.getFullYear()) return fmtDate(d, { day: "2-digit", month: "short" });
+  return fmtDate(d, { day: "2-digit", month: "short", year: "numeric" });
 }
 
 /** "Yesterday, 21:17" — the app's `when` on the details sheet. */
 export function whenLine(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  const time = d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+  const time = fmtTime(d, { hour: "2-digit", minute: "2-digit" });
   const now = new Date();
   const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const startDay = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
   const days = Math.round((startToday - startDay) / 86_400_000);
-  if (days === 0) return `Today, ${time}`;
-  if (days === 1) return `Yesterday, ${time}`;
-  return `${d.toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}, ${time}`;
+  if (days === 0) return tr("payments.when.today", { time });
+  if (days === 1) return tr("payments.when.yesterday", { time });
+  return tr("payments.when.date", { date: fmtDate(d, { day: "numeric", month: "short", year: "numeric" }), time });
 }
 
 /** The app's verb for a row: what happened, not what it is. */
 export function actionTitle(direction: Transfer["direction"]): string {
   switch (direction) {
     case "in":
-      return "Received";
+      return tr("payments.action.received");
     case "out":
-      return "Sent";
+      return tr("payments.action.sent");
     case "move":
-      return "Moved";
+      return tr("payments.action.moved");
     case "exchange":
-      return "Swapped";
+      return tr("payments.action.swapped");
     default:
-      return "Transaction";
+      return tr("payments.action.transaction");
   }
+}
+
+/** Which of the sheet's words a status is: what a colour is chosen by, never the word itself. */
+export function statusKind(status: string | null | undefined): "succeeded" | "failed" | "canceled" | "other" {
+  const s = (status ?? "").toLowerCase();
+  if (s === "confirmed" || s === "completed" || s === "success" || s === "succeeded") return "succeeded";
+  if (s === "failed" || s === "error") return "failed";
+  if (s === "cancelled" || s === "canceled") return "canceled";
+  return "other";
 }
 
 /** Succeeded / Pending / Failed, as the sheet words it. */
 export function statusWord(status: string | null | undefined): string {
   const s = (status ?? "").toLowerCase();
-  if (s === "confirmed" || s === "completed" || s === "success" || s === "succeeded") return "Succeeded";
-  if (s === "failed" || s === "error") return "Failed";
-  if (s === "cancelled" || s === "canceled") return "Canceled";
+  const kind = statusKind(s);
+  if (kind === "succeeded") return tr("payments.status.succeeded");
+  if (kind === "failed") return tr("payments.status.failed");
+  if (kind === "canceled") return tr("payments.status.canceled");
   if (!s) return "—";
+  if (s === "pending") return tr("common.pending");
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
@@ -389,16 +407,16 @@ export function payoutState(order: OfframpOrder): PayoutState {
  * is the only one of these that is a job rather than news.
  */
 export function payoutStatusText(order: OfframpOrder): string {
-  if (order.needsFunding) return "Not paid yet";
+  if (order.needsFunding) return tr("payments.payouts.status.notPaid");
   switch (payoutState(order)) {
     case "settled":
-      return "Arrived";
+      return tr("payments.payouts.status.arrived");
     case "sent":
-      return "On its way";
+      return tr("payments.payouts.status.onItsWay");
     case "failed":
-      return "Didn't go through";
+      return tr("payments.payouts.status.failed");
     default:
-      return "Processing";
+      return tr("payments.payouts.status.processing");
   }
 }
 
@@ -411,7 +429,7 @@ export function payoutRecipientName(order: OfframpOrder): string {
   if (holder) return holder;
   const bank = (b?.bankName ?? "").trim();
   if (bank) return bank;
-  return `${(order.currency || "").toUpperCase()} payout`;
+  return tr("payments.payouts.currencyPayout", { currency: (order.currency || "").toUpperCase() });
 }
 
 /**
@@ -426,14 +444,18 @@ export function payoutAmountText(order: OfframpOrder): string {
   const value = Number(raw.replace(",", "."));
   if (!Number.isFinite(value)) return currency;
   try {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+    // In its own currency, never converted; only the language's way of writing it.
+    return fmtNumber(value, { style: "currency", currency, minimumFractionDigits: 2, maximumFractionDigits: 2 });
   } catch {
-    return `${value.toFixed(2)} ${currency}`;
+    return `${fmtNumber(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
   }
 }
 
 /** The line under the name. The rail is not on the order row, so it is not guessed. */
-export const PAYOUT_METHOD_LINE = "Bank transfer";
+export function payoutMethodLine(last4?: string | null): string {
+  const l = (last4 ?? "").trim();
+  return l ? tr("payments.payouts.methodWithLast4", { last4: l }) : tr("payments.payouts.method");
+}
 
 /** Newest first, defensively: the server already orders by `createdAt DESC`. */
 export function newestFirst(orders: readonly OfframpOrder[]): OfframpOrder[] {
@@ -442,15 +464,19 @@ export function newestFirst(orders: readonly OfframpOrder[]): OfframpOrder[] {
 
 /* ── Standing payments (GET /scheduled-payments) ──────────────────── */
 
-const CADENCE_LABEL: Record<string, string> = {
-  once: "One-off",
-  weekly: "Weekly",
-  biweekly: "Every 2 weeks",
-  monthly: "Monthly",
-};
-
 export function cadenceLabel(cadence: string): string {
-  return CADENCE_LABEL[cadence] ?? cadence;
+  switch (cadence) {
+    case "once":
+      return tr("payments.scheduled.cadence.once");
+    case "weekly":
+      return tr("payments.scheduled.cadence.weekly");
+    case "biweekly":
+      return tr("payments.scheduled.cadence.biweekly");
+    case "monthly":
+      return tr("payments.scheduled.cadence.monthly");
+    default:
+      return cadence;
+  }
 }
 
 /**
@@ -460,11 +486,11 @@ export function cadenceLabel(cadence: string): string {
  * would be a list that lies by omission.
  */
 export function scheduleStatus(s: Schedule): { label: string; live: boolean } {
-  if (s.status === "pending_authorization") return { label: "Not approved yet", live: false };
-  if (s.status === "cancelled") return { label: "Cancelled", live: false };
-  if (s.status === "completed") return { label: "Finished", live: false };
-  if (s.status === "paused") return { label: "Paused", live: false };
-  return { label: "Active", live: true };
+  if (s.status === "pending_authorization") return { label: tr("payments.scheduled.status.notApproved"), live: false };
+  if (s.status === "cancelled") return { label: tr("payments.scheduled.status.cancelled"), live: false };
+  if (s.status === "completed") return { label: tr("payments.scheduled.status.finished"), live: false };
+  if (s.status === "paused") return { label: tr("payments.scheduled.status.paused"), live: false };
+  return { label: tr("payments.scheduled.status.active"), live: true };
 }
 
 /** Stablecoin base units. Six for USDC and USDT on every chain we support. */
@@ -477,9 +503,10 @@ const SCHEDULE_DECIMALS = 6;
  * rent once rendered as "50000000".
  */
 export function formatScheduleAmount(s: Schedule): string {
-  if (s.kind === "offramp") return `${(Number(s.amountMinor) / 100).toFixed(2)} ${s.amountCurrency}`;
+  const two = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
+  if (s.kind === "offramp") return `${fmtNumber(Number(s.amountMinor) / 100, two)} ${s.amountCurrency}`;
   const units = Number(s.amountMinor) / 10 ** SCHEDULE_DECIMALS;
-  return `${units.toFixed(2)} ${(s.token || "").toUpperCase()}`;
+  return `${fmtNumber(units, two)} ${(s.token || "").toUpperCase()}`;
 }
 
 /** "Next 3 Oct", or an em dash when there is no next run. */
@@ -487,7 +514,7 @@ export function scheduleDate(iso: string | null): string {
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("en-US", { day: "numeric", month: "short" });
+  return fmtDate(d, { day: "numeric", month: "short" });
 }
 
 /* ── The other half of the list: conversations ────────────────────── */
@@ -580,7 +607,7 @@ export function mergeInbox(
       peerId: c?.peerId ?? null,
       avatarUrl: c?.avatarUrl ?? null,
       kind: t.kind,
-      line: chatNewer ? (c!.lastFromMe ? `You: ${body}` : body) : t.lastLine,
+      line: chatNewer ? (c!.lastFromMe ? tr("payments.line.youPrefix", { text: body }) : body) : t.lastLine,
       lineIsMessage: !!chatNewer,
       ts: chatNewer ? chatTs : t.lastTs,
       unread: c?.unread ?? 0,
@@ -595,11 +622,11 @@ export function mergeInbox(
     const ts = Date.parse(c.lastAt);
     rows.push({
       id: `peer:${c.peerId}`,
-      name: c.displayName?.trim() || (c.aliasHandle ? `@${c.aliasHandle}` : "Someone on HOLD"),
+      name: c.displayName?.trim() || (c.aliasHandle ? `@${c.aliasHandle}` : tr("payments.someoneOnHold")),
       peerId: c.peerId,
       avatarUrl: c.avatarUrl,
       kind: "hihodl",
-      line: c.lastFromMe ? `You: ${body}` : body,
+      line: c.lastFromMe ? tr("payments.line.youPrefix", { text: body }) : body,
       lineIsMessage: true,
       ts: Number.isFinite(ts) ? ts : 0,
       unread: c.unread,
