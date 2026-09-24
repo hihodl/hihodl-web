@@ -397,7 +397,7 @@
   "crew.splitChanged": "Paylaşım değişti",
   "crew.splitChangedBody": "Artık her satıştan {share} alıyorsun. Ekibin satmaya devam edebilmesi için evet de.",
   "crew.sayYesTo": "Evet de: {share}",
-  "crew.theCrew": "Ekip",
+  "crew.theCrew": "Crew",
   "crew.sharesNote": "Paylar, ekibin her satıştan aldığı tutar üzerindendir. Lider, diğerlerine düşmeyen kısmı alır ve yuvarlama farkını da tutar.",
   "crew.addCreator": "İçerik üreticisi ekle",
   "crew.inviteNotOnHold": "HOLD'da olmayan birini davet et",

@@ -46,7 +46,7 @@
   "list.loadFailed": "Grupların yüklenemedi.",
   "list.empty": "Henüz grup yok",
   "list.emptyBody": "Grup, paranın da içinde olduğu bir sohbettir: akşam yemeğini, taksiyi, evi böl ve hesaplaş.",
-  "list.crew": "Ekip",
+  "list.crew": "Crew",
   "list.unread": "{count} yeni",
   "across.title": "Tüm grupların",
   "across.shareAndPaid": "Senin payın <b>{share}</b> · ödediğin <b>{paid}</b>",
