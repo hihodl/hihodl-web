@@ -1,1 +1,13 @@
-{}
+{
+  "language": "Lingua",
+  "currency": "Valuta",
+  "recentLanguages": "Lingue recenti",
+  "allLanguages": "Tutte le lingue",
+  "searchLanguage": "Cerca lingua",
+  "recentCurrencies": "Valute recenti",
+  "allCurrencies": "Tutte le valute",
+  "searchCurrency": "Cerca valuta o paese",
+  "currencyIntro": "Saldi, totali e prezzi sono mostrati in questa valuta. Quello che paghi davvero resta nel token, e ogni gruppo mantiene la propria valuta.",
+  "currencyNoRate": "* Non c'è ancora un tasso di cambio in tempo reale, quindi gli importi restano in dollari USA.",
+  "currencyNoRateLabel": "{code} {name}, tasso di cambio in tempo reale non disponibile"
+}

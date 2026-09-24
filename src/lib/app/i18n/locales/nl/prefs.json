@@ -1,1 +1,13 @@
-{}
+{
+  "language": "Taal",
+  "currency": "Valuta",
+  "recentLanguages": "Recente talen",
+  "allLanguages": "Alle talen",
+  "searchLanguage": "Taal zoeken",
+  "recentCurrencies": "Recente valuta",
+  "allCurrencies": "Alle valuta",
+  "searchCurrency": "Zoek valuta of land",
+  "currencyIntro": "Saldo's, totalen en prijzen worden in deze valuta getoond. Wat je echt betaalt blijft in de token, en een groep houdt zijn eigen valuta.",
+  "currencyNoRate": "* Nog geen live wisselkoers, dus bedragen blijven in Amerikaanse dollars.",
+  "currencyNoRateLabel": "{code} {name}, live wisselkoers niet beschikbaar"
+}
