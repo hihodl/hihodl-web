@@ -35,7 +35,6 @@
   "send.sendingPayment": "Betaling verzenden",
   "send.resultTo": "Naar {to} • {amount}",
   "send.seeOnSolscan": "Bekijk op Solscan",
-  "send.onPhone.pending": "Keur goed op je telefoon",
   "send.onPhone.approved": "Goedgekeurd op je telefoon. Verzenden…",
   "send.onPhone.submitted": "Goedgekeurd. Verzenden…",
   "send.next.phone": "Een betaling kan niet ongedaan worden gemaakt. Je gekoppelde telefoon keurt hem hierna goed en ondertekent hem, in de HOLD-app.",

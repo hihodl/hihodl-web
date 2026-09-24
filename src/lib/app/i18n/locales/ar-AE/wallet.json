@@ -35,7 +35,6 @@
   "send.sendingPayment": "جارٍ إرسال الدفعة",
   "send.resultTo": "إلى {to} • {amount}",
   "send.seeOnSolscan": "اعرضها على Solscan",
-  "send.onPhone.pending": "وافق من هاتفك",
   "send.onPhone.approved": "تمت الموافقة من هاتفك. جارٍ الإرسال…",
   "send.onPhone.submitted": "تمت الموافقة. جارٍ الإرسال…",
   "send.next.phone": "لا يمكن التراجع عن الدفعة. سيوافق هاتفك المرتبط عليها ويوقّعها في الخطوة التالية، في تطبيق HOLD.",

@@ -35,7 +35,6 @@
   "send.sendingPayment": "กำลังส่งการชำระเงิน",
   "send.resultTo": "ถึง {to} • {amount}",
   "send.seeOnSolscan": "ดูบน Solscan",
-  "send.onPhone.pending": "อนุมัติบนโทรศัพท์ของคุณ",
   "send.onPhone.approved": "อนุมัติบนโทรศัพท์แล้ว กำลังส่ง…",
   "send.onPhone.submitted": "อนุมัติแล้ว กำลังส่ง…",
   "send.next.phone": "การชำระเงินย้อนกลับไม่ได้ ขั้นตอนถัดไป โทรศัพท์ที่เชื่อมไว้จะอนุมัติและเซ็นในแอป HOLD",

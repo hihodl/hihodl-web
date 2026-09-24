@@ -507,7 +507,7 @@ async function payOnPhone(args: { order: Order; say: (p: PayPhase) => PayPhase; 
     if (code === "ALREADY_PAID") {
       return say({ kind: "in-flight", orderId: order.id, message: t("sponsor.pay.alreadyPaid") });
     }
-    return say({ kind: "stopped", message: describeApprovalRefusal(code, "spot") });
+    return say({ kind: "stopped", message: describeApprovalRefusal(code, "spot", detailsOf(e)) });
   }
   say({ kind: "on-phone", approval, order });
 
@@ -555,6 +555,11 @@ function statusOf(e: unknown): number | null {
 function codeOf(e: unknown): string {
   const c = (e as { code?: unknown })?.code;
   return typeof c === "string" ? c : "";
+}
+
+function detailsOf(e: unknown): { platform?: unknown } | null {
+  const d = (e as { details?: unknown })?.details;
+  return d && typeof d === "object" ? (d as { platform?: unknown }) : null;
 }
 
 /**

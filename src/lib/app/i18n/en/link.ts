@@ -37,7 +37,6 @@ const link = {
   "phone.computer": "This page is for your phone. Scan the code on your computer with your phone's camera.",
 
   // Approving a spot or a stay on the phone
-  "approval.pending": "Approve on your phone",
   "approval.approved": "Approved on your phone. Sending…",
   "approval.submitted": "Approved. Sending…",
   "approval.toPay": "To pay",
@@ -82,6 +81,7 @@ const link = {
   "waiting.scanAnyPhone": "Your linked phone approves and signs, in the HOLD app, every payment you start on the web. Scan this code with your phone's camera, or from the HOLD app.",
   "waiting.opensOnPhone": "HOLD opens on your iPhone or Android phone and shows a six-digit code. No HOLD yet? The code shows where to get it.",
   "confirm.webWalletClosed": "This account's wallet was made on the web, which no longer opens wallets, so nothing can go to your phone from here. Make your wallet in the HOLD app.",
+  "defaultPhone.approve": "{platform, select, ios {Open HOLD on your iPhone to approve} android {Open HOLD on your Android phone to approve} other {Open HOLD on your phone to approve}}",
 } satisfies Record<string, string>;
 
 export default link;

@@ -39,7 +39,9 @@ import { Rich, useT } from "@/lib/app/i18n/react";
 import { moneyText } from "@/lib/app/groups-rules";
 import { settleWithWithdrawal, type SettleOutcome } from "@/lib/app/payment-requests";
 import { createWithdrawal, getWithdrawal, rejectWithdrawal, type Withdrawal, type WithdrawalStatus } from "@/lib/link/api";
+import { useDefaultPhone } from "@/lib/link/default-phone";
 import { openOnPhone } from "@/lib/link/intent";
+import { approveOnDefaultPhone, phonePlatformOf, type PhonePlatform } from "@/lib/link/payment-approval-core";
 import { phoneOf, type Phone } from "@/lib/link/ua";
 import { WalletApiError, type Balances } from "@/lib/wallet/api";
 import { explain } from "@/lib/wallet/explain";
@@ -200,7 +202,6 @@ const RESULT: Partial<Record<WithdrawalStatus, { title: MessageKey; text: Messag
 };
 
 const ON_PHONE: Partial<Record<WithdrawalStatus, MessageKey>> = {
-  pending: "wallet.send.onPhone.pending",
   approved: "wallet.send.onPhone.approved",
   submitted: "wallet.send.onPhone.submitted",
 };
@@ -217,6 +218,7 @@ export function WithdrawView({
   balances,
   setDraft,
   here = null,
+  defaultPhone = null,
   peer = null,
   locked = false,
   settle = null,
@@ -234,6 +236,8 @@ export function WithdrawView({
   settle?: SettleOutcome | "pending" | null;
   /** The phone this page is on: it gets Open HOLD (an intent on Android, the universal link on an iPhone). */
   here?: Phone | null;
+  /** The default phone, which approves: "Open HOLD on your iPhone to approve". */
+  defaultPhone?: PhonePlatform | null;
   actions: {
     onBack: () => void;
     onReview: () => void;
@@ -359,7 +363,7 @@ export function WithdrawView({
       <AppScreen title={t("wallet.send.confirmTitle")}>
         <Hero amount={w.amount} token={w.token} />
         <div className="flex flex-col gap-3">
-          <StatusLine>{t(ON_PHONE[w.status] ?? "wallet.send.onPhone.pending")}</StatusLine>
+          <StatusLine>{w.status === "pending" || !ON_PHONE[w.status] ? approveOnDefaultPhone(defaultPhone) : t(ON_PHONE[w.status]!)}</StatusLine>
           <RecipientCard to={w.to} name={peer} />
           <Summary token={w.token} amount={w.amount} />
           {phase.notice ? <WarningNote>{phase.notice}</WarningNote> : null}
@@ -447,6 +451,7 @@ function describe(e: unknown): string {
     if (e.code === "WITHDRAWAL_EXPIRED" || e.status === 410) return t("wallet.send.error.expired");
     if (e.code === "INSUFFICIENT_FUNDS" || e.code === "INSUFFICIENT_BALANCE") return t("wallet.send.error.insufficient");
     if (e.code === "NO_WALLET" || e.code === "NO_WEB_WALLET") return t("wallet.send.error.noWalletGetApp");
+    if (e.code === "APPROVE_ON_YOUR_DEFAULT_PHONE") return approveOnDefaultPhone(phonePlatformOf(e.details.platform));
   }
   return explain(e);
 }
@@ -484,6 +489,7 @@ export function Withdraw({
   });
   const [phase, setPhase] = useState<WithdrawPhase>({ kind: "form" });
   const gate = useLinkGate();
+  const defaultPhone = useDefaultPhone();
   const [here, setHere] = useState<Phone | null>(null);
   useEffect(() => setHere(phoneOf(navigator.userAgent, navigator.maxTouchPoints ?? 0)), []);
   // Follow a withdrawal the server is deciding: the phone's approval, then the chain.
@@ -608,6 +614,7 @@ export function Withdraw({
         balances={balances}
         setDraft={setDraft}
         here={here}
+        defaultPhone={defaultPhone}
         peer={prefill?.peer ?? null}
         locked={!!prefill?.lock}
         settle={settle}

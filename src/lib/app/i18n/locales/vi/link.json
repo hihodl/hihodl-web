@@ -25,7 +25,6 @@
   "phone.androidBody": "Điện thoại được liên kết trong ứng dụng HOLD. Ứng dụng mở ra với mã sáu chữ số: hãy kiểm tra mã khớp với mã trên máy tính.",
   "phone.noApp": "Chưa có ứng dụng HOLD? Cài đặt, đăng nhập bằng cùng tài khoản, và ứng dụng sẽ tiếp tục liên kết này từ chỗ bạn dừng.",
   "phone.computer": "Trang này dành cho điện thoại. Hãy quét mã trên máy tính bằng camera điện thoại.",
-  "approval.pending": "Duyệt trên điện thoại",
   "approval.approved": "Đã duyệt trên điện thoại. Đang gửi…",
   "approval.submitted": "Đã duyệt. Đang gửi…",
   "approval.toPay": "Cần trả",
@@ -67,5 +66,6 @@
   "getOnAppStore": "Tải HOLD trên App Store",
   "waiting.scanAnyPhone": "Điện thoại đã liên kết sẽ duyệt và ký, trong ứng dụng HOLD, mọi khoản thanh toán bạn bắt đầu trên web. Quét mã này bằng camera điện thoại, hoặc từ ứng dụng HOLD.",
   "waiting.opensOnPhone": "HOLD sẽ mở trên iPhone hoặc điện thoại Android của bạn và hiện mã sáu chữ số. Chưa có HOLD? Mã này sẽ chỉ cho bạn cách tải.",
-  "confirm.webWalletClosed": "Ví của tài khoản này được tạo trên web, mà web không còn mở ví nữa, nên không thể gửi gì đến điện thoại của bạn từ đây. Hãy tạo ví trong ứng dụng HOLD."
+  "confirm.webWalletClosed": "Ví của tài khoản này được tạo trên web, mà web không còn mở ví nữa, nên không thể gửi gì đến điện thoại của bạn từ đây. Hãy tạo ví trong ứng dụng HOLD.",
+  "defaultPhone.approve": "{platform, select, ios {Mở HOLD trên iPhone của bạn để duyệt} android {Mở HOLD trên điện thoại Android của bạn để duyệt} other {Mở HOLD trên điện thoại của bạn để duyệt}}"
 }

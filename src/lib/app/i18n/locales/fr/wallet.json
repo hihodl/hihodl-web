@@ -35,7 +35,6 @@
   "send.sendingPayment": "Envoi du paiement",
   "send.resultTo": "À {to} • {amount}",
   "send.seeOnSolscan": "Voir sur Solscan",
-  "send.onPhone.pending": "Approuvez sur votre téléphone",
   "send.onPhone.approved": "Approuvé sur votre téléphone. Envoi…",
   "send.onPhone.submitted": "Approuvé. Envoi…",
   "send.next.phone": "Un paiement est irréversible. Votre téléphone associé l'approuve et le signe à l'étape suivante, dans l'app HOLD.",

@@ -25,7 +25,6 @@
   "phone.androidBody": "Il telefono si collega nell'app HOLD. Si apre su un codice a sei cifre: verifica che corrisponda a quello sul computer.",
   "phone.noApp": "Non hai ancora l'app HOLD? Installala, accedi con lo stesso account e riprenderà questo collegamento da dove l'hai lasciato.",
   "phone.computer": "Questa pagina è per il telefono. Scansiona il codice sul computer con la fotocamera del telefono.",
-  "approval.pending": "Approva sul telefono",
   "approval.approved": "Approvato sul telefono. Invio…",
   "approval.submitted": "Approvato. Invio…",
   "approval.toPay": "Da pagare",
@@ -67,5 +66,6 @@
   "getOnAppStore": "Scarica HOLD dall'App Store",
   "waiting.scanAnyPhone": "Il tuo telefono collegato approva e firma, nell'app HOLD, ogni pagamento che avvii sul web. Scansiona questo codice con la fotocamera del telefono, o dall'app HOLD.",
   "waiting.opensOnPhone": "HOLD si apre sul tuo iPhone o telefono Android e mostra un codice a sei cifre. Non hai ancora HOLD? Il codice indica dove trovarla.",
-  "confirm.webWalletClosed": "Il portafoglio di questo account è stato creato sul web, che non apre più portafogli, quindi da qui non si può inviare nulla al tuo telefono. Crea il tuo portafoglio nell'app HOLD."
+  "confirm.webWalletClosed": "Il portafoglio di questo account è stato creato sul web, che non apre più portafogli, quindi da qui non si può inviare nulla al tuo telefono. Crea il tuo portafoglio nell'app HOLD.",
+  "defaultPhone.approve": "{platform, select, ios {Apri HOLD sul tuo iPhone per approvare} android {Apri HOLD sul tuo telefono Android per approvare} other {Apri HOLD sul tuo telefono per approvare}}"
 }

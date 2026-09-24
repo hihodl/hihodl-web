@@ -25,7 +25,6 @@
   "phone.androidBody": "휴대폰은 HOLD 앱에서 연결돼요. 6자리 코드가 표시되면 컴퓨터에 보이는 코드와 일치하는지 확인하세요.",
   "phone.noApp": "아직 HOLD 앱이 없나요? 설치하고 같은 계정으로 로그인하면 이 연결을 이어서 진행해요.",
   "phone.computer": "이 페이지는 휴대폰용이에요. 컴퓨터에 표시된 코드를 휴대폰 카메라로 스캔하세요.",
-  "approval.pending": "휴대폰에서 승인하세요",
   "approval.approved": "휴대폰에서 승인됐어요. 보내는 중…",
   "approval.submitted": "승인됐어요. 보내는 중…",
   "approval.toPay": "결제 대상",
@@ -67,5 +66,6 @@
   "getOnAppStore": "App Store에서 HOLD 받기",
   "waiting.scanAnyPhone": "연결된 휴대폰이 웹에서 시작한 모든 결제를 HOLD 앱에서 승인하고 서명해요. 휴대폰 카메라로 이 코드를 스캔하거나 HOLD 앱에서 스캔하세요.",
   "waiting.opensOnPhone": "iPhone이나 Android 휴대폰에서 HOLD가 열리고 6자리 코드가 표시돼요. 아직 HOLD가 없나요? 이 코드에 받는 방법이 나와 있어요.",
-  "confirm.webWalletClosed": "이 계정의 지갑은 웹에서 만들어졌는데, 웹은 더 이상 지갑을 열지 않아서 여기서는 휴대폰으로 아무것도 보낼 수 없어요. HOLD 앱에서 지갑을 만드세요."
+  "confirm.webWalletClosed": "이 계정의 지갑은 웹에서 만들어졌는데, 웹은 더 이상 지갑을 열지 않아서 여기서는 휴대폰으로 아무것도 보낼 수 없어요. HOLD 앱에서 지갑을 만드세요.",
+  "defaultPhone.approve": "{platform, select, ios {iPhone에서 HOLD를 열어 승인하세요} android {Android 휴대폰에서 HOLD를 열어 승인하세요} other {휴대폰에서 HOLD를 열어 승인하세요}}"
 }

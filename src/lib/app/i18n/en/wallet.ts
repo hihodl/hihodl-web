@@ -42,7 +42,6 @@ const wallet = {
   "send.sendingPayment": "Sending payment",
   "send.resultTo": "To {to} • {amount}",
   "send.seeOnSolscan": "See it on Solscan",
-  "send.onPhone.pending": "Approve on your phone",
   "send.onPhone.approved": "Approved on your phone. Sending…",
   "send.onPhone.submitted": "Approved. Sending…",
   "send.next.phone": "A payment cannot be undone. Your linked phone approves and signs it next, in the HOLD app.",

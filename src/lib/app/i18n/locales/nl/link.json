@@ -25,7 +25,6 @@
   "phone.androidBody": "Je telefoon koppel je in de HOLD-app. Die opent met een code van zes cijfers: check of hij overeenkomt met die op je computer.",
   "phone.noApp": "Nog geen HOLD-app? Installeer hem, log in met hetzelfde account, en hij pakt deze link op waar je was gebleven.",
   "phone.computer": "Deze pagina is voor je telefoon. Scan de code op je computer met de camera van je telefoon.",
-  "approval.pending": "Keur goed op je telefoon",
   "approval.approved": "Goedgekeurd op je telefoon. Verzenden…",
   "approval.submitted": "Goedgekeurd. Verzenden…",
   "approval.toPay": "Te betalen",
@@ -67,5 +66,6 @@
   "getOnAppStore": "Download HOLD in de App Store",
   "waiting.scanAnyPhone": "Je gekoppelde telefoon keurt in de HOLD-app elke betaling die je op het web start goed, en ondertekent hem. Scan deze code met de camera van je telefoon, of vanuit de HOLD-app.",
   "waiting.opensOnPhone": "HOLD gaat open op je iPhone of Android-telefoon en toont een code van zes cijfers. Nog geen HOLD? De code laat zien waar je hem kunt downloaden.",
-  "confirm.webWalletClosed": "De wallet van dit account is op het web gemaakt, en het web opent geen wallets meer, dus van hieruit kan niets naar je telefoon. Maak je wallet in de HOLD-app."
+  "confirm.webWalletClosed": "De wallet van dit account is op het web gemaakt, en het web opent geen wallets meer, dus van hieruit kan niets naar je telefoon. Maak je wallet in de HOLD-app.",
+  "defaultPhone.approve": "{platform, select, ios {Open HOLD op je iPhone om goed te keuren} android {Open HOLD op je Android-telefoon om goed te keuren} other {Open HOLD op je telefoon om goed te keuren}}"
 }

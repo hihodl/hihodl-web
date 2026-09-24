@@ -35,7 +35,6 @@
   "send.sendingPayment": "Invio del pagamento",
   "send.resultTo": "A {to} • {amount}",
   "send.seeOnSolscan": "Vedilo su Solscan",
-  "send.onPhone.pending": "Approva sul telefono",
   "send.onPhone.approved": "Approvato sul telefono. Invio…",
   "send.onPhone.submitted": "Approvato. Invio…",
   "send.next.phone": "Un pagamento non si può annullare. Subito dopo, il telefono collegato lo approva e lo firma nell'app HOLD.",

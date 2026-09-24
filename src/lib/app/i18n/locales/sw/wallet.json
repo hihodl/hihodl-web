@@ -35,7 +35,6 @@
   "send.sendingPayment": "Inatuma malipo",
   "send.resultTo": "Kwa {to} • {amount}",
   "send.seeOnSolscan": "Yaone kwenye Solscan",
-  "send.onPhone.pending": "Idhinisha kwenye simu yako",
   "send.onPhone.approved": "Imeidhinishwa kwenye simu yako. Inatuma…",
   "send.onPhone.submitted": "Imeidhinishwa. Inatuma…",
   "send.next.phone": "Malipo hayawezi kurudishwa. Simu yako iliyounganishwa itayaidhinisha na kuyatia sahihi baadaye, kwenye programu ya HOLD.",

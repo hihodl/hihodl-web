@@ -106,6 +106,23 @@ export function endedWithoutPaying(status: "rejected" | "expired" | "cancelled")
   }
 }
 
+/** The default phone's platform, as the server names it (`approver.platform`, a 409's `details.platform`). */
+export type PhonePlatform = "ios" | "android";
+
+export function phonePlatformOf(v: unknown): PhonePlatform | null {
+  return v === "ios" || v === "android" ? v : null;
+}
+
+/**
+ * "Open HOLD on your iPhone to approve": only the default phone approves the
+ * web (documentation/the-default-phone-approves.md), so every wait for an
+ * approval, and the server's 409 APPROVE_ON_YOUR_DEFAULT_PHONE, name it.
+ * Unknown (an older server) says "your phone".
+ */
+export function approveOnDefaultPhone(platform: PhonePlatform | null | undefined): string {
+  return t("link.defaultPhone.approve", { platform: platform ?? "other" });
+}
+
 /**
  * Why asking the phone was refused, in words a person can act on.
  *
@@ -114,9 +131,11 @@ export function endedWithoutPaying(status: "rejected" | "expired" | "cancelled")
  * up here one day still reads as a fact and never as a code. Each one is
  * said before anything was signed, so "nothing has been charged" is true.
  */
-export function describeApprovalRefusal(code: string, kind: PaymentKind): string {
+export function describeApprovalRefusal(code: string, kind: PaymentKind, details?: { platform?: unknown } | null): string {
   const spot = kind === "spot";
   switch (code) {
+    case "APPROVE_ON_YOUR_DEFAULT_PHONE":
+      return approveOnDefaultPhone(phonePlatformOf(details?.platform));
     case "VALIDATION_ERROR":
       return spot ? t("link.refusal.validationSpot") : t("link.refusal.validationStay");
     case "NO_PHONE_LINKED":

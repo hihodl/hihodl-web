@@ -35,7 +35,6 @@
   "send.sendingPayment": "Mengirim pembayaran",
   "send.resultTo": "Ke {to} • {amount}",
   "send.seeOnSolscan": "Lihat di Solscan",
-  "send.onPhone.pending": "Setujui di ponselmu",
   "send.onPhone.approved": "Disetujui di ponselmu. Mengirim…",
   "send.onPhone.submitted": "Disetujui. Mengirim…",
   "send.next.phone": "Pembayaran tidak bisa dibatalkan. Ponselmu yang tertaut akan menyetujui dan menandatanganinya berikutnya, di aplikasi HOLD.",

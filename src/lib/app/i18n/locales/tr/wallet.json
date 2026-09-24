@@ -35,7 +35,6 @@
   "send.sendingPayment": "Ödeme gönderiliyor",
   "send.resultTo": "Alıcı: {to} • {amount}",
   "send.seeOnSolscan": "Solscan'de gör",
-  "send.onPhone.pending": "Telefonunda onayla",
   "send.onPhone.approved": "Telefonunda onaylandı. Gönderiliyor…",
   "send.onPhone.submitted": "Onaylandı. Gönderiliyor…",
   "send.next.phone": "Bir ödeme geri alınamaz. Sonraki adımda bağlı telefonun HOLD uygulamasında onaylayıp imzalar.",

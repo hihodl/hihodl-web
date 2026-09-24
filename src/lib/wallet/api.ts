@@ -95,6 +95,13 @@ export interface WalletStatus {
    * Read it through `payerOf`.
    */
   canPayFromWeb?: CanPayFromWeb;
+  /**
+   * The default phone, the one that approves the web: only it gets the push,
+   * and a signature from another phone is refused with 409
+   * APPROVE_ON_YOUR_DEFAULT_PHONE (documentation/the-default-phone-approves.md).
+   * null with no phone linked; absent from an older server.
+   */
+  approver?: { deviceId: string; platform: "ios" | "android" | string } | null;
 }
 
 // Pure, in lib/app/app-wallet-gate so its check script can run it.

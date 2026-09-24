@@ -6,7 +6,7 @@
  * Exits 1 on the first failure.
  */
 
-import { describeApprovalRefusal, endedWithoutPaying, isDecided, toApproval } from "./payment-approval-core";
+import { approveOnDefaultPhone, describeApprovalRefusal, endedWithoutPaying, isDecided, toApproval } from "./payment-approval-core";
 
 let failures = 0;
 function check(name: string, ok: boolean, detail = "") {
@@ -81,6 +81,13 @@ for (const kind of ["spot", "stay"] as const) {
     check(`${kind} ${c}`, said.length > 10 && !said.includes(c) && !said.includes("_"), said);
   }
 }
+
+// The default phone: waiting screens and the 409 say the same sentence.
+check("default phone: iPhone", approveOnDefaultPhone("ios") === "Open HOLD on your iPhone to approve", approveOnDefaultPhone("ios"));
+check("default phone: Android", approveOnDefaultPhone("android") === "Open HOLD on your Android phone to approve");
+check("default phone: unknown", approveOnDefaultPhone(null) === "Open HOLD on your phone to approve");
+check("409 APPROVE_ON_YOUR_DEFAULT_PHONE names the phone", describeApprovalRefusal("APPROVE_ON_YOUR_DEFAULT_PHONE", "spot", { platform: "ios" }) === approveOnDefaultPhone("ios"));
+check("409 with an unknown platform says your phone", describeApprovalRefusal("APPROVE_ON_YOUR_DEFAULT_PHONE", "stay", { platform: "fax" }) === approveOnDefaultPhone(null));
 
 if (failures) {
   console.error(`${failures} failed`);

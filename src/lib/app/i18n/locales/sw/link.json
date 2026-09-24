@@ -25,7 +25,6 @@
   "phone.androidBody": "Simu yako inaunganishwa kwenye programu ya HOLD. Inafunguka kwenye msimbo wa tarakimu sita: hakikisha unalingana na ule ulio kwenye kompyuta yako.",
   "phone.noApp": "Bado huna programu ya HOLD? Isakinishe, ingia kwa akaunti ile ile, nayo itaendelea na kiungo hiki ulipoishia.",
   "phone.computer": "Ukurasa huu ni wa simu yako. Changanua msimbo ulio kwenye kompyuta yako kwa kamera ya simu yako.",
-  "approval.pending": "Idhinisha kwenye simu yako",
   "approval.approved": "Imeidhinishwa kwenye simu yako. Inatuma…",
   "approval.submitted": "Imeidhinishwa. Inatuma…",
   "approval.toPay": "Kulipa",
@@ -67,5 +66,6 @@
   "getOnAppStore": "Pakua HOLD kwenye App Store",
   "waiting.scanAnyPhone": "Simu yako iliyounganishwa huidhinisha na kutia sahihi, kwenye programu ya HOLD, kila malipo unayoanzisha kwenye wavuti. Changanua msimbo huu kwa kamera ya simu yako, au kutoka kwenye programu ya HOLD.",
   "waiting.opensOnPhone": "HOLD hufunguka kwenye iPhone au simu yako ya Android na kuonyesha msimbo wa tarakimu sita. Bado huna HOLD? Msimbo unaonyesha mahali pa kuupakua.",
-  "confirm.webWalletClosed": "Pochi ya akaunti hii iliundwa kwenye wavuti, ambayo haifungui pochi tena, kwa hivyo hakuna kinachoweza kwenda kwenye simu yako kutoka hapa. Unda pochi yako kwenye programu ya HOLD."
+  "confirm.webWalletClosed": "Pochi ya akaunti hii iliundwa kwenye wavuti, ambayo haifungui pochi tena, kwa hivyo hakuna kinachoweza kwenda kwenye simu yako kutoka hapa. Unda pochi yako kwenye programu ya HOLD.",
+  "defaultPhone.approve": "{platform, select, ios {Fungua HOLD kwenye iPhone yako ili kuidhinisha} android {Fungua HOLD kwenye simu yako ya Android ili kuidhinisha} other {Fungua HOLD kwenye simu yako ili kuidhinisha}}"
 }

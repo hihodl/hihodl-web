@@ -35,7 +35,6 @@
   "send.sendingPayment": "Đang gửi thanh toán",
   "send.resultTo": "Đến {to} • {amount}",
   "send.seeOnSolscan": "Xem trên Solscan",
-  "send.onPhone.pending": "Duyệt trên điện thoại",
   "send.onPhone.approved": "Đã duyệt trên điện thoại. Đang gửi…",
   "send.onPhone.submitted": "Đã duyệt. Đang gửi…",
   "send.next.phone": "Thanh toán không thể hoàn tác. Tiếp theo, điện thoại đã liên kết sẽ duyệt và ký trong ứng dụng HOLD.",

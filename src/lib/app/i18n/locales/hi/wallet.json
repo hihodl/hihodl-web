@@ -35,7 +35,6 @@
   "send.sendingPayment": "पेमेंट भेजा जा रहा है",
   "send.resultTo": "{to} को • {amount}",
   "send.seeOnSolscan": "Solscan पर देखें",
-  "send.onPhone.pending": "अपने फ़ोन पर मंज़ूर करें",
   "send.onPhone.approved": "आपके फ़ोन पर मंज़ूर हो गया। भेजा जा रहा है…",
   "send.onPhone.submitted": "मंज़ूर हो गया। भेजा जा रहा है…",
   "send.next.phone": "पेमेंट वापस नहीं लिया जा सकता। अगले स्टेप में आपका लिंक किया गया फ़ोन इसे HOLD ऐप में मंज़ूर और साइन करेगा।",

@@ -25,7 +25,6 @@
   "phone.androidBody": "Ponselmu ditautkan di aplikasi HOLD. Aplikasinya terbuka dengan kode enam digit: pastikan sama dengan yang ada di komputermu.",
   "phone.noApp": "Belum punya aplikasi HOLD? Pasang, masuk dengan akun yang sama, dan aplikasinya akan melanjutkan link ini dari tempat terakhir.",
   "phone.computer": "Halaman ini untuk ponselmu. Pindai kode di komputermu dengan kamera ponselmu.",
-  "approval.pending": "Setujui di ponselmu",
   "approval.approved": "Disetujui di ponselmu. Mengirim…",
   "approval.submitted": "Disetujui. Mengirim…",
   "approval.toPay": "Untuk dibayar",
@@ -67,5 +66,6 @@
   "getOnAppStore": "Unduh HOLD di App Store",
   "waiting.scanAnyPhone": "Ponselmu yang tertaut menyetujui dan menandatangani, di aplikasi HOLD, setiap pembayaran yang kamu mulai di web. Pindai kode ini dengan kamera ponselmu, atau dari aplikasi HOLD.",
   "waiting.opensOnPhone": "HOLD terbuka di iPhone atau ponsel Android-mu dan menampilkan kode enam digit. Belum punya HOLD? Kodenya menunjukkan tempat mendapatkannya.",
-  "confirm.webWalletClosed": "Dompet akun ini dibuat di web, dan web tidak lagi membuka dompet, jadi tidak ada yang bisa dikirim ke ponselmu dari sini. Buat dompetmu di aplikasi HOLD."
+  "confirm.webWalletClosed": "Dompet akun ini dibuat di web, dan web tidak lagi membuka dompet, jadi tidak ada yang bisa dikirim ke ponselmu dari sini. Buat dompetmu di aplikasi HOLD.",
+  "defaultPhone.approve": "{platform, select, ios {Buka HOLD di iPhone-mu untuk menyetujui} android {Buka HOLD di ponsel Android-mu untuk menyetujui} other {Buka HOLD di ponselmu untuk menyetujui}}"
 }

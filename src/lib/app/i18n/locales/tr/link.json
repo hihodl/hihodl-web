@@ -25,7 +25,6 @@
   "phone.androidBody": "Telefonun HOLD uygulamasında bağlanır. Altı haneli bir kodla açılır: bilgisayarındaki kodla eşleştiğini kontrol et.",
   "phone.noApp": "HOLD uygulaman yok mu? Yükle, aynı hesapla giriş yap; bu bağlantıyı kaldığın yerden alır.",
   "phone.computer": "Bu sayfa telefonun için. Bilgisayarındaki kodu telefonunun kamerasıyla tara.",
-  "approval.pending": "Telefonunda onayla",
   "approval.approved": "Telefonunda onaylandı. Gönderiliyor…",
   "approval.submitted": "Onaylandı. Gönderiliyor…",
   "approval.toPay": "Ödenecek",
@@ -67,5 +66,6 @@
   "getOnAppStore": "HOLD'u App Store'dan indir",
   "waiting.scanAnyPhone": "Bağlı telefonun, HOLD uygulamasında, web'de başlattığın her ödemeyi onaylar ve imzalar. Bu kodu telefonunun kamerasıyla veya HOLD uygulamasından tara.",
   "waiting.opensOnPhone": "HOLD, iPhone'unda veya Android telefonunda açılır ve altı haneli bir kod gösterir. Henüz HOLD yok mu? Kod, nereden edinebileceğini gösterir.",
-  "confirm.webWalletClosed": "Bu hesabın cüzdanı web'de oluşturuldu ve web artık cüzdan açmıyor, bu yüzden buradan telefonuna hiçbir şey gönderilemez. Cüzdanını HOLD uygulamasında oluştur."
+  "confirm.webWalletClosed": "Bu hesabın cüzdanı web'de oluşturuldu ve web artık cüzdan açmıyor, bu yüzden buradan telefonuna hiçbir şey gönderilemez. Cüzdanını HOLD uygulamasında oluştur.",
+  "defaultPhone.approve": "{platform, select, ios {Onaylamak için iPhone'unda HOLD'u aç} android {Onaylamak için Android telefonunda HOLD'u aç} other {Onaylamak için telefonunda HOLD'u aç}}"
 }

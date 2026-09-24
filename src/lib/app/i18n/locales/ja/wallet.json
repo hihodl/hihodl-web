@@ -35,7 +35,6 @@
   "send.sendingPayment": "支払いを送信中",
   "send.resultTo": "{to} へ • {amount}",
   "send.seeOnSolscan": "Solscan で見る",
-  "send.onPhone.pending": "スマホで承認してください",
   "send.onPhone.approved": "スマホで承認されました。送信中…",
   "send.onPhone.submitted": "承認されました。送信中…",
   "send.next.phone": "支払いは取り消せません。次に、連携したスマホの HOLD アプリで承認・署名します。",

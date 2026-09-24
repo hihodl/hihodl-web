@@ -268,7 +268,7 @@ async function payOnPhone(
     if (code === "NO_PHONE_LINKED" || code === "LINK_YOUR_PHONE_FIRST") return "no_phone";
     // Booked, or nothing owed: the room is bought (or about to be), not paid twice.
     if (code === "ALREADY_PAID") return finish(bookingId, set);
-    return set({ phase: "stopped", message: t("stays.pay.stillHeld", { reason: describeApprovalRefusal(code, "stay") }) });
+    return set({ phase: "stopped", message: t("stays.pay.stillHeld", { reason: describeApprovalRefusal(code, "stay", detailsOf(e)) }) });
   }
   set({ phase: "phone", approval, message: null });
 
@@ -405,6 +405,11 @@ function status(e: unknown): number | null {
 function codeOf(e: unknown): string {
   const c = typeof e === "object" && e !== null && "code" in e ? (e as { code?: unknown }).code : null;
   return typeof c === "string" ? c : "";
+}
+
+function detailsOf(e: unknown): { platform?: unknown } | null {
+  const d = typeof e === "object" && e !== null && "details" in e ? (e as { details?: unknown }).details : null;
+  return d && typeof d === "object" ? (d as { platform?: unknown }) : null;
 }
 
 function holdRefusal(e: unknown): string {

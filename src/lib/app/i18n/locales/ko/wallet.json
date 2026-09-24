@@ -35,7 +35,6 @@
   "send.sendingPayment": "결제 보내는 중",
   "send.resultTo": "{to}에게 • {amount}",
   "send.seeOnSolscan": "Solscan에서 보기",
-  "send.onPhone.pending": "휴대폰에서 승인하세요",
   "send.onPhone.approved": "휴대폰에서 승인됐어요. 보내는 중…",
   "send.onPhone.submitted": "승인됐어요. 보내는 중…",
   "send.next.phone": "결제는 취소할 수 없어요. 다음 단계에서 연결된 휴대폰의 HOLD 앱이 승인하고 서명해요.",

@@ -35,7 +35,6 @@
   "send.sendingPayment": "正在发送付款",
   "send.resultTo": "至 {to} • {amount}",
   "send.seeOnSolscan": "在 Solscan 上查看",
-  "send.onPhone.pending": "在手机上批准",
   "send.onPhone.approved": "已在手机上批准，正在发送…",
   "send.onPhone.submitted": "已批准，正在发送…",
   "send.next.phone": "付款无法撤销。接下来由你关联的手机在 HOLD 应用中批准并签署。",

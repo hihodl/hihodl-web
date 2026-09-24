@@ -20,14 +20,14 @@
 import type { MessageKey } from "@/lib/app/i18n";
 import { Rich, useT } from "@/lib/app/i18n/react";
 import { openOnPhone } from "@/lib/link/intent";
-import type { PaymentApproval } from "@/lib/link/payment-approval-core";
+import { useDefaultPhone } from "@/lib/link/default-phone";
+import { approveOnDefaultPhone, type PaymentApproval } from "@/lib/link/payment-approval-core";
 
 import { FooterNote, StatusLine, useCountdown, WarningNote } from "../wallet/app-kit";
 import { Ion } from "../ion";
 import { usePhone } from "./in-app";
 
 const ON_PHONE: Partial<Record<PaymentApproval["status"], MessageKey>> = {
-  pending: "link.approval.pending",
   approved: "link.approval.approved",
   submitted: "link.approval.submitted",
 };
@@ -45,6 +45,7 @@ export function PhoneApproval({
 }) {
   const t = useT();
   const here = usePhone();
+  const defaultPhone = useDefaultPhone();
   const pending = approval.status === "pending";
   const left = useCountdown(pending ? approval.expiresAt || null : null);
   const s = approval.summary;
@@ -52,7 +53,7 @@ export function PhoneApproval({
 
   return (
     <div className="flex flex-col gap-3">
-      <StatusLine>{t(ON_PHONE[approval.status] ?? "link.approval.pending")}</StatusLine>
+      <StatusLine>{pending || !ON_PHONE[approval.status] ? approveOnDefaultPhone(defaultPhone) : t(ON_PHONE[approval.status]!)}</StatusLine>
       <div className="rounded-[16px] border border-white/[0.08] bg-white/[0.05] px-4 py-3">
         {s.title ? <p className="text-[15px] font-strong tracking-[-0.2px] text-white">{s.title}</p> : null}
         {s.subtitle ? <p className="mt-0.5 text-[12.5px] text-white/60">{s.subtitle}</p> : null}

@@ -25,7 +25,6 @@
   "phone.androidBody": "Tu móvil se vincula en la app HOLD. Se abre con un código de seis dígitos: comprueba que coincide con el de tu ordenador.",
   "phone.noApp": "¿Aún no tienes la app HOLD? Instálala, inicia sesión con la misma cuenta y retomará este enlace donde lo dejaste.",
   "phone.computer": "Esta página es para tu móvil. Escanea el código de tu ordenador con la cámara del móvil.",
-  "approval.pending": "Aprueba en tu móvil",
   "approval.approved": "Aprobado en tu móvil. Enviando…",
   "approval.submitted": "Aprobado. Enviando…",
   "approval.toPay": "A pagar",
@@ -67,5 +66,6 @@
   "getOnAppStore": "Descargar HOLD en la App Store",
   "waiting.scanAnyPhone": "Tu móvil vinculado aprueba y firma, en la app HOLD, cada pago que empiezas en la web. Escanea este código con la cámara de tu móvil, o desde la app HOLD.",
   "waiting.opensOnPhone": "HOLD se abre en tu iPhone o móvil Android y muestra un código de seis dígitos. ¿Aún no tienes HOLD? El código te dice dónde conseguirla.",
-  "confirm.webWalletClosed": "La wallet de esta cuenta se creó en la web, que ya no abre wallets, así que desde aquí no se puede enviar nada a tu móvil. Crea tu wallet en la app HOLD."
+  "confirm.webWalletClosed": "La wallet de esta cuenta se creó en la web, que ya no abre wallets, así que desde aquí no se puede enviar nada a tu móvil. Crea tu wallet en la app HOLD.",
+  "defaultPhone.approve": "{platform, select, ios {Abre HOLD en tu iPhone para aprobarlo} android {Abre HOLD en tu móvil Android para aprobarlo} other {Abre HOLD en tu móvil para aprobarlo}}"
 }

@@ -35,7 +35,6 @@
   "send.sendingPayment": "Zahlung wird gesendet",
   "send.resultTo": "An {to} • {amount}",
   "send.seeOnSolscan": "Auf Solscan ansehen",
-  "send.onPhone.pending": "Auf deinem Handy bestätigen",
   "send.onPhone.approved": "Auf deinem Handy bestätigt. Wird gesendet…",
   "send.onPhone.submitted": "Bestätigt. Wird gesendet…",
   "send.next.phone": "Eine Zahlung kann nicht rückgängig gemacht werden. Als Nächstes bestätigt und signiert sie dein verknüpftes Handy in der HOLD-App.",

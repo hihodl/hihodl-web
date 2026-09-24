@@ -35,7 +35,6 @@
   "send.sendingPayment": "Enviando pagamento",
   "send.resultTo": "Para {to} • {amount}",
   "send.seeOnSolscan": "Ver no Solscan",
-  "send.onPhone.pending": "Aprove no seu celular",
   "send.onPhone.approved": "Aprovado no seu celular. Enviando…",
   "send.onPhone.submitted": "Aprovado. Enviando…",
   "send.next.phone": "Um pagamento não pode ser desfeito. Em seguida, seu celular vinculado aprova e assina, no app HOLD.",
