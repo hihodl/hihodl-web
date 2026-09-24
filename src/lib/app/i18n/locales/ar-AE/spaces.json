@@ -397,7 +397,7 @@
   "crew.splitChanged": "تغيّر التقسيم",
   "crew.splitChangedBody": "تحصل الآن على {share} من كل بيع. وافق ليواصل الفريق البيع.",
   "crew.sayYesTo": "وافق على {share}",
-  "crew.theCrew": "الفريق",
+  "crew.theCrew": "Crew",
   "crew.sharesNote": "الحصص مما يستلمه الفريق من كل بيع. يحصل القائد على ما لا يحصل عليه الآخرون، ويحتفظ بفروق التقريب.",
   "crew.addCreator": "إضافة صانع محتوى",
   "crew.inviteNotOnHold": "ادعُ شخصًا ليس على HOLD",

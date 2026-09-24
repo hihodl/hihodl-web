@@ -46,7 +46,7 @@
   "list.loadFailed": "تعذّر تحميل مجموعاتك.",
   "list.empty": "لا توجد مجموعات بعد",
   "list.emptyBody": "المجموعة محادثة يكون المال جزءاً منها: قسّموا العشاء وسيارة الأجرة والشقة، ثم سوّوا الحساب.",
-  "list.crew": "الفريق المشترك",
+  "list.crew": "Crew",
   "list.unread": "{count} جديدة",
   "across.title": "عبر مجموعاتك",
   "across.shareAndPaid": "حصتك <b>{share}</b> · دفعت <b>{paid}</b>",
