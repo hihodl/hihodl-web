@@ -27,6 +27,8 @@ import { useMemo } from "react";
 import type { PositionView, SalesListing } from "@/lib/creator/listing";
 import { byEvent, cents, kindsText, listingTotals, NO_EVENT, paidSales, type SaleRow } from "@/lib/app/spaces-model";
 import { useListing, useListingSales, useSales } from "@/lib/app/spaces-data";
+import { t as tr } from "@/lib/app/i18n";
+import { useT } from "@/lib/app/i18n/react";
 
 import { useHref } from "../base";
 import { useShell } from "../Shell";
@@ -50,13 +52,14 @@ import {
   usePaged,
 } from "./cards";
 
-const salesText = (n: number) => `${n} ${n === 1 ? "sale" : "sales"}`;
+const salesText = (n: number) => tr("spaces.sales.count", { count: n });
 
 /** Server totals added across listings: an event is the listings under it. */
 const sumReceived = (ls: readonly SalesListing[]) => ls.reduce((n, l) => n + cents(l.receivedUsdc), 0);
 const sumOrders = (ls: readonly SalesListing[]) => ls.reduce((n, l) => n + l.orders, 0);
 
 export function SalesScreen({ event, listing, offer = null }: { event: string | null; listing: string | null; offer?: string | null }) {
+  useT();
   const sales = useSales();
   const refs = useListingRefs();
   const totals = useMemo(() => listingTotals(sales.data), [sales.data]);
@@ -64,7 +67,7 @@ export function SalesScreen({ event, listing, offer = null }: { event: string | 
   if (!sales.data) {
     return sales.error ? <ReadError error={sales.error} /> : <Skeleton className="h-[260px]" />;
   }
-  const refOf: RefOf = (id, named) => refs.get(id) ?? unknownListing(id, named?.serviceName || named?.spaceTitle || "Listing");
+  const refOf: RefOf = (id, named) => refs.get(id) ?? unknownListing(id, named?.serviceName || named?.spaceTitle || tr("spaces.sales.listing"));
 
   if (listing) return <ListingSales spaceId={listing} total={totals.find((l) => l.spaceId === listing) ?? null} refOf={refOf} offer={offer} />;
   if (event) return <EventSales eventKey={event} totals={totals} refOf={refOf} />;
@@ -90,17 +93,18 @@ function EventGrid({
   spots: number;
   spaces: number;
 }) {
+  const t = useT();
   const href = useHref();
   const paged = usePaged(groups, groups.length);
 
   return (
     <div className="flex flex-col gap-2.5">
       <div className="grid grid-cols-[minmax(0,1fr)] gap-2.5 md:grid-cols-2">
-        <ReceivedCard received={received} sub={`${spots} ${spots === 1 ? "spot" : "spots"} sold across ${spaces} ${spaces === 1 ? "space" : "spaces"}`} />
+        <ReceivedCard received={received} sub={t("spaces.sales.spotsSoldAcross", { spots, spaces })} />
         <TeamRow />
       </div>
       {groups.length === 0 ? (
-        <Empty icon="cash-outline" title="No sales yet" body="When a brand pays for a spot on one of your spaces, it shows here." />
+        <Empty icon="cash-outline" title={t("spaces.sales.emptyTitle")} body={t("spaces.sales.emptyBody")} />
       ) : null}
       <CardGrid>
         {paged.shown.map((g) => {
@@ -110,7 +114,7 @@ function EventGrid({
               key={g.key}
               href={`${href("/sales")}?${eventParam(g.key)}`}
               event={listings[0]?.event ?? null}
-              lines={[kindsText(listings.map((l) => l.kind)) || "Listings"]}
+              lines={[kindsText(listings.map((l) => l.kind)) || t("spaces.sales.listings")]}
               value={dollars(sumReceived(g.items))}
               note={salesText(sumOrders(g.items))}
             />
@@ -124,18 +128,20 @@ function EventGrid({
 
 /** SalesView's first card: what reached the wallet, not what sponsors were charged. */
 function ReceivedCard({ received, sub }: { received: string; sub: string }) {
+  const t = useT();
   return (
     <Card>
-      <p className="text-[12px] font-strong uppercase tracking-[0.4px] text-white/55">Received</p>
+      <p className="text-[12px] font-strong uppercase tracking-[0.4px] text-white/55">{t("spaces.sales.received")}</p>
       <p className={money}>{dollars(cents(received))}</p>
       <p className="text-[13px] font-strong leading-[18px] text-white/[0.82]">{sub}</p>
-      <p className="text-[12px] leading-4 text-white/55">USDC, straight to your wallet when each brand paid.</p>
+      <p className="text-[12px] leading-4 text-white/55">{t("spaces.sales.receivedNote")}</p>
     </Card>
   );
 }
 
 /** SalesView's TeamRow: the way into the team, under the money a share is paid from. */
 function TeamRow() {
+  const t = useT();
   const href = useHref();
   return (
     <Card href={href("/team")}>
@@ -144,9 +150,9 @@ function TeamRow() {
           <Ion name="people-outline" size={17} />
         </span>
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <span className="text-[15px] font-strong tracking-[-0.2px] text-white">Your team</span>
+          <span className="text-[15px] font-strong tracking-[-0.2px] text-white">{t("spaces.sales.yourTeam")}</span>
           <span className="text-[13px] font-strong leading-[18px] text-white/[0.82]">
-            Invite the people who sell for you or turn up at the event, and give them a share you pay yourself.
+            {t("spaces.sales.yourTeamBody")}
           </span>
         </span>
         <Ion name="chevron-forward" size={16} className="shrink-0 text-white/55" />
@@ -156,6 +162,7 @@ function TeamRow() {
 }
 
 function EventSales({ eventKey, totals, refOf }: { eventKey: string; totals: SalesListing[]; refOf: RefOf }) {
+  const t = useT();
   const href = useHref();
   const here = totals
     .filter((l) => (refOf(l.spaceId, l).event?.key ?? NO_EVENT) === eventKey)
@@ -167,12 +174,12 @@ function EventSales({ eventKey, totals, refOf }: { eventKey: string; totals: Sal
     <div className="flex flex-col gap-4">
       <DrillBar
         back={href("/sales")}
-        crumb="Sales"
+        crumb={t("spaces.sales.crumb")}
         title={eventName(event)}
-        right={here.length ? <p className="text-[12.5px] font-strong tabular-nums text-white/[0.82]">{dollars(sumReceived(here))} received</p> : null}
+        right={here.length ? <p className="text-[12.5px] font-strong tabular-nums text-white/[0.82]">{t("spaces.sales.amountReceived", { amount: dollars(sumReceived(here)) })}</p> : null}
       />
       {here.length === 0 ? (
-        <Empty icon="cash-outline" title="No sales yet" body="When a brand pays for a spot on one of your spaces, it shows here." />
+        <Empty icon="cash-outline" title={t("spaces.sales.emptyTitle")} body={t("spaces.sales.emptyBody")} />
       ) : (
         <>
           <CardGrid>
@@ -183,7 +190,7 @@ function EventSales({ eventKey, totals, refOf }: { eventKey: string; totals: Sal
                   key={l.spaceId}
                   href={`${href("/sales")}?listing=${encodeURIComponent(l.spaceId)}`}
                   listing={ref}
-                  line={ref.kind ? KIND_NAME[ref.kind] : "Listing"}
+                  line={ref.kind ? KIND_NAME[ref.kind] : t("spaces.sales.listing")}
                   value={dollars(cents(l.receivedUsdc))}
                   note={salesText(l.orders)}
                 />
@@ -201,6 +208,7 @@ function EventSales({ eventKey, totals, refOf }: { eventKey: string; totals: Sal
 const ROWS = 8;
 
 function ListingSales({ spaceId, total, refOf, offer }: { spaceId: string; total: SalesListing | null; refOf: RefOf; offer: string | null }) {
+  const t = useT();
   const href = useHref();
   const { listings } = useShell();
   const offersContent = useOffersContent();
@@ -254,10 +262,10 @@ function ListingSales({ spaceId, total, refOf, offer }: { spaceId: string; total
         {!sales.data ? (
           sales.error ? <ReadError error={sales.error} /> : <Skeleton className="h-[200px]" />
         ) : rows.length === 0 ? (
-          <Empty icon="cash-outline" title="No sales yet" body="When a brand pays for a spot on one of your spaces, it shows here." />
+          <Empty icon="cash-outline" title={t("spaces.sales.emptyTitle")} body={t("spaces.sales.emptyBody")} />
         ) : (
           <>
-          <SectionLabel>Recent sales</SectionLabel>
+          <SectionLabel>{t("spaces.sales.recent")}</SectionLabel>
           <ul className="flex flex-col gap-2.5">
             {paged.shown.map((r) => (
               <SaleLine
@@ -291,8 +299,9 @@ function SaleLine({
 }) {
   // The name comes with the sale. The position's is only a fallback for a
   // server older than that, and only while this order still holds the spot.
+  const t = useT();
   const outbid = row.status === "outbid";
-  const sponsor = row.sponsorName ?? (outbid ? null : position?.sponsor?.name) ?? (loading && row.sponsorName === undefined ? "…" : "Sponsor");
+  const sponsor = row.sponsorName ?? (outbid ? null : position?.sponsor?.name) ?? (loading && row.sponsorName === undefined ? "…" : t("spaces.delivery.sponsor"));
   const what = position?.title ?? position?.label ?? row.zoneKey;
   // The app's recent sale: who and what on the left, what reached you in green on the right.
   return (
@@ -305,10 +314,10 @@ function SaleLine({
           </div>
           <p className="shrink-0 text-[15px] font-strong tabular-nums text-[#2FBE8A]">{row.receivedUsdc} USDC</p>
         </div>
-        {outbid ? <p className="text-[12.5px] font-strong text-white/55">Taken over since: the next brand repaid this one</p> : null}
+        {outbid ? <p className="text-[12.5px] font-strong text-white/55">{t("spaces.sales.takenOver")}</p> : null}
         {offerHref ? (
           <Link href={offerHref} scroll={false} className={`${btnGlass} self-start`}>
-            Offer them content
+            {t("spaces.sales.offerContent")}
           </Link>
         ) : null}
       </Card>

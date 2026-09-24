@@ -58,6 +58,9 @@ import {
   type CrewSale,
 } from "@/lib/creator/crew";
 
+import { fmtDate } from "@/lib/app/i18n/format";
+import { useT } from "@/lib/app/i18n/react";
+
 import { useHref, useProductHref } from "../base";
 import { Body, Card, Divider, Empty, Field, inputCls, P, SectionLabel, SheetRow, Tag } from "./kit";
 
@@ -66,6 +69,7 @@ const sheetCls = "flex flex-col gap-3 rounded-[18px] border border-white/10 bg-w
 const sheetTitle = "text-[18px] font-extrabold tracking-[-0.3px] text-white";
 
 export function CrewScreen({ crewId, join }: { crewId: string | null; join: string | null }) {
+  const t = useT();
   const href = useHref();
   const router = useRouter();
   const [crews, setCrews] = useState<Crew[] | null>(null);
@@ -110,8 +114,8 @@ export function CrewScreen({ crewId, join }: { crewId: string | null; join: stri
   if (crewId && crews && !open) {
     return (
       <Column>
-        <HoldNotice>That crew isn&apos;t here any more.</HoldNotice>
-        <SheetRow icon="people-outline" title="Your crews" href={href("/crew")} />
+        <HoldNotice>{t("spaces.crew.gone")}</HoldNotice>
+        <SheetRow icon="people-outline" title={t("spaces.crew.yourCrews")} href={href("/crew")} />
       </Column>
     );
   }
@@ -138,30 +142,25 @@ export function CrewScreen({ crewId, join }: { crewId: string | null; join: stri
     <Column>
       {notice ? <HoldNotice>{notice}</HoldNotice> : null}
       <Card>
-        <p className="text-[16px] font-strong tracking-[-0.2px] text-white">Sell together. Get paid together.</p>
-        <Body dim>
-          Put creators who work an event together into one crew, each with what they bring. Brands buy the whole package from one listing.
-        </Body>
-        <Body dim>
-          The brand pays once, and that one payment reaches every wallet in the crew with its part. Nobody collects and pays the others later,
-          and HOLD never holds the money.
-        </Body>
+        <p className="text-[16px] font-strong tracking-[-0.2px] text-white">{t("spaces.crew.introTitle")}</p>
+        <Body dim>{t("spaces.crew.introBody1")}</Body>
+        <Body dim>{t("spaces.crew.introBody2")}</Body>
       </Card>
 
       {asked.length ? (
         <>
-          <SectionLabel>Asked to join</SectionLabel>
+          <SectionLabel>{t("spaces.crew.askedToJoin")}</SectionLabel>
           {asked.map((c) => (
             <Invitation key={c.id} crew={c} onDone={() => void load()} />
           ))}
         </>
       ) : null}
 
-      <SectionLabel>Your crews</SectionLabel>
+      <SectionLabel>{t("spaces.crew.yourCrews")}</SectionLabel>
       {crews === null ? (
-        <Empty icon="hourglass-outline" title="Loading…" />
+        <Empty icon="hourglass-outline" title={t("common.loading")} />
       ) : mine.length === 0 ? (
-        <Empty icon="people-outline" title="No crew yet" body="Start one, then add the creators you work events with." />
+        <Empty icon="people-outline" title={t("spaces.crew.noneTitle")} body={t("spaces.crew.noneBody")} />
       ) : (
         <div className="flex flex-col gap-2">
           {mine.map((c) => (
@@ -171,7 +170,9 @@ export function CrewScreen({ crewId, join }: { crewId: string | null; join: stri
               title={c.name}
               meta={
                 <span className={c.ready ? undefined : "text-amber"}>
-                  {`${c.members.length} ${c.members.length === 1 ? "person" : "people"} · you get ${c.you?.share ?? "–"}${c.ready ? "" : " · not selling yet"}`}
+                  {c.ready
+                    ? t("spaces.crew.rowMeta", { count: c.members.length, share: c.you?.share ?? "–" })
+                    : t("spaces.crew.rowMetaNotSelling", { count: c.members.length, share: c.you?.share ?? "–" })}
                 </span>
               }
               attention={!c.ready || c.you?.agreed === false}
@@ -193,7 +194,7 @@ export function CrewScreen({ crewId, join }: { crewId: string | null; join: stri
       ) : (
         <button type="button" className={ctaPrimary} onClick={() => setStarting(true)}>
           <Ion name="add" size={18} />
-          Start a crew
+          {t("spaces.crew.start")}
         </button>
       )}
     </Column>
@@ -207,14 +208,15 @@ function Column({ children }: { children: React.ReactNode }) {
 /* ── Starting one ─────────────────────────────────────────────────── */
 
 function StartCrew({ onCancel, onStarted }: { onCancel: () => void; onStarted: (c: Crew) => void }) {
+  const t = useT();
   const [name, setName] = useState("");
   const [service, setService] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   return (
     <div className={sheetCls}>
-      <p className={sheetTitle}>Start a crew</p>
-      <Field label="Crew name" hint="Brands see it on the listing." htmlFor="crew-name">
+      <p className={sheetTitle}>{t("spaces.crew.start")}</p>
+      <Field label={t("spaces.crew.nameLabel")} hint={t("spaces.crew.nameHint")} htmlFor="crew-name">
         <input
           id="crew-name"
           className={inputCls}
@@ -222,17 +224,17 @@ function StartCrew({ onCancel, onStarted }: { onCancel: () => void; onStarted: (
           value={name}
           maxLength={CREW_LIMITS.NAME_MAX}
           onChange={(e) => setName(e.target.value)}
-          placeholder="The Balkans crew"
+          placeholder={t("spaces.crew.namePlaceholder")}
         />
       </Field>
-      <Field label="What you bring" hint="One line, shown next to your name." htmlFor="crew-service">
+      <Field label={t("spaces.crew.youBringLabel")} hint={t("spaces.crew.youBringHint")} htmlFor="crew-service">
         <input
           id="crew-service"
           className={inputCls}
           value={service}
           maxLength={CREW_LIMITS.SERVICE_MAX}
           onChange={(e) => setService(e.target.value)}
-          placeholder="Marketing and short form"
+          placeholder={t("spaces.crew.youBringPlaceholder")}
         />
       </Field>
       {notice ? <HoldNotice>{notice}</HoldNotice> : null}
@@ -249,10 +251,10 @@ function StartCrew({ onCancel, onStarted }: { onCancel: () => void; onStarted: (
             .finally(() => setBusy(false));
         }}
       >
-        {busy ? "Creating…" : "Create crew"}
+        {busy ? t("spaces.crew.creating") : t("spaces.crew.create")}
       </button>
       <button type="button" className={ctaSecondary} disabled={busy} onClick={onCancel}>
-        Cancel
+        {t("common.cancel")}
       </button>
     </div>
   );
@@ -262,6 +264,7 @@ function StartCrew({ onCancel, onStarted }: { onCancel: () => void; onStarted: (
 
 /** A crew this person was added to by name: what they bring, their part, who else. */
 function Invitation({ crew, onDone }: { crew: Crew; onDone: () => void }) {
+  const t = useT();
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const me = crew.members.find((m) => m.id === crew.you?.memberId) ?? null;
@@ -269,7 +272,7 @@ function Invitation({ crew, onDone }: { crew: Crew; onDone: () => void }) {
   return (
     <div className={sheetCls}>
       <p className={sheetTitle}>{crew.name}</p>
-      <Body dim>{lead ? `${whoText(lead)} wants you in their crew.` : "A creator wants you in their crew."}</Body>
+      <Body dim>{lead ? t("spaces.crew.wantsYou", { who: whoText(lead) }) : t("spaces.crew.aCreatorWantsYou")}</Body>
       {me ? <Terms service={me.service} share={me.share} /> : null}
       <Roster members={crew.members} />
       <PaidLine />
@@ -287,7 +290,7 @@ function Invitation({ crew, onDone }: { crew: Crew; onDone: () => void }) {
               .finally(() => setBusy(false));
           }}
         >
-          Decline
+          {t("spaces.crew.decline")}
         </button>
         <button
           type="button"
@@ -305,7 +308,7 @@ function Invitation({ crew, onDone }: { crew: Crew; onDone: () => void }) {
               .finally(() => setBusy(false));
           }}
         >
-          {busy ? "Working…" : "Say yes and join"}
+          {busy ? t("spaces.crew.working") : t("spaces.crew.sayYesJoin")}
         </button>
       </div>
     </div>
@@ -314,6 +317,7 @@ function Invitation({ crew, onDone }: { crew: Crew; onDone: () => void }) {
 
 /** A link invitation, read with the code and taken in one step. */
 function JoinByLink({ code, onJoined }: { code: string; onJoined: (c: Crew) => void }) {
+  const t = useT();
   const [invite, setInvite] = useState<CrewInvitePreview | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -326,12 +330,12 @@ function JoinByLink({ code, onJoined }: { code: string; onJoined: (c: Crew) => v
   }, [code]);
   useEffect(read, [read]);
 
-  if (!invite) return notice ? <HoldNotice>{notice}</HoldNotice> : <Empty icon="hourglass-outline" title="Opening the invitation…" />;
+  if (!invite) return notice ? <HoldNotice>{notice}</HoldNotice> : <Empty icon="hourglass-outline" title={t("spaces.crew.opening")} />;
 
   return (
     <div className={sheetCls}>
-      <p className={sheetTitle}>Join {invite.name}</p>
-      <Body dim>{invite.leadHandle ? `@${invite.leadHandle} wants you in their crew.` : "A creator wants you in their crew."}</Body>
+      <p className={sheetTitle}>{t("spaces.crew.join", { name: invite.name })}</p>
+      <Body dim>{invite.leadHandle ? t("spaces.crew.wantsYou", { who: `@${invite.leadHandle}` }) : t("spaces.crew.aCreatorWantsYou")}</Body>
       <Terms service={invite.service} share={invite.share} />
       {invite.members.length ? (
         <Card>
@@ -339,7 +343,7 @@ function JoinByLink({ code, onJoined }: { code: string; onJoined: (c: Crew) => v
             <div key={i} className="flex flex-col gap-0.5">
               {i > 0 ? <Divider /> : null}
               <p className="text-[14px] font-strong text-white">
-                {m.handle ? `@${m.handle}` : "A creator"} {m.isLead ? <Tag label="Lead" /> : null}
+                {m.handle ? `@${m.handle}` : t("spaces.overview.inspired.aCreator")} {m.isLead ? <Tag label={t("spaces.crew.lead")} /> : null}
               </p>
               <p className={fine}>{m.service}</p>
             </div>
@@ -365,21 +369,22 @@ function JoinByLink({ code, onJoined }: { code: string; onJoined: (c: Crew) => v
             .finally(() => setBusy(false));
         }}
       >
-        {busy ? "Joining…" : "Say yes and join"}
+        {busy ? t("spaces.crew.joining") : t("spaces.crew.sayYesJoin")}
       </button>
     </div>
   );
 }
 
 function Terms({ service, share }: { service: string; share: string }) {
+  const t = useT();
   return (
     <div className="flex items-end justify-between gap-3 rounded-[14px] border border-white/10 bg-white/[0.06] p-3">
       <div className="flex min-w-0 flex-col gap-0.5">
-        <p className="text-[12px] font-strong text-white/55">You bring</p>
+        <p className="text-[12px] font-strong text-white/55">{t("spaces.crew.youBring")}</p>
         <p className="text-[15px] font-strong text-white">{service}</p>
       </div>
       <div className="flex shrink-0 flex-col items-end gap-0.5">
-        <p className="text-[12px] font-strong text-white/55">You get</p>
+        <p className="text-[12px] font-strong text-white/55">{t("spaces.crew.youGet")}</p>
         <p className="text-[22px] font-extrabold tabular-nums tracking-[-0.4px] text-white">{share}</p>
       </div>
     </div>
@@ -387,11 +392,8 @@ function Terms({ service, share }: { service: string; share: string }) {
 }
 
 function PaidLine() {
-  return (
-    <p className={fine}>
-      Your part of every sale reaches your own wallet in the brand&apos;s payment, on Solana. You need a payout address in Spaces settings to say yes.
-    </p>
-  );
+  const t = useT();
+  return <p className={fine}>{t("spaces.crew.paidLine")}</p>;
 }
 
 /** The people in a crew, read-only: who, what they bring, their share. */
@@ -409,6 +411,7 @@ function Roster({ members }: { members: CrewMember[] }) {
 }
 
 function PersonLine({ member, right }: { member: CrewMember; right?: React.ReactNode }) {
+  const t = useT();
   const waiting = member.status === "invited";
   return (
     <div className="flex items-center gap-3">
@@ -416,10 +419,10 @@ function PersonLine({ member, right }: { member: CrewMember; right?: React.React
       <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
         <div className="flex flex-wrap items-center gap-1.5">
           <p className="truncate text-[15px] font-strong tracking-[-0.2px] text-white">
-            {member.byLink ? "Invited by link" : whoText(member)}
+            {member.byLink ? t("spaces.crew.invitedByLink") : whoText(member)}
           </p>
-          {member.isLead ? <Tag label="Lead" /> : null}
-          {waiting ? <Tag label="Invited" tone="dim" /> : member.agreed ? null : <Tag label="Hasn't said yes" tone="caution" />}
+          {member.isLead ? <Tag label={t("spaces.crew.lead")} /> : null}
+          {waiting ? <Tag label={t("spaces.crew.invited")} tone="dim" /> : member.agreed ? null : <Tag label={t("spaces.crew.notYes")} tone="caution" />}
         </div>
         <p className="line-clamp-2 text-[12.5px] font-strong leading-[17px] text-white/55">{member.service}</p>
       </div>
@@ -443,6 +446,7 @@ function Avatar({ member }: { member: CrewMember }) {
 /* ── One crew ─────────────────────────────────────────────────────── */
 
 function CrewDetail({ crew, onChanged, onLeft }: { crew: Crew; onChanged: (c: Crew) => void; onLeft: () => void }) {
+  const t = useT();
   const href = useHref();
   const productHref = useProductHref();
   const [notice, setNotice] = useState<string | null>(null);
@@ -467,7 +471,7 @@ function CrewDetail({ crew, onChanged, onLeft }: { crew: Crew; onChanged: (c: Cr
     <>
       {crew.ready ? (
         <HoldNotice icon="checkmark-circle-outline" tone="good">
-          Everyone said yes. Brands can buy from this crew&apos;s listings.
+          {t("spaces.crew.everyoneYes")}
         </HoldNotice>
       ) : readyText ? (
         <HoldNotice>{readyText}</HoldNotice>
@@ -475,18 +479,18 @@ function CrewDetail({ crew, onChanged, onLeft }: { crew: Crew; onChanged: (c: Cr
 
       {crew.you && !crew.you.agreed ? (
         <div className={sheetCls}>
-          <p className={sheetTitle}>The split changed</p>
-          <Body dim>You now get {crew.you.share} of every sale. Say yes so the crew can keep selling.</Body>
+          <p className={sheetTitle}>{t("spaces.crew.splitChanged")}</p>
+          <Body dim>{t("spaces.crew.splitChangedBody", { share: crew.you.share })}</Body>
           <button type="button" className={ctaPrimary} disabled={busy} onClick={() => void done(agreeToCrew(crew.id, crew.termsVersion))}>
-            {busy ? "Working…" : `Say yes to ${crew.you.share}`}
+            {busy ? t("spaces.crew.working") : t("spaces.crew.sayYesTo", { share: crew.you.share })}
           </button>
         </div>
       ) : null}
 
       {notice ? <HoldNotice>{notice}</HoldNotice> : null}
 
-      <SectionLabel right={<span className="text-[12px] font-strong tabular-nums text-white/55">{`${crew.members.length} of ${CREW_LIMITS.MAX_MEMBERS}`}</span>}>
-        The crew
+      <SectionLabel right={<span className="text-[12px] font-strong tabular-nums text-white/55">{t("spaces.insights.xOfY", { x: crew.members.length, y: CREW_LIMITS.MAX_MEMBERS })}</span>}>
+        {t("spaces.crew.theCrew")}
       </SectionLabel>
       {lead ? (
         <Card>
@@ -501,7 +505,7 @@ function CrewDetail({ crew, onChanged, onLeft }: { crew: Crew; onChanged: (c: Cr
         <Roster members={crew.members} />
       )}
       <p className={fine}>
-        Shares are of what the crew receives from each sale. The lead gets whatever the others don&apos;t, and keeps the rounding.
+        {t("spaces.crew.sharesNote")}
       </p>
 
       {lead ? (
@@ -524,17 +528,17 @@ function CrewDetail({ crew, onChanged, onLeft }: { crew: Crew; onChanged: (c: Cr
           <div className="flex flex-col gap-2">
             <button type="button" className={ctaPrimary} disabled={full} onClick={() => setAdding("creator")}>
               <Ion name="person-add-outline" size={18} />
-              Add creator
+              {t("spaces.crew.addCreator")}
             </button>
             <button type="button" className={ctaSecondary} disabled={full} onClick={() => setAdding("link")}>
-              Invite someone not on HOLD
+              {t("spaces.crew.inviteNotOnHold")}
             </button>
-            {full ? <HoldNotice>A crew is at most {CREW_LIMITS.MAX_MEMBERS} people.</HoldNotice> : null}
+            {full ? <HoldNotice>{t("spaces.crew.atMost", { count: CREW_LIMITS.MAX_MEMBERS })}</HoldNotice> : null}
           </div>
         )
       ) : null}
 
-      <SectionLabel>Listings sold as this crew</SectionLabel>
+      <SectionLabel>{t("spaces.crew.listingsSold")}</SectionLabel>
       {crew.spaces.length ? (
         <div className="flex flex-col gap-2">
           {crew.spaces.map((s) => (
@@ -544,23 +548,23 @@ function CrewDetail({ crew, onChanged, onLeft }: { crew: Crew; onChanged: (c: Cr
       ) : (
         <Empty
           icon="pricetag-outline"
-          title="No listing yet"
-          body={lead ? "Open one of your listings and choose Sell as a crew. Brands then pay everyone in one payment." : "The lead puts listings on the crew."}
+          title={t("spaces.crew.noListing")}
+          body={lead ? t("spaces.crew.noListingLead") : t("spaces.crew.noListingMember")}
         />
       )}
 
-      <SectionLabel>Expenses</SectionLabel>
+      <SectionLabel>{t("spaces.crew.expenses")}</SectionLabel>
       {crew.groupId ? (
         <SheetRow
           icon="chatbubbles-outline"
-          title="Expenses & chat"
-          meta="The coffee, the taxi, the hotel: split it and settle up"
+          title={t("spaces.crew.expensesChat")}
+          meta={t("spaces.crew.expensesChatMeta")}
           href={productHref(`/payments/groups/${encodeURIComponent(crew.groupId)}?crew=${crew.id}`)}
         />
       ) : (
         <Card>
-          <p className="text-[15px] font-strong text-white">Expenses group</p>
-          <Body dim>This crew has no expenses group yet. Make a group under Payments › Groups and add the crew to it.</Body>
+          <p className="text-[15px] font-strong text-white">{t("spaces.crew.expensesGroup")}</p>
+          <Body dim>{t("spaces.crew.noExpensesGroup")}</Body>
         </Card>
       )}
 
@@ -583,6 +587,7 @@ function EditableMember({
   othersBps: number;
   onChanged: (c: Crew) => void;
 }) {
+  const t = useT();
   const [editing, setEditing] = useState(false);
   const [pct, setPct] = useState(String(member.shareBps / 100));
   const [service, setService] = useState(member.service);
@@ -616,8 +621,8 @@ function EditableMember({
             <p className="text-[15px] font-extrabold tabular-nums text-white">{member.share}</p>
             {editing || asking ? null : (
               <>
-                <IconButton label={`Change ${whoText(member)}'s share`} icon="create-outline" onClick={() => setEditing(true)} />
-                <IconButton label={`Take ${whoText(member)} off the crew`} icon="close" onClick={() => setAsking(true)} />
+                <IconButton label={t("spaces.crew.changeShare", { who: whoText(member) })} icon="create-outline" onClick={() => setEditing(true)} />
+                <IconButton label={t("spaces.crew.takeOffLabel", { who: whoText(member) })} icon="close" onClick={() => setAsking(true)} />
               </>
             )}
           </div>
@@ -625,22 +630,22 @@ function EditableMember({
       />
       {editing ? (
         <div className="flex flex-col gap-2.5 rounded-[14px] border border-white/10 bg-white/[0.04] p-3">
-          <Field label="What they bring" htmlFor={`svc-${member.id}`}>
+          <Field label={t("spaces.crew.theyBring")} htmlFor={`svc-${member.id}`}>
             <input id={`svc-${member.id}`} className={inputCls} value={service} maxLength={CREW_LIMITS.SERVICE_MAX} onChange={(e) => setService(e.target.value)} />
           </Field>
           <Field
-            label="Their share (%)"
+            label={t("spaces.crew.theirShare")}
             htmlFor={`pct-${member.id}`}
-            hint={left !== null && left >= 0 ? `You keep ${pctText(left)}.` : undefined}
-            error={left !== null && left < 0 ? "That's more than 100% in total." : null}
+            hint={left !== null && left >= 0 ? t("spaces.crew.youKeep", { pct: pctText(left) }) : undefined}
+            error={left !== null && left < 0 ? t("spaces.crew.over100") : null}
           >
             <input id={`pct-${member.id}`} inputMode="decimal" className={inputCls} value={pct} onChange={(e) => setPct(e.target.value)} />
           </Field>
-          <p className={fine}>A new share asks everyone to say yes again before brands can buy.</p>
+          <p className={fine}>{t("spaces.crew.newShareNote")}</p>
           {notice ? <HoldNotice>{notice}</HoldNotice> : null}
           <div className="flex gap-2">
             <button type="button" className={`${ctaSecondary} flex-1`} disabled={busy} onClick={() => setEditing(false)}>
-              Cancel
+              {t("common.cancel")}
             </button>
             <button
               type="button"
@@ -655,7 +660,7 @@ function EditableMember({
                 )
               }
             >
-              {busy ? "Saving…" : "Save"}
+              {busy ? t("common.saving") : t("common.save")}
             </button>
           </div>
         </div>
@@ -663,18 +668,18 @@ function EditableMember({
       {asking ? (
         <div className="flex flex-col gap-2.5 rounded-[14px] border border-white/10 bg-white/[0.04] p-3">
           <p className="text-[15px] font-strong text-white">
-            {member.status === "invited" ? "Withdraw this invitation?" : `Take ${whoText(member)} off the crew?`}
+            {member.status === "invited" ? t("spaces.crew.withdrawAsk") : t("spaces.crew.takeOffAsk", { who: whoText(member) })}
           </p>
           <p className="text-[13.5px] leading-[19px] text-white/[0.62]">
-            Their share comes back to you, and everyone says yes to the new split. Sales already paid stay paid.
+            {t("spaces.crew.takeOffBody")}
           </p>
           {notice ? <HoldNotice>{notice}</HoldNotice> : null}
           <div className="flex gap-2">
             <button type="button" className={`${ctaSecondary} flex-1`} disabled={busy} onClick={() => setAsking(false)}>
-              Cancel
+              {t("common.cancel")}
             </button>
             <button type="button" className={`${ctaPrimary} flex-1`} disabled={busy} onClick={() => run(removeMember(crew.id, member.id))}>
-              {busy ? "Working…" : member.status === "invited" ? "Withdraw" : "Take off"}
+              {busy ? t("spaces.crew.working") : member.status === "invited" ? t("spaces.crew.withdraw") : t("spaces.crew.takeOff")}
             </button>
           </div>
         </div>
@@ -712,25 +717,26 @@ function ShareFields({
   pct: string;
   setPct: (v: string) => void;
 }) {
+  const t = useT();
   const bps = bpsFromPct(pct);
   const left = bps === null ? null : 10_000 - othersBps - bps;
   return (
     <>
-      <Field label="What they bring" hint="Brands see it next to their name." htmlFor={`${id}-svc`}>
+      <Field label={t("spaces.crew.theyBring")} hint={t("spaces.crew.theyBringHint")} htmlFor={`${id}-svc`}>
         <input
           id={`${id}-svc`}
           className={inputCls}
           value={service}
           maxLength={CREW_LIMITS.SERVICE_MAX}
           onChange={(e) => setService(e.target.value)}
-          placeholder="Cameras, interviews and vlogs…"
+          placeholder={t("spaces.crew.theyBringPlaceholder")}
         />
       </Field>
       <Field
-        label="Their share (%)"
+        label={t("spaces.crew.theirShare")}
         htmlFor={`${id}-pct`}
-        hint={left !== null && left >= 0 ? `You keep ${pctText(left)}.` : "Of what the crew receives from each sale."}
-        error={left !== null && left < 0 ? "That's more than 100% in total." : null}
+        hint={left !== null && left >= 0 ? t("spaces.crew.youKeep", { pct: pctText(left) }) : t("spaces.crew.shareHint")}
+        error={left !== null && left < 0 ? t("spaces.crew.over100") : null}
       >
         <input id={`${id}-pct`} inputMode="decimal" className={inputCls} value={pct} onChange={(e) => setPct(e.target.value)} placeholder="30" />
       </Field>
@@ -756,6 +762,7 @@ function AddCreatorForm({
   onCancel: () => void;
   onAdded: (c: Crew) => void;
 }) {
+  const t = useT();
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<HoldCreatorHit[]>([]);
   const [picked, setPicked] = useState<HoldCreatorHit | null>(null);
@@ -772,21 +779,21 @@ function AddCreatorForm({
       return;
     }
     let alive = true;
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       void searchCreators(term, 6)
         .then(({ creators }) => alive && setHits(creators.filter((c) => !taken.has(c.handle.toLowerCase()))))
         .catch(() => alive && setHits([]));
     }, 220);
     return () => {
       alive = false;
-      clearTimeout(t);
+      clearTimeout(timer);
     };
   }, [q, picked, taken]);
 
   const bps = shareOk(pct, othersBps);
   return (
     <div className={sheetCls}>
-      <p className={sheetTitle}>Add creator</p>
+      <p className={sheetTitle}>{t("spaces.crew.addCreator")}</p>
       {picked ? (
         <div className="flex items-center gap-3 rounded-[14px] border border-white/10 bg-white/[0.06] p-2.5">
           <HitAvatar hit={picked} />
@@ -794,10 +801,10 @@ function AddCreatorForm({
             <p className="truncate text-[15px] font-strong text-white">@{picked.handle}</p>
             {picked.name ? <p className={fine}>{picked.name}</p> : null}
           </div>
-          <IconButton label="Pick someone else" icon="close" onClick={() => (setPicked(null), setQ(""))} />
+          <IconButton label={t("spaces.crew.pickElse")} icon="close" onClick={() => (setPicked(null), setQ(""))} />
         </div>
       ) : (
-        <Field label="Who" hint="Their HOLD username or X handle." htmlFor="crew-find">
+        <Field label={t("spaces.crew.who")} hint={t("spaces.crew.whoHint")} htmlFor="crew-find">
           <input id="crew-find" className={inputCls} autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="@username" autoComplete="off" />
         </Field>
       )}
@@ -810,7 +817,7 @@ function AddCreatorForm({
                 <HitAvatar hit={h} />
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate text-[15px] font-strong text-white">@{h.handle}</span>
-                  <span className={fine}>{[h.name, h.username ? `@${h.username} on HOLD` : null].filter(Boolean).join(" · ") || "On HOLD"}</span>
+                  <span className={fine}>{[h.name, h.username ? t("spaces.crew.onHoldAs", { username: h.username }) : null].filter(Boolean).join(" · ") || t("spaces.inspire.onHold")}</span>
                 </span>
                 <Ion name="add-circle-outline" size={20} className="text-white/55" />
               </button>
@@ -819,7 +826,7 @@ function AddCreatorForm({
         </Card>
       ) : null}
       <ShareFields id="add" othersBps={othersBps} service={service} setService={setService} pct={pct} setPct={setPct} />
-      <p className={fine}>They&apos;re asked, not added: they see their part and say yes from their own account.</p>
+      <p className={fine}>{t("spaces.crew.askedNotAdded")}</p>
       {notice ? <HoldNotice>{notice}</HoldNotice> : null}
       <button
         type="button"
@@ -835,10 +842,10 @@ function AddCreatorForm({
             .finally(() => setBusy(false));
         }}
       >
-        {busy ? "Asking…" : picked ? `Ask @${picked.handle} to join` : "Ask them to join"}
+        {busy ? t("spaces.crew.asking") : picked ? t("spaces.crew.askToJoin", { handle: picked.handle }) : t("spaces.crew.askThem")}
       </button>
       <button type="button" className={ctaSecondary} disabled={busy} onClick={onCancel}>
-        Cancel
+        {t("common.cancel")}
       </button>
     </div>
   );
@@ -868,6 +875,7 @@ function LinkForm({
   onCancel: () => void;
   onMade: (c: Crew, url: string, code: string) => void;
 }) {
+  const t = useT();
   const [service, setService] = useState("");
   const [pct, setPct] = useState("");
   const [busy, setBusy] = useState(false);
@@ -875,7 +883,7 @@ function LinkForm({
   const bps = shareOk(pct, othersBps);
   return (
     <div className={sheetCls}>
-      <p className={sheetTitle}>Invite someone not on HOLD</p>
+      <p className={sheetTitle}>{t("spaces.crew.inviteNotOnHold")}</p>
       <ShareFields id="link" othersBps={othersBps} service={service} setService={setService} pct={pct} setPct={setPct} />
       {notice ? <HoldNotice>{notice}</HoldNotice> : null}
       <button
@@ -892,10 +900,10 @@ function LinkForm({
             .finally(() => setBusy(false));
         }}
       >
-        {busy ? "Creating…" : "Get their invite link"}
+        {busy ? t("spaces.crew.creating") : t("spaces.crew.getLink")}
       </button>
       <button type="button" className={ctaSecondary} disabled={busy} onClick={onCancel}>
-        Cancel
+        {t("common.cancel")}
       </button>
     </div>
   );
@@ -903,18 +911,18 @@ function LinkForm({
 
 /** The one time a link exists anywhere a person can read it. */
 function LinkCard({ url, code, onClose }: { url: string; code: string; onClose: () => void }) {
+  const t = useT();
   const [copied, setCopied] = useState(false);
   useEffect(() => {
     if (!copied) return;
-    const t = setTimeout(() => setCopied(false), 1600);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setCopied(false), 1600);
+    return () => clearTimeout(timer);
   }, [copied]);
   return (
     <div className={sheetCls}>
-      <p className={sheetTitle}>Send them this link</p>
+      <p className={sheetTitle}>{t("spaces.crew.sendLink")}</p>
       <HoldNotice icon="eye-off-outline">
-        This link is shown once. We keep only a scrambled copy of its code, so we can&apos;t show it to you again. If it gets lost, invite them
-        again.
+        {t("spaces.crew.shownOnce")}
       </HoldNotice>
       <button
         type="button"
@@ -924,14 +932,14 @@ function LinkCard({ url, code, onClose }: { url: string; code: string; onClose: 
         <span className="line-clamp-2 flex-1 break-all text-[13px] font-strong text-white">{url.replace(/^https?:\/\//, "")}</span>
         <span className="flex h-9 shrink-0 items-center gap-1.5 rounded-[10px] bg-white/10 px-3 text-[13px] font-strong text-white">
           <Ion name={copied ? "checkmark" : "copy-outline"} size={14} />
-          {copied ? "Copied" : "Copy"}
+          {copied ? t("common.copied") : t("common.copy")}
         </span>
       </button>
       <p className={fine}>
-        It&apos;s your own HOLD invite link, open for {CREW_LIMITS.INVITE_DAYS} days. They sign up, see their part and say yes. Code: {code.slice(0, 6)}…
+        {t("spaces.crew.linkNote", { days: CREW_LIMITS.INVITE_DAYS, code: code.slice(0, 6) })}
       </p>
       <button type="button" className={ctaSecondary} onClick={onClose}>
-        Done
+        {t("common.done")}
       </button>
     </div>
   );
@@ -939,6 +947,7 @@ function LinkCard({ url, code, onClose }: { url: string; code: string; onClose: 
 
 /** What the crew's sales sent, and this person's part. */
 function Sales({ crewId }: { crewId: string }) {
+  const t = useT();
   const [data, setData] = useState<{ sales: CrewSale[]; yoursUsdc: string } | null>(null);
   useEffect(() => {
     let alive = true;
@@ -952,8 +961,8 @@ function Sales({ crewId }: { crewId: string }) {
   if (!data || data.sales.length === 0) return null;
   return (
     <>
-      <SectionLabel right={<span className="text-[12px] font-strong tabular-nums text-white/55">{`$${data.yoursUsdc} to you`}</span>}>
-        Sales
+      <SectionLabel right={<span className="text-[12px] font-strong tabular-nums text-white/55">{t("spaces.crew.toYou", { amount: `$${data.yoursUsdc}` })}</span>}>
+        {t("spaces.sales.crumb")}
       </SectionLabel>
       <Card>
         {data.sales.map((s, i) => (
@@ -962,7 +971,9 @@ function Sales({ crewId }: { crewId: string }) {
             <div className="flex items-center justify-between gap-3">
               <div className="flex min-w-0 flex-col gap-0.5">
                 <p className="truncate text-[14px] font-strong text-white">{s.title}</p>
-                <p className={fine}>{`$${s.totalUsdc} to the crew${s.paidAt ? ` · ${new Date(s.paidAt).toLocaleDateString()}` : ""}`}</p>
+                <p className={fine}>{s.paidAt
+                    ? t("spaces.crew.toCrewOn", { amount: `$${s.totalUsdc}`, date: fmtDate(s.paidAt, { year: "numeric", month: "numeric", day: "numeric" }) })
+                    : t("spaces.crew.toCrew", { amount: `$${s.totalUsdc}` })}</p>
               </div>
               <p className="shrink-0 text-[15px] font-extrabold tabular-nums text-white">${s.yoursUsdc}</p>
             </div>
@@ -974,26 +985,27 @@ function Sales({ crewId }: { crewId: string }) {
 }
 
 function Leave({ crew, onLeft }: { crew: Crew; onLeft: () => void }) {
+  const t = useT();
   const [asking, setAsking] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   if (!asking) {
     return (
       <button type="button" className={ctaSecondary} onClick={() => setAsking(true)}>
-        Leave the crew
+        {t("spaces.crew.leaveCrew")}
       </button>
     );
   }
   return (
     <div className={sheetCls}>
-      <p className="text-[15px] font-strong text-white">Leave {crew.name}?</p>
+      <p className="text-[15px] font-strong text-white">{t("spaces.crew.leaveAsk", { name: crew.name })}</p>
       <p className="text-[13.5px] leading-[19px] text-white/[0.62]">
-        Your share goes back to the lead. Sales already paid stay yours, and you stay in the expenses group until you&apos;ve settled up.
+        {t("spaces.crew.leaveBody")}
       </p>
       {notice ? <HoldNotice>{notice}</HoldNotice> : null}
       <div className="flex gap-2">
         <button type="button" className={`${ctaSecondary} flex-1`} disabled={busy} onClick={() => setAsking(false)}>
-          Stay
+          {t("spaces.crew.stay")}
         </button>
         <button
           type="button"
@@ -1007,7 +1019,7 @@ function Leave({ crew, onLeft }: { crew: Crew; onLeft: () => void }) {
               .finally(() => setBusy(false));
           }}
         >
-          {busy ? "Leaving…" : "Leave"}
+          {busy ? t("spaces.crew.leaving") : t("spaces.crew.leave")}
         </button>
       </div>
     </div>

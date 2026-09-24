@@ -14,6 +14,8 @@
 
 "use client";
 
+import { t, type MessageKey } from "@/lib/app/i18n";
+
 import { call } from "./api";
 
 export type { InspiredByInput } from "./inspired-by";
@@ -74,21 +76,31 @@ export interface InspireEventCampaigns {
 /** The card for campaigns tied to no event. */
 export const ANYTIME = "anytime";
 
-export const SURFACE_LABEL: Record<SurfaceKind, string> = {
-  object: "Objects",
-  clothing: "Clothing",
-  body: "Body",
-  content: "Content",
-  vehicle: "Vehicles",
+/** The message key of each surface's name: `surfaceLabel` reads it in the current language. */
+export const SURFACE_LABEL: Record<SurfaceKind, MessageKey> = {
+  object: "spaces.inspire.surface.object",
+  clothing: "spaces.inspire.surface.clothing",
+  body: "spaces.inspire.surface.body",
+  content: "spaces.inspire.surface.content",
+  vehicle: "spaces.inspire.surface.vehicle",
 };
 
-export const PRICING_LABEL: Record<PricingModel, string> = {
-  auction: "Auction",
-  fixed: "Fixed price",
-  tiered: "Tiers",
-  offers: "Offers",
-  not_stated: "Price not stated",
+export const PRICING_LABEL: Record<PricingModel, MessageKey> = {
+  auction: "spaces.inspire.pricing.auction",
+  fixed: "spaces.inspire.pricing.fixed",
+  tiered: "spaces.inspire.pricing.tiered",
+  offers: "spaces.inspire.pricing.offers",
+  not_stated: "spaces.inspire.pricing.notStated",
 };
+
+export function surfaceLabel(kind: SurfaceKind): string {
+  return t(SURFACE_LABEL[kind]);
+}
+
+export function pricingLabel(model: PricingModel): string {
+  const k = PRICING_LABEL[model];
+  return k ? t(k) : model;
+}
 
 export function getInspireEvents(): Promise<{ events: InspireEvent[]; credit: InspireCredit }> {
   return call("inspire/events");

@@ -34,6 +34,9 @@ import { SITE_URL } from "@/lib/ad-space/config";
 import { eventDates } from "@/lib/ad-space/format";
 import type { Brand, HookBlock, Insights, InsightsEvent, Median, SellRow } from "@/lib/creator/insights";
 import { useInsights } from "@/lib/app/spaces-data";
+import { currentIntl, listText, t as tr } from "@/lib/app/i18n";
+import { fmtCompact, fmtNumber, fmtPercent } from "@/lib/app/i18n/format";
+import { useT } from "@/lib/app/i18n/react";
 
 import { useHref } from "../base";
 import { CopyButton } from "../front/kit";
@@ -76,21 +79,28 @@ export function isInsightsView(v: string | null | undefined): v is InsightsView 
 
 /* ── Words and numbers ────────────────────────────────────────────── */
 
-const pctText = (n: number) => `${Number.isInteger(n) ? n : n.toFixed(1)}%`;
-const daysText = (n: number) => `${n} ${n === 1 ? "day" : "days"}`;
-const perFollower = (n: number) => (n >= 0.01 ? `$${n.toFixed(2)}` : `$${n.toFixed(4)}`);
-const compact = (n: number) => n.toLocaleString("en-US", { notation: "compact", maximumFractionDigits: 1 });
-const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+const pctText = (n: number) => fmtPercent(n / 100, Number.isInteger(n) ? 0 : 1);
+const daysText = (n: number) => tr("spaces.days.count", { count: n });
+/** Raised per follower: USDC, in dollars as the rest of Spaces shows it. */
+const perFollower = (n: number) => {
+  const digits = n >= 0.01 ? 2 : 4;
+  return `$${fmtNumber(n, { minimumFractionDigits: digits, maximumFractionDigits: digits })}`;
+};
+const compact = (n: number) => fmtCompact(n);
 
-/** 1st, 2nd, 3rd, 4th, 11th, 21st. */
+/** 1st, 2nd, 3rd, 4th, 11th, 21st: the language's own ordinal. */
 export function ordinal(n: number): string {
-  const tens = n % 100;
-  const suffix = tens >= 11 && tens <= 13 ? "th" : ({ 1: "st", 2: "nd", 3: "rd" } as Record<number, string>)[n % 10] ?? "th";
-  return `${n}${suffix}`;
+  let rule = "other";
+  try {
+    rule = new Intl.PluralRules(currentIntl(), { type: "ordinal" }).select(n);
+  } catch {
+    rule = new Intl.PluralRules("en", { type: "ordinal" }).select(n);
+  }
+  return tr("spaces.insights.ordinal", { rule, n: fmtNumber(n) });
 }
 
 function sampleText(s: { creators: number; listings: number }): string {
-  return `${plural(s.creators, "creator")} · ${plural(s.listings, "listing")}`;
+  return tr("spaces.insights.sample", { creators: s.creators, listings: s.listings });
 }
 
 function where(event: InsightsEvent | null): string {
@@ -99,13 +109,14 @@ function where(event: InsightsEvent | null): string {
 
 /** The event's own line: city and dates. */
 function eventLine(event: InsightsEvent | null): string {
-  if (!event) return "Every event, all time";
+  if (!event) return tr("spaces.insights.everyEvent");
   return [event.city, eventDates(event.startsOn, event.endsOn)].filter(Boolean).join(" · ");
 }
 
 /* ── The screen ───────────────────────────────────────────────────── */
 
 export function InsightsScreen({ event, view, brand }: { event: string | null; view: string | null; brand: string | null }) {
+  useT();
   const read = useInsights(event);
   const href = useHref();
   const base = href("/insights");
@@ -135,15 +146,16 @@ export function InsightsScreen({ event, view, brand }: { event: string | null; v
 /* ── The hub ──────────────────────────────────────────────────────── */
 
 function EventSwitch({ data }: { data: Insights }) {
+  const t = useT();
   const router = useRouter();
   const href = useHref();
   const value = data.event?.slug ?? "all";
-  const options = [...data.events.map((e) => ({ value: e.slug, label: e.name })), { value: "all", label: "All of Spaces" }];
+  const options = [...data.events.map((e) => ({ value: e.slug, label: e.name })), { value: "all", label: t("spaces.insights.allOfSpaces") }];
   // An event the creator has not listed at (a link from somewhere) still shows as chosen.
   if (data.event && !data.events.some((e) => e.slug === data.event!.slug)) options.unshift({ value: data.event.slug, label: data.event.name });
   return (
     <FilterPills
-      label="Event"
+      label={t("spaces.inspire.fact.event")}
       options={options}
       value={value}
       onChange={(v) => router.push(`${href("/insights")}?event=${encodeURIComponent(v)}`, { scroll: false })}
@@ -156,11 +168,12 @@ function best<T extends { pct: number | null }>(rows: readonly T[]): T | null {
 }
 
 function Hub({ data, to }: { data: Insights; to: (v: InsightsView | null, extra?: string) => string }) {
+  const t = useT();
   const { you, whatSells, pricing, timing, brands } = data;
   const topSurface = best(whatSells.surfaces.map((s) => ({ ...s, pct: s.filledPct })));
   const topBand = best(pricing.bands);
   const brandList = brands.event ?? brands.allTime;
-  const needMore = `Not enough sales yet at ${where(data.event)}`;
+  const needMore = t("spaces.insights.notEnoughAt", { where: where(data.event) });
   const hook = hookHeadline(data);
 
   return (
@@ -169,60 +182,60 @@ function Hub({ data, to }: { data: Insights; to: (v: InsightsView | null, extra?
         <div className="min-w-0">
           <h2 className="truncate text-[18px] font-extrabold tracking-[-0.3px] text-white">{where(data.event)}</h2>
           <p className="mt-0.5 truncate text-[12px] leading-4 text-white/55">
-            {eventLine(data.event)} · {sampleText(you.sample)} on HOLD Spaces
+            {t("spaces.insights.hubLine", { line: eventLine(data.event), sample: sampleText(you.sample) })}
           </p>
         </div>
         <EventSwitch data={data} />
       </div>
       <CardGrid>
-        <HubCard href={to("hook")} icon="bulb-outline" title="Your hook" line={hook.line} value={hook.value} note={hook.note} />
+        <HubCard href={to("hook")} icon="bulb-outline" title={t("spaces.insights.hook.title")} line={hook.line} value={hook.value} note={hook.note} />
         <HubCard
           href={to("you")}
           icon="person-outline"
-          title="Your numbers"
-          line={you.listings ? `${you.placements.filled} of ${you.placements.total} spots filled` : "No listing here yet"}
+          title={t("spaces.insights.you.title")}
+          line={you.listings ? t("spaces.insights.spotsFilled", { filled: you.placements.filled, total: you.placements.total }) : t("spaces.insights.noListingHere")}
           value={dollars(you.raisedCents)}
-          note="raised"
+          note={t("spaces.insights.raised")}
         />
         <HubCard
           href={to("sells")}
           icon="stats-chart-outline"
-          title="What sells"
-          line={topSurface ? `${topSurface.label} fill best` : needMore}
+          title={t("spaces.insights.sells.title")}
+          line={topSurface ? t("spaces.insights.fillBest", { label: topSurface.label }) : needMore}
           value={topSurface ? pctText(topSurface.pct!) : "—"}
-          note={topSurface ? "of spots filled" : sampleText(whatSells.sample)}
+          note={topSurface ? t("spaces.insights.ofSpotsFilled") : sampleText(whatSells.sample)}
         />
         <HubCard
           href={to("pricing")}
           icon="pricetag-outline"
-          title="Pricing"
-          line={topBand ? `${topBand.label} floors sell most often` : needMore}
+          title={t("spaces.insights.pricing.title")}
+          line={topBand ? t("spaces.insights.floorsSellMost", { label: topBand.label }) : needMore}
           value={topBand ? pctText(topBand.pct!) : "—"}
-          note={topBand ? "sold at least one" : sampleText(pricing.sample)}
+          note={topBand ? t("spaces.insights.soldAtLeastOne") : sampleText(pricing.sample)}
         />
         <HubCard
           href={to("timing")}
           icon="calendar-outline"
-          title="Timing"
-          line={timing.medianDaysToFirstSale !== null ? "to a first sale, median" : needMore}
+          title={t("spaces.insights.timing.title")}
+          line={timing.medianDaysToFirstSale !== null ? t("spaces.insights.toFirstSaleMedian") : needMore}
           value={timing.medianDaysToFirstSale !== null ? daysText(timing.medianDaysToFirstSale) : "—"}
-          note={plural(timing.medianDaysToFirstSaleSample.creators, "creator")}
+          note={t("spaces.n.creators", { count: timing.medianDaysToFirstSaleSample.creators })}
         />
         <HubCard
           href={to("brands")}
           icon="business-outline"
-          title="Brands buying"
-          line={brandList.brands.length ? brandList.brands.slice(0, 3).map((b) => b.name).join(", ") : "No named brand yet"}
+          title={t("spaces.insights.brands.title")}
+          line={brandList.brands.length ? brandList.brands.slice(0, 3).map((b) => b.name).join(", ") : t("spaces.insights.noNamedBrand")}
           value={String(brandList.brands.length)}
-          note={brands.event ? "here" : "all time"}
+          note={brands.event ? t("spaces.insights.here") : t("spaces.insights.allTimeLower")}
         />
         <HubCard
           href={to("pitch")}
           icon="megaphone-outline"
-          title="Pitch a brand"
-          line="Lead with your reach and content"
-          value="Write"
-          note="copy and send"
+          title={t("spaces.insights.pitch.title")}
+          line={t("spaces.insights.pitch.hubLine")}
+          value={t("spaces.insights.pitch.write")}
+          note={t("spaces.insights.pitch.copyAndSend")}
         />
       </CardGrid>
     </div>
@@ -281,9 +294,10 @@ function Screen({
   aside?: ReactNode;
   children: ReactNode;
 }) {
+  const t = useT();
   return (
     <div className="flex flex-col gap-3.5">
-      <DrillBar back={back} crumb={`Insights · ${where(data.event)}`} title={title} />
+      <DrillBar back={back} crumb={t("spaces.insights.crumb", { where: where(data.event) })} title={title} />
       <div className="grid grid-cols-[minmax(0,1fr)] gap-3.5 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)] lg:items-start">
         <Card>
           <p className="text-[34px] font-extrabold leading-none tracking-[-0.6px] tabular-nums text-white">{big}</p>
@@ -298,11 +312,12 @@ function Screen({
 
 /** What to do while the market is too thin to show. */
 function TooFew({ data, sample, watch }: { data: Insights; sample: { creators: number; listings: number }; watch: string }) {
+  const t = useT();
   return (
     <div className="flex flex-col gap-1.5 py-2">
-      <p className="text-[14.5px] text-white">Not enough sales yet at {where(data.event)}.</p>
+      <p className="text-[14.5px] text-white">{t("spaces.insights.notEnoughAtDot", { where: where(data.event) })}</p>
       <p className="text-[12px] leading-4 text-white/55">
-        {sampleText(sample)} so far; a figure shows from {data.minSample} creators. {watch}
+        {t("spaces.insights.tooFew", { sample: sampleText(sample), min: data.minSample })} {watch}
       </p>
     </div>
   );
@@ -327,11 +342,12 @@ function BarRow({
   total?: number;
   right?: ReactNode;
 }) {
+  const t = useT();
   return (
     <li className={`flex min-w-0 flex-col gap-1.5 border-t border-white/[0.08] py-2.5 ${grid ? "" : "first:border-t-0 first:pt-0"}`}>
       <div className="flex min-w-0 items-baseline justify-between gap-3">
         <p className="truncate text-[14.5px] text-white">{label}</p>
-        <p className="shrink-0 text-[14px] font-strong tabular-nums text-white">{right ?? (pct !== null ? pctText(pct) : <span className="text-[12px] text-white/55">not enough yet</span>)}</p>
+        <p className="shrink-0 text-[14px] font-strong tabular-nums text-white">{right ?? (pct !== null ? pctText(pct) : <span className="text-[12px] text-white/55">{t("spaces.insights.notEnoughYet")}</span>)}</p>
       </div>
       {pct !== null ? <ProgressBar value={pct} max={100} /> : filled !== undefined && total ? <div className="h-1.5 w-full rounded-[3px] bg-white/[0.05]" /> : null}
       <p className="truncate text-[12px] leading-4 text-white/55">{sub}</p>
@@ -356,9 +372,9 @@ function firstOfMine(hook: HookBlock | undefined) {
 }
 
 function earlyText(days: number): string {
-  if (days > 0) return `${daysText(days)} before it starts`;
-  if (days === 0) return "on the first day";
-  return "after it started";
+  if (days > 0) return tr("spaces.insights.early.before", { days: daysText(days) });
+  if (days === 0) return tr("spaces.insights.early.firstDay");
+  return tr("spaces.insights.early.after");
 }
 
 function hookHeadline(data: Insights): { line: string; value: string; note: string } {
@@ -367,20 +383,28 @@ function hookHeadline(data: Insights): { line: string; value: string; note: stri
   if (mine && mine.rank !== null) {
     const d = mine.daysBeforeEvent;
     return {
-      line: `${mine.product}${d === null ? "" : d > 0 ? ` · ${daysText(d)} early` : d === 0 ? " · on day one" : " · after it started"}`,
+      line:
+        d === null
+          ? mine.product
+          : d > 0
+            ? tr("spaces.insights.hook.lineEarly", { product: mine.product, days: daysText(d) })
+            : d === 0
+              ? tr("spaces.insights.hook.lineDayOne", { product: mine.product })
+              : tr("spaces.insights.hook.lineAfter", { product: mine.product }),
       value: ordinal(mine.rank),
-      note: `of ${plural(mine.sameProduct, "listing")} on it`,
+      note: tr("spaces.insights.hook.ofListings", { count: mine.sameProduct }),
     };
   }
   const open = hook?.leastCrowded ?? [];
   return {
-    line: open.length ? `Fewest here: ${open.slice(0, 2).map((p) => p.label).join(", ")}` : "The product is why people look",
-    value: mine ? "—" : "Pick",
-    note: mine ? "pick an event" : "one that stands out",
+    line: open.length ? tr("spaces.insights.hook.fewestHere", { labels: open.slice(0, 2).map((p) => p.label).join(", ") }) : tr("spaces.insights.hook.whyLook"),
+    value: mine ? "—" : tr("spaces.insights.hook.pick"),
+    note: mine ? tr("spaces.insights.hook.pickEvent") : tr("spaces.insights.hook.standsOut"),
   };
 }
 
 function HookScreen({ data, back }: { data: Insights; back: string }) {
+  const t = useT();
   const href = useHref();
   const hook = data.hook;
   const mine = firstOfMine(hook);
@@ -391,54 +415,68 @@ function HookScreen({ data, back }: { data: Insights; back: string }) {
   const earlyData = !early
     ? null
     : early.sold.medianDays !== null
-      ? `Listings here that sold went up a median ${earlyText(early.sold.medianDays)} (${sampleText(early.sold.sample)}).${
-          early.unsold.medianDays !== null ? ` Those that did not: ${earlyText(early.unsold.medianDays)}.` : ""
-        }`
-      : `Not enough sales yet to compare: ${sampleText(early.sold.sample)} sold so far; a figure shows from ${data.minSample} creators.`;
+      ? early.unsold.medianDays !== null
+        ? t("spaces.insights.hook.earlyDataBoth", {
+            sold: earlyText(early.sold.medianDays),
+            sample: sampleText(early.sold.sample),
+            unsold: earlyText(early.unsold.medianDays),
+          })
+        : t("spaces.insights.hook.earlyData", { sold: earlyText(early.sold.medianDays), sample: sampleText(early.sold.sample) })
+      : t("spaces.insights.hook.earlyTooFew", { sample: sampleText(early.sold.sample), min: data.minSample });
 
   const deals = hook?.contentDeals ?? null;
   const dealData = !deals
     ? null
     : deals.pct !== null
-      ? `${pctText(deals.pct)} of the brands that took a spot also bought content from the same creator (${plural(deals.sample.sponsors, "brand")}, ${plural(deals.sample.creators, "creator")}).`
-      : `Not enough yet to show how often: ${plural(deals.sample.creators, "creator")} with a spot sold so far; a figure shows from ${data.minSample}.`;
+      ? t("spaces.insights.hook.dealData", { pct: pctText(deals.pct), brands: deals.sample.sponsors, creators: deals.sample.creators })
+      : t("spaces.insights.hook.dealTooFew", { creators: deals.sample.creators, min: data.minSample });
 
   const rows: { key: string; title: string; body: string; data: string | null; action?: ReactNode }[] = [
     {
       key: "early",
-      title: "Be early",
+      title: t("spaces.insights.hook.beEarly"),
       body: mine
         ? mine.rank !== null
-          ? `Your ${mine.product.toLowerCase()} went up ${mine.daysBeforeEvent !== null ? earlyText(mine.daysBeforeEvent) : ""}, the ${ordinal(mine.rank)} of ${mine.sameProduct} at ${where(event)}. The first ones land on a timeline that is not full yet.`
-          : "Pick an event to see how early you went up, and in what order on your product."
-        : "Go up before the timeline fills: the first listings on a product get seen before the rest.",
+          ? t("spaces.insights.hook.beEarlyMine", {
+              product: mine.product.toLowerCase(),
+              when: mine.daysBeforeEvent !== null ? earlyText(mine.daysBeforeEvent) : "",
+              rank: ordinal(mine.rank),
+              of: mine.sameProduct,
+              where: where(event),
+            })
+          : t("spaces.insights.hook.beEarlyPick")
+        : t("spaces.insights.hook.beEarlyBody"),
       data: earlyData,
     },
     {
       key: "unusual",
-      title: "Be out of the ordinary",
+      title: t("spaces.insights.hook.unusual"),
       body: hook?.leastCrowded.length
-        ? `Fewest listings ${event ? `at ${event.name}` : "on HOLD Spaces"}: ${hook.leastCrowded.map((p) => `${p.label} (${p.listings})`).join(", ")}. Something people do not expect to see is what they stop for.`
-        : "Something people do not expect to see is what they stop for.",
+        ? t("spaces.insights.hook.fewestListings", {
+            at: event ? "event" : "spaces",
+            event: event?.name,
+            list: hook.leastCrowded.map((p) => `${p.label} (${p.listings})`).join(", "),
+          })
+        : t("spaces.insights.hook.stopFor"),
       data: hook ? sampleText(hook.sample) : null,
       action: hook?.leastCrowded[0] ? (
         <Link href={href(`/listings/new?template=${encodeURIComponent(hook.leastCrowded[0].key)}`)} className={chipLink}>
-          List a {hook.leastCrowded[0].label.toLowerCase()}
+          {t("spaces.insights.hook.listA", { product: hook.leastCrowded[0].label.toLowerCase() })}
         </Link>
       ) : null,
     },
     {
       key: "content",
-      title: "A spot is the start of a content deal",
-      body: "The product gets their attention. What they pay for is your reach and the content you make, so when a brand takes a spot, offer them content for their own channels.",
+      title: t("spaces.insights.hook.contentDeal"),
+      body: t("spaces.insights.hook.contentDealBody"),
       data: dealData,
       action: production ? (
         <Link href={href("/sales")} className={chipLink}>
-          Your sales
+          {t("spaces.insights.hook.yourSales")}
         </Link>
       ) : (
         <Link href={href(`/listings/new?template=${PRODUCTION_TEMPLATE}`)} className={chipLink}>
-          Create a Content production listing
+          {t("spaces.insights.hook.createProduction")}
         </Link>
       ),
     },
@@ -449,21 +487,18 @@ function HookScreen({ data, back }: { data: Insights; back: string }) {
     <Screen
       back={back}
       data={data}
-      title="Your hook"
+      title={t("spaces.insights.hook.title")}
       big={mine && mine.rank !== null ? ordinal(mine.rank) : head.value}
       bigNote={
         mine && mine.rank !== null
-          ? `${mine.product} of ${mine.sameProduct} at ${where(event)}${mine.daysBeforeEvent !== null ? `, ${earlyText(mine.daysBeforeEvent)}` : ""}`
+          ? mine.daysBeforeEvent !== null
+            ? t("spaces.insights.hook.bigNoteWhen", { product: mine.product, of: mine.sameProduct, where: where(event), when: earlyText(mine.daysBeforeEvent) })
+            : t("spaces.insights.hook.bigNote", { product: mine.product, of: mine.sameProduct, where: where(event) })
           : head.line
       }
-      aside={
-        <>
-          The product is the hook: it is why people look. What a brand pays for is your reach and the content you make.
-          {!hook ? " Your order and the least crowded products show once this screen can read them." : ""}
-        </>
-      }
+      aside={hook ? t("spaces.insights.hook.aside") : t("spaces.insights.hook.asideNoHook")}
     >
-      <Panel title="What worked" meta={where(event)}>
+      <Panel title={t("spaces.insights.hook.whatWorked")} meta={where(event)}>
         <ul className="flex flex-col">
           {rows.map((r) => (
             <li key={r.key} className="flex min-w-0 flex-col gap-1.5 border-t border-white/[0.08] py-3 first:border-t-0 first:pt-0">
@@ -483,10 +518,11 @@ function HookScreen({ data, back }: { data: Insights; back: string }) {
 /* ── Your numbers ─────────────────────────────────────────────────── */
 
 function medianText(m: Median, fmt: (n: number) => string): ReactNode {
-  return m.value !== null ? fmt(m.value) : <span className="text-[12px] text-white/55">{plural(m.creators, "creator")}, not enough</span>;
+  return m.value !== null ? fmt(m.value) : <span className="text-[12px] text-white/55">{tr("spaces.insights.you.notEnough", { count: m.creators })}</span>;
 }
 
 function YouScreen({ data, back }: { data: Insights; back: string }) {
+  const t = useT();
   const href = useHref();
   const y = data.you;
   const m = y.median;
@@ -495,17 +531,17 @@ function YouScreen({ data, back }: { data: Insights; back: string }) {
       <Screen
         back={back}
         data={data}
-        title="Your numbers"
+        title={t("spaces.insights.you.title")}
         big="$0"
-        bigNote={`You have no published listing at ${where(data.event)}.`}
-        aside="Your raised, spots filled and days to a first sale appear here once a listing is live, next to the median creator at the same event."
+        bigNote={t("spaces.insights.you.noListing", { where: where(data.event) })}
+        aside={t("spaces.insights.you.noListingAside")}
       >
         <Panel>
           <EmptyState
-            title="Publish a listing to see how you compare."
+            title={t("spaces.insights.you.publishToCompare")}
             action={
               <Link href={href("/listings/new")} className={`${ctaPrimary} !w-auto`}>
-                Create a space
+                {t("spaces.overview.createSpace")}
               </Link>
             }
           />
@@ -514,43 +550,43 @@ function YouScreen({ data, back }: { data: Insights; back: string }) {
     );
   }
   const rows: { label: string; you: ReactNode; median: ReactNode }[] = [
-    { label: "Raised (paid)", you: dollars(y.raisedCents), median: medianText(m.raisedCents, dollars) },
+    { label: t("spaces.insights.you.raisedPaid"), you: dollars(y.raisedCents), median: medianText(m.raisedCents, dollars) },
     {
-      label: "Spots filled",
-      you: `${y.placements.filled} of ${y.placements.total}${y.placements.pct !== null ? ` · ${pctText(y.placements.pct)}` : ""}`,
+      label: t("spaces.insights.you.spotsFilled"),
+      you: `${t("spaces.insights.xOfY", { x: y.placements.filled, y: y.placements.total })}${y.placements.pct !== null ? ` · ${pctText(y.placements.pct)}` : ""}`,
       median: medianText(m.filledPct, pctText),
     },
-    { label: "Days live", you: y.daysLive !== null ? daysText(y.daysLive) : "—", median: medianText(m.daysLive, daysText) },
+    { label: t("spaces.insights.you.daysLive"), you: y.daysLive !== null ? daysText(y.daysLive) : "—", median: medianText(m.daysLive, daysText) },
     {
-      label: "Days to first sale",
-      you: y.daysToFirstSale !== null ? daysText(y.daysToFirstSale) : "No sale yet",
+      label: t("spaces.insights.you.daysToFirstSale"),
+      you: y.daysToFirstSale !== null ? daysText(y.daysToFirstSale) : t("spaces.insights.you.noSaleYet"),
       median: medianText(m.daysToFirstSale, daysText),
     },
     {
-      label: "Raised per X follower",
-      you: y.usdPerFollower !== null ? perFollower(y.usdPerFollower) : y.followers === null ? "No follower count" : "—",
+      label: t("spaces.insights.you.perFollower"),
+      you: y.usdPerFollower !== null ? perFollower(y.usdPerFollower) : y.followers === null ? t("spaces.insights.you.noFollowerCount") : "—",
       median: medianText(m.usdPerFollower, perFollower),
     },
-    { label: "Your floor price", you: y.floorCents !== null ? dollars(y.floorCents) : "—", median: medianText(m.floorCents, dollars) },
+    { label: t("spaces.insights.you.floor"), you: y.floorCents !== null ? dollars(y.floorCents) : "—", median: medianText(m.floorCents, dollars) },
   ];
   return (
     <Screen
       back={back}
       data={data}
-      title="Your numbers"
+      title={t("spaces.insights.you.title")}
       big={dollars(y.raisedCents)}
-      bigNote={`raised at ${where(data.event)}, from paid orders only`}
+      bigNote={t("spaces.insights.you.raisedAt", { where: where(data.event) })}
       aside={
         m.raisedCents.value === null
-          ? `The median shows from ${data.minSample} creators at the same event.`
-          : `Medians are the middle creator of ${sampleText(y.sample)}, rounded; nobody's exact receipt is shown.`
+          ? t("spaces.insights.you.medianFrom", { min: data.minSample })
+          : t("spaces.insights.you.mediansAre", { sample: sampleText(y.sample) })
       }
     >
-      <Panel title="You and the median creator" meta={where(data.event)}>
+      <Panel title={t("spaces.insights.you.panel")} meta={where(data.event)}>
         <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)] gap-x-3 text-[12px] leading-4 text-white/55">
           <span />
-          <span>You</span>
-          <span>Median</span>
+          <span>{t("common.you")}</span>
+          <span>{t("spaces.insights.you.median")}</span>
         </div>
         <ul className="mt-2 flex flex-col">
           {rows.map((r) => (
@@ -572,11 +608,13 @@ function YouScreen({ data, back }: { data: Insights; back: string }) {
 /* ── What sells ───────────────────────────────────────────────────── */
 
 function sellSub(r: SellRow): string {
-  const money = r.moneyShare !== null ? ` · ${pctText(r.moneyShare)} of the money` : "";
-  return `${plural(r.listings, "listing")} · ${r.filled} of ${r.placements} spots${money}`;
+  const parts = [tr("spaces.n.listings", { count: r.listings }), tr("spaces.insights.sells.spotsOf", { filled: r.filled, total: r.placements })];
+  if (r.moneyShare !== null) parts.push(tr("spaces.insights.sells.ofMoney", { pct: pctText(r.moneyShare) }));
+  return parts.join(" · ");
 }
 
 function SellsScreen({ data, back }: { data: Insights; back: string }) {
+  const t = useT();
   const [by, setBy] = useState<"surface" | "product">("surface");
   const w = data.whatSells;
   const rows = by === "surface" ? w.surfaces : w.products;
@@ -587,18 +625,32 @@ function SellsScreen({ data, back }: { data: Insights; back: string }) {
     <Screen
       back={back}
       data={data}
-      title="What sells"
+      title={t("spaces.insights.sells.title")}
       big={top ? pctText(top.pct!) : "—"}
-      bigNote={top ? `of spots filled on ${top.label.toLowerCase()}, the best surface here` : `Not enough sales yet at ${where(data.event)}`}
+      bigNote={top ? t("spaces.insights.sells.bigNote", { surface: top.label.toLowerCase() }) : t("spaces.insights.notEnoughAt", { where: where(data.event) })}
     >
-      <Panel title="Spots filled" meta={sampleText(w.sample)} action={<Segmented label="Group by" value={by} onChange={setBy} options={[{ value: "surface", label: "Surface" }, { value: "product", label: "Product" }]} />}>
+      <Panel
+        title={t("spaces.insights.you.spotsFilled")}
+        meta={sampleText(w.sample)}
+        action={
+          <Segmented
+            label={t("spaces.overview.sells.groupBy")}
+            value={by}
+            onChange={setBy}
+            options={[
+              { value: "surface", label: t("spaces.insights.sells.surface") },
+              { value: "product", label: t("spaces.overview.sells.product") },
+            ]}
+          />
+        }
+      >
         {rows.length === 0 ? (
-          <TooFew data={data} sample={w.sample} watch="The first listings here will show which surfaces sponsors pick." />
+          <TooFew data={data} sample={w.sample} watch={t("spaces.insights.sells.watch")} />
         ) : (
           <>
             <ul className="flex flex-col">
               {paged.shown.map((r) => (
-                <BarRow key={r.key} label={r.label} pct={r.filledPct} filled={r.filled} total={r.placements} sub={`${sellSub(r)} · ${plural(r.sample.creators, "creator")}`} />
+                <BarRow key={r.key} label={r.label} pct={r.filledPct} filled={r.filled} total={r.placements} sub={`${sellSub(r)} · ${t("spaces.n.creators", { count: r.sample.creators })}`} />
               ))}
             </ul>
             <div className="mt-3">
@@ -614,6 +666,7 @@ function SellsScreen({ data, back }: { data: Insights; back: string }) {
 /* ── Pricing ──────────────────────────────────────────────────────── */
 
 function PricingScreen({ data, back }: { data: Insights; back: string }) {
+  const t = useT();
   const [by, setBy] = useState<"floor" | "way">("floor");
   const p = data.pricing;
   const top = best(p.bands);
@@ -623,33 +676,42 @@ function PricingScreen({ data, back }: { data: Insights; back: string }) {
     <Screen
       back={back}
       data={data}
-      title="Pricing"
+      title={t("spaces.insights.pricing.title")}
       big={top ? pctText(top.pct!) : "—"}
-      bigNote={top ? `of listings with a ${top.label} floor sold at least one spot` : `Not enough sales yet at ${where(data.event)}`}
+      bigNote={top ? t("spaces.insights.pricing.bigNote", { label: top.label }) : t("spaces.insights.notEnoughAt", { where: where(data.event) })}
       aside={
-        <>
-          A listing counts in the band of its cheapest spot.
-          {p.sample.unpriced ? ` ${plural(p.sample.unpriced, "listing")} on offers with no minimum are left out.` : ""}
-        </>
+        p.sample.unpriced
+          ? t("spaces.insights.pricing.asideUnpriced", { count: p.sample.unpriced })
+          : t("spaces.insights.pricing.aside")
       }
     >
       <Panel
-        title={by === "floor" ? "Floor price" : "How it sells"}
+        title={by === "floor" ? t("spaces.insights.pricing.floor") : t("spaces.inspire.fact.howItSells")}
         meta={sampleText(p.sample)}
-        action={<Segmented label="Show" value={by} onChange={setBy} options={[{ value: "floor", label: "Floor price" }, { value: "way", label: "Fixed or offers" }]} />}
+        action={
+          <Segmented
+            label={t("spaces.deliveries.show")}
+            value={by}
+            onChange={setBy}
+            options={[
+              { value: "floor", label: t("spaces.insights.pricing.floor") },
+              { value: "way", label: t("spaces.insights.pricing.fixedOrOffers") },
+            ]}
+          />
+        }
       >
         {p.sample.listings === 0 ? (
-          <TooFew data={data} sample={p.sample} watch="Watch the first prices that sell here before you set yours." />
+          <TooFew data={data} sample={p.sample} watch={t("spaces.insights.pricing.watch")} />
         ) : by === "floor" ? (
           <ul className="flex flex-col">
             {p.bands.map((b) => (
-              <BarRow key={b.key} label={b.label} pct={b.pct} filled={b.withSale} total={b.listings} sub={`${b.withSale} of ${plural(b.listings, "listing")} sold · ${sampleText(b.sample)}`} />
+              <BarRow key={b.key} label={b.label} pct={b.pct} filled={b.withSale} total={b.listings} sub={`${t("spaces.insights.pricing.bandSold", { sold: b.withSale, count: b.listings })} · ${sampleText(b.sample)}`} />
             ))}
           </ul>
         ) : (
           <ul className="flex flex-col">
             {ways.map((w) => (
-              <BarRow key={w.key} label={w.label} pct={w.filledPct} filled={w.filled} total={w.placements} sub={`${w.filled} of ${plural(w.placements, "spot")} filled · ${sampleText(w.sample)}`} />
+              <BarRow key={w.key} label={w.label} pct={w.filledPct} filled={w.filled} total={w.placements} sub={`${t("spaces.insights.pricing.wayFilled", { filled: w.filled, count: w.placements })} · ${sampleText(w.sample)}`} />
             ))}
           </ul>
         )}
@@ -662,28 +724,39 @@ function PricingScreen({ data, back }: { data: Insights; back: string }) {
 
 function TimingScreen({ data, back }: { data: Insights; back: string }) {
   const [by, setBy] = useState<"age" | "day">("age");
+  const tt = useT();
   const t = data.timing;
 
   return (
     <Screen
       back={back}
       data={data}
-      title="Timing"
+      title={tt("spaces.insights.timing.title")}
       big={t.medianDaysToFirstSale !== null ? daysText(t.medianDaysToFirstSale) : "—"}
-      bigNote={t.medianDaysToFirstSale !== null ? "from going live to a first sale, median" : `Not enough sales yet at ${where(data.event)}`}
-      aside="Days are counted in UTC."
+      bigNote={t.medianDaysToFirstSale !== null ? tt("spaces.insights.timing.bigNote") : tt("spaces.insights.notEnoughAt", { where: where(data.event) })}
+      aside={tt("spaces.insights.timing.utc")}
     >
       <Panel
-        title={by === "age" ? "Spots filled by listing age" : "Launch day"}
+        title={by === "age" ? tt("spaces.insights.timing.byAge") : tt("spaces.insights.timing.launchDay")}
         meta={sampleText(t.sample)}
-        action={<Segmented label="Show" value={by} onChange={setBy} options={[{ value: "age", label: "Listing age" }, { value: "day", label: "Launch day" }]} />}
+        action={
+          <Segmented
+            label={tt("spaces.deliveries.show")}
+            value={by}
+            onChange={setBy}
+            options={[
+              { value: "age", label: tt("spaces.insights.timing.listingAge") },
+              { value: "day", label: tt("spaces.insights.timing.launchDay") },
+            ]}
+          />
+        }
       >
         {t.sample.listings === 0 ? (
-          <TooFew data={data} sample={t.sample} watch="The first week of the first listings is what to watch." />
+          <TooFew data={data} sample={t.sample} watch={tt("spaces.insights.timing.watch")} />
         ) : by === "age" ? (
           <ul className="flex flex-col">
             {t.ages.map((a) => (
-              <BarRow key={a.key} label={a.label} pct={a.filledPct} filled={a.filled} total={a.placements} sub={`${a.filled} of ${plural(a.placements, "spot")} · ${sampleText(a.sample)}`} />
+              <BarRow key={a.key} label={a.label} pct={a.filledPct} filled={a.filled} total={a.placements} sub={`${tt("spaces.insights.timing.ageFilled", { filled: a.filled, count: a.placements })} · ${sampleText(a.sample)}`} />
             ))}
           </ul>
         ) : (
@@ -696,7 +769,11 @@ function TimingScreen({ data, back }: { data: Insights; back: string }) {
                 grid
                 filled={0}
                 total={d.listings}
-                sub={`${plural(d.listings, "listing")}${d.firstWeekSalesPerListing !== null ? ` · ${d.firstWeekSalesPerListing} sales each in week one` : ""}`}
+                sub={
+                  d.firstWeekSalesPerListing !== null
+                    ? `${tt("spaces.n.listings", { count: d.listings })} · ${tt("spaces.insights.timing.weekOne", { n: fmtNumber(d.firstWeekSalesPerListing) })}`
+                    : tt("spaces.n.listings", { count: d.listings })
+                }
               />
             ))}
           </ul>
@@ -712,28 +789,33 @@ function BrandsScreen({ data, back, pitchHref }: { data: Insights; back: string;
   const [scope, setScope] = useState<"event" | "all">(data.brands.event ? "event" : "all");
   const list = scope === "event" && data.brands.event ? data.brands.event : data.brands.allTime;
   const paged = usePaged(list.brands, scope, 6);
+  const t = useT();
 
   return (
     <Screen
       back={back}
       data={data}
-      title="Brands buying"
+      title={t("spaces.insights.brands.title")}
       big={String(list.brands.length)}
-      bigNote={`${list.brands.length === 1 ? "brand has" : "brands have"} paid for a spot ${scope === "event" ? `at ${where(data.event)}` : "on HOLD Spaces"}`}
-      aside="Names as the listings show them publicly, from paid orders only. Spend is a band, never an amount."
+      bigNote={
+        scope === "event"
+          ? t("spaces.insights.brands.bigNoteAt", { count: list.brands.length, where: where(data.event) })
+          : t("spaces.insights.brands.bigNoteAll", { count: list.brands.length })
+      }
+      aside={t("spaces.insights.brands.aside")}
     >
       <Panel
-        title="Who paid"
-        meta={`${plural(list.sample.paidOrders, "paid order")} · ${list.sample.named} named`}
+        title={t("spaces.insights.brands.whoPaid")}
+        meta={t("spaces.insights.brands.meta", { count: list.sample.paidOrders, named: list.sample.named })}
         action={
           data.brands.event ? (
             <Segmented
-              label="Where"
+              label={t("spaces.insights.brands.where")}
               value={scope}
               onChange={setScope}
               options={[
                 { value: "event", label: where(data.event) },
-                { value: "all", label: "All time" },
+                { value: "all", label: t("spaces.insights.brands.allTime") },
               ]}
             />
           ) : null
@@ -741,9 +823,9 @@ function BrandsScreen({ data, back, pitchHref }: { data: Insights; back: string;
       >
         {list.brands.length === 0 ? (
           <div className="flex flex-col gap-1.5 py-2">
-            <p className="text-[14.5px] text-white">No brand has paid here yet.</p>
+            <p className="text-[14.5px] text-white">{t("spaces.insights.brands.noneHere")}</p>
             <p className="text-[12px] leading-4 text-white/55">
-              Brands appear once a spot is paid and its artwork is approved. Until then, pitch the brands you already know: Pitch a brand writes it from your numbers.
+              {t("spaces.insights.brands.noneHereBody")}
             </p>
           </div>
         ) : (
@@ -764,7 +846,8 @@ function BrandsScreen({ data, back, pitchHref }: { data: Insights; back: string;
 }
 
 function BrandRow({ brand, pitch }: { brand: Brand; pitch: string }) {
-  const bits = [plural(brand.placements, "spot"), brand.spendBandLabel, brand.country].filter(Boolean).join(" · ");
+  const t = useT();
+  const bits = [t("spaces.n.spots", { count: brand.placements }), brand.spendBandLabel, brand.country].filter(Boolean).join(" · ");
   return (
     <li className="flex min-w-0 items-center gap-3 border-t border-white/[0.08] py-2.5 first:border-t-0 first:pt-0">
       <div className="min-w-0 flex-1">
@@ -775,7 +858,7 @@ function BrandRow({ brand, pitch }: { brand: Brand; pitch: string }) {
         <p className="mt-0.5 truncate text-[12px] leading-4 text-white/55">{bits}</p>
       </div>
       <Link href={pitch} scroll={false} className={chipLink}>
-        Pitch
+        {t("spaces.insights.brands.pitch")}
       </Link>
     </li>
   );
@@ -806,15 +889,17 @@ function marketLine(data: Insights, sells: { placements: boolean; services: bool
   const objects = s.find((r) => r.key === "object")?.filledPct ?? null;
   const clothing = s.find((r) => r.key === "clothing")?.filledPct ?? null;
   const services = s.find((r) => r.key === "service")?.filledPct ?? null;
-  const at = data.event ? `at ${data.event.name}` : "on HOLD Spaces";
+  const at = data.event ? tr("spaces.insights.pitch.atEvent", { event: data.event.name }) : tr("spaces.insights.pitch.onSpaces");
   if (sells.services && !sells.placements) {
-    return services !== null ? `On HOLD Spaces ${at}, ${pctText(services)} of sponsored content slots have been bought by brands.` : null;
+    return services !== null ? tr("spaces.insights.pitch.marketServices", { at, pct: pctText(services) }) : null;
   }
   if (objects !== null && clothing !== null && clothing > 0 && objects / clothing >= 1.5) {
-    return `On HOLD Spaces ${at}, spots on objects fill ${(objects / clothing).toFixed(objects / clothing >= 10 ? 0 : 1)}x more than spots on outfits: a logo on a suitcase or a laptop is in every shot, all week.`;
+    const ratio = objects / clothing;
+    const digits = ratio >= 10 ? 0 : 1;
+    return tr("spaces.insights.pitch.marketObjects", { at, ratio: fmtNumber(ratio, { minimumFractionDigits: digits, maximumFractionDigits: digits }) });
   }
   const top = best(s.map((r) => ({ ...r, pct: r.filledPct })));
-  if (top) return `On HOLD Spaces ${at}, ${pctText(top.pct!)} of spots on ${top.label.toLowerCase()} have been bought by brands.`;
+  if (top) return tr("spaces.insights.pitch.marketTop", { at, pct: pctText(top.pct!), surface: top.label.toLowerCase() });
   return null;
 }
 
@@ -835,42 +920,54 @@ export function pitchText(input: {
 }): string {
   const { brand, handle, followers, data, hooks, content, open, link, placements, services } = input;
   const y = data.you;
-  const me = handle ? `@${handle}` : "a creator on HOLD Spaces";
+  const me = handle ? `@${handle}` : tr("spaces.insights.pitch.aCreator");
   const event = data.event;
+  const ev = event ? "yes" : "no";
   const lines: string[] = [];
-  lines.push(`Hi ${brand} team,`, "");
+  lines.push(tr("spaces.insights.pitch.hi", { brand }), "");
   lines.push(
     event
-      ? `I'm ${me}, and I'll be at ${event.name} in ${event.city} (${eventDates(event.startsOn, event.endsOn)}).`
-      : `I'm ${me}.`,
+      ? tr("spaces.insights.pitch.imAt", { me, event: event.name, city: event.city, dates: eventDates(event.startsOn, event.endsOn) })
+      : tr("spaces.insights.pitch.im", { me }),
   );
   lines.push("");
 
   // What the brand buys: the reach, then the content. The product comes after, as the hook.
-  lines.push(`What ${brand} gets is my reach and the content I make${event ? ` there` : ""}:`);
-  if (followers) lines.push(`- ${compact(followers)} followers on X see what I post${event ? ` from ${event.name}` : ""}.`);
-  lines.push(`- Photos and posts tagging ${brand}, with the link you want.`);
-  if (services) lines.push(`- Content made for ${brand}${event ? ` at ${event.name}` : ""}: ${content.slice(0, 3).join(", ")}.`);
+  lines.push(tr("spaces.insights.pitch.whatGets", { brand, ev }));
+  if (followers) lines.push(tr("spaces.insights.pitch.followers", { followers: compact(followers), ev, event: event?.name }));
+  lines.push(tr("spaces.insights.pitch.photos", { brand }));
+  if (services) lines.push(tr("spaces.insights.pitch.contentMade", { brand, ev, event: event?.name, content: content.slice(0, 3).join(", ") }));
   lines.push("");
 
   if (hooks.length) {
-    const floor = y.floorCents !== null ? `, from ${dollars(y.floorCents)}` : "";
-    lines.push(`The hook: your logo on ${hooks.slice(0, 2).map((h) => `"${h}"`).join(" and ")}${floor}. It's what makes people stop and look.`);
+    const on = listText(hooks.slice(0, 2).map((h) => `"${h}"`));
+    lines.push(
+      y.floorCents !== null
+        ? tr("spaces.insights.pitch.hookFrom", { on, floor: dollars(y.floorCents) })
+        : tr("spaces.insights.pitch.hook", { on }),
+    );
   }
   const proof: string[] = [];
-  if (y.placements.filled > 0) proof.push(`${y.placements.filled} of my ${y.placements.total} spots here are already taken${open ? `, ${plural(open, "spot")} still open` : ""}.`);
+  if (y.placements.filled > 0) {
+    proof.push(
+      open
+        ? tr("spaces.insights.pitch.takenOpen", { filled: y.placements.filled, total: y.placements.total, open })
+        : tr("spaces.insights.pitch.taken", { filled: y.placements.filled, total: y.placements.total }),
+    );
+  }
   const market = marketLine(data, { placements, services });
   if (market) proof.push(market);
   for (const p of proof) lines.push(p);
   if (hooks.length || proof.length) lines.push("");
 
-  lines.push("Paid in USDC straight to me; your spot is yours the moment it's paid.");
-  lines.push(link ? `Everything is here: ${link}` : "I can send the link to the listing.");
-  lines.push(`If you want content for your own channels too, I can shoot it${event ? ` at ${event.name}` : ""}.`, "", handle ? `@${handle}` : "");
+  lines.push(tr("spaces.insights.pitch.paid"));
+  lines.push(link ? tr("spaces.insights.pitch.everything", { link }) : tr("spaces.insights.pitch.sendLink"));
+  lines.push(tr("spaces.insights.pitch.shoot", { ev, event: event?.name }), "", handle ? `@${handle}` : "");
   return lines.join("\n").trimEnd();
 }
 
 function PitchScreen({ data, back, initialBrand }: { data: Insights; back: string; initialBrand: string | null }) {
+  const t = useT();
   const { x } = useShell();
   const mine = useWhatISell(data);
   const known = useMemo(() => {
@@ -898,36 +995,44 @@ function PitchScreen({ data, back, initialBrand }: { data: Insights; back: strin
 
   return (
     <div className="flex flex-col gap-3.5">
-      <DrillBar back={back} crumb={`Insights · ${where(data.event)}`} title="Pitch a brand" right={text ? <CopyButton value={text} label="Copy pitch" className={chipLink} /> : null} />
+      <DrillBar
+        back={back}
+        crumb={t("spaces.insights.crumb", { where: where(data.event) })}
+        title={t("spaces.insights.pitch.title")}
+        right={text ? <CopyButton value={text} label={t("spaces.insights.pitch.copy")} className={chipLink} /> : null}
+      />
       <div className="grid grid-cols-[minmax(0,1fr)] gap-3.5 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)] lg:items-start">
-        <Panel title="Which brand">
+        <Panel title={t("spaces.insights.pitch.whichBrand")}>
           <input
             className={inputCls}
             value={brand}
             maxLength={60}
-            placeholder="Type a brand"
+            placeholder={t("spaces.insights.pitch.typeBrand")}
             onChange={(e) => setBrand(e.target.value)}
-            aria-label="Brand"
+            aria-label={t("spaces.insights.pitch.brand")}
           />
           {known.length ? (
             <div>
-              <p className="mb-2 text-[12px] leading-4 text-white/55">Brands that already paid on HOLD Spaces</p>
-              <FilterPills label="Brands" value={known.includes(name) ? name : ""} onChange={setBrand} options={known.map((b) => ({ value: b, label: b }))} />
+              <p className="mb-2 text-[12px] leading-4 text-white/55">{t("spaces.insights.pitch.alreadyPaid")}</p>
+              <FilterPills label={t("spaces.overview.brands.filter")} value={known.includes(name) ? name : ""} onChange={setBrand} options={known.map((b) => ({ value: b, label: b }))} />
             </div>
           ) : (
-            <p className="text-[12px] leading-4 text-white/55">No brand has paid here yet. Type the one you want to reach.</p>
+            <p className="text-[12px] leading-4 text-white/55">{t("spaces.insights.pitch.noneYet")}</p>
           )}
           <p className="mt-1 border-t border-white/[0.08] pt-3 text-[12px] leading-[17px] text-white/55">
-            It leads with your reach and your content, with the product as the hook. Built from your own numbers; nothing is sent: copy it and send it where you talk to brands.
+            {t("spaces.insights.pitch.howItWorks")}
           </p>
         </Panel>
-        <Panel title={name ? `For ${name}` : "Your pitch"} meta={name ? `${text.split("\n").length} lines` : ""}>
+        <Panel
+          title={name ? t("spaces.insights.pitch.for", { name }) : t("spaces.insights.pitch.yours")}
+          meta={name ? t("spaces.insights.pitch.lines", { count: text.split("\n").length }) : ""}
+        >
           {name ? (
             <pre className="max-h-[calc(var(--app-vh,100dvh)-260px)] overflow-y-auto whitespace-pre-wrap break-words font-sans text-[14.5px] leading-[22px] text-white">
               {text}
             </pre>
           ) : (
-            <EmptyState title="Pick a brand or type one to write the pitch." />
+            <EmptyState title={t("spaces.insights.pitch.pickBrand")} />
           )}
         </Panel>
       </div>

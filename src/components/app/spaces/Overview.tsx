@@ -48,6 +48,7 @@ import {
 import { feePctText } from "@/lib/ad-space/fee";
 import type { CreatorAnalytics } from "@/lib/creator/analytics";
 import type { OfferView, SalesSummary } from "@/lib/creator/listing";
+import { useT } from "@/lib/app/i18n/react";
 
 import { useHref } from "../base";
 import { Ion, type IonName } from "../ion";
@@ -66,7 +67,6 @@ import {
   isOverviewView,
   PayScreen,
   pctText,
-  plural,
   SellsScreen,
   daysText,
 } from "./OverviewScreens";
@@ -90,6 +90,7 @@ export function Overview({ view = null, brand = null }: { view?: string | null; 
 /* ── Creator ──────────────────────────────────────────────────────── */
 
 function CreatorOverview({ view, brand }: { view: string | null; brand: string | null }) {
+  const tt = useT();
   const { listings, work, agency } = useShell();
   const href = useHref();
   const analytics = useAnalytics();
@@ -126,7 +127,7 @@ function CreatorOverview({ view, brand }: { view: string | null; brand: string |
     const live = listings.filter((l) => l.status === "live");
     return (
       <div className={FILL}>
-        <DrillBar back={back} crumb="Overview" title="Needs you" />
+        <DrillBar back={back} crumb={tt("spaces.overview.crumb")} title={tt("spaces.overview.needsYou")} />
         <div className={BOTTOM}>
           <NeedsYou offers={waiting} deliveries={due} leads={leads} loading={!offers.data || !views.data} limit={8} />
           <LivePanel live={live} rows={8} />
@@ -152,24 +153,29 @@ function CreatorOverview({ view, brand }: { view: string | null; brand: string |
 
   return (
     <div className={FILL}>
-      <section aria-label="Your business" className="grid grid-cols-2 gap-2.5 xl:grid-cols-4">
-        <KpiTile label="Earned" value={v(dollars(t?.receivedCents ?? 0))} note={t ? (t.orders && t.fee.paidByYouCents === 0 ? `${feePctText()} paid by brands` : feeLine(t)) : " "} href={href("/sales")} />
+      <section aria-label={tt("spaces.overview.yourBusiness")} className="grid grid-cols-2 gap-2.5 xl:grid-cols-4">
         <KpiTile
-          label="Brands that paid you"
+          label={tt("spaces.overview.earned")}
+          value={v(dollars(t?.receivedCents ?? 0))}
+          note={t ? (t.orders && t.fee.paidByYouCents === 0 ? tt("spaces.overview.paidByBrands", { pct: feePctText() }) : feeLine(t)) : " "}
+          href={href("/sales")}
+        />
+        <KpiTile
+          label={tt("spaces.overview.brandsThatPaid")}
           value={v(t?.brands ?? 0)}
-          note={t ? (t.repeatBrands ? `${t.repeatBrands} came back` : "none back yet") : " "}
+          note={t ? (t.repeatBrands ? tt("spaces.overview.cameBackCount", { count: t.repeatBrands }) : tt("spaces.overview.noneBackYet")) : " "}
           href={`${href("")}?view=brands`}
         />
         <KpiTile
-          label="Sell-through"
+          label={tt("spaces.overview.sellThrough")}
           value={v(t?.sellThroughPct != null ? pctText(t.sellThroughPct) : "–")}
-          note={t ? `${t.spotsSold} of ${t.spotsTotal} spots sold` : " "}
+          note={t ? tt("spaces.overview.spotsSold", { sold: t.spotsSold, total: t.spotsTotal }) : " "}
           href={`${href("")}?view=sells`}
         />
         <KpiTile
-          label="Needs you"
+          label={tt("spaces.overview.needsYou")}
           value={offers.data && views.data ? needs : "…"}
-          note={`${plural(waiting.length, "offer")} · ${due.length} due`}
+          note={`${tt("spaces.n.offers", { count: waiting.length })} · ${tt("spaces.overview.dueCount", { count: due.length })}`}
           href={`${href("")}?view=needs`}
           attention={needs > 0}
         />
@@ -194,6 +200,7 @@ function Hub({
   /** A Creative Director's team is owed this (their own bookkeeping); 0 hides it. */
   owedToTeamCents: number;
 }) {
+  const tt = useT();
   const to = (view: string) => `${href("")}?view=${view}`;
   const t = data?.totals;
   const topEvent = data?.byEvent.find((e) => e.receivedCents > 0) ?? data?.byEvent[0] ?? null;
@@ -210,52 +217,73 @@ function Hub({
       <HubCard
         href={to("brands")}
         icon="people-outline"
-        title="Brands you work with"
-        line={data ? (data.topBrands.length ? data.topBrands.slice(0, 3).map((b) => b.name).join(", ") : "No brand has paid yet") : " "}
+        title={tt("spaces.overview.brands.title")}
+        line={data ? (data.topBrands.length ? data.topBrands.slice(0, 3).map((b) => b.name).join(", ") : tt("spaces.overview.hub.noBrandYet")) : " "}
         value={t ? String(t.brands) : dash}
-        note={t ? `${t.repeatBrands} repeat` : ""}
+        note={t ? tt("spaces.overview.hub.repeatCount", { count: t.repeatBrands }) : ""}
       />
       <HubCard
         href={to("events")}
         icon="calendar-outline"
-        title="By event"
-        line={topEvent ? `${topEvent.name} made the most` : data ? "No event yet" : " "}
+        title={tt("spaces.overview.events.title")}
+        line={topEvent ? tt("spaces.overview.hub.madeTheMost", { event: topEvent.name }) : data ? tt("spaces.overview.hub.noEventYet") : " "}
         value={topEvent ? dollars(topEvent.receivedCents) : dash}
-        note={t ? plural(t.events, "event") : ""}
+        note={t ? tt("spaces.n.events", { count: t.events }) : ""}
       />
       <HubCard
         href={to("sells")}
         icon="pricetags-outline"
-        title="What sells for you"
-        line={bestProduct ? `${bestProduct.label} sells best` : data ? "Publish to see what sells" : " "}
+        title={tt("spaces.overview.sells.title")}
+        line={bestProduct ? tt("spaces.overview.hub.sellsBest", { product: bestProduct.label }) : data ? tt("spaces.overview.hub.publishToSee") : " "}
         value={bestProduct?.soldPct != null ? pctText(bestProduct.soldPct) : dash}
-        note={bestProduct?.medianDaysToFirstSale != null ? `sold · 1st sale ${daysText(bestProduct.medianDaysToFirstSale)}` : bestProduct ? "sold" : ""}
+        note={
+          bestProduct?.medianDaysToFirstSale != null
+            ? tt("spaces.overview.hub.soldFirstSale", { days: daysText(bestProduct.medianDaysToFirstSale) })
+            : bestProduct
+              ? tt("spaces.overview.hub.sold")
+              : ""
+        }
       />
       <HubCard
         href={to("pay")}
         icon="wallet-outline"
-        title="How brands pay"
-        line={chain ? [`${chain.label} ${pctText(chain.receivedPct ?? 0)}`, hold ? `HOLD ${pctText(hold.ordersPct ?? 0)} of orders` : null].filter(Boolean).join(" · ") : data ? "No payment yet" : " "}
+        title={tt("spaces.overview.pay.title")}
+        line={
+          chain
+            ? [`${chain.label} ${pctText(chain.receivedPct ?? 0)}`, hold ? tt("spaces.overview.hub.holdOfOrders", { pct: pctText(hold.ordersPct ?? 0) }) : null]
+                .filter(Boolean)
+                .join(" · ")
+            : data
+              ? tt("spaces.overview.pay.noPayment")
+              : " "
+        }
         value={chain ? chain.label : dash}
-        note={t ? (t.fee.paidByYouCents === 0 && t.orders > 0 ? "you kept 100%" : "USDC to your wallet") : ""}
+        note={t ? (t.fee.paidByYouCents === 0 && t.orders > 0 ? tt("spaces.overview.hub.youKept", { all: pctText(100) }) : tt("spaces.overview.hub.usdcToWallet")) : ""}
       />
-      <HubCard href={href("/sales")} icon="stats-chart-outline" title="Sales" line="Received per week, last 8 weeks" value={<WeekBars sales={sales} />} note={t ? plural(t.orders, "order") : ""} />
+      <HubCard
+        href={href("/sales")}
+        icon="stats-chart-outline"
+        title={tt("spaces.sales.crumb")}
+        line={tt("spaces.overview.hub.perWeek")}
+        value={<WeekBars sales={sales} />}
+        note={t ? tt("spaces.n.orders", { count: t.orders }) : ""}
+      />
       <HubCard
         href={to("needs")}
         icon="notifications-outline"
-        title="Needs you and live"
-        line="Offers, deliveries, what is live"
+        title={tt("spaces.overview.hub.needsAndLive")}
+        line={tt("spaces.overview.hub.needsAndLiveLine")}
         value={t ? String(t.listings) : dash}
-        note={owedToTeamCents > 0 ? `${dollars(owedToTeamCents)} owed to team` : "listings published"}
+        note={owedToTeamCents > 0 ? tt("spaces.overview.hub.owedToTeam", { amount: dollars(owedToTeamCents) }) : tt("spaces.overview.hub.listingsPublished")}
       />
       {inspired && inspired.listings > 0 ? (
         <HubCard
           href={to("inspired")}
           icon="sparkles-outline"
-          title="You inspired"
+          title={tt("spaces.overview.inspired.title")}
           line={inspired.recent.slice(0, 2).map((l) => (l.creatorHandle ? `@${l.creatorHandle}` : l.title)).join(", ")}
           value={String(inspired.listings)}
-          note={inspired.listings === 1 ? "listing credits you" : "listings credit you"}
+          note={tt("spaces.overview.hub.creditsYou", { count: inspired.listings })}
         />
       ) : null}
     </CardGrid>
@@ -298,10 +326,11 @@ function HubCard({
 
 /** Eight small bars: money received per week. */
 function WeekBars({ sales }: { sales: SalesSummary | undefined }) {
+  const t = useT();
   const points = useMemo(() => salesByWeek(sales), [sales]);
   const max = Math.max(1, ...points.map((p) => p.cents));
   return (
-    <span className="flex h-[30px] items-end gap-1" role="img" aria-label="Received per week, last 8 weeks">
+    <span className="flex h-[30px] items-end gap-1" role="img" aria-label={t("spaces.overview.hub.perWeek")}>
       {points.map((p) => (
         <span
           key={p.label}
@@ -315,11 +344,28 @@ function WeekBars({ sales }: { sales: SalesSummary | undefined }) {
 }
 
 function LivePanel({ live, rows = ROWS }: { live: ReturnType<typeof useShell>["listings"]; rows?: number }) {
+  const t = useT();
   const href = useHref();
   return (
-    <Panel title="Live" meta={`${live.length}`} action={<Link href={href("/listings")} className={seeAll}>All listings</Link>}>
+    <Panel
+      title={t("spaces.overview.live")}
+      meta={`${live.length}`}
+      action={
+        <Link href={href("/listings")} className={seeAll}>
+          {t("spaces.overview.allListings")}
+        </Link>
+      }
+    >
       {live.length === 0 ? (
-        <Empty icon="megaphone-outline" title="Nothing live" action={<Link href={href("/listings/new")} className={emptyBtn}>Create a space</Link>} />
+        <Empty
+          icon="megaphone-outline"
+          title={t("spaces.overview.nothingLive")}
+          action={
+            <Link href={href("/listings/new")} className={emptyBtn}>
+              {t("spaces.overview.createSpace")}
+            </Link>
+          }
+        />
       ) : (
         <ul className="flex flex-col divide-y divide-white/[0.08]">
           {live.slice(0, rows).map((l) => (
@@ -332,7 +378,7 @@ function LivePanel({ live, rows = ROWS }: { live: ReturnType<typeof useShell>["l
                     <span className="w-20 shrink-0">
                       <ProgressBar value={l.totals.positions > 0 ? l.totals.sold / l.totals.positions : 0} />
                     </span>
-                    {l.totals.sold}/{l.totals.positions} sold
+                    {t("spaces.overview.soldFraction", { sold: l.totals.sold, total: l.totals.positions })}
                   </span>
                 }
                 right={<span className="text-[15px] font-strong tabular-nums text-white">{dollars(l.totals.committedCents)}</span>}
@@ -359,46 +405,60 @@ function NeedsYou({
   loading: boolean;
   limit?: number;
 }) {
+  const t = useT();
   const href = useHref();
   const seat = typeof window !== "undefined" ? pendingSeat() : null;
   const rows = [
     ...(seat
-      ? [{ key: "seat", href: href(`/team?seat=${encodeURIComponent(seat.seat)}`), title: "Team invitation", sub: "Waiting for your answer", right: <Tag label="Open" tone="caution" /> }]
+      ? [
+          {
+            key: "seat",
+            href: href(`/team?seat=${encodeURIComponent(seat.seat)}`),
+            title: t("spaces.overview.needs.teamInvitation"),
+            sub: t("spaces.overview.needs.waitingAnswer"),
+            right: <Tag label={t("spaces.overview.needs.open")} tone="caution" />,
+          },
+        ]
       : []),
     ...offers.map((o) => ({
       key: `o-${o.id}`,
       href: href(`/offers?id=${o.id}`),
-      title: `${o.kind === "bid" ? "Bid" : "Offer"} · ${o.sponsor.name}`,
+      title: o.kind === "bid" ? t("spaces.overview.needs.bid", { sponsor: o.sponsor.name }) : t("spaces.overview.needs.offer", { sponsor: o.sponsor.name }),
       sub: o.serviceName || o.spaceTitle,
       right: <span className="text-[15px] font-strong tabular-nums text-white">{dollars(cents(o.amountUsdc))}</span>,
     })),
     ...deliveries.map((d) => ({
       key: `d-${d.id}`,
       href: href(`/deliveries?item=${encodeURIComponent(d.id)}`),
-      title: d.kind === "artwork" ? d.title : `${d.kind === "spot" || d.kind === "production" ? "Deliver" : "Promise"} · ${d.title}`,
+      title:
+        d.kind === "artwork"
+          ? d.title
+          : d.kind === "spot" || d.kind === "production"
+            ? t("spaces.overview.needs.deliver", { title: d.title })
+            : t("spaces.overview.needs.promise", { title: d.title }),
       sub: d.listing,
       right: d.due ? <Tag label={dueText(d.due)} tone={d.state === "overdue" ? "caution" : "calm"} /> : null,
     })),
     ...leads.map((l) => ({
       key: `c-${l.orderId}`,
       href: `${href("/sales")}?listing=${encodeURIComponent(l.spaceId)}&offer=${encodeURIComponent(l.orderId)}`,
-      title: `Offer them content · ${l.brand}`,
+      title: t("spaces.overview.needs.offerContent", { brand: l.brand }),
       sub: l.listing,
-      right: <Tag label="New sale" tone="good" />,
+      right: <Tag label={t("spaces.overview.needs.newSale")} tone="good" />,
     })),
   ];
 
   return (
     <Panel
-      title="Needs you"
+      title={t("spaces.overview.needsYou")}
       meta={loading ? "" : `${rows.length}`}
       action={
         <span className="flex items-center gap-3">
           <Link href={href("/offers")} className={seeAll}>
-            All offers
+            {t("spaces.overview.needs.allOffers")}
           </Link>
           <Link href={href("/deliveries")} className={seeAll}>
-            All deliveries
+            {t("spaces.overview.needs.allDeliveries")}
           </Link>
         </span>
       }
@@ -406,7 +466,7 @@ function NeedsYou({
       {loading ? (
         <Skeleton className="h-36" />
       ) : rows.length === 0 ? (
-        <Empty icon="checkmark-done" title="Nothing waiting" />
+        <Empty icon="checkmark-done" title={t("spaces.overview.needs.nothingWaiting")} />
       ) : (
         <ul className="flex flex-col divide-y divide-white/[0.08]">
           {rows.slice(0, limit).map((r) => (
@@ -423,6 +483,7 @@ function NeedsYou({
 /* ── Manager ──────────────────────────────────────────────────────── */
 
 function ManagerOverview() {
+  const t = useT();
   const { managed, work } = useShell();
   const href = useHref();
   const ids = useMemo(() => managed.map((m) => m.spaceId), [managed]);
@@ -435,27 +496,31 @@ function ManagerOverview() {
 
   return (
     <div className={FILL}>
-      <section aria-label="Position" className="grid grid-cols-2 gap-2.5 xl:grid-cols-4">
-        <KpiTile label="Listings you sell" value={managed.length} href={href("/listings")} />
+      <section aria-label={t("spaces.overview.manager.position")} className="grid grid-cols-2 gap-2.5 xl:grid-cols-4">
+        <KpiTile label={t("spaces.overview.manager.listingsYouSell")} value={managed.length} href={href("/listings")} />
         <KpiTile
-          label="Offers & bids waiting"
+          label={t("spaces.overview.manager.offersWaiting")}
           value={offers.data || ids.length === 0 ? waiting.length : "…"}
           href={href("/offers")}
           attention={waiting.length > 0}
         />
-        <KpiTile label="Due in 7 days" value={due.length} href={href("/deliveries")} attention={due.length > 0} />
-        <KpiTile label="Owed to you" value={dollars(Number(owedToYou / 10_000n))} href={href("/team?tab=earnings")} />
+        <KpiTile label={t("spaces.overview.manager.dueIn7")} value={due.length} href={href("/deliveries")} attention={due.length > 0} />
+        <KpiTile label={t("spaces.overview.manager.owedToYou")} value={dollars(Number(owedToYou / 10_000n))} href={href("/team?tab=earnings")} />
       </section>
 
       <div className={BOTTOM}>
         <NeedsYou offers={waiting} deliveries={due} loading={ids.length > 0 && !offers.data} />
         <Panel
-          title="Listings you sell"
+          title={t("spaces.overview.manager.listingsYouSell")}
           meta={`${managed.length}`}
-          action={<Link href={href("/listings")} className={seeAll}>All listings</Link>}
+          action={
+            <Link href={href("/listings")} className={seeAll}>
+              {t("spaces.overview.allListings")}
+            </Link>
+          }
         >
           {managed.length === 0 ? (
-            <Empty icon="megaphone-outline" title="No listings yet" />
+            <Empty icon="megaphone-outline" title={t("spaces.overview.manager.noListings")} />
           ) : (
             <ul className="flex flex-col divide-y divide-white/[0.08]">
               {managed.slice(0, ROWS).map((m) => (
@@ -463,7 +528,7 @@ function ManagerOverview() {
                   <RowLink
                     href={href(`/listings/${m.spaceId}`)}
                     title={m.title}
-                    meta={m.eventName ?? "No event"}
+                    meta={m.eventName ?? t("spaces.overview.manager.noEvent")}
                     right={<StatusPill status={m.status} />}
                   />
                 </li>
