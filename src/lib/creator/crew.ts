@@ -55,6 +55,21 @@ export interface Crew {
   you: { memberId: string; status: "invited" | "active"; shareBps: number; share: string; agreed: boolean } | null;
   members: CrewMember[];
   spaces: { id: string; slug: string; title: string; status: string }[];
+  /**
+   * One expenses group per event the crew has sold at (made on the first paid
+   * sale there), newest event first. Older backends leave it out.
+   */
+  eventGroups?: CrewEventGroup[];
+}
+
+/** A crew's expenses group for one event: "Token2049", 1 to 2 Oct. Dates are `YYYY-MM-DD`. */
+export interface CrewEventGroup {
+  eventId: string;
+  eventSlug: string;
+  eventName: string;
+  startsOn: string;
+  endsOn: string;
+  groupId: string;
 }
 
 export interface CrewInvitePreview {
