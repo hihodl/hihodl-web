@@ -140,7 +140,7 @@
   "checkoutError.walletClosed": "Bạn đã đóng ví mà chưa ký. Chưa có gì được trả.",
   "checkoutError.walletFailed": "Ví của bạn không hoàn tất được. Chưa có gì được trả; hãy thử lại, hoặc trả bằng cách khác.",
   "checkoutError.crewNotReady": "Nhóm này vẫn đang thống nhất điều khoản, nên chưa thể mua. Chưa có gì được trả; hãy thử lại sau.",
-  "checkoutError.crewPaysOnSolana": "Nhóm sáng tạo được thanh toán trên Solana, để mỗi creator trong nhóm nhận phần của mình trong một lần thanh toán. Hãy trả bằng ví Solana.",
+  "checkoutError.crewPaysOnSolana": "Crew được thanh toán trên Solana, để mỗi creator trong nhóm nhận phần của mình trong một lần thanh toán. Hãy trả bằng ví Solana.",
   "checkoutError.crewMember": "Hiện không thể trả cho một creator trong nhóm này. Chưa có gì được trả; hãy thử lại sau.",
   "checkoutError.briefRequired": "Hãy điền brief trước: creator sẽ quay dựa trên đó. Chưa có gì được trả.",
   "checkoutError.briefInvalid": "Có gì đó trong brief chưa phù hợp. Kiểm tra thông điệp chính, link tài nguyên (https://) và handle liên hệ.",

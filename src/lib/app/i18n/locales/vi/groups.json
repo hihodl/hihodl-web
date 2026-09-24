@@ -46,7 +46,7 @@
   "list.loadFailed": "Không tải được nhóm của bạn.",
   "list.empty": "Chưa có nhóm nào",
   "list.emptyBody": "Nhóm là cuộc trò chuyện có cả chuyện tiền nong: chia tiền bữa tối, taxi, tiền nhà, rồi thanh toán cho nhau.",
-  "list.crew": "Nhóm sáng tạo",
+  "list.crew": "Crew",
   "list.unread": "{count} mới",
   "across.title": "Trên tất cả các nhóm",
   "across.shareAndPaid": "Phần của bạn <b>{share}</b> · bạn đã trả <b>{paid}</b>",
