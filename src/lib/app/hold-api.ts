@@ -634,6 +634,12 @@ export interface RailAccount {
   bankName?: string | null;
   bankCountry?: string | null;
   accountHolderName?: string | null;
+  /**
+   * Whether the holder the payer's bank will match is this person, as the
+   * backend read it from the provider's answer. Null or absent: unknown, and
+   * the card falls back to what it knows per currency (holder-disclosure.ts).
+   */
+  heldInYourName?: boolean | null;
   /** What this rail calls each field. Null when the catalogue read failed. */
   fieldLabels?: Record<string, string> | null;
 }

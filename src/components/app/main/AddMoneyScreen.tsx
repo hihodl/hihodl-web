@@ -46,6 +46,7 @@ import { useState } from "react";
 import { chosenUsername } from "@/lib/app/me";
 import { useHoldWallet } from "@/lib/app/hold-wallet";
 import type { RailAccount } from "@/lib/app/hold-api";
+import { holderDisclosureFor } from "@/lib/app/holder-disclosure";
 import { useAliases, useRailAccounts } from "@/lib/app/money";
 import { useMe, useMyAddresses } from "@/lib/app/spaces-data";
 import { Rich, useT } from "@/lib/app/i18n/react";
@@ -450,7 +451,49 @@ function RailAccountCard({ account }: { account: RailAccount }) {
           ))}
         </dl>
       )}
+
+      <HolderNote account={account} />
     </section>
+  );
+}
+
+/**
+ * Whose name the payer's bank will see. A pooled account (held in the
+ * provider's name) warns in amber, because a salary sent to it is refused by
+ * Verification of Payee; a named euro account says, in neutral, who can pay
+ * into it. The decision is holder-disclosure.ts; the app draws the same thing.
+ */
+function HolderNote({ account }: { account: RailAccount }) {
+  const t = useT();
+  const kind = holderDisclosureFor(account.currency, account.heldInYourName);
+  if (kind === "none") return null;
+
+  if (kind === "named") {
+    return (
+      <div className="flex gap-2.5 rounded-[12px] border border-white/[0.14] bg-white/[0.06] p-3">
+        <Ion name="person-circle-outline" size={18} color="rgba(255,255,255,0.92)" />
+        <div className="min-w-0">
+          <p className="text-[13px] font-strong text-white/[0.92]">{t("home.add.bank.holder.named.title")}</p>
+          <p className="mt-1 text-[12px] leading-[16px] text-white/70">{t("home.add.bank.holder.named.body")}</p>
+        </div>
+      </div>
+    );
+  }
+
+  const currency = (account.currency ?? "").toUpperCase();
+  const holder = (account.accountHolderName ?? "").trim();
+  return (
+    <div className="flex gap-2.5 rounded-[12px] border border-[#FFB703]/35 bg-[#FFB703]/[0.12] p-3">
+      <Ion name="warning-outline" size={18} color="#FFB703" />
+      <div className="min-w-0">
+        <p className="text-[13px] font-strong text-[#FFB703]">{t("home.add.bank.holder.pooled.title", { currency })}</p>
+        <p className="mt-1 text-[12px] leading-[16px] text-[#FFB703]/90">
+          {holder
+            ? t("home.add.bank.holder.pooled.body", { holder })
+            : t("home.add.bank.holder.pooled.bodyUnknownHolder")}
+        </p>
+      </div>
+    </div>
   );
 }
 

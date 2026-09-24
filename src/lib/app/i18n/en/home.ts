@@ -88,6 +88,16 @@ const home = {
   "add.bank.field.paymentCode": "Payment code",
   "add.bank.field.reference": "Reference",
   "add.bank.field.bank": "Bank",
+  "add.bank.holder.named.title":
+    "This IBAN is in your name",
+  "add.bank.holder.named.body":
+    "Your employer, companies and your own bank accounts can pay into it. Payments from other people are not supported yet.",
+  "add.bank.holder.pooled.title":
+    "This {currency} account is not in your name",
+  "add.bank.holder.pooled.body":
+    "It is registered to {holder}. Payroll and other transfers that check the beneficiary name will reject deposits into it, so do not use it for your salary.",
+  "add.bank.holder.pooled.bodyUnknownHolder":
+    "Payroll and other transfers that check the beneficiary name will reject deposits into it, so do not use it for your salary.",
 
   "add.inApp.title": "Available in the HOLD app for now",
   "add.inApp.body": "Sign in there with the same account. It comes to the web next.",
