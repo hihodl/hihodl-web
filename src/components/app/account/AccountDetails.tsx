@@ -11,16 +11,19 @@
 import { useState } from "react";
 
 import { currentMethod } from "@/lib/auth/remember";
+import type { MessageKey } from "@/lib/app/i18n";
+import { useT } from "@/lib/app/i18n/react";
 import { useMe } from "@/lib/app/spaces-data";
 
 import { BackHeader, Column } from "../hold";
 import { Ion, type IonName } from "../ion";
 import { useShell } from "../Shell";
 
-const PROVIDER: Record<"apple" | "google" | "email", { icon: IonName; label: string }> = {
+/** Google and Apple are names; "Email" is a word, and is translated at render. */
+const PROVIDER: Record<"apple" | "google" | "email", { icon: IonName; label: string; labelKey?: MessageKey }> = {
   google: { icon: "logo-google", label: "Google" },
   apple: { icon: "logo-apple", label: "Apple" },
-  email: { icon: "mail-outline", label: "Email" },
+  email: { icon: "mail-outline", label: "Email", labelKey: "account.details.providerEmail" },
 };
 
 const rowCls = "flex w-full items-center gap-3.5 rounded-[16px] border border-white/[0.08] bg-white/[0.06] p-4 text-left";
@@ -37,6 +40,7 @@ export function AccountDetails({ onBack }: { onBack: () => void }) {
   const { session } = useShell();
   const me = useMe();
   const [copied, setCopied] = useState(false);
+  const t = useT();
   const email = me.data?.email ?? session.user.email ?? null;
   const provider = PROVIDER[currentMethod(session.user.app_metadata?.provider)];
 
@@ -56,21 +60,21 @@ export function AccountDetails({ onBack }: { onBack: () => void }) {
 
   return (
     <Column>
-      <BackHeader title="Account" onBack={onBack} />
-      <p className="mb-4 px-0.5 text-[14px] leading-5 text-white/65">Your sign-in details. Tap your email to copy it.</p>
+      <BackHeader title={t("account.details.title")} onBack={onBack} />
+      <p className="mb-4 px-0.5 text-[14px] leading-5 text-white/65">{t("account.details.intro")}</p>
       <div className="flex flex-col gap-3">
         <div className={rowCls}>
           <IconWrap name={provider.icon} />
           <span className="min-w-0 flex-1">
-            <span className="block text-[16px] font-strong text-white">Sign-in method</span>
-            <span className="mt-[3px] block truncate text-[14px] text-white/65">{provider.label}</span>
+            <span className="block text-[16px] font-strong text-white">{t("account.details.method")}</span>
+            <span className="mt-[3px] block truncate text-[14px] text-white/65">{provider.labelKey ? t(provider.labelKey) : provider.label}</span>
           </span>
         </div>
-        <button type="button" onClick={copy} aria-label="Login email. Tap to copy" className={`${rowCls} transition-colors hover:bg-white/10`}>
+        <button type="button" onClick={copy} aria-label={t("account.details.emailAria")} className={`${rowCls} transition-colors hover:bg-white/10`}>
           <IconWrap name="mail-outline" />
           <span className="min-w-0 flex-1">
-            <span className="block text-[16px] font-strong text-white">Login email</span>
-            <span className="mt-[3px] block truncate text-[14px] text-white/65">{email ?? "Not set"}</span>
+            <span className="block text-[16px] font-strong text-white">{t("account.details.email")}</span>
+            <span className="mt-[3px] block truncate text-[14px] text-white/65">{email ?? t("account.home.notSet")}</span>
           </span>
           <Ion name={copied ? "checkmark-circle" : "copy-outline"} size={18} className={copied ? "text-[#22C55E]" : "text-white/45"} />
         </button>

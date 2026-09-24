@@ -26,6 +26,7 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useState } from "react";
 
+import { useT } from "@/lib/app/i18n/react";
 import { chosenUsername } from "@/lib/app/me";
 import { useMe, useX } from "@/lib/app/spaces-data";
 
@@ -92,36 +93,37 @@ function AccountHome({ open }: { open: (v: AccountView) => void }) {
   // Shown only when /me carries the field: an older API refuses to save it.
   const visibilityKnown = !!me.data && "profileVisibility" in me.data.profile;
   const [visibilityOpen, setVisibilityOpen] = useState(false);
+  const t = useT();
 
   return (
     <Column>
       <ProfileHero onAvatar={() => open("profile")} />
 
-      <SectionTitle first>General</SectionTitle>
+      <SectionTitle first>{t("account.home.general")}</SectionTitle>
       <HoldCard>
-        <MenuRow icon="at-outline" label="Username" value={me.data ? handle : undefined} onClick={() => open("username")} />
+        <MenuRow icon="at-outline" label={t("account.home.username")} value={me.data ? handle : undefined} onClick={() => open("username")} />
         {/* Web only: the name a creator's public pages print. */}
-        <MenuRow icon="id-card-outline" label="Display name" value={me.data ? me.data.profile.displayName || "Add your name" : undefined} onClick={() => open("profile")} />
+        <MenuRow icon="id-card-outline" label={t("account.home.displayName")} value={me.data ? me.data.profile.displayName || t("account.home.addName") : undefined} onClick={() => open("profile")} />
         {visibilityKnown ? (
-          <MenuRow icon="eye-outline" label="Profile visibility" value={visibilityLabel(me.data?.profile.profileVisibility)} onClick={() => setVisibilityOpen(true)} />
+          <MenuRow icon="eye-outline" label={t("account.home.visibility")} value={visibilityLabel(me.data?.profile.profileVisibility)} onClick={() => setVisibilityOpen(true)} />
         ) : null}
       </HoldCard>
       {visibilityOpen ? <VisibilitySheet onClose={() => setVisibilityOpen(false)} /> : null}
 
-      <SectionTitle>Account</SectionTitle>
+      <SectionTitle>{t("account.home.account")}</SectionTitle>
       <HoldCard>
-        <MenuRow icon="person-outline" label="Account" sub={email ?? "Not set"} chevron onClick={() => open("account")} />
+        <MenuRow icon="person-outline" label={t("account.home.account")} sub={email ?? t("account.home.notSet")} chevron onClick={() => open("account")} />
         <MenuRow
           icon="logo-x"
-          label="X account"
-          value={x.data === undefined ? undefined : linked ? `@${linked.handle}${linked.verifiedType ? " ✓" : ""}` : "Connect X"}
+          label={t("account.home.x")}
+          value={x.data === undefined ? undefined : linked ? `@${linked.handle}${linked.verifiedType ? " ✓" : ""}` : t("account.home.connectX")}
           attention={!!x.data && linked !== null && !x.data.canPublish}
           chevron={x.data === undefined}
           onClick={() => open("x")}
         />
         <MenuRow
           icon="wallet-outline"
-          label="Where you get paid"
+          label={t("account.home.payout")}
           value={payout.value ?? undefined}
           attention={payout.attention}
           chevron={payout.value === null}
@@ -132,9 +134,9 @@ function AccountHome({ open }: { open: (v: AccountView) => void }) {
       {/* `payment-notes/settings` has answered this the whole time and nothing
           asked it, so the only way to change it was the app. It matters more
           now: Spaces opens a second door into the same inbox. */}
-      <SectionTitle>Messages</SectionTitle>
+      <SectionTitle>{t("account.home.messages")}</SectionTitle>
       <HoldCard>
-        <MenuRow icon="chatbubble-ellipses-outline" label="Who can message you" chevron onClick={() => open("messages")} />
+        <MenuRow icon="chatbubble-ellipses-outline" label={t("account.home.whoCanMessage")} chevron onClick={() => open("messages")} />
       </HoldCard>
     </Column>
   );

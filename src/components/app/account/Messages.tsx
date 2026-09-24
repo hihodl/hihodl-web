@@ -29,21 +29,24 @@
 
 import { useEffect, useState } from "react";
 
+import type { MessageKey } from "@/lib/app/i18n";
+import { useT } from "@/lib/app/i18n/react";
 import { getChatSettings, listBlocked, setChatSettings, unblockUser, type ChatRequestsFrom } from "@/lib/app/chat";
 
 import { BackHeader, Column, HoldCard, SectionTitle } from "../hold";
 import { Ion } from "../ion";
 
-const CHOICES: { key: ChatRequestsFrom; label: string; body: string }[] = [
-  { key: "everyone", label: "Everyone", body: "A first message from somebody new arrives as a request you can accept or decline." },
-  { key: "paid", label: "People you have paid", body: "Only people you have sent money to or been paid by can start a conversation." },
-  { key: "nobody", label: "Nobody new", body: "No new conversations. The ones you already have carry on as they are." },
+const CHOICES: { key: ChatRequestsFrom; label: MessageKey; body: MessageKey }[] = [
+  { key: "everyone", label: "account.messages.everyone", body: "account.messages.everyoneBody" },
+  { key: "paid", label: "account.messages.paid", body: "account.messages.paidBody" },
+  { key: "nobody", label: "account.messages.nobody", body: "account.messages.nobodyBody" },
 ];
 
 export function MessagesSettings({ onBack }: { onBack: () => void }) {
   const [value, setValue] = useState<ChatRequestsFrom | null>(null);
   const [failed, setFailed] = useState(false);
   const [saving, setSaving] = useState<ChatRequestsFrom | null>(null);
+  const t = useT();
 
   useEffect(() => {
     let alive = true;
@@ -79,7 +82,7 @@ export function MessagesSettings({ onBack }: { onBack: () => void }) {
 
   return (
     <Column>
-      <BackHeader title="Who can message you" onBack={onBack} />
+      <BackHeader title={t("account.home.whoCanMessage")} onBack={onBack} />
 
       <HoldCard>
         {CHOICES.map((c) => {
@@ -101,8 +104,8 @@ export function MessagesSettings({ onBack }: { onBack: () => void }) {
                 {on ? <Ion name="checkmark" size={12} color="#FFB703" /> : null}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-[14.5px] font-strong text-white">{c.label}</span>
-                <span className="mt-0.5 block text-[12.5px] leading-[17px] text-white/[0.62]">{c.body}</span>
+                <span className="block text-[14.5px] font-strong text-white">{t(c.label)}</span>
+                <span className="mt-0.5 block text-[12.5px] leading-[17px] text-white/[0.62]">{t(c.body)}</span>
               </span>
             </button>
           );
@@ -111,13 +114,12 @@ export function MessagesSettings({ onBack }: { onBack: () => void }) {
 
       {failed ? (
         <p className="mt-3 px-1 text-[12.5px] leading-[17px] text-white/70">
-          That did not save. Try it again in a moment.
+          {t("account.messages.saveFailed")}
         </p>
       ) : null}
 
       <p className="mt-3 px-1 text-[12.5px] leading-[17px] text-white/[0.55]">
-        Whoever is turned away is never told: a message that does not arrive looks to the sender exactly like one that
-        did. Nobody can work out who has shut them out.
+        {t("account.messages.silent")}
       </p>
 
       <Blocked />
@@ -139,6 +141,7 @@ export function MessagesSettings({ onBack }: { onBack: () => void }) {
 function Blocked() {
   const [rows, setRows] = useState<{ userId: string; aliasHandle: string | null; displayName: string | null }[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const t = useT();
 
   useEffect(() => {
     let alive = true;
@@ -165,12 +168,12 @@ function Blocked() {
 
   return (
     <>
-      <SectionTitle>Blocked</SectionTitle>
+      <SectionTitle>{t("account.messages.blocked")}</SectionTitle>
       <HoldCard>
         {rows.map((b) => (
           <div key={b.userId} className="flex items-center gap-3 px-3.5 py-3">
             <span className="min-w-0 flex-1 truncate text-[14.5px] font-strong text-white">
-              {b.displayName?.trim() || (b.aliasHandle ? `@${b.aliasHandle}` : "Someone on HOLD")}
+              {b.displayName?.trim() || (b.aliasHandle ? `@${b.aliasHandle}` : t("account.messages.someone"))}
             </span>
             <button
               type="button"
@@ -178,7 +181,7 @@ function Blocked() {
               onClick={() => void undo(b.userId)}
               className="shrink-0 rounded-[10px] bg-white/10 px-3 py-1.5 text-[12.5px] font-strong text-white/85 transition-colors hover:bg-white/[0.16] disabled:opacity-50"
             >
-              {busy === b.userId ? "…" : "Unblock"}
+              {busy === b.userId ? "…" : t("account.messages.unblock")}
             </button>
           </div>
         ))}

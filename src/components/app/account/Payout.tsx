@@ -23,6 +23,8 @@ import { PayoutAddress } from "@/components/creator/PayoutAddress";
 import { describeCreatorError } from "@/lib/creator/api";
 import type { PayoutAddressView } from "@/lib/creator/types";
 import { useHoldWallet } from "@/lib/app/hold-wallet";
+import { t as tr } from "@/lib/app/i18n";
+import { useT } from "@/lib/app/i18n/react";
 import { usePayout, useRefresh } from "@/lib/app/spaces-data";
 
 import { CopyButton, shortAddress } from "../front/kit";
@@ -47,36 +49,36 @@ function linesOf(view: PayoutAddressView, w: ReturnType<typeof useHoldWallet>): 
   const sol = view.solana;
   const solana: Line =
     sol.source === "hold"
-      ? { title: "Paid to your HOLD wallet", address: sol.address, text: "Solana. Sponsors pay this address directly.", tone: "done", chip: "HOLD wallet" }
+      ? { title: tr("account.payout.holdTitle"), address: sol.address, text: tr("account.payout.holdText"), tone: "done", chip: tr("account.payout.chipHold") }
       : sol.source === "declared"
         ? {
-            title: "Paid to another wallet",
+            title: tr("account.payout.declaredTitle"),
             address: sol.address,
-            text: "Proved by your signature. A HOLD wallet, once you have one, takes over.",
+            text: tr("account.payout.declaredText"),
             tone: "done",
-            chip: "Another wallet",
+            chip: tr("account.payout.chipAnother"),
           }
         : w.kind === "web" && w.unregistered
           ? {
-              title: "Your HOLD wallet is almost ready",
+              title: tr("account.payout.almostTitle"),
               address: null,
-              text: "Open your Wallet and unlock it once: that tells HOLD its address, and sponsors pay it from then on.",
+              text: tr("account.payout.almostText"),
               tone: "neutral",
-              chip: "One step left",
+              chip: tr("account.payout.chipOneStep"),
             }
           : w.canCreate
-            ? { title: "Make your HOLD wallet", address: null, text: "Sponsors pay your HOLD wallet. Make it in Wallet: a passkey and a minute.", tone: "neutral", chip: "No wallet yet" }
-            : { title: "No wallet yet", address: null, text: "Make your wallet in the HOLD app, or use another wallet.", tone: "neutral", chip: "No wallet yet" };
+            ? { title: tr("account.payout.makeTitle"), address: null, text: tr("account.payout.makeText"), tone: "neutral", chip: tr("account.payout.chipNoWallet") }
+            : { title: tr("account.payout.noWalletTitle"), address: null, text: tr("account.payout.noWalletText"), tone: "neutral", chip: tr("account.payout.chipNoWallet") };
 
   const e = view.evm;
   // Read-only here: Base and Polygon are set up in the HOLD app.
   const evm: Line | null = e.address
     ? {
-        title: "Base and Polygon",
+        title: tr("account.payout.evmTitle"),
         address: e.address,
-        text: e.source === "hold" ? "From the HOLD app's wallet. Listings made in the app can be paid here too." : "Another wallet, proved by your signature.",
+        text: e.source === "hold" ? tr("account.payout.evmHoldText") : tr("account.payout.evmOtherText"),
         tone: "done",
-        chip: e.source === "hold" ? "HOLD app" : "Another wallet",
+        chip: e.source === "hold" ? tr("account.payout.chipHoldApp") : tr("account.payout.chipAnother"),
       }
     : null;
   return { solana, evm };
@@ -95,11 +97,12 @@ export function usePayoutSummary(): { value: string | null; attention: boolean }
 export function PayoutScreen({ onBack, onOther, walletHref }: { onBack: () => void; onOther: () => void; walletHref: string }) {
   const payout = usePayout();
   const w = useHoldWallet();
+  const t = useT();
   const lines = payout.data ? linesOf(payout.data, w) : null;
 
   return (
     <Column>
-      <BackHeader title="Where you get paid" onBack={onBack} />
+      <BackHeader title={t("account.home.payout")} onBack={onBack} />
       {payout.error ? (
         <Notice>{describeCreatorError(payout.error)}</Notice>
       ) : !lines ? (
@@ -107,7 +110,7 @@ export function PayoutScreen({ onBack, onOther, walletHref }: { onBack: () => vo
       ) : (
         <div className="flex flex-col gap-3.5">
           <p className="px-1 text-[15px] font-medium leading-[21px] text-white/[0.72]">
-            Sponsors pay you directly, in USDC, to the address below. HOLD never holds it on the way.
+            {t("account.payout.intro")}
           </p>
           {[lines.solana, ...(lines.evm ? [lines.evm] : [])].map((l) => (
             <Card key={l.title}>
@@ -128,9 +131,9 @@ export function PayoutScreen({ onBack, onOther, walletHref }: { onBack: () => vo
           <HoldCard className="mt-1">
             {w.walletPage ? (
               // The Wallet page carries a strict CSP that only a full page load can set.
-              <MenuRow icon="wallet-outline" label="Open Wallet" href={walletHref} reload chevron />
+              <MenuRow icon="wallet-outline" label={t("account.payout.openWallet")} href={walletHref} reload chevron />
             ) : null}
-            <MenuRow icon="swap-horizontal" label="Use another wallet" sub="Phantom or another Solana wallet" onClick={onOther} chevron />
+            <MenuRow icon="swap-horizontal" label={t("account.payout.other")} sub={t("account.payout.otherSub")} onClick={onOther} chevron />
           </HoldCard>
         </div>
       )}
@@ -143,12 +146,12 @@ export function OtherWallet({ onBack }: { onBack: () => void }) {
   const refresh = useRefresh();
   // Stable: PayoutAddress reads again whenever this changes.
   const onChange = useCallback(() => void refresh("payout"), [refresh]);
+  const t = useT();
   return (
     <Column wide>
-      <BackHeader title="Use another wallet" onBack={onBack} />
+      <BackHeader title={t("account.payout.other")} onBack={onBack} />
       <p className="mb-4 px-1 text-[15px] font-medium leading-[21px] text-white/[0.72]">
-        A Solana wallet other than HOLD, such as Phantom. Connect it and sign one message: no fee, no transaction. If you have a HOLD wallet, it is the one
-        that gets paid.
+        {t("account.payout.otherIntro")}
       </p>
       <PayoutAddress onChange={onChange} />
     </Column>

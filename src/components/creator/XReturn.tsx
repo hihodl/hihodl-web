@@ -24,42 +24,23 @@ import { useEffect, useRef, useState } from "react";
 import { useHref, useProductHref } from "@/components/app/base";
 import { ctaPrimary, ctaSecondary } from "@/components/app/hold";
 import { Ion } from "@/components/app/ion";
+import type { MessageKey } from "@/lib/app/i18n";
+import { useT } from "@/lib/app/i18n/react";
 import { completeXLink, describeCreatorError } from "@/lib/creator/api";
 import { useCreatorSession } from "@/lib/creator/session";
 import { isLinkResult, isTicket, type LinkResult } from "@/lib/creator/types";
 
 import { Notice } from "./parts";
 
-/** What each ending means, said once and said plainly. */
-const RESULT_TEXT: Record<Exclude<LinkResult, "signed_in">, { title: string; body: string }> = {
-  ok: {
-    title: "Your X account is linked",
-    body: "Spaces you publish will be published under it, and its handle is what sponsors see on the page.",
-  },
-  denied: {
-    title: "You said no at X",
-    body: "Nothing was linked and nothing on your account changed. You can start again whenever you like.",
-  },
-  expired: {
-    title: "That sign-in ran out",
-    body: "A trip to X is good for ten minutes and this one took longer. Nothing changed. Start again and it will go through.",
-  },
-  taken: {
-    title: "That X account belongs to another HOLD account",
-    body: "One X account can only be linked to one HOLD account, because it is what a sponsor checks before paying a stranger. Sign in to the account that already has it, or link a different X account here.",
-  },
-  busy: {
-    title: "Your current X account is on a live space",
-    body: "A published board promises a verified creator, and that promise is read off the account fronting it — so it cannot be swapped while that space is open. Once it closes, this will work.",
-  },
-  failed: {
-    title: "That did not go through",
-    body: "Something went wrong between here and X. Nothing was linked and nothing on your account changed. Trying again usually settles it.",
-  },
-  unavailable: {
-    title: "Linking X is not available right now",
-    body: "Nothing was linked and nothing on your account changed. Try again in a little while.",
-  },
+/** What each ending means, said once and said plainly. Keys, read at render. */
+const RESULT_TEXT: Record<Exclude<LinkResult, "signed_in">, { title: MessageKey; body: MessageKey }> = {
+  ok: { title: "account.xReturn.okTitle", body: "account.xReturn.okBody" },
+  denied: { title: "account.xReturn.deniedTitle", body: "account.xReturn.deniedBody" },
+  expired: { title: "account.xReturn.expiredTitle", body: "account.xReturn.expiredBody" },
+  taken: { title: "account.xReturn.takenTitle", body: "account.xReturn.takenBody" },
+  busy: { title: "account.xReturn.busyTitle", body: "account.xReturn.busyBody" },
+  failed: { title: "account.xReturn.failedTitle", body: "account.xReturn.failedBody" },
+  unavailable: { title: "account.xReturn.unavailableTitle", body: "account.xReturn.unavailableBody" },
 };
 
 type State =
@@ -86,6 +67,7 @@ export function XReturn({ result, ticket }: { result?: string; ticket?: string }
   const { session } = useCreatorSession();
   const href = useHref();
   const productHref = useProductHref();
+  const t = useT();
   const [state, setState] = useState<State>(() => initialState(result, ticket));
   // A ticket is single use. React runs an effect twice in development, and a
   // reload would present a spent one, so it is redeemed at most once per load.
@@ -121,14 +103,14 @@ export function XReturn({ result, ticket }: { result?: string; ticket?: string }
   const ok = state.kind === "result" && state.result === "ok";
   const title =
     state.kind === "working"
-      ? "Finishing up with X…"
+      ? t("account.xReturn.working")
       : state.kind === "needs-session"
-        ? "Sign in to finish linking X"
+        ? t("account.xReturn.needsSession")
         : state.kind === "error"
-          ? "We could not finish linking X"
-          : RESULT_TEXT[state.result].title;
+          ? t("account.xReturn.error")
+          : t(RESULT_TEXT[state.result].title);
   const body =
-    state.kind === "needs-session" ? "Sign in and connect X again." : state.kind === "result" ? RESULT_TEXT[state.result].body : null;
+    state.kind === "needs-session" ? t("account.xReturn.needsSessionBody") : state.kind === "result" ? t(RESULT_TEXT[state.result].body) : null;
 
   // TravelEmpty: the icon in its disc, the title, the sentence, and the one way on.
   return (
@@ -145,7 +127,7 @@ export function XReturn({ result, ticket }: { result?: string; ticket?: string }
       ) : null}
       {state.kind !== "working" ? (
         <Link href={productHref("/account?view=x")} className={`${ok ? ctaPrimary : ctaSecondary} mt-3 !w-auto`}>
-          Open Account
+          {t("account.xReturn.open")}
         </Link>
       ) : null}
     </div>

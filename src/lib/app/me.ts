@@ -24,6 +24,7 @@
 
 import { call, CreatorApiError } from "@/lib/creator/api";
 import { creatorAuth } from "@/lib/creator/session";
+import { t } from "@/lib/app/i18n";
 
 /** Who can find the person (the app's Profile visibility sheet). */
 export type ProfileVisibility = "public" | "private" | "invisible";
@@ -80,11 +81,11 @@ export const updateMe = (patch: {
  */
 export function describeProfileError(e: unknown, fallback: (e: unknown) => string): string {
   if (e instanceof CreatorApiError) {
-    if (e.code === "avatar_emoji_invalid") return "HOLD did not accept that emoji. Your avatar was not changed; pick another one.";
-    if (e.code === "avatar_emoji_too_long") return "That emoji is too long to keep. Your avatar was not changed; pick another one.";
-    if (e.status === 400) return "HOLD could not save this yet, so nothing was changed. Try again later.";
+    if (e.code === "avatar_emoji_invalid") return t("account.profileError.emojiInvalid");
+    if (e.code === "avatar_emoji_too_long") return t("account.profileError.emojiTooLong");
+    if (e.status === 400) return t("account.profileError.notYet");
   }
-  return `${fallback(e)} Nothing was changed.`;
+  return t("account.profileError.withReason", { reason: fallback(e) });
 }
 
 /**

@@ -16,6 +16,9 @@ import { useState } from "react";
 
 import { describeCreatorError, startXLink } from "@/lib/creator/api";
 import { MIN_X_ACCOUNT_AGE_DAYS, type XAccountStatus } from "@/lib/creator/types";
+import { t as tr, type MessageKey } from "@/lib/app/i18n";
+import { fmtCompact, fmtDate, fmtNumber } from "@/lib/app/i18n/format";
+import { useT } from "@/lib/app/i18n/react";
 import { unlinkX } from "@/lib/app/me";
 import { useListings, useRefresh, useX } from "@/lib/app/spaces-data";
 
@@ -36,37 +39,40 @@ function daysSince(iso: string | null | undefined): number | null {
 function formatAge(iso: string | null | undefined): string | null {
   const days = daysSince(iso);
   if (days == null) return null;
-  if (days >= 730) return `${Math.floor(days / 365)} years`;
-  if (days >= 365) return "1 year";
-  if (days >= 60) return `${Math.floor(days / 30)} months`;
-  return `${days} days`;
+  if (days >= 365) return tr("account.x.ageYears", { count: Math.floor(days / 365) });
+  if (days >= 60) return tr("account.x.ageMonths", { count: Math.floor(days / 30) });
+  return tr("account.x.ageDays", { count: days });
 }
 
 function formatCount(n: number): string {
-  return n >= 10_000 ? `${(n / 1000).toLocaleString("en-US", { maximumFractionDigits: 1 })}K` : n.toLocaleString("en-US");
+  return n >= 10_000 ? fmtCompact(n) : fmtNumber(n);
 }
 
 function formatDay(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+  return fmtDate(iso, { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 }
 
-const VERIFIED: Record<string, string> = { blue: "Verified (blue)", business: "Verified business", government: "Verified government" };
+const VERIFIED: Record<string, MessageKey> = {
+  blue: "account.x.verifiedBlue",
+  business: "account.x.verifiedBusiness",
+  government: "account.x.verifiedGovernment",
+};
 
 /** XAccountPanel's refusal line, word for word. */
 function refusalLine(x: Linked): string | null {
   switch (x.refusal) {
     case "x_not_verified":
-      return "X hasn't given this account a check mark (blue, business or government). You can link it now, but you need the check mark to publish.";
+      return tr("account.x.refusalNotVerified");
     case "x_account_too_new": {
       const age = daysSince(x.accountCreatedAt);
       if (x.accountCreatedAt && age != null) {
         const ready = formatDay(new Date(Date.parse(x.accountCreatedAt) + MIN_X_ACCOUNT_AGE_DAYS * 86_400_000).toISOString());
-        return `This account is ${age} days old. Accounts need ${MIN_X_ACCOUNT_AGE_DAYS} days before they can publish, so yours can from ${ready}.`;
+        return tr("account.x.refusalTooNew", { age: fmtNumber(age), min: MIN_X_ACCOUNT_AGE_DAYS, date: ready });
       }
-      return `Accounts need to be at least ${MIN_X_ACCOUNT_AGE_DAYS} days old to publish.`;
+      return tr("account.x.refusalTooNewNoDate", { min: MIN_X_ACCOUNT_AGE_DAYS });
     }
     case "x_relink_needed":
-      return "We need a fresh look at this account. Link it again to publish.";
+      return tr("account.x.refusalRelink");
     default:
       return null;
   }
@@ -96,6 +102,7 @@ export function XScreen({ onBack }: { onBack: () => void }) {
   const [busy, setBusy] = useState<"link" | "unlink" | null>(null);
   const [confirm, setConfirm] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const t = useT();
   const status = x.data;
   const linked = status?.linked ? (status as Linked) : null;
   // The server keeps an X account while a live listing is published under it
@@ -138,10 +145,10 @@ export function XScreen({ onBack }: { onBack: () => void }) {
     panel = (
       <Card>
         <Notice icon="cloud-offline-outline" tone="calm">
-          We couldn&apos;t check your X account. {x.error ? describeCreatorError(x.error) : null}
+          {x.error ? t("account.x.checkFailedWith", { reason: describeCreatorError(x.error) }) : t("account.x.checkFailed")}
         </Notice>
         <button type="button" className={ctaSecondary} onClick={() => void refresh("x")}>
-          Try again
+          {t("common.tryAgain")}
         </button>
       </Card>
     );
@@ -151,18 +158,19 @@ export function XScreen({ onBack }: { onBack: () => void }) {
         <div className="flex items-center gap-3">
           <XMark />
           <div className="min-w-0 flex-1">
-            <p className="text-[16px] font-strong tracking-[-0.2px] text-white">Link your X account</p>
+            <p className="text-[16px] font-strong tracking-[-0.2px] text-white">{t("account.x.linkTitle")}</p>
             <p className="mt-0.5 text-[13px] leading-[18px] text-white/[0.62]">
-              Brands decide on the account behind a space. To publish, it needs a check mark from X and has to be at least {MIN_X_ACCOUNT_AGE_DAYS} days old.
+              {t("account.x.linkBody", { min: MIN_X_ACCOUNT_AGE_DAYS })}
             </p>
           </div>
         </div>
-        {!status.configured ? <Notice>Linking X isn&apos;t switched on yet. Check back soon.</Notice> : null}
+        {!status.configured ? <Notice>{t("account.x.notOn")}</Notice> : null}
         {notice ? <Notice>{notice}</Notice> : null}
       </Card>
     );
   } else {
-    const verified = linked.verifiedType ? VERIFIED[linked.verifiedType] : null;
+    const verifiedKey = linked.verifiedType ? VERIFIED[linked.verifiedType] : undefined;
+    const verified = verifiedKey ? t(verifiedKey) : null;
     const age = formatAge(linked.accountCreatedAt);
     const refusal = refusalLine(linked);
     panel = (
@@ -181,15 +189,15 @@ export function XScreen({ onBack }: { onBack: () => void }) {
           {linked.canPublish ? (
             <span className="inline-flex h-6 shrink-0 items-center gap-1 rounded-[12px] bg-[rgba(14,155,104,0.14)] px-[9px] text-[11.5px] font-strong text-[#2FBE8A]">
               <Ion name="checkmark-circle" size={14} />
-              Can publish
+              {t("account.x.canPublish")}
             </span>
           ) : null}
         </div>
         <div className="flex flex-col gap-[7px]">
-          <Fact icon={verified ? "checkmark-circle-outline" : "remove-circle-outline"} text={verified ?? "No check mark from X"} attention={!verified} />
-          {linked.identityVerified ? <Fact icon="id-card-outline" text="ID verified by X" /> : null}
-          {age ? <Fact icon="time-outline" text={`Account age: ${age}`} attention={linked.refusal === "x_account_too_new"} /> : null}
-          {linked.followers != null ? <Fact icon="people-outline" text={`${formatCount(linked.followers)} followers`} /> : null}
+          <Fact icon={verified ? "checkmark-circle-outline" : "remove-circle-outline"} text={verified ?? t("account.x.noCheck")} attention={!verified} />
+          {linked.identityVerified ? <Fact icon="id-card-outline" text={t("account.x.idVerified")} /> : null}
+          {age ? <Fact icon="time-outline" text={t("account.x.age", { age })} attention={linked.refusal === "x_account_too_new"} /> : null}
+          {linked.followers != null ? <Fact icon="people-outline" text={t("account.x.followers", { count: linked.followers, formatted: formatCount(linked.followers) })} /> : null}
         </div>
         {refusal ? <Notice>{refusal}</Notice> : null}
         {notice ? <Notice>{notice}</Notice> : null}
@@ -199,48 +207,48 @@ export function XScreen({ onBack }: { onBack: () => void }) {
 
   return (
     <Column>
-      <BackHeader title="X account" onBack={onBack} />
+      <BackHeader title={t("account.home.x")} onBack={onBack} />
       <div className="flex flex-col gap-3.5">
         {panel}
 
         {status && !linked ? (
           <button type="button" className={ctaPrimary} disabled={!status.configured || busy !== null} onClick={() => void link()}>
             <Ion name="logo-x" size={16} />
-            {busy === "link" ? "Taking you to X…" : "Connect"}
+            {busy === "link" ? t("account.x.taking") : t("account.x.connect")}
           </button>
         ) : null}
 
         {linked && confirm ? (
           <div className={`${holdCard} flex flex-col gap-3 p-5`}>
-            <p className="text-[17px] font-strong text-white">Unlink X?</p>
+            <p className="text-[17px] font-strong text-white">{t("account.x.unlinkTitle")}</p>
             <p className="text-[14px] leading-5 text-white/[0.72]">
               {live.length
-                ? `@${linked.handle} fronts ${live.length === 1 ? "a live space" : `${live.length} live spaces`}, so it stays linked until ${live.length === 1 ? "it closes" : "they close"}.`
-                : "You won't be able to publish until you link an account again."}
+                ? t("account.x.frontsLive", { handle: linked.handle, count: live.length })
+                : t("account.x.unlinkBody")}
             </p>
             {live.length ? null : (
               <button type="button" className={ctaSecondary} disabled={busy !== null} onClick={() => void unlink()}>
-                {busy === "unlink" ? "Unlinking…" : "Unlink"}
+                {busy === "unlink" ? t("account.x.unlinking") : t("account.x.unlink")}
               </button>
             )}
             <button type="button" className="h-11 text-[15px] font-strong text-white/80 hover:text-white" disabled={busy !== null} onClick={() => setConfirm(false)}>
-              {live.length ? "OK" : "Cancel"}
+              {live.length ? t("common.ok") : t("common.cancel")}
             </button>
           </div>
         ) : linked ? (
           <div className="flex flex-col gap-2.5">
             <button type="button" className={ctaPrimary} disabled={busy !== null} onClick={() => void link()}>
               <Ion name={relink ? "refresh" : "swap-horizontal"} size={16} />
-              {busy === "link" ? "Taking you to X…" : relink ? "Link again" : "Change account"}
+              {busy === "link" ? t("account.x.taking") : relink ? t("account.x.linkAgain") : t("account.x.change")}
             </button>
             <button type="button" className={ctaSecondary} disabled={busy !== null} onClick={() => setConfirm(true)}>
               <Ion name="log-out-outline" size={16} />
-              Disconnect
+              {t("account.x.disconnect")}
             </button>
           </div>
         ) : null}
 
-        <p className="px-1 text-center text-[12px] leading-4 text-white/55">We read your public profile once and never post for you. No X password or token is stored.</p>
+        <p className="px-1 text-center text-[12px] leading-4 text-white/55">{t("account.x.privacy")}</p>
       </div>
     </Column>
   );

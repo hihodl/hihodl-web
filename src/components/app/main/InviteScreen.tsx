@@ -15,6 +15,8 @@
 
 import { useState } from "react";
 
+import { fmtNumber } from "@/lib/app/i18n/format";
+import { Rich, useT } from "@/lib/app/i18n/react";
 import { useInvites, useReferralSummary, type Invite } from "@/lib/app/referrals";
 
 import { CopyButton } from "../front/kit";
@@ -28,10 +30,11 @@ const AMBER = "#FFD234";
 const FRIEND = "#8ECAE6";
 const TERMS = "https://hihodl.xyz/legal/referral-terms";
 
-const pts = (n: number) => n.toLocaleString("en-US");
+const pts = (n: number) => fmtNumber(n);
 
 export function InviteScreen({ onBack }: { onBack: () => void }) {
   const summary = useReferralSummary();
+  const t = useT();
   const s = summary.data;
   const perReferrer = s?.pointsPerReferrer;
   const invites = useInvites(s ? (perReferrer ?? 0) : undefined);
@@ -39,9 +42,9 @@ export function InviteScreen({ onBack }: { onBack: () => void }) {
   if (summary.error && !s) {
     return (
       <Column>
-        <BackHeader title="Invite friends" onBack={onBack} />
+        <BackHeader title={t("menu.invite.title")} onBack={onBack} />
         <HoldCard className="mt-4">
-          <ReadFailed title="We couldn't load your invites" onRetry={() => void summary.mutate()} />
+          <ReadFailed title={t("menu.invite.loadFailed")} onRetry={() => void summary.mutate()} />
         </HoldCard>
       </Column>
     );
@@ -53,25 +56,31 @@ export function InviteScreen({ onBack }: { onBack: () => void }) {
   const earned = s ? (s.pointsEarned ?? activated * (perReferrer ?? 0)) : 0;
   const welcome = s?.pointsPerWelcome;
   const message = s?.inviteLink
-    ? `Join me on HOLD and get ${welcome !== undefined ? `${pts(welcome)} points` : "points"} to start. ${s.inviteLink}`
+    ? t("menu.invite.message", {
+        points: welcome !== undefined ? t("menu.invite.points", { count: welcome }) : t("menu.invite.pointsWord"),
+        link: s.inviteLink,
+      })
     : "";
 
   return (
     <Column>
-      <BackHeader title="Invite friends" onBack={onBack} />
+      <BackHeader title={t("menu.invite.title")} onBack={onBack} />
 
       {/* The hero: what you are paid, and what they are. */}
       <section className="mt-2 overflow-hidden rounded-[24px] border border-white/10 bg-[linear-gradient(135deg,#15202C,#0C1620_55%,#0A121A)] p-5">
-        <p className="text-[12.5px] font-bold uppercase tracking-[0.6px] text-white/55">Invite friends, you both earn</p>
+        <p className="text-[12.5px] font-bold uppercase tracking-[0.6px] text-white/55">{t("menu.invite.heroLabel")}</p>
         {s ? (
           <>
             <p className="mt-1.5 flex items-baseline gap-1.5">
               <span className="text-[40px] font-extrabold leading-[1.1] tracking-[-1px] tabular-nums text-white">{pts(perReferrer ?? 0)}</span>
-              <span className="text-[16px] font-bold text-white/70">pts</span>
+              <span className="text-[16px] font-bold text-white/70">{t("menu.invite.pts")}</span>
             </p>
             <p className="mt-1 text-[13.5px] text-white/[0.72]">
-              per friend who activates ·{" "}
-              <span style={{ color: FRIEND }}>they get {welcome !== undefined ? pts(welcome) : "points"} too</span>
+              <Rich
+                k="menu.invite.perFriend"
+                vars={{ points: welcome !== undefined ? pts(welcome) : t("menu.invite.pointsWord") }}
+                tags={{ friend: (c) => <span style={{ color: FRIEND }}>{c}</span> }}
+              />
             </p>
           </>
         ) : (
@@ -81,14 +90,14 @@ export function InviteScreen({ onBack }: { onBack: () => void }) {
 
       {/* The three counts. */}
       <div className="mt-3 flex gap-2">
-        <Stat value={s ? String(invited) : null} label="invited" />
-        <Stat value={s ? String(activated) : null} label="activated" color={GREEN} />
-        <Stat value={s ? pts(earned) : null} label="pts earned" color={AMBER} grow />
+        <Stat value={s ? pts(invited) : null} label={t("menu.invite.invited")} />
+        <Stat value={s ? pts(activated) : null} label={t("menu.invite.activated")} color={GREEN} />
+        <Stat value={s ? pts(earned) : null} label={t("menu.invite.ptsEarned")} color={AMBER} grow />
       </div>
 
       {/* The link. */}
       <HoldCard className="mt-5 p-4">
-        <p className="text-[12px] font-bold uppercase tracking-[0.6px] text-white/55">Your invite link</p>
+        <p className="text-[12px] font-bold uppercase tracking-[0.6px] text-white/55">{t("menu.invite.yourLink")}</p>
         {s?.inviteLink ? (
           <>
             <p className="mt-2 truncate text-[14px] text-white/80">{s.inviteLink}</p>
@@ -108,12 +117,12 @@ export function InviteScreen({ onBack }: { onBack: () => void }) {
             </div>
             {s.qualifyUsd !== undefined ? (
               <p className="mt-3 text-[12.5px] leading-[18px] text-white/55">
-                Your friend activates when they sign up, add money and invest ${pts(s.qualifyUsd)} or more.
+                {t("menu.invite.qualify", { amount: `$${pts(s.qualifyUsd)}` })}
               </p>
             ) : null}
           </>
         ) : s ? (
-          <p className="mt-2 text-[13.5px] text-white/[0.72]">Your link is not ready yet. Try again in a moment.</p>
+          <p className="mt-2 text-[13.5px] text-white/[0.72]">{t("menu.invite.linkNotReady")}</p>
         ) : (
           <Skeleton className="mt-2 h-10" />
         )}
@@ -121,17 +130,21 @@ export function InviteScreen({ onBack }: { onBack: () => void }) {
 
       {/* Your invites. */}
       <div className="mt-6 flex items-baseline justify-between px-0.5">
-        <h2 className="text-[16px] font-bold text-white">Your invites</h2>
+        <h2 className="text-[16px] font-bold text-white">{t("menu.invite.yourInvites")}</h2>
         {list.length > 0 ? (
           <p className="text-[12.5px] text-white/55">
-            {invited} sent · <span style={{ color: GREEN }}>{pts(earned)} pts</span>
+            <Rich
+              k="menu.invite.sentSummary"
+              vars={{ count: pts(invited), points: pts(earned) }}
+              tags={{ green: (c) => <span style={{ color: GREEN }}>{c}</span> }}
+            />
           </p>
         ) : null}
       </div>
       <div className="mt-3">
         {invites.error && !invites.data ? (
           <HoldCard>
-            <ReadFailed compact title="We couldn't load your invites" onRetry={() => void invites.mutate()} />
+            <ReadFailed compact title={t("menu.invite.loadFailed")} onRetry={() => void invites.mutate()} />
           </HoldCard>
         ) : !invites.data ? (
           <div className="flex flex-col gap-2">
@@ -141,7 +154,7 @@ export function InviteScreen({ onBack }: { onBack: () => void }) {
         ) : list.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-8 text-center">
             <Ion name="people-outline" size={24} className="text-white/30" />
-            <p className="text-[13.5px] text-white/55">No invites yet. Share your link to start earning.</p>
+            <p className="text-[13.5px] text-white/55">{t("menu.invite.empty")}</p>
           </div>
         ) : (
           <div className="flex flex-col gap-2">
@@ -153,11 +166,16 @@ export function InviteScreen({ onBack }: { onBack: () => void }) {
       </div>
 
       <p className="mt-6 text-center text-[12px] leading-[18px] text-white/45">
-        Points credit when your friend activates.{" "}
-        <a href={TERMS} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-white/70">
-          T&amp;Cs
-        </a>{" "}
-        apply.
+        <Rich
+          k="menu.invite.terms"
+          tags={{
+            link: (c) => (
+              <a href={TERMS} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-white/70">
+                {c}
+              </a>
+            ),
+          }}
+        />
       </p>
 
       {s?.inviteLink ? (
@@ -190,6 +208,7 @@ function initials(name: string): string {
 }
 
 function InviteRow({ invite }: { invite: Invite }) {
+  const t = useT();
   const activated = invite.status === "activated";
   return (
     <div className="flex items-center gap-3 rounded-[16px] border border-white/[0.08] bg-white/[0.05] px-3.5 py-3">
@@ -203,15 +222,22 @@ function InviteRow({ invite }: { invite: Invite }) {
         <span className="block truncate text-[14px] font-bold text-white">{invite.name}</span>
         {activated ? (
           <span className="block text-[12.5px]" style={{ color: GREEN }}>
-            activated · +{pts(invite.pointsAwarded)} pts
+            {t("menu.invite.rowActivated", { points: pts(invite.pointsAwarded) })}
           </span>
         ) : invite.status === "in_progress" ? (
           <span className="block text-[12.5px] text-white/55">
-            {invite.stepsDone} of 3
-            {invite.daysLeft != null ? <span className="text-amber"> · {invite.daysLeft}d left</span> : null}
+            {invite.daysLeft != null ? (
+              <Rich
+                k="menu.invite.rowProgressLeft"
+                vars={{ done: invite.stepsDone, days: invite.daysLeft }}
+                tags={{ left: (c) => <span className="text-amber">{c}</span> }}
+              />
+            ) : (
+              t("menu.invite.rowProgress", { done: invite.stepsDone })
+            )}
           </span>
         ) : (
-          <span className="block text-[12.5px] text-white/45">ran out of time</span>
+          <span className="block text-[12.5px] text-white/45">{t("menu.invite.expired")}</span>
         )}
       </span>
     </div>
@@ -221,6 +247,7 @@ function InviteRow({ invite }: { invite: Invite }) {
 /** The app's sticky CTA: the share sheet where the browser has one, the clipboard where it does not. */
 function ShareButton({ message, link }: { message: string; link: string }) {
   const [copied, setCopied] = useState(false);
+  const t = useT();
   async function share() {
     if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
       try {
@@ -242,7 +269,7 @@ function ShareButton({ message, link }: { message: string; link: string }) {
   return (
     <button type="button" onClick={() => void share()} className={ctaCommit}>
       <Ion name="gift-outline" size={18} />
-      {copied ? "Link copied" : "Invite friends"}
+      {copied ? t("menu.invite.linkCopied") : t("menu.invite.title")}
     </button>
   );
 }

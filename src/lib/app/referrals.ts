@@ -18,6 +18,7 @@ import useSWR from "swr";
 import { useCreatorSession } from "@/lib/creator/session";
 
 import { read } from "./hold-api";
+import { t } from "./i18n";
 
 export interface ReferralSummary {
   inviteCode: string | null;
@@ -66,7 +67,7 @@ function toInvite(raw: ApiInvite, perReferrer: number): Invite {
   const status: InviteStatus = activated ? "activated" : raw.status === "expired" ? "expired" : "in_progress";
   return {
     id: raw.id,
-    name: raw.friendAlias || raw.friendName || "Friend",
+    name: raw.friendAlias || raw.friendName || t("menu.invite.friend"),
     status,
     stepsDone: activated ? 3 : 1,
     daysLeft: status === "in_progress" ? wholeDaysLeft(raw.expiresAt) : null,

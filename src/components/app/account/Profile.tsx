@@ -18,6 +18,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CreatorApiError, describeCreatorError } from "@/lib/creator/api";
+import { t as tr, type MessageKey } from "@/lib/app/i18n";
+import { fmtDate } from "@/lib/app/i18n/format";
+import { useT } from "@/lib/app/i18n/react";
 import {
   checkUsername,
   chosenUsername,
@@ -45,19 +48,20 @@ import { AvatarCropper } from "./AvatarCropper";
 import { UserAvatar } from "./UserAvatar";
 
 function dayText(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "long" });
+  return fmtDate(iso, { day: "numeric", month: "long" });
 }
 
 /** The hub's hero: the avatar, big and centred (tap to edit), and the @handle under it. */
 export function ProfileHero({ onAvatar }: { onAvatar: () => void }) {
   const me = useMe();
+  const t = useT();
   if (!me.data) {
     return me.error ? <Notice>{describeCreatorError(me.error)}</Notice> : <Skeleton className="mb-6 h-[190px] rounded-[28px]" />;
   }
   const username = chosenUsername(me.data);
   return (
     <HoldCard className="mb-6 flex flex-col items-center px-[18px] py-[22px]">
-      <button type="button" onClick={onAvatar} aria-label="Edit avatar" className="mb-3 rounded-[48px] transition-opacity hover:opacity-90">
+      <button type="button" onClick={onAvatar} aria-label={t("account.profile.editAvatar")} className="mb-3 rounded-[48px] transition-opacity hover:opacity-90">
         <UserAvatar size={96} round fallbackName={username ? `@${username}` : me.data.profile.displayName} />
       </button>
       <p className="max-w-full truncate text-[20px] font-strong tracking-[0.1px] text-white">{username ? `@${username}` : "@—"}</p>
@@ -81,6 +85,7 @@ export function ProfileEdit({ onBack, onEmoji }: { onBack: () => void; onEmoji: 
   const [notice, setNotice] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const input = useRef<HTMLInputElement>(null);
+  const t = useT();
 
   // Filled once the profile is read; typing is never overwritten by a re-read.
   const filled = useRef(false);
@@ -93,7 +98,7 @@ export function ProfileEdit({ onBack, onEmoji }: { onBack: () => void; onEmoji: 
   if (!m) {
     return (
       <Column>
-        <BackHeader title="Avatar" onBack={onBack} />
+        <BackHeader title={t("account.profile.avatarTitle")} onBack={onBack} />
         <Skeleton className="h-[320px] rounded-[28px]" />
       </Column>
     );
@@ -127,7 +132,7 @@ export function ProfileEdit({ onBack, onEmoji }: { onBack: () => void; onEmoji: 
     try {
       setPicked(await loadImage(f));
     } catch {
-      setNotice("That file is not an image we can read. Try a JPEG or a PNG.");
+      setNotice(t("account.profile.notImage"));
     }
   };
 
@@ -140,7 +145,7 @@ export function ProfileEdit({ onBack, onEmoji }: { onBack: () => void; onEmoji: 
       await refresh("me");
       setPicked(null);
     } catch (e) {
-      setNotice(e instanceof CreatorApiError ? describeCreatorError(e) : "Couldn't save that photo. Try again, or pick a different image.");
+      setNotice(e instanceof CreatorApiError ? describeCreatorError(e) : t("account.profile.photoFailed"));
     } finally {
       setBusy(null);
     }
@@ -163,7 +168,7 @@ export function ProfileEdit({ onBack, onEmoji }: { onBack: () => void; onEmoji: 
   const emojiSupported = "avatarEmoji" in m.profile;
   return (
     <Column>
-      <BackHeader title="Avatar" onBack={onBack} />
+      <BackHeader title={t("account.profile.avatarTitle")} onBack={onBack} />
 
       {picked ? (
         <AvatarCropper
@@ -177,7 +182,7 @@ export function ProfileEdit({ onBack, onEmoji }: { onBack: () => void; onEmoji: 
         />
       ) : (
         <>
-          <p className="mb-5 text-center text-[13px] text-[#9FB7C2]">Pick how your avatar should look.</p>
+          <p className="mb-5 text-center text-[13px] text-[#9FB7C2]">{t("account.profile.pickHow")}</p>
 
           <div className="mb-6 flex justify-center">
             <UserAvatar size={96} round />
@@ -186,14 +191,14 @@ export function ProfileEdit({ onBack, onEmoji }: { onBack: () => void; onEmoji: 
           <HoldCard>
             <MenuRow
               icon="image-outline"
-              label="Choose from library"
-              sub="Pick a photo, then choose the part that shows."
+              label={t("account.profile.library")}
+              sub={t("account.profile.librarySub")}
               disabled={busy !== null}
               onClick={() => input.current?.click()}
             />
-            {emojiSupported ? <MenuRow icon="happy-outline" label="Pick emoji" sub="Shown whenever there is no photo." disabled={busy !== null} onClick={onEmoji} /> : null}
+            {emojiSupported ? <MenuRow icon="happy-outline" label={t("account.profile.pickEmoji")} sub={t("account.profile.pickEmojiSub")} disabled={busy !== null} onClick={onEmoji} /> : null}
             {m.profile.avatarUrl ? (
-              <MenuRow icon="trash-outline" label="Remove photo" sub="Go back to your emoji." disabled={busy !== null} onClick={() => void clearPhoto()} />
+              <MenuRow icon="trash-outline" label={t("account.profile.removePhoto")} sub={t("account.profile.removePhotoSub")} disabled={busy !== null} onClick={() => void clearPhoto()} />
             ) : null}
           </HoldCard>
         </>
@@ -209,16 +214,16 @@ export function ProfileEdit({ onBack, onEmoji }: { onBack: () => void; onEmoji: 
         }}
       />
 
-      <SectionTitle>Display name</SectionTitle>
+      <SectionTitle>{t("account.home.displayName")}</SectionTitle>
       <HoldCard className="px-[18px] py-3">
         <label htmlFor="acc-name" className="sr-only">
-          Display name
+          {t("account.home.displayName")}
         </label>
         <input
           id="acc-name"
           className="h-11 w-full bg-transparent text-[16px] text-white outline-none placeholder:text-white/40"
           maxLength={60}
-          placeholder="Your name"
+          placeholder={t("account.profile.namePlaceholder")}
           value={name}
           onChange={(e) => {
             setName(e.target.value);
@@ -227,7 +232,7 @@ export function ProfileEdit({ onBack, onEmoji }: { onBack: () => void; onEmoji: 
           disabled={busy !== null}
         />
       </HoldCard>
-      <p className="mt-2 px-1 text-[12px] text-[#9FB7C2]">Shown on your public pages, next to your @.</p>
+      <p className="mt-2 px-1 text-[12px] text-[#9FB7C2]">{t("account.profile.nameHint")}</p>
 
       {notice ? (
         <div className="mt-4">
@@ -236,7 +241,7 @@ export function ProfileEdit({ onBack, onEmoji }: { onBack: () => void; onEmoji: 
       ) : null}
       <div className="mt-6">
         <button type="button" className={ctaCommit} disabled={!nameChanged || busy !== null} onClick={() => void save()}>
-          {busy === "save" ? "Saving…" : saved ? "Saved" : "Save"}
+          {busy === "save" ? t("common.saving") : saved ? t("common.saved") : t("common.save")}
         </button>
       </div>
     </Column>
@@ -308,6 +313,7 @@ export function EmojiScreen({ onBack }: { onBack: () => void }) {
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const t = useT();
   const m = me.data;
 
   const filtered = useMemo(() => {
@@ -319,7 +325,7 @@ export function EmojiScreen({ onBack }: { onBack: () => void }) {
   if (!m) {
     return (
       <Column>
-        <BackHeader title="Pick emoji" onBack={onBack} />
+        <BackHeader title={t("account.profile.pickEmoji")} onBack={onBack} />
         {me.error ? <Notice>{describeCreatorError(me.error)}</Notice> : <Skeleton className="h-[320px] rounded-[28px]" />}
       </Column>
     );
@@ -327,8 +333,8 @@ export function EmojiScreen({ onBack }: { onBack: () => void }) {
   if (!("avatarEmoji" in m.profile)) {
     return (
       <Column>
-        <BackHeader title="Pick emoji" onBack={onBack} />
-        <Notice tone="calm">Emoji avatars are not available on the web yet. You can pick one in the HOLD app.</Notice>
+        <BackHeader title={t("account.profile.pickEmoji")} onBack={onBack} />
+        <Notice tone="calm">{t("account.emoji.unavailable")}</Notice>
       </Column>
     );
   }
@@ -350,19 +356,19 @@ export function EmojiScreen({ onBack }: { onBack: () => void }) {
 
   return (
     <Column>
-      <BackHeader title="Pick emoji" onBack={onBack} />
+      <BackHeader title={t("account.profile.pickEmoji")} onBack={onBack} />
       <div className="mb-4 mt-1 flex justify-center">
         <EmojiAvatar emoji={current} size={96} />
       </div>
-      {m.profile.avatarUrl ? <p className="mb-4 text-center text-[13px] text-[#9FB7C2]">Your photo shows while you have one. This emoji takes its place when you remove it.</p> : null}
+      {m.profile.avatarUrl ? <p className="mb-4 text-center text-[13px] text-[#9FB7C2]">{t("account.emoji.photoNote")}</p> : null}
 
       <label className="mb-2 flex items-center rounded-[16px] border border-white/[0.08] bg-white/[0.06] px-3.5 py-3">
         <Ion name="search" size={16} className="mr-2 shrink-0 text-white/65" />
-        <span className="sr-only">Search emoji</span>
+        <span className="sr-only">{t("account.emoji.searchLabel")}</span>
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search… rocket, moon, diamond…"
+          placeholder={t("account.emoji.placeholder")}
           autoCapitalize="none"
           autoCorrect="off"
           spellCheck={false}
@@ -376,7 +382,7 @@ export function EmojiScreen({ onBack }: { onBack: () => void }) {
         </div>
       ) : null}
 
-      <div role="listbox" aria-label="Emoji" aria-busy={busy} className="grid grid-cols-6 gap-1.5">
+      <div role="listbox" aria-label={t("account.emoji.gridLabel")} aria-busy={busy} className="grid grid-cols-6 gap-1.5">
         {filtered.map((e) => {
           const selected = e === current;
           return (
@@ -385,7 +391,7 @@ export function EmojiScreen({ onBack }: { onBack: () => void }) {
               type="button"
               role="option"
               aria-selected={selected}
-              aria-label={`Select ${e}`}
+              aria-label={t("account.emoji.select", { emoji: e })}
               disabled={busy}
               onClick={() => void pick(e)}
               className={`flex aspect-square items-center justify-center rounded-[14px] border text-[28px] transition-colors disabled:cursor-wait ${
@@ -403,23 +409,13 @@ export function EmojiScreen({ onBack }: { onBack: () => void }) {
 
 /** The row's value on the Profile hub. */
 export function visibilityLabel(v: ProfileVisibility | null | undefined): string {
-  return v === "private" ? "Private" : v === "invisible" ? "Invisible" : "Public";
+  return v === "private" ? tr("account.visibility.private") : v === "invisible" ? tr("account.visibility.invisible") : tr("account.visibility.public");
 }
 
-const VISIBILITY_OPTIONS: { id: ProfileVisibility; icon: IonName; title: string; body: string }[] = [
-  { id: "public", icon: "globe-outline", title: "Public", body: "Anyone on HOLD can find you in search. Your profile photo is visible." },
-  {
-    id: "private",
-    icon: "shield-outline",
-    title: "Private",
-    body: "Only people who know your exact @username can find you. Photo is hidden — you appear with the HOLD logo.",
-  },
-  {
-    id: "invisible",
-    icon: "eye-off-outline",
-    title: "Invisible",
-    body: "Your @username is off. Nobody can find you on HOLD. You still receive money at your virtual accounts (IBAN, US bank, PIX, CLABE) and your on-chain address.",
-  },
+const VISIBILITY_OPTIONS: { id: ProfileVisibility; icon: IonName; title: MessageKey; body: MessageKey }[] = [
+  { id: "public", icon: "globe-outline", title: "account.visibility.public", body: "account.visibility.publicBody" },
+  { id: "private", icon: "shield-outline", title: "account.visibility.private", body: "account.visibility.privateBody" },
+  { id: "invisible", icon: "eye-off-outline", title: "account.visibility.invisible", body: "account.visibility.invisibleBody" },
 ];
 
 /** profile/_components/VisibilitySheet.tsx: three rows, a tap saves and closes. */
@@ -428,6 +424,7 @@ export function VisibilitySheet({ onClose }: { onClose: () => void }) {
   const save = useSaveProfileChoice();
   const [busy, setBusy] = useState<ProfileVisibility | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const t = useT();
   const current: ProfileVisibility = me.data?.profile.profileVisibility ?? "public";
 
   const choose = async (id: ProfileVisibility) => {
@@ -445,10 +442,10 @@ export function VisibilitySheet({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Sheet title="Profile visibility" onClose={onClose} busy={busy !== null} wide>
-      <p className="text-[14px] leading-5 text-white/65">Control how other people find you on HOLD. You can change this any time.</p>
+    <Sheet title={t("account.home.visibility")} onClose={onClose} busy={busy !== null} wide>
+      <p className="text-[14px] leading-5 text-white/65">{t("account.visibility.intro")}</p>
       {notice ? <Notice>{notice}</Notice> : null}
-      <div role="radiogroup" aria-label="Profile visibility" className="flex flex-col gap-3">
+      <div role="radiogroup" aria-label={t("account.home.visibility")} className="flex flex-col gap-3">
         {VISIBILITY_OPTIONS.map((opt) => {
           const selected = current === opt.id;
           return (
@@ -467,8 +464,8 @@ export function VisibilitySheet({ onClose }: { onClose: () => void }) {
                 <Ion name={opt.icon} size={20} />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-[16px] font-bold text-white">{opt.title}</span>
-                <span className="mt-[5px] block text-[14px] leading-5 text-white/65">{opt.body}</span>
+                <span className="block text-[16px] font-bold text-white">{t(opt.title)}</span>
+                <span className="mt-[5px] block text-[14px] leading-5 text-white/65">{t(opt.body)}</span>
               </span>
               {busy === opt.id ? (
                 <span className="mt-0.5 h-5 w-5 shrink-0 animate-spin rounded-[10px] border-2 border-white/30 border-t-white/80" aria-hidden />
@@ -500,6 +497,7 @@ export function UsernameScreen({ onBack }: { onBack: () => void }) {
   const [notice, setNotice] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const asked = useRef("");
+  const t = useT();
 
   const filled = useRef(false);
   useEffect(() => {
@@ -539,7 +537,7 @@ export function UsernameScreen({ onBack }: { onBack: () => void }) {
       onBack();
     } catch (e) {
       if (e instanceof CreatorApiError && e.code === "CONFLICT") setVerdict("taken");
-      else if (e instanceof CreatorApiError && e.code === "RATE_LIMIT_EXCEEDED") setNotice(e.serverMessage ?? "You can only change your username once every 14 days.");
+      else if (e instanceof CreatorApiError && e.code === "RATE_LIMIT_EXCEEDED") setNotice(e.serverMessage ?? t("account.username.limit"));
       else setNotice(describeCreatorError(e));
       setConfirm(false);
     } finally {
@@ -550,27 +548,27 @@ export function UsernameScreen({ onBack }: { onBack: () => void }) {
   // handle.tsx's status pill: neutral while checking, green when free, orange when not. Never red.
   const pill =
     !changed || !verdict || verdict === "own" ? null : verdict === "checking" ? (
-      <StatusPill tone="neutral">Checking…</StatusPill>
+      <StatusPill tone="neutral">{t("account.username.checking")}</StatusPill>
     ) : verdict === "available" ? (
-      <StatusPill tone="good">Username is available</StatusPill>
+      <StatusPill tone="good">{t("account.username.available")}</StatusPill>
     ) : verdict === "error" ? (
-      <StatusPill tone="warn">We could not check that right now.</StatusPill>
+      <StatusPill tone="warn">{t("account.username.checkFailed")}</StatusPill>
     ) : verdict === "invalid" ? (
-      <StatusPill tone="warn">3 or more letters, numbers, _ . or -</StatusPill>
+      <StatusPill tone="warn">{t("account.username.rule")}</StatusPill>
     ) : (
-      <StatusPill tone="warn">Username is not available</StatusPill>
+      <StatusPill tone="warn">{t("account.username.notAvailable")}</StatusPill>
     );
 
   return (
     <Column>
-      <BackHeader title="Username" onBack={onBack} />
+      <BackHeader title={t("account.home.username")} onBack={onBack} />
       {!m ? (
         <Skeleton className="h-40 rounded-[28px]" />
       ) : (
         <div className="flex flex-col items-center px-6 pt-4">
-          <p className="mb-3 text-center text-[15px] font-medium text-[#9FB7C2]">Choose your handle</p>
+          <p className="mb-3 text-center text-[15px] font-medium text-[#9FB7C2]">{t("account.username.choose")}</p>
           <label htmlFor="acc-username" className="sr-only">
-            Username
+            {t("account.home.username")}
           </label>
           <input
             id="acc-username"
@@ -586,12 +584,12 @@ export function UsernameScreen({ onBack }: { onBack: () => void }) {
           />
           {locked ? (
             <p className="mt-5 text-center text-[12px] font-medium text-[#9FB7C2]">
-              You can only change your username once every 14 days. Next change: {dayText(changeableAt ?? "")}.
+              {t("account.username.locked", { date: dayText(changeableAt ?? "") })}
             </p>
           ) : pill ? (
             <div className="mt-5">{pill}</div>
           ) : (
-            <p className="mt-5 text-center text-[12px] font-medium text-[#9FB7C2]">3 or more letters, numbers, _ . or -</p>
+            <p className="mt-5 text-center text-[12px] font-medium text-[#9FB7C2]">{t("account.username.rule")}</p>
           )}
           <p className="mt-3.5 text-[12px] font-medium text-[#9FB7C2]">{username.length}/50</p>
         </div>
@@ -605,19 +603,19 @@ export function UsernameScreen({ onBack }: { onBack: () => void }) {
 
       {confirm ? (
         <div className={`${holdCard} mt-8 flex flex-col gap-3 p-5`}>
-          <p className="text-[17px] font-strong text-white">Change username?</p>
-          <p className="text-[14px] leading-5 text-white/[0.72]">If you change your username now, you won&apos;t be able to change it again for 14 days.</p>
+          <p className="text-[17px] font-strong text-white">{t("account.username.confirmTitle")}</p>
+          <p className="text-[14px] leading-5 text-white/[0.72]">{t("account.username.confirmBody")}</p>
           <button type="button" className={ctaCommit} disabled={busy} onClick={() => void save()}>
-            {busy ? "Saving…" : "Change"}
+            {busy ? t("common.saving") : t("account.username.change")}
           </button>
           <button type="button" className="h-11 text-[15px] font-strong text-white/80 hover:text-white" disabled={busy} onClick={() => setConfirm(false)}>
-            Cancel
+            {t("common.cancel")}
           </button>
         </div>
       ) : (
         <div className="mt-10">
           <button type="button" className={ctaCommit} disabled={!canContinue} onClick={() => setConfirm(true)}>
-            Continue
+            {t("common.continue")}
           </button>
         </div>
       )}

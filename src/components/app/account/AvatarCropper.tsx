@@ -27,6 +27,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { useT } from "@/lib/app/i18n/react";
 import type { CropRect } from "@/lib/app/me";
 
 import { ctaCommit, ctaSecondary } from "../hold";
@@ -51,6 +52,7 @@ export function AvatarCropper({
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const drag = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
   const box = useRef<HTMLDivElement>(null);
+  const t = useT();
 
   /** Scale at which the image exactly covers the hole. Zoom multiplies it. */
   const cover = VIEW / Math.min(image.naturalWidth, image.naturalHeight);
@@ -130,7 +132,7 @@ export function AvatarCropper({
 
   return (
     <div className="flex flex-col items-center">
-      <p className="mb-4 text-center text-[13px] text-[#9FB7C2]">Drag to move, and zoom until it sits how you want it.</p>
+      <p className="mb-4 text-center text-[13px] text-[#9FB7C2]">{t("account.cropper.hint")}</p>
 
       <div
         ref={box}
@@ -172,7 +174,7 @@ export function AvatarCropper({
       <div className="mt-5 flex w-full max-w-[320px] items-center gap-3">
         <Ion name="image-outline" size={14} className="shrink-0 text-white/70" />
         <label htmlFor="avatar-zoom" className="sr-only">
-          Zoom
+          {t("account.cropper.zoom")}
         </label>
         <input
           id="avatar-zoom"
@@ -190,10 +192,10 @@ export function AvatarCropper({
 
       <div className="mt-6 flex w-full max-w-[320px] flex-col gap-2.5">
         <button type="button" className={ctaCommit} disabled={busy} onClick={() => onConfirm(rect())}>
-          {busy ? "Saving…" : "Use this photo"}
+          {busy ? t("common.saving") : t("account.cropper.use")}
         </button>
         <button type="button" className={ctaSecondary} disabled={busy} onClick={onCancel}>
-          Choose another
+          {t("account.cropper.another")}
         </button>
       </div>
     </div>

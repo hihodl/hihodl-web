@@ -26,6 +26,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { t as tr, type MessageKey } from "@/lib/app/i18n";
+import { fmtDate } from "@/lib/app/i18n/format";
+import { useT } from "@/lib/app/i18n/react";
 import { activeLinkedDevices, removalChallenge, removeLinkedDevice, type LinkedDevice, type RemovalChallenge } from "@/lib/link/api";
 import { WalletApiError } from "@/lib/wallet/api";
 import { explain } from "@/lib/wallet/explain";
@@ -35,11 +38,11 @@ import { BackHeader, Column, ctaCommit, ctaSecondary, HoldCard, Notice, SectionT
 import { Ion } from "../ion";
 import { Skeleton } from "../ui";
 
-const PLATFORM: Record<LinkedDevice["platform"], string> = { android: "Android phone", ios: "iPhone", other: "Phone" };
-const HOW: Record<LinkedDevice["platform"], string> = {
-  android: "Approves and signs payments in the HOLD app",
-  ios: "On your account. Your passkey approves payments",
-  other: "On your account",
+const PLATFORM: Record<LinkedDevice["platform"], MessageKey> = { android: "account.phone.android", ios: "account.phone.iphone", other: "account.phone.other" };
+const HOW: Record<LinkedDevice["platform"], MessageKey> = {
+  android: "account.phone.howAndroid",
+  ios: "account.phone.howIos",
+  other: "account.phone.howOther",
 };
 
 /** The server keeps a removal's nonce five minutes; a fresh one is fetched well before that. */
@@ -47,20 +50,20 @@ const FRESH_MS = 3 * 60 * 1000;
 
 /** Removal refusals in the person's words. Never red; each says nothing was removed. */
 function removalProblem(e: unknown): string {
-  if (e instanceof PasskeyError && e.code === "cancelled") return "The passkey prompt was closed. The phone is still linked.";
+  if (e instanceof PasskeyError && e.code === "cancelled") return tr("account.phone.errCancelled");
   if (e instanceof WalletApiError) {
     switch (e.code) {
       case "UNLINK_NEEDS_PASSKEY":
-        return "Add a passkey to this account to remove this phone. It is still linked.";
+        return tr("account.phone.errNeedsPasskey");
       case "UNLINK_PROOF_NOT_ALLOWED":
-        return "This account has no passkey. Remove the phone from the HOLD app on that phone.";
+        return tr("account.phone.errProofNotAllowed");
       case "PASSKEY_VERIFICATION_FAILED":
       case "PASSKEY_NOT_REGISTERED":
-        return "That passkey did not confirm the removal. The phone is still linked.";
+        return tr("account.phone.errVerifyFailed");
       case "UNLINK_CHALLENGE_EXPIRED":
-        return "That took too long. Tap Remove with passkey again.";
+        return tr("account.phone.errExpired");
       case "not_found":
-        return "That phone is no longer linked.";
+        return tr("account.phone.errNotFound");
     }
   }
   return explain(e);
@@ -69,7 +72,7 @@ function removalProblem(e: unknown): string {
 function when(iso: string | null): string {
   if (!iso) return "";
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  return Number.isNaN(d.getTime()) ? "" : fmtDate(d, { day: "numeric", month: "short", year: "numeric" });
 }
 
 export function useLinkedPhones() {
@@ -111,46 +114,46 @@ export function PhoneScreenView({
   onKeep: () => void;
   onRemove: (id: string) => void;
 }) {
+  const t = useT();
   const small =
     "inline-flex h-8 shrink-0 items-center rounded-[16px] border border-white/[0.22] bg-white/10 px-3 text-[13px] font-strong text-white transition-colors hover:bg-white/[0.14] disabled:opacity-50";
   return (
     <Column>
-      <BackHeader title="Your phone" onBack={onBack} />
+      <BackHeader title={t("account.phone.title")} onBack={onBack} />
       {devices === undefined && !error ? (
         <Skeleton className="h-40 rounded-[28px]" />
       ) : (
         <>
           <p className="mb-2 px-1 text-[15px] font-medium leading-[21px] text-white/[0.72]">
-            A linked Android phone approves and signs, in the HOLD app, the payments you start on the web. Without one, your passkey approves them here.
+            {t("account.phone.intro")}
           </p>
           {devices && devices.length > 0 ? (
             <>
-              <SectionTitle>Linked</SectionTitle>
+              <SectionTitle>{t("account.phone.linked")}</SectionTitle>
               <HoldCard>
                 {devices.map((d) => (
                   <div key={d.id} className="flex items-center gap-3 px-[18px] py-[18px]">
                     <Ion name="phone-portrait-outline" size={18} className="mt-[2px] self-start text-white" />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-[14px] font-strong leading-5 text-white">{PLATFORM[d.platform]}</p>
+                      <p className="truncate text-[14px] font-strong leading-5 text-white">{t(PLATFORM[d.platform])}</p>
                       <p className="mt-0.5 text-[12px] leading-4 text-[#9FB7C2]">
-                        {HOW[d.platform]}
-                        {d.linkedAt ? ` · linked ${when(d.linkedAt)}` : ""}
+                        {d.linkedAt ? t("account.phone.howLinked", { how: t(HOW[d.platform]), date: when(d.linkedAt) }) : t(HOW[d.platform])}
                       </p>
                     </div>
                     {confirming === d.id ? (
                       <div className="flex gap-1.5">
                         {canUsePasskey !== false ? (
                           <button type="button" className={small} disabled={busy || canUsePasskey === null} onClick={() => onRemove(d.id)}>
-                            {busy ? "Removing…" : canUsePasskey === null ? "Preparing…" : "Remove with passkey"}
+                            {busy ? t("account.phone.removing") : canUsePasskey === null ? t("account.phone.preparing") : t("account.phone.removeWithPasskey")}
                           </button>
                         ) : null}
                         <button type="button" className={small} disabled={busy} onClick={onKeep}>
-                          Keep
+                          {t("account.phone.keep")}
                         </button>
                       </div>
                     ) : (
                       <button type="button" className={small} onClick={() => onAsk(d.id)}>
-                        Remove
+                        {t("common.remove")}
                       </button>
                     )}
                   </div>
@@ -161,8 +164,8 @@ export function PhoneScreenView({
           {confirming ? (
             <p className="mt-3 px-1 text-[12px] leading-[17px] text-[#9FB7C2]">
               {canUsePasskey === false
-                ? "Your account has no passkey, so this phone can only be removed from the HOLD app on it."
-                : "Your passkey confirms the removal. Once removed, that phone approves nothing. A wallet made on the web goes back to your passkey. A wallet made in the app needs a phone linked again to pay from the web."}
+                ? t("account.phone.noPasskey")
+                : t("account.phone.passkeyConfirms")}
             </p>
           ) : null}
           {error ? (
@@ -175,7 +178,7 @@ export function PhoneScreenView({
               {/* A full load: the link screen carries the wallet pages' strict CSP. */}
               <a href={linkHref} className={devices.length === 0 ? ctaCommit : ctaSecondary}>
                 <Ion name="qr-code-outline" size={16} />
-                {devices.length === 0 ? "Link your phone" : devices.some((d) => d.platform === "android") ? "Link another phone" : "Link an Android phone"}
+                {devices.length === 0 ? t("account.phone.link") : devices.some((d) => d.platform === "android") ? t("account.phone.linkAnother") : t("account.phone.linkAndroid")}
               </a>
             </div>
           ) : null}
@@ -235,7 +238,7 @@ export function PhoneScreen({ onBack, linkHref }: { onBack: () => void; linkHref
   const remove = async (id: string) => {
     const p = prepared.current;
     if (!p || p.id !== id || !p.challenge.options) {
-      setActionError("Still preparing. Try again in a moment.");
+      setActionError(tr("account.phone.stillPreparing"));
       if (!p) void prepare(id);
       return;
     }
