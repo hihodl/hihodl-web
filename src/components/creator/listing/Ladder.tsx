@@ -33,6 +33,8 @@
 
 import { Ion } from "@/components/app/ion";
 import { Card, Chip, ChipRow, fieldLabel, SectionLabel } from "@/components/app/spaces/kit";
+import type { MessageKey } from "@/lib/app/i18n";
+import { Rich, useT } from "@/lib/app/i18n/react";
 import {
   LIMITS,
   modeKeepsFloor,
@@ -56,24 +58,24 @@ const FEE = feePctText();
 const iconBtn = `${btnSmallGlass} !w-9 !px-0`;
 
 /** How the whole listing sells, said in the words the rung's dropdown uses. */
-function boardModeText(draft: ListingDraft): string {
+function boardModeText(draft: ListingDraft): MessageKey {
   switch (draft.pricingMode) {
     case "offers":
-      return "by offers, with no price shown";
+      return "listings.ladder.board.offers";
     case "bids":
-      return "to the highest bid";
+      return "listings.ladder.board.bids";
     case "takeover":
-      return "at a price anybody can take by paying double";
+      return "listings.ladder.board.takeover";
     default:
-      return draft.acceptsOffers ? "at a price, or by offers under it" : "at a fixed price";
+      return draft.acceptsOffers ? "listings.ladder.board.fixedWithOffers" : "listings.ladder.board.fixed";
   }
 }
 
-const MODE_OPTIONS: readonly { value: SaleMode; label: string }[] = [
-  { value: "fixed", label: "Buy now" },
-  { value: "fixed_with_offers", label: "Buy now, and offers" },
-  { value: "offers", label: "Make an offer" },
-  { value: "bids", label: "Bid" },
+const MODE_OPTIONS: readonly { value: SaleMode; label: MessageKey }[] = [
+  { value: "fixed", label: "listings.ladder.mode.fixed" },
+  { value: "fixed_with_offers", label: "listings.ladder.mode.fixedWithOffers" },
+  { value: "offers", label: "listings.ladder.mode.offers" },
+  { value: "bids", label: "listings.ladder.mode.bids" },
 ];
 
 export function Ladder({
@@ -89,6 +91,7 @@ export function Ladder({
   maxSlots: number;
   isSession: boolean;
 }) {
+  const t = useT();
   const rungs = draft.rungs;
   const set = (next: RungDraft[]) => onChange({ ...draft, rungs: next });
   const patch = (index: number, change: Partial<RungDraft>) =>
@@ -124,24 +127,20 @@ export function Ladder({
       <Problems list={problemsAt(problems, "ladder")} />
 
       <div className="flex flex-wrap items-center justify-between gap-2.5">
-        <ChipRow label="The ladder">
+        <ChipRow label={t("listings.ladder.label")}>
           <Chip
             icon="add"
-            label="Add a tier"
+            label={t("listings.ladder.addTier")}
             disabled={rungs.length >= LIMITS.MAX_TIERS}
             onClick={() => set([...rungs, newRung(rungs)])}
           />
         </ChipRow>
         <span className="text-[11.5px] font-bold uppercase tracking-[0.4px] text-white/55">
-          {copies} of {maxSlots} slots on the ladder
+          {t("listings.ladder.copies", { copies, max: maxSlots })}
         </span>
       </div>
       {rungs.length > 1 ? (
-        <p className="text-[12px] leading-4 text-white/55">
-          A new one starts with the lines of the one below it, because a ladder is usually cumulative — everything in
-          the $50, plus the mic flag. Edit or delete any of them: a rung that deliberately does not include the one
-          under it is allowed to say so.
-        </p>
+        <p className="text-[12px] leading-4 text-white/55">{t("listings.ladder.cumulative")}</p>
       ) : null}
     </div>
   );
@@ -170,6 +169,7 @@ function Rung({
   onRemove: () => void;
   onMove: (by: number) => void;
 }) {
+  const t = useT();
   // THE line this file exists for: the rung's own mode, never the board's.
   const mode = saleModeOf(draft, rung.saleMode);
   const showsPrice = modeShowsPrice(mode);
@@ -190,24 +190,28 @@ function Rung({
     <Card className="!gap-3.5">
       <div className="flex items-center justify-between gap-3">
         <SectionLabel>
-          Tier {index + 1} <span className="ml-1 normal-case tracking-normal">of {total}</span>
+          <Rich
+            k="listings.ladder.tierOf"
+            vars={{ n: index + 1, total }}
+            tags={{ of: (c) => <span className="ml-1 normal-case tracking-normal">{c}</span> }}
+          />
         </SectionLabel>
         <div className="flex gap-1.5">
-          <button type="button" aria-label="Move up" className={iconBtn} disabled={index === 0} onClick={() => onMove(-1)}>
+          <button type="button" aria-label={t("listings.ladder.moveUp")} className={iconBtn} disabled={index === 0} onClick={() => onMove(-1)}>
             <Ion name="chevron-up" size={18} />
           </button>
-          <button type="button" aria-label="Move down" className={iconBtn} disabled={index === total - 1} onClick={() => onMove(1)}>
+          <button type="button" aria-label={t("listings.ladder.moveDown")} className={iconBtn} disabled={index === total - 1} onClick={() => onMove(1)}>
             <Ion name="chevron-down" size={18} />
           </button>
-          <button type="button" aria-label="Take this tier off the ladder" className={iconBtn} disabled={total === 1} onClick={onRemove}>
+          <button type="button" aria-label={t("listings.ladder.removeTier")} className={iconBtn} disabled={total === 1} onClick={onRemove}>
             <Ion name="trash-outline" size={17} />
           </button>
         </div>
       </div>
 
       <Field
-        label="What this tier is called"
-        hint="The line a brand reads before the price. “Flagship on-site interview”, not “Tier 3”."
+        label={t("listings.ladder.title")}
+        hint={t("listings.ladder.titleHint")}
         problems={at("title")}
         htmlFor={id("title")}
       >
@@ -216,13 +220,13 @@ function Rung({
           value={rung.title}
           onChange={(title) => onPatch({ title })}
           maxLength={LIMITS.TIER_TITLE_MAX}
-          placeholder="Flagship on-site interview"
+          placeholder={t("listings.ladder.titlePlaceholder")}
         />
       </Field>
 
       <Field
-        label="What the brand gets for it"
-        hint={`One plain line at a time, up to ${LIMITS.TIER_PERKS_MAX}. This is what somebody is paying for, so it is the part worth writing twice.`}
+        label={t("listings.ladder.perks")}
+        hint={t("listings.ladder.perksHint", { max: LIMITS.TIER_PERKS_MAX })}
         problems={at("perks")}
       >
         <div className="flex flex-col gap-2">
@@ -233,7 +237,7 @@ function Rung({
                   value={line}
                   onChange={(v) => onPatch({ perks: perks.map((p, j) => (j === i ? v : p)) })}
                   maxLength={LIMITS.TIER_PERK_MAX}
-                  placeholder={i === 0 ? "Your logo in the mini strip of every clip" : `Line ${i + 1}`}
+                  placeholder={i === 0 ? t("listings.ladder.perkPlaceholder") : t("listings.brandGets.line", { n: i + 1 })}
                 />
               </span>
               <button
@@ -241,49 +245,49 @@ function Rung({
                 className={`${iconBtn} !h-12 !w-12 !rounded-[24px]`}
                 disabled={perks.length === 1}
                 onClick={() => onPatch({ perks: perks.filter((_, j) => j !== i) })}
-                aria-label="Remove this line"
+                aria-label={t("listings.ladder.removeLine")}
               >
                 <Ion name="remove" size={18} />
               </button>
             </div>
           ))}
-          <ChipRow label="Lines">
-            <Chip icon="add" label="Add a line" disabled={perks.length >= LIMITS.TIER_PERKS_MAX} onClick={() => onPatch({ perks: [...perks, ""] })} />
+          <ChipRow label={t("listings.ladder.lines")}>
+            <Chip icon="add" label={t("listings.brandGets.addLine")} disabled={perks.length >= LIMITS.TIER_PERKS_MAX} onClick={() => onPatch({ perks: [...perks, ""] })} />
           </ChipRow>
         </div>
       </Field>
 
       <div className="flex flex-col gap-1.5">
-        <span className={fieldLabel}>How this one sells</span>
-        <ChipRow label="How this one sells">
-          <Chip label="Same as the rest" selected={rung.saleMode === null} onClick={() => onPatch({ saleMode: null })} />
+        <span className={fieldLabel}>{t("listings.ladder.howSells")}</span>
+        <ChipRow label={t("listings.ladder.howSells")}>
+          <Chip label={t("listings.ladder.sameAsRest")} selected={rung.saleMode === null} onClick={() => onPatch({ saleMode: null })} />
           {MODE_OPTIONS.map((o) => (
             // The count is NOT set from here. A rung that ends up bid for does
             // sell one copy, but "how many of these am I selling" is a number
             // the creator typed, and quietly rewriting six to one on a change
             // of mode loses it. The rule is said beside the field instead, and
             // the step does not advance.
-            <Chip key={o.value} label={o.label} selected={rung.saleMode === o.value} onClick={() => onPatch({ saleMode: o.value })} />
+            <Chip key={o.value} label={t(o.label)} selected={rung.saleMode === o.value} onClick={() => onPatch({ saleMode: o.value })} />
           ))}
         </ChipRow>
         <p className="text-[12px] leading-4 text-white/55">
           {rung.saleMode === null
-            ? `It sells the way the space does: ${boardModeText(draft)}.`
-            : "Just this tier. The rest of the ladder sells the way the space does."}
+            ? t("listings.ladder.sellsLikeSpace", { how: t(boardModeText(draft)) })
+            : t("listings.ladder.justThisTier")}
         </p>
       </div>
 
       <div className="grid gap-3.5 sm:grid-cols-2">
         {showsPrice ? (
           <Field
-            label={bidding ? "Where bidding opens" : "What this tier costs"}
+            label={bidding ? t("listings.ladder.openingBid") : t("listings.ladder.cost")}
             problems={at("price")}
             htmlFor={id("price")}
             hint={
               split
                 ? draft.feePayer === "sponsor"
-                  ? `You receive ${usd(split.creatorGetsCents)}.`
-                  : `You receive ${usd(split.creatorGetsCents)} after our ${FEE}.`
+                  ? t("listings.sell.youReceive", { amount: usd(split.creatorGetsCents) })
+                  : t("listings.sell.youReceiveAfterFee", { amount: usd(split.creatorGetsCents), fee: FEE })
                 : undefined
             }
           >
@@ -291,19 +295,19 @@ function Rung({
           </Field>
         ) : (
           <div className="flex flex-col gap-1.5">
-            <span className={fieldLabel}>What this tier costs</span>
-            <p className="text-[12px] leading-4 text-white/55">No price is shown: brands name theirs.</p>
+            <span className={fieldLabel}>{t("listings.ladder.cost")}</span>
+            <p className="text-[12px] leading-4 text-white/55">{t("listings.ladder.noPriceShown")}</p>
           </div>
         )}
 
         <Field
-          label="How many of this one"
+          label={t("listings.ladder.howMany")}
           problems={at("available")}
           htmlFor={id("available")}
           hint={
             bidding
-              ? "One. This one goes to the highest bid, and bidding is one thing going to one winner: five identical copies under a single countdown are five auctions of the same thing, so the brands spread across them and every one ends under what a single one would have fetched. Set it to 1, or sell this rung another way."
-              : "Each one is sold separately, to a different brand."
+              ? t("listings.ladder.howManyBidding")
+              : t("listings.ladder.howManyHint")
           }
         >
           <Count
@@ -318,13 +322,13 @@ function Rung({
 
       {keepsFloor ? (
         <Field
-          label={bidding ? "The least you'd let it go for" : "The least you'll listen to"}
+          label={bidding ? t("listings.ladder.floorBidding") : t("listings.ladder.floor")}
           problems={at("floor")}
           htmlFor={id("floor")}
           hint={
             bidding
-              ? `Nobody sees it. Leave it empty for no floor at all. At least ${usd(isSession ? LIMITS.SESSION_MIN_CENTS : LIMITS.OFFER_MIN_CENTS)}.`
-              : "Nobody sees it. Leave it empty for no floor at all."
+              ? t("listings.ladder.floorHintMin", { amount: usd(isSession ? LIMITS.SESSION_MIN_CENTS : LIMITS.OFFER_MIN_CENTS) })
+              : t("listings.ladder.floorHint")
           }
         >
           <Money id={id("floor")} value={rung.minOfferDollars} onChange={(minOfferDollars) => onPatch({ minOfferDollars })} />
@@ -332,8 +336,8 @@ function Rung({
       ) : null}
 
       <Field
-        label="Pitch (optional)"
-        hint="One or two sentences, shown under the lines above."
+        label={t("listings.ladder.pitch")}
+        hint={t("listings.ladder.pitchHint")}
         problems={at("pitch")}
         htmlFor={id("pitch")}
       >

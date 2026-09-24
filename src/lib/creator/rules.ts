@@ -22,6 +22,8 @@
  * rung is decided from `saleModeOf(draft, rung.saleMode)`.
  */
 
+import { t } from "@/lib/app/i18n";
+
 import {
   BRAND_GETS_LIMITS,
   LIMITS,
@@ -98,40 +100,40 @@ export function listingProblems(draft: ListingDraft, template: Template, now = D
 
   const title = draft.title.trim();
   if (title.length < LIMITS.TITLE_MIN) {
-    add("title", "name", `Give the listing a name of at least ${LIMITS.TITLE_MIN} characters. It is the headline a brand reads first.`);
+    add("title", "name", t("listings.rules.titleTooShort", { min: LIMITS.TITLE_MIN }));
   } else if (title.length > LIMITS.TITLE_MAX) {
-    add("title", "name", `That name is ${title.length} characters. ${LIMITS.TITLE_MAX} is the most a listing can carry.`);
+    add("title", "name", t("listings.rules.titleTooLong", { length: title.length, max: LIMITS.TITLE_MAX }));
   }
   if (draft.reason.trim().length > LIMITS.REASON_MAX) {
-    add("reason", "name", `Keep this under ${LIMITS.REASON_MAX} characters.`);
+    add("reason", "name", t("listings.rules.keepUnder", { max: LIMITS.REASON_MAX }));
   }
 
   const goal = amount(draft.fundingGoalDollars);
   if (goal === "bad") {
-    add("goal", "name", "Write the goal as an amount in dollars, like 2400.");
+    add("goal", "name", t("listings.rules.goalNotAmount"));
   } else if (goal !== null && (goal < LIMITS.GOAL_MIN_CENTS || goal > LIMITS.GOAL_MAX_CENTS)) {
     add(
       "goal",
       "name",
-      `A goal runs from ${usd(LIMITS.GOAL_MIN_CENTS)} to ${usd(LIMITS.GOAL_MAX_CENTS)}. We do not round it into range — a page asking for a figure you did not type would be worse than this line.`,
+      t("listings.rules.goalOutOfRange", { min: usd(LIMITS.GOAL_MIN_CENTS), max: usd(LIMITS.GOAL_MAX_CENTS) }),
     );
   }
 
   const closesMs = draft.closesAt ? new Date(draft.closesAt).getTime() : NaN;
   if (!Number.isFinite(closesMs)) {
-    add("closesAt", "dates", "Say when the listing stops taking sponsors.");
+    add("closesAt", "dates", t("listings.rules.closesRequired"));
   } else if (closesMs - now < LIMITS.MIN_CAMPAIGN_HOURS * HOUR) {
-    add("closesAt", "dates", `A listing runs for at least ${LIMITS.MIN_CAMPAIGN_HOURS} hours, so pick a time at least a day from now.`);
+    add("closesAt", "dates", t("listings.rules.closesTooSoon", { hours: LIMITS.MIN_CAMPAIGN_HOURS }));
   } else if (closesMs - now > LIMITS.MAX_CAMPAIGN_DAYS * DAY) {
-    add("closesAt", "dates", `A listing runs for at most ${LIMITS.MAX_CAMPAIGN_DAYS} days.`);
+    add("closesAt", "dates", t("listings.problems.closesTooLate", { days: LIMITS.MAX_CAMPAIGN_DAYS }));
   }
 
   if (draft.keyDates.length > LIMITS.KEY_DATES_MAX) {
-    add("keyDates", "dates", `${LIMITS.KEY_DATES_MAX} dates is the most a listing shows.`);
+    add("keyDates", "dates", t("listings.rules.tooManyKeyDates", { max: LIMITS.KEY_DATES_MAX }));
   }
   draft.keyDates.forEach((k, i) => {
-    if (k.label.trim() && !k.date) add(`keyDate:${i}`, "dates", "Give this date a day.");
-    if (k.date && !k.label.trim()) add(`keyDate:${i}`, "dates", "Say what happens on this day.");
+    if (k.label.trim() && !k.date) add(`keyDate:${i}`, "dates", t("listings.rules.keyDateNeedsDay"));
+    if (k.date && !k.label.trim()) add(`keyDate:${i}`, "dates", t("listings.rules.keyDateNeedsLabel"));
   });
 
   /* ── The event ─────────────────────────────────────────────────── */
@@ -140,16 +142,16 @@ export function listingProblems(draft: ListingDraft, template: Template, now = D
   // fires for a draft saved before those answers existed, or one whose product
   // was swapped underneath it.
   if (!template.allowedVenues.includes(draft.venueType)) {
-    add("venueType", "event", "This product cannot be sold at that kind of event. Answer the event question again.");
+    add("venueType", "event", t("listings.rules.venueNotAllowed"));
   }
   if (VENUES_WITH_RULES.includes(draft.venueType) && !draft.eventId && !draft.eventName.trim()) {
-    add("event", "event", "Name the event. A sponsor buying a spot at a conference is buying that conference.");
+    add("event", "event", t("listings.problems.eventNameRequired"));
   }
   if (session && !draft.eventId) {
     add(
       "event",
       "event",
-      "Time in person is always sold at an event, and it has to be one from the list — the last day of the event is what sets your delivery date.",
+      t("listings.rules.sessionNeedsEvent"),
     );
   }
 
@@ -157,7 +159,7 @@ export function listingProblems(draft: ListingDraft, template: Template, now = D
     add(
       "event",
       "event",
-      "Content production is filmed at an event, and it has to be one from the list: its dates are your shoot window.",
+      t("listings.rules.productionNeedsEvent"),
     );
   }
 
@@ -167,34 +169,34 @@ export function listingProblems(draft: ListingDraft, template: Template, now = D
     const pkg = draft.production;
     const counts = PRODUCTION_DELIVERABLES.map((k) => pkg.deliverables[k]);
     if (counts.some((n) => !Number.isInteger(n) || n < 0 || n > PRODUCTION_DELIVERABLE_MAX)) {
-      add("production:deliverables", "includes", `Each line runs from 0 to ${PRODUCTION_DELIVERABLE_MAX}.`);
+      add("production:deliverables", "includes", t("listings.rules.productionLineRange", { max: PRODUCTION_DELIVERABLE_MAX }));
     } else if (counts.every((n) => n === 0)) {
-      add("production:deliverables", "includes", "Tick at least one thing a spot includes. A brand is buying the package, so it has to hold something.");
+      add("production:deliverables", "includes", t("listings.rules.productionEmpty"));
     }
     if (!(PRODUCTION_TURNAROUNDS as readonly number[]).includes(pkg.turnaroundHours)) {
-      add("production:turnaround", "includes", "Pick how soon after each shoot day you deliver.");
+      add("production:turnaround", "includes", t("listings.rules.productionTurnaround"));
     }
   }
 
   /* ── How it sells ──────────────────────────────────────────────── */
 
   if (draft.acceptsOffers && draft.pricingMode !== "fixed") {
-    add("pricing", "sell", "Sponsors can only be allowed to offer less on a listing that has a fixed price.");
+    add("pricing", "sell", t("listings.problems.offersOnlyOnFixed"));
   }
   if (production && draft.pricingMode !== "fixed") {
-    add("pricing", "sell", "A production spot is sold at a price. You can still let brands offer less.");
+    add("pricing", "sell", t("listings.rules.productionSellsAtPrice"));
   }
   if (session && draft.pricingMode === "takeover") {
-    add("pricing", "sell", "A booking a stranger can take off you by paying double is not a booking, so time in person is never sold that way.");
+    add("pricing", "sell", t("listings.rules.takeoverNotForSessions"));
   }
   if (draft.pricingMode === "takeover" && !draft.chains.includes("solana")) {
-    add("chains", "sell", "Taking a spot over repays the sponsor being displaced inside the same payment, and only Solana carries that today. Accept Solana, or sell another way.");
+    add("chains", "sell", t("listings.rules.takeoverNeedsSolana"));
   }
   if (draft.pricingMode === "bids" && service && draft.sells !== "ladder") {
-    add("pricing", "sell", "Identical slots cannot all be sold to one highest bid. Build a ladder and put the rung you want bid on out to bids, or sell these at a price.");
+    add("pricing", "sell", t("listings.rules.bidsNeedLadder"));
   }
   if (draft.chains.length === 0) {
-    add("chains", "sell", "Pick at least one network a sponsor can pay you on.");
+    add("chains", "sell", t("listings.problems.chainsRequired"));
   }
 
   const needsCountdown = draft.pricingMode === "bids" || anyRungBids(draft);
@@ -206,24 +208,24 @@ export function listingProblems(draft: ListingDraft, template: Template, now = D
         "biddingEndsAt",
         "sell",
         anyRungBids(draft)
-          ? "One of your rungs is sold to the highest bid, so the listing needs a moment when bidding stops."
-          : "Say when bidding stops.",
+          ? t("listings.rules.rungNeedsBiddingEnd")
+          : t("listings.rules.biddingEndRequired"),
       );
     } else if (Number.isFinite(closesMs) && endMs > latest) {
       add(
         "biddingEndsAt",
         "sell",
-        `Bidding has to stop at least ${LIMITS.BIDDING_MIN_BEFORE_CLOSE_HOURS} hours before the listing closes. That is the room the winner needs: a day for you to decide, a day for them to pay, and a little slack.`,
+        t("listings.rules.biddingEndTooLate", { hours: LIMITS.BIDDING_MIN_BEFORE_CLOSE_HOURS }),
       );
     } else if (endMs < now + LIMITS.BIDDING_MIN_AFTER_PUBLISH_HOURS * HOUR) {
       add(
         "biddingEndsAt",
         "sell",
-        `Bidding runs for at least ${LIMITS.BIDDING_MIN_AFTER_PUBLISH_HOURS} hours once the listing is live, so pick a time at least a day from now.`,
+        t("listings.rules.biddingEndTooSoon", { hours: LIMITS.BIDDING_MIN_AFTER_PUBLISH_HOURS }),
       );
     }
   } else if (draft.biddingEndsAt) {
-    add("biddingEndsAt", "sell", "Nothing here is sold by bidding, so there is no bidding to stop.");
+    add("biddingEndsAt", "sell", t("listings.rules.noBidding"));
   }
 
   /* ── What is for sale ──────────────────────────────────────────── */
@@ -235,7 +237,7 @@ export function listingProblems(draft: ListingDraft, template: Template, now = D
     } else {
       const mode = saleModeOf(draft, null);
       if (!Number.isInteger(draft.slots) || draft.slots < 1 || draft.slots > maxSlots) {
-        add("slots", "sell", `You can offer between 1 and ${maxSlots} of these.`);
+        add("slots", "sell", t("listings.rules.slotsRange", { max: maxSlots }));
       }
       priceProblems({
         add,
@@ -245,16 +247,16 @@ export function listingProblems(draft: ListingDraft, template: Template, now = D
         priceText: draft.slotPriceDollars,
         floorText: draft.slotMinOfferDollars,
         session,
-        what: "these slots",
+        what: t("listings.rules.whatSlots"),
       });
     }
   } else {
     const on = draft.zones.filter((z) => z.on);
     if (on.length === 0) {
-      add("zones", "sell", "Pick at least one spot on the product to sell.");
+      add("zones", "sell", t("listings.rules.noZones"));
     }
     if (on.length > LIMITS.MAX_POSITIONS) {
-      add("zones", "sell", `${LIMITS.MAX_POSITIONS} spots is the most one listing can carry.`);
+      add("zones", "sell", t("listings.problems.tooManyPositions", { max: LIMITS.MAX_POSITIONS }));
     }
     const mode = saleModeOf(draft, null);
 
@@ -269,7 +271,7 @@ export function listingProblems(draft: ListingDraft, template: Template, now = D
       add(
         "zones",
         "sell",
-        `Pick the spots a brand could buy one at a time as well. On its own, "one brand takes everything" is a single spot with a long name — there is nothing for it to take.`,
+        t("listings.rules.wholeNeedsSquares"),
       );
     }
     if (whole) {
@@ -282,7 +284,7 @@ export function listingProblems(draft: ListingDraft, template: Template, now = D
         add(
           `zone:${WHOLE_ZONE_KEY}:price`,
           "sell",
-          `All of it has to cost at least ${usd(parts)}, what the spots come to together. The brand going all in should never pay less than the brand buying one spot.`,
+          t("listings.rules.wholeBelowParts", { amount: usd(parts) }),
         );
       }
     }
@@ -290,10 +292,10 @@ export function listingProblems(draft: ListingDraft, template: Template, now = D
     for (const zone of on) {
       const label =
         zone.zoneKey === WHOLE_ZONE_KEY
-          ? "all of it"
+          ? t("listings.rules.allOfIt")
           : (template.zones.find((z) => z.zoneKey === zone.zoneKey)?.label ?? zone.zoneKey);
       if (zone.accepts.length === 0) {
-        add(`zone:${zone.zoneKey}:accepts`, "sell", `Say what a sponsor may put on the ${label.toLowerCase()}.`);
+        add(`zone:${zone.zoneKey}:accepts`, "sell", t("listings.rules.zoneAccepts", { label: label.toLowerCase() }));
       }
       priceProblems({
         add,
@@ -303,10 +305,10 @@ export function listingProblems(draft: ListingDraft, template: Template, now = D
         priceText: zone.priceDollars,
         floorText: zone.minOfferDollars,
         session: false,
-        what: `the ${label.toLowerCase()}`,
+        what: t("listings.rules.whatZone", { label: label.toLowerCase() }),
       });
       if (zone.pitch.trim().length > LIMITS.PITCH_MAX) {
-        add(`zone:${zone.zoneKey}:pitch`, "sell", `Keep this under ${LIMITS.PITCH_MAX} characters.`);
+        add(`zone:${zone.zoneKey}:pitch`, "sell", t("listings.rules.keepUnder", { max: LIMITS.PITCH_MAX }));
       }
     }
   }
@@ -321,12 +323,12 @@ export function listingProblems(draft: ListingDraft, template: Template, now = D
     if (!session && !production) {
       const by = draft.deliverBy ? dayStart(draft.deliverBy) : null;
       if (!draft.deliverBy) {
-        add("deliverBy", "promise", "Say the day every sponsor has their work by. It is the promise the whole listing rests on.");
+        add("deliverBy", "promise", t("listings.rules.deliverByRequired"));
       } else if (by === null || by < todayStart || by > latestDue) {
         add(
           "deliverBy",
           "promise",
-          `Pick a day between today and ${LIMITS.DELIVERABLE_DAYS_AFTER_CLOSE} days after the listing closes.`,
+          t("listings.problems.dayInRange", { days: LIMITS.DELIVERABLE_DAYS_AFTER_CLOSE }),
         );
       }
     }
@@ -335,28 +337,28 @@ export function listingProblems(draft: ListingDraft, template: Template, now = D
       add(
         "deliverables",
         "promise",
-        "Promise at least one thing a venue cannot take away. A sponsor who bought a spot on your suitcase and nothing else has bought something the organiser can cancel.",
+        t("listings.rules.noDeliverables"),
       );
     } else if (!draft.deliverables.some((d) => d.kind !== "in_person")) {
       add(
         "deliverables",
         "promise",
-        "At least one of these has to be something you post — a photo, a video, a story, a mention. Being there in person is not something a sponsor can be shown afterwards.",
+        t("listings.rules.noContentDeliverable"),
       );
     }
     if (draft.deliverables.length > LIMITS.DELIVERABLES_MAX) {
-      add("deliverables", "promise", `${LIMITS.DELIVERABLES_MAX} promises is the most one listing can carry.`);
+      add("deliverables", "promise", t("listings.problems.tooManyDeliverables", { max: LIMITS.DELIVERABLES_MAX }));
     }
     draft.deliverables.forEach((d, i) => {
       if (!Number.isInteger(d.count) || d.count < 1 || d.count > LIMITS.DELIVERABLE_COUNT_MAX) {
-        add(`deliverable:${i}:count`, "promise", `Between 1 and ${LIMITS.DELIVERABLE_COUNT_MAX} of them.`);
+        add(`deliverable:${i}:count`, "promise", t("listings.problems.deliverableCount", { max: LIMITS.DELIVERABLE_COUNT_MAX }));
       }
       const due = d.dueDate ? dayStart(d.dueDate) : null;
       if (due === null || due < todayStart || due > latestDue) {
         add(
           `deliverable:${i}:dueDate`,
           "promise",
-          `Pick a day between today and ${LIMITS.DELIVERABLE_DAYS_AFTER_CLOSE} days after the listing closes.`,
+          t("listings.problems.dayInRange", { days: LIMITS.DELIVERABLE_DAYS_AFTER_CLOSE }),
         );
       }
       const note = d.note.trim();
@@ -364,11 +366,11 @@ export function listingProblems(draft: ListingDraft, template: Template, now = D
         add(
           `deliverable:${i}:note`,
           "promise",
-          `Say what this is, in ${LIMITS.NOTE_MIN} to ${LIMITS.NOTE_MAX} characters. "Something custom" is not a promise anybody can check.`,
+          t("listings.rules.customNoteLength", { min: LIMITS.NOTE_MIN, max: LIMITS.NOTE_MAX }),
         );
       }
       if (note.length > LIMITS.NOTE_MAX) {
-        add(`deliverable:${i}:note`, "promise", `Keep this under ${LIMITS.NOTE_MAX} characters.`);
+        add(`deliverable:${i}:note`, "promise", t("listings.rules.keepUnder", { max: LIMITS.NOTE_MAX }));
       }
     });
   }
@@ -377,54 +379,54 @@ export function listingProblems(draft: ListingDraft, template: Template, now = D
     add(
       "fallback",
       "promise",
-      "Without the event there is nothing to film, so the answer has to be a refund from you or the same spot at your next event.",
+      t("listings.problems.fallbackNotForProduction"),
     );
   }
   if (session && draft.fallback !== "creator_refund" && draft.fallback !== "next_event") {
     add(
       "fallback",
       "promise",
-      "Time in person leaves nothing behind if it does not happen, so the answer has to be a refund from you or the same session at your next event.",
+      t("listings.problems.fallbackNotForSessions"),
     );
   }
   if (draft.fallback === "next_event" && draft.fallbackNote.trim().length < 5) {
-    add("fallbackNote", "promise", "Name the event you would carry sponsors to, and when it is. Otherwise it promises nothing.");
+    add("fallbackNote", "promise", t("listings.rules.fallbackNeedsDetails"));
   }
   if (draft.fallbackNote.trim().length > LIMITS.REASON_MAX) {
-    add("fallbackNote", "promise", `Keep this under ${LIMITS.REASON_MAX} characters.`);
+    add("fallbackNote", "promise", t("listings.rules.keepUnder", { max: LIMITS.REASON_MAX }));
   }
 
   if (isCustomServiceTemplate(template)) {
     const name = draft.serviceName.trim();
     const summary = draft.serviceSummary.trim();
     if (name.length < LIMITS.SERVICE_NAME_MIN || name.length > LIMITS.SERVICE_NAME_MAX) {
-      add("serviceName", "promise", `Name what you are selling, in ${LIMITS.SERVICE_NAME_MIN} to ${LIMITS.SERVICE_NAME_MAX} characters.`);
+      add("serviceName", "promise", t("listings.problems.serviceNameLength", { min: LIMITS.SERVICE_NAME_MIN, max: LIMITS.SERVICE_NAME_MAX }));
     }
     if (summary.length < LIMITS.SERVICE_SUMMARY_MIN || summary.length > LIMITS.SERVICE_SUMMARY_MAX) {
       add(
         "serviceSummary",
         "promise",
-        `Say what a brand gets, in ${LIMITS.SERVICE_SUMMARY_MIN} to ${LIMITS.SERVICE_SUMMARY_MAX} characters. This is not in our catalogue, so your words are the only description there is.`,
+        t("listings.rules.serviceSummaryLength", { min: LIMITS.SERVICE_SUMMARY_MIN, max: LIMITS.SERVICE_SUMMARY_MAX }),
       );
     }
   }
 
   if (draft.brandGets) {
     if (draft.brandGets.length > BRAND_GETS_LIMITS.MAX_LINES) {
-      add("brandGets", "promise", `${BRAND_GETS_LIMITS.MAX_LINES} lines is the most the list can carry.`);
+      add("brandGets", "promise", t("listings.rules.brandGetsTooMany", { max: BRAND_GETS_LIMITS.MAX_LINES }));
     }
     draft.brandGets.forEach((l, i) => {
       if (l.kind !== "text") return;
       const text = l.text.trim();
       if (text && (text.length < BRAND_GETS_LIMITS.TEXT_MIN || text.length > BRAND_GETS_LIMITS.TEXT_MAX)) {
-        add(`brandGets:${i}`, "promise", `${BRAND_GETS_LIMITS.TEXT_MIN} to ${BRAND_GETS_LIMITS.TEXT_MAX} characters.`);
+        add(`brandGets:${i}`, "promise", t("listings.problems.charsRange", { min: BRAND_GETS_LIMITS.TEXT_MIN, max: BRAND_GETS_LIMITS.TEXT_MAX }));
       }
     });
   }
 
   const required = requiredAttestations(template.requiredAttestations, draft.venueType, template.kind, session, production);
   if (required.some((a) => !draft.attestations.includes(a))) {
-    add("attestations", "publish", "Tick every line below. Each one is something you are telling sponsors is true.");
+    add("attestations", "publish", t("listings.rules.missingAttestation"));
   }
 
   return out;
@@ -440,38 +442,38 @@ function ladderProblems(
   add: (where: string, step: Step, message: string) => void,
 ) {
   if (draft.rungs.length === 0) {
-    add("ladder", "sell", "Add at least one thing to sell.");
+    add("ladder", "sell", t("listings.rules.ladderEmpty"));
     return;
   }
   if (draft.rungs.length > LIMITS.MAX_TIERS) {
-    add("ladder", "sell", `${LIMITS.MAX_TIERS} is the most a ladder can hold. More than that is a pricing page, and a pricing page is what a sponsor leaves.`);
+    add("ladder", "sell", t("listings.rules.tooManyTiers", { max: LIMITS.MAX_TIERS }));
   }
   const copies = draft.rungs.reduce((sum, r) => sum + (Number.isInteger(r.available) ? Math.max(0, r.available) : 0), 0);
   if (copies < 1 || copies > maxSlots) {
-    add("ladder", "sell", `Everything on the ladder together comes to ${copies}. This product sells between 1 and ${maxSlots} at once.`);
+    add("ladder", "sell", t("listings.rules.ladderCopies", { copies, max: maxSlots }));
   }
 
   for (const rung of draft.rungs) {
     const where = `rung:${rung.key}`;
     const mode = saleModeOf(draft, rung.saleMode);
-    const named = rung.title.trim() || "this one";
+    const named = rung.title.trim() || t("listings.rules.thisOne");
 
     const title = rung.title.trim();
     if (!title) {
-      add(`${where}:title`, "sell", "Name it. This is the line a brand reads before the price.");
+      add(`${where}:title`, "sell", t("listings.rules.rungTitleRequired"));
     } else if (title.length > LIMITS.TIER_TITLE_MAX) {
-      add(`${where}:title`, "sell", `${LIMITS.TIER_TITLE_MAX} characters is the most a name can be.`);
+      add(`${where}:title`, "sell", t("listings.rules.rungTitleTooLong", { max: LIMITS.TIER_TITLE_MAX }));
     }
 
     const perks = rung.perks.map((p) => p.trim()).filter(Boolean);
     if (perks.length === 0) {
-      add(`${where}:perks`, "sell", "Say what the brand gets for this, one plain line at a time. A price with nothing under it does not sell.");
+      add(`${where}:perks`, "sell", t("listings.rules.perksRequired"));
     }
     if (perks.length > LIMITS.TIER_PERKS_MAX) {
-      add(`${where}:perks`, "sell", `${LIMITS.TIER_PERKS_MAX} lines is the most one rung shows.`);
+      add(`${where}:perks`, "sell", t("listings.rules.tooManyPerks", { max: LIMITS.TIER_PERKS_MAX }));
     }
     if (perks.some((p) => p.length > LIMITS.TIER_PERK_MAX)) {
-      add(`${where}:perks`, "sell", `Each line is at most ${LIMITS.TIER_PERK_MAX} characters.`);
+      add(`${where}:perks`, "sell", t("listings.rules.perkTooLong", { max: LIMITS.TIER_PERK_MAX }));
     }
 
     // THE RUNG RULE: a rung sold to the highest bid sells exactly one thing.
@@ -487,12 +489,12 @@ function ladderProblems(
     // and a front are not substitutes, so each of those really is its own
     // bidding. `saleModeOf` is the line between the two.
     if (!Number.isInteger(rung.available) || rung.available < 1 || rung.available > maxSlots) {
-      add(`${where}:available`, "sell", `Between 1 and ${maxSlots} of these.`);
+      add(`${where}:available`, "sell", t("listings.rules.availableRange", { max: maxSlots }));
     } else if (mode === "bids" && rung.available !== 1) {
       add(
         `${where}:available`,
         "sell",
-        `${named} is sold to the highest bid, and bidding is one thing going to one winner. Five identical copies under one countdown are five auctions of the same thing: the brands spread across them and every one of the five ends under what a single one would have fetched. Set it to 1, or sell it another way.`,
+        t("listings.rules.bidRungSellsOne", { name: named }),
       );
     }
 
@@ -508,7 +510,7 @@ function ladderProblems(
     });
 
     if (rung.pitch.trim().length > LIMITS.PITCH_MAX) {
-      add(`${where}:pitch`, "sell", `Keep this under ${LIMITS.PITCH_MAX} characters.`);
+      add(`${where}:pitch`, "sell", t("listings.rules.keepUnder", { max: LIMITS.PITCH_MAX }));
     }
   }
 }
@@ -537,32 +539,32 @@ function priceProblems(args: {
   const price = amount(args.priceText);
   const floor = amount(args.floorText);
 
-  if (price === "bad") add(where, "sell", "Write the price as an amount in dollars, like 1300.");
-  if (floor === "bad") add(floorWhere, "sell", "Write this as an amount in dollars, like 900.");
+  if (price === "bad") add(where, "sell", t("listings.rules.priceNotAmount"));
+  if (floor === "bad") add(floorWhere, "sell", t("listings.rules.floorNotAmount"));
 
   if (!modeShowsPrice(mode)) {
     // Nothing to check: the price box is not shown, and anything typed into it
     // before the mode changed is dropped by `bodyOf`.
   } else if (price === null) {
-    add(where, "sell", mode === "bids" ? `Say where bidding opens for ${what}.` : `Give ${what} a price.`);
+    add(where, "sell", mode === "bids" ? t("listings.rules.openingBidRequired", { what }) : t("listings.rules.priceRequired", { what }));
   } else if (typeof price === "number") {
     const min = mode === "bids" ? offerFloor : session ? LIMITS.SESSION_MIN_CENTS : LIMITS.PRICE_MIN_CENTS;
     if (price < min || price > LIMITS.PRICE_MAX_CENTS) {
-      add(where, "sell", `A price runs from ${usd(min)} to ${usd(LIMITS.PRICE_MAX_CENTS)}.`);
+      add(where, "sell", t("listings.problems.priceOutOfRange", { min: usd(min), max: usd(LIMITS.PRICE_MAX_CENTS) }));
     }
   }
 
   if (!modeKeepsFloor(mode) || typeof floor !== "number") return;
   if (floor < offerFloor || floor > LIMITS.PRICE_MAX_CENTS) {
-    add(floorWhere, "sell", `Your floor runs from ${usd(offerFloor)} to ${usd(LIMITS.PRICE_MAX_CENTS)}. Nobody can offer less than ${usd(offerFloor)} anyway.`);
+    add(floorWhere, "sell", t("listings.rules.floorOutOfRange", { min: usd(offerFloor), max: usd(LIMITS.PRICE_MAX_CENTS) }));
     return;
   }
   if (typeof price !== "number") return;
   if (mode === "bids" && floor < price) {
-    add(floorWhere, "sell", `Your reserve is under the opening bid, so it would never stop anything. Set it above ${usd(price)}, or leave it empty.`);
+    add(floorWhere, "sell", t("listings.rules.reserveBelowOpening", { amount: usd(price) }));
   }
   if (mode === "fixed_with_offers" && floor >= price) {
-    add(floorWhere, "sell", `Your floor is at or above the price, so an offer could never beat buying it. Set it under ${usd(price)}, or leave it empty.`);
+    add(floorWhere, "sell", t("listings.rules.floorAbovePrice", { amount: usd(price) }));
   }
 }
 

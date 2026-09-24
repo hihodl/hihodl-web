@@ -48,6 +48,8 @@ import { useHref } from "@/components/app/base";
 import { BackHeader, ctaCommit, ctaPrimary, Notice as HoldNotice } from "@/components/app/hold";
 import { Ion, type IonName } from "@/components/app/ion";
 import { Body, Empty, SectionLabel } from "@/components/app/spaces/kit";
+import type { MessageKey } from "@/lib/app/i18n";
+import { useT } from "@/lib/app/i18n/react";
 import { useRefresh } from "@/lib/app/spaces-data";
 import type { Chain } from "@/lib/ad-space/types";
 import { describeCreatorError } from "@/lib/creator/api";
@@ -87,17 +89,18 @@ type Stage = "template" | Step;
 
 interface StageDef {
   key: Stage;
-  label: string;
+  /** Read with t() at render: the language is not known when this module loads. */
+  label: MessageKey;
 }
 
 const STAGES: readonly StageDef[] = [
-  { key: "template", label: "Your hook" },
-  { key: "name", label: "What to call it" },
-  { key: "event", label: "The event" },
-  { key: "dates", label: "Dates" },
-  { key: "sell", label: "What you sell" },
-  { key: "promise", label: "What the brand gets" },
-  { key: "publish", label: "Go live" },
+  { key: "template", label: "listings.wizard.stage.template" },
+  { key: "name", label: "listings.wizard.stage.name" },
+  { key: "event", label: "listings.wizard.stage.event" },
+  { key: "dates", label: "listings.wizard.stage.dates" },
+  { key: "sell", label: "listings.wizard.stage.sell" },
+  { key: "promise", label: "listings.wizard.stage.promise" },
+  { key: "publish", label: "listings.wizard.stage.publish" },
 ];
 
 /**
@@ -105,14 +108,14 @@ const STAGES: readonly StageDef[] = [
  * the package, so the package is decided before the price.
  */
 const PRODUCTION_STAGES: readonly StageDef[] = [
-  { key: "template", label: "Your hook" },
-  { key: "name", label: "What to call it" },
-  { key: "event", label: "The event" },
-  { key: "dates", label: "Dates" },
-  { key: "includes", label: "What a spot includes" },
-  { key: "sell", label: "The spots" },
-  { key: "promise", label: "What the brand gets" },
-  { key: "publish", label: "Go live" },
+  { key: "template", label: "listings.wizard.stage.template" },
+  { key: "name", label: "listings.wizard.stage.name" },
+  { key: "event", label: "listings.wizard.stage.event" },
+  { key: "dates", label: "listings.wizard.stage.dates" },
+  { key: "includes", label: "listings.wizard.stage.includes" },
+  { key: "sell", label: "listings.wizard.stage.spots" },
+  { key: "promise", label: "listings.wizard.stage.promise" },
+  { key: "publish", label: "listings.wizard.stage.publish" },
 ];
 
 function stagesFor(template: Template | null): readonly StageDef[] {
@@ -139,6 +142,7 @@ export function ListingWizard({
   /** From Inspire's "Use this idea": the creator whose campaign this started from. */
   inspiredBy?: InspiredByInput | null;
 }) {
+  const t = useT();
   const router = useRouter();
   const href = useHref();
   const refresh = useRefresh();
@@ -173,7 +177,7 @@ export function ListingWizard({
         setTemplates(list);
         setChains(availableChains);
         // Opened from Inspire on one template: start on it, not on the picker.
-        const picked = !existing && templateId ? list.find((t) => t.id === templateId) : undefined;
+        const picked = !existing && templateId ? list.find((x) => x.id === templateId) : undefined;
         if (picked) {
           setTemplate(picked);
           // "Use this idea": the credit starts filled in; the name card's
@@ -182,7 +186,7 @@ export function ListingWizard({
           setEventAnswer(isSessionTemplate(picked) || isProductionTemplate(picked) ? "yes" : null);
         }
         if (existing) {
-          const own = list.find((t) => t.id === existing.space.template?.id) ?? existing.space.template;
+          const own = list.find((x) => x.id === existing.space.template?.id) ?? existing.space.template;
           if (own) {
             setTemplate(own);
             const next = draftFromSpace(existing.space, own);
@@ -303,20 +307,20 @@ export function ListingWizard({
     }
   }
 
-  const title = spaceId ? "Draft" : "New space";
+  const title = spaceId ? t("listings.wizard.titleDraft") : t("listings.wizard.titleNew");
   const back = () => router.push(href("/listings"));
 
   if (loadError) {
     return (
       <Frame title={title} onBack={back}>
-        <Empty icon="cloud-offline-outline" title="This draft isn’t loading" body={loadError} />
+        <Empty icon="cloud-offline-outline" title={t("listings.wizard.notLoading")} body={loadError} />
       </Frame>
     );
   }
   if (!templates) {
     return (
       <Frame title={title} onBack={back}>
-        <Loading what="what you can sell" />
+        <Loading what={t("listings.wizard.loadingWhat")} />
       </Frame>
     );
   }
@@ -335,7 +339,7 @@ export function ListingWizard({
       right={
         spaceId ? (
           <button type="button" className={btnSave} disabled={busy !== null} onClick={() => void save()}>
-            {busy === "saving" ? "Saving…" : "Save"}
+            {busy === "saving" ? t("common.saving") : t("common.save")}
           </button>
         ) : null
       }
@@ -343,7 +347,7 @@ export function ListingWizard({
         <>
           {onLast ? (
             <button type="button" className={ctaCommit} disabled={problems.length > 0 || busy !== null} onClick={() => void publish()}>
-              {busy === "publishing" ? "Publishing…" : "Publish"}
+              {busy === "publishing" ? t("listings.wizard.publishing") : t("listings.wizard.publish")}
             </button>
           ) : (
             <button
@@ -367,11 +371,11 @@ export function ListingWizard({
                 })();
               }}
             >
-              {busy === "saving" ? "Saving…" : saves ? "Save and continue" : "Next"}
+              {busy === "saving" ? t("common.saving") : saves ? t("listings.wizard.saveAndContinue") : t("common.next")}
             </button>
           )}
           {blocked && !onLast ? (
-            <p className="mt-2 text-center text-[12px] leading-4 text-white/55">Fill in what&rsquo;s marked above to continue.</p>
+            <p className="mt-2 text-center text-[12px] leading-4 text-white/55">{t("listings.wizard.fillInMarked")}</p>
           ) : null}
         </>
       }
@@ -381,7 +385,7 @@ export function ListingWizard({
         index={index}
         unlocked={unlocked}
         onIndexChange={setAt}
-        label={`Step ${index + 1} of ${cards.length} · ${cards[index]?.label ?? ""}`}
+        label={t("listings.wizard.stepOf", { n: index + 1, total: cards.length, label: cards[index] ? t(cards[index].label) : "" })}
       >
         {cards.map((card) => {
           if (card.key === "template") {
@@ -391,16 +395,16 @@ export function ListingWizard({
                 templates={templates}
                 chosen={template}
                 locked={!!spaceId}
-                onChoose={(t) => {
-                  if (spaceId || t.id === template?.id) return;
-                  setTemplate(t);
-                  setDraft({ ...draftFor(t), chains, inspiredBy: inspiredBy ?? null });
-                  setEventAnswer(isSessionTemplate(t) || isProductionTemplate(t) ? "yes" : null);
+                onChoose={(next) => {
+                  if (spaceId || next.id === template?.id) return;
+                  setTemplate(next);
+                  setDraft({ ...draftFor(next), chains, inspiredBy: inspiredBy ?? null });
+                  setEventAnswer(isSessionTemplate(next) || isProductionTemplate(next) ? "yes" : null);
                 }}
               />
             );
           }
-          if (!template || !draft) return <StepCard key={card.key} title={card.label} />;
+          if (!template || !draft) return <StepCard key={card.key} title={t(card.label)} />;
           switch (card.key) {
             case "name":
               return <NameStep key="name" draft={draft} onChange={setDraft} problems={problems} />;
@@ -516,19 +520,20 @@ function TemplateStep({
   locked: boolean;
   onChoose: (t: Template) => void;
 }) {
+  const tr = useT();
   const products = templates.filter((t) => t.kind !== "service");
   const services = templates.filter((t) => t.kind === "service" && t.service?.format !== "session");
   const sessions = templates.filter((t) => t.kind === "service" && t.service?.format === "session");
 
   return (
-    <StepCard title="Your hook" help="The product is why people look; what a brand pays for is your reach and your content.">
+    <StepCard title={tr("listings.wizard.stage.template")} help={tr("listings.wizard.hookHelp")}>
       {locked ? (
-        <HoldNotice tone="calm">This draft is saved with its product. Delete the draft to start over with another.</HoldNotice>
+        <HoldNotice tone="calm">{tr("listings.wizard.lockedProduct")}</HoldNotice>
       ) : null}
 
       {products.length ? (
         <>
-          <Shelf title="Ad Space" hint="Spots on something you carry or wear." />
+          <Shelf title={tr("listings.wizard.shelfAdSpace")} hint={tr("listings.wizard.shelfAdSpaceHint")} />
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
             {products.map((t) => {
               const on = t.id === chosen?.id;
@@ -562,7 +567,7 @@ function TemplateStep({
                     )}
                   </span>
                   <span className="line-clamp-2 text-[14.5px] font-extrabold tracking-[-0.2px] text-white">{t.name}</span>
-                  <span className="text-[12px] font-strong text-white/55">{t.zones.length} spots</span>
+                  <span className="text-[12px] font-strong text-white/55">{tr("listings.wizard.spotCount", { count: t.zones.length })}</span>
                 </button>
               );
             })}
@@ -572,7 +577,7 @@ function TemplateStep({
 
       {services.length ? (
         <>
-          <Shelf title="Services" hint="What brands come back for: an interview, a video, a post." />
+          <Shelf title={tr("listings.wizard.shelfServices")} hint={tr("listings.wizard.shelfServicesHint")} />
           {services.map((t) => (
             <OfferCard key={t.id} t={t} on={t.id === chosen?.id} locked={locked} icon="videocam-outline" onChoose={onChoose} unit="slots" />
           ))}
@@ -581,7 +586,7 @@ function TemplateStep({
 
       {sessions.length ? (
         <>
-          <Shelf title="In the room" hint="Your time at an event: host, moderate, review pitches." />
+          <Shelf title={tr("listings.wizard.shelfRoom")} hint={tr("listings.wizard.shelfRoomHint")} />
           {sessions.map((t) => (
             <OfferCard key={t.id} t={t} on={t.id === chosen?.id} locked={locked} icon="people-outline" onChoose={onChoose} unit="sessions" />
           ))}
@@ -615,6 +620,7 @@ function OfferCard({
   onChoose: (t: Template) => void;
   unit: "slots" | "sessions";
 }) {
+  const tr = useT();
   return (
     <button
       type="button"
@@ -632,7 +638,9 @@ function OfferCard({
       {t.service?.summary ? <span className="text-[13.5px] leading-[19px] text-white/[0.62]">{t.service.summary}</span> : null}
       {t.service?.maxSlots ? (
         <span className="text-[12px] font-strong text-white/55">
-          Up to {t.service.maxSlots} {unit}
+          {unit === "slots"
+            ? tr("listings.wizard.upToSlots", { count: t.service.maxSlots })
+            : tr("listings.wizard.upToSessions", { count: t.service.maxSlots })}
         </span>
       ) : null}
     </button>

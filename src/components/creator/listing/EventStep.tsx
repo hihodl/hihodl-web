@@ -33,6 +33,8 @@
 "use client";
 
 import { Notice } from "@/components/app/hold";
+import type { MessageKey } from "@/lib/app/i18n";
+import { useT } from "@/lib/app/i18n/react";
 import {
   DELIVERY_WHENS,
   asksEventKind,
@@ -55,22 +57,22 @@ import { EventPicker } from "./EventPicker";
 import { Choice, Field } from "./parts";
 import { StepCard } from "./StepPager";
 
-const KIND_LABEL: Record<EventKind, string> = {
-  public: "A conference or a public event",
-  race: "A race or a match",
-  private: "Somebody's private event",
+const KIND_LABEL: Record<EventKind, MessageKey> = {
+  public: "listings.event.kind.public",
+  race: "listings.event.kind.race",
+  private: "listings.event.kind.private",
 };
 
-const KIND_BODY: Record<EventKind, string> = {
-  public: "It has rules about branded items.",
-  race: "The organiser's rules on logos apply.",
-  private: "The host has to have agreed.",
+const KIND_BODY: Record<EventKind, MessageKey> = {
+  public: "listings.event.kindBody.public",
+  race: "listings.event.kindBody.race",
+  private: "listings.event.kindBody.private",
 };
 
-const WHEN_LABEL: Record<DeliveryWhen, string> = {
-  before: "Before it starts",
-  during: "While it is on",
-  after: "In the wrap-up after it",
+const WHEN_LABEL: Record<DeliveryWhen, MessageKey> = {
+  before: "listings.event.when.before",
+  during: "listings.event.when.during",
+  after: "listings.event.when.after",
 };
 
 export function EventStep({
@@ -101,6 +103,7 @@ export function EventStep({
   onChange: (next: ListingDraft) => void;
   problems: readonly Problem[];
 }) {
+  const t = useT();
   const session = isSessionTemplate(template);
   const production = isProductionTemplate(template);
   const mustPick = session || production;
@@ -123,20 +126,20 @@ export function EventStep({
 
   return (
     <StepCard
-      title="Offering in an event?"
-      help={mustPick ? "This one is always sold at an event: its dates are the window you work in." : "Say yes and your listing shows on that event's page, next to everyone else going."}
+      title={t("listings.event.title")}
+      help={mustPick ? t("listings.event.helpMustPick") : t("listings.event.help")}
     >
       <Choice
         name="in-event"
         value={answer ?? ""}
         onChange={(v) => answered(v as EventAnswer)}
         options={[
-          { value: "yes", label: "Yes" },
+          { value: "yes", label: t("common.yes") },
           {
             value: "no",
-            label: "No",
+            label: t("common.no"),
             disabled: mustPick,
-            why: mustPick ? "This one is always sold at an event." : undefined,
+            why: mustPick ? t("listings.event.alwaysAtEvent") : undefined,
           },
         ]}
       />
@@ -164,7 +167,7 @@ export function EventStep({
           />
 
           {asksEventKind(template, answer, picked) ? (
-            <Field label="What kind of event" problems={problemsAt(problems, "venueType")}>
+            <Field label={t("listings.event.whatKind")} problems={problemsAt(problems, "venueType")}>
               <Choice
                 name="event-kind"
                 value={kind ?? ""}
@@ -172,7 +175,7 @@ export function EventStep({
                   onKind(v as EventKind);
                   onChange({ ...draft, venueType: venueFor(template, "yes", v as EventKind) });
                 }}
-                options={kinds.map((k) => ({ value: k, label: KIND_LABEL[k], body: KIND_BODY[k] }))}
+                options={kinds.map((k) => ({ value: k, label: t(KIND_LABEL[k]), body: t(KIND_BODY[k]) }))}
               />
             </Field>
           ) : null}
@@ -185,7 +188,7 @@ export function EventStep({
             promise at a time on the next card — see the note below.
           */}
           {picked && service ? (
-            <Field label="When you deliver" hint="It fills in the date every slot is delivered by. You can change it.">
+            <Field label={t("listings.event.whenDeliver")} hint={t("listings.event.whenDeliverHint")}>
               <Choice
                 name="delivery-when"
                 value={when ?? ""}
@@ -193,20 +196,17 @@ export function EventStep({
                   onWhen(v as DeliveryWhen);
                   onChange(withDeliveryDay(draft, deliveryDayFor(v as DeliveryWhen, picked)));
                 }}
-                options={DELIVERY_WHENS.map((w) => ({ value: w, label: WHEN_LABEL[w] }))}
+                options={DELIVERY_WHENS.map((w) => ({ value: w, label: t(WHEN_LABEL[w]) }))}
               />
             </Field>
           ) : null}
 
           {picked && !service ? (
-            <Notice tone="calm">
-              You will set a day for each thing you promise on the next card — the spot can go on before the doors open, the
-              photos land while it is on, and the thank-you in the wrap-up after.
-            </Notice>
+            <Notice tone="calm">{t("listings.event.perPromiseNotice")}</Notice>
           ) : null}
         </>
       ) : answer === "no" ? (
-        <Notice tone="calm">It publishes and sells the same way. It just does not appear on any event&rsquo;s page.</Notice>
+        <Notice tone="calm">{t("listings.event.noEventNotice")}</Notice>
       ) : null}
     </StepCard>
   );

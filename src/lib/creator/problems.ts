@@ -24,6 +24,7 @@
  * exactly the same place on screen.
  */
 
+import { t, type MessageKey } from "@/lib/app/i18n";
 import { clientProductBase } from "@/lib/app/paths";
 
 import { CreatorApiError } from "./api";
@@ -45,7 +46,7 @@ export interface Refusal {
  * product. Account is the person's (/account), opened on the card that fixes it.
  */
 function accountFix(view?: "x" | "payout"): { href: string; label: string } {
-  return { href: `${clientProductBase()}/account${view ? `?view=${view}` : ""}`, label: "Open Account" };
+  return { href: `${clientProductBase()}/account${view ? `?view=${view}` : ""}`, label: t("listings.problems.openAccount") };
 }
 
 /**
@@ -82,115 +83,115 @@ function detailedProblems(
     switch (code) {
       /* what is for sale */
       case "no_positions":
-        at("ladder", "sell", "There is nothing on this listing to sell yet.");
+        at("ladder", "sell", t("listings.problems.noPositions"));
         break;
       case "too_many_tiers":
-        at("ladder", "sell", `${max ?? LIMITS.MAX_TIERS} is the most a ladder can hold.`);
+        at("ladder", "sell", t("listings.problems.tooManyTiers", { max: max ?? LIMITS.MAX_TIERS }));
         break;
       case "slots_out_of_range":
-        at("ladder", "sell", `Everything on the ladder together has to come to between 1 and ${max ?? "the product's limit"}.`);
+        at("ladder", "sell", t("listings.problems.slotsOutOfRange", { max: max ?? t("listings.problems.productLimit") }));
         break;
       case "too_many_positions":
-        at("zones", "sell", `${max ?? LIMITS.MAX_POSITIONS} spots is the most one listing can carry.`);
+        at("zones", "sell", t("listings.problems.tooManyPositions", { max: max ?? LIMITS.MAX_POSITIONS }));
         break;
       case "tier_quantity_invalid":
-        at(field("available"), "sell", "That is not a number of copies this can be sold in.");
+        at(field("available"), "sell", t("listings.problems.tierQuantityInvalid"));
         break;
       case "tier_title_invalid":
-        at(field("title"), "sell", `Name it, in at most ${LIMITS.TIER_TITLE_MAX} characters.`);
+        at(field("title"), "sell", t("listings.problems.tierTitleInvalid", { max: LIMITS.TIER_TITLE_MAX }));
         break;
       case "tier_perks_invalid":
         at(
           field("perks"),
           "sell",
-          `Say what the brand gets: up to ${LIMITS.TIER_PERKS_MAX} plain lines of at most ${LIMITS.TIER_PERK_MAX} characters each.`,
+          t("listings.problems.tierPerksInvalid", { lines: LIMITS.TIER_PERKS_MAX, chars: LIMITS.TIER_PERK_MAX }),
         );
         break;
       case "unknown_zone":
-        at("zones", "sell", "One of these spots is not one this product has. Start the listing again.");
+        at("zones", "sell", t("listings.problems.unknownZone"));
         break;
       case "duplicate_zone":
-        at("zones", "sell", "The same spot is listed twice.");
+        at("zones", "sell", t("listings.problems.duplicateZone"));
         break;
       case "price_out_of_range":
-        at(field("price"), "sell", `A price runs from ${usd(LIMITS.PRICE_MIN_CENTS)} to ${usd(LIMITS.PRICE_MAX_CENTS)}.`);
+        at(field("price"), "sell", t("listings.problems.priceOutOfRange", { min: usd(LIMITS.PRICE_MIN_CENTS), max: usd(LIMITS.PRICE_MAX_CENTS) }));
         break;
       case "no_content_kind":
-        at(field("accepts"), "sell", "Say what a sponsor may put here.");
+        at(field("accepts"), "sell", t("listings.problems.noContentKind"));
         break;
       case "unknown_content_kind":
-        at(field("accepts"), "sell", "That is not something a sponsor can put on a spot.");
+        at(field("accepts"), "sell", t("listings.problems.unknownContentKind"));
         break;
 
       /* what you promise */
       case "venue_not_allowed_for_product":
-        at("venueType", "event", "This product cannot be sold at that kind of event.");
+        at("venueType", "event", t("listings.problems.venueNotAllowed"));
         break;
       case "event_name_required":
-        at("event", "event", "Name the event. A sponsor buying a spot at a conference is buying that conference.");
+        at("event", "event", t("listings.problems.eventNameRequired"));
         break;
       case "no_deliverables":
-        at("deliverables", "promise", "Promise at least one thing a venue cannot take away.");
+        at("deliverables", "promise", t("listings.problems.noDeliverables"));
         break;
       case "no_content_deliverable":
-        at("deliverables", "promise", "At least one promise has to be something you post, not only being there in person.");
+        at("deliverables", "promise", t("listings.problems.noContentDeliverable"));
         break;
       case "too_many_deliverables":
-        at("deliverables", "promise", `${max ?? LIMITS.DELIVERABLES_MAX} promises is the most one listing can carry.`);
+        at("deliverables", "promise", t("listings.problems.tooManyDeliverables", { max: max ?? LIMITS.DELIVERABLES_MAX }));
         break;
       case "unknown_deliverable_kind":
-        at(`deliverable:${index}:kind`, "promise", "That is not something a listing can promise.");
+        at(`deliverable:${index}:kind`, "promise", t("listings.problems.unknownDeliverableKind"));
         break;
       case "unknown_platform":
-        at(`deliverable:${index}:platform`, "promise", "That is not a platform we know.");
+        at(`deliverable:${index}:platform`, "promise", t("listings.problems.unknownPlatform"));
         break;
       case "deliverable_count_out_of_range":
-        at(`deliverable:${index}:count`, "promise", `Between 1 and ${LIMITS.DELIVERABLE_COUNT_MAX} of them.`);
+        at(`deliverable:${index}:count`, "promise", t("listings.problems.deliverableCount", { max: LIMITS.DELIVERABLE_COUNT_MAX }));
         break;
       case "deliverable_date_out_of_range":
         at(
           `deliverable:${index}:dueDate`,
           "promise",
-          `Pick a day between today and ${LIMITS.DELIVERABLE_DAYS_AFTER_CLOSE} days after the listing closes.`,
+          t("listings.problems.dayInRange", { days: LIMITS.DELIVERABLE_DAYS_AFTER_CLOSE }),
         );
         break;
       case "deliverable_note_required":
         at(
           `deliverable:${index}:note`,
           "promise",
-          `Say what this is, in ${LIMITS.NOTE_MIN} to ${LIMITS.NOTE_MAX} characters.`,
+          t("listings.problems.noteLength", { min: LIMITS.NOTE_MIN, max: LIMITS.NOTE_MAX }),
         );
         break;
       case "deliver_by_required":
-        at("deliverBy", "promise", "Say the day every sponsor has their work by.");
+        at("deliverBy", "promise", t("listings.problems.deliverByRequired"));
         break;
       case "deliver_by_out_of_range":
         at(
           "deliverBy",
           "promise",
-          `Pick a day between today and ${LIMITS.DELIVERABLE_DAYS_AFTER_CLOSE} days after the listing closes.`,
+          t("listings.problems.dayInRange", { days: LIMITS.DELIVERABLE_DAYS_AFTER_CLOSE }),
         );
         break;
       case "funding_goal_out_of_range":
-        at("goal", "name", `A goal runs from ${usd(LIMITS.GOAL_MIN_CENTS)} to ${usd(LIMITS.GOAL_MAX_CENTS)}.`);
+        at("goal", "name", t("listings.problems.goalOutOfRange", { min: usd(LIMITS.GOAL_MIN_CENTS), max: usd(LIMITS.GOAL_MAX_CENTS) }));
         break;
       case "service_name_required":
-        at("serviceName", "promise", `Name what you are selling, in ${LIMITS.SERVICE_NAME_MIN} to ${LIMITS.SERVICE_NAME_MAX} characters.`);
+        at("serviceName", "promise", t("listings.problems.serviceNameLength", { min: LIMITS.SERVICE_NAME_MIN, max: LIMITS.SERVICE_NAME_MAX }));
         break;
       case "service_summary_required":
         at(
           "serviceSummary",
           "promise",
-          `Say what a brand gets, in ${LIMITS.SERVICE_SUMMARY_MIN} to ${LIMITS.SERVICE_SUMMARY_MAX} characters.`,
+          t("listings.problems.serviceSummaryLength", { min: LIMITS.SERVICE_SUMMARY_MIN, max: LIMITS.SERVICE_SUMMARY_MAX }),
         );
         break;
       case "brand_gets_too_many":
       case "brand_gets_invalid":
-        at("brandGets", "promise", "Up to 8 lines, each one thing a brand gets.");
+        at("brandGets", "promise", t("listings.problems.brandGetsLines", { max: 8 }));
         break;
       case "brand_gets_line_invalid":
       case "brand_gets_line_length":
-        at(`brandGets:${index}`, "promise", "3 to 120 characters.");
+        at(`brandGets:${index}`, "promise", t("listings.problems.charsRange", { min: 3, max: 120 }));
         break;
       case "text_not_allowed": {
         const field2 =
@@ -204,22 +205,22 @@ function detailedProblems(
         at(
           field2,
           "promise",
-          "Those words are ones HiSpace does not carry: no investment advice, no introductions to investors, no token deals. Say what you make and post instead.",
+          t("listings.problems.textNotAllowed"),
         );
         break;
       }
       case "unknown_fallback":
-        at("fallback", "promise", "Pick one of the three answers.");
+        at("fallback", "promise", t("listings.problems.unknownFallback"));
         break;
       case "fallback_needs_details":
-        at("fallbackNote", "promise", "Name the event you would carry sponsors to, and when it is.");
+        at("fallbackNote", "promise", t("listings.problems.fallbackNeedsDetails"));
         break;
       case "missing_attestation":
-        at("attestations", "publish", "Tick every line. Each one is something you are telling sponsors is true.");
+        at("attestations", "publish", t("listings.problems.missingAttestation"));
         break;
 
       default:
-        at("form", "sell", "Something in this listing is not one we can publish. Check the prices and the dates.");
+        at("form", "sell", t("listings.problems.cannotPublishCheck"));
     }
   }
   // The publish gate reports one missing declaration per line; one sentence is
@@ -235,89 +236,89 @@ function bareProblem(code: string, draft: ListingDraft | null): Problem | null {
   const sell = (where: string, message: string): Problem => ({ where, step: "sell", message });
   switch (code) {
     case "offers_only_on_fixed":
-      return sell("pricing", "Sponsors can only be allowed to offer less on a listing that has a fixed price.");
+      return sell("pricing", t("listings.problems.offersOnlyOnFixed"));
     case "bids_need_placement":
       return sell(
         "pricing",
-        "Identical slots cannot all go to one highest bid. Build a ladder and put one rung out to bids instead.",
+        t("listings.problems.bidsNeedPlacement"),
       );
     case "bid_tier_sells_one":
       return sell(
         "ladder",
-        "A rung sold to the highest bid sells exactly one thing. Set the one you are bidding out to a single copy, or sell it another way.",
+        t("listings.problems.bidTierSellsOne"),
       );
     case "bidding_end_invalid":
       return sell(
         "biddingEndsAt",
-        `Bidding has to stop at least ${LIMITS.BIDDING_MIN_AFTER_PUBLISH_HOURS} hours after the listing goes live and at least ${LIMITS.BIDDING_MIN_BEFORE_CLOSE_HOURS} hours before it closes.`,
+        t("listings.problems.biddingEndInvalid", { after: LIMITS.BIDDING_MIN_AFTER_PUBLISH_HOURS, before: LIMITS.BIDDING_MIN_BEFORE_CLOSE_HOURS }),
       );
     case "reserve_below_opening_bid":
-      return sell("ladder", "A reserve under the opening bid would never stop anything. Put it above the opening bid, or take it off.");
+      return sell("ladder", t("listings.problems.reserveBelowOpeningBid"));
     case "minimum_not_below_price":
-      return sell("ladder", "A floor at or above the price means an offer could never beat buying it. Put it under the price, or take it off.");
+      return sell("ladder", t("listings.problems.minimumNotBelowPrice"));
     case "offer_price_invalid":
-      return sell("ladder", "One of these prices does not fit the way it is being sold. Check the price and the floor on each one.");
+      return sell("ladder", t("listings.problems.offerPriceInvalid"));
     case "chains_required":
-      return sell("chains", "Pick at least one network a sponsor can pay you on.");
+      return sell("chains", t("listings.problems.chainsRequired"));
     case "takeover_needs_a_takeover_chain":
       return sell(
         "chains",
-        "Taking a spot over repays the displaced sponsor inside the same payment, and only Solana carries that. Accept Solana, or sell another way.",
+        t("listings.problems.takeoverNeedsSolana"),
       );
     case "inspired_by_invalid":
     case "inspired_by_handle_invalid":
-      return { where: "inspiredBy", step: "name", message: "That is not a handle we can credit. Letters, numbers and underscores, as on X." };
+      return { where: "inspiredBy", step: "name", message: t("listings.problems.inspiredByInvalid") };
     case "inspired_by_not_found":
-      return { where: "inspiredBy", step: "name", message: "No HOLD creator has that username. Pick one from the list, or credit their X handle instead." };
+      return { where: "inspiredBy", step: "name", message: t("listings.problems.inspiredByNotFound") };
     case "inspired_by_self":
-      return { where: "inspiredBy", step: "name", message: "That is you. Credit somebody else, or leave it empty." };
+      return { where: "inspiredBy", step: "name", message: t("listings.problems.inspiredBySelf") };
     case "closes_too_soon":
-      return { where: "closesAt", step: "dates", message: `A listing runs for at least ${LIMITS.MIN_CAMPAIGN_HOURS} hours.` };
+      return { where: "closesAt", step: "dates", message: t("listings.problems.closesTooSoon", { hours: LIMITS.MIN_CAMPAIGN_HOURS }) };
     case "closes_too_late":
-      return { where: "closesAt", step: "dates", message: `A listing runs for at most ${LIMITS.MAX_CAMPAIGN_DAYS} days.` };
+      return { where: "closesAt", step: "dates", message: t("listings.problems.closesTooLate", { days: LIMITS.MAX_CAMPAIGN_DAYS }) };
     case "production_needs_an_event":
-      return { where: "event", step: "event", message: "Content production is filmed at an event. Pick one from the list." };
+      return { where: "event", step: "event", message: t("listings.problems.productionNeedsEvent") };
     case "production_package_invalid":
     case "production_package_empty":
       return {
         where: "production:deliverables",
         step: "includes",
-        message: "Tick at least one thing a spot includes, and pick a turnaround and the usage rights.",
+        message: t("listings.problems.productionPackageInvalid"),
       };
     case "production_sells_at_a_price":
-      return { where: "pricing", step: "sell", message: "A production spot is sold at a price. You can still read offers under it." };
+      return { where: "pricing", step: "sell", message: t("listings.problems.productionSellsAtPrice") };
     case "fallback_not_for_production":
       return {
         where: "fallback",
         step: "promise",
-        message: "Without the event there is nothing to film, so the answer has to be a refund from you or the same spot at your next event.",
+        message: t("listings.problems.fallbackNotForProduction"),
       };
     case "production_closes_after_event":
       return {
         where: "closesAt",
         step: "dates",
-        message: "This closes after the event is over, when there is nothing left to film. Close it by the event's last day.",
+        message: t("listings.problems.productionClosesAfterEvent"),
       };
     case "room_needs_an_event":
-      return { where: "event", step: "event", message: "Time in person is always sold at an event. Pick one from the list." };
+      return { where: "event", step: "event", message: t("listings.problems.roomNeedsEvent") };
     case "fallback_not_for_sessions":
       return {
         where: "fallback",
         step: "promise",
-        message: "Time in person leaves nothing behind if it does not happen, so the answer has to be a refund from you or the same session at your next event.",
+        message: t("listings.problems.fallbackNotForSessions"),
       };
     case "takeover_not_for_sessions":
-      return sell("pricing", "A booking a stranger can take off you by paying double is not a booking.");
+      return sell("pricing", t("listings.problems.takeoverNotForSessions"));
     case "price_below_minimum":
-      return sell(draft?.sells === "ladder" ? "ladder" : "slotPrice", `Time in person starts at ${usd(LIMITS.SESSION_MIN_CENTS)} a slot.`);
+      return sell(draft?.sells === "ladder" ? "ladder" : "slotPrice", t("listings.problems.priceBelowMinimum", { amount: usd(LIMITS.SESSION_MIN_CENTS) }));
     case "session_closes_after_event":
       return {
         where: "closesAt",
         step: "dates",
-        message: "This closes after the event is over, and a slot sold then is time that no longer exists. Close it by the day after the event ends.",
+        message: t("listings.problems.sessionClosesAfterEvent"),
       };
     case "no_positions":
-      return sell("ladder", "There is nothing on this listing to sell yet.");
+      return sell("ladder", t("listings.problems.noPositions"));
     default:
       return null;
   }
@@ -337,22 +338,22 @@ function accountRefusal(code: string): Refusal | null {
   switch (code) {
     case "x_not_linked":
       return fixed(
-        "A listing is published under your X account, and there is no X account on this HOLD account yet. Connect one and come back — nothing here is lost.",
+        t("listings.account.xNotLinked"),
       );
     case "x_not_verified":
       return fixed(
-        "A listing is published under a verified X account, and X shows no check mark on yours that we can see. X Premium, business and government all count.",
+        t("listings.account.xNotVerified"),
       );
     case "x_account_too_new":
       return fixed(
-        "A listing is published under an X account at least 90 days old, and we cannot see that age on yours. A check mark is a subscription anybody can buy in an afternoon; three months of history is not.",
+        t("listings.account.xAccountTooNew", { days: 90 }),
       );
     case "x_relink_needed":
       return fixed(
-        "It has been a while since X last confirmed your account for us, and we will not publish on a copy we cannot check. Connect X again and it is settled.",
+        t("listings.account.xRelinkNeeded"),
       );
     case "no_solana_address":
-      return fixed("This listing takes Solana and there is no Solana address on your account to pay it to.");
+      return fixed(t("listings.account.noSolanaAddress"));
     case "no_evm_address":
       // Said beside the networks, where it is fixed: the web sets up Solana only.
       return {
@@ -360,8 +361,7 @@ function accountRefusal(code: string): Refusal | null {
           {
             where: "chains",
             step: "sell",
-            message:
-              "Base and Polygon need an address from the HOLD app's wallet, which this account does not have yet. Untick them to publish on Solana, or publish from the HOLD app.",
+            message: t("listings.account.noEvmAddress"),
           },
         ],
         message: null,
@@ -370,8 +370,7 @@ function accountRefusal(code: string): Refusal | null {
     case "creator_cannot_receive_usdc":
       return {
         problems: [],
-        message:
-          "Your Solana wallet has no USDC account yet, so a sponsor paying from the HOLD app could pay and never reach you — our relayer is never allowed to open somebody else's token account. Have any amount of USDC sent to you on Solana once, which opens it for good, then publish again.",
+        message: t("listings.account.cannotReceiveUsdc"),
         fix: accountFix("payout"),
       };
     default:
@@ -380,25 +379,25 @@ function accountRefusal(code: string): Refusal | null {
 }
 
 /** A refusal the console can do nothing about, said without pretending otherwise. */
-const PLAIN: Record<string, string> = {
-  not_a_draft: "This listing is already live, so it cannot be changed here any more.",
-  not_found: "We cannot find this listing. It may have been deleted.",
-  unknown_template: "That product is no longer in our catalogue. Start the listing again on another one.",
-  service_offer_required: "Something went wrong building this listing. Start it again.",
-  zones_required: "Something went wrong building this listing. Start it again.",
-  slug_exhausted: "You already have a lot of listings by this name. Give this one a different one.",
-  address_not_yours: "That is not an address on your account.",
-  chain_unavailable: "We could not read Solana just now, so we will not say yes or no about your wallet. Try again in a minute.",
-  chain_not_available: "One of the networks this listing accepts is not taking payments right now. Take it off, or try again later.",
-  fee_address_not_configured: "This is ours, not yours: HiSpace is not set up to take a payment on one of these networks. Tell us and we will fix it.",
-  country_invalid: "Use the two-letter country code, like SG.",
-  event_unavailable: "That event is not one HiSpace carries listings for any more. Pick another one.",
-  event_name_invalid: "Give the event a name.",
-  time_zone_invalid: "We do not know that time zone.",
-  space_not_live: "This listing is not live, so there is nothing to post about yet.",
-  update_empty: "Write something, or add nothing at all.",
-  image_not_yours: "That image is not one you uploaded.",
-  not_live: "This listing is not live yet, so it has no page to share.",
+const PLAIN: Record<string, MessageKey> = {
+  not_a_draft: "listings.plain.notADraft",
+  not_found: "listings.plain.notFound",
+  unknown_template: "listings.plain.unknownTemplate",
+  service_offer_required: "listings.plain.serviceOfferRequired",
+  zones_required: "listings.plain.zonesRequired",
+  slug_exhausted: "listings.plain.slugExhausted",
+  address_not_yours: "listings.plain.addressNotYours",
+  chain_unavailable: "listings.plain.chainUnavailable",
+  chain_not_available: "listings.plain.chainNotAvailable",
+  fee_address_not_configured: "listings.plain.feeAddressNotConfigured",
+  country_invalid: "listings.plain.countryInvalid",
+  event_unavailable: "listings.plain.eventUnavailable",
+  event_name_invalid: "listings.plain.eventNameInvalid",
+  time_zone_invalid: "listings.plain.timeZoneInvalid",
+  space_not_live: "listings.plain.spaceNotLive",
+  update_empty: "listings.plain.updateEmpty",
+  image_not_yours: "listings.plain.imageNotYours",
+  not_live: "listings.plain.notLive",
 };
 
 /**
@@ -411,85 +410,85 @@ const PLAIN: Record<string, string> = {
  * bought — so each says what happened rather than what they did wrong.
  */
 export function describeRunError(e: unknown): string {
-  if (!(e instanceof CreatorApiError)) return "Something went wrong. Try again.";
+  if (!(e instanceof CreatorApiError)) return t("common.somethingWentWrong");
   switch (e.code) {
     case "network":
-      return "We could not reach HOLD. Check your connection and try again.";
+      return t("listings.run.network");
     case "UNAUTHORIZED":
     case "ACCOUNT_DELETED":
-      return "Your sign-in has expired. Sign in again and pick up where you left off.";
+      return t("listings.run.unauthorized");
     case "rate_limited":
     case "RATE_LIMIT_EXCEEDED":
-      return "That is more than we allow in a minute. Wait a moment and try again.";
+      return t("listings.run.rateLimited");
     case "delivery_link_invalid":
-      return "Paste the link the brand will open, starting with https://: a Drive, Frame.io or Dropbox folder.";
+      return t("listings.run.deliveryLinkInvalid");
     case "checklist_invalid":
-      return "The checklist can only count what the spot includes, and never more than it promised.";
+      return t("listings.run.checklistInvalid");
     case "already_accepted":
-      return "The brand has already accepted this one, so there is nothing more to deliver.";
+      return t("listings.run.alreadyAccepted");
     case "shoot_day_outside_event":
-      return "Pick a day inside the event's dates.";
+      return t("listings.run.shootDayOutsideEvent");
     case "already_delivered":
-      return "The shoot day is fixed once you have delivered.";
+      return t("listings.run.alreadyDelivered");
     case "offer_changed":
-      return "This moved while you were reading it — they raised it, withdrew it, or the clock ran out. Refresh and look again before you answer.";
+      return t("listings.run.offerChanged");
     case "offer_not_open":
-      return "This one is already settled, so there is nothing left to answer.";
+      return t("listings.run.offerNotOpen");
     case "offer_expired":
-      return "The time on this one ran out. Nothing was agreed and nothing is owed.";
+      return t("listings.run.offerExpired");
     case "not_for_bids":
-      return "There is no countering a bid. Bidding is one number going up against a clock; you can take the highest or leave it.";
+      return t("listings.run.notForBids");
     case "too_many_rounds":
-      return "Three counters is as far as one negotiation goes. Take it, or pass.";
+      return t("listings.run.tooManyRounds");
     case "counter_not_above_offer":
-      return "A counter has to be more than they offered. Anything less is just saying yes for less.";
+      return t("listings.run.counterNotAboveOffer");
     case "counter_above_price":
-      return "Your counter is above the price on the page, and buying it outright has to stay the better deal. Ask for less than the listed price.";
+      return t("listings.run.counterAbovePrice");
     case "offer_too_low":
-      return "That is under the least anyone can be asked for on HiSpace, which is $25.";
+      return t("listings.run.offerTooLow");
     case "offer_too_high":
-      return "That is more than a HiSpace spot can cost.";
+      return t("listings.run.offerTooHigh");
     case "space_closed":
-      return "This listing has closed, so nothing more can be agreed on it.";
+      return t("listings.run.spaceClosed");
     case "too_close_to_closing":
-      return "There is not enough time left before this closes for a sponsor to pay. Nothing can be accepted this late.";
+      return t("listings.run.tooCloseToClosing");
     case "position_sold":
-      return "Somebody bought that spot while you were reading this.";
+      return t("listings.run.positionSold");
     case "position_reserved":
-      return "That spot is already held for another accepted offer. It comes back if they do not pay.";
+      return t("listings.run.positionReserved");
     case "position_held":
-      return "Somebody is paying for that spot right now. If it lapses, it comes back.";
+      return t("listings.run.positionHeld");
     case "nothing_to_review":
-      return "There is nothing waiting on this one — you have already answered it, or the sponsor took it back.";
+      return t("listings.run.nothingToReview");
     case "reason_required":
-      return "Say why, in a line. The sponsor gets it and sends something else; without it they are guessing.";
+      return t("listings.run.reasonRequired");
     case "content_changed":
-      return "The sponsor swapped in something different since you looked. Refresh and read the new one before you answer.";
+      return t("listings.run.contentChanged");
     case "position_not_sold":
     case "order_not_paid":
-      return "Nobody has paid for this yet, so there is nothing to deliver.";
+      return t("listings.run.positionNotSold");
     case "not_for_sessions":
-      return "Time in person is confirmed by the person who booked it, not by a link — there is nothing for you to mark here.";
+      return t("listings.run.notForSessions");
     case "offers_not_accepted":
-      return "This one does not take offers, so a floor would never be read.";
+      return t("listings.run.offersNotAccepted");
     case "offer_price_invalid":
     case "minimum_not_below_price":
     case "reserve_below_opening_bid":
-      return "A floor has to sit under the price on a listing that has one, and above the opening bid on one that is bid for. It is never the price itself.";
+      return t("listings.run.offerPriceInvalid");
     case "offer_target_invalid":
-      return "That floor belongs on the other one: a listing selling identical slots keeps one floor for all of them, and everything else keeps its own.";
+      return t("listings.run.offerTargetInvalid");
     case "not_live":
-      return "This listing is not live yet, so it has no page to share.";
+      return t("listings.run.notLive");
     case "space_not_live":
-      return "This listing is not live, so there is nothing to post about yet.";
+      return t("listings.run.spaceNotLive");
     case "update_empty":
-      return "Write something first.";
+      return t("listings.run.updateEmpty");
     case "min_offer_invalid":
-      return "A floor runs from $25 up to the price, and never above it.";
+      return t("listings.run.minOfferInvalid");
     case "not_found":
-      return "We cannot find that any more.";
+      return t("listings.run.notFound");
     default:
-      return "Something went wrong. Try again.";
+      return t("common.somethingWentWrong");
   }
 }
 
@@ -527,24 +526,24 @@ export function describeSeriesError(e: unknown, template: Template | null): stri
     switch (e.code) {
       /* about the whole call */
       case "series_events_required":
-        return "Pick at least one event first.";
+        return t("listings.series.eventsRequired");
       case "series_too_large": {
         const max = typeof e.details.max === "number" ? e.details.max : LIMITS.SERIES_MAX;
-        return `${max} events is as far as one listing goes, counting the one it is at now. Take some off the list.`;
+        return t("listings.series.tooLarge", { max });
       }
       case "space_delisted":
-        return "This listing has been taken down, so there is nothing to copy from it.";
+        return t("listings.series.delisted");
       case "zones_required":
-        return "There is nothing on this listing to sell yet, so there would be nothing on the copies either. Finish it first.";
+        return t("listings.series.zonesRequired");
       case "VALIDATION_ERROR":
       case "validation_error":
-        return `Check the list: every event needs a day it stops selling, and one go adds at most ${LIMITS.SERIES_MAX - 1} of them.`;
+        return t("listings.series.validation", { max: LIMITS.SERIES_MAX - 1 });
 
       /* about one event, and said beside that event */
       case "series_event_repeated":
-        return "This listing already has a page at this event. Two pages at the same event only take sponsors off each other.";
+        return t("listings.series.eventRepeated");
       case "event_unavailable":
-        return "This event is not taking listings any more.";
+        return t("listings.series.eventUnavailable");
       default:
         break;
     }
@@ -572,37 +571,37 @@ export function describeTeamError(e: unknown): string {
     switch (e.code) {
       /* inviting */
       case "team_label_required":
-        return `Give them a name you will recognise, in at most ${TEAM_LIMITS.LABEL_MAX} characters. Only you see it.`;
+        return t("listings.team.labelRequired", { max: TEAM_LIMITS.LABEL_MAX });
       case "team_role_unknown":
-        return "Pick what they will do: sell for you, or turn up and deliver.";
+        return t("listings.team.roleUnknown");
       case "team_too_large": {
         const max = typeof e.details.max === "number" ? e.details.max : TEAM_LIMITS.MAX_MEMBERS;
-        return `${max} people is as big as a team gets here, invitations nobody has taken yet included. Remove somebody, or cancel an invitation, to make room.`;
+        return t("listings.team.tooLarge", { max });
       }
 
       /* taking a seat */
       case "invite_not_found":
-        return "That invitation is not open any more. It may already have been taken, or cancelled. Ask whoever sent it for a new link.";
+        return t("listings.team.inviteNotFound");
       case "invite_expired":
-        return `That invitation ran out: a link is good for ${TEAM_LIMITS.INVITE_DAYS} days. Ask whoever sent it for a new one.`;
+        return t("listings.team.inviteExpired", { days: TEAM_LIMITS.INVITE_DAYS });
       case "invite_is_your_own":
-        return "That is an invitation you made. Send the link to the person you made it for; you cannot take a seat on your own team.";
+        return t("listings.team.inviteIsYourOwn");
       case "already_on_this_team":
-        return "You are already on this team, so there is nothing to accept.";
+        return t("listings.team.alreadyOnTeam");
 
       /* shares */
       case "member_not_active":
-        return "They have not accepted your invitation yet. Once they have, you can put them on a listing.";
+        return t("listings.team.memberNotActive");
       case "share_out_of_range":
-        return "A share runs from 0.01% to 100% of what you receive from each sale on this listing.";
+        return t("listings.team.shareOutOfRange");
       case "shares_over_a_hundred":
-        return "Everybody on this listing together would come to more than 100% of what you receive, so you would owe more than each sale pays you. Lower this share, or somebody else's.";
+        return t("listings.team.sharesOverHundred");
 
       case "VALIDATION_ERROR":
       case "validation_error":
-        return "Something in that is not one we can save. Check the name, the share and the note, and try again.";
+        return t("listings.team.validation");
       case "not_found":
-        return "We cannot find that any more. It may have been removed while this page was open. Refresh and look again.";
+        return t("listings.team.notFound");
       default:
         break;
     }
@@ -634,21 +633,21 @@ export function seriesRefusalError(refusal: { code: string; details?: unknown })
  */
 export function refusalOf(e: unknown, template: Template | null, draft: ListingDraft | null): Refusal {
   if (!(e instanceof CreatorApiError)) {
-    return { problems: [], message: "Something went wrong. Try again.", fix: null };
+    return { problems: [], message: t("common.somethingWentWrong"), fix: null };
   }
 
   if (e.code === "network") {
     return {
       problems: [],
-      message: "We could not reach HOLD. Check your connection and try again.",
+      message: t("listings.run.network"),
       fix: null,
     };
   }
   if (e.code === "UNAUTHORIZED" || e.code === "ACCOUNT_DELETED") {
-    return { problems: [], message: "Your sign-in has expired. Sign in again and pick up where you left off.", fix: accountFix() };
+    return { problems: [], message: t("listings.run.unauthorized"), fix: accountFix() };
   }
   if (e.code === "rate_limited" || e.code === "RATE_LIMIT_EXCEEDED") {
-    return { problems: [], message: "That is more saves than we allow in a minute. Wait a moment and try again.", fix: null };
+    return { problems: [], message: t("listings.problems.rateLimitedSaves"), fix: null };
   }
 
   if (e.code === "invalid_positions" || e.code === "policy_problems") {
@@ -656,7 +655,7 @@ export function refusalOf(e: unknown, template: Template | null, draft: ListingD
     const problems = detailedProblems(list, draft, template);
     return {
       problems,
-      message: problems.length ? null : "Something in this listing is not one we can publish.",
+      message: problems.length ? null : t("listings.problems.cannotPublish"),
       fix: null,
     };
   }
@@ -667,5 +666,6 @@ export function refusalOf(e: unknown, template: Template | null, draft: ListingD
   const bare = bareProblem(e.code, draft);
   if (bare) return { problems: [bare], message: null, fix: null };
 
-  return { problems: [], message: PLAIN[e.code] ?? "Something went wrong. Try again.", fix: null };
+  const plain = PLAIN[e.code];
+  return { problems: [], message: plain ? t(plain) : t("common.somethingWentWrong"), fix: null };
 }

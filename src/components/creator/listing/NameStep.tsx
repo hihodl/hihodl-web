@@ -8,6 +8,7 @@
 
 "use client";
 
+import { useT } from "@/lib/app/i18n/react";
 import { LIMITS, type ListingDraft } from "@/lib/creator/listing";
 import { problemsAt, type Problem } from "@/lib/creator/rules";
 
@@ -24,30 +25,31 @@ export function NameStep({
   onChange: (next: ListingDraft) => void;
   problems: readonly Problem[];
 }) {
+  const t = useT();
   const set = (change: Partial<ListingDraft>) => onChange({ ...draft, ...change });
 
   return (
-    <StepCard title="What to call it" help="The headline a brand reads first, and the only thing here that is not optional.">
-      <Field label="Name" problems={problemsAt(problems, "title")} htmlFor="listing-title">
+    <StepCard title={t("listings.wizard.stage.name")} help={t("listings.name.help")}>
+      <Field label={t("listings.name.name")} problems={problemsAt(problems, "title")} htmlFor="listing-title">
         <Text
           id="listing-title"
           value={draft.title}
           onChange={(title) => set({ title })}
           maxLength={LIMITS.TITLE_MAX}
-          placeholder="Covering Breakpoint London, 15 to 17 November"
+          placeholder={t("listings.name.namePlaceholder")}
         />
       </Field>
       <Field
-        label="Why you are doing it"
-        hint="Optional. A few lines under the headline."
+        label={t("listings.name.reason")}
+        hint={t("listings.name.reasonHint")}
         problems={problemsAt(problems, "reason")}
         htmlFor="listing-reason"
       >
         <Paragraph id="listing-reason" value={draft.reason} onChange={(reason) => set({ reason })} maxLength={LIMITS.REASON_MAX} />
       </Field>
       <Field
-        label="What you need to raise"
-        hint="Optional, and a figure we print rather than a limit we keep."
+        label={t("listings.name.goal")}
+        hint={t("listings.name.goalHint")}
         problems={problemsAt(problems, "goal")}
         htmlFor="listing-goal"
       >

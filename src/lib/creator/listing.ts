@@ -26,6 +26,9 @@
  */
 
 import type { Chain } from "@/lib/ad-space/types";
+import { t } from "@/lib/app/i18n";
+import { fmtNumber } from "@/lib/app/i18n/format";
+
 import type { PublicCrew } from "./crew";
 
 /* ── What the backend allows, mirrored ────────────────────────────── */
@@ -370,13 +373,26 @@ export function isProductionTemplate(t: Template | null): boolean {
 export const PRODUCTION_DELIVERABLES = ["interviews", "shortForm", "brollPack", "photoSet", "socialAssets"] as const;
 export type ProductionDeliverable = (typeof PRODUCTION_DELIVERABLES)[number];
 
-/** What each line is, as the creator ticks it and the brand reads it. Mirrors production-rules.ts. */
+/**
+ * What each line is, as the creator ticks it and the brand reads it. Mirrors production-rules.ts.
+ * Getters, so each read is in the language on screen at that moment.
+ */
 export const PRODUCTION_DELIVERABLE_LABEL: Record<ProductionDeliverable, string> = {
-  interviews: "On-camera interviews",
-  shortForm: "Short-form edits (9:16, up to 60 s)",
-  brollPack: "B-roll pack (raw clips)",
-  photoSet: "Photo set",
-  socialAssets: "Social assets (cut-downs, captions)",
+  get interviews() {
+    return t("listings.production.line.interviews");
+  },
+  get shortForm() {
+    return t("listings.production.line.shortForm");
+  },
+  get brollPack() {
+    return t("listings.production.line.brollPack");
+  },
+  get photoSet() {
+    return t("listings.production.line.photoSet");
+  },
+  get socialAssets() {
+    return t("listings.production.line.socialAssets");
+  },
 };
 
 export const PRODUCTION_TURNAROUNDS = [24, 48, 72] as const;
@@ -384,13 +400,23 @@ export type Turnaround = (typeof PRODUCTION_TURNAROUNDS)[number];
 export const USAGE_SCOPES = ["organic", "organic_and_paid"] as const;
 export const USAGE_TERMS = ["6m", "12m", "perpetual"] as const;
 export const USAGE_SCOPE_LABEL: Record<(typeof USAGE_SCOPES)[number], string> = {
-  organic: "Organic social only",
-  organic_and_paid: "Organic and paid ads",
+  get organic() {
+    return t("listings.production.scope.organic");
+  },
+  get organic_and_paid() {
+    return t("listings.production.scope.organicAndPaid");
+  },
 };
 export const USAGE_TERM_LABEL: Record<(typeof USAGE_TERMS)[number], string> = {
-  "6m": "6 months",
-  "12m": "12 months",
-  perpetual: "Perpetual",
+  get "6m"() {
+    return t("listings.production.term.sixMonths");
+  },
+  get "12m"() {
+    return t("listings.production.term.twelveMonths");
+  },
+  get perpetual() {
+    return t("listings.production.term.perpetual");
+  },
 };
 /** Each line, at most this many per spot. */
 export const PRODUCTION_DELIVERABLE_MAX = 20;
@@ -829,10 +855,13 @@ export function dollarsFromCents(cents: number | null | undefined): string {
   return cents % 100 === 0 ? String(cents / 100) : (cents / 100).toFixed(2);
 }
 
-/** Integer cents as "$1,300" or "$1,300.50". */
+/**
+ * Integer cents as "$1,300" or "$1,300.50". A price paid in USDC: always dollars,
+ * never converted; only the separators follow the language.
+ */
 export function usd(cents: number): string {
   const whole = cents % 100 === 0;
-  return (cents / 100).toLocaleString("en-US", {
+  return fmtNumber(cents / 100, {
     style: "currency",
     currency: "USD",
     minimumFractionDigits: whole ? 0 : 2,

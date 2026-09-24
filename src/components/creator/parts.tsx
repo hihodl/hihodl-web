@@ -17,6 +17,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Notice as HoldNotice } from "@/components/app/hold";
 import { Ion } from "@/components/app/ion";
 import { Card, SectionLabel, Tag } from "@/components/app/spaces/kit";
+import { useT } from "@/lib/app/i18n/react";
 
 /**
  * A group in the app's vocabulary: its SectionLabel (small capitals) over a
@@ -64,12 +65,13 @@ export function Notice({ children }: { children: ReactNode }) {
  * exactly the thing they cannot check.
  */
 export function Address({ value }: { value: string }) {
+  const t = useT();
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!copied) return;
-    const t = setTimeout(() => setCopied(false), 2000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setCopied(false), 2000);
+    return () => clearTimeout(timer);
   }, [copied]);
 
   return (
@@ -92,7 +94,7 @@ export function Address({ value }: { value: string }) {
         }}
       >
         <Ion name={copied ? "checkmark" : "copy-outline"} size={14} />
-        {copied ? "Copied" : "Copy"}
+        {copied ? t("common.copied") : t("common.copy")}
       </button>
     </div>
   );
@@ -100,9 +102,10 @@ export function Address({ value }: { value: string }) {
 
 /** The skeleton a card wears while its first read is in flight. */
 export function Loading({ what }: { what: string }) {
+  const t = useT();
   return (
-    <p className="text-[14px] text-white/55" aria-label={`Loading ${what}`}>
-      Loading…
+    <p className="text-[14px] text-white/55" aria-label={t("listings.parts.loadingWhat", { what })}>
+      {t("common.loading")}
     </p>
   );
 }

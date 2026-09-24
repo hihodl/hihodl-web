@@ -43,6 +43,7 @@
 import { useCallback, useEffect, useRef, type KeyboardEvent, type ReactNode } from "react";
 
 import { Ion } from "@/components/app/ion";
+import { useT } from "@/lib/app/i18n/react";
 
 /**
  * How much of the neighbouring card shows at each edge, and the air between
@@ -79,6 +80,7 @@ export function StepPager({
   /** One node per step, in step order. */
   children: ReactNode[];
 }) {
+  const t = useT();
   const track = useRef<HTMLDivElement>(null);
   // Where the TRACK is, which is not the same thing as where the screen thinks
   // it is: between a swipe landing and the screen's state catching up, and for
@@ -143,16 +145,16 @@ export function StepPager({
     <div className="flex min-w-0 flex-col gap-2" onKeyDown={onKeyDown}>
       {/* The app's calendar head, doing the same job: an arrow, where you are, an arrow. */}
       <div className="flex items-center gap-2">
-        <Arrow name="chevron-back" label="Previous step" on={canBack} onClick={() => go(index - 1)} />
+        <Arrow name="chevron-back" label={t("listings.pager.previousStep")} on={canBack} onClick={() => go(index - 1)} />
         <p className="min-w-0 flex-1 truncate text-center text-[12.5px] font-bold text-white/[0.62]">{label}</p>
-        <Arrow name="chevron-forward" label="Next step" on={canNext} onClick={() => go(index + 1)} />
+        <Arrow name="chevron-forward" label={t("listings.pager.nextStep")} on={canNext} onClick={() => go(index + 1)} />
       </div>
 
       <div
         ref={track}
         onScroll={onScroll}
         role="group"
-        aria-label="The steps of this listing"
+        aria-label={t("listings.pager.steps")}
         className={`flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain ${NO_SCROLLBAR}`}
         // The track carries the peek as padding, so the first and last cards
         // sit the same distance in as every other one, and the snap lands on

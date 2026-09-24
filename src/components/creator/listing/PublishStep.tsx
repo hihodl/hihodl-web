@@ -21,6 +21,8 @@
 
 import { btnGlass, Notice } from "@/components/app/hold";
 import { Body, Card } from "@/components/app/spaces/kit";
+import type { MessageKey } from "@/lib/app/i18n";
+import { useT } from "@/lib/app/i18n/react";
 import {
   isProductionTemplate,
   isSessionTemplate,
@@ -35,17 +37,16 @@ import { Problems, Tick } from "./parts";
 import { StepCard } from "./StepPager";
 
 /** Each declaration in the first person, because that is who is saying it. */
-const ATTESTATION_TEXT: Record<Attestation, string> = {
-  owns_item: "I own this item and will use it as shown.",
-  venue_rules_checked: "I checked the event's rules on branded items.",
-  sports_rules_allow_logos: "The race allows brand logos on athletes' gear.",
-  host_consent: "The host of this event has agreed.",
-  temporary_skin_safe_adult:
-    "It's temporary, skin-safe and removable, I'm 18 or over, and nothing goes on the face or intimate areas.",
-  discloses_sponsorship: "I'll label every sponsored post as sponsored (#ad or the platform's paid-partnership tag).",
-  public_place: "Every session happens at the event venue or another public place, never at a private address.",
-  no_investment_advice: "I won't give investment advice in a session, or tell anyone what to buy or sell.",
-  no_investor_intros: "I won't sell or promise introductions to investors, in a session or because of one.",
+const ATTESTATION_TEXT: Record<Attestation, MessageKey> = {
+  owns_item: "listings.attest.ownsItem",
+  venue_rules_checked: "listings.attest.venueRulesChecked",
+  sports_rules_allow_logos: "listings.attest.sportsRulesAllowLogos",
+  host_consent: "listings.attest.hostConsent",
+  temporary_skin_safe_adult: "listings.attest.temporarySkinSafeAdult",
+  discloses_sponsorship: "listings.attest.disclosesSponsorship",
+  public_place: "listings.attest.publicPlace",
+  no_investment_advice: "listings.attest.noInvestmentAdvice",
+  no_investor_intros: "listings.attest.noInvestorIntros",
 };
 
 export function PublishStep({
@@ -65,6 +66,7 @@ export function PublishStep({
   fix: { href: string; label: string } | null;
   canPublish: boolean;
 }) {
+  const t = useT();
   const set = (change: Partial<ListingDraft>) => onChange({ ...draft, ...change });
   const required = requiredAttestations(
     template.requiredAttestations,
@@ -75,7 +77,7 @@ export function PublishStep({
   );
 
   return (
-    <StepCard title="Go live" help="Confirm each of these. A space that breaks one is taken down.">
+    <StepCard title={t("listings.wizard.stage.publish")} help={t("listings.publish.help")}>
       <div className="flex flex-col gap-1.5">
         {required.map((a) => (
           <Tick
@@ -86,17 +88,14 @@ export function PublishStep({
                 attestations: on ? [...draft.attestations.filter((x) => x !== a), a] : draft.attestations.filter((x) => x !== a),
               })
             }
-            label={ATTESTATION_TEXT[a]}
+            label={t(ATTESTATION_TEXT[a])}
           />
         ))}
         <Problems list={problemsAt(problems, "attestations")} />
       </div>
 
       <Card>
-        <Body dim>
-          Published under your verified X account, and paid straight to your address. A brand&rsquo;s wallet pays yours in one
-          transaction they sign.
-        </Body>
+        <Body dim>{t("listings.publish.howPaid")}</Body>
         {fix ? (
           <a href={fix.href} className={btnGlass}>
             {fix.label}
@@ -106,7 +105,7 @@ export function PublishStep({
       <Problems list={problemsAt(problems, "form")} />
       {banner ? <Notice icon="alert-circle-outline">{banner}</Notice> : null}
       {!canPublish ? (
-        <p className="text-[12px] leading-4 text-white/55">Your draft is saved either way: nothing you have written is lost.</p>
+        <p className="text-[12px] leading-4 text-white/55">{t("listings.publish.savedEitherWay")}</p>
       ) : null}
     </StepCard>
   );

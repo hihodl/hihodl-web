@@ -19,6 +19,8 @@
 
 import { Ion } from "@/components/app/ion";
 import { Body, Card, Chip, ChipRow, SectionLabel } from "@/components/app/spaces/kit";
+import type { MessageKey } from "@/lib/app/i18n";
+import { useT } from "@/lib/app/i18n/react";
 import {
   DELIVERABLE_KINDS,
   DELIVERY_WHENS,
@@ -53,41 +55,41 @@ import { DayField, dayPlus, today } from "./WhenField";
  * date, not as a question on their own: "Before it starts" reads as a sentence,
  * "Before" reads as a setting.
  */
-const WHEN_LABEL: Record<DeliveryWhen, string> = {
-  before: "Before",
-  during: "During",
-  after: "After",
+const WHEN_LABEL: Record<DeliveryWhen, MessageKey> = {
+  before: "listings.promise.when.before",
+  during: "listings.promise.when.during",
+  after: "listings.promise.when.after",
 };
 
-const DELIVERABLE_LABEL: Record<DeliverableKind, string> = {
-  in_person: "In person",
-  photo_post: "Photo post",
-  video: "Video",
-  story: "Story",
-  thank_you_post: "Thank-you post",
-  mention: "Brand mention",
-  custom: "Something else",
+const DELIVERABLE_LABEL: Record<DeliverableKind, MessageKey> = {
+  in_person: "listings.promise.kind.inPerson",
+  photo_post: "listings.promise.kind.photoPost",
+  video: "listings.promise.kind.video",
+  story: "listings.promise.kind.story",
+  thank_you_post: "listings.promise.kind.thankYouPost",
+  mention: "listings.promise.kind.mention",
+  custom: "listings.promise.kind.custom",
 };
 
-const PLATFORM_LABEL: Record<Platform, string> = {
+/** Platform names are names and stay as they are; only "Other" is a word. */
+const PLATFORM_LABEL: Record<Exclude<Platform, "other">, string> = {
   x: "X",
   instagram: "Instagram",
   tiktok: "TikTok",
   youtube: "YouTube",
   linkedin: "LinkedIn",
-  other: "Other",
 };
 
-const FALLBACK_LABEL: Record<Fallback, string> = {
-  content_anyway: "Content anyway",
-  creator_refund: "I refund the price",
-  next_event: "Moves to the next event",
+const FALLBACK_LABEL: Record<Fallback, MessageKey> = {
+  content_anyway: "listings.promise.fallback.contentAnyway",
+  creator_refund: "listings.promise.fallback.creatorRefund",
+  next_event: "listings.promise.fallback.nextEvent",
 };
 
-const FALLBACK_BODY: Record<Fallback, string> = {
-  content_anyway: "Every post and video is still delivered as promised.",
-  creator_refund: "You send the price back from your own wallet.",
-  next_event: "The spot moves to another event within 90 days.",
+const FALLBACK_BODY: Record<Fallback, MessageKey> = {
+  content_anyway: "listings.promise.fallbackBody.contentAnyway",
+  creator_refund: "listings.promise.fallbackBody.creatorRefund",
+  next_event: "listings.promise.fallbackBody.nextEvent",
 };
 
 export function PromiseStep({
@@ -104,6 +106,7 @@ export function PromiseStep({
   onChange: (next: ListingDraft) => void;
   problems: readonly Problem[];
 }) {
+  const t = useT();
   const set = (change: Partial<ListingDraft>) => onChange({ ...draft, ...change });
   const service = template.kind === "service";
   const session = isSessionTemplate(template);
@@ -111,15 +114,15 @@ export function PromiseStep({
   const latestDue = dayPlus(draft.closesAt.slice(0, 10) || today(), LIMITS.DELIVERABLE_DAYS_AFTER_CLOSE);
 
   return (
-    <StepCard title="What the brand gets" help="At least one thing a venue cannot take away, and the day it lands.">
+    <StepCard title={t("listings.wizard.stage.promise")} help={t("listings.promise.help")}>
       {isCustomServiceTemplate(template) ? (
         <>
-          <Field label="Name it" problems={problemsAt(problems, "serviceName")} htmlFor="service-name">
+          <Field label={t("listings.promise.nameIt")} problems={problemsAt(problems, "serviceName")} htmlFor="service-name">
             <Text id="service-name" value={draft.serviceName} onChange={(serviceName) => set({ serviceName })} maxLength={LIMITS.SERVICE_NAME_MAX} />
           </Field>
           <Field
-            label="Say what a brand gets"
-            hint="This one is not in our catalogue, so your words are the only description there is."
+            label={t("listings.promise.summary")}
+            hint={t("listings.promise.summaryHint")}
             problems={problemsAt(problems, "serviceSummary")}
             htmlFor="service-summary"
           >
@@ -134,26 +137,23 @@ export function PromiseStep({
       ) : null}
 
       {session || production ? null : (
-        <Field label="What you get" hint="The list a brand reads before paying, in your words and your order.">
+        <Field label={t("listings.promise.whatYouGet")} hint={t("listings.promise.whatYouGetHint")}>
           <BrandGetsEditor draft={draft} template={template} onChange={onChange} problems={problems} />
         </Field>
       )}
 
       {service ? (
         session ? (
-          <Body dim>
-            Nothing to set: time in person is delivered by the day after the event ends, and that date comes from the event you
-            picked.
-          </Body>
+          <Body dim>{t("listings.promise.sessionNothingToSet")}</Body>
         ) : (
           <DayField
-            label="Every slot delivered by"
+            label={t("listings.promise.deliverBy")}
             value={draft.deliverBy}
             onChange={(deliverBy) => set({ deliverBy })}
             min={today()}
             max={latestDue}
             problems={problemsAt(problems, "deliverBy")}
-            hint="One date for the whole listing, on the page before anybody pays."
+            hint={t("listings.promise.deliverByHint")}
           />
         )
       ) : (
@@ -161,9 +161,9 @@ export function PromiseStep({
       )}
 
       <Field
-        label={session ? "If a session can't happen" : "If the venue says no"}
+        label={session ? t("listings.promise.fallbackSession") : t("listings.promise.fallbackVenue")}
         problems={problemsAt(problems, "fallback")}
-        hint="Your promise, on the page before anybody pays."
+        hint={t("listings.promise.fallbackHint")}
       >
         <Choice
           name="fallback"
@@ -171,24 +171,24 @@ export function PromiseStep({
           onChange={(fallback) => set({ fallback: fallback as Fallback })}
           options={FALLBACKS.filter((f) => !session || f !== "content_anyway").map((f) => ({
             value: f,
-            label: FALLBACK_LABEL[f],
-            body: FALLBACK_BODY[f],
+            label: t(FALLBACK_LABEL[f]),
+            body: t(FALLBACK_BODY[f]),
           }))}
         />
       </Field>
       {draft.fallback === "next_event" ? (
         <Field
-          label="Which event, and when"
+          label={t("listings.promise.whichEvent")}
           problems={problemsAt(problems, "fallbackNote")}
           htmlFor="fallback-note"
-          hint="Within 90 days. Without a name and a date this promises nothing."
+          hint={t("listings.promise.whichEventHint")}
         >
           <Text
             id="fallback-note"
             value={draft.fallbackNote}
             onChange={(fallbackNote) => set({ fallbackNote })}
             maxLength={LIMITS.REASON_MAX}
-            placeholder="Devcon, 12 November"
+            placeholder={t("listings.promise.whichEventPlaceholder")}
           />
         </Field>
       ) : null}
@@ -212,7 +212,9 @@ function Deliverables({
   /** The event this listing sits in, when it sits in one. */
   event: EventSummary | null;
 }) {
+  const t = useT();
   const list = draft.deliverables;
+  const platformLabel = (p: Platform) => (p === "other" ? t("listings.promise.platformOther") : PLATFORM_LABEL[p]);
   const set = (next: DeliverableDraft[]) => onChange({ ...draft, deliverables: next });
   const patch = (i: number, change: Partial<DeliverableDraft>) => set(list.map((d, j) => (j === i ? { ...d, ...change } : d)));
 
@@ -222,34 +224,34 @@ function Deliverables({
       {list.map((d, i) => (
         <Card key={i} className="!gap-3.5">
           <div className="flex items-center justify-between gap-3">
-            <SectionLabel>{`${d.count}× ${DELIVERABLE_LABEL[d.kind]}`}</SectionLabel>
-            <button type="button" aria-label="Remove" className={`${btnSmallGlass} !w-9 !px-0`} onClick={() => set(list.filter((_, j) => j !== i))}>
+            <SectionLabel>{t("listings.promise.countTimes", { count: d.count, kind: t(DELIVERABLE_LABEL[d.kind]) })}</SectionLabel>
+            <button type="button" aria-label={t("common.remove")} className={`${btnSmallGlass} !w-9 !px-0`} onClick={() => set(list.filter((_, j) => j !== i))}>
               <Ion name="trash-outline" size={17} />
             </button>
           </div>
           <div className="grid gap-3.5 sm:grid-cols-2">
-            <Field label="What" problems={problemsAt(problems, `deliverable:${i}:kind`)} htmlFor={`d-${i}-kind`}>
+            <Field label={t("listings.promise.what")} problems={problemsAt(problems, `deliverable:${i}:kind`)} htmlFor={`d-${i}-kind`}>
               <Dropdown
                 id={`d-${i}-kind`}
                 value={d.kind}
                 onChange={(kind) => patch(i, { kind: kind as DeliverableKind })}
-                options={DELIVERABLE_KINDS.map((k) => ({ value: k, label: DELIVERABLE_LABEL[k] }))}
+                options={DELIVERABLE_KINDS.map((k) => ({ value: k, label: t(DELIVERABLE_LABEL[k]) }))}
               />
             </Field>
-            <Field label="How many" problems={problemsAt(problems, `deliverable:${i}:count`)} htmlFor={`d-${i}-count`}>
+            <Field label={t("listings.promise.howMany")} problems={problemsAt(problems, `deliverable:${i}:count`)} htmlFor={`d-${i}-count`}>
               <Count id={`d-${i}-count`} value={d.count} min={1} max={LIMITS.DELIVERABLE_COUNT_MAX} onChange={(count) => patch(i, { count })} />
             </Field>
-            <Field label="Where" problems={problemsAt(problems, `deliverable:${i}:platform`)} htmlFor={`d-${i}-platform`}>
+            <Field label={t("listings.promise.where")} problems={problemsAt(problems, `deliverable:${i}:platform`)} htmlFor={`d-${i}-platform`}>
               <Dropdown
                 id={`d-${i}-platform`}
                 value={d.platform ?? "x"}
                 onChange={(platform) => patch(i, { platform: platform as Platform })}
-                options={PLATFORMS.map((p) => ({ value: p, label: PLATFORM_LABEL[p] }))}
+                options={PLATFORMS.map((p) => ({ value: p, label: platformLabel(p) }))}
               />
             </Field>
             <div className="flex min-w-0 flex-col gap-2">
               <DayField
-                label="By when"
+                label={t("listings.promise.byWhen")}
                 value={d.dueDate}
                 onChange={(dueDate) => patch(i, { dueDate })}
                 min={today()}
@@ -268,7 +270,7 @@ function Deliverables({
                   {DELIVERY_WHENS.map((w) => (
                     <Chip
                       key={w}
-                      label={WHEN_LABEL[w]}
+                      label={t(WHEN_LABEL[w])}
                       selected={windowOfDay(d.dueDate, event) === w}
                       onClick={() => patch(i, { dueDate: deliveryDayFor(w, event) })}
                     />
@@ -278,8 +280,8 @@ function Deliverables({
             </div>
           </div>
           <Field
-            label={d.kind === "custom" ? "Say exactly what it is" : "Anything to add"}
-            hint={d.kind === "custom" ? "Required, and a sponsor reads it." : "Optional."}
+            label={d.kind === "custom" ? t("listings.promise.noteCustom") : t("listings.promise.noteOther")}
+            hint={d.kind === "custom" ? t("listings.promise.noteCustomHint") : t("listings.promise.noteOtherHint")}
             problems={problemsAt(problems, `deliverable:${i}:note`)}
             htmlFor={`d-${i}-note`}
           >
@@ -288,8 +290,8 @@ function Deliverables({
         </Card>
       ))}
       {list.length < LIMITS.DELIVERABLES_MAX ? (
-        <ChipRow label="What the brand gets">
-          <Chip icon="add" label="Add a deliverable" onClick={() => set([...list, { kind: "photo_post", platform: "x", count: 1, dueDate: "", note: "" }])} />
+        <ChipRow label={t("listings.wizard.stage.promise")}>
+          <Chip icon="add" label={t("listings.promise.addDeliverable")} onClick={() => set([...list, { kind: "photo_post", platform: "x", count: 1, dueDate: "", note: "" }])} />
         </ChipRow>
       ) : null}
     </div>
