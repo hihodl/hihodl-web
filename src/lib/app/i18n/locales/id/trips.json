@@ -33,6 +33,7 @@
   "photos.showCaptions": "Tampilkan keterangan",
   "photos.previous": "Foto sebelumnya",
   "photos.next": "Foto berikutnya",
+  "photos.counter": "{index} / {total}",
   "list.title": "Perjalananmu",
   "list.errorTitle": "Tidak bisa memuat perjalananmu",
   "list.emptyTitle": "Belum ada perjalanan",

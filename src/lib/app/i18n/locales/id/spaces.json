@@ -11,6 +11,8 @@
   "promiseKind.thankYouPost": "Postingan terima kasih",
   "promiseKind.mention": "Mention",
   "promiseKind.custom": "Kustom",
+  "delivery.promiseTitle": "{count} × {kind}",
+  "delivery.promiseTitlePlatform": "{count} × {kind} · {platform}",
   "delivery.artworkTitle": "Artwork · {sponsor}",
   "delivery.sponsor": "Sponsor",
   "delivery.sold": "Terjual",

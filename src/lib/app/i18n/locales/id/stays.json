@@ -27,6 +27,8 @@
   "where.searchText": "Cari “{text}”",
   "where.empty": "Tidak ada tempat yang cocok. Coba nama kota.",
   "when.pickCheckout": "Sekarang pilih tanggal check-out",
+  "when.checkin": "CHECK-IN",
+  "when.checkout": "CHECK-OUT",
   "who.adults": "Dewasa",
   "who.adultsSub": "Usia 18 tahun ke atas",
   "who.children": "Anak",

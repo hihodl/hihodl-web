@@ -84,6 +84,7 @@
   "bought.content.pending": "Artwork terkirim",
   "bought.content.rejected": "Diminta perubahan",
   "bought.content.none": "Belum ada artwork",
+  "artwork.kind.logo": "Logo",
   "artwork.kind.qr": "Kode QR",
   "artwork.kind.text": "Teks",
   "artwork.kind.photo": "Foto",
