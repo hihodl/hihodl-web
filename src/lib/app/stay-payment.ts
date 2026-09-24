@@ -80,6 +80,8 @@ import {
 } from "@/lib/link/payment-approvals";
 import { getWalletStatus, payerOf } from "@/lib/wallet/api";
 
+import { t } from "@/lib/app/i18n";
+
 import { BridgeRefused, prepareGasless, quoteCovering, submitGasless, type BridgeQuote } from "./bridge";
 import { bookIt, openPayment, prebook, readPayment, reportLeg, type Booking, type PrebookQuery, type SettlementIntent } from "./stays";
 
@@ -216,7 +218,7 @@ export async function payForStay(args: PayArgs): Promise<PayState> {
         return set({
           phase: "stopped",
           repriced: { was: args.quotedPrice, now: held.price, currency: held.currency },
-          message: "The price changed while you were on this page. Nothing has been charged.",
+          message: t("stays.pay.repriced"),
         });
       }
     } catch (e) {
@@ -245,8 +247,8 @@ export async function payForStay(args: PayArgs): Promise<PayState> {
         phase: "stopped",
         message:
           status(e) === 503
-            ? "We can't take payment for this stay right now. Your room is still held — try again in a moment."
-            : "We couldn't open the payment. Your room is still held — try again in a moment.",
+            ? t("stays.pay.cantTakePayment")
+            : t("stays.pay.cantOpen"),
       });
     }
   }
@@ -273,7 +275,7 @@ export async function payForStay(args: PayArgs): Promise<PayState> {
   if (intent.target.chain === "solana") {
     return set({
       phase: "stopped",
-      message: "This payment needs the HOLD app. Nothing has been charged.",
+      message: t("stays.pay.needsApp"),
     });
   }
 
@@ -283,7 +285,7 @@ export async function payForStay(args: PayArgs): Promise<PayState> {
     if (onPhone !== "no_phone") return onPhone;
     // The phone was removed meanwhile: read who approves now, and fall back.
     const now = payerOf(await getWalletStatus().catch(() => null));
-    if (now !== "web_passkey") return set({ phase: "stopped", message: NO_PHONE_ANY_MORE });
+    if (now !== "web_passkey") return set({ phase: "stopped", message: noPhoneAnyMore() });
   }
 
   // Still "opening": pricing and building move nothing. "paying" starts with the passkey (approveStay).
@@ -301,7 +303,7 @@ export async function payForStay(args: PayArgs): Promise<PayState> {
   } catch (e) {
     return set({
       phase: "stopped",
-      message: e instanceof BridgeRefused ? `${e.message} Nothing has been charged.` : "We couldn't price the transfer. Nothing has been charged.",
+      message: e instanceof BridgeRefused ? t("stays.pay.bridgeRefused", { reason: e.message }) : t("stays.pay.cantPrice"),
     });
   }
 
@@ -328,7 +330,7 @@ export async function payForStay(args: PayArgs): Promise<PayState> {
   } catch (e) {
     // A phone was linked meanwhile: it is the approver now, never the passkey.
     if (codeOf(e) === "APPROVE_ON_YOUR_PHONE") return phoneOrStop(bookingId, set, args.signal);
-    return set({ phase: "stopped", message: "We couldn't prepare the payment. Nothing has been charged. Your room is still held." });
+    return set({ phase: "stopped", message: t("stays.pay.cantPrepare") });
   }
   return set({ phase: "approve" });
 }
@@ -353,7 +355,7 @@ export async function approveStay(args: {
   };
   const bookingId = state.bookingId;
   const p = bookingId ? ready.get(bookingId) : undefined;
-  if (!bookingId || !p) return set({ phase: "stopped", message: "Nothing has been charged. Tap Try again to prepare the payment." });
+  if (!bookingId || !p) return set({ phase: "stopped", message: t("stays.pay.notPrepared") });
   if (sent.get(bookingId)) {
     // A leg is out. Never send a second; wait for the first.
     ready.delete(bookingId);
@@ -362,7 +364,7 @@ export async function approveStay(args: {
   }
   if (Date.now() - p.preparedAt > FRESH_MS) {
     ready.delete(bookingId);
-    return set({ phase: "stopped", message: "That waited too long to be sent, so it was not. Nothing has been charged. Tap Try again." });
+    return set({ phase: "stopped", message: t("stays.pay.tooLate") });
   }
 
   /* 4b ── ONE CEREMONY, TWO THINGS
@@ -396,7 +398,7 @@ export async function approveStay(args: {
       ready.delete(bookingId);
       return phoneOrStop(bookingId, set, args.signal);
     }
-    return set({ phase: "stopped", message: "We couldn't approve the payment. Nothing has been charged." });
+    return set({ phase: "stopped", message: t("stays.pay.cantApprove") });
   } finally {
     wipe(prf, seed);
   }
@@ -415,7 +417,7 @@ export async function approveStay(args: {
       set({ paid: true });
       return finish(bookingId, set);
     }
-    return set({ phase: "stopped", message: "We couldn't send the payment. Nothing has been charged. Try again." });
+    return set({ phase: "stopped", message: t("stays.pay.cantSend") });
   }
   sent.set(bookingId, deposit ?? "in_flight");
   set({ paid: true });
@@ -434,7 +436,10 @@ export async function approveStay(args: {
 
 /* ── The phone ────────────────────────────────────────────────────── */
 
-export const NO_PHONE_ANY_MORE = "Your phone is no longer linked. Link it again to pay from here. Nothing has been charged. Your room is still held.";
+/** The stop that means the linked phone has gone: the checkout asks to link again when it sees it. */
+export function noPhoneAnyMore(): string {
+  return t("stays.pay.noPhoneAnyMore");
+}
 
 /**
  * Ask the linked phone, wait, and send what it signed: steps 3 to 6 when the
@@ -458,7 +463,7 @@ async function payOnPhone(
     if (code === "NO_PHONE_LINKED") return "no_phone";
     // Booked, or nothing owed: the room is bought (or about to be), not paid twice.
     if (code === "ALREADY_PAID") return finish(bookingId, set);
-    return set({ phase: "stopped", message: `${describeApprovalRefusal(code, "stay")} Your room is still held.` });
+    return set({ phase: "stopped", message: t("stays.pay.stillHeld", { reason: describeApprovalRefusal(code, "stay") }) });
   }
   set({ phase: "phone", approval, message: null });
 
@@ -469,14 +474,14 @@ async function payOnPhone(
     },
   });
   if (!end) {
-    return set({ phase: "stopped", approval: null, message: "We stopped waiting for your phone. Nothing has been charged. Your room is still held." });
+    return set({ phase: "stopped", approval: null, message: t("stays.pay.stoppedWaiting") });
   }
 
   switch (end.status) {
     case "rejected":
     case "expired":
     case "cancelled":
-      return set({ phase: "stopped", approval: null, message: `${endedWithoutPaying(end.status)} Your room is still held.` });
+      return set({ phase: "stopped", approval: null, message: t("stays.pay.stillHeld", { reason: endedWithoutPaying(end.status) }) });
     case "submitted":
       // Sent already (another tab, most likely). Never a second time: wait for it.
       sent.set(bookingId, sent.get(bookingId) ?? "in_flight");
@@ -484,7 +489,7 @@ async function payOnPhone(
     case "approved":
       break;
     default:
-      return set({ phase: "stopped", approval: null, message: "We stopped waiting for your phone. Nothing has been charged. Your room is still held." });
+      return set({ phase: "stopped", approval: null, message: t("stays.pay.stoppedWaiting") });
   }
 
   const c = end.continuation;
@@ -492,7 +497,7 @@ async function payOnPhone(
     return set({
       phase: "stopped",
       approval: null,
-      message: "Your phone approved it, but we couldn't read what it signed. Nothing has been charged. Try again.",
+      message: t("stays.pay.unreadableSignature"),
     });
   }
   if (sent.get(bookingId)) {
@@ -512,7 +517,7 @@ async function payOnPhone(
       set({ paid: true });
       return finish(bookingId, set);
     }
-    return set({ phase: "stopped", message: "We couldn't send the payment. Nothing has been charged. Try again." });
+    return set({ phase: "stopped", message: t("stays.pay.cantSend") });
   }
   sent.set(bookingId, deposit ?? "in_flight");
   set({ paid: true });
@@ -527,7 +532,7 @@ async function payOnPhone(
 /** The passkey was refused for a linked phone: ask the phone, or stop when it has gone since. */
 async function phoneOrStop(bookingId: string, set: (n: Partial<PayState>) => PayState, signal?: AbortSignal): Promise<PayState> {
   const out = await payOnPhone(bookingId, set, signal);
-  return out === "no_phone" ? set({ phase: "stopped", message: NO_PHONE_ANY_MORE }) : out;
+  return out === "no_phone" ? set({ phase: "stopped", message: noPhoneAnyMore() }) : out;
 }
 
 /** The server's `messageHash` (hex or base64) against our own sha256 of the bytes. */
@@ -566,7 +571,7 @@ async function finish(bookingId: string, set: (n: Partial<PayState>) => PayState
       if (intent.status === "expired" || intent.status === "failed") {
         return set({
           phase: "stopped",
-          message: "Your payment didn't complete. We're on it — your money is safe and support can see this booking.",
+          message: t("stays.pay.didntComplete"),
         });
       }
     } catch {
@@ -577,7 +582,7 @@ async function finish(bookingId: string, set: (n: Partial<PayState>) => PayState
   if (!funded) {
     return set({
       phase: "stopped",
-      message: "Your payment is taking longer than usual. Leave this page — we'll finish the booking and email you.",
+      message: t("stays.pay.slow"),
     });
   }
 
@@ -599,7 +604,7 @@ async function finish(bookingId: string, set: (n: Partial<PayState>) => PayState
 
   return set({
     phase: "stopped",
-    message: "We have your payment but couldn't confirm the room just yet. We'll finish it and email you the confirmation.",
+    message: t("stays.pay.notConfirmed"),
   });
 }
 
@@ -617,7 +622,7 @@ function codeOf(e: unknown): string {
 function holdRefusal(e: unknown): string {
   const code = typeof e === "object" && e !== null && "code" in e ? (e as { code?: string }).code : null;
   if (status(e) === 409 || code === "CONFLICT") {
-    return "That room has just been taken. Nothing has been charged — try another rate.";
+    return t("stays.pay.roomTaken");
   }
-  return "We couldn't hold that room. Nothing has been charged — try again.";
+  return t("stays.pay.cantHold");
 }

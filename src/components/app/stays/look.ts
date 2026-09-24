@@ -28,6 +28,9 @@
  * app has none and neither does this.
  */
 
+import { t, type MessageKey } from "@/lib/app/i18n";
+import { fmtDate, fmtFiat, fmtNumber } from "@/lib/app/i18n/format";
+
 /* ── Colour ───────────────────────────────────────────────────────── */
 
 export const P = {
@@ -102,35 +105,22 @@ export const CARD_HERO = "rounded-[24px] border-[0.5px] border-white/10 bg-white
 
 /* ── Money, dates, counts ─────────────────────────────────────────── */
 
-/**
- * The locale every number here is formatted in.
- *
- * The app reads i18next, because it ships six languages. The web product does
- * not yet, so this is one constant rather than `navigator.language` — a date
- * formatted from the browser's locale on the client and from nothing on the
- * server is a hydration mismatch on every screen that renders a date, and
- * these screens are full of them.
+/*
+ * Every number and date here is formatted in the person's language
+ * (lib/app/i18n/format). A component that calls these must call `useT()` so it
+ * re-renders when the language or the currency changes.
  */
-const LOCALE = "en-GB";
-
-const CURRENCY_SYMBOL: Record<string, string> = {
-  EUR: "€",
-  USD: "$",
-  GBP: "£",
-  MXN: "$",
-};
 
 /**
- * Money, as the person reads it. Never a percentage we keep.
+ * Money, as the person reads it, in the currency the stay is QUOTED in
+ * (`staysCurrency()`): never converted. Never a percentage we keep.
  *
  * Under a thousand it keeps both decimals; at a thousand and over it rounds
  * and groups, because "€1,284.00" is four characters of noise on a figure
  * nobody is checking to the cent.
  */
 export function money(amount: number, currency: string): string {
-  const symbol = CURRENCY_SYMBOL[currency] ?? "";
-  const n = Math.abs(amount) >= 1000 ? Math.round(amount).toLocaleString(LOCALE) : amount.toFixed(2);
-  return symbol ? `${symbol}${n}` : `${n} ${currency}`;
+  return fmtFiat(amount, currency, Math.abs(amount) >= 1000 ? { whole: true } : { digits: 2 });
 }
 
 /**
@@ -140,33 +130,31 @@ export function money(amount: number, currency: string): string {
  * down advertises a price that does not exist.
  */
 export function moneyWhole(amount: number, currency: string): string {
-  const symbol = CURRENCY_SYMBOL[currency] ?? "";
-  const n = Math.ceil(amount).toLocaleString(LOCALE);
-  return symbol ? `${symbol}${n}` : `${n} ${currency}`;
+  return fmtFiat(Math.ceil(amount), currency, { whole: true });
 }
 
 /** Counts in the reader's own digit grouping. */
 export function count(n: number): string {
-  return n.toLocaleString(LOCALE);
+  return fmtNumber(n);
 }
 
 /** "12.34 USDC". Records and receipts only — never a label on a payment screen. */
 export function usdc(amount: number): string {
-  return `${amount.toFixed(2)} USDC`;
+  return `${fmtNumber(amount, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDC`;
 }
 
 /** "Fri, 29 Aug". */
 export function shortDate(iso: string): string {
   const d = new Date(`${iso}T00:00:00Z`);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString(LOCALE, { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+  return fmtDate(d, { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 }
 
 /** "Friday 14 March" — the booking screen's own, where there is room for it. */
 export function longDate(iso: string): string {
   const d = new Date(`${iso}T00:00:00Z`);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString(LOCALE, { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
+  return fmtDate(d, { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
 }
 
 /**
@@ -180,10 +168,10 @@ export function dateRange(checkin: string, checkout: string): string {
   const a = new Date(`${checkin}T00:00:00Z`);
   const b = new Date(`${checkout}T00:00:00Z`);
   if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime())) return `${checkin} – ${checkout}`;
-  const full = (d: Date) => d.toLocaleDateString(LOCALE, { day: "numeric", month: "short", timeZone: "UTC" });
+  const full = (d: Date) => fmtDate(d, { day: "numeric", month: "short", timeZone: "UTC" });
   // A different calendar month — or the same month a YEAR apart.
   if (checkin.slice(0, 7) !== checkout.slice(0, 7)) return `${full(a)} – ${full(b)}`;
-  const day = (d: Date) => d.toLocaleDateString(LOCALE, { day: "numeric", timeZone: "UTC" });
+  const day = (d: Date) => fmtDate(d, { day: "numeric", timeZone: "UTC" });
   const dayFirst = full(b).startsWith(day(b));
   return dayFirst ? `${day(a)}–${full(b)}` : `${full(a)}–${day(b)}`;
 }
@@ -197,12 +185,12 @@ export function nightsBetween(checkin: string, checkout: string): number {
 
 /** "2 nights", "1 night". */
 export function nights(n: number): string {
-  return `${n} ${n === 1 ? "night" : "nights"}`;
+  return t("stays.nights", { count: n });
 }
 
 export function guests(adults: number, children: number): string {
-  const parts = [`${adults} ${adults === 1 ? "adult" : "adults"}`];
-  if (children > 0) parts.push(`${children} ${children === 1 ? "child" : "children"}`);
+  const parts = [t("stays.adults", { count: adults })];
+  if (children > 0) parts.push(t("stays.children", { count: children }));
   return parts.join(" · ");
 }
 
@@ -232,9 +220,9 @@ export function daysUntil(iso: string): number {
 /** The word for a 0–10 guest score. Nothing below 7: silence beats "Average". */
 export function ratingLabel(rating: number | null): string | null {
   if (rating === null || !Number.isFinite(rating)) return null;
-  if (rating >= 9) return "Exceptional";
-  if (rating >= 8) return "Very good";
-  if (rating >= 7) return "Good";
+  if (rating >= 9) return t("stays.rating.exceptional");
+  if (rating >= 8) return t("stays.rating.veryGood");
+  if (rating >= 7) return t("stays.rating.good");
   return null;
 }
 
@@ -245,12 +233,12 @@ export const POINT_USD = 0.01;
 
 /** "455 pts". The only way points are rendered as an earning. */
 export function pointsEarned(points: number): string {
-  return `${points.toLocaleString(LOCALE)} pts`;
+  return t("stays.points.pts", { points: fmtNumber(points) });
 }
 
 /** "455 pts off" — points as a DISCOUNT on a price. */
 export function pointsOff(points: number): string {
-  return `${points.toLocaleString(LOCALE)} pts off`;
+  return t("stays.points.ptsOff", { points: fmtNumber(points) });
 }
 
 /* ── Odds and ends the screens share ──────────────────────────────── */
@@ -275,20 +263,22 @@ export function provablyCheaper(rate: { publicPrice: number | null; savingVsPubl
 export function boardLabel(board: string | null): string | null {
   if (!board) return null;
   const key = board.trim().toLowerCase().replace(/[\s_-]+/g, "");
-  const known: Record<string, string> = {
-    roomonly: "Room only, no meals",
-    breakfast: "Breakfast included",
-    bedandbreakfast: "Breakfast included",
-    halfboard: "Breakfast and dinner",
-    fullboard: "All meals included",
-    allinclusive: "All inclusive",
+  const known: Record<string, MessageKey> = {
+    roomonly: "stays.board.roomOnly",
+    breakfast: "stays.board.breakfast",
+    bedandbreakfast: "stays.board.breakfast",
+    halfboard: "stays.board.halfBoard",
+    fullboard: "stays.board.fullBoard",
+    allinclusive: "stays.board.allInclusive",
   };
-  return known[key] ?? board;
+  return known[key] ? t(known[key]) : board;
 }
 
 /** Metres under a kilometre, one decimal over it. */
 export function distance(km: number): string {
-  return km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`;
+  return km < 1
+    ? fmtNumber(Math.round(km * 1000), { style: "unit", unit: "meter" })
+    : fmtNumber(km, { style: "unit", unit: "kilometer", minimumFractionDigits: 1, maximumFractionDigits: 1 });
 }
 
 /** Room sizes come in four spellings of two units. */
@@ -296,5 +286,5 @@ export function roomSize(size: number | null, unit: string | null): string | nul
   if (size === null) return null;
   const symbols: Record<string, string> = { sqm: "m²", sqmt: "m²", sqft: "ft²", sqf: "ft²" };
   const u = unit ? (symbols[unit.toLowerCase()] ?? unit) : "m²";
-  return `${size} ${u}`;
+  return `${fmtNumber(size)} ${u}`;
 }

@@ -25,7 +25,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Ion } from "../ion";
 
 import { Cta, Spinner } from "./kit";
-import { P, dateRange, guests as guestsWord, isoDay, nights as nightsWord, nightsBetween, shiftDay } from "./look";
+import { P, dateRange, guests as guestsWord, isoDay, nights as nightsWord, nightsBetween, shiftDay, shortDate } from "./look";
+import { useT } from "@/lib/app/i18n/react";
+import { fmtDate, weekdayName } from "@/lib/app/i18n/format";
 import { usePlaceSearch } from "@/lib/app/stays-data";
 import type { Place } from "@/lib/app/stays";
 
@@ -72,6 +74,7 @@ export function SearchBar({
   onSearch: () => void;
   searching?: boolean;
 }) {
+  const t = useT();
   const [open, setOpen] = useState<Open>(null);
   const box = useRef<HTMLDivElement>(null);
 
@@ -102,8 +105,8 @@ export function SearchBar({
         className="flex flex-col gap-2 rounded-[24px] border-[0.5px] border-white/10 bg-white/[0.04] p-2 sm:flex-row sm:items-center"
       >
         <Field
-          label="Where"
-          value={value.where?.label ?? "Anywhere"}
+          label={t("stays.search.where")}
+          value={value.where?.label ?? t("stays.search.anywhere")}
           muted={!value.where}
           icon="search"
           on={open === "where"}
@@ -111,21 +114,21 @@ export function SearchBar({
           className="sm:flex-[1.4]"
         />
         <Field
-          label="When"
+          label={t("stays.search.when")}
           value={`${dateRange(value.checkin, value.checkout)} · ${nightsWord(nights)}`}
           icon="calendar-outline"
           on={open === "when"}
           onClick={() => setOpen(open === "when" ? null : "when")}
         />
         <Field
-          label="Who"
+          label={t("stays.search.who")}
           value={guestsWord(value.adults, value.children.length)}
           icon="people-outline"
           on={open === "who"}
           onClick={() => setOpen(open === "who" ? null : "who")}
         />
         <Cta
-          label="Search"
+          label={t("common.search")}
           icon="search"
           working={searching}
           disabled={!ready}
@@ -224,6 +227,7 @@ function Field({
 /* ── Where ────────────────────────────────────────────────────────── */
 
 function WherePicker({ value, onPick }: { value: Where | null; onPick: (w: Where) => void }) {
+  const t = useT();
   const [typed, setTyped] = useState(value?.label ?? "");
   const { places, loading } = usePlaceSearch(typed);
   const field = useRef<HTMLInputElement>(null);
@@ -241,8 +245,8 @@ function WherePicker({ value, onPick }: { value: Where | null; onPick: (w: Where
         onKeyDown={(e) => {
           if (e.key === "Enter" && free.length >= 2) onPick(places[0] ? placeToWhere(places[0]) : { label: free, query: free });
         }}
-        placeholder="City, region or country"
-        aria-label="Where are you going"
+        placeholder={t("stays.where.placeholder")}
+        aria-label={t("stays.where.ariaLabel")}
         className="h-[46px] rounded-[16px] px-4 text-[15px] font-semibold tracking-[-0.2px] outline-none placeholder:font-medium"
         style={{ background: "rgba(255,255,255,0.06)", border: `0.5px solid ${P.cardBorder}`, color: P.text }}
       />
@@ -291,14 +295,14 @@ function WherePicker({ value, onPick }: { value: Where | null; onPick: (w: Where
             <Ion name="search" size={16} />
           </span>
           <span className="truncate text-[14px] font-bold tracking-[-0.2px]" style={{ color: P.text }}>
-            {`Search “${free}”`}
+            {t("stays.where.searchText", { text: free })}
           </span>
         </button>
       ) : null}
 
       {!loading && places.length === 0 && free.length >= 2 && !canSearchText ? (
         <p className="py-6 text-center text-[13px]" style={{ color: P.textDim }}>
-          No places matched. Try a city name.
+          {t("stays.where.empty")}
         </p>
       ) : null}
     </div>
@@ -325,6 +329,7 @@ function WhenPicker({
   onChange: (checkin: string, checkout: string) => void;
   onDone: () => void;
 }) {
+  const t = useT();
   // While a range is half-picked, `end` is null and nothing is committed —
   // `onChange` never fires on a half-picked range.
   const [start, setStart] = useState<string>(checkin);
@@ -339,11 +344,8 @@ function WhenPicker({
     });
   }, []);
 
-  const weekdays = useMemo(
-    // 2024-01-01 was a Monday, which is where this grid starts.
-    () => Array.from({ length: 7 }, (_, i) => new Date(Date.UTC(2024, 0, 1 + i)).toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })),
-    [],
-  );
+  // Monday first, which is where this grid starts (weekdayName counts from Sunday). Not memoised: the language can change.
+  const weekdays = Array.from({ length: 7 }, (_, i) => weekdayName((i + 1) % 7, "short"));
 
   function tap(iso: string) {
     if (iso < today) return;
@@ -380,20 +382,20 @@ function WhenPicker({
               <Ion name="calendar-outline" size={15} />
             </span>
             <p className="text-[13px] font-medium" style={{ color: P.textDim }}>
-              Now pick your check-out date
+              {t("stays.when.pickCheckout")}
             </p>
           </div>
         ) : (
           <div className="flex w-full items-center gap-2.5 px-1">
-            <Edge label="CHECK-IN" iso={start} />
+            <Edge label={t("stays.when.checkin")} iso={start} />
             <span
               className="mt-[7px] shrink-0 rounded-[999px] px-2.5 py-[5px] text-[11.5px] font-extrabold tracking-[-0.1px]"
               style={{ background: P.selectSoft, color: P.text }}
             >
               {nightsWord(nightsBetween(start, end))}
             </span>
-            <Edge label="CHECK-OUT" iso={end} right />
-            <Cta label="Done" onClick={onDone} className="ml-2 !h-[42px] shrink-0 !rounded-[21px] !px-5 !text-[14px]" />
+            <Edge label={t("stays.when.checkout")} iso={end} right />
+            <Cta label={t("common.done")} onClick={onDone} className="ml-2 !h-[42px] shrink-0 !rounded-[21px] !px-5 !text-[14px]" />
           </div>
         )}
       </div>
@@ -402,8 +404,8 @@ function WhenPicker({
 }
 
 function Edge({ label, iso, right = false }: { label: string; iso: string; right?: boolean }) {
-  const d = new Date(`${iso}T00:00:00Z`);
-  const said = d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+  useT();
+  const said = shortDate(iso);
   return (
     <div className={`flex min-w-0 flex-1 flex-col gap-[3px] ${right ? "items-end" : ""}`}>
       <span className="text-[10px] font-extrabold tracking-[0.7px]" style={{ color: P.textDim }}>
@@ -435,7 +437,8 @@ function Month({
   const days = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
   // Monday-first: JS counts Sunday as 0, so rotate by six.
   const blanks = (first.getUTCDay() + 6) % 7;
-  const label = first.toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
+  useT();
+  const label = fmtDate(first, { month: "long", year: "numeric", timeZone: "UTC" });
 
   return (
     <div className="mb-[18px]">
@@ -510,19 +513,20 @@ function WhoPicker({
   onChange: (adults: number, ages: number[]) => void;
   onDone: () => void;
 }) {
+  const t = useT();
   return (
     <div className="flex flex-col">
       <Stepper
-        label="Adults"
-        sub="Age 18 and over"
+        label={t("stays.who.adults")}
+        sub={t("stays.who.adultsSub")}
         value={adults}
         min={1}
         max={8}
         onChange={(n) => onChange(n, ages)}
       />
       <Stepper
-        label="Children"
-        sub="Age 0 to 17"
+        label={t("stays.who.children")}
+        sub={t("stays.who.childrenSub")}
         value={ages.length}
         min={0}
         max={MAX_CHILDREN}
@@ -536,13 +540,13 @@ function WhoPicker({
       {ages.length > 0 ? (
         <div className="mt-1.5 border-t-[0.5px] pt-3" style={{ borderColor: P.divider }}>
           <p className="text-[12.5px] leading-[18.5px] tracking-[-0.1px]" style={{ color: P.textDim }}>
-            Ages change the price. Hotels charge differently for a toddler and a teenager, so give us the age at check-in.
+            {t("stays.who.agesNote")}
           </p>
           {ages.map((age, i) => (
             <Stepper
               key={i}
-              label={`Child ${i + 1}`}
-              sub={age === 0 ? "Under 1" : `${age} ${age === 1 ? "year" : "years"}`}
+              label={t("stays.who.child", { index: i + 1 })}
+              sub={age === 0 ? t("stays.who.underOne") : t("stays.who.years", { count: age })}
               value={age}
               min={0}
               max={17}
@@ -553,7 +557,7 @@ function WhoPicker({
         </div>
       ) : null}
 
-      <Cta label="Done" onClick={onDone} className="mt-4" />
+      <Cta label={t("common.done")} onClick={onDone} className="mt-4" />
     </div>
   );
 }
@@ -576,10 +580,11 @@ function Stepper({
   /** A child's age says itself in the sub-line; printing it twice is noise. */
   hideValue?: boolean;
 }) {
+  const t = useT();
   const btn = (dir: -1 | 1, icon: "remove" | "add", at: boolean) => (
     <button
       type="button"
-      aria-label={`${dir < 0 ? "Decrease" : "Increase"} ${label}`}
+      aria-label={dir < 0 ? t("stays.stepper.decrease", { label }) : t("stays.stepper.increase", { label })}
       disabled={at}
       onClick={() => onChange(value + dir)}
       className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[17px] disabled:cursor-default"

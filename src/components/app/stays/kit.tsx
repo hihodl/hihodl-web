@@ -19,6 +19,8 @@ import { useEffect, useState } from "react";
 import { Ion, type IonName } from "../ion";
 
 import { P, R, CARD, pointsEarned } from "./look";
+import { Rich, useT } from "@/lib/app/i18n/react";
+import { fmtNumber } from "@/lib/app/i18n/format";
 import type { Image } from "@/lib/app/stays";
 
 /* ── The ground ───────────────────────────────────────────────────── */
@@ -267,6 +269,7 @@ const PILL_SIZE = {
  * nothing — a zero here is a promise of no promise.
  */
 export function PointsPill({ points, size = "sm" }: { points: number; size?: keyof typeof PILL_SIZE }) {
+  useT();
   if (points <= 0) return null;
   const s = PILL_SIZE[size];
   return (
@@ -288,6 +291,7 @@ export function PointsPill({ points, size = "sm" }: { points: number; size?: key
 
 /** The full sentence, for a screen with room: what you get, and when. */
 export function PointsStatement({ points, credited }: { points: number; credited: boolean }) {
+  const t = useT();
   if (points <= 0) return null;
   return (
     <div
@@ -299,13 +303,20 @@ export function PointsStatement({ points, credited }: { points: number; credited
       </span>
       <div className="min-w-0">
         <p className="text-[15px] font-semibold tracking-[-0.2px]" style={{ color: P.text }}>
-          {credited ? "You got " : "You get "}
-          <span className="font-extrabold" style={{ color: P.caution }}>
-            {pointsEarned(points)}
-          </span>
+          <Rich
+            k={credited ? "stays.points.youGot" : "stays.points.youGet"}
+            vars={{ points: pointsEarned(points) }}
+            tags={{
+              b: (c) => (
+                <span className="font-extrabold" style={{ color: P.caution }}>
+                  {c}
+                </span>
+              ),
+            }}
+          />
         </p>
         <p className="mt-0.5 text-[12.5px] tracking-[-0.1px]" style={{ color: P.textMuted }}>
-          {credited ? "In your balance" : "In your balance after check-out"}
+          {credited ? t("stays.points.credited") : t("stays.points.afterCheckout")}
         </p>
       </div>
     </div>
@@ -314,13 +325,14 @@ export function PointsStatement({ points, credited }: { points: number; credited
 
 /** "Up to 4% back in points" — the shelf's own headline. */
 export function PointsHeadline({ pct }: { pct: number }) {
+  const t = useT();
   return (
     <span
       className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-[999px] px-[11px] py-1.5 text-[12.5px] font-bold tracking-[-0.1px]"
       style={{ background: "rgba(255,183,3,0.10)", border: `0.5px solid ${P.cautionBorder}`, color: P.caution }}
     >
       <Ion name="sparkles" size={13} />
-      {`Up to ${pct}% back in points`}
+      {t("stays.points.headline", { pct })}
     </span>
   );
 }
@@ -341,12 +353,13 @@ export function SectionLabel({ children, className = "" }: { children: ReactNode
 
 /** The 0–10 guest score, in its grey box. */
 export function ScorePill({ rating }: { rating: number }) {
+  useT();
   return (
     <span
       className="rounded-[7px] px-[7px] py-[3px] text-[11.5px] font-extrabold tabular-nums tracking-[-0.2px]"
       style={{ background: "rgba(255,255,255,0.10)", color: P.text }}
     >
-      {rating.toFixed(1)}
+      {fmtNumber(rating, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
     </span>
   );
 }
