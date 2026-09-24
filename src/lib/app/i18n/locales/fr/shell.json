@@ -56,7 +56,7 @@
   "user.signedIn": "Connecté",
   "user.aCreator": "un créateur",
   "user.roleFor": "{role} · {creator}",
-  "user.menuFor": "{name} — menu",
+  "user.menuFor": "Menu de {name}",
   "palette.closeSearch": "Fermer la recherche",
   "palette.placeholder": "Rechercher annonces, offres, pages",
   "palette.noMatch": "Aucun résultat pour « {query} »",

@@ -66,7 +66,7 @@
   "add.bank.pendingDetails": "Ce compte est ouvert, mais ses coordonnées de dépôt ne nous ont pas encore été transmises par le prestataire. Elles apparaîtront ici dès leur arrivée.",
   "add.bank.field.accountHolder": "Titulaire du compte",
   "add.bank.field.accountNumber": "Numéro de compte",
-  "add.bank.field.routingNumber": "Routing number",
+  "add.bank.field.routingNumber": "Numéro de routage (ABA)",
   "add.bank.field.sortCode": "Sort code",
   "add.bank.field.paymentCode": "Code de paiement",
   "add.bank.field.reference": "Référence",

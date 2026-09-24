@@ -58,7 +58,7 @@
   "floors.private": "Privé",
   "floors.now": "Actuel {amount}",
   "floors.none": "Pas de plancher",
-  "floors.min": "Min {amount}",
+  "floors.min": "Min. {amount}",
   "floors.saveChanges": "{count, plural, one {Enregistrer # modification} other {Enregistrer # modifications}}",
   "floors.sameForAll": "Même plancher pour tous",
   "floors.clearAll": "Tout effacer",
