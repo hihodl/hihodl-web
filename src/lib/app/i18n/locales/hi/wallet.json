@@ -64,7 +64,7 @@
   "send.youSend": "आप भेज रहे हैं",
   "send.networkFee": "नेटवर्क शुल्क",
   "send.free": "मुफ़्त",
-  "send.max": "MAX",
+  "send.max": "अधिकतम",
   "send.deleteKey": "डिलीट करें",
   "send.notSolanaEvm": "यह Solana पता नहीं है। सिर्फ़ Solana सपोर्टेड है।",
   "send.notSolana": "यह सही Solana पता नहीं है।",

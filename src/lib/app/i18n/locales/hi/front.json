@@ -64,7 +64,7 @@
   "username.connectionError": "कनेक्शन में गड़बड़ी",
   "username.notAvailable": "उपलब्ध नहीं",
   "username.rateLimited": "आपने हाल ही में यूज़रनेम बदला है। बाद में फिर कोशिश करें।",
-  "username.placeholder": "username",
+  "username.placeholder": "यूज़रनेम",
   "profile.photoFailed": "यह फ़ोटो इस्तेमाल नहीं हो सकी। दूसरी आज़माएँ, या अभी छोड़ दें।",
   "profile.choosePhoto": "दूसरी फ़ोटो चुनें",
   "profile.addPhoto": "फ़ोटो जोड़ें",

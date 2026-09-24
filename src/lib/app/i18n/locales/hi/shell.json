@@ -68,7 +68,7 @@
   "palette.hintMove": "↑↓ चलें",
   "palette.hintOpen": "↵ खोलें",
   "palette.hintClose": "ESC बंद करें",
-  "points.short": "{points} pts",
+  "points.short": "{points} पॉइंट्स",
   "points.title": "{text} · HiPoints",
   "points.aria": "HiPoints में {text}",
   "moreChains.oneStore": "Base या Polygon भी चाहिए? <link>HOLD ऐप पाएँ</link>",

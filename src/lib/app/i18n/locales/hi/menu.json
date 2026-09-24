@@ -163,7 +163,7 @@
   "invite.points": "{count, plural, one {# पॉइंट} other {# पॉइंट}}",
   "invite.pointsWord": "पॉइंट",
   "invite.heroLabel": "दोस्तों को बुलाएँ, दोनों कमाएँ",
-  "invite.pts": "pts",
+  "invite.pts": "पॉइंट्स",
   "invite.perFriend": "हर एक्टिवेट होने वाले दोस्त पर · <friend>उन्हें भी {points} मिलेंगे</friend>",
   "invite.invited": "बुलाए गए",
   "invite.activated": "एक्टिवेट हुए",
