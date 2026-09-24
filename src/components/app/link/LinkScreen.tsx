@@ -18,6 +18,7 @@
 
 import { useCallback } from "react";
 
+import { useT } from "@/lib/app/i18n/react";
 import { safeNext } from "@/lib/app/paths";
 
 import { useProductHref } from "../base";
@@ -25,6 +26,7 @@ import { BackHeader, Column } from "../hold";
 import { LinkPhone } from "./LinkPhone";
 
 export function LinkScreen() {
+  const t = useT();
   const productHref = useProductHref();
   const leave = useCallback(() => {
     const raw = new URLSearchParams(window.location.search).get("next");
@@ -33,7 +35,7 @@ export function LinkScreen() {
 
   return (
     <Column>
-      <BackHeader title="Link your phone" onBack={leave} />
+      <BackHeader title={t("link.linkYourPhone")} onBack={leave} />
       <div className="px-1">
         <LinkPhone onDone={leave} />
       </div>

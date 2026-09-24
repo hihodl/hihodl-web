@@ -16,6 +16,8 @@
  * approved on the phone".
  */
 
+import type { MessageKey } from "@/lib/app/i18n";
+import { Rich, useT } from "@/lib/app/i18n/react";
 import { paymentApprovalIntent } from "@/lib/link/intent";
 import type { PaymentApproval } from "@/lib/link/payment-approval-core";
 
@@ -23,10 +25,10 @@ import { FooterNote, StatusLine, useCountdown, WarningNote } from "../wallet/app
 import { Ion } from "../ion";
 import { usePhone } from "./in-app";
 
-const ON_PHONE: Partial<Record<PaymentApproval["status"], string>> = {
-  pending: "Approve on your phone",
-  approved: "Approved on your phone. Sending…",
-  submitted: "Approved. Sending…",
+const ON_PHONE: Partial<Record<PaymentApproval["status"], MessageKey>> = {
+  pending: "link.approval.pending",
+  approved: "link.approval.approved",
+  submitted: "link.approval.submitted",
 };
 
 export function PhoneApproval({
@@ -40,6 +42,7 @@ export function PhoneApproval({
   notice?: string | null;
   onCancel: () => void;
 }) {
+  const t = useT();
   const here = usePhone();
   const pending = approval.status === "pending";
   const left = useCountdown(pending ? approval.expiresAt || null : null);
@@ -47,19 +50,19 @@ export function PhoneApproval({
 
   return (
     <div className="flex flex-col gap-3">
-      <StatusLine>{ON_PHONE[approval.status] ?? "Approve on your phone"}</StatusLine>
+      <StatusLine>{t(ON_PHONE[approval.status] ?? "link.approval.pending")}</StatusLine>
       <div className="rounded-[16px] border border-white/[0.08] bg-white/[0.05] px-4 py-3">
         {s.title ? <p className="text-[15px] font-strong tracking-[-0.2px] text-white">{s.title}</p> : null}
         {s.subtitle ? <p className="mt-0.5 text-[12.5px] text-white/60">{s.subtitle}</p> : null}
         <div className="mt-2.5 flex items-center justify-between gap-4 border-t border-white/[0.08] pt-2.5">
-          <span className="text-[13.5px] text-white/60">{approval.kind === "stay" ? "To pay" : "You pay"}</span>
+          <span className="text-[13.5px] text-white/60">{approval.kind === "stay" ? t("link.approval.toPay") : t("link.approval.youPay")}</span>
           <span className="text-right text-[13.5px] font-strong tabular-nums text-white">
             {s.amount} {s.token}
           </span>
         </div>
         {s.spend ? (
           <div className="mt-1 flex items-center justify-between gap-4">
-            <span className="text-[13.5px] text-white/60">Leaves your wallet</span>
+            <span className="text-[13.5px] text-white/60">{t("link.approval.leavesWallet")}</span>
             <span className="text-right text-[13.5px] font-strong tabular-nums text-white">
               {s.spend} {s.token}
             </span>
@@ -78,7 +81,7 @@ export function PhoneApproval({
               className="flex h-[52px] w-full items-center justify-center gap-2 rounded-[16px] bg-[#FFB703] px-5 text-[15px] font-strong text-[#0A0F14] transition-opacity hover:opacity-90"
             >
               <Ion name="open-outline" size={18} color="#0A0F14" />
-              Open HOLD
+              {t("link.approval.openHold")}
             </a>
           ) : null}
           <button
@@ -87,16 +90,16 @@ export function PhoneApproval({
             disabled={cancelling}
             className="flex min-h-[50px] w-full items-center justify-center rounded-[14px] border border-white/10 bg-white/[0.06] px-5 py-3.5 text-[15px] font-strong text-white transition-colors hover:bg-white/[0.12] disabled:opacity-60"
           >
-            {cancelling ? "Cancelling…" : "Cancel"}
+            {cancelling ? t("link.approval.cancelling") : t("common.cancel")}
           </button>
         </div>
       ) : null}
       <FooterNote icon="phone-portrait-outline">
-        A notification in the HOLD app on your phone asks you to approve it. No notification? Open HOLD and go to Withdrawals.
+        {t("link.approval.footer")}
         {pending && left ? (
           <>
             {" "}
-            It expires in <span className="tabular-nums">{left}</span>.
+            <Rich k="link.approval.expiresIn" vars={{ left }} tags={{ n: (c) => <span className="tabular-nums">{c}</span> }} />
           </>
         ) : null}
       </FooterNote>

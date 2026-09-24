@@ -18,6 +18,8 @@
 
 import { useEffect, useState } from "react";
 
+import { t as tNow } from "@/lib/app/i18n";
+import { Rich, useT } from "@/lib/app/i18n/react";
 import { notePendingMethod } from "@/lib/auth/remember";
 import { sendSignInCode, verifySignInCode } from "@/lib/creator/session";
 
@@ -37,7 +39,6 @@ import {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const EMAIL_ACCENT = "#00C2FF";
-const EMAIL_INFO = "Your email is used to create your HOLD account and for account recovery.";
 
 export function EmailSignIn({
   initialEmail = "",
@@ -49,6 +50,7 @@ export function EmailSignIn({
   sendNow?: boolean;
   onClose: () => void;
 }) {
+  const t = useT();
   const [email, setEmail] = useState(initialEmail);
   const [code, setCode] = useState("");
   const [sent, setSent] = useState(false);
@@ -59,13 +61,13 @@ export function EmailSignIn({
 
   useEffect(() => {
     if (cooldown <= 0) return;
-    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
   }, [cooldown]);
 
   async function send(to = email) {
     if (!EMAIL_RE.test(to.trim())) {
-      setNotice("That does not look like an email address. Check it and try again.");
+      setNotice(tNow("front.email.invalid"));
       return;
     }
     setBusy(true);
@@ -76,7 +78,7 @@ export function EmailSignIn({
       setCooldown(30);
     } catch (err) {
       // Supabase's own message is the useful one: only it knows whether this is a bad address, a blocked domain or a wait.
-      setNotice(err instanceof Error ? err.message : "We could not send that code. Try again.");
+      setNotice(err instanceof Error ? err.message : tNow("front.email.sendFailed"));
     } finally {
       setBusy(false);
     }
@@ -98,8 +100,8 @@ export function EmailSignIn({
     } catch (err) {
       setNotice(
         err instanceof Error && /expired|invalid/i.test(err.message)
-          ? "That code has expired or is not the one we sent. Ask for a new one."
-          : "We could not check that code. Try again.",
+          ? tNow("front.email.codeExpired")
+          : tNow("front.email.verifyFailed"),
       );
     } finally {
       setBusy(false);
@@ -114,7 +116,7 @@ export function EmailSignIn({
 
   if (sent || (sendNow && busy)) {
     return (
-      <StepScreen tone="ready" title={"Verify your\nemail"} onClose={changeEmail} closeIcon="back" closeLabel="Change email">
+      <StepScreen tone="ready" title={t("front.email.verifyTitle")} onClose={changeEmail} closeIcon="back" closeLabel={t("front.email.changeEmail")}>
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -124,9 +126,9 @@ export function EmailSignIn({
           <span className="mb-4 flex h-16 w-16 items-center justify-center rounded-[32px] border border-[rgba(52,211,153,0.15)] bg-[rgba(52,211,153,0.08)] text-[#34D399]">
             <Ion name="mail-unread-outline" size={32} />
           </span>
-          <h2 className="mb-2 text-[20px] font-bold tracking-[-0.3px] text-white">Check your inbox</h2>
+          <h2 className="mb-2 text-[20px] font-bold tracking-[-0.3px] text-white">{t("front.email.checkInbox")}</h2>
           <p className="mb-4 text-[15px] font-medium leading-[22px] text-white/60">
-            We sent a code to <span className="break-all font-bold text-white">{email.trim()}</span>.
+            <Rich k="front.email.sentTo" vars={{ email: email.trim() }} tags={{ b: (c) => <span className="break-all font-bold text-white">{c}</span> }} />
           </p>
           {notice ? <ErrorBanner onDismiss={() => setNotice(null)}>{notice}</ErrorBanner> : null}
           <InputRow prefix={<Ion name="keypad-outline" size={18} className="mr-2 shrink-0 text-[#34D399]" />}>
@@ -135,8 +137,8 @@ export function EmailSignIn({
               autoComplete="one-time-code"
               inputMode="numeric"
               autoFocus
-              placeholder="6-digit code"
-              aria-label="Code from the email"
+              placeholder={t("front.email.codePlaceholder")}
+              aria-label={t("front.email.codeLabel")}
               value={code}
               onChange={(e) => setCode(e.target.value)}
               disabled={busy}
@@ -144,11 +146,11 @@ export function EmailSignIn({
             />
           </InputRow>
           <div className="mt-5">
-            <ActionButton type="submit" title={busy ? "Checking..." : "Continue"} disabled={busy || code.trim().length < 6} />
+            <ActionButton type="submit" title={busy ? t("front.email.checking") : t("common.continue")} disabled={busy || code.trim().length < 6} />
           </div>
           <div className="mt-1 flex flex-col">
-            <SkipButton label={cooldown > 0 ? `Resend in ${cooldown}s` : "Resend email"} disabled={busy || cooldown > 0} onClick={() => void send()} />
-            <SkipButton label="Change email" disabled={busy} onClick={changeEmail} />
+            <SkipButton label={cooldown > 0 ? t("front.email.resendIn", { seconds: cooldown }) : t("front.email.resend")} disabled={busy || cooldown > 0} onClick={() => void send()} />
+            <SkipButton label={t("front.email.changeEmail")} disabled={busy} onClick={changeEmail} />
           </div>
         </form>
       </StepScreen>
@@ -156,14 +158,14 @@ export function EmailSignIn({
   }
 
   return (
-    <StepScreen tone="username" title={"Continue with\nemail"} onClose={onClose}>
+    <StepScreen tone="username" title={t("front.email.title")} onClose={onClose}>
       <form
         onSubmit={(e) => {
           e.preventDefault();
           if (!busy && email.trim()) void send();
         }}
       >
-        <StepTitle icon="mail-outline" title="Email" accent={EMAIL_ACCENT} onInfo={() => setInfo(true)} />
+        <StepTitle icon="mail-outline" title={t("front.door.email")} accent={EMAIL_ACCENT} onInfo={() => setInfo(true)} />
         {notice ? <ErrorBanner onDismiss={() => setNotice(null)}>{notice}</ErrorBanner> : null}
         <InputRow prefix={<Ion name="mail-outline" size={18} className="mr-2 shrink-0" style={{ color: EMAIL_ACCENT }} />}>
           <input
@@ -172,19 +174,19 @@ export function EmailSignIn({
             inputMode="email"
             autoFocus
             placeholder="you@email.com"
-            aria-label="Email address"
+            aria-label={t("front.email.addressLabel")}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             disabled={busy}
             className={inputFieldCls}
           />
         </InputRow>
-        <NextHint icon="keypad-outline" title="Code" />
+        <NextHint icon="keypad-outline" title={t("front.email.code")} />
         <Cta>
-          <ActionButton type="submit" title={busy ? "Sending..." : "Continue"} disabled={busy || !EMAIL_RE.test(email.trim())} />
+          <ActionButton type="submit" title={busy ? t("front.sending") : t("common.continue")} disabled={busy || !EMAIL_RE.test(email.trim())} />
         </Cta>
       </form>
-      {info ? <InfoSheet title="Email" body={EMAIL_INFO} onClose={() => setInfo(false)} /> : null}
+      {info ? <InfoSheet title={t("front.door.email")} body={t("front.email.info")} onClose={() => setInfo(false)} /> : null}
     </StepScreen>
   );
 }

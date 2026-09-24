@@ -25,6 +25,8 @@
 import { useEffect, useState } from "react";
 
 import { btnGhost, btnLink, btnPrimary, inputCls, Warn } from "@/components/app/front/kit";
+import { t as tNow } from "@/lib/app/i18n";
+import { Rich, useT } from "@/lib/app/i18n/react";
 import { continueWith, enabledProviders, onAppleDevice, type OAuthProvider } from "@/lib/auth/providers";
 import { notePendingMethod } from "@/lib/auth/remember";
 import { sendSignInCode, verifySignInCode } from "@/lib/creator/session";
@@ -56,11 +58,12 @@ export async function goWith(p: OAuthProvider): Promise<string | null> {
     await continueWith(p);
     return null;
   } catch {
-    return `We could not open ${PROVIDER_NAME[p]} sign-in. Try again, or use your email.`;
+    return tNow("front.signIn.providerFailed", { provider: PROVIDER_NAME[p] });
   }
 }
 
 export function SignIn({ configured }: { configured: boolean }) {
+  const t = useT();
   const providers = useProviders();
   const [busy, setBusy] = useState<OAuthProvider | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -80,8 +83,8 @@ export function SignIn({ configured }: { configured: boolean }) {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h1 className="text-h4 font-light text-text">Sign in to HOLD</h1>
-        <p className="mt-1 text-small text-[#9FB7C2]">New here? The same step makes your account.</p>
+        <h1 className="text-h4 font-light text-text">{t("front.signIn.title")}</h1>
+        <p className="mt-1 text-small text-[#9FB7C2]">{t("front.signIn.newHere")}</p>
       </div>
 
       {providers === null || providers.length > 0 ? (
@@ -91,13 +94,13 @@ export function SignIn({ configured }: { configured: boolean }) {
             {(providers ?? []).map((p) => (
               <button key={p} type="button" className={`${btnGhost} w-full`} disabled={busy !== null} onClick={() => void go(p)}>
                 <ProviderLogo provider={p} />
-                {busy === p ? "Opening…" : `Continue with ${PROVIDER_NAME[p]}`}
+                {busy === p ? t("front.door.opening") : t("front.door.continueWithProvider", { provider: PROVIDER_NAME[p] })}
               </button>
             ))}
           </div>
           <div className="flex items-center gap-3 text-tiny text-[#6B8A99]" aria-hidden>
             <span className="h-px flex-1 bg-white/10" />
-            or with your email
+            {t("front.signIn.orEmail")}
             <span className="h-px flex-1 bg-white/10" />
           </div>
         </>
@@ -110,10 +113,11 @@ export function SignIn({ configured }: { configured: boolean }) {
 }
 
 export function NotConfigured() {
+  const t = useT();
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-h4 font-light text-text">Sign in</h1>
-      <Warn>Sign-in is not set up on this deployment.</Warn>
+      <h1 className="text-h4 font-light text-text">{t("front.signIn.signIn")}</h1>
+      <Warn>{t("front.callback.notSetUp")}</Warn>
     </div>
   );
 }
@@ -124,6 +128,7 @@ export function NotConfigured() {
  * the person already said "email me a code").
  */
 export function EmailCode({ initialEmail = "", sendNow = false }: { initialEmail?: string; sendNow?: boolean }) {
+  const t = useT();
   const [email, setEmail] = useState(initialEmail);
   const [code, setCode] = useState("");
   const [sent, setSent] = useState(false);
@@ -132,7 +137,7 @@ export function EmailCode({ initialEmail = "", sendNow = false }: { initialEmail
 
   async function send(to = email) {
     if (!EMAIL_RE.test(to.trim())) {
-      setNotice("That does not look like an email address. Check it and try again.");
+      setNotice(tNow("front.email.invalid"));
       return;
     }
     setBusy(true);
@@ -143,7 +148,7 @@ export function EmailCode({ initialEmail = "", sendNow = false }: { initialEmail
     } catch (err) {
       // Supabase's own message is the useful one here: it is the only party
       // that knows whether this is a bad address, a blocked domain or a wait.
-      setNotice(err instanceof Error ? err.message : "We could not send that code. Try again.");
+      setNotice(err instanceof Error ? err.message : tNow("front.email.sendFailed"));
     } finally {
       setBusy(false);
     }
@@ -165,8 +170,8 @@ export function EmailCode({ initialEmail = "", sendNow = false }: { initialEmail
     } catch (err) {
       setNotice(
         err instanceof Error && /expired|invalid/i.test(err.message)
-          ? "That code has expired or is not the one we sent. Ask for a new one."
-          : "We could not check that code. Try again.",
+          ? tNow("front.email.codeExpired")
+          : tNow("front.email.verifyFailed"),
       );
     } finally {
       setBusy(false);
@@ -183,7 +188,7 @@ export function EmailCode({ initialEmail = "", sendNow = false }: { initialEmail
         className="flex flex-col gap-3"
       >
         <p className="text-small text-[#9FB7C2]">
-          We sent a code to <span className="break-all text-text">{email.trim()}</span>
+          <Rich k="front.signIn.sentTo" vars={{ email: email.trim() }} tags={{ b: (c) => <span className="break-all text-text">{c}</span> }} />
         </p>
         <input
           // `one-time-code` is what makes a phone offer the digits from the
@@ -191,15 +196,15 @@ export function EmailCode({ initialEmail = "", sendNow = false }: { initialEmail
           autoComplete="one-time-code"
           inputMode="numeric"
           autoFocus
-          placeholder="6-digit code"
-          aria-label="Code from the email"
+          placeholder={t("front.email.codePlaceholder")}
+          aria-label={t("front.email.codeLabel")}
           className={inputCls}
           value={code}
           onChange={(e) => setCode(e.target.value)}
           disabled={busy}
         />
         <button type="submit" className={btnPrimary} disabled={busy || code.trim().length < 6}>
-          {busy ? "Checking…" : "Sign in"}
+          {busy ? t("front.signIn.checking") : t("front.signIn.signIn")}
         </button>
         <div className="flex flex-wrap gap-1">
           <button
@@ -212,10 +217,10 @@ export function EmailCode({ initialEmail = "", sendNow = false }: { initialEmail
               setNotice(null);
             }}
           >
-            Use another email
+            {t("front.signIn.anotherEmail")}
           </button>
           <button type="button" className={btnLink} disabled={busy} onClick={() => void send()}>
-            Send a new code
+            {t("front.signIn.newCode")}
           </button>
         </div>
         {notice ? <Warn>{notice}</Warn> : null}
@@ -236,14 +241,14 @@ export function EmailCode({ initialEmail = "", sendNow = false }: { initialEmail
         autoComplete="email"
         inputMode="email"
         placeholder="you@example.com"
-        aria-label="Email"
+        aria-label={t("front.door.email")}
         className={inputCls}
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         disabled={busy}
       />
       <button type="submit" className={btnPrimary} disabled={busy}>
-        {busy ? "Sending…" : "Email me a code"}
+        {busy ? t("front.signIn.sending") : t("front.door.emailMeACode")}
       </button>
       {notice ? <Warn>{notice}</Warn> : null}
     </form>

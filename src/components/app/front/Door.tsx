@@ -22,6 +22,8 @@
 
 import { useEffect, useState } from "react";
 
+import { t as tNow } from "@/lib/app/i18n";
+import { Rich, useT } from "@/lib/app/i18n/react";
 import type { OAuthProvider } from "@/lib/auth/providers";
 import { forgetRemembered, readFace, readRemembered, type Remembered, type RememberedFace } from "@/lib/auth/remember";
 import { takeSignedOutElsewhereNote } from "@/lib/app/sessions";
@@ -43,6 +45,7 @@ function Mark({ provider }: { provider: OAuthProvider | "email" }) {
 }
 
 export function Door({ configured }: { configured: boolean }) {
+  const t = useT();
   // Read after mount: the server draws the first-time welcome, and a stored
   // guess must not make the two paints differ.
   const [known, setKnown] = useState<Remembered | null | undefined>(undefined);
@@ -54,7 +57,7 @@ export function Door({ configured }: { configured: boolean }) {
   // Read after mount, like `known`: set by the shell when this browser's
   // session was removed from another device (lib/app/sessions).
   useEffect(() => {
-    if (takeSignedOutElsewhereNote()) setNotice("This browser was signed out from another device");
+    if (takeSignedOutElsewhereNote()) setNotice(tNow("front.door.signedOutElsewhere"));
   }, []);
   const providers = useProviders();
 
@@ -123,17 +126,17 @@ export function Door({ configured }: { configured: boolean }) {
       ) : null}
 
       {sheet === "choose" ? (
-        <SheetPanel title="Continue with" onClose={() => setSheet(null)}>
+        <SheetPanel title={t("front.door.continueWith")} onClose={() => setSheet(null)}>
           <div className="flex flex-col gap-3">
             {(providers ?? []).map((p) => (
               <Row key={p} onClick={() => void go(p)} disabled={busy !== null}>
                 <Mark provider={p} />
-                {busy === p ? "Opening…" : PROVIDER_NAME[p]}
+                {busy === p ? t("front.door.opening") : PROVIDER_NAME[p]}
               </Row>
             ))}
             <Row onClick={() => setSheet("email")} disabled={busy !== null}>
               <Mark provider="email" />
-              Email
+              {t("front.door.email")}
             </Row>
             {notice ? <Warn>{notice}</Warn> : null}
             <Consent />
@@ -155,18 +158,25 @@ export function Door({ configured }: { configured: boolean }) {
  */
 function Consent() {
   useEffect(() => noteTermsShown(TERMS_VERSION), []);
+  useT();
   const link = "text-white/80 underline underline-offset-2 hover:text-text";
   return (
     <p className="mt-1 px-2 text-center text-[12px] leading-[17px] text-white/60">
-      By continuing you agree to the{" "}
-      <a href="https://hihodl.xyz/terms" target="_blank" rel="noopener noreferrer" className={link}>
-        Terms
-      </a>{" "}
-      and{" "}
-      <a href="https://hihodl.xyz/privacy" target="_blank" rel="noopener noreferrer" className={link}>
-        Privacy Policy
-      </a>
-      .
+      <Rich
+        k="front.door.consent"
+        tags={{
+          terms: (c) => (
+            <a href="https://hihodl.xyz/terms" target="_blank" rel="noopener noreferrer" className={link}>
+              {c}
+            </a>
+          ),
+          privacy: (c) => (
+            <a href="https://hihodl.xyz/privacy" target="_blank" rel="noopener noreferrer" className={link}>
+              {c}
+            </a>
+          ),
+        }}
+      />
     </p>
   );
 }
@@ -177,6 +187,7 @@ function Stage({ children }: { children: React.ReactNode }) {
 }
 
 function Welcome({ onGo }: { onGo: () => void }) {
+  const t = useT();
   return (
     <div className="flex min-h-[70dvh] w-full max-w-[400px] flex-col">
       <div className="flex flex-1 flex-col items-center justify-center pb-10">
@@ -184,7 +195,7 @@ function Welcome({ onGo }: { onGo: () => void }) {
         <div className="mt-5 flex w-full items-center gap-3">
           <span className="h-px flex-1 bg-amber/25" />
           {/* The app draws it at 40 % white; 60 % is the floor for small text here (4.5:1). */}
-          <span className="text-[13px] font-medium tracking-[0.5px] text-white/60">Your money, your rules</span>
+          <span className="text-[13px] font-medium tracking-[0.5px] text-white/60">{t("front.door.tagline")}</span>
           <span className="h-px flex-1 bg-amber/25" />
         </div>
       </div>
@@ -193,7 +204,7 @@ function Welcome({ onGo }: { onGo: () => void }) {
         onClick={onGo}
         className="h-[58px] w-full rounded-[29px] bg-amber text-[17px] font-extrabold tracking-[-0.2px] text-[#0A1117] shadow-[0_6px_20px_rgba(255,183,3,0.2)] transition-colors hover:bg-amber-glow"
       >
-        Let&apos;s go
+        {t("front.door.letsGo")}
       </button>
     </div>
   );
@@ -212,17 +223,18 @@ function WelcomeBack({
   onOther: () => void;
   onNotYou: () => void;
 }) {
+  const t = useT();
   const name = known.name?.trim() || null;
   // Read after mount: localStorage is not there on the server.
   const [face, setFace] = useState<RememberedFace | null | undefined>(undefined);
   useEffect(() => setFace(readFace(known.email)), [known.email]);
   const [photoBroken, setPhotoBroken] = useState(false);
-  const how = known.method === "email" ? "Email me a code" : `Continue with ${PROVIDER_NAME[known.method]}`;
+  const how = known.method === "email" ? t("front.door.emailMeACode") : t("front.door.continueWithProvider", { provider: PROVIDER_NAME[known.method] });
   return (
     <div className="flex min-h-[70dvh] w-full max-w-[400px] flex-col">
       {/* app/auth/lock.tsx: the greeting on top, the photo under it; no wordmark. */}
       <div className="flex flex-1 flex-col items-center pb-10 pt-4 text-center">
-        <h1 className="text-[24px] font-semibold text-text">{name ? `Welcome Back, ${name}` : "Welcome Back"}</h1>
+        <h1 className="text-[24px] font-semibold text-text">{name ? t("front.door.welcomeBackName", { name }) : t("front.door.welcomeBack")}</h1>
         {/* A circle: 100 px with a radius of half of it, as the app draws it. */}
         {face?.photo && !photoBroken ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -247,17 +259,17 @@ function WelcomeBack({
         className="flex h-[58px] w-full items-center justify-center gap-2.5 rounded-[29px] bg-amber text-[17px] font-extrabold tracking-[-0.2px] text-[#0A1117] shadow-[0_6px_20px_rgba(255,183,3,0.2)] transition-colors hover:bg-amber-glow disabled:opacity-60"
       >
         <ProviderLogo provider={known.method} className="h-5 w-5" />
-        {busy ? "Opening…" : how}
+        {busy ? t("front.door.opening") : how}
       </button>
       <div className="mt-3 flex items-center justify-center gap-2">
         <button type="button" className={btnLink} onClick={onOther}>
-          Other ways to sign in
+          {t("front.door.otherWays")}
         </button>
         <span className="text-white/20" aria-hidden>
           ·
         </span>
         <button type="button" className={btnLink} onClick={onNotYou}>
-          Not you?
+          {t("front.door.notYou")}
         </button>
       </div>
     </div>
@@ -274,16 +286,17 @@ function SheetPanel({
   onClose: () => void;
   children: React.ReactNode;
 }) {
+  const t = useT();
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-label={title}>
-      <button type="button" aria-label="Close" className="absolute inset-0 bg-[#030b13]/60 backdrop-blur-sm" onClick={onClose} />
+      <button type="button" aria-label={t("common.close")} className="absolute inset-0 bg-[#030b13]/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-[440px] rounded-t-[24px] border border-white/10 bg-[linear-gradient(160deg,rgba(15,53,85,0.97),rgba(10,25,41,0.98))] px-5 pb-8 pt-3 shadow-[0_-20px_40px_rgba(0,0,0,0.35)] sm:rounded-[24px] sm:pb-6">
         <span className="mx-auto block h-1 w-10 rounded-[2px] bg-white/[0.22] sm:hidden" aria-hidden />
         <div className="relative mt-4 flex items-center justify-center">
           <h2 className="text-[18px] font-black tracking-[-0.5px] text-text">{title}</h2>
           <button
             type="button"
-            aria-label="Close"
+            aria-label={t("common.close")}
             onClick={onClose}
             className="absolute right-0 flex h-8 w-8 items-center justify-center rounded-[16px] bg-white/[0.08] text-[#9FB7C2] hover:text-text"
           >

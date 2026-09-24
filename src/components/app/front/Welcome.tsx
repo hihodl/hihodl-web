@@ -31,6 +31,8 @@
 import type { Session } from "@supabase/supabase-js";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
+import { t as tNow, type MessageKey } from "@/lib/app/i18n";
+import { useT } from "@/lib/app/i18n/react";
 import { CreatorApiError, describeCreatorError } from "@/lib/creator/api";
 import { signOut, useCreatorSession } from "@/lib/creator/session";
 import { clientProductBase, safeNext } from "@/lib/app/paths";
@@ -50,7 +52,7 @@ import {
   type RegistrationOptionsJSON,
 } from "@/lib/wallet/api";
 import { wipe } from "@/lib/wallet/core";
-import { explain, LOSS_WARNING } from "@/lib/wallet/explain";
+import { explain, lossWarning } from "@/lib/wallet/explain";
 import { registerEvmSide, registerWalletAddress, sealNewWallet } from "@/lib/wallet/flows";
 import { createPasskeyWithPrf, evaluatePrf, PasskeyError } from "@/lib/wallet/passkey";
 import { lock, unlockWith } from "@/lib/wallet/vault";
@@ -97,43 +99,43 @@ export function Welcome() {
 }
 
 /** Each step as the app names and colours it (setup.tsx ALL_STEPS, STEP_GRADIENTS, STEP_INFO). */
-const STEP: Record<StepKey, { title: string; icon: IonName; tone: StepTone; info?: string }> = {
+const STEP: Record<StepKey, { title: MessageKey; icon: IonName; tone: StepTone; info?: MessageKey }> = {
   username: {
-    title: "Username",
+    title: "front.steps.username",
     icon: "person-outline",
     tone: "username",
-    info: "Your unique @handle for receiving payments and being found by friends on HOLD.",
+    info: "front.steps.usernameInfo",
   },
   profile: {
-    title: "Profile",
+    title: "front.steps.profile",
     icon: "person-circle-outline",
     tone: "username",
-    info: "Your name and photo, shown to the people you pay and sell to. Both are optional.",
+    info: "front.steps.profileInfo",
   },
   passkey: {
-    title: "Passkey",
+    title: "front.steps.passkey",
     icon: "key-outline",
     tone: "passkey",
-    info: "A secure key stored on your device. Uses Face ID or fingerprint to verify your identity — no passwords needed.",
+    info: "front.steps.passkeyInfo",
   },
   recovery: {
-    title: "Recovery Key",
+    title: "front.steps.recovery",
     icon: "mail-outline",
     tone: "recovery",
-    info: "We'll send 8 recovery codes to your email. These codes are the ONLY way to recover your account if you lose access to Google or Apple. Save them somewhere safe — each code works only once.",
+    info: "front.steps.recoveryInfo",
   },
   wallet: {
-    title: "Wallet",
+    title: "front.steps.wallet",
     icon: "wallet-outline",
     tone: "ready",
-    info: "A Solana wallet for USDC, made in this browser and locked by your passkey. HOLD keeps only an encrypted backup it cannot open.",
+    info: "front.steps.walletInfo",
   },
-  "app-wallet": { title: "Wallet", icon: "wallet-outline", tone: "ready" },
+  "app-wallet": { title: "front.steps.wallet", icon: "wallet-outline", tone: "ready" },
   link: {
-    title: "Link your phone",
+    title: "front.steps.link",
     icon: "phone-portrait-outline",
     tone: "passkey",
-    info: "A linked Android phone approves and signs, in the HOLD app, the payments you start on the web. Without one, your passkey approves them. You can link one later from Menu, Security.",
+    info: "front.steps.linkInfo",
   },
 };
 
@@ -148,6 +150,7 @@ function dashboard(): string {
 }
 
 function Flow({ session }: { session: Session }) {
+  const t = useT();
   const uid = session.user.id;
   const [facts, setFacts] = useState<Facts | null>(null);
   const [steps, setSteps] = useState<StepKey[] | null>(null);
@@ -202,15 +205,15 @@ function Flow({ session }: { session: Session }) {
   // setup.tsx's "Setup incomplete": what the app shows when it could not read the account.
   if (error) {
     return (
-      <StepScreen tone="ready" title={"Protect\nyour wallet"} onClose={close} closeLabel="Sign out">
+      <StepScreen tone="ready" title={t("front.flow.title")} onClose={close} closeLabel={t("common.signOut")}>
         <div className="flex flex-col items-center gap-3.5 py-5 text-center">
           <Ion name="warning-outline" size={32} className="text-[#F59E0B]" />
-          <h2 className="text-[24px] font-extrabold leading-8 text-[#F59E0B]">Setup incomplete</h2>
-          <p className="text-[15px] leading-[22px] text-white/60">Check your connection and try again.</p>
+          <h2 className="text-[24px] font-extrabold leading-8 text-[#F59E0B]">{t("front.flow.incomplete")}</h2>
+          <p className="text-[15px] leading-[22px] text-white/60">{t("front.flow.checkConnection")}</p>
         </div>
         <Cta>
-          <ActionButton title="Retry" onClick={() => void load()} />
-          <SkipButton label="Skip for now" onClick={() => window.location.replace(dashboard())} />
+          <ActionButton title={t("common.retry")} onClick={() => void load()} />
+          <SkipButton label={t("front.flow.skipForNow")} onClick={() => window.location.replace(dashboard())} />
         </Cta>
       </StepScreen>
     );
@@ -218,10 +221,10 @@ function Flow({ session }: { session: Session }) {
 
   if (!facts || !steps || steps.length === 0) {
     return (
-      <StepScreen tone="username" title={"Protect\nyour wallet"}>
+      <StepScreen tone="username" title={t("front.flow.title")}>
         <div className="flex min-h-[40dvh] flex-col items-center justify-center gap-3.5">
           <Spinner />
-          {slow ? <p className="px-8 text-center text-[13px] text-white/60">Connection seems slow. Hang on…</p> : null}
+          {slow ? <p className="px-8 text-center text-[13px] text-white/60">{t("front.flow.slow")}</p> : null}
         </div>
       </StepScreen>
     );
@@ -235,19 +238,20 @@ function Flow({ session }: { session: Session }) {
 
   const head = (
     <>
-      {back ? <CompletedRow title={STEP[steps[at - 1]].title} onBack={back} /> : null}
-      <StepTitle icon={meta.icon} title={meta.title} accent={ACCENTS[meta.tone]} onInfo={meta.info ? () => setInfo(key) : undefined} />
+      {back ? <CompletedRow title={t(STEP[steps[at - 1]].title)} onBack={back} /> : null}
+      <StepTitle icon={meta.icon} title={t(meta.title)} accent={ACCENTS[meta.tone]} onInfo={meta.info ? () => setInfo(key) : undefined} />
     </>
   );
-  const hint = next ? <NextHint icon={next.icon} title={next.title} /> : null;
+  const infoKey = info ? STEP[info].info : undefined;
+  const hint = next ? <NextHint icon={next.icon} title={t(next.title)} /> : null;
   const props = { facts, session, done: done.has(key), onDone: () => complete(key), head, hint };
 
   return (
     <StepScreen
       tone={ready ? "ready" : meta.tone}
-      title={ready && last ? "All set!" : "Protect\nyour wallet"}
+      title={ready && last ? t("front.flow.allSet") : t("front.flow.title")}
       onClose={ready && last ? undefined : close}
-      closeLabel="Sign out"
+      closeLabel={t("common.signOut")}
     >
       {key === "username" ? <UsernameStep {...props} /> : null}
       {key === "profile" ? <ProfileStep {...props} onSkip={() => { saveChoice(session.user.id, "profile"); complete(key); }} /> : null}
@@ -264,7 +268,7 @@ function Flow({ session }: { session: Session }) {
         </>
       ) : null}
 
-      {info && STEP[info].info ? <InfoSheet title={STEP[info].title} body={STEP[info].info} onClose={() => setInfo(null)} /> : null}
+      {infoKey ? <InfoSheet title={t(STEP[info!].title)} body={t(infoKey)} onClose={() => setInfo(null)} /> : null}
     </StepScreen>
   );
 }
@@ -274,8 +278,8 @@ function useSlow(waiting: boolean): boolean {
   const [slow, setSlow] = useState(false);
   useEffect(() => {
     if (!waiting) return;
-    const t = setTimeout(() => setSlow(true), 1500);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setSlow(true), 1500);
+    return () => clearTimeout(timer);
   }, [waiting]);
   return waiting && slow;
 }
@@ -296,21 +300,23 @@ interface StepProps {
 type UsernameStatus = UsernameVerdict | "checking" | "error";
 
 /** The app's four states (setup.tsx); "own" is the web's, for a name already theirs. */
-function statusLine(s: UsernameStatus | null) {
+function UsernameStatusLine({ s }: { s: UsernameStatus | null }) {
+  const t = useT();
   if (s === null || s === "invalid") return null;
   if (s === "checking")
     return (
       <StatusLine tone="muted">
         <Spinner size={14} color="rgba(255,255,255,0.55)" />
-        Checking...
+        {t("front.username.checking")}
       </StatusLine>
     );
-  if (s === "available" || s === "own") return <StatusLine tone="ok">Available</StatusLine>;
-  if (s === "error") return <StatusLine tone="warn">Connection error</StatusLine>;
-  return <StatusLine tone="warn">Not available</StatusLine>;
+  if (s === "available" || s === "own") return <StatusLine tone="ok">{t("front.username.available")}</StatusLine>;
+  if (s === "error") return <StatusLine tone="warn">{t("front.username.connectionError")}</StatusLine>;
+  return <StatusLine tone="warn">{t("front.username.notAvailable")}</StatusLine>;
 }
 
 function UsernameStep({ facts, onDone, head, hint }: StepProps) {
+  const t = useT();
   const [value, setValue] = useState(facts.username ?? "");
   const [verdict, setVerdict] = useState<UsernameStatus | null>(facts.username ? "own" : null);
   const [busy, setBusy] = useState(false);
@@ -346,7 +352,7 @@ function UsernameStep({ facts, onDone, head, hint }: StepProps) {
       onDone();
     } catch (e) {
       if (e instanceof CreatorApiError && e.code === "CONFLICT") setVerdict("taken");
-      else if (e instanceof CreatorApiError && e.code === "RATE_LIMIT_EXCEEDED") setNotice(e.serverMessage ?? "You changed your username recently. Try again later.");
+      else if (e instanceof CreatorApiError && e.code === "RATE_LIMIT_EXCEEDED") setNotice(e.serverMessage ?? tNow("front.username.rateLimited"));
       else setNotice(describeCreatorError(e));
     } finally {
       setBusy(false);
@@ -370,18 +376,18 @@ function UsernameStep({ facts, onDone, head, hint }: StepProps) {
           autoCorrect="off"
           spellCheck={false}
           maxLength={50}
-          aria-label="Username"
-          placeholder="username"
+          aria-label={t("front.steps.username")}
+          placeholder={t("front.username.placeholder")}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           disabled={busy}
           className={inputFieldCls}
         />
       </InputRow>
-      {statusLine(verdict)}
+      <UsernameStatusLine s={verdict} />
       {hint}
       <Cta>
-        <ActionButton type="submit" title={busy ? "Saving..." : "Continue"} disabled={!ok || busy} />
+        <ActionButton type="submit" title={busy ? t("front.saving") : t("common.continue")} disabled={!ok || busy} />
       </Cta>
     </form>
   );
@@ -390,6 +396,7 @@ function UsernameStep({ facts, onDone, head, hint }: StepProps) {
 /* ── Profile: name and photo (the web's; optional) ───────────────── */
 
 function ProfileStep({ facts, session, onDone, onSkip, head, hint }: StepProps & { onSkip: () => void }) {
+  const t = useT();
   const [name, setName] = useState(facts.me.profile.displayName ?? "");
   const [file, setFile] = useState<File | null>(null);
   const preview = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
@@ -407,7 +414,7 @@ function ProfileStep({ facts, session, onDone, onSkip, head, hint }: StepProps &
       if (n && n !== facts.me.profile.displayName) await updateMe({ displayName: n });
       onDone();
     } catch (e) {
-      setNotice(e instanceof CreatorApiError ? describeCreatorError(e) : "That photo could not be used. Try another, or skip it for now.");
+      setNotice(e instanceof CreatorApiError ? describeCreatorError(e) : tNow("front.profile.photoFailed"));
     } finally {
       setBusy(false);
     }
@@ -423,7 +430,7 @@ function ProfileStep({ facts, session, onDone, onSkip, head, hint }: StepProps &
           type="button"
           onClick={() => input.current?.click()}
           disabled={busy}
-          aria-label={file ? "Choose another photo" : "Add a photo"}
+          aria-label={file ? t("front.profile.choosePhoto") : t("front.profile.addPhoto")}
           className="relative flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-[36px] border-2 border-[rgba(236,240,244,0.55)] bg-white/10 text-[30px] font-bold text-white"
         >
           {preview ? (
@@ -434,7 +441,7 @@ function ProfileStep({ facts, session, onDone, onSkip, head, hint }: StepProps &
           )}
         </button>
         <button type="button" onClick={() => input.current?.click()} disabled={busy} className="rounded-[10px] px-1 py-2 text-[14px] font-semibold text-white/80 hover:text-white">
-          {file ? "Choose another photo" : "Add a photo"}
+          {file ? t("front.profile.choosePhoto") : t("front.profile.addPhoto")}
         </button>
         <input
           ref={input}
@@ -446,9 +453,9 @@ function ProfileStep({ facts, session, onDone, onSkip, head, hint }: StepProps &
       </div>
       <InputRow prefix={<Ion name="person-outline" size={18} className="mr-2 shrink-0" style={{ color: ACCENTS.username }} />}>
         <input
-          aria-label="Your name"
+          aria-label={t("front.profile.name")}
           maxLength={60}
-          placeholder="Your name"
+          placeholder={t("front.profile.name")}
           value={name}
           onChange={(e) => setName(e.target.value)}
           disabled={busy}
@@ -457,7 +464,7 @@ function ProfileStep({ facts, session, onDone, onSkip, head, hint }: StepProps &
       </InputRow>
       {hint}
       <Cta>
-        <ActionButton title={busy ? "Saving..." : "Continue"} disabled={busy || (!file && !name.trim())} onClick={() => void save()} />
+        <ActionButton title={busy ? t("front.saving") : t("common.continue")} disabled={busy || (!file && !name.trim())} onClick={() => void save()} />
         <SkipButton onClick={onSkip} disabled={busy} />
       </Cta>
     </div>
@@ -482,8 +489,8 @@ function useRegistrationOptions(session: Session, active: boolean) {
   useEffect(() => {
     if (!active) return;
     void refresh();
-    const t = setInterval(() => void refresh(), 4 * 60 * 1000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => void refresh(), 4 * 60 * 1000);
+    return () => clearInterval(timer);
   }, [active, refresh]);
   return { options, error, refresh };
 }
@@ -492,6 +499,7 @@ function useRegistrationOptions(session: Session, active: boolean) {
 const cancelled = (e: unknown) => e instanceof PasskeyError && e.code === "cancelled";
 
 function PasskeyStep({ facts, session, done, onDone, head, hint }: StepProps) {
+  const t = useT();
   const [made, setMade] = useState(done || facts.hasPasskey);
   const reg = useRegistrationOptions(session, !made);
   const [busy, setBusy] = useState(false);
@@ -530,16 +538,16 @@ function PasskeyStep({ facts, session, done, onDone, head, hint }: StepProps) {
       {problem ? (
         <ErrorBanner onDismiss={() => setError(null)}>{explain(problem)}</ErrorBanner>
       ) : made ? (
-        <StepDesc>Your passkey is set.</StepDesc>
+        <StepDesc>{t("front.passkey.set")}</StepDesc>
       ) : (
-        <StepDesc>Uses Face ID or fingerprint — no passwords needed.</StepDesc>
+        <StepDesc>{t("front.passkey.desc")}</StepDesc>
       )}
       {hint}
       <Cta>
         {made ? (
-          <ActionButton title="Continue" onClick={onDone} />
+          <ActionButton title={t("common.continue")} onClick={onDone} />
         ) : (
-          <ActionButton title={busy ? "Creating..." : "Create Passkey"} icon="key-outline" disabled={busy || !reg.options} onClick={() => void create()} />
+          <ActionButton title={busy ? t("front.creating") : t("front.passkey.create")} icon="key-outline" disabled={busy || !reg.options} onClick={() => void create()} />
         )}
       </Cta>
     </div>
@@ -549,6 +557,7 @@ function PasskeyStep({ facts, session, done, onDone, head, hint }: StepProps) {
 /* ── Recovery Key ─────────────────────────────────────────────────── */
 
 function RecoveryStep({ facts, session, done, onDone, head, hint }: StepProps) {
+  const t = useT();
   const [email, setEmail] = useState(session.user.email ?? facts.me.email ?? "");
   const sent = done || facts.hasCodes;
   const [busy, setBusy] = useState(false);
@@ -564,7 +573,7 @@ function RecoveryStep({ facts, session, done, onDone, head, hint }: StepProps) {
       facts.hasCodes = true;
       onDone();
     } catch (e) {
-      setNotice(e instanceof CreatorApiError && e.serverMessage ? e.serverMessage : "Failed to send recovery codes. Please check your email and try again.");
+      setNotice(e instanceof CreatorApiError && e.serverMessage ? e.serverMessage : tNow("front.recovery.sendFailed"));
     } finally {
       setBusy(false);
     }
@@ -583,7 +592,7 @@ function RecoveryStep({ facts, session, done, onDone, head, hint }: StepProps) {
         <input
           type="email"
           autoComplete="email"
-          aria-label="Email for your recovery codes"
+          aria-label={t("front.recovery.emailLabel")}
           placeholder="email@example.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -591,10 +600,10 @@ function RecoveryStep({ facts, session, done, onDone, head, hint }: StepProps) {
           className={inputFieldCls}
         />
       </InputRow>
-      {sent ? <StatusLine tone="ok">Sent</StatusLine> : null}
+      {sent ? <StatusLine tone="ok">{t("front.recovery.sent")}</StatusLine> : null}
       {hint}
       <Cta>
-        <ActionButton type="submit" title={busy ? "Sending..." : "Continue"} disabled={busy || !email.trim()} />
+        <ActionButton type="submit" title={busy ? t("front.sending") : t("common.continue")} disabled={busy || !email.trim()} />
       </Cta>
     </form>
   );
@@ -619,6 +628,7 @@ function WalletStep({
   head,
   hint,
 }: StepProps & { onSkip: () => void; onReady: (ready: boolean) => void; last: boolean }) {
+  const t = useT();
   // An Android phone is offered the Play app first; an iPhone and a computer make the wallet here.
   const [phase, setPhase] = useState<WalletPhase>(() => (playFirst(facts) ? { kind: "play", went: false } : { kind: "intro" }));
   const canMakeHere = walletToMake(facts);
@@ -693,14 +703,14 @@ function WalletStep({
       <div>
         {head}
         {phase.went ? (
-          <StepDesc>Once HOLD is installed, sign in there with this account and make your wallet. It shows here too, with every chain.</StepDesc>
+          <StepDesc>{t("front.wallet.playWent")}</StepDesc>
         ) : (
-          <StepDesc>HOLD on Google Play makes your wallet with every chain: Solana, Base, Polygon and Ethereum. Sign in there with this account, and it shows here too.</StepDesc>
+          <StepDesc>{t("front.wallet.play")}</StepDesc>
         )}
         {hint}
         <Cta>
           {phase.went ? (
-            <ActionButton title="Continue" onClick={onSkip} />
+            <ActionButton title={t("common.continue")} onClick={onSkip} />
           ) : (
             <a
               href={playHref("android")}
@@ -710,11 +720,11 @@ function WalletStep({
               className="flex h-[54px] w-full items-center justify-center gap-2 rounded-[27px] border border-white/10 bg-white/[0.05] text-[16px] font-bold text-white/[0.85] transition-[background-color,transform] hover:bg-white/[0.09] active:scale-[0.98]"
             >
               <Ion name="logo-google" size={18} />
-              Get HOLD on Google Play
+              {t("front.wallet.getOnPlay")}
             </a>
           )}
-          {canMakeHere ? <SkipButton label="Make it here instead" onClick={() => setPhase({ kind: "intro" })} /> : null}
-          {phase.went ? null : <SkipButton label="Not now" onClick={onSkip} />}
+          {canMakeHere ? <SkipButton label={t("front.wallet.makeHere")} onClick={() => setPhase({ kind: "intro" })} /> : null}
+          {phase.went ? null : <SkipButton label={t("front.notNow")} onClick={onSkip} />}
         </Cta>
       </div>
     );
@@ -724,9 +734,9 @@ function WalletStep({
   if (phase.kind === "ready") {
     return (
       <div>
-        <ReadyBox title="Your wallet is ready" line="You're all set to start using HOLD." />
+        <ReadyBox title={t("front.wallet.readyTitle")} line={t("front.wallet.readyLine")} />
         <Cta>
-          <ActionButton title={last ? "Go to Dashboard" : "Continue"} onClick={onDone} />
+          <ActionButton title={last ? t("front.wallet.goToDashboard") : t("common.continue")} onClick={onDone} />
         </Cta>
       </div>
     );
@@ -738,7 +748,7 @@ function WalletStep({
         {head}
         <div className="flex items-center gap-3 py-5" role="status">
           <Spinner color="#20D690" />
-          <span className="text-[16px] font-semibold text-white/60">Setting up your wallet...</span>
+          <span className="text-[16px] font-semibold text-white/60">{t("front.wallet.settingUp")}</span>
         </div>
       </div>
     );
@@ -749,10 +759,10 @@ function WalletStep({
       <div>
         {head}
         {error ? <ErrorBanner onDismiss={() => setError(null)}>{explain(error)}</ErrorBanner> : null}
-        <StepDesc>Your new passkey was created. Confirm it once more so it can lock your wallet.</StepDesc>
+        <StepDesc>{t("front.wallet.confirmDesc")}</StepDesc>
         {hint}
         <Cta>
-          <ActionButton title={busy ? "Creating..." : "Confirm with passkey"} icon="key-outline" disabled={busy} onClick={() => void withExisting([phase.credentialId])} />
+          <ActionButton title={busy ? t("front.creating") : t("front.wallet.confirm")} icon="key-outline" disabled={busy} onClick={() => void withExisting([phase.credentialId])} />
         </Cta>
       </div>
     );
@@ -766,35 +776,36 @@ function WalletStep({
     <div>
       {head}
       {error ? <ErrorBanner onDismiss={() => setError(null)}>{explain(error)}</ErrorBanner> : null}
-      <StepDesc>A Solana wallet for USDC, locked by your passkey.</StepDesc>
+      <StepDesc>{t("front.wallet.desc")}</StepDesc>
       {/* A disclosure, not filler: the web wallet has no seed in a keychain behind it. */}
       <div className="mt-1 flex gap-2 rounded-[12px] border border-[rgba(245,158,11,0.15)] bg-[rgba(245,158,11,0.08)] p-2.5">
         <Ion name="warning-outline" size={16} className="mt-px shrink-0 text-[#F59E0B]" />
-        <p className="text-[13px] font-medium leading-[18px] text-white/75">{LOSS_WARNING}</p>
+        <p className="text-[13px] font-medium leading-[18px] text-white/75">{lossWarning()}</p>
       </div>
       {hint}
       <Cta>
         <ActionButton
-          title={busy ? "Creating..." : "Create Wallet"}
+          title={busy ? t("front.creating") : t("front.wallet.create")}
           icon="key-outline"
           disabled={busy || (!useExisting && !reg.options)}
           onClick={() => void (useExisting ? withExisting() : withNew())}
         />
-        {useExisting ? <SkipButton label="Use a new passkey" disabled={busy || !reg.options} onClick={() => void withNew()} /> : null}
-        <SkipButton label="Not now" disabled={busy} onClick={onSkip} />
+        {useExisting ? <SkipButton label={t("front.wallet.useNewPasskey")} disabled={busy || !reg.options} onClick={() => void withNew()} /> : null}
+        <SkipButton label={t("front.notNow")} disabled={busy} onClick={onSkip} />
       </Cta>
     </div>
   );
 }
 
 function AppWalletStep({ onDone, head, hint }: StepProps) {
+  const t = useT();
   return (
     <div>
       {head}
-      <StepDesc>Your account already has a wallet, made in the HOLD app. Open the HOLD app to turn it on here too.</StepDesc>
+      <StepDesc>{t("front.wallet.inApp")}</StepDesc>
       {hint}
       <Cta>
-        <ActionButton title="Continue" onClick={onDone} />
+        <ActionButton title={t("common.continue")} onClick={onDone} />
       </Cta>
     </div>
   );

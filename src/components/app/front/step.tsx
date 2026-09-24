@@ -18,6 +18,8 @@
 
 import { useEffect, type ReactNode } from "react";
 
+import { useT } from "@/lib/app/i18n/react";
+
 import { Ion, type IonName } from "../ion";
 
 /* ── The step's colours (setup.tsx STEP_GRADIENTS / STEP_ACCENTS) ─── */
@@ -51,7 +53,7 @@ export function StepScreen({
   title,
   onClose,
   closeIcon = "close",
-  closeLabel = "Close",
+  closeLabel,
   children,
 }: {
   tone: StepTone;
@@ -61,6 +63,7 @@ export function StepScreen({
   closeLabel?: string;
   children: ReactNode;
 }) {
+  const t = useT();
   const [top, mid] = GRADIENTS[tone];
   return (
     <div className="relative min-h-[100dvh] w-full bg-[#0a1929]">
@@ -81,7 +84,7 @@ export function StepScreen({
             <button
               type="button"
               onClick={onClose}
-              aria-label={closeLabel}
+              aria-label={closeLabel ?? t("common.close")}
               className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[14px] bg-white/[0.06] text-white/60 transition-colors hover:bg-white/10 hover:text-white"
             >
               {closeIcon === "back" ? <Ion name="arrow-back" size={16} /> : <Ion name="close" size={16} />}
@@ -125,6 +128,7 @@ export function StepTitle({
   accent: string;
   onInfo?: () => void;
 }) {
+  const t = useT();
   return (
     <div className="mb-3.5 flex items-center gap-2.5">
       <span
@@ -135,7 +139,7 @@ export function StepTitle({
       </span>
       <h2 className="text-[18px] font-bold tracking-[-0.3px] text-white">{title}</h2>
       {onInfo ? (
-        <button type="button" onClick={onInfo} aria-label={`About ${title}`} className="ml-1 rounded-[10px] p-0.5 text-white/50 transition-colors hover:text-white">
+        <button type="button" onClick={onInfo} aria-label={t("front.step.about", { title })} className="ml-1 rounded-[10px] p-0.5 text-white/50 transition-colors hover:text-white">
           <Ion name="information-circle-outline" size={20} />
         </button>
       ) : null}
@@ -186,12 +190,13 @@ export function StatusLine({ tone, children }: { tone: "muted" | "ok" | "warn"; 
 
 /** Soft amber, never red (setup.tsx `errorBanner`). */
 export function ErrorBanner({ children, onDismiss }: { children: ReactNode; onDismiss?: () => void }) {
+  const t = useT();
   return (
     <div role="status" className="mb-2 flex items-center gap-2 rounded-[14px] border border-[rgba(245,158,11,0.15)] bg-[rgba(245,158,11,0.08)] p-3">
       <Ion name="alert-circle" size={16} className="shrink-0 text-[#F59E0B]" />
       <p className="flex-1 text-[13px] font-medium leading-[18px] text-white/75">{children}</p>
       {onDismiss ? (
-        <button type="button" onClick={onDismiss} aria-label="Dismiss" className="shrink-0 rounded-[8px] p-0.5 text-white/40 hover:text-white">
+        <button type="button" onClick={onDismiss} aria-label={t("front.step.dismiss")} className="shrink-0 rounded-[8px] p-0.5 text-white/40 hover:text-white">
           <Ion name="close" size={14} />
         </button>
       ) : null}
@@ -232,7 +237,8 @@ export function ActionButton({
 }
 
 /** The app's quiet second choice: "Skip", "Not now". */
-export function SkipButton({ label = "Skip", onClick, disabled }: { label?: string; onClick: () => void; disabled?: boolean }) {
+export function SkipButton({ label, onClick, disabled }: { label?: string; onClick: () => void; disabled?: boolean }) {
+  const t = useT();
   return (
     <button
       type="button"
@@ -240,7 +246,7 @@ export function SkipButton({ label = "Skip", onClick, disabled }: { label?: stri
       disabled={disabled}
       className="self-center rounded-[10px] px-5 py-3 text-[14px] font-semibold text-white/[0.55] transition-colors hover:text-white/80 disabled:opacity-50"
     >
-      {label}
+      {label ?? t("front.step.skip")}
     </button>
   );
 }
@@ -282,6 +288,7 @@ export function ReadyBox({ title, line }: { title: string; line: string }) {
  * on a phone, a card on a wide screen. Escape closes it.
  */
 export function InfoSheet({ title, body, onClose, children }: { title: string; body?: ReactNode; onClose: () => void; children?: ReactNode }) {
+  const t = useT();
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
@@ -289,7 +296,7 @@ export function InfoSheet({ title, body, onClose, children }: { title: string; b
   }, [onClose]);
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-label={title}>
-      <button type="button" aria-label="Close" className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" onClick={onClose} />
+      <button type="button" aria-label={t("common.close")} className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" onClick={onClose} />
       <div className="relative w-full max-w-[440px] rounded-t-[24px] border border-white/10 bg-[#0D1820] px-6 pb-8 pt-3 shadow-[0_-20px_40px_rgba(0,0,0,0.35)] sm:rounded-[24px]">
         <span className="mx-auto block h-1 w-10 rounded-[2px] bg-white/[0.22]" aria-hidden />
         <h2 className="mt-4 text-[20px] font-bold text-white">{title}</h2>
