@@ -9,38 +9,40 @@
  * ink from the body's lightness, so a white suitcase and a black one both read.
  */
 
+import { t } from "@/lib/app/i18n";
+
 export interface ProductLook {
   body: string;
   accent: string;
 }
 
-/** Body colours: dark to light, never a red. */
+/** Body colours: dark to light, never a red. Names are getters, read in the language on screen. */
 export const BODY_PALETTE: readonly { name: string; hex: string }[] = [
-  { name: "Graphite", hex: "#2B2F36" },
-  { name: "Midnight", hex: "#1E2A44" },
-  { name: "HOLD navy", hex: "#023047" },
-  { name: "Ocean", hex: "#219EBC" },
-  { name: "Sky", hex: "#8ECAE6" },
-  { name: "Forest", hex: "#2F5D50" },
-  { name: "Sage", hex: "#8FAE8B" },
-  { name: "Lilac", hex: "#A78BFA" },
-  { name: "Blush", hex: "#E8C4C4" },
-  { name: "Sand", hex: "#D8C3A5" },
-  { name: "Silver", hex: "#C3CAD4" },
-  { name: "Cream", hex: "#F2EBDD" },
-  { name: "White", hex: "#FAFAFA" },
-  { name: "Amber", hex: "#FFB703" },
+  { get name() { return t("board.colour.graphite"); }, hex: "#2B2F36" },
+  { get name() { return t("board.colour.midnight"); }, hex: "#1E2A44" },
+  { get name() { return t("board.colour.holdNavy"); }, hex: "#023047" },
+  { get name() { return t("board.colour.ocean"); }, hex: "#219EBC" },
+  { get name() { return t("board.colour.sky"); }, hex: "#8ECAE6" },
+  { get name() { return t("board.colour.forest"); }, hex: "#2F5D50" },
+  { get name() { return t("board.colour.sage"); }, hex: "#8FAE8B" },
+  { get name() { return t("board.colour.lilac"); }, hex: "#A78BFA" },
+  { get name() { return t("board.colour.blush"); }, hex: "#E8C4C4" },
+  { get name() { return t("board.colour.sand"); }, hex: "#D8C3A5" },
+  { get name() { return t("board.colour.silver"); }, hex: "#C3CAD4" },
+  { get name() { return t("board.colour.cream"); }, hex: "#F2EBDD" },
+  { get name() { return t("board.colour.white"); }, hex: "#FAFAFA" },
+  { get name() { return t("board.colour.amber"); }, hex: "#FFB703" },
 ];
 
 /** Handle, wheels and trim. */
 export const ACCENT_PALETTE: readonly { name: string; hex: string }[] = [
-  { name: "Black", hex: "#111418" },
-  { name: "Charcoal", hex: "#3A3F47" },
-  { name: "Silver", hex: "#B8C0CC" },
-  { name: "White", hex: "#F4F6FA" },
-  { name: "Gold", hex: "#C9A227" },
-  { name: "Amber", hex: "#FFB703" },
-  { name: "Navy", hex: "#023047" },
+  { get name() { return t("board.colour.black"); }, hex: "#111418" },
+  { get name() { return t("board.colour.charcoal"); }, hex: "#3A3F47" },
+  { get name() { return t("board.colour.silver"); }, hex: "#B8C0CC" },
+  { get name() { return t("board.colour.white"); }, hex: "#F4F6FA" },
+  { get name() { return t("board.colour.gold"); }, hex: "#C9A227" },
+  { get name() { return t("board.colour.amber"); }, hex: "#FFB703" },
+  { get name() { return t("board.colour.navy"); }, hex: "#023047" },
 ];
 
 export const DEFAULT_LOOK: ProductLook = { body: "#1E2A44", accent: "#B8C0CC" };

@@ -7,6 +7,8 @@
  * Tailwind class would be useless to half the readers of this file.
  */
 
+import { t } from "@/lib/app/i18n";
+
 import type { BannerGradient, EventCategory, EventSummary } from "./types";
 
 export const GRADIENTS: Record<BannerGradient, { from: string; via: string }> = {
@@ -43,22 +45,23 @@ export function gradientOverPhotoCss(key: string | null | undefined): string {
   return `linear-gradient(180deg, ${rgba(g.from, 0)} 0%, ${rgba(g.via, 0.55)} 45%, ${rgba(g.from, 0.94)} 100%)`;
 }
 
+/** Getters: each read is in the language on screen. */
 export const CATEGORY_LABEL: Record<EventCategory, string> = {
-  crypto: "Crypto",
-  fintech: "Fintech",
-  ai: "AI",
-  tech: "Tech",
-  robotics: "Robotics",
-  science: "Science",
-  motorsport: "Motorsport",
-  sports: "Sports",
-  travel: "Travel",
-  culture: "Culture",
-  other: "Other",
+  get crypto() { return t("board.category.crypto"); },
+  get fintech() { return t("board.category.fintech"); },
+  get ai() { return t("board.category.ai"); },
+  get tech() { return t("board.category.tech"); },
+  get robotics() { return t("board.category.robotics"); },
+  get science() { return t("board.category.science"); },
+  get motorsport() { return t("board.category.motorsport"); },
+  get sports() { return t("board.category.sports"); },
+  get travel() { return t("board.category.travel"); },
+  get culture() { return t("board.category.culture"); },
+  get other() { return t("board.category.other"); },
 };
 
 export function categoryLabel(key: string): string {
-  return CATEGORY_LABEL[key as EventCategory] ?? "Other";
+  return CATEGORY_LABEL[key as EventCategory] ?? t("board.category.other");
 }
 
 export interface Banner {

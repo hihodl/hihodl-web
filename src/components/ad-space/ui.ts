@@ -9,6 +9,25 @@
  * else is the neutral text scale.
  */
 
+import { Fragment, createElement, type ReactNode } from "react";
+
+import { currentIntl, rawMessage, type MessageKey, type Vars } from "@/lib/app/i18n";
+import { formatMessage, splitTags } from "@/lib/app/i18n/icu";
+
+/**
+ * A message with tags, for a component that may render on the server, where
+ * the `Rich` component (a client one, taking functions) cannot be used:
+ * "Inspired by <link>@{handle}</link>" with `{ link: (c) => <a>{c}</a> }`.
+ */
+export function rich(k: MessageKey, vars: Vars | undefined, tags: Record<string, (chunk: string) => ReactNode>): ReactNode {
+  const tag = currentIntl();
+  return splitTags(rawMessage(k)).map((c, i) => {
+    const text = formatMessage(c.text, vars, tag);
+    const wrap = c.tag ? tags[c.tag] : undefined;
+    return createElement(Fragment, { key: i }, wrap ? wrap(text) : text);
+  });
+}
+
 export const btnPrimary =
   "inline-flex h-12 items-center justify-center gap-2 whitespace-nowrap rounded-[24px] bg-amber px-6 text-small font-medium text-text-on-amber transition-colors duration-180 hover:bg-amber-glow disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber";
 

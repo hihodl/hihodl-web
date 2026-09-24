@@ -17,6 +17,7 @@ import {
   usdFromUsdc,
 } from "@/lib/ad-space/format";
 import type { OfferMode, Position, PositionOffers, Sponsor, Takeover } from "@/lib/ad-space/types";
+import { Rich, useT } from "@/lib/app/i18n/react";
 
 import { QrCode } from "./qr";
 import { btnSmall, btnSmallSecondary, pill } from "./ui";
@@ -69,11 +70,11 @@ export const PositionCard = forwardRef<HTMLElement, Props>(function PositionCard
   },
   ref,
 ) {
+  const t = useT();
   const o = p.offers ?? null;
   const bids = offerMode === "bids";
   const namesPrice = offerMode === "offers" || bids || p.sponsorPaysUsdc === null;
   const biddingOpen = bids && biddingIsOpen(o, now);
-  const noun = session ? "session" : "spot";
   return (
     <article
       ref={ref}
@@ -91,7 +92,7 @@ export const PositionCard = forwardRef<HTMLElement, Props>(function PositionCard
           <h3 className="text-body text-sp-ink">{p.label}</h3>
           {!session && (
             <p className="mt-1 text-tiny text-sp-ink/80">
-              {[sizeLabel, `Takes ${p.accepts.map((k) => CONTENT_KIND_LABEL[k]).join(", ")}`]
+              {[sizeLabel, t("board.card.takes", { kinds: p.accepts.map((k) => CONTENT_KIND_LABEL[k]).join(", ") })]
                 .filter(Boolean)
                 .join(" · ")}
             </p>
@@ -103,7 +104,7 @@ export const PositionCard = forwardRef<HTMLElement, Props>(function PositionCard
       {p.pitch && <p className="text-small text-sp-ink/85">{p.pitch}</p>}
 
       {offerMode === "fixed_with_offers" && p.status === "open" && (
-        <p className="text-tiny text-sp-ink/80">Open to offers.</p>
+        <p className="text-tiny text-sp-ink/80">{t("board.card.openToOffers")}</p>
       )}
 
       {p.status === "sold" &&
@@ -111,7 +112,7 @@ export const PositionCard = forwardRef<HTMLElement, Props>(function PositionCard
         (p.sponsor ? (
           <SponsorLine sponsor={p.sponsor} />
         ) : (
-          <p className="text-small text-sp-ink/85">Sold. Logo coming soon.</p>
+          <p className="text-small text-sp-ink/85">{t("board.card.logoSoon")}</p>
         ))}
 
       {p.delivered && (
@@ -121,7 +122,7 @@ export const PositionCard = forwardRef<HTMLElement, Props>(function PositionCard
           rel="noopener noreferrer"
           className="text-small text-sp-ok hover:underline"
         >
-          Delivered {calendarDate(p.delivered.at)}: see the post
+          {t("board.card.delivered", { date: calendarDate(p.delivered.at) })}
         </a>
       )}
 
@@ -139,7 +140,7 @@ export const PositionCard = forwardRef<HTMLElement, Props>(function PositionCard
         ) : (
           <dl className="flex flex-col gap-0.5">
             <div className="flex items-baseline gap-2">
-              <dt className="sr-only">You pay</dt>
+              <dt className="sr-only">{t("board.youPay")}</dt>
               <dd className="text-body tabular-nums text-sp-ink">
                 {usdFromUsdc(p.sponsorPaysUsdc)}
                 <span className="ml-1 text-[11px] font-normal text-sp-ink/80">USDC</span>
@@ -150,29 +151,29 @@ export const PositionCard = forwardRef<HTMLElement, Props>(function PositionCard
 
         {p.status === "open" && buyable && offerMode === null && (
           <button type="button" className={btnSmall} onClick={() => onSponsor(p)}>
-            {session ? "Book a session" : "Claim this spot"}
+            {session ? t("board.stats.bookSession") : t("board.card.claimThisSpot")}
           </button>
         )}
         {p.status === "open" && buyable && offerMode === "fixed_with_offers" && (
           <div className="flex flex-wrap gap-2">
             <button type="button" className={btnSmall} onClick={() => onSponsor(p)}>
-              Buy now
+              {t("board.tiers.buyNow")}
             </button>
             {onOffer && (
               <button type="button" className={btnSmallSecondary} onClick={() => onOffer(p)}>
-                Make an offer
+                {t("board.chip.makeOffer")}
               </button>
             )}
           </div>
         )}
         {p.status === "open" && buyable && offerMode === "offers" && onOffer && (
           <button type="button" className={btnSmall} onClick={() => onOffer(p)}>
-            Make an offer
+            {t("board.chip.makeOffer")}
           </button>
         )}
         {p.status === "open" && buyable && bids && biddingOpen && onOffer && (
           <button type="button" className={btnSmall} onClick={() => onOffer(p)}>
-            Bid
+            {t("board.tiers.bid")}
           </button>
         )}
         {/* A sold spot on a takeover board is still for sale — at double. The
@@ -180,21 +181,28 @@ export const PositionCard = forwardRef<HTMLElement, Props>(function PositionCard
             holding it, so the button only has to name the act. */}
         {p.status === "sold" && buyable && p.takeover && !p.takeover.closed && p.takeover.nextPriceUsdc && (
           <button type="button" className={btnSmall} onClick={() => onSponsor(p)}>
-            Take this spot
+            {t("board.card.takeThisSpot")}
           </button>
         )}
         {p.status === "held" && buyable && (
           <p className="max-w-[16rem] text-tiny text-sp-amber">
             {o?.reservedUntil ? (
-              <>
-                Held for an accepted {bids ? "bid" : "offer"} until{" "}
-                <time dateTime={o.reservedUntil} suppressHydrationWarning>
-                  {now === null ? instantUtc(o.reservedUntil) : clockTime(o.reservedUntil)}
-                </time>
-                .
-              </>
+              <Rich
+                k="board.card.heldUntil"
+                vars={{
+                  kind: bids ? "bid" : "offer",
+                  when: now === null ? instantUtc(o.reservedUntil) : clockTime(o.reservedUntil),
+                }}
+                tags={{
+                  time: (c) => (
+                    <time dateTime={o.reservedUntil ?? undefined} suppressHydrationWarning>
+                      {c}
+                    </time>
+                  ),
+                }}
+              />
             ) : (
-              <>Someone is paying for this {noun} right now.</>
+              t("board.card.payingNow", { noun: session ? "session" : "spot" })
             )}
           </p>
         )}
@@ -220,6 +228,7 @@ function biddingIsOpen(o: PositionOffers | null, now: number | null): boolean {
  * different things.
  */
 export function BidLines({ offers: o, now }: { offers: PositionOffers | null; now: number | null }) {
+  const t = useT();
   if (!o) return null;
   const end = o.biddingEndsAt ? Date.parse(o.biddingEndsAt) : NaN;
   const ended = o.biddingOpen === false || (Number.isFinite(end) && now !== null && end <= now);
@@ -227,33 +236,43 @@ export function BidLines({ offers: o, now }: { offers: PositionOffers | null; no
   return (
     <div className="flex flex-col gap-2 text-tiny text-sp-ink/85">
       <div className="flex flex-wrap items-center gap-2">
-        {o.reserveMet === true && <span className={pill.done}>Reserve met</span>}
-        {o.reserveMet === false && <span className={pill.attention}>Reserve not met yet</span>}
+        {o.reserveMet === true && <span className={pill.done}>{t("board.bidLines.reserveMet")}</span>}
+        {o.reserveMet === false && <span className={pill.attention}>{t("board.bidLines.reserveNotMet")}</span>}
         <span className={pill.neutral}>
-          {count === 0 ? "No bids yet" : count === 1 ? "1 bid" : `${count} bids`}
+          {t("board.bidLines.bids", { count })}
         </span>
       </div>
       {o.highestBidUsdc && o.leaderName && (
         <p>
-          <span className="text-sp-ink">{o.leaderName}</span> leads.
+          <Rich
+            k="board.bidLines.leads"
+            vars={{ name: o.leaderName }}
+            tags={{ name: (c) => <span className="text-sp-ink">{c}</span> }}
+          />
         </p>
       )}
       {ended ? (
-        <p>Bidding has ended. The creator picks a bid within 24 hours.</p>
+        <p>{t("board.bidLines.ended")}</p>
       ) : (
         o.biddingEndsAt && (
           <p>
             {now === null ? (
-              <>Bidding ends {instantUtc(o.biddingEndsAt)}</>
+              t("board.bidLines.endsAt", { when: instantUtc(o.biddingEndsAt) })
             ) : (
-              <>
-                Bidding ends in <span className="font-mono text-sp-ink">{timeLeft(end - now)}</span>
-              </>
+              <Rich
+                k="board.bidLines.endsIn"
+                vars={{ left: timeLeft(end - now) }}
+                tags={{ time: (c) => <span className="font-mono text-sp-ink">{c}</span> }}
+              />
             )}
             {o.nextMinimumBidUsdc && (
               <>
                 {" "}
-                · next bid from <span className="tabular-nums text-sp-ink">{usdFromUsdc(o.nextMinimumBidUsdc)}</span>
+                <Rich
+                  k="board.bidLines.nextFrom"
+                  vars={{ amount: usdFromUsdc(o.nextMinimumBidUsdc) }}
+                  tags={{ amount: (c) => <span className="tabular-nums text-sp-ink">{c}</span> }}
+                />
               </>
             )}
           </p>
@@ -265,13 +284,14 @@ export function BidLines({ offers: o, now }: { offers: PositionOffers | null; no
 
 /** The one figure a bids spot leads with, under its own label. */
 function BidFigure({ offers: o }: { offers: PositionOffers | null }) {
+  const t = useT();
   const highest = o?.highestBidUsdc ?? null;
   const shown = highest ?? o?.openingBidUsdc ?? null;
-  if (!shown) return <p className="text-small text-sp-ink/85">Open for bids</p>;
+  if (!shown) return <p className="text-small text-sp-ink/85">{t("board.tiers.openForBids")}</p>;
   return (
     <dl className="flex flex-col gap-0.5">
       <div className="flex items-baseline gap-2">
-        <dt className="text-tiny text-sp-ink/80">{highest ? "Highest bid" : "Opening bid"}</dt>
+        <dt className="text-tiny text-sp-ink/80">{highest ? t("board.tiers.highestBid") : t("board.tiers.openingBid")}</dt>
         <dd className="text-body tabular-nums text-sp-ink">
           {usdFromUsdc(shown)}
           <span className="ml-1 text-[11px] font-normal text-sp-ink/80">USDC</span>
@@ -283,13 +303,12 @@ function BidFigure({ offers: o }: { offers: PositionOffers | null }) {
 
 /** A spot with no price: how many offers are open on it, never what they are. */
 function OffersFigure({ offers: o, status }: { offers: PositionOffers | null; status: Position["status"] }) {
+  const t = useT();
   const n = o?.openCount ?? null;
   return (
     <div className="flex flex-col gap-0.5">
-      <p className="text-body text-sp-ink">{status === "sold" ? "Sold" : "Name your price"}</p>
-      {status !== "sold" && n !== null && (
-        <p className="text-tiny text-sp-ink/80">{n === 0 ? "No offers yet" : n === 1 ? "1 open offer" : `${n} open offers`}</p>
-      )}
+      <p className="text-body text-sp-ink">{status === "sold" ? t("board.status.sold") : t("board.stats.nameYourPrice")}</p>
+      {status !== "sold" && n !== null && <p className="text-tiny text-sp-ink/80">{t("board.tiers.openOffers", { count: n })}</p>}
     </div>
   );
 }
@@ -302,21 +321,22 @@ function OffersFigure({ offers: o, status }: { offers: PositionOffers | null; st
  * card uses is not enough here: a reader who sees one amount has to be told
  * which one it is without asking a screen reader.
  */
-function TakeoverPrices({ position: p, takeover: t }: { position: Position; takeover: Takeover }) {
-  const takeable = p.status === "sold" && !t.closed && t.nextSponsorPaysUsdc !== null;
+function TakeoverPrices({ position: p, takeover: tk }: { position: Position; takeover: Takeover }) {
+  const t = useT();
+  const takeable = p.status === "sold" && !tk.closed && tk.nextSponsorPaysUsdc !== null;
   return (
     <dl className="flex flex-col gap-0.5">
       <div className="flex items-baseline gap-2">
-        <dt className="text-tiny text-sp-ink/80">{p.status === "sold" ? "Sold at" : "You pay"}</dt>
+        <dt className="text-tiny text-sp-ink/80">{p.status === "sold" ? t("board.card.soldAt") : t("board.youPay")}</dt>
         <dd className="text-body tabular-nums text-sp-ink">
-          {usdFromUsdc(p.status === "sold" ? t.priceUsdc : p.sponsorPaysUsdc)}
+          {usdFromUsdc(p.status === "sold" ? tk.priceUsdc : p.sponsorPaysUsdc)}
           <span className="ml-1 text-[11px] font-normal text-sp-ink/80">USDC</span>
         </dd>
       </div>
       {takeable ? (
         <div className="flex items-baseline gap-1 text-tiny text-sp-amber">
-          <dt>Take it for</dt>
-          <dd className="tabular-nums">{usdFromUsdc(t.nextSponsorPaysUsdc)}</dd>
+          <dt>{t("board.card.takeItFor")}</dt>
+          <dd className="tabular-nums">{usdFromUsdc(tk.nextSponsorPaysUsdc)}</dd>
         </div>
       ) : null}
     </dl>
@@ -332,33 +352,30 @@ function TakeoverPrices({ position: p, takeover: t }: { position: Position; take
  */
 function TakeoverLines({
   position: p,
-  takeover: t,
+  takeover: tk,
   multiple,
 }: {
   position: Position;
   takeover: Takeover;
   multiple: number | null;
 }) {
+  const t = useT();
   if (p.status !== "sold") {
-    return (
-      <p className="text-tiny text-sp-ink/85">
-        Every takeover {takeoverVerb(multiple)}.
-      </p>
-    );
+    return <p className="text-tiny text-sp-ink/85">{t("board.card.everyTakeover", { verb: takeoverVerb(multiple) })}</p>;
   }
   return (
     <div className="flex flex-col gap-1.5 text-tiny text-sp-ink/85">
-      {t.handsSoFar > 0 && (
+      {tk.handsSoFar > 0 && (
         <p>
-          {handsText(t.handsSoFar)} since bidding opened at {usdFromCents(t.floorPriceCents)}.
+          {t("board.card.handsSince", { hands: handsText(tk.handsSoFar), amount: usdFromCents(tk.floorPriceCents) })}
         </p>
       )}
-      {t.closed ? (
-        <p>{takeoverClosedText(t.closed)}</p>
+      {tk.closed ? (
+        <p>{takeoverClosedText(tk.closed)}</p>
       ) : (
-        t.nextPriceUsdc &&
-        t.refundsUsdc && (
-          <p>The current sponsor gets their {usdFromUsdc(t.refundsUsdc)} back.</p>
+        tk.nextPriceUsdc &&
+        tk.refundsUsdc && (
+          <p>{t("board.card.refund", { amount: usdFromUsdc(tk.refundsUsdc) })}</p>
         )
       )}
     </div>
@@ -411,6 +428,7 @@ function SponsorLine({ sponsor: s }: { sponsor: Sponsor }) {
 }
 
 function SponsorMark({ sponsor: s }: { sponsor: Sponsor }) {
+  const t = useT();
   const box = "flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-tight bg-white";
   if (s.imageUrl) {
     return (
@@ -418,7 +436,7 @@ function SponsorMark({ sponsor: s }: { sponsor: Sponsor }) {
         {/* eslint-disable-next-line @next/next/no-img-element -- sponsor artwork from our own bucket, any host */}
         <img
           src={s.imageUrl}
-          alt={`${s.name} logo`}
+          alt={t("board.card.sponsorLogo", { name: s.name })}
           className={s.contentKind === "photo" ? "h-full w-full object-cover" : "h-full w-full object-contain p-1"}
           loading="lazy"
         />
@@ -428,7 +446,7 @@ function SponsorMark({ sponsor: s }: { sponsor: Sponsor }) {
   if (s.contentKind === "qr" && s.contentText) {
     return (
       <span className={box}>
-        <QrCode text={s.contentText} title={`QR code for ${s.name}`} className="h-full w-full" />
+        <QrCode text={s.contentText} title={t("board.card.sponsorQr", { name: s.name })} className="h-full w-full" />
       </span>
     );
   }

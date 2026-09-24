@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { instantUtc, timeLeft } from "@/lib/ad-space/format";
+import { Rich, useT } from "@/lib/app/i18n/react";
 
 /**
  * "Closes in 12d 5h". The server renders the absolute time (in UTC, stated),
@@ -10,12 +11,13 @@ import { instantUtc, timeLeft } from "@/lib/ad-space/format";
  * disagree during hydration.
  */
 export function ClosesCountdown({ closesAt, closed }: { closesAt: string; closed: boolean }) {
+  const t = useT();
   const [now, setNow] = useState<number | null>(null);
 
   useEffect(() => {
     setNow(Date.now());
-    const t = setInterval(() => setNow(Date.now()), 1_000);
-    return () => clearInterval(t);
+    const tick = setInterval(() => setNow(Date.now()), 1_000);
+    return () => clearInterval(tick);
   }, []);
 
   const end = Date.parse(closesAt);
@@ -24,7 +26,7 @@ export function ClosesCountdown({ closesAt, closed }: { closesAt: string; closed
   if (closed || (left !== null && left <= 0)) {
     return (
       <span>
-        <span className="text-sp-ink">Closed</span>
+        <span className="text-sp-ink">{t("board.closes.closed")}</span>
         <span className="text-sp-ink/80"> · {instantUtc(closesAt)}</span>
       </span>
     );
@@ -33,12 +35,15 @@ export function ClosesCountdown({ closesAt, closed }: { closesAt: string; closed
   return (
     <span title={instantUtc(closesAt)}>
       {left === null ? (
-        <span className="text-sp-ink">Closes {instantUtc(closesAt)}</span>
+        <span className="text-sp-ink">{t("board.countdown.closesAt", { when: instantUtc(closesAt) })}</span>
       ) : (
-        <>
-          <span className="text-sp-ink/80">Closes in </span>
-          <span className="font-mono text-sp-ink">{timeLeft(left)}</span>
-        </>
+        <span className="text-sp-ink/80">
+          <Rich
+            k="board.countdown.closesIn"
+            vars={{ left: timeLeft(left) }}
+            tags={{ time: (c) => <span className="font-mono text-sp-ink">{c}</span> }}
+          />
+        </span>
       )}
     </span>
   );

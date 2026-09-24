@@ -24,6 +24,17 @@ import type {
   VerifiedType,
 } from "./types";
 
+import { currentIntl, currentLocale, t } from "@/lib/app/i18n";
+import { fmtCompact, fmtNumber, fmtTime, monthName } from "@/lib/app/i18n/format";
+
+/**
+ * The tag dates are written in: day before month ("4 Oct 2026") in English, as
+ * these pages always wrote them, and the reader's own language otherwise.
+ */
+function dateTag(): string {
+  return currentLocale() === "en" ? "en-GB" : currentIntl();
+}
+
 export const CHAIN_LABEL: Record<Chain, string> = {
   solana: "Solana",
   base: "Base",
@@ -51,18 +62,20 @@ export function payChainsOf(space: Pick<Space, "chains" | "payTo" | "payableChai
 /** The networks a space is paid on, in words: "Solana", "Solana and Base". */
 export function payChainsText(space: Pick<Space, "chains" | "payTo" | "payableChains">): string {
   const names = payChainsOf(space).map((c) => CHAIN_LABEL[c]);
-  return names.length <= 1 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+  return names.length <= 1
+    ? names.join("")
+    : t("board.list.and", { first: names.slice(0, -1).join(", "), last: names[names.length - 1] });
 }
 
 /** Integer cents to "$1,775" (or "$1,775.50" when there are cents). */
 export function usdFromCents(cents: number): string {
   const whole = cents % 100 === 0;
-  return (cents / 100).toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
+  // Paid in USDC, so always dollars; only the separators follow the language.
+  const n = fmtNumber(Math.abs(cents) / 100, {
     minimumFractionDigits: whole ? 0 : 2,
     maximumFractionDigits: whole ? 0 : 2,
   });
+  return `${cents < 0 ? "-" : ""}$${n}`;
 }
 
 /**
@@ -81,26 +94,25 @@ export function usdFromUsdc(usdc: string | null | undefined): string {
 
 /** "48210" to "48.2K". */
 export function compactNumber(n: number): string {
-  return new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(n);
+  return fmtCompact(n);
 }
 
 /** How long an X account has existed, in the unit a person would say it. */
 export function accountAge(createdAt: string | null, now = Date.now()): string | null {
   if (!createdAt) return null;
-  const t = new Date(createdAt).getTime();
-  if (!Number.isFinite(t)) return null;
-  const months = Math.floor((now - t) / (1000 * 60 * 60 * 24 * 30.44));
-  if (months >= 24) return `${Math.floor(months / 12)} years on X`;
-  if (months >= 12) return "1 year on X";
-  if (months >= 2) return `${months} months on X`;
-  return "New on X";
+  const at = new Date(createdAt).getTime();
+  if (!Number.isFinite(at)) return null;
+  const months = Math.floor((now - at) / (1000 * 60 * 60 * 24 * 30.44));
+  if (months >= 12) return t("board.account.yearsOnX", { count: Math.floor(months / 12) });
+  if (months >= 2) return t("board.account.monthsOnX", { count: months });
+  return t("board.account.newOnX");
 }
 
 /** "2026-10-04" (a calendar date, no time zone) to "4 Oct 2026". */
 export function calendarDate(date: string): string {
   const [y, m, d] = date.slice(0, 10).split("-").map(Number);
   if (!y || !m || !d) return date;
-  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-GB", {
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString(dateTag(), {
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -112,9 +124,9 @@ export function calendarDate(date: string): string {
 export function instantUtc(iso: string): string {
   const d = new Date(iso);
   if (!Number.isFinite(d.getTime())) return iso;
-  const date = d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
-  const time = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
-  return `${date}, ${time} UTC`;
+  const date = d.toLocaleDateString(dateTag(), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+  const time = d.toLocaleTimeString(dateTag(), { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
+  return t("board.time.utc", { date, time });
 }
 
 /**
@@ -139,7 +151,7 @@ export function instantIn(iso: string, timeZone?: string): string | null {
   const d = new Date(iso);
   if (!Number.isFinite(d.getTime())) return null;
   try {
-    return d.toLocaleString("en-GB", {
+    return d.toLocaleString(dateTag(), {
       weekday: "short",
       day: "numeric",
       month: "short",
@@ -157,71 +169,76 @@ export function instantIn(iso: string, timeZone?: string): string | null {
 export function relativeTime(iso: string, now = Date.now()): string {
   const s = Math.round((now - new Date(iso).getTime()) / 1000);
   if (!Number.isFinite(s)) return "";
-  if (s < 60) return "just now";
+  if (s < 60) return t("board.time.justNow");
   const m = Math.round(s / 60);
-  if (m < 60) return `${m} min ago`;
+  if (m < 60) return t("board.time.minutesAgo", { count: m });
   const h = Math.round(m / 60);
-  if (h < 24) return `${h} h ago`;
+  if (h < 24) return t("board.time.hoursAgo", { count: h });
   const d = Math.round(h / 24);
-  if (d < 30) return d === 1 ? "yesterday" : `${d} days ago`;
+  if (d < 30) return d === 1 ? t("board.time.yesterday") : t("board.time.daysAgo", { count: d });
   return calendarDate(iso);
 }
 
 /** Time left as "12d 4h", "3h 20m", "4m 05s". */
 export function timeLeft(ms: number): string {
-  if (ms <= 0) return "0m";
+  if (ms <= 0) return t("board.left.minutes", { m: 0 });
   const s = Math.floor(ms / 1000);
   const d = Math.floor(s / 86400);
   const h = Math.floor((s % 86400) / 3600);
   const m = Math.floor((s % 3600) / 60);
   const sec = s % 60;
-  if (d > 0) return `${d}d ${h}h`;
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m ${String(sec).padStart(2, "0")}s`;
+  if (d > 0) return t("board.left.daysHours", { d, h });
+  if (h > 0) return t("board.left.hoursMinutes", { h, m });
+  return t("board.left.minutesSeconds", { m, s: String(sec).padStart(2, "0") });
 }
 
 /** "HH:MM" in the reader's own clock. Client side only. */
 export function clockTime(iso: string): string {
   const d = new Date(iso);
   if (!Number.isFinite(d.getTime())) return "";
-  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return fmtTime(d, { hour: "2-digit", minute: "2-digit" });
 }
 
+/*
+ * The label records below are getters: each read calls t() at render time, in
+ * the language on screen, and every importer keeps indexing them as before.
+ */
+
 export const VERIFIED_LABEL: Record<Exclude<VerifiedType, null>, string> = {
-  blue: "Verified (X Premium)",
-  business: "Verified business",
-  government: "Verified government",
+  get blue() { return t("board.verified.blue"); },
+  get business() { return t("board.verified.business"); },
+  get government() { return t("board.verified.government"); },
 };
 
 export const STATUS_LABEL: Record<PositionStatus, string> = {
-  open: "Available",
-  held: "Being paid",
-  sold: "Sold",
+  get open() { return t("board.status.open"); },
+  get held() { return t("board.status.held"); },
+  get sold() { return t("board.status.sold"); },
   // One brand bought the whole listing, so this square was never sold and is
   // not for sale. Saying "Sold" would credit it with money it never took.
-  closed: "Taken",
+  get closed() { return t("board.status.closed"); },
 };
 
 export const DELIVERABLE_STATE_LABEL: Record<DeliverableState, string> = {
-  upcoming: "Upcoming",
-  overdue: "Overdue",
-  delivered: "Delivered",
-  missed: "Missed",
+  get upcoming() { return t("board.deliverableState.upcoming"); },
+  get overdue() { return t("board.deliverableState.overdue"); },
+  get delivered() { return t("board.deliverableState.delivered"); },
+  get missed() { return t("board.deliverableState.missed"); },
 };
 
 export const CONTENT_KIND_LABEL: Record<ContentKind, string> = {
-  logo: "Logo",
-  qr: "QR code",
-  text: "Text",
-  photo: "Photo",
+  get logo() { return t("board.contentKind.logo"); },
+  get qr() { return t("board.contentKind.qr"); },
+  get text() { return t("board.contentKind.text"); },
+  get photo() { return t("board.contentKind.photo"); },
 };
 
 /** The same three states, for a session: a buyer books, nobody "sponsors". */
 export const SESSION_STATUS_LABEL: Record<PositionStatus, string> = {
-  open: "Available",
-  held: "Being booked",
-  sold: "Booked",
-  closed: "Taken",
+  get open() { return t("board.status.open"); },
+  get held() { return t("board.sessionStatus.held"); },
+  get sold() { return t("board.sessionStatus.sold"); },
+  get closed() { return t("board.status.closed"); },
 };
 
 /**
@@ -244,19 +261,31 @@ export function isProductionSpace(space: { template: Pick<Space["template"], "se
 export function trackRecordText(record: TrackRecord): string {
   const { delivered, missed } = record;
   const disputed = Math.max(0, record.disputed ?? 0);
-  if (delivered + missed + disputed === 0) return "First HiSpace";
-  const base = `${delivered} delivered${missed ? `, ${missed} missed` : ", none missed"}`;
-  return disputed > 0 ? `${base} · ${disputed} disputed` : base;
+  if (delivered + missed + disputed === 0) return t("board.track.first");
+  const base = missed
+    ? t("board.track.deliveredMissed", { delivered, missed })
+    : t("board.track.deliveredNoneMissed", { delivered });
+  return disputed > 0 ? t("board.track.withDisputed", { record: base, disputed }) : base;
 }
 
-const USAGE_SCOPE: Record<string, string> = { organic: "organic social only", organic_and_paid: "organic and paid ads" };
-const USAGE_TERM: Record<string, string> = { "6m": "6 months", "12m": "12 months" };
+function usageScope(scope: string): string {
+  if (scope === "organic") return t("board.usage.scope.organic");
+  if (scope === "organic_and_paid") return t("board.usage.scope.organicAndPaid");
+  return scope;
+}
+
+function usageTerm(term: string): string {
+  if (term === "6m") return t("board.usage.term.sixMonths");
+  if (term === "12m") return t("board.usage.term.twelveMonths");
+  return term;
+}
 
 /** A production spot's rights: "Use it on organic and paid ads, for 12 months." */
 export function usageText(pkg: { usage: { scope: string; term: string } }): string {
-  const scope = USAGE_SCOPE[pkg.usage.scope] ?? pkg.usage.scope;
-  const term = pkg.usage.term === "perpetual" ? "with no end date" : `for ${USAGE_TERM[pkg.usage.term] ?? pkg.usage.term}`;
-  return `Use it on ${scope}, ${term}.`;
+  const scope = usageScope(pkg.usage.scope);
+  const term =
+    pkg.usage.term === "perpetual" ? t("board.usage.noEnd") : t("board.usage.for", { term: usageTerm(pkg.usage.term) });
+  return t("board.usage.line", { scope, term });
 }
 
 /**
@@ -266,7 +295,7 @@ export function usageText(pkg: { usage: { scope: string; term: string } }): stri
 export function onTimeText(record: TrackRecord): string | null {
   const p = record.production;
   if (!p || p.accepted <= 0) return null;
-  return `Delivered on time: ${Math.min(p.onTime, p.accepted)} of ${p.accepted}`;
+  return t("board.track.onTime", { onTime: Math.min(p.onTime, p.accepted), accepted: p.accepted });
 }
 
 /** Whether a track record has anything a buyer should look at twice. */
@@ -281,34 +310,32 @@ export function trackRecordNeedsAttention(record: TrackRecord): boolean {
  * promises nothing — the app has no line for that case either.
  */
 export const SESSION_FALLBACK_TEXT: Record<Fallback, string> = {
-  creator_refund:
-    "If the session can't happen, the creator sends the price back from their own wallet. It's their promise: HOLD never holds the money.",
-  next_event: "If the session can't happen, it moves to another event within 90 days.",
-  content_anyway: "If the session can't happen, talk to the creator: HOLD can't refund a booking.",
+  get creator_refund() { return t("board.sessionFallback.creatorRefund"); },
+  get next_event() { return t("board.sessionFallback.nextEvent"); },
+  get content_anyway() { return t("board.sessionFallback.contentAnyway"); },
 };
 
 /** The fallback policy for a content production spot: nothing gets filmed without the event. */
 export const PRODUCTION_FALLBACK_TEXT: Record<Fallback, string> = {
-  creator_refund:
-    "If the event doesn't happen, the creator sends the price back from their own wallet. It's their promise: HOLD never holds the money.",
-  next_event: "If the event doesn't happen, your spot moves to another event within 90 days.",
-  content_anyway: "If the event doesn't happen, talk to the creator: HOLD can't refund a spot.",
+  get creator_refund() { return t("board.productionFallback.creatorRefund"); },
+  get next_event() { return t("board.productionFallback.nextEvent"); },
+  get content_anyway() { return t("board.productionFallback.contentAnyway"); },
 };
 
 export const CONTACT_KIND_LABEL: Record<ContactKind, string> = {
   x: "X",
   telegram: "Telegram",
-  email: "Email",
+  get email() { return t("board.contactKind.email"); },
 };
 
 /** Where a booked session stands, from the buyer's side. */
 export const SESSION_STATE_LABEL: Record<SessionState, string> = {
-  awaiting_contact: "Send your contact",
-  awaiting_schedule: "Waiting for a time",
-  scheduled: "Scheduled",
-  awaiting_confirmation: "Did it happen?",
-  delivered: "Delivered",
-  disputed: "You said it didn't happen",
+  get awaiting_contact() { return t("board.sessionState.awaitingContact"); },
+  get awaiting_schedule() { return t("board.sessionState.awaitingSchedule"); },
+  get scheduled() { return t("board.sessionState.scheduled"); },
+  get awaiting_confirmation() { return t("board.sessionState.awaitingConfirmation"); },
+  get delivered() { return t("board.sessionState.delivered"); },
+  get disputed() { return t("board.sessionState.disputed"); },
 };
 
 /** The limits the contract sets on what a buyer types. */
@@ -321,9 +348,9 @@ export const SESSION_TEXT_MAX = 280;
  * is the whole point of showing it on a page a brand reads before paying.
  */
 export const FALLBACK_LABEL: Record<Fallback, string> = {
-  content_anyway: "Content anyway",
-  creator_refund: "I refund the price",
-  next_event: "Moves to the next event",
+  get content_anyway() { return t("board.fallback.label.contentAnyway"); },
+  get creator_refund() { return t("board.fallback.label.creatorRefund"); },
+  get next_event() { return t("board.fallback.label.nextEvent"); },
 };
 
 /**
@@ -339,9 +366,9 @@ export const FALLBACK_LABEL: Record<Fallback, string> = {
  * suggests it is.
  */
 export const FALLBACK_TEXT: Record<Fallback, string> = {
-  content_anyway: "If the venue says no, every post and video is still delivered as promised.",
-  creator_refund: "If the venue says no, the creator sends the price back from their own wallet.",
-  next_event: "If the venue says no, the spot moves to another event within 90 days.",
+  get content_anyway() { return t("board.fallback.text.contentAnyway"); },
+  get creator_refund() { return t("board.fallback.text.creatorRefund"); },
+  get next_event() { return t("board.fallback.text.nextEvent"); },
 };
 
 /**
@@ -349,9 +376,7 @@ export const FALLBACK_TEXT: Record<Fallback, string> = {
  * The caller renders nothing at all for a spot still on its first sponsor.
  */
 export function handsText(hands: number): string {
-  if (hands === 1) return "Changed hands once";
-  if (hands === 2) return "Changed hands twice";
-  return `Changed hands ${hands} times`;
+  return t("board.hands.changed", { count: hands });
 }
 
 /**
@@ -366,9 +391,9 @@ export function handsText(hands: number): string {
 export function handsLeftText(handsLeft: number): string | null {
   const after = handsLeft - 1;
   if (after < 0) return null;
-  if (after === 0) return "That is the last time it can change hands, so it would stay with whoever takes it now.";
-  if (after === 1) return "After that it could be taken off them once more, and then it is settled for good.";
-  return `After that it could be taken off them ${after} more times.`;
+  if (after === 0) return t("board.hands.leftNone");
+  if (after === 1) return t("board.hands.leftOnce");
+  return t("board.hands.leftMore", { count: after });
 }
 
 /**
@@ -377,37 +402,41 @@ export function handsLeftText(handsLeft: number): string | null {
  * given a word of its own.
  */
 export function takeoverVerb(multiple: number | null): string {
-  return multiple === 2 || multiple === null ? "doubles the price" : `multiplies the price by ${multiple}`;
+  return multiple === 2 || multiple === null
+    ? t("board.takeover.doubles")
+    : t("board.takeover.multiplies", { multiple });
 }
 
 /**
  * Why a spot can go no higher, without the server's words for it. An unknown
  * reason still says the only thing a sponsor needs: the ladder has stopped.
  */
-const TAKEOVER_CLOSED_TEXT: Record<string, string> = {
-  too_many_takeovers:
-    "This spot has changed hands as many times as an Ad Space spot is allowed to, so it can go no higher. It stays with the sponsor who has it now.",
-  price_ceiling:
-    "Doubling this spot again would take it past the most an Ad Space spot can cost, so it can go no higher. It stays with the sponsor who has it now.",
-};
-
 export function takeoverClosedText(reason: string): string {
-  return TAKEOVER_CLOSED_TEXT[reason] ?? "This spot can go no higher. It stays with the sponsor who has it now.";
+  if (reason === "too_many_takeovers") return t("board.takeoverClosed.tooManyTakeovers");
+  if (reason === "price_ceiling") return t("board.takeoverClosed.priceCeiling");
+  return t("board.takeoverClosed.other");
 }
 
 /** Phrased to follow "The creator declares that they …". */
-const ATTESTATION_TEXT: Record<string, string> = {
-  owns_item: "own the item",
-  venue_rules_checked: "have checked the venue's rules",
-  discloses_sponsorship: "will label sponsored content as sponsored",
-  temporary_skin_safe_adult: "are an adult and use skin-safe temporary tattoos",
-  public_place: "meet only at the venue or in a public place, never at a private address",
-  no_investment_advice: "give no investment advice",
-  no_investor_intros: "make no introductions to investors",
-};
-
 export function attestationText(key: string): string {
-  return ATTESTATION_TEXT[key] ?? key.replace(/_/g, " ");
+  switch (key) {
+    case "owns_item":
+      return t("board.attestation.ownsItem");
+    case "venue_rules_checked":
+      return t("board.attestation.venueRulesChecked");
+    case "discloses_sponsorship":
+      return t("board.attestation.disclosesSponsorship");
+    case "temporary_skin_safe_adult":
+      return t("board.attestation.temporarySkinSafeAdult");
+    case "public_place":
+      return t("board.attestation.publicPlace");
+    case "no_investment_advice":
+      return t("board.attestation.noInvestmentAdvice");
+    case "no_investor_intros":
+      return t("board.attestation.noInvestorIntros");
+    default:
+      return key.replace(/_/g, " ");
+  }
 }
 
 function platformName(platform: string): string {
@@ -423,16 +452,31 @@ function platformName(platform: string): string {
  *   custom, null, 1, "…"     the creator's note as written
  */
 export function deliverableText(d: Pick<Deliverable, "kind" | "platform" | "count" | "note">): string {
-  const times = d.count > 1 ? `, ${d.count} times` : "";
-  const where = d.platform?.trim() ? ` on ${platformName(d.platform)}` : "";
-  if (d.kind === "mention") return `Mentions your brand${where}${times}`;
-  if (d.kind === "custom") {
-    const note = d.note?.trim();
-    return `${note || "Something extra from the creator"}${where}${times}`;
+  const vars = {
+    count: d.count,
+    on: d.platform?.trim() ? "yes" : "no",
+    platform: d.platform?.trim() ? platformName(d.platform) : "",
+  };
+  switch (d.kind) {
+    case "mention":
+      return t("board.deliverable.mention", vars);
+    case "custom":
+      return t("board.deliverable.custom", { ...vars, note: d.note?.trim() || t("board.deliverable.customDefault") });
+    case "in_person":
+      return t("board.deliverable.inPerson", vars);
+    case "photo_post":
+      return t("board.deliverable.photoPost", vars);
+    case "video":
+      return t("board.deliverable.video", vars);
+    case "story":
+      return t("board.deliverable.story", vars);
+    case "thank_you_post":
+      return t("board.deliverable.thankYouPost", vars);
   }
+  // A kind this page does not know yet: its own name, as the server wrote it.
   const noun = d.kind.replace(/_/g, " ");
   const plural = d.count === 1 ? noun : noun.endsWith("s") ? noun : `${noun}s`;
-  return `${d.count} ${plural}${where}`;
+  return t("board.deliverable.unknown", { ...vars, noun: plural });
 }
 
 /**
@@ -562,9 +606,9 @@ export function spaceTiers(space: Pick<Space, "kind" | "positions">): SpaceTier[
  */
 export function tiersStartAtCents(tiers: SpaceTier[]): number | null {
   let least: number | null = null;
-  for (const t of tiers) {
-    if (!t.buy || t.priceCents === null) continue;
-    if (least === null || t.priceCents < least) least = t.priceCents;
+  for (const tier of tiers) {
+    if (!tier.buy || tier.priceCents === null) continue;
+    if (least === null || tier.priceCents < least) least = tier.priceCents;
   }
   return least;
 }
@@ -576,7 +620,8 @@ export function cardServiceName(card: Pick<SpaceCard, "templateName" | "serviceN
 
 /* ── Events ──────────────────────────────────────────────────────────── */
 
-const MONTH = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+/** A month's short name ("Oct"), 1-based, in the language on screen. */
+const month = (m: number) => monthName(m - 1, "short");
 
 function ymd(date: string): [number, number, number] | null {
   const [y, m, d] = date.slice(0, 10).split("-").map(Number);
@@ -594,18 +639,25 @@ export function eventDates(startsOn: string, endsOn: string): string {
   if (!a || !b) return startsOn;
   const [ay, am, ad] = a;
   const [by, bm, bd] = b;
-  if (ay === by && am === bm && ad === bd) return `${ad} ${MONTH[am - 1]} ${ay}`;
-  if (ay === by && am === bm) return `${ad} to ${bd} ${MONTH[am - 1]} ${ay}`;
-  if (ay === by) return `${ad} ${MONTH[am - 1]} to ${bd} ${MONTH[bm - 1]} ${ay}`;
-  return `${ad} ${MONTH[am - 1]} ${ay} to ${bd} ${MONTH[bm - 1]} ${by}`;
+  if (ay === by && am === bm && ad === bd) return t("board.dates.day", { day: ad, month: month(am), year: ay });
+  if (ay === by && am === bm) return t("board.dates.sameMonth", { from: ad, to: bd, month: month(am), year: ay });
+  if (ay === by) return t("board.dates.sameYear", { from: ad, fromMonth: month(am), to: bd, toMonth: month(bm), year: ay });
+  return t("board.dates.span", {
+    from: ad,
+    fromMonth: month(am),
+    fromYear: ay,
+    to: bd,
+    toMonth: month(bm),
+    toYear: by,
+  });
 }
 
 /** Whole days from today (UTC) to a calendar date; negative once it has passed. */
 function daysUntil(date: string, now: number): number {
   const p = ymd(date);
   if (!p) return NaN;
-  const t = new Date(now);
-  const today = Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate());
+  const d = new Date(now);
+  const today = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
   return Math.round((Date.UTC(p[0], p[1] - 1, p[2]) - today) / 86_400_000);
 }
 
@@ -619,10 +671,10 @@ export type EventPhase = "upcoming" | "now" | "ended";
 export function eventCountdown(startsOn: string, endsOn: string, now = Date.now()): { phase: EventPhase; text: string } {
   const toStart = daysUntil(startsOn, now);
   const toEnd = daysUntil(endsOn, now);
-  if (toEnd < 0) return { phase: "ended", text: "ended" };
-  if (toStart <= 0) return { phase: "now", text: "happening now" };
-  if (toStart === 1) return { phase: "upcoming", text: "tomorrow" };
-  return { phase: "upcoming", text: `in ${toStart} days` };
+  if (toEnd < 0) return { phase: "ended", text: t("board.event.ended") };
+  if (toStart <= 0) return { phase: "now", text: t("board.event.now") };
+  if (toStart === 1) return { phase: "upcoming", text: t("board.event.tomorrow") };
+  return { phase: "upcoming", text: t("board.event.inDays", { count: toStart }) };
 }
 
 /**
@@ -631,11 +683,11 @@ export function eventCountdown(startsOn: string, endsOn: string, now = Date.now(
  */
 export function closesText(closesAt: string, closed: boolean, now = Date.now()): string {
   const left = Date.parse(closesAt) - now;
-  if (closed || !Number.isFinite(left) || left <= 0) return "Closed";
+  if (closed || !Number.isFinite(left) || left <= 0) return t("board.closes.closed");
   const h = Math.floor(left / 3_600_000);
-  if (h >= 48) return `Closes in ${Math.floor(h / 24)} days`;
-  if (h >= 1) return `Closes in ${h} h`;
-  return "Closes within the hour";
+  if (h >= 48) return t("board.closes.inDays", { count: Math.floor(h / 24) });
+  if (h >= 1) return t("board.closes.inHours", { count: h });
+  return t("board.closes.withinHour");
 }
 
 /** What a sponsor can still get on a tab: open spots on live spaces only. */
@@ -652,10 +704,10 @@ export function openSpots(cards: SpaceCard[]): number {
  */
 export function creatorTotalsText(totals: { spaces: number; openSpots: number; events: number }): string {
   const parts = [
-    `${totals.spaces} ${totals.spaces === 1 ? "space" : "spaces"}`,
-    `${totals.openSpots} ${totals.openSpots === 1 ? "spot" : "spots"} open`,
+    t("board.totals.spaces", { count: totals.spaces }),
+    t("board.totals.openSpots", { count: totals.openSpots }),
   ];
-  if (totals.events > 0) parts.push(`${totals.events} ${totals.events === 1 ? "event" : "events"}`);
+  if (totals.events > 0) parts.push(t("board.totals.events", { count: totals.events }));
   return parts.join(" · ");
 }
 
@@ -669,9 +721,8 @@ export function creatorTotalsText(totals: { spaces: number; openSpots: number; e
  * than one that simply opens the event.
  */
 export function otherCreatorsLine(othersAtEvent: number, eventName: string): string {
-  if (othersAtEvent <= 0) return `See everything on sale at ${eventName}`;
-  if (othersAtEvent === 1) return `1 more creator is going to ${eventName}`;
-  return `${othersAtEvent} more creators are going to ${eventName}`;
+  if (othersAtEvent <= 0) return t("board.others.none", { event: eventName });
+  return t("board.others.going", { count: othersAtEvent, event: eventName });
 }
 
 /** The event page's tabs, in the order they are shown. */
@@ -730,17 +781,20 @@ export function spaceProgressText(
   const { totals } = space;
   if (isSessionSpace(space) && space.pricingMode !== "takeover") {
     return spaceSoldOut(space)
-      ? `Fully booked: all ${totals.positions} sessions taken`
-      : `${totals.sold} of ${totals.positions} sessions booked`;
+      ? t("board.progress.sessionsFull", { total: totals.positions })
+      : t("board.progress.sessionsBooked", { sold: totals.sold, total: totals.positions });
   }
-  const noun = space.kind === "service" ? "slots" : "spots";
+  // A service sells slots, a placement spots.
+  const kind = space.kind === "service" ? "slot" : "spot";
   const soldOut = spaceSoldOut(space);
   if (space.pricingMode === "takeover") {
     return soldOut
-      ? `Every ${noun.slice(0, -1)} settled: all ${totals.positions} taken`
-      : `${takeableSpots(space)} of ${totals.positions} ${noun} still up for grabs`;
+      ? t("board.progress.takeoverSettled", { kind, total: totals.positions })
+      : t("board.progress.takeoverOpen", { kind, open: takeableSpots(space), total: totals.positions });
   }
-  return soldOut ? `Sold out: all ${totals.positions} ${noun} taken` : `${totals.sold} of ${totals.positions} ${noun} sold`;
+  return soldOut
+    ? t("board.progress.soldOut", { kind, total: totals.positions })
+    : t("board.progress.sold", { kind, sold: totals.sold, total: totals.positions });
 }
 
 /**
@@ -774,17 +828,17 @@ export function fundingProgress(
 /** "2d", "5h", "40m": coarse on purpose, for chips and link cards. */
 function coarseLeft(ms: number): string {
   const h = Math.floor(ms / 3_600_000);
-  if (h >= 24) return `${Math.floor(h / 24)}d`;
-  if (h >= 1) return `${h}h`;
-  return `${Math.max(1, Math.floor(ms / 60_000))}m`;
+  if (h >= 24) return t("board.left.days", { d: Math.floor(h / 24) });
+  if (h >= 1) return t("board.left.hours", { h });
+  return t("board.left.minutes", { m: Math.max(1, Math.floor(ms / 60_000)) });
 }
 
 /** "Bidding · 2d left", "Bidding ended", or "Bidding" when no end is known. */
 export function biddingChipText(biddingEndsAt: string | null | undefined, now = Date.now()): string {
-  if (!biddingEndsAt) return "Bidding";
+  if (!biddingEndsAt) return t("board.chip.bidding");
   const left = Date.parse(biddingEndsAt) - now;
-  if (!Number.isFinite(left)) return "Bidding";
-  return left > 0 ? `Bidding · ${coarseLeft(left)} left` : "Bidding ended";
+  if (!Number.isFinite(left)) return t("board.chip.bidding");
+  return left > 0 ? t("board.chip.biddingLeft", { left: coarseLeft(left) }) : t("board.chip.biddingEnded");
 }
 
 /**
@@ -798,13 +852,13 @@ export function pricingChipText(
 ): string | null {
   switch (card.pricingMode) {
     case "takeover":
-      return "Open bidding";
+      return t("board.chip.openBidding");
     case "offers":
-      return "Make an offer";
+      return t("board.chip.makeOffer");
     case "bids":
       return biddingChipText(card.biddingEndsAt, now);
     default:
-      return card.acceptsOffers ? "Accepts offers" : null;
+      return card.acceptsOffers ? t("board.chip.acceptsOffers") : null;
   }
 }
 
@@ -866,9 +920,11 @@ export function bidsSummaryText(space: Pick<Space, "pricingMode" | "positions" |
     const end = Date.parse(space.biddingEndsAt);
     if (Number.isFinite(end) && end > now) soonest = end;
   }
-  if (highest && highestEnds !== null) return `Highest bid ${usdFromCents(highest.cents)} · ${coarseLeft(highestEnds - now)} left`;
-  if (soonest === null) return "Bidding ended";
-  const left = `${coarseLeft(soonest - now)} left`;
-  if (opening) return `Bidding opens at ${usdFromCents(opening.cents)} · ${left}`;
-  return `Bidding · ${left}`;
+  if (highest && highestEnds !== null) {
+    return t("board.bids.highest", { amount: usdFromCents(highest.cents), left: coarseLeft(highestEnds - now) });
+  }
+  if (soonest === null) return t("board.chip.biddingEnded");
+  const left = coarseLeft(soonest - now);
+  if (opening) return t("board.bids.opensAt", { amount: usdFromCents(opening.cents), left });
+  return t("board.chip.biddingLeft", { left });
 }

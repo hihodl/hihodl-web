@@ -12,6 +12,7 @@ import {
   usageText,
 } from "@/lib/ad-space/format";
 import type { ContentKind, DeliverableState, Space } from "@/lib/ad-space/types";
+import { t } from "@/lib/app/i18n";
 
 import { card, pill } from "./ui";
 
@@ -33,7 +34,19 @@ import { card, pill } from "./ui";
  */
 
 const ORDER: ContentKind[] = ["logo", "qr", "text", "photo"];
-const WORD: Record<ContentKind, string> = { logo: "logo", qr: "QR code", text: "text", photo: "photo" };
+/** The content kinds as a word inside a sentence ("Your logo or text on…"). */
+function word(k: ContentKind): string {
+  switch (k) {
+    case "logo":
+      return t("board.gets.word.logo");
+    case "qr":
+      return t("board.gets.word.qr");
+    case "text":
+      return t("board.gets.word.text");
+    case "photo":
+      return t("board.gets.word.photo");
+  }
+}
 
 const STATE_PILL: Partial<Record<DeliverableState, string>> = {
   overdue: pill.attention,
@@ -43,28 +56,31 @@ const STATE_PILL: Partial<Record<DeliverableState, string>> = {
 
 function orWords(items: string[]): string {
   if (items.length <= 1) return items.join("");
-  return `${items.slice(0, -1).join(", ")} or ${items[items.length - 1]}`;
+  return t("board.list.or", { first: items.slice(0, -1).join(", "), last: items[items.length - 1] });
 }
 
 /** "Your logo, QR code or text on the suitcase: it's what makes people look", from what the spots take. */
 function spotLine(space: Space): string {
-  if (space.kind === "service") return `One slot: ${serviceName(space)}`;
+  if (space.kind === "service") return t("board.gets.oneSlot", { name: serviceName(space) });
   const taken = new Set(space.positions.flatMap((p) => p.accepts));
-  const kinds = ORDER.filter((k) => taken.has(k)).map((k) => WORD[k]);
-  const on = `the ${serviceName(space).toLowerCase()}`;
+  const kinds = ORDER.filter((k) => taken.has(k)).map(word);
+  const product = serviceName(space).toLowerCase();
   return kinds.length
-    ? `Your ${orWords(kinds)} on ${on}, on the spot you pick. It's what makes people look`
-    : `Your brand on ${on}. It's what makes people look`;
+    ? t("board.gets.spotKinds", { kinds: orWords(kinds), product })
+    : t("board.gets.spotBrand", { product });
 }
 
 /** "@demo_creator's reach: 12.4K followers on X", or null with no count to name. */
 export function reachLine(space: Space): string | null {
   const c = space.creator;
   if (!c?.xHandle || !(c.xFollowers > 0)) return null;
-  const where = space.event ? ` from ${space.event.name}` : "";
-  return space.kind === "service"
-    ? `@${c.xHandle}'s reach: ${compactNumber(c.xFollowers)} followers on X see what they post${where}`
-    : `@${c.xHandle}'s reach: ${compactNumber(c.xFollowers)} followers on X see it in every post${where}`;
+  const vars = {
+    handle: c.xHandle,
+    followers: compactNumber(c.xFollowers),
+    at: space.event ? "event" : "none",
+    event: space.event?.name ?? "",
+  };
+  return space.kind === "service" ? t("board.gets.reachService", vars) : t("board.gets.reachSpot", vars);
 }
 
 export function WhatTheBrandGets({ space }: { space: Space }) {
@@ -74,17 +90,19 @@ export function WhatTheBrandGets({ space }: { space: Space }) {
   // Content production: the package itself, line by line, is what sells it.
   if (isProductionSpace(space) && space.production) {
     const pkg = space.production;
-    const at = space.event ? `${space.event.name}, ${eventDates(space.event.startsOn, space.event.endsOn)}` : space.eventName;
+    const at = space.event
+      ? t("board.gets.eventAndDates", { event: space.event.name, dates: eventDates(space.event.startsOn, space.event.endsOn) })
+      : space.eventName;
     return (
       <div className={`${card} p-5 md:p-6`}>
         <ul className="flex flex-col gap-4">
           {pkg.lines.map((l) => (
-            <Item key={l.key} text={`${l.count} × ${l.label}`} strong />
+            <Item key={l.key} text={t("board.gets.production.line", { count: l.count, label: l.label })} strong />
           ))}
-          {at ? <Item text={`Filmed at ${at}`} /> : null}
-          <Item text={`Delivered to you within ${pkg.turnaroundHours} hours of the shoot day, with one round of changes`} />
+          {at ? <Item text={t("board.gets.production.filmedAt", { at })} /> : null}
+          <Item text={t("board.gets.production.turnaround", { hours: pkg.turnaroundHours })} />
           <Item text={usageText(pkg)} />
-          <Item text="You bring the brief before you pay: goal, key messages, who to interview" />
+          <Item text={t("board.gets.production.brief")} />
         </ul>
       </div>
     );
@@ -92,16 +110,21 @@ export function WhatTheBrandGets({ space }: { space: Space }) {
 
   if (isSessionSpace(space)) {
     const where = space.event
-      ? `In person at ${space.event.name}, ${eventDates(space.event.startsOn, space.event.endsOn)}`
+      ? t("board.gets.session.inPersonAt", {
+          at: t("board.gets.eventAndDates", {
+            event: space.event.name,
+            dates: eventDates(space.event.startsOn, space.event.endsOn),
+          }),
+        })
       : space.eventName
-        ? `In person at ${space.eventName}`
-        : "In person, at the venue or in a public place";
+        ? t("board.gets.session.inPersonAt", { at: space.eventName })
+        : t("board.gets.session.inPersonAnywhere");
     return (
       <div className={`${card} p-5 md:p-6`}>
         <ul className="flex flex-col gap-4">
-          <Item text={`One session: ${serviceName(space)}`} strong />
+          <Item text={t("board.gets.session.one", { name: serviceName(space) })} strong />
           <Item text={where} />
-          <Item text="Time and place set with you after you book" />
+          <Item text={t("board.gets.session.timeAndPlace")} />
         </ul>
       </div>
     );
@@ -120,7 +143,7 @@ export function WhatTheBrandGets({ space }: { space: Space }) {
         {shown}
         {tiered ? (
           <li className="text-small text-sp-ink/85">
-            {items.length ? "Every package also includes:" : "Each package lists what it includes."}
+            {items.length ? t("board.gets.everyPackage") : t("board.gets.eachPackage")}
           </li>
         ) : null}
         {items.map((d) => {
@@ -137,10 +160,10 @@ export function WhatTheBrandGets({ space }: { space: Space }) {
                 <p className="mt-0.5 text-tiny text-sp-ink/80">
                   {d.state === "delivered" && d.deliveredUrl ? (
                     <a href={d.deliveredUrl} target="_blank" rel="noopener noreferrer" className="text-sp-ok hover:underline">
-                      See it
+                      {t("board.gets.seeIt")}
                     </a>
                   ) : (
-                    `By ${calendarDate(d.dueDate)}`
+                    t("board.gets.dueBy", { date: calendarDate(d.dueDate) })
                   )}
                 </p>
               </div>

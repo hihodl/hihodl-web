@@ -16,6 +16,7 @@ import {
 import { gradientCss } from "@/lib/ad-space/look";
 import { type SavedOffer, offerModeOf, offerPath, savedOffers } from "@/lib/ad-space/offers-client";
 import type { OfferKind, OfferMode, Order, Position, PositionOffers, Space } from "@/lib/ad-space/types";
+import { useT } from "@/lib/app/i18n/react";
 
 import { Checkout } from "./Checkout";
 import { OfferSheet } from "./OfferSheet";
@@ -57,6 +58,7 @@ export function SpaceBoard({
   /** What you get and how it works, before the full list of spots. */
   details: ReactNode;
 }) {
+  const t = useT();
   const router = useRouter();
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [flashId, setFlashId] = useState<string | null>(null);
@@ -180,7 +182,7 @@ export function SpaceBoard({
   const wholeCard = whole ? (
     <WholeListing
       position={whole}
-      productName={(space.template.name ?? "listing").toLowerCase()}
+      productName={(space.template.name ?? t("board.space.listing")).toLowerCase()}
       buyable={buyable}
       offerMode={modeOf(whole)}
       partsSold={partsSold}
@@ -220,13 +222,17 @@ export function SpaceBoard({
         <div className="flex flex-col gap-4 rounded-card border border-amber/40 bg-amber/[0.06] p-5 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-small text-sp-ink">
             {resumable.order.status !== "paid"
-              ? `Your payment for ${resumable.position.label} is still going through.`
+              ? t("board.space.paymentGoingThrough", { label: resumable.position.label })
               : session
-                ? `You booked ${resumable.position.label}.`
-                : `You sponsored ${resumable.position.label}. Send the creator your logo.`}
+                ? t("board.space.youBooked", { label: resumable.position.label })
+                : t("board.space.youSponsored", { label: resumable.position.label })}
           </p>
           <button type="button" className={btnSmall} onClick={() => setCheckoutFor(resumable.position)}>
-            {resumable.order.status !== "paid" ? "See the payment" : session ? "See your booking" : "Add your logo"}
+            {resumable.order.status !== "paid"
+              ? t("board.space.seePayment")
+              : session
+                ? t("board.space.seeBooking")
+                : t("board.space.addLogo")}
           </button>
         </div>
       )}
@@ -256,7 +262,7 @@ export function SpaceBoard({
       {isService && (
         <section id="spots" className="container-page scroll-mt-20 py-10 md:py-14" aria-labelledby="pick">
           <h2 id="pick" className="font-display text-h3 font-light text-sp-ink md:text-h2">
-            {session ? "Book a session" : `Pick your ${noun}`}
+            {session ? t("board.stats.bookSession") : t("board.space.pickYour", { noun })}
           </h2>
           {serviceSummary(space) && (
             <p className="mt-3 max-w-2xl whitespace-pre-line break-words text-body text-sp-ink/85 [overflow-wrap:anywhere]">
@@ -297,7 +303,7 @@ export function SpaceBoard({
       {!isService && (cardList || wholeCard) && (
         <section className="container-page py-12 md:py-16" aria-labelledby="every-spot">
           <h2 id="every-spot" className="font-display text-h3 font-light text-sp-ink md:text-h2">
-            {whole ? "Take a spot, or take all of it" : "Pick your spot"}
+            {whole ? t("board.space.spotOrAll") : t("board.space.pickYour", { noun: "spot" })}
           </h2>
           {wholeCard && <div className="mt-8">{wholeCard}</div>}
           {cardList && <div className="mt-8">{cardList}</div>}
@@ -383,15 +389,20 @@ function ListingStage({
 }
 
 function Legend({ takeover, mode }: { takeover: boolean; mode: OfferMode | null }) {
+  const t = useT();
   return (
-    <ul className="mt-8 flex flex-wrap items-center justify-center gap-2" aria-label="Legend">
+    <ul className="mt-8 flex flex-wrap items-center justify-center gap-2" aria-label={t("board.legend.label")}>
       <li className={pill.open}>
-        {mode === "offers" ? "Open, tap to offer" : mode === "bids" ? "Open, tap to bid" : "Open, tap to claim"}
+        {mode === "offers"
+          ? t("board.legend.openOffer")
+          : mode === "bids"
+            ? t("board.legend.openBid")
+            : t("board.legend.openClaim")}
       </li>
-      <li className={pill.held}>Being paid</li>
+      <li className={pill.held}>{t("board.status.held")}</li>
       {/* On a takeover board a sold spot opens checkout like an open one does
           (see `pick`), so the legend cannot call it just "Sold". */}
-      <li className={pill.sold}>{takeover ? "Taken, tap to take it" : "Sold"}</li>
+      <li className={pill.sold}>{takeover ? t("board.legend.takenTap") : t("board.status.sold")}</li>
     </ul>
   );
 }
@@ -416,6 +427,7 @@ function SpaceOffersPanel({
   now: number | null;
   onOffer: () => void;
 }) {
+  const t = useT();
   const n = offers?.openCount ?? null;
   const reserved = offers?.reservedUntil ?? null;
   const noun = session ? "session" : "slot";
@@ -423,23 +435,23 @@ function SpaceOffersPanel({
     <div className="flex flex-col gap-4 rounded-card border border-[color:var(--color-hairline)] bg-sp-ink/[0.03] p-5 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
         <p className="text-body text-sp-ink">
-          {mode === "offers" ? "Name your price" : `Buy a ${noun} now, or offer less`}
+          {mode === "offers" ? t("board.stats.nameYourPrice") : t("board.space.buyNowOrOffer", { noun })}
         </p>
         <p className="mt-1 text-small text-sp-ink/85">
-          For any open {noun}. Accepted? You get the next free one and 24 hours to pay.
-          {n !== null && (n === 0 ? " No offers yet." : n === 1 ? " 1 open offer." : ` ${n} open offers.`)}
+          {t("board.space.forAnyOpen", { noun })}
+          {n !== null && ` ${t("board.space.openOffers", { count: n })}`}
         </p>
         {reserved && (
           <p className="mt-1 text-tiny text-sp-amber">
-            An accepted offer holds a {noun} for{" "}
-            {now === null ? `until ${instantUtc(reserved)}` : timeLeft(Date.parse(reserved) - now)} while it waits for
-            its payment.
+            {now === null
+              ? t("board.space.holdsUntil", { noun, when: instantUtc(reserved) })
+              : t("board.space.holdsFor", { noun, left: timeLeft(Date.parse(reserved) - now) })}
           </p>
         )}
       </div>
       {canOffer && (
         <button type="button" className={mode === "offers" ? btnSmall : btnSmallSecondary} onClick={onOffer}>
-          Make an offer
+          {t("board.chip.makeOffer")}
         </button>
       )}
     </div>
@@ -448,17 +460,19 @@ function SpaceOffersPanel({
 
 /** The offers and bids this browser made on the space, each with its link. */
 function YourOffers({ offers }: { offers: SavedOffer[] }) {
+  const t = useT();
   return (
     <div className="mb-10 flex flex-col gap-3 rounded-card border border-amber/40 bg-amber/[0.06] p-5">
       <p className="text-small text-sp-ink">
-        {offers.length === 1 ? "You made an offer here from this browser." : `You made ${offers.length} offers here from this browser.`}
+        {t("board.space.yourOffers", { count: offers.length })}
       </p>
       <ul className="flex flex-wrap gap-2">
         {offers.slice(0, 6).map((o) => (
           <li key={o.token}>
             <a href={offerPath(o.token)} rel="noreferrer" className={btnSmallSecondary}>
-              {o.kind === "bid" ? "Your bid" : "Your offer"}
-              {o.label ? ` on ${o.label}` : ""}: {usdFromUsdc(o.amountUsdc)}
+              {o.label
+                ? t("board.space.yourOfferOn", { kind: o.kind, label: o.label, amount: usdFromUsdc(o.amountUsdc) })
+                : t("board.space.yourOffer", { kind: o.kind, amount: usdFromUsdc(o.amountUsdc) })}
             </a>
           </li>
         ))}

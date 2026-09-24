@@ -24,16 +24,19 @@
 
 import type { CSSProperties } from "react";
 
+import { t } from "@/lib/app/i18n";
+
 import { contrast, inkOn, normalHex } from "./product-look";
 
 export const PAGE_GROUND_PRESETS = ["hold", "app", "night", "white"] as const;
 export type PageGroundPreset = (typeof PAGE_GROUND_PRESETS)[number];
 
+/** Getters: each read is in the language on screen. */
 export const PAGE_GROUND_LABEL: Record<PageGroundPreset, string> = {
-  hold: "HOLD blue",
-  app: "App dark",
-  night: "Night black",
-  white: "White",
+  get hold() { return t("board.ground.hold"); },
+  get app() { return t("board.ground.app"); },
+  get night() { return t("board.ground.night"); },
+  get white() { return t("board.ground.white"); },
 };
 
 /** The app's dark shell (hihodl-wallet `colors.bg`, `brand.almostBlack`). */

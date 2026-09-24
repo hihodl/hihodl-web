@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { DownloadLink } from "@/components/site/DownloadLink";
 import { Wordmark } from "@/components/site/Wordmark";
 import { SUPPORT_EMAIL } from "@/lib/ad-space/config";
+import { t } from "@/lib/app/i18n";
 import {
   payChainsOf,
   payChainsText,
@@ -30,7 +31,7 @@ import { creatorPath, creatorScreenPath } from "./creator";
 import { SpaceSiblings } from "./events";
 import { IfItDoesNotHappen } from "./IfItDoesNotHappen";
 import { WhatTheBrandGets } from "./WhatTheBrandGets";
-import { btnPrimary, btnSmallSecondary, card, eyebrow } from "./ui";
+import { btnPrimary, btnSmallSecondary, card, eyebrow, rich } from "./ui";
 
 /**
  * The listing page, read by a sponsor who arrived from a creator's post on X.
@@ -52,30 +53,30 @@ import { btnPrimary, btnSmallSecondary, card, eyebrow } from "./ui";
 export function SlimHeader() {
   return (
     <header className="container-page flex h-16 items-center justify-between gap-4">
-      <Link href="/" className="flex items-center text-sp-ink" aria-label="Home">
+      <Link href="/" className="flex items-center text-sp-ink" aria-label={t("board.listing.home")}>
         <Wordmark className="h-5 w-auto" />
       </Link>
-      <DownloadLink className={btnSmallSecondary}>Get HOLD</DownloadLink>
+      <DownloadLink className={btnSmallSecondary}>{t("board.listing.getHold")}</DownloadLink>
     </header>
   );
 }
 
 /** The links a page needs, and the HOLD logo at the very bottom. Nothing to read. */
 export function SpaceFooter({ space }: { space: Space }) {
-  const report = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(`Report HiSpace ${space.id}`)}`;
+  const report = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(t("board.listing.reportSubject", { id: space.id }))}`;
   const link = "text-sp-ink/80 transition-colors duration-180 hover:text-sp-ink";
   return (
     <footer className="hairline">
       <div className="container-page flex flex-col gap-6 py-10">
         <nav className="flex flex-wrap gap-x-6 gap-y-3 text-tiny" aria-label="HiSpace">
           <a href={report} className={link}>
-            Report this HiSpace
+            {t("board.listing.report")}
           </a>
           <Link href="/terms" className={link}>
-            Terms
+            {t("board.listing.terms")}
           </Link>
           <Link href="/privacy" className={link}>
-            Privacy
+            {t("board.listing.privacy")}
           </Link>
         </nav>
         <Link href="/" aria-label="HOLD" className="self-start text-sp-ink/85 transition-colors duration-180 hover:text-sp-ink">
@@ -102,8 +103,8 @@ export function ListingHead({ space }: { space: Space }) {
     : space.kind === "service"
       ? custom
         ? name
-        : `Sponsored ${name.toLowerCase()}`
-      : `Your brand on a ${name.toLowerCase()}`;
+        : t("board.listing.sponsored", { name: name.toLowerCase() })
+      : t("board.listing.yourBrandOn", { name: name.toLowerCase() });
 
   return (
     <div className="flex flex-col gap-5">
@@ -118,7 +119,7 @@ export function ListingHead({ space }: { space: Space }) {
             &larr;
           </span>
           <span className="truncate">
-            All of @{space.creator.xHandle} at {space.event.name}
+            {t("board.listing.allAt", { handle: space.creator.xHandle, event: space.event.name })}
           </span>
         </Link>
       )}
@@ -155,7 +156,7 @@ function CrewBlock({ crew }: { crew: NonNullable<Space["crew"]> | null }) {
   if (!crew || crew.members.length < 2) return null;
   return (
     <div className="flex max-w-2xl flex-col gap-3 rounded-[18px] border border-[color:var(--color-hairline-strong)] bg-[#141F2E]/40 p-4">
-      <p className={`${eyebrow} text-sp-amber`}>{`${crew.name} · ${crew.members.length} creators, one package`}</p>
+      <p className={`${eyebrow} text-sp-amber`}>{t("board.crew.title", { name: crew.name, count: crew.members.length })}</p>
       <ul className="flex flex-col gap-2.5">
         {crew.members.map((m, i) => (
           <li key={`${m.handle ?? "m"}-${i}`} className="flex min-w-0 items-center gap-3">
@@ -176,8 +177,8 @@ function CrewBlock({ crew }: { crew: NonNullable<Space["crew"]> | null }) {
             )}
             <div className="min-w-0">
               <p className="truncate text-small text-sp-ink">
-                {m.handle ? `@${m.handle}` : m.name ?? "A creator"}
-                {m.isLead ? <span className="text-sp-ink/85"> · lead</span> : null}
+                {m.handle ? `@${m.handle}` : m.name ?? t("board.crew.aCreator")}
+                {m.isLead ? <span className="text-sp-ink/85"> · {t("board.crew.lead")}</span> : null}
               </p>
               <p className="break-words text-tiny text-sp-ink/85 [overflow-wrap:anywhere]">{m.service}</p>
             </div>
@@ -186,8 +187,8 @@ function CrewBlock({ crew }: { crew: NonNullable<Space["crew"]> | null }) {
       </ul>
       <p className="text-tiny text-sp-ink/85">
         {crew.ready
-          ? "You pay once. That one payment reaches every creator in the crew, straight to their own wallets."
-          : "This crew is still agreeing its terms. Spots open for sale as soon as everyone has said yes."}
+          ? t("board.crew.ready")
+          : t("board.crew.agreeing")}
       </p>
     </div>
   );
@@ -211,17 +212,23 @@ function InspiredByCredit({ credit }: { credit: NonNullable<Space["inspiredBy"]>
   const cls = "text-sp-ink transition-colors duration-180 hover:text-sp-amber";
   return (
     <p className="-mt-2 text-tiny text-sp-ink/85">
-      Inspired by{" "}
-      {!somewhere ? (
-        <span className="text-sp-ink">@{credit.handle}</span>
-      ) : hold ? (
-        <Link href={href} className={cls}>
-          @{credit.handle}
-        </Link>
-      ) : (
-        <a href={href} target="_blank" rel="noopener noreferrer" className={cls}>
-          @{credit.handle}
-        </a>
+      {rich(
+        "board.listing.inspiredBy",
+        { handle: credit.handle },
+        {
+          handle: (c) =>
+            !somewhere ? (
+              <span className="text-sp-ink">{c}</span>
+            ) : hold ? (
+              <Link href={href} className={cls}>
+                {c}
+              </Link>
+            ) : (
+              <a href={href} target="_blank" rel="noopener noreferrer" className={cls}>
+                {c}
+              </a>
+            ),
+        },
       )}
     </p>
   );
@@ -246,9 +253,9 @@ function CreatorChip({ creator: c }: { creator: Creator }) {
         </p>
         <p className="text-tiny text-sp-ink/85">
           {[
-            `${compactNumber(c.xFollowers)} followers`,
+            t("board.creator.followers", { followers: compactNumber(c.xFollowers) }),
             c.xVerifiedType ? VERIFIED_LABEL[c.xVerifiedType] : null,
-            c.xIdentityVerified ? "ID verified by X" : null,
+            c.xIdentityVerified ? t("board.creator.idVerified") : null,
           ]
             .filter(Boolean)
             .join(" · ")}
@@ -318,7 +325,10 @@ function startingPrice(space: Space): { label: string; value: string } | null {
   }
   if (least === null) return null;
   const allBids = bids && space.pricingMode === "bids";
-  return { label: allBids ? "Bids from" : "Starting price", value: `from ${usdFromCents(least)}` };
+  return {
+    label: allBids ? t("board.stats.bidsFrom") : t("board.stats.startingPrice"),
+    value: t("board.stats.from", { amount: usdFromCents(least) }),
+  };
 }
 
 /** A segment per spot: sold, being paid, open — and on a takeover board, taken but still takeable. */
@@ -346,7 +356,7 @@ export function SpaceStats({ space }: { space: Space }) {
   const session = isSessionSpace(space);
   const isTakeover = space.pricingMode === "takeover";
   const tiered = isTieredSpace(space);
-  const noun = session ? "sessions" : space.kind === "service" ? (tiered ? "packages" : "slots") : "spots";
+  const noun = session ? "session" : space.kind === "service" ? (tiered ? "package" : "slot") : "spot";
   const closed = space.status !== "live";
   const soldOut = spaceSoldOut(space);
   const left = takeableSpots(space);
@@ -355,33 +365,39 @@ export function SpaceStats({ space }: { space: Space }) {
      would read as a space nobody wants, so the money figure waits for a sale. */
   const noTotal = totals.totalCents === null || space.pricingMode === "offers" || space.pricingMode === "bids";
   const money = funding
-    ? { label: "Raised", value: funding.raised, sub: `of ${funding.goal} goal · ${funding.percent}%` }
+    ? {
+        label: t("board.stats.raised"),
+        value: funding.raised,
+        sub: t("board.stats.ofGoal", { goal: funding.goal, percent: funding.percent }),
+      }
     : !noTotal || totals.committedCents > 0
-      ? { label: "Backed by brands", value: usdFromCents(totals.committedCents), sub: null }
+      ? { label: t("board.stats.backed"), value: usdFromCents(totals.committedCents), sub: null }
       : null;
   const price = startingPrice(space);
   const segments = space.positions.map((p) => segmentTone(p, isTakeover));
-  const cta = session ? "Book a session" : space.kind === "service" ? `Claim your ${tiered ? "package" : "slot"}` : "Claim your spot";
+  const cta = session
+    ? t("board.stats.bookSession")
+    : t("board.stats.claim", { noun: space.kind === "service" ? (tiered ? "package" : "slot") : "spot" });
 
   const facts: { label: string; value: ReactNode }[] = [];
   if (price) facts.push({ label: price.label, value: price.value });
-  else if (!soldOut) facts.push({ label: "Price", value: "Name your price" });
+  else if (!soldOut) facts.push({ label: t("board.stats.price"), value: t("board.stats.nameYourPrice") });
   facts.push({
-    label: session ? "Booking closes" : "Sales close",
+    label: session ? t("board.stats.bookingCloses") : t("board.stats.salesClose"),
     value: (
       <>
         {calendarDate(space.closesAt)}
         <span className="block text-tiny text-sp-ink/80">
-          {closed ? "Closed" : <ClosesCountdown closesAt={space.closesAt} closed={closed} />}
+          {closed ? t("board.closes.closed") : <ClosesCountdown closesAt={space.closesAt} closed={closed} />}
         </span>
       </>
     ),
   });
   for (const k of space.keyDates.slice(0, 2)) facts.push({ label: k.label, value: calendarDate(k.date) });
-  if (facts.length < 4) facts.push({ label: "Pay with", value: `USDC on ${payChainsText(space)}` });
+  if (facts.length < 4) facts.push({ label: t("board.stats.payWith"), value: t("board.stats.usdcOn", { chains: payChainsText(space) }) });
 
   return (
-    <section className="container-page py-10 md:py-14" aria-label="Availability">
+    <section className="container-page py-10 md:py-14" aria-label={t("board.stats.availability")}>
       <div className={`${card} flex flex-col gap-7 p-5 md:p-8`}>
         <div className={`grid gap-6 ${money ? "grid-cols-2" : "grid-cols-1"}`}>
           {money && (
@@ -389,16 +405,16 @@ export function SpaceStats({ space }: { space: Space }) {
           )}
           {soldOut ? (
             <Stat
-              label="Available"
-              value={isTakeover ? "Settled" : session ? "Fully booked" : "Sold out"}
-              sub={`All ${totals.positions} ${noun} taken`}
+              label={t("board.stats.available")}
+              value={isTakeover ? t("board.stats.settled") : session ? t("board.stats.fullyBooked") : t("board.stats.soldOut")}
+              sub={t("board.stats.allTaken", { noun, total: totals.positions })}
             />
           ) : (
             <Stat
-              label={isTakeover ? "Up for grabs" : "Available"}
+              label={isTakeover ? t("board.stats.upForGrabs") : t("board.stats.available")}
               value={String(left)}
-              of={`of ${totals.positions}`}
-              sub={session ? "sessions" : space.kind === "service" ? "slots" : "spots"}
+              of={t("board.stats.ofTotal", { total: totals.positions })}
+              sub={t("board.stats.unit", { noun: session ? "session" : space.kind === "service" ? "slot" : "spot" })}
             />
           )}
         </div>
@@ -407,14 +423,14 @@ export function SpaceStats({ space }: { space: Space }) {
           <div
             className="flex h-3 gap-[3px]"
             role="img"
-            aria-label={`${left} of ${totals.positions} ${noun} available`}
+            aria-label={t("board.stats.leftOfNoun", { noun, left, total: totals.positions })}
           >
             {segments.map((tone, i) => (
               <span key={i} className={`h-full min-w-0 flex-1 rounded-[3px] ${SEGMENT[tone]}`} />
             ))}
           </div>
         ) : (
-          <div className="h-3 overflow-hidden rounded-[6px] bg-moonlight/30" role="img" aria-label={`${left} of ${totals.positions} available`}>
+          <div className="h-3 overflow-hidden rounded-[6px] bg-moonlight/30" role="img" aria-label={t("board.stats.leftOf", { left, total: totals.positions })}>
             <div
               className="h-full bg-amber"
               style={{ width: `${totals.positions ? ((totals.positions - left) / totals.positions) * 100 : 0}%` }}
@@ -424,8 +440,17 @@ export function SpaceStats({ space }: { space: Space }) {
 
         <ul className="-mt-4 flex flex-wrap gap-x-4 gap-y-1 text-tiny text-sp-ink/80" aria-hidden>
           {(isTakeover
-            ? ([["sold", "Settled"], ["takeable", "Taken, can be taken over"], ["held", "Being paid"], ["open", "Open"]] as const)
-            : ([["sold", session ? "Booked" : "Sold"], ["held", "Being paid"], ["open", "Open"]] as const)
+            ? ([
+                ["sold", t("board.stats.settled")],
+                ["takeable", t("board.legend.takeable")],
+                ["held", t("board.status.held")],
+                ["open", t("board.legend.open")],
+              ] as const)
+            : ([
+                ["sold", session ? t("board.sessionStatus.sold") : t("board.status.sold")],
+                ["held", t("board.status.held")],
+                ["open", t("board.legend.open")],
+              ] as const)
           ).map(([tone, word]) => (
             <li key={tone} className="flex items-center gap-1.5">
               <span className={`h-2 w-2 rounded-[2px] ${SEGMENT[tone]}`} />
@@ -475,39 +500,41 @@ function Stat({ label, value, of, sub }: { label: string; value: string; of?: st
  */
 function ModeNote({ space }: { space: Space }) {
   const who = `@${space.creator.xHandle}`;
-  const x = space.takeoverMultiple && space.takeoverMultiple !== 2 ? `${space.takeoverMultiple}x` : "double";
+  const multiple = space.takeoverMultiple && space.takeoverMultiple !== 2 ? space.takeoverMultiple : null;
   if (space.pricingMode === "takeover") {
     return (
-      <Note line={`Any spot can be taken: pay ${x} and it's yours.`}>
-        <p>The price on a spot is where bidding opens. Once sold, anyone can take it from its sponsor for {x} the price.</p>
+      <Note
+        line={multiple ? t("board.mode.takeover.lineTimes", { multiple }) : t("board.mode.takeover.lineDouble")}
+      >
+        <p>{multiple ? t("board.mode.takeover.howTimes", { multiple }) : t("board.mode.takeover.howDouble")}</p>
         <p>
-          The sponsor who loses a spot gets back everything they paid, in the same transaction.
-          {payChainsOf(space).length > 1 ? " A spot changes hands on the chain it was bought on." : ""}
+          {t("board.mode.takeover.payback")}
+          {payChainsOf(space).length > 1 ? ` ${t("board.mode.takeover.sameChain")}` : ""}
         </p>
       </Note>
     );
   }
   if (space.pricingMode === "bids") {
     return (
-      <Note line="Highest bid wins.">
-        <p>Each spot is its own auction. A bid in the last 10 minutes adds 10 more. When bidding ends, {who} accepts a bid.</p>
-        <p>Nothing is paid when you bid. If yours is accepted, you have 24 hours to pay.</p>
+      <Note line={t("board.mode.bids.line")}>
+        <p>{t("board.mode.bids.auction", { who })}</p>
+        <p>{t("board.mode.bids.nothingPaid")}</p>
       </Note>
     );
   }
   if (space.pricingMode === "offers") {
     return (
-      <Note line="No set price: make an offer.">
-        <p>{who} accepts, counters or declines. Nothing is paid when you offer.</p>
-        <p>If yours is accepted, you have 24 hours to pay.</p>
+      <Note line={t("board.mode.offers.line")}>
+        <p>{t("board.mode.offers.answers", { who })}</p>
+        <p>{t("board.mode.offers.pay")}</p>
       </Note>
     );
   }
   if (space.acceptsOffers) {
     return (
-      <Note line="Buy now, or make an offer.">
-        <p>Offer less than the price and {who} accepts, counters or declines. Nothing is paid when you offer.</p>
-        <p>If yours is accepted, you have 24 hours to pay.</p>
+      <Note line={t("board.mode.acceptsOffers.line")}>
+        <p>{t("board.mode.acceptsOffers.answers", { who })}</p>
+        <p>{t("board.mode.offers.pay")}</p>
       </Note>
     );
   }
@@ -526,7 +553,7 @@ export function Note({ line, children }: { line: string; children: ReactNode }) 
         >
           i
         </span>
-        <span className="sr-only">How it works</span>
+        <span className="sr-only">{t("board.note.howItWorks")}</span>
       </summary>
       <div className="mt-3 flex max-w-xl flex-col gap-2 text-sp-ink/85">{children}</div>
     </details>
@@ -540,9 +567,9 @@ export function BeforeYouPay({ space }: { space: Space }) {
   const declares = space.attestations.map(attestationText);
   return (
     <section className="container-page py-12 md:py-16" aria-labelledby="what-you-get">
-      <p className={`${eyebrow} text-sp-cool`}>Before you pay</p>
+      <p className={`${eyebrow} text-sp-cool`}>{t("board.beforeYouPay.eyebrow")}</p>
       <h2 id="what-you-get" className="mt-3 font-display text-h3 font-light text-sp-ink md:text-h2">
-        What you get
+        {t("board.beforeYouPay.title")}
       </h2>
       {/* items-start: each card is as tall as what it says. Stretched to the
           taller column, a two-line list was a big empty box. */}
@@ -550,7 +577,7 @@ export function BeforeYouPay({ space }: { space: Space }) {
         <WhatTheBrandGets space={space} />
         <div className="flex flex-col gap-5">
           <IfItDoesNotHappen space={space} />
-          <Block title="Key dates">
+          <Block title={t("board.beforeYouPay.keyDates")}>
             <ul className="flex flex-col gap-2.5">
               {space.keyDates.map((k, i) => (
                 <li key={`${k.date}-${i}`} className="flex items-baseline justify-between gap-4 text-small">
@@ -559,7 +586,7 @@ export function BeforeYouPay({ space }: { space: Space }) {
                 </li>
               ))}
               <li className="flex items-baseline justify-between gap-4 text-small">
-                <span className="text-sp-ink">{session ? "Booking closes" : "Sales close"}</span>
+                <span className="text-sp-ink">{session ? t("board.stats.bookingCloses") : t("board.stats.salesClose")}</span>
                 <span className="shrink-0 font-mono text-sp-ink/85">{calendarDate(space.closesAt)}</span>
               </li>
             </ul>
@@ -568,7 +595,7 @@ export function BeforeYouPay({ space }: { space: Space }) {
       </div>
       {declares.length > 0 && (
         <p className="mt-5 text-tiny text-sp-ink/80">
-          @{space.creator.xHandle} declares that they {joinWords(declares)}.
+          {t("board.beforeYouPay.declares", { handle: space.creator.xHandle, what: joinWords(declares) })}
         </p>
       )}
     </section>
@@ -586,7 +613,7 @@ function Block({ title, children }: { title: string; children: ReactNode }) {
 
 function joinWords(items: string[]): string {
   if (items.length <= 1) return items.join("");
-  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+  return t("board.list.and", { first: items.slice(0, -1).join(", "), last: items[items.length - 1] });
 }
 
 /* ── How it works: four steps ──────────────────────────────────────── */
@@ -600,54 +627,56 @@ function steps(space: Space): Step[] {
   const thing = service ? (tiered ? "package" : "slot") : "spot";
   // Where this creator can be paid right now (payableChains), never a list of every chain.
   const chains = payChainsText(space);
+  const step = (title: string, body: string): Step => ({ title, body });
+  const payInUsdc = t("board.steps.payInUsdc");
+  const payWithin = step(t("board.steps.payWithin.title"), t("board.steps.payWithin.body", { chains }));
   const send = service
-    ? { title: "Send your brief", body: "Right after paying, tell the creator what to feature." }
-    : { title: "Send your logo", body: "Upload it right after paying. The creator approves it." };
+    ? step(t("board.steps.sendBrief.title"), t("board.steps.sendBrief.body"))
+    : step(t("board.steps.sendLogo.title"), t("board.steps.sendLogo.body"));
   const last = service
-    ? {
-        title: "It goes live",
-        body: space.deliverBy ? `Delivered by ${calendarDate(space.deliverBy)}, linked on this page.` : "Each delivery is linked on this page.",
-      }
-    : { title: "Ride along", body: "Your brand goes where the creator goes, in front of their audience, in every post listed above." };
+    ? step(
+        t("board.steps.goesLive.title"),
+        space.deliverBy
+          ? t("board.steps.goesLive.deliveredBy", { date: calendarDate(space.deliverBy) })
+          : t("board.steps.goesLive.linked"),
+      )
+    : step(t("board.steps.rideAlong.title"), t("board.steps.rideAlong.body"));
 
   if (session) {
     return [
-      { title: "Book a session", body: "Pick one below." },
-      { title: "Pay in USDC", body: `From any wallet, on ${chains}.` },
-      { title: "Send your contact", body: "The creator sets the time and place with you." },
-      { title: "Meet, then confirm", body: "Only a session you confirm counts as delivered." },
+      step(t("board.steps.book.title"), t("board.steps.pickOneBelow")),
+      step(payInUsdc, t("board.steps.fromAnyWallet", { chains })),
+      step(t("board.steps.sendContact.title"), t("board.steps.sendContact.body")),
+      step(t("board.steps.meet.title"), t("board.steps.meet.body")),
     ];
   }
   if (space.pricingMode === "takeover") {
     return [
-      { title: `Pick a ${thing}`, body: "An open one, or one somebody already holds." },
-      { title: "Pay in USDC", body: "Taking a held spot pays its sponsor back in full." },
+      step(t("board.steps.pick", { noun: thing }), t("board.steps.takeover.pick")),
+      step(payInUsdc, t("board.steps.takeover.pay")),
       send,
-      { title: "Hold it", body: "It's yours until someone pays more for it." },
+      step(t("board.steps.takeover.hold.title"), t("board.steps.takeover.hold.body")),
     ];
   }
   if (space.pricingMode === "bids") {
     return [
-      { title: "Place a bid", body: "Nothing is paid or locked." },
-      { title: "Highest bid wins", body: "The creator accepts a bid when bidding ends." },
-      { title: "Pay within 24 hours", body: `In USDC, from any wallet, on ${chains}.` },
+      step(t("board.steps.bids.place.title"), t("board.steps.bids.place.body")),
+      step(t("board.steps.bids.wins.title"), t("board.steps.bids.wins.body")),
+      payWithin,
       send,
     ];
   }
   if (space.pricingMode === "offers") {
     return [
-      { title: "Make an offer", body: "Name your price. Nothing is paid or locked." },
-      { title: "The creator answers", body: "Accept, counter or decline." },
-      { title: "Pay within 24 hours", body: `In USDC, from any wallet, on ${chains}.` },
+      step(t("board.steps.offers.make.title"), t("board.steps.offers.make.body")),
+      step(t("board.steps.offers.answers.title"), t("board.steps.offers.answers.body")),
+      payWithin,
       send,
     ];
   }
   return [
-    { title: `Pick a ${thing}`, body: service ? "Pick one below." : "Tap an open spot on the drawing." },
-    {
-      title: "Pay in USDC",
-      body: tiered ? "Or bid or offer, where a package says so." : `From any wallet, on ${chains}.`,
-    },
+    step(t("board.steps.pick", { noun: thing }), service ? t("board.steps.pickOneBelow") : t("board.steps.tapOpenSpot")),
+    step(payInUsdc, tiered ? t("board.steps.orBidOrOffer") : t("board.steps.fromAnyWallet", { chains })),
     send,
     last,
   ];
@@ -657,7 +686,7 @@ export function HowItWorks({ space }: { space: Space }) {
   return (
     <section className="container-page py-12 md:py-16" aria-labelledby="how-it-works">
       <h2 id="how-it-works" className="font-display text-h3 font-light text-sp-ink md:text-h2">
-        How it works
+        {t("board.howItWorks.title")}
       </h2>
       <ol className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {steps(space).map((s, i) => (
@@ -682,8 +711,8 @@ export function SpaceUpdates({ space }: { space: Space }) {
 
   return (
     <section className="container-page py-12 md:py-16">
-      <p className={`${eyebrow} text-sp-amber`}>From @{space.creator.xHandle}</p>
-      <h2 className="mt-3 font-display text-h3 font-light text-sp-ink md:text-h2">Updates</h2>
+      <p className={`${eyebrow} text-sp-amber`}>{t("board.updates.from", { handle: space.creator.xHandle })}</p>
+      <h2 className="mt-3 font-display text-h3 font-light text-sp-ink md:text-h2">{t("board.updates.title")}</h2>
       <ol className="mt-8 flex max-w-2xl flex-col gap-5">
         {updates.map((u) => (
           <li key={u.id} className={`${card} overflow-hidden`}>
@@ -695,7 +724,9 @@ export function SpaceUpdates({ space }: { space: Space }) {
               {u.body && <p className="whitespace-pre-line break-words text-body text-sp-ink [overflow-wrap:anywhere]">{u.body}</p>}
               <p className="text-tiny text-sp-ink/80">
                 <time dateTime={u.createdAt}>{relativeTime(u.createdAt, now)}</time>
-                {u.positionId && labelOf.get(u.positionId) ? ` · Proof for ${labelOf.get(u.positionId)}` : ""}
+                {u.positionId && labelOf.get(u.positionId)
+                  ? ` · ${t("board.updates.proofFor", { label: labelOf.get(u.positionId) })}`
+                  : ""}
               </p>
             </div>
           </li>
@@ -717,17 +748,18 @@ export function SpaceInvite({ space }: { space: Space }) {
   if (!invite) return null;
 
   return (
-    <section className="hairline" aria-label="Sell your own HiSpace">
+    <section className="hairline" aria-label={t("board.invite.sellYourOwn")}>
       <div className="container-page flex flex-col gap-2 py-8 sm:flex-row sm:items-baseline sm:justify-between sm:gap-8">
         <p className="text-small text-sp-ink/85">
-          {isSessionSpace(space) ? "Sell your time at events, like" : "Have an audience? Sell sponsorships, like"} @
-          {space.creator.xHandle}.
+          {isSessionSpace(space)
+            ? t("board.invite.sellTime", { handle: space.creator.xHandle })
+            : t("board.invite.sellSponsorships", { handle: space.creator.xHandle })}
         </p>
         <a
           href={invite.url}
           className="self-start whitespace-nowrap text-small text-sp-ink/85 underline-offset-4 transition-colors duration-180 hover:text-sp-ink hover:underline"
         >
-          Sell your own HiSpace
+          {t("board.invite.sellYourOwn")}
         </a>
       </div>
     </section>
@@ -741,11 +773,9 @@ export function SpaceUnavailable() {
     <section className="container-page flex min-h-[60vh] flex-col justify-center py-20">
       <p className={`${eyebrow} text-sp-amber`}>HiSpace</p>
       <h1 className="mt-5 max-w-2xl font-display text-h3 font-light text-sp-ink md:text-h2">
-        We couldn&rsquo;t load this board just now.
+        {t("board.unavailable.title")}
       </h1>
-      <p className="mt-5 max-w-xl text-body text-sp-ink/85">
-        This is on our side, not the link. Give it a moment and refresh the page.
-      </p>
+      <p className="mt-5 max-w-xl text-body text-sp-ink/85">{t("board.unavailable.body")}</p>
     </section>
   );
 }
