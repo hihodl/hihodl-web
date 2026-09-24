@@ -6,11 +6,17 @@
  * `web` says whether the product has screens here yet; the ones that do not
  * open an honest card that sends the person to the app. When Stays or eSIM
  * get web screens, flipping `web` and adding their routes is the whole change.
+ *
+ * The words are getters: each reads the language on screen when it is read,
+ * at render, never when this module loads. A component drawing them calls
+ * useT() so it re-renders when the language changes.
  */
 
 import type { ComponentType, ReactNode, SVGProps } from "react";
 
 import { APP_STORE_URL, PLAY_STORE_URL } from "@/lib/appLinks";
+import { t } from "@/lib/app/i18n";
+import { useT } from "@/lib/app/i18n/react";
 
 import { IconBed, IconChevronRight, IconMegaphone, IconSim } from "../icons";
 
@@ -34,34 +40,54 @@ export interface Product {
 export const PRODUCTS: readonly Product[] = [
   {
     key: "stays",
-    name: "Stays",
+    get name() {
+      return t("home.products.stays.name");
+    },
     path: "/travel",
     icon: IconBed,
     tone: "#2FBE8A",
-    door: "Find a stay",
-    sub: "Search hotels wherever you're going",
-    about: "Hotels wherever you're going, priced in the app, and HiPoints back on the nights you book.",
+    get door() {
+      return t("home.products.stays.door");
+    },
+    get sub() {
+      return t("home.products.stays.sub");
+    },
+    get about() {
+      return t("home.products.stays.about");
+    },
     web: true,
   },
   {
     key: "esim",
+    // A product name, the same in every language.
     name: "eSIM",
     path: "/esim",
     icon: IconSim,
     tone: "#7CC2D1",
-    door: "Data abroad",
-    sub: "No roaming bill",
-    about: "Mobile data for the country you're going to. Pick a plan in the app, install the eSIM, and you're online when you land.",
+    get door() {
+      return t("home.products.esim.door");
+    },
+    get sub() {
+      return t("home.products.esim.sub");
+    },
+    get about() {
+      return t("home.products.esim.about");
+    },
     web: false,
   },
   {
     key: "spaces",
+    // The product's name, the same in every language.
     name: "Spaces",
     path: "/spaces",
     icon: IconMegaphone,
     tone: "#FFB703",
-    door: "Sell sponsor spots",
-    sub: "On your gear or your content, paid in USDC straight to you",
+    get door() {
+      return t("home.products.spaces.door");
+    },
+    get sub() {
+      return t("home.products.spaces.sub");
+    },
     about: "",
     web: true,
   },
@@ -87,6 +113,7 @@ export function ProductIcon({ product, size = 40 }: { product: Product; size?: n
 
 /** A row that is a door: icon, the product's words, a chevron. */
 export function DoorRow({ product, right }: { product: Product; right?: ReactNode }) {
+  useT();
   return (
     <>
       <ProductIcon product={product} />

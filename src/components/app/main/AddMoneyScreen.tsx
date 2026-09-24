@@ -48,6 +48,7 @@ import { useHoldWallet } from "@/lib/app/hold-wallet";
 import type { RailAccount } from "@/lib/app/hold-api";
 import { useAliases, useRailAccounts } from "@/lib/app/money";
 import { useMe, useMyAddresses } from "@/lib/app/spaces-data";
+import { Rich, useT } from "@/lib/app/i18n/react";
 
 import { useProductHref } from "../base";
 import { BackHeader, Column } from "../hold";
@@ -61,6 +62,7 @@ import { StoreButtons } from "./products";
 type Screen = "grid" | "receive" | "link" | "bank" | "cash";
 
 export function AddMoneyScreen() {
+  const t = useT();
   const [screen, setScreen] = useState<Screen>("grid");
   const back = () => setScreen("grid");
 
@@ -72,9 +74,9 @@ export function AddMoneyScreen() {
       <InTheApp
         onBack={back}
         icon="wallet-outline"
-        title="Add cash"
-        sub="Debit or credit card"
-        about="Buying with a card goes through our on-ramp provider and its checkout. That flow lives in the app; the web never starts a card charge."
+        title={t("home.add.cash.title")}
+        sub={t("home.add.tile.cashSub")}
+        about={t("home.add.cash.about")}
       />
     );
 
@@ -84,6 +86,7 @@ export function AddMoneyScreen() {
 /* ── The grid ─────────────────────────────────────────────────────── */
 
 function Grid({ onOpen }: { onOpen: (s: Screen) => void }) {
+  const t = useT();
   const rails = useRailAccounts();
   const href = useProductHref();
   const hasVA = (rails.data?.accounts?.length ?? 0) > 0;
@@ -93,18 +96,24 @@ function Grid({ onOpen }: { onOpen: (s: Screen) => void }) {
       <div className="grid grid-cols-1 gap-3 pt-1 sm:grid-cols-2">
         <Tile
           icon="business-outline"
-          title="Bank Transfer"
-          sub={rails.data === undefined ? "Wire, ACH or SEPA" : hasVA ? "Wire or ACH to your account" : "Get a personal bank account"}
-          badge={rails.data !== undefined && !hasVA ? "SETUP" : undefined}
+          title={t("home.add.tile.bank")}
+          sub={
+            rails.data === undefined
+              ? t("home.add.tile.bankSubLoading")
+              : hasVA
+                ? t("home.add.tile.bankSubHas")
+                : t("home.add.tile.bankSubNone")
+          }
+          badge={rails.data !== undefined && !hasVA ? t("home.add.tile.setup") : undefined}
           onClick={() => onOpen("bank")}
         />
-        <Tile icon="wallet-outline" title="Add Cash" sub="Debit or credit card" onClick={() => onOpen("cash")} />
-        <Tile icon="qr-code-outline" title="Receive Crypto" sub="QR & wallet addresses" onClick={() => onOpen("receive")} />
-        <Tile icon="link-outline" title="Request Link" sub="Share your hi.me link" onClick={() => onOpen("link")} />
+        <Tile icon="wallet-outline" title={t("home.add.tile.cash")} sub={t("home.add.tile.cashSub")} onClick={() => onOpen("cash")} />
+        <Tile icon="qr-code-outline" title={t("home.add.tile.receive")} sub={t("home.add.tile.receiveSub")} onClick={() => onOpen("receive")} />
+        <Tile icon="link-outline" title={t("home.add.tile.request")} sub={t("home.add.tile.requestSub")} onClick={() => onOpen("link")} />
         {/* The app's row 3: a way to be paid by somebody with no HOLD account,
             from any wallet, free. A page of its own rather than a panel here,
             because a link is opened again and again after it is made. */}
-        <Tile icon="card-outline" title="Pay link" sub="Get paid from any wallet" href={href("/pay-links")} />
+        <Tile icon="card-outline" title={t("home.add.tile.payLink")} sub={t("home.add.tile.payLinkSub")} href={href("/pay-links")} />
       </div>
     </Column>
   );
@@ -163,6 +172,7 @@ function Tile({
  * chains.
  */
 function ReceiveMoney({ onBack }: { onBack: () => void }) {
+  const t = useT();
   const wallet = useHoldWallet();
   const addrs = useMyAddresses();
   const a = addrs.data ?? {};
@@ -177,7 +187,7 @@ function ReceiveMoney({ onBack }: { onBack: () => void }) {
   if (wallet.loading || (addrs.data === undefined && !addrs.error)) {
     return (
       <Column>
-        <BackHeader title="Receive" onBack={onBack} />
+        <BackHeader title={t("common.receive")} onBack={onBack} />
         <Skeleton className="mx-auto h-[420px] w-full max-w-[460px]" />
       </Column>
     );
@@ -186,11 +196,11 @@ function ReceiveMoney({ onBack }: { onBack: () => void }) {
   if (Object.keys(addresses).length === 0) {
     return (
       <Column>
-        <BackHeader title="Receive" onBack={onBack} />
+        <BackHeader title={t("common.receive")} onBack={onBack} />
         <p className="px-1 pt-2 text-[13.5px] leading-[19px] text-[#9FB7C2]">
           {addrs.error
-            ? "We could not read your addresses just now. Nothing has changed — try again in a moment."
-            : "There is no address to be paid on yet. Make your wallet and it appears here."}
+            ? t("home.add.receive.readFailed")
+            : t("home.add.receive.none")}
         </p>
       </Column>
     );
@@ -215,6 +225,7 @@ function ReceiveMoney({ onBack }: { onBack: () => void }) {
  * username is chosen.
  */
 function RequestLink({ onBack }: { onBack: () => void }) {
+  const t = useT();
   const me = useMe();
   const aliases = useAliases();
   const href = useProductHref();
@@ -224,7 +235,7 @@ function RequestLink({ onBack }: { onBack: () => void }) {
   const fromAlias = aliases.data?.[0]?.alias?.replace(/^@/, "") ?? null;
   const name = fromAlias || chosenUsername(me.data);
   const link = name ? `https://hi.me/${name}` : null;
-  const displayName = me.data?.profile.displayName?.trim() || (name ? `@${name}` : "You");
+  const displayName = me.data?.profile.displayName?.trim() || (name ? `@${name}` : t("common.you"));
   const loading = aliases.data === undefined && !aliases.error;
 
   const copy = () => {
@@ -257,14 +268,14 @@ function RequestLink({ onBack }: { onBack: () => void }) {
 
   return (
     <Column>
-      <BackHeader title="Request via link" onBack={onBack} />
+      <BackHeader title={t("home.add.request.title")} onBack={onBack} />
       <section className="rounded-[18px] border border-white/10 bg-white/[0.06] p-6 text-center">
         <div className="flex justify-center">
           <UserAvatar size={80} fallbackName={displayName} />
         </div>
         <p className="mt-4 text-[22px] font-bold text-white">{displayName}</p>
         <p className="mx-auto mt-2 max-w-[320px] text-[14px] leading-5 text-[#9FB7C2]">
-          Share your Hi.me link so anyone can pay you
+          {t("home.add.request.lead")}
         </p>
 
         {loading ? (
@@ -275,7 +286,7 @@ function RequestLink({ onBack }: { onBack: () => void }) {
             <button
               type="button"
               onClick={copy}
-              aria-label="Copy link"
+              aria-label={t("home.add.request.copyLink")}
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/[0.08] transition-colors hover:bg-white/[0.14]"
             >
               <Ion name={copied ? "checkmark" : "copy-outline"} size={16} color={copied ? GREEN : "#89D7FF"} />
@@ -283,11 +294,16 @@ function RequestLink({ onBack }: { onBack: () => void }) {
           </div>
         ) : (
           <p className="mt-5 text-[13px] leading-[18px] text-white/55">
-            You have no username yet, so there is no link to share.{" "}
-            <Link href={href("/account")} className="underline decoration-white/30 underline-offset-2 hover:text-white">
-              Choose one in Account
-            </Link>
-            .
+            <Rich
+              k="home.add.request.noUsername"
+              tags={{
+                link: (c) => (
+                  <Link href={href("/account")} className="underline decoration-white/30 underline-offset-2 hover:text-white">
+                    {c}
+                  </Link>
+                ),
+              }}
+            />
           </p>
         )}
       </section>
@@ -299,12 +315,12 @@ function RequestLink({ onBack }: { onBack: () => void }) {
           className="mt-4 flex h-[52px] w-full items-center justify-center gap-2 rounded-[16px] bg-[#F1F5F9] text-[15px] font-strong text-[#0A1420] transition-opacity hover:opacity-90"
         >
           <Ion name="share-outline" size={18} color="#0A1420" />
-          {shared ? "Copied" : "Share link"}
+          {shared ? t("common.copied") : t("home.add.request.share")}
         </button>
       ) : null}
 
       <p className="mt-3 px-1 text-[12px] leading-[17px] text-white/55">
-        Asking for a specific amount, and the QR that carries it, happen in the HOLD app.
+        {t("home.add.request.amountInApp")}
       </p>
     </Column>
   );
@@ -336,13 +352,14 @@ function RequestLink({ onBack }: { onBack: () => void }) {
  * call.
  */
 function BankTransfer({ onBack }: { onBack: () => void }) {
+  const t = useT();
   const rails = useRailAccounts();
   const accounts = rails.data?.accounts ?? [];
 
   if (rails.data === undefined && !rails.error) {
     return (
       <Column>
-        <BackHeader title="Bank transfer" onBack={onBack} />
+        <BackHeader title={t("home.add.bank.title")} onBack={onBack} />
         <Skeleton className="h-[220px] rounded-[18px]" />
       </Column>
     );
@@ -353,19 +370,18 @@ function BankTransfer({ onBack }: { onBack: () => void }) {
       <InTheApp
         onBack={onBack}
         icon="business-outline"
-        title="Bank transfer"
-        sub="Get a personal bank account"
-        about="An account number of your own, in your name. What arrives in it lands in your HOLD balance. Opening one starts with an identity check that reads your document and matches it to your face — that scanner only exists in the app, so this is the one thing here a browser cannot finish."
+        title={t("home.add.bank.title")}
+        sub={t("home.add.tile.bankSubNone")}
+        about={t("home.add.bank.about")}
       />
     );
   }
 
   return (
     <Column>
-      <BackHeader title="Bank transfer" onBack={onBack} />
+      <BackHeader title={t("home.add.bank.title")} onBack={onBack} />
       <p className="mb-4 px-1 text-[13px] leading-[19px] text-[#9FB7C2]">
-        {accounts.length === 1 ? "Your account. " : "Your accounts. "}
-        Money sent here lands in your HOLD balance.
+        {t("home.add.bank.lead", { count: accounts.length })}
       </p>
       <div className="flex flex-col gap-3">
         {accounts.map((a, i) => (
@@ -373,7 +389,7 @@ function BankTransfer({ onBack }: { onBack: () => void }) {
         ))}
       </div>
       <p className="mt-4 px-1 text-[12px] leading-[17px] text-white/70">
-        Opening another currency happens in the app, where the identity check runs.
+        {t("home.add.bank.anotherCurrency")}
       </p>
     </Column>
   );
@@ -388,21 +404,23 @@ function BankTransfer({ onBack }: { onBack: () => void }) {
  * number, and an empty labelled row reads as something broken.
  */
 function RailAccountCard({ account }: { account: RailAccount }) {
+  const t = useT();
   const labels = account.fieldLabels ?? {};
   const name = (key: string, fallback: string) => labels[key] ?? fallback;
   const fields: { label: string; value: string }[] = [];
   const push = (key: string, fallback: string, value: string | null | undefined) => {
     if (value) fields.push({ label: name(key, fallback), value });
   };
-  push("accountHolderName", "Account holder", account.accountHolderName);
+  // The rail's own words win; ours are the fallback. IBAN and BIC are codes, the same everywhere.
+  push("accountHolderName", t("home.add.bank.field.accountHolder"), account.accountHolderName);
   push("iban", "IBAN", account.iban);
   push("bic", "BIC", account.bic);
-  push("accountNumber", "Account number", account.accountNumber);
-  push("routingNumber", "Routing number", account.routingNumber);
-  push("sortCode", "Sort code", account.sortCode);
-  push("paymentCode", "Payment code", account.paymentCode);
-  push("reference", "Reference", account.reference);
-  push("bankName", "Bank", account.bankName);
+  push("accountNumber", t("home.add.bank.field.accountNumber"), account.accountNumber);
+  push("routingNumber", t("home.add.bank.field.routingNumber"), account.routingNumber);
+  push("sortCode", t("home.add.bank.field.sortCode"), account.sortCode);
+  push("paymentCode", t("home.add.bank.field.paymentCode"), account.paymentCode);
+  push("reference", t("home.add.bank.field.reference"), account.reference);
+  push("bankName", t("home.add.bank.field.bank"), account.bankName);
 
   return (
     <section className="flex flex-col gap-3 rounded-[18px] border border-white/10 bg-white/[0.06] p-5">
@@ -420,7 +438,7 @@ function RailAccountCard({ account }: { account: RailAccount }) {
 
       {fields.length === 0 ? (
         <p className="text-[13px] leading-[18px] text-[#CFE3EC]">
-          This account is open, but its deposit details have not come back from the provider yet. They appear here as soon as they do.
+          {t("home.add.bank.pendingDetails")}
         </p>
       ) : (
         <dl className="flex flex-col">
@@ -437,6 +455,7 @@ function RailAccountCard({ account }: { account: RailAccount }) {
 }
 
 function InTheApp({ onBack, icon, title, sub, about }: { onBack: () => void; icon: IonName; title: string; sub: string; about: string }) {
+  const t = useT();
   return (
     <Column>
       <BackHeader title={title} onBack={onBack} />
@@ -452,13 +471,13 @@ function InTheApp({ onBack, icon, title, sub, about }: { onBack: () => void; ico
         </div>
         <p className="text-[14px] leading-relaxed text-[#CFE3EC]">{about}</p>
         <div className="rounded-[14px] border border-white/10 bg-white/[0.04] px-4 py-3">
-          <p className="text-[13px] font-medium text-white">Available in the HOLD app for now</p>
-          <p className="mt-0.5 text-[12px] text-[#9FB7C2]">Sign in there with the same account. It comes to the web next.</p>
+          <p className="text-[13px] font-medium text-white">{t("home.add.inApp.title")}</p>
+          <p className="mt-0.5 text-[12px] text-[#9FB7C2]">{t("home.add.inApp.body")}</p>
         </div>
         <StoreButtons />
         <p className="flex items-center gap-2 text-[12px] leading-[17px] text-white/55">
           <Ion name="qr-code-outline" size={14} color={SUB} />
-          Receiving crypto and your hi.me link work here, on the screen before this one.
+          {t("home.add.inApp.receiveHere")}
         </p>
       </section>
     </Column>

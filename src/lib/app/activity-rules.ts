@@ -36,9 +36,14 @@ import {
   swapActivityTitle,
   type DisplayMode,
 } from "./display-mode";
+import { t } from "./i18n";
+import { fmtDate, fmtNumber, fmtTime } from "./i18n/format";
 import { isStable } from "./money";
 
 export type { DisplayMode };
+
+/** `t`, under a name `toPaymentItem`'s own `t` (the transfer) does not shadow. */
+const tr = t;
 
 /* ── What a row is, once it is a row ──────────────────────────────── */
 
@@ -60,6 +65,8 @@ export interface PaymentItem {
   date: string;
   /** The signed display string the row prints, or "Processing…". */
   amount: string;
+  /** True when the amount is not known yet and `amount` says "Processing…". */
+  processing?: boolean;
   type: PaymentKind;
   /** The server's own verb, when it sent one. Beats our vocabulary. */
   actionLabel?: string;
@@ -138,7 +145,7 @@ export function parseTransferAmount(raw: unknown, chain?: string, tokenId?: stri
 /** The app's `fmtTokenAmount`: two decimals for a dollar, five for anything else. */
 export function fmtTokenAmount(amount: number, symbol: string): string {
   if (!Number.isFinite(amount)) return "0";
-  return amount.toLocaleString("en-US", { maximumFractionDigits: isStable(symbol) ? 2 : 5 });
+  return fmtNumber(amount, { maximumFractionDigits: isStable(symbol) ? 2 : 5 });
 }
 
 function shortAddress(address?: string | null): string | null {
@@ -192,10 +199,11 @@ export function toPaymentItem(t: Transfer, mode: DisplayMode): PaymentItem {
       title: swapActivityTitle({ fromSym: symbol, toSym: symbolTo, displayFrom: displaySym, displayTo: displaySymTo, mode }),
       type: "exchange",
       amount: received
-        ? `+ ${amountTo.toFixed(amountTo < 1 ? 5 : 2)} ${displaySymTo}`
+        ? `+ ${fmtNumber(amountTo, { minimumFractionDigits: amountTo < 1 ? 5 : 2, maximumFractionDigits: amountTo < 1 ? 5 : 2, useGrouping: false })} ${displaySymTo}`
         : valid
           ? `- ${amountText} ${displaySym}`
-          : "Processing…",
+          : tr("activity.processing"),
+      processing: !received && !valid,
       // Only when there is a received side: a legacy swap must never print the
       // one amount it knows twice.
       amountSecondary: received && valid ? `- ${amountText} ${displaySym}` : undefined,
@@ -212,20 +220,19 @@ export function toPaymentItem(t: Transfer, mode: DisplayMode): PaymentItem {
   if (direction === "move") {
     const from = t.fromAddress || "main";
     const to = t.toAddress || "savings";
-    const LABEL: Record<string, string> = { main: "Main", savings: "Savings", earning: "Earning" };
-    title = `${LABEL[from] ?? from} → ${LABEL[to] ?? to}`;
+    title = `${systemName(from) ?? from} → ${systemName(to) ?? to}`;
     sign = "";
     signed = valid ? amount : 0;
     type = "move";
   } else if (direction === "in") {
     // `merchantName` first: money can arrive from an address of OURS (a
     // refund), and the fallback would print our treasury into the row.
-    title = t.merchantName?.trim() || t.fromAlias || shortAddress(t.fromAddress) || "Deposit";
+    title = t.merchantName?.trim() || t.fromAlias || shortAddress(t.fromAddress) || tr("activity.row.deposit");
     sign = "+";
     signed = valid ? amount : 0;
     type = "in";
   } else {
-    title = t.merchantName?.trim() || t.toAlias || shortAddress(t.toAddress) || "Unknown";
+    title = t.merchantName?.trim() || t.toAlias || shortAddress(t.toAddress) || tr("activity.row.unknown");
     sign = "-";
     signed = valid ? -amount : 0;
     type = "out";
@@ -235,7 +242,8 @@ export function toPaymentItem(t: Transfer, mode: DisplayMode): PaymentItem {
     ...common,
     title,
     type,
-    amount: valid ? `${sign} ${displaySym} ${amountText}`.trim() : "Processing…",
+    amount: valid ? `${sign} ${displaySym} ${amountText}`.trim() : tr("activity.processing"),
+    processing: !valid,
     actionLabel: t.actionLabel || undefined,
     tokenAmount: signed,
     usdValueAtTx: t.usdValueAtTx ?? undefined,
@@ -247,7 +255,19 @@ export function toPaymentItem(t: Transfer, mode: DisplayMode): PaymentItem {
 
 /* ── Names ────────────────────────────────────────────────────────── */
 
-const SYSTEM_NAME: Record<string, string> = { main: "Main", savings: "Savings", earning: "Earning" };
+/** The three names the system gives, in the language on screen; null for anything else. */
+function systemName(slug: string): string | null {
+  switch (slug) {
+    case "main":
+      return t("activity.account.main");
+    case "savings":
+      return t("activity.account.savings");
+    case "earning":
+      return t("activity.account.earning");
+    default:
+      return null;
+  }
+}
 
 /**
  * A slug as the person named it. Resolved at render, not baked into the row,
@@ -258,11 +278,12 @@ const SYSTEM_NAME: Record<string, string> = { main: "Main", savings: "Savings", 
  * name the other end of itself.
  */
 export function resolveAccountName(slug: string | null | undefined, subaccounts: readonly LedgerSubaccount[]): string {
-  if (!slug) return "Account";
+  if (!slug) return t("activity.account.fallback");
   const key = String(slug).toLowerCase();
   const found = subaccounts.find((s) => s.slug.toLowerCase() === key);
   if (found?.displayName) return found.displayName;
-  if (SYSTEM_NAME[key]) return SYSTEM_NAME[key];
+  const system = systemName(key);
+  if (system) return system;
   return key.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
@@ -279,17 +300,17 @@ export function activityAction(type: PaymentKind): string {
   switch (type) {
     case "in":
     case "income":
-      return "Received";
+      return t("activity.action.received");
     case "out":
-      return "Sent";
+      return t("activity.action.sent");
     case "move":
-      return "Moved";
+      return t("activity.action.moved");
     case "exchange":
-      return "Swapped";
+      return t("activity.action.swapped");
     case "refund":
-      return "Refunded";
+      return t("activity.action.refunded");
     default:
-      return "Activity";
+      return t("activity.action.activity");
   }
 }
 
@@ -402,7 +423,7 @@ function groupKey(item: PaymentItem): string | null {
 
 function amountDisplay(sample: PaymentItem, total: number, mode: DisplayMode): string {
   const symbol = maskSymbol(sample.tokenSymbol ?? "", mode);
-  const magnitude = Math.abs(total).toFixed(2);
+  const magnitude = fmtNumber(Math.abs(total), { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false });
   // A move is deliberately unsigned — see moveSignForScope.
   if (sample.type === "move") return symbol ? `${symbol} ${magnitude}` : magnitude;
   return `${total < 0 ? "-" : "+"} ${symbol} ${magnitude}`;
@@ -636,13 +657,13 @@ export function dayLabel(date: Date | string): string {
   const today = new Date();
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
-  if (isSameDay(d, today)) return "Today";
-  if (isSameDay(d, yesterday)) return "Yesterday";
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  if (isSameDay(d, today)) return t("common.today");
+  if (isSameDay(d, yesterday)) return t("common.yesterday");
+  return fmtDate(d, { month: "short", day: "numeric" });
 }
 
 /** The row's time, with the day already said by the divider above it. */
 export function timeLabel(date: Date | string): string {
   const d = typeof date === "string" ? new Date(date) : date;
-  return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+  return fmtTime(d, { hour: "numeric", minute: "2-digit" });
 }

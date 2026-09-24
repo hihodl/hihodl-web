@@ -44,6 +44,9 @@ import {
 import type { PayLinkPayment } from "@/lib/pay-links/types";
 import { chainLabel } from "@/lib/app/payments";
 import { showChainContext } from "@/lib/app/display-mode";
+import type { MessageKey } from "@/lib/app/i18n";
+import { fmtNumber } from "@/lib/app/i18n/format";
+import { useT } from "@/lib/app/i18n/react";
 
 import { useShellPrefs } from "../Shell";
 import { useProductHref } from "../base";
@@ -84,34 +87,37 @@ function Tag({ label, tone = "calm" }: { label: string; tone?: Tone }) {
   );
 }
 
-const LINK_TAG: Record<string, { label: string; tone: Tone }> = {
-  active: { label: "Open", tone: "good" },
-  paid: { label: "Paid", tone: "good" },
-  closed: { label: "Closed", tone: "dim" },
-  expired: { label: "Expired", tone: "dim" },
-  disabled: { label: "Taken down", tone: "caution" },
+const LINK_TAG: Record<string, { labelKey: MessageKey; tone: Tone }> = {
+  active: { labelKey: "home.payLinks.status.active", tone: "good" },
+  paid: { labelKey: "home.payLinks.status.paid", tone: "good" },
+  closed: { labelKey: "home.payLinks.status.closed", tone: "dim" },
+  expired: { labelKey: "home.payLinks.status.expired", tone: "dim" },
+  disabled: { labelKey: "home.payLinks.status.disabled", tone: "caution" },
 };
 
-const PAYMENT_TAG: Record<string, { label: string; tone: Tone }> = {
-  paid: { label: "Paid", tone: "good" },
-  paid_duplicate: { label: "Paid twice", tone: "caution" },
-  awaiting_payment: { label: "Confirming", tone: "calm" },
-  unpaid: { label: "Not paid", tone: "dim" },
+const PAYMENT_TAG: Record<string, { labelKey: MessageKey; tone: Tone }> = {
+  paid: { labelKey: "home.payLinks.payment.paid", tone: "good" },
+  paid_duplicate: { labelKey: "home.payLinks.payment.paidDuplicate", tone: "caution" },
+  awaiting_payment: { labelKey: "home.payLinks.payment.awaiting", tone: "calm" },
+  unpaid: { labelKey: "home.payLinks.payment.unpaid", tone: "dim" },
 };
 
 function StatusTag({ status }: { status: string }) {
+  const t = useT();
   const tag = LINK_TAG[status];
-  return <Tag label={tag?.label ?? status} tone={tag?.tone ?? "dim"} />;
+  return <Tag label={tag ? t(tag.labelKey) : status} tone={tag?.tone ?? "dim"} />;
 }
 
 function PaymentTag({ status }: { status: string }) {
+  const t = useT();
   const tag = PAYMENT_TAG[status];
-  return <Tag label={tag?.label ?? status} tone={tag?.tone ?? "dim"} />;
+  return <Tag label={tag ? t(tag.labelKey) : status} tone={tag?.tone ?? "dim"} />;
 }
 
 /* ── The list ─────────────────────────────────────────────────────── */
 
 function PayLinkList({ onOpen }: { onOpen: (id: string) => void }) {
+  const t = useT();
   const links = useMyPayLinks();
   const href = useProductHref();
   const rows = links.data ?? [];
@@ -121,17 +127,16 @@ function PayLinkList({ onOpen }: { onOpen: (id: string) => void }) {
   return (
     <Column>
       {/* The app opens this from Add money, and so does the web: back goes there. */}
-      <BackHeader title="Pay links" backHref={href("/add")} />
+      <BackHeader title={t("home.payLinks.title")} backHref={href("/add")} />
 
       <section className={`${cardClass} flex flex-col gap-2.5 p-4`}>
-        <h2 className="text-[17px] font-bold tracking-[-0.3px] text-white">Get paid by anyone, from any wallet</h2>
+        <h2 className="text-[17px] font-bold tracking-[-0.3px] text-white">{t("home.payLinks.introTitle")}</h2>
         <p className="text-[13.5px] leading-[19px] text-[#CFE3EC]">
-          Share a link with someone who doesn&rsquo;t use HOLD. They pay in USDC from their own wallet, and it lands in yours. No
-          fee.
+          {t("home.payLinks.introBody")}
         </p>
         <p className="flex items-center gap-2 text-[12.5px] leading-[17px] text-white/55">
           <Ion name="phone-portrait-outline" size={14} color={SUB} />
-          New links are made in the HOLD app. The ones you have are here.
+          {t("home.payLinks.madeInApp")}
         </p>
       </section>
 
@@ -140,10 +145,10 @@ function PayLinkList({ onOpen }: { onOpen: (id: string) => void }) {
       {links.error && !links.data ? (
         <div className="mt-3.5 flex flex-col gap-2.5">
           <Notice icon="cloud-offline-outline">
-            {`Your pay links aren't loading. They're unchanged; this screen just couldn't reach them. ${describeMyPayLinkError(links.error)}`}
+            {t("home.payLinks.loadFailed", { reason: describeMyPayLinkError(links.error) })}
           </Notice>
           <button type="button" className={ctaSecondary} onClick={() => void links.mutate()}>
-            Try again
+            {t("common.tryAgain")}
           </button>
         </div>
       ) : null}
@@ -154,12 +159,12 @@ function PayLinkList({ onOpen }: { onOpen: (id: string) => void }) {
       ) : null}
 
       {links.data && rows.length === 0 ? (
-        <p className="py-6 text-center text-[13px] leading-[19px] text-white/55">No pay links yet. The first one takes a minute.</p>
+        <p className="py-6 text-center text-[13px] leading-[19px] text-white/55">{t("home.payLinks.empty")}</p>
       ) : null}
 
       {open.length > 0 ? (
         <section className="mt-4">
-          <SectionLabel>{`Open (${open.length})`}</SectionLabel>
+          <SectionLabel>{t("home.payLinks.openSection", { count: fmtNumber(open.length) })}</SectionLabel>
           <div className="flex flex-col gap-2.5">
             {open.map((l) => (
               <LinkRow key={l.id} link={l} onOpen={onOpen} />
@@ -170,7 +175,7 @@ function PayLinkList({ onOpen }: { onOpen: (id: string) => void }) {
 
       {done.length > 0 ? (
         <section className="mt-4">
-          <SectionLabel>Paid, closed or expired</SectionLabel>
+          <SectionLabel>{t("home.payLinks.doneSection")}</SectionLabel>
           <div className="flex flex-col gap-2.5">
             {done.map((l) => (
               <LinkRow key={l.id} link={l} onOpen={onOpen} />
@@ -184,6 +189,7 @@ function PayLinkList({ onOpen }: { onOpen: (id: string) => void }) {
 
 /** features/pay-links/components: LinkRow. */
 function LinkRow({ link, onOpen }: { link: MyPayLink; onOpen: (id: string) => void }) {
+  const t = useT();
   return (
     <button
       type="button"
@@ -198,7 +204,7 @@ function LinkRow({ link, onOpen }: { link: MyPayLink; onOpen: (id: string) => vo
       <span className="flex items-center justify-between gap-2.5">
         <span className="text-[12.5px] leading-[17px] text-white/[0.62]">{payLinkTotalsLine(link)}</span>
         {link.expiresAt && link.status === "active" ? (
-          <span className="shrink-0 text-[12.5px] leading-[17px] text-white/[0.62]">{`Until ${when(link.expiresAt)}`}</span>
+          <span className="shrink-0 text-[12.5px] leading-[17px] text-white/[0.62]">{t("home.payLinks.until", { date: when(link.expiresAt) })}</span>
         ) : null}
       </span>
     </button>
@@ -208,6 +214,7 @@ function LinkRow({ link, onOpen }: { link: MyPayLink; onOpen: (id: string) => vo
 /* ── One link ─────────────────────────────────────────────────────── */
 
 function PayLinkDetail({ id, onBack }: { id: string; onBack: () => void }) {
+  const t = useT();
   const detail = useMyPayLink(id);
   const { displayMode } = useShellPrefs();
   const withChains = showChainContext(displayMode);
@@ -219,12 +226,12 @@ function PayLinkDetail({ id, onBack }: { id: string; onBack: () => void }) {
   if (!detail.data) {
     return (
       <Column>
-        <BackHeader title="Pay links" onBack={onBack} />
+        <BackHeader title={t("home.payLinks.title")} onBack={onBack} />
         {detail.error ? (
           <div className="flex flex-col gap-2.5 pt-2">
             <Notice icon="cloud-offline-outline">{describeMyPayLinkError(detail.error)}</Notice>
             <button type="button" className={ctaSecondary} onClick={() => void detail.mutate()}>
-              Try again
+              {t("common.tryAgain")}
             </button>
           </div>
         ) : (
@@ -282,7 +289,7 @@ function PayLinkDetail({ id, onBack }: { id: string; onBack: () => void }) {
       {link.status === "disabled" ? (
         <div className="mb-2.5">
           <Notice icon="eye-off-outline">
-            This link was taken down after a review. Payers see &ldquo;This link is no longer available&rdquo;.
+            {t("home.payLinks.takenDown")}
           </Notice>
         </div>
       ) : null}
@@ -302,10 +309,10 @@ function PayLinkDetail({ id, onBack }: { id: string; onBack: () => void }) {
 
         <div className="mt-1 h-px bg-white/[0.08]" />
 
-        <KV k="Received" v={payLinkTotalsLine(link)} />
-        {withChains ? <KV k="Networks" v={link.chains.map((c) => chainLabel(c)).join(", ")} /> : null}
-        <KV k="Created" v={when(link.createdAt)} />
-        <KV k="Open until" v={link.expiresAt ? when(link.expiresAt) : "No end date"} />
+        <KV k={t("home.payLinks.kv.received")} v={payLinkTotalsLine(link)} />
+        {withChains ? <KV k={t("home.payLinks.kv.networks")} v={link.chains.map((c) => chainLabel(c)).join(", ")} /> : null}
+        <KV k={t("home.payLinks.kv.created")} v={when(link.createdAt)} />
+        <KV k={t("home.payLinks.kv.openUntil")} v={link.expiresAt ? when(link.expiresAt) : t("home.payLinks.kv.noEnd")} />
 
         <div className="mt-1 flex items-center gap-2.5 rounded-[12px] border border-white/[0.08] bg-black/[0.28] px-3 py-2.5">
           <Ion name="link-outline" size={15} color={SUB} />
@@ -320,37 +327,36 @@ function PayLinkDetail({ id, onBack }: { id: string; onBack: () => void }) {
         <div className="mt-3.5 flex flex-col gap-2.5">
           <button type="button" className={ctaPrimary} onClick={() => void share()}>
             <Ion name="share-outline" size={18} color="#0A1420" />
-            {shared ? "Copied" : "Share link"}
+            {shared ? t("common.copied") : t("home.payLinks.share")}
           </button>
 
           {confirming ? (
             <div className={`${cardClass} flex flex-col gap-2.5 p-3.5`}>
-              <p className="text-[14px] font-bold text-white">Close this link?</p>
+              <p className="text-[14px] font-bold text-white">{t("home.payLinks.close.title")}</p>
               <p className="text-[13px] leading-[18px] text-[#CFE3EC]">
-                Nobody can pay it after this. Payments already made stay in your wallet. A closed link can&rsquo;t be opened
-                again.
+                {t("home.payLinks.close.body")}
               </p>
               <div className="flex flex-wrap gap-2.5">
                 <button type="button" className={btnGlass} onClick={() => setConfirming(false)} disabled={closing}>
-                  Keep it open
+                  {t("home.payLinks.close.keep")}
                 </button>
                 <button type="button" className={btnGlass} onClick={() => void close()} disabled={closing}>
                   <Ion name="lock-closed-outline" size={16} />
-                  {closing ? "Closing…" : "Close link"}
+                  {closing ? t("home.payLinks.close.closing") : t("home.payLinks.close.cta")}
                 </button>
               </div>
             </div>
           ) : (
             <button type="button" className={`${btnGlass} self-start`} onClick={() => setConfirming(true)}>
               <Ion name="lock-closed-outline" size={16} />
-              Close link
+              {t("home.payLinks.close.cta")}
             </button>
           )}
         </div>
       ) : null}
 
       <section className="mt-4">
-        <SectionLabel>{`Payments (${payments.length})`}</SectionLabel>
+        <SectionLabel>{t("home.payLinks.paymentsSection", { count: fmtNumber(payments.length) })}</SectionLabel>
         {payments.length > 0 ? (
           <div className={`${cardClass} flex flex-col gap-3 p-3.5`}>
             {payments.map((p, i) => (
@@ -363,8 +369,8 @@ function PayLinkDetail({ id, onBack }: { id: string; onBack: () => void }) {
         ) : (
           <p className="text-[12.5px] leading-[17px] text-white/[0.62]">
             {open
-              ? "No payments yet. You'll get a notification when one lands."
-              : "This link received no payments."}
+              ? t("home.payLinks.noPaymentsOpen")
+              : t("home.payLinks.noPaymentsClosed")}
           </p>
         )}
       </section>
@@ -382,9 +388,10 @@ function KV({ k, v }: { k: string; v: string }) {
 }
 
 function PaymentLine({ payment, withChain }: { payment: PayLinkPayment; withChain: boolean }) {
+  const t = useT();
   const tx = paymentExplorerUrl(payment);
   const paidAt = payment.paidAt ?? payment.createdAt ?? null;
-  const line = [`From ${shortAddress(payment.payerAddress)}`, withChain ? chainLabel(payment.chain) : null, paidAt ? when(paidAt) : null]
+  const line = [t("home.payLinks.from", { address: shortAddress(payment.payerAddress) }), withChain ? chainLabel(payment.chain) : null, paidAt ? when(paidAt) : null]
     .filter(Boolean)
     .join(" · ");
 
@@ -398,14 +405,13 @@ function PaymentLine({ payment, withChain }: { payment: PayLinkPayment; withChai
         <p className="min-w-0 flex-1 truncate text-[12.5px] leading-[17px] text-white/[0.62]">{line}</p>
         <CopyButton
           value={payment.payerAddress}
-          label="Copy address"
+          label={t("home.payLinks.copyAddress")}
           className="shrink-0 text-[12px] font-bold text-white/70 hover:text-white"
         />
       </div>
       {payment.status === "paid_duplicate" ? (
         <p className="text-[12.5px] leading-[17px] text-white/[0.62]">
-          Paid after this one-payment link was already paid. The money is in your wallet; if it wasn&rsquo;t meant for you twice,
-          send it back.
+          {t("home.payLinks.paidTwice")}
         </p>
       ) : null}
       {tx ? (
@@ -416,7 +422,7 @@ function PaymentLine({ payment, withChain }: { payment: PayLinkPayment; withChai
           className="flex items-center gap-1.5 text-[12.5px] font-bold text-white/[0.62] underline underline-offset-2 hover:text-white"
         >
           <Ion name="open-outline" size={13} />
-          See the transaction
+          {t("home.payLinks.seeTx")}
         </a>
       ) : null}
     </div>

@@ -97,13 +97,16 @@ import {
   useTransfers,
   usdOf,
 } from "@/lib/app/money";
+import { t, listText } from "@/lib/app/i18n";
+import { fmtNumber, fmtPercent, fmtUsd } from "@/lib/app/i18n/format";
+import { useLocale, useT } from "@/lib/app/i18n/react";
 import { chainLabel } from "@/lib/app/payments";
 
 import { useProductHref } from "../base";
 import { Ion, type IonName } from "../ion";
 import { useShellPrefs } from "../Shell";
 import { glass, Skeleton } from "../ui";
-import { ActionsRow, HeroBalance, MiniAction, money, TokenIcon } from "../wallet/app-kit";
+import { ActionsRow, HeroBalance, MiniAction, TokenIcon } from "../wallet/app-kit";
 import { ReadFailed } from "../money/kit";
 import { SavingsPanel, SavingsRateLine } from "../money/SavingsScreen";
 import { ActivityRow, GREEN, readRow } from "./activity-parts";
@@ -134,10 +137,8 @@ interface Row {
   chain: string | null;
 }
 
+/** Coin and network names stay as they are; the two fiat names are words. */
 const NAMES: Record<string, string> = {
-  USDC: "US Dollar",
-  USDT: "US Dollar",
-  EURC: "Euro",
   SOL: "Solana",
   ETH: "Ethereum",
   BTC: "Bitcoin",
@@ -147,7 +148,10 @@ const NAMES: Record<string, string> = {
 /** What a row is called, after the BTC family has had its say. */
 function displayName(symbol: string, mode: DisplayMode): string {
   if (isBtcFamilySymbol(symbol)) return btcFamilyDisplayName(symbol, mode);
-  return NAMES[symbol.toUpperCase()] ?? symbol.toUpperCase();
+  const sym = symbol.toUpperCase();
+  if (sym === "USDC" || sym === "USDT") return t("home.token.usDollar");
+  if (sym === "EURC") return t("home.token.euro");
+  return NAMES[sym] ?? sym;
 }
 
 function tickerOf(b: Balance): string {
@@ -203,8 +207,8 @@ function overviewCount(rows: readonly Row[], mode: DisplayMode): number {
 }
 
 function overviewCountLabel(n: number, mode: DisplayMode): string {
-  if (mode === "fintech") return `${n} ${n === 1 ? "balance" : "balances"}`;
-  return `${n} ${n === 1 ? "token" : "tokens"}`;
+  if (mode === "fintech") return t("home.overview.balances", { count: n });
+  return t("home.overview.tokens", { count: n });
 }
 
 /* ── The screen ───────────────────────────────────────────────────── */
@@ -213,15 +217,21 @@ function overviewCountLabel(n: number, mode: DisplayMode): string {
 const HIDDEN = "••••••";
 
 /**
- * `money`, or dots when the person turned on Hide balances (Menu › Settings ›
- * Privacy, the app's own switch). Every figure on this screen goes through it.
+ * The dollar value in the display currency, or dots when the person turned on
+ * Hide balances (Menu › Settings › Privacy, the app's own switch). Every
+ * figure on this screen goes through it.
  */
 function useAmount(): (usd: number) => string {
   const { hideBalances } = useShellPrefs();
-  return useCallback((usd: number) => (hideBalances ? HIDDEN : money(usd)), [hideBalances]);
+  // Re-renders the caller when the language, the currency or the rates change.
+  useT();
+  return useCallback((usd: number) => (hideBalances ? HIDDEN : fmtUsd(usd)), [hideBalances]);
 }
 
 export function HomeScreen({ initialScope = "main" }: { initialScope?: string } = {}) {
+  const t = useT();
+  // The scope names and the rows' words follow the language (`t` is one function for every language).
+  const locale = useLocale();
   const href = useProductHref();
   const { displayMode, hideBalances, setHideBalances } = useShellPrefs();
   const amount = useAmount();
@@ -235,11 +245,12 @@ export function HomeScreen({ initialScope = "main" }: { initialScope?: string } 
   const scopes = useMemo<Scope[]>(() => {
     const pockets = subaccounts.filter((s) => s.slug !== "main" && s.slug !== "savings");
     return [
-      { slug: "main", label: "Main" },
-      { slug: "savings", label: "Savings" },
+      { slug: "main", label: t("home.scope.main") },
+      { slug: "savings", label: t("home.scope.savings") },
       ...pockets.map((p) => ({ slug: p.slug, label: p.displayName || p.slug })),
     ];
-  }, [subaccounts]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subaccounts, locale, t]);
 
   const [activeSlug, setActiveSlug] = useState(initialScope);
   const scope = scopes.find((s) => s.slug === activeSlug) ?? scopes[0];
@@ -314,9 +325,10 @@ export function HomeScreen({ initialScope = "main" }: { initialScope?: string } 
 
   /* The rows of this scope's activity, after the app's own rules. */
   const payments = useMemo<PaymentItem[]>(() => {
-    const all = (transfers.data?.transfers ?? []).map((t) => toPaymentItem(t, displayMode));
+    const all = (transfers.data?.transfers ?? []).map((tr) => toPaymentItem(tr, displayMode));
     return activityRows(all.filter((p) => rowInScope(p, scope.slug)), displayMode);
-  }, [transfers.data, scope.slug, displayMode]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [transfers.data, scope.slug, displayMode, locale]);
 
   const inScope = useMemo(() => (slug: string) => slug === scope.slug, [scope.slug]);
 
@@ -326,7 +338,7 @@ export function HomeScreen({ initialScope = "main" }: { initialScope?: string } 
   const moneyOut = useMemo(() => {
     const now = new Date();
     let total = 0;
-    for (const p of (transfers.data?.transfers ?? []).map((t) => toPaymentItem(t, displayMode))) {
+    for (const p of (transfers.data?.transfers ?? []).map((tr) => toPaymentItem(tr, displayMode))) {
       if (p.type !== "out") continue;
       if (!isStable(p.tokenSymbol ?? "")) continue;
       const d = new Date(p.date);
@@ -400,14 +412,14 @@ export function HomeScreen({ initialScope = "main" }: { initialScope?: string } 
             {readFailed ? (
               <>
                 <span className="block text-[48px] font-strong leading-[52px] text-white">—</span>
-                <p className="mt-2 text-[13px] text-[#9FB7C2]">We could not read your balance just now.</p>
+                <p className="mt-2 text-[13px] text-[#9FB7C2]">{t("home.balance.readFailed")}</p>
               </>
             ) : (
               // The app's hero: tapping the amount hides it, and shows it again.
               <button
                 type="button"
                 onClick={() => setHideBalances(!hideBalances)}
-                aria-label={hideBalances ? "Show balances" : "Hide balances"}
+                aria-label={hideBalances ? t("home.balance.show") : t("home.balance.hide")}
                 aria-pressed={hideBalances}
                 className="max-w-full"
               >
@@ -430,12 +442,14 @@ export function HomeScreen({ initialScope = "main" }: { initialScope?: string } 
             {/* What the total leaves out, said rather than hidden. */}
             {settled && supplied.failed.length > 0 ? (
               <p className="mt-2 px-4 text-center text-[12px] leading-[17px] text-amber">
-                {supplied.failed.join(" and ")} did not answer, so anything earning there is missing from this total.
+                {t("home.balance.venuesMissing", { venues: listText(supplied.failed) })}
               </p>
             ) : null}
             {settled && unpriced.length > 0 ? (
               <p className="mt-2 px-4 text-center text-[12px] leading-[17px] text-[#9FB7C2]">
-                {unpriced.length === 1 ? `${unpriced[0].symbol} has no price today, so it is` : `${unpriced.length} holdings have no price today, so they are`} not in this total.
+                {unpriced.length === 1
+                  ? t("home.balance.unpricedOne", { symbol: unpriced[0].symbol })
+                  : t("home.balance.unpricedMany", { count: fmtNumber(unpriced.length) })}
               </p>
             ) : null}
 
@@ -446,7 +460,7 @@ export function HomeScreen({ initialScope = "main" }: { initialScope?: string } 
                 onClick={() => setOverview(true)}
                 className="flex items-center gap-[5px] rounded-[10px] border border-white/[0.14] bg-white/[0.08] px-3 py-[7px] text-[12px] font-bold text-white transition-colors hover:bg-white/[0.12]"
               >
-                Overview
+                {t("home.overview.title")}
                 <Ion name="chevron-forward" size={12} color="rgba(255,255,255,0.55)" />
               </button>
             </div>
@@ -455,18 +469,18 @@ export function HomeScreen({ initialScope = "main" }: { initialScope?: string } 
           {/* ── Quick actions ── */}
           <div className="mt-7">
             <ActionsRow>
-              <MiniAction icon="add-circle-outline" label="Add" href={href("/add")} />
+              <MiniAction icon="add-circle-outline" label={t("home.actions.add")} href={href("/add")} />
               {/* /wallet/send answers everybody: a web wallet, one made in the app, or none yet. */}
               {gate.blocked ? (
-                <MiniAction icon="send-outline" label="Send" onClick={() => gate.ask(href("/wallet/send"))} />
+                <MiniAction icon="send-outline" label={t("common.send")} onClick={() => gate.ask(href("/wallet/send"))} />
               ) : (
-                <MiniAction icon="send-outline" label="Send" href={href("/wallet/send")} />
+                <MiniAction icon="send-outline" label={t("common.send")} href={href("/wallet/send")} />
               )}
               {/* Was "Accounts", which opened the Overview — the same panel the
                   bubble under the balance opens, two controls apart. Activity
                   takes the place: it left the column, and the card below shows
                   four rows of it, so this is the one-click way to the rest. */}
-              <MiniAction icon="time-outline" label="Activity" href={href("/activity")} />
+              <MiniAction icon="time-outline" label={t("home.actions.activity")} href={href("/activity")} />
             </ActionsRow>
           </div>
 
@@ -477,17 +491,17 @@ export function HomeScreen({ initialScope = "main" }: { initialScope?: string } 
           {cash ? (
             <>
               <HoldingsCard
-                label="Stables"
+                label={t("home.cards.stables")}
                 rows={stables.slice(0, CARD_ROWS)}
                 viewAll={stables.length > CARD_ROWS}
                 loading={!settled}
                 mode={displayMode}
               />
-              <HoldingsCard label="Earning" rows={earning} loading={false} mode={displayMode} />
+              <HoldingsCard label={t("home.cards.earning")} rows={earning} loading={false} mode={displayMode} />
             </>
           ) : null}
           <HoldingsCard
-            label="Assets"
+            label={t("home.cards.assets")}
             rows={assets.slice(0, CARD_ROWS)}
             viewAll={assets.length > CARD_ROWS}
             loading={cash ? false : !settled}
@@ -495,20 +509,20 @@ export function HomeScreen({ initialScope = "main" }: { initialScope?: string } 
           />
 
           {/* ── Activity ── */}
-          <section className={`${glass} mt-[18px]`} aria-label="Activity">
+          <section className={`${glass} mt-[18px]`} aria-label={t("home.activity.title")}>
             <header className="flex items-center justify-between px-4 pb-1 pt-4">
-              <h2 className="text-[11px] font-bold uppercase tracking-[0.6px] text-white/55">Activity</h2>
+              <h2 className="text-[11px] font-bold uppercase tracking-[0.6px] text-white/55">{t("home.activity.title")}</h2>
               {payments.length > RECENT_ACTIVITY_ROWS ? (
                 <Link
                   href={href("/activity")}
                   className="inline-flex h-7 items-center rounded-[14px] border border-white/[0.14] bg-white/[0.08] px-3 text-[12.5px] font-strong tracking-[-0.1px] text-white/70 transition-colors hover:text-white"
                 >
-                  See all
+                  {t("common.seeAll")}
                 </Link>
               ) : null}
             </header>
             {transfers.data === undefined && transfers.error ? (
-              <ReadFailed compact title="We couldn't load your activity" onRetry={() => void transfers.mutate()} />
+              <ReadFailed compact title={t("home.activity.loadFailed")} onRetry={() => void transfers.mutate()} />
             ) : transfers.data === undefined ? (
               <div className="flex flex-col gap-2 p-4">
                 <Skeleton className="h-12" />
@@ -520,8 +534,8 @@ export function HomeScreen({ initialScope = "main" }: { initialScope?: string } 
                 <span className="mb-2 flex h-14 w-14 items-center justify-center rounded-full bg-white/[0.05] text-[rgba(207,227,236,0.4)]">
                   <Ion name="time-outline" size={32} />
                 </span>
-                <p className="text-[15px] font-strong text-white">Your moves will appear here</p>
-                <p className="text-[13px] text-[#9FB7C2]">Send or receive to see your history</p>
+                <p className="text-[15px] font-strong text-white">{t("home.activity.emptyTitle")}</p>
+                <p className="text-[13px] text-[#9FB7C2]">{t("home.activity.emptyBody")}</p>
               </div>
             ) : (
               payments.slice(0, RECENT_ACTIVITY_ROWS).map((item, i) => (
@@ -548,7 +562,7 @@ export function HomeScreen({ initialScope = "main" }: { initialScope?: string } 
           <div className="mt-[18px] grid grid-cols-2 gap-2.5">
             <Link href={href("/activity")} className={`${glass} flex min-h-[104px] flex-col justify-between px-3.5 py-3.5 transition-colors hover:bg-white/[0.06]`}>
               <span className="flex items-center justify-between">
-                <span className="text-[11.5px] font-bold tracking-[0.3px] text-white/55">MONEY OUT</span>
+                <span className="text-[11.5px] font-bold tracking-[0.3px] text-white/55">{t("home.bento.moneyOut")}</span>
                 <span className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-white/[0.08] text-white/80">
                   <Ion name="arrow-up" size={16} />
                 </span>
@@ -557,19 +571,19 @@ export function HomeScreen({ initialScope = "main" }: { initialScope?: string } 
                 <span className="mt-2.5 block text-[22px] font-strong tracking-[-0.4px] tabular-nums text-white">
                   {transfers.data === undefined ? "—" : amount(moneyOut)}
                 </span>
-                <span className="mt-[3px] block text-[12px] text-white/55">This month</span>
+                <span className="mt-[3px] block text-[12px] text-white/55">{t("home.bento.thisMonth")}</span>
               </span>
             </Link>
             <Link href={href("/add")} className={`${glass} flex min-h-[104px] flex-col justify-between px-3.5 py-3.5 transition-colors hover:bg-white/[0.06]`}>
               <span className="flex items-center justify-between">
-                <span className="text-[11.5px] font-bold tracking-[0.3px] text-white/55">GET PAID</span>
+                <span className="text-[11.5px] font-bold tracking-[0.3px] text-white/55">{t("home.bento.getPaid")}</span>
                 <span className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-white/[0.08] text-white/80">
                   <Ion name="arrow-down" size={16} />
                 </span>
               </span>
               <span className="block">
-                <span className="mt-2.5 block text-[15px] font-strong text-white">Receive dollars</span>
-                <span className="mt-[3px] block text-[12px] text-white/55">Account, handle or QR</span>
+                <span className="mt-2.5 block text-[15px] font-strong text-white">{t("home.bento.receiveDollars")}</span>
+                <span className="mt-[3px] block text-[12px] text-white/55">{t("home.bento.receiveWays")}</span>
               </span>
             </Link>
           </div>
@@ -608,6 +622,7 @@ export function HomeScreen({ initialScope = "main" }: { initialScope?: string } 
  * Amber when it did not move.
  */
 function DeltaBadge({ usd, pct }: { usd: number; pct: number }) {
+  const t = useT();
   const up = usd > 0;
   const down = usd < 0;
   const skin = up
@@ -619,8 +634,8 @@ function DeltaBadge({ usd, pct }: { usd: number; pct: number }) {
   return (
     <span className={`inline-flex items-center gap-1 rounded-[12px] border px-2.5 py-[5px] ${skin}`}>
       <Ion name={glyph} size={12} />
-      <span className="text-[12px] font-bold tracking-[0.1px] tabular-nums">{`${up ? "+" : ""}${pct.toFixed(2)}%`}</span>
-      <span className="text-[11px] font-strong opacity-60">24h</span>
+      <span className="text-[12px] font-bold tracking-[0.1px] tabular-nums">{`${up ? "+" : ""}${fmtPercent(pct / 100, 2)}`}</span>
+      <span className="text-[11px] font-strong opacity-60">{t("home.balance.delta24h")}</span>
     </span>
   );
 }
@@ -639,7 +654,7 @@ function EarningLine({ earnedUsd }: { earnedUsd: number }) {
   if (!(earnedUsd >= 0.01)) return null;
   return (
     <p className="mt-2 text-[14px] font-bold tracking-[-0.1px]" style={{ color: GREEN }}>
-      {`+${amount(earnedUsd)} earned`}
+      {t("home.earned", { amount: amount(earnedUsd) })}
     </p>
   );
 }
@@ -666,6 +681,7 @@ function HoldingsCard({
   loading: boolean;
   mode: DisplayMode;
 }) {
+  const t = useT();
   if (loading) {
     return (
       <div className="mt-[18px]">
@@ -690,7 +706,7 @@ function HoldingsCard({
         ))}
         {viewAll ? (
           <p className="px-4 py-3.5 text-center text-[13px] font-strong text-white/55">
-            More of these live in the app
+            {t("home.cards.moreInApp")}
           </p>
         ) : null}
       </div>
@@ -709,7 +725,7 @@ function HoldingRow({ row, mode }: { row: Row; mode: DisplayMode }) {
   const { hideBalances } = useShellPrefs();
   const ticker = maskTokenSymbol(row.symbol, mode) || row.symbol;
   const known = row.symbol === "USDC" || row.symbol === "SOL";
-  const units = hideBalances ? HIDDEN : row.amount.toLocaleString("en-US", { maximumFractionDigits: isStable(row.symbol) ? 2 : 5 });
+  const units = hideBalances ? HIDDEN : fmtNumber(row.amount, { maximumFractionDigits: isStable(row.symbol) ? 2 : 5 });
   const fastBtc = btcFamilySubtitle(row.symbol, mode);
   const under = [`${units} ${ticker}`, row.chain ? chainLabel(row.chain) : fastBtc].filter(Boolean).join(" · ");
   return (
@@ -756,6 +772,7 @@ function Overview({
   mode: DisplayMode;
   onClose: () => void;
 }) {
+  const t = useT();
   const amount = useAmount();
   const vaults = scopes.map((s) => {
     const rows = holdingRows(balances?.[s.slug]?.balances ?? [], prices, mode);
@@ -771,14 +788,14 @@ function Overview({
 
   return (
     <div className="fixed inset-0 z-[70] flex items-end justify-center sm:items-center">
-      <button aria-label="Close overview" className="absolute inset-0 bg-[#030b13]/70 backdrop-blur-sm" onClick={onClose} />
+      <button aria-label={t("home.overview.close")} className="absolute inset-0 bg-[#030b13]/70 backdrop-blur-sm" onClick={onClose} />
       <div className={`${glass} relative m-3 flex max-h-[80dvh] w-full max-w-[460px] flex-col overflow-y-auto p-5`}>
         <div className="flex flex-col items-center">
-          <p className="text-[11px] font-bold uppercase tracking-[0.6px] text-white/55">Overview</p>
+          <p className="text-[11px] font-bold uppercase tracking-[0.6px] text-white/55">{t("home.overview.title")}</p>
           <p className="mt-1 text-[32px] font-strong leading-[38px] tabular-nums text-white">
             {balances === undefined ? "—" : amount(total)}
           </p>
-          <p className="mt-1 text-[12px] text-white/55">{`${vaults.length} vaults · ${overviewCountLabel(assets, mode)}`}</p>
+          <p className="mt-1 text-[12px] text-white/55">{t("home.overview.summary", { vaults: vaults.length, holdings: overviewCountLabel(assets, mode) })}</p>
         </div>
         <div className="mt-4 flex flex-col gap-2">
           {vaults.map((v) => (
@@ -786,7 +803,9 @@ function Overview({
               <span className="min-w-0">
                 <span className="block truncate text-[14px] font-strong text-white">{v.scope.label}</span>
                 <span className="mt-0.5 block truncate text-[12px] text-white/55">
-                  {`${overviewCountLabel(v.count, mode)}${v.split.isWorking ? " · Earning" : ""}`}
+                  {v.split.isWorking
+                    ? t("home.overview.earning", { holdings: overviewCountLabel(v.count, mode) })
+                    : overviewCountLabel(v.count, mode)}
                 </span>
               </span>
               <span className="text-right text-[14px] font-bold tabular-nums text-white">
@@ -796,7 +815,7 @@ function Overview({
           ))}
         </div>
         <p className="mt-4 text-[12px] leading-[17px] text-white/55">
-          Renaming a vault, changing its colour and creating a pocket all happen in the HOLD app.
+          {t("home.overview.note")}
         </p>
       </div>
     </div>
@@ -809,18 +828,19 @@ function Overview({
  * your first account", which is a write.
  */
 function EmptyState({ addHref }: { addHref: string }) {
+  const t = useT();
   return (
     <div className="flex flex-col items-center px-6 pt-10 text-center">
       <span className="mb-6 flex h-[120px] w-[120px] items-center justify-center rounded-full bg-[rgba(255,183,3,0.12)] text-amber">
         <Ion name="wallet-outline" size={64} />
       </span>
-      <h2 className="mb-3 text-[32px] font-strong leading-tight tracking-[-0.5px] text-white">Ready to get started?</h2>
+      <h2 className="mb-3 text-[32px] font-strong leading-tight tracking-[-0.5px] text-white">{t("home.empty.title")}</h2>
       <p className="max-w-[340px] text-[16px] leading-[24px] text-[#CFE3EC]">
-        Your Main and Savings accounts are here. Add money and it shows up on this screen.
+        {t("home.empty.body")}
       </p>
       <Link href={addHref} className="mt-7 inline-flex h-[52px] items-center justify-center gap-2 rounded-[26px] bg-amber px-6 text-[16px] font-extrabold tracking-[-0.2px] text-[#0F0F1A] transition-opacity hover:opacity-90">
         <Ion name="add-circle-outline" size={20} color="#0F0F1A" />
-        Add money
+        {t("home.empty.cta")}
       </Link>
     </div>
   );

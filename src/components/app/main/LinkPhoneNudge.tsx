@@ -34,6 +34,8 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { useHoldWallet } from "@/lib/app/hold-wallet";
+import { t } from "@/lib/app/i18n";
+import { useT } from "@/lib/app/i18n/react";
 import { useLinkedPhones, useWalletStatus } from "@/lib/app/spaces-data";
 import { thisDevice, type AppleDevice } from "@/lib/link/ua";
 import { payerOf } from "@/lib/wallet/api";
@@ -186,38 +188,38 @@ function wordsFor(kind: LinkNudgeCase, device: LinkNudge["device"]): Words {
   if (kind === "pay") {
     if (device === "android") {
       return {
-        title: "Link your phone to pay from here",
-        body: "Open HOLD on this phone to link it. From then on, the app approves every payment you start here.",
+        title: t("home.linkPhone.pay.title"),
+        body: t("home.linkPhone.pay.bodyAndroid"),
       };
     }
     if (device === "iPhone" || device === "iPad") {
       // Linking this iPhone adds no approver: the wallet's keys are on the
       // Android phone, which scans the code this screen shows (?show=android).
       return {
-        title: "Link your phone to pay from here",
-        body: "This wallet was made in the HOLD app on your Android phone. Show a code here, then open HOLD on your Android phone and scan it.",
+        title: t("home.linkPhone.pay.title"),
+        body: t("home.linkPhone.pay.bodyApple"),
       };
     }
     return {
-      title: "Link your phone to pay from here",
-      body: "This wallet was made in the HOLD app and its keys stay on your phone. Link it once and you can pay from here.",
+      title: t("home.linkPhone.pay.title"),
+      body: t("home.linkPhone.pay.body"),
     };
   }
   if (device === "iPhone" || device === "iPad") {
     return {
-      title: `Link this ${device}`,
-      body: `Your passkey already approves payments on this ${device}. Linking only records it as one of your devices.`,
+      title: t("home.linkPhone.approve.titleApple", { device }),
+      body: t("home.linkPhone.approve.bodyApple", { device }),
     };
   }
   if (device === "android") {
     return {
-      title: "Approve payments on your phone",
-      body: "Get HOLD on this phone and it approves every payment you start here. Until then, your passkey does.",
+      title: t("home.linkPhone.approve.title"),
+      body: t("home.linkPhone.approve.bodyAndroid"),
     };
   }
   return {
-    title: "Approve payments on your phone",
-    body: "Link your Android phone and the HOLD app approves every payment you start here. Until then, your passkey does.",
+    title: t("home.linkPhone.approve.title"),
+    body: t("home.linkPhone.approve.body"),
   };
 }
 
@@ -228,6 +230,7 @@ function wordsFor(kind: LinkNudgeCase, device: LinkNudge["device"]): Words {
  * it, calm otherwise. "Later" and, on Android, Google Play sit under the text.
  */
 export function LinkPhoneCard({ nudge }: { nudge: LinkNudge }) {
+  useT();
   if (!nudge.kind) return null;
   const strong = nudge.kind === "pay";
   const w = wordsFor(nudge.kind, nudge.device);
@@ -269,7 +272,7 @@ export function LinkPhoneCard({ nudge }: { nudge: LinkNudge }) {
             rel="noopener"
             className="inline-flex h-8 items-center rounded-[16px] border border-white/[0.14] bg-white/[0.08] px-3.5 text-[13px] font-bold text-white transition-colors hover:bg-white/[0.12]"
           >
-            Get HOLD on Google Play
+            {t("home.linkPhone.getOnPlay")}
           </a>
         ) : null}
         <button
@@ -277,7 +280,7 @@ export function LinkPhoneCard({ nudge }: { nudge: LinkNudge }) {
           onClick={nudge.later}
           className="inline-flex h-8 items-center rounded-[16px] px-3 text-[13px] font-bold text-white/55 transition-colors hover:text-white/80"
         >
-          Later
+          {t("home.linkPhone.later")}
         </button>
       </div>
     </section>
