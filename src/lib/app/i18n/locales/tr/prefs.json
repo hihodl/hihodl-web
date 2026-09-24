@@ -1,1 +1,13 @@
-{}
+{
+  "language": "Dil",
+  "currency": "Para birimi",
+  "recentLanguages": "Son kullanılan diller",
+  "allLanguages": "Tüm diller",
+  "searchLanguage": "Dil ara",
+  "recentCurrencies": "Son kullanılan para birimleri",
+  "allCurrencies": "Tüm para birimleri",
+  "searchCurrency": "Para birimi veya ülke ara",
+  "currencyIntro": "Bakiyeler, toplamlar ve fiyatlar bu para biriminde gösterilir. Asıl ödediğin tutar token cinsinden kalır ve her grup kendi para birimini korur.",
+  "currencyNoRate": "* Henüz canlı döviz kuru yok, bu yüzden tutarlar ABD doları olarak kalır.",
+  "currencyNoRateLabel": "{code} {name}, canlı döviz kuru kullanılamıyor"
+}
