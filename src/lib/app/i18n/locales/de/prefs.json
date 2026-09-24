@@ -1,1 +1,13 @@
-{}
+{
+  "language": "Sprache",
+  "currency": "Währung",
+  "recentLanguages": "Zuletzt verwendete Sprachen",
+  "allLanguages": "Alle Sprachen",
+  "searchLanguage": "Sprache suchen",
+  "recentCurrencies": "Zuletzt verwendete Währungen",
+  "allCurrencies": "Alle Währungen",
+  "searchCurrency": "Währung oder Land suchen",
+  "currencyIntro": "Guthaben, Summen und Preise werden in dieser Währung angezeigt. Was du tatsächlich zahlst, bleibt im Token, und eine Gruppe behält ihre eigene Währung.",
+  "currencyNoRate": "* Noch kein Live-Wechselkurs, daher bleiben die Beträge in US-Dollar.",
+  "currencyNoRateLabel": "{code} {name}, Live-Wechselkurs nicht verfügbar"
+}
