@@ -1,1 +1,13 @@
-{}
+{
+  "language": "Bahasa",
+  "currency": "Mata uang",
+  "recentLanguages": "Bahasa terakhir",
+  "allLanguages": "Semua bahasa",
+  "searchLanguage": "Cari bahasa",
+  "recentCurrencies": "Mata uang terakhir",
+  "allCurrencies": "Semua mata uang",
+  "searchCurrency": "Cari mata uang atau negara",
+  "currencyIntro": "Saldo, total, dan harga ditampilkan dalam mata uang ini. Yang benar-benar kamu bayar tetap dalam token, dan grup tetap memakai mata uangnya sendiri.",
+  "currencyNoRate": "* Belum ada kurs langsung, jadi jumlah tetap dalam dolar AS.",
+  "currencyNoRateLabel": "{code} {name}, kurs langsung tidak tersedia"
+}
