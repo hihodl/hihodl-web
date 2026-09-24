@@ -89,5 +89,19 @@ eq("1Y covers its range", C.coversRange(c6.points, 365, NOW), true);
 
 eq("sameCoin", [C.sameCoin(0.2879, 0.000317), C.sameCoin(115, 99), C.sameCoin(1, 2), C.sameCoin(1, 2.01)], [false, true, true, false]);
 
+// ── The 24h move ─────────────────────────────────────────────────────
+eq("a day ago: the sample at or before the cutoff", C.priceADayAgo(hourly(168, (i) => i + 1), NOW), 144);
+eq("a day ago: empty series", C.priceADayAgo([], NOW), null);
+eq("a day ago: stale cache, nothing near the cutoff", C.priceADayAgo([[NOW - 9 * D, 1], [NOW - 8 * D, 2]], NOW), null);
+eq("a day ago: young coin, first sample 12h ago", C.priceADayAgo([[NOW - 12 * H, 3], [NOW - H, 4]], NOW), null);
+eq("a day ago: series starts just after the cutoff", C.priceADayAgo([[NOW - D + H, 5], [NOW - H, 6]], NOW), 5);
+const r = (symbol: string, amount: number, usd: number | null, stable = false) => ({ symbol, amount, usd, stable });
+eq("move: SOL 100 to 110 plus 100 USDC", C.dayMove([r("SOL", 1, 110), r("USDC", 100, 100, true)], { SOL: 100 }), { usd: 10, pct: 5, leftOut: [] });
+eq("move: JUP with no price a day ago is left out, not a gain", C.dayMove([r("SOL", 1, 110), r("JUP", 100, 50)], { SOL: 100 }), { usd: 10, pct: 10, leftOut: ["JUP"] });
+eq("move: JUP priced as the wrong coin is left out", C.dayMove([r("SOL", 1, 110), r("JUP", 100, 28.79)], { SOL: 100, JUP: 0.000317 }), { usd: 10, pct: 10, leftOut: ["JUP"] });
+eq("move: unpriced now is left out", C.dayMove([r("SOL", 1, 110), r("BONK", 5, null)], { SOL: 100, BONK: 1 }), { usd: 10, pct: 10, leftOut: ["BONK"] });
+eq("move: nothing volatile measurable is no move", C.dayMove([r("JUP", 100, 50), r("USDC", 10, 10, true)], {}), null);
+eq("move: stables only is no move", C.dayMove([r("USDC", 10, 10, true)], {}), null);
+
 console.log(fails ? `${fails} FAILED` : "all ok");
 if (fails) process.exit(1);

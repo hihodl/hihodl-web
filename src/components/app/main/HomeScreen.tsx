@@ -98,6 +98,7 @@ import {
   usdOf,
 } from "@/lib/app/money";
 import { chainLabel } from "@/lib/app/payments";
+import { dayMove } from "@/lib/app/portfolio-curve";
 
 import { useProductHref } from "../base";
 import { Ion, type IonName } from "../ion";
@@ -282,31 +283,17 @@ export function HomeScreen({ initialScope = "main" }: { initialScope?: string } 
   const totalUsd = settled ? split.totalUsd : null;
   const readFailed = balances.error || prices.error;
 
-  /* The 24h move, over the holdings we can price on both days. */
+  /* The 24h move, over the holdings we can price on both days. A holding with
+     no price a day ago (a failed or stale history read, or a feed that is a
+     different coin) is left out of both sides rather than read as a jump from
+     zero; the rows carry no 24h figure of their own. */
   const delta = useMemo(() => {
     const before = yesterday.data;
     if (!settled || !before) return null;
-    let then = 0;
-    let now = 0;
-    let missing = 0;
-    for (const row of rows) {
-      if (isStable(row.symbol)) {
-        // A dollar was a dollar yesterday. It contributes to both sides
-        // equally and moves the percentage toward zero, which is the truth.
-        then += row.usd ?? 0;
-        now += row.usd ?? 0;
-        continue;
-      }
-      const was = before[row.symbol];
-      if (was === undefined || row.usd === null) {
-        missing += 1;
-        continue;
-      }
-      then += row.amount * was;
-      now += row.usd;
-    }
-    if (missing > 0 || then <= 0) return null;
-    return { usd: now - then, pct: ((now - then) / then) * 100 };
+    return dayMove(
+      rows.map((row) => ({ symbol: row.symbol, amount: row.amount, usd: row.usd, stable: isStable(row.symbol) })),
+      before,
+    );
   }, [rows, yesterday.data, settled]);
 
   /* What this scope has working, and what it has earned doing it. */

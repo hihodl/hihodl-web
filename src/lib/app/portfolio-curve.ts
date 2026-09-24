@@ -236,3 +236,93 @@ export function coversRange(points: readonly CurvePoint[], days: number, now: nu
   if (points.length < 2) return false;
   return now - points[0].t >= days * DAY_MS * 0.9;
 }
+
+/* ── The 24h move ─────────────────────────────────────────────────── */
+
+/**
+ * How far from "24 hours ago" a sample may sit and still be read as the price
+ * a day ago. The 7-day series is hourly, so a healthy one always has a sample
+ * within the hour. A series whose nearest sample is further off is a stale
+ * cache or a coin younger than a day, and a price read off it would put a
+ * week's move (or a jump from nothing) under a "24h" label.
+ */
+export const DAY_AGO_TOLERANCE_MS = 6 * 60 * 60 * 1000;
+
+/**
+ * A normalised series → the price at 24 hours before `now`, or null when the
+ * series cannot say: empty, or with nothing within `DAY_AGO_TOLERANCE_MS` of
+ * the cutoff. The last sample at or before the cutoff wins; failing that, the
+ * first one after it.
+ */
+export function priceADayAgo(series: PriceSeries, now: number): number | null {
+  const cutoff = now - DAY_MS;
+  let before: [number, number] | null = null;
+  let after: [number, number] | null = null;
+  for (const point of series) {
+    if (point[0] <= cutoff) {
+      if (!before || point[0] > before[0]) before = point;
+    } else if (!after || point[0] < after[0]) after = point;
+  }
+  const chosen =
+    before && cutoff - before[0] <= DAY_AGO_TOLERANCE_MS
+      ? before
+      : after && after[0] - cutoff <= DAY_AGO_TOLERANCE_MS
+        ? after
+        : null;
+  return chosen && Number.isFinite(chosen[1]) && chosen[1] > 0 ? chosen[1] : null;
+}
+
+/** One holding as the 24h move reads it. `usd` null is a holding we cannot price now. */
+export interface DayMoveRow {
+  symbol: string;
+  amount: number;
+  usd: number | null;
+  stable: boolean;
+}
+
+export interface DayMove {
+  usd: number;
+  pct: number;
+  /** Tickers held but not in the move: no price a day ago, no price now, or a feed that is another coin. */
+  leftOut: string[];
+}
+
+/**
+ * The 24h move over the holdings that can be priced on both days.
+ *
+ * A holding with no price a day ago (the history read failed, came back stale,
+ * or is a different coin — JUP on 24-Sep-2026) is left out of BOTH sides,
+ * never valued at zero yesterday: that would print the whole holding as a
+ * gain. Dollars count on both sides unchanged. With no volatile holding left
+ * to measure there is no move to show, so the answer is null rather than a
+ * 0.00% that only says the stablecoins held their peg.
+ */
+export function dayMove(rows: readonly DayMoveRow[], ago: Readonly<Record<string, number>>): DayMove | null {
+  let then = 0;
+  let now = 0;
+  let measured = 0;
+  const leftOut: string[] = [];
+  for (const row of rows) {
+    if (row.stable) {
+      then += row.usd ?? 0;
+      now += row.usd ?? 0;
+      continue;
+    }
+    const was = ago[row.symbol];
+    if (
+      was === undefined ||
+      !(was > 0) ||
+      row.usd === null ||
+      !(row.amount > 0) ||
+      !sameCoin(row.usd / row.amount, was)
+    ) {
+      leftOut.push(row.symbol);
+      continue;
+    }
+    then += row.amount * was;
+    now += row.usd;
+    measured += 1;
+  }
+  if (measured === 0 || !(then > 0)) return null;
+  return { usd: now - then, pct: ((now - then) / then) * 100, leftOut };
+}

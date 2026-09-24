@@ -60,7 +60,7 @@ import {
   type YieldPosition,
   type YieldReserve,
 } from "./hold-api";
-import { buildPortfolioCurve, type ChartLeg, type PortfolioCurve, type SeriesAnswer } from "./portfolio-curve";
+import { buildPortfolioCurve, priceADayAgo, type ChartLeg, type PortfolioCurve, type SeriesAnswer } from "./portfolio-curve";
 import { useMyAddresses } from "./spaces-data";
 
 const OPTIONS: SWRConfiguration = {
@@ -649,39 +649,30 @@ export function useSuppliedBySlug(): SuppliedAnswer {
 
 /* ── What a holding was worth yesterday ───────────────────────────── */
 
-/** Twenty-four hours, in milliseconds. */
-const DAY_MS = 24 * 60 * 60 * 1000;
-
 /**
  * Each symbol's price a day ago, for the hero's 24h delta.
  *
  * `/prices/history` is one call per symbol, so only the volatile ones are
  * asked: a dollar was a dollar yesterday. A symbol whose series does not come
- * back is left OUT of the answer rather than defaulted to today's price — the
- * caller reads a missing symbol as "we cannot say", and a delta that silently
- * treats an unknown as unchanged is a delta that lies about the one holding it
- * could not read.
+ * back (a 502 UPSTREAM_UNAVAILABLE, say), or comes back with nothing near 24
+ * hours ago (a stale cache, a coin younger than a day), is left OUT of the
+ * answer rather than defaulted to today's price or to the oldest sample on
+ * offer — the caller reads a missing symbol as "we cannot say", and leaves
+ * that holding out of the move (`dayMove`).
  */
 export function usePrices24hAgo(symbols: readonly string[]) {
   const volatile = [...new Set(symbols.map((s) => s.toUpperCase()).filter((s) => !isStable(s)))].sort();
   return useRead<Record<string, number>>(
     volatile.length ? "prices-24h" : null,
     async () => {
-      const cutoff = Date.now() - DAY_MS;
+      const now = Date.now();
       const series = await Promise.all(
         volatile.map((symbol) => getPriceHistory(symbol, 7).then((a) => [symbol, a.prices] as const, () => [symbol, null] as const)),
       );
       const out: Record<string, number> = {};
       for (const [symbol, points] of series) {
-        if (!points?.length) continue;
-        // The last point at or before the cutoff; failing that the oldest we
-        // were given, which is the closest thing to "a day ago" on offer.
-        let best: [number, number] | null = null;
-        for (const point of points) {
-          if (point[0] <= cutoff && (!best || point[0] > best[0])) best = point;
-        }
-        const chosen = best ?? points[0];
-        if (Number.isFinite(chosen[1])) out[symbol] = chosen[1];
+        const price = points ? priceADayAgo(points, now) : null;
+        if (price !== null) out[symbol] = price;
       }
       return out;
     },
