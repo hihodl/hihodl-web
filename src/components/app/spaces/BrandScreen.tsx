@@ -31,6 +31,9 @@ import { useMemo } from "react";
 import type { BrandRelation, CreatorAnalytics } from "@/lib/creator/analytics";
 import { cents, ownerDeliveries, paidSales, type DeliveryItem } from "@/lib/app/spaces-model";
 import { useListingViews, useOffers, useSales } from "@/lib/app/spaces-data";
+import { listText } from "@/lib/app/i18n";
+import { fmtDate } from "@/lib/app/i18n/format";
+import { useT } from "@/lib/app/i18n/react";
 
 import { useHref } from "../base";
 import { useShell } from "../Shell";
@@ -38,7 +41,7 @@ import { dollars, Skeleton } from "../ui";
 import { DrillBar, useListingRefs } from "./cards";
 import { dueText, shortDay } from "./common";
 import { Card, Empty, Group as Panel, ListRow, Tag } from "./kit";
-import { Logo, monthYear, plural } from "./OverviewScreens";
+import { Logo } from "./OverviewScreens";
 
 /** Rows on this screen before it would start to scroll: five bought, three each side under them. */
 const SHOWN = 5;
@@ -64,12 +67,13 @@ function isThem(b: BrandRelation, name: string | null | undefined): boolean {
 }
 
 export function BrandScreen({ data, brandKey, back }: { data: CreatorAnalytics; brandKey: string; back: string }) {
+  const t = useT();
   const brand = data.brands.find((b) => b.key === brandKey) ?? null;
   if (!brand) {
     return (
       <div className="flex flex-col gap-4">
-        <DrillBar back={back} crumb="Brands you work with" title="Brand" />
-        <Empty icon="business-outline" title="This brand is not on your list" body="It shows here once one of its payments has landed." />
+        <DrillBar back={back} crumb={t("creator.brand.crumb")} title={t("creator.brand.title")} />
+        <Empty icon="business-outline" title={t("creator.brand.notOnListTitle")} body={t("creator.brand.notOnListBody")} />
       </div>
     );
   }
@@ -77,6 +81,7 @@ export function BrandScreen({ data, brandKey, back }: { data: CreatorAnalytics; 
 }
 
 function TheirActivity({ brand, back }: { brand: BrandRelation; back: string }) {
+  const t = useT();
   const href = useHref();
   const { listings } = useShell();
   const refs = useListingRefs();
@@ -114,7 +119,7 @@ function TheirActivity({ brand, back }: { brand: BrandRelation; back: string }) 
 
   return (
     <div className="flex flex-col gap-4">
-      <DrillBar back={back} crumb="Brands you work with" title={brand.name} />
+      <DrillBar back={back} crumb={t("creator.brand.crumb")} title={brand.name} />
       <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)] lg:items-start">
         <Card>
           <div className="flex min-w-0 items-center gap-2.5">
@@ -123,17 +128,18 @@ function TheirActivity({ brand, back }: { brand: BrandRelation; back: string }) 
               <p className="truncate text-[15px] font-strong tracking-[-0.2px] text-white">{brand.name}</p>
               {brand.handle ? <p className="truncate text-[12.5px] font-strong text-white/[0.82]">@{brand.handle}</p> : null}
             </div>
-            {brand.repeat ? <Tag label="Repeat" tone="good" /> : null}
+            {brand.repeat ? <Tag label={t("creator.brand.repeat")} tone="good" /> : null}
           </div>
           <p className="text-[40px] font-strong leading-none tracking-[-0.8px] tabular-nums text-white">{dollars(brand.receivedCents)}</p>
           <p className="text-[14.5px] leading-5 text-white/[0.82]">
-            reached you from {plural(brand.orders, "order")}
-            {brand.firstPaidAt ? ` since ${monthYear(brand.firstPaidAt)}` : ""}
+            {brand.firstPaidAt
+              ? t("creator.brand.reachedYouSince", { orders: brand.orders, since: fmtDate(brand.firstPaidAt, { month: "short", year: "numeric", timeZone: "UTC" }) })
+              : t("creator.brand.reachedYou", { orders: brand.orders })}
           </p>
           <div className="mt-1.5 flex flex-col gap-1.5 border-t border-white/[0.08] pt-3 text-[12.5px] leading-[17px] text-white/[0.82]">
-            <p className="truncate">{brand.events.length ? brand.events.map((e) => e.name).join(", ") : "Not tied to an event"}</p>
+            <p className="truncate">{brand.events.length ? brand.events.map((e) => e.name).join(", ") : t("creator.cards.noEvent")}</p>
             <p className="truncate">
-              {[plural(brand.listings, "listing"), brand.chains.map((c) => c.label).join(" and "), brand.payFrom.map((p) => p.label).join(" and ")]
+              {[t("creator.offers.countListings", { count: brand.listings }), listText(brand.chains.map((c) => c.label)), listText(brand.payFrom.map((p) => p.label))]
                 .filter(Boolean)
                 .join(" · ")}
             </p>
@@ -142,12 +148,12 @@ function TheirActivity({ brand, back }: { brand: BrandRelation; back: string }) 
 
         <div className="flex min-w-0 flex-col gap-4">
           <Panel
-            title="What they bought"
-            meta={loadingSales ? "" : plural(bought.length, "order")}
+            title={t("creator.brand.bought")}
+            meta={loadingSales ? "" : t("creator.brand.countOrders", { count: bought.length })}
             action={
               bought.length > SHOWN ? (
                 <Link href={href("/sales")} className={seeAll}>
-                  All sales
+                  {t("creator.brand.allSales")}
                 </Link>
               ) : null
             }
@@ -155,7 +161,7 @@ function TheirActivity({ brand, back }: { brand: BrandRelation; back: string }) 
             {loadingSales ? (
               <Skeleton className="h-28" />
             ) : bought.length === 0 ? (
-              <Empty icon="cash-outline" title="No paid order under this name" body="Their orders show here the moment a payment lands." />
+              <Empty icon="cash-outline" title={t("creator.brand.noOrdersTitle")} body={t("creator.brand.noOrdersBody")} />
             ) : (
               <ul className="flex flex-col divide-y divide-white/[0.08]">
                 {bought.slice(0, SHOWN).map((r) => {
@@ -177,11 +183,11 @@ function TheirActivity({ brand, back }: { brand: BrandRelation; back: string }) 
           </Panel>
 
           <div className="grid grid-cols-[minmax(0,1fr)] gap-4 xl:grid-cols-2">
-            <Panel title="Still to deliver" meta={loadingWork ? "" : `${owedToThem.length}`}>
+            <Panel title={t("creator.brand.toDeliver")} meta={loadingWork ? "" : `${owedToThem.length}`}>
               {loadingWork ? (
                 <Skeleton className="h-20" />
               ) : owedToThem.length === 0 ? (
-                <Empty icon="checkmark-done" title="Nothing owed to them" />
+                <Empty icon="checkmark-done" title={t("creator.brand.nothingOwedTo")} />
               ) : (
                 <ul className="flex flex-col divide-y divide-white/[0.08]">
                   {owedToThem.slice(0, SHOWN_SMALL).map((d) => (
@@ -198,11 +204,11 @@ function TheirActivity({ brand, back }: { brand: BrandRelation; back: string }) 
               )}
             </Panel>
 
-            <Panel title="Still owed" meta={offers.data ? `${owedByThem.length}` : ""}>
+            <Panel title={t("creator.brand.stillOwed")} meta={offers.data ? `${owedByThem.length}` : ""}>
               {!offers.data ? (
                 <Skeleton className="h-20" />
               ) : owedByThem.length === 0 ? (
-                <Empty icon="checkmark-done" title="Nothing waiting to be paid" />
+                <Empty icon="checkmark-done" title={t("creator.brand.nothingToBePaid")} />
               ) : (
                 <ul className="flex flex-col divide-y divide-white/[0.08]">
                   {owedByThem.slice(0, SHOWN_SMALL).map((o) => (
@@ -210,7 +216,7 @@ function TheirActivity({ brand, back }: { brand: BrandRelation; back: string }) 
                       <ListRow
                         href={`${href("/offers")}?id=${o.id}`}
                         title={o.serviceName || o.spaceTitle}
-                        meta={[o.positionLabel, "Accepted, waiting to be paid"].filter(Boolean).join(" · ")}
+                        meta={[o.positionLabel, t("creator.brand.acceptedUnpaid")].filter(Boolean).join(" · ")}
                         right={<span className="text-[15px] font-strong tabular-nums text-white">{dollars(cents(o.agreedUsdc ?? o.amountUsdc))}</span>}
                       />
                     </li>

@@ -14,6 +14,8 @@
  * Who you are and where you get paid are the person's, on Account.
  */
 
+import { useT } from "@/lib/app/i18n/react";
+
 import { useHref } from "../base";
 import { HoldCard, MenuRow, Switch } from "../hold";
 import { Ion } from "../ion";
@@ -23,10 +25,11 @@ import { ReadyToPublish } from "./ReadyToPublish";
 import { YourPagesCard, YourPagesScreen } from "./YourPages";
 
 export function SpacesSettingsScreen({ screen, item }: { screen?: string; item?: string }) {
+  const t = useT();
   const href = useHref();
   if (screen === "background") {
     return (
-      <YourPagesScreen base={href("/settings?screen=background")} back={href("/settings")} backLabel="Settings" item={item} />
+      <YourPagesScreen base={href("/settings?screen=background")} back={href("/settings")} backLabel={t("creator.settings.settings")} item={item} />
     );
   }
   return (
@@ -35,8 +38,8 @@ export function SpacesSettingsScreen({ screen, item }: { screen?: string; item?:
       <div className="flex flex-col gap-4">
         <CreativeDirector />
         <div className="flex flex-col gap-2.5">
-          <SectionLabel>Your pages</SectionLabel>
-          <YourPagesCard href={href("/settings?screen=background")} title="Page background" />
+          <SectionLabel>{t("creator.pages.title")}</SectionLabel>
+          <YourPagesCard href={href("/settings?screen=background")} title={t("creator.settings.pageBackground")} />
         </div>
       </div>
     </div>
@@ -51,26 +54,27 @@ export function SpacesSettingsScreen({ screen, item }: { screen?: string; item?:
  * lib/app/agency).
  */
 function CreativeDirector() {
+  const t = useT();
   const { agency } = useShell();
   const href = useHref();
   const on = agency.on;
   return (
-    <section id="team" aria-label="Creative Director" className="flex flex-col gap-2.5">
-      <SectionLabel>Team</SectionLabel>
+    <section id="team" aria-label={t("creator.settings.creativeDirector")} className="flex flex-col gap-2.5">
+      <SectionLabel>{t("creator.teamScreen.team")}</SectionLabel>
       <HoldCard>
         <div className="flex w-full min-w-0 items-start gap-3 px-[18px] py-[18px]">
           <Ion name="people-outline" size={18} className="mt-[2px] shrink-0 text-white" />
           <span className="min-w-0 flex-1">
-            <span className="block text-[14px] font-bold leading-5 text-white">Creative Director</span>
+            <span className="block text-[14px] font-bold leading-5 text-white">{t("creator.settings.creativeDirector")}</span>
             <span className="mt-0.5 block text-[12px] leading-4 text-[#9FB7C2]">
               {agency.forced
-                ? "On while you have a team."
-                : "Run a team on your listings. You invite people by email, choose who works each listing, and set what each of them earns from a sale. You pay them; HOLD only keeps the count."}
+                ? t("creator.settings.onWhileTeam")
+                : t("creator.settings.cdBody")}
             </span>
           </span>
-          <Switch checked={on} onChange={(v) => agency.set(v)} label="Creative Director" disabled={agency.forced} />
+          <Switch checked={on} onChange={(v) => agency.set(v)} label={t("creator.settings.creativeDirector")} disabled={agency.forced} />
         </div>
-        {on ? <MenuRow icon="people-outline" label="Open Team" chevron href={href("/team")} /> : null}
+        {on ? <MenuRow icon="people-outline" label={t("creator.settings.openTeam")} chevron href={href("/team")} /> : null}
       </HoldCard>
     </section>
   );

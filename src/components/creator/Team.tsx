@@ -42,9 +42,10 @@ import { acceptSeat } from "@/lib/creator/listings";
 import { describeTeamError } from "@/lib/creator/problems";
 import { useCreatorSession } from "@/lib/creator/session";
 import { creatorText, dayText, forgetSeat, rememberSeat, type SeatLookup, type TeamMember } from "@/lib/creator/team";
+import { useT } from "@/lib/app/i18n/react";
 
 import { SignIn } from "./SignIn";
-import { ROLE_TEXT } from "./team/Members";
+import { roleText } from "./team/Members";
 
 interface Props {
   /** The seat code from the link, already checked for shape. */
@@ -104,18 +105,14 @@ const title = "text-[16px] font-strong tracking-[-0.2px] text-white";
 const fine = "text-[12px] leading-[17px] text-white/55";
 
 function Invited({ who, lookup }: { who: string | null; lookup: SeatLookup }) {
+  const t = useT();
   const invite = lookup.kind === "found" ? lookup.invite : null;
   return (
     <Card>
-      <p className={title}>{who ? `${who} wants you on their team` : "Somebody wants you on their team"}</p>
-      {invite ? (
-        <Body>
-          As {ROLE_TEXT[invite.role].label}: {ROLE_TEXT[invite.role].line}
-        </Body>
-      ) : null}
+      <p className={title}>{who ? t("creator.join.wantsYou", { who }) : t("creator.join.somebodyWantsYou")}</p>
+      {invite ? <Body>{t("creator.join.asRole", { role: roleText(invite.role).label, line: roleText(invite.role).line })}</Body> : null}
       <Body dim>
-        A creator on HOLD can invite you to sell for them or to turn up and deliver at their events. Accept and they can put you on their listings.
-        {invite?.expiresAt ? ` Open until ${dayText(invite.expiresAt)}.` : ""}
+        {invite?.expiresAt ? t("creator.join.aboutUntil", { date: dayText(invite.expiresAt) }) : t("creator.join.about")}
       </Body>
     </Card>
   );
@@ -123,12 +120,13 @@ function Invited({ who, lookup }: { who: string | null; lookup: SeatLookup }) {
 
 /** A seat the server already said no to, before anybody pressed anything. */
 function SeatRefused({ code, onDone }: { code: string; onDone: () => void }) {
+  const t = useT();
   return (
     <div className="flex flex-col gap-2.5">
-      <p className="text-[18px] font-extrabold tracking-[-0.3px] text-white">Join a team</p>
+      <p className="text-[18px] font-extrabold tracking-[-0.3px] text-white">{t("creator.join.title")}</p>
       <Notice>{describeTeamError(new CreatorApiError(code, 410))}</Notice>
       <button type="button" className={ctaSecondary} onClick={onDone}>
-        Open Spaces
+        {t("creator.join.openSpaces")}
       </button>
     </div>
   );
@@ -148,6 +146,7 @@ function SeatOffer({
   lookup: SeatLookup;
   onDone: () => void;
 }) {
+  const t = useT();
   const href = useHref();
   const refresh = useRefreshAll();
   const [busy, setBusy] = useState(false);
@@ -156,25 +155,24 @@ function SeatOffer({
 
   if (taken) {
     const theirs = creatorText(taken) ?? who;
-    const role = ROLE_TEXT[taken.role];
+    const role = roleText(taken.role);
     return (
       <div className="flex flex-col gap-2.5">
         <Notice icon="checkmark-circle-outline" tone="good">
-          {theirs ? `You're on ${theirs}'s team as ${role.label}.` : `You're on the team as ${role.label}.`}
+          {theirs ? t("creator.join.onTheirTeam", { who: theirs, role: role.label }) : t("creator.join.onTheTeam", { role: role.label })}
         </Notice>
         <Card>
           <p className={title}>{role.label}</p>
           <Body dim>{role.line}</Body>
         </Card>
         <p className={fine}>
-          When they put you on a listing for a share, the creator who invited you pays it to you themselves. HOLD keeps a record of what you&apos;re owed;
-          it doesn&apos;t send it, hold it or guarantee it.
+          {t("creator.join.whoPays")}
         </p>
         <Link href={href("/deliveries")} className={ctaPrimary} onClick={() => forgetSeat()}>
-          What you have to deliver
+          {t("creator.teamScreen.deliverTitle")}
         </Link>
         <button type="button" className={ctaSecondary} onClick={onDone}>
-          See your teams
+          {t("creator.join.seeTeams")}
         </button>
       </div>
     );
@@ -183,7 +181,7 @@ function SeatOffer({
   return (
     <div className="flex flex-col gap-2.5">
       <Invited who={who} lookup={lookup} />
-      <p className={fine}>Whatever they give you a share of, they pay you themselves. HOLD records it and never moves that money.</p>
+      <p className={fine}>{t("creator.join.shareNote")}</p>
       {notice ? <Notice>{notice}</Notice> : null}
       <button
         type="button"
@@ -208,10 +206,10 @@ function SeatOffer({
             .finally(() => setBusy(false));
         }}
       >
-        {busy ? "Joining…" : "Join the team"}
+        {busy ? t("creator.join.joining") : t("creator.join.join")}
       </button>
       <button type="button" className={ctaSecondary} disabled={busy} onClick={onDone}>
-        Not now
+        {t("creator.join.notNow")}
       </button>
     </div>
   );

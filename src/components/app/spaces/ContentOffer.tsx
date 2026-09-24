@@ -23,6 +23,8 @@ import { SITE_URL } from "@/lib/ad-space/config";
 import { eventDates } from "@/lib/ad-space/format";
 import type { SpaceCard } from "@/lib/creator/listing";
 import { useTemplates } from "@/lib/app/spaces-data";
+import { t } from "@/lib/app/i18n";
+import { useT } from "@/lib/app/i18n/react";
 
 import { useHref } from "../base";
 import { CopyButton } from "../front/kit";
@@ -100,24 +102,29 @@ export function useProductionAt(eventSlug: string | null): { listing: SpaceCard;
 export function contentOfferText(input: { lead: ContentLead; handle: string | null; productionUrl: string | null }): string {
   const { lead, handle, productionUrl } = input;
   const event = lead.event;
-  const at = event ? ` at ${event.name}` : "";
   const lines: string[] = [];
-  const when = event?.startsOn && event.endsOn ? ` (${eventDates(event.startsOn, event.endsOn)})` : "";
-  lines.push(`Hi ${lead.brand} team,`, "");
+  const dates = event?.startsOn && event.endsOn ? eventDates(event.startsOn, event.endsOn) : "";
+  // Where the content is made: nowhere named, at the event, or at the event on its dates.
+  const vars = {
+    brand: lead.brand,
+    spot: midSentence(lead.bought),
+    product: lead.product,
+    event: event?.name ?? "",
+    dates,
+    hasEvent: event ? "yes" : "no",
+    where: event ? (dates ? "dates" : "event") : "none",
+  };
+  lines.push(t("creator.content.msg.greeting", vars), "");
   if (lead.kind === "placement") {
-    lines.push(`Thanks for taking the ${midSentence(lead.bought)} spot on my ${lead.product}${at}. Your brand goes everywhere it goes, in every photo and post.`);
+    lines.push(t("creator.content.msg.placementThanks", vars));
     lines.push("");
-    lines.push(
-      `The ${lead.product} is what gets people looking. If you want content for your own channels too, I can make it${at}${when}: interviews, short videos, b-roll and photos, made for ${lead.brand} and delivered to you.`,
-    );
+    lines.push(t("creator.content.msg.placementOffer", vars));
   } else {
-    lines.push(`Thanks for booking ${midSentence(lead.bought)}${at}.`);
+    lines.push(t("creator.content.msg.serviceThanks", vars));
     lines.push("");
-    lines.push(
-      `If you want content for your own channels too, I can make it${at}${when}: interviews, short videos, b-roll and photos, made for ${lead.brand} and delivered to you.`,
-    );
+    lines.push(t("creator.content.msg.serviceOffer", vars));
   }
-  lines.push(productionUrl ? `What's included and the dates: ${productionUrl}` : "Tell me what you're launching and I'll send you a package.");
+  lines.push(productionUrl ? t("creator.content.msg.included", { url: productionUrl }) : t("creator.content.msg.tellMe"));
   if (handle) lines.push("", `@${handle}`);
   return lines.join("\n");
 }
@@ -137,6 +144,7 @@ export function ContentOfferScreen({
   leads: readonly ContentLead[];
   initial?: string | null;
 }) {
+  const t = useT();
   const href = useHref();
   const { x } = useShell();
   // What was opened stays chosen even when the sales arrive after the screen does.
@@ -149,11 +157,11 @@ export function ContentOfferScreen({
 
   return (
     <div className="flex flex-col gap-3.5">
-      <DrillBar back={back} crumb={crumb} title="Offer them content" right={text ? <CopyButton value={text} label="Copy message" className={copyCls} /> : null} />
+      <DrillBar back={back} crumb={crumb} title={t("creator.content.title")} right={text ? <CopyButton value={text} label={t("creator.content.copyMessage")} className={copyCls} /> : null} />
       <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)] lg:items-start">
-        <Panel title={leads.length > 1 ? "Which brand" : "The brand"}>
+        <Panel title={leads.length > 1 ? t("creator.content.whichBrand") : t("creator.content.theBrand")}>
           {leads.length > 1 ? (
-            <FilterPills label="Brand" value={lead?.key ?? ""} onChange={setKey} options={leads.slice(0, 12).map((l) => ({ value: l.key, label: l.brand }))} />
+            <FilterPills label={t("creator.brand.title")} value={lead?.key ?? ""} onChange={setKey} options={leads.slice(0, 12).map((l) => ({ value: l.key, label: l.brand }))} />
           ) : lead ? (
             <p className="text-[16px] font-strong tracking-[-0.2px] text-white">{lead.brand}</p>
           ) : null}
@@ -165,32 +173,34 @@ export function ContentOfferScreen({
           <div className="flex flex-col gap-3 border-t border-white/[0.08] pt-3 text-[13px] leading-[18px] text-white/[0.82]">
             {production ? (
               <p>
-                {production.url ? "The message links your" : "Link X to add your"} Content production listing at {lead?.event?.name}.
+                {production.url
+                  ? t("creator.content.linksYour", { event: lead?.event?.name ?? "" })
+                  : t("creator.content.linkXToAdd", { event: lead?.event?.name ?? "" })}
               </p>
             ) : (
               <div className="flex flex-col items-start gap-3">
                 <p>
                   {lead?.event
-                    ? `You have no Content production listing at ${lead.event.name}. With one, the message links the package and its dates.`
-                    : "With a Content production listing, the message links the package and its dates."}
+                    ? t("creator.content.noProductionAt", { event: lead.event.name })
+                    : t("creator.content.withProduction")}
                 </p>
                 <Link href={href(`/listings/new?template=${PRODUCTION_TEMPLATE}`)} className={emptyBtn}>
-                  Create one
+                  {t("creator.content.createOne")}
                 </Link>
               </div>
             )}
             <Notice tone="calm" icon="chatbubble-ellipses-outline">
-              Nothing is sent: copy it and send it where you talk to them.
+              {t("creator.content.nothingSent")}
             </Notice>
           </div>
         </Panel>
-        <Panel title={lead ? `For ${lead.brand}` : "Your message"}>
+        <Panel title={lead ? t("creator.content.forBrand", { brand: lead.brand }) : t("creator.content.yourMessage")}>
           {lead ? (
             <pre className="max-h-[calc(var(--app-vh,100dvh)-260px)] overflow-y-auto whitespace-pre-wrap break-words font-sans text-[14.5px] leading-5 text-white">
               {text}
             </pre>
           ) : (
-            <Empty icon="chatbubble-outline" title="No brand has paid for a spot here yet" />
+            <Empty icon="chatbubble-outline" title={t("creator.content.noBrandYet")} />
           )}
         </Panel>
       </div>

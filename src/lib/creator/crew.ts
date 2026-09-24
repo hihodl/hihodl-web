@@ -9,6 +9,9 @@
 
 "use client";
 
+import { t } from "@/lib/app/i18n";
+import { fmtPercent } from "@/lib/app/i18n/format";
+
 import { call, CreatorApiError } from "./api";
 
 export const CREW_LIMITS = {
@@ -112,7 +115,7 @@ export const setListingCrew = (spaceId: string, crewId: string | null) =>
   call<{ spaceId: string; crewId: string | null }>(`ad-space/spaces/${spaceId}/crew`, { method: "PUT", json: { crewId } });
 
 /** "40%" from basis points, for a field the creator types in percent. */
-export const pctText = (bps: number) => `${Number.isInteger(bps / 100) ? bps / 100 : (bps / 100).toFixed(1)}%`;
+export const pctText = (bps: number) => fmtPercent(bps / 10_000, Number.isInteger(bps / 100) ? 0 : 1);
 /** Percent typed by a person, to basis points; null when it is not a number. */
 export function bpsFromPct(text: string): number | null {
   const n = Number(text.replace(",", ".").replace("%", "").trim());
@@ -124,13 +127,13 @@ export function bpsFromPct(text: string): number | null {
 export function notReadyText(reason: CrewNotReady | null): string | null {
   switch (reason) {
     case "crew_too_small":
-      return "A crew is at least two people. Add a creator to start selling together.";
+      return t("creator.crew.notReady.tooSmall");
     case "crew_has_pending_invites":
-      return "Waiting for everyone you asked to say yes. Brands can't buy until they have.";
+      return t("creator.crew.notReady.pendingInvites");
     case "crew_not_agreed":
-      return "The split changed, so everyone has to say yes again before brands can buy.";
+      return t("creator.crew.notReady.notAgreed");
     case "crew_member_has_no_payout":
-      return "Someone in the crew has nowhere to be paid yet.";
+      return t("creator.crew.notReady.noPayout");
     default:
       return null;
   }
@@ -138,7 +141,7 @@ export function notReadyText(reason: CrewNotReady | null): string | null {
 
 /** A person, as the crew shows them. */
 export const whoText = (m: { handle: string | null; name: string | null }) =>
-  m.handle ? `@${m.handle}` : m.name ?? "A creator on HOLD";
+  m.handle ? `@${m.handle}` : m.name ?? t("creator.members.aCreator");
 
 /** Link codes are 24 random bytes, base64url: anything else is not one. */
 export const isCrewCode = (v: unknown): v is string => typeof v === "string" && /^[A-Za-z0-9_-]{16,128}$/.test(v);
@@ -170,38 +173,38 @@ export function takePendingJoin(): string | null {
 
 /** What went wrong, in words, with what to do next. */
 export function describeCrewError(e: unknown): string {
-  if (!(e instanceof CreatorApiError)) return "Something went wrong. Try again.";
+  if (!(e instanceof CreatorApiError)) return t("common.somethingWentWrong");
   switch (e.code) {
     case "crew_creator_not_found":
-      return "No creator on HOLD goes by that name. Check the username or X handle.";
+      return t("creator.crew.error.creatorNotFound");
     case "crew_already_in":
-      return "They're already in this crew.";
+      return t("creator.crew.error.alreadyIn");
     case "crew_too_large":
-      return `A crew is at most ${CREW_LIMITS.MAX_MEMBERS} people.`;
+      return t("creator.crew.error.tooLarge", { max: CREW_LIMITS.MAX_MEMBERS });
     case "crew_share_out_of_range":
-      return "Each share is between 1% and 100%.";
+      return t("creator.crew.error.shareOutOfRange");
     case "crew_shares_over_a_hundred":
-      return "The shares add up to more than 100%. Lower someone's share first.";
+      return t("creator.crew.error.sharesOver");
     case "crew_lead_only":
-      return "Only the person who made the crew can change it.";
+      return t("creator.crew.error.leadOnly");
     case "crew_lead_cannot_leave":
-      return "The lead can't leave the crew. Take the listings off the crew instead.";
+      return t("creator.crew.error.leadCannotLeave");
     case "crew_terms_changed":
-      return "The split changed while you were reading. Check the new one and say yes again.";
+      return t("creator.crew.error.termsChanged");
     case "crew_payout_address_required":
-      return "You need somewhere to be paid first. Add your payout address in Spaces settings, then come back.";
+      return t("creator.crew.error.payoutRequired");
     case "crew_name_required":
-      return "Give the crew a name.";
+      return t("creator.crew.error.nameRequired");
     case "crew_service_required":
-      return "Say what this person brings, like cameras or interviews.";
+      return t("creator.crew.error.serviceRequired");
     case "invite_not_found":
-      return "This invitation isn't open any more. Ask for a new link.";
+      return t("creator.crew.error.inviteNotFound");
     case "invite_expired":
-      return "This invitation has expired. Ask for a new link.";
+      return t("creator.crew.error.inviteExpired");
     case "crew_not_found":
     case "not_found":
-      return "That crew isn't here any more.";
+      return t("creator.crew.error.notFound");
     default:
-      return "Something went wrong. Try again.";
+      return t("common.somethingWentWrong");
   }
 }

@@ -17,6 +17,8 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 import type { SpaceCard as Listing, SpaceStatus } from "@/lib/creator/listing";
+import type { MessageKey } from "@/lib/app/i18n";
+import { useT } from "@/lib/app/i18n/react";
 
 import { useHref } from "../base";
 import { ctaPrimary } from "../hold";
@@ -30,15 +32,20 @@ import { ReadyToPublish } from "./ReadyToPublish";
 type StatusFilter = "all" | "live" | "draft" | "closed";
 type KindFilter = "all" | "placement" | "service";
 
-const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "live", label: "Live" },
-  { value: "draft", label: "Drafts" },
-  { value: "closed", label: "Closed" },
+const STATUS_OPTIONS: { value: StatusFilter; label: MessageKey }[] = [
+  { value: "all", label: "common.all" },
+  { value: "live", label: "creator.status.live" },
+  { value: "draft", label: "creator.listings.drafts" },
+  { value: "closed", label: "creator.status.closed" },
 ];
 
 const ORDER: SpaceStatus[] = ["live", "draft", "closed", "delisted"];
-const GROUP_LABEL: Record<SpaceStatus, string> = { live: "Live", draft: "Drafts", closed: "Closed", delisted: "Taken down" };
+const GROUP_LABEL: Record<SpaceStatus, MessageKey> = {
+  live: "creator.status.live",
+  draft: "creator.listings.drafts",
+  closed: "creator.status.closed",
+  delisted: "creator.status.delisted",
+};
 
 const GRID = "grid grid-cols-[minmax(0,1fr)] gap-2.5 md:grid-cols-2 2xl:grid-cols-3";
 
@@ -49,18 +56,20 @@ export function ListingsScreen() {
 
 /** "Create a space": the app's TravelCta with the add icon. */
 function CreateCta() {
+  const t = useT();
   const href = useHref();
   return (
     <div className="sm:max-w-[360px]">
       <Link href={href("/listings/new")} className={ctaPrimary}>
         <Ion name="add" size={20} />
-        Create a space
+        {t("creator.listings.create")}
       </Link>
     </div>
   );
 }
 
 function OwnListings() {
+  const t = useT();
   const { listings } = useShell();
   const params = useSearchParams();
   const router = useRouter();
@@ -85,11 +94,11 @@ function OwnListings() {
 
       {listings.length > 0 ? (
         <div className="flex flex-wrap items-center gap-2">
-          <ChipRow label="Status">
+          <ChipRow label={t("common.status")}>
             {STATUS_OPTIONS.map((o) => (
               <Chip
                 key={o.value}
-                label={o.label}
+                label={t(o.label)}
                 selected={status === o.value}
                 onClick={() => setStatus(o.value)}
                 count={listings.filter((l) => byStatus(l, o.value)).length}
@@ -97,10 +106,10 @@ function OwnListings() {
             ))}
           </ChipRow>
           {hasServices ? (
-            <ChipRow label="Kind">
-              <Chip label="All kinds" selected={kind === "all"} onClick={() => setKind("all")} />
-              <Chip label="Spaces" selected={kind === "placement"} onClick={() => setKind("placement")} />
-              <Chip label="Services" selected={kind === "service"} onClick={() => setKind("service")} />
+            <ChipRow label={t("creator.offers.kind")}>
+              <Chip label={t("creator.listings.allKinds")} selected={kind === "all"} onClick={() => setKind("all")} />
+              <Chip label={t("creator.listings.kindSpaces")} selected={kind === "placement"} onClick={() => setKind("placement")} />
+              <Chip label={t("creator.listings.kindServices")} selected={kind === "service"} onClick={() => setKind("service")} />
             </ChipRow>
           ) : null}
         </div>
@@ -109,15 +118,15 @@ function OwnListings() {
       {listings.length === 0 ? (
         <Empty
           icon="megaphone-outline"
-          title="Sell sponsor spots"
-          body="Pick your hook: something you'll carry or wear that makes people look, or content you make. Brands pay for your reach and your content, in USDC, straight to your wallet."
+          title={t("creator.listings.emptyTitle")}
+          body={t("creator.listings.emptyBody")}
         />
       ) : groups.length === 0 ? (
-        <Empty icon="funnel-outline" title="No listings match" />
+        <Empty icon="funnel-outline" title={t("creator.listings.noMatch")} />
       ) : (
         groups.map((g) => (
           <section key={g.st} className="flex flex-col gap-2.5">
-            <SectionLabel>{GROUP_LABEL[g.st]}</SectionLabel>
+            <SectionLabel>{t(GROUP_LABEL[g.st])}</SectionLabel>
             <ul className={GRID}>
               {g.rows.map((l) => (
                 <li key={l.id} className="flex">
@@ -134,6 +143,7 @@ function OwnListings() {
 
 /** The app's SpaceCard (MySpacesList), line for line. */
 export function SpaceCard({ listing: l, href: to }: { listing: Listing; href?: string }) {
+  const t = useT();
   const href = useHref();
   const { totals } = l;
   const takeover = l.pricingMode === "takeover";
@@ -145,30 +155,38 @@ export function SpaceCard({ listing: l, href: to }: { listing: Listing; href?: s
         <StatusPill status={l.status} />
       </div>
       {l.event ? <EventLine event={l.event} /> : null}
-      {l.awaitingReview ? <Tag label={`${l.awaitingReview} to review`} tone="caution" /> : null}
+      {l.awaitingReview ? <Tag label={t("creator.listings.toReview", { count: l.awaitingReview })} tone="caution" /> : null}
       {l.status !== "draft" ? (
         <>
           <ProgressBar value={totals.positions > 0 ? totals.sold / totals.positions : 0} />
           <div className="flex items-center justify-between gap-2.5">
             <p className="text-[15px] font-strong tabular-nums text-white">
               {takeover || (totals.totalCents == null && totals.committedCents > 0)
-                ? `${centsText(totals.committedCents)} so far`
+                ? t("creator.listings.soFar", { amount: centsText(totals.committedCents) })
                 : totals.totalCents == null
-                  ? "No sales yet"
-                  : `${centsText(totals.committedCents)} of ${centsText(totals.totalCents)}`}
+                  ? t("creator.listings.noSales")
+                  : t("creator.listings.amountOf", { amount: centsText(totals.committedCents), total: centsText(totals.totalCents) })}
             </p>
-            <p className={meta}>{takeover ? `${totals.sold} of ${totals.positions} taken` : `${totals.sold} of ${totals.positions} sold`}</p>
+            <p className={meta}>{takeover
+                ? t("creator.listings.taken", { sold: totals.sold, total: totals.positions })
+                : t("creator.listings.sold", { sold: totals.sold, total: totals.positions })}</p>
           </div>
         </>
       ) : (
         <p className={meta}>
-          {totals.totalCents == null ? `${totals.positions} spots` : `${totals.positions} spots · ${centsText(totals.totalCents)}`}
+          {totals.totalCents == null
+            ? t("creator.listings.spots", { count: totals.positions })
+            : t("creator.listings.spotsWorth", { count: totals.positions, amount: centsText(totals.totalCents) })}
         </p>
       )}
       <div className="mt-auto flex items-center gap-1.5">
         <Ion name="time-outline" size={13} className="text-white/55" />
         <p className={meta}>
-          {l.status === "live" ? `Closes ${dateTimeText(l.closesAt)}` : l.status === "draft" ? "Continue editing" : `Closed ${dateTimeText(l.closesAt)}`}
+          {l.status === "live"
+            ? t("creator.listings.closes", { when: dateTimeText(l.closesAt) })
+            : l.status === "draft"
+              ? t("creator.listings.continueEditing")
+              : t("creator.listings.closedOn", { when: dateTimeText(l.closesAt) })}
         </p>
       </div>
     </Card>
@@ -176,9 +194,10 @@ export function SpaceCard({ listing: l, href: to }: { listing: Listing; href?: s
 }
 
 function ManagedListings() {
+  const t = useT();
   const { managed } = useShell();
   const href = useHref();
-  if (managed.length === 0) return <Empty icon="megaphone-outline" title="No listings yet" />;
+  if (managed.length === 0) return <Empty icon="megaphone-outline" title={t("creator.listings.noneYet")} />;
   // A status the list does not know reads as closed: it is not selling.
   const statusOf = (m: (typeof managed)[number]): SpaceStatus => ((ORDER as string[]).includes(m.status) ? (m.status as SpaceStatus) : "closed");
   const groups = ORDER.map((st) => ({ st, rows: managed.filter((m) => statusOf(m) === st) })).filter((g) => g.rows.length > 0);
@@ -186,7 +205,7 @@ function ManagedListings() {
     <div className="flex flex-col gap-3.5">
       {groups.map((g) => (
         <section key={g.st} className="flex flex-col gap-2.5">
-          <SectionLabel>{GROUP_LABEL[g.st]}</SectionLabel>
+          <SectionLabel>{t(GROUP_LABEL[g.st])}</SectionLabel>
           <ul className={GRID}>
             {g.rows.map((m) => (
               <li key={m.spaceId} className="flex">
@@ -200,7 +219,9 @@ function ManagedListings() {
                     <div className="mt-auto flex items-center gap-1.5">
                       <Ion name="time-outline" size={13} className="text-white/55" />
                       <p className="text-[12.5px] font-strong text-white/55">
-                        {m.status === "live" ? `Closes ${dateTimeText(m.closesAt)}` : `Closed ${dateTimeText(m.closesAt)}`}
+                        {m.status === "live"
+                          ? t("creator.listings.closes", { when: dateTimeText(m.closesAt) })
+                          : t("creator.listings.closedOn", { when: dateTimeText(m.closesAt) })}
                       </p>
                     </div>
                   ) : null}

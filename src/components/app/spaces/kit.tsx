@@ -23,6 +23,10 @@
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
 
+import { currentIntl } from "@/lib/app/i18n";
+import { fmtDate, fmtNumber } from "@/lib/app/i18n/format";
+import { useT } from "@/lib/app/i18n/react";
+
 import { Ion, type IonName } from "../ion";
 
 /* ── travelPalette, as classes ───────────────────────────────────── */
@@ -312,7 +316,8 @@ export function centsText(cents: number | null | undefined): string {
   if (cents == null || !Number.isFinite(cents)) return "—";
   const d = cents / 100;
   const whole = Number.isInteger(d);
-  return `$${d.toLocaleString("en-US", { minimumFractionDigits: whole ? 0 : 2, maximumFractionDigits: 2 })}`;
+  // A price paid in USDC: stays in dollars, only the separators follow the language.
+  return `$${fmtNumber(d, { minimumFractionDigits: whole ? 0 : 2, maximumFractionDigits: 2 })}`;
 }
 
 /** formatDateTime: "Wed, 7 Oct, 10:00". */
@@ -320,7 +325,7 @@ export function dateTimeText(iso: string | null | undefined): string {
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  return fmtDate(d, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
 /** formatDay: "7 Oct 2026". */
@@ -328,7 +333,7 @@ export function dayText(day: string | null | undefined): string {
   if (!day) return "—";
   const d = new Date(`${day.slice(0, 10)}T00:00:00Z`);
   if (Number.isNaN(d.getTime())) return day;
-  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+  return fmtDate(d, { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 }
 
 /** formatEventDates: "7–8 Oct", "30 Sep – 2 Oct", the year only when it is not this one. */
@@ -339,17 +344,23 @@ export function eventDatesText(startsOn: string, endsOn: string): string {
   if (!Number.isFinite(a)) return startsOn || "";
   const da = new Date(a);
   const db = new Date(b);
-  const m = (d: Date) => d.toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" });
   const thisYear = new Date().getUTCFullYear();
-  if (da.getUTCFullYear() !== db.getUTCFullYear()) return `${da.getUTCDate()} ${m(da)} ${da.getUTCFullYear()} – ${db.getUTCDate()} ${m(db)} ${db.getUTCFullYear()}`;
-  const year = db.getUTCFullYear() !== thisYear ? ` ${db.getUTCFullYear()}` : "";
-  if (a === b) return `${da.getUTCDate()} ${m(da)}${year}`;
-  if (da.getUTCMonth() === db.getUTCMonth()) return `${da.getUTCDate()}–${db.getUTCDate()} ${m(db)}${year}`;
-  return `${da.getUTCDate()} ${m(da)} – ${db.getUTCDate()} ${m(db)}${year}`;
+  const withYear = da.getUTCFullYear() !== db.getUTCFullYear() || db.getUTCFullYear() !== thisYear;
+  const options: Intl.DateTimeFormatOptions = { day: "numeric", month: "short", timeZone: "UTC", ...(withYear ? { year: "numeric" } : {}) };
+  if (a === b) return fmtDate(da, options);
+  // The language writes the range ("7–8 Oct", "Oct 7 – 8"); Intl knows how.
+  try {
+    const f = new Intl.DateTimeFormat(currentIntl(), options) as Intl.DateTimeFormat & { formatRange?: (x: Date, y: Date) => string };
+    if (f.formatRange) return f.formatRange(da, db);
+  } catch {
+    /* fall through */
+  }
+  return `${fmtDate(da, options)} – ${fmtDate(db, options)}`;
 }
 
 /** EventLine (EventParts): a calendar icon and "Name · City · 7–8 Oct", 12.5/600 muted. */
 export function EventLine({ event }: { event: { name: string; city?: string | null; startsOn?: string | null; endsOn?: string | null } }) {
+  useT();
   const when = event.startsOn ? eventDatesText(event.startsOn, event.endsOn ?? event.startsOn) : "";
   return (
     <div className="flex min-w-0 items-center gap-1.5">

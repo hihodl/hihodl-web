@@ -4,16 +4,25 @@
 
 import { describeCreatorError } from "@/lib/creator/api";
 import type { SpaceStatus } from "@/lib/creator/listing";
+import { t, type MessageKey } from "@/lib/app/i18n";
+import { fmtDate } from "@/lib/app/i18n/format";
+import { useT } from "@/lib/app/i18n/react";
 
 import { Notice } from "../hold";
 import { Tag } from "./kit";
 
-export const STATUS_LABEL: Record<SpaceStatus | string, string> = {
-  draft: "Draft",
-  live: "Live",
-  closed: "Closed",
-  delisted: "Taken down",
+const STATUS_KEY: Record<SpaceStatus | string, MessageKey> = {
+  draft: "creator.status.draft",
+  live: "creator.status.live",
+  closed: "creator.status.closed",
+  delisted: "creator.status.delisted",
 };
+
+/** A listing's status in words, at render. */
+export function statusLabel(status: string): string {
+  const k = STATUS_KEY[status];
+  return k ? t(k) : status;
+}
 
 /** The app's `statusTag` (MySpacesList): Live is green, Draft calm, Closed dim, Taken down amber. */
 const STATUS_TONE: Record<string, "good" | "calm" | "dim" | "caution"> = {
@@ -24,13 +33,15 @@ const STATUS_TONE: Record<string, "good" | "calm" | "dim" | "caution"> = {
 };
 
 export function StatusPill({ status, onPhoto = false }: { status: string; onPhoto?: boolean }) {
-  const tag = <Tag label={STATUS_LABEL[status] ?? status} tone={STATUS_TONE[status] ?? "calm"} />;
+  useT();
+  const tag = <Tag label={statusLabel(status)} tone={STATUS_TONE[status] ?? "calm"} />;
   // A tag is a tint; on a picture it sits on a dark backing of the same shape so it reads.
   return onPhoto ? <span className="inline-flex rounded-[11px] bg-[#04101A]/75 backdrop-blur-md">{tag}</span> : tag;
 }
 
 /** The app's Notice for a read that failed: an amber tint, never red. */
 export function ReadError({ error }: { error: unknown }) {
+  useT();
   return error ? <Notice icon="cloud-offline-outline">{describeCreatorError(error)}</Notice> : null;
 }
 
@@ -39,7 +50,7 @@ export function shortDay(iso: string | null | undefined): string {
   if (!iso) return "";
   const d = new Date(iso.length === 10 ? `${iso}T12:00:00` : iso);
   if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  return fmtDate(d, { day: "numeric", month: "short" });
 }
 
 /** "in 3d", "2d late", "today". */
@@ -48,8 +59,8 @@ export function dueText(iso: string | null | undefined): string {
   const day = iso.slice(0, 10);
   const today = new Date().toISOString().slice(0, 10);
   const diff = Math.round((new Date(`${day}T12:00:00Z`).getTime() - new Date(`${today}T12:00:00Z`).getTime()) / 86_400_000);
-  if (diff === 0) return "today";
-  return diff > 0 ? `in ${diff}d` : `${-diff}d late`;
+  if (diff === 0) return t("creator.due.today");
+  return diff > 0 ? t("creator.due.inDays", { days: diff }) : t("creator.due.daysLate", { days: -diff });
 }
 
 /** "Due in 1d 4h", "Due in 5h", "6h late": a production spot is due to the hour. */
@@ -60,8 +71,9 @@ export function countdownText(iso: string, now = Date.now()): string {
   const days = Math.floor(abs / 86_400_000);
   const hours = Math.floor((abs % 86_400_000) / 3_600_000);
   const minutes = Math.max(1, Math.floor((abs % 3_600_000) / 60_000));
-  const span = days > 0 ? `${days}d ${hours}h` : hours > 0 ? `${hours}h` : `${minutes}m`;
-  return ms >= 0 ? `Due in ${span}` : `${span} late`;
+  const span =
+    days > 0 ? t("creator.due.spanDaysHours", { days, hours }) : hours > 0 ? t("creator.due.spanHours", { hours }) : t("creator.due.spanMinutes", { minutes });
+  return ms >= 0 ? t("creator.due.dueIn", { span }) : t("creator.due.late", { span });
 }
 
 /** The list pane scrolls inside itself on a wide screen, so the page does not. */

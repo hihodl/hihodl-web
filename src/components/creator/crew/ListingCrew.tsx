@@ -20,10 +20,12 @@ import { ctaSecondary, Notice as HoldNotice } from "@/components/app/hold";
 import { Ion } from "@/components/app/ion";
 import { Body, Card, Divider, Empty, SheetRow } from "@/components/app/spaces/kit";
 import { describeCrewError, myCrews, notReadyText, setListingCrew, whoText, type Crew } from "@/lib/creator/crew";
+import { useT } from "@/lib/app/i18n/react";
 
 const fine = "text-[12px] leading-[17px] text-white/55";
 
 export function ListingCrew({ spaceId, onChanged }: { spaceId: string; onChanged: () => void }) {
+  const t = useT();
   const href = useHref();
   const [crews, setCrews] = useState<Crew[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -56,16 +58,13 @@ export function ListingCrew({ spaceId, onChanged }: { spaceId: string; onChanged
       .finally(() => setBusy(null));
   };
 
-  if (crews === null) return <Empty icon="hourglass-outline" title="Loading…" />;
+  if (crews === null) return <Empty icon="hourglass-outline" title={t("common.loading")} />;
 
   return (
     <div className="flex flex-col gap-2.5">
       <Card>
-        <p className="text-[16px] font-strong tracking-[-0.2px] text-white">One package, one payment, everyone paid</p>
-        <Body dim>
-          Sold as a crew, the brand pays once and each person in the crew gets their part in their own wallet, in that same payment. The page
-          shows who is in it and what each brings. Crew listings are paid on Solana.
-        </Body>
+        <p className="text-[16px] font-strong tracking-[-0.2px] text-white">{t("creator.crew.leadTitle")}</p>
+        <Body dim>{t("creator.crew.leadBody")}</Body>
       </Card>
 
       {notice ? <HoldNotice>{notice}</HoldNotice> : null}
@@ -73,11 +72,11 @@ export function ListingCrew({ spaceId, onChanged }: { spaceId: string; onChanged
       {crews.length === 0 ? (
         <Empty
           icon="people-outline"
-          title="You don't lead a crew yet"
-          body="Start one in Crew, add the creators you work with, then come back here."
+          title={t("creator.crew.noCrewTitle")}
+          body={t("creator.crew.noCrewBody")}
           action={
             <a href={href("/crew")} className={ctaSecondary}>
-              Go to Crew
+              {t("creator.crew.goToCrew")}
             </a>
           }
         />
@@ -106,7 +105,7 @@ export function ListingCrew({ spaceId, onChanged }: { spaceId: string; onChanged
                     <span className={fine}>{c.members.map((m) => `${whoText(m)} ${m.share}`).join(" · ")}</span>
                     {!c.ready ? <span className="text-[12px] font-strong text-amber">{notReadyText(c.notReady)}</span> : null}
                   </span>
-                  {busy === c.id ? <span className={fine}>Saving…</span> : null}
+                  {busy === c.id ? <span className={fine}>{t("common.saving")}</span> : null}
                 </button>
               </div>
             );
@@ -115,10 +114,10 @@ export function ListingCrew({ spaceId, onChanged }: { spaceId: string; onChanged
       )}
 
       {current ? (
-        <SheetRow icon="people-outline" title={`Manage ${current.name}`} meta="Shares, who's in, and the expenses group" href={`${href("/crew")}?crew=${current.id}`} />
+        <SheetRow icon="people-outline" title={t("creator.crew.manage", { name: current.name })} meta={t("creator.crew.manageMeta")} href={`${href("/crew")}?crew=${current.id}`} />
       ) : null}
       {current ? (
-        <p className={fine}>Tap the chosen crew again to sell this listing on your own. Sales already paid keep the split they were paid with.</p>
+        <p className={fine}>{t("creator.crew.tapAgain")}</p>
       ) : null}
     </div>
   );

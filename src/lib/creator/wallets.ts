@@ -24,6 +24,8 @@
 
 "use client";
 
+import { t } from "@/lib/app/i18n";
+
 /* ── Provider shapes ──────────────────────────────────────────────── */
 
 interface SolanaProvider {
@@ -217,16 +219,14 @@ export async function signEvmMessage(address: string, message: string): Promise<
 
 /** What the wallet did, said to the creator. */
 export function describeWalletError(e: unknown): string {
-  if (!(e instanceof WalletError)) return "Your wallet could not be reached. Try again.";
+  if (!(e instanceof WalletError)) return t("creator.wallet.unreachable");
   const name = e.wallet === "phantom" ? "Phantom" : "MetaMask";
   switch (e.reason) {
     case "missing":
-      return e.wallet === "phantom"
-        ? "No Solana wallet found in this browser. Install Phantom, or open this page in Phantom's own browser."
-        : "No Ethereum wallet found in this browser. Install MetaMask, or open this page in your wallet's own browser.";
+      return e.wallet === "phantom" ? t("creator.wallet.noSolana") : t("creator.wallet.noEvm");
     case "rejected":
-      return `You turned that down in ${name}. Nothing was sent, and nothing moved either way.`;
+      return t("creator.wallet.rejected", { name });
     default:
-      return `${name} could not complete that. Try again.`;
+      return t("creator.wallet.failed", { name });
   }
 }

@@ -45,28 +45,32 @@ import { Body, Card, Disclosure, Divider, Empty, Field, inputCls, KV, money, P, 
 import { markTeamPaid, teamEarnings, teamOwed } from "@/lib/creator/listings";
 import { describeTeamError } from "@/lib/creator/problems";
 import { baseOf, chainName, dayText, groupByMember, shareText, TEAM_LIMITS, usdcText, type Earning, type OwedGroup } from "@/lib/creator/team";
-
-/** A debt whose seat has no label at all, which the server should never send. */
-const UNNAMED = "A team member";
+import { useT } from "@/lib/app/i18n/react";
 
 const fine = `text-[12px] leading-[17px] ${P.dim}`;
 
 /** One sale behind a total: the listing, the share, the chain, the day; what it added on the right. */
 function SaleLine({ r, who }: { r: Earning; who: "you" | "they" }) {
+  const t = useT();
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center justify-between gap-2.5">
         <p className="line-clamp-2 flex-1 text-[12.5px] leading-[17px] text-white/55">
-          {[r.listingTitle ?? "A listing", `${shareText(r.shareBps)} of what was received`, chainName(r.chain), dayText(r.createdAt)].join(" · ")}
+          {[
+            r.listingTitle ?? t("creator.money.aListing"),
+            t("creator.money.shareOfReceived", { share: shareText(r.shareBps) }),
+            chainName(r.chain),
+            dayText(r.createdAt),
+          ].join(" · ")}
         </p>
         <div className="flex shrink-0 flex-col items-end gap-1">
           <p className="text-[13px] font-strong tabular-nums text-white/[0.62]">{usdcText(baseOf(r.amountUsdc))}</p>
-          {r.status === "paid" ? <Tag label="Marked paid" tone="dim" /> : null}
+          {r.status === "paid" ? <Tag label={t("creator.money.markedPaid")} tone="dim" /> : null}
         </div>
       </div>
       {r.status === "paid" && (r.paidTx || r.paidNote) ? (
         <p className="break-all text-[12px] leading-4 text-white/55">
-          {r.paidTx ? `${who === "you" ? "Your" : "Their"} note of the transaction: ${r.paidTx}` : ""}
+          {r.paidTx ? (who === "you" ? t("creator.money.yourTxNote", { tx: r.paidTx }) : t("creator.money.theirTxNote", { tx: r.paidTx })) : ""}
           {r.paidTx && r.paidNote ? " · " : ""}
           {r.paidNote ?? ""}
         </p>
@@ -78,6 +82,7 @@ function SaleLine({ r, who }: { r: Earning; who: "you" | "they" }) {
 /* ── What I owe my team ───────────────────────────────────────────── */
 
 export function Owed() {
+  const t = useT();
   const [rows, setRows] = useState<Earning[] | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -103,32 +108,27 @@ export function Owed() {
     <div className="flex flex-col gap-2.5">
       <Card>
         <Body dim>
-          Nothing here is a balance, and HOLD doesn&apos;t hold any of it. Brands pay creators directly; these are the creator&apos;s own records of what
-          they owe their team, and the creator pays it themselves.
+          {t("creator.money.owedIntro")}
         </Body>
       </Card>
       {notice ? <HoldNotice>{notice}</HoldNotice> : null}
 
       {rows === null ? (
-        <Empty icon="hourglass-outline" title="Loading…" />
+        <Empty icon="hourglass-outline" title={t("common.loading")} />
       ) : groups.length === 0 ? (
-        <Empty
-          icon="receipt-outline"
-          title="Nothing owed either way"
-          body="When a listing with somebody on it sells, their share of what the creator received is recorded here."
-        />
+        <Empty icon="receipt-outline" title={t("creator.money.nothingOwed")} body={t("creator.money.nothingOwedBody")} />
       ) : (
         <>
-          <SectionLabel>You owe your team</SectionLabel>
+          <SectionLabel>{t("creator.money.youOwe")}</SectionLabel>
           <Card>
-            <p className="text-[12.5px] font-strong text-white/[0.62]">Still to pay</p>
+            <p className="text-[12.5px] font-strong text-white/[0.62]">{t("creator.money.stillToPay")}</p>
             <p className={money}>{usdcText(owedTotal)}</p>
             <p className={fine}>
-              Pay each person yourself, from your wallet or however you agreed. HOLD doesn&apos;t send it. Mark it paid here so your record matches.
+              {t("creator.money.payYourself")}
             </p>
           </Card>
           {groups.map((g) => (
-            <PersonCard key={g.memberId} group={g} name={(g.owed[0] ?? g.paid[0])?.memberLabel ?? UNNAMED} onPaid={() => void load()} />
+            <PersonCard key={g.memberId} group={g} name={(g.owed[0] ?? g.paid[0])?.memberLabel ?? t("creator.money.unnamed")} onPaid={() => void load()} />
           ))}
         </>
       )}
@@ -137,6 +137,7 @@ export function Owed() {
 }
 
 function PersonCard({ group, name, onPaid }: { group: OwedGroup; name: string; onPaid: () => void }) {
+  const t = useT();
   const [paying, setPaying] = useState(false);
   const newest = (a: Earning, b: Earning) => b.createdAt.localeCompare(a.createdAt);
 
@@ -149,9 +150,9 @@ function PersonCard({ group, name, onPaid }: { group: OwedGroup; name: string; o
       {[...group.owed].sort(newest).map((r) => (
         <SaleLine key={r.id} r={r} who="you" />
       ))}
-      {group.paidBase > 0n ? <KV k="Marked paid" v={usdcText(group.paidBase)} /> : null}
+      {group.paidBase > 0n ? <KV k={t("creator.money.markedPaid")} v={usdcText(group.paidBase)} /> : null}
       {group.paid.length ? (
-        <Disclosure label={`What you marked paid (${group.paid.length})`}>
+        <Disclosure label={t("creator.money.whatYouMarked", { count: group.paid.length })}>
           {[...group.paid].sort(newest).map((r) => (
             <SaleLine key={r.id} r={r} who="you" />
           ))}
@@ -159,7 +160,7 @@ function PersonCard({ group, name, onPaid }: { group: OwedGroup; name: string; o
       ) : null}
       {group.owed.length > 0 && !paying ? (
         <button type="button" className={ctaSecondary} onClick={() => setPaying(true)}>
-          Mark as paid
+          {t("creator.money.markAsPaid")}
         </button>
       ) : null}
       {paying ? (
@@ -179,6 +180,7 @@ function PersonCard({ group, name, onPaid }: { group: OwedGroup; name: string; o
 
 /** MarkPaidSheet: it changes a record and nothing else; the reference is a note, never proof. */
 function PayForm({ name, owed, onCancel, onPaid }: { name: string; owed: Earning[]; onCancel: () => void; onPaid: () => void }) {
+  const t = useT();
   const [tx, setTx] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
@@ -191,15 +193,16 @@ function PayForm({ name, owed, onCancel, onPaid }: { name: string; owed: Earning
 
   return (
     <div className="flex flex-col gap-3 rounded-[18px] border border-white/10 bg-white/[0.04] p-3.5">
-      <p className="text-[18px] font-extrabold tracking-[-0.3px] text-white">Mark {name} as paid</p>
+      <p className="text-[18px] font-extrabold tracking-[-0.3px] text-white">{t("creator.money.markNamePaid", { name })}</p>
       <Body dim>
-        This records that you paid {name} {usdcText(total)}. It moves no money: pay them yourself first. We don&apos;t check it.
-        {owed.length > batch.length ? ` It covers the oldest ${batch.length} sales; mark again for the rest.` : ""}
+        {owed.length > batch.length
+          ? t("creator.money.recordsPartial", { name, amount: usdcText(total), count: batch.length })
+          : t("creator.money.records", { name, amount: usdcText(total) })}
       </Body>
-      <Field label="Reference (optional)" hint="A transaction hash or a bank reference, for your own records. It's a note, not proof." htmlFor={`paid-tx-${name}`}>
+      <Field label={t("creator.money.reference")} hint={t("creator.money.referenceHint")} htmlFor={`paid-tx-${name}`}>
         <input id={`paid-tx-${name}`} className={inputCls} value={tx} onChange={(e) => setTx(e.target.value)} maxLength={TEAM_LIMITS.PAID_TX_MAX} autoComplete="off" />
       </Field>
-      <Field label="Note (optional)" htmlFor={`paid-note-${name}`}>
+      <Field label={t("creator.money.note")} htmlFor={`paid-note-${name}`}>
         <input id={`paid-note-${name}`} className={inputCls} value={note} onChange={(e) => setNote(e.target.value)} maxLength={TEAM_LIMITS.PAID_NOTE_MAX} />
       </Field>
       {notice ? <HoldNotice>{notice}</HoldNotice> : null}
@@ -220,10 +223,10 @@ function PayForm({ name, owed, onCancel, onPaid }: { name: string; owed: Earning
             .finally(() => setBusy(false));
         }}
       >
-        {busy ? "Saving…" : "I've paid them"}
+        {busy ? t("common.saving") : t("creator.money.iPaid")}
       </button>
       <button type="button" className={ctaSecondary} disabled={busy} onClick={onCancel}>
-        Cancel
+        {t("common.cancel")}
       </button>
     </div>
   );
@@ -240,6 +243,7 @@ function PayForm({ name, owed, onCancel, onPaid }: { name: string; owed: Earning
  * creator's X handle, as the listing was published under it.
  */
 export function Earnings() {
+  const t = useT();
   const [rows, setRows] = useState<Earning[] | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -266,14 +270,11 @@ export function Earnings() {
 
   return (
     <div className="flex flex-col gap-2.5">
-      <SectionLabel>You&apos;re owed</SectionLabel>
-      <p className={fine}>
-        What the creators you work for have recorded they owe you. They pay you themselves; HOLD doesn&apos;t send, hold or guarantee it. “Marked
-        paid” means they told us they paid you.
-      </p>
+      <SectionLabel>{t("creator.money.youreOwed")}</SectionLabel>
+      <p className={fine}>{t("creator.money.youreOwedBody")}</p>
       {notice ? <HoldNotice>{notice}</HoldNotice> : null}
       {rows === null ? (
-        <Empty icon="hourglass-outline" title="Loading…" />
+        <Empty icon="hourglass-outline" title={t("common.loading")} />
       ) : (
         groups.map((g) => {
           const handle = (g.owed[0] ?? g.paid[0])?.creatorHandle ?? null;
@@ -281,10 +282,10 @@ export function Earnings() {
           return (
             <Card key={g.memberId}>
               <div className="flex items-center justify-between gap-3">
-                <p className="flex-1 truncate text-[15px] font-strong tracking-[-0.2px] text-white">{handle ? `@${handle}` : "A creator you work for"}</p>
+                <p className="flex-1 truncate text-[15px] font-strong tracking-[-0.2px] text-white">{handle ? `@${handle}` : t("creator.money.aCreatorYouWorkFor")}</p>
                 <p className="shrink-0 text-[16px] font-strong tabular-nums text-white">{usdcText(g.owedBase)}</p>
               </div>
-              {g.paidBase > 0n ? <KV k="Marked paid" v={usdcText(g.paidBase)} /> : null}
+              {g.paidBase > 0n ? <KV k={t("creator.money.markedPaid")} v={usdcText(g.paidBase)} /> : null}
               <Divider />
               {list.map((r) => (
                 <SaleLine key={r.id} r={r} who="they" />

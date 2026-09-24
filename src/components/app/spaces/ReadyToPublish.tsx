@@ -25,6 +25,9 @@ import { MIN_X_ACCOUNT_AGE_DAYS, type XAccountStatus } from "@/lib/creator/types
 import { useHoldWallet, useUsdcAccount } from "@/lib/app/hold-wallet";
 import { usePayout } from "@/lib/app/spaces-data";
 import { crossesKeyPage } from "@/lib/wallet/csp";
+import { t, type MessageKey } from "@/lib/app/i18n";
+import { fmtDate } from "@/lib/app/i18n/format";
+import { useT } from "@/lib/app/i18n/react";
 
 import { useProductHref } from "../base";
 import { CopyButton } from "../front/kit";
@@ -52,30 +55,38 @@ interface Item {
 
 function xItem(x: XAccountStatus | null, href: (p: string) => string): Item {
   const go = href("/account?view=x");
-  const label = "X account";
+  const label = t("creator.publish.xAccount");
   if (!x || !x.linked) {
-    return { key: "x", state: "todo", label, sub: `Verified and ${MIN_X_ACCOUNT_AGE_DAYS}+ days old`, action: { label: "Connect X", href: go } };
+    return {
+      key: "x",
+      state: "todo",
+      label,
+      sub: t("creator.publish.xVerifiedAndOld", { days: MIN_X_ACCOUNT_AGE_DAYS }),
+      action: { label: t("creator.publish.connectX"), href: go },
+    };
   }
   const who = `@${x.handle}`;
-  if (x.canPublish) return { key: "x", state: "done", label, sub: `${who}, verified` };
+  if (x.canPublish) return { key: "x", state: "done", label, sub: t("creator.publish.xVerified", { who }) };
   switch (x.refusal) {
     case "x_not_verified":
-      return { key: "x", state: "todo", label, sub: `${who} has no check mark on X`, action: { label: "Change account", href: go } };
+      return { key: "x", state: "todo", label, sub: t("creator.publish.xNoCheck", { who }), action: { label: t("creator.publish.changeAccount"), href: go } };
     case "x_account_too_new": {
       const created = x.accountCreatedAt ? Date.parse(x.accountCreatedAt) : NaN;
       const on = Number.isFinite(created)
-        ? new Date(created + MIN_X_ACCOUNT_AGE_DAYS * 86_400_000).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
+        ? fmtDate(created + MIN_X_ACCOUNT_AGE_DAYS * 86_400_000, { day: "numeric", month: "short" })
         : null;
       return {
         key: "x",
         state: "wait",
         label,
-        sub: on ? `${who} turns ${MIN_X_ACCOUNT_AGE_DAYS} days old on ${on}` : `${who} must be ${MIN_X_ACCOUNT_AGE_DAYS}+ days old`,
-        action: { label: "See X account", href: go },
+        sub: on
+          ? t("creator.publish.xTurnsOld", { who, days: MIN_X_ACCOUNT_AGE_DAYS, on })
+          : t("creator.publish.xMustBeOld", { who, days: MIN_X_ACCOUNT_AGE_DAYS }),
+        action: { label: t("creator.publish.seeX"), href: go },
       };
     }
     default:
-      return { key: "x", state: "todo", label, sub: `X needs to confirm ${who} again`, action: { label: "Connect again", href: go } };
+      return { key: "x", state: "todo", label, sub: t("creator.publish.xConfirmAgain", { who }), action: { label: t("creator.publish.connectAgain"), href: go } };
   }
 }
 
@@ -89,62 +100,64 @@ function useItems(): Item[] | null {
   if (!payout.data && !payout.error) return null;
 
   const items: Item[] = [xItem(x, href)];
+  const usdcLabel = t("creator.publish.usdcAccount");
 
   if (address) {
     items.push({
       key: "wallet",
       state: "done",
-      label: "Solana wallet",
-      sub: payout.data?.solana.source === "hold" ? "Your HOLD wallet" : "Another wallet, proved by signature",
+      label: t("creator.publish.solanaWallet"),
+      sub: payout.data?.solana.source === "hold" ? t("creator.publish.yourHoldWallet") : t("creator.publish.anotherWallet"),
     });
   } else {
     const action: Action =
       w.kind === "web" && w.unregistered
-        ? { label: "Unlock wallet", href: href("/wallet") }
+        ? { label: t("creator.publish.unlockWallet"), href: href("/wallet") }
         : w.canCreate
-          ? { label: "Make wallet", href: href("/wallet") }
-          : { label: "Set up", href: href("/account?view=payout") };
-    items.push({ key: "wallet", state: "todo", label: "Solana wallet", sub: "Where sponsors pay you, in USDC", action });
+          ? { label: t("creator.publish.makeWallet"), href: href("/wallet") }
+          : { label: t("creator.publish.setUp"), href: href("/account?view=payout") };
+    items.push({ key: "wallet", state: "todo", label: t("creator.publish.solanaWallet"), sub: t("creator.publish.wherePaid"), action });
   }
 
   if (!address) {
-    items.push({ key: "usdc", state: "unknown", label: "USDC account", sub: "Checked once you have a wallet" });
+    items.push({ key: "usdc", state: "unknown", label: usdcLabel, sub: t("creator.publish.usdcCheckedLater") });
   } else if (usdc.data === "ready") {
-    items.push({ key: "usdc", state: "done", label: "USDC account", sub: "Open, sponsors can pay you" });
+    items.push({ key: "usdc", state: "done", label: usdcLabel, sub: t("creator.publish.usdcOpen") });
   } else if (usdc.data === "missing") {
     items.push({
       key: "usdc",
       state: "todo",
-      label: "USDC account",
-      sub: "Receive any amount of USDC once to open it",
-      action: { label: "Copy address", copy: address },
+      label: usdcLabel,
+      sub: t("creator.publish.usdcReceiveOnce"),
+      action: { label: t("creator.publish.copyAddress"), copy: address },
     });
   } else if (usdc.data) {
     items.push({
       key: "usdc",
       state: "todo",
-      label: "USDC account",
-      sub: usdc.data === "frozen" ? "Frozen on this wallet" : "Not usable on this wallet",
-      action: { label: "Use another wallet", href: href("/account?view=other-wallet") },
+      label: usdcLabel,
+      sub: usdc.data === "frozen" ? t("creator.publish.usdcFrozen") : t("creator.publish.usdcUnusable"),
+      action: { label: t("creator.publish.useAnotherWallet"), href: href("/account?view=other-wallet") },
     });
   } else {
-    items.push({ key: "usdc", state: "unknown", label: "USDC account", sub: usdc.error ? "Checked again when you publish" : "Checking…" });
+    items.push({ key: "usdc", state: "unknown", label: usdcLabel, sub: usdc.error ? t("creator.publish.usdcCheckedOnPublish") : t("creator.publish.checking") });
   }
   return items;
 }
 
 /** Each state as the app's XAccountPanel `Fact` draws it: an Ionicon, green when done, amber while it waits on you. */
-const MARK: Record<State, { icon: IonName; cls: string; word: string }> = {
-  done: { icon: "checkmark-circle", cls: "text-[#2FBE8A]", word: "Done" },
-  todo: { icon: "alert-circle-outline", cls: "text-amber", word: "To do" },
-  wait: { icon: "time-outline", cls: "text-amber", word: "Waiting" },
-  unknown: { icon: "ellipse-outline", cls: "text-white/55", word: "Not yet" },
+const MARK: Record<State, { icon: IonName; cls: string; word: MessageKey }> = {
+  done: { icon: "checkmark-circle", cls: "text-[#2FBE8A]", word: "common.done" },
+  todo: { icon: "alert-circle-outline", cls: "text-amber", word: "creator.publish.stateTodo" },
+  wait: { icon: "time-outline", cls: "text-amber", word: "creator.publish.stateWaiting" },
+  unknown: { icon: "ellipse-outline", cls: "text-white/55", word: "creator.publish.stateNotYet" },
 };
 
 function Mark({ state }: { state: State }) {
+  const t = useT();
   const m = MARK[state];
   return (
-    <span role="img" aria-label={m.word} className={`flex shrink-0 ${m.cls}`}>
+    <span role="img" aria-label={t(m.word)} className={`flex shrink-0 ${m.cls}`}>
       <Ion name={m.icon} size={18} />
     </span>
   );
@@ -185,6 +198,7 @@ function Row({ item }: { item: Item }) {
 }
 
 export function ReadyToPublish({ compact = false }: { compact?: boolean }) {
+  const t = useT();
   const { role } = useShell();
   const items = useItems();
   if (role !== "creator" || !items) return null;
@@ -195,14 +209,14 @@ export function ReadyToPublish({ compact = false }: { compact?: boolean }) {
     // The app's XAccountPanel compact: one Card above the listings, only while publishing would be refused.
     if (open.length === 0) return null;
     return (
-      <section aria-label="Before you publish">
+      <section aria-label={t("creator.publish.before")}>
         <Card>
           <div className="flex items-center gap-3">
             <span className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[21px] bg-white/[0.08] text-white">
               <Ion name="megaphone-outline" size={20} />
             </span>
             <p className="min-w-0 flex-1 text-[16px] font-strong tracking-[-0.2px] text-white">
-              {open.length === 1 ? "One step before you publish" : `${open.length} steps before you publish`}
+              {t("creator.publish.stepsBefore", { count: open.length })}
             </p>
           </div>
           <ul className="flex flex-col divide-y divide-white/[0.08]">
@@ -216,9 +230,9 @@ export function ReadyToPublish({ compact = false }: { compact?: boolean }) {
   }
 
   return (
-    <section aria-label="Ready to publish" className="flex flex-col gap-2.5">
-      <SectionLabel right={<Tag label={`${done} of ${items.length} done`} tone={open.length ? "caution" : "good"} />}>
-        {open.length ? "Before you publish" : "Ready to publish"}
+    <section aria-label={t("creator.publish.ready")} className="flex flex-col gap-2.5">
+      <SectionLabel right={<Tag label={t("creator.publish.doneOf", { done, total: items.length })} tone={open.length ? "caution" : "good"} />}>
+        {open.length ? t("creator.publish.before") : t("creator.publish.ready")}
       </SectionLabel>
       <Card>
         <ul className="flex flex-col divide-y divide-white/[0.08]">
