@@ -35,6 +35,7 @@ import {
 
 import { API_BASE } from "@/lib/ad-space/config";
 
+import { EN } from "./en";
 import { applyLocale, rawMessage, t, type MessageKey } from "./index";
 import { isDisplayCurrency, regionCurrency } from "./currencies";
 import * as format from "./format";
@@ -239,8 +240,53 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     document.documentElement.lang = locale;
   }, [locale]);
+  useDocumentTitle(locale);
 
   return <div style={hidden ? { display: "contents", visibility: "hidden" } : { display: "contents" }}>{children}</div>;
+}
+
+/* ── The tab's title ──────────────────────────────────────────────── */
+
+/** English page title → its key in the "titles" namespace. */
+const TITLE_KEYS: Record<string, MessageKey> = Object.fromEntries(
+  Object.entries(EN)
+    .filter(([k]) => k.startsWith("titles."))
+    .map(([k, v]) => [v, k as MessageKey]),
+);
+
+/**
+ * The pages' titles come from server metadata, in English ("Menu · HOLD").
+ * Once in the browser, the word is swapped for the person's language, and
+ * swapped again whenever Next sets a new title on navigation.
+ */
+function useDocumentTitle(locale: LocaleCode): void {
+  useEffect(() => {
+    let english = document.title;
+    let writing = false;
+    const apply = () => {
+      const [page, ...rest] = english.split(" · ");
+      const key = TITLE_KEYS[page];
+      const next = key ? [t(key), ...rest].join(" · ") : english;
+      if (document.title !== next) {
+        writing = true;
+        document.title = next;
+        writing = false;
+      }
+    };
+    apply();
+    const head = document.querySelector("head");
+    if (!head) return;
+    const obs = new MutationObserver(() => {
+      if (writing) return;
+      const now = document.title;
+      const [page] = now.split(" · ");
+      // A title we did not write: Next navigated. Remember its English.
+      if (TITLE_KEYS[page] || !Object.values(TITLE_KEYS).some((k) => t(k) === page)) english = now;
+      apply();
+    });
+    obs.observe(head, { subtree: true, childList: true, characterData: true });
+    return () => obs.disconnect();
+  }, [locale]);
 }
 
 /**

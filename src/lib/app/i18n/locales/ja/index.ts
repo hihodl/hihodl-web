@@ -1,5 +1,6 @@
 /* Generated: the ja words, every namespace, as one chunk. */
 import common from "./common.json";
+import titles from "./titles.json";
 import shell from "./shell.json";
 import front from "./front.json";
 import link from "./link.json";
@@ -26,6 +27,6 @@ import trips from "./trips.json";
 
 import { prefix } from "../prefix";
 
-const dict = prefix({ common, shell, front, link, menu, prefs, account, home, activity, wallet, money, payments, groups, groupThread, analytics, spaces, listings, creator, runner, board, offers, sponsor, stays, trips });
+const dict = prefix({ common, titles, shell, front, link, menu, prefs, account, home, activity, wallet, money, payments, groups, groupThread, analytics, spaces, listings, creator, runner, board, offers, sponsor, stays, trips });
 
 export default dict;

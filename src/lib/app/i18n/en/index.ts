@@ -29,11 +29,13 @@ import shell from "./shell";
 import spaces from "./spaces";
 import sponsor from "./sponsor";
 import stays from "./stays";
+import titles from "./titles";
 import trips from "./trips";
 import wallet from "./wallet";
 
 export const NAMESPACES = {
   common,
+  titles,
   shell,
   front,
   link,
