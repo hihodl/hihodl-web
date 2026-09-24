@@ -15,6 +15,7 @@
 
 import type { CounterpartyType, SpendTransfer as Transfer } from "./types";
 import type { CategoryId } from "./categories";
+import { t } from "../i18n";
 
 export type { CounterpartyType };
 
@@ -110,16 +111,16 @@ export function counterpartyTypeFromRecipient(to: string | null | undefined): Co
 export function counterpartyTypeLabel(type: CounterpartyType | null | undefined): string {
   switch (type) {
     case "hihodl_user":
-      return "HOLD user";
+      return t("analytics.counterpartyType.hihodlUser");
     case "crypto_wallet":
-      return "Crypto wallet";
+      return t("analytics.counterpartyType.cryptoWallet");
     case "bank":
-      return "Bank account";
+      return t("analytics.counterpartyType.bank");
     case "card":
-      return "Card";
+      return t("analytics.counterpartyType.card");
     case "mobile_money":
-      return "Mobile money";
+      return t("analytics.counterpartyType.mobileMoney");
     default:
-      return "Unknown";
+      return t("analytics.counterpartyType.unknown");
   }
 }

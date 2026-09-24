@@ -13,8 +13,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
+import { currentIntl, t as tr } from "@/lib/app/i18n";
+import { effectiveCurrency, fmtDate, fmtFiat, fmtPercent, fmtUsd, usdToDisplay, weekdayName } from "@/lib/app/i18n/format";
+import { useT } from "@/lib/app/i18n/react";
 import { useTransfers } from "@/lib/app/money";
-import { currentMonthRange, customRange, rangeFromParams, rangeToParams, rollingRange, type SpendRange } from "@/lib/app/spending/range";
+import { currentMonthRange, customRange, rangeFromParams, rangeLabel, rangeToParams, rollingRange, type SpendRange } from "@/lib/app/spending/range";
 import { SPENDING_SELECTED } from "@/lib/app/spending/categories";
 import type { MetricPoint } from "@/lib/app/spending/analytics";
 import { subscriptionCategoryDef } from "@/lib/app/spending/subscriptionCategories";
@@ -22,7 +25,6 @@ import type { Subscription } from "@/lib/app/spending/subscriptions";
 import { asSpendTransfers, type SpendTransfer } from "@/lib/app/spending/types";
 
 import { Ion } from "../ion";
-import { money } from "../wallet/app-kit";
 
 /* ── Tokens, traced from the app ─────────────────────────────────── */
 
@@ -38,9 +40,14 @@ export const glassCard = "border-[0.5px] border-white/[0.22] bg-white/10";
 /** GlassCardSecondaryHero. */
 export const glassHero = "border-[0.5px] border-white/[0.24] bg-[linear-gradient(160deg,rgba(255,255,255,0.16),rgba(255,255,255,0.07))]";
 
-/** The app's `formatFiatAmount` for the web, which counts in dollars. */
-export const fmt = (usd: number) => money(usd);
+/**
+ * The app's `formatFiatAmount`: a dollar figure worked out from activity,
+ * shown in the display currency. Every figure on these screens is one.
+ */
+export const fmt = (usd: number) => fmtUsd(usd);
 export const signed = (usd: number) => `${usd >= 0 ? "+" : "−"}${fmt(Math.abs(usd))}`;
+/** A whole percentage of a 0..1 fraction: "12%". */
+export const pct0 = (fraction: number) => fmtPercent(Math.round(fraction * 100) / 100, 0);
 
 /* ── The one read ────────────────────────────────────────────────── */
 
@@ -120,7 +127,7 @@ export interface DonutSlice {
 export function SpendingDonut({
   slices,
   centerValue,
-  centerLabel = "spent",
+  centerLabel,
   size = 132,
   thickness = 20,
   selectedId = null,
@@ -134,6 +141,8 @@ export function SpendingDonut({
   selectedId?: string | null;
   onSlicePress?: (id: string) => void;
 }) {
+  const t = useT();
+  const label = centerLabel ?? t("analytics.donut.spent");
   const r = (size - thickness) / 2;
   const c = size / 2;
   const C = 2 * Math.PI * r;
@@ -156,7 +165,7 @@ export function SpendingDonut({
   return (
     <div className="relative shrink-0" style={{ width: size, height: size }}>
       {/* The pop is 5px wider than the ring, so the canvas leaves room for it. */}
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="overflow-visible" role="img" aria-label={`${centerValue} ${centerLabel}`}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="overflow-visible" role="img" aria-label={`${centerValue} ${label}`}>
         <circle cx={c} cy={c} r={r} stroke="rgba(255,255,255,0.06)" strokeWidth={thickness} fill="none" />
         {segments.map((seg) => {
           const isSel = selectedId === seg.id;
@@ -176,7 +185,7 @@ export function SpendingDonut({
               onClick={onSlicePress ? () => onSlicePress(seg.id) : undefined}
               className={onSlicePress ? "cursor-pointer transition-[stroke-width,stroke-opacity] duration-150" : undefined}
             >
-              {seg.label ? <title>{`${seg.label} · ${Math.round(seg.pct * 100)}%`}</title> : null}
+              {seg.label ? <title>{`${seg.label} · ${pct0(seg.pct)}`}</title> : null}
             </circle>
           );
         })}
@@ -186,10 +195,10 @@ export function SpendingDonut({
         <span className="whitespace-nowrap font-bold tracking-[-0.4px] tabular-nums text-white" style={{ fontSize: Math.min(15, ((size - 2 * thickness) * 1.55) / Math.max(centerValue.length, 1)) }}>
           {centerValue}
         </span>
-        <span className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.6px] text-white/55">{centerLabel}</span>
+        <span className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.6px] text-white/55">{label}</span>
       </div>
       {onSlicePress && selectedId ? (
-        <button type="button" aria-label="Clear selection" onClick={() => onSlicePress(selectedId)} className="absolute inset-[26%] rounded-full" />
+        <button type="button" aria-label={t("analytics.donut.clearSelection")} onClick={() => onSlicePress(selectedId)} className="absolute inset-[26%] rounded-full" />
       ) : null}
     </div>
   );
@@ -267,6 +276,7 @@ export function MetricChart({
   color: string;
   height?: number;
 }) {
+  const t = useT();
   const [ref, w] = useWidth<HTMLDivElement>();
   const [hover, setHover] = useState<number | null>(null);
 
@@ -311,10 +321,16 @@ export function MetricChart({
     const p = series[hover];
     if (model.kind === "spend") {
       const prior = model.prior[hover];
-      return { label: p.label, lines: [`${fmt(model.cur[hover] ?? 0)} spent so far`, ...(prior !== undefined ? [`${fmt(prior)} last period`] : [])] };
+      return {
+        label: p.label,
+        lines: [
+          t("analytics.chart.spentSoFar", { amount: fmt(model.cur[hover] ?? 0) }),
+          ...(prior !== undefined ? [t("analytics.chart.lastPeriod", { amount: fmt(prior) })] : []),
+        ],
+      };
     }
-    if (model.kind === "income") return { label: p.label, lines: [`${fmt(p.income)} in`] };
-    return { label: p.label, lines: [`${fmt(p.income)} in`, `${fmt(p.spend)} out`] };
+    if (model.kind === "income") return { label: p.label, lines: [t("analytics.chart.in", { amount: fmt(p.income) })] };
+    return { label: p.label, lines: [t("analytics.chart.in", { amount: fmt(p.income) }), t("analytics.chart.out", { amount: fmt(p.spend) })] };
   })();
   const hoverX = hover !== null ? xAt(hover, series.length) : 0;
 
@@ -329,7 +345,7 @@ export function MetricChart({
           onPointerDown={onMove}
           onPointerLeave={() => setHover(null)}
           role="img"
-          aria-label={kind === "spend" ? "Cumulative spending against the previous period" : kind === "income" ? "Income per period" : "Money in and out per period"}
+          aria-label={kind === "spend" ? t("analytics.chart.ariaSpend") : kind === "income" ? t("analytics.chart.ariaIncome") : t("analytics.chart.ariaCashflow")}
         >
           <line x1={0} y1={PAD_TOP} x2={plotW} y2={PAD_TOP} stroke={GRID} strokeDasharray="2 4" />
           <line x1={0} y1={PAD_TOP + plotH} x2={plotW} y2={PAD_TOP + plotH} stroke={GRID} />
@@ -418,20 +434,37 @@ export function MetricChart({
   );
 }
 
-/** The axis cap fits 40px: "$1,240" whole dollars, "$12.4K" beyond. */
+/**
+ * The axis cap fits 40px: "$1,240" whole, "$12.4K" beyond, "$124K" past a
+ * hundred thousand. In the display currency, so the cut is on the drawn figure.
+ */
 function compactFiat(usd: number): string {
-  if (usd >= 10_000) return `$${(usd / 1000).toFixed(usd >= 100_000 ? 0 : 1)}K`;
-  return `$${Math.round(usd).toLocaleString("en-US")}`;
+  const v = usdToDisplay(usd);
+  const cur = effectiveCurrency();
+  if (v >= 100_000) {
+    try {
+      return new Intl.NumberFormat(currentIntl(), { style: "currency", currency: cur, currencyDisplay: "narrowSymbol", notation: "compact", maximumFractionDigits: 0 }).format(v);
+    } catch {
+      return fmtFiat(v, cur, { compact: true });
+    }
+  }
+  if (v >= 10_000) return fmtFiat(v, cur, { compact: true });
+  return fmtFiat(Math.round(v), cur, { whole: true });
 }
 
 /* ── Range sheet ─────────────────────────────────────────────────── */
 
-const PILLS: { key: string; label: string; days: number }[] = [
-  { key: "30", label: "30 days", days: 30 },
-  { key: "90", label: "90 days", days: 90 },
-  { key: "365", label: "1 year", days: 365 },
+const PILLS: { key: string; days: number }[] = [
+  { key: "30", days: 30 },
+  { key: "90", days: 90 },
+  { key: "365", days: 365 },
 ];
-const WEEKDAYS = ["M", "T", "W", "T", "F", "S", "S"];
+/** The calendar's columns, Monday first (0 = Sunday for weekdayName). */
+const WEEKDAYS = [1, 2, 3, 4, 5, 6, 0];
+
+function pillLabel(days: number): string {
+  return days === 365 ? tr("analytics.rangeSheet.oneYear") : tr("analytics.rangeSheet.days", { count: days });
+}
 
 function startOfDay(ms: number): number {
   const d = new Date(ms);
@@ -445,6 +478,7 @@ function startOfDay(ms: number): number {
  * First tap on a day is the start, the second the end.
  */
 export function RangeSheet({ initial, onApply, onClose }: { initial: SpendRange; onApply: (r: SpendRange) => void; onClose: () => void }) {
+  const t = useT();
   const [mode, setMode] = useState<"rolling" | "custom">(initial.mode === "custom" ? "custom" : "rolling");
   const [days, setDays] = useState(initial.mode === "rolling" ? (initial.rollingDays ?? 30) : 30);
   const [start, setStart] = useState<number | null>(initial.start);
@@ -494,14 +528,15 @@ export function RangeSheet({ initial, onApply, onClose }: { initial: SpendRange;
     return cells;
   }, [cal]);
 
-  const summary = useMemo(() => {
-    if (mode === "rolling") return { label: rollingRange(days).label, days };
+  // Drawn fresh each render, so the words follow a change of language.
+  const summary = (() => {
+    if (mode === "rolling") return { label: rangeLabel(rollingRange(days)), days };
     if (start != null) {
       const r = customRange(start, end ?? start);
-      return { label: r.label, days: r.rollingDays ?? 1 };
+      return { label: rangeLabel(r), days: r.rollingDays ?? 1 };
     }
-    return { label: "Pick a start day", days: 0 };
-  }, [mode, days, start, end]);
+    return { label: t("analytics.rangeSheet.pickStart"), days: 0 };
+  })();
 
   const apply = () => {
     if (mode === "rolling") onApply(rollingRange(days));
@@ -523,31 +558,31 @@ export function RangeSheet({ initial, onApply, onClose }: { initial: SpendRange;
     }`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/65 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label="Select range">
-      <button type="button" aria-label="Close" onClick={onClose} className="absolute inset-0 cursor-default" />
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/65 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={t("analytics.rangeSheet.title")}>
+      <button type="button" aria-label={t("common.close")} onClick={onClose} className="absolute inset-0 cursor-default" />
       <div className="relative flex max-h-[92vh] w-full max-w-[440px] flex-col overflow-y-auto rounded-t-[22px] border border-white/[0.12] bg-[#0E2430] px-4 pb-5 pt-2.5 shadow-[0_24px_70px_rgba(0,0,0,0.5)] sm:rounded-[22px]">
         <span className="mx-auto mb-3 h-1 w-9 rounded-[2px] bg-white/25 sm:hidden" aria-hidden />
-        <p className="mb-[18px] text-center text-[18px] font-bold tracking-[-0.3px] text-white">Select range</p>
+        <p className="mb-[18px] text-center text-[18px] font-bold tracking-[-0.3px] text-white">{t("analytics.rangeSheet.title")}</p>
 
         <div className="mb-5 flex gap-2">
           {PILLS.map((p) => (
             <button key={p.key} type="button" aria-pressed={mode === "rolling" && days === p.days} onClick={() => pickPill(p.days)} className={pill(mode === "rolling" && days === p.days)}>
-              {p.label}
+              {pillLabel(p.days)}
             </button>
           ))}
           <button type="button" aria-pressed={mode === "custom"} onClick={() => setMode("custom")} className={pill(mode === "custom")}>
-            Custom
+            {t("analytics.rangeSheet.custom")}
           </button>
         </div>
 
         <div className="mb-3 flex items-center justify-between">
-          <button type="button" aria-label="Previous month" onClick={() => shiftCal(-1)} className="flex h-[30px] w-[30px] items-center justify-center rounded-[9px] bg-white/[0.06] text-white/70 hover:bg-white/10">
+          <button type="button" aria-label={t("analytics.previousMonth")} onClick={() => shiftCal(-1)} className="flex h-[30px] w-[30px] items-center justify-center rounded-[9px] bg-white/[0.06] text-white/70 hover:bg-white/10">
             <Ion name="chevron-back" size={16} />
           </button>
           <p className="text-[15px] font-bold text-white">
-            {new Date(cal.year, cal.month, 1).toLocaleDateString(undefined, { month: "long", year: "numeric" })}
+            {fmtDate(new Date(cal.year, cal.month, 1), { month: "long", year: "numeric" })}
           </p>
-          <button type="button" aria-label="Next month" onClick={() => shiftCal(1)} className="flex h-[30px] w-[30px] items-center justify-center rounded-[9px] bg-white/[0.06] text-white/70 hover:bg-white/10">
+          <button type="button" aria-label={t("analytics.nextMonth")} onClick={() => shiftCal(1)} className="flex h-[30px] w-[30px] items-center justify-center rounded-[9px] bg-white/[0.06] text-white/70 hover:bg-white/10">
             <Ion name="chevron-forward" size={16} />
           </button>
         </div>
@@ -555,7 +590,7 @@ export function RangeSheet({ initial, onApply, onClose }: { initial: SpendRange;
         <div className="mb-1.5 grid grid-cols-7">
           {WEEKDAYS.map((w, i) => (
             <span key={i} className="text-center text-[11px] font-bold text-white/[0.45]">
-              {w}
+              {weekdayName(w, "narrow")}
             </span>
           ))}
         </div>
@@ -581,14 +616,13 @@ export function RangeSheet({ initial, onApply, onClose }: { initial: SpendRange;
 
         <div className="pt-4">
           <div className="mb-3.5 text-center">
-            <p className="text-[11px] font-bold tracking-[0.5px] text-white/55">SELECTED</p>
+            <p className="text-[11px] font-bold tracking-[0.5px] text-white/55">{t("analytics.rangeSheet.selected")}</p>
             <p className="mt-0.5 text-[15px] font-bold text-white">
-              {summary.label}
-              {summary.days > 0 && mode === "custom" ? ` · ${summary.days} days` : ""}
+              {summary.days > 0 && mode === "custom" ? t("analytics.rangeSheet.summaryDays", { label: summary.label, count: summary.days }) : summary.label}
             </p>
           </div>
           <button type="button" onClick={apply} className={`${glassCard} flex h-[54px] w-full items-center justify-center rounded-[16px] text-[16px] font-bold tracking-[-0.2px] text-white transition-colors hover:bg-white/[0.14]`}>
-            Apply
+            {t("analytics.rangeSheet.apply")}
           </button>
         </div>
       </div>
@@ -600,14 +634,15 @@ export function RangeSheet({ initial, onApply, onClose }: { initial: SpendRange;
 
 /** "In 3 days" / "Tomorrow" / "Today" / a date. */
 function whenLabel(daysUntil: number, nextChargeAt: number): string {
-  if (daysUntil <= 0) return "Today";
-  if (daysUntil === 1) return "Tomorrow";
-  if (daysUntil <= 14) return `In ${daysUntil} days`;
-  return new Date(nextChargeAt).toLocaleDateString(undefined, { day: "numeric", month: "short" });
+  if (daysUntil <= 0) return tr("common.today");
+  if (daysUntil === 1) return tr("analytics.subTile.tomorrow");
+  if (daysUntil <= 14) return tr("analytics.subTile.inDays", { count: daysUntil });
+  return fmtDate(nextChargeAt, { day: "numeric", month: "short" });
 }
 
 /** SubscriptionTiles: a horizontal strip of 150×150 tiles, amber accent. */
 export function SubscriptionTiles({ subscriptions }: { subscriptions: Subscription[] }) {
+  const t = useT();
   return (
     <div className="-mx-1 flex snap-x gap-3 overflow-x-auto px-1 py-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {subscriptions.map((sub) => {
@@ -616,13 +651,13 @@ export function SubscriptionTiles({ subscriptions }: { subscriptions: Subscripti
           <div
             key={sub.key}
             className="flex h-[150px] w-[150px] shrink-0 snap-start flex-col justify-between rounded-[18px] border-[0.5px] border-amber/[0.22] bg-white/[0.05] p-3.5"
-            aria-label={`${sub.label} subscription`}
+            aria-label={t("analytics.subTile.aria", { name: sub.label })}
           >
             <div className="flex items-center justify-between">
               <span className="flex h-10 w-10 items-center justify-center rounded-[20px] bg-amber/[0.16] text-amber">
                 <Ion name={def.icon} size={18} />
               </span>
-              <span className="text-[11px] font-bold text-white/55">Day {sub.billingDay}</span>
+              <span className="text-[11px] font-bold text-white/55">{t("analytics.subTile.billingDay", { day: sub.billingDay })}</span>
             </div>
             <div className="min-w-0">
               <p className="truncate text-[15px] font-bold tracking-[-0.2px] text-white">{sub.label}</p>

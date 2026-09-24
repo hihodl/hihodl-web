@@ -23,6 +23,7 @@ import {
   isFiatCounterparty,
 } from "./counterparty";
 import { categoryFromMcc } from "./mcc";
+import { t as msg } from "../i18n";
 
 // ─── Spend classification ────────────────────────────────────────────────────
 // A "spend" is real consumption: an outbound payment via a spending rail
@@ -86,7 +87,7 @@ export function counterpartyLabel(t: Transfer): string {
   if (addr.startsWith("0x") && addr.length > 12) return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
   if (addr.length >= 32 && addr.length <= 44) return `${addr.slice(0, 4)}…${addr.slice(-4)}`;
   if (t.note && t.note.trim()) return t.note.trim();
-  return addr || "Payment";
+  return addr || msg("analytics.counterparty.payment");
 }
 
 // ─── Weighted keyword evidence ───────────────────────────────────────────────
