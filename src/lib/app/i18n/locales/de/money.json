@@ -5,7 +5,7 @@
   "donut.sliceTitle": "{label} {share}",
   "donut.invested": "investiert",
   "invest.title": "Investieren",
-  "invest.performance": "Performance",
+  "invest.performance": "Wertentwicklung",
   "invest.readFailed": "Wir konnten deine Investments nicht laden",
   "invest.unvalued": "{count, plural, one {# Position ist nicht in dieser Summe – gerade ist kein Preis verfügbar.} other {# Positionen sind nicht in dieser Summe – gerade ist kein Preis verfügbar.}}",
   "invest.action": "Investieren",
