@@ -52,6 +52,7 @@ import {
   type StaysConfig,
 } from "./stays";
 import { staysCurrency } from "./display-currency";
+import { t } from "./i18n";
 
 /**
  * A stay's photographs and description keep; its prices do not.
@@ -352,7 +353,7 @@ export function refreshTrips(): Promise<void> {
   publish({ loading: true });
   inflight = getBookings()
     .then((bookings) => publish({ server: bookings, loadedAt: Date.now(), error: null }))
-    .catch(() => publish({ error: "Couldn't load your trips" }))
+    .catch(() => publish({ error: t("trips.list.errorTitle") }))
     .finally(() => {
       inflight = null;
       publish({ loading: false });

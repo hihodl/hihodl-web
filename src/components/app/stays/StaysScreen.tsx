@@ -28,12 +28,14 @@ import { Banner, Card, Empty, Photo, PointsHeadline, Screen, SectionLabel, Spinn
 import { P, dateRange, money, nights as nightsWord, stayRange } from "./look";
 import { SearchBar, blankStay, sane, stayToParams, type Stay } from "./SearchControls";
 import { useFeatured, useStaysConfig, useTrips } from "@/lib/app/stays-data";
+import { useT } from "@/lib/app/i18n/react";
 import type { Booking, FeaturedCard } from "@/lib/app/stays";
 
 export function StaysScreen() {
   const href = useProductHref();
   const router = useRouter();
   const config = useStaysConfig();
+  const t = useT();
   const [stay, setStay] = useState<Stay>(blankStay);
 
   function go(next: Stay) {
@@ -47,8 +49,8 @@ export function StaysScreen() {
       <Screen className="py-8">
         <Empty
           icon="bed-outline"
-          title="Stays isn't live yet"
-          body="We're finishing the connection to our booking partner. It'll be here soon."
+          title={t("trips.home.offTitle")}
+          body={t("trips.home.offBody")}
         />
       </Screen>
     );
@@ -57,17 +59,17 @@ export function StaysScreen() {
   return (
     <Screen className="gap-5">
       {config.data?.sandbox ? (
-        <Banner icon="flask-outline">Test mode — nothing you book here is a real reservation</Banner>
+        <Banner icon="flask-outline">{t("stays.sandbox.banner")}</Banner>
       ) : null}
 
       <header className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-[26px] font-extrabold leading-tight tracking-[-0.7px]" style={{ color: P.text }}>
-              Where to?
+              {t("trips.home.title")}
             </h1>
             <p className="mt-1 text-[13.5px] font-semibold" style={{ color: P.textMuted }}>
-              Hotels at the rate we are quoted, paid in USDC, with HiPoints back on every night.
+              {t("trips.home.subtitle")}
             </p>
           </div>
           {config.data ? <PointsHeadline pct={config.data.headlineEarnRatePct} /> : null}
@@ -77,7 +79,7 @@ export function StaysScreen() {
       </header>
 
       <Shelf
-        title="Close to home"
+        title={t("trips.home.shelfNear")}
         set="near"
         onOpen={(card) =>
           go({
@@ -90,7 +92,7 @@ export function StaysScreen() {
         }
       />
       <Shelf
-        title="Worth the flight"
+        title={t("trips.home.shelfLonghaul")}
         set="longhaul"
         onOpen={(card) =>
           go({
@@ -111,6 +113,7 @@ export function StaysScreen() {
 /* ── The shelf ────────────────────────────────────────────────────── */
 
 function Shelf({ title, set, onOpen }: { title: string; set: "near" | "longhaul"; onOpen: (card: FeaturedCard) => void }) {
+  useT();
   const { data, isLoading, error } = useFeatured(set);
 
   // A shelf that could not be built says nothing at all. It is inspiration:
@@ -138,6 +141,7 @@ function Shelf({ title, set, onOpen }: { title: string; set: "near" | "longhaul"
 }
 
 function Tile({ card, onOpen }: { card: FeaturedCard; onOpen: () => void }) {
+  useT();
   return (
     <button
       type="button"
@@ -190,6 +194,7 @@ function TileSkeleton() {
 
 function YourTrips() {
   const href = useProductHref();
+  const t = useT();
   const { bookings, loading } = useTrips();
   const today = new Date().toISOString().slice(0, 10);
   const upcoming = bookings.filter((b) => b.checkout >= today && b.status !== "cancelled").slice(0, 3);
@@ -206,9 +211,9 @@ function YourTrips() {
   return (
     <section className="flex flex-col gap-2.5">
       <div className="flex items-baseline justify-between gap-3">
-        <SectionLabel>Your trips</SectionLabel>
+        <SectionLabel>{t("trips.home.yourTrips")}</SectionLabel>
         <Link href={href("/travel/trips")} className="text-[12.5px] font-bold" style={{ color: P.greenText }}>
-          See all
+          {t("trips.home.seeAll")}
         </Link>
       </div>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -221,6 +226,7 @@ function YourTrips() {
 }
 
 function TripPreview({ booking, href }: { booking: Booking; href: string }) {
+  useT();
   return (
     <Link href={href} className="block transition-opacity active:opacity-85">
       <Card className="flex items-center gap-3 p-[14px]">

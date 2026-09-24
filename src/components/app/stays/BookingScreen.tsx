@@ -34,15 +34,18 @@ import { Ion } from "../ion";
 
 import { CancelSheet } from "./CancelSheet";
 import { Banner, Card, Empty, Photo, Screen, SectionLabel, Spinner } from "./kit";
-import { P, count, daysUntil, guests as guestsWord, longDate, money, nights as nightsWord, nightsBetween, pointsEarned, shortDate } from "./look";
+import { P, daysUntil, guests as guestsWord, longDate, money, nights as nightsWord, nightsBetween, pointsEarned, shortDate } from "./look";
 import { refreshTrips, useBooking } from "@/lib/app/stays-data";
 import type { Booking } from "@/lib/app/stays";
+import { fmtDate } from "@/lib/app/i18n/format";
+import { useT } from "@/lib/app/i18n/react";
 
 const SUPPORT_EMAIL = "support@hihodl.xyz";
 
 export function BookingScreen({ bookingId }: { bookingId: string }) {
   const href = useProductHref();
   const router = useRouter();
+  const t = useT();
   const { data: booking, isLoading, error, mutate } = useBooking(bookingId);
   const [cancelling, setCancelling] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
@@ -59,7 +62,7 @@ export function BookingScreen({ bookingId }: { bookingId: string }) {
   if (error || !booking) {
     return (
       <Screen className="py-8">
-        <Empty icon="cloud-offline-outline" title="Couldn't load this booking" action="Try again" onAction={() => void mutate()} />
+        <Empty icon="cloud-offline-outline" title={t("trips.booking.errorTitle")} action={t("common.tryAgain")} onAction={() => void mutate()} />
       </Screen>
     );
   }
@@ -87,7 +90,7 @@ export function BookingScreen({ bookingId }: { bookingId: string }) {
         style={{ color: P.textMuted }}
       >
         <Ion name="chevron-back" size={14} />
-        Your trips
+        {t("trips.booking.backToTrips")}
       </button>
 
       {/* ── The hero ── */}
@@ -115,13 +118,13 @@ export function BookingScreen({ bookingId }: { bookingId: string }) {
         </div>
       </div>
 
-      {booking.isSandbox ? <Banner icon="flask-outline">Test booking — not a real reservation</Banner> : null}
+      {booking.isSandbox ? <Banner icon="flask-outline">{t("trips.booking.sandbox")}</Banner> : null}
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         {/* ── The code ── */}
         {booking.reference ? (
           <Card hero className="p-4 lg:col-span-2">
-            <SectionLabel className="!px-0">{booking.referenceKind === "hotel" ? "Hotel confirmation" : "Booking reference"}</SectionLabel>
+            <SectionLabel className="!px-0">{booking.referenceKind === "hotel" ? t("trips.booking.hotelConfirmation") : t("trips.booking.reference")}</SectionLabel>
             <button type="button" onClick={() => void copy(booking.reference!, "Reference")} className="mt-1 flex w-full items-center gap-3 text-left">
               <span className="min-w-0 flex-1">
                 <span className="block text-[21px] font-extrabold tabular-nums tracking-[0.4px]" style={{ color: P.text }}>
@@ -129,7 +132,7 @@ export function BookingScreen({ bookingId }: { bookingId: string }) {
                 </span>
                 {booking.referenceKind === "hotel" ? (
                   <span className="mt-0.5 block text-[12px]" style={{ color: P.textDim }}>
-                    The property&apos;s own code. Give it at the desk.
+                    {t("trips.booking.hotelCodeNote")}
                   </span>
                 ) : null}
               </span>
@@ -143,9 +146,9 @@ export function BookingScreen({ bookingId }: { bookingId: string }) {
         {/* ── Where ── */}
         {booking.hotel.address || booking.hotel.city ? (
           <Card hero className="p-4">
-            <SectionLabel className="!px-0">Where</SectionLabel>
+            <SectionLabel className="!px-0">{t("trips.booking.where")}</SectionLabel>
             <p className="mt-2 text-[15px] font-semibold leading-[21px]" style={{ color: P.text }}>
-              {booking.hotel.address ?? "Address provided by the property"}
+              {booking.hotel.address ?? t("trips.booking.addressByProperty")}
             </p>
             {booking.hotel.city ? (
               <p className="mt-0.5 text-[12.5px] font-semibold" style={{ color: "rgba(255,255,255,0.64)" }}>
@@ -165,7 +168,7 @@ export function BookingScreen({ bookingId }: { bookingId: string }) {
                 style={{ background: P.chipBg, color: P.chipText }}
               >
                 <Ion name="navigate" size={12} />
-                Directions
+                {t("trips.booking.directions")}
               </a>
               {booking.hotel.address ? (
                 <button
@@ -174,7 +177,7 @@ export function BookingScreen({ bookingId }: { bookingId: string }) {
                   className="rounded-[999px] px-[13px] py-2 text-[12px] font-bold"
                   style={{ background: "rgba(255,255,255,0.08)", color: P.text }}
                 >
-                  {copied === "Address" ? "Copied" : "Copy address"}
+                  {copied === "Address" ? t("trips.booking.copied") : t("trips.booking.copyAddress")}
                 </button>
               ) : null}
               {booking.hotel.phone ? (
@@ -184,7 +187,7 @@ export function BookingScreen({ bookingId }: { bookingId: string }) {
                   style={{ background: "rgba(255,255,255,0.08)", color: P.text }}
                 >
                   <Ion name="call-outline" size={12} />
-                  Call the hotel
+                  {t("trips.booking.callHotel")}
                 </a>
               ) : null}
             </div>
@@ -193,28 +196,28 @@ export function BookingScreen({ bookingId }: { bookingId: string }) {
 
         {/* ── When ── */}
         <Card hero className="p-4">
-          <SectionLabel className="!px-0">When</SectionLabel>
+          <SectionLabel className="!px-0">{t("trips.booking.when")}</SectionLabel>
           <div className="mt-1.5 flex flex-col">
-            <Row label="Check in" value={longDate(booking.checkin)} />
-            <Row label="Check out" value={longDate(booking.checkout)} divided />
+            <Row label={t("trips.booking.checkIn")} value={longDate(booking.checkin)} />
+            <Row label={t("trips.booking.checkOut")} value={longDate(booking.checkout)} divided />
           </div>
           <span className="mt-3 inline-block rounded-[999px] px-[11px] py-1.5 text-[12px] font-bold" style={{ background: "rgba(255,255,255,0.07)", color: P.text }}>
             {nightsWord(nights)}
           </span>
           <p className="mt-2.5 text-[11.5px]" style={{ color: P.textFaint }}>
-            Arrival and departure times are set by the property.
+            {t("trips.booking.timesNote")}
           </p>
         </Card>
 
         {/* ── The room ── */}
         <Card hero className="p-4">
-          <SectionLabel className="!px-0">Your room</SectionLabel>
+          <SectionLabel className="!px-0">{t("trips.booking.yourRoom")}</SectionLabel>
           <div className="mt-1.5 flex flex-col">
-            {booking.room ? <Row label="Room" value={booking.room} /> : null}
-            {booking.board ? <Row label="Board" value={booking.board} divided /> : null}
-            <Row label="Guests" value={guestsWord(booking.adults, booking.children)} divided />
-            <Row label="Lead guest" value={booking.guestName} divided />
-            {booking.specialRequest ? <Row label="Your request" value={booking.specialRequest} divided /> : null}
+            {booking.room ? <Row label={t("trips.booking.room")} value={booking.room} /> : null}
+            {booking.board ? <Row label={t("trips.booking.board")} value={booking.board} divided /> : null}
+            <Row label={t("trips.booking.guests")} value={guestsWord(booking.adults, booking.children)} divided />
+            <Row label={t("trips.booking.leadGuest")} value={booking.guestName} divided />
+            {booking.specialRequest ? <Row label={t("trips.booking.yourRequest")} value={booking.specialRequest} divided /> : null}
           </div>
         </Card>
 
@@ -225,16 +228,16 @@ export function BookingScreen({ bookingId }: { bookingId: string }) {
           // The accent only while the free window is genuinely open: amber that
           // is always on says nothing.
         >
-          <SectionLabel className="!px-0">Cancellation</SectionLabel>
+          <SectionLabel className="!px-0">{t("trips.booking.cancellation")}</SectionLabel>
           <Cancellation booking={booking} />
         </Card>
 
         {/* ── What it cost ── */}
         <Card hero className="p-4 lg:col-span-2">
-          <SectionLabel className="!px-0">Payment</SectionLabel>
+          <SectionLabel className="!px-0">{t("trips.booking.payment")}</SectionLabel>
           <div className="mt-1.5 flex flex-col">
-            <Row label="Total paid" value={money(booking.price, booking.currency)} strong />
-            {booking.pointsRedeemed > 0 ? <Row label="Points used" value={`${count(booking.pointsRedeemed)} pts`} divided /> : null}
+            <Row label={t("trips.booking.totalPaid")} value={money(booking.price, booking.currency)} strong />
+            {booking.pointsRedeemed > 0 ? <Row label={t("trips.booking.pointsUsed")} value={pointsEarned(booking.pointsRedeemed)} divided /> : null}
           </div>
           {booking.points.earned > 0 ? (
             <div className="mt-3 border-t-[0.5px] pt-3" style={{ borderColor: P.divider }}>
@@ -243,10 +246,10 @@ export function BookingScreen({ bookingId }: { bookingId: string }) {
               </p>
               <p className="mt-0.5 text-[12.5px]" style={{ color: P.textMuted }}>
                 {cancelled
-                  ? "Not earned — this booking was cancelled"
+                  ? t("trips.booking.pointsNotEarned")
                   : booking.points.state === "credited"
-                    ? "In your balance"
-                    : `Credited after you check out on ${shortDate(booking.checkout)}`}
+                    ? t("stays.points.credited")
+                    : t("trips.booking.pointsAfterCheckout", { date: shortDate(booking.checkout) })}
               </p>
             </div>
           ) : null}
@@ -259,7 +262,7 @@ export function BookingScreen({ bookingId }: { bookingId: string }) {
         style={{ color: P.textDim }}
       >
         <Ion name="mail-outline" size={16} />
-        Question about this booking? Email us
+        {t("trips.booking.help")}
       </a>
 
       {booking.cancellable && !cancelled ? (
@@ -269,7 +272,7 @@ export function BookingScreen({ bookingId }: { bookingId: string }) {
           className="mx-auto px-2 py-3 text-[13.5px] font-semibold underline"
           style={{ color: P.textMuted }}
         >
-          Cancel this booking
+          {t("trips.booking.cancel")}
         </button>
       ) : null}
 
@@ -292,23 +295,24 @@ export function BookingScreen({ bookingId }: { bookingId: string }) {
 
 /** Where this booking is in its own life, in six words or fewer. */
 function Phase({ booking }: { booking: Booking }) {
+  const t = useT();
   const inDays = daysUntil(booking.checkin);
   const outDays = daysUntil(booking.checkout);
   const cancelled = booking.status === "cancelled";
 
   const said = cancelled
-    ? "Cancelled"
+    ? t("trips.phase.cancelled")
     : outDays <= 0
-      ? `Stayed in ${new Date(`${booking.checkout}T00:00:00Z`).toLocaleDateString("en-GB", { month: "long", timeZone: "UTC" })}`
+      ? t("trips.phase.stayedIn", { month: fmtDate(`${booking.checkout}T00:00:00Z`, { month: "long", timeZone: "UTC" }) })
       : inDays <= 0
         ? outDays === 1
-          ? "Checking out tomorrow"
-          : `You're staying — ${outDays} nights left`
+          ? t("trips.phase.checkingOutTomorrow")
+          : t("trips.phase.staying", { count: outDays })
         : inDays === 0
-          ? "Check in today"
+          ? t("trips.phase.checkInToday")
           : inDays === 1
-            ? "Check in tomorrow"
-            : `In ${inDays} days`;
+            ? t("trips.phase.checkInTomorrow")
+            : t("trips.phase.inDays", { count: inDays });
 
   return (
     <span
@@ -325,6 +329,7 @@ function Phase({ booking }: { booking: Booking }) {
 }
 
 function Cancellation({ booking }: { booking: Booking }) {
+  const t = useT();
   const until = booking.freeCancelUntil?.slice(0, 10) ?? null;
   const days = until ? daysUntil(until) : null;
   const open = days !== null && days >= 0;
@@ -337,12 +342,12 @@ function Cancellation({ booking }: { booking: Booking }) {
         </span>
         <div className="min-w-0">
           <p className="text-[15.5px] font-extrabold" style={{ color: P.caution }}>
-            {`Free until ${shortDate(until!)}`}
+            {t("trips.policy.freeUntil", { date: shortDate(until!) })}
           </p>
           <p className="mt-1 text-[13px] leading-[19px]" style={{ color: P.textMuted }}>
             {days === 0
-              ? "That's today. Cancel before the property's deadline and you're refunded in full."
-              : `You have ${days} ${days === 1 ? "day" : "days"}. Cancel before then and you're refunded in full; after it, the property sets the charge.`}
+              ? t("trips.policy.todayBody")
+              : t("trips.policy.daysBody", { count: days })}
           </p>
         </div>
       </div>
@@ -356,12 +361,12 @@ function Cancellation({ booking }: { booking: Booking }) {
       </span>
       <div className="min-w-0">
         <p className="text-[15.5px] font-extrabold" style={{ color: P.text }}>
-          {until ? "Free cancellation has ended" : "Non-refundable"}
+          {until ? t("trips.policy.ended") : t("stays.rate.nonRefundable")}
         </p>
         <p className="mt-1 text-[13px] leading-[19px]" style={{ color: P.textMuted }}>
           {until
-            ? `The free window closed on ${shortDate(until)}. Cancelling now is up to the property and may be charged.`
-            : "This rate was booked without free cancellation, which is why it was cheaper. Changes are up to the property."}
+            ? t("trips.policy.endedBody", { date: shortDate(until) })
+            : t("trips.policy.nonRefundableBody")}
         </p>
       </div>
     </div>

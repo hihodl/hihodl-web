@@ -26,12 +26,13 @@ import { useProductHref } from "../base";
 import { Ion } from "../ion";
 
 import { Cta, Empty, Screen, SectionLabel, Spinner } from "./kit";
-import { P, count, nights as nightsWord } from "./look";
+import { P, count } from "./look";
 import { SearchBar, sane, stayFromParams, stayToParams, type Stay } from "./SearchControls";
 import { StayCard, StayCardSkeleton } from "./StayCard";
 import { useSearch } from "@/lib/app/stays-data";
 import type { SearchQuery } from "@/lib/app/stays";
 import { staysCurrency } from "@/lib/app/display-currency";
+import { useT } from "@/lib/app/i18n/react";
 
 /** Where the reader was in each search, so Back can put them back there. */
 const scrollFor = new Map<string, number>();
@@ -41,6 +42,8 @@ const opened = new Set<string>();
 export function ResultsScreen() {
   const href = useProductHref();
   const router = useRouter();
+  // Also what re-renders the search when the currency changes (`staysCurrency()` below).
+  const t = useT();
   const params = useSearchParams();
 
   // The URL is the state. Editing the bar changes a draft; pressing Search
@@ -136,7 +139,7 @@ export function ResultsScreen() {
             <Ion name="information-circle-outline" size={15} />
           </span>
           <p className="text-[12.5px] font-semibold leading-[18px] tracking-[-0.1px]" style={{ color: P.caution }}>
-            {`Nothing matched exactly, so these are stays in ${resolution.label}.`}
+            {t("trips.results.widened", { place: resolution.label })}
           </p>
         </div>
       ) : null}
@@ -151,23 +154,23 @@ export function ResultsScreen() {
       ) : error ? (
         <Empty
           icon="cloud-offline-outline"
-          title="Couldn't load stays"
-          body="Check your connection and try again."
-          action="Try again"
+          title={t("trips.results.errorTitle")}
+          body={t("trips.results.errorBody")}
+          action={t("common.tryAgain")}
           onAction={() => router.refresh()}
         />
       ) : stays.length === 0 ? (
         <Empty
           icon="bed-outline"
-          title="Nothing available for those dates"
-          body="Try shifting your dates by a night or two, or search a nearby city."
+          title={t("trips.results.emptyTitle")}
+          body={t("trips.results.emptyBody")}
         />
       ) : (
         <section className="flex flex-col">
           <div className="mb-2.5 flex items-baseline justify-between gap-3">
-            <SectionLabel>{`${count(stays.length)}${hasMore ? "+" : ""} ${stays.length === 1 ? "stay" : "stays"}`}</SectionLabel>
+            <SectionLabel>{t("trips.results.count", { count: stays.length, shown: `${count(stays.length)}${hasMore ? "+" : ""}` })}</SectionLabel>
             <p className="text-[11.5px] font-semibold tracking-[-0.1px]" style={{ color: P.textDim }}>
-              {`Total for ${nightsWord(nights)}, cheapest first`}
+              {t("trips.results.totalFor", { count: nights })}
             </p>
           </div>
 
@@ -184,7 +187,7 @@ export function ResultsScreen() {
 
           <div ref={foot} className="flex justify-center py-6">
             {loadingMore ? <Spinner size={20} color={P.greenText} /> : null}
-            {!loadingMore && hasMore ? <Cta label="Show more" variant="secondary" onClick={loadMore} /> : null}
+            {!loadingMore && hasMore ? <Cta label={t("trips.results.showMore")} variant="secondary" onClick={loadMore} /> : null}
           </div>
         </section>
       )}

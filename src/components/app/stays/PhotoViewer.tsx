@@ -46,6 +46,8 @@ import { Ion } from "../ion";
 import { Photo } from "./kit";
 import { P } from "./look";
 import type { GalleryImage } from "@/lib/app/stays";
+import { fmtNumber } from "@/lib/app/i18n/format";
+import { useT } from "@/lib/app/i18n/react";
 
 export function PhotoViewer({
   images,
@@ -62,6 +64,7 @@ export function PhotoViewer({
   /** The property or room name, under the counter, small. */
   title?: string;
 }) {
+  const t = useT();
   const [at, setAt] = useState(initialIndex);
   const [chrome, setChrome] = useState(true);
   const [mounted, setMounted] = useState(false);
@@ -116,7 +119,7 @@ export function PhotoViewer({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={title ? `${title} — photographs` : "Photographs"}
+      aria-label={title ? t("trips.photos.titled", { title }) : t("trips.photos.title")}
       className="fixed inset-0 z-[200] flex items-center justify-center"
       style={{ background: "rgba(0,0,0,0.96)" }}
     >
@@ -124,7 +127,7 @@ export function PhotoViewer({
           navigates sits above this and stops the click. */}
       <button
         type="button"
-        aria-label={chrome ? "Hide captions" : "Show captions"}
+        aria-label={chrome ? t("trips.photos.hideCaptions") : t("trips.photos.showCaptions")}
         onClick={() => setChrome((c) => !c)}
         className="absolute inset-0 flex cursor-default items-center justify-center p-0"
       >
@@ -136,7 +139,7 @@ export function PhotoViewer({
       {/* Always reachable, chrome or no chrome. */}
       <button
         type="button"
-        aria-label="Close"
+        aria-label={t("common.close")}
         onClick={onClose}
         className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-[999px] transition-opacity hover:opacity-100 sm:right-5 sm:top-5"
         style={{ background: "rgba(255,255,255,0.12)", color: P.text, opacity: 0.9 }}
@@ -157,7 +160,7 @@ export function PhotoViewer({
             className="rounded-[999px] px-3 py-[6px] text-[12px] font-extrabold tabular-nums tracking-[-0.1px]"
             style={{ background: "rgba(255,255,255,0.12)", color: P.text }}
           >
-            {`${at + 1} / ${images.length}`}
+            {t("trips.photos.counter", { index: fmtNumber(at + 1), total: fmtNumber(images.length) })}
           </span>
           {title ? (
             <span className="max-w-full truncate text-[12px] font-semibold" style={{ color: P.textMuted }}>
@@ -182,10 +185,11 @@ export function PhotoViewer({
 
 /** Bigger than the gallery's own arrows: here they are the only way to page. */
 function Step({ side, onClick }: { side: "left" | "right"; onClick: () => void }) {
+  const t = useT();
   return (
     <button
       type="button"
-      aria-label={side === "left" ? "Previous photo" : "Next photo"}
+      aria-label={side === "left" ? t("trips.photos.previous") : t("trips.photos.next")}
       onClick={onClick}
       className={`absolute top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-[999px] transition-opacity hover:opacity-100 ${
         side === "left" ? "left-2 sm:left-5" : "right-2 sm:right-5"

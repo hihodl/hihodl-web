@@ -32,12 +32,14 @@ import { Empty, Photo, Screen, SectionLabel, Spinner } from "./kit";
 import { P, money, pointsEarned, shortDate, stayRange } from "./look";
 import { refreshTrips, useTrips } from "@/lib/app/stays-data";
 import type { Booking } from "@/lib/app/stays";
+import { useT } from "@/lib/app/i18n/react";
 
 const SUPPORT_EMAIL = "support@hihodl.xyz";
 
 export function TripsScreen() {
   const href = useProductHref();
   const router = useRouter();
+  const t = useT();
   const { bookings, loading, error, refetch } = useTrips();
   const [cancelling, setCancelling] = useState<Booking | null>(null);
 
@@ -48,7 +50,7 @@ export function TripsScreen() {
   return (
     <Screen className="gap-4">
       <h1 className="text-[25px] font-extrabold leading-tight tracking-[-0.7px]" style={{ color: P.text }}>
-        Your trips
+        {t("trips.list.title")}
       </h1>
 
       {loading ? (
@@ -56,20 +58,20 @@ export function TripsScreen() {
           <Spinner size={22} color={P.greenText} />
         </div>
       ) : error ? (
-        <Empty icon="cloud-offline-outline" title="Couldn't load your trips" action="Try again" onAction={() => void refetch()} />
+        <Empty icon="cloud-offline-outline" title={t("trips.list.errorTitle")} action={t("common.tryAgain")} onAction={() => void refetch()} />
       ) : bookings.length === 0 ? (
         <Empty
           icon="briefcase-outline"
-          title="No trips yet"
-          body="Book a stay and it'll show up here, with the points you earned."
-          action="Find a stay"
+          title={t("trips.list.emptyTitle")}
+          body={t("trips.list.emptyBody")}
+          action={t("trips.list.findStay")}
           onAction={() => router.push(href("/travel"))}
         />
       ) : (
         <>
           {upcoming.length > 0 ? (
             <section className="flex flex-col">
-              <SectionLabel className="mb-3 !px-0">Upcoming</SectionLabel>
+              <SectionLabel className="mb-3 !px-0">{t("trips.list.upcoming")}</SectionLabel>
               {upcoming.map((b) => (
                 <TripRow key={b.id} booking={b} href={href(`/travel/trips/${b.id}`)} onCancel={() => setCancelling(b)} />
               ))}
@@ -78,7 +80,7 @@ export function TripsScreen() {
 
           {past.length > 0 ? (
             <section className="flex flex-col">
-              <SectionLabel className="mb-3 mt-2 !px-0">Past</SectionLabel>
+              <SectionLabel className="mb-3 mt-2 !px-0">{t("trips.list.past")}</SectionLabel>
               {past.map((b) => (
                 <TripRow key={b.id} booking={b} href={href(`/travel/trips/${b.id}`)} onCancel={() => setCancelling(b)} />
               ))}
@@ -95,7 +97,7 @@ export function TripsScreen() {
             style={{ color: P.textDim }}
           >
             <Ion name="mail-outline" size={15} />
-            Question about a trip? Email us
+            {t("trips.list.help")}
           </a>
         </>
       )}
@@ -117,6 +119,7 @@ export function TripsScreen() {
 /* ── One row ──────────────────────────────────────────────────────── */
 
 function TripRow({ booking, href, onCancel }: { booking: Booking; href: string; onCancel: () => void }) {
+  const t = useT();
   const cancelled = booking.status === "cancelled";
   const confirming = booking.status === "pending";
 
@@ -152,7 +155,7 @@ function TripRow({ booking, href, onCancel }: { booking: Booking; href: string; 
             </p>
             {booking.reference ? (
               <p className="mt-0.5 text-[11.5px]" style={{ color: P.textDim }}>
-                {`Ref ${booking.reference}`}
+                {t("trips.list.ref", { reference: booking.reference })}
               </p>
             ) : null}
           </div>
@@ -167,7 +170,7 @@ function TripRow({ booking, href, onCancel }: { booking: Booking; href: string; 
         >
           {confirming ? <Spinner size={13} color={P.textMuted} /> : null}
           <p className="text-[12px] font-bold tracking-[0.2px]" style={{ color: P.textMuted }}>
-            {cancelled ? "Cancelled" : "CONFIRMING WITH THE HOTEL"}
+            {cancelled ? t("trips.list.cancelled") : t("trips.list.confirming")}
           </p>
         </div>
       ) : null}
@@ -179,7 +182,7 @@ function TripRow({ booking, href, onCancel }: { booking: Booking; href: string; 
           className="mt-3 self-start py-1 text-[13px] font-semibold underline"
           style={{ color: P.textMuted }}
         >
-          Cancel booking
+          {t("trips.list.cancelBooking")}
         </button>
       ) : null}
     </div>
@@ -194,12 +197,13 @@ function TripRow({ booking, href, onCancel }: { booking: Booking; href: string; 
  * all when there is nothing to earn — a zero is a promise of no promise.
  */
 function PointsColumn({ booking }: { booking: Booking }) {
+  const t = useT();
   if (booking.points.earned <= 0 && booking.status !== "cancelled") return null;
 
   if (booking.status === "cancelled") {
     return (
       <span className="shrink-0 rounded-[8px] px-[9px] py-[5px] text-[11.5px] font-semibold" style={{ background: "rgba(255,255,255,0.06)", color: P.textDim }}>
-        No points — stay cancelled
+        {t("trips.list.noPoints")}
       </span>
     );
   }
@@ -216,7 +220,11 @@ function PointsColumn({ booking }: { booking: Booking }) {
         </span>
       </span>
       <span className="mt-0.5 text-[11.5px]" style={{ color: P.textDim }}>
-        {credited ? "In your balance" : booking.points.dueAt ? `after ${shortDate(booking.points.dueAt.slice(0, 10))}` : "In your balance after check-out"}
+        {credited
+          ? t("stays.points.credited")
+          : booking.points.dueAt
+            ? t("trips.list.pointsAfter", { date: shortDate(booking.points.dueAt.slice(0, 10)) })
+            : t("stays.points.afterCheckout")}
       </span>
     </span>
   );
