@@ -171,5 +171,8 @@
   "xReturn.open": "Mở Tài khoản",
   "payout.getAppText": "Tải ứng dụng HOLD: ứng dụng sẽ tạo ví cho bạn, và từ đó nhà tài trợ sẽ thanh toán vào đó. Hoặc bạn có thể dùng ví khác.",
   "phone.introEvery": "Điện thoại đã liên kết sẽ duyệt và ký, trong ứng dụng HOLD, mọi khoản thanh toán bạn bắt đầu trên web. Nếu chưa liên kết điện thoại nào, không thể thanh toán từ web.",
-  "phone.removeInApp": "Để xoá một điện thoại, hãy mở ứng dụng HOLD: Cài đặt › Thiết bị."
+  "phone.removeInApp": "Để xoá một điện thoại, hãy mở ứng dụng HOLD: Cài đặt › Thiết bị.",
+  "phone.default": "Mặc định",
+  "phone.defaultIs": "{platform, select, ios {iPhone của bạn là điện thoại mặc định: nó duyệt các khoản thanh toán bạn bắt đầu ở đây.} android {Điện thoại Android của bạn là điện thoại mặc định: nó duyệt các khoản thanh toán bạn bắt đầu ở đây.} other {Điện thoại này là điện thoại mặc định: nó duyệt các khoản thanh toán bạn bắt đầu ở đây.}}",
+  "phone.changeInApp": "Đổi trong ứng dụng HOLD, Cài đặt › Thiết bị."
 }

@@ -171,5 +171,8 @@
   "xReturn.open": "Fungua Akaunti",
   "payout.getAppText": "Pakua programu ya HOLD: itaunda pochi yako, na wafadhili wataanza kuilipa kuanzia hapo. Au tumia pochi nyingine.",
   "phone.introEvery": "Simu yako iliyounganishwa huidhinisha na kutia sahihi, kwenye programu ya HOLD, kila malipo unayoanzisha kwenye wavuti. Bila hiyo, hakuna kinachoweza kulipwa kutoka kwenye wavuti.",
-  "phone.removeInApp": "Ili kuondoa simu, fungua programu ya HOLD: Mipangilio › Vifaa."
+  "phone.removeInApp": "Ili kuondoa simu, fungua programu ya HOLD: Mipangilio › Vifaa.",
+  "phone.default": "Chaguo-msingi",
+  "phone.defaultIs": "{platform, select, ios {iPhone yako ndiyo simu yako chaguo-msingi: inaidhinisha malipo unayoanzisha hapa.} android {Simu yako ya Android ndiyo simu yako chaguo-msingi: inaidhinisha malipo unayoanzisha hapa.} other {Simu hii ndiyo simu yako chaguo-msingi: inaidhinisha malipo unayoanzisha hapa.}}",
+  "phone.changeInApp": "Ibadilishe kwenye programu ya HOLD, Mipangilio › Vifaa."
 }

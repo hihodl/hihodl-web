@@ -207,6 +207,9 @@ const account = {
   "payout.getAppText": "Get the HOLD app: it makes your wallet, and sponsors pay it from then on. Or use another wallet.",
   "phone.introEvery": "Your linked phone approves and signs, in the HOLD app, every payment you start on the web. Without one, nothing can be paid from the web.",
   "phone.removeInApp": "To remove a phone, open the HOLD app: Settings › Devices.",
+  "phone.default": "Default",
+  "phone.defaultIs": "{platform, select, ios {Your iPhone is your default phone: it approves the payments you start here.} android {Your Android phone is your default phone: it approves the payments you start here.} other {This phone is your default phone: it approves the payments you start here.}}",
+  "phone.changeInApp": "Change it in the HOLD app, Settings › Devices.",
 } satisfies Record<string, string>;
 
 export default account;

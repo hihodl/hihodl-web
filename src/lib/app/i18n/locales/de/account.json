@@ -171,5 +171,8 @@
   "xReturn.open": "Konto öffnen",
   "payout.getAppText": "Hol dir die HOLD-App: Sie erstellt deine Wallet, und Sponsoren zahlen ab dann an sie. Oder nutze eine andere Wallet.",
   "phone.introEvery": "Dein verknüpftes Handy bestätigt und signiert, in der HOLD-App, jede Zahlung, die du im Web startest. Ohne verknüpftes Handy kann im Web nichts bezahlt werden.",
-  "phone.removeInApp": "Um ein Handy zu entfernen, öffne die HOLD-App: Einstellungen › Geräte."
+  "phone.removeInApp": "Um ein Handy zu entfernen, öffne die HOLD-App: Einstellungen › Geräte.",
+  "phone.default": "Standard",
+  "phone.defaultIs": "{platform, select, ios {Dein iPhone ist dein Standard-Handy: Es bestätigt die Zahlungen, die du hier startest.} android {Dein Android-Handy ist dein Standard-Handy: Es bestätigt die Zahlungen, die du hier startest.} other {Dieses Handy ist dein Standard-Handy: Es bestätigt die Zahlungen, die du hier startest.}}",
+  "phone.changeInApp": "Ändere es in der HOLD-App unter Einstellungen › Geräte."
 }

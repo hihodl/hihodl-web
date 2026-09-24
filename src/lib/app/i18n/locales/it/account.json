@@ -171,5 +171,8 @@
   "xReturn.open": "Apri Account",
   "payout.getAppText": "Scarica l'app HOLD: crea il tuo portafoglio, e gli sponsor lo pagano da quel momento. Oppure usa un altro portafoglio.",
   "phone.introEvery": "Il tuo telefono collegato approva e firma, nell'app HOLD, ogni pagamento che avvii sul web. Senza un telefono collegato, non si può pagare nulla dal web.",
-  "phone.removeInApp": "Per rimuovere un telefono, apri l'app HOLD: Impostazioni › Dispositivi."
+  "phone.removeInApp": "Per rimuovere un telefono, apri l'app HOLD: Impostazioni › Dispositivi.",
+  "phone.default": "Predefinito",
+  "phone.defaultIs": "{platform, select, ios {Il tuo iPhone è il telefono predefinito: approva i pagamenti che avvii qui.} android {Il tuo telefono Android è il telefono predefinito: approva i pagamenti che avvii qui.} other {Questo telefono è il telefono predefinito: approva i pagamenti che avvii qui.}}",
+  "phone.changeInApp": "Cambialo nell'app HOLD, Impostazioni › Dispositivi."
 }

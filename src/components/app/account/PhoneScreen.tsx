@@ -7,7 +7,13 @@
  *
  *   rows     how many, on Settings › Security (where the app keeps "Link
  *            with the web")
- *   screen   each phone and when it was linked      → Account ?view=phone
+ *   screen   each phone and when it was linked, the default one tagged
+ *            "Default"                               → Account ?view=phone
+ *
+ * The default phone is the only one that approves the web
+ * (documentation/the-default-phone-approves.md). The web only says which one
+ * it is and where to change it: the HOLD app, Settings › Devices. There is no
+ * control for it here, because changing it is signed by a phone's device key.
  *
  * "Link your phone" opens the link screen, /wallet/link (a full load: it
  * carries the wallet pages' strict CSP). It is there whatever is linked
@@ -70,6 +76,7 @@ export function PhoneScreenView({
   onBack: () => void;
 }) {
   const t = useT();
+  const primary = devices?.find((d) => d.isPrimary) ?? null;
   return (
     <Column>
       <BackHeader title={t("account.phone.title")} onBack={onBack} />
@@ -88,7 +95,14 @@ export function PhoneScreenView({
                   <div key={d.id} className="flex items-center gap-3 px-[18px] py-[18px]">
                     <Ion name="phone-portrait-outline" size={18} className="mt-[2px] self-start text-white" />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-[14px] font-strong leading-5 text-white">{t(PLATFORM[d.platform])}</p>
+                      <p className="flex items-center gap-2 text-[14px] font-strong leading-5 text-white">
+                        <span className="truncate">{t(PLATFORM[d.platform])}</span>
+                        {d.isPrimary ? (
+                          <span className="inline-flex h-5 shrink-0 items-center rounded-[10px] bg-amber/[0.14] px-2 text-[11px] font-strong text-amber">
+                            {t("account.phone.default")}
+                          </span>
+                        ) : null}
+                      </p>
                       <p className="mt-0.5 text-[12px] leading-4 text-[#9FB7C2]">
                         {d.linkedAt ? t("account.phone.howLinked", { how: t(HOW[d.platform]), date: when(d.linkedAt) }) : t(HOW[d.platform])}
                       </p>
@@ -98,8 +112,13 @@ export function PhoneScreenView({
               </HoldCard>
             </>
           ) : null}
+          {primary ? (
+            <p className="mt-3 px-1 text-[12px] leading-[17px] text-[#9FB7C2]">
+              {t("account.phone.defaultIs", { platform: primary.platform })} {t("account.phone.changeInApp")}
+            </p>
+          ) : null}
           {devices && devices.length > 0 ? (
-            <p className="mt-3 px-1 text-[12px] leading-[17px] text-[#9FB7C2]">{t("account.phone.removeInApp")}</p>
+            <p className="mt-2 px-1 text-[12px] leading-[17px] text-[#9FB7C2]">{t("account.phone.removeInApp")}</p>
           ) : null}
           {error ? (
             <div className="mt-4">

@@ -171,5 +171,8 @@
   "xReturn.open": "Abrir Cuenta",
   "payout.getAppText": "Consigue la app HOLD: crea tu wallet, y los patrocinadores le pagan a partir de entonces. O usa otra wallet.",
   "phone.introEvery": "Tu móvil vinculado aprueba y firma, en la app HOLD, cada pago que empiezas en la web. Sin uno vinculado, no se puede pagar nada desde la web.",
-  "phone.removeInApp": "Para quitar un móvil, abre la app HOLD: Ajustes › Dispositivos."
+  "phone.removeInApp": "Para quitar un móvil, abre la app HOLD: Ajustes › Dispositivos.",
+  "phone.default": "Predeterminado",
+  "phone.defaultIs": "{platform, select, ios {Tu iPhone es tu móvil predeterminado: aprueba los pagos que empiezas aquí.} android {Tu móvil Android es tu móvil predeterminado: aprueba los pagos que empiezas aquí.} other {Este móvil es tu móvil predeterminado: aprueba los pagos que empiezas aquí.}}",
+  "phone.changeInApp": "Cámbialo en la app HOLD, Ajustes › Dispositivos."
 }

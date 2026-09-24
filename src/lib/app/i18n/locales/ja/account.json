@@ -171,5 +171,8 @@
   "xReturn.open": "アカウントを開く",
   "payout.getAppText": "HOLD アプリを入手してください。ウォレットが作成され、以降はスポンサーがそこへ支払います。または別のウォレットを使うこともできます。",
   "phone.introEvery": "連携したスマホが、ウェブで始めたすべての支払いを HOLD アプリで承認・署名します。連携していない場合、ウェブから支払うことはできません。",
-  "phone.removeInApp": "スマホを削除するには、HOLD アプリの 設定 › デバイス を開いてください。"
+  "phone.removeInApp": "スマホを削除するには、HOLD アプリの 設定 › デバイス を開いてください。",
+  "phone.default": "既定",
+  "phone.defaultIs": "{platform, select, ios {iPhone が既定のスマホです。ここで始めた支払いを承認します。} android {Android スマホが既定のスマホです。ここで始めた支払いを承認します。} other {このスマホが既定のスマホです。ここで始めた支払いを承認します。}}",
+  "phone.changeInApp": "HOLD アプリの 設定 › デバイス で変更できます。"
 }

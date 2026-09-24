@@ -87,6 +87,8 @@ export interface LinkedDevice {
   linkedAt: string | null;
   lastUsedAt: string | null;
   revokedAt: string | null;
+  /** The default phone: the only one that approves the web. Changed only in the app, Settings › Devices. */
+  isPrimary: boolean;
 }
 
 export async function listLinkedDevices(): Promise<LinkedDevice[]> {
@@ -100,6 +102,7 @@ export async function listLinkedDevices(): Promise<LinkedDevice[]> {
       linkedAt: str(d, "linkedAt", "linked_at"),
       lastUsedAt: str(d, "lastUsedAt", "last_used_at"),
       revokedAt: str(d, "revokedAt", "revoked_at"),
+      isPrimary: d.isPrimary === true || d.is_primary === true,
     };
   });
 }

@@ -171,5 +171,8 @@
   "xReturn.open": "Hesabı aç",
   "payout.getAppText": "HOLD uygulamasını indir: cüzdanını oluşturur, sponsorlar da o zamandan sonra ona öder. Ya da başka bir cüzdan kullan.",
   "phone.introEvery": "Bağlı telefonun, HOLD uygulamasında, web'de başlattığın her ödemeyi onaylar ve imzalar. Biri olmadan web'den hiçbir ödeme yapılamaz.",
-  "phone.removeInApp": "Bir telefonu kaldırmak için HOLD uygulamasını aç: Ayarlar › Cihazlar."
+  "phone.removeInApp": "Bir telefonu kaldırmak için HOLD uygulamasını aç: Ayarlar › Cihazlar.",
+  "phone.default": "Varsayılan",
+  "phone.defaultIs": "{platform, select, ios {iPhone'un varsayılan telefonun: burada başlattığın ödemeleri o onaylar.} android {Android telefonun varsayılan telefonun: burada başlattığın ödemeleri o onaylar.} other {Bu telefon varsayılan telefonun: burada başlattığın ödemeleri o onaylar.}}",
+  "phone.changeInApp": "HOLD uygulamasında Ayarlar › Cihazlar bölümünden değiştir."
 }

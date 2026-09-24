@@ -171,5 +171,8 @@
   "xReturn.open": "Account openen",
   "payout.getAppText": "Download de HOLD-app: die maakt je wallet aan, en sponsors betalen er vanaf dan naartoe. Of gebruik een andere wallet.",
   "phone.introEvery": "Je gekoppelde telefoon keurt in de HOLD-app elke betaling die je op het web start goed, en ondertekent hem. Zonder een kan er niets vanaf het web worden betaald.",
-  "phone.removeInApp": "Wil je een telefoon verwijderen? Open de HOLD-app: Instellingen › Apparaten."
+  "phone.removeInApp": "Wil je een telefoon verwijderen? Open de HOLD-app: Instellingen › Apparaten.",
+  "phone.default": "Standaard",
+  "phone.defaultIs": "{platform, select, ios {Je iPhone is je standaardtelefoon: hij keurt de betalingen goed die je hier start.} android {Je Android-telefoon is je standaardtelefoon: hij keurt de betalingen goed die je hier start.} other {Deze telefoon is je standaardtelefoon: hij keurt de betalingen goed die je hier start.}}",
+  "phone.changeInApp": "Wijzig het in de HOLD-app, Instellingen › Apparaten."
 }

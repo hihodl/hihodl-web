@@ -171,5 +171,8 @@
   "xReturn.open": "Ouvrir Compte",
   "payout.getAppText": "Téléchargez l'app HOLD : elle crée votre wallet, et les sponsors le paient ensuite. Ou utilisez un autre wallet.",
   "phone.introEvery": "Votre téléphone associé approuve et signe, dans l'app HOLD, chaque paiement que vous lancez sur le web. Sans téléphone associé, rien ne peut être payé depuis le web.",
-  "phone.removeInApp": "Pour retirer un téléphone, ouvrez l'app HOLD : Paramètres › Appareils."
+  "phone.removeInApp": "Pour retirer un téléphone, ouvrez l'app HOLD : Paramètres › Appareils.",
+  "phone.default": "Par défaut",
+  "phone.defaultIs": "{platform, select, ios {Votre iPhone est votre téléphone par défaut : il approuve les paiements que vous lancez ici.} android {Votre téléphone Android est votre téléphone par défaut : il approuve les paiements que vous lancez ici.} other {Ce téléphone est votre téléphone par défaut : il approuve les paiements que vous lancez ici.}}",
+  "phone.changeInApp": "Changez-le dans l'app HOLD, Paramètres › Appareils."
 }

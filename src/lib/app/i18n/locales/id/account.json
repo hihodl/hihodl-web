@@ -171,5 +171,8 @@
   "xReturn.open": "Buka Akun",
   "payout.getAppText": "Unduh aplikasi HOLD: aplikasi ini membuat dompetmu, dan sponsor membayar ke sana sejak saat itu. Atau pakai dompet lain.",
   "phone.introEvery": "Ponselmu yang tertaut menyetujui dan menandatangani, di aplikasi HOLD, setiap pembayaran yang kamu mulai di web. Tanpa itu, tidak ada pembayaran yang bisa dilakukan dari web.",
-  "phone.removeInApp": "Untuk menghapus ponsel, buka aplikasi HOLD: Pengaturan › Perangkat."
+  "phone.removeInApp": "Untuk menghapus ponsel, buka aplikasi HOLD: Pengaturan › Perangkat.",
+  "phone.default": "Utama",
+  "phone.defaultIs": "{platform, select, ios {iPhone-mu adalah ponsel utama: ia menyetujui pembayaran yang kamu mulai di sini.} android {Ponsel Android-mu adalah ponsel utama: ia menyetujui pembayaran yang kamu mulai di sini.} other {Ponsel ini adalah ponsel utama: ia menyetujui pembayaran yang kamu mulai di sini.}}",
+  "phone.changeInApp": "Ubah di aplikasi HOLD, Pengaturan › Perangkat."
 }

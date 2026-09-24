@@ -171,5 +171,8 @@
   "xReturn.open": "打开账户",
   "payout.getAppText": "获取 HOLD 应用：它会为你创建钱包，此后赞助商将向它付款。你也可以使用其他钱包。",
   "phone.introEvery": "已关联的手机会在 HOLD 应用中批准并签署你在网页版发起的每一笔付款。如果没有关联手机，网页版将无法付款。",
-  "phone.removeInApp": "要移除手机，请打开 HOLD 应用：设置 › 设备。"
+  "phone.removeInApp": "要移除手机，请打开 HOLD 应用：设置 › 设备。",
+  "phone.default": "默认",
+  "phone.defaultIs": "{platform, select, ios {你的 iPhone 是默认手机：它会批准你在这里发起的付款。} android {你的 Android 手机是默认手机：它会批准你在这里发起的付款。} other {这部手机是默认手机：它会批准你在这里发起的付款。}}",
+  "phone.changeInApp": "请在 HOLD 应用的 设置 › 设备 中更改。"
 }

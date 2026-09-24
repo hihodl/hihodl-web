@@ -171,5 +171,8 @@
   "xReturn.open": "계정 열기",
   "payout.getAppText": "HOLD 앱을 받으세요. 지갑이 만들어지고, 그때부터 스폰서가 그 지갑으로 결제해요. 아니면 다른 지갑을 사용할 수도 있어요.",
   "phone.introEvery": "연결된 휴대폰이 웹에서 시작한 모든 결제를 HOLD 앱에서 승인하고 서명해요. 연결된 휴대폰이 없으면 웹에서는 결제할 수 없어요.",
-  "phone.removeInApp": "휴대폰을 삭제하려면 HOLD 앱에서 설정 › 기기로 가세요."
+  "phone.removeInApp": "휴대폰을 삭제하려면 HOLD 앱에서 설정 › 기기로 가세요.",
+  "phone.default": "기본",
+  "phone.defaultIs": "{platform, select, ios {iPhone이 기본 휴대폰이에요. 여기서 시작한 결제를 승인해요.} android {Android 휴대폰이 기본 휴대폰이에요. 여기서 시작한 결제를 승인해요.} other {이 휴대폰이 기본 휴대폰이에요. 여기서 시작한 결제를 승인해요.}}",
+  "phone.changeInApp": "HOLD 앱의 설정 › 기기에서 변경하세요."
 }
