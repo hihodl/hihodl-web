@@ -1,1 +1,13 @@
-{}
+{
+  "language": "Lugha",
+  "currency": "Sarafu",
+  "recentLanguages": "Lugha za hivi karibuni",
+  "allLanguages": "Lugha zote",
+  "searchLanguage": "Tafuta lugha",
+  "recentCurrencies": "Sarafu za hivi karibuni",
+  "allCurrencies": "Sarafu zote",
+  "searchCurrency": "Tafuta sarafu au nchi",
+  "currencyIntro": "Salio, jumla na bei huonyeshwa kwa sarafu hii. Unacholipa hasa hubaki kwenye tokeni, na kikundi hutumia sarafu yake.",
+  "currencyNoRate": "* Bado hakuna kiwango cha ubadilishaji cha moja kwa moja, kwa hiyo kiasi hubaki kwa dola za Marekani.",
+  "currencyNoRateLabel": "{code} {name}, kiwango cha ubadilishaji cha moja kwa moja hakipatikani"
+}
