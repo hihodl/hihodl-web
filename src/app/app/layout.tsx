@@ -11,6 +11,8 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 
+import { IOS_APP_ID } from "@/lib/appLinks";
+
 /**
  * Everything the website's root layout sets for sharing and search is unset
  * here: a canonical pointing at hihodl.xyz and the website's link card would
@@ -26,6 +28,10 @@ export const metadata: Metadata = {
   alternates: { canonical: null },
   openGraph: null,
   twitter: null,
+  // Safari's smart app banner: the product is opened by people who have the
+  // HOLD app (the wallet is made there), so an iPhone offers to open it.
+  // Only on the product, never on the public token pages brands open.
+  itunes: { appId: IOS_APP_ID },
 };
 
 /**
