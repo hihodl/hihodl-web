@@ -81,7 +81,7 @@
   "sales.crumb": "销售",
   "sales.amountReceived": "已收到 {amount}",
   "sales.recent": "最近销售",
-  "sales.takenOver": "已被接手：下一个品牌已向这个品牌退款",
+  "sales.takenOver": "之后被抢占：下一个品牌已全额退款给这个品牌",
   "sales.offerContent": "向他们提供内容",
   "deliveries.kind.artwork": "设计稿",
   "deliveries.state.todo": "待办",
