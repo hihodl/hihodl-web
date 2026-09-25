@@ -11,12 +11,15 @@ import { Wordmark } from "@/components/site/Wordmark";
 import { CHAIN_LABEL, usdFromCents } from "@/lib/ad-space/format";
 import { ownerHandleLine, ownerName } from "@/lib/pay-links/client";
 import { payPageMetadata } from "@/lib/pay-links/metadata";
-import { getPayLink } from "@/lib/pay-links/server";
+import { getPayLink, getPersonalPayLink } from "@/lib/pay-links/server";
 import type { PayLinkPublic, PayLinkStatus, ShownPayLink } from "@/lib/pay-links/types";
 
 /**
  * /pay/<code> — somebody asks to be paid, and the payer has no HOLD account
  * (pay-links-v0.md).
+ *
+ * `/pay/@handle` is the same page for a person's personal link (the QR in
+ * their app): anyone pays them any amount, whether or not they have HOLD.
  *
  * Not a marketplace page: no profile, no track record, not in the sitemap,
  * `noindex`, and a link card that says nothing the link's owner wrote. Read on
@@ -35,7 +38,9 @@ const GONE: Record<Exclude<PayLinkStatus, "active" | "disabled">, { title: strin
 };
 
 export default async function PayLinkPage({ params }: { params: { code: string } }) {
-  const found = await getPayLink(params.code, headers());
+  // `/pay/@dana` arrives as `%40dana`.
+  const raw = decodeURIComponent(params.code);
+  const found = raw.startsWith("@") ? await getPersonalPayLink(raw.slice(1), headers()) : await getPayLink(raw, headers());
   if (found.kind === "missing") notFound();
 
   return (
@@ -84,6 +89,7 @@ function isShown(link: PayLinkPublic): link is ShownPayLink {
 }
 
 function PayLinkBody({ link }: { link: ShownPayLink }) {
+  if (link.personal) return <PersonalBody link={link} />;
   const handleLine = ownerHandleLine(link.owner);
   const active = link.status === "active";
   const gone = link.status === "active" || link.status === "disabled" ? null : GONE[link.status];
@@ -142,6 +148,56 @@ function PayLinkBody({ link }: { link: ShownPayLink }) {
       )}
 
       {/* Always mounted: on a paid link it still shows this browser its own payment and receipt. */}
+      <section className={active ? `${card} p-5 md:p-6` : ""} aria-label="Pay">
+        <PayLinkPay link={link} />
+      </section>
+
+      <ReportLink code={link.code} />
+    </div>
+  );
+}
+
+/**
+ * A person's own link: no title of theirs to show, so the page is who you are
+ * paying and the amount you choose. The same warning, checkout and report.
+ */
+function PersonalBody({ link }: { link: ShownPayLink }) {
+  const active = link.status === "active";
+  const name = link.owner?.displayName?.trim();
+  const handle = ownerName(link.owner);
+  return (
+    <div className="flex flex-col gap-6">
+      <section className={`${card} flex flex-col gap-5 p-5 md:p-6`} aria-label="Who you are paying">
+        <div className="min-w-0">
+          <p className={`${eyebrow} text-text-faint`}>Pay</p>
+          <h1 className="mt-2 break-words font-display text-h4 font-light text-text [overflow-wrap:anywhere] md:text-h3">
+            {handle}
+          </h1>
+          {name && name !== handle && <p className="mt-2 break-words text-small text-text-muted">{name}</p>}
+        </div>
+        <dl className="grid grid-cols-1 gap-4 border-t border-[color:var(--color-hairline)] pt-4 sm:grid-cols-2">
+          <div className="min-w-0">
+            <dt className="text-tiny text-text-faint">Amount</dt>
+            <dd className="mt-1 text-body text-text">You choose</dd>
+          </div>
+          <div className="min-w-0">
+            <dt className="text-tiny text-text-faint">Networks</dt>
+            <dd className="mt-1 text-small text-text-muted">USDC on {link.chains.map((c) => CHAIN_LABEL[c]).join(", ")}</dd>
+          </div>
+        </dl>
+      </section>
+
+      {active ? (
+        <p className="rounded-card border border-amber/40 bg-amber/[0.06] px-4 py-3 text-small text-text" role="note">
+          Only pay people you know. HOLD does not check what this payment is for and cannot reverse it.
+        </p>
+      ) : (
+        <section className={`${card} flex flex-col gap-2 p-5 md:p-6`}>
+          <h2 className="font-display text-h4 font-light text-text">This link takes no more payments.</h2>
+          <p className="text-small text-text-muted">Ask {handle} for their new one.</p>
+        </section>
+      )}
+
       <section className={active ? `${card} p-5 md:p-6` : ""} aria-label="Pay">
         <PayLinkPay link={link} />
       </section>

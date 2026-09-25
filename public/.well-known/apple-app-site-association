@@ -12,7 +12,8 @@
           { "/": "/auth/confirm", "comment": "Email verification (token_hash)" },
           { "/": "/invite/*", "comment": "Referral invite links — the path the app and the backend actually use" },
           { "/": "/link/*", "comment": "Link your phone: app.hihodl.xyz/link/<sessionId>?k=… (the QR on the computer). The app joins the session with its device key, as Android's App Link does" },
-          { "/": "/s/*", "comment": "A creator's public Spaces page, opened in the app when it is installed" }
+          { "/": "/s/*", "comment": "A creator's public Spaces page, opened in the app when it is installed" },
+          { "/": "/pay/@*", "comment": "A person's personal pay link (the QR in their app): with HOLD installed it opens Quick Send to them. Only /pay/@, never /pay/<code>, whose page the app does not have" }
         ]
       }
     ]
