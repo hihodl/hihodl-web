@@ -15,6 +15,7 @@
     "@solana/web3.js": "^1.99.0",
     "@subframe/core": "^1.147.0",
     "@supabase/supabase-js": "^2.78.0",
+    "@walletconnect/ethereum-provider": "^2.25.0",
     "classnames": "^2.3.2",
     "framer-motion": "^12.23.24",
     "gsap": "^3.13.0",
