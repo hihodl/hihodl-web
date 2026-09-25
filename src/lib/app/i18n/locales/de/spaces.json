@@ -404,11 +404,8 @@
   "crew.atMost": "Eine Crew hat höchstens {count} Personen.",
   "crew.listingsSold": "Als diese Crew verkaufte Inserate",
   "crew.noListing": "Noch kein Inserat",
-  "crew.noListingLead": "Öffne eines deiner Inserate und wähle Als Crew verkaufen. Dann bezahlen Marken alle mit einer Zahlung.",
+  "crew.noListingLead": "Öffne eines deiner Inserate und wähle Mit anderen Creators verkaufen. Dann bezahlen Marken alle mit einer Zahlung.",
   "crew.noListingMember": "Der Lead stellt Inserate in die Crew.",
-  "crew.expenses": "Ausgaben",
-  "crew.expensesChat": "Ausgaben & Chat",
-  "crew.expensesChatMeta": "Kaffee, Taxi, Hotel: aufteilen und ausgleichen",
   "crew.expensesGroup": "Ausgabengruppe",
   "crew.noExpensesGroup": "Diese Crew hat noch keine Ausgabengruppe. Erstell eine Gruppe unter Zahlungen › Gruppen und füg die Crew hinzu.",
   "crew.changeShare": "Anteil von {who} ändern",
@@ -446,5 +443,14 @@
   "crew.leaveBody": "Dein Anteil geht an den Lead zurück. Bereits bezahlte Verkäufe bleiben deine, und du bleibst in der Ausgabengruppe, bis du ausgeglichen hast.",
   "crew.stay": "Bleiben",
   "crew.leaving": "Wird verlassen…",
-  "crew.leave": "Verlassen"
+  "crew.leave": "Verlassen",
+  "crew.invitationTitle": "Crew-Einladung",
+  "crew.setPayout": "Auszahlungsadresse festlegen",
+  "crew.setPayoutMeta": "Dann zusagen",
+  "crew.you": "Du",
+  "crew.sells": "{count, plural, one {Verkauft} other {Verkauft # Inserate}}",
+  "crew.splitCosts": "Kosten teilen",
+  "crew.groupRow": "Gruppenausgaben & Chat",
+  "crew.groupLine": "Wer zusagt, kommt in die Gruppe der Crew für gemeinsame Kosten beim Event.",
+  "crew.noPayoutTag": "Keine Solana-Auszahlung"
 }

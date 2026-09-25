@@ -18,7 +18,7 @@ const runner = {
   "screen.updates": "Updates",
   "screen.content": "Offer them content",
   "screen.team": "Who works it",
-  "screen.together": "Sell as a crew",
+  "screen.together": "Sell with other creators",
   "hub.sidePhoto": "{side} photo",
   "hub.notLoading": "This space isn't loading",
   "hub.delisted": "This space was taken down after a review. It isn't public and takes no new sponsors.",

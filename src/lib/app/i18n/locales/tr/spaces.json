@@ -404,11 +404,8 @@
   "crew.atMost": "Bir ekip en fazla {count} kişidir.",
   "crew.listingsSold": "Bu ekip olarak satılan ilanlar",
   "crew.noListing": "Henüz ilan yok",
-  "crew.noListingLead": "İlanlarından birini aç ve Ekip olarak sat'ı seç. Markalar böylece herkese tek bir ödemeyle öder.",
+  "crew.noListingLead": "İlanlarından birini aç ve Diğer içerik üreticileriyle sat'ı seç. Markalar böylece herkese tek bir ödemeyle öder.",
   "crew.noListingMember": "İlanları ekibe lider ekler.",
-  "crew.expenses": "Harcamalar",
-  "crew.expensesChat": "Harcamalar ve sohbet",
-  "crew.expensesChatMeta": "Kahve, taksi, otel: böl ve hesaplaş",
   "crew.expensesGroup": "Harcama grubu",
   "crew.noExpensesGroup": "Bu ekibin henüz bir harcama grubu yok. Ödemeler › Gruplar altında bir grup oluştur ve ekibi ekle.",
   "crew.changeShare": "Payı değiştir: {who}",
@@ -446,5 +443,14 @@
   "crew.leaveBody": "Payın lidere geri döner. Ödenmiş satışlar senin kalır ve hesaplaşana kadar harcama grubunda kalırsın.",
   "crew.stay": "Kal",
   "crew.leaving": "Ayrılınıyor…",
-  "crew.leave": "Ayrıl"
+  "crew.leave": "Ayrıl",
+  "crew.invitationTitle": "Ekip daveti",
+  "crew.setPayout": "Ödeme adresini belirle",
+  "crew.setPayoutMeta": "Sonra evet de",
+  "crew.you": "Sen",
+  "crew.sells": "{count, plural, one {Satıyor} other {# ilan satıyor}}",
+  "crew.splitCosts": "Masrafları paylaş",
+  "crew.groupRow": "Grup harcamaları ve sohbet",
+  "crew.groupLine": "Evet diyen herkes, etkinlikteki ortak masraflar için ekibin grubuna katılır.",
+  "crew.noPayoutTag": "Solana ödeme adresi yok"
 }

@@ -33,6 +33,7 @@ import {
 } from "@/lib/creator/listing";
 import { problemsAt, type Problem } from "@/lib/creator/rules";
 
+import { ListingPackage } from "../crew/ListingPackage";
 import { Problems, Tick } from "./parts";
 import { StepCard } from "./StepPager";
 
@@ -57,7 +58,10 @@ export function PublishStep({
   banner,
   fix,
   canPublish,
+  spaceId,
 }: {
+  /** The saved draft: this card is only reached once the draft is on the server. */
+  spaceId: string | null;
   draft: ListingDraft;
   template: Template;
   onChange: (next: ListingDraft) => void;
@@ -102,6 +106,11 @@ export function PublishStep({
           </a>
         ) : null}
       </Card>
+      {/* The listing as a package with other creators, decided before it goes live. */}
+      {spaceId ? (
+        <ListingPackage spaceId={spaceId} title={draft.title} offersSolana={draft.chains.includes("solana")} />
+      ) : null}
+
       <Problems list={problemsAt(problems, "form")} />
       {banner ? <Notice icon="alert-circle-outline">{banner}</Notice> : null}
       {!canPublish ? (

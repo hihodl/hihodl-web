@@ -404,11 +404,8 @@
   "crew.atMost": "Een crew heeft maximaal {count} personen.",
   "crew.listingsSold": "Advertenties verkocht als deze crew",
   "crew.noListing": "Nog geen advertentie",
-  "crew.noListingLead": "Open een van je advertenties en kies Als crew verkopen. Merken betalen dan iedereen in één betaling.",
+  "crew.noListingLead": "Open een van je advertenties en kies Verkoop met andere creators. Merken betalen dan iedereen in één betaling.",
   "crew.noListingMember": "De lead zet advertenties op de crew.",
-  "crew.expenses": "Uitgaven",
-  "crew.expensesChat": "Uitgaven en chat",
-  "crew.expensesChatMeta": "De koffie, de taxi, het hotel: verdelen en verrekenen",
   "crew.expensesGroup": "Uitgavengroep",
   "crew.noExpensesGroup": "Deze crew heeft nog geen uitgavengroep. Maak een groep aan onder Betalingen › Groepen en voeg de crew toe.",
   "crew.changeShare": "Deel van {who} wijzigen",
@@ -446,5 +443,14 @@
   "crew.leaveBody": "Je deel gaat terug naar de lead. Al betaalde verkopen blijven van jou, en je blijft in de uitgavengroep tot je hebt verrekend.",
   "crew.stay": "Blijven",
   "crew.leaving": "Verlaten…",
-  "crew.leave": "Verlaten"
+  "crew.leave": "Verlaten",
+  "crew.invitationTitle": "Crew-uitnodiging",
+  "crew.setPayout": "Stel je uitbetalingsadres in",
+  "crew.setPayoutMeta": "Zeg daarna ja",
+  "crew.you": "Jij",
+  "crew.sells": "{count, plural, one {Verkoopt} other {Verkoopt # advertenties}}",
+  "crew.splitCosts": "Kosten delen",
+  "crew.groupRow": "Groepsuitgaven en chat",
+  "crew.groupLine": "Iedereen die ja zegt, komt in de groep van de crew voor gedeelde kosten op het event.",
+  "crew.noPayoutTag": "Geen Solana-uitbetaling"
 }

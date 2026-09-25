@@ -404,11 +404,8 @@
   "crew.atMost": "Một nhóm tối đa {count} người.",
   "crew.listingsSold": "Tin đăng bán theo nhóm này",
   "crew.noListing": "Chưa có tin đăng",
-  "crew.noListingLead": "Mở một tin đăng của bạn và chọn Bán theo nhóm. Thương hiệu sẽ trả cho mọi người trong một lần thanh toán.",
+  "crew.noListingLead": "Mở một tin đăng của bạn và chọn Bán cùng các creator khác. Thương hiệu sẽ trả cho mọi người trong một lần thanh toán.",
   "crew.noListingMember": "Trưởng nhóm sẽ đưa tin đăng vào nhóm.",
-  "crew.expenses": "Chi tiêu",
-  "crew.expensesChat": "Chi tiêu & trò chuyện",
-  "crew.expensesChatMeta": "Cà phê, taxi, khách sạn: chia tiền và thanh toán",
   "crew.expensesGroup": "Nhóm chi tiêu",
   "crew.noExpensesGroup": "Nhóm này chưa có nhóm chi tiêu. Tạo một nhóm trong Thanh toán › Nhóm và thêm các thành viên vào.",
   "crew.changeShare": "Đổi phần của {who}",
@@ -446,5 +443,14 @@
   "crew.leaveBody": "Phần của bạn trở về trưởng nhóm. Các lần bán đã thanh toán vẫn là của bạn, và bạn vẫn ở trong nhóm chi tiêu cho đến khi thanh toán xong.",
   "crew.stay": "Ở lại",
   "crew.leaving": "Đang rời…",
-  "crew.leave": "Rời"
+  "crew.leave": "Rời",
+  "crew.invitationTitle": "Lời mời vào nhóm",
+  "crew.setPayout": "Đặt địa chỉ nhận tiền của bạn",
+  "crew.setPayoutMeta": "Rồi đồng ý",
+  "crew.you": "Bạn",
+  "crew.sells": "{count, plural, =1 {Đang bán} other {Đang bán # tin đăng}}",
+  "crew.splitCosts": "Chia chi phí",
+  "crew.groupRow": "Chi tiêu nhóm & trò chuyện",
+  "crew.groupLine": "Ai đồng ý sẽ vào nhóm chi tiêu của crew cho các khoản chung tại sự kiện.",
+  "crew.noPayoutTag": "Chưa có ví nhận Solana"
 }

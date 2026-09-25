@@ -404,11 +404,8 @@
   "crew.atMost": "Una crew ha al massimo {count} persone.",
   "crew.listingsSold": "Annunci venduti come questa crew",
   "crew.noListing": "Ancora nessun annuncio",
-  "crew.noListingLead": "Apri uno dei tuoi annunci e scegli Vendi come crew. I brand pagano poi tutti con un solo pagamento.",
+  "crew.noListingLead": "Apri uno dei tuoi annunci e scegli Vendi con altri creator. I brand pagano poi tutti con un solo pagamento.",
   "crew.noListingMember": "È il responsabile a mettere gli annunci sulla crew.",
-  "crew.expenses": "Spese",
-  "crew.expensesChat": "Spese e chat",
-  "crew.expensesChatMeta": "Il caffè, il taxi, l'hotel: dividete e saldate",
   "crew.expensesGroup": "Gruppo spese",
   "crew.noExpensesGroup": "Questa crew non ha ancora un gruppo spese. Crea un gruppo in Pagamenti › Gruppi e aggiungici la crew.",
   "crew.changeShare": "Cambia la quota di {who}",
@@ -446,5 +443,14 @@
   "crew.leaveBody": "La tua quota torna al responsabile. Le vendite già pagate restano tue, e resti nel gruppo spese finché non hai saldato.",
   "crew.stay": "Resta",
   "crew.leaving": "Uscita…",
-  "crew.leave": "Lascia"
+  "crew.leave": "Lascia",
+  "crew.invitationTitle": "Invito alla crew",
+  "crew.setPayout": "Imposta il tuo indirizzo di incasso",
+  "crew.setPayoutMeta": "Poi accetta",
+  "crew.you": "Tu",
+  "crew.sells": "{count, plural, one {Vende} other {Vende # annunci}}",
+  "crew.splitCosts": "Dividi le spese",
+  "crew.groupRow": "Spese del gruppo e chat",
+  "crew.groupLine": "Chi accetta entra nel gruppo della crew per le spese condivise all'evento.",
+  "crew.noPayoutTag": "Nessun incasso su Solana"
 }

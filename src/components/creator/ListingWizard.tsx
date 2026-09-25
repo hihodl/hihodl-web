@@ -443,6 +443,7 @@ export function ListingWizard({
               return (
                 <PublishStep
                   key="publish"
+                  spaceId={spaceId}
                   draft={draft}
                   template={template}
                   onChange={setDraft}

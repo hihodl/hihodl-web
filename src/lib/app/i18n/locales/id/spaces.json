@@ -404,11 +404,8 @@
   "crew.atMost": "Satu crew maksimal {count} orang.",
   "crew.listingsSold": "Listing yang dijual sebagai crew ini",
   "crew.noListing": "Belum ada listing",
-  "crew.noListingLead": "Buka salah satu listing-mu dan pilih Jual sebagai crew. Brand lalu membayar semua orang dalam satu pembayaran.",
+  "crew.noListingLead": "Buka salah satu listing-mu dan pilih Jual bersama creator lain. Brand lalu membayar semua orang dalam satu pembayaran.",
   "crew.noListingMember": "Pemimpin yang memasukkan listing ke crew.",
-  "crew.expenses": "Pengeluaran",
-  "crew.expensesChat": "Pengeluaran & chat",
-  "crew.expensesChatMeta": "Kopi, taksi, hotel: bagi dan lunasi",
   "crew.expensesGroup": "Grup pengeluaran",
   "crew.noExpensesGroup": "Crew ini belum punya grup pengeluaran. Buat grup di Pembayaran › Grup dan tambahkan crew-nya.",
   "crew.changeShare": "Ubah bagian {who}",
@@ -446,5 +443,14 @@
   "crew.leaveBody": "Bagianmu kembali ke pemimpin. Penjualan yang sudah dibayar tetap milikmu, dan kamu tetap di grup pengeluaran sampai semuanya lunas.",
   "crew.stay": "Tetap",
   "crew.leaving": "Keluar…",
-  "crew.leave": "Keluar"
+  "crew.leave": "Keluar",
+  "crew.invitationTitle": "Undangan crew",
+  "crew.setPayout": "Atur alamat pembayaranmu",
+  "crew.setPayoutMeta": "Lalu setujui",
+  "crew.you": "Kamu",
+  "crew.sells": "{count, plural, =1 {Menjual} other {Menjual # listing}}",
+  "crew.splitCosts": "Bagi biaya",
+  "crew.groupRow": "Pengeluaran grup & chat",
+  "crew.groupLine": "Semua yang setuju bergabung ke grup crew untuk biaya bersama di acara.",
+  "crew.noPayoutTag": "Tanpa pembayaran Solana"
 }

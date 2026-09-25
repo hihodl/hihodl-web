@@ -404,11 +404,8 @@
   "crew.atMost": "Crewมีได้สูงสุด {count} คน",
   "crew.listingsSold": "ลิสติ้งที่ขายในนามCrewนี้",
   "crew.noListing": "ยังไม่มีลิสติ้ง",
-  "crew.noListingLead": "เปิดลิสติ้งของคุณแล้วเลือก ขายในนามCrew จากนั้นแบรนด์จะจ่ายทุกคนในการจ่ายครั้งเดียว",
+  "crew.noListingLead": "เปิดลิสติ้งของคุณแล้วเลือก ขายร่วมกับครีเอเตอร์คนอื่น จากนั้นแบรนด์จะจ่ายทุกคนในการจ่ายครั้งเดียว",
   "crew.noListingMember": "หัวหน้าเป็นผู้นำลิสติ้งเข้าCrew",
-  "crew.expenses": "ค่าใช้จ่าย",
-  "crew.expensesChat": "ค่าใช้จ่ายและแชต",
-  "crew.expensesChatMeta": "กาแฟ แท็กซี่ โรงแรม: หารกันแล้วเคลียร์ยอด",
   "crew.expensesGroup": "กลุ่มค่าใช้จ่าย",
   "crew.noExpensesGroup": "Crewนี้ยังไม่มีกลุ่มค่าใช้จ่าย สร้างกลุ่มที่ การชำระเงิน › กลุ่ม แล้วเพิ่มCrewเข้าไป",
   "crew.changeShare": "เปลี่ยนส่วนแบ่งของ {who}",
@@ -446,5 +443,14 @@
   "crew.leaveBody": "ส่วนแบ่งของคุณจะกลับไปที่หัวหน้า ยอดขายที่จ่ายแล้วยังเป็นของคุณ และคุณยังอยู่ในกลุ่มค่าใช้จ่ายจนกว่าจะเคลียร์ยอด",
   "crew.stay": "อยู่ต่อ",
   "crew.leaving": "กำลังออก…",
-  "crew.leave": "ออก"
+  "crew.leave": "ออก",
+  "crew.invitationTitle": "คำเชิญเข้า Crew",
+  "crew.setPayout": "ตั้งที่อยู่รับเงินของคุณ",
+  "crew.setPayoutMeta": "แล้วจึงตอบรับ",
+  "crew.you": "คุณ",
+  "crew.sells": "{count, plural, =1 {ขายลิสติ้ง} other {ขาย # ลิสติ้ง}}",
+  "crew.splitCosts": "หารค่าใช้จ่าย",
+  "crew.groupRow": "ค่าใช้จ่ายกลุ่มและแชต",
+  "crew.groupLine": "ทุกคนที่ตอบรับจะเข้ากลุ่มของ Crew สำหรับค่าใช้จ่ายร่วมกันในงาน",
+  "crew.noPayoutTag": "ไม่มีที่รับเงินบน Solana"
 }

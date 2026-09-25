@@ -404,11 +404,8 @@
   "crew.atMost": "Crewは最大 {count} 人です。",
   "crew.listingsSold": "このCrewとして販売中の出品",
   "crew.noListing": "まだ出品はありません",
-  "crew.noListingLead": "出品を開いて「Crewとして販売」を選びましょう。ブランドは 1 回の支払いで全員に支払えます。",
+  "crew.noListingLead": "出品を開いて「ほかのクリエイターと一緒に販売」を選びましょう。ブランドは 1 回の支払いで全員に支払えます。",
   "crew.noListingMember": "出品をCrewに追加するのはリーダーです。",
-  "crew.expenses": "支出",
-  "crew.expensesChat": "支出とチャット",
-  "crew.expensesChatMeta": "コーヒー、タクシー、ホテル：割り勘して精算",
   "crew.expensesGroup": "支出グループ",
   "crew.noExpensesGroup": "このCrewにはまだ支出グループがありません。支払い › グループでグループを作り、Crewを追加してください。",
   "crew.changeShare": "{who} の取り分を変更",
@@ -446,5 +443,14 @@
   "crew.leaveBody": "あなたの取り分はリーダーに戻ります。支払い済みの販売はあなたのもので、精算が済むまでは支出グループに残ります。",
   "crew.stay": "残る",
   "crew.leaving": "退出中…",
-  "crew.leave": "抜ける"
+  "crew.leave": "抜ける",
+  "crew.invitationTitle": "Crewへの招待",
+  "crew.setPayout": "受取アドレスを設定",
+  "crew.setPayoutMeta": "その後に承諾",
+  "crew.you": "あなた",
+  "crew.sells": "{count, plural, =1 {販売する出品} other {販売する出品 # 件}}",
+  "crew.splitCosts": "費用を割り勘",
+  "crew.groupRow": "グループの支出とチャット",
+  "crew.groupLine": "承諾した人は全員、イベントでの共有費用のためのCrewのグループに参加します。",
+  "crew.noPayoutTag": "Solana の受取先なし"
 }

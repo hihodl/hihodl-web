@@ -13,6 +13,7 @@ import { t } from "@/lib/app/i18n";
 import { fmtPercent } from "@/lib/app/i18n/format";
 
 import { call, CreatorApiError } from "./api";
+import type { Blocker } from "./crew-package";
 
 export const CREW_LIMITS = {
   MAX_MEMBERS: 6,
@@ -68,7 +69,24 @@ export interface CrewInvitePreview {
   service: string;
   shareBps: number;
   share: string;
-  members: { handle: string | null; service: string; isLead: boolean }[];
+  /**
+   * Everyone in the crew. Servers from before 24 September send only
+   * `handle`, `service` and `isLead`, and only people who are in; newer ones
+   * send the whole split, this invitation's own seat included.
+   */
+  members: {
+    handle: string | null;
+    service: string;
+    isLead: boolean;
+    shareBps?: number;
+    share?: string;
+    name?: string | null;
+    avatarUrl?: string | null;
+    agreed?: boolean;
+    isThisInvite?: boolean;
+  }[];
+  /** The crew's live listings; absent from older servers. */
+  spaces?: { id: string; slug: string; title: string; status: string }[];
   expiresAt: string | null;
 }
 
@@ -116,12 +134,7 @@ export const setListingCrew = (spaceId: string, crewId: string | null) =>
 
 /** "40%" from basis points, for a field the creator types in percent. */
 export const pctText = (bps: number) => fmtPercent(bps / 10_000, Number.isInteger(bps / 100) ? 0 : 1);
-/** Percent typed by a person, to basis points; null when it is not a number. */
-export function bpsFromPct(text: string): number | null {
-  const n = Number(text.replace(",", ".").replace("%", "").trim());
-  if (!Number.isFinite(n)) return null;
-  return Math.round(n * 100);
-}
+export { bpsFromPct, leadKeepsBps, othersBps, shareOk } from "./crew-package";
 
 /** Why the crew cannot sell yet, said to its members. */
 export function notReadyText(reason: CrewNotReady | null): string | null {
@@ -136,6 +149,18 @@ export function notReadyText(reason: CrewNotReady | null): string | null {
       return t("creator.crew.notReady.noPayout");
     default:
       return null;
+  }
+}
+
+/** Why one member is holding the package up, next to their name. */
+export function blockerText(reason: Blocker): string {
+  switch (reason) {
+    case "invited":
+      return t("spaces.crew.invited");
+    case "not_agreed":
+      return t("spaces.crew.notYes");
+    case "no_payout":
+      return t("spaces.crew.noPayoutTag");
   }
 }
 

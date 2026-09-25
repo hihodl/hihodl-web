@@ -404,11 +404,8 @@
   "crew.atMost": "Kikosi kina watu {count} zaidi.",
   "crew.listingsSold": "Matangazo yanayouzwa kama kikosi hiki",
   "crew.noListing": "Bado hakuna tangazo",
-  "crew.noListingLead": "Fungua mojawapo ya matangazo yako na uchague Uza kama kikosi. Kisha chapa zinamlipa kila mtu kwa malipo moja.",
+  "crew.noListingLead": "Fungua mojawapo ya matangazo yako na uchague Uza pamoja na wabunifu wengine. Kisha chapa zinamlipa kila mtu kwa malipo moja.",
   "crew.noListingMember": "Kiongozi ndiye anayeweka matangazo kwenye kikosi.",
-  "crew.expenses": "Gharama",
-  "crew.expensesChat": "Gharama na mazungumzo",
-  "crew.expensesChatMeta": "Kahawa, teksi, hoteli: gawanyeni na mmalize hesabu",
   "crew.expensesGroup": "Kikundi cha gharama",
   "crew.noExpensesGroup": "Kikosi hiki bado hakina kikundi cha gharama. Unda kikundi chini ya Malipo › Vikundi na uongeze kikosi ndani yake.",
   "crew.changeShare": "Badilisha sehemu ya {who}",
@@ -446,5 +443,14 @@
   "crew.leaveBody": "Sehemu yako inarudi kwa kiongozi. Mauzo yaliyokwisha kulipwa yanabaki yako, na unabaki kwenye kikundi cha gharama hadi umalize hesabu.",
   "crew.stay": "Baki",
   "crew.leaving": "Inaondoka…",
-  "crew.leave": "Ondoka"
+  "crew.leave": "Ondoka",
+  "crew.invitationTitle": "Mwaliko wa kikosi",
+  "crew.setPayout": "Weka anwani yako ya kupokea malipo",
+  "crew.setPayoutMeta": "Kisha sema ndiyo",
+  "crew.you": "Wewe",
+  "crew.sells": "{count, plural, one {Kinauza} other {Kinauza matangazo #}}",
+  "crew.splitCosts": "Gawanya gharama",
+  "crew.groupRow": "Gharama za kikundi na mazungumzo",
+  "crew.groupLine": "Kila anayesema ndiyo anajiunga na kikundi cha kikosi kwa gharama za pamoja kwenye tukio.",
+  "crew.noPayoutTag": "Hakuna malipo ya Solana"
 }

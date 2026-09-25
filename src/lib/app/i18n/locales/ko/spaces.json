@@ -404,11 +404,8 @@
   "crew.atMost": "Crew는 최대 {count}명이에요.",
   "crew.listingsSold": "이 Crew로 판매하는 리스팅",
   "crew.noListing": "아직 리스팅이 없어요",
-  "crew.noListingLead": "내 리스팅 하나를 열고 Crew로 판매를 선택하세요. 그러면 브랜드가 한 번의 결제로 모두에게 지급해요.",
+  "crew.noListingLead": "내 리스팅 하나를 열고 다른 크리에이터와 함께 판매를 선택하세요. 그러면 브랜드가 한 번의 결제로 모두에게 지급해요.",
   "crew.noListingMember": "리스팅은 리더가 Crew에 올려요.",
-  "crew.expenses": "지출",
-  "crew.expensesChat": "지출 및 채팅",
-  "crew.expensesChatMeta": "커피, 택시, 호텔: 나누고 정산하세요",
   "crew.expensesGroup": "지출 그룹",
   "crew.noExpensesGroup": "이 Crew에는 아직 지출 그룹이 없어요. 결제 › 그룹에서 그룹을 만들고 Crew를 추가하세요.",
   "crew.changeShare": "{who}님의 몫 변경",
@@ -446,5 +443,14 @@
   "crew.leaveBody": "내 몫은 리더에게 돌아가요. 이미 결제된 판매는 내 것으로 남고, 정산을 마칠 때까지 지출 그룹에 남아 있어요.",
   "crew.stay": "남기",
   "crew.leaving": "나가는 중…",
-  "crew.leave": "나가기"
+  "crew.leave": "나가기",
+  "crew.invitationTitle": "Crew 초대",
+  "crew.setPayout": "정산 주소 설정하기",
+  "crew.setPayoutMeta": "그다음 수락하세요",
+  "crew.you": "나",
+  "crew.sells": "{count, plural, =1 {판매 중인 리스팅} other {판매 중인 리스팅 #개}}",
+  "crew.splitCosts": "비용 나누기",
+  "crew.groupRow": "그룹 지출 및 채팅",
+  "crew.groupLine": "수락한 사람은 모두 이벤트 공동 비용을 위한 Crew 그룹에 들어가요.",
+  "crew.noPayoutTag": "Solana 정산 없음"
 }

@@ -404,11 +404,8 @@
   "crew.atMost": "一个Crew最多 {count} 人。",
   "crew.listingsSold": "以这个小队名义出售的刊登",
   "crew.noListing": "还没有刊登",
-  "crew.noListingLead": "打开你的一个刊登，选择“以Crew出售”。之后品牌一笔付款就能付给所有人。",
+  "crew.noListingLead": "打开你的一个刊登，选择“与其他创作者一起出售”。之后品牌一笔付款就能付给所有人。",
   "crew.noListingMember": "由队长把刊登放到小队名下。",
-  "crew.expenses": "支出",
-  "crew.expensesChat": "支出与聊天",
-  "crew.expensesChatMeta": "咖啡、打车、酒店：分摊并结清",
   "crew.expensesGroup": "支出群组",
   "crew.noExpensesGroup": "这个小队还没有支出群组。在“付款 › 群组”下建一个群组，然后把小队成员加进去。",
   "crew.changeShare": "修改 {who} 的份额",
@@ -446,5 +443,14 @@
   "crew.leaveBody": "你的份额会回到队长那里。已付款的销售仍归你，在结清之前你会留在支出群组里。",
   "crew.stay": "留下",
   "crew.leaving": "正在退出…",
-  "crew.leave": "退出"
+  "crew.leave": "退出",
+  "crew.invitationTitle": "Crew 邀请",
+  "crew.setPayout": "设置你的收款地址",
+  "crew.setPayoutMeta": "然后同意",
+  "crew.you": "你",
+  "crew.sells": "{count, plural, =1 {出售} other {出售 # 个刊登}}",
+  "crew.splitCosts": "分摊费用",
+  "crew.groupRow": "群组支出与聊天",
+  "crew.groupLine": "每位同意的人都会加入Crew的群组，用于分摊活动中的共同费用。",
+  "crew.noPayoutTag": "无 Solana 收款地址"
 }

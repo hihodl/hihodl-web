@@ -414,11 +414,8 @@ const spaces = {
   "crew.atMost": "A crew is at most {count} people.",
   "crew.listingsSold": "Listings sold as this crew",
   "crew.noListing": "No listing yet",
-  "crew.noListingLead": "Open one of your listings and choose Sell as a crew. Brands then pay everyone in one payment.",
+  "crew.noListingLead": "Open one of your listings and choose Sell with other creators. Brands then pay everyone in one payment.",
   "crew.noListingMember": "The lead puts listings on the crew.",
-  "crew.expenses": "Expenses",
-  "crew.expensesChat": "Expenses & chat",
-  "crew.expensesChatMeta": "The coffee, the taxi, the hotel: split it and settle up",
   "crew.expensesGroup": "Expenses group",
   "crew.noExpensesGroup": "This crew has no expenses group yet. Make a group under Payments › Groups and add the crew to it.",
   "crew.changeShare": "Change {who}'s share",
@@ -457,6 +454,15 @@ const spaces = {
   "crew.stay": "Stay",
   "crew.leaving": "Leaving…",
   "crew.leave": "Leave",
+  "crew.invitationTitle": "Crew invitation",
+  "crew.setPayout": "Set your payout address",
+  "crew.setPayoutMeta": "Then say yes",
+  "crew.you": "You",
+  "crew.sells": "{count, plural, one {Sells} other {Sells # listings}}",
+  "crew.splitCosts": "Split costs",
+  "crew.groupRow": "Group expenses & chat",
+  "crew.groupLine": "Everyone who says yes joins the crew's group for shared costs at the event.",
+  "crew.noPayoutTag": "No Solana payout",
 } satisfies Record<string, string>;
 
 export default spaces;
