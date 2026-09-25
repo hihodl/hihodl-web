@@ -45,6 +45,28 @@ interface SignMessageInput {
   readonly message: Uint8Array;
 }
 
+/** Sign In With Solana (solana:signIn 1.0.0): every field optional, as @solana/wallet-standard-features has it. */
+export interface SolanaSignInInput {
+  readonly domain?: string;
+  readonly address?: string;
+  readonly statement?: string;
+  readonly uri?: string;
+  readonly version?: string;
+  readonly chainId?: string;
+  readonly nonce?: string;
+  readonly issuedAt?: string;
+  readonly expirationTime?: string;
+  readonly notBefore?: string;
+  readonly requestId?: string;
+  readonly resources?: readonly string[];
+}
+export interface SolanaSignInOutput {
+  readonly account: HoldWalletAccount;
+  readonly signedMessage: Uint8Array;
+  readonly signature: Uint8Array;
+  readonly signatureType: "ed25519";
+}
+
 type ChangeListener = (properties: { accounts?: readonly HoldWalletAccount[] }) => void;
 
 export interface HoldWallet {
@@ -76,6 +98,10 @@ export interface HoldWallet {
         ...inputs: readonly SignMessageInput[]
       ) => Promise<readonly { readonly signedMessage: Uint8Array; readonly signature: Uint8Array; readonly signatureType: "ed25519" }[]>;
     };
+    readonly "solana:signIn": {
+      readonly version: "1.0.0";
+      readonly signIn: (...inputs: readonly SolanaSignInInput[]) => Promise<readonly SolanaSignInOutput[]>;
+    };
   };
 }
 
@@ -88,6 +114,13 @@ export interface HoldConnectOptions {
   apiUrl?: string;
 }
 
+/**
+ * Why a connect failed before HOLD could answer, for a site that wants to
+ * show its own words: the browser blocked the popup, or the site's
+ * Cross-Origin-Opener-Policy cut the popup off from this page.
+ */
+export type HoldConnectReason = "POPUP_BLOCKED" | "POPUP_SEVERED";
+
 /** An error a wallet adapter understands: 4001 the user said no, 4100 not connected (any more). */
 export class HoldConnectError extends Error {
   constructor(
@@ -95,11 +128,18 @@ export class HoldConnectError extends Error {
     message: string,
     /** The HTTP status behind it, when there was one. */
     readonly status?: number,
+    /** Set when the popup never got to talk to this page. */
+    readonly reason?: HoldConnectReason,
   ) {
     super(message);
     this.name = "HoldConnectError";
   }
 }
+
+export const POPUP_BLOCKED_MESSAGE = "Allow pop-ups for this site to connect HOLD";
+export const POPUP_SEVERED_MESSAGE =
+  "The HOLD window could not talk to this page. If you did not close it, this site's Cross-Origin-Opener-Policy header cuts popups off from it: " +
+  "the site must send Cross-Origin-Opener-Policy: same-origin-allow-popups (or no such header) for HOLD to connect.";
 
 /* ── Constants ─────────────────────────────────────────────────────── */
 
@@ -123,10 +163,72 @@ export const HOLD_WALLET_ICON = `data:image/svg+xml;base64,${btoa(ICON_SVG)}` as
 const DEFAULT_CONNECT_URL = "https://app.hihodl.xyz/connect";
 const DEFAULT_API_URL = "https://api.hihodl.xyz/api/v1";
 export const STORAGE_KEY = "hold-connect:v1";
-const POLL_MS = 1_500;
-/** Past expiresAt the server answers `expired` itself; this is how long we keep asking for it. */
-const EXPIRY_GRACE_MS = 15_000;
+/** Asking the phone: every 1.5 s for the first 30 s, then every 3 s, until expiresAt. */
+const POLL_FAST_MS = 1_500;
+const POLL_SLOW_MS = 3_000;
+const POLL_FAST_FOR_MS = 30_000;
 const DEFAULT_REQUEST_TTL_MS = 5 * 60_000;
+/** The popup says ready as soon as it loads; this long without it, it cannot reach us (COOP). */
+const HANDSHAKE_WAIT_MS = 20_000;
+/**
+ * A popup the opener's COOP severed reads as closed at once. Closed before
+ * its ready and this soon is that, not a person (who cannot open and close
+ * a window this fast).
+ */
+const SEVERED_CLOSE_MS = 2_000;
+
+/** The next wait between polls: fast at first, slower after, never past the deadline. */
+export function pollDelay(startedAt: number, now: number, until: number): number {
+  const d = now - startedAt < POLL_FAST_FOR_MS ? POLL_FAST_MS : POLL_SLOW_MS;
+  return Math.max(0, Math.min(d, until - now));
+}
+
+/* ── Sign In With Solana ───────────────────────────────────────────── */
+
+type SignInFields = SolanaSignInInput & { readonly domain: string; readonly address: string };
+
+/**
+ * The SIWS message, exactly as @solana/wallet-standard-util's
+ * createSignInMessageText writes it (and parseSignInMessageText reads it back):
+ *
+ *   ${domain} wants you to sign in with your Solana account:
+ *   ${address}
+ *
+ *   ${statement}
+ *
+ *   URI: ${uri}
+ *   Version: ${version}
+ *   Chain ID: ${chainId}
+ *   Nonce: ${nonce}
+ *   Issued At: ${issuedAt}
+ *   Expiration Time: ${expirationTime}
+ *   Not Before: ${notBefore}
+ *   Request ID: ${requestId}
+ *   Resources:
+ *   - ${resources[0]}
+ *
+ * A field left out is a line left out.
+ */
+export function createSignInMessageText(input: SignInFields): string {
+  let message = `${input.domain} wants you to sign in with your Solana account:\n`;
+  message += `${input.address}`;
+  if (input.statement) message += `\n\n${input.statement}`;
+  const fields: string[] = [];
+  if (input.uri) fields.push(`URI: ${input.uri}`);
+  if (input.version) fields.push(`Version: ${input.version}`);
+  if (input.chainId) fields.push(`Chain ID: ${input.chainId}`);
+  if (input.nonce) fields.push(`Nonce: ${input.nonce}`);
+  if (input.issuedAt) fields.push(`Issued At: ${input.issuedAt}`);
+  if (input.expirationTime) fields.push(`Expiration Time: ${input.expirationTime}`);
+  if (input.notBefore) fields.push(`Not Before: ${input.notBefore}`);
+  if (input.requestId) fields.push(`Request ID: ${input.requestId}`);
+  if (input.resources) {
+    fields.push("Resources:");
+    for (const r of input.resources) fields.push(`- ${r}`);
+  }
+  if (fields.length) message += `\n\n${fields.join("\n")}`;
+  return message;
+}
 
 /* ── Bytes ─────────────────────────────────────────────────────────── */
 
@@ -235,7 +337,6 @@ class HoldConnectWallet {
     this.#connectUrl = opts.connectUrl ?? DEFAULT_CONNECT_URL;
     this.#connectOrigin = new URL(this.#connectUrl).origin;
     this.#apiUrl = (opts.apiUrl ?? DEFAULT_API_URL).replace(/\/+$/, "");
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
     this.wallet = Object.freeze({
       version: "1.0.0",
@@ -260,6 +361,7 @@ class HoldConnectWallet {
           signAndSendTransaction: (...inputs: readonly SignAndSendTransactionInput[]) => this.#signAndSend(inputs),
         },
         "solana:signMessage": { version: "1.0.0", signMessage: (...inputs: readonly SignMessageInput[]) => this.#signMessage(inputs) },
+        "solana:signIn": { version: "1.0.0", signIn: (...inputs: readonly SolanaSignInInput[]) => this.#signIn(inputs) },
       }),
     } as HoldWallet);
 
@@ -314,7 +416,7 @@ class HoldConnectWallet {
     if (this.#connecting) return this.#connecting;
     // Opened right here, in the click's own task: a popup opened after an await is blocked.
     const popup = window.open(this.#connectUrl, "hold-connect", "width=420,height=640");
-    if (!popup) return Promise.reject(new HoldConnectError(-32603, "The browser blocked the HOLD window. Allow pop-ups for this site and try again."));
+    if (!popup) return Promise.reject(new HoldConnectError(-32603, POPUP_BLOCKED_MESSAGE, undefined, "POPUP_BLOCKED"));
     this.#connecting = this.#handshake(popup).finally(() => {
       this.#connecting = null;
     });
@@ -324,11 +426,15 @@ class HoldConnectWallet {
   #handshake(popup: Window): Promise<{ readonly accounts: readonly HoldWalletAccount[] }> {
     return new Promise((resolve, reject) => {
       let settled = false;
+      let ready = false;
+      const openedAt = Date.now();
+      const severed = () => new HoldConnectError(-32603, POPUP_SEVERED_MESSAGE, undefined, "POPUP_SEVERED");
       const done = (fn: () => void) => {
         if (settled) return;
         settled = true;
         window.removeEventListener("message", onMessage);
         clearInterval(closedTimer);
+        clearTimeout(handshakeTimer);
         fn();
       };
       const onMessage = (e: MessageEvent) => {
@@ -338,6 +444,7 @@ class HoldConnectWallet {
         switch (d.type) {
           // Every ready gets a hello: the popup says it again after a sign-in or a phone link.
           case "hold-connect:ready":
+            ready = true;
             popup.postMessage({ type: "hold-connect:hello", appName: this.#appName ?? undefined }, this.#connectOrigin);
             return;
           case "hold-connect:connected": {
@@ -366,8 +473,24 @@ class HoldConnectWallet {
       };
       window.addEventListener("message", onMessage);
       const closedTimer = setInterval(() => {
-        if (popup.closed) done(() => reject(new HoldConnectError(4001, "The HOLD window was closed.")));
+        if (!popup.closed) return;
+        if (!ready && Date.now() - openedAt < SEVERED_CLOSE_MS) return done(() => reject(severed()));
+        done(() => reject(new HoldConnectError(4001, "The HOLD window was closed.")));
       }, 500);
+      // A site with Cross-Origin-Opener-Policy: same-origin severs the popup
+      // from this page: its ready never arrives, and some browsers still
+      // report the window open. Say why instead of waiting forever.
+      const handshakeTimer = setTimeout(() => {
+        if (ready) return;
+        done(() => {
+          try {
+            popup.close();
+          } catch {
+            /* severed: it cannot be closed from here either */
+          }
+          reject(severed());
+        });
+      }, HANDSHAKE_WAIT_MS);
     });
   }
 
@@ -439,17 +562,25 @@ class HoldConnectWallet {
     const created = await this.#call("POST", "requests", { kind, payload });
     const id = typeof created.id === "string" ? created.id : null;
     if (!id) throw new HoldConnectError(-32603, "HOLD did not accept the request.");
-    const until = Date.parse(String(created.expiresAt ?? ""));
-    const giveUpAt = (Number.isFinite(until) ? until : Date.now() + DEFAULT_REQUEST_TTL_MS) + EXPIRY_GRACE_MS;
+    const startedAt = Date.now();
+    // expiresAt is the server's clock: kept as a span from createdAt when both
+    // are given, so a computer whose clock is off still waits the right time.
+    const expires = Date.parse(String(created.expiresAt ?? ""));
+    const createdAtServer = Date.parse(String(created.createdAt ?? ""));
+    const giveUpAt = Number.isFinite(expires)
+      ? Number.isFinite(createdAtServer) && expires > createdAtServer
+        ? startedAt + (expires - createdAtServer)
+        : expires
+      : startedAt + DEFAULT_REQUEST_TTL_MS;
     for (;;) {
-      await new Promise((r) => setTimeout(r, POLL_MS));
+      await new Promise((r) => setTimeout(r, pollDelay(startedAt, Date.now(), giveUpAt)));
       let r: Record<string, unknown>;
       try {
         r = await this.#call("GET", `requests/${encodeURIComponent(id)}`);
       } catch (e) {
         // A lost poll is asked again; losing the connection or the request is final.
         if (e instanceof HoldConnectError && (e.code === 4100 || e.status === 404)) throw e;
-        if (Date.now() > giveUpAt) throw new HoldConnectError(-32603, "Your phone did not answer in time.");
+        if (Date.now() >= giveUpAt) throw new HoldConnectError(-32603, "Your phone did not answer in time.");
         continue;
       }
       const status = r.status;
@@ -460,7 +591,7 @@ class HoldConnectWallet {
         const message = typeof e.message === "string" ? e.message : "You said no on your phone.";
         throw new HoldConnectError(code, message);
       }
-      if (status === "expired" || Date.now() > giveUpAt) throw new HoldConnectError(-32603, "Your phone did not answer in time.");
+      if (status === "expired" || Date.now() >= giveUpAt) throw new HoldConnectError(-32603, "Your phone did not answer in time.");
     }
   }
 
@@ -512,6 +643,35 @@ class HoldConnectWallet {
     const sigs = list as unknown[];
     if (sigs.length !== inputs.length) throw new HoldConnectError(-32603, "HOLD returned the wrong number of signatures.");
     return sigs.map((s, n) => ({ signedMessage: messages[n], signature: signatureBytes(String(s)), signatureType: "ed25519" as const }));
+  }
+
+  /**
+   * Sign In With Solana. Connects first when needed, and the popup opens
+   * right here, synchronously, since signIn is called from a click. The
+   * message then goes to the phone as any signMessage does.
+   */
+  #signIn(inputs: readonly SolanaSignInInput[]): Promise<readonly SolanaSignInOutput[]> {
+    const list = inputs.length ? inputs : [{}];
+    let connected: Promise<unknown>;
+    try {
+      connected = this.#connect();
+    } catch (e) {
+      connected = Promise.reject(e);
+    }
+    return connected.then(async () => {
+      const account = this.#accounts[0];
+      if (!this.#token || !account) throw new HoldConnectError(4100, "Connect HOLD first.");
+      if (list.length > 10) throw new HoldConnectError(-32602, "HOLD signs at most 10 at a time.");
+      const domain = window.location.host;
+      const messages = list.map((i) => {
+        if (i.address && i.address !== account.address) throw new HoldConnectError(4100, "That account is not the one connected to HOLD.");
+        if (i.chainId && i.chainId !== "mainnet" && i.chainId !== SOLANA_MAINNET) throw new HoldConnectError(-32602, `HOLD signs on ${SOLANA_MAINNET} only.`);
+        const text = createSignInMessageText({ ...i, domain: i.domain || domain, address: account.address });
+        return new TextEncoder().encode(text);
+      });
+      const out = await this.#signMessage(messages.map((message) => ({ account, message })));
+      return out.map((o) => ({ account, signedMessage: o.signedMessage, signature: o.signature, signatureType: "ed25519" as const }));
+    });
   }
 }
 
