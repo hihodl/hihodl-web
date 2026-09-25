@@ -70,6 +70,7 @@
   "defaultPhone.approve": "{platform, select, ios {iPhone에서 HOLD를 열어 승인하세요} android {Android 휴대폰에서 HOLD를 열어 승인하세요} other {휴대폰에서 HOLD를 열어 승인하세요}}",
   "connect.eyebrow": "사이트가 HOLD에 연결하려고 해요",
   "connect.saysItIs": "{name}(이)라고 밝혔어요",
+  "connect.localDev": "로컬 개발 사이트",
   "connect.what": "이 사이트는 내 Solana 주소를 볼 수 있어요. 사이트가 요청하는 모든 서명은 휴대폰에서 승인하고, 키는 절대 휴대폰 밖으로 나가지 않아요.",
   "connect.asking": "휴대폰에 묻는 중…",
   "connect.footer": "휴대폰의 HOLD 알림에서 승인해 주세요. 알림이 없나요? 휴대폰에서 HOLD를 여세요.",

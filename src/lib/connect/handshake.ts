@@ -20,21 +20,33 @@ export const HELLO = "hold-connect:hello";
 export const CONNECTED = "hold-connect:connected";
 export const ERROR = "hold-connect:error";
 
-/** The backend's rule (`^https://[a-z0-9.-]+(:\d+)?$`, lowercased), plus a local http one in development. */
+/** The backend's rule (`^https://[a-z0-9.-]+(:\d+)?$`, lowercased), plus a developer's own machine over http. */
 const HTTPS_ORIGIN = /^https:\/\/[a-z0-9.-]+(:\d+)?$/;
 const LOCAL_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
 
 /**
  * The dapp's origin, as the popup accepts it: `MessageEvent.origin`,
- * lowercased, https only (a local http origin only when `dev`). null for
- * anything else, including the opaque "null" of a sandboxed frame or a file.
+ * lowercased, https, or http on localhost / 127.0.0.1 (any port). null for
+ * anything else, including every other http origin and the opaque "null" of
+ * a sandboxed frame or a file.
+ *
+ * The local ones are accepted in every environment, production included, so
+ * a dapp developer on http://localhost can finish a connect against
+ * app.hihodl.xyz: the backend is what decides, from its exact list
+ * (HOLD_CONNECT_DEV_ORIGINS; in production only localhost and 127.0.0.1
+ * entries of it, never a wildcard). A local origin the backend does not list
+ * is refused there, and the popup says so.
  */
-export function dappOrigin(eventOrigin: unknown, dev: boolean): string | null {
+export function dappOrigin(eventOrigin: unknown): string | null {
   if (typeof eventOrigin !== "string") return null;
   const o = eventOrigin.toLowerCase();
-  if (HTTPS_ORIGIN.test(o)) return o;
-  if (dev && LOCAL_ORIGIN.test(o)) return o;
+  if (HTTPS_ORIGIN.test(o) || LOCAL_ORIGIN.test(o)) return o;
   return null;
+}
+
+/** A developer's own machine (http://localhost or http://127.0.0.1): drawn with a "Local development site" note. */
+export function isLocalOrigin(origin: string): boolean {
+  return LOCAL_ORIGIN.test(origin.toLowerCase());
 }
 
 /** What to draw big: the host, punycode as the browser gives it (never a look-alike in Unicode). */
@@ -150,11 +162,11 @@ export function encodeKept(k: Kept): string {
   return JSON.stringify(k);
 }
 
-export function decodeKept(raw: string | null, now: number, dev: boolean): Kept | null {
+export function decodeKept(raw: string | null, now: number): Kept | null {
   if (!raw) return null;
   try {
     const k = JSON.parse(raw) as Partial<Kept>;
-    const origin = dappOrigin(k.origin, dev);
+    const origin = dappOrigin(k.origin);
     if (!origin || typeof k.at !== "number" || now - k.at > STORE_TTL_MS || k.at > now + 60_000) return null;
     return { origin, appName: cleanAppName(k.appName), at: k.at };
   } catch {

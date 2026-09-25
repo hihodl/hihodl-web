@@ -70,6 +70,7 @@
   "defaultPhone.approve": "{platform, select, ios {Buka HOLD di iPhone-mu untuk menyetujui} android {Buka HOLD di ponsel Android-mu untuk menyetujui} other {Buka HOLD di ponselmu untuk menyetujui}}",
   "connect.eyebrow": "Sebuah situs ingin terhubung ke HOLD",
   "connect.saysItIs": "Mengaku sebagai {name}",
+  "connect.localDev": "Situs pengembangan lokal",
   "connect.what": "Situs ini akan melihat alamat Solana-mu. Setiap tanda tangan yang dimintanya disetujui di ponselmu, dan kuncimu tidak pernah keluar dari ponsel.",
   "connect.asking": "Menanyakan ke ponselmu…",
   "connect.footer": "Notifikasi HOLD di ponselmu memintamu menyetujuinya. Tidak ada notifikasi? Buka HOLD di ponselmu.",

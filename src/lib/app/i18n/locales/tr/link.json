@@ -70,6 +70,7 @@
   "defaultPhone.approve": "{platform, select, ios {Onaylamak için iPhone'unda HOLD'u aç} android {Onaylamak için Android telefonunda HOLD'u aç} other {Onaylamak için telefonunda HOLD'u aç}}",
   "connect.eyebrow": "Bir site HOLD'a bağlanmak istiyor",
   "connect.saysItIs": "Kendini {name} olarak tanıtıyor",
+  "connect.localDev": "Yerel geliştirme sitesi",
   "connect.what": "Solana adresini görecek. İstediği her imzayı telefonunda onaylarsın ve anahtarların telefonundan asla çıkmaz.",
   "connect.asking": "Telefonuna soruluyor…",
   "connect.footer": "Telefonundaki bir HOLD bildirimi onaylamanı istiyor. Bildirim gelmedi mi? Telefonunda HOLD'u aç.",

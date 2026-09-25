@@ -70,6 +70,7 @@
   "defaultPhone.approve": "{platform, select, ios {Mở HOLD trên iPhone của bạn để duyệt} android {Mở HOLD trên điện thoại Android của bạn để duyệt} other {Mở HOLD trên điện thoại của bạn để duyệt}}",
   "connect.eyebrow": "Một trang web muốn kết nối với HOLD",
   "connect.saysItIs": "Tự nhận là {name}",
+  "connect.localDev": "Trang web phát triển cục bộ",
   "connect.what": "Trang này sẽ thấy địa chỉ Solana của bạn. Mọi chữ ký trang yêu cầu đều được duyệt trên điện thoại của bạn, và khóa của bạn không bao giờ rời khỏi điện thoại.",
   "connect.asking": "Đang hỏi điện thoại của bạn…",
   "connect.footer": "Một thông báo HOLD trên điện thoại sẽ yêu cầu bạn duyệt. Không thấy thông báo? Hãy mở HOLD trên điện thoại.",

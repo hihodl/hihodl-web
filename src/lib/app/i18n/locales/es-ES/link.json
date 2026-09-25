@@ -70,6 +70,7 @@
   "defaultPhone.approve": "{platform, select, ios {Abre HOLD en tu iPhone para aprobarlo} android {Abre HOLD en tu móvil Android para aprobarlo} other {Abre HOLD en tu móvil para aprobarlo}}",
   "connect.eyebrow": "Un sitio quiere conectarse a HOLD",
   "connect.saysItIs": "Dice ser {name}",
+  "connect.localDev": "Sitio de desarrollo local",
   "connect.what": "Verá tu dirección de Solana. Cada firma que pida se aprueba en tu móvil, y tus claves nunca salen de él.",
   "connect.asking": "Preguntando a tu móvil…",
   "connect.footer": "Una notificación de HOLD en tu móvil te pide que lo apruebes. ¿No te llega? Abre HOLD en tu móvil.",

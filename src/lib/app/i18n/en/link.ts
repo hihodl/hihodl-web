@@ -86,6 +86,7 @@ const link = {
   // HOLD Connect: a site on a computer asks to connect (/connect, the popup)
   "connect.eyebrow": "A site wants to connect to HOLD",
   "connect.saysItIs": "Says it is {name}",
+  "connect.localDev": "Local development site",
   "connect.what": "It will see your Solana address. Every signature it asks for is approved on your phone, and your keys never leave it.",
   "connect.asking": "Asking your phone…",
   "connect.footer": "A notification from HOLD on your phone asks you to approve it. No notification? Open HOLD on your phone.",

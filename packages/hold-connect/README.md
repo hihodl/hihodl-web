@@ -54,7 +54,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 
 (or no COOP header at all). The SDK detects the cut, when the window reads as closed within 2 s of opening or says nothing for 20 s, and rejects with `reason: "POPUP_SEVERED"` and a message that names the header.
 
-Your site must be served over **https**: HOLD connects to no other origin.
+Your site must be served over **https**. The one exception is your own machine while you build: `http://localhost:<port>` and `http://127.0.0.1:<port>` connect too, but only when that exact origin is on the HOLD API's `HOLD_CONNECT_DEV_ORIGINS` list (ask us to add yours). No other http origin connects.
 
 ## Publishing
 

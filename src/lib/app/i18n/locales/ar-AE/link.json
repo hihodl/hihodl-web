@@ -70,6 +70,7 @@
   "defaultPhone.approve": "{platform, select, ios {افتح HOLD على iPhone للموافقة} android {افتح HOLD على هاتف Android للموافقة} other {افتح HOLD على هاتفك للموافقة}}",
   "connect.eyebrow": "موقع يريد الاتصال بـ HOLD",
   "connect.saysItIs": "يقول إنه {name}",
+  "connect.localDev": "موقع تطوير محلي",
   "connect.what": "سيرى عنوانك على Solana. كل توقيع يطلبه توافق عليه من هاتفك، ومفاتيحك لا تغادره أبدًا.",
   "connect.asking": "نسأل هاتفك…",
   "connect.footer": "إشعار من HOLD على هاتفك يطلب منك الموافقة. لم يصلك إشعار؟ افتح HOLD على هاتفك.",

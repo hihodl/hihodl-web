@@ -34,6 +34,7 @@ import {
   encodeKept,
   errorFor,
   hostOf,
+  isLocalOrigin,
   READY,
   readHello,
   STORE_KEY,
@@ -50,7 +51,6 @@ import { Ion } from "../ion";
 import { linkHref } from "../link/in-app";
 import { FooterNote, StatusLine, useCountdown } from "../wallet/app-kit";
 
-const DEV = process.env.NODE_ENV !== "production";
 /** How long the opener has to say hello after our ready. */
 const HELLO_WAIT_MS = 10_000;
 
@@ -82,7 +82,7 @@ function keep(site: Site | null): void {
 
 function kept(): Site | null {
   try {
-    return decodeKept(window.sessionStorage.getItem(STORE_KEY), Date.now(), DEV);
+    return decodeKept(window.sessionStorage.getItem(STORE_KEY), Date.now());
   } catch {
     return null;
   }
@@ -138,7 +138,7 @@ export function ConnectPopup() {
       if (e.source !== opener || siteRef.current) return;
       const hello = readHello(e.data);
       if (!hello) return;
-      const origin = dappOrigin(e.origin, DEV);
+      const origin = dappOrigin(e.origin);
       if (!origin) {
         setPhase({ k: "insecure", origin: String(e.origin) });
         return;
@@ -323,6 +323,7 @@ export function ConnectPopup() {
             <p className="text-tiny uppercase tracking-[0.08em] text-[#9FB7C2]">{t("link.connect.eyebrow")}</p>
             <h1 className="mt-2 break-all text-[26px] font-bold leading-[1.15] tracking-[-0.4px] text-white">{host}</h1>
             {site?.appName ? <p className="mt-1 text-small text-[#9FB7C2]">{t("link.connect.saysItIs", { name: site.appName })}</p> : null}
+            {site && isLocalOrigin(site.origin) ? <p className="mt-1 text-tiny text-[#9FB7C2]">{t("link.connect.localDev")}</p> : null}
           </div>
         ) : title ? (
           <h1 className="mt-6 text-h4 font-light text-text">{title}</h1>

@@ -70,6 +70,7 @@
   "defaultPhone.approve": "{platform, select, ios {Open HOLD op je iPhone om goed te keuren} android {Open HOLD op je Android-telefoon om goed te keuren} other {Open HOLD op je telefoon om goed te keuren}}",
   "connect.eyebrow": "Een site wil verbinding maken met HOLD",
   "connect.saysItIs": "Zegt {name} te zijn",
+  "connect.localDev": "Lokale ontwikkelsite",
   "connect.what": "De site ziet je Solana-adres. Elke handtekening die ze vraagt, keur je goed op je telefoon, en je sleutels verlaten die nooit.",
   "connect.asking": "We vragen het je telefoon…",
   "connect.footer": "Een melding van HOLD op je telefoon vraagt je om goed te keuren. Geen melding? Open HOLD op je telefoon.",

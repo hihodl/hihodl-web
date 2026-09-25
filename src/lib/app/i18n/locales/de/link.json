@@ -70,6 +70,7 @@
   "defaultPhone.approve": "{platform, select, ios {Öffne HOLD auf deinem iPhone, um zu bestätigen} android {Öffne HOLD auf deinem Android-Handy, um zu bestätigen} other {Öffne HOLD auf deinem Handy, um zu bestätigen}}",
   "connect.eyebrow": "Eine Website will sich mit HOLD verbinden",
   "connect.saysItIs": "Gibt an, {name} zu sein",
+  "connect.localDev": "Lokale Entwicklungs-Website",
   "connect.what": "Sie sieht deine Solana-Adresse. Jede Signatur, die sie anfragt, bestätigst du auf deinem Handy, und deine Schlüssel verlassen es nie.",
   "connect.asking": "Wir fragen dein Handy…",
   "connect.footer": "Eine Benachrichtigung von HOLD auf deinem Handy bittet dich, zu bestätigen. Keine Benachrichtigung? Öffne HOLD auf deinem Handy.",

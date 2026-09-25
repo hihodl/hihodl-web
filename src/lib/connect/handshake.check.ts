@@ -6,7 +6,7 @@
  * Exits 1 on any failure.
  */
 
-import { cleanAppName, dappOrigin, decodeKept, encodeKept, errorFor, hostOf, readHello, toConnectRequest } from "./handshake";
+import { cleanAppName, dappOrigin, decodeKept, encodeKept, errorFor, hostOf, isLocalOrigin, readHello, toConnectRequest } from "./handshake";
 
 let failures = 0;
 function check(name: string, ok: boolean, detail = "") {
@@ -14,18 +14,30 @@ function check(name: string, ok: boolean, detail = "") {
   if (!ok) failures++;
 }
 
-// The origin: https only, as the browser says it, lowercased.
-check("https origin", dappOrigin("https://sp3nd.shop", false) === "https://sp3nd.shop");
-check("https with port", dappOrigin("https://a.b.c:8443", false) === "https://a.b.c:8443");
-check("uppercase lowered", dappOrigin("https://SP3ND.shop", false) === "https://sp3nd.shop");
-check("http refused", dappOrigin("http://sp3nd.shop", false) === null);
-check("opaque null refused", dappOrigin("null", false) === null);
-check("path refused", dappOrigin("https://sp3nd.shop/x", false) === null);
-check("userinfo refused", dappOrigin("https://a@b.com", false) === null);
-check("localhost refused in production", dappOrigin("http://localhost:3000", false) === null);
-check("localhost allowed in dev", dappOrigin("http://localhost:3000", true) === "http://localhost:3000");
-check("other http refused in dev", dappOrigin("http://evil.com", true) === null);
-check("not a string", dappOrigin(undefined, true) === null);
+// The origin: https, or http on the developer's own machine, as the browser says it, lowercased.
+check("https origin", dappOrigin("https://sp3nd.shop") === "https://sp3nd.shop");
+check("https with port", dappOrigin("https://a.b.c:8443") === "https://a.b.c:8443");
+check("uppercase lowered", dappOrigin("https://SP3ND.shop") === "https://sp3nd.shop");
+check("http refused", dappOrigin("http://sp3nd.shop") === null);
+check("opaque null refused", dappOrigin("null") === null);
+check("path refused", dappOrigin("https://sp3nd.shop/x") === null);
+check("userinfo refused", dappOrigin("https://a@b.com") === null);
+// Local development: accepted everywhere, production included (the backend's HOLD_CONNECT_DEV_ORIGINS decides).
+check("http://localhost:<port> accepted", dappOrigin("http://localhost:3000") === "http://localhost:3000");
+check("http://127.0.0.1:<port> accepted", dappOrigin("http://127.0.0.1:5173") === "http://127.0.0.1:5173");
+check("http://localhost without port accepted", dappOrigin("http://localhost") === "http://localhost");
+check("http://LOCALHOST lowered", dappOrigin("http://LOCALHOST:3000") === "http://localhost:3000");
+check("localhost look-alike refused", dappOrigin("http://localhost.evil.com") === null);
+check("localhost as a subdomain refused", dappOrigin("http://evil.localhost:3000") === null);
+check("other loopback refused", dappOrigin("http://127.0.0.2:3000") === null);
+check("private network http refused", dappOrigin("http://192.168.1.10:3000") === null);
+check("http 0.0.0.0 refused", dappOrigin("http://0.0.0.0:3000") === null);
+check("ipv6 loopback refused", dappOrigin("http://[::1]:3000") === null);
+check("other http refused", dappOrigin("http://evil.com") === null);
+check("not a string", dappOrigin(undefined) === null);
+check("local origin gets the note", isLocalOrigin("http://localhost:3000") && isLocalOrigin("http://127.0.0.1:8080"));
+check("https localhost is not the local-http note", !isLocalOrigin("https://localhost:3000"));
+check("a public site gets no note", !isLocalOrigin("https://sp3nd.shop"));
 check("punycode host drawn as punycode", hostOf("https://xn--80ak6aa92e.com") === "xn--80ak6aa92e.com");
 check("host keeps port", hostOf("https://a.com:8443") === "a.com:8443");
 
@@ -59,10 +71,11 @@ check("expired is not 4001", errorFor("expired").code !== 4001);
 // Kept across a sign-in trip.
 const now = 1_000_000_000;
 const kept = encodeKept({ origin: "https://sp3nd.shop", appName: "SP3ND", at: now });
-check("kept round trip", decodeKept(kept, now + 1000, false)?.origin === "https://sp3nd.shop");
-check("kept expires", decodeKept(kept, now + 16 * 60_000, false) === null);
-check("kept http refused", decodeKept(encodeKept({ origin: "http://evil.com", appName: null, at: now }), now, false) === null);
-check("kept garbage", decodeKept("{", now, false) === null);
+check("kept round trip", decodeKept(kept, now + 1000)?.origin === "https://sp3nd.shop");
+check("kept expires", decodeKept(kept, now + 16 * 60_000) === null);
+check("kept http refused", decodeKept(encodeKept({ origin: "http://evil.com", appName: null, at: now }), now) === null);
+check("kept localhost kept", decodeKept(encodeKept({ origin: "http://localhost:3000", appName: null, at: now }), now)?.origin === "http://localhost:3000");
+check("kept garbage", decodeKept("{", now) === null);
 
 if (failures) {
   console.log(`\n${failures} failing`);

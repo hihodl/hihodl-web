@@ -70,6 +70,7 @@
   "defaultPhone.approve": "{platform, select, ios {Fungua HOLD kwenye iPhone yako ili kuidhinisha} android {Fungua HOLD kwenye simu yako ya Android ili kuidhinisha} other {Fungua HOLD kwenye simu yako ili kuidhinisha}}",
   "connect.eyebrow": "Tovuti inataka kuunganishwa na HOLD",
   "connect.saysItIs": "Inasema ni {name}",
+  "connect.localDev": "Tovuti ya uundaji ya ndani",
   "connect.what": "Itaona anwani yako ya Solana. Kila sahihi itakayoomba unaidhinisha kwenye simu yako, na funguo zako haziondoki kamwe kwenye simu.",
   "connect.asking": "Tunauliza simu yako…",
   "connect.footer": "Arifa ya HOLD kwenye simu yako inakuomba uidhinishe. Hujapata arifa? Fungua HOLD kwenye simu yako.",
