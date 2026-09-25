@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HOLD Connect test page</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; padding: 24px 16px; background: #0a1929; color: #e8f1f5; font: 15px/1.5 system-ui, sans-serif; }
+  main { max-width: 560px; margin: 0 auto; display: grid; gap: 12px; }
+  button { height: 44px; border-radius: 12px; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.06); color: inherit; font: inherit; cursor: pointer; }
+  button.primary { background: #ffb703; color: #0a1117; border: 0; font-weight: 600; }
+  input { height: 40px; border-radius: 10px; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.04); color: inherit; padding: 0 12px; font: inherit; }
+  pre { white-space: pre-wrap; word-break: break-all; background: rgba(255,255,255,.04); border-radius: 12px; padding: 12px; min-height: 120px; margin: 0; font-size: 13px; }
+  .muted { color: #9fb7c2; font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <h1 style="margin:0;font-size:22px">HOLD Connect test page</h1>
+  <p class="muted">Build first: <code>npm run build</code> in packages/hold-connect, then serve this package folder over https (or http://localhost in development) and open /example/. Query: <code>?connectUrl=…&amp;apiUrl=…</code> to point at a local popup or API.</p>
+  <button class="primary" id="connect">Connect HOLD</button>
+  <input id="message" value="Sign in to the HOLD Connect test page">
+  <button id="sign">Sign message</button>
+  <button id="disconnect">Disconnect</button>
+  <pre id="log"></pre>
+</main>
+<script type="module">
+  import { registerHoldConnect } from "../dist/esm/index.js";
+
+  const q = new URLSearchParams(location.search);
+  const log = (...a) => { document.getElementById("log").textContent += a.map((x) => typeof x === "string" ? x : JSON.stringify(x)).join(" ") + "\n"; };
+
+  // What a Wallet Standard app does (@wallet-standard/app getWallets): collect registered wallets.
+  const wallets = [];
+  window.addEventListener("wallet-standard:register-wallet", (e) => e.detail({ register: (...w) => { wallets.push(...w); return () => {}; } }));
+
+  const opts = { appName: "HOLD test page" };
+  if (q.get("connectUrl")) opts.connectUrl = q.get("connectUrl");
+  if (q.get("apiUrl")) opts.apiUrl = q.get("apiUrl");
+  const mine = registerHoldConnect(opts);
+  const wallet = wallets.find((w) => w.name === "HOLD") ?? mine;
+  log(wallet ? `registered: ${wallet.name}` : "not registered (HOLD already provided, e.g. in the HOLD in-app browser)");
+  if (!wallet) throw new Error("no wallet");
+
+  wallet.features["standard:events"].on("change", ({ accounts }) => log("change:", (accounts ?? []).map((a) => a.address)));
+  wallet.features["standard:connect"].connect({ silent: true }).then((r) => r.accounts.length && log("restored:", r.accounts[0].address));
+
+  // Connect is called inside the click, so the popup is not blocked.
+  document.getElementById("connect").onclick = () => {
+    wallet.features["standard:connect"].connect()
+      .then((r) => log("connected:", r.accounts[0]?.address))
+      .catch((e) => log("connect failed:", e.code, e.message));
+  };
+  document.getElementById("sign").onclick = async () => {
+    const account = wallet.accounts[0];
+    if (!account) return log("connect first");
+    const message = new TextEncoder().encode(document.getElementById("message").value);
+    log("asking your phone…");
+    try {
+      const [out] = await wallet.features["solana:signMessage"].signMessage({ account, message });
+      log("signature (base64):", btoa(String.fromCharCode(...out.signature)), out.signatureType);
+    } catch (e) {
+      log("sign failed:", e.code, e.message);
+    }
+  };
+  document.getElementById("disconnect").onclick = () => wallet.features["standard:disconnect"].disconnect().then(() => log("disconnected"));
+</script>
+</body>
+</html>
