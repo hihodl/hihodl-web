@@ -82,6 +82,29 @@ const link = {
   "waiting.opensOnPhone": "HOLD opens on your iPhone or Android phone and shows a six-digit code. No HOLD yet? The code shows where to get it.",
   "confirm.webWalletClosed": "This account's wallet was made on the web, which no longer opens wallets, so nothing can go to your phone from here. Make your wallet in the HOLD app.",
   "defaultPhone.approve": "{platform, select, ios {Open HOLD on your iPhone to approve} android {Open HOLD on your Android phone to approve} other {Open HOLD on your phone to approve}}",
+
+  // HOLD Connect: a site on a computer asks to connect (/connect, the popup)
+  "connect.eyebrow": "A site wants to connect to HOLD",
+  "connect.saysItIs": "Says it is {name}",
+  "connect.localDev": "Local development site",
+  "connect.what": "It will see your Solana address. Every signature it asks for is approved on your phone, and your keys never leave it.",
+  "connect.asking": "Asking your phone…",
+  "connect.footer": "A notification from HOLD on your phone asks you to approve it. No notification? Open HOLD on your phone.",
+  "connect.connected": "Connected. You can close this window.",
+  "connect.rejected": "You said no on your phone, so {host} was not connected.",
+  "connect.expired": "Your phone did not answer in time, so {host} was not connected. Press Connect on the site to try again.",
+  "connect.noOpener.title": "Nothing to connect",
+  "connect.noOpener.body": "Open this from a site's Connect button, by choosing HOLD in its list of wallets.",
+  "connect.noHello": "The site that opened this window did not answer. Close it and press Connect on the site again.",
+  "connect.insecure": "{origin} is not a secure (https) site, so HOLD does not connect to it.",
+  "connect.reopen": "You're signed in. Go back to {host} and press Connect again.",
+  "connect.noPhone.title": "Link your phone first",
+  "connect.noPhone.body": "Sites connect to HOLD through your phone: it approves every connection and every signature. Link it once, then come back here.",
+  "connect.noPhone.cta": "Link your phone",
+  "connect.failed": "We couldn't reach HOLD. Check your connection and try again.",
+  "connect.rateLimited": "Too many tries in a row. Wait a minute and try again.",
+  "connect.badOrigin": "HOLD can't connect to this site's address.",
+  "connect.tryAgain": "Try again",
 } satisfies Record<string, string>;
 
 export default link;

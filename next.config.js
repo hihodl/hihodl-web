@@ -121,6 +121,16 @@ const nextConfig = {
           { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
         ],
       },
+      // A WalletConnect pairing URI rides in /wc's query (its symKey among
+      // it): never cached (the pattern matches /wc itself too), never sent on as a referrer.
+      {
+        source: "/wc/:path*",
+        headers: [
+          { key: "Cache-Control", value: "private, no-store, max-age=0" },
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+        ],
+      },
       {
         source: "/.well-known/apple-app-site-association",
         headers: [
