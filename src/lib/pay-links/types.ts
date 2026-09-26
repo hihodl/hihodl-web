@@ -34,6 +34,12 @@ export interface PayLinkOwner {
  */
 export interface PayLinkPublic {
   code: string;
+  /**
+   * The owner's personal link, `hihodl.xyz/pay/@handle`: an open amount,
+   * reusable, never expiring. Its title is ours, not the owner's, so the page
+   * names the person instead. Absent from a server older than this field.
+   */
+  personal?: boolean;
   /** At most 80 characters, checked by the server for links, emails and impersonation. */
   title: string | null;
   /** At most 280 characters, or null. */

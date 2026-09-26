@@ -50,6 +50,7 @@ import {
   type ExpectedPayment,
 } from "@/lib/pay-links/client";
 import type { PayLinkEvmPayload, PayLinkPayment, ShownPayLink, TimedPayLinkCheckout } from "@/lib/pay-links/types";
+import { connectWalletConnect, isWalletConnectDismissed, walletConnectProjectId } from "@/lib/pay-links/walletconnect";
 
 /**
  * Paying a pay link, from any wallet, with no HOLD account.
@@ -97,6 +98,8 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
   const [notice, setNotice] = useState<string | null>(null);
   const [wallets, setWallets] = useState<SolanaWallet[]>([]);
   const [hasEvm, setHasEvm] = useState(false);
+  // Inlined at build, so the server and the browser agree on it.
+  const walletConnect = walletConnectProjectId() !== null;
   const [mobile, setMobile] = useState(false);
   const [amountText, setAmountText] = useState("");
   const [now, setNow] = useState(() => Date.now());
@@ -412,17 +415,36 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
     setPhase({ kind: "qr", link: payLinkSolanaPay(link.code, c, amount.cents ?? null), scanned: false });
   }
 
-  async function payWithEvm(evmChain: "base" | "polygon") {
+  /**
+   * `via`: the wallet in this browser, or any wallet over WalletConnect (a
+   * phone wallet from Safari or Chrome, or a code scanned from a computer).
+   * Both sign the same one authorization.
+   */
+  async function payWithEvm(evmChain: "base" | "polygon", via: "injected" | "walletconnect" = "injected") {
     clearNotice();
     const amount = amountOrProblem();
     if (!amount) return;
-    const provider = injected().ethereum;
-    if (!provider) {
+    const meta = PUBLIC_CHAINS[evmChain];
+    let provider = via === "injected" ? injected().ethereum : undefined;
+    if (via === "injected" && !provider) {
       setNotice("No browser wallet found. Open this page in MetaMask, Coinbase Wallet or Rabby, or pay another way.");
       return;
     }
-    const meta = PUBLIC_CHAINS[evmChain];
     try {
+      if (via === "walletconnect") {
+        setPhase({ kind: "busy", label: "Choose your wallet…" });
+        try {
+          provider = await connectWalletConnect();
+        } catch (e) {
+          // Closing the wallet list is changing your mind, not a failure.
+          if (isWalletConnectDismissed(e)) {
+            setPhase({ kind: "choose" });
+            return;
+          }
+          throw e;
+        }
+      }
+      if (!provider) throw new Error("no_provider");
       setPhase({ kind: "busy", label: "Connecting your wallet…" });
       const accounts = (await provider.request({ method: "eth_requestAccounts" })) as string[];
       const payerAddress = accounts?.[0];
@@ -588,16 +610,35 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
               <p className="text-small text-text-muted">
                 One signature, no gas. The whole amount goes to {payee}; HOLD takes nothing.
               </p>
-              {!hasEvm && (
+              {!hasEvm && !walletConnect && (
                 <p className="text-small text-amber">
                   No browser wallet found here. Open this page in MetaMask, Coinbase Wallet or Rabby
                   {link.chains.includes("solana") ? ", or pay on Solana by QR" : ""}.
                 </p>
               )}
-              <div>
-                <button type="button" className={btnPrimary} disabled={!hasEvm || waiting} onClick={() => void payWithEvm(chain)}>
-                  Connect wallet and pay
-                </button>
+              <div className="flex flex-wrap gap-3">
+                {hasEvm && (
+                  <button type="button" className={btnPrimary} disabled={waiting} onClick={() => void payWithEvm(chain)}>
+                    Connect wallet and pay
+                  </button>
+                )}
+                {/* Any wallet on a phone, or a code to scan from a computer: MetaMask,
+                    Coinbase Wallet, Trust, Rainbow and the rest. */}
+                {walletConnect && (
+                  <button
+                    type="button"
+                    className={hasEvm ? btnSecondary : btnPrimary}
+                    disabled={waiting}
+                    onClick={() => void payWithEvm(chain, "walletconnect")}
+                  >
+                    {hasEvm ? "Use another wallet" : "Choose your wallet and pay"}
+                  </button>
+                )}
+                {!hasEvm && !walletConnect && (
+                  <button type="button" className={btnPrimary} disabled>
+                    Connect wallet and pay
+                  </button>
+                )}
               </div>
             </div>
           )}

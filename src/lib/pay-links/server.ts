@@ -53,6 +53,17 @@ export async function getPayLink(code: string, from: Headers | null): Promise<Lo
   return read(`/${encodeURIComponent(code)}`, (d) => d.link as PayLinkPublic | undefined, from);
 }
 
+/** A handle as `/pay/@<handle>` carries it: the backend's own shape, lower-cased. */
+export const PAY_HANDLE_RE = /^[a-z0-9_.]{1,63}$/;
+
+/** `/pay/@handle`: the person's personal link, read by who holds the handle now. */
+export async function getPersonalPayLink(handle: string, from: Headers | null): Promise<Lookup<PayLinkPublic>> {
+  const h = handle.replace(/^@/, "").toLowerCase();
+  if (!PAY_HANDLE_RE.test(h)) return { kind: "missing" };
+  if (fixtureEnabled()) return { kind: "missing" };
+  return read(`/@${encodeURIComponent(h)}`, (d) => d.link as PayLinkPublic | undefined, from);
+}
+
 export async function getReceipt(token: string, from: Headers | null): Promise<Lookup<PayReceipt>> {
   if (!RECEIPT_TOKEN_RE.test(token)) return { kind: "missing" };
   if (fixtureEnabled()) {
