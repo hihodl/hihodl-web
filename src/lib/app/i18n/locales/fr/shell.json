@@ -78,6 +78,7 @@
   "hold.badgePending": "{count} en attente",
   "error.network": "Impossible de joindre HOLD. Vérifiez votre connexion et réessayez.",
   "error.signInExpired": "Votre session a expiré. Reconnectez-vous pour reprendre là où vous en étiez.",
+  "error.emailChangeHold": "Certaines modifications de sécurité sont en pause jusqu'à {when}.",
   "error.rateLimited": "Trop de tentatives en une minute. Patientez un instant et réessayez.",
   "error.payoutAddressInvalid": "Nous ne pouvons pas payer cette adresse. Copiez-la à nouveau depuis votre wallet.",
   "error.payoutChainUnknown": "HiSpace ne paie pas sur ce réseau.",

@@ -98,6 +98,7 @@ const shell = {
   // describeCreatorError (lib/creator/api)
   "error.network": "We could not reach HOLD. Check your connection and try again.",
   "error.signInExpired": "Your sign-in has expired. Sign in again and pick up where you left off.",
+  "error.emailChangeHold": "Some security changes are paused until {when}.",
   "error.rateLimited": "That is more tries than we allow in a minute. Wait a moment and try again.",
   "error.payoutAddressInvalid": "That is not an address we can pay. Copy it again from your wallet.",
   "error.payoutChainUnknown": "That network is not one HiSpace pays on.",

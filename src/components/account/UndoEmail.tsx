@@ -6,8 +6,9 @@
  *
  * The token is read once from `?t=`, kept in this component's memory, and
  * dropped from the address bar straight away, so it is not left in the
- * history, a bookmark, a screenshot or a copied URL. A reload therefore finds
- * no token and says the link is not valid: the email's link still works.
+ * history, a bookmark, a screenshot or a copied URL. It is also kept in this
+ * tab's sessionStorage (gone when the tab closes, never in the URL) so that a
+ * reload still works; it is removed once the undo is done.
  */
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
@@ -24,6 +25,25 @@ import {
   type UndoNote,
   type UndoView,
 } from "@/lib/account/undo-email";
+
+const TAB_KEY = "hold.undoEmail.token";
+
+function rememberedToken(): string | null {
+  try {
+    return window.sessionStorage.getItem(TAB_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function rememberToken(t: string | null): void {
+  try {
+    if (t) window.sessionStorage.setItem(TAB_KEY, t);
+    else window.sessionStorage.removeItem(TAB_KEY);
+  } catch {
+    /* a reload then says the link is not valid; the email's link still works */
+  }
+}
 
 const NOTE: Record<UndoNote, string> = {
   again: "That did not go through. Try again.",
@@ -51,7 +71,9 @@ export function UndoEmail() {
   useEffect(() => {
     // Read once: a second run (React's dev double effect) finds the query gone.
     if (token.current !== undefined) return;
-    token.current = tokenFrom(window.location.search);
+    const fromUrl = tokenFrom(window.location.search);
+    token.current = fromUrl ?? rememberedToken();
+    if (fromUrl) rememberToken(fromUrl);
     try {
       window.history.replaceState(window.history.state, "", window.location.pathname);
     } catch {
@@ -68,6 +90,7 @@ export function UndoEmail() {
     try {
       await undoEmailChange(t);
       token.current = null;
+      rememberToken(null);
       setView({ kind: "done" });
     } catch (e) {
       setView(viewFromUndoError(e, from));
