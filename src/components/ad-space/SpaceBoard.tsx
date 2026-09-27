@@ -14,6 +14,7 @@ import {
   usdFromUsdc,
 } from "@/lib/ad-space/format";
 import { gradientCss } from "@/lib/ad-space/look";
+import { PAY_PARAM, isPositionId } from "@/lib/ad-space/pay-here";
 import { type SavedOffer, offerModeOf, offerPath, savedOffers } from "@/lib/ad-space/offers-client";
 import type { OfferKind, OfferMode, Order, Position, PositionOffers, Space } from "@/lib/ad-space/types";
 import { useT } from "@/lib/app/i18n/react";
@@ -103,6 +104,25 @@ export function SpaceBoard({
 
   /* The offers this browser made here, so a sponsor finds their way back. */
   useEffect(() => setMine(savedOffers(space.id)), [space.id]);
+
+  /* `?pay=<spot>`: this checkout's own address (its camera code, a wallet's
+     browser, the HOLD button's fallback) opens the spot's checkout, when the
+     spot can be bought here and now; otherwise the board, as it is. */
+  const payAsked = useRef(false);
+  useEffect(() => {
+    if (payAsked.current) return;
+    payAsked.current = true;
+    const id = new URLSearchParams(window.location.search).get(PAY_PARAM);
+    if (!isPositionId(id)) return;
+    const p = space.positions.find((x) => x.id === id);
+    if (!p) return;
+    const takeable = p.status === "sold" && p.takeover && !p.takeover.closed && p.takeover.nextPriceUsdc;
+    const mode = modeOf(p);
+    const byOffer = mode === "offers" || mode === "bids";
+    const liveNow = space.status === "live" && Date.parse(space.closesAt) > Date.now();
+    if (liveNow && !byOffer && (p.status === "open" || takeable)) setCheckoutFor(p);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on arrival
+  }, []);
 
   const onPaid = useCallback(() => router.refresh(), [router]);
   const onClose = useCallback(() => setCheckoutFor(null), []);

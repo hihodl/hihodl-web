@@ -5,7 +5,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   CheckoutError,
   SPENT_KEY_CODES,
-  checkoutId,
   checkoutKey,
   confirmOrder,
   currentCheckout,
@@ -15,7 +14,6 @@ import {
   fileBrief,
   rememberManageToken,
   rotateCheckoutKey,
-  solanaPayLink,
   startCheckout,
   submitAuthorizations,
 } from "@/lib/ad-space/checkout-client";
@@ -34,9 +32,11 @@ import {
   serviceName,
   timeLeft,
 } from "@/lib/ad-space/format";
-import { describeOfferError, offerSolanaPayLink, startOfferCheckout } from "@/lib/ad-space/offers-client";
+import { describeOfferError, startOfferCheckout } from "@/lib/ad-space/offers-client";
 import { pointsForOfferAmount, pointsForPosition, pointsWorth } from "@/lib/ad-space/points";
 import { APP_STORE_URL, PLAY_STORE_URL, SMART_LINK_URL } from "@/lib/appLinks";
+import { browseWalletsFor, checkoutPageUrl, holdSpotUrl } from "@/lib/ad-space/pay-here";
+import { walletBrowseUrl } from "@/lib/pay-links/page-rules";
 import { PUBLIC_CHAINS } from "@/lib/orders/chains.public";
 import { fmtNumber } from "@/lib/app/i18n/format";
 import { Rich, useT } from "@/lib/app/i18n/react";
@@ -170,7 +170,12 @@ export function Checkout({
   const [notice, setNotice] = useState<string | null>(null);
   const { solana: solanaWallets, evm: evmWallets, mobile } = useBrowserWallets();
   const [picked, setPicked] = useState<string | null>(null);
-  const [mobileLink, setMobileLink] = useState<string | null>(null);
+  /**
+   * This checkout's own address (the camera QR, and each wallet's browser on
+   * a phone, open it) and the HOLD app's link to this spot's payment.
+   */
+  const [pageUrl, setPageUrl] = useState<string | null>(null);
+  const [holdLink, setHoldLink] = useState<string | null>(null);
   /** After a refusal that means "this spot is gone", offer the way back to the board. */
   const [offerOtherSpot, setOfferOtherSpot] = useState(false);
   const [now, setNow] = useState(() => Date.now());
@@ -264,19 +269,10 @@ export function Checkout({
     };
   }, [position.id]);
 
-  /* The Solana Pay link for the mobile button, computed once the key is known.
-     An accepted offer's link has to be asked for (it binds the key), so it is
-     only fetched when the sponsor chooses Scan, whose panel has the same button. */
   useEffect(() => {
-    if (offerToken || phase.kind !== "choose" || chain !== "solana") return;
-    let live = true;
-    void checkoutId(keyRef.current).then((c) => {
-      if (live) setMobileLink(solanaPayLink(position.id, c));
-    });
-    return () => {
-      live = false;
-    };
-  }, [phase.kind, chain, position.id, offerToken]);
+    setPageUrl(checkoutPageUrl(window.location, position.id, offerToken));
+    setHoldLink(offerToken ? null : holdSpotUrl(window.location.pathname, position.id));
+  }, [position.id, offerToken]);
 
   /* Countdown tick while something is held. */
   const ticking = phase.kind === "qr" || phase.kind === "confirming" || phase.kind === "evm-sign";
@@ -434,38 +430,6 @@ export function Checkout({
     }
   }
 
-  async function startQr() {
-    setNotice(null);
-    setOfferOtherSpot(false);
-    if (!offerToken) {
-      if (briefRef.current) {
-        // The wallet that scans the code opens the order: the brief waits for it under this key.
-        try {
-          await fileBrief(position.id, keyRef.current, briefRef.current);
-        } catch (e) {
-          setNotice(explain(e, "solana"));
-          return;
-        }
-      }
-      const c = await checkoutId(keyRef.current);
-      setPhase({ kind: "qr", link: solanaPayLink(position.id, c) });
-      return;
-    }
-    // An accepted offer: the server binds this key to the offer and answers the link.
-    setPhase({ kind: "busy", label: t("sponsor.checkout.preparingQr") });
-    try {
-      const link = await withFreshKey(async (key) => {
-        if (briefRef.current) await fileBrief(position.id, key, briefRef.current);
-        return offerSolanaPayLink(offerToken, key);
-      });
-      setPhase({ kind: "qr", link });
-    } catch (e) {
-      setNotice(explain(e, "solana"));
-      setOfferOtherSpot(e instanceof CheckoutError && GONE_CODES.has(e.code));
-      setPhase({ kind: "choose" });
-    }
-  }
-
   async function payWithEvm(evmChain: "base" | "polygon", wallet: EvmWallet) {
     setNotice(null);
     setOfferOtherSpot(false);
@@ -520,15 +484,6 @@ export function Checkout({
   /* ── What the sheet shows ───────────────────────────────────────── */
 
   const needsBrief = production && !brief;
-  const scanWorks = chains.includes("solana");
-
-  /* Choosing Scan draws the QR straight away: no second button to press. */
-  const choosing = phase.kind === "choose";
-  useEffect(() => {
-    if (method !== "scan" || chain !== "solana" || !choosing || needsBrief || notice) return;
-    void startQr();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- startQr reads refs; re-running on its identity would loop
-  }, [method, chain, choosing, needsBrief, notice]);
 
   /* A chosen way to pay comes into view whole, the QR most of all. */
   const panelRef = useRef<HTMLDivElement>(null);
@@ -569,7 +524,7 @@ export function Checkout({
 
   const methods = [
     { id: "wallet" as const, label: t("sponsor.checkout.method.wallet") },
-    ...(scanWorks ? [{ id: "scan" as const, label: t("sponsor.checkout.method.scan") }] : []),
+    { id: "scan" as const, label: t("sponsor.checkout.method.scan") },
     {
       id: "hold" as const,
       label: t("sponsor.checkout.method.hold"),
@@ -602,8 +557,6 @@ export function Checkout({
             total={total}
             now={now}
             onPay={payNow}
-            phoneLink={mobile && chain === "solana" ? mobileLink : null}
-            onPhoneLink={() => void startQr()}
           />
         )}
         {method === "scan" && phase.kind === "qr" && <StatusLine>{t("sponsor.checkout.waitingForPayment")}</StatusLine>}
@@ -739,34 +692,28 @@ export function Checkout({
                 {method === "wallet" && (
                   <WalletList
                     chain={chain}
-                    chains={chains}
                     wallets={walletsHere}
                     chosenId={chosen?.id ?? null}
                     onPick={setPicked}
                     mobile={mobile}
-                    mobileLink={mobileLink}
+                    browseUrl={pageUrl}
                     busy={busy}
                     onScan={() => onMethod("scan")}
-                    onSolana={() => {
-                      setChain("solana");
-                      onMethod("scan");
-                    }}
-                    onPhoneLink={() => void startQr()}
                   />
                 )}
 
                 {method === "scan" && (
-                  <ScanPanel
-                    chain={chain}
-                    phase={phase}
-                    mobile={mobile}
-                    canSwitch={scanWorks}
-                    onSolana={() => setChain("solana")}
-                  />
+                  <ScanPanel url={pageUrl} />
                 )}
 
                 {method === "hold" && (
-                  <HoldPanel points={holdPoints} mobile={mobile} takeover={space.pricingMode === "takeover"} />
+                  <HoldPanel
+                    points={holdPoints}
+                    mobile={mobile}
+                    takeover={space.pricingMode === "takeover"}
+                    holdLink={holdLink}
+                    qrUrl={pageUrl}
+                  />
                 )}
               </div>
             </>
@@ -893,60 +840,50 @@ function Included({ space, position: p, session }: { space: Space; position: Pos
 
 function WalletList({
   chain,
-  chains,
   wallets,
   chosenId,
   onPick,
   mobile,
-  mobileLink,
+  browseUrl,
   busy,
   onScan,
-  onSolana,
-  onPhoneLink,
 }: {
   chain: Chain;
-  chains: Chain[];
   wallets: { id: string; name: string; icon?: string | null }[];
   chosenId: string | null;
   onPick: (id: string) => void;
   mobile: boolean;
-  mobileLink: string | null;
+  /** This checkout's address, for a wallet's own browser to open. */
+  browseUrl: string | null;
   busy: boolean;
   onScan: () => void;
-  onSolana: () => void;
-  onPhoneLink: () => void;
 }) {
   const t = useT();
   const solana = chain === "solana";
-  const extra = busy ? null : solana ? (
-    mobile && mobileLink ? (
-      <ExtraRow
-        title={t("sponsor.parts.openWalletApp")}
-        sub={t("sponsor.checkout.wallets.anySolana")}
-        href={mobileLink}
-        onClick={onPhoneLink}
-      />
-    ) : (
-      <ExtraRow title={t("sponsor.checkout.wallets.another")} sub={t("sponsor.checkout.wallets.scanAny")} onClick={onScan} />
-    )
-  ) : (
-    <>
-      <CopyLinkRow />
-      {chains.includes("solana") && (
-        <ExtraRow title={t("sponsor.checkout.wallets.solanaInstead")} sub={t("sponsor.checkout.wallets.scanAny")} onClick={onSolana} />
-      )}
-    </>
+  // Inside a wallet's browser (a phone that has one here), nothing else to offer.
+  const extra = busy || mobile ? null : (
+    <ExtraRow title={t("sponsor.checkout.wallets.another")} sub={t("sponsor.checkout.wallets.scanPhone")} onClick={onScan} />
   );
 
   if (wallets.length > 0) {
     return <WalletRows wallets={wallets} selected={chosenId} onSelect={onPick} disabled={busy} extra={extra} />;
   }
-  // A phone: the button below opens the wallet app itself, so the list has nothing to add.
-  if (solana && mobile && mobileLink) {
+  // A phone browser: open this checkout inside the wallet app, which pays it in one tap there.
+  if (mobile && browseUrl) {
     return (
-      <p className="px-1 text-center text-small text-white/85">
-        {t("sponsor.checkout.wallets.opensOnPhone")}
-      </p>
+      <div className="flex flex-col gap-2">
+        {browseWalletsFor(chain).map((id) => (
+          <ExtraRow
+            key={id}
+            title={WALLET_NAME[id]}
+            href={walletBrowseUrl(id, browseUrl)}
+            icon={
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={WALLET_LOGO[id]} alt="" width={32} height={32} className={`h-8 w-8 rounded-[9px] bg-white object-contain ${WALLET_LOGO_INSET[id] ? "p-[5px]" : ""}`} />
+            }
+          />
+        ))}
+      </div>
     );
   }
   return (
@@ -957,6 +894,23 @@ function WalletList({
   );
 }
 
+/** Each wallet's own app icon, as the pay-link page shows it (public/pay/wallets). */
+const WALLET_LOGO: Record<ReturnType<typeof browseWalletsFor>[number], string> = {
+  phantom: "/pay/wallets/phantom.png",
+  solflare: "/pay/wallets/solflare.png",
+  metamask: "/pay/wallets/metamask.png",
+  coinbase: "/pay/wallets/coinbase.png",
+  trust: "/pay/wallets/trust.svg",
+};
+const WALLET_LOGO_INSET: Partial<Record<ReturnType<typeof browseWalletsFor>[number], true>> = { metamask: true, coinbase: true, trust: true };
+const WALLET_NAME: Record<ReturnType<typeof browseWalletsFor>[number], string> = {
+  phantom: "Phantom",
+  solflare: "Solflare",
+  metamask: "MetaMask",
+  coinbase: "Coinbase Wallet",
+  trust: "Trust Wallet",
+};
+
 /** The amber button, or what is happening instead of it. */
 function WalletAction({
   phase,
@@ -966,8 +920,6 @@ function WalletAction({
   total,
   now,
   onPay,
-  phoneLink,
-  onPhoneLink,
 }: {
   phase: Phase;
   chosen: { name: string } | null;
@@ -976,10 +928,6 @@ function WalletAction({
   total: string | null;
   now: number;
   onPay: () => void;
-  /** On a phone with no wallet in the browser: the Solana Pay link that opens the wallet app. */
-  phoneLink: string | null;
-  /** The page starts watching for the order the wallet app will open. */
-  onPhoneLink: () => void;
 }) {
   const t = useT();
   // The wallet app was opened from here: watch for its payment, as the QR does.
@@ -997,13 +945,8 @@ function WalletAction({
       </div>
     );
   }
-  if (!hasWallets) {
-    return phoneLink && phase.kind === "choose" ? (
-      <a href={phoneLink} className={ctaPrimary} onClick={onPhoneLink}>
-        {t("sponsor.checkout.payInWalletApp", { total: total ?? "" })}
-      </a>
-    ) : null;
-  }
+  // No wallet here: the list above opens one (a phone) or the camera code does.
+  if (!hasWallets) return null;
   return (
     <div className="flex flex-col gap-2">
       <button type="button" className={ctaPrimary} disabled={!chosen || phase.kind !== "choose"} onClick={onPay}>
@@ -1021,72 +964,24 @@ function WalletAction({
   );
 }
 
-/** For an EVM wallet this browser does not have: open the page inside that wallet. */
-function CopyLinkRow() {
-  const t = useT();
-  const [copied, setCopied] = useState(false);
-  return (
-    <ExtraRow
-      title={copied ? t("sponsor.funds.linkCopied") : t("sponsor.funds.useAnother")}
-      sub={t("sponsor.funds.useAnotherSub")}
-      onClick={() => {
-        void navigator.clipboard
-          .writeText(window.location.href)
-          .then(() => {
-            setCopied(true);
-            window.setTimeout(() => setCopied(false), 2000);
-          })
-          .catch(() => setCopied(false));
-      }}
-    />
-  );
-}
+/* ── Scan to pay: this checkout on the payer's phone ────────────── */
 
-/* ── Scan to pay (Solana Pay) ──────────────────────────────────────── */
-
-function ScanPanel({
-  chain,
-  phase,
-  mobile,
-  canSwitch,
-  onSolana,
-}: {
-  chain: Chain;
-  phase: Phase;
-  mobile: boolean;
-  canSwitch: boolean;
-  onSolana: () => void;
-}) {
+/**
+ * The camera, not a wallet, reads this code: it opens this same checkout on
+ * the phone, where the wallet buttons open it inside the wallet and HOLD
+ * opens the app, on any network. A Solana Pay code only some wallets read
+ * (Phantom's scanner refused ours as "not a valid address") and it could not
+ * carry the creator's and HOLD's parts on Base or Polygon.
+ */
+function ScanPanel({ url }: { url: string | null }) {
   const t = useT();
-  if (chain !== "solana") {
-    return (
-      <div className={`${sheetCard} flex flex-col items-center gap-3 px-5 py-6 text-center`}>
-        <p className="text-small text-sp-ink">{t("sponsor.checkout.scan.onlySolana")}</p>
-        {canSwitch && (
-          <button type="button" className={ctaGlass} onClick={onSolana}>
-            {t("sponsor.checkout.scan.switch")}
-          </button>
-        )}
-      </div>
-    );
-  }
-  if (phase.kind !== "qr") {
-    return phase.kind === "busy" ? <StatusLine>{phase.label}</StatusLine> : <StatusLine>{t("sponsor.checkout.scan.drawing")}</StatusLine>;
-  }
+  if (!url) return <StatusLine>{t("sponsor.checkout.scan.drawing")}</StatusLine>;
   return (
     <div className="flex flex-col items-center gap-4 text-center">
       <div className="w-full max-w-[232px] rounded-[20px] bg-white p-3 shadow-[0_12px_32px_rgba(0,0,0,0.35)]">
-        <QrCode text={phase.link} title={t("sponsor.checkout.scan.qrTitle")} className="h-auto w-full" />
+        <QrCode text={url} title={t("sponsor.checkout.scan.cameraTitle")} logo="/favicon.png" className="h-auto w-full" />
       </div>
-      <p className="flex items-center gap-2 text-small text-[#CFE3EC]">
-        {t("sponsor.checkout.scan.with")}
-        <InfoTip label={t("sponsor.checkout.scan.how")}>{t("sponsor.checkout.scan.howBody")}</InfoTip>
-      </p>
-      {mobile && (
-        <a href={phase.link} className={ctaGlass}>
-          {t("sponsor.parts.openWalletApp")}
-        </a>
-      )}
+      <p className="max-w-[300px] text-small text-[#CFE3EC]">{t("sponsor.checkout.scan.camera")}</p>
     </div>
   );
 }
@@ -1099,9 +994,42 @@ function ScanPanel({
  * confirms (sponsor-points.ts). They are HiPoints, not cash back, and the
  * page says so where it matters: behind the (i).
  */
-function HoldPanel({ points, mobile, takeover }: { points: number | null; mobile: boolean; takeover: boolean }) {
+function HoldPanel({
+  points,
+  mobile,
+  takeover,
+  holdLink,
+  qrUrl,
+}: {
+  points: number | null;
+  mobile: boolean;
+  takeover: boolean;
+  /** The app on this spot's payment (hihodl://s/…?pay=), when this is a space page. */
+  holdLink: string | null;
+  /** This checkout's address: the camera opens it, and the app with it where installed. */
+  qrUrl: string | null;
+}) {
   const t = useT();
   const worth = points !== null ? pointsWorth(points) : null;
+  const [opening, setOpening] = useState(false);
+  /** The app, and its store when it did not open: the page is still in front a moment later. */
+  const openHold = () => {
+    if (!holdLink) return;
+    setOpening(true);
+    let left = false;
+    const onHide = () => {
+      if (document.visibilityState === "hidden") left = true;
+    };
+    document.addEventListener("visibilitychange", onHide);
+    window.location.href = holdLink;
+    window.setTimeout(() => {
+      document.removeEventListener("visibilitychange", onHide);
+      setOpening(false);
+      if (!left && document.visibilityState === "visible") {
+        window.location.href = /Android/i.test(navigator.userAgent) ? PLAY_STORE_URL : APP_STORE_URL;
+      }
+    }, 1_500);
+  };
   return (
     <div
       className="flex flex-col gap-5 overflow-hidden rounded-[20px] p-5 sm:flex-row sm:items-center"
@@ -1132,7 +1060,13 @@ function HoldPanel({ points, mobile, takeover }: { points: number | null; mobile
             </InfoTip>
           )}
         </p>
-        {mobile && (
+        {mobile && holdLink ? (
+          <div className="mt-4">
+            <button type="button" className={ctaGlass} onClick={openHold} disabled={opening}>
+              {opening ? t("payPage.holdOpening") : t("link.waiting.openInHold")}
+            </button>
+          </div>
+        ) : mobile ? (
           <div className="mt-4 flex flex-wrap gap-2">
             <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer" className={ctaGlass}>
               App Store
@@ -1141,11 +1075,11 @@ function HoldPanel({ points, mobile, takeover }: { points: number | null; mobile
               Google Play
             </a>
           </div>
-        )}
+        ) : null}
       </div>
       {!mobile && (
         <div className="w-[132px] shrink-0 self-center rounded-[16px] bg-white p-2 shadow-[0_12px_32px_rgba(0,0,0,0.35)]">
-          <QrCode text={SMART_LINK_URL} title={t("sponsor.appPrompt.qrTitle")} className="h-auto w-full" />
+          <QrCode text={qrUrl ?? SMART_LINK_URL} title={t("sponsor.appPrompt.qrTitle")} className="h-auto w-full" />
         </div>
       )}
     </div>
