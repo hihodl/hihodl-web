@@ -15,6 +15,13 @@ export interface SolanaProvider {
   publicKey?: { toString(): string } | null;
   connect(opts?: unknown): Promise<unknown>;
   signAndSendTransaction(tx: unknown, opts?: unknown): Promise<unknown>;
+  /**
+   * Signs without sending: the injected ones answer the signed transaction,
+   * a Wallet Standard one its bytes (signedTransactionBytes reads either).
+   * A pay link uses it so the payer's wallet signs BEFORE our fee payer:
+   * Phantom blocks a transaction someone else signed first.
+   */
+  signTransaction?(tx: unknown): Promise<unknown>;
   /** Phantom, Solflare and Backpack answer `{ signature }`; some wallets the bytes alone. */
   signMessage?(message: Uint8Array, display?: string): Promise<unknown>;
 }
@@ -62,6 +69,24 @@ export function detectSolanaWallets(): SolanaWallet[] {
     );
   }
   return found;
+}
+
+/** The bytes of what `signTransaction` answered: a transaction object, or its bytes. */
+export function signedTransactionBytes(out: unknown): Uint8Array | null {
+  if (out instanceof Uint8Array) return out;
+  const serialize = (out as { serialize?: () => Uint8Array } | null)?.serialize;
+  if (typeof serialize !== "function") return null;
+  try {
+    return serialize.call(out);
+  } catch {
+    return null;
+  }
+}
+
+export function bytesToBase64(bytes: Uint8Array): string {
+  let bin = "";
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
 }
 
 export function blockhashExpired(e: unknown): boolean {
@@ -231,6 +256,11 @@ type StandardSignAndSend = {
     ...inputs: { account: StandardAccount; chain: string; transaction: Uint8Array }[]
   ): Promise<readonly { signature: Uint8Array }[]>;
 };
+type StandardSignTransaction = {
+  signTransaction(
+    ...inputs: { account: StandardAccount; chain: string; transaction: Uint8Array }[]
+  ): Promise<readonly { signedTransaction: Uint8Array }[]>;
+};
 type StandardSignMessage = {
   signMessage(...inputs: { account: StandardAccount; message: Uint8Array }[]): Promise<readonly { signature: Uint8Array }[]>;
 };
@@ -250,6 +280,7 @@ function standardCanPay(w: StandardWallet): boolean {
 function standardProvider(w: StandardWallet): SolanaProvider {
   let account: StandardAccount | null = w.accounts[0] ?? null;
   const signMessage = w.features["solana:signMessage"] as StandardSignMessage | undefined;
+  const signTransaction = w.features["solana:signTransaction"] as StandardSignTransaction | undefined;
   const provider: SolanaProvider = {
     publicKey: account ? { toString: () => account!.address } : null,
     async connect() {
@@ -272,6 +303,18 @@ function standardProvider(w: StandardWallet): SolanaProvider {
       return { signature: base58(out.signature) };
     },
   };
+  if (signTransaction) {
+    provider.signTransaction = async (tx: unknown) => {
+      if (!account) throw new Error("no_account");
+      const [out] = await signTransaction.signTransaction({
+        account,
+        chain: SOLANA_MAINNET,
+        transaction: (tx as { serialize(): Uint8Array }).serialize(),
+      });
+      if (!out?.signedTransaction) throw new Error("no_signature");
+      return out.signedTransaction;
+    };
+  }
   if (signMessage) {
     provider.signMessage = async (message: Uint8Array) => {
       if (!account) throw new Error("no_account");
