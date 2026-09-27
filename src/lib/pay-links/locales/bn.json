@@ -196,7 +196,7 @@
   "payPage.stable.lapsedBody": "আপনার ওয়ালেট থেকে কিছুই যায়নি। আপনি প্রস্তুত হলে আবার শুরু করুন।",
   "payPage.stable.startAgain": "আবার শুরু করুন",
   "payPage.stable.qrTitle": "Solana Pay QR কোড",
-  "payPage.stable.qrScan": "Phantom, Solflare বা যেকোনো Solana ওয়ালেট দিয়ে স্ক্যান করুন। অনুমোদনের আগে এটি সঠিক পরিমাণ দেখাবে।",
+  "payPage.stable.qrScan": "Phantom, Solflare বা যেকোনো Solana ওয়ালেট দিয়ে স্ক্যান করুন।",
   "payPage.stable.qrMismatch": "আপনার ওয়ালেট যে পেমেন্টটি খুলেছে তা এই পেজের সাথে মেলেনি। এটি অনুমোদন করবেন না; পরিবর্তে এই নতুন কোডটি স্ক্যান করুন।",
   "payPage.stable.qrExpired": "পেমেন্ট আসার আগেই সেই কোডের মেয়াদ শেষ হয়ে গেছে, তাই এখানে একটি নতুন কোড দেওয়া হলো। কিছুই পরিশোধ করা হয়নি।",
   "payPage.stable.qrScanned": "আপনার ওয়ালেটে পেমেন্টটি আছে। সেখানে এটি অনুমোদন করুন, এবং এই পেজ আপডেট হয়ে যাবে।",

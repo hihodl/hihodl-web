@@ -111,7 +111,7 @@ const payPage = {
   "stable.lapsedBody": "Nothing left your wallet. Start again when you're ready.",
   "stable.startAgain": "Start again",
   "stable.qrTitle": "Solana Pay QR code",
-  "stable.qrScan": "Scan with Phantom, Solflare or any Solana wallet. It shows the exact amount before you approve.",
+  "stable.qrScan": "Scan with Phantom, Solflare or any Solana wallet.",
   "stable.qrMismatch": "The payment your wallet opened didn't match this page. Don't approve it; scan this new code instead.",
   "stable.qrExpired": "That code ran out before a payment arrived, so here is a new one. Nothing was paid.",
   "stable.qrScanned": "Your wallet has the payment. Approve it there, and this page updates.",

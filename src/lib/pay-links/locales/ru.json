@@ -196,7 +196,7 @@
   "payPage.stable.lapsedBody": "С вашего кошелька ничего не списано. Начните заново, когда будете готовы.",
   "payPage.stable.startAgain": "Начать заново",
   "payPage.stable.qrTitle": "QR-код Solana Pay",
-  "payPage.stable.qrScan": "Отсканируйте в Phantom, Solflare или любом кошельке Solana. Точная сумма покажется перед подтверждением.",
+  "payPage.stable.qrScan": "Отсканируйте в Phantom, Solflare или любом кошельке Solana.",
   "payPage.stable.qrMismatch": "Платёж, который открылся в кошельке, не совпал с этой страницей. Не подтверждайте его — отсканируйте вместо этого новый код.",
   "payPage.stable.qrExpired": "Срок действия того кода истёк раньше, чем поступил платёж, поэтому вот новый. Оплата не прошла.",
   "payPage.stable.qrScanned": "Платёж уже в вашем кошельке. Подтвердите его там, и эта страница обновится.",

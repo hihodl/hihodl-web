@@ -80,7 +80,7 @@
   "stable.lapsedBody": "지갑에서 나간 내역이 없어요. 준비되면 다시 시작하세요.",
   "stable.startAgain": "다시 시작",
   "stable.qrTitle": "Solana Pay QR 코드",
-  "stable.qrScan": "Phantom, Solflare 또는 다른 Solana 지갑으로 스캔하세요. 승인하기 전에 정확한 금액을 보여줘요.",
+  "stable.qrScan": "Phantom, Solflare 또는 다른 Solana 지갑으로 스캔하세요.",
   "stable.qrMismatch": "지갑에서 연 결제가 이 페이지와 일치하지 않았어요. 승인하지 말고 이 새 코드를 스캔하세요.",
   "stable.qrExpired": "결제가 도착하기 전에 이 코드가 만료되어 새 코드를 준비했어요. 아직 결제된 내역은 없어요.",
   "stable.qrScanned": "지갑에 결제가 도착했어요. 그곳에서 승인하면 이 페이지도 업데이트돼요.",

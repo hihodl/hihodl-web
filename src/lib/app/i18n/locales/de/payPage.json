@@ -80,7 +80,7 @@
   "stable.lapsedBody": "Es ist nichts aus deiner Wallet abgegangen. Fang neu an, wenn du bereit bist.",
   "stable.startAgain": "Neu starten",
   "stable.qrTitle": "Solana Pay QR-Code",
-  "stable.qrScan": "Scann mit Phantom, Solflare oder einer beliebigen Solana-Wallet. Er zeigt den genauen Betrag, bevor du bestätigst.",
+  "stable.qrScan": "Scann mit Phantom, Solflare oder einer beliebigen Solana-Wallet.",
   "stable.qrMismatch": "Die Zahlung, die deine Wallet geöffnet hat, passte nicht zu dieser Seite. Bestätige sie nicht; scann stattdessen diesen neuen Code.",
   "stable.qrExpired": "Dieser Code ist abgelaufen, bevor eine Zahlung ankam, deshalb hier ein neuer. Es wurde nichts bezahlt.",
   "stable.qrScanned": "Deine Wallet hat die Zahlung. Bestätige sie dort, und diese Seite aktualisiert sich.",

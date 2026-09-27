@@ -196,7 +196,7 @@
   "payPage.stable.lapsedBody": "Nic nie zostało pobrane z Twojego portfela. Zacznij od nowa, kiedy zechcesz.",
   "payPage.stable.startAgain": "Zacznij od nowa",
   "payPage.stable.qrTitle": "Kod QR Solana Pay",
-  "payPage.stable.qrScan": "Zeskanuj w Phantom, Solflare lub dowolnym portfelu Solana. Pokaże dokładną kwotę przed zatwierdzeniem.",
+  "payPage.stable.qrScan": "Zeskanuj w Phantom, Solflare lub dowolnym portfelu Solana.",
   "payPage.stable.qrMismatch": "Płatność otwarta w portfelu nie zgadzała się z tą stroną. Nie zatwierdzaj jej — zamiast tego zeskanuj ten nowy kod.",
   "payPage.stable.qrExpired": "Ważność tamtego kodu wygasła, zanim dotarła płatność, więc oto nowy. Nic nie zostało zapłacone.",
   "payPage.stable.qrScanned": "Płatność jest już w Twoim portfelu. Zatwierdź ją tam, a ta strona się zaktualizuje.",

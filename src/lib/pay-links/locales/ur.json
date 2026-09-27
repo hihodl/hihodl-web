@@ -196,7 +196,7 @@
   "payPage.stable.lapsedBody": "آپ کے والٹ سے کچھ نہیں گیا۔ تیار ہونے پر دوبارہ شروع کریں۔",
   "payPage.stable.startAgain": "دوبارہ شروع کریں",
   "payPage.stable.qrTitle": "Solana Pay QR کوڈ",
-  "payPage.stable.qrScan": "Phantom، Solflare یا کسی بھی Solana والٹ سے اسکین کریں۔ منظوری سے پہلے یہ صحیح رقم دکھائے گا۔",
+  "payPage.stable.qrScan": "Phantom، Solflare یا کسی بھی Solana والٹ سے اسکین کریں۔",
   "payPage.stable.qrMismatch": "آپ کے والٹ نے جو ادائیگی کھولی وہ اس صفحے سے میل نہیں کھاتی۔ اسے منظور نہ کریں؛ اس کے بجائے یہ نیا کوڈ اسکین کریں۔",
   "payPage.stable.qrExpired": "ادائیگی پہنچنے سے پہلے وہ کوڈ ختم ہو گیا، تو یہ ایک نیا کوڈ ہے۔ کچھ بھی ادا نہیں کیا گیا۔",
   "payPage.stable.qrScanned": "آپ کے والٹ میں ادائیگی موجود ہے۔ وہاں اسے منظور کریں، اور یہ صفحہ اپڈیٹ ہو جائے گا۔",

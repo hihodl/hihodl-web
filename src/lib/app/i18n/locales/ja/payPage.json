@@ -80,7 +80,7 @@
   "stable.lapsedBody": "ウォレットから何も送金されていません。準備ができたらもう一度お試しください。",
   "stable.startAgain": "もう一度やり直す",
   "stable.qrTitle": "Solana Pay QR コード",
-  "stable.qrScan": "Phantom、Solflare、または任意の Solana ウォレットでスキャンしてください。承認する前に正確な金額が表示されます。",
+  "stable.qrScan": "Phantom、Solflare、または任意の Solana ウォレットでスキャンしてください。",
   "stable.qrMismatch": "ウォレットで開かれた支払いがこのページと一致しませんでした。承認せず、代わりにこの新しいコードをスキャンしてください。",
   "stable.qrExpired": "支払いが届く前にこのコードが期限切れになったため、新しいコードを用意しました。まだ支払いは行われていません。",
   "stable.qrScanned": "ウォレットに支払いが届いています。そちらで承認すると、このページも更新されます。",
