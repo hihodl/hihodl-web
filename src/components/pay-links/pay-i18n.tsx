@@ -25,12 +25,8 @@ const KEY = "hold.payLocale";
 const APP_KEY = "hold.locale";
 
 const LOADERS: Record<ExtraCode, () => Promise<{ default: Readonly<Record<string, string>> }>> = {
-  fil: () => import("@/lib/pay-links/locales/fil.json"),
-  am: () => import("@/lib/pay-links/locales/am.json"),
   ru: () => import("@/lib/pay-links/locales/ru.json"),
   bn: () => import("@/lib/pay-links/locales/bn.json"),
-  ha: () => import("@/lib/pay-links/locales/ha.json"),
-  yo: () => import("@/lib/pay-links/locales/yo.json"),
   ur: () => import("@/lib/pay-links/locales/ur.json"),
   pl: () => import("@/lib/pay-links/locales/pl.json"),
 };

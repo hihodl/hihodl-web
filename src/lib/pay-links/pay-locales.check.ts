@@ -21,20 +21,21 @@ function eq(name: string, a: unknown, b: unknown) {
   } else console.log("ok  ", name);
 }
 
-eq("tl is Filipino", matchPayLocale("tl-PH"), "fil");
-eq("fil", matchPayLocale("fil"), "fil");
-eq("am-ET", matchPayLocale("am-ET"), "am");
+// Filipino, Amharic, Hausa and Yoruba readers get English, which the
+// Philippines and Nigeria use officially (Alex, 2026-09-27).
+eq("tl falls to English", matchPayLocale("tl-PH"), null);
+eq("am-ET falls to English", matchPayLocale("am-ET"), null);
 eq("ru-RU", matchPayLocale("ru-RU"), "ru");
 eq("bn-BD", matchPayLocale("bn-BD"), "bn");
-eq("ha-NG", matchPayLocale("ha-NG"), "ha");
-eq("yo-NG", matchPayLocale("yo-NG"), "yo");
+eq("ha-NG falls to English", matchPayLocale("ha-NG"), null);
+eq("yo-NG falls to English", matchPayLocale("yo-NG"), null);
 eq("ur-PK", matchPayLocale("ur-PK"), "ur");
 eq("pl-PL", matchPayLocale("pl-PL"), "pl");
 eq("es-MX stays Mexican", matchPayLocale("es-MX"), "es-MX");
 eq("es-AR stays Argentine", matchPayLocale("es-AR"), "es-AR");
 eq("ar-IQ is Arabic", matchPayLocale("ar-IQ"), "ar-AE");
 eq("ar-MR is Arabic", matchPayLocale("ar-MR"), "ar-AE");
-eq("first known", browserPayLocale(["xx", "yo-NG", "en"]), "yo");
+eq("first known", browserPayLocale(["xx", "yo-NG", "en"]), "en");
 eq("none", browserPayLocale(["xx"]), null);
 eq("rtl ur", isRtl("ur"), true);
 eq("rtl ar", isRtl("ar-AE"), true);

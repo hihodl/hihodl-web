@@ -240,7 +240,7 @@ const ENGLISH_NAME: Record<string, string> = Object.fromEntries(CURRENCIES.map((
 
 function useCurrencyName(): (code: string) => string {
   const appLocale = useLocale();
-  // An extra page language (Filipino, Amharic…) names currencies in itself too.
+  // An extra page language (Russian, Bengali…) names currencies in itself too.
   const locale = getPrefs().intl ?? appLocale;
   return useMemo(() => {
     let dn: Intl.DisplayNames | null = null;

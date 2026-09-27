@@ -28,8 +28,8 @@ export interface PrefsState {
   rates: Readonly<Record<string, number>> | null;
   /**
    * The Intl tag to format with when the words are a language the product
-   * does not speak everywhere (the public pay page's extra languages: "fil",
-   * "am"…). Null: the locale's own tag.
+   * does not speak everywhere (the public pay page's extra languages: "ru",
+   * "bn"…). Null: the locale's own tag.
    */
   intl: string | null;
 }

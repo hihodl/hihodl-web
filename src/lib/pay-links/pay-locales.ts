@@ -1,10 +1,11 @@
 /**
  * The languages the public pay page speaks: every language of the product
- * (../app/i18n/locales), plus eight more that the people paying our users
- * read (Nigeria, Ethiopia, the Philippines, Russia, Bangladesh, Pakistan,
- * Poland): Filipino, Amharic, Russian, Bengali, Hausa, Yoruba, Urdu, Polish.
+ * (../app/i18n/locales), plus four more that the people paying our users
+ * read: Russian, Bengali, Urdu, Polish. Filipino, Amharic, Hausa and Yoruba
+ * were dropped (Alex, 2026-09-27): the Philippines and Nigeria read English
+ * officially, and a line nobody native has checked is worse than English.
  *
- * The extra eight exist on this page only. Their dictionaries
+ * The extra four exist on this page only. Their dictionaries
  * (./locales/<code>.json) hold the pay page's words (the payPage namespace)
  * and the few shared lines it shows (a payment refusal, a wallet's name);
  * anything else reads English. While one is on screen the product's locale
@@ -16,7 +17,7 @@
 
 import { LOCALES, browserLocale, isLocale, matchLocale, type LocaleCode } from "../app/i18n/locales";
 
-export const EXTRA_CODES = ["fil", "am", "ru", "bn", "ha", "yo", "ur", "pl"] as const;
+export const EXTRA_CODES = ["ru", "bn", "ur", "pl"] as const;
 export type ExtraCode = (typeof EXTRA_CODES)[number];
 export type PayLocale = LocaleCode | ExtraCode;
 
@@ -32,12 +33,8 @@ export interface PayLocaleInfo {
 }
 
 export const EXTRA_LOCALES: readonly PayLocaleInfo[] = [
-  { code: "fil", native: "Filipino", english: "Filipino", country: "PH", intl: "fil-PH" },
-  { code: "am", native: "አማርኛ", english: "Amharic", country: "ET", intl: "am-ET" },
   { code: "ru", native: "Русский", english: "Russian", country: "RU", intl: "ru-RU" },
   { code: "bn", native: "বাংলা", english: "Bengali", country: "BD", intl: "bn-BD-u-nu-latn" },
-  { code: "ha", native: "Hausa", english: "Hausa", country: "NG", intl: "ha-NG" },
-  { code: "yo", native: "Yorùbá", english: "Yoruba", country: "NG", intl: "yo-NG" },
   { code: "ur", native: "اردو", english: "Urdu", country: "PK", intl: "ur-PK-u-nu-latn" },
   { code: "pl", native: "Polski", english: "Polish", country: "PL", intl: "pl-PL" },
 ];
@@ -63,13 +60,12 @@ export function isRtl(code: PayLocale): boolean {
 
 /**
  * A browser tag as a page language, or null. The page's own languages first
- * ("tl" is Filipino too), then the product's rule: "es-MX" is Mexican
+ * then the product's rule: "es-MX" is Mexican
  * Spanish, "ar-IQ" and "ar-MR" Arabic, "pt-PT" Portuguese.
  */
 export function matchPayLocale(tag: string | null | undefined): PayLocale | null {
   if (!tag) return null;
   const base = tag.trim().replace(/_/g, "-").toLowerCase().split("-")[0];
-  if (base === "tl" || base === "fil") return "fil";
   if (isExtra(base)) return base;
   return matchLocale(tag);
 }
