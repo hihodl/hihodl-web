@@ -38,6 +38,41 @@ const DRAG_CLOSE_VELOCITY = 0.55;
 /** The open modals, newest last: Escape belongs to the last one only. */
 const stack: string[] = [];
 
+/**
+ * The page behind a modal holds still. `overflow: hidden` alone does not do
+ * it in iOS Safari, which scrolls the document under a finger anyway: the
+ * body is pinned (`position: fixed` at minus the scroll) and the scroll put
+ * back where it was when the last modal closes.
+ */
+let locked: { y: number; style: Partial<CSSStyleDeclaration>; htmlOverscroll: string } | null = null;
+
+function lockPage() {
+  if (locked) return;
+  const body = document.body;
+  const y = window.scrollY;
+  locked = {
+    y,
+    style: { position: body.style.position, top: body.style.top, left: body.style.left, right: body.style.right, width: body.style.width, overflow: body.style.overflow },
+    htmlOverscroll: document.documentElement.style.overscrollBehavior,
+  };
+  body.style.position = "fixed";
+  body.style.top = `-${y}px`;
+  body.style.left = "0";
+  body.style.right = "0";
+  body.style.width = "100%";
+  body.style.overflow = "hidden";
+  document.documentElement.style.overscrollBehavior = "none";
+}
+
+function unlockPage() {
+  if (!locked) return;
+  const { y, style, htmlOverscroll } = locked;
+  locked = null;
+  Object.assign(document.body.style, style);
+  document.documentElement.style.overscrollBehavior = htmlOverscroll;
+  window.scrollTo(0, y);
+}
+
 const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]):not([type="hidden"]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
 export type ModalSize = "sm" | "md" | "lg" | "full";
@@ -107,11 +142,9 @@ export function Modal({
   // The stack, the page behind held still, focus in and back out.
   useEffect(() => {
     if (!mounted) return;
+    if (!stack.length) lockPage();
     stack.push(id);
     const before = document.activeElement as HTMLElement | null;
-    const body = document.body;
-    const overflow = body.style.overflow;
-    body.style.overflow = "hidden";
     const t = window.setTimeout(() => {
       const el = panel.current;
       if (!el || el.contains(document.activeElement)) return;
@@ -122,7 +155,7 @@ export function Modal({
       window.clearTimeout(t);
       const i = stack.lastIndexOf(id);
       if (i >= 0) stack.splice(i, 1);
-      if (!stack.length) body.style.overflow = overflow;
+      if (!stack.length) unlockPage();
       if (before && document.contains(before)) before.focus({ preventScroll: true });
     };
   }, [mounted, id]);
@@ -260,7 +293,7 @@ export function Modal({
         } motion-reduce:!transition-none`}
       >
         {head}
-        <div className={`flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden overscroll-contain ${bare ? "" : "gap-3 px-4 pb-4"}`}>{children}</div>
+        <div className={`flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y [&>*]:shrink-0 ${bare ? "" : "gap-3 px-4 pb-4"}`}>{children}</div>
         {footer ? <div className="shrink-0 border-t border-white/[0.06] px-4 pb-4 pt-3">{footer}</div> : null}
       </div>
     </div>,

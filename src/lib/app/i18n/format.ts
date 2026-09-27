@@ -25,7 +25,8 @@ import { intlTag } from "./locales";
 import { getPrefs } from "./store";
 
 function tag(): string {
-  return intlTag(getPrefs().locale);
+  const { intl, locale } = getPrefs();
+  return intl ?? intlTag(locale);
 }
 
 const nfCache = new Map<string, Intl.NumberFormat>();

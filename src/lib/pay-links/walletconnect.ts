@@ -26,6 +26,7 @@ type WcProvider = Eip1193Provider & {
   connect(): Promise<void>;
   disconnect(): Promise<void>;
   on(event: string, cb: (...args: unknown[]) => void): void;
+  removeListener?(event: string, cb: (...args: unknown[]) => void): void;
 };
 
 let cached: Promise<WcProvider> | null = null;
@@ -40,7 +41,8 @@ async function init(projectId: string): Promise<WcProvider> {
     projectId,
     // Optional, not required: a wallet that lacks Polygon can still pay on Base.
     optionalChains: [...CHAIN_IDS],
-    showQrModal: true,
+    // The page draws the pairing code itself (HOLD's QR), from `display_uri`.
+    showQrModal: false,
     metadata: {
       name: "HOLD",
       description: "Pay in USDC from any wallet.",
@@ -56,11 +58,11 @@ async function init(projectId: string): Promise<WcProvider> {
 }
 
 /**
- * The payer's wallet over WalletConnect, connected. Opens the wallet list (a QR
- * on a computer, the installed wallets on a phone) unless a session from
- * earlier on this page is still alive. Rejects when the payer closes the list.
+ * The payer's wallet over WalletConnect, connected. `onUri` receives the
+ * pairing link as soon as there is one: the page shows it as a QR for a
+ * wallet on another device. Reuses a session from earlier on this page.
  */
-export async function connectWalletConnect(): Promise<Eip1193Provider> {
+export async function connectWalletConnect(onUri?: (uri: string) => void): Promise<Eip1193Provider> {
   const projectId = walletConnectProjectId();
   if (!projectId) throw new Error("walletconnect_off");
   if (!cached) cached = init(projectId);
@@ -71,7 +73,17 @@ export async function connectWalletConnect(): Promise<Eip1193Provider> {
     cached = null;
     throw e;
   }
-  if (!provider.session) await provider.connect();
+  if (!provider.session) {
+    const listener = (uri: unknown) => {
+      if (typeof uri === "string" && onUri) onUri(uri);
+    };
+    provider.on("display_uri", listener);
+    try {
+      await provider.connect();
+    } finally {
+      provider.removeListener?.("display_uri", listener);
+    }
+  }
   return provider;
 }
 

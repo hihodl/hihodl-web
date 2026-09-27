@@ -8,19 +8,19 @@
  * on the Main account's head (ScreenBg account="Main": rgba(0,194,255,0.45)
  * fading out over the app's navy #0D1820).
  *
- *   the face       photo or initials, the HOLD badge on its corner
- *   the amount     Quick Send's 54/900 number and its 30/900 unit, centred,
- *                  and the currency as a pill under it
+ *   the face       photo (public profiles only) or initials, the HOLD badge
+ *                  on its corner, a tick when the owner is verified
+ *   the amount     Quick Send's: the symbol, then the number at 54/900; the
+ *                  currency pill under it (USD or EUR, what the owner can
+ *                  receive: USDC, or EURC on Base)
  *   the note       Quick Send's method row: an uppercase label over the value
  *   how to pay     HOLD (the app, or the store), card, Apple Pay or Google
- *                  Pay (one, by device), stablecoins (the old checkout, in a
- *                  sheet)
+ *                  Pay (one, by device), stablecoins (a sheet)
  *
- * Card payments are charged in the chosen currency on Coinflow's hosted
- * checkout, framed in a sheet. Stablecoins are always USDC.
+ * Nothing explains itself on the screen: the warnings and the fine print are
+ * in the Terms the foot links to.
  *
- * Every word goes through the language on screen (I18nProvider: this
- * browser's saved choice, else its own languages), chosen at the top right.
+ * Every word follows the language chosen at the top right (./pay-i18n).
  */
 
 import Link from "next/link";
@@ -29,9 +29,10 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { Ion, type IonName } from "@/components/app/ion";
 import { Modal } from "@/components/app/Modal";
 import { Wordmark } from "@/components/site/Wordmark";
+import type { Chain } from "@/lib/ad-space/types";
 import { CheckoutError, checkoutKey, rotateCheckoutKey } from "@/lib/ad-space/checkout-client";
-import { fmtFiat } from "@/lib/app/i18n/format";
-import { I18nProvider, ensureRates, useFormat, useT } from "@/lib/app/i18n/react";
+import { currencySymbol, fmtFiat } from "@/lib/app/i18n/format";
+import { ensureRates, useFormat, useT } from "@/lib/app/i18n/react";
 import { getPrefs } from "@/lib/app/i18n/store";
 import { APP_STORE_URL, PLAY_STORE_URL } from "@/lib/appLinks";
 import {
@@ -55,30 +56,34 @@ import {
   minorFromUsdCents,
   parseMinor,
   readCoinflowMessage,
+  readPayState,
   usdCentsFromMinor,
   walletMethodFor,
   type Platform,
 } from "@/lib/pay-links/page-rules";
 import type { CardMethod, CardPayment, ShownPayLink } from "@/lib/pay-links/types";
 
-import { PayLinkPay } from "./PayLinkPay";
+import { PayLinkPay, networksFor } from "./PayLinkPay";
+import { PayI18nProvider } from "./pay-i18n";
 import { CurrencyPill, HoldSheet, LanguageButton, OwnerFace } from "./pay-parts";
 import { ReportLink } from "./ReportLink";
 
 export type PayPageState = { kind: "unreachable" } | { kind: "disabled" } | { kind: "shown"; link: ShownPayLink };
 
+/** What the owner can receive: USDC, and EURC on Base. */
+const CURRENCIES = ["USD", "EUR"] as const;
 const NOTE_MAX = 140;
 const POLL_MS = 3_000;
 const POLL_FOR_MS = 5 * 60_000;
 /** How long the page waits for the app to take over before sending the payer to the store. */
 const APP_WAIT_MS = 1_500;
-/** The stablecoin checkout's own limits (PayLinkPay). */
+/** The stablecoin checkout's own limits (PayLinkPay), in the token's cents. */
 const STABLE_MIN_CENTS = 100;
 const STABLE_MAX_CENTS = 1_000_000;
 
 export function PayPage({ state }: { state: PayPageState }) {
   return (
-    <I18nProvider>
+    <PayI18nProvider>
       <Ground>
         <TopBar />
         {state.kind === "unreachable" ? (
@@ -89,24 +94,36 @@ export function PayPage({ state }: { state: PayPageState }) {
           <Shown link={state.link} />
         )}
       </Ground>
-    </I18nProvider>
+    </PayI18nProvider>
   );
 }
 
 /* ── The ground and the top bar ─────────────────────────────────── */
 
+/**
+ * The page is exactly as tall as what is on it (at least the screen): the
+ * navy is the body's own colour, painted on <html> and <body> while the page
+ * is up, so nothing needs a fixed layer and nothing extends past the foot.
+ */
 function Ground({ children }: { children: ReactNode }) {
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    const before = [html.style.backgroundColor, body.style.backgroundColor];
+    html.style.backgroundColor = "#0D1820";
+    body.style.backgroundColor = "#0D1820";
+    return () => {
+      html.style.backgroundColor = before[0];
+      body.style.backgroundColor = before[1];
+    };
+  }, []);
   return (
-    <div className="relative min-h-dvh overflow-x-hidden bg-[#0D1820] text-white">
-      {/* The app's navy under everything, past the end of a short page too. */}
-      <div aria-hidden className="pointer-events-none fixed inset-0 bg-[#0D1820]" />
+    <div className="relative flex min-h-[100svh] flex-col overflow-x-clip bg-[#0D1820] text-white">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 top-0 h-[280px] bg-[linear-gradient(180deg,rgba(0,194,255,0.45)_0%,rgba(54,224,255,0)_100%)]"
       />
-      <div className="relative mx-auto flex min-h-dvh w-full max-w-[480px] flex-col px-4 pb-[max(24px,env(safe-area-inset-bottom))]">
-        {children}
-      </div>
+      <div className="relative mx-auto flex w-full max-w-[480px] flex-1 flex-col px-4 pb-[max(16px,env(safe-area-inset-bottom))]">{children}</div>
     </div>
   );
 }
@@ -114,7 +131,7 @@ function Ground({ children }: { children: ReactNode }) {
 function TopBar() {
   return (
     <header className="flex h-16 shrink-0 items-center justify-between">
-      <Link href="/" aria-label="HOLD" className="text-white">
+      <Link href="/" aria-label="HOLD" className="text-white" dir="ltr">
         <Wordmark className="h-[18px] w-auto" />
       </Link>
       <LanguageButton />
@@ -143,52 +160,62 @@ type CardPhase =
   | { kind: "paid"; payment: CardPayment }
   | { kind: "failed"; payment: CardPayment };
 
-function useBrowserTags(): string[] {
-  const [tags, setTags] = useState<string[]>([]);
-  useEffect(() => {
-    setTags(navigator.languages?.length ? [...navigator.languages] : navigator.language ? [navigator.language] : []);
-  }, []);
-  return tags;
-}
-
 function Shown({ link }: { link: ShownPayLink }) {
   const t = useT();
-  const f = useFormat();
+  useFormat();
   const active = link.status === "active";
   const card = link.card && link.card.methods.length && link.card.currencies.length ? link.card : null;
   const payee = ownerName(link.owner);
   const bigName = link.owner?.displayName?.trim() || payee;
   const handle = link.owner?.handle ? `@${link.owner.handle}` : null;
   const fixed = link.amount.mode === "fixed" ? link.amount.cents : null;
+  const tokens = link.tokens?.length ? link.tokens : ["usdc"];
 
-  /* The device, once in the browser: the server can't know it. */
+  /* The device and what a wallet's browser brought back, once in the browser. */
   const [platform, setPlatform] = useState<Platform | null>(null);
   const [pageUrl, setPageUrl] = useState("");
+  const [picked, setPicked] = useState<string | null>(null);
+  const [tags, setTags] = useState<string[]>([]);
+  const [amountText, setAmountText] = useState("");
+  const [startNetwork, setStartNetwork] = useState<Chain | null>(null);
+  const [sheet, setSheet] = useState<"hold" | "stable" | null>(null);
   useEffect(() => {
     setPlatform(detectPlatform(navigator.userAgent, navigator.maxTouchPoints ?? 0));
-    setPageUrl(window.location.href.split("#")[0]);
-  }, []);
+    setTags(navigator.languages?.length ? [...navigator.languages] : navigator.language ? [navigator.language] : []);
+    const url = new URL(window.location.href);
+    const back = readPayState(url.search);
+    if (back.currency) setPicked(back.currency);
+    if (back.amount && fixed === null) setAmountText(back.amount);
+    if (back.network) setStartNetwork(back.network as Chain);
+    if (back.stablecoins) setSheet("stable");
+    // The address stays the link; what came back is on the screen now.
+    for (const k of ["amount", "currency", "pay", "network"]) url.searchParams.delete(k);
+    if (url.href !== window.location.href) window.history.replaceState(null, "", url.href);
+    setPageUrl(url.href.split("#")[0]);
+  }, [fixed]);
 
-  /* The currency: the browser's region when the card takes it. */
-  const tags = useBrowserTags();
-  const choices = useMemo(() => (card ? card.currencies.map((c) => c.toUpperCase()) : ["USD"]), [card]);
-  const [picked, setPicked] = useState<string | null>(null);
-  const currency = picked && choices.includes(picked) ? picked : defaultCurrency(tags, card ? choices : null);
+  /* The currency: USD or EUR, the browser's region picks. */
+  const currency = picked && (CURRENCIES as readonly string[]).includes(picked) ? picked : defaultCurrency(tags, CURRENCIES);
   useEffect(() => {
     if (currency !== "USD") void ensureRates();
   }, [currency]);
   const rates = getPrefs().rates;
+  const symbol = currencySymbol(currency);
 
-  /* The amount, as typed (open) or as asked (fixed). */
-  const [amountText, setAmountText] = useState("");
+  /* The amount, as typed (open) or as asked (fixed, in dollars; shown in euros when a rate says). */
   const [note, setNote] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
+  const amountInput = useRef<HTMLInputElement>(null);
   const typedMinor = fixed === null ? parseMinor(amountText, currency) : null;
+  const fixedShown = useMemo(() => {
+    if (fixed === null) return null;
+    const m = minorFromUsdCents(fixed, currency, rates);
+    return m === null ? { minor: fixed, currency: "USD" } : { minor: m, currency };
+  }, [fixed, currency, rates]);
 
   const cardMin = card?.minUsdCents ?? STABLE_MIN_CENTS;
   const openMax = link.amount.mode === "open" ? link.amount.maxCents : null;
   const cardMax = Math.min(card?.maxUsdCents ?? STABLE_MAX_CENTS, openMax ?? Number.POSITIVE_INFINITY);
-  /** US cents in the chosen currency; `round` makes a limit whole ("From 1 €", not "From 0,88 €"). */
   const money = (usdCents: number, round?: "up" | "down") => {
     const m = minorFromUsdCents(usdCents, currency, rates);
     if (m === null) return fmtFiat(usdCents / 100, "USD");
@@ -197,8 +224,6 @@ function Shown({ link }: { link: ShownPayLink }) {
     return fmtFiat(round === "up" ? Math.ceil(units) : Math.floor(units), currency, { whole: true });
   };
 
-  /* Sheets. */
-  const [sheet, setSheet] = useState<"hold" | "stable" | null>(null);
   const [holdOpening, setHoldOpening] = useState(false);
 
   /* ── The card ── */
@@ -212,20 +237,27 @@ function Shown({ link }: { link: ShownPayLink }) {
     if (id) setCardPhase({ kind: "watching", paymentId: id, since: Date.now(), payment: null, slow: false });
   }, [scope, link.code]);
 
-  /** The amount to charge, or null after saying what is wrong with it. */
-  function cardAmount(): { amountMinor?: number } | null {
-    if (fixed !== null) return {};
+  /** An open link's amount, or null after asking for it on the page. */
+  function typedAmount(): number | null {
     if (typedMinor === null || typedMinor <= 0) {
-      setNotice(t("payPage.amountInvalid"));
+      setNotice(t("payPage.amountFirst"));
+      amountInput.current?.focus();
       return null;
     }
-    const usd = usdCentsFromMinor(typedMinor, currency, rates);
+    return typedMinor;
+  }
+
+  function cardAmount(): { amountMinor?: number } | null {
+    if (fixed !== null) return {};
+    const minor = typedAmount();
+    if (minor === null) return null;
+    const usd = usdCentsFromMinor(minor, currency, rates);
     // Without a rate the server judges the amount; with one, say it here first.
     if (usd !== null && (usd < cardMin || usd > cardMax)) {
       setNotice(t("payPage.amountRange", { min: money(cardMin, "up"), max: money(cardMax, "down") }));
       return null;
     }
-    return { amountMinor: typedMinor };
+    return { amountMinor: minor };
   }
 
   async function payByCard(method: CardMethod) {
@@ -251,7 +283,7 @@ function Shown({ link }: { link: ShownPayLink }) {
     }
   }
 
-  /* Coinflow says the card went through: watch our payment until the USDC lands. */
+  /* Coinflow says the card went through: watch our payment until the money lands. */
   const checkoutUrl = cardPhase.kind === "checkout" ? cardPhase.url : null;
   const checkoutPaymentId = cardPhase.kind === "checkout" ? cardPhase.payment.id : null;
   useEffect(() => {
@@ -344,31 +376,67 @@ function Shown({ link }: { link: ShownPayLink }) {
     }, APP_WAIT_MS);
   }, [platform, link]);
 
+  /* ── Stablecoins: USDC, or EURC on Base, for the amount on the page ── */
+  const token = currency === "EUR" ? "eurc" : "usdc";
+  // EURC is for an open amount the payer types in euros; a fixed link is priced in dollars.
+  const stableOk = token === "usdc" ? networksFor(link, "usdc").length > 0 : tokens.includes("eurc") && fixed === null && networksFor(link, "eurc").length > 0;
+  const stableCents = fixed !== null ? null : typedMinor;
+
+  function openStable() {
+    setNotice(null);
+    if (!stableOk) {
+      setNotice(t("payPage.eurcUnavailable"));
+      return;
+    }
+    if (fixed === null) {
+      const minor = typedAmount();
+      if (minor === null) return;
+      const max = Math.min(openMax ?? STABLE_MAX_CENTS, STABLE_MAX_CENTS);
+      if (minor < STABLE_MIN_CENTS || minor > max) {
+        setNotice(t("payPage.amountRange", { min: fmtFiat(STABLE_MIN_CENTS / 100, currency, { whole: true }), max: fmtFiat(max / 100, currency, { whole: true }) }));
+        return;
+      }
+    }
+    setSheet("stable");
+  }
+
   /* ── The rows ── */
   const walletMethod = platform ? walletMethodFor(platform) : null;
-  const showCard = !!card && card.methods.includes("card");
-  const showWallet = !!card && !!walletMethod && card.methods.includes(walletMethod);
+  const cardTakes = !!card && card.currencies.map((c) => c.toUpperCase()).includes(currency);
+  const showCard = cardTakes && !!card && card.methods.includes("card");
+  const showWallet = cardTakes && !!card && !!walletMethod && card.methods.includes(walletMethod);
   const busy = cardPhase.kind === "starting";
-
-  const stableAmountText =
-    fixed === null && currency === "USD" && typedMinor !== null && typedMinor > 0 ? (typedMinor / 100).toFixed(2) : "";
-
   const done = cardPhase.kind === "paid" || cardPhase.kind === "failed" || cardPhase.kind === "watching";
 
   return (
     <main className="flex flex-1 flex-col">
       {/* Who */}
-      <section className="flex flex-col items-center pt-4 text-center" aria-label={t("payPage.howMuch")}>
+      <section className="flex flex-col items-center pt-4 text-center">
         <OwnerFace owner={link.owner} size={84} />
-        <h1 className="mt-4 max-w-full break-words text-[24px] font-extrabold leading-[30px] tracking-[-0.4px] [overflow-wrap:anywhere]">
-          {bigName}
+        <h1 className="mt-4 flex max-w-full items-center justify-center gap-1.5 text-[24px] font-extrabold leading-[30px] tracking-[-0.4px]">
+          <span className="min-w-0 break-words [overflow-wrap:anywhere]" dir="auto">
+            {bigName}
+          </span>
+          {link.owner?.verified ? (
+            <span className="inline-flex shrink-0 text-[#00C2FF]" title={t("payPage.verified")}>
+              <Ion name="checkmark-circle" size={20} aria-label={t("payPage.verified")} />
+            </span>
+          ) : null}
         </h1>
-        {handle && handle !== bigName ? <p className="mt-0.5 text-[14px] font-strong text-[#9FB7C2]">{handle}</p> : null}
+        {handle && handle !== bigName ? (
+          <p className="mt-0.5 text-[14px] font-strong text-[#9FB7C2]" dir="ltr">
+            {handle}
+          </p>
+        ) : null}
         {!link.personal ? (
-          <p className="mt-3 max-w-full break-words text-[15px] font-bold text-white [overflow-wrap:anywhere]">{link.title}</p>
+          <p className="mt-3 max-w-full break-words text-[15px] font-bold text-white [overflow-wrap:anywhere]" dir="auto">
+            {link.title}
+          </p>
         ) : null}
         {!link.personal && link.note ? (
-          <p className="mt-1 max-w-full whitespace-pre-line break-words text-[13px] leading-[18px] text-[#9FB7C2] [overflow-wrap:anywhere]">{link.note}</p>
+          <p className="mt-1 max-w-full whitespace-pre-line break-words text-[13px] leading-[18px] text-[#9FB7C2] [overflow-wrap:anywhere]" dir="auto">
+            {link.note}
+          </p>
         ) : null}
       </section>
 
@@ -380,11 +448,12 @@ function Shown({ link }: { link: ShownPayLink }) {
         <>
           {/* How much */}
           <section className="mt-7 flex flex-col items-center">
-            <p className="text-[15px] font-strong text-[#CFE3EC]">{fixed === null ? t("payPage.howMuch") : t("payPage.fixedAmount")}</p>
+            {fixed === null ? <p className="text-[15px] font-strong text-[#CFE3EC]">{t("payPage.howMuch")}</p> : null}
             <AmountLine
-              fixedCents={fixed}
+              inputRef={amountInput}
+              symbol={fixedShown ? currencySymbol(fixedShown.currency) : symbol}
+              fixedText={fixedShown ? fmtNumberPlain(fixedShown.minor, fixedShown.currency) : null}
               text={amountText}
-              currency={fixed === null ? currency : "USD"}
               onChange={(v) => {
                 setAmountText(cleanAmountInput(v, currency));
                 setNotice(null);
@@ -394,7 +463,7 @@ function Shown({ link }: { link: ShownPayLink }) {
             <div className="mt-3">
               <CurrencyPill
                 currency={currency}
-                choices={choices}
+                choices={CURRENCIES}
                 onChange={(c) => {
                   setPicked(c);
                   setAmountText((v) => cleanAmountInput(v, c));
@@ -402,21 +471,11 @@ function Shown({ link }: { link: ShownPayLink }) {
                 }}
               />
             </div>
-            <p className={`mt-2.5 min-h-[18px] px-2 text-center text-[13px] leading-[18px] ${notice ? "text-amber" : "text-[#9FB7C2]"}`} role={notice ? "status" : undefined}>
-              {notice
-                ? notice
-                : fixed !== null
-                  ? currency !== "USD" && minorFromUsdCents(fixed, currency, rates) !== null
-                    ? t("payPage.approx", { amount: money(fixed) })
-                    : !card
-                      ? t("payPage.usdOnly")
-                      : ""
-                  : card
-                    ? t("payPage.limits", { min: money(cardMin, "up"), max: money(cardMax, "down") })
-                    : openMax !== null
-                      ? t("payPage.limits", { min: f.fmtFiat(STABLE_MIN_CENTS / 100, "USD"), max: f.fmtFiat(openMax / 100, "USD") })
-                      : t("payPage.usdOnly")}
-            </p>
+            {notice ? (
+              <p className="mt-2.5 px-2 text-center text-[13px] leading-[18px] text-amber" role="status">
+                {notice}
+              </p>
+            ) : null}
           </section>
 
           {/* The note */}
@@ -433,6 +492,7 @@ function Shown({ link }: { link: ShownPayLink }) {
               maxLength={NOTE_MAX}
               placeholder={t("payPage.notePlaceholder")}
               autoComplete="off"
+              dir="auto"
               className="mt-1 w-full min-w-0 bg-transparent text-[15px] font-bold text-white outline-none placeholder:font-medium placeholder:text-white/35"
             />
           </label>
@@ -470,26 +530,22 @@ function Shown({ link }: { link: ShownPayLink }) {
             <MethodRow
               icon={<ImgIcon src="/pay/usdc.png" />}
               label={t("payPage.stablecoins")}
-              sub={t("payPage.stablecoinsSub")}
-              onClick={() => {
-                setNotice(null);
-                setSheet("stable");
-              }}
+              sub={!stableOk ? t("payPage.eurcUnavailableShort") : token === "eurc" ? t("payPage.stablecoinsSubEur") : t("payPage.stablecoinsSub")}
+              onClick={openStable}
               disabled={busy}
+              muted={!stableOk}
               last
             />
           </div>
-          <p className="mt-3 px-1 text-[12px] leading-[17px] text-[#9FB7C2]">{t("payPage.warning")}</p>
         </>
       )}
 
-      <Foot link={link} payee={bigName} card={!!card} />
+      <Foot link={link} />
 
       {sheet === "hold" ? <HoldSheet pageUrl={pageUrl || `https://hihodl.xyz/pay/${link.personal && link.owner?.handle ? `@${link.owner.handle}` : link.code}`} onClose={() => setSheet(null)} /> : null}
-      {sheet === "stable" ? (
-        <Modal onClose={() => setSheet(null)} title={t("payPage.stableTitle")} size="full">
-          <p className="rounded-[12px] bg-white/[0.04] px-3 py-2.5 text-[13px] leading-[18px] text-[#CFE3EC]">{t("payPage.stableUsd")}</p>
-          <PayLinkPay link={link} initialAmountText={stableAmountText} />
+      {sheet === "stable" && active ? (
+        <Modal onClose={() => setSheet(null)} title={t("payPage.payWithToken", { token: token === "eurc" ? "EURC" : "USDC" })} size="lg">
+          <PayLinkPay link={link} token={token} amountCents={stableCents} amountText={fixed === null ? amountText : null} network={startNetwork} />
         </Modal>
       ) : null}
       {cardPhase.kind === "checkout" ? (
@@ -503,35 +559,50 @@ function Shown({ link }: { link: ShownPayLink }) {
   );
 }
 
+/** "150.00" in the language's digits and separators, no symbol. */
+function fmtNumberPlain(minor: number, currency: string): string {
+  const d = minorDigits(currency);
+  try {
+    return new Intl.NumberFormat(getPrefs().intl ?? getPrefs().locale, { minimumFractionDigits: d, maximumFractionDigits: d }).format(minor / 10 ** d);
+  } catch {
+    return (minor / 10 ** d).toFixed(d);
+  }
+}
+
 /* ── The amount ─────────────────────────────────────────────────── */
 
-/** Quick Send's amount: the number at 54/900 and the unit at 30/900, shrinking as it grows. */
+/** Quick Send's amount: the symbol, then the number at 54/900, shrinking as it grows. */
 function AmountLine({
-  fixedCents,
+  inputRef,
+  symbol,
+  fixedText,
   text,
-  currency,
   onChange,
   label,
 }: {
-  fixedCents: number | null;
+  inputRef: React.RefObject<HTMLInputElement>;
+  symbol: string;
+  fixedText: string | null;
   text: string;
-  currency: string;
   onChange: (v: string) => void;
   label: string;
 }) {
-  const f = useFormat();
-  const shown = fixedCents !== null ? f.fmtNumber(fixedCents / 100, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : text;
+  const shown = fixedText ?? text;
   const len = Math.max(1, shown.length);
   const size = len <= 6 ? 54 : len <= 8 ? 44 : 36;
-  const unit = Math.round(size * 0.56);
   return (
-    <div className="mt-2 flex max-w-full items-baseline justify-center gap-2">
-      {fixedCents !== null ? (
+    // Numbers read left to right in every language on the page.
+    <div className="mt-2 flex max-w-full items-baseline justify-center" dir="ltr">
+      <span className={`font-black leading-none ${fixedText || text ? "text-white" : "text-white/35"}`} style={{ fontSize: size }}>
+        {symbol}
+      </span>
+      {fixedText !== null ? (
         <span className="font-black leading-none tracking-[0.5px] text-white tabular-nums" style={{ fontSize: size }}>
-          {shown}
+          {fixedText}
         </span>
       ) : (
         <input
+          ref={inputRef}
           value={text}
           onChange={(e) => onChange(e.target.value)}
           inputMode="decimal"
@@ -539,13 +610,10 @@ function AmountLine({
           enterKeyHint="done"
           placeholder="0"
           aria-label={label}
-          className="min-w-0 bg-transparent text-center font-black leading-none tracking-[0.5px] text-white caret-amber outline-none tabular-nums placeholder:text-white/35"
-          style={{ fontSize: size, width: `${len + 0.6}ch`, maxWidth: "calc(100vw - 32px - 5ch)" }}
+          className="min-w-0 bg-transparent text-start font-black leading-none tracking-[0.5px] text-white caret-amber outline-none tabular-nums placeholder:text-white/35"
+          style={{ fontSize: size, width: `${len + 0.4}ch`, maxWidth: "calc(100vw - 32px - 2ch)" }}
         />
       )}
-      <span className="font-black leading-none text-white" style={{ fontSize: unit }}>
-        {currency}
-      </span>
     </div>
   );
 }
@@ -559,6 +627,7 @@ function MethodRow({
   onClick,
   disabled,
   spinning,
+  muted,
   last,
 }: {
   icon: ReactNode;
@@ -567,6 +636,7 @@ function MethodRow({
   onClick: () => void;
   disabled?: boolean;
   spinning?: boolean;
+  muted?: boolean;
   last?: boolean;
 }) {
   return (
@@ -574,20 +644,16 @@ function MethodRow({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`flex w-full min-w-0 items-center gap-3.5 px-4 py-3.5 text-left transition-colors hover:bg-white/[0.04] disabled:cursor-default disabled:opacity-60 ${
+      className={`flex w-full min-w-0 items-center gap-3.5 px-4 py-3.5 text-start transition-colors hover:bg-white/[0.04] disabled:cursor-default disabled:opacity-60 ${
         last ? "" : "border-b border-white/[0.06]"
-      }`}
+      } ${muted ? "opacity-60" : ""}`}
     >
       {icon}
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[15px] font-bold leading-5 text-white">{label}</span>
         <span className="mt-0.5 block truncate text-[12.5px] leading-4 text-[#9FB7C2]">{sub}</span>
       </span>
-      {spinning ? (
-        <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-white/25 border-t-white" aria-hidden />
-      ) : (
-        <Ion name="chevron-forward" size={16} className="shrink-0 text-white/35" />
-      )}
+      {spinning ? <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-white/25 border-t-white" aria-hidden /> : null}
     </button>
   );
 }
@@ -621,16 +687,9 @@ function CardCheckoutSheet({ url, title, onClose }: { url: string; title: string
             {t("payPage.cardStarting")}
           </p>
         ) : null}
-        <iframe
-          src={url}
-          title={title}
-          allow="payment"
-          onLoad={() => setLoaded(true)}
-          className="relative h-full min-h-[520px] w-full flex-1 border-0"
-        />
+        <iframe src={url} title={title} allow="payment" onLoad={() => setLoaded(true)} className="relative h-full min-h-[520px] w-full flex-1 border-0" />
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-        <p className="text-[12px] leading-[17px] text-[#9FB7C2]">{t("payPage.cardSecure")}</p>
+      <div className="flex justify-end px-1">
         <a href={url} target="_blank" rel="noopener noreferrer" className="text-[13px] font-bold text-white underline-offset-4 hover:underline">
           {t("payPage.cardOpenTab")}
         </a>
@@ -643,13 +702,15 @@ function CardResult({ phase, payee, onAgain }: { phase: CardPhase; payee: string
   const t = useT();
   const f = useFormat();
   const p = phase.kind === "paid" || phase.kind === "failed" ? phase.payment : phase.kind === "watching" ? phase.payment : null;
-  const amount = p ? (() => {
-    try {
-      return f.fmtFiat(p.amountMinor / 10 ** minorDigits(p.currency), p.currency);
-    } catch {
-      return null;
-    }
-  })() : null;
+  const amount = p
+    ? (() => {
+        try {
+          return f.fmtFiat(p.amountMinor / 10 ** minorDigits(p.currency), p.currency);
+        } catch {
+          return null;
+        }
+      })()
+    : null;
   const tx = p?.explorerUrl && /^https:\/\//.test(p.explorerUrl) ? p.explorerUrl : null;
 
   let icon: IonName = "time-outline";
@@ -722,21 +783,19 @@ function Gone({ link, payee }: { link: ShownPayLink; payee: string }) {
   );
 }
 
-/* ── The foot ───────────────────────────────────────────────────── */
+/* ── The foot: the end of the page ──────────────────────────────── */
 
-function Foot({ link, payee, card }: { link: ShownPayLink; payee: string; card: boolean }) {
+function Foot({ link }: { link: ShownPayLink }) {
   const t = useT();
   return (
-    <footer className="mt-auto flex flex-col items-center gap-2 pt-10 text-center text-[12px] leading-[17px] text-[#9FB7C2]">
-      {card ? <p>{t("payPage.coinflow")}</p> : null}
-      <p className="max-w-[360px]">{t("payPage.about", { name: payee })}</p>
-      <div className="mt-1 flex flex-col items-center [&_button]:self-center">
+    <footer className="mt-auto flex flex-col items-center pt-10 text-center text-[12px] leading-[17px] text-[#9FB7C2]">
+      <nav className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1" aria-label="Legal">
         <ReportLink code={link.code} />
-      </div>
-      <nav className="mt-1 flex gap-5" aria-label="Legal">
+        <span aria-hidden>·</span>
         <Link href="/terms" className="hover:text-white">
           {t("payPage.terms")}
         </Link>
+        <span aria-hidden>·</span>
         <Link href="/privacy" className="hover:text-white">
           {t("payPage.privacy")}
         </Link>

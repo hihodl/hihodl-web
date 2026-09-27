@@ -27,6 +27,12 @@ import type {
 
 const PUBLIC = `${API_BASE}/pay-links/public`;
 
+/** What a payment is made in: USDC anywhere, EURC on Base. */
+export type PayToken = "usdc" | "eurc";
+
+/** Circle's EURC on Base (6 decimals, ERC-3009 like USDC). */
+export const EURC_BASE = "0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42";
+
 /** The checkout-key scope for a link, so its key never collides with a HiSpace position's. */
 export function payKeyScope(code: string): string {
   return `pay:${code}`;
@@ -53,7 +59,7 @@ export function clockSkewMs(serverTime: unknown, receivedAt: number): number {
 export async function startPayCheckout(
   code: string,
   key: string,
-  body: { chain: Chain; payerAddress: string; amountCents?: number },
+  body: { chain: Chain; payerAddress: string; amountCents?: number; token?: PayToken },
 ): Promise<TimedPayLinkCheckout> {
   const res = await apiRequest<PayLinkCheckout>(`${PUBLIC}/${encodeURIComponent(code)}/checkout`, { key, json: body });
   return { ...res, skewMs: clockSkewMs(res.serverTime, Date.now()) };
@@ -209,7 +215,10 @@ function bigintOf(v: unknown): bigint | null {
 }
 
 export interface ExpectedPayment {
+  /** In the token's cents: US cents for USDC, euro cents for EURC. */
   cents: number;
+  /** USDC unless said. EURC is only ever on Base. */
+  token?: PayToken;
   chain: Chain;
   payerAddress: string;
   payTo: PayLinkPublic["payTo"];
@@ -235,7 +244,8 @@ export function evmCheckoutProblem(res: TimedPayLinkCheckout, expect: ExpectedPa
   if (!expect.payTo?.evm || !sameEvm(m.to, expect.payTo.evm)) return "receiver";
   if (!sameEvm(m.from, expect.payerAddress)) return "payer";
   if (Number(evm.domain.chainId) !== meta.chainId || evm.chainId !== meta.chainId) return "chain_id";
-  if (!sameEvm(evm.domain.verifyingContract, meta.usdc)) return "token";
+  const contract = expect.token === "eurc" ? (expect.chain === "base" ? EURC_BASE : null) : meta.usdc;
+  if (!contract || !sameEvm(evm.domain.verifyingContract, contract)) return "token";
   // A quote with under 30 seconds left can't be signed and relayed in time: ask for a new one.
   // Judged on the server's clock, so a browser clock that runs fast or slow doesn't decide it.
   if (!Number.isFinite(evm.validBefore) || evm.validBefore * 1000 <= Date.now() + res.skewMs + 30_000) return "expired";
