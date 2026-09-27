@@ -48,6 +48,21 @@ export interface PayLinkFace {
 export type CardMethod = "card" | "applePay" | "googlePay";
 
 /**
+ * A way to pay a link, as the server decides it per link (the backend's
+ * methods.ts). `bank_transfer` names only its currency and whether the payer
+ * must be a business, and the page does not offer it yet.
+ */
+export type PayLinkMethod =
+  | { kind: "hold" }
+  | { kind: "stablecoins" }
+  | { kind: "card" }
+  | { kind: "apple_pay" }
+  | { kind: "google_pay" }
+  | { kind: "bank_transfer"; currency: string; payerMustBeBusiness: boolean };
+
+export type PayLinkMethodKind = PayLinkMethod["kind"];
+
+/**
  * What the link takes by card, or null for no card rows. Amounts in US cents;
  * `currencies` are ISO 4217 codes the card may be charged in.
  */
@@ -101,6 +116,8 @@ export interface PayLinkPublic {
   card?: PayLinkCardOffer | null;
   /** What the link takes in stablecoins. Absent means USDC only (an older server). */
   tokens?: ("usdc" | "eurc")[];
+  /** The ways the page may offer, and no others. Absent from an older server: every row as before. */
+  methods?: PayLinkMethod[];
 }
 
 /** A link that still says what it asks for: anything but a disabled one. */

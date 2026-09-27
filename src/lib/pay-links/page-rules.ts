@@ -9,6 +9,7 @@
  */
 
 import { regionCurrency } from "../app/i18n/currencies";
+import type { PayLinkMethod, PayLinkMethodKind } from "./types";
 
 /* ── The device ─────────────────────────────────────────────────── */
 
@@ -32,6 +33,24 @@ export function isPhone(p: Platform): boolean {
 /** Apple Pay on Apple devices, Google Pay everywhere else. Never both. */
 export function walletMethodFor(p: Platform): "applePay" | "googlePay" {
   return p === "ios" || p === "mac" ? "applePay" : "googlePay";
+}
+
+/* ── The ways to pay ─────────────────────────────────────────────── */
+
+/**
+ * Whether the server offers this way to pay the link. The server decides per
+ * link (a card only within its limits, say) and the page shows only what it
+ * names, without saying why a row is missing. A server that names none is
+ * older than the list: every row shows, as it did.
+ */
+export function offers(link: { methods?: PayLinkMethod[] | null }, kind: PayLinkMethodKind): boolean {
+  if (!Array.isArray(link.methods)) return true;
+  return link.methods.some((m) => m?.kind === kind);
+}
+
+/** The kind Apple Pay and Google Pay are offered as. The card checkout keeps Coinflow's names. */
+export function walletMethodKind(m: "applePay" | "googlePay"): "apple_pay" | "google_pay" {
+  return m === "applePay" ? "apple_pay" : "google_pay";
 }
 
 /* ── Opening the app ────────────────────────────────────────────── */

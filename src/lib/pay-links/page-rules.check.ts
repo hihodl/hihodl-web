@@ -23,6 +23,8 @@ import {
   payStateUrl,
   readPayState,
   holdPayUrl,
+  offers,
+  walletMethodKind,
 } from "./page-rules";
 
 let fails = 0;
@@ -112,6 +114,13 @@ eq("hold url bare", holdPayUrl("hihodl://pay/@demo", null, "USD"), "hihodl://pay
 eq("initials verified name", initialsFor("Alex L.", "hialex"), "AL");
 eq("currency EUR region", defaultCurrency(["de-DE"], ["USD", "EUR"]), "EUR");
 eq("currency ng", defaultCurrency(["en-NG"], ["USD", "EUR"]), "USD");
+eq("offers: an older server names none, every row shows", offers({}, "card"), true);
+eq("offers: named", offers({ methods: [{ kind: "hold" }, { kind: "stablecoins" }, { kind: "card" }] }, "card"), true);
+eq("offers: not named", offers({ methods: [{ kind: "hold" }, { kind: "stablecoins" }] }, "card"), false);
+eq("offers: an empty list offers nothing", offers({ methods: [] }, "hold"), false);
+eq("offers: a bank transfer is not a card", offers({ methods: [{ kind: "bank_transfer", currency: "EUR", payerMustBeBusiness: true }] }, "card"), false);
+eq("wallet kind apple", walletMethodKind("applePay"), "apple_pay");
+eq("wallet kind google", walletMethodKind("googlePay"), "google_pay");
 
 if (fails) {
   console.log(`\n${fails} failing`);

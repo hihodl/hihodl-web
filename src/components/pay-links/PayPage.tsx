@@ -54,11 +54,13 @@ import {
   isPhone,
   minorDigits,
   minorFromUsdCents,
+  offers,
   parseMinor,
   readCoinflowMessage,
   readPayState,
   usdCentsFromMinor,
   walletMethodFor,
+  walletMethodKind,
   type Platform,
 } from "@/lib/pay-links/page-rules";
 import type { CardMethod, CardPayment, ShownPayLink } from "@/lib/pay-links/types";
@@ -197,6 +199,9 @@ function Shown({ link }: { link: ShownPayLink }) {
   const handle = link.owner?.handle ? `@${link.owner.handle}` : null;
   const fixed = link.amount.mode === "fixed" ? link.amount.cents : null;
   const tokens = link.tokens?.length ? link.tokens : ["usdc"];
+  // The rows the server offers on this link, and no others (an older server names none: all of them).
+  const holdOffered = offers(link, "hold");
+  const stableOffered = offers(link, "stablecoins");
 
   /* The device and what a wallet's browser brought back, once in the browser. */
   const [platform, setPlatform] = useState<Platform | null>(null);
@@ -214,12 +219,12 @@ function Shown({ link }: { link: ShownPayLink }) {
     if (back.currency) setPicked(back.currency);
     if (back.amount && fixed === null) setAmountText(back.amount);
     if (back.network) setStartNetwork(back.network as Chain);
-    if (back.stablecoins) setSheet("stable");
+    if (back.stablecoins && stableOffered) setSheet("stable");
     // The address stays the link; what came back is on the screen now.
     for (const k of ["amount", "currency", "pay", "network"]) url.searchParams.delete(k);
     if (url.href !== window.location.href) window.history.replaceState(null, "", url.href);
     setPageUrl(url.href.split("#")[0]);
-  }, [fixed]);
+  }, [fixed, stableOffered]);
 
   /* The currency: USD or EUR, the browser's region picks. */
   const currency = picked && (CURRENCIES as readonly string[]).includes(picked) ? picked : defaultCurrency(tags, CURRENCIES);
@@ -430,8 +435,9 @@ function Shown({ link }: { link: ShownPayLink }) {
   /* ── The rows ── */
   const walletMethod = platform ? walletMethodFor(platform) : null;
   const cardTakes = !!card && card.currencies.map((c) => c.toUpperCase()).includes(currency);
-  const showCard = cardTakes && !!card && card.methods.includes("card");
-  const showWallet = cardTakes && !!card && !!walletMethod && card.methods.includes(walletMethod);
+  const showCard = cardTakes && !!card && card.methods.includes("card") && offers(link, "card");
+  const showWallet = cardTakes && !!card && !!walletMethod && card.methods.includes(walletMethod) && offers(link, walletMethodKind(walletMethod));
+  const lastRow = stableOffered ? "stable" : showWallet ? "wallet" : showCard ? "card" : "hold";
   const busy = cardPhase.kind === "starting";
   const done = cardPhase.kind === "paid" || cardPhase.kind === "failed" || cardPhase.kind === "watching";
 
@@ -527,13 +533,16 @@ function Shown({ link }: { link: ShownPayLink }) {
           {/* How to pay */}
           <h2 className="mb-2 mt-6 px-1 text-[13px] font-strong leading-[18px] text-[#9FB7C2]">{t("payPage.howToPay")}</h2>
           <div className="overflow-hidden rounded-[28px] border border-x-white/[0.07] border-b-white/[0.04] border-t-white/[0.16] bg-white/[0.06] backdrop-blur-xl">
-            <MethodRow
-              icon={<ImgIcon src="/favicon.png" rounded />}
-              label={t("payPage.hold")}
-              sub={holdOpening ? t("payPage.holdOpening") : undefined}
-              onClick={openHold}
-              disabled={busy || !platform}
-            />
+            {holdOffered ? (
+              <MethodRow
+                icon={<ImgIcon src="/favicon.png" rounded />}
+                label={t("payPage.hold")}
+                sub={holdOpening ? t("payPage.holdOpening") : undefined}
+                onClick={openHold}
+                disabled={busy || !platform}
+                last={lastRow === "hold"}
+              />
+            ) : null}
             {showCard ? (
               <MethodRow
                 icon={<GlyphIcon name="card-outline" />}
@@ -541,6 +550,7 @@ function Shown({ link }: { link: ShownPayLink }) {
                 onClick={() => void payByCard("card")}
                 disabled={busy}
                 spinning={cardPhase.kind === "starting" && cardPhase.method === "card"}
+                last={lastRow === "card"}
               />
             ) : null}
             {showWallet && walletMethod ? (
@@ -550,17 +560,20 @@ function Shown({ link }: { link: ShownPayLink }) {
                 onClick={() => void payByCard(walletMethod)}
                 disabled={busy}
                 spinning={cardPhase.kind === "starting" && cardPhase.method === walletMethod}
+                last={lastRow === "wallet"}
               />
             ) : null}
-            <MethodRow
-              icon={<ImgIcon src="/pay/usdc.png" />}
-              label={t("payPage.stablecoins")}
-              sub={!stableOk ? t("payPage.eurcUnavailableShort") : undefined}
-              onClick={openStable}
-              disabled={busy}
-              muted={!stableOk}
-              last
-            />
+            {stableOffered ? (
+              <MethodRow
+                icon={<ImgIcon src="/pay/usdc.png" />}
+                label={t("payPage.stablecoins")}
+                sub={!stableOk ? t("payPage.eurcUnavailableShort") : undefined}
+                onClick={openStable}
+                disabled={busy}
+                muted={!stableOk}
+                last
+              />
+            ) : null}
           </div>
         </>
       )}
