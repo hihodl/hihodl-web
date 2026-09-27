@@ -57,7 +57,7 @@ import {
   type ExpectedPayment,
   type PayToken,
 } from "@/lib/pay-links/client";
-import { appSchemeUrl, holdPayUrl, payStateUrl, walletBrowseUrl, type WalletLinkId } from "@/lib/pay-links/page-rules";
+import { appSchemeUrl, holdPayUrl, offers, payStateUrl, walletBrowseUrl, type WalletLinkId } from "@/lib/pay-links/page-rules";
 import type { PayLinkEvmPayload, PayLinkPayment, ShownPayLink, TimedPayLinkCheckout } from "@/lib/pay-links/types";
 import {
   connectWalletConnect,
@@ -881,7 +881,7 @@ export function PayLinkPay({
         <div className="flex flex-col gap-2">
           <p className="px-1 text-[13px] font-strong text-[#9FB7C2]">{t("payPage.orOpenWallet")}</p>
           <div className="overflow-hidden rounded-[20px] border border-white/[0.08] bg-white/[0.05]">
-            {mobile && stateUrl && scheme && token === "usdc" ? (
+            {mobile && stateUrl && scheme && token === "usdc" && offers(link, "hold") ? (
               <WalletRow href={holdPayUrl(scheme, amountText, "USD")} logo={WALLET_LOGO.hold} name="HOLD" />
             ) : null}
             {mobile && stateUrl

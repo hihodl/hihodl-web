@@ -50,7 +50,14 @@ export async function getPayLink(code: string, from: Headers | null): Promise<Lo
     const link = fixturePayLink(code);
     return link ? { kind: "found", value: link } : { kind: "missing" };
   }
-  return read(`/${encodeURIComponent(code)}`, (d) => d.link as PayLinkPublic | undefined, from);
+  return read(`/${encodeURIComponent(code)}`, (d) => withFallback(d), from);
+}
+
+/** `fallback` is read on the link, or beside it in `data`, whichever the server sends. */
+function withFallback(d: Record<string, unknown>): PayLinkPublic | undefined {
+  const link = d.link as PayLinkPublic | undefined;
+  if (!link || link.fallback !== undefined || d.fallback === undefined) return link;
+  return { ...link, fallback: d.fallback as PayLinkPublic["fallback"] };
 }
 
 /** A handle as `/pay/@<handle>` carries it: the backend's own shape, lower-cased. */

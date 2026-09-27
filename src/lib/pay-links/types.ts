@@ -7,7 +7,22 @@
 
 import type { Chain, ConfirmOutcome } from "@/lib/ad-space/types";
 
-export type PayLinkStatus = "active" | "paid" | "closed" | "expired" | "disabled";
+/**
+ * `frozen` is a link paused for now (it answers with `methods: []`); unlike
+ * `disabled` it still says what it asks for, and it may come back.
+ */
+export type PayLinkStatus = "active" | "paid" | "closed" | "expired" | "frozen" | "disabled";
+
+/**
+ * Where to pay the same person when this link can't be paid: their personal
+ * link. Sent only for a paid, closed, expired or frozen link whose owner has
+ * an active personal link; never for a disabled one.
+ */
+export interface PayLinkFallback {
+  handle: string;
+  /** "/pay/@<handle>". The page builds its own from `handle` and only follows a match. */
+  path: string;
+}
 
 export type PayLinkAmount = { mode: "fixed"; cents: number } | { mode: "open"; maxCents: number | null };
 
@@ -46,6 +61,35 @@ export interface PayLinkFace {
 
 /** How a payer with no wallet pays: Coinflow's hosted checkout. */
 export type CardMethod = "card" | "applePay" | "googlePay";
+
+/**
+ * A way to pay a link, as the server decides it per link (the backend's
+ * methods.ts). `bank_transfer` names only its currency and whether the payer
+ * must be a business; its account comes beside it in `bankTransfers`.
+ */
+export type PayLinkMethod =
+  | { kind: "hold" }
+  | { kind: "stablecoins" }
+  | { kind: "card" }
+  | { kind: "apple_pay" }
+  | { kind: "google_pay" }
+  | { kind: "bank_transfer"; currency: string; payerMustBeBusiness: boolean };
+
+export type PayLinkMethodKind = PayLinkMethod["kind"];
+
+/**
+ * The owner's own bank account (Bridge holds it in their name; `holderName`
+ * is what Bridge returned) and the reference that ties a transfer to this
+ * link (`HOLD-<CODE>`). Sent only for a `bank_transfer` in `methods`.
+ */
+export interface PayLinkBankTransfer {
+  currency: string;
+  reference: string;
+  payerMustBeBusiness: boolean;
+  account:
+    | { iban: string; bic: string | null; holderName: string }
+    | { accountNumber: string; routingNumber: string; holderName: string; rails: ("ach" | "wire")[] };
+}
 
 /**
  * What the link takes by card, or null for no card rows. Amounts in US cents;
@@ -101,6 +145,12 @@ export interface PayLinkPublic {
   card?: PayLinkCardOffer | null;
   /** What the link takes in stablecoins. Absent means USDC only (an older server). */
   tokens?: ("usdc" | "eurc")[];
+  /** The ways the page may offer, and no others. Absent from an older server: every row as before. */
+  methods?: PayLinkMethod[];
+  /** The account and reference for each bank transfer in `methods`. Absent from an older server. */
+  bankTransfers?: PayLinkBankTransfer[];
+  /** The owner's personal link, when this one can't be paid. Absent from an older server. */
+  fallback?: PayLinkFallback | null;
 }
 
 /** A link that still says what it asks for: anything but a disabled one. */

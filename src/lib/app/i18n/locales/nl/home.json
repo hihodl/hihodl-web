@@ -179,5 +179,7 @@
   "payLinks.pay.notFound": "We kunnen deze link of betaling niet meer vinden. Vernieuw de pagina.",
   "payLinks.pay.badRequest": "We kunnen deze link of betaling niet vinden. Controleer de link en vernieuw de pagina.",
   "add.receive.noneGetApp": "Er is nog geen adres om naartoe te betalen. Je wallet wordt gemaakt in de HOLD-app: download hem, en het adres verschijnt hier.",
-  "linkPhone.pay.bodyComputer": "De keys van je wallet blijven op je telefoon. Koppel hem één keer en de HOLD-app keurt elke betaling goed die je hier start."
+  "linkPhone.pay.bodyComputer": "De keys van je wallet blijven op je telefoon. Koppel hem één keer en de HOLD-app keurt elke betaling goed die je hier start.",
+  "payLinks.status.frozen": "Gepauzeerd",
+  "payLinks.pay.gone.frozen": "Deze link werd gepauzeerd terwijl je betaalde, dus hij accepteert voorlopig geen betalingen. Er is niets betaald."
 }

@@ -15,7 +15,8 @@
  *                  receive: USDC, or EURC on Base)
  *   the note       Quick Send's method row: an uppercase label over the value
  *   how to pay     HOLD (the app, or the store), card, Apple Pay or Google
- *                  Pay (one, by device), stablecoins (a sheet)
+ *                  Pay (one, by device), bank transfer (a sheet: the owner's
+ *                  own account and the link's reference), stablecoins (a sheet)
  *
  * Nothing explains itself on the screen: the warnings and the fine print are
  * in the Terms the foot links to.
@@ -24,7 +25,7 @@
  */
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 
 import { Ion, type IonName } from "@/components/app/ion";
 import { Modal } from "@/components/app/Modal";
@@ -46,33 +47,45 @@ import {
 import { ownerName, payKeyScope } from "@/lib/pay-links/client";
 import {
   appSchemeUrl,
+  bankTransfersOf,
   cleanAmountInput,
   defaultCurrency,
   detectPlatform,
+  fallbackHref,
+  groupIban,
   isCoinflowCheckoutUrl,
   isCoinflowOrigin,
   isPhone,
   minorDigits,
   minorFromUsdCents,
+  offers,
   parseMinor,
+  payHandleOf,
+  PAY_NOTE_MAX,
   readCoinflowMessage,
   readPayState,
   usdCentsFromMinor,
   walletMethodFor,
+  walletMethodKind,
   type Platform,
 } from "@/lib/pay-links/page-rules";
-import type { CardMethod, CardPayment, ShownPayLink } from "@/lib/pay-links/types";
+import type { CardMethod, CardPayment, PayLinkBankTransfer, PayLinkOwner, PayLinkStatus, ShownPayLink } from "@/lib/pay-links/types";
 
 import { PayLinkPay, networksFor } from "./PayLinkPay";
 import { PayI18nProvider } from "./pay-i18n";
 import { CurrencyPill, HoldSheet, LanguageButton, OwnerFace } from "./pay-parts";
 import { ReportLink } from "./ReportLink";
 
-export type PayPageState = { kind: "unreachable" } | { kind: "disabled" } | { kind: "shown"; link: ShownPayLink };
+export type PayPageState =
+  | { kind: "unreachable" }
+  | { kind: "disabled" }
+  | { kind: "shown"; link: ShownPayLink }
+  /** A link that can't be paid and came back without what it asked for, but with its owner's page to go to. */
+  | { kind: "elsewhere"; status: PayLinkStatus; owner: PayLinkOwner | null; href: string };
 
 /** What the owner can receive: USDC, and EURC on Base. */
 const CURRENCIES = ["USD", "EUR"] as const;
-const NOTE_MAX = 140;
+const NOTE_MAX = PAY_NOTE_MAX;
 const POLL_MS = 3_000;
 const POLL_FOR_MS = 5 * 60_000;
 /** How long the page waits for the app to take over before sending the payer to the store. */
@@ -90,6 +103,16 @@ export function PayPage({ state }: { state: PayPageState }) {
           <Message titleKey="payPage.unavailableTitle" bodyKey="payPage.unavailableBody" />
         ) : state.kind === "disabled" ? (
           <Message titleKey="payPage.disabledTitle" bodyKey="payPage.disabledBody" />
+        ) : state.kind === "elsewhere" ? (
+          <main className="flex flex-1 flex-col items-center justify-center pb-16 text-center">
+            <OwnerFace owner={state.owner} size={84} />
+            <h1 className="mt-4 max-w-full break-words text-[24px] font-extrabold leading-[30px] tracking-[-0.4px] [overflow-wrap:anywhere]" dir="auto">
+              {ownerLine(state.owner)}
+            </h1>
+            <div className="mt-8 w-full">
+              <SendOn status={state.status} href={state.href} name={ownerLine(state.owner)} />
+            </div>
+          </main>
         ) : (
           <Shown link={state.link} />
         )}
@@ -197,6 +220,11 @@ function Shown({ link }: { link: ShownPayLink }) {
   const handle = link.owner?.handle ? `@${link.owner.handle}` : null;
   const fixed = link.amount.mode === "fixed" ? link.amount.cents : null;
   const tokens = link.tokens?.length ? link.tokens : ["usdc"];
+  // The rows the server offers on this link, and no others (an older server names none: all of them).
+  const holdOffered = offers(link, "hold");
+  const stableOffered = offers(link, "stablecoins");
+  // Only what the server listed and sent the account for; never assumed.
+  const banks = bankTransfersOf(link);
 
   /* The device and what a wallet's browser brought back, once in the browser. */
   const [platform, setPlatform] = useState<Platform | null>(null);
@@ -205,7 +233,9 @@ function Shown({ link }: { link: ShownPayLink }) {
   const [tags, setTags] = useState<string[]>([]);
   const [amountText, setAmountText] = useState("");
   const [startNetwork, setStartNetwork] = useState<Chain | null>(null);
-  const [sheet, setSheet] = useState<"hold" | "stable" | null>(null);
+  const [sheet, setSheet] = useState<"hold" | "stable" | "bank" | null>(null);
+  const [bankCurrency, setBankCurrency] = useState<string | null>(null);
+  const [note, setNote] = useState("");
   useEffect(() => {
     setPlatform(detectPlatform(navigator.userAgent, navigator.maxTouchPoints ?? 0));
     setTags(navigator.languages?.length ? [...navigator.languages] : navigator.language ? [navigator.language] : []);
@@ -214,12 +244,14 @@ function Shown({ link }: { link: ShownPayLink }) {
     if (back.currency) setPicked(back.currency);
     if (back.amount && fixed === null) setAmountText(back.amount);
     if (back.network) setStartNetwork(back.network as Chain);
-    if (back.stablecoins) setSheet("stable");
+    if (back.stablecoins && stableOffered) setSheet("stable");
+    // A link that can't be paid sends its title here as the note; the payer can change it.
+    if (back.note) setNote(back.note);
     // The address stays the link; what came back is on the screen now.
-    for (const k of ["amount", "currency", "pay", "network"]) url.searchParams.delete(k);
+    for (const k of ["amount", "currency", "pay", "network", "note"]) url.searchParams.delete(k);
     if (url.href !== window.location.href) window.history.replaceState(null, "", url.href);
     setPageUrl(url.href.split("#")[0]);
-  }, [fixed]);
+  }, [fixed, stableOffered]);
 
   /* The currency: USD or EUR, the browser's region picks. */
   const currency = picked && (CURRENCIES as readonly string[]).includes(picked) ? picked : defaultCurrency(tags, CURRENCIES);
@@ -230,7 +262,6 @@ function Shown({ link }: { link: ShownPayLink }) {
   const symbol = currencySymbol(currency);
 
   /* The amount, as typed (open) or as asked (fixed, in dollars; shown in euros when a rate says). */
-  const [note, setNote] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const amountInput = useRef<HTMLInputElement>(null);
   const typedMinor = fixed === null ? parseMinor(amountText, currency) : null;
@@ -430,8 +461,19 @@ function Shown({ link }: { link: ShownPayLink }) {
   /* ── The rows ── */
   const walletMethod = platform ? walletMethodFor(platform) : null;
   const cardTakes = !!card && card.currencies.map((c) => c.toUpperCase()).includes(currency);
-  const showCard = cardTakes && !!card && card.methods.includes("card");
-  const showWallet = cardTakes && !!card && !!walletMethod && card.methods.includes(walletMethod);
+  const showCard = cardTakes && !!card && card.methods.includes("card") && offers(link, "card");
+  const showWallet = cardTakes && !!card && !!walletMethod && card.methods.includes(walletMethod) && offers(link, walletMethodKind(walletMethod));
+  const lastRow = stableOffered ? "stable" : banks.length ? "bank" : showWallet ? "wallet" : showCard ? "card" : "hold";
+  const bank = sheet === "bank" ? banks.find((b) => b.currency === bankCurrency) ?? null : null;
+  /* What the transfer is for: the fixed price (in USD, the only currency a fixed link takes by bank), or what was typed in its currency. */
+  const bankAmount = (b: PayLinkBankTransfer): { shown: string; raw: string } | null => {
+    let minor: number | null = null;
+    if (fixed !== null) minor = b.currency.toUpperCase() === "USD" ? fixed : null;
+    else if (typedMinor !== null && typedMinor > 0 && currency === b.currency.toUpperCase()) minor = typedMinor;
+    if (minor === null) return null;
+    const d = minorDigits(b.currency);
+    return { shown: fmtFiat(minor / 10 ** d, b.currency), raw: (minor / 10 ** d).toFixed(d) };
+  };
   const busy = cardPhase.kind === "starting";
   const done = cardPhase.kind === "paid" || cardPhase.kind === "failed" || cardPhase.kind === "watching";
 
@@ -468,7 +510,7 @@ function Shown({ link }: { link: ShownPayLink }) {
       </section>
 
       {!active ? (
-        <Gone link={link} payee={payee} />
+        <Gone link={link} payee={payee} name={bigName} />
       ) : done ? (
         <CardResult phase={cardPhase} payee={bigName} onAgain={cardAgain} />
       ) : (
@@ -527,13 +569,16 @@ function Shown({ link }: { link: ShownPayLink }) {
           {/* How to pay */}
           <h2 className="mb-2 mt-6 px-1 text-[13px] font-strong leading-[18px] text-[#9FB7C2]">{t("payPage.howToPay")}</h2>
           <div className="overflow-hidden rounded-[28px] border border-x-white/[0.07] border-b-white/[0.04] border-t-white/[0.16] bg-white/[0.06] backdrop-blur-xl">
-            <MethodRow
-              icon={<ImgIcon src="/favicon.png" rounded />}
-              label={t("payPage.hold")}
-              sub={holdOpening ? t("payPage.holdOpening") : undefined}
-              onClick={openHold}
-              disabled={busy || !platform}
-            />
+            {holdOffered ? (
+              <MethodRow
+                icon={<ImgIcon src="/favicon.png" rounded />}
+                label={t("payPage.hold")}
+                sub={holdOpening ? t("payPage.holdOpening") : undefined}
+                onClick={openHold}
+                disabled={busy || !platform}
+                last={lastRow === "hold"}
+              />
+            ) : null}
             {showCard ? (
               <MethodRow
                 icon={<GlyphIcon name="card-outline" />}
@@ -541,6 +586,7 @@ function Shown({ link }: { link: ShownPayLink }) {
                 onClick={() => void payByCard("card")}
                 disabled={busy}
                 spinning={cardPhase.kind === "starting" && cardPhase.method === "card"}
+                last={lastRow === "card"}
               />
             ) : null}
             {showWallet && walletMethod ? (
@@ -550,17 +596,34 @@ function Shown({ link }: { link: ShownPayLink }) {
                 onClick={() => void payByCard(walletMethod)}
                 disabled={busy}
                 spinning={cardPhase.kind === "starting" && cardPhase.method === walletMethod}
+                last={lastRow === "wallet"}
               />
             ) : null}
-            <MethodRow
-              icon={<ImgIcon src="/pay/usdc.png" />}
-              label={t("payPage.stablecoins")}
-              sub={!stableOk ? t("payPage.eurcUnavailableShort") : undefined}
-              onClick={openStable}
-              disabled={busy}
-              muted={!stableOk}
-              last
-            />
+            {banks.map((b, i) => (
+              <MethodRow
+                key={b.currency}
+                icon={<GlyphIcon name="business-outline" />}
+                label={t("payPage.bank")}
+                sub={banks.length > 1 ? b.currency : undefined}
+                onClick={() => {
+                  setBankCurrency(b.currency);
+                  setSheet("bank");
+                }}
+                disabled={busy}
+                last={lastRow === "bank" && i === banks.length - 1}
+              />
+            ))}
+            {stableOffered ? (
+              <MethodRow
+                icon={<ImgIcon src="/pay/usdc.png" />}
+                label={t("payPage.stablecoins")}
+                sub={!stableOk ? t("payPage.eurcUnavailableShort") : undefined}
+                onClick={openStable}
+                disabled={busy}
+                muted={!stableOk}
+                last
+              />
+            ) : null}
           </div>
         </>
       )}
@@ -571,6 +634,11 @@ function Shown({ link }: { link: ShownPayLink }) {
       {sheet === "stable" && active ? (
         <Modal onClose={() => setSheet(null)} title={t("payPage.payWithToken", { token: token === "eurc" ? "EURC" : "USDC" })} size="lg">
           <PayLinkPay link={link} token={token} amountCents={stableCents} amountText={fixed === null ? amountText : null} network={startNetwork} />
+        </Modal>
+      ) : null}
+      {bank && active ? (
+        <Modal onClose={() => setSheet(null)} title={t("payPage.bankTitle")} size="lg">
+          <BankSheet transfer={bank} amount={bankAmount(bank)} payee={bigName} />
         </Modal>
       ) : null}
       {cardPhase.kind === "checkout" ? (
@@ -700,6 +768,77 @@ function GlyphIcon({ name, tone = "glass" }: { name: IonName; tone?: "glass" | "
   );
 }
 
+/* ── Bank transfer ──────────────────────────────────────────────── */
+
+/**
+ * The owner's own account, as the app's Add money shows one (the rows of
+ * RailAccountCard), each a tap to copy, and the link's reference, which is
+ * what ties the transfer to this link. Two short lines under it and nothing
+ * more: whether it must come from a company, and that the reference matters.
+ */
+function BankSheet({ transfer, amount, payee }: { transfer: PayLinkBankTransfer; amount: { shown: string; raw: string } | null; payee: string }) {
+  const t = useT();
+  const a = transfer.account;
+  const rows: { label: string; shown: string; raw: string; strong?: boolean }[] = [];
+  if (amount) rows.push({ label: t("payPage.amountLabel"), shown: amount.shown, raw: amount.raw });
+  rows.push({ label: t("payPage.bankHolder"), shown: a.holderName, raw: a.holderName });
+  if ("iban" in a) {
+    rows.push({ label: "IBAN", shown: groupIban(a.iban), raw: a.iban.replace(/\s+/g, "") });
+    if (a.bic) rows.push({ label: "BIC", shown: a.bic, raw: a.bic });
+  } else {
+    rows.push({ label: t("payPage.bankAccountNumber"), shown: a.accountNumber, raw: a.accountNumber });
+    rows.push({ label: t("payPage.bankRouting"), shown: a.routingNumber, raw: a.routingNumber });
+  }
+  rows.push({ label: t("payPage.bankReference"), shown: transfer.reference, raw: transfer.reference, strong: true });
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col rounded-[18px] border border-white/10 bg-white/[0.06] px-4">
+        {rows.map((r, i) => (
+          <CopyRow key={r.label} label={r.label} shown={r.shown} raw={r.raw} strong={r.strong} first={i === 0} />
+        ))}
+      </div>
+      {transfer.payerMustBeBusiness ? (
+        <p className="flex items-center gap-2 px-1 text-[13px] font-strong leading-[18px] text-amber">
+          <Ion name="business-outline" size={15} />
+          {t("payPage.bankBusinessOnly")}
+        </p>
+      ) : null}
+      <p className="px-1 text-[12.5px] leading-[17px] text-[#9FB7C2]">{t("payPage.bankUseReference", { name: payee })}</p>
+    </div>
+  );
+}
+
+function CopyRow({ label, shown, raw, strong, first }: { label: string; shown: string; raw: string; strong?: boolean; first: boolean }) {
+  const t = useT();
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    const p = navigator.clipboard?.writeText(raw);
+    if (!p) return;
+    void p.then(
+      () => {
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1800);
+      },
+      () => setCopied(false),
+    );
+  };
+  return (
+    <div className={first ? "" : "border-t border-white/[0.07]"}>
+      <button type="button" onClick={copy} aria-label={t("payPage.bankCopy", { label })} className="flex w-full items-center justify-between gap-4 py-3 text-start">
+        <span className="shrink-0 text-[12.5px] text-[#9FB7C2]">{label}</span>
+        <span className="flex min-w-0 items-center gap-2">
+          {/* Account numbers and references read left to right in every language. */}
+          <span dir="ltr" className={`min-w-0 break-all text-end tabular-nums text-white ${strong ? "text-[15px] font-extrabold" : "text-[13.5px] font-strong"}`}>
+            {shown}
+          </span>
+          <Ion name={copied ? "checkmark" : "copy-outline"} size={15} className={copied ? "shrink-0 text-[#2FBE8A]" : "shrink-0 text-[#9FB7C2]"} />
+        </span>
+      </button>
+    </div>
+  );
+}
+
 /* ── The card's checkout and what came of it ────────────────────── */
 
 function CardCheckoutSheet({ url, title, onClose }: { url: string; title: string; onClose: () => void }) {
@@ -788,24 +927,126 @@ function CardResult({ phase, payee, onAgain }: { phase: CardPhase; payee: string
 
 /* ── A link that takes no more payments ─────────────────────────── */
 
-function Gone({ link, payee }: { link: ShownPayLink; payee: string }) {
+function Gone({ link, payee, name }: { link: ShownPayLink; payee: string; name: string }) {
   const t = useT();
+  const href = fallbackHref(link);
   const words = link.personal
     ? { title: t("payPage.gone.personalTitle"), body: t("payPage.gone.personalBody", { name: payee }) }
     : link.status === "paid"
       ? { title: t("payPage.gone.paidTitle"), body: t("payPage.gone.paidBody") }
       : link.status === "closed"
         ? { title: t("payPage.gone.closedTitle"), body: t("payPage.gone.closedBody") }
-        : { title: t("payPage.gone.expiredTitle"), body: t("payPage.gone.expiredBody") };
+        : link.status === "frozen"
+          ? { title: t("payPage.gone.frozenTitle"), body: t("payPage.gone.frozenBody") }
+          : { title: t("payPage.gone.expiredTitle"), body: t("payPage.gone.expiredBody") };
   return (
     <section className="mt-8 flex flex-col gap-4">
-      <div className="flex flex-col items-center gap-2 rounded-[28px] border border-white/[0.08] bg-white/[0.06] px-5 py-6 text-center">
-        <h2 className="text-[19px] font-extrabold tracking-[-0.3px]">{words.title}</h2>
-        <p className="text-[14px] leading-[20px] text-[#CFE3EC]">{words.body}</p>
-      </div>
+      {href ? (
+        <SendOn status={link.status} href={href} name={name} />
+      ) : (
+        <div className="flex flex-col items-center gap-2 rounded-[28px] border border-white/[0.08] bg-white/[0.06] px-5 py-6 text-center">
+          <h2 className="text-[19px] font-extrabold tracking-[-0.3px]">{words.title}</h2>
+          <p className="text-[14px] leading-[20px] text-[#CFE3EC]">{words.body}</p>
+        </div>
+      )}
       {/* Still mounted: on a paid link it shows this browser its own payment and receipt. */}
       <PayLinkPay link={link} />
     </section>
+  );
+}
+
+/**
+ * A link that can't be paid, with somewhere to go: one line for why, and the
+ * owner's own page. A plain link, so that page loads fresh and reads what
+ * this one hands it (the amount and the note, which the payer can change).
+ */
+function SendOn({ status, href, name }: { status: PayLinkStatus; href: string; name: string }) {
+  const t = useT();
+  const line = status === "paid" ? t("payPage.fallback.paid") : status === "frozen" ? t("payPage.fallback.frozen") : t("payPage.fallback.inactive");
+  return (
+    <div className="flex flex-col items-center gap-4 rounded-[28px] border border-white/[0.08] bg-white/[0.06] px-5 py-6 text-center">
+      <p className="text-[15px] font-strong leading-[21px] text-[#CFE3EC]">{line}</p>
+      <a href={href} className="inline-flex min-h-[48px] w-full items-center justify-center rounded-[24px] bg-amber px-4 py-3 text-[15px] font-extrabold leading-5 text-[#0F0F1A]">
+        <span className="min-w-0 break-words [overflow-wrap:anywhere]" dir="auto">
+          {t("payPage.fallback.cta", { name })}
+        </span>
+      </a>
+    </div>
+  );
+}
+
+/** The name a page with nothing else shows: the verified or display name, else the handle. */
+function ownerLine(owner: PayLinkOwner | null): string {
+  return owner?.displayName?.trim() || ownerName(owner);
+}
+
+/* ── An address that names no link ─────────────────────────────── */
+
+/**
+ * `/pay/<code>` or `/pay/@handle` that the server doesn't know. It never says
+ * whether a link ever existed; it offers the one thing a payer can still do
+ * here, which is to pay somebody by their HOLD handle.
+ */
+export function PayNotFound() {
+  return (
+    <PayI18nProvider>
+      <Ground>
+        <TopBar />
+        <NotFoundBody />
+      </Ground>
+    </PayI18nProvider>
+  );
+}
+
+function NotFoundBody() {
+  const t = useT();
+  const [text, setText] = useState("");
+  const [bad, setBad] = useState(false);
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    const h = payHandleOf(text);
+    if (!h) {
+      setBad(true);
+      return;
+    }
+    window.location.href = `/pay/@${h}`;
+  };
+  return (
+    <main className="flex flex-1 flex-col items-center justify-center gap-3 pb-16 text-center">
+      <Ion name="information-circle-outline" size={34} className="text-amber" />
+      <h1 className="text-[22px] font-extrabold leading-[28px] tracking-[-0.3px]">{t("payPage.notFound.title")}</h1>
+      <p className="max-w-[340px] text-[15px] leading-[21px] text-[#CFE3EC]">{t("payPage.notFound.body")}</p>
+      <form onSubmit={submit} className="mt-5 flex w-full flex-col gap-3 text-start" noValidate>
+        <label className="flex flex-col rounded-[18px] border border-white/10 bg-white/[0.06] px-4 py-3">
+          <span className="text-[11px] font-bold uppercase tracking-[0.5px] text-white/50">{t("payPage.notFound.label")}</span>
+          <span className="mt-1 flex items-baseline gap-0.5" dir="ltr">
+            <span className="text-[15px] font-bold text-white/50">@</span>
+            <input
+              value={text}
+              onChange={(e) => {
+                setText(e.target.value.slice(0, 64));
+                setBad(false);
+              }}
+              placeholder="handle"
+              autoComplete="off"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              enterKeyHint="go"
+              className="w-full min-w-0 bg-transparent text-[15px] font-bold text-white outline-none placeholder:font-medium placeholder:text-white/35"
+            />
+          </span>
+        </label>
+        {bad ? (
+          <p className="px-1 text-[13px] leading-[18px] text-amber" role="status">
+            {t("payPage.notFound.badHandle")}
+          </p>
+        ) : null}
+        <button type="submit" className="inline-flex h-12 w-full items-center justify-center rounded-[24px] bg-amber text-[15px] font-extrabold text-[#0F0F1A]">
+          {t("payPage.notFound.go")}
+        </button>
+      </form>
+    </main>
   );
 }
 

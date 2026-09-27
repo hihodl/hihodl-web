@@ -23,6 +23,13 @@ import {
   payStateUrl,
   readPayState,
   holdPayUrl,
+  offers,
+  walletMethodKind,
+  bankTransfersOf,
+  groupIban,
+  fallbackHref,
+  payHandleOf,
+  cleanPrefillNote,
 } from "./page-rules";
 
 let fails = 0;
@@ -105,13 +112,62 @@ eq("metamask", walletBrowseUrl("metamask", "https://hihodl.xyz/pay/x?a=1"), "htt
 eq("coinbase", walletBrowseUrl("coinbase", "https://hihodl.xyz/pay/x"), "https://go.cb-w.com/dapp?cb_url=https%3A%2F%2Fhihodl.xyz%2Fpay%2Fx");
 eq("trust", walletBrowseUrl("trust", "https://hihodl.xyz/pay/x"), "https://link.trustwallet.com/open_url?coin_id=60&url=https%3A%2F%2Fhihodl.xyz%2Fpay%2Fx");
 eq("state url", payStateUrl("https://hihodl.xyz/pay/@demo?amount=1#x", { amount: "25.00", currency: "EUR", network: "base" }), page);
-eq("state read", readPayState(new URL(page).search), { amount: "25.00", currency: "EUR", stablecoins: true, network: "base" });
-eq("state read junk", readPayState("?amount=1e9&currency=GBP&network=eth"), { amount: null, currency: null, stablecoins: false, network: null });
+eq("state read", readPayState(new URL(page).search), { amount: "25.00", currency: "EUR", stablecoins: true, network: "base", note: null });
+eq("state read junk", readPayState("?amount=1e9&currency=GBP&network=eth"), { amount: null, currency: null, stablecoins: false, network: null, note: null });
+eq("state read note", readPayState("?amount=150.00&currency=USD&note=Pitch%20deck%20review").note, "Pitch deck review");
+eq("note: controls and overrides go", cleanPrefillNote("a\u202Eb\nc\u0000d"), "a b c d");
+eq("note: blank is none", cleanPrefillNote("  \u200B "), null);
+eq("note: capped at 140", cleanPrefillNote("x".repeat(300))?.length, 140);
+
+const dead = { title: "Pitch deck review", amount: { mode: "fixed" as const, cents: 15000 }, fallback: { handle: "dana", path: "/pay/@dana" } };
+eq("fallback closed carries amount and title", fallbackHref({ ...dead, status: "closed" }), "/pay/@dana?amount=150.00&currency=USD&note=Pitch+deck+review");
+eq("fallback expired", fallbackHref({ ...dead, status: "expired" }), "/pay/@dana?amount=150.00&currency=USD&note=Pitch+deck+review");
+eq("fallback frozen", fallbackHref({ ...dead, status: "frozen" }), "/pay/@dana?amount=150.00&currency=USD&note=Pitch+deck+review");
+eq("fallback paid carries nothing", fallbackHref({ ...dead, status: "paid" }), "/pay/@dana");
+eq("fallback open amount: the title only", fallbackHref({ ...dead, amount: { mode: "open", maxCents: null }, status: "closed" }), "/pay/@dana?note=Pitch+deck+review");
+eq("fallback never on disabled", fallbackHref({ ...dead, status: "disabled" }), null);
+eq("fallback never on active", fallbackHref({ ...dead, status: "active" }), null);
+eq("fallback none", fallbackHref({ ...dead, fallback: null, status: "closed" }), null);
+eq("fallback: a personal link is never sent on", fallbackHref({ ...dead, personal: true, status: "closed" }), null);
+eq("fallback: path must match the handle", fallbackHref({ ...dead, fallback: { handle: "dana", path: "https://evil.example/pay/@dana" }, status: "closed" }), null);
+eq("fallback: bad handle", fallbackHref({ ...dead, fallback: { handle: "../x", path: "/pay/@../x" }, status: "closed" }), null);
+eq("fallback: case folds", fallbackHref({ ...dead, fallback: { handle: "Dana", path: "/pay/@Dana" }, status: "paid" }), "/pay/@dana");
+eq("handle input", payHandleOf(" @Dana_1 "), "dana_1");
+eq("handle input junk", payHandleOf("dana smith"), null);
+eq("handle input empty", payHandleOf("@"), null);
 eq("hold url", holdPayUrl("hihodl://pay/@demo", "25.00", "USD"), "hihodl://pay/@demo?amount=25.00&currency=USD");
 eq("hold url bare", holdPayUrl("hihodl://pay/@demo", null, "USD"), "hihodl://pay/@demo");
 eq("initials verified name", initialsFor("Alex L.", "hialex"), "AL");
 eq("currency EUR region", defaultCurrency(["de-DE"], ["USD", "EUR"]), "EUR");
 eq("currency ng", defaultCurrency(["en-NG"], ["USD", "EUR"]), "USD");
+eq("offers: an older server names none, every row shows", offers({}, "card"), true);
+eq("offers: named", offers({ methods: [{ kind: "hold" }, { kind: "stablecoins" }, { kind: "card" }] }, "card"), true);
+eq("offers: not named", offers({ methods: [{ kind: "hold" }, { kind: "stablecoins" }] }, "card"), false);
+eq("offers: an empty list offers nothing", offers({ methods: [] }, "hold"), false);
+eq("offers: a bank transfer is not a card", offers({ methods: [{ kind: "bank_transfer", currency: "EUR", payerMustBeBusiness: true }] }, "card"), false);
+eq("wallet kind apple", walletMethodKind("applePay"), "apple_pay");
+eq("wallet kind google", walletMethodKind("googlePay"), "google_pay");
+
+const EUR_BT = {
+  currency: "EUR",
+  reference: "HOLD-7K2MXQ9P",
+  payerMustBeBusiness: true,
+  account: { iban: "DE89370400440532013000", bic: "COBADEFFXXX", holderName: "Dana Lee" },
+};
+const USD_BT = {
+  currency: "USD",
+  reference: "HOLD-7K2MXQ9P",
+  payerMustBeBusiness: true,
+  account: { accountNumber: "900123456789", routingNumber: "101019644", holderName: "Dana Lee", rails: ["ach", "wire"] as ("ach" | "wire")[] },
+};
+const bankMethod = (currency: string) => ({ kind: "bank_transfer" as const, currency, payerMustBeBusiness: true });
+eq("bank: an older server shows none", bankTransfersOf({ bankTransfers: [EUR_BT] }).length, 0);
+eq("bank: only what methods list", bankTransfersOf({ methods: [bankMethod("USD")], bankTransfers: [EUR_BT, USD_BT] }).map((b) => b.currency), ["USD"]);
+eq("bank: both", bankTransfersOf({ methods: [bankMethod("EUR"), bankMethod("USD")], bankTransfers: [EUR_BT, USD_BT] }).length, 2);
+eq("bank: listed but no account sent", bankTransfersOf({ methods: [bankMethod("EUR")], bankTransfers: [] }).length, 0);
+eq("bank: no holder, no row", bankTransfersOf({ methods: [bankMethod("EUR")], bankTransfers: [{ ...EUR_BT, account: { ...EUR_BT.account, holderName: " " } }] }).length, 0);
+eq("bank: no reference, no row", bankTransfersOf({ methods: [bankMethod("EUR")], bankTransfers: [{ ...EUR_BT, reference: "" }] }).length, 0);
+eq("iban grouped", groupIban("DE89370400440532013000"), "DE89 3704 0044 0532 0130 00");
 
 if (fails) {
   console.log(`\n${fails} failing`);

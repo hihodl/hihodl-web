@@ -77,12 +77,23 @@ const payPage = {
   "gone.closedBody": "Its owner closed it, so it takes no more payments.",
   "gone.expiredTitle": "This link has expired.",
   "gone.expiredBody": "It takes no more payments. Ask whoever sent it for a new one.",
+  "gone.frozenTitle": "This link is paused.",
+  "gone.frozenBody": "It takes no payments for now.",
   "gone.personalTitle": "This link takes no more payments.",
   "gone.personalBody": "Ask {name} for their new one.",
   "disabledTitle": "This link is no longer available.",
   "disabledBody": "Don't send money to whoever shared it.",
   "unavailableTitle": "We couldn't load this link just now.",
   "unavailableBody": "This is on our side. Give it a moment and refresh the page. Nothing has been paid.",
+  "fallback.paid": "This link has been paid",
+  "fallback.inactive": "This link is no longer active",
+  "fallback.frozen": "This link is paused",
+  "fallback.cta": "Pay {name} another amount",
+  "notFound.title": "This link doesn't exist",
+  "notFound.body": "Check the link with whoever sent it.",
+  "notFound.label": "Pay someone on HOLD",
+  "notFound.go": "Continue",
+  "notFound.badHandle": "That isn't a HOLD handle.",
 
   // The foot
   "terms": "Terms",
@@ -141,6 +152,17 @@ const payPage = {
   "wcScan": "Scan with any wallet on another phone or computer.",
   "orOpenWallet": "Or open your wallet",
   "openInWalletBrowser": "Open this page in your wallet's browser to pay.",
+
+  // Bank transfer: the owner's own account and the link's reference
+  "bank": "Bank transfer",
+  "bankTitle": "Pay by bank transfer",
+  "bankHolder": "Account holder",
+  "bankAccountNumber": "Account number",
+  "bankRouting": "Routing number",
+  "bankReference": "Reference",
+  "bankBusinessOnly": "Pay from a company account",
+  "bankUseReference": "Use this reference so it reaches {name}",
+  "bankCopy": "Copy {label}",
 } as const;
 
 export default payPage;

@@ -179,5 +179,7 @@
   "payLinks.pay.notFound": "Bu bağlantıyı veya ödemeyi artık bulamıyoruz. Sayfayı yenile.",
   "payLinks.pay.badRequest": "Bu bağlantıyı veya ödemeyi bulamıyoruz. Bağlantıyı kontrol et ve sayfayı yenile.",
   "add.receive.noneGetApp": "Henüz ödeme alınacak bir adres yok. Cüzdanın HOLD uygulamasında oluşturulur: uygulamayı indir, adres burada görünür.",
-  "linkPhone.pay.bodyComputer": "Cüzdanının anahtarları telefonunda kalır. Bir kez bağla, HOLD uygulaması burada başlattığın her ödemeyi onaylar."
+  "linkPhone.pay.bodyComputer": "Cüzdanının anahtarları telefonunda kalır. Bir kez bağla, HOLD uygulaması burada başlattığın her ödemeyi onaylar.",
+  "payLinks.status.frozen": "Duraklatıldı",
+  "payLinks.pay.gone.frozen": "Sen öderken bu bağlantı duraklatıldı, bu yüzden şimdilik ödeme kabul etmiyor. Hiçbir ödeme yapılmadı."
 }

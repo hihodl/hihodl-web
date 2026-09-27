@@ -179,5 +179,7 @@
   "payLinks.pay.notFound": "找不到此链接或付款了。请刷新页面。",
   "payLinks.pay.badRequest": "找不到此链接或付款。请检查链接并刷新页面。",
   "add.receive.noneGetApp": "目前还没有可收款的地址。你的钱包由 HOLD 应用创建：获取应用后，地址就会显示在这里。",
-  "linkPhone.pay.bodyComputer": "你钱包的密钥保存在手机上。关联一次后，HOLD 应用会批准你在这里发起的每一笔付款。"
+  "linkPhone.pay.bodyComputer": "你钱包的密钥保存在手机上。关联一次后，HOLD 应用会批准你在这里发起的每一笔付款。",
+  "payLinks.status.frozen": "已暂停",
+  "payLinks.pay.gone.frozen": "你付款时此链接已被暂停，因此目前不接受付款。未支付任何款项。"
 }

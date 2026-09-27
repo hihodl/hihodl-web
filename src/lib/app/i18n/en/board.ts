@@ -221,6 +221,7 @@ const board = {
   "stats.bidsFrom": "Bids from",
   "stats.startingPrice": "Starting price",
   "stats.from": "from {amount}",
+  "stats.seeMore": "See what @{handle} has open",
   "stats.raised": "Raised",
   "stats.ofGoal": "of {goal} goal · {percent}%",
   "stats.backed": "Backed by brands",

@@ -360,5 +360,6 @@
   "product.biddingOpensAt": "enchères dès {amount}",
   "product.openForBids": "ouvert aux enchères",
   "product.offer": "Offre",
-  "product.openToOffers": "ouvert aux offres"
+  "product.openToOffers": "ouvert aux offres",
+  "stats.seeMore": "Voir ce que @{handle} propose"
 }

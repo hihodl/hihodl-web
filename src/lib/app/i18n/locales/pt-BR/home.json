@@ -179,5 +179,7 @@
   "payLinks.pay.notFound": "Não encontramos mais este link ou pagamento. Atualize a página.",
   "payLinks.pay.badRequest": "Não encontramos este link ou pagamento. Confira o link e atualize a página.",
   "add.receive.noneGetApp": "Ainda não há um endereço para receber. Sua carteira é criada no app HOLD: baixe-o, e o endereço aparece aqui.",
-  "linkPhone.pay.bodyComputer": "As chaves da sua carteira ficam no seu celular. Vincule-o uma vez e o app HOLD aprova cada pagamento que você começar aqui."
+  "linkPhone.pay.bodyComputer": "As chaves da sua carteira ficam no seu celular. Vincule-o uma vez e o app HOLD aprova cada pagamento que você começar aqui.",
+  "payLinks.status.frozen": "Pausado",
+  "payLinks.pay.gone.frozen": "Este link foi pausado enquanto você pagava, então por enquanto ele não aceita pagamentos. Nada foi pago."
 }

@@ -360,5 +360,6 @@
   "product.biddingOpensAt": "起拍价 {amount}",
   "product.openForBids": "接受出价",
   "product.offer": "报价",
-  "product.openToOffers": "接受报价"
+  "product.openToOffers": "接受报价",
+  "stats.seeMore": "查看 @{handle} 还有哪些开放项目"
 }

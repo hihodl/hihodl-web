@@ -360,5 +360,6 @@
   "product.biddingOpensAt": "zabuni zinaanzia {amount}",
   "product.openForBids": "wazi kwa zabuni",
   "product.offer": "Ofa",
-  "product.openToOffers": "wazi kwa ofa"
+  "product.openToOffers": "wazi kwa ofa",
+  "stats.seeMore": "Tazama alicho nacho @{handle} wazi"
 }

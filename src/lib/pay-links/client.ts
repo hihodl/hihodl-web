@@ -381,6 +381,8 @@ function goneStatus(status: string | null): string | null {
       return t("home.payLinks.pay.gone.closed");
     case "expired":
       return t("home.payLinks.pay.gone.expired");
+    case "frozen":
+      return t("home.payLinks.pay.gone.frozen");
     case "disabled":
       return t("home.payLinks.pay.gone.disabled");
     default:

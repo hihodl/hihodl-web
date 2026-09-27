@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { creatorPath } from "@/components/ad-space/creator";
 import { SpacesGround } from "@/components/ad-space/ground";
 import { SpaceBoard } from "@/components/ad-space/SpaceBoard";
 import {
@@ -11,10 +13,13 @@ import {
   SpaceInvite,
   SpaceStats,
   SpaceUnavailable,
+  SlimHeader,
   SpaceUpdates,
 } from "@/components/ad-space/sections";
-import { isSessionSpace, serviceName, spaceProgressText } from "@/lib/ad-space/format";
-import { getPublicSpace } from "@/lib/ad-space/server";
+import { btnPrimary, eyebrow } from "@/components/ad-space/ui";
+import { t } from "@/lib/app/i18n";
+import { isSessionSpace, serviceName, spaceProgressText, spaceSoldOut } from "@/lib/ad-space/format";
+import { getPublicCreator, getPublicSpace } from "@/lib/ad-space/server";
 
 /**
  * /s/<handle>/<slug> — a creator's Ad Space, as a sponsor arriving from X
@@ -94,7 +99,17 @@ export async function generateMetadata({
 
 export default async function AdSpacePage({ params }: { params: Params }) {
   const found = await getPublicSpace(params.handle, params.slug);
-  if (found.kind === "missing") notFound();
+  if (found.kind === "missing") {
+    // Gone (sold, closed, taken down), but the creator still sells: their own page, never anyone else's.
+    const hub = await getPublicCreator(params.handle);
+    if (hub.kind !== "found") notFound();
+    return <GoneToCreator handle={hub.page.creator.xHandle} />;
+  }
+  // Nothing more to take here: the creator's own page, when it has something open.
+  const more =
+    found.kind === "found" && (found.space.status !== "live" || spaceSoldOut(found.space))
+      ? await hubPath(found.space.creator.xHandle)
+      : null;
 
   return (
     <SpacesGround ground={found.kind === "found" ? found.space.pageGround ?? null : null}>
@@ -108,7 +123,7 @@ export default async function AdSpacePage({ params }: { params: Params }) {
             <SpaceBoard
               space={found.space}
               head={<ListingHead space={found.space} />}
-              stats={<SpaceStats space={found.space} />}
+              stats={<SpaceStats space={found.space} more={more} />}
               details={
                 <>
                   <BeforeYouPay space={found.space} />
@@ -123,5 +138,35 @@ export default async function AdSpacePage({ params }: { params: Params }) {
         </>
       )}
     </SpacesGround>
+  );
+}
+
+/** The creator's own page, or null when it has nothing a brand could buy (it would answer 404). */
+async function hubPath(handle: string): Promise<string | null> {
+  const hub = await getPublicCreator(handle);
+  return hub.kind === "found" ? creatorPath(hub.page.creator.xHandle) : null;
+}
+
+/**
+ * A space the API no longer serves, from a creator who still sells. Like the
+ * not-found it never says why (a delisted space's reason is between us and
+ * its creator); it sends the brand to the creator's own page.
+ */
+function GoneToCreator({ handle }: { handle: string }) {
+  return (
+    <>
+      <SlimHeader />
+      <main className="container-page flex min-h-[60vh] flex-col justify-center py-20">
+        <p className={`${eyebrow} text-sp-amber`}>HiSpace</p>
+        <h1 className="mt-5 max-w-2xl font-display text-h3 font-light text-sp-ink md:text-h2">
+          This one isn&rsquo;t on sale any more.
+        </h1>
+        <div className="mt-10">
+          <Link href={creatorPath(handle)} className={btnPrimary}>
+            {t("board.stats.seeMore", { handle })}
+          </Link>
+        </div>
+      </main>
+    </>
   );
 }

@@ -360,5 +360,6 @@
   "product.biddingOpensAt": "bieden begint bij {amount}",
   "product.openForBids": "open voor biedingen",
   "product.offer": "Aanbieding",
-  "product.openToOffers": "open voor aanbiedingen"
+  "product.openToOffers": "open voor aanbiedingen",
+  "stats.seeMore": "Bekijk wat @{handle} open heeft"
 }
