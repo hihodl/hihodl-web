@@ -17,11 +17,14 @@ import { Ion } from "@/components/app/ion";
 import { Modal } from "@/components/app/Modal";
 import { QrCode } from "@/components/ad-space/qr";
 import { CURRENCIES, CURRENCY_COUNTRY } from "@/lib/app/i18n/currencies";
-import { LOCALES, type LocaleCode } from "@/lib/app/i18n/locales";
-import { chooseLocale, useLocale, useT } from "@/lib/app/i18n/react";
+import { useLocale, useT } from "@/lib/app/i18n/react";
+import { getPrefs } from "@/lib/app/i18n/store";
 import { APP_STORE_URL, PLAY_STORE_URL } from "@/lib/appLinks";
 import { initialsFor, safeAvatarUrl } from "@/lib/pay-links/page-rules";
+import { PAY_LOCALES, type PayLocale } from "@/lib/pay-links/pay-locales";
 import type { PayLinkOwner } from "@/lib/pay-links/types";
+
+import { usePayLocale } from "./pay-i18n";
 
 /* ── The face ───────────────────────────────────────────────────── */
 
@@ -123,7 +126,7 @@ function SheetRow({ children, selected, onClick, last }: { children: ReactNode; 
       type="button"
       onClick={onClick}
       aria-pressed={selected}
-      className={`flex w-full min-w-0 items-center gap-3 px-[14px] py-[13px] text-left transition-colors hover:bg-white/[0.04] ${
+      className={`flex w-full min-w-0 items-center gap-3 px-[14px] py-[13px] text-start transition-colors hover:bg-white/[0.04] ${
         selected ? "bg-white/[0.06]" : ""
       } ${last ? "" : "border-b border-white/[0.06]"}`}
     >
@@ -139,17 +142,18 @@ const sheetCard = "overflow-hidden rounded-[20px] border border-white/[0.08] bg-
 
 export function LanguageButton() {
   const t = useT();
-  const locale = useLocale();
+  const { locale } = usePayLocale();
   const flags = useFlags();
   const [open, setOpen] = useState(false);
-  const info = LOCALES.find((l) => l.code === locale) ?? LOCALES[0];
+  const info = PAY_LOCALES.find((l) => l.code === locale) ?? PAY_LOCALES[0];
   return (
     <>
       <button
         type="button"
         onClick={() => setOpen(true)}
         aria-label={t("payPage.language")}
-        className="flex h-9 items-center gap-1.5 rounded-[18px] border border-white/[0.12] bg-white/10 pl-1.5 pr-2.5 text-[13px] font-bold text-white transition-colors hover:bg-white/[0.14]"
+        dir="ltr"
+        className="flex h-9 items-center gap-1.5 rounded-[18px] border border-white/[0.12] bg-white/10 pe-2.5 ps-1.5 text-[13px] font-bold text-white transition-colors hover:bg-white/[0.14]"
       >
         <Flag country={info.country} fallback={info.code} flags={flags} size={24} />
         <span>{info.code.split("-")[0].toUpperCase()}</span>
@@ -162,28 +166,71 @@ export function LanguageButton() {
 
 function LanguageSheet({ onClose }: { onClose: () => void }) {
   const t = useT();
-  const current = useLocale();
+  const { locale, choose } = usePayLocale();
   const flags = useFlags();
-  const pick = (code: LocaleCode) => {
-    void chooseLocale(code);
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
+  const items = PAY_LOCALES.filter((l) => !q || l.native.toLowerCase().includes(q) || l.english.toLowerCase().includes(q) || l.code.toLowerCase().includes(q));
+  const pick = (code: PayLocale) => {
+    choose(code);
     onClose();
   };
   return (
     <Modal onClose={onClose} title={t("payPage.language")} size="sm">
+      <SearchField value={query} onChange={setQuery} placeholder={t("payPage.searchLanguage")} />
       <div className={sheetCard}>
-        {LOCALES.map((l, i) => (
-          <SheetRow key={l.code} selected={l.code === current} onClick={() => pick(l.code)} last={i === LOCALES.length - 1}>
-            <Flag country={l.country} fallback={l.code} flags={flags} size={30} />
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-[16px] font-bold text-white" lang={l.code}>
-                {l.native}
+        {items.length ? (
+          items.map((l, i) => (
+            <SheetRow key={l.code} selected={l.code === locale} onClick={() => pick(l.code)} last={i === items.length - 1}>
+              <Flag country={l.country} fallback={l.code} flags={flags} size={30} />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[16px] font-bold text-white" lang={l.code} dir="auto">
+                  {l.native}
+                </span>
+                <span className="block truncate text-[12.5px] text-white/60" dir="ltr">
+                  {l.english}
+                </span>
               </span>
-              <span className="block truncate text-[12.5px] text-white/60">{l.english}</span>
-            </span>
-          </SheetRow>
-        ))}
+            </SheetRow>
+          ))
+        ) : (
+          <p className="py-8 text-center text-[14px] text-[#9FB7C2]">{t("payPage.noResults")}</p>
+        )}
       </div>
     </Modal>
+  );
+}
+
+function SearchField({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
+  const t = useT();
+  const input = useRef<HTMLInputElement>(null);
+  return (
+    <label className="flex h-11 shrink-0 items-center gap-2.5 rounded-[22px] bg-white/[0.94] px-4">
+      <Ion name="search" size={17} className="shrink-0 text-[rgba(7,12,18,0.55)]" />
+      <input
+        ref={input}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        autoCapitalize="none"
+        autoCorrect="off"
+        spellCheck={false}
+        className="min-w-0 flex-1 bg-transparent text-[16px] font-medium text-[#070C12] outline-none placeholder:text-[rgba(7,12,18,0.45)]"
+      />
+      {value ? (
+        <button
+          type="button"
+          onClick={() => {
+            onChange("");
+            input.current?.focus();
+          }}
+          aria-label={t("common.clearSearch")}
+          className="shrink-0 text-[rgba(7,12,18,0.55)]"
+        >
+          <Ion name="close-circle" size={17} />
+        </button>
+      ) : null}
+    </label>
   );
 }
 
@@ -192,7 +239,9 @@ function LanguageSheet({ onClose }: { onClose: () => void }) {
 const ENGLISH_NAME: Record<string, string> = Object.fromEntries(CURRENCIES.map(([c, n]) => [c, n]));
 
 function useCurrencyName(): (code: string) => string {
-  const locale = useLocale();
+  const appLocale = useLocale();
+  // An extra page language (Filipino, Amharic…) names currencies in itself too.
+  const locale = getPrefs().intl ?? appLocale;
   return useMemo(() => {
     let dn: Intl.DisplayNames | null = null;
     try {
@@ -213,31 +262,23 @@ function useCurrencyName(): (code: string) => string {
   }, [locale]);
 }
 
-/** The pill under the amount: flag, code and, when there is a choice, a chevron. */
+/** The pill under the amount: flag, code and chevron. Always a choice (USD or EUR). */
 export function CurrencyPill({ currency, choices, onChange }: { currency: string; choices: readonly string[]; onChange: (c: string) => void }) {
   const t = useT();
   const flags = useFlags();
   const [open, setOpen] = useState(false);
-  const canChoose = choices.length > 1;
-  const inner = (
-    <>
-      <Flag country={CURRENCY_COUNTRY[currency] ?? null} fallback={currency} flags={flags} size={22} />
-      <span>{currency}</span>
-      {canChoose ? <Ion name="chevron-down" size={13} className="text-[#AFC9D6]" /> : null}
-    </>
-  );
-  const pill = "flex h-9 items-center gap-2 rounded-[18px] bg-white/10 pl-1.5 pr-3 text-[15px] font-extrabold text-white";
-  if (!canChoose) {
-    return (
-      <span className={pill} aria-label={t("payPage.currency")}>
-        {inner}
-      </span>
-    );
-  }
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} aria-label={t("payPage.chooseCurrency")} className={`${pill} transition-colors hover:bg-white/[0.14]`}>
-        {inner}
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label={t("payPage.chooseCurrency")}
+        dir="ltr"
+        className="flex h-9 items-center gap-2 rounded-[18px] bg-white/10 pe-3 ps-1.5 text-[15px] font-extrabold text-white transition-colors hover:bg-white/[0.14]"
+      >
+        <Flag country={CURRENCY_COUNTRY[currency] ?? null} fallback={currency} flags={flags} size={22} />
+        <span>{currency}</span>
+        <Ion name="chevron-down" size={13} className="text-[#AFC9D6]" />
       </button>
       {open ? (
         <CurrencySheet
@@ -259,31 +300,13 @@ function CurrencySheet({ current, choices, onClose, onPick }: { current: string;
   const flags = useFlags();
   const nameOf = useCurrencyName();
   const [query, setQuery] = useState("");
-  const input = useRef<HTMLInputElement>(null);
   const q = query.trim().toLowerCase();
   const items = choices
     .map((code) => ({ code, name: nameOf(code), english: ENGLISH_NAME[code] ?? code }))
     .filter((c) => !q || c.code.toLowerCase().includes(q) || c.name.toLowerCase().includes(q) || c.english.toLowerCase().includes(q));
   return (
     <Modal onClose={onClose} title={t("payPage.currency")} size="sm">
-      <label className="flex h-11 shrink-0 items-center gap-2.5 rounded-[22px] bg-white/[0.94] px-4">
-        <Ion name="search" size={17} className="shrink-0 text-[rgba(7,12,18,0.55)]" />
-        <input
-          ref={input}
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={t("payPage.searchCurrency")}
-          autoCapitalize="none"
-          autoCorrect="off"
-          spellCheck={false}
-          className="min-w-0 flex-1 bg-transparent text-[16px] font-medium text-[#070C12] outline-none placeholder:text-[rgba(7,12,18,0.45)]"
-        />
-        {query ? (
-          <button type="button" onClick={() => { setQuery(""); input.current?.focus(); }} aria-label={t("common.clearSearch")} className="shrink-0 text-[rgba(7,12,18,0.55)]">
-            <Ion name="close-circle" size={17} />
-          </button>
-        ) : null}
-      </label>
+      {choices.length > 6 ? <SearchField value={query} onChange={setQuery} placeholder={t("payPage.searchCurrency")} /> : null}
       <div className={sheetCard}>
         {items.length ? (
           items.map((c, i) => (
@@ -317,7 +340,7 @@ function PlayMark() {
 export function StoreBadges() {
   const t = useT();
   const badge =
-    "flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-[10px] border border-white/25 bg-black px-3 text-left text-white transition-colors hover:bg-[#111]";
+    "flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-[10px] border border-white/25 bg-black px-3 text-start text-white transition-colors hover:bg-[#111]";
   return (
     <div className="flex w-full gap-2.5">
       <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer" className={badge}>

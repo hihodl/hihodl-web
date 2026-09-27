@@ -226,3 +226,80 @@ export function safeAvatarUrl(url: unknown): string | null {
     return null;
   }
 }
+
+/* ── Opening this page inside a wallet ──────────────────────────── */
+
+export type WalletLinkId = "hold" | "phantom" | "solflare" | "metamask" | "coinbase" | "trust";
+
+/**
+ * A wallet's own browser, opened on this page. Mobile browsers can't tell
+ * which apps are installed, and a bare `solana:` link opens whatever the
+ * phone picked as its Solana handler, so each wallet gets its own button.
+ * Inside the wallet the page finds the wallet injected and pays in one tap.
+ */
+export function walletBrowseUrl(id: Exclude<WalletLinkId, "hold">, pageUrl: string): string {
+  const u = encodeURIComponent(pageUrl);
+  let origin = "";
+  try {
+    origin = new URL(pageUrl).origin;
+  } catch {
+    origin = pageUrl;
+  }
+  const ref = encodeURIComponent(origin);
+  switch (id) {
+    case "phantom":
+      return `https://phantom.app/ul/browse/${u}?ref=${ref}`;
+    case "solflare":
+      return `https://solflare.com/ul/v1/browse/${u}?ref=${ref}`;
+    case "metamask":
+      return `https://metamask.app.link/dapp/${pageUrl.replace(/^https?:\/\//, "")}`;
+    case "coinbase":
+      return `https://go.cb-w.com/dapp?cb_url=${u}`;
+    case "trust":
+      return `https://link.trustwallet.com/open_url?coin_id=60&url=${u}`;
+  }
+}
+
+/**
+ * This page's URL carrying what the payer chose, so the page reopens inside a
+ * wallet with the same amount, currency and network, straight on the
+ * stablecoin sheet.
+ */
+export function payStateUrl(
+  base: string,
+  s: { amount: string | null; currency: string; network: string | null },
+): string {
+  let u: URL;
+  try {
+    u = new URL(base);
+  } catch {
+    return base;
+  }
+  u.hash = "";
+  for (const k of ["amount", "currency", "pay", "network"]) u.searchParams.delete(k);
+  if (s.amount) u.searchParams.set("amount", s.amount);
+  u.searchParams.set("currency", s.currency);
+  u.searchParams.set("pay", "stablecoins");
+  if (s.network) u.searchParams.set("network", s.network);
+  return u.toString();
+}
+
+/** What a reopened page reads back. Anything malformed is dropped. */
+export function readPayState(search: string): { amount: string | null; currency: string | null; stablecoins: boolean; network: string | null } {
+  const q = new URLSearchParams(search);
+  const amount = q.get("amount");
+  const currency = (q.get("currency") ?? "").toUpperCase();
+  const network = q.get("network");
+  return {
+    amount: amount && /^\d{1,9}(?:[.,]\d{0,2})?$/.test(amount) ? amount : null,
+    currency: currency === "USD" || currency === "EUR" ? currency : null,
+    stablecoins: q.get("pay") === "stablecoins",
+    network: network === "solana" || network === "base" || network === "polygon" ? network : null,
+  };
+}
+
+/** The app's address with the amount along (the app reads the handle; the rest rides for later). */
+export function holdPayUrl(scheme: string, amount: string | null, currency: string): string {
+  if (!amount) return scheme;
+  return `${scheme}?amount=${encodeURIComponent(amount)}&currency=${encodeURIComponent(currency)}`;
+}

@@ -79,7 +79,7 @@ export function useDisplayCurrency(): { currency: string; source: CurrencySource
  */
 export function Rich({ k, vars, tags }: { k: MessageKey; vars?: Vars; tags: Record<string, (chunk: ReactNode) => ReactNode> }) {
   usePrefsVersion();
-  const tagFor = intlTag(getPrefs().locale);
+  const tagFor = getPrefs().intl ?? intlTag(getPrefs().locale);
   const chunks = splitTags(rawMessage(k));
   return (
     <>

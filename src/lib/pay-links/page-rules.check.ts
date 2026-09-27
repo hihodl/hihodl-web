@@ -19,6 +19,10 @@ import {
   safeAvatarUrl,
   usdCentsFromMinor,
   walletMethodFor,
+  walletBrowseUrl,
+  payStateUrl,
+  readPayState,
+  holdPayUrl,
 } from "./page-rules";
 
 let fails = 0;
@@ -93,6 +97,21 @@ eq("initials nothing", initialsFor("  ", null), "?");
 eq("avatar https", safeAvatarUrl("https://x.supabase.co/a.jpg?token=1"), "https://x.supabase.co/a.jpg?token=1");
 eq("avatar javascript", safeAvatarUrl("javascript:alert(1)"), null);
 eq("avatar http", safeAvatarUrl("http://x/a.jpg"), null);
+
+const page = "https://hihodl.xyz/pay/@demo?amount=25.00&currency=EUR&pay=stablecoins&network=base";
+eq("phantom", walletBrowseUrl("phantom", "https://hihodl.xyz/pay/@demo?amount=5"), "https://phantom.app/ul/browse/https%3A%2F%2Fhihodl.xyz%2Fpay%2F%40demo%3Famount%3D5?ref=https%3A%2F%2Fhihodl.xyz");
+eq("solflare", walletBrowseUrl("solflare", "https://hihodl.xyz/pay/x"), "https://solflare.com/ul/v1/browse/https%3A%2F%2Fhihodl.xyz%2Fpay%2Fx?ref=https%3A%2F%2Fhihodl.xyz");
+eq("metamask", walletBrowseUrl("metamask", "https://hihodl.xyz/pay/x?a=1"), "https://metamask.app.link/dapp/hihodl.xyz/pay/x?a=1");
+eq("coinbase", walletBrowseUrl("coinbase", "https://hihodl.xyz/pay/x"), "https://go.cb-w.com/dapp?cb_url=https%3A%2F%2Fhihodl.xyz%2Fpay%2Fx");
+eq("trust", walletBrowseUrl("trust", "https://hihodl.xyz/pay/x"), "https://link.trustwallet.com/open_url?coin_id=60&url=https%3A%2F%2Fhihodl.xyz%2Fpay%2Fx");
+eq("state url", payStateUrl("https://hihodl.xyz/pay/@demo?amount=1#x", { amount: "25.00", currency: "EUR", network: "base" }), page);
+eq("state read", readPayState(new URL(page).search), { amount: "25.00", currency: "EUR", stablecoins: true, network: "base" });
+eq("state read junk", readPayState("?amount=1e9&currency=GBP&network=eth"), { amount: null, currency: null, stablecoins: false, network: null });
+eq("hold url", holdPayUrl("hihodl://pay/@demo", "25.00", "USD"), "hihodl://pay/@demo?amount=25.00&currency=USD");
+eq("hold url bare", holdPayUrl("hihodl://pay/@demo", null, "USD"), "hihodl://pay/@demo");
+eq("initials verified name", initialsFor("Alex L.", "hialex"), "AL");
+eq("currency EUR region", defaultCurrency(["de-DE"], ["USD", "EUR"]), "EUR");
+eq("currency ng", defaultCurrency(["en-NG"], ["USD", "EUR"]), "USD");
 
 if (fails) {
   console.log(`\n${fails} failing`);

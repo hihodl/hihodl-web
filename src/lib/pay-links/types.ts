@@ -33,6 +33,11 @@ export interface PayLinkOwner {
    * Absent from a server older than this field.
    */
   face?: PayLinkFace | null;
+  /**
+   * True when the owner passed KYC; `displayName` is then their verified
+   * short name ("Alex L."). Absent from an older server.
+   */
+  verified?: boolean;
 }
 
 export interface PayLinkFace {
@@ -94,6 +99,8 @@ export interface PayLinkPublic {
   payTo: { solana: string | null; evm: string | null } | null;
   /** Card, Apple Pay and Google Pay, when the server offers them. Absent from an older server. */
   card?: PayLinkCardOffer | null;
+  /** What the link takes in stablecoins. Absent means USDC only (an older server). */
+  tokens?: ("usdc" | "eurc")[];
 }
 
 /** A link that still says what it asks for: anything but a disabled one. */

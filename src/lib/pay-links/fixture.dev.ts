@@ -11,7 +11,7 @@
  *   /pay/c2sedxyz   closed by its owner
  *   /pay/exp2red9   expired
  *   /pay/dsab2ed3   disabled by us after reports (everything the owner wrote is null)
- *   /pay/@demo      a personal link: open amount, a private profile (initials), card, Apple Pay and Google Pay
+ *   /pay/@demo      a personal link: open amount, a verified private profile (initials), card, Apple Pay and Google Pay, USDC and EURC
  *   /pay/@demo_creator  the same, with a public profile photo
  *   /pay/r/fixture_receipt_base
  *   /pay/r/fixture_receipt_disabled (the link was disabled since: no title)
@@ -40,9 +40,10 @@ const PERSONAL: Record<string, PayLinkPublic> = {
     chains: ["solana", "base", "polygon"],
     status: "active",
     // A private profile: no photo, so the page draws the initials.
-    owner: { displayName: "Demo Creator", handle: "demo", label: "@demo", face: { avatarUrl: null } },
+    owner: { displayName: "Demo C.", handle: "demo", label: "@demo", face: { avatarUrl: null }, verified: true },
     payTo: PAY_TO,
     card: CARD,
+    tokens: ["usdc", "eurc"],
   },
   demo_creator: {
     code: "demcrtr2",

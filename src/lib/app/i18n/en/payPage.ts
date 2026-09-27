@@ -10,17 +10,12 @@ const payPage = {
 
   // Who is being paid, and how much
   "howMuch": "How much do you want to send?",
-  "fixedAmount": "Amount to pay",
   "amountLabel": "Amount",
-  "approx": "About {amount}",
-  "limits": "From {min} to {max}",
-  "amountInvalid": "Type an amount, like 25 or 25.50.",
   "amountRange": "The amount has to be between {min} and {max}.",
   "currency": "Currency",
   "chooseCurrency": "Choose a currency",
   "searchCurrency": "Search currency",
   "noResults": "No results",
-  "usdOnly": "This link is paid in US dollars.",
 
   // The note
   "note": "Note",
@@ -34,7 +29,6 @@ const payPage = {
   "cardSub": "Charged in {currency}",
   "stablecoins": "Stablecoins",
   "stablecoinsSub": "USDC from any wallet",
-  "warning": "Only pay people you know. A payment can't be reversed.",
 
   // The HOLD row
   "holdTitle": "Pay with HOLD",
@@ -45,14 +39,11 @@ const payPage = {
   "getItOn": "Get it on",
 
   // The stablecoin sheet
-  "stableTitle": "Pay with stablecoins",
-  "stableUsd": "Stablecoin payments are in USDC, one US dollar each.",
 
   // The card sheet
   "cardTitle": "Pay by card",
   "cardStarting": "Opening the secure checkout…",
   "cardOpenTab": "Open in a new tab",
-  "cardSecure": "Your card details go to Coinflow, not to HOLD.",
 
   // After a card payment
   "paidAccepted": "Payment accepted",
@@ -94,8 +85,6 @@ const payPage = {
   "unavailableBody": "This is on our side. Give it a moment and refresh the page. Nothing has been paid.",
 
   // The foot
-  "coinflow": "Card payments are processed by Coinflow.",
-  "about": "HOLD is a wallet. The money goes straight to {name}. HOLD never holds it.",
   "terms": "Terms",
   "privacy": "Privacy",
 
@@ -105,20 +94,15 @@ const payPage = {
   "report.placeholder": "It pretends to be a support team asking for a refund.",
   "report.send": "Send report",
   "report.sending": "Sending…",
-  "report.cancel": "Cancel",
   "report.thanks": "Thanks. We look at every report, and we take down links that are used to deceive people.",
 
   // The stablecoin flow, inside its sheet
-  "stable.amountHow": "Type the amount in dollars, like 150 or 150.50.",
   "stable.amountBetween": "The amount has to be between {min} and {max}.",
   "stable.connecting": "Connecting {wallet}…",
   "stable.preparing": "Preparing the payment…",
   "stable.approveIn": "Approve the payment in {wallet}…",
   "stable.freshOne": "That took a while, so here is a fresh one. Approve it in {wallet}…",
   "stable.makingCode": "Making your code…",
-  "stable.noBrowserWallet": "No browser wallet found. Open this page in MetaMask, Coinbase Wallet or Rabby, or pay another way.",
-  "stable.chooseWallet": "Choose your wallet…",
-  "stable.connectingWallet": "Connecting your wallet…",
   "stable.switching": "Switching your wallet to {net}…",
   "stable.duplicateTitle": "Someone else paid this link first.",
   "stable.duplicateBody": "This link takes one payment, and another one arrived a moment before yours. We have told {payee}. Contact them with your transaction to sort it out; HOLD can't reverse a payment.",
@@ -126,37 +110,37 @@ const payPage = {
   "stable.lapsedTitle": "No payment arrived.",
   "stable.lapsedBody": "Nothing left your wallet. Start again when you're ready.",
   "stable.startAgain": "Start again",
-  "stable.oneMoment": "One moment…",
-  "stable.amountLabel": "Amount in US dollars (USDC)",
-  "stable.amountRange": "From {min} to {max}.",
-  "stable.evmIntro": "One signature, no gas. The whole amount goes to {payee}; HOLD takes nothing.",
-  "stable.noWalletHere": "No browser wallet found here. Open this page in MetaMask, Coinbase Wallet or Rabby.",
-  "stable.noWalletHereSolana": "No browser wallet found here. Open this page in MetaMask, Coinbase Wallet or Rabby, or pay on Solana by QR.",
-  "stable.connectAndPay": "Connect wallet and pay",
-  "stable.useAnother": "Use another wallet",
-  "stable.chooseAndPay": "Choose your wallet and pay",
-  "stable.direct": "You pay {payee} directly, in USDC on {net}. HOLD never holds the money, charges no fee and can't reverse the payment.",
   "stable.qrTitle": "Solana Pay QR code",
   "stable.qrScan": "Scan with Phantom, Solflare or any Solana wallet. It shows the exact amount before you approve.",
   "stable.qrMismatch": "The payment your wallet opened didn't match this page. Don't approve it; scan this new code instead.",
   "stable.qrExpired": "That code ran out before a payment arrived, so here is a new one. Nothing was paid.",
   "stable.qrScanned": "Your wallet has the payment. Approve it there, and this page updates.",
-  "stable.openInWallet": "Open in my wallet",
-  "stable.waitingWallet": "Waiting for your wallet…",
-  "stable.back": "Back",
   "stable.signInWallet": "Sign in your wallet",
   "stable.sending": "Sending the payment…",
   "stable.signWithin": "Sign within {time}.",
   "stable.signExpired": "This signature request has expired. Close your wallet and start again.",
   "stable.confirming": "Confirming your payment on {net}…",
   "stable.updatesOwn": "This page updates on its own.",
-  "stable.paid": "Paid",
   "stable.paidSent": "{amount} sent to {payee}.",
-  "stable.paidIn": "In USDC on {net}.",
-  "stable.receiptTitle": "Keep your receipt.",
-  "stable.receiptBody": "Its link shows the amount, the network, the transaction and the time. Save it: you have no account here to find it in later.",
+  "stable.paidIn": "In {token} on {net}.",
   "stable.receiptOpen": "Open the receipt",
   "stable.another": "Make another payment",
+  // Round two: the amount first, EURC, the verified tick, the language search
+  "amountFirst": "Type how much you want to send first.",
+  "verified": "Verified",
+  "searchLanguage": "Search language",
+  "stablecoinsSubEur": "EURC on Base",
+  "eurcUnavailable": "EURC isn't available for this link. Switch to USD to pay in USDC.",
+  "eurcUnavailableShort": "EURC isn't available for this link",
+  "payWithToken": "Pay with {token}",
+  "sheetTo": "to {name}",
+  "network": "Network",
+  "onNetwork": "{token} on {net}",
+  "payWithWallet": "Pay with {wallet}",
+  "showCode": "Show the code",
+  "wcScan": "Scan with any wallet on another phone or computer.",
+  "orOpenWallet": "Or open your wallet",
+  "openInWalletBrowser": "Open this page in your wallet's browser to pay.",
 } as const;
 
 export default payPage;

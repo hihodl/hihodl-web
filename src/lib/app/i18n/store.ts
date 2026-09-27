@@ -26,6 +26,12 @@ export interface PrefsState {
   currencySource: CurrencySource;
   /** Units of a currency per 1 USD (GET /fx/rates); null until read. */
   rates: Readonly<Record<string, number>> | null;
+  /**
+   * The Intl tag to format with when the words are a language the product
+   * does not speak everywhere (the public pay page's extra languages: "fil",
+   * "am"…). Null: the locale's own tag.
+   */
+  intl: string | null;
 }
 
 let state: PrefsState = {
@@ -34,6 +40,7 @@ let state: PrefsState = {
   currency: "USD",
   currencySource: "default",
   rates: null,
+  intl: null,
 };
 let version = 0;
 const listeners = new Set<() => void>();

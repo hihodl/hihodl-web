@@ -29,10 +29,10 @@ const EN_DICT = EN as Readonly<Record<string, string>>;
 
 /** The message for `key` in the current language, English where it has none. */
 export function t(key: MessageKey, vars?: Vars): string {
-  const { dict, locale } = getPrefs();
+  const { dict, locale, intl } = getPrefs();
   const raw = dict[key] ?? EN_DICT[key];
   if (raw === undefined) return key;
-  return formatMessage(raw, vars, intlTag(locale));
+  return formatMessage(raw, vars, intl ?? intlTag(locale));
 }
 
 /** The raw message, unformatted: for rich text, which formats around tags. */
@@ -57,7 +57,8 @@ export function currentLocale(): LocaleCode {
 
 /** The tag to hand Intl for the current language. */
 export function currentIntl(): string {
-  return intlTag(getPrefs().locale);
+  const { intl, locale } = getPrefs();
+  return intl ?? intlTag(locale);
 }
 
 let loading: Promise<void> | null = null;
@@ -72,13 +73,13 @@ export async function applyLocale(code: LocaleCode): Promise<void> {
   wanted = code;
   const dictCode = dictionaryOf(code);
   if (dictCode === "en") {
-    if (wanted === code) setPrefs({ locale: code, dict: {} });
+    if (wanted === code) setPrefs({ locale: code, dict: {}, intl: null });
     return;
   }
   const run = (async () => {
     try {
       const mod = await LOADERS[dictCode]();
-      if (wanted === code) setPrefs({ locale: code, dict: mod.default });
+      if (wanted === code) setPrefs({ locale: code, dict: mod.default, intl: null });
     } catch {
       // A chunk that did not load leaves the page in the language it was in.
     }
