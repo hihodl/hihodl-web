@@ -51,6 +51,7 @@ import {
   sentHere,
   solanaCheckoutProblem,
   startPayCheckout,
+  startSolanaTransfer,
   submitPayAuthorization,
   submitPaySolana,
   type ExpectedPayment,
@@ -123,7 +124,8 @@ type Phase =
   | { kind: "choose" }
   | { kind: "busy"; label: string }
   /** `scanned`: a phone wallet has opened the payment and not sent it yet. */
-  | { kind: "qr"; link: string; scanned: boolean }
+  /** `transfer`: a transfer request, a payment from the moment it is shown; otherwise a transaction request, one once a wallet opens it. */
+  | { kind: "qr"; link: string; scanned: boolean; transfer?: boolean }
   /** Waiting for a wallet to pair over WalletConnect; `uri` is the code to show. */
   /** A WalletConnect pairing: Base or Polygon, or Solana for Ledger Wallet. */
   | { kind: "wc"; uri: string | null; solana?: boolean }
@@ -297,11 +299,28 @@ export function PayLinkPay({
   }, [confirmingId, router, scope]);
 
   /** A new QR code on a new key, for the same amount. */
+  /**
+   * The code for the key in `keyRef`: a transfer request, which every
+   * wallet's scanner reads (Phantom's refused the transaction request as
+   * "not a valid address"), or the transaction request where the server has
+   * no transfer requests yet.
+   */
+  const qrPhase = useCallback(async (): Promise<Phase> => {
+    const transfer = await startSolanaTransfer(link.code, keyRef.current, qrRef.current.amountInUrl);
+    if (transfer) return { kind: "qr", link: transfer.transferRequest, scanned: false, transfer: true };
+    const c = await checkoutId(keyRef.current);
+    return { kind: "qr", link: payLinkSolanaPay(link.code, c, qrRef.current.amountInUrl), scanned: false };
+  }, [link.code]);
+
   const replaceQr = useCallback(async () => {
     keyRef.current = rotateCheckoutKey(scope);
-    const c = await checkoutId(keyRef.current);
-    setPhase({ kind: "qr", link: payLinkSolanaPay(link.code, c, qrRef.current.amountInUrl), scanned: false });
-  }, [link.code, scope]);
+    try {
+      setPhase(await qrPhase());
+    } catch (e) {
+      fail(e, "solana");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qrPhase, scope]);
 
   /*
    * QR poll: once a phone wallet has opened the payment, check it is the
@@ -309,6 +328,7 @@ export function PayLinkPay({
    * The page stays on the code meanwhile: nothing was sent from here.
    */
   const qrLink = phase.kind === "qr" ? phase.link : null;
+  const qrTransfer = phase.kind === "qr" && Boolean(phase.transfer);
   useEffect(() => {
     if (!qrLink) return;
     let stop = false;
@@ -348,7 +368,10 @@ export function PayLinkPay({
             await replaceQr();
             return;
           }
-          setPhase((p) => (p.kind === "qr" && !p.scanned ? { ...p, scanned: true } : p));
+          // A transfer request is a payment from the moment it is shown: nothing was scanned yet.
+          if (!qrTransfer) setPhase((p) => (p.kind === "qr" && !p.scanned ? { ...p, scanned: true } : p));
+          // Settling one reads the chain by its reference; every other look is plenty.
+          else wait = POLL_MS * 2;
         }
       } catch (e) {
         if (e instanceof CheckoutError && e.code === "rate_limited") wait = POLL_MS * 4;
@@ -360,7 +383,7 @@ export function PayLinkPay({
       stop = true;
       if (timer) clearTimeout(timer);
     };
-  }, [qrLink, replaceQr, router, scope]);
+  }, [qrLink, qrTransfer, replaceQr, router, scope]);
 
   /** The amount to send, or null after saying what is wrong with it. */
   function amountOrProblem(): { cents: number | undefined; expected: number } | null {
@@ -518,9 +541,13 @@ export function PayLinkPay({
       keyRef.current = rotateCheckoutKey(scope);
     }
     qrRef.current = { cents, amountInUrl: fixed === null ? cents : null, replaced: false };
-    const c = await checkoutId(keyRef.current);
-    setPhase({ kind: "qr", link: payLinkSolanaPay(link.code, c, fixed === null ? cents : null), scanned: false });
-  }, [fixed, amountCents, maxCents, scope, link.code]);
+    try {
+      setPhase(await qrPhase());
+    } catch (e) {
+      fail(e, "solana");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fixed, amountCents, maxCents, scope, qrPhase]);
 
   /**
    * One authorization on Base or Polygon, from the wallet in this browser or
