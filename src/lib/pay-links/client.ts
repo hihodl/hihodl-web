@@ -102,6 +102,30 @@ export function submitPaySolana(paymentId: string, key: string, transaction: str
   });
 }
 
+/**
+ * The Solana QR as a Solana Pay transfer request (`solana:<owner>?amount=
+ * &spl-token=&reference=`), which every wallet's scanner reads; the server
+ * opens it as this key's payment and finds the transfer by its reference.
+ * A server from before it answers 404: the caller shows the transaction
+ * request instead.
+ */
+export async function startSolanaTransfer(
+  code: string,
+  key: string,
+  amountCents: number | null,
+): Promise<{ payment: PayLinkPayment; transferRequest: string } | null> {
+  try {
+    const res = await apiRequest<{ payment: PayLinkPayment; transferRequest: string }>(`${PUBLIC}/${encodeURIComponent(code)}/solana-transfer`, {
+      key,
+      json: amountCents !== null ? { amountCents } : {},
+    });
+    return typeof res?.transferRequest === "string" && res.transferRequest.startsWith("solana:") ? res : null;
+  } catch (e) {
+    if (e instanceof CheckoutError && e.status === 404) return null;
+    throw e;
+  }
+}
+
 /** The payment bound to this key, if this page or a scanned QR has opened one. */
 export async function currentPayment(key: string): Promise<PayLinkPayment | null> {
   const data = await apiRequest<{ payment: PayLinkPayment | null }>(`${PUBLIC}/checkout`, { key });
