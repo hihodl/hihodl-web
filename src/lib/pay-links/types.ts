@@ -26,6 +26,48 @@ export interface PayLinkOwner {
    * server older than this field sends none.
    */
   label?: string;
+  /**
+   * The owner's face: a signed https photo URL (valid about an hour), sent
+   * only when their profile is public. Null (or a null URL) when it is
+   * private, invisible or has no photo: the page draws their initials.
+   * Absent from a server older than this field.
+   */
+  face?: PayLinkFace | null;
+}
+
+export interface PayLinkFace {
+  avatarUrl: string | null;
+}
+
+/** How a payer with no wallet pays: Coinflow's hosted checkout. */
+export type CardMethod = "card" | "applePay" | "googlePay";
+
+/**
+ * What the link takes by card, or null for no card rows. Amounts in US cents;
+ * `currencies` are ISO 4217 codes the card may be charged in.
+ */
+export interface PayLinkCardOffer {
+  methods: CardMethod[];
+  currencies: string[];
+  minUsdCents: number;
+  maxUsdCents: number;
+}
+
+export type CardPaymentStatus = "pending" | "paid" | "declined" | "failed" | "refunded";
+
+/** A card payment, as `POST /:code/card` and `GET /card/:paymentId` return it. */
+export interface CardPayment {
+  id: string;
+  method: string;
+  status: CardPaymentStatus;
+  currency: string;
+  /** In the currency's minor units. */
+  amountMinor: number;
+  usdCents: number | null;
+  txHash: string | null;
+  explorerUrl: string | null;
+  paidAt: string | null;
+  createdAt: string;
 }
 
 /**
@@ -50,6 +92,8 @@ export interface PayLinkPublic {
   owner: PayLinkOwner | null;
   /** Null unless the link is active. */
   payTo: { solana: string | null; evm: string | null } | null;
+  /** Card, Apple Pay and Google Pay, when the server offers them. Absent from an older server. */
+  card?: PayLinkCardOffer | null;
 }
 
 /** A link that still says what it asks for: anything but a disabled one. */

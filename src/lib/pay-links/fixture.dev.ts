@@ -11,14 +11,62 @@
  *   /pay/c2sedxyz   closed by its owner
  *   /pay/exp2red9   expired
  *   /pay/dsab2ed3   disabled by us after reports (everything the owner wrote is null)
+ *   /pay/@demo      a personal link: open amount, a private profile (initials), card, Apple Pay and Google Pay
+ *   /pay/@demo_creator  the same, with a public profile photo
  *   /pay/r/fixture_receipt_base
  *   /pay/r/fixture_receipt_disabled (the link was disabled since: no title)
  */
 
-import type { PayLinkPublic, PayReceipt } from "./types";
+import type { PayLinkCardOffer, PayLinkPublic, PayReceipt } from "./types";
 
 const OWNER = { displayName: "Dana Okafor", handle: "dana", label: "@dana" };
 const PAY_TO = { solana: "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU", evm: "0xAb5801a7D398351b8bE11C439e05C5B3259aeC9B" };
+
+const CARD: PayLinkCardOffer = {
+  methods: ["card", "applePay", "googlePay"],
+  currencies: ["USD", "EUR", "GBP", "CAD", "AUD", "CHF", "MXN", "BRL", "COP", "PEN"],
+  minUsdCents: 100,
+  maxUsdCents: 50_000,
+};
+
+/** Personal links by handle. Made-up people only: never a real person's handle. */
+const PERSONAL: Record<string, PayLinkPublic> = {
+  demo: {
+    code: "demapays",
+    personal: true,
+    title: "Pay @demo",
+    note: null,
+    amount: { mode: "open", maxCents: null },
+    chains: ["solana", "base", "polygon"],
+    status: "active",
+    // A private profile: no photo, so the page draws the initials.
+    owner: { displayName: "Demo Creator", handle: "demo", label: "@demo", face: { avatarUrl: null } },
+    payTo: PAY_TO,
+    card: CARD,
+  },
+  demo_creator: {
+    code: "demcrtr2",
+    personal: true,
+    title: "Pay @demo_creator",
+    note: null,
+    amount: { mode: "open", maxCents: null },
+    chains: ["solana", "base"],
+    status: "active",
+    // The HOLD icon stands in for a photo: a picture of nobody.
+    owner: {
+      displayName: "Demo Creator",
+      handle: "demo_creator",
+      label: "@demo_creator",
+      face: { avatarUrl: "https://hihodl.xyz/icon-512.png" },
+    },
+    payTo: PAY_TO,
+    card: CARD,
+  },
+};
+
+export function fixturePersonalPayLink(handle: string): PayLinkPublic | null {
+  return PERSONAL[handle] ?? null;
+}
 
 const LINKS: Record<string, PayLinkPublic> = {
   k7x2m9qa: {
@@ -30,6 +78,7 @@ const LINKS: Record<string, PayLinkPublic> = {
     status: "active",
     owner: OWNER,
     payTo: PAY_TO,
+    card: CARD,
   },
   dana4pay: {
     code: "dana4pay",
