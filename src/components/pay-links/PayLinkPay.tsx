@@ -58,7 +58,13 @@ import {
 } from "@/lib/pay-links/client";
 import { appSchemeUrl, holdPayUrl, payStateUrl, walletBrowseUrl, type WalletLinkId } from "@/lib/pay-links/page-rules";
 import type { PayLinkEvmPayload, PayLinkPayment, ShownPayLink, TimedPayLinkCheckout } from "@/lib/pay-links/types";
-import { connectWalletConnect, isWalletConnectDismissed, walletConnectProjectId } from "@/lib/pay-links/walletconnect";
+import {
+  connectWalletConnect,
+  connectWalletConnectSolana,
+  isWalletConnectDismissed,
+  ledgerLiveUrl,
+  walletConnectProjectId,
+} from "@/lib/pay-links/walletconnect";
 
 /**
  * Paying a pay link in stablecoins, from any wallet, with no HOLD account:
@@ -90,7 +96,7 @@ const POLL_MS = 3_000;
 const MIN_CENTS = 100;
 const MAX_CENTS = 1_000_000;
 const NETWORK_LOGO: Record<Chain, string> = { solana: "/pay/solana.svg", base: "/pay/base.svg", polygon: "/pay/polygon.svg" };
-const WALLET_LOGO: Record<WalletLinkId, string> = {
+const WALLET_LOGO: Record<WalletLinkId | "ledger", string> = {
   hold: "/favicon.png",
   // Each wallet's own app icon, from its website (27-Sep-2026): phantom.com,
   // solflare.com, metamask.io, wallet.coinbase.com, trustwallet.com.
@@ -99,6 +105,8 @@ const WALLET_LOGO: Record<WalletLinkId, string> = {
   metamask: "/pay/wallets/metamask.png",
   coinbase: "/pay/wallets/coinbase.png",
   trust: "/pay/wallets/trust.svg",
+  // ledger.com's own icon (27-Sep-2026).
+  ledger: "/pay/wallets/ledger.png",
 };
 /** Marks drawn without a background sit on a white tile, like their app icon. */
 const WALLET_LOGO_INSET: Partial<Record<WalletLinkId, true>> = { metamask: true, coinbase: true, trust: true };
@@ -117,7 +125,8 @@ type Phase =
   /** `scanned`: a phone wallet has opened the payment and not sent it yet. */
   | { kind: "qr"; link: string; scanned: boolean }
   /** Waiting for a wallet to pair over WalletConnect; `uri` is the code to show. */
-  | { kind: "wc"; uri: string | null }
+  /** A WalletConnect pairing: Base or Polygon, or Solana for Ledger Wallet. */
+  | { kind: "wc"; uri: string | null; solana?: boolean }
   /** `skewMs`: the server's clock minus this browser's, from the checkout answer. */
   | { kind: "evm-sign"; label: string; validBefore: number; skewMs: number; sending: boolean }
   | { kind: "confirming"; payment: PayLinkPayment }
@@ -169,6 +178,8 @@ export function PayLinkPay({
   const signatureRef = useRef<string | null>(null);
   /** The WalletConnect pairing this sheet is waiting on; a newer one (or a closed sheet) retires it. */
   const wcRun = useRef(0);
+  /** The payer tapped Ledger before the pairing link existed: open Ledger Wallet when it does. */
+  const ledgerWanted = useRef(false);
   /** What the open QR code asks for, and whether it has already been replaced once. */
   const qrRef = useRef<{ cents: number; amountInUrl: number | null; replaced: boolean }>({
     cents: 0,
@@ -566,7 +577,9 @@ export function PayLinkPay({
       setPhase({ kind: "wc", uri: null });
       try {
         const provider = await connectWalletConnect((uri) => {
-          if (wcRun.current === run) setPhase((p) => (p.kind === "wc" ? { kind: "wc", uri } : p));
+          if (wcRun.current !== run) return;
+          setPhase((p) => (p.kind === "wc" ? { kind: "wc", uri } : p));
+          openLedgerIfWanted(uri);
         });
         if (wcRun.current !== run) return;
         await payWithEvm(evmChain, provider, "WalletConnect");
@@ -579,6 +592,53 @@ export function PayLinkPay({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
+
+  /**
+   * Ledger Wallet on Solana: a WalletConnect pairing of its own (the Solana
+   * code is Solana Pay, which Ledger Wallet does not read), then the same
+   * payment as a wallet in the page, signed first by the Ledger.
+   */
+  const startWcSolana = useCallback(
+    async () => {
+      const run = ++wcRun.current;
+      setPhase({ kind: "wc", uri: null, solana: true });
+      try {
+        const provider = await connectWalletConnectSolana((uri) => {
+          if (wcRun.current !== run) return;
+          setPhase((p) => (p.kind === "wc" ? { kind: "wc", uri, solana: true } : p));
+          openLedgerIfWanted(uri);
+        });
+        if (wcRun.current !== run) return;
+        await payWithSolanaWallet({ name: "Ledger", provider });
+      } catch (e) {
+        if (wcRun.current !== run) return;
+        if (isWalletConnectDismissed(e)) return setPhase({ kind: "choose" });
+        fail(e, "solana");
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  function openLedgerIfWanted(uri: string) {
+    if (!ledgerWanted.current) return;
+    ledgerWanted.current = false;
+    window.location.href = ledgerLiveUrl(uri);
+  }
+
+  /** Ledger: open Ledger Wallet on this payment's pairing, starting one for the network if needed. */
+  function payWithLedger() {
+    clearNotice();
+    const onThisNetwork = phase.kind === "wc" && (chain === "solana") === Boolean(phase.solana);
+    if (onThisNetwork && phase.uri) {
+      window.location.href = ledgerLiveUrl(phase.uri);
+      return;
+    }
+    ledgerWanted.current = true;
+    if (onThisNetwork) return;
+    if (chain === "solana") void startWcSolana();
+    else void startWc(chain as "base" | "polygon");
+  }
 
   /*
    * The code shows itself: on Solana the Solana Pay request, on Base and
@@ -596,6 +656,7 @@ export function PayLinkPay({
   function switchNetwork(c: Chain) {
     if (c === chain) return;
     wcRun.current++;
+    ledgerWanted.current = false;
     // A wait is for the same wallet on the same network; another network can be tried now.
     clearNotice();
     setChain(c);
@@ -687,6 +748,7 @@ export function PayLinkPay({
   const qrText = phase.kind === "qr" ? phase.link : phase.kind === "wc" ? phase.uri : null;
   const showQrArea = chain === "solana" || walletConnect;
   const busyLabel = phase.kind === "busy" ? phase.label : null;
+  const showLedger = walletConnect && canPay;
 
   return (
     <div className="flex flex-col gap-4">
@@ -779,7 +841,7 @@ export function PayLinkPay({
           <p className="max-w-[300px] text-center text-[12.5px] leading-[17px] text-[#9FB7C2]">
             {phase.kind === "qr" && phase.scanned
               ? t("payPage.stable.qrScanned")
-              : chain === "solana"
+              : chain === "solana" && phase.kind !== "wc"
                 ? t("payPage.stable.qrScan")
                 : t("payPage.wcScan")}
           </p>
@@ -788,16 +850,27 @@ export function PayLinkPay({
         <p className="text-center text-[13px] leading-[18px] text-[#9FB7C2]">{t("payPage.openInWalletBrowser")}</p>
       ) : null}
 
-      {mobile && !injectedHere && stateUrl ? (
+      {!injectedHere && ((mobile && stateUrl) || showLedger) ? (
         <div className="flex flex-col gap-2">
           <p className="px-1 text-[13px] font-strong text-[#9FB7C2]">{t("payPage.orOpenWallet")}</p>
           <div className="overflow-hidden rounded-[20px] border border-white/[0.08] bg-white/[0.05]">
-            {scheme && token === "usdc" ? (
+            {mobile && stateUrl && scheme && token === "usdc" ? (
               <WalletRow href={holdPayUrl(scheme, amountText, "USD")} logo={WALLET_LOGO.hold} name="HOLD" />
             ) : null}
-            {walletLinks.map((id, i) => (
-              <WalletRow key={id} href={walletBrowseUrl(id as Exclude<WalletLinkId, "hold">, stateUrl)} logo={WALLET_LOGO[id]} inset={Boolean(WALLET_LOGO_INSET[id as WalletLinkId])} name={WALLET_NAME[id as Exclude<WalletLinkId, "hold">]} last={i === walletLinks.length - 1} />
-            ))}
+            {mobile && stateUrl
+              ? walletLinks.map((id, i) => (
+                  <WalletRow
+                    key={id}
+                    href={walletBrowseUrl(id as Exclude<WalletLinkId, "hold">, stateUrl)}
+                    logo={WALLET_LOGO[id]}
+                    inset={Boolean(WALLET_LOGO_INSET[id as WalletLinkId])}
+                    name={WALLET_NAME[id as Exclude<WalletLinkId, "hold">]}
+                    last={!showLedger && i === walletLinks.length - 1}
+                  />
+                ))
+              : null}
+            {/* A Ledger pays through Ledger Wallet (the app, on a phone or a computer) over WalletConnect. */}
+            {showLedger ? <WalletRow onClick={payWithLedger} logo={WALLET_LOGO.ledger} inset name="Ledger" disabled={waiting || !!busyLabel} last /> : null}
           </div>
         </div>
       ) : null}
@@ -816,25 +889,40 @@ const glassCta =
 
 function WalletRow({
   href,
+  onClick,
   logo,
   name,
   inset = false,
   last = false,
+  disabled = false,
 }: {
-  href: string;
   logo: string;
   name: string;
   inset?: boolean;
   last?: boolean;
-}) {
-  return (
-    <a href={href} className={`flex items-center gap-3 px-4 py-3 transition-colors hover:bg-white/[0.04] ${last ? "" : "border-b border-white/[0.06]"}`}>
+  disabled?: boolean;
+} & ({ href: string; onClick?: undefined } | { href?: undefined; onClick: () => void })) {
+  const row = `flex w-full items-center gap-3 px-4 py-3 text-start transition-colors hover:bg-white/[0.04] disabled:opacity-50 ${last ? "" : "border-b border-white/[0.06]"}`;
+  const body = (
+    <>
       <span className={`flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-[9px] bg-white ${inset ? "p-[5px]" : ""}`}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={logo} alt="" width={32} height={32} className="h-full w-full object-contain" />
       </span>
       <span className="min-w-0 flex-1 truncate text-[15px] font-bold text-white">{name}</span>
       <Ion name="open-outline" size={15} className="shrink-0 text-white/40" />
+    </>
+  );
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} disabled={disabled} className={row}>
+        {body}
+      </button>
+    );
+  }
+  return (
+    <a href={href} className={row}>
+      {body}
     </a>
   );
 }
