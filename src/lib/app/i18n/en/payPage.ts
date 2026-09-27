@@ -101,12 +101,13 @@ const payPage = {
   "safety": "Only pay people you know.",
 
   // The link card a chat app draws for this page (og:title, og:description)
-  "og.personalTitle": "Send money to {name}",
-  "og.linkDescription": "Pay {name} in a minute.",
-  "og.cardApplePay": "Card or Apple Pay, in a minute. No account needed.",
-  "og.byCard": "Pay by card in a minute. No account needed.",
-  "og.plain": "Fast and secure. No account needed.",
-  "og.genericTitle": "Pay with HOLD",
+  "og.personalTitle": "Pay {name} with HOLD",
+  "og.linkDescription": "Pay {name} easily with HOLD. Fast, secure and no account needed.",
+  "og.cardApplePay": "Pay by card or Apple Pay in seconds. No account needed.",
+  "og.byCard": "Pay by card in seconds. No account needed.",
+  "og.plain": "Pay or get paid easily with payment links. Fast, secure and no account needed.",
+  "og.personalPlain": "Pay or get paid easily with a link. Fast, secure and no account needed.",
+  "og.genericTitle": "HOLD Pay",
 
   // Report
   "report.open": "Report this link",

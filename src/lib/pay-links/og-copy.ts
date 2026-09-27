@@ -1,9 +1,9 @@
 /**
- * The link card a chat app draws for a pay page (og:title, og:description,
- * og:image), as words.
+ * The link card a chat app draws for a pay page (og:title, og:description),
+ * as words. The image is always the static HOLD banner (./metadata).
  *
- * It sells the payment the way a bank's "send me money" link does: who you
- * pay, for what and how much, and that it takes a minute. No crypto word ever
+ * It sells the payment the way Revolut.Me does: short, simple marketing lines
+ * (who you pay, for what and how much, fast and no account needed). No crypto word ever
  * reaches it (no wallet, USDC, chain): how the money moves is the page's
  * business. The warning to pay only people you know lives on the page itself,
  * under the pay button, not on the card.
@@ -25,6 +25,9 @@ export interface OgCopy {
   linkDescription: string;
   cardApplePay: string;
   byCard: string;
+  /** A personal link whose payment methods are unknown or take no card. */
+  personalPlain: string;
+  /** The plain HOLD card's description. */
   plain: string;
   genericTitle: string;
 }
@@ -34,8 +37,6 @@ export type OgFormat = (message: string, vars?: Record<string, string>) => strin
 export interface PayPreview {
   title: string;
   description: string;
-  /** True when the card gets its own image (the person, and the price); false for the plain HOLD one. */
-  image: boolean;
 }
 
 const TITLE_MAX = 60;
@@ -64,7 +65,7 @@ export function clipText(text: string, max: number): string {
 }
 
 export function genericPreview(copy: OgCopy): PayPreview {
-  return { title: copy.genericTitle, description: copy.plain, image: false };
+  return { title: copy.genericTitle, description: copy.plain };
 }
 
 /** Whether a link is worth its own card: active, with its title, amount and a name to show. */
@@ -85,11 +86,11 @@ export function payPreview(
   if (personal || link.personal) {
     // Only what this link really takes: an older server names no methods, so no card is promised.
     const kinds = new Set((link.methods ?? []).map((m) => m.kind));
-    const description = kinds.has("card") && kinds.has("apple_pay") ? copy.cardApplePay : kinds.has("card") ? copy.byCard : copy.plain;
-    return { title: fmt(copy.personalTitle, { name }), description, image: true };
+    const description = kinds.has("card") && kinds.has("apple_pay") ? copy.cardApplePay : kinds.has("card") ? copy.byCard : copy.personalPlain;
+    return { title: fmt(copy.personalTitle, { name }), description };
   }
 
   const what = clipText(link.title, TITLE_MAX);
   const title = link.amount.mode === "fixed" ? `${what} · ${previewPrice(link.amount.cents, intl)}` : what;
-  return { title, description: fmt(copy.linkDescription, { name }), image: true };
+  return { title, description: fmt(copy.linkDescription, { name }) };
 }

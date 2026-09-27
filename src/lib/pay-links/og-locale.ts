@@ -16,7 +16,7 @@ import { EXTRA_LOCALES, isExtra, payLocaleFrom, type PayLocale } from "./pay-loc
  * that sends none reads English.
  */
 
-const OG_KEYS = ["personalTitle", "linkDescription", "cardApplePay", "byCard", "plain", "genericTitle"] as const;
+const OG_KEYS = ["personalTitle", "linkDescription", "cardApplePay", "byCard", "personalPlain", "plain", "genericTitle"] as const;
 
 async function payPageWords(locale: PayLocale): Promise<Record<string, string> | null> {
   try {

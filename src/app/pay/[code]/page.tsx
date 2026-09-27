@@ -33,8 +33,8 @@ export const dynamic = "force-dynamic";
 const lookup = cache((raw: string) => (raw.startsWith("@") ? getPersonalPayLink(raw.slice(1), headers()) : getPayLink(raw, headers())));
 
 /**
- * The link card: "Send money to Alex L." for a personal link, "Dinner · $40"
- * for a priced one, in the reader's language, with the link's own image.
+ * The link card: "Pay Alex L. with HOLD" for a personal link, "Dinner · $40"
+ * for a priced one, in the reader's language, on the static HOLD banner.
  * Anything that can't be paid gets the plain HOLD card.
  */
 export async function generateMetadata({ params }: { params: { code: string } }): Promise<Metadata> {
@@ -42,8 +42,7 @@ export async function generateMetadata({ params }: { params: { code: string } })
   const [found, words] = await Promise.all([lookup(raw), ogCopyFor(headers().get("accept-language"))]);
   const link = found.kind === "found" ? found.value : null;
   const preview = payPreview(link, raw.startsWith("@"), words.copy, words.fmt, words.intl);
-  const imageUrl = preview.image ? `/api/og/pay/${encodeURIComponent(raw)}?d=${new Date().toISOString().slice(0, 10)}` : null;
-  return payPageMetadata("Pay link", { ...preview, imageUrl, lang: words.lang });
+  return payPageMetadata("Pay link", { ...preview, lang: words.lang });
 }
 
 export default async function PayLinkPage({ params }: { params: { code: string } }) {

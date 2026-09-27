@@ -29,6 +29,7 @@ const copyOf = (d: Record<string, string>, pre: string): OgCopy => ({
   linkDescription: d[`${pre}og.linkDescription`],
   cardApplePay: d[`${pre}og.cardApplePay`],
   byCard: d[`${pre}og.byCard`],
+  personalPlain: d[`${pre}og.personalPlain`],
   plain: d[`${pre}og.plain`],
   genericTitle: d[`${pre}og.genericTitle`],
 });
@@ -55,18 +56,17 @@ eq("price whole", previewPrice(4000, "en"), "$40");
 eq("price cents", previewPrice(125050, "en"), "$1,250.50");
 eq("price de", previewPrice(125050, "de"), "$1.250,50");
 
-eq("priced", payPreview(base, false, COPY, fmt, "en"), { title: "Dinner at Lucio · $40", description: "Pay Demo C. in a minute.", image: true });
+eq("priced", payPreview(base, false, COPY, fmt, "en"), { title: "Dinner at Lucio · $40", description: "Pay Demo C. easily with HOLD. Fast, secure and no account needed." });
 eq("open amount: no price", payPreview({ ...base, amount: { mode: "open", maxCents: 5000 } }, false, COPY, fmt, "en").title, "Dinner at Lucio");
 eq("personal, card and Apple Pay", payPreview({ ...personal, methods: [{ kind: "card" }, { kind: "apple_pay" }, { kind: "hold" }] }, true, COPY, fmt, "en"), {
-  title: "Send money to Demo C.",
-  description: "Card or Apple Pay, in a minute. No account needed.",
-  image: true,
+  title: "Pay Demo C. with HOLD",
+  description: "Pay by card or Apple Pay in seconds. No account needed.",
 });
-eq("personal, card only", payPreview({ ...personal, methods: [{ kind: "card" }] }, true, COPY, fmt, "en").description, "Pay by card in a minute. No account needed.");
-eq("personal, no card: nothing promised", payPreview({ ...personal, methods: [{ kind: "hold" }, { kind: "stablecoins" }] }, true, COPY, fmt, "en").description, "Fast and secure. No account needed.");
-eq("personal, older server: nothing promised", payPreview(personal, true, COPY, fmt, "en").description, "Fast and secure. No account needed.");
-eq("personal flag from the server", payPreview(personal, false, COPY, fmt, "en").title, "Send money to Demo C.");
-const generic = { title: "Pay with HOLD", description: "Fast and secure. No account needed.", image: false };
+eq("personal, card only", payPreview({ ...personal, methods: [{ kind: "card" }] }, true, COPY, fmt, "en").description, "Pay by card in seconds. No account needed.");
+eq("personal, no card: nothing promised", payPreview({ ...personal, methods: [{ kind: "hold" }, { kind: "stablecoins" }] }, true, COPY, fmt, "en").description, "Pay or get paid easily with a link. Fast, secure and no account needed.");
+eq("personal, older server: nothing promised", payPreview(personal, true, COPY, fmt, "en").description, "Pay or get paid easily with a link. Fast, secure and no account needed.");
+eq("personal flag from the server", payPreview(personal, false, COPY, fmt, "en").title, "Pay Demo C. with HOLD");
+const generic = { title: "HOLD Pay", description: "Pay or get paid easily with payment links. Fast, secure and no account needed." };
 eq("paid: plain card", payPreview({ ...base, status: "paid" }, false, COPY, fmt, "en"), generic);
 eq("frozen: plain card", payPreview({ ...base, status: "frozen" }, false, COPY, fmt, "en"), generic);
 eq("disabled: plain card", payPreview({ ...base, status: "disabled", title: null, amount: null, owner: null }, false, COPY, fmt, "en"), generic);
@@ -96,6 +96,7 @@ for (const [code, d, pre] of dicts) {
   const all = Object.values(c).concat(d[`${pre}safety`]);
   eq(`${code}: card words present`, all.every((v) => typeof v === "string" && v.length > 0), true);
   eq(`${code}: no crypto word`, all.filter((v) => CRYPTO.test(v)), []);
+  eq(`${code}: no dash as punctuation`, all.filter((v) => /\s[-\u2013\u2014]\s|[\u2013\u2014]/.test(v)), []);
   eq(`${code}: names the person`, [c.personalTitle, c.linkDescription].every((v) => v.includes("{name}")), true);
 }
 
