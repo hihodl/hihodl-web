@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { PayPage, type PayPageState } from "@/components/pay-links/PayPage";
 import { payPageMetadata } from "@/lib/pay-links/metadata";
+import { fallbackHref } from "@/lib/pay-links/page-rules";
 import { getPayLink, getPersonalPayLink } from "@/lib/pay-links/server";
 import type { PayLinkPublic, ShownPayLink } from "@/lib/pay-links/types";
 
@@ -38,7 +39,8 @@ export default async function PayLinkPage({ params }: { params: { code: string }
       ? { kind: "unreachable" }
       : isShown(found.value)
         ? { kind: "shown", link: found.value }
-        : // Nothing the owner wrote is shown on a link we took down.
+        : elsewhere(found.value) ??
+          // Nothing the owner wrote is shown on a link we took down.
           { kind: "disabled" };
 
   return <PayPage state={state} />;
@@ -47,4 +49,13 @@ export default async function PayLinkPage({ params }: { params: { code: string }
 /** A disabled link, or one that comes back without its title or amount, shows nothing the owner wrote. */
 function isShown(link: PayLinkPublic): link is ShownPayLink {
   return link.status !== "disabled" && link.title !== null && link.amount !== null;
+}
+
+/**
+ * A link that can't be paid and came back without its title or amount, but
+ * with its owner's page to go to. Never a disabled one (fallbackHref refuses it).
+ */
+function elsewhere(link: PayLinkPublic): PayPageState | null {
+  const href = fallbackHref(link);
+  return href ? { kind: "elsewhere", status: link.status, owner: link.owner, href } : null;
 }

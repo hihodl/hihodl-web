@@ -92,6 +92,7 @@ const LINK_TAG: Record<string, { labelKey: MessageKey; tone: Tone }> = {
   paid: { labelKey: "home.payLinks.status.paid", tone: "good" },
   closed: { labelKey: "home.payLinks.status.closed", tone: "dim" },
   expired: { labelKey: "home.payLinks.status.expired", tone: "dim" },
+  frozen: { labelKey: "home.payLinks.status.frozen", tone: "caution" },
   disabled: { labelKey: "home.payLinks.status.disabled", tone: "caution" },
 };
 

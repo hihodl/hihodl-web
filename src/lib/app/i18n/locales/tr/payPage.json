@@ -117,5 +117,16 @@
   "bankReference": "Açıklama",
   "bankBusinessOnly": "Bir şirket hesabından öde",
   "bankUseReference": "{name} kişisine ulaşması için bu açıklamayı kullan",
-  "bankCopy": "{label} kopyala"
+  "bankCopy": "{label} kopyala",
+  "gone.frozenTitle": "Bu bağlantı duraklatıldı.",
+  "gone.frozenBody": "Şimdilik ödeme kabul etmiyor.",
+  "fallback.paid": "Bu bağlantı zaten ödendi",
+  "fallback.inactive": "Bu bağlantı artık aktif değil",
+  "fallback.frozen": "Bu bağlantı duraklatıldı",
+  "fallback.cta": "{name} kişisine başka bir tutar öde",
+  "notFound.title": "Bu bağlantı yok",
+  "notFound.body": "Bağlantıyı sana gönderen kişiyle kontrol et.",
+  "notFound.label": "HOLD'da birine ödeme yap",
+  "notFound.go": "Devam",
+  "notFound.badHandle": "Bu bir HOLD kullanıcı adı değil."
 }

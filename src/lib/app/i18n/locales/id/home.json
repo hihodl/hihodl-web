@@ -179,5 +179,7 @@
   "payLinks.pay.notFound": "Kami tidak bisa menemukan link atau pembayaran ini lagi. Muat ulang halaman.",
   "payLinks.pay.badRequest": "Kami tidak bisa menemukan link atau pembayaran ini. Cek link-nya lalu muat ulang halaman.",
   "add.receive.noneGetApp": "Belum ada alamat untuk dibayar. Dompetmu dibuat di aplikasi HOLD: unduh, dan alamatnya akan muncul di sini.",
-  "linkPhone.pay.bodyComputer": "Kunci dompetmu tetap di ponselmu. Tautkan sekali dan aplikasi HOLD akan menyetujui setiap pembayaran yang kamu mulai di sini."
+  "linkPhone.pay.bodyComputer": "Kunci dompetmu tetap di ponselmu. Tautkan sekali dan aplikasi HOLD akan menyetujui setiap pembayaran yang kamu mulai di sini.",
+  "payLinks.status.frozen": "Dijeda",
+  "payLinks.pay.gone.frozen": "Link ini dijeda saat kamu membayar, jadi untuk saat ini tidak menerima pembayaran. Tidak ada yang dibayar."
 }

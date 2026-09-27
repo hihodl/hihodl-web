@@ -117,5 +117,16 @@
   "bankReference": "المرجع",
   "bankBusinessOnly": "ادفع من حساب شركة",
   "bankUseReference": "استخدم هذا المرجع ليصل المبلغ إلى {name}",
-  "bankCopy": "نسخ {label}"
+  "bankCopy": "نسخ {label}",
+  "gone.frozenTitle": "هذا الرابط متوقف مؤقتًا.",
+  "gone.frozenBody": "لا يقبل أي دفعات في الوقت الحالي.",
+  "fallback.paid": "تم دفع هذا الرابط",
+  "fallback.inactive": "هذا الرابط لم يعد نشطًا",
+  "fallback.frozen": "هذا الرابط متوقف مؤقتًا",
+  "fallback.cta": "ادفع لـ {name} مبلغًا آخر",
+  "notFound.title": "هذا الرابط غير موجود",
+  "notFound.body": "تحقق من الرابط مع من أرسله إليك.",
+  "notFound.label": "ادفع لشخص على HOLD",
+  "notFound.go": "متابعة",
+  "notFound.badHandle": "هذا ليس اسم مستخدم على HOLD."
 }

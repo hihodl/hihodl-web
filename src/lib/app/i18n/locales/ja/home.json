@@ -179,5 +179,7 @@
   "payLinks.pay.notFound": "このリンクまたは支払いが見つかりません。ページを更新してください。",
   "payLinks.pay.badRequest": "このリンクまたは支払いが見つかりません。リンクを確認して、ページを更新してください。",
   "add.receive.noneGetApp": "まだ支払いを受け取るアドレスがありません。ウォレットは HOLD アプリで作成されます。入手すると、ここにアドレスが表示されます。",
-  "linkPhone.pay.bodyComputer": "ウォレットの鍵はスマホに保管されます。一度連携すれば、ここで始めたすべての支払いを HOLD アプリが承認します。"
+  "linkPhone.pay.bodyComputer": "ウォレットの鍵はスマホに保管されます。一度連携すれば、ここで始めたすべての支払いを HOLD アプリが承認します。",
+  "payLinks.status.frozen": "一時停止中",
+  "payLinks.pay.gone.frozen": "お支払い中にこのリンクが一時停止されたため、現在は支払いを受け付けていません。支払いは行われていません。"
 }

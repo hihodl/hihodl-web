@@ -117,5 +117,16 @@
   "bankReference": "Référence",
   "bankBusinessOnly": "Payez depuis un compte d'entreprise",
   "bankUseReference": "Indiquez cette référence pour que le paiement parvienne à {name}",
-  "bankCopy": "Copier {label}"
+  "bankCopy": "Copier {label}",
+  "gone.frozenTitle": "Ce lien est en pause.",
+  "gone.frozenBody": "Il n'accepte aucun paiement pour le moment.",
+  "fallback.paid": "Ce lien a déjà été payé",
+  "fallback.inactive": "Ce lien n'est plus actif",
+  "fallback.frozen": "Ce lien est en pause",
+  "fallback.cta": "Payer un autre montant à {name}",
+  "notFound.title": "Ce lien n'existe pas",
+  "notFound.body": "Vérifiez le lien auprès de la personne qui vous l'a envoyé.",
+  "notFound.label": "Payer quelqu'un sur HOLD",
+  "notFound.go": "Continuer",
+  "notFound.badHandle": "Ce n'est pas un identifiant HOLD."
 }

@@ -117,5 +117,16 @@
   "bankReference": "रेफ़रेंस",
   "bankBusinessOnly": "किसी कंपनी खाते से भुगतान करें",
   "bankUseReference": "यह रेफ़रेंस डालें ताकि पैसा {name} तक पहुँचे",
-  "bankCopy": "{label} कॉपी करें"
+  "bankCopy": "{label} कॉपी करें",
+  "gone.frozenTitle": "यह लिंक रोका गया है।",
+  "gone.frozenBody": "फ़िलहाल यह कोई भुगतान नहीं लेता।",
+  "fallback.paid": "इस लिंक का भुगतान हो चुका है",
+  "fallback.inactive": "यह लिंक अब सक्रिय नहीं है",
+  "fallback.frozen": "यह लिंक रोका गया है",
+  "fallback.cta": "{name} को कोई दूसरी रक़म भेजें",
+  "notFound.title": "यह लिंक मौजूद नहीं है",
+  "notFound.body": "जिसने यह लिंक भेजा है, उससे जाँच लें।",
+  "notFound.label": "HOLD पर किसी को भुगतान करें",
+  "notFound.go": "आगे बढ़ें",
+  "notFound.badHandle": "यह HOLD हैंडल नहीं है।"
 }

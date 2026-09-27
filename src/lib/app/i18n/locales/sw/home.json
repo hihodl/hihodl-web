@@ -179,5 +179,7 @@
   "payLinks.pay.notFound": "Hatupati tena kiungo au malipo haya. Onyesha upya ukurasa.",
   "payLinks.pay.badRequest": "Hatupati kiungo au malipo haya. Angalia kiungo kisha uonyeshe upya ukurasa.",
   "add.receive.noneGetApp": "Bado hakuna anwani ya kulipiwa. Pochi yako inaundwa kwenye programu ya HOLD: ipakue, na anwani itaonekana hapa.",
-  "linkPhone.pay.bodyComputer": "Funguo za pochi yako zinabaki kwenye simu yako. Iunganishe mara moja, na programu ya HOLD itaidhinisha kila malipo unayoanzisha hapa."
+  "linkPhone.pay.bodyComputer": "Funguo za pochi yako zinabaki kwenye simu yako. Iunganishe mara moja, na programu ya HOLD itaidhinisha kila malipo unayoanzisha hapa.",
+  "payLinks.status.frozen": "Kimesitishwa",
+  "payLinks.pay.gone.frozen": "Kiungo hiki kilisitishwa ulipokuwa ukilipa, kwa hivyo kwa sasa hakipokei malipo. Hakuna kilicholipwa."
 }

@@ -117,5 +117,16 @@
   "bankReference": "附言",
   "bankBusinessOnly": "请从公司账户付款",
   "bankUseReference": "请填写此附言，款项才能到达 {name}",
-  "bankCopy": "复制{label}"
+  "bankCopy": "复制{label}",
+  "gone.frozenTitle": "此链接已暂停。",
+  "gone.frozenBody": "目前不接受付款。",
+  "fallback.paid": "此链接已付款",
+  "fallback.inactive": "此链接已失效",
+  "fallback.frozen": "此链接已暂停",
+  "fallback.cta": "向 {name} 支付其他金额",
+  "notFound.title": "此链接不存在",
+  "notFound.body": "请向发送链接的人核实。",
+  "notFound.label": "在 HOLD 上付款给某人",
+  "notFound.go": "继续",
+  "notFound.badHandle": "这不是 HOLD 用户名。"
 }

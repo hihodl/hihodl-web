@@ -179,5 +179,7 @@
   "payLinks.pay.notFound": "Không còn tìm thấy link hoặc khoản thanh toán này. Hãy tải lại trang.",
   "payLinks.pay.badRequest": "Không tìm thấy link hoặc khoản thanh toán này. Hãy kiểm tra link và tải lại trang.",
   "add.receive.noneGetApp": "Chưa có địa chỉ nào để nhận thanh toán. Ví của bạn được tạo trong ứng dụng HOLD: hãy tải ứng dụng, địa chỉ sẽ xuất hiện ở đây.",
-  "linkPhone.pay.bodyComputer": "Khoá của ví bạn nằm trên điện thoại. Liên kết một lần và ứng dụng HOLD sẽ duyệt mọi khoản thanh toán bạn bắt đầu ở đây."
+  "linkPhone.pay.bodyComputer": "Khoá của ví bạn nằm trên điện thoại. Liên kết một lần và ứng dụng HOLD sẽ duyệt mọi khoản thanh toán bạn bắt đầu ở đây.",
+  "payLinks.status.frozen": "Tạm dừng",
+  "payLinks.pay.gone.frozen": "Liên kết này đã bị tạm dừng khi bạn đang thanh toán, nên hiện không nhận thanh toán. Chưa có khoản nào được thanh toán."
 }

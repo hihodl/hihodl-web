@@ -7,7 +7,22 @@
 
 import type { Chain, ConfirmOutcome } from "@/lib/ad-space/types";
 
-export type PayLinkStatus = "active" | "paid" | "closed" | "expired" | "disabled";
+/**
+ * `frozen` is a link paused for now (it answers with `methods: []`); unlike
+ * `disabled` it still says what it asks for, and it may come back.
+ */
+export type PayLinkStatus = "active" | "paid" | "closed" | "expired" | "frozen" | "disabled";
+
+/**
+ * Where to pay the same person when this link can't be paid: their personal
+ * link. Sent only for a paid, closed, expired or frozen link whose owner has
+ * an active personal link; never for a disabled one.
+ */
+export interface PayLinkFallback {
+  handle: string;
+  /** "/pay/@<handle>". The page builds its own from `handle` and only follows a match. */
+  path: string;
+}
 
 export type PayLinkAmount = { mode: "fixed"; cents: number } | { mode: "open"; maxCents: number | null };
 
@@ -134,6 +149,8 @@ export interface PayLinkPublic {
   methods?: PayLinkMethod[];
   /** The account and reference for each bank transfer in `methods`. Absent from an older server. */
   bankTransfers?: PayLinkBankTransfer[];
+  /** The owner's personal link, when this one can't be paid. Absent from an older server. */
+  fallback?: PayLinkFallback | null;
 }
 
 /** A link that still says what it asks for: anything but a disabled one. */

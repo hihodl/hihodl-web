@@ -9,7 +9,7 @@
  */
 
 import { regionCurrency } from "../app/i18n/currencies";
-import type { PayLinkBankTransfer, PayLinkMethod, PayLinkMethodKind } from "./types";
+import type { PayLinkAmount, PayLinkBankTransfer, PayLinkFallback, PayLinkMethod, PayLinkMethodKind, PayLinkStatus } from "./types";
 
 /* ── The device ─────────────────────────────────────────────────── */
 
@@ -330,8 +330,28 @@ export function payStateUrl(
   return u.toString();
 }
 
-/** What a reopened page reads back. Anything malformed is dropped. */
-export function readPayState(search: string): { amount: string | null; currency: string | null; stablecoins: boolean; network: string | null } {
+/** The note field's length on the page, and the most a prefilled note carries. */
+export const PAY_NOTE_MAX = 140;
+
+/**
+ * A note that arrives in the address: one line of plain text, no control or
+ * direction-override characters, at most PAY_NOTE_MAX. Null when nothing is left.
+ */
+export function cleanPrefillNote(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  // eslint-disable-next-line no-control-regex
+  const s = raw.replace(/[\u0000-\u001F\u007F-\u009F\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g, " ").replace(/\s+/g, " ").trim();
+  return s ? Array.from(s).slice(0, PAY_NOTE_MAX).join("").trim() : null;
+}
+
+/** What a reopened page reads back, and what a dead link hands its owner's page. Anything malformed is dropped. */
+export function readPayState(search: string): {
+  amount: string | null;
+  currency: string | null;
+  stablecoins: boolean;
+  network: string | null;
+  note: string | null;
+} {
   const q = new URLSearchParams(search);
   const amount = q.get("amount");
   const currency = (q.get("currency") ?? "").toUpperCase();
@@ -341,7 +361,57 @@ export function readPayState(search: string): { amount: string | null; currency:
     currency: currency === "USD" || currency === "EUR" ? currency : null,
     stablecoins: q.get("pay") === "stablecoins",
     network: network === "solana" || network === "base" || network === "polygon" ? network : null,
+    note: cleanPrefillNote(q.get("note")),
   };
+}
+
+/* ── A link that can't be paid ──────────────────────────────────── */
+
+/** The statuses a link is sent on from, to its owner's personal link. Never `disabled`. */
+const SENDS_ON: readonly PayLinkStatus[] = ["paid", "closed", "expired", "frozen"];
+
+/**
+ * Where a link that can't be paid sends the payer: its owner's personal page,
+ * `/pay/@handle`, or null. The address is built here from the handle, and only
+ * when the server's own `path` says the same, so a payload can never send the
+ * payer anywhere but a HOLD pay page.
+ *
+ * A link that asked a fixed amount carries it (`amount=25.00&currency=USD`)
+ * and its title as the note, and the payer can still change both. A paid
+ * link carries nothing: it was paid, and this may be somebody else.
+ */
+export function fallbackHref(link: {
+  status: PayLinkStatus;
+  personal?: boolean;
+  title: string | null;
+  amount: PayLinkAmount | null;
+  fallback?: PayLinkFallback | null;
+}): string | null {
+  const f = link.fallback;
+  // A personal link is already the owner's page: sending it on would come back here.
+  if (!f || link.personal || typeof f.handle !== "string" || typeof f.path !== "string") return null;
+  if (!SENDS_ON.includes(link.status)) return null;
+  const h = f.handle.replace(/^@/, "").toLowerCase();
+  if (!HANDLE.test(h)) return null;
+  const path = `/pay/@${h}`;
+  if (f.path.toLowerCase() !== path) return null;
+  if (link.status === "paid") return path;
+  const q = new URLSearchParams();
+  const cents = link.amount?.mode === "fixed" ? link.amount.cents : null;
+  if (cents !== null && Number.isInteger(cents) && cents > 0 && cents < 1e11) {
+    q.set("amount", (cents / 100).toFixed(2));
+    q.set("currency", "USD");
+  }
+  const note = cleanPrefillNote(link.title);
+  if (note) q.set("note", note);
+  const s = q.toString();
+  return s ? `${path}?${s}` : path;
+}
+
+/** "@dana", "dana" or " @Dana " as the handle `/pay/@handle` takes, or null. */
+export function payHandleOf(input: string): string | null {
+  const h = input.trim().replace(/^@/, "").toLowerCase();
+  return HANDLE.test(h) ? h : null;
 }
 
 /** The app's address with the amount along (the app reads the handle; the rest rides for later). */

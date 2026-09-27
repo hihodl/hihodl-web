@@ -179,5 +179,7 @@
   "payLinks.pay.notFound": "Non troviamo più questo link o pagamento. Ricarica la pagina.",
   "payLinks.pay.badRequest": "Non troviamo questo link o pagamento. Controlla il link e ricarica la pagina.",
   "add.receive.noneGetApp": "Non c'è ancora un indirizzo su cui essere pagato. Il tuo portafoglio si crea nell'app HOLD: scaricala, e l'indirizzo comparirà qui.",
-  "linkPhone.pay.bodyComputer": "Le chiavi del tuo portafoglio restano sul tuo telefono. Collegalo una volta e l'app HOLD approva ogni pagamento che avvii qui."
+  "linkPhone.pay.bodyComputer": "Le chiavi del tuo portafoglio restano sul tuo telefono. Collegalo una volta e l'app HOLD approva ogni pagamento che avvii qui.",
+  "payLinks.status.frozen": "In pausa",
+  "payLinks.pay.gone.frozen": "Questo link è stato messo in pausa mentre pagavi, quindi per ora non accetta pagamenti. Non è stato pagato nulla."
 }

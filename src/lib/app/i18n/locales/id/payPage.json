@@ -117,5 +117,16 @@
   "bankReference": "Referensi",
   "bankBusinessOnly": "Bayar dari rekening perusahaan",
   "bankUseReference": "Gunakan referensi ini agar sampai ke {name}",
-  "bankCopy": "Salin {label}"
+  "bankCopy": "Salin {label}",
+  "gone.frozenTitle": "Link ini sedang dijeda.",
+  "gone.frozenBody": "Untuk saat ini link ini tidak menerima pembayaran.",
+  "fallback.paid": "Link ini sudah dibayar",
+  "fallback.inactive": "Link ini sudah tidak aktif",
+  "fallback.frozen": "Link ini sedang dijeda",
+  "fallback.cta": "Bayar {name} dengan jumlah lain",
+  "notFound.title": "Link ini tidak ada",
+  "notFound.body": "Periksa link ini dengan orang yang mengirimnya.",
+  "notFound.label": "Bayar seseorang di HOLD",
+  "notFound.go": "Lanjut",
+  "notFound.badHandle": "Itu bukan handle HOLD."
 }

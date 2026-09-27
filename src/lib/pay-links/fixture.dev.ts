@@ -8,9 +8,10 @@
  *   /pay/dana4pay   active, open amount up to $1,000, every chain, an owner named with no handle,
  *                   bank transfer in EUR and USD (made-up account numbers)
  *   /pay/n2wnerxy   active, fixed $20, an owner with no name and no handle
- *   /pay/pa2dpa2d   single use, already paid
- *   /pay/c2sedxyz   closed by its owner
- *   /pay/exp2red9   expired
+ *   /pay/pa2dpa2d   single use, already paid (sends on to @demo, nothing carried)
+ *   /pay/c2sedxyz   closed by its owner (sends on to @demo with $50 and its title)
+ *   /pay/exp2red9   expired (no personal link: nowhere to send on)
+ *   /pay/fr2zenpy   frozen, no ways to pay (sends on to @demo_creator with $75 and its title)
  *   /pay/dsab2ed3   disabled by us after reports (everything the owner wrote is null)
  *   /pay/@demo      a personal link: open amount, a verified private profile (initials), card, Apple Pay and Google Pay, USDC and EURC
  *   /pay/@demo_creator  the same, with a public profile photo
@@ -65,6 +66,8 @@ const PERSONAL: Record<string, PayLinkPublic> = {
     card: CARD,
   },
 };
+
+const DEMO = PERSONAL.demo.owner;
 
 export function fixturePersonalPayLink(handle: string): PayLinkPublic | null {
   return PERSONAL[handle] ?? null;
@@ -131,8 +134,9 @@ const LINKS: Record<string, PayLinkPublic> = {
     amount: { mode: "fixed", cents: 40000 },
     chains: ["base"],
     status: "paid",
-    owner: OWNER,
+    owner: DEMO,
     payTo: PAY_TO,
+    fallback: { handle: "demo", path: "/pay/@demo" },
   },
   c2sedxyz: {
     code: "c2sedxyz",
@@ -141,8 +145,21 @@ const LINKS: Record<string, PayLinkPublic> = {
     amount: { mode: "fixed", cents: 5000 },
     chains: ["solana"],
     status: "closed",
-    owner: OWNER,
+    owner: DEMO,
     payTo: PAY_TO,
+    fallback: { handle: "demo", path: "/pay/@demo" },
+  },
+  fr2zenpy: {
+    code: "fr2zenpy",
+    title: "Sponsored post, one week",
+    note: null,
+    amount: { mode: "fixed", cents: 7500 },
+    chains: ["solana", "base"],
+    status: "frozen",
+    owner: PERSONAL.demo_creator.owner,
+    payTo: null,
+    methods: [],
+    fallback: { handle: "demo_creator", path: "/pay/@demo_creator" },
   },
   exp2red9: {
     code: "exp2red9",

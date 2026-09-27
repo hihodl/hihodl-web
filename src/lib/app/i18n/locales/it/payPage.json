@@ -117,5 +117,16 @@
   "bankReference": "Causale",
   "bankBusinessOnly": "Paga da un conto aziendale",
   "bankUseReference": "Usa questa causale perché arrivi a {name}",
-  "bankCopy": "Copia {label}"
+  "bankCopy": "Copia {label}",
+  "gone.frozenTitle": "Questo link è in pausa.",
+  "gone.frozenBody": "Per ora non accetta pagamenti.",
+  "fallback.paid": "Questo link è già stato pagato",
+  "fallback.inactive": "Questo link non è più attivo",
+  "fallback.frozen": "Questo link è in pausa",
+  "fallback.cta": "Paga a {name} un altro importo",
+  "notFound.title": "Questo link non esiste",
+  "notFound.body": "Controlla il link con chi te l'ha inviato.",
+  "notFound.label": "Paga qualcuno su HOLD",
+  "notFound.go": "Continua",
+  "notFound.badHandle": "Questo non è un handle HOLD."
 }

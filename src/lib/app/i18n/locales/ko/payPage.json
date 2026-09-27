@@ -117,5 +117,16 @@
   "bankReference": "참조 번호",
   "bankBusinessOnly": "법인 계좌에서 결제하세요",
   "bankUseReference": "{name}님에게 도착하도록 이 참조 번호를 사용하세요",
-  "bankCopy": "{label} 복사"
+  "bankCopy": "{label} 복사",
+  "gone.frozenTitle": "이 링크는 일시 중지되었습니다.",
+  "gone.frozenBody": "지금은 결제를 받지 않습니다.",
+  "fallback.paid": "이 링크는 이미 결제되었습니다",
+  "fallback.inactive": "이 링크는 더 이상 활성 상태가 아닙니다",
+  "fallback.frozen": "이 링크는 일시 중지되었습니다",
+  "fallback.cta": "{name}님에게 다른 금액 결제하기",
+  "notFound.title": "존재하지 않는 링크입니다",
+  "notFound.body": "링크를 보낸 사람에게 확인하세요.",
+  "notFound.label": "HOLD에서 누군가에게 결제하기",
+  "notFound.go": "계속",
+  "notFound.badHandle": "HOLD 핸들이 아닙니다."
 }

@@ -179,5 +179,7 @@
   "payLinks.pay.notFound": "Ce lien ou ce paiement est introuvable. Actualisez la page.",
   "payLinks.pay.badRequest": "Ce lien ou ce paiement est introuvable. Vérifiez le lien et actualisez la page.",
   "add.receive.noneGetApp": "Il n'y a pas encore d'adresse pour être payé. Votre wallet est créé dans l'app HOLD : téléchargez-le, et l'adresse apparaîtra ici.",
-  "linkPhone.pay.bodyComputer": "Les clés de votre wallet restent sur votre téléphone. Associez-le une fois et l'app HOLD approuve chaque paiement que vous lancez ici."
+  "linkPhone.pay.bodyComputer": "Les clés de votre wallet restent sur votre téléphone. Associez-le une fois et l'app HOLD approuve chaque paiement que vous lancez ici.",
+  "payLinks.status.frozen": "En pause",
+  "payLinks.pay.gone.frozen": "Ce lien a été mis en pause pendant votre paiement, il n'accepte donc aucun paiement pour le moment. Rien n'a été payé."
 }

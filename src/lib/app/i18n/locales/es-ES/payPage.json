@@ -117,5 +117,16 @@
   "bankReference": "Concepto",
   "bankBusinessOnly": "Paga desde una cuenta de empresa",
   "bankUseReference": "Usa este concepto para que le llegue a {name}",
-  "bankCopy": "Copiar {label}"
+  "bankCopy": "Copiar {label}",
+  "gone.frozenTitle": "Este enlace está en pausa.",
+  "gone.frozenBody": "Por ahora no admite pagos.",
+  "fallback.paid": "Este enlace ya se ha pagado",
+  "fallback.inactive": "Este enlace ya no está activo",
+  "fallback.frozen": "Este enlace está en pausa",
+  "fallback.cta": "Paga a {name} otro importe",
+  "notFound.title": "Este enlace no existe",
+  "notFound.body": "Compruébalo con quien te lo envió.",
+  "notFound.label": "Paga a alguien en HOLD",
+  "notFound.go": "Continuar",
+  "notFound.badHandle": "Ese no es un usuario de HOLD."
 }

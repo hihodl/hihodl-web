@@ -233,5 +233,17 @@
   "payPage.bankReference": "حوالہ",
   "payPage.bankBusinessOnly": "کسی کمپنی کے اکاؤنٹ سے ادائیگی کریں",
   "payPage.bankUseReference": "یہ حوالہ استعمال کریں تاکہ رقم {name} تک پہنچے",
-  "payPage.bankCopy": "{label} کاپی کریں"
+  "payPage.bankCopy": "{label} کاپی کریں",
+  "payPage.gone.frozenTitle": "یہ لنک عارضی طور پر روکا گیا ہے۔",
+  "payPage.gone.frozenBody": "فی الحال یہ کوئی ادائیگی قبول نہیں کرتا۔",
+  "payPage.fallback.paid": "اس لنک کی ادائیگی ہو چکی ہے",
+  "payPage.fallback.inactive": "یہ لنک اب فعال نہیں ہے",
+  "payPage.fallback.frozen": "یہ لنک عارضی طور پر روکا گیا ہے",
+  "payPage.fallback.cta": "{name} کو کوئی اور رقم ادا کریں",
+  "payPage.notFound.title": "یہ لنک موجود نہیں ہے",
+  "payPage.notFound.body": "جس نے یہ لنک بھیجا ہے اس سے تصدیق کریں۔",
+  "payPage.notFound.label": "HOLD پر کسی کو ادائیگی کریں",
+  "payPage.notFound.go": "جاری رکھیں",
+  "payPage.notFound.badHandle": "یہ HOLD ہینڈل نہیں ہے۔",
+  "home.payLinks.pay.gone.frozen": "آپ کے ادائیگی کرتے وقت یہ لنک روک دیا گیا، اس لیے فی الحال یہ کوئی ادائیگی قبول نہیں کرتا۔ کچھ بھی ادا نہیں کیا گیا۔"
 }

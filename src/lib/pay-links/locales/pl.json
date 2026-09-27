@@ -233,5 +233,17 @@
   "payPage.bankReference": "Tytuł przelewu",
   "payPage.bankBusinessOnly": "Zapłać z konta firmowego",
   "payPage.bankUseReference": "Wpisz ten tytuł przelewu, aby pieniądze trafiły do {name}",
-  "payPage.bankCopy": "Kopiuj: {label}"
+  "payPage.bankCopy": "Kopiuj: {label}",
+  "payPage.gone.frozenTitle": "Ten link jest wstrzymany.",
+  "payPage.gone.frozenBody": "Na razie nie przyjmuje płatności.",
+  "payPage.fallback.paid": "Ten link został już opłacony",
+  "payPage.fallback.inactive": "Ten link nie jest już aktywny",
+  "payPage.fallback.frozen": "Ten link jest wstrzymany",
+  "payPage.fallback.cta": "Zapłać {name} inną kwotę",
+  "payPage.notFound.title": "Ten link nie istnieje",
+  "payPage.notFound.body": "Sprawdź link u osoby, która go wysłała.",
+  "payPage.notFound.label": "Zapłać komuś w HOLD",
+  "payPage.notFound.go": "Dalej",
+  "payPage.notFound.badHandle": "To nie jest nazwa użytkownika HOLD.",
+  "home.payLinks.pay.gone.frozen": "Ten link został wstrzymany w trakcie płatności, więc na razie nie przyjmuje płatności. Nic nie zostało zapłacone."
 }

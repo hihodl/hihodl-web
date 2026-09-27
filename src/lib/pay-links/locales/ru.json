@@ -233,5 +233,17 @@
   "payPage.bankReference": "Назначение платежа",
   "payPage.bankBusinessOnly": "Платите со счёта компании",
   "payPage.bankUseReference": "Укажите это назначение платежа, чтобы деньги дошли до {name}",
-  "payPage.bankCopy": "Копировать: {label}"
+  "payPage.bankCopy": "Копировать: {label}",
+  "payPage.gone.frozenTitle": "Эта ссылка приостановлена.",
+  "payPage.gone.frozenBody": "Сейчас она не принимает платежи.",
+  "payPage.fallback.paid": "Эта ссылка уже оплачена",
+  "payPage.fallback.inactive": "Эта ссылка больше не активна",
+  "payPage.fallback.frozen": "Эта ссылка приостановлена",
+  "payPage.fallback.cta": "Заплатить {name} другую сумму",
+  "payPage.notFound.title": "Такой ссылки нет",
+  "payPage.notFound.body": "Уточните ссылку у того, кто её прислал.",
+  "payPage.notFound.label": "Заплатить кому-то в HOLD",
+  "payPage.notFound.go": "Продолжить",
+  "payPage.notFound.badHandle": "Это не имя пользователя HOLD.",
+  "home.payLinks.pay.gone.frozen": "Эту ссылку приостановили, пока вы платили, поэтому сейчас она не принимает платежи. Ничего не оплачено."
 }
