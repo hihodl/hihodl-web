@@ -224,5 +224,14 @@
   "payPage.showCode": "কোড দেখান",
   "payPage.wcScan": "অন্য একটি ফোন বা কম্পিউটারে যেকোনো ওয়ালেট দিয়ে স্ক্যান করুন।",
   "payPage.orOpenWallet": "অথবা আপনার ওয়ালেট খুলুন",
-  "payPage.openInWalletBrowser": "পেমেন্ট করতে আপনার ওয়ালেটের ব্রাউজারে এই পেজটি খুলুন।"
+  "payPage.openInWalletBrowser": "পেমেন্ট করতে আপনার ওয়ালেটের ব্রাউজারে এই পেজটি খুলুন।",
+  "payPage.bank": "ব্যাংক ট্রান্সফার",
+  "payPage.bankTitle": "ব্যাংক ট্রান্সফারে পেমেন্ট করুন",
+  "payPage.bankHolder": "অ্যাকাউন্টধারী",
+  "payPage.bankAccountNumber": "অ্যাকাউন্ট নম্বর",
+  "payPage.bankRouting": "রাউটিং নম্বর",
+  "payPage.bankReference": "রেফারেন্স",
+  "payPage.bankBusinessOnly": "কোম্পানির অ্যাকাউন্ট থেকে পেমেন্ট করুন",
+  "payPage.bankUseReference": "{name}-এর কাছে পৌঁছাতে এই রেফারেন্সটি ব্যবহার করুন",
+  "payPage.bankCopy": "{label} কপি করুন"
 }

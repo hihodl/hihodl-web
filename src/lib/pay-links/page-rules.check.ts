@@ -25,6 +25,8 @@ import {
   holdPayUrl,
   offers,
   walletMethodKind,
+  bankTransfersOf,
+  groupIban,
 } from "./page-rules";
 
 let fails = 0;
@@ -121,6 +123,27 @@ eq("offers: an empty list offers nothing", offers({ methods: [] }, "hold"), fals
 eq("offers: a bank transfer is not a card", offers({ methods: [{ kind: "bank_transfer", currency: "EUR", payerMustBeBusiness: true }] }, "card"), false);
 eq("wallet kind apple", walletMethodKind("applePay"), "apple_pay");
 eq("wallet kind google", walletMethodKind("googlePay"), "google_pay");
+
+const EUR_BT = {
+  currency: "EUR",
+  reference: "HOLD-7K2MXQ9P",
+  payerMustBeBusiness: true,
+  account: { iban: "DE89370400440532013000", bic: "COBADEFFXXX", holderName: "Dana Lee" },
+};
+const USD_BT = {
+  currency: "USD",
+  reference: "HOLD-7K2MXQ9P",
+  payerMustBeBusiness: true,
+  account: { accountNumber: "900123456789", routingNumber: "101019644", holderName: "Dana Lee", rails: ["ach", "wire"] as ("ach" | "wire")[] },
+};
+const bankMethod = (currency: string) => ({ kind: "bank_transfer" as const, currency, payerMustBeBusiness: true });
+eq("bank: an older server shows none", bankTransfersOf({ bankTransfers: [EUR_BT] }).length, 0);
+eq("bank: only what methods list", bankTransfersOf({ methods: [bankMethod("USD")], bankTransfers: [EUR_BT, USD_BT] }).map((b) => b.currency), ["USD"]);
+eq("bank: both", bankTransfersOf({ methods: [bankMethod("EUR"), bankMethod("USD")], bankTransfers: [EUR_BT, USD_BT] }).length, 2);
+eq("bank: listed but no account sent", bankTransfersOf({ methods: [bankMethod("EUR")], bankTransfers: [] }).length, 0);
+eq("bank: no holder, no row", bankTransfersOf({ methods: [bankMethod("EUR")], bankTransfers: [{ ...EUR_BT, account: { ...EUR_BT.account, holderName: " " } }] }).length, 0);
+eq("bank: no reference, no row", bankTransfersOf({ methods: [bankMethod("EUR")], bankTransfers: [{ ...EUR_BT, reference: "" }] }).length, 0);
+eq("iban grouped", groupIban("DE89370400440532013000"), "DE89 3704 0044 0532 0130 00");
 
 if (fails) {
   console.log(`\n${fails} failing`);

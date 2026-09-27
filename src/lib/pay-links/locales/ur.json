@@ -224,5 +224,14 @@
   "payPage.showCode": "کوڈ دکھائیں",
   "payPage.wcScan": "کسی اور فون یا کمپیوٹر پر کسی بھی والٹ سے اسکین کریں۔",
   "payPage.orOpenWallet": "یا اپنا والٹ کھولیں",
-  "payPage.openInWalletBrowser": "ادائیگی کے لیے اپنے والٹ کے براؤزر میں یہ صفحہ کھولیں۔"
+  "payPage.openInWalletBrowser": "ادائیگی کے لیے اپنے والٹ کے براؤزر میں یہ صفحہ کھولیں۔",
+  "payPage.bank": "بینک ٹرانسفر",
+  "payPage.bankTitle": "بینک ٹرانسفر سے ادائیگی کریں",
+  "payPage.bankHolder": "اکاؤنٹ ہولڈر",
+  "payPage.bankAccountNumber": "اکاؤنٹ نمبر",
+  "payPage.bankRouting": "روٹنگ نمبر",
+  "payPage.bankReference": "حوالہ",
+  "payPage.bankBusinessOnly": "کسی کمپنی کے اکاؤنٹ سے ادائیگی کریں",
+  "payPage.bankUseReference": "یہ حوالہ استعمال کریں تاکہ رقم {name} تک پہنچے",
+  "payPage.bankCopy": "{label} کاپی کریں"
 }

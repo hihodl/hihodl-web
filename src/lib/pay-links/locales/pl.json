@@ -224,5 +224,14 @@
   "payPage.showCode": "Pokaż kod",
   "payPage.wcScan": "Zeskanuj dowolnym portfelem na innym telefonie lub komputerze.",
   "payPage.orOpenWallet": "Albo otwórz swój portfel",
-  "payPage.openInWalletBrowser": "Otwórz tę stronę w przeglądarce portfela, żeby zapłacić."
+  "payPage.openInWalletBrowser": "Otwórz tę stronę w przeglądarce portfela, żeby zapłacić.",
+  "payPage.bank": "Przelew bankowy",
+  "payPage.bankTitle": "Zapłać przelewem bankowym",
+  "payPage.bankHolder": "Właściciel rachunku",
+  "payPage.bankAccountNumber": "Numer rachunku",
+  "payPage.bankRouting": "Numer routingowy",
+  "payPage.bankReference": "Tytuł przelewu",
+  "payPage.bankBusinessOnly": "Zapłać z konta firmowego",
+  "payPage.bankUseReference": "Wpisz ten tytuł przelewu, aby pieniądze trafiły do {name}",
+  "payPage.bankCopy": "Kopiuj: {label}"
 }

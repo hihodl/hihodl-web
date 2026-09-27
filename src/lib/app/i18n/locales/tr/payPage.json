@@ -108,5 +108,14 @@
   "showCode": "Kodu göster",
   "wcScan": "Başka bir telefon veya bilgisayardan herhangi bir cüzdanla tara.",
   "orOpenWallet": "Veya cüzdanını aç",
-  "openInWalletBrowser": "Ödemek için bu sayfayı cüzdanının tarayıcısında aç."
+  "openInWalletBrowser": "Ödemek için bu sayfayı cüzdanının tarayıcısında aç.",
+  "bank": "Banka havalesi",
+  "bankTitle": "Banka havalesiyle öde",
+  "bankHolder": "Hesap sahibi",
+  "bankAccountNumber": "Hesap numarası",
+  "bankRouting": "Routing numarası",
+  "bankReference": "Açıklama",
+  "bankBusinessOnly": "Bir şirket hesabından öde",
+  "bankUseReference": "{name} kişisine ulaşması için bu açıklamayı kullan",
+  "bankCopy": "{label} kopyala"
 }

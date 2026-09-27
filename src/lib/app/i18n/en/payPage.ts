@@ -141,6 +141,17 @@ const payPage = {
   "wcScan": "Scan with any wallet on another phone or computer.",
   "orOpenWallet": "Or open your wallet",
   "openInWalletBrowser": "Open this page in your wallet's browser to pay.",
+
+  // Bank transfer: the owner's own account and the link's reference
+  "bank": "Bank transfer",
+  "bankTitle": "Pay by bank transfer",
+  "bankHolder": "Account holder",
+  "bankAccountNumber": "Account number",
+  "bankRouting": "Routing number",
+  "bankReference": "Reference",
+  "bankBusinessOnly": "Pay from a company account",
+  "bankUseReference": "Use this reference so it reaches {name}",
+  "bankCopy": "Copy {label}",
 } as const;
 
 export default payPage;

@@ -224,5 +224,14 @@
   "payPage.showCode": "Показать код",
   "payPage.wcScan": "Отсканируйте любым кошельком с другого телефона или компьютера.",
   "payPage.orOpenWallet": "Или откройте кошелёк",
-  "payPage.openInWalletBrowser": "Откройте эту страницу в браузере кошелька, чтобы оплатить."
+  "payPage.openInWalletBrowser": "Откройте эту страницу в браузере кошелька, чтобы оплатить.",
+  "payPage.bank": "Банковский перевод",
+  "payPage.bankTitle": "Оплатить банковским переводом",
+  "payPage.bankHolder": "Владелец счёта",
+  "payPage.bankAccountNumber": "Номер счёта",
+  "payPage.bankRouting": "Routing-номер",
+  "payPage.bankReference": "Назначение платежа",
+  "payPage.bankBusinessOnly": "Платите со счёта компании",
+  "payPage.bankUseReference": "Укажите это назначение платежа, чтобы деньги дошли до {name}",
+  "payPage.bankCopy": "Копировать: {label}"
 }

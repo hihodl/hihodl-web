@@ -108,5 +108,14 @@
   "showCode": "إظهار الرمز",
   "wcScan": "امسح الرمز باستخدام أي محفظة من هاتف أو حاسوب آخر.",
   "orOpenWallet": "أو افتح محفظتك",
-  "openInWalletBrowser": "افتح هذه الصفحة في متصفح محفظتك للدفع."
+  "openInWalletBrowser": "افتح هذه الصفحة في متصفح محفظتك للدفع.",
+  "bank": "تحويل بنكي",
+  "bankTitle": "الدفع بتحويل بنكي",
+  "bankHolder": "اسم صاحب الحساب",
+  "bankAccountNumber": "رقم الحساب",
+  "bankRouting": "رقم التوجيه",
+  "bankReference": "المرجع",
+  "bankBusinessOnly": "ادفع من حساب شركة",
+  "bankUseReference": "استخدم هذا المرجع ليصل المبلغ إلى {name}",
+  "bankCopy": "نسخ {label}"
 }

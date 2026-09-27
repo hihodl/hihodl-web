@@ -5,7 +5,8 @@
  * Codes follow the backend rule: 8 characters, no 0, 1, i, l or o.
  *
  *   /pay/k7x2m9qa   active, fixed $150, Solana and Base
- *   /pay/dana4pay   active, open amount up to $1,000, every chain, an owner named with no handle
+ *   /pay/dana4pay   active, open amount up to $1,000, every chain, an owner named with no handle,
+ *                   bank transfer in EUR and USD (made-up account numbers)
  *   /pay/n2wnerxy   active, fixed $20, an owner with no name and no handle
  *   /pay/pa2dpa2d   single use, already paid
  *   /pay/c2sedxyz   closed by its owner
@@ -91,6 +92,27 @@ const LINKS: Record<string, PayLinkPublic> = {
     // A handle the text filter refused: the label falls back to the display name.
     owner: { displayName: "Dana Okafor", handle: null, label: "Dana Okafor" },
     payTo: PAY_TO,
+    methods: [
+      { kind: "hold" },
+      { kind: "stablecoins" },
+      { kind: "bank_transfer", currency: "EUR", payerMustBeBusiness: true },
+      { kind: "bank_transfer", currency: "USD", payerMustBeBusiness: true },
+    ],
+    // Made-up numbers: the IBAN is the textbook example, the US ones are nobody's.
+    bankTransfers: [
+      {
+        currency: "EUR",
+        reference: "HOLD-DANA4PAY",
+        payerMustBeBusiness: true,
+        account: { iban: "DE89370400440532013000", bic: "COBADEFFXXX", holderName: "Dana Okafor" },
+      },
+      {
+        currency: "USD",
+        reference: "HOLD-DANA4PAY",
+        payerMustBeBusiness: true,
+        account: { accountNumber: "000123456789", routingNumber: "000000000", holderName: "Dana Okafor", rails: ["ach", "wire"] },
+      },
+    ],
   },
   n2wnerxy: {
     code: "n2wnerxy",

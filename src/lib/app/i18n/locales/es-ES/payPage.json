@@ -108,5 +108,14 @@
   "showCode": "Mostrar el código",
   "wcScan": "Escanea con cualquier wallet desde otro móvil u ordenador.",
   "orOpenWallet": "O abre tu wallet",
-  "openInWalletBrowser": "Abre esta página en el navegador de tu wallet para pagar."
+  "openInWalletBrowser": "Abre esta página en el navegador de tu wallet para pagar.",
+  "bank": "Transferencia bancaria",
+  "bankTitle": "Pagar por transferencia bancaria",
+  "bankHolder": "Titular de la cuenta",
+  "bankAccountNumber": "Número de cuenta",
+  "bankRouting": "Número de routing",
+  "bankReference": "Concepto",
+  "bankBusinessOnly": "Paga desde una cuenta de empresa",
+  "bankUseReference": "Usa este concepto para que le llegue a {name}",
+  "bankCopy": "Copiar {label}"
 }

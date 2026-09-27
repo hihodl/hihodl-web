@@ -108,5 +108,14 @@
   "showCode": "코드 보기",
   "wcScan": "다른 휴대폰이나 컴퓨터에서 아무 지갑으로나 스캔하세요.",
   "orOpenWallet": "또는 지갑 열기",
-  "openInWalletBrowser": "결제하려면 지갑의 브라우저에서 이 페이지를 여세요."
+  "openInWalletBrowser": "결제하려면 지갑의 브라우저에서 이 페이지를 여세요.",
+  "bank": "계좌 이체",
+  "bankTitle": "계좌 이체로 결제",
+  "bankHolder": "예금주",
+  "bankAccountNumber": "계좌 번호",
+  "bankRouting": "라우팅 번호",
+  "bankReference": "참조 번호",
+  "bankBusinessOnly": "법인 계좌에서 결제하세요",
+  "bankUseReference": "{name}님에게 도착하도록 이 참조 번호를 사용하세요",
+  "bankCopy": "{label} 복사"
 }

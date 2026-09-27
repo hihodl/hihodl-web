@@ -15,7 +15,8 @@
  *                  receive: USDC, or EURC on Base)
  *   the note       Quick Send's method row: an uppercase label over the value
  *   how to pay     HOLD (the app, or the store), card, Apple Pay or Google
- *                  Pay (one, by device), stablecoins (a sheet)
+ *                  Pay (one, by device), bank transfer (a sheet: the owner's
+ *                  own account and the link's reference), stablecoins (a sheet)
  *
  * Nothing explains itself on the screen: the warnings and the fine print are
  * in the Terms the foot links to.
@@ -46,9 +47,11 @@ import {
 import { ownerName, payKeyScope } from "@/lib/pay-links/client";
 import {
   appSchemeUrl,
+  bankTransfersOf,
   cleanAmountInput,
   defaultCurrency,
   detectPlatform,
+  groupIban,
   isCoinflowCheckoutUrl,
   isCoinflowOrigin,
   isPhone,
@@ -63,7 +66,7 @@ import {
   walletMethodKind,
   type Platform,
 } from "@/lib/pay-links/page-rules";
-import type { CardMethod, CardPayment, ShownPayLink } from "@/lib/pay-links/types";
+import type { CardMethod, CardPayment, PayLinkBankTransfer, ShownPayLink } from "@/lib/pay-links/types";
 
 import { PayLinkPay, networksFor } from "./PayLinkPay";
 import { PayI18nProvider } from "./pay-i18n";
@@ -202,6 +205,8 @@ function Shown({ link }: { link: ShownPayLink }) {
   // The rows the server offers on this link, and no others (an older server names none: all of them).
   const holdOffered = offers(link, "hold");
   const stableOffered = offers(link, "stablecoins");
+  // Only what the server listed and sent the account for; never assumed.
+  const banks = bankTransfersOf(link);
 
   /* The device and what a wallet's browser brought back, once in the browser. */
   const [platform, setPlatform] = useState<Platform | null>(null);
@@ -210,7 +215,8 @@ function Shown({ link }: { link: ShownPayLink }) {
   const [tags, setTags] = useState<string[]>([]);
   const [amountText, setAmountText] = useState("");
   const [startNetwork, setStartNetwork] = useState<Chain | null>(null);
-  const [sheet, setSheet] = useState<"hold" | "stable" | null>(null);
+  const [sheet, setSheet] = useState<"hold" | "stable" | "bank" | null>(null);
+  const [bankCurrency, setBankCurrency] = useState<string | null>(null);
   useEffect(() => {
     setPlatform(detectPlatform(navigator.userAgent, navigator.maxTouchPoints ?? 0));
     setTags(navigator.languages?.length ? [...navigator.languages] : navigator.language ? [navigator.language] : []);
@@ -437,7 +443,17 @@ function Shown({ link }: { link: ShownPayLink }) {
   const cardTakes = !!card && card.currencies.map((c) => c.toUpperCase()).includes(currency);
   const showCard = cardTakes && !!card && card.methods.includes("card") && offers(link, "card");
   const showWallet = cardTakes && !!card && !!walletMethod && card.methods.includes(walletMethod) && offers(link, walletMethodKind(walletMethod));
-  const lastRow = stableOffered ? "stable" : showWallet ? "wallet" : showCard ? "card" : "hold";
+  const lastRow = stableOffered ? "stable" : banks.length ? "bank" : showWallet ? "wallet" : showCard ? "card" : "hold";
+  const bank = sheet === "bank" ? banks.find((b) => b.currency === bankCurrency) ?? null : null;
+  /* What the transfer is for: the fixed price (in USD, the only currency a fixed link takes by bank), or what was typed in its currency. */
+  const bankAmount = (b: PayLinkBankTransfer): { shown: string; raw: string } | null => {
+    let minor: number | null = null;
+    if (fixed !== null) minor = b.currency.toUpperCase() === "USD" ? fixed : null;
+    else if (typedMinor !== null && typedMinor > 0 && currency === b.currency.toUpperCase()) minor = typedMinor;
+    if (minor === null) return null;
+    const d = minorDigits(b.currency);
+    return { shown: fmtFiat(minor / 10 ** d, b.currency), raw: (minor / 10 ** d).toFixed(d) };
+  };
   const busy = cardPhase.kind === "starting";
   const done = cardPhase.kind === "paid" || cardPhase.kind === "failed" || cardPhase.kind === "watching";
 
@@ -563,6 +579,20 @@ function Shown({ link }: { link: ShownPayLink }) {
                 last={lastRow === "wallet"}
               />
             ) : null}
+            {banks.map((b, i) => (
+              <MethodRow
+                key={b.currency}
+                icon={<GlyphIcon name="business-outline" />}
+                label={t("payPage.bank")}
+                sub={banks.length > 1 ? b.currency : undefined}
+                onClick={() => {
+                  setBankCurrency(b.currency);
+                  setSheet("bank");
+                }}
+                disabled={busy}
+                last={lastRow === "bank" && i === banks.length - 1}
+              />
+            ))}
             {stableOffered ? (
               <MethodRow
                 icon={<ImgIcon src="/pay/usdc.png" />}
@@ -584,6 +614,11 @@ function Shown({ link }: { link: ShownPayLink }) {
       {sheet === "stable" && active ? (
         <Modal onClose={() => setSheet(null)} title={t("payPage.payWithToken", { token: token === "eurc" ? "EURC" : "USDC" })} size="lg">
           <PayLinkPay link={link} token={token} amountCents={stableCents} amountText={fixed === null ? amountText : null} network={startNetwork} />
+        </Modal>
+      ) : null}
+      {bank && active ? (
+        <Modal onClose={() => setSheet(null)} title={t("payPage.bankTitle")} size="lg">
+          <BankSheet transfer={bank} amount={bankAmount(bank)} payee={bigName} />
         </Modal>
       ) : null}
       {cardPhase.kind === "checkout" ? (
@@ -710,6 +745,77 @@ function GlyphIcon({ name, tone = "glass" }: { name: IonName; tone?: "glass" | "
     <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${bg}`} aria-hidden>
       <Ion name={name} size={18} />
     </span>
+  );
+}
+
+/* ── Bank transfer ──────────────────────────────────────────────── */
+
+/**
+ * The owner's own account, as the app's Add money shows one (the rows of
+ * RailAccountCard), each a tap to copy, and the link's reference, which is
+ * what ties the transfer to this link. Two short lines under it and nothing
+ * more: whether it must come from a company, and that the reference matters.
+ */
+function BankSheet({ transfer, amount, payee }: { transfer: PayLinkBankTransfer; amount: { shown: string; raw: string } | null; payee: string }) {
+  const t = useT();
+  const a = transfer.account;
+  const rows: { label: string; shown: string; raw: string; strong?: boolean }[] = [];
+  if (amount) rows.push({ label: t("payPage.amountLabel"), shown: amount.shown, raw: amount.raw });
+  rows.push({ label: t("payPage.bankHolder"), shown: a.holderName, raw: a.holderName });
+  if ("iban" in a) {
+    rows.push({ label: "IBAN", shown: groupIban(a.iban), raw: a.iban.replace(/\s+/g, "") });
+    if (a.bic) rows.push({ label: "BIC", shown: a.bic, raw: a.bic });
+  } else {
+    rows.push({ label: t("payPage.bankAccountNumber"), shown: a.accountNumber, raw: a.accountNumber });
+    rows.push({ label: t("payPage.bankRouting"), shown: a.routingNumber, raw: a.routingNumber });
+  }
+  rows.push({ label: t("payPage.bankReference"), shown: transfer.reference, raw: transfer.reference, strong: true });
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col rounded-[18px] border border-white/10 bg-white/[0.06] px-4">
+        {rows.map((r, i) => (
+          <CopyRow key={r.label} label={r.label} shown={r.shown} raw={r.raw} strong={r.strong} first={i === 0} />
+        ))}
+      </div>
+      {transfer.payerMustBeBusiness ? (
+        <p className="flex items-center gap-2 px-1 text-[13px] font-strong leading-[18px] text-amber">
+          <Ion name="business-outline" size={15} />
+          {t("payPage.bankBusinessOnly")}
+        </p>
+      ) : null}
+      <p className="px-1 text-[12.5px] leading-[17px] text-[#9FB7C2]">{t("payPage.bankUseReference", { name: payee })}</p>
+    </div>
+  );
+}
+
+function CopyRow({ label, shown, raw, strong, first }: { label: string; shown: string; raw: string; strong?: boolean; first: boolean }) {
+  const t = useT();
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    const p = navigator.clipboard?.writeText(raw);
+    if (!p) return;
+    void p.then(
+      () => {
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1800);
+      },
+      () => setCopied(false),
+    );
+  };
+  return (
+    <div className={first ? "" : "border-t border-white/[0.07]"}>
+      <button type="button" onClick={copy} aria-label={t("payPage.bankCopy", { label })} className="flex w-full items-center justify-between gap-4 py-3 text-start">
+        <span className="shrink-0 text-[12.5px] text-[#9FB7C2]">{label}</span>
+        <span className="flex min-w-0 items-center gap-2">
+          {/* Account numbers and references read left to right in every language. */}
+          <span dir="ltr" className={`min-w-0 break-all text-end tabular-nums text-white ${strong ? "text-[15px] font-extrabold" : "text-[13.5px] font-strong"}`}>
+            {shown}
+          </span>
+          <Ion name={copied ? "checkmark" : "copy-outline"} size={15} className={copied ? "shrink-0 text-[#2FBE8A]" : "shrink-0 text-[#9FB7C2]"} />
+        </span>
+      </button>
+    </div>
   );
 }
 

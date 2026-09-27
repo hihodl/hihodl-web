@@ -9,7 +9,7 @@
  */
 
 import { regionCurrency } from "../app/i18n/currencies";
-import type { PayLinkMethod, PayLinkMethodKind } from "./types";
+import type { PayLinkBankTransfer, PayLinkMethod, PayLinkMethodKind } from "./types";
 
 /* ── The device ─────────────────────────────────────────────────── */
 
@@ -46,6 +46,33 @@ export function walletMethodFor(p: Platform): "applePay" | "googlePay" {
 export function offers(link: { methods?: PayLinkMethod[] | null }, kind: PayLinkMethodKind): boolean {
   if (!Array.isArray(link.methods)) return true;
   return link.methods.some((m) => m?.kind === kind);
+}
+
+/**
+ * The bank transfers the page may show: those the server lists in `methods`
+ * AND sent the account for, each well formed. Unlike the other rows, an older
+ * server that names no methods shows none: a bank transfer is never assumed.
+ */
+export function bankTransfersOf(link: { methods?: PayLinkMethod[] | null; bankTransfers?: PayLinkBankTransfer[] | null }): PayLinkBankTransfer[] {
+  if (!Array.isArray(link.methods) || !Array.isArray(link.bankTransfers)) return [];
+  const listed = new Set(link.methods.flatMap((m) => (m?.kind === "bank_transfer" && typeof m.currency === "string" ? [m.currency.toUpperCase()] : [])));
+  const seen = new Set<string>();
+  return link.bankTransfers.filter((b) => {
+    const cur = typeof b?.currency === "string" ? b.currency.toUpperCase() : "";
+    if (!listed.has(cur) || seen.has(cur) || typeof b.reference !== "string" || !b.reference.trim() || !b.account) return false;
+    const a = b.account as Record<string, unknown>;
+    const holder = typeof a.holderName === "string" && a.holderName.trim() !== "";
+    const iban = typeof a.iban === "string" && a.iban.trim() !== "";
+    const us = typeof a.accountNumber === "string" && a.accountNumber.trim() !== "" && typeof a.routingNumber === "string" && a.routingNumber.trim() !== "";
+    if (!holder || !(iban || us)) return false;
+    seen.add(cur);
+    return true;
+  });
+}
+
+/** An IBAN as a bank prints it: groups of four. What is copied stays unspaced. */
+export function groupIban(iban: string): string {
+  return iban.replace(/\s+/g, "").replace(/(.{4})(?=.)/g, "$1 ");
 }
 
 /** The kind Apple Pay and Google Pay are offered as. The card checkout keeps Coinflow's names. */

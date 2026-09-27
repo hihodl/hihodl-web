@@ -108,5 +108,14 @@
   "showCode": "Code anzeigen",
   "wcScan": "Scann mit einer beliebigen Wallet auf einem anderen Handy oder Computer.",
   "orOpenWallet": "Oder öffne deine Wallet",
-  "openInWalletBrowser": "Öffne diese Seite im Browser deiner Wallet, um zu bezahlen."
+  "openInWalletBrowser": "Öffne diese Seite im Browser deiner Wallet, um zu bezahlen.",
+  "bank": "Banküberweisung",
+  "bankTitle": "Per Banküberweisung zahlen",
+  "bankHolder": "Kontoinhaber",
+  "bankAccountNumber": "Kontonummer",
+  "bankRouting": "Routing-Nummer",
+  "bankReference": "Verwendungszweck",
+  "bankBusinessOnly": "Zahle von einem Firmenkonto",
+  "bankUseReference": "Gib diesen Verwendungszweck an, damit es bei {name} ankommt",
+  "bankCopy": "{label} kopieren"
 }

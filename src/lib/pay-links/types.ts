@@ -50,7 +50,7 @@ export type CardMethod = "card" | "applePay" | "googlePay";
 /**
  * A way to pay a link, as the server decides it per link (the backend's
  * methods.ts). `bank_transfer` names only its currency and whether the payer
- * must be a business, and the page does not offer it yet.
+ * must be a business; its account comes beside it in `bankTransfers`.
  */
 export type PayLinkMethod =
   | { kind: "hold" }
@@ -61,6 +61,20 @@ export type PayLinkMethod =
   | { kind: "bank_transfer"; currency: string; payerMustBeBusiness: boolean };
 
 export type PayLinkMethodKind = PayLinkMethod["kind"];
+
+/**
+ * The owner's own bank account (Bridge holds it in their name; `holderName`
+ * is what Bridge returned) and the reference that ties a transfer to this
+ * link (`HOLD-<CODE>`). Sent only for a `bank_transfer` in `methods`.
+ */
+export interface PayLinkBankTransfer {
+  currency: string;
+  reference: string;
+  payerMustBeBusiness: boolean;
+  account:
+    | { iban: string; bic: string | null; holderName: string }
+    | { accountNumber: string; routingNumber: string; holderName: string; rails: ("ach" | "wire")[] };
+}
 
 /**
  * What the link takes by card, or null for no card rows. Amounts in US cents;
@@ -118,6 +132,8 @@ export interface PayLinkPublic {
   tokens?: ("usdc" | "eurc")[];
   /** The ways the page may offer, and no others. Absent from an older server: every row as before. */
   methods?: PayLinkMethod[];
+  /** The account and reference for each bank transfer in `methods`. Absent from an older server. */
+  bankTransfers?: PayLinkBankTransfer[];
 }
 
 /** A link that still says what it asks for: anything but a disabled one. */

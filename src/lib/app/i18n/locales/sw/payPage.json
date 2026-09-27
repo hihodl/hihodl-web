@@ -108,5 +108,14 @@
   "showCode": "Onyesha msimbo",
   "wcScan": "Changanua kwa pochi yoyote kwenye simu au kompyuta nyingine.",
   "orOpenWallet": "Au fungua pochi yako",
-  "openInWalletBrowser": "Fungua ukurasa huu kwenye kivinjari cha pochi yako ili kulipa."
+  "openInWalletBrowser": "Fungua ukurasa huu kwenye kivinjari cha pochi yako ili kulipa.",
+  "bank": "Uhamisho wa benki",
+  "bankTitle": "Lipa kwa uhamisho wa benki",
+  "bankHolder": "Mmiliki wa akaunti",
+  "bankAccountNumber": "Nambari ya akaunti",
+  "bankRouting": "Nambari ya routing",
+  "bankReference": "Kumbukumbu",
+  "bankBusinessOnly": "Lipa kutoka akaunti ya kampuni",
+  "bankUseReference": "Tumia kumbukumbu hii ili ifike kwa {name}",
+  "bankCopy": "Nakili {label}"
 }

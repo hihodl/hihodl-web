@@ -108,5 +108,14 @@
   "showCode": "Mostra il codice",
   "wcScan": "Inquadra con qualsiasi wallet da un altro telefono o computer.",
   "orOpenWallet": "Oppure apri il tuo wallet",
-  "openInWalletBrowser": "Apri questa pagina nel browser del tuo wallet per pagare."
+  "openInWalletBrowser": "Apri questa pagina nel browser del tuo wallet per pagare.",
+  "bank": "Bonifico bancario",
+  "bankTitle": "Paga con bonifico bancario",
+  "bankHolder": "Intestatario del conto",
+  "bankAccountNumber": "Numero di conto",
+  "bankRouting": "Routing number",
+  "bankReference": "Causale",
+  "bankBusinessOnly": "Paga da un conto aziendale",
+  "bankUseReference": "Usa questa causale perché arrivi a {name}",
+  "bankCopy": "Copia {label}"
 }
