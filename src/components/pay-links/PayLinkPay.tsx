@@ -51,6 +51,8 @@ import {
 } from "@/lib/pay-links/client";
 import type { PayLinkEvmPayload, PayLinkPayment, ShownPayLink, TimedPayLinkCheckout } from "@/lib/pay-links/types";
 import { connectWalletConnect, isWalletConnectDismissed, walletConnectProjectId } from "@/lib/pay-links/walletconnect";
+import { t } from "@/lib/app/i18n";
+import { useT } from "@/lib/app/i18n/react";
 
 /**
  * Paying a pay link, from any wallet, with no HOLD account.
@@ -90,8 +92,14 @@ export function parseCents(text: string): number | null {
   return Number(m[1]) * 100 + Number((m[2] ?? "").padEnd(2, "0") || "0");
 }
 
-export function PayLinkPay({ link }: { link: ShownPayLink }) {
+/**
+ * `initialAmountText`: what the page's own amount field already holds, in US
+ * dollars, so an open-amount payer does not type it twice.
+ */
+export function PayLinkPay({ link, initialAmountText = "" }: { link: ShownPayLink; initialAmountText?: string }) {
   const router = useRouter();
+  // Re-render when the language changes; `t` reads whichever is on screen.
+  useT();
   const scope = payKeyScope(link.code);
   const [chain, setChain] = useState<Chain>(link.chains.includes("solana") ? "solana" : link.chains[0]);
   const [phase, setPhase] = useState<Phase>({ kind: "loading" });
@@ -101,7 +109,7 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
   // Inlined at build, so the server and the browser agree on it.
   const walletConnect = walletConnectProjectId() !== null;
   const [mobile, setMobile] = useState(false);
-  const [amountText, setAmountText] = useState("");
+  const [amountText, setAmountText] = useState(initialAmountText);
   const [now, setNow] = useState(() => Date.now());
   /** When the server said a previous attempt of this payer's may have settled (`previous_attempt_pending`). */
   const [retryAt, setRetryAt] = useState<number | null>(null);
@@ -246,7 +254,7 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
               return;
             }
             qrRef.current.replaced = true;
-            setNotice("The payment your wallet opened didn't match this page. Don't approve it; scan this new code instead.");
+            setNotice(t("payPage.stable.qrMismatch"));
             await replaceQr();
             return;
           }
@@ -261,7 +269,7 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
           }
           if (payment.status === "paid_duplicate") return setPhase({ kind: "duplicate", payment });
           if (payment.status === "unpaid") {
-            setNotice("That code ran out before a payment arrived, so here is a new one. Nothing was paid.");
+            setNotice(t("payPage.stable.qrExpired"));
             await replaceQr();
             return;
           }
@@ -284,11 +292,11 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
     if (link.amount.mode === "fixed") return { cents: undefined, expected: link.amount.cents };
     const cents = parseCents(amountText);
     if (cents === null) {
-      setNotice("Type the amount in dollars, like 150 or 150.50.");
+      setNotice(t("payPage.stable.amountHow"));
       return null;
     }
     if (cents < MIN_CENTS || cents > maxCents) {
-      setNotice(`The amount has to be between ${usdFromCents(MIN_CENTS)} and ${usdFromCents(maxCents)}.`);
+      setNotice(t("payPage.stable.amountBetween", { min: usdFromCents(MIN_CENTS), max: usdFromCents(maxCents) }));
       return null;
     }
     return { cents, expected: cents };
@@ -351,12 +359,12 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
     const amount = amountOrProblem();
     if (!amount) return;
     try {
-      setPhase({ kind: "busy", label: `Connecting ${wallet.name}…` });
+      setPhase({ kind: "busy", label: t("payPage.stable.connecting", { wallet: wallet.name }) });
       const connected = (await wallet.provider.connect()) as { publicKey?: { toString(): string } } | undefined;
       const payerAddress = (connected?.publicKey ?? wallet.provider.publicKey)?.toString();
       if (!payerAddress) throw new Error("no_account");
 
-      setPhase({ kind: "busy", label: "Preparing the payment…" });
+      setPhase({ kind: "busy", label: t("payPage.stable.preparing") });
       const web3 = await import("@solana/web3.js");
       const expect: ExpectedPayment = { cents: amount.expected, chain: "solana", payerAddress, payTo: link.payTo };
       const checkout = () =>
@@ -376,13 +384,13 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
         );
       let { payment, tx } = await checkout();
 
-      setPhase({ kind: "busy", label: `Approve the payment in ${wallet.name}…` });
+      setPhase({ kind: "busy", label: t("payPage.stable.approveIn", { wallet: wallet.name }) });
       let sent: unknown;
       try {
         sent = await wallet.provider.signAndSendTransaction(tx);
       } catch (e) {
         if (!blockhashExpired(e)) throw e;
-        setPhase({ kind: "busy", label: `That took a while, so here is a fresh one. Approve it in ${wallet.name}…` });
+        setPhase({ kind: "busy", label: t("payPage.stable.freshOne", { wallet: wallet.name }) });
         // The same key would hand back the same, expired transaction.
         keyRef.current = rotateCheckoutKey(scope);
         ({ payment, tx } = await checkout());
@@ -402,7 +410,7 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
     clearNotice();
     const amount = amountOrProblem();
     if (!amount) return;
-    setPhase({ kind: "busy", label: "Making your code…" });
+    setPhase({ kind: "busy", label: t("payPage.stable.makingCode") });
     // A key that already opened a payment would show the phone that payment
     // again, whatever the page now asks for: start this code on a new one.
     try {
@@ -427,12 +435,12 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
     const meta = PUBLIC_CHAINS[evmChain];
     let provider = via === "injected" ? injected().ethereum : undefined;
     if (via === "injected" && !provider) {
-      setNotice("No browser wallet found. Open this page in MetaMask, Coinbase Wallet or Rabby, or pay another way.");
+      setNotice(t("payPage.stable.noBrowserWallet"));
       return;
     }
     try {
       if (via === "walletconnect") {
-        setPhase({ kind: "busy", label: "Choose your wallet…" });
+        setPhase({ kind: "busy", label: t("payPage.stable.chooseWallet") });
         try {
           provider = await connectWalletConnect();
         } catch (e) {
@@ -445,15 +453,15 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
         }
       }
       if (!provider) throw new Error("no_provider");
-      setPhase({ kind: "busy", label: "Connecting your wallet…" });
+      setPhase({ kind: "busy", label: t("payPage.stable.connectingWallet") });
       const accounts = (await provider.request({ method: "eth_requestAccounts" })) as string[];
       const payerAddress = accounts?.[0];
       if (!payerAddress) throw new Error("no_account");
 
-      setPhase({ kind: "busy", label: `Switching your wallet to ${meta.label}…` });
+      setPhase({ kind: "busy", label: t("payPage.stable.switching", { net: meta.label }) });
       await switchEvmChain(provider, meta);
 
-      setPhase({ kind: "busy", label: "Preparing the payment…" });
+      setPhase({ kind: "busy", label: t("payPage.stable.preparing") });
       const expect: ExpectedPayment = { cents: amount.expected, chain: evmChain, payerAddress, payTo: link.payTo };
       const { payment, evm, skewMs } = await checkedCheckout<{
         payment: PayLinkPayment;
@@ -511,9 +519,9 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
   if (phase.kind === "duplicate") {
     return (
       <div className="flex flex-col gap-3">
-        <h2 className="font-display text-h4 font-light text-text">Someone else paid this link first.</h2>
+        <h2 className="font-display text-h4 font-light text-text">{t("payPage.stable.duplicateTitle")}</h2>
         <p className="text-small text-text-muted">
-          This link takes one payment, and another one arrived a moment before yours. We have told {payee}. Contact them with your transaction to sort it out; HOLD can&rsquo;t reverse a payment.
+          {t("payPage.stable.duplicateBody", { payee })}
         </p>
         {paymentExplorerUrl(phase.payment) && (
           <div>
@@ -523,7 +531,7 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
               rel="noopener noreferrer"
               className={btnSmallSecondary}
             >
-              View the transaction
+              {t("payPage.stable.viewTx")}
             </a>
           </div>
         )}
@@ -534,11 +542,11 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
   if (phase.kind === "lapsed") {
     return (
       <div className="flex flex-col gap-4">
-        <h2 className="font-display text-h4 font-light text-text">No payment arrived.</h2>
-        <p className="text-small text-text-muted">Nothing left your wallet. Start again when you&rsquo;re ready.</p>
+        <h2 className="font-display text-h4 font-light text-text">{t("payPage.stable.lapsedTitle")}</h2>
+        <p className="text-small text-text-muted">{t("payPage.stable.lapsedBody")}</p>
         <div>
           <button type="button" className={btnPrimary} onClick={payAgain}>
-            Start again
+            {t("payPage.stable.startAgain")}
           </button>
         </div>
       </div>
@@ -547,7 +555,7 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
 
   return (
     <div className="flex flex-col gap-6">
-      {phase.kind === "loading" && <p className="text-small text-text-muted">One moment…</p>}
+      {phase.kind === "loading" && <p className="text-small text-text-muted">{t("payPage.stable.oneMoment")}</p>}
 
       {phase.kind === "busy" && (
         <p className="flex items-center gap-3 text-small text-text" role="status">
@@ -560,7 +568,7 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
         <>
           {open && (
             <label className="flex flex-col gap-2">
-              <span className="text-small text-text-muted">Amount in US dollars (USDC)</span>
+              <span className="text-small text-text-muted">{t("payPage.stable.amountLabel")}</span>
               <span className="relative block">
                 <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-body text-text-muted">$</span>
                 <input
@@ -577,7 +585,7 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
                 />
               </span>
               <span id="amount-limits" className="text-tiny text-text-faint">
-                From {usdFromCents(MIN_CENTS)} to {usdFromCents(maxCents)}.
+                {t("payPage.stable.amountRange", { min: usdFromCents(MIN_CENTS), max: usdFromCents(maxCents) })}
               </span>
             </label>
           )}
@@ -608,18 +616,17 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
           ) : (
             <div className="flex flex-col gap-4">
               <p className="text-small text-text-muted">
-                One signature, no gas. The whole amount goes to {payee}; HOLD takes nothing.
+                {t("payPage.stable.evmIntro", { payee })}
               </p>
               {!hasEvm && !walletConnect && (
                 <p className="text-small text-amber">
-                  No browser wallet found here. Open this page in MetaMask, Coinbase Wallet or Rabby
-                  {link.chains.includes("solana") ? ", or pay on Solana by QR" : ""}.
+                  {link.chains.includes("solana") ? t("payPage.stable.noWalletHereSolana") : t("payPage.stable.noWalletHere")}
                 </p>
               )}
               <div className="flex flex-wrap gap-3">
                 {hasEvm && (
                   <button type="button" className={btnPrimary} disabled={waiting} onClick={() => void payWithEvm(chain)}>
-                    Connect wallet and pay
+                    {t("payPage.stable.connectAndPay")}
                   </button>
                 )}
                 {/* Any wallet on a phone, or a code to scan from a computer: MetaMask,
@@ -631,12 +638,12 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
                     disabled={waiting}
                     onClick={() => void payWithEvm(chain, "walletconnect")}
                   >
-                    {hasEvm ? "Use another wallet" : "Choose your wallet and pay"}
+                    {hasEvm ? t("payPage.stable.useAnother") : t("payPage.stable.chooseAndPay")}
                   </button>
                 )}
                 {!hasEvm && !walletConnect && (
                   <button type="button" className={btnPrimary} disabled>
-                    Connect wallet and pay
+                    {t("payPage.stable.connectAndPay")}
                   </button>
                 )}
               </div>
@@ -644,8 +651,7 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
           )}
 
           <p className="text-tiny leading-relaxed text-text-faint">
-            You pay {payee} directly, in USDC on {CHAIN_LABEL[chain]}. HOLD never holds the money,
-            charges no fee and can&rsquo;t reverse the payment.
+            {t("payPage.stable.direct", { payee, net: CHAIN_LABEL[chain] })}
           </p>
         </>
       )}
@@ -653,25 +659,25 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
       {phase.kind === "qr" && (
         <div className="flex flex-col items-center gap-4 text-center">
           <div className="w-full max-w-[240px] rounded-card bg-white p-3">
-            <QrCode text={phase.link} title="Solana Pay QR code" className="h-auto w-full" />
+            <QrCode text={phase.link} title={t("payPage.stable.qrTitle")} className="h-auto w-full" />
           </div>
           <p className="text-small text-text-muted">
-            Scan with Phantom, Solflare or any Solana wallet. It shows the exact amount before you approve.
+            {t("payPage.stable.qrScan")}
           </p>
           {phase.scanned && (
-            <p className="text-small text-text">Your wallet has the payment. Approve it there, and this page updates.</p>
+            <p className="text-small text-text">{t("payPage.stable.qrScanned")}</p>
           )}
           {mobile && (
             <a href={phase.link} className={btnSecondary}>
-              Open in my wallet
+              {t("payPage.stable.openInWallet")}
             </a>
           )}
           <p className="flex items-center gap-3 text-small text-text-faint" role="status">
             <Spinner />
-            Waiting for your wallet…
+            {t("payPage.stable.waitingWallet")}
           </p>
           <button type="button" className={btnSmallSecondary} onClick={() => setPhase({ kind: "choose" })}>
-            Back
+            {t("payPage.stable.back")}
           </button>
         </div>
       )}
@@ -688,20 +694,19 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
               {phase.sending ? <Check /> : 1}
             </span>
             <span className="min-w-0 flex-1 break-words">{phase.label}</span>
-            {!phase.sending && <span className="text-tiny text-amber">Sign in your wallet</span>}
+            {!phase.sending && <span className="text-tiny text-amber">{t("payPage.stable.signInWallet")}</span>}
           </div>
           {phase.sending ? (
             <p className="flex items-center gap-3 text-small text-text" role="status">
               <Spinner />
-              Sending the payment…
+              {t("payPage.stable.sending")}
             </p>
           ) : phase.validBefore * 1000 > now + phase.skewMs ? (
             <p className="text-tiny text-text-faint">
-              Sign within{" "}
-              <span className="font-mono text-text-muted">{timeLeft(phase.validBefore * 1000 - (now + phase.skewMs))}</span>.
+              {t("payPage.stable.signWithin", { time: timeLeft(phase.validBefore * 1000 - (now + phase.skewMs)) })}
             </p>
           ) : (
-            <p className="text-tiny text-amber">This signature request has expired. Close your wallet and start again.</p>
+            <p className="text-tiny text-amber">{t("payPage.stable.signExpired")}</p>
           )}
         </div>
       )}
@@ -710,9 +715,9 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
         <div className="flex flex-col gap-3">
           <p className="flex items-center gap-3 text-body text-text" role="status">
             <Spinner />
-            Confirming your payment on {CHAIN_LABEL[phase.payment.chain]}…
+            {t("payPage.stable.confirming", { net: CHAIN_LABEL[phase.payment.chain] })}
           </p>
-          <p className="text-small text-text-muted">This page updates on its own.</p>
+          <p className="text-small text-text-muted">{t("payPage.stable.updatesOwn")}</p>
         </div>
       )}
 
@@ -734,27 +739,27 @@ function Paid({
   payee: string;
   onPayAgain: (() => void) | null;
 }) {
+  useT();
   const receipt = receiptPath(payment.receiptUrl);
   const explorer = paymentExplorerUrl(payment);
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <p className="text-tiny uppercase tracking-wider text-success">Paid</p>
+        <p className="text-tiny uppercase tracking-wider text-success">{t("payPage.stable.paid")}</p>
         <h2 className="mt-2 font-display text-h3 font-light text-text">
-          {usdFromCents(payment.amountCents)} sent to {payee}.
+          {t("payPage.stable.paidSent", { amount: usdFromCents(payment.amountCents), payee })}
         </h2>
-        <p className="mt-2 text-small text-text-muted">In USDC on {CHAIN_LABEL[payment.chain]}.</p>
+        <p className="mt-2 text-small text-text-muted">{t("payPage.stable.paidIn", { net: CHAIN_LABEL[payment.chain] })}</p>
       </div>
       {receipt && (
         <div className="flex flex-col gap-2 rounded-card border border-[color:var(--color-hairline-strong)] bg-white/[0.03] p-4">
-          <p className="text-small text-text">Keep your receipt.</p>
+          <p className="text-small text-text">{t("payPage.stable.receiptTitle")}</p>
           <p className="text-small text-text-muted">
-            Its link shows the amount, the network, the transaction and the time. Save it: you have no account here to
-            find it in later.
+            {t("payPage.stable.receiptBody")}
           </p>
           <div>
             <Link href={receipt} className={btnSmallSecondary}>
-              Open the receipt
+              {t("payPage.stable.receiptOpen")}
             </Link>
           </div>
         </div>
@@ -767,12 +772,12 @@ function Paid({
             rel="noopener noreferrer"
             className={btnSmallSecondary}
           >
-            View the transaction
+            {t("payPage.stable.viewTx")}
           </a>
         )}
         {onPayAgain && (
           <button type="button" className={btnSmallSecondary} onClick={onPayAgain}>
-            Make another payment
+            {t("payPage.stable.another")}
           </button>
         )}
       </div>

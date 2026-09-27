@@ -25,9 +25,10 @@ import offers from "./offers.json";
 import sponsor from "./sponsor.json";
 import stays from "./stays.json";
 import trips from "./trips.json";
+import payPage from "./payPage.json";
 
 import { prefix } from "../prefix";
 
-const dict = prefix({ common, titles, shell, front, link, menu, prefs, account, home, activity, wallet, money, payments, requests, groups, groupThread, analytics, spaces, listings, creator, runner, board, offers, sponsor, stays, trips });
+const dict = prefix({ common, titles, shell, front, link, menu, prefs, account, home, activity, wallet, money, payments, requests, groups, groupThread, analytics, spaces, listings, creator, runner, board, offers, sponsor, stays, trips, payPage });
 
 export default dict;

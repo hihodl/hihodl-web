@@ -60,7 +60,11 @@ export const PAY_HANDLE_RE = /^[a-z0-9_.]{1,63}$/;
 export async function getPersonalPayLink(handle: string, from: Headers | null): Promise<Lookup<PayLinkPublic>> {
   const h = handle.replace(/^@/, "").toLowerCase();
   if (!PAY_HANDLE_RE.test(h)) return { kind: "missing" };
-  if (fixtureEnabled()) return { kind: "missing" };
+  if (fixtureEnabled()) {
+    const { fixturePersonalPayLink } = await import("./fixture.dev");
+    const link = fixturePersonalPayLink(h);
+    return link ? { kind: "found", value: link } : { kind: "missing" };
+  }
   return read(`/@${encodeURIComponent(h)}`, (d) => d.link as PayLinkPublic | undefined, from);
 }
 
