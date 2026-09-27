@@ -183,13 +183,11 @@ function LanguageSheet({ onClose }: { onClose: () => void }) {
           items.map((l, i) => (
             <SheetRow key={l.code} selected={l.code === locale} onClick={() => pick(l.code)} last={i === items.length - 1}>
               <Flag country={l.country} fallback={l.code} flags={flags} size={30} />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-[16px] font-bold text-white" lang={l.code} dir="auto">
-                  {l.native}
-                </span>
-                <span className="block truncate text-[12.5px] text-white/60" dir="ltr">
-                  {l.english}
-                </span>
+              {/* Plain English for every language (Alex, 2026-09-27): one line,
+                  left to right, so Arabic and Urdu line up with the rest.
+                  The search still finds a language by its own name. */}
+              <span className="block min-w-0 flex-1 truncate text-[16px] font-bold text-white" dir="ltr">
+                {l.english}
               </span>
             </SheetRow>
           ))

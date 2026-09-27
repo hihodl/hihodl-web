@@ -89,12 +89,16 @@ const MAX_CENTS = 1_000_000;
 const NETWORK_LOGO: Record<Chain, string> = { solana: "/pay/solana.svg", base: "/pay/base.svg", polygon: "/pay/polygon.svg" };
 const WALLET_LOGO: Record<WalletLinkId, string> = {
   hold: "/favicon.png",
-  phantom: "/pay/wallets/phantom.svg",
-  solflare: "/pay/wallets/solflare.svg",
-  metamask: "/pay/wallets/metamask.svg",
-  coinbase: "/pay/wallets/coinbase.svg",
+  // Each wallet's own app icon, from its website (27-Sep-2026): phantom.com,
+  // solflare.com, metamask.io, wallet.coinbase.com, trustwallet.com.
+  phantom: "/pay/wallets/phantom.png",
+  solflare: "/pay/wallets/solflare.png",
+  metamask: "/pay/wallets/metamask.png",
+  coinbase: "/pay/wallets/coinbase.png",
   trust: "/pay/wallets/trust.svg",
 };
+/** Marks drawn without a background sit on a white tile, like their app icon. */
+const WALLET_LOGO_INSET: Partial<Record<WalletLinkId, true>> = { metamask: true, coinbase: true, trust: true };
 const WALLET_NAME: Record<Exclude<WalletLinkId, "hold">, string> = {
   phantom: "Phantom",
   solflare: "Solflare",
@@ -760,7 +764,7 @@ export function PayLinkPay({
               <WalletRow href={holdPayUrl(scheme, amountText, "USD")} logo={WALLET_LOGO.hold} name="HOLD" />
             ) : null}
             {walletLinks.map((id, i) => (
-              <WalletRow key={id} href={walletBrowseUrl(id as Exclude<WalletLinkId, "hold">, stateUrl)} logo={WALLET_LOGO[id]} name={WALLET_NAME[id as Exclude<WalletLinkId, "hold">]} last={i === walletLinks.length - 1} />
+              <WalletRow key={id} href={walletBrowseUrl(id as Exclude<WalletLinkId, "hold">, stateUrl)} logo={WALLET_LOGO[id]} inset={Boolean(WALLET_LOGO_INSET[id as WalletLinkId])} name={WALLET_NAME[id as Exclude<WalletLinkId, "hold">]} last={i === walletLinks.length - 1} />
             ))}
           </div>
         </div>
@@ -778,11 +782,25 @@ const amberCta =
 const glassCta =
   "inline-flex h-12 w-full items-center justify-center gap-2 rounded-[24px] border border-white/[0.22] bg-white/10 px-5 text-[15px] font-bold text-white";
 
-function WalletRow({ href, logo, name, last = false }: { href: string; logo: string; name: string; last?: boolean }) {
+function WalletRow({
+  href,
+  logo,
+  name,
+  inset = false,
+  last = false,
+}: {
+  href: string;
+  logo: string;
+  name: string;
+  inset?: boolean;
+  last?: boolean;
+}) {
   return (
     <a href={href} className={`flex items-center gap-3 px-4 py-3 transition-colors hover:bg-white/[0.04] ${last ? "" : "border-b border-white/[0.06]"}`}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={logo} alt="" width={32} height={32} className="h-8 w-8 shrink-0 rounded-[9px]" />
+      <span className={`flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-[9px] bg-white ${inset ? "p-[5px]" : ""}`}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={logo} alt="" width={32} height={32} className="h-full w-full object-contain" />
+      </span>
       <span className="min-w-0 flex-1 truncate text-[15px] font-bold text-white">{name}</span>
       <Ion name="open-outline" size={15} className="shrink-0 text-white/40" />
     </a>

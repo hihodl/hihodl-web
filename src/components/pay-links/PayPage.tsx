@@ -503,7 +503,7 @@ function Shown({ link }: { link: ShownPayLink }) {
             <MethodRow
               icon={<ImgIcon src="/favicon.png" rounded />}
               label={t("payPage.hold")}
-              sub={holdOpening ? t("payPage.holdOpening") : t("payPage.holdSub")}
+              sub={holdOpening ? t("payPage.holdOpening") : undefined}
               onClick={openHold}
               disabled={busy || !platform}
             />
@@ -511,7 +511,6 @@ function Shown({ link }: { link: ShownPayLink }) {
               <MethodRow
                 icon={<GlyphIcon name="card-outline" />}
                 label={t("payPage.card")}
-                sub={t("payPage.cardSub", { currency })}
                 onClick={() => void payByCard("card")}
                 disabled={busy}
                 spinning={cardPhase.kind === "starting" && cardPhase.method === "card"}
@@ -521,7 +520,6 @@ function Shown({ link }: { link: ShownPayLink }) {
               <MethodRow
                 icon={<GlyphIcon name={walletMethod === "applePay" ? "logo-apple" : "logo-google"} tone={walletMethod === "applePay" ? "black" : "white"} />}
                 label={walletMethod === "applePay" ? "Apple Pay" : "Google Pay"}
-                sub={t("payPage.cardSub", { currency })}
                 onClick={() => void payByCard(walletMethod)}
                 disabled={busy}
                 spinning={cardPhase.kind === "starting" && cardPhase.method === walletMethod}
@@ -530,7 +528,7 @@ function Shown({ link }: { link: ShownPayLink }) {
             <MethodRow
               icon={<ImgIcon src="/pay/usdc.png" />}
               label={t("payPage.stablecoins")}
-              sub={!stableOk ? t("payPage.eurcUnavailableShort") : token === "eurc" ? t("payPage.stablecoinsSubEur") : t("payPage.stablecoinsSub")}
+              sub={!stableOk ? t("payPage.eurcUnavailableShort") : undefined}
               onClick={openStable}
               disabled={busy}
               muted={!stableOk}
@@ -632,7 +630,8 @@ function MethodRow({
 }: {
   icon: ReactNode;
   label: string;
-  sub: string;
+  /** Only a state worth saying ("Opening HOLD…", "not available"); rows carry no description. */
+  sub?: string;
   onClick: () => void;
   disabled?: boolean;
   spinning?: boolean;
@@ -651,7 +650,7 @@ function MethodRow({
       {icon}
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[15px] font-bold leading-5 text-white">{label}</span>
-        <span className="mt-0.5 block truncate text-[12.5px] leading-4 text-[#9FB7C2]">{sub}</span>
+        {sub ? <span className="mt-0.5 block truncate text-[12.5px] leading-4 text-[#9FB7C2]">{sub}</span> : null}
       </span>
       {spinning ? <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-white/25 border-t-white" aria-hidden /> : null}
     </button>
