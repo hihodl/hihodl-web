@@ -104,21 +104,44 @@ export function PayPage({ state }: { state: PayPageState }) {
  * The page is exactly as tall as what is on it (at least the screen): the
  * navy is the body's own colour, painted on <html> and <body> while the page
  * is up, so nothing needs a fixed layer and nothing extends past the foot.
+ *
+ * The page ends at the foot, on iOS too:
+ *   - it is as tall as the screen that is showing (dvh), so the foot follows
+ *     Safari's bar as it hides, where svh left a strip of navy under it
+ *   - no rubber band past either end (overscroll-behavior)
+ *   - when the keyboard goes down, iOS can leave the page scrolled into where
+ *     the keyboard was; the scroll is put back inside the page
  */
 function Ground({ children }: { children: ReactNode }) {
   useEffect(() => {
     const html = document.documentElement;
     const body = document.body;
-    const before = [html.style.backgroundColor, body.style.backgroundColor];
+    const before = [html.style.backgroundColor, body.style.backgroundColor, html.style.overscrollBehavior, body.style.overscrollBehavior];
     html.style.backgroundColor = "#0D1820";
     body.style.backgroundColor = "#0D1820";
+    html.style.overscrollBehavior = "none";
+    body.style.overscrollBehavior = "none";
+
+    const vv = window.visualViewport;
+    const settle = () => {
+      // A modal pins the body; its own unlock puts the scroll back.
+      if (body.style.position === "fixed") return;
+      const max = Math.max(0, html.scrollHeight - window.innerHeight);
+      if (window.scrollY > max) window.scrollTo(0, max);
+    };
+    vv?.addEventListener("resize", settle);
+    window.addEventListener("focusout", settle);
     return () => {
+      vv?.removeEventListener("resize", settle);
+      window.removeEventListener("focusout", settle);
       html.style.backgroundColor = before[0];
       body.style.backgroundColor = before[1];
+      html.style.overscrollBehavior = before[2];
+      body.style.overscrollBehavior = before[3];
     };
   }, []);
   return (
-    <div className="relative flex min-h-[100svh] flex-col overflow-x-clip bg-[#0D1820] text-white">
+    <div className="relative flex min-h-[100svh] flex-col overflow-x-clip bg-[#0D1820] text-white supports-[height:100dvh]:min-h-[100dvh]">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 top-0 h-[280px] bg-[linear-gradient(180deg,rgba(0,194,255,0.45)_0%,rgba(54,224,255,0)_100%)]"
