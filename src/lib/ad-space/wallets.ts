@@ -177,6 +177,29 @@ export function base58(bytes: Uint8Array): string {
   return bytes.every((b) => b === 0) ? out.slice(0, bytes.length) : out;
 }
 
+/** base58's inverse: null for a character outside the alphabet. */
+export function base58Decode(text: string): Uint8Array | null {
+  const bytes: number[] = [0];
+  for (const ch of text) {
+    const value = B58.indexOf(ch);
+    if (value < 0) return null;
+    let carry = value;
+    for (let i = 0; i < bytes.length; i++) {
+      carry += bytes[i] * 58;
+      bytes[i] = carry & 0xff;
+      carry >>= 8;
+    }
+    while (carry > 0) {
+      bytes.push(carry & 0xff);
+      carry >>= 8;
+    }
+  }
+  let zeros = 0;
+  while (zeros < text.length && text[zeros] === "1") zeros++;
+  const body = text.length === zeros ? [] : bytes.reverse();
+  return Uint8Array.from([...new Array<number>(zeros).fill(0), ...body]);
+}
+
 /** UTF-8 text as a 0x hex string, which is what `personal_sign` takes. */
 export function utf8Hex(text: string): string {
   return `0x${Array.from(new TextEncoder().encode(text), (b) => b.toString(16).padStart(2, "0")).join("")}`;
