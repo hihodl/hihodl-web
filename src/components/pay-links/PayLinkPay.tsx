@@ -20,7 +20,9 @@ import {
   type SolanaWallet,
   base64ToBytes,
   blockhashExpired,
+  bytesToBase64,
   isMobile,
+  signedTransactionBytes,
   switchEvmChain,
   typedData,
   watchEvmWallets,
@@ -50,6 +52,7 @@ import {
   solanaCheckoutProblem,
   startPayCheckout,
   submitPayAuthorization,
+  submitPaySolana,
   type ExpectedPayment,
   type PayToken,
 } from "@/lib/pay-links/client";
@@ -425,7 +428,7 @@ export function PayLinkPay({
       const web3 = await import("@solana/web3.js");
       const expect: ExpectedPayment = { cents: amount.expected, chain: "solana", payerAddress, payTo: link.payTo };
       const checkout = () =>
-        checkedCheckout<{ payment: PayLinkPayment; tx: VersionedTransaction }>(
+        checkedCheckout<{ payment: PayLinkPayment; tx: VersionedTransaction; first: VersionedTransaction | null }>(
           { chain: "solana", payerAddress, ...(amount.cents ? { amountCents: amount.cents } : {}) },
           (res) => {
             if (!("solana" in res)) return { problem: "shape" };
@@ -436,22 +439,51 @@ export function PayLinkPay({
               return { problem: "unreadable" };
             }
             const problem = solanaCheckoutProblem(web3, tx, res, expect);
-            return problem ? { problem } : { ok: { payment: res.payment, tx } };
+            if (problem) return { problem };
+            // The unsigned copy is used only when it is the checked message, byte for byte.
+            let first: VersionedTransaction | null = null;
+            if (res.solana.walletFirst) {
+              try {
+                const copy = web3.VersionedTransaction.deserialize(base64ToBytes(res.solana.walletFirst));
+                if (sameBytes(copy.message.serialize(), tx.message.serialize())) first = copy;
+              } catch {
+                first = null;
+              }
+            }
+            return { ok: { payment: res.payment, tx, first } };
           },
         );
-      let { payment, tx } = await checkout();
+      let { payment, tx, first } = await checkout();
+
+      /**
+       * The wallet signs first when it can and the server handed out the
+       * unsigned copy: our fee payer's signature is added on the server.
+       * Phantom blocks, as "could be malicious", a transaction someone else
+       * signed before it. Otherwise the wallet signs and sends ours.
+       */
+      const pay = async (): Promise<unknown> => {
+        const signTransaction = wallet.provider.signTransaction;
+        if (first && typeof signTransaction === "function") {
+          const bytes = signedTransactionBytes(await signTransaction.call(wallet.provider, first));
+          if (!bytes) throw new Error("no_signature");
+          setPhase({ kind: "busy", label: t("payPage.stable.sending") });
+          return (await submitPaySolana(payment.id, keyRef.current, bytesToBase64(bytes))).signature;
+        }
+        return wallet.provider.signAndSendTransaction(tx);
+      };
 
       setPhase({ kind: "busy", label: t("payPage.stable.approveIn", { wallet: wallet.name }) });
       let sent: unknown;
       try {
-        sent = await wallet.provider.signAndSendTransaction(tx);
+        sent = await pay();
       } catch (e) {
         if (!blockhashExpired(e)) throw e;
         setPhase({ kind: "busy", label: t("payPage.stable.freshOne", { wallet: wallet.name }) });
         // The same key would hand back the same, expired transaction.
         keyRef.current = rotateCheckoutKey(scope);
-        ({ payment, tx } = await checkout());
-        sent = await wallet.provider.signAndSendTransaction(tx);
+        ({ payment, tx, first } = await checkout());
+        setPhase({ kind: "busy", label: t("payPage.stable.approveIn", { wallet: wallet.name }) });
+        sent = await pay();
       }
       const signature = typeof sent === "string" ? sent : (sent as { signature?: unknown })?.signature;
       if (typeof signature !== "string" || !signature) throw new Error("no_signature");
@@ -888,4 +920,11 @@ function Paid({
       ) : null}
     </Result>
   );
+}
+
+/** Two byte strings are the same bytes. */
+function sameBytes(a: Uint8Array, b: Uint8Array): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
 }

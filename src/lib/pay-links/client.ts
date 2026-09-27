@@ -90,6 +90,18 @@ export function submitPayAuthorization(
   });
 }
 
+/**
+ * The payer's wallet signed our Solana transaction without sending it: the
+ * server adds its fee payer's signature and broadcasts. `signature` is the
+ * transaction's id.
+ */
+export function submitPaySolana(paymentId: string, key: string, transaction: string): Promise<{ signature: string; payment: PayLinkPayment }> {
+  return apiRequest(`${PUBLIC}/payments/${encodeURIComponent(paymentId)}/solana`, {
+    key,
+    json: { transaction },
+  });
+}
+
 /** The payment bound to this key, if this page or a scanned QR has opened one. */
 export async function currentPayment(key: string): Promise<PayLinkPayment | null> {
   const data = await apiRequest<{ payment: PayLinkPayment | null }>(`${PUBLIC}/checkout`, { key });

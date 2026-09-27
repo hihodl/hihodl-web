@@ -136,7 +136,15 @@ export interface PayLinkEvmPayload {
 
 /** `POST /:code/checkout` answers `{ payment, solana }` or `{ payment, evm }`. */
 export type PayLinkCheckout = (
-  | { payment: PayLinkPayment; solana: { transaction: string; lastValidBlockHeight: number } }
+  | {
+      payment: PayLinkPayment;
+      /**
+       * `transaction` is signed by our fee payer; `walletFirst` (a server
+       * from 27-Sep-2026 on) is the same one unsigned, for a wallet that
+       * signs first and hands it back (submitPaySolana).
+       */
+      solana: { transaction: string; walletFirst?: string; lastValidBlockHeight: number };
+    }
   | { payment: PayLinkPayment; evm: PayLinkEvmPayload }
 ) & {
   /** The server's clock when it answered, ISO 8601. */
