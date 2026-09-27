@@ -1056,6 +1056,11 @@ function Foot({ link }: { link: ShownPayLink }) {
   const t = useT();
   return (
     <footer className="mt-auto flex flex-col items-center pt-10 text-center text-[12px] leading-[17px] text-[#9FB7C2]">
+      {/* The link card sells; the warning lives here, on the page, once. */}
+      <p className="mb-2 flex items-center gap-1.5">
+        <Ion name="shield-checkmark-outline" size={13} />
+        {t("payPage.safety")}
+      </p>
       <nav className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1" aria-label="Legal">
         <ReportLink code={link.code} />
         <span aria-hidden>·</span>
