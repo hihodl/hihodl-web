@@ -38,7 +38,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 
 import { SpacesGround } from "@/components/ad-space/ground";
 import { Wordmark } from "@/components/site/Wordmark";
-import { currentMethod, remember, rememberFace } from "@/lib/auth/remember";
+import { currentMethod, emailToRemember, remember, rememberFace } from "@/lib/auth/remember";
 import { describeCreatorError } from "@/lib/creator/api";
 import type { SpaceCard } from "@/lib/creator/listing";
 import { useCreatorSession } from "@/lib/creator/session";
@@ -274,14 +274,17 @@ function SignedIn({ session, children }: { session: Session; children: ReactNode
   useRatesRefresh();
 
   // Who signed in here, for the next visit's "Welcome back" (lib/auth/remember).
+  // An email /me disagrees with (a login email change) is not kept.
+  const meEmail = me.data?.email;
+  const keptEmail = emailToRemember(session.user.email, meEmail);
   useEffect(() => {
     const m = me.data;
     remember({
       method: currentMethod(session.user.app_metadata?.provider),
-      email: session.user.email ?? null,
+      email: keptEmail,
       name: m?.profile.displayName?.trim() || (chosenUsername(m) ? `@${chosenUsername(m)}` : null),
     });
-  }, [me.data, session.user.app_metadata?.provider, session.user.email]);
+  }, [me.data, session.user.app_metadata?.provider, keptEmail]);
 
   // And their face: a small copy of the photo (the URL itself expires within
   // the hour) or their emoji. Only once /me has answered: a failed read
@@ -291,8 +294,8 @@ function SignedIn({ session, children }: { session: Session; children: ReactNode
   const meReady = me.data !== undefined;
   useEffect(() => {
     if (!meReady) return;
-    void rememberFace(session.user.email ?? null, photo, emoji).catch(() => undefined);
-  }, [meReady, photo, emoji, session.user.email]);
+    void rememberFace(keptEmail, photo, emoji).catch(() => undefined);
+  }, [meReady, photo, emoji, keptEmail]);
 
   // Every one of these is SETTLED when it has either answered or failed. None
   // of them is allowed to be fatal, Spaces included, and none of them is

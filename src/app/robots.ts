@@ -26,10 +26,11 @@ export default function robots(): MetadataRoute.Robots {
       // `/b/` is a session's manage link: the token in it is the booking.
       // `/o/` is an offer's manage link, the same kind of credential.
       // `/p/` is a production brand's delivery link, the same kind again.
+      // `/account/undo-email` carries the token that undoes a login email change.
       // `/pay/r/` is a receipt, private to its payer. `/pay/<code>` itself is
       // NOT disallowed: X must fetch the page to draw the generic card, and the
       // page tells crawlers `noindex` itself.
-      disallow: ["/api/", "/founders/checkout", "/invite/", "/thank-you", "/statements/verify", "/b/", "/o/", "/p/", "/pay/r/"],
+      disallow: ["/api/", "/founders/checkout", "/invite/", "/thank-you", "/statements/verify", "/b/", "/o/", "/p/", "/pay/r/", "/account/undo-email"],
     },
     sitemap: "https://hihodl.xyz/sitemap.xml",
   };
