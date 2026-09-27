@@ -80,7 +80,7 @@
   "stable.lapsedBody": "Nada saiu da sua carteira. Comece de novo quando estiver pronto.",
   "stable.startAgain": "Começar de novo",
   "stable.qrTitle": "Código QR do Solana Pay",
-  "stable.qrScan": "Escaneie com Phantom, Solflare ou qualquer carteira Solana. Ele mostra o valor exato antes de você aprovar.",
+  "stable.qrScan": "Escaneie com Phantom, Solflare ou qualquer carteira Solana.",
   "stable.qrMismatch": "O pagamento que sua carteira abriu não correspondia a esta página. Não aprove; escaneie este novo código.",
   "stable.qrExpired": "Aquele código expirou antes que um pagamento chegasse, então aqui está um novo. Nada foi pago.",
   "stable.qrScanned": "Sua carteira já tem o pagamento. Aprove por lá, e esta página se atualiza.",

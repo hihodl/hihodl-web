@@ -80,7 +80,7 @@
   "stable.lapsedBody": "Tidak ada yang keluar dari dompetmu. Mulai lagi saat kamu siap.",
   "stable.startAgain": "Mulai lagi",
   "stable.qrTitle": "Kode QR Solana Pay",
-  "stable.qrScan": "Pindai dengan Phantom, Solflare atau dompet Solana mana pun. Jumlah yang tepat akan ditampilkan sebelum kamu menyetujuinya.",
+  "stable.qrScan": "Pindai dengan Phantom, Solflare atau dompet Solana mana pun.",
   "stable.qrMismatch": "Pembayaran yang terbuka di dompetmu tidak cocok dengan halaman ini. Jangan setujui; pindai kode baru ini sebagai gantinya.",
   "stable.qrExpired": "Kode itu kedaluwarsa sebelum ada pembayaran yang masuk, jadi ini yang baru. Belum ada yang dibayar.",
   "stable.qrScanned": "Dompetmu sudah menerima pembayarannya. Setujui di sana, dan halaman ini akan diperbarui.",

@@ -80,7 +80,7 @@
   "stable.lapsedBody": "Cüzdanından hiçbir şey çıkmadı. Hazır olduğunda tekrar başla.",
   "stable.startAgain": "Tekrar başla",
   "stable.qrTitle": "Solana Pay QR kodu",
-  "stable.qrScan": "Phantom, Solflare veya herhangi bir Solana cüzdanıyla tara. Onaylamadan önce tam tutarı gösterir.",
+  "stable.qrScan": "Phantom, Solflare veya herhangi bir Solana cüzdanıyla tara.",
   "stable.qrMismatch": "Cüzdanının açtığı ödeme bu sayfayla eşleşmedi. Onaylama; bunun yerine bu yeni kodu tara.",
   "stable.qrExpired": "O kodun süresi bir ödeme gelmeden doldu, bu yüzden işte yeni bir tane. Hiçbir ödeme yapılmadı.",
   "stable.qrScanned": "Cüzdanın ödemeyi aldı. Onu orada onayla, bu sayfa güncellenecek.",

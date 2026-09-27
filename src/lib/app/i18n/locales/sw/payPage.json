@@ -80,7 +80,7 @@
   "stable.lapsedBody": "Hakuna kilichotoka kwenye pochi yako. Anza tena ukiwa tayari.",
   "stable.startAgain": "Anza tena",
   "stable.qrTitle": "Msimbo wa QR wa Solana Pay",
-  "stable.qrScan": "Changanua kwa Phantom, Solflare au pochi yoyote ya Solana. Utaonyesha kiasi hasa kabla hujaidhinisha.",
+  "stable.qrScan": "Changanua kwa Phantom, Solflare au pochi yoyote ya Solana.",
   "stable.qrMismatch": "Malipo yaliyofunguliwa na pochi yako hayakulingana na ukurasa huu. Usiyaidhinishe; changanua msimbo huu mpya badala yake.",
   "stable.qrExpired": "Msimbo huo uliisha muda kabla malipo hayajafika, kwa hiyo hapa kuna mpya. Hakuna kilicholipwa.",
   "stable.qrScanned": "Pochi yako ina malipo hayo. Yaidhinishe huko, na ukurasa huu utasasishwa.",

@@ -80,7 +80,7 @@
   "stable.lapsedBody": "Không có gì rời khỏi ví của bạn. Hãy bắt đầu lại khi bạn sẵn sàng.",
   "stable.startAgain": "Bắt đầu lại",
   "stable.qrTitle": "Mã QR Solana Pay",
-  "stable.qrScan": "Quét bằng Phantom, Solflare hoặc bất kỳ ví Solana nào. Nó sẽ hiện đúng số tiền trước khi bạn duyệt.",
+  "stable.qrScan": "Quét bằng Phantom, Solflare hoặc bất kỳ ví Solana nào.",
   "stable.qrMismatch": "Khoản thanh toán mà ví của bạn mở ra không khớp với trang này. Đừng duyệt nó; hãy quét mã mới này thay vào đó.",
   "stable.qrExpired": "Mã đó đã hết hạn trước khi có khoản thanh toán nào đến, nên đây là một mã mới. Chưa có gì được thanh toán.",
   "stable.qrScanned": "Ví của bạn đã nhận khoản thanh toán. Hãy duyệt ở đó, và trang này sẽ cập nhật.",

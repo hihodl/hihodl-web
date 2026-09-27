@@ -80,7 +80,7 @@
   "stable.lapsedBody": "你的钱包没有任何资金转出。准备好后请重新开始。",
   "stable.startAgain": "重新开始",
   "stable.qrTitle": "Solana Pay 二维码",
-  "stable.qrScan": "用 Phantom、Solflare 或任意 Solana 钱包扫描。它会在你批准前显示准确的金额。",
+  "stable.qrScan": "用 Phantom、Solflare 或任意 Solana 钱包扫描。",
   "stable.qrMismatch": "你的钱包打开的付款与此页面不匹配。请不要批准它；请改为扫描这个新的二维码。",
   "stable.qrExpired": "这个二维码在付款到账前已失效，这是一个新的。尚未产生任何付款。",
   "stable.qrScanned": "你的钱包已收到这笔付款。请在那边批准它，此页面会随之更新。",

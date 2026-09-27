@@ -80,7 +80,7 @@
   "stable.lapsedBody": "Er is niets uit je wallet gegaan. Begin opnieuw wanneer je klaar bent.",
   "stable.startAgain": "Opnieuw beginnen",
   "stable.qrTitle": "Solana Pay QR-code",
-  "stable.qrScan": "Scan met Phantom, Solflare of een andere Solana-wallet. Hij toont het exacte bedrag voordat je goedkeurt.",
+  "stable.qrScan": "Scan met Phantom, Solflare of een andere Solana-wallet.",
   "stable.qrMismatch": "De betaling die je wallet opende, kwam niet overeen met deze pagina. Keur hem niet goed; scan in plaats daarvan deze nieuwe code.",
   "stable.qrExpired": "Die code verliep voordat er een betaling binnenkwam, dus hier is een nieuwe. Er is niets betaald.",
   "stable.qrScanned": "Je wallet heeft de betaling ontvangen. Keur hem daar goed, en deze pagina werkt zichzelf bij.",
