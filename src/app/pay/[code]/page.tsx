@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 
 import { PayPage, type PayPageState } from "@/components/pay-links/PayPage";
 import { payPageMetadata } from "@/lib/pay-links/metadata";
+import { payPreview } from "@/lib/pay-links/og-copy";
+import { ogCopyFor } from "@/lib/pay-links/og-locale";
 import { fallbackHref } from "@/lib/pay-links/page-rules";
 import { getPayLink, getPersonalPayLink } from "@/lib/pay-links/server";
 import type { PayLinkPublic, ShownPayLink } from "@/lib/pay-links/types";
@@ -26,12 +29,27 @@ import type { PayLinkPublic, ShownPayLink } from "@/lib/pay-links/types";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = payPageMetadata("Pay link");
+/** One read per request, shared by the link card and the page. */
+const lookup = cache((raw: string) => (raw.startsWith("@") ? getPersonalPayLink(raw.slice(1), headers()) : getPayLink(raw, headers())));
+
+/**
+ * The link card: "Send money to Alex L." for a personal link, "Dinner · $40"
+ * for a priced one, in the reader's language, with the link's own image.
+ * Anything that can't be paid gets the plain HOLD card.
+ */
+export async function generateMetadata({ params }: { params: { code: string } }): Promise<Metadata> {
+  const raw = decodeURIComponent(params.code);
+  const [found, words] = await Promise.all([lookup(raw), ogCopyFor(headers().get("accept-language"))]);
+  const link = found.kind === "found" ? found.value : null;
+  const preview = payPreview(link, raw.startsWith("@"), words.copy, words.fmt, words.intl);
+  const imageUrl = preview.image ? `/api/og/pay/${encodeURIComponent(raw)}?d=${new Date().toISOString().slice(0, 10)}` : null;
+  return payPageMetadata("Pay link", { ...preview, imageUrl, lang: words.lang });
+}
 
 export default async function PayLinkPage({ params }: { params: { code: string } }) {
   // `/pay/@dana` arrives as `%40dana`.
   const raw = decodeURIComponent(params.code);
-  const found = raw.startsWith("@") ? await getPersonalPayLink(raw.slice(1), headers()) : await getPayLink(raw, headers());
+  const found = await lookup(raw);
   if (found.kind === "missing") notFound();
 
   const state: PayPageState =

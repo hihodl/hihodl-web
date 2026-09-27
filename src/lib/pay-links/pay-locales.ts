@@ -95,3 +95,28 @@ export const EXTRA_KEYS_EXACT = ["common.close", "common.clearSearch", "common.n
 export function isExtraKey(key: string): boolean {
   return EXTRA_KEY_PREFIXES.some((p) => key.startsWith(p)) || (EXTRA_KEYS_EXACT as readonly string[]).includes(key);
 }
+
+/** An Accept-Language header's tags, most preferred first ("es-ES,es;q=0.9,en;q=0.8"). */
+export function acceptLanguageTags(header: string | null | undefined): string[] {
+  if (!header) return [];
+  return header
+    .split(",")
+    .map((part, i) => {
+      const [tag, ...params] = part.trim().split(";");
+      const q = params.map((p) => p.trim()).find((p) => p.startsWith("q="));
+      const weight = q ? Number(q.slice(2)) : 1;
+      return { tag: tag.trim(), weight: Number.isFinite(weight) ? weight : 0, i };
+    })
+    .filter((x) => x.tag && x.tag !== "*" && x.weight > 0)
+    .sort((a, b) => b.weight - a.weight || a.i - b.i)
+    .map((x) => x.tag);
+}
+
+/** The page's language for a request that has no browser yet (a link card): Accept-Language, else English. */
+export function payLocaleFrom(header: string | null | undefined): PayLocale {
+  for (const tag of acceptLanguageTags(header)) {
+    const m = matchPayLocale(tag);
+    if (m) return m;
+  }
+  return "en";
+}
