@@ -360,5 +360,6 @@
   "product.biddingOpensAt": "đấu giá khởi điểm {amount}",
   "product.openForBids": "đang mở đấu giá",
   "product.offer": "Đề nghị",
-  "product.openToOffers": "nhận đề nghị"
+  "product.openToOffers": "nhận đề nghị",
+  "stats.seeMore": "Xem @{handle} đang mở những gì"
 }

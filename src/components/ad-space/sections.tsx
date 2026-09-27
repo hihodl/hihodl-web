@@ -351,7 +351,12 @@ const SEGMENT: Record<ReturnType<typeof segmentTone>, string> = {
  * the money committed and what is left, in big type, a bar with one segment per
  * spot, then the price, the close and the dates in one row, and the button.
  */
-export function SpaceStats({ space }: { space: Space }) {
+/**
+ * @param more the creator's own page, when this space takes nothing more
+ *   (closed or sold out) and that page has something open. Only ever this
+ *   creator's: the page sells for them and never sends a brand to anyone else.
+ */
+export function SpaceStats({ space, more = null }: { space: Space; more?: string | null }) {
   const { totals } = space;
   const session = isSessionSpace(space);
   const isTakeover = space.pricingMode === "takeover";
@@ -470,11 +475,15 @@ export function SpaceStats({ space }: { space: Space }) {
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <ModeNote space={space} />
-          {!closed && !soldOut && (
+          {!closed && !soldOut ? (
             <a href="#spots" className={`${btnPrimary} self-start sm:self-auto`}>
               {cta}
             </a>
-          )}
+          ) : more ? (
+            <Link href={more} className={`${btnPrimary} self-start sm:self-auto`}>
+              {t("board.stats.seeMore", { handle: space.creator.xHandle })}
+            </Link>
+          ) : null}
         </div>
       </div>
     </section>

@@ -360,5 +360,6 @@
   "product.biddingOpensAt": "बोली {amount} से शुरू",
   "product.openForBids": "बोली के लिए खुला",
   "product.offer": "ऑफ़र",
-  "product.openToOffers": "ऑफ़र के लिए खुला"
+  "product.openToOffers": "ऑफ़र के लिए खुला",
+  "stats.seeMore": "देखें @{handle} के पास क्या खुला है"
 }

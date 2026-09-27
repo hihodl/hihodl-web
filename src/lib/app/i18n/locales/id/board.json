@@ -360,5 +360,6 @@
   "product.biddingOpensAt": "bid dibuka di {amount}",
   "product.openForBids": "terbuka untuk bid",
   "product.offer": "Tawar",
-  "product.openToOffers": "terbuka untuk tawaran"
+  "product.openToOffers": "terbuka untuk tawaran",
+  "stats.seeMore": "Lihat apa yang dibuka @{handle}"
 }

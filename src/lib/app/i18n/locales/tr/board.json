@@ -360,5 +360,6 @@
   "product.biddingOpensAt": "pey {amount} ile açılır",
   "product.openForBids": "pey açık",
   "product.offer": "Teklif",
-  "product.openToOffers": "tekliflere açık"
+  "product.openToOffers": "tekliflere açık",
+  "stats.seeMore": "@{handle} kullanıcısının açık tekliflerine bak"
 }

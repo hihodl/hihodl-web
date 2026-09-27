@@ -360,5 +360,6 @@
   "product.biddingOpensAt": "เริ่มประมูลที่ {amount}",
   "product.openForBids": "เปิดรับประมูล",
   "product.offer": "เสนอราคา",
-  "product.openToOffers": "เปิดรับข้อเสนอ"
+  "product.openToOffers": "เปิดรับข้อเสนอ",
+  "stats.seeMore": "ดูว่า @{handle} มีอะไรเปิดอยู่"
 }

@@ -360,5 +360,6 @@
   "product.biddingOpensAt": "Auktion startet bei {amount}",
   "product.openForBids": "offen für Gebote",
   "product.offer": "Angebot",
-  "product.openToOffers": "offen für Angebote"
+  "product.openToOffers": "offen für Angebote",
+  "stats.seeMore": "Sieh dir an, was @{handle} offen hat"
 }

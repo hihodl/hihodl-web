@@ -360,5 +360,6 @@
   "product.biddingOpensAt": "تبدأ المزايدة من {amount}",
   "product.openForBids": "مفتوح للمزايدة",
   "product.offer": "عرض",
-  "product.openToOffers": "مفتوح للعروض"
+  "product.openToOffers": "مفتوح للعروض",
+  "stats.seeMore": "اطّلع على ما لدى @{handle} متاحًا"
 }

@@ -360,5 +360,6 @@
   "product.biddingOpensAt": "la puja empieza en {amount}",
   "product.openForBids": "abierto a pujas",
   "product.offer": "Ofertar",
-  "product.openToOffers": "abierto a ofertas"
+  "product.openToOffers": "abierto a ofertas",
+  "stats.seeMore": "Mira lo que tiene abierto @{handle}"
 }
