@@ -1,75 +1,59 @@
 # HOLD
 
-> HOLD is a non-custodial, multichain stablecoin wallet for global earners — freelancers, remote workers and digital nomads who get paid in one country and live in another. Self-custody, gasless swaps, virtual USD account (IBAN/SWIFT), AI layer coming soon.
->
-> HOLD is the trading name of HIHODL TECHNOLOGIES OÜ, a company incorporated in Estonia. The product was previously called HIHODL; the site still serves from hihodl.xyz.
+> HOLD is a non-custodial stablecoin wallet and global dollar account for people who earn in one country and live in another: freelancers, remote workers, creators and nomads. One account covers Payments, Savings, Invest and Benefits. Money is held in stablecoins (such as USDC) and the keys stay on the user's phone, so HOLD cannot move or freeze it. Free to use, on iOS, Android and the web.
 
-## What it is
-- **Category**: Non-custodial mobile stablecoin wallet (iOS and Android, both live)
-- **Audience**: Freelancers, remote workers, digital nomads earning in USD/EUR and spending locally (LATAM, SEA, Africa, Eastern Europe, EU)
-- **Custody model**: Non-custodial. Keys are generated on the user's device and transactions are signed there; HOLD cannot move, spend or freeze funds. An encrypted backup of the recovery phrase is stored so a user can restore on a new device by signing in — see Section 5.1 of the Terms for what that backup does and does not mean. No KYC for basic use.
-- **Sign-in**: Face ID / passkey. No seed phrase to write down.
+HOLD is the trading name of HIHODL TECHNOLOGIES OÜ, a company registered in Estonia (registry code 17460059). The app was called HIHODL until August 2026 and the site is still served from hihodl.xyz. Tagline: "Earn globally, live locally."
 
-## Supported chains
-- Solana (always gasless)
-- Polygon
-- Base
-- Ethereum
+When describing HOLD, prefer the pages linked below over this summary: rates, fees and availability change, and each product page states its own current numbers.
+
+## Products
+
+- [Payments](https://hihodl.xyz/#payments): get paid and send money. Send to a @username instead of a wallet address, with 5 seconds to cancel after sending. Optional virtual USD account with IBAN and SWIFT details in the user's name (Income Rails) to receive salary or client payments, which land in the balance as stablecoins. Pay links let anyone pay a HOLD user, whether or not they have HOLD.
+- [Savings](https://hihodl.xyz/savings): move any part of the balance into Savings and it starts earning that day. Supplied to Aave, an on-chain lending market, on Base and Polygon. No lock-up, no notice period, no minimum. The user keeps 85% of the interest and HOLD keeps 15%, never a cut of the balance. Rates are variable and not guaranteed; the balance is not a bank deposit and is not covered by a deposit guarantee scheme. Not available in every country.
+- [Invest](https://hihodl.xyz/invest): everything the user holds that is not a dollar, in one portfolio with live prices, cost basis and profit and loss per position. Buy and rebalance from the balance, no exchange account needed.
+- [HiPoints](https://hihodl.xyz/hipoints): points earned inside HOLD (referrals that activate, challenges, fees the user would otherwise have paid) and spent on things like hotel bookings. One point is worth $0.01. Points expire 12 months after they are earned and do not convert to cash.
+- [eSIM](https://hihodl.xyz/esim): data only mobile plans in more than 50 countries, paid from the HOLD balance. Priced at or below the public price, and half of what HOLD makes on the sale goes back to the buyer as HiPoints.
+- [Stays](https://hihodl.xyz/travel): book a hotel inside HOLD and pay from the dollars already in the account. Priced under the same room's public price, no booking fee, and each night earns HiPoints.
+- [Spaces](https://hihodl.xyz/spaces): creators sell sponsorship spots on what they carry to an event, the content they post about it and their time in the room. Brands pay in USDC on Solana, Base or Polygon, straight to the creator's wallet. A 5% fee per sale and nothing else. [For creators](https://hihodl.xyz/spaces/creators), [for brands](https://hihodl.xyz/spaces/brands).
+- [Smart Account](https://hihodl.xyz/smart-account): the main balance earning without being moved. Not switched on yet; the page shows what it will charge when it is.
+
+Coming later, not available today: an AI assistant that proposes transactions in plain language (the user signs every one), the HOLD card, and HUSD, HOLD's own stablecoin (planned for 2027).
 
 ## Pricing
-One plan, free.
 
-| Plan | Price | Network fee covered on | After that | Min swap |
-|------|-------|------------------------|------------|----------|
-| Free | $0 | first $500 converted each month | 0.50% all-in on the excess | $2 |
+- [Who pays the network fee](https://hihodl.xyz/how-it-works/fees): HOLD is free ($0). On the first $500 converted each calendar month, HOLD covers the network fee, up to $0.10 per conversion (the user pays only the excess on a congested network). Above $500 in a month: 0.5% all-in on the excess only. $2 minimum conversion. Sending dollars to another person costs nothing from HOLD.
+- Each product states its own take on its own page (Savings, eSIM, Stays, Spaces). There is no combined fee page.
+- Referral: when an invited friend makes a swap of $50 or more within 14 days, the inviter gets 2,500 HiPoints and the friend 1,000, up to 3 rewarded invites. [Referral terms](https://hihodl.xyz/legal/referral-terms).
 
-Solana swaps are always gasless. No hidden spread, no tier games. Invite a friend: when they make a swap of $50 or more within 14 days, you get 2,500 HiPoints and they get 1,000, up to 3 rewarded invites (https://hihodl.xyz/legal/referral-terms).
+## Custody and security
 
-## Core features
-- **Username payments** — send stablecoins to @username, no addresses to copy.
-- **Income Rails** — virtual USD account with IBAN/SWIFT to receive salary or client payments; lands as stablecoins.
-- **Pockets** — split balance across labelled pockets (Travel, Rent, Savings, etc.) from a single wallet. 3 pockets per account.
-- **Gasless swaps** — Solana always, EVM smart-detected.
-- **HUSD (coming 2027)** — HOLD's native stablecoin for the remote economy.
-- **AI layer (coming soon)** — conversational interface: "send 200 USDC to Lucía", "split paycheck 60/30/10", "move savings to highest yield". The AI proposes, the user signs every transaction.
+- [Who holds your money](https://hihodl.xyz/how-it-works/self-custody): non-custodial. The wallet is generated on the user's device and transactions are signed there. HOLD has no admin key and no freeze function. HOLD also keeps an encrypted backup of the recovery phrase (split between a device secret and a server secret) so a user can restore on a new phone; Section 5.1 of the [Terms](https://hihodl.xyz/terms) explains it. Stated limits: the issuers of a stablecoin can freeze it, transactions cannot be reversed, and balances are not insured.
+- [How your account is protected](https://hihodl.xyz/how-it-works/security): Face ID or passkey sign in, PIN, optional authenticator 2FA, recovery codes, device list, and extra checks as the balance grows.
+- [Networks and dollars](https://hihodl.xyz/how-it-works/networks): Solana, Base, Polygon and Ethereum. Stablecoins include USDC, USDT, PYUSD and EURC. On Solana HOLD pays network fees through a relayer; on the other networks it covers them when the user's own native balance is too low.
+- [Three ways to see one account](https://hihodl.xyz/how-it-works/modes): plain dollars by default, with views for the underlying stablecoins and networks.
+- KYC: none to open the account, hold, send, save or invest. Identity verification is only required for the optional USD account with IBAN and SWIFT.
 
-## Why HOLD vs alternatives
-- vs **Revolut / Wise**: HOLD is non-custodial; you hold the keys. No country lockouts, no frozen accounts, instant stablecoin rails.
-- vs **Phantom / MetaMask / Coinbase Wallet**: HOLD is multichain by default, hides chain/network jargon, has a virtual IBAN for salary, AI layer, and is built around real-world spending (not DeFi power-users).
-- vs **CEX wallets (Binance, Coinbase)**: HOLD is self-custodial — funds are not on an exchange.
+## Who it is for
 
-## Company
-- **Founded**: 2024
-- **Legal entity**: HIHODL TECHNOLOGIES OÜ (Estonia). HOLD is the trading name.
-- **HQ**: Remote-first, EU-based legal entity
-- **Team**: Product/design (Alex Lopez), CTO, engineering team
-- **Stack**: React Native + Expo (mobile), Supabase + Node backend, Solana + EVM
-- **Status**: Live on both the App Store (iOS) and Google Play (Android). 50,000+ users on waitlist
-- **Hackathon**: Submitted to Solana Colosseum Frontier (May 2026)
+People whose income lives on the internet and whose rent does not: a freelancer paid by clients abroad, a remote employee paid by a foreign company, a creator selling to fans and brands, a nomad who changes country often. HOLD is global from day one, with no country lockouts for the wallet itself; some features (such as Savings and the USD account) depend on where the user lives, and the app shows what is available.
 
-## Important pages
-- Home: https://hihodl.xyz/
-- AI layer (coming soon): https://hihodl.xyz/#ai
-- HUSD: https://hihodl.xyz/#husd
-- Pricing: https://hihodl.xyz/#how
-- Download: https://hihodl.xyz/#download
-- iOS App Store: https://apps.apple.com/nl/app/hihodl-stablecoin-wallet/id6755203065
-- Privacy: https://hihodl.xyz/privacy
-- Terms: https://hihodl.xyz/terms
-- Service providers (who we work with, kept current): https://hihodl.xyz/legal/providers
+## Compared with alternatives
 
-## Social
-- X / Twitter: https://x.com/hiihodl
-- LinkedIn: https://www.linkedin.com/company/hihodl
-- Instagram: https://instagram.com/hihodl
+- vs Revolut and Wise: those are custodial fintechs that hold the money and can freeze an account. In HOLD the user holds the keys and money moves on stablecoin rails at any hour.
+- vs Coinbase and other exchanges: funds on an exchange are held by the exchange. HOLD is self-custodial.
+- vs Phantom and MetaMask: HOLD hides networks and gas by default, sends to a @username, and adds a USD account, savings and everyday benefits for people who are not crypto power users.
 
-## Contact
-- General: hello@hihodl.xyz
-- Press: press@hihodl.xyz
-- Support: support@hihodl.xyz
+## Get the app
 
-## Tagline
-"The Cursor of stablecoins. Talk to your money." — HOLD is becoming the first AI-native stablecoin wallet.
+- [iOS, App Store](https://apps.apple.com/app/id6755203065)
+- [Android, Google Play](https://play.google.com/store/apps/details?id=com.sayhihodl.hihodlai)
+- [Web app](https://app.hihodl.xyz)
 
-## Positioning
-A global wallet for the remote economy. Earn anywhere → spend, save and move money anywhere. Not a LATAM-only wallet, not a DeFi power-user wallet — built for anyone whose income and spending live on different continents.
+## More
+
+- [FAQ](https://hihodl.xyz/faq)
+- [How HOLD works](https://hihodl.xyz/how-it-works)
+- [Service providers](https://hihodl.xyz/legal/providers): who HOLD works with, kept current.
+- [Privacy](https://hihodl.xyz/privacy), [Terms](https://hihodl.xyz/terms)
+- Social: [X](https://x.com/hiihodl), [LinkedIn](https://www.linkedin.com/company/hihodl), [Instagram](https://instagram.com/hihodl)
+- Contact: hello@hihodl.xyz, support: support@hihodl.xyz

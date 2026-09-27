@@ -71,6 +71,7 @@ const jsonLd = {
         "Savings — balance earns on-chain interest via Aave on Base and Polygon",
         "Invest — one portfolio with cost basis and profit and loss per position",
         "Benefits — HiPoints, hotel stays and eSIM data paid from your balance",
+        "Spaces — creators sell sponsorship spots at events; brands pay in USDC straight to the creator's wallet, 5% fee per sale",
         "Non-custodial — keys generated on your device, with encrypted cloud recovery",
         "Network fee covered on the first $500 you convert each month",
         "Pockets — split one balance into labelled buckets",

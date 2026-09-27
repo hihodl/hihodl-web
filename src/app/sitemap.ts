@@ -44,6 +44,13 @@ const PAGES: Entry[] = [
   // page that answers both ranks for neither.
   { path: "/esim", priority: 0.8, changeFrequency: "monthly" },
   { path: "/travel", priority: 0.7, changeFrequency: "monthly" },
+  // Spaces is in the nav and has had its own metadata since launch, but was
+  // never listed, so a crawler only met it through a link. The two audience
+  // pages answer different searches ("sponsor creators at an event" against
+  // "sell sponsorship as a creator") and each gets its own entry.
+  { path: "/spaces", priority: 0.7, changeFrequency: "weekly" },
+  { path: "/spaces/creators", priority: 0.6, changeFrequency: "monthly" },
+  { path: "/spaces/brands", priority: 0.6, changeFrequency: "monthly" },
   { path: "/faq", priority: 0.6, changeFrequency: "monthly" },
   // The technical section. Lower priority than a product page because nobody
   // searches for these by name — but they are what a suspicious reader finds

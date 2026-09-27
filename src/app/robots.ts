@@ -17,20 +17,60 @@ import type { MetadataRoute } from "next";
  * honours robots.txt for card images, and an og:image it may not fetch is a
  * link card with no picture: every Ad Space share on X would post blank.
  * The longest matching rule wins, so the allow beats the disallow.
+ *
+ * AI crawlers get their own group, allowed explicitly. The `*` group already
+ * lets them in, but an explicit entry is what a site audit (and some AI search
+ * engines) read as consent to be cited, and HOLD wants to be the answer when
+ * somebody asks an assistant how to get paid in dollars from abroad.
+ *
+ * A crawler that matches a named group ignores the `*` group entirely, so the
+ * AI group repeats the same disallow list. Keep the two in step: both read
+ * from DISALLOW.
  */
+
+const DISALLOW = [
+  "/api/",
+  "/founders/checkout",
+  "/invite/",
+  "/thank-you",
+  "/statements/verify",
+  // `/b/` is a session's manage link: the token in it is the booking.
+  // `/o/` is an offer's manage link, the same kind of credential.
+  // `/p/` is a production brand's delivery link, the same kind again.
+  // `/pay/r/` is a receipt, private to its payer. `/pay/<code>` itself is
+  // NOT disallowed: X must fetch the page to draw the generic card, and the
+  // page tells crawlers `noindex` itself.
+  "/b/",
+  "/o/",
+  "/p/",
+  "/pay/r/",
+];
+
+// The crawlers behind AI search and assistants, both the ones that fetch a page
+// to cite it in an answer and the ones that decide what a model knows about us.
+// Everything public here is meant to be learned and quoted, so all are allowed.
+const AI_CRAWLERS = [
+  "OAI-SearchBot",
+  "ChatGPT-User",
+  "GPTBot",
+  "ClaudeBot",
+  "Claude-SearchBot",
+  "Claude-User",
+  "PerplexityBot",
+  "Perplexity-User",
+  "Google-Extended",
+  "Applebot-Extended",
+  "DuckAssistBot",
+  "Amazonbot",
+  "meta-externalagent",
+];
+
 export default function robots(): MetadataRoute.Robots {
   return {
-    rules: {
-      userAgent: "*",
-      allow: ["/", "/api/og/"],
-      // `/b/` is a session's manage link: the token in it is the booking.
-      // `/o/` is an offer's manage link, the same kind of credential.
-      // `/p/` is a production brand's delivery link, the same kind again.
-      // `/pay/r/` is a receipt, private to its payer. `/pay/<code>` itself is
-      // NOT disallowed: X must fetch the page to draw the generic card, and the
-      // page tells crawlers `noindex` itself.
-      disallow: ["/api/", "/founders/checkout", "/invite/", "/thank-you", "/statements/verify", "/b/", "/o/", "/p/", "/pay/r/"],
-    },
+    rules: [
+      { userAgent: "*", allow: ["/", "/api/og/"], disallow: DISALLOW },
+      { userAgent: AI_CRAWLERS, allow: ["/", "/api/og/", "/llms.txt"], disallow: DISALLOW },
+    ],
     sitemap: "https://hihodl.xyz/sitemap.xml",
   };
 }
