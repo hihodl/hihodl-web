@@ -102,10 +102,10 @@ const payPage = {
 
   // The link card a chat app draws for this page (og:title, og:description)
   "og.personalTitle": "Pay {name} in a minute",
-  "og.linkDescription": "{name} is asking you to pay. It takes a minute, no account needed.",
-  "og.cardApplePay": "Card or Apple Pay. No account or app needed.",
-  "og.byCard": "Pay by card. No account or app needed.",
-  "og.plain": "Fast and secure. No account needed.",
+  "og.linkDescription": "{name} sent you a payment request. Pay it in seconds.",
+  "og.cardApplePay": "Card or Apple Pay. Done in seconds.",
+  "og.byCard": "Pay by card. Done in seconds.",
+  "og.plain": "Instant payments. Beautifully simple.",
   "og.genericTitle": "Pay with HOLD",
 
   // Report
