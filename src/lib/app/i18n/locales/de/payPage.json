@@ -115,6 +115,8 @@
   "showCode": "Code anzeigen",
   "wcScan": "Scann mit einer beliebigen Wallet auf einem anderen Handy oder Computer.",
   "orOpenWallet": "Oder öffne deine Wallet",
+  "scanQr": "QR-Code scannen",
+  "back": "Zurück",
   "openInWalletBrowser": "Öffne diese Seite im Browser deiner Wallet, um zu bezahlen.",
   "bank": "Banküberweisung",
   "bankTitle": "Per Banküberweisung zahlen",

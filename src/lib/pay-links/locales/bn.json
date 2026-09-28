@@ -231,6 +231,8 @@
   "payPage.showCode": "কোড দেখান",
   "payPage.wcScan": "অন্য একটি ফোন বা কম্পিউটারে যেকোনো ওয়ালেট দিয়ে স্ক্যান করুন।",
   "payPage.orOpenWallet": "অথবা আপনার ওয়ালেট খুলুন",
+  "payPage.scanQr": "QR কোড স্ক্যান করুন",
+  "payPage.back": "ফিরে যান",
   "payPage.openInWalletBrowser": "পেমেন্ট করতে আপনার ওয়ালেটের ব্রাউজারে এই পেজটি খুলুন।",
   "payPage.bank": "ব্যাংক ট্রান্সফার",
   "payPage.bankTitle": "ব্যাংক ট্রান্সফারে পেমেন্ট করুন",

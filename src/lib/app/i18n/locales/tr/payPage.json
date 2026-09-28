@@ -115,6 +115,8 @@
   "showCode": "Kodu göster",
   "wcScan": "Başka bir telefon veya bilgisayardan herhangi bir cüzdanla tara.",
   "orOpenWallet": "Veya cüzdanını aç",
+  "scanQr": "QR kodu tara",
+  "back": "Geri",
   "openInWalletBrowser": "Ödemek için bu sayfayı cüzdanının tarayıcısında aç.",
   "bank": "Banka havalesi",
   "bankTitle": "Banka havalesiyle öde",

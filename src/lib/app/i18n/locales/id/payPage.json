@@ -115,6 +115,8 @@
   "showCode": "Tampilkan kode",
   "wcScan": "Pindai dengan dompet mana pun dari ponsel atau komputer lain.",
   "orOpenWallet": "Atau buka dompetmu",
+  "scanQr": "Pindai kode QR",
+  "back": "Kembali",
   "openInWalletBrowser": "Buka halaman ini di browser dompetmu untuk membayar.",
   "bank": "Transfer bank",
   "bankTitle": "Bayar dengan transfer bank",

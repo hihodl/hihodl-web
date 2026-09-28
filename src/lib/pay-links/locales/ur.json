@@ -231,6 +231,8 @@
   "payPage.showCode": "کوڈ دکھائیں",
   "payPage.wcScan": "کسی اور فون یا کمپیوٹر پر کسی بھی والٹ سے اسکین کریں۔",
   "payPage.orOpenWallet": "یا اپنا والٹ کھولیں",
+  "payPage.scanQr": "QR کوڈ اسکین کریں",
+  "payPage.back": "واپس",
   "payPage.openInWalletBrowser": "ادائیگی کے لیے اپنے والٹ کے براؤزر میں یہ صفحہ کھولیں۔",
   "payPage.bank": "بینک ٹرانسفر",
   "payPage.bankTitle": "بینک ٹرانسفر سے ادائیگی کریں",

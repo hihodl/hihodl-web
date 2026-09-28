@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
-import { Ion } from "@/components/app/ion";
+import { Ion, type IonName } from "@/components/app/ion";
 import { QrCode } from "@/components/ad-space/qr";
 import {
   CheckoutError,
@@ -75,13 +75,16 @@ import {
  *                  Polygon for USDC; Base alone for EURC)
  *   in a wallet    when this page is already inside one (injected), "Pay
  *                  with <wallet>" comes first: one tap
- *   the QR         HOLD's code, the logo in its middle: the Solana Pay
- *                  transaction request on Solana, the WalletConnect pairing
- *                  on Base and Polygon, for a wallet on another device
  *   on a phone     "Or open your wallet": HOLD, and each wallet's own browser
  *                  opened on this page with the same amount. A browser can't
  *                  see which apps are installed, and a bare `solana:` link
  *                  opens whichever app claimed it, so every wallet is named.
+ *                  Phantom and MetaMask pay on both Solana and EVM, so both
+ *                  are listed on every network.
+ *   the QR         the last row, "Scan QR code": the sheet turns into HOLD's
+ *                  code, the logo in its middle, with Back to the options.
+ *                  The Solana Pay request on Solana, the WalletConnect
+ *                  pairing on Base and Polygon, for a wallet on another device.
  *
  * The HiSpace checkout underneath, minus the fee: a Solana transfer, or ONE
  * ERC-3009 authorization on Base or Polygon that our relayer submits. The
@@ -166,6 +169,8 @@ export function PayLinkPay({
     network && chains.includes(network) ? network : chains.includes("solana") ? "solana" : chains[0] ?? "base",
   );
   const [phase, setPhase] = useState<Phase>({ kind: "loading" });
+  /** The options, or the QR code the payer asked for in their place. */
+  const [view, setView] = useState<"options" | "qr">("options");
   const [notice, setNotice] = useState<string | null>(null);
   const [solWallets, setSolWallets] = useState<SolanaWallet[]>([]);
   const [evmWallets, setEvmWallets] = useState<EvmWallet[]>([]);
@@ -667,18 +672,40 @@ export function PayLinkPay({
     else void startWc(chain as "base" | "polygon");
   }
 
-  /*
-   * The code shows itself: on Solana the Solana Pay request, on Base and
-   * Polygon the WalletConnect pairing, as soon as the sheet has nothing else
-   * to do. Not after a refusal: the payer reads it first and asks again.
-   */
   const canPay = link.status === "active";
   const injectedHere = chain === "solana" ? solWallets.length > 0 : evmWallets.length > 0;
-  useEffect(() => {
-    if (!canPay || phase.kind !== "choose" || notice || waiting) return;
-    if (chain === "solana") void startQr();
-    else if (walletConnect) void startWc(chain);
-  }, [canPay, phase.kind, notice, waiting, chain, startQr, startWc, walletConnect]);
+
+  /** Make the code for this network: the Solana Pay request, or the WalletConnect pairing. */
+  function makeCode() {
+    clearNotice();
+    if (chain === "solana") {
+      // A Ledger pairing still waiting gives way to the code.
+      wcRun.current++;
+      ledgerWanted.current = false;
+      void startQr();
+    } else void startWc(chain as "base" | "polygon");
+  }
+
+  /**
+   * "Scan QR code": the sheet shows the code in place of the options. A
+   * pairing already open for this network (Ledger started it) is shown as is.
+   */
+  function openQr() {
+    clearNotice();
+    if (!amountOrProblem()) return;
+    setView("qr");
+    if (phase.kind === "qr" || (phase.kind === "wc" && (chain === "solana") === Boolean(phase.solana))) return;
+    makeCode();
+  }
+
+  /** Back to the options: the code is dropped, and a pairing still waiting with it. */
+  function closeQr() {
+    wcRun.current++;
+    ledgerWanted.current = false;
+    clearNotice();
+    setView("options");
+    if (phase.kind === "qr" || phase.kind === "wc") setPhase({ kind: "choose" });
+  }
 
   function switchNetwork(c: Chain) {
     if (c === chain) return;
@@ -687,6 +714,7 @@ export function PayLinkPay({
     // A wait is for the same wallet on the same network; another network can be tried now.
     clearNotice();
     setChain(c);
+    setView("options");
     if (phase.kind === "qr" || phase.kind === "wc" || phase.kind === "busy") setPhase({ kind: "choose" });
   }
 
@@ -769,19 +797,81 @@ export function PayLinkPay({
 
   /* The choice: network, the wallet here, the code, the wallets on this phone. */
   const shownAmount = money(expectedCents);
-  const walletLinks: WalletLinkId[] = chain === "solana" ? ["phantom", "solflare"] : ["metamask", "coinbase", "trust"];
+  // Phantom and MetaMask each pay on Solana and on Base and Polygon (their docs, 28-Sep-2026).
+  const walletLinks: WalletLinkId[] = chain === "solana" ? ["phantom", "solflare", "metamask"] : ["metamask", "phantom", "coinbase", "trust"];
   const scheme = appSchemeUrl(link);
   const stateUrl = pageUrl ? payStateUrl(pageUrl, { amount: amountText, currency: token === "eurc" ? "EUR" : "USD", network: chain }) : "";
   const qrText = phase.kind === "qr" ? phase.link : phase.kind === "wc" ? phase.uri : null;
   const showQrArea = chain === "solana" || walletConnect;
   const busyLabel = phase.kind === "busy" ? phase.label : null;
   const showLedger = walletConnect && canPay;
+  const header = (
+    <p className="text-center text-[14px] text-[#CFE3EC]">
+      <span className="font-extrabold text-white">{shownAmount}</span> {t("payPage.sheetTo", { name: `\u2068${link.owner?.displayName?.trim() || payee}\u2069` })}
+    </p>
+  );
+
+  if (view === "qr" && showQrArea) {
+    return (
+      <div className="flex flex-col gap-4">
+        <div className="relative flex items-center justify-center">
+          <button
+            type="button"
+            onClick={closeQr}
+            disabled={!!busyLabel}
+            className="absolute start-0 inline-flex h-9 items-center gap-1 rounded-[18px] pe-3 ps-1.5 text-[14px] font-bold text-white/80 transition-colors hover:text-white disabled:opacity-40"
+          >
+            <Ion name="chevron-back" size={18} className="rtl:rotate-180" />
+            {t("payPage.back")}
+          </button>
+          <h3 className="text-[15px] font-extrabold text-white">{t("payPage.scanQr")}</h3>
+        </div>
+
+        {header}
+
+        {busyLabel && !qrText ? <BusyLine label={busyLabel} /> : null}
+
+        <div className="flex flex-col items-center gap-3">
+          <div className="flex aspect-square w-full max-w-[236px] items-center justify-center rounded-[24px] bg-white p-3.5 shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
+            {qrText ? (
+              <QrCode text={qrText} title={t("payPage.stable.qrTitle")} logo="/favicon.png" className="h-auto w-full" />
+            ) : phase.kind === "choose" ? (
+              // A refusal, or a pairing the wallet closed: the payer reads why, then asks again.
+              <button
+                type="button"
+                disabled={waiting}
+                onClick={makeCode}
+                className="flex flex-col items-center gap-2 text-[13px] font-bold text-[#0A1420] disabled:opacity-40"
+              >
+                <Ion name="qr-code-outline" size={34} />
+                {t("payPage.showCode")}
+              </button>
+            ) : (
+              <span className="h-7 w-7 animate-spin rounded-full border-[3px] border-[#0A1420]/15 border-t-[#0A1420]" aria-hidden />
+            )}
+          </div>
+          <p className="max-w-[300px] text-center text-[12.5px] leading-[17px] text-[#9FB7C2]">
+            {phase.kind === "qr" && phase.scanned
+              ? t("payPage.stable.qrScanned")
+              : chain === "solana" && phase.kind !== "wc"
+                ? t("payPage.stable.qrScan")
+                : t("payPage.wcScan")}
+          </p>
+        </div>
+
+        {noticeLine}
+      </div>
+    );
+  }
+
+  const openRows = !injectedHere && mobile && stateUrl;
+  const holdRow = openRows && scheme && token === "usdc" && offers(link, "hold");
+  const ledgerRow = !injectedHere && showLedger;
+  const qrRow = showQrArea && canPay;
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-center text-[14px] text-[#CFE3EC]">
-        <span className="font-extrabold text-white">{shownAmount}</span> {t("payPage.sheetTo", { name: `\u2068${link.owner?.displayName?.trim() || payee}\u2069` })}
-      </p>
+      {header}
 
       {chains.length > 1 ? (
         <div role="radiogroup" aria-label={t("payPage.network")} className="flex h-11 gap-1 rounded-[22px] bg-white/[0.06] p-1">
@@ -840,51 +930,14 @@ export function PayLinkPay({
             </button>
           ))}
 
-      {busyLabel && !qrText ? <BusyLine label={busyLabel} /> : null}
+      {busyLabel ? <BusyLine label={busyLabel} /> : null}
 
-      {showQrArea ? (
-        <div className="flex flex-col items-center gap-3">
-          <div className="flex aspect-square w-full max-w-[236px] items-center justify-center rounded-[24px] bg-white p-3.5 shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
-            {qrText ? (
-              <QrCode text={qrText} title={t("payPage.stable.qrTitle")} logo="/favicon.png" className="h-auto w-full" />
-            ) : phase.kind === "choose" && (notice || waiting) ? (
-              <button
-                type="button"
-                disabled={waiting}
-                onClick={() => {
-                  clearNotice();
-                  if (chain === "solana") void startQr();
-                  else void startWc(chain as "base" | "polygon");
-                }}
-                className="flex flex-col items-center gap-2 text-[13px] font-bold text-[#0A1420] disabled:opacity-40"
-              >
-                <Ion name="qr-code-outline" size={34} />
-                {t("payPage.showCode")}
-              </button>
-            ) : (
-              <span className="h-7 w-7 animate-spin rounded-full border-[3px] border-[#0A1420]/15 border-t-[#0A1420]" aria-hidden />
-            )}
-          </div>
-          <p className="max-w-[300px] text-center text-[12.5px] leading-[17px] text-[#9FB7C2]">
-            {phase.kind === "qr" && phase.scanned
-              ? t("payPage.stable.qrScanned")
-              : chain === "solana" && phase.kind !== "wc"
-                ? t("payPage.stable.qrScan")
-                : t("payPage.wcScan")}
-          </p>
-        </div>
-      ) : !injectedHere ? (
-        <p className="text-center text-[13px] leading-[18px] text-[#9FB7C2]">{t("payPage.openInWalletBrowser")}</p>
-      ) : null}
-
-      {!injectedHere && ((mobile && stateUrl) || showLedger) ? (
+      {openRows || ledgerRow || qrRow ? (
         <div className="flex flex-col gap-2">
-          <p className="px-1 text-[13px] font-strong text-[#9FB7C2]">{t("payPage.orOpenWallet")}</p>
+          {openRows || ledgerRow ? <p className="px-1 text-[13px] font-strong text-[#9FB7C2]">{t("payPage.orOpenWallet")}</p> : null}
           <div className="overflow-hidden rounded-[20px] border border-white/[0.08] bg-white/[0.05]">
-            {mobile && stateUrl && scheme && token === "usdc" && offers(link, "hold") ? (
-              <WalletRow href={holdPayUrl(scheme, amountText, "USD")} logo={WALLET_LOGO.hold} name="HOLD" />
-            ) : null}
-            {mobile && stateUrl
+            {holdRow ? <WalletRow href={holdPayUrl(scheme, amountText, "USD")} logo={WALLET_LOGO.hold} name="HOLD" /> : null}
+            {openRows
               ? walletLinks.map((id, i) => (
                   <WalletRow
                     key={id}
@@ -892,14 +945,20 @@ export function PayLinkPay({
                     logo={WALLET_LOGO[id]}
                     inset={Boolean(WALLET_LOGO_INSET[id as WalletLinkId])}
                     name={WALLET_NAME[id as Exclude<WalletLinkId, "hold">]}
-                    last={!showLedger && i === walletLinks.length - 1}
+                    last={!ledgerRow && !qrRow && i === walletLinks.length - 1}
                   />
                 ))
               : null}
             {/* A Ledger pays through Ledger Wallet (the app, on a phone or a computer) over WalletConnect. */}
-            {showLedger ? <WalletRow onClick={payWithLedger} logo={WALLET_LOGO.ledger} inset name="Ledger" disabled={waiting || !!busyLabel} last /> : null}
+            {ledgerRow ? (
+              <WalletRow onClick={payWithLedger} logo={WALLET_LOGO.ledger} inset name="Ledger" disabled={waiting || !!busyLabel} last={!qrRow} />
+            ) : null}
+            {/* The code, for a wallet on another device: it takes the sheet, with Back to these options. */}
+            {qrRow ? <WalletRow onClick={openQr} icon="qr-code-outline" name={t("payPage.scanQr")} disabled={waiting || !!busyLabel} last /> : null}
           </div>
         </div>
+      ) : !injectedHere ? (
+        <p className="text-center text-[13px] leading-[18px] text-[#9FB7C2]">{t("payPage.openInWalletBrowser")}</p>
       ) : null}
 
       {noticeLine}
@@ -918,26 +977,38 @@ function WalletRow({
   href,
   onClick,
   logo,
+  icon,
   name,
   inset = false,
   last = false,
   disabled = false,
 }: {
-  logo: string;
   name: string;
   inset?: boolean;
   last?: boolean;
   disabled?: boolean;
-} & ({ href: string; onClick?: undefined } | { href?: undefined; onClick: () => void })) {
+} & ({ logo: string; icon?: undefined } | { logo?: undefined; icon: IonName }) &
+  ({ href: string; onClick?: undefined } | { href?: undefined; onClick: () => void })) {
   const row = `flex w-full items-center gap-3 px-4 py-3 text-start transition-colors hover:bg-white/[0.04] disabled:opacity-50 ${last ? "" : "border-b border-white/[0.06]"}`;
   const body = (
     <>
-      <span className={`flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-[9px] bg-white ${inset ? "p-[5px]" : ""}`}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={logo} alt="" width={32} height={32} className="h-full w-full object-contain" />
-      </span>
+      {icon ? (
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-white/[0.1] text-white">
+          <Ion name={icon} size={18} />
+        </span>
+      ) : (
+        <span className={`flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-[9px] bg-white ${inset ? "p-[5px]" : ""}`}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={logo} alt="" width={32} height={32} className="h-full w-full object-contain" />
+        </span>
+      )}
       <span className="min-w-0 flex-1 truncate text-[15px] font-bold text-white">{name}</span>
-      <Ion name="open-outline" size={15} className="shrink-0 text-white/40" />
+      {/* A row that opens another app says so; the code stays in this sheet. */}
+      {onClick && icon ? (
+        <Ion name="chevron-forward" size={15} className="shrink-0 text-white/40 rtl:rotate-180" />
+      ) : (
+        <Ion name="open-outline" size={15} className="shrink-0 text-white/40" />
+      )}
     </>
   );
   if (onClick) {
