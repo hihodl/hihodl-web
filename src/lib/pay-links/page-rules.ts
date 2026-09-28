@@ -360,7 +360,7 @@ export function readPayState(search: string): {
     amount: amount && /^\d{1,9}(?:[.,]\d{0,2})?$/.test(amount) ? amount : null,
     currency: currency === "USD" || currency === "EUR" ? currency : null,
     stablecoins: q.get("pay") === "stablecoins",
-    network: network === "solana" || network === "base" || network === "polygon" ? network : null,
+    network: network === "solana" || network === "base" || network === "polygon" || network === "arc" ? network : null,
     note: cleanPrefillNote(q.get("note")),
   };
 }

@@ -39,6 +39,8 @@ export const CHAIN_LABEL: Record<Chain, string> = {
   solana: "Solana",
   base: "Base",
   polygon: "Polygon",
+  // A proper name: "Arc" in every language.
+  arc: "Arc",
 };
 
 /**
