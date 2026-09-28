@@ -113,6 +113,7 @@ eq("coinbase", walletBrowseUrl("coinbase", "https://hihodl.xyz/pay/x"), "https:/
 eq("trust", walletBrowseUrl("trust", "https://hihodl.xyz/pay/x"), "https://link.trustwallet.com/open_url?coin_id=60&url=https%3A%2F%2Fhihodl.xyz%2Fpay%2Fx");
 eq("state url", payStateUrl("https://hihodl.xyz/pay/@demo?amount=1#x", { amount: "25.00", currency: "EUR", network: "base" }), page);
 eq("state read", readPayState(new URL(page).search), { amount: "25.00", currency: "EUR", stablecoins: true, network: "base", note: null });
+eq("state read arc", readPayState("?amount=5&currency=USD&network=arc").network, "arc");
 eq("state read junk", readPayState("?amount=1e9&currency=GBP&network=eth"), { amount: null, currency: null, stablecoins: false, network: null, note: null });
 eq("state read note", readPayState("?amount=150.00&currency=USD&note=Pitch%20deck%20review").note, "Pitch deck review");
 eq("note: controls and overrides go", cleanPrefillNote("a\u202Eb\nc\u0000d"), "a b c d");

@@ -537,7 +537,8 @@ export function Checkout({
     if (chain === "solana") {
       const w = solanaWallets.find((s) => s.name === chosen.id);
       if (w) void payWithSolanaWallet(w);
-    } else {
+    } else if (chain !== "arc") {
+      // Arc pays pay links only; no space is ever on it (28-Sep-2026).
       const w = evmWallets.find((e) => e.id === chosen.id);
       if (w) void payWithEvm(chain, w);
     }

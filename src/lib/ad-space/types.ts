@@ -9,7 +9,8 @@
 
 import type { PackageView as ProductionPackageView, ProductionView as ProductionSpotView } from "@/lib/creator/listing";
 
-export type Chain = "solana" | "base" | "polygon";
+/** `arc` (Circle's L1) is a pay-link network only; no space is paid on it (28-Sep-2026). */
+export type Chain = "solana" | "base" | "polygon" | "arc";
 
 export type SpaceStatus = "draft" | "live" | "closed" | "delisted";
 /**
