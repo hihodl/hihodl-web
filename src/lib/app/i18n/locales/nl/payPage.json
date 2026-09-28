@@ -115,6 +115,8 @@
   "showCode": "Toon de code",
   "wcScan": "Scan met een willekeurige wallet op een andere telefoon of computer.",
   "orOpenWallet": "Of open je wallet",
+  "scanQr": "QR-code scannen",
+  "back": "Terug",
   "openInWalletBrowser": "Open deze pagina in de browser van je wallet om te betalen.",
   "bank": "Bankoverschrijving",
   "bankTitle": "Betalen via bankoverschrijving",

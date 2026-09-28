@@ -231,6 +231,8 @@
   "payPage.showCode": "Показать код",
   "payPage.wcScan": "Отсканируйте любым кошельком с другого телефона или компьютера.",
   "payPage.orOpenWallet": "Или откройте кошелёк",
+  "payPage.scanQr": "Сканировать QR-код",
+  "payPage.back": "Назад",
   "payPage.openInWalletBrowser": "Откройте эту страницу в браузере кошелька, чтобы оплатить.",
   "payPage.bank": "Банковский перевод",
   "payPage.bankTitle": "Оплатить банковским переводом",

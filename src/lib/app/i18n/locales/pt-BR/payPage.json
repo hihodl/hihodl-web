@@ -115,6 +115,8 @@
   "showCode": "Mostrar o código",
   "wcScan": "Escaneie com qualquer carteira em outro celular ou computador.",
   "orOpenWallet": "Ou abra sua carteira",
+  "scanQr": "Escanear QR code",
+  "back": "Voltar",
   "openInWalletBrowser": "Abra esta página no navegador da sua carteira para pagar.",
   "bank": "Transferência bancária",
   "bankTitle": "Pagar por transferência bancária",

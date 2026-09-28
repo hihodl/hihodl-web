@@ -115,6 +115,8 @@
   "showCode": "Hiện mã",
   "wcScan": "Quét bằng bất kỳ ví nào trên điện thoại hoặc máy tính khác.",
   "orOpenWallet": "Hoặc mở ví của bạn",
+  "scanQr": "Quét mã QR",
+  "back": "Quay lại",
   "openInWalletBrowser": "Mở trang này trong trình duyệt của ví để thanh toán.",
   "bank": "Chuyển khoản ngân hàng",
   "bankTitle": "Thanh toán bằng chuyển khoản ngân hàng",

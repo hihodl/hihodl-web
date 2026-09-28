@@ -115,6 +115,8 @@
   "showCode": "Afficher le code",
   "wcScan": "Scannez avec n'importe quel wallet depuis un autre téléphone ou ordinateur.",
   "orOpenWallet": "Ou ouvrez votre wallet",
+  "scanQr": "Scanner le QR code",
+  "back": "Retour",
   "openInWalletBrowser": "Ouvrez cette page dans le navigateur de votre wallet pour payer.",
   "bank": "Virement bancaire",
   "bankTitle": "Payer par virement bancaire",

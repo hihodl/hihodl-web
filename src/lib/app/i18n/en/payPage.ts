@@ -160,6 +160,8 @@ const payPage = {
   "showCode": "Show the code",
   "wcScan": "Scan with any wallet on another phone or computer.",
   "orOpenWallet": "Or open your wallet",
+  "scanQr": "Scan QR code",
+  "back": "Back",
   "openInWalletBrowser": "Open this page in your wallet's browser to pay.",
 
   // Bank transfer: the owner's own account and the link's reference
