@@ -306,10 +306,43 @@ export function walletBrowseUrl(id: Exclude<WalletLinkId, "hold">, pageUrl: stri
   }
 }
 
+/** The flags a wallet's injected provider carries, as far as the page reads them. */
+type Flags = { isPhantom?: boolean; isSolflare?: boolean; isMetaMask?: boolean; isCoinbaseWallet?: boolean; isTrust?: boolean; isTrustWallet?: boolean };
+
+/**
+ * The wallet whose own browser this page is open in, or null. Only on a
+ * phone: a mobile browser has no extensions, so a provider there means the
+ * page is inside that wallet's app. On a computer an extension injects the
+ * same provider into every tab, and that tab still takes a card.
+ *
+ * Phantom and Trust also inject `ethereum` (with `isMetaMask` on some
+ * versions), so their own flag is read first and MetaMask comes last.
+ */
+export function walletBrowserOf(
+  platform: Platform,
+  w: { phantom?: { solana?: Flags; ethereum?: Flags }; solflare?: Flags; solana?: Flags; ethereum?: Flags; trustwallet?: unknown },
+): Exclude<WalletLinkId, "hold"> | null {
+  if (!isPhone(platform)) return null;
+  const eth = w.ethereum;
+  if (w.phantom?.solana?.isPhantom || w.solana?.isPhantom || eth?.isPhantom) return "phantom";
+  if (w.solflare?.isSolflare || w.solana?.isSolflare) return "solflare";
+  if (w.trustwallet || eth?.isTrust || eth?.isTrustWallet) return "trust";
+  if (eth?.isCoinbaseWallet) return "coinbase";
+  if (eth?.isMetaMask) return "metamask";
+  return null;
+}
+
 /**
  * This page's URL carrying what the payer chose, so the page reopens inside a
  * wallet with the same amount, currency and network, straight on the
  * stablecoin sheet.
+ *
+ * It rides in the PATH (`/pay/<code>/w/USD-25.00-solana`), never the query: a
+ * wallet's browse link carries this whole URL encoded inside its own, and
+ * Phantom decodes it once as a whole, so an inner `?amount=` became the
+ * browse link's own query and the page opened with nothing typed. A path
+ * segment of letters, digits, dots and dashes reads the same however many
+ * times it is decoded.
  */
 export function payStateUrl(
   base: string,
@@ -322,12 +355,22 @@ export function payStateUrl(
     return base;
   }
   u.hash = "";
-  for (const k of ["amount", "currency", "pay", "network"]) u.searchParams.delete(k);
-  if (s.amount) u.searchParams.set("amount", s.amount);
-  u.searchParams.set("currency", s.currency);
-  u.searchParams.set("pay", "stablecoins");
-  if (s.network) u.searchParams.set("network", s.network);
+  u.search = "";
+  u.pathname = payPagePath(u.pathname);
+  const amount = s.amount ? s.amount.replace(",", ".") : "";
+  const cur = (s.currency || "USD").toUpperCase();
+  const seg = [cur, /^\d{1,9}(?:\.\d{0,2})?$/.test(amount) ? amount : "0", s.network ?? "any"].join("-");
+  u.pathname = `${u.pathname.replace(/\/+$/, "")}/${STATE_SEGMENT}/${seg}`;
   return u.toString();
+}
+
+/** The path marker before the state a wallet's browser brings back. */
+export const STATE_SEGMENT = "w";
+
+/** `/pay/<code>/w/USD-25.00-solana` as `/pay/<code>`; any other path as it is. */
+export function payPagePath(pathname: string): string {
+  const m = pathname.match(new RegExp(`^(/pay/[^/]+)/${STATE_SEGMENT}/[^/]*/?$`));
+  return m ? m[1] : pathname;
 }
 
 /** The note field's length on the page, and the most a prefilled note carries. */
@@ -345,7 +388,10 @@ export function cleanPrefillNote(raw: string | null | undefined): string | null 
 }
 
 /** What a reopened page reads back, and what a dead link hands its owner's page. Anything malformed is dropped. */
-export function readPayState(search: string): {
+export function readPayState(
+  search: string,
+  pathname = "",
+): {
   amount: string | null;
   currency: string | null;
   stablecoins: boolean;
@@ -353,13 +399,15 @@ export function readPayState(search: string): {
   note: string | null;
 } {
   const q = new URLSearchParams(search);
-  const amount = q.get("amount");
-  const currency = (q.get("currency") ?? "").toUpperCase();
-  const network = q.get("network");
+  // What a wallet's browser brought back rides in the path (payStateUrl); an older page's link, in the query.
+  const inPath = pathname.match(new RegExp(`^/pay/[^/]+/${STATE_SEGMENT}/([A-Za-z]{3})-([\\d.,]+)-([a-z]+)/?$`));
+  const amount = inPath ? (inPath[2] === "0" ? null : inPath[2]) : q.get("amount");
+  const currency = (inPath ? inPath[1] : q.get("currency") ?? "").toUpperCase();
+  const network = inPath ? inPath[3] : q.get("network");
   return {
     amount: amount && /^\d{1,9}(?:[.,]\d{0,2})?$/.test(amount) ? amount : null,
     currency: currency === "USD" || currency === "EUR" ? currency : null,
-    stablecoins: q.get("pay") === "stablecoins",
+    stablecoins: inPath !== null || q.get("pay") === "stablecoins",
     network: network === "solana" || network === "base" || network === "polygon" ? network : null,
     note: cleanPrefillNote(q.get("note")),
   };

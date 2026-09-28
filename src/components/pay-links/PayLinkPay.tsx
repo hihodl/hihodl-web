@@ -100,7 +100,7 @@ const POLL_MS = 3_000;
 const MIN_CENTS = 100;
 const MAX_CENTS = 1_000_000;
 const NETWORK_LOGO: Record<Chain, string> = { solana: "/pay/solana.svg", base: "/pay/base.svg", polygon: "/pay/polygon.svg" };
-const WALLET_LOGO: Record<WalletLinkId | "ledger", string> = {
+export const WALLET_LOGO: Record<WalletLinkId | "ledger", string> = {
   hold: "/favicon.png",
   // Each wallet's own app icon, from its website (27-Sep-2026): phantom.com,
   // solflare.com, metamask.io, wallet.coinbase.com, trustwallet.com.
@@ -113,8 +113,8 @@ const WALLET_LOGO: Record<WalletLinkId | "ledger", string> = {
   ledger: "/pay/wallets/ledger.png",
 };
 /** Marks drawn without a background sit on a white tile, like their app icon. */
-const WALLET_LOGO_INSET: Partial<Record<WalletLinkId, true>> = { metamask: true, coinbase: true, trust: true };
-const WALLET_NAME: Record<Exclude<WalletLinkId, "hold">, string> = {
+export const WALLET_LOGO_INSET: Partial<Record<WalletLinkId, true>> = { metamask: true, coinbase: true, trust: true };
+export const WALLET_NAME: Record<Exclude<WalletLinkId, "hold">, string> = {
   phantom: "Phantom",
   solflare: "Solflare",
   metamask: "MetaMask",
