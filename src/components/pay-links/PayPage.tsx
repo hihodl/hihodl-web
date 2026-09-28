@@ -64,7 +64,10 @@ import {
   payHandleOf,
   PAY_NOTE_MAX,
   readCoinflowMessage,
+  payPagePath,
   readPayState,
+  walletBrowserOf,
+  type WalletLinkId,
   usdCentsFromMinor,
   walletMethodFor,
   walletMethodKind,
@@ -72,7 +75,7 @@ import {
 } from "@/lib/pay-links/page-rules";
 import type { CardMethod, CardPayment, PayLinkBankTransfer, PayLinkOwner, PayLinkStatus, ShownPayLink } from "@/lib/pay-links/types";
 
-import { PayLinkPay, networksFor } from "./PayLinkPay";
+import { PayLinkPay, WALLET_LOGO, WALLET_LOGO_INSET, WALLET_NAME, networksFor } from "./PayLinkPay";
 import { PayI18nProvider } from "./pay-i18n";
 import { CurrencyPill, HoldSheet, LanguageButton, OwnerFace } from "./pay-parts";
 import { ReportLink } from "./ReportLink";
@@ -245,11 +248,18 @@ function Shown({ link }: { link: ShownPayLink }) {
   const [sheet, setSheet] = useState<"hold" | "stable" | "bank" | null>(null);
   const [bankCurrency, setBankCurrency] = useState<string | null>(null);
   const [note, setNote] = useState("");
+  /** The wallet whose own browser this page is open in: then that wallet is the only way to pay. */
+  const [inWallet, setInWallet] = useState<Exclude<WalletLinkId, "hold"> | null>(null);
   useEffect(() => {
-    setPlatform(detectPlatform(navigator.userAgent, navigator.maxTouchPoints ?? 0));
+    const p = detectPlatform(navigator.userAgent, navigator.maxTouchPoints ?? 0);
+    setPlatform(p);
+    // Most wallets inject before the page runs; some a moment later.
+    const look = () => setInWallet(walletBrowserOf(p, window as never));
+    look();
+    const again = [window.setTimeout(look, 400), window.setTimeout(look, 1500)];
     setTags(navigator.languages?.length ? [...navigator.languages] : navigator.language ? [navigator.language] : []);
     const url = new URL(window.location.href);
-    const back = readPayState(url.search);
+    const back = readPayState(url.search, url.pathname);
     if (back.currency) setPicked(back.currency);
     if (back.amount && fixed === null) setAmountText(back.amount);
     if (back.network) setStartNetwork(back.network as Chain);
@@ -258,8 +268,10 @@ function Shown({ link }: { link: ShownPayLink }) {
     if (back.note) setNote(back.note);
     // The address stays the link; what came back is on the screen now.
     for (const k of ["amount", "currency", "pay", "network", "note"]) url.searchParams.delete(k);
+    url.pathname = payPagePath(url.pathname);
     if (url.href !== window.location.href) window.history.replaceState(null, "", url.href);
     setPageUrl(url.href.split("#")[0]);
+    return () => again.forEach((id) => window.clearTimeout(id));
   }, [fixed, stableOffered]);
 
   /* The currency: USD or EUR, the browser's region picks. */
@@ -468,6 +480,8 @@ function Shown({ link }: { link: ShownPayLink }) {
   }
 
   /* ── The rows ── */
+  // A wallet that can pay here, when the page is open in its browser; a link that takes no stablecoins keeps its rows.
+  const walletHere = stableOffered ? inWallet : null;
   const walletMethod = platform ? walletMethodFor(platform) : null;
   const cardTakes = !!card && card.currencies.map((c) => c.toUpperCase()).includes(currency);
   const showCard = cardTakes && !!card && card.methods.includes("card") && offers(link, "card");
@@ -580,7 +594,19 @@ function Shown({ link }: { link: ShownPayLink }) {
           {/* How to pay */}
           <h2 className="mb-1.5 mt-5 px-1 text-[13px] font-strong leading-[18px] text-[#9FB7C2]">{t("payPage.howToPay")}</h2>
           <div className="overflow-hidden rounded-[28px] border border-x-white/[0.07] border-b-white/[0.04] border-t-white/[0.16] bg-white/[0.06] backdrop-blur-xl">
-            {holdOffered ? (
+            {walletHere ? (
+              // Inside a wallet's own browser the wallet is how this payer pays: no HOLD, card or bank rows.
+              <MethodRow
+                icon={<WalletIcon id={walletHere} />}
+                label={WALLET_NAME[walletHere]}
+                sub={!stableOk ? t("payPage.eurcUnavailableShort") : undefined}
+                onClick={openStable}
+                disabled={busy}
+                muted={!stableOk}
+                last
+              />
+            ) : null}
+            {!walletHere && holdOffered ? (
               <MethodRow
                 icon={<ImgIcon src="/favicon.png" rounded />}
                 label={t("payPage.hold")}
@@ -590,7 +616,7 @@ function Shown({ link }: { link: ShownPayLink }) {
                 last={lastRow === "hold"}
               />
             ) : null}
-            {stableOffered ? (
+            {!walletHere && stableOffered ? (
               <MethodRow
                 icon={<ImgIcon src="/pay/usdc.png" />}
                 label={t("payPage.stablecoins")}
@@ -601,7 +627,7 @@ function Shown({ link }: { link: ShownPayLink }) {
                 last={lastRow === "stable"}
               />
             ) : null}
-            {showCard ? (
+            {!walletHere && showCard ? (
               <MethodRow
                 icon={<GlyphIcon name="card-outline" />}
                 label={t("payPage.card")}
@@ -611,7 +637,7 @@ function Shown({ link }: { link: ShownPayLink }) {
                 last={lastRow === "card"}
               />
             ) : null}
-            {showWallet && walletMethod ? (
+            {!walletHere && showWallet && walletMethod ? (
               <MethodRow
                 icon={<GlyphIcon name={walletMethod === "applePay" ? "logo-apple" : "logo-google"} tone={walletMethod === "applePay" ? "black" : "white"} />}
                 label={walletMethod === "applePay" ? "Apple Pay" : "Google Pay"}
@@ -621,7 +647,8 @@ function Shown({ link }: { link: ShownPayLink }) {
                 last={lastRow === "wallet"}
               />
             ) : null}
-            {banks.map((b, i) => (
+            {!walletHere &&
+              banks.map((b, i) => (
               <MethodRow
                 key={b.currency}
                 icon={<GlyphIcon name="business-outline" />}
@@ -767,6 +794,16 @@ function ImgIcon({ src, rounded = false }: { src: string; rounded?: boolean }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img src={src} alt="" width={36} height={36} className={`h-9 w-9 shrink-0 ${rounded ? "rounded-[10px]" : "rounded-full"}`} />
+  );
+}
+
+function WalletIcon({ id }: { id: Exclude<WalletLinkId, "hold"> }) {
+  const inset = Boolean(WALLET_LOGO_INSET[id]);
+  return (
+    <span className={`flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-white ${inset ? "p-1.5" : ""}`} aria-hidden>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={WALLET_LOGO[id]} alt="" width={36} height={36} className="h-full w-full object-contain" />
+    </span>
   );
 }
 
