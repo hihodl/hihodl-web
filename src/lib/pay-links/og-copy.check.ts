@@ -55,18 +55,17 @@ eq("price whole", previewPrice(4000, "en"), "$40");
 eq("price cents", previewPrice(125050, "en"), "$1,250.50");
 eq("price de", previewPrice(125050, "de"), "$1.250,50");
 
-eq("priced", payPreview(base, false, COPY, fmt, "en"), { title: "Dinner at Lucio · $40", description: "Pay Demo C. in a minute.", image: true });
+eq("priced", payPreview(base, false, COPY, fmt, "en"), { title: "Dinner at Lucio · $40", description: "Demo C. is asking you to pay. It takes a minute, no account needed." });
 eq("open amount: no price", payPreview({ ...base, amount: { mode: "open", maxCents: 5000 } }, false, COPY, fmt, "en").title, "Dinner at Lucio");
 eq("personal, card and Apple Pay", payPreview({ ...personal, methods: [{ kind: "card" }, { kind: "apple_pay" }, { kind: "hold" }] }, true, COPY, fmt, "en"), {
-  title: "Send money to Demo C.",
-  description: "Card or Apple Pay, in a minute. No account needed.",
-  image: true,
+  title: "Pay Demo C. in a minute",
+  description: "Card or Apple Pay. No account or app needed.",
 });
-eq("personal, card only", payPreview({ ...personal, methods: [{ kind: "card" }] }, true, COPY, fmt, "en").description, "Pay by card in a minute. No account needed.");
+eq("personal, card only", payPreview({ ...personal, methods: [{ kind: "card" }] }, true, COPY, fmt, "en").description, "Pay by card. No account or app needed.");
 eq("personal, no card: nothing promised", payPreview({ ...personal, methods: [{ kind: "hold" }, { kind: "stablecoins" }] }, true, COPY, fmt, "en").description, "Fast and secure. No account needed.");
 eq("personal, older server: nothing promised", payPreview(personal, true, COPY, fmt, "en").description, "Fast and secure. No account needed.");
-eq("personal flag from the server", payPreview(personal, false, COPY, fmt, "en").title, "Send money to Demo C.");
-const generic = { title: "Pay with HOLD", description: "Fast and secure. No account needed.", image: false };
+eq("personal flag from the server", payPreview(personal, false, COPY, fmt, "en").title, "Pay Demo C. in a minute");
+const generic = { title: "Pay with HOLD", description: "Fast and secure. No account needed." };
 eq("paid: plain card", payPreview({ ...base, status: "paid" }, false, COPY, fmt, "en"), generic);
 eq("frozen: plain card", payPreview({ ...base, status: "frozen" }, false, COPY, fmt, "en"), generic);
 eq("disabled: plain card", payPreview({ ...base, status: "disabled", title: null, amount: null, owner: null }, false, COPY, fmt, "en"), generic);
