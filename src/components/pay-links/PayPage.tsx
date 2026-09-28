@@ -10,13 +10,14 @@
  *
  *   the face       photo (public profiles only) or initials, the HOLD badge
  *                  on its corner, a tick when the owner is verified
- *   the amount     Quick Send's: the symbol, then the number at 54/900; the
+ *   the amount     Quick Send's: the symbol, then the number at 48/900; the
  *                  currency pill under it (USD or EUR, what the owner can
  *                  receive: USDC, or EURC on Base)
  *   the note       Quick Send's method row: an uppercase label over the value
- *   how to pay     HOLD (the app, or the store), card, Apple Pay or Google
- *                  Pay (one, by device), bank transfer (a sheet: the owner's
- *                  own account and the link's reference), stablecoins (a sheet)
+ *   how to pay     HOLD (the app, or the store), stablecoins (a sheet), card,
+ *                  Apple Pay or Google Pay (one, by device), bank transfer (a
+ *                  sheet: the owner's own account and the link's reference).
+ *                  Every row fits on one phone screen without scrolling.
  *
  * Nothing explains itself on the screen: the warnings and the fine print are
  * in the Terms the foot links to.
@@ -154,11 +155,19 @@ function Ground({ children }: { children: ReactNode }) {
       if (body.style.position === "fixed") return;
       if (window.scrollY !== 0) window.scrollTo(0, 0);
     };
+    // Once more after the keyboard has finished going down: iOS pans the window back mid-animation.
+    let later: ReturnType<typeof setTimeout> | undefined;
+    const settleSoon = () => {
+      settle();
+      clearTimeout(later);
+      later = setTimeout(settle, 350);
+    };
     vv?.addEventListener("resize", settle);
-    window.addEventListener("focusout", settle);
+    window.addEventListener("focusout", settleSoon);
     return () => {
+      clearTimeout(later);
       vv?.removeEventListener("resize", settle);
-      window.removeEventListener("focusout", settle);
+      window.removeEventListener("focusout", settleSoon);
       html.style.backgroundColor = before[0];
       body.style.backgroundColor = before[1];
       html.style.overflow = before[2];
@@ -180,7 +189,7 @@ function Ground({ children }: { children: ReactNode }) {
 
 function TopBar() {
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between">
+    <header className="flex h-12 shrink-0 items-center justify-between">
       <Link href="/" aria-label="HOLD" className="text-white" dir="ltr">
         <Wordmark className="h-[18px] w-auto" />
       </Link>
@@ -463,7 +472,8 @@ function Shown({ link }: { link: ShownPayLink }) {
   const cardTakes = !!card && card.currencies.map((c) => c.toUpperCase()).includes(currency);
   const showCard = cardTakes && !!card && card.methods.includes("card") && offers(link, "card");
   const showWallet = cardTakes && !!card && !!walletMethod && card.methods.includes(walletMethod) && offers(link, walletMethodKind(walletMethod));
-  const lastRow = stableOffered ? "stable" : banks.length ? "bank" : showWallet ? "wallet" : showCard ? "card" : "hold";
+  // Stablecoins right under HOLD: most payers pay that way, and it must never be the row under the fold.
+  const lastRow = banks.length ? "bank" : showWallet ? "wallet" : showCard ? "card" : stableOffered ? "stable" : "hold";
   const bank = sheet === "bank" ? banks.find((b) => b.currency === bankCurrency) ?? null : null;
   /* What the transfer is for: the fixed price (in USD, the only currency a fixed link takes by bank), or what was typed in its currency. */
   const bankAmount = (b: PayLinkBankTransfer): { shown: string; raw: string } | null => {
@@ -480,9 +490,9 @@ function Shown({ link }: { link: ShownPayLink }) {
   return (
     <main className="flex flex-1 flex-col">
       {/* Who */}
-      <section className="flex flex-col items-center pt-4 text-center">
-        <OwnerFace owner={link.owner} size={84} />
-        <h1 className="mt-4 flex max-w-full items-center justify-center gap-1.5 text-[24px] font-extrabold leading-[30px] tracking-[-0.4px]">
+      <section className="flex flex-col items-center pt-1 text-center">
+        <OwnerFace owner={link.owner} size={64} />
+        <h1 className="mt-3 flex max-w-full items-center justify-center gap-1.5 text-[22px] font-extrabold leading-[28px] tracking-[-0.4px]">
           <span className="min-w-0 break-words [overflow-wrap:anywhere]" dir="auto">
             {bigName}
           </span>
@@ -498,7 +508,7 @@ function Shown({ link }: { link: ShownPayLink }) {
           </p>
         ) : null}
         {!link.personal ? (
-          <p className="mt-3 max-w-full break-words text-[15px] font-bold text-white [overflow-wrap:anywhere]" dir="auto">
+          <p className="mt-2 max-w-full break-words text-[15px] font-bold text-white [overflow-wrap:anywhere]" dir="auto">
             {link.title}
           </p>
         ) : null}
@@ -516,7 +526,7 @@ function Shown({ link }: { link: ShownPayLink }) {
       ) : (
         <>
           {/* How much */}
-          <section className="mt-7 flex flex-col items-center">
+          <section className="mt-4 flex flex-col items-center">
             {fixed === null ? <p className="text-[15px] font-strong text-[#CFE3EC]">{t("payPage.howMuch")}</p> : null}
             <AmountLine
               inputRef={amountInput}
@@ -529,7 +539,7 @@ function Shown({ link }: { link: ShownPayLink }) {
               }}
               label={t("payPage.amountLabel")}
             />
-            <div className="mt-3">
+            <div className="mt-2.5">
               <CurrencyPill
                 currency={currency}
                 choices={CURRENCIES}
@@ -548,26 +558,27 @@ function Shown({ link }: { link: ShownPayLink }) {
           </section>
 
           {/* The note */}
-          <label className="mt-5 flex flex-col rounded-[18px] border border-white/10 bg-white/[0.06] px-4 py-3">
-            <span className="flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.5px] text-white/50">
-              <span>{t("payPage.note")}</span>
-              <span className="font-strong normal-case tracking-normal text-white/35">
-                {note.length}/{NOTE_MAX}
-              </span>
-            </span>
+          {/* The note: one line, the placeholder says what it is. 16px, or iOS zooms the page in on focus and leaves it there. */}
+          <label className="mt-3 flex items-center gap-3 rounded-[18px] border border-white/10 bg-white/[0.06] px-4 py-3">
             <input
               value={note}
               onChange={(e) => setNote(e.target.value.slice(0, NOTE_MAX))}
               maxLength={NOTE_MAX}
               placeholder={t("payPage.notePlaceholder")}
+              aria-label={t("payPage.note")}
               autoComplete="off"
               dir="auto"
-              className="mt-1 w-full min-w-0 bg-transparent text-[15px] font-bold text-white outline-none placeholder:font-medium placeholder:text-white/35"
+              className="w-full min-w-0 flex-1 bg-transparent text-[16px] font-bold leading-[22px] text-white outline-none placeholder:font-medium placeholder:text-white/35"
             />
+            {note.length ? (
+              <span className="shrink-0 text-[11px] font-strong text-white/35">
+                {note.length}/{NOTE_MAX}
+              </span>
+            ) : null}
           </label>
 
           {/* How to pay */}
-          <h2 className="mb-2 mt-6 px-1 text-[13px] font-strong leading-[18px] text-[#9FB7C2]">{t("payPage.howToPay")}</h2>
+          <h2 className="mb-1.5 mt-5 px-1 text-[13px] font-strong leading-[18px] text-[#9FB7C2]">{t("payPage.howToPay")}</h2>
           <div className="overflow-hidden rounded-[28px] border border-x-white/[0.07] border-b-white/[0.04] border-t-white/[0.16] bg-white/[0.06] backdrop-blur-xl">
             {holdOffered ? (
               <MethodRow
@@ -577,6 +588,17 @@ function Shown({ link }: { link: ShownPayLink }) {
                 onClick={openHold}
                 disabled={busy || !platform}
                 last={lastRow === "hold"}
+              />
+            ) : null}
+            {stableOffered ? (
+              <MethodRow
+                icon={<ImgIcon src="/pay/usdc.png" />}
+                label={t("payPage.stablecoins")}
+                sub={!stableOk ? t("payPage.eurcUnavailableShort") : undefined}
+                onClick={openStable}
+                disabled={busy}
+                muted={!stableOk}
+                last={lastRow === "stable"}
               />
             ) : null}
             {showCard ? (
@@ -613,17 +635,6 @@ function Shown({ link }: { link: ShownPayLink }) {
                 last={lastRow === "bank" && i === banks.length - 1}
               />
             ))}
-            {stableOffered ? (
-              <MethodRow
-                icon={<ImgIcon src="/pay/usdc.png" />}
-                label={t("payPage.stablecoins")}
-                sub={!stableOk ? t("payPage.eurcUnavailableShort") : undefined}
-                onClick={openStable}
-                disabled={busy}
-                muted={!stableOk}
-                last
-              />
-            ) : null}
           </div>
         </>
       )}
@@ -664,7 +675,7 @@ function fmtNumberPlain(minor: number, currency: string): string {
 
 /* ── The amount ─────────────────────────────────────────────────── */
 
-/** Quick Send's amount: the symbol, then the number at 54/900, shrinking as it grows. */
+/** Quick Send's amount: the symbol, then the number at 48/900, shrinking as it grows. */
 function AmountLine({
   inputRef,
   symbol,
@@ -682,10 +693,10 @@ function AmountLine({
 }) {
   const shown = fixedText ?? text;
   const len = Math.max(1, shown.length);
-  const size = len <= 6 ? 54 : len <= 8 ? 44 : 36;
+  const size = len <= 6 ? 48 : len <= 8 ? 40 : 34;
   return (
     // Numbers read left to right in every language on the page.
-    <div className="mt-2 flex max-w-full items-baseline justify-center" dir="ltr">
+    <div className="mt-1 flex max-w-full items-baseline justify-center" dir="ltr">
       <span className={`font-black leading-none ${fixedText || text ? "text-white" : "text-white/35"}`} style={{ fontSize: size }}>
         {symbol}
       </span>
@@ -738,7 +749,7 @@ function MethodRow({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`flex w-full min-w-0 items-center gap-3.5 px-4 py-3.5 text-start transition-colors hover:bg-white/[0.04] disabled:cursor-default disabled:opacity-60 ${
+      className={`flex w-full min-w-0 items-center gap-3.5 px-4 py-2.5 text-start transition-colors hover:bg-white/[0.04] disabled:cursor-default disabled:opacity-60 ${
         last ? "" : "border-b border-white/[0.06]"
       } ${muted ? "opacity-60" : ""}`}
     >
