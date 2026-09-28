@@ -12,7 +12,7 @@ import type { PayPreview } from "./og-copy";
  * name is in the title, and nothing the owner chose is ever drawn as a picture.
  */
 const BANNER = { url: "/banner-social.png", width: 1200, height: 630, alt: "HOLD", type: "image/png" };
-const PLAIN = { title: "Pay with HOLD", description: "Fast and secure. No account needed." };
+const PLAIN = { title: "Pay with HOLD", description: "Instant payments. Beautifully simple." };
 
 export function payPageMetadata(title: string, preview?: PayPreview & { lang?: string }): Metadata {
   const card = preview ?? PLAIN;
