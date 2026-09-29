@@ -173,7 +173,7 @@ export interface PayLinkPayment {
   receiptUrl: string | null;
 }
 
-/** The one ERC-3009 authorization a Base or Polygon payment signs: HiSpace's EvmPayload with one entry. */
+/** The one ERC-3009 authorization a Base, Polygon or Arc payment signs: HiSpace's EvmPayload with one entry. */
 export interface PayLinkEvmPayload {
   chainId: number;
   token: string;

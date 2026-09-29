@@ -32,7 +32,7 @@ import type { Chain } from "@/lib/ad-space/types";
 import { t } from "@/lib/app/i18n";
 import { fmtFiat } from "@/lib/app/i18n/format";
 import { useT } from "@/lib/app/i18n/react";
-import { PUBLIC_CHAINS } from "@/lib/orders/chains.public";
+import { PUBLIC_CHAINS, type EvmPayChain } from "@/lib/orders/chains.public";
 import {
   MISMATCH_CODE,
   PAY_SPENT_KEY_CODES,
@@ -84,10 +84,10 @@ import {
  *   the QR         the last row, "Scan QR code": the sheet turns into HOLD's
  *                  code, the logo in its middle, with Back to the options.
  *                  The Solana Pay request on Solana, the WalletConnect
- *                  pairing on Base and Polygon, for a wallet on another device.
+ *                  pairing on Base, Polygon and Arc, for a wallet on another device.
  *
  * The HiSpace checkout underneath, minus the fee: a Solana transfer, or ONE
- * ERC-3009 authorization on Base or Polygon that our relayer submits. The
+ * ERC-3009 authorization on Base, Polygon or Arc that our relayer submits. The
  * server decides when a payment is paid; this sheet only asks. Nothing
  * reaches a wallet until the sheet has checked the server's answer is the
  * payment it shows: amount, token, network, payer and receiver.
@@ -99,7 +99,13 @@ import {
 const POLL_MS = 3_000;
 const MIN_CENTS = 100;
 const MAX_CENTS = 1_000_000;
-const NETWORK_LOGO: Record<Chain, string> = { solana: "/pay/solana.svg", base: "/pay/base.svg", polygon: "/pay/polygon.svg" };
+const NETWORK_LOGO: Record<Chain, string> = {
+  solana: "/pay/solana.svg",
+  base: "/pay/base.svg",
+  polygon: "/pay/polygon.svg",
+  // Circle's own Arc mark (28-Sep-2026).
+  arc: "/pay/arc.png",
+};
 export const WALLET_LOGO: Record<WalletLinkId | "ledger", string> = {
   hold: "/favicon.png",
   // Each wallet's own app icon, from its website (27-Sep-2026): phantom.com,
@@ -130,7 +136,7 @@ type Phase =
   /** `transfer`: a transfer request, a payment from the moment it is shown; otherwise a transaction request, one once a wallet opens it. */
   | { kind: "qr"; link: string; scanned: boolean; transfer?: boolean }
   /** Waiting for a wallet to pair over WalletConnect; `uri` is the code to show. */
-  /** A WalletConnect pairing: Base or Polygon, or Solana for Ledger Wallet. */
+  /** A WalletConnect pairing: Base, Polygon or Arc, or Solana for Ledger Wallet. */
   | { kind: "wc"; uri: string | null; solana?: boolean }
   /** `skewMs`: the server's clock minus this browser's, from the checkout answer. */
   | { kind: "evm-sign"; label: string; validBefore: number; skewMs: number; sending: boolean }
@@ -555,10 +561,10 @@ export function PayLinkPay({
   }, [fixed, amountCents, maxCents, scope, qrPhase]);
 
   /**
-   * One authorization on Base or Polygon, from the wallet in this browser or
+   * One authorization on Base, Polygon or Arc, from the wallet in this browser or
    * one paired over WalletConnect (`provider` already connected).
    */
-  async function payWithEvm(evmChain: "base" | "polygon", provider: EvmWallet["provider"], walletName: string) {
+  async function payWithEvm(evmChain: EvmPayChain, provider: EvmWallet["provider"], walletName: string) {
     clearNotice();
     const amount = amountOrProblem();
     if (!amount) return;
@@ -604,7 +610,7 @@ export function PayLinkPay({
 
   /** Show the WalletConnect pairing as our QR, and pay once a wallet pairs. */
   const startWc = useCallback(
-    async (evmChain: "base" | "polygon") => {
+    async (evmChain: EvmPayChain) => {
       const run = ++wcRun.current;
       setPhase({ kind: "wc", uri: null });
       try {
@@ -669,7 +675,7 @@ export function PayLinkPay({
     ledgerWanted.current = true;
     if (onThisNetwork) return;
     if (chain === "solana") void startWcSolana();
-    else void startWc(chain as "base" | "polygon");
+    else void startWc(chain as EvmPayChain);
   }
 
   const canPay = link.status === "active";
@@ -683,7 +689,7 @@ export function PayLinkPay({
       wcRun.current++;
       ledgerWanted.current = false;
       void startQr();
-    } else void startWc(chain as "base" | "polygon");
+    } else void startWc(chain as EvmPayChain);
   }
 
   /**
@@ -798,6 +804,7 @@ export function PayLinkPay({
   /* The choice: network, the wallet here, the code, the wallets on this phone. */
   const shownAmount = money(expectedCents);
   // Phantom and MetaMask each pay on Solana and on Base and Polygon (their docs, 28-Sep-2026).
+  // Arc takes the same four EVM wallets; Coinbase Wallet adds it by hand (docs.arc.io, 28-Sep-2026).
   const walletLinks: WalletLinkId[] = chain === "solana" ? ["phantom", "solflare", "metamask"] : ["metamask", "phantom", "coinbase", "trust"];
   const scheme = appSchemeUrl(link);
   const stateUrl = pageUrl ? payStateUrl(pageUrl, { amount: amountText, currency: token === "eurc" ? "EUR" : "USD", network: chain }) : "";
@@ -919,7 +926,7 @@ export function PayLinkPay({
               disabled={waiting || !!busyLabel}
               onClick={() => {
                 wcRun.current++;
-                void payWithEvm(chain as "base" | "polygon", w.provider, w.name);
+                void payWithEvm(chain as EvmPayChain, w.provider, w.name);
               }}
             >
               {w.icon ? (
