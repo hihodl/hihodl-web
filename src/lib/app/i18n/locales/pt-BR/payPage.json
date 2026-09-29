@@ -137,5 +137,22 @@
   "notFound.body": "Confira o link com quem enviou.",
   "notFound.label": "Pague alguém na HOLD",
   "notFound.go": "Continuar",
-  "notFound.badHandle": "Isso não é um usuário da HOLD."
+  "notFound.badHandle": "Isso não é um usuário da HOLD.",
+  "recurring.per": "{period, select, week {/ semana} other {/ mês}}",
+  "recurring.terms": "{amount} agora e depois {period, select, week {toda semana} other {todo mês}}.",
+  "recurring.subscribeWith": "Assinar com {wallet}",
+  "recurring.preparing": "Preparando sua assinatura…",
+  "recurring.approveIn": "Aprove em {wallet}…",
+  "recurring.subscribing": "Assinando…",
+  "recurring.doneTitle": "Pronto, você assinou",
+  "recurring.doneBody": "{payee} recebe {amount} de você {period, select, week {toda semana} other {todo mês}}, a partir de agora.",
+  "recurring.notReady": "Esta assinatura ainda não está aberta.",
+  "recurring.noWallet": "Abra esta página no Phantom ou no Solflare para assinar.",
+  "recurring.onlySolana": "Assinaturas são pagas em USDC na Solana, pelo Phantom ou Solflare. Cartão e outras redes estão chegando.",
+  "recurring.needUsdc": "Esta carteira precisa de {amount} na Solana para começar.",
+  "recurring.needSol": "Esta carteira precisa de um pouco de SOL (cerca de 0,004) para assinar.",
+  "recurring.already": "Esta carteira já é assinante.",
+  "recurring.ownLink": "Este é o seu próprio link.",
+  "recurring.cancelled": "Nada foi assinado.",
+  "recurring.failed": "Não deu certo. Tente de novo."
 }

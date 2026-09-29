@@ -137,5 +137,22 @@
   "notFound.body": "Controlla il link con chi te l'ha inviato.",
   "notFound.label": "Paga qualcuno su HOLD",
   "notFound.go": "Continua",
-  "notFound.badHandle": "Questo non è un handle HOLD."
+  "notFound.badHandle": "Questo non è un handle HOLD.",
+  "recurring.per": "{period, select, week {/ settimana} other {/ mese}}",
+  "recurring.terms": "{amount} ora, poi {period, select, week {ogni settimana} other {ogni mese}}.",
+  "recurring.subscribeWith": "Abbonati con {wallet}",
+  "recurring.preparing": "Stiamo preparando il tuo abbonamento…",
+  "recurring.approveIn": "Approvalo in {wallet}…",
+  "recurring.subscribing": "Abbonamento in corso…",
+  "recurring.doneTitle": "Ci sei",
+  "recurring.doneBody": "{payee} riceve {amount} da te {period, select, week {ogni settimana} other {ogni mese}}, da adesso.",
+  "recurring.notReady": "Questo abbonamento non è ancora aperto.",
+  "recurring.noWallet": "Apri questa pagina in Phantom o Solflare per abbonarti.",
+  "recurring.onlySolana": "Gli abbonamenti si pagano in USDC su Solana, da Phantom o Solflare. Carta e altre reti in arrivo.",
+  "recurring.needUsdc": "Questo wallet ha bisogno di {amount} su Solana per iniziare.",
+  "recurring.needSol": "Questo wallet ha bisogno di un po' di SOL (circa 0,004) per abbonarsi.",
+  "recurring.already": "Questo wallet è già abbonato.",
+  "recurring.ownLink": "Questo è il tuo link.",
+  "recurring.cancelled": "Non è stato firmato nulla.",
+  "recurring.failed": "Non è andato a buon fine. Riprova."
 }

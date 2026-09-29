@@ -137,5 +137,22 @@
   "notFound.body": "Controleer de link bij wie hem stuurde.",
   "notFound.label": "Betaal iemand op HOLD",
   "notFound.go": "Doorgaan",
-  "notFound.badHandle": "Dat is geen HOLD-handle."
+  "notFound.badHandle": "Dat is geen HOLD-handle.",
+  "recurring.per": "{period, select, week {/ week} other {/ maand}}",
+  "recurring.terms": "{amount} nu, daarna {period, select, week {elke week} other {elke maand}}.",
+  "recurring.subscribeWith": "Abonneren met {wallet}",
+  "recurring.preparing": "Je abonnement wordt klaargezet…",
+  "recurring.approveIn": "Keur het goed in {wallet}…",
+  "recurring.subscribing": "Bezig met abonneren…",
+  "recurring.doneTitle": "Je bent erbij",
+  "recurring.doneBody": "{payee} krijgt vanaf nu {period, select, week {elke week} other {elke maand}} {amount} van je.",
+  "recurring.notReady": "Dit abonnement is nog niet open.",
+  "recurring.noWallet": "Open deze pagina in Phantom of Solflare om te abonneren.",
+  "recurring.onlySolana": "Abonnementen betaal je in USDC op Solana, met Phantom of Solflare. Kaart en andere netwerken komen eraan.",
+  "recurring.needUsdc": "Deze wallet heeft {amount} op Solana nodig om te starten.",
+  "recurring.needSol": "Deze wallet heeft wat SOL nodig (ongeveer 0,004) om te abonneren.",
+  "recurring.already": "Deze wallet is al geabonneerd.",
+  "recurring.ownLink": "Dit is je eigen link.",
+  "recurring.cancelled": "Er is niets ondertekend.",
+  "recurring.failed": "Dat is niet gelukt. Probeer het opnieuw."
 }

@@ -151,6 +151,35 @@ export interface PayLinkPublic {
   bankTransfers?: PayLinkBankTransfer[];
   /** The owner's personal link, when this one can't be paid. Absent from an older server. */
   fallback?: PayLinkFallback | null;
+  /**
+   * A recurring link: paying it is subscribing, charged every period. Null or
+   * absent for a one-time link (and from an older server).
+   */
+  recurring?: PayLinkRecurring | null;
+}
+
+/**
+ * "10 USDC / month": a plan on the Solana Subscriptions program the owner
+ * signed. `plan` is there once it is on chain (`ready`); the page checks the
+ * subscribe transaction it is handed against it (recurring.ts).
+ */
+export interface PayLinkRecurring {
+  period: "week" | "month";
+  amountCents: number;
+  token: "usdc";
+  chain: "solana";
+  ready: boolean;
+  plan?: {
+    programId: string;
+    planPda: string;
+    merchant: string;
+    /** u64, as a decimal string. */
+    planId: string;
+    /** Per period, USDC base units (6 decimals), as a decimal string. */
+    amountBase: string;
+    periodHours: number;
+    mint: string;
+  };
 }
 
 /** A link that still says what it asks for: anything but a disabled one. */

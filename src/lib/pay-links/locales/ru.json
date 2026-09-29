@@ -254,5 +254,22 @@
   "payPage.notFound.label": "Заплатить кому-то в HOLD",
   "payPage.notFound.go": "Продолжить",
   "payPage.notFound.badHandle": "Это не имя пользователя HOLD.",
-  "home.payLinks.pay.gone.frozen": "Эту ссылку приостановили, пока вы платили, поэтому сейчас она не принимает платежи. Ничего не оплачено."
+  "home.payLinks.pay.gone.frozen": "Эту ссылку приостановили, пока вы платили, поэтому сейчас она не принимает платежи. Ничего не оплачено.",
+  "payPage.recurring.per": "{period, select, week {/ неделя} other {/ месяц}}",
+  "payPage.recurring.terms": "{amount} сейчас, затем {period, select, week {каждую неделю} other {каждый месяц}}.",
+  "payPage.recurring.subscribeWith": "Подписаться через {wallet}",
+  "payPage.recurring.preparing": "Готовим вашу подписку…",
+  "payPage.recurring.approveIn": "Подтвердите в {wallet}…",
+  "payPage.recurring.subscribing": "Оформляем подписку…",
+  "payPage.recurring.doneTitle": "Вы подписаны",
+  "payPage.recurring.doneBody": "{payee} получает от вас {amount} {period, select, week {каждую неделю} other {каждый месяц}}, начиная с сегодня.",
+  "payPage.recurring.notReady": "Эта подписка пока не открыта.",
+  "payPage.recurring.noWallet": "Откройте эту страницу в Phantom или Solflare, чтобы подписаться.",
+  "payPage.recurring.onlySolana": "Подписки оплачиваются в USDC в сети Solana, через Phantom или Solflare. Карта и другие сети скоро появятся.",
+  "payPage.recurring.needUsdc": "Чтобы начать, в этом кошельке нужно {amount} в Solana.",
+  "payPage.recurring.needSol": "Чтобы подписаться, в этом кошельке нужно немного SOL (около 0,004).",
+  "payPage.recurring.already": "Этот кошелёк уже подписан.",
+  "payPage.recurring.ownLink": "Это ваша собственная ссылка.",
+  "payPage.recurring.cancelled": "Ничего не подписано.",
+  "payPage.recurring.failed": "Не получилось. Попробуйте ещё раз."
 }

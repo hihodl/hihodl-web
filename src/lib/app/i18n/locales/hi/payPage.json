@@ -137,5 +137,22 @@
   "notFound.body": "जिसने यह लिंक भेजा है, उससे जाँच लें।",
   "notFound.label": "HOLD पर किसी को भुगतान करें",
   "notFound.go": "आगे बढ़ें",
-  "notFound.badHandle": "यह HOLD हैंडल नहीं है।"
+  "notFound.badHandle": "यह HOLD हैंडल नहीं है।",
+  "recurring.per": "{period, select, week {/ सप्ताह} other {/ महीना}}",
+  "recurring.terms": "अभी {amount}, फिर {period, select, week {हर सप्ताह} other {हर महीने}}.",
+  "recurring.subscribeWith": "{wallet} से सब्सक्राइब करें",
+  "recurring.preparing": "आपका सब्सक्रिप्शन तैयार हो रहा है…",
+  "recurring.approveIn": "{wallet} में मंज़ूर करें…",
+  "recurring.subscribing": "सब्सक्राइब हो रहा है…",
+  "recurring.doneTitle": "आप जुड़ गए",
+  "recurring.doneBody": "{payee} को अब से {period, select, week {हर सप्ताह} other {हर महीने}} आपसे {amount} मिलेंगे।",
+  "recurring.notReady": "यह सब्सक्रिप्शन अभी खुला नहीं है।",
+  "recurring.noWallet": "सब्सक्राइब करने के लिए यह पेज Phantom या Solflare में खोलें।",
+  "recurring.onlySolana": "सब्सक्रिप्शन Solana पर USDC में, Phantom या Solflare से चुकाए जाते हैं। कार्ड और दूसरे नेटवर्क जल्द आ रहे हैं।",
+  "recurring.needUsdc": "शुरू करने के लिए इस वॉलेट में Solana पर {amount} होने चाहिए।",
+  "recurring.needSol": "सब्सक्राइब करने के लिए इस वॉलेट में थोड़ा SOL (लगभग 0.004) चाहिए।",
+  "recurring.already": "यह वॉलेट पहले से सब्सक्राइब है।",
+  "recurring.ownLink": "यह आपका अपना लिंक है।",
+  "recurring.cancelled": "कुछ भी साइन नहीं हुआ।",
+  "recurring.failed": "यह पूरा नहीं हुआ। फिर से कोशिश करें।"
 }

@@ -254,5 +254,22 @@
   "payPage.notFound.label": "HOLD-এ কাউকে পেমেন্ট করুন",
   "payPage.notFound.go": "চালিয়ে যান",
   "payPage.notFound.badHandle": "এটি HOLD হ্যান্ডেল নয়।",
-  "home.payLinks.pay.gone.frozen": "আপনি পেমেন্ট করার সময় এই লিংকটি সাময়িকভাবে বন্ধ করা হয়েছে, তাই এখন এটি কোনো পেমেন্ট নেয় না। কিছুই পেমেন্ট হয়নি।"
+  "home.payLinks.pay.gone.frozen": "আপনি পেমেন্ট করার সময় এই লিংকটি সাময়িকভাবে বন্ধ করা হয়েছে, তাই এখন এটি কোনো পেমেন্ট নেয় না। কিছুই পেমেন্ট হয়নি।",
+  "payPage.recurring.per": "{period, select, week {/ সপ্তাহ} other {/ মাস}}",
+  "payPage.recurring.terms": "এখন {amount}, তারপর {period, select, week {প্রতি সপ্তাহে} other {প্রতি মাসে}}।",
+  "payPage.recurring.subscribeWith": "{wallet} দিয়ে সাবস্ক্রাইব করুন",
+  "payPage.recurring.preparing": "আপনার সাবস্ক্রিপশন তৈরি হচ্ছে…",
+  "payPage.recurring.approveIn": "{wallet}-এ অনুমোদন দিন…",
+  "payPage.recurring.subscribing": "সাবস্ক্রাইব হচ্ছে…",
+  "payPage.recurring.doneTitle": "আপনি যুক্ত হয়েছেন",
+  "payPage.recurring.doneBody": "{payee} এখন থেকে {period, select, week {প্রতি সপ্তাহে} other {প্রতি মাসে}} আপনার কাছ থেকে {amount} পাবেন।",
+  "payPage.recurring.notReady": "এই সাবস্ক্রিপশন এখনও খোলা হয়নি।",
+  "payPage.recurring.noWallet": "সাবস্ক্রাইব করতে এই পেজটি Phantom বা Solflare-এ খুলুন।",
+  "payPage.recurring.onlySolana": "সাবস্ক্রিপশন Solana-তে USDC দিয়ে, Phantom বা Solflare থেকে দেওয়া হয়। কার্ড ও অন্য নেটওয়ার্ক আসছে।",
+  "payPage.recurring.needUsdc": "শুরু করতে এই ওয়ালেটে Solana-তে {amount} দরকার।",
+  "payPage.recurring.needSol": "সাবস্ক্রাইব করতে এই ওয়ালেটে সামান্য SOL (প্রায় 0.004) দরকার।",
+  "payPage.recurring.already": "এই ওয়ালেট আগেই সাবস্ক্রাইব করেছে।",
+  "payPage.recurring.ownLink": "এটি আপনার নিজের লিংক।",
+  "payPage.recurring.cancelled": "কিছুই সই করা হয়নি।",
+  "payPage.recurring.failed": "সম্পন্ন হয়নি। আবার চেষ্টা করুন।"
 }

@@ -46,6 +46,7 @@ import {
   startCardPayment,
 } from "@/lib/pay-links/card";
 import { ownerName, payKeyScope } from "@/lib/pay-links/client";
+import { RecurringPay } from "./RecurringPay";
 import {
   appSchemeUrl,
   bankTransfersOf,
@@ -263,7 +264,8 @@ function Shown({ link }: { link: ShownPayLink }) {
     if (back.currency) setPicked(back.currency);
     if (back.amount && fixed === null) setAmountText(back.amount);
     if (back.network) setStartNetwork(back.network as Chain);
-    if (back.stablecoins && stableOffered) setSheet("stable");
+    // A recurring link has no stablecoin sheet: its own block subscribes.
+    if (back.stablecoins && stableOffered && !link.recurring) setSheet("stable");
     // A link that can't be paid sends its title here as the note; the payer can change it.
     if (back.note) setNote(back.note);
     // The address stays the link; what came back is on the screen now.
@@ -272,7 +274,7 @@ function Shown({ link }: { link: ShownPayLink }) {
     if (url.href !== window.location.href) window.history.replaceState(null, "", url.href);
     setPageUrl(url.href.split("#")[0]);
     return () => again.forEach((id) => window.clearTimeout(id));
-  }, [fixed, stableOffered]);
+  }, [fixed, stableOffered, link.recurring]);
 
   /* The currency: USD or EUR, the browser's region picks. */
   const currency = picked && (CURRENCIES as readonly string[]).includes(picked) ? picked : defaultCurrency(tags, CURRENCIES);
@@ -535,6 +537,9 @@ function Shown({ link }: { link: ShownPayLink }) {
 
       {!active ? (
         <Gone link={link} payee={payee} name={bigName} />
+      ) : link.recurring ? (
+        // Paying a recurring link is subscribing, from a Solana wallet: its own block, no other rows.
+        <RecurringPay link={link} recurring={link.recurring} payee={bigName} platform={platform} pageUrl={pageUrl} />
       ) : done ? (
         <CardResult phase={cardPhase} payee={bigName} onAgain={cardAgain} />
       ) : (
@@ -669,7 +674,7 @@ function Shown({ link }: { link: ShownPayLink }) {
       <Foot link={link} />
 
       {sheet === "hold" ? <HoldSheet pageUrl={pageUrl || `https://hihodl.xyz/pay/${link.personal && link.owner?.handle ? `@${link.owner.handle}` : link.code}`} onClose={() => setSheet(null)} /> : null}
-      {sheet === "stable" && active ? (
+      {sheet === "stable" && active && !link.recurring ? (
         <Modal onClose={() => setSheet(null)} title={t("payPage.payWithToken", { token: token === "eurc" ? "EURC" : "USDC" })} size="lg">
           <PayLinkPay link={link} token={token} amountCents={stableCents} amountText={fixed === null ? amountText : null} network={startNetwork} />
         </Modal>

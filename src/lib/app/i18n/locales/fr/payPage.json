@@ -137,5 +137,22 @@
   "notFound.body": "Vérifiez le lien auprès de la personne qui vous l'a envoyé.",
   "notFound.label": "Payer quelqu'un sur HOLD",
   "notFound.go": "Continuer",
-  "notFound.badHandle": "Ce n'est pas un identifiant HOLD."
+  "notFound.badHandle": "Ce n'est pas un identifiant HOLD.",
+  "recurring.per": "{period, select, week {/ semaine} other {/ mois}}",
+  "recurring.terms": "{amount} maintenant, puis {period, select, week {chaque semaine} other {chaque mois}}.",
+  "recurring.subscribeWith": "S'abonner avec {wallet}",
+  "recurring.preparing": "Préparation de votre abonnement…",
+  "recurring.approveIn": "Validez dans {wallet}…",
+  "recurring.subscribing": "Abonnement en cours…",
+  "recurring.doneTitle": "C'est fait",
+  "recurring.doneBody": "{payee} reçoit {amount} de votre part {period, select, week {chaque semaine} other {chaque mois}}, dès maintenant.",
+  "recurring.notReady": "Cet abonnement n'est pas encore ouvert.",
+  "recurring.noWallet": "Ouvrez cette page dans Phantom ou Solflare pour vous abonner.",
+  "recurring.onlySolana": "Les abonnements se paient en USDC sur Solana, depuis Phantom ou Solflare. La carte et d'autres réseaux arrivent.",
+  "recurring.needUsdc": "Ce portefeuille a besoin de {amount} sur Solana pour commencer.",
+  "recurring.needSol": "Ce portefeuille a besoin d'un peu de SOL (environ 0,004) pour s'abonner.",
+  "recurring.already": "Ce portefeuille est déjà abonné.",
+  "recurring.ownLink": "C'est votre propre lien.",
+  "recurring.cancelled": "Rien n'a été signé.",
+  "recurring.failed": "Ça n'a pas abouti. Réessayez."
 }

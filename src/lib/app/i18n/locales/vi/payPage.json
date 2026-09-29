@@ -137,5 +137,22 @@
   "notFound.body": "Hãy kiểm tra lại với người đã gửi liên kết.",
   "notFound.label": "Thanh toán cho ai đó trên HOLD",
   "notFound.go": "Tiếp tục",
-  "notFound.badHandle": "Đó không phải là tên người dùng HOLD."
+  "notFound.badHandle": "Đó không phải là tên người dùng HOLD.",
+  "recurring.per": "{period, select, week {/ tuần} other {/ tháng}}",
+  "recurring.terms": "{amount} bây giờ, sau đó {period, select, week {mỗi tuần} other {mỗi tháng}}.",
+  "recurring.subscribeWith": "Đăng ký bằng {wallet}",
+  "recurring.preparing": "Đang chuẩn bị gói đăng ký…",
+  "recurring.approveIn": "Hãy duyệt trong {wallet}…",
+  "recurring.subscribing": "Đang đăng ký…",
+  "recurring.doneTitle": "Bạn đã đăng ký",
+  "recurring.doneBody": "{payee} nhận {amount} từ bạn {period, select, week {mỗi tuần} other {mỗi tháng}}, bắt đầu từ bây giờ.",
+  "recurring.notReady": "Gói đăng ký này chưa mở.",
+  "recurring.noWallet": "Mở trang này trong Phantom hoặc Solflare để đăng ký.",
+  "recurring.onlySolana": "Gói đăng ký được trả bằng USDC trên Solana, từ Phantom hoặc Solflare. Thẻ và các mạng khác sắp có.",
+  "recurring.needUsdc": "Ví này cần {amount} trên Solana để bắt đầu.",
+  "recurring.needSol": "Ví này cần một ít SOL (khoảng 0,004) để đăng ký.",
+  "recurring.already": "Ví này đã đăng ký rồi.",
+  "recurring.ownLink": "Đây là liên kết của chính bạn.",
+  "recurring.cancelled": "Chưa có gì được ký.",
+  "recurring.failed": "Chưa thành công. Hãy thử lại."
 }

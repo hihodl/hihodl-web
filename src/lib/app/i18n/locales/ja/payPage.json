@@ -137,5 +137,22 @@
   "notFound.body": "リンクを送った人に確認してください。",
   "notFound.label": "HOLD で誰かに支払う",
   "notFound.go": "続ける",
-  "notFound.badHandle": "HOLD のハンドルではありません。"
+  "notFound.badHandle": "HOLD のハンドルではありません。",
+  "recurring.per": "{period, select, week {/ 週} other {/ 月}}",
+  "recurring.terms": "今 {amount}、その後は{period, select, week {毎週} other {毎月}}。",
+  "recurring.subscribeWith": "{wallet} で購読する",
+  "recurring.preparing": "購読を準備しています…",
+  "recurring.approveIn": "{wallet} で承認してください…",
+  "recurring.subscribing": "購読しています…",
+  "recurring.doneTitle": "購読が完了しました",
+  "recurring.doneBody": "{payee} は今から{period, select, week {毎週} other {毎月}} {amount} を受け取ります。",
+  "recurring.notReady": "この購読はまだ開始されていません。",
+  "recurring.noWallet": "購読するには、このページを Phantom または Solflare で開いてください。",
+  "recurring.onlySolana": "購読は Solana 上の USDC で、Phantom または Solflare から支払えます。カードや他のネットワークにも対応予定です。",
+  "recurring.needUsdc": "開始するには、このウォレットに Solana 上の {amount} が必要です。",
+  "recurring.needSol": "購読するには、このウォレットに少しの SOL(約 0.004)が必要です。",
+  "recurring.already": "このウォレットはすでに購読しています。",
+  "recurring.ownLink": "これはあなた自身のリンクです。",
+  "recurring.cancelled": "何も署名されていません。",
+  "recurring.failed": "完了しませんでした。もう一度お試しください。"
 }

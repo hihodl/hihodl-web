@@ -137,5 +137,22 @@
   "notFound.body": "Periksa link ini dengan orang yang mengirimnya.",
   "notFound.label": "Bayar seseorang di HOLD",
   "notFound.go": "Lanjut",
-  "notFound.badHandle": "Itu bukan handle HOLD."
+  "notFound.badHandle": "Itu bukan handle HOLD.",
+  "recurring.per": "{period, select, week {/ minggu} other {/ bulan}}",
+  "recurring.terms": "{amount} sekarang, lalu {period, select, week {setiap minggu} other {setiap bulan}}.",
+  "recurring.subscribeWith": "Berlangganan dengan {wallet}",
+  "recurring.preparing": "Menyiapkan langganan kamu…",
+  "recurring.approveIn": "Setujui di {wallet}…",
+  "recurring.subscribing": "Sedang berlangganan…",
+  "recurring.doneTitle": "Kamu sudah bergabung",
+  "recurring.doneBody": "{payee} menerima {amount} dari kamu {period, select, week {setiap minggu} other {setiap bulan}}, mulai sekarang.",
+  "recurring.notReady": "Langganan ini belum dibuka.",
+  "recurring.noWallet": "Buka halaman ini di Phantom atau Solflare untuk berlangganan.",
+  "recurring.onlySolana": "Langganan dibayar dengan USDC di Solana, dari Phantom atau Solflare. Kartu dan jaringan lain segera hadir.",
+  "recurring.needUsdc": "Dompet ini butuh {amount} di Solana untuk mulai.",
+  "recurring.needSol": "Dompet ini butuh sedikit SOL (sekitar 0,004) untuk berlangganan.",
+  "recurring.already": "Dompet ini sudah berlangganan.",
+  "recurring.ownLink": "Ini tautan kamu sendiri.",
+  "recurring.cancelled": "Tidak ada yang ditandatangani.",
+  "recurring.failed": "Belum berhasil. Coba lagi."
 }

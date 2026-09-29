@@ -254,5 +254,22 @@
   "payPage.notFound.label": "HOLD پر کسی کو ادائیگی کریں",
   "payPage.notFound.go": "جاری رکھیں",
   "payPage.notFound.badHandle": "یہ HOLD ہینڈل نہیں ہے۔",
-  "home.payLinks.pay.gone.frozen": "آپ کے ادائیگی کرتے وقت یہ لنک روک دیا گیا، اس لیے فی الحال یہ کوئی ادائیگی قبول نہیں کرتا۔ کچھ بھی ادا نہیں کیا گیا۔"
+  "home.payLinks.pay.gone.frozen": "آپ کے ادائیگی کرتے وقت یہ لنک روک دیا گیا، اس لیے فی الحال یہ کوئی ادائیگی قبول نہیں کرتا۔ کچھ بھی ادا نہیں کیا گیا۔",
+  "payPage.recurring.per": "{period, select, week {/ ہفتہ} other {/ مہینہ}}",
+  "payPage.recurring.terms": "ابھی {amount}، پھر {period, select, week {ہر ہفتے} other {ہر مہینے}}۔",
+  "payPage.recurring.subscribeWith": "{wallet} سے سبسکرائب کریں",
+  "payPage.recurring.preparing": "آپ کی سبسکرپشن تیار ہو رہی ہے…",
+  "payPage.recurring.approveIn": "{wallet} میں منظور کریں…",
+  "payPage.recurring.subscribing": "سبسکرائب ہو رہا ہے…",
+  "payPage.recurring.doneTitle": "آپ شامل ہو گئے",
+  "payPage.recurring.doneBody": "{payee} کو اب سے {period, select, week {ہر ہفتے} other {ہر مہینے}} آپ سے {amount} ملیں گے۔",
+  "payPage.recurring.notReady": "یہ سبسکرپشن ابھی کھلی نہیں ہے۔",
+  "payPage.recurring.noWallet": "سبسکرائب کرنے کے لیے یہ صفحہ Phantom یا Solflare میں کھولیں۔",
+  "payPage.recurring.onlySolana": "سبسکرپشنز Solana پر USDC میں، Phantom یا Solflare سے ادا ہوتی ہیں۔ کارڈ اور دوسرے نیٹ ورک جلد آ رہے ہیں۔",
+  "payPage.recurring.needUsdc": "شروع کرنے کے لیے اس والیٹ میں Solana پر {amount} ہونے چاہییں۔",
+  "payPage.recurring.needSol": "سبسکرائب کرنے کے لیے اس والیٹ میں تھوڑا SOL (تقریباً 0.004) چاہیے۔",
+  "payPage.recurring.already": "یہ والیٹ پہلے سے سبسکرائب ہے۔",
+  "payPage.recurring.ownLink": "یہ آپ کا اپنا لنک ہے۔",
+  "payPage.recurring.cancelled": "کچھ بھی سائن نہیں ہوا۔",
+  "payPage.recurring.failed": "یہ مکمل نہیں ہوا۔ دوبارہ کوشش کریں۔"
 }
