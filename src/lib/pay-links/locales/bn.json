@@ -271,5 +271,10 @@
   "payPage.recurring.already": "এই ওয়ালেট আগেই সাবস্ক্রাইব করেছে।",
   "payPage.recurring.ownLink": "এটি আপনার নিজের লিংক।",
   "payPage.recurring.cancelled": "কিছুই সই করা হয়নি।",
-  "payPage.recurring.failed": "সম্পন্ন হয়নি। আবার চেষ্টা করুন।"
+  "payPage.recurring.failed": "সম্পন্ন হয়নি। আবার চেষ্টা করুন।",
+  "payPage.recurring.renewNeeded": "এই ওয়ালেট সাবস্ক্রাইব করা আছে, কিন্তু অন্য একটি অ্যাপ এর অনুমোদন বদলে দিয়েছে, তাই {payee}-কে পেমেন্ট করা যাচ্ছে না। পেমেন্ট চালু রাখতে রিনিউ করুন।",
+  "payPage.recurring.renewWith": "{wallet} দিয়ে রিনিউ করুন",
+  "payPage.recurring.renewing": "রিনিউ হচ্ছে…",
+  "payPage.recurring.renewedTitle": "রিনিউ হয়েছে",
+  "payPage.recurring.renewedBody": "{payee} আবার {period, select, week {প্রতি সপ্তাহে} other {প্রতি মাসে}} আপনার কাছ থেকে {amount} পাবেন।"
 }

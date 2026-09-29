@@ -154,5 +154,10 @@
   "recurring.already": "このウォレットはすでに購読しています。",
   "recurring.ownLink": "これはあなた自身のリンクです。",
   "recurring.cancelled": "何も署名されていません。",
-  "recurring.failed": "完了しませんでした。もう一度お試しください。"
+  "recurring.failed": "完了しませんでした。もう一度お試しください。",
+  "recurring.renewNeeded": "このウォレットは登録済みですが、別のアプリに承認を置き換えられたため、{payee} へ支払えません。支払いを続けるには更新してください。",
+  "recurring.renewWith": "{wallet} で更新",
+  "recurring.renewing": "更新中…",
+  "recurring.renewedTitle": "更新しました",
+  "recurring.renewedBody": "{payee} は再び{period, select, week {毎週} other {毎月}} {amount} を受け取ります。"
 }

@@ -271,5 +271,10 @@
   "payPage.recurring.already": "یہ والیٹ پہلے سے سبسکرائب ہے۔",
   "payPage.recurring.ownLink": "یہ آپ کا اپنا لنک ہے۔",
   "payPage.recurring.cancelled": "کچھ بھی سائن نہیں ہوا۔",
-  "payPage.recurring.failed": "یہ مکمل نہیں ہوا۔ دوبارہ کوشش کریں۔"
+  "payPage.recurring.failed": "یہ مکمل نہیں ہوا۔ دوبارہ کوشش کریں۔",
+  "payPage.recurring.renewNeeded": "یہ والیٹ سبسکرائب ہے، لیکن کسی دوسری ایپ نے اس کی منظوری بدل دی ہے، اس لیے {payee} کو ادائیگی نہیں ہو سکتی۔ ادائیگی جاری رکھنے کے لیے تجدید کریں۔",
+  "payPage.recurring.renewWith": "{wallet} سے تجدید کریں",
+  "payPage.recurring.renewing": "تجدید ہو رہی ہے…",
+  "payPage.recurring.renewedTitle": "تجدید ہو گئی",
+  "payPage.recurring.renewedBody": "{payee} کو دوبارہ {period, select, week {ہر ہفتے} other {ہر مہینے}} آپ سے {amount} ملیں گے۔"
 }

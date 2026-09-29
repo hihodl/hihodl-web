@@ -154,5 +154,10 @@
   "recurring.already": "Este monedero ya está suscrito.",
   "recurring.ownLink": "Este es tu propio enlace.",
   "recurring.cancelled": "No se ha firmado nada.",
-  "recurring.failed": "No se ha completado. Inténtalo de nuevo."
+  "recurring.failed": "No se ha completado. Inténtalo de nuevo.",
+  "recurring.renewNeeded": "Este monedero está suscrito, pero otra app ha sustituido su autorización, así que {payee} no puede cobrar. Renueva para seguir pagando.",
+  "recurring.renewWith": "Renovar con {wallet}",
+  "recurring.renewing": "Renovando…",
+  "recurring.renewedTitle": "Renovada",
+  "recurring.renewedBody": "{payee} vuelve a recibir {amount} de ti {period, select, week {cada semana} other {cada mes}}."
 }

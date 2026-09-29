@@ -154,5 +154,10 @@
   "recurring.already": "यह वॉलेट पहले से सब्सक्राइब है।",
   "recurring.ownLink": "यह आपका अपना लिंक है।",
   "recurring.cancelled": "कुछ भी साइन नहीं हुआ।",
-  "recurring.failed": "यह पूरा नहीं हुआ। फिर से कोशिश करें।"
+  "recurring.failed": "यह पूरा नहीं हुआ। फिर से कोशिश करें।",
+  "recurring.renewNeeded": "यह वॉलेट सब्सक्राइब है, लेकिन किसी दूसरे ऐप ने इसकी अनुमति बदल दी है, इसलिए {payee} को भुगतान नहीं हो सकता। भुगतान जारी रखने के लिए नवीनीकृत करें।",
+  "recurring.renewWith": "{wallet} से नवीनीकृत करें",
+  "recurring.renewing": "नवीनीकृत हो रहा है…",
+  "recurring.renewedTitle": "नवीनीकृत",
+  "recurring.renewedBody": "{payee} को फिर से आपसे {period, select, week {हर हफ़्ते} other {हर महीने}} {amount} मिलेंगे।"
 }

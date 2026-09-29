@@ -154,5 +154,10 @@
   "recurring.already": "Bu cüzdan zaten abone.",
   "recurring.ownLink": "Bu senin kendi bağlantın.",
   "recurring.cancelled": "Hiçbir şey imzalanmadı.",
-  "recurring.failed": "Olmadı. Tekrar dene."
+  "recurring.failed": "Olmadı. Tekrar dene.",
+  "recurring.renewNeeded": "Bu cüzdan abone, ancak onayı başka bir uygulama tarafından değiştirildi, bu yüzden {payee} ödeme alamıyor. Ödemeye devam etmek için yenile.",
+  "recurring.renewWith": "{wallet} ile yenile",
+  "recurring.renewing": "Yenileniyor…",
+  "recurring.renewedTitle": "Yenilendi",
+  "recurring.renewedBody": "{payee} yeniden {period, select, week {her hafta} other {her ay}} senden {amount} alıyor."
 }

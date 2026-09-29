@@ -154,5 +154,10 @@
   "recurring.already": "Ce portefeuille est déjà abonné.",
   "recurring.ownLink": "C'est votre propre lien.",
   "recurring.cancelled": "Rien n'a été signé.",
-  "recurring.failed": "Ça n'a pas abouti. Réessayez."
+  "recurring.failed": "Ça n'a pas abouti. Réessayez.",
+  "recurring.renewNeeded": "Ce portefeuille est abonné, mais une autre app a remplacé son autorisation : {payee} ne peut donc pas être payé. Renouvelez pour continuer à payer.",
+  "recurring.renewWith": "Renouveler avec {wallet}",
+  "recurring.renewing": "Renouvellement…",
+  "recurring.renewedTitle": "Renouvelé",
+  "recurring.renewedBody": "{payee} reçoit de nouveau {amount} de votre part {period, select, week {chaque semaine} other {chaque mois}}."
 }

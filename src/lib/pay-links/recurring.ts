@@ -104,6 +104,44 @@ export function subscribeTxProblem(
   return subscribes === 1 ? null : "no_subscribe";
 }
 
+/**
+ * Renewing a subscription whose approval another app replaced: the server
+ * answers the subscribe call with `{ renew: true }` and a transaction that must
+ * be exactly compute budget + ONE SPL Approve of this wallet's USDC account to
+ * its own Subscription Authority (the approval the program pulls through),
+ * paid and signed by this wallet alone. Nothing moves; nothing else is signed.
+ */
+export function reapproveTxProblem(web3: Web3, tx: SolanaWeb3.VersionedTransaction, expect: { payerAddress: string }): string | null {
+  const { PublicKey } = web3;
+  const msg = tx.message;
+  const keys = msg.staticAccountKeys.map((k) => k.toBase58());
+  if ("addressTableLookups" in msg && (msg.addressTableLookups?.length ?? 0) > 0) return "lookup_tables";
+  if (keys[0] !== expect.payerAddress) return "fee_payer";
+  if (msg.header.numRequiredSignatures !== 1) return "signers";
+  const payer = new PublicKey(expect.payerAddress);
+  const mint = new PublicKey(USDC_MINT);
+  const authority = PublicKey.findProgramAddressSync(
+    [new TextEncoder().encode("SubscriptionAuthority"), payer.toBytes(), mint.toBytes()],
+    new PublicKey(SUBSCRIPTIONS_PROGRAM),
+  )[0].toBase58();
+  const ata = PublicKey.findProgramAddressSync([payer.toBytes(), new PublicKey(TOKEN_PROGRAM).toBytes(), mint.toBytes()], new PublicKey(ATA_PROGRAM))[0].toBase58();
+  let approves = 0;
+  for (const ix of msg.compiledInstructions) {
+    const programId = keys[ix.programIdIndex];
+    const accounts = ix.accountKeyIndexes.map((i) => keys[i]);
+    const data = ix.data;
+    if (programId === COMPUTE_BUDGET) {
+      if (approves > 0 || (data[0] !== 2 && data[0] !== 3)) return "compute_budget";
+      continue;
+    }
+    if (programId !== TOKEN_PROGRAM) return "program";
+    if (approves++ > 0) return "approve_twice";
+    if (data[0] !== 4 || data.length !== 9 || accounts.length !== 3) return "token_instruction";
+    if (accounts[0] !== ata || accounts[1] !== authority || accounts[2] !== expect.payerAddress) return "approve_accounts";
+  }
+  return approves === 1 ? null : "no_approve";
+}
+
 /** "10 USDC" from the plan's base units (6 decimals), without trailing zeros. */
 export function usdcText(amountBase: string): string {
   const n = BigInt(amountBase);

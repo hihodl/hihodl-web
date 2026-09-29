@@ -271,5 +271,10 @@
   "payPage.recurring.already": "Ten portfel już subskrybuje.",
   "payPage.recurring.ownLink": "To Twój własny link.",
   "payPage.recurring.cancelled": "Nic nie zostało podpisane.",
-  "payPage.recurring.failed": "Nie udało się. Spróbuj ponownie."
+  "payPage.recurring.failed": "Nie udało się. Spróbuj ponownie.",
+  "payPage.recurring.renewNeeded": "Ten portfel jest subskrybowany, ale inna aplikacja zastąpiła jego zgodę, więc {payee} nie może otrzymać płatności. Odnów, aby dalej płacić.",
+  "payPage.recurring.renewWith": "Odnów przez {wallet}",
+  "payPage.recurring.renewing": "Odnawianie…",
+  "payPage.recurring.renewedTitle": "Odnowiono",
+  "payPage.recurring.renewedBody": "{payee} znów dostaje od ciebie {amount} {period, select, week {co tydzień} other {co miesiąc}}."
 }

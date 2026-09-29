@@ -12,6 +12,11 @@
  * sends it (the payer pays the network fee and the accounts' rent, ~0.004
  * SOL). Then the page asks the server, which reads the chain, until the
  * subscription is there. The first period is charged by HOLD right after.
+ *
+ * A wallet already subscribed whose approval another app replaced (nothing
+ * can be charged) gets "Renew" instead of a refusal: the server hands back
+ * the SPL Approve alone, checked the same way (reapproveTxProblem), and the
+ * wallet signs that.
  */
 
 import { useEffect, useState } from "react";
@@ -21,12 +26,16 @@ import { base64ToBytes, blockhashExpired, watchSolanaWallets, type SolanaWallet 
 import { useT } from "@/lib/app/i18n/react";
 import { startSubscribe, subscribed } from "@/lib/pay-links/client";
 import { walletBrowseUrl, type Platform } from "@/lib/pay-links/page-rules";
-import { subscribeTxProblem, usdcText } from "@/lib/pay-links/recurring";
+import { reapproveTxProblem, subscribeTxProblem, usdcText } from "@/lib/pay-links/recurring";
 import type { PayLinkRecurring, ShownPayLink } from "@/lib/pay-links/types";
 
 import { WALLET_LOGO } from "./PayLinkPay";
 
-type Phase = { kind: "choose" } | { kind: "busy"; label: string } | { kind: "done" };
+type Phase =
+  | { kind: "choose" }
+  | { kind: "busy"; label: string }
+  | { kind: "renew"; wallet: SolanaWallet; payer: string }
+  | { kind: "done"; renewed?: boolean };
 
 const POLL_MS = 3_000;
 const POLL_FOR_MS = 120_000;
@@ -72,6 +81,43 @@ export function RecurringPay({
     return t("payPage.recurring.failed");
   }
 
+  /** The server's transaction for this wallet, checked: a subscription, or (renew) the Approve alone. */
+  async function built(web3: typeof import("@solana/web3.js"), payer: string) {
+    const res = await startSubscribe(link.code, payer);
+    const tx = web3.VersionedTransaction.deserialize(base64ToBytes(res.transaction));
+    const problem = res.renew
+      ? reapproveTxProblem(web3, tx, { payerAddress: payer })
+      : subscribeTxProblem(web3, tx, { payerAddress: payer, plan: plan! });
+    if (problem) throw new Error(`unexpected_transaction:${problem}`);
+    return { tx, renew: res.renew === true };
+  }
+
+  /** Signs and sends what the server built (once more on a stale blockhash), then waits for the chain. */
+  async function signAndWait(wallet: SolanaWallet, payer: string, renew: boolean) {
+    const web3 = await import("@solana/web3.js");
+    setPhase({ kind: "busy", label: t("payPage.recurring.preparing") });
+    let { tx, renew: now } = await built(web3, payer);
+    // The page offered one thing; the server must still mean the same.
+    if (now !== renew) throw new Error("state_changed");
+    setPhase({ kind: "busy", label: t("payPage.recurring.approveIn", { wallet: wallet.name }) });
+    try {
+      await wallet.provider.signAndSendTransaction(tx);
+    } catch (e) {
+      if (!blockhashExpired(e)) throw e;
+      ({ tx, renew: now } = await built(web3, payer));
+      if (now !== renew) throw new Error("state_changed");
+      await wallet.provider.signAndSendTransaction(tx);
+    }
+    setPhase({ kind: "busy", label: t(renew ? "payPage.recurring.renewing" : "payPage.recurring.subscribing") });
+    const since = Date.now();
+    for (;;) {
+      const r = await subscribed(link.code, payer).catch(() => ({ state: "pending" as const }));
+      if (r.state === "active") return setPhase({ kind: "done", renewed: renew });
+      if (Date.now() - since > POLL_FOR_MS) throw new Error("not_seen");
+      await new Promise((ok) => setTimeout(ok, POLL_MS));
+    }
+  }
+
   async function subscribeWith(wallet: SolanaWallet) {
     if (!plan) return;
     setNotice(null);
@@ -81,35 +127,23 @@ export function RecurringPay({
       const payer = (connected?.publicKey ?? wallet.provider.publicKey)?.toString();
       if (!payer) throw new Error("no_account");
       const web3 = await import("@solana/web3.js");
-      const build = async () => {
-        const res = await startSubscribe(link.code, payer);
-        const tx = web3.VersionedTransaction.deserialize(base64ToBytes(res.transaction));
-        // Exactly a subscription to the plan on this page, paid and signed by this wallet alone.
-        const problem = subscribeTxProblem(web3, tx, { payerAddress: payer, plan });
-        if (problem) throw new Error(`unexpected_transaction:${problem}`);
-        return tx;
-      };
       setPhase({ kind: "busy", label: t("payPage.recurring.preparing") });
-      let tx = await build();
-      setPhase({ kind: "busy", label: t("payPage.recurring.approveIn", { wallet: wallet.name }) });
-      try {
-        await wallet.provider.signAndSendTransaction(tx);
-      } catch (e) {
-        if (!blockhashExpired(e)) throw e;
-        tx = await build();
-        await wallet.provider.signAndSendTransaction(tx);
-      }
-      setPhase({ kind: "busy", label: t("payPage.recurring.subscribing") });
-      const since = Date.now();
-      for (;;) {
-        const r = await subscribed(link.code, payer).catch(() => ({ state: "pending" as const }));
-        if (r.state === "active") return setPhase({ kind: "done" });
-        if (Date.now() - since > POLL_FOR_MS) throw new Error("not_seen");
-        await new Promise((ok) => setTimeout(ok, POLL_MS));
-      }
+      // Already subscribed, approval gone: ask before the wallet signs anything.
+      if ((await built(web3, payer)).renew) return setPhase({ kind: "renew", wallet, payer });
+      await signAndWait(wallet, payer, false);
     } catch (e) {
       setNotice(problemText(e));
       setPhase({ kind: "choose" });
+    }
+  }
+
+  async function renewWith(wallet: SolanaWallet, payer: string) {
+    setNotice(null);
+    try {
+      await signAndWait(wallet, payer, true);
+    } catch (e) {
+      setNotice(problemText(e));
+      setPhase({ kind: "renew", wallet, payer });
     }
   }
 
@@ -134,11 +168,25 @@ export function RecurringPay({
 
       {phase.kind === "done" ? (
         <section className="mt-6 flex flex-col items-center rounded-[28px] border border-white/[0.08] bg-white/[0.06] px-5 py-6 text-center">
-          <span className="text-[17px] font-extrabold text-[#2FBE8A]">{t("payPage.recurring.doneTitle")}</span>
+          <span className="text-[17px] font-extrabold text-[#2FBE8A]">
+            {t(phase.renewed ? "payPage.recurring.renewedTitle" : "payPage.recurring.doneTitle")}
+          </span>
           <span className="mt-1.5 text-[14px] leading-[19px] text-[#CFE3EC]">
-            {t("payPage.recurring.doneBody", { payee, amount: price, period: recurring.period })}
+            {t(phase.renewed ? "payPage.recurring.renewedBody" : "payPage.recurring.doneBody", { payee, amount: price, period: recurring.period })}
           </span>
         </section>
+      ) : phase.kind === "renew" ? (
+        <>
+          <p className="mt-5 px-2 text-center text-[14px] leading-[19px] text-[#CFE3EC]">{t("payPage.recurring.renewNeeded", { payee })}</p>
+          <div className="mt-3 overflow-hidden rounded-[28px] border border-x-white/[0.07] border-b-white/[0.04] border-t-white/[0.16] bg-white/[0.06] backdrop-blur-xl">
+            <Row
+              icon={<Logo src={phase.wallet.icon ?? logoFor(phase.wallet.name)} />}
+              label={t("payPage.recurring.renewWith", { wallet: phase.wallet.name })}
+              onClick={() => void renewWith(phase.wallet, phase.payer)}
+              last
+            />
+          </div>
+        </>
       ) : !recurring.ready || !plan ? (
         <p className="mt-6 text-center text-[14px] text-[#9FB7C2]">{t("payPage.recurring.notReady")}</p>
       ) : (

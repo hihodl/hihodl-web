@@ -154,5 +154,10 @@
   "recurring.already": "Questo wallet è già abbonato.",
   "recurring.ownLink": "Questo è il tuo link.",
   "recurring.cancelled": "Non è stato firmato nulla.",
-  "recurring.failed": "Non è andato a buon fine. Riprova."
+  "recurring.failed": "Non è andato a buon fine. Riprova.",
+  "recurring.renewNeeded": "Questo wallet è abbonato, ma un'altra app ha sostituito la sua autorizzazione, quindi {payee} non può essere pagato. Rinnova per continuare a pagare.",
+  "recurring.renewWith": "Rinnova con {wallet}",
+  "recurring.renewing": "Rinnovo in corso…",
+  "recurring.renewedTitle": "Rinnovato",
+  "recurring.renewedBody": "{payee} riceve di nuovo {amount} da te {period, select, week {ogni settimana} other {ogni mese}}."
 }

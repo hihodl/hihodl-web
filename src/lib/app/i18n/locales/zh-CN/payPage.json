@@ -154,5 +154,10 @@
   "recurring.already": "此钱包已经订阅。",
   "recurring.ownLink": "这是你自己的链接。",
   "recurring.cancelled": "没有签署任何内容。",
-  "recurring.failed": "没有完成,请重试。"
+  "recurring.failed": "没有完成,请重试。",
+  "recurring.renewNeeded": "此钱包已订阅，但其授权已被其他应用替换，因此无法向 {payee} 付款。请续订以继续付款。",
+  "recurring.renewWith": "使用 {wallet} 续订",
+  "recurring.renewing": "正在续订…",
+  "recurring.renewedTitle": "已续订",
+  "recurring.renewedBody": "{payee} 将再次{period, select, week {每周} other {每月}}从你这里收到 {amount}。"
 }

@@ -154,5 +154,10 @@
   "recurring.already": "Dompet ini sudah berlangganan.",
   "recurring.ownLink": "Ini tautan kamu sendiri.",
   "recurring.cancelled": "Tidak ada yang ditandatangani.",
-  "recurring.failed": "Belum berhasil. Coba lagi."
+  "recurring.failed": "Belum berhasil. Coba lagi.",
+  "recurring.renewNeeded": "Dompet ini berlangganan, tetapi izinnya diganti oleh aplikasi lain, jadi {payee} tidak bisa dibayar. Perbarui agar tetap membayar.",
+  "recurring.renewWith": "Perbarui dengan {wallet}",
+  "recurring.renewing": "Memperbarui…",
+  "recurring.renewedTitle": "Diperbarui",
+  "recurring.renewedBody": "{payee} kembali menerima {amount} darimu {period, select, week {setiap minggu} other {setiap bulan}}."
 }

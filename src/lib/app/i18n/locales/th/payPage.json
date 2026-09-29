@@ -154,5 +154,10 @@
   "recurring.already": "กระเป๋านี้สมัครแล้ว",
   "recurring.ownLink": "นี่คือลิงก์ของคุณเอง",
   "recurring.cancelled": "ยังไม่ได้ลงนามอะไร",
-  "recurring.failed": "ไม่สำเร็จ ลองอีกครั้ง"
+  "recurring.failed": "ไม่สำเร็จ ลองอีกครั้ง",
+  "recurring.renewNeeded": "วอลเล็ตนี้สมัครสมาชิกอยู่ แต่แอปอื่นได้แทนที่การอนุญาตของมัน จึงชำระเงินให้ {payee} ไม่ได้ ต่ออายุเพื่อชำระต่อ",
+  "recurring.renewWith": "ต่ออายุด้วย {wallet}",
+  "recurring.renewing": "กำลังต่ออายุ…",
+  "recurring.renewedTitle": "ต่ออายุแล้ว",
+  "recurring.renewedBody": "{payee} จะได้รับ {amount} จากคุณ{period, select, week {ทุกสัปดาห์} other {ทุกเดือน}}อีกครั้ง"
 }

@@ -271,5 +271,10 @@
   "payPage.recurring.already": "Этот кошелёк уже подписан.",
   "payPage.recurring.ownLink": "Это ваша собственная ссылка.",
   "payPage.recurring.cancelled": "Ничего не подписано.",
-  "payPage.recurring.failed": "Не получилось. Попробуйте ещё раз."
+  "payPage.recurring.failed": "Не получилось. Попробуйте ещё раз.",
+  "payPage.recurring.renewNeeded": "Этот кошелёк подписан, но другое приложение заменило его разрешение, поэтому {payee} не может получить оплату. Продлите, чтобы продолжить платить.",
+  "payPage.recurring.renewWith": "Продлить через {wallet}",
+  "payPage.recurring.renewing": "Продление…",
+  "payPage.recurring.renewedTitle": "Продлено",
+  "payPage.recurring.renewedBody": "{payee} снова получает от вас {amount} {period, select, week {каждую неделю} other {каждый месяц}}."
 }

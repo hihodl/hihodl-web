@@ -193,6 +193,11 @@ const payPage = {
   "recurring.ownLink": "This is your own link.",
   "recurring.cancelled": "Nothing was signed.",
   "recurring.failed": "That didn't go through. Try again.",
+  "recurring.renewNeeded": "This wallet is subscribed, but its approval was replaced by another app, so {payee} can't be paid. Renew to keep paying.",
+  "recurring.renewWith": "Renew with {wallet}",
+  "recurring.renewing": "Renewing…",
+  "recurring.renewedTitle": "Renewed",
+  "recurring.renewedBody": "{payee} gets {amount} from you {period, select, week {every week} other {every month}} again.",
 } as const;
 
 export default payPage;

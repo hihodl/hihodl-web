@@ -154,5 +154,10 @@
   "recurring.already": "Esta carteira já é assinante.",
   "recurring.ownLink": "Este é o seu próprio link.",
   "recurring.cancelled": "Nada foi assinado.",
-  "recurring.failed": "Não deu certo. Tente de novo."
+  "recurring.failed": "Não deu certo. Tente de novo.",
+  "recurring.renewNeeded": "Esta carteira está inscrita, mas outro app substituiu a autorização dela, então {payee} não pode receber. Renove para continuar pagando.",
+  "recurring.renewWith": "Renovar com {wallet}",
+  "recurring.renewing": "Renovando…",
+  "recurring.renewedTitle": "Renovada",
+  "recurring.renewedBody": "{payee} volta a receber {amount} de você {period, select, week {toda semana} other {todo mês}}."
 }

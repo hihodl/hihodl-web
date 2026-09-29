@@ -154,5 +154,10 @@
   "recurring.already": "هذه المحفظة مشتركة بالفعل.",
   "recurring.ownLink": "هذا رابطك أنت.",
   "recurring.cancelled": "لم يتم توقيع أي شيء.",
-  "recurring.failed": "لم تكتمل العملية. حاول مرة أخرى."
+  "recurring.failed": "لم تكتمل العملية. حاول مرة أخرى.",
+  "recurring.renewNeeded": "هذه المحفظة مشتركة، لكن تطبيقًا آخر استبدل موافقتها، لذا لا يمكن الدفع إلى {payee}. جدّد لمواصلة الدفع.",
+  "recurring.renewWith": "التجديد عبر {wallet}",
+  "recurring.renewing": "جارٍ التجديد…",
+  "recurring.renewedTitle": "تم التجديد",
+  "recurring.renewedBody": "يحصل {payee} مجددًا على {amount} منك {period, select, week {كل أسبوع} other {كل شهر}}."
 }

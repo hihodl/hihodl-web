@@ -154,5 +154,10 @@
   "recurring.already": "Ví này đã đăng ký rồi.",
   "recurring.ownLink": "Đây là liên kết của chính bạn.",
   "recurring.cancelled": "Chưa có gì được ký.",
-  "recurring.failed": "Chưa thành công. Hãy thử lại."
+  "recurring.failed": "Chưa thành công. Hãy thử lại.",
+  "recurring.renewNeeded": "Ví này đã đăng ký, nhưng một ứng dụng khác đã thay thế quyền chấp thuận của nó nên không thể thanh toán cho {payee}. Hãy gia hạn để tiếp tục thanh toán.",
+  "recurring.renewWith": "Gia hạn bằng {wallet}",
+  "recurring.renewing": "Đang gia hạn…",
+  "recurring.renewedTitle": "Đã gia hạn",
+  "recurring.renewedBody": "{payee} lại nhận {amount} từ bạn {period, select, week {mỗi tuần} other {mỗi tháng}}."
 }

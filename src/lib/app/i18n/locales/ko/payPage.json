@@ -154,5 +154,10 @@
   "recurring.already": "이 지갑은 이미 구독 중이에요.",
   "recurring.ownLink": "내 링크예요.",
   "recurring.cancelled": "서명된 것이 없어요.",
-  "recurring.failed": "완료되지 않았어요. 다시 시도해 주세요."
+  "recurring.failed": "완료되지 않았어요. 다시 시도해 주세요.",
+  "recurring.renewNeeded": "이 지갑은 구독 중이지만 다른 앱이 승인을 교체해서 {payee}에게 결제할 수 없어요. 계속 결제하려면 갱신하세요.",
+  "recurring.renewWith": "{wallet}(으)로 갱신",
+  "recurring.renewing": "갱신 중…",
+  "recurring.renewedTitle": "갱신됨",
+  "recurring.renewedBody": "{payee}님이 다시 {period, select, week {매주} other {매달}} {amount}를 받아요."
 }

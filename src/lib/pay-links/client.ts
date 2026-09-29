@@ -130,7 +130,10 @@ export async function startSolanaTransfer(
  * A recurring link: the payer's [InitSubscriptionAuthority] + Subscribe,
  * unsigned, with the payer as fee payer (recurring.ts checks it).
  */
-export function startSubscribe(code: string, payerAddress: string): Promise<{ transaction: string; lastValidBlockHeight: number }> {
+export function startSubscribe(
+  code: string,
+  payerAddress: string,
+): Promise<{ transaction: string; lastValidBlockHeight: number; renew?: true }> {
   return apiRequest(`${PUBLIC}/${encodeURIComponent(code)}/subscribe`, { json: { payerAddress } });
 }
 

@@ -154,5 +154,10 @@
   "recurring.already": "Deze wallet is al geabonneerd.",
   "recurring.ownLink": "Dit is je eigen link.",
   "recurring.cancelled": "Er is niets ondertekend.",
-  "recurring.failed": "Dat is niet gelukt. Probeer het opnieuw."
+  "recurring.failed": "Dat is niet gelukt. Probeer het opnieuw.",
+  "recurring.renewNeeded": "Deze wallet is geabonneerd, maar een andere app heeft de toestemming vervangen, dus {payee} kan niet betaald worden. Verleng om te blijven betalen.",
+  "recurring.renewWith": "Verlengen met {wallet}",
+  "recurring.renewing": "Verlengen…",
+  "recurring.renewedTitle": "Verlengd",
+  "recurring.renewedBody": "{payee} krijgt weer {amount} van je, {period, select, week {elke week} other {elke maand}}."
 }
