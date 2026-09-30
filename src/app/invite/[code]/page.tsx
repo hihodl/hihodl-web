@@ -8,9 +8,10 @@ import { APP_STORE_URL, PLAY_STORE_URL } from "@/lib/appLinks";
 
 export default function InviteRedirect() {
   const { code } = useParams<{ code: string }>();
-  // Set when the link is a group's join link: the page then stays up with an
-  // "Open the group" button instead of leaving for the store.
-  const [groupLink, setGroupLink] = useState<string | null>(null);
+  // Set when the link carries a group or an event: the page then stays up with
+  // an "Open the group" / "Open the event" button instead of leaving for the
+  // store. An event wins the words on the page when the link carries both.
+  const [carried, setCarried] = useState<{ kind: "group" | "event"; link: string } | null>(null);
 
   useEffect(() => {
     if (!code) return;
@@ -45,11 +46,22 @@ export default function InviteRedirect() {
     // to open, and a store install drops every parameter, so for a group the
     // page never leaves for the store on its own: it stays up with the store
     // buttons and an "Open the group" button that works once HOLD is installed.
-    const group = new URLSearchParams(window.location.search).get("group");
-    if (group && /^[A-Za-z0-9]{10,32}$/.test(group)) {
-      const q = new URLSearchParams({ group });
+    //
+    // An event shared with someone is the same link with `?event=<slug>`, the
+    // path of the event's public Luma page (luma.com/<slug>). Same reasoning,
+    // same treatment: the slug rides the deep link and the page stays up with
+    // "Open the event". The slug is only passed through, never fetched, and
+    // one that is not a plain slug is dropped: nothing a link carries reaches
+    // the deep link unchecked. A link may carry a group and an event together.
+    const params = new URLSearchParams(window.location.search);
+    const group = params.get("group");
+    const event = params.get("event");
+    const q = new URLSearchParams();
+    if (group && /^[A-Za-z0-9]{10,32}$/.test(group)) q.set("group", group);
+    if (event && /^[A-Za-z0-9_-]{1,120}$/.test(event)) q.set("event", event);
+    if (q.has("group") || q.has("event")) {
       const deepLink = `hihodl://invite/${encodeURIComponent(code)}?${q.toString()}`;
-      setGroupLink(deepLink);
+      setCarried({ kind: q.has("event") ? "event" : "group", link: deepLink });
       window.location.href = deepLink;
       return;
     }
@@ -111,7 +123,11 @@ export default function InviteRedirect() {
         </svg>
       </div>
       <h1 style={{ fontSize: 28, fontWeight: 900, marginBottom: 8 }}>
-        {groupLink ? "You\u2019re invited to a group on HOLD" : "You\u2019ve been invited to HOLD"}
+        {carried?.kind === "event"
+          ? "See this event on HOLD"
+          : carried
+            ? "You\u2019re invited to a group on HOLD"
+            : "You\u2019ve been invited to HOLD"}
       </h1>
       <p
         style={{
@@ -121,7 +137,12 @@ export default function InviteRedirect() {
           maxWidth: 400,
         }}
       >
-        {groupLink ? (
+        {carried?.kind === "event" ? (
+          <>
+            Book it with friends, free or in stablecoins. Get HOLD, then come
+            back to this page and tap Open the event.
+          </>
+        ) : carried ? (
           <>
             Split the bill and pay your share in dollars, straight from your
             phone. Get HOLD, then come back to this page and tap Open the group.
@@ -133,9 +154,9 @@ export default function InviteRedirect() {
           </>
         )}
       </p>
-      {groupLink ? (
+      {carried ? (
         <a
-          href={groupLink}
+          href={carried.link}
           style={{
             padding: "14px 28px",
             backgroundColor: "#FFB703",
@@ -146,7 +167,7 @@ export default function InviteRedirect() {
             fontWeight: 800,
           }}
         >
-          Open the group
+          {carried.kind === "event" ? "Open the event" : "Open the group"}
         </a>
       ) : (
         <p style={{ fontSize: 14, color: "rgba(255,255,255,0.4)" }}>
