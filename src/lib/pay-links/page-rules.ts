@@ -275,7 +275,7 @@ export function safeAvatarUrl(url: unknown): string | null {
 
 /* ── Opening this page inside a wallet ──────────────────────────── */
 
-export type WalletLinkId = "hold" | "phantom" | "solflare" | "metamask" | "coinbase" | "trust";
+export type WalletLinkId = "hold" | "phantom" | "solflare" | "backpack" | "metamask" | "coinbase" | "trust";
 
 /**
  * A wallet's own browser, opened on this page. Mobile browsers can't tell
@@ -297,6 +297,9 @@ export function walletBrowseUrl(id: Exclude<WalletLinkId, "hold">, pageUrl: stri
       return `https://phantom.app/ul/browse/${u}?ref=${ref}`;
     case "solflare":
       return `https://solflare.com/ul/v1/browse/${u}?ref=${ref}`;
+    case "backpack":
+      // docs.backpack.app/deeplinks/other-methods/browse (30-Sep-2026).
+      return `https://backpack.app/ul/v1/browse/${u}?ref=${ref}`;
     case "metamask":
       return `https://metamask.app.link/dapp/${pageUrl.replace(/^https?:\/\//, "")}`;
     case "coinbase":
@@ -307,7 +310,7 @@ export function walletBrowseUrl(id: Exclude<WalletLinkId, "hold">, pageUrl: stri
 }
 
 /** The flags a wallet's injected provider carries, as far as the page reads them. */
-type Flags = { isPhantom?: boolean; isSolflare?: boolean; isMetaMask?: boolean; isCoinbaseWallet?: boolean; isTrust?: boolean; isTrustWallet?: boolean };
+type Flags = { isPhantom?: boolean; isSolflare?: boolean; isBackpack?: boolean; isMetaMask?: boolean; isCoinbaseWallet?: boolean; isTrust?: boolean; isTrustWallet?: boolean };
 
 /**
  * The wallet whose own browser this page is open in, or null. Only on a
@@ -317,13 +320,16 @@ type Flags = { isPhantom?: boolean; isSolflare?: boolean; isMetaMask?: boolean; 
  *
  * Phantom and Trust also inject `ethereum` (with `isMetaMask` on some
  * versions), so their own flag is read first and MetaMask comes last.
+ * Backpack is read first, by its own `window.backpack`: a `window.solana`
+ * it may also set must not read as another wallet.
  */
 export function walletBrowserOf(
   platform: Platform,
-  w: { phantom?: { solana?: Flags; ethereum?: Flags }; solflare?: Flags; solana?: Flags; ethereum?: Flags; trustwallet?: unknown },
+  w: { phantom?: { solana?: Flags; ethereum?: Flags }; solflare?: Flags; backpack?: Flags; solana?: Flags; ethereum?: Flags; trustwallet?: unknown },
 ): Exclude<WalletLinkId, "hold"> | null {
   if (!isPhone(platform)) return null;
   const eth = w.ethereum;
+  if (w.backpack || w.solana?.isBackpack) return "backpack";
   if (w.phantom?.solana?.isPhantom || w.solana?.isPhantom || eth?.isPhantom) return "phantom";
   if (w.solflare?.isSolflare || w.solana?.isSolflare) return "solflare";
   if (w.trustwallet || eth?.isTrust || eth?.isTrustWallet) return "trust";
