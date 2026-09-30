@@ -266,11 +266,15 @@ function Shown({ link }: { link: ShownPayLink }) {
     if (back.stablecoins && stableOffered) setSheet("stable");
     // A link that can't be paid sends its title here as the note; the payer can change it.
     if (back.note) setNote(back.note);
-    // The address stays the link; what came back is on the screen now.
+    // What came in the query is on the screen now, so the address drops it.
     for (const k of ["amount", "currency", "pay", "network", "note"]) url.searchParams.delete(k);
-    url.pathname = payPagePath(url.pathname);
+    const link = new URL(url.href);
+    link.pathname = payPagePath(url.pathname);
+    // What a wallet's browser brought in the PATH stays in the address: those
+    // browsers reload the page (after a connect, back from the background, a
+    // restored tab), and a reload of the bare link opened with nothing typed.
     if (url.href !== window.location.href) window.history.replaceState(null, "", url.href);
-    setPageUrl(url.href.split("#")[0]);
+    setPageUrl(link.href.split("#")[0]);
     return () => again.forEach((id) => window.clearTimeout(id));
   }, [fixed, stableOffered]);
 
