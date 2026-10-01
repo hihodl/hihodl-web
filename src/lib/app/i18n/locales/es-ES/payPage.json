@@ -137,5 +137,13 @@
   "notFound.body": "Compruébalo con quien te lo envió.",
   "notFound.label": "Paga a alguien en HOLD",
   "notFound.go": "Continuar",
-  "notFound.badHandle": "Ese no es un usuario de HOLD."
+  "notFound.badHandle": "Ese no es un usuario de HOLD.",
+  "testMode": "Modo de prueba",
+  "testModeBody": "No se mueve dinero. Elige cómo termina este pago.",
+  "simulatePaid": "Simular pagado",
+  "simulateFailed": "Simular fallido",
+  "simulateError": "No ha funcionado. Inténtalo de nuevo.",
+  "cancelCheckout": "Cancelar",
+  "returningTo": "Te llevamos de vuelta a {site}…",
+  "continueTo": "Continuar a {site}"
 }

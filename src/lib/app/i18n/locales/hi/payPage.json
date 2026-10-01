@@ -137,5 +137,13 @@
   "notFound.body": "जिसने यह लिंक भेजा है, उससे जाँच लें।",
   "notFound.label": "HOLD पर किसी को भुगतान करें",
   "notFound.go": "आगे बढ़ें",
-  "notFound.badHandle": "यह HOLD हैंडल नहीं है।"
+  "notFound.badHandle": "यह HOLD हैंडल नहीं है।",
+  "testMode": "टेस्ट मोड",
+  "testModeBody": "कोई पैसा नहीं जाता। चुनें कि यह भुगतान कैसे खत्म हो।",
+  "simulatePaid": "भुगतान सफल सिम्युलेट करें",
+  "simulateFailed": "भुगतान विफल सिम्युलेट करें",
+  "simulateError": "यह नहीं हो पाया। फिर से कोशिश करें।",
+  "cancelCheckout": "रद्द करें",
+  "returningTo": "आपको {site} पर वापस ले जा रहे हैं…",
+  "continueTo": "{site} पर जाएं"
 }

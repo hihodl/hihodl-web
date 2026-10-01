@@ -137,5 +137,13 @@
   "notFound.body": "Bağlantıyı sana gönderen kişiyle kontrol et.",
   "notFound.label": "HOLD'da birine ödeme yap",
   "notFound.go": "Devam",
-  "notFound.badHandle": "Bu bir HOLD kullanıcı adı değil."
+  "notFound.badHandle": "Bu bir HOLD kullanıcı adı değil.",
+  "testMode": "Test modu",
+  "testModeBody": "Para hareket etmez. Bu ödemenin nasıl biteceğini seç.",
+  "simulatePaid": "Ödendi simüle et",
+  "simulateFailed": "Başarısız simüle et",
+  "simulateError": "Olmadı. Tekrar dene.",
+  "cancelCheckout": "İptal",
+  "returningTo": "{site} sitesine geri götürülüyorsun…",
+  "continueTo": "{site} sitesine devam et"
 }

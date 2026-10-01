@@ -137,5 +137,13 @@
   "notFound.body": "تحقق من الرابط مع من أرسله إليك.",
   "notFound.label": "ادفع لشخص على HOLD",
   "notFound.go": "متابعة",
-  "notFound.badHandle": "هذا ليس اسم مستخدم على HOLD."
+  "notFound.badHandle": "هذا ليس اسم مستخدم على HOLD.",
+  "testMode": "وضع الاختبار",
+  "testModeBody": "لا تتحرك أي أموال. اختر كيف تنتهي هذه الدفعة.",
+  "simulatePaid": "محاكاة الدفع",
+  "simulateFailed": "محاكاة الفشل",
+  "simulateError": "لم ينجح ذلك. حاول مرة أخرى.",
+  "cancelCheckout": "إلغاء",
+  "returningTo": "نعيدك إلى {site}…",
+  "continueTo": "المتابعة إلى {site}"
 }

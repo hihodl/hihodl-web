@@ -137,5 +137,13 @@
   "notFound.body": "링크를 보낸 사람에게 확인하세요.",
   "notFound.label": "HOLD에서 누군가에게 결제하기",
   "notFound.go": "계속",
-  "notFound.badHandle": "HOLD 핸들이 아닙니다."
+  "notFound.badHandle": "HOLD 핸들이 아닙니다.",
+  "testMode": "테스트 모드",
+  "testModeBody": "실제 돈은 이동하지 않아요. 이 결제가 어떻게 끝날지 고르세요.",
+  "simulatePaid": "결제 완료 시뮬레이션",
+  "simulateFailed": "실패 시뮬레이션",
+  "simulateError": "잘 되지 않았어요. 다시 시도하세요.",
+  "cancelCheckout": "취소",
+  "returningTo": "{site}(으)로 돌아가는 중…",
+  "continueTo": "{site}(으)로 계속"
 }

@@ -137,5 +137,13 @@
   "notFound.body": "Controleer de link bij wie hem stuurde.",
   "notFound.label": "Betaal iemand op HOLD",
   "notFound.go": "Doorgaan",
-  "notFound.badHandle": "Dat is geen HOLD-handle."
+  "notFound.badHandle": "Dat is geen HOLD-handle.",
+  "testMode": "Testmodus",
+  "testModeBody": "Er gaat geen geld over. Kies hoe deze betaling afloopt.",
+  "simulatePaid": "Betaald simuleren",
+  "simulateFailed": "Mislukt simuleren",
+  "simulateError": "Dat lukte niet. Probeer het opnieuw.",
+  "cancelCheckout": "Annuleren",
+  "returningTo": "We brengen je terug naar {site}…",
+  "continueTo": "Verder naar {site}"
 }

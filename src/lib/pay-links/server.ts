@@ -2,6 +2,7 @@
 import { API_BASE } from "@/lib/ad-space/config";
 import { fixtureEnabled, upstreamHeaders } from "@/lib/ad-space/server";
 
+import { CHECKOUT_ID_RE, readCheckout, type CheckoutView } from "./checkout";
 import type { PayLinkPublic, PayReceipt } from "./types";
 
 /**
@@ -83,4 +84,19 @@ export async function getReceipt(token: string, from: Headers | null): Promise<L
     return receipt ? { kind: "found", value: receipt } : { kind: "missing" };
   }
   return read(`/receipts/${encodeURIComponent(token)}`, (d) => d.receipt as PayReceipt | undefined, from);
+}
+
+/**
+ * `/pay/c/<id>`: a creator's checkout, made by their server with an API key
+ * (./checkout). A server without the route answers 404, which is a missing
+ * page, exactly like an unknown id.
+ */
+export async function getCheckout(id: string, from: Headers | null): Promise<Lookup<{ link: PayLinkPublic; checkout: CheckoutView }>> {
+  if (!CHECKOUT_ID_RE.test(id)) return { kind: "missing" };
+  if (fixtureEnabled()) {
+    const { fixtureCheckout } = await import("./fixture.dev");
+    const value = readCheckout(id, fixtureCheckout(id));
+    return value ? { kind: "found", value } : { kind: "missing" };
+  }
+  return read(`/checkout/${encodeURIComponent(id)}`, (d) => readCheckout(id, d), from);
 }

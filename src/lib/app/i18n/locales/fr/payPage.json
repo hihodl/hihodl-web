@@ -137,5 +137,13 @@
   "notFound.body": "Vérifiez le lien auprès de la personne qui vous l'a envoyé.",
   "notFound.label": "Payer quelqu'un sur HOLD",
   "notFound.go": "Continuer",
-  "notFound.badHandle": "Ce n'est pas un identifiant HOLD."
+  "notFound.badHandle": "Ce n'est pas un identifiant HOLD.",
+  "testMode": "Mode test",
+  "testModeBody": "Aucun argent ne circule. Choisis comment ce paiement se termine.",
+  "simulatePaid": "Simuler payé",
+  "simulateFailed": "Simuler un échec",
+  "simulateError": "Ça n'a pas marché. Réessaie.",
+  "cancelCheckout": "Annuler",
+  "returningTo": "Retour vers {site}…",
+  "continueTo": "Continuer vers {site}"
 }

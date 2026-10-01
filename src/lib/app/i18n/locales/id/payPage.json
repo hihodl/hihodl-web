@@ -137,5 +137,13 @@
   "notFound.body": "Periksa link ini dengan orang yang mengirimnya.",
   "notFound.label": "Bayar seseorang di HOLD",
   "notFound.go": "Lanjut",
-  "notFound.badHandle": "Itu bukan handle HOLD."
+  "notFound.badHandle": "Itu bukan handle HOLD.",
+  "testMode": "Mode uji",
+  "testModeBody": "Tidak ada uang yang berpindah. Pilih bagaimana pembayaran ini berakhir.",
+  "simulatePaid": "Simulasikan lunas",
+  "simulateFailed": "Simulasikan gagal",
+  "simulateError": "Tidak berhasil. Coba lagi.",
+  "cancelCheckout": "Batal",
+  "returningTo": "Mengantarmu kembali ke {site}…",
+  "continueTo": "Lanjut ke {site}"
 }

@@ -151,6 +151,11 @@ export interface PayLinkPublic {
   bankTransfers?: PayLinkBankTransfer[];
   /** The owner's personal link, when this one can't be paid. Absent from an older server. */
   fallback?: PayLinkFallback | null;
+  /**
+   * What a fixed price is in: USD (USDC), or EUR for a checkout priced in
+   * euros (EURC on Base; the amount is then euro cents). Absent means USD.
+   */
+  currency?: "USD" | "EUR";
 }
 
 /** A link that still says what it asks for: anything but a disabled one. */

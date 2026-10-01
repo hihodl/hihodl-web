@@ -137,5 +137,13 @@
   "notFound.body": "Hakikisha kiungo na aliyekutumia.",
   "notFound.label": "Mlipe mtu kwenye HOLD",
   "notFound.go": "Endelea",
-  "notFound.badHandle": "Hilo si jina la mtumiaji la HOLD."
+  "notFound.badHandle": "Hilo si jina la mtumiaji la HOLD.",
+  "testMode": "Hali ya majaribio",
+  "testModeBody": "Hakuna pesa inayohamishwa. Chagua jinsi malipo haya yanavyoisha.",
+  "simulatePaid": "Iga kulipwa",
+  "simulateFailed": "Iga kushindwa",
+  "simulateError": "Haikufanya kazi. Jaribu tena.",
+  "cancelCheckout": "Ghairi",
+  "returningTo": "Tunakurudisha {site}…",
+  "continueTo": "Endelea hadi {site}"
 }

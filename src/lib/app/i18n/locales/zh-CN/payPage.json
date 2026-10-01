@@ -137,5 +137,13 @@
   "notFound.body": "请向发送链接的人核实。",
   "notFound.label": "在 HOLD 上付款给某人",
   "notFound.go": "继续",
-  "notFound.badHandle": "这不是 HOLD 用户名。"
+  "notFound.badHandle": "这不是 HOLD 用户名。",
+  "testMode": "测试模式",
+  "testModeBody": "不会产生真实资金流动。选择这笔付款的结果。",
+  "simulatePaid": "模拟已付款",
+  "simulateFailed": "模拟失败",
+  "simulateError": "没有成功，请重试。",
+  "cancelCheckout": "取消",
+  "returningTo": "正在带你返回 {site}…",
+  "continueTo": "继续前往 {site}"
 }

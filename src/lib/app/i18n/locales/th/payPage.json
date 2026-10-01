@@ -137,5 +137,13 @@
   "notFound.body": "ตรวจสอบลิงก์กับผู้ที่ส่งมาให้คุณ",
   "notFound.label": "ชำระเงินให้ใครสักคนบน HOLD",
   "notFound.go": "ดำเนินการต่อ",
-  "notFound.badHandle": "นี่ไม่ใช่แฮนเดิลของ HOLD"
+  "notFound.badHandle": "นี่ไม่ใช่แฮนเดิลของ HOLD",
+  "testMode": "โหมดทดสอบ",
+  "testModeBody": "ไม่มีการโอนเงินจริง เลือกว่าการชำระเงินนี้จะจบอย่างไร",
+  "simulatePaid": "จำลองว่าชำระแล้ว",
+  "simulateFailed": "จำลองว่าล้มเหลว",
+  "simulateError": "ไม่สำเร็จ ลองอีกครั้ง",
+  "cancelCheckout": "ยกเลิก",
+  "returningTo": "กำลังพาคุณกลับไปที่ {site}…",
+  "continueTo": "ไปต่อที่ {site}"
 }

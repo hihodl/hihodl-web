@@ -45,6 +45,8 @@ import {
   rememberedCardPayment,
   startCardPayment,
 } from "@/lib/pay-links/card";
+import { siteOf, successReturnUrl, type CheckoutView } from "@/lib/pay-links/checkout";
+import { checkoutStatusNow, simulateCheckout } from "@/lib/pay-links/checkout-client";
 import { ownerName, payKeyScope } from "@/lib/pay-links/client";
 import {
   appSchemeUrl,
@@ -98,7 +100,18 @@ const APP_WAIT_MS = 1_500;
 const STABLE_MIN_CENTS = 100;
 const STABLE_MAX_CENTS = 1_000_000;
 
-export function PayPage({ state }: { state: PayPageState }) {
+/** How often a creator's checkout is read while the page waits for it to be paid, and for how long. */
+const CHECKOUT_POLL_MS = 4_000;
+const CHECKOUT_POLL_FOR_MS = 30 * 60_000;
+/** How long the paid state stays on screen before the buyer goes back to the creator's site. */
+const RETURN_AFTER_MS = 2_000;
+
+/**
+ * `checkout` is a creator's checkout (/pay/c/<id>): the page then sends the
+ * buyer back to their site once paid, offers a way back before, and in test
+ * mode shows two buttons instead of ways to pay.
+ */
+export function PayPage({ state, checkout }: { state: PayPageState; checkout?: CheckoutView }) {
   return (
     <PayI18nProvider>
       <Ground>
@@ -118,7 +131,7 @@ export function PayPage({ state }: { state: PayPageState }) {
             </div>
           </main>
         ) : (
-          <Shown link={state.link} />
+          <Shown link={state.link} checkout={checkout ?? null} />
         )}
       </Ground>
     </PayI18nProvider>
@@ -222,15 +235,18 @@ type CardPhase =
   | { kind: "paid"; payment: CardPayment }
   | { kind: "failed"; payment: CardPayment };
 
-function Shown({ link }: { link: ShownPayLink }) {
+function Shown({ link, checkout }: { link: ShownPayLink; checkout: CheckoutView | null }) {
   const t = useT();
   useFormat();
   const active = link.status === "active";
+  const testMode = checkout?.mode === "test";
   const card = link.card && link.card.methods.length && link.card.currencies.length ? link.card : null;
   const payee = ownerName(link.owner);
   const bigName = link.owner?.displayName?.trim() || payee;
   const handle = link.owner?.handle ? `@${link.owner.handle}` : null;
   const fixed = link.amount.mode === "fixed" ? link.amount.cents : null;
+  /** A checkout priced in euros: the amount is euro cents, paid in EURC, and the page stays in EUR. */
+  const pricedEur = link.currency === "EUR" && fixed !== null;
   const tokens = link.tokens?.length ? link.tokens : ["usdc"];
   // The rows the server offers on this link, and no others (an older server names none: all of them).
   const holdOffered = offers(link, "hold");
@@ -279,7 +295,7 @@ function Shown({ link }: { link: ShownPayLink }) {
   }, [fixed, stableOffered]);
 
   /* The currency: USD or EUR, the browser's region picks. */
-  const currency = picked && (CURRENCIES as readonly string[]).includes(picked) ? picked : defaultCurrency(tags, CURRENCIES);
+  const currency = pricedEur ? "EUR" : picked && (CURRENCIES as readonly string[]).includes(picked) ? picked : defaultCurrency(tags, CURRENCIES);
   useEffect(() => {
     if (currency !== "USD") void ensureRates();
   }, [currency]);
@@ -292,9 +308,10 @@ function Shown({ link }: { link: ShownPayLink }) {
   const typedMinor = fixed === null ? parseMinor(amountText, currency) : null;
   const fixedShown = useMemo(() => {
     if (fixed === null) return null;
+    if (pricedEur) return { minor: fixed, currency: "EUR" };
     const m = minorFromUsdCents(fixed, currency, rates);
     return m === null ? { minor: fixed, currency: "USD" } : { minor: m, currency };
-  }, [fixed, currency, rates]);
+  }, [fixed, currency, rates, pricedEur]);
 
   const cardMin = card?.minUsdCents ?? STABLE_MIN_CENTS;
   const openMax = link.amount.mode === "open" ? link.amount.maxCents : null;
@@ -429,6 +446,57 @@ function Shown({ link }: { link: ShownPayLink }) {
     setNotice(null);
   }
 
+  /* ── A creator's checkout: paid here (any way, or simulated) sends the buyer back ── */
+  const [checkoutPaid, setCheckoutPaid] = useState(false);
+  const [simulated, setSimulated] = useState<"idle" | "busy" | "failed" | "error">("idle");
+  const checkoutId = checkout?.id ?? null;
+  const watchCheckout = !!checkoutId && active && !checkoutPaid;
+  useEffect(() => {
+    if (!watchCheckout || !checkoutId) return;
+    let stop = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const since = Date.now();
+    const tick = async () => {
+      if (document.visibilityState === "visible") {
+        const status = await checkoutStatusNow(checkoutId);
+        if (stop) return;
+        if (status === "paid") return setCheckoutPaid(true);
+      }
+      if (Date.now() - since < CHECKOUT_POLL_FOR_MS) timer = setTimeout(tick, CHECKOUT_POLL_MS);
+    };
+    timer = setTimeout(tick, CHECKOUT_POLL_MS);
+    return () => {
+      stop = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [watchCheckout, checkoutId]);
+  useEffect(() => {
+    if (checkoutId && cardPhase.kind === "paid") setCheckoutPaid(true);
+  }, [checkoutId, cardPhase.kind]);
+  const returnTo = checkoutPaid && checkout?.successUrl ? successReturnUrl(checkout.successUrl, checkout.id) : null;
+  useEffect(() => {
+    if (!checkoutPaid) return;
+    // The paid state replaces the sheets, so the buyer sees it before leaving.
+    setSheet(null);
+    if (!returnTo) return;
+    const id = window.setTimeout(() => window.location.assign(returnTo), RETURN_AFTER_MS);
+    return () => window.clearTimeout(id);
+  }, [checkoutPaid, returnTo]);
+
+  async function simulate(outcome: "paid" | "failed") {
+    if (!checkoutId) return;
+    setSimulated("busy");
+    try {
+      await simulateCheckout(checkoutId, outcome);
+      if (outcome === "paid") {
+        setSimulated("idle");
+        setCheckoutPaid(true);
+      } else setSimulated("failed");
+    } catch {
+      setSimulated("error");
+    }
+  }
+
   /* ── HOLD: the app if it is there, the store if it isn't ── */
   const openHold = useCallback(() => {
     if (!platform) return;
@@ -462,7 +530,10 @@ function Shown({ link }: { link: ShownPayLink }) {
   /* ── Stablecoins: USDC, or EURC on Base, for the amount on the page ── */
   const token = currency === "EUR" ? "eurc" : "usdc";
   // EURC is for an open amount the payer types in euros; a fixed link is priced in dollars.
-  const stableOk = token === "usdc" ? networksFor(link, "usdc").length > 0 : tokens.includes("eurc") && fixed === null && networksFor(link, "eurc").length > 0;
+  const stableOk =
+    token === "usdc"
+      ? networksFor(link, "usdc").length > 0
+      : (tokens.includes("eurc") || pricedEur) && (fixed === null || pricedEur) && networksFor(link, "eurc").length > 0;
   const stableCents = fixed !== null ? null : typedMinor;
 
   function openStable() {
@@ -496,7 +567,7 @@ function Shown({ link }: { link: ShownPayLink }) {
   /* What the transfer is for: the fixed price (in USD, the only currency a fixed link takes by bank), or what was typed in its currency. */
   const bankAmount = (b: PayLinkBankTransfer): { shown: string; raw: string } | null => {
     let minor: number | null = null;
-    if (fixed !== null) minor = b.currency.toUpperCase() === "USD" ? fixed : null;
+    if (fixed !== null) minor = b.currency.toUpperCase() === (pricedEur ? "EUR" : "USD") ? fixed : null;
     else if (typedMinor !== null && typedMinor > 0 && currency === b.currency.toUpperCase()) minor = typedMinor;
     if (minor === null) return null;
     const d = minorDigits(b.currency);
@@ -509,6 +580,12 @@ function Shown({ link }: { link: ShownPayLink }) {
     <main className="flex flex-1 flex-col">
       {/* Who */}
       <section className="flex flex-col items-center pt-1 text-center">
+        {testMode ? (
+          <span className="mb-3 inline-flex h-7 items-center gap-1.5 rounded-[14px] bg-amber/[0.14] px-3 text-[12.5px] font-extrabold tracking-[0.2px] text-amber">
+            <Ion name="flask-outline" size={14} />
+            {t("payPage.testMode")}
+          </span>
+        ) : null}
         <OwnerFace owner={link.owner} size={64} />
         <h1 className="mt-3 flex max-w-full items-center justify-center gap-1.5 text-[22px] font-extrabold leading-[28px] tracking-[-0.4px]">
           <span className="min-w-0 break-words [overflow-wrap:anywhere]" dir="auto">
@@ -537,8 +614,12 @@ function Shown({ link }: { link: ShownPayLink }) {
         ) : null}
       </section>
 
-      {!active ? (
+      {checkoutPaid ? (
+        <CheckoutPaid payee={bigName} amount={fixed !== null ? fmtFiat(fixed / 100, pricedEur ? "EUR" : "USD") : null} returnTo={returnTo} />
+      ) : !active ? (
         <Gone link={link} payee={payee} name={bigName} />
+      ) : testMode && simulated === "failed" ? (
+        <CheckoutFailed onAgain={() => setSimulated("idle")} />
       ) : done ? (
         <CardResult phase={cardPhase} payee={bigName} onAgain={cardAgain} />
       ) : (
@@ -560,7 +641,7 @@ function Shown({ link }: { link: ShownPayLink }) {
             <div className="mt-2.5">
               <CurrencyPill
                 currency={currency}
-                choices={CURRENCIES}
+                choices={pricedEur ? (["EUR"] as const) : CURRENCIES}
                 onChange={(c) => {
                   setPicked(c);
                   setAmountText((v) => cleanAmountInput(v, c));
@@ -595,6 +676,10 @@ function Shown({ link }: { link: ShownPayLink }) {
             ) : null}
           </label>
 
+          {testMode ? (
+            <TestModePanel busy={simulated === "busy"} error={simulated === "error"} onSimulate={(o) => void simulate(o)} />
+          ) : (
+          <>
           {/* How to pay */}
           <h2 className="mb-1.5 mt-5 px-1 text-[13px] font-strong leading-[18px] text-[#9FB7C2]">{t("payPage.howToPay")}</h2>
           <div className="overflow-hidden rounded-[28px] border border-x-white/[0.07] border-b-white/[0.04] border-t-white/[0.16] bg-white/[0.06] backdrop-blur-xl">
@@ -667,6 +752,13 @@ function Shown({ link }: { link: ShownPayLink }) {
               />
             ))}
           </div>
+          </>
+          )}
+          {checkout?.cancelUrl ? (
+            <a href={successReturnUrl(checkout.cancelUrl, checkout.id, "cancelled")} className="mt-4 self-center px-3 py-1.5 text-[14px] font-bold text-[#CFE3EC] underline-offset-4 hover:text-white hover:underline">
+              {t("payPage.cancelCheckout")}
+            </a>
+          ) : null}
         </>
       )}
 
@@ -973,6 +1065,75 @@ function CardResult({ phase, payee, onAgain }: { phase: CardPhase; payee: string
           </button>
         ) : null}
       </div>
+    </section>
+  );
+}
+
+/* ── A creator's checkout: paid, failed (test), and test mode ──── */
+
+/** The paid state, then the way back to the creator's site (automatic after RETURN_AFTER_MS). */
+function CheckoutPaid({ payee, amount, returnTo }: { payee: string; amount: string | null; returnTo: string | null }) {
+  const t = useT();
+  const site = returnTo ? siteOf(returnTo) : null;
+  return (
+    <section className="mt-8 flex flex-col items-center gap-3 rounded-[28px] border border-x-white/[0.07] border-b-white/[0.04] border-t-white/[0.16] bg-white/[0.06] px-5 py-7 text-center" role="status">
+      <Ion name="checkmark-circle" size={36} className="text-[#2FBE8A]" />
+      <h2 className="text-[20px] font-extrabold tracking-[-0.3px]">{t("payPage.paidAccepted")}</h2>
+      <p className="max-w-[340px] text-[15px] leading-[21px] text-[#CFE3EC]">
+        {amount ? t("payPage.paidDone", { amount, name: payee }) : t("payPage.paidDoneNoAmount", { name: payee })}
+      </p>
+      {returnTo && site ? (
+        <>
+          <p className="text-[13px] leading-[18px] text-[#9FB7C2]">{t("payPage.returningTo", { site })}</p>
+          <a href={returnTo} className="mt-2 inline-flex h-12 w-full items-center justify-center rounded-[24px] border border-white/[0.26] bg-white/[0.14] text-[15px] font-bold text-white">
+            {t("payPage.continueTo", { site })}
+          </a>
+        </>
+      ) : null}
+    </section>
+  );
+}
+
+function CheckoutFailed({ onAgain }: { onAgain: () => void }) {
+  const t = useT();
+  return (
+    <section className="mt-8 flex flex-col items-center gap-3 rounded-[28px] border border-x-white/[0.07] border-b-white/[0.04] border-t-white/[0.16] bg-white/[0.06] px-5 py-7 text-center" role="status">
+      <Ion name="information-circle-outline" size={36} className="text-amber" />
+      <p className="max-w-[340px] text-[15px] leading-[21px] text-[#CFE3EC]">{t("payPage.paidFailed")}</p>
+      <button type="button" onClick={onAgain} className="mt-2 inline-flex h-12 w-full items-center justify-center rounded-[24px] border border-white/[0.26] bg-white/[0.14] text-[15px] font-bold text-white">
+        {t("payPage.tryAgain")}
+      </button>
+    </section>
+  );
+}
+
+/** A test checkout: no way to pay, two buttons that end it as the creator's server will see it. */
+function TestModePanel({ busy, error, onSimulate }: { busy: boolean; error: boolean; onSimulate: (o: "paid" | "failed") => void }) {
+  const t = useT();
+  return (
+    <section className="mt-5 flex flex-col gap-2.5 rounded-[28px] border border-x-white/[0.07] border-b-white/[0.04] border-t-white/[0.16] bg-white/[0.06] p-4">
+      <p className="px-1 text-[13.5px] leading-[19px] text-[#CFE3EC]">{t("payPage.testModeBody")}</p>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => onSimulate("paid")}
+        className="inline-flex h-12 w-full items-center justify-center rounded-[24px] bg-[#F1F5F9] text-[15px] font-extrabold text-[#0A1420] disabled:bg-white/[0.07] disabled:text-white/60"
+      >
+        {t("payPage.simulatePaid")}
+      </button>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => onSimulate("failed")}
+        className="inline-flex h-12 w-full items-center justify-center rounded-[24px] border border-white/[0.26] bg-white/[0.14] text-[15px] font-bold text-white disabled:bg-white/[0.07] disabled:text-white/60"
+      >
+        {t("payPage.simulateFailed")}
+      </button>
+      {error ? (
+        <p className="px-1 text-center text-[13px] leading-[18px] text-amber" role="status">
+          {t("payPage.simulateError")}
+        </p>
+      ) : null}
     </section>
   );
 }

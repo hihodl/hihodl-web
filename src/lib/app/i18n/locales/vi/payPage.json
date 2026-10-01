@@ -137,5 +137,13 @@
   "notFound.body": "Hãy kiểm tra lại với người đã gửi liên kết.",
   "notFound.label": "Thanh toán cho ai đó trên HOLD",
   "notFound.go": "Tiếp tục",
-  "notFound.badHandle": "Đó không phải là tên người dùng HOLD."
+  "notFound.badHandle": "Đó không phải là tên người dùng HOLD.",
+  "testMode": "Chế độ thử nghiệm",
+  "testModeBody": "Không có tiền nào được chuyển. Chọn cách khoản thanh toán này kết thúc.",
+  "simulatePaid": "Mô phỏng đã thanh toán",
+  "simulateFailed": "Mô phỏng thất bại",
+  "simulateError": "Không thành công. Hãy thử lại.",
+  "cancelCheckout": "Hủy",
+  "returningTo": "Đang đưa bạn trở lại {site}…",
+  "continueTo": "Tiếp tục đến {site}"
 }

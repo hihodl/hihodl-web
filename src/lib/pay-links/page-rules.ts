@@ -373,9 +373,10 @@ export function payStateUrl(
 /** The path marker before the state a wallet's browser brings back. */
 export const STATE_SEGMENT = "w";
 
-/** `/pay/<code>/w/USD-25.00-solana` as `/pay/<code>`; any other path as it is. */
+/** `/pay/<code>/w/USD-25.00-solana` as `/pay/<code>` (and `/pay/c/<id>/w/…` as `/pay/c/<id>`); any other path as it is. */
 export function payPagePath(pathname: string): string {
-  const m = pathname.match(new RegExp(`^(/pay/[^/]+)/${STATE_SEGMENT}/[^/]*/?$`));
+  // A creator's checkout is one segment deeper: /pay/c/<id>/w/….
+  const m = pathname.match(new RegExp(`^(/pay/(?:c/)?[^/]+)/${STATE_SEGMENT}/[^/]*/?$`));
   return m ? m[1] : pathname;
 }
 
@@ -406,7 +407,7 @@ export function readPayState(
 } {
   const q = new URLSearchParams(search);
   // What a wallet's browser brought back rides in the path (payStateUrl); an older page's link, in the query.
-  const inPath = pathname.match(new RegExp(`^/pay/[^/]+/${STATE_SEGMENT}/([A-Za-z]{3})-([\\d.,]+)-([a-z]+)/?$`));
+  const inPath = pathname.match(new RegExp(`^/pay/(?:c/)?[^/]+/${STATE_SEGMENT}/([A-Za-z]{3})-([\\d.,]+)-([a-z]+)/?$`));
   const amount = inPath ? (inPath[2] === "0" ? null : inPath[2]) : q.get("amount");
   const currency = (inPath ? inPath[1] : q.get("currency") ?? "").toUpperCase();
   const network = inPath ? inPath[3] : q.get("network");

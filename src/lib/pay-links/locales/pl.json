@@ -254,5 +254,13 @@
   "payPage.notFound.label": "Zapłać komuś w HOLD",
   "payPage.notFound.go": "Dalej",
   "payPage.notFound.badHandle": "To nie jest nazwa użytkownika HOLD.",
-  "home.payLinks.pay.gone.frozen": "Ten link został wstrzymany w trakcie płatności, więc na razie nie przyjmuje płatności. Nic nie zostało zapłacone."
+  "home.payLinks.pay.gone.frozen": "Ten link został wstrzymany w trakcie płatności, więc na razie nie przyjmuje płatności. Nic nie zostało zapłacone.",
+  "payPage.testMode": "Tryb testowy",
+  "payPage.testModeBody": "Żadne pieniądze nie są przesyłane. Wybierz, jak zakończy się ta płatność.",
+  "payPage.simulatePaid": "Symuluj opłacenie",
+  "payPage.simulateFailed": "Symuluj błąd",
+  "payPage.simulateError": "Nie udało się. Spróbuj ponownie.",
+  "payPage.cancelCheckout": "Anuluj",
+  "payPage.returningTo": "Wracasz do {site}…",
+  "payPage.continueTo": "Przejdź do {site}"
 }

@@ -202,3 +202,21 @@ export function fixtureReceipt(token: string): PayReceipt | null {
     link: { code: disabled ? "dsab2ed3" : "k7x2m9qa", title: disabled ? null : "Pitch deck review", owner: OWNER },
   };
 }
+
+/**
+ * A creator's checkout (/pay/c/<id>), answered the way the public route
+ * answers: `chk_test…` is a test checkout (no link behind it), `chk_eur…` is
+ * priced in euros, anything else a live $40 checkout over /pay/k7x2m9qa.
+ */
+export function fixtureCheckout(id: string): Record<string, unknown> | null {
+  if (!id.startsWith("chk_")) return null;
+  const back = { successUrl: "http://localhost:3000/thanks?from=hold", cancelUrl: "http://localhost:3000/cart", orderId: "order_1042" };
+  if (id.startsWith("chk_test")) {
+    return { ...back, mode: "test", status: "open", title: "Two prints", description: "A3, matte", amount: "40.00", currency: "USD", chains: [], owner: LINKS.k7x2m9qa.owner };
+  }
+  const link = LINKS.k7x2m9qa;
+  if (id.startsWith("chk_eur")) {
+    return { ...link, ...back, chains: ["base"], tokens: ["eurc"], amount: { mode: "fixed", cents: 2550 }, currency: "EUR", mode: "live", status: "open", description: "Two prints" };
+  }
+  return { ...link, ...back, amount: { mode: "fixed", cents: 4000 }, mode: "live", status: "open", description: "Pitch deck review, two rounds" };
+}

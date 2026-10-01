@@ -254,5 +254,13 @@
   "payPage.notFound.label": "HOLD پر کسی کو ادائیگی کریں",
   "payPage.notFound.go": "جاری رکھیں",
   "payPage.notFound.badHandle": "یہ HOLD ہینڈل نہیں ہے۔",
-  "home.payLinks.pay.gone.frozen": "آپ کے ادائیگی کرتے وقت یہ لنک روک دیا گیا، اس لیے فی الحال یہ کوئی ادائیگی قبول نہیں کرتا۔ کچھ بھی ادا نہیں کیا گیا۔"
+  "home.payLinks.pay.gone.frozen": "آپ کے ادائیگی کرتے وقت یہ لنک روک دیا گیا، اس لیے فی الحال یہ کوئی ادائیگی قبول نہیں کرتا۔ کچھ بھی ادا نہیں کیا گیا۔",
+  "payPage.testMode": "ٹیسٹ موڈ",
+  "payPage.testModeBody": "کوئی رقم منتقل نہیں ہوتی۔ چنیں کہ یہ ادائیگی کیسے ختم ہو۔",
+  "payPage.simulatePaid": "ادائیگی کی نقل کریں",
+  "payPage.simulateFailed": "ناکامی کی نقل کریں",
+  "payPage.simulateError": "یہ نہیں ہو سکا۔ دوبارہ کوشش کریں۔",
+  "payPage.cancelCheckout": "منسوخ کریں",
+  "payPage.returningTo": "آپ کو {site} پر واپس لے جا رہے ہیں…",
+  "payPage.continueTo": "{site} پر جائیں"
 }

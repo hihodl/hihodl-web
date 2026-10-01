@@ -254,5 +254,13 @@
   "payPage.notFound.label": "HOLD-এ কাউকে পেমেন্ট করুন",
   "payPage.notFound.go": "চালিয়ে যান",
   "payPage.notFound.badHandle": "এটি HOLD হ্যান্ডেল নয়।",
-  "home.payLinks.pay.gone.frozen": "আপনি পেমেন্ট করার সময় এই লিংকটি সাময়িকভাবে বন্ধ করা হয়েছে, তাই এখন এটি কোনো পেমেন্ট নেয় না। কিছুই পেমেন্ট হয়নি।"
+  "home.payLinks.pay.gone.frozen": "আপনি পেমেন্ট করার সময় এই লিংকটি সাময়িকভাবে বন্ধ করা হয়েছে, তাই এখন এটি কোনো পেমেন্ট নেয় না। কিছুই পেমেন্ট হয়নি।",
+  "payPage.testMode": "টেস্ট মোড",
+  "payPage.testModeBody": "কোনো টাকা লেনদেন হয় না। এই পেমেন্ট কীভাবে শেষ হবে তা বেছে নিন।",
+  "payPage.simulatePaid": "পেমেন্ট সফল সিমুলেট করুন",
+  "payPage.simulateFailed": "ব্যর্থ সিমুলেট করুন",
+  "payPage.simulateError": "হয়নি। আবার চেষ্টা করুন।",
+  "payPage.cancelCheckout": "বাতিল",
+  "payPage.returningTo": "আপনাকে {site}-এ ফিরিয়ে নেওয়া হচ্ছে…",
+  "payPage.continueTo": "{site}-এ যান"
 }
