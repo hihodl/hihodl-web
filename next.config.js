@@ -72,9 +72,14 @@ const nextConfig = {
       },
       // Pay links and their receipts (pay-links-v0.md): not indexed, not cached,
       // and no Referer carrying a receipt token or a link to another site.
+      // Never framed, creators' checkouts (/pay/c/<id>) included: the pay
+      // button opens a tab or a popup, and an embedded checkout is a later
+      // step with its own route. Said here as well as in the catch-all so a
+      // change there can't open these pages to framing.
       {
         source: "/pay/:path*",
         headers: [
+          { key: "X-Frame-Options", value: "DENY" },
           { key: "Cache-Control", value: "private, no-store, max-age=0" },
           { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
           { key: "Referrer-Policy", value: "no-referrer" },
@@ -129,6 +134,16 @@ const nextConfig = {
           { key: "Cache-Control", value: "private, no-store, max-age=0" },
           { key: "Referrer-Policy", value: "no-referrer" },
           { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+        ],
+      },
+      // The pay button creators paste into their sites (public/button.js).
+      // Loaded by <script> from any origin, so no CORS is involved; cached
+      // for an hour so a fix reaches every site the same day.
+      {
+        source: "/button.js",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=3600" },
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
         ],
       },
       {

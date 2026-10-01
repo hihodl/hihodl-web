@@ -48,6 +48,7 @@ import type { MessageKey } from "@/lib/app/i18n";
 import { fmtNumber } from "@/lib/app/i18n/format";
 import { useT } from "@/lib/app/i18n/react";
 
+import { PayButtonSection } from "../developers/PayButtonSection";
 import { useShellPrefs } from "../Shell";
 import { useProductHref } from "../base";
 import { BackHeader, Column, Notice, ctaPrimary, ctaSecondary, btnGlass } from "../hold";
@@ -355,6 +356,8 @@ function PayLinkDetail({ id, onBack }: { id: string; onBack: () => void }) {
           )}
         </div>
       ) : null}
+
+      {open ? <PayButtonSection link={link} /> : null}
 
       <section className="mt-4">
         <SectionLabel>{t("home.payLinks.paymentsSection", { count: fmtNumber(payments.length) })}</SectionLabel>
