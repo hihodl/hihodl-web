@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { SpacesGround } from "@/components/ad-space/ground";
+import { PreviewReady } from "@/components/ad-space/PreviewReady";
 import { SpaceBoard } from "@/components/ad-space/SpaceBoard";
+import { StudioSections } from "@/components/ad-space/StudioSections";
 import {
   BeforeYouPay,
   HowItWorks,
@@ -14,6 +16,7 @@ import {
   SpaceUpdates,
 } from "@/components/ad-space/sections";
 import { getPublicSpace } from "@/lib/ad-space/server";
+import { effectOf, effectParam, titleStyleParam } from "@/lib/ad-space/studio";
 import { PAGE_GROUND_PRESETS } from "@/lib/ad-space/theme";
 
 /**
@@ -40,6 +43,17 @@ import { PAGE_GROUND_PRESETS } from "@/lib/ad-space/theme";
  * which is backwards: you choose a background by looking at it. The parameter
  * overrides the stored ground for this render and nothing else — it is read
  * nowhere but here, and the canonical page at /s never looks at it.
+ *
+ * `?titleStyle=` and `?effect=` work the same way for the studio's title
+ * style and effect: the pending pick, for this render only.
+ *
+ * `?embed=app` IS THE APP'S WEBVIEW
+ *
+ * Inside the HOLD app the page is framed by the app's own screen, so the
+ * site's chrome goes (the footer, and the "sell your own" line written for a
+ * stranger), and once rendered it posts `{"type":"hold-preview-ready"}`
+ * through `window.ReactNativeWebView.postMessage` so the app can drop its
+ * loader. Anywhere else the message has nowhere to go and is not sent.
  *
  * Fresh every time (`revalidate: 0`): a preview that is ten seconds stale is a
  * preview of the wrong thing after every save.
@@ -74,10 +88,21 @@ export default async function ListingPreviewPage({
   if (found.kind === "missing") notFound();
 
   const override = groundParam(searchParams);
+  const titleStyle = titleStyleParam(searchParams.titleStyle);
+  const effect = effectParam(searchParams.effect);
+  const embed = searchParams.embed === "app";
+  const space =
+    found.kind === "found"
+      ? { ...found.space, ...(titleStyle ? { titleStyle } : {}), ...(effect ? { effect } : {}) }
+      : null;
 
   return (
-    <SpacesGround ground={found.kind === "found" ? override ?? found.space.pageGround ?? null : override}>
-      {found.kind === "unreachable" ? (
+    <SpacesGround
+      ground={space ? override ?? space.pageGround ?? null : override}
+      effect={space ? effectOf(space.effect) : "none"}
+    >
+      {embed && <PreviewReady />}
+      {!space ? (
         <main>
           <SpaceUnavailable />
         </main>
@@ -85,20 +110,21 @@ export default async function ListingPreviewPage({
         <>
           <main className="overflow-x-clip">
             <SpaceBoard
-              space={found.space}
-              head={<ListingHead space={found.space} />}
-              stats={<SpaceStats space={found.space} />}
+              space={space}
+              head={<ListingHead space={space} />}
+              stats={<SpaceStats space={space} />}
               details={
                 <>
-                  <BeforeYouPay space={found.space} />
-                  <HowItWorks space={found.space} />
+                  <BeforeYouPay space={space} />
+                  <StudioSections space={space} />
+                  <HowItWorks space={space} />
                 </>
               }
             />
-            <SpaceUpdates space={found.space} />
-            <SpaceInvite space={found.space} />
+            <SpaceUpdates space={space} />
+            {!embed && <SpaceInvite space={space} />}
           </main>
-          <SpaceFooter space={found.space} />
+          {!embed && <SpaceFooter space={space} />}
         </>
       )}
     </SpacesGround>
