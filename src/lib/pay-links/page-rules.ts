@@ -9,6 +9,7 @@
  */
 
 import { regionCurrency } from "../app/i18n/currencies";
+import { openOnPhone } from "../link/intent";
 import type { PayLinkAmount, PayLinkBankTransfer, PayLinkFallback, PayLinkMethod, PayLinkMethodKind, PayLinkStatus } from "./types";
 
 /* ── The device ─────────────────────────────────────────────────── */
@@ -498,4 +499,21 @@ export function payHandleOf(input: string): string | null {
 export function holdPayUrl(scheme: string, amount: string | null, currency: string): string {
   if (!amount || !scheme.startsWith("hihodl://pay/@")) return scheme;
   return `${scheme}?amount=${encodeURIComponent(amount)}&currency=${encodeURIComponent(currency)}`;
+}
+
+/** The only two app addresses a pay page hands on: `pay/@handle` and `pay/<code>`. */
+const HOLD_PAY = new RegExp(`^hihodl://pay/(@${HANDLE.source.slice(1, -1)}|${CODE.source.slice(1, -1)})$`);
+
+/**
+ * The HOLD row's address on this phone. The bare `hihodl://` scheme opens
+ * nothing when HOLD is missing, so a phone goes through the site's bridge:
+ * on Android an intent (the app, else Google Play), on an iPhone the opener
+ * at hihodl.xyz/open (the app, else the App Store). Off a phone the scheme as
+ * before. Only `pay/@handle` (with the amount `holdPayUrl` adds) and
+ * `pay/<code>` pass; anything else is null and the row is not shown.
+ */
+export function holdPayHref(scheme: string, amount: string | null, currency: string, phone: "android" | "ios" | null | undefined): string | null {
+  if (!HOLD_PAY.test(scheme)) return null;
+  const url = holdPayUrl(scheme, amount, currency);
+  return openOnPhone(url.slice("hihodl://".length), phone) ?? url;
 }
