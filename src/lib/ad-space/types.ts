@@ -577,6 +577,15 @@ export interface Space {
    * default; hold | app | night | white | #RRGGBB. Null or absent: HOLD blue.
    */
   pageGround?: string | null;
+  /**
+   * The page studio (lib/ad-space/studio.ts): the title's font, one subtle
+   * effect over the page, and the creator's sections in their order. Absent
+   * on an older server: classic, none, no sections. Read through
+   * `titleStyleOf` / `effectOf` / `sectionsOf`, never raw.
+   */
+  titleStyle?: string;
+  effect?: string;
+  sections?: unknown[];
 }
 
 export type BrandGetsLine = { kind: "reach" } | { kind: "spot" } | { kind: "text"; text: string };
@@ -701,6 +710,10 @@ export interface CreatorProfile extends CardCreator {
   xHandle: string;
   /** The ground the creator chose for their pages: hold | app | night | white | #RRGGBB. Null or absent: HOLD blue. */
   pageGround?: string | null;
+  /** The creator's line under the name, plain, at most 160. Null or absent: none. */
+  bio?: string | null;
+  /** The hub name's font (lib/ad-space/studio.ts). Absent: classic. */
+  titleStyle?: string;
 }
 
 /**

@@ -361,5 +361,7 @@
   "product.openForBids": "ouvert aux enchères",
   "product.offer": "Offre",
   "product.openToOffers": "ouvert aux offres",
-  "stats.seeMore": "Voir ce que @{handle} propose"
+  "stats.seeMore": "Voir ce que @{handle} propose",
+  "studio.audience": "Audience",
+  "studio.pastWork": "Travaux précédents"
 }
