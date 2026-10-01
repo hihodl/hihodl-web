@@ -363,5 +363,9 @@
   "product.openToOffers": "เปิดรับข้อเสนอ",
   "stats.seeMore": "ดูว่า @{handle} มีอะไรเปิดอยู่",
   "studio.audience": "ผู้ชม",
-  "studio.pastWork": "ผลงานที่ผ่านมา"
+  "studio.pastWork": "ผลงานที่ผ่านมา",
+  "studio.link": "ลิงก์",
+  "studio.text": "ข้อความ",
+  "studio.edit": "แก้ไข",
+  "studio.addStory": "เพิ่มคำอธิบายสั้นๆ"
 }

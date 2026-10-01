@@ -363,5 +363,9 @@
   "product.openToOffers": "オファー受付中",
   "stats.seeMore": "@{handle} の受付中のものを見る",
   "studio.audience": "オーディエンス",
-  "studio.pastWork": "過去の実績"
+  "studio.pastWork": "過去の実績",
+  "studio.link": "リンク",
+  "studio.text": "テキスト",
+  "studio.edit": "編集",
+  "studio.addStory": "ひとこと添える"
 }

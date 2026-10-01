@@ -129,6 +129,48 @@ export async function getPublicSpace(
   }
 }
 
+/**
+ * The creator's own read of a space, drafts included: what the app's editor
+ * draws (`/app/preview/<id>?embed=app`). `token` is the creator's Supabase
+ * access token, passed through as the bearer and nothing else: not cached
+ * (`no-store`), not logged, not kept.
+ *
+ * `owner` only when the backend says the caller IS the creator: the owner
+ * route answers a live space to anybody signed in, with `isCreator: false`,
+ * and that is the public page, not the editor.
+ */
+export type OwnerLookup =
+  | { kind: "owner"; space: Space }
+  | { kind: "auth" }
+  | { kind: "notOwner" }
+  | { kind: "unreachable" };
+
+export async function getOwnerSpace(spaceId: string, token: string, from: Headers | null): Promise<OwnerLookup> {
+  if (!UUID_RE.test(spaceId)) return { kind: "notOwner" };
+  if (fixtureEnabled()) {
+    const { fixtureSpace } = await import("./fixture.dev");
+    const space = fixtureSpace("id", spaceId);
+    return space ? { kind: "owner", space: withEventFields(space) } : { kind: "notOwner" };
+  }
+  try {
+    const res = await fetch(`${AD_SPACE_API}/spaces/${spaceId}`, {
+      headers: upstreamHeaders(from, { authorization: `Bearer ${token}` }),
+      cache: "no-store",
+      signal: AbortSignal.timeout(6_000),
+    });
+    if (res.status === 401) return { kind: "auth" };
+    if (res.status === 403 || res.status === 404) return { kind: "notOwner" };
+    if (!res.ok) return { kind: "unreachable" };
+    const body = (await res.json()) as { data?: { space?: Space & { isCreator?: boolean } } };
+    const space = body?.data?.space;
+    if (!space) return { kind: "unreachable" };
+    if (space.isCreator !== true) return { kind: "notOwner" };
+    return { kind: "owner", space: withEventFields(space) };
+  } catch {
+    return { kind: "unreachable" };
+  }
+}
+
 /** The only per-rung modes the page knows how to sell (ad-space-tiers-v0.md). */
 const SALE_MODES = new Set(["fixed", "fixed_with_offers", "offers", "bids"]);
 

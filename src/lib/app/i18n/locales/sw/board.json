@@ -363,5 +363,9 @@
   "product.openToOffers": "wazi kwa ofa",
   "stats.seeMore": "Tazama alicho nacho @{handle} wazi",
   "studio.audience": "Hadhira",
-  "studio.pastWork": "Kazi za awali"
+  "studio.pastWork": "Kazi za awali",
+  "studio.link": "Kiungo",
+  "studio.text": "Maandishi",
+  "studio.edit": "Hariri",
+  "studio.addStory": "Ongeza mstari kuhusu hili"
 }
