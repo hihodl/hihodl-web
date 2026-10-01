@@ -3,6 +3,7 @@ import { compactNumber, onTimeText, trackRecordText } from "@/lib/ad-space/forma
 import { hostOf, sectionsOf, type PageSection, type StudioLink } from "@/lib/ad-space/studio";
 import type { Space } from "@/lib/ad-space/types";
 
+import { AddSectionChips, Editable } from "./edit-mode";
 import { card, eyebrow } from "./ui";
 
 /**
@@ -16,14 +17,18 @@ import { card, eyebrow } from "./ui";
  */
 export function StudioSections({ space }: { space: Space }) {
   const sections = sectionsOf(space.sections);
-  if (sections.length === 0) return null;
+  // In the app's editor an empty page still offers its add chips; anywhere else, nothing.
+  if (sections.length === 0) return <AddSectionChips sections={sections} bare />;
   return (
     <section className="container-page pb-12 md:pb-16" aria-label={space.creator.xHandle ? `@${space.creator.xHandle}` : undefined}>
       <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
         {sections.map((s, i) => (
-          <Section key={`${s.kind}-${i}`} section={s} space={space} />
+          <Editable key={`${s.kind}-${i}`} target="section" index={i}>
+            <Section section={s} space={space} />
+          </Editable>
         ))}
       </div>
+      <AddSectionChips sections={sections} />
     </section>
   );
 }

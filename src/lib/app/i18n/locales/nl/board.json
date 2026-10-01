@@ -363,5 +363,9 @@
   "product.openToOffers": "open voor aanbiedingen",
   "stats.seeMore": "Bekijk wat @{handle} open heeft",
   "studio.audience": "Publiek",
-  "studio.pastWork": "Eerder werk"
+  "studio.pastWork": "Eerder werk",
+  "studio.link": "Link",
+  "studio.text": "Tekst",
+  "studio.edit": "Bewerken",
+  "studio.addStory": "Voeg er een regel over toe"
 }

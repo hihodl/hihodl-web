@@ -363,5 +363,9 @@
   "product.openToOffers": "ऑफ़र के लिए खुला",
   "stats.seeMore": "देखें @{handle} के पास क्या खुला है",
   "studio.audience": "दर्शक",
-  "studio.pastWork": "पिछला काम"
+  "studio.pastWork": "पिछला काम",
+  "studio.link": "लिंक",
+  "studio.text": "टेक्स्ट",
+  "studio.edit": "संपादित करें",
+  "studio.addStory": "इसके बारे में एक पंक्ति जोड़ें"
 }

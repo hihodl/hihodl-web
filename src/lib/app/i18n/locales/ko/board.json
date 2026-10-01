@@ -363,5 +363,9 @@
   "product.openToOffers": "오퍼 받음",
   "stats.seeMore": "@{handle}님이 열어 둔 항목 보기",
   "studio.audience": "오디언스",
-  "studio.pastWork": "지난 작업"
+  "studio.pastWork": "지난 작업",
+  "studio.link": "링크",
+  "studio.text": "텍스트",
+  "studio.edit": "편집",
+  "studio.addStory": "한 줄 설명 추가"
 }

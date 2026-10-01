@@ -363,5 +363,9 @@
   "product.openToOffers": "abierto a ofertas",
   "stats.seeMore": "Mira lo que tiene abierto @{handle}",
   "studio.audience": "Audiencia",
-  "studio.pastWork": "Trabajos anteriores"
+  "studio.pastWork": "Trabajos anteriores",
+  "studio.link": "Enlace",
+  "studio.text": "Texto",
+  "studio.edit": "Editar",
+  "studio.addStory": "Añade una línea sobre esto"
 }

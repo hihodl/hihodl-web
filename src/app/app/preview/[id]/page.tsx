@@ -1,23 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { SpacesGround } from "@/components/ad-space/ground";
-import { PreviewReady } from "@/components/ad-space/PreviewReady";
-import { SpaceBoard } from "@/components/ad-space/SpaceBoard";
-import { StudioSections } from "@/components/ad-space/StudioSections";
-import {
-  BeforeYouPay,
-  HowItWorks,
-  ListingHead,
-  SpaceFooter,
-  SpaceInvite,
-  SpaceStats,
-  SpaceUnavailable,
-  SpaceUpdates,
-} from "@/components/ad-space/sections";
+import { PreviewBody } from "@/components/ad-space/PreviewBody";
+import { PreviewCanvas } from "@/components/ad-space/PreviewCanvas";
+import { previewModeOf } from "@/lib/ad-space/preview-bridge";
 import { getPublicSpace } from "@/lib/ad-space/server";
-import { effectOf, effectParam, titleStyleParam } from "@/lib/ad-space/studio";
-import { PAGE_GROUND_PRESETS } from "@/lib/ad-space/theme";
+import { effectParam, groundParam, titleStyleParam } from "@/lib/ad-space/studio";
 
 /**
  * The creator's own page, before anybody else can see it.
@@ -47,13 +35,16 @@ import { PAGE_GROUND_PRESETS } from "@/lib/ad-space/theme";
  * `?titleStyle=` and `?effect=` work the same way for the studio's title
  * style and effect: the pending pick, for this render only.
  *
- * `?embed=app` IS THE APP'S WEBVIEW
+ * `?embed=app` IS THE APP'S WEBVIEW, `&edit=1` ITS EDITOR
  *
  * Inside the HOLD app the page is framed by the app's own screen, so the
  * site's chrome goes (the footer, and the "sell your own" line written for a
- * stranger), and once rendered it posts `{"type":"hold-preview-ready"}`
- * through `window.ReactNativeWebView.postMessage` so the app can drop its
- * loader. Anywhere else the message has nowhere to go and is not sent.
+ * stranger) and nothing on it acts: no checkout, no offer, no link out. The
+ * page is then drawn by `PreviewCanvas`, which loads the creator's own read
+ * (drafts included) with the app's token, makes the page tappable part by
+ * part when `edit=1`, and redraws from the app's live updates without a
+ * reload. `edit=1` means nothing without `embed=app`. The protocol, message
+ * by message, is lib/ad-space/preview-bridge.ts.
  *
  * Fresh every time (`revalidate: 0`): a preview that is ten seconds stale is a
  * preview of the wrong thing after every save.
@@ -67,14 +58,6 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-/** A preset name or a #RRGGBB. Anything else is ignored rather than drawn. */
-function groundParam(searchParams: SearchParams): string | null {
-  const g = searchParams.ground;
-  if (typeof g !== "string") return null;
-  if ((PAGE_GROUND_PRESETS as readonly string[]).includes(g)) return g;
-  return /^#[0-9a-fA-F]{6}$/.test(g) ? g : null;
-}
-
 export default async function ListingPreviewPage({
   params,
   searchParams,
@@ -85,48 +68,24 @@ export default async function ListingPreviewPage({
   // `id` as the handle is the backend's own share shape for a space whose
   // creator has no handle on record; it maps to GET /public/spaces/:id.
   const found = await getPublicSpace("id", params.id, 0);
-  if (found.kind === "missing") notFound();
+  const mode = previewModeOf(searchParams);
 
-  const override = groundParam(searchParams);
+  const ground = groundParam(searchParams.ground);
   const titleStyle = titleStyleParam(searchParams.titleStyle);
   const effect = effectParam(searchParams.effect);
-  const embed = searchParams.embed === "app";
-  const space =
-    found.kind === "found"
-      ? { ...found.space, ...(titleStyle ? { titleStyle } : {}), ...(effect ? { effect } : {}) }
-      : null;
+  const overrides = {
+    ...(ground ? { pageGround: ground } : {}),
+    ...(titleStyle ? { titleStyle } : {}),
+    ...(effect ? { effect } : {}),
+  };
 
-  return (
-    <SpacesGround
-      ground={space ? override ?? space.pageGround ?? null : override}
-      effect={space ? effectOf(space.effect) : "none"}
-    >
-      {embed && <PreviewReady />}
-      {!space ? (
-        <main>
-          <SpaceUnavailable />
-        </main>
-      ) : (
-        <>
-          <main className="overflow-x-clip">
-            <SpaceBoard
-              space={space}
-              head={<ListingHead space={space} />}
-              stats={<SpaceStats space={space} />}
-              details={
-                <>
-                  <BeforeYouPay space={space} />
-                  <StudioSections space={space} />
-                  <HowItWorks space={space} />
-                </>
-              }
-            />
-            <SpaceUpdates space={space} />
-            {!embed && <SpaceInvite space={space} />}
-          </main>
-          {!embed && <SpaceFooter space={space} />}
-        </>
-      )}
-    </SpacesGround>
-  );
+  // In the app a draft is not missing: the public read never answers for one,
+  // and the creator's own read (with the app's token) happens in the canvas.
+  if (mode !== "public") {
+    return <PreviewCanvas initial={found.kind === "found" ? found.space : null} overrides={overrides} edit={mode === "edit"} />;
+  }
+
+  if (found.kind === "missing") notFound();
+  const space = found.kind === "found" ? { ...found.space, ...overrides } : null;
+  return <PreviewBody space={space} ground={space ? space.pageGround ?? null : ground} embed={false} />;
 }

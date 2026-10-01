@@ -363,5 +363,9 @@
   "product.openToOffers": "مفتوح للعروض",
   "stats.seeMore": "اطّلع على ما لدى @{handle} متاحًا",
   "studio.audience": "الجمهور",
-  "studio.pastWork": "أعمال سابقة"
+  "studio.pastWork": "أعمال سابقة",
+  "studio.link": "رابط",
+  "studio.text": "نص",
+  "studio.edit": "تعديل",
+  "studio.addStory": "أضف سطرًا عنه"
 }
