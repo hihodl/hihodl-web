@@ -35,6 +35,7 @@
 
 import { API_BASE } from "@/lib/ad-space/config";
 import { t } from "@/lib/app/i18n";
+import { fmtDateTime } from "@/lib/app/i18n/format";
 
 import { accessToken } from "./session";
 import type { PayoutAddressView, PayoutChain, PayoutChallenge, XAccountStatus } from "./types";
@@ -174,7 +175,13 @@ export function describeCreatorError(e: unknown): string {
       return t("shell.error.network");
     case "UNAUTHORIZED":
     case "ACCOUNT_DELETED":
+    case "SESSION_REVOKED":
       return t("shell.error.signInExpired");
+    case "EMAIL_CHANGE_HOLD": {
+      // 48 hours after a login email change; the server names the end.
+      const ends = typeof e.details.ends_at === "string" ? e.details.ends_at : null;
+      return ends ? t("shell.error.emailChangeHold", { when: fmtDateTime(ends) }) : t("common.somethingWentWrong");
+    }
     case "rate_limited":
     case "RATE_LIMIT_EXCEEDED":
       return t("shell.error.rateLimited");

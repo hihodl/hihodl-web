@@ -78,6 +78,7 @@
   "hold.badgePending": "{count} beklemede",
   "error.network": "HOLD'a ulaşamadık. Bağlantını kontrol edip tekrar dene.",
   "error.signInExpired": "Oturumunun süresi doldu. Tekrar giriş yap ve kaldığın yerden devam et.",
+  "error.emailChangeHold": "Bazı güvenlik değişiklikleri {when} saatine kadar duraklatıldı.",
   "error.rateLimited": "Bir dakikada izin verdiğimizden fazla deneme yaptın. Biraz bekleyip tekrar dene.",
   "error.payoutAddressInvalid": "Bu, ödeme yapabileceğimiz bir adres değil. Cüzdanından tekrar kopyala.",
   "error.payoutChainUnknown": "Bu ağ, HiSpace'in ödeme yaptığı ağlardan biri değil.",

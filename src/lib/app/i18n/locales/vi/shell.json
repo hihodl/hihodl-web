@@ -78,6 +78,7 @@
   "hold.badgePending": "{count} đang chờ",
   "error.network": "Không kết nối được với HOLD. Hãy kiểm tra kết nối và thử lại.",
   "error.signInExpired": "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại để tiếp tục từ chỗ bạn dừng.",
+  "error.emailChangeHold": "Một số thay đổi bảo mật tạm dừng đến {when}.",
   "error.rateLimited": "Bạn đã thử quá nhiều lần trong một phút. Chờ một chút rồi thử lại.",
   "error.payoutAddressInvalid": "Chúng tôi không thể thanh toán vào địa chỉ này. Hãy sao chép lại từ ví của bạn.",
   "error.payoutChainUnknown": "HiSpace không thanh toán trên mạng này.",

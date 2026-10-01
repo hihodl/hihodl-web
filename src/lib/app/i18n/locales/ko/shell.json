@@ -78,6 +78,7 @@
   "hold.badgePending": "{count}개 대기 중",
   "error.network": "HOLD에 연결하지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요.",
   "error.signInExpired": "로그인이 만료됐어요. 다시 로그인하면 하던 곳부터 이어갈 수 있어요.",
+  "error.emailChangeHold": "일부 보안 변경이 {when}까지 일시 중지되었습니다.",
   "error.rateLimited": "1분 동안 허용된 시도 횟수를 넘었어요. 잠시 후 다시 시도해 주세요.",
   "error.payoutAddressInvalid": "지급할 수 없는 주소예요. 지갑에서 다시 복사해 주세요.",
   "error.payoutChainUnknown": "HiSpace가 지급하지 않는 네트워크예요.",
