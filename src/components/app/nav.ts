@@ -77,6 +77,7 @@ export type NavKey =
   | "esim"
   | "spaces"
   | "account"
+  | "developers"
   // Spaces
   | "overview"
   | "listings"
@@ -188,6 +189,8 @@ export const MAIN_HIDDEN: readonly NavItem[] = [
   { key: "groups", labelKey: "shell.nav.groups", path: "/payments/groups", icon: IconTeam, keywords: "groups split expenses bills share costs settle up owe owed trip flatmates crew chat" },
   // The app's pay links live behind a tile on Add money, not in a menu either.
   { key: "pay-links", labelKey: "shell.nav.payLinks", path: "/pay-links", icon: IconPayments, keywords: "pay link get paid by anyone from any wallet usdc invoice charge someone without hold" },
+  // A row of Settings: API keys, webhooks and the checkout quickstart for a creator's own site.
+  { key: "developers", labelKey: "developers.title", path: "/developers", icon: IconSettings, keywords: "developers api keys webhooks checkout integrate website store button signature" },
 ];
 
 /* ── Spaces ───────────────────────────────────────────────────────── */

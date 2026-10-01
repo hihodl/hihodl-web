@@ -13,6 +13,7 @@ import analytics from "./analytics";
 import board from "./board";
 import common from "./common";
 import creator from "./creator";
+import developers from "./developers";
 import front from "./front";
 import groupThread from "./groupThread";
 import groups from "./groups";
@@ -63,6 +64,7 @@ export const NAMESPACES = {
   stays,
   trips,
   payPage,
+  developers,
 } as const;
 
 type Namespaces = typeof NAMESPACES;
