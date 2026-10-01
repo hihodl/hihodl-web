@@ -361,5 +361,7 @@
   "product.openForBids": "wazi kwa zabuni",
   "product.offer": "Ofa",
   "product.openToOffers": "wazi kwa ofa",
-  "stats.seeMore": "Tazama alicho nacho @{handle} wazi"
+  "stats.seeMore": "Tazama alicho nacho @{handle} wazi",
+  "studio.audience": "Hadhira",
+  "studio.pastWork": "Kazi za awali"
 }

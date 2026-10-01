@@ -361,5 +361,7 @@
   "product.openForBids": "aperto alle offerte",
   "product.offer": "Proposta",
   "product.openToOffers": "aperto alle proposte",
-  "stats.seeMore": "Guarda cosa ha aperto @{handle}"
+  "stats.seeMore": "Guarda cosa ha aperto @{handle}",
+  "studio.audience": "Pubblico",
+  "studio.pastWork": "Lavori precedenti"
 }

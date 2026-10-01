@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { creatorPath } from "@/components/ad-space/creator";
 import { SpacesGround } from "@/components/ad-space/ground";
 import { SpaceBoard } from "@/components/ad-space/SpaceBoard";
+import { StudioSections } from "@/components/ad-space/StudioSections";
 import {
   BeforeYouPay,
   HowItWorks,
@@ -20,6 +21,7 @@ import { btnPrimary, eyebrow } from "@/components/ad-space/ui";
 import { t } from "@/lib/app/i18n";
 import { isSessionSpace, serviceName, spaceProgressText, spaceSoldOut } from "@/lib/ad-space/format";
 import { getPublicCreator, getPublicSpace } from "@/lib/ad-space/server";
+import { effectOf } from "@/lib/ad-space/studio";
 
 /**
  * /s/<handle>/<slug> — a creator's Ad Space, as a sponsor arriving from X
@@ -112,7 +114,10 @@ export default async function AdSpacePage({ params }: { params: Params }) {
       : null;
 
   return (
-    <SpacesGround ground={found.kind === "found" ? found.space.pageGround ?? null : null}>
+    <SpacesGround
+      ground={found.kind === "found" ? found.space.pageGround ?? null : null}
+      effect={found.kind === "found" ? effectOf(found.space.effect) : "none"}
+    >
       {found.kind === "unreachable" ? (
         <main>
           <SpaceUnavailable />
@@ -127,6 +132,7 @@ export default async function AdSpacePage({ params }: { params: Params }) {
               details={
                 <>
                   <BeforeYouPay space={found.space} />
+                  <StudioSections space={found.space} />
                   <HowItWorks space={found.space} />
                 </>
               }

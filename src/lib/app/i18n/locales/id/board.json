@@ -361,5 +361,7 @@
   "product.openForBids": "terbuka untuk bid",
   "product.offer": "Tawar",
   "product.openToOffers": "terbuka untuk tawaran",
-  "stats.seeMore": "Lihat apa yang dibuka @{handle}"
+  "stats.seeMore": "Lihat apa yang dibuka @{handle}",
+  "studio.audience": "Audiens",
+  "studio.pastWork": "Karya sebelumnya"
 }

@@ -443,6 +443,10 @@ const board = {
   "product.openForBids": "open for bids",
   "product.offer": "Offer",
   "product.openToOffers": "open to offers",
+
+  /* ── components/ad-space/StudioSections.tsx ── */
+  "studio.audience": "Audience",
+  "studio.pastWork": "Past work",
 } satisfies Record<string, string>;
 
 export default board;

@@ -361,5 +361,7 @@
   "product.openForBids": "open voor biedingen",
   "product.offer": "Aanbieding",
   "product.openToOffers": "open voor aanbiedingen",
-  "stats.seeMore": "Bekijk wat @{handle} open heeft"
+  "stats.seeMore": "Bekijk wat @{handle} open heeft",
+  "studio.audience": "Publiek",
+  "studio.pastWork": "Eerder werk"
 }

@@ -361,5 +361,7 @@
   "product.openForBids": "बोली के लिए खुला",
   "product.offer": "ऑफ़र",
   "product.openToOffers": "ऑफ़र के लिए खुला",
-  "stats.seeMore": "देखें @{handle} के पास क्या खुला है"
+  "stats.seeMore": "देखें @{handle} के पास क्या खुला है",
+  "studio.audience": "दर्शक",
+  "studio.pastWork": "पिछला काम"
 }

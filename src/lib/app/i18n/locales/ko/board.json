@@ -361,5 +361,7 @@
   "product.openForBids": "입찰 진행 중",
   "product.offer": "오퍼",
   "product.openToOffers": "오퍼 받음",
-  "stats.seeMore": "@{handle}님이 열어 둔 항목 보기"
+  "stats.seeMore": "@{handle}님이 열어 둔 항목 보기",
+  "studio.audience": "오디언스",
+  "studio.pastWork": "지난 작업"
 }

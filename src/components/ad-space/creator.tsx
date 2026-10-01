@@ -4,12 +4,14 @@ import type { ReactNode } from "react";
 import { Wordmark } from "@/components/site/Wordmark";
 import { compactNumber, eventDates, eventCountdown, onTimeText, openSpots, trackRecordNeedsAttention, usdFromCents } from "@/lib/ad-space/format";
 import { gradientCss } from "@/lib/ad-space/look";
+import { bioOf, titleStyleOf } from "@/lib/ad-space/studio";
 import { t } from "@/lib/app/i18n";
 import { fmtNumber } from "@/lib/app/i18n/format";
 import type { CreatorGroup, CreatorProfile, EventSummary, SpaceCard } from "@/lib/ad-space/types";
 
 import { BannerFrame, VerifiedTick, eventBanner } from "./events";
 import { SpacesGround } from "./ground";
+import { titleFontStyle } from "./title-fonts";
 
 /**
  * A creator's page, `/s/<handle>`, and the screens under it.
@@ -247,6 +249,7 @@ export function CreatorHero({ creator, openNow }: { creator: CreatorProfile; ope
   const record = creator.trackRecord;
   const flagged = trackRecordNeedsAttention(record);
   const disputed = Math.max(0, record.disputed ?? 0);
+  const bio = bioOf(creator.bio);
 
   return (
     <section className="container-page pb-8 pt-6 md:pb-12 md:pt-10">
@@ -254,7 +257,7 @@ export function CreatorHero({ creator, openNow }: { creator: CreatorProfile; ope
         <HeroAvatar creator={creator} />
         <div className="min-w-0">
           <h1 className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 break-words font-display text-[36px] font-light leading-[1.05] text-sp-ink [overflow-wrap:anywhere] md:text-h2">
-            <span>{name}</span>
+            <span style={titleFontStyle(titleStyleOf(creator.titleStyle))}>{name}</span>
             <VerifiedTick type={creator.xVerifiedType} />
           </h1>
           <a
@@ -265,6 +268,7 @@ export function CreatorHero({ creator, openNow }: { creator: CreatorProfile; ope
           >
             @{creator.xHandle}
           </a>
+          {bio && <p className="mt-2 max-w-xl break-words text-body text-sp-ink [overflow-wrap:anywhere]">{bio}</p>}
         </div>
       </div>
 

@@ -24,11 +24,13 @@ import {
   trackRecordText,
   usdFromCents,
 } from "@/lib/ad-space/format";
+import { titleStyleOf } from "@/lib/ad-space/studio";
 import type { Creator, Position, Space } from "@/lib/ad-space/types";
 
 import { ClosesCountdown } from "./ClosesCountdown";
 import { creatorPath, creatorScreenPath } from "./creator";
 import { SpaceSiblings } from "./events";
+import { titleFontStyle } from "./title-fonts";
 import { IfItDoesNotHappen } from "./IfItDoesNotHappen";
 import { WhatTheBrandGets } from "./WhatTheBrandGets";
 import { btnPrimary, btnSmallSecondary, card, eyebrow, rich } from "./ui";
@@ -127,7 +129,10 @@ export function ListingHead({ space }: { space: Space }) {
         <p className={`${eyebrow} break-words text-sp-amber [overflow-wrap:anywhere]`}>
           {[space.event?.name ?? space.eventName, what].filter(Boolean).join(" · ")}
         </p>
-        <h1 className="mt-3 max-w-4xl break-words font-display text-[40px] font-light leading-[1.05] text-sp-ink [overflow-wrap:anywhere] md:text-h1">
+        <h1
+          className="mt-3 max-w-4xl break-words font-display text-[40px] font-light leading-[1.05] text-sp-ink [overflow-wrap:anywhere] md:text-h1"
+          style={titleFontStyle(titleStyleOf(space.titleStyle))}
+        >
           {space.title}
         </h1>
         {space.reason && (
