@@ -982,7 +982,9 @@ function CardResult({ phase, payee, onAgain }: { phase: CardPhase; payee: string
 function Gone({ link, payee, name }: { link: ShownPayLink; payee: string; name: string }) {
   const t = useT();
   const href = fallbackHref(link);
-  const words = link.personal
+  const words = link.groupDebt
+    ? { title: t("payPage.gone.settledTitle"), body: t("payPage.gone.settledBody", { group: link.groupDebt.groupName || link.title }) }
+    : link.personal
     ? { title: t("payPage.gone.personalTitle"), body: t("payPage.gone.personalBody", { name: payee }) }
     : link.status === "paid"
       ? { title: t("payPage.gone.paidTitle"), body: t("payPage.gone.paidBody") }

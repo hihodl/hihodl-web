@@ -54,6 +54,8 @@
   "gone.expiredBody": "Artık ödeme kabul etmiyor. Onu sana gönderen kişiden yenisini iste.",
   "gone.personalTitle": "Bu bağlantı artık ödeme kabul etmiyor.",
   "gone.personalBody": "{name}'den yeni bağlantısını iste.",
+  "gone.settledTitle": "Hepsi ödendi",
+  "gone.settledBody": "{group} grubunda şu an ödenecek bir şey yok.",
   "disabledTitle": "Bu bağlantı artık kullanılamıyor.",
   "disabledBody": "Onu paylaşan kişiye para gönderme.",
   "unavailableTitle": "Bu bağlantıyı şu anda yükleyemedik.",

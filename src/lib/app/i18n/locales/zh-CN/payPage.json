@@ -54,6 +54,8 @@
   "gone.expiredBody": "它不再接受付款。请向发给你链接的人索取新的。",
   "gone.personalTitle": "此链接不再接受付款。",
   "gone.personalBody": "向 {name} 索取他们的新链接。",
+  "gone.settledTitle": "已全部结清",
+  "gone.settledBody": "{group} 目前没有待付款项。",
   "disabledTitle": "此链接已不可用。",
   "disabledBody": "请不要向分享此链接的人付款。",
   "unavailableTitle": "我们暂时无法加载此链接。",

@@ -151,6 +151,22 @@ export interface PayLinkPublic {
   bankTransfers?: PayLinkBankTransfer[];
   /** The owner's personal link, when this one can't be paid. Absent from an older server. */
   fallback?: PayLinkFallback | null;
+  /**
+   * Only on a group debt's link (what one HOLD group member owes another,
+   * sent from the group's remind): its title and amount are read live from
+   * the group. `settled` when nothing is owed now (the link reads `paid`).
+   */
+  groupDebt?: PayLinkGroupDebt | null;
+}
+
+/** A group debt, as the public read describes it. Amounts in the group's currency, minor units as a string. */
+export interface PayLinkGroupDebt {
+  groupName: string;
+  creditorName: string | null;
+  debtorName: string | null;
+  amountMinor: string;
+  currency: string;
+  settled: boolean;
 }
 
 /** A link that still says what it asks for: anything but a disabled one. */

@@ -54,6 +54,8 @@
   "gone.expiredBody": "もう支払いを受け付けていません。送ってきた相手に新しいリンクを頼んでください。",
   "gone.personalTitle": "このリンクはもう支払いを受け付けていません。",
   "gone.personalBody": "{name} に新しいリンクを頼んでください。",
+  "gone.settledTitle": "精算済み",
+  "gone.settledBody": "{group} では現在、支払うものはありません。",
   "disabledTitle": "このリンクは利用できなくなりました。",
   "disabledBody": "このリンクを共有した相手には送金しないでください。",
   "unavailableTitle": "このリンクを今読み込めませんでした。",

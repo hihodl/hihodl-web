@@ -30,6 +30,7 @@ import {
   fallbackHref,
   payHandleOf,
   cleanPrefillNote,
+  isGroupDebt,
 } from "./page-rules";
 
 let fails = 0;
@@ -130,6 +131,8 @@ eq("fallback open amount: the title only", fallbackHref({ ...dead, amount: { mod
 eq("fallback never on disabled", fallbackHref({ ...dead, status: "disabled" }), null);
 eq("fallback never on active", fallbackHref({ ...dead, status: "active" }), null);
 eq("fallback none", fallbackHref({ ...dead, fallback: null, status: "closed" }), null);
+eq("fallback: a settled group debt is never sent on", fallbackHref({ ...dead, status: "paid", groupDebt: { settled: true } }), null);
+eq("fallback: a closed group debt is never sent on", fallbackHref({ ...dead, status: "closed", groupDebt: { settled: false } }), null);
 eq("fallback: a personal link is never sent on", fallbackHref({ ...dead, personal: true, status: "closed" }), null);
 eq("fallback: path must match the handle", fallbackHref({ ...dead, fallback: { handle: "dana", path: "https://evil.example/pay/@dana" }, status: "closed" }), null);
 eq("fallback: bad handle", fallbackHref({ ...dead, fallback: { handle: "../x", path: "/pay/@../x" }, status: "closed" }), null);
@@ -139,6 +142,16 @@ eq("handle input junk", payHandleOf("dana smith"), null);
 eq("handle input empty", payHandleOf("@"), null);
 eq("hold url", holdPayUrl("hihodl://pay/@demo", "25.00", "USD"), "hihodl://pay/@demo?amount=25.00&currency=USD");
 eq("hold url bare", holdPayUrl("hihodl://pay/@demo", null, "USD"), "hihodl://pay/@demo");
+eq("hold url: a code carries nothing", holdPayUrl("hihodl://pay/ab3k9mzq", "25.00", "USD"), "hihodl://pay/ab3k9mzq");
+
+// A group debt's link: the app opens the group's Pay sheet; settled, nothing to open and nowhere to send on.
+const debt = { groupName: "Lisbon", creditorName: "Ana", debtorName: "Bea", amountMinor: "1500", currency: "EUR", settled: false };
+eq("group debt: is one", isGroupDebt({ groupDebt: debt }), true);
+eq("group debt: a plain link is not", isGroupDebt({}), false);
+eq("group debt: scheme is the code", appSchemeUrl({ code: "ab3k9mzq", personal: false, owner: { handle: "ana" }, groupDebt: debt }), "hihodl://pay/ab3k9mzq");
+eq("group debt: settled has no scheme", appSchemeUrl({ code: "ab3k9mzq", personal: false, owner: { handle: "ana" }, groupDebt: { ...debt, settled: true } }), null);
+eq("group debt: a bad code has no scheme", appSchemeUrl({ code: "../x/abc", personal: false, owner: { handle: "ana" }, groupDebt: debt }), null);
+eq("group debt: never the owner's handle", appSchemeUrl({ code: "ab3k9mzq", personal: true, owner: { handle: "ana" }, groupDebt: debt }), "hihodl://pay/ab3k9mzq");
 eq("initials verified name", initialsFor("Alex L.", "hialex"), "AL");
 eq("currency EUR region", defaultCurrency(["de-DE"], ["USD", "EUR"]), "EUR");
 eq("currency ng", defaultCurrency(["en-NG"], ["USD", "EUR"]), "USD");
