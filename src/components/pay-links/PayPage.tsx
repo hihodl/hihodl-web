@@ -674,7 +674,7 @@ function Shown({ link }: { link: ShownPayLink }) {
 
       {sheet === "hold" ? <HoldSheet pageUrl={pageUrl || `https://hihodl.xyz/pay/${link.personal && link.owner?.handle ? `@${link.owner.handle}` : link.code}`} onClose={() => setSheet(null)} /> : null}
       {sheet === "stable" && active ? (
-        <Modal onClose={() => setSheet(null)} title={t("payPage.payWithToken", { token: token === "eurc" ? "EURC" : "USDC" })} size="lg">
+        <Modal onClose={() => setSheet(null)} title={t("payPage.payWithToken", { token: token === "eurc" ? "EURC" : "USDC" })} size="lg" tall>
           <PayLinkPay link={link} token={token} amountCents={stableCents} amountText={fixed === null ? amountText : null} network={startNetwork} />
         </Modal>
       ) : null}
