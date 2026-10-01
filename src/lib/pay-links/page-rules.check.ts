@@ -23,6 +23,7 @@ import {
   payStateUrl,
   readPayState,
   holdPayUrl,
+  holdPayHref,
   offers,
   walletMethodKind,
   bankTransfersOf,
@@ -143,6 +144,43 @@ eq("handle input empty", payHandleOf("@"), null);
 eq("hold url", holdPayUrl("hihodl://pay/@demo", "25.00", "USD"), "hihodl://pay/@demo?amount=25.00&currency=USD");
 eq("hold url bare", holdPayUrl("hihodl://pay/@demo", null, "USD"), "hihodl://pay/@demo");
 eq("hold url: a code carries nothing", holdPayUrl("hihodl://pay/ab3k9mzq", "25.00", "USD"), "hihodl://pay/ab3k9mzq");
+
+// The HOLD row on a phone goes through the bridge: the app when installed, the store when not.
+eq("hold href iPhone: the opener, amount along", holdPayHref("hihodl://pay/@demo", "25.00", "USD", "ios"), "https://hihodl.xyz/open?to=pay%2F%40demo%3Famount%3D25.00%26currency%3DUSD");
+eq(
+  "hold href Android: an intent with Play behind it",
+  holdPayHref("hihodl://pay/@demo", "25.00", "USD", "android"),
+  "intent://pay/@demo?amount=25.00&currency=USD#Intent;scheme=hihodl;package=com.sayhihodl.hihodlai;S.browser_fallback_url=https%3A%2F%2Fplay.google.com%2Fstore%2Fapps%2Fdetails%3Fid%3Dcom.sayhihodl.hihodlai;end",
+);
+eq("hold href off a phone: the scheme as before", holdPayHref("hihodl://pay/@demo", "25.00", "USD", null), "hihodl://pay/@demo?amount=25.00&currency=USD");
+eq("hold href code iPhone", holdPayHref("hihodl://pay/ab3k9mzq", "25.00", "USD", "ios"), "https://hihodl.xyz/open?to=pay%2Fab3k9mzq");
+eq(
+  "hold href code Android",
+  holdPayHref("hihodl://pay/ab3k9mzq", "25.00", "USD", "android"),
+  "intent://pay/ab3k9mzq#Intent;scheme=hihodl;package=com.sayhihodl.hihodlai;S.browser_fallback_url=https%3A%2F%2Fplay.google.com%2Fstore%2Fapps%2Fdetails%3Fid%3Dcom.sayhihodl.hihodlai;end",
+);
+// Nothing else rides through.
+eq(
+  "hold href: an amount cannot add a parameter or end the intent",
+  holdPayHref("hihodl://pay/@demo", "1&to=x#Intent;scheme=https;end", "USD;end", "android")?.split("#Intent")[0],
+  "intent://pay/@demo?amount=1%26to%3Dx%23Intent%3Bscheme%3Dhttps%3Bend&currency=USD%3Bend",
+);
+for (const bad of [
+  "hihodl://withdrawals/123",
+  "hihodl://pay/@demo/../withdrawals",
+  "hihodl://pay/@demo?amount=1",
+  "hihodl://pay/@demo#x",
+  "hihodl://pay/@Demo",
+  "hihodl://pay/abcdefgi",
+  "hihodl://pay/ab3k9mzq1",
+  "hihodl://pay/",
+  "hihodl://pay/@",
+  "https://evil.example/pay/@demo",
+  "hihodl://pay/@demo\nx",
+  " hihodl://pay/@demo",
+]) {
+  eq(`hold href refuses ${JSON.stringify(bad)}`, holdPayHref(bad, "25.00", "USD", "ios"), null);
+}
 
 // A group debt's link: the app opens the group's Pay sheet; settled, nothing to open and nowhere to send on.
 const debt = { groupName: "Lisbon", creditorName: "Ana", debtorName: "Bea", amountMinor: "1500", currency: "EUR", settled: false };
