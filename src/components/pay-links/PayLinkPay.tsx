@@ -109,9 +109,10 @@ const NETWORK_LOGO: Record<Chain, string> = {
 export const WALLET_LOGO: Record<WalletLinkId | "ledger", string> = {
   hold: "/favicon.png",
   // Each wallet's own app icon, from its website (27-Sep-2026): phantom.com,
-  // solflare.com, metamask.io, wallet.coinbase.com, trustwallet.com.
+  // solflare.com, metamask.io, wallet.coinbase.com, trustwallet.com; backpack.app (30-Sep-2026).
   phantom: "/pay/wallets/phantom.png",
   solflare: "/pay/wallets/solflare.png",
+  backpack: "/pay/wallets/backpack.png",
   metamask: "/pay/wallets/metamask.png",
   coinbase: "/pay/wallets/coinbase.png",
   trust: "/pay/wallets/trust.svg",
@@ -119,10 +120,11 @@ export const WALLET_LOGO: Record<WalletLinkId | "ledger", string> = {
   ledger: "/pay/wallets/ledger.png",
 };
 /** Marks drawn without a background sit on a white tile, like their app icon. */
-export const WALLET_LOGO_INSET: Partial<Record<WalletLinkId, true>> = { metamask: true, coinbase: true, trust: true };
+export const WALLET_LOGO_INSET: Partial<Record<WalletLinkId, true>> = { backpack: true, metamask: true, coinbase: true, trust: true };
 export const WALLET_NAME: Record<Exclude<WalletLinkId, "hold">, string> = {
   phantom: "Phantom",
   solflare: "Solflare",
+  backpack: "Backpack",
   metamask: "MetaMask",
   coinbase: "Coinbase Wallet",
   trust: "Trust Wallet",
@@ -804,8 +806,9 @@ export function PayLinkPay({
   /* The choice: network, the wallet here, the code, the wallets on this phone. */
   const shownAmount = money(expectedCents);
   // Phantom and MetaMask each pay on Solana and on Base and Polygon (their docs, 28-Sep-2026).
+  // Backpack opens this page in its browser (docs.backpack.app, 30-Sep-2026); it is listed on Solana.
   // Arc takes the same four EVM wallets; Coinbase Wallet adds it by hand (docs.arc.io, 28-Sep-2026).
-  const walletLinks: WalletLinkId[] = chain === "solana" ? ["phantom", "solflare", "metamask"] : ["metamask", "phantom", "coinbase", "trust"];
+  const walletLinks: WalletLinkId[] = chain === "solana" ? ["phantom", "solflare", "backpack", "metamask"] : ["metamask", "phantom", "coinbase", "trust"];
   const scheme = appSchemeUrl(link);
   const stateUrl = pageUrl ? payStateUrl(pageUrl, { amount: amountText, currency: token === "eurc" ? "EUR" : "USD", network: chain }) : "";
   const qrText = phase.kind === "qr" ? phase.link : phase.kind === "wc" ? phase.uri : null;

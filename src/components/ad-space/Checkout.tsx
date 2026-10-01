@@ -899,14 +899,16 @@ function WalletList({
 const WALLET_LOGO: Record<ReturnType<typeof browseWalletsFor>[number], string> = {
   phantom: "/pay/wallets/phantom.png",
   solflare: "/pay/wallets/solflare.png",
+  backpack: "/pay/wallets/backpack.png",
   metamask: "/pay/wallets/metamask.png",
   coinbase: "/pay/wallets/coinbase.png",
   trust: "/pay/wallets/trust.svg",
 };
-const WALLET_LOGO_INSET: Partial<Record<ReturnType<typeof browseWalletsFor>[number], true>> = { metamask: true, coinbase: true, trust: true };
+const WALLET_LOGO_INSET: Partial<Record<ReturnType<typeof browseWalletsFor>[number], true>> = { backpack: true, metamask: true, coinbase: true, trust: true };
 const WALLET_NAME: Record<ReturnType<typeof browseWalletsFor>[number], string> = {
   phantom: "Phantom",
   solflare: "Solflare",
+  backpack: "Backpack",
   metamask: "MetaMask",
   coinbase: "Coinbase Wallet",
   trust: "Trust Wallet",

@@ -108,6 +108,7 @@ eq("avatar http", safeAvatarUrl("http://x/a.jpg"), null);
 const page = "https://hihodl.xyz/pay/@demo?amount=25.00&currency=EUR&pay=stablecoins&network=base";
 eq("phantom", walletBrowseUrl("phantom", "https://hihodl.xyz/pay/@demo?amount=5"), "https://phantom.app/ul/browse/https%3A%2F%2Fhihodl.xyz%2Fpay%2F%40demo%3Famount%3D5?ref=https%3A%2F%2Fhihodl.xyz");
 eq("solflare", walletBrowseUrl("solflare", "https://hihodl.xyz/pay/x"), "https://solflare.com/ul/v1/browse/https%3A%2F%2Fhihodl.xyz%2Fpay%2Fx?ref=https%3A%2F%2Fhihodl.xyz");
+eq("backpack", walletBrowseUrl("backpack", "https://hihodl.xyz/pay/x"), "https://backpack.app/ul/v1/browse/https%3A%2F%2Fhihodl.xyz%2Fpay%2Fx?ref=https%3A%2F%2Fhihodl.xyz");
 eq("metamask", walletBrowseUrl("metamask", "https://hihodl.xyz/pay/x?a=1"), "https://metamask.app.link/dapp/hihodl.xyz/pay/x?a=1");
 eq("coinbase", walletBrowseUrl("coinbase", "https://hihodl.xyz/pay/x"), "https://go.cb-w.com/dapp?cb_url=https%3A%2F%2Fhihodl.xyz%2Fpay%2Fx");
 eq("trust", walletBrowseUrl("trust", "https://hihodl.xyz/pay/x"), "https://link.trustwallet.com/open_url?coin_id=60&url=https%3A%2F%2Fhihodl.xyz%2Fpay%2Fx");
