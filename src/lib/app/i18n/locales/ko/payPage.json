@@ -54,6 +54,8 @@
   "gone.expiredBody": "더 이상 결제를 받지 않아요. 보낸 사람에게 새 링크를 요청하세요.",
   "gone.personalTitle": "이 링크는 더 이상 결제를 받지 않아요.",
   "gone.personalBody": "{name}님에게 새 링크를 요청하세요.",
+  "gone.settledTitle": "모두 정산됨",
+  "gone.settledBody": "지금 {group}에서 갚을 금액이 없어요.",
   "disabledTitle": "이 링크는 더 이상 사용할 수 없어요.",
   "disabledBody": "이 링크를 공유한 사람에게 돈을 보내지 마세요.",
   "unavailableTitle": "지금은 이 링크를 불러올 수 없었어요.",

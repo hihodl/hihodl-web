@@ -83,16 +83,34 @@ export function walletMethodKind(m: "applePay" | "googlePay"): "apple_pay" | "go
 /* ── Opening the app ────────────────────────────────────────────── */
 
 const HANDLE = /^[a-z0-9_.]{1,63}$/;
+/** A link code, as the server makes them (eight of 2-9 and a-z without i, l, o). */
+const CODE = /^[23456789a-hjkmnp-z]{8}$/;
+
+/** Whether this is a group debt's link (the server sends `groupDebt` only on those). */
+export function isGroupDebt(link: { groupDebt?: { settled?: unknown } | null }): boolean {
+  return Boolean(link.groupDebt && typeof link.groupDebt === "object");
+}
 
 /**
  * The app's own address for this link, or null when it has none.
  *
- * The app (release/ios-build-13, src/lib/personalPayLink.ts) reads
- * `hihodl://pay/@handle` and opens Quick Send to that handle. It takes no
- * amount and no note, and it has no route for a link code, so a code link
- * goes straight to the store.
+ * The app (src/lib/personalPayLink.ts) reads `hihodl://pay/@handle` and opens
+ * Quick Send to that handle; it takes no amount and no note. A group debt's
+ * link opens as `hihodl://pay/<code>`: the app asks the group what is owed
+ * and opens that group's Pay sheet, so the payment settles the debt in the
+ * group. A settled debt has nothing to open. Any other code link has no app
+ * route and goes straight to the store.
  */
-export function appSchemeUrl(link: { personal?: boolean; owner: { handle: string | null } | null }): string | null {
+export function appSchemeUrl(link: {
+  code?: string;
+  personal?: boolean;
+  owner: { handle: string | null } | null;
+  groupDebt?: { settled?: unknown } | null;
+}): string | null {
+  if (isGroupDebt(link)) {
+    const code = (link.code ?? "").toLowerCase();
+    return link.groupDebt?.settled !== true && CODE.test(code) ? `hihodl://pay/${code}` : null;
+  }
   const h = (link.owner?.handle ?? "").toLowerCase();
   if (!link.personal || !HANDLE.test(h)) return null;
   return `hihodl://pay/@${h}`;
@@ -440,8 +458,12 @@ export function fallbackHref(link: {
   title: string | null;
   amount: PayLinkAmount | null;
   fallback?: PayLinkFallback | null;
+  groupDebt?: { settled?: unknown } | null;
 }): string | null {
   const f = link.fallback;
+  // A group debt is paid in its group: a settled one says so, and a payment to
+  // the owner's personal link would be a transfer the group never hears of.
+  if (isGroupDebt(link)) return null;
   // A personal link is already the owner's page: sending it on would come back here.
   if (!f || link.personal || typeof f.handle !== "string" || typeof f.path !== "string") return null;
   if (!SENDS_ON.includes(link.status)) return null;
@@ -468,8 +490,12 @@ export function payHandleOf(input: string): string | null {
   return HANDLE.test(h) ? h : null;
 }
 
-/** The app's address with the amount along (the app reads the handle; the rest rides for later). */
+/**
+ * The app's address with the amount along (the app reads the handle; the rest
+ * rides for later). A link code's address carries nothing: the app reads the
+ * debt live.
+ */
 export function holdPayUrl(scheme: string, amount: string | null, currency: string): string {
-  if (!amount) return scheme;
+  if (!amount || !scheme.startsWith("hihodl://pay/@")) return scheme;
   return `${scheme}?amount=${encodeURIComponent(amount)}&currency=${encodeURIComponent(currency)}`;
 }

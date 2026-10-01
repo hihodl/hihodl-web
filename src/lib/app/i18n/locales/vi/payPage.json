@@ -54,6 +54,8 @@
   "gone.expiredBody": "Link này không nhận thêm thanh toán nữa. Hãy hỏi người gửi link cho bạn một link mới.",
   "gone.personalTitle": "Link này không nhận thêm thanh toán nữa.",
   "gone.personalBody": "Hãy hỏi {name} xin link mới của họ.",
+  "gone.settledTitle": "Đã thanh toán hết",
+  "gone.settledBody": "Hiện không còn khoản nợ nào trong {group}.",
   "disabledTitle": "Link này không còn khả dụng.",
   "disabledBody": "Đừng gửi tiền cho bất kỳ ai đã chia sẻ link này.",
   "unavailableTitle": "Chúng tôi không tải được link này ngay lúc này.",

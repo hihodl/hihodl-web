@@ -54,6 +54,8 @@
   "gone.expiredBody": "Hij accepteert geen betalingen meer. Vraag degene die hem stuurde om een nieuwe.",
   "gone.personalTitle": "Deze link accepteert geen betalingen meer.",
   "gone.personalBody": "Vraag {name} om zijn nieuwe link.",
+  "gone.settledTitle": "Alles verrekend",
+  "gone.settledBody": "Er staat nu niets open in {group}.",
   "disabledTitle": "Deze link is niet meer beschikbaar.",
   "disabledBody": "Stuur geen geld naar wie hem heeft gedeeld.",
   "unavailableTitle": "We konden deze link nu niet laden.",

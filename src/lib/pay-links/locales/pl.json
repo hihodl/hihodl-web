@@ -170,6 +170,8 @@
   "payPage.gone.expiredBody": "Nie przyjmuje już płatności. Poproś osobę, która go wysłała, o nowy.",
   "payPage.gone.personalTitle": "Ten link nie przyjmuje już płatności.",
   "payPage.gone.personalBody": "Poproś {name} o nowy link.",
+  "payPage.gone.settledTitle": "Wszystko rozliczone",
+  "payPage.gone.settledBody": "W {group} nikt teraz nic nie jest winien.",
   "payPage.disabledTitle": "Ten link nie jest już dostępny.",
   "payPage.disabledBody": "Nie wysyłaj pieniędzy osobie, która go udostępniła.",
   "payPage.unavailableTitle": "Nie udało się teraz wczytać tego linku.",
