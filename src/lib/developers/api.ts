@@ -85,7 +85,10 @@ export async function revokeKey(id: string): Promise<void> {
 }
 
 export async function listWebhooks(): Promise<DevWebhook[]> {
-  return list<DevWebhook>(await read<unknown>("developer/webhooks"), "webhooks");
+  // The server lists them as `{ endpoints }`; `{ webhooks }` is still read.
+  const body = await read<unknown>("developer/webhooks");
+  const endpoints = list<DevWebhook>(body, "endpoints");
+  return endpoints.length ? endpoints : list<DevWebhook>(body, "webhooks");
 }
 
 export async function createWebhook(url: string): Promise<NewDevWebhook> {
