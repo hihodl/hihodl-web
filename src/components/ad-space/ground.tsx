@@ -74,8 +74,8 @@ function HoldBlue() {
  *
  * `ground` is the stored value (hold | app | night | white | #RRGGBB, or
  * null); a light one re-inks everything inside through `data-sp-ground`.
- * `effect` is the page studio's one subtle layer (PageEffect.tsx), drawn on
- * the ground and under everything else; "none" or absent draws nothing.
+ * `effect` is the page studio's one subtle layer (PageEffect.tsx), drifting
+ * over the page and click-through; "none" or absent draws nothing.
  */
 export function SpacesGround({
   ground = null,

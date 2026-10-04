@@ -8,7 +8,6 @@ import { t } from "@/lib/app/i18n";
 import {
   payChainsOf,
   payChainsText,
-  VERIFIED_LABEL,
   attestationText,
   calendarDate,
   compactNumber,
@@ -30,7 +29,7 @@ import type { Creator, Position, Space } from "@/lib/ad-space/types";
 import { ClosesCountdown } from "./ClosesCountdown";
 import { Editable, StoryPlaceholder } from "./edit-mode";
 import { creatorPath, creatorScreenPath } from "./creator";
-import { SpaceSiblings } from "./events";
+import { SpaceSiblings, VerifiedTick } from "./events";
 import { titleFontStyle } from "./title-fonts";
 import { IfItDoesNotHappen } from "./IfItDoesNotHappen";
 import { WhatTheBrandGets } from "./WhatTheBrandGets";
@@ -248,6 +247,7 @@ function InspiredByCredit({ credit }: { credit: NonNullable<Space["inspiredBy"]>
 
 function CreatorChip({ creator: c }: { creator: Creator }) {
   const attention = trackRecordNeedsAttention(c.trackRecord);
+  const hasHistory = c.trackRecord.delivered + c.trackRecord.missed + Math.max(0, c.trackRecord.disputed ?? 0) > 0;
   return (
     <div className="flex min-w-0 items-center gap-3">
       <Avatar creator={c} />
@@ -258,21 +258,27 @@ function CreatorChip({ creator: c }: { creator: Creator }) {
             href={`https://x.com/i/user/${encodeURIComponent(c.xUserId)}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sp-ink/85 transition-colors duration-180 hover:text-sp-amber"
+            className="inline-flex items-center gap-1 self-center text-sp-ink/85 transition-colors duration-180 hover:text-sp-amber"
           >
             @{c.xHandle}
+            <VerifiedTick type={c.xVerifiedType} />
           </a>
         </p>
+        {/* X's verification is the tick by the handle, never a line of words;
+            and a creator with no history yet says nothing about it. */}
         <p className="text-tiny text-sp-ink/85">
           {[
             t("board.creator.followers", { followers: compactNumber(c.xFollowers) }),
-            c.xVerifiedType ? VERIFIED_LABEL[c.xVerifiedType] : null,
             c.xIdentityVerified ? t("board.creator.idVerified") : null,
           ]
             .filter(Boolean)
             .join(" · ")}
-          {" · "}
-          <span className={attention ? "text-sp-amber" : "text-sp-ink"}>{trackRecordText(c.trackRecord)}</span>
+          {hasHistory ? (
+            <>
+              {" · "}
+              <span className={attention ? "text-sp-amber" : "text-sp-ink"}>{trackRecordText(c.trackRecord)}</span>
+            </>
+          ) : null}
           {onTimeText(c.trackRecord) ? <span className="text-sp-ink">{` · ${onTimeText(c.trackRecord)}`}</span> : null}
         </p>
       </div>

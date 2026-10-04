@@ -8,9 +8,11 @@ import type { PageEffect as Effect } from "@/lib/ad-space/studio";
  * The one subtle layer a creator may put over their page: sparkles, confetti,
  * petals or snow. Off by default, and built to never be the thing you notice:
  *
- * - it sits under the content (inside the ground's stacking context, above
- *   only the ground), so every card, CTA and line of text covers it;
- * - few particles (18 to 28), low opacity, slow, and capped at 30 frames a
+ * - it drifts over the page, never under it: under the content the banner
+ *   and the cards covered it, and on a phone the creator saw no effect at
+ *   all (Alex, 4-Oct-2026). Over it, it stays click-through and soft enough
+ *   to read through;
+ * - few particles (22 to 34), half opacity, slow, and capped at 30 frames a
  *   second on a canvas no denser than 2x;
  * - nothing at all under `prefers-reduced-motion`, and the loop stops while
  *   the tab is hidden;
@@ -19,7 +21,7 @@ import type { PageEffect as Effect } from "@/lib/ad-space/studio";
 
 type P = { x: number; y: number; vx: number; vy: number; r: number; a: number; t: number; c: string };
 
-const COUNT: Record<Exclude<Effect, "none">, number> = { sparkles: 18, confetti: 24, petals: 18, snow: 28 };
+const COUNT: Record<Exclude<Effect, "none">, number> = { sparkles: 22, confetti: 28, petals: 22, snow: 34 };
 
 export function PageEffect({ effect, light = false }: { effect: Effect; light?: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -57,7 +59,7 @@ export function PageEffect({ effect, light = false }: { effect: Effect; light?: 
       y: anywhere || effect === "sparkles" ? rnd(0, h) : rnd(-40, -8),
       vx: effect === "petals" ? rnd(0.15, 0.45) : rnd(-0.12, 0.12),
       vy: effect === "sparkles" ? 0 : effect === "snow" ? rnd(0.25, 0.6) : rnd(0.45, 0.9),
-      r: effect === "snow" ? rnd(1, 2.6) : effect === "sparkles" ? rnd(1.5, 3.2) : rnd(3, 5.5),
+      r: effect === "snow" ? rnd(1.6, 3.4) : effect === "sparkles" ? rnd(2.2, 4.2) : rnd(4, 7),
       a: rnd(0, Math.PI * 2),
       t: rnd(0, Math.PI * 2),
       c: palette[Math.floor(Math.random() * palette.length)],
@@ -66,7 +68,7 @@ export function PageEffect({ effect, light = false }: { effect: Effect; light?: 
 
     const draw = (p: P) => {
       if (effect === "sparkles") {
-        const o = 0.12 + 0.28 * (0.5 + 0.5 * Math.sin(p.t));
+        const o = 0.2 + 0.5 * (0.5 + 0.5 * Math.sin(p.t));
         ctx.fillStyle = `rgba(${p.c},${o})`;
         ctx.beginPath();
         // A four-point star: two thin diamonds crossed.
@@ -81,7 +83,7 @@ export function PageEffect({ effect, light = false }: { effect: Effect; light?: 
         ctx.fill();
         return;
       }
-      ctx.fillStyle = `rgba(${p.c},${effect === "snow" ? 0.3 : 0.25})`;
+      ctx.fillStyle = `rgba(${p.c},${effect === "snow" ? 0.6 : 0.5})`;
       if (effect === "snow") {
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
@@ -147,5 +149,5 @@ export function PageEffect({ effect, light = false }: { effect: Effect; light?: 
   }, [effect, light]);
 
   if (effect === "none") return null;
-  return <canvas ref={ref} aria-hidden className="pointer-events-none fixed inset-0 -z-[5] h-full w-full" />;
+  return <canvas ref={ref} aria-hidden className="pointer-events-none fixed inset-0 z-30 h-full w-full" />;
 }
