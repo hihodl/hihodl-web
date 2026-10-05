@@ -24,6 +24,7 @@ const shell = {
   "nav.briefs": "Briefs",
   "nav.sales": "Sales",
   "nav.deliveries": "Deliveries",
+  "nav.business": "Business",
   "nav.board": "Find a spot",
   "nav.bought": "Your spots",
   "nav.team": "Team",

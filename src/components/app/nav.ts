@@ -36,6 +36,7 @@ import {
   IconAdd,
   IconBed,
   IconBriefs,
+  IconBusiness,
   IconDeliveries,
   IconGift,
   IconHome,
@@ -84,6 +85,7 @@ export type NavKey =
   | "briefs"
   | "sales"
   | "deliveries"
+  | "business"
   | "team"
   | "crew"
   | "inspire"
@@ -205,6 +207,16 @@ export const SPACES_GROUPS: readonly NavGroup[] = [
       { key: "briefs", labelKey: "shell.nav.briefs", path: "/spaces/briefs", icon: IconBriefs, roles: ALL, keywords: "brand asks open call campaign apply applications brief write a brief flight hotel covered winner" },
       { key: "sales", labelKey: "shell.nav.sales", path: "/spaces/sales", icon: IconSales, roles: ["creator"], keywords: "orders money received usdc" },
       { key: "deliveries", labelKey: "shell.nav.deliveries", path: "/spaces/deliveries", icon: IconDeliveries, roles: ALL, keywords: "work artwork approve deliver due promises" },
+      // A company's desk: profile, treasury, enquiries, invoices, who did what.
+      // Everybody: a seller's own business, or the one their seat works for.
+      {
+        key: "business",
+        labelKey: "shell.nav.business",
+        path: "/spaces/business",
+        icon: IconBusiness,
+        roles: ALL,
+        keywords: "business company profile treasury vault multisig squads enquiries inbox quotes invoices receipts csv accountant activity log audit team roles",
+      },
     ],
   },
   /*

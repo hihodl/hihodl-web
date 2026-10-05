@@ -11,6 +11,7 @@ import account from "./account";
 import activity from "./activity";
 import analytics from "./analytics";
 import board from "./board";
+import business from "./business";
 import common from "./common";
 import creator from "./creator";
 import front from "./front";
@@ -56,6 +57,7 @@ export const NAMESPACES = {
   spaces,
   listings,
   creator,
+  business,
   runner,
   board,
   offers,
