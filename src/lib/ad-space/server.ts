@@ -23,6 +23,7 @@ import type {
   SpacePhoto,
   SpaceTab,
   SponsorPage,
+  SponsorReport,
 } from "./types";
 
 /**
@@ -917,5 +918,38 @@ export async function listPublicBriefs(limit = 50): Promise<PublicBrief[]> {
     return (body?.data?.briefs ?? []).filter((b) => !!b?.slug);
   } catch {
     return [];
+  }
+}
+
+/* ── The sponsor's report, by its link ────────────────────────────────── */
+
+/** 32 random bytes, base64url, no padding (a-sponsor-gets-its-report-contract.md). */
+export const REPORT_TOKEN_RE = /^[A-Za-z0-9_-]{43}$/;
+
+export type ReportLookup =
+  | { kind: "found"; report: SponsorReport }
+  | { kind: "missing" }
+  | { kind: "unreachable" };
+
+/**
+ * `GET /public/reports/:token`, never cached: deliveries, scans and invoices
+ * keep arriving, and the answer carries signed invoice links. The token is a
+ * bearer secret (read-only), so it goes into the upstream URL and nowhere else.
+ */
+export async function getSponsorReport(token: string, from: Headers | null): Promise<ReportLookup> {
+  if (!REPORT_TOKEN_RE.test(token)) return { kind: "missing" };
+  try {
+    const res = await fetch(`${AD_SPACE_API}/public/reports/${encodeURIComponent(token)}`, {
+      headers: upstreamHeaders(from),
+      cache: "no-store",
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (res.status === 404) return { kind: "missing" };
+    if (!res.ok) return { kind: "unreachable" };
+    const body = (await res.json()) as { data?: { report?: SponsorReport } };
+    const report = body?.data?.report;
+    return report?.event && Array.isArray(report.items) ? { kind: "found", report } : { kind: "unreachable" };
+  } catch {
+    return { kind: "unreachable" };
   }
 }
