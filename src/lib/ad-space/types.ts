@@ -942,7 +942,10 @@ export interface Order {
   bank?: BankInstructions | null;
 }
 
-/** Bridge's transfer states, as the order view relays them. */
+/**
+ * Bridge's transfer states, as the order view relays them, plus `short_paid`
+ * (ours: less arrived than the order, never sold). Bridge may add others.
+ */
 export type BankState =
   | "awaiting_funds"
   | "in_review"
@@ -954,7 +957,8 @@ export type BankState =
   | "returned"
   | "refund_in_flight"
   | "refund_failed"
-  | "refunded";
+  | "refunded"
+  | "short_paid";
 
 export type BankRail = "wire" | "ach_push";
 
@@ -966,6 +970,7 @@ export interface BankInstructions {
   amount: string;
   /** The deposit message: it routes the money to this order, so it goes in the transfer. */
   reference: string;
+  /** Until when the spot is held: a guest's day, extended to a week once Bridge has the money. */
   expiresAt: string;
   payerMustBeBusiness: true;
   notFromStates: string[];

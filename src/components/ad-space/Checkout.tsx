@@ -20,7 +20,7 @@ import {
   submitAuthorizations,
 } from "@/lib/ad-space/checkout-client";
 import { bankOption, cancelBankTransfer, startBankTransfer, type BankTarget } from "@/lib/ad-space/bank-client";
-import { BANK_POLL_MS, bankErrorKey, bankShown, usdExact } from "@/lib/ad-space/bank-rules";
+import { BANK_POLL_MS, bankErrorKey, bankRequestErrorKey, bankShown, usdExact } from "@/lib/ad-space/bank-rules";
 import { loadBilling, saveOrderBilling, storeBilling } from "@/lib/ad-space/billing";
 import type { BillingDetails } from "@/lib/ad-space/billing-rules";
 import { TAKEOVER_CHAINS } from "@/lib/ad-space/config";
@@ -557,7 +557,9 @@ export function Checkout({
       setPhase({ kind: "bank", order: { ...res.order, bank: res.bank ?? res.order.bank ?? null } });
     } catch (e) {
       if (byEnquiry(e, onByEnquiry) || noLongerOnSale(e, onNoLongerOnSale)) return;
-      setNotice(explain(e, null));
+      // The guest's daily cap on bank holds has its own words; the rest as any checkout error.
+      const capped = e instanceof CheckoutError ? bankRequestErrorKey(e.code, e.status) : null;
+      setNotice(capped === "sponsor.checkout.bank.error.dailyCap" ? t(capped) : explain(e, null));
       setOfferOtherSpot(e instanceof CheckoutError && GONE_CODES.has(e.code));
       setPhase({ kind: "choose" });
     }
@@ -810,6 +812,7 @@ export function Checkout({
             bank={phase.order.bank ?? null}
             subject={subject}
             seller={`@${space.creator.xHandle}`}
+            closesAt={space.closesAt}
             cancelling={cancelling}
             onCancel={() => void cancelBank(phase.order)}
             onStartAgain={startAgain}
@@ -1537,5 +1540,5 @@ function Duplicate({ order }: { order: Order }) {
 function bankText(e: unknown, subject: "spot" | "session", min: string, tr: ReturnType<typeof useT>): string | null {
   if (!(e instanceof CheckoutError)) return null;
   const key = bankErrorKey(e.code);
-  return key ? tr(key, { subject, min }) : null;
+  return key ? tr(key, { subject, min, email: "support@hihodl.xyz" }) : null;
 }
