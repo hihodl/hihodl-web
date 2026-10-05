@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { isTieredSpace, usdFromCents } from "@/lib/ad-space/format";
+import { isPartnershipSpace, isTieredSpace, usdFromCents } from "@/lib/ad-space/format";
 import { PAY_PARAM, isPositionId } from "@/lib/ad-space/pay-here";
 import { offerModeOf } from "@/lib/ad-space/offers-client";
 import type { Position, Space } from "@/lib/ad-space/types";
@@ -24,6 +24,10 @@ import { useServerNow } from "./useServerNow";
  *
  * Anything this row cannot sell in one tap (a ladder, bidding, a closed or
  * unreadable listing) gets one link to the package's own page instead.
+ *
+ * A partnership in kind is never bought, offered on or quoted: its only button
+ * is Apply as partner, the enquiry. Should a checkout or an offer still meet
+ * its 409 `partnership_by_enquiry`, the sheet hands over to the enquiry.
  *
  * `?pay=<slot>` is the checkout's own address (its camera code, a wallet's
  * browser): it opens that slot's checkout again, as the listing page does.
@@ -47,7 +51,8 @@ export function PackageActions({ path, space }: { path: string; space: Space | n
     (best, p) => (p.priceCents !== null && (best?.priceCents == null || p.priceCents < best.priceCents) ? p : best),
     null,
   );
-  const simple = !!space && live && !isTieredSpace(space);
+  const partnership = !!space && isPartnershipSpace(space);
+  const simple = !!space && live && !partnership && !isTieredSpace(space);
   const isService = space?.template.kind === "service";
   const mode = space ? offerModeOf(space, isService ? null : cheapest ?? open[0] ?? null) : null;
   const canBuy = simple && !!cheapest && mode !== "offers" && mode !== "bids";
@@ -69,12 +74,28 @@ export function PackageActions({ path, space }: { path: string; space: Space | n
   const closeOffer = useCallback(() => setOffering(false), []);
   const closeAsk = useCallback(() => setAsking(false), []);
   const noop = useCallback(() => {}, []);
+  const toEnquiry = useCallback(() => {
+    setCheckoutFor(null);
+    setOffering(false);
+    setAsking(true);
+  }, []);
 
   if (!space || !live) {
     return (
       <Link href={path} className={btnSmallSecondary}>
         {t("publicPages.sponsor.seePackage")}
       </Link>
+    );
+  }
+
+  if (partnership) {
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" className={btnSmall} onClick={() => setAsking(true)}>
+          {t("publicPages.sponsor.applyAsPartner")}
+        </button>
+        {asking && <EnquirySheet space={space} position={null} onClose={closeAsk} onSent={noop} />}
+      </div>
     );
   }
 
@@ -99,7 +120,9 @@ export function PackageActions({ path, space }: { path: string; space: Space | n
         {t("publicPages.sponsor.getQuote")}
       </button>
 
-      {checkoutFor && <Checkout space={space} position={checkoutFor} onClose={closeCheckout} onPaid={refresh} />}
+      {checkoutFor && (
+        <Checkout space={space} position={checkoutFor} onClose={closeCheckout} onPaid={refresh} onByEnquiry={toEnquiry} />
+      )}
       {offering && (
         <OfferSheet
           space={space}
@@ -108,6 +131,7 @@ export function PackageActions({ path, space }: { path: string; space: Space | n
           now={now}
           onClose={closeOffer}
           onSent={refresh}
+          onByEnquiry={toEnquiry}
         />
       )}
       {asking && <EnquirySheet space={space} position={null} onClose={closeAsk} onSent={noop} />}

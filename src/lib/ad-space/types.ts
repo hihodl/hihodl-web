@@ -118,10 +118,17 @@ export interface Template {
      * this template's generic ones. Absent on a server older than it.
      */
     custom?: boolean;
+    /**
+     * A partnership in kind (`media-or-community-partner`): no price, no
+     * checkout, offer or quote. The brand applies in an enquiry. Absent on
+     * every other template and on an older server.
+     */
+    partnership?: boolean;
   } | null;
 }
 
-export type ServiceFormat = "content" | "session" | "production";
+/** `event_asset`: one of an event's own packages, sold by its verified host (productType `event_asset` too). */
+export type ServiceFormat = "content" | "session" | "production" | "event_asset";
 
 // Content production (spaces-content-production-v0.md): one set of types for
 // the console and the public pages, kept with the creator's listing model.
@@ -746,6 +753,8 @@ export interface SpaceCard {
   totals: { positions: number; open: number; sold: number };
   /** The lowest price a sponsor can pay right now, or null when nothing can be bought. */
   fromPriceCents: number | null;
+  /** `organiser`: one of the event's own packages, sold by its verified host. Absent on an older server. */
+  sellerRole?: "creator" | "organiser";
 }
 
 export interface EventPage {

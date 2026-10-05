@@ -118,6 +118,17 @@ export class CheckoutError extends Error {
 }
 
 /**
+ * A partnership in kind (organiser-sells-its-event-contract.md) is agreed in an
+ * enquiry: checkout, offers and quotes on it answer 409 `partnership_by_enquiry`.
+ * Hands that refusal to `onByEnquiry` when the caller can open the enquiry.
+ */
+export function byEnquiry(e: unknown, onByEnquiry: (() => void) | undefined): boolean {
+  if (!onByEnquiry || !(e instanceof CheckoutError) || e.code !== "partnership_by_enquiry") return false;
+  onByEnquiry();
+  return true;
+}
+
+/**
  * One call to our API from the browser, answering `data` or throwing a
  * CheckoutError carrying `error.code`. Shared by the HiSpace checkout, the
  * booking page and pay links.

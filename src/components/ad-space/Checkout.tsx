@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   CheckoutError,
+  byEnquiry,
   SPENT_KEY_CODES,
   checkoutKey,
   confirmOrder,
@@ -163,6 +164,7 @@ export function Checkout({
   onPaid,
   offer = null,
   quote = null,
+  onByEnquiry,
 }: {
   space: Space;
   position: Position;
@@ -172,6 +174,11 @@ export function Checkout({
   offer?: { token: string; view: OfferView } | null;
   /** An accepted seller's quote to pay, by the enquiry link's token. */
   quote?: { token: string; view: QuoteView } | null;
+  /**
+   * A partnership in kind answers 409 `partnership_by_enquiry`: nothing is
+   * paid, the brand applies in an enquiry. Called instead of a notice.
+   */
+  onByEnquiry?: () => void;
 }) {
   // Only where the creator can be paid. Taking a sold spot over is only
   // possible on the chains takeovers work on; the position view does not say
@@ -475,6 +482,7 @@ export function Checkout({
       signatureRef.current = signature;
       setPhase({ kind: "confirming", order: res.order });
     } catch (e) {
+      if (byEnquiry(e, onByEnquiry)) return;
       setNotice(explain(e, "solana"));
       setOfferOtherSpot(e instanceof CheckoutError && GONE_CODES.has(e.code));
       // A connected wallet that declined leaves the hold in place; the next
@@ -525,6 +533,7 @@ export function Checkout({
       signatureRef.current = null;
       setPhase({ kind: "confirming", order: submitted.order });
     } catch (e) {
+      if (byEnquiry(e, onByEnquiry)) return;
       const refusal = submitting ? describeAuthorizationRefusal(e, evmChain, subject) : null;
       setNotice(refusal ?? explain(e, evmChain));
       setOfferOtherSpot(
@@ -731,7 +740,9 @@ export function Checkout({
                     // Checked by the server now, so a problem is said here and not at the wallet.
                     void fileBrief(position.id, keyRef.current, body)
                       .then(() => setBrief(body))
-                      .catch((e) => setNotice(explain(e, null)))
+                      .catch((e) => {
+                        if (!byEnquiry(e, onByEnquiry)) setNotice(explain(e, null));
+                      })
                       .finally(() => setSavingBrief(false));
                   }}
                 />

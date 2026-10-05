@@ -6,6 +6,7 @@ import { type ReactNode, useCallback, useEffect, useRef, useState } from "react"
 import { currentCheckout, existingCheckoutKey } from "@/lib/ad-space/checkout-client";
 import {
   instantUtc,
+  isPartnershipSpace,
   isSessionSpace,
   isTieredSpace,
   serviceSummary,
@@ -139,6 +140,11 @@ export function SpaceBoard({
   const onAskClose = useCallback(() => setAskFor(null), []);
   const onAskSent = useCallback(() => setAsked(savedEnquiries(space.id)), [space.id]);
   const ask = useCallback((p: Position | null) => setAskFor({ position: p }), []);
+  const toEnquiry = useCallback(() => {
+    setCheckoutFor(null);
+    setOfferFor(null);
+    setAskFor({ position: null });
+  }, []);
   const onOfferSent = useCallback(() => {
     setMine(savedOffers(space.id));
     router.refresh();
@@ -150,10 +156,13 @@ export function SpaceBoard({
      on the rung and not on the space, exactly as it does on a placement. */
   const tiered = isTieredSpace(space);
   const tiers = tiered ? spaceTiers(space) : [];
-  const spaceMode = offerModeOf(space);
+  /* A partnership in kind is agreed in an enquiry, never offered on: no offer
+     mode, and a checkout that meets its 409 hands over to the enquiry. */
+  const partnership = isPartnershipSpace(space);
+  const spaceMode = partnership ? null : offerModeOf(space);
   const modeOf = useCallback(
-    (p: Position): OfferMode | null => offerModeOf(space, isService && !tiered ? null : p),
-    [space, isService, tiered],
+    (p: Position): OfferMode | null => (partnership ? null : offerModeOf(space, isService && !tiered ? null : p)),
+    [space, isService, tiered, partnership],
   );
   /** Bidding is open while the server says so and its end is still ahead on the server's clock. */
   const biddingOpen = useCallback(
@@ -361,7 +370,7 @@ export function SpaceBoard({
       )}
 
       {checkoutFor && (
-        <Checkout space={space} position={checkoutFor} onClose={onClose} onPaid={onPaid} />
+        <Checkout space={space} position={checkoutFor} onClose={onClose} onPaid={onPaid} onByEnquiry={toEnquiry} />
       )}
 
       {offerFor && (
@@ -372,6 +381,7 @@ export function SpaceBoard({
           now={now}
           onClose={onOfferClose}
           onSent={onOfferSent}
+          onByEnquiry={toEnquiry}
         />
       )}
     </>

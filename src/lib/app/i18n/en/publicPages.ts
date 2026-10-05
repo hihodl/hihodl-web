@@ -37,6 +37,7 @@ const publicPages = {
   "sponsor.buy": "Buy · {price}",
   "sponsor.makeOffer": "Make an offer",
   "sponsor.getQuote": "Get a quote",
+  "sponsor.applyAsPartner": "Apply as partner",
   "sponsor.seePackage": "See package",
   "sponsor.open": "{open} of {total} open",
   "sponsor.creatorsGoing": "Creators going",

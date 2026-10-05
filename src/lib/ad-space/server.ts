@@ -223,9 +223,6 @@ function withEventFields(space: Space): Space {
   );
   return {
     ...raw,
-    // An organiser's event package (`event_asset`) is N identical slots with
-    // no zones, which is exactly how this page draws a service.
-    ...serviceKindOf(raw),
     // With no photo to draw them on, squares are dropped too, so nothing
     // downstream can place one on the catalog drawing by mistake.
     positions: photo ? positions : positions.map((p) => (onSides.has(p.zoneKey) ? p : { ...p, rect: null })),
@@ -257,21 +254,6 @@ function withEventFields(space: Space): Space {
       platform: d.platform ?? null,
       note: d.note ?? null,
     })),
-  };
-}
-
-/**
- * `event_asset` (organiser-sells-its-event-contract.md) read as `service`, on
- * the space and on its template, so every reader that branches on the kind
- * sells an event package the way it sells slots. Nothing for any other kind.
- */
-function serviceKindOf(raw: Space): Partial<Pick<Space, "kind" | "template">> {
-  const own = (raw.kind as string) === "event_asset";
-  const tpl = raw.template && (raw.template.kind as string) === "event_asset";
-  if (!own && !tpl) return {};
-  return {
-    kind: own ? "service" : raw.kind,
-    ...(raw.template ? { template: { ...raw.template, kind: tpl ? "service" : raw.template.kind } } : {}),
   };
 }
 
@@ -390,8 +372,8 @@ export async function getPublicEvent(slug: string, revalidate = 30): Promise<Eve
   // A backend older than organiser packages sends neither key: no packages, no host.
   const packages = cardsOf(data.packages);
   const sold = new Set(packages.map((c) => c.spaceId));
-  // A package is said once, above the tabs, even if a server lists it in one too.
-  const notAPackage = (c: SpaceCard) => !sold.has(c.spaceId);
+  // A package is said once, above the tabs, never inside one.
+  const notAPackage = (c: SpaceCard) => !sold.has(c.spaceId) && c.sellerRole !== "organiser";
   const tabs = {
     ground: (data.tabs?.ground ?? []).map(withCardDefaults).filter(notAPackage),
     feed: (data.tabs?.feed ?? []).map(withCardDefaults).filter(notAPackage),
@@ -407,11 +389,12 @@ export async function getPublicEvent(slug: string, revalidate = 30): Promise<Eve
   };
 }
 
-/** Cards from an API list, or none for anything that is not one. */
+/** An organiser's package cards from an API list: a creator's card never passes for one. */
 function cardsOf(raw: unknown): SpaceCard[] {
   if (!Array.isArray(raw)) return [];
   return raw
     .filter((c): c is SpaceCard => !!c && typeof c === "object" && typeof (c as SpaceCard).spaceId === "string")
+    .filter((c) => c.sellerRole !== "creator")
     .map(withCardDefaults);
 }
 
