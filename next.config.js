@@ -70,6 +70,15 @@ const nextConfig = {
           { key: "Referrer-Policy", value: "no-referrer" },
         ],
       },
+      // A guest's conversation with a seller: its link is its only credential (spot-enquiries-contract.md).
+      {
+        source: "/e/:token*",
+        headers: [
+          { key: "Cache-Control", value: "private, no-store, max-age=0" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+          { key: "Referrer-Policy", value: "no-referrer" },
+        ],
+      },
       // Pay links and their receipts (pay-links-v0.md): not indexed, not cached,
       // and no Referer carrying a receipt token or a link to another site.
       {

@@ -1,0 +1,21 @@
+{
+  "creator.unreachableTitle": "Hatukuweza kupakia mtayarishaji huyu kwa sasa.",
+  "creator.whereTheySell": "Wanapouza",
+  "creator.nothingOnSale": "Hakuna kinachouzwa kwa sasa.",
+  "creator.listings": "Matangazo",
+  "creator.showAll": "Onyesha yote {count}",
+  "creator.missingTitle": "Hakuna kinachouzwa kwenye kiungo hiki.",
+  "creator.missingBody": "Hakikisha jina la mtumiaji na aliyekushirikisha. Huenda mtayarishaji huyu hana kitu wazi sasa, au hajawahi kufungua nafasi.",
+  "event.unreachableTitle": "Hatukuweza kupakia tukio hili kwa sasa.",
+  "event.spaces": "Nafasi",
+  "event.nobodyYet": "Bado hakuna aliyefungua nafasi kwa {event}.",
+  "event.allTaken": "Kila kitu hapa kimechukuliwa. Kichupo kingine bado kina nafasi wazi.",
+  "event.notAffiliated": "HOLD haihusiani na {event}.",
+  "event.missingTitle": "Hakuna tukio kwenye kiungo hiki.",
+  "event.missingBody": "Hakikisha kiungo na aliyekushirikisha. Ukienda kwenye tukio, unaweza kuliongeza kutoka programu ya HOLD unapofungua nafasi yako.",
+  "space.goneTitle": "Hiki hakiuzwi tena.",
+  "space.missingTitle": "Hakuna HiSpace kwenye kiungo hiki.",
+  "space.missingBody": "Hakikisha kiungo na aliyekushirikisha. Huenda bado hakijachapishwa, au kimeondolewa.",
+  "space.footerNav": "Viungo vya HiSpace",
+  "goToHold": "Nenda HOLD"
+}

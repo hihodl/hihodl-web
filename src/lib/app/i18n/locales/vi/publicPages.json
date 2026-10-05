@@ -1,0 +1,21 @@
+{
+  "creator.unreachableTitle": "Hiện chưa tải được nhà sáng tạo này.",
+  "creator.whereTheySell": "Nơi họ bán",
+  "creator.nothingOnSale": "Hiện chưa có gì đang bán.",
+  "creator.listings": "Danh sách bán",
+  "creator.showAll": "Xem tất cả {count}",
+  "creator.missingTitle": "Liên kết này không có gì đang bán.",
+  "creator.missingBody": "Hãy kiểm tra tên người dùng với người đã chia sẻ. Nhà sáng tạo này có thể hiện chưa mở gì, hoặc chưa từng mở không gian nào.",
+  "event.unreachableTitle": "Hiện chưa tải được sự kiện này.",
+  "event.spaces": "Không gian",
+  "event.nobodyYet": "Chưa ai mở không gian cho {event}.",
+  "event.allTaken": "Ở đây đã hết chỗ. Một thẻ khác vẫn còn vị trí trống.",
+  "event.notAffiliated": "HOLD không liên kết với {event}.",
+  "event.missingTitle": "Liên kết này không có sự kiện nào.",
+  "event.missingBody": "Hãy kiểm tra liên kết với người đã chia sẻ. Nếu bạn sắp đến một sự kiện, bạn có thể thêm nó từ ứng dụng HOLD khi mở không gian của mình.",
+  "space.goneTitle": "Mục này không còn bán nữa.",
+  "space.missingTitle": "Liên kết này không có HiSpace nào.",
+  "space.missingBody": "Hãy kiểm tra liên kết với người đã chia sẻ. Có thể nó chưa được đăng, hoặc đã bị gỡ.",
+  "space.footerNav": "Liên kết HiSpace",
+  "goToHold": "Đến HOLD"
+}

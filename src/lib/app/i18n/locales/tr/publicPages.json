@@ -1,0 +1,21 @@
+{
+  "creator.unreachableTitle": "Bu içerik üreticisini şu an yükleyemedik.",
+  "creator.whereTheySell": "Nerede satıyor",
+  "creator.nothingOnSale": "Şu an satışta bir şey yok.",
+  "creator.listings": "İlanlar",
+  "creator.showAll": "{count} tanesinin hepsini gör",
+  "creator.missingTitle": "Bu bağlantıda satışta bir şey yok.",
+  "creator.missingBody": "Kullanıcı adını paylaşan kişiyle kontrol et. Bu içerik üreticisinin şu an açık bir şeyi olmayabilir ya da hiç alan açmamış olabilir.",
+  "event.unreachableTitle": "Bu etkinliği şu an yükleyemedik.",
+  "event.spaces": "Alanlar",
+  "event.nobodyYet": "{event} için henüz kimse alan açmadı.",
+  "event.allTaken": "Buradakilerin hepsi alındı. Başka bir sekmede hâlâ boş yerler var.",
+  "event.notAffiliated": "HOLD, {event} ile bağlantılı değildir.",
+  "event.missingTitle": "Bu bağlantıda etkinlik yok.",
+  "event.missingBody": "Bağlantıyı paylaşan kişiyle kontrol et. Bir etkinliğe gidiyorsan, alanını açarken HOLD uygulamasından ekleyebilirsin.",
+  "space.goneTitle": "Bu artık satışta değil.",
+  "space.missingTitle": "Bu bağlantıda HiSpace yok.",
+  "space.missingBody": "Bağlantıyı paylaşan kişiyle kontrol et. Henüz yayınlanmamış ya da kaldırılmış olabilir.",
+  "space.footerNav": "HiSpace bağlantıları",
+  "goToHold": "HOLD'a git"
+}
