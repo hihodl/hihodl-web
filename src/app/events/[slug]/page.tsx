@@ -4,7 +4,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { SpacesGround } from "@/components/ad-space/ground";
 import { ProfileFooter } from "@/components/ad-space/creator";
 import { EventBanner, EventTabs, SpaceCardGrid, TAB_NAME, eventPath } from "@/components/ad-space/events";
-import { OrganiserPackages } from "@/components/ad-space/organiser";
+import { OrganiserPackages, SponsorTheWeek } from "@/components/ad-space/organiser";
 import { SlimHeader } from "@/components/ad-space/sections";
 import { eyebrow } from "@/components/ad-space/ui";
 import { SLUG_RE } from "@/lib/ad-space/config";
@@ -129,7 +129,7 @@ export default async function EventPage({
     );
   }
 
-  const { event, tabs, defaultTab, packages } = found.page;
+  const { event, tabs, defaultTab, packages, calendar } = found.page;
   const active = tabParam(searchParams) ?? defaultTab;
   // The host's own packages, above the creators, only when a verified host sells some.
   const organiser = packages.length > 0 ? event.organiser ?? null : null;
@@ -143,6 +143,11 @@ export default async function EventPage({
       <SlimHeader language={language} />
       <main>
         <EventBanner event={event} now={now} />
+        {calendar && calendar.packages > 0 && (
+          <div className="container-page pt-10 md:pt-14">
+            <SponsorTheWeek calendar={calendar} />
+          </div>
+        )}
         {organiser && (
           <div className="container-page pt-10 md:pt-14">
             <OrganiserPackages organiser={organiser} packages={packages} spaces={spaces} now={now} />

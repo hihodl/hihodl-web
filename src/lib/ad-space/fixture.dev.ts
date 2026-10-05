@@ -1443,7 +1443,7 @@ export function fixtureEvents(): EventSummary[] {
   return [TOKEN2049, BREAKPOINT, DEVCON];
 }
 
-export function fixtureEvent(slug: string): Omit<EventPage, "packages"> | { redirectTo: string } | null {
+export function fixtureEvent(slug: string): Omit<EventPage, "packages" | "calendar"> | { redirectTo: string } | null {
   // As the API computes it: open spots on live spaces, feed 15 to ground 13.
   if (slug === TOKEN2049.slug) return { event: TOKEN2049, tabs: token2049Tabs(), defaultTab: "feed" };
   if (slug === DEVCON.slug) return { event: DEVCON, tabs: devconTabs(), defaultTab: "ground" };
