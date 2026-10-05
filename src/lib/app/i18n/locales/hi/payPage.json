@@ -54,6 +54,8 @@
   "gone.expiredBody": "यह अब पेमेंट नहीं लेता। जिसने भी यह भेजा, उनसे नया लिंक माँगें।",
   "gone.personalTitle": "यह लिंक अब पेमेंट नहीं लेता।",
   "gone.personalBody": "{name} से उनका नया लिंक माँगें।",
+  "gone.settledTitle": "सब चुकता",
+  "gone.settledBody": "{group} में अभी कुछ भी बकाया नहीं है।",
   "disabledTitle": "यह लिंक अब उपलब्ध नहीं है।",
   "disabledBody": "जिसने भी इसे शेयर किया, उसे पैसे न भेजें।",
   "unavailableTitle": "हम अभी यह लिंक लोड नहीं कर सके।",

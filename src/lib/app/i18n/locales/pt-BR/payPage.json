@@ -54,6 +54,8 @@
   "gone.expiredBody": "Ele não aceita mais pagamentos. Peça um novo a quem enviou.",
   "gone.personalTitle": "Este link não aceita mais pagamentos.",
   "gone.personalBody": "Peça a {name} o novo link.",
+  "gone.settledTitle": "Tudo acertado",
+  "gone.settledBody": "Nada está pendente em {group} agora.",
   "disabledTitle": "Este link não está mais disponível.",
   "disabledBody": "Não envie dinheiro para quem compartilhou este link.",
   "unavailableTitle": "Não conseguimos carregar este link agora.",

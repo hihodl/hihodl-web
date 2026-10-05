@@ -170,6 +170,8 @@
   "payPage.gone.expiredBody": "এটি আর কোনো পেমেন্ট নেয় না। যিনি এটি পাঠিয়েছেন তার কাছে একটি নতুন লিঙ্ক চান।",
   "payPage.gone.personalTitle": "এই লিঙ্ক আর কোনো পেমেন্ট নেয় না।",
   "payPage.gone.personalBody": "{name}-এর কাছে তাদের নতুন লিঙ্কটি চান।",
+  "payPage.gone.settledTitle": "সব মিটে গেছে",
+  "payPage.gone.settledBody": "এই মুহূর্তে {group}-এ কোনো বকেয়া নেই।",
   "payPage.disabledTitle": "এই লিঙ্কটি আর উপলব্ধ নেই।",
   "payPage.disabledBody": "যিনি এটি শেয়ার করেছেন তাকে টাকা পাঠাবেন না।",
   "payPage.unavailableTitle": "আমরা এখন এই লিঙ্কটি লোড করতে পারিনি।",

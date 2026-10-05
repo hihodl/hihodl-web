@@ -17,7 +17,14 @@
  *
  * `size="full"` is a whole screen on a phone (the add-expense flow, as the app
  * pushes a screen) and a tall dialog on a desktop. `bare` drops the surface
- * for a viewer that brings its own (the receipt).
+ * for a viewer that brings its own (the receipt). `tall` opens a phone sheet
+ * at one height whatever it holds, for a sheet whose content changes with
+ * where it is opened (the pay sheet: one button inside a wallet, the list of
+ * wallets anywhere else).
+ *
+ * A phone sheet keeps at least 16px under its last button: a wallet's in-app
+ * browser (Phantom, 1-Oct-2026) reports no bottom safe area, and the button
+ * sat on the screen's edge.
  *
  * Colours are the app's; nothing here is red.
  */
@@ -95,6 +102,7 @@ export function Modal({
   bare = false,
   showClose = true,
   label,
+  tall = false,
 }: {
   onClose: () => void;
   /** The heading, centred under the handle as in the app. */
@@ -110,6 +118,8 @@ export function Modal({
   showClose?: boolean;
   /** The accessible name when there is no title. */
   label?: string;
+  /** A phone sheet that opens at one height, whatever it holds. */
+  tall?: boolean;
 }) {
   const t = useT();
   const id = useId();
@@ -287,7 +297,7 @@ export function Modal({
           transition: dragging ? "none" : `transform ${phase === "out" ? CLOSE_MS : OPEN_MS}ms ${EASE}, opacity ${phase === "out" ? CLOSE_MS : 260}ms ease`,
         }}
         className={`relative flex w-full flex-col overflow-hidden outline-none ${WIDTH[size]} ${surface} ${
-          full ? "h-[100dvh] sm:h-[min(820px,90dvh)] sm:rounded-[24px]" : "max-h-[92dvh] rounded-t-[28px] pb-[env(safe-area-inset-bottom)] sm:max-h-[88dvh] sm:rounded-[24px] sm:pb-0"
+          full ? "h-[100dvh] sm:h-[min(820px,90dvh)] sm:rounded-[24px]" : `max-h-[92dvh] rounded-t-[28px] pb-[max(env(safe-area-inset-bottom),16px)] sm:max-h-[88dvh] sm:rounded-[24px] sm:pb-0 ${tall ? "max-sm:h-[min(600px,82dvh)]" : ""}`
         } ${bare ? "bg-transparent" : "sm:border sm:border-white/[0.1]"} ${
           shown ? "opacity-100" : `${full ? "translate-y-[6%]" : "translate-y-full"} opacity-100 sm:translate-y-3 sm:scale-[0.98] sm:opacity-0`
         } motion-reduce:!transition-none`}

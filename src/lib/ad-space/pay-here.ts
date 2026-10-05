@@ -48,6 +48,6 @@ export function holdSpotUrl(pathname: string, positionId: string): string | null
 }
 
 /** The wallets a phone opens this page in, per network: the ones a payer there most likely has. */
-export function browseWalletsFor(chain: Chain): ("phantom" | "solflare" | "metamask" | "coinbase" | "trust")[] {
-  return chain === "solana" ? ["phantom", "solflare"] : ["metamask", "coinbase", "trust"];
+export function browseWalletsFor(chain: Chain): ("phantom" | "solflare" | "backpack" | "metamask" | "coinbase" | "trust")[] {
+  return chain === "solana" ? ["phantom", "solflare", "backpack"] : ["metamask", "coinbase", "trust"];
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 
 import { productUrl } from "@/lib/app/paths";
@@ -8,6 +8,9 @@ import { APP_STORE_URL, PLAY_STORE_URL } from "@/lib/appLinks";
 
 export default function InviteRedirect() {
   const { code } = useParams<{ code: string }>();
+  // Set when the link is a group's join link: the page then stays up with an
+  // "Open the group" button instead of leaving for the store.
+  const [groupLink, setGroupLink] = useState<string | null>(null);
 
   useEffect(() => {
     if (!code) return;
@@ -34,6 +37,20 @@ export default function InviteRedirect() {
     if (seat && /^[A-Za-z0-9_-]{16,128}$/.test(seat)) {
       const q = new URLSearchParams({ seat });
       window.location.replace(productUrl(`/spaces/team?${q.toString()}`));
+      return;
+    }
+
+    // A group's join link is the sharer's invite link with `?group=<code>`.
+    // The deep link carries it into the app. Someone without HOLD has no app
+    // to open, and a store install drops every parameter, so for a group the
+    // page never leaves for the store on its own: it stays up with the store
+    // buttons and an "Open the group" button that works once HOLD is installed.
+    const group = new URLSearchParams(window.location.search).get("group");
+    if (group && /^[A-Za-z0-9]{10,32}$/.test(group)) {
+      const q = new URLSearchParams({ group });
+      const deepLink = `hihodl://invite/${encodeURIComponent(code)}?${q.toString()}`;
+      setGroupLink(deepLink);
+      window.location.href = deepLink;
       return;
     }
 
@@ -94,7 +111,7 @@ export default function InviteRedirect() {
         </svg>
       </div>
       <h1 style={{ fontSize: 28, fontWeight: 900, marginBottom: 8 }}>
-        You&apos;ve been invited to HOLD
+        {groupLink ? "You\u2019re invited to a group on HOLD" : "You\u2019ve been invited to HOLD"}
       </h1>
       <p
         style={{
@@ -104,12 +121,38 @@ export default function InviteRedirect() {
           maxWidth: 400,
         }}
       >
-        Your friend invited you to join HOLD, the gasless stablecoin wallet.
-        Sign up and swap $50 or more within 14 days, and you both get HiPoints.
+        {groupLink ? (
+          <>
+            Split the bill and pay your share in dollars, straight from your
+            phone. Get HOLD, then come back to this page and tap Open the group.
+          </>
+        ) : (
+          <>
+            Your friend invited you to join HOLD, the gasless stablecoin wallet.
+            Sign up and swap $50 or more within 14 days, and you both get HiPoints.
+          </>
+        )}
       </p>
-      <p style={{ fontSize: 14, color: "rgba(255,255,255,0.4)" }}>
-        Redirecting to the app...
-      </p>
+      {groupLink ? (
+        <a
+          href={groupLink}
+          style={{
+            padding: "14px 28px",
+            backgroundColor: "#FFB703",
+            borderRadius: 14,
+            color: "#0A1929",
+            textDecoration: "none",
+            fontSize: 16,
+            fontWeight: 800,
+          }}
+        >
+          Open the group
+        </a>
+      ) : (
+        <p style={{ fontSize: 14, color: "rgba(255,255,255,0.4)" }}>
+          Redirecting to the app...
+        </p>
+      )}
       <div style={{ marginTop: 32, display: "flex", gap: 16 }}>
         <a
           href={APP_STORE_URL}

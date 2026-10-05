@@ -54,6 +54,8 @@
   "gone.expiredBody": "لم يعد يقبل مدفوعات. اطلب من مُرسله رابطاً جديداً.",
   "gone.personalTitle": "لم يعد هذا الرابط يقبل مدفوعات.",
   "gone.personalBody": "اطلب من {name} رابطه الجديد.",
+  "gone.settledTitle": "تمت التسوية بالكامل",
+  "gone.settledBody": "لا يوجد أي مبلغ مستحق في {group} حاليًا.",
   "disabledTitle": "هذا الرابط لم يعد متاحاً.",
   "disabledBody": "لا ترسل مالاً لمن شاركه معك.",
   "unavailableTitle": "تعذّر علينا تحميل هذا الرابط الآن.",

@@ -78,6 +78,7 @@
   "hold.badgePending": "{count} in behandeling",
   "error.network": "We konden HOLD niet bereiken. Controleer je verbinding en probeer het opnieuw.",
   "error.signInExpired": "Je sessie is verlopen. Log opnieuw in en ga verder waar je gebleven was.",
+  "error.emailChangeHold": "Sommige beveiligingswijzigingen staan op pauze tot {when}.",
   "error.rateLimited": "Dat zijn meer pogingen dan we per minuut toestaan. Wacht even en probeer het opnieuw.",
   "error.payoutAddressInvalid": "Naar dat adres kunnen we niet betalen. Kopieer het opnieuw uit je wallet.",
   "error.payoutChainUnknown": "HiSpace betaalt niet uit op dat netwerk.",

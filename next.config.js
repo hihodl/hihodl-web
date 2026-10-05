@@ -80,6 +80,17 @@ const nextConfig = {
           { key: "Referrer-Policy", value: "no-referrer" },
         ],
       },
+      // The undo link a changed login email's OLD address gets
+      // (change-your-login-email-spec): its token undoes the change, so the
+      // same treatment as a manage link.
+      {
+        source: "/account/undo-email",
+        headers: [
+          { key: "Cache-Control", value: "private, no-store, max-age=0" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+          { key: "Referrer-Policy", value: "no-referrer" },
+        ],
+      },
       // A phone-link address carries a session id and its public key
       // (link-your-phone-and-approved-withdrawals.md): not cached, not
       // indexed, no Referer. Both spellings: app.hihodl.xyz/link/… is

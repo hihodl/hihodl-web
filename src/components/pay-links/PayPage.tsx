@@ -268,11 +268,15 @@ function Shown({ link }: { link: ShownPayLink }) {
     if (back.stablecoins && stableOffered && !link.recurring) setSheet("stable");
     // A link that can't be paid sends its title here as the note; the payer can change it.
     if (back.note) setNote(back.note);
-    // The address stays the link; what came back is on the screen now.
+    // What came in the query is on the screen now, so the address drops it.
     for (const k of ["amount", "currency", "pay", "network", "note"]) url.searchParams.delete(k);
-    url.pathname = payPagePath(url.pathname);
+    const bare = new URL(url.href);
+    bare.pathname = payPagePath(url.pathname);
+    // What a wallet's browser brought in the PATH stays in the address: those
+    // browsers reload the page (after a connect, back from the background, a
+    // restored tab), and a reload of the bare link opened with nothing typed.
     if (url.href !== window.location.href) window.history.replaceState(null, "", url.href);
-    setPageUrl(url.href.split("#")[0]);
+    setPageUrl(bare.href.split("#")[0]);
     return () => again.forEach((id) => window.clearTimeout(id));
   }, [fixed, stableOffered, link.recurring]);
 
@@ -675,7 +679,7 @@ function Shown({ link }: { link: ShownPayLink }) {
 
       {sheet === "hold" ? <HoldSheet pageUrl={pageUrl || `https://hihodl.xyz/pay/${link.personal && link.owner?.handle ? `@${link.owner.handle}` : link.code}`} onClose={() => setSheet(null)} /> : null}
       {sheet === "stable" && active && !link.recurring ? (
-        <Modal onClose={() => setSheet(null)} title={t("payPage.payWithToken", { token: token === "eurc" ? "EURC" : "USDC" })} size="lg">
+        <Modal onClose={() => setSheet(null)} title={t("payPage.payWithToken", { token: token === "eurc" ? "EURC" : "USDC" })} size="lg" tall>
           <PayLinkPay link={link} token={token} amountCents={stableCents} amountText={fixed === null ? amountText : null} network={startNetwork} />
         </Modal>
       ) : null}
@@ -983,7 +987,9 @@ function CardResult({ phase, payee, onAgain }: { phase: CardPhase; payee: string
 function Gone({ link, payee, name }: { link: ShownPayLink; payee: string; name: string }) {
   const t = useT();
   const href = fallbackHref(link);
-  const words = link.personal
+  const words = link.groupDebt
+    ? { title: t("payPage.gone.settledTitle"), body: t("payPage.gone.settledBody", { group: link.groupDebt.groupName || link.title }) }
+    : link.personal
     ? { title: t("payPage.gone.personalTitle"), body: t("payPage.gone.personalBody", { name: payee }) }
     : link.status === "paid"
       ? { title: t("payPage.gone.paidTitle"), body: t("payPage.gone.paidBody") }

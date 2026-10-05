@@ -78,6 +78,7 @@
   "hold.badgePending": "{count} menunggu",
   "error.network": "Kami tidak bisa terhubung ke HOLD. Cek koneksimu lalu coba lagi.",
   "error.signInExpired": "Sesi masukmu sudah habis. Masuk lagi dan lanjutkan dari tempat terakhir.",
+  "error.emailChangeHold": "Beberapa perubahan keamanan dijeda sampai {when}.",
   "error.rateLimited": "Terlalu banyak percobaan dalam satu menit. Tunggu sebentar lalu coba lagi.",
   "error.payoutAddressInvalid": "Itu bukan alamat yang bisa kami bayar. Salin lagi dari dompetmu.",
   "error.payoutChainUnknown": "HiSpace tidak membayar di jaringan itu.",

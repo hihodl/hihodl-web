@@ -78,6 +78,7 @@
   "hold.badgePending": "{count} 项待处理",
   "error.network": "无法连接到 HOLD。请检查网络连接后重试。",
   "error.signInExpired": "你的登录已过期。请重新登录，继续刚才的操作。",
+  "error.emailChangeHold": "部分安全更改已暂停，直到 {when}。",
   "error.rateLimited": "一分钟内尝试次数过多。请稍等片刻再试。",
   "error.payoutAddressInvalid": "这不是我们可以付款的地址。请从你的钱包重新复制。",
   "error.payoutChainUnknown": "HiSpace 不在该网络上付款。",

@@ -23,6 +23,7 @@ import {
   payStateUrl,
   readPayState,
   holdPayUrl,
+  holdPayHref,
   offers,
   walletMethodKind,
   bankTransfersOf,
@@ -30,6 +31,7 @@ import {
   fallbackHref,
   payHandleOf,
   cleanPrefillNote,
+  isGroupDebt,
 } from "./page-rules";
 
 let fails = 0;
@@ -108,11 +110,13 @@ eq("avatar http", safeAvatarUrl("http://x/a.jpg"), null);
 const page = "https://hihodl.xyz/pay/@demo?amount=25.00&currency=EUR&pay=stablecoins&network=base";
 eq("phantom", walletBrowseUrl("phantom", "https://hihodl.xyz/pay/@demo?amount=5"), "https://phantom.app/ul/browse/https%3A%2F%2Fhihodl.xyz%2Fpay%2F%40demo%3Famount%3D5?ref=https%3A%2F%2Fhihodl.xyz");
 eq("solflare", walletBrowseUrl("solflare", "https://hihodl.xyz/pay/x"), "https://solflare.com/ul/v1/browse/https%3A%2F%2Fhihodl.xyz%2Fpay%2Fx?ref=https%3A%2F%2Fhihodl.xyz");
+eq("backpack", walletBrowseUrl("backpack", "https://hihodl.xyz/pay/x"), "https://backpack.app/ul/v1/browse/https%3A%2F%2Fhihodl.xyz%2Fpay%2Fx?ref=https%3A%2F%2Fhihodl.xyz");
 eq("metamask", walletBrowseUrl("metamask", "https://hihodl.xyz/pay/x?a=1"), "https://metamask.app.link/dapp/hihodl.xyz/pay/x?a=1");
 eq("coinbase", walletBrowseUrl("coinbase", "https://hihodl.xyz/pay/x"), "https://go.cb-w.com/dapp?cb_url=https%3A%2F%2Fhihodl.xyz%2Fpay%2Fx");
 eq("trust", walletBrowseUrl("trust", "https://hihodl.xyz/pay/x"), "https://link.trustwallet.com/open_url?coin_id=60&url=https%3A%2F%2Fhihodl.xyz%2Fpay%2Fx");
 eq("state url", payStateUrl("https://hihodl.xyz/pay/@demo?amount=1#x", { amount: "25.00", currency: "EUR", network: "base" }), page);
 eq("state read", readPayState(new URL(page).search), { amount: "25.00", currency: "EUR", stablecoins: true, network: "base", note: null });
+eq("state read arc", readPayState("?amount=5&currency=USD&network=arc").network, "arc");
 eq("state read junk", readPayState("?amount=1e9&currency=GBP&network=eth"), { amount: null, currency: null, stablecoins: false, network: null, note: null });
 eq("state read note", readPayState("?amount=150.00&currency=USD&note=Pitch%20deck%20review").note, "Pitch deck review");
 eq("note: controls and overrides go", cleanPrefillNote("a\u202Eb\nc\u0000d"), "a b c d");
@@ -128,6 +132,8 @@ eq("fallback open amount: the title only", fallbackHref({ ...dead, amount: { mod
 eq("fallback never on disabled", fallbackHref({ ...dead, status: "disabled" }), null);
 eq("fallback never on active", fallbackHref({ ...dead, status: "active" }), null);
 eq("fallback none", fallbackHref({ ...dead, fallback: null, status: "closed" }), null);
+eq("fallback: a settled group debt is never sent on", fallbackHref({ ...dead, status: "paid", groupDebt: { settled: true } }), null);
+eq("fallback: a closed group debt is never sent on", fallbackHref({ ...dead, status: "closed", groupDebt: { settled: false } }), null);
 eq("fallback: a personal link is never sent on", fallbackHref({ ...dead, personal: true, status: "closed" }), null);
 eq("fallback: path must match the handle", fallbackHref({ ...dead, fallback: { handle: "dana", path: "https://evil.example/pay/@dana" }, status: "closed" }), null);
 eq("fallback: bad handle", fallbackHref({ ...dead, fallback: { handle: "../x", path: "/pay/@../x" }, status: "closed" }), null);
@@ -137,6 +143,53 @@ eq("handle input junk", payHandleOf("dana smith"), null);
 eq("handle input empty", payHandleOf("@"), null);
 eq("hold url", holdPayUrl("hihodl://pay/@demo", "25.00", "USD"), "hihodl://pay/@demo?amount=25.00&currency=USD");
 eq("hold url bare", holdPayUrl("hihodl://pay/@demo", null, "USD"), "hihodl://pay/@demo");
+eq("hold url: a code carries nothing", holdPayUrl("hihodl://pay/ab3k9mzq", "25.00", "USD"), "hihodl://pay/ab3k9mzq");
+
+// The HOLD row on a phone goes through the bridge: the app when installed, the store when not.
+eq("hold href iPhone: the opener, amount along", holdPayHref("hihodl://pay/@demo", "25.00", "USD", "ios"), "https://hihodl.xyz/open?to=pay%2F%40demo%3Famount%3D25.00%26currency%3DUSD");
+eq(
+  "hold href Android: an intent with Play behind it",
+  holdPayHref("hihodl://pay/@demo", "25.00", "USD", "android"),
+  "intent://pay/@demo?amount=25.00&currency=USD#Intent;scheme=hihodl;package=com.sayhihodl.hihodlai;S.browser_fallback_url=https%3A%2F%2Fplay.google.com%2Fstore%2Fapps%2Fdetails%3Fid%3Dcom.sayhihodl.hihodlai;end",
+);
+eq("hold href off a phone: the scheme as before", holdPayHref("hihodl://pay/@demo", "25.00", "USD", null), "hihodl://pay/@demo?amount=25.00&currency=USD");
+eq("hold href code iPhone", holdPayHref("hihodl://pay/ab3k9mzq", "25.00", "USD", "ios"), "https://hihodl.xyz/open?to=pay%2Fab3k9mzq");
+eq(
+  "hold href code Android",
+  holdPayHref("hihodl://pay/ab3k9mzq", "25.00", "USD", "android"),
+  "intent://pay/ab3k9mzq#Intent;scheme=hihodl;package=com.sayhihodl.hihodlai;S.browser_fallback_url=https%3A%2F%2Fplay.google.com%2Fstore%2Fapps%2Fdetails%3Fid%3Dcom.sayhihodl.hihodlai;end",
+);
+// Nothing else rides through.
+eq(
+  "hold href: an amount cannot add a parameter or end the intent",
+  holdPayHref("hihodl://pay/@demo", "1&to=x#Intent;scheme=https;end", "USD;end", "android")?.split("#Intent")[0],
+  "intent://pay/@demo?amount=1%26to%3Dx%23Intent%3Bscheme%3Dhttps%3Bend&currency=USD%3Bend",
+);
+for (const bad of [
+  "hihodl://withdrawals/123",
+  "hihodl://pay/@demo/../withdrawals",
+  "hihodl://pay/@demo?amount=1",
+  "hihodl://pay/@demo#x",
+  "hihodl://pay/@Demo",
+  "hihodl://pay/abcdefgi",
+  "hihodl://pay/ab3k9mzq1",
+  "hihodl://pay/",
+  "hihodl://pay/@",
+  "https://evil.example/pay/@demo",
+  "hihodl://pay/@demo\nx",
+  " hihodl://pay/@demo",
+]) {
+  eq(`hold href refuses ${JSON.stringify(bad)}`, holdPayHref(bad, "25.00", "USD", "ios"), null);
+}
+
+// A group debt's link: the app opens the group's Pay sheet; settled, nothing to open and nowhere to send on.
+const debt = { groupName: "Lisbon", creditorName: "Ana", debtorName: "Bea", amountMinor: "1500", currency: "EUR", settled: false };
+eq("group debt: is one", isGroupDebt({ groupDebt: debt }), true);
+eq("group debt: a plain link is not", isGroupDebt({}), false);
+eq("group debt: scheme is the code", appSchemeUrl({ code: "ab3k9mzq", personal: false, owner: { handle: "ana" }, groupDebt: debt }), "hihodl://pay/ab3k9mzq");
+eq("group debt: settled has no scheme", appSchemeUrl({ code: "ab3k9mzq", personal: false, owner: { handle: "ana" }, groupDebt: { ...debt, settled: true } }), null);
+eq("group debt: a bad code has no scheme", appSchemeUrl({ code: "../x/abc", personal: false, owner: { handle: "ana" }, groupDebt: debt }), null);
+eq("group debt: never the owner's handle", appSchemeUrl({ code: "ab3k9mzq", personal: true, owner: { handle: "ana" }, groupDebt: debt }), "hihodl://pay/ab3k9mzq");
 eq("initials verified name", initialsFor("Alex L.", "hialex"), "AL");
 eq("currency EUR region", defaultCurrency(["de-DE"], ["USD", "EUR"]), "EUR");
 eq("currency ng", defaultCurrency(["en-NG"], ["USD", "EUR"]), "USD");

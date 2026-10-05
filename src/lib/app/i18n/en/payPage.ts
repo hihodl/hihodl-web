@@ -81,6 +81,8 @@ const payPage = {
   "gone.frozenBody": "It takes no payments for now.",
   "gone.personalTitle": "This link takes no more payments.",
   "gone.personalBody": "Ask {name} for their new one.",
+  "gone.settledTitle": "All settled",
+  "gone.settledBody": "Nothing is owed in {group} right now.",
   "disabledTitle": "This link is no longer available.",
   "disabledBody": "Don't send money to whoever shared it.",
   "unavailableTitle": "We couldn't load this link just now.",

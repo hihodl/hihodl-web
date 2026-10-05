@@ -4,7 +4,7 @@
  * Built on the HiSpace public checkout: the same `X-Checkout-Key` (made per
  * link and kept in localStorage), the same Solana Pay transaction request, the
  * same error envelope. What differs is that nothing here carries a fee: one
- * transfer on Solana, one ERC-3009 authorization on Base and Polygon.
+ * transfer on Solana, one ERC-3009 authorization on Base, Polygon and Arc.
  */
 
 import type * as SolanaWeb3 from "@solana/web3.js";
@@ -176,10 +176,13 @@ export function receiptPath(url: string | null | undefined): string | null {
 }
 
 /** Explorer link for a transaction, when the server gives none. */
-export function explorerTxUrl(chain: Chain, tx: string): string {
+export function explorerTxUrl(chain: Chain, tx: string): string | null {
   if (chain === "solana") return `https://solscan.io/tx/${encodeURIComponent(tx)}`;
   if (chain === "base") return `https://basescan.org/tx/${encodeURIComponent(tx)}`;
-  return `https://polygonscan.com/tx/${encodeURIComponent(tx)}`;
+  if (chain === "polygon") return `https://polygonscan.com/tx/${encodeURIComponent(tx)}`;
+  if (chain === "arc") return `https://explorer.arc.io/tx/${encodeURIComponent(tx)}`;
+  // A network this page doesn't know yet gets no link rather than another chain's explorer (28-Sep-2026).
+  return null;
 }
 
 /** The server's explorer link when it sends one (only https), else ours. Null with no transaction. */
@@ -279,7 +282,7 @@ export interface ExpectedPayment {
 /**
  * Why a checkout answer is not the payment this page showed, or null when it
  * is. Checked before anything reaches the wallet: the amount, the network, the
- * payer, the receiver, and on Base and Polygon the token contract the
+ * payer, the receiver, and on Base, Polygon and Arc the token contract the
  * signature is valid for.
  */
 export function evmCheckoutProblem(res: TimedPayLinkCheckout, expect: ExpectedPayment): string | null {
@@ -385,7 +388,7 @@ function capitalise(s: string): string {
 
 function detailsChain(e: CheckoutError): Chain | null {
   const c = e.details.chain;
-  return c === "solana" || c === "base" || c === "polygon" ? c : null;
+  return c === "solana" || c === "base" || c === "polygon" || c === "arc" ? c : null;
 }
 
 /** Why a link stopped taking payments, when the server says which way it went. */
@@ -426,7 +429,7 @@ export function describePayError(e: unknown, chain: Chain | null, ctx: PayErrorC
       case "chain_unavailable": {
         const refused = detailsChain(e) ?? chain;
         if (e.details.reason === "gas_budget_exhausted") {
-          const where = refused ? CHAIN_LABEL[refused] : listText([CHAIN_LABEL.base, CHAIN_LABEL.polygon]);
+          const where = refused ? CHAIN_LABEL[refused] : listText([CHAIN_LABEL.base, CHAIN_LABEL.polygon, CHAIN_LABEL.arc]);
           return accepts?.includes("solana") && refused !== "solana"
             ? t("home.payLinks.pay.pausedTrySolana", { where })
             : t("home.payLinks.pay.pausedToday", { where });

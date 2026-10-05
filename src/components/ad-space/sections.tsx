@@ -24,11 +24,14 @@ import {
   trackRecordText,
   usdFromCents,
 } from "@/lib/ad-space/format";
+import { titleStyleOf } from "@/lib/ad-space/studio";
 import type { Creator, Position, Space } from "@/lib/ad-space/types";
 
 import { ClosesCountdown } from "./ClosesCountdown";
+import { Editable, StoryPlaceholder } from "./edit-mode";
 import { creatorPath, creatorScreenPath } from "./creator";
 import { SpaceSiblings } from "./events";
+import { titleFontStyle } from "./title-fonts";
 import { IfItDoesNotHappen } from "./IfItDoesNotHappen";
 import { WhatTheBrandGets } from "./WhatTheBrandGets";
 import { btnPrimary, btnSmallSecondary, card, eyebrow, rich } from "./ui";
@@ -127,13 +130,22 @@ export function ListingHead({ space }: { space: Space }) {
         <p className={`${eyebrow} break-words text-sp-amber [overflow-wrap:anywhere]`}>
           {[space.event?.name ?? space.eventName, what].filter(Boolean).join(" · ")}
         </p>
-        <h1 className="mt-3 max-w-4xl break-words font-display text-[40px] font-light leading-[1.05] text-sp-ink [overflow-wrap:anywhere] md:text-h1">
-          {space.title}
+        <h1
+          className="mt-3 max-w-4xl break-words font-display text-[40px] font-light leading-[1.05] text-sp-ink [overflow-wrap:anywhere] md:text-h1"
+          style={titleFontStyle(titleStyleOf(space.titleStyle))}
+        >
+          <Editable target="title" as="span" chip="inline">
+            {space.title}
+          </Editable>
         </h1>
-        {space.reason && (
-          <p className="mt-4 max-w-2xl break-words text-body text-sp-ink/85 [overflow-wrap:anywhere] md:text-lead">
-            {space.reason}
-          </p>
+        {space.reason ? (
+          <Editable target="story">
+            <p className="mt-4 max-w-2xl break-words text-body text-sp-ink/85 [overflow-wrap:anywhere] md:text-lead">
+              {space.reason}
+            </p>
+          </Editable>
+        ) : (
+          <StoryPlaceholder />
         )}
       </div>
       <CreatorChip creator={space.creator} />
@@ -583,7 +595,9 @@ export function BeforeYouPay({ space }: { space: Space }) {
       {/* items-start: each card is as tall as what it says. Stretched to the
           taller column, a two-line list was a big empty box. */}
       <div className="mt-8 grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <WhatTheBrandGets space={space} />
+        <Editable target="brandGets">
+          <WhatTheBrandGets space={space} />
+        </Editable>
         <div className="flex flex-col gap-5">
           <IfItDoesNotHappen space={space} />
           <Block title={t("board.beforeYouPay.keyDates")}>

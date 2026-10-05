@@ -7,8 +7,15 @@
  * A wallet needs a chain id, a token address and a name — that is all this is.
  */
 
+/**
+ * The EVM networks a wallet signs on. Arc is Circle's L1 and pays pay links
+ * only (28-Sep-2026): the founders and ad-space checkouts keep their own
+ * Base-and-Polygon lists, so an entry here is not an offer there.
+ */
+export type EvmPayChain = "base" | "polygon" | "arc";
+
 export interface PublicChain {
-  key: "base" | "polygon";
+  key: EvmPayChain;
   label: string;
   chainId: number;
   chainIdHex: string;
@@ -23,7 +30,7 @@ export interface PublicChain {
   };
 }
 
-export const PUBLIC_CHAINS: Record<"base" | "polygon", PublicChain> = {
+export const PUBLIC_CHAINS: Record<EvmPayChain, PublicChain> = {
   base: {
     key: "base",
     label: "Base",
@@ -50,6 +57,24 @@ export const PUBLIC_CHAINS: Record<"base" | "polygon", PublicChain> = {
       nativeCurrency: { name: "POL", symbol: "POL", decimals: 18 },
       rpcUrls: ["https://polygon-rpc.com"],
       blockExplorerUrls: ["https://polygonscan.com"],
+    },
+  },
+  arc: {
+    key: "arc",
+    label: "Arc",
+    chainId: 5042,
+    chainIdHex: "0x13b2",
+    // Arc's USDC ERC-20 interface: 6 decimals, ERC-3009, EIP-712 domain
+    // "USDC" version "2" (docs.arc.io, 28-Sep-2026).
+    usdc: "0x3600000000000000000000000000000000000000",
+    usdcDecimals: 6,
+    addChainParams: {
+      chainName: "Arc",
+      // USDC is Arc's gas token, and natively it counts 18 decimals, not the
+      // ERC-20's 6. A wallet adding the chain wants the native figure.
+      nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
+      rpcUrls: ["https://rpc.mainnet.arc.io"],
+      blockExplorerUrls: ["https://explorer.arc.io"],
     },
   },
 };

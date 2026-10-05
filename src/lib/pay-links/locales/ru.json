@@ -170,6 +170,8 @@
   "payPage.gone.expiredBody": "Она больше не принимает платежи. Попросите у отправителя новую ссылку.",
   "payPage.gone.personalTitle": "Эта ссылка больше не принимает платежи.",
   "payPage.gone.personalBody": "Попросите у {name} новую ссылку.",
+  "payPage.gone.settledTitle": "Всё рассчитано",
+  "payPage.gone.settledBody": "Сейчас в {group} никто никому не должен.",
   "payPage.disabledTitle": "Эта ссылка больше недоступна.",
   "payPage.disabledBody": "Не отправляйте деньги тому, кто поделился ею.",
   "payPage.unavailableTitle": "Не удалось загрузить эту ссылку прямо сейчас.",

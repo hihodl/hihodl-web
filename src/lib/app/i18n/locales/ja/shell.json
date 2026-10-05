@@ -78,6 +78,7 @@
   "hold.badgePending": "保留中 {count} 件",
   "error.network": "HOLD に接続できませんでした。接続を確認して、もう一度お試しください。",
   "error.signInExpired": "サインインの有効期限が切れました。もう一度サインインして、続きから再開してください。",
+  "error.emailChangeHold": "一部のセキュリティ変更は{when}まで一時停止中です。",
   "error.rateLimited": "1 分間に許可される回数を超えました。少し待ってから、もう一度お試しください。",
   "error.payoutAddressInvalid": "このアドレスには支払えません。ウォレットからもう一度コピーしてください。",
   "error.payoutChainUnknown": "このネットワークは HiSpace の支払いに対応していません。",

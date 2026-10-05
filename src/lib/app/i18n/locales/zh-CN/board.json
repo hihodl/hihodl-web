@@ -361,5 +361,11 @@
   "product.openForBids": "接受出价",
   "product.offer": "报价",
   "product.openToOffers": "接受报价",
-  "stats.seeMore": "查看 @{handle} 还有哪些开放项目"
+  "stats.seeMore": "查看 @{handle} 还有哪些开放项目",
+  "studio.audience": "受众",
+  "studio.pastWork": "过往作品",
+  "studio.link": "链接",
+  "studio.text": "文本",
+  "studio.edit": "编辑",
+  "studio.addStory": "添加一句介绍"
 }

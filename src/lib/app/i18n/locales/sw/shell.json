@@ -78,6 +78,7 @@
   "hold.badgePending": "{count} zinasubiri",
   "error.network": "Hatukuweza kufikia HOLD. Angalia muunganisho wako kisha ujaribu tena.",
   "error.signInExpired": "Muda wa kuingia kwako umeisha. Ingia tena na uendelee ulipoishia.",
+  "error.emailChangeHold": "Baadhi ya mabadiliko ya usalama yamesitishwa hadi {when}.",
   "error.rateLimited": "Umejaribu mara nyingi kuliko tunavyoruhusu kwa dakika moja. Subiri kidogo kisha ujaribu tena.",
   "error.payoutAddressInvalid": "Hiyo si anwani tunayoweza kulipa. Inakili tena kutoka kwenye pochi yako.",
   "error.payoutChainUnknown": "HiSpace hailipi kwenye mtandao huo.",

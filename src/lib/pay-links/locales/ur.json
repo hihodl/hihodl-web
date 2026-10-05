@@ -170,6 +170,8 @@
   "payPage.gone.expiredBody": "یہ مزید ادائیگیاں قبول نہیں کرتا۔ جس نے یہ بھیجا تھا اس سے نیا لنک مانگیں۔",
   "payPage.gone.personalTitle": "یہ لنک مزید ادائیگیاں قبول نہیں کرتا۔",
   "payPage.gone.personalBody": "{name} سے ان کا نیا لنک مانگیں۔",
+  "payPage.gone.settledTitle": "سب حساب برابر",
+  "payPage.gone.settledBody": "اس وقت {group} میں کچھ بھی واجب الادا نہیں۔",
   "payPage.disabledTitle": "یہ لنک اب دستیاب نہیں ہے۔",
   "payPage.disabledBody": "جس نے یہ شیئر کیا ہے اسے رقم نہ بھیجیں۔",
   "payPage.unavailableTitle": "ہم ابھی یہ لنک لوڈ نہیں کر سکے۔",

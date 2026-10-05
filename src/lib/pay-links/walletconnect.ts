@@ -3,7 +3,7 @@
 import { base58Decode, base64ToBytes, bytesToBase64, type Eip1193Provider, type SolanaProvider } from "@/lib/ad-space/wallets";
 
 /**
- * WalletConnect for a payer on Base or Polygon whose wallet is not in this
+ * WalletConnect for a payer on Base, Polygon or Arc whose wallet is not in this
  * browser: MetaMask, Coinbase Wallet, Trust, Rainbow and the rest on a phone,
  * from Safari or Chrome, or any of them scanning a code from a computer.
  *
@@ -35,15 +35,15 @@ type WcProvider = Eip1193Provider & {
 
 let cached: Promise<WcProvider> | null = null;
 
-/** Base and Polygon, the two chains a pay link signs on. */
-const CHAIN_IDS = [8453, 137] as const;
+/** Base, Polygon and Arc (5042), the chains a pay link signs on. */
+const CHAIN_IDS = [8453, 137, 5042] as const;
 
 async function init(projectId: string): Promise<WcProvider> {
   const { EthereumProvider } = await import("@walletconnect/ethereum-provider");
   const origin = window.location.origin;
   const provider = (await EthereumProvider.init({
     projectId,
-    // Optional, not required: a wallet that lacks Polygon can still pay on Base.
+    // Optional, not required: a wallet that lacks Polygon or Arc can still pay on Base.
     optionalChains: [...CHAIN_IDS],
     // The page draws the pairing code itself (HOLD's QR), from `display_uri`.
     showQrModal: false,

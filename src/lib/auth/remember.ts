@@ -43,6 +43,20 @@ export function readRemembered(): Remembered | null {
   }
 }
 
+/**
+ * The email worth keeping for the next sign-in: the session's, unless /me
+ * (`public.users.email`, which follows a login email change at once) says
+ * another one. Then the login email has just changed or been undone and the
+ * session's token may still carry the old address, so neither is kept: a
+ * prefilled address must never be one that no longer signs in. The next
+ * sign-in keeps the right one. `meEmail` undefined = /me has not answered.
+ */
+export function emailToRemember(sessionEmail: string | null | undefined, meEmail: string | null | undefined): string | null {
+  const session = sessionEmail?.trim() || null;
+  if (meEmail === undefined || meEmail === null || !session) return session;
+  return meEmail.trim().toLowerCase() === session.toLowerCase() ? session : null;
+}
+
 export function remember(next: Remembered): void {
   try {
     window.localStorage.setItem(KEY, JSON.stringify(next));

@@ -44,7 +44,7 @@
 
 import { useEffect } from "react";
 
-import { read } from "./hold-api";
+import { HoldApiError, read } from "./hold-api";
 import { browserDeviceName } from "@/lib/link/ua";
 import { signOut } from "@/lib/creator/session";
 
@@ -177,7 +177,11 @@ export async function thisBrowserStanding(userId: string): Promise<"ok" | "remov
   let current: CurrentSessionAnswer | null;
   try {
     current = await read<CurrentSessionAnswer>("sessions/current");
-  } catch {
+  } catch (e) {
+    // A login email change (or its undo) elsewhere cuts this session at the
+    // server, which answers every call 401 SESSION_REVOKED from then on.
+    if (e instanceof HoldApiError && e.code === "SESSION_REVOKED") return "removed";
+    if (e instanceof HoldApiError && e.code === "ACCOUNT_DELETED") return "deleted";
     return "ok";
   }
   if (!current || typeof current !== "object") return "ok";

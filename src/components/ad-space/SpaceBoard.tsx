@@ -25,6 +25,7 @@ import { PositionCard } from "./PositionCard";
 import { WholeListing, squaresOf, wholeOf } from "./WholeListing";
 import { ProductBoard } from "./ProductBoard";
 import { TierLadder } from "./TierLadder";
+import { Editable } from "./edit-mode";
 import { btnSmall, btnSmallSecondary, pill } from "./ui";
 import { useServerNow } from "./useServerNow";
 
@@ -264,70 +265,76 @@ export function SpaceBoard({
 
   return (
     <>
-      <ListingBand space={space}>
-        {head}
-        {/* On a placement the product IS the banner: the suitcase itself, with
-            every spot on it live. `ListingStage` is the one boundary a photo
-            of the real object would replace (see its comment). */}
-        {!isService && (
-          <div id="spots" className="mt-10 scroll-mt-20">
-            <ListingStage space={space} activeId={active} onHover={setHoverId} onPick={pick} mode={spaceMode} />
-          </div>
-        )}
-      </ListingBand>
+      <Editable target="cover" chip="corner">
+        <ListingBand space={space}>
+          {head}
+          {/* On a placement the product IS the banner: the suitcase itself, with
+              every spot on it live. `ListingStage` is the one boundary a photo
+              of the real object would replace (see its comment). */}
+          {!isService && (
+            <div id="spots" className="mt-10 scroll-mt-20">
+              <ListingStage space={space} activeId={active} onHover={setHoverId} onPick={pick} mode={spaceMode} />
+            </div>
+          )}
+        </ListingBand>
+      </Editable>
 
       {stats}
       {notices}
 
       {isService && (
-        <section id="spots" className="container-page scroll-mt-20 py-10 md:py-14" aria-labelledby="pick">
-          <h2 id="pick" className="font-display text-h3 font-light text-sp-ink md:text-h2">
-            {session ? t("board.stats.bookSession") : t("board.space.pickYour", { noun })}
-          </h2>
-          {serviceSummary(space) && (
-            <p className="mt-3 max-w-2xl whitespace-pre-line break-words text-body text-sp-ink/85 [overflow-wrap:anywhere]">
-              {serviceSummary(space)}
-            </p>
-          )}
-          <div className="mt-8 flex flex-col gap-6">
-            {!tiered && spaceMode && spaceMode !== "bids" && (
-              <SpaceOffersPanel
-                mode={spaceMode}
-                offers={space.spaceOffers}
-                canOffer={buyable && space.positions.some((p) => p.status === "open")}
-                session={session}
-                now={now}
-                onOffer={() => setOfferFor({ position: null, kind: "offer" })}
-              />
+        <Editable target="spots">
+          <section id="spots" className="container-page scroll-mt-20 py-10 md:py-14" aria-labelledby="pick">
+            <h2 id="pick" className="font-display text-h3 font-light text-sp-ink md:text-h2">
+              {session ? t("board.stats.bookSession") : t("board.space.pickYour", { noun })}
+            </h2>
+            {serviceSummary(space) && (
+              <p className="mt-3 max-w-2xl whitespace-pre-line break-words text-body text-sp-ink/85 [overflow-wrap:anywhere]">
+                {serviceSummary(space)}
+              </p>
             )}
-            {tiered && (
-              <TierLadder
-                tiers={tiers}
-                buyable={buyable}
-                session={session}
-                modeOf={modeOf}
-                biddingOpen={biddingOpen}
-                now={now}
-                onSponsor={setCheckoutFor}
-                onOffer={openOffer}
-              />
-            )}
-            {wholeCard && <div className="mb-8">{wholeCard}</div>}
-            {cardList}
-          </div>
-        </section>
+            <div className="mt-8 flex flex-col gap-6">
+              {!tiered && spaceMode && spaceMode !== "bids" && (
+                <SpaceOffersPanel
+                  mode={spaceMode}
+                  offers={space.spaceOffers}
+                  canOffer={buyable && space.positions.some((p) => p.status === "open")}
+                  session={session}
+                  now={now}
+                  onOffer={() => setOfferFor({ position: null, kind: "offer" })}
+                />
+              )}
+              {tiered && (
+                <TierLadder
+                  tiers={tiers}
+                  buyable={buyable}
+                  session={session}
+                  modeOf={modeOf}
+                  biddingOpen={biddingOpen}
+                  now={now}
+                  onSponsor={setCheckoutFor}
+                  onOffer={openOffer}
+                />
+              )}
+              {wholeCard && <div className="mb-8">{wholeCard}</div>}
+              {cardList}
+            </div>
+          </section>
+        </Editable>
       )}
 
       {details}
 
       {!isService && (cardList || wholeCard) && (
-        <section className="container-page py-12 md:py-16" aria-labelledby="every-spot">
-          <h2 id="every-spot" className="font-display text-h3 font-light text-sp-ink md:text-h2">
-            {whole ? t("board.space.spotOrAll") : t("board.space.pickYour", { noun: "spot" })}
-          </h2>
-          {wholeCard && <div className="mt-8">{wholeCard}</div>}
-          {cardList && <div className="mt-8">{cardList}</div>}
-        </section>
+        <Editable target="spots">
+          <section className="container-page py-12 md:py-16" aria-labelledby="every-spot">
+            <h2 id="every-spot" className="font-display text-h3 font-light text-sp-ink md:text-h2">
+              {whole ? t("board.space.spotOrAll") : t("board.space.pickYour", { noun: "spot" })}
+            </h2>
+            {wholeCard && <div className="mt-8">{wholeCard}</div>}
+            {cardList && <div className="mt-8">{cardList}</div>}
+          </section>
+        </Editable>
       )}
 
       {checkoutFor && (

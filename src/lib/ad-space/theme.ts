@@ -27,9 +27,9 @@ import type { CSSProperties } from "react";
 import { t } from "@/lib/app/i18n";
 
 import { contrast, inkOn, normalHex } from "./product-look";
+import { PAGE_GROUND_PRESETS, type PageGroundPreset } from "./studio";
 
-export const PAGE_GROUND_PRESETS = ["hold", "app", "night", "white"] as const;
-export type PageGroundPreset = (typeof PAGE_GROUND_PRESETS)[number];
+export { PAGE_GROUND_PRESETS, type PageGroundPreset };
 
 /** Getters: each read is in the language on screen. */
 export const PAGE_GROUND_LABEL: Record<PageGroundPreset, string> = {

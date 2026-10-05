@@ -54,6 +54,8 @@
   "gone.expiredBody": "Link ini tidak menerima pembayaran lagi. Minta yang baru dari orang yang mengirimnya.",
   "gone.personalTitle": "Link ini tidak menerima pembayaran lagi.",
   "gone.personalBody": "Minta link baru dari {name}.",
+  "gone.settledTitle": "Semua sudah lunas",
+  "gone.settledBody": "Saat ini tidak ada yang terutang di {group}.",
   "disabledTitle": "Link ini sudah tidak tersedia.",
   "disabledBody": "Jangan kirim uang ke siapa pun yang membagikan link ini.",
   "unavailableTitle": "Kami tidak bisa memuat link ini saat ini.",

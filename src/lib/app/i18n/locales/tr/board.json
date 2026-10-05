@@ -361,5 +361,11 @@
   "product.openForBids": "pey açık",
   "product.offer": "Teklif",
   "product.openToOffers": "tekliflere açık",
-  "stats.seeMore": "@{handle} kullanıcısının açık tekliflerine bak"
+  "stats.seeMore": "@{handle} kullanıcısının açık tekliflerine bak",
+  "studio.audience": "Kitle",
+  "studio.pastWork": "Önceki işler",
+  "studio.link": "Bağlantı",
+  "studio.text": "Metin",
+  "studio.edit": "Düzenle",
+  "studio.addStory": "Bununla ilgili bir satır ekle"
 }

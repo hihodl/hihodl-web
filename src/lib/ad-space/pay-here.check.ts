@@ -24,7 +24,7 @@ eq("hold link", holdSpotUrl("/s/demo_creator/token2049", ID), `hihodl://s/demo_c
 eq("hold link, trailing slash", holdSpotUrl("/s/demo_creator/token2049/", ID), `hihodl://s/demo_creator/token2049?pay=${ID}`);
 eq("no hold link off a space", holdSpotUrl("/o/tok", ID), null);
 eq("no hold link for a junk id", holdSpotUrl("/s/a/b", "x"), null);
-eq("solana wallets", browseWalletsFor("solana"), ["phantom", "solflare"]);
+eq("solana wallets", browseWalletsFor("solana"), ["phantom", "solflare", "backpack"]);
 eq("evm wallets", browseWalletsFor("base"), ["metamask", "coinbase", "trust"]);
 
 if (fails) {

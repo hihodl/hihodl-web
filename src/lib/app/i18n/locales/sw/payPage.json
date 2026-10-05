@@ -54,6 +54,8 @@
   "gone.expiredBody": "Hakipokei malipo tena. Muulize aliyekutumia kiungo kingine kipya.",
   "gone.personalTitle": "Kiungo hiki hakipokei malipo tena.",
   "gone.personalBody": "Muulize {name} kiungo chao kipya.",
+  "gone.settledTitle": "Yote yamelipwa",
+  "gone.settledBody": "Hakuna deni lolote katika {group} kwa sasa.",
   "disabledTitle": "Kiungo hiki hakipatikani tena.",
   "disabledBody": "Usimtumie pesa yeyote aliyekigawa kiungo hiki.",
   "unavailableTitle": "Hatukuweza kupakia kiungo hiki sasa hivi.",
