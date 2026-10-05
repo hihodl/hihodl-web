@@ -152,11 +152,40 @@ export interface PayLinkPublic {
   /** The owner's personal link, when this one can't be paid. Absent from an older server. */
   fallback?: PayLinkFallback | null;
   /**
+   * A recurring link: paying it is subscribing, charged every period. Null or
+   * absent for a one-time link (and from an older server).
+   */
+  recurring?: PayLinkRecurring | null;
+  /**
    * Only on a group debt's link (what one HOLD group member owes another,
    * sent from the group's remind): its title and amount are read live from
    * the group. `settled` when nothing is owed now (the link reads `paid`).
    */
   groupDebt?: PayLinkGroupDebt | null;
+}
+
+/**
+ * "10 USDC / month": a plan on the Solana Subscriptions program the owner
+ * signed. `plan` is there once it is on chain (`ready`); the page checks the
+ * subscribe transaction it is handed against it (recurring.ts).
+ */
+export interface PayLinkRecurring {
+  period: "week" | "month";
+  amountCents: number;
+  token: "usdc";
+  chain: "solana";
+  ready: boolean;
+  plan?: {
+    programId: string;
+    planPda: string;
+    merchant: string;
+    /** u64, as a decimal string. */
+    planId: string;
+    /** Per period, USDC base units (6 decimals), as a decimal string. */
+    amountBase: string;
+    periodHours: number;
+    mint: string;
+  };
 }
 
 /** A group debt, as the public read describes it. Amounts in the group's currency, minor units as a string. */

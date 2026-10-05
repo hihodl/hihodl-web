@@ -176,6 +176,30 @@ const payPage = {
   "bankBusinessOnly": "Pay from a company account",
   "bankUseReference": "Use this reference so it reaches {name}",
   "bankCopy": "Copy {label}",
+
+  // A recurring link: paying it is subscribing (components/pay-links/RecurringPay.tsx)
+  "recurring.per": "{period, select, week {/ week} other {/ month}}",
+  "recurring.terms": "{amount} now, then {period, select, week {every week} other {every month}}.",
+  "recurring.subscribeWith": "Subscribe with {wallet}",
+  "recurring.preparing": "Setting up your subscription…",
+  "recurring.approveIn": "Approve it in {wallet}…",
+  "recurring.subscribing": "Subscribing…",
+  "recurring.doneTitle": "You're in",
+  "recurring.doneBody": "{payee} gets {amount} from you {period, select, week {every week} other {every month}}, starting now.",
+  "recurring.notReady": "This subscription isn't open yet.",
+  "recurring.noWallet": "Open this page in Phantom or Solflare to subscribe.",
+  "recurring.onlySolana": "Subscriptions take USDC on Solana, from Phantom or Solflare. Card and other networks are coming.",
+  "recurring.needUsdc": "This wallet needs {amount} on Solana to start.",
+  "recurring.needSol": "This wallet needs a little SOL (about 0.004) to subscribe.",
+  "recurring.already": "This wallet is already subscribed.",
+  "recurring.ownLink": "This is your own link.",
+  "recurring.cancelled": "Nothing was signed.",
+  "recurring.failed": "That didn't go through. Try again.",
+  "recurring.renewNeeded": "This wallet is subscribed, but its approval was replaced by another app, so {payee} can't be paid. Renew to keep paying.",
+  "recurring.renewWith": "Renew with {wallet}",
+  "recurring.renewing": "Renewing…",
+  "recurring.renewedTitle": "Renewed",
+  "recurring.renewedBody": "{payee} gets {amount} from you {period, select, week {every week} other {every month}} again.",
 } as const;
 
 export default payPage;

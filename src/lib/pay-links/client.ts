@@ -126,6 +126,22 @@ export async function startSolanaTransfer(
   }
 }
 
+/**
+ * A recurring link: the payer's [InitSubscriptionAuthority] + Subscribe,
+ * unsigned, with the payer as fee payer (recurring.ts checks it).
+ */
+export function startSubscribe(
+  code: string,
+  payerAddress: string,
+): Promise<{ transaction: string; lastValidBlockHeight: number; renew?: true }> {
+  return apiRequest(`${PUBLIC}/${encodeURIComponent(code)}/subscribe`, { json: { payerAddress } });
+}
+
+/** After the wallet sent it: "active" once the chain shows the subscription, "pending" until then. */
+export function subscribed(code: string, payerAddress: string): Promise<{ state: "active" | "pending" }> {
+  return apiRequest(`${PUBLIC}/${encodeURIComponent(code)}/subscribed`, { json: { payerAddress } });
+}
+
 /** The payment bound to this key, if this page or a scanned QR has opened one. */
 export async function currentPayment(key: string): Promise<PayLinkPayment | null> {
   const data = await apiRequest<{ payment: PayLinkPayment | null }>(`${PUBLIC}/checkout`, { key });
