@@ -27,6 +27,7 @@ import {
 import { titleStyleOf } from "@/lib/ad-space/studio";
 import type { Creator, Position, Space } from "@/lib/ad-space/types";
 
+import { BusinessLogo, VerifiedBusinessMark, businessOf, websiteHost } from "./business";
 import { ClosesCountdown } from "./ClosesCountdown";
 import { Editable, StoryPlaceholder } from "./edit-mode";
 import { creatorPath, creatorScreenPath } from "./creator";
@@ -248,12 +249,16 @@ function InspiredByCredit({ credit }: { credit: NonNullable<Space["inspiredBy"]>
 
 function CreatorChip({ creator: c }: { creator: Creator }) {
   const attention = trackRecordNeedsAttention(c.trackRecord);
+  /* A company selling from this account: its name and logo lead, and the
+     person's X account stays one tap away as where it sells from. */
+  const business = businessOf(c);
+  const host = business ? websiteHost(business.website) : null;
   return (
     <div className="flex min-w-0 items-center gap-3">
-      <Avatar creator={c} />
+      {business ? <BusinessLogo business={business} size={44} /> : <Avatar creator={c} />}
       <div className="min-w-0">
-        <p className="flex min-w-0 flex-wrap items-baseline gap-x-2 text-small">
-          <span className="truncate text-sp-ink">{c.xName}</span>
+        <p className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-small">
+          <span className="truncate text-sp-ink">{business ? business.displayName : c.xName}</span>
           <a
             href={`https://x.com/i/user/${encodeURIComponent(c.xUserId)}`}
             target="_blank"
@@ -262,11 +267,14 @@ function CreatorChip({ creator: c }: { creator: Creator }) {
           >
             @{c.xHandle}
           </a>
+          {business?.verified && <VerifiedBusinessMark name={business.displayName} />}
         </p>
         <p className="text-tiny text-sp-ink/85">
           {[
+            host,
             t("board.creator.followers", { followers: compactNumber(c.xFollowers) }),
-            c.xVerifiedType ? VERIFIED_LABEL[c.xVerifiedType] : null,
+            // The company's own mark already says it: X's "business" label beside it would say it twice.
+            c.xVerifiedType && !(business?.verified && c.xVerifiedType === "business") ? VERIFIED_LABEL[c.xVerifiedType] : null,
             c.xIdentityVerified ? t("board.creator.idVerified") : null,
           ]
             .filter(Boolean)

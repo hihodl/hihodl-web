@@ -59,6 +59,7 @@ import type {
   Booking,
   BrandProduction,
   CreatorPage,
+  GuestEnquiry,
   EventPage,
   EventSummary,
   OfferThread,
@@ -401,6 +402,8 @@ function suitcaseColour(): Space {
     title: "Road to TOKEN2049, in my colours",
     productLook: { body: "#F2EBDD", accent: "#111418" },
     siblings: [],
+    // A company selling from this account (business-treasury-contract.md).
+    creator: { ...base.creator, business: { displayName: "Solana Spaces", logoUrl: null, website: "https://solana.com/", verified: true } },
   };
 }
 
@@ -1700,6 +1703,24 @@ function offersFixtures(): Space[] {
 /** A fixture offer's token: a 43-character name, so it passes the real token check. */
 function fixtureToken(name: string): string {
   return `fixture_${name}`.padEnd(43, "x");
+}
+
+/** `/e/<fixture_enquiry…>`: a guest's question to Solana Spaces about one spot, answered once. */
+export function fixtureEnquiry(token: string): GuestEnquiry | null {
+  if (token !== fixtureToken("enquiry")) return null;
+  const space = suitcaseColour();
+  const spot = space.positions[0];
+  const at = (minutesAgo: number) => new Date(Date.now() - minutesAgo * 60_000).toISOString();
+  return {
+    space: { id: space.id, title: space.title },
+    position: spot ? { id: spot.id, label: spot.label } : null,
+    business: { name: "@demo_creator" },
+    you: { name: "Dana", company: "Acme Labs" },
+    messages: [
+      { id: "m1", author: "you", body: "Hi! Could we take this spot and the one next to it as a bundle? Our budget is around $2,000.", sentBy: null, createdAt: at(180) },
+      { id: "m2", author: "business", body: "Yes, we can bundle those two. Want me to hold them until Friday?", sentBy: "Maria", createdAt: at(42) },
+    ],
+  };
 }
 
 export function fixtureOffer(token: string): OfferThread | null {

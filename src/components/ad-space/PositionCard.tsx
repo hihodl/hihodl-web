@@ -52,6 +52,8 @@ type Props = {
   onSponsor: (p: Position) => void;
   /** Opens the offer or bid form for this spot. Absent on a service slot. */
   onOffer?: (p: Position) => void;
+  /** Opens "Ask about this spot". Absent when the space takes no questions (not live). */
+  onAsk?: (p: Position) => void;
 };
 
 export const PositionCard = forwardRef<HTMLElement, Props>(function PositionCard(
@@ -67,6 +69,7 @@ export const PositionCard = forwardRef<HTMLElement, Props>(function PositionCard
     onHover,
     onSponsor,
     onOffer,
+    onAsk,
   },
   ref,
 ) {
@@ -207,6 +210,15 @@ export const PositionCard = forwardRef<HTMLElement, Props>(function PositionCard
           </p>
         )}
       </div>
+      {onAsk && (
+        <button
+          type="button"
+          className="-mt-1 self-start text-small font-medium text-sp-amber transition-colors duration-180 hover:text-amber-glow"
+          onClick={() => onAsk(p)}
+        >
+          {t("enquiries.ask.spot")}
+        </button>
+      )}
     </article>
   );
 });

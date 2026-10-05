@@ -14,12 +14,15 @@ import {
   usdFromUsdc,
 } from "@/lib/ad-space/format";
 import { gradientCss } from "@/lib/ad-space/look";
+import { type SavedEnquiry, enquiryPath, savedEnquiries } from "@/lib/ad-space/enquiries";
 import { PAY_PARAM, isPositionId } from "@/lib/ad-space/pay-here";
 import { type SavedOffer, offerModeOf, offerPath, savedOffers } from "@/lib/ad-space/offers-client";
 import type { OfferKind, OfferMode, Order, Position, PositionOffers, Space } from "@/lib/ad-space/types";
 import { useT } from "@/lib/app/i18n/react";
 
+import { sellerName } from "./business";
 import { Checkout } from "./Checkout";
+import { EnquirySheet } from "./EnquirySheet";
 import { OfferSheet } from "./OfferSheet";
 import { PositionCard } from "./PositionCard";
 import { WholeListing, squaresOf, wholeOf } from "./WholeListing";
@@ -68,6 +71,9 @@ export function SpaceBoard({
   /** The offer or bid form: a spot, or null for a service space's own offer. */
   const [offerFor, setOfferFor] = useState<{ position: Position | null; kind: OfferKind } | null>(null);
   const [mine, setMine] = useState<SavedOffer[]>([]);
+  /** "Ask about this spot": a spot, or null for the whole space. */
+  const [askFor, setAskFor] = useState<{ position: Position | null } | null>(null);
+  const [asked, setAsked] = useState<SavedEnquiry[]>([]);
   const now = useServerNow();
   const [resumable, setResumable] = useState<{ position: Position; order: Order } | null>(null);
   const cards = useRef(new Map<string, HTMLElement>());
@@ -105,6 +111,7 @@ export function SpaceBoard({
 
   /* The offers this browser made here, so a sponsor finds their way back. */
   useEffect(() => setMine(savedOffers(space.id)), [space.id]);
+  useEffect(() => setAsked(savedEnquiries(space.id)), [space.id]);
 
   /* `?pay=<spot>`: this checkout's own address (its camera code, a wallet's
      browser, the HOLD button's fallback) opens the spot's checkout, when the
@@ -128,6 +135,9 @@ export function SpaceBoard({
   const onPaid = useCallback(() => router.refresh(), [router]);
   const onClose = useCallback(() => setCheckoutFor(null), []);
   const onOfferClose = useCallback(() => setOfferFor(null), []);
+  const onAskClose = useCallback(() => setAskFor(null), []);
+  const onAskSent = useCallback(() => setAsked(savedEnquiries(space.id)), [space.id]);
+  const ask = useCallback((p: Position | null) => setAskFor({ position: p }), []);
   const onOfferSent = useCallback(() => {
     setMine(savedOffers(space.id));
     router.refresh();
@@ -232,6 +242,7 @@ export function SpaceBoard({
           onHover={setHoverId}
           onSponsor={setCheckoutFor}
           onOffer={isService && !tiered ? undefined : openOffer}
+          onAsk={buyable ? ask : undefined}
         />
       ))}
     </div>
@@ -336,6 +347,13 @@ export function SpaceBoard({
           </section>
         </Editable>
       )}
+
+      {/* Only a live space takes questions (409 space_not_taking_enquiries otherwise). */}
+      {(buyable || asked.length > 0) && (
+        <AskPanel seller={sellerName(space.creator)} canAsk={buyable} asked={asked} onAsk={() => ask(null)} />
+      )}
+
+      {askFor && <EnquirySheet space={space} position={askFor.position} onClose={onAskClose} onSent={onAskSent} />}
 
       {checkoutFor && (
         <Checkout space={space} position={checkoutFor} onClose={onClose} onPaid={onPaid} />
@@ -505,5 +523,56 @@ function YourOffers({ offers }: { offers: SavedOffer[] }) {
         ))}
       </ul>
     </div>
+  );
+}
+
+/**
+ * "Ask the seller", for the space as a whole, and the conversations this
+ * browser already opened here, each with its link.
+ */
+function AskPanel({
+  seller,
+  canAsk,
+  asked,
+  onAsk,
+}: {
+  seller: string;
+  canAsk: boolean;
+  asked: SavedEnquiry[];
+  onAsk: () => void;
+}) {
+  const t = useT();
+  return (
+    <section className="container-page pb-12 md:pb-16" aria-labelledby="ask-seller">
+      <div className="flex flex-col gap-4 rounded-card border border-[color:var(--color-hairline)] bg-sp-ink/[0.03] p-5 md:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <h2 id="ask-seller" className="text-body text-sp-ink">
+              {t("enquiries.ask.panelTitle")}
+            </h2>
+            <p className="mt-1 max-w-xl text-small text-sp-ink/85">{t("enquiries.ask.panelBody", { seller })}</p>
+          </div>
+          {canAsk && (
+            <button type="button" className={btnSmallSecondary} onClick={onAsk}>
+              {t("enquiries.ask.seller")}
+            </button>
+          )}
+        </div>
+        {asked.length > 0 && (
+          <div className="flex flex-col gap-2 border-t border-[color:var(--color-hairline)] pt-4">
+            <p className="text-tiny text-sp-ink/85">{t("enquiries.ask.yours", { count: asked.length })}</p>
+            <ul className="flex flex-wrap gap-2">
+              {asked.slice(0, 6).map((e) => (
+                <li key={e.token}>
+                  <a href={enquiryPath(e.token)} rel="noreferrer" className={btnSmallSecondary}>
+                    {e.label ?? t("enquiries.ask.whole")}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }

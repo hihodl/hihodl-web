@@ -16,6 +16,7 @@ import {
 import { fmtPercent } from "@/lib/app/i18n/format";
 import { useT } from "@/lib/app/i18n/react";
 
+import { BusinessLogo, businessOf } from "./business";
 import { Spinner } from "./checkout-parts";
 
 /**
@@ -152,11 +153,14 @@ export function PaySheet({
 
 /* ── The top of the sheet: who is paid, how much, on what ─────────────── */
 
-export function CreatorChip({ creator }: { creator: Pick<Space["creator"], "xHandle" | "xName" | "xAvatarUrl"> }) {
+export function CreatorChip({ creator }: { creator: Pick<Space["creator"], "xHandle" | "xName" | "xAvatarUrl" | "business"> }) {
+  const business = businessOf(creator);
   const initial = (creator.xName || creator.xHandle || "?").replace(/^@/, "").slice(0, 1).toUpperCase();
   return (
     <span className="inline-flex h-9 max-w-full items-center gap-2 rounded-[18px] bg-sp-ink/[0.07] pl-1 pr-3.5">
-      {creator.xAvatarUrl ? (
+      {business ? (
+        <BusinessLogo business={business} size={28} />
+      ) : creator.xAvatarUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- X avatar, served by X
         <img
           src={creator.xAvatarUrl}
@@ -171,7 +175,7 @@ export function CreatorChip({ creator }: { creator: Pick<Space["creator"], "xHan
           {initial}
         </span>
       )}
-      <span className="truncate text-small font-medium text-sp-ink">@{creator.xHandle}</span>
+      <span className="truncate text-small font-medium text-sp-ink">{business ? business.displayName : `@${creator.xHandle}`}</span>
     </span>
   );
 }

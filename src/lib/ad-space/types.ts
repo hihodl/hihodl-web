@@ -36,6 +36,18 @@ export type VenueType = "travel" | "conference" | "sports_event" | "private_even
  */
 export type PricingMode = "fixed" | "takeover" | "offers" | "bids";
 
+/**
+ * The company behind a seller account (business-treasury-contract.md), on
+ * public space and creator pages. Null or absent: a person, shown as before.
+ * `verified` is HOLD's own check (an X business account, or ops by hand).
+ */
+export interface BusinessSeller {
+  displayName: string;
+  logoUrl: string | null;
+  website: string | null;
+  verified: boolean;
+}
+
 export interface Creator {
   xUserId: string;
   xHandle: string;
@@ -46,6 +58,8 @@ export interface Creator {
   xFollowers: number;
   xAccountCreatedAt: string | null;
   trackRecord: TrackRecord;
+  /** A company selling from this account, or null for a person. Absent on an older server. */
+  business?: BusinessSeller | null;
 }
 
 /**
@@ -714,6 +728,8 @@ export interface CreatorProfile extends CardCreator {
   bio?: string | null;
   /** The hub name's font (lib/ad-space/studio.ts). Absent: classic. */
   titleStyle?: string;
+  /** A company selling from this account, or null for a person. Absent on an older server. */
+  business?: BusinessSeller | null;
 }
 
 /**
@@ -970,4 +986,24 @@ export interface PublicBrief {
   createdAt: string;
   winners: BriefWinner[];
   record: BrandRecord;
+}
+
+/* ── Ask about this spot (spot-enquiries-contract.md) ───────────────── */
+
+export interface GuestEnquiryMessage {
+  id: string;
+  author: "you" | "business";
+  body: string;
+  /** The teammate who answered for the business, or null. */
+  sentBy: string | null;
+  createdAt: string;
+}
+
+/** `GET /public/enquiries/:token`: a guest's thread with a seller. Never carries an email or a user id. */
+export interface GuestEnquiry {
+  space: { id: string; title: string };
+  position: { id: string; label: string } | null;
+  business: { name: string };
+  you: { name: string; company: string | null };
+  messages: GuestEnquiryMessage[];
 }

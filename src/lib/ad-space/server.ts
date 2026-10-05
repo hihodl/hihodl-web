@@ -10,6 +10,7 @@ import type {
   CreatorPage,
   EventPage,
   EventSummary,
+  GuestEnquiry,
   OfferThread,
   PhotoRect,
   Position,
@@ -600,6 +601,53 @@ export async function getOffer(token: string, from: Headers | null): Promise<Off
             offer: data.offer,
             space: data.space,
             position: data.position ? withTierFields(data.position) : null,
+          },
+        }
+      : { kind: "unreachable" };
+  } catch {
+    return { kind: "unreachable" };
+  }
+}
+
+/* ── A guest's question to a seller, by its link ───────────────────── */
+
+export type EnquiryLookup =
+  | { kind: "found"; enquiry: GuestEnquiry }
+  | { kind: "missing" }
+  | { kind: "unreachable" };
+
+/**
+ * `GET /public/enquiries/:token` (spot-enquiries-contract.md), never cached: a
+ * seller's reply can arrive at any moment, and opening it tells the seller the
+ * guest has seen the thread. The token is a bearer secret, handled like an
+ * offer's: the upstream URL and nowhere else.
+ */
+export async function getEnquiry(token: string, from: Headers | null): Promise<EnquiryLookup> {
+  if (!OFFER_TOKEN_RE.test(token)) return { kind: "missing" };
+  if (fixtureEnabled()) {
+    const { fixtureEnquiry } = await import("./fixture.dev");
+    const enquiry = fixtureEnquiry(token);
+    return enquiry ? { kind: "found", enquiry } : { kind: "missing" };
+  }
+  try {
+    const res = await fetch(`${AD_SPACE_API}/public/enquiries/${encodeURIComponent(token)}`, {
+      headers: upstreamHeaders(from),
+      cache: "no-store",
+      signal: AbortSignal.timeout(6_000),
+    });
+    if (res.status === 404) return { kind: "missing" };
+    if (!res.ok) return { kind: "unreachable" };
+    const body = (await res.json()) as { data?: { enquiry?: Partial<GuestEnquiry> } };
+    const e = body?.data?.enquiry;
+    return e?.space && e.business && Array.isArray(e.messages)
+      ? {
+          kind: "found",
+          enquiry: {
+            space: e.space,
+            position: e.position ?? null,
+            business: e.business,
+            you: e.you ?? { name: "", company: null },
+            messages: e.messages,
           },
         }
       : { kind: "unreachable" };
