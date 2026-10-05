@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   CheckoutError,
   byEnquiry,
+  noLongerOnSale,
   SPENT_KEY_CODES,
   checkoutKey,
   confirmOrder,
@@ -165,6 +166,7 @@ export function Checkout({
   offer = null,
   quote = null,
   onByEnquiry,
+  onNoLongerOnSale,
 }: {
   space: Space;
   position: Position;
@@ -179,6 +181,8 @@ export function Checkout({
    * paid, the brand applies in an enquiry. Called instead of a notice.
    */
   onByEnquiry?: () => void;
+  /** 409 `package_not_organised`: the package left its event's host. Called instead of a notice. */
+  onNoLongerOnSale?: () => void;
 }) {
   // Only where the creator can be paid. Taking a sold spot over is only
   // possible on the chains takeovers work on; the position view does not say
@@ -482,7 +486,7 @@ export function Checkout({
       signatureRef.current = signature;
       setPhase({ kind: "confirming", order: res.order });
     } catch (e) {
-      if (byEnquiry(e, onByEnquiry)) return;
+      if (byEnquiry(e, onByEnquiry) || noLongerOnSale(e, onNoLongerOnSale)) return;
       setNotice(explain(e, "solana"));
       setOfferOtherSpot(e instanceof CheckoutError && GONE_CODES.has(e.code));
       // A connected wallet that declined leaves the hold in place; the next
@@ -533,7 +537,7 @@ export function Checkout({
       signatureRef.current = null;
       setPhase({ kind: "confirming", order: submitted.order });
     } catch (e) {
-      if (byEnquiry(e, onByEnquiry)) return;
+      if (byEnquiry(e, onByEnquiry) || noLongerOnSale(e, onNoLongerOnSale)) return;
       const refusal = submitting ? describeAuthorizationRefusal(e, evmChain, subject) : null;
       setNotice(refusal ?? explain(e, evmChain));
       setOfferOtherSpot(
@@ -741,7 +745,7 @@ export function Checkout({
                     void fileBrief(position.id, keyRef.current, body)
                       .then(() => setBrief(body))
                       .catch((e) => {
-                        if (!byEnquiry(e, onByEnquiry)) setNotice(explain(e, null));
+                        if (!byEnquiry(e, onByEnquiry) && !noLongerOnSale(e, onNoLongerOnSale)) setNotice(explain(e, null));
                       })
                       .finally(() => setSavingBrief(false));
                   }}

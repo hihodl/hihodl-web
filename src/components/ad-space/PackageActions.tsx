@@ -40,6 +40,8 @@ export function PackageActions({ path, space }: { path: string; space: Space | n
   const [checkoutFor, setCheckoutFor] = useState<Position | null>(null);
   const [offering, setOffering] = useState(false);
   const [asking, setAsking] = useState(false);
+  /** Set when the server says the package left its event's host (409 `package_not_organised`). */
+  const [gone, setGone] = useState(false);
 
   useEffect(() => {
     // The server says "live"; the clock may already have passed closesAt.
@@ -74,11 +76,19 @@ export function PackageActions({ path, space }: { path: string; space: Space | n
   const closeOffer = useCallback(() => setOffering(false), []);
   const closeAsk = useCallback(() => setAsking(false), []);
   const noop = useCallback(() => {}, []);
+  const toGone = useCallback(() => {
+    setCheckoutFor(null);
+    setOffering(false);
+    setGone(true);
+    router.refresh();
+  }, [router]);
   const toEnquiry = useCallback(() => {
     setCheckoutFor(null);
     setOffering(false);
     setAsking(true);
   }, []);
+
+  if (gone) return <p className="text-small text-sp-ink/85">{t("publicPages.sponsor.noLongerOnSale")}</p>;
 
   if (!space || !live) {
     return (
@@ -121,7 +131,7 @@ export function PackageActions({ path, space }: { path: string; space: Space | n
       </button>
 
       {checkoutFor && (
-        <Checkout space={space} position={checkoutFor} onClose={closeCheckout} onPaid={refresh} onByEnquiry={toEnquiry} />
+        <Checkout space={space} position={checkoutFor} onClose={closeCheckout} onPaid={refresh} onByEnquiry={toEnquiry} onNoLongerOnSale={toGone} />
       )}
       {offering && (
         <OfferSheet
@@ -132,6 +142,7 @@ export function PackageActions({ path, space }: { path: string; space: Space | n
           onClose={closeOffer}
           onSent={refresh}
           onByEnquiry={toEnquiry}
+          onNoLongerOnSale={toGone}
         />
       )}
       {asking && <EnquirySheet space={space} position={null} onClose={closeAsk} onSent={noop} />}

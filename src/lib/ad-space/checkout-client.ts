@@ -129,6 +129,18 @@ export function byEnquiry(e: unknown, onByEnquiry: (() => void) | undefined): bo
 }
 
 /**
+ * A package whose seller no longer organises its event answers 409
+ * `package_not_organised` to checkout, offers and quotes. Hands it to
+ * `onNoLongerOnSale` (which closes the sheet and says so) when the caller
+ * has one; otherwise `describeError` words it.
+ */
+export function noLongerOnSale(e: unknown, onNoLongerOnSale: (() => void) | undefined): boolean {
+  if (!onNoLongerOnSale || !(e instanceof CheckoutError) || e.code !== "package_not_organised") return false;
+  onNoLongerOnSale();
+  return true;
+}
+
+/**
  * One call to our API from the browser, answering `data` or throwing a
  * CheckoutError carrying `error.code`. Shared by the HiSpace checkout, the
  * booking page and pay links.
@@ -519,6 +531,8 @@ export function describeError(e: unknown, chain?: Chain | null, subject: Subject
     }
     return t("sponsor.checkoutError.walletFailed");
   }
+
+  if (e.code === "package_not_organised") return t("publicPages.sponsor.noLongerOnSale");
 
   const sessionText = describeSessionError(e);
   if (sessionText && e.code !== "not_found") return sessionText;

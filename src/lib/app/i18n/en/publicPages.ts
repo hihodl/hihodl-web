@@ -39,6 +39,7 @@ const publicPages = {
   "sponsor.getQuote": "Get a quote",
   "sponsor.applyAsPartner": "Apply as partner",
   "sponsor.seePackage": "See package",
+  "sponsor.noLongerOnSale": "This package is no longer on sale.",
   "sponsor.open": "{open} of {total} open",
   "sponsor.creatorsGoing": "Creators going",
   "sponsor.creatorsSub": "Your brand on what they carry, in what they post, and in the room.",

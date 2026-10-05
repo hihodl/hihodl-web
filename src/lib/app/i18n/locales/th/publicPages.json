@@ -29,6 +29,7 @@
   "sponsor.getQuote": "ขอใบเสนอราคา",
   "sponsor.applyAsPartner": "สมัครเป็นพาร์ทเนอร์",
   "sponsor.seePackage": "ดูแพ็กเกจ",
+  "sponsor.noLongerOnSale": "แพ็กเกจนี้ไม่ได้วางขายแล้ว",
   "sponsor.open": "ว่าง {open} จาก {total}",
   "sponsor.creatorsGoing": "ครีเอเตอร์ที่ไป",
   "sponsor.creatorsSub": "แบรนด์ของคุณบนสิ่งที่พวกเขาถือ ในโพสต์ และในงาน",

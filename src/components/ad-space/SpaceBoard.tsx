@@ -78,6 +78,8 @@ export function SpaceBoard({
   const [asked, setAsked] = useState<SavedEnquiry[]>([]);
   const now = useServerNow();
   const [resumable, setResumable] = useState<{ position: Position; order: Order } | null>(null);
+  /** The package left its event's host (409 `package_not_organised`): said once, above the spots. */
+  const [gone, setGone] = useState(false);
   const cards = useRef(new Map<string, HTMLElement>());
 
   const [buyable, setBuyable] = useState(space.status === "live");
@@ -140,6 +142,12 @@ export function SpaceBoard({
   const onAskClose = useCallback(() => setAskFor(null), []);
   const onAskSent = useCallback(() => setAsked(savedEnquiries(space.id)), [space.id]);
   const ask = useCallback((p: Position | null) => setAskFor({ position: p }), []);
+  const toGone = useCallback(() => {
+    setCheckoutFor(null);
+    setOfferFor(null);
+    setGone(true);
+    router.refresh();
+  }, [router]);
   const toEnquiry = useCallback(() => {
     setCheckoutFor(null);
     setOfferFor(null);
@@ -260,8 +268,13 @@ export function SpaceBoard({
     </div>
   );
 
-  const notices = (resumable && !checkoutFor) || mine.length > 0 ? (
+  const notices = (resumable && !checkoutFor) || mine.length > 0 || gone ? (
     <div className="container-page flex flex-col gap-4">
+      {gone && (
+        <p className="rounded-card border border-amber/40 bg-amber/[0.06] p-5 text-small text-sp-ink" role="status">
+          {t("publicPages.sponsor.noLongerOnSale")}
+        </p>
+      )}
       {resumable && !checkoutFor && (
         <div className="flex flex-col gap-4 rounded-card border border-amber/40 bg-amber/[0.06] p-5 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-small text-sp-ink">
@@ -370,7 +383,7 @@ export function SpaceBoard({
       )}
 
       {checkoutFor && (
-        <Checkout space={space} position={checkoutFor} onClose={onClose} onPaid={onPaid} onByEnquiry={toEnquiry} />
+        <Checkout space={space} position={checkoutFor} onClose={onClose} onPaid={onPaid} onByEnquiry={toEnquiry} onNoLongerOnSale={toGone} />
       )}
 
       {offerFor && (
@@ -382,6 +395,7 @@ export function SpaceBoard({
           onClose={onOfferClose}
           onSent={onOfferSent}
           onByEnquiry={toEnquiry}
+          onNoLongerOnSale={toGone}
         />
       )}
     </>
