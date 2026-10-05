@@ -61,6 +61,16 @@ const nextConfig = {
           { key: "Referrer-Policy", value: "no-referrer" },
         ],
       },
+      // A sponsor's report (a-sponsor-gets-its-report-contract.md): read-only and
+      // made to be forwarded, but still a bearer link.
+      {
+        source: "/r/:token*",
+        headers: [
+          { key: "Cache-Control", value: "private, no-store, max-age=0" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+          { key: "Referrer-Policy", value: "no-referrer" },
+        ],
+      },
       // An offer's or bid's manage link is its only credential (hispace-offers-v0.md).
       {
         source: "/o/:token*",

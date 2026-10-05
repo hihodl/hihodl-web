@@ -1104,3 +1104,92 @@ export interface GuestEnquiry {
   /** Every quote the seller sent in this thread, newest first. Absent before the quotes backend ships. */
   quotes?: QuoteView[];
 }
+
+/* ── The sponsor's report (a-sponsor-gets-its-report-contract.md) ───── */
+
+export type ReportItemKind = "package" | "session" | "production" | "spot";
+export type ReportDeliveryState = "pending" | "partly" | "delivered" | "disputed";
+
+export interface ReportSeller {
+  key: string;
+  role: "organiser" | "creator";
+  name: string | null;
+  handle: string | null;
+  avatarUrl: string | null;
+  /** The event's verified Luma host selling its own package. */
+  verifiedHost: boolean;
+  businessName: string | null;
+}
+
+export interface ReportProof {
+  url: string;
+  host: string;
+  source: "spot" | "listing" | "production";
+  kind: string | null;
+  note: string | null;
+  platform: string | null;
+  isImage: boolean;
+  postedAt: string | null;
+}
+
+export interface ReportScans {
+  /** Redirects served by the spot's link, minus known bots. Never people. */
+  total: number;
+  duringEvent: number;
+  /** Oldest first, only days with a count. */
+  byDay: { day: string; scans: number }[];
+}
+
+export type ReportInvoice =
+  | { status: "issued"; kind: string; number: string; issuedAt: string; pdfUrl: string | null }
+  | { status: "pending"; issuesAt: string | null }
+  | { status: "not_available" };
+
+export interface ReportItem {
+  orderId: string;
+  kind: ReportItemKind;
+  sellerKey: string;
+  listing: { id: string; title: string; productName: string | null; serviceSummary: string | null; path: string | null };
+  spot: { zoneKey: string; title: string | null; zoneLabel: string | null; slot: number | null; whole: boolean; perks: string[] };
+  priceUsdc: string;
+  paidUsdc: string;
+  chain: Chain;
+  paidAt: string | null;
+  txSignature: string | null;
+  explorerUrl: string | null;
+  delivery: {
+    state: ReportDeliveryState;
+    detail: string;
+    settledBy: "buyer" | "silence" | "links" | "accepted" | null;
+    at: string | null;
+    confirmBy: string | null;
+  };
+  proof: ReportProof[];
+  content: { kind: string | null; status: string | null; sponsorName: string | null; text: string | null; imageUrl: string | null } | null;
+  scans: ReportScans | null;
+  invoice: ReportInvoice;
+}
+
+/** `GET /public/reports/:token`. */
+export interface SponsorReport {
+  status: "in_progress" | "final";
+  finalAt: string | null;
+  generatedAt: string;
+  event: EventSummary;
+  sponsor: { name: string | null };
+  sellers: ReportSeller[];
+  items: ReportItem[];
+  totals: {
+    items: number;
+    paidBase: string;
+    paidUsdc: string;
+    scans: number;
+    scansDuringEvent: number;
+    delivered: number;
+    partly: number;
+    pending: number;
+    disputed: number;
+    withQr: number;
+  };
+  scansAre: "redirects_minus_known_bots";
+}
