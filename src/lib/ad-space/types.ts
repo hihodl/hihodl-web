@@ -996,7 +996,33 @@ export interface GuestEnquiryMessage {
   body: string;
   /** The teammate who answered for the business, or null. */
   sentBy: string | null;
+  /** A seller's quote this message carries, read fresh on every thread read (seller-quotes-contract.md). */
+  quote?: QuoteView | null;
   createdAt: string;
+}
+
+/* ── A seller's quote (seller-quotes-contract.md) ───────────────────── */
+
+export type QuoteState = "open" | "accepted" | "paid" | "expired" | "withdrawn" | "superseded";
+
+/** A price the seller sent for one spot inside an enquiry thread. No user ids, emails or tokens. */
+export interface QuoteView {
+  quoteId: string;
+  state: QuoteState;
+  spaceId: string;
+  position: { id: string; label: string } | null;
+  /** The seller's price, in the role of a listed price. */
+  priceUsdc: string;
+  /** What the buyer's wallet sends: the price, plus our fee when the buyer carries it. */
+  buyerPaysUsdc: string;
+  feePayer: "sponsor" | "creator";
+  note: string | null;
+  /** open: when the quote ends. accepted: when the 24 hour hold ends. Otherwise null. */
+  expiresAt: string | null;
+  sentAt: string;
+  /** The version to send back on accept. */
+  updatedAt: string;
+  orderId: string | null;
 }
 
 /** `GET /public/enquiries/:token`: a guest's thread with a seller. Never carries an email or a user id. */
@@ -1006,4 +1032,6 @@ export interface GuestEnquiry {
   business: { name: string };
   you: { name: string; company: string | null };
   messages: GuestEnquiryMessage[];
+  /** Every quote the seller sent in this thread, newest first. Absent before the quotes backend ships. */
+  quotes?: QuoteView[];
 }

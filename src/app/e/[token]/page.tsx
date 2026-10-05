@@ -131,7 +131,7 @@ function Conversation({
         </div>
       </div>
 
-      <EnquiryThread token={token} initial={enquiry} seller={seller} />
+      <EnquiryThread token={token} initial={enquiry} seller={seller} space={space} />
     </div>
   );
 }

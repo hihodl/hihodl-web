@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 
 import { CheckoutError } from "@/lib/ad-space/checkout-client";
 import {
@@ -10,12 +10,16 @@ import {
   messageProblem,
   replyToGuestEnquiry,
 } from "@/lib/ad-space/enquiries";
-import { isExpiredLink, isNewerThread, nextPollDelay } from "@/lib/ad-space/enquiry-rules";
-import type { GuestEnquiry, GuestEnquiryMessage } from "@/lib/ad-space/types";
+import { isExpiredLink, isNewerThread, nextPollDelay, quoteOfMessage } from "@/lib/ad-space/enquiry-rules";
+import { isSessionSpace } from "@/lib/ad-space/format";
+import { QUOTE_STALE_CODES, acceptGuestQuote, describeQuoteError } from "@/lib/ad-space/quotes";
+import type { GuestEnquiry, GuestEnquiryMessage, Position, QuoteView, Space } from "@/lib/ad-space/types";
 import { fmtDateTime, fmtNumber } from "@/lib/app/i18n/format";
 import { useT } from "@/lib/app/i18n/react";
 
+import { Checkout } from "./Checkout";
 import { Spinner } from "./checkout-parts";
+import { QuoteCard } from "./QuoteCard";
 import { btnPrimary } from "./ui";
 
 /**
@@ -31,11 +35,31 @@ import { btnPrimary } from "./ui";
  * A link left unused for 90 days expires (410): the page then says so, and
  * that the seller's next reply brings a fresh link by email.
  *
+ * A message carrying a seller's quote draws the quote card instead of its
+ * fallback line (seller-quotes-contract.md): Accept and pay holds the spot
+ * 24 hours and opens the same checkout an accepted offer uses, bound to this
+ * thread's token and the quote. Every read brings the quotes' current state,
+ * so a quote accepted in the app, paid, withdrawn or ended shows here too.
+ *
  * Bubbles: the guest's on the right in the light glass, the seller's on the
- * left on the page's own ink. Filled amber is only the Send button.
+ * left on the page's own ink. Filled amber is only the action.
  */
-export function EnquiryThread({ token, initial, seller }: { token: string; initial: GuestEnquiry; seller: string }) {
+export function EnquiryThread({
+  token,
+  initial,
+  seller,
+  space,
+}: {
+  token: string;
+  initial: GuestEnquiry;
+  seller: string;
+  /** The full public space, for paying a quote through its checkout. Null when it couldn't be read. */
+  space: Space | null;
+}) {
   const t = useT();
+  const [accepting, setAccepting] = useState<string | null>(null);
+  const [quoteNotice, setQuoteNotice] = useState<{ quoteId: string; text: string } | null>(null);
+  const [paying, setPaying] = useState<string | null>(null);
   const [enquiry, setEnquiry] = useState(initial);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -106,6 +130,57 @@ export function EnquiryThread({ token, initial, seller }: { token: string; initi
   }, [count]);
 
   const waiting = !enquiry.messages.some((m) => m.author === "business");
+  const session = space ? isSessionSpace(space) : false;
+  const positionOf = (q: QuoteView | null | undefined): Position | null =>
+    (q?.position && space?.positions.find((p) => p.id === q.position?.id)) || null;
+
+  /** Read the thread now, after a refusal or a payment; only a newer thread replaces the one on screen. */
+  const reload = useCallback(async () => {
+    try {
+      const next = await getGuestEnquiry(token);
+      setEnquiry((cur) => (isNewerThread(cur, next) ? next : cur));
+    } catch (err) {
+      if (err instanceof CheckoutError && isExpiredLink(err.status, err.code)) setExpired(true);
+      // Anything else: the next poll reads it again.
+    }
+  }, [token]);
+
+  async function accept(q: QuoteView) {
+    if (sending.current || stopped) return;
+    // The reply box and the polls wait while the acceptance goes out.
+    sending.current = true;
+    setAccepting(q.quoteId);
+    setQuoteNotice(null);
+    try {
+      const next = await acceptGuestQuote(token, q.quoteId, q.updatedAt);
+      setEnquiry(next);
+      const fresh = next.quotes?.find((x) => x.quoteId === q.quoteId) ?? next.messages.find((m) => m.quote?.quoteId === q.quoteId)?.quote;
+      // Accepted: straight on to paying, the second half of the one tap.
+      if (fresh?.state === "accepted" && positionOf(fresh)) setPaying(fresh.quoteId);
+    } catch (err) {
+      if (err instanceof CheckoutError && isExpiredLink(err.status, err.code)) {
+        setExpired(true);
+      } else {
+        setQuoteNotice({ quoteId: q.quoteId, text: describeQuoteError(err, session ? "session" : "spot") ?? describeEnquiryError(err, max) });
+        if (err instanceof CheckoutError && QUOTE_STALE_CODES.has(err.code)) {
+          sending.current = false;
+          await reload();
+        }
+      }
+    } finally {
+      sending.current = false;
+      setAccepting(null);
+    }
+  }
+
+  const payingQuote = paying
+    ? (enquiry.quotes?.find((q) => q.quoteId === paying) ?? enquiry.messages.find((m) => m.quote?.quoteId === paying)?.quote ?? null)
+    : null;
+  const payingPosition = positionOf(payingQuote);
+  const closeCheckout = useCallback(() => setPaying(null), []);
+  const onPaid = useCallback(() => {
+    void reload();
+  }, [reload]);
 
   async function send(e: FormEvent) {
     e.preventDefault();
@@ -136,9 +211,28 @@ export function EnquiryThread({ token, initial, seller }: { token: string; initi
   return (
     <div className="flex flex-col gap-6">
       <ol className="flex flex-col gap-3" aria-label={t("enquiries.thread.eyebrow")} aria-live="polite" aria-relevant="additions">
-        {enquiry.messages.map((m) => (
-          <Bubble key={m.id} message={m} seller={seller} />
-        ))}
+        {enquiry.messages.map((m) => {
+          const quote = quoteOfMessage(m, enquiry.quotes);
+          return (
+            <Bubble key={m.id} message={m} seller={seller}>
+              {quote && (
+                <QuoteCard
+                  quote={quote}
+                  seller={seller}
+                  busy={accepting === quote.quoteId}
+                  canPay={!!space && !!positionOf(quote)}
+                  session={session}
+                  notice={quoteNotice?.quoteId === quote.quoteId ? quoteNotice.text : null}
+                  onAccept={() => void accept(quote)}
+                  onPay={() => {
+                    setQuoteNotice(null);
+                    setPaying(quote.quoteId);
+                  }}
+                />
+              )}
+            </Bubble>
+          );
+        })}
       </ol>
       <div ref={endRef} />
 
@@ -184,6 +278,16 @@ export function EnquiryThread({ token, initial, seller }: { token: string; initi
           {notice}
         </p>
       )}
+
+      {payingQuote && space && payingPosition && (
+        <Checkout
+          space={space}
+          position={payingPosition}
+          onClose={closeCheckout}
+          onPaid={onPaid}
+          quote={{ token, view: payingQuote }}
+        />
+      )}
     </div>
   );
 }
@@ -199,7 +303,7 @@ export function ExpiredNotice({ seller }: { seller: string }) {
   );
 }
 
-function Bubble({ message: m, seller }: { message: GuestEnquiryMessage; seller: string }) {
+function Bubble({ message: m, seller, children }: { message: GuestEnquiryMessage; seller: string; children?: ReactNode }) {
   const t = useT();
   const mine = m.author === "you";
   return (
@@ -212,13 +316,16 @@ function Bubble({ message: m, seller }: { message: GuestEnquiryMessage; seller: 
           {fmtDateTime(m.createdAt)}
         </time>
       </span>
-      <p
-        className={`max-w-[min(34rem,88%)] whitespace-pre-wrap break-words rounded-[18px] px-4 py-3 text-body [overflow-wrap:anywhere] ${
-          mine ? "bg-sp-ink/[0.12] text-sp-ink" : "border border-[color:var(--color-hairline)] bg-sp-ink/[0.03] text-sp-ink"
-        }`}
-      >
-        {m.body}
-      </p>
+      {/* A quote draws its card; its body is only the fallback line for readers without one. */}
+      {children ?? (
+        <p
+          className={`max-w-[min(34rem,88%)] whitespace-pre-wrap break-words rounded-[18px] px-4 py-3 text-body [overflow-wrap:anywhere] ${
+            mine ? "bg-sp-ink/[0.12] text-sp-ink" : "border border-[color:var(--color-hairline)] bg-sp-ink/[0.03] text-sp-ink"
+          }`}
+        >
+          {m.body}
+        </p>
+      )}
     </li>
   );
 }

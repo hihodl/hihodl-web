@@ -30,26 +30,79 @@ export function nextPollDelay(failures: number): number {
 
 /**
  * A guest link that stopped working because nobody wrote for 90 days. The
- * backend answers 410 with a code naming the expiry; any 410, or any code
- * that says "expired", reads as that, whatever its exact spelling.
+ * backend answers 410 `enquiry_link_expired`; any 410, or a code naming an
+ * expired LINK, reads as that. A quote's own `offer_expired` (409) is not the
+ * link: it must never close the conversation.
  */
 export function isExpiredLink(status: number, code: string | null | undefined): boolean {
   if (status === 410) return true;
-  return typeof code === "string" && /expired/i.test(code);
+  return typeof code === "string" && /link/i.test(code) && /expired/i.test(code);
 }
 
 /**
  * Whether the thread on screen should take what a read returned: only when
  * it is newer, so a slow read never wipes a reply that just went out.
  */
-export function isNewerThread(
-  current: { messages: readonly { id: string; createdAt: string }[] },
-  next: { messages: readonly { id: string; createdAt: string }[] },
-): boolean {
+export function isNewerThread(current: ThreadShape, next: ThreadShape): boolean {
   const a = current.messages;
   const b = next.messages;
   if (b.length !== a.length) return b.length > a.length;
   const lastA = a[a.length - 1];
   const lastB = b[b.length - 1];
-  return !!lastB && (!lastA || lastB.id !== lastA.id);
+  if (lastB && (!lastA || lastB.id !== lastA.id)) return true;
+  return quotesMoved(current.quotes ?? [], next.quotes ?? []);
+}
+
+type QuoteShape = { quoteId: string; state: string; updatedAt: string; expiresAt?: string | null };
+type ThreadShape = {
+  messages: readonly { id: string; createdAt: string }[];
+  quotes?: readonly QuoteShape[] | null;
+};
+
+/**
+ * Whether a read brings a quote change the screen lacks: a quote it has not
+ * seen, one written since (accepted in the app, paid, withdrawn), or one whose
+ * state moved without a write (the server reads an open quote past its end as
+ * expired). A read older than what an Accept just returned has an older
+ * `updatedAt`, so it never puts an accepted quote back to open.
+ */
+export function quotesMoved(current: readonly QuoteShape[], next: readonly QuoteShape[]): boolean {
+  for (const q of next) {
+    const cur = current.find((c) => c.quoteId === q.quoteId);
+    if (!cur) return true;
+    const tq = Date.parse(q.updatedAt);
+    const tc = Date.parse(cur.updatedAt);
+    if (Number.isFinite(tq) && Number.isFinite(tc) && tq !== tc) {
+      if (tq > tc) return true;
+      continue;
+    }
+    if (q.state !== cur.state) return true;
+  }
+  return false;
+}
+
+/**
+ * The state to draw for a quote at `now`: the server's, except that an open
+ * quote or an accepted hold whose time ran out on screen reads as expired
+ * before the next read says so.
+ */
+export function quoteStateAt<S extends string>(q: { state: S; expiresAt: string | null }, now: number | null): S | "expired" {
+  if ((q.state === "open" || q.state === "accepted") && q.expiresAt && now !== null) {
+    const end = Date.parse(q.expiresAt);
+    if (Number.isFinite(end) && end <= now) return "expired";
+  }
+  return q.state;
+}
+
+/**
+ * The freshest copy of the quote a message carries: the thread's `quotes`
+ * list when it names it, else the message's own copy.
+ */
+export function quoteOfMessage<Q extends { quoteId: string }>(
+  message: { quote?: Q | null },
+  quotes: readonly Q[] | null | undefined,
+): Q | null {
+  const own = message.quote ?? null;
+  if (!own) return null;
+  return quotes?.find((q) => q.quoteId === own.quoteId) ?? own;
 }

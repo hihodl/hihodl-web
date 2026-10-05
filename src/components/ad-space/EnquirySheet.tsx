@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
+import { CheckoutError } from "@/lib/ad-space/checkout-client";
 import {
   ENQUIRY_APP_MESSAGE_MAX,
   ENQUIRY_COMPANY_MAX,
@@ -121,6 +122,11 @@ export function EnquirySheet({
         setForceGuest(true);
         setNotice(t("enquiries.error.signedOut"));
       } else {
+        // The spot sold (or got held) since the page was read: the question
+        // still goes to the seller about the whole space, one tap away.
+        if ((err instanceof CheckoutError || err instanceof HoldApiError) && err.code === "position_not_taking_enquiries") {
+          setPositionId("");
+        }
         setNotice(describeEnquiryError(err, max));
       }
       sending.current = false;

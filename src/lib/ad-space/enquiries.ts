@@ -124,6 +124,10 @@ export function describeEnquiryError(e: unknown, max = ENQUIRY_WEB_MESSAGE_MAX):
       return t("enquiries.error.notFound");
     case "space_not_taking_enquiries":
       return t("enquiries.error.notTaking");
+    case "position_not_taking_enquiries":
+      return t("enquiries.error.spotNotTaking");
+    case "enquiry_link_expired":
+      return t("enquiries.thread.expiredBodyPlain");
     case "enquiry_name_invalid":
       return t("enquiries.error.nameInvalid", { max: ENQUIRY_NAME_MAX });
     case "enquiry_company_invalid":
