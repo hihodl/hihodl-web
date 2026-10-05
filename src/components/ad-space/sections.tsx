@@ -6,6 +6,7 @@ import { Wordmark } from "@/components/site/Wordmark";
 import { SUPPORT_EMAIL } from "@/lib/ad-space/config";
 import { t, type LocaleCode } from "@/lib/app/i18n";
 import {
+  isPartnershipSpace,
   payChainsOf,
   payChainsText,
   VERIFIED_LABEL,
@@ -489,7 +490,7 @@ export function SpaceStats({ space, more = null }: { space: Space; more?: string
                 ["open", t("board.legend.open")],
               ] as const)
             : ([
-                ["sold", session ? t("board.sessionStatus.sold") : t("board.status.sold")],
+                ["sold", session ? t("board.sessionStatus.sold") : isPartnershipSpace(space) ? t("publicPages.sponsor.partner") : t("board.status.sold")],
                 ["held", t("board.status.held")],
                 ["open", t("board.legend.open")],
               ] as const)

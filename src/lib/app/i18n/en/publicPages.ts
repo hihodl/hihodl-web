@@ -41,6 +41,7 @@ const publicPages = {
   "sponsor.seePackage": "See package",
   "sponsor.noLongerOnSale": "This package is no longer on sale.",
   "sponsor.partners": "Partners",
+  "sponsor.partner": "Partner",
   "sponsor.partnerPanelTitle": "Partner with this event",
   "sponsor.partnerPanelBody": "Bring your audience, your channel or your community. Tell {seller} who you reach and what you'd do for the event.",
   "sponsor.sendApplication": "Send application",

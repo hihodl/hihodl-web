@@ -218,6 +218,12 @@ export interface Position {
   takesEverything?: boolean;
   /** This spot's square on `Space.photo`, or null. Only drawn when the space has a photo. */
   rect?: PhotoRect | null;
+  /**
+   * A partnership package's slot taken by a partner in kind: `status` reads
+   * "sold" (so old clients sell nothing on it), and it is shown as "Partner".
+   * Absent on every other slot and on an older server.
+   */
+  partnered?: boolean;
   /** The tier's name when this position sells one, else the zone's label or the slot number. */
   label: string;
   /**
