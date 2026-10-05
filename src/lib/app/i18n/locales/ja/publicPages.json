@@ -1,0 +1,21 @@
+{
+  "creator.unreachableTitle": "このクリエイターを今は読み込めませんでした。",
+  "creator.whereTheySell": "販売している場所",
+  "creator.nothingOnSale": "現在販売中のものはありません。",
+  "creator.listings": "出品",
+  "creator.showAll": "{count} 件をすべて表示",
+  "creator.missingTitle": "このリンクには販売中のものがありません。",
+  "creator.missingBody": "共有してくれた人にハンドルを確認してください。このクリエイターは今は何も公開していないか、スペースを開いたことがない可能性があります。",
+  "event.unreachableTitle": "このイベントを今は読み込めませんでした。",
+  "event.spaces": "スペース",
+  "event.nobodyYet": "{event} のスペースはまだ誰も開いていません。",
+  "event.allTaken": "ここはすべて埋まっています。別のタブにはまだ空きがあります。",
+  "event.notAffiliated": "HOLD は {event} と提携していません。",
+  "event.missingTitle": "このリンクにはイベントがありません。",
+  "event.missingBody": "共有してくれた人にリンクを確認してください。イベントに参加する場合は、スペースを開くときに HOLD アプリから追加できます。",
+  "space.goneTitle": "これはもう販売していません。",
+  "space.missingTitle": "このリンクには HiSpace がありません。",
+  "space.missingBody": "共有してくれた人にリンクを確認してください。まだ公開されていないか、取り下げられた可能性があります。",
+  "space.footerNav": "HiSpace のリンク",
+  "goToHold": "HOLD へ"
+}

@@ -13,6 +13,7 @@ import { STATUS_LABEL, usdFromUsdc } from "@/lib/ad-space/format";
 import { getEnquiry, getPublicSpaceById } from "@/lib/ad-space/server";
 import type { GuestEnquiry, Space } from "@/lib/ad-space/types";
 import { t } from "@/lib/app/i18n";
+import { applyRequestLocale } from "@/lib/app/i18n/server";
 
 /**
  * /e/<token>: a brand's question to a seller, for a brand with no HOLD
@@ -36,6 +37,7 @@ export const metadata: Metadata = {
 };
 
 export default async function EnquiryPage({ params }: { params: { token: string } }) {
+  const language = await applyRequestLocale();
   const found = await getEnquiry(params.token, headers());
   if (found.kind === "missing") notFound();
 
@@ -45,10 +47,17 @@ export default async function EnquiryPage({ params }: { params: { token: string 
 
   return (
     <SpacesGround ground={space?.pageGround ?? null}>
-      <SlimHeader />
+      <SlimHeader language={language} />
       <main className="container-page max-w-3xl py-10 md:py-16">
         {found.kind === "found" ? (
           <Conversation token={params.token} enquiry={found.enquiry} space={space} />
+        ) : found.kind === "expired" ? (
+          // Ninety quiet days: the link is spent, the conversation is not. The seller's next reply mails a fresh one.
+          <div className="flex min-h-[50vh] flex-col justify-center">
+            <p className={`${eyebrow} text-sp-amber`}>HOLD</p>
+            <h1 className="mt-5 font-display text-h3 font-light text-sp-ink md:text-h2">{t("enquiries.thread.expiredTitle")}</h1>
+            <p className="mt-5 max-w-xl text-body text-sp-ink/85">{t("enquiries.thread.expiredBodyPlain")}</p>
+          </div>
         ) : (
           <div className="flex min-h-[50vh] flex-col justify-center">
             <p className={`${eyebrow} text-sp-amber`}>HOLD</p>

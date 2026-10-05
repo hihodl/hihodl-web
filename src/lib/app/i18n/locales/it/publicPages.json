@@ -1,0 +1,21 @@
+{
+  "creator.unreachableTitle": "Al momento non riusciamo a caricare questo creator.",
+  "creator.whereTheySell": "Dove vende",
+  "creator.nothingOnSale": "Niente in vendita al momento.",
+  "creator.listings": "Annunci",
+  "creator.showAll": "Vedi tutti i {count}",
+  "creator.missingTitle": "Non c'è niente in vendita a questo link.",
+  "creator.missingBody": "Controlla l'handle con chi te l'ha condiviso. Questo creator potrebbe non avere niente di aperto ora, o non aver mai aperto uno spazio.",
+  "event.unreachableTitle": "Al momento non riusciamo a caricare questo evento.",
+  "event.spaces": "Spazi",
+  "event.nobodyYet": "Nessuno ha ancora aperto uno spazio per {event}.",
+  "event.allTaken": "Qui è tutto preso. Un'altra scheda ha ancora posizioni libere.",
+  "event.notAffiliated": "HOLD non è affiliata a {event}.",
+  "event.missingTitle": "Nessun evento a questo link.",
+  "event.missingBody": "Controlla il link con chi te l'ha condiviso. Se vai a un evento, puoi aggiungerlo dall'app HOLD quando apri il tuo spazio.",
+  "space.goneTitle": "Questo non è più in vendita.",
+  "space.missingTitle": "Nessun HiSpace a questo link.",
+  "space.missingBody": "Controlla il link con chi te l'ha condiviso. Potrebbe non essere ancora pubblicato, o essere stato ritirato.",
+  "space.footerNav": "Link di HiSpace",
+  "goToHold": "Vai su HOLD"
+}

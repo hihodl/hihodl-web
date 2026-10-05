@@ -1,0 +1,21 @@
+{
+  "creator.unreachableTitle": "ตอนนี้ยังโหลดครีเอเตอร์คนนี้ไม่ได้",
+  "creator.whereTheySell": "ขายที่ไหน",
+  "creator.nothingOnSale": "ตอนนี้ยังไม่มีอะไรวางขาย",
+  "creator.listings": "รายการขาย",
+  "creator.showAll": "ดูทั้งหมด {count} รายการ",
+  "creator.missingTitle": "ลิงก์นี้ไม่มีอะไรวางขาย",
+  "creator.missingBody": "ลองตรวจสอบแฮนเดิลกับคนที่แชร์มา ครีเอเตอร์คนนี้อาจยังไม่มีอะไรเปิดอยู่ หรืออาจไม่เคยเปิดสเปซเลย",
+  "event.unreachableTitle": "ตอนนี้ยังโหลดอีเวนต์นี้ไม่ได้",
+  "event.spaces": "สเปซ",
+  "event.nobodyYet": "ยังไม่มีใครเปิดสเปซสำหรับ {event}",
+  "event.allTaken": "ที่นี่ถูกจองหมดแล้ว อีกแท็บยังมีที่ว่างอยู่",
+  "event.notAffiliated": "HOLD ไม่มีส่วนเกี่ยวข้องกับ {event}",
+  "event.missingTitle": "ลิงก์นี้ไม่มีอีเวนต์",
+  "event.missingBody": "ลองตรวจสอบลิงก์กับคนที่แชร์มา ถ้าคุณจะไปอีเวนต์ คุณเพิ่มได้จากแอป HOLD ตอนเปิดสเปซของคุณ",
+  "space.goneTitle": "อันนี้ไม่ได้วางขายแล้ว",
+  "space.missingTitle": "ลิงก์นี้ไม่มี HiSpace",
+  "space.missingBody": "ลองตรวจสอบลิงก์กับคนที่แชร์มา อาจยังไม่ได้เผยแพร่ หรืออาจถูกนำออกแล้ว",
+  "space.footerNav": "ลิงก์ HiSpace",
+  "goToHold": "ไปที่ HOLD"
+}

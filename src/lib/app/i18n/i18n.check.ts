@@ -12,7 +12,7 @@ import path from "path";
 
 import { NAMESPACES } from "./en";
 import { formatMessage, signature, splitTags } from "./icu";
-import { browserLocale, DICTIONARY_CODES, matchLocale } from "./locales";
+import { acceptLanguageLocale, browserLocale, DICTIONARY_CODES, matchLocale } from "./locales";
 
 let fails = 0;
 function eq(name: string, a: unknown, b: unknown) {
@@ -53,6 +53,13 @@ eq("match zh-TW", matchLocale("zh-TW"), "zh-CN");
 eq("match ar-SA", matchLocale("ar-SA"), "ar-AE");
 eq("match unknown", matchLocale("pl-PL"), null);
 eq("browser first known", browserLocale(["pl-PL", "de-AT", "en"]), "de");
+eq("accept-language plain", acceptLanguageLocale("es-ES,es;q=0.9,en;q=0.8"), "es-ES");
+eq("accept-language by weight", acceptLanguageLocale("en;q=0.5, fr-CA;q=0.9"), "fr");
+eq("accept-language skips unknown", acceptLanguageLocale("pl-PL,pl;q=0.9,de;q=0.7"), "de");
+eq("accept-language q=0 is a no", acceptLanguageLocale("ja;q=0, ko"), "ko");
+eq("accept-language star", acceptLanguageLocale("*"), null);
+eq("accept-language empty", acceptLanguageLocale(""), null);
+eq("accept-language none", acceptLanguageLocale(null), null);
 
 /* 2 ── the dictionaries */
 const root = path.join(__dirname, "locales");

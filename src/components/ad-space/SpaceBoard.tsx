@@ -15,6 +15,7 @@ import {
 } from "@/lib/ad-space/format";
 import { gradientCss } from "@/lib/ad-space/look";
 import { type SavedEnquiry, enquiryPath, savedEnquiries } from "@/lib/ad-space/enquiries";
+import { canAskAbout } from "@/lib/ad-space/enquiry-rules";
 import { PAY_PARAM, isPositionId } from "@/lib/ad-space/pay-here";
 import { type SavedOffer, offerModeOf, offerPath, savedOffers } from "@/lib/ad-space/offers-client";
 import type { OfferKind, OfferMode, Order, Position, PositionOffers, Space } from "@/lib/ad-space/types";
@@ -195,6 +196,8 @@ export function SpaceBoard({
   );
 
   const active = hoverId ?? flashId;
+  /** The spot this browser's own checkout holds: still worth a question, unlike one somebody else holds. */
+  const heldByMe = resumable && resumable.order.status === "awaiting_payment" ? resumable.position.id : null;
   const sizeOf = (p: Position) => space.template.zones.find((z) => z.zoneKey === p.zoneKey)?.sizeLabel ?? null;
   const session = isSessionSpace(space);
 
@@ -242,7 +245,7 @@ export function SpaceBoard({
           onHover={setHoverId}
           onSponsor={setCheckoutFor}
           onOffer={isService && !tiered ? undefined : openOffer}
-          onAsk={buyable ? ask : undefined}
+          onAsk={buyable && canAskAbout(p, heldByMe) ? ask : undefined}
         />
       ))}
     </div>
@@ -353,7 +356,9 @@ export function SpaceBoard({
         <AskPanel seller={sellerName(space.creator)} canAsk={buyable} asked={asked} onAsk={() => ask(null)} />
       )}
 
-      {askFor && <EnquirySheet space={space} position={askFor.position} onClose={onAskClose} onSent={onAskSent} />}
+      {askFor && (
+        <EnquirySheet space={space} position={askFor.position} heldByMe={heldByMe} onClose={onAskClose} onSent={onAskSent} />
+      )}
 
       {checkoutFor && (
         <Checkout space={space} position={checkoutFor} onClose={onClose} onPaid={onPaid} />

@@ -1,0 +1,21 @@
+{
+  "creator.unreachableTitle": "Kami belum bisa memuat kreator ini sekarang.",
+  "creator.whereTheySell": "Tempat mereka berjualan",
+  "creator.nothingOnSale": "Belum ada yang dijual sekarang.",
+  "creator.listings": "Daftar jualan",
+  "creator.showAll": "Lihat semua {count}",
+  "creator.missingTitle": "Tidak ada yang dijual di tautan ini.",
+  "creator.missingBody": "Cek handle-nya dengan orang yang membagikannya. Kreator ini mungkin belum membuka apa pun sekarang, atau belum pernah membuka space.",
+  "event.unreachableTitle": "Kami belum bisa memuat acara ini sekarang.",
+  "event.spaces": "Space",
+  "event.nobodyYet": "Belum ada yang membuka space untuk {event}.",
+  "event.allTaken": "Semua di sini sudah diambil. Tab lain masih punya slot kosong.",
+  "event.notAffiliated": "HOLD tidak berafiliasi dengan {event}.",
+  "event.missingTitle": "Tidak ada acara di tautan ini.",
+  "event.missingBody": "Cek tautannya dengan orang yang membagikannya. Kalau kamu akan ke sebuah acara, kamu bisa menambahkannya dari aplikasi HOLD saat membuka space-mu.",
+  "space.goneTitle": "Yang ini sudah tidak dijual lagi.",
+  "space.missingTitle": "Tidak ada HiSpace di tautan ini.",
+  "space.missingBody": "Cek tautannya dengan orang yang membagikannya. Mungkin belum diterbitkan, atau sudah diturunkan.",
+  "space.footerNav": "Tautan HiSpace",
+  "goToHold": "Ke HOLD"
+}

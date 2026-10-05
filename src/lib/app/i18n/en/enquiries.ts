@@ -75,6 +75,9 @@ const enquiries = {
   "thread.unreachableTitle": "We couldn't load this conversation just now.",
   "thread.unreachableBody": "This is on our side, not your link. Give it a moment and refresh the page.",
   "thread.gone": "This conversation isn't available any more.",
+  "thread.expiredTitle": "This link has expired.",
+  "thread.expiredBody": "A link stops working after 90 days without a message. When {seller} replies, we email you a fresh one and the conversation picks up right here.",
+  "thread.expiredBodyPlain": "A link stops working after 90 days without a message. When the seller replies, we email you a fresh one and the conversation picks up right here.",
 
   /* ── A company selling on HOLD ── */
   "business.verified": "Verified business",

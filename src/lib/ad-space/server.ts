@@ -1,6 +1,7 @@
 // Server-only by construction: no "use client" file imports this module.
 import { lookOf } from "./product-look";
 import { AD_SPACE_API, HANDLE_RE, SLUG_RE } from "./config";
+import { isExpiredLink } from "./enquiry-rules";
 import { defaultEventTab, openSpots } from "./format";
 import { gradientKey } from "./look";
 import type {
@@ -614,6 +615,8 @@ export async function getOffer(token: string, from: Headers | null): Promise<Off
 export type EnquiryLookup =
   | { kind: "found"; enquiry: GuestEnquiry }
   | { kind: "missing" }
+  /** The link went 90 days without a message (410, or a code naming the expiry). */
+  | { kind: "expired" }
   | { kind: "unreachable" };
 
 /**
@@ -635,8 +638,15 @@ export async function getEnquiry(token: string, from: Headers | null): Promise<E
       cache: "no-store",
       signal: AbortSignal.timeout(6_000),
     });
-    if (res.status === 404) return { kind: "missing" };
-    if (!res.ok) return { kind: "unreachable" };
+    if (!res.ok) {
+      const code = await res
+        .json()
+        .then((b: { error?: { code?: unknown } }) => (typeof b?.error?.code === "string" ? b.error.code : null))
+        .catch(() => null);
+      if (isExpiredLink(res.status, code)) return { kind: "expired" };
+      if (res.status === 404) return { kind: "missing" };
+      return { kind: "unreachable" };
+    }
     const body = (await res.json()) as { data?: { enquiry?: Partial<GuestEnquiry> } };
     const e = body?.data?.enquiry;
     return e?.space && e.business && Array.isArray(e.messages)

@@ -122,3 +122,25 @@ export function browserLocale(tags: readonly string[] | null | undefined): Local
   }
   return null;
 }
+
+/**
+ * An Accept-Language header ("es-ES,es;q=0.9,en;q=0.8") as one of ours, or
+ * null: the languages in the order of their weight, then the first we speak.
+ * A weight of 0 means "not this one".
+ */
+export function acceptLanguageLocale(header: string | null | undefined): LocaleCode | null {
+  if (!header) return null;
+  const tags = header
+    .split(",")
+    .slice(0, 20)
+    .map((part, i) => {
+      const [tag, ...params] = part.trim().split(";");
+      const q = params.map((p) => /^\s*q\s*=\s*([0-9.]+)\s*$/i.exec(p)).find(Boolean);
+      const weight = q ? Number(q[1]) : 1;
+      return { tag: tag.trim(), weight: Number.isFinite(weight) ? weight : 0, i };
+    })
+    .filter((x) => x.tag && x.tag !== "*" && x.weight > 0)
+    .sort((a, b) => b.weight - a.weight || a.i - b.i)
+    .map((x) => x.tag);
+  return browserLocale(tags);
+}

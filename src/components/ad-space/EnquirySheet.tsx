@@ -18,6 +18,7 @@ import {
   sendAppEnquiry,
   sendGuestEnquiry,
 } from "@/lib/ad-space/enquiries";
+import { canAskAbout } from "@/lib/ad-space/enquiry-rules";
 import type { Position, Space } from "@/lib/ad-space/types";
 import { HoldApiError } from "@/lib/app/hold-api";
 import { fmtNumber } from "@/lib/app/i18n/format";
@@ -50,12 +51,15 @@ type Sent = { kind: "web"; token: string | null; threadUrl: string } | { kind: "
 export function EnquirySheet({
   space,
   position,
+  heldByMe = null,
   onClose,
   onSent,
 }: {
   space: Space;
   /** The spot asked about, or null for the space as a whole. */
   position: Position | null;
+  /** The spot this browser's own checkout holds, which can still be asked about. */
+  heldByMe?: string | null;
   onClose: () => void;
   onSent: () => void;
 }) {
@@ -68,9 +72,9 @@ export function EnquirySheet({
   const inApp = !!session && !forceGuest;
   const max = inApp ? ENQUIRY_APP_MESSAGE_MAX : ENQUIRY_WEB_MESSAGE_MAX;
 
-  // Every spot can be asked about, sold or not: "will this come back?" is a question too.
-  const spots = space.positions.filter((p) => p.status !== "closed");
-  const [positionId, setPositionId] = useState<string>(position?.id ?? "");
+  // Only spots still for sale are offered; a question about a sold one goes to the whole space.
+  const spots = space.positions.filter((p) => canAskAbout(p, heldByMe));
+  const [positionId, setPositionId] = useState<string>(position && canAskAbout(position, heldByMe) ? position.id : "");
   const [name, setName] = useState("");
   const [company, setCompany] = useState("");
   const [email, setEmail] = useState("");

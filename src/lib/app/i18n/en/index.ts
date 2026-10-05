@@ -25,6 +25,7 @@ import money from "./money";
 import offers from "./offers";
 import payments from "./payments";
 import payPage from "./payPage";
+import publicPages from "./publicPages";
 import prefs from "./prefs";
 import requests from "./requests";
 import runner from "./runner";
@@ -65,6 +66,7 @@ export const NAMESPACES = {
   trips,
   payPage,
   enquiries,
+  publicPages,
 } as const;
 
 type Namespaces = typeof NAMESPACES;

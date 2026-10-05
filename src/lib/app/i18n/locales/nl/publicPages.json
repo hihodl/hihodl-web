@@ -1,0 +1,21 @@
+{
+  "creator.unreachableTitle": "We konden deze creator nu niet laden.",
+  "creator.whereTheySell": "Waar ze verkopen",
+  "creator.nothingOnSale": "Nu niets te koop.",
+  "creator.listings": "Aanbod",
+  "creator.showAll": "Toon alle {count}",
+  "creator.missingTitle": "Er is niets te koop op deze link.",
+  "creator.missingBody": "Check de handle bij wie hem deelde. Deze creator heeft nu misschien niets open, of heeft nog nooit een space geopend.",
+  "event.unreachableTitle": "We konden dit event nu niet laden.",
+  "event.spaces": "Spaces",
+  "event.nobodyYet": "Nog niemand heeft een space geopend voor {event}.",
+  "event.allTaken": "Alles hier is weg. Een ander tabblad heeft nog vrije plekken.",
+  "event.notAffiliated": "HOLD is niet verbonden aan {event}.",
+  "event.missingTitle": "Er is geen event op deze link.",
+  "event.missingBody": "Check de link bij wie hem deelde. Ga je naar een event, dan kun je het toevoegen in de HOLD app als je je space opent.",
+  "space.goneTitle": "Deze is niet meer te koop.",
+  "space.missingTitle": "Er is geen HiSpace op deze link.",
+  "space.missingBody": "Check de link bij wie hem deelde. Misschien is hij nog niet gepubliceerd, of is hij offline gehaald.",
+  "space.footerNav": "HiSpace links",
+  "goToHold": "Naar HOLD"
+}

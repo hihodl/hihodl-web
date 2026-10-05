@@ -18,7 +18,9 @@ import {
   SpaceUpdates,
 } from "@/components/ad-space/sections";
 import { btnPrimary, eyebrow } from "@/components/ad-space/ui";
-import { t } from "@/lib/app/i18n";
+import { t, type LocaleCode } from "@/lib/app/i18n";
+import { applyRequestLocale, inEnglish } from "@/lib/app/i18n/server";
+import type { Space } from "@/lib/ad-space/types";
 import { isSessionSpace, serviceName, spaceProgressText, spaceSoldOut } from "@/lib/ad-space/format";
 import { getPublicCreator, getPublicSpace } from "@/lib/ad-space/server";
 import { effectOf } from "@/lib/ad-space/studio";
@@ -61,7 +63,11 @@ export async function generateMetadata({
     return { title: "HiSpace", robots: { index: false, follow: false } };
   }
 
-  const s = found.space;
+  return inEnglish(() => spaceMetadata(found.space, searchParams));
+}
+
+/** The space's title and link card, in English (see `inEnglish`). */
+function spaceMetadata(s: Space, searchParams: SearchParams): Metadata {
   const handle = s.creator.xHandle;
   const path = `/s/${encodeURIComponent(handle)}/${encodeURIComponent(s.slug)}`;
   const og = `/api/og${path}?m=${milestone(searchParams, s.totals.sold)}`;
@@ -100,12 +106,14 @@ export async function generateMetadata({
 }
 
 export default async function AdSpacePage({ params }: { params: Params }) {
+  // The viewer's language, before anything below draws a word.
+  const language = await applyRequestLocale();
   const found = await getPublicSpace(params.handle, params.slug);
   if (found.kind === "missing") {
     // Gone (sold, closed, taken down), but the creator still sells: their own page, never anyone else's.
     const hub = await getPublicCreator(params.handle);
     if (hub.kind !== "found") notFound();
-    return <GoneToCreator handle={hub.page.creator.xHandle} />;
+    return <GoneToCreator handle={hub.page.creator.xHandle} language={language} />;
   }
   // Nothing more to take here: the creator's own page, when it has something open.
   const more =
@@ -119,15 +127,18 @@ export default async function AdSpacePage({ params }: { params: Params }) {
       effect={found.kind === "found" ? effectOf(found.space.effect) : "none"}
     >
       {found.kind === "unreachable" ? (
-        <main>
-          <SpaceUnavailable />
-        </main>
+        <>
+          <SlimHeader language={language} />
+          <main>
+            <SpaceUnavailable />
+          </main>
+        </>
       ) : (
         <>
           <main className="overflow-x-clip">
             <SpaceBoard
               space={found.space}
-              head={<ListingHead space={found.space} />}
+              head={<ListingHead space={found.space} language={language} />}
               stats={<SpaceStats space={found.space} more={more} />}
               details={
                 <>
@@ -158,14 +169,14 @@ async function hubPath(handle: string): Promise<string | null> {
  * not-found it never says why (a delisted space's reason is between us and
  * its creator); it sends the brand to the creator's own page.
  */
-function GoneToCreator({ handle }: { handle: string }) {
+function GoneToCreator({ handle, language }: { handle: string; language: { locale: LocaleCode; chosen: boolean } }) {
   return (
     <>
-      <SlimHeader />
+      <SlimHeader language={language} />
       <main className="container-page flex min-h-[60vh] flex-col justify-center py-20">
         <p className={`${eyebrow} text-sp-amber`}>HiSpace</p>
         <h1 className="mt-5 max-w-2xl font-display text-h3 font-light text-sp-ink md:text-h2">
-          This one isn&rsquo;t on sale any more.
+          {t("publicPages.space.goneTitle")}
         </h1>
         <div className="mt-10">
           <Link href={creatorPath(handle)} className={btnPrimary}>

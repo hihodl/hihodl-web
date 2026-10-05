@@ -3,7 +3,14 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { CheckoutError } from "@/lib/ad-space/checkout-client";
-import { ENQUIRY_WEB_MESSAGE_MAX, describeEnquiryError, messageProblem, replyToGuestEnquiry } from "@/lib/ad-space/enquiries";
+import {
+  ENQUIRY_WEB_MESSAGE_MAX,
+  describeEnquiryError,
+  getGuestEnquiry,
+  messageProblem,
+  replyToGuestEnquiry,
+} from "@/lib/ad-space/enquiries";
+import { isExpiredLink, isNewerThread, nextPollDelay } from "@/lib/ad-space/enquiry-rules";
 import type { GuestEnquiry, GuestEnquiryMessage } from "@/lib/ad-space/types";
 import { fmtDateTime, fmtNumber } from "@/lib/app/i18n/format";
 import { useT } from "@/lib/app/i18n/react";
@@ -16,8 +23,13 @@ import { btnPrimary } from "./ui";
  *
  * The page arrives with the thread read on the server; replying posts from the
  * browser and the answer IS the thread again, so it simply replaces what is
- * on screen. No polling: a reply from the seller is announced by email, with
- * a fresh link back here.
+ * on screen. While the tab is on screen the thread is read again every 20 s
+ * (doubling after failures, up to 5 min), and once more the moment the tab
+ * comes back, so a seller's reply lands without a reload and without
+ * touching the reply being typed. A hidden tab reads nothing.
+ *
+ * A link left unused for 90 days expires (410): the page then says so, and
+ * that the seller's next reply brings a fresh link by email.
  *
  * Bubbles: the guest's on the right in the light glass, the seller's on the
  * left on the page's own ink. Filled amber is only the Send button.
@@ -29,9 +41,64 @@ export function EnquiryThread({ token, initial, seller }: { token: string; initi
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [gone, setGone] = useState(false);
+  const [expired, setExpired] = useState(false);
   const sending = useRef(false);
   const endRef = useRef<HTMLDivElement>(null);
   const max = ENQUIRY_WEB_MESSAGE_MAX;
+
+  /* Reading the thread again while the tab is on screen. */
+  const stopped = gone || expired;
+  useEffect(() => {
+    if (stopped) return;
+    let timer: number | null = null;
+    let failures = 0;
+    let inFlight = false;
+    let live = true;
+
+    const clear = () => {
+      if (timer !== null) window.clearTimeout(timer);
+      timer = null;
+    };
+    const schedule = () => {
+      clear();
+      if (live && document.visibilityState === "visible") timer = window.setTimeout(() => void poll(), nextPollDelay(failures));
+    };
+    const poll = async () => {
+      // A reply going out answers with the thread itself; this read waits for the next turn.
+      if (inFlight || sending.current || document.visibilityState !== "visible") return schedule();
+      inFlight = true;
+      try {
+        const next = await getGuestEnquiry(token);
+        if (!live) return;
+        failures = 0;
+        setEnquiry((cur) => (isNewerThread(cur, next) ? next : cur));
+      } catch (err) {
+        if (!live) return;
+        if (err instanceof CheckoutError && isExpiredLink(err.status, err.code)) {
+          setExpired(true);
+          return;
+        }
+        // A link the API stopped knowing is said when the guest replies; reading just stops.
+        if (err instanceof CheckoutError && err.code === "not_found") return;
+        failures++;
+      } finally {
+        inFlight = false;
+      }
+      schedule();
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void poll();
+      else clear();
+    };
+
+    schedule();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      live = false;
+      clear();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [token, stopped]);
 
   const count = enquiry.messages.length;
   useEffect(() => {
@@ -42,7 +109,7 @@ export function EnquiryThread({ token, initial, seller }: { token: string; initi
 
   async function send(e: FormEvent) {
     e.preventDefault();
-    if (sending.current || gone) return;
+    if (sending.current || stopped) return;
     setNotice(null);
     const problem = messageProblem(message, max);
     if (problem) return setNotice(problem);
@@ -52,7 +119,9 @@ export function EnquiryThread({ token, initial, seller }: { token: string; initi
       setEnquiry(await replyToGuestEnquiry(token, message.trim()));
       setMessage("");
     } catch (err) {
-      if (err instanceof CheckoutError && err.code === "not_found") {
+      if (err instanceof CheckoutError && isExpiredLink(err.status, err.code)) {
+        setExpired(true);
+      } else if (err instanceof CheckoutError && err.code === "not_found") {
         setGone(true);
         setNotice(t("enquiries.thread.gone"));
       } else {
@@ -66,16 +135,18 @@ export function EnquiryThread({ token, initial, seller }: { token: string; initi
 
   return (
     <div className="flex flex-col gap-6">
-      <ol className="flex flex-col gap-3" aria-label={t("enquiries.thread.eyebrow")}>
+      <ol className="flex flex-col gap-3" aria-label={t("enquiries.thread.eyebrow")} aria-live="polite" aria-relevant="additions">
         {enquiry.messages.map((m) => (
           <Bubble key={m.id} message={m} seller={seller} />
         ))}
       </ol>
       <div ref={endRef} />
 
-      {waiting && <p className="text-small text-sp-ink/85">{t("enquiries.thread.waiting", { seller })}</p>}
+      {waiting && !stopped && <p className="text-small text-sp-ink/85">{t("enquiries.thread.waiting", { seller })}</p>}
 
-      {!gone && (
+      {expired && <ExpiredNotice seller={seller} />}
+
+      {!stopped && (
         <form onSubmit={send} className="flex flex-col gap-3" noValidate>
           <label className="flex flex-col gap-2">
             <span className="flex items-baseline justify-between gap-3">
@@ -113,6 +184,17 @@ export function EnquiryThread({ token, initial, seller }: { token: string; initi
           {notice}
         </p>
       )}
+    </div>
+  );
+}
+
+/** The link stopped working after 90 quiet days. The thread on screen stays readable. */
+export function ExpiredNotice({ seller }: { seller: string }) {
+  const t = useT();
+  return (
+    <div className="flex flex-col gap-2 rounded-[16px] border border-[color:var(--color-hairline)] bg-sp-ink/[0.04] px-4 py-4" role="status">
+      <p className="text-body text-sp-ink">{t("enquiries.thread.expiredTitle")}</p>
+      <p className="text-small text-sp-ink/85">{t("enquiries.thread.expiredBody", { seller })}</p>
     </div>
   );
 }

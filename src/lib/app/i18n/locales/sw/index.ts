@@ -27,9 +27,10 @@ import stays from "./stays.json";
 import trips from "./trips.json";
 import payPage from "./payPage.json";
 import enquiries from "./enquiries.json";
+import publicPages from "./publicPages.json";
 
 import { prefix } from "../prefix";
 
-const dict = prefix({ common, titles, shell, front, link, menu, prefs, account, home, activity, wallet, money, payments, requests, groups, groupThread, analytics, spaces, listings, creator, runner, board, offers, sponsor, stays, trips, payPage, enquiries });
+const dict = prefix({ common, titles, shell, front, link, menu, prefs, account, home, activity, wallet, money, payments, requests, groups, groupThread, analytics, spaces, listings, creator, runner, board, offers, sponsor, stays, trips, payPage, enquiries, publicPages });
 
 export default dict;

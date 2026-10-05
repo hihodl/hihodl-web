@@ -45,7 +45,23 @@ let state: PrefsState = {
 let version = 0;
 const listeners = new Set<() => void>();
 
+/**
+ * On the server, the language of the request being rendered, when a page
+ * chose one (./server: the public space pages, from the viewer's cookie or
+ * Accept-Language). Request-scoped by React's `cache`, so two visitors in two
+ * languages never share it. Null: English, as before.
+ */
+let serverScope: (() => PrefsState | null) | null = null;
+
+export function setServerScope(read: () => PrefsState | null): void {
+  serverScope = read;
+}
+
 export function getPrefs(): PrefsState {
+  if (serverScope && typeof window === "undefined") {
+    const scoped = serverScope();
+    if (scoped) return scoped;
+  }
   return state;
 }
 
