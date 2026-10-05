@@ -352,6 +352,8 @@ export interface Template {
     deliverableKind?: string;
     /** `custom-service`: the creator names the service themselves. */
     custom?: boolean;
+    /** `media-or-community-partner`: agreed in an enquiry, never bought. Absent elsewhere and on an older server. */
+    partnership?: boolean;
   } | null;
   allowedVenues: VenueType[];
   requiredAttestations: string[];
@@ -639,6 +641,8 @@ export interface SpaceView {
   inspiredBy?: InspiredBy | null;
   /** Sold as a crew: who is in it and what each brings, never the split. Null or absent: an ordinary listing. */
   crew?: PublicCrew | null;
+  /** A partnership package's accepted partners, with the id that ends one. Absent: none, or an older server. */
+  partners?: { id: string; name: string; logoUrl: string | null }[];
 }
 
 /**

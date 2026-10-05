@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { cardServiceName, closesText, usdFromCents } from "@/lib/ad-space/format";
-import type { EventOrganiser, Space, SpaceCard, SpaceTab } from "@/lib/ad-space/types";
+import type { EventOrganiser, EventPartner, Space, SpaceCard, SpaceTab } from "@/lib/ad-space/types";
 import { t } from "@/lib/app/i18n";
 import { fmtNumber } from "@/lib/app/i18n/format";
 
@@ -71,6 +71,38 @@ export function HostLine({ organiser }: { organiser: EventOrganiser }) {
 }
 
 /**
+ * "Partners": who the host took on a partnership package, logo and name, the
+ * way a sponsor wall reads. Nothing at all while there are none.
+ */
+export function PartnersRow({ partners, className = "" }: { partners: EventPartner[] | undefined; className?: string }) {
+  const list = (partners ?? []).filter((p) => p.name.trim());
+  if (list.length === 0) return null;
+  return (
+    <div className={`flex min-w-0 flex-wrap items-center gap-2 ${className}`}>
+      <span className="text-tiny text-sp-ink/80">{t("publicPages.sponsor.partners")}</span>
+      <ul className="flex min-w-0 flex-wrap items-center gap-2">
+        {list.map((p, i) => (
+          <li
+            key={`${p.name}-${i}`}
+            className="inline-flex h-7 min-w-0 max-w-[220px] items-center gap-1.5 rounded-[14px] border border-sp-ink/15 bg-sp-ink/[0.04] pl-1 pr-2.5"
+          >
+            {p.logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element -- the partner's logo, from our own bucket
+              <img src={p.logoUrl} alt="" width={20} height={20} className="h-5 w-5 shrink-0 rounded-full bg-white object-contain" />
+            ) : (
+              <span aria-hidden className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-sp-ink/10 text-[10px] font-medium text-sp-ink">
+                {p.name.trim().charAt(0).toUpperCase()}
+              </span>
+            )}
+            <span className="truncate text-tiny text-sp-ink">{p.name}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/**
  * The host's packages, one row each. `spaces` holds the full listing behind a
  * card when it could be read, keyed by space id; without it a row still links
  * to the package's own page, where every way to buy is.
@@ -131,6 +163,7 @@ function PackageRow({ card: c, space, now }: { card: SpaceCard; space: Space | n
           </span>{" "}
           · {closesText(c.closesAt, closed, now)}
         </p>
+        <PartnersRow partners={c.partners ?? space?.partners} className="mt-3" />
       </div>
       <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-3 sm:justify-end">
         {!closed && c.fromPriceCents !== null && (

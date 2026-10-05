@@ -375,7 +375,7 @@ export function SpaceBoard({
 
       {/* Only a live space takes questions (409 space_not_taking_enquiries otherwise). */}
       {(buyable || asked.length > 0) && (
-        <AskPanel seller={sellerName(space.creator)} canAsk={buyable} asked={asked} onAsk={() => ask(null)} />
+        <AskPanel seller={sellerName(space.creator)} canAsk={buyable} asked={asked} onAsk={() => ask(null)} partnership={partnership} />
       )}
 
       {askFor && (
@@ -557,18 +557,21 @@ function YourOffers({ offers }: { offers: SavedOffer[] }) {
 
 /**
  * "Ask the seller", for the space as a whole, and the conversations this
- * browser already opened here, each with its link.
+ * browser already opened here, each with its link. On a partnership package
+ * the enquiry IS the way in, so it reads "Apply as partner" and leads.
  */
 function AskPanel({
   seller,
   canAsk,
   asked,
   onAsk,
+  partnership,
 }: {
   seller: string;
   canAsk: boolean;
   asked: SavedEnquiry[];
   onAsk: () => void;
+  partnership: boolean;
 }) {
   const t = useT();
   return (
@@ -577,13 +580,15 @@ function AskPanel({
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <h2 id="ask-seller" className="text-body text-sp-ink">
-              {t("enquiries.ask.panelTitle")}
+              {partnership ? t("publicPages.sponsor.partnerPanelTitle") : t("enquiries.ask.panelTitle")}
             </h2>
-            <p className="mt-1 max-w-xl text-small text-sp-ink/85">{t("enquiries.ask.panelBody", { seller })}</p>
+            <p className="mt-1 max-w-xl text-small text-sp-ink/85">
+              {partnership ? t("publicPages.sponsor.partnerPanelBody", { seller }) : t("enquiries.ask.panelBody", { seller })}
+            </p>
           </div>
           {canAsk && (
-            <button type="button" className={btnSmallSecondary} onClick={onAsk}>
-              {t("enquiries.ask.seller")}
+            <button type="button" className={partnership ? btnSmall : btnSmallSecondary} onClick={onAsk}>
+              {partnership ? t("publicPages.sponsor.applyAsPartner") : t("enquiries.ask.seller")}
             </button>
           )}
         </div>

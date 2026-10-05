@@ -449,6 +449,8 @@ export interface Space {
    * rights. Null on every other template; absent on an older server.
    */
   production?: ProductionPackageView | null;
+  /** A partnership package's agreed partners, in the order they joined. Absent or empty: none yet, or an older server. */
+  partners?: EventPartner[];
   reason: string | null;
   status: SpaceStatus;
   kind: "placement" | "service";
@@ -659,6 +661,15 @@ export interface EventSummary {
   organiser?: EventOrganiser | null;
 }
 
+/**
+ * A media or community partner the organiser accepted on a partnership package
+ * (`media-or-community-partner`): agreed in an enquiry, never bought.
+ */
+export interface EventPartner {
+  name: string;
+  logoUrl: string | null;
+}
+
 /** The verified host of an event, as the public pages show them. */
 export interface EventOrganiser {
   name: string;
@@ -753,6 +764,8 @@ export interface SpaceCard {
   totals: { positions: number; open: number; sold: number };
   /** The lowest price a sponsor can pay right now, or null when nothing can be bought. */
   fromPriceCents: number | null;
+  /** A partnership package's agreed partners. Absent or empty: none yet, or an older server. */
+  partners?: EventPartner[];
   /** `organiser`: one of the event's own packages, sold by its verified host. Absent on an older server. */
   sellerRole?: "creator" | "organiser";
 }

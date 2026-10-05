@@ -246,6 +246,8 @@ const ERRORS: Record<string, MessageKey> = {
   quote_days_invalid: "business.error.quoteDaysInvalid",
   quote_note_invalid: "business.error.quoteNoteInvalid",
   quote_not_open: "business.error.quoteNotOpen",
+  package_not_organised: "publicPages.sponsor.noLongerOnSale",
+  no_space: "business.partner.logoNotYours",
   range_invalid: "business.error.rangeInvalid",
   range_too_long: "business.error.rangeTooLong",
   rate_limited: "business.error.rateLimited",

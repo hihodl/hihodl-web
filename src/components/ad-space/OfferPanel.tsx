@@ -19,6 +19,7 @@ import {
 } from "@/lib/ad-space/offers-client";
 import { earnPointsLine, pointsForOfferAmount, pointsWorth } from "@/lib/ad-space/points";
 import type { OfferStatus, OfferThread, OfferView, Position, Space } from "@/lib/ad-space/types";
+import { useT } from "@/lib/app/i18n/react";
 
 import { AppPrompt } from "./AppPrompt";
 import { Checkout } from "./Checkout";
@@ -110,6 +111,7 @@ export function OfferPanel({
   /** The full public space, for paying through the page's checkout. Null when it couldn't be read. */
   space: Space | null;
 }) {
+  const t = useT();
   const [thread, setThread] = useState(initial);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -165,6 +167,12 @@ export function OfferPanel({
     void reload();
   }, [reload]);
   const closeCheckout = useCallback(() => setPaying(false), []);
+  /** 409 `package_not_organised`: the package left its event's host. The sheet closes and the panel says so. */
+  const toGone = useCallback(() => {
+    setPaying(false);
+    setNotice(t("publicPages.sponsor.noLongerOnSale"));
+    void reload();
+  }, [reload, t]);
 
   const open = offer.status === "pending" || offer.status === "countered";
   const biddingEnd = positionOffers?.biddingEndsAt ? Date.parse(positionOffers.biddingEndsAt) : NaN;
@@ -417,6 +425,7 @@ export function OfferPanel({
           onClose={closeCheckout}
           onPaid={onPaid}
           offer={offer.status === "accepted" ? { token, view: offer } : null}
+          onNoLongerOnSale={toGone}
         />
       )}
     </div>
