@@ -640,6 +640,12 @@ export type EventCategory =
 export interface EventSummary {
   id: string;
   slug: string;
+  /**
+   * `calendar`: a Luma calendar (a whole week, a city's side events) sold by
+   * its own host (a-calendar-sells-its-week-contract.md). Absent on an older
+   * server, which reads as `event`.
+   */
+  kind?: "event" | "calendar";
   name: string;
   city: string;
   /** ISO 3166-1 alpha-2, or null. */
@@ -695,6 +701,31 @@ export interface SponsorPage {
   packages: SpaceCard[];
   creators: Record<SpaceTab, number>;
   slug: string;
+  /** `calendar`: the page sells a Luma calendar's week. `event` on an older server. */
+  kind: "event" | "calendar";
+  /** A calendar's upcoming events, soonest first (at most 30). Empty for an event. */
+  events: CalendarEvent[];
+  /** For an event: the calendar it belongs to that sells its week. Null for a calendar or none. */
+  calendar: CalendarLink | null;
+}
+
+/** One upcoming event of a Luma calendar, as its sponsor page lists it. */
+export interface CalendarEvent {
+  name: string;
+  /** ISO with the event's own offset, so its local day and time read straight off it. */
+  startAt: string | null;
+  lumaUrl: string;
+  /** A live Spaces event names this Luma page. */
+  onHold: boolean;
+}
+
+/** The Luma calendar an event is in, when its host sells the week on HOLD. */
+export interface CalendarLink {
+  name: string;
+  /** The calendar's sponsor link key: `/sponsor/<key>`. */
+  key: string;
+  /** Its packages still selling; 0 hides the row. */
+  packages: number;
 }
 
 /** What the backend knows of a Luma event that is not selling on HOLD (yet). */
@@ -783,6 +814,8 @@ export interface EventPage {
   defaultTab: SpaceTab;
   /** The verified organiser's own packages, above the tabs. Empty on an old server. */
   packages: SpaceCard[];
+  /** The calendar this event is in that sells its week, or null (and on an old server). */
+  calendar: CalendarLink | null;
 }
 
 /* ── A creator's hub (/s/<handle>) ────────────────────────────────────── */

@@ -11,6 +11,8 @@ import type {
   CreatorPage,
   EventOrganiser,
   EventPage,
+  CalendarEvent,
+  CalendarLink,
   EventSummary,
   GuestEnquiry,
   ListedEvent,
@@ -343,6 +345,7 @@ export async function getPublicEvent(slug: string, revalidate = 30): Promise<Eve
       redirectTo?: string;
       packages?: unknown;
       organiser?: unknown;
+      calendar?: unknown;
     };
   } | null;
   if (fixtureEnabled()) {
@@ -386,8 +389,44 @@ export async function getPublicEvent(slug: string, revalidate = 30): Promise<Eve
   const organiser = organiserOf(data.event.organiser) ?? organiserOf(data.organiser);
   return {
     kind: "found",
-    page: { event: { ...data.event, organiser }, tabs, defaultTab: fromApi ?? defaultEventTab(tabs), packages },
+    page: {
+      event: { ...data.event, organiser },
+      tabs,
+      defaultTab: fromApi ?? defaultEventTab(tabs),
+      packages,
+      calendar: calendarLinkOf(data.calendar),
+    },
   };
+}
+
+/** The calendar an event is in, from the API, or null when absent or malformed. */
+function calendarLinkOf(raw: unknown): CalendarLink | null {
+  if (!raw || typeof raw !== "object") return null;
+  const c = raw as Record<string, unknown>;
+  if (typeof c.name !== "string" || !c.name.trim() || typeof c.key !== "string" || !LUMA_KEY_RE.test(c.key)) return null;
+  const packages = typeof c.packages === "number" && Number.isFinite(c.packages) && c.packages > 0 ? Math.floor(c.packages) : 0;
+  return { name: c.name.trim(), key: c.key, packages };
+}
+
+/** Only a Luma page is linked out to. */
+const LUMA_URL_RE = /^https:\/\/(?:www\.)?(?:lu\.ma|luma\.com)\/[^\s]+$/i;
+
+/** A calendar's events, from the API: malformed rows are dropped, never shown half. */
+function calendarEventsOf(raw: unknown): CalendarEvent[] {
+  if (!Array.isArray(raw)) return [];
+  const out: CalendarEvent[] = [];
+  for (const r of raw.slice(0, 30)) {
+    if (!r || typeof r !== "object") continue;
+    const e = r as Record<string, unknown>;
+    if (typeof e.name !== "string" || !e.name.trim() || typeof e.lumaUrl !== "string" || !LUMA_URL_RE.test(e.lumaUrl)) continue;
+    out.push({
+      name: e.name.trim(),
+      startAt: typeof e.startAt === "string" && /^\d{4}-\d{2}-\d{2}/.test(e.startAt) ? e.startAt : null,
+      lumaUrl: e.lumaUrl,
+      onHold: e.onHold === true,
+    });
+  }
+  return out;
 }
 
 /** An organiser's package cards from an API list: a creator's card never passes for one. */
@@ -463,6 +502,9 @@ export async function getSponsorPage(lumaKey: string, revalidate = 30): Promise<
       packages: cardsOf(data?.packages),
       creators: creatorCounts(data?.creators),
       slug,
+      kind: data?.kind === "calendar" || event.kind === "calendar" ? "calendar" : "event",
+      events: calendarEventsOf(data?.events),
+      calendar: data?.kind === "calendar" ? null : calendarLinkOf(data?.calendar),
     },
   };
 }

@@ -1,7 +1,7 @@
 import Link from "next/link";
 
-import { cardServiceName, closesText, usdFromCents } from "@/lib/ad-space/format";
-import type { EventOrganiser, EventPartner, Space, SpaceCard, SpaceTab } from "@/lib/ad-space/types";
+import { cardServiceName, closesText, eventDates, usdFromCents } from "@/lib/ad-space/format";
+import type { CalendarEvent, CalendarLink, EventOrganiser, EventPartner, Space, SpaceCard, SpaceTab } from "@/lib/ad-space/types";
 import { t } from "@/lib/app/i18n";
 import { fmtNumber } from "@/lib/app/i18n/format";
 
@@ -113,12 +113,15 @@ export function OrganiserPackages({
   spaces,
   now,
   headingAs: Heading = "h2",
+  calendar = false,
 }: {
   organiser: EventOrganiser;
   packages: SpaceCard[];
   spaces: Record<string, Space>;
   now: number;
   headingAs?: "h1" | "h2";
+  /** A Luma calendar's packages: nothing open points at its events, not at creators. */
+  calendar?: boolean;
 }) {
   const name = hostName(organiser);
   return (
@@ -133,7 +136,9 @@ export function OrganiserPackages({
         {t("publicPages.sponsor.packagesSub", { name })}
       </p>
       {packages.length === 0 ? (
-        <p className="mt-6 text-small text-sp-ink/85">{t("publicPages.sponsor.noPackages")}</p>
+        <p className="mt-6 text-small text-sp-ink/85">
+          {calendar ? t("publicPages.sponsor.calendar.noPackages") : t("publicPages.sponsor.noPackages")}
+        </p>
       ) : (
         <ul className="mt-6 flex flex-col gap-3">
           {packages.map((c) => (
@@ -211,5 +216,76 @@ export function CreatorsGoing({
         ))}
       </nav>
     </section>
+  );
+}
+
+/**
+ * "Events in this calendar": a calendar's upcoming events, soonest first, each
+ * linking to its Luma page, with "On HOLD" when a Spaces event names it. The
+ * day and time are the event's own, read off its offset, never converted.
+ */
+export function CalendarEvents({ calendarName, events }: { calendarName: string; events: CalendarEvent[] }) {
+  if (events.length === 0) return null;
+  return (
+    <section aria-labelledby="calendar-events">
+      <h2 id="calendar-events" className="font-display text-h4 font-light text-sp-ink md:text-h3">
+        {t("publicPages.sponsor.calendar.events")}
+      </h2>
+      <p className="mt-2 break-words text-small text-sp-ink/85 [overflow-wrap:anywhere]">
+        {t("publicPages.sponsor.calendar.eventsSub", { name: calendarName })}
+      </p>
+      <ul className="mt-6 flex flex-col divide-y divide-[color:var(--color-hairline)] rounded-card border border-[color:var(--color-hairline)] bg-sp-ink/[0.02]">
+        {events.map((e, i) => {
+          const day = e.startAt ? e.startAt.slice(0, 10) : null;
+          const time = e.startAt && /T\d{2}:\d{2}/.test(e.startAt) ? e.startAt.slice(11, 16) : null;
+          return (
+            <li key={`${e.lumaUrl}-${i}`} className="flex min-w-0 flex-col gap-1 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 md:px-5">
+              <div className="min-w-0">
+                <a
+                  href={e.lumaUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block break-words text-body text-sp-ink [overflow-wrap:anywhere] hover:text-sp-amber"
+                >
+                  {e.name}
+                </a>
+                {day && (
+                  <p className="mt-0.5 text-tiny tabular-nums text-sp-ink/80">
+                    {eventDates(day, day)}
+                    {time ? ` · ${time}` : ""}
+                  </p>
+                )}
+              </div>
+              {e.onHold && (
+                <span className="inline-flex h-6 shrink-0 items-center self-start whitespace-nowrap rounded-[12px] border border-sp-ink/25 bg-sp-ink/[0.06] px-2.5 text-tiny font-medium text-sp-ink sm:self-center">
+                  {t("publicPages.sponsor.calendar.onHold")}
+                </span>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+/** "Sponsor the whole <calendar>": an event's way to the week it belongs to, when its host sells it. */
+export function SponsorTheWeek({ calendar }: { calendar: CalendarLink | null }) {
+  if (!calendar || calendar.packages <= 0) return null;
+  return (
+    <Link
+      href={`/sponsor/${encodeURIComponent(calendar.key)}`}
+      className="group flex min-w-0 items-center justify-between gap-4 rounded-card border border-[color:var(--color-hairline)] bg-sp-ink/[0.03] p-4 transition-colors duration-180 hover:bg-sp-ink/[0.06] md:p-5"
+    >
+      <span className="min-w-0">
+        <span className="block break-words text-body text-sp-ink [overflow-wrap:anywhere] group-hover:text-sp-amber">
+          {t("publicPages.sponsor.calendar.wholeWeek", { name: calendar.name })}
+        </span>
+        <span className="mt-0.5 block text-small text-sp-ink/85">{t("publicPages.sponsor.calendar.wholeWeekSub")}</span>
+      </span>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 text-sp-ink/80 group-hover:text-sp-amber">
+        <path d="M6 3.5 10.5 8 6 12.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </Link>
   );
 }

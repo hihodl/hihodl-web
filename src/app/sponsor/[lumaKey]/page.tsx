@@ -3,7 +3,14 @@ import type { Metadata } from "next";
 import { ProfileFooter } from "@/components/ad-space/creator";
 import { BannerFrame, EventMiniCard, eventBanner } from "@/components/ad-space/events";
 import { SpacesGround } from "@/components/ad-space/ground";
-import { CreatorsGoing, HostLine, OrganiserPackages, hostName } from "@/components/ad-space/organiser";
+import {
+  CalendarEvents,
+  CreatorsGoing,
+  HostLine,
+  OrganiserPackages,
+  SponsorTheWeek,
+  hostName,
+} from "@/components/ad-space/organiser";
 import { SlimHeader } from "@/components/ad-space/sections";
 import { btnPrimary, eyebrow } from "@/components/ad-space/ui";
 import { DownloadLink } from "@/components/site/DownloadLink";
@@ -52,13 +59,16 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 }
 
 /** The title and link card, in English (see `inEnglish`). */
-function sponsorMetadata(lumaKey: string, { event, packages }: SponsorPageData): Metadata {
+function sponsorMetadata(lumaKey: string, { event, packages, kind }: SponsorPageData): Metadata {
   const path = sponsorPath(lumaKey);
   const og = `/api/og/sponsor/${encodeURIComponent(lumaKey)}?d=${today()}`;
   const host = event.organiser ? hostName(event.organiser) : null;
   const dates = eventDates(event.startsOn, event.endsOn);
-  const title = `Sponsor ${event.name}, ${event.city}`;
-  const description = `${packages.length > 0 ? `Sponsor packages from ${host ?? "the host"}` : "Sponsor the creators going"} at ${event.name} in ${event.city}, ${dates}. Pay in USDC and your brand is in.`;
+  const calendar = kind === "calendar";
+  const title = calendar ? `Sponsor the week: ${event.name}` : `Sponsor ${event.name}, ${event.city}`;
+  const description = calendar
+    ? `Sponsor packages from ${host ?? "the host"} across ${event.name}, ${dates}. Pay in USDC and your brand is on the whole week.`
+    : `${packages.length > 0 ? `Sponsor packages from ${host ?? "the host"}` : "Sponsor the creators going"} at ${event.name} in ${event.city}, ${dates}. Pay in USDC and your brand is in.`;
   const alt = `${event.name}, ${event.city}, ${dates}`;
   return {
     title,
@@ -104,7 +114,8 @@ export default async function SponsorPage({ params }: { params: Params }) {
 
   if (found.kind === "notOnHold") return <NotOnHold luma={found.luma} language={language} />;
 
-  const { event, packages, creators, slug } = found.page;
+  const { event, packages, creators, slug, kind, events, calendar } = found.page;
+  const isCalendar = kind === "calendar";
   const organiser = event.organiser;
   const now = Date.now();
   const spaces = await getPackageSpaces(packages);
@@ -115,14 +126,24 @@ export default async function SponsorPage({ params }: { params: Params }) {
       <main>
         <BannerFrame banner={eventBanner(event)} className="flex min-h-[320px] sm:min-h-[380px] md:min-h-[440px]">
           <div className="container-page relative flex w-full flex-col justify-end gap-3 pb-10 pt-6">
-            <p className={`${eyebrow} text-white/85`}>{t("publicPages.sponsor.eyebrow")}</p>
+            <p className={`${eyebrow} text-white/85`}>
+              {isCalendar ? t("publicPages.sponsor.calendar.eyebrow") : t("publicPages.sponsor.eyebrow")}
+            </p>
             <EventMiniCard event={event} now={now} as="h1" />
             {organiser && <HostLine organiser={organiser} />}
           </div>
         </BannerFrame>
         <div className="container-page flex flex-col gap-14 py-10 md:gap-16 md:py-14">
-          {organiser && <OrganiserPackages organiser={organiser} packages={packages} spaces={spaces} now={now} />}
-          <CreatorsGoing slug={slug} eventName={event.name} counts={creators} />
+          {!isCalendar && <SponsorTheWeek calendar={calendar} />}
+          {organiser && (
+            <OrganiserPackages organiser={organiser} packages={packages} spaces={spaces} now={now} calendar={isCalendar} />
+          )}
+          {/* A calendar has no creators of its own: its events do, each on its own page. */}
+          {isCalendar ? (
+            <CalendarEvents calendarName={event.name} events={events} />
+          ) : (
+            <CreatorsGoing slug={slug} eventName={event.name} counts={creators} />
+          )}
         </div>
       </main>
       <ProfileFooter />

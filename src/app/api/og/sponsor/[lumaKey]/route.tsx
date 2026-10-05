@@ -5,7 +5,8 @@ import { getSponsorPage } from "@/lib/ad-space/server";
 
 /**
  * The link card for a sponsor page: the event's cover with the event page's
- * small card, and the host and their packages on it. The page's og:image
+ * small card, and the host and their packages on it. A Luma calendar's card
+ * says "Sponsor the week" and counts its events too. The page's og:image
  * carries `?d=<today>` so the countdown is never a day stale.
  *
  * A Luma event nobody sells on HOLD yet (or a backend older than this page)
@@ -19,7 +20,9 @@ export async function GET(_req: Request, { params }: { params: { lumaKey: string
   const found = await getSponsorPage(params.lumaKey, 300);
 
   if (found.kind === "found") {
-    const { event, packages } = found.page;
+    const { event, packages, kind, events } = found.page;
+    // A calendar's card says the week, and counts its events beside the packages.
+    const calendar = kind === "calendar";
     const image = await loadOgImage(event.coverUrl);
     const host = event.organiser ? event.organiser.businessName?.trim() || event.organiser.name : null;
     return new ImageResponse(
@@ -30,7 +33,7 @@ export async function GET(_req: Request, { params }: { params: { lumaKey: string
             now={Date.now()}
             header={
               <div style={{ display: "flex", fontSize: 22, color: OG.amber, letterSpacing: 2, textTransform: "uppercase", marginBottom: 16 }}>
-                Sponsor this event
+                {calendar ? "Sponsor the week" : "Sponsor this event"}
               </div>
             }
             footer={
@@ -38,9 +41,13 @@ export async function GET(_req: Request, { params }: { params: { lumaKey: string
                 <div style={{ display: "flex", alignItems: "center", marginTop: 20 }}>
                   <OgChip>Verified host</OgChip>
                   <div style={{ fontSize: 26, color: OG.muted }}>
-                    {packages.length > 0
-                      ? `${clip(host, 24)} · ${packages.length} ${packages.length === 1 ? "package" : "packages"}`
-                      : clip(host, 32)}
+                    {[
+                      clip(host, calendar ? 20 : 24),
+                      calendar && events.length > 0 ? `${events.length} ${events.length === 1 ? "event" : "events"}` : null,
+                      packages.length > 0 ? `${packages.length} ${packages.length === 1 ? "package" : "packages"}` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </div>
                 </div>
               ) : undefined
