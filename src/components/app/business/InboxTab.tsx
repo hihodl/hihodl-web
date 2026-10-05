@@ -336,7 +336,8 @@ function PartnerPanel({ thread: e, canAct, partners }: { thread: EnquiryThread; 
   const [logoBusy, setLogoBusy] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
-  const [accepted, setAccepted] = useState<string | null>(null);
+  // A thread already accepted says so instead of offering it again.
+  const [accepted, setAccepted] = useState<string | null>(e.partner?.name ?? null);
 
   // The local preview lives as long as the pick does.
   useEffect(() => () => (logo ? URL.revokeObjectURL(logo.preview) : undefined), [logo]);
@@ -354,7 +355,8 @@ function PartnerPanel({ thread: e, canAct, partners }: { thread: EnquiryThread; 
     }
     setLogoBusy(true);
     try {
-      const out = await uploadSpaceImage(f);
+      // A teammate uploads for the business that owns the package; the owner as themselves.
+      const out = await uploadSpaceImage(f, e.myRole === "owner" ? null : e.business.ownerUserId);
       setLogo({ path: out.path, preview: URL.createObjectURL(f) });
     } catch (err) {
       setError(err);
@@ -383,7 +385,9 @@ function PartnerPanel({ thread: e, canAct, partners }: { thread: EnquiryThread; 
 
   return (
     <>
-      {canAct ? (
+      {canAct && e.partner ? (
+        <Notice tone="good" icon="checkmark-circle-outline">{t("business.partner.accepted", { name: e.partner.name })}</Notice>
+      ) : canAct ? (
         <Card className="gap-3">
           <p className="text-[15px] font-bold text-white">{t("business.partner.title")}</p>
           <p className="text-[13px] leading-5 text-white/[0.82]">{t("business.partner.body")}</p>

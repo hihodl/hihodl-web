@@ -165,6 +165,8 @@ export interface EnquiryThread {
   guestSeenAt: string | null;
   messages: ThreadMessage[];
   quotes?: QuoteView[];
+  /** The partner accepted from this enquiry (a partnership package), or null. Absent on an older server. */
+  partner?: PackagePartner | null;
 }
 
 export interface InvoiceRow {
@@ -256,13 +258,18 @@ export interface PackagePartner {
   id: string;
   name: string;
   logoUrl: string | null;
+  /** The enquiry it was accepted from. */
+  enquiryId?: string;
 }
 
 /**
- * An image for the seller's own spaces (POST /ad-space/media), raw bytes, PNG,
+ * An image for the seller's spaces (POST /ad-space/media), raw bytes, PNG,
  * JPEG or WebP. Answers the storage path the next call names (`logoPath`).
+ * `asBusiness` (the owner's user id) lets a teammate with `artwork.approve`
+ * upload for a business that owns the space; it is stored under the uploader.
  */
-export const uploadSpaceImage = (file: Blob) => read<{ path: string; url: string | null }>("ad-space/media", { raw: file });
+export const uploadSpaceImage = (file: Blob, asBusiness?: string | null) =>
+  read<{ path: string; url: string | null }>(`ad-space/media${asBusiness ? `?${new URLSearchParams({ asBusiness })}` : ""}`, { raw: file });
 
 /**
  * Take the brand behind an enquiry on a partnership package as a partner: its

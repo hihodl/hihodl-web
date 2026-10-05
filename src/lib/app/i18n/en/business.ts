@@ -191,7 +191,9 @@ const business = {
   "partner.end": "End partnership",
   "partner.endConfirm": "Tap again to end",
   "partner.ending": "Ending…",
-  "partner.logoNotYours": "Only the account that owns this package can add a logo. Accept without one and the name shows.",
+  "partner.nameRequired": "Type the name the page shows.",
+  "partner.nameInvalid": "Use a name up to 60 characters, without links or contacts.",
+  "partner.noSlot": "Every partner slot on this package is taken.",
 
   /* ── Sales and invoices ── */
   "sales.csvTitle": "Sales for your accountant",
