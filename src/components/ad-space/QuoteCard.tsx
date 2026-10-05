@@ -5,18 +5,20 @@ import { useEffect, useState } from "react";
 import { existingCheckoutKey } from "@/lib/ad-space/checkout-client";
 import { instantIn, instantUtc, timeLeft } from "@/lib/ad-space/format";
 import { quoteStateAt } from "@/lib/ad-space/enquiry-rules";
-import { type BuyerDocument, getBuyerDocument } from "@/lib/ad-space/quotes";
+import { type BuyerDocument, QUOTE_DECLINE_REASON_MAX, getBuyerDocument } from "@/lib/ad-space/quotes";
 import type { QuoteState, QuoteView } from "@/lib/ad-space/types";
+import { fmtNumber } from "@/lib/app/i18n/format";
 import { useT } from "@/lib/app/i18n/react";
 
 import { Spinner } from "./checkout-parts";
-import { btnPrimary, btnSmallSecondary, eyebrow, pill } from "./ui";
+import { btnPrimary, btnSecondary, btnSmallSecondary, eyebrow, pill } from "./ui";
 import { useServerNow } from "./useServerNow";
 
 /**
  * A seller's quote inside the guest's conversation (seller-quotes-contract.md):
  * the spot, the price, the seller's note, how long it stands, and the one
- * action its state allows. Open: Accept and pay. Accepted: Pay, until the
+ * action its state allows. Open: Accept and pay, or Decline with an optional
+ * reason for the seller. Accepted: Pay, until the
  * 24 hour hold ends. Paid: what goes on the spot, and the invoice once the
  * seller's document exists.
  *
@@ -33,22 +35,27 @@ const PILL: Record<QuoteState, string> = {
   expired: pill.neutral,
   withdrawn: pill.neutral,
   superseded: pill.neutral,
+  declined: pill.neutral,
 };
 
 export function QuoteCard({
   quote,
   seller,
   busy,
+  declining,
   canPay,
   session,
   notice,
   onAccept,
+  onDecline,
   onPay,
 }: {
   quote: QuoteView;
   seller: string;
   /** Accepting this quote right now. */
   busy: boolean;
+  /** Declining this quote right now. */
+  declining: boolean;
   /** The checkout can be opened here (the space and its spot were read). */
   canPay: boolean;
   /** A session in person is booked, not sponsored. */
@@ -56,6 +63,7 @@ export function QuoteCard({
   /** A refusal about this quote, in words. */
   notice: string | null;
   onAccept: () => void;
+  onDecline: (reason: string) => void;
   onPay: () => void;
 }) {
   const t = useT();
@@ -64,6 +72,8 @@ export function QuoteCard({
   const state = quoteStateAt(quote, now);
   const spot = quote.position?.label || t("enquiries.quote.thisSpot");
   const feeOnTop = quote.buyerPaysUsdc !== quote.priceUsdc;
+  const [asking, setAsking] = useState(false);
+  const [reason, setReason] = useState("");
   const paidHere = usePaidHere(state === "paid" ? (quote.position?.id ?? null) : null);
 
   return (
@@ -97,9 +107,9 @@ export function QuoteCard({
 
       <Standing quote={quote} state={state} seller={seller} now={now} session={session} />
 
-      {state === "open" && (
-        <div>
-          <button type="button" className={btnPrimary} disabled={busy} onClick={onAccept}>
+      {state === "open" && !asking && (
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className={btnPrimary} disabled={busy || declining} onClick={onAccept}>
             {busy ? (
               <>
                 <Spinner />
@@ -109,7 +119,52 @@ export function QuoteCard({
               t("enquiries.quote.accept")
             )}
           </button>
+          <button type="button" className={btnSecondary} disabled={busy || declining} onClick={() => setAsking(true)}>
+            {t("enquiries.quote.decline")}
+          </button>
         </div>
+      )}
+
+      {state === "open" && asking && (
+        <form
+          className="flex flex-col gap-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!declining) onDecline(reason);
+          }}
+        >
+          <label className="flex flex-col gap-2">
+            <span className="flex items-baseline justify-between gap-3">
+              <span className="text-small text-sp-ink">{t("enquiries.quote.declineReason", { seller })}</span>
+              <span className={`text-tiny ${reason.length >= QUOTE_DECLINE_REASON_MAX ? "text-sp-amber" : "text-sp-ink/85"}`}>
+                {fmtNumber(reason.length)}/{fmtNumber(QUOTE_DECLINE_REASON_MAX)}
+              </span>
+            </span>
+            <textarea
+              className="min-h-[84px] w-full resize-y rounded-[14px] border border-[color:var(--color-hairline-strong)] bg-sp-ink/[0.04] px-3 py-2 text-small text-sp-ink outline-none transition-colors duration-180 placeholder:text-sp-ink/50 focus:border-amber/60 disabled:opacity-60"
+              value={reason}
+              maxLength={QUOTE_DECLINE_REASON_MAX}
+              placeholder={t("enquiries.quote.declinePlaceholder")}
+              disabled={declining}
+              onChange={(e) => setReason(e.target.value)}
+            />
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <button type="submit" className={btnSmallSecondary} disabled={declining}>
+              {declining ? (
+                <>
+                  <Spinner />
+                  {t("enquiries.quote.declining")}
+                </>
+              ) : (
+                t("enquiries.quote.declineSend")
+              )}
+            </button>
+            <button type="button" className="px-3 text-small font-medium text-sp-ink/85 hover:text-sp-ink disabled:opacity-40" disabled={declining} onClick={() => setAsking(false)}>
+              {t("common.back")}
+            </button>
+          </div>
+        </form>
       )}
 
       {state === "accepted" &&
@@ -182,6 +237,8 @@ function Standing({
       return line(t("enquiries.quote.withdrawnBody", { seller }));
     case "superseded":
       return line(t("enquiries.quote.supersededBody", { subject }));
+    case "declined":
+      return line(t("enquiries.quote.declinedBody", { seller }));
     default:
       return null;
   }

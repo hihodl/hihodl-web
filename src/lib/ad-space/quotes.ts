@@ -36,6 +36,20 @@ export async function acceptGuestQuote(token: string, quoteId: string, updatedAt
   return (await quoteCall<{ enquiry: GuestEnquiry }>(token, quoteId, "/accept", { json })).enquiry;
 }
 
+/** The longest reason a guest can give for declining. */
+export const QUOTE_DECLINE_REASON_MAX = 280;
+
+/**
+ * Decline an open quote, with an optional reason the seller reads. The answer
+ * is the thread with the quote now `declined`, or null when the API answered
+ * without one (the caller then reads the thread again).
+ */
+export async function declineGuestQuote(token: string, quoteId: string, reason: string): Promise<GuestEnquiry | null> {
+  const r = reason.trim().slice(0, QUOTE_DECLINE_REASON_MAX);
+  const data = await quoteCall<{ enquiry?: GuestEnquiry } | null>(token, quoteId, "/decline", { json: r ? { reason: r } : {} });
+  return data && typeof data === "object" && data.enquiry && Array.isArray(data.enquiry.messages) ? data.enquiry : null;
+}
+
 /** The checkout for an accepted quote: exactly the offer checkout's answer, priced at the quote. */
 export function startQuoteCheckout(
   token: string,
@@ -95,6 +109,7 @@ export const QUOTE_STALE_CODES: ReadonlySet<string> = new Set([
   "offer_not_accepted",
   "quote_not_open",
   "quote_accepted",
+  "quote_declined",
   "quote_changed",
   "position_sold",
   "position_reserved",
@@ -125,6 +140,11 @@ export function describeQuoteError(e: unknown, subject: "spot" | "session" = "sp
       return t("enquiries.quote.error.notAccepted");
     case "quote_accepted":
       return t("enquiries.quote.error.alreadyAccepted");
+    case "quote_declined":
+      return t("enquiries.quote.error.declined");
+    case "quote_reason_invalid":
+    case "decline_reason_invalid":
+      return t("enquiries.quote.error.reasonInvalid");
     case "position_sold":
       return t("enquiries.quote.error.sold", { subject });
     case "position_reserved": {

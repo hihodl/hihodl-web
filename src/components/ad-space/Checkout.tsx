@@ -17,6 +17,8 @@ import {
   startCheckout,
   submitAuthorizations,
 } from "@/lib/ad-space/checkout-client";
+import { loadBilling, saveOrderBilling, storeBilling } from "@/lib/ad-space/billing";
+import type { BillingDetails } from "@/lib/ad-space/billing-rules";
 import { TAKEOVER_CHAINS } from "@/lib/ad-space/config";
 import {
   CHAIN_LABEL,
@@ -76,6 +78,7 @@ import {
   sheetCard,
   useBrowserWallets,
 } from "./pay-sheet";
+import { BillingStep } from "./BillingStep";
 import { BriefForm, BriefReady, EMPTY_BRIEF, PackageLines, PaidProduction, type BriefDraft } from "./Production";
 import { QrCode } from "./qr";
 import { ManageLinkBox, SessionContactForm } from "./SessionBooking";
@@ -119,6 +122,12 @@ import { SpotPreview } from "./ProductBoard";
  * (seller-quotes-contract.md): the same flow, asked for through the enquiry
  * token and the quote (`POST /public/enquiries/:token/quotes/:id/checkout`)
  * and priced at the quote.
+ *
+ * Invoice details (sale-invoices-contract.md) are an optional step before
+ * paying, prefilled from this browser's last purchase. They go to the order
+ * once the checkout has created it, next to the wallet's signature and never
+ * in its way: the checkout body, and so what the wallet signs, is the same
+ * with or without them.
  */
 
 type Phase =
@@ -207,6 +216,27 @@ export function Checkout({
   briefRef.current = production ? brief : null;
   const withBrief = <T extends object>(body: T): T & { brief?: BriefBody } =>
     briefRef.current ? { ...body, brief: briefRef.current } : body;
+  /**
+   * Who the seller's invoice names. Chosen before paying and sent once per
+   * order, as soon as the checkout answers with one; a refusal of any kind
+   * leaves the payment alone (the seller then issues a receipt to nobody).
+   */
+  const [billing, setBillingState] = useState<BillingDetails | null>(null);
+  const [billingOpen, setBillingOpen] = useState(false);
+  const billingRef = useRef<BillingDetails | null>(null);
+  billingRef.current = billing;
+  const billedOrders = useRef(new Set<string>());
+  useEffect(() => setBillingState(loadBilling()), []);
+  const setBilling = useCallback((d: BillingDetails | null) => {
+    setBillingState(d);
+    storeBilling(d);
+  }, []);
+  const sendBilling = useCallback((orderId: string) => {
+    const d = billingRef.current;
+    if (!d || billedOrders.current.has(orderId)) return;
+    billedOrders.current.add(orderId);
+    void saveOrderBilling(orderId, keyRef.current, d);
+  }, []);
   /**
    * What paying this from the HOLD app would earn (spaces-sponsor-points-v0.md):
    * on an accepted offer, the fee on the agreed amount; otherwise the fee this
@@ -421,6 +451,7 @@ export function Checkout({
       const checkout = () =>
         withFreshKey((key) => beginSolana(key, sponsorAddress));
       let [res, web3] = await Promise.all([checkout(), import("@solana/web3.js")]);
+      sendBilling(res.order.id);
 
       setPhase({ kind: "busy", label: t("sponsor.checkout.approveIn", { name: wallet.name }) });
       let sent: unknown;
@@ -469,6 +500,7 @@ export function Checkout({
 
       setPhase({ kind: "busy", label: t("sponsor.checkout.preparingPayment") });
       const res = await withFreshKey((key) => beginEvm(key, evmChain, sponsorAddress));
+      sendBilling(res.order.id);
       const creatorAuth = res.evm.authorizations.find((a) => a.role === "creator");
       const feeAuth = res.evm.authorizations.find((a) => a.role === "fee");
       if (!creatorAuth || !feeAuth) throw new CheckoutError("server", 500);
@@ -506,6 +538,8 @@ export function Checkout({
   /* ── What the sheet shows ───────────────────────────────────────── */
 
   const needsBrief = production && !brief;
+  /** The invoice form, open: it takes the place of the ways to pay until it is used or skipped. */
+  const billingShown = billingOpen && phase.kind === "choose";
 
   /* A chosen way to pay comes into view whole, the QR most of all. */
   const panelRef = useRef<HTMLDivElement>(null);
@@ -571,7 +605,7 @@ export function Checkout({
   /* The bottom bloc, as in the app: the one action, then one line of trust. */
   const paying = phase.kind === "choose" || phase.kind === "busy" || phase.kind === "evm-sign" || phase.kind === "qr";
   const footer =
-    paying && !needsBrief ? (
+    paying && !needsBrief && !billingShown ? (
       <>
         {method === "wallet" && (
           <WalletAction
@@ -711,9 +745,19 @@ export function Checkout({
                 <Included space={space} position={position} session={session} />
               ) : null}
 
-              <MethodTabs options={methods} value={method} onChange={onMethod} disabled={busy} />
+              {phase.kind === "choose" || billing ? (
+                <BillingStep
+                  value={billing}
+                  open={billingShown}
+                  disabled={busy || phase.kind !== "choose"}
+                  onOpen={setBillingOpen}
+                  onChange={setBilling}
+                />
+              ) : null}
 
-              <div ref={panelRef} className="flex scroll-mb-4 flex-col gap-5">
+              {!billingShown && <MethodTabs options={methods} value={method} onChange={onMethod} disabled={busy} />}
+
+              <div ref={panelRef} className={`flex scroll-mb-4 flex-col gap-5 ${billingShown ? "hidden" : ""}`}>
                 {method === "wallet" && (
                   <WalletList
                     chain={chain}

@@ -1003,7 +1003,7 @@ export interface GuestEnquiryMessage {
 
 /* ── A seller's quote (seller-quotes-contract.md) ───────────────────── */
 
-export type QuoteState = "open" | "accepted" | "paid" | "expired" | "withdrawn" | "superseded";
+export type QuoteState = "open" | "accepted" | "paid" | "expired" | "withdrawn" | "superseded" | "declined";
 
 /** A price the seller sent for one spot inside an enquiry thread. No user ids, emails or tokens. */
 export interface QuoteView {

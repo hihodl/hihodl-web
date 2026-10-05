@@ -12,7 +12,7 @@ import {
 } from "@/lib/ad-space/enquiries";
 import { isExpiredLink, isNewerThread, nextPollDelay, quoteOfMessage } from "@/lib/ad-space/enquiry-rules";
 import { isSessionSpace } from "@/lib/ad-space/format";
-import { QUOTE_STALE_CODES, acceptGuestQuote, describeQuoteError } from "@/lib/ad-space/quotes";
+import { QUOTE_STALE_CODES, acceptGuestQuote, declineGuestQuote, describeQuoteError } from "@/lib/ad-space/quotes";
 import type { GuestEnquiry, GuestEnquiryMessage, Position, QuoteView, Space } from "@/lib/ad-space/types";
 import { fmtDateTime, fmtNumber } from "@/lib/app/i18n/format";
 import { useT } from "@/lib/app/i18n/react";
@@ -58,6 +58,7 @@ export function EnquiryThread({
 }) {
   const t = useT();
   const [accepting, setAccepting] = useState<string | null>(null);
+  const [declining, setDeclining] = useState<string | null>(null);
   const [quoteNotice, setQuoteNotice] = useState<{ quoteId: string; text: string } | null>(null);
   const [paying, setPaying] = useState<string | null>(null);
   const [enquiry, setEnquiry] = useState(initial);
@@ -173,6 +174,33 @@ export function EnquiryThread({
     }
   }
 
+  /** Decline an open quote; the seller reads the reason in the thread. */
+  async function decline(q: QuoteView, reason: string) {
+    if (sending.current || stopped) return;
+    sending.current = true;
+    setDeclining(q.quoteId);
+    setQuoteNotice(null);
+    try {
+      const next = await declineGuestQuote(token, q.quoteId, reason);
+      sending.current = false;
+      if (next) setEnquiry(next);
+      else await reload();
+    } catch (err) {
+      if (err instanceof CheckoutError && isExpiredLink(err.status, err.code)) {
+        setExpired(true);
+      } else {
+        setQuoteNotice({ quoteId: q.quoteId, text: describeQuoteError(err, session ? "session" : "spot") ?? describeEnquiryError(err, max) });
+        if (err instanceof CheckoutError && QUOTE_STALE_CODES.has(err.code)) {
+          sending.current = false;
+          await reload();
+        }
+      }
+    } finally {
+      sending.current = false;
+      setDeclining(null);
+    }
+  }
+
   const payingQuote = paying
     ? (enquiry.quotes?.find((q) => q.quoteId === paying) ?? enquiry.messages.find((m) => m.quote?.quoteId === paying)?.quote ?? null)
     : null;
@@ -220,10 +248,12 @@ export function EnquiryThread({
                   quote={quote}
                   seller={seller}
                   busy={accepting === quote.quoteId}
+                  declining={declining === quote.quoteId}
                   canPay={!!space && !!positionOf(quote)}
                   session={session}
                   notice={quoteNotice?.quoteId === quote.quoteId ? quoteNotice.text : null}
                   onAccept={() => void accept(quote)}
+                  onDecline={(reason) => void decline(quote, reason)}
                   onPay={() => {
                     setQuoteNotice(null);
                     setPaying(quote.quoteId);
