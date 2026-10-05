@@ -899,6 +899,68 @@ export interface Order {
    * the first copy it sees in localStorage, keyed by order.
    */
   manageUrl?: string | null;
+  /**
+   * How the order is paid (a-brand-pays-by-bank-or-card-contract.md): `chain`
+   * from a wallet, `bank` by a Bridge transfer whose instructions are `bank`.
+   * Absent from an API that predates bank transfers, which means `chain`.
+   */
+  rail?: "chain" | "bank";
+  /** A bank order only: where and how the brand pays, and where Bridge has it. */
+  bank?: BankInstructions | null;
+}
+
+/** Bridge's transfer states, as the order view relays them. */
+export type BankState =
+  | "awaiting_funds"
+  | "in_review"
+  | "funds_received"
+  | "payment_submitted"
+  | "payment_processed"
+  | "canceled"
+  | "undeliverable"
+  | "returned"
+  | "refund_in_flight"
+  | "refund_failed"
+  | "refunded";
+
+export type BankRail = "wire" | "ach_push";
+
+/** The bank details for one order: the proforma the brand pays. */
+export interface BankInstructions {
+  rail: BankRail;
+  currency: "USD";
+  /** "1050.00": exactly what the transfer must carry. */
+  amount: string;
+  /** The deposit message: it routes the money to this order, so it goes in the transfer. */
+  reference: string;
+  expiresAt: string;
+  payerMustBeBusiness: true;
+  notFromStates: string[];
+  beneficiaryName: string | null;
+  beneficiaryAddress: string | null;
+  bankName: string | null;
+  bankAddress: string | null;
+  accountNumber: string | null;
+  routingNumber: string | null;
+  /** The seller, by the name the page shows. */
+  receivesFor: string;
+  /** Unknown strings are possible from a newer API. */
+  status: BankState | (string & {});
+  sellerReceivedUsdc: string | null;
+}
+
+/** `GET /public/positions/:id/bank-transfer`: whether this spot takes a bank transfer, and why not. */
+export interface BankOption {
+  bank: {
+    currency: "USD";
+    rails: BankRail[];
+    holdDays: number;
+    minUsdCents: number;
+    amount?: string;
+    payerMustBeBusiness?: boolean;
+    notFromStates?: string[];
+  } | null;
+  reason: string | null;
 }
 
 /**
