@@ -2,7 +2,7 @@
  * npx sucrase-node src/lib/ad-space/bank-rules.check.ts
  */
 
-import { bankErrorKey, bankShown, bankStage, canCancel, usdExact } from "./bank-rules";
+import { bankErrorKey, bankRequestErrorKey, bankShown, bankStage, canCancel, guestWeekUntil, usdExact } from "./bank-rules";
 import type { BankOption } from "./types";
 
 let fails = 0;
@@ -30,7 +30,20 @@ eq("canceled is gone", bankStage("canceled"), "gone");
 eq("refunded is gone", bankStage("refunded"), "gone");
 eq("undeliverable is stuck", bankStage("undeliverable"), "stuck");
 eq("refund failed is stuck", bankStage("refund_failed"), "stuck");
-eq("an unknown state claims nothing arrived", bankStage("something_new"), "waiting");
+eq("no state yet waits", bankStage(null), "waiting");
+eq("short paid is short", bankStage("short_paid"), "short");
+eq("stuck is stuck", bankStage("stuck"), "stuck");
+eq("a Bridge error is stuck", bankStage("error"), "stuck");
+eq("an unknown state is stuck, never waiting", bankStage("something_new"), "stuck");
+eq("no cancel once short paid", canCancel("short_paid"), false);
+eq("no cancel while stuck", canCancel("something_new"), false);
+
+/* A guest's hold */
+eq("a guest's day becomes a week from when it was written", guestWeekUntil("2026-10-07T12:00:00.000Z", "2026-11-30T00:00:00.000Z"), "2026-10-13T12:00:00.000Z");
+eq("never past the close", guestWeekUntil("2026-10-07T12:00:00.000Z", "2026-10-10T00:00:00.000Z"), "2026-10-10T00:00:00.000Z");
+eq("no close known, still a week", guestWeekUntil("2026-10-07T12:00:00.000Z", null), "2026-10-13T12:00:00.000Z");
+eq("already a week, nothing to add", guestWeekUntil("2026-10-13T12:00:00.000Z", "2026-10-13T12:00:00.000Z"), null);
+eq("no hold, no line", guestWeekUntil(null, "2026-11-30T00:00:00.000Z"), null);
 eq("cancel while waiting", canCancel("awaiting_funds"), true);
 eq("no cancel once money arrived", canCancel("funds_received"), false);
 eq("no cancel once paid", canCancel("payment_processed"), false);
@@ -57,6 +70,10 @@ eq("caps code", bankErrorKey("bank_hold_limit"), "sponsor.checkout.bank.error.ho
 eq("close window code", bankErrorKey("bank_too_close_to_closing"), "sponsor.checkout.bank.error.tooCloseToClosing");
 eq("vault is not for this", bankErrorKey("seller_vault"), "sponsor.checkout.bank.error.notForThis");
 eq("not a bank code", bankErrorKey("position_sold"), null);
+eq("short paid cancel code", bankErrorKey("bank_short_paid"), "sponsor.checkout.bank.error.shortPaid");
+eq("guest daily cap", bankRequestErrorKey("rate_limited", 429), "sponsor.checkout.bank.error.dailyCap");
+eq("limiter down keeps the checkout's words", bankRequestErrorKey("rate_limited", 503), null);
+eq("request codes fall through to bank codes", bankRequestErrorKey("bank_hold_limit", 429), "sponsor.checkout.bank.error.holdLimit");
 
 if (fails) {
   console.log(`\n${fails} failing`);

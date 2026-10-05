@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { BANK_MIN_USD_CENTS, bankStage, canCancel, usdExact } from "@/lib/ad-space/bank-rules";
+import { BANK_MIN_USD_CENTS, bankStage, canCancel, guestWeekUntil, usdExact } from "@/lib/ad-space/bank-rules";
 import { instantIn, instantUtc } from "@/lib/ad-space/format";
 import { getBuyerDocument, type BuyerDocument } from "@/lib/ad-space/quotes";
 import type { BankInstructions, BankOption, BankRail, Order } from "@/lib/ad-space/types";
@@ -23,6 +23,7 @@ import { CopyButton, StatusLine, ctaGlass, fieldLabel, sheetCard } from "./pay-s
 type Subject = "spot" | "session";
 
 const NOT_FROM = ["NY", "TX"];
+const SUPPORT = "support@hihodl.xyz";
 
 /** A date the reader's own clock shows, rendered after mount so server and browser agree. */
 function useLocalInstant(iso: string | null | undefined): string | null {
@@ -99,6 +100,7 @@ export function BankDetails({
   bank,
   subject,
   seller,
+  closesAt,
   cancelling,
   onCancel,
   onStartAgain,
@@ -107,14 +109,18 @@ export function BankDetails({
   bank: BankInstructions | null;
   subject: Subject;
   seller: string;
+  /** The listing's close: a guest's week never runs past it. */
+  closesAt: string | null;
   cancelling: boolean;
   onCancel: () => void;
   onStartAgain: () => void;
 }) {
   const t = useT();
   const [asking, setAsking] = useState(false);
-  const heldUntil = useLocalInstant(order.reservedUntil);
-  const expires = useLocalInstant(bank?.expiresAt ?? null);
+  // The hold, read again on every poll: a guest's day becomes a week once
+  // Bridge has the money, and this line moves with it.
+  const heldUntil = useLocalInstant(bank?.expiresAt ?? order.reservedUntil);
+  const weekUntil = useLocalInstant(guestWeekUntil(bank?.expiresAt ?? order.reservedUntil, closesAt));
   const over = order.status === "expired" || order.status === "cancelled";
   const stage = over ? "gone" : bankStage(bank?.status);
 
@@ -134,6 +140,28 @@ export function BankDetails({
   }
 
   const amount = usdExact(bank.amount) ?? `${bank.amount} USD`;
+
+  // Less arrived, or a person is looking: no details to send again, only the
+  // reference support needs.
+  if (stage === "short" || stage === "stuck") {
+    return (
+      <div className="flex flex-col gap-5">
+        <StatusLine tone="attention">
+          {stage === "short"
+            ? t("sponsor.checkout.bank.status.short", { subject, amount, email: SUPPORT, reference: bank.reference })
+            : t("sponsor.checkout.bank.status.stuck", { email: SUPPORT, reference: bank.reference })}
+        </StatusLine>
+        <div className="flex flex-col gap-3 rounded-[16px] bg-amber/[0.09] p-5">
+          <p className={fieldLabel}>{t("sponsor.checkout.bank.reference")}</p>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="break-all font-mono text-[22px] font-medium text-sp-ink">{bank.reference}</p>
+            <CopyButton value={bank.reference} />
+          </div>
+        </div>
+        <p className="text-center text-tiny text-white/85 print:hidden">{t("sponsor.checkout.bank.checking")}</p>
+      </div>
+    );
+  }
   const rows: { label: string; value: string | null }[] = [
     { label: t("sponsor.checkout.bank.beneficiary"), value: bank.beneficiaryName },
     { label: t("sponsor.checkout.bank.beneficiaryAddress"), value: bank.beneficiaryAddress },
@@ -150,12 +178,8 @@ export function BankDetails({
         <StatusLine>{t("sponsor.checkout.bank.status.waiting")}</StatusLine>
       ) : stage === "received" ? (
         <StatusLine>{t("sponsor.checkout.bank.status.received", { seller })}</StatusLine>
-      ) : stage === "paid" ? (
-        <StatusLine tone="done">{t("sponsor.checkout.bank.status.paid")}</StatusLine>
       ) : (
-        <StatusLine tone="attention">
-          {t("sponsor.checkout.bank.status.stuck", { email: "support@hihodl.xyz", reference: bank.reference })}
-        </StatusLine>
+        <StatusLine tone="done">{t("sponsor.checkout.bank.status.paid")}</StatusLine>
       )}
 
       <div className={`${sheetCard} flex flex-col gap-1 p-5 text-center`}>
@@ -199,7 +223,7 @@ export function BankDetails({
 
       <ul className="flex flex-col gap-1.5 px-1 text-small text-[#CFE3EC]">
         {heldUntil && <li>{t("sponsor.checkout.bank.heldUntil", { subject, date: heldUntil })}</li>}
-        {expires && <li>{t("sponsor.checkout.bank.expires", { date: expires })}</li>}
+        {stage === "waiting" && weekUntil && <li>{t("sponsor.checkout.bank.guestHold", { date: weekUntil })}</li>}
         <li>{t("sponsor.checkout.bank.through", { seller: bank.receivesFor || seller })}</li>
         <li>{t("sponsor.checkout.bank.business", { states: (bank.notFromStates?.length ? bank.notFromStates : NOT_FROM).join(", ") })}</li>
       </ul>

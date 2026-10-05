@@ -24,12 +24,20 @@ export const BANK_POLL_MS = 20_000;
  *   received — the money is at Bridge or on its way to the seller.
  *   paid     — delivered; the order turns paid.
  *   gone     — cancelled, or the money went back to the sender.
- *   stuck    — the money is at Bridge and a person has to look.
+ *   short    — less arrived than the order: never sold, support settles it.
+ *   stuck    — a person has to look: Bridge reported a problem, or a state
+ *              this page does not know (the server alerts ops on both).
  */
-export type BankStage = "waiting" | "received" | "paid" | "gone" | "stuck";
+export type BankStage = "waiting" | "received" | "paid" | "gone" | "short" | "stuck";
 
 export function bankStage(status: BankState | string | null | undefined): BankStage {
   switch (status) {
+    // No Bridge state yet: the transfer is being written, nothing has arrived.
+    case null:
+    case undefined:
+    case "":
+    case "awaiting_funds":
+      return "waiting";
     case "in_review":
     case "funds_received":
     case "payment_submitted":
@@ -41,13 +49,33 @@ export function bankStage(status: BankState | string | null | undefined): BankSt
     case "returned":
     case "refunded":
       return "gone";
-    case "undeliverable":
-    case "refund_failed":
-      return "stuck";
-    // awaiting_funds, and anything a newer API adds: nothing is said to have arrived.
+    case "short_paid":
+      return "short";
+    // undeliverable, refund_failed, stuck, error, and anything Bridge adds
+    // later: the page never claims to know more than the server does.
     default:
-      return "waiting";
+      return "stuck";
   }
+}
+
+/** A guest's free hold before Bridge has the money, and the hold once it has (contract, Holds). */
+export const BANK_GUEST_HOLD_HOURS = 24;
+export const BANK_HOLD_DAYS = 7;
+
+/**
+ * Until when a guest's spot is held once their transfer reaches Bridge: a week
+ * from when the order was written, never past the listing's close. The order
+ * was written {@link BANK_GUEST_HOLD_HOURS} before its free hold ends (bank is
+ * never offered within two days of the close, so that hold is never cut short).
+ * Null when either date is unreadable or the week adds nothing.
+ */
+export function guestWeekUntil(expiresAt: string | null | undefined, closesAt: string | null | undefined): string | null {
+  const until = Date.parse(expiresAt ?? "");
+  if (!Number.isFinite(until)) return null;
+  let week = until - BANK_GUEST_HOLD_HOURS * 3_600_000 + BANK_HOLD_DAYS * 86_400_000;
+  const close = Date.parse(closesAt ?? "");
+  if (Number.isFinite(close)) week = Math.min(week, close);
+  return week > until ? new Date(week).toISOString() : null;
 }
 
 /** Only an untouched transfer can be cancelled: Bridge refuses once money has arrived. */
@@ -128,7 +156,19 @@ export function bankErrorKey(code: string): MessageKey | null {
       return "sponsor.checkout.bank.error.inFlight";
     case "pays_by_bank":
       return "sponsor.checkout.bank.error.paysByBank";
+    case "bank_short_paid":
+      return "sponsor.checkout.bank.error.shortPaid";
     default:
       return null;
   }
+}
+
+/**
+ * Asking for bank details: a 429 `rate_limited` there is the guest's daily
+ * cap on bank holds (or a burst), said calmly with the wallet as the way on.
+ * A 503 `rate_limited` is our limiter down and keeps the checkout's own words.
+ */
+export function bankRequestErrorKey(code: string, status: number): MessageKey | null {
+  if (code === "rate_limited" && status === 429) return "sponsor.checkout.bank.error.dailyCap";
+  return bankErrorKey(code);
 }
