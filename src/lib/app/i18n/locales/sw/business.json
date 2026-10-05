@@ -159,6 +159,7 @@
   "quote.state.superseded": "Imebadilishwa",
   "quote.state.declined": "Imekataliwa",
   "quote.anySpot": "Bei yako",
+  "quote.declinedBecause": "Imekataliwa: {reason}",
   "sales.csvTitle": "Mauzo kwa mhasibu wako",
   "sales.csvBody": "Kila mauzo katika kipindi kama CSV, kwa tarehe ya malipo kwa UTC, hadi mwaka mmoja kwa wakati mmoja.",
   "sales.from": "Kutoka",

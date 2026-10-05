@@ -159,6 +159,7 @@
   "quote.state.superseded": "Sostituito",
   "quote.state.declined": "Rifiutato",
   "quote.anySpot": "Il tuo preventivo",
+  "quote.declinedBecause": "Rifiutato: {reason}",
   "sales.csvTitle": "Vendite per il tuo commercialista",
   "sales.csvBody": "Ogni vendita nel periodo in un CSV, per data di pagamento in UTC, fino a un anno alla volta.",
   "sales.from": "Da",

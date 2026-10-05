@@ -159,6 +159,7 @@
   "quote.state.superseded": "Vervangen",
   "quote.state.declined": "Afgewezen",
   "quote.anySpot": "Je offerte",
+  "quote.declinedBecause": "Afgewezen: {reason}",
   "sales.csvTitle": "Verkopen voor je boekhouder",
   "sales.csvBody": "Elke verkoop in de periode als CSV, op betaaldatum in UTC, tot een jaar per keer.",
   "sales.from": "Van",

@@ -1017,6 +1017,8 @@ export interface QuoteView {
   buyerPaysUsdc: string;
   feePayer: "sponsor" | "creator";
   note: string | null;
+  /** The buyer's reason, set only when the quote is declined. Absent before the decline backend ships. */
+  declineReason?: string | null;
   /** open: when the quote ends. accepted: when the 24 hour hold ends. Otherwise null. */
   expiresAt: string | null;
   sentAt: string;

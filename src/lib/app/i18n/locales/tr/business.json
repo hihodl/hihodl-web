@@ -159,6 +159,7 @@
   "quote.state.superseded": "Yerine yenisi geldi",
   "quote.state.declined": "Reddedildi",
   "quote.anySpot": "Teklifiniz",
+  "quote.declinedBecause": "Reddedildi: {reason}",
   "sales.csvTitle": "Muhasebecin için satışlar",
   "sales.csvBody": "Aralıktaki her satış, UTC ödeme tarihine göre bir CSV olarak, bir seferde en fazla bir yıl.",
   "sales.from": "Başlangıç",

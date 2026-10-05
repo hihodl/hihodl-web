@@ -159,6 +159,7 @@
   "quote.state.superseded": "差し替え済み",
   "quote.state.declined": "辞退",
   "quote.anySpot": "あなたの見積もり",
+  "quote.declinedBecause": "辞退: {reason}",
   "sales.csvTitle": "会計担当者向けの売上",
   "sales.csvBody": "期間内のすべての売上を CSV で。UTC の支払日順、一度に最大1年分。",
   "sales.from": "開始",

@@ -175,6 +175,7 @@ const business = {
   "quote.state.superseded": "Replaced",
   "quote.state.declined": "Declined",
   "quote.anySpot": "Your quote",
+  "quote.declinedBecause": "Declined: {reason}",
 
   /* ── Sales and invoices ── */
   "sales.csvTitle": "Sales for your accountant",

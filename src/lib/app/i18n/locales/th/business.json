@@ -159,6 +159,7 @@
   "quote.state.superseded": "ถูกแทนที่",
   "quote.state.declined": "ถูกปฏิเสธ",
   "quote.anySpot": "ใบเสนอราคาของคุณ",
+  "quote.declinedBecause": "ถูกปฏิเสธ: {reason}",
   "sales.csvTitle": "ยอดขายสำหรับนักบัญชีของคุณ",
   "sales.csvBody": "ทุกการขายในช่วงที่เลือกเป็น CSV ตามวันที่ชำระเงินในเวลา UTC ครั้งละไม่เกินหนึ่งปี",
   "sales.from": "จาก",

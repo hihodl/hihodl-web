@@ -159,6 +159,7 @@
   "quote.state.superseded": "Diganti",
   "quote.state.declined": "Ditolak",
   "quote.anySpot": "Penawaran Anda",
+  "quote.declinedBecause": "Ditolak: {reason}",
   "sales.csvTitle": "Penjualan untuk akuntanmu",
   "sales.csvBody": "Setiap penjualan dalam rentang sebagai CSV, berdasarkan tanggal pembayaran dalam UTC, maksimal satu tahun sekaligus.",
   "sales.from": "Dari",

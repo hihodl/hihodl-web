@@ -159,6 +159,7 @@
   "quote.state.superseded": "Ersetzt",
   "quote.state.declined": "Abgelehnt",
   "quote.anySpot": "Dein Angebot",
+  "quote.declinedBecause": "Abgelehnt: {reason}",
   "sales.csvTitle": "Verkäufe für deine Buchhaltung",
   "sales.csvBody": "Alle Verkäufe im Zeitraum als CSV, nach Zahlungsdatum in UTC, bis zu einem Jahr auf einmal.",
   "sales.from": "Von",

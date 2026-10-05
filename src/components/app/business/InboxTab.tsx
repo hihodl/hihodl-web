@@ -326,6 +326,9 @@ function QuoteCard({ quote: q, canWithdraw }: { quote: QuoteView; canWithdraw: b
       <KV k={t("business.quote.price")} v={`${q.priceUsdc} USDC`} strong />
       {q.buyerPaysUsdc !== q.priceUsdc ? <KV k={t("business.quote.buyerPays")} v={`${q.buyerPaysUsdc} USDC`} /> : null}
       {q.note ? <p className="text-[13px] text-white/[0.82]">{q.note}</p> : null}
+      {q.state === "declined" && q.declineReason ? (
+        <p className="text-[13px] text-white/[0.82]">{t("business.quote.declinedBecause", { reason: q.declineReason })}</p>
+      ) : null}
       {q.expiresAt ? (
         <p className="text-[12px] text-white/55">
           {q.state === "accepted" ? t("business.quote.heldUntil", { when: fmtDateTime(q.expiresAt) }) : t("business.quote.endsAt", { when: fmtDateTime(q.expiresAt) })}
