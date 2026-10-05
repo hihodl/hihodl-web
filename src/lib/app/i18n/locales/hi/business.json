@@ -157,6 +157,8 @@
   "quote.state.expired": "समय खत्म",
   "quote.state.withdrawn": "वापस लिया",
   "quote.state.superseded": "बदला गया",
+  "quote.state.declined": "अस्वीकृत",
+  "quote.anySpot": "आपका कोटेशन",
   "sales.csvTitle": "आपके अकाउंटेंट के लिए बिक्री",
   "sales.csvBody": "चुनी गई अवधि की हर बिक्री CSV में, UTC में पेमेंट की तारीख के हिसाब से, एक बार में एक साल तक।",
   "sales.from": "से",

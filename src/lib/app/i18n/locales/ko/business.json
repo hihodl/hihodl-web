@@ -157,6 +157,8 @@
   "quote.state.expired": "만료됨",
   "quote.state.withdrawn": "철회됨",
   "quote.state.superseded": "대체됨",
+  "quote.state.declined": "거절됨",
+  "quote.anySpot": "내 견적",
   "sales.csvTitle": "회계 담당자용 판매 내역",
   "sales.csvBody": "기간 내 모든 판매를 CSV로, UTC 결제일 기준, 한 번에 최대 1년.",
   "sales.from": "시작",

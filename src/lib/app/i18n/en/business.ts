@@ -173,6 +173,8 @@ const business = {
   "quote.state.expired": "Expired",
   "quote.state.withdrawn": "Withdrawn",
   "quote.state.superseded": "Replaced",
+  "quote.state.declined": "Declined",
+  "quote.anySpot": "Your quote",
 
   /* ── Sales and invoices ── */
   "sales.csvTitle": "Sales for your accountant",

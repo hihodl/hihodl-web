@@ -157,6 +157,8 @@
   "quote.state.expired": "Hết hạn",
   "quote.state.withdrawn": "Đã rút lại",
   "quote.state.superseded": "Đã thay thế",
+  "quote.state.declined": "Đã từ chối",
+  "quote.anySpot": "Báo giá của bạn",
   "sales.csvTitle": "Doanh số cho kế toán của bạn",
   "sales.csvBody": "Mọi lần bán trong khoảng thời gian dưới dạng CSV, theo ngày thanh toán giờ UTC, tối đa một năm mỗi lần.",
   "sales.from": "Từ",

@@ -26,6 +26,7 @@ import useSWR, { useSWRConfig } from "swr";
 import { useCallback } from "react";
 
 import { API_BASE } from "@/lib/ad-space/config";
+import type { QuoteView } from "@/lib/ad-space/types";
 import { accessToken, useCreatorSession } from "@/lib/creator/session";
 
 import { HoldApiError, read } from "./hold-api";
@@ -119,20 +120,8 @@ export interface MemberChallenge {
   expiresInMinutes: number;
 }
 
-export interface QuoteView {
-  quoteId: string;
-  state: "open" | "accepted" | "paid" | "expired" | "withdrawn" | "superseded";
-  spaceId: string;
-  position: { id: string; label: string };
-  priceUsdc: string;
-  buyerPaysUsdc: string;
-  feePayer: "sponsor" | "creator";
-  note: string | null;
-  expiresAt: string | null;
-  sentAt: string;
-  updatedAt: string;
-  orderId: string | null;
-}
+/** One quote shape for the seller console and the buyer thread. */
+export type { QuoteView } from "@/lib/ad-space/types";
 
 export interface EnquiryRow {
   enquiryId: string;

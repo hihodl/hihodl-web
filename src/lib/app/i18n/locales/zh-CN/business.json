@@ -157,6 +157,8 @@
   "quote.state.expired": "已过期",
   "quote.state.withdrawn": "已撤回",
   "quote.state.superseded": "已替换",
+  "quote.state.declined": "已拒绝",
+  "quote.anySpot": "你的报价",
   "sales.csvTitle": "给会计的销售记录",
   "sales.csvBody": "所选范围内的每笔销售导出为 CSV，按 UTC 付款日期排列，每次最多一年。",
   "sales.from": "从",

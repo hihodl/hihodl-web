@@ -309,6 +309,7 @@ const QUOTE_TONE: Record<QuoteView["state"], "good" | "calm" | "caution" | "dim"
   expired: "dim",
   withdrawn: "dim",
   superseded: "dim",
+  declined: "dim",
 };
 
 function QuoteCard({ quote: q, canWithdraw }: { quote: QuoteView; canWithdraw: boolean }) {
@@ -319,7 +320,7 @@ function QuoteCard({ quote: q, canWithdraw }: { quote: QuoteView; canWithdraw: b
   return (
     <div className="flex w-full max-w-[420px] flex-col gap-1.5 rounded-[16px] border border-white/10 bg-white/[0.05] px-3.5 py-3">
       <div className="flex items-center justify-between gap-2">
-        <span className="truncate text-[14px] font-bold text-white">{q.position.label}</span>
+        <span className="truncate text-[14px] font-bold text-white">{q.position?.label ?? t("business.quote.anySpot")}</span>
         <Tag label={t(`business.quote.state.${q.state}` as const)} tone={QUOTE_TONE[q.state]} />
       </div>
       <KV k={t("business.quote.price")} v={`${q.priceUsdc} USDC`} strong />

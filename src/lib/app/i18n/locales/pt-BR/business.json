@@ -157,6 +157,8 @@
   "quote.state.expired": "Expirado",
   "quote.state.withdrawn": "Retirado",
   "quote.state.superseded": "Substituído",
+  "quote.state.declined": "Recusado",
+  "quote.anySpot": "Seu orçamento",
   "sales.csvTitle": "Vendas para o seu contador",
   "sales.csvBody": "Todas as vendas do período em CSV, por data de pagamento em UTC, até um ano por vez.",
   "sales.from": "De",

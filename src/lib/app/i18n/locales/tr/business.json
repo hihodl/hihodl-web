@@ -157,6 +157,8 @@
   "quote.state.expired": "Süresi doldu",
   "quote.state.withdrawn": "Geri çekildi",
   "quote.state.superseded": "Yerine yenisi geldi",
+  "quote.state.declined": "Reddedildi",
+  "quote.anySpot": "Teklifiniz",
   "sales.csvTitle": "Muhasebecin için satışlar",
   "sales.csvBody": "Aralıktaki her satış, UTC ödeme tarihine göre bir CSV olarak, bir seferde en fazla bir yıl.",
   "sales.from": "Başlangıç",

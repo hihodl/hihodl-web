@@ -157,6 +157,8 @@
   "quote.state.expired": "منتهي الصلاحية",
   "quote.state.withdrawn": "مسحوب",
   "quote.state.superseded": "مُستبدل",
+  "quote.state.declined": "مرفوض",
+  "quote.anySpot": "عرض السعر",
   "sales.csvTitle": "المبيعات لمحاسبك",
   "sales.csvBody": "كل عملية بيع في الفترة كملف CSV، حسب تاريخ الدفع بتوقيت UTC، حتى سنة في كل مرة.",
   "sales.from": "من",
