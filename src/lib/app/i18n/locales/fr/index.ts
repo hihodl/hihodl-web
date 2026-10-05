@@ -19,6 +19,7 @@ import analytics from "./analytics.json";
 import spaces from "./spaces.json";
 import listings from "./listings.json";
 import creator from "./creator.json";
+import business from "./business.json";
 import runner from "./runner.json";
 import board from "./board.json";
 import offers from "./offers.json";
@@ -29,6 +30,6 @@ import payPage from "./payPage.json";
 
 import { prefix } from "../prefix";
 
-const dict = prefix({ common, titles, shell, front, link, menu, prefs, account, home, activity, wallet, money, payments, requests, groups, groupThread, analytics, spaces, listings, creator, runner, board, offers, sponsor, stays, trips, payPage });
+const dict = prefix({ common, titles, shell, front, link, menu, prefs, account, home, activity, wallet, money, payments, requests, groups, groupThread, analytics, spaces, listings, creator, business, runner, board, offers, sponsor, stays, trips, payPage });
 
 export default dict;
