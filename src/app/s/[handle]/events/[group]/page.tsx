@@ -22,9 +22,12 @@ import {
   splitGroups,
 } from "@/components/ad-space/creator";
 import { SpaceCardGrid } from "@/components/ad-space/events";
+import { PublicLanguage } from "@/components/ad-space/PublicLanguage";
 import { SlimHeader } from "@/components/ad-space/sections";
 import { btnSmallSecondary, eyebrow } from "@/components/ad-space/ui";
 import { getPublicCreator } from "@/lib/ad-space/server";
+import { t } from "@/lib/app/i18n";
+import { applyRequestLocale } from "@/lib/app/i18n/server";
 
 /**
  * The screens under a creator's page:
@@ -82,20 +85,20 @@ export default async function CreatorGroupScreen({
   params: Params;
   searchParams: SearchParams;
 }) {
+  const language = await applyRequestLocale();
+  const switcher = <PublicLanguage serverLocale={language.locale} chosen={language.chosen} />;
   const found = await getPublicCreator(params.handle);
   if (found.kind === "missing") notFound();
   if (found.kind === "unreachable") {
     return (
       <>
-        <SlimHeader />
+        <SlimHeader language={language} />
         <main className="container-page flex min-h-[60vh] flex-col justify-center py-20">
           <p className={`${eyebrow} text-sp-amber`}>HiSpace</p>
           <h1 className="mt-5 max-w-2xl font-display text-h3 font-light text-sp-ink md:text-h2">
-            We couldn&rsquo;t load this creator just now.
+            {t("publicPages.creator.unreachableTitle")}
           </h1>
-          <p className="mt-5 max-w-xl text-body text-sp-ink/85">
-            This is on our side, not the link. Give it a moment and refresh the page.
-          </p>
+          <p className="mt-5 max-w-xl text-body text-sp-ink/85">{t("board.unavailable.body")}</p>
         </main>
       </>
     );
@@ -113,10 +116,10 @@ export default async function CreatorGroupScreen({
     if (past.length === 0) notFound();
     return (
       <ProfileGround ground={creator.pageGround ?? null}>
-        <TopBar left={<BackLink href={home} label={name} />} />
+        <TopBar left={<BackLink href={home} label={name} />} right={switcher} />
         <main className="container-page w-full">
           <h1 className="pb-6 pt-6 font-display text-[36px] font-light leading-[1.05] text-sp-ink md:pb-10 md:pt-10 md:text-h2">
-            Past events
+            {t("offers.creator.pastEvents")}
           </h1>
           <GroupGrid handle={handle} groups={past} kind={null} now={now} over />
         </main>
@@ -150,8 +153,13 @@ export default async function CreatorGroupScreen({
   return (
     <ProfileGround ground={creator.pageGround ?? null}>
       <TopBar
-        left={<BackLink href={back} label={over ? "Past events" : name} />}
-        right={<KindPills kinds={kinds} active={kind} counts={kindCounts(group.cards)} hrefFor={(k) => here(k)} />}
+        left={<BackLink href={back} label={over ? t("offers.creator.pastEvents") : name} />}
+        right={
+          <div className="flex items-center gap-2">
+            <KindPills kinds={kinds} active={kind} counts={kindCounts(group.cards)} hrefFor={(k) => here(k)} />
+            {switcher}
+          </div>
+        }
       />
       <main>
         <div className="container-page">
@@ -159,18 +167,18 @@ export default async function CreatorGroupScreen({
             <GroupHeader event={event} now={now} />
           </div>
         </div>
-        <section className="container-page pt-6 md:pt-8" aria-label="Listings">
+        <section className="container-page pt-6 md:pt-8" aria-label={t("publicPages.creator.listings")}>
           <SpaceCardGrid cards={visible} event={event} tab={null} now={now} showCreator={false} readOnly={over} />
           {visible.length < cards.length && (
             <div className="mt-8 flex justify-center">
               <Link href={here(kind, true)} scroll={false} className={btnSmallSecondary}>
-                Show all {cards.length}
+                {t("publicPages.creator.showAll", { count: cards.length })}
               </Link>
             </div>
           )}
         </section>
       </main>
-      <ProfileFooter note={event ? `HOLD is not affiliated with ${event.name}.` : undefined} />
+      <ProfileFooter note={event ? t("publicPages.event.notAffiliated", { event: event.name }) : undefined} />
     </ProfileGround>
   );
 }

@@ -17,6 +17,8 @@ import {
   startCheckout,
   submitAuthorizations,
 } from "@/lib/ad-space/checkout-client";
+import { loadBilling, saveOrderBilling, storeBilling } from "@/lib/ad-space/billing";
+import type { BillingDetails } from "@/lib/ad-space/billing-rules";
 import { TAKEOVER_CHAINS } from "@/lib/ad-space/config";
 import {
   CHAIN_LABEL,
@@ -34,13 +36,14 @@ import {
 } from "@/lib/ad-space/format";
 import { describeOfferError, startOfferCheckout } from "@/lib/ad-space/offers-client";
 import { pointsForOfferAmount, pointsForPosition, pointsWorth } from "@/lib/ad-space/points";
+import { describeQuoteError, startQuoteCheckout } from "@/lib/ad-space/quotes";
 import { APP_STORE_URL, PLAY_STORE_URL, SMART_LINK_URL } from "@/lib/appLinks";
 import { browseWalletsFor, checkoutPageUrl, holdSpotUrl } from "@/lib/ad-space/pay-here";
 import { walletBrowseUrl } from "@/lib/pay-links/page-rules";
 import { PUBLIC_CHAINS } from "@/lib/orders/chains.public";
 import { fmtNumber } from "@/lib/app/i18n/format";
 import { Rich, useT } from "@/lib/app/i18n/react";
-import type { Booking, BriefBody, Chain, EvmPayload, OfferView, Order, Position, Space } from "@/lib/ad-space/types";
+import type { Booking, BriefBody, Chain, EvmPayload, OfferView, Order, Position, QuoteView, Space } from "@/lib/ad-space/types";
 
 import {
   type EvmWallet,
@@ -75,6 +78,7 @@ import {
   sheetCard,
   useBrowserWallets,
 } from "./pay-sheet";
+import { BillingStep } from "./BillingStep";
 import { BriefForm, BriefReady, EMPTY_BRIEF, PackageLines, PaidProduction, type BriefDraft } from "./Production";
 import { QrCode } from "./qr";
 import { ManageLinkBox, SessionContactForm } from "./SessionBooking";
@@ -113,6 +117,17 @@ import { SpotPreview } from "./ProductBoard";
  * Solana Pay QR comes from the offer too (`POST /public/offers/:token/checkout`
  * with `qr: true`), which binds this browser's checkout key to the offer; the
  * page then waits on `GET /public/checkout` with that key like any QR payment.
+ *
+ * With `quote`, this pays a seller's quote the guest accepted at /e/<token>
+ * (seller-quotes-contract.md): the same flow, asked for through the enquiry
+ * token and the quote (`POST /public/enquiries/:token/quotes/:id/checkout`)
+ * and priced at the quote.
+ *
+ * Invoice details (sale-invoices-contract.md) are an optional step before
+ * paying, prefilled from this browser's last purchase. They go to the order
+ * once the checkout has created it, next to the wallet's signature and never
+ * in its way: the checkout body, and so what the wallet signs, is the same
+ * with or without them.
  */
 
 type Phase =
@@ -147,6 +162,7 @@ export function Checkout({
   onClose,
   onPaid,
   offer = null,
+  quote = null,
 }: {
   space: Space;
   position: Position;
@@ -154,6 +170,8 @@ export function Checkout({
   onPaid: () => void;
   /** An accepted offer or bid to pay, by its manage-link token. */
   offer?: { token: string; view: OfferView } | null;
+  /** An accepted seller's quote to pay, by the enquiry link's token. */
+  quote?: { token: string; view: QuoteView } | null;
 }) {
   // Only where the creator can be paid. Taking a sold spot over is only
   // possible on the chains takeovers work on; the position view does not say
@@ -199,37 +217,71 @@ export function Checkout({
   const withBrief = <T extends object>(body: T): T & { brief?: BriefBody } =>
     briefRef.current ? { ...body, brief: briefRef.current } : body;
   /**
+   * Who the seller's invoice names. Chosen before paying and sent once per
+   * order, as soon as the checkout answers with one; a refusal of any kind
+   * leaves the payment alone (the seller then issues a receipt to nobody).
+   */
+  const [billing, setBillingState] = useState<BillingDetails | null>(null);
+  const [billingOpen, setBillingOpen] = useState(false);
+  const billingRef = useRef<BillingDetails | null>(null);
+  billingRef.current = billing;
+  const billedOrders = useRef(new Set<string>());
+  useEffect(() => setBillingState(loadBilling()), []);
+  const setBilling = useCallback((d: BillingDetails | null) => {
+    setBillingState(d);
+    storeBilling(d);
+  }, []);
+  const sendBilling = useCallback((orderId: string) => {
+    const d = billingRef.current;
+    if (!d || billedOrders.current.has(orderId)) return;
+    billedOrders.current.add(orderId);
+    void saveOrderBilling(orderId, keyRef.current, d);
+  }, []);
+  /**
    * What paying this from the HOLD app would earn (spaces-sponsor-points-v0.md):
    * on an accepted offer, the fee on the agreed amount; otherwise the fee this
    * spot's payment carries. Null when the server doesn't say, and then the HOLD
    * option promises nothing.
    */
+  // A quote is bound to the conversation on this page, so the app promises nothing for it.
   const holdPoints = offer
     ? pointsForOfferAmount(offer.view.agreedUsdc, space, offer.view)
-    : pointsForPosition(position, space);
+    : quote
+      ? null
+      : pointsForPosition(position, space);
 
   /** The checkout calls: the position's, or the accepted offer's at the agreed amount. */
   const offerToken = offer?.token ?? null;
+  const quoteToken = quote?.token ?? null;
+  const quoteId = quote?.view.quoteId ?? null;
+  /** The page this checkout sits on is its own address when it pays an offer or a quote. */
+  const boundToken = offerToken ?? quoteToken;
   const beginSolana = useCallback(
     (key: string, sponsorAddress: string) =>
-      offerToken
-        ? startOfferCheckout(offerToken, key, withBrief({ chain: "solana" as const, sponsorAddress }))
-        : startCheckout(position.id, key, withBrief({ chain: "solana" as const, sponsorAddress })),
+      quoteToken && quoteId
+        ? startQuoteCheckout(quoteToken, quoteId, key, withBrief({ chain: "solana" as const, sponsorAddress }))
+        : offerToken
+          ? startOfferCheckout(offerToken, key, withBrief({ chain: "solana" as const, sponsorAddress }))
+          : startCheckout(position.id, key, withBrief({ chain: "solana" as const, sponsorAddress })),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the brief is read from its ref at call time
-    [offerToken, position.id],
+    [offerToken, quoteToken, quoteId, position.id],
   );
   const beginEvm = useCallback(
     (key: string, chain: "base" | "polygon", sponsorAddress: string) =>
-      offerToken
-        ? startOfferCheckout(offerToken, key, withBrief({ chain, sponsorAddress }))
-        : startCheckout(position.id, key, withBrief({ chain, sponsorAddress })),
+      quoteToken && quoteId
+        ? startQuoteCheckout(quoteToken, quoteId, key, withBrief({ chain, sponsorAddress }))
+        : offerToken
+          ? startOfferCheckout(offerToken, key, withBrief({ chain, sponsorAddress }))
+          : startCheckout(position.id, key, withBrief({ chain, sponsorAddress })),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the brief is read from its ref at call time
-    [offerToken, position.id],
+    [offerToken, quoteToken, quoteId, position.id],
   );
   const explain = useCallback(
     (e: unknown, c: Chain | null) =>
-      (offer ? describeOfferError(e, { kind: offer.view.kind, chain: c, subject }) : null) ?? describeError(e, c, subject),
-    [offer, subject],
+      (quote ? describeQuoteError(e, subject) : null) ??
+      (offer ? describeOfferError(e, { kind: offer.view.kind, chain: c, subject }) : null) ??
+      describeError(e, c, subject),
+    [offer, quote, subject],
   );
 
   /* Resume: this browser may already hold a checkout for this spot. */
@@ -270,9 +322,9 @@ export function Checkout({
   }, [position.id]);
 
   useEffect(() => {
-    setPageUrl(checkoutPageUrl(window.location, position.id, offerToken));
-    setHoldLink(offerToken ? null : holdSpotUrl(window.location.pathname, position.id));
-  }, [position.id, offerToken]);
+    setPageUrl(checkoutPageUrl(window.location, position.id, boundToken));
+    setHoldLink(boundToken ? null : holdSpotUrl(window.location.pathname, position.id));
+  }, [position.id, boundToken]);
 
   /* Countdown tick while something is held. */
   const ticking = phase.kind === "qr" || phase.kind === "confirming" || phase.kind === "evm-sign";
@@ -399,6 +451,7 @@ export function Checkout({
       const checkout = () =>
         withFreshKey((key) => beginSolana(key, sponsorAddress));
       let [res, web3] = await Promise.all([checkout(), import("@solana/web3.js")]);
+      sendBilling(res.order.id);
 
       setPhase({ kind: "busy", label: t("sponsor.checkout.approveIn", { name: wallet.name }) });
       let sent: unknown;
@@ -447,6 +500,7 @@ export function Checkout({
 
       setPhase({ kind: "busy", label: t("sponsor.checkout.preparingPayment") });
       const res = await withFreshKey((key) => beginEvm(key, evmChain, sponsorAddress));
+      sendBilling(res.order.id);
       const creatorAuth = res.evm.authorizations.find((a) => a.role === "creator");
       const feeAuth = res.evm.authorizations.find((a) => a.role === "fee");
       if (!creatorAuth || !feeAuth) throw new CheckoutError("server", 500);
@@ -484,6 +538,8 @@ export function Checkout({
   /* ── What the sheet shows ───────────────────────────────────────── */
 
   const needsBrief = production && !brief;
+  /** The invoice form, open: it takes the place of the ways to pay until it is used or skipped. */
+  const billingShown = billingOpen && phase.kind === "choose";
 
   /* A chosen way to pay comes into view whole, the QR most of all. */
   const panelRef = useRef<HTMLDivElement>(null);
@@ -504,13 +560,15 @@ export function Checkout({
   const walletsHere = chain === "solana" ? solanaWallets.map((w) => ({ id: w.name, name: w.name, icon: w.icon ?? null })) : evmWallets;
   const chosen = walletsHere.find((w) => w.id === picked) ?? walletsHere[0] ?? null;
 
-  const figures = amountsOf(position, offer?.view ?? null);
+  const figures = amountsOf(position, offer?.view ?? null, quote?.view ?? null);
   const total = dollars(figures.totalUsdc);
   const feeNote = space.feeBps > 0 ? t("sponsor.checkout.feeIncluded", { pct: feePercent(space.feeBps) }) : null;
   const busy = phase.kind === "busy" || phase.kind === "evm-sign";
   const heldMs = (o: Order) => new Date(o.reservedUntil).getTime() - now;
 
-  const eyebrow = offer
+  const eyebrow = quote
+    ? t("enquiries.quote.checkoutEyebrow")
+    : offer
     ? offer.view.kind === "bid"
       ? t("sponsor.checkout.eyebrow.bid")
       : t("sponsor.checkout.eyebrow.offer")
@@ -547,7 +605,7 @@ export function Checkout({
   /* The bottom bloc, as in the app: the one action, then one line of trust. */
   const paying = phase.kind === "choose" || phase.kind === "busy" || phase.kind === "evm-sign" || phase.kind === "qr";
   const footer =
-    paying && !needsBrief ? (
+    paying && !needsBrief && !billingShown ? (
       <>
         {method === "wallet" && (
           <WalletAction
@@ -687,9 +745,19 @@ export function Checkout({
                 <Included space={space} position={position} session={session} />
               ) : null}
 
-              <MethodTabs options={methods} value={method} onChange={onMethod} disabled={busy} />
+              {phase.kind === "choose" || billing ? (
+                <BillingStep
+                  value={billing}
+                  open={billingShown}
+                  disabled={busy || phase.kind !== "choose"}
+                  onOpen={setBillingOpen}
+                  onChange={setBilling}
+                />
+              ) : null}
 
-              <div ref={panelRef} className="flex scroll-mb-4 flex-col gap-5">
+              {!billingShown && <MethodTabs options={methods} value={method} onChange={onMethod} disabled={busy} />}
+
+              <div ref={panelRef} className={`flex scroll-mb-4 flex-col gap-5 ${billingShown ? "hidden" : ""}`}>
                 {method === "wallet" && (
                   <WalletList
                     chain={chain}
@@ -749,7 +817,9 @@ export function Checkout({
 function amountsOf(
   p: Position,
   offer: OfferView | null,
+  quote: QuoteView | null = null,
 ): { headlineUsdc: string | null; totalUsdc: string | null; refundsUsdc: string | null } {
+  if (quote) return { headlineUsdc: quote.priceUsdc, totalUsdc: quote.buyerPaysUsdc, refundsUsdc: null };
   if (offer?.agreedUsdc && offer.agreedSponsorPaysUsdc) {
     return { headlineUsdc: offer.agreedUsdc, totalUsdc: offer.agreedSponsorPaysUsdc, refundsUsdc: null };
   }

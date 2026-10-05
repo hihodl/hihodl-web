@@ -1,0 +1,21 @@
+{
+  "creator.unreachableTitle": "हम अभी इस क्रिएटर को लोड नहीं कर पाए।",
+  "creator.whereTheySell": "कहाँ बेचते हैं",
+  "creator.nothingOnSale": "अभी कुछ भी बिक्री पर नहीं है।",
+  "creator.listings": "लिस्टिंग",
+  "creator.showAll": "सभी {count} देखें",
+  "creator.missingTitle": "इस लिंक पर कुछ भी बिक्री पर नहीं है।",
+  "creator.missingBody": "जिसने शेयर किया उससे हैंडल चेक करें। हो सकता है इस क्रिएटर के पास अभी कुछ खुला न हो, या उसने कभी स्पेस खोला ही न हो।",
+  "event.unreachableTitle": "हम अभी इस इवेंट को लोड नहीं कर पाए।",
+  "event.spaces": "स्पेस",
+  "event.nobodyYet": "{event} के लिए अभी तक किसी ने स्पेस नहीं खोला है।",
+  "event.allTaken": "यहाँ सब कुछ ले लिया गया है। दूसरे टैब में अभी भी खाली जगहें हैं।",
+  "event.notAffiliated": "HOLD का {event} से कोई संबंध नहीं है।",
+  "event.missingTitle": "इस लिंक पर कोई इवेंट नहीं है।",
+  "event.missingBody": "जिसने शेयर किया उससे लिंक चेक करें। अगर आप किसी इवेंट में जा रहे हैं, तो अपना स्पेस खोलते समय HOLD ऐप से उसे जोड़ सकते हैं।",
+  "space.goneTitle": "यह अब बिक्री पर नहीं है।",
+  "space.missingTitle": "इस लिंक पर कोई HiSpace नहीं है।",
+  "space.missingBody": "जिसने शेयर किया उससे लिंक चेक करें। हो सकता है यह अभी प्रकाशित न हुआ हो, या हटा दिया गया हो।",
+  "space.footerNav": "HiSpace लिंक",
+  "goToHold": "HOLD पर जाएँ"
+}

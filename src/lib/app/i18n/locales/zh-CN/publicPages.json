@@ -1,0 +1,21 @@
+{
+  "creator.unreachableTitle": "暂时无法加载这位创作者。",
+  "creator.whereTheySell": "在哪里出售",
+  "creator.nothingOnSale": "目前没有在售内容。",
+  "creator.listings": "在售项目",
+  "creator.showAll": "查看全部 {count} 个",
+  "creator.missingTitle": "此链接下没有在售内容。",
+  "creator.missingBody": "请向分享者核对用户名。这位创作者目前可能没有开放的项目，或从未开设过空间。",
+  "event.unreachableTitle": "暂时无法加载此活动。",
+  "event.spaces": "空间",
+  "event.nobodyYet": "还没有人为 {event} 开设空间。",
+  "event.allTaken": "这里已全部售出。另一个标签页还有空位。",
+  "event.notAffiliated": "HOLD 与 {event} 无关联。",
+  "event.missingTitle": "此链接下没有活动。",
+  "event.missingBody": "请向分享者核对链接。如果你要参加某个活动，可以在开设空间时通过 HOLD App 添加。",
+  "space.goneTitle": "这个已不再出售。",
+  "space.missingTitle": "此链接下没有 HiSpace。",
+  "space.missingBody": "请向分享者核对链接。它可能尚未发布，或已被下架。",
+  "space.footerNav": "HiSpace 链接",
+  "goToHold": "前往 HOLD"
+}

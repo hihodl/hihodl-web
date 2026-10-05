@@ -1,0 +1,21 @@
+{
+  "creator.unreachableTitle": "تعذّر تحميل صفحة صانع المحتوى هذا الآن.",
+  "creator.whereTheySell": "أين يبيع",
+  "creator.nothingOnSale": "لا شيء معروض للبيع الآن.",
+  "creator.listings": "العروض",
+  "creator.showAll": "عرض الكل ({count})",
+  "creator.missingTitle": "لا يوجد شيء للبيع على هذا الرابط.",
+  "creator.missingBody": "تحقّق من اسم المستخدم مع من شاركه معك. قد لا يكون لدى صانع المحتوى هذا شيء مفتوح الآن، أو ربما لم يفتح مساحة قط.",
+  "event.unreachableTitle": "تعذّر تحميل هذه الفعالية الآن.",
+  "event.spaces": "المساحات",
+  "event.nobodyYet": "لم يفتح أحد مساحة لـ {event} بعد.",
+  "event.allTaken": "كل شيء هنا محجوز. لا تزال هناك أماكن متاحة في تبويب آخر.",
+  "event.notAffiliated": "HOLD غير تابعة لـ {event}.",
+  "event.missingTitle": "لا توجد فعالية على هذا الرابط.",
+  "event.missingBody": "تحقّق من الرابط مع من شاركه معك. إذا كنت ذاهبًا إلى فعالية، يمكنك إضافتها من تطبيق HOLD عند فتح مساحتك.",
+  "space.goneTitle": "لم يعد هذا معروضًا للبيع.",
+  "space.missingTitle": "لا توجد HiSpace على هذا الرابط.",
+  "space.missingBody": "تحقّق من الرابط مع من شاركه معك. ربما لم يُنشر بعد، أو أُزيل.",
+  "space.footerNav": "روابط HiSpace",
+  "goToHold": "اذهب إلى HOLD"
+}

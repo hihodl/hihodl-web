@@ -52,6 +52,12 @@ export interface TeamMember {
   creatorHandle?: string | null;
   creatorName?: string | null;
   creatorAvatarUrl?: string | null;
+  /**
+   * The owner's user id, on a seat read from the member's side, once the
+   * backend sends it: the business console acts for that owner with
+   * `?asBusiness=` (business-roles-and-activity-contract.md). Absent today.
+   */
+  ownerUserId?: string | null;
 }
 
 /**
