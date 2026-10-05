@@ -4,11 +4,12 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { SpacesGround } from "@/components/ad-space/ground";
 import { ProfileFooter } from "@/components/ad-space/creator";
 import { EventBanner, EventTabs, SpaceCardGrid, TAB_NAME, eventPath } from "@/components/ad-space/events";
+import { OrganiserPackages } from "@/components/ad-space/organiser";
 import { SlimHeader } from "@/components/ad-space/sections";
 import { eyebrow } from "@/components/ad-space/ui";
 import { SLUG_RE } from "@/lib/ad-space/config";
 import { EVENT_TABS, eventDates, openSpots } from "@/lib/ad-space/format";
-import { getPublicEvent } from "@/lib/ad-space/server";
+import { getPackageSpaces, getPublicEvent } from "@/lib/ad-space/server";
 import type { EventPage as EventPageData, SpaceTab } from "@/lib/ad-space/types";
 import { t } from "@/lib/app/i18n";
 import { applyRequestLocale, inEnglish } from "@/lib/app/i18n/server";
@@ -128,8 +129,11 @@ export default async function EventPage({
     );
   }
 
-  const { event, tabs, defaultTab } = found.page;
+  const { event, tabs, defaultTab, packages } = found.page;
   const active = tabParam(searchParams) ?? defaultTab;
+  // The host's own packages, above the creators, only when a verified host sells some.
+  const organiser = packages.length > 0 ? event.organiser ?? null : null;
+  const spaces = organiser ? await getPackageSpaces(packages) : {};
   const now = Date.now();
   const total = EVENT_TABS.reduce((sum, t) => sum + tabs[t].length, 0);
   const openElsewhere = EVENT_TABS.some((t) => t !== active && openSpots(tabs[t]) > 0);
@@ -139,6 +143,11 @@ export default async function EventPage({
       <SlimHeader language={language} />
       <main>
         <EventBanner event={event} now={now} />
+        {organiser && (
+          <div className="container-page pt-10 md:pt-14">
+            <OrganiserPackages organiser={organiser} packages={packages} spaces={spaces} now={now} />
+          </div>
+        )}
         <section className="container-page py-10 md:py-14" aria-label={t("publicPages.event.spaces")}>
           {total === 0 && (
             <p className="mb-6 max-w-2xl break-words text-body text-sp-ink/85 [overflow-wrap:anywhere]">
@@ -156,8 +165,8 @@ export default async function EventPage({
         </section>
       </main>
       {/* The HOLD mark, and the one sentence that has to stay: this page uses the
-          event's name and picture without being the event. */}
-      <ProfileFooter note={t("publicPages.event.notAffiliated", { event: event.name })} />
+          event's name and picture without being the event. Not once its host sells here. */}
+      <ProfileFooter note={event.organiser ? undefined : t("publicPages.event.notAffiliated", { event: event.name })} />
     </SpacesGround>
   );
 }

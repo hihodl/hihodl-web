@@ -9,15 +9,20 @@ import type {
   BrandProduction,
   PublicBrief,
   CreatorPage,
+  EventOrganiser,
   EventPage,
   EventSummary,
   GuestEnquiry,
+  ListedEvent,
+  LumaTeaser,
   OfferThread,
   PhotoRect,
   Position,
   Space,
   SpaceCard,
   SpacePhoto,
+  SpaceTab,
+  SponsorPage,
 } from "./types";
 
 /**
@@ -218,6 +223,9 @@ function withEventFields(space: Space): Space {
   );
   return {
     ...raw,
+    // An organiser's event package (`event_asset`) is N identical slots with
+    // no zones, which is exactly how this page draws a service.
+    ...serviceKindOf(raw),
     // With no photo to draw them on, squares are dropped too, so nothing
     // downstream can place one on the catalog drawing by mistake.
     positions: photo ? positions : positions.map((p) => (onSides.has(p.zoneKey) ? p : { ...p, rect: null })),
@@ -249,6 +257,21 @@ function withEventFields(space: Space): Space {
       platform: d.platform ?? null,
       note: d.note ?? null,
     })),
+  };
+}
+
+/**
+ * `event_asset` (organiser-sells-its-event-contract.md) read as `service`, on
+ * the space and on its template, so every reader that branches on the kind
+ * sells an event package the way it sells slots. Nothing for any other kind.
+ */
+function serviceKindOf(raw: Space): Partial<Pick<Space, "kind" | "template">> {
+  const own = (raw.kind as string) === "event_asset";
+  const tpl = raw.template && (raw.template.kind as string) === "event_asset";
+  if (!own && !tpl) return {};
+  return {
+    kind: own ? "service" : raw.kind,
+    ...(raw.template ? { template: { ...raw.template, kind: tpl ? "service" : raw.template.kind } } : {}),
   };
 }
 
@@ -330,7 +353,14 @@ export async function getPublicEvent(slug: string, revalidate = 30): Promise<Eve
   if (!SLUG_RE.test(slug)) return { kind: "missing" };
 
   let body: {
-    data?: { event?: EventSummary; tabs?: Partial<EventPage["tabs"]>; defaultTab?: unknown; redirectTo?: string };
+    data?: {
+      event?: EventSummary;
+      tabs?: Partial<EventPage["tabs"]>;
+      defaultTab?: unknown;
+      redirectTo?: string;
+      packages?: unknown;
+      organiser?: unknown;
+    };
   } | null;
   if (fixtureEnabled()) {
     const { fixtureEvent } = await import("./fixture.dev");
@@ -357,18 +387,189 @@ export async function getPublicEvent(slug: string, revalidate = 30): Promise<Eve
     return { kind: "moved", slug: data.redirectTo };
   }
   if (!data?.event) return { kind: "unreachable" };
+  // A backend older than organiser packages sends neither key: no packages, no host.
+  const packages = cardsOf(data.packages);
+  const sold = new Set(packages.map((c) => c.spaceId));
+  // A package is said once, above the tabs, even if a server lists it in one too.
+  const notAPackage = (c: SpaceCard) => !sold.has(c.spaceId);
   const tabs = {
-    ground: (data.tabs?.ground ?? []).map(withCardDefaults),
-    feed: (data.tabs?.feed ?? []).map(withCardDefaults),
+    ground: (data.tabs?.ground ?? []).map(withCardDefaults).filter(notAPackage),
+    feed: (data.tabs?.feed ?? []).map(withCardDefaults).filter(notAPackage),
     // A backend that predates sessions sends no `room`.
-    room: (data.tabs?.room ?? []).map(withCardDefaults),
+    room: (data.tabs?.room ?? []).map(withCardDefaults).filter(notAPackage),
   };
   const fromApi =
     data.defaultTab === "ground" || data.defaultTab === "feed" || data.defaultTab === "room" ? data.defaultTab : null;
+  const organiser = organiserOf(data.event.organiser) ?? organiserOf(data.organiser);
   return {
     kind: "found",
-    page: { event: data.event, tabs, defaultTab: fromApi ?? defaultEventTab(tabs) },
+    page: { event: { ...data.event, organiser }, tabs, defaultTab: fromApi ?? defaultEventTab(tabs), packages },
   };
+}
+
+/** Cards from an API list, or none for anything that is not one. */
+function cardsOf(raw: unknown): SpaceCard[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((c): c is SpaceCard => !!c && typeof c === "object" && typeof (c as SpaceCard).spaceId === "string")
+    .map(withCardDefaults);
+}
+
+/** The verified host, or null: an unverified or nameless one is shown as nobody. */
+function organiserOf(raw: unknown): EventOrganiser | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  if (o.verified !== true || typeof o.name !== "string" || !o.name.trim()) return null;
+  return {
+    name: o.name.trim(),
+    avatarUrl: typeof o.avatarUrl === "string" && /^https:\/\//.test(o.avatarUrl) ? o.avatarUrl : null,
+    verified: true,
+    businessName: typeof o.businessName === "string" && o.businessName.trim() ? o.businessName.trim() : null,
+  };
+}
+
+/* ── An organiser's sponsor page (/sponsor/<lumaKey>) ────────────────── */
+
+/** A Luma event's path, as `luma.com/<key>` writes it. */
+export const LUMA_KEY_RE = /^[A-Za-z0-9_-]{1,120}$/;
+
+/**
+ * `notOnHold`: no Spaces event for that Luma page, or one nobody has proved
+ * they host. It is also what a backend older than this page answers (a plain
+ * 404), so an old server shows the invitation to sell rather than an error.
+ */
+export type SponsorLookup =
+  | { kind: "found"; page: SponsorPage }
+  | { kind: "notOnHold"; luma: LumaTeaser | null }
+  | { kind: "unreachable" };
+
+/** @param revalidate seconds; the same window as an event page. */
+export async function getSponsorPage(lumaKey: string, revalidate = 30): Promise<SponsorLookup> {
+  if (!LUMA_KEY_RE.test(lumaKey)) return { kind: "notOnHold", luma: null };
+  if (fixtureEnabled()) return { kind: "notOnHold", luma: null };
+
+  let body: unknown;
+  let status: number;
+  try {
+    const res = await fetch(`${AD_SPACE_API}/public/sponsor/${encodeURIComponent(lumaKey)}`, {
+      headers: upstreamHeaders(null),
+      next: { revalidate },
+      signal: AbortSignal.timeout(6_000),
+    });
+    status = res.status;
+    if (status !== 404 && !res.ok) return { kind: "unreachable" };
+    body = await res.json().catch(() => null);
+  } catch {
+    return { kind: "unreachable" };
+  }
+
+  if (status === 404) return { kind: "notOnHold", luma: lumaTeaserOf(body) };
+
+  const data = (body as { data?: Record<string, unknown> } | null)?.data;
+  const event = data?.event as EventSummary | undefined;
+  if (!event || typeof event.slug !== "string" || typeof event.name !== "string") return { kind: "unreachable" };
+  const organiser = organiserOf(event.organiser);
+  // The page exists to show a verified host's packages; without the host it is not theirs to sell.
+  if (!organiser) return { kind: "notOnHold", luma: { name: event.name, coverUrl: event.coverUrl, startAt: event.startsOn, city: event.city } };
+  const slug = typeof data?.slug === "string" && SLUG_RE.test(data.slug) ? data.slug : event.slug;
+  return {
+    kind: "found",
+    page: {
+      event: { ...event, organiser },
+      packages: cardsOf(data?.packages),
+      creators: creatorCounts(data?.creators),
+      slug,
+    },
+  };
+}
+
+/**
+ * The full listing behind each live package, read in parallel, so its row can
+ * open the same checkout and sheets as its own page. A package that cannot be
+ * read is left out of the map, and its row links to its page instead.
+ */
+export async function getPackageSpaces(cards: SpaceCard[]): Promise<Record<string, Space>> {
+  const out: Record<string, Space> = {};
+  await Promise.all(
+    cards.slice(0, 12).map(async (c) => {
+      const m = /^\/s\/([^/?#]+)\/([^/?#]+)\/?$/.exec(c.path);
+      if (!m || c.status !== "live") return;
+      let handle: string;
+      let slug: string;
+      try {
+        handle = decodeURIComponent(m[1]).replace(/^@/, "");
+        slug = decodeURIComponent(m[2]);
+      } catch {
+        return;
+      }
+      const found = await getPublicSpace(handle, slug);
+      if (found.kind === "found" && found.space.id === c.spaceId) out[c.spaceId] = found.space;
+    }),
+  );
+  return out;
+}
+
+/** `{ ground, feed, room }` as numbers; a list counts as its length, anything else as zero. */
+function creatorCounts(raw: unknown): Record<SpaceTab, number> {
+  const o = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const n = (v: unknown) =>
+    Array.isArray(v) ? v.length : typeof v === "number" && Number.isFinite(v) && v > 0 ? Math.floor(v) : 0;
+  return { ground: n(o.ground), feed: n(o.feed), room: n(o.room) };
+}
+
+/**
+ * The Luma event's name and picture from a 404 `event_not_on_hold`. The
+ * backend's error envelope puts extra fields under `error.details`; the other
+ * places are read too, so a small change of envelope never loses the name.
+ */
+function lumaTeaserOf(body: unknown): LumaTeaser | null {
+  const b = body && typeof body === "object" ? (body as Record<string, any>) : null;
+  const raw = b?.error?.details?.luma ?? b?.error?.luma ?? b?.data?.luma ?? b?.luma ?? null;
+  if (!raw || typeof raw !== "object" || typeof raw.name !== "string" || !raw.name.trim()) return null;
+  return {
+    name: raw.name.trim(),
+    coverUrl: typeof raw.coverUrl === "string" && /^https:\/\//.test(raw.coverUrl) ? raw.coverUrl : null,
+    startAt: typeof raw.startAt === "string" ? raw.startAt : null,
+    city: typeof raw.city === "string" && raw.city.trim() ? raw.city.trim() : null,
+  };
+}
+
+/**
+ * Upcoming events with something for sale, for the /events index. `hasPackages`
+ * asks for those whose organiser sells on HOLD; a server older than packages
+ * ignores the flag, so the rows are filtered again here.
+ * Null when the API did not answer, which the page says rather than "nothing".
+ */
+export async function listUpcomingEvents({
+  hasPackages = false,
+  limit = 100,
+}: { hasPackages?: boolean; limit?: number } = {}): Promise<ListedEvent[] | null> {
+  if (fixtureEnabled()) {
+    const { fixtureEvents } = await import("./fixture.dev");
+    return hasPackages ? [] : fixtureEvents();
+  }
+  try {
+    const qs = new URLSearchParams({ limit: String(limit) });
+    if (hasPackages) qs.set("hasPackages", "true");
+    const res = await fetch(`${AD_SPACE_API}/public/events?${qs}`, {
+      headers: upstreamHeaders(null),
+      next: { revalidate: 60 },
+      signal: AbortSignal.timeout(6_000),
+    });
+    if (!res.ok) return null;
+    const body = (await res.json()) as { data?: { events?: ListedEvent[] } };
+    const events = body?.data?.events;
+    if (!Array.isArray(events)) return null;
+    const rows = events
+      .filter((e) => e && typeof e.slug === "string" && typeof e.name === "string")
+      .map((e) => ({ ...e, organiser: organiserOf(e.organiser) }));
+    // Packages need a verified host: a row without the count is kept only when
+    // it has one, which also leaves an old server's list (no hosts) empty.
+    const sells = (e: ListedEvent) => (typeof e.packages === "number" ? e.packages > 0 : !!e.organiser);
+    return hasPackages ? rows.filter(sells) : rows;
+  } catch {
+    return null;
+  }
 }
 
 /**

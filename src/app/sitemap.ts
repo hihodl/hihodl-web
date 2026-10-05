@@ -45,6 +45,8 @@ const PAGES: Entry[] = [
   { path: "/esim", priority: 0.8, changeFrequency: "monthly" },
   { path: "/travel", priority: 0.7, changeFrequency: "monthly" },
   { path: "/faq", priority: 0.6, changeFrequency: "monthly" },
+  // Every upcoming event a sponsor can buy into, the way into each event page.
+  { path: "/events", priority: 0.6, changeFrequency: "daily" },
   // The technical section. Lower priority than a product page because nobody
   // searches for these by name — but they are what a suspicious reader finds
   // when they search "is HOLD safe" or "hold non custodial", and losing that

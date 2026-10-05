@@ -644,6 +644,49 @@ export interface EventSummary {
   coverCredit: string | null;
   /** Live and closed spaces. Never shown on the banner. */
   spaceCount: number;
+  /**
+   * The host who proved on Luma that the event is theirs
+   * (organiser-sells-its-event-contract.md). Null when nobody has; absent on a
+   * server older than organiser packages, which reads the same.
+   */
+  organiser?: EventOrganiser | null;
+}
+
+/** The verified host of an event, as the public pages show them. */
+export interface EventOrganiser {
+  name: string;
+  avatarUrl: string | null;
+  verified: true;
+  /** The company they sell for, when they act for one. */
+  businessName?: string | null;
+}
+
+/**
+ * `GET /public/sponsor/:lumaKey`: one event as a sponsor arriving from its Luma
+ * page sees it. `packages` are the organiser's own spaces; `creators` counts
+ * the creators' spaces on each of the event page's tabs.
+ */
+export interface SponsorPage {
+  event: EventSummary & { organiser: EventOrganiser | null };
+  packages: SpaceCard[];
+  creators: Record<SpaceTab, number>;
+  slug: string;
+}
+
+/** What the backend knows of a Luma event that is not selling on HOLD (yet). */
+export interface LumaTeaser {
+  name: string;
+  coverUrl: string | null;
+  startAt: string | null;
+  city: string | null;
+}
+
+/** One row of `GET /public/events`: the summary, with what is still for sale there. */
+export interface ListedEvent extends EventSummary {
+  /** Positions still for sale on the event's live spaces. Absent on an old server. */
+  openSpots?: number;
+  /** The organiser's live packages. Absent on a server older than organiser packages. */
+  packages?: number;
 }
 
 /** Placement templates are `ground`, content services `feed`, sessions `room`. */
@@ -710,6 +753,8 @@ export interface EventPage {
   tabs: Record<SpaceTab, SpaceCard[]>;
   /** The tab to open on without `?tab=`: the API's, else computed the same way here. */
   defaultTab: SpaceTab;
+  /** The verified organiser's own packages, above the tabs. Empty on an old server. */
+  packages: SpaceCard[];
 }
 
 /* ── A creator's hub (/s/<handle>) ────────────────────────────────────── */
