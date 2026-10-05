@@ -81,7 +81,7 @@ export default function PrivacyPage() {
                     <li>Cookies and similar tracking technologies</li>
                   </ul>
                   <p className="mt-3">
-                    When you open a Luma event inside the HOLD app, HOLD may record whether the organiser asks guests about sponsoring the event: the text of that registration question and its options, and the organiser&apos;s public contact if the question names one. We never record your answers, and we don&apos;t store who reported it.
+                    When you open a Luma event inside the HOLD app, HOLD may record whether the organiser asks guests about sponsoring the event: the text of that registration question and its options, and the organiser&apos;s public contact if the question names one. We never record your answers, and we don&apos;t keep your account with it: only a one-way code that lets us count how many different people saw the same question.
                   </p>
                 </div>
               </div>
