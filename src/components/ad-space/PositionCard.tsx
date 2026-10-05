@@ -101,7 +101,9 @@ export const PositionCard = forwardRef<HTMLElement, Props>(function PositionCard
             </p>
           )}
         </div>
-        <span className={pill[p.status]}>{(session ? SESSION_STATUS_LABEL : STATUS_LABEL)[p.status]}</span>
+        <span className={pill[p.status]}>
+          {p.partnered ? t("publicPages.sponsor.partner") : (session ? SESSION_STATUS_LABEL : STATUS_LABEL)[p.status]}
+        </span>
       </header>
 
       {p.pitch && <p className="text-small text-sp-ink/85">{p.pitch}</p>}
@@ -112,6 +114,7 @@ export const PositionCard = forwardRef<HTMLElement, Props>(function PositionCard
 
       {p.status === "sold" &&
         !session &&
+        !p.partnered &&
         (p.sponsor ? (
           <SponsorLine sponsor={p.sponsor} />
         ) : (
@@ -139,7 +142,7 @@ export const PositionCard = forwardRef<HTMLElement, Props>(function PositionCard
         ) : bids ? (
           <BidFigure offers={o} />
         ) : namesPrice ? (
-          <OffersFigure offers={o} status={p.status} />
+          <OffersFigure offers={o} status={p.status} partnered={!!p.partnered} />
         ) : (
           <dl className="flex flex-col gap-0.5">
             <div className="flex items-baseline gap-2">
@@ -314,12 +317,14 @@ function BidFigure({ offers: o }: { offers: PositionOffers | null }) {
 }
 
 /** A spot with no price: how many offers are open on it, never what they are. */
-function OffersFigure({ offers: o, status }: { offers: PositionOffers | null; status: Position["status"] }) {
+function OffersFigure({ offers: o, status, partnered = false }: { offers: PositionOffers | null; status: Position["status"]; partnered?: boolean }) {
   const t = useT();
   const n = o?.openCount ?? null;
   return (
     <div className="flex flex-col gap-0.5">
-      <p className="text-body text-sp-ink">{status === "sold" ? t("board.status.sold") : t("board.stats.nameYourPrice")}</p>
+      <p className="text-body text-sp-ink">
+        {partnered ? t("publicPages.sponsor.partner") : status === "sold" ? t("board.status.sold") : t("board.stats.nameYourPrice")}
+      </p>
       {status !== "sold" && n !== null && <p className="text-tiny text-sp-ink/80">{t("board.tiers.openOffers", { count: n })}</p>}
     </div>
   );
