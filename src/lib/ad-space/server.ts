@@ -9,15 +9,23 @@ import type {
   BrandProduction,
   PublicBrief,
   CreatorPage,
+  EventOrganiser,
   EventPage,
+  CalendarEvent,
+  CalendarLink,
   EventSummary,
   GuestEnquiry,
+  ListedEvent,
+  LumaTeaser,
   OfferThread,
   PhotoRect,
   Position,
   Space,
   SpaceCard,
   SpacePhoto,
+  SpaceTab,
+  SponsorPage,
+  SponsorReport,
 } from "./types";
 
 /**
@@ -330,7 +338,15 @@ export async function getPublicEvent(slug: string, revalidate = 30): Promise<Eve
   if (!SLUG_RE.test(slug)) return { kind: "missing" };
 
   let body: {
-    data?: { event?: EventSummary; tabs?: Partial<EventPage["tabs"]>; defaultTab?: unknown; redirectTo?: string };
+    data?: {
+      event?: EventSummary;
+      tabs?: Partial<EventPage["tabs"]>;
+      defaultTab?: unknown;
+      redirectTo?: string;
+      packages?: unknown;
+      organiser?: unknown;
+      calendar?: unknown;
+    };
   } | null;
   if (fixtureEnabled()) {
     const { fixtureEvent } = await import("./fixture.dev");
@@ -357,18 +373,229 @@ export async function getPublicEvent(slug: string, revalidate = 30): Promise<Eve
     return { kind: "moved", slug: data.redirectTo };
   }
   if (!data?.event) return { kind: "unreachable" };
+  // A backend older than organiser packages sends neither key: no packages, no host.
+  const packages = cardsOf(data.packages);
+  const sold = new Set(packages.map((c) => c.spaceId));
+  // A package is said once, above the tabs, never inside one.
+  const notAPackage = (c: SpaceCard) => !sold.has(c.spaceId) && c.sellerRole !== "organiser";
   const tabs = {
-    ground: (data.tabs?.ground ?? []).map(withCardDefaults),
-    feed: (data.tabs?.feed ?? []).map(withCardDefaults),
+    ground: (data.tabs?.ground ?? []).map(withCardDefaults).filter(notAPackage),
+    feed: (data.tabs?.feed ?? []).map(withCardDefaults).filter(notAPackage),
     // A backend that predates sessions sends no `room`.
-    room: (data.tabs?.room ?? []).map(withCardDefaults),
+    room: (data.tabs?.room ?? []).map(withCardDefaults).filter(notAPackage),
   };
   const fromApi =
     data.defaultTab === "ground" || data.defaultTab === "feed" || data.defaultTab === "room" ? data.defaultTab : null;
+  const organiser = organiserOf(data.event.organiser) ?? organiserOf(data.organiser);
   return {
     kind: "found",
-    page: { event: data.event, tabs, defaultTab: fromApi ?? defaultEventTab(tabs) },
+    page: {
+      event: { ...data.event, organiser },
+      tabs,
+      defaultTab: fromApi ?? defaultEventTab(tabs),
+      packages,
+      calendar: calendarLinkOf(data.calendar),
+    },
   };
+}
+
+/** The calendar an event is in, from the API, or null when absent or malformed. */
+function calendarLinkOf(raw: unknown): CalendarLink | null {
+  if (!raw || typeof raw !== "object") return null;
+  const c = raw as Record<string, unknown>;
+  if (typeof c.name !== "string" || !c.name.trim() || typeof c.key !== "string" || !LUMA_KEY_RE.test(c.key)) return null;
+  const packages = typeof c.packages === "number" && Number.isFinite(c.packages) && c.packages > 0 ? Math.floor(c.packages) : 0;
+  return { name: c.name.trim(), key: c.key, packages };
+}
+
+/** Only a Luma page is linked out to. */
+const LUMA_URL_RE = /^https:\/\/(?:www\.)?(?:lu\.ma|luma\.com)\/[^\s]+$/i;
+
+/** A calendar's events, from the API: malformed rows are dropped, never shown half. */
+function calendarEventsOf(raw: unknown): CalendarEvent[] {
+  if (!Array.isArray(raw)) return [];
+  const out: CalendarEvent[] = [];
+  for (const r of raw.slice(0, 30)) {
+    if (!r || typeof r !== "object") continue;
+    const e = r as Record<string, unknown>;
+    if (typeof e.name !== "string" || !e.name.trim() || typeof e.lumaUrl !== "string" || !LUMA_URL_RE.test(e.lumaUrl)) continue;
+    out.push({
+      name: e.name.trim(),
+      startAt: typeof e.startAt === "string" && /^\d{4}-\d{2}-\d{2}/.test(e.startAt) ? e.startAt : null,
+      lumaUrl: e.lumaUrl,
+      onHold: e.onHold === true,
+    });
+  }
+  return out;
+}
+
+/** An organiser's package cards from an API list: a creator's card never passes for one. */
+function cardsOf(raw: unknown): SpaceCard[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((c): c is SpaceCard => !!c && typeof c === "object" && typeof (c as SpaceCard).spaceId === "string")
+    .filter((c) => c.sellerRole !== "creator")
+    .map(withCardDefaults);
+}
+
+/** The verified host, or null: an unverified or nameless one is shown as nobody. */
+function organiserOf(raw: unknown): EventOrganiser | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  if (o.verified !== true || typeof o.name !== "string" || !o.name.trim()) return null;
+  return {
+    name: o.name.trim(),
+    avatarUrl: typeof o.avatarUrl === "string" && /^https:\/\//.test(o.avatarUrl) ? o.avatarUrl : null,
+    verified: true,
+    businessName: typeof o.businessName === "string" && o.businessName.trim() ? o.businessName.trim() : null,
+  };
+}
+
+/* ── An organiser's sponsor page (/sponsor/<lumaKey>) ────────────────── */
+
+/** A Luma event's path, as `luma.com/<key>` writes it. */
+export const LUMA_KEY_RE = /^[A-Za-z0-9_-]{1,120}$/;
+
+/**
+ * `notOnHold`: no Spaces event for that Luma page, or one nobody has proved
+ * they host. It is also what a backend older than this page answers (a plain
+ * 404), so an old server shows the invitation to sell rather than an error.
+ */
+export type SponsorLookup =
+  | { kind: "found"; page: SponsorPage }
+  | { kind: "notOnHold"; luma: LumaTeaser | null }
+  | { kind: "unreachable" };
+
+/** @param revalidate seconds; the same window as an event page. */
+export async function getSponsorPage(lumaKey: string, revalidate = 30): Promise<SponsorLookup> {
+  if (!LUMA_KEY_RE.test(lumaKey)) return { kind: "notOnHold", luma: null };
+  if (fixtureEnabled()) return { kind: "notOnHold", luma: null };
+
+  let body: unknown;
+  let status: number;
+  try {
+    const res = await fetch(`${AD_SPACE_API}/public/sponsor/${encodeURIComponent(lumaKey)}`, {
+      headers: upstreamHeaders(null),
+      next: { revalidate },
+      signal: AbortSignal.timeout(6_000),
+    });
+    status = res.status;
+    if (status !== 404 && !res.ok) return { kind: "unreachable" };
+    body = await res.json().catch(() => null);
+  } catch {
+    return { kind: "unreachable" };
+  }
+
+  if (status === 404) return { kind: "notOnHold", luma: lumaTeaserOf(body) };
+
+  const data = (body as { data?: Record<string, unknown> } | null)?.data;
+  const event = data?.event as EventSummary | undefined;
+  if (!event || typeof event.slug !== "string" || typeof event.name !== "string") return { kind: "unreachable" };
+  const organiser = organiserOf(event.organiser);
+  // The page exists to show a verified host's packages; without the host it is not theirs to sell.
+  if (!organiser) return { kind: "notOnHold", luma: { name: event.name, coverUrl: event.coverUrl, startAt: event.startsOn, city: event.city } };
+  const slug = typeof data?.slug === "string" && SLUG_RE.test(data.slug) ? data.slug : event.slug;
+  return {
+    kind: "found",
+    page: {
+      event: { ...event, organiser },
+      packages: cardsOf(data?.packages),
+      creators: creatorCounts(data?.creators),
+      slug,
+      kind: data?.kind === "calendar" || event.kind === "calendar" ? "calendar" : "event",
+      events: calendarEventsOf(data?.events),
+      calendar: data?.kind === "calendar" ? null : calendarLinkOf(data?.calendar),
+    },
+  };
+}
+
+/**
+ * The full listing behind each live package, read in parallel, so its row can
+ * open the same checkout and sheets as its own page. A package that cannot be
+ * read is left out of the map, and its row links to its page instead.
+ */
+export async function getPackageSpaces(cards: SpaceCard[]): Promise<Record<string, Space>> {
+  const out: Record<string, Space> = {};
+  await Promise.all(
+    cards.slice(0, 12).map(async (c) => {
+      const m = /^\/s\/([^/?#]+)\/([^/?#]+)\/?$/.exec(c.path);
+      if (!m || c.status !== "live") return;
+      let handle: string;
+      let slug: string;
+      try {
+        handle = decodeURIComponent(m[1]).replace(/^@/, "");
+        slug = decodeURIComponent(m[2]);
+      } catch {
+        return;
+      }
+      const found = await getPublicSpace(handle, slug);
+      if (found.kind === "found" && found.space.id === c.spaceId) out[c.spaceId] = found.space;
+    }),
+  );
+  return out;
+}
+
+/** `{ ground, feed, room }` as numbers; a list counts as its length, anything else as zero. */
+function creatorCounts(raw: unknown): Record<SpaceTab, number> {
+  const o = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const n = (v: unknown) =>
+    Array.isArray(v) ? v.length : typeof v === "number" && Number.isFinite(v) && v > 0 ? Math.floor(v) : 0;
+  return { ground: n(o.ground), feed: n(o.feed), room: n(o.room) };
+}
+
+/**
+ * The Luma event's name and picture from a 404 `event_not_on_hold`. The
+ * backend's error envelope puts extra fields under `error.details`; the other
+ * places are read too, so a small change of envelope never loses the name.
+ */
+function lumaTeaserOf(body: unknown): LumaTeaser | null {
+  const b = body && typeof body === "object" ? (body as Record<string, any>) : null;
+  const raw = b?.error?.details?.luma ?? b?.error?.luma ?? b?.data?.luma ?? b?.luma ?? null;
+  if (!raw || typeof raw !== "object" || typeof raw.name !== "string" || !raw.name.trim()) return null;
+  return {
+    name: raw.name.trim(),
+    coverUrl: typeof raw.coverUrl === "string" && /^https:\/\//.test(raw.coverUrl) ? raw.coverUrl : null,
+    startAt: typeof raw.startAt === "string" ? raw.startAt : null,
+    city: typeof raw.city === "string" && raw.city.trim() ? raw.city.trim() : null,
+  };
+}
+
+/**
+ * Upcoming events with something for sale, for the /events index. `hasPackages`
+ * asks for those whose organiser sells on HOLD; a server older than packages
+ * ignores the flag, so the rows are filtered again here.
+ * Null when the API did not answer, which the page says rather than "nothing".
+ */
+export async function listUpcomingEvents({
+  hasPackages = false,
+  limit = 100,
+}: { hasPackages?: boolean; limit?: number } = {}): Promise<ListedEvent[] | null> {
+  if (fixtureEnabled()) {
+    const { fixtureEvents } = await import("./fixture.dev");
+    return hasPackages ? [] : fixtureEvents();
+  }
+  try {
+    const qs = new URLSearchParams({ limit: String(limit) });
+    if (hasPackages) qs.set("hasPackages", "true");
+    const res = await fetch(`${AD_SPACE_API}/public/events?${qs}`, {
+      headers: upstreamHeaders(null),
+      next: { revalidate: 60 },
+      signal: AbortSignal.timeout(6_000),
+    });
+    if (!res.ok) return null;
+    const body = (await res.json()) as { data?: { events?: ListedEvent[] } };
+    const events = body?.data?.events;
+    if (!Array.isArray(events)) return null;
+    const rows = events
+      .filter((e) => e && typeof e.slug === "string" && typeof e.name === "string")
+      .map((e) => ({ ...e, organiser: organiserOf(e.organiser) }));
+    // Packages need a verified host: a row without the count is kept only when
+    // it has one, which also leaves an old server's list (no hosts) empty.
+    const sells = (e: ListedEvent) => (typeof e.packages === "number" ? e.packages > 0 : !!e.organiser);
+    return hasPackages ? rows.filter(sells) : rows;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -733,5 +960,38 @@ export async function listPublicBriefs(limit = 50): Promise<PublicBrief[]> {
     return (body?.data?.briefs ?? []).filter((b) => !!b?.slug);
   } catch {
     return [];
+  }
+}
+
+/* ── The sponsor's report, by its link ────────────────────────────────── */
+
+/** 32 random bytes, base64url, no padding (a-sponsor-gets-its-report-contract.md). */
+export const REPORT_TOKEN_RE = /^[A-Za-z0-9_-]{43}$/;
+
+export type ReportLookup =
+  | { kind: "found"; report: SponsorReport }
+  | { kind: "missing" }
+  | { kind: "unreachable" };
+
+/**
+ * `GET /public/reports/:token`, never cached: deliveries, scans and invoices
+ * keep arriving, and the answer carries signed invoice links. The token is a
+ * bearer secret (read-only), so it goes into the upstream URL and nowhere else.
+ */
+export async function getSponsorReport(token: string, from: Headers | null): Promise<ReportLookup> {
+  if (!REPORT_TOKEN_RE.test(token)) return { kind: "missing" };
+  try {
+    const res = await fetch(`${AD_SPACE_API}/public/reports/${encodeURIComponent(token)}`, {
+      headers: upstreamHeaders(from),
+      cache: "no-store",
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (res.status === 404) return { kind: "missing" };
+    if (!res.ok) return { kind: "unreachable" };
+    const body = (await res.json()) as { data?: { report?: SponsorReport } };
+    const report = body?.data?.report;
+    return report?.event && Array.isArray(report.items) ? { kind: "found", report } : { kind: "unreachable" };
+  } catch {
+    return { kind: "unreachable" };
   }
 }

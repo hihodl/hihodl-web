@@ -532,5 +532,19 @@
   "sell.priceUsd": "Prix (USD)",
   "sell.reserveHint": "Prix de réserve : en dessous, rien ne se vend automatiquement. Personne ne le voit.",
   "sell.hiddenMinHint": "Les offres en dessous reçoivent une contre-proposition automatique à ce prix. Personne ne le voit.",
-  "sell.zonePitchPlaceholder": "Le plus grand emplacement, visible sur chaque photo à l'aéroport"
+  "sell.zonePitchPlaceholder": "Le plus grand emplacement, visible sur chaque photo à l'aéroport",
+  "attest.organiserDelivers": "J'organise cet événement et j'y livre ce que promet cette offre, ou je rembourse la marque.",
+  "package.titleNew": "Nouvelle offre",
+  "package.titleAt": "{name} à {event}",
+  "package.shelf": "Les offres de votre événement",
+  "package.shelfFor": "Offres pour {event}",
+  "package.shelfHint": "Ce que les marques vous achètent en tant qu'organisateur : plusieurs emplacements identiques à un prix.",
+  "package.notVerified": "Vérifiez que vous organisez cet événement dans Entreprise, Vos événements, puis ajoutez ses offres.",
+  "package.closesAfterEvent": "Une offre se termine au plus tard à la fin du lendemain de l'événement.",
+  "package.needsEvent": "Une offre appartient à l'événement que vous organisez.",
+  "package.fallback": "S'il n'a pas lieu, la marque est remboursée ou passe à votre prochain événement.",
+  "package.partnersByEnquiry": "Les partenaires en nature se décident dans une demande : celle-ci se vend donc par offres, sans prix.",
+  "package.notTheOrganiser": "Seul l'organisateur vérifié de cet événement vend ses offres.",
+  "package.notForThisEvent": "Cette offre est pour un autre type d'événement. Choisissez-en une dans cette liste.",
+  "package.deliveredAtEvent": "Vous la livrez à l'événement et publiez ensuite une photo ou un lien comme preuve. La marque confirme, et sept jours sans réponse valent livraison."
 }

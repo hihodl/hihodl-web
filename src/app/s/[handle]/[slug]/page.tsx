@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { creatorPath } from "@/components/ad-space/creator";
 import { SpacesGround } from "@/components/ad-space/ground";
+import { PartnersRow } from "@/components/ad-space/organiser";
 import { SpaceBoard } from "@/components/ad-space/SpaceBoard";
 import { StudioSections } from "@/components/ad-space/StudioSections";
 import {
@@ -142,6 +143,12 @@ export default async function AdSpacePage({ params }: { params: Params }) {
               stats={<SpaceStats space={found.space} more={more} />}
               details={
                 <>
+                  {/* A partnership package's partners, once the host has taken some on. */}
+                  {(found.space.partners?.length ?? 0) > 0 && (
+                    <div className="container-page pt-8 md:pt-10">
+                      <PartnersRow partners={found.space.partners} />
+                    </div>
+                  )}
                   <BeforeYouPay space={found.space} />
                   <StudioSections space={found.space} />
                   <HowItWorks space={found.space} />

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 
-import { CheckoutError } from "@/lib/ad-space/checkout-client";
+import { CheckoutError, noLongerOnSale } from "@/lib/ad-space/checkout-client";
 import {
   ENQUIRY_WEB_MESSAGE_MAX,
   describeEnquiryError,
@@ -206,6 +206,12 @@ export function EnquiryThread({
     : null;
   const payingPosition = positionOf(payingQuote);
   const closeCheckout = useCallback(() => setPaying(null), []);
+  /** 409 `package_not_organised`: the package left its event's host. The sheet closes and the thread says so. */
+  const toGone = useCallback(() => {
+    setPaying(null);
+    setNotice(t("publicPages.sponsor.noLongerOnSale"));
+    void reload();
+  }, [reload, t]);
   const onPaid = useCallback(() => {
     void reload();
   }, [reload]);
@@ -316,6 +322,7 @@ export function EnquiryThread({
           onClose={closeCheckout}
           onPaid={onPaid}
           quote={{ token, view: payingQuote }}
+          onNoLongerOnSale={toGone}
         />
       )}
     </div>

@@ -20,6 +20,7 @@ import {
   sendGuestEnquiry,
 } from "@/lib/ad-space/enquiries";
 import { canAskAbout } from "@/lib/ad-space/enquiry-rules";
+import { isPartnershipSpace } from "@/lib/ad-space/format";
 import type { Position, Space } from "@/lib/ad-space/types";
 import { HoldApiError } from "@/lib/app/hold-api";
 import { fmtNumber } from "@/lib/app/i18n/format";
@@ -67,6 +68,8 @@ export function EnquirySheet({
   const t = useT();
   const seller = sellerName(space.creator);
   const business = businessOf(space.creator);
+  /** A partnership package: the enquiry is the application, and says so. */
+  const partnership = isPartnershipSpace(space);
   const { session } = useCreatorSession();
   /** Set when a session turned out to be dead mid-send: the guest form from then on. */
   const [forceGuest, setForceGuest] = useState(false);
@@ -143,6 +146,8 @@ export function EnquirySheet({
             <Spinner />
             {t("enquiries.sheet.sending")}
           </>
+        ) : partnership ? (
+          t("publicPages.sponsor.sendApplication")
         ) : (
           t("enquiries.sheet.send")
         )}
@@ -154,7 +159,7 @@ export function EnquirySheet({
   );
 
   return (
-    <PaySheet labelledBy="enquiry-title" eyebrow={t("enquiries.sheet.eyebrow")} title={space.title} onClose={onClose} footer={footer}>
+    <PaySheet labelledBy="enquiry-title" eyebrow={partnership ? t("publicPages.sponsor.applyAsPartner") : t("enquiries.sheet.eyebrow")} title={space.title} onClose={onClose} footer={footer}>
       {sent ? (
         <EnquirySent sent={sent} seller={seller} />
       ) : (
@@ -234,7 +239,7 @@ export function EnquirySheet({
 
           <label className="flex flex-col gap-2">
             <span className="flex items-baseline justify-between gap-3">
-              <span className={fieldLabel}>{t("enquiries.sheet.message")}</span>
+              <span className={fieldLabel}>{partnership ? t("publicPages.sponsor.partnerMessage") : t("enquiries.sheet.message")}</span>
               <span className={`text-tiny ${message.length > max ? "text-sp-amber" : "text-white/85"}`}>
                 {fmtNumber(message.length)}/{fmtNumber(max)}
               </span>
@@ -244,7 +249,7 @@ export function EnquirySheet({
               value={message}
               maxLength={max}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder={t("enquiries.sheet.messagePlaceholder")}
+              placeholder={partnership ? t("publicPages.sponsor.partnerMessagePlaceholder") : t("enquiries.sheet.messagePlaceholder")}
               disabled={busy}
               aria-describedby="enquiry-what"
             />

@@ -23,6 +23,7 @@
  */
 
 import { t } from "@/lib/app/i18n";
+import { packageClosesByMs } from "@/lib/app/organiser-rules";
 
 import {
   BRAND_GETS_LIMITS,
@@ -31,6 +32,8 @@ import {
   anyRungBids,
   centsFromDollars,
   isCustomServiceTemplate,
+  isPackageTemplate,
+  isPartnershipTemplate,
   isProductionTemplate,
   isSessionTemplate,
   PRODUCTION_DELIVERABLE_MAX,
@@ -89,11 +92,18 @@ function amount(text: string): number | null | "bad" {
  * telling them one field at a time turns one correction into six round trips.
  * That is the same reason the backend's own `draftProblems` collects.
  */
-export function listingProblems(draft: ListingDraft, template: Template, now = Date.now()): Problem[] {
+export function listingProblems(
+  draft: ListingDraft,
+  template: Template,
+  now = Date.now(),
+  /** An event's package: the last day of its event, which it must close by the end of the day after. */
+  ctx: { eventEndsOn?: string | null } = {},
+): Problem[] {
   const out: Problem[] = [];
   const add = (where: string, step: Step, message: string) => out.push({ where, step, message });
   const session = isSessionTemplate(template);
   const production = isProductionTemplate(template);
+  const pkg = isPackageTemplate(template);
   const service = template.kind === "service";
 
   /* ── What it is called, and when it closes ─────────────────────── */
@@ -126,6 +136,15 @@ export function listingProblems(draft: ListingDraft, template: Template, now = D
     add("closesAt", "dates", t("listings.rules.closesTooSoon", { hours: LIMITS.MIN_CAMPAIGN_HOURS }));
   } else if (closesMs - now > LIMITS.MAX_CAMPAIGN_DAYS * DAY) {
     add("closesAt", "dates", t("listings.problems.closesTooLate", { days: LIMITS.MAX_CAMPAIGN_DAYS }));
+  }
+
+  // An event's package: nobody buys a booth at an event that ended.
+  const closesBy = pkg ? packageClosesByMs(ctx.eventEndsOn) : null;
+  if (closesBy !== null && Number.isFinite(closesMs) && closesMs > closesBy) {
+    add("closesAt", "dates", t("listings.package.closesAfterEvent"));
+  }
+  if (pkg && !draft.eventId) {
+    add("closesAt", "dates", t("listings.package.needsEvent"));
   }
 
   if (draft.keyDates.length > LIMITS.KEY_DATES_MAX) {
@@ -185,6 +204,9 @@ export function listingProblems(draft: ListingDraft, template: Template, now = D
   }
   if (production && draft.pricingMode !== "fixed") {
     add("pricing", "sell", t("listings.rules.productionSellsAtPrice"));
+  }
+  if (isPartnershipTemplate(template) && (draft.pricingMode !== "offers" || draft.acceptsOffers)) {
+    add("pricing", "sell", t("listings.package.partnersByEnquiry"));
   }
   if (session && draft.pricingMode === "takeover") {
     add("pricing", "sell", t("listings.rules.takeoverNotForSessions"));
@@ -320,7 +342,7 @@ export function listingProblems(draft: ListingDraft, template: Template, now = D
   const latestDue = closeDay + LIMITS.DELIVERABLE_DAYS_AFTER_CLOSE * DAY;
 
   if (service) {
-    if (!session && !production) {
+    if (!session && !production && !pkg) {
       const by = draft.deliverBy ? dayStart(draft.deliverBy) : null;
       if (!draft.deliverBy) {
         add("deliverBy", "promise", t("listings.rules.deliverByRequired"));
@@ -382,6 +404,9 @@ export function listingProblems(draft: ListingDraft, template: Template, now = D
       t("listings.problems.fallbackNotForProduction"),
     );
   }
+  if (pkg && draft.fallback !== "creator_refund" && draft.fallback !== "next_event") {
+    add("fallback", "promise", t("listings.package.fallback"));
+  }
   if (session && draft.fallback !== "creator_refund" && draft.fallback !== "next_event") {
     add(
       "fallback",
@@ -424,7 +449,7 @@ export function listingProblems(draft: ListingDraft, template: Template, now = D
     });
   }
 
-  const required = requiredAttestations(template.requiredAttestations, draft.venueType, template.kind, session, production);
+  const required = requiredAttestations(template.requiredAttestations, draft.venueType, template.kind, session, production, pkg);
   if (required.some((a) => !draft.attestations.includes(a))) {
     add("attestations", "publish", t("listings.rules.missingAttestation"));
   }

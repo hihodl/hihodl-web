@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   CheckoutError,
+  byEnquiry,
+  noLongerOnSale,
   SPENT_KEY_CODES,
   checkoutKey,
   confirmOrder,
@@ -17,6 +19,8 @@ import {
   startCheckout,
   submitAuthorizations,
 } from "@/lib/ad-space/checkout-client";
+import { bankOption, cancelBankTransfer, startBankTransfer, type BankTarget } from "@/lib/ad-space/bank-client";
+import { BANK_POLL_MS, bankErrorKey, bankRequestErrorKey, bankShown, usdExact } from "@/lib/ad-space/bank-rules";
 import { loadBilling, saveOrderBilling, storeBilling } from "@/lib/ad-space/billing";
 import type { BillingDetails } from "@/lib/ad-space/billing-rules";
 import { TAKEOVER_CHAINS } from "@/lib/ad-space/config";
@@ -43,7 +47,19 @@ import { walletBrowseUrl } from "@/lib/pay-links/page-rules";
 import { PUBLIC_CHAINS } from "@/lib/orders/chains.public";
 import { fmtNumber } from "@/lib/app/i18n/format";
 import { Rich, useT } from "@/lib/app/i18n/react";
-import type { Booking, BriefBody, Chain, EvmPayload, OfferView, Order, Position, QuoteView, Space } from "@/lib/ad-space/types";
+import type {
+  BankOption,
+  BankRail,
+  Booking,
+  BriefBody,
+  Chain,
+  EvmPayload,
+  OfferView,
+  Order,
+  Position,
+  QuoteView,
+  Space,
+} from "@/lib/ad-space/types";
 
 import {
   type EvmWallet,
@@ -78,9 +94,11 @@ import {
   sheetCard,
   useBrowserWallets,
 } from "./pay-sheet";
+import { BankChoice, BankDetails, OrderInvoice, bankMinimum } from "./BankTransfer";
 import { BillingStep } from "./BillingStep";
 import { BriefForm, BriefReady, EMPTY_BRIEF, PackageLines, PaidProduction, type BriefDraft } from "./Production";
 import { QrCode } from "./qr";
+import { ReportLink } from "./ReportLink";
 import { ManageLinkBox, SessionContactForm } from "./SessionBooking";
 import { SponsorContentForm } from "./SponsorContentForm";
 import { SpotPreview } from "./ProductBoard";
@@ -123,6 +141,13 @@ import { SpotPreview } from "./ProductBoard";
  * token and the quote (`POST /public/enquiries/:token/quotes/:id/checkout`)
  * and priced at the quote.
  *
+ * Pay by bank transfer (a-brand-pays-by-bank-or-card-contract.md) is a fourth
+ * way, shown only when the server offers it for this spot: the same checkout
+ * key opens a bank order through Bridge, whose instructions (amount,
+ * reference, bank details) the page shows and keeps showing on every return,
+ * holding the spot for days instead of minutes. Bridge decides when it is
+ * paid; the page reads the order again until it is.
+ *
  * Invoice details (sale-invoices-contract.md) are an optional step before
  * paying, prefilled from this browser's last purchase. They go to the order
  * once the checkout has created it, next to the wallet's signature and never
@@ -137,11 +162,13 @@ type Phase =
   | { kind: "qr"; link: string }
   | { kind: "evm-sign"; order: Order; evm: EvmPayload; step: 0 | 1 | 2; wallet: string }
   | { kind: "confirming"; order: Order }
+  /** A bank order: its instructions, until Bridge delivers or it is let go. */
+  | { kind: "bank"; order: Order }
   | { kind: "paid"; order: Order }
   | { kind: "duplicate"; order: Order }
   | { kind: "lapsed" };
 
-type Method = "wallet" | "scan" | "hold";
+type Method = "wallet" | "scan" | "hold" | "bank";
 
 const POLL_MS = 3_000;
 
@@ -163,6 +190,8 @@ export function Checkout({
   onPaid,
   offer = null,
   quote = null,
+  onByEnquiry,
+  onNoLongerOnSale,
 }: {
   space: Space;
   position: Position;
@@ -172,6 +201,13 @@ export function Checkout({
   offer?: { token: string; view: OfferView } | null;
   /** An accepted seller's quote to pay, by the enquiry link's token. */
   quote?: { token: string; view: QuoteView } | null;
+  /**
+   * A partnership in kind answers 409 `partnership_by_enquiry`: nothing is
+   * paid, the brand applies in an enquiry. Called instead of a notice.
+   */
+  onByEnquiry?: () => void;
+  /** 409 `package_not_organised`: the package left its event's host. Called instead of a notice. */
+  onNoLongerOnSale?: () => void;
 }) {
   // Only where the creator can be paid. Taking a sold spot over is only
   // possible on the chains takeovers work on; the position view does not say
@@ -197,6 +233,12 @@ export function Checkout({
   /** After a refusal that means "this spot is gone", offer the way back to the board. */
   const [offerOtherSpot, setOfferOtherSpot] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+  /** Whether this spot takes a bank transfer: null until asked, and when the server has no bank door. */
+  const [bankOpt, setBankOpt] = useState<BankOption | null>(null);
+  const [rail, setRail] = useState<BankRail>("wire");
+  const [cancelling, setCancelling] = useState(false);
+  /** Bumped to ask again whether bank is offered: a hold of our own let go changes the answer. */
+  const [bankAsk, setBankAsk] = useState(0);
 
   const keyRef = useRef<string>("");
   const signatureRef = useRef<string | null>(null);
@@ -276,13 +318,41 @@ export function Checkout({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the brief is read from its ref at call time
     [offerToken, quoteToken, quoteId, position.id],
   );
+  const bankTarget: BankTarget =
+    quoteToken && quoteId
+      ? { kind: "quote", token: quoteToken, quoteId }
+      : offerToken
+        ? { kind: "offer", token: offerToken }
+        : { kind: "position", positionId: position.id };
+  const bankOn =
+    !takingOver &&
+    bankShown(
+      bankOpt,
+      quote
+        ? { priceUsd: quote.view.priceUsdc, bid: false }
+        : offer
+          ? { priceUsd: offer.view.agreedUsdc, bid: offer.view.kind === "bid" }
+          : null,
+    );
   const explain = useCallback(
     (e: unknown, c: Chain | null) =>
+      bankText(e, subject, bankMinimum(bankOpt), t) ??
       (quote ? describeQuoteError(e, subject) : null) ??
       (offer ? describeOfferError(e, { kind: offer.view.kind, chain: c, subject }) : null) ??
       describeError(e, c, subject),
-    [offer, quote, subject],
+    [offer, quote, subject, bankOpt, t],
   );
+
+  /* Whether this spot takes a bank transfer. Asked once; no answer means no bank door. */
+  useEffect(() => {
+    let live = true;
+    void bankOption(position.id).then((o) => {
+      if (live) setBankOpt(o);
+    });
+    return () => {
+      live = false;
+    };
+  }, [position.id, bankAsk]);
 
   /* Resume: this browser may already hold a checkout for this spot. */
   useEffect(() => {
@@ -300,6 +370,11 @@ export function Checkout({
         if (order && order.positionId === position.id) {
           setChain(order.chain);
           if (order.status === "paid") return setPhase({ kind: "paid", order });
+          // A bank order waiting for its transfer: the same instructions, again.
+          if (order.rail === "bank" && order.status === "awaiting_payment") {
+            setMethod("bank");
+            return setPhase({ kind: "bank", order });
+          }
           if (order.status === "paid_duplicate") return setPhase({ kind: "duplicate", order });
           if (order.status === "awaiting_payment") return setPhase({ kind: "confirming", order });
           // A quote holds nothing and is not worth resuming: the next
@@ -411,6 +486,39 @@ export function Checkout({
     };
   }, [waitingQr, position.id]);
 
+  /* Bank poll: the order again every 20 s while its transfer is out. Bridge
+     moves in hours; the server also sweeps, so a slow poll loses nothing. */
+  const bankOrderId = phase.kind === "bank" ? phase.order.id : null;
+  useEffect(() => {
+    if (!bankOrderId) return;
+    let stop = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const tick = async () => {
+      let wait = BANK_POLL_MS;
+      try {
+        const order = await currentCheckout(keyRef.current);
+        if (stop) return;
+        if (order && order.id === bankOrderId) {
+          if (order.status === "paid") {
+            setPhase({ kind: "paid", order });
+            onPaid();
+            return;
+          }
+          setPhase((p) => (p.kind === "bank" && p.order.id === order.id ? { kind: "bank", order } : p));
+          if (order.status === "expired" || order.status === "cancelled") return;
+        }
+      } catch (e) {
+        if (e instanceof CheckoutError && e.code === "rate_limited") wait = BANK_POLL_MS * 3;
+      }
+      if (!stop) timer = setTimeout(tick, wait);
+    };
+    timer = setTimeout(tick, BANK_POLL_MS);
+    return () => {
+      stop = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [bankOrderId, onPaid]);
+
   /* ── Actions ────────────────────────────────────────────────────── */
 
   /**
@@ -433,10 +541,44 @@ export function Checkout({
 
   const startAgain = useCallback(() => {
     keyRef.current = rotateCheckoutKey(position.id);
+    setBankAsk((n) => n + 1);
     signatureRef.current = null;
     setNotice(null);
     setPhase({ kind: "choose" });
   }, [position.id]);
+
+  /** Ask for the bank details: the order is made, the spot held, and Bridge's instructions shown. */
+  async function payByBank() {
+    setNotice(null);
+    setOfferOtherSpot(false);
+    try {
+      setPhase({ kind: "busy", label: t("sponsor.checkout.bank.preparing") });
+      const res = await withFreshKey((key) => startBankTransfer(bankTarget, key, rail));
+      sendBilling(res.order.id);
+      setPhase({ kind: "bank", order: { ...res.order, bank: res.bank ?? res.order.bank ?? null } });
+    } catch (e) {
+      if (byEnquiry(e, onByEnquiry) || noLongerOnSale(e, onNoLongerOnSale)) return;
+      // The guest's daily cap on bank holds has its own words; the rest as any checkout error.
+      const capped = e instanceof CheckoutError ? bankRequestErrorKey(e.code, e.status) : null;
+      setNotice(capped === "sponsor.checkout.bank.error.dailyCap" ? t(capped) : explain(e, null));
+      setOfferOtherSpot(e instanceof CheckoutError && GONE_CODES.has(e.code));
+      setPhase({ kind: "choose" });
+    }
+  }
+
+  /** The brand lets the spot go. Refused once the money has reached Bridge. */
+  async function cancelBank(order: Order) {
+    setNotice(null);
+    setCancelling(true);
+    try {
+      const after = await cancelBankTransfer(order.id, keyRef.current);
+      setPhase({ kind: "bank", order: after.bank === undefined ? { ...after, bank: order.bank } : after });
+    } catch (e) {
+      setNotice(explain(e, null));
+    } finally {
+      setCancelling(false);
+    }
+  }
 
   async function payWithSolanaWallet(wallet: SolanaWallet) {
     setNotice(null);
@@ -475,6 +617,7 @@ export function Checkout({
       signatureRef.current = signature;
       setPhase({ kind: "confirming", order: res.order });
     } catch (e) {
+      if (byEnquiry(e, onByEnquiry) || noLongerOnSale(e, onNoLongerOnSale)) return;
       setNotice(explain(e, "solana"));
       setOfferOtherSpot(e instanceof CheckoutError && GONE_CODES.has(e.code));
       // A connected wallet that declined leaves the hold in place; the next
@@ -525,6 +668,7 @@ export function Checkout({
       signatureRef.current = null;
       setPhase({ kind: "confirming", order: submitted.order });
     } catch (e) {
+      if (byEnquiry(e, onByEnquiry) || noLongerOnSale(e, onNoLongerOnSale)) return;
       const refusal = submitting ? describeAuthorizationRefusal(e, evmChain, subject) : null;
       setNotice(refusal ?? explain(e, evmChain));
       setOfferOtherSpot(
@@ -557,6 +701,11 @@ export function Checkout({
     if (phase.kind === "qr") setPhase({ kind: "choose" });
   };
 
+  /* No bank door (any more): the wallets, not an empty tab. */
+  useEffect(() => {
+    if (method === "bank" && !bankOn && phase.kind === "choose") setMethod("wallet");
+  }, [method, bankOn, phase.kind]);
+
   const walletsHere = chain === "solana" ? solanaWallets.map((w) => ({ id: w.name, name: w.name, icon: w.icon ?? null })) : evmWallets;
   const chosen = walletsHere.find((w) => w.id === picked) ?? walletsHere[0] ?? null;
 
@@ -588,7 +737,10 @@ export function Checkout({
       label: t("sponsor.checkout.method.hold"),
       badge: holdPoints !== null ? t("sponsor.checkout.method.earn", { amount: pointsWorth(holdPoints) }) : null,
     },
+    ...(bankOn ? [{ id: "bank" as const, label: t("sponsor.checkout.method.bank") }] : []),
   ];
+  /** What the bank transfer carries: the server's figure when it gave one, else the checkout's total. */
+  const bankTotal = (!offer && !quote ? usdExact(bankOpt?.bank?.amount) : null) ?? total;
 
   const payNow = () => {
     if (!chosen) return;
@@ -619,6 +771,14 @@ export function Checkout({
           />
         )}
         {method === "scan" && phase.kind === "qr" && <StatusLine>{t("sponsor.checkout.waitingForPayment")}</StatusLine>}
+        {method === "bank" && bankOn &&
+          (phase.kind === "busy" ? (
+            <StatusLine>{phase.label}</StatusLine>
+          ) : (
+            <button type="button" className={ctaPrimary} disabled={phase.kind !== "choose"} onClick={() => void payByBank()}>
+              {t("sponsor.checkout.bank.getDetails", { total: bankTotal ?? "" })}
+            </button>
+          ))}
         <p className="flex items-center justify-center gap-2 text-center text-tiny text-white/85">
           {t("sponsor.checkout.paidStraight", { handle: space.creator.xHandle })}
           <InfoTip label={t("sponsor.checkout.aboutRefunds")}>
@@ -639,13 +799,34 @@ export function Checkout({
   return (
     <PaySheet labelledBy="checkout-title" eyebrow={eyebrow} title={position.label} onClose={onClose} footer={footer}>
       {phase.kind === "paid" ? (
-        session ? (
-          <PaidSession order={phase.order} space={space} />
-        ) : production ? (
-          <PaidProduction order={phase.order} space={space} />
-        ) : (
-          <Paid order={phase.order} space={space} position={position} checkoutKey={keyRef.current} />
-        )
+        <>
+          {session ? (
+            <PaidSession order={phase.order} space={space} />
+          ) : production ? (
+            <PaidProduction order={phase.order} space={space} />
+          ) : (
+            <Paid order={phase.order} space={space} position={position} checkoutKey={keyRef.current} />
+          )}
+          <ReportLink url={phase.order.reportUrl} className="mt-6 border-t border-sp-ink/[0.08] pt-6" />
+        </>
+      ) : phase.kind === "bank" ? (
+        <>
+          <BankDetails
+            order={phase.order}
+            bank={phase.order.bank ?? null}
+            subject={subject}
+            seller={`@${space.creator.xHandle}`}
+            closesAt={space.closesAt}
+            cancelling={cancelling}
+            onCancel={() => void cancelBank(phase.order)}
+            onStartAgain={startAgain}
+          />
+          {notice && (
+            <SheetNotice>
+              <p>{notice}</p>
+            </SheetNotice>
+          )}
+        </>
       ) : phase.kind === "duplicate" ? (
         <Duplicate order={phase.order} />
       ) : phase.kind === "lapsed" ? (
@@ -686,7 +867,8 @@ export function Checkout({
                 </span>
               )}
             </div>
-            <NetworkPill
+            {/* A bank transfer has no network to pick: Bridge pays the seller where they are paid. */}
+            {method !== "bank" && <NetworkPill
               chains={chains}
               chain={chain}
               disabled={busy || phase.kind === "confirming"}
@@ -696,7 +878,7 @@ export function Checkout({
                 setPicked(null);
                 if (phase.kind === "qr") setPhase({ kind: "choose" });
               }}
-            />
+            />}
           </div>
 
 
@@ -731,7 +913,9 @@ export function Checkout({
                     // Checked by the server now, so a problem is said here and not at the wallet.
                     void fileBrief(position.id, keyRef.current, body)
                       .then(() => setBrief(body))
-                      .catch((e) => setNotice(explain(e, null)))
+                      .catch((e) => {
+                        if (!byEnquiry(e, onByEnquiry) && !noLongerOnSale(e, onNoLongerOnSale)) setNotice(explain(e, null));
+                      })
                       .finally(() => setSavingBrief(false));
                   }}
                 />
@@ -773,6 +957,10 @@ export function Checkout({
 
                 {method === "scan" && (
                   <ScanPanel url={pageUrl} />
+                )}
+
+                {method === "bank" && bankOn && (
+                  <BankChoice option={bankOpt} rail={rail} onRail={setRail} seller={`@${space.creator.xHandle}`} disabled={busy} />
                 )}
 
                 {method === "hold" && (
@@ -1262,6 +1450,14 @@ function Paid({
       {order.takeover && <p className="text-center text-tiny text-white/85">
           {t("sponsor.checkout.paid.listedAt", { amount: dollars(order.priceUsdc) })}
         </p>}
+      {order.rail === "bank" && (
+        <div className="flex flex-col gap-3">
+          {order.bank?.reference && (
+            <p className="text-center text-tiny text-white/85">{t("sponsor.checkout.bank.paidBy", { reference: order.bank.reference })}</p>
+          )}
+          <OrderInvoice orderId={order.id} checkoutKey={checkoutKey} />
+        </div>
+      )}
       <div className="border-t border-sp-ink/[0.08] pt-6">
         <SponsorContentForm order={order} checkoutKey={checkoutKey} accepts={position.accepts} creatorHandle={handle} />
       </div>
@@ -1340,4 +1536,13 @@ function Duplicate({ order }: { order: Order }) {
       </div>
     </div>
   );
+}
+
+/* ── Bank transfer refusals ────────────────────────────────────────── */
+
+/** A bank-transfer refusal in plain words, or null for any other error. */
+function bankText(e: unknown, subject: "spot" | "session", min: string, tr: ReturnType<typeof useT>): string | null {
+  if (!(e instanceof CheckoutError)) return null;
+  const key = bankErrorKey(e.code);
+  return key ? tr(key, { subject, min, email: "support@hihodl.xyz" }) : null;
 }

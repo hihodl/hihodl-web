@@ -532,5 +532,19 @@
   "sell.priceUsd": "Bei (USD)",
   "sell.reserveHint": "Bei ya akiba: chini yake hakuna kinachouzwa chenyewe. Hakuna anayeiona.",
   "sell.hiddenMinHint": "Ofa zilizo chini yake zinapata jibu la ofa lenyewe kwa bei hii. Hakuna anayekiona.",
-  "sell.zonePitchPlaceholder": "Nafasi kubwa zaidi, inaonekana kwenye kila picha ya uwanja wa ndege"
+  "sell.zonePitchPlaceholder": "Nafasi kubwa zaidi, inaonekana kwenye kila picha ya uwanja wa ndege",
+  "attest.organiserDelivers": "Ninaandaa tukio hili na ninatoa hapo kile kifurushi hiki kinaahidi, au ninairudishia chapa pesa.",
+  "package.titleNew": "Kifurushi kipya",
+  "package.titleAt": "{name} kwenye {event}",
+  "package.shelf": "Vifurushi vya tukio lako",
+  "package.shelfFor": "Vifurushi vya {event}",
+  "package.shelfHint": "Kile chapa hununua kwako kama mwandaaji: nafasi kadhaa zinazofanana kwa bei moja.",
+  "package.notVerified": "Thibitisha kuwa unaandaa tukio hili kwenye Biashara, Matukio yako, kisha uongeze vifurushi vyake.",
+  "package.closesAfterEvent": "Kifurushi hufungwa kabla ya mwisho wa siku inayofuata tukio.",
+  "package.needsEvent": "Kifurushi ni cha tukio unaloandaa.",
+  "package.fallback": "Lisipofanyika, chapa hurudishiwa pesa au huhamia tukio lako lijalo.",
+  "package.partnersByEnquiry": "Washirika wa vitu hukubaliana kwenye ombi, kwa hiyo kifurushi hiki huuzwa kwa ofa, bila bei.",
+  "package.notTheOrganiser": "Ni mwandaaji aliyethibitishwa wa tukio hili pekee anayeuza vifurushi vyake.",
+  "package.notForThisEvent": "Kifurushi hicho ni cha aina nyingine ya tukio. Chagua kimoja kutoka orodha hii.",
+  "package.deliveredAtEvent": "Unakitoa kwenye tukio kisha unachapisha picha au kiungo kama ushahidi baadaye. Chapa inathibitisha, na siku saba za kimya huhesabiwa kama imetolewa."
 }

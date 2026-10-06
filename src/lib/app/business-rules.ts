@@ -21,9 +21,9 @@ import type { MessageKey } from "./i18n";
 
 export type BusinessRole = "owner" | "manager" | "rep";
 
-export type BusinessTab = "profile" | "treasury" | "inbox" | "sales" | "activity" | "team";
+export type BusinessTab = "profile" | "treasury" | "inbox" | "events" | "sales" | "activity" | "team";
 
-export const TABS: readonly BusinessTab[] = ["profile", "treasury", "inbox", "sales", "activity", "team"];
+export const TABS: readonly BusinessTab[] = ["profile", "treasury", "inbox", "events", "sales", "activity", "team"];
 
 /**
  * The permission matrix (business-roles-and-activity-contract.md), the rows
@@ -42,7 +42,8 @@ export type BusinessAction =
   | "team.view"
   | "enquiry.reply"
   | "enquiry.quote"
-  | "enquiry.archive";
+  | "enquiry.archive"
+  | "event.claim";
 
 const MATRIX: Record<BusinessAction, readonly BusinessRole[]> = {
   "business.profile": ["owner"],
@@ -53,6 +54,8 @@ const MATRIX: Record<BusinessAction, readonly BusinessRole[]> = {
   "enquiry.reply": ["owner", "manager"],
   "enquiry.quote": ["owner", "manager"],
   "enquiry.archive": ["owner", "manager"],
+  // Claiming an event for a business is selling for it: `space.publish`.
+  "event.claim": ["owner", "manager"],
 };
 
 export function can(role: BusinessRole, action: BusinessAction): boolean {
@@ -74,6 +77,9 @@ export function tabsFor(role: BusinessRole, opts: { guardianChange?: boolean; ac
         return can(role, "treasury.manage") || !!opts.guardianChange;
       case "inbox":
         return true;
+      case "events":
+        // A manager claims for the business with its owner's id, so it needs that id.
+        return can(role, "event.claim") && (role === "owner" || !!opts.actingForOther);
       case "sales":
         return can(role, "invoices");
       case "activity":
@@ -246,6 +252,10 @@ const ERRORS: Record<string, MessageKey> = {
   quote_days_invalid: "business.error.quoteDaysInvalid",
   quote_note_invalid: "business.error.quoteNoteInvalid",
   quote_not_open: "business.error.quoteNotOpen",
+  package_not_organised: "publicPages.sponsor.noLongerOnSale",
+  partner_name_required: "business.partner.nameRequired",
+  partner_name_invalid: "business.partner.nameInvalid",
+  no_open_slot: "business.partner.noSlot",
   range_invalid: "business.error.rangeInvalid",
   range_too_long: "business.error.rangeTooLong",
   rate_limited: "business.error.rateLimited",

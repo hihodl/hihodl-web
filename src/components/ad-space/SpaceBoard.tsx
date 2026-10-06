@@ -6,6 +6,7 @@ import { type ReactNode, useCallback, useEffect, useRef, useState } from "react"
 import { currentCheckout, existingCheckoutKey } from "@/lib/ad-space/checkout-client";
 import {
   instantUtc,
+  isPartnershipSpace,
   isSessionSpace,
   isTieredSpace,
   serviceSummary,
@@ -77,6 +78,8 @@ export function SpaceBoard({
   const [asked, setAsked] = useState<SavedEnquiry[]>([]);
   const now = useServerNow();
   const [resumable, setResumable] = useState<{ position: Position; order: Order } | null>(null);
+  /** The package left its event's host (409 `package_not_organised`): said once, above the spots. */
+  const [gone, setGone] = useState(false);
   const cards = useRef(new Map<string, HTMLElement>());
 
   const [buyable, setBuyable] = useState(space.status === "live");
@@ -139,6 +142,17 @@ export function SpaceBoard({
   const onAskClose = useCallback(() => setAskFor(null), []);
   const onAskSent = useCallback(() => setAsked(savedEnquiries(space.id)), [space.id]);
   const ask = useCallback((p: Position | null) => setAskFor({ position: p }), []);
+  const toGone = useCallback(() => {
+    setCheckoutFor(null);
+    setOfferFor(null);
+    setGone(true);
+    router.refresh();
+  }, [router]);
+  const toEnquiry = useCallback(() => {
+    setCheckoutFor(null);
+    setOfferFor(null);
+    setAskFor({ position: null });
+  }, []);
   const onOfferSent = useCallback(() => {
     setMine(savedOffers(space.id));
     router.refresh();
@@ -150,10 +164,13 @@ export function SpaceBoard({
      on the rung and not on the space, exactly as it does on a placement. */
   const tiered = isTieredSpace(space);
   const tiers = tiered ? spaceTiers(space) : [];
-  const spaceMode = offerModeOf(space);
+  /* A partnership in kind is agreed in an enquiry, never offered on: no offer
+     mode, and a checkout that meets its 409 hands over to the enquiry. */
+  const partnership = isPartnershipSpace(space);
+  const spaceMode = partnership ? null : offerModeOf(space);
   const modeOf = useCallback(
-    (p: Position): OfferMode | null => offerModeOf(space, isService && !tiered ? null : p),
-    [space, isService, tiered],
+    (p: Position): OfferMode | null => (partnership ? null : offerModeOf(space, isService && !tiered ? null : p)),
+    [space, isService, tiered, partnership],
   );
   /** Bidding is open while the server says so and its end is still ahead on the server's clock. */
   const biddingOpen = useCallback(
@@ -251,8 +268,13 @@ export function SpaceBoard({
     </div>
   );
 
-  const notices = (resumable && !checkoutFor) || mine.length > 0 ? (
+  const notices = (resumable && !checkoutFor) || mine.length > 0 || gone ? (
     <div className="container-page flex flex-col gap-4">
+      {gone && (
+        <p className="rounded-card border border-amber/40 bg-amber/[0.06] p-5 text-small text-sp-ink" role="status">
+          {t("publicPages.sponsor.noLongerOnSale")}
+        </p>
+      )}
       {resumable && !checkoutFor && (
         <div className="flex flex-col gap-4 rounded-card border border-amber/40 bg-amber/[0.06] p-5 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-small text-sp-ink">
@@ -353,7 +375,7 @@ export function SpaceBoard({
 
       {/* Only a live space takes questions (409 space_not_taking_enquiries otherwise). */}
       {(buyable || asked.length > 0) && (
-        <AskPanel seller={sellerName(space.creator)} canAsk={buyable} asked={asked} onAsk={() => ask(null)} />
+        <AskPanel seller={sellerName(space.creator)} canAsk={buyable} asked={asked} onAsk={() => ask(null)} partnership={partnership} />
       )}
 
       {askFor && (
@@ -361,7 +383,7 @@ export function SpaceBoard({
       )}
 
       {checkoutFor && (
-        <Checkout space={space} position={checkoutFor} onClose={onClose} onPaid={onPaid} />
+        <Checkout space={space} position={checkoutFor} onClose={onClose} onPaid={onPaid} onByEnquiry={toEnquiry} onNoLongerOnSale={toGone} />
       )}
 
       {offerFor && (
@@ -372,6 +394,8 @@ export function SpaceBoard({
           now={now}
           onClose={onOfferClose}
           onSent={onOfferSent}
+          onByEnquiry={toEnquiry}
+          onNoLongerOnSale={toGone}
         />
       )}
     </>
@@ -533,18 +557,21 @@ function YourOffers({ offers }: { offers: SavedOffer[] }) {
 
 /**
  * "Ask the seller", for the space as a whole, and the conversations this
- * browser already opened here, each with its link.
+ * browser already opened here, each with its link. On a partnership package
+ * the enquiry IS the way in, so it reads "Apply as partner" and leads.
  */
 function AskPanel({
   seller,
   canAsk,
   asked,
   onAsk,
+  partnership,
 }: {
   seller: string;
   canAsk: boolean;
   asked: SavedEnquiry[];
   onAsk: () => void;
+  partnership: boolean;
 }) {
   const t = useT();
   return (
@@ -553,13 +580,15 @@ function AskPanel({
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <h2 id="ask-seller" className="text-body text-sp-ink">
-              {t("enquiries.ask.panelTitle")}
+              {partnership ? t("publicPages.sponsor.partnerPanelTitle") : t("enquiries.ask.panelTitle")}
             </h2>
-            <p className="mt-1 max-w-xl text-small text-sp-ink/85">{t("enquiries.ask.panelBody", { seller })}</p>
+            <p className="mt-1 max-w-xl text-small text-sp-ink/85">
+              {partnership ? t("publicPages.sponsor.partnerPanelBody", { seller }) : t("enquiries.ask.panelBody", { seller })}
+            </p>
           </div>
           {canAsk && (
-            <button type="button" className={btnSmallSecondary} onClick={onAsk}>
-              {t("enquiries.ask.seller")}
+            <button type="button" className={partnership ? btnSmall : btnSmallSecondary} onClick={onAsk}>
+              {partnership ? t("publicPages.sponsor.applyAsPartner") : t("enquiries.ask.seller")}
             </button>
           )}
         </div>

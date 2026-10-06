@@ -532,5 +532,19 @@
   "sell.priceUsd": "가격 (USD)",
   "sell.reserveHint": "최저 낙찰가: 이보다 낮으면 자동으로 판매되지 않아요. 아무도 볼 수 없어요.",
   "sell.hiddenMinHint": "이보다 낮은 제안에는 이 가격으로 자동 역제안해요. 아무도 볼 수 없어요.",
-  "sell.zonePitchPlaceholder": "가장 큰 자리, 모든 공항 사진에 등장"
+  "sell.zonePitchPlaceholder": "가장 큰 자리, 모든 공항 사진에 등장",
+  "attest.organiserDelivers": "저는 이 이벤트를 주최하며 이 패키지가 약속한 것을 이벤트에서 제공하거나 브랜드에 환불합니다.",
+  "package.titleNew": "새 패키지",
+  "package.titleAt": "{event}의 {name}",
+  "package.shelf": "내 이벤트 패키지",
+  "package.shelfFor": "{event} 패키지",
+  "package.shelfHint": "브랜드가 주최자에게 사는 것: 같은 자리 여러 개를 하나의 가격으로.",
+  "package.notVerified": "비즈니스의 내 이벤트에서 이 이벤트의 주최자임을 확인한 뒤 패키지를 추가하세요.",
+  "package.closesAfterEvent": "패키지는 늦어도 이벤트 다음 날이 끝날 때 마감됩니다.",
+  "package.needsEvent": "패키지는 주최하는 이벤트에 속합니다.",
+  "package.fallback": "열리지 않으면 브랜드는 환불받거나 다음 이벤트로 옮겨갑니다.",
+  "package.partnersByEnquiry": "현물 파트너는 문의에서 합의하므로 이 패키지는 가격 없이 제안으로 판매됩니다.",
+  "package.notTheOrganiser": "이 이벤트의 패키지는 확인된 주최자만 판매합니다.",
+  "package.notForThisEvent": "그 패키지는 다른 종류의 이벤트용이에요. 이 목록에서 고르세요.",
+  "package.deliveredAtEvent": "이벤트에서 제공하고 끝난 뒤 사진이나 링크를 증빙으로 올리세요. 브랜드가 확인하며, 7일간 응답이 없으면 제공된 것으로 봅니다."
 }

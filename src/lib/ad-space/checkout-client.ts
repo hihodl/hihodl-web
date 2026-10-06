@@ -118,6 +118,29 @@ export class CheckoutError extends Error {
 }
 
 /**
+ * A partnership in kind (organiser-sells-its-event-contract.md) is agreed in an
+ * enquiry: checkout, offers and quotes on it answer 409 `partnership_by_enquiry`.
+ * Hands that refusal to `onByEnquiry` when the caller can open the enquiry.
+ */
+export function byEnquiry(e: unknown, onByEnquiry: (() => void) | undefined): boolean {
+  if (!onByEnquiry || !(e instanceof CheckoutError) || e.code !== "partnership_by_enquiry") return false;
+  onByEnquiry();
+  return true;
+}
+
+/**
+ * A package whose seller no longer organises its event answers 409
+ * `package_not_organised` to checkout, offers and quotes. Hands it to
+ * `onNoLongerOnSale` (which closes the sheet and says so) when the caller
+ * has one; otherwise `describeError` words it.
+ */
+export function noLongerOnSale(e: unknown, onNoLongerOnSale: (() => void) | undefined): boolean {
+  if (!onNoLongerOnSale || !(e instanceof CheckoutError) || e.code !== "package_not_organised") return false;
+  onNoLongerOnSale();
+  return true;
+}
+
+/**
  * One call to our API from the browser, answering `data` or throwing a
  * CheckoutError carrying `error.code`. Shared by the HiSpace checkout, the
  * booking page and pay links.
@@ -508,6 +531,8 @@ export function describeError(e: unknown, chain?: Chain | null, subject: Subject
     }
     return t("sponsor.checkoutError.walletFailed");
   }
+
+  if (e.code === "package_not_organised") return t("publicPages.sponsor.noLongerOnSale");
 
   const sessionText = describeSessionError(e);
   if (sessionText && e.code !== "not_found") return sessionText;

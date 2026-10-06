@@ -28,6 +28,7 @@ import {
   LIMITS,
   deliveryDayFor,
   isCustomServiceTemplate,
+  isPackageTemplate,
   isProductionTemplate,
   isSessionTemplate,
   windowOfDay,
@@ -111,6 +112,8 @@ export function PromiseStep({
   const service = template.kind === "service";
   const session = isSessionTemplate(template);
   const production = isProductionTemplate(template);
+  // An event's package is delivered at the event and confirmed by the brand after it.
+  const pkg = isPackageTemplate(template);
   const latestDue = dayPlus(draft.closesAt.slice(0, 10) || today(), LIMITS.DELIVERABLE_DAYS_AFTER_CLOSE);
 
   return (
@@ -145,6 +148,8 @@ export function PromiseStep({
       {service ? (
         session ? (
           <Body dim>{t("listings.promise.sessionNothingToSet")}</Body>
+        ) : pkg ? (
+          <Body dim>{t("listings.package.deliveredAtEvent")}</Body>
         ) : (
           <DayField
             label={t("listings.promise.deliverBy")}
@@ -169,7 +174,7 @@ export function PromiseStep({
           name="fallback"
           value={draft.fallback}
           onChange={(fallback) => set({ fallback: fallback as Fallback })}
-          options={FALLBACKS.filter((f) => !session || f !== "content_anyway").map((f) => ({
+          options={FALLBACKS.filter((f) => !(session || pkg) || f !== "content_anyway").map((f) => ({
             value: f,
             label: t(FALLBACK_LABEL[f]),
             body: t(FALLBACK_BODY[f]),

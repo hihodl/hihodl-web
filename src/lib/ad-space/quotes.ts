@@ -147,6 +147,8 @@ export function describeQuoteError(e: unknown, subject: "spot" | "session" = "sp
       return t("enquiries.quote.error.reasonInvalid");
     case "position_sold":
       return t("enquiries.quote.error.sold", { subject });
+    case "package_not_organised":
+      return t("publicPages.sponsor.noLongerOnSale");
     case "position_reserved": {
       const until = typeof d.reservedUntil === "string" ? d.reservedUntil : null;
       return until

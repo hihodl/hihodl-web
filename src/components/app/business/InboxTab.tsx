@@ -12,25 +12,35 @@
  * "sent by" beside it. The owner can also open that thread in Payments.
  *
  * Reads are per person: opening a thread marks it read for the caller only.
+ *
+ * An enquiry on a partnership package (`media-or-community-partner`) is an
+ * application, never quoted: the seller accepts the brand as a partner (name,
+ * optional logo) and ends a partnership from the package's partner list.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
+  acceptPartner,
+  endPartnership,
   markEnquiryRead,
   replyToEnquiry,
   sendQuote,
   setArchived,
+  uploadSpaceImage,
   useBusinessRefresh,
   useEnquiries,
   useEnquiry,
+  usePackage,
   withdrawQuote,
   type ArchivedFilter,
   type EnquiryRow,
   type EnquiryThread,
+  type PackagePartner,
   type QuoteView,
 } from "@/lib/app/business";
 import { can, centsFromInput, type BusinessRole } from "@/lib/app/business-rules";
+import { HoldApiError } from "@/lib/app/hold-api";
 import { fmtDateTime, fmtRelative } from "@/lib/app/i18n/format";
 import { useT } from "@/lib/app/i18n/react";
 import { getListing } from "@/lib/creator/listings";
@@ -139,6 +149,10 @@ function Thread({ id, role, onBack }: { id: string; role: BusinessRole; onBack: 
   const thread = useEnquiry(id);
   const refresh = useBusinessRefresh();
   const productHref = useProductHref();
+  // The seller's view of the space says whether it is a partnership package, and lists its partners.
+  const pkg = usePackage(thread.data?.enquiry.space.id ?? null);
+  const template = pkg.data?.space.template ?? null;
+  const partnership = template?.service?.partnership === true || template?.id === "media-or-community-partner";
 
   // Opening it marks it read for this person, then the list's badge follows.
   useEffect(() => {
@@ -215,7 +229,11 @@ function Thread({ id, role, onBack }: { id: string; role: BusinessRole; onBack: 
       ) : null}
 
       {canReply ? <Reply thread={e} /> : <Notice tone="calm" icon="lock-closed-outline">{t("business.inbox.readOnly")}</Notice>}
-      {canQuote ? <QuoteForm thread={e} /> : null}
+      {partnership ? (
+        <PartnerPanel thread={e} canAct={canQuote} partners={pkg.data?.space.partners ?? []} />
+      ) : canQuote ? (
+        <QuoteForm thread={e} />
+      ) : null}
     </div>
   );
 }
@@ -297,6 +315,167 @@ function Reply({ thread: e }: { thread: EnquiryThread }) {
         </button>
       </div>
     </Card>
+  );
+}
+
+/* ── Partners in kind ────────────────────────────────────────────── */
+
+const LOGO_MAX = 3 * 1024 * 1024;
+
+/**
+ * A partnership package's enquiry: Accept as partner (the name the page shows,
+ * the asker's company by default, and an optional logo), then the package's
+ * partners with End partnership on each.
+ */
+function PartnerPanel({ thread: e, canAct, partners }: { thread: EnquiryThread; canAct: boolean; partners: PackagePartner[] }) {
+  const t = useT();
+  const refresh = useBusinessRefresh();
+  const file = useRef<HTMLInputElement>(null);
+  const [name, setName] = useState(e.asker.company?.trim() || e.asker.name);
+  const [logo, setLogo] = useState<{ path: string; preview: string } | null>(null);
+  const [logoBusy, setLogoBusy] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  // A thread already accepted says so instead of offering it again.
+  const [accepted, setAccepted] = useState<string | null>(e.partner?.name ?? null);
+
+  // The local preview lives as long as the pick does.
+  useEffect(() => () => (logo ? URL.revokeObjectURL(logo.preview) : undefined), [logo]);
+
+  async function pickLogo(f: File | undefined) {
+    if (!f) return;
+    setError(null);
+    if (f.type !== "image/png" && f.type !== "image/jpeg") {
+      setError(new HoldApiError("image_type_not_supported", 415));
+      return;
+    }
+    if (f.size > LOGO_MAX) {
+      setError(new HoldApiError("image_too_large", 413));
+      return;
+    }
+    setLogoBusy(true);
+    try {
+      // A teammate uploads for the business that owns the package; the owner as themselves.
+      const out = await uploadSpaceImage(f, e.myRole === "owner" ? null : e.business.ownerUserId);
+      setLogo({ path: out.path, preview: URL.createObjectURL(f) });
+    } catch (err) {
+      setError(err);
+    } finally {
+      setLogoBusy(false);
+      if (file.current) file.current.value = "";
+    }
+  }
+
+  async function accept() {
+    const shown = name.trim();
+    if (!shown) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const out = await acceptPartner(e.enquiryId, { name: shown, ...(logo ? { logoPath: logo.path } : {}) });
+      setAccepted(out?.partner?.name ?? shown);
+      setLogo(null);
+      await refresh("package", "enquiry", "enquiries");
+    } catch (err) {
+      setError(err);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      {canAct && e.partner ? (
+        <Notice tone="good" icon="checkmark-circle-outline">{t("business.partner.accepted", { name: e.partner.name })}</Notice>
+      ) : canAct ? (
+        <Card className="gap-3">
+          <p className="text-[15px] font-bold text-white">{t("business.partner.title")}</p>
+          <p className="text-[13px] leading-5 text-white/[0.82]">{t("business.partner.body")}</p>
+          <Field label={t("business.partner.name")} htmlFor="b-p-name">
+            <input id="b-p-name" className={inputCls} maxLength={80} value={name} onChange={(x) => setName(x.target.value)} />
+          </Field>
+          <div className="flex items-center gap-3">
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-[14px] border border-white/10 bg-white/[0.06]">
+              {logo ? (
+                // eslint-disable-next-line @next/next/no-img-element -- a local preview of the picked file
+                <img src={logo.preview} alt="" className="h-full w-full object-contain" />
+              ) : (
+                <Ion name="image-outline" size={22} className="text-white/55" />
+              )}
+            </span>
+            <div className="flex min-w-0 flex-col gap-1">
+              <button type="button" className={btnGlassPill} disabled={logoBusy || busy} onClick={() => file.current?.click()}>
+                {logoBusy ? t("business.partner.uploading") : logo ? t("business.partner.changeLogo") : t("business.partner.addLogo")}
+              </button>
+              <span className="text-[12px] text-white/55">{t("business.partner.logoHint")}</span>
+            </div>
+            <input ref={file} type="file" accept="image/png,image/jpeg" className="hidden" onChange={(x) => void pickLogo(x.target.files?.[0])} />
+          </div>
+          <ErrorNote error={error} />
+          {accepted ? <Notice tone="good" icon="checkmark-circle-outline">{t("business.partner.accepted", { name: accepted })}</Notice> : null}
+          <div>
+            <button type="button" className={btnWhite} disabled={busy || logoBusy || !name.trim()} onClick={() => void accept()}>
+              <Ion name="people-outline" size={15} />
+              {busy ? t("business.partner.accepting") : t("business.partner.accept")}
+            </button>
+          </div>
+        </Card>
+      ) : null}
+
+      <SectionLabel>{t("business.partner.list")}</SectionLabel>
+      <Card className="gap-0 py-1.5">
+        {partners.length === 0 ? (
+          <p className="px-1 py-2 text-[13.5px] text-white/55">{t("business.partner.none")}</p>
+        ) : (
+          partners.map((p) => <PartnerRow key={p.id} spaceId={e.space.id} partner={p} canEnd={canAct} />)
+        )}
+      </Card>
+    </>
+  );
+}
+
+function PartnerRow({ spaceId, partner: p, canEnd }: { spaceId: string; partner: PackagePartner; canEnd: boolean }) {
+  const t = useT();
+  const refresh = useBusinessRefresh();
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+
+  async function end() {
+    if (!confirming) return setConfirming(true);
+    setBusy(true);
+    setError(null);
+    try {
+      await endPartnership(spaceId, p.id);
+      await refresh("package");
+    } catch (err) {
+      setError(err);
+      setConfirming(false);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5 px-1 py-2">
+      <div className="flex min-w-0 items-center gap-3">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-[10px] border border-white/10 bg-white/[0.06]">
+          {p.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- the partner's logo, from our own bucket
+            <img src={p.logoUrl} alt="" className="h-full w-full object-contain" />
+          ) : (
+            <span className="text-[13px] font-bold text-white/[0.82]">{p.name.trim().charAt(0).toUpperCase()}</span>
+          )}
+        </span>
+        <span className="min-w-0 flex-1 truncate text-[14.5px] font-bold text-white">{p.name}</span>
+        {canEnd ? (
+          <button type="button" className={btnGlassPill} disabled={busy} onClick={() => void end()} onBlur={() => !busy && setConfirming(false)}>
+            {busy ? t("business.partner.ending") : confirming ? t("business.partner.endConfirm") : t("business.partner.end")}
+          </button>
+        ) : null}
+      </div>
+      <ErrorNote error={error} />
+    </div>
   );
 }
 

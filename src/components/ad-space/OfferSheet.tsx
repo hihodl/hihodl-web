@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { SITE_URL } from "@/lib/ad-space/config";
-import { CheckoutError, describeError } from "@/lib/ad-space/checkout-client";
+import { CheckoutError, byEnquiry, describeError, noLongerOnSale } from "@/lib/ad-space/checkout-client";
 import { CONTACT_KINDS, CONTACT_PLACEHOLDER, contactProblem, normaliseContact } from "@/lib/ad-space/contact";
 import { CONTACT_KIND_LABEL, isSessionSpace, serviceName, usdFromCents } from "@/lib/ad-space/format";
 import {
@@ -196,6 +196,8 @@ export function OfferSheet({
   now,
   onClose,
   onSent,
+  onByEnquiry,
+  onNoLongerOnSale,
 }: {
   space: Space;
   /**
@@ -207,6 +209,10 @@ export function OfferSheet({
   now: number | null;
   onClose: () => void;
   onSent: () => void;
+  /** A partnership in kind (409 `partnership_by_enquiry`) goes to the enquiry instead. */
+  onByEnquiry?: () => void;
+  /** 409 `package_not_organised`: the package left its event's host. Called instead of a notice. */
+  onNoLongerOnSale?: () => void;
 }) {
   const t = useT();
   const session = isSessionSpace(space);
@@ -298,6 +304,10 @@ export function OfferSheet({
       setSent({ offer: res.offer, token, manageUrl: res.manageUrl, proofSent: proofOk });
       onSent();
     } catch (err) {
+      if (byEnquiry(err, onByEnquiry) || noLongerOnSale(err, onNoLongerOnSale)) {
+        sending.current = false;
+        return;
+      }
       setNotice(
         describeOfferError(err, { kind, chain: checked?.proof.chain ?? null, subject: session ? "session" : "spot" }) ??
           describeError(err, checked?.proof.chain ?? null, session ? "session" : "spot"),

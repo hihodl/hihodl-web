@@ -532,5 +532,19 @@
   "sell.priceUsd": "価格（USD）",
   "sell.reserveHint": "最低落札価格：これを下回ると自動では売れません。誰にも表示されません。",
   "sell.hiddenMinHint": "これを下回るオファーには、この価格で自動的にカウンターオファーします。誰にも表示されません。",
-  "sell.zonePitchPlaceholder": "いちばん大きな枠。空港のどのショットにも映ります"
+  "sell.zonePitchPlaceholder": "いちばん大きな枠。空港のどのショットにも映ります",
+  "attest.organiserDelivers": "私はこのイベントを主催し、このパッケージの内容をイベントで提供します。できなければブランドに返金します。",
+  "package.titleNew": "新しいパッケージ",
+  "package.titleAt": "{event}の{name}",
+  "package.shelf": "イベントのパッケージ",
+  "package.shelfFor": "{event}のパッケージ",
+  "package.shelfHint": "主催者としてブランドに販売するもの：同じ枠を複数、1つの価格で。",
+  "package.notVerified": "「ビジネス」の「あなたのイベント」でこのイベントの主催者であることを確認してから、パッケージを追加してください。",
+  "package.closesAfterEvent": "パッケージはイベント翌日の終わりまでに締め切られます。",
+  "package.needsEvent": "パッケージは主催するイベントに属します。",
+  "package.fallback": "開催されない場合、ブランドは返金されるか、次のイベントに移ります。",
+  "package.partnersByEnquiry": "現物提供のパートナーは問い合わせで合意するため、価格なしのオファーで販売します。",
+  "package.notTheOrganiser": "このイベントのパッケージを販売できるのは確認済みの主催者だけです。",
+  "package.notForThisEvent": "そのパッケージは別の種類のイベント向けです。このリストから選んでください。",
+  "package.deliveredAtEvent": "イベントで提供し、その後に写真またはリンクを証拠として投稿します。ブランドが確認し、7日間反応がなければ提供済みになります。"
 }

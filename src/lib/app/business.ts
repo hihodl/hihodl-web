@@ -27,6 +27,7 @@ import { useCallback } from "react";
 
 import { API_BASE } from "@/lib/ad-space/config";
 import type { QuoteView } from "@/lib/ad-space/types";
+import { getListing } from "@/lib/creator/listings";
 import { accessToken, useCreatorSession } from "@/lib/creator/session";
 
 import { HoldApiError, read } from "./hold-api";
@@ -164,6 +165,8 @@ export interface EnquiryThread {
   guestSeenAt: string | null;
   messages: ThreadMessage[];
   quotes?: QuoteView[];
+  /** The partner accepted from this enquiry (a partnership package), or null. Absent on an older server. */
+  partner?: PackagePartner | null;
 }
 
 export interface InvoiceRow {
@@ -248,6 +251,38 @@ export const withdrawQuote = (quoteId: string) =>
 export const setArchived = (id: string, archived: boolean) =>
   read<{ archivedAt: string | null }>(`ad-space/enquiries/${encodeURIComponent(id)}/${archived ? "archive" : "unarchive"}`, { json: {} });
 
+/* ── Partners in kind (media-or-community-partner) ───────────────── */
+
+/** One accepted partner of a partnership package, as the seller side lists it. */
+export interface PackagePartner {
+  id: string;
+  name: string;
+  logoUrl: string | null;
+  /** The enquiry it was accepted from. */
+  enquiryId?: string;
+}
+
+/**
+ * An image for the seller's spaces (POST /ad-space/media), raw bytes, PNG,
+ * JPEG or WebP. Answers the storage path the next call names (`logoPath`).
+ * `asBusiness` (the owner's user id) lets a teammate with `artwork.approve`
+ * upload for a business that owns the space; it is stored under the uploader.
+ */
+export const uploadSpaceImage = (file: Blob, asBusiness?: string | null) =>
+  read<{ path: string; url: string | null }>(`ad-space/media${asBusiness ? `?${new URLSearchParams({ asBusiness })}` : ""}`, { raw: file });
+
+/**
+ * Take the brand behind an enquiry on a partnership package as a partner: its
+ * name (else the asker's company or name) and logo go on the package's public
+ * pages. Nothing is bought or paid.
+ */
+export const acceptPartner = (enquiryId: string, body: { name?: string; logoPath?: string }) =>
+  read<{ partner: PackagePartner }>(`ad-space/enquiries/${encodeURIComponent(enquiryId)}/accept-partner`, { json: body });
+
+/** End a partnership: the partner comes off the package's public pages. */
+export const endPartnership = (spaceId: string, partnerId: string) =>
+  read<unknown>(`ad-space/spaces/${encodeURIComponent(spaceId)}/partners/${encodeURIComponent(partnerId)}`, { method: "DELETE" });
+
 /* ── Invoices and the CSV ────────────────────────────────────────── */
 
 export function listInvoices(before?: string | null) {
@@ -320,6 +355,8 @@ export const useEnquiries = (spaceId: string | null, archived: ArchivedFilter) =
   useBusinessRead("enquiries", () => listEnquiries({ spaceId, archived }), `${spaceId ?? ""}:${archived}`);
 export const useEnquiry = (id: string | null) => useBusinessRead(id ? "enquiry" : null, () => getEnquiry(id!), id ?? "");
 export const useInvoices = (on = true) => useBusinessRead(on ? "invoices" : null, () => listInvoices());
+/** The seller's view of an enquiry's space: its template (a partnership or not) and its partners. */
+export const usePackage = (spaceId: string | null) => useBusinessRead(spaceId ? "package" : null, () => getListing(spaceId!), spaceId ?? "");
 
 /** Re-read the named business reads (after a save, a reply, a cancel). */
 export function useBusinessRefresh(): (...names: string[]) => Promise<unknown> {
