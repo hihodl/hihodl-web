@@ -98,6 +98,7 @@ import { BankChoice, BankDetails, OrderInvoice, bankMinimum } from "./BankTransf
 import { BillingStep } from "./BillingStep";
 import { BriefForm, BriefReady, EMPTY_BRIEF, PackageLines, PaidProduction, type BriefDraft } from "./Production";
 import { QrCode } from "./qr";
+import { ReportLink } from "./ReportLink";
 import { ManageLinkBox, SessionContactForm } from "./SessionBooking";
 import { SponsorContentForm } from "./SponsorContentForm";
 import { SpotPreview } from "./ProductBoard";
@@ -798,13 +799,16 @@ export function Checkout({
   return (
     <PaySheet labelledBy="checkout-title" eyebrow={eyebrow} title={position.label} onClose={onClose} footer={footer}>
       {phase.kind === "paid" ? (
-        session ? (
-          <PaidSession order={phase.order} space={space} />
-        ) : production ? (
-          <PaidProduction order={phase.order} space={space} />
-        ) : (
-          <Paid order={phase.order} space={space} position={position} checkoutKey={keyRef.current} />
-        )
+        <>
+          {session ? (
+            <PaidSession order={phase.order} space={space} />
+          ) : production ? (
+            <PaidProduction order={phase.order} space={space} />
+          ) : (
+            <Paid order={phase.order} space={space} position={position} checkoutKey={keyRef.current} />
+          )}
+          <ReportLink url={phase.order.reportUrl} className="mt-6 border-t border-sp-ink/[0.08] pt-6" />
+        </>
       ) : phase.kind === "bank" ? (
         <>
           <BankDetails

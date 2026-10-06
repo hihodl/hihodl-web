@@ -27,6 +27,7 @@ import { Spinner } from "./checkout-parts";
 import { type CheckedFunds, FundsCheck, usableProof } from "./FundsCheck";
 import { AmountField, amountProblem, proofSpent } from "./OfferSheet";
 import { payChainsOf } from "./pay-sheet";
+import { ReportLink } from "./ReportLink";
 import { btnPrimary, btnSecondary, btnSmallSecondary, card, eyebrow, pill } from "./ui";
 import { useServerNow } from "./useServerNow";
 
@@ -249,6 +250,8 @@ export function OfferPanel({
 
       <section className={`${card} flex flex-col gap-4 p-5 md:p-6`} aria-label="Where it stands">
         <Standing thread={thread} now={now} biddingOpen={biddingOpen} paidHere={paidHere} subject={subject} />
+
+        {offer.status === "paid" && <ReportLink url={thread.reportUrl ?? offer.reportUrl} />}
 
         {offer.status === "countered" && offer.counterUsdc && !raising && (
           <div className="flex flex-col gap-3 sm:flex-row">

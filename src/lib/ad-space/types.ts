@@ -384,6 +384,8 @@ export interface OfferView {
   /** The space's title and web path ("/s/<handle>/<slug>"), when the server joins them in. */
   spaceTitle?: string | null;
   spacePath?: string | null;
+  /** The sponsor's report once paid, if the server puts it on the offer itself. */
+  reportUrl?: string | null;
 }
 
 /** `GET /public/offers/:token`, and what `respond` answers. */
@@ -402,6 +404,8 @@ export interface OfferThread {
     event: EventSummary | null;
   };
   position: Position | null;
+  /** The sponsor's report once the offer is paid, else null. Absent on an older server. */
+  reportUrl?: string | null;
 }
 
 export interface OfferProof {
@@ -940,6 +944,11 @@ export interface Order {
   rail?: "chain" | "bank";
   /** A bank order only: where and how the brand pays, and where Bridge has it. */
   bank?: BankInstructions | null;
+  /**
+   * The sponsor's report (`https://hihodl.xyz/r/<token>`), once the order is
+   * paid and its listing names an event; null before. Absent on an older server.
+   */
+  reportUrl?: string | null;
 }
 
 /**
