@@ -30,6 +30,15 @@
  * carries no zod defaults on purpose, and sending the whole form back would be
  * the thing that undoes that.
  *
+ * AN EVENT'S OWN PACKAGES
+ *
+ * `?claim=<claimId>` opens it for the host of a Luma event (or calendar) who
+ * proved it on Business › Your events (organiser-sells-its-event-contract.md):
+ * the picker lists only that event's packages (`?seller=organiser`, and
+ * `&scope=calendar` for a calendar), the event is the claim's and is not
+ * asked, and a claim made for a business drafts the package for that business
+ * (`?asBusiness=`), because an event proved for a business is its only.
+ *
  * WHY THE FOOTER IS THE GATE AND NOT "PUBLISH"
  *
  * Every rule the API enforces is mirrored in ../lib/creator/rules, checked as
@@ -50,6 +59,7 @@ import { Ion, type IonName } from "@/components/app/ion";
 import { Body, Empty, SectionLabel } from "@/components/app/spaces/kit";
 import type { MessageKey } from "@/lib/app/i18n";
 import { useT } from "@/lib/app/i18n/react";
+import { getMyClaims, type ClaimWithEvent } from "@/lib/app/organiser";
 import { useRefresh } from "@/lib/app/spaces-data";
 import type { Chain } from "@/lib/ad-space/types";
 import { describeCreatorError } from "@/lib/creator/api";
@@ -59,8 +69,11 @@ import {
   draftFromSpace,
   deliveryWhenOf,
   eventKindOf,
+  isPackageTemplate,
   isProductionTemplate,
   isSessionTemplate,
+  LIMITS,
+  localValueOf,
   patchOf,
   type DeliveryWhen,
   type EventAnswer,
@@ -73,6 +86,7 @@ import { createListing, getListing, getTemplates, patchListing, publishListing }
 import type { InspiredByInput } from "@/lib/creator/inspired-by";
 import { refusalOf } from "@/lib/creator/problems";
 import { firstStepWithProblem, listingProblems, type Problem, type Step } from "@/lib/creator/rules";
+import { useCreatorSession } from "@/lib/creator/session";
 
 import { DatesStep } from "./listing/DatesStep";
 import { EventStep } from "./listing/EventStep";
@@ -118,8 +132,29 @@ const PRODUCTION_STAGES: readonly StageDef[] = [
   { key: "publish", label: "listings.wizard.stage.publish" },
 ];
 
-function stagesFor(template: Template | null): readonly StageDef[] {
+function stagesFor(template: Template | null, organiser = false): readonly StageDef[] {
+  // An event's package is on the claim's event: there is nothing to ask about it.
+  if (organiser) return STAGES.filter((s) => s.key !== "event");
   return isProductionTemplate(template) ? PRODUCTION_STAGES : STAGES;
+}
+
+/** The claim's event as the wizard's event, which is a narrower shape. */
+function eventOfClaim(c: ClaimWithEvent): EventSummary | null {
+  const e = c.event;
+  if (!e) return null;
+  return { id: e.id, slug: e.slug, name: e.name, city: e.city, country: e.country, startsOn: e.startsOn, endsOn: e.endsOn, category: e.category, spaceCount: e.spaceCount };
+}
+
+/**
+ * A package's draft on its event: the event set, the venue a host's event is,
+ * and a close on the event's last evening (by the server's rule it may close
+ * no later than the end of the day after).
+ */
+function packageDraft(template: Template, event: EventSummary, chains: Chain[], title: string): ListingDraft {
+  const base = draftFor(template);
+  const venue = template.allowedVenues.includes("conference") ? "conference" : base.venueType;
+  const lastEvening = localValueOf(new Date(`${event.endsOn}T23:00:00`).toISOString());
+  return { ...base, chains, inspiredBy: null, eventId: event.id, eventName: "", venueType: venue, closesAt: lastEvening, title };
 }
 
 /**
@@ -136,11 +171,14 @@ export function ListingWizard({
   spaceId: initialSpaceId,
   templateId,
   inspiredBy,
+  claimId,
 }: {
   spaceId?: string;
   templateId?: string;
   /** From Inspire's "Use this idea": the creator whose campaign this started from. */
   inspiredBy?: InspiredByInput | null;
+  /** A verified host claim: the wizard sells that event's own packages. */
+  claimId?: string | null;
 }) {
   const t = useT();
   const router = useRouter();
@@ -164,8 +202,47 @@ export function ListingWizard({
   const [fix, setFix] = useState<{ href: string; label: string } | null>(null);
   const [busy, setBusy] = useState<"saving" | "publishing" | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const { session } = useCreatorSession();
+  const myId = session?.user?.id ?? null;
+  /** The claim this package is sold under, once read. */
+  const [claim, setClaim] = useState<ClaimWithEvent | null>(null);
+  const organiser = !!claimId;
+  const claimEvent = claim ? eventOfClaim(claim) : null;
+  // A claim made for a business drafts for that business; one's own needs no `asBusiness`.
+  const asBusiness = claim?.claim.actingForBusinessId && claim.claim.actingForBusinessId !== myId ? claim.claim.actingForBusinessId : null;
 
   useEffect(() => {
+    if (!claimId) return;
+    let alive = true;
+    void (async () => {
+      try {
+        const all = await getMyClaims();
+        const found = (all ?? []).find((c) => c.claim.id === claimId) ?? null;
+        if (!alive) return;
+        if (!found || found.claim.status !== "verified" || !found.event) {
+          setLoadError(t("listings.package.notVerified"));
+          return;
+        }
+        const scope = found.event.kind === "calendar" ? "calendar" : "event";
+        const { templates: list, availableChains } = await getTemplates({ seller: "organiser", scope });
+        if (!alive) return;
+        setClaim(found);
+        setTemplates(list.filter((x) => isPackageTemplate(x)));
+        setChains(availableChains);
+        setPickedEvent(eventOfClaim(found));
+        setEventAnswer("yes");
+        setEventKind(eventKindOf(found.event));
+      } catch (e) {
+        if (alive) setLoadError(describeCreatorError(e));
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [claimId, t]);
+
+  useEffect(() => {
+    if (claimId) return;
     let alive = true;
     void (async () => {
       try {
@@ -211,14 +288,14 @@ export function ListingWizard({
     return () => {
       alive = false;
     };
-  }, [initialSpaceId, templateId, inspiredBy]);
+  }, [initialSpaceId, templateId, inspiredBy, claimId]);
 
   const problems = useMemo<Problem[]>(() => {
     if (!draft || !template) return [];
-    return [...listingProblems(draft, template), ...serverProblems];
-  }, [draft, template, serverProblems]);
+    return [...listingProblems(draft, template, Date.now(), { eventEndsOn: claimEvent?.endsOn ?? null }), ...serverProblems];
+  }, [draft, template, serverProblems, claimEvent?.endsOn]);
 
-  const stages = stagesFor(template);
+  const stages = stagesFor(template, organiser);
   // A saved draft keeps its product, so the picker is not one of its cards.
   const cards = spaceId ? stages.slice(1) : stages;
   // The card list shortens the moment the draft is first saved — the picker
@@ -262,7 +339,7 @@ export function ListingWizard({
     setServerProblems([]);
     try {
       if (!spaceId) {
-        const { space } = await createListing({ templateId: template.id, ...body });
+        const { space } = await createListing({ templateId: template.id, ...body }, asBusiness);
         setSpaceId(space.id);
         setSavedBody(body);
         void refresh("listings");
@@ -283,7 +360,7 @@ export function ListingWizard({
     } finally {
       setBusy(null);
     }
-  }, [draft, template, spaceId, savedBody, refresh, showStep]);
+  }, [draft, template, spaceId, savedBody, refresh, showStep, asBusiness]);
 
   async function publish() {
     const id = await save();
@@ -294,7 +371,8 @@ export function ListingWizard({
     try {
       await publishListing(id);
       void refresh("listings", "views");
-      router.push(href(`/listings/${id}?tab=share`));
+      // A package's link is the event's sponsor link, which lives on Your events.
+      router.push(organiser ? href("/business?tab=events") : href(`/listings/${id}?tab=share`));
     } catch (e) {
       const refusal = refusalOf(e, template, draft);
       setServerProblems(refusal.problems);
@@ -307,8 +385,8 @@ export function ListingWizard({
     }
   }
 
-  const title = spaceId ? t("listings.wizard.titleDraft") : t("listings.wizard.titleNew");
-  const back = () => router.push(href("/listings"));
+  const title = spaceId ? t("listings.wizard.titleDraft") : organiser ? t("listings.package.titleNew") : t("listings.wizard.titleNew");
+  const back = () => router.push(organiser ? href("/business?tab=events") : href("/listings"));
 
   if (loadError) {
     return (
@@ -395,9 +473,16 @@ export function ListingWizard({
                 templates={templates}
                 chosen={template}
                 locked={!!spaceId}
+                organiser={claimEvent?.name ?? null}
                 onChoose={(next) => {
                   if (spaceId || next.id === template?.id) return;
                   setTemplate(next);
+                  if (claimEvent) {
+                    const named = t("listings.package.titleAt", { name: next.name, event: claimEvent.name }).slice(0, LIMITS.TITLE_MAX);
+                    setDraft(packageDraft(next, claimEvent, webChains(chains), named));
+                    setEventAnswer("yes");
+                    return;
+                  }
                   setDraft({ ...draftFor(next), chains, inspiredBy: inspiredBy ?? null });
                   setEventAnswer(isSessionTemplate(next) || isProductionTemplate(next) ? "yes" : null);
                 }}
@@ -514,22 +599,39 @@ function TemplateStep({
   templates,
   chosen,
   locked,
+  organiser,
   onChoose,
 }: {
   templates: readonly Template[];
   chosen: Template | null;
   locked: boolean;
+  /** The event whose own packages these are, for its host; null for a creator. */
+  organiser?: string | null;
   onChoose: (t: Template) => void;
 }) {
   const tr = useT();
-  const products = templates.filter((t) => t.kind !== "service");
-  const services = templates.filter((t) => t.kind === "service" && t.service?.format !== "session");
+  const packages = templates.filter((t) => isPackageTemplate(t));
+  const products = templates.filter((t) => t.kind !== "service" && !isPackageTemplate(t));
+  const services = templates.filter((t) => t.kind === "service" && t.service?.format !== "session" && !isPackageTemplate(t));
   const sessions = templates.filter((t) => t.kind === "service" && t.service?.format === "session");
 
   return (
     <StepCard title={tr("listings.wizard.stage.template")} help={tr("listings.wizard.hookHelp")}>
       {locked ? (
         <HoldNotice tone="calm">{tr("listings.wizard.lockedProduct")}</HoldNotice>
+      ) : null}
+
+      {packages.length ? (
+        <>
+          <Shelf
+            title={organiser ? tr("listings.package.shelfFor", { event: organiser }) : tr("listings.package.shelf")}
+            hint={tr("listings.package.shelfHint")}
+          />
+          {/* The one the host names themselves comes last. */}
+          {[...packages.filter((t) => !t.service?.custom), ...packages.filter((t) => t.service?.custom)].map((t) => (
+            <OfferCard key={t.id} t={t} on={t.id === chosen?.id} locked={locked} icon="megaphone-outline" onChoose={onChoose} unit="slots" />
+          ))}
+        </>
       ) : null}
 
       {products.length ? (

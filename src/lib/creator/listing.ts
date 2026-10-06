@@ -149,6 +149,8 @@ export const ATTESTATIONS = [
   "public_place",
   "no_investment_advice",
   "no_investor_intros",
+  // An event's own package: the host delivers it at the event, or refunds.
+  "organiser_delivers",
 ] as const;
 export type Attestation = (typeof ATTESTATIONS)[number];
 
@@ -172,9 +174,11 @@ export function requiredAttestations(
   isSession: boolean,
   /** Content production declares exactly what its template asks, like the backend. */
   isProduction = false,
+  /** So does an event's own package (`event_asset`): the host's promise to deliver it. */
+  isPackage = false,
 ): Attestation[] {
   const out = new Set<Attestation>();
-  if (kind === "service" && isProduction) {
+  if (kind === "service" && (isProduction || isPackage)) {
     return ATTESTATIONS.filter((a) => templateRequires.includes(a));
   }
   if (kind === "service" && isSession) {
@@ -329,7 +333,7 @@ export function withDeliveryDay(draft: ListingDraft, day: string): ListingDraft 
 /* ── What the API hands back ──────────────────────────────────────── */
 
 export type TemplateKind = "placement" | "service";
-export type ServiceFormat = "content" | "session" | "production";
+export type ServiceFormat = "content" | "session" | "production" | "event_asset";
 
 export interface TemplateZone {
   zoneKey: string;
@@ -368,6 +372,22 @@ export function isSessionTemplate(t: Template | null): boolean {
 /** Content production: a package for the brand's own channels, delivered privately. */
 export function isProductionTemplate(t: Template | null): boolean {
   return t?.kind === "service" && t.service?.format === "production";
+}
+
+/**
+ * An event's own sponsor package (organiser-sells-its-event-contract.md):
+ * sold only by the event's verified host, listed only by
+ * `GET /templates?seller=organiser`. A service with `format: "event_asset"`
+ * (and `productType: "event_asset"`), N identical slots, delivered at the
+ * event and confirmed by the buyer after it, like a session.
+ */
+export function isPackageTemplate(t: Template | null): boolean {
+  return !!t && (t.service?.format === "event_asset" || t.productType === "event_asset");
+}
+
+/** A partner in kind (`media-or-community-partner`): offers only, no price, agreed in an enquiry. */
+export function isPartnershipTemplate(t: Template | null): boolean {
+  return isPackageTemplate(t) && t?.service?.partnership === true;
 }
 
 /* ── Content production (spaces-content-production-v0.md) ─────────── */
@@ -1056,7 +1076,9 @@ export function draftFor(template: Template): ListingDraft {
   const service = template.kind === "service";
   const session = isSessionTemplate(template);
   const production = isProductionTemplate(template);
-  const suggested = template.service?.suggestedPriceCents ?? null;
+  const pkg = isPackageTemplate(template);
+  const partnership = isPartnershipTemplate(template);
+  const suggested = partnership ? null : template.service?.suggestedPriceCents ?? null;
   return {
     templateId: template.id,
     title: "",
@@ -1064,7 +1086,8 @@ export function draftFor(template: Template): ListingDraft {
     fundingGoalDollars: "",
     closesAt: "",
     biddingEndsAt: "",
-    pricingMode: "fixed",
+    // A partner in kind is agreed in an enquiry: offers, and never a price.
+    pricingMode: partnership ? "offers" : "fixed",
     acceptsOffers: false,
     feePayer: "sponsor",
     venueType: template.allowedVenues[0] ?? "everyday",
@@ -1073,7 +1096,8 @@ export function draftFor(template: Template): ListingDraft {
     keyDates: [],
     chains: [],
     // Production is filmed at the event: without the event there is no content either.
-    fallback: session || production ? "creator_refund" : "content_anyway",
+    // So is an event's package: it happens at the event, or the brand is refunded.
+    fallback: session || production || pkg ? "creator_refund" : "content_anyway",
     fallbackNote: "",
     attestations: [],
     deliverables: [],
@@ -1084,7 +1108,8 @@ export function draftFor(template: Template): ListingDraft {
     serviceSummary: "",
     production: { ...DEFAULT_PACKAGE, deliverables: { ...DEFAULT_PACKAGE.deliverables }, usage: { ...DEFAULT_PACKAGE.usage } },
     // A production spot is one package at one price: N identical spots, not a ladder.
-    sells: production ? "slots" : service ? "ladder" : "zones",
+    // So is an event's package: N identical slots (a booth, a banner) at one price.
+    sells: production || pkg ? "slots" : service ? "ladder" : "zones",
     rungs: service ? [{ ...newRung([]), perks: [""] }] : [],
     slots: 1,
     slotPriceDollars: dollarsFromCents(suggested),
@@ -1281,6 +1306,7 @@ function linesOf(perks: readonly string[]): string[] {
 export function bodyOf(draft: ListingDraft, template: Template): Record<string, unknown> {
   const session = isSessionTemplate(template);
   const production = isProductionTemplate(template);
+  const pkg = isPackageTemplate(template);
   const body: Record<string, unknown> = {
     title: draft.title.trim(),
     reason: draft.reason.trim() || null,
@@ -1316,8 +1342,9 @@ export function bodyOf(draft: ListingDraft, template: Template): Record<string, 
 
   if (template.kind === "service") {
     // A session's deliver-by is not typed: publish sets it to the day after
-    // the event ends. Sending one would be a number we made up.
-    body.deliverBy = session || production ? null : draft.deliverBy || null;
+    // the event ends. Sending one would be a number we made up. An event's
+    // package is the same: publish sets it from the event.
+    body.deliverBy = session || production || pkg ? null : draft.deliverBy || null;
     // Sent only for production, so no other listing's PATCH ever mentions it.
     if (production) body.production = draft.production;
     body.deliverables = [];
