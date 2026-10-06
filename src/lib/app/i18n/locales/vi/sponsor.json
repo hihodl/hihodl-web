@@ -383,5 +383,7 @@
   "checkout.duplicate.subject": "Đơn HiSpace {id}",
   "checkout.duplicate.copyId": "Sao chép mã đơn",
   "flow.paidFooterPhone": "Thanh toán bằng USDC từ ví HOLD của bạn, được duyệt trên điện thoại đã liên kết. Khoản này chuyển thẳng đến {name} — chúng tôi không bao giờ giữ nó.",
-  "flow.noWallet.getAppBody": "Thanh toán cho một vị trí cần có ví HOLD, và ví này được tạo trong ứng dụng HOLD trên iPhone hoặc điện thoại Android của bạn. Hãy đăng nhập ở đó bằng tài khoản này, liên kết điện thoại, rồi thanh toán từ đây."
+  "flow.noWallet.getAppBody": "Thanh toán cho một vị trí cần có ví HOLD, và ví này được tạo trong ứng dụng HOLD trên iPhone hoặc điện thoại Android của bạn. Hãy đăng nhập ở đó bằng tài khoản này, liên kết điện thoại, rồi thanh toán từ đây.",
+  "checkout.paid.report": "Báo cáo tài trợ của bạn",
+  "checkout.paid.reportBody": "Báo cáo được hoàn thiện sau sự kiện: bằng chứng, ảnh và hóa đơn trên một trang để chuyển tiếp."
 }

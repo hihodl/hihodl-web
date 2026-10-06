@@ -127,5 +127,7 @@
   "report.unreachableBody": "El fallo es nuestro, no de tu enlace. Recarga la página en un momento.",
   "report.missingTitle": "Este enlace de informe no funciona.",
   "report.missingBody": "Comprueba que lo copiaste entero. Es el enlace del correo de tu informe de patrocinio o de la app HOLD.",
-  "goToHold": "Ir a HOLD"
+  "goToHold": "Ir a HOLD",
+  "sponsor.notOnHold.claimIt": "Reclamarlo",
+  "sponsor.notOnHold.claimItSignIn": "¿Ya estás en HOLD? Reclámalo"
 }

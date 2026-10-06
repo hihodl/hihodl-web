@@ -393,6 +393,8 @@ const sponsor = {
   "checkout.paid.listedAt": "The spot is listed at {amount} now.",
   "checkout.paid.sessionBooked": "Your session is booked.",
   "checkout.paid.noBookingLink": "Your booking link hasn’t reached this page yet. Reload it in this browser: it is how you send @{handle} your contact.",
+  "checkout.paid.report": "Your sponsor report",
+  "checkout.paid.reportBody": "It fills in after the event: the proof, the photos and your invoice, on one page to forward.",
   "checkout.duplicate.title": "Someone else’s payment landed first.",
   "checkout.duplicate.body": "Your payment arrived after this spot sold. Our team has been alerted; email <link>{email}</link> with order <mono>{order}</mono> and we’ll sort it out with the creator.",
   "checkout.duplicate.subject": "HiSpace order {id}",

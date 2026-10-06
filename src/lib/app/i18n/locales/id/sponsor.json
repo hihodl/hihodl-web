@@ -383,5 +383,7 @@
   "checkout.duplicate.subject": "Pesanan HiSpace {id}",
   "checkout.duplicate.copyId": "Salin ID pesanan",
   "flow.paidFooterPhone": "Dibayar dalam USDC dari dompet HOLD-mu, disetujui di ponselmu yang tertaut. Langsung masuk ke {name} — kami tidak pernah menahannya.",
-  "flow.noWallet.getAppBody": "Membayar untuk spot butuh dompet HOLD, yang dibuat di aplikasi HOLD di iPhone atau ponsel Android-mu. Masuk di sana dengan akun ini, tautkan ponselnya, dan bayar dari sini."
+  "flow.noWallet.getAppBody": "Membayar untuk spot butuh dompet HOLD, yang dibuat di aplikasi HOLD di iPhone atau ponsel Android-mu. Masuk di sana dengan akun ini, tautkan ponselnya, dan bayar dari sini.",
+  "checkout.paid.report": "Laporan sponsormu",
+  "checkout.paid.reportBody": "Terisi setelah acara: bukti, foto, dan invoice-mu, dalam satu halaman untuk diteruskan."
 }

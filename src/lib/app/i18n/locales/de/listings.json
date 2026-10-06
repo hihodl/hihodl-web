@@ -532,5 +532,19 @@
   "sell.priceUsd": "Preis (USD)",
   "sell.reserveHint": "Mindestpreis: Darunter wird nichts automatisch verkauft. Niemand sieht ihn.",
   "sell.hiddenMinHint": "Angebote darunter bekommen automatisch ein Gegenangebot zu diesem Preis. Niemand sieht es.",
-  "sell.zonePitchPlaceholder": "Größter Spot, in jedem Flughafen-Shot zu sehen"
+  "sell.zonePitchPlaceholder": "Größter Spot, in jedem Flughafen-Shot zu sehen",
+  "attest.organiserDelivers": "Ich veranstalte dieses Event und liefere dort, was dieses Paket verspricht, oder erstatte der Marke den Betrag.",
+  "package.titleNew": "Neues Paket",
+  "package.titleAt": "{name} bei {event}",
+  "package.shelf": "Die Pakete deines Events",
+  "package.shelfFor": "Pakete für {event}",
+  "package.shelfHint": "Was Marken bei dir als Veranstalter kaufen: mehrere gleiche Plätze zu einem Preis.",
+  "package.notVerified": "Bestätige unter Unternehmen, Deine Events, dass du dieses Event veranstaltest, und füge dann seine Pakete hinzu.",
+  "package.closesAfterEvent": "Ein Paket endet spätestens am Ende des Tages nach dem Event.",
+  "package.needsEvent": "Ein Paket gehört zu dem Event, das du veranstaltest.",
+  "package.fallback": "Findet es nicht statt, bekommt die Marke ihr Geld zurück oder wechselt zu deinem nächsten Event.",
+  "package.partnersByEnquiry": "Sachpartner werden in einer Anfrage vereinbart, deshalb wird dieses Paket über Angebote verkauft, ohne Preis.",
+  "package.notTheOrganiser": "Nur der bestätigte Veranstalter dieses Events verkauft seine Pakete.",
+  "package.notForThisEvent": "Dieses Paket ist für eine andere Art von Event. Wähle eines aus dieser Liste.",
+  "package.deliveredAtEvent": "Du lieferst es beim Event und postest danach ein Foto oder einen Link als Nachweis. Die Marke bestätigt, und sieben ruhige Tage gelten als geliefert."
 }

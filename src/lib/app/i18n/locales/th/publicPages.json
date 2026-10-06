@@ -127,5 +127,7 @@
   "report.unreachableBody": "ปัญหาอยู่ที่เรา ไม่ใช่ลิงก์ของคุณ รีเฟรชหน้าอีกสักครู่",
   "report.missingTitle": "ลิงก์รายงานนี้ใช้ไม่ได้",
   "report.missingBody": "ตรวจสอบว่าคุณคัดลอกครบทั้งหมด เป็นลิงก์จากอีเมลรายงานผู้สนับสนุนหรือจากแอป HOLD",
-  "goToHold": "ไปที่ HOLD"
+  "goToHold": "ไปที่ HOLD",
+  "sponsor.notOnHold.claimIt": "อ้างสิทธิ์",
+  "sponsor.notOnHold.claimItSignIn": "ใช้ HOLD อยู่แล้ว? อ้างสิทธิ์"
 }

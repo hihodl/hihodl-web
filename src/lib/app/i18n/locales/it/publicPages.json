@@ -127,5 +127,7 @@
   "report.unreachableBody": "Il problema è nostro, non del tuo link. Ricarica la pagina tra un attimo.",
   "report.missingTitle": "Questo link del report non funziona.",
   "report.missingBody": "Controlla di averlo copiato tutto. È il link dell'email del tuo report di sponsorizzazione o dell'app HOLD.",
-  "goToHold": "Vai su HOLD"
+  "goToHold": "Vai su HOLD",
+  "sponsor.notOnHold.claimIt": "Rivendicalo",
+  "sponsor.notOnHold.claimItSignIn": "Già su HOLD? Rivendicalo"
 }

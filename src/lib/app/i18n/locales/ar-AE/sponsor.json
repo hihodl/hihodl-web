@@ -383,5 +383,7 @@
   "checkout.duplicate.subject": "طلب HiSpace {id}",
   "checkout.duplicate.copyId": "نسخ رقم الطلب",
   "flow.paidFooterPhone": "دُفعت بعملة USDC من محفظة HOLD الخاصة بك، بموافقة من هاتفك المرتبط. تذهب مباشرة إلى {name} — لا نحتفظ بها أبداً.",
-  "flow.noWallet.getAppBody": "الدفع مقابل مساحة يحتاج إلى محفظة HOLD، وتُنشأ في تطبيق HOLD على هاتفك iPhone أو Android. سجّل الدخول هناك بهذا الحساب، اربط الهاتف، وادفع من هنا."
+  "flow.noWallet.getAppBody": "الدفع مقابل مساحة يحتاج إلى محفظة HOLD، وتُنشأ في تطبيق HOLD على هاتفك iPhone أو Android. سجّل الدخول هناك بهذا الحساب، اربط الهاتف، وادفع من هنا.",
+  "checkout.paid.report": "تقرير الرعاية الخاص بك",
+  "checkout.paid.reportBody": "يكتمل بعد الفعالية: الإثباتات والصور وفاتورتك، في صفحة واحدة لإعادة توجيهها."
 }

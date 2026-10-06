@@ -60,6 +60,8 @@ const publicPages = {
   "sponsor.notOnHold.title": "Is this your event?",
   "sponsor.notOnHold.body": "Sell its sponsorship on HOLD",
   "sponsor.notOnHold.getHold": "Get HOLD",
+  "sponsor.notOnHold.claimIt": "Claim it",
+  "sponsor.notOnHold.claimItSignIn": "On HOLD already? Claim it",
   "eventsIndex.title": "Events to sponsor",
   "eventsIndex.sub": "Upcoming events with host packages or creators going.",
   "eventsIndex.filter": "Filter events",

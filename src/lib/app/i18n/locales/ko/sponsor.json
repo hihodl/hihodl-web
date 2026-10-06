@@ -383,5 +383,7 @@
   "checkout.duplicate.subject": "HiSpace 주문 {id}",
   "checkout.duplicate.copyId": "주문 ID 복사",
   "flow.paidFooterPhone": "연결된 휴대폰에서 승인한 뒤, 내 HOLD 지갑에서 USDC로 결제돼요. {name}에게 바로 전달되며, HOLD는 절대 보관하지 않아요.",
-  "flow.noWallet.getAppBody": "자리 결제에는 HOLD 지갑이 필요해요. iPhone이나 Android 휴대폰의 HOLD 앱에서 만들 수 있어요. 그곳에서 이 계정으로 로그인하고 휴대폰을 연결한 뒤 여기서 결제하세요."
+  "flow.noWallet.getAppBody": "자리 결제에는 HOLD 지갑이 필요해요. iPhone이나 Android 휴대폰의 HOLD 앱에서 만들 수 있어요. 그곳에서 이 계정으로 로그인하고 휴대폰을 연결한 뒤 여기서 결제하세요.",
+  "checkout.paid.report": "내 스폰서 리포트",
+  "checkout.paid.reportBody": "이벤트 후에 채워져요: 증빙, 사진, 인보이스를 한 페이지에 담아 전달할 수 있어요."
 }

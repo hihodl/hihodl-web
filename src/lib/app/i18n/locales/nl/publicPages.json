@@ -127,5 +127,7 @@
   "report.unreachableBody": "Dit ligt aan ons, niet aan je link. Vernieuw de pagina zo meteen.",
   "report.missingTitle": "Deze rapportlink werkt niet.",
   "report.missingBody": "Controleer of je hem helemaal hebt gekopieerd. Het is de link uit de e-mail van je sponsorrapport of uit de HOLD-app.",
-  "goToHold": "Naar HOLD"
+  "goToHold": "Naar HOLD",
+  "sponsor.notOnHold.claimIt": "Claimen",
+  "sponsor.notOnHold.claimItSignIn": "Al op HOLD? Claim het"
 }

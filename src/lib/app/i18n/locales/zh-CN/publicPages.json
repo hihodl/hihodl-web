@@ -127,5 +127,7 @@
   "report.unreachableBody": "问题在我们这边，不是你的链接。请稍后刷新页面。",
   "report.missingTitle": "此报告链接无效。",
   "report.missingBody": "请确认你复制了完整链接。它是你的赞助报告邮件或 HOLD 应用中的链接。",
-  "goToHold": "前往 HOLD"
+  "goToHold": "前往 HOLD",
+  "sponsor.notOnHold.claimIt": "认领",
+  "sponsor.notOnHold.claimItSignIn": "已在使用 HOLD？立即认领"
 }

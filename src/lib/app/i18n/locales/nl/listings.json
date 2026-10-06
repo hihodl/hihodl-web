@@ -532,5 +532,19 @@
   "sell.priceUsd": "Prijs (USD)",
   "sell.reserveHint": "Reserveprijs: daaronder verkoopt niets automatisch. Niemand ziet hem.",
   "sell.hiddenMinHint": "Aanbiedingen daaronder krijgen automatisch een tegenbod voor deze prijs. Niemand ziet het.",
-  "sell.zonePitchPlaceholder": "Grootste plek, te zien in elk vliegveldshot"
+  "sell.zonePitchPlaceholder": "Grootste plek, te zien in elk vliegveldshot",
+  "attest.organiserDelivers": "Ik organiseer dit event en lever daar wat dit pakket belooft, of ik betaal het merk terug.",
+  "package.titleNew": "Nieuw pakket",
+  "package.titleAt": "{name} op {event}",
+  "package.shelf": "De pakketten van je event",
+  "package.shelfFor": "Pakketten voor {event}",
+  "package.shelfHint": "Wat merken bij jou als organisator kopen: een aantal gelijke plekken voor één prijs.",
+  "package.notVerified": "Verifieer onder Bedrijf, Je events, dat je dit event organiseert en voeg dan de pakketten toe.",
+  "package.closesAfterEvent": "Een pakket sluit uiterlijk aan het eind van de dag na het event.",
+  "package.needsEvent": "Een pakket hoort bij het event dat je organiseert.",
+  "package.fallback": "Gaat het niet door, dan krijgt het merk zijn geld terug of schuift het door naar je volgende event.",
+  "package.partnersByEnquiry": "Partners in natura worden in een aanvraag afgesproken, dus dit pakket gaat via biedingen, zonder prijs.",
+  "package.notTheOrganiser": "Alleen de geverifieerde organisator van dit event verkoopt de pakketten.",
+  "package.notForThisEvent": "Dat pakket is voor een ander soort event. Kies er een uit deze lijst.",
+  "package.deliveredAtEvent": "Je levert het op het event en plaatst daarna een foto of link als bewijs. Het merk bevestigt, en zeven stille dagen gelden als geleverd."
 }

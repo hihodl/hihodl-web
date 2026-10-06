@@ -127,5 +127,7 @@
   "report.unreachableBody": "Masalahnya di pihak kami, bukan tautanmu. Muat ulang halaman sebentar lagi.",
   "report.missingTitle": "Tautan laporan ini tidak berfungsi.",
   "report.missingBody": "Pastikan kamu menyalinnya utuh. Ini tautan dari email laporan sponsormu atau aplikasi HOLD.",
-  "goToHold": "Ke HOLD"
+  "goToHold": "Ke HOLD",
+  "sponsor.notOnHold.claimIt": "Klaim",
+  "sponsor.notOnHold.claimItSignIn": "Sudah di HOLD? Klaim"
 }

@@ -383,5 +383,7 @@
   "checkout.duplicate.subject": "HiSpace 注文 {id}",
   "checkout.duplicate.copyId": "注文番号をコピー",
   "flow.paidFooterPhone": "連携したスマホで承認され、あなたの HOLD ウォレットから USDC で支払われます。{name} に直接届き、HOLD が預かることはありません。",
-  "flow.noWallet.getAppBody": "枠の支払いには HOLD ウォレットが必要です。iPhone または Android スマホの HOLD アプリで作成できます。このアカウントでサインインし、スマホを連携してから、ここで支払ってください。"
+  "flow.noWallet.getAppBody": "枠の支払いには HOLD ウォレットが必要です。iPhone または Android スマホの HOLD アプリで作成できます。このアカウントでサインインし、スマホを連携してから、ここで支払ってください。",
+  "checkout.paid.report": "スポンサーレポート",
+  "checkout.paid.reportBody": "イベント後に完成します：証拠、写真、請求書を1ページにまとめて転送できます。"
 }

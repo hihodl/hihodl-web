@@ -383,5 +383,7 @@
   "checkout.duplicate.subject": "HiSpace ऑर्डर {id}",
   "checkout.duplicate.copyId": "ऑर्डर ID कॉपी करें",
   "flow.paidFooterPhone": "आपके HOLD वॉलेट से USDC में पे किया गया, आपके लिंक किए गए फ़ोन पर मंज़ूर। यह सीधे {name} तक जाता है — हम इसे कभी नहीं रखते।",
-  "flow.noWallet.getAppBody": "किसी स्पॉट के लिए पे करने के लिए HOLD वॉलेट चाहिए, जो आपके iPhone या Android फ़ोन पर HOLD ऐप में बनता है। वहाँ इसी अकाउंट से साइन इन करें, फ़ोन लिंक करें, और यहाँ से पे करें।"
+  "flow.noWallet.getAppBody": "किसी स्पॉट के लिए पे करने के लिए HOLD वॉलेट चाहिए, जो आपके iPhone या Android फ़ोन पर HOLD ऐप में बनता है। वहाँ इसी अकाउंट से साइन इन करें, फ़ोन लिंक करें, और यहाँ से पे करें।",
+  "checkout.paid.report": "आपकी स्पॉन्सर रिपोर्ट",
+  "checkout.paid.reportBody": "यह इवेंट के बाद भरती है: सबूत, फ़ोटो और आपका इनवॉइस, आगे भेजने के लिए एक पेज पर।"
 }

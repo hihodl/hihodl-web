@@ -383,5 +383,7 @@
   "checkout.duplicate.subject": "HiSpace siparişi {id}",
   "checkout.duplicate.copyId": "Sipariş numarasını kopyala",
   "flow.paidFooterPhone": "HOLD cüzdanından USDC olarak ödendi, bağlı telefonunda onaylandı. Doğrudan {name} hesabına gider — parayı asla biz tutmayız.",
-  "flow.noWallet.getAppBody": "Bir yer için ödeme yapmak bir HOLD cüzdanı gerektirir ve bu, iPhone'unda veya Android telefonunda HOLD uygulamasında oluşturulur. Orada bu hesapla giriş yap, telefonu bağla ve buradan öde."
+  "flow.noWallet.getAppBody": "Bir yer için ödeme yapmak bir HOLD cüzdanı gerektirir ve bu, iPhone'unda veya Android telefonunda HOLD uygulamasında oluşturulur. Orada bu hesapla giriş yap, telefonu bağla ve buradan öde.",
+  "checkout.paid.report": "Sponsorluk raporun",
+  "checkout.paid.reportBody": "Etkinlikten sonra dolar: kanıtlar, fotoğraflar ve faturan, iletmek için tek sayfada."
 }

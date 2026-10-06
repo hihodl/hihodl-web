@@ -127,5 +127,7 @@
   "report.unreachableBody": "Lỗi ở phía chúng tôi, không phải liên kết của bạn. Hãy tải lại trang sau giây lát.",
   "report.missingTitle": "Liên kết báo cáo này không hoạt động.",
   "report.missingBody": "Hãy kiểm tra bạn đã sao chép đầy đủ. Đây là liên kết trong email báo cáo tài trợ hoặc trong ứng dụng HOLD.",
-  "goToHold": "Đến HOLD"
+  "goToHold": "Đến HOLD",
+  "sponsor.notOnHold.claimIt": "Nhận sự kiện",
+  "sponsor.notOnHold.claimItSignIn": "Đã dùng HOLD? Nhận ngay"
 }

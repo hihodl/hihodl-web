@@ -383,5 +383,7 @@
   "checkout.duplicate.subject": "HiSpace-bestelling {id}",
   "checkout.duplicate.copyId": "Bestelnummer kopiëren",
   "flow.paidFooterPhone": "Betaald in USDC vanuit je HOLD-wallet, goedgekeurd op je gekoppelde telefoon. Het gaat rechtstreeks naar {name} — wij houden het nooit vast.",
-  "flow.noWallet.getAppBody": "Om voor een plek te betalen heb je een HOLD-wallet nodig, gemaakt in de HOLD-app op je iPhone of Android-telefoon. Log daar in met dit account, koppel de telefoon, en betaal vanaf hier."
+  "flow.noWallet.getAppBody": "Om voor een plek te betalen heb je een HOLD-wallet nodig, gemaakt in de HOLD-app op je iPhone of Android-telefoon. Log daar in met dit account, koppel de telefoon, en betaal vanaf hier.",
+  "checkout.paid.report": "Je sponsorrapport",
+  "checkout.paid.reportBody": "Het vult zich na het event: het bewijs, de foto's en je factuur, op één pagina om door te sturen."
 }

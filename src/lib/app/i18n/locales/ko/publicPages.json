@@ -127,5 +127,7 @@
   "report.unreachableBody": "링크가 아니라 저희 쪽 문제예요. 잠시 후 페이지를 새로고침하세요.",
   "report.missingTitle": "이 리포트 링크는 작동하지 않아요.",
   "report.missingBody": "전체를 복사했는지 확인하세요. 스폰서 리포트 이메일이나 HOLD 앱에 있는 링크예요.",
-  "goToHold": "HOLD로 가기"
+  "goToHold": "HOLD로 가기",
+  "sponsor.notOnHold.claimIt": "신청하기",
+  "sponsor.notOnHold.claimItSignIn": "이미 HOLD를 쓰나요? 신청하기"
 }

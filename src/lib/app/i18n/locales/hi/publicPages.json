@@ -127,5 +127,7 @@
   "report.unreachableBody": "गड़बड़ी हमारी तरफ है, आपके लिंक में नहीं। थोड़ी देर में पेज रीफ्रेश करें।",
   "report.missingTitle": "यह रिपोर्ट लिंक काम नहीं कर रहा।",
   "report.missingBody": "जांचें कि आपने पूरा लिंक कॉपी किया है। यह आपकी स्पॉन्सर रिपोर्ट ईमेल या HOLD ऐप वाला लिंक है।",
-  "goToHold": "HOLD पर जाएँ"
+  "goToHold": "HOLD पर जाएँ",
+  "sponsor.notOnHold.claimIt": "क्लेम करें",
+  "sponsor.notOnHold.claimItSignIn": "पहले से HOLD पर हैं? क्लेम करें"
 }

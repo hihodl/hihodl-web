@@ -532,5 +532,19 @@
   "sell.priceUsd": "Harga (USD)",
   "sell.reserveHint": "Harga cadangan: di bawahnya tidak ada yang terjual otomatis. Tidak ada yang melihatnya.",
   "sell.hiddenMinHint": "Tawaran di bawahnya otomatis mendapat tawaran balik di harga ini. Tidak ada yang melihatnya.",
-  "sell.zonePitchPlaceholder": "Spot terbesar, terlihat di setiap foto di bandara"
+  "sell.zonePitchPlaceholder": "Spot terbesar, terlihat di setiap foto di bandara",
+  "attest.organiserDelivers": "Saya menyelenggarakan acara ini dan memberikan apa yang dijanjikan paket ini di sana, atau mengembalikan dana brand.",
+  "package.titleNew": "Paket baru",
+  "package.titleAt": "{name} di {event}",
+  "package.shelf": "Paket acaramu",
+  "package.shelfFor": "Paket untuk {event}",
+  "package.shelfHint": "Yang dibeli brand darimu sebagai penyelenggara: beberapa tempat yang sama dengan satu harga.",
+  "package.notVerified": "Verifikasi bahwa kamu menyelenggarakan acara ini di Bisnis, Acara kamu, lalu tambahkan paketnya.",
+  "package.closesAfterEvent": "Paket ditutup paling lambat di akhir hari setelah acara.",
+  "package.needsEvent": "Paket milik acara yang kamu selenggarakan.",
+  "package.fallback": "Jika tidak terlaksana, brand mendapat pengembalian dana atau pindah ke acaramu berikutnya.",
+  "package.partnersByEnquiry": "Partner in-kind disepakati lewat pertanyaan, jadi paket ini dijual lewat penawaran, tanpa harga.",
+  "package.notTheOrganiser": "Hanya penyelenggara terverifikasi acara ini yang menjual paketnya.",
+  "package.notForThisEvent": "Paket itu untuk jenis acara lain. Pilih satu dari daftar ini.",
+  "package.deliveredAtEvent": "Kamu memberikannya di acara lalu memposting foto atau tautan sebagai bukti. Brand mengonfirmasi, dan tujuh hari tanpa respons dihitung terkirim."
 }

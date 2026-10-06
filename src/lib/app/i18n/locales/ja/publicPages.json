@@ -127,5 +127,7 @@
   "report.unreachableBody": "原因は当社側にあり、リンクの問題ではありません。少ししてからページを再読み込みしてください。",
   "report.missingTitle": "このレポートのリンクは機能しません。",
   "report.missingBody": "リンク全体をコピーしたか確認してください。スポンサーレポートのメールまたはHOLDアプリのリンクです。",
-  "goToHold": "HOLD へ"
+  "goToHold": "HOLD へ",
+  "sponsor.notOnHold.claimIt": "申請する",
+  "sponsor.notOnHold.claimItSignIn": "HOLDをお持ちですか？申請する"
 }

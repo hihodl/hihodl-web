@@ -383,5 +383,7 @@
   "checkout.duplicate.subject": "Ordine HiSpace {id}",
   "checkout.duplicate.copyId": "Copia l'ID ordine",
   "flow.paidFooterPhone": "Pagato in USDC dal tuo portafoglio HOLD, approvato sul telefono collegato. Va dritto a {name}: non lo tratteniamo mai.",
-  "flow.noWallet.getAppBody": "Pagare uno spot richiede un portafoglio HOLD, creato nell'app HOLD sul tuo iPhone o telefono Android. Accedi lì con questo account, collega il telefono e paga da qui."
+  "flow.noWallet.getAppBody": "Pagare uno spot richiede un portafoglio HOLD, creato nell'app HOLD sul tuo iPhone o telefono Android. Accedi lì con questo account, collega il telefono e paga da qui.",
+  "checkout.paid.report": "Il tuo report di sponsorizzazione",
+  "checkout.paid.reportBody": "Si completa dopo l'evento: le prove, le foto e la tua fattura, in una pagina da inoltrare."
 }

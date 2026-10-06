@@ -383,5 +383,7 @@
   "checkout.duplicate.subject": "HiSpace 订单 {id}",
   "checkout.duplicate.copyId": "复制订单号",
   "flow.paidFooterPhone": "以 USDC 从你的 HOLD 钱包付款，由你关联的手机批准。款项直接送达 {name} —— HOLD 从不经手。",
-  "flow.noWallet.getAppBody": "支付广告位需要 HOLD 钱包，它由你 iPhone 或 Android 手机上的 HOLD 应用创建。请在那里用此账户登录，关联手机，然后回到这里付款。"
+  "flow.noWallet.getAppBody": "支付广告位需要 HOLD 钱包，它由你 iPhone 或 Android 手机上的 HOLD 应用创建。请在那里用此账户登录，关联手机，然后回到这里付款。",
+  "checkout.paid.report": "你的赞助报告",
+  "checkout.paid.reportBody": "活动结束后自动完善：证明、照片和发票都在一页上，方便转发。"
 }

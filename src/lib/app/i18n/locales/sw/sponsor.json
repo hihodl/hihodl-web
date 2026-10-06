@@ -383,5 +383,7 @@
   "checkout.duplicate.subject": "Agizo la HiSpace {id}",
   "checkout.duplicate.copyId": "Nakili namba ya agizo",
   "flow.paidFooterPhone": "Imelipwa kwa USDC kutoka kwenye pochi yako ya HOLD, ikiidhinishwa kwenye simu yako iliyounganishwa. Inakwenda moja kwa moja kwa {name} — hatuishikilii kamwe.",
-  "flow.noWallet.getAppBody": "Kulipia nafasi kunahitaji pochi ya HOLD, inayoundwa kwenye programu ya HOLD, kwenye iPhone au simu yako ya Android. Ingia huko kwa akaunti hii, unganisha simu, kisha ulipe kutoka hapa."
+  "flow.noWallet.getAppBody": "Kulipia nafasi kunahitaji pochi ya HOLD, inayoundwa kwenye programu ya HOLD, kwenye iPhone au simu yako ya Android. Ingia huko kwa akaunti hii, unganisha simu, kisha ulipe kutoka hapa.",
+  "checkout.paid.report": "Ripoti yako ya udhamini",
+  "checkout.paid.reportBody": "Hujazwa baada ya tukio: ushahidi, picha na ankara yako, kwenye ukurasa mmoja wa kutuma mbele."
 }

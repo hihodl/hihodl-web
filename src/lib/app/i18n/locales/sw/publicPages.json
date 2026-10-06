@@ -127,5 +127,7 @@
   "report.unreachableBody": "Tatizo ni letu, si la kiungo chako. Onyesha upya ukurasa baada ya muda mfupi.",
   "report.missingTitle": "Kiungo hiki cha ripoti hakifanyi kazi.",
   "report.missingBody": "Hakikisha umenakili chote. Ni kiungo kutoka barua pepe ya ripoti yako ya udhamini au programu ya HOLD.",
-  "goToHold": "Nenda HOLD"
+  "goToHold": "Nenda HOLD",
+  "sponsor.notOnHold.claimIt": "Lidai",
+  "sponsor.notOnHold.claimItSignIn": "Uko kwenye HOLD tayari? Lidai"
 }

@@ -532,5 +532,19 @@
   "sell.priceUsd": "Giá (USD)",
   "sell.reserveHint": "Giá tối thiểu: thấp hơn mức này sẽ không tự động bán. Không ai thấy.",
   "sell.hiddenMinHint": "Đề nghị thấp hơn mức này sẽ tự động nhận đề nghị lại ở giá này. Không ai thấy.",
-  "sell.zonePitchPlaceholder": "Vị trí lớn nhất, xuất hiện trong mọi khung hình ở sân bay"
+  "sell.zonePitchPlaceholder": "Vị trí lớn nhất, xuất hiện trong mọi khung hình ở sân bay",
+  "attest.organiserDelivers": "Tôi tổ chức sự kiện này và trao tại đó những gì gói này hứa, nếu không sẽ hoàn tiền cho thương hiệu.",
+  "package.titleNew": "Gói mới",
+  "package.titleAt": "{name} tại {event}",
+  "package.shelf": "Các gói của sự kiện",
+  "package.shelfFor": "Các gói cho {event}",
+  "package.shelfHint": "Những gì thương hiệu mua từ bạn với tư cách nhà tổ chức: một số suất giống nhau với một mức giá.",
+  "package.notVerified": "Xác minh bạn tổ chức sự kiện này trong Doanh nghiệp, Sự kiện của bạn, rồi thêm các gói.",
+  "package.closesAfterEvent": "Gói đóng muộn nhất vào cuối ngày sau sự kiện.",
+  "package.needsEvent": "Gói thuộc về sự kiện bạn tổ chức.",
+  "package.fallback": "Nếu sự kiện không diễn ra, thương hiệu được hoàn tiền hoặc chuyển sang sự kiện tiếp theo của bạn.",
+  "package.partnersByEnquiry": "Đối tác hiện vật được thỏa thuận qua yêu cầu, nên gói này bán theo đề nghị, không có giá.",
+  "package.notTheOrganiser": "Chỉ nhà tổ chức đã xác minh của sự kiện này mới bán các gói của nó.",
+  "package.notForThisEvent": "Gói đó dành cho loại sự kiện khác. Hãy chọn một gói trong danh sách này.",
+  "package.deliveredAtEvent": "Bạn trao tại sự kiện và sau đó đăng ảnh hoặc liên kết làm bằng chứng. Thương hiệu xác nhận, và bảy ngày không phản hồi được tính là đã trao."
 }

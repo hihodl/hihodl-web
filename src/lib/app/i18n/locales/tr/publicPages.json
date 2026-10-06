@@ -127,5 +127,7 @@
   "report.unreachableBody": "Sorun bizde, bağlantında değil. Sayfayı birazdan yenile.",
   "report.missingTitle": "Bu rapor bağlantısı çalışmıyor.",
   "report.missingBody": "Tamamını kopyaladığından emin ol. Sponsorluk raporu e-postandaki ya da HOLD uygulamasındaki bağlantıdır.",
-  "goToHold": "HOLD'a git"
+  "goToHold": "HOLD'a git",
+  "sponsor.notOnHold.claimIt": "Talep et",
+  "sponsor.notOnHold.claimItSignIn": "Zaten HOLD'da mısın? Talep et"
 }

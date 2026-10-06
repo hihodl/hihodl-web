@@ -532,5 +532,19 @@
   "sell.priceUsd": "价格（USD）",
   "sell.reserveHint": "保留价：低于此价不会自动成交。没有人能看到。",
   "sell.hiddenMinHint": "低于此价的报价会自动以此价格还价。没有人能看到。",
-  "sell.zonePitchPlaceholder": "最大的广告位，每张机场照片里都能看到"
+  "sell.zonePitchPlaceholder": "最大的广告位，每张机场照片里都能看到",
+  "attest.organiserDelivers": "我是这个活动的主办方，会在活动中交付这个套餐承诺的内容，否则向品牌退款。",
+  "package.titleNew": "新套餐",
+  "package.titleAt": "{event} 的{name}",
+  "package.shelf": "你的活动套餐",
+  "package.shelfFor": "{event} 的套餐",
+  "package.shelfHint": "品牌向你这位主办方购买的内容：若干个相同的名额，一个价格。",
+  "package.notVerified": "请先在“企业”的“你的活动”中验证你是这个活动的主办方，然后添加套餐。",
+  "package.closesAfterEvent": "套餐最迟在活动次日结束时截止。",
+  "package.needsEvent": "套餐属于你主办的活动。",
+  "package.fallback": "如果活动没有举行，品牌将获得退款或转到你的下一个活动。",
+  "package.partnersByEnquiry": "实物合作伙伴通过咨询达成，因此这个套餐以报价方式出售，不设价格。",
+  "package.notTheOrganiser": "只有这个活动的已验证主办方才能出售其套餐。",
+  "package.notForThisEvent": "这个套餐适用于另一类活动。请从这个列表中选择。",
+  "package.deliveredAtEvent": "你在活动中交付，之后发布照片或链接作为证明。品牌确认，七天无回应即视为已交付。"
 }

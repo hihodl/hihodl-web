@@ -127,5 +127,7 @@
   "report.unreachableBody": "المشكلة من جهتنا وليست في رابطك. حدّث الصفحة بعد لحظة.",
   "report.missingTitle": "رابط هذا التقرير لا يعمل.",
   "report.missingBody": "تحقق من أنك نسخته كاملًا. إنه الرابط الموجود في بريد تقرير الرعاية أو في تطبيق HOLD.",
-  "goToHold": "اذهب إلى HOLD"
+  "goToHold": "اذهب إلى HOLD",
+  "sponsor.notOnHold.claimIt": "طالِب بها",
+  "sponsor.notOnHold.claimItSignIn": "على HOLD بالفعل؟ طالِب بها"
 }

@@ -383,5 +383,7 @@
   "checkout.duplicate.subject": "Pedido de HiSpace {id}",
   "checkout.duplicate.copyId": "Copiar ID del pedido",
   "flow.paidFooterPhone": "Pagado en USDC desde tu wallet de HOLD, aprobado en tu móvil vinculado. Va directo a {name}: nunca lo custodiamos.",
-  "flow.noWallet.getAppBody": "Patrocinar una posición necesita una wallet de HOLD, y se crea en la app HOLD de tu iPhone o móvil Android. Inicia sesión allí con esta cuenta, vincula el móvil y paga desde aquí."
+  "flow.noWallet.getAppBody": "Patrocinar una posición necesita una wallet de HOLD, y se crea en la app HOLD de tu iPhone o móvil Android. Inicia sesión allí con esta cuenta, vincula el móvil y paga desde aquí.",
+  "checkout.paid.report": "Tu informe de patrocinio",
+  "checkout.paid.reportBody": "Se completa después del evento: las pruebas, las fotos y tu factura, en una página para reenviar."
 }
