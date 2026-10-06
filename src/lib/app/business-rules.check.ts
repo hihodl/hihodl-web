@@ -20,9 +20,9 @@ function eq(name: string, a: unknown, b: unknown) {
 }
 
 // tabs per role
-eq("owner sees every tab", R.tabsFor("owner"), ["profile", "treasury", "inbox", "sales", "activity", "team"]);
+eq("owner sees every tab", R.tabsFor("owner"), ["profile", "treasury", "inbox", "events", "sales", "activity", "team"]);
 eq("manager without the owner's id: inbox only", R.tabsFor("manager"), ["inbox"]);
-eq("manager acting for a business: inbox and activity", R.tabsFor("manager", { actingForOther: true }), ["inbox", "activity"]);
+eq("manager acting for a business: inbox, events and activity", R.tabsFor("manager", { actingForOther: true }), ["inbox", "events", "activity"]);
 eq("rep: inbox only, even acting for a business", R.tabsFor("rep", { actingForOther: true }), ["inbox"]);
 eq("guardian opens treasury from a push", R.tabsFor("rep", { guardianChange: true }), ["treasury", "inbox"]);
 eq("pickTab falls back to the first", R.pickTab("sales", R.tabsFor("rep")), "inbox");

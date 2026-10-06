@@ -7,6 +7,9 @@
  *   Treasury   the vault sponsors pay, its members, balance, last payments,
  *              and a pending change with its countdown and Cancel
  *   Inbox      enquiries from brands, answered in place, quotes, archive
+ *   Events     the Luma events (and calendars) it hosts: claim one with a
+ *              code, its sponsor link, its packages (`?claim=<luma link>`
+ *              pre-fills the claim, from the sponsor page's "Claim it")
  *   Sales      invoices and receipts, their PDFs, the sales CSV
  *   Activity   who did what, by space, person and action
  *   Team       the seats and their roles, managed on Spaces › Team
@@ -34,12 +37,14 @@ import { useMemo } from "react";
 import { useBusinessProfile } from "@/lib/app/business";
 import { pickTab, tabsFor, type BusinessRole, type BusinessTab } from "@/lib/app/business-rules";
 import { useT } from "@/lib/app/i18n/react";
+import { useCreatorSession } from "@/lib/creator/session";
 
 import { useHref } from "../base";
 import { useShell } from "../Shell";
 import { Chip, ChipRow, h1, Tag } from "../spaces/kit";
 import { Skeleton } from "../ui";
 import { ActivityTab } from "./ActivityTab";
+import { EventsTab } from "./EventsTab";
 import { InboxTab } from "./InboxTab";
 import { ErrorNote } from "./parts";
 import { ProfileTab } from "./ProfileTab";
@@ -55,11 +60,25 @@ interface Acting {
   name: string;
 }
 
-export function BusinessScreen({ tab, enquiry, change, as }: { tab: string | null; enquiry: string | null; change: string | null; as: string | null }) {
+export function BusinessScreen({
+  tab,
+  enquiry,
+  change,
+  as,
+  claim = null,
+}: {
+  tab: string | null;
+  enquiry: string | null;
+  change: string | null;
+  as: string | null;
+  /** A Luma link to claim, handed over by the sponsor page. */
+  claim?: string | null;
+}) {
   const t = useT();
   const router = useRouter();
   const href = useHref();
   const { seats, listings, work } = useShell();
+  const { session } = useCreatorSession();
   const profile = useBusinessProfile();
 
   const others = useMemo<Acting[]>(
@@ -102,6 +121,7 @@ export function BusinessScreen({ tab, enquiry, change, as }: { tab: string | nul
     profile: t("business.tab.profile"),
     treasury: t("business.tab.treasury"),
     inbox: t("business.tab.inbox"),
+    events: t("business.tab.events"),
     sales: t("business.tab.sales"),
     activity: t("business.tab.activity"),
     team: t("business.tab.team"),
@@ -144,6 +164,14 @@ export function BusinessScreen({ tab, enquiry, change, as }: { tab: string | nul
       {active === "treasury" ? <TreasuryTab isOwner={isOwn} hasProfile={hasProfile} changeId={change} /> : null}
       {active === "inbox" ? (
         <InboxTab role={acting.role} open={enquiry} onOpen={(id) => router.replace(link({ tab: "inbox", e: id }), { scroll: false })} />
+      ) : null}
+      {active === "events" ? (
+        <EventsTab
+          // One's own account claims for its business when it has a profile, else for the person.
+          actingForBusinessId={isOwn ? (hasProfile ? session?.user?.id ?? null : null) : acting.ownerUserId}
+          isOwn={isOwn}
+          prefill={claim}
+        />
       ) : null}
       {active === "sales" ? <SalesTab /> : null}
       {active === "activity" ? <ActivityTab asBusiness={isOwn ? null : acting.ownerUserId} spaces={spaces} /> : null}

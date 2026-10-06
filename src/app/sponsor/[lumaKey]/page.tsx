@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { ClaimIt } from "@/components/ad-space/ClaimIt";
 import { ProfileFooter } from "@/components/ad-space/creator";
 import { BannerFrame, EventMiniCard, eventBanner } from "@/components/ad-space/events";
 import { SpacesGround } from "@/components/ad-space/ground";
@@ -19,6 +20,7 @@ import { getPackageSpaces, getSponsorPage } from "@/lib/ad-space/server";
 import type { LumaTeaser, SponsorPage as SponsorPageData } from "@/lib/ad-space/types";
 import { t, type LocaleCode } from "@/lib/app/i18n";
 import { applyRequestLocale, inEnglish } from "@/lib/app/i18n/server";
+import { lumaKeyOf, lumaUrlOf } from "@/lib/app/organiser-rules";
 
 /**
  * /sponsor/<lumaKey> — the link a Luma host puts where their page asks who
@@ -112,7 +114,7 @@ export default async function SponsorPage({ params }: { params: Params }) {
     );
   }
 
-  if (found.kind === "notOnHold") return <NotOnHold luma={found.luma} language={language} />;
+  if (found.kind === "notOnHold") return <NotOnHold lumaKey={params.lumaKey} luma={found.luma} language={language} />;
 
   const { event, packages, creators, slug, kind, events, calendar } = found.page;
   const isCalendar = kind === "calendar";
@@ -157,9 +159,11 @@ export default async function SponsorPage({ params }: { params: Params }) {
  * the person most likely to land here: its host.
  */
 function NotOnHold({
+  lumaKey,
   luma,
   language,
 }: {
+  lumaKey: string;
   luma: LumaTeaser | null;
   language: { locale: LocaleCode; chosen: boolean };
 }) {
@@ -185,7 +189,9 @@ function NotOnHold({
             {t("publicPages.sponsor.notOnHold.title")}
           </h1>
           <p className="mt-4 max-w-xl text-body text-sp-ink/85">{t("publicPages.sponsor.notOnHold.body")}</p>
-          <div className="mt-8">
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            {/* The host signed in on the web claims it there; the app does it too. */}
+            {lumaKeyOf(lumaUrlOf(lumaKey)) ? <ClaimIt lumaKey={lumaKey} /> : null}
             <DownloadLink className={btnPrimary}>{t("publicPages.sponsor.notOnHold.getHold")}</DownloadLink>
           </div>
         </section>
