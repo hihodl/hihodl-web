@@ -76,6 +76,14 @@ const NON_FINANCIAL: Provider[] = [
     pending: true,
   },
   {
+    name: "Duffel",
+    what:
+      "Flight search, booking and ticketing with airlines for in-app flights. The airline that operates each flight does so under its own fare rules and conditions of carriage.",
+    data:
+      "For each traveller: name, date of birth, gender, contact email and phone number, passport details only when the airline requires them, and any frequent flyer number you add. Duffel passes these to the airline so it can issue the ticket. No identity verification data.",
+    pending: true,
+  },
+  {
     name: "eSIM Go",
     what: "Mobile data plans (eSIM) bought in the app.",
     data:
@@ -179,7 +187,7 @@ export default function ProvidersLegalPage() {
               Service providers
             </h1>
             <p className="text-base sm:text-lg text-[#94a3b8ff] font-['Inter'] font-[400]">
-              Last updated: August 17, 2026
+              Last updated: October 9, 2026
             </p>
           </div>
 
