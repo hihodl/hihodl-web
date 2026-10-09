@@ -22,6 +22,9 @@
       }
     ]
   },
+  "appclips": {
+    "apps": ["VLV25ZF66P.com.sayhihodl.hihodlyes.Clip"]
+  },
   "webcredentials": {
     "apps": ["VLV25ZF66P.com.sayhihodl.hihodlyes"]
   }

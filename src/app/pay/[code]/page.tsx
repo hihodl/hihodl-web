@@ -42,7 +42,8 @@ export async function generateMetadata({ params }: { params: { code: string } })
   const [found, words] = await Promise.all([lookup(raw), ogCopyFor(headers().get("accept-language"))]);
   const link = found.kind === "found" ? found.value : null;
   const preview = payPreview(link, raw.startsWith("@"), words.copy, words.fmt, words.intl);
-  return payPageMetadata("Pay link", { ...preview, lang: words.lang });
+  // Only a link that can be paid offers the App Clip.
+  return payPageMetadata("Pay link", { ...preview, lang: words.lang }, { appClip: link !== null });
 }
 
 export default async function PayLinkPage({ params }: { params: { code: string } }) {
