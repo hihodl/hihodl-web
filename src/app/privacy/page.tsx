@@ -49,7 +49,7 @@ export default function PrivacyPage() {
               Privacy Policy
             </h1>
             <p className="text-base sm:text-lg text-[#94a3b8ff] font-['Inter'] font-[400]">
-              Last updated: October 6, 2026
+              Last updated: October 10, 2026
             </p>
           </div>
 
@@ -71,6 +71,15 @@ export default function PrivacyPage() {
                     <li>Referral information and codes</li>
                     <li>Any other information you voluntarily provide to us</li>
                   </ul>
+                  <p className="mt-3">
+                    <strong>Bookings you add to a plan.</strong> You can forward a booking email to your personal trips.hihodl.xyz address, or share a PDF, screenshot or text into the HOLD app. We read it once to pull out the trip details: the kind of booking, dates and times, places, the flight, train or hotel, the booking reference, the names of the passengers or guests, and the price. We keep only those details. The original email, file or image is not stored once it has been read. If a detail is not in the booking, we leave it empty rather than guess it.
+                  </p>
+                  <p className="mt-3">
+                    Members of the plan see the trip details. The booking reference, passenger names and price are shown only to the person who added the booking and to the people travelling on it. A forwarded email counts as yours only when it comes from your account&apos;s email address and passes the sender&apos;s email authentication (DMARC); anything else waits for you to confirm it before it reaches a plan. You can create a new trips address at any time, and the old one stops working.
+                  </p>
+                  <p className="mt-3">
+                    <strong>Your phone&apos;s calendar.</strong> If you choose Add to my calendar, HOLD writes the trip items you travel on into a calendar named HOLD on your phone. HOLD does not read your other calendar events, and nothing from your calendar is sent to us.
+                  </p>
                 </div>
                 <div>
                   <h3 className="text-xl font-[600] text-[#eaf6ffff] mb-2">2.2 Automatically Collected Information</h3>
@@ -100,6 +109,7 @@ export default function PrivacyPage() {
                 <li>Monitor and analyze usage patterns and trends</li>
                 <li>Detect, prevent, and address technical issues and security threats</li>
                 <li>Comply with legal obligations and enforce our terms</li>
+                <li>Read the bookings you forward or share and add them to the plan you choose</li>
               </ul>
             </section>
 
@@ -225,7 +235,7 @@ export default function PrivacyPage() {
             <section className="flex flex-col gap-4">
               <h2 className="text-2xl font-[700] text-[#eaf6ffff]">14. Data Retention</h2>
               <p className="text-[#94a3b8ff]">
-                We retain personal information only for as long as necessary for the purposes described in this Policy, including to provide the services, comply with legal and anti-money-laundering obligations, resolve disputes, and enforce our agreements. KYC and biometric data captured by Sumsub are retained and deleted in accordance with Sumsub&apos;s retention practices and applicable law; HOLD does not hold this data. Retention periods required by anti-money-laundering law may extend beyond account closure.
+                We retain personal information only for as long as necessary for the purposes described in this Policy, including to provide the services, comply with legal and anti-money-laundering obligations, resolve disputes, and enforce our agreements. KYC and biometric data captured by Sumsub are retained and deleted in accordance with Sumsub&apos;s retention practices and applicable law; HOLD does not hold this data. Retention periods required by anti-money-laundering law may extend beyond account closure. Trip details read from a booking are kept as part of the plan they were added to. The original booking email, file or image is not kept after it has been read.
               </p>
             </section>
 
