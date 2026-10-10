@@ -107,8 +107,17 @@ const INFRASTRUCTURE: Provider[] = [
   },
   {
     name: "Resend",
-    what: "Transactional email delivery.",
-    data: "Your email address and the content of the message being sent to you.",
+    what:
+      "Transactional email delivery, and receiving the booking emails you forward to your personal trips.hihodl.xyz address.",
+    data:
+      "Your email address and the content of the message being sent to you. For a forwarded booking: the email and its attachments, which we read once and do not keep.",
+  },
+  {
+    name: "Anthropic",
+    what:
+      "The AI model behind Hi, the assistant in the app, and behind reading the bookings you forward or share into a plan.",
+    data:
+      "The messages you send Hi and the context it needs to answer. For a booking: the email, PDF or image you sent, so the trip details can be read from it.",
   },
 ];
 
@@ -179,7 +188,7 @@ export default function ProvidersLegalPage() {
               Service providers
             </h1>
             <p className="text-base sm:text-lg text-[#94a3b8ff] font-['Inter'] font-[400]">
-              Last updated: August 17, 2026
+              Last updated: October 10, 2026
             </p>
           </div>
 
