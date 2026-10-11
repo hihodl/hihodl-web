@@ -45,6 +45,10 @@ const PAGES: Entry[] = [
   { path: "/esim", priority: 0.8, changeFrequency: "monthly" },
   { path: "/travel", priority: 0.7, changeFrequency: "monthly" },
   { path: "/faq", priority: 0.6, changeFrequency: "monthly" },
+  // HOLD for AI agents: the connect steps and the developer reference. Beta,
+  // invite only, but the page is public: it is what a developer searching
+  // "hold mcp" or "x402 pay" should land on.
+  { path: "/agents", priority: 0.6, changeFrequency: "monthly" },
   // Every upcoming event a sponsor can buy into, the way into each event page.
   { path: "/events", priority: 0.6, changeFrequency: "daily" },
   // The technical section. Lower priority than a product page because nobody
