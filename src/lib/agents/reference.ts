@@ -60,7 +60,7 @@ export const SCOPES: { id: Scope; name: string; plain: string; moves: string }[]
     id: "pay",
     name: "Pay within limits",
     plain:
-      "Pays for APIs on the sites you allowed without asking each time. With Propose payments on too, a payment in dollars or euros to a person you allowed goes out at once instead of waiting for you. No assistant gets it when it connects: you turn it on later, per assistant, in the HOLD app under Settings > AI assistants.",
+      "Pays for APIs on the sites you allowed, and sends dollars or euros to the people you allowed, without asking each time. No assistant gets it when it connects: you turn it on later, per assistant, in the HOLD app under Settings > AI assistants. Turn it off there and payments stop at once.",
     moves: "Only inside the limits you set. Over a limit, or to a site or person not on its list, it asks you first.",
   },
 ];
@@ -213,7 +213,7 @@ export const TOOLS: Tool[] = [
     title: "Propose a payment",
     readOnly: false,
     description:
-      "Proposes paying a HOLD user by @handle, in USD or EUR; the user approves or declines in the app with Face ID. With the pay permission, an amount to a handle the user allowed, inside the limits of its currency, is sent at once (status paid). Over the limits, or to someone not on the list, it returns status waiting_for_approval and an actionId; read the outcome with get_action.",
+      "Proposes paying a HOLD user by @handle, in USD or EUR; the user approves or declines in the app with Face ID. With the pay permission, an amount to a handle the user allowed, inside the limits of its currency, is sent at once (status paid). Over the limits, or to someone not on the list, it returns status waiting_for_approval and an actionId; read the outcome with get_action. Reached by propose_payments or pay. With pay alone, a send that would need approval is refused (not_allowed) instead of becoming a proposal.",
     inputs: [
       { name: "toHandle", type: "string", required: true, note: "The HOLD @handle to pay: a to z, 0 to 9, _ . -, 2 to 50 characters, @ optional" },
       { name: "amount", type: MONEY, required: true, note: 'e.g. "20.00"' },
@@ -275,7 +275,7 @@ export const TOOLS: Tool[] = [
     title: "Check a proposal",
     readOnly: true,
     description:
-      "Works with Propose payments or with Pay within limits. The status of a proposal or a payment waiting for approval: pending, approved (HOLD is paying it now), completed (for a payment HOLD made, result has the payment and, for an x402 call, the paid response), failed (result.error says why), declined or expired (24 hours).",
+      "Reached by propose_payments or pay. The status of a proposal or a payment waiting for approval: pending, approved (HOLD is paying it now), completed (for a payment HOLD made, result has the payment and, for an x402 call, the paid response), failed (result.error says why), declined or expired (24 hours).",
     inputs: [{ name: "id", type: "uuid", required: true, note: "The id a propose_* tool returned, or the actionId of a payment waiting for approval" }],
   },
   {
@@ -324,8 +324,9 @@ export const OAUTH = {
   refreshTokenDays: 30,
   proposalHours: 24,
   maxPendingProposals: 20,
-  /** Per assistant (connection); only tools/call counts. */
+  /** Per assistant (connection): MCP_CALLS_PER_MINUTE and MCP_MESSAGES_PER_MINUTE. */
   callsPerMinute: 60,
+  messagesPerMinute: 300,
   /** agents-oauth.router.ts: POST /oauth/register, per IP address. */
   registrationsPerHour: 20,
 } as const;

@@ -229,7 +229,8 @@ export default function AgentsPage() {
               <p className="mt-4 text-body text-text-muted leading-relaxed">
                 Six permissions. You pick five of them when you connect. The sixth, Pay within
                 limits, is never asked for at connect. You turn it on later for each assistant in
-                the HOLD app, under Settings &gt; AI assistants, and it works at once.
+                the HOLD app, under Settings &gt; AI assistants, and it works at once. Turn it off
+                there and payments stop at once.
               </p>
             </div>
 
@@ -324,8 +325,8 @@ export default function AgentsPage() {
                 strings, never floats.
               </p>
               <p className="mt-4 text-body text-text-muted leading-relaxed">
-                Rate limits: each assistant gets {OAUTH.callsPerMinute} tool calls a minute, and
-                only <InlineCode>tools/call</InlineCode> counts. Connecting has its own limits,
+                Rate limits: each assistant gets {OAUTH.callsPerMinute} tool calls and{" "}
+                {OAUTH.messagesPerMinute} messages a minute. Connecting has its own limits,
                 such as {OAUTH.registrationsPerHour} client registrations an hour. Over a limit
                 you get <InlineCode>429</InlineCode> with <InlineCode>Retry-After</InlineCode>.
               </p>
