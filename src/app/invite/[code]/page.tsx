@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 
 import { productUrl } from "@/lib/app/paths";
+import { withStoreAttribution } from "@/lib/analytics/mixpanel";
 import { APP_STORE_URL, PLAY_STORE_URL } from "@/lib/appLinks";
 
 export default function InviteRedirect() {
@@ -68,9 +69,9 @@ export default function InviteRedirect() {
       const isAndroid = /Android/.test(navigator.userAgent);
 
       if (isIOS) {
-        window.location.href = APP_STORE_URL;
+        window.location.href = withStoreAttribution(APP_STORE_URL);
       } else if (isAndroid) {
-        window.location.href = PLAY_STORE_URL;
+        window.location.href = withStoreAttribution(PLAY_STORE_URL);
       } else {
         // Desktop fallback — go to homepage
         window.location.href = "https://hihodl.xyz";

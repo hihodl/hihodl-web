@@ -103,7 +103,7 @@ const INFRASTRUCTURE: Provider[] = [
   {
     name: "Mixpanel",
     what: "Product analytics.",
-    data: "Usage events, so we can see which parts of the app are used.",
+    data: "Usage events, so we can see which parts of the app and of this website are used.",
   },
   {
     name: "Resend",
