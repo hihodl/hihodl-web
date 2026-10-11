@@ -5,6 +5,8 @@
  * one of these, this file is wrong until it is updated:
  *
  *   server/services/agents/config.ts        scopes, public base, TTLs, rate limit
+ *   server/api/agents-oauth.router.ts       the connect and register rate limits
+ *   server/services/x402/config.ts          the beta list, Bazaar listing
  *   server/services/agents/mcp-tools.ts     TOOL_INPUTS, TOOL_SCOPES, TOOL_INFO
  *   server/services/agents/markets/tools.ts MARKET_TOOL_INPUTS, _SCOPES, _INFO
  *   server/services/agents/markets/rules.ts SWAP_TOKENS, SAVINGS_TOKENS, XSTOCK_*
@@ -39,7 +41,7 @@ export const SCOPES: { id: Scope; name: string; plain: string; moves: string }[]
     id: "markets",
     name: "Markets",
     plain: "Live prices, your portfolio with what you paid, the day's biggest movers, Savings rates and a quote for a conversion.",
-    moves: "Moves nothing.",
+    moves: "Reads only. Conversions, investing and taking money out of Savings are proposals, under Propose payments.",
   },
   {
     id: "request_money",
@@ -58,7 +60,7 @@ export const SCOPES: { id: Scope; name: string; plain: string; moves: string }[]
     id: "pay",
     name: "Pay within limits",
     plain:
-      "Pays for APIs on the sites you allowed, and sends dollars or euros to the people you allowed, without asking each time.",
+      "Pays for APIs on the sites you allowed without asking each time. With Propose payments on too, a payment in dollars or euros to a person you allowed goes out at once instead of waiting for you. No assistant gets it when it connects: you turn it on later, per assistant, in the HOLD app under Settings > AI assistants.",
     moves: "Only inside the limits you set. Over a limit, or to a site or person not on its list, it asks you first.",
   },
 ];
@@ -263,8 +265,9 @@ export const TOOLS: Tool[] = [
     scope: "propose_payments",
     title: "Propose taking money out of Savings",
     readOnly: false,
-    description: "Proposes moving dollars from Savings back to the main account. Nothing moves until the user confirms in the app.",
-    inputs: [{ name: "amount", type: MONEY, required: false, note: "Dollars; leave out to take everything out" }],
+    description:
+      "Proposes moving dollars from Savings back to the main account, from the stablecoin the user holds most of in Savings. Nothing moves until the user confirms in the app.",
+    inputs: [{ name: "amount", type: MONEY, required: false, note: "Dollars. Leave it out to take all of that one stablecoin out; other stablecoins in Savings stay" }],
   },
   {
     name: "get_action",
@@ -272,7 +275,7 @@ export const TOOLS: Tool[] = [
     title: "Check a proposal",
     readOnly: true,
     description:
-      "The status of a proposal or a payment waiting for approval: pending, approved (HOLD is paying it now), completed (for a payment HOLD made, result has the payment and, for an x402 call, the paid response), failed (result.error says why), declined or expired (24 hours).",
+      "Works with Propose payments or with Pay within limits. The status of a proposal or a payment waiting for approval: pending, approved (HOLD is paying it now), completed (for a payment HOLD made, result has the payment and, for an x402 call, the paid response), failed (result.error says why), declined or expired (24 hours).",
     inputs: [{ name: "id", type: "uuid", required: true, note: "The id a propose_* tool returned, or the actionId of a payment waiting for approval" }],
   },
   {
@@ -321,7 +324,10 @@ export const OAUTH = {
   refreshTokenDays: 30,
   proposalHours: 24,
   maxPendingProposals: 20,
+  /** Per assistant (connection); only tools/call counts. */
   callsPerMinute: 60,
+  /** agents-oauth.router.ts: POST /oauth/register, per IP address. */
+  registrationsPerHour: 20,
 } as const;
 
 export const ENDPOINTS: { method: string; path: string; what: string }[] = [

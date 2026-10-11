@@ -18,7 +18,7 @@ import {
 } from "@/lib/agents/reference";
 
 /**
- * /agents — HOLD for AI agents: how to connect Claude, ChatGPT or Cursor, what
+ * /agents: HOLD for AI agents. How to connect Claude, Claude Code, ChatGPT or Cursor, what
  * each permission lets an assistant do, the limits, and the developer reference.
  *
  * Every fact on this page comes from src/lib/agents/reference.ts, which names
@@ -63,6 +63,8 @@ const CURSOR_CONFIG = `{
   }
 }`;
 
+const CLAUDE_CODE_ADD = `claude mcp add --transport http hold ${MCP_URL}`;
+
 const CURL_QUOTE = `curl -i "${API_BASE}/x402/pay/@yourhandle?amount=1.50&note=Thanks"`;
 
 const CURL_PAY = `curl -i "${API_BASE}/x402/pay/@yourhandle?amount=1.50&note=Thanks" \\
@@ -75,11 +77,11 @@ const FAQ = [
   },
   {
     q: "Which assistants work?",
-    a: "Any assistant that speaks MCP with OAuth: Claude, ChatGPT and Cursor among them. They all use the same address and the same approval in the HOLD app.",
+    a: "Any assistant that speaks MCP with OAuth: Claude, Claude Code, ChatGPT and Cursor among them. They all use the same address and the same approval in the HOLD app.",
   },
   {
     q: "Can it spend my money without asking?",
-    a: "Only if you give it the pay permission, and then only inside the limits you set: the money you set aside, a daily budget, a per payment limit, and the sites and people you allowed. Everything else waits for you to approve it in the app.",
+    a: "Only if you turn on the pay permission for it in the HOLD app, under Settings > AI assistants, and then only inside the limits you set: the money you set aside, a daily budget, a per payment limit, and the sites and people you allowed. Everything else waits for you to approve it in the app.",
   },
   {
     q: "What if it goes over its limit?",
@@ -159,11 +161,23 @@ export default function AgentsPage() {
               <CopyLine value={MCP_URL} />
             </div>
 
-            <div className="mt-14 grid grid-cols-1 lg:grid-cols-3 gap-5">
+            <div className="mt-14 grid grid-cols-1 md:grid-cols-2 gap-5">
               <ClientCard name="Claude">
                 <DocStep n={1} title="Add a connector" body="In Claude, open Settings, then Connectors, and choose Add custom connector." />
                 <DocStep n={2} title="Paste the address" body={`Name it HOLD and paste ${MCP_URL}. Then press Connect.`} />
                 <DocStep n={3} title="Approve on your phone" body="A HOLD page opens with a code. Approve it in the HOLD app and you are back in Claude." />
+              </ClientCard>
+              <ClientCard name="Claude Code">
+                <DocStep n={1} title="Add the server" body="In a terminal, run:" />
+                <div className="pl-12">
+                  <Code>{CLAUDE_CODE_ADD}</Code>
+                </div>
+                <DocStep n={2} title="Sign in" body="In Claude Code, type /mcp, pick hold and sign in. A HOLD page opens with a code." />
+                <DocStep
+                  n={3}
+                  title="Approve on your phone"
+                  body="HOLD shows it as Unverified app, because it signs in through your own computer. That is expected. Approve it in the HOLD app."
+                />
               </ClientCard>
               <ClientCard name="ChatGPT">
                 <DocStep n={1} title="Add a connector" body="In ChatGPT settings, create a custom connector for a remote MCP server." />
@@ -196,7 +210,7 @@ export default function AgentsPage() {
                 <DocStep
                   n={3}
                   title="You choose the permissions"
-                  body="Keep the ones you want, drop the rest, and approve with Face ID. The page sends you back to your assistant, connected."
+                  body="Keep the ones you want, drop the rest, and approve with Face ID. The page sends you back to your assistant, connected. Paying by itself is not on this list: you turn it on later in the app."
                 />
               </div>
             </div>
@@ -213,7 +227,9 @@ export default function AgentsPage() {
                 It never moves your money without your limits or your approval.
               </p>
               <p className="mt-4 text-body text-text-muted leading-relaxed">
-                Six permissions, and you pick them one by one when you connect.
+                Six permissions. You pick five of them when you connect. The sixth, Pay within
+                limits, is never asked for at connect. You turn it on later for each assistant in
+                the HOLD app, under Settings &gt; AI assistants, and it works at once.
               </p>
             </div>
 
@@ -304,9 +320,14 @@ export default function AgentsPage() {
               <h2 className="mt-4 font-display text-h2 font-light text-text">The reference</h2>
               <p className="mt-6 text-body text-text-muted leading-relaxed">
                 An MCP server over Streamable HTTP at <InlineCode>{MCP_URL}</InlineCode>, with
-                OAuth 2.1. A token sees only the tools its permissions reach, and each connection
-                gets {OAUTH.callsPerMinute} tool calls a minute. Amounts are decimal strings,
-                never floats.
+                OAuth 2.1. A token sees only the tools its permissions reach. Amounts are decimal
+                strings, never floats.
+              </p>
+              <p className="mt-4 text-body text-text-muted leading-relaxed">
+                Rate limits: each assistant gets {OAUTH.callsPerMinute} tool calls a minute, and
+                only <InlineCode>tools/call</InlineCode> counts. Connecting has its own limits,
+                such as {OAUTH.registrationsPerHour} client registrations an hour. Over a limit
+                you get <InlineCode>429</InlineCode> with <InlineCode>Retry-After</InlineCode>.
               </p>
             </div>
 
@@ -404,7 +425,8 @@ export default function AgentsPage() {
                 <div className="mt-6 space-y-4 text-body text-text-muted leading-relaxed">
                   <p>
                     Any agent can pay a HOLD user in USDC on Base, straight to their own address.
-                    Ask without a payment header and you get the 402:
+                    By @handle, the user&rsquo;s personal link must be on Base and active. Amounts
+                    go from $0.01 to $1,000. Ask without a payment header and you get the 402:
                   </p>
                 </div>
                 <Code>{CURL_QUOTE}</Code>
@@ -429,7 +451,9 @@ export default function AgentsPage() {
               <RouteTable rows={X402_ROUTES} />
               <p className="mt-4 text-small text-text-faint">
                 A link pays at its own amount, or at the <InlineCode>amount</InlineCode> you pass when
-                the link leaves it open. In the beta, only invited HOLD users can be paid this way.
+                the link leaves it open. Recurring links, group links and euro links cannot be paid
+                by agents. A link its owner chose to list can be listed in Coinbase&rsquo;s x402
+                Bazaar. In the beta, only invited HOLD users can be paid this way.
               </p>
             </div>
 
@@ -454,7 +478,8 @@ export default function AgentsPage() {
                     {i < SCOPES.length - 1 ? " " : "."}
                   </span>
                 ))}{" "}
-                Proposals expire after {OAUTH.proposalHours} hours, and at most{" "}
+                A client never gets <InlineCode>pay</InlineCode> at connect; the user turns it on
+                in the app, and it applies at once. Proposals expire after {OAUTH.proposalHours} hours, and at most{" "}
                 {OAUTH.maxPendingProposals} wait at once.
               </p>
             </div>
