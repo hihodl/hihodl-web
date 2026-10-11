@@ -82,6 +82,10 @@ const FAQ = [
     a: "Only if you give it the pay permission, and then only inside the limits you set: the money you set aside, a daily budget, a per payment limit, and the sites and people you allowed. Everything else waits for you to approve it in the app.",
   },
   {
+    q: "What if it goes over its limit?",
+    a: "Nothing is paid. The payment comes to your HOLD app instead, with the amount and who it is for. Approve it and HOLD pays it once, decline it, or let it expire after 24 hours. Always allow puts that site or person on the list for next time. The money you set aside is a hard ceiling an approval cannot lift.",
+  },
+  {
     q: "How do I disconnect an assistant?",
     a: "From the HOLD app, at any time. Its access ends at once, together with every token it holds.",
   },
@@ -209,7 +213,7 @@ export default function AgentsPage() {
                 It never moves your money without your limits or your approval.
               </p>
               <p className="mt-4 text-body text-text-muted leading-relaxed">
-                Five permissions, and you pick them one by one when you connect.
+                Six permissions, and you pick them one by one when you connect.
               </p>
             </div>
 
@@ -253,15 +257,23 @@ export default function AgentsPage() {
               />
               <DocCard
                 title="Sites"
-                body={`An assistant pays only the sites you list, up to ${LIMITS.maxDomains}, by exact name: allowing api.example.com does not allow example.com. No sites listed, no API payments.`}
+                body={`An assistant pays by itself only on the sites you list, up to ${LIMITS.maxDomains}, by exact name: allowing api.example.com does not allow example.com. Any other site, it asks you first.`}
               />
               <DocCard
                 title="People"
-                body={`Up to ${LIMITS.maxHandles} @handles it may send dollars to without asking, inside the limits. Any other person, or any amount over the limits, comes to you as a proposal.`}
+                body={`Up to ${LIMITS.maxHandles} @handles it may send to without asking, inside the limits. Any other person, it asks you first.`}
               />
               <DocCard
                 title="Every payment, in view"
                 body={`Every payment is in your Activity, and from $${LIMITS.pushFrom} you get a notification. If a paid call fails, the money comes back to you.`}
+              />
+              <DocCard
+                title="Euros too"
+                body="Set aside euros as well, in EURC on Base, with their own daily budget and per payment limit, and your assistant can send euros to the people you allowed. Paid sites always charge in dollars."
+              />
+              <DocCard
+                title="Over a limit, it asks"
+                body="A payment over a limit, or to a site or person not on the list, is not refused and not paid: it lands in your HOLD app. Approve it and HOLD pays it once; tap Always allow and that site or person goes on the list."
               />
             </div>
 
@@ -269,8 +281,14 @@ export default function AgentsPage() {
               <DocLimit title="Cards and payouts are blocked.">
                 <p>
                   Gift cards, prepaid and virtual cards, push to card, Venmo, PayPal and bank
-                  payouts are refused, even on a site you allowed. An assistant&rsquo;s budget
-                  pays for services; it never turns into cash somewhere else.
+                  payouts are refused, even on a site you allowed, and even if you approve them.
+                  An assistant&rsquo;s budget pays for services; it never turns into cash
+                  somewhere else.
+                </p>
+                <p>
+                  An approval never lifts the money you set aside or your balance either. And
+                  HOLD can pause payments by assistants at any time; while paused, nothing is
+                  charged.
                 </p>
               </DocLimit>
             </div>
@@ -366,6 +384,17 @@ export default function AgentsPage() {
                     <InlineCode>find_paid_services</InlineCode> searches Coinbase&rsquo;s x402
                     Bazaar for APIs HOLD can pay, and <InlineCode>get_spending</InlineCode> tells
                     the assistant what it has left before it tries.
+                  </p>
+                  <p>
+                    Over a limit, or on a site not on the list, nothing is paid and the tool
+                    returns <InlineCode>{'status: "waiting_for_approval"'}</InlineCode> with an{" "}
+                    <InlineCode>actionId</InlineCode>. Once the user approves, HOLD makes the call
+                    and pays it once; <InlineCode>get_action</InlineCode> then returns{" "}
+                    <InlineCode>completed</InlineCode> with the paid response, or{" "}
+                    <InlineCode>failed</InlineCode>, <InlineCode>declined</InlineCode> or{" "}
+                    <InlineCode>expired</InlineCode>. While payments are paused, the pay tools
+                    return <InlineCode>paused</InlineCode> and nothing is charged; do not retry
+                    straight away.
                   </p>
                 </div>
               </div>
