@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 
+import { PayLinkViewed } from "@/components/pay-links/PayLinkViewed";
 import { PayPage, type PayPageState } from "@/components/pay-links/PayPage";
 import { payPageMetadata } from "@/lib/pay-links/metadata";
 import { payPreview } from "@/lib/pay-links/og-copy";
@@ -61,7 +62,12 @@ export default async function PayLinkPage({ params }: { params: { code: string }
           // Nothing the owner wrote is shown on a link we took down.
           { kind: "disabled" };
 
-  return <PayPage state={state} />;
+  return (
+    <>
+      <PayPage state={state} />
+      <PayLinkViewed code={raw} state={state.kind} />
+    </>
+  );
 }
 
 /** A disabled link, or one that comes back without its title or amount, shows nothing the owner wrote. */

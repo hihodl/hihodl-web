@@ -36,6 +36,7 @@ import { CheckoutError, checkoutKey, rotateCheckoutKey } from "@/lib/ad-space/ch
 import { currencySymbol, fmtFiat } from "@/lib/app/i18n/format";
 import { ensureRates, useFormat, useT } from "@/lib/app/i18n/react";
 import { getPrefs } from "@/lib/app/i18n/store";
+import { withStoreAttribution } from "@/lib/analytics/mixpanel";
 import { APP_STORE_URL, PLAY_STORE_URL } from "@/lib/appLinks";
 import {
   CARD_SPENT_KEY_CODES,
@@ -438,7 +439,7 @@ function Shown({ link }: { link: ShownPayLink }) {
       setSheet("hold");
       return;
     }
-    const store = platform === "ios" ? APP_STORE_URL : PLAY_STORE_URL;
+    const store = withStoreAttribution(platform === "ios" ? APP_STORE_URL : PLAY_STORE_URL);
     const scheme = appSchemeUrl(link);
     if (!scheme) {
       window.location.href = store;
