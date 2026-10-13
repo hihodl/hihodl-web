@@ -9,6 +9,7 @@ const shell = {
   "nav.stays": "Stays",
   "nav.esim": "eSIM",
   "nav.spaces": "Spaces",
+  "nav.partners": "Partners",
   "nav.menu": "Menu",
   "nav.account": "Account",
   "nav.wallet": "Wallet",
