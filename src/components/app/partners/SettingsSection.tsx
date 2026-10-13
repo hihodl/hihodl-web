@@ -70,8 +70,14 @@ function BillingForm({ current, onSaved }: { current: Billing | null; onSaved: (
   useEffect(() => setSaved(false), [d]);
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((x) => ({ ...x, [k]: v }));
   const company = d.entity === "company";
+  // Nothing changed, nothing to send: a save with changes sends the details back to HOLD for a check.
+  const changed =
+    !current ||
+    (["entity", "legalName", "taxId", "vatId", "address", "country", "email"] as const).some(
+      (k) => String(d[k] ?? "").trim() !== String(current[k] ?? "").trim(),
+    );
   const ready =
-    !busy && d.legalName.trim().length >= 2 && d.address.trim().length >= 5 && /^[A-Z]{2}$/.test(d.country) && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email.trim()) && (!company || !!d.taxId?.trim());
+    changed && !busy && d.legalName.trim().length >= 2 && d.address.trim().length >= 5 && /^[A-Z]{2}$/.test(d.country) && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email.trim()) && (!company || !!d.taxId?.trim());
 
   async function submit(e: FormEvent) {
     e.preventDefault();

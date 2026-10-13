@@ -39,30 +39,43 @@ export function OverviewSection({
 }) {
   const t = data.totals;
   const recent = usePaged<Commission>("partners/me/commissions", { scope, limit: "6" });
-  const columns = useMemo(() => commissionColumns(scope).filter((c) => ["bookedAt", "kind", "traveller", "commission", "status"].includes(c.key)), [scope]);
+  const columns = useMemo(() => commissionColumns(scope).filter((c) => ["bookedAt", "kind", "traveller", "commission", "mine", "status"].includes(c.key)), [scope]);
   const team = scope === "team";
 
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-        <KpiTile label="Link visits" value={t.visits.toLocaleString("en-US")} note="Opens of your invite pages" />
-        <KpiTile label="Signups" value={t.signups.toLocaleString("en-US")} note={team ? "Through the team's links" : "Through your links"} />
+        <KpiTile label="Link visits" value={t.visits.toLocaleString("en-US")} note="Invite page opens" />
+        <KpiTile label="Signups" value={t.signups.toLocaleString("en-US")} note={team ? "Via the team's links" : "Via your links"} />
         <KpiTile
           label="Travellers who booked"
           value={t.travellers.toLocaleString("en-US")}
           note={t.signups ? `${Math.round(t.conversion * 100)}% of signups` : "Of your signups"}
         />
-        <KpiTile label="Bookings" value={t.bookings.toLocaleString("en-US")} note="Stays, flights and eSIMs" />
-        <KpiTile label="Earned" value={usd(t.earnedUsdc)} note={`${usd(t.receivedUsdc)} received`} attention={t.earnedUsdc > 0} />
+        <KpiTile label="Bookings" value={t.bookings.toLocaleString("en-US")} note="Stays, flights, eSIM" />
+        {team || paid ? (
+          <KpiTile
+            label={team ? "Earned" : "Earned by you"}
+            value={usd(t.earnedUsdc)}
+            note={!team && t.generatedUsdc > t.earnedUsdc ? `Of ${usd(t.generatedUsdc)} made` : `${usd(t.receivedUsdc)} received`}
+            attention={t.earnedUsdc > 0}
+          />
+        ) : (
+          // Owner mode: a member is not paid; what their travellers made goes to the team owner.
+          <KpiTile label="Commission made" value={usd(t.generatedUsdc)} note="Paid to the team owner" />
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
-        <DeskPanel title="Where the money is" meta={team ? "The whole team" : "What you brought"}>
+        <DeskPanel
+          title="Where the money is"
+          meta={team ? "The whole team" : paid ? "Paid to you, from the travellers you brought" : "Your team is paid through its owner"}
+        >
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <Stat label="Pending" value={usd(t.pendingUsdc)} tone="blue" note="Trip not taken yet" />
-            <Stat label="Payable" value={usd(t.payableUsdc)} tone="amber" note="Goes out next payout" />
+            <Stat label="Payable" value={usd(t.payableUsdc)} tone="amber" note="In the next payout" />
             <Stat label="Paid" value={usd(t.paidUsdc)} tone="green" note="Sent to Savings" />
-            <Stat label="Received by you" value={usd(data.mine.receivedUsdc)} note={`${usd(data.mine.payableUsdc)} payable to you`} />
+            <Stat label="Received by you" value={usd(data.mine.receivedUsdc)} note={`${usd(data.mine.payableUsdc)} to come`} />
           </div>
           <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-white/[0.06] pt-3 text-[13px]">
             <span className="flex items-center gap-2 font-bold text-white">
@@ -117,7 +130,8 @@ export function OverviewSection({
         </div>
       </DeskPanel>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)]">
+      {/* The link card needs the width for its QR beside the link: side by side only on very wide screens. */}
+      <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)]">
         <LinkCard partner={data.partner} link={link} onSaved={onLinkSaved} canEdit={data.me.role === "owner"} />
         <DeskPanel
           flush
@@ -171,8 +185,9 @@ function Bars({ title, values, labels, format, color }: { title: string; values:
       </div>
       <div className="mt-1.5 flex gap-1">
         {labels.map((l, i) => (
-          <span key={i} className={`min-w-0 flex-1 truncate text-center text-[10.5px] text-white/45 ${i % 2 ? "hidden sm:block" : ""}`}>
-            {l}
+          // Every third month named (and the current one): twelve names never fit a third of the row.
+          <span key={i} className="min-w-0 flex-1 overflow-visible whitespace-nowrap text-center text-[10.5px] text-white/45">
+            {i % 3 === 2 || i === labels.length - 1 ? l : ""}
           </span>
         ))}
       </div>

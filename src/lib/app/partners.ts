@@ -120,6 +120,8 @@ export interface PartnerDashboard {
     bookings: number;
     conversion: number;
     earnedUsdc: number;
+    /** Commission these travellers made for the whole team. Equals earnedUsdc in team scope. */
+    generatedUsdc: number;
     pendingUsdc: number;
     payableUsdc: number;
     paidUsdc: number;
@@ -135,6 +137,7 @@ export interface PartnerDashboard {
   billing: BillingState;
 }
 
+/** One booking (a clawback is its own row), however many cuts it was split into. */
 export interface Commission {
   id: string;
   kind: BookingKind;
@@ -145,13 +148,14 @@ export interface Commission {
   linkCode: string | null;
   marginUsd: number;
   shareBps: number;
+  /** What the booking earned the team, every cut. */
   commissionUsdc: number;
-  cut: "partner" | "member";
-  /** "me", or the payee's name. */
-  payee: string;
+  /** The part paid to you. 0 when none of it is yours. */
+  mineUsdc: number;
+  /** The member's cut in split mode, else 0. */
+  memberUsdc: number;
   status: CommissionStatus;
   payableAfter: string;
-  payoutId: string | null;
   clawback: boolean;
   voidReason: string | null;
 }
@@ -301,7 +305,7 @@ export interface Page<T> {
   scope: Scope;
   items: T[];
   nextCursor: string | null;
-  total?: { count?: number; commissionUsdc?: number; sentUsdc?: number };
+  total?: { count?: number; commissionUsdc?: number; mineUsdc?: number; sentUsdc?: number };
 }
 
 /* ── Calls ────────────────────────────────────────────────────────── */

@@ -99,7 +99,7 @@ export function DeskPanel({ title, meta, actions, children, flush = false }: { t
 }
 
 export const smallBtn =
-  "inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-white/[0.14] bg-white/[0.08] px-3.5 text-[13px] font-bold text-white transition-colors hover:bg-white/[0.14] disabled:cursor-not-allowed disabled:opacity-50";
+  "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-white/[0.14] bg-white/[0.08] px-3.5 text-[13px] font-bold text-white transition-colors hover:bg-white/[0.14] disabled:cursor-not-allowed disabled:opacity-50";
 export const amberBtn =
   "inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-amber px-4 text-[13px] font-extrabold text-[#0F0F1A] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50";
 
@@ -195,7 +195,8 @@ export type Column<T> = {
   title: string;
   align?: "left" | "right";
   /** Hidden under this breakpoint, so a phone keeps the columns that matter. */
-  hideBelow?: "sm" | "md" | "lg" | "xl";
+  /** Viewport breakpoints. The desk's own nav and the app's sidebar take ~480px, so "2xl" (1536) is a wide table's friend. */
+  hideBelow?: "sm" | "md" | "lg" | "xl" | "2xl";
   render: (row: T) => ReactNode;
   className?: string;
 };
@@ -205,6 +206,7 @@ const HIDE: Record<NonNullable<Column<unknown>["hideBelow"]>, string> = {
   md: "hidden md:table-cell",
   lg: "hidden lg:table-cell",
   xl: "hidden xl:table-cell",
+  "2xl": "hidden 2xl:table-cell",
 };
 
 export function DataTable<T>({
@@ -225,14 +227,14 @@ export function DataTable<T>({
   }
   return (
     <div className="min-w-0 overflow-x-auto">
-      <table className="w-full min-w-[560px] border-collapse text-[13.5px]">
+      <table className="w-full border-collapse text-[13.5px] sm:min-w-[560px]">
         <thead>
           <tr>
             {columns.map((c) => (
               <th
                 key={c.key}
                 scope="col"
-                className={`sticky top-0 whitespace-nowrap border-b border-white/[0.08] px-3 py-2.5 text-[11px] font-bold uppercase tracking-[0.6px] text-[#9FB7C2] first:pl-4 last:pr-4 sm:first:pl-5 sm:last:pr-5 ${
+                className={`sticky top-0 whitespace-nowrap border-b border-white/[0.08] px-2 py-2.5 text-[11px] sm:px-3 font-bold uppercase tracking-[0.6px] text-[#9FB7C2] first:pl-4 last:pr-4 sm:first:pl-5 sm:last:pr-5 ${
                   c.align === "right" ? "text-right" : "text-left"
                 } ${c.hideBelow ? HIDE[c.hideBelow] : ""}`}
               >
@@ -251,7 +253,7 @@ export function DataTable<T>({
               {columns.map((c) => (
                 <td
                   key={c.key}
-                  className={`px-3 py-3 align-middle text-white/90 first:pl-4 last:pr-4 sm:first:pl-5 sm:last:pr-5 ${c.align === "right" ? "text-right tabular-nums" : ""} ${
+                  className={`px-2 py-3 align-middle sm:px-3 text-white/90 first:pl-4 last:pr-4 sm:first:pl-5 sm:last:pr-5 ${c.align === "right" ? "text-right tabular-nums" : ""} ${
                     c.hideBelow ? HIDE[c.hideBelow] : ""
                   } ${c.className ?? ""}`}
                 >

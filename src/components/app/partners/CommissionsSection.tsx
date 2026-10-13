@@ -34,6 +34,7 @@ export function commissionColumns(scope: Scope): Column<Commission>[] {
     {
       key: "kind",
       title: "Product",
+      hideBelow: "md",
       render: (c) => {
         const k = KIND[c.kind] ?? KIND.stay;
         return (
@@ -46,22 +47,26 @@ export function commissionColumns(scope: Scope): Column<Commission>[] {
     },
     { key: "traveller", title: "Traveller", render: (c) => <span className="font-bold text-white">{c.traveller}</span> },
     { key: "member", title: "Brought by", hideBelow: "lg", render: (c) => c.memberName ?? <Muted>Partner</Muted> },
-    { key: "link", title: "Link", hideBelow: "xl", render: (c) => (c.linkCode ? <span className="font-mono text-[12.5px] text-white/70">{c.linkCode}</span> : <Muted>Trip</Muted>) },
-    { key: "margin", title: "HOLD margin", align: "right", hideBelow: "md", render: (c) => usd(c.marginUsd) },
-    { key: "share", title: "Share", align: "right", hideBelow: "lg", render: (c) => pct(c.shareBps) },
+    { key: "margin", title: "HOLD margin", align: "right", hideBelow: "2xl", render: (c) => usd(c.marginUsd) },
     {
       key: "commission",
       title: "Commission",
       align: "right",
       render: (c) => (
-        <span className={`font-extrabold ${c.status === "void" ? "text-white/40 line-through" : c.clawback ? "text-white/60" : "text-white"}`}>{usd(c.commissionUsdc)}</span>
+        <span className={`whitespace-nowrap font-extrabold ${c.status === "void" ? "text-white/40 line-through" : c.clawback ? "text-white/60" : "text-white"}`}>{usd(c.commissionUsdc)}</span>
       ),
     },
     {
-      key: "payee",
-      title: "Paid to",
-      hideBelow: "md",
-      render: (c) => (c.payee === "me" ? "You" : c.payee),
+      key: "mine",
+      title: "Your part",
+      align: "right",
+      hideBelow: "sm",
+      render: (c) =>
+        c.mineUsdc ? (
+          <span className="whitespace-nowrap font-bold text-amber">{usd(c.mineUsdc)}</span>
+        ) : (
+          <Muted>{c.memberUsdc ? "Member's" : "None"}</Muted>
+        ),
     },
     {
       key: "status",
@@ -69,7 +74,7 @@ export function commissionColumns(scope: Scope): Column<Commission>[] {
       render: (c) => (
         <span className="inline-flex flex-col items-start gap-0.5">
           <CommissionStatusPill c={c} />
-          {c.status === "pending" && c.payableAfter ? <span className="whitespace-nowrap text-[11.5px] text-white/45">after {dayLabel(c.payableAfter)}</span> : null}
+          {c.status === "pending" && c.payableAfter ? <span className="hidden whitespace-nowrap text-[11.5px] text-white/45 sm:inline">after {dayLabel(c.payableAfter)}</span> : null}
         </span>
       ),
     },
@@ -100,7 +105,7 @@ export function CommissionsSection({ scope, trips }: { scope: Scope; trips: Trip
       title="Commissions"
       meta={
         page.total
-          ? `${(page.total.count ?? 0).toLocaleString("en-US")} rows, ${usd(page.total.commissionUsdc ?? 0)} not counting cancelled`
+          ? `${(page.total.count ?? 0).toLocaleString("en-US")} ${page.total.count === 1 ? "booking" : "bookings"}, ${usd(page.total.commissionUsdc ?? 0)} commission, ${usd(page.total.mineUsdc ?? 0)} yours. Cancelled not counted.`
           : "Every booking your travellers made"
       }
       actions={<ExportButton path={`partners/me/export/commissions?${qs}`} name="hold-partners-commissions.csv" />}

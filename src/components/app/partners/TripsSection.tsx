@@ -138,7 +138,7 @@ const peopleColumns: Column<TripDetail["people"][number]>[] = [
         )}
         <span className="flex min-w-0 flex-col">
           <span className="truncate font-bold text-white">{p.name}</span>
-          {p.handle ? <span className="truncate text-[12px] text-white/45">@{p.handle}</span> : null}
+          {p.handle ? <span className="truncate text-[12px] text-white/45">@{p.handle.replace(/^@/, "")}</span> : null}
         </span>
       </span>
     ),
