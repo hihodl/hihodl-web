@@ -21,7 +21,7 @@ import { inputCls, QrDownloads, SlugLine, slugReady, useSlugCheck } from "./kit"
 const smallBtn =
   "inline-flex h-10 items-center justify-center gap-1.5 rounded-[20px] border border-white/[0.14] bg-white/[0.08] px-4 text-[14px] font-bold text-white transition-colors hover:bg-white/[0.14] disabled:cursor-not-allowed disabled:opacity-50";
 
-export function LinkCard({ partner, link, onSaved }: { partner: Partner; link: string; onSaved: (me: PartnerMe) => void }) {
+export function LinkCard({ partner, link, onSaved, canEdit = true }: { partner: Partner; link: string; onSaved: (me: PartnerMe) => void; canEdit?: boolean }) {
   const [editing, setEditing] = useState(false);
   const [raw, setRaw] = useState(partner.slug);
   const [busy, setBusy] = useState(false);
@@ -98,6 +98,7 @@ export function LinkCard({ partner, link, onSaved }: { partner: Partner; link: s
               <p className="mt-2 break-all text-[17px] font-bold text-white">{link.replace(/^https?:\/\//, "")}</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <CopyButton value={link} className={smallBtn} />
+                {canEdit ? (
                 <button
                   type="button"
                   className={smallBtn}
@@ -109,6 +110,7 @@ export function LinkCard({ partner, link, onSaved }: { partner: Partner; link: s
                   <Ion name="create-outline" size={16} />
                   Edit link name
                 </button>
+                ) : null}
               </div>
             </>
           )}
@@ -122,7 +124,7 @@ export function LinkCard({ partner, link, onSaved }: { partner: Partner; link: s
           <div className="w-[168px] overflow-hidden rounded-[16px] bg-white p-1.5">
             <QrCode text={link} title={`QR code for ${link}`} className="block h-auto w-full" />
           </div>
-          <QrDownloads text={link} name={`hold-${partner.slug}-qr`} />
+          <QrDownloads text={link} name={`hold-${link.split("/").pop() || partner.slug}-qr`} />
         </div>
       </div>
     </HoldCard>

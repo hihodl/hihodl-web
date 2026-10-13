@@ -20,7 +20,7 @@ import { productHref } from "@/lib/app/paths";
 export const metadata: Metadata = {
   title: "HOLD Partners",
   description:
-    "For travel agencies, group trip organisers, travel creators and event organisers. Bring your travellers to HOLD and earn a share of our margin on every stay, flight and eSIM they book, paid monthly in USDC.",
+    "For travel agencies, group trip organisers, travel creators, communities and event teams. Bring your travellers to HOLD and earn a share of our margin on every stay, flight and eSIM they book, paid monthly in USDC, with a login for everyone on your team.",
   alternates: { canonical: "/partners" },
 };
 
@@ -48,7 +48,7 @@ export default function PartnersPage() {
                 </p>
                 <div className="mt-10 flex flex-wrap items-center gap-3">
                   <PrimaryAction href={apply}>Become a partner</PrimaryAction>
-                  <SecondaryAction href="#how-it-works">How it works</SecondaryAction>
+                  <SecondaryAction href={apply}>Sign in to your desk</SecondaryAction>
                 </div>
               </div>
               <div className="min-w-0">
@@ -122,6 +122,60 @@ export default function PartnersPage() {
 
         <Block tone="night" hairline="amber">
           <BlockHead
+            title="Bring your whole team"
+            intro="An agency, a community or an event team signs up once. Everyone on it earns with their own login, their own link and their own wallet."
+          />
+          <Rules
+            items={[
+              {
+                title: "One login per person",
+                body: "Each person signs in with Apple, Google or email to their own HOLD account. Nobody shares a password, and nobody sees a wallet that is not theirs.",
+              },
+              {
+                title: "A link for everyone",
+                body: "Invite your team with a link. Each of them gets their own link and QR, and you see who brings which travellers.",
+              },
+              {
+                title: "Pay the team directly",
+                body: "Keep every commission yourself, or give each member a split that HOLD pays straight into their own Savings, every month.",
+              },
+              {
+                title: "Owners, admins, members",
+                body: "Owners decide how the team is paid. Admins invite and manage people. Members see what they brought.",
+              },
+            ]}
+          />
+        </Block>
+
+        <Block tone="abyss" hairline="moonlight">
+          <BlockHead
+            title="A desk built for agencies"
+            intro="Full width, with tables, not a phone screen stretched across your monitor."
+          />
+          <Rules
+            items={[
+              {
+                title: "Every traveller in one table",
+                body: "Who joined, through which link or trip, what they booked and what it earned, filtered by date, product, trip and member.",
+              },
+              {
+                title: "Who paid the deposit",
+                body: "Open a trip and see everyone in it, who has paid the deposit, and what the trip has earned you so far.",
+              },
+              {
+                title: "Exports and statements",
+                body: "Download any list as CSV for your accounting, and a PDF statement for every payout with the transfer that paid it.",
+              },
+              {
+                title: "Numbers that stay put",
+                body: "What you earned and received is counted from the commissions themselves. Spending or moving your money never changes it.",
+              },
+            ]}
+          />
+        </Block>
+
+        <Block tone="night" hairline="amber">
+          <BlockHead
             title="Run the trip from HOLD"
             intro="Partners get the tools to move a group, not only a link."
           />
@@ -150,7 +204,15 @@ export default function PartnersPage() {
 
       <Closing
         line="Your travellers already book somewhere. Let it pay you."
-        body="Apply with your HOLD account. Once you are approved, your link, your trips and your payouts live in one panel."
+        body={
+          <>
+            Apply with your HOLD account. Once you are approved, your link, your trips and your payouts live in one panel.{" "}
+            <a href="/legal/partner-terms" className="underline underline-offset-2 hover:text-white">
+              Read the partner terms
+            </a>
+            .
+          </>
+        }
         actions={
           <>
             <PrimaryAction href={apply}>Become a partner</PrimaryAction>

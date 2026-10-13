@@ -34,7 +34,18 @@ export default function InviteRedirect() {
       .then((body: { data?: Resolved; partner?: Resolved["partner"] } | null) => {
         // The backend's envelope, or a bare body.
         const name = (body?.data ?? body)?.partner?.name;
-        if (typeof name === "string" && name.trim()) setPartnerName(name.trim());
+        if (typeof name === "string" && name.trim()) {
+          setPartnerName(name.trim());
+          // A partner's link: count the open for their desk. A KPI only, so
+          // it is a beacon that nothing waits on.
+          void fetch(`${API_BASE}/partners/visit`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ code }),
+            credentials: "omit",
+            keepalive: true,
+          }).catch(() => undefined);
+        }
       })
       .catch(() => {
         /* the page reads the same without it */

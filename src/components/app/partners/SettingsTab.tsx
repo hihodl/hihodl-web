@@ -8,7 +8,7 @@
 
 import { useState, type FormEvent } from "react";
 
-import { partnerErrorText, updatePartner, type Partner, type PartnerMe } from "@/lib/app/partners";
+import { PARTNER_TERMS_URL, partnerErrorText, updatePartner, type Partner, type PartnerMe } from "@/lib/app/partners";
 
 import { ctaCommit, HoldCard } from "../hold";
 import { Alert } from "../ui";
@@ -21,7 +21,7 @@ const KIND_LABEL: Record<Partner["kind"], string> = {
   other: "Other",
 };
 
-export function SettingsTab({ partner, onSaved }: { partner: Partner; onSaved: (me: PartnerMe) => void }) {
+export function SettingsTab({ partner, onSaved, canEdit = true }: { partner: Partner; onSaved: (me: PartnerMe) => void; canEdit?: boolean }) {
   const [name, setName] = useState(partner.name);
   const [instagram, setInstagram] = useState(partner.instagram ?? "");
   const [website, setWebsite] = useState(partner.website ?? "");
@@ -46,6 +46,12 @@ export function SettingsTab({ partner, onSaved }: { partner: Partner; onSaved: (
         website: website.trim(),
       });
       onSaved(me);
+      // Show what the server kept ("@foo" → "foo", "site.com" → "https://site.com/"), so the form reads as saved.
+      if (me.partner) {
+        setName(me.partner.name);
+        setInstagram(me.partner.instagram ?? "");
+        setWebsite(me.partner.website ?? "");
+      }
       setSaved(true);
     } catch (err) {
       setError(partnerErrorText(err));
@@ -72,10 +78,14 @@ export function SettingsTab({ partner, onSaved }: { partner: Partner; onSaved: (
         </dl>
         <p className="mt-3 text-[12.5px] leading-[18px] text-white/55">
           On every stay, flight and eSIM they book in that time, from the day they sign up or join one of your trips. Your
-          travellers always pay HOLD&rsquo;s own prices.
+          travellers always pay HOLD&rsquo;s own prices.{" "}
+          <a href={PARTNER_TERMS_URL} target="_blank" rel="noopener noreferrer" className="font-bold text-[#8ECAE6] hover:text-white">
+            Read the full terms
+          </a>
         </p>
       </HoldCard>
 
+      {canEdit ? (
       <HoldCard className="p-5">
         <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
           <h2 className="text-[16px] font-bold text-white">Profile</h2>
@@ -128,6 +138,7 @@ export function SettingsTab({ partner, onSaved }: { partner: Partner; onSaved: (
           </button>
         </form>
       </HoldCard>
+      ) : null}
     </div>
   );
 }

@@ -10,7 +10,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { qrModules } from "@/components/ad-space/qr";
-import { checkSlug, linkText, normaliseSlug, partnerErrorText, SLUG_MAX, SLUG_MIN, type SlugAnswer } from "@/lib/app/partners";
+import { checkSlug, linkText, normaliseSlug, PARTNER_TERMS_URL, partnerErrorText, SLUG_MAX, SLUG_MIN, type SlugAnswer } from "@/lib/app/partners";
 
 import { Ion, type IonName } from "../ion";
 
@@ -241,3 +241,19 @@ export function QrDownloads({ text, name }: { text: string; name: string }) {
   );
 }
 
+
+/** "I agree to the HOLD Partners terms". Applying and joining a team both need it ticked. */
+export function TermsCheck({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <label className="flex cursor-pointer items-start gap-3 text-[13.5px] leading-[20px] text-white/75">
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-amber" />
+      <span>
+        I agree to the{" "}
+        <a href={PARTNER_TERMS_URL} target="_blank" rel="noopener noreferrer" className="font-bold text-[#8ECAE6] hover:text-white">
+          HOLD Partners terms
+        </a>
+        , including how commissions are earned, paid and taken back when a booking is cancelled.
+      </span>
+    </label>
+  );
+}
