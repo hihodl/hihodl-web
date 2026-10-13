@@ -73,6 +73,7 @@ const PAGES: Entry[] = [
   // whenever an integration does, which is the whole reason it exists.
   { path: "/legal/providers", priority: 0.3, changeFrequency: "monthly" },
   { path: "/legal/referral-terms", priority: 0.2, changeFrequency: "yearly" },
+  { path: "/legal/partner-terms", priority: 0.2, changeFrequency: "yearly" },
   { path: "/e-sign", priority: 0.2, changeFrequency: "yearly" },
 ];
 

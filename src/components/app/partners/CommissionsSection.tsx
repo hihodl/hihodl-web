@@ -9,7 +9,7 @@
 
 import { useState } from "react";
 
-import { dayLabel, pct, queryOf, usd, useLinks, usePaged, useTeam, type Commission, type CommissionStatus, type Scope, type TripRow } from "@/lib/app/partners";
+import { dayLabel, pct, queryOf, usd, useLinks, usePaged, useTeam, type Commission, type CommissionStatus, type Scope, type TripName } from "@/lib/app/partners";
 
 import { Ion } from "../ion";
 import { DateFilter, DeskPanel, ExportButton, FilterBar, Muted, PagedTable, SelectFilter, type Column } from "./desk";
@@ -86,7 +86,7 @@ export function useFilters(initial: Filters = {}) {
   return { f, set, setMany: (p: Filters) => setF((x) => ({ ...x, ...p })), clear: () => setF({}), active };
 }
 
-export function CommissionsSection({ scope, trips }: { scope: Scope; trips: TripRow[] }) {
+export function CommissionsSection({ scope, trips }: { scope: Scope; trips: TripName[] }) {
   const team = scope === "team";
   const { f, set, setMany, clear, active } = useFilters();
   const page = usePaged<Commission>("partners/me/commissions", { scope, ...f });

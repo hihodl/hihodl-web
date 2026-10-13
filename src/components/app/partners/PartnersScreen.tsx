@@ -22,7 +22,7 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo } from "react";
 
-import { canSeeTeam, usePaged, usePartnerDashboard, usePartnerMe, type PartnerMe, type Scope, type TripRow } from "@/lib/app/partners";
+import { canSeeTeam, usePartnerDashboard, usePartnerMe, useTripNames, type PartnerMe, type Scope } from "@/lib/app/partners";
 
 import { BackHeader, Column, Notice } from "../hold";
 import { ReadFailed } from "../money/kit";
@@ -75,9 +75,9 @@ export function PartnersScreen() {
   useEffect(() => {
     if (servedScope && servedScope !== scope) void me.mutate();
   }, [servedScope, scope, me]);
-  // Trip names for the filters: the most recent 200 is plenty for a select.
-  const tripOptions = usePaged<TripRow>("partners/me/trips", { scope, limit: "200" }, live && section !== "overview");
-  const trips = useMemo(() => tripOptions.items, [tripOptions.items]);
+  // Trip names for the filters: one light read of every trip's id and name.
+  const tripNames = useTripNames(live && section !== "overview", scope);
+  const trips = useMemo(() => tripNames.data ?? [], [tripNames.data]);
 
   /** A write answered with the partner: show it now, then read the rest again. */
   function took(next: PartnerMe) {
@@ -199,7 +199,7 @@ export function PartnersScreen() {
           ) : section === "travellers" ? (
             <TravellersSection scope={scope} trips={trips} />
           ) : section === "trips" ? (
-            <TripsSection scope={scope} active={active} onChanged={() => tripOptions.reload()} />
+            <TripsSection scope={scope} active={active} onChanged={() => void tripNames.mutate()} />
           ) : section === "commissions" ? (
             <CommissionsSection scope={scope} trips={trips} />
           ) : section === "payouts" ? (

@@ -108,6 +108,9 @@ export function JoinScreen({ code }: { code: string }) {
           As {i.role === "admin" ? "an admin" : "a member"}. You get your own link, and you see the travellers you bring and what they earn
           {i.splitBps ? `. You are paid ${pct(i.splitBps)} of the commission on your travellers, straight into your HOLD Savings` : ""}.
         </p>
+        {i.forEmail ? (
+          <p className="mt-2 text-[13px] leading-[19px] text-white/55">This invite is for {i.forEmail}. Sign in with the HOLD account that uses that email.</p>
+        ) : null}
 
         {i.status === "open" && !i.partner.active ? (
           <div className="mt-5">

@@ -278,6 +278,8 @@ export interface InviteInfo {
   role: "admin" | "member";
   splitBps: number;
   invitedBy: string | null;
+  /** Set when the invite is for one email only, masked ("m***@agency.com"). */
+  forEmail?: string | null;
   status: Invite["status"];
   expiresAt: string;
 }
@@ -492,6 +494,22 @@ export function useTripDetail(id: string | null) {
   return useSWR<TripDetail>(uid && id ? ["partners", uid, "trip", id] : null, () => getTripDetail(id!), OPTIONS);
 }
 
+/** A trip's id and name, for filter menus. */
+export interface TripName {
+  id: string;
+  name: string;
+}
+
+/** Every trip's name in the scope (up to 500), one cheap read: the filters' menu. */
+export function useTripNames(enabled: boolean, scope: Scope) {
+  const uid = useUid();
+  return useSWR<TripName[]>(
+    uid && enabled ? ["partners", uid, "trip-names", scope] : null,
+    async () => (await read<{ items: TripName[] }>(`partners/me/trips/names?${new URLSearchParams({ scope })}`)).items,
+    OPTIONS,
+  );
+}
+
 export function useLinks(enabled: boolean, scope: Scope) {
   const uid = useUid();
   return useSWR<PartnerLink[]>(uid && enabled ? ["partners", uid, "links", scope] : null, async () => (await listLinks(scope)).links, OPTIONS);
@@ -643,6 +661,7 @@ const MESSAGES: Record<string, string> = {
   invite_expired: "This invite has expired. Ask for a new link.",
   invite_revoked: "This invite was cancelled. Ask for a new link.",
   invite_accepted: "This invite was already used. Ask for a new link.",
+  invite_for_another_email: "This invite is for another email. Sign in with the HOLD account that uses it, or ask for a link without an email.",
   already_on_a_team: "Your HOLD account is already on a partner team. Leave it first to join another.",
   link_not_found: "That link is gone. Reload the page.",
   trip_not_found: "That trip is gone, or it is run by someone else.",

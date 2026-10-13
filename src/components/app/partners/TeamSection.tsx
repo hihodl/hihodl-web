@@ -339,7 +339,7 @@ function NewInvite({ owner, split, onDone }: { owner: boolean; split: boolean; o
             </div>
           </Field>
         ) : null}
-        <Field label="Their email (optional)" hint="For your own records. The invite is the link.">
+        <Field label="Their email (optional)" hint="With an email, only the HOLD account signed in with it can join. Leave it empty for a link anyone you send it to can use.">
           <input className={inputCls} type="email" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={200} placeholder="maria@agency.com" />
         </Field>
         {!splitOk ? (

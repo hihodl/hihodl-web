@@ -7,7 +7,7 @@
  * anyone else is initials. Filtered on the server; the export matches.
  */
 
-import { dayLabel, queryOf, usd, useLinks, usePaged, useTeam, type Scope, type Traveller, type TripRow } from "@/lib/app/partners";
+import { dayLabel, queryOf, usd, useLinks, usePaged, useTeam, type Scope, type Traveller, type TripName } from "@/lib/app/partners";
 
 import { Ion } from "../ion";
 import { useFilters } from "./CommissionsSection";
@@ -65,7 +65,7 @@ function columns(scope: Scope): Column<Traveller>[] {
   return scope === "team" ? cols : cols.filter((c) => c.key !== "member");
 }
 
-export function TravellersSection({ scope, trips }: { scope: Scope; trips: TripRow[] }) {
+export function TravellersSection({ scope, trips }: { scope: Scope; trips: TripName[] }) {
   const team = scope === "team";
   const { f, set, setMany, clear, active } = useFilters();
   const page = usePaged<Traveller>("partners/me/travellers", { scope, ...f });
