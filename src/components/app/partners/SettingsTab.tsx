@@ -21,7 +21,7 @@ const KIND_LABEL: Record<Partner["kind"], string> = {
   other: "Other",
 };
 
-export function SettingsTab({ partner, onSaved }: { partner: Partner; onSaved: (me: PartnerMe) => void }) {
+export function SettingsTab({ partner, onSaved, canEdit = true }: { partner: Partner; onSaved: (me: PartnerMe) => void; canEdit?: boolean }) {
   const [name, setName] = useState(partner.name);
   const [instagram, setInstagram] = useState(partner.instagram ?? "");
   const [website, setWebsite] = useState(partner.website ?? "");
@@ -76,6 +76,7 @@ export function SettingsTab({ partner, onSaved }: { partner: Partner; onSaved: (
         </p>
       </HoldCard>
 
+      {canEdit ? (
       <HoldCard className="p-5">
         <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
           <h2 className="text-[16px] font-bold text-white">Profile</h2>
@@ -128,6 +129,7 @@ export function SettingsTab({ partner, onSaved }: { partner: Partner; onSaved: (
           </button>
         </form>
       </HoldCard>
+      ) : null}
     </div>
   );
 }

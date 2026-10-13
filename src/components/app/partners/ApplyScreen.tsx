@@ -144,7 +144,7 @@ export function ApplyScreen({ onApplied }: { onApplied: (me: PartnerMe) => void 
             <ChoicePills options={KINDS} value={kind} onChange={setKind} label="What you do" />
           </div>
 
-          <div className="grid gap-5 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <Field label="Instagram (optional)">
               <input
                 className={inputCls}
