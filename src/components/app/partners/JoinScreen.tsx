@@ -20,18 +20,19 @@ import { BackHeader, Column, ctaCommit, HoldCard, Notice } from "../hold";
 import { Ion } from "../ion";
 import { ReadFailed } from "../money/kit";
 import { Alert, Skeleton } from "../ui";
-import { Field, inputCls, SlugLine, slugReady, useSlugCheck } from "./kit";
+import { Field, inputCls, SlugLine, slugReady, TermsCheck, useSlugCheck } from "./kit";
 
 export function JoinScreen({ code }: { code: string }) {
   const info = useSWR(["partners", "invite", code], () => describeInvite(code), { revalidateOnFocus: false });
   const me = usePartnerMe();
   const [raw, setRaw] = useState("");
+  const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [joined, setJoined] = useState<string | null>(null);
   const check = useSlugCheck(raw);
   const custom = normaliseSlug(raw).length > 0;
-  const ready = !busy && (!custom || slugReady(check, raw));
+  const ready = !busy && agreed && (!custom || slugReady(check, raw));
   const desk = productHref("/partners");
 
   const header = <BackHeader title="Partners" subtitle="Team invite" />;
@@ -146,6 +147,7 @@ export function JoinScreen({ code }: { code: string }) {
               />
               {custom ? <SlugLine raw={raw} check={check} /> : null}
             </Field>
+            <TermsCheck checked={agreed} onChange={setAgreed} />
             {error ? <Alert>{error}</Alert> : null}
             <button type="submit" className={ctaCommit} disabled={!ready}>
               {busy ? "Joining" : `Join ${i.partner.name}`}

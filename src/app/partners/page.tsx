@@ -204,7 +204,15 @@ export default function PartnersPage() {
 
       <Closing
         line="Your travellers already book somewhere. Let it pay you."
-        body="Apply with your HOLD account. Once you are approved, your link, your trips and your payouts live in one panel."
+        body={
+          <>
+            Apply with your HOLD account. Once you are approved, your link, your trips and your payouts live in one panel.{" "}
+            <a href="/legal/partner-terms" className="underline underline-offset-2 hover:text-white">
+              Read the partner terms
+            </a>
+            .
+          </>
+        }
         actions={
           <>
             <PrimaryAction href={apply}>Become a partner</PrimaryAction>

@@ -313,7 +313,12 @@ export interface ApplyBody {
   kind: PartnerKind;
   instagram?: string;
   website?: string;
+  /** Ticked "I agree to the HOLD Partners terms". The server refuses without it. */
+  acceptTerms: true;
 }
+
+/** The terms every person on a team accepts (PARTNER_TERMS_VERSION on the server). */
+export const PARTNER_TERMS_URL = "https://hihodl.xyz/legal/partner-terms";
 
 export const applyAsPartner = (body: ApplyBody) => read<PartnerMe>("partners/apply", { json: body });
 
@@ -352,7 +357,9 @@ export const createInvite = (body: { role: "admin" | "member"; splitBps?: number
 export const revokeInvite = (id: string) => read<{ revoked: boolean }>(`partners/me/invites/${enc(id)}`, { method: "DELETE" });
 export const describeInvite = (code: string) => read<InviteInfo>(`partners/invites/${enc(code)}`);
 export const acceptInvite = (code: string, linkCode?: string) =>
-  read<PartnerMe & { joined: boolean; link: string | null }>(`partners/invites/${enc(code)}/accept`, { json: linkCode ? { linkCode } : {} });
+  read<PartnerMe & { joined: boolean; link: string | null }>(`partners/invites/${enc(code)}/accept`, {
+    json: linkCode ? { linkCode, acceptTerms: true } : { acceptTerms: true },
+  });
 
 export const getBilling = () => read<{ billing: Billing | null }>("partners/me/billing");
 export const saveBilling = (body: Omit<Billing, "verified" | "verifiedAt" | "updatedAt">) =>
@@ -601,6 +608,7 @@ const MESSAGES: Record<string, string> = {
   owner_cannot_be_removed: "The owner cannot be removed. Hand the partner to someone else first.",
   owner_must_transfer_first: "Hand the partner to someone else before you leave.",
   owner_is_moved_by_transfer: "Change the owner with Make owner.",
+  terms_required: "Tick the box to accept the HOLD Partners terms.",
   invite_not_found: "This invite does not exist. Ask for a new link.",
   invite_expired: "This invite has expired. Ask for a new link.",
   invite_revoked: "This invite was cancelled. Ask for a new link.",

@@ -15,7 +15,7 @@ import { applyAsPartner, normaliseSlug, partnerErrorText, type PartnerKind, type
 import { ctaCommit, HoldCard } from "../hold";
 import { Ion, type IonName } from "../ion";
 import { Alert } from "../ui";
-import { ChoicePills, Field, inputCls, SlugLine, slugReady, useSlugCheck } from "./kit";
+import { ChoicePills, Field, inputCls, SlugLine, slugReady, TermsCheck, useSlugCheck } from "./kit";
 
 const KINDS: readonly { value: PartnerKind; label: string }[] = [
   { value: "agency", label: "Travel agency" },
@@ -54,13 +54,14 @@ export function ApplyScreen({ onApplied }: { onApplied: (me: PartnerMe) => void 
   const [kind, setKind] = useState<PartnerKind | null>(null);
   const [instagram, setInstagram] = useState("");
   const [website, setWebsite] = useState("");
+  const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Until the link name is typed, it follows the name.
   const slugRaw = slugTouched ? slug : normaliseSlug(name).slice(0, 20);
   const check = useSlugCheck(slugRaw);
-  const ready = name.trim().length >= 2 && kind !== null && slugReady(check, slugRaw) && !busy;
+  const ready = name.trim().length >= 2 && kind !== null && slugReady(check, slugRaw) && agreed && !busy;
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -74,6 +75,7 @@ export function ApplyScreen({ onApplied }: { onApplied: (me: PartnerMe) => void 
         kind,
         ...(instagram.trim() ? { instagram: instagram.trim().replace(/^@/, "") } : {}),
         ...(website.trim() ? { website: website.trim() } : {}),
+        acceptTerms: true,
       });
       onApplied(me);
     } catch (err) {
@@ -171,6 +173,8 @@ export function ApplyScreen({ onApplied }: { onApplied: (me: PartnerMe) => void 
               />
             </Field>
           </div>
+
+          <TermsCheck checked={agreed} onChange={setAgreed} />
 
           {error ? <Alert>{error}</Alert> : null}
 

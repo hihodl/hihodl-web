@@ -8,7 +8,7 @@
 
 import { useState, type FormEvent } from "react";
 
-import { partnerErrorText, updatePartner, type Partner, type PartnerMe } from "@/lib/app/partners";
+import { PARTNER_TERMS_URL, partnerErrorText, updatePartner, type Partner, type PartnerMe } from "@/lib/app/partners";
 
 import { ctaCommit, HoldCard } from "../hold";
 import { Alert } from "../ui";
@@ -72,7 +72,10 @@ export function SettingsTab({ partner, onSaved, canEdit = true }: { partner: Par
         </dl>
         <p className="mt-3 text-[12.5px] leading-[18px] text-white/55">
           On every stay, flight and eSIM they book in that time, from the day they sign up or join one of your trips. Your
-          travellers always pay HOLD&rsquo;s own prices.
+          travellers always pay HOLD&rsquo;s own prices.{" "}
+          <a href={PARTNER_TERMS_URL} target="_blank" rel="noopener noreferrer" className="font-bold text-[#8ECAE6] hover:text-white">
+            Read the full terms
+          </a>
         </p>
       </HoldCard>
 
