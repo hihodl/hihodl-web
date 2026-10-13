@@ -58,7 +58,7 @@ export function NewTrip({ onDone }: { onDone: (made: boolean) => void }) {
           <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} maxLength={80} placeholder="Bali retreat, May" autoFocus />
         </Field>
         <Field label="Place (optional)">
-          <input className={inputCls} value={place} onChange={(e) => setPlace(e.target.value)} maxLength={120} placeholder="Ubud, Bali" />
+          <input className={inputCls} value={place} onChange={(e) => setPlace(e.target.value)} maxLength={80} placeholder="Ubud, Bali" />
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Starts (optional)">

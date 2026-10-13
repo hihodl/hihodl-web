@@ -95,13 +95,30 @@ function columns(scope: Scope): Column<Payout>[] {
   return scope === "team" ? cols : cols.filter((c) => c.key !== "payee");
 }
 
-export function PayoutsSection({ scope, billing, payoutsEnabled, go }: { scope: Scope; billing: BillingState; payoutsEnabled: boolean; go: (s: Section) => void }) {
+/**
+ * `billing` and `payoutsEnabled` are undefined until the dashboard is read: no
+ * notice is shown on a guess. `paid`: this person is paid at all (the owner,
+ * or anyone in split mode); nobody else is asked for billing details.
+ */
+export function PayoutsSection({
+  scope,
+  billing,
+  payoutsEnabled,
+  paid,
+  go,
+}: {
+  scope: Scope;
+  billing: BillingState | undefined;
+  payoutsEnabled: boolean | undefined;
+  paid: boolean;
+  go: (s: Section) => void;
+}) {
   const { f, set, clear, active } = useFilters();
   const page = usePaged<Payout>("partners/me/payouts", { scope, ...f });
   const qs = queryOf({ scope, ...f });
   return (
     <div className="flex flex-col gap-4">
-      {billing !== "verified" ? (
+      {paid && billing && billing !== "verified" ? (
         <Notice icon="shield-checkmark-outline">
           {billing === "missing" ? (
             <>
@@ -116,7 +133,7 @@ export function PayoutsSection({ scope, billing, payoutsEnabled, go }: { scope: 
           )}
         </Notice>
       ) : null}
-      {!payoutsEnabled ? <Notice tone="calm">Payouts start soon. Everything you earn until then is kept and paid with the first one.</Notice> : null}
+      {payoutsEnabled === false ? <Notice tone="calm">Payouts start soon. Everything you earn until then is kept and paid with the first one.</Notice> : null}
       <DeskPanel
         flush
         title="Payouts"

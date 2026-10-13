@@ -46,6 +46,12 @@ export function SettingsTab({ partner, onSaved, canEdit = true }: { partner: Par
         website: website.trim(),
       });
       onSaved(me);
+      // Show what the server kept ("@foo" → "foo", "site.com" → "https://site.com/"), so the form reads as saved.
+      if (me.partner) {
+        setName(me.partner.name);
+        setInstagram(me.partner.instagram ?? "");
+        setWebsite(me.partner.website ?? "");
+      }
       setSaved(true);
     } catch (err) {
       setError(partnerErrorText(err));

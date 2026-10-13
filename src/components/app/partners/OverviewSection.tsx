@@ -13,7 +13,8 @@ import { useMemo } from "react";
 import { dayLabel, monthLabel, usd, usePaged, type Commission, type PartnerDashboard, type PartnerMe, type Scope } from "@/lib/app/partners";
 
 import { Ion } from "../ion";
-import { KpiTile } from "../ui";
+import { ReadFailed } from "../money/kit";
+import { KpiTile, Skeleton } from "../ui";
 import { commissionColumns } from "./CommissionsSection";
 import { DataTable, DeskPanel, smallBtn, Stat, type Section } from "./desk";
 import { KIND } from "./kit";
@@ -23,10 +24,13 @@ export function OverviewSection({
   data,
   link,
   scope,
+  paid,
   onLinkSaved,
   go,
 }: {
   data: PartnerDashboard;
+  /** Paid at all: the owner, or anyone in split mode. Nobody else is asked for billing. */
+  paid: boolean;
   /** The link this person shares: the partner's for the owner, their own for everyone else. */
   link: string;
   scope: Scope;
@@ -70,7 +74,7 @@ export function OverviewSection({
             <span className="text-white/55">
               Payouts land in your HOLD Savings in USDC. What you earned here stays the same when you spend or move it.
             </span>
-            {data.billing !== "verified" ? (
+            {paid && data.billing !== "verified" ? (
               <button type="button" className="font-bold text-amber underline-offset-2 hover:underline" onClick={() => go("settings")}>
                 {data.billing === "missing" ? "Add your billing details to get paid" : "Billing details in review"}
               </button>
@@ -125,12 +129,18 @@ export function OverviewSection({
             </button>
           }
         >
-          <DataTable
-            columns={columns}
-            rows={recent.items}
-            rowKey={(c) => c.id}
-            empty="Nothing yet. When a traveller you brought books a stay, a flight or an eSIM, it shows up here."
-          />
+          {recent.error && recent.items.length === 0 ? (
+            <ReadFailed title="Could not load the latest commissions" onRetry={() => recent.reload()} />
+          ) : recent.loading && recent.items.length === 0 ? (
+            <Skeleton className="m-4 h-[120px]" />
+          ) : (
+            <DataTable
+              columns={columns}
+              rows={recent.items}
+              rowKey={(c) => c.id}
+              empty="Nothing yet. When a traveller you brought books a stay, a flight or an eSIM, it shows up here."
+            />
+          )}
         </DeskPanel>
       </div>
     </div>

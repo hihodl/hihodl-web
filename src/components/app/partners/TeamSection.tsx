@@ -35,6 +35,7 @@ import {
 } from "@/lib/app/partners";
 
 import { CopyButton } from "../front/kit";
+import { Notice } from "../hold";
 
 import { Ion } from "../ion";
 import { ReadFailed } from "../money/kit";
@@ -59,12 +60,14 @@ export function TeamSection({ partner, me, onChanged }: { partner: Partner; me: 
   const team = useTeam(true);
   const invites = useInvites(true);
   const [error, setError] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
   const [inviting, setInviting] = useState(false);
   const split = partner.payoutMode === "split";
 
   async function act(fn: () => Promise<unknown>, confirmText?: string) {
     if (confirmText && !window.confirm(confirmText)) return;
     setError(null);
+    setNote(null);
     try {
       await fn();
       void team.mutate();
@@ -159,7 +162,19 @@ export function TeamSection({ partner, me, onChanged }: { partner: Partner; me: 
                 className={smallBtn}
                 aria-label={`Remove ${m.name}`}
                 title="Remove from the team"
-                onClick={() => void act(() => removeMember(m.memberId), `Remove ${m.name} from the team? What they earned stays theirs. Travellers they brought keep counting, for the owner.`)}
+                onClick={() =>
+                  void act(async () => {
+                    const out = await removeMember(m.memberId);
+                    const t = out.trips;
+                    if (t?.moved) {
+                      setNote(
+                        t.needsAttention.length
+                          ? `${t.moved} ${t.moved === 1 ? "trip moved" : "trips moved"} to the owner. ${t.needsAttention.length} trip ${t.needsAttention.length === 1 ? "chat" : "chats"} could not be handed over yet: open ${t.needsAttention.length === 1 ? "it" : "them"} in the HOLD app (a balance still open keeps them in).`
+                          : `${t.moved} ${t.moved === 1 ? "trip moved" : "trips moved"} to the owner, with ${t.moved === 1 ? "its" : "their"} group ${t.moved === 1 ? "chat" : "chats"}. Add a new deposit link where one was theirs.`,
+                      );
+                    }
+                  }, `Remove ${m.name} from the team? What they earned stays theirs. Travellers they brought keep counting, for the owner, and their trips move to the owner.`)
+                }
               >
                 <Ion name="trash-outline" size={15} />
               </button>
@@ -190,6 +205,7 @@ export function TeamSection({ partner, me, onChanged }: { partner: Partner; me: 
       </DeskPanel>
 
       {error ? <Alert>{error}</Alert> : null}
+      {note ? <Notice tone="calm">{note}</Notice> : null}
 
       <DeskPanel
         flush
@@ -228,7 +244,13 @@ export function TeamSection({ partner, me, onChanged }: { partner: Partner; me: 
         />
       ) : null}
 
-      <InvitesPanel invites={invites.data} onRevoke={(i) => void act(() => revokeInvite(i.id), "Cancel this invite? The link stops working.")} />
+      {invites.error && invites.data === undefined ? (
+        <DeskPanel title="Invites">
+          <ReadFailed compact title="Could not load the invites" onRetry={() => void invites.mutate()} />
+        </DeskPanel>
+      ) : (
+        <InvitesPanel invites={invites.data} owner={owner} onRevoke={(i) => void act(() => revokeInvite(i.id), "Cancel this invite? The link stops working.")} />
+      )}
     </div>
   );
 }
@@ -288,7 +310,7 @@ function NewInvite({ owner, split, onDone }: { owner: boolean; split: boolean; o
       <DeskPanel title="Invite ready" actions={<button type="button" className={smallBtn} onClick={() => onDone(true)}>Done</button>}>
         <p className="break-all font-mono text-[13.5px] text-white">{made.url}</p>
         <div className="mt-2.5 flex flex-wrap gap-2">
-          <CopyButton value={made.url} className={smallBtn} />
+          <CopyButton value={made.url ?? ""} className={smallBtn} />
         </div>
         <p className="mt-3 text-[12.5px] leading-[18px] text-white/55">
           Send it to them. They open it, sign in with Apple, Google or email using their own HOLD account, and join with their own link. It works once and
@@ -350,7 +372,7 @@ const INVITE: Record<Invite["status"], { label: string; tone: PillTone }> = {
   expired: { label: "Expired", tone: "quiet" },
 };
 
-function InvitesPanel({ invites, onRevoke }: { invites: Invite[] | undefined; onRevoke: (i: Invite) => void }) {
+function InvitesPanel({ invites, owner, onRevoke }: { invites: Invite[] | undefined; owner: boolean; onRevoke: (i: Invite) => void }) {
   if (!invites?.length) return null;
   const columns: Column<Invite>[] = [
     { key: "who", title: "Invite", render: (i) => <span className="text-white">{i.email ?? <Muted>Link only</Muted>}</span> },
@@ -364,10 +386,15 @@ function InvitesPanel({ invites, onRevoke }: { invites: Invite[] | undefined; on
       render: (i) =>
         i.status === "open" ? (
           <span className="inline-flex justify-end gap-1.5">
-            <CopyButton value={i.url} className={smallBtn} />
-            <button type="button" className={smallBtn} onClick={() => onRevoke(i)}>
-              Cancel
-            </button>
+            {/* An admin invite is the owner's to share and cancel. */}
+            {i.url ? <CopyButton value={i.url} className={smallBtn} /> : null}
+            {owner || i.role !== "admin" ? (
+              <button type="button" className={smallBtn} onClick={() => onRevoke(i)}>
+                Cancel
+              </button>
+            ) : (
+              <Muted>Owner&rsquo;s invite</Muted>
+            )}
           </span>
         ) : null,
     },

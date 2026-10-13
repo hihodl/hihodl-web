@@ -20,7 +20,7 @@
  */
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 
 import { canSeeTeam, usePaged, usePartnerDashboard, usePartnerMe, type PartnerMe, type Scope, type TripRow } from "@/lib/app/partners";
 
@@ -69,6 +69,12 @@ export function PartnersScreen() {
   );
 
   const dashboard = usePartnerDashboard(live, scope);
+  // The server answered for a narrower scope than asked: the role changed
+  // (an admin made a member). Read who I am again so the desk follows.
+  const servedScope = dashboard.data?.scope;
+  useEffect(() => {
+    if (servedScope && servedScope !== scope) void me.mutate();
+  }, [servedScope, scope, me]);
   // Trip names for the filters: the most recent 200 is plenty for a select.
   const tripOptions = usePaged<TripRow>("partners/me/trips", { scope, limit: "200" }, live && section !== "overview");
   const trips = useMemo(() => tripOptions.items, [tripOptions.items]);
@@ -115,6 +121,12 @@ export function PartnersScreen() {
     return (
       <Column wide>
         <BackHeader title="Partners" />
+        {me.data.pastPayouts ? (
+          // Left a team, or the team is gone: what was paid to them is still theirs to read.
+          <div className="mb-5">
+            <PayoutsSection scope="me" billing={undefined} payoutsEnabled={undefined} paid={false} go={() => undefined} />
+          </div>
+        ) : null}
         <ApplyScreen onApplied={took} />
       </Column>
     );
@@ -131,6 +143,8 @@ export function PartnersScreen() {
 
   const myLink = role === "owner" ? (me.data.link ?? "") : (me.data.links.find((l) => !l.archived && l.mine && !l.main)?.url ?? me.data.link ?? "");
   const active = partner.status === "active";
+  // Who is paid at all: the owner always, everyone else only in split mode.
+  const paid = role === "owner" || partner.payoutMode === "split";
 
   return (
     <div className="flex w-full min-w-0 flex-col pb-8">
@@ -169,7 +183,7 @@ export function PartnersScreen() {
               <DeskPanel>
                 <ReadFailed title="Could not load your numbers" onRetry={() => void dashboard.mutate()} />
               </DeskPanel>
-            ) : !dashboard.data || dashboard.data.scope !== scope ? (
+            ) : !dashboard.data ? (
               <div className="flex flex-col gap-3">
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
                   {[0, 1, 2, 3, 4].map((i) => (
@@ -180,7 +194,7 @@ export function PartnersScreen() {
                 <Skeleton className="h-[220px]" />
               </div>
             ) : (
-              <OverviewSection data={dashboard.data} link={myLink} scope={scope} onLinkSaved={took} go={(s) => go({ s })} />
+              <OverviewSection data={dashboard.data} link={myLink} scope={dashboard.data.scope} paid={paid} onLinkSaved={took} go={(s) => go({ s })} />
             )
           ) : section === "travellers" ? (
             <TravellersSection scope={scope} trips={trips} />
@@ -189,7 +203,7 @@ export function PartnersScreen() {
           ) : section === "commissions" ? (
             <CommissionsSection scope={scope} trips={trips} />
           ) : section === "payouts" ? (
-            <PayoutsSection scope={scope} billing={dashboard.data?.billing ?? "missing"} payoutsEnabled={dashboard.data?.payoutsEnabled ?? false} go={(s) => go({ s })} />
+            <PayoutsSection scope={scope} billing={dashboard.data?.billing} payoutsEnabled={dashboard.data?.payoutsEnabled} paid={paid} go={(s) => go({ s })} />
           ) : section === "links" ? (
             <LinksSection scope={scope} canManageAny={team} active={active} />
           ) : section === "team" && me.data.me ? (

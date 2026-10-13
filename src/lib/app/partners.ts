@@ -83,6 +83,8 @@ export interface PartnerMe {
   me: Me | null;
   link: string | null;
   links: PartnerLink[];
+  /** Not on a team (any more): how many payouts were paid to them, which they can still read. */
+  pastPayouts?: number;
 }
 
 export type SlugProblem = "slug_too_short" | "slug_too_long" | "slug_reserved" | "slug_taken";
@@ -196,7 +198,8 @@ export interface Trip {
   memberId: string | null;
   runBy: string | null;
   members: number;
-  joinUrl: string;
+  /** Null in lists, and when the link cannot be made (the trip page says so). */
+  joinUrl: string | null;
   payLinkCode: string | null;
   payLinkUrl: string | null;
   createdAt: string;
@@ -259,8 +262,9 @@ export interface TeamMember {
 
 export interface Invite {
   id: string;
-  code: string;
-  url: string;
+  /** Null on an admin invite for anyone but the owner: only the owner hands out admin. */
+  code: string | null;
+  url: string | null;
   role: "admin" | "member";
   splitBps: number;
   email: string | null;
@@ -346,9 +350,16 @@ export const updateLink = (id: string, body: { label?: string | null; archived?:
 export const listTeam = () => read<{ members: TeamMember[] }>("partners/me/team");
 export const updateMember = (memberId: string, body: { role?: "admin" | "member"; splitBps?: number }) =>
   read<{ member: TeamMember }>(`partners/me/team/${enc(memberId)}`, { method: "PATCH", json: body });
-export const removeMember = (memberId: string) => read<{ removed: boolean }>(`partners/me/team/${enc(memberId)}`, { method: "DELETE" });
+/** What happened to the trips of somebody leaving: moved to the owner; `needsAttention` are trips whose chat could not be handed over. */
+export interface TripsHandOver {
+  moved: number;
+  needsAttention: string[];
+}
+
+export const removeMember = (memberId: string) =>
+  read<{ removed: boolean; trips?: TripsHandOver }>(`partners/me/team/${enc(memberId)}`, { method: "DELETE" });
 export const transferOwner = (memberId: string) => read<PartnerMe>(`partners/me/team/${enc(memberId)}/owner`, { json: {} });
-export const leaveTeam = () => read<{ left: boolean }>("partners/me/leave", { json: {} });
+export const leaveTeam = () => read<{ left: boolean; trips?: TripsHandOver }>("partners/me/leave", { json: {} });
 export const setPayoutMode = (mode: PayoutMode) => read<{ payoutMode: PayoutMode }>("partners/me/payout-mode", { method: "PUT", json: { mode } });
 
 export const listInvites = () => read<{ invites: Invite[] }>("partners/me/invites");
@@ -394,6 +405,18 @@ export async function createTripDeposit(trip: Pick<Trip, "id" | "name">, cents: 
   return next;
 }
 
+/** "hold-partners-commissions.csv" → "hold-partners-commissions-2026-10-13.csv". */
+export function datedName(name: string, now = new Date()): string {
+  const day = now.toISOString().slice(0, 10);
+  const dot = name.lastIndexOf(".");
+  return dot > 0 ? `${name.slice(0, dot)}-${day}${name.slice(dot)}` : `${name}-${day}`;
+}
+
+/** A trip's name as a file name piece: "Morocco May!" → "morocco-may". */
+export function fileSlug(s: string): string {
+  return s.toLowerCase().normalize("NFKD").replace(/[^\w\s-]/g, "").trim().replace(/[\s_-]+/g, "-").slice(0, 40) || "trip";
+}
+
 /**
  * A CSV or a PDF from the API, saved by the browser. Same bearer as every
  * read; the file never touches anything but this tab.
@@ -422,7 +445,9 @@ export async function downloadFile(path: string, fallbackName: string): Promise<
   }
   const blob = await res.blob();
   const cd = res.headers.get("content-disposition") ?? "";
-  const name = /filename="([^"]+)"/.exec(cd)?.[1] ?? fallbackName;
+  // The edge does not pass content-disposition through, so the name is usually
+  // built here: the fallback with today's date, so exports never overwrite.
+  const name = /filename="([^"]+)"/.exec(cd)?.[1] ?? datedName(fallbackName);
   const url = URL.createObjectURL(blob);
   try {
     const a = document.createElement("a");
@@ -592,7 +617,12 @@ const MESSAGES: Record<string, string> = {
   already_partner: "You already applied. Reload the page to see where it stands.",
   not_a_partner: "This account is not on a partner team.",
   not_allowed: "Only the owner or an admin of your team can do that.",
-  partner_not_active: "This opens once your partner account is active.",
+  partner_not_active: "This partner is not active right now. It opens again once HOLD re-activates it.",
+  date_invalid: "That date does not look right. The end cannot be before the start.",
+  website_invalid: "Add a website starting with https://",
+  slug_rename_limit: "Your link name was changed the most times allowed. Old links keep working.",
+  RATE_LIMIT_EXCEEDED: "Too many tries in a row. Wait a minute and try again.",
+  HTTP_429: "Too many tries in a row. Wait a minute and try again.",
   pay_link_not_yours: "That pay link belongs to another account.",
   handle_required: "Pick a HOLD username in the app first, then come back here. Deposit links are paid to your username.",
   account_too_new: "Your HOLD account is too new to collect payments. Try again in a few days.",

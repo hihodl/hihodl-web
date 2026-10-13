@@ -55,6 +55,16 @@ export function JoinScreen({ code }: { code: string }) {
       </Column>
     );
   }
+  if (me.error && !me.data) {
+    return (
+      <Column>
+        {header}
+        <HoldCard>
+          <ReadFailed title="Could not check your HOLD account" onRetry={() => void me.mutate()} />
+        </HoldCard>
+      </Column>
+    );
+  }
   if (!info.data || !me.data) {
     return (
       <Column>
@@ -99,7 +109,11 @@ export function JoinScreen({ code }: { code: string }) {
           {i.splitBps ? `. You are paid ${pct(i.splitBps)} of the commission on your travellers, straight into your HOLD Savings` : ""}.
         </p>
 
-        {i.status !== "open" ? (
+        {i.status === "open" && !i.partner.active ? (
+          <div className="mt-5">
+            <Notice>{i.partner.name} is paused on HOLD Partners right now. This invite works again once it is active.</Notice>
+          </div>
+        ) : i.status !== "open" ? (
           <div className="mt-5">
             <Notice>
               {i.status === "accepted" ? "This invite was already used." : i.status === "expired" ? "This invite has expired." : "This invite was cancelled."} Ask for a new

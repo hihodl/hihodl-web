@@ -13,7 +13,7 @@
 import { useState } from "react";
 
 import { QrCode } from "@/components/ad-space/qr";
-import { dayLabel, usd, usePaged, useTripDetail, type DepositState, type Scope, type TripDetail, type TripRow } from "@/lib/app/partners";
+import { dayLabel, fileSlug, usd, usePaged, useTripDetail, type DepositState, type Scope, type TripDetail, type TripRow } from "@/lib/app/partners";
 
 import { CopyButton } from "../front/kit";
 import { Ion } from "../ion";
@@ -203,7 +203,7 @@ function TripDetailView({ id, onBack }: { id: string; onBack: () => void }) {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         {back}
-        <ExportButton path={`partners/me/export/trips/${encodeURIComponent(trip.id)}`} name="hold-partners-trip.csv" label="Export travellers" />
+        <ExportButton path={`partners/me/export/trips/${encodeURIComponent(trip.id)}`} name={`hold-partners-trip-${fileSlug(trip.name)}.csv`} label="Export travellers" />
       </div>
 
       <DeskPanel title={trip.name} meta={[trip.place, when(trip), trip.runBy ? `Run by ${trip.runBy}` : null].filter(Boolean).join(", ") || undefined}>
@@ -225,29 +225,20 @@ function TripDetailView({ id, onBack }: { id: string; onBack: () => void }) {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <DeskPanel title="Join link">
-          <p className="break-all text-[13.5px] text-white/85">{trip.joinUrl.replace(/^https?:\/\//, "")}</p>
-          <div className="mt-2.5 flex flex-wrap gap-2">
-            <CopyButton value={trip.joinUrl} className={smallBtn} />
-            <button type="button" className={smallBtn} onClick={() => setQr((v) => !v)} aria-expanded={qr}>
-              <Ion name="qr-code-outline" size={15} />
-              {qr ? "Hide QR" : "QR code"}
-            </button>
-          </div>
-          {qr ? (
-            <div className="mt-3 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-              <div className="w-[148px] overflow-hidden rounded-[14px] bg-white p-1.5">
-                <QrCode text={trip.joinUrl} title={`QR code to join ${trip.name}`} className="block h-auto w-full" />
-              </div>
-              <QrDownloads text={trip.joinUrl} name={`hold-trip-${trip.id.slice(0, 8)}-qr`} />
-            </div>
-          ) : null}
+          {trip.joinUrl ? (
+            <JoinLink url={trip.joinUrl} name={trip.name} id={trip.id} qr={qr} onQr={() => setQr((v) => !v)} />
+          ) : (
+            <p className="text-[13px] leading-[19px] text-white/60">
+              The join link cannot be made right now. The trip&rsquo;s chat may have changed hands: open it in the HOLD app to share it, or try again in a moment.
+            </p>
+          )}
         </DeskPanel>
         <DeskPanel title="Deposits">
           {trip.payLinkUrl ? (
             <>
               <p className="break-all text-[13.5px] text-white/85">{trip.payLinkUrl.replace(/^https?:\/\//, "")}</p>
               <p className="mt-1 text-[12.5px] leading-[18px] text-white/55">
-                {detail.data.deposit?.perTravellerUsd ? `${usd(detail.data.deposit.perTravellerUsd)} per traveller. ` : ""}Payments land in the HOLD account of whoever runs the trip.
+                {detail.data.deposit?.perTravellerUsd ? `${usd(detail.data.deposit.perTravellerUsd)} per traveller. ` : ""}Payments land in the HOLD account that made this link.
               </p>
               <div className="mt-2.5 flex flex-wrap gap-2">
                 <CopyButton value={trip.payLinkUrl} className={smallBtn} />
@@ -281,5 +272,28 @@ function TripDetailView({ id, onBack }: { id: string; onBack: () => void }) {
         <DataTable columns={peopleColumns} rows={people} rowKey={(p) => `${p.name}-${p.joinedAt}-${p.handle}`} empty="Nobody has joined yet. Share the join link with your group." />
       </DeskPanel>
     </div>
+  );
+}
+
+function JoinLink({ url, name, id, qr, onQr }: { url: string; name: string; id: string; qr: boolean; onQr: () => void }) {
+  return (
+    <>
+      <p className="break-all text-[13.5px] text-white/85">{url.replace(/^https?:\/\//, "")}</p>
+      <div className="mt-2.5 flex flex-wrap gap-2">
+        <CopyButton value={url} className={smallBtn} />
+        <button type="button" className={smallBtn} onClick={onQr} aria-expanded={qr}>
+          <Ion name="qr-code-outline" size={15} />
+          {qr ? "Hide QR" : "QR code"}
+        </button>
+      </div>
+      {qr ? (
+        <div className="mt-3 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+          <div className="w-[148px] overflow-hidden rounded-[14px] bg-white p-1.5">
+            <QrCode text={url} title={`QR code to join ${name}`} className="block h-auto w-full" />
+          </div>
+          <QrDownloads text={url} name={`hold-trip-${id.slice(0, 8)}-qr`} />
+        </div>
+      ) : null}
+    </>
   );
 }

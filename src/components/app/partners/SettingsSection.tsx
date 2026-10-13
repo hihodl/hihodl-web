@@ -11,6 +11,7 @@
  */
 
 import { useEffect, useState, type FormEvent } from "react";
+import { useSWRConfig } from "swr";
 
 import { COUNTRY_CODES } from "@/lib/ad-space/billing-rules";
 import { leaveTeam, partnerErrorText, saveBilling, useBilling, type Billing, type Me, type Partner, type PartnerMe } from "@/lib/app/partners";
@@ -36,6 +37,7 @@ export function SettingsSection({ partner, me, onSaved, onLeft }: { partner: Par
 
 function BillingPanel() {
   const billing = useBilling(true);
+  const { mutate } = useSWRConfig();
   if (billing.error && billing.data === undefined) {
     return (
       <DeskPanel title="Billing details">
@@ -44,7 +46,16 @@ function BillingPanel() {
     );
   }
   if (billing.data === undefined) return <Skeleton className="h-[420px]" />;
-  return <BillingForm current={billing.data} onSaved={(b) => void billing.mutate(b, { revalidate: false })} />;
+  return (
+    <BillingForm
+      current={billing.data}
+      onSaved={(b) => {
+        void billing.mutate(b, { revalidate: false });
+        // The Overview and Payouts notices read billing from the dashboard: read it again.
+        void mutate((key) => Array.isArray(key) && key[0] === "partners" && key[2] === "dashboard");
+      }}
+    />
+  );
 }
 
 type Draft = Omit<Billing, "verified" | "verifiedAt" | "updatedAt">;

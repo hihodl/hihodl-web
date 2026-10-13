@@ -13,7 +13,7 @@
  *   DEFAULT_ATTRIBUTION_MONTHS = 12
  *   payableAfterOf: stay = day after check out, flight = day after last departure,
  *                   eSIM = ESIM_HOLD_DAYS (14) after delivery
- *   PAYOUT_MIN_USDC = 10, PAYOUT_CEILING_USDC = 2500
+ *   PAYOUT_MIN_USDC = 10, PAYOUT_CEILING_USDC = 2500 (a bigger month is paid in parts, pickPayoutRows)
  *   payoutPeriodFor / nextPayoutOn: the 1st of the month pays the month before
  *   clawbackOf: a paid commission on a booking cancelled later comes off the next payout
  *
@@ -134,7 +134,7 @@ export default function PartnerTermsPage() {
                 <li>On the <span className="text-[#eaf6ffff] font-[600]">1st of each month</span> we pay what you earned in the month before, in <span className="text-[#eaf6ffff] font-[600]">USDC</span>, into the HOLD Savings of the person being paid.</li>
                 <li>A payout under <span className="text-[#eaf6ffff] font-[600]">$10</span> is not sent. It carries over to the next month.</li>
                 <li>We pay only once your billing details (your name or company, address, country and tax ID) are filled in under Settings and checked by HOLD. Until then your commissions keep adding up and nothing is lost.</li>
-                <li>A single payout above <span className="text-[#eaf6ffff] font-[600]">$2,500</span> is reviewed by hand before it is sent.</li>
+                <li>A month above <span className="text-[#eaf6ffff] font-[600]">$2,500</span> is paid in parts: up to $2,500 now, the rest with the next payouts.</li>
                 <li>A team can be paid in one of two ways, chosen by its owner: everything to the owner, or each member paid their agreed part of the commission on their own travellers straight into their own Savings, with the rest to the owner.</li>
                 <li>Each payout comes with a statement in your desk. The statement is not a tax invoice.</li>
               </ul>
