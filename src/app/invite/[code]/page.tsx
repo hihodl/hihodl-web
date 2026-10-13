@@ -3,15 +3,44 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 
+import { API_BASE } from "@/lib/ad-space/config";
 import { productUrl } from "@/lib/app/paths";
 import { withStoreAttribution } from "@/lib/analytics/mixpanel";
 import { APP_STORE_URL, PLAY_STORE_URL } from "@/lib/appLinks";
+
+type Resolved = { partner?: { name?: unknown } | null };
 
 export default function InviteRedirect() {
   const { code } = useParams<{ code: string }>();
   // Set when the link is a group's join link: the page then stays up with an
   // "Open the group" button instead of leaving for the store.
   const [groupLink, setGroupLink] = useState<string | null>(null);
+  // Set when the code is a HOLD Partner's link: the heading names them.
+  const [partnerName, setPartnerName] = useState<string | null>(null);
+
+  // Who sent the link. Fire and forget: the redirect below never waits for it,
+  // and an unknown code, a slow API or a failure simply keeps the plain words.
+  useEffect(() => {
+    if (!code) return;
+    const ctrl = new AbortController();
+    fetch(`${API_BASE}/referrals/resolve`, {
+      method: "POST",
+      headers: { "content-type": "application/json", accept: "application/json" },
+      body: JSON.stringify({ code }),
+      credentials: "omit",
+      signal: ctrl.signal,
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body: { data?: Resolved; partner?: Resolved["partner"] } | null) => {
+        // The backend's envelope, or a bare body.
+        const name = (body?.data ?? body)?.partner?.name;
+        if (typeof name === "string" && name.trim()) setPartnerName(name.trim());
+      })
+      .catch(() => {
+        /* the page reads the same without it */
+      });
+    return () => ctrl.abort();
+  }, [code]);
 
   useEffect(() => {
     if (!code) return;
@@ -112,7 +141,13 @@ export default function InviteRedirect() {
         </svg>
       </div>
       <h1 style={{ fontSize: 28, fontWeight: 900, marginBottom: 8 }}>
-        {groupLink ? "You\u2019re invited to a group on HOLD" : "You\u2019ve been invited to HOLD"}
+        {partnerName
+          ? groupLink
+            ? `${partnerName} invited you to a trip on HOLD`
+            : `${partnerName} invited you to HOLD`
+          : groupLink
+            ? "You\u2019re invited to a group on HOLD"
+            : "You\u2019ve been invited to HOLD"}
       </h1>
       <p
         style={{
@@ -126,6 +161,11 @@ export default function InviteRedirect() {
           <>
             Split the bill and pay your share in dollars, straight from your
             phone. Get HOLD, then come back to this page and tap Open the group.
+          </>
+        ) : partnerName ? (
+          <>
+            Book stays, flights and eSIMs at HOLD&rsquo;s prices, earn HiPoints
+            on every booking, and pay in dollars straight from your phone.
           </>
         ) : (
           <>

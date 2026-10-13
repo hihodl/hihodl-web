@@ -44,6 +44,8 @@ const PAGES: Entry[] = [
   // page that answers both ranks for neither.
   { path: "/esim", priority: 0.8, changeFrequency: "monthly" },
   { path: "/travel", priority: 0.7, changeFrequency: "monthly" },
+  // HOLD Partners: agencies, creators and organisers who bring travellers.
+  { path: "/partners", priority: 0.7, changeFrequency: "monthly" },
   { path: "/faq", priority: 0.6, changeFrequency: "monthly" },
   // HOLD for AI agents: the connect steps and the developer reference. Beta,
   // invite only, but the page is public: it is what a developer searching

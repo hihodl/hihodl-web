@@ -2,7 +2,7 @@
  * The product's navigation, on two levels, like the app.
  *
  * MAIN is HOLD itself — Home, Invest, Payments, Benefits and the products
- * under it (Stays, eSIM, Spaces) — and Menu at the foot, which holds the
+ * under it (Stays, eSIM, Spaces, Partners) — and Menu at the foot, which holds the
  * person, Settings, Security, recovery, help, the wallet and signing out.
  *
  * THE COLUMN LISTS PLACES, AND A PLACE IS SOMEWHERE HOME CANNOT ALREADY TAKE
@@ -77,6 +77,7 @@ export type NavKey =
   | "stays"
   | "esim"
   | "spaces"
+  | "partners"
   | "account"
   // Spaces
   | "overview"
@@ -143,6 +144,8 @@ export const MAIN_GROUPS: readonly NavGroup[] = [
       { key: "stays", labelKey: "shell.nav.stays", path: "/travel", icon: IconBed, keywords: "travel hotels hi travel", child: true },
       { key: "esim", labelKey: "shell.nav.esim", path: "/esim", icon: IconSim, keywords: "data roaming abroad", child: true },
       { key: "spaces", labelKey: "shell.nav.spaces", path: "/spaces", icon: IconMegaphone, keywords: "sponsors listings creator ad space", child: true },
+      // HOLD Partners: agencies, creators and organisers who bring travellers and earn on their bookings.
+      { key: "partners", labelKey: "shell.nav.partners", path: "/partners", icon: IconCrew, keywords: "partners agency travel agency group trips organiser commission earn affiliate link qr deposits payouts", child: true },
     ],
   },
 ];
