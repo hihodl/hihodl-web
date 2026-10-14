@@ -299,15 +299,45 @@ export function levelOf(rel: string): Level {
 }
 
 /**
+ * Spaces' selling pages: what Ad Space opens with HOLD Partners
+ * (lib/app/ad-space-access). Somebody it is not open to lands on one and sees
+ * the Partners panel instead (spaces/PartnersOnly); buying (Board, Bought),
+ * briefs, deliveries and the business desk stay open to everybody, and the
+ * Spaces entry stays in the main column, opening on Board (SPACES_BUY_PATH).
+ */
+export const AD_SPACE_SELLING: ReadonlySet<NavKey> = new Set<NavKey>([
+  "overview",
+  "listings",
+  "offers",
+  "sales",
+  "insights",
+  "inspire",
+  "crew",
+  "team",
+  "spaces-settings",
+]);
+
+/**
  * What this person may open. `team` is false for a creator who runs no team
  * and sits on nobody else's; `wallet` is the backend's rollout gate
- * (lib/wallet/enabled).
+ * (lib/wallet/enabled); `adSpace` is false for somebody Ad Space is not open
+ * to, which takes Spaces' selling pages out of its column (Spaces itself
+ * stays in the main one, for buying).
  */
-export function visible(item: NavItem, role: ShellRole, team: boolean, wallet = false): boolean {
+export function visible(item: NavItem, role: ShellRole, team: boolean, wallet = false, adSpace = true): boolean {
   if (item.roles && !item.roles.includes(role)) return false;
   if (item.key === "team" && !team) return false;
   if (item.key === "wallet" && !wallet) return false;
+  if (!adSpace && AD_SPACE_SELLING.has(item.key)) return false;
   return true;
+}
+
+/** Where Spaces opens for somebody who can buy but not sell: the Board. */
+export const SPACES_BUY_PATH = "/spaces/board";
+
+/** The item as this person should follow it: Spaces opens on Board when selling is not open to them. */
+export function routed(item: NavItem, adSpace: boolean): NavItem {
+  return !adSpace && item.key === "spaces" ? { ...item, path: SPACES_BUY_PATH } : item;
 }
 
 function every(level: Level): NavItem[] {
@@ -316,8 +346,8 @@ function every(level: Level): NavItem[] {
   return [...l.groups.flatMap((g) => g.items), ...l.foot, ...hidden];
 }
 
-export function itemsFor(level: Level, role: ShellRole, team = true, wallet = false): NavItem[] {
-  return every(level).filter((i) => visible(i, role, team, wallet));
+export function itemsFor(level: Level, role: ShellRole, team = true, wallet = false, adSpace = true): NavItem[] {
+  return every(level).filter((i) => visible(i, role, team, wallet, adSpace));
 }
 
 /** The product's prefix from Spaces' base: `` on app.hihodl.xyz, `/app` elsewhere. */

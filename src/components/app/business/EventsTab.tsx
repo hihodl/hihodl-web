@@ -26,6 +26,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { SITE_URL } from "@/lib/ad-space/config";
+import { useAdSpaceAccess } from "@/lib/app/ad-space-access";
 import { HoldApiError } from "@/lib/app/hold-api";
 import { t as tNow } from "@/lib/app/i18n";
 import { useT } from "@/lib/app/i18n/react";
@@ -43,6 +44,7 @@ import { useCreatorSession } from "@/lib/creator/session";
 import { useHref } from "../base";
 import { Notice } from "../hold";
 import { Ion } from "../ion";
+import { PartnersOnly } from "../spaces/PartnersOnly";
 import { btnGlassPill, btnWhite, Card, Empty, EventLine, Field, inputCls, SectionLabel, Tag } from "../spaces/kit";
 import { Skeleton } from "../ui";
 
@@ -83,6 +85,8 @@ export function EventsTab({
   const { session } = useCreatorSession();
   const myId = session?.user?.id ?? null;
   const claims = useMyClaims();
+  // Claiming an event as its host comes with HOLD Partners (lib/app/ad-space-access).
+  const adSpace = useAdSpaceAccess().allowed;
   const [link, setLink] = useState(prefill ?? "");
   const [active, setActive] = useState<ClaimWithEvent | null>(null);
   const [busy, setBusy] = useState<"start" | "verify" | null>(null);
@@ -156,6 +160,9 @@ export function EventsTab({
   return (
     <div className="flex flex-col gap-2.5">
       <SectionLabel>{t("business.events.claimTitle")}</SectionLabel>
+      {!adSpace && !active ? (
+        <PartnersOnly compact />
+      ) : (
       <Card className="gap-3">
         <p className="text-[13.5px] leading-5 text-white/[0.82]">{t("business.events.claimBody")}</p>
         <form
@@ -188,6 +195,7 @@ export function EventsTab({
           </button>
         </form>
       </Card>
+      )}
 
       {note && !active ? <Notice tone={note.tone}>{note.text}</Notice> : null}
 

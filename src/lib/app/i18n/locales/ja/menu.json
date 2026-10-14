@@ -139,7 +139,7 @@
   "invite.activated": "アクティブ",
   "invite.ptsEarned": "獲得 pt",
   "invite.yourLink": "あなたの招待リンク",
-  "invite.qualify": "友だちが登録し、入金して {amount} 以上投資するとアクティブになります。",
+  "invite.qualify": "友だちが {days} 日以内に {stay} 以上の滞在を終えるか、{amount} 以上投資するとアクティブになります。",
   "invite.linkNotReady": "リンクの準備がまだできていません。少ししてからもう一度お試しください。",
   "invite.yourInvites": "あなたの招待",
   "invite.sentSummary": "{count} 件送信 · <green>{points} pt</green>",

@@ -92,6 +92,8 @@
   "products.esim.about": "Data ya simu kwa nchi unayoenda. Chagua kifurushi kwenye programu, sakinisha eSIM, na uko mtandaoni ukitua.",
   "products.spaces.door": "Uza nafasi za wafadhili",
   "products.spaces.sub": "Kwenye vifaa vyako au maudhui yako, unalipwa kwa USDC moja kwa moja",
+  "products.spaces.buyDoor": "Dhamini mtayarishi",
+  "products.spaces.buySub": "Weka nafasi kwenye vifaa, maudhui au tukio lao",
   "linkPhone.pay.title": "Unganisha simu yako ili ulipe kutoka hapa",
   "linkPhone.pay.bodyAndroid": "Fungua HOLD kwenye simu hii ili uiunganishe. Kuanzia hapo, programu itaidhinisha kila malipo unayoanzisha hapa.",
   "linkPhone.later": "Baadaye",

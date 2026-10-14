@@ -15,7 +15,6 @@ import {
   SuitcaseFigure,
   Timeline,
 } from "@/components/spaces-site/parts";
-import { productHref } from "@/lib/app/paths";
 import { HOLD_KEEPS, bps } from "@/lib/rates.config";
 
 /**
@@ -42,7 +41,8 @@ export const metadata: Metadata = {
 };
 
 export default function SpacesCreatorsPage() {
-  const sell = productHref();
+  // Selling on Spaces comes with HOLD Partners: a creator starts there.
+  const sell = "/partners";
 
   return (
     <>
@@ -62,7 +62,7 @@ export default function SpacesCreatorsPage() {
           }
           actions={
             <>
-              <PrimaryAction href={sell}>Start selling on the web</PrimaryAction>
+              <PrimaryAction href={sell}>Start with HOLD Partners</PrimaryAction>
               <SecondaryAction href="#who-can-sell">Who can sell</SecondaryAction>
             </>
           }
@@ -253,10 +253,10 @@ export default function SpacesCreatorsPage() {
 
       <Closing
         line="One link for everything you sell, and a record that follows you."
-        body="Sign in with your email, connect your X account and a wallet, and publish your first listing from the browser."
+        body="Ad Space comes with HOLD Partners. Join, connect your X account and a wallet, and publish your first listing from the browser."
         actions={
           <>
-            <PrimaryAction href={sell}>Start selling on the web</PrimaryAction>
+            <PrimaryAction href={sell}>Start with HOLD Partners</PrimaryAction>
             <SecondaryAction href="/spaces">How Spaces works</SecondaryAction>
           </>
         }

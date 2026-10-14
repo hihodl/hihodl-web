@@ -45,6 +45,7 @@ import { useCreatorSession } from "@/lib/creator/session";
 import { creatorText, isSeatCode, pendingSeat, type TeamMember, type WorkListing } from "@/lib/creator/team";
 import { keepPendingJoin } from "@/lib/creator/crew";
 import type { XAccountStatus } from "@/lib/creator/types";
+import { useAdSpaceAccess } from "@/lib/app/ad-space-access";
 import { useAgency, type Agency } from "@/lib/app/agency";
 import type { MessageKey } from "@/lib/app/i18n";
 import { useLocale, useRatesRefresh, useServerPrefs, useT } from "@/lib/app/i18n/react";
@@ -64,10 +65,12 @@ import { Door as SignInDoor } from "./front/Door";
 import { GetTheAppScreen } from "./main/GetTheApp";
 import { HeaderSlotContext, type HeaderSlot } from "./header-slot";
 import { HiPointsChip } from "./HiPointsChip";
+import { PartnersOnly } from "./spaces/PartnersOnly";
 import { UserAvatar, useUserPhoto } from "./account/UserAvatar";
 import { IconArrowLeft, IconClose, IconCollapse, IconExpand, IconInsights, IconPlus, IconSearch } from "./icons";
 import {
   activeKey,
+  AD_SPACE_SELLING,
   hrefFor,
   itemsFor,
   LEVELS,
@@ -75,6 +78,8 @@ import {
   navGroupTitle,
   navLabel,
   openToAll,
+  routed,
+  SPACES_BUY_PATH,
   productPrefix,
   visible,
   type Level,
@@ -101,6 +106,12 @@ export interface ShellState {
   teamPage: boolean;
   /** Whether the Wallet module exists for this person (rollout gate); undefined while asking. */
   walletPage: boolean | undefined;
+  /**
+   * Whether Ad Space's selling side is open to this person (HOLD Partners, or
+   * already selling). True until the server says otherwise, and true when it
+   * cannot be asked (lib/app/ad-space-access).
+   */
+  adSpace: boolean;
   /**
    * HiSpace could not be read, so `listings` and `seats` are empty because we
    * do not know, not because there is nothing. Anything that would tell the
@@ -267,6 +278,7 @@ function SignedIn({ session, children }: { session: Session; children: ReactNode
   const agency = useAgency(session.user.id, team.data);
   // Asked alongside, never waited for: the shell draws without it.
   const walletPage = useWalletEnabled(session.user.id);
+  const adSpace = useAdSpaceAccess().allowed;
 
   // The language and display currency the person chose, in the app or here,
   // win over this browser's guess once /me has answered (lib/app/i18n/react).
@@ -340,10 +352,11 @@ function SignedIn({ session, children }: { session: Session; children: ReactNode
       agency,
       teamPage: role !== "creator" || agency.on || onTeams,
       walletPage,
+      adSpace,
       spacesDown: spacesDown !== null,
       spacesLoading: !spacesReady,
     };
-  }, [spacesReady, listings.data, seats.data, x.data, work.data, session, agency, walletPage, spacesDown]);
+  }, [spacesReady, listings.data, seats.data, x.data, work.data, session, agency, walletPage, adSpace, spacesDown]);
 
   // Only a Spaces page waits for Spaces, and it waits inside the Frame, so the
   // way to Home, Wallet and Stays is on screen the whole time.
@@ -474,9 +487,16 @@ function Frame({ children }: { children: ReactNode }) {
   const settling = level === "spaces" && shell.spacesLoading;
   const here = active ? deciding || settling || openToAll(rel) || allowed.some((i) => i.key === active) : true;
   useEffect(() => {
-    if (here) return;
+    if (here || (level === "spaces" && rel.replace(/\/+$/, "") === "/spaces" && !shell.adSpace)) return;
     router.replace(level === "spaces" && allowed[0] ? hrefFor(allowed[0], base) : hrefFor({ path: "" }, base));
-  }, [here, router, allowed, base, level]);
+  }, [here, router, allowed, base, level, rel, shell.adSpace]);
+  // Spaces' front door for somebody who can buy but not sell is the Board.
+  const spacesRoot = rel.replace(/\/+$/, "") === "/spaces";
+  useEffect(() => {
+    if (spacesRoot && !shell.adSpace) router.replace(hrefFor({ path: SPACES_BUY_PATH }, base));
+  }, [spacesRoot, shell.adSpace, router, base]);
+  // Any other selling page of Spaces for them: the Partners panel, not a redirect.
+  const partnersOnly = level === "spaces" && !shell.adSpace && !spacesRoot && active !== null && AD_SPACE_SELLING.has(active);
 
   const badges = useBadges();
   const entries = usePaletteEntries();
@@ -528,7 +548,9 @@ function Frame({ children }: { children: ReactNode }) {
               onMenu={() => setDrawer(true)}
               onSearch={() => setPalette(true)}
             />
-            <main className="flex min-w-0 flex-1 flex-col">{here && !deciding ? children : null}</main>
+            <main className="flex min-w-0 flex-1 flex-col">
+              {here && !deciding && !(spacesRoot && !shell.adSpace) ? (partnersOnly ? <PartnersOnly /> : children) : null}
+            </main>
           </div>
         </div>
 
@@ -616,14 +638,14 @@ function Sidebar({
   onSearch?: () => void;
 }) {
   const t = useT();
-  const { role, teamPage, walletPage } = useShell();
+  const { role, teamPage, walletPage, adSpace } = useShell();
   const productHref = useProductHref();
   const wallet = walletPage === true;
   const nav = LEVELS[level];
   const groups = nav.groups
-    .map((g) => ({ title: navGroupTitle(g), items: g.items.filter((i) => visible(i, role, teamPage, wallet)) }))
+    .map((g) => ({ title: navGroupTitle(g), items: g.items.filter((i) => visible(i, role, teamPage, wallet, adSpace)).map((i) => routed(i, adSpace)) }))
     .filter((g) => g.items.length > 0);
-  const foot = nav.foot.filter((i) => visible(i, role, teamPage, wallet));
+  const foot = nav.foot.filter((i) => visible(i, role, teamPage, wallet, adSpace));
   const home = productHref();
 
   const toggle = onClose ? (
@@ -884,7 +906,7 @@ function TopBar({
   onSearch: () => void;
 }) {
   const t = useT();
-  const { role, session } = useShell();
+  const { role, session, adSpace } = useShell();
   const me = useMe();
   const href = useHref();
   const productHref = useProductHref();
@@ -930,7 +952,7 @@ function TopBar({
           <button type="button" onClick={onSearch} aria-label={t("common.search")} className={`${btnGhost} hidden lg:inline-flex`}>
             <IconSearch className="h-3.5 w-3.5" />
           </button>
-          {level === "spaces" && role === "creator" ? (
+          {level === "spaces" && role === "creator" && adSpace ? (
             <Link
               href={href("/listings/new")}
               aria-label={t("shell.title.newListing")}
@@ -957,7 +979,7 @@ function TopBar({
 
 /** The same two levels as the sidebar: HOLD's pages, then Spaces' pages and what is in them. */
 function usePaletteEntries(): PaletteEntry[] {
-  const { role, listings, managed, teamPage, walletPage } = useShell();
+  const { role, listings, managed, teamPage, walletPage, adSpace } = useShell();
   const href = useHref();
   const base = useSpacesBase();
   const offers = useOffers(role === "creator");
@@ -969,11 +991,11 @@ function usePaletteEntries(): PaletteEntry[] {
     void locale;
     const out: PaletteEntry[] = [];
     const wallet = walletPage === true;
-    for (const i of itemsFor("main", role, teamPage, wallet)) {
-      out.push({ id: `main-${i.key}`, group: "HOLD", label: navLabel(i), href: hrefFor(i, base), keywords: i.keywords });
+    for (const i of itemsFor("main", role, teamPage, wallet, adSpace)) {
+      out.push({ id: `main-${i.key}`, group: "HOLD", label: navLabel(i), href: hrefFor(routed(i, adSpace), base), keywords: i.keywords });
     }
-    if (role === "creator") out.push({ id: "new", group: "Spaces", label: t("shell.title.newListing"), href: href("/listings/new"), keywords: "create start" });
-    for (const i of itemsFor("spaces", role, teamPage, wallet)) {
+    if (role === "creator" && adSpace) out.push({ id: "new", group: "Spaces", label: t("shell.title.newListing"), href: href("/listings/new"), keywords: "create start" });
+    for (const i of itemsFor("spaces", role, teamPage, wallet, adSpace)) {
       out.push({ id: `spaces-${i.key}`, group: "Spaces", label: navLabel(i), href: hrefFor(i, base), keywords: i.keywords });
     }
     for (const l of listings) {
@@ -1002,5 +1024,5 @@ function usePaletteEntries(): PaletteEntry[] {
     const seat = typeof window !== "undefined" ? pendingSeat() : null;
     if (seat) out.push({ id: "seat", group: "Spaces", label: t("shell.palette.openInvitation"), href: href(`/team?seat=${encodeURIComponent(seat.seat)}`) });
     return out;
-  }, [role, listings, managed, offers.data, href, base, teamPage, walletPage, t, locale]);
+  }, [role, listings, managed, offers.data, href, base, teamPage, walletPage, adSpace, t, locale]);
 }

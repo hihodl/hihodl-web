@@ -109,6 +109,10 @@ const shell = {
     "That signature was not this address's. Make sure the wallet you signed with is the one you connected, and try again.",
   "error.xFrontsALiveSpace":
     "This X account is on a live listing, so it stays connected until that listing closes. Sponsors paid for that handle.",
+  "error.partnersOnly": "Ad Space is part of HOLD Partners. Join to sell sponsorships of your space or your events.",
+  "adSpace.partnersTitle": "Ad Space is part of HOLD Partners",
+  "adSpace.partnersBody": "Sell sponsorships of your space or your events. It comes with HOLD Partners, for creators and organisers.",
+  "adSpace.partnersCta": "See HOLD Partners",
   "getApp.title": "Get the HOLD app",
   "getApp.body": "Your wallet is made in the HOLD app, on your iPhone or Android phone. Sign in there with this account, and the web opens the same wallet. Your phone approves every payment.",
   "getApp.failedTitle": "We couldn't open your account",

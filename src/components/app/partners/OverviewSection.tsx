@@ -8,10 +8,12 @@
  * earned and received never moves when the money is spent from Savings.
  */
 
+import Link from "next/link";
 import { useMemo } from "react";
 
 import { dayLabel, monthLabel, usd, usePaged, type Commission, type PartnerDashboard, type PartnerMe, type Scope } from "@/lib/app/partners";
 
+import { useProductHref } from "../base";
 import { Ion } from "../ion";
 import { ReadFailed } from "../money/kit";
 import { KpiTile, Skeleton } from "../ui";
@@ -41,6 +43,7 @@ export function OverviewSection({
   const recent = usePaged<Commission>("partners/me/commissions", { scope, limit: "6" });
   const columns = useMemo(() => commissionColumns(scope).filter((c) => ["bookedAt", "kind", "traveller", "commission", "status"].includes(c.key)), [scope]);
   const team = scope === "team";
+  const productHref = useProductHref();
 
   return (
     <div className="flex flex-col gap-4">
@@ -143,6 +146,23 @@ export function OverviewSection({
           )}
         </DeskPanel>
       </div>
+
+      {/* Ad Space is part of HOLD Partners: sponsorships of a space or an event. */}
+      <Link
+        href={productHref("/spaces")}
+        className="flex items-center gap-3 rounded-[16px] border border-white/[0.08] bg-white/[0.04] px-4 py-3 transition-colors hover:bg-white/[0.07]"
+      >
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber/[0.14] text-amber">
+          <Ion name="megaphone-outline" size={17} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[14px] font-bold text-white">Ad Space comes with HOLD Partners</span>
+          <span className="mt-0.5 block text-[13px] leading-[19px] text-white/60">
+            Sell sponsorships of your space or your events. Brands book a spot and pay you directly.
+          </span>
+        </span>
+        <Ion name="chevron-forward" size={16} className="shrink-0 text-white/40" />
+      </Link>
     </div>
   );
 }

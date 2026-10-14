@@ -186,8 +186,9 @@ export default function Home() {
             </div>
 
             <p className="mt-10 text-small text-text-faint max-w-xl mx-auto">
-              Invite a friend: when they swap $50 or more, you get 2,500 HiPoints
-              and they get 1,000. Up to 3 rewarded invites.{" "}
+              Invite a friend: when they complete a $100 stay or swap $50 within
+              90 days, you get 2,500 HiPoints and they get 1,000. Up to 10
+              rewarded invites.{" "}
               <Link href="/legal/referral-terms" className="underline underline-offset-2 hover:text-text-muted">
                 Terms
               </Link>
