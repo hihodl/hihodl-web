@@ -49,7 +49,7 @@ export default function TermsPage() {
               Terms of Service
             </h1>
             <p className="text-base sm:text-lg text-[#94a3b8ff] font-['Inter'] font-[400]">
-              Last updated: August 13, 2026
+              Last updated: October 15, 2026
             </p>
           </div>
 
@@ -64,7 +64,19 @@ export default function TermsPage() {
             <section className="flex flex-col gap-4">
               <h2 className="text-2xl font-[700] text-[#eaf6ffff]">2. Description of Service</h2>
               <p className="text-[#94a3b8ff]">
-                HOLD provides a self-custodial, multichain cryptocurrency wallet service. Our services include, but are not limited to, wallet management, blockchain interactions, and related financial technology services. We reserve the right to modify, suspend, or discontinue any aspect of our services at any time.
+                HOLD provides a self-custodial, multichain cryptocurrency wallet and the services built around it: sending, receiving and swapping digital assets, payment links, savings features, the Hi assistant, and travel bookings (flights, stays and mobile data plans), together with the HiPoints rewards programme. We may modify, suspend, or discontinue any part of the services; where a change takes away something you rely on, we will tell you in advance unless the law, a provider, or security requires us to act at once.
+              </p>
+              <h3 className="text-xl font-[600] text-[#eaf6ffff] mt-2">2.1 Product terms</h3>
+              <p className="text-[#94a3b8ff]">
+                Some products have their own terms, which apply on top of these Terms when you use that product and are shown or linked before you pay: the{" "}
+                <a href="/legal/flights" className="text-brand-ffb703 underline underline-offset-2 hover:opacity-80 transition">Flight Terms</a>, the{" "}
+                <a href="/legal/stays" className="text-brand-ffb703 underline underline-offset-2 hover:opacity-80 transition">Stay Terms</a>, the{" "}
+                <a href="/legal/esim" className="text-brand-ffb703 underline underline-offset-2 hover:opacity-80 transition">eSIM Terms of Sale</a>, the{" "}
+                <a href="/legal/hipoints" className="text-brand-ffb703 underline underline-offset-2 hover:opacity-80 transition">HiPoints Terms</a>, and the tokenized stocks disclosures in Section 6. Where product terms and these Terms say different things about that product, the product terms prevail.
+              </p>
+              <h3 className="text-xl font-[600] text-[#eaf6ffff] mt-2">2.2 One product per booking; no package travel</h3>
+              <p className="text-[#94a3b8ff]">
+                Each travel booking you make through HOLD is a single, separate service: a flight, a stay, or a data plan, each with its own supplier, price, and contract. HOLD does not combine travel services into packages or sell them as linked travel arrangements, and booking more than one service through HOLD does not create a package between them. Any optional extra offered with a booking (such as seats, bags, or cancellation cover) belongs to that booking and is sold on the terms shown with it.
               </p>
             </section>
 
@@ -79,13 +91,17 @@ export default function TermsPage() {
                 <li>You will comply with all applicable local, state, national, and international laws and regulations</li>
                 <li>All information you provide is accurate, current, and complete</li>
               </ul>
+              <h3 className="text-xl font-[600] text-[#eaf6ffff] mt-2">3.1 Booking for other people, including children</h3>
+              <p className="text-[#94a3b8ff]">
+                You may use HOLD to book travel for other people, including children under 18. When you do, you confirm that you are authorised to act for each of them, that the details you give for them are accurate, and that you accept the applicable terms on their behalf and are responsible for the booking. Children travel under the supplier&apos;s own rules for minors, including any requirement to travel with an adult; HOLD does not book unaccompanied minors. Only the account holder, who must be 18 or over, has a HOLD account; a person you book for does not.
+              </p>
             </section>
 
             <section className="flex flex-col gap-4">
               <h2 className="text-2xl font-[700] text-[#eaf6ffff]">4. User Accounts and Registration</h2>
               <div className="flex flex-col gap-3 text-[#94a3b8ff]">
                 <p>
-                  When you register for our waitlist or create an account, you agree to:
+                  When you create an account, you agree to:
                 </p>
                 <ul className="list-disc list-inside space-y-2 ml-4">
                   <li>Provide accurate, current, and complete information</li>
@@ -155,7 +171,7 @@ export default function TermsPage() {
                 <div>
                   <h3 className="text-xl font-[600] text-[#eaf6ffff] mb-2">6.4 Country eligibility</h3>
                   <p>
-                    Availability of Regulated Features depends on your country of residence and on provider coverage. During verification you may be asked to select your country from a list of supported regions; if your country is not listed, the relevant feature is not available to you, and Regulated Features may be unavailable in some jurisdictions. HOLD is global-first with an initial focus on Latin America (for example, Mexico, Brazil, Argentina, and Colombia) and is expanding to additional regions over time. Supported jurisdictions may change.
+                    Availability of Regulated Features depends on your country of residence and on provider coverage. During verification you may be asked to select your country from a list of supported regions; if your country is not listed, the relevant feature is not available to you, and Regulated Features may be unavailable in some jurisdictions. Supported jurisdictions may change as providers add or remove coverage.
                   </p>
                 </div>
                 <div>
@@ -275,7 +291,14 @@ export default function TermsPage() {
                 <li>Any fine, penalty, denied entry, overstay, tax liability, or other consequence arising from your reliance on an Informational Tool</li>
                 <li>Any loss of funds due to loss of private keys or seed phrases</li>
                 <li>Any blockchain network issues or failures</li>
+                <li>Any act or omission of an airline, property, network operator, or other supplier in providing a service you booked through HOLD</li>
               </ul>
+              <p className="text-[#94a3b8ff]">
+                To the maximum extent permitted by law, our total liability to you for all claims arising out of or relating to the services in any twelve-month period is limited to the greater of (a) the fees you paid to HOLD in that period and (b) EUR 100. Amounts you paid to a supplier for a booking are governed by the product terms for that booking and are not reduced by this limit.
+              </p>
+              <p className="text-[#94a3b8ff]">
+                Nothing in these Terms excludes or limits liability that cannot be excluded or limited by law, including liability for death or personal injury caused by negligence, for fraud, for gross negligence or wilful misconduct, or your statutory rights as a consumer.
+              </p>
             </section>
 
             <section className="flex flex-col gap-4">
@@ -288,7 +311,10 @@ export default function TermsPage() {
             <section className="flex flex-col gap-4">
               <h2 className="text-2xl font-[700] text-[#eaf6ffff]">15. Termination</h2>
               <p className="text-[#94a3b8ff]">
-                We may terminate or suspend your access to our services immediately, without prior notice or liability, for any reason, including if you breach these Terms of Service. Upon termination, your right to use our services will cease immediately.
+                You may stop using HOLD and close your account at any time. We may end these Terms or suspend your access with 30 days&apos; notice, or immediately where you have seriously or repeatedly breached them, where we are required to by law or by a provider or authority, or where it is necessary to protect you, other users, or the services from fraud or a security threat. We will tell you why unless the law prevents us.
+              </p>
+              <p className="text-[#94a3b8ff]">
+                Termination never takes your assets: your wallet is self-custodial, and your recovery phrase continues to give you access to it with any compatible wallet software. Bookings already confirmed stay in force under their product terms, and money owed to you (including refunds) is still paid.
               </p>
             </section>
 
@@ -302,19 +328,28 @@ export default function TermsPage() {
             <section className="flex flex-col gap-4">
               <h2 className="text-2xl font-[700] text-[#eaf6ffff]">17. Changes to Terms</h2>
               <p className="text-[#94a3b8ff]">
-                We reserve the right to modify or replace these Terms of Service at any time. If a revision is material, we will provide at least 30 days notice prior to any new terms taking effect. What constitutes a material change will be determined at our sole discretion. Your continued use of our services after any changes constitutes acceptance of the new terms.
+                We may update these Terms. If a change materially affects your rights or obligations, we will give you at least 30 days&apos; notice in the app or by email before it takes effect, and you may close your account before then if you do not agree. Changes required by law, or that only add features or fix errors, may take effect sooner. Each booking is governed by the terms in force when you confirmed it.
               </p>
             </section>
 
             <section className="flex flex-col gap-4">
               <h2 className="text-2xl font-[700] text-[#eaf6ffff]">18. Severability</h2>
               <p className="text-[#94a3b8ff]">
-                If any provision of these Terms of Service is held to be invalid or unenforceable by a court, the remaining provisions will remain in effect. These Terms of Service constitute the entire agreement between you and HOLD regarding our services.
+                If any provision of these Terms of Service is held to be invalid or unenforceable by a court, the remaining provisions will remain in effect. These Terms of Service, the product terms referred to in Section 2.1, and our Privacy Policy together constitute the entire agreement between you and HOLD regarding our services. These Terms are written in English; where we provide a translation, the English version prevails to the extent permitted by law.
               </p>
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">19. Contact Information</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">19. Complaints</h2>
+              <p className="text-[#94a3b8ff]">
+                If something has gone wrong, write to{" "}
+                <a href="mailto:legal@hihodl.xyz" className="text-brand-ffb703 underline underline-offset-2 hover:opacity-80 transition">legal@hihodl.xyz</a>
+                {" "}with your account email and, for a booking, its reference. We acknowledge complaints within 5 business days and aim to give a full answer within 30 days. If you live in the European Union and are not satisfied with our answer, you may refer the dispute to the Estonian Consumer Disputes Committee (Tarbijavaidluste komisjon) or to the consumer dispute body of your own country. This does not affect your right to go to court.
+              </p>
+            </section>
+
+            <section className="flex flex-col gap-4">
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">20. Contact Information</h2>
               <p className="text-[#94a3b8ff]">
                 If you have any questions about these Terms of Service, please contact us at:
               </p>
@@ -331,12 +366,21 @@ export default function TermsPage() {
         {/* ==== FOOTER ==== */}
         <div className="flex w-full flex-col items-center px-4 sm:px-6 md:px-8 py-12 border-t-2 border-[rgba(255,255,255,0.08)] mt-8">
           <div className="flex w-full max-w-[1280px] flex-col items-center gap-6">
-            <div className="flex gap-6">
+            <div className="flex flex-wrap justify-center gap-x-6 gap-y-3">
               <a href="/privacy" className="text-[#94a3b8ff] hover:text-brand-ffb703 transition text-sm font-['Inter']">
                 Privacy
               </a>
               <a href="/terms" className="text-[#94a3b8ff] hover:text-brand-ffb703 transition text-sm font-['Inter']">
                 Terms
+              </a>
+              <a href="/legal/flights" className="text-[#94a3b8ff] hover:text-brand-ffb703 transition text-sm font-['Inter']">
+                Flights
+              </a>
+              <a href="/legal/stays" className="text-[#94a3b8ff] hover:text-brand-ffb703 transition text-sm font-['Inter']">
+                Stays
+              </a>
+              <a href="/legal/hipoints" className="text-[#94a3b8ff] hover:text-brand-ffb703 transition text-sm font-['Inter']">
+                HiPoints
               </a>
               <a href="/legal/providers" className="text-[#94a3b8ff] hover:text-brand-ffb703 transition text-sm font-['Inter']">
                 Providers

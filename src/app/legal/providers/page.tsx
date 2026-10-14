@@ -68,9 +68,17 @@ const FINANCIAL: Provider[] = [
 
 const NON_FINANCIAL: Provider[] = [
   {
+    name: "Duffel",
+    what:
+      "Flight inventory and ticketing for in-app flights. You pay HOLD; HOLD books the ticket with the airline through Duffel. The airline is the carrier. See the Flight Terms.",
+    data:
+      "Each traveller's name, date of birth, gender, contact details and, where the airline requires it, document details. No identity verification data.",
+    pending: true,
+  },
+  {
     name: "liteAPI (Nuitée)",
     what:
-      "Hotel and accommodation inventory, and the booking payment, for in-app stays. liteAPI is the merchant of record for the booking; HOLD is not.",
+      "Hotel and accommodation inventory for in-app stays. You pay HOLD; HOLD reserves the room with liteAPI, which books it with the property under its own terms. See the Stay Terms.",
     data:
       "The details needed to make and hold a booking, such as guest name and dates. No identity verification data.",
     pending: true,
@@ -188,7 +196,7 @@ export default function ProvidersLegalPage() {
               Service providers
             </h1>
             <p className="text-base sm:text-lg text-[#94a3b8ff] font-['Inter'] font-[400]">
-              Last updated: October 10, 2026
+              Last updated: October 15, 2026
             </p>
           </div>
 
