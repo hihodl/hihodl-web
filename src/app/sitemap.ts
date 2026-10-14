@@ -68,6 +68,9 @@ const PAGES: Entry[] = [
   // Linked from the eSIM checkout in the app, so it is read far more often than
   // a legal page normally is — and it is the page that says who the seller is.
   { path: "/legal/esim", priority: 0.3, changeFrequency: "yearly" },
+  { path: "/legal/flights", priority: 0.3, changeFrequency: "yearly" },
+  { path: "/legal/stays", priority: 0.3, changeFrequency: "yearly" },
+  { path: "/legal/hipoints", priority: 0.3, changeFrequency: "yearly" },
   // Referenced from both legal pages and quoted to counterparties in compliance
   // reviews, so it is checked far more often than a yearly page. It also changes
   // whenever an integration does, which is the whole reason it exists.
