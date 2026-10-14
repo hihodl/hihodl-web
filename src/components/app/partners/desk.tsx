@@ -88,7 +88,7 @@ export function DeskPanel({ title, meta, actions, children, flush = false }: { t
         <header className={`flex min-w-0 flex-wrap items-center justify-between gap-3 ${flush ? "px-4 pt-4 sm:px-5 sm:pt-5" : ""} mb-3`}>
           <div className="min-w-0">
             {title ? <h2 className="truncate text-[16px] font-bold text-white">{title}</h2> : null}
-            {meta ? <p className="mt-0.5 truncate text-[12.5px] text-[#9FB7C2]">{meta}</p> : null}
+            {meta ? <p className="mt-0.5 text-[12.5px] leading-[18px] text-[#9FB7C2]">{meta}</p> : null}
           </div>
           {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
         </header>
@@ -110,7 +110,8 @@ export const filterCls =
 
 export function FilterBar({ children, onClear, active }: { children: ReactNode; onClear?: () => void; active?: boolean }) {
   return (
-    <div className="mb-3 flex flex-wrap items-center gap-2">
+    // A phone gets two filters a row and the dates their own, not four ragged rows.
+    <div className="mb-3 grid grid-cols-2 items-center gap-2 sm:flex sm:flex-wrap">
       {children}
       {active && onClear ? (
         <button type="button" onClick={onClear} className="h-9 rounded-full px-3 text-[13px] font-bold text-[#8ECAE6] hover:text-white">
@@ -135,7 +136,7 @@ export function SelectFilter({
   return (
     <label className="inline-flex min-w-0 items-center">
       <span className="sr-only">{label}</span>
-      <select className={`${filterCls} max-w-[220px] pr-7`} value={value} onChange={(e) => onChange(e.target.value)} aria-label={label}>
+      <select className={`${filterCls} w-full pr-7 sm:w-auto sm:max-w-[220px]`} value={value} onChange={(e) => onChange(e.target.value)} aria-label={label}>
         <option value="">{label}: all</option>
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -149,10 +150,10 @@ export function SelectFilter({
 
 export function DateFilter({ from, to, onChange }: { from: string; to: string; onChange: (from: string, to: string) => void }) {
   return (
-    <span className="inline-flex items-center gap-1.5">
-      <input className={`${filterCls} w-[140px]`} type="date" value={from} max={to || undefined} onChange={(e) => onChange(e.target.value, to)} aria-label="From" />
+    <span className="col-span-2 inline-flex min-w-0 items-center gap-1.5">
+      <input className={`${filterCls} w-full flex-1 sm:w-[140px] sm:flex-none`} type="date" value={from} max={to || undefined} onChange={(e) => onChange(e.target.value, to)} aria-label="From" />
       <span className="text-[12px] text-white/45">to</span>
-      <input className={`${filterCls} w-[140px]`} type="date" value={to} min={from || undefined} onChange={(e) => onChange(from, e.target.value)} aria-label="To" />
+      <input className={`${filterCls} w-full flex-1 sm:w-[140px] sm:flex-none`} type="date" value={to} min={from || undefined} onChange={(e) => onChange(from, e.target.value)} aria-label="To" />
     </span>
   );
 }

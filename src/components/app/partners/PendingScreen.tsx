@@ -18,8 +18,8 @@ export function PendingScreen({ partner, link }: { partner: Partner; link: strin
         </span>
         <h2 className="mt-4 text-[22px] font-extrabold tracking-[-0.4px] text-white">We&rsquo;re reviewing your application</h2>
         <p className="mx-auto mt-2 max-w-[400px] text-[14px] leading-[21px] text-white/[0.72]">
-          Thanks, {partner.name}. We look at every application by hand. Once you are approved, your dashboard, trips and
-          payouts open right here.
+          Thanks, {partner.name}. We look at every application by hand. Once you are approved we email you and send a
+          push to your HOLD app, and your dashboard, trips and payouts open right here.
         </p>
       </HoldCard>
 

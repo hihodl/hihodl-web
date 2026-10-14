@@ -57,7 +57,7 @@ function columns(scope: Scope): Column<Traveller>[] {
           <Muted>Not yet</Muted>
         ),
     },
-    { key: "bookings", title: "Bookings", align: "right", render: (t) => t.bookings.toLocaleString("en-US") },
+    { key: "bookings", title: "Bookings", align: "right", hideBelow: "sm", render: (t) => t.bookings.toLocaleString("en-US") },
     { key: "commission", title: "Commission", align: "right", render: (t) => <span className="font-extrabold text-white">{usd(t.commissionUsdc)}</span> },
     { key: "last", title: "Last booking", hideBelow: "xl", render: (t) => (t.lastBookedAt ? dayLabel(t.lastBookedAt) : <Muted>None</Muted>) },
     { key: "until", title: "Counts until", hideBelow: "xl", render: (t) => dayLabel(t.attributedUntil) },

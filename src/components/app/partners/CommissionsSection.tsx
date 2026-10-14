@@ -30,7 +30,8 @@ export function CommissionStatusPill({ c }: { c: Pick<Commission, "status" | "cl
 
 export function commissionColumns(scope: Scope): Column<Commission>[] {
   const cols: Column<Commission>[] = [
-    { key: "bookedAt", title: "Booked", render: (c) => <span className="whitespace-nowrap">{dayLabel(c.bookedAt)}</span> },
+    // On a phone the year drops to a second line, so Status keeps its room.
+    { key: "bookedAt", title: "Booked", render: (c) => <span className="sm:whitespace-nowrap">{dayLabel(c.bookedAt)}</span> },
     {
       key: "kind",
       title: "Product",

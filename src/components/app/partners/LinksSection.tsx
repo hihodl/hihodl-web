@@ -17,7 +17,7 @@ import { Ion } from "../ion";
 import { ReadFailed } from "../money/kit";
 import { Alert, Skeleton } from "../ui";
 import { amberBtn, DataTable, DeskPanel, filterCls, Muted, smallBtn, type Column } from "./desk";
-import { Field, inputCls, Pill, QrDownloads, SlugLine, slugReady, useSlugCheck } from "./kit";
+import { CheckBox, Field, inputCls, Pill, QrDownloads, SlugLine, slugReady, useSlugCheck } from "./kit";
 
 export function LinksSection({ scope, canManageAny, active }: { scope: Scope; canManageAny: boolean; active: boolean }) {
   const links = useLinks(true, scope);
@@ -108,8 +108,8 @@ export function LinksSection({ scope, canManageAny, active }: { scope: Scope; ca
         actions={
           <>
             {archived ? (
-              <label className="inline-flex items-center gap-2 text-[13px] text-white/70">
-                <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} className="accent-amber" />
+              <label className="inline-flex cursor-pointer items-center gap-2 text-[13px] text-white/70">
+                <CheckBox small checked={showArchived} onChange={setShowArchived} />
                 Show archived ({archived})
               </label>
             ) : null}

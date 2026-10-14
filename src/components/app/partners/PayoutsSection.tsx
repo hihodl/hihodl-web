@@ -62,7 +62,7 @@ function Statement({ id, period }: { id: string; period: string }) {
 function columns(scope: Scope): Column<Payout>[] {
   const cols: Column<Payout>[] = [
     { key: "period", title: "Month", render: (p) => <span className="font-bold text-white">{monthLabel(p.period)}</span> },
-    { key: "payee", title: "Paid to", render: (p) => (p.payee === "me" ? "You" : p.payee) },
+    { key: "payee", title: "Paid to", hideBelow: "sm", render: (p) => (p.payee === "me" ? "You" : p.payee) },
     { key: "amount", title: "Amount", align: "right", render: (p) => <span className="font-extrabold text-white">{usd(p.amountUsdc)}</span> },
     {
       key: "status",
