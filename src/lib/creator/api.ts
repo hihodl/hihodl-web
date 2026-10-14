@@ -34,6 +34,7 @@
 "use client";
 
 import { API_BASE } from "@/lib/ad-space/config";
+import { notePartnersOnly } from "@/lib/app/ad-space-gate";
 import { t } from "@/lib/app/i18n";
 import { fmtDateTime } from "@/lib/app/i18n/format";
 
@@ -111,6 +112,8 @@ export async function call<T>(
   if (!res.ok || !parsed || parsed.error || parsed.data === undefined) {
     const err = parsed?.error;
     const code = err?.code ?? (res.status === 429 ? "rate_limited" : res.status === 404 ? "not_found" : "server");
+    // Ad Space comes with HOLD Partners: a refused create closes the door everywhere it is drawn.
+    notePartnersOnly(code, res.status);
     throw new CreatorApiError(code, res.status, err?.details ?? {}, err?.message ?? null);
   }
   return parsed.data;
@@ -195,6 +198,8 @@ export function describeCreatorError(e: unknown): string {
       return t("shell.error.payoutSignatureInvalid");
     case "x_fronts_a_live_space":
       return t("shell.error.xFrontsALiveSpace");
+    case "partners_only":
+      return t("shell.error.partnersOnly");
     default:
       return t("common.somethingWentWrong");
   }

@@ -45,6 +45,11 @@ const PITCH: readonly { icon: IonName; title: string; body: string }[] = [
     title: "Trip group chats",
     body: "Make a chat per trip. Travellers join with one link, and you can collect deposits in the same place.",
   },
+  {
+    icon: "megaphone-outline",
+    title: "Ad Space included",
+    body: "Creators and organisers sell sponsorships of their space or their events, and brands pay them directly.",
+  },
 ];
 
 export function ApplyScreen({ onApplied }: { onApplied: (me: PartnerMe) => void }) {

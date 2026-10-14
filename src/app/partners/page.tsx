@@ -20,7 +20,7 @@ import { productHref } from "@/lib/app/paths";
 export const metadata: Metadata = {
   title: "HOLD Partners",
   description:
-    "For travel agencies, group trip organisers, travel creators, communities and event teams. Bring your travellers to HOLD and earn a share of our margin on every stay, flight and eSIM they book, paid monthly in USDC, with a login for everyone on your team.",
+    "For travel agencies, group trip organisers, travel creators, communities and event teams. Bring your travellers to HOLD and earn a share of our margin on every stay, flight and eSIM they book, paid monthly in USDC, with a login for everyone on your team. Ad Space comes with it.",
   alternates: { canonical: "/partners" },
 };
 
@@ -196,6 +196,25 @@ export default function PartnersPage() {
               {
                 title: "Split costs inside the chat",
                 body: "Shared dinners, transfers and tickets are split in the same group, and everyone settles up in dollars.",
+              },
+            ]}
+          />
+        </Block>
+
+        <Block tone="abyss" hairline="moonlight">
+          <BlockHead
+            title="Ad Space comes with it"
+            intro="Creators and organisers on HOLD Partners also sell sponsorships of their space or their events. Brands book a spot and pay you in USDC."
+          />
+          <Rules
+            items={[
+              {
+                title: "Sponsors for your events",
+                body: "List your event and sell the stage, the booth, the side event and the posts around it, each with its own price.",
+              },
+              {
+                title: "Spots on what you carry",
+                body: "Your suitcase, your stream, your newsletter. One page shows every spot, and brands pay you directly.",
               },
             ]}
           />

@@ -22,7 +22,7 @@ import { PRODUCTS, ProductIcon } from "./products";
 export function BenefitsScreen() {
   const t = useT();
   const href = useProductHref();
-  const { role, listings } = useShell();
+  const { role, listings, adSpace } = useShell();
   const offers = useOffers(role === "creator");
   const live = listings.filter((l) => l.status === "live").length;
   const waiting = offers.data ? waitingOnYou(offers.data).length : 0;
@@ -34,7 +34,8 @@ export function BenefitsScreen() {
         <p className="text-small text-[#9FB7C2]">{t("home.benefits.lead")}</p>
       </section>
       <div className="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-3">
-        {PRODUCTS.map((p) => (
+        {/* Spaces' door shows only to somebody Ad Space is open to (HOLD Partners). */}
+        {PRODUCTS.filter((p) => p.key !== "spaces" || adSpace).map((p) => (
           <Link
             key={p.key}
             href={href(p.path)}

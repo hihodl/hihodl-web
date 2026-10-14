@@ -100,6 +100,7 @@ const CLAIM_ERRORS: Record<string, MessageKey> = {
   RATE_LIMIT_EXCEEDED: "business.events.error.rateLimited",
   NETWORK: "business.error.network",
   UNAUTHORIZED: "business.error.signIn",
+  partners_only: "shell.error.partnersOnly",
 };
 
 /** A refusal from a claim call, as a sentence. Every code the contract names has its own. */
