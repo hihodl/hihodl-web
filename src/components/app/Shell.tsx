@@ -78,6 +78,8 @@ import {
   navGroupTitle,
   navLabel,
   openToAll,
+  routed,
+  SPACES_BUY_PATH,
   productPrefix,
   visible,
   type Level,
@@ -485,11 +487,16 @@ function Frame({ children }: { children: ReactNode }) {
   const settling = level === "spaces" && shell.spacesLoading;
   const here = active ? deciding || settling || openToAll(rel) || allowed.some((i) => i.key === active) : true;
   useEffect(() => {
-    if (here) return;
+    if (here || (level === "spaces" && rel.replace(/\/+$/, "") === "/spaces" && !shell.adSpace)) return;
     router.replace(level === "spaces" && allowed[0] ? hrefFor(allowed[0], base) : hrefFor({ path: "" }, base));
-  }, [here, router, allowed, base, level]);
-  // A selling page of Spaces for somebody Ad Space is not open to: the Partners panel, not a redirect.
-  const partnersOnly = level === "spaces" && !shell.adSpace && active !== null && AD_SPACE_SELLING.has(active);
+  }, [here, router, allowed, base, level, rel, shell.adSpace]);
+  // Spaces' front door for somebody who can buy but not sell is the Board.
+  const spacesRoot = rel.replace(/\/+$/, "") === "/spaces";
+  useEffect(() => {
+    if (spacesRoot && !shell.adSpace) router.replace(hrefFor({ path: SPACES_BUY_PATH }, base));
+  }, [spacesRoot, shell.adSpace, router, base]);
+  // Any other selling page of Spaces for them: the Partners panel, not a redirect.
+  const partnersOnly = level === "spaces" && !shell.adSpace && !spacesRoot && active !== null && AD_SPACE_SELLING.has(active);
 
   const badges = useBadges();
   const entries = usePaletteEntries();
@@ -541,7 +548,9 @@ function Frame({ children }: { children: ReactNode }) {
               onMenu={() => setDrawer(true)}
               onSearch={() => setPalette(true)}
             />
-            <main className="flex min-w-0 flex-1 flex-col">{here && !deciding ? (partnersOnly ? <PartnersOnly /> : children) : null}</main>
+            <main className="flex min-w-0 flex-1 flex-col">
+              {here && !deciding && !(spacesRoot && !shell.adSpace) ? (partnersOnly ? <PartnersOnly /> : children) : null}
+            </main>
           </div>
         </div>
 
@@ -634,7 +643,7 @@ function Sidebar({
   const wallet = walletPage === true;
   const nav = LEVELS[level];
   const groups = nav.groups
-    .map((g) => ({ title: navGroupTitle(g), items: g.items.filter((i) => visible(i, role, teamPage, wallet, adSpace)) }))
+    .map((g) => ({ title: navGroupTitle(g), items: g.items.filter((i) => visible(i, role, teamPage, wallet, adSpace)).map((i) => routed(i, adSpace)) }))
     .filter((g) => g.items.length > 0);
   const foot = nav.foot.filter((i) => visible(i, role, teamPage, wallet, adSpace));
   const home = productHref();
@@ -983,7 +992,7 @@ function usePaletteEntries(): PaletteEntry[] {
     const out: PaletteEntry[] = [];
     const wallet = walletPage === true;
     for (const i of itemsFor("main", role, teamPage, wallet, adSpace)) {
-      out.push({ id: `main-${i.key}`, group: "HOLD", label: navLabel(i), href: hrefFor(i, base), keywords: i.keywords });
+      out.push({ id: `main-${i.key}`, group: "HOLD", label: navLabel(i), href: hrefFor(routed(i, adSpace), base), keywords: i.keywords });
     }
     if (role === "creator" && adSpace) out.push({ id: "new", group: "Spaces", label: t("shell.title.newListing"), href: href("/listings/new"), keywords: "create start" });
     for (const i of itemsFor("spaces", role, teamPage, wallet, adSpace)) {
