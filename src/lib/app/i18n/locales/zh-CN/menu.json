@@ -139,7 +139,7 @@
   "invite.activated": "已激活",
   "invite.ptsEarned": "已赚积分",
   "invite.yourLink": "你的邀请链接",
-  "invite.qualify": "好友注册、充值并投资 {amount} 或以上即算激活。",
+  "invite.qualify": "好友在 {days} 天内完成一次 {stay} 的住宿或投资 {amount} 即算激活。",
   "invite.linkNotReady": "你的链接还没准备好。请稍后再试。",
   "invite.yourInvites": "你的邀请",
   "invite.sentSummary": "已发送 {count} 个 · <green>{points} 分</green>",

@@ -3,7 +3,9 @@
  *
  * `GET /referrals/me` is the summary (the link, the counts, the points each
  * side is paid, and what the friend must invest before either is) and `GET
- * /referrals/invites` the list. The numbers are the server's: the fallbacks
+ * /referrals/invites` the list. A friend qualifies on either a swap of
+ * `qualifyUsd` or a completed stay of `qualifyStayUsd`, within
+ * `qualifyWindowDays`. The numbers are the server's: the fallbacks
  * the app keeps for a cold start are not repeated here, because the web draws
  * a skeleton until the summary lands rather than a figure it made up.
  *
@@ -30,7 +32,17 @@ export interface ReferralSummary {
   pointsPerReferrer?: number;
   pointsPerWelcome?: number;
   qualifyUsd?: number;
+  /** A completed stay of this much also qualifies the friend (server: 100). */
+  qualifyStayUsd?: number;
+  /** Days the friend has to qualify, from the link (server: 90). */
+  qualifyWindowDays?: number;
+  /** How many friends pay the referrer (server: 10). */
+  awardsMax?: number;
 }
+
+/** Until the backend that sends them is deployed, the two new rules read as the server sets them. */
+export const QUALIFY_STAY_USD_FALLBACK = 100;
+export const QUALIFY_WINDOW_DAYS_FALLBACK = 90;
 
 interface ApiInvite {
   id: string;

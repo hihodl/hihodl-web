@@ -139,7 +139,7 @@
   "invite.activated": "đã kích hoạt",
   "invite.ptsEarned": "điểm đã nhận",
   "invite.yourLink": "Link mời của bạn",
-  "invite.qualify": "Bạn bè được tính là kích hoạt khi đăng ký, nạp tiền và đầu tư từ {amount} trở lên.",
+  "invite.qualify": "Bạn bè được tính là kích hoạt khi hoàn tất kỳ lưu trú {stay} hoặc đầu tư {amount} trong {days} ngày.",
   "invite.linkNotReady": "Link của bạn chưa sẵn sàng. Thử lại sau giây lát.",
   "invite.yourInvites": "Lời mời của bạn",
   "invite.sentSummary": "Đã gửi {count} · <green>{points} điểm</green>",

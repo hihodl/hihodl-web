@@ -181,7 +181,7 @@ export default function InviteRedirect() {
         ) : (
           <>
             Your friend invited you to join HOLD, the gasless stablecoin wallet.
-            Sign up and swap $50 or more within 14 days, and you both get HiPoints.
+            Book a stay of $100 or invest $50 within 90 days, and you both get HiPoints.
           </>
         )}
       </p>

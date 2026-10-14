@@ -8,10 +8,12 @@
  *   HIPOINTS.REFERRAL_QUALIFIED_POINTS = 2500   (server/services/hipoints.service.ts)
  *   HIPOINTS.REFERRAL_WELCOME_POINTS   = 1000
  *   HIPOINTS.REFERRAL_QUALIFY_USD      = 50
- *   HIPOINTS.MAX_REFERRAL_AWARDS       = 3
+ *   HIPOINTS.REFERRAL_QUALIFY_STAY_USD = 100
+ *   HIPOINTS.REFERRAL_WINDOW_DAYS      = 90
+ *   HIPOINTS.MAX_REFERRAL_AWARDS       = 10
  *   HIPOINTS.EXPIRY_DAYS               = 180
  *   POINT_USD                          = 0.01   (server/services/rewards-economics.ts)
- *   24h code window + 14-day qualification window (server/api/referrals.router.ts)
+ *   24h code window (server/api/referrals.router.ts)
  *
  * If one of those constants moves, this page moves in the same commit. A terms
  * page that disagrees with the ledger is worse than no terms page, because it is
@@ -67,16 +69,17 @@ export default function ReferralTermsPage() {
               Referral program terms
             </h1>
             <p className="text-base sm:text-lg text-[#94a3b8ff] font-['Inter'] font-[400]">
-              Last updated: September 24, 2026
+              Last updated: October 14, 2026
             </p>
           </div>
 
           <div className="rounded-2xl border border-[rgba(255,183,3,0.35)] bg-[rgba(255,183,3,0.06)] p-6">
             <p className="text-[#eaf6ffff] font-['Inter'] font-[600] leading-relaxed">
-              In short: your friend joins with your invite link and makes a swap
-              of $50 or more within 14 days, and you both get HiPoints — 2,500
-              for you, 1,000 for them. Up to 3 rewarded invites per account. The
-              detail is below, and it is the detail our systems actually apply.
+              In short: your friend joins with your invite link and, within 90
+              days, completes a stay of $100 or more or makes a swap of $50 or
+              more. You both get HiPoints: 2,500 for you, 1,000 for them. Up to
+              10 rewarded invites per account. The detail is below, and it is
+              the detail our systems actually apply.
             </p>
           </div>
 
@@ -95,21 +98,36 @@ export default function ReferralTermsPage() {
               <ul className="list-disc list-inside space-y-2 ml-4 text-[#94a3b8ff]">
                 <li>Your friend must be a new HOLD user. An invite code can only be applied within <span className="text-[#eaf6ffff] font-[600]">24 hours</span> of their account being created.</li>
                 <li>Each account can be referred once. If a code has already been applied to an account, another cannot replace it.</li>
-                <li>Once registered, the referral has <span className="text-[#eaf6ffff] font-[600]">14 days</span> to qualify. After that it expires and no reward is paid to either side.</li>
+                <li>Once registered, the referral has <span className="text-[#eaf6ffff] font-[600]">90 days</span> to qualify. After that it expires and no reward is paid to either side.</li>
               </ul>
             </section>
 
             <section className="flex flex-col gap-4">
               <h2 className="text-2xl font-[700] text-[#eaf6ffff]">3. What qualifies</h2>
               <p className="text-[#94a3b8ff]">
-                A referral qualifies when your friend completes a single swap in
-                the app worth at least{" "}
-                <span className="text-[#eaf6ffff] font-[600]">$50</span>, within
-                the 14-day window. It has to be one swap of $50 or more, not $50
-                added up across several. Signing up, installing the app,
-                applying the code, or simply holding a balance does not by
-                itself earn anything on either side — we pay both of you for the
-                same event, and that event is the one above.
+                A referral qualifies on whichever of these two happens first,
+                within the 90-day window:
+              </p>
+              <ul className="list-disc list-inside space-y-2 ml-4 text-[#94a3b8ff]">
+                <li>
+                  A stay booked in the app after the referral was registered,
+                  paid at least{" "}
+                  <span className="text-[#eaf6ffff] font-[600]">$100</span>{" "}
+                  after any HiPoints used, and completed: it counts once your
+                  friend has checked out. A cancelled stay does not count.
+                </li>
+                <li>
+                  A single swap in the app worth at least{" "}
+                  <span className="text-[#eaf6ffff] font-[600]">$50</span>. It
+                  has to be one swap of $50 or more, not $50 added up across
+                  several.
+                </li>
+              </ul>
+              <p className="text-[#94a3b8ff]">
+                Signing up, installing the app, applying the code, or simply
+                holding a balance does not by itself earn anything on either
+                side. We pay both of you for the same event, and that event is
+                one of the two above.
               </p>
             </section>
 
@@ -146,7 +164,7 @@ export default function ReferralTermsPage() {
             <section className="flex flex-col gap-4">
               <h2 className="text-2xl font-[700] text-[#eaf6ffff]">5. Caps and expiry</h2>
               <ul className="list-disc list-inside space-y-2 ml-4 text-[#94a3b8ff]">
-                <li>A maximum of <span className="text-[#eaf6ffff] font-[600]">3 rewarded referrals</span> per account. Beyond that, referrals can still be registered and can still qualify, but no further referrer reward is paid.</li>
+                <li>A maximum of <span className="text-[#eaf6ffff] font-[600]">10 rewarded referrals</span> per account. Beyond that, referrals can still be registered and can still qualify, but no further referrer reward is paid.</li>
                 <li>Awarded points expire <span className="text-[#eaf6ffff] font-[600]">180 days</span> after they are granted if they have not been used. We notify you before they do.</li>
                 <li>A promotional round may add its own end date or cap. Where one applies, it is shown in the app next to the offer.</li>
               </ul>
@@ -169,7 +187,7 @@ export default function ReferralTermsPage() {
               <p className="text-[#94a3b8ff]">
                 We may change or end the program at any time. Changes apply to
                 referrals registered after the change; a referral already
-                registered and still inside its 14-day window is settled on the
+                registered and still inside its 90-day window is settled on the
                 terms in force when it was registered. Material changes are
                 reflected on this page with a new &quot;Last updated&quot; date.
               </p>

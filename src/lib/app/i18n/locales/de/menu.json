@@ -139,7 +139,7 @@
   "invite.activated": "aktiviert",
   "invite.ptsEarned": "Pkt. verdient",
   "invite.yourLink": "Dein Einladungslink",
-  "invite.qualify": "Dein Freund ist aktiviert, wenn er sich registriert, Geld hinzufügt und {amount} oder mehr investiert.",
+  "invite.qualify": "Dein Freund ist aktiviert, wenn er innerhalb von {days} Tagen einen Aufenthalt ab {stay} abschließt oder {amount} investiert.",
   "invite.linkNotReady": "Dein Link ist noch nicht bereit. Versuch es gleich nochmal.",
   "invite.yourInvites": "Deine Einladungen",
   "invite.sentSummary": "{count} gesendet · <green>{points} Pkt.</green>",

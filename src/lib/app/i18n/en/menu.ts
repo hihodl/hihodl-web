@@ -170,7 +170,7 @@ const menu = {
   "invite.activated": "activated",
   "invite.ptsEarned": "pts earned",
   "invite.yourLink": "Your invite link",
-  "invite.qualify": "Your friend activates when they sign up, add money and invest {amount} or more.",
+  "invite.qualify": "Your friend activates when they complete a stay of {stay} or invest {amount} within {days} days.",
   "invite.linkNotReady": "Your link is not ready yet. Try again in a moment.",
   "invite.yourInvites": "Your invites",
   "invite.sentSummary": "{count} sent · <green>{points} pts</green>",

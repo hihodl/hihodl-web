@@ -139,7 +139,7 @@
   "invite.activated": "مفعّلون",
   "invite.ptsEarned": "نقاط مكتسبة",
   "invite.yourLink": "رابط دعوتك",
-  "invite.qualify": "يُفعَّل صديقك عندما يسجّل ويضيف أموالاً ويستثمر {amount} أو أكثر.",
+  "invite.qualify": "يُفعَّل صديقك عندما يُكمل إقامة بقيمة {stay} أو يستثمر {amount} خلال {days} يومًا.",
   "invite.linkNotReady": "رابطك ليس جاهزاً بعد. حاول مرة أخرى بعد لحظة.",
   "invite.yourInvites": "دعواتك",
   "invite.sentSummary": "{count} مُرسلة · <green>{points} نقطة</green>",
