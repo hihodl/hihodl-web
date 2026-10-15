@@ -134,7 +134,19 @@ const INFRASTRUCTURE: Provider[] = [
     what:
       "The AI model behind Hi, the assistant in the app, and behind reading the bookings you forward or share into a plan.",
     data:
-      "The messages you send Hi and the context it needs to answer. For a booking: the email, PDF or image you sent, so the trip details can be read from it.",
+      "The messages you send Hi and the context it needs to answer. For a booking: the email, PDF or image you sent, or the message found in a Gmail account you connected, so the trip details can be read from it. Not used to train models.",
+  },
+  {
+    name: "Google (Gmail API)",
+    what:
+      "Only if you connect your Gmail account: read only access to find your travel bookings and build your trips.",
+    data:
+      "Your Gmail address and an access token. We read only messages a travel bookings search returns and keep only the trip details from them. Our use follows the Google API Services User Data Policy, including the Limited Use requirements.",
+  },
+  {
+    name: "Unsplash",
+    what: "Photos of the places on your trips.",
+    data: "The name of the place (a city or a country), never anything about you.",
   },
 ];
 
