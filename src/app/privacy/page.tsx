@@ -49,7 +49,7 @@ export default function PrivacyPage() {
               Privacy Policy
             </h1>
             <p className="text-base sm:text-lg text-[#94a3b8ff] font-['Inter'] font-[400]">
-              Last updated: October 10, 2026
+              Last updated: October 15, 2026
             </p>
           </div>
 
@@ -75,7 +75,19 @@ export default function PrivacyPage() {
                     <strong>Bookings you add to a plan.</strong> You can forward a booking email to your personal trips.hihodl.xyz address, or share a PDF, screenshot or text into the HOLD app. We read it once to pull out the trip details: the kind of booking, dates and times, places, the flight, train or hotel, the booking reference, the names of the passengers or guests, and the price. We keep only those details. The original email, file or image is not stored once it has been read. If a detail is not in the booking, we leave it empty rather than guess it.
                   </p>
                   <p className="mt-3">
-                    Members of the plan see the trip details. The booking reference, passenger names and price are shown only to the person who added the booking and to the people travelling on it. A forwarded email counts as yours only when it comes from your account&apos;s email address and passes the sender&apos;s email authentication (DMARC); anything else waits for you to confirm it before it reaches a plan. You can create a new trips address at any time, and the old one stops working.
+                    <strong>Where a booking goes.</strong> HOLD puts every booking you add into a trip for you, and tells you where it went so you can move it with one tap. It goes to a trip that already holds the same booking reference; or to a plan you share with others in a group or a one to one chat, but only when its dates overlap the booking and its place or its members match the booking (the destination, or the names of the passengers or guests); or to one of your own personal trips with the same dates; or, if nothing fits, to a new personal trip named after the destination. Dates alone never put a booking into a plan other people see. To match passengers we compare their names only with the names of the people in your own chats, never with anyone else on HOLD. A booking from a sender we could not verify only ever goes to your own personal trips.
+                  </p>
+                  <p className="mt-3">
+                    <strong>Personal trips.</strong> A personal trip is a plan only you can see. Nobody else is in it unless you move a booking into a plan you share.
+                  </p>
+                  <p className="mt-3">
+                    Members of the plan see the trip details. The booking reference, passenger names and price are shown only to the person who added the booking and to the people travelling on it; when the passengers on a booking are members of the plan, they count as travelling on it. A forwarded email counts as yours only when it comes from one of your own addresses (your account&apos;s email, your connected Gmail, or the travel email you confirmed) and passes the sender&apos;s email authentication (DMARC). If a booking is later changed or cancelled and you forward that email too, we update or remove the trip item it matches. You can create a new trips address at any time, and the old one stops working.
+                  </p>
+                  <p className="mt-3">
+                    <strong>Your travel email.</strong> You can tell HOLD which email address your booking confirmations go to, even if it is not the one you sign in with. We send a six digit code to that address and use it only after you enter the code. HOLD fills it in as the contact email when you book a stay, a flight or an experience in the app, so the confirmation reaches the inbox your trips are built from. You can change or remove it at any time.
+                  </p>
+                  <p className="mt-3">
+                    <strong>Connecting Gmail.</strong> If you choose to connect your Gmail account, HOLD asks Google for read only access. We search your mailbox for travel bookings (flights, stays, trains, events and similar) and read only the messages that search returns, starting from the last 12 months; a booking for a trip that has already ended is ignored and nothing from it is kept. Each message is read once to pull out the trip details listed above; the message itself is not stored. We keep your Gmail address and an encrypted access token so the sync can keep running, and you can disconnect at any time in the app or in your Google account, after which we stop reading and delete the token. HOLD&apos;s use and transfer of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements. We use Gmail data only to add your bookings to your trips; we do not use it for advertising, we do not sell it, we do not let people read it except with your permission, for security or to comply with the law, and we do not use it to train AI models.
                   </p>
                   <p className="mt-3">
                     <strong>Your phone&apos;s calendar.</strong> If you choose Add to my calendar, HOLD writes the trip items you travel on into a calendar named HOLD on your phone. HOLD does not read your other calendar events, and nothing from your calendar is sent to us.
@@ -109,7 +121,8 @@ export default function PrivacyPage() {
                 <li>Monitor and analyze usage patterns and trends</li>
                 <li>Detect, prevent, and address technical issues and security threats</li>
                 <li>Comply with legal obligations and enforce our terms</li>
-                <li>Read the bookings you forward or share and add them to the plan you choose</li>
+                <li>Read the bookings you forward, share or that we find in a Gmail account you connected, and add each one to the trip it belongs to</li>
+                <li>Let Hi, the assistant in the app, write to you about a trip of yours when it notices something worth knowing, for example a night with nowhere to stay; you can turn these trip ideas off in Settings, or for one trip or one kind of idea from the message itself</li>
               </ul>
             </section>
 
