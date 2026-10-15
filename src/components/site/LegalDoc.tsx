@@ -3,7 +3,7 @@
 /**
  * One product's terms, drawn the way /legal/esim is: the title and review date,
  * the box that says who is on the other side of the purchase, then numbered
- * sections. The product terms (flights, stays, HiPoints) share it
+ * sections. The product terms (flights, stays, experiences, HiPoints) share it
  * so they read as one set, and the footer links every one of them.
  *
  * Each page is linked from its own checkout in the app ("By paying you accept
@@ -36,6 +36,7 @@ export const LEGAL_LINKS: Array<{ href: string; label: string }> = [
   { href: "/privacy", label: "Privacy" },
   { href: "/legal/flights", label: "Flights" },
   { href: "/legal/stays", label: "Stays" },
+  { href: "/legal/experiences", label: "Experiences" },
   { href: "/legal/esim", label: "eSIM" },
   { href: "/legal/hipoints", label: "HiPoints" },
   { href: "/legal/traveler", label: "Traveler" },

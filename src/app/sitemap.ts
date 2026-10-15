@@ -70,6 +70,7 @@ const PAGES: Entry[] = [
   { path: "/legal/esim", priority: 0.3, changeFrequency: "yearly" },
   { path: "/legal/flights", priority: 0.3, changeFrequency: "yearly" },
   { path: "/legal/stays", priority: 0.3, changeFrequency: "yearly" },
+  { path: "/legal/experiences", priority: 0.3, changeFrequency: "yearly" },
   { path: "/legal/hipoints", priority: 0.3, changeFrequency: "yearly" },
   // Referenced from both legal pages and quoted to counterparties in compliance
   // reviews, so it is checked far more often than a yearly page. It also changes
