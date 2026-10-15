@@ -64,19 +64,20 @@ export default function TermsPage() {
             <section className="flex flex-col gap-4">
               <h2 className="text-2xl font-[700] text-[#eaf6ffff]">2. Description of Service</h2>
               <p className="text-[#94a3b8ff]">
-                HOLD provides a self-custodial, multichain cryptocurrency wallet and the services built around it: sending, receiving and swapping digital assets, payment links, savings features, the Hi assistant, and travel bookings (flights, stays and mobile data plans), together with the HiPoints rewards programme. We may modify, suspend, or discontinue any part of the services; where a change takes away something you rely on, we will tell you in advance unless the law, a provider, or security requires us to act at once.
+                HOLD provides a self-custodial, multichain cryptocurrency wallet and the services built around it: sending, receiving and swapping digital assets, payment links, savings features, the Hi assistant, and travel bookings (flights, stays, experiences and mobile data plans), together with the HiPoints rewards programme. We may modify, suspend, or discontinue any part of the services; where a change takes away something you rely on, we will tell you in advance unless the law, a provider, or security requires us to act at once.
               </p>
               <h3 className="text-xl font-[600] text-[#eaf6ffff] mt-2">2.1 Product terms</h3>
               <p className="text-[#94a3b8ff]">
                 Some products have their own terms, which apply on top of these Terms when you use that product and are shown or linked before you pay: the{" "}
                 <a href="/legal/flights" className="text-brand-ffb703 underline underline-offset-2 hover:opacity-80 transition">Flight Terms</a>, the{" "}
                 <a href="/legal/stays" className="text-brand-ffb703 underline underline-offset-2 hover:opacity-80 transition">Stay Terms</a>, the{" "}
+                <a href="/legal/experiences" className="text-brand-ffb703 underline underline-offset-2 hover:opacity-80 transition">Experience Terms</a>, the{" "}
                 <a href="/legal/esim" className="text-brand-ffb703 underline underline-offset-2 hover:opacity-80 transition">eSIM Terms of Sale</a>, the{" "}
                 <a href="/legal/hipoints" className="text-brand-ffb703 underline underline-offset-2 hover:opacity-80 transition">HiPoints Terms</a>, and the tokenized stocks disclosures in Section 6. Where product terms and these Terms say different things about that product, the product terms prevail.
               </p>
               <h3 className="text-xl font-[600] text-[#eaf6ffff] mt-2">2.2 One product per booking; no package travel</h3>
               <p className="text-[#94a3b8ff]">
-                Each travel booking you make through HOLD is a single, separate service: a flight, a stay, or a data plan, each with its own supplier, price, and contract. HOLD does not combine travel services into packages or sell them as linked travel arrangements, and booking more than one service through HOLD does not create a package between them. Any optional extra offered with a booking (such as seats, bags, or cancellation cover) belongs to that booking and is sold on the terms shown with it.
+                Each travel booking you make through HOLD is a single, separate service: a flight, a stay, a data plan, or an experience, each with its own supplier, price, and contract. HOLD does not combine travel services into packages or sell them as linked travel arrangements, and booking more than one service through HOLD does not create a package between them. Any optional extra offered with a booking (such as seats, bags, or cancellation cover) belongs to that booking and is sold on the terms shown with it.
               </p>
             </section>
 
@@ -378,6 +379,9 @@ export default function TermsPage() {
               </a>
               <a href="/legal/stays" className="text-[#94a3b8ff] hover:text-brand-ffb703 transition text-sm font-['Inter']">
                 Stays
+              </a>
+              <a href="/legal/experiences" className="text-[#94a3b8ff] hover:text-brand-ffb703 transition text-sm font-['Inter']">
+                Experiences
               </a>
               <a href="/legal/hipoints" className="text-[#94a3b8ff] hover:text-brand-ffb703 transition text-sm font-['Inter']">
                 HiPoints

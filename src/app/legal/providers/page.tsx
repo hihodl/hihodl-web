@@ -84,6 +84,15 @@ const NON_FINANCIAL: Provider[] = [
     pending: true,
   },
   {
+    name: "Tiqets",
+    entity: "Tiqets International B.V., Amsterdam, the Netherlands.",
+    what:
+      "Activities, tours, and museum and attraction tickets shown in the app. You book and pay on Tiqets' own site, where Tiqets sells the ticket under its own terms; HOLD may earn a commission. See the Experience Terms.",
+    data:
+      "Nothing from HOLD for a ticket you book on Tiqets' site: you give your details to Tiqets there. No identity verification data.",
+    pending: true,
+  },
+  {
     name: "eSIM Go",
     what: "Mobile data plans (eSIM) bought in the app.",
     data:
