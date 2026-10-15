@@ -95,7 +95,7 @@ export function TeamSection({ partner, me, onChanged }: { partner: Partner; me: 
               {m.name}
               {m.isMe ? <span className="font-normal text-white/50"> (you)</span> : null}
             </span>
-            {m.handle ? <span className="truncate text-[12px] text-white/45">@{m.handle}</span> : null}
+            {m.handle ? <span className="truncate text-[12px] text-white/45">@{m.handle.replace(/^@/, "")}</span> : null}
           </span>
         </span>
       ),
@@ -135,10 +135,10 @@ export function TeamSection({ partner, me, onChanged }: { partner: Partner; me: 
           pct(m.splitBps)
         ),
     },
-    { key: "signups", title: "Signups", align: "right", hideBelow: "md", render: (m) => m.signups.toLocaleString("en-US") },
+    { key: "signups", title: "Signups", align: "right", hideBelow: "2xl", render: (m) => m.signups.toLocaleString("en-US") },
     { key: "brought", title: "Brought", align: "right", hideBelow: "md", render: (m) => usd(m.broughtUsdc) },
-    { key: "earned", title: "Earned", align: "right", render: (m) => <span className="font-extrabold text-white">{usd(m.earnedUsdc)}</span> },
-    { key: "received", title: "Received", align: "right", hideBelow: "lg", render: (m) => usd(m.receivedUsdc) },
+    { key: "earned", title: "Earned", align: "right", hideBelow: "sm", render: (m) => <span className="font-extrabold text-white">{usd(m.earnedUsdc)}</span> },
+    { key: "received", title: "Received", align: "right", hideBelow: "2xl", render: (m) => usd(m.receivedUsdc) },
     { key: "billing", title: "Payouts", hideBelow: "xl", render: (m) => <Pill tone={BILLING[m.billing].tone}>{BILLING[m.billing].label}</Pill> },
     {
       key: "actions",

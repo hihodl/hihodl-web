@@ -43,7 +43,7 @@ function tripColumns(scope: Scope): Column<TripRow>[] {
       ),
     },
     { key: "runBy", title: "Run by", hideBelow: "lg", render: (t) => t.runBy ?? <Muted>Partner</Muted> },
-    { key: "members", title: "People", align: "right", render: (t) => t.members.toLocaleString("en-US") },
+    { key: "members", title: "People", align: "right", hideBelow: "sm", render: (t) => t.members.toLocaleString("en-US") },
     { key: "deposits", title: "Deposits paid", align: "right", hideBelow: "sm", render: (t) => (t.payLinkCode ? t.depositsPaid.toLocaleString("en-US") : <Muted>No deposit</Muted>) },
     { key: "collected", title: "Collected", align: "right", hideBelow: "md", render: (t) => (t.payLinkCode ? usd(t.collectedUsdc) : <Muted>None</Muted>) },
     { key: "bookings", title: "Bookings", align: "right", hideBelow: "md", render: (t) => t.bookings.toLocaleString("en-US") },
@@ -138,7 +138,7 @@ const peopleColumns: Column<TripDetail["people"][number]>[] = [
         )}
         <span className="flex min-w-0 flex-col">
           <span className="truncate font-bold text-white">{p.name}</span>
-          {p.handle ? <span className="truncate text-[12px] text-white/45">@{p.handle}</span> : null}
+          {p.handle ? <span className="truncate text-[12px] text-white/45">@{p.handle.replace(/^@/, "")}</span> : null}
         </span>
       </span>
     ),

@@ -88,7 +88,7 @@ export function DeskPanel({ title, meta, actions, children, flush = false }: { t
         <header className={`flex min-w-0 flex-wrap items-center justify-between gap-3 ${flush ? "px-4 pt-4 sm:px-5 sm:pt-5" : ""} mb-3`}>
           <div className="min-w-0">
             {title ? <h2 className="truncate text-[16px] font-bold text-white">{title}</h2> : null}
-            {meta ? <p className="mt-0.5 truncate text-[12.5px] text-[#9FB7C2]">{meta}</p> : null}
+            {meta ? <p className="mt-0.5 text-[12.5px] leading-[18px] text-[#9FB7C2]">{meta}</p> : null}
           </div>
           {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
         </header>
@@ -99,7 +99,7 @@ export function DeskPanel({ title, meta, actions, children, flush = false }: { t
 }
 
 export const smallBtn =
-  "inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-white/[0.14] bg-white/[0.08] px-3.5 text-[13px] font-bold text-white transition-colors hover:bg-white/[0.14] disabled:cursor-not-allowed disabled:opacity-50";
+  "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-white/[0.14] bg-white/[0.08] px-3.5 text-[13px] font-bold text-white transition-colors hover:bg-white/[0.14] disabled:cursor-not-allowed disabled:opacity-50";
 export const amberBtn =
   "inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-amber px-4 text-[13px] font-extrabold text-[#0F0F1A] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50";
 
@@ -110,7 +110,8 @@ export const filterCls =
 
 export function FilterBar({ children, onClear, active }: { children: ReactNode; onClear?: () => void; active?: boolean }) {
   return (
-    <div className="mb-3 flex flex-wrap items-center gap-2">
+    // A phone gets two filters a row and the dates their own, not four ragged rows.
+    <div className="mb-3 grid grid-cols-2 items-center gap-2 sm:flex sm:flex-wrap">
       {children}
       {active && onClear ? (
         <button type="button" onClick={onClear} className="h-9 rounded-full px-3 text-[13px] font-bold text-[#8ECAE6] hover:text-white">
@@ -135,7 +136,7 @@ export function SelectFilter({
   return (
     <label className="inline-flex min-w-0 items-center">
       <span className="sr-only">{label}</span>
-      <select className={`${filterCls} max-w-[220px] pr-7`} value={value} onChange={(e) => onChange(e.target.value)} aria-label={label}>
+      <select className={`${filterCls} w-full pr-7 sm:w-auto sm:max-w-[220px]`} value={value} onChange={(e) => onChange(e.target.value)} aria-label={label}>
         <option value="">{label}: all</option>
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -149,10 +150,10 @@ export function SelectFilter({
 
 export function DateFilter({ from, to, onChange }: { from: string; to: string; onChange: (from: string, to: string) => void }) {
   return (
-    <span className="inline-flex items-center gap-1.5">
-      <input className={`${filterCls} w-[140px]`} type="date" value={from} max={to || undefined} onChange={(e) => onChange(e.target.value, to)} aria-label="From" />
+    <span className="col-span-2 inline-flex min-w-0 items-center gap-1.5">
+      <input className={`${filterCls} w-full flex-1 sm:w-[140px] sm:flex-none`} type="date" value={from} max={to || undefined} onChange={(e) => onChange(e.target.value, to)} aria-label="From" />
       <span className="text-[12px] text-white/45">to</span>
-      <input className={`${filterCls} w-[140px]`} type="date" value={to} min={from || undefined} onChange={(e) => onChange(from, e.target.value)} aria-label="To" />
+      <input className={`${filterCls} w-full flex-1 sm:w-[140px] sm:flex-none`} type="date" value={to} min={from || undefined} onChange={(e) => onChange(from, e.target.value)} aria-label="To" />
     </span>
   );
 }
@@ -195,7 +196,8 @@ export type Column<T> = {
   title: string;
   align?: "left" | "right";
   /** Hidden under this breakpoint, so a phone keeps the columns that matter. */
-  hideBelow?: "sm" | "md" | "lg" | "xl";
+  /** Viewport breakpoints. The desk's own nav and the app's sidebar take ~480px, so "2xl" (1536) is a wide table's friend. */
+  hideBelow?: "sm" | "md" | "lg" | "xl" | "2xl";
   render: (row: T) => ReactNode;
   className?: string;
 };
@@ -205,6 +207,7 @@ const HIDE: Record<NonNullable<Column<unknown>["hideBelow"]>, string> = {
   md: "hidden md:table-cell",
   lg: "hidden lg:table-cell",
   xl: "hidden xl:table-cell",
+  "2xl": "hidden 2xl:table-cell",
 };
 
 export function DataTable<T>({
@@ -225,14 +228,14 @@ export function DataTable<T>({
   }
   return (
     <div className="min-w-0 overflow-x-auto">
-      <table className="w-full min-w-[560px] border-collapse text-[13.5px]">
+      <table className="w-full border-collapse text-[13.5px] sm:min-w-[560px]">
         <thead>
           <tr>
             {columns.map((c) => (
               <th
                 key={c.key}
                 scope="col"
-                className={`sticky top-0 whitespace-nowrap border-b border-white/[0.08] px-3 py-2.5 text-[11px] font-bold uppercase tracking-[0.6px] text-[#9FB7C2] first:pl-4 last:pr-4 sm:first:pl-5 sm:last:pr-5 ${
+                className={`sticky top-0 whitespace-nowrap border-b border-white/[0.08] px-2 py-2.5 text-[11px] sm:px-3 font-bold uppercase tracking-[0.6px] text-[#9FB7C2] first:pl-4 last:pr-4 sm:first:pl-5 sm:last:pr-5 ${
                   c.align === "right" ? "text-right" : "text-left"
                 } ${c.hideBelow ? HIDE[c.hideBelow] : ""}`}
               >
@@ -251,7 +254,7 @@ export function DataTable<T>({
               {columns.map((c) => (
                 <td
                   key={c.key}
-                  className={`px-3 py-3 align-middle text-white/90 first:pl-4 last:pr-4 sm:first:pl-5 sm:last:pr-5 ${c.align === "right" ? "text-right tabular-nums" : ""} ${
+                  className={`px-2 py-3 align-middle sm:px-3 text-white/90 first:pl-4 last:pr-4 sm:first:pl-5 sm:last:pr-5 ${c.align === "right" ? "text-right tabular-nums" : ""} ${
                     c.hideBelow ? HIDE[c.hideBelow] : ""
                   } ${c.className ?? ""}`}
                 >

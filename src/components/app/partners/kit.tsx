@@ -242,11 +242,28 @@ export function QrDownloads({ text, name }: { text: string; name: string }) {
 }
 
 
+/** The app's own tick box (as on the listing form), not the browser's white square. Put it first inside a <label>. */
+export function CheckBox({ checked, onChange, small }: { checked: boolean; onChange: (v: boolean) => void; small?: boolean }) {
+  return (
+    <>
+      <input type="checkbox" className="peer sr-only" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      <span
+        aria-hidden
+        className={`flex shrink-0 items-center justify-center border transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-white/40 ${
+          small ? "h-[18px] w-[18px] rounded-[6px]" : "h-[22px] w-[22px] rounded-[7px]"
+        } ${checked ? "border-[#F1F5F9] bg-[#F1F5F9] text-[#0A1420]" : "border-white/35"}`}
+      >
+        {checked ? <Ion name="checkmark" size={small ? 13 : 15} /> : null}
+      </span>
+    </>
+  );
+}
+
 /** "I agree to the HOLD Partners terms". Applying and joining a team both need it ticked. */
 export function TermsCheck({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <label className="flex cursor-pointer items-start gap-3 text-[13.5px] leading-[20px] text-white/75">
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-amber" />
+      <CheckBox checked={checked} onChange={onChange} />
       <span>
         I agree to the{" "}
         <a href={PARTNER_TERMS_URL} target="_blank" rel="noopener noreferrer" className="font-bold text-[#8ECAE6] hover:text-white">

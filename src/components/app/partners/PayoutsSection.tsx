@@ -62,7 +62,7 @@ function Statement({ id, period }: { id: string; period: string }) {
 function columns(scope: Scope): Column<Payout>[] {
   const cols: Column<Payout>[] = [
     { key: "period", title: "Month", render: (p) => <span className="font-bold text-white">{monthLabel(p.period)}</span> },
-    { key: "payee", title: "Paid to", render: (p) => (p.payee === "me" ? "You" : p.payee) },
+    { key: "payee", title: "Paid to", hideBelow: "sm", render: (p) => (p.payee === "me" ? "You" : p.payee) },
     { key: "amount", title: "Amount", align: "right", render: (p) => <span className="font-extrabold text-white">{usd(p.amountUsdc)}</span> },
     {
       key: "status",
@@ -137,7 +137,7 @@ export function PayoutsSection({
       <DeskPanel
         flush
         title="Payouts"
-        meta={page.total ? `${usd(page.total.sentUsdc ?? 0)} sent in ${(page.total.count ?? 0).toLocaleString("en-US")} payouts` : "Monthly, in USDC, to HOLD Savings"}
+        meta={page.total ? `${usd(page.total.sentUsdc ?? 0)} sent in ${(page.total.count ?? 0).toLocaleString("en-US")} ${page.total.count === 1 ? "payout" : "payouts"}` : "Monthly, in USDC, to HOLD Savings"}
         actions={<ExportButton path={`partners/me/export/payouts?${qs}`} name="hold-partners-payouts.csv" />}
       >
         <div className="px-4 sm:px-5">
