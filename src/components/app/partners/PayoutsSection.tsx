@@ -137,7 +137,7 @@ export function PayoutsSection({
       <DeskPanel
         flush
         title="Payouts"
-        meta={page.total ? `${usd(page.total.sentUsdc ?? 0)} sent in ${(page.total.count ?? 0).toLocaleString("en-US")} ${page.total.count === 1 ? "payout" : "payouts"}` : "Monthly, in USDC, to HOLD Savings"}
+        meta={page.total ? `${usd(page.total.sentUsdc ?? 0)} sent in ${(page.total.count ?? 0).toLocaleString("en-US")} ${page.total.count === 1 ? "payout" : "payouts"}` : "Monthly, in USD or EUR, to HOLD Savings"}
         actions={<ExportButton path={`partners/me/export/payouts?${qs}`} name="hold-partners-payouts.csv" />}
       >
         <div className="px-4 sm:px-5">

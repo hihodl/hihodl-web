@@ -88,7 +88,7 @@ export function OverviewSection({
                 : "Payouts start soon"}
             </span>
             <span className="text-white/55">
-              Payouts land in your HOLD Savings in USDC. What you earned here stays the same when you spend or move it.
+              Payouts land in your HOLD Savings in USD or EUR. What you earned here stays the same when you spend or move it.
             </span>
             {paid && data.billing !== "verified" ? (
               <button type="button" className="font-bold text-amber underline-offset-2 hover:underline" onClick={() => go("settings")}>

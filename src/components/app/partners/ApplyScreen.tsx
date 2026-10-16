@@ -33,7 +33,7 @@ const PITCH: readonly { icon: IonName; title: string; body: string }[] = [
   {
     icon: "wallet-outline",
     title: "Paid monthly into your Savings",
-    body: "In USDC, straight into your HOLD Savings, where it earns from the day it lands.",
+    body: "In USD or EUR, straight into your HOLD Savings, on the 1st of every month.",
   },
   {
     icon: "qr-code-outline",

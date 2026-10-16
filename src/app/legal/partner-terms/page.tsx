@@ -14,6 +14,8 @@
  *   payableAfterOf: stay = day after check out, flight = day after last departure,
  *                   eSIM = ESIM_HOLD_DAYS (14) after delivery
  *   PAYOUT_MIN_USDC = 10, PAYOUT_CEILING_USDC = 2500 (a bigger month is paid in parts, pickPayoutRows)
+ *   Payout currency: USD (USDC) or EUR (EURC) on Base. Today runPartnerPayouts sends USDC only
+ *   (sendUsdcOnBase); EURC payouts must ship before PARTNER_PAYOUTS_ENABLED goes on.
  *   payoutPeriodFor / nextPayoutOn: the 1st of the month pays the month before
  *   clawbackOf: a paid commission on a booking cancelled later comes off the next payout
  *
@@ -70,14 +72,14 @@ export default function PartnerTermsPage() {
               HOLD Partners terms
             </h1>
             <p className="text-base sm:text-lg text-[#94a3b8ff] font-['Inter'] font-[400]">
-              Last updated: October 13, 2026
+              Last updated: October 16, 2026
             </p>
           </div>
 
           <div className="rounded-2xl border border-[rgba(255,183,3,0.35)] bg-[rgba(255,183,3,0.06)] p-6">
             <p className="text-[#eaf6ffff] font-['Inter'] font-[600] leading-relaxed">
               In short: travellers who sign up through your link are yours for 12 months. You earn a share of HOLD&apos;s
-              margin on the stays, flights and eSIMs they book, once the trip has happened. We pay it monthly in USDC into
+              margin on the stays, flights and eSIMs they book, once the trip has happened. We pay it monthly in USD or EUR into
               your HOLD Savings, after your billing details are checked. If a paid booking is cancelled later, it comes off
               your next payout.
             </p>
@@ -131,8 +133,9 @@ export default function PartnerTermsPage() {
             <section className="flex flex-col gap-4">
               <h2 className="text-2xl font-[700] text-[#eaf6ffff]">5. Payouts</h2>
               <ul className="list-disc list-inside space-y-2 ml-4 text-[#94a3b8ff]">
-                <li>On the <span className="text-[#eaf6ffff] font-[600]">1st of each month</span> we pay what you earned in the month before, in <span className="text-[#eaf6ffff] font-[600]">USDC</span>, into the HOLD Savings of the person being paid.</li>
-                <li>A payout under <span className="text-[#eaf6ffff] font-[600]">$10</span> is not sent. It carries over to the next month.</li>
+                <li>On the <span className="text-[#eaf6ffff] font-[600]">1st of each month</span> we pay what you earned in the month before, in <span className="text-[#eaf6ffff] font-[600]">USD or EUR</span> (as USDC or EURC, the digital dollar and euro issued by Circle), into the HOLD Savings of the person being paid.</li>
+                <li>Commissions are counted in US dollars. A payout in euros is converted at the market rate on the day it is sent.</li>
+                <li>A payout under <span className="text-[#eaf6ffff] font-[600]">$10</span> (or the same in euros) is not sent. It carries over to the next month.</li>
                 <li>We pay only once your billing details (your name or company, address, country and tax ID) are filled in under Settings and checked by HOLD. Until then your commissions keep adding up and nothing is lost.</li>
                 <li>A month above <span className="text-[#eaf6ffff] font-[600]">$2,500</span> is paid in parts: up to $2,500 now, the rest with the next payouts.</li>
                 <li>A team can be paid in one of two ways, chosen by its owner: everything to the owner, or each member paid their agreed part of the commission on their own travellers straight into their own Savings, with the rest to the owner.</li>
