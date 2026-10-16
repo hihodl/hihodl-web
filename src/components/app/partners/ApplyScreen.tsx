@@ -124,7 +124,7 @@ export function ApplyScreen({ onApplied }: { onApplied: (me: PartnerMe) => void 
               value={name}
               onChange={(e) => setName(e.target.value)}
               maxLength={80}
-              placeholder="Dream Life Getaways"
+              placeholder="Agency name"
               autoComplete="organization"
             />
           </Field>
@@ -138,7 +138,7 @@ export function ApplyScreen({ onApplied }: { onApplied: (me: PartnerMe) => void 
                 setSlug(e.target.value);
               }}
               maxLength={40}
-              placeholder="dreamlife"
+              placeholder="Link name"
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}

@@ -171,7 +171,7 @@ function NewLink({ canPickMember, onDone }: { canPickMember: boolean; onDone: (m
     <DeskPanel title="New link">
       <form onSubmit={submit} className="grid grid-cols-1 gap-4 md:grid-cols-2" noValidate>
         <Field label="Link name">
-          <input className={inputCls} value={raw} onChange={(e) => setRaw(e.target.value)} maxLength={40} placeholder="dreamlifeinsta" autoFocus autoCapitalize="none" autoCorrect="off" spellCheck={false} />
+          <input className={inputCls} value={raw} onChange={(e) => setRaw(e.target.value)} maxLength={40} placeholder="Link name" autoFocus autoCapitalize="none" autoCorrect="off" spellCheck={false} />
           <SlugLine raw={raw} check={check} />
         </Field>
         <Field label="What it is for (optional)" hint="Only your team sees this.">
