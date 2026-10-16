@@ -199,7 +199,7 @@ export function PartnersScreen() {
           ) : section === "travellers" ? (
             <TravellersSection scope={scope} trips={trips} />
           ) : section === "trips" ? (
-            <TripsSection scope={scope} active={active} onChanged={() => void tripNames.mutate()} />
+            <TripsSection scope={scope} active={active} agency={partner?.kind === "agency"} partnerName={partner?.name ?? ""} onChanged={() => void tripNames.mutate()} />
           ) : section === "commissions" ? (
             <CommissionsSection scope={scope} trips={trips} />
           ) : section === "payouts" ? (

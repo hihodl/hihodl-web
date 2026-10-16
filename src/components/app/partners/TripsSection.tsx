@@ -8,12 +8,16 @@
  * A deposit is matched to a traveller when they paid from their HOLD wallet.
  * Card, bank and outside wallet payments cannot be tied to a person, so they
  * are shown as "not matched" with their total: the money always adds up.
+ *
+ * Agencies only: each trip says how many of its welcome eSIMs were claimed
+ * (the first `maxTravellers` who join by the link get one). A trip that
+ * gives none says nothing about it, and creators never see the line.
  */
 
 import { useState } from "react";
 
 import { QrCode } from "@/components/ad-space/qr";
-import { dayLabel, fileSlug, usd, usePaged, useTripDetail, type DepositState, type Scope, type TripDetail, type TripRow } from "@/lib/app/partners";
+import { countryName, dayLabel, fileSlug, usd, usePaged, useTripDetail, type DepositState, type Scope, type Trip, type TripDetail, type TripRow } from "@/lib/app/partners";
 
 import { CopyButton } from "../front/kit";
 import { Ion } from "../ion";
@@ -23,7 +27,18 @@ import { Skeleton } from "../ui";
 import { DataTable, DeskPanel, ExportButton, FilterBar, Muted, PagedTable, SelectFilter, smallBtn, Stat, type Column } from "./desk";
 import { useFilters } from "./CommissionsSection";
 import { Pill, QrDownloads, type PillTone } from "./kit";
-import { DepositForm, NewTrip } from "./TripsTab";
+import { DepositForm, NewTrip, TravellersForm } from "./TripsTab";
+
+/** The welcome eSIM a trip gives, in words; null when it gives none. */
+function welcomeText(t: Pick<Trip, "place" | "countryCode" | "maxTravellers" | "welcome">): { line: string; count: string } | null {
+  const w = t.welcome;
+  if (!w?.offered) return null;
+  const where = countryName(t.countryCode) || t.place?.trim();
+  const line = `Includes a 1 GB welcome eSIM${where ? ` for ${where}` : ""}`;
+  const n = (v: number) => v.toLocaleString("en-US");
+  const count = t.maxTravellers != null ? `${n(w.given)} of ${n(t.maxTravellers)} claimed` : w.left != null ? `${n(w.left)} left` : `${n(w.given)} claimed`;
+  return { line, count };
+}
 
 function when(t: { startsOn: string | null; endsOn: string | null }): string {
   const a = dayLabel(t.startsOn);
@@ -31,17 +46,25 @@ function when(t: { startsOn: string | null; endsOn: string | null }): string {
   return a && b ? `${a} to ${b}` : a || b;
 }
 
-function tripColumns(scope: Scope): Column<TripRow>[] {
+function tripColumns(scope: Scope, agency: boolean): Column<TripRow>[] {
   const cols: Column<TripRow>[] = [
     {
       key: "name",
       title: "Trip",
-      render: (t) => (
-        <span className="flex min-w-0 flex-col">
-          <span className="truncate font-bold text-white">{t.name}</span>
-          <span className="truncate text-[12px] text-white/45">{[t.place, when(t)].filter(Boolean).join(", ") || "No dates yet"}</span>
-        </span>
-      ),
+      render: (t) => {
+        const welcome = agency ? welcomeText(t) : null;
+        return (
+          <span className="flex min-w-0 flex-col">
+            <span className="truncate font-bold text-white">{t.name}</span>
+            <span className="truncate text-[12px] text-white/45">{[t.place, when(t)].filter(Boolean).join(", ") || "No dates yet"}</span>
+            {welcome ? (
+              <span className="truncate text-[12px] text-amber/90" title={`${welcome.line}. ${welcome.count}.`}>
+                {welcome.line}. {welcome.count}
+              </span>
+            ) : null}
+          </span>
+        );
+      },
     },
     { key: "runBy", title: "Run by", hideBelow: "lg", render: (t) => t.runBy ?? <Muted>Partner</Muted> },
     { key: "members", title: "People", align: "right", hideBelow: "sm", render: (t) => t.members.toLocaleString("en-US") },
@@ -54,7 +77,20 @@ function tripColumns(scope: Scope): Column<TripRow>[] {
   return scope === "team" ? cols : cols.filter((c) => c.key !== "runBy");
 }
 
-export function TripsSection({ scope, active, onChanged }: { scope: Scope; active: boolean; onChanged: () => void }) {
+export function TripsSection({
+  scope,
+  active,
+  agency,
+  partnerName,
+  onChanged,
+}: {
+  scope: Scope;
+  active: boolean;
+  /** An agency's trips hold seats and give the welcome eSIM; a creator's do not. */
+  agency: boolean;
+  partnerName: string;
+  onChanged: () => void;
+}) {
   const [open, setOpen] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const { f, set, clear, active: filtered } = useFilters();
@@ -64,6 +100,8 @@ export function TripsSection({ scope, active, onChanged }: { scope: Scope; activ
     return (
       <TripDetailView
         id={open}
+        agency={agency}
+        partnerName={partnerName}
         onBack={() => {
           setOpen(null);
           page.reload();
@@ -76,6 +114,7 @@ export function TripsSection({ scope, active, onChanged }: { scope: Scope; activ
     <div className="flex flex-col gap-4">
       {creating ? (
         <NewTrip
+          agency={agency}
           onDone={(made) => {
             setCreating(false);
             if (made) {
@@ -105,7 +144,7 @@ export function TripsSection({ scope, active, onChanged }: { scope: Scope; activ
         </div>
         <PagedTable
           page={page}
-          columns={tripColumns(scope)}
+          columns={tripColumns(scope, agency)}
           rowKey={(t) => t.id}
           onRowClick={(t) => setOpen(t.id)}
           failedTitle="Could not load your trips"
@@ -158,10 +197,11 @@ const peopleColumns: Column<TripDetail["people"][number]>[] = [
   { key: "commission", title: "Commission", align: "right", render: (p) => <span className="font-extrabold text-white">{usd(p.commissionUsdc)}</span> },
 ];
 
-function TripDetailView({ id, onBack }: { id: string; onBack: () => void }) {
+function TripDetailView({ id, agency, partnerName, onBack }: { id: string; agency: boolean; partnerName: string; onBack: () => void }) {
   const detail = useTripDetail(id);
   const [qr, setQr] = useState(false);
   const [deposit, setDeposit] = useState(false);
+  const [seats, setSeats] = useState(false);
   const back = (
     <button type="button" className={smallBtn} onClick={onBack}>
       <Ion name="chevron-back" size={15} />
@@ -192,6 +232,9 @@ function TripDetailView({ id, onBack }: { id: string; onBack: () => void }) {
   const { trip, totals, people } = detail.data;
   const travellers = people.filter((p) => !p.team);
   const expected = totals.expectedUsdc;
+  const welcome = agency ? welcomeText(trip) : null;
+  // The server sends `welcome` once it runs agency trips: only then is the group set up as below.
+  const groupSetUp = agency && trip.welcome !== undefined;
 
   return (
     <div className="flex flex-col gap-4">
@@ -215,6 +258,34 @@ function TripDetailView({ id, onBack }: { id: string; onBack: () => void }) {
             an outside wallet and cannot be tied to a traveller. They are in the total collected.
           </p>
         ) : null}
+        {welcome ? (
+          <div className="mt-4 border-t border-white/[0.08] pt-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 items-start gap-2.5">
+                <Ion name="cellular-outline" size={18} className="mt-0.5 shrink-0 text-amber" />
+                <span className="flex min-w-0 flex-col">
+                  <span className="text-[13.5px] font-bold text-white">{welcome.line}</span>
+                  <span className="text-[12.5px] text-white/55">{welcome.count}</span>
+                </span>
+              </div>
+              {!seats ? (
+                <button type="button" className={`${smallBtn} self-start sm:self-auto`} onClick={() => setSeats(true)}>
+                  <Ion name="people-outline" size={15} />
+                  {trip.maxTravellers != null ? "Change travellers" : "Set travellers"}
+                </button>
+              ) : null}
+            </div>
+            {seats ? (
+              <TravellersForm
+                trip={trip}
+                onDone={(saved) => {
+                  setSeats(false);
+                  if (saved) void detail.mutate();
+                }}
+              />
+            ) : null}
+          </div>
+        ) : null}
       </DeskPanel>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -226,6 +297,12 @@ function TripDetailView({ id, onBack }: { id: string; onBack: () => void }) {
               The join link cannot be made right now. The trip&rsquo;s chat may have changed hands: open it in the HOLD app to share it, or try again in a moment.
             </p>
           )}
+          {groupSetUp ? (
+            <p className="mt-3 text-[12.5px] leading-[18px] text-white/55">
+              Travellers who open your trip link join the {partnerName ? `${partnerName} · ${trip.name}` : trip.name} group in HOLD, with you as the only admin
+              {welcome ? ", and find their welcome eSIM in the app." : "."}
+            </p>
+          ) : null}
         </DeskPanel>
         <DeskPanel title="Deposits">
           {trip.payLinkUrl ? (
