@@ -17,6 +17,7 @@
 import { useState } from "react";
 
 import { QrCode } from "@/components/ad-space/qr";
+import { flagEmoji } from "@/lib/app/event-look";
 import { countryName, dayLabel, fileSlug, usd, usePaged, useTripDetail, type DepositState, type Scope, type Trip, type TripDetail, type TripRow } from "@/lib/app/partners";
 
 import { CopyButton } from "../front/kit";
@@ -235,6 +236,8 @@ function TripDetailView({ id, agency, partnerName, onBack }: { id: string; agenc
   const welcome = agency ? welcomeText(trip) : null;
   // The server sends `welcome` once it runs agency trips: only then is the group set up as below.
   const groupSetUp = agency && trip.welcome !== undefined;
+  const countryLabel = countryName(trip.countryCode);
+  const country = countryLabel ? `${flagEmoji(trip.countryCode) ?? ""} ${countryLabel}`.trim() : null;
 
   return (
     <div className="flex flex-col gap-4">
@@ -243,7 +246,7 @@ function TripDetailView({ id, agency, partnerName, onBack }: { id: string; agenc
         <ExportButton path={`partners/me/export/trips/${encodeURIComponent(trip.id)}`} name={`hold-partners-trip-${fileSlug(trip.name)}.csv`} label="Export travellers" />
       </div>
 
-      <DeskPanel title={trip.name} meta={[trip.place, when(trip), trip.runBy ? `Run by ${trip.runBy}` : null].filter(Boolean).join(", ") || undefined}>
+      <DeskPanel title={trip.name} meta={[trip.place, country, when(trip), trip.runBy ? `Run by ${trip.runBy}` : null].filter(Boolean).join(", ") || undefined}>
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
           <Stat label="Travellers" value={totals.members.toLocaleString("en-US")} />
           <Stat label="Deposit paid" value={`${totals.paid} of ${totals.members}`} tone="green" note={totals.partial ? `${totals.partial} part paid` : undefined} />
@@ -258,20 +261,26 @@ function TripDetailView({ id, agency, partnerName, onBack }: { id: string; agenc
             an outside wallet and cannot be tied to a traveller. They are in the total collected.
           </p>
         ) : null}
-        {welcome ? (
+        {groupSetUp ? (
           <div className="mt-4 border-t border-white/[0.08] pt-4">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex min-w-0 items-start gap-2.5">
-                <Ion name="cellular-outline" size={18} className="mt-0.5 shrink-0 text-amber" />
-                <span className="flex min-w-0 flex-col">
-                  <span className="text-[13.5px] font-bold text-white">{welcome.line}</span>
-                  <span className="text-[12.5px] text-white/55">{welcome.count}</span>
+              {welcome ? (
+                <div className="flex min-w-0 items-start gap-2.5">
+                  <Ion name="cellular-outline" size={18} className="mt-0.5 shrink-0 text-amber" />
+                  <span className="flex min-w-0 flex-col">
+                    <span className="text-[13.5px] font-bold text-white">{welcome.line}</span>
+                    <span className="text-[12.5px] text-white/55">{welcome.count}</span>
+                  </span>
+                </div>
+              ) : (
+                <span className="text-[13px] text-white/60">
+                  {[country ?? "No country yet", trip.maxTravellers != null ? `${trip.maxTravellers.toLocaleString("en-US")} travellers` : null].filter(Boolean).join(", ")}
                 </span>
-              </div>
+              )}
               {!seats ? (
                 <button type="button" className={`${smallBtn} self-start sm:self-auto`} onClick={() => setSeats(true)}>
-                  <Ion name="people-outline" size={15} />
-                  {trip.maxTravellers != null ? "Change travellers" : "Set travellers"}
+                  <Ion name="create-outline" size={15} />
+                  {trip.maxTravellers != null && trip.countryCode ? "Edit country and travellers" : "Set country and travellers"}
                 </button>
               ) : null}
             </div>

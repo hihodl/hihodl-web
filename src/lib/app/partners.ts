@@ -229,11 +229,14 @@ export interface TripWelcome {
   left: number | null;
 }
 
+let regionNames: Intl.DisplayNames | null | undefined;
+
 /** "Indonesia" from "ID"; null when there is no code or it is not a country. */
 export function countryName(code: string | null | undefined): string | null {
   if (!code || !/^[A-Z]{2}$/i.test(code)) return null;
   try {
-    const name = new Intl.DisplayNames(["en"], { type: "region" }).of(code.toUpperCase());
+    if (regionNames === undefined) regionNames = new Intl.DisplayNames(["en"], { type: "region" });
+    const name = regionNames?.of(code.toUpperCase());
     return name && name.toUpperCase() !== code.toUpperCase() ? name : null;
   } catch {
     return null;
@@ -375,12 +378,12 @@ export const getPartnerDashboard = (scope: Scope) => read<PartnerDashboard>(`par
 
 export const getTripDetail = (id: string) => read<TripDetail>(`partners/me/trips/${enc(id)}`);
 
-export const createTrip = (body: { name: string; place?: string; startsOn?: string; endsOn?: string; maxTravellers?: number | null }) =>
+export const createTrip = (body: { name: string; place?: string; startsOn?: string; endsOn?: string; maxTravellers?: number | null; countryCode?: string | null }) =>
   read<{ trip: Trip }>("partners/me/trips", { json: body });
 
 export const updateTrip = (
   id: string,
-  body: { name?: string; place?: string; startsOn?: string; endsOn?: string; payLinkCode?: string | null; maxTravellers?: number | null },
+  body: { name?: string; place?: string; startsOn?: string; endsOn?: string; payLinkCode?: string | null; maxTravellers?: number | null; countryCode?: string | null },
 ) => read<{ trip: Trip }>(`partners/me/trips/${enc(id)}`, { method: "PATCH", json: body });
 
 export const listLinks = (scope: Scope) => read<{ links: PartnerLink[] }>(`partners/me/links?scope=${scope}`);
