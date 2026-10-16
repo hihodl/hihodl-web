@@ -221,12 +221,22 @@ export interface Trip {
   welcome?: TripWelcome | null;
 }
 
+/**
+ * A seat is given when a traveller JOINS by the trip link (the first
+ * `maxTravellers`); the eSIM is claimed when they install it in the app.
+ * Every count is optional: older servers send fewer of them.
+ */
 export interface TripWelcome {
   /** False: this trip gives no welcome eSIM, and the desk says nothing about it. */
   offered: boolean;
-  given: number;
-  /** Null when the trip has no traveller limit. */
-  left: number | null;
+  /** Seats the trip holds (its maxTravellers). */
+  seats?: number | null;
+  /** Seats taken: travellers who joined by the link while seats were left. */
+  taken?: number | null;
+  /** Welcome eSIMs installed. */
+  claimed?: number | null;
+  /** Seats minus taken; null when not offered. */
+  left?: number | null;
 }
 
 let regionNames: Intl.DisplayNames | null | undefined;
@@ -710,7 +720,6 @@ const MESSAGES: Record<string, string> = {
   link_not_found: "That link is gone. Reload the page.",
   trip_not_found: "That trip is gone, or it is run by someone else.",
   max_travellers_invalid: `Travellers is a whole number from 1 to ${TRIP_TRAVELLERS_MAX}.`,
-  max_travellers_required: "Add how many travellers are going.",
   payout_not_found: "That payout is not yours to open.",
   payout_not_sent: "A statement is ready once the payout is sent.",
   legal_name_required: "Add the legal name payouts go to.",

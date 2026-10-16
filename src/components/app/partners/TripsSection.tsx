@@ -9,9 +9,10 @@
  * Card, bank and outside wallet payments cannot be tied to a person, so they
  * are shown as "not matched" with their total: the money always adds up.
  *
- * Agencies only: each trip says how many of its welcome eSIMs were claimed
- * (the first `maxTravellers` who join by the link get one). A trip that
- * gives none says nothing about it, and creators never see the line.
+ * Agencies only: each trip shows its seats (the first `maxTravellers` who
+ * join by the link get one, with a welcome eSIM), how many were taken and
+ * how many eSIMs were installed. A trip that gives none says nothing about
+ * it, and creators never see the line.
  */
 
 import { useState } from "react";
@@ -37,7 +38,14 @@ function welcomeText(t: Pick<Trip, "place" | "countryCode" | "maxTravellers" | "
   const where = countryName(t.countryCode) || t.place?.trim();
   const line = `Includes a 1 GB welcome eSIM${where ? ` for ${where}` : ""}`;
   const n = (v: number) => v.toLocaleString("en-US");
-  const count = t.maxTravellers != null ? `${n(w.given)} of ${n(t.maxTravellers)} claimed` : w.left != null ? `${n(w.left)} left` : `${n(w.given)} claimed`;
+  const seats = w.seats ?? t.maxTravellers ?? null;
+  const count = [
+    seats != null ? `${n(seats)} ${seats === 1 ? "seat" : "seats"}` : null,
+    w.taken != null ? `${n(w.taken)} joined` : null,
+    w.claimed != null ? `${n(w.claimed)} ${w.claimed === 1 ? "eSIM" : "eSIMs"} installed` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
   return { line, count };
 }
 
@@ -59,8 +67,9 @@ function tripColumns(scope: Scope, agency: boolean): Column<TripRow>[] {
             <span className="truncate font-bold text-white">{t.name}</span>
             <span className="truncate text-[12px] text-white/45">{[t.place, when(t)].filter(Boolean).join(", ") || "No dates yet"}</span>
             {welcome ? (
-              <span className="truncate text-[12px] text-amber/90" title={`${welcome.line}. ${welcome.count}.`}>
-                {welcome.line}. {welcome.count}
+              <span className="truncate text-[12px] text-amber/90" title={welcome.count ? `${welcome.line}. ${welcome.count}` : welcome.line}>
+                {welcome.line}
+                {welcome.count ? `. ${welcome.count}` : ""}
               </span>
             ) : null}
           </span>
@@ -269,7 +278,7 @@ function TripDetailView({ id, agency, partnerName, onBack }: { id: string; agenc
                   <Ion name="cellular-outline" size={18} className="mt-0.5 shrink-0 text-amber" />
                   <span className="flex min-w-0 flex-col">
                     <span className="text-[13.5px] font-bold text-white">{welcome.line}</span>
-                    <span className="text-[12.5px] text-white/55">{welcome.count}</span>
+                    {welcome.count ? <span className="text-[12.5px] text-white/55">{welcome.count}</span> : null}
                   </span>
                 </div>
               ) : (
@@ -309,7 +318,7 @@ function TripDetailView({ id, agency, partnerName, onBack }: { id: string; agenc
           {groupSetUp ? (
             <p className="mt-3 text-[12.5px] leading-[18px] text-white/55">
               Travellers who open your trip link join the {partnerName ? `${partnerName} · ${trip.name}` : trip.name} group in HOLD, with you as the only admin
-              {welcome ? ", and find their welcome eSIM in the app." : "."}
+              {welcome ? ", and find their welcome eSIM in the app." : "."} As the admin, you set the group&rsquo;s photo from the HOLD app.
             </p>
           ) : null}
         </DeskPanel>

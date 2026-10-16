@@ -35,7 +35,7 @@ export function toTravellers(raw: string): number | null {
 }
 
 const TRAVELLERS_HINT = (n: number | null) =>
-  `Only the first ${n ? `${n} ` : ""}travellers who join through this trip's link get the welcome eSIM. Everyone else can still join and still counts for your commission.`;
+  `The first ${n ? `${n} ` : ""}travellers who join through this trip's link get a seat and their welcome eSIM. Anyone after that can still join and still counts for your commission.`;
 
 function TravellersField({ value, onChange, autoFocus }: { value: string; onChange: (v: string) => void; autoFocus?: boolean }) {
   const n = toTravellers(value);
