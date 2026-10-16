@@ -60,22 +60,24 @@ function BillingPanel() {
 
 type Draft = Omit<Billing, "verified" | "verifiedAt" | "updatedAt">;
 
-const EMPTY: Draft = { entity: "company", legalName: "", taxId: "", vatId: "", address: "", country: "", email: "" };
+const EMPTY: Draft = { entity: "company", legalName: "", taxId: "", vatId: "", address: "", country: "", email: "", payoutCurrency: "USD" };
 
 function BillingForm({ current, onSaved }: { current: Billing | null; onSaved: (b: Billing) => void }) {
-  const [d, setD] = useState<Draft>(current ? { ...current, taxId: current.taxId ?? "", vatId: current.vatId ?? "" } : EMPTY);
+  const [d, setD] = useState<Draft>(current ? { ...current, taxId: current.taxId ?? "", vatId: current.vatId ?? "", payoutCurrency: current.payoutCurrency ?? "USD" } : EMPTY);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => setSaved(false), [d]);
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((x) => ({ ...x, [k]: v }));
   const company = d.entity === "company";
-  // Nothing changed, nothing to send: a save with changes sends the details back to HOLD for a check.
-  const changed =
+  // Nothing changed, nothing to send. A change to who you are sends the details
+  // back to HOLD for a check; a change of currency alone does not.
+  const detailsChanged =
     !current ||
     (["entity", "legalName", "taxId", "vatId", "address", "country", "email"] as const).some(
       (k) => String(d[k] ?? "").trim() !== String(current[k] ?? "").trim(),
     );
+  const changed = detailsChanged || d.payoutCurrency !== (current?.payoutCurrency ?? "USD");
   const ready =
     changed && !busy && d.legalName.trim().length >= 2 && d.address.trim().length >= 5 && /^[A-Z]{2}$/.test(d.country) && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email.trim()) && (!company || !!d.taxId?.trim());
 
@@ -93,6 +95,7 @@ function BillingForm({ current, onSaved }: { current: Billing | null; onSaved: (
         address: d.address.trim(),
         country: d.country,
         email: d.email.trim(),
+        payoutCurrency: d.payoutCurrency,
       });
       onSaved(billing);
       setSaved(true);
@@ -106,7 +109,7 @@ function BillingForm({ current, onSaved }: { current: Billing | null; onSaved: (
   const state = !current ? <Pill tone="quiet">Not added</Pill> : current.verified ? <Pill tone="green">Checked by HOLD</Pill> : <Pill tone="blue">In review</Pill>;
 
   return (
-    <DeskPanel title="Billing details" meta="Who your payouts go to. Shown on every statement." actions={state}>
+    <DeskPanel title="Billing details" meta="Who your payouts go to, and in what. Shown on every invoice." actions={state}>
       <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
         <ChoicePills
           label="Paid as"
@@ -146,8 +149,20 @@ function BillingForm({ current, onSaved }: { current: Billing | null; onSaved: (
             <input className={inputCls} type="email" value={d.email} onChange={(e) => set("email", e.target.value)} maxLength={200} />
           </Field>
         </div>
+        <ChoicePills
+          label="Paid in"
+          value={d.payoutCurrency}
+          onChange={(v) => set("payoutCurrency", v)}
+          options={[
+            { value: "USD", label: "US dollars" },
+            { value: "EUR", label: "Euros" },
+          ]}
+        />
+        <p className="-mt-2 text-[12.5px] leading-[18px] text-white/55">
+          Commissions are counted in dollars. In euros, each payout is converted at the rate of the day it is sent.
+        </p>
         {current && current.verified ? (
-          <p className="text-[12.5px] leading-[18px] text-white/55">Changing anything sends your details back to HOLD for a check. Payouts wait until it is done.</p>
+          <p className="text-[12.5px] leading-[18px] text-white/55">Changing your details sends them back to HOLD for a check, and payouts wait until it is done. Changing the currency does not.</p>
         ) : (
           <p className="text-[12.5px] leading-[18px] text-white/55">HOLD checks these once before your first payout, usually within two working days.</p>
         )}

@@ -180,6 +180,12 @@ export interface Payout {
   id: string;
   period: string;
   amountUsdc: number;
+  /** What was sent. Commissions are counted in dollars; a euro payout is converted on the payout day. */
+  currency?: "USD" | "EUR";
+  amountPaid?: number;
+  fxRate?: number | null;
+  /** The self-billed invoice number (HP-2026-000042), the payee's own sent payouts only. */
+  statementNo?: string | null;
   payee: string;
   status: PayoutStatus;
   txHash: string | null;
@@ -296,6 +302,8 @@ export interface Billing {
   address: string;
   country: string;
   email: string;
+  /** What payouts are sent in: dollars as USDC, euros as EURC. Changing only this keeps the check. */
+  payoutCurrency: "USD" | "EUR";
   verified: boolean;
   verifiedAt: string | null;
   updatedAt: string;
@@ -656,6 +664,7 @@ const MESSAGES: Record<string, string> = {
   role_invalid: "Pick admin or member.",
   split_invalid: "A split is between 0% and 100%.",
   email_invalid: "That email does not look right.",
+  payout_currency_invalid: "Pick dollars or euros.",
   member_not_found: "That person is no longer on the team.",
   owner_cannot_be_removed: "The owner cannot be removed. Hand the partner to someone else first.",
   owner_must_transfer_first: "Hand the partner to someone else before you leave.",
@@ -680,6 +689,16 @@ const MESSAGES: Record<string, string> = {
   NETWORK: "You look offline. Check your connection and try again.",
   UNAUTHORIZED: "Your session ended. Sign in again.",
 };
+
+/** "€1,234.56" from euros. */
+export function eur(n: number): string {
+  return (Number.isFinite(n) ? n : 0).toLocaleString("en-US", { style: "currency", currency: "EUR", minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/** What a payout sent, in the currency it was sent in. */
+export function paidText(p: Pick<Payout, "amountUsdc" | "currency" | "amountPaid">): string {
+  return p.currency === "EUR" && p.amountPaid != null ? eur(p.amountPaid) : usd(p.amountUsdc);
+}
 
 /** "$1,234.56" from dollars. */
 export function usd(n: number): string {

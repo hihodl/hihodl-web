@@ -20,7 +20,7 @@ import { productHref } from "@/lib/app/paths";
 export const metadata: Metadata = {
   title: "HOLD Partners",
   description:
-    "For travel agencies, group trip organisers, travel creators, communities and event teams. Bring your travellers to HOLD and earn a share of our margin on every stay, flight and eSIM they book, paid monthly in USDC, with a login for everyone on your team. Ad Space comes with it.",
+    "For travel agencies, group trip organisers, travel creators, communities and event teams. Bring your travellers to HOLD and earn a share of our margin on every stay, flight and eSIM they book, paid monthly in USD or EUR, with a login for everyone on your team. Ad Space comes with it.",
   alternates: { canonical: "/partners" },
 };
 
@@ -44,7 +44,7 @@ export default function PartnersPage() {
                 </h1>
                 <p className="mt-8 max-w-xl text-lead text-[#C9D4E0]">
                   Share your own HOLD link. Every stay, flight and eSIM your travellers book earns you a share of our
-                  margin, paid every month in USDC into your HOLD account.
+                  margin, paid every month in USD or EUR into your HOLD account.
                 </p>
                 <div className="mt-10 flex flex-wrap items-center gap-3">
                   <PrimaryAction href={apply}>Become a partner</PrimaryAction>
@@ -87,7 +87,7 @@ export default function PartnersPage() {
               },
               {
                 title: "Get paid every month",
-                body: "Your panel shows signups, bookings and every commission as it moves from pending to payable to paid. Payouts land in your HOLD Savings in USDC.",
+                body: "Your panel shows signups, bookings and every commission as it moves from pending to payable to paid. Payouts land in your HOLD Savings in USD or EUR.",
               },
             ]}
           />
@@ -105,8 +105,8 @@ export default function PartnersPage() {
                 body: "Every booking counts, not only the first one. Your share is set when we approve you and shown in your panel.",
               },
               {
-                title: "Paid monthly in USDC",
-                body: "Earned commissions go out at the start of each month, straight into your HOLD Savings, where they keep earning.",
+                title: "Paid monthly in USD or EUR",
+                body: "Earned commissions go out at the start of each month, straight into your HOLD Savings.",
               },
               {
                 title: "Your travellers never pay more",
@@ -204,7 +204,7 @@ export default function PartnersPage() {
         <Block tone="abyss" hairline="moonlight">
           <BlockHead
             title="Ad Space comes with it"
-            intro="Creators and organisers on HOLD Partners also sell sponsorships of their space or their events. Brands book a spot and pay you in USDC."
+            intro="Creators and organisers on HOLD Partners also sell sponsorships of their space or their events. Brands book a spot and pay you in USD or EUR."
           />
           <Rules
             items={[
@@ -265,7 +265,7 @@ function LinkFigure() {
           ))}
         </ul>
       </div>
-      <p className="mt-6 border-t border-white/10 pt-4 text-small text-[#C9D4E0]">Paid monthly in USDC to your HOLD Savings.</p>
+      <p className="mt-6 border-t border-white/10 pt-4 text-small text-[#C9D4E0]">Paid monthly in USD or EUR to your HOLD Savings.</p>
     </div>
   );
 }

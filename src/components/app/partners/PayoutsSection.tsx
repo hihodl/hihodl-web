@@ -9,7 +9,7 @@
 
 import { useState } from "react";
 
-import { dayLabel, downloadFile, monthLabel, partnerErrorText, queryOf, usd, usePaged, type BillingState, type Payout, type Scope } from "@/lib/app/partners";
+import { dayLabel, downloadFile, monthLabel, paidText, partnerErrorText, queryOf, usd, usePaged, type BillingState, type Payout, type Scope } from "@/lib/app/partners";
 
 import { Notice } from "../hold";
 import { Ion } from "../ion";
@@ -43,7 +43,7 @@ function Statement({ id, period }: { id: string; period: string }) {
           setBusy(true);
           setError(null);
           try {
-            await downloadFile(`partners/me/payouts/${encodeURIComponent(id)}/statement`, `hold-partners-statement-${period}.pdf`);
+            await downloadFile(`partners/me/payouts/${encodeURIComponent(id)}/statement`, `hold-partners-invoice-${period}.pdf`);
           } catch (e) {
             setError(partnerErrorText(e));
           } finally {
@@ -63,7 +63,12 @@ function columns(scope: Scope): Column<Payout>[] {
   const cols: Column<Payout>[] = [
     { key: "period", title: "Month", render: (p) => <span className="font-bold text-white">{monthLabel(p.period)}</span> },
     { key: "payee", title: "Paid to", hideBelow: "sm", render: (p) => (p.payee === "me" ? "You" : p.payee) },
-    { key: "amount", title: "Amount", align: "right", render: (p) => <span className="font-extrabold text-white">{usd(p.amountUsdc)}</span> },
+    { key: "amount", title: "Amount", align: "right", render: (p) => (
+        <span className="inline-flex flex-col items-end gap-0.5">
+          <span className="font-extrabold text-white">{paidText(p)}</span>
+          {p.currency === "EUR" ? <span className="text-[11.5px] text-white/45">{usd(p.amountUsdc)} earned</span> : null}
+        </span>
+      ) },
     {
       key: "status",
       title: "Status",
@@ -90,7 +95,7 @@ function columns(scope: Scope): Column<Payout>[] {
           <Muted>None</Muted>
         ),
     },
-    { key: "pdf", title: "Statement", align: "right", render: (p) => (p.statement ? <Statement id={p.id} period={p.period} /> : <Muted>After sending</Muted>) },
+    { key: "pdf", title: "Invoice", align: "right", render: (p) => (p.statement ? <Statement id={p.id} period={p.period} /> : <Muted>After sending</Muted>) },
   ];
   return scope === "team" ? cols : cols.filter((c) => c.key !== "payee");
 }
@@ -137,7 +142,7 @@ export function PayoutsSection({
       <DeskPanel
         flush
         title="Payouts"
-        meta={page.total ? `${usd(page.total.sentUsdc ?? 0)} sent in ${(page.total.count ?? 0).toLocaleString("en-US")} ${page.total.count === 1 ? "payout" : "payouts"}` : "Monthly, in USDC, to HOLD Savings"}
+        meta={page.total ? `${usd(page.total.sentUsdc ?? 0)} sent in ${(page.total.count ?? 0).toLocaleString("en-US")} ${page.total.count === 1 ? "payout" : "payouts"}` : "Monthly, in USD or EUR, to HOLD Savings"}
         actions={<ExportButton path={`partners/me/export/payouts?${qs}`} name="hold-partners-payouts.csv" />}
       >
         <div className="px-4 sm:px-5">

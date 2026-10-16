@@ -33,7 +33,7 @@ const PITCH: readonly { icon: IonName; title: string; body: string }[] = [
   {
     icon: "wallet-outline",
     title: "Paid monthly into your Savings",
-    body: "In USDC, straight into your HOLD Savings, where it earns from the day it lands.",
+    body: "In USD or EUR, straight into your HOLD Savings, on the 1st of every month.",
   },
   {
     icon: "qr-code-outline",
@@ -124,7 +124,7 @@ export function ApplyScreen({ onApplied }: { onApplied: (me: PartnerMe) => void 
               value={name}
               onChange={(e) => setName(e.target.value)}
               maxLength={80}
-              placeholder="Dream Life Getaways"
+              placeholder="Agency name"
               autoComplete="organization"
             />
           </Field>
@@ -138,7 +138,7 @@ export function ApplyScreen({ onApplied }: { onApplied: (me: PartnerMe) => void 
                 setSlug(e.target.value);
               }}
               maxLength={40}
-              placeholder="dreamlife"
+              placeholder="Link name"
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
