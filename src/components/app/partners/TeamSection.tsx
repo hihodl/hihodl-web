@@ -35,6 +35,7 @@ import {
 } from "@/lib/app/partners";
 
 import { CopyButton } from "../front/kit";
+import { PersonFace } from "../payments/group-kit";
 import { Notice } from "../hold";
 
 import { Ion } from "../ion";
@@ -84,12 +85,7 @@ export function TeamSection({ partner, me, onChanged }: { partner: Partner; me: 
       title: "Person",
       render: (m) => (
         <span className="flex min-w-0 items-center gap-2.5">
-          {m.avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={m.avatarUrl} alt="" className="h-8 w-8 shrink-0 rounded-full object-cover" />
-          ) : (
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/[0.1] text-[12px] font-bold text-white">{m.name.slice(0, 1).toUpperCase()}</span>
-          )}
+          <PersonFace person={{ avatarUrl: m.avatarUrl, displayName: m.name, aliasHandle: m.handle }} size={32} />
           <span className="flex min-w-0 flex-col">
             <span className="truncate font-bold text-white">
               {m.name}

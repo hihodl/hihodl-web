@@ -18,6 +18,7 @@ import { dayLabel, fileSlug, usd, usePaged, useTripDetail, type DepositState, ty
 import { CopyButton } from "../front/kit";
 import { Ion } from "../ion";
 import { ReadFailed } from "../money/kit";
+import { PersonFace } from "../payments/group-kit";
 import { Skeleton } from "../ui";
 import { DataTable, DeskPanel, ExportButton, FilterBar, Muted, PagedTable, SelectFilter, smallBtn, Stat, type Column } from "./desk";
 import { useFilters } from "./CommissionsSection";
@@ -128,14 +129,7 @@ const peopleColumns: Column<TripDetail["people"][number]>[] = [
     title: "Traveller",
     render: (p) => (
       <span className="flex min-w-0 items-center gap-2.5">
-        {p.avatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={p.avatarUrl} alt="" className="h-8 w-8 shrink-0 rounded-full object-cover" />
-        ) : (
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/[0.1] text-[12px] font-bold text-white">
-            {p.name.slice(0, 1).toUpperCase()}
-          </span>
-        )}
+        <PersonFace person={{ avatarUrl: p.avatarUrl, displayName: p.name, aliasHandle: p.handle }} size={32} />
         <span className="flex min-w-0 flex-col">
           <span className="truncate font-bold text-white">{p.name}</span>
           {p.handle ? <span className="truncate text-[12px] text-white/45">@{p.handle.replace(/^@/, "")}</span> : null}
