@@ -6,7 +6,8 @@
  *
  * Every number here is the backend's (hihodl-backend, server/services/travel):
  * the 8 EUR service fee per booking and per change (flight-pricing.ts), the
- * extras markup, refunds in USDC to the paying wallet at the rate paid
+ * extras markup (EUR 4 a bag, EUR 3 a seat, nothing on cancellation cover),
+ * HiPoints on flights (flight-points.service.ts), refunds in USDC to the paying wallet at the rate paid
  * (flight-refund.service.ts), up to 4 travellers and no more lap infants than
  * adults (flights.router.ts). Change one there, change it here.
  */
@@ -18,7 +19,7 @@ export default function FlightTermsPage() {
   return (
     <LegalDoc
       title="Flight Terms"
-      reviewed="October 15, 2026"
+      reviewed="October 18, 2026"
       callout={
         <>
           <p>
@@ -57,7 +58,7 @@ export default function FlightTermsPage() {
               </P>
               <Ul
                 items={[
-                  "Seats and bags you add are charged at the airline's price plus EUR 2 each, included in the price shown for them.",
+                  "Bags you add are charged at the airline's price plus EUR 4 each, and paid seats at the airline's price plus EUR 3 each, included in the price shown for them. Free seats and bags cost nothing extra.",
                   "Cancellation cover, where offered, is charged at its provider's price with nothing added, and is sold on that provider's own terms, linked where you choose it.",
                   "The service fee is for the work of booking and is not refunded if the flight is later cancelled or refunded, except where the cancellation is our fault.",
                 ]}
@@ -157,9 +158,14 @@ export default function FlightTermsPage() {
           body: (
             <>
               <P>
-                You can add a traveller&apos;s frequent flyer number to a booking. Whether miles are credited, and how
-                many, is decided by the airline&apos;s programme. A flight earns either airline miles or HiPoints, never
-                both, and earns HiPoints only where the checkout shows it; see the{" "}
+                We do not add frequent flyer numbers to bookings made in HOLD, so we cannot promise that an airline
+                will credit miles for them. Where the checkout shows it, a flight earns HiPoints instead, credited once
+                the flight has departed; a booking cancelled before departure earns none.
+              </P>
+              <P>
+                Where the checkout offers it, you can use HiPoints as a discount on our part of the price. If the
+                booking is not issued or the airline cancels the flight, the points come back to you. If you cancel the
+                booking yourself, points used on it are not returned, like our service fee. See the{" "}
                 <A href="/legal/hipoints">HiPoints Terms</A>.
               </P>
             </>
