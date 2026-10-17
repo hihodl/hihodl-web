@@ -24,8 +24,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    site: "@hiihodl",
-    creator: "@hiihodl",
+    site: "@hiihold",
+    creator: "@hiihold",
     title: "Stay Terms | HOLD",
     description: DESCRIPTION,
     images: [OG_URL],

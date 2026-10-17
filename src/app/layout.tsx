@@ -36,8 +36,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    site: "@hiihodl",
-    creator: "@hiihodl",
+    site: "@hiihold",
+    creator: "@hiihold",
     title: "HOLD — Earn globally, live locally",
     description:
       "One account for people who earn in one country and live in another. Get paid in minutes, earn on the balance, invest and spend — you hold the keys.",

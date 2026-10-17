@@ -27,8 +27,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    site: "@hiihodl",
-    creator: "@hiihodl",
+    site: "@hiihold",
+    creator: "@hiihold",
     title: "Service Providers — Who We Work With | HOLD",
     description:
       "Who performs each regulated activity in HOLD, who verifies identity, and what data each provider receives.",

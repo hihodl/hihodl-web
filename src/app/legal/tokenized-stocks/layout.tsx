@@ -27,8 +27,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    site: "@hiihodl",
-    creator: "@hiihodl",
+    site: "@hiihold",
+    creator: "@hiihold",
     title: "Tokenized Stocks — Product Disclosure | HOLD",
     description:
       "How tokenized stocks work in HOLD: a non-custodial, peer-to-pool product you execute yourself. HOLD is not a broker or issuer.",

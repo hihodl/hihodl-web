@@ -48,7 +48,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     title,
     description,
     openGraph: { type: "website", siteName: "HOLD", title, description },
-    twitter: { card: "summary", site: "@hiihodl", title, description },
+    twitter: { card: "summary", site: "@hiihold", title, description },
   };
 }
 

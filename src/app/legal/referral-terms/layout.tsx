@@ -28,8 +28,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    site: "@hiihodl",
-    creator: "@hiihodl",
+    site: "@hiihold",
+    creator: "@hiihold",
     title: "Referral Program Terms | HOLD",
     description:
       "What qualifies a referral, what each side earns, the caps, and when a reward expires.",

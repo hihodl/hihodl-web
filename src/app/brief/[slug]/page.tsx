@@ -68,7 +68,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
       images: [{ url: og, width: 1200, height: 630, alt, type: "image/png" }],
       locale: "en_US",
     },
-    twitter: { card: "summary_large_image", site: "@hiihodl", title, description, images: [{ url: og, alt }] },
+    twitter: { card: "summary_large_image", site: "@hiihold", title, description, images: [{ url: og, alt }] },
   };
 }
 

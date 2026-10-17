@@ -48,7 +48,7 @@ export function payPageMetadata(
     },
     twitter: {
       card: "summary_large_image",
-      site: "@hiihodl",
+      site: "@hiihold",
       title: card.title,
       description: card.description,
       images: [BANNER.url],

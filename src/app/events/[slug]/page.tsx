@@ -81,7 +81,7 @@ function eventMetadata({ event, tabs }: EventPageData): Metadata {
     },
     twitter: {
       card: "summary_large_image",
-      site: "@hiihodl",
+      site: "@hiihold",
       title,
       description,
       images: [{ url: og, alt }],

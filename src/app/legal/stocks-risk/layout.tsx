@@ -27,8 +27,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    site: "@hiihodl",
-    creator: "@hiihodl",
+    site: "@hiihold",
+    creator: "@hiihold",
     title: "Tokenized Stocks — Investment Risk Disclosure | HOLD",
     description:
       "The risks of buying, holding, and selling tokenized stocks in HOLD. You may lose your entire investment.",

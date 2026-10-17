@@ -970,9 +970,9 @@ function AboutScreen({ onBack }: { onBack: () => void }) {
 
       <SectionTitle>{t("menu.about.followUs")}</SectionTitle>
       <HoldCard className="flex px-2 py-1">
-        {social("X", "fa6:x-twitter", "https://x.com/hiihodl")}
-        {social("LinkedIn", "fa6:linkedin", "https://www.linkedin.com/company/hihodl")}
-        {social("Telegram", "fa6:telegram", "https://t.me/HiHODLchat")}
+        {social("X", "fa6:x-twitter", "https://x.com/hiihold")}
+        {social("LinkedIn", "fa6:linkedin", "https://www.linkedin.com/company/hiihold")}
+        {social("Telegram", "fa6:telegram", "https://t.me/hiihold")}
       </HoldCard>
 
       <SectionTitle>{t("menu.about.legal")}</SectionTitle>

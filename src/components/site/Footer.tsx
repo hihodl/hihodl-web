@@ -60,9 +60,11 @@ const LEGAL = [
 ];
 
 const SOCIAL = [
-  { href: "https://x.com/hiihodl", label: "X" },
-  { href: "https://www.linkedin.com/company/hihodl", label: "LinkedIn" },
-  { href: "https://instagram.com/hihodl", label: "Instagram" },
+  { href: "https://x.com/hiihold", label: "X" },
+  { href: "https://www.linkedin.com/company/hiihold", label: "LinkedIn" },
+  { href: "https://instagram.com/hiihold", label: "Instagram" },
+  { href: "https://www.tiktok.com/@hiihold", label: "TikTok" },
+  { href: "https://t.me/hiihold", label: "Telegram" },
 ];
 
 export function Footer() {

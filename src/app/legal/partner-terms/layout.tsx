@@ -28,8 +28,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    site: "@hiihodl",
-    creator: "@hiihodl",
+    site: "@hiihold",
+    creator: "@hiihold",
     title: "Partner Program Terms | HOLD",
     description:
       "Who is your traveller, what you earn, when it is paid, and when it comes back.",

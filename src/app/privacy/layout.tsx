@@ -25,8 +25,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    site: "@hiihodl",  
-    creator: "@hiihodl",
+    site: "@hiihold",  
+    creator: "@hiihold",
     title: "Privacy Policy | HOLD",
     description: "HOLD Privacy Policy - Learn how we collect, use, and protect your personal information.",
     images: [OG_URL],

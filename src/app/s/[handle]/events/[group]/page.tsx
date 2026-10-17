@@ -74,7 +74,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     title,
     alternates: { canonical: path },
     openGraph: { type: "profile", url: path, siteName: "HOLD", title, images: [{ url: og, width: 1200, height: 630 }] },
-    twitter: { card: "summary_large_image", site: "@hiihodl", title, images: [{ url: og }] },
+    twitter: { card: "summary_large_image", site: "@hiihold", title, images: [{ url: og }] },
   };
 }
 

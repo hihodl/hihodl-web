@@ -59,9 +59,11 @@ Solana swaps are always gasless. No hidden spread, no tier games. Invite a frien
 - Service providers (who we work with, kept current): https://hihodl.xyz/legal/providers
 
 ## Social
-- X / Twitter: https://x.com/hiihodl
-- LinkedIn: https://www.linkedin.com/company/hihodl
-- Instagram: https://instagram.com/hihodl
+- X / Twitter: https://x.com/hiihold
+- LinkedIn: https://www.linkedin.com/company/hiihold
+- Instagram: https://instagram.com/hiihold
+- TikTok: https://www.tiktok.com/@hiihold
+- Telegram: https://t.me/hiihold
 
 ## Contact
 - General: hello@hihodl.xyz

@@ -87,7 +87,7 @@ function sponsorMetadata(lumaKey: string, { event, packages, kind }: SponsorPage
     },
     twitter: {
       card: "summary_large_image",
-      site: "@hiihodl",
+      site: "@hiihold",
       title,
       description,
       images: [{ url: og, alt }],

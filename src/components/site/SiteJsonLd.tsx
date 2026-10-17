@@ -32,9 +32,11 @@ const jsonLd = {
       description:
         "Non-custodial multichain stablecoin wallet for global earners and remote workers.",
       sameAs: [
-        "https://x.com/hiihodl",
-        "https://www.linkedin.com/company/hihodl",
-        "https://instagram.com/hihodl",
+        "https://x.com/hiihold",
+        "https://www.linkedin.com/company/hiihold",
+        "https://instagram.com/hiihold",
+        "https://www.tiktok.com/@hiihold",
+        "https://t.me/hiihold",
       ],
     },
     {

@@ -123,7 +123,7 @@ export default function LeaderboardPage() {
             <p className="text-center font-['Inter'] text-[14px] font-[400] leading-[20px] text-[#94a3b8ff]">
               Share on{" "}
               <a
-                href="https://x.com/hiihodl"
+                href="https://x.com/hiihold"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-brand-ffb703 hover:underline"

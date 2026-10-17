@@ -97,7 +97,7 @@ function spaceMetadata(s: Space, searchParams: SearchParams): Metadata {
     },
     twitter: {
       card: "summary_large_image",
-      site: "@hiihodl",
+      site: "@hiihold",
       title,
       description,
       images: [{ url: og, alt }],

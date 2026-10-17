@@ -27,8 +27,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    site: "@hiihodl",
-    creator: "@hiihodl",
+    site: "@hiihold",
+    creator: "@hiihold",
     title: "Traveler — How We Calculate Visa & Tax Days | HOLD",
     description:
       "How HOLD's Traveler feature estimates visa allowances and tax-residency days, the data behind it, and its limits. Informational only, not advice.",

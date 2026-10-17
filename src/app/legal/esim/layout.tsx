@@ -37,8 +37,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    site: "@hiihodl",
-    creator: "@hiihodl",
+    site: "@hiihold",
+    creator: "@hiihold",
     title: "eSIM Terms of Sale | HOLD",
     description:
       "Who the seller is, what a data-only eSIM does and does not do, when a plan starts, and when you get your money back.",

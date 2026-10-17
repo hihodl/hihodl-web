@@ -25,8 +25,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    site: "@hiihodl",  
-    creator: "@hiihodl",
+    site: "@hiihold",  
+    creator: "@hiihold",
     title: "Terms of Service | HOLD",
     description: "HOLD Terms of Service - Read our terms and conditions for using HOLD wallet services.",
     images: [OG_URL],

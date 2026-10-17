@@ -27,8 +27,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    site: "@hiihodl",
-    creator: "@hiihodl",
+    site: "@hiihold",
+    creator: "@hiihold",
     title: "Tokenized Stocks — Restricted Jurisdictions | HOLD",
     description:
       "The jurisdictions where HOLD does not offer tokenized stocks: the US, Canada, the UK, Australia, and sanctioned regions.",
