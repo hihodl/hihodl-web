@@ -20,7 +20,7 @@ export default function HiPointsTermsPage() {
   return (
     <LegalDoc
       title="HiPoints Terms"
-      reviewed="October 15, 2026"
+      reviewed="October 18, 2026"
       callout={
         <>
           <p>
@@ -67,8 +67,9 @@ export default function HiPointsTermsPage() {
                 and what they take off; points cover our part of the price only, never the supplier&apos;s.
               </P>
               <P>
-                A flight earns either airline miles or HiPoints, never both, and earns or accepts HiPoints only where the
-                flight checkout shows it.
+                A flight earns HiPoints, and accepts them as a discount, only where the flight checkout shows it. Points
+                used on a flight you cancel yourself are not returned; the{" "}
+                <A href="/legal/flights">Flight Terms</A> explain when they are.
               </P>
             </>
           ),
