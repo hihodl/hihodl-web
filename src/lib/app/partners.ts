@@ -213,7 +213,48 @@ export interface Trip {
   payLinkCode: string | null;
   payLinkUrl: string | null;
   createdAt: string;
+  /** ISO-2 country the trip goes to (where its welcome eSIM works). Missing until the server sends it. */
+  countryCode?: string | null;
+  /** Agencies: how many travellers get the welcome eSIM (the first N who join by the link). Missing until the server sends it. */
+  maxTravellers?: number | null;
+  /** Agencies: the 1 GB welcome eSIM travellers of this trip get. Missing until the server sends it. */
+  welcome?: TripWelcome | null;
 }
+
+/**
+ * A seat is given when a traveller JOINS by the trip link (the first
+ * `maxTravellers`); the eSIM is claimed when they install it in the app.
+ * Every count is optional: older servers send fewer of them.
+ */
+export interface TripWelcome {
+  /** False: this trip gives no welcome eSIM, and the desk says nothing about it. */
+  offered: boolean;
+  /** Seats the trip holds (its maxTravellers). */
+  seats?: number | null;
+  /** Seats taken: travellers who joined by the link while seats were left. */
+  taken?: number | null;
+  /** Welcome eSIMs installed. */
+  claimed?: number | null;
+  /** Seats minus taken; null when not offered. */
+  left?: number | null;
+}
+
+let regionNames: Intl.DisplayNames | null | undefined;
+
+/** "Indonesia" from "ID"; null when there is no code or it is not a country. */
+export function countryName(code: string | null | undefined): string | null {
+  if (!code || !/^[A-Z]{2}$/i.test(code)) return null;
+  try {
+    if (regionNames === undefined) regionNames = new Intl.DisplayNames(["en"], { type: "region" });
+    const name = regionNames?.of(code.toUpperCase());
+    return name && name.toUpperCase() !== code.toUpperCase() ? name : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The most travellers a trip can hold seats for. */
+export const TRIP_TRAVELLERS_MAX = 500;
 
 export interface TripRow extends Trip {
   bookings: number;
@@ -347,12 +388,12 @@ export const getPartnerDashboard = (scope: Scope) => read<PartnerDashboard>(`par
 
 export const getTripDetail = (id: string) => read<TripDetail>(`partners/me/trips/${enc(id)}`);
 
-export const createTrip = (body: { name: string; place?: string; startsOn?: string; endsOn?: string }) =>
+export const createTrip = (body: { name: string; place?: string; startsOn?: string; endsOn?: string; maxTravellers?: number | null; countryCode?: string | null }) =>
   read<{ trip: Trip }>("partners/me/trips", { json: body });
 
 export const updateTrip = (
   id: string,
-  body: { name?: string; place?: string; startsOn?: string; endsOn?: string; payLinkCode?: string | null },
+  body: { name?: string; place?: string; startsOn?: string; endsOn?: string; payLinkCode?: string | null; maxTravellers?: number | null; countryCode?: string | null },
 ) => read<{ trip: Trip }>(`partners/me/trips/${enc(id)}`, { method: "PATCH", json: body });
 
 export const listLinks = (scope: Scope) => read<{ links: PartnerLink[] }>(`partners/me/links?scope=${scope}`);
@@ -678,6 +719,7 @@ const MESSAGES: Record<string, string> = {
   already_on_a_team: "Your HOLD account is already on a partner team. Leave it first to join another.",
   link_not_found: "That link is gone. Reload the page.",
   trip_not_found: "That trip is gone, or it is run by someone else.",
+  max_travellers_invalid: `Travellers is a whole number from 1 to ${TRIP_TRAVELLERS_MAX}.`,
   payout_not_found: "That payout is not yours to open.",
   payout_not_sent: "A statement is ready once the payout is sent.",
   legal_name_required: "Add the legal name payouts go to.",
