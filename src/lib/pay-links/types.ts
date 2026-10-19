@@ -162,6 +162,14 @@ export interface PayLinkPublic {
    * the group. `settled` when nothing is owed now (the link reads `paid`).
    */
   groupDebt?: PayLinkGroupDebt | null;
+  /** USD, or EUR for a checkout priced in euros (`amount` is then euro cents). Absent from an older server. */
+  currency?: string;
+  /**
+   * What was asked in the asker's currency (an agent's euro split), minor
+   * units as a string: shown beside the charge, never charged. Null on most
+   * links, absent from an older server.
+   */
+  asked?: { currency: string; minor: string } | null;
 }
 
 /**
