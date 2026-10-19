@@ -20,6 +20,15 @@
  */
 
 export const API_BASE = "https://api.hihodl.xyz";
+
+/**
+ * What is switched on in production, read from the Render env (19 October
+ * 2026): AGENTS_MCP_ENABLED on for the beta list, AGENTS_PAY_ENABLED off (the
+ * pay scope is not in /.well-known/oauth-protected-resource), X402_SELL_ENABLED
+ * off (/x402/pay answers 404). The page prints the pay permission, its limits
+ * and the x402 routes only while these say so.
+ */
+export const LIVE = { pay: false, x402Sell: false } as const;
 export const MCP_URL = `${API_BASE}/mcp`;
 
 export type Scope = "read" | "search" | "markets" | "request_money" | "propose_payments" | "pay";
@@ -34,7 +43,7 @@ export const SCOPES: { id: Scope; name: string; plain: string; moves: string }[]
   {
     id: "search",
     name: "Search",
-    plain: "Hotels for your dates, flights, and paid APIs it could use for you.",
+    plain: LIVE.pay ? "Hotels for your dates, flights, and paid APIs it could use for you." : "Hotels for your dates and flights, priced live.",
     moves: "Moves nothing.",
   },
   {
@@ -46,7 +55,8 @@ export const SCOPES: { id: Scope; name: string; plain: string; moves: string }[]
   {
     id: "request_money",
     name: "Ask for money",
-    plain: "Makes a single use payment link in dollars, paid into your account, for whoever owes you.",
+    plain:
+      "Makes payment links paid into your account: one for whoever owes you, or one per person to split a bill in dollars or euros. Your friends pay from the link, nothing to install.",
     moves: "Money only comes in.",
   },
   {
@@ -205,6 +215,21 @@ export const TOOLS: Tool[] = [
       { name: "amount", type: MONEY, required: true, note: 'e.g. "25.00"' },
       { name: "currency", type: '"USD"', required: true, note: "Payment links are priced in dollars" },
       { name: "note", type: "string, 140 max", required: false, note: "What it is for; the payer sees it" },
+    ],
+  },
+  {
+    name: "split_payment",
+    scope: "request_money",
+    title: "Split a bill",
+    readOnly: false,
+    description:
+      "Splits a bill the user paid into equal parts and makes one single use payment link per person, paid into the user's account, plus a ready message with every link for the group chat. Leftover cents go to the first people. A euro bill is charged in dollars at today's rate and each link shows the part in euros. If some links could not be made (notMade), the others still work. Never sends the user's money.",
+    inputs: [
+      { name: "total", type: MONEY, required: true, note: 'The whole bill, e.g. "120.00"' },
+      { name: "currency", type: '"USD" | "EUR"', required: true, note: "The bill's currency" },
+      { name: "title", type: "string, 60 max", required: true, note: "What it was; every payer sees it" },
+      { name: "people", type: "string[], 1 to 9", required: true, note: "First names or @handles, each once; the user is not in the list" },
+      { name: "includeMe", type: "boolean", required: false, note: "The user pays an equal part too (default true)" },
     ],
   },
   {

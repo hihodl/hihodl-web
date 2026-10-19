@@ -5,10 +5,12 @@ import { TopNav } from "@/components/site/TopNav";
 import { Footer } from "@/components/site/Footer";
 import { SectionHairline } from "@/components/site/SectionHairline";
 import { DocAnswer, DocCard, DocLimit, DocStep } from "@/components/site/Doc";
+import { AgentsBetaForm } from "@/components/site/AgentsBetaForm";
 import {
   API_BASE,
   ENDPOINTS,
   LIMITS,
+  LIVE,
   MCP_URL,
   OAUTH,
   SCOPES,
@@ -26,13 +28,17 @@ import {
  * that file.
  *
  * Beta, invite only: the backend serves the feature only to the user ids on its
- * allowlist (AGENTS_ALLOWED_USERS), and paying by x402 only to the people on
- * X402_SELL_ALLOWED_USERS. The page says so in the hero and in the FAQ.
+ * allowlist (AGENTS_ALLOWED_USERS); people ask to join with their @handle
+ * (AgentsBetaForm, POST /api/v1/agents-beta). Paying by itself and x402 are
+ * printed only while LIVE says they are on in production.
+ *
+ * It sells the money first (HOLD is a fintech app): the assistant books it,
+ * the friends pay you back, nothing leaves without Face ID.
  */
 
 const TITLE = "HOLD for AI agents";
 const DESCRIPTION =
-  "Connect Claude, ChatGPT or Cursor to your HOLD account. Your assistant reads your balances, finds hotels and flights, asks for money and pays for APIs over x402, inside the limits you set.";
+  "Connect Claude, ChatGPT or Cursor to your HOLD account. Your assistant finds the hotel, splits the bill and sends each friend a link to pay you back. Nothing leaves your account without your Face ID.";
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -42,7 +48,7 @@ export const metadata: Metadata = {
     type: "website",
     url: "/agents",
     siteName: "HOLD",
-    title: `${TITLE}: your AI assistants, paid from HOLD`,
+    title: `${TITLE}: your assistant books it, your friends pay you back`,
     description: DESCRIPTION,
     images: [{ url: "/banner-social.png", width: 1200, height: 630, alt: "HOLD for AI agents", type: "image/png" }],
     locale: "en_US",
@@ -51,7 +57,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     site: "@hiihodl",
     creator: "@hiihodl",
-    title: `${TITLE}: your AI assistants, paid from HOLD`,
+    title: `${TITLE}: your assistant books it, your friends pay you back`,
     description: DESCRIPTION,
     images: ["/banner-social.png"],
   },
@@ -73,20 +79,33 @@ const CURL_PAY = `curl -i "${API_BASE}/x402/pay/@yourhandle?amount=1.50&note=Tha
 const FAQ = [
   {
     q: "Who can use it?",
-    a: "It is in beta and invite only. Until your account is invited, the HOLD app will not approve a connection. Ask us at hello@hihodl.xyz.",
+    a: "It is in beta. Ask to join with your HOLD @handle on this page and we let people in in batches. Until your account is in, the HOLD app will not approve a connection. When it is, AI assistants shows up in HOLD under Settings.",
+  },
+  {
+    q: "Do my friends need HOLD to pay me back?",
+    a: "No. Each one gets their own link and pays on a HOLD web page, nothing to install. Someone who has HOLD opens it in the app.",
   },
   {
     q: "Which assistants work?",
     a: "Any assistant that speaks MCP with OAuth: Claude, Claude Code, ChatGPT and Cursor among them. They all use the same address and the same approval in the HOLD app.",
   },
-  {
-    q: "Can it spend my money without asking?",
-    a: "Only if you turn on the pay permission for it in the HOLD app, under Settings > AI assistants, and then only inside the limits you set: the money you set aside, a daily budget, a per payment limit, and the sites and people you allowed. Everything else waits for you to approve it in the app.",
-  },
-  {
-    q: "What if it goes over its limit?",
-    a: "Nothing is paid. The payment comes to your HOLD app instead, with the amount and who it is for. Approve it and HOLD pays it once, decline it, or let it expire after 24 hours. Always allow puts that site or person on the list for next time. The money you set aside is a hard ceiling an approval cannot lift.",
-  },
+  ...(LIVE.pay
+    ? [
+        {
+          q: "Can it spend my money without asking?",
+          a: "Only if you turn on the pay permission for it in the HOLD app, under Settings > AI assistants, and then only inside the limits you set: the money you set aside, a daily budget, a per payment limit, and the sites and people you allowed. Everything else waits for you to approve it in the app.",
+        },
+        {
+          q: "What if it goes over its limit?",
+          a: "Nothing is paid. The payment comes to your HOLD app instead, with the amount and who it is for. Approve it and HOLD pays it once, decline it, or let it expire after 24 hours. Always allow puts that site or person on the list for next time. The money you set aside is a hard ceiling an approval cannot lift.",
+        },
+      ]
+    : [
+        {
+          q: "Can it spend my money without asking?",
+          a: "No. Every payment, booking or conversion it lines up waits in your HOLD app until you approve it with Face ID, or decline it. Asking for money, like a split, never moves yours.",
+        },
+      ]),
   {
     q: "How do I disconnect an assistant?",
     a: "From the HOLD app, at any time. Its access ends at once, together with every token it holds.",
@@ -102,6 +121,17 @@ const FAQ = [
 ];
 
 const SCOPE_LABEL: Record<Scope, string> = Object.fromEntries(SCOPES.map((s) => [s.id, s.name])) as Record<Scope, string>;
+
+/** The permissions and tools production serves: no pay permission, nor its tools, while it is off. */
+const SHOWN_SCOPES = SCOPES.filter((s) => LIVE.pay || s.id !== "pay");
+// find_paid_services finds APIs to pay with pay_x402: no use while paying is off.
+const SHOWN_TOOLS = TOOLS.filter((t) => LIVE.pay || (t.scope !== "pay" && t.name !== "find_paid_services"));
+
+const SPLIT_STEPS = [
+  { title: "Ask your assistant", body: "\u201cSplit the 120 \u20ac dinner between Maya, Jules and Ana.\u201d It works out each part, 30 \u20ac." },
+  { title: "Each friend gets a link", body: "One link per person, with their part in their message. They pay on the web, nothing to install; with HOLD, it opens in the app." },
+  { title: "The money comes to you", body: "Every part lands in your HOLD account. Nothing ever leaves it without your Face ID." },
+];
 
 export default function AgentsPage() {
   return (
@@ -122,19 +152,25 @@ export default function AgentsPage() {
                 </span>
               </div>
               <h1 className="mt-6 font-display text-h1 font-light text-text leading-tight">
-                Your AI assistants,
+                Your assistant books it.
                 <br />
-                <span className="text-text-muted">paid from HOLD.</span>
+                <span className="text-text-muted">Your friends pay you back.</span>
               </h1>
               <p className="mt-8 text-lead text-text-muted">
-                Connect Claude, ChatGPT or Cursor to your account. Your assistant checks your
-                balance, finds the hotel, lines up the payment and pays for the APIs it needs,
-                inside the limits you set.
+                Connect Claude, ChatGPT or Cursor to your HOLD account. Your assistant checks
+                your balance, finds the hotel, splits the bill and sends each friend a link to
+                pay their part. Nothing leaves your account without your Face ID.
               </p>
               <div className="mt-10 flex flex-wrap items-center gap-4">
                 <a
-                  href="#connect"
+                  href="#beta"
                   className="inline-flex items-center justify-center px-7 py-4 rounded-pill bg-amber text-text-on-amber font-medium text-body hover:bg-amber-glow transition-all duration-180 ease-out-soft hover:scale-[1.02]"
+                >
+                  Ask to join the beta
+                </a>
+                <a
+                  href="#connect"
+                  className="inline-flex items-center justify-center px-6 py-4 rounded-pill border border-[color:var(--color-hairline-strong)] bg-white/[0.06] text-text text-body hover:bg-white/[0.1] transition-colors duration-180"
                 >
                   Connect HOLD to Claude
                 </a>
@@ -145,6 +181,40 @@ export default function AgentsPage() {
                   For developers
                 </a>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ─── A split, start to end ─────────────────────────────── */}
+        <section className="relative overflow-hidden bg-abyss">
+          <SectionHairline tone="amber" />
+          <div className="container-page section relative">
+            <div className="max-w-2xl">
+              <h2 className="font-display text-h2 font-light text-text">From the chat to the money back</h2>
+              <p className="mt-6 text-body text-text-muted leading-relaxed">
+                Other assistants can book. When they do, somebody fronts the money and chases
+                the rest. With HOLD, the same message that books it asks everyone for their part.
+              </p>
+            </div>
+            <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8">
+              {SPLIT_STEPS.map((step, i) => (
+                <DocStep key={step.title} n={i + 1} title={step.title} body={step.body} />
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ─── Beta ──────────────────────────────────────────────── */}
+        <section id="beta" className="relative overflow-hidden bg-night scroll-mt-20">
+          <SectionHairline tone="moonlight" />
+          <div className="container-page section relative">
+            <div className="max-w-2xl">
+              <h2 className="font-display text-h2 font-light text-text">Ask to join the beta</h2>
+              <p className="mt-6 text-body text-text-muted leading-relaxed">
+                We let people in in batches. Leave your HOLD @handle and, when you are in, AI
+                assistants shows up in the app under Settings.
+              </p>
+              <AgentsBetaForm />
             </div>
           </div>
         </section>
@@ -210,7 +280,11 @@ export default function AgentsPage() {
                 <DocStep
                   n={3}
                   title="You choose the permissions"
-                  body="Keep the ones you want, drop the rest, and approve with Face ID. The page sends you back to your assistant, connected. Paying by itself is not on this list: you turn it on later in the app."
+                  body={
+                    LIVE.pay
+                      ? "Keep the ones you want, drop the rest, and approve with Face ID. The page sends you back to your assistant, connected. Paying by itself is not on this list: you turn it on later in the app."
+                      : "Keep the ones you want, drop the rest, and approve with Face ID. The page sends you back to your assistant, connected. None of them moves your money by itself."
+                  }
                 />
               </div>
             </div>
@@ -224,18 +298,17 @@ export default function AgentsPage() {
             <div className="max-w-2xl">
               <h2 className="font-display text-h2 font-light text-text">What an assistant can do</h2>
               <p className="mt-6 text-lead text-text">
-                It never moves your money without your limits or your approval.
+                {LIVE.pay ? "It never moves your money without your limits or your approval." : "It never moves your money without your approval."}
               </p>
               <p className="mt-4 text-body text-text-muted leading-relaxed">
-                Six permissions. You pick five of them when you connect. The sixth, Pay within
-                limits, is never asked for at connect. You turn it on later for each assistant in
-                the HOLD app, under Settings &gt; AI assistants, and it works at once. Turn it off
-                there and payments stop at once.
+                {LIVE.pay
+                  ? "Six permissions. You pick five of them when you connect. The sixth, Pay within limits, is never asked for at connect. You turn it on later for each assistant in the HOLD app, under Settings > AI assistants, and it works at once. Turn it off there and payments stop at once."
+                  : `${SHOWN_SCOPES.length} permissions, all chosen when you connect. Payments are proposals: they wait in your HOLD app for Face ID.`}
               </p>
             </div>
 
             <div className="mt-14 grid grid-cols-1 md:grid-cols-2 gap-5">
-              {SCOPES.map((s) => (
+              {SHOWN_SCOPES.map((s) => (
                 <div key={s.id} className="rounded-card p-8 border border-[color:var(--color-hairline)] bg-white/[0.03]">
                   <p className="font-mono text-tiny text-moonlight">{s.id}</p>
                   <h3 className="mt-3 font-display text-h4 font-light text-text leading-snug">{s.name}</h3>
@@ -248,6 +321,7 @@ export default function AgentsPage() {
         </section>
 
         {/* ─── Limits ────────────────────────────────────────────── */}
+        {LIVE.pay ? (
         <section className="relative overflow-hidden bg-abyss">
           <SectionHairline tone="amber" />
           <div className="container-page section relative">
@@ -311,6 +385,7 @@ export default function AgentsPage() {
             </div>
           </div>
         </section>
+        ) : null}
 
         {/* ─── Developers ───────────────────────────────────────── */}
         <section id="developers" className="relative overflow-hidden bg-night scroll-mt-20">
@@ -336,7 +411,7 @@ export default function AgentsPage() {
             <div className="mt-14">
               <h3 className="font-display text-h3 font-light text-text">Tools</h3>
               <div className="mt-8 flex flex-col gap-4">
-                {TOOLS.map((t) => (
+                {SHOWN_TOOLS.map((t) => (
                   <details
                     key={t.name}
                     className="group rounded-card border border-[color:var(--color-hairline)] bg-white/[0.03] p-6 open:bg-white/[0.05] transition-colors"
@@ -378,16 +453,19 @@ export default function AgentsPage() {
               </div>
               <p className="mt-6 text-small text-text-faint">
                 A name with <span className="font-mono">?</span> is optional. Permission per tool:{" "}
-                {SCOPES.map((s, i) => (
+                {SHOWN_SCOPES.map((s, i) => (
                   <span key={s.id}>
-                    <span className="font-mono">{s.id}</span> ({SCOPE_LABEL[s.id]}){i < SCOPES.length - 1 ? ", " : "."}
+                    <span className="font-mono">{s.id}</span> ({SCOPE_LABEL[s.id]}){i < SHOWN_SCOPES.length - 1 ? ", " : "."}
                   </span>
                 ))}
               </p>
             </div>
 
             {/* x402 */}
+            {LIVE.pay || LIVE.x402Sell ? (
+            <>
             <div className="mt-20 grid grid-cols-1 lg:grid-cols-2 gap-10">
+              {LIVE.pay ? (
               <div className="min-w-0">
                 <h3 className="font-display text-h3 font-light text-text">Paying APIs with x402</h3>
                 <div className="mt-6 space-y-4 text-body text-text-muted leading-relaxed">
@@ -420,7 +498,9 @@ export default function AgentsPage() {
                   </p>
                 </div>
               </div>
+              ) : null}
 
+              {LIVE.x402Sell ? (
               <div className="min-w-0">
                 <h3 className="font-display text-h3 font-light text-text">Getting paid with x402</h3>
                 <div className="mt-6 space-y-4 text-body text-text-muted leading-relaxed">
@@ -446,8 +526,10 @@ export default function AgentsPage() {
                   Main Account as income.
                 </p>
               </div>
+              ) : null}
             </div>
 
+            {LIVE.x402Sell ? (
             <div className="mt-10">
               <RouteTable rows={X402_ROUTES} />
               <p className="mt-4 text-small text-text-faint">
@@ -457,6 +539,9 @@ export default function AgentsPage() {
                 Bazaar. In the beta, only invited HOLD users can be paid this way.
               </p>
             </div>
+            ) : null}
+            </>
+            ) : null}
 
             {/* OAuth */}
             <div className="mt-20">
@@ -473,14 +558,19 @@ export default function AgentsPage() {
               </div>
               <p className="mt-6 text-small text-text-faint">
                 Every path is on <InlineCode>{API_BASE}</InlineCode>. Scopes:{" "}
-                {SCOPES.map((s, i) => (
+                {SHOWN_SCOPES.map((s, i) => (
                   <span key={s.id}>
                     <InlineCode>{s.id}</InlineCode>
-                    {i < SCOPES.length - 1 ? " " : "."}
+                    {i < SHOWN_SCOPES.length - 1 ? " " : "."}
                   </span>
                 ))}{" "}
-                A client never gets <InlineCode>pay</InlineCode> at connect; the user turns it on
-                in the app, and it applies at once. Proposals expire after {OAUTH.proposalHours} hours, and at most{" "}
+                {LIVE.pay ? (
+                  <>
+                    A client never gets <InlineCode>pay</InlineCode> at connect; the user turns it on
+                    in the app, and it applies at once.{" "}
+                  </>
+                ) : null}
+                Proposals expire after {OAUTH.proposalHours} hours, and at most{" "}
                 {OAUTH.maxPendingProposals} wait at once.
               </p>
             </div>
@@ -501,8 +591,8 @@ export default function AgentsPage() {
             </div>
             <p className="mt-10 text-body text-text-muted">
               Want in?{" "}
-              <a href="mailto:hello@hihodl.xyz" className="text-text hover:text-amber underline">
-                hello@hihodl.xyz
+              <a href="#beta" className="text-text hover:text-amber underline">
+                Ask to join the beta
               </a>
               . New to HOLD?{" "}
               <Link href="/" className="text-text hover:text-amber underline">
