@@ -95,6 +95,9 @@ export default function PrivacyPage() {
                   <p className="mt-3">
                     <strong>Connecting your Google Calendar.</strong> If you allow it when you connect your Google account, HOLD creates a calendar named HOLD in your Google account and keeps the trip items you travel on in it: the title, times, place, booking reference and a link back to the app. HOLD changes only that calendar, updates an event when the booking changes and removes it when the booking is cancelled; an event you delete yourself is never added back. If you also allow HOLD to see when you are busy, then when a new booking reaches your trips we ask Google whether you are busy at that time, and only learn the busy times, not what they are; if something clashes, Hi sends you a message about it. Two more choices are off unless you turn them on in Settings, Connected accounts: <em>Show event names</em> lets HOLD read the names and times of your own events around your bookings, so Hi can tell you which one clashes; <em>Let Hi move my events</em> lets HOLD move one of your events to another time, only after you tap yes, and never an event that has other people on it. Event names are shown only to you; a clash message waits for the app to collect it for at most 30 days, and when you ask Hi about your agenda, the times and names it needs are sent to our AI provider to answer you and are not used to train models. You can turn any of this off, or disconnect, at any time; disconnecting removes the HOLD calendar from your Google account and deletes our token.
                   </p>
+                  <p className="mt-3">
+                    <strong>Connecting a Microsoft account.</strong> You can also connect an Outlook, Hotmail or work Microsoft account. Microsoft asks you to let HOLD read your mail and read and write your calendars, because Microsoft offers no narrower permission. HOLD only uses that access the way it is described above for Gmail and Google Calendar: we look for travel bookings among new messages in your inbox, read only messages whose subject looks like a booking, and keep only the trip details; we write only the HOLD calendar we create; we look at your busy times around a new booking; and we read event names or move an event only if you turned those on. We keep your account address and an encrypted access token. When you disconnect, we delete the HOLD calendar from your account, stop reading and delete the token; Microsoft does not let apps withdraw their own access, so the app also shows you where to remove HOLD in your Microsoft account.
+                  </p>
                 </div>
                 <div>
                   <h3 className="text-xl font-[600] text-[#eaf6ffff] mb-2">2.2 Automatically Collected Information</h3>
@@ -124,8 +127,8 @@ export default function PrivacyPage() {
                 <li>Monitor and analyze usage patterns and trends</li>
                 <li>Detect, prevent, and address technical issues and security threats</li>
                 <li>Comply with legal obligations and enforce our terms</li>
-                <li>Read the bookings you forward, share or that we find in a Gmail account you connected, and add each one to the trip it belongs to</li>
-                <li>Keep your bookings in the HOLD calendar of a Google account you connected, and tell you when a new booking clashes with your calendar</li>
+                <li>Read the bookings you forward, share or that we find in a Gmail or Outlook account you connected, and add each one to the trip it belongs to</li>
+                <li>Keep your bookings in the HOLD calendar of a Google or Microsoft account you connected, and tell you when a new booking clashes with your calendar</li>
                 <li>Let Hi, the assistant in the app, write to you about a trip of yours when it notices something worth knowing, for example a night with nowhere to stay; you can turn these trip ideas off in Settings, or for one trip or one kind of idea from the message itself</li>
               </ul>
             </section>
