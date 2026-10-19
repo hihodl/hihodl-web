@@ -49,7 +49,7 @@ export default function PrivacyPage() {
               Privacy Policy
             </h1>
             <p className="text-base sm:text-lg text-[#94a3b8ff] font-['Inter'] font-[400]">
-              Last updated: October 15, 2026
+              Last updated: October 19, 2026
             </p>
           </div>
 
@@ -87,10 +87,13 @@ export default function PrivacyPage() {
                     <strong>Your travel email.</strong> You can tell HOLD which email address your booking confirmations go to, even if it is not the one you sign in with. We send a six digit code to that address and use it only after you enter the code. HOLD fills it in as the contact email when you book a stay, a flight or an experience in the app, so the confirmation reaches the inbox your trips are built from. You can change or remove it at any time.
                   </p>
                   <p className="mt-3">
-                    <strong>Connecting Gmail.</strong> If you choose to connect your Gmail account, HOLD asks Google for read only access. We search your mailbox for travel bookings (flights, stays, trains, events and similar) and read only the messages that search returns, starting from the last 12 months; a booking for a trip that has already ended is ignored and nothing from it is kept. Each message is read once to pull out the trip details listed above; the message itself is not stored. We keep your Gmail address and an encrypted access token so the sync can keep running, and you can disconnect at any time in the app or in your Google account, after which we stop reading and delete the token. HOLD&apos;s use and transfer of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements. We use Gmail data only to add your bookings to your trips; we do not use it for advertising, we do not sell it, we do not let people read it except with your permission, for security or to comply with the law, and we do not use it to train AI models.
+                    <strong>Connecting Gmail.</strong> If you choose to connect your Gmail account, HOLD asks Google for read only access. We search your mailbox for travel bookings (flights, stays, trains, events and similar) and read only the messages that search returns, starting from the last 12 months; a booking for a trip that has already ended is ignored and nothing from it is kept. Each message is read once to pull out the trip details listed above; the message itself is not stored. We keep your Gmail address and an encrypted access token so the sync can keep running, and you can disconnect at any time in the app or in your Google account, after which we stop reading and delete the token. HOLD&apos;s use and transfer of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements. We use Gmail data only to add your bookings to your trips, and Google Calendar data only for what is described below; we do not use either for advertising, we do not sell it, we do not let people read it except with your permission, for security or to comply with the law, and we do not use it to train AI models.
                   </p>
                   <p className="mt-3">
                     <strong>Your phone&apos;s calendar.</strong> If you choose Add to my calendar, HOLD writes the trip items you travel on into a calendar named HOLD on your phone. HOLD does not read your other calendar events, and nothing from your calendar is sent to us.
+                  </p>
+                  <p className="mt-3">
+                    <strong>Connecting your Google Calendar.</strong> If you allow it when you connect your Google account, HOLD creates a calendar named HOLD in your Google account and keeps the trip items you travel on in it: the title, times, place, booking reference and a link back to the app. HOLD changes only that calendar, updates an event when the booking changes and removes it when the booking is cancelled; an event you delete yourself is never added back. If you also allow HOLD to see when you are busy, then when a new booking reaches your trips we ask Google whether you are busy at that time, and only learn the busy times, not what they are; if something clashes, Hi sends you a message about it. Two more choices are off unless you turn them on in Settings, Connected accounts: <em>Show event names</em> lets HOLD read the names and times of your own events around your bookings, so Hi can tell you which one clashes; <em>Let Hi move my events</em> lets HOLD move one of your events to another time, only after you tap yes, and never an event that has other people on it. Event names are shown only to you; a clash message waits for the app to collect it for at most 30 days, and when you ask Hi about your agenda, the times and names it needs are sent to our AI provider to answer you and are not used to train models. You can turn any of this off, or disconnect, at any time; disconnecting removes the HOLD calendar from your Google account and deletes our token.
                   </p>
                 </div>
                 <div>
@@ -122,6 +125,7 @@ export default function PrivacyPage() {
                 <li>Detect, prevent, and address technical issues and security threats</li>
                 <li>Comply with legal obligations and enforce our terms</li>
                 <li>Read the bookings you forward, share or that we find in a Gmail account you connected, and add each one to the trip it belongs to</li>
+                <li>Keep your bookings in the HOLD calendar of a Google account you connected, and tell you when a new booking clashes with your calendar</li>
                 <li>Let Hi, the assistant in the app, write to you about a trip of yours when it notices something worth knowing, for example a night with nowhere to stay; you can turn these trip ideas off in Settings, or for one trip or one kind of idea from the message itself</li>
               </ul>
             </section>

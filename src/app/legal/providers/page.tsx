@@ -134,14 +134,14 @@ const INFRASTRUCTURE: Provider[] = [
     what:
       "The AI model behind Hi, the assistant in the app, and behind reading the bookings you forward or share into a plan.",
     data:
-      "The messages you send Hi and the context it needs to answer. For a booking: the email, PDF or image you sent, or the message found in a Gmail account you connected, so the trip details can be read from it. Not used to train models.",
+      "The messages you send Hi and the context it needs to answer. For a booking: the email, PDF or image you sent, or the message found in a Gmail account you connected, so the trip details can be read from it. When you ask Hi about your agenda: the busy times, and event names if you turned them on, from a calendar you connected. Not used to train models.",
   },
   {
-    name: "Google (Gmail API)",
+    name: "Google (Gmail and Calendar APIs)",
     what:
-      "Only if you connect your Gmail account: read only access to find your travel bookings and build your trips.",
+      "Only if you connect your Google account: read only access to Gmail to find your travel bookings, and the HOLD calendar in your Google Calendar, with your busy times to warn you of a clash.",
     data:
-      "Your Gmail address and an access token. We read only messages a travel bookings search returns and keep only the trip details from them. Our use follows the Google API Services User Data Policy, including the Limited Use requirements.",
+      "Your Google address and an access token. From Gmail we read only messages a travel bookings search returns and keep only the trip details from them. In Google Calendar we write only the HOLD calendar, read busy times around a new booking, and read event names or move an event only if you turned those on. Our use follows the Google API Services User Data Policy, including the Limited Use requirements.",
   },
   {
     name: "Unsplash",
