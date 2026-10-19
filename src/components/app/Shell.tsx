@@ -66,6 +66,7 @@ import { GetTheAppScreen } from "./main/GetTheApp";
 import { HeaderSlotContext, type HeaderSlot } from "./header-slot";
 import { HiPointsChip } from "./HiPointsChip";
 import { PartnersOnly } from "./spaces/PartnersOnly";
+import { RailTip } from "./RailTip";
 import { UserAvatar, useUserPhoto } from "./account/UserAvatar";
 import { IconArrowLeft, IconClose, IconCollapse, IconExpand, IconInsights, IconPlus, IconSearch } from "./icons";
 import {
@@ -656,8 +657,9 @@ function Sidebar({
     <button
       type="button"
       aria-label={collapsed ? t("shell.sidebar.expand") : t("shell.sidebar.collapse")}
+      data-rail-tip={collapsed ? t("shell.sidebar.expand") : undefined}
       onClick={onToggle}
-      className="flex h-8 w-8 items-center justify-center rounded-[8px] text-[#9FB7C2] hover:bg-white/10 hover:text-text"
+      className={`flex items-center justify-center text-[#9FB7C2] transition-colors hover:bg-white/10 hover:text-text ${collapsed ? "h-10 w-10 rounded-full" : "h-8 w-8 rounded-[8px]"}`}
     >
       {collapsed ? <IconExpand /> : <IconCollapse />}
     </button>
@@ -669,9 +671,11 @@ function Sidebar({
         collapsed ? "items-center px-2 py-3" : "p-3"
       }`}
     >
+      {/* Folded, every icon is named in a pill beside it on hover, at once. */}
+      {collapsed ? <RailTip /> : null}
       <div className={`flex w-full items-center ${collapsed ? "flex-col gap-3" : "justify-between gap-2 px-1.5 pb-3 pt-1"}`}>
         {level === "main" ? (
-          <Link href={home} aria-label={t("shell.sidebar.dashboard")} className="flex min-w-0 items-center">
+          <Link href={home} aria-label={t("shell.sidebar.dashboard")} data-rail-tip={collapsed ? t("shell.sidebar.dashboard") : undefined} className="flex min-w-0 items-center">
             {collapsed ? (
               <span className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-white/10 bg-white/[0.06] text-[13px] font-semibold text-amber">H</span>
             ) : (
@@ -683,10 +687,11 @@ function Sidebar({
           <Link
             href={home}
             aria-label={t("shell.sidebar.backToHold")}
-            title={t("shell.sidebar.backToHold")}
+            title={collapsed ? undefined : t("shell.sidebar.backToHold")}
+            data-rail-tip={collapsed ? t("shell.sidebar.backToHold") : undefined}
             className={
               collapsed
-                ? "flex h-9 w-9 items-center justify-center rounded-[10px] border border-white/10 bg-white/[0.06] text-[#CFE3EC] hover:bg-white/10"
+                ? "flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-[#CFE3EC] hover:bg-white/10"
                 : "flex h-9 min-w-0 items-center gap-2 rounded-[10px] px-1.5 text-small text-[#CFE3EC] transition-colors hover:bg-white/[0.07] hover:text-text"
             }
           >
@@ -713,10 +718,11 @@ function Sidebar({
           type="button"
           onClick={onSearch}
           aria-label={t("common.search")}
-          title={t("shell.sidebar.searchShortcut")}
+          title={collapsed ? undefined : t("shell.sidebar.searchShortcut")}
+          data-rail-tip={collapsed ? t("shell.sidebar.searchShortcut") : undefined}
           className={
             collapsed
-              ? "mb-1 flex h-9 w-9 items-center justify-center rounded-[10px] border border-white/10 bg-white/[0.05] text-[#CFE3EC] transition-colors hover:bg-white/10 hover:text-text"
+              ? "mb-1 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-[#CFE3EC] transition-colors hover:bg-white/10 hover:text-text"
               : "mb-2 flex h-9 w-full items-center gap-2 rounded-[10px] border border-white/10 bg-white/[0.05] px-2.5 text-small text-[#9FB7C2] transition-colors hover:bg-white/10 hover:text-text"
           }
         >
@@ -769,25 +775,27 @@ function NavLink({ item, active, badge, collapsed, hard }: { item: NavItem; acti
   const pathname = usePathname();
   const full = hard || crossesKeyPage(href, pathname ?? undefined);
   const current = active ? ("page" as const) : undefined;
-  const go = (className: string, children: ReactNode, label?: string) =>
+  // `tip` is the folded rail's: the name the icon alone cannot say, read out
+  // and shown in RailTip's pill.
+  const go = (className: string, children: ReactNode, tip?: string) =>
     full ? (
-      <a href={href} aria-current={current} aria-label={label} title={label} className={className}>
+      <a href={href} aria-current={current} aria-label={tip} data-rail-tip={tip} className={className}>
         {children}
       </a>
     ) : (
-      <Link href={href} aria-current={current} aria-label={label} title={label} className={className}>
+      <Link href={href} aria-current={current} aria-label={tip} data-rail-tip={tip} className={className}>
         {children}
       </Link>
     );
 
   if (collapsed) {
     return go(
-      `relative flex h-9 w-9 items-center justify-center rounded-[10px] transition-colors ${
+      `relative flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
         active ? "bg-amber/25 text-[#FFE2A1]" : "text-[#9FB7C2] hover:bg-white/10 hover:text-text"
       }`,
       <>
-        <Icon />
-        {badge ? <span className="absolute right-1 top-1 h-2 w-2 rounded-[4px] bg-amber" aria-hidden /> : null}
+        <Icon width={18} height={18} />
+        {badge ? <span className="absolute right-[7px] top-[7px] h-2 w-2 rounded-[4px] bg-amber" aria-hidden /> : null}
       </>,
       label,
     );
@@ -849,7 +857,7 @@ function UserCard({ collapsed }: { collapsed: boolean }) {
   if (collapsed) {
     return (
       <div className="flex flex-col items-center gap-1">
-        <Link href={productHref("/menu")} title={name} aria-label={t("shell.user.menuFor", { name })}>
+        <Link href={productHref("/menu")} data-rail-tip={name} aria-label={t("shell.user.menuFor", { name })}>
           <UserAvatar size={36} fallbackName={name} />
         </Link>
         <HiPointsChip compact />
