@@ -1,6 +1,8 @@
 import type { MetadataRoute } from "next";
 
 import { listPublicBriefs, listPublicEvents } from "@/lib/ad-space/server";
+import { esimPath } from "@/lib/esim/countries";
+import { getEsimPrices } from "@/lib/esim/prices";
 
 /**
  * The sitemap.
@@ -42,7 +44,7 @@ const PAGES: Entry[] = [
   // One entry per product, never a combined one. "esim japan" and "hotel
   // cashback" are different searches by different people a month apart, and a
   // page that answers both ranks for neither.
-  { path: "/esim", priority: 0.8, changeFrequency: "monthly" },
+  { path: "/esim", priority: 0.8, changeFrequency: "weekly" },
   { path: "/travel", priority: 0.7, changeFrequency: "monthly" },
   // HOLD Partners: agencies, creators and organisers who bring travellers.
   { path: "/partners", priority: 0.7, changeFrequency: "monthly" },
@@ -121,5 +123,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
-  return [...pages, ...eventPages, ...briefPages];
+  // One page per destination on sale, from the same price table the pages read.
+  // "esim japan" is the search; each country is its own answer. On any API
+  // failure this is empty, like the events above.
+  const esim = await getEsimPrices();
+  const esimPages: MetadataRoute.Sitemap =
+    esim.kind === "ok"
+      ? [...esim.byCode.keys()].map((code) => ({
+          url: `${SITE}${esimPath(code)}`,
+          lastModified,
+          changeFrequency: "weekly",
+          priority: 0.7,
+        }))
+      : [];
+
+  return [...pages, ...eventPages, ...briefPages, ...esimPages];
 }
