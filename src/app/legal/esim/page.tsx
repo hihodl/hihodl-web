@@ -49,7 +49,7 @@ export default function EsimLegalPage() {
               eSIM Terms of Sale
             </h1>
             <p className="text-base sm:text-lg text-[#94a3b8ff] font-['Inter'] font-[400]">
-              Last reviewed: August 9, 2026
+              Last reviewed: October 21, 2026
             </p>
           </div>
 
@@ -102,7 +102,7 @@ export default function EsimLegalPage() {
               </p>
               <p className="text-[#94a3b8ff]">
                 If the profile cannot be installed on your device, you get your
-                money back. See section 7.
+                money back. See section 8.
               </p>
             </section>
 
@@ -124,6 +124,12 @@ export default function EsimLegalPage() {
                 the speed: operators apply fair-use policies and may slow a
                 connection down once a threshold is passed. Tethering or hotspot
                 use may be restricted on some networks.
+              </p>
+              <p className="text-[#94a3b8ff]">
+                A plan sold by the day gives you a full speed allowance every day
+                of the plan. Once the day&apos;s allowance is used, the connection
+                keeps working at the slower speed shown before you pay, until the
+                next day starts.
               </p>
               <p className="text-[#94a3b8ff]">
                 Some destinations are not available at all. Our connectivity
@@ -160,7 +166,8 @@ export default function EsimLegalPage() {
               </h2>
               <p className="text-[#94a3b8ff]">
                 The price you see at checkout is the price you pay. It is shown in
-                your display currency and settled from your HOLD balance in USDC;
+                your display currency and settled from your HOLD balance in USDC,
+                or by card or Apple Pay where the checkout offers it;
                 where your display currency is not the US dollar, the checkout
                 converts at the rate in force at that moment and tells you if that
                 rate is not live. There is no separate booking fee, card fee or
@@ -217,34 +224,45 @@ export default function EsimLegalPage() {
               </h2>
               <p className="text-[#94a3b8ff]">
                 <span className="text-[#eaf6ffff] font-[600]">
-                  If it will not install, you get your money back.
+                  Trip guarantee: if it does not work, we replace it or refund it in full.
                 </span>{" "}
                 If the profile cannot be installed on your device, or it installs
-                and never connects in the destination, contact us and we refund the
-                purchase in full, points included. That is the promise the checkout
-                makes and it is not conditional on you being right about why.
+                and never connects in the destination, tell us from the eSIM in
+                HOLD (&quot;This eSIM isn&apos;t working&quot;) or write to us. We
+                replace it or refund the purchase in full, points included. That is
+                the promise the checkout makes and it is not conditional on you
+                being right about why.
               </p>
               <p className="text-[#94a3b8ff]">
                 <span className="text-[#eaf6ffff] font-[600]">
-                  Once data has been used, the plan is not refundable.
+                  An eSIM you never installed comes back in full.
                 </span>{" "}
-                A plan you bought and did not use is refundable while it has not
-                started and has not expired — write to us and we will cancel it.
+                You can return an eSIM you have not installed from the eSIM in
+                HOLD, for the whole price and every point you applied, for as long
+                as the network still holds it unused (usually around 180 days).
+                There is no fee. The money goes back the way you paid: to your HOLD
+                balance, or to your card.
+              </p>
+              <p className="text-[#94a3b8ff]">
+                <span className="text-[#eaf6ffff] font-[600]">
+                  Once data has been used, only the unused part can come back.
+                </span>{" "}
                 Poor coverage in a specific spot, a phone that was carrier-locked
                 and has since been unlocked, or a trip that did not happen after
-                the plan started are not grounds for a refund.
+                the plan started are not grounds for a full refund.
               </p>
               <p className="text-[#94a3b8ff]">
                 <span className="text-[#eaf6ffff] font-[600]">
                   The 14-day withdrawal right.
                 </span>{" "}
-                Under EU consumer law you normally have 14 days to withdraw from a
-                distance contract. Digital content supplied immediately is an
-                exception: when you confirm a purchase you are asking us to supply
-                the eSIM straight away and acknowledging that you lose the 14-day
-                right of withdrawal once it has been delivered to you. Everything in
-                the two paragraphs above is what we offer regardless, and it does
-                not limit any statutory right you have that cannot be waived.
+                Under EU consumer law you have 14 days to withdraw from a distance
+                contract. When you confirm a purchase you ask us to supply the eSIM
+                straight away, so within those 14 days you pay for the part that was
+                supplied and get the rest back: we measure the larger of the days
+                that have passed and the data you have used, and the plan in HOLD
+                shows the amount before you confirm. Everything above is what we
+                offer regardless, and it does not limit any statutory right you
+                have that cannot be waived.
               </p>
             </section>
 
