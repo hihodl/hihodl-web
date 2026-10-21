@@ -25,7 +25,7 @@ export const metadata: Metadata = {
 
 export default function OnrampPage() {
   return (
-    <main className="min-h-dvh bg-[#070C12]">
+    <main className="fixed inset-0 overflow-y-auto bg-[#070C12]">
       <OnrampMount />
     </main>
   );

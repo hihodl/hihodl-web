@@ -38,25 +38,48 @@ const SCRIPTS = ["https://js.stripe.com/endive/stripe.js", "https://crypto-js.st
 const SECRET = /^cos_[A-Za-z0-9]+_secret_[A-Za-z0-9]+$/;
 const KEY = /^pk_(live|test)_[A-Za-z0-9]+$/;
 
+/**
+ * One load per script, shared. A tag already on the page is not a loaded
+ * script: resolving on its presence let the onramp start before Stripe.js had
+ * run ("Please include StripeJS alongside Stripe Crypto Onramp"), seen in a
+ * headless check on 22-Oct-2026 whenever the second effect run won the race.
+ */
+const loading = new Map<string, Promise<void>>();
+
 function load(src: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (document.querySelector(`script[src="${src}"]`)) return resolve();
-    const s = document.createElement("script");
-    s.src = src;
-    s.async = true;
-    s.onload = () => resolve();
-    s.onerror = () => reject(new Error(`could not load ${src}`));
-    document.head.appendChild(s);
-  });
+  let p = loading.get(src);
+  if (!p) {
+    p = new Promise<void>((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = src;
+      s.async = true;
+      s.onload = () => resolve();
+      s.onerror = () => {
+        loading.delete(src);
+        reject(new Error(`could not load ${src}`));
+      };
+      document.head.appendChild(s);
+    });
+    loading.set(src, p);
+  }
+  return p;
 }
 
 const DONE = new Set(["fulfillment_processing", "fulfillment_complete", "rejected"]);
 
+/**
+ * Read once per page load and kept here, because the read also wipes it: a
+ * second read (React runs effects twice in development) would find nothing.
+ */
+let fromFragment: { clientSecret: string; publishableKey: string } | null = null;
+
 function readFragment(): { clientSecret: string; publishableKey: string } {
+  if (fromFragment) return fromFragment;
   const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
   // Out of the address, history and any later read at once.
   if (window.location.hash) window.history.replaceState(null, "", window.location.pathname);
-  return { clientSecret: params.get("cs") ?? "", publishableKey: params.get("pk") ?? "" };
+  fromFragment = { clientSecret: params.get("cs") ?? "", publishableKey: params.get("pk") ?? "" };
+  return fromFragment;
 }
 
 export function OnrampMount() {
@@ -84,7 +107,8 @@ export function OnrampMount() {
             if (DONE.has(status)) window.location.replace(`/onramp/done?status=${encodeURIComponent(status)}`);
           })
           .mount(host.current);
-      } catch {
+      } catch (err) {
+        console.error("[onramp] mount failed", err instanceof Error ? err.message : err);
         setState("failed");
       }
     })();
