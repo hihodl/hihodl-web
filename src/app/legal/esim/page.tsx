@@ -193,10 +193,9 @@ export default function EsimLegalPage() {
                 balance along with the money.
               </p>
               <p className="text-[#94a3b8ff]">
-                Buying a plan also earns points, credited after the order
-                completes. Points are a loyalty benefit, not money and not a
-                claim on us: they have no cash value and cannot be transferred or
-                withdrawn.
+                Buying a plan does not earn points. Points are a loyalty benefit,
+                not money and not a claim on us: they have no cash value and
+                cannot be transferred or withdrawn.
               </p>
             </section>
 

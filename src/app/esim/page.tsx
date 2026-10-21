@@ -9,7 +9,6 @@ import { DestinationSearch, type Destination } from "@/components/esim/Destinati
 import { Fact, GetTheApp, PRIMARY_CTA, Step } from "@/components/esim/ui";
 import { COUNTRY_CODES, NOT_ON_SALE, POPULAR, countryFlag, countryName, esimPath, usd } from "@/lib/esim/countries";
 import { getEsimPrices, type EsimPrices } from "@/lib/esim/prices";
-import { HOLD_KEEPS, bps } from "@/lib/rates.config";
 
 /**
  * /esim: the hub. Find a destination, see what it costs, and why paying from
@@ -40,9 +39,6 @@ import { HOLD_KEEPS, bps } from "@/lib/rates.config";
  */
 
 export const revalidate = 3600;
-
-/** What the buyer keeps of the spread. The page renders this, never our share. */
-const userShareBps = 10_000 - HOLD_KEEPS.esim.marginShareBps;
 
 function cheapestOf(prices: EsimPrices): number | null {
   if (prices.kind !== "ok") return null;
@@ -150,11 +146,11 @@ export default async function EsimPage() {
               />
               <Fact
                 title="Unused? Refunded in full"
-                body="Plans changed before it started? We cancel it and refund every cent."
+                body="Never installed it? Return it from the app for the whole price. No fee."
               />
               <Fact
-                title="HiPoints on every plan"
-                body="Every plan earns HiPoints. Spend them on the next one, up to the whole price."
+                title="Pay with HiPoints"
+                body="Put your HiPoints toward a plan at checkout, up to the whole price."
               />
             </div>
           </div>
@@ -219,9 +215,7 @@ export default async function EsimPage() {
                   no card fee, no FX fee, nothing for a plan that sits unused.
                 </p>
                 <p className="text-text">
-                  Then {bps(userShareBps)} of what we make on the sale comes back to you as HiPoints, credited when
-                  the order completes. We keep the rest. So the cheaper the plan, the smaller the reward: it is a
-                  share of a real margin.
+                  We keep that spread. A plan does not earn HiPoints, but you can pay for one with them.
                 </p>
               </div>
             </div>
