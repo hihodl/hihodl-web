@@ -49,6 +49,8 @@ export interface Partner {
   shareBps: number;
   /** Part of that share given back to the travellers it brings, as a discount at their checkout. 5000 = half. */
   giveBackBps?: number;
+  /** Public URL of the partner's logo, drawn small next to its name. null = the name alone. */
+  logoUrl?: string | null;
   attributionMonths: number;
   payoutMode: PayoutMode;
   createdAt: string;
@@ -416,6 +418,14 @@ export const applyAsPartner = (body: ApplyBody) => read<PartnerMe>("partners/app
 export const updatePartner = (body: { name?: string; slug?: string; instagram?: string; website?: string; giveBackBps?: number }) =>
   read<PartnerMe>("partners/me", { method: "PATCH", json: body });
 
+/** Image types the logo upload takes, and its size cap (the backend checks both again, by the bytes). */
+export const LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"] as const;
+export const LOGO_MAX_BYTES = 3 * 1024 * 1024;
+
+/** The owner's logo: the raw file as the body with its own Content-Type, never multipart. */
+export const uploadPartnerLogo = (file: Blob) => read<PartnerMe>("partners/me/logo", { raw: file });
+export const removePartnerLogo = () => read<PartnerMe>("partners/me/logo", { method: "DELETE" });
+
 export const getPartnerDashboard = (scope: Scope) => read<PartnerDashboard>(`partners/me/dashboard?scope=${scope}`);
 
 export const getTripDetail = (id: string) => read<TripDetail>(`partners/me/trips/${enc(id)}`);
@@ -756,6 +766,11 @@ const MESSAGES: Record<string, string> = {
   dates_out_of_order: "Open until cannot be before open from.",
   give_back_invalid: "Give back is a percentage from 0% to 100% of your share.",
   forbidden: "Only the owner of your team can change what is given back.",
+  image_too_large: "That image is over 3 MB. Pick a smaller one.",
+  image_type_not_supported: "Use a PNG, JPEG or WebP image.",
+  storage_unavailable: "The logo could not be saved right now. Try again in a moment.",
+  HTTP_413: "That image is over 3 MB. Pick a smaller one.",
+  HTTP_415: "Use a PNG, JPEG or WebP image.",
   trip_not_found: "That trip is gone, or it is run by someone else.",
   max_travellers_invalid: `Travellers is a whole number from 1 to ${TRIP_TRAVELLERS_MAX}.`,
   payout_not_found: "That payout is not yours to open.",
