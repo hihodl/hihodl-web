@@ -17,7 +17,8 @@ export function Analytics() {
   const pathname = usePathname();
 
   useEffect(() => {
-    if (!pathname) return;
+    // Not on the onramp: its address briefly carries a Stripe client secret.
+    if (!pathname || pathname.startsWith("/onramp")) return;
     const utms = visitUtms();
     const props: Record<string, string> = { path: safePath(pathname) };
     for (const k of UTM_KEYS) if (utms[k]) props[k] = utms[k] as string;
