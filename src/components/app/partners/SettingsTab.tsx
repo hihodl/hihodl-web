@@ -4,16 +4,31 @@
  * The partner's profile (name, Instagram, website), and the terms HOLD set on
  * approval, read only: the share of HOLD's margin and how long a traveller
  * counts for the partner. The link name is edited on its own card (Overview).
- * The owner also sets how much of the share is given back to travellers.
+ * The owner also sets how much of the share is given back to travellers, and
+ * the partner's logo.
  */
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
 
-import { bpsOfPct, PARTNER_TERMS_URL, partnerErrorText, pct, pctInput, updatePartner, type Partner, type PartnerMe } from "@/lib/app/partners";
+import {
+  bpsOfPct,
+  LOGO_MAX_BYTES,
+  LOGO_TYPES,
+  PARTNER_TERMS_URL,
+  partnerErrorText,
+  pct,
+  pctInput,
+  removePartnerLogo,
+  updatePartner,
+  uploadPartnerLogo,
+  type Partner,
+  type PartnerMe,
+} from "@/lib/app/partners";
 
 import { ctaCommit, HoldCard } from "../hold";
 import { Alert } from "../ui";
-import { Field, inputCls } from "./kit";
+import { smallBtn } from "./desk";
+import { Field, inputCls, PartnerLogo } from "./kit";
 
 const KIND_LABEL: Record<Partner["kind"], string> = {
   agency: "Travel agency",
@@ -150,6 +165,7 @@ export function SettingsTab({ partner, onSaved, canEdit = true }: { partner: Par
       </HoldCard>
       ) : null}
 
+      {canEdit ? <LogoCard partner={partner} onSaved={onSaved} /> : null}
       {canEdit ? <GiveBackCard partner={partner} onSaved={onSaved} /> : null}
     </div>
   );
@@ -221,6 +237,62 @@ function GiveBackCard({ partner, onSaved }: { partner: Partner; onSaved: (me: Pa
           {busy ? "Saving" : saved && !changed ? "Saved" : "Save"}
         </button>
       </form>
+    </HoldCard>
+  );
+}
+
+/** The owner's logo: sent as the raw file, published at once. */
+function LogoCard({ partner, onSaved }: { partner: Partner; onSaved: (me: PartnerMe) => void }) {
+  const input = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState<"upload" | "remove" | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function run(kind: "upload" | "remove", call: () => Promise<PartnerMe>) {
+    setBusy(kind);
+    setError(null);
+    try {
+      onSaved(await call());
+    } catch (err) {
+      setError(partnerErrorText(err));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  function picked(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    // Picking the same file again must fire a change too.
+    e.target.value = "";
+    if (!file) return;
+    if (!(LOGO_TYPES as readonly string[]).includes(file.type)) return setError(partnerErrorText({ code: "image_type_not_supported" }));
+    if (file.size > LOGO_MAX_BYTES) return setError(partnerErrorText({ code: "image_too_large" }));
+    void run("upload", () => uploadPartnerLogo(file));
+  }
+
+  return (
+    <HoldCard className="p-5">
+      <h2 className="text-[16px] font-bold text-white">Logo</h2>
+      <p className="mt-1.5 text-[12.5px] leading-[18px] text-white/55">Shown next to your name when your members see their discount at checkout.</p>
+      <div className="mt-4 flex flex-wrap items-center gap-4">
+        <PartnerLogo name={partner.name} url={partner.logoUrl} size={64} />
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className={smallBtn} onClick={() => input.current?.click()} disabled={busy !== null}>
+            {busy === "upload" ? "Uploading" : partner.logoUrl ? "Change" : "Upload"}
+          </button>
+          {partner.logoUrl ? (
+            <button type="button" className={smallBtn} onClick={() => void run("remove", removePartnerLogo)} disabled={busy !== null}>
+              {busy === "remove" ? "Removing" : "Remove"}
+            </button>
+          ) : null}
+        </div>
+        <input ref={input} type="file" accept={LOGO_TYPES.join(",")} className="hidden" onChange={picked} />
+      </div>
+      <p className="mt-2 text-[12px] text-white/45">PNG, JPEG or WebP, up to 3 MB. A square image looks best.</p>
+      {error ? (
+        <div className="mt-3">
+          <Alert>{error}</Alert>
+        </div>
+      ) : null}
     </HoldCard>
   );
 }
