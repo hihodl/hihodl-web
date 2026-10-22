@@ -205,7 +205,7 @@ export function PartnersScreen() {
           ) : section === "payouts" ? (
             <PayoutsSection scope={scope} billing={dashboard.data?.billing} payoutsEnabled={dashboard.data?.payoutsEnabled} paid={paid} go={(s) => go({ s })} />
           ) : section === "links" ? (
-            <LinksSection scope={scope} canManageAny={team} active={active} />
+            <LinksSection scope={scope} canManageAny={team} active={active} owner={role === "owner"} partnerGiveBackBps={partner.giveBackBps ?? 0} />
           ) : section === "team" && me.data.me ? (
             <TeamSection partner={partner} me={me.data.me} onChanged={() => void me.mutate()} />
           ) : (
