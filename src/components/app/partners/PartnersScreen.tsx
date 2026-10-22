@@ -38,7 +38,7 @@ import { SettingsSection } from "./SettingsSection";
 import { TeamSection } from "./TeamSection";
 import { TravellersSection } from "./TravellersSection";
 import { TripsSection } from "./TripsSection";
-import { Pill } from "./kit";
+import { PartnerLogo, Pill } from "./kit";
 
 const ROLE_LABEL = { owner: "Owner", admin: "Admin", member: "Member" } as const;
 
@@ -155,6 +155,7 @@ export function PartnersScreen() {
         <main className="flex min-w-0 flex-1 flex-col gap-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-2.5">
+              {partner.logoUrl ? <PartnerLogo name={partner.name} url={partner.logoUrl} size={28} /> : null}
               <h1 className="truncate text-[22px] font-bold tracking-[-0.4px] text-white">{SECTIONS.find((s) => s.key === section)?.label}</h1>
               <Pill tone={role === "owner" ? "amber" : role === "admin" ? "blue" : "quiet"}>{ROLE_LABEL[role ?? "member"]}</Pill>
               {partner.status === "paused" ? <Pill tone="amber">Paused</Pill> : null}
@@ -205,7 +206,7 @@ export function PartnersScreen() {
           ) : section === "payouts" ? (
             <PayoutsSection scope={scope} billing={dashboard.data?.billing} payoutsEnabled={dashboard.data?.payoutsEnabled} paid={paid} go={(s) => go({ s })} />
           ) : section === "links" ? (
-            <LinksSection scope={scope} canManageAny={team} active={active} />
+            <LinksSection scope={scope} canManageAny={team} active={active} owner={role === "owner"} partnerGiveBackBps={partner.giveBackBps ?? 0} />
           ) : section === "team" && me.data.me ? (
             <TeamSection partner={partner} me={me.data.me} onChanged={() => void me.mutate()} />
           ) : (
