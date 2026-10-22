@@ -47,6 +47,8 @@ export interface Partner {
   status: PartnerStatus;
   /** 4000 = 40% of HOLD's margin. */
   shareBps: number;
+  /** Part of that share given back to the travellers it brings, as a discount at their checkout. 5000 = half. */
+  giveBackBps?: number;
   attributionMonths: number;
   payoutMode: PayoutMode;
   createdAt: string;
@@ -74,8 +76,31 @@ export interface PartnerLink {
   signups: number;
   bookings: number;
   commissionUsdc: number;
+  /** What the link took off its travellers' bookings, in dollars. Never paid to the partner. */
+  givenBackUsdc?: number;
+  /** How many people the link may bring (a use is a signup). null = no limit. */
+  maxUses?: number | null;
+  /** When the link can be entered: from midnight UTC on validFrom to (not including) validUntil. */
+  validFrom?: string | null;
+  validUntil?: string | null;
+  /** What it gives back now, basis points of the partner's share. */
+  giveBackBps?: number;
+  /** false = it follows the partner's own give back. */
+  ownGiveBack?: boolean;
+  state?: LinkState;
   archived: boolean;
   createdAt: string;
+}
+
+/** What a person entering the link today meets. */
+export type LinkState = "open" | "not_started" | "ended" | "full";
+
+/** What a link create or edit sets. Dates are "YYYY-MM-DD"; until is inclusive. giveBackBps null = same as the partner. */
+export interface LinkLimits {
+  maxUses?: number | null;
+  validFrom?: string | null;
+  validUntil?: string | null;
+  giveBackBps?: number | null;
 }
 
 export interface PartnerMe {
@@ -126,6 +151,8 @@ export interface PartnerDashboard {
     payableUsdc: number;
     paidUsdc: number;
     receivedUsdc: number;
+    /** Taken off these travellers' prices at checkout. Not paid to the partner. */
+    givenBackUsdc?: number;
   };
   mine: { earnedUsdc: number; payableUsdc: number; receivedUsdc: number };
   byProduct: { kind: BookingKind; bookings: number; commissionUsdc: number }[];
@@ -154,6 +181,8 @@ export interface Commission {
   mineUsdc: number;
   /** The member's cut in split mode, else 0. */
   memberUsdc: number;
+  /** Taken off the traveller's price at checkout, out of the partner's share. */
+  givenBackUsdc?: number;
   status: CommissionStatus;
   payableAfter: string;
   clawback: boolean;
@@ -255,6 +284,9 @@ export function countryName(code: string | null | undefined): string | null {
 
 /** The most travellers a trip can hold seats for. */
 export const TRIP_TRAVELLERS_MAX = 500;
+
+/** Most people one link can be limited to (the backend's MAX_CODE_USES). */
+export const MAX_LINK_USES = 100_000;
 
 export interface TripRow extends Trip {
   bookings: number;
@@ -381,7 +413,7 @@ export const PARTNER_TERMS_URL = "https://hihodl.xyz/legal/partner-terms";
 
 export const applyAsPartner = (body: ApplyBody) => read<PartnerMe>("partners/apply", { json: body });
 
-export const updatePartner = (body: { name?: string; slug?: string; instagram?: string; website?: string }) =>
+export const updatePartner = (body: { name?: string; slug?: string; instagram?: string; website?: string; giveBackBps?: number }) =>
   read<PartnerMe>("partners/me", { method: "PATCH", json: body });
 
 export const getPartnerDashboard = (scope: Scope) => read<PartnerDashboard>(`partners/me/dashboard?scope=${scope}`);
@@ -397,9 +429,9 @@ export const updateTrip = (
 ) => read<{ trip: Trip }>(`partners/me/trips/${enc(id)}`, { method: "PATCH", json: body });
 
 export const listLinks = (scope: Scope) => read<{ links: PartnerLink[] }>(`partners/me/links?scope=${scope}`);
-export const createLink = (body: { code: string; label?: string; memberId?: string }) =>
+export const createLink = (body: { code: string; label?: string; memberId?: string } & LinkLimits) =>
   read<{ link: { id: string; code: string; url: string } }>("partners/me/links", { json: body });
-export const updateLink = (id: string, body: { label?: string | null; archived?: boolean }) =>
+export const updateLink = (id: string, body: { label?: string | null; archived?: boolean } & LinkLimits) =>
   read<{ link: unknown }>(`partners/me/links/${enc(id)}`, { method: "PATCH", json: body });
 
 export const listTeam = () => read<{ members: TeamMember[] }>("partners/me/team");
@@ -718,6 +750,12 @@ const MESSAGES: Record<string, string> = {
   invite_for_another_email: "This invite is for another email. Sign in with the HOLD account that uses it, or ask for a link without an email.",
   already_on_a_team: "Your HOLD account is already on a partner team. Leave it first to join another.",
   link_not_found: "That link is gone. Reload the page.",
+  max_uses_invalid: `Max people is a whole number from 1 to ${MAX_LINK_USES.toLocaleString("en-US")}. Leave it empty for no limit.`,
+  valid_from_invalid: "The open from date does not look right. Pick a day or leave it empty.",
+  valid_until_invalid: "The open until date does not look right. Pick a day or leave it empty.",
+  dates_out_of_order: "Open until cannot be before open from.",
+  give_back_invalid: "Give back is a percentage from 0% to 100% of your share.",
+  forbidden: "Only the owner of your team can change what is given back.",
   trip_not_found: "That trip is gone, or it is run by someone else.",
   max_travellers_invalid: `Travellers is a whole number from 1 to ${TRIP_TRAVELLERS_MAX}.`,
   payout_not_found: "That payout is not yours to open.",
@@ -759,6 +797,33 @@ export function monthLabel(month: string, short = false): string {
   if (!y || !m) return month;
   const d = new Date(Date.UTC(y, m - 1, 1));
   return d.toLocaleDateString("en-US", short ? { month: "short", timeZone: "UTC" } : { month: "long", year: "numeric", timeZone: "UTC" });
+}
+
+/** The calendar day a link opens, "YYYY-MM-DD" (stored as that midnight UTC). */
+export function linkFromDay(iso: string | null | undefined): string {
+  return iso ? iso.slice(0, 10) : "";
+}
+
+/** The last calendar day a link is open, "YYYY-MM-DD": the server keeps the next midnight UTC. */
+export function linkUntilDay(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const t = Date.parse(iso);
+  return Number.isNaN(t) ? "" : new Date(t - 1).toISOString().slice(0, 10);
+}
+
+/** "40" or "33.33" from basis points, for a percentage input. */
+export function pctInput(bps: number | null | undefined): string {
+  if (bps == null) return "";
+  const v = bps / 100;
+  return Number.isInteger(v) ? String(v) : v.toFixed(2).replace(/0$/, "");
+}
+
+/** Basis points from a typed percentage 0 to 100 (two decimals at most), else null. */
+export function bpsOfPct(raw: string): number | null {
+  const s = raw.trim().replace(",", ".").replace(/%$/, "").trim();
+  if (!/^\d{1,3}(\.\d{1,2})?$/.test(s)) return null;
+  const bps = Math.round(Number(s) * 100);
+  return bps >= 0 && bps <= 10_000 ? bps : null;
 }
 
 /** "13 Oct 2026" from an ISO date or "YYYY-MM-DD". */
