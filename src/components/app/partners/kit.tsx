@@ -112,6 +112,44 @@ export function SlugLine({ raw, check, current }: { raw: string; check: SlugStat
   );
 }
 
+/* ── The partner's logo ───────────────────────────────────────────── */
+
+/** "ST" from "Superteam Spain". */
+export function initialsOf(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  const s = words.length > 1 ? `${words[0][0]}${words[1][0]}` : (words[0] ?? "").slice(0, 2);
+  return s.toUpperCase() || "?";
+}
+
+/** The logo as a small rounded square, or the initials when there is none (or it fails to load). */
+export function PartnerLogo({ name, url, size = 28 }: { name: string; url: string | null | undefined; size?: number }) {
+  const [broken, setBroken] = useState<string | null>(null);
+  const radius = Math.round(size * 0.28);
+  if (url && broken !== url) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- a small public bucket image of any host; next/image would need every host listed
+      <img
+        src={url}
+        alt=""
+        width={size}
+        height={size}
+        onError={() => setBroken(url)}
+        className="shrink-0 bg-white/[0.06] object-cover"
+        style={{ width: size, height: size, borderRadius: radius }}
+      />
+    );
+  }
+  return (
+    <span
+      aria-hidden
+      className="flex shrink-0 items-center justify-center bg-white/[0.08] font-extrabold text-white/70"
+      style={{ width: size, height: size, borderRadius: radius, fontSize: Math.max(10, Math.round(size * 0.36)) }}
+    >
+      {initialsOf(name)}
+    </span>
+  );
+}
+
 /* ── Pills ────────────────────────────────────────────────────────── */
 
 export type PillTone = "amber" | "green" | "blue" | "quiet";

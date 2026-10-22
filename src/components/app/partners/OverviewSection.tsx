@@ -44,6 +44,9 @@ export function OverviewSection({
   const columns = useMemo(() => commissionColumns(scope).filter((c) => ["bookedAt", "kind", "traveller", "commission", "mine", "status"].includes(c.key)), [scope]);
   const team = scope === "team";
   const productHref = useProductHref();
+  // Shown once the partner gives back, or anything was given back before.
+  const givenBack = t.givenBackUsdc ?? 0;
+  const showGivenBack = givenBack > 0 || (data.partner.giveBackBps ?? 0) > 0;
 
   return (
     <div className="flex flex-col gap-4">
@@ -74,11 +77,12 @@ export function OverviewSection({
           title="Where the money is"
           meta={team ? "The whole team" : paid ? "Paid to you, from the travellers you brought" : "Your team is paid through its owner"}
         >
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className={`grid grid-cols-2 gap-4 ${showGivenBack ? "sm:grid-cols-3" : "sm:grid-cols-4"}`}>
             <Stat label="Pending" value={usd(t.pendingUsdc)} tone="blue" note="Trip not taken yet" />
             <Stat label="Payable" value={usd(t.payableUsdc)} tone="amber" note="In the next payout" />
             <Stat label="Paid" value={usd(t.paidUsdc)} tone="green" note="Sent to Savings" />
             <Stat label="Received by you" value={usd(data.mine.receivedUsdc)} note={`${usd(data.mine.payableUsdc)} to come`} />
+            {showGivenBack ? <Stat label="Given back to travellers" value={usd(givenBack)} note="Off their price, not paid to you" /> : null}
           </div>
           <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-white/[0.06] pt-3 text-[13px]">
             <span className="flex items-center gap-2 font-bold text-white">
