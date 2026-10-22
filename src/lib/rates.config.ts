@@ -198,7 +198,13 @@ export const HOLD_KEEPS = {
    * We buy a bundle wholesale on a signed rate card and sell it at our own
    * price. There is no booking fee, no delivery fee and no card fee to disclose
    * because there are none — the entire take is the spread, and the honest
-   * disclosure is to say that plainly and say what share of it comes back.
+   * disclosure is to say that plainly.
+   *
+   * ── NO SHARE COMES BACK, AND THAT IS A DECISION (21-Oct-2026) ──
+   * eSIMs SPEND HiPoints and never earn them, the rule flights and experiences
+   * already follow (Alex). The keys `marginShareBps` and `marginShareProBps`
+   * are gone rather than zeroed, for the reason the travel block gives: an
+   * absent key makes a page that renders "X% back" fail to compile.
    *
    * ── What is deliberately NOT published ──
    * The cost-side mechanics: the wholesale floor, the flat margin component, the
@@ -206,11 +212,9 @@ export const HOLD_KEEPS = {
    * of it; neither question is answered by handing over the pricing function.
    * The two numbers below are the ones that change what a customer receives.
    *
-   * measured: TRAVEL_PRICING.USER_SHARE {free: 0.5, pro: 0.6} in
-   *           server/services/travel/pricing.service.ts, read 2026-08-13 on
-   *           .worktrees/connectivity. We keep the remainder.
-   * measured: CONNECTIVITY_PRICING.TARGET_UNDERCUT_VS_BENCHMARK = 0.3 and
-   *           MIN_UNDERCUT_VS_PUBLIC = 0.02, same branch, same day.
+   * measured: CONNECTIVITY_PRICING.TARGET_UNDERCUT_VS_BENCHMARK = 0.05 and
+   *           MIN_UNDERCUT_VS_PUBLIC = 0.02 on backend main, 21-Oct-2026, and
+   *           connectivity pricing awards 0 points (feat/esim-batch-2026-10-21).
    *
    * ⚠️  NOT LIVE. The connectivity layer sits on a branch, not in production.
    *     /esim carried an "in development" label until 13-aug-2026; Alex removed
@@ -220,12 +224,8 @@ export const HOLD_KEEPS = {
    *     block does not ship to a public URL before the code does.
    */
   esim: {
-    /** Our share of the spread on the Free plan. The user gets the rest. */
-    marginShareBps: 5000,
-    /** Our share on Pro. Lower on purpose — the plan has to buy something. */
-    marginShareProBps: 4000,
     /** Where we aim to land against a comparable public price, when one exists. */
-    targetUndercutVsPublicBps: 3000,
+    targetUndercutVsPublicBps: 500,
     /** The guard rail: with a benchmark in hand we are never above it. */
     minUndercutVsPublicBps: 200,
     provisional: true,
