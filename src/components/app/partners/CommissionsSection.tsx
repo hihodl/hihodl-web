@@ -28,7 +28,8 @@ export function CommissionStatusPill({ c }: { c: Pick<Commission, "status" | "cl
   return <Pill tone={s.tone}>{s.label}</Pill>;
 }
 
-export function commissionColumns(scope: Scope): Column<Commission>[] {
+/** `givenBack`: add the Given back column (only when a row has one). */
+export function commissionColumns(scope: Scope, givenBack = false): Column<Commission>[] {
   const cols: Column<Commission>[] = [
     // On a phone the year drops to a second line, so Status keeps its room.
     { key: "bookedAt", title: "Booked", render: (c) => <span className="sm:whitespace-nowrap">{dayLabel(c.bookedAt)}</span> },
@@ -57,6 +58,17 @@ export function commissionColumns(scope: Scope): Column<Commission>[] {
         <span className={`whitespace-nowrap font-extrabold ${c.status === "void" ? "text-white/40 line-through" : c.clawback ? "text-white/60" : "text-white"}`}>{usd(c.commissionUsdc)}</span>
       ),
     },
+    ...(givenBack
+      ? [
+          {
+            key: "givenBack",
+            title: "Given back",
+            align: "right",
+            hideBelow: "lg",
+            render: (c) => (c.givenBackUsdc ? <span className="whitespace-nowrap text-white/80">{usd(c.givenBackUsdc)}</span> : <Muted>None</Muted>),
+          } satisfies Column<Commission>,
+        ]
+      : []),
     {
       key: "mine",
       title: "Your part",
@@ -138,7 +150,7 @@ export function CommissionsSection({ scope, trips }: { scope: Scope; trips: Trip
       </div>
       <PagedTable
         page={page}
-        columns={commissionColumns(scope)}
+        columns={commissionColumns(scope, page.items.some((c) => (c.givenBackUsdc ?? 0) !== 0))}
         rowKey={(c) => c.id}
         failedTitle="Could not load commissions"
         empty={active ? "No commissions match these filters." : "Nothing yet. When a traveller you brought books a stay, a flight or an eSIM, it shows up here."}
