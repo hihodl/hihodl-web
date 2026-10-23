@@ -134,7 +134,7 @@ const PEOPLE = [
 
 export function People() {
   return (
-    <section id="people" className="scroll-mt-16 bg-white py-20 md:py-28">
+    <section id="people" className="scroll-mt-16 border-t border-black/[0.08] bg-white py-20 md:py-28">
       <div className="px-4">
         <H2>
           Made for the way
@@ -264,7 +264,7 @@ export function Changes() {
 const FAQ = [
   {
     q: "What is HOLD?",
-    a: "One app for your money. Get paid into your own USD, EUR and GBP accounts, send to Mexico, Brazil and Colombia in seconds, split with friends, save and invest, and let Hi, your money assistant, book stays and more from your balance.",
+    a: "One app for your money. Get paid into your own USD, EUR and GBP accounts, put reais in by Pix, send by Pix, SPEI and Bre-B in seconds, split with friends, save and invest, and let Hi, your money assistant, book stays and more from your balance.",
   },
   {
     q: "How do I get paid into HOLD?",
@@ -331,7 +331,7 @@ export function Faq() {
 
 const INSIDE: { icon: IconName; big: string; sub: string }[] = [
   { icon: "bank", big: "USD · EUR · GBP", sub: "Accounts in your name" },
-  { icon: "download", big: "MXN · BRL · COP", sub: "Sent in seconds" },
+  { icon: "download", big: "Pix · SPEI · Bre-B", sub: "Reais, pesos, in seconds" },
   { icon: "leaf", big: "Savings", sub: "Earns while you sleep" },
   { icon: "chart", big: "Invest", sub: "Bitcoin, Solana and more" },
   { icon: "spark", big: "Hi", sub: "Your money assistant" },

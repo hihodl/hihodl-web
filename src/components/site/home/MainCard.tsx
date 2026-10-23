@@ -35,6 +35,7 @@ export const ACTIONS: { id: string; label: string; icon: IconName; title: string
     title: "Add money",
     rows: [
       { icon: "bank", title: "Bank transfer", sub: "Into your own USD, EUR or GBP account" },
+      { flag: "🇧🇷", title: "Pix", sub: "Put reais in from any Brazilian bank" },
       { icon: "at", title: "From a friend", sub: "Anyone on HOLD can pay your @username" },
       { icon: "network", title: "From another wallet", sub: "Solana, Polygon, Base and Ethereum" },
     ],
@@ -45,9 +46,9 @@ export const ACTIONS: { id: string; label: string; icon: IconName; title: string
     icon: "send",
     title: "Send money",
     rows: [
-      { flag: "🇲🇽", title: "Mexico", sub: "Pesos to any CLABE by SPEI, instantly" },
-      { flag: "🇧🇷", title: "Brazil", sub: "Reais to any Pix key, instantly" },
-      { flag: "🇨🇴", title: "Colombia", sub: "Pesos to any Bre-B key" },
+      { flag: "🇲🇽", title: "SPEI · Mexico", sub: "Pesos to any CLABE, instantly" },
+      { flag: "🇧🇷", title: "Pix · Brazil", sub: "Reais to any Pix key, instantly" },
+      { flag: "🇨🇴", title: "Bre-B · Colombia", sub: "Pesos to any Bre-B key" },
       { flag: "🇪🇺", title: "Europe", sub: "Euros to any IBAN" },
       { flag: "🇬🇧", title: "United Kingdom", sub: "Pounds by Faster Payments" },
       { flag: "🇺🇸", title: "United States", sub: "Dollars to any US bank account" },

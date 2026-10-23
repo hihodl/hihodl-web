@@ -39,7 +39,7 @@ export function Section({
   soft?: boolean;
 }) {
   return (
-    <section id={id} className={`scroll-mt-16 px-4 py-20 md:px-8 md:py-28 ${soft ? SOFT : "bg-white"} ${className}`}>
+    <section id={id} className={`scroll-mt-16 border-t border-black/[0.08] px-4 py-20 md:px-8 md:py-28 ${soft ? SOFT : "bg-white"} ${className}`}>
       <div className="mx-auto max-w-[1120px]">{children}</div>
     </section>
   );

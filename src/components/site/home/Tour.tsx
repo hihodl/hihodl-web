@@ -16,7 +16,8 @@ import { ActionPanel, MainCard } from "./MainCard";
 
 const CAN_DO: { icon: IconName; text: string }[] = [
   { icon: "bank", text: "Get paid into your own USD, EUR and GBP accounts" },
-  { icon: "download", text: "Send to Mexico, Brazil and Colombia in seconds" },
+  { icon: "addCircle", text: "Put reais in by Pix" },
+  { icon: "download", text: "Send by Pix, SPEI and Bre-B in seconds" },
   { icon: "at", text: "Pay anyone on HOLD by @username" },
   { icon: "split", text: "Split the trip in a group chat, settle in a tap" },
   { icon: "leaf", text: "Savings that earns while you sleep" },
@@ -35,7 +36,7 @@ export function Tour() {
   const [action, setAction] = useState("pay");
 
   return (
-    <section id="tour" className="scroll-mt-16 bg-[#F4F5F7] px-4 py-20 md:px-8 md:py-28">
+    <section id="tour" className="scroll-mt-16 border-t border-black/[0.08] bg-[#F4F5F7] px-4 py-20 md:px-8 md:py-28">
       <div className="mx-auto max-w-[1120px]">
         <H2>
           Tap around your <em>account</em>
@@ -50,7 +51,7 @@ export function Tour() {
 
           <div className="mt-10 md:mt-0">
             <p className={`text-[19px] leading-[1.5] ${BODY}`}>
-              Get paid into your own USD, EUR and GBP accounts. Send to Mexico, Brazil and Colombia in seconds. Save, invest,
+              Get paid into your own USD, EUR and GBP accounts, and put reais in by Pix. Send by Pix, SPEI and Bre-B in seconds. Save, invest,
               and let Hi book the trip from your balance.
             </p>
             <div className="mt-6">

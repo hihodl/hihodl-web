@@ -129,8 +129,8 @@ export function HeroShrink() {
             Get paid in dollars, euros and pounds. Send home in seconds.
           </p>
           <p className={`mx-auto mt-3 hidden max-w-[460px] text-[18px] leading-[1.5] md:mx-0 md:block ${BODY}`}>
-            Your own USD, EUR and GBP accounts, money to Mexico, Brazil and Colombia in seconds, Savings that earns while you
-            sleep, and Hi to book the trip from your balance.
+            Your own USD, EUR and GBP accounts, reais in by Pix, money out to Pix, SPEI and Bre-B in seconds, Savings that
+            earns while you sleep, and Hi to book the trip from your balance.
           </p>
           <div className="mt-4 md:mt-8">
             <AmberCta />
