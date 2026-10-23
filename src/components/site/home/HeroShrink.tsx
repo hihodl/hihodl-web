@@ -44,6 +44,7 @@ const GEOMETRY = `
 export function HeroShrink() {
   const box = useRef<HTMLDivElement | null>(null);
   const [done, setDone] = useState(false);
+  const [open, setOpen] = useState(true);
 
   useEffect(() => {
     const el = box.current;
@@ -59,6 +60,7 @@ export function HeroShrink() {
         const p = still ? 1 : Math.min(1, Math.max(0, scrolled / (travel * 0.7)));
         el.style.setProperty("--p", p.toFixed(4));
         setDone(p > 0.85);
+        setOpen(p < 0.25);
       });
     };
     update();
@@ -92,19 +94,35 @@ export function HeroShrink() {
             sizes="100vw"
             className="object-cover [object-position:50%_50%]"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/5 to-black/20" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/10 to-black/30" />
         </div>
 
-        {/* The opening headline, on the full photo; it leaves as the card closes */}
+        {/* The opening copy, on the blue wall at the top of the photo; it leaves as the card closes */}
         <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 px-5 pb-12 md:px-12 md:pb-16"
+          className="absolute inset-x-0 top-0 mx-auto max-w-[1800px] px-5 pt-[96px] md:px-12 md:pt-[132px]"
           style={{ opacity: "clamp(0, calc(1 - var(--p) * 3), 1)", transform: "translateY(calc(var(--p) * -60px))" }}
         >
-          <h1 className="max-w-[900px] text-[50px] font-medium leading-[0.98] tracking-[-0.045em] text-white md:text-[104px]">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/90 md:text-[14px]">
+            Dollars · Euros · Pounds · Pix
+          </p>
+          <h1 className="mt-4 max-w-[980px] text-[52px] font-medium leading-[0.96] tracking-[-0.045em] text-white md:text-[112px]">
             Your money,
             <br />
             without borders.
           </h1>
+          <p className="mt-5 max-w-[520px] text-[17px] leading-[1.45] text-white/90 md:mt-7 md:text-[21px]">
+            One account to get paid from anywhere, send home in seconds and save while you sleep. Hi books the trip from
+            your balance. Free, in a tap.
+          </p>
+          <div className={`mt-7 flex flex-wrap gap-3 md:mt-9 ${open ? "" : "pointer-events-none"}`}>
+            <AmberCta />
+            <a
+              href="#accounts"
+              className="inline-flex h-14 items-center justify-center rounded-full border border-white/40 bg-white/10 px-8 text-[17px] font-medium text-white backdrop-blur-md transition-colors hover:bg-white/20"
+            >
+              See your account
+            </a>
+          </div>
         </div>
 
         {/* The account's face, on the card */}
