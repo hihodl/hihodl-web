@@ -56,11 +56,10 @@ const CARDS: {
   },
   {
     // A pocket, named the way people name them in the app ("Travel, rent,
-    // anything you name"). Stand-in photo until the Thailand one is saved
-    // as /home/pocket-thailand.jpg.
-    photo: "/home/train.jpg",
-    pos: "35% 50%",
-    alt: "The sea and a coastal village seen from a train window",
+    // anything you name").
+    photo: "/home/pocket-thailand.jpg",
+    pos: "50% 45%",
+    alt: "A longtail boat on a turquoise lake between limestone cliffs in Khao Sok, Thailand",
     pill: "Pockets",
     label: "Pocket · Thailand",
     amount: "$860.00",
