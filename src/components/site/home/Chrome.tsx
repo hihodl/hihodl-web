@@ -24,7 +24,9 @@ export function HomeNav() {
   return (
     <header
       className={`fixed inset-x-0 top-0 z-50 transition-colors duration-320 ${
-        solid ? "border-b border-black/[0.06] bg-white/90 text-[#0E0E19] backdrop-blur-xl" : "bg-transparent text-white md:bg-white md:text-[#0E0E19]"
+        solid
+          ? "border-b border-white/40 bg-white/55 text-[#0E0E19] shadow-[0_1px_0_rgba(15,15,26,0.04)] backdrop-blur-[24px] backdrop-saturate-[1.8]"
+          : "bg-transparent text-white md:bg-white/55 md:text-[#0E0E19] md:backdrop-blur-[24px] md:backdrop-saturate-[1.8]"
       }`}
     >
       <div className="mx-auto flex h-16 max-w-[1800px] items-center justify-between px-4 md:px-5">
