@@ -29,7 +29,7 @@ const CARDS: {
   pos: string;
   /**
    * How far down the card the sharp photo starts, as a share of its height.
-   * Above it, the same photo blurred, which is where the balance sits.
+   * Above it, the photo's top edge mirrored and blurred, where the balance sits.
    */
   drop?: number;
   alt: string;
@@ -93,6 +93,9 @@ const CARDS: {
     line: "Pocket · set aside from Main ›",
   },
 ];
+
+/** The share of a photo's height, from its top edge, that may fill the space above it. */
+const EDGE = 0.05;
 
 const BUTTONS: { icon: IconName; label: string }[] = [
   { icon: "addCircle", label: "Add" },
@@ -163,22 +166,33 @@ export function Accounts() {
               }
             >
               {c.drop ? (
-                <Image src={c.photo} alt="" fill quality={40} sizes="300px" className="scale-125 object-cover blur-[28px]" style={{ objectPosition: c.pos }} />
+                // Above the photo: only the photo's top strip (EDGE of its height,
+                // the wall, the door, the lounger), mirrored upward, stretched and
+                // blurred, so the background carries on into the space where the
+                // balance sits. Never the person. Its first row is the photo's
+                // first row, so the seam has nothing to hide.
+                <div className="absolute inset-x-0 top-0 overflow-hidden" style={{ height: `${c.drop * 100}%` }} aria-hidden>
+                  <div
+                    className="absolute inset-x-0 top-full origin-top"
+                    style={{ height: `${100 / c.drop}%`, transform: `scaleY(${-c.drop / EDGE})` }}
+                  >
+                    <Image src={c.photo} alt="" fill quality={60} sizes="300px" className="scale-x-110 object-cover blur-[10px]" style={{ objectPosition: c.pos }} />
+                  </div>
+                </div>
               ) : null}
               <div
                 className="absolute inset-0"
-                style={
-                  c.drop
-                    ? {
-                        transform: `translateY(${c.drop * 100}%)`,
-                        WebkitMaskImage: "linear-gradient(to bottom, transparent, black 16%)",
-                        maskImage: "linear-gradient(to bottom, transparent, black 16%)",
-                      }
-                    : undefined
-                }
+                style={c.drop ? { transform: `translateY(${c.drop * 100}%)` } : undefined}
               >
                 <Image src={c.photo} alt={c.alt} fill quality={90} sizes="(min-width: 768px) 380px, 80vw" className="object-cover" style={{ objectPosition: c.pos }} />
               </div>
+              {c.drop ? (
+                <div
+                  className="absolute inset-x-0 h-[10%] -translate-y-1/2 backdrop-blur-[6px] [mask-image:linear-gradient(to_bottom,transparent,black_40%,black_60%,transparent)]"
+                  style={{ top: `${c.drop * 100}%` }}
+                  aria-hidden
+                />
+              ) : null}
               <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/5 to-black/45" />
               <div className="absolute inset-0 flex flex-col p-3.5 text-white">
                 <div className="flex items-center justify-between">
