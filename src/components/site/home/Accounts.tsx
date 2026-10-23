@@ -20,9 +20,8 @@ import { Icon, type IconName } from "./Icon";
 /**
  * Each card is the app's own account card (dashboard, release/ios-build-13):
  * the account's name in a pill top left, the currency pill top right, the
- * balance left aligned, a line under it, four square glass buttons, and the
- * glass banner the app shows at the foot of Home, with its pager dots. The
- * banner lines are the app's own (dashboard.banners.*, travel.banner.*).
+ * balance left aligned, a line under it, and the four square glass buttons
+ * at the foot. No banner: it crowded the card and hid the person.
  */
 const CARDS: {
   photo: string;
@@ -39,7 +38,6 @@ const CARDS: {
   code: string;
   amount: string;
   line: string;
-  banner: { title: string; body: string; coins: string[] };
 }[] = [
   {
     // Faces sit high in these photos, where the card puts the balance, so
@@ -55,7 +53,6 @@ const CARDS: {
     code: "EUR",
     amount: "1,850.00 €",
     line: "IBAN in your name ›",
-    banner: { title: "Open your account", body: "Your own USD, EUR and GBP account numbers.", coins: ["€", "$", "£"] },
   },
   {
     photo: "/home/linen.jpg",
@@ -68,7 +65,6 @@ const CARDS: {
     code: "All",
     amount: "4,338.10 $",
     line: "Open your account ›",
-    banner: { title: "Join the waitlist", body: "Be first to spend your dollars anywhere.", coins: ["$"] },
   },
   {
     photo: "/home/towel.jpg",
@@ -81,7 +77,6 @@ const CARDS: {
     code: "USD",
     amount: "1,500.00 $",
     line: "Earning while you sleep ›",
-    banner: { title: "Put your dollars to work", body: "Your Savings earns while you sleep.", coins: ["$"] },
   },
   {
     // A pocket, named the way people name them in the app ("Travel, rent,
@@ -95,7 +90,6 @@ const CARDS: {
     code: "USD",
     amount: "860.00 $",
     line: "Pocket · set aside from Main ›",
-    banner: { title: "Book hotels, get money back", body: "Pay the stay straight from this pocket.", coins: ["$"] },
   },
 ];
 
@@ -206,7 +200,7 @@ export function Accounts() {
                 </p>
                 <p className="mt-2 truncate text-[13px] font-semibold text-white/90">{c.line}</p>
 
-                <div className="mt-auto grid grid-cols-4 gap-1.5 px-1">
+                <div className="mt-auto grid grid-cols-4 gap-1.5 px-1 pb-1">
                   {BUTTONS.map((btn) => (
                     <span key={btn.label} className="flex flex-col items-center gap-1">
                       <span className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-white/20 backdrop-blur-md">
@@ -217,29 +211,6 @@ export function Accounts() {
                   ))}
                 </div>
 
-                <div className="relative mt-3 overflow-hidden rounded-[18px] border border-white/25 bg-white/15 px-3 pb-4 pt-2.5 backdrop-blur-xl">
-                  <p className="pr-14 text-[15px] font-semibold leading-tight">{c.banner.title}</p>
-                  <p className="mt-0.5 pr-14 text-[12px] leading-snug text-white/80">{c.banner.body}</p>
-                  <span className="absolute right-2 top-1/2 flex -translate-y-1/2" aria-hidden>
-                    {c.banner.coins.map((k, n) => (
-                      <span
-                        key={k}
-                        className="-ml-3 flex h-9 w-9 items-center justify-center rounded-full border border-white/40 text-[15px] font-semibold shadow-md first:ml-0"
-                        style={{
-                          background: n === 1 ? "linear-gradient(145deg,#BFE3F0,#5D8FA8)" : "linear-gradient(145deg,#8FB3C4,#2F5C73)",
-                          zIndex: n === 1 ? 2 : 1,
-                        }}
-                      >
-                        {k}
-                      </span>
-                    ))}
-                  </span>
-                  <span className="absolute bottom-1.5 left-1/2 flex -translate-x-1/2 gap-1" aria-hidden>
-                    <span className="h-1 w-4 rounded-full bg-white/80" />
-                    <span className="h-1 w-1 rounded-full bg-white/40" />
-                    <span className="h-1 w-1 rounded-full bg-white/40" />
-                  </span>
-                </div>
               </div>
             </button>
           );
