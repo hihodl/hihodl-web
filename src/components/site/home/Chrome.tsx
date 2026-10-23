@@ -27,7 +27,7 @@ export function HomeNav() {
         solid ? "border-b border-black/[0.06] bg-white/90 text-[#0E0E19] backdrop-blur-xl" : "bg-transparent text-white md:bg-white md:text-[#0E0E19]"
       }`}
     >
-      <div className="mx-auto flex h-16 max-w-[1600px] items-center justify-between px-4 md:px-8">
+      <div className="mx-auto flex h-16 max-w-[1800px] items-center justify-between px-4 md:px-5">
         <Link href="/" aria-label="HOLD home">
           <Wordmark className="h-6 w-auto" />
         </Link>

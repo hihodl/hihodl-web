@@ -152,7 +152,7 @@ export function Hero() {
   const panel = ACTIONS.find((a) => a.id === action) ?? ACTIONS[3];
 
   return (
-    <section className="bg-white md:mx-auto md:grid md:max-w-[1600px] md:grid-cols-[minmax(0,1fr)_400px] md:gap-10 md:px-8 md:pt-20 lg:grid-cols-[minmax(0,1fr)_440px] xl:grid-cols-[minmax(0,1fr)_480px] xl:gap-14">
+    <section className="bg-white md:mx-auto md:grid md:max-w-[1800px] md:grid-cols-[minmax(0,1fr)_380px] md:gap-8 md:px-5 md:pt-20 lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-10 xl:grid-cols-[minmax(0,1fr)_460px] xl:gap-12">
       {/* Gallery: tall on a phone, wide and big on a laptop */}
       <div className="relative aspect-[4/5] md:sticky md:top-20 md:aspect-[4/3] md:self-start md:overflow-hidden md:rounded-[32px] md:shadow-[0_20px_50px_rgba(15,15,26,0.12)]">
         <div
