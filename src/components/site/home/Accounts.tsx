@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useState, type CSSProperties } from "react";
 import { AmberCta, PHOTO_GLASS } from "./ui";
 import { Icon, type IconName } from "./Icon";
+import { Flag, type FlagCode } from "./Flag";
 
 /**
  * The account four ways, alive but never on its own: the section's ground
@@ -34,7 +35,7 @@ const CARDS: {
   alt: string;
   pill: string;
   name: string;
-  flags: string[];
+  flags: FlagCode[];
   code: string;
   amount: string;
   line: string;
@@ -49,7 +50,7 @@ const CARDS: {
     alt: "A woman with coffee on a balcony over the rooftops of Lisbon",
     pill: "Euro",
     name: "Main",
-    flags: ["🇪🇺"],
+    flags: ["EU"],
     code: "EUR",
     amount: "1,850.00 €",
     line: "IBAN in your name ›",
@@ -61,7 +62,7 @@ const CARDS: {
     alt: "A man in a linen shirt in front of a blue door",
     pill: "Dollar",
     name: "Main",
-    flags: ["🇺🇸", "🇪🇺"],
+    flags: ["US", "EU"],
     code: "All",
     amount: "4,338.10 $",
     line: "Open your account ›",
@@ -73,7 +74,7 @@ const CARDS: {
     alt: "A woman lying in the sun on a striped towel with a coffee",
     pill: "Savings",
     name: "Savings",
-    flags: ["🇺🇸"],
+    flags: ["US"],
     code: "USD",
     amount: "1,500.00 $",
     line: "Earning while you sleep ›",
@@ -86,7 +87,7 @@ const CARDS: {
     alt: "A longtail boat on a turquoise lake between limestone cliffs in Khao Sok, Thailand",
     pill: "Pockets",
     name: "Thailand",
-    flags: ["🇺🇸"],
+    flags: ["US"],
     code: "USD",
     amount: "860.00 $",
     line: "Pocket · set aside from Main ›",
@@ -185,9 +186,7 @@ export function Accounts() {
                   <span className="flex items-center gap-1.5 rounded-full bg-black/35 py-0.5 pl-0.5 pr-2.5 text-[13px] font-semibold backdrop-blur-md">
                     <span className="flex -space-x-1.5">
                       {c.flags.map((f) => (
-                        <span key={f} className="flex h-6 w-6 items-center justify-center rounded-full border border-white/70 bg-white text-[15px] leading-none">
-                          {f}
-                        </span>
+                        <Flag key={f} code={f} size={22} />
                       ))}
                     </span>
                     {c.code}

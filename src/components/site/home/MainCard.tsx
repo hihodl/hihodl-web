@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useState } from "react";
 import { PHOTO_GLASS, SOFT, SUBTLE } from "./ui";
 import { Icon, type IconName } from "./Icon";
+import { Flag, type FlagCode } from "./Flag";
 
 /**
  * The Main card, the way the app draws it (dashboard, release/ios-build-13):
@@ -13,13 +14,13 @@ import { Icon, type IconName } from "./Icon";
  * Accounts. Figures are an example balance, not a customer.
  */
 export const VIEWS = {
-  All: { label: "All", sub: null, amount: "$4,338.10", flag: null },
-  USD: { label: "US dollar", sub: "USD", amount: "$2,340.10", flag: "🇺🇸" },
-  EUR: { label: "Euro", sub: "≈ $1,998.00", amount: "€1,850.00", flag: "🇪🇺" },
+  All: { label: "All", sub: null, amount: "$4,338.10", flag: null as FlagCode | null },
+  USD: { label: "US dollar", sub: "USD", amount: "$2,340.10", flag: "US" as FlagCode },
+  EUR: { label: "Euro", sub: "≈ $1,998.00", amount: "€1,850.00", flag: "EU" as FlagCode },
 } as const;
 export type View = keyof typeof VIEWS;
 
-type Row = { flag?: string; icon?: IconName; title: string; sub: string };
+type Row = { flag?: FlagCode; icon?: IconName; title: string; sub: string };
 
 /**
  * What each of the four buttons does, from the live fiat_rail_catalog
@@ -35,7 +36,7 @@ export const ACTIONS: { id: string; label: string; icon: IconName; title: string
     title: "Add money",
     rows: [
       { icon: "bank", title: "Bank transfer", sub: "Into your own USD, EUR or GBP account" },
-      { flag: "🇧🇷", title: "Pix", sub: "Put reais in from any Brazilian bank" },
+      { flag: "BR" as FlagCode, title: "Pix", sub: "Put reais in from any Brazilian bank" },
       { icon: "at", title: "From a friend", sub: "Anyone on HOLD can pay your @username" },
       { icon: "network", title: "From another wallet", sub: "Solana, Polygon, Base and Ethereum" },
     ],
@@ -46,12 +47,12 @@ export const ACTIONS: { id: string; label: string; icon: IconName; title: string
     icon: "send",
     title: "Send money",
     rows: [
-      { flag: "🇲🇽", title: "SPEI · Mexico", sub: "Pesos to any CLABE, instantly" },
-      { flag: "🇧🇷", title: "Pix · Brazil", sub: "Reais to any Pix key, instantly" },
-      { flag: "🇨🇴", title: "Bre-B · Colombia", sub: "Pesos to any Bre-B key" },
-      { flag: "🇪🇺", title: "Europe", sub: "Euros to any IBAN" },
-      { flag: "🇬🇧", title: "United Kingdom", sub: "Pounds by Faster Payments" },
-      { flag: "🇺🇸", title: "United States", sub: "Dollars to any US bank account" },
+      { flag: "MX" as FlagCode, title: "SPEI · Mexico", sub: "Pesos to any CLABE, instantly" },
+      { flag: "BR" as FlagCode, title: "Pix · Brazil", sub: "Reais to any Pix key, instantly" },
+      { flag: "CO" as FlagCode, title: "Bre-B · Colombia", sub: "Pesos to any Bre-B key" },
+      { flag: "EU" as FlagCode, title: "Europe", sub: "Euros to any IBAN" },
+      { flag: "GB" as FlagCode, title: "United Kingdom", sub: "Pounds by Faster Payments" },
+      { flag: "US" as FlagCode, title: "United States", sub: "Dollars to any US bank account" },
     ],
   },
   {
@@ -71,16 +72,12 @@ export const ACTIONS: { id: string; label: string; icon: IconName; title: string
     icon: "wallet",
     title: "Your accounts",
     rows: [
-      { flag: "🇺🇸", title: "US dollar account", sub: "Account and routing number in your name" },
-      { flag: "🇪🇺", title: "Euro account", sub: "An IBAN in your name" },
-      { flag: "🇬🇧", title: "British pound account", sub: "Sort code and account number in your name" },
+      { flag: "US" as FlagCode, title: "US dollar account", sub: "Account and routing number in your name" },
+      { flag: "EU" as FlagCode, title: "Euro account", sub: "An IBAN in your name" },
+      { flag: "GB" as FlagCode, title: "British pound account", sub: "Sort code and account number in your name" },
     ],
   },
 ];
-
-function Flag({ f }: { f: string }) {
-  return <span className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white/80 bg-white text-[18px]">{f}</span>;
-}
 
 /**
  * The card face. Without `photo` it is transparent, for laying over a photo
@@ -125,11 +122,11 @@ export function MainCard({
               <span className="flex -space-x-2 leading-none" aria-hidden>
                 {view === "All" ? (
                   <>
-                    <Flag f="🇺🇸" />
-                    <Flag f="🇪🇺" />
+                    <Flag code="US" size={26} />
+                    <Flag code="EU" size={26} />
                   </>
                 ) : (
-                  <Flag f={VIEWS[view].flag ?? ""} />
+                  <Flag code={VIEWS[view].flag ?? "US"} size={26} />
                 )}
               </span>
               {view === "All" ? "All" : view}
@@ -152,7 +149,7 @@ export function MainCard({
                     className={`flex w-full items-center gap-3 rounded-[16px] px-2.5 py-2.5 text-left transition-colors ${view === k ? "bg-white/20" : "hover:bg-white/10"}`}
                   >
                     {v.flag ? (
-                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-[22px]">{v.flag}</span>
+                      <Flag code={v.flag} size={36} />
                     ) : (
                       <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-[12px] font-semibold text-[#0F0F1A]">All</span>
                     )}
@@ -202,9 +199,13 @@ export function ActionPanel({ action }: { action: string }) {
       <ul className="mt-2 divide-y divide-black/[0.06]">
         {panel.rows.map((r) => (
           <li key={r.title} className="flex items-center gap-3 py-2.5">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[20px]">
-              {r.flag ?? (r.icon ? <Icon name={r.icon} size={17} className="text-[#0F0F1A]" /> : null)}
-            </span>
+            {r.flag ? (
+              <Flag code={r.flag} size={36} className="border-black/10" />
+            ) : (
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white">
+                {r.icon ? <Icon name={r.icon} size={17} className="text-[#0F0F1A]" /> : null}
+              </span>
+            )}
             <span>
               <span className="block text-[15px] font-medium text-[#0F0F1A]">{r.title}</span>
               <span className={`block text-[13px] ${SUBTLE}`}>{r.sub}</span>
