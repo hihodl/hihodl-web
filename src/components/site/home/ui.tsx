@@ -45,11 +45,11 @@ export function Section({
   );
 }
 
-/** A section title: centred, with one or two words carried in bold or bold italic. */
+/** A section title: centred, medium weight, one word set in italic. */
 export function H2({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
     <h2
-      className={`text-center text-[34px] font-semibold leading-[1.1] tracking-[-0.02em] text-[#0F0F1A] md:text-[50px] [&_b]:font-black [&_em]:font-black [&_em]:italic ${className}`}
+      className={`text-center text-[36px] font-medium leading-[1.06] tracking-[-0.035em] text-[#0F0F1A] md:text-[56px] [&_b]:font-medium [&_em]:font-medium [&_em]:italic ${className}`}
     >
       {children}
     </h2>
@@ -60,7 +60,7 @@ export function H2({ children, className = "" }: { children: ReactNode; classNam
 export function AmberCta({ children = "Get HOLD", wide = false }: { children?: ReactNode; wide?: boolean }) {
   return (
     <DownloadLink
-      className={`inline-flex h-14 items-center justify-center rounded-full bg-[#FFB703] px-9 text-[17px] font-extrabold text-[#0F0F1A] transition-transform duration-180 ease-out-soft hover:scale-[1.02] active:scale-[0.98] ${
+      className={`inline-flex h-14 items-center justify-center rounded-full bg-[#FFB703] px-9 text-[17px] font-semibold text-[#0F0F1A] transition-transform duration-180 ease-out-soft hover:scale-[1.02] active:scale-[0.98] ${
         wide ? "w-full" : ""
       }`}
     >

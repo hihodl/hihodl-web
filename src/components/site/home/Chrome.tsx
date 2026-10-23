@@ -33,7 +33,7 @@ export function HomeNav() {
         <Link href="/" aria-label="HOLD home">
           <Wordmark className="h-6 w-auto" />
         </Link>
-        <DownloadLink className="inline-flex h-10 items-center rounded-full bg-[#FFB703] px-5 text-[15px] font-extrabold text-[#0F0F1A] transition-transform duration-180 hover:scale-[1.03]">
+        <DownloadLink className="inline-flex h-10 items-center rounded-full bg-[#FFB703] px-5 text-[15px] font-semibold text-[#0F0F1A] transition-transform duration-180 hover:scale-[1.03]">
           Get HOLD
         </DownloadLink>
       </div>
@@ -59,17 +59,17 @@ export function HomeFooter() {
             Get paid in six currencies, send in seconds, and let Hi do the rest.
           </p>
           <div className="mt-6 flex flex-wrap gap-2">
-            <a href={APP_STORE_URL} className="rounded-full bg-[#0F0F1A] px-4 py-2 text-[14px] font-bold text-white">
+            <a href={APP_STORE_URL} className="rounded-full bg-[#0F0F1A] px-4 py-2 text-[14px] font-medium text-white">
               App Store
             </a>
-            <a href={PLAY_STORE_URL} className="rounded-full bg-[#0F0F1A] px-4 py-2 text-[14px] font-bold text-white">
+            <a href={PLAY_STORE_URL} className="rounded-full bg-[#0F0F1A] px-4 py-2 text-[14px] font-medium text-white">
               Google Play
             </a>
           </div>
         </div>
         <div className="mt-10 grid grid-cols-2 gap-10 md:mt-0">
           <div>
-            <p className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#5F6975]">Follow</p>
+            <p className="text-[12px] font-medium uppercase tracking-[0.14em] text-[#5F6975]">Follow</p>
             <ul className="mt-4 space-y-2.5">
               {SOCIALS.map((s) => (
                 <li key={s.label}>
@@ -81,7 +81,7 @@ export function HomeFooter() {
             </ul>
           </div>
           <div>
-            <p className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#5F6975]">Legal</p>
+            <p className="text-[12px] font-medium uppercase tracking-[0.14em] text-[#5F6975]">Legal</p>
             <ul className="mt-4 space-y-2.5">
               <li>
                 <Link href="/privacy" className="text-[15px] text-[#0F0F1A] hover:text-[#00A6DB]">

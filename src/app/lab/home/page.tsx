@@ -1,25 +1,28 @@
 import type { Metadata } from "next";
-import { Nunito } from "next/font/google";
+import { Inter_Tight } from "next/font/google";
 
 import { HomeFooter, HomeNav } from "@/components/site/home/Chrome";
-import { Hero } from "@/components/site/home/Hero";
+import { HeroShrink } from "@/components/site/home/HeroShrink";
+import { Accounts } from "@/components/site/home/Accounts";
+import { Tour } from "@/components/site/home/Tour";
 import { HiFirst } from "@/components/site/home/HiFirst";
 import { Changes, Faq, HowItWorks, Inside, People, Private, Ready } from "@/components/site/home/Sections";
 
 /**
- * The new homepage, built on Persona's product page: a gallery with the
- * account's sheet under it, three steps, who it is for, privacy, what
- * changes, questions, what is inside, one closing banner.
+ * The new homepage: a full screen photo that closes into the account as you
+ * scroll (Revolut's opening), the account three ways, a card to tap around,
+ * then Persona's order: three steps, who it is for, privacy, what changes,
+ * questions, what is inside, one closing banner.
  *
  * A light page like Persona's, with the app's colours as the accents (see
- * home/ui.tsx) and the app's typeface, Nunito (hihodl-wallet src/theme/fonts.ts).
+ * home/ui.tsx) and Inter Tight: sharp, light weights, no heavy bold (Alex, 23-oct).
  * Its copy comes from the app's own strings, never from the old pages.
  *
  * Lives under /lab until it replaces the homepage, so it is not indexed.
  */
-const nunito = Nunito({
+const interTight = Inter_Tight({
   subsets: ["latin"],
-  weight: ["400", "600", "700", "800", "900"],
+  weight: ["400", "500", "600"],
   style: ["normal", "italic"],
   display: "swap",
 });
@@ -31,10 +34,12 @@ export const metadata: Metadata = {
 
 export default function HomePreview() {
   return (
-    <div className={`${nunito.className} bg-white`}>
+    <div className={`${interTight.className} bg-white`}>
       <HomeNav />
       <main>
-        <Hero />
+        <HeroShrink />
+        <Accounts />
+        <Tour />
         <HowItWorks />
         <People />
         <Private />

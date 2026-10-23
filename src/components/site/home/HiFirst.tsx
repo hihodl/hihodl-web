@@ -122,7 +122,7 @@ export function HiFirst() {
         </button>
         <div className="px-4 pb-5 pt-7 text-center md:flex md:flex-col md:justify-center md:px-6">
           <Wordmark className="mx-auto h-5 w-auto text-[#0E0E19]" />
-          <h2 id="hi-first-title" className="mt-2 text-[30px] font-extrabold leading-[1.1] tracking-[-0.02em] text-[#0F0F1A]">
+          <h2 id="hi-first-title" className="mt-2 text-[30px] font-semibold leading-[1.1] tracking-[-0.02em] text-[#0F0F1A]">
             What should Hi do first?
           </h2>
           <p className="mt-2 text-[15px] text-[#5F6975]">Pick one and we&rsquo;ll show you how.</p>

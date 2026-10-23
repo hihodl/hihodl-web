@@ -15,13 +15,18 @@ import { Icon, type IconName } from "./Icon";
  * or customer numbers.
  */
 
+/** The HOLD wordmark set inside a heading, sized and seated like a capital. */
+function InlineMark() {
+  return <Wordmark className="mx-[0.06em] inline-block h-[0.7em] w-auto align-baseline text-[#0E0E19]" />;
+}
+
 /* ── How it works ─────────────────────────────────────────── */
 
 export function HowItWorks() {
   return (
     <Section id="how">
       <H2>
-        See how <b>HOLD</b> works
+        See how <InlineMark /> works
       </H2>
       <div className="mt-12 grid gap-12 md:mt-16 md:grid-cols-3 md:gap-6">
         <Step
@@ -93,8 +98,8 @@ function Step({
         <Image src={photo} alt={alt} fill quality={90} sizes="(min-width: 768px) 360px, 100vw" className="object-cover" style={{ objectPosition: pos }} />
         <div className="absolute inset-x-3 bottom-3">{children}</div>
       </div>
-      <p className={`mt-6 text-[13px] font-bold uppercase tracking-[0.16em] ${SUBTLE}`}>Step {n}</p>
-      <h3 className="mt-2 text-[24px] font-extrabold tracking-[-0.01em] text-[#0F0F1A]">{title}</h3>
+      <p className={`mt-6 text-[13px] font-medium uppercase tracking-[0.16em] ${SUBTLE}`}>Step {n}</p>
+      <h3 className="mt-2 text-[24px] font-semibold tracking-[-0.01em] text-[#0F0F1A]">{title}</h3>
       <p className={`mt-2 text-[17px] leading-[1.5] ${BODY}`}>{body}</p>
     </div>
   );
@@ -104,10 +109,10 @@ function Row({ left, sub, right, accent }: { left: string; sub: string; right: s
   return (
     <div className="flex items-center justify-between gap-3">
       <div>
-        <p className="text-[15px] font-bold text-white">{left}</p>
+        <p className="text-[15px] font-medium text-white">{left}</p>
         <p className="text-[13px] text-white/75">{sub}</p>
       </div>
-      <p className="text-[15px] font-extrabold" style={{ color: accent ? APP.cyanGlow : "#FFFFFF" }}>
+      <p className="text-[15px] font-semibold" style={{ color: accent ? APP.cyanGlow : "#FFFFFF" }}>
         {right}
       </p>
     </div>
@@ -146,8 +151,8 @@ export function People() {
             <Image src={p.photo} alt={p.alt} fill quality={90} sizes="(min-width: 768px) 340px, 80vw" className="object-cover" style={{ objectPosition: p.pos }} />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
             <div className="absolute inset-x-5 bottom-5">
-              <span className={`inline-block rounded-full px-3 py-1 text-[13px] font-bold text-white ${PHOTO_GLASS}`}>{p.tag}</span>
-              <p className="mt-3 text-[18px] font-bold leading-[1.3] text-white">{p.line}</p>
+              <span className={`inline-block rounded-full px-3 py-1 text-[13px] font-medium text-white ${PHOTO_GLASS}`}>{p.tag}</span>
+              <p className="mt-3 text-[18px] font-medium leading-[1.3] text-white">{p.line}</p>
             </div>
           </li>
         ))}
@@ -198,8 +203,8 @@ export function Private() {
   return (
     <Section id="private" soft>
       <div className="md:grid md:grid-cols-[1fr_1.1fr] md:items-start md:gap-16">
-        <h2 className="text-[34px] font-semibold leading-[1.1] tracking-[-0.02em] text-[#0F0F1A] md:sticky md:top-28 md:text-[50px]">
-          The most personal money is the most <em className="font-black italic">private</em>.
+        <h2 className="text-[36px] font-medium leading-[1.06] tracking-[-0.035em] text-[#0F0F1A] md:sticky md:top-28 md:text-[56px]">
+          The most personal money is the most <em className="italic">private</em>.
         </h2>
         <ul className="mt-10 divide-y divide-black/10 md:mt-0">
           {PRIVATE.map((p) => (
@@ -208,7 +213,7 @@ export function Private() {
                 <summary className="flex cursor-pointer list-none items-start gap-4 py-5 [&::-webkit-details-marker]:hidden">
                   <Icon name={p.icon} size={22} className="mt-0.5 shrink-0 text-[#0F0F1A]" />
                   <span className="flex-1">
-                    <span className="block text-[18px] font-extrabold text-[#0F0F1A]">{p.title}</span>
+                    <span className="block text-[18px] font-semibold text-[#0F0F1A]">{p.title}</span>
                     <span className={`block text-[15px] ${BODY}`}>{p.sub}</span>
                   </span>
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white shadow-sm transition-transform duration-180 group-open:rotate-45">
@@ -245,7 +250,7 @@ export function Changes() {
             <div className="relative aspect-[4/3] overflow-hidden rounded-[20px]">
               <Image src={c.photo} alt={c.alt} fill quality={90} sizes="(min-width: 768px) 360px, 90vw" className="object-cover" style={{ objectPosition: c.pos }} />
             </div>
-            <p className="mt-5 text-[22px] font-extrabold tracking-[-0.01em] text-[#0F0F1A]">{c.title}</p>
+            <p className="mt-5 text-[22px] font-semibold tracking-[-0.01em] text-[#0F0F1A]">{c.title}</p>
             <p className={`mx-auto mt-1 max-w-[300px] pb-2 text-[15px] ${BODY}`}>{c.sub}</p>
           </div>
         ))}
@@ -310,7 +315,7 @@ export function Faq() {
       <div className="mx-auto mt-12 max-w-[760px] space-y-3">
         {FAQ.map((f, i) => (
           <details key={f.q} open={i === 0} className="group rounded-[20px] bg-white px-5 shadow-[0_6px_20px_rgba(15,15,26,0.06)]">
-            <summary className="flex cursor-pointer list-none items-center gap-4 py-5 text-[17px] font-bold text-[#0F0F1A] [&::-webkit-details-marker]:hidden">
+            <summary className="flex cursor-pointer list-none items-center gap-4 py-5 text-[17px] font-medium text-[#0F0F1A] [&::-webkit-details-marker]:hidden">
               <span className="flex-1">{f.q}</span>
               <Icon name="chevron" size={18} className="text-black/50 transition-transform duration-180 group-open:rotate-180" />
             </summary>
@@ -339,7 +344,7 @@ function Tile({ t }: { t: (typeof INSIDE)[number] }) {
   return (
     <div className={`flex flex-col items-center justify-center rounded-[22px] px-3 py-7 text-center ${SOFT}`}>
       <Icon name={t.icon} size={26} className="text-[#00A6DB]" />
-      <p className="mt-3 text-[21px] font-extrabold tracking-[-0.01em] text-[#0F0F1A]">{t.big}</p>
+      <p className="mt-3 text-[21px] font-semibold tracking-[-0.01em] text-[#0F0F1A]">{t.big}</p>
       <p className={`mt-1 text-[14px] ${BODY}`}>{t.sub}</p>
     </div>
   );
@@ -349,7 +354,7 @@ export function Inside() {
   return (
     <Section id="inside">
       <H2>
-        What&rsquo;s inside <b>HOLD</b>
+        What&rsquo;s inside <InlineMark />
       </H2>
       <div className="mx-auto mt-12 grid max-w-[1000px] grid-cols-2 gap-3 md:grid-cols-4">
         {INSIDE.slice(0, 2).map((t) => (
@@ -389,7 +394,7 @@ export function Ready() {
       <div className="relative mx-auto w-full max-w-[1240px] px-7 pb-10 md:px-8 md:pb-0">
         <div className="md:max-w-[480px]">
           <Wordmark className="h-5 w-auto text-white" />
-          <h2 className="mt-3 text-[44px] font-extrabold leading-[1.02] tracking-[-0.02em] text-white md:text-[60px]">
+          <h2 className="mt-3 text-[46px] font-medium leading-[1.0] tracking-[-0.04em] text-white md:text-[64px]">
             Ready when
             <br />
             you are.
