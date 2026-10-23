@@ -1,58 +1,76 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState, type CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import { AmberCta, PHOTO_GLASS } from "./ui";
 import { Icon, type IconName } from "./Icon";
 
 /**
- * The account three ways, the way Revolut shows "Your salary, reimagined",
- * but alive: one card at a time comes forward. The section's ground is that
- * card's photo, large and blurred; a segmented pill with a filling timeline
- * says which one is on, and when the line fills, the next card grows, the
- * others step back and the ground fades to its photo. On a laptop the cards
- * stay in place, side by side, and only their size changes; on a
- * phone, where they do not fit, the forward one moves to the centre. A tap on the pill
- * jumps there; hovering pauses. With reduced motion nothing moves on its own.
+ * The account four ways, alive but never on its own: the section's ground
+ * is the forward card's photo, large and blurred, and the segmented pill
+ * under the cards picks which one comes forward (a tap on a card does the
+ * same). The picked card grows, the others step back, and the ground fades
+ * to its photo. On a laptop the cards stay in place, side by side, and only
+ * their size changes; on a phone, where they do not fit, the forward one
+ * moves to the centre.
  *
  * Main in euros, Main in dollars, Savings, and a pocket: the faces the app
  * really has. Every figure is an example.
+ */
+/**
+ * Each card is the app's own account card (dashboard, release/ios-build-13):
+ * the account's name in a pill top left, the currency pill top right, the
+ * balance left aligned, a line under it, four square glass buttons, and the
+ * glass banner the app shows at the foot of Home, with its pager dots. The
+ * banner lines are the app's own (dashboard.banners.*, travel.banner.*).
  */
 const CARDS: {
   photo: string;
   pos: string;
   alt: string;
   pill: string;
-  label: string;
+  name: string;
+  flags: string[];
+  code: string;
   amount: string;
-  row: { icon: IconName; title: string; sub: string; amount: string };
+  line: string;
+  banner: { title: string; body: string; coins: string[] };
 }[] = [
   {
     photo: "/home/lisbon.jpg",
     pos: "30% 50%",
     alt: "A woman with coffee on a balcony over the rooftops of Lisbon",
     pill: "Euro",
-    label: "Main · EUR",
-    amount: "€1,850.00",
-    row: { icon: "at", title: "@marta", sub: "Yesterday", amount: "−€45.00" },
+    name: "Main",
+    flags: ["🇪🇺"],
+    code: "EUR",
+    amount: "1,850.00 €",
+    line: "IBAN in your name ›",
+    banner: { title: "Open your account", body: "Your own USD, EUR and GBP account numbers.", coins: ["€", "$", "£"] },
   },
   {
     photo: "/home/walk.jpg",
     pos: "40% 50%",
     alt: "A woman in a linen coat walking past a deep blue wall",
     pill: "Dollar",
-    label: "Main · USD",
-    amount: "$2,340.10",
-    row: { icon: "bank", title: "Client paid", sub: "Friday", amount: "+$1,800.00" },
+    name: "Main",
+    flags: ["🇺🇸", "🇪🇺"],
+    code: "All",
+    amount: "4,338.10 $",
+    line: "Open your account ›",
+    banner: { title: "Join the waitlist", body: "Be first to spend your dollars anywhere.", coins: ["$"] },
   },
   {
     photo: "/home/towel.jpg",
     pos: "40% 45%",
     alt: "A woman lying in the sun on a striped towel with a coffee",
     pill: "Savings",
-    label: "Savings",
-    amount: "$1,500.00",
-    row: { icon: "leaf", title: "From Main", sub: "Earning", amount: "+$500.00" },
+    name: "Savings",
+    flags: ["🇺🇸"],
+    code: "USD",
+    amount: "1,500.00 $",
+    line: "Earning while you sleep ›",
+    banner: { title: "Put your dollars to work", body: "Your Savings earns while you sleep.", coins: ["$"] },
   },
   {
     // A pocket, named the way people name them in the app ("Travel, rent,
@@ -61,34 +79,32 @@ const CARDS: {
     pos: "50% 45%",
     alt: "A longtail boat on a turquoise lake between limestone cliffs in Khao Sok, Thailand",
     pill: "Pockets",
-    label: "Pocket · Thailand",
-    amount: "$860.00",
-    row: { icon: "wallet", title: "From Main", sub: "Monday", amount: "+$200.00" },
+    name: "Thailand",
+    flags: ["🇺🇸"],
+    code: "USD",
+    amount: "860.00 $",
+    line: "Pocket · set aside from Main ›",
+    banner: { title: "Book hotels, get money back", body: "Pay the stay straight from this pocket.", coins: ["$"] },
   },
 ];
 
-/** How long each card stays forward. */
-const STEP_MS = 4500;
+const BUTTONS: { icon: IconName; label: string }[] = [
+  { icon: "addCircle", label: "Add" },
+  { icon: "send", label: "Pay" },
+  { icon: "swap", label: "Move" },
+  { icon: "wallet", label: "Accounts" },
+];
+
 
 export function Accounts() {
   const [active, setActive] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const [still, setStill] = useState(false);
 
-  useEffect(() => {
-    setStill(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-  }, []);
 
-  // The timeline is the clock: when the forward segment's line fills, the
-  // next card comes forward. Pausing pauses the line, so they never drift.
-  const next = () => setActive((i) => (i + 1) % CARDS.length);
 
   return (
     <section
       id="accounts"
       className="relative scroll-mt-16 overflow-hidden px-4 py-20 md:px-8 md:py-28"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
     >
       {/* The ground: the forward card's photo, large and blurred */}
       <div className="absolute inset-0 bg-[#1B2D36]" aria-hidden>
@@ -118,16 +134,16 @@ export function Accounts() {
       </div>
 
       {/* The cards: the forward one grows, the others step back */}
-      <div className="relative mx-auto mt-12 h-[480px] max-w-[1120px] md:h-[500px]">
+      <div className="relative mx-auto mt-12 h-[540px] max-w-[1120px] md:h-[520px]">
         {CARDS.map((c, i) => {
           const on = i === active;
           return (
             <button
-              key={c.label}
+              key={c.pill}
               type="button"
               onClick={() => setActive(i)}
-              aria-label={`${c.label}, ${c.amount}`}
-              className={`acc-card absolute outline-none focus-visible:ring-2 focus-visible:ring-white/70 left-1/2 top-1/2 aspect-[3/4] w-[min(320px,80vw)] overflow-hidden rounded-[28px] text-left shadow-[0_30px_60px_rgba(0,0,0,0.30)] transition-all duration-700 ease-out-soft md:w-[290px] ${
+              aria-label={`${c.name}, ${c.amount}`}
+              className={`acc-card absolute outline-none focus-visible:ring-2 focus-visible:ring-white/70 left-1/2 top-1/2 aspect-[10/16] w-[min(300px,78vw)] overflow-hidden rounded-[28px] text-left shadow-[0_30px_60px_rgba(0,0,0,0.30)] transition-all duration-700 ease-out-soft md:w-[270px] ${
                 Math.abs(i - active) > 1 ? "max-md:opacity-0" : ""
               }`}
               style={
@@ -141,21 +157,62 @@ export function Accounts() {
               }
             >
               <Image src={c.photo} alt={c.alt} fill quality={90} sizes="(min-width: 768px) 380px, 75vw" className="object-cover" style={{ objectPosition: c.pos }} />
-              <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/25 to-black/50" />
-              <div className="absolute inset-x-0 top-[34%] flex flex-col items-center text-white">
-                <p className="text-[14px] font-medium text-white/90">{c.label}</p>
-                <p className="mt-1 text-[40px] font-semibold leading-none tracking-[-0.03em] [text-shadow:0_2px_16px_rgba(0,0,0,0.25)]">{c.amount}</p>
-                <span className={`mt-4 rounded-full px-4 py-2 text-[14px] font-semibold ${PHOTO_GLASS}`}>Accounts</span>
-              </div>
-              <div className="absolute inset-x-3 bottom-3 flex items-center gap-3 rounded-[18px] bg-white px-3.5 py-3 shadow-sm">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#00C2FF] text-white">
-                  <Icon name={c.row.icon} size={17} />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[15px] font-medium text-[#0F0F1A]">{c.row.title}</span>
-                  <span className="block truncate text-[13px] text-[#5F6975]">{c.row.sub}</span>
-                </span>
-                <span className="text-[15px] font-semibold text-[#0F0F1A]">{c.row.amount}</span>
+              <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/5 to-black/45" />
+              <div className="absolute inset-0 flex flex-col p-3.5 text-white">
+                <div className="flex items-center justify-between">
+                  <span className="rounded-full bg-black/35 px-3 py-1 text-[13px] font-semibold backdrop-blur-md">{c.name}</span>
+                  <span className="flex items-center gap-1.5 rounded-full bg-black/35 py-0.5 pl-0.5 pr-2.5 text-[13px] font-semibold backdrop-blur-md">
+                    <span className="flex -space-x-1.5">
+                      {c.flags.map((f) => (
+                        <span key={f} className="flex h-6 w-6 items-center justify-center rounded-full border border-white/70 bg-white text-[15px] leading-none">
+                          {f}
+                        </span>
+                      ))}
+                    </span>
+                    {c.code}
+                    <Icon name="chevron" size={12} />
+                  </span>
+                </div>
+
+                <p className="mt-[22%] text-[38px] font-semibold leading-none tracking-[-0.03em] [text-shadow:0_2px_18px_rgba(0,0,0,0.3)]">
+                  {c.amount}
+                </p>
+                <p className="mt-2 truncate text-[13px] font-semibold text-white/90">{c.line}</p>
+
+                <div className="mt-auto grid grid-cols-4 gap-1.5 px-1">
+                  {BUTTONS.map((btn) => (
+                    <span key={btn.label} className="flex flex-col items-center gap-1">
+                      <span className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-white/20 backdrop-blur-md">
+                        <Icon name={btn.icon} size={18} />
+                      </span>
+                      <span className="text-[11px] font-semibold">{btn.label}</span>
+                    </span>
+                  ))}
+                </div>
+
+                <div className="relative mt-3 overflow-hidden rounded-[18px] border border-white/25 bg-white/15 px-3 pb-4 pt-2.5 backdrop-blur-xl">
+                  <p className="pr-14 text-[15px] font-semibold leading-tight">{c.banner.title}</p>
+                  <p className="mt-0.5 pr-14 text-[12px] leading-snug text-white/80">{c.banner.body}</p>
+                  <span className="absolute right-2 top-1/2 flex -translate-y-1/2" aria-hidden>
+                    {c.banner.coins.map((k, n) => (
+                      <span
+                        key={k}
+                        className="-ml-3 flex h-9 w-9 items-center justify-center rounded-full border border-white/40 text-[15px] font-semibold shadow-md first:ml-0"
+                        style={{
+                          background: n === 1 ? "linear-gradient(145deg,#BFE3F0,#5D8FA8)" : "linear-gradient(145deg,#8FB3C4,#2F5C73)",
+                          zIndex: n === 1 ? 2 : 1,
+                        }}
+                      >
+                        {k}
+                      </span>
+                    ))}
+                  </span>
+                  <span className="absolute bottom-1.5 left-1/2 flex -translate-x-1/2 gap-1" aria-hidden>
+                    <span className="h-1 w-4 rounded-full bg-white/80" />
+                    <span className="h-1 w-1 rounded-full bg-white/40" />
+                    <span className="h-1 w-1 rounded-full bg-white/40" />
+                  </span>
+                </div>
               </div>
             </button>
           );
@@ -163,7 +220,7 @@ export function Accounts() {
       </div>
 
       <div className="relative mt-10 flex justify-center">
-        {/* The segmented pill, each segment its own timeline */}
+        {/* The segmented pill: the only way the cards change */}
         <div role="tablist" aria-label="Accounts" className={`mx-auto inline-flex gap-1 rounded-full p-1 ${PHOTO_GLASS}`}>
           {CARDS.map((c, i) => {
             const on = i === active;
@@ -179,17 +236,6 @@ export function Accounts() {
                 }`}
               >
                 {c.pill}
-                {on && !still && (
-                  <span
-                    key={active}
-                    onAnimationEnd={next}
-                    className="absolute bottom-0 left-0 h-[3px] bg-[#00C2FF]"
-                    style={{
-                      animation: `hold-timeline ${STEP_MS}ms linear forwards`,
-                      animationPlayState: paused ? "paused" : "running",
-                    }}
-                  />
-                )}
               </button>
             );
           })}
@@ -203,7 +249,6 @@ export function Accounts() {
           #accounts { --step: 300px; }
           #accounts .acc-card { --o: var(--od); }
         }
-        @keyframes hold-timeline { from { width: 0% } to { width: 100% } }
       `}</style>
     </section>
   );
