@@ -23,14 +23,14 @@ import { MainCard } from "./MainCard";
 const GEOMETRY = `
 .hold-shrink {
   --cw: min(340px, calc(100vw - 32px));
-  --ch: min(430px, 54svh);
-  --t: 80px;
+  --ch: min(430px, 50svh);
+  --t: min(80px, 11svh);
   --l: calc((100% - var(--cw)) / 2);
 }
 @media (min-width: 768px) {
   .hold-shrink {
-    --cw: 420px;
-    --ch: min(560px, calc(100svh - 160px));
+    --ch: min(max(560px, 62svh), calc(100svh - 160px));
+    --cw: min(calc(var(--ch) * 0.78), calc(50vw - 64px));
     --t: calc((100% - var(--ch)) / 2 + 28px);
     --l: calc(50% + 24px);
   }
@@ -38,6 +38,11 @@ const GEOMETRY = `
 .hold-shrink {
   --b: calc(100% - var(--t) - var(--ch));
   --r: calc(100% - var(--l) - var(--cw));
+}
+/* The copy: under the card on a phone, centred beside it on a laptop */
+.hold-shrink .hold-copy { top: calc(var(--t) + var(--ch) + 20px); }
+@media (min-width: 768px) {
+  .hold-shrink .hold-copy { top: 50%; transform: translateY(-50%); }
 }
 `;
 
@@ -99,22 +104,22 @@ export function HeroShrink() {
 
         {/* The opening copy, on the blue wall at the top of the photo; it leaves as the card closes */}
         <div
-          className="absolute inset-x-0 top-0 mx-auto max-w-[1800px] px-5 pt-[96px] md:px-12 md:pt-[132px]"
+          className="absolute inset-x-0 top-0 mx-auto max-w-[1800px] px-5 pt-[clamp(72px,13svh,96px)] md:px-12 md:pt-[clamp(84px,15svh,132px)]"
           style={{ opacity: "clamp(0, calc(1 - var(--p) * 3), 1)", transform: "translateY(calc(var(--p) * -60px))" }}
         >
           <p className="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/90 md:text-[14px]">
             Dollars · Euros · Pounds · Pix
           </p>
-          <h1 className="mt-4 max-w-[980px] text-[52px] font-medium leading-[0.96] tracking-[-0.045em] text-white md:text-[112px]">
+          <h1 className="mt-4 max-w-[980px] text-[clamp(36px,min(12.5vw,8svh),52px)] font-medium leading-[0.96] tracking-[-0.045em] text-white md:text-[clamp(52px,min(8.5vw,13svh),112px)]">
             Your money,
             <br />
             without borders.
           </h1>
-          <p className="mt-5 max-w-[520px] text-[17px] leading-[1.45] text-white/90 md:mt-7 md:text-[21px]">
+          <p className="mt-5 max-w-[520px] text-[17px] leading-[1.45] text-white/90 md:mt-7 md:text-[clamp(17px,min(1.6vw,3svh),21px)] [@media(max-height:560px)]:hidden">
             One account to get paid from anywhere, send home in seconds and save while you sleep. Hi books the trip from
             your balance. Free, in a tap.
           </p>
-          <div className={`mt-7 flex flex-wrap gap-3 md:mt-9 ${open ? "" : "pointer-events-none"}`}>
+          <div className={`mt-7 flex flex-wrap gap-3 md:mt-[clamp(20px,4svh,36px)] [@media(max-height:560px)]:mt-5 ${open ? "" : "pointer-events-none"}`}>
             <AmberCta />
             <a
               href="#accounts"
@@ -135,22 +140,21 @@ export function HeroShrink() {
 
         {/* The copy: beside the card on a laptop, under it on a phone */}
         <div
-          className="absolute inset-x-0 px-5 text-center md:left-0 md:right-[calc(50%+56px)] md:top-1/2 md:-translate-y-1/2 md:px-0 md:pl-[max(32px,calc(50%-560px))] md:text-left"
+          className="hold-copy absolute inset-x-0 px-5 text-center md:left-0 md:right-[calc(50%+56px)] md:px-0 md:pl-[max(32px,calc(50%-560px))] md:text-left"
           style={{
-            top: "calc(var(--t) + var(--ch) + 20px)",
             opacity: "clamp(0, calc((var(--p) - 0.65) * 3), 1)",
             pointerEvents: done ? "auto" : "none",
           }}
         >
-          <Wordmark className="mx-auto hidden h-9 w-auto text-[#0E0E19] md:mx-0 md:block" />
-          <p className="mt-0 text-[24px] font-medium leading-[1.15] tracking-[-0.025em] text-[#0F0F1A] md:mt-6 md:text-[44px] md:leading-[1.04]">
+          <Wordmark className="mx-auto hidden h-[clamp(22px,min(2.6vw,5svh),44px)] w-auto text-[#0E0E19] md:mx-0 md:block" />
+          <p className="mt-0 text-[clamp(19px,min(6.2vw,3.6svh),24px)] font-medium leading-[1.15] tracking-[-0.025em] text-[#0F0F1A] md:mt-[clamp(12px,3svh,24px)] md:text-[clamp(26px,min(3.3vw,6.4svh),56px)] md:leading-[1.04]">
             Get paid in dollars, euros and pounds. Send home in seconds.
           </p>
-          <p className={`mx-auto mt-3 hidden max-w-[460px] text-[18px] leading-[1.5] md:mx-0 md:block ${BODY}`}>
+          <p className={`mx-auto mt-3 hidden max-w-[min(460px,100%)] min-[1600px]:max-w-[540px] text-[clamp(16px,1.2vw,21px)] leading-[1.5] md:mx-0 md:block [@media(max-height:720px)]:!hidden ${BODY}`}>
             Your own USD, EUR and GBP accounts, reais in by Pix, money out to Pix, SPEI and Bre-B in seconds, Savings that
             earns while you sleep, and Hi to book the trip from your balance.
           </p>
-          <div className="mt-4 md:mt-8">
+          <div className="mt-[clamp(10px,2svh,16px)] md:mt-[clamp(16px,4svh,32px)]">
             <AmberCta />
           </div>
         </div>
