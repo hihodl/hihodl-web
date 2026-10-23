@@ -24,7 +24,7 @@ export function HomeNav() {
   return (
     <header
       className={`fixed inset-x-0 top-0 z-50 transition-colors duration-320 ${
-        solid ? "border-b border-black/[0.06] bg-white/90 text-[#0F0F1A] backdrop-blur-xl" : "bg-transparent text-white md:bg-white md:text-[#0F0F1A]"
+        solid ? "border-b border-black/[0.06] bg-white/90 text-[#0E0E19] backdrop-blur-xl" : "bg-transparent text-white md:bg-white md:text-[#0E0E19]"
       }`}
     >
       <div className="mx-auto flex h-16 max-w-[1600px] items-center justify-between px-4 md:px-8">
@@ -52,7 +52,7 @@ export function HomeFooter() {
     <footer className="border-t border-black/[0.06] bg-white px-4 pb-12 pt-14 md:px-8">
       <div className="mx-auto max-w-[1240px] md:flex md:items-start md:justify-between">
         <div className="max-w-[360px]">
-          <Wordmark className="h-7 w-auto text-[#0F0F1A]" />
+          <Wordmark className="h-7 w-auto text-[#0E0E19]" />
           <p className="mt-4 text-[16px] leading-[1.5] text-[#3F4A55]">
             Get paid in six currencies, send in seconds, and let Hi do the rest.
           </p>

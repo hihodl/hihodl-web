@@ -1,5 +1,6 @@
 "use client";
 
+import { Wordmark } from "@/components/site/Wordmark";
 import Image from "next/image";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { AmberCta, APP, BODY, PHOTO_GLASS, SOFT, SUBTLE } from "./ui";
@@ -199,8 +200,8 @@ export function Hero() {
         <p className={`text-[12px] font-bold uppercase tracking-[0.14em] ${SUBTLE}`}>
           <span className="text-[#0F0F1A]">Free to download</span> · iPhone and Android
         </p>
-        <h1 className="mt-3 text-[34px] font-extrabold leading-[1.05] tracking-[-0.02em] text-[#0F0F1A] md:text-[40px]">
-          HOLD
+        <h1 className="mt-4 text-[#0E0E19]">
+          <Wordmark className="h-8 w-auto md:h-9" />
         </h1>
         <p className={`mt-3 text-[18px] leading-[1.45] ${BODY}`}>
           Get paid into your own USD, EUR and GBP accounts. Send to Mexico, Brazil and Colombia in seconds.

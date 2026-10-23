@@ -1,5 +1,6 @@
 "use client";
 
+import { Wordmark } from "@/components/site/Wordmark";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { track } from "@/lib/analytics/mixpanel";
@@ -120,7 +121,7 @@ export function HiFirst() {
           <Icon name="close" size={16} />
         </button>
         <div className="px-4 pb-5 pt-7 text-center md:flex md:flex-col md:justify-center md:px-6">
-          <p className="text-[15px] font-extrabold text-[#0F0F1A]">HOLD</p>
+          <Wordmark className="mx-auto h-5 w-auto text-[#0E0E19]" />
           <h2 id="hi-first-title" className="mt-2 text-[30px] font-extrabold leading-[1.1] tracking-[-0.02em] text-[#0F0F1A]">
             What should Hi do first?
           </h2>

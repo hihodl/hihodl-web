@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { Wordmark } from "@/components/site/Wordmark";
 import type { ReactNode } from "react";
 import { AmberCta, APP, BODY, H2, PHOTO_GLASS, Section, SOFT, SUBTLE } from "./ui";
 import { Icon, type IconName } from "./Icon";
@@ -385,7 +386,7 @@ export function Ready() {
       <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent md:bg-gradient-to-r md:from-black/80 md:via-black/30 md:to-transparent" />
       <div className="relative mx-auto w-full max-w-[1240px] px-7 pb-10 md:px-8 md:pb-0">
         <div className="md:max-w-[480px]">
-          <p className="text-[15px] font-extrabold tracking-[0.02em] text-white">HOLD</p>
+          <Wordmark className="h-5 w-auto text-white" />
           <h2 className="mt-3 text-[44px] font-extrabold leading-[1.02] tracking-[-0.02em] text-white md:text-[60px]">
             Ready when
             <br />
