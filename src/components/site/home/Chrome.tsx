@@ -24,11 +24,11 @@ export function HomeNav() {
   return (
     <header
       className={`fixed inset-x-0 top-0 z-50 transition-colors duration-320 ${
-        solid ? "border-b border-white/10 bg-[#0D1820]/85 backdrop-blur-xl" : "bg-transparent"
+        solid ? "border-b border-black/[0.06] bg-white/90 text-[#0F0F1A] backdrop-blur-xl" : "bg-transparent text-white md:bg-white md:text-[#0F0F1A]"
       }`}
     >
-      <div className="mx-auto flex h-16 max-w-[1240px] items-center justify-between px-4 md:px-8">
-        <Link href="/" aria-label="HOLD home" className="text-white">
+      <div className="mx-auto flex h-16 max-w-[1600px] items-center justify-between px-4 md:px-8">
+        <Link href="/" aria-label="HOLD home">
           <Wordmark className="h-6 w-auto" />
         </Link>
         <DownloadLink className="inline-flex h-10 items-center rounded-full bg-[#FFB703] px-5 text-[15px] font-extrabold text-[#0F0F1A] transition-transform duration-180 hover:scale-[1.03]">
@@ -49,29 +49,29 @@ const SOCIALS = [
 
 export function HomeFooter() {
   return (
-    <footer className="border-t border-white/10 px-4 pb-12 pt-14 md:px-8">
+    <footer className="border-t border-black/[0.06] bg-white px-4 pb-12 pt-14 md:px-8">
       <div className="mx-auto max-w-[1240px] md:flex md:items-start md:justify-between">
         <div className="max-w-[360px]">
-          <Wordmark className="h-7 w-auto text-white" />
-          <p className="mt-4 text-[16px] leading-[1.5] text-[#C8D0D9]">
-            Dollars and euros in one account, and Hi to move them.
+          <Wordmark className="h-7 w-auto text-[#0F0F1A]" />
+          <p className="mt-4 text-[16px] leading-[1.5] text-[#3F4A55]">
+            Get paid in six currencies, send in seconds, and let Hi do the rest.
           </p>
           <div className="mt-6 flex flex-wrap gap-2">
-            <a href={APP_STORE_URL} className="rounded-full bg-white px-4 py-2 text-[14px] font-bold text-[#0F0F1A]">
+            <a href={APP_STORE_URL} className="rounded-full bg-[#0F0F1A] px-4 py-2 text-[14px] font-bold text-white">
               App Store
             </a>
-            <a href={PLAY_STORE_URL} className="rounded-full bg-white px-4 py-2 text-[14px] font-bold text-[#0F0F1A]">
+            <a href={PLAY_STORE_URL} className="rounded-full bg-[#0F0F1A] px-4 py-2 text-[14px] font-bold text-white">
               Google Play
             </a>
           </div>
         </div>
         <div className="mt-10 grid grid-cols-2 gap-10 md:mt-0">
           <div>
-            <p className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#9FB7C2]">Follow</p>
+            <p className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#5F6975]">Follow</p>
             <ul className="mt-4 space-y-2.5">
               {SOCIALS.map((s) => (
                 <li key={s.label}>
-                  <a href={s.href} target="_blank" rel="noopener noreferrer" className="text-[15px] text-white hover:text-[#36E0FF]">
+                  <a href={s.href} target="_blank" rel="noopener noreferrer" className="text-[15px] text-[#0F0F1A] hover:text-[#00A6DB]">
                     {s.label}
                   </a>
                 </li>
@@ -79,15 +79,15 @@ export function HomeFooter() {
             </ul>
           </div>
           <div>
-            <p className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#9FB7C2]">Legal</p>
+            <p className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#5F6975]">Legal</p>
             <ul className="mt-4 space-y-2.5">
               <li>
-                <Link href="/privacy" className="text-[15px] text-white hover:text-[#36E0FF]">
+                <Link href="/privacy" className="text-[15px] text-[#0F0F1A] hover:text-[#00A6DB]">
                   Privacy
                 </Link>
               </li>
               <li>
-                <Link href="/terms" className="text-[15px] text-white hover:text-[#36E0FF]">
+                <Link href="/terms" className="text-[15px] text-[#0F0F1A] hover:text-[#00A6DB]">
                   Terms
                 </Link>
               </li>
@@ -95,7 +95,7 @@ export function HomeFooter() {
           </div>
         </div>
       </div>
-      <p className="mx-auto mt-12 max-w-[1240px] text-[13px] text-[#9FB7C2]">© 2026 HOLD. All rights reserved.</p>
+      <p className="mx-auto mt-12 max-w-[1240px] text-[13px] text-[#5F6975]">© 2026 HOLD. All rights reserved.</p>
     </footer>
   );
 }

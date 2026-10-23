@@ -18,11 +18,11 @@ const SEEN_KEY = "hold.hiFirst.seen";
 
 const CHOICES: { id: string; label: string; target: string; icon: IconName }[] = [
   { id: "get_paid", label: "Getting paid from abroad", target: "how", icon: "download" },
+  { id: "send_home", label: "Sending money home", target: "how", icon: "at" },
   { id: "save", label: "Saving without thinking", target: "inside", icon: "leaf" },
   { id: "split", label: "Splitting with friends", target: "people", icon: "split" },
   { id: "trip", label: "Booking my next trip", target: "changes", icon: "plane" },
-  { id: "private", label: "Keeping my money private", target: "private", icon: "key" },
-];
+  ];
 
 function seen(): boolean {
   try {
@@ -90,7 +90,7 @@ export function HiFirst() {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/55 p-3 backdrop-blur-[6px] md:p-8" onClick={close}>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-3 backdrop-blur-[6px] md:p-8" onClick={close}>
       <div
         ref={box}
         role="dialog"
@@ -98,7 +98,7 @@ export function HiFirst() {
         aria-labelledby="hi-first-title"
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-[440px] overflow-hidden rounded-[30px] border border-white/10 bg-[#0D1820] p-3 shadow-2xl outline-none md:grid md:max-w-[900px] md:grid-cols-2 md:gap-4"
+        className="relative w-full max-w-[440px] overflow-hidden rounded-[30px] bg-white p-3 shadow-2xl outline-none md:grid md:max-w-[900px] md:grid-cols-2 md:gap-4"
       >
         <div className="relative aspect-[1.9/1] overflow-hidden rounded-[22px] md:aspect-auto md:min-h-[520px]">
           <Image
@@ -115,26 +115,26 @@ export function HiFirst() {
           type="button"
           onClick={close}
           aria-label="Close"
-          className="absolute right-6 top-6 flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#0F0F1A] md:right-5 md:top-5 md:bg-white/10 md:text-white"
+          className="absolute right-6 top-6 flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#0F0F1A] shadow md:right-5 md:top-5 md:bg-[#F4F5F7] md:shadow-none"
         >
           <Icon name="close" size={16} />
         </button>
         <div className="px-4 pb-5 pt-7 text-center md:flex md:flex-col md:justify-center md:px-6">
-          <p className="text-[15px] font-extrabold text-white">HOLD</p>
-          <h2 id="hi-first-title" className="mt-2 text-[30px] font-extrabold leading-[1.1] tracking-[-0.02em] text-white">
+          <p className="text-[15px] font-extrabold text-[#0F0F1A]">HOLD</p>
+          <h2 id="hi-first-title" className="mt-2 text-[30px] font-extrabold leading-[1.1] tracking-[-0.02em] text-[#0F0F1A]">
             What should Hi do first?
           </h2>
-          <p className="mt-2 text-[15px] text-[#C8D0D9]">Pick one and we&rsquo;ll show you how.</p>
+          <p className="mt-2 text-[15px] text-[#5F6975]">Pick one and we&rsquo;ll show you how.</p>
           <ul className="mt-6 space-y-2 text-left">
             {CHOICES.map((c) => (
               <li key={c.id}>
                 <button
                   type="button"
                   onClick={() => pick(c)}
-                  className="flex w-full items-center gap-3 rounded-full bg-white/[0.07] p-1.5 pr-5 text-[16px] font-semibold text-white transition-colors duration-180 hover:bg-white/[0.12]"
+                  className="flex w-full items-center gap-3 rounded-full bg-[#F4F5F7] p-1.5 pr-5 text-[16px] font-semibold text-[#0F0F1A] transition-colors duration-180 hover:bg-[#ECEEF1]"
                 >
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10">
-                    <Icon name={c.icon} size={18} className="text-[#36E0FF]" />
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white">
+                    <Icon name={c.icon} size={18} className="text-[#0F0F1A]" />
                   </span>
                   {c.label}
                 </button>

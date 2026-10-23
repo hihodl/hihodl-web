@@ -2,50 +2,54 @@ import type { ReactNode } from "react";
 import { DownloadLink } from "@/components/site/DownloadLink";
 
 /**
- * The homepage speaks the app's palette, not the old site's steel blue:
- * hihodl-wallet src/theme/colors.ts and gradients.ts (release/ios-build-13).
- * When the app changes a colour, it changes here.
+ * A light page, the way Persona sells: white and very light grey grounds,
+ * near-black type, and the sunny photos carrying the feeling. The app's own
+ * colours (hihodl-wallet src/theme/colors.ts and gradients.ts on
+ * release/ios-build-13) are the accents: the cyan Main card, the silver
+ * Savings card and the amber action.
  */
 export const APP = {
-  /** navBg: the ground under every screen. */
-  ground: "#0D1820",
-  /** sheetBase: the app's bottom sheet. */
-  sheet: "#1B2D36",
-  /** Main account: ACCOUNT_PRIMARY.Main, CARD_GRADS.Main. */
   cyan: "#00C2FF",
   cyanGlow: "#36E0FF",
-  /** Savings account: CARD_GRADS.Savings. */
   silver: "#D7DCE4",
   silverDeep: "#AEB6C2",
-  /** brand.yellow, the primary action. */
   amber: "#FFB703",
-  /** brand.almostBlack, ink on amber. */
+  /** brand.almostBlack: the ink, on white and on amber. */
   ink: "#0F0F1A",
-  /** textOnBlueMuted and textSubtle: secondary text, 4:1 or better on the ground. */
-  muted: "#C8D0D9",
-  subtle: "#9FB7C2",
+  /** navBg: the dark ground, used once, for the closing banner. */
+  navy: "#0D1820",
 } as const;
 
-/** The app's row on a sheet: white at 6% with a hairline. */
-export const GLASS = "rounded-[24px] border border-white/10 bg-white/[0.06]";
+/** Body copy on white (9:1) and on the soft grey (8:1). */
+export const BODY = "text-[#3F4A55]";
+/** Secondary copy: 4.8:1 on white, 4.5:1 on the soft grey. */
+export const SUBTLE = "text-[#5F6975]";
+/** The soft grey ground of a card or an alternate section. */
+export const SOFT = "bg-[#F4F5F7]";
 
-/** Glass laid on a photo: dark tint, blur, solid fallback where blur is missing. */
-export const PHOTO_GLASS =
-  "border border-white/15 bg-[#0D1820]/85 supports-[backdrop-filter]:bg-[#0D1820]/45 supports-[backdrop-filter]:backdrop-blur-[20px]";
-
-export function Section({ id, children, className = "" }: { id?: string; children: ReactNode; className?: string }) {
+export function Section({
+  id,
+  children,
+  className = "",
+  soft = false,
+}: {
+  id?: string;
+  children: ReactNode;
+  className?: string;
+  soft?: boolean;
+}) {
   return (
-    <section id={id} className={`scroll-mt-16 px-4 py-20 md:px-8 md:py-28 ${className}`}>
+    <section id={id} className={`scroll-mt-16 px-4 py-20 md:px-8 md:py-28 ${soft ? SOFT : "bg-white"} ${className}`}>
       <div className="mx-auto max-w-[1120px]">{children}</div>
     </section>
   );
 }
 
-/** A section title: centred and heavy, with one or two words in bold or bold italic. */
+/** A section title: centred, with one or two words carried in bold or bold italic. */
 export function H2({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
     <h2
-      className={`text-center text-[34px] font-semibold leading-[1.1] tracking-[-0.02em] text-white md:text-[52px] [&_b]:font-black [&_em]:font-black [&_em]:italic ${className}`}
+      className={`text-center text-[34px] font-semibold leading-[1.1] tracking-[-0.02em] text-[#0F0F1A] md:text-[50px] [&_b]:font-black [&_em]:font-black [&_em]:italic ${className}`}
     >
       {children}
     </h2>
@@ -64,3 +68,11 @@ export function AmberCta({ children = "Get HOLD", wide = false }: { children?: R
     </DownloadLink>
   );
 }
+
+/**
+ * Glass laid on a photo, the KAST way: a neutral dark tint with a strong
+ * blur, so it takes the photo's own colour instead of painting it blue.
+ * Solid where blur is missing.
+ */
+export const PHOTO_GLASS =
+  "border border-white/20 bg-black/55 supports-[backdrop-filter]:bg-black/25 supports-[backdrop-filter]:backdrop-blur-[24px] supports-[backdrop-filter]:backdrop-saturate-[1.6]";
