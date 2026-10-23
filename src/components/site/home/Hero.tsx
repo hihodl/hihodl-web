@@ -10,8 +10,8 @@ import { Icon, type IconName } from "./Icon";
  * The hero is a product page, the way Persona sells its band: a big photo
  * gallery and a column that holds the product. On a phone the column rises
  * over the gallery as a white sheet, like the app's Accounts sheet; on a
- * laptop the gallery runs off the left edge, wide, and the column sits
- * beside it.
+ * laptop the gallery is a big rounded card and the column sits beside it,
+ * the pair centred with the same margin on both sides.
  *
  * Fintech first: it opens on what HOLD does with money. Custody and keys
  * belong to the privacy section further down, never to the first lines.
@@ -152,9 +152,9 @@ export function Hero() {
   const panel = ACTIONS.find((a) => a.id === action) ?? ACTIONS[3];
 
   return (
-    <section className="bg-white md:grid md:grid-cols-[minmax(0,1fr)_400px] md:gap-12 md:pr-8 md:pt-20 lg:grid-cols-[minmax(0,1fr)_440px] xl:grid-cols-[minmax(0,1fr)_480px] xl:gap-16 xl:pr-[max(32px,calc((100vw-1600px)/2+32px))]">
+    <section className="bg-white md:mx-auto md:grid md:max-w-[1600px] md:grid-cols-[minmax(0,1fr)_400px] md:gap-10 md:px-8 md:pt-20 lg:grid-cols-[minmax(0,1fr)_440px] xl:grid-cols-[minmax(0,1fr)_480px] xl:gap-14">
       {/* Gallery: tall on a phone, wide and big on a laptop */}
-      <div className="relative aspect-[4/5] md:sticky md:top-20 md:aspect-[4/3] md:self-start md:overflow-hidden md:rounded-r-[32px]">
+      <div className="relative aspect-[4/5] md:sticky md:top-20 md:aspect-[4/3] md:self-start md:overflow-hidden md:rounded-[32px] md:shadow-[0_20px_50px_rgba(15,15,26,0.12)]">
         <div
           ref={track}
           onScroll={onScroll}
