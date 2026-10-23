@@ -116,13 +116,15 @@ function Row({ left, sub, right, accent }: { left: string; sub: string; right: s
 
 /* ── Who it is for ────────────────────────────────────────── */
 
+// Six people who appear nowhere else on the page, so the hero gallery and
+// this row never show the same face twice.
 const PEOPLE = [
-  { photo: "/home/designer.jpg", pos: "52% 40%", tag: "For freelancers", line: "A client abroad pays your USD details. It lands as dollars.", alt: "A designer leaning back from his desk" },
-  { photo: "/home/lisbon.jpg", pos: "28% 50%", tag: "For remote workers", line: "Paid in dollars, living in euros. One account for both.", alt: "A woman with coffee on a Lisbon balcony" },
-  { photo: "/home/crew.jpg", pos: "50% 50%", tag: "For friend groups", line: "One chat for the trip. Everyone settles up before they leave.", alt: "Three friends on white steps against a blue wall" },
-  { photo: "/home/train.jpg", pos: "62% 40%", tag: "For travellers", line: "Data on before you land. Nothing to type, nothing to scan.", alt: "A man by a train window on the Italian coast" },
-  { photo: "/home/towel.jpg", pos: "40% 45%", tag: "For savers", line: "Savings that earns while you sleep.", alt: "A woman in the sun on a striped towel" },
-  { photo: "/home/linen.jpg", pos: "45% 35%", tag: "For nights out", line: "Split it in the chat, settle in a tap.", alt: "A man in a linen shirt by a blue door" },
+  { photo: "/home/p-freelancer.jpg", pos: "52% 40%", tag: "For freelancers", line: "A client abroad pays your USD account. It lands as dollars.", alt: "A woman on a sofa smiling at her laptop in a sunny apartment" },
+  { photo: "/home/p-remote.jpg", pos: "52% 40%", tag: "For remote workers", line: "Paid in dollars, living in euros. One account for both.", alt: "A man with a coffee at an open window over Lisbon" },
+  { photo: "/home/p-friends.jpg", pos: "58% 40%", tag: "For friend groups", line: "One chat for the trip. Everyone settles up before they leave.", alt: "Four friends laughing in the back of an open jeep by the sea" },
+  { photo: "/home/p-traveller.jpg", pos: "47% 40%", tag: "For travellers", line: "Data on before you land. Nothing to type, nothing to scan.", alt: "A woman with braids smiling as she walks out of an airport" },
+  { photo: "/home/p-saver.jpg", pos: "60% 40%", tag: "For savers", line: "Savings that earns while you sleep.", alt: "A man asleep in a hammock on a shaded terrace" },
+  { photo: "/home/p-nights.jpg", pos: "55% 40%", tag: "For nights out", line: "Split it in the chat, settle in a tap.", alt: "Four friends walking arm in arm down a lit old town street at night" },
 ];
 
 export function People() {
@@ -137,7 +139,7 @@ export function People() {
       </div>
       <ul
         aria-label="Who HOLD is for"
-        className="mt-12 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 md:gap-5 md:px-[max(32px,calc((100vw-1120px)/2))] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="mt-12 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 md:gap-5 md:scroll-px-[max(32px,calc((100vw-1120px)/2))] md:px-[max(32px,calc((100vw-1120px)/2))] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {PEOPLE.map((p) => (
           <li key={p.tag} className="relative aspect-[3/4] w-[80vw] max-w-[340px] shrink-0 snap-center overflow-hidden rounded-[28px] md:snap-start">
