@@ -27,6 +27,11 @@ import { Icon, type IconName } from "./Icon";
 const CARDS: {
   photo: string;
   pos: string;
+  /**
+   * How far down the card the sharp photo starts, as a share of its height.
+   * Above it, the same photo blurred, which is where the balance sits.
+   */
+  drop?: number;
   alt: string;
   pill: string;
   name: string;
@@ -37,8 +42,12 @@ const CARDS: {
   banner: { title: string; body: string; coins: string[] };
 }[] = [
   {
+    // Faces sit high in these photos, where the card puts the balance, so
+    // the photo drops into the card (see `drop`) and the face lands between
+    // the balance and the buttons, the way the app shows a person.
     photo: "/home/lisbon.jpg",
-    pos: "30% 50%",
+    pos: "30% 0%",
+    drop: 0.3,
     alt: "A woman with coffee on a balcony over the rooftops of Lisbon",
     pill: "Euro",
     name: "Main",
@@ -49,9 +58,10 @@ const CARDS: {
     banner: { title: "Open your account", body: "Your own USD, EUR and GBP account numbers.", coins: ["€", "$", "£"] },
   },
   {
-    photo: "/home/walk.jpg",
-    pos: "40% 50%",
-    alt: "A woman in a linen coat walking past a deep blue wall",
+    photo: "/home/linen.jpg",
+    pos: "42% 0%",
+    drop: 0.38,
+    alt: "A man in a linen shirt in front of a blue door",
     pill: "Dollar",
     name: "Main",
     flags: ["🇺🇸", "🇪🇺"],
@@ -62,7 +72,8 @@ const CARDS: {
   },
   {
     photo: "/home/towel.jpg",
-    pos: "40% 45%",
+    pos: "11% 0%",
+    drop: 0.32,
     alt: "A woman lying in the sun on a striped towel with a coffee",
     pill: "Savings",
     name: "Savings",
@@ -156,7 +167,23 @@ export function Accounts() {
                 } as CSSProperties
               }
             >
-              <Image src={c.photo} alt={c.alt} fill quality={90} sizes="(min-width: 768px) 380px, 75vw" className="object-cover" style={{ objectPosition: c.pos }} />
+              {c.drop ? (
+                <Image src={c.photo} alt="" fill quality={40} sizes="300px" className="scale-125 object-cover blur-[28px]" style={{ objectPosition: c.pos }} />
+              ) : null}
+              <div
+                className="absolute inset-0"
+                style={
+                  c.drop
+                    ? {
+                        transform: `translateY(${c.drop * 100}%)`,
+                        WebkitMaskImage: "linear-gradient(to bottom, transparent, black 16%)",
+                        maskImage: "linear-gradient(to bottom, transparent, black 16%)",
+                      }
+                    : undefined
+                }
+              >
+                <Image src={c.photo} alt={c.alt} fill quality={90} sizes="(min-width: 768px) 380px, 80vw" className="object-cover" style={{ objectPosition: c.pos }} />
+              </div>
               <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/5 to-black/45" />
               <div className="absolute inset-0 flex flex-col p-3.5 text-white">
                 <div className="flex items-center justify-between">

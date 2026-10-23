@@ -43,7 +43,7 @@ export function Tour() {
         </H2>
         <div className="mt-12 md:mt-16 md:grid md:grid-cols-[420px_1fr] md:items-start md:gap-16">
           <div className="md:sticky md:top-24">
-            <MainCard photo={{ src: "/home/linen.jpg", pos: "50% 30%" }} action={action} onAction={setAction} />
+            <MainCard photo={{ src: "/home/walk.jpg", pos: "45% 40%" }} action={action} onAction={setAction} />
             <div className="mt-3 rounded-[22px] bg-white">
               <ActionPanel action={action} />
             </div>
