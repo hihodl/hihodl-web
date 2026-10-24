@@ -49,7 +49,7 @@ export default function PrivacyPage() {
               Privacy Policy
             </h1>
             <p className="text-base sm:text-lg text-[#94a3b8ff] font-['Inter'] font-[400]">
-              Last updated: October 10, 2026
+              Last updated: October 23, 2026
             </p>
           </div>
 
@@ -75,10 +75,37 @@ export default function PrivacyPage() {
                     <strong>Bookings you add to a plan.</strong> You can forward a booking email to your personal trips.hihodl.xyz address, or share a PDF, screenshot or text into the HOLD app. We read it once to pull out the trip details: the kind of booking, dates and times, places, the flight, train or hotel, the booking reference, the names of the passengers or guests, and the price. We keep only those details. The original email, file or image is not stored once it has been read. If a detail is not in the booking, we leave it empty rather than guess it.
                   </p>
                   <p className="mt-3">
-                    Members of the plan see the trip details. The booking reference, passenger names and price are shown only to the person who added the booking and to the people travelling on it. A forwarded email counts as yours only when it comes from your account&apos;s email address and passes the sender&apos;s email authentication (DMARC); anything else waits for you to confirm it before it reaches a plan. You can create a new trips address at any time, and the old one stops working.
+                    <strong>Where a booking goes.</strong> HOLD puts every booking you add into a trip for you, and tells you where it went so you can move it with one tap. It goes to a trip that already holds the same booking reference; or to a plan you share with others in a group or a one to one chat, but only when its dates overlap the booking and its place or its members match the booking (the destination, or the names of the passengers or guests); or to one of your own personal trips with the same dates; or, if nothing fits, to a new personal trip named after the destination. Dates alone never put a booking into a plan other people see. To match passengers we compare their names only with the names of the people in your own chats, never with anyone else on HOLD. A booking from a sender we could not verify only ever goes to your own personal trips.
                   </p>
                   <p className="mt-3">
-                    <strong>Your phone&apos;s calendar.</strong> If you choose Add to my calendar, HOLD writes the trip items you travel on into a calendar named HOLD on your phone. HOLD does not read your other calendar events, and nothing from your calendar is sent to us.
+                    <strong>Personal trips.</strong> A personal trip is a plan only you can see. Nobody else is in it unless you move a booking into a plan you share.
+                  </p>
+                  <p className="mt-3">
+                    Members of the plan see the trip details. The booking reference, passenger names and price are shown only to the person who added the booking and to the people travelling on it; when the passengers on a booking are members of the plan, they count as travelling on it. A forwarded email counts as yours only when it comes from one of your own addresses (your account&apos;s email, your connected Gmail, or the travel email you confirmed) and passes the sender&apos;s email authentication (DMARC). If a booking is later changed or cancelled and you forward that email too, we update or remove the trip item it matches. You can create a new trips address at any time, and the old one stops working.
+                  </p>
+                  <p className="mt-3">
+                    <strong>Your travel email.</strong> You can tell HOLD which email address your booking confirmations go to, even if it is not the one you sign in with. We send a six digit code to that address and use it only after you enter the code. HOLD fills it in as the contact email when you book a stay, a flight or an experience in the app, so the confirmation reaches the inbox your trips are built from. You can change or remove it at any time.
+                  </p>
+                  <p className="mt-3">
+                    <strong>Connecting Gmail.</strong> If you choose to connect your Gmail account, HOLD asks Google for read only access. We search your mailbox for travel bookings (flights, stays, trains, events and similar) and read only the messages that search returns, starting from the last 12 months; a booking for a trip that has already ended is ignored and nothing from it is kept. Each message is read once to pull out the trip details listed above; the message itself is not stored. We keep your Gmail address and an encrypted access token so the sync can keep running, and you can disconnect at any time in the app or in your Google account, after which we stop reading and delete the token. HOLD&apos;s use and transfer of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements. We use Gmail data only to add your bookings to your trips, and Google Calendar data only for what is described below; we do not use either for advertising, we do not sell it, we do not let people read it except with your permission, for security or to comply with the law, and we do not use it to train AI models.
+                  </p>
+                  <p className="mt-3">
+                    <strong>Your phone&apos;s calendar.</strong> If you choose Add to my calendar, HOLD writes the trip items you travel on into a calendar named HOLD on your phone. If you also allow HOLD to see your phone&apos;s calendars (the app asks your phone for permission the first time Hi needs it), then while you talk to Hi the app sends the times you are busy over the next weeks, without the names of your events, so Hi can tell you whether you are free and whether a booking clashes with something. Those busy times are sent to our AI provider only to answer you and are not used to train models; HOLD does not store them, and never changes an event in your phone&apos;s calendars. You can withdraw the permission at any time in your phone&apos;s settings.
+                  </p>
+                  <p className="mt-3">
+                    <strong>Your address book.</strong> If you allow HOLD to see your contacts, the app turns each phone number into a one way code (a hash) on your phone and asks which codes belong to people on HOLD who verified their number and let others find them by it. Only the codes are sent, and we do not keep them. While you talk to Hi, the app also sends the names you saved for the people it found, so Hi can find &quot;Marta&quot; when you ask to pay or ask her; we do not keep those names, and only the names that match what you asked for reach our AI provider. You can withdraw the permission at any time in your phone&apos;s settings.
+                  </p>
+                  <p className="mt-3">
+                    <strong>Where you are.</strong> If you allow HOLD to use your location while you use the app, your phone turns it into the name of the city and country you are in, and only that is sent with your messages to Hi, so it can suggest an eSIM, places or the local money for where you are. HOLD never asks for your location in the background, does not store it, and never sends your exact position to Hi.
+                  </p>
+                  <p className="mt-3">
+                    <strong>Reminders.</strong> When you ask Hi to remind you of something, the reminder is set on your phone as a notification. HOLD does not keep it on its servers.
+                  </p>
+                  <p className="mt-3">
+                    <strong>Connecting your Google Calendar.</strong> If you allow it when you connect your Google account, HOLD creates a calendar named HOLD in your Google account and keeps the trip items you travel on in it: the title, times, place, booking reference and a link back to the app. HOLD changes only that calendar, updates an event when the booking changes and removes it when the booking is cancelled; an event you delete yourself is never added back. If you also allow HOLD to see when you are busy, then when a new booking reaches your trips we ask Google whether you are busy at that time, and only learn the busy times, not what they are; if something clashes, Hi sends you a message about it. Two more choices are off unless you turn them on in Settings, Connected accounts: <em>Show event names</em> lets HOLD read the names and times of your own events around your bookings, so Hi can tell you which one clashes; <em>Let Hi move my events</em> lets HOLD move one of your events to another time, only after you tap yes, and never an event that has other people on it. Event names are shown only to you; a clash message waits for the app to collect it for at most 30 days, and when you ask Hi about your agenda, the times and names it needs are sent to our AI provider to answer you and are not used to train models. You can turn any of this off, or disconnect, at any time; disconnecting removes the HOLD calendar from your Google account and deletes our token.
+                  </p>
+                  <p className="mt-3">
+                    <strong>Connecting a Microsoft account.</strong> You can also connect an Outlook, Hotmail or work Microsoft account. Microsoft asks you to let HOLD read your mail and read and write your calendars, because Microsoft offers no narrower permission. HOLD only uses that access the way it is described above for Gmail and Google Calendar: we look for travel bookings among new messages in your inbox, read only messages whose subject looks like a booking, and keep only the trip details; we write only the HOLD calendar we create; we look at your busy times around a new booking; and we read event names or move an event only if you turned those on. We keep your account address and an encrypted access token. When you disconnect, we delete the HOLD calendar from your account, stop reading and delete the token; Microsoft does not let apps withdraw their own access, so the app also shows you where to remove HOLD in your Microsoft account.
                   </p>
                 </div>
                 <div>
@@ -109,7 +136,9 @@ export default function PrivacyPage() {
                 <li>Monitor and analyze usage patterns and trends</li>
                 <li>Detect, prevent, and address technical issues and security threats</li>
                 <li>Comply with legal obligations and enforce our terms</li>
-                <li>Read the bookings you forward or share and add them to the plan you choose</li>
+                <li>Read the bookings you forward, share or that we find in a Gmail or Outlook account you connected, and add each one to the trip it belongs to</li>
+                <li>Keep your bookings in the HOLD calendar of a Google or Microsoft account you connected, and tell you when a new booking clashes with your calendar</li>
+                <li>Let Hi, the assistant in the app, write to you about a trip of yours when it notices something worth knowing, for example a night with nowhere to stay; you can turn these trip ideas off in Settings, or for one trip or one kind of idea from the message itself</li>
               </ul>
             </section>
 

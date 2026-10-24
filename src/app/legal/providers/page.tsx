@@ -134,7 +134,26 @@ const INFRASTRUCTURE: Provider[] = [
     what:
       "The AI model behind Hi, the assistant in the app, and behind reading the bookings you forward or share into a plan.",
     data:
-      "The messages you send Hi and the context it needs to answer. For a booking: the email, PDF or image you sent, so the trip details can be read from it.",
+      "The messages you send Hi and the context it needs to answer. For a booking: the email, PDF or image you sent, or the message found in a Gmail or Outlook account you connected, so the trip details can be read from it. When you ask Hi about your agenda: the busy times, and event names if you turned them on, from a calendar you connected. Not used to train models.",
+  },
+  {
+    name: "Google (Gmail and Calendar APIs)",
+    what:
+      "Only if you connect your Google account: read only access to Gmail to find your travel bookings, and the HOLD calendar in your Google Calendar, with your busy times to warn you of a clash.",
+    data:
+      "Your Google address and an access token. From Gmail we read only messages a travel bookings search returns and keep only the trip details from them. In Google Calendar we write only the HOLD calendar, read busy times around a new booking, and read event names or move an event only if you turned those on. Our use follows the Google API Services User Data Policy, including the Limited Use requirements.",
+  },
+  {
+    name: "Microsoft (Microsoft Graph)",
+    what:
+      "Only if you connect a Microsoft account: your Outlook inbox to find your travel bookings, and the HOLD calendar in your Outlook calendar, with your busy times to warn you of a clash.",
+    data:
+      "Your Microsoft address and an access token. We read only new inbox messages whose subject looks like a booking and keep only the trip details from them. We write only the HOLD calendar, read busy times around a new booking, and show event names or move an event only if you turned those on.",
+  },
+  {
+    name: "Unsplash",
+    what: "Photos of the places on your trips.",
+    data: "The name of the place (a city or a country), never anything about you.",
   },
 ];
 
