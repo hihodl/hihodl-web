@@ -139,7 +139,7 @@
   "invite.activated": "เปิดใช้งานแล้ว",
   "invite.ptsEarned": "พอยต์ที่ได้",
   "invite.yourLink": "ลิงก์ชวนของคุณ",
-  "invite.qualify": "เพื่อนจะนับว่าเปิดใช้งานเมื่อเข้าพักครบ {stay} หรือลงทุน {amount} ภายใน {days} วัน",
+  "invite.qualify": "เพื่อนของคุณจะเปิดใช้งานเมื่อจองที่พัก {stay} หรือลงทุน {amount} ในเงินออมและเก็บไว้ {holdDays} วัน ภายใน {days} วัน",
   "invite.linkNotReady": "ลิงก์ของคุณยังไม่พร้อม ลองใหม่อีกสักครู่",
   "invite.yourInvites": "คำชวนของคุณ",
   "invite.sentSummary": "ส่งแล้ว {count} · <green>{points} พอยต์</green>",

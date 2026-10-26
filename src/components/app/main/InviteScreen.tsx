@@ -18,6 +18,7 @@ import { useState } from "react";
 import { fmtNumber } from "@/lib/app/i18n/format";
 import { Rich, useT } from "@/lib/app/i18n/react";
 import {
+  INVEST_HOLD_DAYS_FALLBACK,
   QUALIFY_STAY_USD_FALLBACK,
   QUALIFY_WINDOW_DAYS_FALLBACK,
   useInvites,
@@ -121,10 +122,11 @@ export function InviteScreen({ onBack }: { onBack: () => void }) {
                 WhatsApp
               </a>
             </div>
-            {s.qualifyUsd !== undefined ? (
+            {s.qualifyInvestUsd !== undefined ? (
               <p className="mt-3 text-[12.5px] leading-[18px] text-white/55">
                 {t("menu.invite.qualify", {
-                  amount: `$${pts(s.qualifyUsd)}`,
+                  amount: `$${pts(s.qualifyInvestUsd)}`,
+                  holdDays: s.investHoldDays ?? INVEST_HOLD_DAYS_FALLBACK,
                   stay: `$${pts(s.qualifyStayUsd ?? QUALIFY_STAY_USD_FALLBACK)}`,
                   days: s.qualifyWindowDays ?? QUALIFY_WINDOW_DAYS_FALLBACK,
                 })}

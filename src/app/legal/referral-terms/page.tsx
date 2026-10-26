@@ -7,7 +7,8 @@
  * Every number on this page is copied from a live constant, not from a deck:
  *   HIPOINTS.REFERRAL_QUALIFIED_POINTS = 2500   (server/services/hipoints.service.ts)
  *   HIPOINTS.REFERRAL_WELCOME_POINTS   = 1000
- *   HIPOINTS.REFERRAL_QUALIFY_USD      = 50
+ *   HIPOINTS.REFERRAL_QUALIFY_INVEST_USD = 100
+ *   HIPOINTS.REFERRAL_INVEST_HOLD_DAYS   = 30
  *   HIPOINTS.REFERRAL_QUALIFY_STAY_USD = 100
  *   HIPOINTS.REFERRAL_WINDOW_DAYS      = 90
  *   HIPOINTS.MAX_REFERRAL_AWARDS       = 10
@@ -69,15 +70,15 @@ export default function ReferralTermsPage() {
               Referral program terms
             </h1>
             <p className="text-base sm:text-lg text-[#94a3b8ff] font-['Inter'] font-[400]">
-              Last updated: October 14, 2026
+              Last updated: October 26, 2026
             </p>
           </div>
 
           <div className="rounded-2xl border border-[rgba(255,183,3,0.35)] bg-[rgba(255,183,3,0.06)] p-6">
             <p className="text-[#eaf6ffff] font-['Inter'] font-[600] leading-relaxed">
               In short: your friend joins with your invite link and, within 90
-              days, completes a stay of $100 or more or makes a swap of $50 or
-              more. You both get HiPoints: 2,500 for you, 1,000 for them. Up to
+              days, completes a stay of $100 or more, or invests $100 in
+              Savings and keeps it there for 30 days. You both get HiPoints: 2,500 for you, 1,000 for them. Up to
               10 rewarded invites per account. The detail is below, and it is
               the detail our systems actually apply.
             </p>
@@ -117,16 +118,21 @@ export default function ReferralTermsPage() {
                   friend has checked out. A cancelled stay does not count.
                 </li>
                 <li>
-                  A single swap in the app worth at least{" "}
-                  <span className="text-[#eaf6ffff] font-[600]">$50</span>. It
-                  has to be one swap of $50 or more, not $50 added up across
-                  several.
+                  At least{" "}
+                  <span className="text-[#eaf6ffff] font-[600]">$100</span>{" "}
+                  invested in Savings and kept there for{" "}
+                  <span className="text-[#eaf6ffff] font-[600]">30 days</span>{" "}
+                  in a row, never dropping below $100. Only money put in after
+                  the referral was registered counts, interest does not count,
+                  and the 30 days have to end inside the 90-day window, so your
+                  friend needs to invest by about day 60. Taking money out and
+                  putting it back does not count twice.
                 </li>
               </ul>
               <p className="text-[#94a3b8ff]">
-                Signing up, installing the app, applying the code, or simply
-                holding a balance does not by itself earn anything on either
-                side. We pay both of you for the same event, and that event is
+                Signing up, installing the app, applying the code, swapping, or
+                simply holding a balance outside Savings does not by itself earn
+                anything on either side. We pay both of you for the same event, and that event is
                 one of the two above.
               </p>
             </section>

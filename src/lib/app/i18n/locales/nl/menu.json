@@ -139,7 +139,7 @@
   "invite.activated": "geactiveerd",
   "invite.ptsEarned": "ptn verdiend",
   "invite.yourLink": "Je uitnodigingslink",
-  "invite.qualify": "Je vriend activeert als die binnen {days} dagen een verblijf van {stay} afrondt of {amount} belegt.",
+  "invite.qualify": "Je vriend wordt geactiveerd door binnen {days} dagen een verblijf van {stay} te boeken, of {amount} in Sparen te zetten en {holdDays} dagen te laten staan.",
   "invite.linkNotReady": "Je link is nog niet klaar. Probeer het zo opnieuw.",
   "invite.yourInvites": "Je uitnodigingen",
   "invite.sentSummary": "{count} verstuurd · <green>{points} ptn</green>",

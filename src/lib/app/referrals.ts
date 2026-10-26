@@ -3,9 +3,11 @@
  *
  * `GET /referrals/me` is the summary (the link, the counts, the points each
  * side is paid, and what the friend must invest before either is) and `GET
- * /referrals/invites` the list. A friend qualifies on either a swap of
- * `qualifyUsd` or a completed stay of `qualifyStayUsd`, within
- * `qualifyWindowDays`. The numbers are the server's: the fallbacks
+ * /referrals/invites` the list. A friend qualifies on either
+ * `qualifyInvestUsd` kept in Savings for `investHoldDays`, or a completed stay
+ * of `qualifyStayUsd`, within `qualifyWindowDays`. A swap no longer counts
+ * (26-oct-2026); `qualifyUsd` is still served for shipped app builds and is
+ * not read here. The numbers are the server's: the fallbacks
  * the app keeps for a cold start are not repeated here, because the web draws
  * a skeleton until the summary lands rather than a figure it made up.
  *
@@ -31,7 +33,10 @@ export interface ReferralSummary {
   pointsEarned?: number;
   pointsPerReferrer?: number;
   pointsPerWelcome?: number;
-  qualifyUsd?: number;
+  /** Dollars the friend keeps in Savings to qualify (server: 100). */
+  qualifyInvestUsd?: number;
+  /** Days that amount has to stay in Savings (server: 30). */
+  investHoldDays?: number;
   /** A completed stay of this much also qualifies the friend (server: 100). */
   qualifyStayUsd?: number;
   /** Days the friend has to qualify, from the link (server: 90). */
@@ -43,6 +48,7 @@ export interface ReferralSummary {
 /** Until the backend that sends them is deployed, the two new rules read as the server sets them. */
 export const QUALIFY_STAY_USD_FALLBACK = 100;
 export const QUALIFY_WINDOW_DAYS_FALLBACK = 90;
+export const INVEST_HOLD_DAYS_FALLBACK = 30;
 
 interface ApiInvite {
   id: string;

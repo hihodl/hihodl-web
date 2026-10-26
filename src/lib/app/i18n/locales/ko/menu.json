@@ -139,7 +139,7 @@
   "invite.activated": "활성화됨",
   "invite.ptsEarned": "받은 포인트",
   "invite.yourLink": "내 초대 링크",
-  "invite.qualify": "친구가 {days}일 안에 {stay} 이상 숙박을 마치거나 {amount} 이상 투자하면 활성화돼요.",
+  "invite.qualify": "친구는 {days}일 안에 {stay} 숙박을 예약하거나, 저축에 {amount}를 투자해 {holdDays}일 동안 유지하면 활성화돼요.",
   "invite.linkNotReady": "아직 링크가 준비되지 않았어요. 잠시 후 다시 시도하세요.",
   "invite.yourInvites": "내 초대",
   "invite.sentSummary": "{count}명 초대 · <green>{points}P</green>",
