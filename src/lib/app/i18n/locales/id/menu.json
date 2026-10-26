@@ -139,7 +139,7 @@
   "invite.activated": "aktif",
   "invite.ptsEarned": "poin diperoleh",
   "invite.yourLink": "Link undanganmu",
-  "invite.qualify": "Temanmu aktif setelah menyelesaikan menginap senilai {stay} atau berinvestasi {amount} dalam {days} hari.",
+  "invite.qualify": "Temanmu aktif dengan memesan penginapan {stay}, atau berinvestasi {amount} di Tabungan dan menyimpannya selama {holdDays} hari, dalam {days} hari.",
   "invite.linkNotReady": "Link-mu belum siap. Coba lagi sebentar lagi.",
   "invite.yourInvites": "Undanganmu",
   "invite.sentSummary": "{count} terkirim · <green>{points} poin</green>",

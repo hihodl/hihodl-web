@@ -23,7 +23,7 @@ One plan, free.
 |------|-------|------------------------|------------|----------|
 | Free | $0 | first $500 converted each month | 0.50% all-in on the excess | $2 |
 
-Solana swaps are always gasless. No hidden spread, no tier games. Invite a friend: when they make a swap of $50 or more within 14 days, you get 2,500 HiPoints and they get 1,000, up to 3 rewarded invites (https://hihodl.xyz/legal/referral-terms).
+Solana swaps are always gasless. No hidden spread, no tier games. Invite a friend: when they complete a stay of $100 or more, or invest $100 in Savings and keep it there for 30 days, within 90 days, you get 2,500 HiPoints and they get 1,000, up to 10 rewarded invites (https://hihodl.xyz/legal/referral-terms).
 
 ## Core features
 - **Username payments** — send stablecoins to @username, no addresses to copy.

@@ -139,7 +139,7 @@
   "invite.activated": "walioanza kutumia",
   "invite.ptsEarned": "pointi ulizopata",
   "invite.yourLink": "Kiungo chako cha mwaliko",
-  "invite.qualify": "Rafiki yako anahesabika akimaliza malazi ya {stay} au kuwekeza {amount} ndani ya siku {days}.",
+  "invite.qualify": "Rafiki yako anaamilishwa kwa kuweka nafasi ya malazi ya {stay}, au kuwekeza {amount} kwenye Akiba na kuiacha siku {holdDays}, ndani ya siku {days}.",
   "invite.linkNotReady": "Kiungo chako bado hakijawa tayari. Jaribu tena baada ya muda mfupi.",
   "invite.yourInvites": "Mialiko yako",
   "invite.sentSummary": "{count} imetumwa · <green>pointi {points}</green>",

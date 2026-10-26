@@ -139,7 +139,7 @@
   "invite.activated": "एक्टिवेट हुए",
   "invite.ptsEarned": "pts कमाए",
   "invite.yourLink": "आपका इनवाइट लिंक",
-  "invite.qualify": "आपका दोस्त तब एक्टिवेट होता है जब वह {days} दिनों में {stay} का स्टे पूरा करे या {amount} निवेश करे।",
+  "invite.qualify": "आपका दोस्त {days} दिनों के अंदर {stay} का स्टे बुक करके, या बचत में {amount} निवेश करके {holdDays} दिन रखकर एक्टिवेट होता है।",
   "invite.linkNotReady": "आपका लिंक अभी तैयार नहीं है। थोड़ी देर में फिर कोशिश करें।",
   "invite.yourInvites": "आपके इनवाइट",
   "invite.sentSummary": "{count} भेजे · <green>{points} pts</green>",
