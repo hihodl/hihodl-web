@@ -3,6 +3,7 @@ import { createSupabaseClient } from '@/lib/supabase';
 import {
   escapeHtml,
   ipRateLimit,
+  isSameSiteRequest,
   signToken,
   validateDisplayName,
   validateEmail,
@@ -17,6 +18,11 @@ const REFERRAL_CODE_RE = /^[0-9a-z]{8}$/;
 
 export async function POST(req: NextRequest) {
   try {
+    // Only our own signup forms post here (see isSameSiteRequest).
+    if (!isSameSiteRequest(req)) {
+      return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+    }
+
     // ── Rate limit per IP — 5 signups / minute ─────────────────────────────
     // Without this an attacker scripts thousands of requests → thousands of
     // Resend emails sent ($) + sender-reputation damage to noreply@hihodl.xyz.
