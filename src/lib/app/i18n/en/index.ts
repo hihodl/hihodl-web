@@ -11,9 +11,11 @@ import account from "./account";
 import activity from "./activity";
 import analytics from "./analytics";
 import board from "./board";
+import business from "./business";
 import common from "./common";
 import creator from "./creator";
 import developers from "./developers";
+import enquiries from "./enquiries";
 import front from "./front";
 import groupThread from "./groupThread";
 import groups from "./groups";
@@ -25,6 +27,7 @@ import money from "./money";
 import offers from "./offers";
 import payments from "./payments";
 import payPage from "./payPage";
+import publicPages from "./publicPages";
 import prefs from "./prefs";
 import requests from "./requests";
 import runner from "./runner";
@@ -57,6 +60,7 @@ export const NAMESPACES = {
   spaces,
   listings,
   creator,
+  business,
   runner,
   board,
   offers,
@@ -65,6 +69,8 @@ export const NAMESPACES = {
   trips,
   payPage,
   developers,
+  enquiries,
+  publicPages,
 } as const;
 
 type Namespaces = typeof NAMESPACES;

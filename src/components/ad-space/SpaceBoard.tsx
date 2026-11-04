@@ -6,6 +6,7 @@ import { type ReactNode, useCallback, useEffect, useRef, useState } from "react"
 import { currentCheckout, existingCheckoutKey } from "@/lib/ad-space/checkout-client";
 import {
   instantUtc,
+  isPartnershipSpace,
   isSessionSpace,
   isTieredSpace,
   serviceSummary,
@@ -14,17 +15,22 @@ import {
   usdFromUsdc,
 } from "@/lib/ad-space/format";
 import { gradientCss } from "@/lib/ad-space/look";
+import { type SavedEnquiry, enquiryPath, savedEnquiries } from "@/lib/ad-space/enquiries";
+import { canAskAbout } from "@/lib/ad-space/enquiry-rules";
 import { PAY_PARAM, isPositionId } from "@/lib/ad-space/pay-here";
 import { type SavedOffer, offerModeOf, offerPath, savedOffers } from "@/lib/ad-space/offers-client";
 import type { OfferKind, OfferMode, Order, Position, PositionOffers, Space } from "@/lib/ad-space/types";
 import { useT } from "@/lib/app/i18n/react";
 
+import { sellerName } from "./business";
 import { Checkout } from "./Checkout";
+import { EnquirySheet } from "./EnquirySheet";
 import { OfferSheet } from "./OfferSheet";
 import { PositionCard } from "./PositionCard";
 import { WholeListing, squaresOf, wholeOf } from "./WholeListing";
 import { ProductBoard } from "./ProductBoard";
 import { TierLadder } from "./TierLadder";
+import { Editable } from "./edit-mode";
 import { btnSmall, btnSmallSecondary, pill } from "./ui";
 import { useServerNow } from "./useServerNow";
 
@@ -67,8 +73,13 @@ export function SpaceBoard({
   /** The offer or bid form: a spot, or null for a service space's own offer. */
   const [offerFor, setOfferFor] = useState<{ position: Position | null; kind: OfferKind } | null>(null);
   const [mine, setMine] = useState<SavedOffer[]>([]);
+  /** "Ask about this spot": a spot, or null for the whole space. */
+  const [askFor, setAskFor] = useState<{ position: Position | null } | null>(null);
+  const [asked, setAsked] = useState<SavedEnquiry[]>([]);
   const now = useServerNow();
   const [resumable, setResumable] = useState<{ position: Position; order: Order } | null>(null);
+  /** The package left its event's host (409 `package_not_organised`): said once, above the spots. */
+  const [gone, setGone] = useState(false);
   const cards = useRef(new Map<string, HTMLElement>());
 
   const [buyable, setBuyable] = useState(space.status === "live");
@@ -104,6 +115,7 @@ export function SpaceBoard({
 
   /* The offers this browser made here, so a sponsor finds their way back. */
   useEffect(() => setMine(savedOffers(space.id)), [space.id]);
+  useEffect(() => setAsked(savedEnquiries(space.id)), [space.id]);
 
   /* `?pay=<spot>`: this checkout's own address (its camera code, a wallet's
      browser, the HOLD button's fallback) opens the spot's checkout, when the
@@ -127,6 +139,20 @@ export function SpaceBoard({
   const onPaid = useCallback(() => router.refresh(), [router]);
   const onClose = useCallback(() => setCheckoutFor(null), []);
   const onOfferClose = useCallback(() => setOfferFor(null), []);
+  const onAskClose = useCallback(() => setAskFor(null), []);
+  const onAskSent = useCallback(() => setAsked(savedEnquiries(space.id)), [space.id]);
+  const ask = useCallback((p: Position | null) => setAskFor({ position: p }), []);
+  const toGone = useCallback(() => {
+    setCheckoutFor(null);
+    setOfferFor(null);
+    setGone(true);
+    router.refresh();
+  }, [router]);
+  const toEnquiry = useCallback(() => {
+    setCheckoutFor(null);
+    setOfferFor(null);
+    setAskFor({ position: null });
+  }, []);
   const onOfferSent = useCallback(() => {
     setMine(savedOffers(space.id));
     router.refresh();
@@ -138,10 +164,13 @@ export function SpaceBoard({
      on the rung and not on the space, exactly as it does on a placement. */
   const tiered = isTieredSpace(space);
   const tiers = tiered ? spaceTiers(space) : [];
-  const spaceMode = offerModeOf(space);
+  /* A partnership in kind is agreed in an enquiry, never offered on: no offer
+     mode, and a checkout that meets its 409 hands over to the enquiry. */
+  const partnership = isPartnershipSpace(space);
+  const spaceMode = partnership ? null : offerModeOf(space);
   const modeOf = useCallback(
-    (p: Position): OfferMode | null => offerModeOf(space, isService && !tiered ? null : p),
-    [space, isService, tiered],
+    (p: Position): OfferMode | null => (partnership ? null : offerModeOf(space, isService && !tiered ? null : p)),
+    [space, isService, tiered, partnership],
   );
   /** Bidding is open while the server says so and its end is still ahead on the server's clock. */
   const biddingOpen = useCallback(
@@ -184,6 +213,8 @@ export function SpaceBoard({
   );
 
   const active = hoverId ?? flashId;
+  /** The spot this browser's own checkout holds: still worth a question, unlike one somebody else holds. */
+  const heldByMe = resumable && resumable.order.status === "awaiting_payment" ? resumable.position.id : null;
   const sizeOf = (p: Position) => space.template.zones.find((z) => z.zoneKey === p.zoneKey)?.sizeLabel ?? null;
   const session = isSessionSpace(space);
 
@@ -231,13 +262,19 @@ export function SpaceBoard({
           onHover={setHoverId}
           onSponsor={setCheckoutFor}
           onOffer={isService && !tiered ? undefined : openOffer}
+          onAsk={buyable && canAskAbout(p, heldByMe) ? ask : undefined}
         />
       ))}
     </div>
   );
 
-  const notices = (resumable && !checkoutFor) || mine.length > 0 ? (
+  const notices = (resumable && !checkoutFor) || mine.length > 0 || gone ? (
     <div className="container-page flex flex-col gap-4">
+      {gone && (
+        <p className="rounded-card border border-amber/40 bg-amber/[0.06] p-5 text-small text-sp-ink" role="status">
+          {t("publicPages.sponsor.noLongerOnSale")}
+        </p>
+      )}
       {resumable && !checkoutFor && (
         <div className="flex flex-col gap-4 rounded-card border border-amber/40 bg-amber/[0.06] p-5 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-small text-sp-ink">
@@ -264,74 +301,89 @@ export function SpaceBoard({
 
   return (
     <>
-      <ListingBand space={space}>
-        {head}
-        {/* On a placement the product IS the banner: the suitcase itself, with
-            every spot on it live. `ListingStage` is the one boundary a photo
-            of the real object would replace (see its comment). */}
-        {!isService && (
-          <div id="spots" className="mt-10 scroll-mt-20">
-            <ListingStage space={space} activeId={active} onHover={setHoverId} onPick={pick} mode={spaceMode} />
-          </div>
-        )}
-      </ListingBand>
+      <Editable target="cover" chip="corner">
+        <ListingBand space={space}>
+          {head}
+          {/* On a placement the product IS the banner: the suitcase itself, with
+              every spot on it live. `ListingStage` is the one boundary a photo
+              of the real object would replace (see its comment). */}
+          {!isService && (
+            <div id="spots" className="mt-10 scroll-mt-20">
+              <ListingStage space={space} activeId={active} onHover={setHoverId} onPick={pick} mode={spaceMode} />
+            </div>
+          )}
+        </ListingBand>
+      </Editable>
 
       {stats}
       {notices}
 
       {isService && (
-        <section id="spots" className="container-page scroll-mt-20 py-10 md:py-14" aria-labelledby="pick">
-          <h2 id="pick" className="font-display text-h3 font-light text-sp-ink md:text-h2">
-            {session ? t("board.stats.bookSession") : t("board.space.pickYour", { noun })}
-          </h2>
-          {serviceSummary(space) && (
-            <p className="mt-3 max-w-2xl whitespace-pre-line break-words text-body text-sp-ink/85 [overflow-wrap:anywhere]">
-              {serviceSummary(space)}
-            </p>
-          )}
-          <div className="mt-8 flex flex-col gap-6">
-            {!tiered && spaceMode && spaceMode !== "bids" && (
-              <SpaceOffersPanel
-                mode={spaceMode}
-                offers={space.spaceOffers}
-                canOffer={buyable && space.positions.some((p) => p.status === "open")}
-                session={session}
-                now={now}
-                onOffer={() => setOfferFor({ position: null, kind: "offer" })}
-              />
+        <Editable target="spots">
+          <section id="spots" className="container-page scroll-mt-20 py-10 md:py-14" aria-labelledby="pick">
+            <h2 id="pick" className="font-display text-h3 font-light text-sp-ink md:text-h2">
+              {session ? t("board.stats.bookSession") : t("board.space.pickYour", { noun })}
+            </h2>
+            {serviceSummary(space) && (
+              <p className="mt-3 max-w-2xl whitespace-pre-line break-words text-body text-sp-ink/85 [overflow-wrap:anywhere]">
+                {serviceSummary(space)}
+              </p>
             )}
-            {tiered && (
-              <TierLadder
-                tiers={tiers}
-                buyable={buyable}
-                session={session}
-                modeOf={modeOf}
-                biddingOpen={biddingOpen}
-                now={now}
-                onSponsor={setCheckoutFor}
-                onOffer={openOffer}
-              />
-            )}
-            {wholeCard && <div className="mb-8">{wholeCard}</div>}
-            {cardList}
-          </div>
-        </section>
+            <div className="mt-8 flex flex-col gap-6">
+              {!tiered && spaceMode && spaceMode !== "bids" && (
+                <SpaceOffersPanel
+                  mode={spaceMode}
+                  offers={space.spaceOffers}
+                  canOffer={buyable && space.positions.some((p) => p.status === "open")}
+                  session={session}
+                  now={now}
+                  onOffer={() => setOfferFor({ position: null, kind: "offer" })}
+                />
+              )}
+              {tiered && (
+                <TierLadder
+                  tiers={tiers}
+                  buyable={buyable}
+                  session={session}
+                  modeOf={modeOf}
+                  biddingOpen={biddingOpen}
+                  now={now}
+                  onSponsor={setCheckoutFor}
+                  onOffer={openOffer}
+                />
+              )}
+              {wholeCard && <div className="mb-8">{wholeCard}</div>}
+              {cardList}
+            </div>
+          </section>
+        </Editable>
       )}
 
       {details}
 
       {!isService && (cardList || wholeCard) && (
-        <section className="container-page py-12 md:py-16" aria-labelledby="every-spot">
-          <h2 id="every-spot" className="font-display text-h3 font-light text-sp-ink md:text-h2">
-            {whole ? t("board.space.spotOrAll") : t("board.space.pickYour", { noun: "spot" })}
-          </h2>
-          {wholeCard && <div className="mt-8">{wholeCard}</div>}
-          {cardList && <div className="mt-8">{cardList}</div>}
-        </section>
+        <Editable target="spots">
+          <section className="container-page py-12 md:py-16" aria-labelledby="every-spot">
+            <h2 id="every-spot" className="font-display text-h3 font-light text-sp-ink md:text-h2">
+              {whole ? t("board.space.spotOrAll") : t("board.space.pickYour", { noun: "spot" })}
+            </h2>
+            {wholeCard && <div className="mt-8">{wholeCard}</div>}
+            {cardList && <div className="mt-8">{cardList}</div>}
+          </section>
+        </Editable>
+      )}
+
+      {/* Only a live space takes questions (409 space_not_taking_enquiries otherwise). */}
+      {(buyable || asked.length > 0) && (
+        <AskPanel seller={sellerName(space.creator)} canAsk={buyable} asked={asked} onAsk={() => ask(null)} partnership={partnership} />
+      )}
+
+      {askFor && (
+        <EnquirySheet space={space} position={askFor.position} heldByMe={heldByMe} onClose={onAskClose} onSent={onAskSent} />
       )}
 
       {checkoutFor && (
-        <Checkout space={space} position={checkoutFor} onClose={onClose} onPaid={onPaid} />
+        <Checkout space={space} position={checkoutFor} onClose={onClose} onPaid={onPaid} onByEnquiry={toEnquiry} onNoLongerOnSale={toGone} />
       )}
 
       {offerFor && (
@@ -342,6 +394,8 @@ export function SpaceBoard({
           now={now}
           onClose={onOfferClose}
           onSent={onOfferSent}
+          onByEnquiry={toEnquiry}
+          onNoLongerOnSale={toGone}
         />
       )}
     </>
@@ -498,5 +552,61 @@ function YourOffers({ offers }: { offers: SavedOffer[] }) {
         ))}
       </ul>
     </div>
+  );
+}
+
+/**
+ * "Ask the seller", for the space as a whole, and the conversations this
+ * browser already opened here, each with its link. On a partnership package
+ * the enquiry IS the way in, so it reads "Apply as partner" and leads.
+ */
+function AskPanel({
+  seller,
+  canAsk,
+  asked,
+  onAsk,
+  partnership,
+}: {
+  seller: string;
+  canAsk: boolean;
+  asked: SavedEnquiry[];
+  onAsk: () => void;
+  partnership: boolean;
+}) {
+  const t = useT();
+  return (
+    <section className="container-page pb-12 md:pb-16" aria-labelledby="ask-seller">
+      <div className="flex flex-col gap-4 rounded-card border border-[color:var(--color-hairline)] bg-sp-ink/[0.03] p-5 md:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <h2 id="ask-seller" className="text-body text-sp-ink">
+              {partnership ? t("publicPages.sponsor.partnerPanelTitle") : t("enquiries.ask.panelTitle")}
+            </h2>
+            <p className="mt-1 max-w-xl text-small text-sp-ink/85">
+              {partnership ? t("publicPages.sponsor.partnerPanelBody", { seller }) : t("enquiries.ask.panelBody", { seller })}
+            </p>
+          </div>
+          {canAsk && (
+            <button type="button" className={partnership ? btnSmall : btnSmallSecondary} onClick={onAsk}>
+              {partnership ? t("publicPages.sponsor.applyAsPartner") : t("enquiries.ask.seller")}
+            </button>
+          )}
+        </div>
+        {asked.length > 0 && (
+          <div className="flex flex-col gap-2 border-t border-[color:var(--color-hairline)] pt-4">
+            <p className="text-tiny text-sp-ink/85">{t("enquiries.ask.yours", { count: asked.length })}</p>
+            <ul className="flex flex-wrap gap-2">
+              {asked.slice(0, 6).map((e) => (
+                <li key={e.token}>
+                  <a href={enquiryPath(e.token)} rel="noreferrer" className={btnSmallSecondary}>
+                    {e.label ?? t("enquiries.ask.whole")}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }

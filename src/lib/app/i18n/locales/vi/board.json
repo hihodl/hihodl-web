@@ -361,5 +361,11 @@
   "product.openForBids": "đang mở đấu giá",
   "product.offer": "Đề nghị",
   "product.openToOffers": "nhận đề nghị",
-  "stats.seeMore": "Xem @{handle} đang mở những gì"
+  "stats.seeMore": "Xem @{handle} đang mở những gì",
+  "studio.audience": "Khán giả",
+  "studio.pastWork": "Tác phẩm trước đây",
+  "studio.link": "Liên kết",
+  "studio.text": "Văn bản",
+  "studio.edit": "Chỉnh sửa",
+  "studio.addStory": "Thêm một dòng về điều này"
 }

@@ -139,7 +139,7 @@
   "invite.activated": "aktifleşti",
   "invite.ptsEarned": "puan kazanıldı",
   "invite.yourLink": "Davet bağlantın",
-  "invite.qualify": "Arkadaşın kaydolduğunda, para eklediğinde ve {amount} veya daha fazla yatırım yaptığında aktifleşir.",
+  "invite.qualify": "Arkadaşın {days} gün içinde {stay} konaklama ayırttığında ya da Birikime {amount} yatırıp {holdDays} gün tuttuğunda aktifleşir.",
   "invite.linkNotReady": "Bağlantın henüz hazır değil. Birazdan tekrar dene.",
   "invite.yourInvites": "Davetlerin",
   "invite.sentSummary": "{count} gönderildi · <green>{points} puan</green>",

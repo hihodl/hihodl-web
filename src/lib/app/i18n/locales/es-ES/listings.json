@@ -532,5 +532,19 @@
   "sell.priceUsd": "Precio (USD)",
   "sell.reserveHint": "Reserva: por debajo, nada se vende solo. Nadie la ve.",
   "sell.hiddenMinHint": "Las ofertas por debajo reciben una contraoferta automática a este precio. Nadie lo ve.",
-  "sell.zonePitchPlaceholder": "La posición más grande, sale en todas las fotos del aeropuerto"
+  "sell.zonePitchPlaceholder": "La posición más grande, sale en todas las fotos del aeropuerto",
+  "attest.organiserDelivers": "Organizo este evento y entrego en él lo que promete este paquete, o devuelvo el dinero a la marca.",
+  "package.titleNew": "Nuevo paquete",
+  "package.titleAt": "{name} en {event}",
+  "package.shelf": "Los paquetes de tu evento",
+  "package.shelfFor": "Paquetes para {event}",
+  "package.shelfHint": "Lo que las marcas te compran como organizador: varios espacios idénticos a un precio.",
+  "package.notVerified": "Verifica que organizas este evento en Empresa, Tus eventos, y después añade sus paquetes.",
+  "package.closesAfterEvent": "Un paquete cierra como tarde al final del día siguiente al evento.",
+  "package.needsEvent": "Un paquete pertenece al evento que organizas.",
+  "package.fallback": "Si no se celebra, la marca recibe un reembolso o pasa a tu próximo evento.",
+  "package.partnersByEnquiry": "Los partners en especie se acuerdan en una consulta, así que este se vende por ofertas, sin precio.",
+  "package.notTheOrganiser": "Solo el organizador verificado de este evento vende sus paquetes.",
+  "package.notForThisEvent": "Ese paquete es para otro tipo de evento. Elige uno de esta lista.",
+  "package.deliveredAtEvent": "Lo entregas en el evento y después publicas una foto o un enlace como prueba. La marca lo confirma, y siete días sin respuesta cuentan como entregado."
 }

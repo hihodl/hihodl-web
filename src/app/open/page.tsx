@@ -3,6 +3,7 @@
 import React, { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
+import { withStoreAttribution } from "@/lib/analytics/mixpanel";
 import { APP_STORE_URL, PLAY_STORE_URL } from "@/lib/appLinks";
 import { Wordmark } from "@/components/site/Wordmark";
 
@@ -42,7 +43,7 @@ function OpenContent() {
       return;
     }
 
-    const storeUrl = detected === "ios" ? APP_STORE_URL : PLAY_STORE_URL;
+    const storeUrl = withStoreAttribution(detected === "ios" ? APP_STORE_URL : PLAY_STORE_URL);
 
     let timeoutId: number | undefined;
     const cancelFallback = () => {

@@ -21,7 +21,7 @@ import { useLocale, useT } from "@/lib/app/i18n/react";
 import { getPrefs } from "@/lib/app/i18n/store";
 import { APP_STORE_URL, PLAY_STORE_URL } from "@/lib/appLinks";
 import { initialsFor, safeAvatarUrl } from "@/lib/pay-links/page-rules";
-import { PAY_LOCALES, type PayLocale } from "@/lib/pay-links/pay-locales";
+import { PAY_LOCALES } from "@/lib/pay-links/pay-locales";
 import type { PayLinkOwner } from "@/lib/pay-links/types";
 
 import { usePayLocale } from "./pay-i18n";
@@ -159,20 +159,38 @@ export function LanguageButton() {
         <span>{info.code.split("-")[0].toUpperCase()}</span>
         <Ion name="chevron-down" size={12} className="text-white/60" />
       </button>
-      {open ? <LanguageSheet onClose={() => setOpen(false)} /> : null}
+      {open ? <PayLanguageSheet onClose={() => setOpen(false)} /> : null}
     </>
   );
 }
 
-function LanguageSheet({ onClose }: { onClose: () => void }) {
-  const t = useT();
+function PayLanguageSheet({ onClose }: { onClose: () => void }) {
   const { locale, choose } = usePayLocale();
+  return <LanguageSheet locales={PAY_LOCALES} current={locale} onPick={choose} onClose={onClose} />;
+}
+
+/**
+ * The language sheet: search, then one row per language. Shared by the pay
+ * page (its own languages) and the public space pages (the product's).
+ */
+export function LanguageSheet<C extends string>({
+  locales,
+  current,
+  onPick,
+  onClose,
+}: {
+  locales: readonly { code: C; native: string; english: string; country: string }[];
+  current: C;
+  onPick: (code: C) => void;
+  onClose: () => void;
+}) {
+  const t = useT();
   const flags = useFlags();
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
-  const items = PAY_LOCALES.filter((l) => !q || l.native.toLowerCase().includes(q) || l.english.toLowerCase().includes(q) || l.code.toLowerCase().includes(q));
-  const pick = (code: PayLocale) => {
-    choose(code);
+  const items = locales.filter((l) => !q || l.native.toLowerCase().includes(q) || l.english.toLowerCase().includes(q) || l.code.toLowerCase().includes(q));
+  const pick = (code: C) => {
+    onPick(code);
     onClose();
   };
   return (
@@ -181,7 +199,7 @@ function LanguageSheet({ onClose }: { onClose: () => void }) {
       <div className={sheetCard}>
         {items.length ? (
           items.map((l, i) => (
-            <SheetRow key={l.code} selected={l.code === locale} onClick={() => pick(l.code)} last={i === items.length - 1}>
+            <SheetRow key={l.code} selected={l.code === current} onClick={() => pick(l.code)} last={i === items.length - 1}>
               <Flag country={l.country} fallback={l.code} flags={flags} size={30} />
               {/* Plain English for every language (Alex, 2026-09-27): one line,
                   left to right, so Arabic and Urdu line up with the rest.

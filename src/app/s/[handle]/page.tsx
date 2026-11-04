@@ -18,10 +18,14 @@ import {
   openNowIn,
   splitGroups,
 } from "@/components/ad-space/creator";
+import { PublicLanguage } from "@/components/ad-space/PublicLanguage";
 import { SlimHeader } from "@/components/ad-space/sections";
 import { eyebrow } from "@/components/ad-space/ui";
 import { creatorTotalsText } from "@/lib/ad-space/format";
 import { getPublicCreator } from "@/lib/ad-space/server";
+import type { CreatorPage as CreatorPageData } from "@/lib/ad-space/types";
+import { t } from "@/lib/app/i18n";
+import { applyRequestLocale, inEnglish } from "@/lib/app/i18n/server";
 
 /**
  * /s/<handle> — one creator: who they are, then one banner per event they sell
@@ -53,7 +57,11 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     return { title: "HiSpace", robots: { index: false, follow: false } };
   }
 
-  const { creator, groups, totals } = found.page;
+  return inEnglish(() => creatorMetadata(found.page));
+}
+
+/** The creator's title and link card, in English (see `inEnglish`). */
+function creatorMetadata({ creator, groups, totals }: CreatorPageData): Metadata {
   // The handle as the backend holds it, so a link typed in any casing still
   // names one canonical address.
   const path = creatorPath(creator.xHandle);
@@ -94,21 +102,20 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 }
 
 export default async function CreatorPage({ params, searchParams }: { params: Params; searchParams: SearchParams }) {
+  const language = await applyRequestLocale();
   const found = await getPublicCreator(params.handle);
   if (found.kind === "missing") notFound();
 
   if (found.kind === "unreachable") {
     return (
       <>
-        <SlimHeader />
+        <SlimHeader language={language} />
         <main className="container-page flex min-h-[60vh] flex-col justify-center py-20">
           <p className={`${eyebrow} text-sp-amber`}>HiSpace</p>
           <h1 className="mt-5 max-w-2xl font-display text-h3 font-light text-sp-ink md:text-h2">
-            We couldn&rsquo;t load this creator just now.
+            {t("publicPages.creator.unreachableTitle")}
           </h1>
-          <p className="mt-5 max-w-xl text-body text-sp-ink/85">
-            This is on our side, not the link. Give it a moment and refresh the page.
-          </p>
+          <p className="mt-5 max-w-xl text-body text-sp-ink/85">{t("board.unavailable.body")}</p>
         </main>
       </>
     );
@@ -133,15 +140,20 @@ export default async function CreatorPage({ params, searchParams }: { params: Pa
             hrefFor={(k) => (k === "spaces" ? home : `${home}?kind=${k}`)}
           />
         }
-        right={past.length > 0 ? <PastEventsLink href={creatorScreenPath(creator.xHandle, PAST)} /> : null}
+        right={
+          <div className="flex items-center gap-2">
+            {past.length > 0 ? <PastEventsLink href={creatorScreenPath(creator.xHandle, PAST)} /> : null}
+            <PublicLanguage serverLocale={language.locale} chosen={language.chosen} />
+          </div>
+        }
       />
       <main>
         <CreatorHero creator={creator} openNow={openNowIn(current)} />
-        <section className="container-page" aria-label="Where they sell">
+        <section className="container-page" aria-label={t("publicPages.creator.whereTheySell")}>
           {current.length > 0 ? (
             <GroupGrid handle={creator.xHandle} groups={current} kind={kind} now={now} />
           ) : (
-            <p className="text-body text-sp-ink/85">Nothing on sale right now.</p>
+            <p className="text-body text-sp-ink/85">{t("publicPages.creator.nothingOnSale")}</p>
           )}
         </section>
       </main>

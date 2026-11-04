@@ -579,6 +579,8 @@ function describeClaim(e: unknown): string {
       return t("sponsor.claim.ownSpace");
     case "space_closed":
       return t("sponsor.claim.closed");
+    case "package_not_organised":
+      return t("publicPages.sponsor.noLongerOnSale");
     case "offer_not_payable":
       return t("sponsor.claim.offerNotPayable");
     case "relayer_not_configured":

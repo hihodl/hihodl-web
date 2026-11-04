@@ -4,12 +4,15 @@ import type { ReactNode } from "react";
 import { Wordmark } from "@/components/site/Wordmark";
 import { compactNumber, eventDates, eventCountdown, onTimeText, openSpots, trackRecordNeedsAttention, usdFromCents } from "@/lib/ad-space/format";
 import { gradientCss } from "@/lib/ad-space/look";
+import { bioOf, titleStyleOf } from "@/lib/ad-space/studio";
 import { t } from "@/lib/app/i18n";
 import { fmtNumber } from "@/lib/app/i18n/format";
 import type { CreatorGroup, CreatorProfile, EventSummary, SpaceCard } from "@/lib/ad-space/types";
 
+import { BusinessLogo, VerifiedBusinessMark, businessOf, websiteHost } from "./business";
 import { BannerFrame, VerifiedTick, eventBanner } from "./events";
 import { SpacesGround } from "./ground";
+import { titleFontStyle } from "./title-fonts";
 
 /**
  * A creator's page, `/s/<handle>`, and the screens under it.
@@ -243,19 +246,23 @@ export function kindCounts(cards: SpaceCard[]): Record<Kind, number> {
  * trust this person with a campaign; the numbers answer it without a sentence.
  */
 export function CreatorHero({ creator, openNow }: { creator: CreatorProfile; openNow: number }) {
-  const name = creator.xName || `@${creator.xHandle}`;
+  // A company selling from this account leads with its own name and logo.
+  const business = businessOf(creator);
+  const host = business ? websiteHost(business.website) : null;
+  const name = business?.displayName ?? (creator.xName || `@${creator.xHandle}`);
   const record = creator.trackRecord;
   const flagged = trackRecordNeedsAttention(record);
   const disputed = Math.max(0, record.disputed ?? 0);
+  const bio = bioOf(creator.bio);
 
   return (
     <section className="container-page pb-8 pt-6 md:pb-12 md:pt-10">
       <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center sm:gap-7">
-        <HeroAvatar creator={creator} />
+        {business ? <BusinessLogo business={business} size={96} /> : <HeroAvatar creator={creator} />}
         <div className="min-w-0">
           <h1 className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 break-words font-display text-[36px] font-light leading-[1.05] text-sp-ink [overflow-wrap:anywhere] md:text-h2">
-            <span>{name}</span>
-            <VerifiedTick type={creator.xVerifiedType} />
+            <span style={titleFontStyle(titleStyleOf(creator.titleStyle))}>{name}</span>
+            {business?.verified ? <VerifiedBusinessMark name={business.displayName} /> : <VerifiedTick type={creator.xVerifiedType} />}
           </h1>
           <a
             href={`https://x.com/${encodeURIComponent(creator.xHandle)}`}
@@ -265,6 +272,17 @@ export function CreatorHero({ creator, openNow }: { creator: CreatorProfile; ope
           >
             @{creator.xHandle}
           </a>
+          {host && business?.website && (
+            <a
+              href={business.website}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-4 mt-1.5 inline-block text-body text-sp-ink/85 transition-colors duration-180 hover:text-sp-amber"
+            >
+              {host}
+            </a>
+          )}
+          {bio && <p className="mt-2 max-w-xl break-words text-body text-sp-ink [overflow-wrap:anywhere]">{bio}</p>}
         </div>
       </div>
 

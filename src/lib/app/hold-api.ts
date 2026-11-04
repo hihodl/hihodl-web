@@ -37,6 +37,7 @@
 import { API_BASE } from "@/lib/ad-space/config";
 import { accessToken } from "@/lib/creator/session";
 
+import { notePartnersOnly } from "./ad-space-gate";
 import { normalisePriceSeries } from "./portfolio-curve";
 
 export class HoldApiError extends Error {
@@ -119,6 +120,7 @@ export async function read<T>(
     const err = (body as { error?: { code?: string; message?: string; details?: unknown } } | null)?.error;
     const code = err?.code ?? `HTTP_${res.status}`;
     const details = err?.details && typeof err.details === "object" && !Array.isArray(err.details) ? (err.details as Record<string, unknown>) : null;
+    notePartnersOnly(code, res.status);
     throw new HoldApiError(code, res.status, typeof err?.message === "string" ? err.message : null, details);
   }
 

@@ -92,6 +92,8 @@
   "products.esim.about": "Mobile Daten für das Land, in das du reist. Wähl einen Tarif in der App, installier die eSIM, und du bist bei der Landung online.",
   "products.spaces.door": "Sponsor-Spots verkaufen",
   "products.spaces.sub": "Auf deiner Ausrüstung oder deinem Content, bezahlt in USDC direkt an dich",
+  "products.spaces.buyDoor": "Sponsere einen Creator",
+  "products.spaces.buySub": "Buche einen Platz auf seiner Ausrüstung, seinem Content oder seinem Event",
   "linkPhone.pay.title": "Verknüpf dein Handy, um hier zu bezahlen",
   "linkPhone.pay.bodyAndroid": "Öffne HOLD auf diesem Handy, um es zu verknüpfen. Ab dann bestätigt die App jede Zahlung, die du hier startest.",
   "linkPhone.later": "Später",

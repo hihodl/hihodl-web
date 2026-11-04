@@ -92,6 +92,8 @@
   "products.esim.about": "Datos móviles para el país al que vas. Elige un plan en la app, instala la eSIM y tendrás conexión al aterrizar.",
   "products.spaces.door": "Vende posiciones de patrocinio",
   "products.spaces.sub": "En tu equipo o tu contenido, cobradas en USDC directamente a ti",
+  "products.spaces.buyDoor": "Patrocina a un creador",
+  "products.spaces.buySub": "Reserva un hueco en su equipo, su contenido o su evento",
   "linkPhone.pay.title": "Vincula tu móvil para pagar desde aquí",
   "linkPhone.pay.bodyAndroid": "Abre HOLD en este móvil para vincularlo. A partir de entonces, la app aprobará cada pago que empieces aquí.",
   "linkPhone.later": "Más tarde",

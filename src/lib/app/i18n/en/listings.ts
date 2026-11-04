@@ -320,6 +320,7 @@ const listings = {
   "attest.publicPlace": "Every session happens at the event venue or another public place, never at a private address.",
   "attest.noInvestmentAdvice": "I won't give investment advice in a session, or tell anyone what to buy or sell.",
   "attest.noInvestorIntros": "I won't sell or promise introductions to investors, in a session or because of one.",
+  "attest.organiserDelivers": "I host this event and deliver what this package promises at it, or refund the brand.",
   "publish.help": "Confirm each of these. A space that breaks one is taken down.",
   "publish.howPaid": "Published under your verified X account, and paid straight to your address. A brand’s wallet pays yours in one transaction they sign.",
   "publish.savedEitherWay": "Your draft is saved either way: nothing you have written is lost.",
@@ -583,6 +584,20 @@ const listings = {
   "sell.reserveHint": "Reserve: below it nothing sells automatically. Nobody sees it.",
   "sell.hiddenMinHint": "Offers under it get an automatic counter at this price. Nobody sees it.",
   "sell.zonePitchPlaceholder": "Biggest spot, seen in every airport shot",
+  // An event's own packages, sold by its host
+  "package.titleNew": "New package",
+  "package.titleAt": "{name} at {event}",
+  "package.shelf": "Your event's packages",
+  "package.shelfFor": "Packages for {event}",
+  "package.shelfHint": "What brands buy from you as the host: a number of identical spots at one price.",
+  "package.notVerified": "Verify that you host this event on Business, Your events, then add its packages.",
+  "package.closesAfterEvent": "A package closes by the end of the day after the event.",
+  "package.needsEvent": "A package belongs to the event you host.",
+  "package.fallback": "If it doesn't happen, the brand gets a refund or moves to your next event.",
+  "package.partnersByEnquiry": "Partners in kind are agreed in an enquiry, so this one sells by offers, with no price.",
+  "package.notTheOrganiser": "Only the verified host of this event sells its packages.",
+  "package.notForThisEvent": "That package is for another kind of event. Pick one from this list.",
+  "package.deliveredAtEvent": "You deliver it at the event and post a photo or link as proof after it. The brand confirms, and seven quiet days count as delivered.",
 } satisfies Record<string, string>;
 
 export default listings;

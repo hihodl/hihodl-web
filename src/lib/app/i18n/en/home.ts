@@ -120,6 +120,8 @@ const home = {
     "Mobile data for the country you're going to. Pick a plan in the app, install the eSIM, and you're online when you land.",
   "products.spaces.door": "Sell sponsor spots",
   "products.spaces.sub": "On your gear or your content, paid in USDC straight to you",
+  "products.spaces.buyDoor": "Sponsor a creator",
+  "products.spaces.buySub": "Book a spot on their gear, their content or their event",
 
   /* ── Link your phone ── */
   "linkPhone.pay.title": "Link your phone to pay from here",

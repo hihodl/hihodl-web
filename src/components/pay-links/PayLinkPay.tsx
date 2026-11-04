@@ -57,7 +57,8 @@ import {
   type ExpectedPayment,
   type PayToken,
 } from "@/lib/pay-links/client";
-import { appSchemeUrl, holdPayUrl, offers, payStateUrl, walletBrowseUrl, type WalletLinkId } from "@/lib/pay-links/page-rules";
+import { usePhone } from "@/components/app/link/in-app";
+import { appSchemeUrl, holdPayHref, offers, payStateUrl, walletBrowseUrl, type WalletLinkId } from "@/lib/pay-links/page-rules";
 import type { PayLinkEvmPayload, PayLinkPayment, ShownPayLink, TimedPayLinkCheckout } from "@/lib/pay-links/types";
 import {
   connectWalletConnect,
@@ -185,6 +186,7 @@ export function PayLinkPay({
   // Inlined at build, so the server and the browser agree on it.
   const walletConnect = walletConnectProjectId() !== null;
   const [mobile, setMobile] = useState(false);
+  const phone = usePhone();
   const [pageUrl, setPageUrl] = useState("");
   const [now, setNow] = useState(() => Date.now());
   /** When the server said a previous attempt of this payer's may have settled (`previous_attempt_pending`). */
@@ -810,6 +812,8 @@ export function PayLinkPay({
   // Arc takes the same four EVM wallets; Coinbase Wallet adds it by hand (docs.arc.io, 28-Sep-2026).
   const walletLinks: WalletLinkId[] = chain === "solana" ? ["phantom", "solflare", "backpack", "metamask"] : ["metamask", "phantom", "coinbase", "trust"];
   const scheme = appSchemeUrl(link);
+  // Through the site's bridge on a phone: the app when installed, its store when not.
+  const holdHref = scheme ? holdPayHref(scheme, amountText, "USD", phone) : null;
   const stateUrl = pageUrl ? payStateUrl(pageUrl, { amount: amountText, currency: token === "eurc" ? "EUR" : "USD", network: chain }) : "";
   const qrText = phase.kind === "qr" ? phase.link : phase.kind === "wc" ? phase.uri : null;
   const showQrArea = chain === "solana" || walletConnect;
@@ -875,7 +879,7 @@ export function PayLinkPay({
   }
 
   const openRows = !injectedHere && mobile && stateUrl;
-  const holdRow = openRows && scheme && token === "usdc" && offers(link, "hold");
+  const holdRow = openRows && holdHref && token === "usdc" && offers(link, "hold");
   const ledgerRow = !injectedHere && showLedger;
   const qrRow = showQrArea && canPay;
 
@@ -946,7 +950,7 @@ export function PayLinkPay({
         <div className="flex flex-col gap-2">
           {openRows || ledgerRow ? <p className="px-1 text-[13px] font-strong text-[#9FB7C2]">{t("payPage.orOpenWallet")}</p> : null}
           <div className="overflow-hidden rounded-[20px] border border-white/[0.08] bg-white/[0.05]">
-            {holdRow ? <WalletRow href={holdPayUrl(scheme, amountText, "USD")} logo={WALLET_LOGO.hold} name="HOLD" /> : null}
+            {holdRow && holdHref ? <WalletRow href={holdHref} logo={WALLET_LOGO.hold} name="HOLD" /> : null}
             {openRows
               ? walletLinks.map((id, i) => (
                   <WalletRow

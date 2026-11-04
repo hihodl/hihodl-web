@@ -317,6 +317,13 @@ function bareProblem(code: string, draft: ListingDraft | null): Problem | null {
         step: "dates",
         message: t("listings.problems.sessionClosesAfterEvent"),
       };
+    // An event's own package, sold by its host (organiser-sells-its-event-contract.md).
+    case "package_closes_after_event":
+      return { where: "closesAt", step: "dates", message: t("listings.package.closesAfterEvent") };
+    case "fallback_not_for_packages":
+      return { where: "fallback", step: "promise", message: t("listings.package.fallback") };
+    case "partnership_offers_only":
+      return sell("pricing", t("listings.package.partnersByEnquiry"));
     case "no_positions":
       return sell("ladder", t("listings.problems.noPositions"));
     default:
@@ -398,6 +405,9 @@ const PLAIN: Record<string, MessageKey> = {
   update_empty: "listings.plain.updateEmpty",
   image_not_yours: "listings.plain.imageNotYours",
   not_live: "listings.plain.notLive",
+  not_the_organiser: "listings.package.notTheOrganiser",
+  package_needs_an_event: "listings.package.needsEvent",
+  package_not_for_this_event: "listings.package.notForThisEvent",
 };
 
 /**

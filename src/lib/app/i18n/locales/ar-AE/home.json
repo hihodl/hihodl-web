@@ -92,6 +92,8 @@
   "products.esim.about": "بيانات جوال للبلد الذي تسافر إليه. اختر باقة في التطبيق، وثبّت eSIM، وستكون متصلاً عند وصولك.",
   "products.spaces.door": "بِع مساحات رعاية",
   "products.spaces.sub": "على معداتك أو محتواك، مدفوعة بـ USDC مباشرة إليك",
+  "products.spaces.buyDoor": "ارعَ مبدعًا",
+  "products.spaces.buySub": "احجز مكانًا على معداته أو محتواه أو فعاليته",
   "linkPhone.pay.title": "اربط هاتفك لتدفع من هنا",
   "linkPhone.pay.bodyAndroid": "افتح HOLD على هذا الهاتف لربطه. من بعدها، سيوافق التطبيق على كل دفعة تبدأها هنا.",
   "linkPhone.later": "لاحقاً",

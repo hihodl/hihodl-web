@@ -92,6 +92,8 @@
   "products.esim.about": "Des données mobiles pour le pays où vous allez. Choisissez un forfait dans l'app, installez l'eSIM, et vous êtes connecté dès l'atterrissage.",
   "products.spaces.door": "Vendre des emplacements sponsor",
   "products.spaces.sub": "Sur votre matériel ou votre contenu, payés en USDC directement à vous",
+  "products.spaces.buyDoor": "Sponsorisez un créateur",
+  "products.spaces.buySub": "Réservez un emplacement sur son équipement, son contenu ou son événement",
   "linkPhone.pay.title": "Associez votre téléphone pour payer d'ici",
   "linkPhone.pay.bodyAndroid": "Ouvrez HOLD sur ce téléphone pour l'associer. Ensuite, l'app approuvera chaque paiement que vous lancez ici.",
   "linkPhone.later": "Plus tard",

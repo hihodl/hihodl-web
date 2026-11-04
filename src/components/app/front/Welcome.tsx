@@ -429,7 +429,7 @@ function ProfileStep({ facts, session, onDone, onSkip, head, hint }: StepProps &
 
 function RecoveryStep({ facts, session, done, onDone, head, hint }: StepProps) {
   const t = useT();
-  const [email, setEmail] = useState(session.user.email ?? facts.me.email ?? "");
+  const email = session.user.email ?? facts.me.email ?? "";
   const sent = done || facts.hasCodes;
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -444,7 +444,13 @@ function RecoveryStep({ facts, session, done, onDone, head, hint }: StepProps) {
       facts.hasCodes = true;
       onDone();
     } catch (e) {
-      setNotice(e instanceof CreatorApiError && e.serverMessage ? e.serverMessage : tNow("front.recovery.sendFailed"));
+      setNotice(
+        e instanceof CreatorApiError && e.code === "EMAIL_CHANGE_HOLD"
+          ? describeCreatorError(e)
+          : e instanceof CreatorApiError && e.serverMessage
+            ? e.serverMessage
+            : tNow("front.recovery.sendFailed"),
+      );
     } finally {
       setBusy(false);
     }
@@ -466,7 +472,10 @@ function RecoveryStep({ facts, session, done, onDone, head, hint }: StepProps) {
           aria-label={t("front.recovery.emailLabel")}
           placeholder="email@example.com"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          // The codes go to the login email and nowhere else: the server
+          // refuses any other address, since a stolen session could otherwise
+          // mail itself a way back in.
+          readOnly
           disabled={busy || sent}
           className={inputFieldCls}
         />

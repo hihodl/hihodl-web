@@ -251,6 +251,15 @@ export function isSessionSpace(space: { template: Pick<Space["template"], "servi
   return space.template.service?.format === "session";
 }
 
+/**
+ * A partnership in kind (`media-or-community-partner`): agreed in an enquiry,
+ * never bought, offered on or quoted. Checkout, offers and quotes answer 409
+ * `partnership_by_enquiry` on it.
+ */
+export function isPartnershipSpace(space: { template: Pick<Space["template"], "service" | "id"> }): boolean {
+  return space.template.service?.partnership === true || space.template.id === "media-or-community-partner";
+}
+
 /** A content production space: a package made for the brand, delivered privately. */
 export function isProductionSpace(space: { template: Pick<Space["template"], "service"> }): boolean {
   return space.template.service?.format === "production";

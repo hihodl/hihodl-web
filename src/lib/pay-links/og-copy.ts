@@ -11,7 +11,8 @@
  * What reaches the card is only what the public payload already shows on the
  * page: the owner's verified or display name (else their @handle) and, for a
  * priced link, its title (which the server filters for links, emails and
- * impersonation) and its price. A link that can't be paid, a disabled one, or
+ * impersonation) and its price, in the currency it was asked in: what a
+ * group debt owes now, else the part asked (a euro split), else the link's own. A link that can't be paid, a disabled one, or
  * one with nobody to name gets the plain HOLD card.
  *
  * Pure: no React, no `@/` imports, so a .check.ts can load it.
@@ -56,6 +57,27 @@ export function previewPrice(cents: number, intl: string): string {
   return `$${n}`;
 }
 
+/** "30 €", "€30", "$1,250.50": any currency, in minor units, separators and symbol in the reader's language. */
+export function previewMoney(minor: number, currency: string, intl: string): string {
+  if (currency === "USD") return previewPrice(minor, intl);
+  const whole = minor % 100 === 0;
+  try {
+    return new Intl.NumberFormat(intl, { style: "currency", currency, minimumFractionDigits: whole ? 0 : 2, maximumFractionDigits: whole ? 0 : 2 }).format(minor / 100);
+  } catch {
+    return `${(minor / 100).toFixed(whole ? 0 : 2)} ${currency}`;
+  }
+}
+
+/** A fixed link's price as the asker means it: a live group debt, else what was asked, else the link's own currency. */
+export function askedPrice(link: PayLinkPublic & { amount: { mode: "fixed"; cents: number } }, intl: string): string {
+  const debt = link.groupDebt;
+  const debtMinor = debt && !debt.settled ? Number(debt.amountMinor) : NaN;
+  if (debt && Number.isSafeInteger(debtMinor) && debtMinor > 0) return previewMoney(debtMinor, debt.currency, intl);
+  const asked = link.asked ? Number(link.asked.minor) : NaN;
+  if (link.asked && Number.isSafeInteger(asked) && asked > 0) return previewMoney(asked, link.asked.currency, intl);
+  return previewMoney(link.amount.cents, link.currency === "EUR" ? "EUR" : "USD", intl);
+}
+
 export function clipText(text: string, max: number): string {
   const chars = Array.from(text.trim());
   return chars.length > max ? `${chars.slice(0, max - 1).join("").trimEnd()}…` : chars.join("");
@@ -88,6 +110,6 @@ export function payPreview(
   }
 
   const what = clipText(link.title, TITLE_MAX);
-  const title = link.amount.mode === "fixed" ? `${what} · ${previewPrice(link.amount.cents, intl)}` : what;
+  const title = link.amount.mode === "fixed" ? `${what} · ${askedPrice({ ...link, amount: link.amount }, intl)}` : what;
   return { title, description: fmt(copy.linkDescription, { name }) };
 }

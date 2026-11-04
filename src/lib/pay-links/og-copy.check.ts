@@ -11,7 +11,7 @@ import path from "path";
 
 import { EN } from "../app/i18n/en";
 import { formatMessage } from "../app/i18n/icu";
-import { type OgCopy, payPreview, previewName, previewPrice } from "./og-copy";
+import { type OgCopy, payPreview, previewMoney, previewName, previewPrice } from "./og-copy";
 import { acceptLanguageTags, payLocaleFrom } from "./pay-locales";
 import type { PayLinkPublic } from "./types";
 
@@ -56,6 +56,14 @@ eq("price cents", previewPrice(125050, "en"), "$1,250.50");
 eq("price de", previewPrice(125050, "de"), "$1.250,50");
 
 eq("priced", payPreview(base, false, COPY, fmt, "en"), { title: "Dinner at Lucio · $40", description: "Demo C. sent you a payment request. Pay it in seconds." });
+eq("money: euros in Spanish", previewMoney(3000, "EUR", "es-ES").replace(/\u00a0/g, " "), "30 €");
+eq("money: euros in English", previewMoney(3050, "EUR", "en"), "€30.50");
+eq("money: dollars stay as they were", previewMoney(4000, "USD", "en"), "$40");
+eq("a euro split shows its euros, not the dollars it charges", payPreview({ ...base, amount: { mode: "fixed", cents: 3300 }, asked: { currency: "EUR", minor: "3000" } }, false, COPY, fmt, "en").title, "Dinner at Lucio · €30");
+eq("a group debt shows what is owed now, in the group's currency", payPreview({ ...base, groupDebt: { groupName: "Lisbon", creditorName: null, debtorName: null, amountMinor: "4550", currency: "EUR", settled: false } }, false, COPY, fmt, "en").title, "Dinner at Lucio · €45.50");
+eq("a settled debt falls back to the link's price", payPreview({ ...base, groupDebt: { groupName: "Lisbon", creditorName: null, debtorName: null, amountMinor: "0", currency: "EUR", settled: true } }, false, COPY, fmt, "en").title, "Dinner at Lucio · $40");
+eq("a checkout priced in euros", payPreview({ ...base, currency: "EUR" }, false, COPY, fmt, "en").title, "Dinner at Lucio · €40");
+eq("a bad asked amount is ignored", payPreview({ ...base, asked: { currency: "EUR", minor: "x" } }, false, COPY, fmt, "en").title, "Dinner at Lucio · $40");
 eq("open amount: no price", payPreview({ ...base, amount: { mode: "open", maxCents: 5000 } }, false, COPY, fmt, "en").title, "Dinner at Lucio");
 eq("personal, card and Apple Pay", payPreview({ ...personal, methods: [{ kind: "card" }, { kind: "apple_pay" }, { kind: "hold" }] }, true, COPY, fmt, "en"), {
   title: "Pay Demo C. in a minute",

@@ -92,6 +92,8 @@
   "products.esim.about": "가는 나라의 모바일 데이터예요. 앱에서 요금제를 고르고 eSIM을 설치하면 도착하자마자 온라인이에요.",
   "products.spaces.door": "스폰서 자리 판매",
   "products.spaces.sub": "내 장비나 콘텐츠에, USDC로 바로 받아요",
+  "products.spaces.buyDoor": "크리에이터 후원하기",
+  "products.spaces.buySub": "장비, 콘텐츠, 이벤트의 자리를 예약하세요",
   "linkPhone.pay.title": "여기서 결제하려면 휴대폰을 연결하세요",
   "linkPhone.pay.bodyAndroid": "이 휴대폰에서 HOLD를 열어 연결하세요. 그 후로는 여기서 시작한 모든 결제를 앱이 승인해요.",
   "linkPhone.later": "나중에",

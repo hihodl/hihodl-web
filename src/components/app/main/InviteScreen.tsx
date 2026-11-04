@@ -17,7 +17,14 @@ import { useState } from "react";
 
 import { fmtNumber } from "@/lib/app/i18n/format";
 import { Rich, useT } from "@/lib/app/i18n/react";
-import { useInvites, useReferralSummary, type Invite } from "@/lib/app/referrals";
+import {
+  INVEST_HOLD_DAYS_FALLBACK,
+  QUALIFY_STAY_USD_FALLBACK,
+  QUALIFY_WINDOW_DAYS_FALLBACK,
+  useInvites,
+  useReferralSummary,
+  type Invite,
+} from "@/lib/app/referrals";
 
 import { CopyButton } from "../front/kit";
 import { BackHeader, Column, ctaCommit, HoldCard } from "../hold";
@@ -115,9 +122,14 @@ export function InviteScreen({ onBack }: { onBack: () => void }) {
                 WhatsApp
               </a>
             </div>
-            {s.qualifyUsd !== undefined ? (
+            {s.qualifyInvestUsd !== undefined ? (
               <p className="mt-3 text-[12.5px] leading-[18px] text-white/55">
-                {t("menu.invite.qualify", { amount: `$${pts(s.qualifyUsd)}` })}
+                {t("menu.invite.qualify", {
+                  amount: `$${pts(s.qualifyInvestUsd)}`,
+                  holdDays: s.investHoldDays ?? INVEST_HOLD_DAYS_FALLBACK,
+                  stay: `$${pts(s.qualifyStayUsd ?? QUALIFY_STAY_USD_FALLBACK)}`,
+                  days: s.qualifyWindowDays ?? QUALIFY_WINDOW_DAYS_FALLBACK,
+                })}
               </p>
             ) : null}
           </>

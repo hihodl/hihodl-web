@@ -24,6 +24,7 @@ import { Body, Card } from "@/components/app/spaces/kit";
 import type { MessageKey } from "@/lib/app/i18n";
 import { useT } from "@/lib/app/i18n/react";
 import {
+  isPackageTemplate,
   isProductionTemplate,
   isSessionTemplate,
   requiredAttestations,
@@ -48,6 +49,7 @@ const ATTESTATION_TEXT: Record<Attestation, MessageKey> = {
   public_place: "listings.attest.publicPlace",
   no_investment_advice: "listings.attest.noInvestmentAdvice",
   no_investor_intros: "listings.attest.noInvestorIntros",
+  organiser_delivers: "listings.attest.organiserDelivers",
 };
 
 export function PublishStep({
@@ -78,6 +80,7 @@ export function PublishStep({
     template.kind,
     isSessionTemplate(template),
     isProductionTemplate(template),
+    isPackageTemplate(template),
   );
 
   return (

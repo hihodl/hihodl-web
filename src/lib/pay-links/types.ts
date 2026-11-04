@@ -152,10 +152,58 @@ export interface PayLinkPublic {
   /** The owner's personal link, when this one can't be paid. Absent from an older server. */
   fallback?: PayLinkFallback | null;
   /**
-   * What a fixed price is in: USD (USDC), or EUR for a checkout priced in
-   * euros (EURC on Base; the amount is then euro cents). Absent means USD.
+   * A recurring link: paying it is subscribing, charged every period. Null or
+   * absent for a one-time link (and from an older server).
    */
-  currency?: "USD" | "EUR";
+  recurring?: PayLinkRecurring | null;
+  /**
+   * Only on a group debt's link (what one HOLD group member owes another,
+   * sent from the group's remind): its title and amount are read live from
+   * the group. `settled` when nothing is owed now (the link reads `paid`).
+   */
+  groupDebt?: PayLinkGroupDebt | null;
+  /** USD, or EUR for a checkout priced in euros (`amount` is then euro cents). Absent from an older server. */
+  currency?: string;
+  /**
+   * What was asked in the asker's currency (an agent's euro split), minor
+   * units as a string: shown beside the charge, never charged. Null on most
+   * links, absent from an older server.
+   */
+  asked?: { currency: string; minor: string } | null;
+}
+
+/**
+ * "10 USDC / month": a plan on the Solana Subscriptions program the owner
+ * signed. `plan` is there once it is on chain (`ready`); the page checks the
+ * subscribe transaction it is handed against it (recurring.ts).
+ */
+export interface PayLinkRecurring {
+  period: "week" | "month";
+  amountCents: number;
+  token: "usdc";
+  chain: "solana";
+  ready: boolean;
+  plan?: {
+    programId: string;
+    planPda: string;
+    merchant: string;
+    /** u64, as a decimal string. */
+    planId: string;
+    /** Per period, USDC base units (6 decimals), as a decimal string. */
+    amountBase: string;
+    periodHours: number;
+    mint: string;
+  };
+}
+
+/** A group debt, as the public read describes it. Amounts in the group's currency, minor units as a string. */
+export interface PayLinkGroupDebt {
+  groupName: string;
+  creditorName: string | null;
+  debtorName: string | null;
+  amountMinor: string;
+  currency: string;
+  settled: boolean;
 }
 
 /** A link that still says what it asks for: anything but a disabled one. */

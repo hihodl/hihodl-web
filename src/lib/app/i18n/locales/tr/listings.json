@@ -532,5 +532,19 @@
   "sell.priceUsd": "Fiyat (USD)",
   "sell.reserveHint": "Rezerv: altında hiçbir şey otomatik olarak satılmaz. Kimse görmez.",
   "sell.hiddenMinHint": "Altındaki tekliflere bu fiyattan otomatik karşı teklif gider. Kimse görmez.",
-  "sell.zonePitchPlaceholder": "En büyük yer, her havalimanı karesinde görünür"
+  "sell.zonePitchPlaceholder": "En büyük yer, her havalimanı karesinde görünür",
+  "attest.organiserDelivers": "Bu etkinliği ben düzenliyorum ve bu paketin vaat ettiğini etkinlikte teslim ederim ya da markaya iade ederim.",
+  "package.titleNew": "Yeni paket",
+  "package.titleAt": "{event} etkinliğinde {name}",
+  "package.shelf": "Etkinliğinin paketleri",
+  "package.shelfFor": "{event} için paketler",
+  "package.shelfHint": "Markaların organizatör olarak senden aldığı: tek fiyata birkaç aynı yer.",
+  "package.notVerified": "İşletme, Etkinliklerin bölümünde bu etkinliği düzenlediğini doğrula, sonra paketlerini ekle.",
+  "package.closesAfterEvent": "Bir paket en geç etkinlikten sonraki günün sonunda kapanır.",
+  "package.needsEvent": "Bir paket düzenlediğin etkinliğe aittir.",
+  "package.fallback": "Gerçekleşmezse marka iadesini alır ya da bir sonraki etkinliğine geçer.",
+  "package.partnersByEnquiry": "Ayni partnerler bir talepte kararlaştırılır, bu yüzden bu paket fiyatsız, tekliflerle satılır.",
+  "package.notTheOrganiser": "Bu etkinliğin paketlerini yalnızca doğrulanmış organizatörü satar.",
+  "package.notForThisEvent": "O paket başka türde bir etkinlik için. Bu listeden birini seç.",
+  "package.deliveredAtEvent": "Etkinlikte teslim edersin ve sonrasında kanıt olarak bir fotoğraf ya da bağlantı paylaşırsın. Marka onaylar; yedi sessiz gün teslim edilmiş sayılır."
 }

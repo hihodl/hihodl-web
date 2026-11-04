@@ -23,6 +23,14 @@ function route(request: NextRequest, init: Init): NextResponse | null {
   const { pathname, search } = request.nextUrl;
   const host = request.headers.get('host');
 
+  // partners.hihodl.xyz is a name to print on a flyer, not a site: it sends
+  // people to the Partners panel in the product, keeping whatever followed.
+  if (host?.toLowerCase().split(':')[0] === 'partners.hihodl.xyz') {
+    const suffix = pathname === '/' ? '' : pathname.replace(/^\/{2,}/, '/');
+    const target = `${productOrigin() || 'https://app.hihodl.xyz'}/partners${suffix}${search}`;
+    return NextResponse.redirect(target, 308);
+  }
+
   // The product is not for search engines. Its robots.txt closes the whole
   // host; the website's (app/robots.ts) would otherwise answer for it, since
   // a file path is never rewritten into the /app tree.

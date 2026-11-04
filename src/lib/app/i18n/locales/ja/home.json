@@ -92,6 +92,8 @@
   "products.esim.about": "行き先の国で使えるモバイルデータ。アプリでプランを選んで eSIM をインストールすれば、到着したらすぐにネットにつながります。",
   "products.spaces.door": "スポンサー枠を販売",
   "products.spaces.sub": "あなたの持ち物やコンテンツで。USDC で直接あなたに支払われます",
+  "products.spaces.buyDoor": "クリエイターをスポンサーする",
+  "products.spaces.buySub": "ギア、コンテンツ、イベントの枠を予約",
   "linkPhone.pay.title": "ここから支払うにはスマホを連携してください",
   "linkPhone.pay.bodyAndroid": "このスマホで HOLD を開いて連携してください。以降、ここで始めた支払いはすべてアプリで承認されます。",
   "linkPhone.later": "後で",

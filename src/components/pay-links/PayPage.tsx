@@ -36,6 +36,7 @@ import { CheckoutError, checkoutKey, rotateCheckoutKey } from "@/lib/ad-space/ch
 import { currencySymbol, fmtFiat } from "@/lib/app/i18n/format";
 import { ensureRates, useFormat, useT } from "@/lib/app/i18n/react";
 import { getPrefs } from "@/lib/app/i18n/store";
+import { withStoreAttribution } from "@/lib/analytics/mixpanel";
 import { APP_STORE_URL, PLAY_STORE_URL } from "@/lib/appLinks";
 import {
   CARD_SPENT_KEY_CODES,
@@ -48,6 +49,7 @@ import {
 import { siteOf, successReturnUrl, type CheckoutView } from "@/lib/pay-links/checkout";
 import { checkoutStatusNow, simulateCheckout } from "@/lib/pay-links/checkout-client";
 import { ownerName, payKeyScope } from "@/lib/pay-links/client";
+import { RecurringPay } from "./RecurringPay";
 import {
   appSchemeUrl,
   bankTransfersOf,
@@ -279,20 +281,21 @@ function Shown({ link, checkout }: { link: ShownPayLink; checkout: CheckoutView 
     if (back.currency) setPicked(back.currency);
     if (back.amount && fixed === null) setAmountText(back.amount);
     if (back.network) setStartNetwork(back.network as Chain);
-    if (back.stablecoins && stableOffered) setSheet("stable");
+    // A recurring link has no stablecoin sheet: its own block subscribes.
+    if (back.stablecoins && stableOffered && !link.recurring) setSheet("stable");
     // A link that can't be paid sends its title here as the note; the payer can change it.
     if (back.note) setNote(back.note);
     // What came in the query is on the screen now, so the address drops it.
     for (const k of ["amount", "currency", "pay", "network", "note"]) url.searchParams.delete(k);
-    const link = new URL(url.href);
-    link.pathname = payPagePath(url.pathname);
+    const bare = new URL(url.href);
+    bare.pathname = payPagePath(url.pathname);
     // What a wallet's browser brought in the PATH stays in the address: those
     // browsers reload the page (after a connect, back from the background, a
     // restored tab), and a reload of the bare link opened with nothing typed.
     if (url.href !== window.location.href) window.history.replaceState(null, "", url.href);
-    setPageUrl(link.href.split("#")[0]);
+    setPageUrl(bare.href.split("#")[0]);
     return () => again.forEach((id) => window.clearTimeout(id));
-  }, [fixed, stableOffered]);
+  }, [fixed, stableOffered, link.recurring]);
 
   /* The currency: USD or EUR, the browser's region picks. */
   const currency = pricedEur ? "EUR" : picked && (CURRENCIES as readonly string[]).includes(picked) ? picked : defaultCurrency(tags, CURRENCIES);
@@ -504,7 +507,7 @@ function Shown({ link, checkout }: { link: ShownPayLink; checkout: CheckoutView 
       setSheet("hold");
       return;
     }
-    const store = platform === "ios" ? APP_STORE_URL : PLAY_STORE_URL;
+    const store = withStoreAttribution(platform === "ios" ? APP_STORE_URL : PLAY_STORE_URL);
     const scheme = appSchemeUrl(link);
     if (!scheme) {
       window.location.href = store;
@@ -620,6 +623,9 @@ function Shown({ link, checkout }: { link: ShownPayLink; checkout: CheckoutView 
         <Gone link={link} payee={payee} name={bigName} />
       ) : testMode && simulated === "failed" ? (
         <CheckoutFailed onAgain={() => setSimulated("idle")} />
+      ) : link.recurring ? (
+        // Paying a recurring link is subscribing, from a Solana wallet: its own block, no other rows.
+        <RecurringPay link={link} recurring={link.recurring} payee={bigName} platform={platform} pageUrl={pageUrl} />
       ) : done ? (
         <CardResult phase={cardPhase} payee={bigName} onAgain={cardAgain} />
       ) : (
@@ -765,8 +771,8 @@ function Shown({ link, checkout }: { link: ShownPayLink; checkout: CheckoutView 
       <Foot link={link} />
 
       {sheet === "hold" ? <HoldSheet pageUrl={pageUrl || `https://hihodl.xyz/pay/${link.personal && link.owner?.handle ? `@${link.owner.handle}` : link.code}`} onClose={() => setSheet(null)} /> : null}
-      {sheet === "stable" && active ? (
-        <Modal onClose={() => setSheet(null)} title={t("payPage.payWithToken", { token: token === "eurc" ? "EURC" : "USDC" })} size="lg">
+      {sheet === "stable" && active && !link.recurring ? (
+        <Modal onClose={() => setSheet(null)} title={t("payPage.payWithToken", { token: token === "eurc" ? "EURC" : "USDC" })} size="lg" tall>
           <PayLinkPay link={link} token={token} amountCents={stableCents} amountText={fixed === null ? amountText : null} network={startNetwork} />
         </Modal>
       ) : null}
@@ -1143,7 +1149,9 @@ function TestModePanel({ busy, error, onSimulate }: { busy: boolean; error: bool
 function Gone({ link, payee, name }: { link: ShownPayLink; payee: string; name: string }) {
   const t = useT();
   const href = fallbackHref(link);
-  const words = link.personal
+  const words = link.groupDebt
+    ? { title: t("payPage.gone.settledTitle"), body: t("payPage.gone.settledBody", { group: link.groupDebt.groupName || link.title }) }
+    : link.personal
     ? { title: t("payPage.gone.personalTitle"), body: t("payPage.gone.personalBody", { name: payee }) }
     : link.status === "paid"
       ? { title: t("payPage.gone.paidTitle"), body: t("payPage.gone.paidBody") }

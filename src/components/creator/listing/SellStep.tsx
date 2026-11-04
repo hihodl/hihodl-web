@@ -46,6 +46,7 @@ import {
   type ListingDraft,
   type PricingMode,
   type Template,
+  isPartnershipTemplate,
   isProductionTemplate,
   isSessionTemplate,
   squareZonesOf,
@@ -91,6 +92,7 @@ export function SellStep({
   const session = isSessionTemplate(template);
   // Content production sells N identical spots at a price; brands may offer under it.
   const production = isProductionTemplate(template);
+  const partnership = isPartnershipTemplate(template);
   const onlyAtAPrice = t("listings.problems.productionSellsAtPrice");
   const maxSlots = template.service?.maxSlots ?? 0;
   const needsCountdown = draft.pricingMode === "bids" || anyRungBids(draft);
@@ -157,7 +159,12 @@ export function SellStep({
               // they are answered.
               set(change);
             }}
-            options={pricingOptions.map((o) => ({ ...o, value: o.value as string }))}
+            options={pricingOptions.map((o) =>
+              // A partner in kind is agreed in an enquiry: offers is the only way it sells.
+              partnership && o.value !== "offers"
+                ? { ...o, value: o.value as string, disabled: true, why: t("listings.package.partnersByEnquiry") }
+                : { ...o, value: o.value as string },
+            )}
           />
         </Field>
 

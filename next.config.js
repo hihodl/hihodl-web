@@ -40,6 +40,18 @@ const nextConfig = {
           { key: "X-DNS-Prefetch-Control", value: "on" },
         ],
       },
+      // Stripe's onramp inside the app. Never cached or indexed, and the camera
+      // is allowed here only: Stripe's identity check can ask for a document
+      // and a selfie (EU buyers always), which the site wide camera=() blocks.
+      {
+        source: "/onramp/:path*",
+        headers: [
+          { key: "Cache-Control", value: "private, no-store, max-age=0" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "Permissions-Policy", value: "camera=*, microphone=(), geolocation=(), interest-cohort=()" },
+        ],
+      },
       // A session's manage link is its only credential (hispace-in-the-room-v0.md).
       // Listed after the catch-all so these win: no cache anywhere, no index,
       // and no Referer that would carry the token to another site.
@@ -61,9 +73,28 @@ const nextConfig = {
           { key: "Referrer-Policy", value: "no-referrer" },
         ],
       },
+      // A sponsor's report (a-sponsor-gets-its-report-contract.md): read-only and
+      // made to be forwarded, but still a bearer link.
+      {
+        source: "/r/:token*",
+        headers: [
+          { key: "Cache-Control", value: "private, no-store, max-age=0" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+          { key: "Referrer-Policy", value: "no-referrer" },
+        ],
+      },
       // An offer's or bid's manage link is its only credential (hispace-offers-v0.md).
       {
         source: "/o/:token*",
+        headers: [
+          { key: "Cache-Control", value: "private, no-store, max-age=0" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+          { key: "Referrer-Policy", value: "no-referrer" },
+        ],
+      },
+      // A guest's conversation with a seller: its link is its only credential (spot-enquiries-contract.md).
+      {
+        source: "/e/:token*",
         headers: [
           { key: "Cache-Control", value: "private, no-store, max-age=0" },
           { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
@@ -80,6 +111,17 @@ const nextConfig = {
         source: "/pay/:path*",
         headers: [
           { key: "X-Frame-Options", value: "DENY" },
+          { key: "Cache-Control", value: "private, no-store, max-age=0" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+          { key: "Referrer-Policy", value: "no-referrer" },
+        ],
+      },
+      // The undo link a changed login email's OLD address gets
+      // (change-your-login-email-spec): its token undoes the change, so the
+      // same treatment as a manage link.
+      {
+        source: "/account/undo-email",
+        headers: [
           { key: "Cache-Control", value: "private, no-store, max-age=0" },
           { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
           { key: "Referrer-Policy", value: "no-referrer" },

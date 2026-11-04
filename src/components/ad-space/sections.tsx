@@ -4,8 +4,9 @@ import type { ReactNode } from "react";
 import { DownloadLink } from "@/components/site/DownloadLink";
 import { Wordmark } from "@/components/site/Wordmark";
 import { SUPPORT_EMAIL } from "@/lib/ad-space/config";
-import { t } from "@/lib/app/i18n";
+import { t, type LocaleCode } from "@/lib/app/i18n";
 import {
+  isPartnershipSpace,
   payChainsOf,
   payChainsText,
   VERIFIED_LABEL,
@@ -24,11 +25,16 @@ import {
   trackRecordText,
   usdFromCents,
 } from "@/lib/ad-space/format";
+import { titleStyleOf } from "@/lib/ad-space/studio";
 import type { Creator, Position, Space } from "@/lib/ad-space/types";
 
+import { BusinessLogo, VerifiedBusinessMark, businessOf, websiteHost } from "./business";
 import { ClosesCountdown } from "./ClosesCountdown";
+import { PublicLanguage } from "./PublicLanguage";
+import { Editable, StoryPlaceholder } from "./edit-mode";
 import { creatorPath, creatorScreenPath } from "./creator";
 import { SpaceSiblings } from "./events";
+import { titleFontStyle } from "./title-fonts";
 import { IfItDoesNotHappen } from "./IfItDoesNotHappen";
 import { WhatTheBrandGets } from "./WhatTheBrandGets";
 import { btnPrimary, btnSmallSecondary, card, eyebrow, rich } from "./ui";
@@ -50,13 +56,21 @@ import { btnPrimary, btnSmallSecondary, card, eyebrow, rich } from "./ui";
  * look at one board and maybe pay for a spot; five product menus above it are
  * five ways out of the page.
  */
-export function SlimHeader() {
+/**
+ * The top of a public page. `language`: the language the server drew it in
+ * (lib/app/i18n/server.ts), which puts the language switch beside the
+ * download button; a page that does not pick one per viewer leaves it out.
+ */
+export function SlimHeader({ language }: { language?: { locale: LocaleCode; chosen: boolean } } = {}) {
   return (
     <header className="container-page flex h-16 items-center justify-between gap-4">
       <Link href="/" className="flex items-center text-sp-ink" aria-label={t("board.listing.home")}>
         <Wordmark className="h-5 w-auto" />
       </Link>
-      <DownloadLink className={btnSmallSecondary}>{t("board.listing.getHold")}</DownloadLink>
+      <div className="flex min-w-0 items-center gap-2">
+        {language && <PublicLanguage serverLocale={language.locale} chosen={language.chosen} />}
+        <DownloadLink className={btnSmallSecondary}>{t("board.listing.getHold")}</DownloadLink>
+      </div>
     </header>
   );
 }
@@ -68,7 +82,7 @@ export function SpaceFooter({ space }: { space: Space }) {
   return (
     <footer className="hairline">
       <div className="container-page flex flex-col gap-6 py-10">
-        <nav className="flex flex-wrap gap-x-6 gap-y-3 text-tiny" aria-label="HiSpace">
+        <nav className="flex flex-wrap gap-x-6 gap-y-3 text-tiny" aria-label={t("publicPages.space.footerNav")}>
           <a href={report} className={link}>
             {t("board.listing.report")}
           </a>
@@ -94,7 +108,7 @@ export function SpaceFooter({ space }: { space: Space }) {
  * picture, or its product, or its gradient) is drawn by `SpaceBoard`, because on
  * a placement the product IS the banner and it is the interactive part.
  */
-export function ListingHead({ space }: { space: Space }) {
+export function ListingHead({ space, language }: { space: Space; language?: { locale: LocaleCode; chosen: boolean } }) {
   const session = isSessionSpace(space);
   const name = serviceName(space);
   const custom = space.template.service?.custom === true;
@@ -110,30 +124,47 @@ export function ListingHead({ space }: { space: Space }) {
     <div className="flex flex-col gap-5">
       {/* Back to this creator's own listings at the event, never the event's
           page: that one lists other creators, and this page sells for this one. */}
-      {space.event && (
-        <Link
-          href={creatorScreenPath(space.creator.xHandle, space.event.slug)}
-          className="inline-flex h-8 max-w-full items-center self-start overflow-hidden whitespace-nowrap rounded-[16px] bg-[#141F2E]/60 px-3 text-tiny text-white/85 backdrop-blur-md transition-colors duration-180 hover:bg-[#141F2E]/80 hover:text-white"
-        >
-          <span aria-hidden className="mr-1.5">
-            &larr;
-          </span>
-          <span className="truncate">
-            {t("board.listing.allAt", { handle: space.creator.xHandle, event: space.event.name })}
-          </span>
-        </Link>
+      {(space.event || language) && (
+        <div className="flex min-w-0 items-center justify-between gap-3">
+          {space.event ? (
+            <Link
+              href={creatorScreenPath(space.creator.xHandle, space.event.slug)}
+              className="inline-flex h-8 min-w-0 max-w-full items-center self-start overflow-hidden whitespace-nowrap rounded-[16px] bg-[#141F2E]/60 px-3 text-tiny text-white/85 backdrop-blur-md transition-colors duration-180 hover:bg-[#141F2E]/80 hover:text-white"
+            >
+              <span aria-hidden className="mr-1.5">
+                &larr;
+              </span>
+              <span className="truncate">
+                {t("board.listing.allAt", { handle: space.creator.xHandle, event: space.event.name })}
+              </span>
+            </Link>
+          ) : (
+            <span />
+          )}
+          {/* The page's language, on the public page only (the studio preview passes none). */}
+          {language && <PublicLanguage serverLocale={language.locale} chosen={language.chosen} />}
+        </div>
       )}
       <div>
         <p className={`${eyebrow} break-words text-sp-amber [overflow-wrap:anywhere]`}>
           {[space.event?.name ?? space.eventName, what].filter(Boolean).join(" · ")}
         </p>
-        <h1 className="mt-3 max-w-4xl break-words font-display text-[40px] font-light leading-[1.05] text-sp-ink [overflow-wrap:anywhere] md:text-h1">
-          {space.title}
+        <h1
+          className="mt-3 max-w-4xl break-words font-display text-[40px] font-light leading-[1.05] text-sp-ink [overflow-wrap:anywhere] md:text-h1"
+          style={titleFontStyle(titleStyleOf(space.titleStyle))}
+        >
+          <Editable target="title" as="span" chip="inline">
+            {space.title}
+          </Editable>
         </h1>
-        {space.reason && (
-          <p className="mt-4 max-w-2xl break-words text-body text-sp-ink/85 [overflow-wrap:anywhere] md:text-lead">
-            {space.reason}
-          </p>
+        {space.reason ? (
+          <Editable target="story">
+            <p className="mt-4 max-w-2xl break-words text-body text-sp-ink/85 [overflow-wrap:anywhere] md:text-lead">
+              {space.reason}
+            </p>
+          </Editable>
+        ) : (
+          <StoryPlaceholder />
         )}
       </div>
       <CreatorChip creator={space.creator} />
@@ -236,12 +267,16 @@ function InspiredByCredit({ credit }: { credit: NonNullable<Space["inspiredBy"]>
 
 function CreatorChip({ creator: c }: { creator: Creator }) {
   const attention = trackRecordNeedsAttention(c.trackRecord);
+  /* A company selling from this account: its name and logo lead, and the
+     person's X account stays one tap away as where it sells from. */
+  const business = businessOf(c);
+  const host = business ? websiteHost(business.website) : null;
   return (
     <div className="flex min-w-0 items-center gap-3">
-      <Avatar creator={c} />
+      {business ? <BusinessLogo business={business} size={44} /> : <Avatar creator={c} />}
       <div className="min-w-0">
-        <p className="flex min-w-0 flex-wrap items-baseline gap-x-2 text-small">
-          <span className="truncate text-sp-ink">{c.xName}</span>
+        <p className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-small">
+          <span className="truncate text-sp-ink">{business ? business.displayName : c.xName}</span>
           <a
             href={`https://x.com/i/user/${encodeURIComponent(c.xUserId)}`}
             target="_blank"
@@ -250,11 +285,14 @@ function CreatorChip({ creator: c }: { creator: Creator }) {
           >
             @{c.xHandle}
           </a>
+          {business?.verified && <VerifiedBusinessMark name={business.displayName} />}
         </p>
         <p className="text-tiny text-sp-ink/85">
           {[
+            host,
             t("board.creator.followers", { followers: compactNumber(c.xFollowers) }),
-            c.xVerifiedType ? VERIFIED_LABEL[c.xVerifiedType] : null,
+            // The company's own mark already says it: X's "business" label beside it would say it twice.
+            c.xVerifiedType && !(business?.verified && c.xVerifiedType === "business") ? VERIFIED_LABEL[c.xVerifiedType] : null,
             c.xIdentityVerified ? t("board.creator.idVerified") : null,
           ]
             .filter(Boolean)
@@ -452,7 +490,7 @@ export function SpaceStats({ space, more = null }: { space: Space; more?: string
                 ["open", t("board.legend.open")],
               ] as const)
             : ([
-                ["sold", session ? t("board.sessionStatus.sold") : t("board.status.sold")],
+                ["sold", session ? t("board.sessionStatus.sold") : isPartnershipSpace(space) ? t("publicPages.sponsor.partner") : t("board.status.sold")],
                 ["held", t("board.status.held")],
                 ["open", t("board.legend.open")],
               ] as const)
@@ -583,7 +621,9 @@ export function BeforeYouPay({ space }: { space: Space }) {
       {/* items-start: each card is as tall as what it says. Stretched to the
           taller column, a two-line list was a big empty box. */}
       <div className="mt-8 grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <WhatTheBrandGets space={space} />
+        <Editable target="brandGets">
+          <WhatTheBrandGets space={space} />
+        </Editable>
         <div className="flex flex-col gap-5">
           <IfItDoesNotHappen space={space} />
           <Block title={t("board.beforeYouPay.keyDates")}>

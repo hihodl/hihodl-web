@@ -2,7 +2,7 @@
  * The product's navigation, on two levels, like the app.
  *
  * MAIN is HOLD itself — Home, Invest, Payments, Benefits and the products
- * under it (Stays, eSIM, Spaces) — and Menu at the foot, which holds the
+ * under it (Stays, eSIM, Spaces, Partners) — and Menu at the foot, which holds the
  * person, Settings, Security, recovery, help, the wallet and signing out.
  *
  * THE COLUMN LISTS PLACES, AND A PLACE IS SOMEWHERE HOME CANNOT ALREADY TAKE
@@ -36,6 +36,7 @@ import {
   IconAdd,
   IconBed,
   IconBriefs,
+  IconBusiness,
   IconDeliveries,
   IconGift,
   IconHome,
@@ -76,6 +77,7 @@ export type NavKey =
   | "stays"
   | "esim"
   | "spaces"
+  | "partners"
   | "account"
   | "developers"
   // Spaces
@@ -85,6 +87,7 @@ export type NavKey =
   | "briefs"
   | "sales"
   | "deliveries"
+  | "business"
   | "team"
   | "crew"
   | "inspire"
@@ -142,6 +145,8 @@ export const MAIN_GROUPS: readonly NavGroup[] = [
       { key: "stays", labelKey: "shell.nav.stays", path: "/travel", icon: IconBed, keywords: "travel hotels hi travel", child: true },
       { key: "esim", labelKey: "shell.nav.esim", path: "/esim", icon: IconSim, keywords: "data roaming abroad", child: true },
       { key: "spaces", labelKey: "shell.nav.spaces", path: "/spaces", icon: IconMegaphone, keywords: "sponsors listings creator ad space", child: true },
+      // HOLD Partners: agencies, creators and organisers who bring travellers and earn on their bookings.
+      { key: "partners", labelKey: "shell.nav.partners", path: "/partners", icon: IconCrew, keywords: "partners agency travel agency group trips organiser commission earn affiliate link qr deposits payouts", child: true },
     ],
   },
 ];
@@ -208,6 +213,16 @@ export const SPACES_GROUPS: readonly NavGroup[] = [
       { key: "briefs", labelKey: "shell.nav.briefs", path: "/spaces/briefs", icon: IconBriefs, roles: ALL, keywords: "brand asks open call campaign apply applications brief write a brief flight hotel covered winner" },
       { key: "sales", labelKey: "shell.nav.sales", path: "/spaces/sales", icon: IconSales, roles: ["creator"], keywords: "orders money received usdc" },
       { key: "deliveries", labelKey: "shell.nav.deliveries", path: "/spaces/deliveries", icon: IconDeliveries, roles: ALL, keywords: "work artwork approve deliver due promises" },
+      // A company's desk: profile, treasury, enquiries, invoices, who did what.
+      // Everybody: a seller's own business, or the one their seat works for.
+      {
+        key: "business",
+        labelKey: "shell.nav.business",
+        path: "/spaces/business",
+        icon: IconBusiness,
+        roles: ALL,
+        keywords: "business company profile treasury vault multisig squads enquiries inbox quotes invoices receipts csv accountant activity log audit team roles",
+      },
     ],
   },
   /*
@@ -287,15 +302,45 @@ export function levelOf(rel: string): Level {
 }
 
 /**
+ * Spaces' selling pages: what Ad Space opens with HOLD Partners
+ * (lib/app/ad-space-access). Somebody it is not open to lands on one and sees
+ * the Partners panel instead (spaces/PartnersOnly); buying (Board, Bought),
+ * briefs, deliveries and the business desk stay open to everybody, and the
+ * Spaces entry stays in the main column, opening on Board (SPACES_BUY_PATH).
+ */
+export const AD_SPACE_SELLING: ReadonlySet<NavKey> = new Set<NavKey>([
+  "overview",
+  "listings",
+  "offers",
+  "sales",
+  "insights",
+  "inspire",
+  "crew",
+  "team",
+  "spaces-settings",
+]);
+
+/**
  * What this person may open. `team` is false for a creator who runs no team
  * and sits on nobody else's; `wallet` is the backend's rollout gate
- * (lib/wallet/enabled).
+ * (lib/wallet/enabled); `adSpace` is false for somebody Ad Space is not open
+ * to, which takes Spaces' selling pages out of its column (Spaces itself
+ * stays in the main one, for buying).
  */
-export function visible(item: NavItem, role: ShellRole, team: boolean, wallet = false): boolean {
+export function visible(item: NavItem, role: ShellRole, team: boolean, wallet = false, adSpace = true): boolean {
   if (item.roles && !item.roles.includes(role)) return false;
   if (item.key === "team" && !team) return false;
   if (item.key === "wallet" && !wallet) return false;
+  if (!adSpace && AD_SPACE_SELLING.has(item.key)) return false;
   return true;
+}
+
+/** Where Spaces opens for somebody who can buy but not sell: the Board. */
+export const SPACES_BUY_PATH = "/spaces/board";
+
+/** The item as this person should follow it: Spaces opens on Board when selling is not open to them. */
+export function routed(item: NavItem, adSpace: boolean): NavItem {
+  return !adSpace && item.key === "spaces" ? { ...item, path: SPACES_BUY_PATH } : item;
 }
 
 function every(level: Level): NavItem[] {
@@ -304,8 +349,8 @@ function every(level: Level): NavItem[] {
   return [...l.groups.flatMap((g) => g.items), ...l.foot, ...hidden];
 }
 
-export function itemsFor(level: Level, role: ShellRole, team = true, wallet = false): NavItem[] {
-  return every(level).filter((i) => visible(i, role, team, wallet));
+export function itemsFor(level: Level, role: ShellRole, team = true, wallet = false, adSpace = true): NavItem[] {
+  return every(level).filter((i) => visible(i, role, team, wallet, adSpace));
 }
 
 /** The product's prefix from Spaces' base: `` on app.hihodl.xyz, `/app` elsewhere. */

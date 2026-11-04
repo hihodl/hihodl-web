@@ -4,12 +4,15 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { SpacesGround } from "@/components/ad-space/ground";
 import { ProfileFooter } from "@/components/ad-space/creator";
 import { EventBanner, EventTabs, SpaceCardGrid, TAB_NAME, eventPath } from "@/components/ad-space/events";
+import { OrganiserPackages, SponsorTheWeek } from "@/components/ad-space/organiser";
 import { SlimHeader } from "@/components/ad-space/sections";
 import { eyebrow } from "@/components/ad-space/ui";
 import { SLUG_RE } from "@/lib/ad-space/config";
 import { EVENT_TABS, eventDates, openSpots } from "@/lib/ad-space/format";
-import { getPublicEvent } from "@/lib/ad-space/server";
-import type { SpaceTab } from "@/lib/ad-space/types";
+import { getPackageSpaces, getPublicEvent } from "@/lib/ad-space/server";
+import type { EventPage as EventPageData, SpaceTab } from "@/lib/ad-space/types";
+import { t } from "@/lib/app/i18n";
+import { applyRequestLocale, inEnglish } from "@/lib/app/i18n/server";
 
 /**
  * /events/<slug> — every creator going to one event, as a sponsor looking for
@@ -44,7 +47,11 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     return { title: "HiSpace", robots: { index: false, follow: false } };
   }
 
-  const { event, tabs } = found.page;
+  return inEnglish(() => eventMetadata(found.page));
+}
+
+/** The event's title and link card, in English (see `inEnglish`). */
+function eventMetadata({ event, tabs }: EventPageData): Metadata {
   const path = eventPath(event.slug);
   const og = `/api/og/e/${encodeURIComponent(event.slug)}?d=${today()}`;
   const title = `${event.name}, ${event.city} · Sponsor creators going`;
@@ -99,6 +106,7 @@ export default async function EventPage({
     permanentRedirect(`${eventPath(lower)}${tab ? `?tab=${tab}` : ""}`);
   }
 
+  const language = await applyRequestLocale();
   const found = await getPublicEvent(params.slug);
   if (found.kind === "missing") notFound();
   if (found.kind === "moved") {
@@ -109,35 +117,46 @@ export default async function EventPage({
   if (found.kind === "unreachable") {
     return (
       <SpacesGround>
-        <SlimHeader />
+        <SlimHeader language={language} />
         <main className="container-page flex min-h-[60vh] flex-col justify-center py-20">
           <p className={`${eyebrow} text-sp-amber`}>HiSpace</p>
           <h1 className="mt-5 max-w-2xl font-display text-h3 font-light text-sp-ink md:text-h2">
-            We couldn&rsquo;t load this event just now.
+            {t("publicPages.event.unreachableTitle")}
           </h1>
-          <p className="mt-5 max-w-xl text-body text-sp-ink/85">
-            This is on our side, not the link. Give it a moment and refresh the page.
-          </p>
+          <p className="mt-5 max-w-xl text-body text-sp-ink/85">{t("board.unavailable.body")}</p>
         </main>
       </SpacesGround>
     );
   }
 
-  const { event, tabs, defaultTab } = found.page;
+  const { event, tabs, defaultTab, packages, calendar } = found.page;
   const active = tabParam(searchParams) ?? defaultTab;
+  // The host's own packages, above the creators, only when a verified host sells some.
+  const organiser = packages.length > 0 ? event.organiser ?? null : null;
+  const spaces = organiser ? await getPackageSpaces(packages) : {};
   const now = Date.now();
   const total = EVENT_TABS.reduce((sum, t) => sum + tabs[t].length, 0);
   const openElsewhere = EVENT_TABS.some((t) => t !== active && openSpots(tabs[t]) > 0);
 
   return (
     <SpacesGround>
-      <SlimHeader />
+      <SlimHeader language={language} />
       <main>
         <EventBanner event={event} now={now} />
-        <section className="container-page py-10 md:py-14" aria-label="Spaces">
+        {calendar && calendar.packages > 0 && (
+          <div className="container-page pt-10 md:pt-14">
+            <SponsorTheWeek calendar={calendar} />
+          </div>
+        )}
+        {organiser && (
+          <div className="container-page pt-10 md:pt-14">
+            <OrganiserPackages organiser={organiser} packages={packages} spaces={spaces} now={now} />
+          </div>
+        )}
+        <section className="container-page py-10 md:py-14" aria-label={t("publicPages.event.spaces")}>
           {total === 0 && (
             <p className="mb-6 max-w-2xl break-words text-body text-sp-ink/85 [overflow-wrap:anywhere]">
-              Nobody has opened a space for {event.name} yet.
+              {t("publicPages.event.nobodyYet", { event: event.name })}
             </p>
           )}
           <EventTabs slug={event.slug} eventName={event.name} active={active} tabs={tabs} />
@@ -146,15 +165,13 @@ export default async function EventPage({
           </div>
           {/* Visible only when the other tab is where the spots are, so nobody misses it. */}
           {tabs[active].length > 0 && openSpots(tabs[active]) === 0 && openElsewhere && (
-            <p className="mt-6 text-small text-sp-ink/85">
-              Everything here is taken. Another tab still has open spots.
-            </p>
+            <p className="mt-6 text-small text-sp-ink/85">{t("publicPages.event.allTaken")}</p>
           )}
         </section>
       </main>
       {/* The HOLD mark, and the one sentence that has to stay: this page uses the
-          event's name and picture without being the event. */}
-      <ProfileFooter note={`HOLD is not affiliated with ${event.name}.`} />
+          event's name and picture without being the event. Not once its host sells here. */}
+      <ProfileFooter note={event.organiser ? undefined : t("publicPages.event.notAffiliated", { event: event.name })} />
     </SpacesGround>
   );
 }

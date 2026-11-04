@@ -92,6 +92,8 @@
   "products.esim.about": "Gideceğin ülke için mobil veri. Uygulamada bir paket seç, eSIM'i yükle ve indiğinde çevrimiçi ol.",
   "products.spaces.door": "Sponsor yerleri sat",
   "products.spaces.sub": "Ekipmanında veya içeriğinde, doğrudan sana USDC olarak ödenir",
+  "products.spaces.buyDoor": "Bir içerik üreticisine sponsor ol",
+  "products.spaces.buySub": "Ekipmanında, içeriğinde ya da etkinliğinde bir yer ayırt",
   "linkPhone.pay.title": "Buradan ödemek için telefonunu bağla",
   "linkPhone.pay.bodyAndroid": "Bağlamak için bu telefonda HOLD'u aç. Bundan sonra burada başlattığın her ödemeyi uygulama onaylar.",
   "linkPhone.later": "Sonra",

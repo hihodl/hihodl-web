@@ -34,7 +34,9 @@
 "use client";
 
 import { API_BASE } from "@/lib/ad-space/config";
+import { notePartnersOnly } from "@/lib/app/ad-space-gate";
 import { t } from "@/lib/app/i18n";
+import { fmtDateTime } from "@/lib/app/i18n/format";
 
 import { accessToken } from "./session";
 import type { PayoutAddressView, PayoutChain, PayoutChallenge, XAccountStatus } from "./types";
@@ -110,6 +112,8 @@ export async function call<T>(
   if (!res.ok || !parsed || parsed.error || parsed.data === undefined) {
     const err = parsed?.error;
     const code = err?.code ?? (res.status === 429 ? "rate_limited" : res.status === 404 ? "not_found" : "server");
+    // Ad Space comes with HOLD Partners: a refused create closes the door everywhere it is drawn.
+    notePartnersOnly(code, res.status);
     throw new CreatorApiError(code, res.status, err?.details ?? {}, err?.message ?? null);
   }
   return parsed.data;
@@ -174,7 +178,13 @@ export function describeCreatorError(e: unknown): string {
       return t("shell.error.network");
     case "UNAUTHORIZED":
     case "ACCOUNT_DELETED":
+    case "SESSION_REVOKED":
       return t("shell.error.signInExpired");
+    case "EMAIL_CHANGE_HOLD": {
+      // 48 hours after a login email change; the server names the end.
+      const ends = typeof e.details.ends_at === "string" ? e.details.ends_at : null;
+      return ends ? t("shell.error.emailChangeHold", { when: fmtDateTime(ends) }) : t("common.somethingWentWrong");
+    }
     case "rate_limited":
     case "RATE_LIMIT_EXCEEDED":
       return t("shell.error.rateLimited");
@@ -188,6 +198,8 @@ export function describeCreatorError(e: unknown): string {
       return t("shell.error.payoutSignatureInvalid");
     case "x_fronts_a_live_space":
       return t("shell.error.xFrontsALiveSpace");
+    case "partners_only":
+      return t("shell.error.partnersOnly");
     default:
       return t("common.somethingWentWrong");
   }

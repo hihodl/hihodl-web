@@ -137,19 +137,31 @@ export function PaymentsScreen({ initialFilter = "all" }: { initialFilter?: Filt
    * conversation it left and not on the list. Read once the rows are here,
    * then taken off the address, so Back to the list does not reopen it.
    */
+  /*
+   * ?peer=<user id> does the same from outside Payments: the business inbox
+   * opens the Payment Thread with the brand who asked, and only knows who
+   * they are, not which row their thread became.
+   */
   const [deepThread, setDeepThread] = useState<string | null>(null);
+  const [deepPeer, setDeepPeer] = useState<string | null>(null);
   useEffect(() => {
-    const id = new URLSearchParams(window.location.search).get("thread");
+    const q = new URLSearchParams(window.location.search);
+    const id = q.get("thread");
     if (id) setDeepThread(id);
+    const peer = q.get("peer");
+    if (peer) setDeepPeer(peer);
   }, []);
   useEffect(() => {
-    if (!deepThread || !rows.some((r) => r.id === deepThread)) return;
-    setView({ kind: "thread", id: deepThread });
+    const row = deepThread ? rows.find((r) => r.id === deepThread) : deepPeer ? rows.find((r) => r.peerId === deepPeer) : null;
+    if (!row) return;
+    setView({ kind: "thread", id: row.id });
     setDeepThread(null);
+    setDeepPeer(null);
     const url = new URL(window.location.href);
     url.searchParams.delete("thread");
+    url.searchParams.delete("peer");
     window.history.replaceState(window.history.state, "", url.toString());
-  }, [deepThread, rows]);
+  }, [deepThread, deepPeer, rows]);
 
   if (view.kind === "thread") {
     const row = rows.find((r) => r.id === view.id) ?? null;

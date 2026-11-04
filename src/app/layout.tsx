@@ -2,6 +2,8 @@ import "./globals.css";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
+import { Analytics } from "@/components/site/Analytics";
+
 const SITE = "https://hihodl.xyz";
 const OG_URL = `${SITE}/banner-social.png`;
 
@@ -60,7 +62,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           rel="stylesheet"
         />
       </head>
-      <body className="bg-abyss text-text min-h-dvh">{children}</body>
+      <body className="bg-abyss text-text min-h-dvh">
+        {children}
+        <Analytics />
+      </body>
     </html>
   );
 }
