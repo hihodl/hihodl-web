@@ -3,11 +3,10 @@
 import type { VersionedTransaction } from "@solana/web3.js";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
-import { Check, ChainPicker, SolanaOptions, Spinner } from "@/components/ad-space/checkout-parts";
+import { Ion, type IonName } from "@/components/app/ion";
 import { QrCode } from "@/components/ad-space/qr";
-import { btnPrimary, btnSecondary, btnSmallSecondary, input } from "@/components/ad-space/ui";
 import {
   CheckoutError,
   checkoutId,
@@ -15,19 +14,25 @@ import {
   existingCheckoutKey,
   rotateCheckoutKey,
 } from "@/lib/ad-space/checkout-client";
-import { CHAIN_LABEL, timeLeft, usdFromCents } from "@/lib/ad-space/format";
+import { CHAIN_LABEL, timeLeft } from "@/lib/ad-space/format";
 import {
+  type EvmWallet,
   type SolanaWallet,
   base64ToBytes,
   blockhashExpired,
-  detectSolanaWallets,
-  injected,
+  bytesToBase64,
   isMobile,
+  signedTransactionBytes,
   switchEvmChain,
   typedData,
+  watchEvmWallets,
+  watchSolanaWallets,
 } from "@/lib/ad-space/wallets";
 import type { Chain } from "@/lib/ad-space/types";
-import { PUBLIC_CHAINS } from "@/lib/orders/chains.public";
+import { t } from "@/lib/app/i18n";
+import { fmtFiat } from "@/lib/app/i18n/format";
+import { useT } from "@/lib/app/i18n/react";
+import { PUBLIC_CHAINS, type EvmPayChain } from "@/lib/orders/chains.public";
 import {
   MISMATCH_CODE,
   PAY_SPENT_KEY_CODES,
@@ -46,34 +51,96 @@ import {
   sentHere,
   solanaCheckoutProblem,
   startPayCheckout,
+  startSolanaTransfer,
   submitPayAuthorization,
+  submitPaySolana,
   type ExpectedPayment,
+  type PayToken,
 } from "@/lib/pay-links/client";
+import { usePhone } from "@/components/app/link/in-app";
+import { appSchemeUrl, holdPayHref, offers, payStateUrl, walletBrowseUrl, type WalletLinkId } from "@/lib/pay-links/page-rules";
 import type { PayLinkEvmPayload, PayLinkPayment, ShownPayLink, TimedPayLinkCheckout } from "@/lib/pay-links/types";
+import {
+  connectWalletConnect,
+  connectWalletConnectSolana,
+  isWalletConnectDismissed,
+  ledgerLiveUrl,
+  walletConnectProjectId,
+} from "@/lib/pay-links/walletconnect";
 
 /**
- * Paying a pay link, from any wallet, with no HOLD account.
+ * Paying a pay link in stablecoins, from any wallet, with no HOLD account:
+ * the sheet behind the page's "Stablecoins" row.
  *
- * The HiSpace checkout underneath, minus the fee: a Solana transfer signed by a
- * connected wallet or a phone wallet through Solana Pay, or ONE ERC-3009
- * authorization on Base or Polygon that our relayer submits. The server decides
- * when a payment is paid; this page only asks.
+ *   the network    a segmented row with each network's mark (Solana, Base,
+ *                  Polygon for USDC; Base alone for EURC)
+ *   in a wallet    when this page is already inside one (injected), "Pay
+ *                  with <wallet>" comes first: one tap
+ *   on a phone     "Or open your wallet": HOLD, and each wallet's own browser
+ *                  opened on this page with the same amount. A browser can't
+ *                  see which apps are installed, and a bare `solana:` link
+ *                  opens whichever app claimed it, so every wallet is named.
+ *                  Phantom and MetaMask pay on both Solana and EVM, so both
+ *                  are listed on every network.
+ *   the QR         the last row, "Scan QR code": the sheet turns into HOLD's
+ *                  code, the logo in its middle, with Back to the options.
+ *                  The Solana Pay request on Solana, the WalletConnect
+ *                  pairing on Base, Polygon and Arc, for a wallet on another device.
  *
- * Nothing touches a wallet until the payer presses a button that says so, and
- * nothing reaches the wallet until this page has checked that what the server
- * handed back is the payment it shows: amount, network, payer and receiver.
+ * The HiSpace checkout underneath, minus the fee: a Solana transfer, or ONE
+ * ERC-3009 authorization on Base, Polygon or Arc that our relayer submits. The
+ * server decides when a payment is paid; this sheet only asks. Nothing
+ * reaches a wallet until the sheet has checked the server's answer is the
+ * payment it shows: amount, token, network, payer and receiver.
+ *
+ * The amount is the page's: an open link hands it in (`amountCents`, in the
+ * token's cents), a fixed link carries its own.
  */
 
 const POLL_MS = 3_000;
 const MIN_CENTS = 100;
 const MAX_CENTS = 1_000_000;
+const NETWORK_LOGO: Record<Chain, string> = {
+  solana: "/pay/solana.svg",
+  base: "/pay/base.svg",
+  polygon: "/pay/polygon.svg",
+  // Circle's own Arc mark (28-Sep-2026).
+  arc: "/pay/arc.png",
+};
+export const WALLET_LOGO: Record<WalletLinkId | "ledger", string> = {
+  hold: "/favicon.png",
+  // Each wallet's own app icon, from its website (27-Sep-2026): phantom.com,
+  // solflare.com, metamask.io, wallet.coinbase.com, trustwallet.com; backpack.app (30-Sep-2026).
+  phantom: "/pay/wallets/phantom.png",
+  solflare: "/pay/wallets/solflare.png",
+  backpack: "/pay/wallets/backpack.png",
+  metamask: "/pay/wallets/metamask.png",
+  coinbase: "/pay/wallets/coinbase.png",
+  trust: "/pay/wallets/trust.svg",
+  // ledger.com's own icon (27-Sep-2026).
+  ledger: "/pay/wallets/ledger.png",
+};
+/** Marks drawn without a background sit on a white tile, like their app icon. */
+export const WALLET_LOGO_INSET: Partial<Record<WalletLinkId, true>> = { backpack: true, metamask: true, coinbase: true, trust: true };
+export const WALLET_NAME: Record<Exclude<WalletLinkId, "hold">, string> = {
+  phantom: "Phantom",
+  solflare: "Solflare",
+  backpack: "Backpack",
+  metamask: "MetaMask",
+  coinbase: "Coinbase Wallet",
+  trust: "Trust Wallet",
+};
 
 type Phase =
   | { kind: "loading" }
   | { kind: "choose" }
   | { kind: "busy"; label: string }
   /** `scanned`: a phone wallet has opened the payment and not sent it yet. */
-  | { kind: "qr"; link: string; scanned: boolean }
+  /** `transfer`: a transfer request, a payment from the moment it is shown; otherwise a transaction request, one once a wallet opens it. */
+  | { kind: "qr"; link: string; scanned: boolean; transfer?: boolean }
+  /** Waiting for a wallet to pair over WalletConnect; `uri` is the code to show. */
+  /** A WalletConnect pairing: Base, Polygon or Arc, or Solana for Ledger Wallet. */
+  | { kind: "wc"; uri: string | null; solana?: boolean }
   /** `skewMs`: the server's clock minus this browser's, from the checkout answer. */
   | { kind: "evm-sign"; label: string; validBefore: number; skewMs: number; sending: boolean }
   | { kind: "confirming"; payment: PayLinkPayment }
@@ -81,29 +148,55 @@ type Phase =
   | { kind: "duplicate"; payment: PayLinkPayment }
   | { kind: "lapsed" };
 
-/** "150", "150.5", "1,500.00" to cents, or null. No floating point. */
-export function parseCents(text: string): number | null {
-  const t = text.trim().replace(/^\$/, "").replace(/,/g, "");
-  const m = t.match(/^(\d{1,5})(?:\.(\d{1,2}))?$/);
-  if (!m) return null;
-  return Number(m[1]) * 100 + Number((m[2] ?? "").padEnd(2, "0") || "0");
+/** The networks a token can be paid on, among the link's. */
+export function networksFor(link: Pick<ShownPayLink, "chains">, token: PayToken): Chain[] {
+  return token === "eurc" ? link.chains.filter((c) => c === "base") : link.chains;
 }
 
-export function PayLinkPay({ link }: { link: ShownPayLink }) {
+export function PayLinkPay({
+  link,
+  amountCents = null,
+  token = "usdc",
+  amountText = null,
+  network = null,
+}: {
+  link: ShownPayLink;
+  /** An open link's amount, in the token's cents (validated by the page). Ignored on a fixed link. */
+  amountCents?: number | null;
+  token?: PayToken;
+  /** The amount as the payer typed it, carried into a wallet's browser. */
+  amountText?: string | null;
+  /** The network to start on (a page reopened inside a wallet). */
+  network?: Chain | null;
+}) {
   const router = useRouter();
+  // Re-render when the language changes; `t` reads whichever is on screen.
+  useT();
   const scope = payKeyScope(link.code);
-  const [chain, setChain] = useState<Chain>(link.chains.includes("solana") ? "solana" : link.chains[0]);
+  const chains = networksFor(link, token);
+  const [chain, setChain] = useState<Chain>(
+    network && chains.includes(network) ? network : chains.includes("solana") ? "solana" : chains[0] ?? "base",
+  );
   const [phase, setPhase] = useState<Phase>({ kind: "loading" });
+  /** The options, or the QR code the payer asked for in their place. */
+  const [view, setView] = useState<"options" | "qr">("options");
   const [notice, setNotice] = useState<string | null>(null);
-  const [wallets, setWallets] = useState<SolanaWallet[]>([]);
-  const [hasEvm, setHasEvm] = useState(false);
+  const [solWallets, setSolWallets] = useState<SolanaWallet[]>([]);
+  const [evmWallets, setEvmWallets] = useState<EvmWallet[]>([]);
+  // Inlined at build, so the server and the browser agree on it.
+  const walletConnect = walletConnectProjectId() !== null;
   const [mobile, setMobile] = useState(false);
-  const [amountText, setAmountText] = useState("");
+  const phone = usePhone();
+  const [pageUrl, setPageUrl] = useState("");
   const [now, setNow] = useState(() => Date.now());
   /** When the server said a previous attempt of this payer's may have settled (`previous_attempt_pending`). */
   const [retryAt, setRetryAt] = useState<number | null>(null);
   const keyRef = useRef("");
   const signatureRef = useRef<string | null>(null);
+  /** The WalletConnect pairing this sheet is waiting on; a newer one (or a closed sheet) retires it. */
+  const wcRun = useRef(0);
+  /** The payer tapped Ledger before the pairing link existed: open Ledger Wallet when it does. */
+  const ledgerWanted = useRef(false);
   /** What the open QR code asks for, and whether it has already been replaced once. */
   const qrRef = useRef<{ cents: number; amountInUrl: number | null; replaced: boolean }>({
     cents: 0,
@@ -111,17 +204,27 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
     replaced: false,
   });
 
-  const open = link.amount.mode === "open";
-  const maxCents = link.amount.mode === "open" ? Math.min(link.amount.maxCents ?? MAX_CENTS, MAX_CENTS) : MAX_CENTS;
-  const limits = { minCents: MIN_CENTS, maxCents };
+  const unit = token === "eurc" ? "EURC" : "USDC";
+  const money = useCallback((cents: number) => fmtFiat(cents / 100, token === "eurc" ? "EUR" : "USD"), [token]);
+  const fixed = link.amount.mode === "fixed" ? link.amount.cents : null;
+  const expectedCents = fixed ?? amountCents ?? 0;
   const payee = ownerName(link.owner);
-  const errorContext = { limits, accepts: link.chains, payee };
+  const maxCents = link.amount.mode === "open" ? Math.min(link.amount.maxCents ?? MAX_CENTS, MAX_CENTS) : MAX_CENTS;
+  const errorContext = { limits: { minCents: MIN_CENTS, maxCents }, accepts: chains, payee };
   const waiting = retryAt !== null && retryAt > now;
 
   useEffect(() => {
-    setWallets(detectSolanaWallets());
-    setHasEvm(Boolean(injected().ethereum));
     setMobile(isMobile());
+    setPageUrl(window.location.href);
+    const stopSol = watchSolanaWallets(setSolWallets);
+    const stopEvm = watchEvmWallets(setEvmWallets);
+    // Closing the sheet retires a pairing still waiting.
+    const pairing = wcRun;
+    return () => {
+      stopSol();
+      stopEvm();
+      pairing.current++;
+    };
   }, []);
 
   /*
@@ -168,8 +271,8 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
   const ticking = phase.kind === "evm-sign" || waiting;
   useEffect(() => {
     if (!ticking) return;
-    const t = setInterval(() => setNow(Date.now()), 1_000);
-    return () => clearInterval(t);
+    const id = setInterval(() => setNow(Date.now()), 1_000);
+    return () => clearInterval(id);
   }, [ticking]);
 
   /* Confirm poll while a payment is on its way. */
@@ -211,11 +314,28 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
   }, [confirmingId, router, scope]);
 
   /** A new QR code on a new key, for the same amount. */
+  /**
+   * The code for the key in `keyRef`: a transfer request, which every
+   * wallet's scanner reads (Phantom's refused the transaction request as
+   * "not a valid address"), or the transaction request where the server has
+   * no transfer requests yet.
+   */
+  const qrPhase = useCallback(async (): Promise<Phase> => {
+    const transfer = await startSolanaTransfer(link.code, keyRef.current, qrRef.current.amountInUrl);
+    if (transfer) return { kind: "qr", link: transfer.transferRequest, scanned: false, transfer: true };
+    const c = await checkoutId(keyRef.current);
+    return { kind: "qr", link: payLinkSolanaPay(link.code, c, qrRef.current.amountInUrl), scanned: false };
+  }, [link.code]);
+
   const replaceQr = useCallback(async () => {
     keyRef.current = rotateCheckoutKey(scope);
-    const c = await checkoutId(keyRef.current);
-    setPhase({ kind: "qr", link: payLinkSolanaPay(link.code, c, qrRef.current.amountInUrl), scanned: false });
-  }, [link.code, scope]);
+    try {
+      setPhase(await qrPhase());
+    } catch (e) {
+      fail(e, "solana");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qrPhase, scope]);
 
   /*
    * QR poll: once a phone wallet has opened the payment, check it is the
@@ -223,6 +343,7 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
    * The page stays on the code meanwhile: nothing was sent from here.
    */
   const qrLink = phase.kind === "qr" ? phase.link : null;
+  const qrTransfer = phase.kind === "qr" && Boolean(phase.transfer);
   useEffect(() => {
     if (!qrLink) return;
     let stop = false;
@@ -243,7 +364,7 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
               return;
             }
             qrRef.current.replaced = true;
-            setNotice("The payment your wallet opened didn't match this page. Don't approve it; scan this new code instead.");
+            setNotice(t("payPage.stable.qrMismatch"));
             await replaceQr();
             return;
           }
@@ -258,11 +379,14 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
           }
           if (payment.status === "paid_duplicate") return setPhase({ kind: "duplicate", payment });
           if (payment.status === "unpaid") {
-            setNotice("That code ran out before a payment arrived, so here is a new one. Nothing was paid.");
+            setNotice(t("payPage.stable.qrExpired"));
             await replaceQr();
             return;
           }
-          setPhase((p) => (p.kind === "qr" && !p.scanned ? { ...p, scanned: true } : p));
+          // A transfer request is a payment from the moment it is shown: nothing was scanned yet.
+          if (!qrTransfer) setPhase((p) => (p.kind === "qr" && !p.scanned ? { ...p, scanned: true } : p));
+          // Settling one reads the chain by its reference; every other look is plenty.
+          else wait = POLL_MS * 2;
         }
       } catch (e) {
         if (e instanceof CheckoutError && e.code === "rate_limited") wait = POLL_MS * 4;
@@ -274,21 +398,16 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
       stop = true;
       if (timer) clearTimeout(timer);
     };
-  }, [qrLink, replaceQr, router, scope]);
+  }, [qrLink, qrTransfer, replaceQr, router, scope]);
 
   /** The amount to send, or null after saying what is wrong with it. */
   function amountOrProblem(): { cents: number | undefined; expected: number } | null {
-    if (link.amount.mode === "fixed") return { cents: undefined, expected: link.amount.cents };
-    const cents = parseCents(amountText);
-    if (cents === null) {
-      setNotice("Type the amount in dollars, like 150 or 150.50.");
+    if (fixed !== null) return { cents: undefined, expected: fixed };
+    if (amountCents === null || amountCents < MIN_CENTS || amountCents > maxCents) {
+      setNotice(t("payPage.stable.amountBetween", { min: money(MIN_CENTS), max: money(maxCents) }));
       return null;
     }
-    if (cents < MIN_CENTS || cents > maxCents) {
-      setNotice(`The amount has to be between ${usdFromCents(MIN_CENTS)} and ${usdFromCents(maxCents)}.`);
-      return null;
-    }
-    return { cents, expected: cents };
+    return { cents: amountCents, expected: amountCents };
   }
 
   const withFreshKey = useCallback(
@@ -312,8 +431,9 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
     body: { chain: Chain; payerAddress: string; amountCents?: number },
     check: (res: TimedPayLinkCheckout) => { ok: T } | { problem: string },
   ): Promise<T> {
+    const full = token === "eurc" ? { ...body, token } : body;
     for (let attempt = 0; ; attempt++) {
-      const res = await withFreshKey((key) => startPayCheckout(link.code, key, body));
+      const res = await withFreshKey((key) => startPayCheckout(link.code, key, full));
       const verdict = check(res);
       if ("ok" in verdict) return verdict.ok;
       if (attempt >= 1) throw new CheckoutError(MISMATCH_CODE, 0, { problem: verdict.problem });
@@ -348,16 +468,16 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
     const amount = amountOrProblem();
     if (!amount) return;
     try {
-      setPhase({ kind: "busy", label: `Connecting ${wallet.name}…` });
+      setPhase({ kind: "busy", label: t("payPage.stable.connecting", { wallet: wallet.name }) });
       const connected = (await wallet.provider.connect()) as { publicKey?: { toString(): string } } | undefined;
       const payerAddress = (connected?.publicKey ?? wallet.provider.publicKey)?.toString();
       if (!payerAddress) throw new Error("no_account");
 
-      setPhase({ kind: "busy", label: "Preparing the payment…" });
+      setPhase({ kind: "busy", label: t("payPage.stable.preparing") });
       const web3 = await import("@solana/web3.js");
       const expect: ExpectedPayment = { cents: amount.expected, chain: "solana", payerAddress, payTo: link.payTo };
       const checkout = () =>
-        checkedCheckout<{ payment: PayLinkPayment; tx: VersionedTransaction }>(
+        checkedCheckout<{ payment: PayLinkPayment; tx: VersionedTransaction; first: VersionedTransaction | null }>(
           { chain: "solana", payerAddress, ...(amount.cents ? { amountCents: amount.cents } : {}) },
           (res) => {
             if (!("solana" in res)) return { problem: "shape" };
@@ -368,22 +488,51 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
               return { problem: "unreadable" };
             }
             const problem = solanaCheckoutProblem(web3, tx, res, expect);
-            return problem ? { problem } : { ok: { payment: res.payment, tx } };
+            if (problem) return { problem };
+            // The unsigned copy is used only when it is the checked message, byte for byte.
+            let first: VersionedTransaction | null = null;
+            if (res.solana.walletFirst) {
+              try {
+                const copy = web3.VersionedTransaction.deserialize(base64ToBytes(res.solana.walletFirst));
+                if (sameBytes(copy.message.serialize(), tx.message.serialize())) first = copy;
+              } catch {
+                first = null;
+              }
+            }
+            return { ok: { payment: res.payment, tx, first } };
           },
         );
-      let { payment, tx } = await checkout();
+      let { payment, tx, first } = await checkout();
 
-      setPhase({ kind: "busy", label: `Approve the payment in ${wallet.name}…` });
+      /**
+       * The wallet signs first when it can and the server handed out the
+       * unsigned copy: our fee payer's signature is added on the server.
+       * Phantom blocks, as "could be malicious", a transaction someone else
+       * signed before it. Otherwise the wallet signs and sends ours.
+       */
+      const pay = async (): Promise<unknown> => {
+        const signTransaction = wallet.provider.signTransaction;
+        if (first && typeof signTransaction === "function") {
+          const bytes = signedTransactionBytes(await signTransaction.call(wallet.provider, first));
+          if (!bytes) throw new Error("no_signature");
+          setPhase({ kind: "busy", label: t("payPage.stable.sending") });
+          return (await submitPaySolana(payment.id, keyRef.current, bytesToBase64(bytes))).signature;
+        }
+        return wallet.provider.signAndSendTransaction(tx);
+      };
+
+      setPhase({ kind: "busy", label: t("payPage.stable.approveIn", { wallet: wallet.name }) });
       let sent: unknown;
       try {
-        sent = await wallet.provider.signAndSendTransaction(tx);
+        sent = await pay();
       } catch (e) {
         if (!blockhashExpired(e)) throw e;
-        setPhase({ kind: "busy", label: `That took a while, so here is a fresh one. Approve it in ${wallet.name}…` });
+        setPhase({ kind: "busy", label: t("payPage.stable.freshOne", { wallet: wallet.name }) });
         // The same key would hand back the same, expired transaction.
         keyRef.current = rotateCheckoutKey(scope);
-        ({ payment, tx } = await checkout());
-        sent = await wallet.provider.signAndSendTransaction(tx);
+        ({ payment, tx, first } = await checkout());
+        setPhase({ kind: "busy", label: t("payPage.stable.approveIn", { wallet: wallet.name }) });
+        sent = await pay();
       }
       const signature = typeof sent === "string" ? sent : (sent as { signature?: unknown })?.signature;
       if (typeof signature !== "string" || !signature) throw new Error("no_signature");
@@ -395,11 +544,10 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
     }
   }
 
-  async function startQr() {
-    clearNotice();
-    const amount = amountOrProblem();
-    if (!amount) return;
-    setPhase({ kind: "busy", label: "Making your code…" });
+  const startQr = useCallback(async () => {
+    const cents = fixed ?? amountCents;
+    if (cents === null || cents < MIN_CENTS || cents > maxCents) return;
+    setPhase({ kind: "busy", label: t("payPage.stable.makingCode") });
     // A key that already opened a payment would show the phone that payment
     // again, whatever the page now asks for: start this code on a new one.
     try {
@@ -407,32 +555,35 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
     } catch {
       keyRef.current = rotateCheckoutKey(scope);
     }
-    qrRef.current = { cents: amount.expected, amountInUrl: amount.cents ?? null, replaced: false };
-    const c = await checkoutId(keyRef.current);
-    setPhase({ kind: "qr", link: payLinkSolanaPay(link.code, c, amount.cents ?? null), scanned: false });
-  }
+    qrRef.current = { cents, amountInUrl: fixed === null ? cents : null, replaced: false };
+    try {
+      setPhase(await qrPhase());
+    } catch (e) {
+      fail(e, "solana");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fixed, amountCents, maxCents, scope, qrPhase]);
 
-  async function payWithEvm(evmChain: "base" | "polygon") {
+  /**
+   * One authorization on Base, Polygon or Arc, from the wallet in this browser or
+   * one paired over WalletConnect (`provider` already connected).
+   */
+  async function payWithEvm(evmChain: EvmPayChain, provider: EvmWallet["provider"], walletName: string) {
     clearNotice();
     const amount = amountOrProblem();
     if (!amount) return;
-    const provider = injected().ethereum;
-    if (!provider) {
-      setNotice("No browser wallet found. Open this page in MetaMask, Coinbase Wallet or Rabby, or pay another way.");
-      return;
-    }
     const meta = PUBLIC_CHAINS[evmChain];
     try {
-      setPhase({ kind: "busy", label: "Connecting your wallet…" });
+      setPhase({ kind: "busy", label: t("payPage.stable.connecting", { wallet: walletName }) });
       const accounts = (await provider.request({ method: "eth_requestAccounts" })) as string[];
       const payerAddress = accounts?.[0];
       if (!payerAddress) throw new Error("no_account");
 
-      setPhase({ kind: "busy", label: `Switching your wallet to ${meta.label}…` });
+      setPhase({ kind: "busy", label: t("payPage.stable.switching", { net: meta.label }) });
       await switchEvmChain(provider, meta);
 
-      setPhase({ kind: "busy", label: "Preparing the payment…" });
-      const expect: ExpectedPayment = { cents: amount.expected, chain: evmChain, payerAddress, payTo: link.payTo };
+      setPhase({ kind: "busy", label: t("payPage.stable.preparing") });
+      const expect: ExpectedPayment = { cents: amount.expected, chain: evmChain, payerAddress, payTo: link.payTo, token };
       const { payment, evm, skewMs } = await checkedCheckout<{
         payment: PayLinkPayment;
         evm: PayLinkEvmPayload;
@@ -461,225 +612,476 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
     }
   }
 
+  /** Show the WalletConnect pairing as our QR, and pay once a wallet pairs. */
+  const startWc = useCallback(
+    async (evmChain: EvmPayChain) => {
+      const run = ++wcRun.current;
+      setPhase({ kind: "wc", uri: null });
+      try {
+        const provider = await connectWalletConnect((uri) => {
+          if (wcRun.current !== run) return;
+          setPhase((p) => (p.kind === "wc" ? { kind: "wc", uri } : p));
+          openLedgerIfWanted(uri);
+        });
+        if (wcRun.current !== run) return;
+        await payWithEvm(evmChain, provider, "WalletConnect");
+      } catch (e) {
+        if (wcRun.current !== run) return;
+        if (isWalletConnectDismissed(e)) return setPhase({ kind: "choose" });
+        fail(e, evmChain);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  /**
+   * Ledger Wallet on Solana: a WalletConnect pairing of its own (the Solana
+   * code is Solana Pay, which Ledger Wallet does not read), then the same
+   * payment as a wallet in the page, signed first by the Ledger.
+   */
+  const startWcSolana = useCallback(
+    async () => {
+      const run = ++wcRun.current;
+      setPhase({ kind: "wc", uri: null, solana: true });
+      try {
+        const provider = await connectWalletConnectSolana((uri) => {
+          if (wcRun.current !== run) return;
+          setPhase((p) => (p.kind === "wc" ? { kind: "wc", uri, solana: true } : p));
+          openLedgerIfWanted(uri);
+        });
+        if (wcRun.current !== run) return;
+        await payWithSolanaWallet({ name: "Ledger", provider });
+      } catch (e) {
+        if (wcRun.current !== run) return;
+        if (isWalletConnectDismissed(e)) return setPhase({ kind: "choose" });
+        fail(e, "solana");
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  function openLedgerIfWanted(uri: string) {
+    if (!ledgerWanted.current) return;
+    ledgerWanted.current = false;
+    window.location.href = ledgerLiveUrl(uri);
+  }
+
+  /** Ledger: open Ledger Wallet on this payment's pairing, starting one for the network if needed. */
+  function payWithLedger() {
+    clearNotice();
+    const onThisNetwork = phase.kind === "wc" && (chain === "solana") === Boolean(phase.solana);
+    if (onThisNetwork && phase.uri) {
+      window.location.href = ledgerLiveUrl(phase.uri);
+      return;
+    }
+    ledgerWanted.current = true;
+    if (onThisNetwork) return;
+    if (chain === "solana") void startWcSolana();
+    else void startWc(chain as EvmPayChain);
+  }
+
+  const canPay = link.status === "active";
+  const injectedHere = chain === "solana" ? solWallets.length > 0 : evmWallets.length > 0;
+
+  /** Make the code for this network: the Solana Pay request, or the WalletConnect pairing. */
+  function makeCode() {
+    clearNotice();
+    if (chain === "solana") {
+      // A Ledger pairing still waiting gives way to the code.
+      wcRun.current++;
+      ledgerWanted.current = false;
+      void startQr();
+    } else void startWc(chain as EvmPayChain);
+  }
+
+  /**
+   * "Scan QR code": the sheet shows the code in place of the options. A
+   * pairing already open for this network (Ledger started it) is shown as is.
+   */
+  function openQr() {
+    clearNotice();
+    if (!amountOrProblem()) return;
+    setView("qr");
+    if (phase.kind === "qr" || (phase.kind === "wc" && (chain === "solana") === Boolean(phase.solana))) return;
+    makeCode();
+  }
+
+  /** Back to the options: the code is dropped, and a pairing still waiting with it. */
+  function closeQr() {
+    wcRun.current++;
+    ledgerWanted.current = false;
+    clearNotice();
+    setView("options");
+    if (phase.kind === "qr" || phase.kind === "wc") setPhase({ kind: "choose" });
+  }
+
+  function switchNetwork(c: Chain) {
+    if (c === chain) return;
+    wcRun.current++;
+    ledgerWanted.current = false;
+    // A wait is for the same wallet on the same network; another network can be tried now.
+    clearNotice();
+    setChain(c);
+    setView("options");
+    if (phase.kind === "qr" || phase.kind === "wc" || phase.kind === "busy") setPhase({ kind: "choose" });
+  }
+
   function payAgain() {
     keyRef.current = rotateCheckoutKey(scope);
     signatureRef.current = null;
     clearNotice();
-    setAmountText("");
     setPhase({ kind: "choose" });
   }
 
   /* ── Render ─────────────────────────────────────────────────────── */
 
-  // A link that takes no more payments still shows this browser its own
-  // payment (and its receipt), and nothing else.
-  const canPay = link.status === "active";
-  if (!canPay && (phase.kind === "loading" || phase.kind === "choose" || phase.kind === "lapsed")) {
-    return notice ? (
-      <p className="rounded-card border border-amber/30 bg-amber/[0.05] px-4 py-3 text-small text-text-muted" role="status">
-        {notice}
+  const noticeLine =
+    notice || retryAt !== null ? (
+      <p className="rounded-[14px] bg-amber/[0.12] px-3.5 py-2.5 text-[13px] font-strong leading-[18px] text-amber" role="status">
+        {retryAt !== null ? previousAttemptSentence(Math.max(0, Math.ceil((retryAt - now) / 1000))) : notice}
       </p>
     ) : null;
-  }
+
+  // A link that takes no more payments still shows this browser its own
+  // payment (and its receipt), and nothing else.
+  if (!canPay && (phase.kind === "loading" || phase.kind === "choose" || phase.kind === "lapsed")) return noticeLine;
 
   if (phase.kind === "paid") {
-    return <Paid payment={phase.payment} payee={payee} onPayAgain={link.status === "active" ? payAgain : null} />;
+    return <Paid payment={phase.payment} payee={payee} unit={unit} money={money} onPayAgain={link.status === "active" ? payAgain : null} />;
   }
 
   if (phase.kind === "duplicate") {
+    const tx = paymentExplorerUrl(phase.payment);
     return (
-      <div className="flex flex-col gap-3">
-        <h2 className="font-display text-h4 font-light text-text">Someone else paid this link first.</h2>
-        <p className="text-small text-text-muted">
-          This link takes one payment, and another one arrived a moment before yours. We have told {payee}. Contact them with your transaction to sort it out; HOLD can&rsquo;t reverse a payment.
-        </p>
-        {paymentExplorerUrl(phase.payment) && (
-          <div>
-            <a
-              href={paymentExplorerUrl(phase.payment) ?? undefined}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={btnSmallSecondary}
-            >
-              View the transaction
-            </a>
-          </div>
-        )}
-      </div>
+      <Result icon="information-circle-outline" tone="text-amber" title={t("payPage.stable.duplicateTitle")} body={t("payPage.stable.duplicateBody", { payee })}>
+        {tx ? <GlassLink href={tx}>{t("payPage.stable.viewTx")}</GlassLink> : null}
+      </Result>
     );
   }
 
   if (phase.kind === "lapsed") {
     return (
-      <div className="flex flex-col gap-4">
-        <h2 className="font-display text-h4 font-light text-text">No payment arrived.</h2>
-        <p className="text-small text-text-muted">Nothing left your wallet. Start again when you&rsquo;re ready.</p>
-        <div>
-          <button type="button" className={btnPrimary} onClick={payAgain}>
-            Start again
-          </button>
+      <Result icon="time-outline" tone="text-amber" title={t("payPage.stable.lapsedTitle")} body={t("payPage.stable.lapsedBody")}>
+        <button type="button" className={amberCta} onClick={payAgain}>
+          {t("payPage.stable.startAgain")}
+        </button>
+      </Result>
+    );
+  }
+
+  if (phase.kind === "confirming") {
+    return (
+      <Result spinning title={t("payPage.stable.confirming", { net: CHAIN_LABEL[phase.payment.chain] })} body={t("payPage.stable.updatesOwn")} />
+    );
+  }
+
+  if (phase.kind === "evm-sign") {
+    const left = phase.validBefore * 1000 - (now + phase.skewMs);
+    return (
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-3 rounded-[18px] bg-white/[0.06] px-4 py-3.5 text-[14px] text-white">
+          <span
+            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-[14px] text-[13px] font-extrabold ${
+              phase.sending ? "bg-[#2FBE8A]/20 text-[#2FBE8A]" : "bg-amber text-[#0F0F1A]"
+            }`}
+            aria-hidden
+          >
+            {phase.sending ? <Ion name="checkmark" size={14} /> : 1}
+          </span>
+          <span className="min-w-0 flex-1 break-words">{phase.label}</span>
         </div>
+        {phase.sending ? (
+          <BusyLine label={t("payPage.stable.sending")} />
+        ) : left > 0 ? (
+          <p className="text-center text-[13px] text-[#9FB7C2]">
+            {t("payPage.stable.signInWallet")} · {t("payPage.stable.signWithin", { time: timeLeft(left) })}
+          </p>
+        ) : (
+          <p className="text-center text-[13px] text-amber">{t("payPage.stable.signExpired")}</p>
+        )}
       </div>
     );
   }
 
-  return (
-    <div className="flex flex-col gap-6">
-      {phase.kind === "loading" && <p className="text-small text-text-muted">One moment…</p>}
+  /* The choice: network, the wallet here, the code, the wallets on this phone. */
+  const shownAmount = money(expectedCents);
+  // Phantom and MetaMask each pay on Solana and on Base and Polygon (their docs, 28-Sep-2026).
+  // Backpack opens this page in its browser (docs.backpack.app, 30-Sep-2026); it is listed on Solana.
+  // Arc takes the same four EVM wallets; Coinbase Wallet adds it by hand (docs.arc.io, 28-Sep-2026).
+  const walletLinks: WalletLinkId[] = chain === "solana" ? ["phantom", "solflare", "backpack", "metamask"] : ["metamask", "phantom", "coinbase", "trust"];
+  const scheme = appSchemeUrl(link);
+  // Through the site's bridge on a phone: the app when installed, its store when not.
+  const holdHref = scheme ? holdPayHref(scheme, amountText, "USD", phone) : null;
+  const stateUrl = pageUrl ? payStateUrl(pageUrl, { amount: amountText, currency: token === "eurc" ? "EUR" : "USD", network: chain }) : "";
+  const qrText = phase.kind === "qr" ? phase.link : phase.kind === "wc" ? phase.uri : null;
+  const showQrArea = chain === "solana" || walletConnect;
+  const busyLabel = phase.kind === "busy" ? phase.label : null;
+  const showLedger = walletConnect && canPay;
+  const header = (
+    <p className="text-center text-[14px] text-[#CFE3EC]">
+      <span className="font-extrabold text-white">{shownAmount}</span> {t("payPage.sheetTo", { name: `\u2068${link.owner?.displayName?.trim() || payee}\u2069` })}
+    </p>
+  );
 
-      {phase.kind === "busy" && (
-        <p className="flex items-center gap-3 text-small text-text" role="status">
-          <Spinner />
-          {phase.label}
-        </p>
-      )}
-
-      {phase.kind === "choose" && (
-        <>
-          {open && (
-            <label className="flex flex-col gap-2">
-              <span className="text-small text-text-muted">Amount in US dollars (USDC)</span>
-              <span className="relative block">
-                <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-body text-text-muted">$</span>
-                <input
-                  className={`${input} pl-8 font-mono`}
-                  value={amountText}
-                  onChange={(e) => {
-                    setAmountText(e.target.value);
-                    setNotice(null);
-                  }}
-                  inputMode="decimal"
-                  autoComplete="off"
-                  placeholder="0.00"
-                  aria-describedby="amount-limits"
-                />
-              </span>
-              <span id="amount-limits" className="text-tiny text-text-faint">
-                From {usdFromCents(MIN_CENTS)} to {usdFromCents(maxCents)}.
-              </span>
-            </label>
-          )}
-
-          {link.chains.length > 1 && (
-            <ChainPicker
-              chains={link.chains}
-              chain={chain}
-              onChange={(c) => {
-                setChain(c);
-                // A wait is for the same wallet on the same network; another network can be tried now.
-                clearNotice();
-              }}
-            />
-          )}
-
-          {chain === "solana" ? (
-            <SolanaOptions
-              wallets={wallets}
-              mobile={mobile}
-              // The phone link needs the amount first, so on mobile it goes through the QR step.
-              mobileLink={null}
-              disabled={waiting}
-              onWallet={(w) => void payWithSolanaWallet(w)}
-              onQr={() => void startQr()}
-              onMobileLink={() => void startQr()}
-            />
-          ) : (
-            <div className="flex flex-col gap-4">
-              <p className="text-small text-text-muted">
-                One signature, no gas. The whole amount goes to {payee}; HOLD takes nothing.
-              </p>
-              {!hasEvm && (
-                <p className="text-small text-amber">
-                  No browser wallet found here. Open this page in MetaMask, Coinbase Wallet or Rabby
-                  {link.chains.includes("solana") ? ", or pay on Solana by QR" : ""}.
-                </p>
-              )}
-              <div>
-                <button type="button" className={btnPrimary} disabled={!hasEvm || waiting} onClick={() => void payWithEvm(chain)}>
-                  Connect wallet and pay
-                </button>
-              </div>
-            </div>
-          )}
-
-          <p className="text-tiny leading-relaxed text-text-faint">
-            You pay {payee} directly, in USDC on {CHAIN_LABEL[chain]}. HOLD never holds the money,
-            charges no fee and can&rsquo;t reverse the payment.
-          </p>
-        </>
-      )}
-
-      {phase.kind === "qr" && (
-        <div className="flex flex-col items-center gap-4 text-center">
-          <div className="w-full max-w-[240px] rounded-card bg-white p-3">
-            <QrCode text={phase.link} title="Solana Pay QR code" className="h-auto w-full" />
-          </div>
-          <p className="text-small text-text-muted">
-            Scan with Phantom, Solflare or any Solana wallet. It shows the exact amount before you approve.
-          </p>
-          {phase.scanned && (
-            <p className="text-small text-text">Your wallet has the payment. Approve it there, and this page updates.</p>
-          )}
-          {mobile && (
-            <a href={phase.link} className={btnSecondary}>
-              Open in my wallet
-            </a>
-          )}
-          <p className="flex items-center gap-3 text-small text-text-faint" role="status">
-            <Spinner />
-            Waiting for your wallet…
-          </p>
-          <button type="button" className={btnSmallSecondary} onClick={() => setPhase({ kind: "choose" })}>
-            Back
+  if (view === "qr" && showQrArea) {
+    return (
+      <div className="flex flex-col gap-4">
+        <div className="relative flex items-center justify-center">
+          <button
+            type="button"
+            onClick={closeQr}
+            disabled={!!busyLabel}
+            className="absolute start-0 inline-flex h-9 items-center gap-1 rounded-[18px] pe-3 ps-1.5 text-[14px] font-bold text-white/80 transition-colors hover:text-white disabled:opacity-40"
+          >
+            <Ion name="chevron-back" size={18} className="rtl:rotate-180" />
+            {t("payPage.back")}
           </button>
+          <h3 className="text-[15px] font-extrabold text-white">{t("payPage.scanQr")}</h3>
         </div>
-      )}
 
-      {phase.kind === "evm-sign" && (
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center gap-3 rounded-input border border-amber/50 px-4 py-3 text-small text-text">
-            <span
-              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-[12px] text-tiny ${
-                phase.sending ? "bg-success/20 text-success" : "bg-amber text-text-on-amber"
-              }`}
-              aria-hidden
-            >
-              {phase.sending ? <Check /> : 1}
-            </span>
-            <span className="min-w-0 flex-1 break-words">{phase.label}</span>
-            {!phase.sending && <span className="text-tiny text-amber">Sign in your wallet</span>}
+        {header}
+
+        {busyLabel && !qrText ? <BusyLine label={busyLabel} /> : null}
+
+        <div className="flex flex-col items-center gap-3">
+          <div className="flex aspect-square w-full max-w-[236px] items-center justify-center rounded-[24px] bg-white p-3.5 shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
+            {qrText ? (
+              <QrCode text={qrText} title={t("payPage.stable.qrTitle")} logo="/favicon.png" className="h-auto w-full" />
+            ) : phase.kind === "choose" ? (
+              // A refusal, or a pairing the wallet closed: the payer reads why, then asks again.
+              <button
+                type="button"
+                disabled={waiting}
+                onClick={makeCode}
+                className="flex flex-col items-center gap-2 text-[13px] font-bold text-[#0A1420] disabled:opacity-40"
+              >
+                <Ion name="qr-code-outline" size={34} />
+                {t("payPage.showCode")}
+              </button>
+            ) : (
+              <span className="h-7 w-7 animate-spin rounded-full border-[3px] border-[#0A1420]/15 border-t-[#0A1420]" aria-hidden />
+            )}
           </div>
-          {phase.sending ? (
-            <p className="flex items-center gap-3 text-small text-text" role="status">
-              <Spinner />
-              Sending the payment…
-            </p>
-          ) : phase.validBefore * 1000 > now + phase.skewMs ? (
-            <p className="text-tiny text-text-faint">
-              Sign within{" "}
-              <span className="font-mono text-text-muted">{timeLeft(phase.validBefore * 1000 - (now + phase.skewMs))}</span>.
-            </p>
-          ) : (
-            <p className="text-tiny text-amber">This signature request has expired. Close your wallet and start again.</p>
-          )}
-        </div>
-      )}
-
-      {phase.kind === "confirming" && (
-        <div className="flex flex-col gap-3">
-          <p className="flex items-center gap-3 text-body text-text" role="status">
-            <Spinner />
-            Confirming your payment on {CHAIN_LABEL[phase.payment.chain]}…
+          <p className="max-w-[300px] text-center text-[12.5px] leading-[17px] text-[#9FB7C2]">
+            {phase.kind === "qr" && phase.scanned
+              ? t("payPage.stable.qrScanned")
+              : chain === "solana" && phase.kind !== "wc"
+                ? t("payPage.stable.qrScan")
+                : t("payPage.wcScan")}
           </p>
-          <p className="text-small text-text-muted">This page updates on its own.</p>
         </div>
-      )}
 
-      {(notice || retryAt !== null) && (
-        <p className="rounded-card border border-amber/30 bg-amber/[0.05] px-4 py-3 text-small text-text-muted" role="status">
-          {retryAt !== null ? previousAttemptSentence(Math.max(0, Math.ceil((retryAt - now) / 1000))) : notice}
+        {noticeLine}
+      </div>
+    );
+  }
+
+  const openRows = !injectedHere && mobile && stateUrl;
+  const holdRow = openRows && holdHref && token === "usdc" && offers(link, "hold");
+  const ledgerRow = !injectedHere && showLedger;
+  const qrRow = showQrArea && canPay;
+
+  return (
+    <div className="flex flex-col gap-4">
+      {header}
+
+      {chains.length > 1 ? (
+        <div role="radiogroup" aria-label={t("payPage.network")} className="flex h-11 gap-1 rounded-[22px] bg-white/[0.06] p-1">
+          {chains.map((c) => (
+            <button
+              key={c}
+              type="button"
+              role="radio"
+              aria-checked={chain === c}
+              onClick={() => switchNetwork(c)}
+              className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[18px] text-[13.5px] font-bold transition-colors ${
+                chain === c ? "bg-white text-[#0A1420]" : "text-white/75 hover:text-white"
+              }`}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={NETWORK_LOGO[c]} alt="" width={18} height={18} className="h-[18px] w-[18px] shrink-0 rounded-[5px]" />
+              <span className="truncate">{CHAIN_LABEL[c]}</span>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <p className="flex items-center justify-center gap-1.5 text-[13px] font-bold text-white/80">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={NETWORK_LOGO[chain]} alt="" width={18} height={18} className="h-[18px] w-[18px] rounded-[5px]" />
+          {t("payPage.onNetwork", { token: unit, net: CHAIN_LABEL[chain] })}
         </p>
       )}
+
+      {/* Already inside a wallet: one tap. */}
+      {chain === "solana"
+        ? solWallets.map((w) => (
+            <button key={w.name} type="button" className={amberCta} disabled={waiting || !!busyLabel} onClick={() => void payWithSolanaWallet(w)}>
+              {w.icon ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={w.icon} alt="" width={22} height={22} className="h-[22px] w-[22px] rounded-[6px]" />
+              ) : null}
+              {t("payPage.payWithWallet", { wallet: w.name })}
+            </button>
+          ))
+        : evmWallets.map((w) => (
+            <button
+              key={w.id}
+              type="button"
+              className={amberCta}
+              disabled={waiting || !!busyLabel}
+              onClick={() => {
+                wcRun.current++;
+                void payWithEvm(chain as EvmPayChain, w.provider, w.name);
+              }}
+            >
+              {w.icon ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={w.icon} alt="" width={22} height={22} className="h-[22px] w-[22px] rounded-[6px]" />
+              ) : null}
+              {t("payPage.payWithWallet", { wallet: w.name })}
+            </button>
+          ))}
+
+      {busyLabel ? <BusyLine label={busyLabel} /> : null}
+
+      {openRows || ledgerRow || qrRow ? (
+        <div className="flex flex-col gap-2">
+          {openRows || ledgerRow ? <p className="px-1 text-[13px] font-strong text-[#9FB7C2]">{t("payPage.orOpenWallet")}</p> : null}
+          <div className="overflow-hidden rounded-[20px] border border-white/[0.08] bg-white/[0.05]">
+            {holdRow && holdHref ? <WalletRow href={holdHref} logo={WALLET_LOGO.hold} name="HOLD" /> : null}
+            {openRows
+              ? walletLinks.map((id, i) => (
+                  <WalletRow
+                    key={id}
+                    href={walletBrowseUrl(id as Exclude<WalletLinkId, "hold">, stateUrl)}
+                    logo={WALLET_LOGO[id]}
+                    inset={Boolean(WALLET_LOGO_INSET[id as WalletLinkId])}
+                    name={WALLET_NAME[id as Exclude<WalletLinkId, "hold">]}
+                    last={!ledgerRow && !qrRow && i === walletLinks.length - 1}
+                  />
+                ))
+              : null}
+            {/* A Ledger pays through Ledger Wallet (the app, on a phone or a computer) over WalletConnect. */}
+            {ledgerRow ? (
+              <WalletRow onClick={payWithLedger} logo={WALLET_LOGO.ledger} inset name="Ledger" disabled={waiting || !!busyLabel} last={!qrRow} />
+            ) : null}
+            {/* The code, for a wallet on another device: it takes the sheet, with Back to these options. */}
+            {qrRow ? <WalletRow onClick={openQr} icon="qr-code-outline" name={t("payPage.scanQr")} disabled={waiting || !!busyLabel} last /> : null}
+          </div>
+        </div>
+      ) : !injectedHere ? (
+        <p className="text-center text-[13px] leading-[18px] text-[#9FB7C2]">{t("payPage.openInWalletBrowser")}</p>
+      ) : null}
+
+      {noticeLine}
+    </div>
+  );
+}
+
+/* ── Parts ─────────────────────────────────────────────────────────── */
+
+const amberCta =
+  "inline-flex h-[52px] w-full items-center justify-center gap-2.5 rounded-[26px] bg-amber px-5 text-[16px] font-extrabold text-[#0F0F1A] transition-opacity hover:opacity-90 disabled:opacity-50";
+const glassCta =
+  "inline-flex h-12 w-full items-center justify-center gap-2 rounded-[24px] border border-white/[0.22] bg-white/10 px-5 text-[15px] font-bold text-white";
+
+function WalletRow({
+  href,
+  onClick,
+  logo,
+  icon,
+  name,
+  inset = false,
+  last = false,
+  disabled = false,
+}: {
+  name: string;
+  inset?: boolean;
+  last?: boolean;
+  disabled?: boolean;
+} & ({ logo: string; icon?: undefined } | { logo?: undefined; icon: IonName }) &
+  ({ href: string; onClick?: undefined } | { href?: undefined; onClick: () => void })) {
+  const row = `flex w-full items-center gap-3 px-4 py-3 text-start transition-colors hover:bg-white/[0.04] disabled:opacity-50 ${last ? "" : "border-b border-white/[0.06]"}`;
+  const body = (
+    <>
+      {icon ? (
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-white/[0.1] text-white">
+          <Ion name={icon} size={18} />
+        </span>
+      ) : (
+        <span className={`flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-[9px] bg-white ${inset ? "p-[5px]" : ""}`}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={logo} alt="" width={32} height={32} className="h-full w-full object-contain" />
+        </span>
+      )}
+      <span className="min-w-0 flex-1 truncate text-[15px] font-bold text-white">{name}</span>
+      {/* A row that opens another app says so; the code stays in this sheet. */}
+      {onClick && icon ? (
+        <Ion name="chevron-forward" size={15} className="shrink-0 text-white/40 rtl:rotate-180" />
+      ) : (
+        <Ion name="open-outline" size={15} className="shrink-0 text-white/40" />
+      )}
+    </>
+  );
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} disabled={disabled} className={row}>
+        {body}
+      </button>
+    );
+  }
+  return (
+    <a href={href} className={row}>
+      {body}
+    </a>
+  );
+}
+
+function BusyLine({ label }: { label: string }) {
+  return (
+    <p className="flex items-center justify-center gap-2.5 text-center text-[14px] text-white" role="status">
+      <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-white/25 border-t-white" aria-hidden />
+      {label}
+    </p>
+  );
+}
+
+function GlassLink({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" className={glassCta}>
+      {children}
+      <Ion name="open-outline" size={15} />
+    </a>
+  );
+}
+
+function Result({
+  icon = "checkmark-circle",
+  tone = "text-[#2FBE8A]",
+  spinning = false,
+  title,
+  body,
+  children,
+}: {
+  icon?: "checkmark-circle" | "information-circle-outline" | "time-outline";
+  tone?: string;
+  spinning?: boolean;
+  title: string;
+  body?: string;
+  children?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-3 py-4 text-center" role="status">
+      {spinning ? (
+        <span className="h-9 w-9 animate-spin rounded-full border-[3px] border-white/20 border-t-amber" aria-hidden />
+      ) : (
+        <Ion name={icon} size={40} className={tone} />
+      )}
+      <h3 className="text-[19px] font-extrabold tracking-[-0.3px] text-white">{title}</h3>
+      {body ? <p className="max-w-[340px] text-[14px] leading-[20px] text-[#CFE3EC]">{body}</p> : null}
+      {children ? <div className="mt-1 flex w-full flex-col gap-2.5">{children}</div> : null}
     </div>
   );
 }
@@ -687,54 +1089,42 @@ export function PayLinkPay({ link }: { link: ShownPayLink }) {
 function Paid({
   payment,
   payee,
+  unit,
+  money,
   onPayAgain,
 }: {
   payment: PayLinkPayment;
   payee: string;
+  unit: string;
+  money: (cents: number) => string;
   onPayAgain: (() => void) | null;
 }) {
+  useT();
   const receipt = receiptPath(payment.receiptUrl);
   const explorer = paymentExplorerUrl(payment);
   return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <p className="text-tiny uppercase tracking-wider text-success">Paid</p>
-        <h2 className="mt-2 font-display text-h3 font-light text-text">
-          {usdFromCents(payment.amountCents)} sent to {payee}.
-        </h2>
-        <p className="mt-2 text-small text-text-muted">In USDC on {CHAIN_LABEL[payment.chain]}.</p>
-      </div>
-      {receipt && (
-        <div className="flex flex-col gap-2 rounded-card border border-[color:var(--color-hairline-strong)] bg-white/[0.03] p-4">
-          <p className="text-small text-text">Keep your receipt.</p>
-          <p className="text-small text-text-muted">
-            Its link shows the amount, the network, the transaction and the time. Save it: you have no account here to
-            find it in later.
-          </p>
-          <div>
-            <Link href={receipt} className={btnSmallSecondary}>
-              Open the receipt
-            </Link>
-          </div>
-        </div>
-      )}
-      <div className="flex flex-wrap gap-2">
-        {explorer && (
-          <a
-            href={explorer}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={btnSmallSecondary}
-          >
-            View the transaction
-          </a>
-        )}
-        {onPayAgain && (
-          <button type="button" className={btnSmallSecondary} onClick={onPayAgain}>
-            Make another payment
-          </button>
-        )}
-      </div>
-    </div>
+    <Result
+      title={t("payPage.stable.paidSent", { amount: money(payment.amountCents), payee })}
+      body={t("payPage.stable.paidIn", { token: unit, net: CHAIN_LABEL[payment.chain] })}
+    >
+      {receipt ? (
+        <Link href={receipt} className={glassCta}>
+          {t("payPage.stable.receiptOpen")}
+        </Link>
+      ) : null}
+      {explorer ? <GlassLink href={explorer}>{t("payPage.stable.viewTx")}</GlassLink> : null}
+      {onPayAgain ? (
+        <button type="button" className={glassCta} onClick={onPayAgain}>
+          {t("payPage.stable.another")}
+        </button>
+      ) : null}
+    </Result>
   );
+}
+
+/** Two byte strings are the same bytes. */
+function sameBytes(a: Uint8Array, b: Uint8Array): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
 }

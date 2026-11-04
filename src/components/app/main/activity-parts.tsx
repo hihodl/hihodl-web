@@ -20,8 +20,11 @@
 
 import type { CSSProperties, ReactNode } from "react";
 
+import { t } from "@/lib/app/i18n";
+import { fmtUsd } from "@/lib/app/i18n/format";
+import { useT } from "@/lib/app/i18n/react";
+
 import { Ion, type IonName } from "../ion";
-import { money } from "../wallet/app-kit";
 import {
   activityAction,
   isYieldSupply,
@@ -288,7 +291,7 @@ export function readRow(
   mode: DisplayMode,
 ): RowReading {
   const counterparty = item.type === "move" ? resolveMoveTitle(item.fromAddress, item.toAddress, subaccounts) : item.title;
-  const processing = item.amount === "Processing…";
+  const processing = item.processing === true;
   const swap = item.type === "exchange";
 
   // A move carries no sign of its own. A bridge joins it despite arriving as
@@ -307,13 +310,13 @@ export function readRow(
   if (!swap && !processing && Number.isFinite(item.tokenAmount)) {
     const sym = (item.tokenSymbol ?? "").toUpperCase();
     if (isStable(sym)) {
-      amount = money(Math.abs(item.tokenAmount ?? 0));
+      amount = fmtUsd(Math.abs(item.tokenAmount ?? 0));
     } else {
       const price = prices[sym] ?? (item.tokenMint ? prices[item.tokenMint] : undefined);
       const frozen = Number.isFinite(item.usdValueAtTx)
         ? Math.abs(item.usdValueAtTx as number)
         : Math.abs(item.tokenAmount ?? 0) * (Number.isFinite(price) ? (price as number) : 0);
-      amount = frozen > 0 ? money(frozen) : `${fmtTokenAmount(Math.abs(item.tokenAmount ?? 0), sym)} ${maskSymbol(sym, mode)}`;
+      amount = frozen > 0 ? fmtUsd(frozen) : `${fmtTokenAmount(Math.abs(item.tokenAmount ?? 0), sym)} ${maskSymbol(sym, mode)}`;
     }
     if (sign) amount = `${sign} ${amount}`;
   }
@@ -321,7 +324,8 @@ export function readRow(
   return {
     action: item.actionLabel || activityAction(item.type),
     counterparty,
-    amount,
+    // Made when the row was read, perhaps in another language: said again in this one.
+    amount: processing ? t("activity.processing") : amount,
     amountSecondary: swap ? item.amountSecondary : undefined,
     sign,
     processing,
@@ -344,6 +348,7 @@ export function ActivityRow({
   surface: "card" | "flush";
   mode: DisplayMode;
 }) {
+  const tt = useT();
   const plate =
     surface === "card"
       ? "min-h-16 rounded-[18px] border border-b-white/[0.04] border-l-white/[0.07] border-r-white/[0.07] border-t-white/[0.16] bg-[#15313D] px-3 py-3"
@@ -385,7 +390,7 @@ export function ActivityRow({
 
   const cls = `flex w-full items-center justify-between gap-2 text-left ${plate} ${item.status === "pending" ? "opacity-65" : ""}`;
   return onOpen ? (
-    <button type="button" onClick={onOpen} className={`${cls} transition-colors hover:bg-white/[0.04]`} aria-label={`Open ${reading.counterparty} transaction`}>
+    <button type="button" onClick={onOpen} className={`${cls} transition-colors hover:bg-white/[0.04]`} aria-label={tt("activity.row.open", { name: reading.counterparty })}>
       {body}
     </button>
   ) : (

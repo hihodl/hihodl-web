@@ -2,6 +2,8 @@
 
 import { STATUS_LABEL, usdFromUsdc } from "@/lib/ad-space/format";
 import type { OfferMode, Position } from "@/lib/ad-space/types";
+import { t as translate } from "@/lib/app/i18n";
+import { useT } from "@/lib/app/i18n/react";
 
 import { btnSmall, btnSmallSecondary, pill } from "./ui";
 
@@ -35,6 +37,7 @@ export function WholeListing({
   onSponsor: (p: Position) => void;
   onOffer?: (p: Position) => void;
 }) {
+  const t = useT();
   const namesPrice = offerMode === "offers" || offerMode === "bids" || p.sponsorPaysUsdc === null;
   const taken = p.status === "sold";
   const gone = !taken && partsSold;
@@ -49,15 +52,15 @@ export function WholeListing({
     >
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="text-body text-sp-ink">{p.title ?? "One brand takes everything"}</h3>
+          <h3 className="text-body text-sp-ink">{p.title ?? t("board.whole.title")}</h3>
           <p className="mt-1 text-tiny text-sp-ink/80">
             {taken
-              ? `The whole ${productName} is one brand's.`
-              : `Every spot on the ${productName}, and nobody else on it.`}
+              ? t("board.whole.taken", { product: productName })
+              : t("board.whole.every", { product: productName })}
           </p>
         </div>
         <span className={pill[taken ? "sold" : gone ? "closed" : p.status]}>
-          {gone ? "No longer whole" : STATUS_LABEL[p.status]}
+          {gone ? t("board.whole.noLongerWhole") : STATUS_LABEL[p.status]}
         </span>
       </header>
 
@@ -73,14 +76,14 @@ export function WholeListing({
         </ul>
       )}
 
-      {taken && p.sponsor?.name && <p className="text-small text-sp-ink/85">{p.sponsor.name} took all of it.</p>}
+      {taken && p.sponsor?.name && <p className="text-small text-sp-ink/85">{t("board.whole.tookAll", { name: p.sponsor.name })}</p>}
 
       <div className="mt-auto flex flex-wrap items-end justify-between gap-x-4 gap-y-3 border-t border-[color:var(--color-hairline)] pt-4">
         {namesPrice ? (
-          <p className="text-small text-sp-ink/80">You name the price.</p>
+          <p className="text-small text-sp-ink/80">{t("board.whole.youNamePrice")}</p>
         ) : (
           <dl className="flex flex-col gap-0.5">
-            <dt className="sr-only">You pay</dt>
+            <dt className="sr-only">{t("board.youPay")}</dt>
             <dd className="text-body tabular-nums text-sp-ink">
               {usdFromUsdc(p.sponsorPaysUsdc)}
               <span className="ml-1 text-[11px] font-normal text-sp-ink/80">USDC</span>
@@ -90,18 +93,18 @@ export function WholeListing({
         {buyable && !taken && !gone && (
           namesPrice && onOffer ? (
             <button type="button" className={btnSmall} onClick={() => onOffer(p)}>
-              {offerMode === "bids" ? "Bid for all of it" : "Offer for all of it"}
+              {offerMode === "bids" ? t("board.whole.bidAll") : t("board.whole.offerAll")}
             </button>
           ) : (
             <button type="button" className={btnSmall} onClick={() => onSponsor(p)}>
-              Take all of it
+              {t("board.whole.takeAll")}
             </button>
           )
         )}
         {gone && (
           // Said plainly rather than hidden: a brand that came for the whole
           // piece should learn why it cannot have it, not find a missing button.
-          <p className="text-tiny text-sp-ink/70">A spot has been sold, so the piece is no longer whole.</p>
+          <p className="text-tiny text-sp-ink/70">{t("board.whole.spotSold")}</p>
         )}
       </div>
     </article>
@@ -110,7 +113,7 @@ export function WholeListing({
 
 /** A reason a square cannot be bought, when the whole listing was. */
 export function takenWholeText(productName: string): string {
-  return `One brand took the whole ${productName}.`;
+  return translate("board.whole.tookWhole", { product: productName });
 }
 
 /** The whole-listing position of a board, or null. */

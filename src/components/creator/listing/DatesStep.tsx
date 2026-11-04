@@ -16,6 +16,7 @@
 
 import { Ion } from "@/components/app/ion";
 import { emptyBtn } from "@/components/app/spaces/kit";
+import { useT } from "@/lib/app/i18n/react";
 import { LIMITS, type ListingDraft } from "@/lib/creator/listing";
 import { problemsAt, type Problem } from "@/lib/creator/rules";
 
@@ -32,6 +33,7 @@ export function DatesStep({
   onChange: (next: ListingDraft) => void;
   problems: readonly Problem[];
 }) {
+  const t = useT();
   const set = (change: Partial<ListingDraft>) => onChange({ ...draft, ...change });
   const from = today();
   // The earliest valid close is a day out, and the latest is sixty: the
@@ -41,18 +43,18 @@ export function DatesStep({
   const keyMax = dayPlus(draft.closesAt.slice(0, 10) || closesMax, LIMITS.DELIVERABLE_DAYS_AFTER_CLOSE);
 
   return (
-    <StepCard title="Dates" help={`It stops taking sponsors between a day and ${LIMITS.MAX_CAMPAIGN_DAYS} days from now.`}>
+    <StepCard title={t("listings.wizard.stage.dates")} help={t("listings.dates.help", { days: LIMITS.MAX_CAMPAIGN_DAYS })}>
       <DayTimeField
-        label="Closes"
+        label={t("listings.dates.closes")}
         value={draft.closesAt}
         onChange={(closesAt) => set({ closesAt })}
         min={closesMin}
         max={closesMax}
         problems={problemsAt(problems, "closesAt")}
-        hint="Set it a little before you travel."
+        hint={t("listings.dates.closesHint")}
       />
 
-      <Field label="Dates worth showing" hint="Optional. The days a sponsor will want to know about." problems={problemsAt(problems, "keyDates")}>
+      <Field label={t("listings.dates.keyDates")} hint={t("listings.dates.keyDatesHint")} problems={problemsAt(problems, "keyDates")}>
         <div className="flex flex-col gap-3">
           {draft.keyDates.map((k, i) => (
             <div key={i} className="flex flex-col gap-2">
@@ -62,12 +64,12 @@ export function DatesStep({
                     value={k.label}
                     onChange={(label) => set({ keyDates: draft.keyDates.map((d, j) => (j === i ? { ...d, label } : d)) })}
                     maxLength={60}
-                    placeholder="Everything posted by"
+                    placeholder={t("listings.dates.keyDatePlaceholder")}
                   />
                 </div>
                 <button
                   type="button"
-                  aria-label="Remove this date"
+                  aria-label={t("listings.dates.removeDate")}
                   className={`${btnSmallGlass} !h-12 !w-12 !rounded-[24px] !px-0`}
                   onClick={() => set({ keyDates: draft.keyDates.filter((_, j) => j !== i) })}
                 >
@@ -75,7 +77,7 @@ export function DatesStep({
                 </button>
               </div>
               <DayField
-                label="On"
+                label={t("listings.dates.on")}
                 value={k.date}
                 onChange={(date) => set({ keyDates: draft.keyDates.map((d, j) => (j === i ? { ...d, date } : d)) })}
                 min={from}
@@ -88,7 +90,7 @@ export function DatesStep({
             <div>
               <button type="button" className={emptyBtn} onClick={() => set({ keyDates: [...draft.keyDates, { label: "", date: "" }] })}>
                 <Ion name="add" size={16} className="mr-1.5" />
-                Add a date
+                {t("listings.dates.addDate")}
               </button>
             </div>
           ) : null}

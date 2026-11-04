@@ -14,6 +14,8 @@
 
 import { useEffect, useState } from "react";
 
+import type { MessageKey } from "@/lib/app/i18n";
+import { useT } from "@/lib/app/i18n/react";
 import { clientProductBase } from "@/lib/app/paths";
 import { takeNext } from "@/lib/auth/providers";
 import { creatorAuth } from "@/lib/creator/session";
@@ -21,7 +23,8 @@ import { creatorAuth } from "@/lib/creator/session";
 import { ErrorBanner, Spinner } from "./step";
 
 export function AuthCallback() {
-  const [failed, setFailed] = useState<string | null>(null);
+  const t = useT();
+  const [failed, setFailed] = useState<MessageKey | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -31,7 +34,7 @@ export function AuthCallback() {
 
     void (async () => {
       if (!auth) {
-        if (alive) setFailed("Sign-in is not set up on this deployment.");
+        if (alive) setFailed("front.callback.notSetUp");
         return;
       }
       // getSession waits for the client's start-up, which is where the code is exchanged.
@@ -43,8 +46,8 @@ export function AuthCallback() {
       }
       setFailed(
         providerError && /cancel|denied|access_denied/i.test(providerError)
-          ? "You closed the sign-in before it finished. Nothing changed."
-          : "That sign-in did not go through. It can happen when the page was opened in another browser. Try again from here.",
+          ? "front.callback.cancelled"
+          : "front.callback.failed",
       );
     })();
     return () => {
@@ -57,18 +60,18 @@ export function AuthCallback() {
     <div className="flex min-h-[100dvh] w-full flex-col items-center justify-center gap-5 px-6 py-10">
       {failed ? (
         <div className="flex w-full max-w-[400px] flex-col gap-4">
-          <ErrorBanner>{failed}</ErrorBanner>
+          <ErrorBanner>{t(failed)}</ErrorBanner>
           <a
             href={clientProductBase() || "/"}
             className="flex h-[58px] w-full items-center justify-center rounded-[29px] bg-amber text-[17px] font-extrabold tracking-[-0.2px] text-[#0A1117] shadow-[0_6px_20px_rgba(255,183,3,0.2)] transition-colors hover:bg-amber-glow"
           >
-            Back to sign in
+            {t("front.callback.backToSignIn")}
           </a>
         </div>
       ) : (
         <>
           <Spinner color="#FFB703" size={36} />
-          <p className="text-center text-[17px] font-semibold text-white">Completing sign in...</p>
+          <p className="text-center text-[17px] font-semibold text-white">{t("front.callback.completing")}</p>
         </>
       )}
     </div>

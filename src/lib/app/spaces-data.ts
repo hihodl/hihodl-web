@@ -31,9 +31,11 @@ import {
   getCreatorSettings,
 } from "@/lib/creator/listings";
 import { useCreatorSession } from "@/lib/creator/session";
+import { briefApplications, brandRecord, getBrief, myApplications, myBriefs, openBriefs } from "@/lib/creator/briefs";
 import { getInsights } from "@/lib/creator/insights";
 import { getAnalytics } from "@/lib/creator/analytics";
 import { getInspireCampaigns, getInspireEvents } from "@/lib/creator/inspire";
+import { activeLinkedDevices } from "@/lib/link/api";
 import { getWalletStatus } from "@/lib/wallet/api";
 
 import { getMe, getMyAddresses } from "./me";
@@ -127,6 +129,26 @@ export const useMe = () => useRead("me", getMe);
 export const useWalletStatus = (on = true) => useRead(on ? "wallet-status" : null, getWalletStatus);
 /** The app wallet's addresses (GET /me/addresses). */
 export const useMyAddresses = (on = true) => useRead(on ? "my-addresses" : null, getMyAddresses);
+/** The phones linked to this account that still count (GET /device-link/devices, revoked ones dropped). */
+export const useLinkedPhones = (on = true) => useRead(on ? "linked-phones" : null, activeLinkedDevices);
+
+/* ── Briefs: the side where the brand asks first ──────────────────── */
+
+/** Open briefs anybody may apply to, newest first. */
+export const useOpenBriefs = (on = true) => useRead(on ? "open-briefs" : null, async () => (await openBriefs()).briefs);
+/** The briefs this person wrote, whatever became of them. */
+export const useMyBriefs = (on = true) => useRead(on ? "my-briefs" : null, async () => (await myBriefs()).briefs);
+/** One brief, whole: its own read, so a link into it works without the list. */
+export const useBrief = (briefId: string | null) =>
+  useRead(briefId ? "brief" : null, async () => (await getBrief(briefId!)).brief, briefId ?? "");
+/** One brief's queue, with the account behind each application. The brand's own only. */
+export const useBriefApplications = (briefId: string | null) =>
+  useRead(briefId ? "brief-applications" : null, async () => (await briefApplications(briefId!)).applications, briefId ?? "");
+/** What this person applied to, each with the brief it is for. */
+export const useMyApplications = (on = true) =>
+  useRead(on ? "my-applications" : null, async () => (await myApplications()).applications);
+/** This person's own record as a brand: what a creator reads before flying anywhere. */
+export const useBrandRecord = (on = true) => useRead(on ? "brand-record" : null, async () => (await brandRecord()).record);
 
 /** Market data for an event (a slug), all of Spaces (`all`), or the creator's nearest event (null). */
 export const useInsights = (event: string | null) =>

@@ -4,6 +4,8 @@
  * Shared by the HiSpace checkout and pay links. Client side only.
  */
 
+import { t } from "@/lib/app/i18n";
+
 import type { EvmPayload } from "./types";
 
 export interface SolanaProvider {
@@ -13,6 +15,13 @@ export interface SolanaProvider {
   publicKey?: { toString(): string } | null;
   connect(opts?: unknown): Promise<unknown>;
   signAndSendTransaction(tx: unknown, opts?: unknown): Promise<unknown>;
+  /**
+   * Signs without sending: the injected ones answer the signed transaction,
+   * a Wallet Standard one its bytes (signedTransactionBytes reads either).
+   * A pay link uses it so the payer's wallet signs BEFORE our fee payer:
+   * Phantom blocks a transaction someone else signed first.
+   */
+  signTransaction?(tx: unknown): Promise<unknown>;
   /** Phantom, Solflare and Backpack answer `{ signature }`; some wallets the bytes alone. */
   signMessage?(message: Uint8Array, display?: string): Promise<unknown>;
 }
@@ -55,11 +64,29 @@ export function detectSolanaWallets(): SolanaWallet[] {
   const generic = w.solana;
   if (generic) {
     add(
-      generic.isPhantom ? "Phantom" : generic.isSolflare ? "Solflare" : generic.isBackpack ? "Backpack" : "your wallet",
+      generic.isPhantom ? "Phantom" : generic.isSolflare ? "Solflare" : generic.isBackpack ? "Backpack" : t("sponsor.wallets.yourWallet"),
       generic,
     );
   }
   return found;
+}
+
+/** The bytes of what `signTransaction` answered: a transaction object, or its bytes. */
+export function signedTransactionBytes(out: unknown): Uint8Array | null {
+  if (out instanceof Uint8Array) return out;
+  const serialize = (out as { serialize?: () => Uint8Array } | null)?.serialize;
+  if (typeof serialize !== "function") return null;
+  try {
+    return serialize.call(out);
+  } catch {
+    return null;
+  }
+}
+
+export function bytesToBase64(bytes: Uint8Array): string {
+  let bin = "";
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
 }
 
 export function blockhashExpired(e: unknown): boolean {
@@ -150,6 +177,29 @@ export function base58(bytes: Uint8Array): string {
   return bytes.every((b) => b === 0) ? out.slice(0, bytes.length) : out;
 }
 
+/** base58's inverse: null for a character outside the alphabet. */
+export function base58Decode(text: string): Uint8Array | null {
+  const bytes: number[] = [0];
+  for (const ch of text) {
+    const value = B58.indexOf(ch);
+    if (value < 0) return null;
+    let carry = value;
+    for (let i = 0; i < bytes.length; i++) {
+      carry += bytes[i] * 58;
+      bytes[i] = carry & 0xff;
+      carry >>= 8;
+    }
+    while (carry > 0) {
+      bytes.push(carry & 0xff);
+      carry >>= 8;
+    }
+  }
+  let zeros = 0;
+  while (zeros < text.length && text[zeros] === "1") zeros++;
+  const body = text.length === zeros ? [] : bytes.reverse();
+  return Uint8Array.from([...new Array<number>(zeros).fill(0), ...body]);
+}
+
 /** UTF-8 text as a 0x hex string, which is what `personal_sign` takes. */
 export function utf8Hex(text: string): string {
   return `0x${Array.from(new TextEncoder().encode(text), (b) => b.toString(16).padStart(2, "0")).join("")}`;
@@ -229,6 +279,11 @@ type StandardSignAndSend = {
     ...inputs: { account: StandardAccount; chain: string; transaction: Uint8Array }[]
   ): Promise<readonly { signature: Uint8Array }[]>;
 };
+type StandardSignTransaction = {
+  signTransaction(
+    ...inputs: { account: StandardAccount; chain: string; transaction: Uint8Array }[]
+  ): Promise<readonly { signedTransaction: Uint8Array }[]>;
+};
 type StandardSignMessage = {
   signMessage(...inputs: { account: StandardAccount; message: Uint8Array }[]): Promise<readonly { signature: Uint8Array }[]>;
 };
@@ -248,6 +303,7 @@ function standardCanPay(w: StandardWallet): boolean {
 function standardProvider(w: StandardWallet): SolanaProvider {
   let account: StandardAccount | null = w.accounts[0] ?? null;
   const signMessage = w.features["solana:signMessage"] as StandardSignMessage | undefined;
+  const signTransaction = w.features["solana:signTransaction"] as StandardSignTransaction | undefined;
   const provider: SolanaProvider = {
     publicKey: account ? { toString: () => account!.address } : null,
     async connect() {
@@ -270,6 +326,18 @@ function standardProvider(w: StandardWallet): SolanaProvider {
       return { signature: base58(out.signature) };
     },
   };
+  if (signTransaction) {
+    provider.signTransaction = async (tx: unknown) => {
+      if (!account) throw new Error("no_account");
+      const [out] = await signTransaction.signTransaction({
+        account,
+        chain: SOLANA_MAINNET,
+        transaction: (tx as { serialize(): Uint8Array }).serialize(),
+      });
+      if (!out?.signedTransaction) throw new Error("no_signature");
+      return out.signedTransaction;
+    };
+  }
   if (signMessage) {
     provider.signMessage = async (message: Uint8Array) => {
       if (!account) throw new Error("no_account");
@@ -302,7 +370,7 @@ export function watchSolanaWallets(onChange: (wallets: SolanaWallet[]) => void):
     }
     // An unnamed injected `window.solana` is one of the wallets that announced
     // itself by name; listing both would show the same wallet twice.
-    onChange(added ? out.filter((w) => w.name !== "your wallet") : out);
+    onChange(added ? out.filter((w) => w.name !== t("sponsor.wallets.yourWallet")) : out);
   };
   const api = {
     register(...wallets: StandardWallet[]) {
@@ -340,7 +408,7 @@ function injectedEvmName(p: Eip1193Provider): string {
   if (f.isRabby) return "Rabby";
   if (f.isCoinbaseWallet) return "Coinbase Wallet";
   if (f.isMetaMask) return "MetaMask";
-  return "Browser wallet";
+  return t("sponsor.wallets.browserWallet");
 }
 
 /**
@@ -360,7 +428,7 @@ export function watchEvmWallets(onChange: (wallets: EvmWallet[]) => void): () =>
     if (!d?.provider || typeof d.provider.request !== "function") return;
     const id = d.info?.uuid ?? d.info?.rdns ?? d.info?.name ?? String(announced.size);
     // One wallet announcing twice (reloads, several frames) is still one wallet.
-    const name = d.info?.name ?? "Browser wallet";
+    const name = d.info?.name ?? t("sponsor.wallets.browserWallet");
     for (const [k, w] of announced) if (w.name === name) announced.delete(k);
     announced.set(id, { id, name, icon: d.info?.icon ?? null, provider: d.provider });
     emit();

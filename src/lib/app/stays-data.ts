@@ -51,6 +51,8 @@ import {
   type StayResult,
   type StaysConfig,
 } from "./stays";
+import { staysCurrency } from "./display-currency";
+import { t } from "./i18n";
 
 /**
  * A stay's photographs and description keep; its prices do not.
@@ -89,7 +91,7 @@ export function usePoints() {
   return useSWR<HiPoints>(who ? [who, "hipoints"] : null, () => getPoints(), OPTIONS);
 }
 
-export function useFeatured(set: "near" | "longhaul", currency = "EUR") {
+export function useFeatured(set: "near" | "longhaul", currency = staysCurrency()) {
   const who = useWho();
   return useSWR<FeaturedAnswer>(
     who ? [who, "stays/featured", set, currency] : null,
@@ -351,7 +353,7 @@ export function refreshTrips(): Promise<void> {
   publish({ loading: true });
   inflight = getBookings()
     .then((bookings) => publish({ server: bookings, loadedAt: Date.now(), error: null }))
-    .catch(() => publish({ error: "Couldn't load your trips" }))
+    .catch(() => publish({ error: t("trips.list.errorTitle") }))
     .finally(() => {
       inflight = null;
       publish({ loading: false });

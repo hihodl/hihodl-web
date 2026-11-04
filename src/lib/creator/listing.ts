@@ -26,6 +26,9 @@
  */
 
 import type { Chain } from "@/lib/ad-space/types";
+import { t } from "@/lib/app/i18n";
+import { fmtNumber } from "@/lib/app/i18n/format";
+
 import type { PublicCrew } from "./crew";
 
 /* ── What the backend allows, mirrored ────────────────────────────── */
@@ -146,6 +149,8 @@ export const ATTESTATIONS = [
   "public_place",
   "no_investment_advice",
   "no_investor_intros",
+  // An event's own package: the host delivers it at the event, or refunds.
+  "organiser_delivers",
 ] as const;
 export type Attestation = (typeof ATTESTATIONS)[number];
 
@@ -169,9 +174,11 @@ export function requiredAttestations(
   isSession: boolean,
   /** Content production declares exactly what its template asks, like the backend. */
   isProduction = false,
+  /** So does an event's own package (`event_asset`): the host's promise to deliver it. */
+  isPackage = false,
 ): Attestation[] {
   const out = new Set<Attestation>();
-  if (kind === "service" && isProduction) {
+  if (kind === "service" && (isProduction || isPackage)) {
     return ATTESTATIONS.filter((a) => templateRequires.includes(a));
   }
   if (kind === "service" && isSession) {
@@ -326,7 +333,7 @@ export function withDeliveryDay(draft: ListingDraft, day: string): ListingDraft 
 /* ── What the API hands back ──────────────────────────────────────── */
 
 export type TemplateKind = "placement" | "service";
-export type ServiceFormat = "content" | "session" | "production";
+export type ServiceFormat = "content" | "session" | "production" | "event_asset";
 
 export interface TemplateZone {
   zoneKey: string;
@@ -349,6 +356,8 @@ export interface Template {
     deliverableKind?: string;
     /** `custom-service`: the creator names the service themselves. */
     custom?: boolean;
+    /** `media-or-community-partner`: agreed in an enquiry, never bought. Absent elsewhere and on an older server. */
+    partnership?: boolean;
   } | null;
   allowedVenues: VenueType[];
   requiredAttestations: string[];
@@ -365,18 +374,47 @@ export function isProductionTemplate(t: Template | null): boolean {
   return t?.kind === "service" && t.service?.format === "production";
 }
 
+/**
+ * An event's own sponsor package (organiser-sells-its-event-contract.md):
+ * sold only by the event's verified host, listed only by
+ * `GET /templates?seller=organiser`. A service with `format: "event_asset"`
+ * (and `productType: "event_asset"`), N identical slots, delivered at the
+ * event and confirmed by the buyer after it, like a session.
+ */
+export function isPackageTemplate(t: Template | null): boolean {
+  return !!t && (t.service?.format === "event_asset" || t.productType === "event_asset");
+}
+
+/** A partner in kind (`media-or-community-partner`): offers only, no price, agreed in an enquiry. */
+export function isPartnershipTemplate(t: Template | null): boolean {
+  return isPackageTemplate(t) && t?.service?.partnership === true;
+}
+
 /* ── Content production (spaces-content-production-v0.md) ─────────── */
 
 export const PRODUCTION_DELIVERABLES = ["interviews", "shortForm", "brollPack", "photoSet", "socialAssets"] as const;
 export type ProductionDeliverable = (typeof PRODUCTION_DELIVERABLES)[number];
 
-/** What each line is, as the creator ticks it and the brand reads it. Mirrors production-rules.ts. */
+/**
+ * What each line is, as the creator ticks it and the brand reads it. Mirrors production-rules.ts.
+ * Getters, so each read is in the language on screen at that moment.
+ */
 export const PRODUCTION_DELIVERABLE_LABEL: Record<ProductionDeliverable, string> = {
-  interviews: "On-camera interviews",
-  shortForm: "Short-form edits (9:16, up to 60 s)",
-  brollPack: "B-roll pack (raw clips)",
-  photoSet: "Photo set",
-  socialAssets: "Social assets (cut-downs, captions)",
+  get interviews() {
+    return t("listings.production.line.interviews");
+  },
+  get shortForm() {
+    return t("listings.production.line.shortForm");
+  },
+  get brollPack() {
+    return t("listings.production.line.brollPack");
+  },
+  get photoSet() {
+    return t("listings.production.line.photoSet");
+  },
+  get socialAssets() {
+    return t("listings.production.line.socialAssets");
+  },
 };
 
 export const PRODUCTION_TURNAROUNDS = [24, 48, 72] as const;
@@ -384,13 +422,23 @@ export type Turnaround = (typeof PRODUCTION_TURNAROUNDS)[number];
 export const USAGE_SCOPES = ["organic", "organic_and_paid"] as const;
 export const USAGE_TERMS = ["6m", "12m", "perpetual"] as const;
 export const USAGE_SCOPE_LABEL: Record<(typeof USAGE_SCOPES)[number], string> = {
-  organic: "Organic social only",
-  organic_and_paid: "Organic and paid ads",
+  get organic() {
+    return t("listings.production.scope.organic");
+  },
+  get organic_and_paid() {
+    return t("listings.production.scope.organicAndPaid");
+  },
 };
 export const USAGE_TERM_LABEL: Record<(typeof USAGE_TERMS)[number], string> = {
-  "6m": "6 months",
-  "12m": "12 months",
-  perpetual: "Perpetual",
+  get "6m"() {
+    return t("listings.production.term.sixMonths");
+  },
+  get "12m"() {
+    return t("listings.production.term.twelveMonths");
+  },
+  get perpetual() {
+    return t("listings.production.term.perpetual");
+  },
 };
 /** Each line, at most this many per spot. */
 export const PRODUCTION_DELIVERABLE_MAX = 20;
@@ -613,6 +661,8 @@ export interface SpaceView {
   inspiredBy?: InspiredBy | null;
   /** Sold as a crew: who is in it and what each brings, never the split. Null or absent: an ordinary listing. */
   crew?: PublicCrew | null;
+  /** A partnership package's accepted partners, with the id that ends one. Absent: none, or an older server. */
+  partners?: { id: string; name: string; logoUrl: string | null }[];
 }
 
 /**
@@ -829,10 +879,13 @@ export function dollarsFromCents(cents: number | null | undefined): string {
   return cents % 100 === 0 ? String(cents / 100) : (cents / 100).toFixed(2);
 }
 
-/** Integer cents as "$1,300" or "$1,300.50". */
+/**
+ * Integer cents as "$1,300" or "$1,300.50". A price paid in USDC: always dollars,
+ * never converted; only the separators follow the language.
+ */
 export function usd(cents: number): string {
   const whole = cents % 100 === 0;
-  return (cents / 100).toLocaleString("en-US", {
+  return fmtNumber(cents / 100, {
     style: "currency",
     currency: "USD",
     minimumFractionDigits: whole ? 0 : 2,
@@ -1023,7 +1076,9 @@ export function draftFor(template: Template): ListingDraft {
   const service = template.kind === "service";
   const session = isSessionTemplate(template);
   const production = isProductionTemplate(template);
-  const suggested = template.service?.suggestedPriceCents ?? null;
+  const pkg = isPackageTemplate(template);
+  const partnership = isPartnershipTemplate(template);
+  const suggested = partnership ? null : template.service?.suggestedPriceCents ?? null;
   return {
     templateId: template.id,
     title: "",
@@ -1031,7 +1086,8 @@ export function draftFor(template: Template): ListingDraft {
     fundingGoalDollars: "",
     closesAt: "",
     biddingEndsAt: "",
-    pricingMode: "fixed",
+    // A partner in kind is agreed in an enquiry: offers, and never a price.
+    pricingMode: partnership ? "offers" : "fixed",
     acceptsOffers: false,
     feePayer: "sponsor",
     venueType: template.allowedVenues[0] ?? "everyday",
@@ -1040,7 +1096,8 @@ export function draftFor(template: Template): ListingDraft {
     keyDates: [],
     chains: [],
     // Production is filmed at the event: without the event there is no content either.
-    fallback: session || production ? "creator_refund" : "content_anyway",
+    // So is an event's package: it happens at the event, or the brand is refunded.
+    fallback: session || production || pkg ? "creator_refund" : "content_anyway",
     fallbackNote: "",
     attestations: [],
     deliverables: [],
@@ -1051,7 +1108,8 @@ export function draftFor(template: Template): ListingDraft {
     serviceSummary: "",
     production: { ...DEFAULT_PACKAGE, deliverables: { ...DEFAULT_PACKAGE.deliverables }, usage: { ...DEFAULT_PACKAGE.usage } },
     // A production spot is one package at one price: N identical spots, not a ladder.
-    sells: production ? "slots" : service ? "ladder" : "zones",
+    // So is an event's package: N identical slots (a booth, a banner) at one price.
+    sells: production || pkg ? "slots" : service ? "ladder" : "zones",
     rungs: service ? [{ ...newRung([]), perks: [""] }] : [],
     slots: 1,
     slotPriceDollars: dollarsFromCents(suggested),
@@ -1248,6 +1306,7 @@ function linesOf(perks: readonly string[]): string[] {
 export function bodyOf(draft: ListingDraft, template: Template): Record<string, unknown> {
   const session = isSessionTemplate(template);
   const production = isProductionTemplate(template);
+  const pkg = isPackageTemplate(template);
   const body: Record<string, unknown> = {
     title: draft.title.trim(),
     reason: draft.reason.trim() || null,
@@ -1283,8 +1342,9 @@ export function bodyOf(draft: ListingDraft, template: Template): Record<string, 
 
   if (template.kind === "service") {
     // A session's deliver-by is not typed: publish sets it to the day after
-    // the event ends. Sending one would be a number we made up.
-    body.deliverBy = session || production ? null : draft.deliverBy || null;
+    // the event ends. Sending one would be a number we made up. An event's
+    // package is the same: publish sets it from the event.
+    body.deliverBy = session || production || pkg ? null : draft.deliverBy || null;
     // Sent only for production, so no other listing's PATCH ever mentions it.
     if (production) body.production = draft.production;
     body.deliverables = [];

@@ -7,8 +7,8 @@
  * WELCOME is hihodl-wallet/app/auth/choose.tsx: the HOLD wordmark in the
  * middle of the Benefits ground, "Your money, your rules" between two amber
  * hairlines, one amber "Let's go", and behind it a "Continue with" sheet of
- * Apple, Google and Email rows. The app's Passkey row and Import wallet are
- * not here: the web signs in with a passkey nowhere yet, and a wallet is
+ * Apple, Google and Email rows. The app's other sign-in row and Import wallet
+ * are not here: the web signs in only with these three, and a wallet is
  * imported in the app.
  *
  * WELCOME BACK is the app's lock screen (app/auth/lock.tsx) without the PIN:
@@ -22,13 +22,18 @@
 
 import { useEffect, useState } from "react";
 
+import { t as tNow } from "@/lib/app/i18n";
+import { Rich, useT } from "@/lib/app/i18n/react";
 import type { OAuthProvider } from "@/lib/auth/providers";
-import { forgetRemembered, readRemembered, type Remembered } from "@/lib/auth/remember";
+import { forgetRemembered, readFace, readRemembered, type Remembered, type RememberedFace } from "@/lib/auth/remember";
+import { takeSignedOutElsewhereNote } from "@/lib/app/sessions";
+import { noteTermsShown, TERMS_VERSION } from "@/lib/app/terms";
 
 import { goWith, NotConfigured, PROVIDER_NAME, ProviderLogo, useProviders } from "@/components/creator/SignIn";
 
+import { StoreButtons } from "../main/products";
 import { EmailSignIn } from "./EmailSignIn";
-import { btnLink, HoldMark, Warn } from "./kit";
+import { btnLink, DEFAULT_AVATAR_EMOJI, EmojiAvatar, HoldMark, Warn } from "./kit";
 
 type Sheet = null | "choose" | "email";
 
@@ -41,6 +46,7 @@ function Mark({ provider }: { provider: OAuthProvider | "email" }) {
 }
 
 export function Door({ configured }: { configured: boolean }) {
+  const t = useT();
   // Read after mount: the server draws the first-time welcome, and a stored
   // guess must not make the two paints differ.
   const [known, setKnown] = useState<Remembered | null | undefined>(undefined);
@@ -49,6 +55,11 @@ export function Door({ configured }: { configured: boolean }) {
   const [emailNow, setEmailNow] = useState(false);
   const [busy, setBusy] = useState<OAuthProvider | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // Read after mount, like `known`: set by the shell when this browser's
+  // session was removed from another device (lib/app/sessions).
+  useEffect(() => {
+    if (takeSignedOutElsewhereNote()) setNotice(tNow("front.door.signedOutElsewhere"));
+  }, []);
   const providers = useProviders();
 
   if (!configured) {
@@ -116,23 +127,58 @@ export function Door({ configured }: { configured: boolean }) {
       ) : null}
 
       {sheet === "choose" ? (
-        <SheetPanel title="Continue with" onClose={() => setSheet(null)}>
+        <SheetPanel title={t("front.door.continueWith")} onClose={() => setSheet(null)}>
           <div className="flex flex-col gap-3">
             {(providers ?? []).map((p) => (
               <Row key={p} onClick={() => void go(p)} disabled={busy !== null}>
                 <Mark provider={p} />
-                {busy === p ? "Opening…" : PROVIDER_NAME[p]}
+                {busy === p ? t("front.door.opening") : PROVIDER_NAME[p]}
               </Row>
             ))}
             <Row onClick={() => setSheet("email")} disabled={busy !== null}>
               <Mark provider="email" />
-              Email
+              {t("front.door.email")}
             </Row>
             {notice ? <Warn>{notice}</Warn> : null}
+            <Consent />
           </div>
         </SheetPanel>
       ) : null}
     </Stage>
+  );
+}
+
+/**
+ * Said where an account is made: every row in this sheet creates one for
+ * somebody new. Recorded after the sign-in succeeds, with the version these
+ * links point at (`POST /me/terms`, lib/app/terms `TERMS_VERSION`, sent from
+ * lib/creator/session on SIGNED_IN). Not /verification/consent, which is the
+ * KYC documents' own.
+ * Absolute links: the product lives on app.hihodl.xyz, the documents on the
+ * site, and a new tab keeps the sheet where it was.
+ */
+function Consent() {
+  useEffect(() => noteTermsShown(TERMS_VERSION), []);
+  useT();
+  const link = "text-white/80 underline underline-offset-2 hover:text-text";
+  return (
+    <p className="mt-1 px-2 text-center text-[12px] leading-[17px] text-white/60">
+      <Rich
+        k="front.door.consent"
+        tags={{
+          terms: (c) => (
+            <a href="https://hihodl.xyz/terms" target="_blank" rel="noopener noreferrer" className={link}>
+              {c}
+            </a>
+          ),
+          privacy: (c) => (
+            <a href="https://hihodl.xyz/privacy" target="_blank" rel="noopener noreferrer" className={link}>
+              {c}
+            </a>
+          ),
+        }}
+      />
+    </p>
   );
 }
 
@@ -142,6 +188,7 @@ function Stage({ children }: { children: React.ReactNode }) {
 }
 
 function Welcome({ onGo }: { onGo: () => void }) {
+  const t = useT();
   return (
     <div className="flex min-h-[70dvh] w-full max-w-[400px] flex-col">
       <div className="flex flex-1 flex-col items-center justify-center pb-10">
@@ -149,7 +196,7 @@ function Welcome({ onGo }: { onGo: () => void }) {
         <div className="mt-5 flex w-full items-center gap-3">
           <span className="h-px flex-1 bg-amber/25" />
           {/* The app draws it at 40 % white; 60 % is the floor for small text here (4.5:1). */}
-          <span className="text-[13px] font-medium tracking-[0.5px] text-white/60">Your money, your rules</span>
+          <span className="text-[13px] font-medium tracking-[0.5px] text-white/60">{t("front.door.tagline")}</span>
           <span className="h-px flex-1 bg-amber/25" />
         </div>
       </div>
@@ -158,8 +205,13 @@ function Welcome({ onGo }: { onGo: () => void }) {
         onClick={onGo}
         className="h-[58px] w-full rounded-[29px] bg-amber text-[17px] font-extrabold tracking-[-0.2px] text-[#0A1117] shadow-[0_6px_20px_rgba(255,183,3,0.2)] transition-colors hover:bg-amber-glow"
       >
-        Let&apos;s go
+        {t("front.door.letsGo")}
       </button>
+      {/* Somebody without a HOLD account starts in the app: the account and the wallet are made there. */}
+      <div className="mt-6 flex flex-col items-center gap-3 text-center">
+        <p className="text-[13px] leading-[18px] text-white/60">{t("front.door.newGetApp")}</p>
+        <StoreButtons className="justify-center" />
+      </div>
     </div>
   );
 }
@@ -177,18 +229,33 @@ function WelcomeBack({
   onOther: () => void;
   onNotYou: () => void;
 }) {
+  const t = useT();
   const name = known.name?.trim() || null;
-  const initial = (name ?? known.email ?? "?").replace(/^@/, "").charAt(0).toUpperCase();
-  const how = known.method === "email" ? "Email me a code" : `Continue with ${PROVIDER_NAME[known.method]}`;
+  // Read after mount: localStorage is not there on the server.
+  const [face, setFace] = useState<RememberedFace | null | undefined>(undefined);
+  useEffect(() => setFace(readFace(known.email)), [known.email]);
+  const [photoBroken, setPhotoBroken] = useState(false);
+  const how = known.method === "email" ? t("front.door.emailMeACode") : t("front.door.continueWithProvider", { provider: PROVIDER_NAME[known.method] });
   return (
     <div className="flex min-h-[70dvh] w-full max-w-[400px] flex-col">
       {/* app/auth/lock.tsx: the greeting on top, the photo under it; no wordmark. */}
       <div className="flex flex-1 flex-col items-center pb-10 pt-4 text-center">
-        <h1 className="text-[24px] font-semibold text-text">{name ? `Welcome Back, ${name}` : "Welcome Back"}</h1>
+        <h1 className="text-[24px] font-semibold text-text">{name ? t("front.door.welcomeBackName", { name }) : t("front.door.welcomeBack")}</h1>
         {/* A circle: 100 px with a radius of half of it, as the app draws it. */}
-        <span className="mt-6 flex h-[100px] w-[100px] items-center justify-center rounded-[50px] border-2 border-[rgba(236,240,244,0.55)] bg-white/[0.08] text-[44px] font-medium text-text" aria-hidden>
-          {initial}
-        </span>
+        {face?.photo && !photoBroken ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={face.photo}
+            alt=""
+            onError={() => setPhotoBroken(true)}
+            className="mt-6 h-[100px] w-[100px] rounded-[50px] border-2 border-[rgba(236,240,244,0.55)] bg-black/[0.28] object-cover"
+          />
+        ) : (
+          // No photo: the emoji they chose in the app, else the app's default.
+          <span className="mt-6">
+            <EmojiAvatar emoji={face === undefined ? null : face?.emoji || DEFAULT_AVATAR_EMOJI} size={100} ring />
+          </span>
+        )}
         {known.email ? <p className="mt-4 break-all text-small text-[#9FB7C2]">{known.email}</p> : null}
       </div>
       <button
@@ -198,17 +265,17 @@ function WelcomeBack({
         className="flex h-[58px] w-full items-center justify-center gap-2.5 rounded-[29px] bg-amber text-[17px] font-extrabold tracking-[-0.2px] text-[#0A1117] shadow-[0_6px_20px_rgba(255,183,3,0.2)] transition-colors hover:bg-amber-glow disabled:opacity-60"
       >
         <ProviderLogo provider={known.method} className="h-5 w-5" />
-        {busy ? "Opening…" : how}
+        {busy ? t("front.door.opening") : how}
       </button>
       <div className="mt-3 flex items-center justify-center gap-2">
         <button type="button" className={btnLink} onClick={onOther}>
-          Other ways to sign in
+          {t("front.door.otherWays")}
         </button>
         <span className="text-white/20" aria-hidden>
           ·
         </span>
         <button type="button" className={btnLink} onClick={onNotYou}>
-          Not you?
+          {t("front.door.notYou")}
         </button>
       </div>
     </div>
@@ -225,16 +292,17 @@ function SheetPanel({
   onClose: () => void;
   children: React.ReactNode;
 }) {
+  const t = useT();
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-label={title}>
-      <button type="button" aria-label="Close" className="absolute inset-0 bg-[#030b13]/60 backdrop-blur-sm" onClick={onClose} />
+      <button type="button" aria-label={t("common.close")} className="absolute inset-0 bg-[#030b13]/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-[440px] rounded-t-[24px] border border-white/10 bg-[linear-gradient(160deg,rgba(15,53,85,0.97),rgba(10,25,41,0.98))] px-5 pb-8 pt-3 shadow-[0_-20px_40px_rgba(0,0,0,0.35)] sm:rounded-[24px] sm:pb-6">
         <span className="mx-auto block h-1 w-10 rounded-[2px] bg-white/[0.22] sm:hidden" aria-hidden />
         <div className="relative mt-4 flex items-center justify-center">
           <h2 className="text-[18px] font-black tracking-[-0.5px] text-text">{title}</h2>
           <button
             type="button"
-            aria-label="Close"
+            aria-label={t("common.close")}
             onClick={onClose}
             className="absolute right-0 flex h-8 w-8 items-center justify-center rounded-[16px] bg-white/[0.08] text-[#9FB7C2] hover:text-text"
           >

@@ -30,10 +30,13 @@
  */
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useProductHref } from "../base";
 import { Ion } from "../ion";
+import { hereNow, useLinkGate } from "../link/LinkGate";
+import { PhoneApproval } from "../link/PhoneApproval";
+import { GetTheAppCard } from "../main/GetTheApp";
 
 import { Banner, Card, Cta, Empty, Photo, Screen, SectionLabel, Spinner } from "./kit";
 import { P, boardLabel, count, guests as guestsWord, money, shortDate, stayRange } from "./look";
@@ -42,12 +45,17 @@ import { sane, stayFromParams, stayToParams } from "./SearchControls";
 import { usePoints, useRates, useStay, useStaysConfig } from "@/lib/app/stays-data";
 import { holdTripProvisionally, refreshTrips, releaseProvisionalTrip } from "@/lib/app/stays-data";
 import { payForStay, type PayState } from "@/lib/app/stay-payment";
-import { getBalances, getWalletStatus, type WalletStatus } from "@/lib/wallet/api";
+import { getWalletStatus, payerOf, WalletApiError, type WalletStatus } from "@/lib/wallet/api";
+import { cancelPaymentApproval } from "@/lib/link/payment-approvals";
 import { useCreatorSession } from "@/lib/creator/session";
 import useSWR from "swr";
 import type { Booking, Guest, Rate } from "@/lib/app/stays";
+import { staysCurrency } from "@/lib/app/display-currency";
+import { useT } from "@/lib/app/i18n/react";
 
 export function CheckoutScreen({ hotelId }: { hotelId: string }) {
+  // Also re-renders on a change of display currency: the rates are asked for in `staysCurrency()`.
+  const t = useT();
   const href = useProductHref();
   const router = useRouter();
   const params = useSearchParams();
@@ -61,27 +69,27 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
     checkout: search.checkout,
     adults: search.adults,
     ...(search.children.length ? { children: search.children } : {}),
-    currency: "EUR",
+    currency: staysCurrency(),
   }, true);
   const points = usePoints();
   const { session } = useCreatorSession();
 
   /*
-   * The wallet, read rather than unlocked.
-   *
-   * Paying needs two things from it: the address the deposit leaves from, and
-   * a passkey to sign with. `registered_address` gives the first without
-   * opening anything, and the passkey ceremony at the moment of paying gives
-   * the second. Asking somebody to unlock the vault FIRST and then produce a
-   * passkey anyway is one ceremony too many for one payment — and the unlock
-   * would buy nothing, because the vault deliberately never hands its seed to
-   * anyone.
+   * The wallet, read: only to know who can approve. The linked phone approves
+   * and signs every stay paid here, and the server builds the deposit from
+   * the wallet it knows, so nothing is opened in this browser.
    */
   const wallet = useSWR<WalletStatus>(session?.user?.id ? [session.user.id, "wallet/status"] : null, () => getWalletStatus(), {
     revalidateOnFocus: false,
     shouldRetryOnError: false,
   });
-  const from = wallet.data?.state === "web_wallet" ? (wallet.data.registered_address ?? null) : null;
+  /*
+   * Who approves (documentation/one-wallet-every-device.md): the linked phone,
+   * iPhone or Android, always. No phone yet: "Link your phone". No wallet:
+   * "Get the HOLD app", where it is made.
+   */
+  const payer = payerOf(wallet.data ?? null);
+  const canPay = payer === "app";
 
   const rate = rates.data?.rates.find((r) => r.offerId === offerId) ?? null;
   /** The property's photographs, over the checkout — never away from it. */
@@ -100,12 +108,81 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
 
   const balance = Number(points.data?.balance ?? 0);
   const ceiling = Math.min(balance, rate?.maxPointsRedeemable ?? 0);
-  const discount = spend * (config.data?.pointsUsdValue ?? 0.01);
+  /*
+   * What a point takes off, in the RATE's currency, as the server's quote
+   * (travel/pricing.service.ts `quote`) computes it: USD 0.01 converted at the
+   * backend's FX, served on the rate as `pointValue`, and the discount rounded
+   * to cents the way the quote rounds it. So a EUR stay loses about EUR 0.92
+   * per 100 points and a JPY stay about JPY 150, never "1 of any currency".
+   * A rate from a backend that predates `pointValue` still took
+   * `points × pointsUsdValue` off in its own currency, so that is the fallback,
+   * and the preview matches whichever server priced the room.
+   */
+  const pointValue = rate?.pointValue ?? config.data?.pointsUsdValue ?? 0.01;
+  const discount = Math.round(spend * pointValue * 100) / 100;
   const total = rate ? Math.max(0, rate.price - discount) : 0;
 
   /* ── Paying ── */
   const [pay, setPay] = useState<PayState | null>(null);
   const running = pay !== null && !["booked", "stopped", "idle"].includes(pay.phase);
+  const locked = running;
+
+  /*
+   * A wallet made in the app with no phone linked cannot pay from here at
+   * all: the sheet every payment opens (link/LinkGate) says so as the
+   * checkout opens, before a form is filled for nothing, and again on Pay.
+   * Linking comes back to this checkout. No phone found mid-payment
+   * (`linkFirst` on the run's state) asks the same way.
+   */
+  const gate = useLinkGate();
+  const { ask } = gate;
+  const linkFirst = payer === "link_first";
+  const askedOnOpen = useRef(false);
+  useEffect(() => {
+    if (!linkFirst || askedOnOpen.current) return;
+    askedOnOpen.current = true;
+    ask(hereNow());
+  }, [linkFirst, ask]);
+  const phoneGone = pay?.phase === "stopped" && pay.linkFirst === true;
+  useEffect(() => {
+    if (phoneGone) ask(hereNow());
+  }, [phoneGone, ask]);
+
+  /*
+   * Following the phone ends with this page. A pending approval is cancelled
+   * as it goes, so the phone cannot approve a deposit nobody is here to send;
+   * an approved one is being sent already and is left alone.
+   */
+  // Made in the effect, not the ref's initial value: strict mode mounts twice, and a controller aborted by the first unmount would stay aborted.
+  const stop = useRef<AbortController>(new AbortController());
+  const waiting = useRef<string | null>(null);
+  waiting.current = pay?.phase === "phone" && pay.approval?.status === "pending" ? pay.approval.id : null;
+  useEffect(() => {
+    const ctl = new AbortController();
+    stop.current = ctl;
+    return () => {
+      ctl.abort();
+      if (waiting.current) void cancelPaymentApproval(waiting.current).catch(() => undefined);
+    };
+  }, []);
+  const [cancel, setCancel] = useState<{ busy: boolean; notice: string | null }>({ busy: false, notice: null });
+
+  /** The server's cancel: the wait then ends on "cancelled" at the next poll. */
+  async function cancelOnPhone() {
+    if (pay?.phase !== "phone" || !pay.approval) return;
+    setCancel({ busy: true, notice: null });
+    try {
+      await cancelPaymentApproval(pay.approval.id);
+    } catch (e) {
+      const decided = e instanceof WalletApiError && e.code === "NOT_PENDING";
+      setCancel({
+        busy: false,
+        notice: decided
+          ? t("stays.checkout.cancelDecided")
+          : t("stays.checkout.cancelFailed"),
+      });
+    }
+  }
 
   const filled =
     guest.firstName.trim().length > 0 &&
@@ -113,18 +190,8 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
     /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(guest.email.trim());
 
   async function start() {
-    if (!rate || !stay.data || !from || !session?.user?.id) return;
-    let available = 0;
-    try {
-      available = (await getBalances(from)).usdc;
-    } catch {
-      // A balance we cannot read is not a reason to refuse a payment that may
-      // be perfectly fundable — an RPC hiccup would block it. So we let the
-      // run continue: the transfer then fails at the point of sending, which
-      // is still BEFORE anything is broadcast, and nothing moves either way.
-      // The only cost is a vaguer message than the balance check would give.
-      available = Number.POSITIVE_INFINITY;
-    }
+    if (!rate || !stay.data || !canPay || !session?.user?.id) return;
+    setCancel({ busy: false, notice: null });
 
     const held = pay?.bookingId ?? null;
     const out = await payForStay({
@@ -140,10 +207,8 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
         ...(request.trim() ? { specialRequest: request.trim() } : {}),
       },
       quotedPrice: rate.price,
-      from,
-      available,
-      uid: session.user.id,
       bookingId: held,
+      signal: stop.current.signal,
       onState: (s) => {
         setPay(s);
         // The server will not list an unpaid hold, and rightly so. But between
@@ -153,6 +218,10 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
       },
     });
 
+    after(out);
+  }
+
+  function after(out: PayState) {
     if (out.phase === "booked" && out.booking) {
       void refreshTrips();
       router.push(href(`/travel/trips/${out.booking.id}`));
@@ -160,6 +229,8 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
     }
     // Nothing left the wallet, so nothing should be pretending to be a trip.
     if (!out.paid && out.bookingId) releaseProvisionalTrip(out.bookingId);
+    // Who approves may have changed under us (a phone linked or removed): ask again.
+    if (out.phase === "stopped") void wallet.mutate();
   }
 
   /* ── What to draw ── */
@@ -179,9 +250,9 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
       <Screen className="py-8">
         <Empty
           icon="bed-outline"
-          title="That rate has gone"
-          body="Prices here are held for a few minutes. Nothing has been charged — pick a room again."
-          action="Back to the property"
+          title={t("stays.checkout.rateGoneTitle")}
+          body={t("stays.checkout.rateGoneBody")}
+          action={t("stays.checkout.rateGoneAction")}
           onAction={() => router.push(`${href(`/travel/stay/${hotelId}`)}?${stayToParams(search)}`)}
         />
       </Screen>
@@ -192,7 +263,7 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
 
   return (
     <Screen className="gap-4">
-      {config.data?.sandbox ? <Banner icon="flask-outline">Test mode — nothing you book here is a real reservation</Banner> : null}
+      {config.data?.sandbox ? <Banner icon="flask-outline">{t("stays.sandbox.banner")}</Banner> : null}
 
       <button
         type="button"
@@ -202,11 +273,11 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
         style={{ color: P.textMuted }}
       >
         <Ion name="chevron-back" size={14} />
-        Back
+        {t("common.back")}
       </button>
 
       <h1 className="text-[25px] font-extrabold leading-tight tracking-[-0.7px]" style={{ color: P.text }}>
-        Confirm and pay
+        {t("stays.checkout.title")}
       </h1>
 
       {/* One column, in the app's order: what am I booking · can I still
@@ -224,7 +295,7 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
                 open OVER this screen rather than instead of it. */}
             <button
               type="button"
-              aria-label="See the photographs"
+              aria-label={t("stays.checkout.seePhotos")}
               disabled={!stay.data || stay.data.gallery.length === 0}
               onClick={() => setViewing(true)}
               className="h-[62px] w-[62px] shrink-0 cursor-zoom-in overflow-hidden rounded-[12px] p-0 disabled:cursor-default"
@@ -256,37 +327,37 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
             </span>
             <p className="text-[13px] font-medium leading-[19px]" style={{ color: P.text }}>
               {rate.refundable && rate.freeCancellationUntil
-                ? `Cancel free until ${shortDate(rate.freeCancellationUntil.slice(0, 10))}. We refund you in full, back to the account you paid from.`
+                ? t("stays.checkout.policyFreeUntil", { date: shortDate(rate.freeCancellationUntil.slice(0, 10)) })
                 : rate.refundable
-                  ? "Free cancellation. We refund you in full, back to the account you paid from."
-                  : "This rate can't be cancelled or changed once it's booked. It's the reason it's priced the way it is."}
+                  ? t("stays.checkout.policyFree")
+                  : t("stays.checkout.policyNonRefundable")}
             </p>
           </Card>
         </div>
 
         {/* ── Who is staying ── */}
-        <SectionLabel className="mb-2.5 mt-[22px]">Lead guest</SectionLabel>
+        <SectionLabel className="mb-2.5 mt-[22px]">{t("stays.checkout.leadGuest")}</SectionLabel>
           <Card hero className="flex flex-col gap-3 p-[14px]">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Field label="First name" value={guest.firstName} onChange={(v) => setGuest({ ...guest, firstName: v })} autoComplete="given-name" disabled={running} />
-              <Field label="Last name" value={guest.lastName} onChange={(v) => setGuest({ ...guest, lastName: v })} autoComplete="family-name" disabled={running} />
+              <Field label={t("stays.checkout.firstName")} value={guest.firstName} onChange={(v) => setGuest({ ...guest, firstName: v })} autoComplete="given-name" disabled={locked} />
+              <Field label={t("stays.checkout.lastName")} value={guest.lastName} onChange={(v) => setGuest({ ...guest, lastName: v })} autoComplete="family-name" disabled={locked} />
             </div>
-            <Field label="Email" value={guest.email} onChange={(v) => setGuest({ ...guest, email: v })} type="email" autoComplete="email" disabled={running} />
-            <Field label="Phone (optional)" value={guest.phone ?? ""} onChange={(v) => setGuest({ ...guest, phone: v })} type="tel" autoComplete="tel" disabled={running} />
+            <Field label={t("stays.checkout.email")} value={guest.email} onChange={(v) => setGuest({ ...guest, email: v })} type="email" autoComplete="email" disabled={locked} />
+            <Field label={t("stays.checkout.phoneOptional")} value={guest.phone ?? ""} onChange={(v) => setGuest({ ...guest, phone: v })} type="tel" autoComplete="tel" disabled={locked} />
             <p className="text-[11.5px] leading-[17px]" style={{ color: P.textFaint }}>
-              The property gets this name and it has to match the passport or ID at the desk.
+              {t("stays.checkout.nameMatchesId")}
             </p>
           </Card>
 
           {/* ── Anything to ask for ── */}
-          <SectionLabel className="mb-2.5 mt-[22px]">Anything the property should know</SectionLabel>
+          <SectionLabel className="mb-2.5 mt-[22px]">{t("stays.checkout.requestTitle")}</SectionLabel>
           <Card hero className="p-[14px]">
             <textarea
               value={request}
               onChange={(e) => setRequest(e.target.value.slice(0, 500))}
-              disabled={running}
+              disabled={locked}
               rows={3}
-              placeholder="A late arrival, a cot, a quiet room. We pass it on — the property decides."
+              placeholder={t("stays.checkout.requestPlaceholder")}
               className="w-full resize-none bg-transparent text-[13.5px] leading-[19px] outline-none placeholder:text-[13px]"
               style={{ color: P.text }}
             />
@@ -298,19 +369,19 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
           {/* ── Points ── */}
           {ceiling > 0 ? (
             <>
-              <SectionLabel className="mb-2.5 mt-[22px]">Pay with points</SectionLabel>
-              <PointsBand balance={balance} ceiling={ceiling} value={spend} onChange={setSpend} pointUsd={config.data?.pointsUsdValue ?? 0.01} disabled={running} />
+              <SectionLabel className="mb-2.5 mt-[22px]">{t("stays.checkout.payWithPoints")}</SectionLabel>
+              <PointsBand balance={balance} ceiling={ceiling} value={spend} onChange={setSpend} pointValue={pointValue} currency={rate.currency} disabled={locked} />
             </>
           ) : null}
 
           {/* ── What it comes to ── last, under every choice that changes it. */}
           <div className="mt-[22px] flex flex-col gap-3">
             <Card hero className="flex flex-col px-[14px] py-1.5">
-              <Row label="Stay" value={money(rate.price, rate.currency)} />
-              {spend > 0 ? <Row label="Points discount" value={`− ${money(discount, rate.currency)}`} tone={P.caution} /> : null}
+              <Row label={t("stays.checkout.stay")} value={money(rate.price, rate.currency)} />
+              {spend > 0 ? <Row label={t("stays.checkout.pointsDiscount")} value={`− ${money(discount, rate.currency)}`} tone={P.caution} /> : null}
               <div className="my-2 h-[0.5px]" style={{ background: P.divider }} />
-              <Row label="You pay now" value={money(total, rate.currency)} strong />
-              {rate.pointsEarned > 0 ? <Row label="Points earned" value={`+ ${count(rate.pointsEarned)}`} tone={P.caution} /> : null}
+              <Row label={t("stays.checkout.youPayNow")} value={money(total, rate.currency)} strong />
+              {rate.pointsEarned > 0 ? <Row label={t("stays.checkout.pointsEarned")} value={`+ ${count(rate.pointsEarned)}`} tone={P.caution} /> : null}
             </Card>
 
             {/* Under the total and never folded into it: the app's
@@ -324,14 +395,14 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
                     <Ion name="business-outline" size={15} />
                   </span>
                   <p className="min-w-0 flex-1 text-[13px] font-bold tracking-[-0.2px]" style={{ color: P.text }}>
-                    City tax, collected by the hotel
+                    {t("stays.checkout.cityTaxTitle")}
                   </p>
                   <p className="text-[14.5px] font-extrabold tracking-[-0.3px]" style={{ color: P.text }}>
                     {money(rate.payAtProperty, rate.currency)}
                   </p>
                 </div>
                 <p className="mt-[7px] text-[12.5px] leading-[18px]" style={{ color: P.textMuted }}>
-                  Local tourist tax, charged at check-in by the property. It isn&apos;t part of your stay price and we never collect it.
+                  {t("stays.checkout.cityTaxBody")}
                 </p>
               </Card>
             ) : null}
@@ -352,31 +423,15 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
              * integration branch. Somebody fills the whole form, and the only
              * button on the screen never lights up.
              */}
-            {!from ? (
-              <Card hero className="flex flex-col gap-2 p-[14px]">
-                <p className="text-[13px] font-bold" style={{ color: P.text }}>
-                  {!wallet.data
-                    ? "We couldn't read your wallet"
-                    : wallet.data.state === "app_wallet"
-                      ? "Pay for this one in the app"
-                      : "You need a wallet here first"}
-                </p>
-                <p className="text-[12.5px] leading-[18px]" style={{ color: P.textMuted }}>
-                  {!wallet.data
-                    ? "Nothing has been charged, and the room is not held. This page has to know which wallet pays before it can ask you to."
-                    : wallet.data.state === "app_wallet"
-                      ? "Your wallet lives on your phone, and that is where it signs. Search and hold a room here; pay there."
-                      : "A HOLD wallet in this browser, made once with a passkey. Then this page can pay on its own."}
-                </p>
-                <Cta
-                  label={!wallet.data ? "Try again" : wallet.data.state === "app_wallet" ? "How it works" : "Set up the wallet"}
-                  variant="secondary"
-                  onClick={() => (wallet.data ? router.push(href("/wallet")) : void wallet.mutate())}
-                />
-              </Card>
+            {!canPay && linkFirst ? (
+              <Cta label={t("stays.checkout.pay", { amount: money(total, rate.currency) })} variant="commit" onClick={() => ask(hereNow())} />
+            ) : !canPay ? (
+              <NoPayer wallet={wallet.data ?? null} onRetry={() => void wallet.mutate()} onLink={() => ask(hereNow())} />
+            ) : pay?.phase === "phone" && pay.approval ? (
+              <PhoneApproval approval={pay.approval} cancelling={cancel.busy} notice={cancel.notice} onCancel={() => void cancelOnPhone()} />
             ) : (
               <Cta
-                label={pay?.phase === "stopped" && pay.bookingId ? "Try again" : `Pay ${money(total, rate.currency)}`}
+                label={pay?.phase === "stopped" && pay.bookingId ? t("common.tryAgain") : t("stays.checkout.pay", { amount: money(total, rate.currency) })}
                 variant="commit"
                 working={running}
                 disabled={!filled || running}
@@ -385,10 +440,12 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
             )}
 
             <p className="text-[11.5px] leading-[17px]" style={{ color: P.textFaint }}>
-              Paid in USDC from your HOLD wallet. Rooms are supplied and reserved by our booking partner; the stay is provided by the property under its own terms.
+              {t("stays.checkout.footerPhone")}
             </p>
           </div>
       </div>
+
+      {gate.sheet}
 
       <PhotoViewer
         images={stay.data?.gallery ?? []}
@@ -402,6 +459,34 @@ export function CheckoutScreen({ hotelId }: { hotelId: string }) {
 }
 
 /* ── The bits ─────────────────────────────────────────────────────── */
+
+/**
+ * Why this page cannot pay, and the way forward. Never a dead end
+ * (documentation/one-wallet-every-device.md):
+ *
+ *   unread      try again
+ *   no wallet   it is made in the HOLD app: "Get the HOLD app"
+ *   otherwise   a wallet with no phone to approve on: link the phone
+ */
+function NoPayer({ wallet, onRetry, onLink }: { wallet: WalletStatus | null; onRetry: () => void; onLink: () => void }) {
+  const t = useT();
+  if (wallet && wallet.state === "none") {
+    return <GetTheAppCard body={t("stays.noPayer.getAppBody")} />;
+  }
+  const title = !wallet ? t("stays.noPayer.unreadTitle") : t("stays.noPayer.appTitle");
+  const body = !wallet ? t("stays.noPayer.unreadBody") : t("stays.noPayer.linkBody");
+  return (
+    <Card hero className="flex flex-col gap-2 p-[14px]">
+      <p className="text-[13px] font-bold" style={{ color: P.text }}>
+        {title}
+      </p>
+      <p className="text-[12.5px] leading-[18px]" style={{ color: P.textMuted }}>
+        {body}
+      </p>
+      {!wallet ? <Cta label={t("common.tryAgain")} variant="secondary" onClick={onRetry} /> : <Cta label={t("stays.noPayer.linkPhone")} variant="secondary" onClick={onLink} />}
+    </Card>
+  );
+}
 
 function Field({
   label,
@@ -463,16 +548,20 @@ function PointsBand({
   ceiling,
   value,
   onChange,
-  pointUsd,
+  pointValue,
+  currency,
   disabled,
 }: {
   balance: number;
   ceiling: number;
   value: number;
   onChange: (n: number) => void;
-  pointUsd: number;
+  /** What one point takes off, in `currency` (see the checkout's `discount`). */
+  pointValue: number;
+  currency: string;
   disabled?: boolean;
 }) {
+  const t = useT();
   const steps = [0, 0.25, 0.5, 0.75, 1].map((share) => Math.round(ceiling * share));
   return (
     <div className="flex flex-col gap-2">
@@ -492,17 +581,17 @@ function PointsBand({
               }}
             >
               <span className="text-[17px] font-extrabold tabular-nums tracking-[-0.4px]" style={{ color: on ? P.caution : n === 0 ? "rgba(255,255,255,0.28)" : P.text }}>
-                {n === 0 ? "None" : count(n)}
+                {n === 0 ? t("stays.checkout.pointsNone") : count(n)}
               </span>
               <span className="text-[11.5px] font-semibold" style={{ color: on ? "rgba(255,255,255,0.82)" : "rgba(255,255,255,0.55)" }}>
-                {n === 0 ? "keep them" : `− $${(n * pointUsd).toFixed(2)}`}
+                {n === 0 ? t("stays.checkout.pointsKeep") : `− ${money(Math.round(n * pointValue * 100) / 100, currency)}`}
               </span>
             </button>
           );
         })}
       </div>
       <p className="text-[11.5px]" style={{ color: P.textDim }}>
-        {`You have ${count(balance)} pts. This stay takes up to ${count(ceiling)}.`}
+        {t("stays.checkout.pointsBalance", { balance: count(balance), ceiling: count(ceiling) })}
       </p>
     </div>
   );
@@ -516,16 +605,19 @@ function PointsBand({
  * step is honest and says more.
  */
 function Progress({ state }: { state: PayState | null }) {
-  if (!state || state.phase === "idle") return null;
+  const t = useT();
+  // Waiting on the phone is said by its own screen.
+  if (!state || state.phase === "idle" || state.phase === "phone") return null;
 
   const said: Record<PayState["phase"], string | null> = {
     idle: null,
-    holding: "Holding your room…",
-    opening: "Opening the payment…",
-    paying: "Sending your payment…",
-    settling: "Waiting for the payment to land…",
-    booking: "Buying the room…",
-    booked: "Booked.",
+    holding: t("stays.progress.holding"),
+    opening: t("stays.progress.opening"),
+    phone: null,
+    paying: t("stays.progress.paying"),
+    settling: t("stays.progress.settling"),
+    booking: t("stays.progress.booking"),
+    booked: t("stays.progress.booked"),
     stopped: null,
   };
 
@@ -550,7 +642,7 @@ function Progress({ state }: { state: PayState | null }) {
       </p>
       {state.paid ? (
         <span className="shrink-0 text-[11px] font-bold" style={{ color: P.greenText }}>
-          Paid
+          {t("stays.checkout.paid")}
         </span>
       ) : null}
     </div>

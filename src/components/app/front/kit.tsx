@@ -11,6 +11,7 @@
 import { useState, type ReactNode } from "react";
 
 import { Wordmark } from "@/components/site/Wordmark";
+import { useT } from "@/lib/app/i18n/react";
 
 import { glass } from "../ui";
 
@@ -49,12 +50,13 @@ export function Warn({ children }: { children: ReactNode }) {
 
 /** A heading with a Back to its left, for every screen that is not a home. */
 export function ScreenHeader({ title, onBack, action }: { title: string; onBack?: () => void; action?: ReactNode }) {
+  const t = useT();
   return (
     <header className="flex items-center justify-between gap-2">
       <div className="flex min-w-0 items-center gap-1">
         {onBack ? (
           <button type="button" onClick={onBack} className="h-8 shrink-0 rounded-[8px] px-2 text-tiny text-[#9FB7C2] hover:bg-white/10 hover:text-text">
-            ← Back
+            ← {t("common.back")}
           </button>
         ) : null}
         <h2 className="truncate text-body font-medium text-text">{title}</h2>
@@ -101,13 +103,30 @@ export function Avatar({
   );
 }
 
+/** The app's avatar when nobody chose one (src/store/profile.ts). */
+export const DEFAULT_AVATAR_EMOJI = "🚀";
+
+/** The face with no photo: an emoji on the app's glass disk. `emoji` null draws the disk alone (still loading). */
+export function EmojiAvatar({ emoji, size, round = true, ring = false }: { emoji: string | null; size: number; round?: boolean; ring?: boolean }) {
+  return (
+    <span
+      style={{ width: size, height: size, borderRadius: round ? size / 2 : Math.round(size * 0.28), borderWidth: ring ? (size >= 48 ? 2 : 1.5) : 1 }}
+      className={`flex shrink-0 items-center justify-center bg-black/[0.28] ${ring ? "border-[rgba(236,240,244,0.55)]" : "border-white/10"}`}
+      aria-hidden
+    >
+      {emoji ? <span style={{ fontSize: Math.round(size / 2), lineHeight: 1 }}>{emoji}</span> : null}
+    </span>
+  );
+}
+
 /** "4Hn2…9xQe". */
 export function shortAddress(addr: string): string {
   return addr.length > 12 ? `${addr.slice(0, 4)}…${addr.slice(-4)}` : addr;
 }
 
 /** Copy a value; says "Copied" for a moment. Nothing else is written to the clipboard. */
-export function CopyButton({ value, label = "Copy", className = btnSmallGhost }: { value: string; label?: string; className?: string }) {
+export function CopyButton({ value, label, className = btnSmallGhost }: { value: string; label?: string; className?: string }) {
+  const t = useT();
   const [copied, setCopied] = useState(false);
   return (
     <button
@@ -126,7 +145,7 @@ export function CopyButton({ value, label = "Copy", className = btnSmallGhost }:
         );
       }}
     >
-      {copied ? "Copied" : label}
+      {copied ? t("common.copied") : (label ?? t("common.copy"))}
     </button>
   );
 }

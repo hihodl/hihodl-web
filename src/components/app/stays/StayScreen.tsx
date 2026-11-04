@@ -31,16 +31,20 @@ import { useProductHref } from "../base";
 import { Ion } from "../ion";
 
 import { Empty, Screen, ScorePill, Spinner } from "./kit";
-import { P, count, nightsBetween, ratingLabel, stayRange } from "./look";
+import { P, nightsBetween, ratingLabel, stayRange } from "./look";
 import { sane, stayFromParams, stayToParams } from "./SearchControls";
 import { groupByRoom } from "./group";
 import { About, CheckinTimes, Facilities, Gallery, GoodToKnow, Nearby, ReviewSummary, RoomGroup } from "./StayParts";
 import { useRates, useStay } from "@/lib/app/stays-data";
 import type { Rate } from "@/lib/app/stays";
+import { staysCurrency } from "@/lib/app/display-currency";
+import { useT } from "@/lib/app/i18n/react";
 
 export function StayScreen({ hotelId }: { hotelId: string }) {
   const href = useProductHref();
   const router = useRouter();
+  // Also what re-renders the page when the currency changes (`staysCurrency()` below).
+  const t = useT();
   const params = useSearchParams();
   const search = useMemo(() => sane(stayFromParams(new URLSearchParams(params.toString()))), [params]);
   const nights = nightsBetween(search.checkin, search.checkout);
@@ -51,13 +55,14 @@ export function StayScreen({ hotelId }: { hotelId: string }) {
     checkout: search.checkout,
     adults: search.adults,
     ...(search.children.length ? { children: search.children } : {}),
-    currency: "EUR",
+    currency: staysCurrency(),
   });
 
   function book(rate: Rate) {
     const q = stayToParams(search);
     q.set("offer", rate.offerId);
-    router.push(`${href(`/travel/stay/${hotelId}/book`)}?${q}`);
+    // A full load: the book page signs, under the key pages' strict CSP (lib/wallet/csp).
+    window.location.assign(`${href(`/travel/stay/${hotelId}/book`)}?${q}`);
   }
 
   const groups = useMemo(() => groupByRoom(rates.data?.rates ?? [], stay.data?.rooms ?? []), [rates.data, stay.data]);
@@ -67,9 +72,9 @@ export function StayScreen({ hotelId }: { hotelId: string }) {
       <Screen className="py-8">
         <Empty
           icon="cloud-offline-outline"
-          title="Couldn't load this property"
-          body="Check your connection and try again."
-          action="Try again"
+          title={t("trips.stay.errorTitle")}
+          body={t("trips.stay.errorBody")}
+          action={t("common.tryAgain")}
           onAction={() => void stay.mutate()}
         />
       </Screen>
@@ -85,7 +90,7 @@ export function StayScreen({ hotelId }: { hotelId: string }) {
         style={{ color: P.textMuted }}
       >
         <Ion name="chevron-back" size={14} />
-        Back to results
+        {t("trips.stay.backToResults")}
       </button>
 
       {stay.isLoading || !stay.data ? (
@@ -111,7 +116,7 @@ export function StayScreen({ hotelId }: { hotelId: string }) {
                   ) : null}
                   {stay.data.reviewCount ? (
                     <span className="text-[12px]" style={{ color: P.textDim }}>
-                      {`· ${count(stay.data.reviewCount)} reviews`}
+                      {t("trips.stay.reviews", { count: stay.data.reviewCount })}
                     </span>
                   ) : null}
                 </>
@@ -139,7 +144,7 @@ export function StayScreen({ hotelId }: { hotelId: string }) {
             <div className="min-w-0">
               <section className="mt-[22px] flex flex-col gap-2.5">
                 <h2 className="text-[13.5px] font-extrabold tracking-[-0.1px]" style={{ color: P.text }}>
-                  Rooms
+                  {t("trips.stay.rooms")}
                 </h2>
 
                 {rates.isLoading ? (
@@ -149,17 +154,17 @@ export function StayScreen({ hotelId }: { hotelId: string }) {
                 ) : rates.error ? (
                   <Empty
                     icon="cloud-offline-outline"
-                    title="Couldn't load prices"
-                    body="The property is there; we just couldn't price it. Try again."
-                    action="Try again"
+                    title={t("trips.stay.pricesErrorTitle")}
+                    body={t("trips.stay.pricesErrorBody")}
+                    action={t("common.tryAgain")}
                     onAction={() => void rates.mutate()}
                   />
                 ) : groups.length === 0 ? (
                   <Empty
                     icon="bed-outline"
-                    title="No rooms for these dates"
-                    body="Try different dates — this property may be full."
-                    action="Change dates"
+                    title={t("trips.stay.noRoomsTitle")}
+                    body={t("trips.stay.noRoomsBody")}
+                    action={t("trips.stay.changeDates")}
                     onAction={() => router.push(`${href("/travel/search")}?${stayToParams(search)}`)}
                   />
                 ) : (
@@ -186,7 +191,7 @@ export function StayScreen({ hotelId }: { hotelId: string }) {
               {/* Who actually sells the room. It rode in the price card; with
                   that gone it belongs at the foot of the page it qualifies. */}
               <p className="mt-6 text-[11.5px] leading-[17px]" style={{ color: P.textFaint }}>
-                Rooms are supplied and reserved by our booking partner. You pay HOLD, and the stay is provided by the property under its own terms.
+                {t("trips.stay.supplierNote")}
               </p>
             </div>
           </div>

@@ -30,24 +30,25 @@
  *
  *   1. claim    POST /ad-space/positions/:id/claim   holds the spot, builds the
  *               transaction, answers a Handoff
- *   2. approve  POST /withdrawals/tx-challenge + /tx-authorize
- *   3. sign     the wallet's key, over the bytes just approved
- *   4. submit   POST /relayer/solana/submit
- *   5. confirm  POST /ad-space/orders/:id/confirm
+ *   2. ask      POST /payment-approvals { kind: "spot", ref: { orderId } }:
+ *               the linked phone approves AND signs, in the HOLD app
+ *   3. submit   POST /relayer/solana/submit, with what the phone signed
+ *   4. confirm  POST /ad-space/orders/:id/confirm
  *
- * Step 2 exists because of step 4. A registered web wallet does not reach our
- * relayer without a per-transaction approval (TECH-357), and the two older
- * proofs — a withdrawal row, a linked phone's signature — both need the server
- * to have described the transfer first. It cannot: this transaction is a
- * purchase with the creator's leg, our fee's leg and possibly a takeover
- * refund in it, and the strict transfer check refuses all of that by design.
- * The passkey approval over the bytes themselves is what fits, and it is the
- * same ceremony a stay's bridge deposit uses.
+ * ── WHO APPROVES ──
  *
- * The approval is taken BEFORE the wallet is opened, so a refusal costs a
- * prompt and nothing else — and it is one prompt, not two, because
- * `assertWithPrf` signs the server's challenge and evaluates PRF in the same
- * ceremony.
+ * The phone, always (Alex, 2026-09-24: the web does not pay any more). The
+ * web never opens a key for a spot. `GET /wallet-backup/status`
+ * → `canPayFromWeb` says whether it can be asked
+ * (documentation/one-wallet-every-device.md, "Payments built by the server,
+ * approved on the phone"):
+ *
+ *   app          a phone (iPhone or Android) with a device key is linked:
+ *                steps 2 to 4 above.
+ *   link_first   a wallet made in the app with no phone linked: "Link your
+ *                phone to pay from here". Never a dead end.
+ *   none         no wallet at all: it is made in the HOLD app, so "Get the
+ *                HOLD app".
  *
  * ── THE LINE ──
  *
@@ -62,13 +63,19 @@ import { useEffect, useState } from "react";
 
 import type { ContentBody } from "@/lib/ad-space/content-form";
 import type { Order } from "@/lib/ad-space/types";
+import { t } from "@/lib/app/i18n";
 import { call } from "@/lib/creator/api";
-import { authorizeTxPasskey, relayerSubmit, txApprovalChallenge } from "@/lib/link/api";
-import { getWalletBackup, getWalletStatus } from "@/lib/wallet/api";
-import { wipe } from "@/lib/wallet/core";
-import { openWallet } from "@/lib/wallet/flows";
-import { assertWithPrf } from "@/lib/wallet/passkey";
-import { messageOf, signSerializedTx } from "@/lib/wallet/sign-tx";
+
+import { relayerSubmit } from "@/lib/link/api";
+import {
+  cancelPaymentApproval,
+  describeApprovalRefusal,
+  endedWithoutPaying,
+  requestPaymentApproval,
+  waitForPhone,
+  type PaymentApproval,
+} from "@/lib/link/payment-approvals";
+import { getWalletStatus, payerOf } from "@/lib/wallet/api";
 
 import { creatorStorefront } from "./storefront";
 
@@ -306,15 +313,27 @@ export function useSpotsBoughtFrom(peerId: string | null): SpotBought[] {
 export type PayPhase =
   | { kind: "idle" }
   | { kind: "holding" }
-  | { kind: "approving" }
-  | { kind: "signing" }
   | { kind: "sending" }
   | { kind: "confirming"; order: Order }
   | { kind: "bought"; order: Order; signature: string }
   /** Nothing left the wallet. Saying so is only allowed before `sending` returns. */
   | { kind: "stopped"; message: string }
   /** Money is on its way and we lost the thread. Never retried from here. */
-  | { kind: "in-flight"; orderId: string; message: string };
+  | { kind: "in-flight"; orderId: string; message: string }
+  /** Asking the linked phone (POST /payment-approvals). */
+  | { kind: "asking-phone" }
+  /**
+   * The linked phone approves and signs; this page polls and submits. `order`
+   * is the held order, confirmed once the phone's transaction is sent.
+   */
+  | { kind: "on-phone"; approval: PaymentApproval; order: Order }
+  /**
+   * A wallet made in the HOLD app with no phone linked: the web holds no key
+   * for it, so the way to pay from here is to link the phone once.
+   */
+  | { kind: "link-first" }
+  /** No wallet at all: it is made in the HOLD app, never here. */
+  | { kind: "no-wallet" };
 
 /** A fresh idempotency key: the header wants 10 to 128 characters. */
 function newKey(): string {
@@ -324,85 +343,110 @@ function newKey(): string {
 }
 
 /**
- * Buy one spot, start to finish, reporting each step.
+ * ONE KEY PER SPOT, FOR AS LONG AS THIS PAGE LIVES.
  *
- * `uid` is the signed-in person; `onPhase` is called as it goes so a screen can
- * say what is happening without this file knowing anything about a screen.
+ * Pay can be tapped again (after a phone that declined, or a wait that
+ * ended). With a new key each time that second claim was a second
+ * order: a second hold on a spot this person already holds, counted against
+ * their holds for the day. The same key makes the server answer with the
+ * order it already made, and a fresh transaction for it when the old one's
+ * blockhash has lapsed (orders.service `openOrder` → `solanaHandoff`).
+ *
+ * The key is per spot, offer and points share, because the server refuses a
+ * replay that changes any of them (`idempotency_key_reused`).
+ */
+const claimKeys = new Map<string, string>();
+function claimKeyFor(positionId: string, offerId: string | null, share: PointsFeeShare | undefined): string {
+  const id = `${positionId}|${offerId ?? ""}|${share ?? ""}`;
+  let key = claimKeys.get(id);
+  if (!key) {
+    key = newKey();
+    claimKeys.set(id, key);
+  }
+  return key;
+}
+
+/**
+ * Buy one spot: whose wallet, hold the spot, ask the phone, send what it
+ * signed. Ends in `bought`, or in a phase that says why not.
  *
  * Every refusal before the submit says "nothing has been charged", because
- * nothing has. After it, nothing is ever re-sent — see THE LINE above.
+ * nothing has. Past `submitted` nothing is ever re-sent (THE LINE above).
  */
 export async function payForSpot(args: {
-  uid: string;
   positionId: string;
   offerId?: string | null;
   pointsFeeShare?: PointsFeeShare;
   onPhase: (p: PayPhase) => void;
+  /** Stops following the phone (the sheet closed). Nothing is sent after it. */
+  signal?: AbortSignal;
 }): Promise<PayPhase> {
   const say = (p: PayPhase) => {
     args.onPhase(p);
     return p;
   };
 
-  /* 1 ── whose wallet, and does it exist */
+  /* 1 ── whose wallet, and whether the phone can be asked */
   const status = await getWalletStatus().catch(() => null);
-  const from = status?.registered_address ?? null;
-  if (!from) {
-    return say({
-      kind: "stopped",
-      message: "This account has no HOLD wallet on the web yet. Make one from Wallet, then buy from here.",
-    });
-  }
+  if (!status) return say({ kind: "stopped", message: t("sponsor.pay.walletUnreadable") });
+  const payer = payerOf(status);
+  if (payer === "link_first") return say({ kind: "link-first" });
+  if (payer !== "app") return say(status.state === "none" ? { kind: "no-wallet" } : { kind: "link-first" });
+  const from = status.registered_address ?? null;
+  if (!from) return say({ kind: "stopped", message: t("sponsor.pay.addressUnreadable") });
 
   /* 2 ── hold the spot */
   say({ kind: "holding" });
   let handoff: RelayedHandoff;
-  try {
-    handoff = await claimSpot({
+  const claim = () =>
+    claimSpot({
       positionId: args.positionId,
       sponsorAddress: from,
-      idempotencyKey: newKey(),
+      idempotencyKey: claimKeyFor(args.positionId, args.offerId ?? null, args.pointsFeeShare),
       offerId: args.offerId ?? null,
       pointsFeeShare: args.pointsFeeShare,
     });
+  try {
+    try {
+      handoff = await claim();
+    } catch (e) {
+      // The order this key made is over (its hold lapsed), or the key no
+      // longer fits it: that key can only ever answer the same refusal. Drop
+      // it and ask once more with a new one.
+      const code = codeOf(e);
+      if (code !== "hold_expired" && code !== "idempotency_key_reused") throw e;
+      claimKeys.delete(`${args.positionId}|${args.offerId ?? ""}|${args.pointsFeeShare ?? ""}`);
+      handoff = await claim();
+    }
   } catch (e) {
     return say({ kind: "stopped", message: describeClaim(e) });
   }
-  // A handoff without a relayer is the signed-out shape and must not be signed
-  // here: the fee payer would be this wallet, which has no SOL and never
-  // agreed to pay one.
+  // A handoff without a relayer is the signed-out shape: the fee payer would
+  // be this wallet, which has no SOL and never agreed to pay one.
   if (!handoff?.transaction || !handoff.relayerPublicKey) {
-    return say({ kind: "stopped", message: "We could not prepare that payment. Nothing has been charged." });
+    return say({ kind: "stopped", message: t("sponsor.pay.notPrepared") });
   }
 
-  /* 3 ── one ceremony: approve these exact bytes, and open the wallet */
-  let prf: Uint8Array | null = null;
-  let seed: Uint8Array | null = null;
-  let signed: string;
-  try {
-    say({ kind: "approving" });
-    const backup = await getWalletBackup();
-    if (backup.wrappings.length === 0) throw new Error("no_passkey");
-    const message = await messageOf(handoff.transaction);
-    const challenge = await txApprovalChallenge(message);
-    const bound = await assertWithPrf(
-      challenge.options,
-      backup.wrappings.map((w) => w.credential_id),
-    );
-    prf = bound.prf;
-    await authorizeTxPasskey(message, bound.assertion);
+  /* 3 ── the phone approves and signs; this page sends what comes back */
+  const onPhone = await payOnPhone({ order: handoff.order, say, signal: args.signal });
+  // The phone was removed meanwhile: link one again to pay from here.
+  return onPhone === "no_phone" ? say({ kind: "link-first" }) : onPhone;
+}
 
-    say({ kind: "signing" });
-    const key = await openWallet({ uid: args.uid, backup, credentialId: bound.credentialId, prf });
-    seed = key.seed;
-    signed = await signSerializedTx(handoff.transaction, seed, from);
-  } catch {
-    return say({ kind: "stopped", message: "We couldn't approve that payment. Nothing has been charged." });
-  } finally {
-    wipe(prf, seed);
-  }
+/**
+ * Send the spot the phone signed, then tell Spaces. PAST THE SUBMIT NOTHING
+ * IS RE-SENT.
+ */
+async function sendAndConfirm(args: {
+  signed: string;
+  submitIdempotencyKey: string;
+  order: Order;
+  say: (p: PayPhase) => PayPhase;
+}): Promise<PayPhase> {
+  const { signed, order, say } = args;
+  const handoff = { order, submitIdempotencyKey: args.submitIdempotencyKey };
 
-  /* 4 ── send it. PAST THIS LINE NOTHING IS RE-SENT. */
+  /* 3 ── send it. PAST THIS LINE NOTHING IS RE-SENT. */
   say({ kind: "sending" });
   let signature: string;
   try {
@@ -416,13 +460,13 @@ export async function payForSpot(args: {
       return say({
         kind: "in-flight",
         orderId: handoff.order.id,
-        message: "This payment is already going through. Give it a moment and check the spot.",
+        message: t("sponsor.pay.alreadyGoing"),
       });
     }
-    return say({ kind: "stopped", message: "We couldn't send that payment. Nothing has been charged — try again." });
+    return say({ kind: "stopped", message: t("sponsor.pay.notSent") });
   }
 
-  /* 5 ── tell Spaces, which is what turns the spot over */
+  /* 4 ── tell Spaces, which is what turns the spot over */
   say({ kind: "confirming", order: handoff.order });
   try {
     const done = await confirmSpot(handoff.order.id, signature);
@@ -433,9 +477,72 @@ export async function payForSpot(args: {
     return say({
       kind: "in-flight",
       orderId: handoff.order.id,
-      message: "Your payment is on the network. The spot turns over as soon as it settles.",
+      message: t("sponsor.pay.onNetwork"),
     });
   }
+}
+
+/* ── The phone ────────────────────────────────────────────────────── */
+
+/**
+ * Ask the linked phone for a held order, wait for it, and send what it signed.
+ *
+ * "no_phone" is the one answer that is not a phase: the server says no phone
+ * is linked any more (409 NO_PHONE_LINKED or LINK_YOUR_PHONE_FIRST), and
+ * the caller sends the person to the link screen.
+ *
+ * Every end before the submit says "nothing has been charged", because until
+ * this page submits, nothing has: the phone only signs, and the gate's
+ * approval is withdrawn on a cancel.
+ */
+async function payOnPhone(args: { order: Order; say: (p: PayPhase) => PayPhase; signal?: AbortSignal }): Promise<PayPhase | "no_phone"> {
+  const { order, say } = args;
+  say({ kind: "asking-phone" });
+  let approval: PaymentApproval;
+  try {
+    approval = await requestPaymentApproval({ kind: "spot", orderId: order.id });
+  } catch (e) {
+    const code = codeOf(e);
+    if (code === "NO_PHONE_LINKED" || code === "LINK_YOUR_PHONE_FIRST") return "no_phone";
+    if (code === "ALREADY_PAID") {
+      return say({ kind: "in-flight", orderId: order.id, message: t("sponsor.pay.alreadyPaid") });
+    }
+    return say({ kind: "stopped", message: describeApprovalRefusal(code, "spot", detailsOf(e)) });
+  }
+  say({ kind: "on-phone", approval, order });
+
+  const end = await waitForPhone(approval, {
+    signal: args.signal,
+    onUpdate: (a) => {
+      if (a.status === "pending") say({ kind: "on-phone", approval: a, order });
+    },
+  });
+  if (!end) return say({ kind: "stopped", message: t("sponsor.pay.stoppedWaiting") });
+
+  switch (end.status) {
+    case "rejected":
+    case "expired":
+    case "cancelled":
+      return say({ kind: "stopped", message: endedWithoutPaying(end.status) });
+    case "submitted":
+      // Sent already (another tab of this page, most likely). Never a second time.
+      return say({ kind: "in-flight", orderId: order.id, message: t("sponsor.pay.alreadyGoing") });
+    case "approved": {
+      const c = end.continuation;
+      if (!end.signedTx || !c || c.kind !== "spot" || !c.submitIdempotencyKey) {
+        return say({ kind: "stopped", message: t("sponsor.pay.phoneUnreadable") });
+      }
+      say({ kind: "on-phone", approval: end, order });
+      return sendAndConfirm({ signed: end.signedTx, submitIdempotencyKey: c.submitIdempotencyKey, order, say });
+    }
+    default:
+      return say({ kind: "stopped", message: t("sponsor.pay.stoppedWaiting") });
+  }
+}
+
+/** Cancel what the phone has not decided: the phone cannot approve it after, and the wait ends on "cancelled". */
+export function cancelSpotApproval(id: string): Promise<PaymentApproval> {
+  return cancelPaymentApproval(id);
 }
 
 /* ── Reading a refusal ────────────────────────────────────────────── */
@@ -450,6 +557,11 @@ function codeOf(e: unknown): string {
   return typeof c === "string" ? c : "";
 }
 
+function detailsOf(e: unknown): { platform?: unknown } | null {
+  const d = (e as { details?: unknown })?.details;
+  return d && typeof d === "object" ? (d as { platform?: unknown }) : null;
+}
+
 /**
  * Why the hold was refused, in the words of the thing that happened.
  *
@@ -460,20 +572,22 @@ function describeClaim(e: unknown): string {
   switch (codeOf(e)) {
     case "position_taken":
     case "position_not_available":
-      return "Somebody took that spot first. Nothing has been charged.";
+      return t("sponsor.claim.taken");
     case "position_held":
-      return "Somebody is paying for that spot right now. Try again in a few minutes.";
+      return t("sponsor.claim.held");
     case "own_space":
-      return "That is your own listing, so there is nothing to buy on it.";
+      return t("sponsor.claim.ownSpace");
     case "space_closed":
-      return "That listing has closed. Nothing has been charged.";
+      return t("sponsor.claim.closed");
+    case "package_not_organised":
+      return t("publicPages.sponsor.noLongerOnSale");
     case "offer_not_payable":
-      return "That offer can no longer be paid — it may have expired. Nothing has been charged.";
+      return t("sponsor.claim.offerNotPayable");
     case "relayer_not_configured":
-      return "Payments are briefly unavailable. Nothing has been charged.";
+      return t("sponsor.claim.unavailable");
     case "not_enough_points":
-      return "You do not have enough HiPoints for that share of the fee. Choose a smaller one.";
+      return t("sponsor.claim.notEnoughPoints");
     default:
-      return "We could not hold that spot. Nothing has been charged.";
+      return t("sponsor.claim.other");
   }
 }

@@ -62,7 +62,28 @@ export function validateDisplayName(input: unknown): string | null {
   // in the DB for human readability in the admin view.
   const cleaned = input.replace(/[\x00-\x1F\x7F]/g, "").trim();
   if (cleaned.length === 0 || cleaned.length > 50) return null;
+  // No name has markup in it. On 2026-10-26 a script filled the waitlist with
+  // `<img src=//is.gd/...>` and `{{7*7}}` names, waiting for a screen that
+  // renders one unescaped.
+  if (/[<>{}`]/.test(cleaned)) return null;
   return cleaned;
+}
+
+/**
+ * Whether a POST came from a page on this same site. Our forms fetch with a
+ * relative URL, so the browser sends an Origin equal to the host it is on
+ * (hihodl.xyz, www, a preview). A script that calls the route directly sends
+ * none, or another site's.
+ */
+export function isSameSiteRequest(req: { headers: Headers }): boolean {
+  const origin = req.headers.get("origin");
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
+  if (!origin || !host) return false;
+  try {
+    return new URL(origin).host === host;
+  } catch {
+    return false;
+  }
 }
 
 // ── In-memory rate limit ─────────────────────────────────────────────────

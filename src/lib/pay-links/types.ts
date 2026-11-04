@@ -7,7 +7,22 @@
 
 import type { Chain, ConfirmOutcome } from "@/lib/ad-space/types";
 
-export type PayLinkStatus = "active" | "paid" | "closed" | "expired" | "disabled";
+/**
+ * `frozen` is a link paused for now (it answers with `methods: []`); unlike
+ * `disabled` it still says what it asks for, and it may come back.
+ */
+export type PayLinkStatus = "active" | "paid" | "closed" | "expired" | "frozen" | "disabled";
+
+/**
+ * Where to pay the same person when this link can't be paid: their personal
+ * link. Sent only for a paid, closed, expired or frozen link whose owner has
+ * an active personal link; never for a disabled one.
+ */
+export interface PayLinkFallback {
+  handle: string;
+  /** "/pay/@<handle>". The page builds its own from `handle` and only follows a match. */
+  path: string;
+}
 
 export type PayLinkAmount = { mode: "fixed"; cents: number } | { mode: "open"; maxCents: number | null };
 
@@ -26,6 +41,82 @@ export interface PayLinkOwner {
    * server older than this field sends none.
    */
   label?: string;
+  /**
+   * The owner's face: a signed https photo URL (valid about an hour), sent
+   * only when their profile is public. Null (or a null URL) when it is
+   * private, invisible or has no photo: the page draws their initials.
+   * Absent from a server older than this field.
+   */
+  face?: PayLinkFace | null;
+  /**
+   * True when the owner passed KYC; `displayName` is then their verified
+   * short name ("Alex L."). Absent from an older server.
+   */
+  verified?: boolean;
+}
+
+export interface PayLinkFace {
+  avatarUrl: string | null;
+}
+
+/** How a payer with no wallet pays: Coinflow's hosted checkout. */
+export type CardMethod = "card" | "applePay" | "googlePay";
+
+/**
+ * A way to pay a link, as the server decides it per link (the backend's
+ * methods.ts). `bank_transfer` names only its currency and whether the payer
+ * must be a business; its account comes beside it in `bankTransfers`.
+ */
+export type PayLinkMethod =
+  | { kind: "hold" }
+  | { kind: "stablecoins" }
+  | { kind: "card" }
+  | { kind: "apple_pay" }
+  | { kind: "google_pay" }
+  | { kind: "bank_transfer"; currency: string; payerMustBeBusiness: boolean };
+
+export type PayLinkMethodKind = PayLinkMethod["kind"];
+
+/**
+ * The owner's own bank account (Bridge holds it in their name; `holderName`
+ * is what Bridge returned) and the reference that ties a transfer to this
+ * link (`HOLD-<CODE>`). Sent only for a `bank_transfer` in `methods`.
+ */
+export interface PayLinkBankTransfer {
+  currency: string;
+  reference: string;
+  payerMustBeBusiness: boolean;
+  account:
+    | { iban: string; bic: string | null; holderName: string }
+    | { accountNumber: string; routingNumber: string; holderName: string; rails: ("ach" | "wire")[] };
+}
+
+/**
+ * What the link takes by card, or null for no card rows. Amounts in US cents;
+ * `currencies` are ISO 4217 codes the card may be charged in.
+ */
+export interface PayLinkCardOffer {
+  methods: CardMethod[];
+  currencies: string[];
+  minUsdCents: number;
+  maxUsdCents: number;
+}
+
+export type CardPaymentStatus = "pending" | "paid" | "declined" | "failed" | "refunded";
+
+/** A card payment, as `POST /:code/card` and `GET /card/:paymentId` return it. */
+export interface CardPayment {
+  id: string;
+  method: string;
+  status: CardPaymentStatus;
+  currency: string;
+  /** In the currency's minor units. */
+  amountMinor: number;
+  usdCents: number | null;
+  txHash: string | null;
+  explorerUrl: string | null;
+  paidAt: string | null;
+  createdAt: string;
 }
 
 /**
@@ -34,6 +125,12 @@ export interface PayLinkOwner {
  */
 export interface PayLinkPublic {
   code: string;
+  /**
+   * The owner's personal link, `hihodl.xyz/pay/@handle`: an open amount,
+   * reusable, never expiring. Its title is ours, not the owner's, so the page
+   * names the person instead. Absent from a server older than this field.
+   */
+  personal?: boolean;
   /** At most 80 characters, checked by the server for links, emails and impersonation. */
   title: string | null;
   /** At most 280 characters, or null. */
@@ -44,6 +141,69 @@ export interface PayLinkPublic {
   owner: PayLinkOwner | null;
   /** Null unless the link is active. */
   payTo: { solana: string | null; evm: string | null } | null;
+  /** Card, Apple Pay and Google Pay, when the server offers them. Absent from an older server. */
+  card?: PayLinkCardOffer | null;
+  /** What the link takes in stablecoins. Absent means USDC only (an older server). */
+  tokens?: ("usdc" | "eurc")[];
+  /** The ways the page may offer, and no others. Absent from an older server: every row as before. */
+  methods?: PayLinkMethod[];
+  /** The account and reference for each bank transfer in `methods`. Absent from an older server. */
+  bankTransfers?: PayLinkBankTransfer[];
+  /** The owner's personal link, when this one can't be paid. Absent from an older server. */
+  fallback?: PayLinkFallback | null;
+  /**
+   * A recurring link: paying it is subscribing, charged every period. Null or
+   * absent for a one-time link (and from an older server).
+   */
+  recurring?: PayLinkRecurring | null;
+  /**
+   * Only on a group debt's link (what one HOLD group member owes another,
+   * sent from the group's remind): its title and amount are read live from
+   * the group. `settled` when nothing is owed now (the link reads `paid`).
+   */
+  groupDebt?: PayLinkGroupDebt | null;
+  /** USD, or EUR for a checkout priced in euros (`amount` is then euro cents). Absent from an older server. */
+  currency?: string;
+  /**
+   * What was asked in the asker's currency (an agent's euro split), minor
+   * units as a string: shown beside the charge, never charged. Null on most
+   * links, absent from an older server.
+   */
+  asked?: { currency: string; minor: string } | null;
+}
+
+/**
+ * "10 USDC / month": a plan on the Solana Subscriptions program the owner
+ * signed. `plan` is there once it is on chain (`ready`); the page checks the
+ * subscribe transaction it is handed against it (recurring.ts).
+ */
+export interface PayLinkRecurring {
+  period: "week" | "month";
+  amountCents: number;
+  token: "usdc";
+  chain: "solana";
+  ready: boolean;
+  plan?: {
+    programId: string;
+    planPda: string;
+    merchant: string;
+    /** u64, as a decimal string. */
+    planId: string;
+    /** Per period, USDC base units (6 decimals), as a decimal string. */
+    amountBase: string;
+    periodHours: number;
+    mint: string;
+  };
+}
+
+/** A group debt, as the public read describes it. Amounts in the group's currency, minor units as a string. */
+export interface PayLinkGroupDebt {
+  groupName: string;
+  creditorName: string | null;
+  debtorName: string | null;
+  amountMinor: string;
+  currency: string;
+  settled: boolean;
 }
 
 /** A link that still says what it asks for: anything but a disabled one. */
@@ -66,7 +226,7 @@ export interface PayLinkPayment {
   receiptUrl: string | null;
 }
 
-/** The one ERC-3009 authorization a Base or Polygon payment signs: HiSpace's EvmPayload with one entry. */
+/** The one ERC-3009 authorization a Base, Polygon or Arc payment signs: HiSpace's EvmPayload with one entry. */
 export interface PayLinkEvmPayload {
   chainId: number;
   token: string;
@@ -79,7 +239,15 @@ export interface PayLinkEvmPayload {
 
 /** `POST /:code/checkout` answers `{ payment, solana }` or `{ payment, evm }`. */
 export type PayLinkCheckout = (
-  | { payment: PayLinkPayment; solana: { transaction: string; lastValidBlockHeight: number } }
+  | {
+      payment: PayLinkPayment;
+      /**
+       * `transaction` is signed by our fee payer; `walletFirst` (a server
+       * from 27-Sep-2026 on) is the same one unsigned, for a wallet that
+       * signs first and hands it back (submitPaySolana).
+       */
+      solana: { transaction: string; walletFirst?: string; lastValidBlockHeight: number };
+    }
   | { payment: PayLinkPayment; evm: PayLinkEvmPayload }
 ) & {
   /** The server's clock when it answered, ISO 8601. */

@@ -127,6 +127,12 @@ export interface Rate {
   savingVsPublic: number | null;
   publicPrice: number | null;
   maxPointsRedeemable: number;
+  /**
+   * What one point takes off `price`, in `currency`: USD 0.01 at the backend's
+   * FX, 0 when it holds no rate (and then `maxPointsRedeemable` is 0 too).
+   * Absent on a backend that predates it.
+   */
+  pointValue?: number;
   promotion: { label: string; multiplier: number; coveredShare: number } | null;
 }
 
@@ -393,6 +399,8 @@ export interface PrebookAnswer {
   /** Re-priced from the supplier's confirmation, not from the search result. */
   price: number;
   pointsApplied: number;
+  /** What those points took off, in `currency`. Absent on an older backend. */
+  pointsDiscountValue?: number;
   pointsEarned: number;
   savingVsPublic: number | null;
   freeCancellationUntil: string | null;

@@ -31,6 +31,8 @@
  * "solana". Pass the masked value to the UI and nowhere else.
  */
 
+import { t } from "./i18n";
+
 import { isStable } from "./money";
 
 export type DisplayMode = "fintech" | "hybrid" | "native";
@@ -47,8 +49,10 @@ export function asDisplayMode(raw: string | null | undefined): DisplayMode | nul
 
 /* ── The picker's own words (the app's DisplayModeSheet) ──────────── */
 
-export const DISPLAY_MODE_TITLE = "Choose your view";
-export const DISPLAY_MODE_INTRO = "Choose how much of the crypto layer you want to see. You can change this any time.";
+/** The sheet's title. A function: the language is known only at render. */
+export const DISPLAY_MODE_TITLE = (): string => t("menu.displayMode.title");
+/** The sheet's one line of intro. */
+export const DISPLAY_MODE_INTRO = (): string => t("menu.displayMode.intro");
 
 export interface DisplayModeOption {
   id: DisplayMode;
@@ -58,27 +62,16 @@ export interface DisplayModeOption {
   body: string;
 }
 
-/** Word for word from the app's `settings:displayMode.*`. */
-export const DISPLAY_MODE_OPTIONS: readonly DisplayModeOption[] = [
-  {
-    id: "fintech",
-    icon: "cash-outline",
-    title: "Fintech",
-    body: "Simplest. Your money shows as plain currency — USD. No coins, no networks. Just balances you can spend and send.",
-  },
-  {
-    id: "hybrid",
-    icon: "layers-outline",
-    title: "Hybrid",
-    body: "See your stablecoins — USDC, USDT — combined across every network. You know which coin you hold, without worrying about chains.",
-  },
-  {
-    id: "native",
-    icon: "cube-outline",
-    title: "Native",
-    body: "Full control. Every coin shown per network — Solana, Ethereum, Polygon, Base — with chain badges and the Smart routing toggle when you send.",
-  },
-];
+const OPTION_KEYS = [
+  { id: "fintech", icon: "cash-outline", title: "menu.displayMode.fintechTitle", body: "menu.displayMode.fintechBody" },
+  { id: "hybrid", icon: "layers-outline", title: "menu.displayMode.hybridTitle", body: "menu.displayMode.hybridBody" },
+  { id: "native", icon: "cube-outline", title: "menu.displayMode.nativeTitle", body: "menu.displayMode.nativeBody" },
+] as const;
+
+/** Word for word from the app's `settings:displayMode.*`, in the person's language. Call at render. */
+export function DISPLAY_MODE_OPTIONS(): readonly DisplayModeOption[] {
+  return OPTION_KEYS.map((o) => ({ id: o.id, icon: o.icon, title: t(o.title), body: t(o.body) }));
+}
 
 /* ── Symbols ──────────────────────────────────────────────────────── */
 
@@ -147,7 +140,7 @@ export function btcFamilyDisplayName(symbol: string | null | undefined, mode: Di
 /** The one-line subtitle that marks cbBTC as the on-Solana leg. Empty in fintech. */
 export function btcFamilySubtitle(symbol: string | null | undefined, mode: DisplayMode): string {
   if (mode === "fintech") return "";
-  return isFastBtc(symbol) ? "Fast swap · on Solana" : "";
+  return isFastBtc(symbol) ? t("menu.displayMode.fastBtc") : "";
 }
 
 /* ── Chains ───────────────────────────────────────────────────────── */
@@ -204,12 +197,12 @@ export function swapActivityTitle(opts: {
   mode: DisplayMode;
 }): string {
   const { fromSym, toSym, displayFrom, displayTo, mode } = opts;
-  if (mode === "native" || !toSym) return "Swapped";
+  if (mode === "native" || !toSym) return t("menu.displayMode.swapped");
   const fromStable = isStable(fromSym);
   const toStable = isStable(toSym);
-  if (fromStable && !toStable) return `Bought ${displayTo ?? toSym}`;
-  if (!fromStable && toStable) return `Sold ${displayFrom}`;
-  return "Swapped";
+  if (fromStable && !toStable) return t("menu.displayMode.bought", { symbol: displayTo ?? toSym });
+  if (!fromStable && toStable) return t("menu.displayMode.sold", { symbol: displayFrom });
+  return t("menu.displayMode.swapped");
 }
 
 /**

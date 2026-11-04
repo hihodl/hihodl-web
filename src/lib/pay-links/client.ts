@@ -4,12 +4,13 @@
  * Built on the HiSpace public checkout: the same `X-Checkout-Key` (made per
  * link and kept in localStorage), the same Solana Pay transaction request, the
  * same error envelope. What differs is that nothing here carries a fee: one
- * transfer on Solana, one ERC-3009 authorization on Base and Polygon.
+ * transfer on Solana, one ERC-3009 authorization on Base, Polygon and Arc.
  */
 
 import type * as SolanaWeb3 from "@solana/web3.js";
 
 import { API_BASE } from "@/lib/ad-space/config";
+import { listText, t } from "@/lib/app/i18n";
 import { CHAIN_LABEL, usdFromCents } from "@/lib/ad-space/format";
 import { CheckoutError, apiRequest, describeError } from "@/lib/ad-space/checkout-client";
 import type { Chain } from "@/lib/ad-space/types";
@@ -25,6 +26,12 @@ import type {
 } from "./types";
 
 const PUBLIC = `${API_BASE}/pay-links/public`;
+
+/** What a payment is made in: USDC anywhere, EURC on Base. */
+export type PayToken = "usdc" | "eurc";
+
+/** Circle's EURC on Base (6 decimals, ERC-3009 like USDC). */
+export const EURC_BASE = "0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42";
 
 /** The checkout-key scope for a link, so its key never collides with a HiSpace position's. */
 export function payKeyScope(code: string): string {
@@ -52,7 +59,7 @@ export function clockSkewMs(serverTime: unknown, receivedAt: number): number {
 export async function startPayCheckout(
   code: string,
   key: string,
-  body: { chain: Chain; payerAddress: string; amountCents?: number },
+  body: { chain: Chain; payerAddress: string; amountCents?: number; token?: PayToken },
 ): Promise<TimedPayLinkCheckout> {
   const res = await apiRequest<PayLinkCheckout>(`${PUBLIC}/${encodeURIComponent(code)}/checkout`, { key, json: body });
   return { ...res, skewMs: clockSkewMs(res.serverTime, Date.now()) };
@@ -81,6 +88,58 @@ export function submitPayAuthorization(
     key,
     json: { signature },
   });
+}
+
+/**
+ * The payer's wallet signed our Solana transaction without sending it: the
+ * server adds its fee payer's signature and broadcasts. `signature` is the
+ * transaction's id.
+ */
+export function submitPaySolana(paymentId: string, key: string, transaction: string): Promise<{ signature: string; payment: PayLinkPayment }> {
+  return apiRequest(`${PUBLIC}/payments/${encodeURIComponent(paymentId)}/solana`, {
+    key,
+    json: { transaction },
+  });
+}
+
+/**
+ * The Solana QR as a Solana Pay transfer request (`solana:<owner>?amount=
+ * &spl-token=&reference=`), which every wallet's scanner reads; the server
+ * opens it as this key's payment and finds the transfer by its reference.
+ * A server from before it answers 404: the caller shows the transaction
+ * request instead.
+ */
+export async function startSolanaTransfer(
+  code: string,
+  key: string,
+  amountCents: number | null,
+): Promise<{ payment: PayLinkPayment; transferRequest: string } | null> {
+  try {
+    const res = await apiRequest<{ payment: PayLinkPayment; transferRequest: string }>(`${PUBLIC}/${encodeURIComponent(code)}/solana-transfer`, {
+      key,
+      json: amountCents !== null ? { amountCents } : {},
+    });
+    return typeof res?.transferRequest === "string" && res.transferRequest.startsWith("solana:") ? res : null;
+  } catch (e) {
+    if (e instanceof CheckoutError && e.status === 404) return null;
+    throw e;
+  }
+}
+
+/**
+ * A recurring link: the payer's [InitSubscriptionAuthority] + Subscribe,
+ * unsigned, with the payer as fee payer (recurring.ts checks it).
+ */
+export function startSubscribe(
+  code: string,
+  payerAddress: string,
+): Promise<{ transaction: string; lastValidBlockHeight: number; renew?: true }> {
+  return apiRequest(`${PUBLIC}/${encodeURIComponent(code)}/subscribe`, { json: { payerAddress } });
+}
+
+/** After the wallet sent it: "active" once the chain shows the subscription, "pending" until then. */
+export function subscribed(code: string, payerAddress: string): Promise<{ state: "active" | "pending" }> {
+  return apiRequest(`${PUBLIC}/${encodeURIComponent(code)}/subscribed`, { json: { payerAddress } });
 }
 
 /** The payment bound to this key, if this page or a scanned QR has opened one. */
@@ -117,10 +176,13 @@ export function receiptPath(url: string | null | undefined): string | null {
 }
 
 /** Explorer link for a transaction, when the server gives none. */
-export function explorerTxUrl(chain: Chain, tx: string): string {
+export function explorerTxUrl(chain: Chain, tx: string): string | null {
   if (chain === "solana") return `https://solscan.io/tx/${encodeURIComponent(tx)}`;
   if (chain === "base") return `https://basescan.org/tx/${encodeURIComponent(tx)}`;
-  return `https://polygonscan.com/tx/${encodeURIComponent(tx)}`;
+  if (chain === "polygon") return `https://polygonscan.com/tx/${encodeURIComponent(tx)}`;
+  if (chain === "arc") return `https://explorer.arc.io/tx/${encodeURIComponent(tx)}`;
+  // A network this page doesn't know yet gets no link rather than another chain's explorer (28-Sep-2026).
+  return null;
 }
 
 /** The server's explorer link when it sends one (only https), else ours. Null with no transaction. */
@@ -144,7 +206,7 @@ export function ownerName(owner: Owner): string {
   if (owner?.handle) return `@${owner.handle}`;
   const name = owner?.displayName?.trim();
   if (name) return name;
-  return "the link owner";
+  return t("home.payLinks.owner.fallback");
 }
 
 /**
@@ -154,7 +216,7 @@ export function ownerName(owner: Owner): string {
 export function ownerHandleLine(owner: Owner): string | null {
   if (!owner?.handle) return null;
   const handle = `@${owner.handle}`;
-  return ownerName(owner) === handle ? null : `${handle} on HOLD`;
+  return ownerName(owner) === handle ? null : t("home.payLinks.owner.handleLine", { handle });
 }
 
 /* ── Payments this page sent ───────────────────────────────────────── */
@@ -208,7 +270,10 @@ function bigintOf(v: unknown): bigint | null {
 }
 
 export interface ExpectedPayment {
+  /** In the token's cents: US cents for USDC, euro cents for EURC. */
   cents: number;
+  /** USDC unless said. EURC is only ever on Base. */
+  token?: PayToken;
   chain: Chain;
   payerAddress: string;
   payTo: PayLinkPublic["payTo"];
@@ -217,7 +282,7 @@ export interface ExpectedPayment {
 /**
  * Why a checkout answer is not the payment this page showed, or null when it
  * is. Checked before anything reaches the wallet: the amount, the network, the
- * payer, the receiver, and on Base and Polygon the token contract the
+ * payer, the receiver, and on Base, Polygon and Arc the token contract the
  * signature is valid for.
  */
 export function evmCheckoutProblem(res: TimedPayLinkCheckout, expect: ExpectedPayment): string | null {
@@ -234,7 +299,8 @@ export function evmCheckoutProblem(res: TimedPayLinkCheckout, expect: ExpectedPa
   if (!expect.payTo?.evm || !sameEvm(m.to, expect.payTo.evm)) return "receiver";
   if (!sameEvm(m.from, expect.payerAddress)) return "payer";
   if (Number(evm.domain.chainId) !== meta.chainId || evm.chainId !== meta.chainId) return "chain_id";
-  if (!sameEvm(evm.domain.verifyingContract, meta.usdc)) return "token";
+  const contract = expect.token === "eurc" ? (expect.chain === "base" ? EURC_BASE : null) : meta.usdc;
+  if (!contract || !sameEvm(evm.domain.verifyingContract, contract)) return "token";
   // A quote with under 30 seconds left can't be signed and relayed in time: ask for a new one.
   // Judged on the server's clock, so a browser clock that runs fast or slow doesn't decide it.
   if (!Number.isFinite(evm.validBefore) || evm.validBefore * 1000 <= Date.now() + res.skewMs + 30_000) return "expired";
@@ -312,8 +378,8 @@ export function retryAfterSeconds(e: unknown): number | null {
 
 export function previousAttemptSentence(seconds: number): string {
   return seconds > 0
-    ? `Your previous attempt is still settling. Try again in ${seconds} ${seconds === 1 ? "second" : "seconds"}.`
-    : "Your previous attempt has had time to settle. You can try again now.";
+    ? t("home.payLinks.pay.previousPending", { seconds })
+    : t("home.payLinks.pay.previousSettled");
 }
 
 function capitalise(s: string): string {
@@ -322,15 +388,26 @@ function capitalise(s: string): string {
 
 function detailsChain(e: CheckoutError): Chain | null {
   const c = e.details.chain;
-  return c === "solana" || c === "base" || c === "polygon" ? c : null;
+  return c === "solana" || c === "base" || c === "polygon" || c === "arc" ? c : null;
 }
 
-const GONE_STATUS: Record<string, string> = {
-  paid: "This link has already been paid, so it takes no more payments. This attempt took nothing from your wallet; if an earlier one of yours paid it, it shows in your wallet's history.",
-  closed: "Its owner closed this link while you were paying, so it takes no more payments. Nothing was paid.",
-  expired: "This link expired while you were paying, so it takes no more payments. Nothing was paid.",
-  disabled: "This link is no longer available. Nothing was paid.",
-};
+/** Why a link stopped taking payments, when the server says which way it went. */
+function goneStatus(status: string | null): string | null {
+  switch (status) {
+    case "paid":
+      return t("home.payLinks.pay.gone.paid");
+    case "closed":
+      return t("home.payLinks.pay.gone.closed");
+    case "expired":
+      return t("home.payLinks.pay.gone.expired");
+    case "frozen":
+      return t("home.payLinks.pay.gone.frozen");
+    case "disabled":
+      return t("home.payLinks.pay.gone.disabled");
+    default:
+      return null;
+  }
+}
 
 /**
  * Pay-link codes in plain words, falling back to the HiSpace sentences for the
@@ -339,82 +416,79 @@ const GONE_STATUS: Record<string, string> = {
  */
 export function describePayError(e: unknown, chain: Chain | null, ctx: PayErrorContext = {}): string {
   const { limits, accepts, payee } = ctx;
-  const net = chain ? CHAIN_LABEL[chain] : "this network";
+  const net = chain ? CHAIN_LABEL[chain] : t("home.payLinks.pay.thisNetwork");
   if (e instanceof CheckoutError) {
     switch (e.code) {
       case "link_not_active": {
         // Also the answer to a retry on a key whose link has changed since.
         const status = typeof e.details.status === "string" ? e.details.status : null;
-        return (
-          (status && GONE_STATUS[status]) ??
-          "This link can't take payments any more. It may have been paid, closed or expired. Nothing was paid."
-        );
+        return goneStatus(status) ?? t("home.payLinks.pay.notActive");
       }
       case "previous_attempt_pending":
         return previousAttemptSentence(retryAfterSeconds(e) ?? 30);
       case "chain_unavailable": {
         const refused = detailsChain(e) ?? chain;
         if (e.details.reason === "gas_budget_exhausted") {
-          const where = refused ? CHAIN_LABEL[refused] : "Base and Polygon";
+          const where = refused ? CHAIN_LABEL[refused] : listText([CHAIN_LABEL.base, CHAIN_LABEL.polygon, CHAIN_LABEL.arc]);
           return accepts?.includes("solana") && refused !== "solana"
-            ? `${where} payments are paused for today. Try Solana.`
-            : `${where} payments on this link are paused for today. Nothing was paid; try again tomorrow.`;
+            ? t("home.payLinks.pay.pausedTrySolana", { where })
+            : t("home.payLinks.pay.pausedToday", { where });
         }
         break;
       }
       case "link_busy":
-        return "Someone else is paying this link right now. Try again in a couple of minutes.";
+        return t("home.payLinks.pay.busy");
       case "amount_out_of_range":
         return limits
-          ? `The amount has to be between ${usdFromCents(limits.minCents)} and ${usdFromCents(limits.maxCents)}.`
-          : "That amount is outside what this link accepts.";
+          ? t("home.payLinks.pay.amountRange", { min: usdFromCents(limits.minCents), max: usdFromCents(limits.maxCents) })
+          : t("home.payLinks.pay.amountOutside");
       case "chain_not_accepted":
-        return `This link doesn't take payments on ${net}. Pick one of the other networks.`;
+        return t("home.payLinks.pay.chainNotAccepted", { net });
       case "receiver_not_ready":
-        return `The person you're paying can't receive USDC on ${net} right now. Nothing was paid. Try another network, or tell them.`;
+        return t("home.payLinks.pay.receiverNotReady", { net });
       case "insufficient_funds": {
         const need = typeof e.details.neededUsdc === "string" ? e.details.neededUsdc : null;
         const have = typeof e.details.balanceUsdc === "string" ? e.details.balanceUsdc : null;
         return need && have
-          ? `This wallet has ${have} USDC on ${net} and this payment needs ${need}. Add USDC or pay from another wallet.`
-          : `This wallet doesn't have enough USDC on ${net} for this payment. Add USDC or pay from another wallet.`;
+          ? t("home.payLinks.pay.insufficientKnown", { have, net, need })
+          : t("home.payLinks.pay.insufficient", { net });
       }
       case "rate_limited":
-        if (e.status === 503) return "Payments are paused for a moment on our side. Nothing was paid; try again in a minute.";
+        if (e.status === 503) return t("home.payLinks.pay.pausedOurSide");
         switch (e.details.scope) {
           case "link":
-            return "This link has taken as many payments as it can today. Nothing was paid; try again tomorrow.";
+            return t("home.payLinks.pay.limitLink");
           case "owner":
-            return `${payee ? capitalise(payee) : "The person you're paying"} has received as many payments as they can today. Nothing was paid; try again tomorrow.`;
+            return t("home.payLinks.pay.limitOwner", { payee: payee ? capitalise(payee) : t("home.payLinks.pay.personPaying") });
           case "payer":
-            return `This wallet has started as many payments on ${net} as it can today. Nothing was paid; try again tomorrow or pay from another wallet.`;
+            return t("home.payLinks.pay.limitPayer", { net });
           case "open_checkouts":
-            return "Too many payments to this link are waiting to be signed right now. Nothing was paid; try again in a few minutes.";
+            return t("home.payLinks.pay.openCheckouts");
         }
-        return "Too many requests from this connection. Nothing was paid; wait a moment and try again.";
+        return t("home.payLinks.pay.tooManyRequests");
       case "own_address":
-        return "That wallet is the one this link pays. Pay from a different wallet.";
+        return t("home.payLinks.pay.ownAddress");
       case "invalid_address":
-        return `Your wallet gave us an address we can't use on ${net}. Reconnect it and try again.`;
+        return t("home.payLinks.pay.invalidAddress", { net });
       case "bad_signature":
-        return "That signature didn't match the payment, so we didn't send it. Nothing was paid.";
+        return t("home.payLinks.pay.badSignature");
       case "payment_expired":
-        return "That payment took too long to sign, so it can't be sent any more. Nothing was paid; start again.";
+        return t("home.payLinks.pay.expired");
       case "checkout_key_reused":
-        return "This payment was started with a different wallet or network. Nothing was paid; start again.";
+        return t("home.payLinks.pay.keyReused");
       case "checkout_in_flight":
-        return "This page is already starting a payment. Wait a moment and try again.";
+        return t("home.payLinks.pay.inFlight");
       case "checkout_key_required":
       case "invalid_checkout":
       case "not_an_evm_payment":
-        return "This payment couldn't be started from this page. Nothing was paid; refresh the page and try again.";
+        return t("home.payLinks.pay.cantStart");
       case MISMATCH_CODE:
-        return "The payment we were given didn't match what this page shows, so nothing was sent to your wallet. Nothing was paid; refresh the page and try again.";
+        return t("home.payLinks.pay.mismatch");
       case "not_found":
-        return "We can't find this link or payment any more. Refresh the page.";
+        return t("home.payLinks.pay.notFound");
     }
     // A request the server couldn't read, such as a code in the wrong shape.
-    if (e.status === 400) return "We can't find this link or payment. Check the link and refresh the page.";
+    if (e.status === 400) return t("home.payLinks.pay.badRequest");
   }
   return describeError(e, chain);
 }

@@ -2,26 +2,29 @@ import Link from "next/link";
 
 import { SlimHeader } from "@/components/ad-space/sections";
 import { btnSecondary, eyebrow } from "@/components/ad-space/ui";
+import { t } from "@/lib/app/i18n";
+import { applyRequestLocale } from "@/lib/app/i18n/server";
 
 /**
  * The API answers 404 for drafts and for spaces we took down, and this page
  * does not say which: a delisted space's reason is between us and its creator.
  */
-export default function AdSpaceNotFound() {
+export default async function AdSpaceNotFound() {
+  const language = await applyRequestLocale();
   return (
     <>
-      <SlimHeader />
+      <SlimHeader language={language} />
       <main className="container-page flex min-h-[60vh] flex-col justify-center py-20">
         <p className={`${eyebrow} text-sp-amber`}>HiSpace</p>
         <h1 className="mt-5 max-w-2xl font-display text-h3 font-light text-sp-ink md:text-h2">
-          There&rsquo;s no HiSpace at this link.
+          {t("publicPages.space.missingTitle")}
         </h1>
         <p className="mt-5 max-w-xl text-body text-sp-ink/85">
-          Check the link with whoever shared it. It may not be published yet, or it may have been taken down.
+          {t("publicPages.space.missingBody")}
         </p>
         <div className="mt-10">
           <Link href="/" className={btnSecondary}>
-            Go to HOLD
+            {t("publicPages.goToHold")}
           </Link>
         </div>
       </main>

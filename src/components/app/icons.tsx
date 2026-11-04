@@ -48,6 +48,14 @@ export const IconOffers = (p: P) => (
   </Icon>
 );
 
+/** A brief: a page with an ask on it, which is the listing a brand writes. */
+export const IconBriefs = (p: P) => (
+  <Icon {...p}>
+    <rect x="4" y="3" width="16" height="18" rx="2" />
+    <path d="M8 8h8M8 12h8M8 16h4" />
+  </Icon>
+);
+
 export const IconSales = (p: P) => (
   <Icon {...p}>
     <path d="M3 3v18h18" />
@@ -243,6 +251,14 @@ export const IconWallet = (p: P) => (
     <path d="M19 7V5.5A1.5 1.5 0 0 0 17.5 4h-12A1.5 1.5 0 0 0 4 5.5v13A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V15" />
     <path d="M21 9h-5a3 3 0 0 0 0 6h5z" />
     <circle cx="16" cy="12" r="0.6" fill="currentColor" />
+  </Icon>
+);
+
+export const IconBusiness = (p: P) => (
+  <Icon {...p}>
+    <rect x="3" y="7" width="18" height="13" rx="2" />
+    <path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
+    <path d="M3 13h18" />
   </Icon>
 );
 

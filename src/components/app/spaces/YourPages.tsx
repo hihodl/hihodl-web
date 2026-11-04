@@ -23,6 +23,7 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 import { GroundPicker, GroundSwatch, labelOf } from "@/components/creator/run/GroundPicker";
 import { getCreatorSettings, setPageGround, type CreatorSettings } from "@/lib/creator/listings";
+import { useT } from "@/lib/app/i18n/react";
 
 import { useHref } from "../base";
 import { BackHeader, Column, HoldCard, SectionTitle } from "../hold";
@@ -45,7 +46,9 @@ export function useGrounds(): { grounds: Grounds | null; reload: () => void } {
 }
 
 /** The row that opens this screen, in a card of its own, for any settings page. */
-export function YourPagesCard({ href, title = "Your pages" }: { href: string; title?: string }) {
+export function YourPagesCard({ href, title: titleIn }: { href: string; title?: string }) {
+  const t = useT();
+  const title = titleIn ?? t("creator.pages.title");
   const { grounds } = useGrounds();
   return (
     <HoldCard>
@@ -56,7 +59,9 @@ export function YourPagesCard({ href, title = "Your pages" }: { href: string; ti
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[14px] font-strong leading-5 text-white">{title}</span>
           <span className="mt-0.5 block truncate text-[12px] leading-4 text-[#9FB7C2]">
-            {grounds ? `Background: ${labelOf(grounds.pageGround)} profile, ${labelOf(grounds.listingGround ?? grounds.pageGround)} listings` : "…"}
+            {grounds
+              ? t("creator.pages.cardNote", { profile: labelOf(grounds.pageGround), listings: labelOf(grounds.listingGround ?? grounds.pageGround) })
+              : "…"}
           </span>
         </span>
         <Ion name="chevron-forward" size={16} className="shrink-0 text-white/35" />
@@ -78,6 +83,7 @@ export function YourPagesScreen({
   backLabel: string;
   item?: string;
 }) {
+  const t = useT();
   const href = useHref();
   const { listings } = useShell();
   const { grounds, reload } = useGrounds();
@@ -86,11 +92,11 @@ export function YourPagesScreen({
   if (item === "profile" || item === "listings") {
     const profile = item === "profile";
     return (
-      <Frame back={base} backLabel="Your pages" title={profile ? "Profile page" : "Listings, by default"}>
+      <Frame back={base} backLabel={t("creator.pages.title")} title={profile ? t("creator.pages.profile") : t("creator.pages.listingsDefault")}>
         <p className="mb-4 px-1 text-[15px] font-medium leading-[21px] text-white/[0.72]">
           {profile
-            ? "What your profile and its event screens stand on."
-            : "What every listing stands on unless it has its own. “Same as my profile” follows your profile page."}
+            ? t("creator.pages.profileBody")
+            : t("creator.pages.listingsBody")}
         </p>
         {grounds ? (
           <GroundPicker
@@ -98,7 +104,7 @@ export function YourPagesScreen({
             value={profile ? grounds.pageGround ?? null : grounds.listingGround ?? null}
             allowDefault={!profile}
             defaultValue={grounds.pageGround ?? null}
-            defaultLabel="Same as my profile"
+            defaultLabel={t("creator.pages.sameAsProfile")}
             onSave={(next) => setPageGround(profile ? { pageGround: next } : { listingGround: next }).then(reload)}
           />
         ) : null}
@@ -108,27 +114,33 @@ export function YourPagesScreen({
 
   const listingDefault = grounds ? grounds.listingGround ?? grounds.pageGround ?? null : null;
   return (
-    <Frame back={back} backLabel={backLabel} title="Your pages">
+    <Frame back={back} backLabel={backLabel} title={t("creator.pages.title")}>
       <p className="mb-2 px-1 text-[15px] font-medium leading-[21px] text-white/[0.72]">
-        The background sponsors see on your public pages. The payment sheet keeps the app&rsquo;s dark on every one.
+        {t("creator.pages.intro")}
       </p>
       <ul className="mt-2 grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2">
         <li>
-          <GroundCard href={`${base}${sep}item=profile`} value={grounds?.pageGround ?? null} title="Profile page" note={grounds ? labelOf(grounds.pageGround) : "…"} />
+          <GroundCard href={`${base}${sep}item=profile`} value={grounds?.pageGround ?? null} title={t("creator.pages.profile")} note={grounds ? labelOf(grounds.pageGround) : "…"} />
         </li>
         <li>
           <GroundCard
             href={`${base}${sep}item=listings`}
             value={listingDefault}
-            title="Listings, by default"
-            note={grounds ? (grounds.listingGround ? labelOf(grounds.listingGround) : `Same as my profile · ${labelOf(grounds.pageGround)}`) : "…"}
+            title={t("creator.pages.listingsDefault")}
+            note={
+              grounds
+                ? grounds.listingGround
+                  ? labelOf(grounds.listingGround)
+                  : t("creator.pages.sameAsProfileWith", { ground: labelOf(grounds.pageGround) })
+                : "…"
+            }
           />
         </li>
       </ul>
 
-      <SectionTitle>Each listing</SectionTitle>
+      <SectionTitle>{t("creator.pages.eachListing")}</SectionTitle>
       {listings.length === 0 ? (
-        <p className="px-1 text-[13px] text-[#9FB7C2]">No listings yet.</p>
+        <p className="px-1 text-[13px] text-[#9FB7C2]">{t("creator.pages.noListings")}</p>
       ) : (
         <HoldCard>
           {listings.map((l) => {
@@ -140,7 +152,7 @@ export function YourPagesScreen({
                 </div>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[14px] font-strong leading-5 text-white">{l.serviceName || l.title}</span>
-                  <span className="mt-0.5 block truncate text-[12px] leading-4 text-[#9FB7C2]">{own ? `Its own: ${labelOf(own)}` : `Default · ${labelOf(listingDefault)}`}</span>
+                  <span className="mt-0.5 block truncate text-[12px] leading-4 text-[#9FB7C2]">{own ? t("creator.pages.itsOwn", { ground: labelOf(own) }) : t("creator.pages.default", { ground: labelOf(listingDefault) })}</span>
                 </span>
                 <Ion name="chevron-forward" size={16} className="shrink-0 text-white/35" />
               </Link>

@@ -121,7 +121,7 @@ async function createStripeCheckout(input: {
           product_data: {
             name: "HOLD Founder Pass",
             description:
-              `Pro for life, 0% savings fee on up to $${FOUNDER_PASS.savingsFeeWaiverUpToUsd.toLocaleString("en-US")}, ` +
+              `0% savings fee on up to $${FOUNDER_PASS.savingsFeeWaiverUpToUsd.toLocaleString("en-US")}, ` +
               "0% FX in every corridor, permanent creator referral tier.",
           },
         },

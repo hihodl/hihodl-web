@@ -1,44 +1,14 @@
 /**
- * The pure half of a withdrawal from the web wallet: amounts, addresses and
- * the hash a passkey assertion is bound to. No DOM, no network, no web3.js,
- * so `npx sucrase-node src/lib/link/sas.check.ts` proves it too.
- *
- * documentation/link-your-phone-and-approved-withdrawals.md:
- *
- *   challenge = sha256(utf8("hihodl/withdrawal/v1") ‖ utf8(id) ‖ sha256(message))
- *
- * The web computes it itself and refuses to prompt for a passkey when the
- * server's options carry anything else: an assertion is then only ever
- * about the transfer this screen built and showed.
+ * The pure half of a send from the web: amounts and addresses. No DOM, no
+ * network, no web3.js, so `npx sucrase-node src/lib/link/sas.check.ts` proves
+ * it too. The send itself is approved and signed on the linked phone.
  */
 
-import { sha256 } from "@noble/hashes/sha256";
 import { base58 } from "@scure/base";
 
 export type WithdrawToken = "USDC" | "SOL";
 
 export const DECIMALS: Record<WithdrawToken, number> = { USDC: 6, SOL: 9 };
-
-export const WITHDRAWAL_DOMAIN = "hihodl/withdrawal/v1";
-
-export function withdrawalChallenge(id: string, message: Uint8Array): Uint8Array {
-  const enc = new TextEncoder();
-  const a = enc.encode(WITHDRAWAL_DOMAIN);
-  const b = enc.encode(id);
-  const c = sha256(message);
-  const all = new Uint8Array(a.length + b.length + c.length);
-  all.set(a, 0);
-  all.set(b, a.length);
-  all.set(c, a.length + b.length);
-  return sha256(all);
-}
-
-export function sameBytes(a: Uint8Array, b: Uint8Array): boolean {
-  if (a.length !== b.length) return false;
-  let d = 0;
-  for (let i = 0; i < a.length; i++) d |= a[i] ^ b[i];
-  return d === 0;
-}
 
 /** A Solana address: base58 of exactly 32 bytes. Not an 0x address, not a token account check. */
 export function isSolanaAddress(s: string): boolean {
@@ -78,4 +48,24 @@ export function fromBaseUnits(units: bigint, token: WithdrawToken): string {
 export function canonicalAmount(amount: string, token: WithdrawToken): string | null {
   const u = toBaseUnits(amount, token);
   return u === null ? null : fromBaseUnits(u, token);
+}
+
+/**
+ * Did this send pay the request it was opened for?
+ *
+ * Pay on a payment request opens Send filled in, and the person may change
+ * any of it. Only a send to the same address, in the same token, for the same
+ * amount closes the request: settling one after they sent something else, or
+ * to somebody else, would tell the person who asked that they were paid.
+ * Compared in base units, so "25" and "25.000000" are the same amount.
+ */
+export function paysTheRequest(
+  asked: { to?: string; amount?: string; token?: WithdrawToken },
+  sent: { to: string; amount: string; token: WithdrawToken },
+): boolean {
+  if (!asked.to || !asked.amount) return false;
+  if (asked.to !== sent.to || (asked.token ?? "USDC") !== sent.token) return false;
+  const a = toBaseUnits(asked.amount, sent.token);
+  const b = toBaseUnits(sent.amount, sent.token);
+  return a !== null && b !== null && a === b;
 }

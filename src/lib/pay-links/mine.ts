@@ -34,6 +34,7 @@
 import useSWR, { type SWRConfiguration } from "swr";
 
 import { read } from "@/lib/app/hold-api";
+import { t } from "@/lib/app/i18n";
 import { useCreatorSession } from "@/lib/creator/session";
 import { usdFromCents } from "@/lib/ad-space/format";
 import type { Chain } from "@/lib/ad-space/types";
@@ -134,14 +135,14 @@ export function payLinkAmountLine(link: Pick<MyPayLink, "amount" | "use">): stri
     link.amount.mode === "fixed"
       ? usdFromCents(link.amount.cents)
       : link.amount.maxCents != null
-        ? `Payer chooses, up to ${usdFromCents(link.amount.maxCents)}`
-        : "Payer chooses the amount";
-  return `${amount} · ${link.use === "single" ? "one payment" : "reusable"}`;
+        ? t("home.payLinks.amount.upTo", { amount: usdFromCents(link.amount.maxCents) })
+        : t("home.payLinks.amount.open");
+  return t("home.payLinks.amount.line", { amount, use: link.use === "single" ? "single" : "reusable" });
 }
 
 /** "2 payments · $300 received". */
 export function payLinkTotalsLine(link: Pick<MyPayLink, "totals">): string {
-  return `${link.totals?.payments ?? 0} payments · ${usdFromCents(link.totals?.receivedCents ?? 0)} received`;
+  return t("home.payLinks.totals", { count: link.totals?.payments ?? 0, amount: usdFromCents(link.totals?.receivedCents ?? 0) });
 }
 
 /* ── What went wrong (app: features/pay-links/errors.ts) ──────────── */
@@ -155,19 +156,19 @@ export function describeMyPayLinkError(e: unknown): string {
   const code = (e as { code?: unknown })?.code;
   switch (typeof code === "string" ? code : "") {
     case "link_not_active":
-      return "This link isn't open any more.";
+      return t("home.payLinks.error.notActive");
     case "not_found":
     case "NOT_FOUND":
-      return "We couldn't find that link.";
+      return t("home.payLinks.error.notFound");
     case "rate_limited":
     case "RATE_LIMIT_EXCEEDED":
-      return "Too many tries in a short time. Wait a moment and try again.";
+      return t("home.payLinks.error.rateLimited");
     case "NETWORK":
     case "TIMEOUT":
-      return "No connection. Check your internet and try again.";
+      return t("home.payLinks.error.network");
     case "UNAUTHORIZED":
-      return "Your session ended. Sign in again.";
+      return t("home.payLinks.error.unauthorized");
     default:
-      return "Something went wrong. Try again in a moment.";
+      return t("home.payLinks.error.other");
   }
 }

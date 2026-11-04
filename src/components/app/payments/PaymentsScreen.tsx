@@ -34,12 +34,13 @@
  * verify screen that links a wallet, which the web cannot do — or the page
  * would dead-end on a read every signed-in person is allowed to make.
  *
- * VIEW ONLY, FOR THE MONEY
+ * THE MONEY, FROM A THREAD
  *
- * Nothing here sends, requests, cancels a schedule, revokes an allowance or
- * funds a payout. The one money action the web has is receiving (/add), and the
- * withdrawal flow on the Wallet page, which is approved on the phone or signed
- * with a passkey bound to that one transaction.
+ * A thread's Send and Request are Quick Send (wallet/QuickSend), with the
+ * person locked in. Request writes a row with the session and moves nothing;
+ * Send, and Pay on a request made of you, go through the web's one payment
+ * path, /wallet/send, approved and signed on the linked phone. The
+ * rest of the money here (schedules, allowances, payouts) is still read only.
  */
 
 import Link from "next/link";
@@ -47,7 +48,17 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useConversations } from "@/lib/app/chat";
 import type { DisplayMode } from "@/lib/app/display-mode";
-import { askFor, requestAmount, resolveHandle, usePaymentRequests, type PaymentRequest } from "@/lib/app/payment-requests";
+import { useLocale, useT } from "@/lib/app/i18n/react";
+import { HoldApiError } from "@/lib/app/hold-api";
+import {
+  askFor,
+  describeRequestError,
+  resolveHandle,
+  usePaymentRequests,
+  webCanPay,
+  type PaymentRequest,
+} from "@/lib/app/payment-requests";
+import { requestPeers } from "@/lib/app/request-rules";
 import { storefrontOf, useSpotsBoughtFrom } from "@/lib/app/sponsor";
 import { useTransfers } from "@/lib/app/money";
 import {
@@ -63,9 +74,11 @@ import { SponsorFlow } from "../sponsor/SponsorFlow";
 import { useProductHref } from "../base";
 import { BackHeader, Column } from "../hold";
 import { Ion, type IonName } from "../ion";
+import { useLinkGate } from "../link/LinkGate";
 import { useShell, useShellPrefs } from "../Shell";
 import { Skeleton } from "../ui";
 import { cardClass } from "../wallet/app-kit";
+import { QuickSendView, type QuickOption } from "../wallet/QuickSend";
 import { Conversation, SafetyMenu } from "./Chat";
 import { GroupsList } from "./Groups";
 import { ChatRequests } from "./Requests";
@@ -82,12 +95,22 @@ type Filter = "all" | "groups" | "favs";
 type View = { kind: "list" } | { kind: "thread"; id: string } | { kind: "tx"; id: string; from: string | null };
 
 /** The app's rotating placeholders (payments:searchPh and its siblings). */
-const PHRASES = ["Search", "Search @username", "Search contact", "Paste wallet address"];
+const PHRASES = [
+  "payments.search.phrase.search",
+  "payments.search.phrase.username",
+  "payments.search.phrase.contact",
+  "payments.search.phrase.address",
+] as const;
 
 export function PaymentsScreen({ initialFilter = "all" }: { initialFilter?: Filter } = {}) {
   const { displayMode } = useShellPrefs();
+  // The rows carry worded names ("Wallet • …", "You: …"), so they are rebuilt in a new language.
+  const locale = useLocale();
   const transfers = useTransfers(100);
   const conversations = useConversations();
+  const requests = usePaymentRequests();
+  const { session } = useShell();
+  const meId = session?.user?.id ?? null;
   const [view, setView] = useState<View>({ kind: "list" });
 
   /**
@@ -95,13 +118,50 @@ export function PaymentsScreen({ initialFilter = "all" }: { initialFilter?: Filt
    * be late or to fail. A chat read that 500s must not take the payment history
    * down with it — somebody opened this to check a number.
    */
-  const rows = useMemo(
-    () =>
-      transfers.data
-        ? mergeInbox(groupTransfersIntoThreads(peerRows(transfers.data.transfers)), conversations.data ?? [])
-        : [],
-    [transfers.data, conversations.data],
-  );
+  const rows = useMemo(() => {
+    if (!transfers.data) return [];
+    /*
+     * A request can be the first thing between two people. Its peer joins the
+     * conversations half, so the person asked finds a thread to open after the
+     * push, and a peer who is already a conversation keeps that row.
+     */
+    const chats = conversations.data ?? [];
+    const talking = new Set(chats.map((c) => c.peerId));
+    const asked = requestPeers(requests.data, meId).filter((p) => !talking.has(p.peerId));
+    return mergeInbox(groupTransfersIntoThreads(peerRows(transfers.data.transfers)), [...chats, ...asked]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [transfers.data, conversations.data, requests.data, meId, locale]);
+
+  /*
+   * ?thread=<id>: back from Quick Send, or from paying a request, lands in the
+   * conversation it left and not on the list. Read once the rows are here,
+   * then taken off the address, so Back to the list does not reopen it.
+   */
+  /*
+   * ?peer=<user id> does the same from outside Payments: the business inbox
+   * opens the Payment Thread with the brand who asked, and only knows who
+   * they are, not which row their thread became.
+   */
+  const [deepThread, setDeepThread] = useState<string | null>(null);
+  const [deepPeer, setDeepPeer] = useState<string | null>(null);
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const id = q.get("thread");
+    if (id) setDeepThread(id);
+    const peer = q.get("peer");
+    if (peer) setDeepPeer(peer);
+  }, []);
+  useEffect(() => {
+    const row = deepThread ? rows.find((r) => r.id === deepThread) : deepPeer ? rows.find((r) => r.peerId === deepPeer) : null;
+    if (!row) return;
+    setView({ kind: "thread", id: row.id });
+    setDeepThread(null);
+    setDeepPeer(null);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("thread");
+    url.searchParams.delete("peer");
+    window.history.replaceState(window.history.state, "", url.toString());
+  }, [deepThread, deepPeer, rows]);
 
   if (view.kind === "thread") {
     const row = rows.find((r) => r.id === view.id) ?? null;
@@ -169,6 +229,7 @@ function List({
   onRetry: () => void;
   onOpen: (id: string) => void;
 }) {
+  const t = useT();
   const [filter, setFilter] = useState<Filter>(initialFilter);
   const [query, setQuery] = useState("");
 
@@ -181,8 +242,8 @@ function List({
       // chip draws GroupsList instead.
       if (filter !== "all") return false;
       if (!q) return true;
-      const t = r.thread;
-      return `${r.name} ${t?.alias ?? ""} ${t?.address ?? ""}`.toLowerCase().includes(q);
+      const th = r.thread;
+      return `${r.name} ${th?.alias ?? ""} ${th?.address ?? ""}`.toLowerCase().includes(q);
     });
   }, [rows, filter, query]);
 
@@ -193,9 +254,9 @@ function List({
       <div className="mt-3 flex items-center gap-2 overflow-x-auto pb-0.5">
         {(
           [
-            { k: "all", label: "All" },
-            { k: "groups", label: "Groups" },
-            { k: "favs", label: "Favourites" },
+            { k: "all", label: t("common.all") },
+            { k: "groups", label: t("payments.filter.groups") },
+            { k: "favs", label: t("payments.filter.favourites") },
           ] as { k: Filter; label: string }[]
         ).map((c) => (
           <button
@@ -221,13 +282,13 @@ function List({
       {!loading && failed && filter !== "groups" ? (
         <div className="flex flex-col items-center px-4 pt-12 text-center">
           <Ion name="alert-circle-outline" size={48} className="text-white/40" />
-          <p className="mt-3 text-[14px] text-white/[0.62]">Could not load payment history</p>
+          <p className="mt-3 text-[14px] text-white/[0.62]">{t("payments.list.loadFailed")}</p>
           <button
             type="button"
             onClick={onRetry}
             className="mt-4 rounded-[12px] bg-white/10 px-5 py-2.5 text-[14px] font-strong text-white transition-colors hover:bg-white/[0.16]"
           >
-            Retry
+            {t("common.retry")}
           </button>
         </div>
       ) : null}
@@ -236,14 +297,14 @@ function List({
         <Empty
           icon="star-outline"
           iconClass="text-amber/40"
-          title="No favourites yet"
-          body="Favourites are marked in the HOLD app."
+          title={t("payments.list.noFavouritesTitle")}
+          body={t("payments.list.noFavouritesBody")}
         />
       ) : null}
 
       {!loading && !failed && shown.length === 0 && filter === "all" ? (
         query.trim() ? (
-          <Empty icon="search-outline" title="Nothing matches that" body="Try a name, a username or an address." />
+          <Empty icon="search-outline" title={t("payments.list.noMatchTitle")} body={t("payments.list.noMatchBody")} />
         ) : (
           <EmptyHistory />
         )
@@ -264,6 +325,7 @@ function List({
  * the shell has ⌘K — so it filters the list where it stands.
  */
 function SearchRow({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const t = useT();
   const [phrase, setPhrase] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setPhrase((i) => (i + 1) % PHRASES.length), 2000);
@@ -276,12 +338,12 @@ function SearchRow({ value, onChange }: { value: string; onChange: (v: string) =
         type="search"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder={value ? PHRASES[0] : PHRASES[phrase]}
-        aria-label="Search payments"
+        placeholder={t(value ? PHRASES[0] : PHRASES[phrase])}
+        aria-label={t("payments.search.aria")}
         className="min-w-0 flex-1 bg-transparent text-[14px] tracking-[-0.2px] text-white outline-none placeholder:text-white/55"
       />
       {value ? (
-        <button type="button" onClick={() => onChange("")} aria-label="Clear" className="shrink-0 text-white/60 hover:text-white">
+        <button type="button" onClick={() => onChange("")} aria-label={t("payments.search.clear")} className="shrink-0 text-white/60 hover:text-white">
           <Ion name="close-circle" size={16} />
         </button>
       ) : null}
@@ -295,6 +357,7 @@ function SearchRow({ value, onChange }: { value: string; onChange: (v: string) =
  * — a white overlay would replace #15313D and read as a dimmer card.
  */
 function ThreadRow({ row, mode, onOpen }: { row: InboxRow; mode: DisplayMode; onOpen: () => void }) {
+  useT();
   return (
     <button
       type="button"
@@ -397,17 +460,18 @@ function Empty({ icon, iconClass = "text-white/40", title, body }: { icon: IonNa
 
 /** The app's global empty state: chat bubbles, and the way to put money in. */
 function EmptyHistory() {
+  const t = useT();
   const href = useProductHref();
   return (
     <div className="flex flex-col items-center px-4 pt-12 text-center">
       <Ion name="chatbubbles-outline" size={48} className="text-white/40" />
-      <p className="mt-3 text-[14px] text-white/[0.62]">No payment history yet</p>
-      <p className="mt-1 text-[13px] text-white/55">Top up your account to start sending and receiving.</p>
+      <p className="mt-3 text-[14px] text-white/[0.62]">{t("payments.list.emptyTitle")}</p>
+      <p className="mt-1 text-[13px] text-white/55">{t("payments.list.emptyBody")}</p>
       <Link
         href={href("/add")}
         className="mt-5 rounded-[14px] bg-amber px-6 py-3 text-[15px] font-bold text-[#070C12] transition-opacity hover:opacity-90"
       >
-        Add money
+        {t("payments.list.addMoney")}
       </Link>
     </div>
   );
@@ -427,12 +491,9 @@ function EmptyHistory() {
  * PAYING FROM HERE IS NOT THE APP'S ANY MORE
  *
  * It was, and the screen said so: "Paying X again happens in the HOLD app."
- * That sentence was written when a signature meant the phone. It is now wrong
- * for most people and dead for the rest — the web wallet signs with its
- * passkey, and a withdrawal is approved by a passkey bound to it unless an
- * Android phone is linked, in which case the app approves on a second device
- * (chooseChannel, server-side). Send is a screen this product already has, in
- * both channels: components/app/wallet/Withdraw.tsx.
+ * A payment started here is approved and signed on the linked phone, iPhone
+ * or Android, in the HOLD app (2026-09-24: the web never pays by itself).
+ * Send is a screen this product already has: components/app/wallet/Withdraw.tsx.
  *
  * REQUEST IS THE OTHER HALF, AND IT WAS SIMPLY MISSING
  *
@@ -462,11 +523,14 @@ function ThreadView({
   onBack: () => void;
   onOpenTx: (id: string) => void;
 }) {
+  const t = useT();
   const productHref = useProductHref();
   const requests = usePaymentRequests();
-  const { session } = useShell();
   const [asking, setAsking] = useState(false);
+  const [opening, setOpening] = useState(false);
   const spots = useSpotsBoughtFrom(row?.peerId ?? null);
+  // A wallet made in the app with no phone linked: Send and Pay open the sheet (link/LinkGate).
+  const gate = useLinkGate();
   /*
    * THE THIRD DOOR, AND ONLY THE THIRD.
    *
@@ -494,40 +558,77 @@ function ThreadView({
   if (!row) {
     return (
       <>
-        <BackHeader title="Payments" onBack={onBack} />
-        <Empty icon="cloud-offline-outline" title="That conversation is not loaded" body="Go back and open it again." />
+        <BackHeader title={t("payments.thread.title")} onBack={onBack} />
+        <Empty icon="cloud-offline-outline" title={t("payments.thread.notLoadedTitle")} body={t("payments.thread.notLoadedBody")} />
       </>
     );
   }
   const payments = [...row.transfers].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
   const handle = row.thread?.alias ?? null;
+  // The name Quick Send locks in its header: the handle when there is one, which is what the app shows.
+  const lockedName = handle ? `@${handle.replace(/^@/, "")}` : row.name;
 
   /**
-   * Send, with as much of the answer as we honestly have.
+   * Quick Send, with as much of the answer as we honestly have.
    *
-   * The handle resolves to an address for anybody who chose a public one; when
-   * it does not, Send opens on its own first step and asks. Never a guess: the
-   * one thing worse than typing an address is being handed the wrong one.
+   * The thread IS the recipient, so Send opens on the amount with the person
+   * locked in the header (wallet/QuickSend) and Back returns here. That needs
+   * their address, which a public handle resolves to; when it does not, Send
+   * opens on its own first step and asks. Never a guess: the one thing worse
+   * than typing an address is being handed the wrong one.
+   *
+   * It is /wallet/send and a full load (the wallet pages' CSP), because that is
+   * where the web's one payment path lives: the linked phone approves it.
    */
-  const openSend = async (prefill?: { amount?: string; token?: string }) => {
-    const resolved = handle ? await resolveHandle(handle) : null;
-    const q = new URLSearchParams({ open: "send" });
-    if (resolved?.chain === "solana" && resolved.address) q.set("to", resolved.address);
+  const openSend = async (prefill?: { amount?: string; token?: string; requestId?: string; handle?: string | null }) => {
+    const who = prefill?.handle ?? handle;
+    const resolved = who ? await resolveHandle(who) : null;
+    const q = new URLSearchParams();
+    if (resolved && (resolved.chain === "solana" || resolved.chain === "sol") && resolved.address) {
+      q.set("to", resolved.address);
+      q.set("peer", who ? `@${who.replace(/^@/, "")}` : lockedName);
+    }
     if (prefill?.amount) q.set("amount", prefill.amount);
     if (prefill?.token) q.set("token", prefill.token.toUpperCase());
-    window.location.assign(`${productHref("/wallet")}?${q.toString()}`);
+    // So the send, once confirmed, closes this request with its withdrawal (Withdraw → settle {withdrawalId}).
+    if (prefill?.requestId) {
+      q.set("request", prefill.requestId);
+      q.set("lock", "1");
+    }
+    q.set("back", `/payments?thread=${encodeURIComponent(row.id)}`);
+    const to = `${productHref("/wallet/send")}?${q.toString()}`;
+    // Linking comes back to this very send, filled in, and it carries on there.
+    if (gate.blocked) return gate.ask(to);
+    window.location.assign(to);
   };
 
+  /** Pay on a request made of you: Quick Send with the person, the amount and the token locked. */
   const payTheirRequest = (r: PaymentRequest) => {
-    const amount = requestAmount(r);
-    void openSend({ amount: amount === null ? undefined : String(amount), token: r.tokenId });
+    const can = webCanPay(r);
+    if (!("token" in can)) return;
+    void openSend({ amount: r.amount, token: can.token, requestId: r.id, handle: r.requester?.username ?? handle });
   };
+
+  // Request is Quick Send in request mode, drawn in place of the thread: no wallet, no key, no phone.
+  if (asking && row.peerId) {
+    return (
+      <RequestScreen
+        peerId={row.peerId}
+        peerName={lockedName}
+        onBack={() => setAsking(false)}
+        onAsked={() => {
+          setAsking(false);
+          void requests.mutate();
+        }}
+      />
+    );
+  }
 
   return (
     <>
       <BackHeader
         title={row.name}
-        subtitle={payments.length ? `${payments.length} ${payments.length === 1 ? "payment" : "payments"}` : "No payments yet"}
+        subtitle={payments.length ? t("payments.thread.paymentCount", { count: payments.length }) : t("payments.thread.noPayments")}
         onBack={onBack}
         // Only where there is somebody to block: a thread that is an address
         // and nothing else has no account on the other side.
@@ -545,27 +646,31 @@ function ThreadView({
       />
 
       {/* The app's own row, in the app's own order: Request on the left in the
-          quieter shape, Send on the right as the filled amber. Both are real
-          here now — a request needs no key, and a send is approved with the
-          passkey or on a linked phone. */}
-      <div className="mt-3 flex items-center gap-2 px-1">
+          quieter shape, Send on the right as the filled amber. Both open Quick
+          Send with this person locked in: Request in request mode, here, with
+          no key; Send on /wallet/send, approved on the linked phone. It wraps on a phone rather than scrolling sideways. */}
+      <div className="mt-3 flex flex-wrap items-center gap-2 px-1">
         <button
           type="button"
           disabled={!row.peerId}
-          title={row.peerId ? undefined : "There is no HOLD account on the other side of this thread."}
+          title={row.peerId ? undefined : t("payments.thread.noAccount")}
           onClick={() => setAsking(true)}
           className="inline-flex h-9 items-center justify-center gap-1.5 rounded-[10px] bg-white/10 px-3.5 text-[12.5px] font-strong text-white transition-colors hover:bg-white/[0.16] disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Ion name="download-outline" size={14} />
-          Request
+          {t("payments.thread.request")}
         </button>
         <button
           type="button"
-          onClick={() => void openSend()}
-          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-[10px] bg-amber px-3.5 text-[12.5px] font-bold text-text-on-amber transition-colors hover:bg-amber-glow"
+          disabled={opening}
+          onClick={() => {
+            setOpening(true);
+            void openSend().finally(() => setOpening(false));
+          }}
+          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-[10px] bg-amber px-3.5 text-[12.5px] font-bold text-text-on-amber transition-colors hover:bg-amber-glow disabled:opacity-60"
         >
           <Ion name="arrow-up" size={14} />
-          Send
+          {opening ? t("payments.thread.opening") : t("common.send")}
         </button>
         {shop ? (
           <button
@@ -574,17 +679,18 @@ function ThreadView({
             className="inline-flex h-9 items-center justify-center gap-1.5 rounded-[10px] bg-white/10 px-3.5 text-[12.5px] font-strong text-white transition-colors hover:bg-white/[0.16]"
           >
             <Ion name="megaphone-outline" size={14} />
-            Book a spot
+            {t("payments.thread.bookSpot")}
           </button>
         ) : null}
         <p className="min-w-0 flex-1 text-[12px] leading-[17px] text-white/60">
-          Approved with your passkey, or on your phone if you have linked one.
+          {t("payments.thread.approvedOnPhone")}
         </p>
       </div>
 
+      {gate.sheet}
+
       {booking && shop ? (
         <SponsorFlow
-          uid={session.user.id}
           handle={shop.handle}
           creatorName={row.name}
           onClose={() => setBooking(false)}
@@ -592,106 +698,83 @@ function ThreadView({
         />
       ) : null}
 
-      {asking && row.peerId ? (
-        <AskSheet
-          peerId={row.peerId}
-          peerName={row.name}
-          onClose={() => setAsking(false)}
-          onAsked={() => {
-            setAsking(false);
-            void requests.mutate();
-          }}
-        />
-      ) : null}
     </>
   );
 }
 
 /**
- * "How much?" — and nothing else.
+ * Request: Quick Send in request mode (the app's QuickRequestScreen).
  *
- * The app's QuickRequestScreen picks a token and a chain from the balances,
- * because on a phone somebody may be holding five things. Here the wallet is
- * Solana USDC, so asking which one would be a question with one answer. If
- * that stops being true this grows a picker; until then it does not pretend.
+ * The same keypad and the same token and network selector, with a note the
+ * other person reads on the bubble, and a Request button. It writes
+ * `POST /payments/request` with the session and nothing else: there is no
+ * approval on the phone and no signature, because no money moves.
+ * The money moves later, when they press Pay on the bubble.
+ *
+ * WHICH TOKENS
+ *
+ * USDC on the four chains HOLD runs on, and SOL. The person asked may pay
+ * from the app, which pays any of them. The web pays the Solana ones; a
+ * request on another chain says, on the payer's web bubble, to pay it in the
+ * app, rather than being refused here.
  */
-function AskSheet({
+const REQUEST_OPTIONS: readonly QuickOption[] = [
+  { token: "USDC", chain: "solana" },
+  { token: "USDC", chain: "base" },
+  { token: "USDC", chain: "polygon" },
+  { token: "USDC", chain: "ethereum" },
+  { token: "SOL", chain: "solana" },
+];
+
+function RequestScreen({
   peerId,
   peerName,
-  onClose,
+  onBack,
   onAsked,
 }: {
   peerId: string;
   peerName: string;
-  onClose: () => void;
+  onBack: () => void;
   onAsked: () => void;
 }) {
+  const t = useT();
   const [amount, setAmount] = useState("");
+  const [option, setOption] = useState<QuickOption>(REQUEST_OPTIONS[0]);
+  const [note, setNote] = useState("");
   const [sending, setSending] = useState(false);
-  const [failed, setFailed] = useState(false);
-  const value = Number(amount.replace(",", "."));
+  const [notice, setNotice] = useState<string | null>(null);
+  const clean = amount.replace(/\.$/, "");
+  const value = Number(clean);
   const ok = Number.isFinite(value) && value > 0;
 
   const submit = async () => {
     if (!ok || sending) return;
     setSending(true);
-    setFailed(false);
+    setNotice(null);
     try {
-      await askFor({ payerUserId: peerId, amount: String(value) });
+      await askFor({ payerUserId: peerId, amount: clean, tokenId: option.token, chain: option.chain, note });
       onAsked();
-    } catch {
-      setFailed(true);
+    } catch (e) {
+      setNotice(e instanceof HoldApiError ? describeRequestError(e) : describeRequestError({ status: -1 }));
       setSending(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center" role="dialog" aria-modal="true">
-      {/* The backdrop closes it; the sheet must not, or every tap inside shuts it. */}
-      <button type="button" aria-label="Close" onClick={onClose} className="absolute inset-0 cursor-default" />
-      <div className="relative w-full max-w-[420px] rounded-[20px] border border-white/[0.12] bg-[#0E2430] p-4 shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
-        <p className="text-[15px] font-extrabold tracking-[-0.2px] text-white">Ask {peerName} for</p>
-        <p className="mt-1 text-[12.5px] leading-[17px] text-white/65">
-          They see it in this conversation with a Pay button. Nothing moves until they pay it.
-        </p>
-
-        <label className="mt-3 flex h-12 items-center gap-2 rounded-[16px] border border-white/[0.15] bg-white/[0.06] px-3.5 focus-within:border-white/30">
-          <input
-            autoFocus
-            inputMode="decimal"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value.replace(/[^0-9.,]/g, "").slice(0, 12))}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") void submit();
-              if (e.key === "Escape") onClose();
-            }}
-            placeholder="0.00"
-            aria-label="Amount in USDC"
-            className="h-full min-w-0 flex-1 bg-transparent text-[20px] font-extrabold tabular-nums text-white outline-none placeholder:text-white/40"
-          />
-          <span className="shrink-0 text-[13px] font-bold text-white/80">USDC</span>
-        </label>
-
-        {failed ? <p className="mt-2 text-[12px] leading-[17px] text-white/75">That did not go through. Try again.</p> : null}
-
-        <div className="mt-3 flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => void submit()}
-            disabled={!ok || sending}
-            className="inline-flex h-10 flex-1 items-center justify-center rounded-[12px] bg-amber text-[14px] font-bold text-text-on-amber transition-colors hover:bg-amber-glow disabled:bg-white/[0.12] disabled:text-white/50"
-          >
-            {sending ? "Asking…" : "Send request"}
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="inline-flex h-10 items-center justify-center rounded-[12px] bg-white/10 px-4 text-[14px] font-strong text-white/85 transition-colors hover:bg-white/[0.16]"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    </div>
+    <QuickSendView
+      mode="request"
+      recipient={{ name: peerName, locked: true }}
+      onBack={onBack}
+      amount={amount}
+      onAmount={setAmount}
+      decimals={option.token === "SOL" ? 9 : 6}
+      option={option}
+      options={REQUEST_OPTIONS}
+      onOption={setOption}
+      note={note}
+      onNote={setNote}
+      notice={notice}
+      cta={{ label: sending ? t("requests.requesting") : t("requests.cta"), disabled: !ok || sending, onClick: () => void submit() }}
+    />
   );
 }

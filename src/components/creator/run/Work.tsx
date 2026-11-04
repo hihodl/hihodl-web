@@ -27,6 +27,7 @@ import { useState } from "react";
 
 import { btnWhite as btnSmall, btnGlassPill as btnSmallSecondary, cardBox as card, tagCls as pill } from "@/components/app/spaces/kit";
 import { calendarDate } from "@/lib/ad-space/format";
+import { Rich, useT } from "@/lib/app/i18n/react";
 import type { DeliverableView, PositionView, SpaceView } from "@/lib/creator/listing";
 import { markDeliverableDelivered, markPositionDelivered, reviewContent } from "@/lib/creator/listings";
 import { describeRunError } from "@/lib/creator/problems";
@@ -34,23 +35,24 @@ import { describeRunError } from "@/lib/creator/problems";
 import { Text } from "../listing/parts";
 import { ProductionSpot } from "./Production";
 
-const DELIVERABLE_STATE: Record<DeliverableView["state"], string> = {
-  delivered: "Delivered",
-  upcoming: "Coming up",
-  overdue: "Past its date",
-  missed: "Counted as missed",
-};
+const DELIVERABLE_STATE = {
+  delivered: "runner.work.state.delivered",
+  upcoming: "runner.work.state.upcoming",
+  overdue: "runner.work.state.overdue",
+  missed: "runner.work.state.missed",
+} as const satisfies Record<DeliverableView["state"], string>;
 
 export function Work({ space, onChanged }: { space: SpaceView; onChanged: () => void }) {
+  const t = useT();
   const waiting = space.positions.filter((p) => p.content?.status === "pending" && p.sponsor);
   const sold = space.positions.filter((p) => p.status === "sold");
 
   return (
     <div className="flex flex-col gap-6">
       <section className="flex flex-col gap-2.5">
-        <h3 className="text-[15.5px] font-bold text-white">Artwork to approve</h3>
+        <h3 className="text-[15.5px] font-bold text-white">{t("runner.work.artwork")}</h3>
         {waiting.length === 0 ? (
-          <p className="text-[14.5px] text-white/[0.62]">Nothing waiting on you.</p>
+          <p className="text-[14.5px] text-white/[0.62]">{t("runner.work.nothingWaiting")}</p>
         ) : (
           <ul className="flex flex-col gap-2.5">
             {waiting.map((p) => (
@@ -63,9 +65,9 @@ export function Work({ space, onChanged }: { space: SpaceView; onChanged: () => 
       </section>
 
       <section className="flex flex-col gap-2.5">
-        <h3 className="text-[15.5px] font-bold text-white">Sold spots</h3>
+        <h3 className="text-[15.5px] font-bold text-white">{t("runner.work.soldSpots")}</h3>
         {sold.length === 0 ? (
-          <p className="text-[14.5px] text-white/[0.62]">Nothing sold yet.</p>
+          <p className="text-[14.5px] text-white/[0.62]">{t("runner.work.nothingSold")}</p>
         ) : (
           // Small cards side by side rather than a stack of full-width rows: a
           // board with eighteen spots sold was a page that scrolled twice. A
@@ -87,7 +89,7 @@ export function Work({ space, onChanged }: { space: SpaceView; onChanged: () => 
 
       {space.deliverables.length > 0 ? (
         <section className="flex flex-col gap-2.5">
-          <h3 className="text-[15.5px] font-bold text-white">Promises</h3>
+          <h3 className="text-[15.5px] font-bold text-white">{t("runner.work.promises")}</h3>
           <ul className="grid grid-cols-[minmax(0,1fr)] gap-2.5 xl:grid-cols-2">
             {space.deliverables.map((d) => (
               <li key={d.id}>
@@ -104,6 +106,7 @@ export function Work({ space, onChanged }: { space: SpaceView; onChanged: () => 
 /* ── A sponsor's artwork ──────────────────────────────────────────── */
 
 export function Review({ position, onChanged }: { position: PositionView; onChanged: () => void }) {
+  const t = useT();
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [saying, setSaying] = useState(false);
@@ -132,18 +135,19 @@ export function Review({ position, onChanged }: { position: PositionView; onChan
         <div className="min-w-0">
           <p className="text-[15.5px] text-white">{position.title ?? position.label}</p>
           <p className="mt-1 text-[12.5px] text-white/[0.62]">
-            From {position.sponsor?.name ?? "a sponsor"}
-            {position.sponsor?.xHandle ? ` · @${position.sponsor.xHandle}` : ""}
+            {position.sponsor?.xHandle
+              ? t("runner.work.fromHandle", { name: position.sponsor?.name ?? t("runner.work.aSponsor"), handle: position.sponsor.xHandle })
+              : t("runner.work.from", { name: position.sponsor?.name ?? t("runner.work.aSponsor") })}
           </p>
         </div>
-        <span className={pill.attention}>Waiting on you</span>
+        <span className={pill.attention}>{t("runner.work.waitingOnYou")}</span>
       </div>
 
       {position.sponsor?.imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={position.sponsor.imageUrl}
-          alt={`What ${position.sponsor.name ?? "the sponsor"} sent`}
+          alt={t("runner.work.whatSent", { name: position.sponsor.name ?? t("runner.work.theSponsor") })}
           className="max-h-64 w-auto max-w-full rounded-[16px] border border-white/[0.08] bg-white/5 object-contain"
         />
       ) : null}
@@ -156,29 +160,29 @@ export function Review({ position, onChanged }: { position: PositionView; onChan
 
       {saying ? (
         <div className="flex flex-col gap-3">
-          <p className="text-[14.5px] text-white/[0.62]">Reason, shown to the sponsor:</p>
-          <Text value={reason} onChange={setReason} maxLength={200} placeholder="The logo is too small to read on the strip" />
+          <p className="text-[14.5px] text-white/[0.62]">{t("runner.work.reasonShown")}</p>
+          <Text value={reason} onChange={setReason} maxLength={200} placeholder={t("runner.work.reasonPlaceholder")} />
           <div className="flex flex-wrap gap-2">
             <button type="button" className={btnSmall} disabled={busy || !reason.trim()} onClick={() => void answer(false)}>
-              {busy ? "Sending…" : "Send it back"}
+              {busy ? t("runner.sending") : t("runner.work.sendBack")}
             </button>
             <button type="button" className={btnSmallSecondary} onClick={() => setSaying(false)}>
-              Cancel
+              {t("common.cancel")}
             </button>
           </div>
         </div>
       ) : (
         <div className="flex flex-wrap gap-2">
           <button type="button" className={btnSmall} disabled={busy} onClick={() => void answer(true)}>
-            {busy ? "Working…" : "Approve"}
+            {busy ? t("runner.working") : t("runner.work.approve")}
           </button>
           <button type="button" className={btnSmallSecondary} disabled={busy} onClick={() => setSaying(true)}>
-            Reject
+            {t("runner.work.reject")}
           </button>
         </div>
       )}
 
-      <p className="text-[12.5px] text-white/[0.62]">Approving publishes this version.</p>
+      <p className="text-[12.5px] text-white/[0.62]">{t("runner.work.approveNote")}</p>
 
       {notice ? <Line>{notice}</Line> : null}
     </div>
@@ -188,6 +192,7 @@ export function Review({ position, onChanged }: { position: PositionView; onChan
 /* ── A sold spot, and the link that delivers it ───────────────────── */
 
 export function SoldSpot({ position, onChanged }: { position: PositionView; onChanged: () => void }) {
+  const t = useT();
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -198,25 +203,33 @@ export function SoldSpot({ position, onChanged }: { position: PositionView; onCh
         <div className="min-w-0">
           <p className="truncate text-[14.5px] font-bold text-white">{position.title ?? position.label}</p>
           <p className="mt-0.5 truncate text-[12.5px] text-white/[0.62]">
-            {position.sponsor?.name ?? "Sold"}
-            {position.creatorReceivesUsdc ? ` · ${position.creatorReceivesUsdc} USDC to you` : ""}
+            {position.creatorReceivesUsdc
+              ? t("runner.work.toYou", { name: position.sponsor?.name ?? t("runner.spots.sold"), amount: position.creatorReceivesUsdc })
+              : (position.sponsor?.name ?? t("runner.spots.sold"))}
           </p>
         </div>
         <span className={position.delivered ? pill.done : pill.attention}>
-          {position.delivered ? "Delivered" : "To deliver"}
+          {position.delivered ? t("runner.work.delivered") : t("runner.work.toDeliver")}
         </span>
       </div>
 
       {position.qr ? (
         <p className="truncate text-[12.5px] text-white/[0.62]">
-          QR <span className="text-white">{position.qr.url}</span> · {position.qr.scans}{" "}
-          {position.qr.scans === 1 ? "scan" : "scans"}
+          <Rich
+            k="runner.work.qr"
+            vars={{ url: position.qr.url, count: position.qr.scans }}
+            tags={{ u: (c) => <span className="text-white">{c}</span> }}
+          />
         </p>
       ) : null}
 
       {position.delivered ? (
         <p className="break-all text-[13px] text-white/[0.62]">
-          Delivered {calendarDate(position.delivered.at)}: <span className="text-white">{position.delivered.url}</span>
+          <Rich
+            k="runner.work.deliveredOn"
+            vars={{ date: calendarDate(position.delivered.at), url: position.delivered.url }}
+            tags={{ u: (c) => <span className="text-white">{c}</span> }}
+          />
         </p>
       ) : (
         <div className="flex flex-col gap-2 sm:flex-row">
@@ -239,7 +252,7 @@ export function SoldSpot({ position, onChanged }: { position: PositionView; onCh
                 .finally(() => setBusy(false));
             }}
           >
-            {busy ? "Saving…" : "Mark delivered"}
+            {busy ? t("common.saving") : t("runner.work.markDelivered")}
           </button>
         </div>
       )}
@@ -252,6 +265,7 @@ export function SoldSpot({ position, onChanged }: { position: PositionView; onCh
 /* ── One of the listing's own promises ────────────────────────────── */
 
 export function PromiseCard({ deliverable, onChanged }: { deliverable: DeliverableView; onChanged: () => void }) {
+  const t = useT();
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -261,16 +275,18 @@ export function PromiseCard({ deliverable, onChanged }: { deliverable: Deliverab
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[15.5px] text-white">
-            {deliverable.count} × {deliverable.kind.replace(/_/g, " ")}
-            {deliverable.platform ? ` on ${deliverable.platform}` : ""}
+            {deliverable.platform
+              ? t("runner.work.promiseOn", { count: deliverable.count, kind: deliverable.kind.replace(/_/g, " "), platform: deliverable.platform })
+              : t("runner.work.promise", { count: deliverable.count, kind: deliverable.kind.replace(/_/g, " ") })}
           </p>
           <p className="mt-1 text-[12.5px] text-white/[0.62]">
-            By {calendarDate(deliverable.dueDate)}
-            {deliverable.note ? ` · ${deliverable.note}` : ""}
+            {deliverable.note
+              ? t("runner.work.byNote", { date: calendarDate(deliverable.dueDate), note: deliverable.note })
+              : t("runner.work.by", { date: calendarDate(deliverable.dueDate) })}
           </p>
         </div>
         <span className={deliverable.state === "delivered" ? pill.done : pill.attention}>
-          {DELIVERABLE_STATE[deliverable.state]}
+          {t(DELIVERABLE_STATE[deliverable.state])}
         </span>
       </div>
 
@@ -299,7 +315,7 @@ export function PromiseCard({ deliverable, onChanged }: { deliverable: Deliverab
                 .finally(() => setBusy(false));
             }}
           >
-            {busy ? "Saving…" : "Mark delivered"}
+            {busy ? t("common.saving") : t("runner.work.markDelivered")}
           </button>
         </div>
       )}

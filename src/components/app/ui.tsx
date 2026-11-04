@@ -12,6 +12,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { useT } from "@/lib/app/i18n/react";
+
 import { IconChevronRight } from "./icons";
 
 export const glass =
@@ -181,8 +183,9 @@ export function FilterPills<T extends string>({
 
 /** Tabs that are links, for a drill-down whose tab belongs in the URL. */
 export function LinkTabs({ tabs, active }: { tabs: readonly { key: string; label: string; href: string; count?: number }[]; active: string }) {
+  const t = useT();
   return (
-    <nav aria-label="Sections" className="-mx-1 overflow-x-auto px-1">
+    <nav aria-label={t("shell.ui.sections")} className="-mx-1 overflow-x-auto px-1">
       <div className="inline-flex rounded-[12px] border border-white/10 bg-[rgba(3,12,16,0.5)] p-1">
         {tabs.map((t) => {
           const on = t.key === active;

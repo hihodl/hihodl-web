@@ -21,6 +21,7 @@ import {
 import { CONTENT_KIND_LABEL } from "@/lib/ad-space/format";
 import { ImageProblem, prepareImage } from "@/lib/ad-space/image";
 import type { ContentKind, Order, Position, Sponsor } from "@/lib/ad-space/types";
+import { Rich, useT } from "@/lib/app/i18n/react";
 
 import { btnPrimary, input } from "./ui";
 
@@ -59,6 +60,7 @@ export function SponsorContentForm({
   accepts: ContentKind[];
   creatorHandle: string;
 }) {
+  const t = useT();
   const kinds = accepts.length ? accepts : (["logo"] as ContentKind[]);
   const [kind, setKind] = useState<ContentKind>(kinds[0]);
   const [name, setName] = useState("");
@@ -135,7 +137,7 @@ export function SponsorContentForm({
       } else if (err instanceof CheckoutError && err.status === 422) {
         // TODO(contract): content validation codes are not listed in the
         // contract. Until they are, a 422 here gets one honest sentence.
-        setNotice("Something in the form wasn't accepted. Check the name, link and image, then send it again.");
+        setNotice(t("offers.content.form.rejected422"));
       } else {
         setNotice(describeError(err, order.chain));
       }
@@ -147,22 +149,18 @@ export function SponsorContentForm({
   return (
     <form onSubmit={submit} className="flex flex-col gap-5" noValidate>
       <div>
-        <h3 className="text-body text-sp-ink">What goes on your spot</h3>
-        <p className="mt-1 text-small text-sp-ink/85">
-          @{creatorHandle} approves it before it shows on the board. Come back in this same browser to check on it
-          or send a new version: this browser is what proves the spot is yours.
-        </p>
+        <h3 className="text-body text-sp-ink">{t("offers.content.form.title")}</h3>
+        <p className="mt-1 text-small text-sp-ink/85">{t("offers.content.form.body", { handle: creatorHandle })}</p>
       </div>
 
       {review?.status === "approved" && (
         <p className="rounded-card border border-success/30 bg-success/[0.06] px-4 py-3 text-small text-sp-ink/85" role="status">
-          Approved. It&rsquo;s on the board.
+          {t("offers.content.form.approved")}
         </p>
       )}
       {review?.status === "pending" && (
         <p className="rounded-card border border-[color:var(--color-hairline-strong)] bg-sp-ink/[0.03] px-4 py-3 text-small text-sp-ink/85" role="status">
-          Waiting for @{creatorHandle}&rsquo;s approval. It appears on the board once they approve it, and you can send
-          a new version while you wait.
+          {t("offers.content.form.pending", { handle: creatorHandle })}
         </p>
       )}
       {review && sentAs && (
@@ -186,38 +184,40 @@ export function SponsorContentForm({
             )}
           </span>
           <p className="min-w-0 text-small text-sp-ink/85">
-            You sent <span className="text-sp-ink">{sentAs.name}</span>
+            <Rich k="offers.content.form.youSent" vars={{ name: sentAs.name }} tags={{ b: (c) => <span className="text-sp-ink">{c}</span> }} />
             {sentAs.contentText ? <span className="font-mono"> · {sentAs.contentText}</span> : null}
           </p>
         </div>
       )}
       {review?.status === "rejected" && (
         <p className="rounded-card border border-amber/30 bg-amber/[0.05] px-4 py-3 text-small text-sp-ink/85" role="status">
-          @{creatorHandle} asked for a change
           {review.rejectedReason ? (
-            <>
-              : <span className="text-sp-ink">&ldquo;{review.rejectedReason}&rdquo;</span>
-            </>
-          ) : null}
-          . Send a new version below.
+            <Rich
+              k="offers.content.form.changeAskedReason"
+              vars={{ handle: creatorHandle, reason: review.rejectedReason }}
+              tags={{ q: (c) => <span className="text-sp-ink">{c}</span> }}
+            />
+          ) : (
+            t("offers.content.form.changeAsked", { handle: creatorHandle })
+          )}
         </p>
       )}
 
       <label className="flex flex-col gap-2">
-        <span className="text-small text-sp-ink/85">Name to credit</span>
+        <span className="text-small text-sp-ink/85">{t("offers.content.form.name")}</span>
         <input
           className={input}
           value={name}
           maxLength={NAME_MAX}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Acme"
+          placeholder={t("offers.sheet.namePlaceholder")}
           autoComplete="organization"
         />
       </label>
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         <label className="flex flex-col gap-2">
-          <span className="text-small text-sp-ink/85">Link (optional)</span>
+          <span className="text-small text-sp-ink/85">{t("offers.content.form.link")}</span>
           <input
             className={input}
             value={url}
@@ -228,7 +228,7 @@ export function SponsorContentForm({
           />
         </label>
         <label className="flex flex-col gap-2">
-          <span className="text-small text-sp-ink/85">X handle (optional)</span>
+          <span className="text-small text-sp-ink/85">{t("offers.content.form.xHandle")}</span>
           <input
             className={input}
             value={xHandle}
@@ -242,7 +242,7 @@ export function SponsorContentForm({
 
       {kinds.length > 1 && (
         <fieldset className="flex flex-col gap-2">
-          <legend className="mb-2 text-small text-sp-ink/85">What to print</legend>
+          <legend className="mb-2 text-small text-sp-ink/85">{t("offers.content.form.whatToPrint")}</legend>
           <div className="flex flex-wrap gap-2">
             {kinds.map((k) => (
               <button
@@ -266,14 +266,14 @@ export function SponsorContentForm({
 
       {needsImage && (
         <label className="flex flex-col gap-2">
-          <span className="text-small text-sp-ink/85">{kind === "logo" ? "Logo" : "Photo"}</span>
+          <span className="text-small text-sp-ink/85">{kind === "logo" ? t("offers.content.form.logo") : t("offers.content.form.photo")}</span>
           <span className="flex items-center gap-4">
             <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-tight bg-white">
               {preview ? (
                 // eslint-disable-next-line @next/next/no-img-element -- local object URL preview
                 <img src={preview} alt="" className="h-full w-full object-contain" />
               ) : (
-                <span className="text-tiny text-text-on-amber/50">None</span>
+                <span className="text-tiny text-text-on-amber/50">{t("common.none")}</span>
               )}
             </span>
             <input
@@ -283,13 +283,13 @@ export function SponsorContentForm({
               className="min-w-0 text-small text-sp-ink/85 file:mr-3 file:h-10 file:rounded-[20px] file:border file:border-solid file:border-[color:var(--color-hairline-strong)] file:bg-transparent file:px-4 file:text-small file:text-sp-ink"
             />
           </span>
-          <span className="text-tiny text-sp-ink/80">PNG, JPEG or WebP. We straighten and shrink it before sending.</span>
+          <span className="text-tiny text-sp-ink/80">{t("offers.content.form.fileHint")}</span>
         </label>
       )}
 
       {kind === "qr" && (
         <label className="flex flex-col gap-2">
-          <span className="text-small text-sp-ink/85">Link the QR code opens</span>
+          <span className="text-small text-sp-ink/85">{t("offers.content.form.qrLink")}</span>
           <input
             className={input}
             value={text}
@@ -302,7 +302,7 @@ export function SponsorContentForm({
 
       {kind === "text" && (
         <label className="flex flex-col gap-2">
-          <span className="text-small text-sp-ink/85">Line to print</span>
+          <span className="text-small text-sp-ink/85">{t("offers.content.form.line")}</span>
           <input
             className={input}
             value={text}
@@ -321,7 +321,7 @@ export function SponsorContentForm({
 
       <div>
         <button type="submit" className={btnPrimary} disabled={busy}>
-          {busy ? "Sending…" : review ? "Send a new version" : "Send for approval"}
+          {busy ? t("offers.sheet.sending") : review ? t("offers.content.form.sendNew") : t("offers.content.form.send")}
         </button>
       </div>
     </form>

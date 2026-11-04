@@ -24,7 +24,9 @@
  * menu and Home. See nav.ts.
  *
  * Signed out, it is HOLD's door (front/Door: welcome, or welcome back) and
- * nothing else. An invitation link (`/spaces/team?seat=…`) is the one page
+ * nothing else. Signed in, it needs a wallet made in the HOLD app: anything
+ * else gets "Get the HOLD app" (main/GetTheApp), except the pages that open
+ * without it (lib/app/app-wallet-gate: Spaces, while SPACES_OPEN_WITHOUT_APP). An invitation link (`/spaces/team?seat=…`) is the one page
  * that renders without the shell, because the person holding it may have no
  * account yet.
  */
@@ -36,36 +38,50 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 
 import { SpacesGround } from "@/components/ad-space/ground";
 import { Wordmark } from "@/components/site/Wordmark";
-import { currentMethod, remember } from "@/lib/auth/remember";
+import { currentMethod, emailToRemember, remember, rememberFace } from "@/lib/auth/remember";
 import { describeCreatorError } from "@/lib/creator/api";
 import type { SpaceCard } from "@/lib/creator/listing";
 import { useCreatorSession } from "@/lib/creator/session";
 import { creatorText, isSeatCode, pendingSeat, type TeamMember, type WorkListing } from "@/lib/creator/team";
 import { keepPendingJoin } from "@/lib/creator/crew";
 import type { XAccountStatus } from "@/lib/creator/types";
+import { useAdSpaceAccess } from "@/lib/app/ad-space-access";
 import { useAgency, type Agency } from "@/lib/app/agency";
+import type { MessageKey } from "@/lib/app/i18n";
+import { useLocale, useRatesRefresh, useServerPrefs, useT } from "@/lib/app/i18n/react";
 import { asDisplayMode, DEFAULT_DISPLAY_MODE, type DisplayMode } from "@/lib/app/display-mode";
 import { chosenUsername } from "@/lib/app/me";
+import { openWithoutApp, SPACES_OPEN_WITHOUT_APP } from "@/lib/app/app-wallet-gate";
 import { useDoor } from "@/lib/app/onboarding";
+import { useSignOutWhenRemovedElsewhere } from "@/lib/app/sessions";
 import { roleOf, waitingOnYou, type ShellRole } from "@/lib/app/spaces-model";
 import { useCreatorSettings, useListings, useMe, useOffers, useSeats, useTeam, useWork, useX } from "@/lib/app/spaces-data";
+import { crossesKeyPage } from "@/lib/wallet/csp";
 import { useWalletEnabled } from "@/lib/wallet/enabled";
 
 import { SpacesBaseProvider, useHref, useProductHref, useSpacesBase } from "./base";
 import { CommandPalette, type PaletteEntry } from "./CommandPalette";
 import { Door as SignInDoor } from "./front/Door";
+import { GetTheAppScreen } from "./main/GetTheApp";
 import { HeaderSlotContext, type HeaderSlot } from "./header-slot";
 import { HiPointsChip } from "./HiPointsChip";
-import { UserAvatar } from "./account/UserAvatar";
-import { IconArrowLeft, IconClose, IconCollapse, IconExpand, IconMenu, IconPlus, IconSearch } from "./icons";
+import { PartnersOnly } from "./spaces/PartnersOnly";
+import { RailTip } from "./RailTip";
+import { UserAvatar, useUserPhoto } from "./account/UserAvatar";
+import { IconArrowLeft, IconClose, IconCollapse, IconExpand, IconInsights, IconPlus, IconSearch } from "./icons";
 import {
   activeKey,
+  AD_SPACE_SELLING,
   hrefFor,
   itemsFor,
   LEVELS,
   levelOf,
+  navGroupTitle,
+  navLabel,
+  openToAll,
+  routed,
+  SPACES_BUY_PATH,
   productPrefix,
-  titleFor,
   visible,
   type Level,
   type NavItem,
@@ -92,11 +108,24 @@ export interface ShellState {
   /** Whether the Wallet module exists for this person (rollout gate); undefined while asking. */
   walletPage: boolean | undefined;
   /**
+   * Whether Ad Space's selling side is open to this person (HOLD Partners, or
+   * already selling). True until the server says otherwise, and true when it
+   * cannot be asked (lib/app/ad-space-access).
+   */
+  adSpace: boolean;
+  /**
    * HiSpace could not be read, so `listings` and `seats` are empty because we
    * do not know, not because there is nothing. Anything that would tell the
    * person they have no listings must check this first.
    */
   spacesDown: boolean;
+  /**
+   * The Spaces reads (listings, seats, X, team, settings) have not all
+   * settled yet. Home, Wallet, Payments, Savings and Stays draw without them;
+   * until this is false `role`, `listings` and `seats` are provisional (a
+   * creator with nothing), and only Spaces pages wait for them.
+   */
+  spacesLoading: boolean;
 }
 
 const ShellContext = createContext<ShellState | null>(null);
@@ -118,6 +147,13 @@ export interface ShellPrefs {
   setCollapsed: (v: boolean) => void;
   displayMode: DisplayMode;
   setDisplayMode: (v: DisplayMode) => void;
+  /**
+   * The app's Settings › Privacy › Hide balances (`showBalances` in its
+   * settings store, inverted): amounts on Home drawn as dots. Kept like
+   * `displayMode`, in this browser, because the app keeps it on the phone.
+   */
+  hideBalances: boolean;
+  setHideBalances: (v: boolean) => void;
 }
 
 const PrefsContext = createContext<ShellPrefs | null>(null);
@@ -157,6 +193,8 @@ export function productRel(pathname: string, base: string): string {
 
 function Gate({ children }: { children: ReactNode }) {
   const { session, configured } = useCreatorSession();
+  // Removed from another device: signs this browser out, and the Door says why.
+  useSignOutWhenRemovedElsewhere(session?.user.id);
   const pathname = usePathname();
   const params = useSearchParams();
   const base = useSpacesBase();
@@ -178,27 +216,41 @@ function Gate({ children }: { children: ReactNode }) {
   if (session === null) return <SignInDoor configured={configured} />;
   // Coming back from X finishes that trip first; onboarding can wait a page.
   return (
-    <Onboarded session={session} skip={/^\/spaces\/x\/?$/.test(rel)}>
+    <Onboarded session={session} skip={/^\/spaces\/x\/?$/.test(rel)} needsApp={!openWithoutApp(rel)}>
       <SignedIn session={session}>{children}</SignedIn>
     </Onboarded>
   );
 }
 
 /**
- * Onboarding before the product, once: a person without a username, a
- * passkey or recovery codes (or a web wallet they can make) is sent to
- * /welcome, which brings them back here. Everybody else never sees it.
- * A full load, not a client navigation: /welcome carries the wallet pages'
- * strict CSP, which only a response can set.
+ * The way in, after sign-in:
+ *
+ *   1. a wallet made in the HOLD app, on every page that needs one
+ *      (`needsApp`): read from the server on every load, never from this
+ *      browser's memory. Without one, "Get the HOLD app"; a failed read, Retry
+ *   2. onboarding, once: a person without a username or recovery codes is sent to /welcome, which brings them back here. Everybody
+ *      else never sees it. A full load, not a client navigation: /welcome
+ *      carries the wallet pages' strict CSP, which only a response can set
  */
-function Onboarded({ session, skip, children }: { session: Session; skip: boolean; children: ReactNode }) {
-  const door = useDoor(session, skip);
+function Onboarded({ session, skip, needsApp, children }: { session: Session; skip: boolean; needsApp: boolean; children: ReactNode }) {
+  const { door, checking, recheck } = useDoor(session, skip, needsApp);
   const base = useSpacesBase();
+  const productHref = useProductHref();
   useEffect(() => {
     if (door !== "onboarding") return;
     const here = `${window.location.pathname}${window.location.search}${window.location.hash}`;
     window.location.replace(`${productPrefix(base)}/welcome?next=${encodeURIComponent(here)}`);
   }, [door, base]);
+  if (door === "get-app" || door === "failed") {
+    return (
+      <GetTheAppScreen
+        failed={door === "failed"}
+        checking={checking}
+        onCheck={recheck}
+        spacesHref={SPACES_OPEN_WITHOUT_APP ? productHref("/spaces") : null}
+      />
+    );
+  }
   if (door !== "in") return <Centered><Wordmark className="h-5 w-auto text-text" /></Centered>;
   return <>{children}</>;
 }
@@ -212,6 +264,8 @@ export function Centered({ children }: { children: ReactNode }) {
 const COLLAPSE_KEY = "hold-shell-collapsed";
 /** The app's `walletMode`, kept where the app keeps it: on the device. */
 const DISPLAY_MODE_KEY = "hold-display-mode";
+/** The app's Hide balances, per browser like the view. */
+const HIDE_BALANCES_KEY = "hold-hide-balances";
 
 function SignedIn({ session, children }: { session: Session; children: ReactNode }) {
   const onSpacesPage = productRel(usePathname(), useSpacesBase()).startsWith("/spaces");
@@ -225,19 +279,41 @@ function SignedIn({ session, children }: { session: Session; children: ReactNode
   const agency = useAgency(session.user.id, team.data);
   // Asked alongside, never waited for: the shell draws without it.
   const walletPage = useWalletEnabled(session.user.id);
+  const adSpace = useAdSpaceAccess().allowed;
+
+  // The language and display currency the person chose, in the app or here,
+  // win over this browser's guess once /me has answered (lib/app/i18n/react).
+  useServerPrefs(me.data);
+  useRatesRefresh();
 
   // Who signed in here, for the next visit's "Welcome back" (lib/auth/remember).
+  // An email /me disagrees with (a login email change) is not kept.
+  const meEmail = me.data?.email;
+  const keptEmail = emailToRemember(session.user.email, meEmail);
   useEffect(() => {
     const m = me.data;
     remember({
       method: currentMethod(session.user.app_metadata?.provider),
-      email: session.user.email ?? null,
+      email: keptEmail,
       name: m?.profile.displayName?.trim() || (chosenUsername(m) ? `@${chosenUsername(m)}` : null),
     });
-  }, [me.data, session.user.app_metadata?.provider, session.user.email]);
+  }, [me.data, session.user.app_metadata?.provider, keptEmail]);
+
+  // And their face: a small copy of the photo (the URL itself expires within
+  // the hour) or their emoji. Only once /me has answered: a failed read
+  // never wipes what was kept.
+  const { photo } = useUserPhoto();
+  const emoji = me.data?.profile.avatarEmoji ?? null;
+  const meReady = me.data !== undefined;
+  useEffect(() => {
+    if (!meReady) return;
+    void rememberFace(keptEmail, photo, emoji).catch(() => undefined);
+  }, [meReady, photo, emoji, keptEmail]);
 
   // Every one of these is SETTLED when it has either answered or failed. None
-  // of them is allowed to be fatal, Spaces included.
+  // of them is allowed to be fatal, Spaces included, and none of them is
+  // waited for outside Spaces: they are all HiSpace's, and Home's first paint
+  // used to sit behind five of them.
   //
   // It used to be: a failed `listings` or `seats` read replaced the whole
   // product with one error card. Those two are HiSpace reads, and Home, Wallet,
@@ -245,7 +321,7 @@ function SignedIn({ session, children }: { session: Session; children: ReactNode
   // /ad-space route answering badly took down five products that were working
   // perfectly, for everybody. One section being unreachable is not the same
   // event as the account being unreachable, and only the section may say so.
-  const ready =
+  const spacesReady =
     (listings.data !== undefined || listings.error) &&
     (seats.data !== undefined || seats.error) &&
     (x.data !== undefined || x.error) &&
@@ -260,8 +336,7 @@ function SignedIn({ session, children }: { session: Session; children: ReactNode
    */
   const spacesDown = listings.error ?? seats.error ?? null;
 
-  const state = useMemo<ShellState | null>(() => {
-    if (!ready) return null;
+  const state = useMemo<ShellState>(() => {
     const spaces = listings.data ?? [];
     const mine = seats.data ?? [];
     const role = roleOf(spaces, mine, x.data ?? null);
@@ -278,15 +353,21 @@ function SignedIn({ session, children }: { session: Session; children: ReactNode
       agency,
       teamPage: role !== "creator" || agency.on || onTeams,
       walletPage,
+      adSpace,
       spacesDown: spacesDown !== null,
+      spacesLoading: !spacesReady,
     };
-  }, [ready, listings.data, seats.data, x.data, work.data, session, agency, walletPage, spacesDown]);
+  }, [spacesReady, listings.data, seats.data, x.data, work.data, session, agency, walletPage, adSpace, spacesDown]);
 
-  if (!state) return <Centered><Wordmark className="h-5 w-auto text-text" /></Centered>;
+  // Only a Spaces page waits for Spaces, and it waits inside the Frame, so the
+  // way to Home, Wallet and Stays is on screen the whole time.
+  let page: ReactNode = children;
+  if (onSpacesPage && spacesDown) page = <SpacesUnreachable error={spacesDown} />;
+  else if (onSpacesPage && !spacesReady) page = <div className="flex min-h-[40vh] w-full items-center justify-center"><Wordmark className="h-5 w-auto text-text" /></div>;
 
   return (
     <ShellContext.Provider value={state}>
-      <Frame>{spacesDown && onSpacesPage ? <SpacesUnreachable error={spacesDown} /> : children}</Frame>
+      <Frame>{page}</Frame>
     </ShellContext.Provider>
   );
 }
@@ -300,12 +381,13 @@ function SignedIn({ session, children }: { session: Session; children: ReactNode
  * somebody to throw away a working sign-in over a section being down.
  */
 function SpacesUnreachable({ error }: { error: unknown }) {
+  const t = useT();
   return (
     <div className={`${glass} flex w-full max-w-[440px] flex-col gap-4 p-6`}>
       <Wordmark className="h-5 w-auto text-text" />
       <Alert>{describeCreatorError(error)}</Alert>
       <button type="button" className={`${btnGhost} self-start`} onClick={() => window.location.reload()}>
-        Try again
+        {t("common.tryAgain")}
       </button>
     </div>
   );
@@ -322,9 +404,11 @@ function Frame({ children }: { children: ReactNode }) {
   const rel = productRel(pathname, base);
   const level = levelOf(rel);
   const active = activeKey(rel);
+  const t = useT();
 
   const [collapsed, setCollapsed] = useState(false);
   const [displayMode, setDisplayMode] = useState<DisplayMode>(DEFAULT_DISPLAY_MODE);
+  const [hideBalances, setHideBalances] = useState(false);
   const [drawer, setDrawer] = useState(false);
   const [palette, setPalette] = useState(false);
 
@@ -336,6 +420,7 @@ function Frame({ children }: { children: ReactNode }) {
       setCollapsed(window.localStorage.getItem(COLLAPSE_KEY) === "1");
       const stored = asDisplayMode(window.localStorage.getItem(DISPLAY_MODE_KEY));
       if (stored) setDisplayMode(stored);
+      setHideBalances(window.localStorage.getItem(HIDE_BALANCES_KEY) === "1");
     } catch {
       /* the sidebar opens expanded, and the view is the default one */
     }
@@ -357,10 +442,25 @@ function Frame({ children }: { children: ReactNode }) {
       /* remembered for this page only */
     }
   }, []);
+  const saveHideBalances = useCallback((v: boolean) => {
+    setHideBalances(v);
+    try {
+      window.localStorage.setItem(HIDE_BALANCES_KEY, v ? "1" : "0");
+    } catch {
+      /* remembered for this page only */
+    }
+  }, []);
   const toggleCollapsed = () => saveCollapsed(!collapsed);
   const prefs = useMemo(
-    () => ({ collapsed, setCollapsed: saveCollapsed, displayMode, setDisplayMode: saveDisplayMode }),
-    [collapsed, saveCollapsed, displayMode, saveDisplayMode],
+    () => ({
+      collapsed,
+      setCollapsed: saveCollapsed,
+      displayMode,
+      setDisplayMode: saveDisplayMode,
+      hideBalances,
+      setHideBalances: saveHideBalances,
+    }),
+    [collapsed, saveCollapsed, displayMode, saveDisplayMode, hideBalances, saveHideBalances],
   );
 
   // Closing the drawer on every navigation, so a tap on a link is the whole gesture.
@@ -382,12 +482,22 @@ function Frame({ children }: { children: ReactNode }) {
   const allowed = itemsFor(level, shell.role, shell.teamPage, shell.walletPage === true);
   // While the wallet gate is still being asked, the Wallet page waits blank
   // rather than being sent away and back.
-  const deciding = active === "wallet" && shell.walletPage === undefined;
-  const here = active ? deciding || allowed.some((i) => i.key === active) : true;
+  const deciding = active === "wallet" && !openToAll(rel) && shell.walletPage === undefined;
+  // /wallet/link and /wallet/send answer everybody, gate or not (nav.openToAll).
+  // Nor is a Spaces page judged on a role that is still a guess.
+  const settling = level === "spaces" && shell.spacesLoading;
+  const here = active ? deciding || settling || openToAll(rel) || allowed.some((i) => i.key === active) : true;
   useEffect(() => {
-    if (here) return;
+    if (here || (level === "spaces" && rel.replace(/\/+$/, "") === "/spaces" && !shell.adSpace)) return;
     router.replace(level === "spaces" && allowed[0] ? hrefFor(allowed[0], base) : hrefFor({ path: "" }, base));
-  }, [here, router, allowed, base, level]);
+  }, [here, router, allowed, base, level, rel, shell.adSpace]);
+  // Spaces' front door for somebody who can buy but not sell is the Board.
+  const spacesRoot = rel.replace(/\/+$/, "") === "/spaces";
+  useEffect(() => {
+    if (spacesRoot && !shell.adSpace) router.replace(hrefFor({ path: SPACES_BUY_PATH }, base));
+  }, [spacesRoot, shell.adSpace, router, base]);
+  // Any other selling page of Spaces for them: the Partners panel, not a redirect.
+  const partnersOnly = level === "spaces" && !shell.adSpace && !spacesRoot && active !== null && AD_SPACE_SELLING.has(active);
 
   const badges = useBadges();
   const entries = usePaletteEntries();
@@ -405,7 +515,11 @@ function Frame({ children }: { children: ReactNode }) {
 
   return (
     <div
-      className="w-full px-[clamp(12px,1.6vw,28px)] py-3 lg:py-4"
+      // Clipped sideways, never scrolled: on a phone the page moves up and
+      // down and nothing else. A row wider than the screen used to make the
+      // whole product draggable left and right. `clip`, not `hidden`, so this
+      // is not a scroll container and the sticky header still sticks.
+      className="w-full max-w-full overflow-x-clip px-[clamp(12px,1.6vw,28px)] py-3 lg:py-4"
       // The dashboard's way to big screens: the whole product drawn larger,
       // and anything sized by the viewport divided back (--app-vh).
       style={{ zoom: scale, ["--ui-scale" as string]: scale, ["--app-vh" as string]: `calc(100dvh / ${scale})` }}
@@ -428,7 +542,6 @@ function Frame({ children }: { children: ReactNode }) {
           {/* As tall as the sidebar at least, so a screen that fills it ends where the sidebar ends. */}
           <div className="flex min-w-0 flex-col gap-4 lg:min-h-[calc(var(--app-vh,100dvh)-2rem)]">
             <TopBar
-              title={titleFor(rel)}
               screenHeader={claims > 0}
               titleRef={setTitleEl}
               rightRef={setRightEl}
@@ -436,13 +549,15 @@ function Frame({ children }: { children: ReactNode }) {
               onMenu={() => setDrawer(true)}
               onSearch={() => setPalette(true)}
             />
-            <main className="flex min-w-0 flex-1 flex-col">{here && !deciding ? children : null}</main>
+            <main className="flex min-w-0 flex-1 flex-col">
+              {here && !deciding && !(spacesRoot && !shell.adSpace) ? (partnersOnly ? <PartnersOnly /> : children) : null}
+            </main>
           </div>
         </div>
 
         {drawer ? (
           <div className="fixed inset-0 z-[65] lg:hidden">
-            <button aria-label="Close menu" className="absolute inset-0 bg-[#030b13]/70 backdrop-blur-sm" onClick={() => setDrawer(false)} />
+            <button aria-label={t("shell.sidebar.closeMenu")} className="absolute inset-0 bg-[#030b13]/70 backdrop-blur-sm" onClick={() => setDrawer(false)} />
             <div className="absolute inset-y-0 left-0 w-[min(86vw,300px)] p-3">
               <Sidebar collapsed={false} level={level} active={active} badges={badges} onClose={() => setDrawer(false)} />
             </div>
@@ -498,7 +613,8 @@ function useBadges(): Partial<Record<NavKey, number>> {
 /**
  * The Wallet page carries a strict Content-Security-Policy that only a
  * response can set, so the way in and the way out are full page loads, never
- * a client-side navigation.
+ * a client-side navigation. The other pages that unlock keys (buying a spot,
+ * paying for a stay) are caught by `crossesKeyPage` in NavLink.
  */
 function hardLink(key: NavKey, active: NavKey | null): boolean {
   return key === "wallet" || active === "wallet";
@@ -522,26 +638,28 @@ function Sidebar({
   /** Absent in the phone drawer, where the top bar still carries Search. */
   onSearch?: () => void;
 }) {
-  const { role, teamPage, walletPage } = useShell();
+  const t = useT();
+  const { role, teamPage, walletPage, adSpace } = useShell();
   const productHref = useProductHref();
   const wallet = walletPage === true;
   const nav = LEVELS[level];
   const groups = nav.groups
-    .map((g) => ({ ...g, items: g.items.filter((i) => visible(i, role, teamPage, wallet)) }))
+    .map((g) => ({ title: navGroupTitle(g), items: g.items.filter((i) => visible(i, role, teamPage, wallet, adSpace)).map((i) => routed(i, adSpace)) }))
     .filter((g) => g.items.length > 0);
-  const foot = nav.foot.filter((i) => visible(i, role, teamPage, wallet));
+  const foot = nav.foot.filter((i) => visible(i, role, teamPage, wallet, adSpace));
   const home = productHref();
 
   const toggle = onClose ? (
-    <button type="button" aria-label="Close menu" onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-[8px] text-[#9FB7C2] hover:bg-white/10 hover:text-text">
+    <button type="button" aria-label={t("shell.sidebar.closeMenu")} onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-[8px] text-[#9FB7C2] hover:bg-white/10 hover:text-text">
       <IconClose />
     </button>
   ) : onToggle ? (
     <button
       type="button"
-      aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+      aria-label={collapsed ? t("shell.sidebar.expand") : t("shell.sidebar.collapse")}
+      data-rail-tip={collapsed ? t("shell.sidebar.expand") : undefined}
       onClick={onToggle}
-      className="flex h-8 w-8 items-center justify-center rounded-[8px] text-[#9FB7C2] hover:bg-white/10 hover:text-text"
+      className={`flex items-center justify-center text-[#9FB7C2] transition-colors hover:bg-white/10 hover:text-text ${collapsed ? "h-10 w-10 rounded-full" : "h-8 w-8 rounded-[8px]"}`}
     >
       {collapsed ? <IconExpand /> : <IconCollapse />}
     </button>
@@ -553,9 +671,11 @@ function Sidebar({
         collapsed ? "items-center px-2 py-3" : "p-3"
       }`}
     >
+      {/* Folded, every icon is named in a pill beside it on hover, at once. */}
+      {collapsed ? <RailTip /> : null}
       <div className={`flex w-full items-center ${collapsed ? "flex-col gap-3" : "justify-between gap-2 px-1.5 pb-3 pt-1"}`}>
         {level === "main" ? (
-          <Link href={home} aria-label="Dashboard" className="flex min-w-0 items-center">
+          <Link href={home} aria-label={t("shell.sidebar.dashboard")} data-rail-tip={collapsed ? t("shell.sidebar.dashboard") : undefined} className="flex min-w-0 items-center">
             {collapsed ? (
               <span className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-white/10 bg-white/[0.06] text-[13px] font-semibold text-amber">H</span>
             ) : (
@@ -566,16 +686,17 @@ function Sidebar({
           // A product's column: its name, and the way back to HOLD's.
           <Link
             href={home}
-            aria-label="Back to HOLD"
-            title="Back to HOLD"
+            aria-label={t("shell.sidebar.backToHold")}
+            title={collapsed ? undefined : t("shell.sidebar.backToHold")}
+            data-rail-tip={collapsed ? t("shell.sidebar.backToHold") : undefined}
             className={
               collapsed
-                ? "flex h-9 w-9 items-center justify-center rounded-[10px] border border-white/10 bg-white/[0.06] text-[#CFE3EC] hover:bg-white/10"
+                ? "flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-[#CFE3EC] hover:bg-white/10"
                 : "flex h-9 min-w-0 items-center gap-2 rounded-[10px] px-1.5 text-small text-[#CFE3EC] transition-colors hover:bg-white/[0.07] hover:text-text"
             }
           >
             <IconArrowLeft />
-            {collapsed ? null : <span className="truncate">Back</span>}
+            {collapsed ? null : <span className="truncate">{t("common.back")}</span>}
           </Link>
         )}
         {toggle}
@@ -585,7 +706,7 @@ function Sidebar({
         <div className="mb-3 flex items-center gap-2 border-b border-white/10 px-2.5 pb-3">
           <Wordmark className="h-3 w-auto text-text" />
           <span className="h-3.5 w-px bg-white/20" aria-hidden />
-          <span className="text-small font-medium text-amber">Spaces</span>
+          <span className="text-small font-medium text-amber">{t("shell.nav.spaces")}</span>
         </div>
       ) : null}
 
@@ -596,25 +717,26 @@ function Sidebar({
         <button
           type="button"
           onClick={onSearch}
-          aria-label="Search"
-          title="Search (⌘K)"
+          aria-label={t("common.search")}
+          title={collapsed ? undefined : t("shell.sidebar.searchShortcut")}
+          data-rail-tip={collapsed ? t("shell.sidebar.searchShortcut") : undefined}
           className={
             collapsed
-              ? "mb-1 flex h-9 w-9 items-center justify-center rounded-[10px] border border-white/10 bg-white/[0.05] text-[#CFE3EC] transition-colors hover:bg-white/10 hover:text-text"
+              ? "mb-1 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-[#CFE3EC] transition-colors hover:bg-white/10 hover:text-text"
               : "mb-2 flex h-9 w-full items-center gap-2 rounded-[10px] border border-white/10 bg-white/[0.05] px-2.5 text-small text-[#9FB7C2] transition-colors hover:bg-white/10 hover:text-text"
           }
         >
           <IconSearch className="h-3.5 w-3.5 shrink-0" />
           {collapsed ? null : (
             <>
-              <span>Search</span>
+              <span>{t("common.search")}</span>
               <kbd className="ml-auto rounded-[4px] border border-white/15 px-1 py-0.5 text-[9px]">⌘K</kbd>
             </>
           )}
         </button>
       ) : null}
 
-      <nav aria-label={level === "main" ? "HOLD" : "Spaces"} className={`flex w-full flex-1 flex-col overflow-y-auto ${collapsed ? "items-center gap-1 pt-2" : "gap-4"}`}>
+      <nav aria-label={level === "main" ? "HOLD" : t("shell.nav.spaces")} className={`flex w-full flex-1 flex-col overflow-y-auto ${collapsed ? "items-center gap-1 pt-2" : "gap-4"}`}>
         {groups.map((g) => (
           <div key={g.title ?? "main"} className={collapsed ? "flex flex-col items-center gap-1" : "flex flex-col gap-1"}>
             {collapsed ? (
@@ -645,31 +767,37 @@ function Sidebar({
 }
 
 function NavLink({ item, active, badge, collapsed, hard }: { item: NavItem; active: boolean; badge?: number; collapsed: boolean; hard: boolean }) {
+  useT();
   const base = useSpacesBase();
   const Icon = item.icon;
+  const label = navLabel(item);
   const href = hrefFor(item, base);
+  const pathname = usePathname();
+  const full = hard || crossesKeyPage(href, pathname ?? undefined);
   const current = active ? ("page" as const) : undefined;
-  const go = (className: string, children: ReactNode, label?: string) =>
-    hard ? (
-      <a href={href} aria-current={current} aria-label={label} title={label} className={className}>
+  // `tip` is the folded rail's: the name the icon alone cannot say, read out
+  // and shown in RailTip's pill.
+  const go = (className: string, children: ReactNode, tip?: string) =>
+    full ? (
+      <a href={href} aria-current={current} aria-label={tip} data-rail-tip={tip} className={className}>
         {children}
       </a>
     ) : (
-      <Link href={href} aria-current={current} aria-label={label} title={label} className={className}>
+      <Link href={href} aria-current={current} aria-label={tip} data-rail-tip={tip} className={className}>
         {children}
       </Link>
     );
 
   if (collapsed) {
     return go(
-      `relative flex h-9 w-9 items-center justify-center rounded-[10px] transition-colors ${
+      `relative flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
         active ? "bg-amber/25 text-[#FFE2A1]" : "text-[#9FB7C2] hover:bg-white/10 hover:text-text"
       }`,
       <>
-        <Icon />
-        {badge ? <span className="absolute right-1 top-1 h-2 w-2 rounded-[4px] bg-amber" aria-hidden /> : null}
+        <Icon width={18} height={18} />
+        {badge ? <span className="absolute right-[7px] top-[7px] h-2 w-2 rounded-[4px] bg-amber" aria-hidden /> : null}
       </>,
-      item.label,
+      label,
     );
   }
   return go(
@@ -682,7 +810,7 @@ function NavLink({ item, active, badge, collapsed, hard }: { item: NavItem; acti
       <span className={active ? "text-amber" : "text-[#9FB7C2]"}>
         <Icon />
       </span>
-      <span className="min-w-0 flex-1 truncate">{item.label}</span>
+      <span className="min-w-0 flex-1 truncate">{label}</span>
       {badge ? (
         <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-[10px] bg-amber px-1.5 text-[11px] font-medium text-text-on-amber">
           {badge > 9 ? "9+" : badge}
@@ -692,7 +820,7 @@ function NavLink({ item, active, badge, collapsed, hard }: { item: NavItem; acti
   );
 }
 
-const ROLE_LABEL: Record<ShellRole, string> = { creator: "Creator", manager: "Manager", rep: "Rep" };
+const ROLE_LABEL: Record<ShellRole, MessageKey> = { creator: "shell.role.creator", manager: "shell.role.manager", rep: "shell.role.rep" };
 
 /**
  * The person, at the foot of the column.
@@ -711,20 +839,25 @@ const ROLE_LABEL: Record<ShellRole, string> = { creator: "Creator", manager: "Ma
  * person and nothing else.
  */
 function UserCard({ collapsed }: { collapsed: boolean }) {
+  const t = useT();
   const { session, x, role, seats, agency } = useShell();
   const me = useMe();
   const productHref = useProductHref();
   const linked = x?.linked ? x : null;
   const username = chosenUsername(me.data);
-  const name = me.data?.profile.displayName?.trim() || (username ? `@${username}` : linked ? `@${linked.handle}` : session.user.email ?? "Signed in");
+  const name = me.data?.profile.displayName?.trim() || (username ? `@${username}` : linked ? `@${linked.handle}` : session.user.email ?? t("shell.user.signedIn"));
   const seat = role !== "creator" ? seats.find((s) => s.status === "active" && s.role === role) : null;
-  const title = role === "creator" && agency.on ? "Creative Director" : ROLE_LABEL[role];
-  const sub = seat ? `${title} · ${creatorText(seat) ?? "a creator"}` : username && me.data?.profile.displayName ? `@${username}` : title;
+  const title = role === "creator" && agency.on ? t("shell.role.creativeDirector") : t(ROLE_LABEL[role]);
+  const sub = seat
+    ? t("shell.user.roleFor", { role: title, creator: creatorText(seat) ?? t("shell.user.aCreator") })
+    : username && me.data?.profile.displayName
+      ? `@${username}`
+      : title;
 
   if (collapsed) {
     return (
       <div className="flex flex-col items-center gap-1">
-        <Link href={productHref("/menu")} title={name} aria-label={`${name} — menu`}>
+        <Link href={productHref("/menu")} data-rail-tip={name} aria-label={t("shell.user.menuFor", { name })}>
           <UserAvatar size={36} fallbackName={name} />
         </Link>
         <HiPointsChip compact />
@@ -733,7 +866,7 @@ function UserCard({ collapsed }: { collapsed: boolean }) {
   }
   return (
     <div className="flex items-center gap-2.5 rounded-[12px] border border-white/10 bg-white/[0.04] p-2">
-      <Link href={productHref("/menu")} className="flex min-w-0 flex-1 items-center gap-2.5" title="Menu">
+      <Link href={productHref("/menu")} className="flex min-w-0 flex-1 items-center gap-2.5" title={t("shell.nav.menu")}>
         <UserAvatar size={36} fallbackName={name} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-small text-text">{name}</p>
@@ -746,8 +879,25 @@ function UserCard({ collapsed }: { collapsed: boolean }) {
 
 /* ── Top bar ──────────────────────────────────────────────────────── */
 
+/** Past this many pixels of scroll the phone's header grows its glass, as the app's does. */
+const GLASS_AFTER = 12;
+
+function useScrolled(): boolean {
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const read = () => setScrolled(window.scrollY > GLASS_AFTER);
+    read();
+    window.addEventListener("scroll", read, { passive: true });
+    return () => window.removeEventListener("scroll", read);
+  }, []);
+  return scrolled;
+}
+
+/** The app's header disc: 30px, flat secondary glass (DashboardHeader.iconDisc). */
+const iconDisc =
+  "flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[15px] border border-white/10 bg-white/[0.08] text-white transition-colors hover:bg-white/[0.14]";
+
 function TopBar({
-  title,
   screenHeader,
   titleRef,
   rightRef,
@@ -755,8 +905,7 @@ function TopBar({
   onMenu,
   onSearch,
 }: {
-  title: string;
-  /** A screen's own header (a chevron back and its title) is drawn here instead of the section title. */
+  /** A screen's own header (a chevron back and its title) is drawn here instead of the person. */
   screenHeader: boolean;
   titleRef: (el: HTMLElement | null) => void;
   rightRef: (el: HTMLElement | null) => void;
@@ -764,61 +913,70 @@ function TopBar({
   onMenu: () => void;
   onSearch: () => void;
 }) {
-  const { role, session } = useShell();
+  const t = useT();
+  const { role, session, adSpace } = useShell();
+  const me = useMe();
   const href = useHref();
   const productHref = useProductHref();
+  const scrolled = useScrolled();
+  const username = chosenUsername(me.data);
   return (
     /*
       ON A WIDE SCREEN THIS BAR ONLY EXISTS WHEN IT CARRIES A BACK BUTTON.
-      With no screen header it said the section's name and offered Search —
-      and the sidebar beside it already highlights the section, so the name
-      was the same word twice and the row was a strip of furniture over every
-      page. Search moved into the column, where it is still one click and one
-      ⌘K away.
+      The sidebar already names the section and holds Search, so without a
+      screen header the row would be furniture over every page.
 
-      On a phone it always shows, and it is not furniture there: it is the
-      only way to the menu and to the person.
+      ON A PHONE IT IS THE APP'S DASHBOARD HEADER, NOT A BAR.
+      It was a boxed strip with a hamburger, the section's name and the
+      avatar on the right: a website's menu, on a product whose app has none.
+      The app puts the person on the left (avatar and @username, which opens
+      the menu), and on the right Search and Analytics, on no surface at all
+      until the page scrolls under it. So does this. A screen with its own
+      header (a chevron back and a title) takes the left side instead, as the
+      app's internal screens do.
     */
     <header
-      className={`sticky top-2 z-40 rounded-[18px] border border-white/10 bg-[linear-gradient(145deg,rgba(8,23,36,0.9),rgba(6,16,27,0.88))] p-2 shadow-[0_18px_35px_rgba(0,0,0,0.32)] backdrop-blur-xl ${
+      className={`sticky top-0 z-40 -mx-[clamp(12px,1.6vw,28px)] -mt-3 px-[clamp(12px,1.6vw,28px)] pb-2 pt-3 transition-colors duration-200 ${
+        scrolled ? "border-b border-white/[0.08] bg-[#06121c]/70 backdrop-blur-xl" : "border-b border-transparent"
+      } lg:top-2 lg:mx-0 lg:mt-0 lg:rounded-[18px] lg:border lg:border-white/10 lg:bg-[linear-gradient(145deg,rgba(8,23,36,0.9),rgba(6,16,27,0.88))] lg:p-2 lg:shadow-[0_18px_35px_rgba(0,0,0,0.32)] lg:backdrop-blur-xl ${
         screenHeader ? "" : "lg:hidden"
       }`}
     >
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex h-11 items-center justify-between gap-2 lg:h-auto">
         <div className="flex min-w-0 flex-1 items-center gap-2">
-          <button
-            type="button"
-            aria-label="Open menu"
-            onClick={onMenu}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-white/10 bg-white/[0.05] text-[#CFE3EC] lg:hidden"
-          >
-            <IconMenu />
-          </button>
           <div ref={titleRef} className={screenHeader ? "flex min-w-0 flex-1 items-center" : "hidden"} />
-          {screenHeader ? null : <h1 className="truncate pl-1 text-[17px] font-bold tracking-[-0.3px] text-text">{title}</h1>}
+          {screenHeader ? null : (
+            <button type="button" aria-label={t("shell.topBar.openMenu")} onClick={onMenu} className="flex min-w-0 items-center gap-2 rounded-[18px] pr-2">
+              <UserAvatar size={32} round fallbackName={session.user.email} />
+              <span className="truncate text-[14px] font-semibold text-white">{username ? `@${username}` : t("shell.nav.menu")}</span>
+            </button>
+          )}
         </div>
-        <div className="flex shrink-0 items-center gap-1.5">
-          <span className="lg:hidden">
-            <HiPointsChip compact />
-          </span>
+        <div className="flex shrink-0 items-center gap-2.5 lg:gap-1.5">
           <div ref={rightRef} className="flex items-center gap-1.5 empty:hidden" />
-          <button type="button" onClick={onSearch} aria-label="Search" className={`${btnGhost} sm:justify-start`}>
+          <button type="button" onClick={onSearch} aria-label={t("common.search")} className={`${iconDisc} lg:hidden`}>
+            <IconSearch className="h-4 w-4" />
+          </button>
+          <button type="button" onClick={onSearch} aria-label={t("common.search")} className={`${btnGhost} hidden lg:inline-flex`}>
             <IconSearch className="h-3.5 w-3.5" />
           </button>
-          {level === "spaces" && role === "creator" ? (
+          {level === "spaces" && role === "creator" && adSpace ? (
             <Link
               href={href("/listings/new")}
-              className={`${screenHeader ? "hidden sm:inline-flex" : "inline-flex"} h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] bg-amber px-3 text-tiny font-medium text-text-on-amber transition-colors hover:bg-amber-glow`}
+              aria-label={t("shell.title.newListing")}
+              className={`${screenHeader ? "hidden sm:inline-flex" : "inline-flex"} h-[30px] items-center justify-center gap-1.5 whitespace-nowrap rounded-[15px] bg-amber px-2.5 text-tiny font-medium text-text-on-amber transition-colors hover:bg-amber-glow lg:h-9 lg:rounded-[10px] lg:px-3`}
             >
               <IconPlus className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">New listing</span>
+              <span className="hidden sm:inline">{t("shell.title.newListing")}</span>
             </Link>
           ) : null}
-          {/* On a phone the sidebar, and the person in it, is behind the menu. */}
-          {/* Same destination as the column's person: the Menu, which opens on Account. */}
-          <Link href={productHref("/menu")} aria-label="Menu" className="shrink-0 lg:hidden">
-            <UserAvatar size={36} fallbackName={session.user.email} />
-          </Link>
+          {/* The app's Analytics disc: Spending Analytics (/analytics), what
+              the app opens with its SPENDING_ANALYTICS flag on. */}
+          {screenHeader ? null : (
+            <Link href={productHref("/analytics")} aria-label={t("shell.nav.analytics")} className={`${iconDisc} lg:hidden`}>
+              <IconInsights className="h-4 w-4" />
+            </Link>
+          )}
         </div>
       </div>
     </header>
@@ -829,20 +987,24 @@ function TopBar({
 
 /** The same two levels as the sidebar: HOLD's pages, then Spaces' pages and what is in them. */
 function usePaletteEntries(): PaletteEntry[] {
-  const { role, listings, managed, teamPage, walletPage } = useShell();
+  const { role, listings, managed, teamPage, walletPage, adSpace } = useShell();
   const href = useHref();
   const base = useSpacesBase();
   const offers = useOffers(role === "creator");
+  const t = useT();
+  // The entries hold translated words, so they are rebuilt when the language changes.
+  const locale = useLocale();
 
   return useMemo(() => {
+    void locale;
     const out: PaletteEntry[] = [];
     const wallet = walletPage === true;
-    for (const i of itemsFor("main", role, teamPage, wallet)) {
-      out.push({ id: `main-${i.key}`, group: "HOLD", label: i.label, href: hrefFor(i, base), keywords: i.keywords });
+    for (const i of itemsFor("main", role, teamPage, wallet, adSpace)) {
+      out.push({ id: `main-${i.key}`, group: "HOLD", label: navLabel(i), href: hrefFor(routed(i, adSpace), base), keywords: i.keywords });
     }
-    if (role === "creator") out.push({ id: "new", group: "Spaces", label: "New listing", href: href("/listings/new"), keywords: "create start" });
-    for (const i of itemsFor("spaces", role, teamPage, wallet)) {
-      out.push({ id: `spaces-${i.key}`, group: "Spaces", label: i.label, href: hrefFor(i, base), keywords: i.keywords });
+    if (role === "creator" && adSpace) out.push({ id: "new", group: "Spaces", label: t("shell.title.newListing"), href: href("/listings/new"), keywords: "create start" });
+    for (const i of itemsFor("spaces", role, teamPage, wallet, adSpace)) {
+      out.push({ id: `spaces-${i.key}`, group: "Spaces", label: navLabel(i), href: hrefFor(i, base), keywords: i.keywords });
     }
     for (const l of listings) {
       out.push({
@@ -862,13 +1024,13 @@ function usePaletteEntries(): PaletteEntry[] {
         id: `o-${o.id}`,
         group: "Offers",
         label: `${o.sponsor.name} · ${o.amountUsdc} USDC`,
-        sub: `${o.kind === "bid" ? "Bid" : "Offer"} · ${o.serviceName || o.spaceTitle} · ${o.status}`,
+        sub: `${o.kind === "bid" ? t("shell.palette.bid") : t("shell.palette.offer")} · ${o.serviceName || o.spaceTitle} · ${o.status}`,
         href: href(`/offers?id=${o.id}`),
       });
     }
     // A remembered invitation is reachable from anywhere.
     const seat = typeof window !== "undefined" ? pendingSeat() : null;
-    if (seat) out.push({ id: "seat", group: "Spaces", label: "Open team invitation", href: href(`/team?seat=${encodeURIComponent(seat.seat)}`) });
+    if (seat) out.push({ id: "seat", group: "Spaces", label: t("shell.palette.openInvitation"), href: href(`/team?seat=${encodeURIComponent(seat.seat)}`) });
     return out;
-  }, [role, listings, managed, offers.data, href, base, teamPage, walletPage]);
+  }, [role, listings, managed, offers.data, href, base, teamPage, walletPage, adSpace, t, locale]);
 }

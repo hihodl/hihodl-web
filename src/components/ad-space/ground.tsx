@@ -1,6 +1,9 @@
 import type { CSSProperties, ReactNode } from "react";
 
+import type { PageEffect as Effect } from "@/lib/ad-space/studio";
 import { groundOf } from "@/lib/ad-space/theme";
+
+import { PageEffect } from "./PageEffect";
 
 /**
  * The ground every Spaces page stands on. The creator chooses it (see
@@ -71,8 +74,18 @@ function HoldBlue() {
  *
  * `ground` is the stored value (hold | app | night | white | #RRGGBB, or
  * null); a light one re-inks everything inside through `data-sp-ground`.
+ * `effect` is the page studio's one subtle layer (PageEffect.tsx), drawn on
+ * the ground and under everything else; "none" or absent draws nothing.
  */
-export function SpacesGround({ ground = null, children }: { ground?: string | null; children: ReactNode }) {
+export function SpacesGround({
+  ground = null,
+  effect = "none",
+  children,
+}: {
+  ground?: string | null;
+  effect?: Effect;
+  children: ReactNode;
+}) {
   const g = groundOf(ground);
   return (
     <div
@@ -86,6 +99,7 @@ export function SpacesGround({ ground = null, children }: { ground?: string | nu
       <div className="pointer-events-none fixed inset-0 -z-10" style={{ background: g.base }} aria-hidden>
         {g.kind === "hold" ? <HoldBlue /> : null}
       </div>
+      {effect !== "none" && <PageEffect effect={effect} light={g.light} />}
       {children}
     </div>
   );

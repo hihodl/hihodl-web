@@ -15,6 +15,9 @@ import type { SpaceCard, TemplateKind } from "@/lib/creator/listing";
 import { eventLook, tintRgba } from "@/lib/app/event-look";
 import { listingRefs, NO_EVENT, type EventRef, type ListingRef } from "@/lib/app/spaces-model";
 import { useTemplates } from "@/lib/app/spaces-data";
+import { t } from "@/lib/app/i18n";
+import { fmtNumber } from "@/lib/app/i18n/format";
+import { useT } from "@/lib/app/i18n/react";
 
 import { BackHeader } from "../hold";
 import { useShell } from "../Shell";
@@ -50,14 +53,15 @@ export function Pager({
   size?: number;
   setPage: (p: number) => void;
 }) {
+  const t = useT();
   if (pages <= 1) return null;
   return (
-    <nav aria-label="Pages" className="flex items-center justify-end gap-2">
+    <nav aria-label={t("creator.cards.pages")} className="flex items-center justify-end gap-2">
       <span className="text-[12.5px] font-strong tabular-nums text-white/55">
-        {page * size + 1}–{Math.min(total, (page + 1) * size)} of {total}
+        {t("creator.cards.range", { from: fmtNumber(page * size + 1), to: fmtNumber(Math.min(total, (page + 1) * size)), total: fmtNumber(total) })}
       </span>
-      <Chip label="Previous" icon="chevron-back" disabled={page === 0} onClick={() => setPage(page - 1)} />
-      <Chip label="Next" disabled={page >= pages - 1} onClick={() => setPage(page + 1)} />
+      <Chip label={t("creator.cards.previous")} icon="chevron-back" disabled={page === 0} onClick={() => setPage(page - 1)} />
+      <Chip label={t("common.next")} disabled={page >= pages - 1} onClick={() => setPage(page + 1)} />
     </nav>
   );
 }
@@ -95,7 +99,15 @@ export function useListingKind(): (l: SpaceCard) => TemplateKind {
   }, [templates.data]);
 }
 
-export const KIND_NAME: Record<TemplateKind, string> = { placement: "Ad space", service: "Service" };
+/** Read at render: each name is a getter, so it follows the language. */
+export const KIND_NAME: Record<TemplateKind, string> = {
+  get placement() {
+    return t("creator.cards.kindPlacement");
+  },
+  get service() {
+    return t("creator.cards.kindService");
+  },
+};
 
 /** Every listing this person can see, with its event: their own and their team seats. */
 export function useListingRefs(): ReadonlyMap<string, ListingRef> {
@@ -138,7 +150,7 @@ export function DrillBar({ back, crumb, title, right }: { back: string; crumb: s
 }
 
 export function eventName(event: EventRef | null | undefined): string {
-  return event?.name ?? "Not tied to an event";
+  return event?.name ?? t("creator.cards.noEvent");
 }
 
 function eventWhere(event: EventRef | null): string {
@@ -210,6 +222,7 @@ export function EventCard({
   note?: ReactNode;
   attention?: boolean;
 }) {
+  useT();
   return (
     <li>
       <Link href={href} scroll={false} className={`${cardCls} gap-2.5 p-3.5 sm:min-h-[168px] xl:min-h-[188px]`}>

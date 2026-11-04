@@ -21,6 +21,7 @@ const PRODUCT = [
   { href: "/travel",        label: "Stays" },
   { href: "/esim",          label: "eSIM" },
   { href: "/spaces",        label: "Spaces" },
+  { href: "/agents",        label: "AI agents (beta)" },
   { href: "/#ai",           label: "AI (soon)" },
   { href: "/#husd",         label: "HUSD" },
 ];

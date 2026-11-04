@@ -68,11 +68,28 @@ const FINANCIAL: Provider[] = [
 
 const NON_FINANCIAL: Provider[] = [
   {
+    name: "Duffel",
+    what:
+      "Flight inventory and ticketing for in-app flights. You pay HOLD; HOLD books the ticket with the airline through Duffel. The airline is the carrier. See the Flight Terms.",
+    data:
+      "Each traveller's name, date of birth, gender, contact details and, where the airline requires it, document details. No identity verification data.",
+    pending: true,
+  },
+  {
     name: "liteAPI (Nuitée)",
     what:
-      "Hotel and accommodation inventory, and the booking payment, for in-app stays. liteAPI is the merchant of record for the booking; HOLD is not.",
+      "Hotel and accommodation inventory for in-app stays. You pay HOLD; HOLD reserves the room with liteAPI, which books it with the property under its own terms. See the Stay Terms.",
     data:
       "The details needed to make and hold a booking, such as guest name and dates. No identity verification data.",
+    pending: true,
+  },
+  {
+    name: "Tiqets",
+    entity: "Tiqets International B.V., Amsterdam, the Netherlands.",
+    what:
+      "Activities, tours, and museum and attraction tickets shown in the app. You book and pay on Tiqets' own site, where Tiqets sells the ticket under its own terms; HOLD may earn a commission. See the Experience Terms.",
+    data:
+      "Nothing from HOLD for a ticket you book on Tiqets' site: you give your details to Tiqets there. No identity verification data.",
     pending: true,
   },
   {
@@ -103,12 +120,40 @@ const INFRASTRUCTURE: Provider[] = [
   {
     name: "Mixpanel",
     what: "Product analytics.",
-    data: "Usage events, so we can see which parts of the app are used.",
+    data: "Usage events, so we can see which parts of the app and of this website are used.",
   },
   {
     name: "Resend",
-    what: "Transactional email delivery.",
-    data: "Your email address and the content of the message being sent to you.",
+    what:
+      "Transactional email delivery, and receiving the booking emails you forward to your personal trips.hihodl.xyz address.",
+    data:
+      "Your email address and the content of the message being sent to you. For a forwarded booking: the email and its attachments, which we read once and do not keep.",
+  },
+  {
+    name: "Anthropic",
+    what:
+      "The AI model behind Hi, the assistant in the app, and behind reading the bookings you forward or share into a plan.",
+    data:
+      "The messages you send Hi and the context it needs to answer. For a booking: the email, PDF or image you sent, or the message found in a Gmail or Outlook account you connected, so the trip details can be read from it. When you ask Hi about your agenda: the busy times, and event names if you turned them on, from a calendar you connected. Not used to train models.",
+  },
+  {
+    name: "Google (Gmail and Calendar APIs)",
+    what:
+      "Only if you connect your Google account: read only access to Gmail to find your travel bookings, and the HOLD calendar in your Google Calendar, with your busy times to warn you of a clash.",
+    data:
+      "Your Google address and an access token. From Gmail we read only messages a travel bookings search returns and keep only the trip details from them. In Google Calendar we write only the HOLD calendar, read busy times around a new booking, and read event names or move an event only if you turned those on. Our use follows the Google API Services User Data Policy, including the Limited Use requirements.",
+  },
+  {
+    name: "Microsoft (Microsoft Graph)",
+    what:
+      "Only if you connect a Microsoft account: your Outlook inbox to find your travel bookings, and the HOLD calendar in your Outlook calendar, with your busy times to warn you of a clash.",
+    data:
+      "Your Microsoft address and an access token. We read only new inbox messages whose subject looks like a booking and keep only the trip details from them. We write only the HOLD calendar, read busy times around a new booking, and show event names or move an event only if you turned those on.",
+  },
+  {
+    name: "Unsplash",
+    what: "Photos of the places on your trips.",
+    data: "The name of the place (a city or a country), never anything about you.",
   },
 ];
 
@@ -179,7 +224,7 @@ export default function ProvidersLegalPage() {
               Service providers
             </h1>
             <p className="text-base sm:text-lg text-[#94a3b8ff] font-['Inter'] font-[400]">
-              Last updated: August 17, 2026
+              Last updated: October 15, 2026
             </p>
           </div>
 

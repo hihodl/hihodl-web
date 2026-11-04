@@ -33,12 +33,16 @@ import { eventDates } from "@/lib/ad-space/format";
 import { gradientCss } from "@/lib/ad-space/look";
 import { SITE_URL } from "@/lib/ad-space/config";
 import { eventLook, tintRgba } from "@/lib/app/event-look";
+import { t as tr } from "@/lib/app/i18n";
+import { fmtDate, fmtNumber } from "@/lib/app/i18n/format";
+import { Rich, useT } from "@/lib/app/i18n/react";
 import { useInspireCampaigns, useInspireEvents, useTemplates } from "@/lib/app/spaces-data";
 import {
   ANYTIME,
   ideaQuery,
-  PRICING_LABEL,
+  pricingLabel,
   SURFACE_LABEL,
+  surfaceLabel,
   templateForCampaign,
   type InspireCampaign,
   type InspireCredit,
@@ -83,7 +87,7 @@ function useInspireHref() {
 }
 
 function where(e: Pick<InspireEvent, "city" | "startsOn" | "endsOn" | "slug">): string {
-  if (e.slug === ANYTIME) return "Any day, anywhere";
+  if (e.slug === ANYTIME) return tr("spaces.inspire.anyDayAnywhere");
   const when = e.startsOn && e.endsOn ? eventDates(e.startsOn, e.endsOn) : "";
   return [e.city, when].filter(Boolean).join(" · ");
 }
@@ -91,7 +95,7 @@ function where(e: Pick<InspireEvent, "city" | "startsOn" | "endsOn" | "slug">): 
 function day(iso: string | null): string | null {
   if (!iso) return null;
   const d = new Date(`${iso.slice(0, 10)}T12:00:00Z`);
-  return Number.isNaN(d.getTime()) ? null : d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+  return Number.isNaN(d.getTime()) ? null : fmtDate(d, { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 }
 
 /* ── Pieces ───────────────────────────────────────────────────────── */
@@ -106,11 +110,12 @@ function day(iso: string | null): string | null {
  * screen — rather than stamped on each card.
  */
 function OriginTag({ origin }: { origin: InspireCampaign["origin"] }) {
-  if (origin === "hold") return <Tag label="On HOLD" tone="good" />;
+  const t = useT();
+  if (origin === "hold") return <Tag label={t("spaces.inspire.onHold")} tone="good" />;
   return (
     <span
-      title="From X"
-      aria-label="From X"
+      title={t("spaces.inspire.fromX")}
+      aria-label={t("spaces.inspire.fromX")}
       className="inline-flex h-[22px] w-[22px] shrink-0 items-center justify-center self-start rounded-[11px] bg-white/[0.07] text-white/[0.82]"
     >
       <Ion name="logo-x" size={11} />
@@ -209,6 +214,7 @@ function hashOf(key: string): number {
  * reads where the button goes before pressing it.
  */
 function ProductBand({ campaign: c, art, tall = false }: { campaign: InspireCampaign; art: ProductArt; tall?: boolean }) {
+  const t = useT();
   const ground = GROUNDS[hashOf(c.id) % GROUNDS.length];
   const stroke = art.view ? Math.max(0.6, art.view.viewBox[0] / 120) : 0;
   return (
@@ -236,7 +242,7 @@ function ProductBand({ campaign: c, art, tall = false }: { campaign: InspireCamp
         <OriginTag origin={c.origin} />
       </span>
       <span className="absolute bottom-2.5 right-3 max-w-[70%] truncate text-[11.5px] font-extrabold tracking-[0.1px] text-white">
-        {art.pending ? "" : art.name ?? "No product like it yet"}
+        {art.pending ? "" : art.name ?? t("spaces.inspire.noProductYet")}
       </span>
     </div>
   );
@@ -261,15 +267,23 @@ function External({ href, children }: { href: string; children: ReactNode }) {
 function Credit({ credit, children }: { credit: InspireCredit; children?: ReactNode }) {
   return (
     <p className="text-[12px] leading-[17px] text-white/70">
-      Campaigns marked with the X mark were posted on X and gathered in the{" "}
-      <a href={credit.url} target="_blank" rel="noreferrer noopener" className="text-white/[0.82] underline underline-offset-2 hover:text-white">
-        {credit.name}
-      </a>{" "}
-      by{" "}
-      <a href={credit.byUrl} target="_blank" rel="noreferrer noopener" className="text-white/[0.82] underline underline-offset-2 hover:text-white">
-        {credit.by}
-      </a>
-      . Those creators are not on HOLD: we show what they offered, never how it went. {children}
+      <Rich
+        k="spaces.inspire.credit"
+        vars={{ name: credit.name, by: credit.by }}
+        tags={{
+          index: (c) => (
+            <a href={credit.url} target="_blank" rel="noreferrer noopener" className="text-white/[0.82] underline underline-offset-2 hover:text-white">
+              {c}
+            </a>
+          ),
+          by: (c) => (
+            <a href={credit.byUrl} target="_blank" rel="noreferrer noopener" className="text-white/[0.82] underline underline-offset-2 hover:text-white">
+              {c}
+            </a>
+          ),
+        }}
+      />{" "}
+      {children}
     </p>
   );
 }
@@ -277,6 +291,7 @@ function Credit({ credit, children }: { credit: InspireCredit; children?: ReactN
 /* ── The hub ──────────────────────────────────────────────────────── */
 
 function Hub() {
+  const t = useT();
   const read = useInspireEvents();
   const links = useInspireHref();
   const events = useMemo(() => read.data?.events ?? [], [read.data]);
@@ -288,11 +303,10 @@ function Hub() {
   return (
     <div className="flex flex-col gap-3.5">
       <Body dim className="max-w-[640px]">
-        What creators have sold ad space on, event by event: suitcases, dresses, cars, laptop lids, content. Open one, then start your own
-        from an idea that worked.
+        {t("spaces.inspire.hubIntro")}
       </Body>
       {events.length === 0 ? (
-        <Empty icon="bulb-outline" title="Nothing here yet" body="When a creator publishes a listing on HOLD, it shows up under its event, ready to borrow from." />
+        <Empty icon="bulb-outline" title={t("spaces.inspire.hubEmptyTitle")} body={t("spaces.inspire.hubEmptyBody")} />
       ) : (
         <>
           <CardGrid>
@@ -309,6 +323,7 @@ function Hub() {
 }
 
 function EventTile({ event, href }: { event: InspireEvent; href: string }) {
+  const t = useT();
   return (
     <li>
       <Card href={href} className="h-full !gap-3 sm:min-h-[150px]">
@@ -318,14 +333,14 @@ function EventTile({ event, href }: { event: InspireEvent; href: string }) {
             <p className="truncate text-[14.5px] font-bold text-white">{event.name}</p>
             <p className="mt-0.5 truncate text-[12.5px] text-white/55">{where(event)}</p>
           </div>
-          <Tag label={String(event.count)} />
+          <Tag label={fmtNumber(event.count)} />
         </div>
         <div className="mt-auto flex min-w-0 flex-col gap-0.5 text-[12.5px] font-strong">
-          {event.holdCount > 0 ? <p className="truncate text-white/[0.82]">{event.holdCount} on HOLD</p> : null}
+          {event.holdCount > 0 ? <p className="truncate text-white/[0.82]">{t("spaces.inspire.holdCount", { count: event.holdCount })}</p> : null}
           {event.indexCount > 0 ? (
             <p className="flex min-w-0 items-center gap-1.5 truncate text-white/70">
               <Ion name="logo-x" size={10.5} className="shrink-0" />
-              {event.indexCount} from X
+              {t("spaces.inspire.indexCount", { count: event.indexCount })}
             </p>
           ) : null}
         </div>
@@ -343,6 +358,7 @@ function isSurface(v: string | null): v is SurfaceKind {
 }
 
 function EventScreen({ slug, initialSurface }: { slug: string; initialSurface: string | null }) {
+  const t = useT();
   const read = useInspireCampaigns(slug);
   const links = useInspireHref();
   const artOf = useProductArt();
@@ -354,7 +370,7 @@ function EventScreen({ slug, initialSurface }: { slug: string; initialSurface: s
   if (read.error) {
     return (
       <div className="flex flex-col gap-3.5">
-        <DrillBar back={links.hub} crumb="Inspire" title="Event" />
+        <DrillBar back={links.hub} crumb={t("spaces.inspire.crumb")} title={t("spaces.inspire.eventTitle")} />
         <ReadError error={read.error} />
       </div>
     );
@@ -364,27 +380,27 @@ function EventScreen({ slug, initialSurface }: { slug: string; initialSurface: s
 
   return (
     <div className="flex flex-col gap-3.5">
-      <DrillBar back={links.hub} crumb={["Inspire", where(event)].filter(Boolean).join(" · ")} title={event.name} />
+      <DrillBar back={links.hub} crumb={[t("spaces.inspire.crumb"), where(event)].filter(Boolean).join(" · ")} title={event.name} />
       {facets.surfaces.length > 1 ? (
         <Pills<SurfaceFilter>
-          label="What it is on"
+          label={t("spaces.inspire.whatItIsOn")}
           value={surface}
           onChange={setSurface}
           options={[
-            { value: "all", label: "All", count: all.length },
-            ...facets.surfaces.map((f) => ({ value: f.kind, label: SURFACE_LABEL[f.kind], count: f.count })),
+            { value: "all", label: t("common.all"), count: all.length },
+            ...facets.surfaces.map((f) => ({ value: f.kind, label: surfaceLabel(f.kind), count: f.count })),
           ]}
         />
       ) : null}
       {shown.length === 0 ? (
         <Empty
           icon="bulb-outline"
-          title={all.length === 0 ? "No campaigns at this event yet" : `Nothing on ${surface === "all" ? "this" : SURFACE_LABEL[surface].toLowerCase()} here yet`}
-          body={all.length === 0 ? "Yours could be the first one other creators borrow from." : undefined}
+          title={all.length === 0 ? t("spaces.inspire.eventEmptyTitle") : t("spaces.inspire.nothingOnSurface", { surface })}
+          body={all.length === 0 ? t("spaces.inspire.eventEmptyBody") : undefined}
           action={
             surface !== "all" ? (
               <button type="button" onClick={() => setSurface("all")} className={emptyBtn}>
-                Show all
+                {t("spaces.inspire.showAll")}
               </button>
             ) : undefined
           }
@@ -411,7 +427,8 @@ function EventScreen({ slug, initialSurface }: { slug: string; initialSurface: s
  * cost a third of a screenful and said what the screen behind it says.
  */
 function CampaignCard({ campaign: c, href, art }: { campaign: InspireCampaign; href: string; art: ProductArt }) {
-  const what = c.surface.product ?? (c.surface.kind ? SURFACE_LABEL[c.surface.kind] : null);
+  useT();
+  const what = c.surface.product ?? (c.surface.kind ? surfaceLabel(c.surface.kind) : null);
   return (
     <li>
       <Link href={href} scroll={false} className={cardCls}>
@@ -426,7 +443,7 @@ function CampaignCard({ campaign: c, href, art }: { campaign: InspireCampaign; h
           </div>
           <p className="line-clamp-2 min-h-[40px] text-[14.5px] leading-5 text-white">{c.title}</p>
           <p className="mt-auto truncate text-[12.5px] font-strong text-white/[0.82]">
-            {[what, PRICING_LABEL[c.pricing.model]].filter(Boolean).join(" · ")}
+            {[what, pricingLabel(c.pricing.model)].filter(Boolean).join(" · ")}
           </p>
         </div>
       </Link>
@@ -437,6 +454,7 @@ function CampaignCard({ campaign: c, href, art }: { campaign: InspireCampaign; h
 /* ── One campaign ─────────────────────────────────────────────────── */
 
 function CampaignScreen({ slug, id }: { slug: string; id: string }) {
+  const t = useT();
   const read = useInspireCampaigns(slug);
   const links = useInspireHref();
   const artOf = useProductArt();
@@ -444,7 +462,7 @@ function CampaignScreen({ slug, id }: { slug: string; id: string }) {
   if (read.error) {
     return (
       <div className="flex flex-col gap-3.5">
-        <DrillBar back={links.event(slug)} crumb="Inspire" title="Campaign" />
+        <DrillBar back={links.event(slug)} crumb={t("spaces.inspire.crumb")} title={t("spaces.inspire.campaignTitle")} />
         <ReadError error={read.error} />
       </div>
     );
@@ -455,26 +473,26 @@ function CampaignScreen({ slug, id }: { slug: string; id: string }) {
   if (!c) {
     return (
       <div className="flex flex-col gap-3.5">
-        <DrillBar back={links.event(slug)} crumb={`Inspire · ${event.name}`} title="Campaign" />
-        <Empty icon="bulb-outline" title="This campaign is no longer listed here" />
+        <DrillBar back={links.event(slug)} crumb={t("spaces.inspire.crumbEvent", { event: event.name })} title={t("spaces.inspire.campaignTitle")} />
+        <Empty icon="bulb-outline" title={t("spaces.inspire.campaignGone")} />
       </div>
     );
   }
 
   const art = artOf(c);
   const facts: [string, ReactNode][] = [
-    ["On", [c.surface.product, c.surface.kind ? SURFACE_LABEL[c.surface.kind] : null].filter(Boolean).join(" · ") || "Not stated"],
-    ["What a sponsor gets", c.offer ?? "Not stated"],
-    ["How it sells", [PRICING_LABEL[c.pricing.model], c.pricing.text].filter(Boolean).join(": ")],
-    ["Event", event.slug === ANYTIME ? "Not tied to an event" : `${event.name}${where(event) ? ` · ${where(event)}` : ""}`],
-    ["Launched", day(c.launchedOn) ?? "Not known"],
-    ["Closest product we sell", art.pending ? " " : art.name ?? "None yet"],
+    [t("spaces.inspire.fact.on"), [c.surface.product, c.surface.kind ? surfaceLabel(c.surface.kind) : null].filter(Boolean).join(" · ") || t("spaces.inspire.notStated")],
+    [t("spaces.inspire.fact.sponsorGets"), c.offer ?? t("spaces.inspire.notStated")],
+    [t("spaces.inspire.fact.howItSells"), [pricingLabel(c.pricing.model), c.pricing.text].filter(Boolean).join(": ")],
+    [t("spaces.inspire.fact.event"), event.slug === ANYTIME ? t("spaces.inspire.notTiedToEvent") : `${event.name}${where(event) ? ` · ${where(event)}` : ""}`],
+    [t("spaces.inspire.fact.launched"), day(c.launchedOn) ?? t("spaces.inspire.notKnown")],
+    [t("spaces.inspire.fact.closestProduct"), art.pending ? " " : art.name ?? t("spaces.inspire.noneYet")],
   ];
   const credited = c.origin === "hold" || c.creator.platform === "x";
 
   return (
     <div className="flex flex-col gap-3.5">
-      <DrillBar back={links.event(event.slug)} crumb={`Inspire · ${event.name}`} title={`@${c.creator.handle}`} />
+      <DrillBar back={links.event(event.slug)} crumb={t("spaces.inspire.crumbEvent", { event: event.name })} title={`@${c.creator.handle}`} />
       <div className="grid grid-cols-[minmax(0,1fr)] gap-3.5 lg:grid-cols-[minmax(0,1fr)_minmax(0,340px)] lg:items-start">
         <Card className="!gap-3.5">
           <div className="flex min-w-0 items-center gap-3">
@@ -496,27 +514,27 @@ function CampaignScreen({ slug, id }: { slug: string; id: string }) {
         </Card>
 
         <div className="flex flex-col gap-2.5">
-          <SectionLabel>Make it yours</SectionLabel>
+          <SectionLabel>{t("spaces.inspire.makeItYours")}</SectionLabel>
           <Card>
             <div className="overflow-hidden rounded-[14px]">
               <ProductBand campaign={c} art={art} tall />
             </div>
             <Body dim>
-              {art.pending
-                ? "Opens a new listing on the closest product we have"
-                : art.name
-                  ? `Opens a new listing on ${art.name}, our closest product to this one`
-                  : "We sell nothing like this yet, so this opens the product picker"}
-              {credited ? `, crediting @${c.creator.handle} as “Inspired by”.` : "."}
+              {t("spaces.inspire.useIdeaBody", {
+                art: art.pending ? "pending" : art.name ? "named" : "none",
+                name: art.name,
+                credited: credited ? "yes" : "no",
+                handle: c.creator.handle,
+              })}
             </Body>
             <Link href={links.idea(c, art.templateId)} className={ctaPrimary}>
-              Use this idea
+              {t("spaces.inspire.useThisIdea")}
             </Link>
             <div className="flex flex-wrap gap-2">
-              {c.links.post ? <External href={c.links.post}>See the post</External> : null}
-              {c.links.website ? <External href={c.links.website}>Website</External> : null}
-              {c.links.holdPage ? <External href={`${SITE_URL}${c.links.holdPage}`}>Their page on HOLD</External> : null}
-              {c.source ? <External href={c.source.url}>Where we found it</External> : null}
+              {c.links.post ? <External href={c.links.post}>{t("spaces.inspire.seePost")}</External> : null}
+              {c.links.website ? <External href={c.links.website}>{t("spaces.inspire.website")}</External> : null}
+              {c.links.holdPage ? <External href={`${SITE_URL}${c.links.holdPage}`}>{t("spaces.inspire.theirPage")}</External> : null}
+              {c.source ? <External href={c.source.url}>{t("spaces.inspire.whereFound")}</External> : null}
             </div>
             {c.origin === "sponsorme_index" ? (
               <>

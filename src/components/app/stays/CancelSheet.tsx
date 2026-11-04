@@ -40,11 +40,9 @@ import { Ion } from "../ion";
 import { Spinner } from "./kit";
 import { P, money, shortDate } from "./look";
 import { cancelBooking, type Booking } from "@/lib/app/stays";
+import { useT } from "@/lib/app/i18n/react";
 
 const SUPPORT_EMAIL = "support@hihodl.xyz";
-
-const BLOCKED_DEFAULT =
-  "The property isn't accepting an online cancellation for this booking. Your reservation is unchanged and nothing has been charged.";
 
 export function CancelSheet({
   booking,
@@ -56,9 +54,11 @@ export function CancelSheet({
   /** The cancellation went through. The caller re-reads what it owns. */
   onDone: () => void;
 }) {
+  const t = useT();
   const [busy, setBusy] = useState(false);
-  const [blocked, setBlocked] = useState<string | null>(null);
-  const [problem, setProblem] = useState<string | null>(null);
+  // Flags, not sentences: the words are drawn at render, in the language of the moment.
+  const [blocked, setBlocked] = useState(false);
+  const [problem, setProblem] = useState(false);
 
   // While a request is out, the sheet cannot be dismissed: there is money in
   // the air and closing over it is how somebody ends up unsure what happened.
@@ -74,7 +74,7 @@ export function CancelSheet({
 
   async function confirm() {
     setBusy(true);
-    setProblem(null);
+    setProblem(false);
     try {
       await cancelBooking(booking.id);
       // The fan-out. Fire and forget, each isolated: the cancellation has
@@ -87,8 +87,8 @@ export function CancelSheet({
       const status = typeof e === "object" && e !== null && "status" in e ? (e as { status?: number }).status : null;
       // 409 is the supplier refusing THIS booking — explain it and offer a
       // human. Anything else is a blip, and the answer is to try again.
-      if (status === 409) setBlocked(BLOCKED_DEFAULT);
-      else setProblem("Couldn't cancel that booking. Please try again.");
+      if (status === 409) setBlocked(true);
+      else setProblem(true);
     } finally {
       setBusy(false);
     }
@@ -100,7 +100,7 @@ export function CancelSheet({
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal="true">
       <button
         type="button"
-        aria-label="Close"
+        aria-label={t("common.close")}
         disabled={busy}
         onClick={onClose}
         className="absolute inset-0 cursor-default disabled:cursor-default"
@@ -116,7 +116,7 @@ export function CancelSheet({
         <div className="flex items-start gap-3">
           <div className="min-w-0 flex-1">
             <h2 className="text-[22px] font-extrabold tracking-[-0.4px]" style={{ color: P.text }}>
-              {blocked ? "We can't cancel this one" : "Cancel this booking?"}
+              {blocked ? t("trips.cancel.blockedTitle") : t("trips.cancel.title")}
             </h2>
             <p className="mt-1 line-clamp-2 text-[14px] font-semibold" style={{ color: P.textMuted }}>
               {booking.hotel.name}
@@ -124,7 +124,7 @@ export function CancelSheet({
           </div>
           <button
             type="button"
-            aria-label="Close"
+            aria-label={t("common.close")}
             disabled={busy}
             onClick={onClose}
             className="mt-0.5 flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[17px] disabled:opacity-40"
@@ -137,28 +137,28 @@ export function CancelSheet({
         {!blocked && refund !== null ? (
           <div className="mt-[18px] rounded-[16px] p-[14px]" style={{ background: "#0E2029", border: `0.5px solid ${P.cardBorder}` }}>
             <p className="text-[11px] font-bold uppercase tracking-[0.5px]" style={{ color: "rgba(255,255,255,0.55)" }}>
-              You get back
+              {t("trips.cancel.youGetBack")}
             </p>
             <p className="mt-1 text-[26px] font-extrabold tabular-nums tracking-[-0.6px]" style={{ color: "#4ADE80" }}>
               {money(refund, booking.currency)}
             </p>
             <p className="mt-1.5 text-[12px] font-medium leading-4" style={{ color: "rgba(255,255,255,0.5)" }}>
-              Sent to the wallet you paid from, as soon as this goes through.
+              {t("trips.cancel.refundNote")}
             </p>
           </div>
         ) : null}
 
         <p className="mt-3.5 text-[12.5px] font-semibold leading-[18px]" style={{ color: "rgba(255,255,255,0.5)" }}>
           {blocked
-            ? blocked
+            ? t("trips.cancel.blocked")
             : free && booking.freeCancelUntil
-              ? `Free cancellation until ${shortDate(booking.freeCancelUntil.slice(0, 10))}.`
-              : "This booking is past its free-cancellation date. Cancelling is still possible — the property decides what it keeps."}
+              ? t("trips.cancel.freeUntil", { date: shortDate(booking.freeCancelUntil.slice(0, 10)) })
+              : t("trips.cancel.pastFree")}
         </p>
 
         {problem ? (
           <p className="mt-2.5 text-[12.5px] font-semibold" style={{ color: P.caution }}>
-            {problem}
+            {t("trips.cancel.failed")}
           </p>
         ) : null}
 
@@ -169,7 +169,7 @@ export function CancelSheet({
           className="mt-5 flex h-[52px] w-full items-center justify-center rounded-[16px] text-[16px] font-extrabold tracking-[-0.2px] disabled:opacity-60"
           style={{ background: "#fff", color: "#07131A" }}
         >
-          {blocked ? "Close" : "Keep booking"}
+          {blocked ? t("common.close") : t("trips.cancel.keep")}
         </button>
 
         {blocked ? (
@@ -178,7 +178,7 @@ export function CancelSheet({
             className="mt-2.5 flex h-[50px] w-full items-center justify-center rounded-[16px] text-[15.5px] font-extrabold tracking-[-0.1px]"
             style={{ background: "rgba(255,183,3,0.12)", border: `0.5px solid rgba(255,183,3,0.38)`, color: P.caution }}
           >
-            Email us about this booking
+            {t("trips.cancel.emailUs")}
           </a>
         ) : (
           <button
@@ -188,7 +188,7 @@ export function CancelSheet({
             className="mt-2.5 flex h-[50px] w-full items-center justify-center rounded-[16px] text-[15.5px] font-extrabold tracking-[-0.1px] disabled:opacity-80"
             style={{ background: "rgba(255,183,3,0.12)", border: `0.5px solid rgba(255,183,3,0.38)`, color: P.caution }}
           >
-            {busy ? <Spinner size={17} color={P.caution} /> : "Cancel booking"}
+            {busy ? <Spinner size={17} color={P.caution} /> : t("trips.cancel.confirm")}
           </button>
         )}
       </div>

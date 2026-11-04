@@ -13,6 +13,8 @@
 
 import type { ReactNode } from "react";
 
+import { useT } from "@/lib/app/i18n/react";
+
 import { Ion } from "../ion";
 
 /** The quiet plate under a row whose action is a signature. */
@@ -48,5 +50,37 @@ export function AssetMark({ symbol, size = 36 }: { symbol: string; size?: number
     >
       {(symbol || "?").slice(0, 1).toUpperCase()}
     </span>
+  );
+}
+
+/**
+ * A read that failed. Never an empty state: "nothing here" and "we could not
+ * look" are different facts, and only this one offers to look again.
+ */
+export function ReadFailed({
+  title,
+  body,
+  onRetry,
+  compact = false,
+}: {
+  title: string;
+  body?: string;
+  onRetry: () => void;
+  compact?: boolean;
+}) {
+  const t = useT();
+  return (
+    <div className={`flex flex-col items-center gap-2.5 px-6 text-center ${compact ? "py-6" : "py-10"}`}>
+      <Ion name="cloud-offline-outline" size={compact ? 24 : 28} className="text-white/30" />
+      <p className="text-[14px] font-bold text-white/[0.85]">{title}</p>
+      <p className="text-[13px] leading-[19px] text-white/55">{body ?? t("money.readFailed.body")}</p>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="mt-1 h-9 rounded-[18px] bg-white/10 px-4 text-[13px] font-bold text-white transition-colors hover:bg-white/[0.16]"
+      >
+        {t("common.retry")}
+      </button>
+    </div>
   );
 }

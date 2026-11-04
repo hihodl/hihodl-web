@@ -133,6 +133,11 @@
 html {
   font-family: var(--font-body);
   height: 100%;
+  /* iOS Safari still pans sideways with overflow-x on body alone. `clip`, not
+     `hidden`, on both: neither becomes a scroll container, so window scroll
+     and sticky headers keep working. Older Safari drops `clip` and falls back
+     to body's `hidden`, which is what it had before. */
+  overflow-x: clip;
   background: var(--color-abyss);
   color: var(--color-text);
 }
@@ -144,6 +149,7 @@ body {
   margin: 0;
   max-width: 100%;
   overflow-x: hidden;
+  overflow-x: clip;
   overscroll-behavior-x: none;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

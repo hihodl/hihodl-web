@@ -29,6 +29,8 @@
  */
 
 import { Ion } from "./ion";
+import { fmtNumber } from "@/lib/app/i18n/format";
+import { useT } from "@/lib/app/i18n/react";
 import { usePoints } from "@/lib/app/stays-data";
 
 export function HiPointsChip({
@@ -47,6 +49,7 @@ export function HiPointsChip({
    */
   row?: boolean;
 }) {
+  const t = useT();
   const points = usePoints();
 
   // No answer, a failed one, or an empty balance: nothing is drawn. A chip
@@ -55,13 +58,14 @@ export function HiPointsChip({
   const balance = Number(points.data?.balance ?? 0);
   if (!points.data || !Number.isFinite(balance) || balance <= 0) return null;
 
-  const text = `${balance.toLocaleString("en-GB")} pts`;
+  const amount = fmtNumber(balance);
+  const text = t("shell.points.short", { points: amount });
 
   if (row) {
     return (
       <span
-        title={`${text} · HiPoints`}
-        aria-label={`${text} in HiPoints`}
+        title={t("shell.points.title", { text })}
+        aria-label={t("shell.points.aria", { text })}
         className="flex h-8 w-full items-center gap-2 rounded-[10px] px-2.5 text-tiny font-bold tabular-nums tracking-[-0.2px]"
         style={{
           background: "rgba(255,183,3,0.10)",
@@ -78,8 +82,8 @@ export function HiPointsChip({
 
   return (
     <span
-      title={`${text} · HiPoints`}
-      aria-label={`${text} in HiPoints`}
+      title={t("shell.points.title", { text })}
+      aria-label={t("shell.points.aria", { text })}
       className={`inline-flex shrink-0 items-center gap-[5px] whitespace-nowrap rounded-[999px] font-bold tabular-nums tracking-[-0.2px] ${
         compact ? "h-7 px-2 text-[11px]" : "h-8 px-2.5 text-[12px]"
       }`}
@@ -90,7 +94,7 @@ export function HiPointsChip({
       }}
     >
       <Ion name="star" size={compact ? 11 : 12} />
-      {compact ? balance.toLocaleString("en-GB") : text}
+      {compact ? amount : text}
     </span>
   );
 }

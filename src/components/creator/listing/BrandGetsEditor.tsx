@@ -15,6 +15,7 @@
 
 "use client";
 
+import { useT } from "@/lib/app/i18n/react";
 import {
   BRAND_GETS_LIMITS,
   BRAND_GETS_SUGGESTED,
@@ -33,10 +34,10 @@ const iconBtn =
   "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[18px] text-white/[0.62] transition-colors hover:bg-white/[0.08] hover:text-white disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent";
 
 /** How a suggestion reads in the editor: what the page will say, with today's figure filled in there. */
-function suggestionText(kind: "reach" | "spot", template: Template): string {
-  if (kind === "reach") return "Your reach: your followers on X see it in every post (the page shows today's count)";
-  if (template.kind === "service") return `One slot: ${template.name}`;
-  return `Their logo, QR code or text on the ${template.name.toLowerCase()}, on the spot they pick`;
+function suggestionText(kind: "reach" | "spot", template: Template, t: ReturnType<typeof useT>): string {
+  if (kind === "reach") return t("listings.brandGets.reach");
+  if (template.kind === "service") return t("listings.brandGets.oneSlot", { name: template.name });
+  return t("listings.brandGets.spot", { product: template.name.toLowerCase() });
 }
 
 /** The suggestions a listing can carry: a ladder's rungs each say what they are, so no "spot" line there. */
@@ -55,6 +56,7 @@ export function BrandGetsEditor({
   onChange: (next: ListingDraft) => void;
   problems: readonly Problem[];
 }) {
+  const t = useT();
   const suggested = suggestionsFor(draft);
   // Never edited: the page shows the suggestions, so the editor starts from them.
   const lines: BrandGetsLine[] = draft.brandGets ?? suggested.map((l) => ({ ...l }));
@@ -75,7 +77,7 @@ export function BrandGetsEditor({
       <Problems list={problemsAt(problems, "brandGets")} />
       {lines.length === 0 ? (
         <p className="rounded-[14px] border border-dashed border-white/[0.14] px-3.5 py-3.5 text-[14px] leading-5 text-white/[0.62]">
-          No lines of your own. Your page lists only what you will post, below. Add a line to say more.
+          {t("listings.brandGets.empty")}
         </p>
       ) : (
         <ol className="flex flex-col gap-2">
@@ -94,14 +96,14 @@ export function BrandGetsEditor({
                   {own ? (
                     <>
                       <label htmlFor={`brand-gets-${i}`} className="sr-only">
-                        Line {i + 1}
+                        {t("listings.brandGets.line", { n: i + 1 })}
                       </label>
                       <textarea
                         id={`brand-gets-${i}`}
                         value={l.text}
                         rows={l.text.length > 44 ? 3 : 2}
                         maxLength={BRAND_GETS_LIMITS.TEXT_MAX}
-                        placeholder="A shout-out from the stage, your product in the vlog…"
+                        placeholder={t("listings.brandGets.placeholder")}
                         onChange={(e) => set(lines.map((x, j) => (j === i ? { kind: "text", text: e.target.value.replace(/\n/g, " ") } : x)))}
                         className="block w-full resize-none bg-transparent py-2 text-[15.5px] text-white outline-none placeholder:text-white/[0.28] sm:[field-sizing:content]"
                       />
@@ -109,20 +111,20 @@ export function BrandGetsEditor({
                     </>
                   ) : (
                     <p className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 py-2">
-                      <Tag label="Suggested" />
-                      <span className="min-w-0 text-[14.5px] leading-5 text-white">{suggestionText(l.kind, template)}</span>
+                      <Tag label={t("listings.brandGets.suggested")} />
+                      <span className="min-w-0 text-[14.5px] leading-5 text-white">{suggestionText(l.kind, template, t)}</span>
                     </p>
                   )}
                 </div>
                 {/* Up and down stacked on a phone, side by side from `sm`: the line keeps the room. */}
                 <div className="flex shrink-0 flex-col sm:flex-row">
-                  <button type="button" className={iconBtn} aria-label={`Move line ${i + 1} up`} disabled={i === 0} onClick={() => move(i, -1)}>
+                  <button type="button" className={iconBtn} aria-label={t("listings.brandGets.moveUp", { n: i + 1 })} disabled={i === 0} onClick={() => move(i, -1)}>
                     <Ion name="chevron-up" size={16} />
                   </button>
                   <button
                     type="button"
                     className={iconBtn}
-                    aria-label={`Move line ${i + 1} down`}
+                    aria-label={t("listings.brandGets.moveDown", { n: i + 1 })}
                     disabled={i === lines.length - 1}
                     onClick={() => move(i, 1)}
                   >
@@ -132,7 +134,7 @@ export function BrandGetsEditor({
                 <button
                   type="button"
                   className={iconBtn}
-                  aria-label={`Remove line ${i + 1}`}
+                  aria-label={t("listings.brandGets.remove", { n: i + 1 })}
                   onClick={() => set(lines.filter((_, j) => j !== i))}
                 >
                   <Ion name="close" size={18} />
@@ -143,14 +145,14 @@ export function BrandGetsEditor({
         </ol>
       )}
 
-      <ChipRow label="Add to what the brand gets">
-        <Chip icon="add" label="Add a line" disabled={full} onClick={() => set([...lines, { kind: "text", text: "" }])} />
+      <ChipRow label={t("listings.brandGets.addTo")}>
+        <Chip icon="add" label={t("listings.brandGets.addLine")} disabled={full} onClick={() => set([...lines, { kind: "text", text: "" }])} />
         {missing.map((s) => (
-          <Chip key={s.kind} icon="add" label={`${s.kind === "reach" ? "Your reach" : "The spot"} (suggested)`} disabled={full} onClick={() => set([...lines, { ...s }])} />
+          <Chip key={s.kind} icon="add" label={s.kind === "reach" ? t("listings.brandGets.addReach") : t("listings.brandGets.addSpot")} disabled={full} onClick={() => set([...lines, { ...s }])} />
         ))}
       </ChipRow>
       <p className="text-[12px] leading-4 text-white/55">
-        {lines.length} of {BRAND_GETS_LIMITS.MAX_LINES} lines · up to {BRAND_GETS_LIMITS.TEXT_MAX} characters each
+        {t("listings.brandGets.counter", { count: lines.length, max: BRAND_GETS_LIMITS.MAX_LINES, chars: BRAND_GETS_LIMITS.TEXT_MAX })}
       </p>
     </div>
   );

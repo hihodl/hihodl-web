@@ -11,6 +11,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import type { MessageKey } from "@/lib/app/i18n";
+import { useT } from "@/lib/app/i18n/react";
 import { searchCreators, type HoldCreatorHit } from "@/lib/creator/analytics";
 import type { InspiredBy } from "@/lib/creator/listing";
 
@@ -21,9 +23,9 @@ import { btnSmallGlass, Field, Text } from "./parts";
 
 type Mode = "hold" | "x";
 
-const MODES: { value: Mode; label: string }[] = [
-  { value: "hold", label: "A HOLD creator" },
-  { value: "x", label: "An X handle" },
+const MODES: { value: Mode; label: MessageKey }[] = [
+  { value: "hold", label: "listings.inspired.modeHold" },
+  { value: "x", label: "listings.inspired.modeX" },
 ];
 
 const X_HANDLE = /^[A-Za-z0-9_]{1,15}$/;
@@ -38,6 +40,7 @@ export function InspiredByField({
   onChange: (next: InspiredBy | null) => void;
   problems: readonly string[];
 }) {
+  const t = useT();
   const [mode, setMode] = useState<Mode>(value?.kind ?? "hold");
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<HoldCreatorHit[]>([]);
@@ -52,22 +55,22 @@ export function InspiredByField({
       return;
     }
     const n = ++asked.current;
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       setSearching(true);
       searchCreators(q)
         .then((r) => n === asked.current && setHits(r.creators))
         .catch(() => n === asked.current && setHits([]))
         .finally(() => n === asked.current && setSearching(false));
     }, 250);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [query, mode, value]);
 
   const typed = clean(query);
 
   return (
     <Field
-      label="Inspired by"
-      hint="Optional. Credit the creator who did it first or did it well. A HOLD creator is told and sees it on their Overview; your page shows “Inspired by @them”, linked to them."
+      label={t("listings.inspired.label")}
+      hint={t("listings.inspired.hint")}
       problems={problems}
       htmlFor="listing-inspired"
     >
@@ -75,8 +78,8 @@ export function InspiredByField({
         <div className="flex min-w-0 items-center justify-between gap-3 rounded-[14px] border border-white/10 bg-white/[0.06] px-3 py-[11px]">
           <Ion name={value.kind === "hold" ? "person-circle-outline" : "logo-x"} size={18} className="shrink-0 text-white/[0.62]" />
           <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <span className="truncate text-[14.5px] font-bold text-white">Inspired by @{value.handle}</span>
-            <span className="truncate text-[12.5px] text-white/55">{[value.name, value.kind === "hold" ? "HOLD creator" : "X"].filter(Boolean).join(" · ")}</span>
+            <span className="truncate text-[14.5px] font-bold text-white">{t("listings.inspired.byHandle", { handle: value.handle })}</span>
+            <span className="truncate text-[12.5px] text-white/55">{[value.name, value.kind === "hold" ? t("listings.inspired.holdCreator") : "X"].filter(Boolean).join(" · ")}</span>
           </span>
           <button
             type="button"
@@ -86,16 +89,16 @@ export function InspiredByField({
               setQuery("");
             }}
           >
-            Remove
+            {t("common.remove")}
           </button>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          <ChipRow label="Who inspired it">
+          <ChipRow label={t("listings.inspired.who")}>
             {MODES.map((m) => (
               <Chip
                 key={m.value}
-                label={m.label}
+                label={t(m.label)}
                 selected={m.value === mode}
                 onClick={() => {
                   setMode(m.value);
@@ -111,7 +114,7 @@ export function InspiredByField({
                 value={query}
                 onChange={setQuery}
                 maxLength={41}
-                placeholder={mode === "hold" ? "Search by username" : "@handle on X"}
+                placeholder={mode === "hold" ? t("listings.inspired.searchPlaceholder") : t("listings.inspired.xPlaceholder")}
               />
             </div>
             {mode === "x" ? (
@@ -121,13 +124,13 @@ export function InspiredByField({
                 onClick={() => onChange({ kind: "x", handle: typed })}
                 className={`${emptyBtn} !h-12 !rounded-[24px] shrink-0 disabled:opacity-45`}
               >
-                Credit @{typed || "handle"}
+                {t("listings.inspired.credit", { handle: typed || t("listings.inspired.handleWord") })}
               </button>
             ) : null}
           </div>
           {mode === "hold" && typed ? (
             hits.length ? (
-              <ul className="flex flex-col gap-2" aria-label="HOLD creators">
+              <ul className="flex flex-col gap-2" aria-label={t("listings.inspired.holdCreators")}>
                 {hits.map((h) => (
                   <li key={h.handle}>
                     <button
@@ -146,7 +149,8 @@ export function InspiredByField({
                       <span className="min-w-0">
                         <span className="block truncate text-[14.5px] font-bold text-white">@{h.handle}</span>
                         <span className="block truncate text-[12.5px] text-white/55">
-                          {[h.name, h.username ? `HOLD username ${h.username}` : null].filter(Boolean).join(" · ") || "HOLD creator"}
+                          {[h.name, h.username ? t("listings.inspired.holdUsername", { username: h.username }) : null].filter(Boolean).join(" · ") ||
+                            t("listings.inspired.holdCreator")}
                         </span>
                       </span>
                     </button>
@@ -155,7 +159,7 @@ export function InspiredByField({
               </ul>
             ) : (
               <p className="text-[12px] leading-4 text-white/55">
-                {searching ? "Looking…" : "No HOLD creator by that name. Not on HOLD? Credit their X handle instead."}
+                {searching ? t("listings.eventPicker.looking") : t("listings.inspired.noneFound")}
               </p>
             )
           ) : null}

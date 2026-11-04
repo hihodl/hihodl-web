@@ -23,8 +23,27 @@ function route(request: NextRequest, init: Init): NextResponse | null {
   const { pathname, search } = request.nextUrl;
   const host = request.headers.get('host');
 
-  // Files from /public (logos, icons) are the same on both hosts.
-  if (/\.[a-z0-9]+$/i.test(pathname)) return null;
+  // partners.hihodl.xyz is a name to print on a flyer, not a site: it sends
+  // people to the Partners panel in the product, keeping whatever followed.
+  if (host?.toLowerCase().split(':')[0] === 'partners.hihodl.xyz') {
+    const suffix = pathname === '/' ? '' : pathname.replace(/^\/{2,}/, '/');
+    const target = `${productOrigin() || 'https://app.hihodl.xyz'}/partners${suffix}${search}`;
+    return NextResponse.redirect(target, 308);
+  }
+
+  // The product is not for search engines. Its robots.txt closes the whole
+  // host; the website's (app/robots.ts) would otherwise answer for it, since
+  // a file path is never rewritten into the /app tree.
+  if (isAppHost(host) && pathname === '/robots.txt') {
+    return new NextResponse('User-agent: *\nDisallow: /\n', {
+      headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'public, max-age=3600' },
+    });
+  }
+
+  // Files from /public (logos, icons) are the same on both hosts. So is
+  // /.well-known: apple-app-site-association has no extension, and rewritten
+  // into /app it would be a 404 on the app host.
+  if (/\.[a-z0-9]+$/i.test(pathname) || pathname.startsWith('/.well-known/')) return null;
 
   if (isAppHost(host)) {
     // The prefix is an implementation detail; a link that carries it is

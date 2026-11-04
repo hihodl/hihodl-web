@@ -6,6 +6,9 @@
  * `com.sayhihodl.hihodlyes` for iOS). Using the iOS one on Play returns a 404.
  */
 
+/** The App Store id of HOLD for iPhone (the smart app banner's `app-id`). */
+export const IOS_APP_ID = "6755203065";
+
 export const APP_STORE_URL =
   "https://apps.apple.com/nl/app/hihodl-stablecoin-wallet/id6755203065?l=en-GB";
 

@@ -10,7 +10,7 @@ import {
   PROVISIONAL_LABEL,
   RATES_MEASURED_ON,
   RATE_DISCLAIMER,
-  TIERS,
+  PUBLIC_TIERS,
   bestLtvPct,
   bestNetApyPct,
   blendedCashbackBps,
@@ -67,11 +67,11 @@ export default function HiPointsPage() {
 
   const bestApy = bestNetApyPct();
   const bestLtv = bestLtvPct();
-  const bestCashback = Math.max(...TIERS.map((t) => headlineCashbackBps(t.id)));
-  const anyProvisional = TIERS.some((t) => t.provisional);
+  const bestCashback = Math.max(...PUBLIC_TIERS.map((t) => headlineCashbackBps(t.id)));
+  const anyProvisional = PUBLIC_TIERS.some((t) => t.provisional);
 
   // The tier whose savings terms are best — the one the "up to" APY belongs to.
-  const bestTier = TIERS.reduce((a, b) =>
+  const bestTier = PUBLIC_TIERS.reduce((a, b) =>
     a.savingsInterestShareBps <= b.savingsInterestShareBps ? a : b,
   );
 
@@ -147,7 +147,7 @@ export default function HiPointsPage() {
                 <thead>
                   <tr>
                     <th scope="col" className="pb-4 border-b border-[color:var(--color-hairline-strong)]" />
-                    {TIERS.map((t) => (
+                    {PUBLIC_TIERS.map((t) => (
                       <th
                         key={t.id}
                         scope="col"
@@ -343,8 +343,8 @@ export default function HiPointsPage() {
               <h2 className="font-display text-h2 font-light text-text">HiPoints</h2>
               <p className="mt-6 text-body text-text-muted leading-relaxed">
                 Points are the currency inside the product. You earn them by moving and
-                holding money, and you spend them on your plan, on our fees, and on partner
-                perks. One point is {usd(HIPOINT_USD)}.
+                holding money, and you spend them on our fees and on partner perks. One
+                point is {usd(HIPOINT_USD)}.
               </p>
             </div>
 
@@ -355,7 +355,7 @@ export default function HiPointsPage() {
               />
               <Card
                 title="Spend"
-                body="Pay your plan with points, or cover a fee. Points never expire quietly — you get a reminder before they do."
+                body="Cover a fee with points. Points never expire quietly: you get a reminder before they do."
               />
               <Card
                 title="Perks"
@@ -379,13 +379,7 @@ export default function HiPointsPage() {
               </h2>
               <div className="mt-8 space-y-6 text-body text-text-muted">
                 <p>
-                  Three ways, and none of them is a charge on your balance.
-                </p>
-                <p>
-                  <span className="text-text">You may pay for a plan.</span> The
-                  price of each one is in the table above, and the free plan stays
-                  free. That is the only thing on this page you ever pay us
-                  directly.
+                  Two ways, and neither of them is a charge on your balance.
                 </p>
                 <p>
                   <span className="text-text">Card networks pay us when you
@@ -439,7 +433,7 @@ function ComparisonRow({
   plain,
 }: {
   label: string;
-  render: (tier: (typeof TIERS)[number]) => string;
+  render: (tier: (typeof PUBLIC_TIERS)[number]) => string;
   accent?: boolean;
   plain?: boolean;
 }) {
@@ -451,7 +445,7 @@ function ComparisonRow({
       >
         {label}
       </th>
-      {TIERS.map((t) => (
+      {PUBLIC_TIERS.map((t) => (
         <td
           key={t.id}
           className="py-4 pl-6 text-right align-top border-b border-[color:var(--color-hairline)]"
