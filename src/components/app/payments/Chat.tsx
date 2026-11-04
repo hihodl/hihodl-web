@@ -43,6 +43,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { maskTokenSymbol, type DisplayMode } from "@/lib/app/display-mode";
 import type { Transfer } from "@/lib/app/hold-api";
+import { t as tNow, type MessageKey } from "@/lib/app/i18n";
+import { fmtDate, fmtNumber, fmtTime } from "@/lib/app/i18n/format";
+import { useLocale, useT } from "@/lib/app/i18n/react";
 import { tokenTicker, transferAmount } from "@/lib/app/payments";
 import {
   NOTE_MAX_LENGTH,
@@ -60,17 +63,25 @@ import {
   type Note,
 } from "@/lib/app/chat";
 import type { SpotBought } from "@/lib/app/sponsor";
+import { HoldApiError } from "@/lib/app/hold-api";
 import {
   cancelRequest,
-  openRequestsWith,
+  describeRequestError,
   rejectRequest,
+  remindRequest,
   requestAmount,
+  requestTag,
+  requestsWith,
   theyAsked,
   usePaymentRequests,
+  webCanPay,
   type PaymentRequest,
 } from "@/lib/app/payment-requests";
 
+import { btnGlass } from "../hold";
 import { Ion } from "../ion";
+import { Modal } from "../Modal";
+import { plateCaution } from "./group-kit";
 
 /* ── The thread ───────────────────────────────────────────────────── */
 
@@ -110,16 +121,19 @@ export function Conversation({
   payments: readonly Transfer[];
   mode: DisplayMode;
   onOpenTx: (id: string) => void;
-  /** Pay one of their requests: the thread hands it up, the screen opens Send. */
+  /** Pay one of their requests: the thread hands it up, the screen opens Quick Send with it locked. */
   onPayRequest: (request: PaymentRequest) => void;
   /** Spots bought from this creator, derived by the screen above. */
   spots?: readonly SpotBought[];
 }) {
+  const t = useT();
+  // The day dividers are words ("Today"), so the rows are rebuilt in a new language.
+  const locale = useLocale();
   const notes = useThreadNotes(peerId);
   const state = useChatState(peerId);
   const requests = usePaymentRequests();
   const messages = useMemo(() => looseMessages(notes.data), [notes.data]);
-  const open = useMemo(() => openRequestsWith(requests.data, peerId), [requests.data, peerId]);
+  const asked = useMemo(() => requestsWith(requests.data, peerId), [requests.data, peerId]);
 
   useMarkSeen(messages, () => void notes.mutate());
 
@@ -132,7 +146,8 @@ export function Conversation({
       ...messages.map((n) => ({ kind: "msg" as const, key: `n:${n.id}`, ts: Date.parse(n.createdAt), note: n })),
       // A request is a third thing that happened between two people, so it
       // takes its place in the same run rather than sitting in a panel above.
-      ...open.map((r) => ({ kind: "req" as const, key: `r:${r.id}`, ts: Date.parse(r.createdAt), request: r })),
+      // Closed ones stay, their tag turned to Paid, Declined or Cancelled.
+      ...asked.map((r) => ({ kind: "req" as const, key: `r:${r.id}`, ts: Date.parse(r.createdAt), request: r })),
       // A spot bought from this creator. Derived, never written: see
       // `useSpotsBoughtFrom`. A fact does not get an edit button.
       ...spots.map((s) => ({ kind: "spot" as const, key: `s:${s.orderId}`, ts: s.ts, spot: s })),
@@ -141,7 +156,8 @@ export function Conversation({
       .sort((a, b) => a.ts - b.ts);
 
     return withDays(items);
-  }, [payments, messages, open, spots]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [payments, messages, asked, spots, locale]);
 
   const waiting = state.data?.status === "pending" && state.data.requestedByMe;
 
@@ -150,7 +166,7 @@ export function Conversation({
       <div className="mt-2 flex flex-col gap-2">
         {rows.length === 0 ? (
           <p className="px-1 py-6 text-center text-[13px] leading-[18px] text-white/70">
-            Nothing between you and {peerName} yet.
+            {t("payments.chat.nothingYet", { name: peerName })}
           </p>
         ) : null}
 
@@ -168,6 +184,7 @@ export function Conversation({
               key={r.key}
               request={r.request}
               incoming={!!peerId && theyAsked(r.request, peerId)}
+              mode={mode}
               peerName={peerName}
               onPay={() => onPayRequest(r.request)}
               onAnswered={() => void requests.mutate()}
@@ -193,7 +210,7 @@ export function Conversation({
         /* A thread with an address, or with somebody who has never been on
            HOLD, has no user id anywhere in it — and a conversation needs one. */
         <p className="mt-4 px-1 text-[12px] leading-[17px] text-white/70">
-          There is no HOLD account on the other side of this thread, so there is nobody to write to.
+          {t("payments.chat.nobodyToWrite")}
         </p>
       )}
     </>
@@ -209,6 +226,7 @@ export function Conversation({
  * money moved is read from the side and the colour before any word is.
  */
 function PaymentBubble({ row, mode, onOpen }: { row: Transfer; mode: DisplayMode; onOpen: () => void }) {
+  const t = useT();
   const out = row.direction === "out";
   const amount = Math.abs(transferAmount(row));
   const ticker = maskTokenSymbol(tokenTicker(row), mode);
@@ -226,7 +244,7 @@ function PaymentBubble({ row, mode, onOpen }: { row: Transfer; mode: DisplayMode
       >
         <span className="flex items-center gap-1.5">
           <span className="text-[16px] font-extrabold tracking-[0.2px] text-white">{out ? "–" : "+"}</span>
-          <span className="text-[16px] font-extrabold tabular-nums tracking-[0.2px] text-white">{amount.toFixed(2)}</span>
+          <span className="text-[16px] font-extrabold tabular-nums tracking-[0.2px] text-white">{fmtNumber(amount, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           <span className="pt-px text-[13px] font-bold text-white/90">{ticker}</span>
         </span>
 
@@ -236,7 +254,7 @@ function PaymentBubble({ row, mode, onOpen }: { row: Transfer; mode: DisplayMode
         {note ? <span className="mt-1.5 block whitespace-pre-wrap break-words text-[13.5px] leading-[19px] text-white/85">{note}</span> : null}
 
         <span className="mt-1.5 flex items-center justify-end gap-2 text-[10.5px] text-white/60">
-          {pending ? <span className="capitalize">{row.status}</span> : null}
+          {pending ? <span className="capitalize">{row.status?.toLowerCase() === "pending" ? t("common.pending") : row.status}</span> : null}
           <span>{shortTime(row.createdAt)}</span>
         </span>
       </button>
@@ -279,6 +297,8 @@ function withDays(items: Happened[]): Row[] {
  * empty state is the point: it is where a creator writes the first message.
  */
 export function WordsOnly({ peerId, peerName, intro }: { peerId: string; peerName: string; intro: string }) {
+  useT();
+  const locale = useLocale();
   const notes = useThreadNotes(peerId);
   const state = useChatState(peerId);
   const messages = useMemo(() => looseMessages(notes.data), [notes.data]);
@@ -287,7 +307,8 @@ export function WordsOnly({ peerId, peerName, intro }: { peerId: string; peerNam
 
   const rows = useMemo(
     () => withDays(messages.map((n) => ({ kind: "msg" as const, key: `n:${n.id}`, ts: Date.parse(n.createdAt), note: n }))),
-    [messages],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [messages, locale],
   );
   const waiting = state.data?.status === "pending" && state.data.requestedByMe;
 
@@ -334,6 +355,7 @@ export function WordsOnly({ peerId, peerName, intro }: { peerId: string; peerNam
  * row would leave a creator and a brand reading two different histories.
  */
 function SpotBubble({ spot, peerName }: { spot: SpotBought; peerName: string }) {
+  const t = useT();
   const outbid = spot.status === "outbid";
   const amount = Number(spot.amountUsdc);
   return (
@@ -341,17 +363,22 @@ function SpotBubble({ spot, peerName }: { spot: SpotBought; peerName: string }) 
       <div className="max-w-[78%] rounded-[16px] border border-white/[0.12] bg-white/[0.07] px-3.5 py-2.5">
         <span className="flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-[0.5px] text-white/60">
           <Ion name="megaphone-outline" size={13} />
-          {outbid ? "Spot taken over" : "Spot booked"}
+          {outbid ? t("payments.chat.spotTakenOver") : t("payments.chat.spotBooked")}
         </span>
         <p className="mt-1 text-[13.5px] leading-[19px] text-white/85">
           {outbid
-            ? `Somebody doubled the price on this one. You were repaid in full.`
-            : `You booked a spot with ${peerName}${Number.isFinite(amount) ? ` for $${amount.toFixed(2)}` : ""}.`}
+            ? t("payments.chat.spotOutbid")
+            : Number.isFinite(amount)
+              ? t("payments.chat.spotBookedWithAmount", {
+                  name: peerName,
+                  amount: fmtNumber(amount, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+                })
+              : t("payments.chat.spotBookedWith", { name: peerName })}
         </p>
         <span className="mt-1.5 flex items-center justify-end gap-2 text-[10.5px] text-white/55">
           {spot.explorerUrl ? (
             <a href={spot.explorerUrl} target="_blank" rel="noopener noreferrer" className="hover:text-white">
-              Receipt
+              {t("payments.chat.receipt")}
             </a>
           ) : null}
           <span>{shortTime(new Date(spot.ts).toISOString())}</span>
@@ -362,103 +389,175 @@ function SpotBubble({ spot, peerName }: { spot: SpotBought; peerName: string }) 
 }
 
 /**
- * A request, as a bubble.
+ * A request, as a bubble: the SAME bubble as a payment, with a tag.
  *
- * THE TWO SIDES ARE NOT THE SAME BUBBLE
+ * It used to be a card of its own, amber-bordered, with "Payment request" in
+ * capitals over it. That read as a notification sitting in the conversation,
+ * and a request is not a notification: it is a payment that has not happened
+ * yet (contract §1, "the thread"). So it takes the payment's shape — radius
+ * 16, the figure at 16/900 with the ticker beside it, the note inside, the
+ * time at the foot, the glass tint and no ground of its own — and says what
+ * it is in a small tag: `Requested`, and later `Paid`, `Declined` or
+ * `Cancelled`.
  *
- * The app's `RequestMsg` decides its buttons from `meta.isIncoming`, and so
- * does this: a request somebody made OF you carries Pay and Decline; one you
- * made of them carries Cancel and says nothing else, because there is nothing
- * you can do about it except wait or take it back.
+ * Its side is the side of whoever ASKED, as a message's is its writer's: one
+ * you asked for is on your side in your tint, one they asked of you is on
+ * theirs.
  *
- * It wears the amber TINT and not the fill. Filled amber is the CTA on this
- * product — the Pay button inside is the action, and a bubble that shouted
- * the same colour would compete with it.
+ * THE TWO SIDES DO NOT GET THE SAME BUTTONS
  *
- * WHAT PAY DOES, AND WHAT IT DOES NOT
+ *   they asked you   Pay and Decline. Pay opens Quick Send with the person and
+ *                    the amount locked in; the request is settled with the
+ *                    withdrawal once the money is confirmed, never before.
+ *   you asked        Remind and Cancel. Remind is once a day per request; a
+ *                    second one gets the server's `retryAt`, said as a time.
  *
- * It opens Send with the amount and, when the handle resolves, the address.
- * It does not settle the request: the server's `/settle` only flips a status,
- * and flipping it before the money moved would tell the person who asked that
- * they had been paid. That row closes when the payment does.
+ * A closed request keeps its place and loses its buttons: the history must
+ * not rearrange itself around something already read.
  */
+const TAG_TONE: Record<ReturnType<typeof requestTag>, string> = {
+  Requested: "bg-[rgba(255,183,3,0.16)] text-amber",
+  Paid: "bg-[rgba(32,214,144,0.14)] text-[#20D690]",
+  Declined: "bg-white/[0.08] text-white/65",
+  Cancelled: "bg-white/[0.08] text-white/65",
+};
+
+/** The word on the tag, per `requestTag`. */
+const TAG_KEY = {
+  Requested: "requests.tag.requested",
+  Paid: "requests.tag.paid",
+  Declined: "requests.tag.declined",
+  Cancelled: "requests.tag.cancelled",
+} as const satisfies Record<ReturnType<typeof requestTag>, MessageKey>;
+
 function RequestBubble({
   request,
   incoming,
+  mode,
   peerName,
   onPay,
   onAnswered,
 }: {
   request: PaymentRequest;
   incoming: boolean;
+  mode: DisplayMode;
   peerName: string;
   onPay: () => void;
   onAnswered: () => void;
 }) {
-  const [busy, setBusy] = useState(false);
+  const t = useT();
+  const [busy, setBusy] = useState<"decline" | "cancel" | "remind" | null>(null);
+  const [said, setSaid] = useState<string | null>(null);
+  // Decline and Cancel close the request for both sides, so each asks first,
+  // as the app does. Remind is harmless and goes straight away.
+  const [ask, setAsk] = useState<"decline" | "cancel" | null>(null);
   const amount = requestAmount(request);
   if (amount === null) return null;
-  const ticker = request.tokenId.toUpperCase();
+  const ticker = maskTokenSymbol(request.tokenId.split(".")[0].toUpperCase(), mode);
+  const tag = requestTag(request.status);
+  const open = request.status === "requested";
+  const payable = webCanPay(request);
 
-  const answer = async (fn: () => Promise<unknown>) => {
-    setBusy(true);
+  const act = async (which: "decline" | "cancel" | "remind", fn: () => Promise<unknown>, done?: string) => {
+    setBusy(which);
+    setSaid(null);
     try {
       await fn();
+      if (done) setSaid(done);
       onAnswered();
+    } catch (e) {
+      setSaid(e instanceof HoldApiError ? describeRequestError(e) : describeRequestError({ status: -1 }));
+      // A request that closed meanwhile is a fact to show, not an error to keep.
+      if (e instanceof HoldApiError && (e.detail === "request_not_open" || e.code === "request_not_open")) onAnswered();
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   };
 
+  const plate =
+    "inline-flex h-8 items-center justify-center rounded-[10px] px-3.5 text-[12.5px] transition-colors disabled:opacity-50 [-webkit-tap-highlight-color:transparent]";
+  const glass = `${plate} bg-white/10 font-strong text-white/85 hover:bg-white/[0.16]`;
+
   return (
     <div className={`flex ${incoming ? "justify-start" : "justify-end"}`}>
-      <div className="max-w-[78%] rounded-[16px] border border-[rgba(255,183,3,0.35)] bg-[rgba(255,183,3,0.10)] px-3.5 py-3">
-        <span className="flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-[0.5px] text-amber">
-          <Ion name="download-outline" size={13} />
-          {incoming ? "Payment request" : "Request sent"}
+      <div
+        className={`max-w-[78%] min-w-0 rounded-[16px] border border-white/10 px-3.5 py-3 ${
+          incoming ? "bg-white/[0.08]" : "bg-[rgba(255,183,3,0.15)]"
+        }`}
+      >
+        <span className="flex items-center gap-1.5">
+          <span className="text-[16px] font-extrabold tabular-nums tracking-[0.2px] text-white">{fmtNumber(amount, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          <span className="pt-px text-[13px] font-bold text-white/90">{ticker}</span>
         </span>
 
-        <span className="mt-1.5 flex items-baseline gap-1.5">
-          <span className="text-[18px] font-extrabold tabular-nums tracking-[0.2px] text-white">{amount.toFixed(2)}</span>
-          <span className="text-[13px] font-bold text-white/90">{ticker}</span>
+        {request.note ? (
+          <span className="mt-1.5 block whitespace-pre-wrap break-words text-[13.5px] leading-[19px] text-white/85">{request.note}</span>
+        ) : null}
+
+        {open ? (
+          <span className="mt-2.5 flex flex-wrap items-center gap-2">
+            {incoming ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => ("token" in payable ? onPay() : setSaid(t("requests.payInApp", { chain: payable.app })))}
+                  className={`${plate} bg-amber font-bold text-text-on-amber hover:bg-amber-glow`}
+                >
+                  {t("requests.pay")}
+                </button>
+                <button type="button" disabled={!!busy} onClick={() => setAsk("decline")} className={glass}>
+                  {t("requests.decline")}
+                </button>
+              </>
+            ) : (
+              <>
+                <button type="button" disabled={!!busy} onClick={() => void act("remind", () => remindRequest(request.id), t("requests.reminded"))} className={glass}>
+                  {t("requests.remind")}
+                </button>
+                <button type="button" disabled={!!busy} onClick={() => setAsk("cancel")} className={glass}>
+                  {t("requests.cancel")}
+                </button>
+              </>
+            )}
+          </span>
+        ) : null}
+
+        {said ? <span className="mt-2 block text-[12px] leading-[17px] text-white/75">{said}</span> : null}
+
+        <span className="mt-1.5 flex items-center justify-end gap-2 text-[10.5px] text-white/60">
+          <span className={`inline-flex h-4 items-center rounded-[8px] px-1.5 text-[10px] font-extrabold uppercase tracking-[0.4px] ${TAG_TONE[tag]}`}>{t(TAG_KEY[tag])}</span>
+          <span>{shortTime(request.createdAt)}</span>
         </span>
-
-        <p className="mt-1 text-[12.5px] leading-[17px] text-white/70">
-          {incoming ? `${peerName} asked you for this.` : `Waiting for ${peerName}.`}
-        </p>
-
-        <div className="mt-2.5 flex items-center gap-2">
-          {incoming ? (
-            <>
-              <button
-                type="button"
-                onClick={onPay}
-                className="inline-flex h-8 items-center rounded-[10px] bg-amber px-3.5 text-[12.5px] font-bold text-text-on-amber transition-colors hover:bg-amber-glow"
-              >
-                Pay
-              </button>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => void answer(() => rejectRequest(request.id))}
-                className="inline-flex h-8 items-center rounded-[10px] bg-white/10 px-3 text-[12.5px] font-strong text-white/85 transition-colors hover:bg-white/[0.16] disabled:opacity-50"
-              >
-                Decline
-              </button>
-            </>
-          ) : (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void answer(() => cancelRequest(request.id))}
-              className="inline-flex h-8 items-center rounded-[10px] bg-white/10 px-3 text-[12.5px] font-strong text-white/85 transition-colors hover:bg-white/[0.16] disabled:opacity-50"
-            >
-              Cancel
-            </button>
-          )}
-          <span className="ml-auto text-[10.5px] text-white/60">{shortTime(request.createdAt)}</span>
-        </div>
       </div>
+
+      {ask ? (
+        <Modal
+          title={ask === "decline" ? t("requests.declineTitle") : t("requests.cancelTitle")}
+          onClose={() => setAsk(null)}
+          busy={!!busy}
+          size="sm"
+          footer={
+            <div className="flex gap-2">
+              <button type="button" className={`${btnGlass} flex-1`} disabled={!!busy} onClick={() => setAsk(null)}>
+                {t("requests.keep")}
+              </button>
+              <button
+                type="button"
+                className={`${plateCaution} flex-1`}
+                disabled={!!busy}
+                onClick={() => {
+                  const which = ask;
+                  void act(which, () => (which === "decline" ? rejectRequest(request.id) : cancelRequest(request.id))).then(() => setAsk(null));
+                }}
+              >
+                {busy ? t("requests.oneMoment") : ask === "decline" ? t("requests.declineIt") : t("requests.cancelIt")}
+              </button>
+            </div>
+          }
+        >
+          <p className="text-[14px] leading-[20px] text-white/[0.78]">{ask === "decline" ? t("requests.declineBody", { name: peerName }) : t("requests.cancelBody", { name: peerName })}</p>
+        </Modal>
+      ) : null}
     </div>
   );
 }
@@ -468,11 +567,11 @@ function dayLabel(ts: number): string {
   const d = new Date(ts);
   const today = new Date();
   const same = (a: Date, b: Date) => a.toDateString() === b.toDateString();
-  if (same(d, today)) return "Today";
+  if (same(d, today)) return tNow("common.today");
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
-  if (same(d, yesterday)) return "Yesterday";
-  return d.toLocaleDateString(undefined, {
+  if (same(d, yesterday)) return tNow("common.yesterday");
+  return fmtDate(d, {
     day: "numeric",
     month: "short",
     ...(d.getFullYear() === today.getFullYear() ? {} : { year: "numeric" }),
@@ -519,6 +618,7 @@ function useMarkSeen(messages: Note[], onMarked: () => void) {
  * must not rearrange itself around something they have already read.
  */
 function Bubble({ note, requested = false, onWithdrawn }: { note: Note; requested?: boolean; onWithdrawn?: () => void }) {
+  const t = useT();
   const url = gifUrl(note.media);
   const mine = note.mine;
   const ink = mine ? "text-white/[0.92]" : "text-[rgba(13,24,32,0.92)]";
@@ -556,8 +656,8 @@ function Bubble({ note, requested = false, onWithdrawn }: { note: Note; requeste
           type="button"
           onClick={() => void withdraw()}
           disabled={withdrawing}
-          aria-label="Take this message back"
-          title="Take this message back"
+          aria-label={t("payments.chat.takeBack")}
+          title={t("payments.chat.takeBack")}
           className="mr-1.5 mt-auto mb-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-white/0 transition-colors hover:bg-white/10 hover:text-white/80 focus-visible:text-white/80 group-hover:text-white/45"
         >
           <Ion name="close-circle" size={16} />
@@ -567,7 +667,7 @@ function Bubble({ note, requested = false, onWithdrawn }: { note: Note; requeste
         className={`max-w-[78%] rounded-[18px] px-3.5 pb-[7px] pt-2.5 ${mine ? "bg-white/[0.14]" : "bg-[rgba(232,240,244,0.92)]"}`}
       >
         {note.deleted ? (
-          <p className={`text-[15px] italic leading-[21px] ${muted}`}>Message removed</p>
+          <p className={`text-[15px] italic leading-[21px] ${muted}`}>{t("payments.chat.removed")}</p>
         ) : (
           <>
             {/* The URL is BUILT, never received: `gifUrl` composes it from a
@@ -586,8 +686,8 @@ function Bubble({ note, requested = false, onWithdrawn }: { note: Note; requeste
         )}
         <span className={`mt-[3px] flex items-center justify-end gap-2 text-[10.5px] ${muted}`}>
           <span>{shortTime(note.createdAt)}</span>
-          {note.edited && !note.deleted ? <span>Edited</span> : null}
-          {mine && requested ? <span>Requested</span> : mine && note.seen ? <span>Read</span> : null}
+          {note.edited && !note.deleted ? <span>{t("payments.chat.edited")}</span> : null}
+          {mine && requested ? <span>{t("payments.chat.requested")}</span> : mine && note.seen ? <span>{t("payments.chat.read")}</span> : null}
         </span>
       </div>
     </div>
@@ -601,9 +701,10 @@ function Bubble({ note, requested = false, onWithdrawn }: { note: Note; requeste
  * already crowded and a notice there pushed the money row a line further away.
  */
 function WaitingRow({ name }: { name: string }) {
+  const t = useT();
   return (
     <p className="mx-auto max-w-[80%] rounded-[14px] bg-white/[0.06] px-3.5 py-2 text-center text-[12px] leading-[17px] text-white/75">
-      Sent as a request. {name} has not answered yet, so nothing else you write arrives until they do.
+      {t("payments.chat.waitingRow", { name })}
     </p>
   );
 }
@@ -636,6 +737,7 @@ function WaitingRow({ name }: { name: string }) {
  * than not having it at all.
  */
 export function SafetyMenu({ peerId, peerName, onBlocked }: { peerId: string; peerName: string; onBlocked?: () => void }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"menu" | "block" | "report" | "done">("menu");
   const [detail, setDetail] = useState("");
@@ -667,7 +769,7 @@ export function SafetyMenu({ peerId, peerName, onBlocked }: { peerId: string; pe
       <button
         type="button"
         onClick={() => setOpen(true)}
-        aria-label={`More about ${peerName}`}
+        aria-label={t("payments.safety.moreAbout", { name: peerName })}
         className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[18px] text-white/75 transition-colors hover:bg-white/10 hover:text-white"
       >
         <Ion name="ellipsis-horizontal" size={20} />
@@ -675,7 +777,7 @@ export function SafetyMenu({ peerId, peerName, onBlocked }: { peerId: string; pe
 
       {open ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center" role="dialog" aria-modal="true">
-          <button type="button" aria-label="Close" onClick={close} className="absolute inset-0 cursor-default" />
+          <button type="button" aria-label={t("common.close")} onClick={close} className="absolute inset-0 cursor-default" />
           <div className="relative w-full max-w-[420px] rounded-[20px] border border-white/[0.12] bg-[#0E2430] p-4 shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
             {mode === "menu" ? (
               <>
@@ -687,7 +789,7 @@ export function SafetyMenu({ peerId, peerName, onBlocked }: { peerId: string; pe
                     className="flex h-11 items-center gap-2.5 rounded-[14px] bg-white/[0.06] px-3.5 text-left text-[14px] font-strong text-white transition-colors hover:bg-white/[0.12]"
                   >
                     <Ion name="flag-outline" size={17} />
-                    Report this conversation
+                    {t("payments.safety.report")}
                   </button>
                   <button
                     type="button"
@@ -695,7 +797,7 @@ export function SafetyMenu({ peerId, peerName, onBlocked }: { peerId: string; pe
                     className="flex h-11 items-center gap-2.5 rounded-[14px] bg-white/[0.06] px-3.5 text-left text-[14px] font-strong text-white transition-colors hover:bg-white/[0.12]"
                   >
                     <Ion name="ban-outline" size={17} />
-                    Block {peerName}
+                    {t("payments.safety.blockName", { name: peerName })}
                   </button>
                 </div>
               </>
@@ -703,10 +805,9 @@ export function SafetyMenu({ peerId, peerName, onBlocked }: { peerId: string; pe
 
             {mode === "block" ? (
               <>
-                <p className="text-[15px] font-extrabold tracking-[-0.2px] text-white">Block {peerName}?</p>
+                <p className="text-[15px] font-extrabold tracking-[-0.2px] text-white">{t("payments.safety.blockQuestion", { name: peerName })}</p>
                 <p className="mt-1.5 text-[13px] leading-[18px] text-white/70">
-                  They can no longer write to you, here or on a payment. You can undo it from Account → Who can message
-                  you.
+                  {t("payments.safety.blockBody")}
                 </p>
                 <div className="mt-3 flex items-center gap-2">
                   <button
@@ -715,14 +816,14 @@ export function SafetyMenu({ peerId, peerName, onBlocked }: { peerId: string; pe
                     onClick={() => void run(() => blockUser(peerId), () => { onBlocked?.(); close(); })}
                     className="inline-flex h-10 flex-1 items-center justify-center rounded-[12px] bg-white/[0.16] text-[14px] font-bold text-white transition-colors hover:bg-white/[0.22] disabled:opacity-60"
                   >
-                    {busy ? "Blocking…" : "Block"}
+                    {busy ? t("payments.safety.blocking") : t("payments.safety.block")}
                   </button>
                   <button
                     type="button"
                     onClick={() => setMode("menu")}
                     className="inline-flex h-10 items-center justify-center rounded-[12px] bg-white/10 px-4 text-[14px] font-strong text-white/85 transition-colors hover:bg-white/[0.16]"
                   >
-                    Back
+                    {t("common.back")}
                   </button>
                 </div>
               </>
@@ -730,17 +831,17 @@ export function SafetyMenu({ peerId, peerName, onBlocked }: { peerId: string; pe
 
             {mode === "report" ? (
               <>
-                <p className="text-[15px] font-extrabold tracking-[-0.2px] text-white">Report {peerName}</p>
+                <p className="text-[15px] font-extrabold tracking-[-0.2px] text-white">{t("payments.safety.reportTitle", { name: peerName })}</p>
                 <p className="mt-1.5 text-[13px] leading-[18px] text-white/70">
-                  Tell us what happened. This does not block them — you are asked about that next.
+                  {t("payments.safety.reportBody")}
                 </p>
                 <textarea
                   autoFocus
                   rows={3}
                   value={detail}
                   onChange={(e) => setDetail(e.target.value.slice(0, 280))}
-                  placeholder="What happened?"
-                  aria-label="What happened"
+                  placeholder={t("payments.safety.whatHappenedPlaceholder")}
+                  aria-label={t("payments.safety.whatHappenedAria")}
                   className="mt-2.5 w-full resize-none rounded-[14px] border border-white/[0.15] bg-white/[0.06] px-3 py-2.5 text-[14px] leading-[20px] text-white outline-none placeholder:text-white/50 focus:border-white/30"
                 />
                 <div className="mt-2.5 flex items-center gap-2">
@@ -755,14 +856,14 @@ export function SafetyMenu({ peerId, peerName, onBlocked }: { peerId: string; pe
                     }
                     className="inline-flex h-10 flex-1 items-center justify-center rounded-[12px] bg-amber text-[14px] font-bold text-text-on-amber transition-colors hover:bg-amber-glow disabled:bg-white/[0.12] disabled:text-white/50"
                   >
-                    {busy ? "Sending…" : "Send report"}
+                    {busy ? t("payments.safety.sending") : t("payments.safety.sendReport")}
                   </button>
                   <button
                     type="button"
                     onClick={() => setMode("menu")}
                     className="inline-flex h-10 items-center justify-center rounded-[12px] bg-white/10 px-4 text-[14px] font-strong text-white/85 transition-colors hover:bg-white/[0.16]"
                   >
-                    Back
+                    {t("common.back")}
                   </button>
                 </div>
               </>
@@ -770,9 +871,9 @@ export function SafetyMenu({ peerId, peerName, onBlocked }: { peerId: string; pe
 
             {mode === "done" ? (
               <>
-                <p className="text-[15px] font-extrabold tracking-[-0.2px] text-white">Report sent</p>
+                <p className="text-[15px] font-extrabold tracking-[-0.2px] text-white">{t("payments.safety.reportSent")}</p>
                 <p className="mt-1.5 text-[13px] leading-[18px] text-white/70">
-                  We will look at it. Do you also want to block {peerName}?
+                  {t("payments.safety.alsoBlock", { name: peerName })}
                 </p>
                 <div className="mt-3 flex items-center gap-2">
                   <button
@@ -781,20 +882,20 @@ export function SafetyMenu({ peerId, peerName, onBlocked }: { peerId: string; pe
                     onClick={() => void run(() => blockUser(peerId), () => { onBlocked?.(); close(); })}
                     className="inline-flex h-10 flex-1 items-center justify-center rounded-[12px] bg-white/[0.16] text-[14px] font-bold text-white transition-colors hover:bg-white/[0.22] disabled:opacity-60"
                   >
-                    {busy ? "Blocking…" : "Block them too"}
+                    {busy ? t("payments.safety.blocking") : t("payments.safety.blockToo")}
                   </button>
                   <button
                     type="button"
                     onClick={close}
                     className="inline-flex h-10 items-center justify-center rounded-[12px] bg-white/10 px-4 text-[14px] font-strong text-white/85 transition-colors hover:bg-white/[0.16]"
                   >
-                    No, thanks
+                    {t("payments.safety.noThanks")}
                   </button>
                 </div>
               </>
             ) : null}
 
-            {failed ? <p className="mt-2 text-[12px] leading-[17px] text-white/75">That did not go through. Try again.</p> : null}
+            {failed ? <p className="mt-2 text-[12px] leading-[17px] text-white/75">{t("payments.didNotGoThrough")}</p> : null}
           </div>
         </div>
       ) : null}
@@ -813,6 +914,7 @@ function Composer({
   status: "none" | "pending" | "accepted" | "declined" | null;
   onSent: () => void;
 }) {
+  const t = useT();
   const [text, setText] = useState("");
   const [gif, setGif] = useState<Gif | null>(null);
   const [picking, setPicking] = useState(false);
@@ -856,7 +958,7 @@ function Composer({
     <div className="sticky bottom-0 mt-4 pb-1 pt-3">
       {refused ? (
         <p className="mb-2 px-1 text-[12px] leading-[17px] text-white/75">
-          That did not go through. The GIF may have been refused — try it without one.
+          {t("payments.chat.refused")}
         </p>
       ) : null}
 
@@ -868,7 +970,7 @@ function Composer({
           <button
             type="button"
             onClick={() => setGif(null)}
-            aria-label="Remove GIF"
+            aria-label={t("payments.chat.removeGif")}
             className="shrink-0 rounded-full p-1 text-white/70 transition-colors hover:text-white"
           >
             <Ion name="close-circle" size={18} />
@@ -886,8 +988,8 @@ function Composer({
         <button
           type="button"
           onClick={() => setPicking(true)}
-          aria-label="Add a GIF"
-          title="Add a GIF"
+          aria-label={t("payments.chat.addGif")}
+          title={t("payments.chat.addGif")}
           className={`flex h-9 shrink-0 items-center justify-center rounded-full px-2.5 text-[11.5px] font-extrabold tracking-[0.3px] transition-colors ${
             gif ? "bg-amber text-[#0F0F1A]" : "text-white/75 hover:bg-white/10 hover:text-white"
           }`}
@@ -907,15 +1009,15 @@ function Composer({
             }
           }}
           rows={1}
-          placeholder={status === "none" ? "Say something — it arrives as a request" : "Type a message…"}
-          aria-label="Message"
+          placeholder={status === "none" ? t("payments.chat.placeholderRequest") : t("payments.chat.placeholder")}
+          aria-label={t("payments.chat.messageAria")}
           className="max-h-32 min-h-[36px] min-w-0 flex-1 resize-none bg-transparent py-2 text-[14.5px] leading-[20px] text-white outline-none placeholder:text-white/60"
         />
         <button
           type="button"
           onClick={() => void submit()}
           disabled={!canSend}
-          aria-label="Send"
+          aria-label={t("common.send")}
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber text-[#0F0F1A] transition-opacity disabled:bg-white/[0.12] disabled:text-white/50"
         >
           <Ion name={sending ? "ellipsis-horizontal" : "arrow-up"} size={18} />
@@ -948,6 +1050,7 @@ function Composer({
  * somebody their search was bad.
  */
 function GifPicker({ onClose, onPick }: { onClose: () => void; onPick: (g: Gif) => void }) {
+  const t = useT();
   const [q, setQ] = useState("");
   const [gifs, setGifs] = useState<Gif[]>([]);
   const [answer, setAnswer] = useState<{ available: boolean; exhausted: boolean } | null>(null);
@@ -984,10 +1087,10 @@ function GifPicker({ onClose, onPick }: { onClose: () => void; onPick: (g: Gif) 
   const empty =
     !loading && gifs.length === 0
       ? answer && !answer.available
-        ? "GIFs are not switched on here."
+        ? t("payments.gif.off")
         : answer?.exhausted
-          ? "GIFs are out for now. Try again later."
-          : "Nothing matched that."
+          ? t("payments.gif.exhausted")
+          : t("payments.gif.noMatch")
       : null;
 
   return (
@@ -998,8 +1101,8 @@ function GifPicker({ onClose, onPick }: { onClose: () => void; onPick: (g: Gif) 
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search GIFs"
-            aria-label="Search GIFs"
+            placeholder={t("payments.gif.search")}
+            aria-label={t("payments.gif.search")}
             autoFocus
             className="min-w-0 flex-1 bg-transparent text-[14px] text-white outline-none placeholder:text-white/60"
           />
@@ -1009,7 +1112,7 @@ function GifPicker({ onClose, onPick }: { onClose: () => void; onPick: (g: Gif) 
           onClick={onClose}
           className="shrink-0 rounded-[12px] px-2.5 py-2 text-[13px] font-strong text-white/80 transition-colors hover:text-white"
         >
-          Close
+          {t("common.close")}
         </button>
       </div>
 
@@ -1030,7 +1133,7 @@ function GifPicker({ onClose, onPick }: { onClose: () => void; onPick: (g: Gif) 
           ))}
         </div>
       )}
-      <p className="mt-2 text-right text-[10.5px] text-white/55">Powered by GIPHY</p>
+      <p className="mt-2 text-right text-[10.5px] text-white/55">{t("payments.gif.poweredBy")}</p>
     </div>
   );
 }
@@ -1040,5 +1143,5 @@ function GifPicker({ onClose, onPick }: { onClose: () => void; onPick: (g: Gif) 
 function shortTime(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  return fmtTime(d, { hour: "2-digit", minute: "2-digit" });
 }

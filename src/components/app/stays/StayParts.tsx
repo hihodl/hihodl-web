@@ -24,8 +24,13 @@ import { Ion, type IonName } from "../ion";
 
 import { Photo, PointsPill } from "./kit";
 import { PhotoViewer } from "./PhotoViewer";
-import { P, boardLabel, count, distance, money, nights as nightsWord, roomSize, shortDate } from "./look";
+import { P, boardLabel, distance, money, roomSize, shortDate } from "./look";
 import type { GalleryImage, Rate, RoomInfo, StayDetail } from "@/lib/app/stays";
+import { useT } from "@/lib/app/i18n/react";
+import { fmtNumber } from "@/lib/app/i18n/format";
+
+/** A 0–10 score, one decimal, as the language writes it. */
+const score = (n: number) => fmtNumber(n, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 /* ── Shared shapes ────────────────────────────────────────────────── */
 
@@ -80,6 +85,7 @@ function Chip({ children }: { children: React.ReactNode }) {
  * separately, and a denominator you cannot page to is a broken promise.
  */
 export function Gallery({ images, alt }: { images: GalleryImage[]; alt: string }) {
+  const t = useT();
   const [at, setAt] = useState(0);
   /** null when closed; otherwise the photograph the viewer opens on. */
   const [viewing, setViewing] = useState<number | null>(null);
@@ -101,7 +107,7 @@ export function Gallery({ images, alt }: { images: GalleryImage[]; alt: string }
             stop the click, so paging is still paging. */}
         <button
           type="button"
-          aria-label="Open photographs"
+          aria-label={t("stays.gallery.open")}
           onClick={() => setViewing(at)}
           className="absolute inset-0 block h-full w-full cursor-zoom-in p-0"
         >
@@ -157,10 +163,11 @@ export function Gallery({ images, alt }: { images: GalleryImage[]; alt: string }
 }
 
 function Arrow({ side, onClick }: { side: "left" | "right"; onClick: () => void }) {
+  const t = useT();
   return (
     <button
       type="button"
-      aria-label={side === "left" ? "Previous photo" : "Next photo"}
+      aria-label={side === "left" ? t("stays.gallery.previous") : t("stays.gallery.next")}
       onClick={onClick}
       className={`absolute top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-[18px] transition-opacity hover:opacity-100 ${
         side === "left" ? "left-3" : "right-3"
@@ -196,24 +203,27 @@ export function RateRow({
   selected?: boolean;
   onPick: () => void;
 }) {
+  const t = useT();
   const facts: { icon: IonName; text: string; tone?: string }[] = [];
 
   if (rate.refundable) {
     facts.push({
       icon: "shield-checkmark-outline",
-      text: rate.freeCancellationUntil ? `Free cancellation until ${shortDate(rate.freeCancellationUntil.slice(0, 10))}` : "Free cancellation",
+      text: rate.freeCancellationUntil
+        ? t("stays.rate.freeCancellationUntil", { date: shortDate(rate.freeCancellationUntil.slice(0, 10)) })
+        : t("stays.rate.freeCancellation"),
       tone: P.greenText,
     });
     if (rate.freeCancellationUntil && rate.cancellationFee !== null) {
-      facts.push({ icon: "information-circle-outline", text: `${money(rate.cancellationFee, rate.currency)} if you cancel later` });
+      facts.push({ icon: "information-circle-outline", text: t("stays.rate.cancelLater", { amount: money(rate.cancellationFee, rate.currency) }) });
     }
   } else {
-    facts.push({ icon: "information-circle-outline", text: "Non-refundable", tone: P.caution });
+    facts.push({ icon: "information-circle-outline", text: t("stays.rate.nonRefundable"), tone: P.caution });
   }
   if (rate.maxOccupancy) {
-    facts.push({ icon: "person-outline", text: `For ${rate.maxOccupancy} ${rate.maxOccupancy === 1 ? "guest" : "guests"}` });
+    facts.push({ icon: "person-outline", text: t("stays.rate.sleeps", { count: rate.maxOccupancy }) });
   }
-  facts.push({ icon: "card-outline", text: "Pay today" });
+  facts.push({ icon: "card-outline", text: t("stays.rate.payToday") });
 
   const board = boardLabel(rate.boardName);
 
@@ -269,7 +279,7 @@ export function RateRow({
             {money(rate.price, rate.currency)}
           </span>
           <span className="mt-px block text-[11.5px] font-medium" style={{ color: P.textDim }}>
-            {`total for ${nightsWord(nights)}`}
+            {t("stays.rate.totalForNights", { count: nights })}
           </span>
         </span>
         <PointsPill points={rate.pointsEarned} size="md" />
@@ -318,6 +328,7 @@ const AMENITY_HEADLINE = 4;
  * nothing teaches people that the arrows do nothing.
  */
 function RoomStrip({ photos, name }: { photos: GalleryImage[]; name: string }) {
+  const t = useT();
   const rail = useRef<HTMLDivElement>(null);
   const [viewing, setViewing] = useState<number | null>(null);
   const [ends, setEnds] = useState({ left: false, right: false });
@@ -363,7 +374,7 @@ function RoomStrip({ photos, name }: { photos: GalleryImage[]; name: string }) {
           <button
             key={`${p.url}-${i}`}
             type="button"
-            aria-label={`${name} — photograph ${i + 1} of ${photos.length}`}
+            aria-label={t("stays.gallery.roomPhoto", { name, index: i + 1, total: photos.length })}
             onClick={() => setViewing(i)}
             className="h-[70px] w-[104px] shrink-0 cursor-zoom-in overflow-hidden rounded-[12px] p-0"
           >
@@ -392,10 +403,11 @@ function RoomStrip({ photos, name }: { photos: GalleryImage[]; name: string }) {
 const TILE = 110;
 
 function StripArrow({ side, onClick }: { side: "left" | "right"; onClick: () => void }) {
+  const t = useT();
   return (
     <button
       type="button"
-      aria-label={side === "left" ? "Scroll photographs left" : "Scroll photographs right"}
+      aria-label={side === "left" ? t("stays.gallery.scrollLeft") : t("stays.gallery.scrollRight")}
       onClick={onClick}
       className={`absolute top-[35px] hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-[999px] opacity-0 transition-opacity group-hover/strip:opacity-100 sm:flex ${
         side === "left" ? "left-1" : "right-1"
@@ -420,10 +432,11 @@ export function RoomGroup({
   picked: string | null;
   onPick: (rate: Rate) => void;
 }) {
+  const t = useT();
   const [allAmenities, setAllAmenities] = useState(false);
   const [wholeProse, setWholeProse] = useState(false);
 
-  const name = room?.name ?? rates[0]?.roomName ?? "Room";
+  const name = room?.name ?? rates[0]?.roomName ?? t("stays.room.fallbackName");
   const beds = (room?.beds ?? []).map((b) => (b.quantity > 1 ? `${b.quantity} × ${b.type}` : b.type)).join(" · ");
   const size = roomSize(room?.sizeSquare ?? null, room?.sizeUnit ?? null);
   const amenities = room?.amenities ?? [];
@@ -454,7 +467,7 @@ export function RoomGroup({
           ) : null}
           <div className="flex flex-wrap gap-y-[9px]">
             {size ? <Fact icon="resize-outline" text={size} strong /> : null}
-            {room?.maxOccupancy ? <Fact icon="people-outline" text={`For ${room.maxOccupancy} ${room.maxOccupancy === 1 ? "guest" : "guests"}`} strong /> : null}
+            {room?.maxOccupancy ? <Fact icon="people-outline" text={t("stays.rate.sleeps", { count: room.maxOccupancy })} strong /> : null}
             {headline.map((a) => (
               <Fact key={a} icon="checkmark" text={a} green />
             ))}
@@ -468,12 +481,12 @@ export function RoomGroup({
                   ))}
                 </div>
                 <button type="button" onClick={() => setAllAmenities(false)} className="self-start text-[12.5px] font-bold" style={{ color: P.greenText }}>
-                  Show less
+                  {t("common.showLess")}
                 </button>
               </>
             ) : (
               <button type="button" onClick={() => setAllAmenities(true)} className="self-start text-[12.5px] font-bold" style={{ color: P.greenText }}>
-                {`Show ${rest.length} more ${rest.length === 1 ? "amenity" : "amenities"}`}
+                {t("stays.room.moreAmenities", { count: rest.length })}
               </button>
             )
           ) : null}
@@ -486,7 +499,7 @@ export function RoomGroup({
             {room.description}
           </p>
           <button type="button" onClick={() => setWholeProse((v) => !v)} className="self-start text-[12.5px] font-bold" style={{ color: P.greenText }}>
-            {wholeProse ? "Show less" : "Read more"}
+            {wholeProse ? t("common.showLess") : t("stays.info.readMore")}
           </button>
         </div>
       ) : null}
@@ -516,24 +529,25 @@ function Fact({ icon, text, strong = false, green = false }: { icon: IonName; te
 /* ── What guests say ──────────────────────────────────────────────── */
 
 export function ReviewSummary({ stay }: { stay: StayDetail }) {
+  const t = useT();
   const s = stay.reviewSummary;
   if (!s || (s.categories.length === 0 && s.pros.length === 0 && s.cons.length === 0)) return null;
 
   return (
-    <Section title="What guests say">
+    <Section title={t("stays.reviews.title")}>
       <InfoCard>
         {stay.guestRating !== null ? (
           <div className="flex items-center gap-2.5">
             <span className="text-[30px] font-extrabold tabular-nums leading-none tracking-[-0.8px]" style={{ color: P.text }}>
-              {stay.guestRating.toFixed(1)}
+              {score(stay.guestRating)}
             </span>
             <div className="flex flex-col gap-0.5">
               <span className="text-[12.5px] font-bold" style={{ color: P.textMuted }}>
-                out of 10
+                {t("stays.reviews.outOf10")}
               </span>
               {stay.reviewCount ? (
                 <span className="text-[11.5px] font-semibold" style={{ color: P.textDim }}>
-                  {`${count(stay.reviewCount)} ${stay.reviewCount === 1 ? "review" : "reviews"}`}
+                  {t("stays.reviews.count", { count: stay.reviewCount })}
                 </span>
               ) : null}
             </div>
@@ -551,7 +565,7 @@ export function ReviewSummary({ stay }: { stay: StayDetail }) {
                   <span className="block h-full rounded-[999px]" style={{ width: `${Math.max(4, Math.min(100, c.rating * 10))}%`, background: P.green }} />
                 </span>
                 <span className="w-7 shrink-0 text-right text-[12px] font-extrabold tabular-nums" style={{ color: P.text }}>
-                  {c.rating.toFixed(1)}
+                  {score(c.rating)}
                 </span>
               </div>
             ))}
@@ -584,7 +598,7 @@ export function ReviewSummary({ stay }: { stay: StayDetail }) {
         ) : null}
 
         <p className="text-[10.5px] font-semibold" style={{ color: P.textFaint }}>
-          A summary of guest reviews, not individual quotes.
+          {t("stays.reviews.summaryNote")}
         </p>
       </InfoCard>
     </Section>
@@ -606,12 +620,13 @@ const POI_ICON: Record<string, IonName> = {
 };
 
 export function Nearby({ places }: { places: StayDetail["nearby"] }) {
+  const t = useT();
   const [all, setAll] = useState(false);
   if (places.length === 0) return null;
   const shown = all ? places : places.slice(0, 4);
 
   return (
-    <Section title="What's nearby">
+    <Section title={t("stays.nearby.title")}>
       <InfoCard className="!gap-0">
         {shown.map((p, i) => (
           <div
@@ -633,7 +648,7 @@ export function Nearby({ places }: { places: StayDetail["nearby"] }) {
           </div>
         ))}
         {places.length > 4 ? (
-          <More onClick={() => setAll((v) => !v)}>{all ? "Show less" : `Show all ${places.length}`}</More>
+          <More onClick={() => setAll((v) => !v)}>{all ? t("common.showLess") : t("stays.nearby.showAll", { count: fmtNumber(places.length) })}</More>
         ) : null}
       </InfoCard>
     </Section>
@@ -669,6 +684,7 @@ const FACILITY_PRIORITY: { re: RegExp; icon: IonName }[] = [
 ];
 
 export function Facilities({ facilities }: { facilities: string[] }) {
+  const t = useT();
   const [all, setAll] = useState(false);
   if (facilities.length === 0) return null;
 
@@ -684,7 +700,7 @@ export function Facilities({ facilities }: { facilities: string[] }) {
   const rest = facilities.filter((f) => !taken.has(f));
 
   return (
-    <Section title="Facilities">
+    <Section title={t("stays.facilities.title")}>
       <InfoCard>
         <div className="flex flex-wrap gap-y-2.5">
           {headline.map((f) => (
@@ -699,10 +715,10 @@ export function Facilities({ facilities }: { facilities: string[] }) {
                   <Chip key={f}>{f}</Chip>
                 ))}
               </div>
-              <More onClick={() => setAll(false)}>Show less</More>
+              <More onClick={() => setAll(false)}>{t("common.showLess")}</More>
             </>
           ) : (
-            <More onClick={() => setAll(true)}>{`${rest.length} more ${rest.length === 1 ? "facility" : "facilities"}`}</More>
+            <More onClick={() => setAll(true)}>{t("stays.facilities.more", { count: rest.length })}</More>
           )
         ) : null}
       </InfoCard>
@@ -713,31 +729,33 @@ export function Facilities({ facilities }: { facilities: string[] }) {
 /* ── About, and good to know ──────────────────────────────────────── */
 
 export function About({ text }: { text: string | null }) {
+  const t = useT();
   const [whole, setWhole] = useState(false);
   if (!text?.trim()) return null;
   return (
-    <Section title="About this property">
+    <Section title={t("stays.about.title")}>
       <InfoCard>
         <p className={`text-[12.5px] font-medium leading-[19px] ${whole ? "" : "line-clamp-4"}`} style={{ color: P.textMuted }}>
           {text}
         </p>
-        <More onClick={() => setWhole((v) => !v)}>{whole ? "Show less" : "Read more"}</More>
+        <More onClick={() => setWhole((v) => !v)}>{whole ? t("common.showLess") : t("stays.info.readMore")}</More>
       </InfoCard>
     </Section>
   );
 }
 
 export function GoodToKnow({ stay }: { stay: StayDetail }) {
+  const t = useT();
   const [whole, setWhole] = useState(false);
   const flags: string[] = [];
-  if (stay.childAllowed) flags.push("Children welcome");
-  if (stay.petsAllowed === true) flags.push("Pets allowed");
-  if (stay.petsAllowed === false) flags.push("No pets");
+  if (stay.childAllowed) flags.push(t("stays.goodToKnow.childrenWelcome"));
+  if (stay.petsAllowed === true) flags.push(t("stays.goodToKnow.petsAllowed"));
+  if (stay.petsAllowed === false) flags.push(t("stays.goodToKnow.noPets"));
   const text = stay.importantInfo?.trim();
   if (!text && flags.length === 0) return null;
 
   return (
-    <Section title="Good to know">
+    <Section title={t("stays.goodToKnow.title")}>
       <InfoCard>
         {flags.length > 0 ? (
           <div className="flex flex-wrap gap-[7px]">
@@ -751,7 +769,7 @@ export function GoodToKnow({ stay }: { stay: StayDetail }) {
             <p className={`whitespace-pre-line text-[12.5px] font-medium leading-[19px] ${whole ? "" : "line-clamp-4"}`} style={{ color: P.textMuted }}>
               {text}
             </p>
-            <More onClick={() => setWhole((v) => !v)}>{whole ? "Show less" : "Read more"}</More>
+            <More onClick={() => setWhole((v) => !v)}>{whole ? t("common.showLess") : t("stays.info.readMore")}</More>
           </>
         ) : null}
       </InfoCard>
@@ -762,14 +780,20 @@ export function GoodToKnow({ stay }: { stay: StayDetail }) {
 /* ── When you can arrive ──────────────────────────────────────────── */
 
 export function CheckinTimes({ stay }: { stay: StayDetail }) {
+  const t = useT();
   if (!stay.checkinTime && !stay.checkoutTime) return null;
   return (
-    <Section title="Arriving and leaving">
+    <Section title={t("stays.times.title")}>
       <InfoCard className="!gap-0">
         {stay.checkinTime ? (
-          <Row label="Check in" value={[stay.checkinTime && `from ${stay.checkinTime}`, stay.checkinUntil && `until ${stay.checkinUntil}`].filter(Boolean).join(" · ")} />
+          <Row
+            label={t("stays.times.checkin")}
+            value={[stay.checkinTime && t("stays.times.from", { time: stay.checkinTime }), stay.checkinUntil && t("stays.times.until", { time: stay.checkinUntil })]
+              .filter(Boolean)
+              .join(" · ")}
+          />
         ) : null}
-        {stay.checkoutTime ? <Row label="Check out" value={`by ${stay.checkoutTime}`} divided /> : null}
+        {stay.checkoutTime ? <Row label={t("stays.times.checkout")} value={t("stays.times.by", { time: stay.checkoutTime })} divided /> : null}
       </InfoCard>
     </Section>
   );

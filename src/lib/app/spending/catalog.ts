@@ -6,7 +6,7 @@
 // Falls back to "Other" for an id it does not know (a custom category the
 // phone made), so a lookup never indexes `undefined`.
 
-import { CATEGORIES, CATEGORY_IDS, type CategoryDef, type CategoryId } from "./categories";
+import { CATEGORIES, CATEGORY_IDS, categoryName, type CategoryDef, type CategoryId } from "./categories";
 
 // Synthetic (non-spend) def for the internal-transfers drill-down. Not a real
 // spend category — it's the "Transfers" ring in the donut — but it flows through
@@ -18,15 +18,15 @@ const TRANSFERS_DEF: CategoryDef = {
 };
 
 export function getCategoryDef(id: string): CategoryDef {
-  if (id === "transfers") return TRANSFERS_DEF;
+  if (id === "transfers") return { ...TRANSFERS_DEF, label: categoryName(TRANSFERS_DEF.id) };
   const builtin = (CATEGORIES as Record<string, CategoryDef>)[id];
   const base = builtin ?? CATEGORIES.other;
-  return { id: base.id, label: base.label, icon: base.icon };
+  return { id: base.id, label: categoryName(base.id), icon: base.icon };
 }
 
 /** The full ordered built-in taxonomy, as the app's `useCategoryCatalog().list` with nothing customised. */
 export function categoryList(): CategoryDef[] {
-  return CATEGORY_IDS.map((id) => CATEGORIES[id]);
+  return CATEGORY_IDS.map((id) => ({ ...CATEGORIES[id], label: categoryName(id) }));
 }
 
 /** Whether an id is a built-in category. */

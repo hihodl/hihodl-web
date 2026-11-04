@@ -42,6 +42,9 @@
 
 "use client";
 
+import { t } from "@/lib/app/i18n";
+import { fmtNumber } from "@/lib/app/i18n/format";
+
 import { read } from "./hold-api";
 
 /** Quotes are exact-in, so covering an exact-out target takes a couple of tries. */
@@ -149,7 +152,7 @@ export async function quoteCovering(
   for (let attempt = 1; attempt <= MAX_QUOTE_ATTEMPTS; attempt++) {
     if (deposit > args.available) {
       throw new BridgeRefused(
-        `You need ${deposit.toFixed(2)} USDC to cover this — your balance is ${args.available.toFixed(2)}.`,
+        t("stays.bridge.notEnough", { need: usdc2(deposit), balance: usdc2(args.available) }),
       );
     }
 
@@ -164,18 +167,23 @@ export async function quoteCovering(
 
     const guaranteed = Number(quote.destination.minAmount ?? quote.destination.amount);
     if (!Number.isFinite(guaranteed) || guaranteed <= 0) {
-      throw new BridgeRefused("We couldn't price the transfer. Try again in a moment.");
+      throw new BridgeRefused(t("stays.bridge.cantPrice"));
     }
     if (guaranteed >= args.arrival) return { quote, deposit };
 
     const next = deposit * (args.arrival / guaranteed) * GROSS_UP_SAFETY;
     if (next > args.arrival * MAX_BRIDGE_COST_RATIO) {
-      throw new BridgeRefused("Moving the money would cost more than it is worth right now. Try again shortly.");
+      throw new BridgeRefused(t("stays.bridge.tooExpensive"));
     }
     deposit = next;
   }
 
-  throw new BridgeRefused("We couldn't find a way to send this right now. Try again shortly.");
+  throw new BridgeRefused(t("stays.bridge.noRoute"));
+}
+
+/** A USDC amount as a refusal says it: two decimals, in the language's separators. */
+function usdc2(n: number): string {
+  return fmtNumber(n, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 /**

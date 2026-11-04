@@ -18,6 +18,8 @@
 
 import type { IonName } from "@/components/app/ion";
 
+import { t } from "../i18n";
+
 type IoniconName = IonName;
 
 export type CategoryId =
@@ -60,11 +62,46 @@ export const CATEGORIES: Record<CategoryId, CategoryDef> = {
 export const CATEGORY_IDS = Object.keys(CATEGORIES) as CategoryId[];
 
 export function categoryDef(id: CategoryId): CategoryDef {
-  return CATEGORIES[id] ?? CATEGORIES.other;
+  const def = CATEGORIES[id] ?? CATEGORIES.other;
+  return { ...def, label: categoryName(def.id) };
 }
 
 export function categoryLabel(id: CategoryId): string {
   return categoryDef(id).label;
+}
+
+/**
+ * A category's name in the person's language. `CATEGORIES[…].label` keeps the
+ * app's English (the port stays verbatim); what is DRAWN goes through here.
+ * An id this does not know (a custom category the phone made) is "Other".
+ */
+export function categoryName(id: string): string {
+  switch (id) {
+    case "groceries":
+      return t("analytics.category.groceries");
+    case "eating_out":
+      return t("analytics.category.eatingOut");
+    case "transport":
+      return t("analytics.category.transport");
+    case "bills":
+      return t("analytics.category.bills");
+    case "shopping":
+      return t("analytics.category.shopping");
+    case "subscriptions":
+      return t("analytics.category.subscriptions");
+    case "health":
+      return t("analytics.category.health");
+    case "entertainment":
+      return t("analytics.category.entertainment");
+    case "travel":
+      return t("analytics.category.travel");
+    case "people":
+      return t("analytics.category.people");
+    case "transfers":
+      return t("analytics.category.transfers");
+    default:
+      return t("analytics.category.other");
+  }
 }
 
 // ─── Green → white ramp ──────────────────────────────────────────────────────

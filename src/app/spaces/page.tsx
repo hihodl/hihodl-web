@@ -43,9 +43,11 @@ export const metadata: Metadata = {
 };
 
 export default function SpacesPage() {
-  // Both sides sign up in the product. The pills above already lead to each
-  // side's page, so the actions lead somewhere the pills do not.
+  // Brands sign up in the product. Selling comes with HOLD Partners, so a
+  // creator starts on its page. The pills above already lead to each side's
+  // page, so the actions lead somewhere the pills do not.
   const join = productHref();
+  const sell = "/partners";
 
   return (
     <>
@@ -66,14 +68,15 @@ export default function SpacesPage() {
           }
           actions={
             <>
-              <PrimaryAction href={join}>I&rsquo;m a creator</PrimaryAction>
+              <PrimaryAction href={sell}>I&rsquo;m a creator</PrimaryAction>
               <SecondaryAction href={join}>I&rsquo;m a brand</SecondaryAction>
             </>
           }
           photo={{
             wide: "/spaces/hero-airport-wide.jpg",
             square: "/spaces/hero-airport-square.jpg",
-            alt: "A creator at the airport with her carry-on. Its front carries sponsor spots: a logo, a QR code and a solid amber panel sold, two spots still open.",
+            ambient: "/spaces/hero-airport-ambient.jpg",
+            alt: "A creator at the airport with her carry-on. Its front carries sponsor spots: a logo, a QR code and a solid amber panel sold, two spots still open at $200 and $175.",
           }}
         />
 
@@ -227,10 +230,10 @@ export default function SpacesPage() {
 
       <Closing
         line="The creator already had the audience. Now the sale has a page."
-        body="Spaces is part of HOLD Benefits, next to Stays and eSIM. Creators can list from the web with no app; brands can pay from the wallet they already use."
+        body="Spaces is part of HOLD Benefits, next to Stays and eSIM. Creators and organisers sell with HOLD Partners; brands pay from the wallet they already use."
         actions={
           <>
-            <PrimaryAction href={join}>Start selling</PrimaryAction>
+            <PrimaryAction href={sell}>Start selling</PrimaryAction>
             <SecondaryAction href={join}>Sponsor a creator</SecondaryAction>
           </>
         }

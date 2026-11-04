@@ -33,6 +33,8 @@ import {
   type ListingRef,
 } from "@/lib/app/spaces-model";
 import { useListingViews, useRefresh } from "@/lib/app/spaces-data";
+import { t as tr, type MessageKey } from "@/lib/app/i18n";
+import { useT } from "@/lib/app/i18n/react";
 
 import { useHref } from "../base";
 import { BackHeader } from "../hold";
@@ -45,27 +47,34 @@ import { CardGrid, DrillBar, EventCard, eventName, eventParam, ListingFigureCard
 
 type Show = "todo" | "done" | "all";
 
-const KIND_TEXT: Record<DeliveryItem["kind"], string> = { artwork: "Artwork", spot: "Spot", promise: "Promise", production: "Production" };
+const KIND_KEY: Record<DeliveryItem["kind"], MessageKey> = {
+  artwork: "spaces.deliveries.kind.artwork",
+  spot: "spaces.delivery.spot",
+  promise: "spaces.delivery.promise",
+  production: "spaces.delivery.production",
+};
+const kindText = (k: DeliveryItem["kind"]) => tr(KIND_KEY[k]);
 const KIND_ICON: Record<DeliveryItem["kind"], IonName> = {
   artwork: "image-outline",
   spot: "megaphone-outline",
   promise: "checkbox-outline",
   production: "videocam-outline",
 };
-const STATE_TEXT: Record<DeliveryItem["state"], string> = {
-  todo: "To do",
-  overdue: "Late",
-  waiting: "Artwork pending",
-  done: "Delivered",
+const STATE_KEY: Record<DeliveryItem["state"], MessageKey> = {
+  todo: "spaces.deliveries.state.todo",
+  overdue: "spaces.deliveries.state.overdue",
+  waiting: "spaces.deliveries.state.waiting",
+  done: "spaces.deliveries.state.done",
 };
+const STATE_TEXT = (s: DeliveryItem["state"]) => tr(STATE_KEY[s]);
 
 /** A production spot waiting on its brand says so, not "artwork pending". */
 function stateText(i: DeliveryItem): string {
   if (i.kind === "production" && i.production) {
-    if (i.state === "waiting") return "With the brand";
-    if (i.production.state === "revision_requested") return "Revision";
+    if (i.state === "waiting") return tr("spaces.deliveries.state.withBrand");
+    if (i.production.state === "revision_requested") return tr("spaces.deliveries.state.revision");
   }
-  return STATE_TEXT[i.state];
+  return STATE_TEXT(i.state);
 }
 
 const open = (i: DeliveryItem) => i.state !== "done";
@@ -80,17 +89,19 @@ function due(items: readonly DeliveryItem[]) {
   const next = left.map((i) => i.due).filter((d): d is string => !!d).sort()[0] ?? null;
   const late = left.some((i) => i.state === "overdue");
   const parts = [
-    deliver ? `${deliver} to deliver` : "",
-    artwork ? `${artwork} artwork to approve` : "",
-    waiting ? `${waiting} waiting on artwork` : "",
-    withBrand ? `${withBrand} with the brand` : "",
+    deliver ? tr("spaces.deliveries.toDeliver", { count: deliver }) : "",
+    artwork ? tr("spaces.deliveries.artworkToApprove", { count: artwork }) : "",
+    waiting ? tr("spaces.deliveries.waitingOnArtwork", { count: waiting }) : "",
+    withBrand ? tr("spaces.deliveries.withBrand", { count: withBrand }) : "",
   ].filter(Boolean);
+  // Past its day: dueText already reads "2d late", so it gets no "Due".
+  const nextLate = next !== null && next.slice(0, 10) < new Date().toISOString().slice(0, 10);
   return {
     open: left.length,
-    text: parts.length ? parts.join(" · ") : "All delivered",
+    text: parts.length ? parts.join(" · ") : tr("spaces.deliveries.allDelivered"),
     next,
     late,
-    note: next ? (dueText(next).endsWith("late") ? dueText(next) : `Due ${dueText(next)}`) : left.length ? "" : `${items.length} done`,
+    note: next ? (nextLate ? dueText(next) : tr("spaces.deliveries.due", { when: dueText(next) })) : left.length ? "" : tr("spaces.deliveries.doneCount", { count: items.length }),
   };
 }
 
@@ -105,6 +116,7 @@ export function DeliveriesScreen({
   selected: string | null;
   view: string | null;
 }) {
+  useT();
   const { role, listings, work } = useShell();
   const running = useMemo(
     () => (role === "creator" ? listings.filter((l) => l.status !== "draft").map((l) => l.id) : null),
@@ -119,7 +131,7 @@ export function DeliveriesScreen({
     [views.data, work, own],
   );
   const loading = role === "creator" && !views.data && !views.error;
-  const refOf = (id: string, i?: DeliveryItem) => refs.get(id) ?? unknownListing(id, i?.listing ?? "Listing");
+  const refOf = (id: string, i?: DeliveryItem) => refs.get(id) ?? unknownListing(id, i?.listing ?? tr("spaces.sales.listing"));
 
   // An item on its own (the Overview's "needs you") opens on its listing.
   const spaceId = listing ?? items.find((i) => i.id === selected)?.spaceId ?? null;
@@ -159,10 +171,11 @@ export function DeliveriesScreen({
 type RefOf = (id: string, i?: DeliveryItem) => ListingRef;
 
 function EventGrid({ groups, refOf }: { groups: { key: string; items: DeliveryItem[] }[]; refOf: RefOf }) {
+  const t = useT();
   const href = useHref();
   const paged = usePaged(groups, groups.length);
   if (groups.length === 0) {
-    return <Empty icon="checkmark-done" title="Nothing to deliver" body="When a brand pays for a spot, what you owe them shows here." />;
+    return <Empty icon="checkmark-done" title={t("spaces.deliveries.nothingToDeliver")} body={t("spaces.deliveries.emptyBody")} />;
   }
   return (
     <div className="flex flex-col gap-4">
@@ -188,6 +201,7 @@ function EventGrid({ groups, refOf }: { groups: { key: string; items: DeliveryIt
 }
 
 function EventDeliveries({ eventKey, items, refOf }: { eventKey: string; items: DeliveryItem[]; refOf: RefOf }) {
+  const t = useT();
   const href = useHref();
   const listings = byListing(items, (i) => i.spaceId).sort((a, b) => due(b.items).open - due(a.items).open);
   const paged = usePaged(listings, eventKey);
@@ -195,9 +209,9 @@ function EventDeliveries({ eventKey, items, refOf }: { eventKey: string; items: 
 
   return (
     <div className="flex flex-col gap-4">
-      <DrillBar back={href("/deliveries")} crumb="Deliveries" title={eventName(event)} />
+      <DrillBar back={href("/deliveries")} crumb={t("spaces.deliveries.crumb")} title={eventName(event)} />
       {listings.length === 0 ? (
-        <Empty icon="checkmark-done" title="Nothing to deliver" />
+        <Empty icon="checkmark-done" title={t("spaces.deliveries.nothingToDeliver")} />
       ) : (
         <>
           <CardGrid>
@@ -236,6 +250,7 @@ function ListingDeliveries({
   view: string | null;
   error: unknown;
 }) {
+  const t = useT();
   const { role } = useShell();
   const router = useRouter();
   const pathname = usePathname();
@@ -260,10 +275,10 @@ function ListingDeliveries({
           : countdownText(i.production.dueAt)
         : stateText(i)
       : i.state === "done"
-        ? STATE_TEXT.done
+        ? STATE_TEXT("done")
         : i.due
           ? dueText(i.due)
-          : STATE_TEXT[i.state];
+          : STATE_TEXT(i.state);
 
   return (
     <div className="flex flex-col gap-4">
@@ -278,13 +293,13 @@ function ListingDeliveries({
         showDetail={!!selected && !!current}
         list={
           <div className={`flex flex-col gap-2.5 ${LIST_PANEL} lg:overflow-y-auto`}>
-            <ChipRow label="Show">
-              <Chip label="To do" count={items.filter((i) => inView(i, "todo")).length} selected={show === "todo"} onClick={() => setShow("todo")} />
-              <Chip label="Delivered" count={items.filter((i) => inView(i, "done")).length} selected={show === "done"} onClick={() => setShow("done")} />
-              <Chip label="All" count={items.length} selected={show === "all"} onClick={() => setShow("all")} />
+            <ChipRow label={t("spaces.deliveries.show")}>
+              <Chip label={t("spaces.deliveries.state.todo")} count={items.filter((i) => inView(i, "todo")).length} selected={show === "todo"} onClick={() => setShow("todo")} />
+              <Chip label={t("spaces.deliveries.state.done")} count={items.filter((i) => inView(i, "done")).length} selected={show === "done"} onClick={() => setShow("done")} />
+              <Chip label={t("common.all")} count={items.length} selected={show === "all"} onClick={() => setShow("all")} />
             </ChipRow>
             {list.length === 0 ? (
-              <Empty icon="checkmark-done" title={show === "todo" ? "Nothing to deliver" : "Nothing here"} />
+              <Empty icon="checkmark-done" title={show === "todo" ? t("spaces.deliveries.nothingToDeliver") : t("spaces.deliveries.nothingHere")} />
             ) : (
               <ul className="flex flex-col gap-2">
                 {list.map((i) => {
@@ -302,7 +317,7 @@ function ListingDeliveries({
                         <Ion name={KIND_ICON[i.kind]} size={18} className={`shrink-0 ${i.state === "overdue" ? "text-amber" : "text-white/[0.82]"}`} />
                         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                           <span className="truncate text-[14.5px] font-bold text-white">{i.title}</span>
-                          <span className="truncate text-[12.5px] text-white/55">{i.sub === KIND_TEXT[i.kind] ? i.sub : `${KIND_TEXT[i.kind]} · ${i.sub}`}</span>
+                          <span className="truncate text-[12.5px] text-white/55">{i.sub === kindText(i.kind) ? i.sub : `${kindText(i.kind)} · ${i.sub}`}</span>
                         </span>
                         <Tag label={status(i)} tone={tone(i)} />
                       </Link>
@@ -317,7 +332,7 @@ function ListingDeliveries({
           current ? (
             <Detail item={current} backHref={`${base}&view=${show}`} />
           ) : (
-            <Empty icon="checkmark-done" title="Nothing selected" />
+            <Empty icon="checkmark-done" title={t("spaces.deliveries.nothingSelected")} />
           )
         }
       />
@@ -326,6 +341,7 @@ function ListingDeliveries({
 }
 
 function Detail({ item, backHref }: { item: DeliveryItem; backHref: string }) {
+  const t = useT();
   const href = useHref();
   const { listings } = useShell();
   const refresh = useRefresh();
@@ -341,13 +357,13 @@ function Detail({ item, backHref }: { item: DeliveryItem; backHref: string }) {
         right={
           canOpen ? (
             <Link href={href(`/listings/${item.spaceId}?tab=deliveries`)} className="inline-flex items-center gap-1 text-[13px] font-strong text-white/[0.82] hover:text-white">
-              Open listing
+              {t("spaces.deliveries.openListing")}
               <Ion name="chevron-forward" size={14} />
             </Link>
           ) : null
         }
       >
-        {KIND_TEXT[item.kind]} · {item.listing}
+        {kindText(item.kind)} · {item.listing}
       </SectionLabel>
       <div className="flex flex-col gap-2.5">
         {item.kind === "production" && item.production ? (

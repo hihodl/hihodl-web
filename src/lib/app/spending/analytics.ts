@@ -22,6 +22,8 @@
 //
 //   you saved / net kept = income − spend   (payouts sit apart, per the design)
 
+import { fmtDate, monthName } from "../i18n/format";
+
 import { parseAmt, transferUsd as txUsd } from "./amounts";
 import { rampColor, type CategoryDef } from "./categories";
 import { getCategoryDef } from "./catalog";
@@ -86,13 +88,9 @@ function planBuckets(range: SpendRange): BucketPlan {
 
 function bucketLabel(startMs: number, kind: BucketPlan["kind"]): string {
   const d = new Date(startMs);
-  try {
-    if (kind === "day") return String(d.getDate());
-    if (kind === "week") return d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
-    return d.toLocaleDateString(undefined, { month: "short" });
-  } catch {
-    return `${d.getDate()}/${d.getMonth() + 1}`;
-  }
+  if (kind === "day") return fmtDate(d, { day: "numeric" }) || String(d.getDate());
+  if (kind === "week") return fmtDate(d, { day: "numeric", month: "short" }) || `${d.getDate()}/${d.getMonth() + 1}`;
+  return monthName(d.getMonth(), "short");
 }
 
 /** Bucket a window's peers into an income/spend time-series for the detail chart. */

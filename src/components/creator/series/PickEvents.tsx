@@ -41,6 +41,8 @@ import { useState } from "react";
 
 import { btnWhite as btnPrimary, btnGlassPill as btnSecondary, btnGlassPill as btnSmallSecondary, cardBox as card } from "@/components/app/spaces/kit";
 import { eventDates } from "@/lib/ad-space/format";
+import { t as tl } from "@/lib/app/i18n";
+import { useT } from "@/lib/app/i18n/react";
 import {
   LIMITS,
   instantOf,
@@ -90,24 +92,20 @@ function defaultCloseFor(event: EventSummary, sourceClosesAt: string): string {
  */
 function closeProblems(row: Row, session: boolean, now: number): string[] {
   const iso = instantOf(row.closesAt);
-  if (!iso) return ["Say the day this one stops selling."];
+  if (!iso) return [tl("runner.pick.sayDay")];
   const at = Date.parse(iso);
   const out: string[] = [];
   if (at - now < LIMITS.MIN_CAMPAIGN_HOURS * HOUR) {
-    out.push(
-      `A listing runs for at least ${LIMITS.MIN_CAMPAIGN_HOURS} hours, and this one would be over before then. Give it a later day, or leave this event out.`,
-    );
+    out.push(tl("runner.pick.minHours", { hours: LIMITS.MIN_CAMPAIGN_HOURS }));
   } else if (at - now > LIMITS.MAX_CAMPAIGN_DAYS * DAY) {
-    out.push(
-      `A listing runs for at most ${LIMITS.MAX_CAMPAIGN_DAYS} days. This event is further off than that, so come back to it nearer the time.`,
-    );
+    out.push(tl("runner.pick.maxDays", { days: LIMITS.MAX_CAMPAIGN_DAYS }));
   }
   if (session) {
     // A session is delivered by the day after the event ends, and selling time
     // after that is selling time that no longer exists.
     const lastDay = Date.parse(`${row.event.endsOn.slice(0, 10)}T00:00:00Z`);
     if (Number.isFinite(lastDay) && at > lastDay + 2 * DAY) {
-      out.push("Time in person cannot be sold once the event is over. Close this one by the day after it ends.");
+      out.push(tl("runner.pick.session"));
     }
   }
   return out;
@@ -132,6 +130,7 @@ export function PickEvents({
   onFinished: () => void;
   onCancel: () => void;
 }) {
+  const t = useT();
   const [rows, setRows] = useState<Row[]>([]);
   /** Why one event did not become a listing, kept beside that event's row. */
   const [refusals, setRefusals] = useState<Record<string, string>>({});
@@ -149,13 +148,11 @@ export function PickEvents({
   function add(event: EventSummary) {
     setNotice(null);
     if (taken.includes(event.id) || rows.some((r) => r.event.id === event.id)) {
-      setNotice(
-        `This listing already goes to ${event.name}. Two pages at the same event only take sponsors off each other.`,
-      );
+      setNotice(t("runner.pick.already", { name: event.name }));
       return;
     }
     if (room === 0) {
-      setNotice(`${LIMITS.SERIES_MAX} listings is as far as one of these goes, counting the one you are on.`);
+      setNotice(t("runner.pick.limit", { max: LIMITS.SERIES_MAX }));
       return;
     }
     setRows((list) => [...list, { event, closesAt: defaultCloseFor(event, space.closesAt) }]);
@@ -205,17 +202,14 @@ export function PickEvents({
   return (
     <div className="flex flex-col gap-6">
       <p className="text-[15.5px] text-white/[0.62]">
-        Pick the events. Each one becomes its own listing with everything this one has — the same ladder, the same
-        wording, the same promises — and its own link. What it does not share is what is for sale: {space.totals.positions}{" "}
-        {space.totals.positions === 1 ? "spot" : "spots"} here means {space.totals.positions} at each of them, not{" "}
-        {space.totals.positions} between them.
+        {t("runner.pick.intro", { count: space.totals.positions })}
       </p>
 
       <p className="text-[14.5px] text-white">
-        {held === 1 ? "This listing is at one event so far." : `This listing already goes to ${held} events.`}{" "}
+        {held === 1 ? t("runner.pick.oneSoFar") : t("runner.pick.goesTo", { count: held })}{" "}
         {rows.length > 0
-          ? `Adding ${rows.length} more makes ${held + rows.length} of ${LIMITS.SERIES_MAX}.`
-          : `You can add ${room} more, up to ${LIMITS.SERIES_MAX} in all.`}
+          ? t("runner.pick.adding", { count: rows.length, total: held + rows.length, max: LIMITS.SERIES_MAX })
+          : t("runner.pick.canAdd", { room, max: LIMITS.SERIES_MAX })}
       </p>
 
       {/*
@@ -225,10 +219,8 @@ export function PickEvents({
       */}
       {made > 0 ? (
         <p role="status" className="text-[14.5px] text-[#2FBE8A]">
-          {made === 1 ? "One listing is set up" : `${made} listings are set up`} and waiting with the others.{" "}
-          {rows.length === 1
-            ? "This one is not, and the reason is under it."
-            : "These are not, and each says why under it."}
+          {t("runner.pick.made", { count: made })}{" "}
+          {rows.length === 1 ? t("runner.pick.thisNot") : t("runner.pick.theseNot")}
         </p>
       ) : null}
 
@@ -246,7 +238,7 @@ export function PickEvents({
         />
       ) : (
         <p className="text-[14.5px] text-white/[0.62]">
-          That is {LIMITS.SERIES_MAX}, which is as many as one listing goes to. Take one off the list to pick another.
+          {t("runner.pick.full", { max: LIMITS.SERIES_MAX })}
         </p>
       )}
 
@@ -262,15 +254,15 @@ export function PickEvents({
                   </p>
                 </div>
                 <button type="button" className={btnSmallSecondary} onClick={() => drop(row.event.id)}>
-                  Take it off
+                  {t("runner.pick.takeOff")}
                 </button>
               </div>
               {refusals[row.event.id] ? (
                 <p className="text-[14.5px] text-amber">{refusals[row.event.id]}</p>
               ) : null}
               <DayTimeField
-                label="This one stops selling"
-                hint="The day the event starts, unless you say otherwise. Every other date moves with it."
+                label={t("runner.pick.stopsSelling")}
+                hint={t("runner.pick.stopsHint")}
                 problems={problemsByEvent.get(row.event.id) ?? []}
                 value={row.closesAt}
                 min={dayPlus(today(), 1)}
@@ -288,20 +280,19 @@ export function PickEvents({
         </p>
       ) : null}
 
-      <Problems list={rows.length === 0 ? ["Pick at least one event. Nothing is made until you do."] : []} />
+      <Problems list={rows.length === 0 ? [t("runner.pick.pickOne")] : []} />
 
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" className={btnPrimary} disabled={blocked || busy} onClick={() => void submit()}>
-          {busy ? "Making them…" : rows.length <= 1 ? "Make the listing" : `Make the ${rows.length} listings`}
+          {busy ? t("runner.pick.making") : t("runner.pick.make", { count: rows.length })}
         </button>
         <button type="button" className={btnSecondary} disabled={busy} onClick={onCancel}>
-          {made > 0 ? "Done" : "Cancel"}
+          {made > 0 ? t("common.done") : t("common.cancel")}
         </button>
       </div>
 
       <p className="text-[12.5px] text-white/[0.62]">
-        Each one is made on its own, so an event that cannot take this listing costs you that event and nothing else.
-        They are made as drafts: nobody can see one until it is published, and publishing happens one listing at a time.
+        {t("runner.pick.footer")}
       </p>
     </div>
   );

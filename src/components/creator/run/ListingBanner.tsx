@@ -19,6 +19,7 @@ import { useHref } from "@/components/app/base";
 import { Ion } from "@/components/app/ion";
 import { Card, centsText, Chip, ChipRow, dateTimeText, eventDatesText, ProgressBar } from "@/components/app/spaces/kit";
 import { gradientCss } from "@/lib/ad-space/look";
+import { useT } from "@/lib/app/i18n/react";
 import type { SpaceView } from "@/lib/creator/listing";
 import { BANNER_MAX_BYTES, BANNER_TYPES, clearListingBanner, setListingBanner } from "@/lib/creator/listings";
 import { describeRunError } from "@/lib/creator/problems";
@@ -40,6 +41,7 @@ export function ListingBanner({
   publicUrl: string | null;
   onChanged: () => void;
 }) {
+  const t = useT();
   const href = useHref();
   const input = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -60,11 +62,11 @@ export function ListingBanner({
     if (!file) return;
     setNotice(null);
     if (!(BANNER_TYPES as readonly string[]).includes(file.type)) {
-      setNotice("Use a JPG, PNG or WebP.");
+      setNotice(t("runner.banner.badType"));
       return;
     }
     if (file.size > BANNER_MAX_BYTES) {
-      setNotice("Up to 3 MB.");
+      setNotice(t("runner.photo.err.tooLarge"));
       return;
     }
     setPreview(URL.createObjectURL(file));
@@ -120,12 +122,12 @@ export function ListingBanner({
           {canDress ? (
             <>
               <Chip
-                label={busy ? "Uploading…" : image ? "Change image" : "Add image"}
+                label={busy ? t("runner.uploading") : image ? t("runner.banner.change") : t("runner.banner.add")}
                 icon="image-outline"
                 disabled={busy}
                 onClick={() => input.current?.click()}
               />
-              {space.bannerUrl && !busy ? <Chip label="Remove" icon="trash-outline" onClick={remove} /> : null}
+              {space.bannerUrl && !busy ? <Chip label={t("common.remove")} icon="trash-outline" onClick={remove} /> : null}
               <input
                 ref={input}
                 type="file"
@@ -141,12 +143,12 @@ export function ListingBanner({
           {space.status === "draft" && owner ? (
             <Link href={href(`/listings/${space.id}/edit`)} className={chipLink}>
               <Ion name="create-outline" size={14} />
-              Continue editing
+              {t("runner.banner.continueEditing")}
             </Link>
           ) : publicUrl ? (
             <a href={publicUrl} target="_blank" rel="noreferrer" className={chipLink}>
               <Ion name="open-outline" size={14} />
-              Public page
+              {t("runner.banner.publicPage")}
             </a>
           ) : null}
         </ChipRow>
@@ -157,19 +159,25 @@ export function ListingBanner({
       <Card>
         <div className="flex items-center justify-between gap-2.5">
           {noTotal && totals.committedCents <= 0 ? (
-            <p className={meta}>No sales yet</p>
+            <p className={meta}>{t("runner.banner.noSales")}</p>
           ) : (
             <>
               <p className="text-[26px] font-strong tracking-[-0.6px] tabular-nums text-white">{centsText(totals.committedCents)}</p>
-              <p className={meta}>{takeover || noTotal ? "so far" : `of ${centsText(totals.totalCents)}`}</p>
+              <p className={meta}>{takeover || noTotal ? t("runner.banner.soFar") : t("runner.banner.ofTotal", { total: centsText(totals.totalCents) })}</p>
             </>
           )}
         </div>
         <ProgressBar value={totals.positions > 0 ? totals.sold / totals.positions : 0} />
         <div className="flex items-center justify-between gap-2.5">
-          <p className={meta}>{takeover ? `${totals.sold} of ${totals.positions} taken` : `${totals.sold} of ${totals.positions} sold`}</p>
+          <p className={meta}>{takeover
+              ? t("runner.banner.taken", { sold: totals.sold, total: totals.positions })
+              : t("runner.spots.soldOf", { sold: totals.sold, total: totals.positions })}</p>
           <p className={meta}>
-            {space.status === "draft" ? "Draft" : space.status === "live" ? `Closes ${dateTimeText(space.closesAt)}` : `Closed ${dateTimeText(space.closesAt)}`}
+            {space.status === "draft"
+              ? t("runner.banner.draft")
+              : space.status === "live"
+                ? t("runner.banner.closes", { date: dateTimeText(space.closesAt) })
+                : t("runner.banner.closed", { date: dateTimeText(space.closesAt) })}
           </p>
         </div>
       </Card>

@@ -24,6 +24,8 @@
  * with the flag off.
  */
 
+import { t } from "@/lib/app/i18n";
+
 export interface DiscoverCoin {
   id: string;
   symbol: string;
@@ -57,7 +59,7 @@ export const DISCOVER_COINS: readonly DiscoverCoin[] = [
  */
 export function tileSubtitle(coin: DiscoverCoin): string {
   if (coin.name !== coin.symbol) return coin.name;
-  return coin.wrappedBy ? `via ${coin.wrappedBy}` : coin.name;
+  return coin.wrappedBy ? t("money.buy.via", { issuer: coin.wrappedBy }) : coin.name;
 }
 
 /**

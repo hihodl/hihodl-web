@@ -23,12 +23,25 @@
  *
  * WHERE THE CURVE COMES FROM
  *
- * The app calls DefiLlama straight from the device. A browser cannot — CORS
- * and the rate limit are both in the way — so this draws the same shape from
- * our own `GET /prices/history` (see `usePortfolioHistory`). Two consequences,
- * both deliberate: there is no 24H range here, because the backend's `days` is
- * 7, 30, 90 or 365 and nothing else; and an asset with no series is disclosed
- * under the chart rather than folded into the line.
+ * The app calls DefiLlama straight from the device; the web draws the same
+ * shape from our own `GET /prices/history` (see `usePortfolioHistory` and the
+ * arithmetic in lib/app/portfolio-curve). Consequences, all deliberate:
+ *
+ *   - There is no 24H or All range here, because the backend's `days` is 7,
+ *     30, 90 or 365 and nothing else.
+ *   - The line is built from the raw balance rows, one leg per ticker, and
+ *     does not change with the display mode: cbBTC is charted as cbBTC even
+ *     where fintech folds it into one Bitcoin row.
+ *   - SOL at work in a venue is in the hero total, so it is in the line too,
+ *     as SOL. Any other supplied token has no amount to price backwards and
+ *     is disclosed instead.
+ *   - An asset whose series failed, is missing, stopped, or is plainly a
+ *     different coin from the one we hold is left out of the line and named
+ *     under it. A line that looks complete and is not is worse than a note.
+ *   - A line that starts later than its range (a coin younger than a year)
+ *     labels its move "since <date>", never "1y".
+ *   - The line is drawn against TIME, not sample index, so the live right
+ *     edge an hour after the last hourly sample sits an hour to the right.
  *
  * WHAT THE DISPLAY MODE CHANGES
  *
@@ -82,6 +95,8 @@ import {
   type DisplayMode,
 } from "@/lib/app/display-mode";
 import type { Balance } from "@/lib/app/hold-api";
+import { fmtDate, fmtNumber, fmtPercent, fmtUsd } from "@/lib/app/i18n/format";
+import { useT } from "@/lib/app/i18n/react";
 import {
   formatApy,
   isStable,
@@ -96,8 +111,11 @@ import {
   useYieldPositions,
   useYieldReserves,
   usdOf,
+  type ChartLeg,
   type CurvePoint,
+  type PortfolioCurve,
 } from "@/lib/app/money";
+import { coversRange, sameCoin, UNCHARTED_DUST_USD } from "@/lib/app/portfolio-curve";
 import { chainLabel } from "@/lib/app/payments";
 import { useMyAddresses } from "@/lib/app/spaces-data";
 
@@ -105,7 +123,6 @@ import { useProductHref } from "../base";
 import { Ion } from "../ion";
 import { useShellPrefs } from "../Shell";
 import { Skeleton } from "../ui";
-import { money } from "../wallet/app-kit";
 import { DISCOVER_COINS, tileSubtitle, discoverableFor } from "./discover-coins";
 import { AssetMark, InAppNote, ReadFailed } from "./kit";
 
@@ -120,10 +137,10 @@ const FLAT_PCT = 0.005;
 const INVEST_DUST_USD = 0.01;
 
 const RANGES = [
-  { label: "7D", short: "7d", days: 7 },
-  { label: "30D", short: "30d", days: 30 },
-  { label: "90D", short: "90d", days: 90 },
-  { label: "1Y", short: "1y", days: 365 },
+  { label: "7D", labelKey: "money.invest.range.7d", shortKey: "money.invest.range.7dShort", days: 7 },
+  { label: "30D", labelKey: "money.invest.range.30d", shortKey: "money.invest.range.30dShort", days: 30 },
+  { label: "90D", labelKey: "money.invest.range.90d", shortKey: "money.invest.range.90dShort", days: 90 },
+  { label: "1Y", labelKey: "money.invest.range.1y", shortKey: "money.invest.range.1yShort", days: 365 },
 ] as const;
 
 type Range = (typeof RANGES)[number];
@@ -146,7 +163,7 @@ interface Holding {
 
 /** Token units: more precision under 1, tidy for whole coins. */
 function units(n: number): string {
-  return (Number.isFinite(n) ? n : 0).toLocaleString("en-US", { maximumFractionDigits: n >= 1 ? 4 : 6 });
+  return fmtNumber(Number.isFinite(n) ? n : 0, { maximumFractionDigits: n >= 1 ? 4 : 6 });
 }
 
 function symbolOf(b: Balance): string {
@@ -154,6 +171,7 @@ function symbolOf(b: Balance): string {
 }
 
 export function InvestScreen() {
+  const t = useT();
   const { displayMode } = useShellPrefs();
   const container = useContainer();
   const accounts = useMemo(() => (container.data?.subaccounts ?? []).map((s) => s.slug), [container.data]);
@@ -205,11 +223,32 @@ export function InvestScreen() {
   const hasInvestments = holdings.length > 0 || working.usd > 0;
 
   const [range, setRange] = useState<Range>(RANGES[0]);
-  const charted = useMemo(
-    () => holdings.filter((h) => h.usd !== null).map((h) => ({ symbol: h.symbol, amount: h.amount, usd: h.usd ?? 0 })),
-    [holdings],
-  );
-  const history = usePortfolioHistory(charted, range.days);
+
+  /* The line's legs: one per ticker, straight off the balance rows, so the
+   * display mode cannot change what is charted. Only money that is in the
+   * hero total goes in (a row no feed priced is not in the total, so it is
+   * not in the line either), and the SOL at work joins its liquid SOL. */
+  const legs = useMemo<ChartLeg[]>(() => {
+    const bySymbol = new Map<string, ChartLeg>();
+    const add = (symbol: string, amount: number, liveUsd: number) => {
+      const prev = bySymbol.get(symbol) ?? { symbol, amount: 0, liveUsd: 0 };
+      bySymbol.set(symbol, { symbol, amount: prev.amount + amount, liveUsd: prev.liveUsd + liveUsd });
+    };
+    for (const b of rows) {
+      const symbol = symbolOf(b);
+      if (!symbol || isStable(symbol)) continue;
+      const amount = Number(b.balance);
+      const usd = prices.data ? usdOf(b, prices.data.prices) : null;
+      if (!Number.isFinite(amount) || amount <= 0 || usd === null) continue;
+      add(symbol, amount, usd);
+    }
+    if (working.sol > 0 && working.solUsd > 0) add("SOL", working.sol, working.solUsd);
+    // Dust is left out of the line as it is left out of the list.
+    return [...bySymbol.values()].filter((l) => l.liveUsd >= INVEST_DUST_USD).sort((a, b) => a.symbol.localeCompare(b.symbol));
+  }, [rows, prices.data, working.sol, working.solUsd]);
+  // Supplied money that is not SOL: in the total, with no amount to chart.
+  const suppliedUncharted = Math.max(0, working.usd - working.solUsd);
+  const history = usePortfolioHistory(legs, range.days, suppliedUncharted);
 
   /* What the person paid, from our own ledger — the move against weighted
    * average cost, summed per (chain, token) because that is the grain the
@@ -273,7 +312,9 @@ export function InvestScreen() {
       const key = chain ? `${symbol}|${chain}` : symbol;
       const then = ago[symbol];
       const now = usdOf(b, prices.data.prices);
-      if (then === undefined || now === null) {
+      // A price a day ago from a feed that is a different coin (JUP, today)
+      // would print the whole holding as a 24h gain. No figure beats that one.
+      if (then === undefined || now === null || !sameCoin(now / amount, then)) {
         incomplete.add(key);
         continue;
       }
@@ -316,11 +357,11 @@ export function InvestScreen() {
       <div className="mx-auto flex w-full max-w-[1040px] flex-col">
         {/* The app's header: the title, and the disc that opens Performance. */}
         <div className="flex items-center justify-between px-1 pb-2.5">
-          <h1 className="text-[28px] font-bold tracking-[-0.6px] text-white">Invest</h1>
+          <h1 className="text-[28px] font-bold tracking-[-0.6px] text-white">{t("money.invest.title")}</h1>
           <Link
             href={href("/invest/performance")}
-            aria-label="Performance"
-            title="Performance"
+            aria-label={t("money.invest.performance")}
+            title={t("money.invest.performance")}
             className="flex h-[38px] w-[38px] items-center justify-center rounded-[19px] bg-white/[0.06] text-white/[0.75] transition-colors hover:bg-white/[0.12] hover:text-white"
           >
             <Ion name="pie-chart-outline" size={19} />
@@ -330,13 +371,14 @@ export function InvestScreen() {
         {loading ? (
           <Skeleton className="h-[248px]" />
         ) : failed ? (
-          <ReadFailed title="We couldn't load your investments" onRetry={retry} />
+          <ReadFailed title={t("money.invest.readFailed")} onRetry={retry} />
         ) : hasInvestments ? (
           <Hero
             totalValue={investValue}
-            points={history.data?.points ?? []}
-            loading={history.isLoading && !history.data}
-            unchartedUsd={history.data?.unchartedUsd ?? 0}
+            curve={history.data ?? null}
+            loading={legs.length > 0 && !history.data && !history.error}
+            failed={!!history.error && !history.data}
+            onRetry={() => void history.mutate()}
             range={range}
             onRange={setRange}
           />
@@ -349,9 +391,7 @@ export function InvestScreen() {
             perfectly real and sitting on chain. */}
         {!loading && !failed && unvalued > 0 ? (
           <p className="mt-2.5 px-1 text-[13px] font-strong text-white/[0.8]">
-            {unvalued === 1
-              ? "1 holding is not in this total — no price available right now."
-              : `${unvalued} holdings are not in this total — no price available right now.`}
+            {t("money.invest.unvalued", { count: unvalued })}
           </p>
         ) : null}
 
@@ -359,10 +399,10 @@ export function InvestScreen() {
             web it is a statement rather than a tap: an exchange is a signature. */}
         <div className="mt-3.5 flex h-[52px] w-full items-center justify-center gap-2 rounded-[26px] border border-white/[0.22] bg-white/10">
           <Ion name="trending-up-outline" size={18} className="text-white" />
-          <span className="text-[16px] font-extrabold tracking-[-0.2px] text-white">Invest</span>
+          <span className="text-[16px] font-extrabold tracking-[-0.2px] text-white">{t("money.invest.action")}</span>
         </div>
         <div className="mt-2.5">
-          <InAppNote>Buying and exchanging happen in the HOLD app, where the trade is signed on your own device.</InAppNote>
+          <InAppNote>{t("money.invest.inApp")}</InAppNote>
         </div>
 
         {working.sol > 0 || working.failed ? (
@@ -371,7 +411,7 @@ export function InvestScreen() {
 
         {!loading && holdings.length ? (
           <section className="mt-[26px]">
-            <h2 className="px-1 text-[22px] font-bold tracking-[-0.4px] text-white">Assets</h2>
+            <h2 className="px-1 text-[22px] font-bold tracking-[-0.4px] text-white">{t("money.invest.assets")}</h2>
             <div className="mt-3 overflow-hidden rounded-[18px] border border-white/10 bg-[linear-gradient(145deg,rgba(9,27,40,0.72),rgba(6,18,30,0.64))] shadow-[0_18px_36px_rgba(0,0,0,0.28)] backdrop-blur-xl">
               {holdings.map((h, i) => (
                 <div key={h.key}>
@@ -452,35 +492,71 @@ function deltaOverRange(points: readonly CurvePoint[]): Delta | null {
   return { abs, pct, dir: pct > FLAT_PCT ? 1 : pct < -FLAT_PCT ? -1 : 0 };
 }
 
+/** "Mar 3" — the day a line that starts late really starts. */
+function shortDate(ms: number): string {
+  return fmtDate(ms, { month: "short", day: "numeric" });
+}
+
+/**
+ * The one line under the chart that says what it leaves out, naming up to
+ * three tickers. Every reason reads as a fact about the feed, never about
+ * the holding, which is real and on chain whatever the chart can say.
+ */
+function leftOutNote(curve: PortfolioCurve | null, t: ReturnType<typeof useT>): string | null {
+  if (!curve || curve.unchartedUsd <= UNCHARTED_DUST_USD) return null;
+  const names = [...new Set(curve.leftOut.map((l) => l.symbol))];
+  const amount = fmtUsd(curve.unchartedUsd);
+  if (names.length === 0) return t("money.invest.hero.leftOut", { amount });
+  const who = names.length <= 3 ? names.join(", ") : t("money.invest.hero.leftOutMore", { names: names.slice(0, 3).join(", "), count: names.length - 3 });
+  return t("money.invest.hero.leftOutNamed", { amount, names: who });
+}
+
 function Hero({
   totalValue,
-  points,
+  curve,
   loading,
-  unchartedUsd,
+  failed,
+  onRetry,
   range,
   onRange,
 }: {
   totalValue: number;
-  points: CurvePoint[];
+  curve: PortfolioCurve | null;
   loading: boolean;
-  unchartedUsd: number;
+  failed: boolean;
+  onRetry: () => void;
   range: Range;
   onRange: (r: Range) => void;
 }) {
+  const points = curve?.points ?? [];
   // The delta comes off the real curve and nowhere else: a percentage read off
   // an invented series would be an invented percentage. No curve, no delta.
+  // It is the move of what the line holds, which is the whole total unless the
+  // note under the chart says otherwise.
+  const t = useT();
   const delta = deltaOverRange(points);
   const arrow = delta ? (delta.dir > 0 ? " ▲" : delta.dir < 0 ? " ▼" : "") : "";
-  const sign = (n: number) => `${n >= 0 ? "+" : "−"}${money(Math.abs(n))}`;
-  const deltaText = delta ? `${range.short}  ${sign(delta.abs)}${arrow} ${Math.abs(delta.pct).toFixed(2)}%` : "";
+  const label =
+    points.length > 1 && !coversRange(points, range.days, points[points.length - 1].t)
+      ? t("money.invest.hero.since", { date: shortDate(points[0].t) })
+      : t(range.shortKey);
+  const deltaText = delta
+    ? t("money.invest.hero.delta", {
+        range: label,
+        amount: fmtUsd(delta.abs, { signed: true }),
+        arrow,
+        percent: fmtPercent(Math.abs(delta.pct) / 100, 2),
+      })
+    : "";
+  const note = leftOutNote(curve, t);
 
   return (
     <section
       className="min-h-[248px] rounded-[18px] border border-white/10 bg-[linear-gradient(145deg,rgba(9,27,40,0.72),rgba(6,18,30,0.64))] px-[22px] pb-4 pt-[22px] shadow-[0_18px_36px_rgba(0,0,0,0.28)] backdrop-blur-xl"
-      aria-label="Invested value"
+      aria-label={t("money.invest.hero.label")}
     >
-      <p className="text-[11px] font-bold uppercase tracking-[1.4px] text-white/[0.55]">Invested value</p>
-      <p className="mt-1 truncate text-[44px] font-strong leading-[1.1] tracking-[-1.2px] tabular-nums text-white">{money(totalValue)}</p>
+      <p className="text-[11px] font-bold uppercase tracking-[1.4px] text-white/[0.55]">{t("money.invest.hero.label")}</p>
+      <p className="mt-1 truncate text-[44px] font-strong leading-[1.1] tracking-[-1.2px] tabular-nums text-white">{fmtUsd(totalValue)}</p>
 
       {/* One sub-line at a fixed height, so it never nudges the chart. Green
           only for a real gain: flat and down are both neutral white. */}
@@ -494,18 +570,32 @@ function Hero({
       <div className="relative mt-2.5 h-[160px]">
         {points.length > 1 ? (
           <Curve points={points} up={!delta || delta.dir >= 0} />
+        ) : loading ? (
+          <div className="flex h-full items-center justify-center">
+            <p className="text-[14px] font-strong text-white/[0.55]">{t("common.loading")}</p>
+          </div>
+        ) : failed || curve?.allFailed ? (
+          // Could not ask is not nothing to draw: it gets a Retry, not a verdict.
+          <div className="flex h-full flex-col items-center justify-center gap-2.5">
+            <p className="text-[14px] font-strong text-white/[0.7]">{t("money.invest.hero.historyFailed")}</p>
+            <button
+              type="button"
+              onClick={onRetry}
+              className="h-8 rounded-[16px] bg-white/10 px-3.5 text-[12.5px] font-bold text-white transition-colors hover:bg-white/[0.16]"
+            >
+              {t("common.retry")}
+            </button>
+          </div>
         ) : (
           <div className="flex h-full items-center justify-center">
-            <p className="text-[14px] font-strong text-white/[0.55]">
-              {loading ? "Loading…" : "No price history for these assets"}
-            </p>
+            <p className="text-[14px] font-strong text-white/[0.55]">{t("money.invest.hero.noHistory")}</p>
           </div>
         )}
       </div>
 
-      {unchartedUsd > 0.01 ? (
-        <p className="mt-2 truncate text-[11.5px] font-strong tracking-[-0.1px] text-white/[0.8]">
-          Chart excludes {money(unchartedUsd)} with no price history
+      {note ? (
+        <p className="mt-2 truncate text-[11.5px] font-strong tracking-[-0.1px] text-white/[0.8]" title={note}>
+          {note}
         </p>
       ) : null}
 
@@ -524,7 +614,7 @@ function Hero({
                 on ? "border-white/[0.28] bg-white/[0.16] font-bold text-white" : "border-transparent font-strong text-white/[0.55] hover:text-white"
               }`}
             >
-              {r.label}
+              {t(r.labelKey)}
             </button>
           );
         })}
@@ -535,19 +625,28 @@ function Hero({
 
 /** The portfolio line: one path over a soft fill, in the colour of the move. */
 function Curve({ points, up }: { points: readonly CurvePoint[]; up: boolean }) {
+  const t = useT();
   const W = 1000;
   const H = 160;
-  const ys = points.map((p) => p.y);
-  const lo = Math.min(...ys);
-  const hi = Math.max(...ys);
+  // A loop, not Math.min(...ys): 90 days hourly is 2,160 points per leg.
+  let lo = Infinity;
+  let hi = -Infinity;
+  for (const p of points) {
+    if (p.y < lo) lo = p.y;
+    if (p.y > hi) hi = p.y;
+  }
   const span = hi - lo || 1;
-  const x = (i: number) => (i / (points.length - 1)) * W;
+  // Against time, not sample index: the live right edge can sit an hour or
+  // five after the last feed sample, and hourly feeds skip the odd hour.
+  const t0 = points[0].t;
+  const tSpan = points[points.length - 1].t - t0 || 1;
+  const x = (ms: number) => ((ms - t0) / tSpan) * W;
   const y = (v: number) => H - 6 - ((v - lo) / span) * (H - 16);
-  const line = points.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)} ${y(p.y).toFixed(1)}`).join(" ");
+  const line = points.map((p, i) => `${i ? "L" : "M"}${x(p.t).toFixed(1)} ${y(p.y).toFixed(1)}`).join(" ");
   const ink = up ? UP : DOWN;
   const id = `curve-${up ? "up" : "flat"}`;
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="h-full w-full" role="img" aria-label="Portfolio value over the chosen range">
+    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="h-full w-full" role="img" aria-label={t("money.invest.hero.curveAria")}>
       <defs>
         <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={ink} stopOpacity="0.22" />
@@ -563,12 +662,11 @@ function Curve({ points, up }: { points: readonly CurvePoint[]; up: boolean }) {
 /* ── EmptyHero ────────────────────────────────────────────────────── */
 
 function EmptyHero() {
+  const t = useT();
   return (
     <section className="flex min-h-[150px] flex-col justify-center rounded-[18px] border border-white/10 bg-[linear-gradient(145deg,rgba(9,27,40,0.72),rgba(6,18,30,0.64))] p-[22px] shadow-[0_18px_36px_rgba(0,0,0,0.28)] backdrop-blur-xl">
-      <h2 className="text-[26px] font-bold tracking-[-0.6px] text-white">Grow your wealth</h2>
-      <p className="mt-2 text-[14px] leading-5 text-white/[0.8]">
-        Turn your dollars into Bitcoin, Solana and more — right from your balance.
-      </p>
+      <h2 className="text-[26px] font-bold tracking-[-0.6px] text-white">{t("money.invest.empty.title")}</h2>
+      <p className="mt-2 text-[14px] leading-5 text-white/[0.8]">{t("money.invest.empty.body")}</p>
     </section>
   );
 }
@@ -584,12 +682,13 @@ function EmptyHero() {
  * never "+$0.00", when its data is; a loss is neutral white, never red.
  */
 function AssetRow({ holding, move, day, mode }: { holding: Holding; move: number | null; day: number | null; mode: DisplayMode }) {
+  const t = useT();
   const ticker = maskTokenSymbol(holding.symbol, mode) || holding.symbol;
   const label = isBtcFamilySymbol(holding.symbol) ? btcFamilyDisplayName(holding.symbol, mode) : ticker;
   // The network, in native only — and the cbBTC note in the two modes that
   // tell the Bitcoin family apart at all.
   const under = holding.chain ? chainLabel(holding.chain) : btcFamilySubtitle(holding.symbol, mode);
-  const signed = (n: number) => `${n >= 0 ? "+" : "−"}${money(Math.abs(n))}`;
+  const signed = (n: number) => fmtUsd(n, { signed: true });
   return (
     <div className="flex min-h-[56px] items-center gap-3 px-4 py-3.5">
       <AssetMark symbol={holding.symbol} />
@@ -601,7 +700,7 @@ function AssetRow({ holding, move, day, mode }: { holding: Holding; move: number
             {under && move !== null ? " · " : ""}
             {move !== null ? (
               <span className="font-strong" style={{ color: move >= 0 ? UP : DOWN }}>
-                {signed(move)} since you bought
+                {t("money.invest.row.sinceBought", { amount: signed(move) })}
               </span>
             ) : null}
           </p>
@@ -611,15 +710,15 @@ function AssetRow({ holding, move, day, mode }: { holding: Holding; move: number
         {/* An em dash, never "$0.00": a zero here is a claim about somebody's
             money and we do not have the price to make it. */}
         <p className="text-[15px] font-bold tracking-[-0.2px] tabular-nums text-white">
-          {holding.usd === null ? "—" : money(holding.usd)}
+          {holding.usd === null ? "—" : fmtUsd(holding.usd)}
         </p>
         {day !== null && holding.usd !== null ? (
           <p
             className="truncate text-[12.5px] font-strong tracking-[-0.1px] tabular-nums"
             style={{ color: day >= 0 ? UP : DOWN }}
-            aria-label={`${day >= 0 ? "up" : "down"} ${money(Math.abs(day))} in 24 hours`}
+            aria-label={t("money.invest.row.dayAria", { dir: day >= 0 ? "up" : "down", amount: fmtUsd(day, { abs: true }) })}
           >
-            {signed(day)} <span className="text-white/[0.6]">24h</span>
+            {signed(day)} <span className="text-white/[0.6]">{t("money.invest.row.day")}</span>
           </p>
         ) : (
           <p className="truncate text-[12.5px] tabular-nums text-white/[0.8]">{units(holding.amount)}</p>
@@ -632,12 +731,17 @@ function AssetRow({ holding, move, day, mode }: { holding: Holding; move: number
 /* ── SolEarnRow ───────────────────────────────────────────────────── */
 
 /** SOL amounts at a width that does not move. */
-const sol = (n: number) => n.toFixed(4);
+const sol = (n: number) => fmtNumber(n, { minimumFractionDigits: 4, maximumFractionDigits: 4 });
 
 export function SolEarnRow({ workingSol, apy, failed }: { workingSol: number; apy: number | null; failed: boolean }) {
+  const t = useT();
   const working = workingSol > 0;
   // A zero we cannot vouch for. The row must not pitch over it.
-  const standing = working ? `${sol(workingSol)} earning` : failed ? "Couldn't check your position" : "Put your Solana to work";
+  const standing = working
+    ? t("money.solEarn.earning", { amount: sol(workingSol) })
+    : failed
+      ? t("money.solEarn.couldNotCheck")
+      : t("money.solEarn.putToWork");
   return (
     <div className="mt-3 flex items-center gap-3 rounded-[18px] border border-white/[0.08] bg-white/[0.04] p-3.5">
       <AssetMark symbol="SOL" />
@@ -648,7 +752,7 @@ export function SolEarnRow({ workingSol, apy, failed }: { workingSol: number; ap
       <div className="flex flex-col items-end">
         {/* A rate we could not read is a dash, never 0.0%. */}
         <p className="text-[15px] font-bold tabular-nums text-white">{apy != null && apy > 0 ? formatApy(apy) : "—"}</p>
-        <p className="text-[11px] text-white/[0.8]">a year</p>
+        <p className="text-[11px] text-white/[0.8]">{t("money.solEarn.aYear")}</p>
       </div>
     </div>
   );
@@ -662,17 +766,18 @@ export function SolEarnRow({ workingSol, apy, failed }: { workingSol: number; ap
  * a tile offering to discover something you own reads as a bug.
  */
 function BuySection({ held }: { held: readonly Holding[] }) {
+  const t = useT();
   const coins = useMemo(() => discoverableFor(held, DISCOVER_COINS), [held]);
   if (!coins.length) return null;
   return (
     <section className="mt-[26px]">
-      <h2 className="px-1 text-[22px] font-bold tracking-[-0.4px] text-white">Buy</h2>
+      <h2 className="px-1 text-[22px] font-bold tracking-[-0.4px] text-white">{t("money.buy.title")}</h2>
       <div className="-mx-1 mt-3.5 flex gap-3 overflow-x-auto px-1 pb-1">
         {coins.map((c) => (
           <div
             key={c.id}
             className="flex h-32 w-32 shrink-0 flex-col justify-between rounded-[18px] border border-white/10 bg-white/[0.05] p-3.5"
-            aria-label={c.wrappedBy ? `${c.name}, wrapped by ${c.wrappedBy}` : c.name}
+            aria-label={c.wrappedBy ? t("money.buy.wrappedAria", { name: c.name, issuer: c.wrappedBy }) : c.name}
           >
             <AssetMark symbol={c.symbol} size={38} />
             <div className="min-w-0">
@@ -683,7 +788,7 @@ function BuySection({ held }: { held: readonly Holding[] }) {
         ))}
       </div>
       <div className="mt-2.5">
-        <InAppNote>Every one of these is one tap from a filled order in the HOLD app. The trade is signed on your phone.</InAppNote>
+        <InAppNote>{t("money.buy.inApp")}</InAppNote>
       </div>
     </section>
   );
@@ -698,17 +803,16 @@ function BuySection({ held }: { held: readonly Holding[] }) {
  * nothing to gate, and the card points at the app, where buying happens.
  */
 function StocksSection() {
+  const t = useT();
   return (
     <section className="mt-[26px]">
-      <h2 className="px-1 text-[22px] font-bold tracking-[-0.4px] text-white">Stocks</h2>
-      <p className="mt-0.5 px-1 text-[13px] font-strong text-white/[0.8]">Tokenized US stocks · buy with your dollars</p>
+      <h2 className="px-1 text-[22px] font-bold tracking-[-0.4px] text-white">{t("money.stocks.title")}</h2>
+      <p className="mt-0.5 px-1 text-[13px] font-strong text-white/[0.8]">{t("money.stocks.subtitle")}</p>
       <div className="mt-3.5 flex items-center gap-3.5 rounded-[18px] border border-white/[0.08] bg-white/[0.04] p-3.5">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-white/[0.07]">
           <Ion name="bar-chart-outline" size={19} className="text-white/80" />
         </span>
-        <p className="min-w-0 flex-1 text-[13px] leading-[18px] text-white/[0.8]">
-          Browsing and buying stocks happens in the HOLD app, where the order is signed.
-        </p>
+        <p className="min-w-0 flex-1 text-[13px] leading-[18px] text-white/[0.8]">{t("money.stocks.inApp")}</p>
       </div>
     </section>
   );

@@ -5,15 +5,16 @@ import { TopNav } from "@/components/site/TopNav";
 import { Footer } from "@/components/site/Footer";
 import { SectionHairline } from "@/components/site/SectionHairline";
 import { SeatsCounter, LivePrice } from "@/components/founders/SeatsCounter";
-import { FOUNDER_PASS, TIER_BY_ID, usd } from "@/lib/rates.config";
+import { FOUNDER_PASS, usd } from "@/lib/rates.config";
 
 /**
  * /founders — the Founder Pass sales page.
  *
  * WHAT THIS PAGE SELLS, AND WHAT IT DOES NOT.
  *
- * It sells what is live today: the plan, the savings terms, the referral tier,
- * FX. The card appears once, near the bottom, as something that arrives when it
+ * It sells what is live today: the savings terms, the referral tier, FX. It
+ * sold the paid plan for life until 24-sep-2026; HOLD Pro does not launch now,
+ * so the pass no longer offers or promises it. The card appears once, near the bottom, as something that arrives when it
  * arrives. There is no launch date on this page and there is no wording that
  * lets a reader come away thinking they bought a card — because they did not,
  * and a pass sold on a card that slips is a refund queue and a reputation.
@@ -30,7 +31,7 @@ import { FOUNDER_PASS, TIER_BY_ID, usd } from "@/lib/rates.config";
 export const metadata: Metadata = {
   title: "Founder Pass — 500 seats",
   description:
-    "500 founder seats. One payment. Pro for life, no savings fee on your first $25,000, no FX markup in any corridor, and a permanent creator referral tier. Full refund if the card has not shipped within six months.",
+    "500 founder seats. One payment. No savings fee on your first $25,000, no FX markup in any corridor, and a permanent creator referral tier. Full refund if the card has not shipped within six months.",
   alternates: { canonical: "/founders" },
   openGraph: {
     type: "website",
@@ -38,7 +39,7 @@ export const metadata: Metadata = {
     siteName: "HOLD",
     title: "HOLD Founder Pass — 500 seats",
     description:
-      "One payment. Pro for life, no savings fee on your first $25,000, no FX markup anywhere, and a permanent creator referral tier.",
+      "One payment. No savings fee on your first $25,000, no FX markup anywhere, and a permanent creator referral tier.",
     locale: "en_US",
   },
 };
@@ -46,8 +47,6 @@ export const metadata: Metadata = {
 const CHECKOUT = "/founders/checkout";
 
 export default function FoundersPage() {
-  const pro = TIER_BY_ID.pro;
-
   return (
     <>
       <TopNav />
@@ -82,7 +81,7 @@ export default function FoundersPage() {
 
               <p className="mt-8 text-lead text-text-muted max-w-2xl">
                 A one-off payment for a permanent set of terms on your dollar account:
-                the paid plan for life, no fee on what your savings earn up to{" "}
+                no fee on what your savings earn up to{" "}
                 {usd(FOUNDER_PASS.savingsFeeWaiverUpToUsd)}, and no markup when you spend
                 in another currency. Five hundred seats and then the door closes.
               </p>
@@ -147,11 +146,6 @@ export default function FoundersPage() {
 
             <div className="mt-16 grid grid-cols-1 md:grid-cols-2 gap-5">
               <Benefit
-                title="The paid plan, for life"
-                body={`${pro.name} never renews and never bills you again. Unlimited pockets, priority support, no monthly fee for as long as the account exists.`}
-                worth={`${usd(pro.priceUsdMonthly)}/month, forever`}
-              />
-              <Benefit
                 title={`No savings fee on your first ${usd(FOUNDER_PASS.savingsFeeWaiverUpToUsd)}`}
                 body={`Every cent your savings earn is yours, on balances up to ${usd(FOUNDER_PASS.savingsFeeWaiverUpToUsd)}. Nothing is taken out of the interest. For life.`}
                 worth="For life"
@@ -168,7 +162,7 @@ export default function FoundersPage() {
               />
               <Benefit
                 title={`${FOUNDER_PASS.welcomeHiPoints.toLocaleString("en-US")} HiPoints to start`}
-                body="Credited when your pass is confirmed. Points pay for your plan and for partner perks — they are the currency inside the product."
+                body="Credited when your pass is confirmed. Points pay for partner perks and cover fees. They are the currency inside the product."
                 worth="On day one"
               />
               <Benefit
@@ -273,11 +267,11 @@ export default function FoundersPage() {
               />
               <Answer
                 q="So what am I actually paying for?"
-                a="The plan, the savings terms, the referral tier and the FX terms. All four work today. The card benefits are on top, and they are the part the guarantee covers."
+                a="The savings terms, the referral tier and the FX terms. All three work today. The card benefits are on top, and they are the part the guarantee covers."
               />
               <Answer
                 q="What happens to my terms if you change your prices?"
-                a="Nothing. The pass fixes your terms at the moment you buy. If the plan gets more expensive or the savings fee changes, yours does not."
+                a="Nothing. The pass fixes your terms at the moment you buy. If the savings fee changes, yours does not."
               />
               <Answer
                 q="Is 500 a real number?"

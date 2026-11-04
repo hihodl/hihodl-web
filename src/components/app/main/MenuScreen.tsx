@@ -6,11 +6,11 @@
  * under it, and the help line and the company at the foot. Each row opens its
  * own screen with Back (`?screen=`, so the browser's Back works too).
  *
- *   Security           → ?screen=security   security.tsx: the rows the web has
- *                          (Link your phone, Passkeys)
+ *   Security           → ?screen=security   security.tsx: the row the web has
+ *                          (Link your phone)
  *   Account recovery   → ?screen=recovery   backup.tsx, the fintech "ways to
- *                          get back in": Passkey, Recovery codes
- *                          → ?screen=passkeys       passkeys.tsx
+ *                          get back in": Recovery codes (the web has no
+ *                          passkey anywhere, Alex 2026-09-24)
  *                          → ?screen=codes          recovery-codes.tsx
  *   Statements         → ?screen=statements statements/index.tsx, drawn and
  *                          honest: the server issues the document and the app
@@ -33,9 +33,12 @@
  *                          Report a bug; notifications, the authenticator and
  *                          payment protection are named and sent to the app
  *
+ *   Language           → ?screen=language   settings/language.tsx
+ *   Currency           → ?screen=currency   settings/currency.tsx, both rows of
+ *                          Settings › Appearance as in the app (PrefsScreens)
+ *
  * Left out on purpose, because the web has nothing real behind them: PIN, Face
- * ID and auto-lock (the phone's), and language and currency (the web is in
- * English and in dollars, and has no exchange rates to show another).
+ * ID and auto-lock (the phone's).
  */
 
 import Link from "next/link";
@@ -50,13 +53,12 @@ import {
   DISPLAY_MODE_OPTIONS,
   DISPLAY_MODE_TITLE,
   type DisplayMode,
+  type DisplayModeOption,
 } from "@/lib/app/display-mode";
 import { chosenUsername, emailRecoveryCodes, recoveryCodesStatus } from "@/lib/app/me";
 import { useMe } from "@/lib/app/spaces-data";
-import { useHoldWallet } from "@/lib/app/hold-wallet";
 import { thisDevice, type Phone } from "@/lib/link/ua";
 import { listSessions, revokeSession, thisBrowserSessionId, type ActiveSession } from "@/lib/app/sessions";
-import { listPasskeys, type RegisteredPasskey } from "@/lib/wallet/api";
 
 import { useLinkedPhones } from "../account/PhoneScreen";
 import { linkHref } from "../link/in-app";
@@ -68,23 +70,27 @@ import { useShell, useShellPrefs } from "../Shell";
 import { YourPagesCard, YourPagesScreen } from "../spaces/YourPages";
 import { Skeleton } from "../ui";
 import { InviteScreen } from "./InviteScreen";
+import { CurrencyScreen, LanguageScreen, languageName } from "./PrefsScreens";
+import { t as tr } from "@/lib/app/i18n";
+import { fmtNumber } from "@/lib/app/i18n/format";
+import { useDisplayCurrency, useLocale, useT } from "@/lib/app/i18n/react";
 
 /** The product's own host serves only the product; the website's pages live on the website. */
 const WEBSITE = "https://hihodl.xyz";
 
-type Screen = "home" | "plan" | "invite" | "security" | "recovery" | "passkeys" | "codes" | "statements" | "settings" | "sessions" | "personalization" | "about";
+type Screen = "home" | "plan" | "invite" | "security" | "recovery" | "codes" | "statements" | "settings" | "sessions" | "personalization" | "about" | "language" | "currency";
 
 export function MenuScreen({ screen, item }: { screen?: string; item?: string } = {}) {
   const router = useRouter();
   const pathname = usePathname();
   const productHref = useProductHref();
+  const t = useT();
   const open = useCallback((s: Screen) => router.push(s === "home" ? pathname : `${pathname}?screen=${s}`, { scroll: false }), [router, pathname]);
   const home = () => open("home");
   if (screen === "plan") return <PlanScreen onBack={home} />;
   if (screen === "invite") return <InviteScreen onBack={home} />;
-  if (screen === "security") return <SecurityScreen onBack={home} open={open} />;
+  if (screen === "security") return <SecurityScreen onBack={home} />;
   if (screen === "recovery") return <RecoveryScreen onBack={home} open={open} />;
-  if (screen === "passkeys") return <PasskeysScreen onBack={() => open("recovery")} />;
   if (screen === "codes") return <CodesScreen onBack={() => open("recovery")} />;
   if (screen === "statements") return <StatementsScreen onBack={home} />;
   if (screen === "settings") return <SettingsScreen onBack={home} open={open} />;
@@ -92,13 +98,15 @@ export function MenuScreen({ screen, item }: { screen?: string; item?: string } 
   // Appearance is a row of Settings, as in the app.
   if (screen === "personalization") return <PersonalizationScreen onBack={() => open("settings")} />;
   if (screen === "about") return <AboutScreen onBack={home} />;
+  if (screen === "language") return <LanguageScreen onBack={() => open("settings")} />;
+  if (screen === "currency") return <CurrencyScreen onBack={() => open("settings")} />;
   if (screen === "pages") {
     // Your pages, one level under Appearance (../spaces/YourPages).
     return (
       <YourPagesScreen
         base={productHref("/menu?screen=pages")}
         back={productHref("/menu?screen=personalization")}
-        backLabel="Appearance"
+        backLabel={t("menu.appearance.title")}
         item={item}
       />
     );
@@ -108,21 +116,6 @@ export function MenuScreen({ screen, item }: { screen?: string; item?: string } 
 
 /* ── Data ─────────────────────────────────────────────────────────── */
 
-/** undefined while reading, null when it could not be read. */
-function usePasskeys(): RegisteredPasskey[] | null | undefined {
-  const [list, setList] = useState<RegisteredPasskey[] | null | undefined>(undefined);
-  useEffect(() => {
-    let alive = true;
-    listPasskeys().then(
-      (l) => alive && setList(l),
-      () => alive && setList(null),
-    );
-    return () => {
-      alive = false;
-    };
-  }, []);
-  return list;
-}
 
 type CodesStatus = { hasActiveCodes: boolean; unusedCount: number; generatedAt: string | null };
 
@@ -140,6 +133,7 @@ function useCodes(): [CodesStatus | null | undefined, () => void] {
 function MenuHome({ open }: { open: (s: Screen) => void }) {
   const productHref = useProductHref();
   const { walletPage } = useShell();
+  const t = useT();
   const [codes] = useCodes();
   // The app's badge on Account recovery: recovery codes never made.
   const recoveryBadge = codes && !codes.hasActiveCodes ? 1 : 0;
@@ -151,22 +145,22 @@ function MenuHome({ open }: { open: (s: Screen) => void }) {
         {/*
           Wallet sits here and no longer in the side column. Beside Home it
           read as a second money screen; it is not one. It is where the wallet
-          is made, unlocked and its recovery words read — which is this list's
-          subject, next to Security and Account recovery.
+          made in the HOLD app is read and sent from, approved on the phone —
+          which is this list's subject, next to Security and Account recovery.
         */}
         {walletPage === true ? (
-          <MenuRow icon="wallet-outline" label="Wallet" sub="Your Solana address, recovery words and withdrawals" href={productHref("/wallet")} reload />
+          <MenuRow icon="wallet-outline" label={t("menu.home.wallet")} sub={t("menu.home.walletSubPhone")} href={productHref("/wallet")} reload />
         ) : null}
-        <MenuRow icon="shield-checkmark-outline" label="Security" onClick={() => open("security")} />
-        <MenuRow icon="key-outline" label="Account recovery" badge={recoveryBadge} onClick={() => open("recovery")} />
-        <MenuRow icon="document-text-outline" label="Statements" onClick={() => open("statements")} />
-        <MenuRow icon="log-in-outline" label="Sign-in" href={productHref("/account?view=account")} />
-        <MenuRow icon="settings-outline" label="Settings" onClick={() => open("settings")} />
-        <MenuRow icon="help-circle-outline" label="Help & Support" href="mailto:support@hihodl.xyz" external />
-        <MenuRow icon="information-circle-outline" label="About HOLD" onClick={() => open("about")} />
+        <MenuRow icon="shield-checkmark-outline" label={t("menu.home.security")} onClick={() => open("security")} />
+        <MenuRow icon="key-outline" label={t("menu.home.recovery")} badge={recoveryBadge} onClick={() => open("recovery")} />
+        <MenuRow icon="document-text-outline" label={t("menu.home.statements")} onClick={() => open("statements")} />
+        <MenuRow icon="log-in-outline" label={t("menu.home.signIn")} href={productHref("/account?view=account")} />
+        <MenuRow icon="settings-outline" label={t("menu.home.settings")} onClick={() => open("settings")} />
+        <MenuRow icon="help-circle-outline" label={t("menu.home.help")} href="mailto:support@hihodl.xyz" external />
+        <MenuRow icon="information-circle-outline" label={t("menu.home.about")} onClick={() => open("about")} />
         {/* The app's last settings row, in its calm words. Closing is done on
             the website's page, which says what closing does before it asks. */}
-        <MenuRow icon="heart-dislike-outline" label="Close account" href={`${WEBSITE}/delete-account`} external />
+        <MenuRow icon="heart-dislike-outline" label={t("menu.home.closeAccount")} href={`${WEBSITE}/delete-account`} external />
       </HoldCard>
 
       {/* Sign Out: quieter than a row, on purpose (the app's signOutRow). */}
@@ -176,10 +170,10 @@ function MenuHome({ open }: { open: (s: Screen) => void }) {
         className="mt-[18px] flex items-center justify-center gap-2 rounded-[12px] px-4 py-3.5 text-[15px] font-strong text-white/55 transition-colors hover:text-white/80"
       >
         <Ion name="log-out-outline" size={16} />
-        Sign Out
+        {t("menu.home.signOut")}
       </button>
 
-      <p className="mt-[18px] text-center text-[12px] text-[#9FB7C2]">Need something else? We&apos;re here to help.</p>
+      <p className="mt-[18px] text-center text-[12px] text-[#9FB7C2]">{t("menu.home.helpLine")}</p>
       <p className="mt-8 text-center text-[11px] font-strong tracking-[1.2px] text-white/55">HIHODL TECHNOLOGIES OÜ</p>
     </Column>
   );
@@ -195,8 +189,9 @@ function MenuHero() {
   const me = useMe();
   const { session } = useShell();
   const productHref = useProductHref();
+  const t = useT();
   const username = chosenUsername(me.data);
-  const name = username ? `@${username}` : me.data?.profile.displayName?.trim() || session.user.email || "You";
+  const name = username ? `@${username}` : me.data?.profile.displayName?.trim() || session.user.email || t("common.you");
   return (
     <Link href={productHref("/account")} className="mt-1 flex flex-col items-center gap-3 rounded-[18px] py-5 transition-opacity hover:opacity-80">
       <UserAvatar size={96} fallbackName={name} />
@@ -205,7 +200,7 @@ function MenuHero() {
           under the photograph that opens the same page — so the list now
           starts at Wallet and this line says where the photograph goes. */}
       <span className="flex items-center gap-1 text-[12.5px] text-[#9FB7C2]">
-        Profile, X account, where you get paid
+        {t("menu.hero.sub")}
         <Ion name="chevron-forward" size={12} className="text-white/45" />
       </span>
     </Link>
@@ -220,7 +215,7 @@ function MenuHero() {
  * The plan tile carries the app's own words (`menu:tiles.standard` /
  * `menu:tiles.pro`) over the plan this person is actually on, read from `GET
  * /me`. Tapping it opens the one thing the web can honestly say about it:
- * which plan, and that changing it is done in the app. It names no rate —
+ * which plan, and nothing to upgrade to. It names no rate —
  * each of those belongs to the one product page that charges it
  * (rates.config), and a tile that collected them would be the aggregate fee
  * page this product has decided not to have.
@@ -229,17 +224,18 @@ function MenuTiles({ open }: { open: (s: Screen) => void }) {
   const productHref = useProductHref();
   const me = useMe();
   const pro = me.data?.profile.plan === "pro";
+  const t = useT();
   return (
     <div className="mt-1 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
       <Tile
         icon="card-outline"
-        title={me.data ? (pro ? "Pro" : "Standard") : "Your plan"}
-        sub={me.data ? (pro ? "Gasless transfers" : "Your plan") : "Loading…"}
+        title={me.data ? (pro ? t("menu.tiles.pro") : t("menu.tiles.standard")) : t("menu.tiles.yourPlan")}
+        sub={me.data ? (pro ? t("menu.tiles.proSub") : t("menu.tiles.yourPlan")) : t("common.loading")}
         onClick={() => open("plan")}
       />
-      <Tile icon="person-add-outline" title="Invite friends" sub="Earn rewards together" onClick={() => open("invite")} />
+      <Tile icon="person-add-outline" title={t("menu.tiles.invite")} sub={t("menu.tiles.inviteSub")} onClick={() => open("invite")} />
       {/* The link screen itself: a full load, it carries the wallet pages' CSP. */}
-      <Tile icon="phone-portrait-outline" title="Link your phone" sub="Android approves payments" href={linkHref(productHref, productHref("/menu"))} reload />
+      <Tile icon="phone-portrait-outline" title={t("menu.tiles.link")} sub={t("menu.tiles.linkSubEvery")} href={linkHref(productHref, productHref("/menu"))} reload />
     </div>
   );
 }
@@ -276,14 +272,13 @@ function Tile({ icon, title, sub, href, reload, onClick }: { icon: IonName; titl
 /* ── Plan ((paywall)/plans, as much of it as the web can say) ─────── */
 
 /**
- * Which plan, and where it changes.
+ * Which plan, and nothing to buy.
  *
- * The app's tile opens its paywall, which is a purchase: `POST
- * /subscriptions/create` raises a payment request that the wallet approves on
- * the phone. The web has no plan checkout of its own (the website's only
- * Stripe checkout is the Founder Pass), so the plan is stated from `GET /me`
- * and the action is the way into the app's plans screen, never a link back to
- * the website that would send the person round in a loop.
+ * The plan is stated from `GET /me`. HOLD Pro does not launch now (decision
+ * of 24-sep-2026), so this screen offers no upgrade, no way into the app's
+ * plans screen and no line about what Pro would add. An account already on
+ * Pro still reads its own plan here, because that is a fact about the
+ * account, not an offer.
  *
  * No rates here, deliberately. Every take we charge belongs to the one product
  * page that charges it (lib/rates.config, rule 2: no aggregated fee page), so
@@ -293,9 +288,10 @@ function Tile({ icon, title, sub, href, reload, onClick }: { icon: IonName; titl
 function PlanScreen({ onBack }: { onBack: () => void }) {
   const me = useMe();
   const pro = me.data?.profile.plan === "pro";
+  const t = useT();
   return (
     <Column>
-      <BackHeader title="Your plan" onBack={onBack} />
+      <BackHeader title={t("menu.plan.title")} onBack={onBack} />
       <HoldCard className="mt-4 flex flex-col items-center gap-3 px-5 py-7 text-center">
         <span className="flex h-[60px] w-[60px] items-center justify-center rounded-[30px] bg-amber/[0.12] text-amber">
           <Ion name="card-outline" size={28} />
@@ -303,44 +299,13 @@ function PlanScreen({ onBack }: { onBack: () => void }) {
         {me.data === undefined ? (
           <Skeleton className="h-7 w-32" />
         ) : (
-          <p className="text-[24px] font-strong text-white">{pro ? "Pro" : "Standard"}</p>
+          <p className="text-[24px] font-strong text-white">{pro ? t("menu.tiles.pro") : t("menu.tiles.standard")}</p>
         )}
         <p className="text-[14px] leading-[21px] text-white/[0.72]">
-          {pro
-            ? "You are on Pro. Transfers are gasless and conversions carry no base markup."
-            : "You are on Standard. Everything in HOLD works; Pro removes the base markup on conversions and makes transfers gasless."}
+          {pro ? t("menu.plan.proBody") : t("menu.plan.standardBody")}
         </p>
       </HoldCard>
-      <div className="mt-4">
-        <Notice icon="phone-portrait-outline" tone="calm">
-          Your plan is changed in the HOLD app: Menu, then your plan. It is paid from your wallet there and applies to this account as soon as it clears.
-        </Notice>
-      </div>
-      <HoldCard className="mt-4">
-        <PlanInTheApp />
-        <MenuRow icon="globe-outline" label="What each plan includes" sub="hihodl.xyz/hipoints" href={`${WEBSITE}/hipoints`} external />
-      </HoldCard>
     </Column>
-  );
-}
-
-/**
- * The way to the app's plans screen from this device. A phone opens it
- * (`hihodl://plans` through /open, which falls back to the store when the app
- * is not there). A computer cannot open an app on a phone, so it says where to
- * look and offers both stores rather than a link that lands on the homepage.
- */
-function PlanInTheApp() {
-  const [phone, setPhone] = useState<Phone | null>(null);
-  useEffect(() => setPhone(thisDevice().phone), []);
-  if (phone) {
-    return <MenuRow icon="open-outline" label="Open plans in the app" href={`${WEBSITE}/open?to=plans`} external chevron />;
-  }
-  return (
-    <>
-      <MenuRow icon="logo-apple" label="HOLD on the App Store" sub="Open HOLD on your phone to change plan" href={APP_STORE_URL} external chevron />
-      <MenuRow icon="logo-google" label="HOLD on Google Play" href={PLAY_STORE_URL} external chevron />
-    </>
   );
 }
 
@@ -360,26 +325,26 @@ function PlanInTheApp() {
  * remembers from their phone reads as a product that lost it.
  */
 function StatementsScreen({ onBack }: { onBack: () => void }) {
+  const t = useT();
   return (
     <Column>
-      <BackHeader title="Statements" onBack={onBack} />
+      <BackHeader title={t("menu.statements.title")} onBack={onBack} />
       <HoldCard className="mt-4 flex flex-col items-center gap-3 px-5 py-7 text-center">
         <span className="flex h-[60px] w-[60px] items-center justify-center rounded-[30px] bg-amber/[0.12] text-amber">
           <Ion name="document-text-outline" size={28} />
         </span>
-        <p className="text-[20px] font-strong text-white">Paper for somebody else</p>
+        <p className="text-[20px] font-strong text-white">{t("menu.statements.heading")}</p>
         <p className="text-[14px] leading-[21px] text-white/[0.72]">
-          An account statement is a document a landlord, a consulate or a bank will read. We issue it with a verification code on it, so
-          whoever receives it can confirm it came from us and has not been altered.
+          {t("menu.statements.body")}
         </p>
       </HoldCard>
       <div className="mt-4">
         <Notice icon="phone-portrait-outline" tone="calm">
-          Requesting a statement happens in the HOLD app: Menu › Statements, where you pick the account, the period and the format.
+          {t("menu.statements.inApp")}
         </Notice>
       </div>
       <p className="mt-4 px-4 text-center text-[13px] leading-[18px] text-[#9FB7C2]">
-        Holding one already? The QR on it opens the verification page here on the web.
+        {t("menu.statements.verify")}
       </p>
     </Column>
   );
@@ -387,31 +352,25 @@ function StatementsScreen({ onBack }: { onBack: () => void }) {
 
 /* ── Security (security.tsx) ──────────────────────────────────────── */
 
-function SecurityScreen({ onBack, open }: { onBack: () => void; open: (s: Screen) => void }) {
+function SecurityScreen({ onBack }: { onBack: () => void }) {
   const productHref = useProductHref();
-  const passkeys = usePasskeys();
   const phones = useLinkedPhones();
   const n = phones.devices?.length ?? 0;
-  const phoneValue = phones.error ? "Unavailable" : phones.devices === undefined ? undefined : n === 0 ? "Not linked" : n === 1 ? "Linked" : `${n} phones`;
+  const t = useT();
+  const phoneValue = phones.error ? t("common.unavailable") : phones.devices === undefined ? undefined : t("menu.security.phones", { count: n });
   return (
     <Column>
-      <BackHeader title="Security" onBack={onBack} />
+      <BackHeader title={t("menu.security.title")} onBack={onBack} />
       <HoldCard className="mt-4">
         {/* The app's "Link with the web", from this side. With nothing linked it opens
             the link screen itself (a full load, for the wallet pages' CSP); with a phone
             linked, the list of phones, which links another from there. */}
         <MenuRow
           icon="qr-code-outline"
-          label="Link your phone"
+          label={t("menu.security.linkPhone")}
           value={phoneValue}
           href={phones.devices && n === 0 ? linkHref(productHref, productHref("/menu?screen=security")) : productHref("/account?view=phone")}
           reload={!!phones.devices && n === 0}
-        />
-        <MenuRow
-          icon="finger-print-outline"
-          label="Passkeys"
-          value={passkeys === undefined ? undefined : passkeys === null ? "Unavailable" : String(passkeys.length)}
-          onClick={() => open("passkeys")}
         />
       </HoldCard>
     </Column>
@@ -421,6 +380,7 @@ function SecurityScreen({ onBack, open }: { onBack: () => void; open: (s: Screen
 /* ── Account recovery (backup.tsx, the fintech "ways to get back in") ─ */
 
 function FactorRow({ icon, title, subtitle, active, divider, onClick }: { icon: IonName; title: string; subtitle: string; active: boolean | null; divider: boolean; onClick: () => void }) {
+  const t = useT();
   return (
     <button
       type="button"
@@ -437,26 +397,26 @@ function FactorRow({ icon, title, subtitle, active, divider, onClick }: { icon: 
       {active === null ? (
         <Skeleton className="h-6 w-10" />
       ) : active ? (
-        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[12px] bg-[#3ED598] text-[#0A1A24]" aria-label="On">
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[12px] bg-[#3ED598] text-[#0A1A24]" aria-label={t("common.on")}>
           <Ion name="checkmark" size={15} />
         </span>
       ) : (
-        <span className="shrink-0 text-[13px] font-strong text-amber">Set up</span>
+        <span className="shrink-0 text-[13px] font-strong text-amber">{t("menu.recovery.setUp")}</span>
       )}
     </button>
   );
 }
 
 function RecoveryScreen({ onBack, open }: { onBack: () => void; open: (s: Screen) => void }) {
-  const passkeys = usePasskeys();
   const [codes] = useCodes();
   const [info, setInfo] = useState(false);
+  const t = useT();
   return (
     <Column>
-      <BackHeader title="Account recovery" onBack={onBack} />
+      <BackHeader title={t("menu.recovery.title")} onBack={onBack} />
       <div className="mt-4 flex items-start gap-2 px-1">
-        <p className="flex-1 text-[15px] font-medium leading-[21px] text-white/[0.72]">If you ever lose your phone, any of these brings your account back.</p>
-        <button type="button" aria-label="How recovery works" aria-expanded={info} onClick={() => setInfo((v) => !v)} className="mt-px text-amber">
+        <p className="flex-1 text-[15px] font-medium leading-[21px] text-white/[0.72]">{t("menu.recovery.introCodes")}</p>
+        <button type="button" aria-label={t("menu.recovery.infoAria")} aria-expanded={info} onClick={() => setInfo((v) => !v)} className="mt-px text-amber">
           <Ion name="information-circle-outline" size={20} />
         </button>
       </div>
@@ -466,137 +426,26 @@ function RecoveryScreen({ onBack, open }: { onBack: () => void; open: (s: Screen
           <span className="flex h-[54px] w-[54px] items-center justify-center rounded-[27px] bg-amber/[0.12] text-amber">
             <Ion name="shield-checkmark" size={24} />
           </span>
-          <p className="text-[19px] font-strong text-white">How you get back in</p>
+          <p className="text-[19px] font-strong text-white">{t("menu.recovery.infoTitle")}</p>
           <p className="text-[14px] leading-5 text-white/[0.72]">
-            Your money lives in your wallet, not with us, so we can never move it on our own. To make sure you can always get back in, set up at least two
-            ways below.
+            {t("menu.recovery.infoBody1Codes")}
           </p>
           <p className="text-[14px] leading-5 text-white/[0.72]">
-            Recovery codes are one-time backups. Save them somewhere that is not your email, like your password manager.
+            {t("menu.recovery.infoBody2")}
           </p>
-          <p className="text-[13px] text-white/55">The more ways you set up, the safer you are.</p>
         </HoldCard>
       ) : null}
 
       <HoldCard className="mt-[18px]">
         <FactorRow
-          icon="finger-print-outline"
-          title="Passkey"
-          subtitle="Unlock with your face. Works on your new phone automatically."
-          active={passkeys === undefined ? null : !!passkeys && passkeys.length > 0}
-          divider={false}
-          onClick={() => open("passkeys")}
-        />
-        <FactorRow
           icon="grid-outline"
-          title="Recovery codes"
-          subtitle="One-time codes. Save them somewhere that is not your email."
+          title={t("menu.recovery.codes")}
+          subtitle={t("menu.recovery.codesSub")}
           active={codes === undefined ? null : !!codes?.hasActiveCodes}
-          divider
+          divider={false}
           onClick={() => open("codes")}
         />
       </HoldCard>
-      <p className="mt-4 px-4 text-center text-[13px] leading-[18px] text-[#9FB7C2]">Set up at least two. You can change these anytime.</p>
-    </Column>
-  );
-}
-
-/* ── Passkeys (passkeys.tsx) ──────────────────────────────────────── */
-
-function added(iso: string): string {
-  const days = Math.floor((Date.now() - Date.parse(iso)) / 86_400_000);
-  if (!Number.isFinite(days)) return "";
-  if (days < 1) return "today";
-  if (days === 1) return "yesterday";
-  if (days < 30) return `${days}d ago`;
-  const months = Math.floor(days / 30);
-  return months === 1 ? "1mo ago" : `${months}mo ago`;
-}
-
-function PasskeysScreen({ onBack }: { onBack: () => void }) {
-  const productHref = useProductHref();
-  const w = useHoldWallet();
-  const passkeys = usePasskeys();
-  const [info, setInfo] = useState(false);
-  // Adding a passkey happens in the Wallet, which carries a strict CSP only a full page load can set.
-  const add = w.walletPage ? (
-    <a href={productHref("/wallet")} className={passkeys && passkeys.length > 0 ? ctaSecondary : ctaPrimary}>
-      <Ion name="add" size={18} />
-      {passkeys && passkeys.length > 0 ? "Add another device" : "Add a passkey"}
-    </a>
-  ) : null;
-  return (
-    <Column>
-      <BackHeader
-        title="Passkeys"
-        onBack={onBack}
-        right={
-          <button type="button" aria-label="What are passkeys?" aria-expanded={info} onClick={() => setInfo((v) => !v)} className="flex h-9 w-9 items-center justify-center text-white/70 hover:text-white">
-            <Ion name="information-circle-outline" size={24} />
-          </button>
-        }
-      />
-      {info ? (
-        <HoldCard className="mb-4 mt-2 flex flex-col items-center gap-3 px-5 py-6 text-center">
-          <span className="flex h-[60px] w-[60px] items-center justify-center rounded-[30px] bg-amber/[0.12] text-amber">
-            <Ion name="finger-print" size={30} />
-          </span>
-          <p className="text-[20px] font-strong text-white">What are passkeys?</p>
-          <p className="text-[14px] leading-[21px] text-white/65">Passkeys let you sign in with Face ID or your fingerprint — no password and no recovery phrase to type.</p>
-          <p className="text-[14px] leading-[21px] text-white/65">
-            Each device you sign in from registers its own passkey, so you can add or remove them independently here.
-          </p>
-        </HoldCard>
-      ) : null}
-
-      {passkeys === undefined ? (
-        <div className="mt-4 flex flex-col gap-3">
-          <Skeleton className="h-[74px] rounded-[16px]" />
-          <Skeleton className="h-[74px] rounded-[16px]" />
-        </div>
-      ) : passkeys === null ? (
-        <div className="mt-4">
-          <Notice icon="alert-circle-outline" tone="calm">
-            Failed to load passkeys
-          </Notice>
-        </div>
-      ) : passkeys.length === 0 ? (
-        <div className="mt-4 flex flex-col items-center gap-2 rounded-[18px] border border-amber/[0.22] bg-amber/[0.06] p-5 text-center">
-          <span className="mb-0.5 flex h-[54px] w-[54px] items-center justify-center rounded-[27px] bg-amber/[0.12] text-amber">
-            <Ion name="finger-print" size={26} />
-          </span>
-          <p className="text-[17px] font-strong text-white">Protect this device</p>
-          <p className="mb-2 px-1 text-[13px] leading-[19px] text-white/60">
-            This device doesn&apos;t have a passkey yet. Add one to sign in with Face ID or your fingerprint — no password needed.
-          </p>
-          {add ? <div className="w-full">{add}</div> : null}
-        </div>
-      ) : (
-        <>
-          <p className="mb-3 mt-4 px-0.5 text-[12px] font-strong uppercase tracking-[0.6px] text-white/55">All passkeys</p>
-          <div className="mb-4 flex flex-col gap-3">
-            {passkeys.map((p) => (
-              <div key={p.id} className="flex items-center gap-3 rounded-[16px] border border-white/[0.08] bg-white/[0.05] p-3.5">
-                <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[10px] bg-amber/10 text-amber">
-                  <Ion name={p.deviceType === "singleDevice" ? "phone-portrait-outline" : "key-outline"} size={20} />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[15px] font-strong text-white">{p.name || "Passkey"}</span>
-                  <span className="mt-[3px] block text-[12px] font-medium text-white/55">Added {added(p.createdAt)}</span>
-                </span>
-              </div>
-            ))}
-          </div>
-          {add}
-        </>
-      )}
-
-      <div className="flex items-start gap-2.5 px-1 pt-[18px]">
-        <Ion name="shield-checkmark-outline" size={18} className="shrink-0 text-white/55" />
-        <p className="flex-1 text-[12px] leading-[17px] text-white/55">
-          Removing the last passkey is not allowed. To replace it, add a new one first, then remove the old.
-        </p>
-      </div>
     </Column>
   );
 }
@@ -610,14 +459,12 @@ function maskEmail(email: string): string {
 }
 
 function ago(iso: string | null): string {
-  if (!iso) return "previously";
+  if (!iso) return tr("menu.codes.agoPreviously");
   const days = Math.floor((Date.now() - Date.parse(iso)) / 86_400_000);
-  if (!Number.isFinite(days)) return "previously";
-  if (days < 1) return "today";
-  if (days === 1) return "1 day ago";
-  if (days < 30) return `${days} days ago`;
-  const months = Math.floor(days / 30);
-  return months === 1 ? "1 month ago" : `${months} months ago`;
+  if (!Number.isFinite(days)) return tr("menu.codes.agoPreviously");
+  if (days < 1) return tr("menu.codes.agoToday");
+  if (days < 30) return tr("menu.codes.agoDays", { count: days });
+  return tr("menu.codes.agoMonths", { count: Math.floor(days / 30) });
 }
 
 function Box({ icon, children, tone }: { icon: IonName; children: ReactNode; tone: "warn" | "info" }) {
@@ -636,8 +483,9 @@ function CodesScreen({ onBack }: { onBack: () => void }) {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const t = useT();
   const email = session.user.email ?? null;
-  const masked = email ? maskEmail(email) : "your email";
+  const masked = email ? maskEmail(email) : t("menu.codes.yourEmail");
   const has = !!codes?.hasActiveCodes;
 
   const send = async () => {
@@ -668,15 +516,15 @@ function CodesScreen({ onBack }: { onBack: () => void }) {
 
   return (
     <Column>
-      <BackHeader title="Recovery Codes" onBack={onBack} />
+      <BackHeader title={t("menu.codes.title")} onBack={onBack} />
       {codes === undefined ? (
         <Skeleton className="mt-4 h-72 rounded-[28px]" />
       ) : sent ? (
         <div className="mt-4 flex flex-col">
           {badge("mail-open-outline", true)}
-          <p className="mb-3 text-center text-[24px] font-strong text-white">Check your email</p>
+          <p className="mb-3 text-center text-[24px] font-strong text-white">{t("menu.codes.checkEmail")}</p>
           <p className="mb-5 text-center text-[15px] leading-[22px] text-white/70">
-            We just sent your recovery codes to {masked}. Keep that email somewhere safe — you&apos;ll need a code to get back into your account.
+            {t("menu.codes.sentBody", { email: masked })}
           </p>
           <div className="mb-6 flex justify-center">
             <span className="inline-flex h-9 items-center gap-2 rounded-[18px] border border-[rgba(76,175,80,0.28)] bg-[rgba(76,175,80,0.1)] px-3.5 text-[14px] font-strong text-[#4CAF50]">
@@ -685,35 +533,33 @@ function CodesScreen({ onBack }: { onBack: () => void }) {
             </span>
           </div>
           <Box icon="information-circle-outline" tone="info">
-            Each code can only be used once. After using a code, generate new ones if needed.
+            {t("menu.codes.onceOnly")}
           </Box>
           <div className="mt-5 flex flex-col gap-3">
             <button type="button" className={ctaPrimary} onClick={onBack}>
-              Done
+              {t("common.done")}
             </button>
           </div>
         </div>
       ) : (
         <div className="mt-4 flex flex-col">
           {badge(has ? "shield-checkmark-outline" : "key-outline", has)}
-          <p className="mb-3 text-center text-[24px] font-strong text-white">{has ? "Recovery Codes Active" : "Recovery Codes"}</p>
+          <p className="mb-3 text-center text-[24px] font-strong text-white">{has ? t("menu.codes.activeTitle") : t("menu.codes.title")}</p>
           <p className="mb-5 text-center text-[15px] leading-[22px] text-white/70">
             {codes === null
-              ? "We could not read your recovery codes right now."
+              ? t("menu.codes.readFailed")
               : has
-                ? `You generated recovery codes ${ago(codes.generatedAt)}. They're valid until you regenerate or use them.${codes.unusedCount ? ` ${codes.unusedCount} unused.` : ""}`
-                : "Recovery codes are backup codes that can be used to recover your account if you lose access to your device or forget your password."}
+                ? `${t("menu.codes.activeBody", { ago: ago(codes.generatedAt) })}${codes.unusedCount ? ` ${t("menu.codes.unused", { count: fmtNumber(codes.unusedCount) })}` : ""}`
+                : t("menu.codes.intro")}
           </p>
           <div className="mx-auto mb-6 flex max-w-[340px] items-start gap-2 px-1">
             <Ion name="mail-outline" size={16} className="mt-px shrink-0 text-white/55" />
             <p className="flex-1 text-[13px] leading-[18px] text-white/55">
-              We&apos;ll send them to {masked}. Generate new ones here anytime — it replaces the old set.
+              {t("menu.codes.sendTo", { email: masked })}
             </p>
           </div>
           <Box icon={has ? "refresh-outline" : "warning-outline"} tone="warn">
-            {has
-              ? "Regenerating will invalidate your existing codes immediately. Only do this if you have lost or compromised the old ones."
-              : "Keep the email somewhere safe. Anyone with these codes can recover your account, so don't forward or share them."}
+            {has ? t("menu.codes.regenWarn") : t("menu.codes.keepWarn")}
           </Box>
           {notice ? (
             <div className="mt-4">
@@ -722,23 +568,21 @@ function CodesScreen({ onBack }: { onBack: () => void }) {
           ) : null}
           {confirm ? (
             <HoldCard className="mt-5 flex flex-col gap-3 p-5">
-              <p className="text-[17px] font-strong text-white">{has ? "Regenerate Recovery Codes?" : "Generate Recovery Codes?"}</p>
+              <p className="text-[17px] font-strong text-white">{has ? t("menu.codes.confirmRegenTitle") : t("menu.codes.confirmGenTitle")}</p>
               <p className="text-[14px] leading-5 text-white/[0.72]">
-                {has
-                  ? "Your existing recovery codes will be invalidated immediately. We'll email a fresh set to your inbox. Only do this if you've lost or compromised the old ones."
-                  : "We'll create your recovery codes and email them straight to you. Use them to get back into your account if you ever lose access."}
+                {has ? t("menu.codes.confirmRegenBody") : t("menu.codes.confirmGenBody")}
               </p>
               <button type="button" className={ctaPrimary} disabled={sending} onClick={() => void send()}>
-                {sending ? "Sending…" : has ? "Regenerate" : "Generate"}
+                {sending ? t("menu.codes.sending") : has ? t("menu.codes.regenerate") : t("menu.codes.generate")}
               </button>
               <button type="button" className="h-11 text-[15px] font-strong text-white/80 hover:text-white" disabled={sending} onClick={() => setConfirm(false)}>
-                Cancel
+                {t("common.cancel")}
               </button>
             </HoldCard>
           ) : email ? (
             <div className="mt-5">
               <button type="button" className={ctaPrimary} onClick={() => setConfirm(true)}>
-                {has ? "Regenerate Recovery Codes" : "Generate & email my codes"}
+                {has ? t("menu.codes.regenerateCta") : t("menu.codes.generateCta")}
               </button>
             </div>
           ) : null}
@@ -763,7 +607,7 @@ function ViewOption({
   selected,
   onChoose,
 }: {
-  option: (typeof DISPLAY_MODE_OPTIONS)[number];
+  option: DisplayModeOption;
   selected: boolean;
   onChoose: () => void;
 }) {
@@ -802,17 +646,18 @@ function PersonalizationScreen({ onBack }: { onBack: () => void }) {
   const { role } = useShell();
   const { collapsed, setCollapsed, displayMode, setDisplayMode } = useShellPrefs();
   const productHref = useProductHref();
+  const t = useT();
   return (
     <Column>
-      <BackHeader title="Appearance" onBack={onBack} />
+      <BackHeader title={t("menu.appearance.title")} onBack={onBack} />
 
       {/* The app's "View" row, opened out: on the phone it is a sheet, and a
           page has the room to simply show the three and their reasons. Words
           are the app's own (settings:displayMode.*), unchanged. */}
-      <SectionTitle first>View</SectionTitle>
-      <p className="mb-3 px-1 text-[14px] leading-5 text-white/[0.72]">{DISPLAY_MODE_INTRO}</p>
-      <div className="flex flex-col gap-2.5" role="radiogroup" aria-label={DISPLAY_MODE_TITLE}>
-        {DISPLAY_MODE_OPTIONS.map((o) => (
+      <SectionTitle first>{t("menu.appearance.view")}</SectionTitle>
+      <p className="mb-3 px-1 text-[14px] leading-5 text-white/[0.72]">{DISPLAY_MODE_INTRO()}</p>
+      <div className="flex flex-col gap-2.5" role="radiogroup" aria-label={DISPLAY_MODE_TITLE()}>
+        {DISPLAY_MODE_OPTIONS().map((o) => (
           <ViewOption
             key={o.id}
             option={o}
@@ -822,25 +667,25 @@ function PersonalizationScreen({ onBack }: { onBack: () => void }) {
         ))}
       </div>
       <p className="mt-3 px-1 text-[12px] leading-[17px] text-[#9FB7C2]">
-        Remembered in this browser. The app keeps its own copy, so setting it here does not change it on your phone.
+        {t("menu.appearance.remembered")}
       </p>
 
-      <SectionTitle>Sidebar</SectionTitle>
+      <SectionTitle>{t("menu.appearance.sidebar")}</SectionTitle>
       <HoldCard>
         <div className="flex items-center gap-3 px-3 py-5">
           <Ion name="contrast-outline" size={18} className="shrink-0 text-white" />
           <span className="min-w-0 flex-1 pr-3">
-            <span className="block text-[16px] font-strong leading-[21px] tracking-[0.1px] text-white">Icons only</span>
-            <span className="mt-0.5 block text-[13px] leading-[17px] text-white/[0.62]">Keep the sidebar narrow on a wide screen. Remembered in this browser.</span>
+            <span className="block text-[16px] font-strong leading-[21px] tracking-[0.1px] text-white">{t("menu.appearance.iconsOnly")}</span>
+            <span className="mt-0.5 block text-[13px] leading-[17px] text-white/[0.62]">{t("menu.appearance.iconsOnlySub")}</span>
           </span>
-          <Switch checked={collapsed} onChange={setCollapsed} label="Icons only" />
+          <Switch checked={collapsed} onChange={setCollapsed} label={t("menu.appearance.iconsOnly")} />
         </div>
       </HoldCard>
 
       {/* Your pages: what a creator's public pages stand on (../spaces/YourPages). */}
       {role === "creator" ? (
         <>
-          <SectionTitle>Your pages</SectionTitle>
+          <SectionTitle>{t("menu.appearance.yourPages")}</SectionTitle>
           <YourPagesCard href={productHref("/menu?screen=pages")} />
         </>
       ) : null}
@@ -862,46 +707,51 @@ function PersonalizationScreen({ onBack }: { onBack: () => void }) {
  */
 function SettingsScreen({ onBack, open }: { onBack: () => void; open: (s: Screen) => void }) {
   const { hideBalances, setHideBalances } = useShellPrefs();
+  const t = useT();
+  const locale = useLocale();
+  const { currency } = useDisplayCurrency();
   const [sessions] = useSessions();
-  const sessionsValue = sessions === undefined ? undefined : sessions === null ? "Unavailable" : String(sessions.length);
+  const sessionsValue = sessions === undefined ? undefined : sessions === null ? t("common.unavailable") : fmtNumber(sessions.length);
   return (
     <Column>
-      <BackHeader title="Settings" onBack={onBack} />
+      <BackHeader title={t("menu.settings.title")} onBack={onBack} />
 
-      <SectionTitle>Privacy</SectionTitle>
+      <SectionTitle>{t("menu.settings.privacy")}</SectionTitle>
       <HoldCard>
         <div className="flex items-center gap-3 px-[18px] py-[18px]">
           <Ion name="eye-off-outline" size={18} className="mt-[2px] shrink-0 self-start text-white" />
           <span className="min-w-0 flex-1 pr-3">
-            <span className="block text-[14px] font-bold leading-5 text-white">Hide balances</span>
-            <span className="mt-0.5 block text-[12px] leading-4 text-[#9FB7C2]">Mask the amounts on Home. Tapping the balance does it too. Remembered in this browser.</span>
+            <span className="block text-[14px] font-bold leading-5 text-white">{t("menu.settings.hideBalances")}</span>
+            <span className="mt-0.5 block text-[12px] leading-4 text-[#9FB7C2]">{t("menu.settings.hideBalancesSub")}</span>
           </span>
-          <Switch checked={hideBalances} onChange={setHideBalances} label="Hide balances" />
+          <Switch checked={hideBalances} onChange={setHideBalances} label={t("menu.settings.hideBalances")} />
         </div>
       </HoldCard>
 
-      <SectionTitle>Appearance</SectionTitle>
+      <SectionTitle>{t("menu.settings.appearance")}</SectionTitle>
       <HoldCard>
-        <MenuRow icon="contrast-outline" label="Appearance" sub="View, sidebar and your pages" chevron onClick={() => open("personalization")} />
+        <MenuRow icon="cash-outline" label={t("prefs.currency")} value={currency} onClick={() => open("currency")} />
+        <MenuRow icon="language-outline" label={t("prefs.language")} value={languageName(locale)} onClick={() => open("language")} />
+        <MenuRow icon="contrast-outline" label={t("menu.settings.appearance")} sub={t("menu.settings.appearanceSub")} chevron onClick={() => open("personalization")} />
       </HoldCard>
 
-      <SectionTitle>Security</SectionTitle>
+      <SectionTitle>{t("menu.settings.security")}</SectionTitle>
       <HoldCard>
-        <MenuRow icon="phone-portrait-outline" label="Active sessions" value={sessionsValue} chevron={sessionsValue === undefined} onClick={() => open("sessions")} />
+        <MenuRow icon="phone-portrait-outline" label={t("menu.settings.sessions")} value={sessionsValue} chevron={sessionsValue === undefined} onClick={() => open("sessions")} />
       </HoldCard>
 
-      <SectionTitle>In the HOLD app</SectionTitle>
+      <SectionTitle>{t("menu.settings.inTheApp")}</SectionTitle>
       <InTheApp
         items={[
-          { icon: "notifications-outline", label: "Notifications", where: "Menu › Settings › Notifications", to: "notifications" },
-          { icon: "keypad-outline", label: "Two-factor authentication", where: "Menu › Security › Google Authenticator", to: "security" },
-          { icon: "shield-outline", label: "Payment protection", where: "Menu › Security › Payment protection", to: "send-protection" },
+          { icon: "notifications-outline", label: t("menu.settings.notifications"), where: t("menu.settings.notificationsWhere"), to: "notifications" },
+          { icon: "keypad-outline", label: t("menu.settings.twoFactor"), where: t("menu.settings.twoFactorWhere"), to: "security" },
+          { icon: "shield-outline", label: t("menu.settings.protection"), where: t("menu.settings.protectionWhere"), to: "send-protection" },
         ]}
       />
 
-      <SectionTitle>Support</SectionTitle>
+      <SectionTitle>{t("menu.settings.support")}</SectionTitle>
       <HoldCard>
-        <MenuRow icon="bug-outline" label="Report a bug" sub="An email to support, with this browser filled in" href={bugReportHref()} external />
+        <MenuRow icon="bug-outline" label={t("menu.settings.reportBug")} sub={t("menu.settings.reportBugSub")} href={bugReportHref()} external />
       </HoldCard>
     </Column>
   );
@@ -915,12 +765,13 @@ function SettingsScreen({ onBack, open }: { onBack: () => void; open: (s: Screen
  */
 function InTheApp({ items }: { items: { icon: IonName; label: string; where: string; to: string }[] }) {
   const [phone, setPhone] = useState<Phone | null>(null);
+  const t = useT();
   useEffect(() => setPhone(thisDevice().phone), []);
   if (phone) {
     return (
       <HoldCard>
         {items.map((i) => (
-          <MenuRow key={i.to} icon={i.icon} label={i.label} value="Open in the app" href={`${WEBSITE}/open?to=${i.to}`} external />
+          <MenuRow key={i.to} icon={i.icon} label={i.label} value={t("common.openInApp")} href={`${WEBSITE}/open?to=${i.to}`} external />
         ))}
       </HoldCard>
     );
@@ -932,12 +783,12 @@ function InTheApp({ items }: { items: { icon: IonName; label: string; where: str
           <Ion name={i.icon} size={18} className="mt-[2px] shrink-0 self-start text-white" />
           <span className="min-w-0 flex-1">
             <span className="block truncate text-[14px] font-bold leading-5 text-white">{i.label}</span>
-            <span className="mt-0.5 block text-[12px] leading-4 text-[#9FB7C2]">{`On your phone: ${i.where}`}</span>
+            <span className="mt-0.5 block text-[12px] leading-4 text-[#9FB7C2]">{t("menu.settings.onYourPhone", { where: i.where })}</span>
           </span>
         </div>
       ))}
-      <MenuRow icon="logo-apple" label="HOLD on the App Store" href={APP_STORE_URL} external chevron />
-      <MenuRow icon="logo-google" label="HOLD on Google Play" href={PLAY_STORE_URL} external chevron />
+      <MenuRow icon="logo-apple" label={t("menu.stores.appStore")} href={APP_STORE_URL} external chevron />
+      <MenuRow icon="logo-google" label={t("menu.stores.googlePlay")} href={PLAY_STORE_URL} external chevron />
     </HoldCard>
   );
 }
@@ -950,8 +801,8 @@ function InTheApp({ items }: { items: { icon: IonName; label: string; where: str
 function bugReportHref(): string {
   const where = typeof window === "undefined" ? "" : window.location.href;
   const ua = typeof navigator === "undefined" ? "" : navigator.userAgent;
-  const body = `What happened:\n\n\nWhat you expected:\n\n\n---\nPage: ${where}\nBrowser: ${ua}\n`;
-  return `mailto:support@hihodl.xyz?subject=${encodeURIComponent("Bug report (web)")}&body=${encodeURIComponent(body)}`;
+  const body = tr("menu.bug.body", { page: where, browser: ua });
+  return `mailto:support@hihodl.xyz?subject=${encodeURIComponent(tr("menu.bug.subject"))}&body=${encodeURIComponent(body)}`;
 }
 
 /** undefined while reading, null when it could not be read. `reload` reads again. */
@@ -969,10 +820,10 @@ function useSessions(): [ActiveSession[] | null | undefined, () => void] {
 function lastSeen(iso: string): string {
   const mins = Math.floor((Date.now() - Date.parse(iso)) / 60_000);
   if (!Number.isFinite(mins)) return "";
-  if (mins < 5) return "Active now";
-  if (mins < 60) return `${mins} min ago`;
+  if (mins < 5) return tr("menu.sessions.activeNow");
+  if (mins < 60) return tr("menu.sessions.minAgo", { count: mins });
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return hours === 1 ? "1 hour ago" : `${hours} hours ago`;
+  if (hours < 24) return tr("menu.sessions.hoursAgo", { count: hours });
   return ago(iso).replace(/^./, (c) => c.toUpperCase());
 }
 
@@ -995,6 +846,7 @@ function SessionsScreen({ onBack }: { onBack: () => void }) {
   const [pending, setPending] = useState<ActiveSession | null>(null);
   const [removing, setRemoving] = useState(false);
   const [failed, setFailed] = useState(false);
+  const t = useT();
 
   const remove = async () => {
     if (!pending || removing) return;
@@ -1013,9 +865,9 @@ function SessionsScreen({ onBack }: { onBack: () => void }) {
 
   return (
     <Column>
-      <BackHeader title="Active sessions" onBack={onBack} />
+      <BackHeader title={t("menu.sessions.title")} onBack={onBack} />
       <p className="mt-4 px-1 text-[14px] leading-5 text-white/[0.72]">
-        The phones and browsers signed in to your HOLD account.
+        {t("menu.sessions.intro")}
       </p>
       <HoldCard className="mt-3">
         {ordered === undefined ? (
@@ -1025,15 +877,15 @@ function SessionsScreen({ onBack }: { onBack: () => void }) {
           </div>
         ) : ordered === null ? (
           <div className="p-4">
-            <Notice tone="calm">We could not read your sessions just now. Try again in a moment.</Notice>
+            <Notice tone="calm">{t("menu.sessions.readFailed")}</Notice>
           </div>
         ) : ordered.length === 0 ? (
-          <p className="px-[18px] py-[18px] text-[14px] text-white/[0.72]">No device is signed in to HOLD right now.</p>
+          <p className="px-[18px] py-[18px] text-[14px] text-white/[0.72]">{t("menu.sessions.none")}</p>
         ) : (
           ordered.map((x) => {
             const current = isCurrent(x);
             const place = [x.city, x.country].filter(Boolean).join(", ");
-            const sub = [current ? "This browser" : lastSeen(x.lastActiveAt), place].filter(Boolean).join(" · ");
+            const sub = [current ? t("menu.sessions.thisBrowser") : lastSeen(x.lastActiveAt), place].filter(Boolean).join(" · ");
             const asking = pending?.id === x.id;
             return (
               <div key={x.id} className="flex w-full min-w-0 flex-col px-[18px] py-[18px]">
@@ -1045,12 +897,12 @@ function SessionsScreen({ onBack }: { onBack: () => void }) {
                   </span>
                   {current ? (
                     <span className="shrink-0 rounded-[10px] bg-white/10 px-2 py-1 text-[11px] font-extrabold tracking-[0.4px] text-white">
-                      THIS BROWSER
+                      {t("menu.sessions.thisBrowserBadge")}
                     </span>
                   ) : (
                     <button
                       type="button"
-                      aria-label={`Remove ${x.deviceName}`}
+                      aria-label={t("menu.sessions.removeAria", { device: x.deviceName })}
                       onClick={() => {
                         setFailed(false);
                         setPending(asking ? null : x);
@@ -1064,17 +916,17 @@ function SessionsScreen({ onBack }: { onBack: () => void }) {
                 </div>
                 {asking ? (
                   <div className="mt-3 flex flex-col gap-3 rounded-[14px] bg-white/[0.04] p-3.5">
-                    <p className="text-[15px] font-extrabold leading-5 text-white">Remove this device?</p>
+                    <p className="text-[15px] font-extrabold leading-5 text-white">{t("menu.sessions.removeTitle")}</p>
                     <p className="text-[13px] leading-[18px] text-white/[0.72]">
-                      This device will be signed out immediately. It&apos;ll need to sign in again to access your account.
+                      {t("menu.sessions.removeBody")}
                     </p>
-                    {failed ? <Notice>Could not remove. Try again.</Notice> : null}
+                    {failed ? <Notice>{t("menu.sessions.removeFailed")}</Notice> : null}
                     <div className="flex flex-col gap-2 sm:flex-row">
                       <button type="button" className={ctaPrimary} disabled={removing} onClick={() => void remove()}>
-                        {removing ? "Removing..." : "Remove device"}
+                        {removing ? t("menu.sessions.removing") : t("menu.sessions.removeDevice")}
                       </button>
                       <button type="button" className={ctaSecondary} disabled={removing} onClick={() => setPending(null)}>
-                        Cancel
+                        {t("common.cancel")}
                       </button>
                     </div>
                   </div>
@@ -1093,6 +945,7 @@ function SessionsScreen({ onBack }: { onBack: () => void }) {
 function AboutScreen({ onBack }: { onBack: () => void }) {
   // On app.hihodl.xyz a bare /terms would be read as a page of the product.
   const site = useSpacesBase().startsWith("/app") ? "" : WEBSITE;
+  const t = useT();
   const social = (label: string, icon: IonName, href: string) => (
     <a
       key={label}
@@ -1109,26 +962,26 @@ function AboutScreen({ onBack }: { onBack: () => void }) {
   );
   return (
     <Column>
-      <BackHeader title="About" onBack={onBack} />
-      <SectionTitle>Connect</SectionTitle>
+      <BackHeader title={t("menu.about.title")} onBack={onBack} />
+      <SectionTitle>{t("menu.about.connect")}</SectionTitle>
       <HoldCard>
-        <MenuRow icon="globe-outline" label="Website" href={`${WEBSITE}`} external />
+        <MenuRow icon="globe-outline" label={t("menu.about.website")} href={`${WEBSITE}`} external />
       </HoldCard>
 
-      <SectionTitle>Follow us</SectionTitle>
+      <SectionTitle>{t("menu.about.followUs")}</SectionTitle>
       <HoldCard className="flex px-2 py-1">
         {social("X", "fa6:x-twitter", "https://x.com/hiihodl")}
         {social("LinkedIn", "fa6:linkedin", "https://www.linkedin.com/company/hihodl")}
         {social("Telegram", "fa6:telegram", "https://t.me/HiHODLchat")}
       </HoldCard>
 
-      <SectionTitle>Legal</SectionTitle>
+      <SectionTitle>{t("menu.about.legal")}</SectionTitle>
       <HoldCard>
-        <MenuRow icon="document-text-outline" label="Terms of Service" href={`${site}/terms`} external />
-        <MenuRow icon="shield-outline" label="Privacy Policy" href={`${site}/privacy`} external />
+        <MenuRow icon="document-text-outline" label={t("menu.about.terms")} href={`${site}/terms`} external />
+        <MenuRow icon="shield-outline" label={t("menu.about.privacy")} href={`${site}/privacy`} external />
       </HoldCard>
 
-      <p className="mt-6 text-center text-[12px] text-[#9FB7C2]">Made for freelancers around the world.</p>
+      <p className="mt-6 text-center text-[12px] text-[#9FB7C2]">{t("menu.about.tagline")}</p>
     </Column>
   );
 }

@@ -63,11 +63,14 @@ import {
   usdOf,
 } from "@/lib/app/money";
 
+import { listText } from "@/lib/app/i18n";
+import { fmtUsd } from "@/lib/app/i18n/format";
+import { useLocale, useT } from "@/lib/app/i18n/react";
+
 import { Ion } from "../ion";
 import { useShellPrefs } from "../Shell";
 import { Alert, glass, Skeleton } from "../ui";
 import { ReadFailed } from "../money/kit";
-import { money } from "../wallet/app-kit";
 import { ActivityRow, DayDivider, readRow } from "./activity-parts";
 
 const FIRST_PAGE = 40;
@@ -77,6 +80,9 @@ const PAGE_SIZE = 40;
 const ALL = "__all__";
 
 export function ActivityScreen() {
+  const t = useT();
+  // The rows carry words ("Deposit", "Main → Savings"): read them again when the language changes.
+  const locale = useLocale();
   const { displayMode } = useShellPrefs();
   const container = useContainer();
   const subaccounts = useMemo<LedgerSubaccount[]>(() => container.data?.subaccounts ?? [], [container.data]);
@@ -84,11 +90,13 @@ export function ActivityScreen() {
   const scopes = useMemo(() => {
     const pockets = subaccounts.filter((s) => s.slug !== "main" && s.slug !== "savings");
     return [
-      { slug: "main", label: "Main" },
-      { slug: "savings", label: "Savings" },
+      { slug: "main", label: t("activity.account.main") },
+      { slug: "savings", label: t("activity.account.savings") },
       ...pockets.map((p) => ({ slug: p.slug, label: p.displayName || p.slug })),
     ];
-  }, [subaccounts]);
+    // `locale`: `t` is one function for every language, so the language itself is what changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subaccounts, locale, t]);
 
   const [selected, setSelected] = useState<string>(ALL);
   const [q, setQ] = useState("");
@@ -147,7 +155,9 @@ export function ActivityScreen() {
   }, [hasMore, loadMore]);
 
   /* ── The rows ── */
-  const all = useMemo(() => raw.map((t) => toPaymentItem(t, displayMode)), [raw, displayMode]);
+  // `locale`: the rows' words ("Deposit", "Main → Savings") follow the language.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const all = useMemo(() => raw.map((tr) => toPaymentItem(tr, displayMode)), [raw, displayMode, locale]);
 
   const filtered = useMemo(() => {
     const scoped = selected === ALL ? all : all.filter((p) => rowInScope(p, selected));
@@ -255,14 +265,16 @@ export function ActivityScreen() {
   const shownUsd = Math.max(0, rewound ?? anchorUsd);
 
   const scopeLabel =
-    selected === ALL ? "All accounts" : (() => {
+    selected === ALL ? t("activity.scope.all") : (() => {
       const s = scopes.find((x) => x.slug === selected);
-      if (!s) return "All accounts";
-      return s.slug === "main" || s.slug === "savings" ? `${s.label} account` : s.label;
+      if (!s) return t("activity.scope.all");
+      return s.slug === "main" || s.slug === "savings" ? t("activity.scope.account", { name: s.label }) : s.label;
     })();
 
   const headerLabel =
-    topRow && rewound !== undefined ? `${dayLabel(topRow.date)}, ${timeLabel(topRow.date)}` : "Current balance";
+    topRow && rewound !== undefined
+      ? t("activity.when", { day: dayLabel(topRow.date), time: timeLabel(topRow.date) })
+      : t("activity.balance.current");
 
   /* ── Details ── */
   const [open, setOpen] = useState<PaymentItem | null>(null);
@@ -280,7 +292,9 @@ export function ActivityScreen() {
       out.push({ kind: "row", key: item.txHash || item.id, item });
     }
     return out;
-  }, [filtered]);
+    // `locale`: "Today" follows the language.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtered, locale]);
 
   return (
     <div className="mx-auto flex w-full max-w-[560px] flex-col pb-6" onScroll={() => undefined}>
@@ -290,19 +304,19 @@ export function ActivityScreen() {
         {balances.error || prices.error ? (
           <>
             <p className="text-[40px] font-strong leading-[46px] tracking-[-0.5px] text-white">—</p>
-            <p className="mt-0.5 text-[14px] font-strong text-[#9FB7C2]">We could not read your balance just now.</p>
+            <p className="mt-0.5 text-[14px] font-strong text-[#9FB7C2]">{t("activity.balance.readFailed")}</p>
           </>
         ) : !settled ? (
           <Skeleton className="h-[46px] w-[220px]" />
         ) : (
           <>
-            <p className="text-[40px] font-strong leading-[46px] tracking-[-0.5px] tabular-nums text-white">{money(shownUsd)}</p>
+            <p className="text-[40px] font-strong leading-[46px] tracking-[-0.5px] tabular-nums text-white">{fmtUsd(shownUsd)}</p>
             <p className="mt-0.5 text-[14px] font-strong text-[#9FB7C2]">{headerLabel}</p>
           </>
         )}
         {settled && supplied.failed.length > 0 ? (
           <p className="mt-1.5 text-[12px] leading-[17px] text-amber">
-            {supplied.failed.join(" and ")} did not answer, so anything earning there is missing from this balance.
+            {t("activity.balance.venuesMissing", { venues: listText(supplied.failed) })}
           </p>
         ) : null}
       </div>
@@ -316,12 +330,12 @@ export function ActivityScreen() {
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search activity..."
-            aria-label="Search activity"
+            placeholder={t("activity.search.placeholder")}
+            aria-label={t("activity.search.label")}
             className="min-w-0 flex-1 bg-transparent px-3 text-[15px] text-white outline-none placeholder:text-white/55"
           />
           {q ? (
-            <button type="button" onClick={() => setQ("")} aria-label="Clear search" className="mr-3 text-white/55 hover:text-white">
+            <button type="button" onClick={() => setQ("")} aria-label={t("common.clearSearch")} className="mr-3 text-white/55 hover:text-white">
               <Ion name="close-circle" size={18} />
             </button>
           ) : null}
@@ -330,7 +344,7 @@ export function ActivityScreen() {
           type="button"
           onClick={() => setFilterOpen((v) => !v)}
           aria-expanded={filterOpen}
-          aria-label={`Filter accounts. Showing ${scopeLabel}`}
+          aria-label={t("activity.filter.label", { scope: scopeLabel })}
           className="relative flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full border border-white/[0.14] bg-white/[0.08] text-white transition-colors hover:bg-white/[0.12]"
         >
           <Ion name="options-outline" size={19} />
@@ -339,8 +353,8 @@ export function ActivityScreen() {
       </div>
 
       {filterOpen ? (
-        <div className={`${glass} mt-2 flex flex-wrap gap-1.5 p-3`} role="group" aria-label="Accounts">
-          {[{ slug: ALL, label: "All accounts" }, ...scopes].map((s) => {
+        <div className={`${glass} mt-2 flex flex-wrap gap-1.5 p-3`} role="group" aria-label={t("activity.filter.group")}>
+          {[{ slug: ALL, label: t("activity.scope.all") }, ...scopes].map((s) => {
             const on = s.slug === selected;
             return (
               <button
@@ -362,7 +376,7 @@ export function ActivityScreen() {
       {/* ── The list ── */}
       {first.error && first.data === undefined ? (
         <div className={`${glass} mt-4`}>
-          <ReadFailed title="We couldn't load your activity" onRetry={() => void first.mutate()} />
+          <ReadFailed title={t("activity.loadFailed")} onRetry={() => void first.mutate()} />
         </div>
       ) : first.data === undefined ? (
         <div className="mt-4 flex flex-col gap-2">
@@ -371,7 +385,7 @@ export function ActivityScreen() {
           ))}
         </div>
       ) : sections.length === 0 ? (
-        <p className="mt-10 text-center text-[14px] text-white/55">No activity found.</p>
+        <p className="mt-10 text-center text-[14px] text-white/55">{t("activity.empty")}</p>
       ) : (
         <div className="flex flex-col gap-2">
           {sections.map((s) =>
@@ -398,9 +412,9 @@ export function ActivityScreen() {
       {pageError ? (
         <div className="py-5">
           <Alert>
-            The next page would not load.{" "}
+            {t("activity.nextPage.failed")}{" "}
             <button type="button" onClick={() => void loadMore()} className="underline underline-offset-2">
-              Try again
+              {t("common.tryAgain")}
             </button>
           </Alert>
         </div>
@@ -409,7 +423,7 @@ export function ActivityScreen() {
           <Skeleton className="h-16" />
         </div>
       ) : !hasMore && filtered.length > 0 ? (
-        <p className="py-5 text-center text-[12px] font-strong tracking-[0.3px] text-white/55">End of activity</p>
+        <p className="py-5 text-center text-[12px] font-strong tracking-[0.3px] text-white/55">{t("activity.end")}</p>
       ) : null}
 
       {open ? <Details item={open} mode={displayMode} onClose={() => setOpen(null)} /> : null}
@@ -483,6 +497,7 @@ function TrackedRow({
  * neither has anything to refer to.
  */
 function Details({ item, mode, onClose }: { item: PaymentItem; mode: DisplayMode; onClose: () => void }) {
+  const t = useT();
   const [detail, setDetail] = useState<Record<string, unknown> | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -507,23 +522,23 @@ function Details({ item, mode, onClose }: { item: PaymentItem; mode: DisplayMode
     rows.push([label, String(value)]);
   };
   const source = (detail?.transfer as Record<string, unknown>) ?? detail ?? {};
-  push("Status", item.status);
-  push("When", `${dayLabel(item.date)}, ${timeLabel(item.date)}`);
-  push("Amount", item.amount);
-  if (showChainContext(mode)) push("Network", source.chain ?? item.chain);
-  if (showTxReceipt(mode)) push("Transaction", source.txHash ?? item.txHash);
-  push("Note", source.note);
-  push("Method", source.method);
+  push(t("common.status"), item.status);
+  push(t("activity.details.when"), t("activity.when", { day: dayLabel(item.date), time: timeLabel(item.date) }));
+  push(t("common.amount"), item.processing ? t("activity.processing") : item.amount);
+  if (showChainContext(mode)) push(t("common.network"), source.chain ?? item.chain);
+  if (showTxReceipt(mode)) push(t("activity.details.transaction"), source.txHash ?? item.txHash);
+  push(t("activity.details.note"), source.note);
+  push(t("activity.details.method"), source.method);
 
   return (
     <div className="fixed inset-0 z-[70] flex items-end justify-center sm:items-center">
-      <button aria-label="Close" className="absolute inset-0 bg-[#030b13]/70 backdrop-blur-sm" onClick={onClose} />
-      <div className={`${glass} relative m-3 flex max-h-[80dvh] w-full max-w-[460px] flex-col overflow-y-auto p-5`} role="dialog" aria-label="Transaction">
+      <button aria-label={t("common.close")} className="absolute inset-0 bg-[#030b13]/70 backdrop-blur-sm" onClick={onClose} />
+      <div className={`${glass} relative m-3 flex max-h-[80dvh] w-full max-w-[460px] flex-col overflow-y-auto p-5`} role="dialog" aria-label={t("activity.details.dialog")}>
         <p className="text-[17px] font-bold text-white">{item.actionLabel || item.title}</p>
         <p className="mt-0.5 text-[13px] text-white/55">{item.title}</p>
 
         {failed ? (
-          <p className="mt-4 text-[13px] text-[#9FB7C2]">We could not read the rest of this transaction just now.</p>
+          <p className="mt-4 text-[13px] text-[#9FB7C2]">{t("activity.details.readFailed")}</p>
         ) : detail === null ? (
           <div className="mt-4 flex flex-col gap-2">
             <Skeleton className="h-6" />
@@ -542,23 +557,23 @@ function Details({ item, mode, onClose }: { item: PaymentItem; mode: DisplayMode
 
         {item.foldedLegs && item.foldedLegs.length > 1 ? (
           <div className="mt-4 rounded-[18px] bg-white/[0.04] p-4">
-            <p className="text-[12px] font-bold uppercase tracking-[0.3px] text-white/55">Paid in {item.foldedLegs.length} parts</p>
+            <p className="text-[12px] font-bold uppercase tracking-[0.3px] text-white/55">{t("activity.details.paidInParts", { count: item.foldedLegs.length })}</p>
             <div className="mt-2.5 flex flex-col gap-2.5">
               {item.foldedLegs.map((leg, i) => (
                 <div key={leg.id} className="flex items-center justify-between gap-3">
                   {/* The chain is what tells two legs apart — in native. Elsewhere
                       they are simply the parts the one payment was made of. */}
                   <span className="text-[14px] font-strong text-white/65">
-                    {showChainContext(mode) ? leg.chain ?? "—" : `Part ${i + 1}`}
+                    {showChainContext(mode) ? leg.chain ?? "—" : t("activity.details.part", { n: i + 1 })}
                   </span>
-                  <span className="text-[14px] font-bold tabular-nums text-white">{money(Math.abs(leg.tokenAmount))}</span>
+                  <span className="text-[14px] font-bold tabular-nums text-white">{fmtUsd(Math.abs(leg.tokenAmount))}</span>
                 </div>
               ))}
             </div>
           </div>
         ) : null}
 
-        <p className="mt-4 text-[12px] leading-[17px] text-white/55">Categories and notes are set in the HOLD app.</p>
+        <p className="mt-4 text-[12px] leading-[17px] text-white/55">{t("activity.details.inApp")}</p>
       </div>
     </div>
   );

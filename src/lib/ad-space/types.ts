@@ -9,7 +9,8 @@
 
 import type { PackageView as ProductionPackageView, ProductionView as ProductionSpotView } from "@/lib/creator/listing";
 
-export type Chain = "solana" | "base" | "polygon";
+/** `arc` (Circle's L1) is a pay-link network only; no space is paid on it (28-Sep-2026). */
+export type Chain = "solana" | "base" | "polygon" | "arc";
 
 export type SpaceStatus = "draft" | "live" | "closed" | "delisted";
 /**
@@ -35,6 +36,18 @@ export type VenueType = "travel" | "conference" | "sports_event" | "private_even
  */
 export type PricingMode = "fixed" | "takeover" | "offers" | "bids";
 
+/**
+ * The company behind a seller account (business-treasury-contract.md), on
+ * public space and creator pages. Null or absent: a person, shown as before.
+ * `verified` is HOLD's own check (an X business account, or ops by hand).
+ */
+export interface BusinessSeller {
+  displayName: string;
+  logoUrl: string | null;
+  website: string | null;
+  verified: boolean;
+}
+
 export interface Creator {
   xUserId: string;
   xHandle: string;
@@ -45,6 +58,8 @@ export interface Creator {
   xFollowers: number;
   xAccountCreatedAt: string | null;
   trackRecord: TrackRecord;
+  /** A company selling from this account, or null for a person. Absent on an older server. */
+  business?: BusinessSeller | null;
 }
 
 /**
@@ -103,10 +118,17 @@ export interface Template {
      * this template's generic ones. Absent on a server older than it.
      */
     custom?: boolean;
+    /**
+     * A partnership in kind (`media-or-community-partner`): no price, no
+     * checkout, offer or quote. The brand applies in an enquiry. Absent on
+     * every other template and on an older server.
+     */
+    partnership?: boolean;
   } | null;
 }
 
-export type ServiceFormat = "content" | "session" | "production";
+/** `event_asset`: one of an event's own packages, sold by its verified host (productType `event_asset` too). */
+export type ServiceFormat = "content" | "session" | "production" | "event_asset";
 
 // Content production (spaces-content-production-v0.md): one set of types for
 // the console and the public pages, kept with the creator's listing model.
@@ -196,6 +218,12 @@ export interface Position {
   takesEverything?: boolean;
   /** This spot's square on `Space.photo`, or null. Only drawn when the space has a photo. */
   rect?: PhotoRect | null;
+  /**
+   * A partnership package's slot taken by a partner in kind: `status` reads
+   * "sold" (so old clients sell nothing on it), and it is shown as "Partner".
+   * Absent on every other slot and on an older server.
+   */
+  partnered?: boolean;
   /** The tier's name when this position sells one, else the zone's label or the slot number. */
   label: string;
   /**
@@ -356,6 +384,8 @@ export interface OfferView {
   /** The space's title and web path ("/s/<handle>/<slug>"), when the server joins them in. */
   spaceTitle?: string | null;
   spacePath?: string | null;
+  /** The sponsor's report once paid, if the server puts it on the offer itself. */
+  reportUrl?: string | null;
 }
 
 /** `GET /public/offers/:token`, and what `respond` answers. */
@@ -374,6 +404,8 @@ export interface OfferThread {
     event: EventSummary | null;
   };
   position: Position | null;
+  /** The sponsor's report once the offer is paid, else null. Absent on an older server. */
+  reportUrl?: string | null;
 }
 
 export interface OfferProof {
@@ -427,6 +459,8 @@ export interface Space {
    * rights. Null on every other template; absent on an older server.
    */
   production?: ProductionPackageView | null;
+  /** A partnership package's agreed partners, in the order they joined. Absent or empty: none yet, or an older server. */
+  partners?: EventPartner[];
   reason: string | null;
   status: SpaceStatus;
   kind: "placement" | "service";
@@ -576,6 +610,15 @@ export interface Space {
    * default; hold | app | night | white | #RRGGBB. Null or absent: HOLD blue.
    */
   pageGround?: string | null;
+  /**
+   * The page studio (lib/ad-space/studio.ts): the title's font, one subtle
+   * effect over the page, and the creator's sections in their order. Absent
+   * on an older server: classic, none, no sections. Read through
+   * `titleStyleOf` / `effectOf` / `sectionsOf`, never raw.
+   */
+  titleStyle?: string;
+  effect?: string;
+  sections?: unknown[];
 }
 
 export type BrandGetsLine = { kind: "reach" } | { kind: "spot" } | { kind: "text"; text: string };
@@ -601,6 +644,12 @@ export type EventCategory =
 export interface EventSummary {
   id: string;
   slug: string;
+  /**
+   * `calendar`: a Luma calendar (a whole week, a city's side events) sold by
+   * its own host (a-calendar-sells-its-week-contract.md). Absent on an older
+   * server, which reads as `event`.
+   */
+  kind?: "event" | "calendar";
   name: string;
   city: string;
   /** ISO 3166-1 alpha-2, or null. */
@@ -620,6 +669,83 @@ export interface EventSummary {
   coverCredit: string | null;
   /** Live and closed spaces. Never shown on the banner. */
   spaceCount: number;
+  /**
+   * The host who proved on Luma that the event is theirs
+   * (organiser-sells-its-event-contract.md). Null when nobody has; absent on a
+   * server older than organiser packages, which reads the same.
+   */
+  organiser?: EventOrganiser | null;
+}
+
+/**
+ * A media or community partner the organiser accepted on a partnership package
+ * (`media-or-community-partner`): agreed in an enquiry, never bought.
+ */
+export interface EventPartner {
+  name: string;
+  logoUrl: string | null;
+}
+
+/** The verified host of an event, as the public pages show them. */
+export interface EventOrganiser {
+  name: string;
+  avatarUrl: string | null;
+  verified: true;
+  /** The company they sell for, when they act for one. */
+  businessName?: string | null;
+}
+
+/**
+ * `GET /public/sponsor/:lumaKey`: one event as a sponsor arriving from its Luma
+ * page sees it. `packages` are the organiser's own spaces; `creators` counts
+ * the creators' spaces on each of the event page's tabs.
+ */
+export interface SponsorPage {
+  event: EventSummary & { organiser: EventOrganiser | null };
+  packages: SpaceCard[];
+  creators: Record<SpaceTab, number>;
+  slug: string;
+  /** `calendar`: the page sells a Luma calendar's week. `event` on an older server. */
+  kind: "event" | "calendar";
+  /** A calendar's upcoming events, soonest first (at most 30). Empty for an event. */
+  events: CalendarEvent[];
+  /** For an event: the calendar it belongs to that sells its week. Null for a calendar or none. */
+  calendar: CalendarLink | null;
+}
+
+/** One upcoming event of a Luma calendar, as its sponsor page lists it. */
+export interface CalendarEvent {
+  name: string;
+  /** ISO with the event's own offset, so its local day and time read straight off it. */
+  startAt: string | null;
+  lumaUrl: string;
+  /** A live Spaces event names this Luma page. */
+  onHold: boolean;
+}
+
+/** The Luma calendar an event is in, when its host sells the week on HOLD. */
+export interface CalendarLink {
+  name: string;
+  /** The calendar's sponsor link key: `/sponsor/<key>`. */
+  key: string;
+  /** Its packages still selling; 0 hides the row. */
+  packages: number;
+}
+
+/** What the backend knows of a Luma event that is not selling on HOLD (yet). */
+export interface LumaTeaser {
+  name: string;
+  coverUrl: string | null;
+  startAt: string | null;
+  city: string | null;
+}
+
+/** One row of `GET /public/events`: the summary, with what is still for sale there. */
+export interface ListedEvent extends EventSummary {
+  /** Positions still for sale on the event's live spaces. Absent on an old server. */
+  openSpots?: number;
+  /** The organiser's live packages. Absent on a server older than organiser packages. */
+  packages?: number;
 }
 
 /** Placement templates are `ground`, content services `feed`, sessions `room`. */
@@ -679,6 +805,10 @@ export interface SpaceCard {
   totals: { positions: number; open: number; sold: number };
   /** The lowest price a sponsor can pay right now, or null when nothing can be bought. */
   fromPriceCents: number | null;
+  /** A partnership package's agreed partners. Absent or empty: none yet, or an older server. */
+  partners?: EventPartner[];
+  /** `organiser`: one of the event's own packages, sold by its verified host. Absent on an older server. */
+  sellerRole?: "creator" | "organiser";
 }
 
 export interface EventPage {
@@ -686,6 +816,10 @@ export interface EventPage {
   tabs: Record<SpaceTab, SpaceCard[]>;
   /** The tab to open on without `?tab=`: the API's, else computed the same way here. */
   defaultTab: SpaceTab;
+  /** The verified organiser's own packages, above the tabs. Empty on an old server. */
+  packages: SpaceCard[];
+  /** The calendar this event is in that sells its week, or null (and on an old server). */
+  calendar: CalendarLink | null;
 }
 
 /* ── A creator's hub (/s/<handle>) ────────────────────────────────────── */
@@ -700,6 +834,12 @@ export interface CreatorProfile extends CardCreator {
   xHandle: string;
   /** The ground the creator chose for their pages: hold | app | night | white | #RRGGBB. Null or absent: HOLD blue. */
   pageGround?: string | null;
+  /** The creator's line under the name, plain, at most 160. Null or absent: none. */
+  bio?: string | null;
+  /** The hub name's font (lib/ad-space/studio.ts). Absent: classic. */
+  titleStyle?: string;
+  /** A company selling from this account, or null for a person. Absent on an older server. */
+  business?: BusinessSeller | null;
 }
 
 /**
@@ -796,6 +936,78 @@ export interface Order {
    * the first copy it sees in localStorage, keyed by order.
    */
   manageUrl?: string | null;
+  /**
+   * How the order is paid (a-brand-pays-by-bank-or-card-contract.md): `chain`
+   * from a wallet, `bank` by a Bridge transfer whose instructions are `bank`.
+   * Absent from an API that predates bank transfers, which means `chain`.
+   */
+  rail?: "chain" | "bank";
+  /** A bank order only: where and how the brand pays, and where Bridge has it. */
+  bank?: BankInstructions | null;
+  /**
+   * The sponsor's report (`https://hihodl.xyz/r/<token>`), once the order is
+   * paid and its listing names an event; null before. Absent on an older server.
+   */
+  reportUrl?: string | null;
+}
+
+/**
+ * Bridge's transfer states, as the order view relays them, plus `short_paid`
+ * (ours: less arrived than the order, never sold). Bridge may add others.
+ */
+export type BankState =
+  | "awaiting_funds"
+  | "in_review"
+  | "funds_received"
+  | "payment_submitted"
+  | "payment_processed"
+  | "canceled"
+  | "undeliverable"
+  | "returned"
+  | "refund_in_flight"
+  | "refund_failed"
+  | "refunded"
+  | "short_paid";
+
+export type BankRail = "wire" | "ach_push";
+
+/** The bank details for one order: the proforma the brand pays. */
+export interface BankInstructions {
+  rail: BankRail;
+  currency: "USD";
+  /** "1050.00": exactly what the transfer must carry. */
+  amount: string;
+  /** The deposit message: it routes the money to this order, so it goes in the transfer. */
+  reference: string;
+  /** Until when the spot is held: a guest's day, extended to a week once Bridge has the money. */
+  expiresAt: string;
+  payerMustBeBusiness: true;
+  notFromStates: string[];
+  beneficiaryName: string | null;
+  beneficiaryAddress: string | null;
+  bankName: string | null;
+  bankAddress: string | null;
+  accountNumber: string | null;
+  routingNumber: string | null;
+  /** The seller, by the name the page shows. */
+  receivesFor: string;
+  /** Unknown strings are possible from a newer API. */
+  status: BankState | (string & {});
+  sellerReceivedUsdc: string | null;
+}
+
+/** `GET /public/positions/:id/bank-transfer`: whether this spot takes a bank transfer, and why not. */
+export interface BankOption {
+  bank: {
+    currency: "USD";
+    rails: BankRail[];
+    holdDays: number;
+    minUsdCents: number;
+    amount?: string;
+    payerMustBeBusiness?: boolean;
+    notFromStates?: string[];
+  } | null;
+  reason: string | null;
 }
 
 /**
@@ -901,4 +1113,198 @@ export interface ApiErrorBody {
   code: string;
   message: string;
   details?: Record<string, unknown>;
+}
+
+/* ── Briefs: the brand asking in public ──────────────────────────── */
+
+/** One creator a brand picked, as the announcement names them. */
+export interface BriefWinner {
+  handle: string | null;
+  name: string | null;
+  avatarUrl: string | null;
+  verifiedType: string | null;
+  followers: number | null;
+  /** The entry they won with, when they applied with one. */
+  link: string | null;
+  pickedAt: string;
+  /** Their listing, once it is live. Null when the brief paid in kind. */
+  space: { slug: string } | null;
+}
+
+/** What a brand's word has been worth. Counted, never scored. */
+export interface BrandRecord {
+  briefsPosted: number;
+  creatorsPicked: number;
+  endedWithNobody: number;
+  paidCents: number;
+  awaitingPayment: number;
+}
+
+/** A brief as anybody with the link reads it. Never the queue. */
+export interface PublicBrief {
+  /** Public only so the page can link into the product to apply. */
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  brand: { name: string | null; handle: string | null };
+  city: string | null;
+  event: EventSummary | null;
+  budgetCents: number;
+  payMode: "split" | "upfront";
+  positions: { label: string; priceCents: number }[];
+  perks: string | null;
+  inKindOnly: boolean;
+  peopleWanted: number;
+  pickedCount: number;
+  applicantCount: number;
+  fallback: string;
+  fallbackNote: string | null;
+  status: string;
+  applicationsCloseAt: string | null;
+  applicationsOpen: boolean;
+  decideBy: string | null;
+  decidedAt: string | null;
+  createdAt: string;
+  winners: BriefWinner[];
+  record: BrandRecord;
+}
+
+/* ── Ask about this spot (spot-enquiries-contract.md) ───────────────── */
+
+export interface GuestEnquiryMessage {
+  id: string;
+  author: "you" | "business";
+  body: string;
+  /** The teammate who answered for the business, or null. */
+  sentBy: string | null;
+  /** A seller's quote this message carries, read fresh on every thread read (seller-quotes-contract.md). */
+  quote?: QuoteView | null;
+  createdAt: string;
+}
+
+/* ── A seller's quote (seller-quotes-contract.md) ───────────────────── */
+
+export type QuoteState = "open" | "accepted" | "paid" | "expired" | "withdrawn" | "superseded" | "declined";
+
+/** A price the seller sent for one spot inside an enquiry thread. No user ids, emails or tokens. */
+export interface QuoteView {
+  quoteId: string;
+  state: QuoteState;
+  spaceId: string;
+  position: { id: string; label: string } | null;
+  /** The seller's price, in the role of a listed price. */
+  priceUsdc: string;
+  /** What the buyer's wallet sends: the price, plus our fee when the buyer carries it. */
+  buyerPaysUsdc: string;
+  feePayer: "sponsor" | "creator";
+  note: string | null;
+  /** The buyer's reason, set only when the quote is declined. Absent before the decline backend ships. */
+  declineReason?: string | null;
+  /** open: when the quote ends. accepted: when the 24 hour hold ends. Otherwise null. */
+  expiresAt: string | null;
+  sentAt: string;
+  /** The version to send back on accept. */
+  updatedAt: string;
+  orderId: string | null;
+}
+
+/** `GET /public/enquiries/:token`: a guest's thread with a seller. Never carries an email or a user id. */
+export interface GuestEnquiry {
+  space: { id: string; title: string };
+  position: { id: string; label: string } | null;
+  business: { name: string };
+  you: { name: string; company: string | null };
+  messages: GuestEnquiryMessage[];
+  /** Every quote the seller sent in this thread, newest first. Absent before the quotes backend ships. */
+  quotes?: QuoteView[];
+}
+
+/* ── The sponsor's report (a-sponsor-gets-its-report-contract.md) ───── */
+
+export type ReportItemKind = "package" | "session" | "production" | "spot";
+export type ReportDeliveryState = "pending" | "partly" | "delivered" | "disputed";
+
+export interface ReportSeller {
+  key: string;
+  role: "organiser" | "creator";
+  name: string | null;
+  handle: string | null;
+  avatarUrl: string | null;
+  /** The event's verified Luma host selling its own package. */
+  verifiedHost: boolean;
+  businessName: string | null;
+}
+
+export interface ReportProof {
+  url: string;
+  host: string;
+  source: "spot" | "listing" | "production";
+  kind: string | null;
+  note: string | null;
+  platform: string | null;
+  isImage: boolean;
+  postedAt: string | null;
+}
+
+export interface ReportScans {
+  /** Redirects served by the spot's link, minus known bots. Never people. */
+  total: number;
+  duringEvent: number;
+  /** Oldest first, only days with a count. */
+  byDay: { day: string; scans: number }[];
+}
+
+export type ReportInvoice =
+  | { status: "issued"; kind: string; number: string; issuedAt: string; pdfUrl: string | null }
+  | { status: "pending"; issuesAt: string | null }
+  | { status: "not_available" };
+
+export interface ReportItem {
+  orderId: string;
+  kind: ReportItemKind;
+  sellerKey: string;
+  listing: { id: string; title: string; productName: string | null; serviceSummary: string | null; path: string | null };
+  spot: { zoneKey: string; title: string | null; zoneLabel: string | null; slot: number | null; whole: boolean; perks: string[] };
+  priceUsdc: string;
+  paidUsdc: string;
+  chain: Chain;
+  paidAt: string | null;
+  txSignature: string | null;
+  explorerUrl: string | null;
+  delivery: {
+    state: ReportDeliveryState;
+    detail: string;
+    settledBy: "buyer" | "silence" | "links" | "accepted" | null;
+    at: string | null;
+    confirmBy: string | null;
+  };
+  proof: ReportProof[];
+  content: { kind: string | null; status: string | null; sponsorName: string | null; text: string | null; imageUrl: string | null } | null;
+  scans: ReportScans | null;
+  invoice: ReportInvoice;
+}
+
+/** `GET /public/reports/:token`. */
+export interface SponsorReport {
+  status: "in_progress" | "final";
+  finalAt: string | null;
+  generatedAt: string;
+  event: EventSummary;
+  sponsor: { name: string | null };
+  sellers: ReportSeller[];
+  items: ReportItem[];
+  totals: {
+    items: number;
+    paidBase: string;
+    paidUsdc: string;
+    scans: number;
+    scansDuringEvent: number;
+    delivered: number;
+    partly: number;
+    pending: number;
+    disputed: number;
+    withQr: number;
+  };
+  scansAre: "redirects_minus_known_bots";
 }

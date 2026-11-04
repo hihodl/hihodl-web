@@ -26,6 +26,7 @@ import { useEffect, useRef, useState } from "react";
 import { btnGlassPill as btnSmallSecondary } from "@/components/app/spaces/kit";
 
 import { Ion } from "@/components/app/ion";
+import { useT } from "@/lib/app/i18n/react";
 
 /** What the page is read on, at the width it is really read at. */
 const WIDTHS = { phone: 390, wide: 1120 } as const;
@@ -46,6 +47,7 @@ export function PagePreview({
   reload?: number;
   className?: string;
 }) {
+  const t = useT();
   const [shape, setShape] = useState<Shape>("phone");
   const box = useRef<HTMLDivElement>(null);
   const [room, setRoom] = useState(0);
@@ -71,7 +73,7 @@ export function PagePreview({
   return (
     <section className={`flex min-w-0 flex-col gap-2 ${className}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-[12px] font-bold uppercase tracking-[0.4px] text-white/55">Your page</p>
+        <p className="text-[12px] font-bold uppercase tracking-[0.4px] text-white/55">{t("runner.preview.yourPage")}</p>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1 rounded-[16px] border border-white/10 bg-white/[0.05] p-0.5">
             {(Object.keys(WIDTHS) as Shape[]).map((k) => (
@@ -84,12 +86,12 @@ export function PagePreview({
                   shape === k ? "bg-white/15 text-white" : "text-white/[0.62] hover:bg-white/10"
                 }`}
               >
-                {k === "phone" ? "Phone" : "Desktop"}
+                {k === "phone" ? t("runner.preview.phone") : t("runner.preview.desktop")}
               </button>
             ))}
           </div>
           <a href={url} target="_blank" rel="noreferrer" className={btnSmallSecondary}>
-            Open it <Ion name="open-outline" size={13} />
+            {t("runner.preview.open")} <Ion name="open-outline" size={13} />
           </a>
         </div>
       </div>
@@ -99,7 +101,7 @@ export function PagePreview({
           <iframe
             key={`${reload}:${url}`}
             src={url}
-            title="Your page"
+            title={t("runner.preview.yourPage")}
             loading="lazy"
             // Nothing in a preview needs to leave it: no top-level navigation,
             // no downloads, no popups. Scripts and same-origin stay on, or the
@@ -118,7 +120,7 @@ export function PagePreview({
       </div>
 
       <p className="text-[12px] leading-4 text-white/55">
-        Exactly what a sponsor sees, before anybody can reach it.
+        {t("runner.preview.note")}
       </p>
     </section>
   );

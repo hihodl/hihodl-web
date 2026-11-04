@@ -1,61 +1,23 @@
 /**
- * What the wallet flows say to a person, for anything they can throw. Shared
- * by the Wallet page and onboarding's wallet and passkey steps, so the same
- * failure reads the same everywhere. Never red, and every line says whether
- * anything was saved.
+ * What a failed call to the wallet's backend says to a person. Shared by the
+ * Wallet page, Send, the link screen and Your phone, so the same failure
+ * reads the same everywhere. Never red.
+ *
+ * The web makes and opens no wallet any more (Alex, 2026-09-24), so the
+ * passkey, crypto and backup failures this used to explain are gone with the
+ * code that threw them.
  */
 
-import { WalletCryptoError } from "./core";
+import { t } from "@/lib/app/i18n";
+
 import { WalletApiError } from "./api";
-import { WalletFlowError } from "./flows";
-import { PasskeyError } from "./passkey";
 
-export const LOSS_WARNING =
-  "If you lose every passkey on this wallet and never exported your 12 words, the funds in it cannot be recovered by anyone, including us. Your HOLD account can be; the money cannot.";
-
-/** What to tell the person, for anything a flow can throw. Never red. */
+/** What to tell the person, for anything a call can throw. Never red. */
 export function explain(e: unknown): string {
-  if (e instanceof PasskeyError) {
-    switch (e.code) {
-      case "cancelled":
-        return "The passkey prompt was closed before it finished. Nothing was saved.";
-      case "exists":
-        return "This device already has a passkey for your account. Use that one instead.";
-      case "no_prf":
-        return "This passkey cannot protect a wallet: its password manager does not support the PRF extension. Nothing was saved, and a passkey just created for it was not added to your account (you can delete it from your password manager). Use Safari with iCloud Keychain (iOS 18.4 / macOS 15.4 or later) or Chrome with Google Password Manager.";
-      case "no_prf_here":
-        return "This browser cannot protect a wallet with a passkey: it does not support the PRF extension. Nothing was created. Use Safari with iCloud Keychain (iOS 18.4 / macOS 15.4 or later) or Chrome with Google Password Manager, or make your wallet in the HOLD app.";
-      // Said BEFORE any prompt: nothing was created, so there is nothing to
-      // delete and nothing to undo. The version is the fix, and it is theirs
-      // to make, so it is named.
-      case "os_too_old":
-        return "Update this device before making a wallet here. iOS 18.0 to 18.3 can hand back a different key depending on how you unlock, which would leave a wallet nobody can open — Apple fixed it in 18.4. Nothing was created. You can still sign in, and you can make your wallet in the HOLD app or on a device that is up to date.";
-      case "unavailable":
-        return "Passkeys for HOLD only work on app.hihodl.xyz, in a browser that supports them.";
-      default:
-        return "The passkey did not answer. Try again.";
-    }
-  }
-  if (e instanceof WalletCryptoError) {
-    return e.code === "decrypt_failed"
-      ? "That passkey did not open this wallet. Nothing was changed."
-      : "The wallet backup could not be read. Nothing was changed.";
-  }
-  if (e instanceof WalletFlowError) {
-    if (e.code === "unknown_passkey") return "That passkey is not one that opens this wallet. Choose another.";
-    if (e.code === "self_check_failed") return "A safety check failed before anything was saved. Nothing was written. Try again.";
-    return "The wallet could not be saved. Try again.";
-  }
   if (e instanceof WalletApiError) {
-    if (e.code === "APP_WALLET_EXISTS") return "This account already has a wallet in the HOLD app. Nothing was saved.";
-    if (e.code === "SEED_BACKUP_EXISTS") return "This account already has a web wallet. Nothing was overwritten.";
-    if (e.code === "EMAIL_NOT_VERIFIED") return "Confirm your email address before creating a wallet.";
-    if (e.code === "WEB_WALLET_NOT_ENABLED") return "The web wallet is not available on your account yet. Nothing was saved.";
-    if (e.code === "LAST_WRAPPING") return "This is the only passkey that opens your wallet. Add another first.";
-    if (e.code === "WRAPPING_EXISTS") return "That passkey already opens your wallet.";
-    if (e.code === "rate_limited" || e.status === 429) return "Too many attempts. Wait a few minutes and try again.";
-    if (e.status === 0) return "Could not reach HOLD. Check your connection and try again.";
-    return "Something went wrong on our side. Nothing was changed.";
+    if (e.code === "rate_limited" || e.status === 429) return t("wallet.explain.api.rateLimited");
+    if (e.status === 0) return t("wallet.explain.api.offline");
+    return t("wallet.explain.api.server");
   }
-  return "Something went wrong. Nothing was changed.";
+  return t("wallet.explain.unknown");
 }

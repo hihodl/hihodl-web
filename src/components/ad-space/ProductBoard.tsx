@@ -5,6 +5,8 @@ import type { CSSProperties, KeyboardEvent } from "react";
 import { STATUS_LABEL, usdFromUsdc } from "@/lib/ad-space/format";
 import { inkOn, isClosedPath, type ProductLook } from "@/lib/ad-space/product-look";
 import type { PhotoRect, Position, SpacePhoto, Template, TemplateView, TemplateZone } from "@/lib/ad-space/types";
+import { t as translate } from "@/lib/app/i18n";
+import { useT } from "@/lib/app/i18n/react";
 
 import { qrModules } from "./qr";
 import { ZONE } from "./ui";
@@ -243,6 +245,7 @@ function ViewPhotoFigure({
   onHover: (id: string | null) => void;
   onPick: (p: Position) => void;
 }) {
+  const t = useT();
   const W = PHOTO_UNITS;
   const H = Math.max(1, Math.round((PHOTO_UNITS * photo.height) / photo.width));
   const aspect = photo.width / photo.height;
@@ -257,7 +260,7 @@ function ViewPhotoFigure({
           className="block w-full"
           style={{ aspectRatio: `${W} / ${H}` }}
           role="group"
-          aria-label={`${view.label}, photographed by the creator`}
+          aria-label={t("board.product.viewPhoto", { view: view.label })}
         >
           <image href={photo.url} x={0} y={0} width={W} height={H} preserveAspectRatio="xMidYMid slice" />
           {positions.map((p) =>
@@ -302,6 +305,7 @@ function PhotoFigure({
   onHover: (id: string | null) => void;
   onPick: (p: Position) => void;
 }) {
+  const t = useT();
   const W = PHOTO_UNITS;
   const H = Math.max(1, Math.round((PHOTO_UNITS * photo.height) / photo.width));
   const aspect = photo.width / photo.height;
@@ -316,7 +320,7 @@ function PhotoFigure({
           className="block w-full"
           style={{ aspectRatio: `${W} / ${H}` }}
           role="group"
-          aria-label="The product, photographed by the creator"
+          aria-label={t("board.product.photo")}
         >
           <image href={photo.url} x={0} y={0} width={W} height={H} preserveAspectRatio="xMidYMid slice" />
           {positions.map((p) =>
@@ -449,6 +453,7 @@ function Zone({
   /** A picture of the spot (the checkout's), not a control: no focus, no clicks. */
   still?: boolean;
 }) {
+  useT(); // zoneFigure's words, in the language on screen
   const rx = rect.x * W;
   const ry = rect.y * H;
   const rw = rect.w * W;
@@ -459,9 +464,9 @@ function Zone({
   // the card is where a reader learns what the next hand would cost.
   const figure = zoneFigure(p);
   const price = p.status === "open" ? figure.spoken : "";
-  const label = `${p.label}, ${STATUS_LABEL[p.status].toLowerCase()}${price}${
-    p.sponsor ? `, ${p.sponsor.name}` : ""
-  }`;
+  const label = [p.label, STATUS_LABEL[p.status].toLowerCase(), price, p.sponsor?.name ?? ""]
+    .filter(Boolean)
+    .join(", ");
 
   const onKey = (e: KeyboardEvent<SVGGElement>) => {
     if (e.key === "Enter" || e.key === " ") {
@@ -575,6 +580,7 @@ function SoldZone({
   radius: number;
   active: boolean;
 }) {
+  const t = useT();
   const s = p.sponsor;
   const pad = Math.min(w, h) * 0.1;
   const edge = (
@@ -631,7 +637,7 @@ function SoldZone({
   }
 
   // Text, a name, or a sale whose content the creator has not approved yet.
-  const words = s ? s.contentText || s.name : "Sold";
+  const words = s ? s.contentText || s.name : t("board.status.sold");
   return (
     <>
       <rect x={x} y={y} width={w} height={h} rx={radius} fill={ZONE.soldFill} />
@@ -701,14 +707,21 @@ function FittedText({
 function zoneFigure(p: Position): { short: string; spoken: string } {
   const o = p.offers;
   if (o?.mode === "bids") {
-    if (o.highestBidUsdc) return { short: priceShort(o.highestBidUsdc), spoken: `, highest bid ${usdFromUsdc(o.highestBidUsdc)}` };
-    if (o.openingBidUsdc) return { short: priceShort(o.openingBidUsdc), spoken: `, bidding opens at ${usdFromUsdc(o.openingBidUsdc)}` };
-    return { short: "Bid", spoken: ", open for bids" };
+    if (o.highestBidUsdc) {
+      return { short: priceShort(o.highestBidUsdc), spoken: translate("board.product.highestBid", { amount: usdFromUsdc(o.highestBidUsdc) }) };
+    }
+    if (o.openingBidUsdc) {
+      return { short: priceShort(o.openingBidUsdc), spoken: translate("board.product.biddingOpensAt", { amount: usdFromUsdc(o.openingBidUsdc) }) };
+    }
+    return { short: translate("board.tiers.bid"), spoken: translate("board.product.openForBids") };
   }
-  if (o?.mode === "offers" || p.sponsorPaysUsdc === null) return { short: "Offer", spoken: ", open to offers" };
+  if (o?.mode === "offers" || p.sponsorPaysUsdc === null) {
+    return { short: translate("board.product.offer"), spoken: translate("board.product.openToOffers") };
+  }
+  const amount = usdFromUsdc(p.sponsorPaysUsdc);
   return {
     short: priceShort(p.sponsorPaysUsdc),
-    spoken: `, ${p.takeover ? "bidding opens at " : ""}${usdFromUsdc(p.sponsorPaysUsdc)}`,
+    spoken: p.takeover ? translate("board.product.biddingOpensAt", { amount }) : amount,
   };
 }
 

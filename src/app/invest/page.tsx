@@ -70,7 +70,6 @@ const FAQ = [
 export default function InvestPage() {
   const { monthlyVolumeUsd, networkFeeCeilingUsd } = FREE_ALLOWANCE;
   const freeMarkupPct = HOLD_KEEPS.swapMarkupFreeBps / 100;
-  const proMarkupPct = HOLD_KEEPS.swapMarkupProBps / 100;
 
   return (
     <>
@@ -147,23 +146,12 @@ export default function InvestPage() {
               </p>
             </div>
 
-            <div className="mt-14 grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="mt-14 max-w-xl">
               <PriceCard
                 plan="Free"
                 headline={`First ${usd(monthlyVolumeUsd)} a month`}
                 body={`We pay the network fee on your behalf, up to ${usd(networkFeeCeilingUsd)} a conversion. If the network is busy and the real cost is higher than that, you pay only the difference — never the whole thing.`}
                 foot={`Above ${usd(monthlyVolumeUsd)} in a calendar month: ${freeMarkupPct}% all-in on the excess, not on the whole amount. ${usd(2)} minimum conversion.`}
-              />
-              <PriceCard
-                highlight
-                plan="Pro"
-                headline="No monthly cap"
-                body="The network fee is covered every time, whatever you moved this month. There is no volume at which Pro starts charging you more."
-                foot={
-                  proMarkupPct === 0
-                    ? "No markup on what you convert, at any volume."
-                    : `${proMarkupPct}% markup on what you convert.`
-                }
               />
             </div>
 

@@ -4,10 +4,15 @@ import type { ReactNode } from "react";
 import { Wordmark } from "@/components/site/Wordmark";
 import { compactNumber, eventDates, eventCountdown, onTimeText, openSpots, trackRecordNeedsAttention, usdFromCents } from "@/lib/ad-space/format";
 import { gradientCss } from "@/lib/ad-space/look";
+import { bioOf, titleStyleOf } from "@/lib/ad-space/studio";
+import { t } from "@/lib/app/i18n";
+import { fmtNumber } from "@/lib/app/i18n/format";
 import type { CreatorGroup, CreatorProfile, EventSummary, SpaceCard } from "@/lib/ad-space/types";
 
+import { BusinessLogo, VerifiedBusinessMark, businessOf, websiteHost } from "./business";
 import { BannerFrame, VerifiedTick, eventBanner } from "./events";
 import { SpacesGround } from "./ground";
+import { titleFontStyle } from "./title-fonts";
 
 /**
  * A creator's page, `/s/<handle>`, and the screens under it.
@@ -173,7 +178,7 @@ export function BackLink({ href, label }: { href: string; label: string }) {
 export function PastEventsLink({ href }: { href: string }) {
   return (
     <Link href={href} className={barLink}>
-      Past events
+      {t("offers.creator.pastEvents")}
     </Link>
   );
 }
@@ -204,7 +209,7 @@ export function KindPills({
 }) {
   if (kinds.length < 2 || !active) return null;
   return (
-    <nav aria-label="What they sell" className="inline-flex h-11 shrink-0 items-center gap-1 rounded-[22px] bg-sp-ink/[0.06] p-1">
+    <nav aria-label={t("offers.creator.whatTheySell")} className="inline-flex h-11 shrink-0 items-center gap-1 rounded-[22px] bg-sp-ink/[0.06] p-1">
       {kinds.map((k) => {
         const on = k === active;
         return (
@@ -218,7 +223,7 @@ export function KindPills({
               on ? "bg-amber text-text-on-amber" : "text-sp-ink/85 hover:text-sp-ink"
             }`}
           >
-            {k === "spaces" ? "Spaces" : "Services"}
+            {k === "spaces" ? t("offers.creator.kind.spaces") : t("offers.creator.kind.services")}
             <span className={`tabular-nums ${on ? "text-text-on-amber/70" : "text-sp-ink/80"}`}>{counts[k]}</span>
           </Link>
         );
@@ -241,19 +246,23 @@ export function kindCounts(cards: SpaceCard[]): Record<Kind, number> {
  * trust this person with a campaign; the numbers answer it without a sentence.
  */
 export function CreatorHero({ creator, openNow }: { creator: CreatorProfile; openNow: number }) {
-  const name = creator.xName || `@${creator.xHandle}`;
+  // A company selling from this account leads with its own name and logo.
+  const business = businessOf(creator);
+  const host = business ? websiteHost(business.website) : null;
+  const name = business?.displayName ?? (creator.xName || `@${creator.xHandle}`);
   const record = creator.trackRecord;
   const flagged = trackRecordNeedsAttention(record);
   const disputed = Math.max(0, record.disputed ?? 0);
+  const bio = bioOf(creator.bio);
 
   return (
     <section className="container-page pb-8 pt-6 md:pb-12 md:pt-10">
       <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center sm:gap-7">
-        <HeroAvatar creator={creator} />
+        {business ? <BusinessLogo business={business} size={96} /> : <HeroAvatar creator={creator} />}
         <div className="min-w-0">
           <h1 className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 break-words font-display text-[36px] font-light leading-[1.05] text-sp-ink [overflow-wrap:anywhere] md:text-h2">
-            <span>{name}</span>
-            <VerifiedTick type={creator.xVerifiedType} />
+            <span style={titleFontStyle(titleStyleOf(creator.titleStyle))}>{name}</span>
+            {business?.verified ? <VerifiedBusinessMark name={business.displayName} /> : <VerifiedTick type={creator.xVerifiedType} />}
           </h1>
           <a
             href={`https://x.com/${encodeURIComponent(creator.xHandle)}`}
@@ -263,21 +272,41 @@ export function CreatorHero({ creator, openNow }: { creator: CreatorProfile; ope
           >
             @{creator.xHandle}
           </a>
+          {host && business?.website && (
+            <a
+              href={business.website}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-4 mt-1.5 inline-block text-body text-sp-ink/85 transition-colors duration-180 hover:text-sp-amber"
+            >
+              {host}
+            </a>
+          )}
+          {bio && <p className="mt-2 max-w-xl break-words text-body text-sp-ink [overflow-wrap:anywhere]">{bio}</p>}
         </div>
       </div>
 
       <div className="mt-8 grid max-w-2xl grid-cols-3 gap-3 md:mt-10 md:gap-4">
-        {typeof creator.xFollowers === "number" && <Stat value={compactNumber(creator.xFollowers)} label="Followers" />}
-        <Stat value={String(openNow)} label={openNow === 1 ? "Spot open" : "Spots open"} />
+        {typeof creator.xFollowers === "number" && <Stat value={compactNumber(creator.xFollowers)} label={t("offers.creator.followers")} />}
+        <Stat value={fmtNumber(openNow)} label={t("offers.creator.spotsOpen", { count: openNow })} />
         <Stat
-          value={String(record.delivered)}
-          label="Delivered"
-          note={flagged ? [record.missed ? `${record.missed} missed` : null, disputed ? `${disputed} disputed` : null].filter(Boolean).join(" · ") : null}
+          value={fmtNumber(record.delivered)}
+          label={t("offers.creator.delivered")}
+          note={
+            flagged
+              ? [
+                  record.missed ? t("offers.creator.missed", { count: record.missed }) : null,
+                  disputed ? t("offers.creator.disputed", { count: disputed }) : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")
+              : null
+          }
         />
       </div>
       {/* What a brand buys here, as creators learned to sell it: the product gets the look, the reach and the content are the point. */}
       <p className="mt-6 max-w-2xl text-body text-sp-ink/85">
-        Every spot comes with {name}&rsquo;s reach and the content they make. The product is what makes people look.
+        {t("offers.creator.pitch", { name })}
       </p>
       {onTimeText(record) ? (
         <p className="mt-6 inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-[20px] border border-success/40 bg-success/10 px-4 text-small text-sp-ink">
@@ -388,18 +417,17 @@ function GroupTile({
   over: boolean;
 }) {
   const n = cards.length;
-  const noun = kind === "spaces" ? "space" : kind === "services" ? "service" : "listing";
-  const counted = `${noun}${n === 1 ? "" : "s"}`;
+  const counted = t("offers.creator.tile.counted", { kind: kind ?? "listings", count: n });
   const from = over ? null : fromPrice(cards);
   const sold = cards.reduce((s, c) => s + c.totals.sold, 0);
-  const title = event ? event.name : "On sale all year";
+  const title = event ? event.name : t("offers.creator.allYear");
   const countdown = event ? eventCountdown(event.startsOn, event.endsOn, now) : null;
   const chip = !event
-    ? "No event"
+    ? t("offers.creator.chip.noEvent")
     : countdown?.phase === "ended"
-      ? "Ended"
+      ? t("offers.creator.chip.ended")
       : countdown?.phase === "now"
-        ? "Happening now"
+        ? t("offers.creator.chip.now")
         : capitalise(countdown?.text ?? "");
 
   const body = (
@@ -413,16 +441,16 @@ function GroupTile({
             {title}
           </h2>
           <p className="mt-1.5 truncate text-small text-white/85">
-            {event ? `${event.city} · ${eventDates(event.startsOn, event.endsOn)}` : "Whenever your campaign runs"}
+            {event ? `${event.city} · ${eventDates(event.startsOn, event.endsOn)}` : t("offers.creator.whenever")}
           </p>
         </div>
         <div className="shrink-0 text-right">
           <p className="font-display text-[40px] font-light leading-none tabular-nums text-white md:text-[48px]">
-            {over ? sold : n}
+            {fmtNumber(over ? sold : n)}
           </p>
           <p className="mt-1 text-tiny text-white/85">
-            {over ? "sold" : counted}
-            {from !== null && <span className="block text-white">from {usdFromCents(from)}</span>}
+            {over ? t("offers.creator.tile.sold", { count: sold }) : counted}
+            {from !== null && <span className="block text-white">{t("offers.creator.tile.from", { price: usdFromCents(from) })}</span>}
           </p>
         </div>
       </div>
@@ -443,7 +471,11 @@ function GroupTile({
       )}
       <Link
         href={href}
-        aria-label={`${title}: ${over ? `${sold} sold` : `${n} ${counted}`}`}
+        aria-label={
+          over
+            ? t("offers.creator.tile.ariaSold", { title, count: sold })
+            : t("offers.creator.tile.ariaOpen", { title, count: n, counted })
+        }
         className="absolute inset-0 rounded-card outline-offset-2 transition-colors duration-180 group-hover:bg-sp-ink/[0.04]"
       />
     </div>
@@ -462,12 +494,12 @@ export function GroupHeader({ event, now }: { event: EventSummary | null; now: n
       <div className="flex items-end justify-between gap-4">
         <div className="min-w-0">
           <h1 className="break-words font-display text-[36px] font-light leading-[1.05] text-white [overflow-wrap:anywhere] md:text-h2">
-            {event ? event.name : "On sale all year"}
+            {event ? event.name : t("offers.creator.allYear")}
           </h1>
           <p className="mt-2 text-small text-white/80">
             {event
-              ? `${event.city} · ${eventDates(event.startsOn, event.endsOn)}${eventIsOver(event, now) ? " · Ended" : ""}`
-              : "Not tied to an event"}
+              ? `${event.city} · ${eventDates(event.startsOn, event.endsOn)}${eventIsOver(event, now) ? ` · ${t("offers.creator.chip.ended")}` : ""}`
+              : t("offers.creator.notTied")}
           </p>
         </div>
       </div>

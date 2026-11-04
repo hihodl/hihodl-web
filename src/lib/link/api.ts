@@ -1,5 +1,5 @@
 /**
- * Linking a phone, and withdrawals that a phone or a passkey approves:
+ * Linking a phone, and withdrawals that the linked phone approves:
  * the backend's routes, exactly as documentation/
  * link-your-phone-and-approved-withdrawals.md names them. Same transport as
  * the wallet's (the person's Supabase token, authed CORS).
@@ -38,7 +38,7 @@ export interface LinkSession {
 export interface LinkState {
   status: LinkStatus;
   platform: Phone | null;
-  /** base64 (or base64url) of the app's X25519 key, once an Android phone joined. */
+  /** base64 (or base64url) of the app's X25519 key, once the phone joined. */
   appPub: string | null;
   expiresAt: string | null;
   /**
@@ -76,10 +76,6 @@ export async function getLinkState(id: string): Promise<LinkState> {
   };
 }
 
-export function joinLinkSession(id: string, body: { platform: Phone; appPub?: string }): Promise<unknown> {
-  return send(`device-link/sessions/${encodeURIComponent(id)}/join`, { json: body });
-}
-
 /** `{ box: null, nonce: null }` only when the account has no web wallet (409 SECRET_REQUIRED otherwise). */
 export function sealLinkSession(id: string, body: { box: string | null; nonce: string | null }): Promise<unknown> {
   return send(`device-link/sessions/${encodeURIComponent(id)}/seal`, { json: body });
@@ -91,6 +87,8 @@ export interface LinkedDevice {
   linkedAt: string | null;
   lastUsedAt: string | null;
   revokedAt: string | null;
+  /** The default phone: the only one that approves the web. Changed only in the app, Settings › Devices. */
+  isPrimary: boolean;
 }
 
 export async function listLinkedDevices(): Promise<LinkedDevice[]> {
@@ -104,6 +102,7 @@ export async function listLinkedDevices(): Promise<LinkedDevice[]> {
       linkedAt: str(d, "linkedAt", "linked_at"),
       lastUsedAt: str(d, "lastUsedAt", "last_used_at"),
       revokedAt: str(d, "revokedAt", "revoked_at"),
+      isPrimary: d.isPrimary === true || d.is_primary === true,
     };
   });
 }
@@ -113,50 +112,10 @@ export async function activeLinkedDevices(): Promise<LinkedDevice[]> {
   return (await listLinkedDevices()).filter((d) => !d.revokedAt);
 }
 
-/**
- * REMOVING A PHONE NEEDS THE PASSKEY (or the phone itself, from the app).
- *
- * The session alone used to remove a phone, and a linked Android phone is the
- * approver of every web payment. Now:
- *
- *   1. `removalChallenge(id)` BEFORE the tap: a nonce, and WebAuthn options
- *      whose challenge is sha256("hihodl/unlink/v1" ‖ deviceId ‖ nonce).
- *      `proofs` says who can remove this phone: "passkey" when the account
- *      has one, "device" when the phone has a device key (the app signs it).
- *   2. the passkey prompt, first thing in the click (Safari's user activation)
- *   3. `removeLinkedDevice(id, nonce, assertion)`.
- *
- * The old DELETE answers 410 UNLINK_NEEDS_APPROVAL. Contract:
- * documentation/one-wallet-every-device.md, "Removing a phone".
- */
-export interface RemovalChallenge {
-  nonce: string;
-  expiresAt: string | null;
-  proofs: ("passkey" | "device")[];
-  options: AssertionOptionsJSON | null;
-  /** When this tab asked; the server keeps the nonce five minutes. */
-  fetchedAt: number;
-}
-
-export async function removalChallenge(id: string): Promise<RemovalChallenge> {
-  const r = await send<Raw>(`device-link/devices/${encodeURIComponent(id)}/remove-challenge`, { json: {} });
-  const proofs = Array.isArray(r.proofs) ? (r.proofs as unknown[]).filter((p): p is "passkey" | "device" => p === "passkey" || p === "device") : [];
-  return {
-    nonce: str(r, "nonce") ?? "",
-    expiresAt: str(r, "expiresAt", "expires_at"),
-    proofs,
-    options: (r.publicKey as AssertionOptionsJSON | null | undefined) ?? null,
-    fetchedAt: Date.now(),
-  };
-}
-
-export function removeLinkedDevice(id: string, body: { nonce: string; assertion: unknown }): Promise<unknown> {
-  return send(`device-link/devices/${encodeURIComponent(id)}/remove`, { json: body });
-}
-
 /* ── Withdrawals ──────────────────────────────────────────────────── */
 
-export type WithdrawalChannel = "app" | "web_passkey";
+/** `app`: the linked phone approves and signs. Anything else is an older server's, and the web withdraws it. */
+export type WithdrawalChannel = "app" | (string & {});
 export type WithdrawalStatus = "pending" | "approved" | "rejected" | "expired" | "submitted" | "confirmed" | "failed";
 
 export interface Withdrawal {
@@ -200,86 +159,13 @@ export async function rejectWithdrawal(id: string): Promise<unknown> {
   return send(`withdrawals/${encodeURIComponent(id)}/reject`, { json: {} });
 }
 
-/** WebAuthn request options, JSON-encoded the way @simplewebauthn/server writes them. */
-export interface AssertionOptionsJSON {
-  challenge: string;
-  rpId?: string;
-  timeout?: number;
-  userVerification?: UserVerificationRequirement;
-  allowCredentials?: { id: string; type: "public-key"; transports?: string[] }[];
-}
+/* ── The relayer (POST /relayer/solana/submit) ──────────────────────── */
 
 /**
- * `{ publicKey, messageHash }`. A second call replaces the first challenge
- * (the server rebuilds it from the stored hash when the assertion comes).
- */
-export async function withdrawalPasskeyChallenge(id: string, message: string): Promise<{ options: AssertionOptionsJSON; messageHash: string | null }> {
-  const r = await send<Raw>(`withdrawals/${encodeURIComponent(id)}/passkey-challenge`, { json: { message } });
-  const options = (r.publicKey as AssertionOptionsJSON | undefined) ?? (r.options as AssertionOptionsJSON | undefined) ?? (r as unknown as AssertionOptionsJSON);
-  return { options, messageHash: str(r, "messageHash", "message_hash") };
-}
-
-export async function authorizeWithdrawalPasskey(id: string, assertion: unknown): Promise<Withdrawal> {
-  return toWithdrawal(await send<Raw>(`withdrawals/${encodeURIComponent(id)}/authorize-passkey`, { json: { assertion } }));
-}
-
-/* ── Approving bytes the server did not write ─────────────────────── */
-
-/**
- * A BRIDGE DEPOSIT'S APPROVAL.
- *
- * `withdrawalPasskeyChallenge` above binds a passkey to a transfer the server
- * described first — token, amount, recipient — and the server refuses any
- * bytes that are not exactly that. A bridge deposit has no such description:
- * the provider builds it, lookup tables and its own program included, and the
- * transfer check refuses all of it by design.
- *
- * So these two bind the one thing a deposit does have: its hash. The challenge
- * is sha256("hihodl/tx/v1" ‖ sha256(message)) — the same digest a linked phone
- * signs — and `POST /cross-chain/gasless/submit` spends the approval once.
- *
- * `message` is the COMPILED MESSAGE, base64: `tx.message.serialize()`, not the
- * transaction. That is what a Solana signature covers and what the gate hashes.
- */
-export async function txApprovalChallenge(message: string): Promise<{ options: AssertionOptionsJSON; messageHash: string | null }> {
-  const r = await send<Raw>("withdrawals/tx-challenge", { json: { message } });
-  const options = (r.publicKey as AssertionOptionsJSON | undefined) ?? (r.options as AssertionOptionsJSON | undefined) ?? (r as unknown as AssertionOptionsJSON);
-  return { options, messageHash: str(r, "messageHash", "message_hash") };
-}
-
-export async function authorizeTxPasskey(message: string, assertion: unknown): Promise<{ approved: boolean }> {
-  const r = await send<Raw>("withdrawals/tx-authorize", { json: { message, assertion } });
-  return { approved: r.approved === true };
-}
-
-/* ── The relayer (POST /relayer/solana/quote and /submit) ─────────── */
-
-export interface RelayerQuote {
-  blockhash: string;
-  relayerPublicKey: string;
-  idempotencyKey: string;
-  computeUnits?: number;
-  priorityFeeLamports?: string;
-  /** Present only when the recipient's token account has to be bought: the sender pays it back in the same transaction. */
-  sponsorship?: {
-    accountsToCreate: number;
-    chargeBaseUnits: string;
-    chargeMint: string;
-    treasuryTokenAccount: string;
-  } | null;
-}
-
-export function relayerQuote(body: { tokenId: string; amount: string; to: string; from: string }): Promise<RelayerQuote> {
-  // Sponsored (no USDC rebate leg): a withdrawal's bytes are one transfer, which is what the server checks.
-  return send<RelayerQuote>("relayer/solana/quote", { json: { ...body, sponsored: true } });
-}
-
-/**
- * `withdrawalId` is optional because it is only one of the three ways past the
- * gate. A withdrawal names itself here; a transaction the SERVER built — a
- * bridge deposit, a spot bought on Spaces — is let through by the passkey
- * approval over its own bytes instead, which was taken before this call and
- * needs nothing in the body. See `txApprovalChallenge` above.
+ * Send a transaction the linked phone signed. A spot bought on Spaces is let
+ * past the relayer's gate by the phone's approval over its own bytes
+ * (POST /payment-approvals/:id/authorize-device), taken before this call, so
+ * it needs nothing in the body but the bytes and the key.
  */
 export function relayerSubmit(body: {
   serializedTx: string;

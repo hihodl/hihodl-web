@@ -13,6 +13,8 @@
 
 import type { IonName } from "@/components/app/ion";
 
+import { t } from "../i18n";
+
 import type { SpendTransfer as Transfer } from "./types";
 
 type IoniconName = IonName;
@@ -59,7 +61,38 @@ export const SUBSCRIPTION_CATEGORY_IDS = Object.keys(
 export function subscriptionCategoryDef(
   id: SubscriptionCategoryId,
 ): SubscriptionCategoryDef {
-  return SUBSCRIPTION_CATEGORIES[id] ?? SUBSCRIPTION_CATEGORIES.other;
+  const def = SUBSCRIPTION_CATEGORIES[id] ?? SUBSCRIPTION_CATEGORIES.other;
+  return { ...def, label: subscriptionCategoryName(def.id) };
+}
+
+/** A recurring-payment kind's name in the person's language (the table keeps the app's English). */
+export function subscriptionCategoryName(id: SubscriptionCategoryId): string {
+  switch (id) {
+    case "home":
+      return t("analytics.subCategory.home");
+    case "phone":
+      return t("analytics.subCategory.phone");
+    case "internet":
+      return t("analytics.subCategory.internet");
+    case "streaming":
+      return t("analytics.subCategory.streaming");
+    case "music":
+      return t("analytics.subCategory.music");
+    case "gym":
+      return t("analytics.subCategory.gym");
+    case "insurance":
+      return t("analytics.subCategory.insurance");
+    case "water":
+      return t("analytics.subCategory.water");
+    case "electricity":
+      return t("analytics.subCategory.electricity");
+    case "transport":
+      return t("analytics.subCategory.transport");
+    case "software":
+      return t("analytics.subCategory.software");
+    default:
+      return t("analytics.subCategory.other");
+  }
 }
 
 // Ordered most-specific → most-general; first keyword hit wins. English +

@@ -25,6 +25,8 @@
  * are named by the person who made them.
  */
 
+import { t } from "@/lib/app/i18n";
+
 import type { PhotoRect } from "./listing";
 
 /** The server's own floor and tolerance (services/ad-space/photo-rules.ts). */
@@ -37,11 +39,20 @@ const GAP = 0.025;
 export const LAYOUTS = ["grid", "band", "column", "corners"] as const;
 export type LayoutKind = (typeof LAYOUTS)[number];
 
+/** Getters, so each read is in the language on screen at that moment. */
 export const LAYOUT_LABEL: Record<LayoutKind, string> = {
-  grid: "Even grid",
-  band: "Headline and a row",
-  column: "Down one side",
-  corners: "Corners",
+  get grid() {
+    return t("listings.layout.grid");
+  },
+  get band() {
+    return t("listings.layout.band");
+  },
+  get column() {
+    return t("listings.layout.column");
+  },
+  get corners() {
+    return t("listings.layout.corners");
+  },
 };
 
 function clamp(n: number, lo: number, hi: number): number {

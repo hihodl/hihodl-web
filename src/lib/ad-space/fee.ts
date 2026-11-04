@@ -8,10 +8,12 @@
  * reads this one number instead of a literal in each screen. It is the
  * backend's `AD_SPACE.FEE_BPS`; when that changes, this changes with it.
  */
+import { fmtPercent } from "@/lib/app/i18n/format";
+
 export const AD_SPACE_FEE_BPS = 500;
 
 /** "5%", "2.5%". */
 export function feePctText(bps: number = AD_SPACE_FEE_BPS): string {
   const pct = bps / 100;
-  return `${Number.isInteger(pct) ? pct : pct.toFixed(1)}%`;
+  return fmtPercent(bps / 10_000, Number.isInteger(pct) ? 0 : 1);
 }

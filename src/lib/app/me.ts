@@ -7,6 +7,7 @@
  *
  *   GET   /me                              profile (avatarUrl comes back signed, 1 h)
  *   PATCH /me                              { displayName } { aliasHandle } { avatarUrl: storage path }
+ *                                          { avatarEmoji } { profileVisibility }
  *   GET   /me/check-handle?handle=         { available, reason }
  *   GET   /me/addresses                    the app wallet's addresses
  *   GET   /recovery-codes/status           { hasActiveCodes }
@@ -21,8 +22,12 @@
 
 "use client";
 
-import { call } from "@/lib/creator/api";
+import { call, CreatorApiError } from "@/lib/creator/api";
 import { creatorAuth } from "@/lib/creator/session";
+import { t } from "@/lib/app/i18n";
+
+/** Who can find the person (the app's Profile visibility sheet). */
+export type ProfileVisibility = "public" | "private" | "invisible";
 
 export interface Me {
   id: string;
@@ -32,11 +37,20 @@ export interface Me {
   /** When the username may change next (14-day rule); null or absent when it may now. */
   aliasChangeableAt?: string | null;
   email: string | null;
+  /**
+   * The language chosen in the app or here (`users.locale`, "es-ES"); absent
+   * from an API that does not send it yet, and then this browser decides.
+   */
+  locale?: string | null;
+  /** ISO 4217 display currency (`users.display_currency`); absent or null = not chosen. */
+  displayCurrency?: string | null;
   profile: {
     displayName: string | null;
     avatarUrl: string | null;
     /** The emoji the person chose in the app ("🚀"); absent from an API that predates it. */
     avatarEmoji?: string | null;
+    /** Absent from an API that predates it: the web then offers no control for it. */
+    profileVisibility?: ProfileVisibility | null;
     country: string | null;
     railsRegion: string | null;
     plan: string;
@@ -47,8 +61,32 @@ export interface Me {
 export const getMe = () => call<Me>("me");
 
 /** The answer carries no signed photo and no username window: read GET /me again after it. */
-export const updateMe = (patch: { displayName?: string; aliasHandle?: string; avatarUrl?: string }) =>
-  call<unknown>("me", { method: "PATCH", json: patch }).then(() => undefined);
+export const updateMe = (patch: {
+  displayName?: string;
+  aliasHandle?: string;
+  avatarUrl?: string;
+  /** One emoji, up to 16 UTF-16 units; "" or null clears it. */
+  avatarEmoji?: string | null;
+  profileVisibility?: ProfileVisibility;
+  /** One of the 19 language codes. An API that does not take it yet answers 400; the choice still holds in this browser. */
+  locale?: string;
+  /** ISO 4217 from the supported list; otherwise 422 unsupported_currency. */
+  displayCurrency?: string;
+}) => call<unknown>("me", { method: "PATCH", json: patch }).then(() => undefined);
+
+/**
+ * Why an emoji or a visibility choice was not kept, said plainly: the screen
+ * has already put the old value back, so every sentence says nothing changed.
+ * A backend that predates these fields answers 400 "No fields to update".
+ */
+export function describeProfileError(e: unknown, fallback: (e: unknown) => string): string {
+  if (e instanceof CreatorApiError) {
+    if (e.code === "avatar_emoji_invalid") return t("account.profileError.emojiInvalid");
+    if (e.code === "avatar_emoji_too_long") return t("account.profileError.emojiTooLong");
+    if (e.status === 400) return t("account.profileError.notYet");
+  }
+  return t("account.profileError.withReason", { reason: fallback(e) });
+}
 
 /**
  * The HOLD wallet's addresses as the app registered them, by chain
@@ -199,8 +237,20 @@ export async function uploadAvatar(file: Blob, supabaseUid: string, previous: st
   }
 }
 
-/** Back to the initial. The stored object is removed too, best effort. */
+/**
+ * Back to the emoji. `DELETE /me/avatar` clears the photo and removes the
+ * stored object on the server, where the app's own delete lives too. A backend
+ * that predates the route answers 404, and then the old way still works: clear
+ * the path with PATCH /me and remove the object from this person's own folder,
+ * best effort.
+ */
 export async function removeAvatar(supabaseUid: string, previous: string | null): Promise<void> {
+  try {
+    await call<{ removed: boolean }>("me/avatar", { method: "DELETE" });
+    return;
+  } catch (e) {
+    if (!(e instanceof CreatorApiError) || (e.status !== 404 && e.status !== 405)) throw e;
+  }
   await updateMe({ avatarUrl: "" });
   const old = storagePathOf(previous);
   const auth = creatorAuth();

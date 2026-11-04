@@ -35,8 +35,18 @@ import type { Assignment, Earning, Invitation, TeamMember, TeamRole, WorkListing
 
 /* ── The catalogue ────────────────────────────────────────────────── */
 
-export function getTemplates(): Promise<{ templates: Template[]; availableChains: Chain[] }> {
-  return call<{ templates: Template[]; availableChains: Chain[] }>("ad-space/templates");
+export function getTemplates(
+  /**
+   * An event's host: `seller: "organiser"` lists the event's own packages and
+   * nothing else, `scope: "calendar"` a Luma calendar's (its whole week).
+   */
+  opts: { seller?: "organiser"; scope?: "event" | "calendar" } = {},
+): Promise<{ templates: Template[]; availableChains: Chain[] }> {
+  const q = new URLSearchParams();
+  if (opts.seller) q.set("seller", opts.seller);
+  if (opts.seller && opts.scope === "calendar") q.set("scope", "calendar");
+  const query = q.toString();
+  return call<{ templates: Template[]; availableChains: Chain[] }>(`ad-space/templates${query ? `?${query}` : ""}`);
 }
 
 /* ── Events ───────────────────────────────────────────────────────── */
@@ -67,8 +77,13 @@ export function createEvent(body: {
 
 /* ── Drafting, publishing ─────────────────────────────────────────── */
 
-export function createListing(body: Record<string, unknown>): Promise<{ space: SpaceView }> {
-  return call<{ space: SpaceView }>("ad-space/spaces", { json: body });
+/**
+ * `asBusiness` (the owner's user id) drafts it for that business: an event
+ * proved for a business is that business's only, so its packages are too.
+ */
+export function createListing(body: Record<string, unknown>, asBusiness?: string | null): Promise<{ space: SpaceView }> {
+  const q = asBusiness ? `?${new URLSearchParams({ asBusiness })}` : "";
+  return call<{ space: SpaceView }>(`ad-space/spaces${q}`, { json: body });
 }
 
 export function getListing(spaceId: string): Promise<{ space: SpaceView }> {

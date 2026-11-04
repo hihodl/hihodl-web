@@ -50,6 +50,7 @@ import {
   type Assignment,
   type TeamMember,
 } from "@/lib/creator/team";
+import { Rich, useT } from "@/lib/app/i18n/react";
 
 import { btnSmallGlass, Dropdown, Field, Text } from "../listing/parts";
 
@@ -58,7 +59,7 @@ const btnSmall =
   "inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-[18px] bg-[#F1F5F9] px-3.5 text-[13px] font-extrabold text-[#0A1420] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:bg-white/[0.07] disabled:text-white/60";
 const btnSmallSecondary = btnSmallGlass;
 import { Loading, Notice, Section } from "../parts";
-import { ROLE_TEXT } from "./Members";
+import { roleText } from "./Members";
 
 /** The same sentence the server's refusal gets, for the same rule checked before sending. */
 function shareSentence(code: string | null): string | null {
@@ -66,6 +67,7 @@ function shareSentence(code: string | null): string | null {
 }
 
 export function ListingTeam({ spaceId }: { spaceId: string }) {
+  const t = useT();
   const [assignments, setAssignments] = useState<Assignment[] | null>(null);
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [hidden, setHidden] = useState(false);
@@ -73,9 +75,9 @@ export function ListingTeam({ spaceId }: { spaceId: string }) {
 
   const load = useCallback(async () => {
     try {
-      const [a, t] = await Promise.all([listingTeam(spaceId), getTeam()]);
+      const [a, tm] = await Promise.all([listingTeam(spaceId), getTeam()]);
       setAssignments(a.assignments);
-      setTeam(t.team);
+      setTeam(tm.team);
       setNotice(null);
     } catch (e) {
       if (e instanceof CreatorApiError && e.code === "not_found") {
@@ -99,9 +101,9 @@ export function ListingTeam({ spaceId }: { spaceId: string }) {
   const waiting = team.filter((m) => m.status === "invited").length;
 
   return (
-    <Section title="Who works it">
+    <Section title={t("creator.listingTeam.title")}>
       {assignments === null ? (
-        <Loading what="who is on this listing" />
+        <Loading what={t("creator.listingTeam.loadingWhat")} />
       ) : (
         <div className="flex flex-col gap-3.5">
           <RoomLeft room={room} />
@@ -122,15 +124,20 @@ export function ListingTeam({ spaceId }: { spaceId: string }) {
 
           {team.length === 0 ? (
             <p className="text-[14px] leading-5 text-white/[0.62]">
-              No team yet.{" "}
-              <Link href={spacesPath("/team")} className="text-white underline underline-offset-2">
-                Invite someone
-              </Link>
+              <Rich
+                k="creator.listingTeam.noTeam"
+                tags={{
+                  link: (c) => (
+                    <Link href={spacesPath("/team")} className="text-white underline underline-offset-2">
+                      {c}
+                    </Link>
+                  ),
+                }}
+              />
             </p>
           ) : free.length === 0 ? (
             <p className="text-[14px] leading-5 text-white/[0.62]">
-              {assignments.length > 0 ? "Everyone who has accepted is on it." : "Nobody has accepted yet."}
-              {waiting > 0 ? ` ${waiting} ${waiting === 1 ? "invitation" : "invitations"} open.` : ""}
+              {t(assignments.length > 0 ? "creator.listingTeam.everyoneOn" : "creator.listingTeam.nobodyAccepted", { waiting })}
             </p>
           ) : (
             <AddForm spaceId={spaceId} free={free} assignments={assignments} room={room} onChanged={() => void load()} />
@@ -144,14 +151,15 @@ export function ListingTeam({ spaceId }: { spaceId: string }) {
 }
 
 function RoomLeft({ room }: { room: number }) {
+  const t = useT();
   const taken = TEAM_LIMITS.SHARE_TOTAL_MAX_BPS - room;
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-baseline justify-between gap-2 text-[14px]">
         <span className="font-strong text-white">
-          {taken === 0 ? "Nothing given away yet" : `${shareText(taken)} given to your team`}
+          {taken === 0 ? t("creator.listingTeam.nothingGiven") : t("creator.listingTeam.given", { share: shareText(taken) })}
         </span>
-        <span className="text-white/55">{shareText(room)} left</span>
+        <span className="text-white/55">{t("creator.listingTeam.left", { share: shareText(room) })}</span>
       </div>
       {/* Width only ever says how much: the colour is the same amber at 10% and at 100%. */}
       <div aria-hidden>
@@ -172,6 +180,7 @@ function AssignmentRow({
   all: readonly Assignment[];
   onChanged: () => void;
 }) {
+  const t = useT();
   const [editing, setEditing] = useState(false);
   const [percent, setPercent] = useState(percentFromBps(assignment.shareBps));
   const [note, setNote] = useState(assignment.note ?? "");
@@ -188,25 +197,25 @@ function AssignmentRow({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="break-words text-[14.5px] font-bold text-white">{assignment.label}</p>
-          <p className="mt-0.5 text-[12.5px] text-white/55">{ROLE_TEXT[assignment.role].label}</p>
+          <p className="mt-0.5 text-[12.5px] text-white/55">{roleText(assignment.role).label}</p>
         </div>
-        <Tag label={`${shareText(assignment.shareBps)} of what you receive`} />
+        <Tag label={t("creator.listingTeam.ofWhatYouReceive", { share: shareText(assignment.shareBps) })} />
       </div>
       {assignment.note && !editing ? <p className="break-words text-[14px] leading-5 text-white/[0.62]">{assignment.note}</p> : null}
 
       {editing ? (
         <div className="flex flex-col gap-4">
           <Field
-            label="Their share"
-            hint={`Up to ${shareText(roomForThem)}`}
+            label={t("creator.listingTeam.theirShare")}
+            hint={t("creator.listingTeam.upTo", { share: shareText(roomForThem) })}
             problems={percent.trim() && problem ? [problem] : []}
           >
             <Percent value={percent} onChange={setPercent} />
           </Field>
-          <Field label="Note" hint="Optional. Only you see it.">
-            <Text value={note} onChange={setNote} maxLength={TEAM_LIMITS.NOTE_MAX} placeholder="Runs the booth both days" />
+          <Field label={t("creator.listingTeam.note")} hint={t("creator.listingTeam.noteHint")}>
+            <Text value={note} onChange={setNote} maxLength={TEAM_LIMITS.NOTE_MAX} placeholder={t("creator.listingTeam.notePlaceholder")} />
           </Field>
-          <p className="text-[12px] leading-4 text-white/55">From the next sale.</p>
+          <p className="text-[12px] leading-4 text-white/55">{t("creator.listingTeam.fromNextSale")}</p>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -224,7 +233,7 @@ function AssignmentRow({
                   .finally(() => setBusy(false));
               }}
             >
-              {busy ? "Saving…" : "Save"}
+              {busy ? t("common.saving") : t("common.save")}
             </button>
             <button
               type="button"
@@ -237,14 +246,14 @@ function AssignmentRow({
                 setNotice(null);
               }}
             >
-              Cancel
+              {t("common.cancel")}
             </button>
           </div>
         </div>
       ) : asking ? (
         <div className="flex flex-col gap-2 rounded-[12px] bg-amber/[0.12] px-3 py-2.5">
-          <p className="text-[13px] font-strong leading-[18px] text-amber">Take {assignment.label} off this listing?</p>
-          <p className="text-[14px] leading-5 text-white/[0.62]">Past sales stay owed.</p>
+          <p className="text-[13px] font-strong leading-[18px] text-amber">{t("creator.listingTeam.takeOffAsk", { name: assignment.label })}</p>
+          <p className="text-[14px] leading-5 text-white/[0.62]">{t("creator.listingTeam.pastOwed")}</p>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -259,20 +268,20 @@ function AssignmentRow({
                   .finally(() => setBusy(false));
               }}
             >
-              {busy ? "Working…" : "Take them off"}
+              {busy ? t("creator.members.working") : t("creator.listingTeam.takeOff")}
             </button>
             <button type="button" className={btnSmallSecondary} disabled={busy} onClick={() => setAsking(false)}>
-              Keep them
+              {t("creator.listingTeam.keep")}
             </button>
           </div>
         </div>
       ) : (
         <div className="flex flex-wrap gap-2">
           <button type="button" className={btnSmallSecondary} onClick={() => setEditing(true)}>
-            Change share
+            {t("creator.listingTeam.changeShare")}
           </button>
           <button type="button" className={btnSmallSecondary} onClick={() => setAsking(true)}>
-            Take off this listing
+            {t("creator.listingTeam.takeOffListing")}
           </button>
         </div>
       )}
@@ -295,6 +304,7 @@ function AddForm({
   room: number;
   onChanged: () => void;
 }) {
+  const t = useT();
   const [memberId, setMemberId] = useState(free[0].id);
   const [percent, setPercent] = useState("");
   const [note, setNote] = useState("");
@@ -308,28 +318,28 @@ function AddForm({
 
   return (
     <div className="flex flex-col gap-3.5 border-t border-white/[0.08] pt-3.5">
-      <h3 className="text-[12px] font-bold uppercase tracking-[0.4px] text-white/55">Add to this listing</h3>
+      <h3 className="text-[12px] font-bold uppercase tracking-[0.4px] text-white/55">{t("creator.listingTeam.addTitle")}</h3>
       {room === 0 ? (
-        <p className="text-[14px] leading-5 text-white/[0.62]">100% already shared. Lower a share to make room.</p>
+        <p className="text-[14px] leading-5 text-white/[0.62]">{t("creator.listingTeam.full")}</p>
       ) : (
         <>
           <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-3">
-            <Field label="Who">
+            <Field label={t("creator.listingTeam.who")}>
               <Dropdown
                 value={chosen}
                 onChange={setMemberId}
-                options={free.map((m) => ({ value: m.id, label: `${m.label} · ${ROLE_TEXT[m.role].pill}` }))}
+                options={free.map((m) => ({ value: m.id, label: `${m.label} · ${roleText(m.role).pill}` }))}
               />
             </Field>
             <Field
-              label="Share"
-              hint={`Up to ${shareText(room)} left`}
+              label={t("creator.listingTeam.share")}
+              hint={t("creator.listingTeam.upToLeft", { share: shareText(room) })}
               problems={percent.trim() && problem ? [problem] : []}
             >
               <Percent value={percent} onChange={setPercent} />
             </Field>
-            <Field label="Note" hint="Optional. Only you see it.">
-              <Text value={note} onChange={setNote} maxLength={TEAM_LIMITS.NOTE_MAX} placeholder="Runs the booth both days" />
+            <Field label={t("creator.listingTeam.note")} hint={t("creator.listingTeam.noteHint")}>
+              <Text value={note} onChange={setNote} maxLength={TEAM_LIMITS.NOTE_MAX} placeholder={t("creator.listingTeam.notePlaceholder")} />
             </Field>
           </div>
           <div>
@@ -350,7 +360,7 @@ function AddForm({
                   .finally(() => setBusy(false));
               }}
             >
-              {busy ? "Saving…" : "Add"}
+              {busy ? t("common.saving") : t("common.add")}
             </button>
           </div>
         </>

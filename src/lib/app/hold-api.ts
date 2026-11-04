@@ -27,16 +27,18 @@
  * key because there is no key in a sentence — which is exactly why it is the
  * half of Payments the web can carry in full.
  *
- * Money on the web is otherwise view only. A withdrawal is approved on the
- * phone (Android) or signed with a passkey bound to that one transaction
- * (iPhone) — see lib/wallet and documentation/link-your-phone-and-approved-
- * withdrawals.md — and nothing on these screens bypasses that.
+ * Money on the web is otherwise view only. A withdrawal is approved and
+ * signed on the linked phone — see documentation/link-your-phone-and-
+ * approved-withdrawals.md — and nothing on these screens bypasses that.
  */
 
 "use client";
 
 import { API_BASE } from "@/lib/ad-space/config";
 import { accessToken } from "@/lib/creator/session";
+
+import { notePartnersOnly } from "./ad-space-gate";
+import { normalisePriceSeries } from "./portfolio-curve";
 
 export class HoldApiError extends Error {
   constructor(
@@ -49,6 +51,8 @@ export class HoldApiError extends Error {
      * tell those apart reads this and not `code`.
      */
     readonly detail: string | null = null,
+    /** The server's `error.details`, where a route sends one (`nextAllowedAt` on a reminder, `owedMinor` on mark-paid). */
+    readonly details: Record<string, unknown> | null = null,
   ) {
     super(code);
     this.name = "HoldApiError";
@@ -68,7 +72,12 @@ export async function read<T>(
   init: {
     json?: unknown;
     signal?: AbortSignal;
-    method?: "GET" | "POST" | "PUT" | "DELETE";
+    method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+    /**
+     * Raw bytes as the body (a group photo, a receipt): sent as they are with
+     * the blob's own type, never multipart and never base64. POST by default.
+     */
+    raw?: Blob;
     /** Extra request headers. Anything beyond Content-Type and Authorization must be allowed by the Worker's preflight (see lib/app/groups). */
     headers?: Record<string, string>;
   } = {},
@@ -77,20 +86,21 @@ export async function read<T>(
   if (!token) throw new HoldApiError("UNAUTHORIZED", 401);
 
   const headers: Record<string, string> = { ...init.headers, accept: "application/json", authorization: `Bearer ${token}` };
-  if (init.json !== undefined) headers["content-type"] = "application/json";
+  if (init.raw !== undefined) headers["content-type"] = init.raw.type || "application/octet-stream";
+  else if (init.json !== undefined) headers["content-type"] = "application/json";
 
   // A body means POST unless the caller names another verb. `method` exists for
   // the chat, which is the one place on the web that genuinely writes: a note
   // is withdrawn with DELETE and the privacy setting is saved with PUT, and
   // neither can be spelled with the body rule alone.
-  const method = init.method ?? (init.json !== undefined ? "POST" : "GET");
+  const method = init.method ?? (init.json !== undefined || init.raw !== undefined ? "POST" : "GET");
 
   let res: Response;
   try {
     res = await fetch(`${API_BASE}/${path.replace(/^\/+/, "")}`, {
       method,
       headers,
-      body: init.json !== undefined ? JSON.stringify(init.json) : undefined,
+      body: init.raw !== undefined ? init.raw : init.json !== undefined ? JSON.stringify(init.json) : undefined,
       cache: "no-store",
       credentials: "omit",
       signal: init.signal,
@@ -107,9 +117,11 @@ export async function read<T>(
   }
 
   if (!res.ok) {
-    const err = (body as { error?: { code?: string; message?: string } } | null)?.error;
+    const err = (body as { error?: { code?: string; message?: string; details?: unknown } } | null)?.error;
     const code = err?.code ?? `HTTP_${res.status}`;
-    throw new HoldApiError(code, res.status, typeof err?.message === "string" ? err.message : null);
+    const details = err?.details && typeof err.details === "object" && !Array.isArray(err.details) ? (err.details as Record<string, unknown>) : null;
+    notePartnersOnly(code, res.status);
+    throw new HoldApiError(code, res.status, typeof err?.message === "string" ? err.message : null, details);
   }
 
   const envelope = body as { success?: boolean; data?: unknown } | null;
@@ -186,19 +198,15 @@ function priceMap(raw: unknown): Record<string, number> {
 /**
  * A price series for one symbol: `[[msSinceEpoch, price], …]`.
  *
- * Production sends `[{ timestamp, price }]`; the curve and the 24h move both
- * read tuples, and read the objects as `undefined`. Normalised here so that
- * neither can.
+ * Production sends `[{ timestamp, price }]` with the timestamp in ms; the
+ * curve and the 24h move both read tuples, and read the objects as
+ * `undefined`. Normalised here — seconds, numeric strings, disorder and
+ * duplicate instants included — by `normalisePriceSeries`, which says what
+ * the wire has been seen to carry and why each case is taken.
  */
 export async function getPriceHistory(symbol: string, days: 7 | 30 | 90 | 365): Promise<{ symbol: string; prices: [number, number][] }> {
   const raw = await read<{ symbol?: string; prices?: unknown }>(`prices/history?symbol=${encodeURIComponent(symbol)}&days=${days}`);
-  const prices: [number, number][] = [];
-  for (const p of Array.isArray(raw?.prices) ? (raw.prices as unknown[]) : []) {
-    const t = Array.isArray(p) ? p[0] : (p as { timestamp?: number })?.timestamp;
-    const v = Array.isArray(p) ? p[1] : (p as { price?: number })?.price;
-    if (typeof t === "number" && typeof v === "number" && Number.isFinite(t) && Number.isFinite(v)) prices.push([t, v]);
-  }
-  return { symbol: raw?.symbol ?? symbol, prices };
+  return { symbol: raw?.symbol ?? symbol, prices: normalisePriceSeries(raw?.prices) };
 }
 
 /* ── What moved ───────────────────────────────────────────────────── */
@@ -628,6 +636,12 @@ export interface RailAccount {
   bankName?: string | null;
   bankCountry?: string | null;
   accountHolderName?: string | null;
+  /**
+   * Whether the holder the payer's bank will match is this person, as the
+   * backend read it from the provider's answer. Null or absent: unknown, and
+   * the card falls back to what it knows per currency (holder-disclosure.ts).
+   */
+  heldInYourName?: boolean | null;
   /** What this rail calls each field. Null when the catalogue read failed. */
   fieldLabels?: Record<string, string> | null;
 }

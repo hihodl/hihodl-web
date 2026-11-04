@@ -13,6 +13,8 @@
  * Clients switch on `error.code`, never on the message.
  */
 
+import { t } from "@/lib/app/i18n";
+
 import { AD_SPACE_API } from "./config";
 import { CheckoutError, apiRequest, describeSessionError, type EvmCheckout, type SolanaCheckout } from "./checkout-client";
 import { CHAIN_LABEL, clockTime, isTieredSpace } from "./format";
@@ -366,130 +368,124 @@ export interface OfferErrorContext {
 export function describeOfferError(e: unknown, ctx: OfferErrorContext = {}): string | null {
   if (!(e instanceof CheckoutError)) return null;
   const d = e.details;
-  const bid = ctx.kind === "bid";
-  const thing = bid ? "bid" : "offer";
+  const kind = ctx.kind === "bid" ? "bid" : "offer";
   const subject = ctx.subject ?? "spot";
-  const net = ctx.chain ? CHAIN_LABEL[ctx.chain] : "that network";
+  const net = ctx.chain ? CHAIN_LABEL[ctx.chain] : t("offers.error.thatNetwork");
 
   switch (e.code) {
     case "offers_not_accepted":
-      return "This space doesn't take offers or bids. Refresh the page to see how it sells now.";
+      return t("offers.error.offersNotAccepted");
     case "offer_too_low": {
       const min = str(d.minimumUsdc);
       return min
-        ? `That's too low: an ${thing} here starts at ${min} USDC.`
-        : `That's too low: an ${thing} starts at $${subject === "session" ? 50 : 25}.`;
+        ? t("offers.error.offerTooLowMin", { kind, min })
+        : t("offers.error.offerTooLow", { kind, floor: subject === "session" ? 50 : 25 });
     }
     case "price_below_minimum":
-      return `That's too low: an ${thing} on a session starts at $50.`;
+      return t("offers.error.priceBelowMinimum", { kind });
     case "offer_too_high":
-      return `That's more than any ${subject} can cost ($25,000). Lower the amount.`;
+      return t("offers.error.offerTooHigh", { subject });
     case "offer_not_below_price":
-      return "That's the listed price or more, so there is nothing to negotiate: use Buy now instead.";
+      return t("offers.error.offerNotBelowPrice");
     case "bid_too_low": {
       const next = str(d.nextMinimumBidUsdc);
-      return next
-        ? `Someone bid in the meantime. The next bid has to be at least ${next} USDC.`
-        : "That bid is too low. Refresh the page to see the next minimum bid.";
+      return next ? t("offers.error.bidTooLowNext", { next }) : t("offers.error.bidTooLow");
     }
     case "bid_needs_backing": {
       const need = str(d.neededUsdc);
       const have = str(d.balanceUsdc);
-      const base = "A bid has to be backed by a wallet holding what you would pay.";
       return need && have
-        ? `${base} The wallet you checked has ${have} USDC on ${net} and this bid needs ${need}. Check a wallet with enough USDC, or bid less.`
-        : `${base} Check your funds with a wallet that holds enough USDC, then send it again.`;
+        ? t("offers.error.bidNeedsBackingFigures", { have, net, need })
+        : t("offers.error.bidNeedsBacking");
     }
     case "bidding_closed":
-      return "Bidding on this spot has ended, so it takes no more bids.";
+      return t("offers.error.biddingClosed");
     case "name_not_allowed":
-      return "That name can't be shown on the page. Use your own name or your brand's, with no links.";
+      return t("offers.error.nameNotAllowed");
     case "contact_invalid":
-      return "That contact doesn't look right. An X or Telegram handle, or a full email address.";
+      return t("offers.error.contactInvalid");
     case "message_invalid":
-      return `The message can't be sent: keep it to ${OFFER_MESSAGE_MAX} characters, with no links, emails, phone numbers, @handles or wallet addresses. Your contact goes in its own field.`;
+      return t("offers.error.messageInvalid", { max: OFFER_MESSAGE_MAX });
     case "proof_invalid":
-      return "Your wallet's signature didn't check out. Check your funds again with the same wallet.";
+      return t("offers.error.proofInvalid");
     case "proof_expired":
-      return "Your funds check expired: it lasts 5 minutes. Check your funds again, then send.";
+      return t("offers.error.proofExpired");
     case "chain_not_accepted":
-      return `This creator doesn't take payments on ${net}. Pick another network.`;
+      return t("offers.error.chainNotAccepted", { net });
     case "raise_too_low":
-      return `A raise has to be more than your last ${thing}.`;
+      return t("offers.error.raiseTooLow", { kind });
     case "raise_not_below_counter":
-      return "That's the creator's counter or more. To pay the counter, use Accept instead of raising.";
+      return t("offers.error.raiseNotBelowCounter");
     case "offer_required":
-      return `This space sells by offers or bids, so there's no price to pay straight away. Make an offer or bid, and pay once it's accepted.`;
+      return t("offers.error.offerRequired");
     case "offer_target_invalid":
-      return "This offer doesn't match how the space is laid out: on an item it goes on a spot, on a service it's for any slot. Refresh the page and try again.";
+      return t("offers.error.offerTargetInvalid");
     case "offer_expired":
-      return `This ${thing}'s time ran out before that went through, so it can't change any more. The page now shows where it stands.`;
+      return t("offers.error.offerExpired", { kind });
     case "bid_locked":
-      return "Bidding has ended and yours is the highest bid, so it can't be withdrawn now. If it's accepted and you don't pay within 24 hours, it lapses.";
+      return t("offers.error.bidLocked");
     case "blocked":
-      return "You've blocked this creator in HOLD, so you can't sponsor, make offers or bid on their spaces.";
+      return t("offers.error.blocked");
     case "space_closed":
     case "space_not_live":
-      return "This HiSpace has closed, so it takes no more offers or bids.";
+      return t("offers.error.spaceClosed");
     case "position_sold":
-      return subject === "session" ? "Every session here has been booked." : "This spot has just sold.";
+      return t("offers.error.positionSold", { subject });
     // One brand takes everything (ad-space-whole-listing-v0.md). An acceptance
     // is refused by the same two rules a payment is, so the creator hears the
     // same two sentences the sponsor would.
     case "whole_listing_taken":
-      return `One brand is taking this whole listing, so no single ${subject} on it can be sold or accepted.`;
+      return t("offers.error.wholeListingTaken", { subject });
     case "parts_already_sold":
-      return `A ${subject} on this listing has already gone, so it can't be sold whole any more.`;
+      return t("offers.error.partsAlreadySold", { subject });
     case "own_space":
-      return "This is your own space, so you can't sponsor it, make an offer or bid on it.";
+      return t("offers.error.ownSpace");
     case "too_many_offers":
-      return "You already have 5 open offers on this space with this contact. Wait for an answer, or withdraw one first.";
+      return t("offers.error.tooManyOffers");
     case "position_reserved": {
       const until = str(d.reservedUntil);
       return until
-        ? `An accepted offer holds this ${subject} until ${clockTime(until)}. If it isn't paid by then, it opens again.`
-        : `An accepted offer holds this ${subject} while it waits for its payment. If it isn't paid in time, it opens again.`;
+        ? t("offers.error.positionReservedUntil", { subject, time: clockTime(until) })
+        : t("offers.error.positionReserved", { subject });
     }
     case "offer_not_accepted":
-      return "This offer isn't accepted, so there is nothing to pay yet. The page now shows where it stands.";
+      return t("offers.error.offerNotAccepted");
     case "offer_not_open":
-      return `This ${thing} has already closed, so it can't change. The page now shows where it stands.`;
+      return t("offers.error.offerNotOpen", { kind });
     case "offer_changed":
-      return `This ${thing} changed while you were looking. The page now shows the latest.`;
+      return t("offers.error.offerChanged", { kind });
     case "too_many_rounds":
-      return "This offer has had all the counter-offers it can. The creator can still accept or decline it.";
+      return t("offers.error.tooManyRounds");
     case "no_slot_free":
-      return "Every slot here is already sold or held for another sponsor.";
+      return t("offers.error.noSlotFree");
     case "too_close_to_closing":
-      return "This space closes too soon to leave 24 hours to pay, so the offer can't be accepted now.";
+      return t("offers.error.tooCloseToClosing");
     // The rest come from the creator's side (countering, publishing). No call
     // this page makes should get them; mapped so a raw code never shows.
     case "counter_not_above_offer":
-      return "A counter-offer has to be above the offer it answers.";
+      return t("offers.error.counterNotAboveOffer");
     case "counter_above_price":
-      return "A counter-offer can't be above the listed price.";
+      return t("offers.error.counterAbovePrice");
     case "not_for_bids":
-      return "A bid can't be countered. It can only be accepted or declined.";
+      return t("offers.error.notForBids");
     case "bids_need_placement":
-      return "Bidding is only for spots on an item, not for services.";
+      return t("offers.error.bidsNeedPlacement");
     case "offers_only_on_fixed":
-      return "Only a space with a fixed price can also take offers.";
+      return t("offers.error.offersOnlyOnFixed");
     case "bidding_end_invalid":
-      return "The end of bidding has to be at least 24 hours after publishing and at least 50 hours before the space closes.";
+      return t("offers.error.biddingEndInvalid");
     case "reserve_below_opening_bid":
-      return "The reserve can't be below the opening bid.";
+      return t("offers.error.reserveBelowOpeningBid");
     case "minimum_not_below_price":
-      return "The hidden minimum has to be below the listed price.";
+      return t("offers.error.minimumNotBelowPrice");
     case "offer_price_invalid":
-      return "A price has to be between $25 and $25,000.";
+      return t("offers.error.offerPriceInvalid");
     case "VALIDATION_ERROR":
-      return "Something in the form isn't right. Check the amount, your name, your contact and the message.";
+      return t("offers.error.validation");
     case "rate_limited":
-      return e.status === 503
-        ? "Offers are paused for a moment on our side. Try again in a minute."
-        : "Too many offers from this connection lately. Wait a while and try again.";
+      return e.status === 503 ? t("offers.error.paused") : t("offers.error.rateLimited");
     case "not_found":
-      return "We can't find this offer. Check you copied the whole link.";
+      return t("offers.error.notFound");
     default:
       return describeSessionError(e);
   }

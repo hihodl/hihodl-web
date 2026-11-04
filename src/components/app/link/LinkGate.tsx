@@ -1,12 +1,12 @@
 "use client";
 
 /**
- * Paying from a wallet made in the app, with no phone linked: one sheet,
- * wherever the payment starts.
+ * Paying with no phone linked: one sheet, wherever the payment starts.
  *
- * Such a wallet's keys are on the Android phone, so the web cannot pay from it
- * at all until that phone is linked (`canPayFromWeb` link_first on
- * GET /wallet-backup/status; documentation/one-wallet-every-device.md). Every
+ * The web does not pay by itself (Alex, 2026-09-24): the linked phone, an
+ * iPhone or an Android phone, approves and signs every payment started here.
+ * Until one is linked (`canPayFromWeb` link_first on GET /wallet-backup/status;
+ * documentation/one-wallet-every-device.md) nothing can be paid here. Every
  * way into a payment (Home's Send, the Wallet's Send, Payments' Send and "Pay"
  * on a request, a Spaces spot, a Stay's checkout) asks through this sheet
  * instead of an inline card or a button that does nothing:
@@ -15,12 +15,12 @@
  *
  * "Link your phone" is a full page load to /wallet/link (the link screen
  * carries the wallet pages' strict CSP) with `?next=` the page the payment was
- * started from, so the person comes back to it and carries on; on an iPhone or
- * iPad with `&show=android`, since only the Android phone approves this
- * wallet and it scans the code off this screen.
+ * started from, so the person comes back to it and carries on. On a phone the
+ * link screen opens the HOLD app on that same phone; on a computer it shows a
+ * code to scan with HOLD on the phone.
  *
- * A web wallet (web_passkey) or a phone that approves already (app) is never
- * blocked: `blocked` is false and nothing is drawn. Neither while the status
+ * A phone that approves already (app) is never blocked: `blocked` is false
+ * and nothing is drawn. Neither while the status
  * is still loading or failed to load: the payment screen then answers for
  * itself, as it did before.
  *
@@ -31,6 +31,8 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
+import { t } from "@/lib/app/i18n";
+import { useT } from "@/lib/app/i18n/react";
 import { useWalletStatus } from "@/lib/app/spaces-data";
 import { thisDevice, type AppleDevice } from "@/lib/link/ua";
 import { payerOf } from "@/lib/wallet/api";
@@ -55,31 +57,23 @@ export function hereNow(): string | undefined {
   return `${window.location.pathname}${window.location.search}`;
 }
 
-/**
- * The link screen, coming back to `next`. On an iPhone or iPad the screen opens
- * on its QR (`show=android`), for the Android app to scan.
- */
-export function linkToPay(productHref: (p?: string) => string, next: string | undefined, device: GateDevice): string {
-  const base = linkHref(productHref, next ?? productHref("/"));
-  return device === "iPhone" || device === "iPad" ? `${base}&show=android` : base;
+/** The link screen, coming back to `next`. */
+export function linkToPay(productHref: (p?: string) => string, next: string | undefined): string {
+  return linkHref(productHref, next ?? productHref("/"));
 }
 
 /** The words, by device. */
 export function payWords(device: GateDevice): { title: string; body: string } {
-  const title = "Link your phone to pay from here";
-  if (device === "android") {
-    return { title, body: "Your wallet was made in the HOLD app. Link this phone once, and the app approves every payment you start here. Until then, nothing can be paid from here." };
-  }
-  if (device === "iPhone" || device === "iPad") {
-    // Linking this iPhone adds no approver: the keys are on the Android phone.
+  const title = t("link.pay.title");
+  if (device === "computer") {
     return {
       title,
-      body: "Your wallet was made in the HOLD app on your Android phone, and its keys stay there. Show a code here, scan it with HOLD on that phone, and you can pay from here. Until then, nothing can be paid from here.",
+      body: t("link.pay.bodyComputerKeys"),
     };
   }
   return {
     title,
-    body: "Your wallet was made in the HOLD app, and its keys stay on your phone. Link the phone once, and it approves and signs every payment you start here. Until then, nothing can be paid from here.",
+    body: t("link.pay.bodyThisPhone"),
   };
 }
 
@@ -90,6 +84,7 @@ export function payWords(device: GateDevice): { title: string; body: string } {
  * checkout is one), so a transformed parent never clips it.
  */
 export function LinkToPaySheet({ open, device, href, onClose }: { open: boolean; device: GateDevice; href: string; onClose: () => void }) {
+  const tr = useT();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -104,7 +99,7 @@ export function LinkToPaySheet({ open, device, href, onClose }: { open: boolean;
 
   return createPortal(
     <div className="fixed inset-0 z-[90] flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-labelledby="link-to-pay-title">
-      <button type="button" aria-label="Close" className="absolute inset-0 bg-black/55 backdrop-blur-sm" onClick={onClose} />
+      <button type="button" aria-label={tr("common.close")} className="absolute inset-0 bg-black/55 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-[460px] overflow-hidden rounded-t-[28px] bg-[linear-gradient(180deg,#12324a,#0a1929)] px-6 pb-5 pt-3 sm:m-3 sm:rounded-[28px]">
         <div className="mx-auto mb-5 h-1 w-10 rounded-[2px] bg-white/25 sm:hidden" />
         <span className="mx-auto flex h-[60px] w-[60px] items-center justify-center rounded-full bg-[rgba(255,183,3,0.18)] text-amber">
@@ -119,14 +114,14 @@ export function LinkToPaySheet({ open, device, href, onClose }: { open: boolean;
           href={href}
           className="mt-6 flex h-[52px] items-center justify-center rounded-[26px] bg-amber text-[16px] font-bold text-[#0F0F1A] transition-opacity hover:opacity-90"
         >
-          Link your phone
+          {tr("link.linkYourPhone")}
         </a>
         <button
           type="button"
           onClick={onClose}
           className="flex w-full items-center justify-center py-3.5 text-[15px] font-semibold text-white/60 transition-colors hover:text-white/80"
         >
-          Not now
+          {tr("link.notNow")}
         </button>
       </div>
     </div>,
@@ -173,6 +168,6 @@ export function useLinkGate(): LinkGate {
     blocked,
     ask,
     guard,
-    sheet: <LinkToPaySheet open={next !== null} device={device} href={linkToPay(productHref, next ?? undefined, device)} onClose={close} />,
+    sheet: <LinkToPaySheet open={next !== null} device={device} href={linkToPay(productHref, next ?? undefined)} onClose={close} />,
   };
 }

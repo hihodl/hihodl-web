@@ -28,6 +28,8 @@ import { OfferCard } from "@/components/creator/run/Offers";
 import type { OfferView } from "@/lib/creator/listing";
 import { byEvent, byListing, NO_EVENT, OPEN_OFFER, type ListingRef } from "@/lib/app/spaces-model";
 import { useListing, useManagedOffers, useOffers, useRefresh } from "@/lib/app/spaces-data";
+import { t } from "@/lib/app/i18n";
+import { useT } from "@/lib/app/i18n/react";
 
 import { useHref } from "../base";
 import { Ion } from "../ion";
@@ -40,19 +42,17 @@ import { CardGrid, DrillBar, EventCard, eventName, eventParam, ListingFigureCard
 type Show = "waiting" | "open" | "all";
 type Kind = "all" | "offer" | "bid";
 
-const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
-
 /** What waits on you in a set of offers: "2 offers · 1 bid waiting". */
 function waiting(offers: readonly OfferView[]) {
   const pending = offers.filter((o) => o.status === "pending");
   const bids = pending.filter((o) => o.kind === "bid").length;
   const plain = pending.length - bids;
   const open = offers.filter((o) => OPEN_OFFER.includes(o.status)).length;
-  const parts = [plain ? count(plain, "offer", "offers") : "", bids ? count(bids, "bid", "bids") : ""].filter(Boolean);
+  const parts = [plain ? t("creator.offers.countOffers", { count: plain }) : "", bids ? t("creator.offers.countBids", { count: bids }) : ""].filter(Boolean);
   return {
     count: pending.length,
-    text: parts.length ? `${parts.join(" · ")} waiting` : "Nothing waiting on you",
-    note: open > pending.length ? `${open - pending.length} with the sponsor` : `${offers.length} in total`,
+    text: parts.length ? t("creator.offers.waitingParts", { parts: parts.join(" · ") }) : t("creator.offers.nothingWaiting"),
+    note: open > pending.length ? t("creator.offers.withSponsor", { count: open - pending.length }) : t("creator.offers.inTotal", { count: offers.length }),
   };
 }
 
@@ -69,6 +69,7 @@ export function OffersScreen({
   view: string | null;
   from: string | null;
 }) {
+  const t = useT();
   const { role, managed } = useShell();
   const ids = useMemo(() => managed.map((m) => m.spaceId), [managed]);
   const own = useOffers(role === "creator");
@@ -76,7 +77,7 @@ export function OffersScreen({
   const read = role === "creator" ? own : theirs;
   const offers = useMemo(() => read.data ?? (role === "manager" && ids.length === 0 ? [] : null), [read.data, role, ids.length]);
   const refs = useListingRefs();
-  const refOf = (id: string, o?: OfferView) => refs.get(id) ?? unknownListing(id, o ? o.serviceName || o.spaceTitle : "Listing");
+  const refOf = (id: string, o?: OfferView) => refs.get(id) ?? unknownListing(id, o ? o.serviceName || o.spaceTitle : t("creator.offers.listingFallback"));
 
   if (offers === null) return read.error ? <ReadError error={read.error} /> : <Skeleton className="h-[260px]" />;
 
@@ -115,14 +116,15 @@ export function OffersScreen({
 type RefOf = (id: string, o?: OfferView) => ListingRef;
 
 function EventGrid({ groups, refOf }: { groups: { key: string; items: OfferView[] }[]; refOf: RefOf }) {
+  const t = useT();
   const href = useHref();
   const paged = usePaged(groups, groups.length);
   if (groups.length === 0) {
     return (
       <Empty
         icon="pricetags-outline"
-        title="No offers yet"
-        body="When a brand makes an offer or a bid on one of your spaces, it lands here to accept, counter or decline."
+        title={t("creator.offers.emptyTitle")}
+        body={t("creator.offers.emptyBody")}
       />
     );
   }
@@ -137,7 +139,7 @@ function EventGrid({ groups, refOf }: { groups: { key: string; items: OfferView[
               key={g.key}
               href={`${href("/offers")}?${eventParam(g.key)}`}
               event={refOf(g.items[0].spaceId, g.items[0]).event}
-              lines={[w.text, count(listings, "listing", "listings")]}
+              lines={[w.text, t("creator.offers.countListings", { count: listings })]}
               value={w.count}
               note={w.note}
               attention={w.count > 0}
@@ -151,6 +153,7 @@ function EventGrid({ groups, refOf }: { groups: { key: string; items: OfferView[
 }
 
 function EventOffers({ eventKey, offers, refOf }: { eventKey: string; offers: OfferView[]; refOf: RefOf }) {
+  const t = useT();
   const href = useHref();
   const listings = byListing(offers, (o) => o.spaceId).sort((a, b) => waiting(b.items).count - waiting(a.items).count);
   const paged = usePaged(listings, eventKey);
@@ -158,9 +161,9 @@ function EventOffers({ eventKey, offers, refOf }: { eventKey: string; offers: Of
 
   return (
     <div className="flex flex-col gap-4">
-      <DrillBar back={href("/offers")} crumb="Offers & bids" title={eventName(event)} />
+      <DrillBar back={href("/offers")} crumb={t("creator.offers.title")} title={eventName(event)} />
       {listings.length === 0 ? (
-        <Empty icon="pricetags-outline" title="No offers yet" />
+        <Empty icon="pricetags-outline" title={t("creator.offers.emptyTitle")} />
       ) : (
         <>
           <CardGrid>
@@ -201,6 +204,7 @@ function ListingOffers({
   fromHub: boolean;
   error: unknown;
 }) {
+  const t = useT();
   const router = useRouter();
   const pathname = usePathname();
   const href = useHref();
@@ -255,38 +259,38 @@ function ListingOffers({
       <DrillBar
         back={fromHub ? href(`/listings/${listing.id}`) : `${href("/offers")}?${eventParam(listing.event?.key ?? NO_EVENT)}`}
         crumb={fromHub ? listing.title : eventName(listing.event)}
-        title={fromHub ? "Offers & bids" : listing.title}
+        title={fromHub ? t("creator.offers.title") : listing.title}
       />
       <div className="mx-auto flex w-full max-w-[720px] flex-col gap-2.5">
-        <ChipRow label="Show">
-          <Chip label="Waiting on you" count={offers.filter((o) => inView(o, "waiting")).length} selected={show === "waiting"} onClick={() => setShow("waiting")} />
-          <Chip label="Open" count={offers.filter((o) => inView(o, "open")).length} selected={show === "open"} onClick={() => setShow("open")} />
-          <Chip label="All" count={offers.length} selected={show === "all"} onClick={() => setShow("all")} />
+        <ChipRow label={t("creator.offers.show")}>
+          <Chip label={t("creator.offers.waitingOnYou")} count={offers.filter((o) => inView(o, "waiting")).length} selected={show === "waiting"} onClick={() => setShow("waiting")} />
+          <Chip label={t("creator.offers.open")} count={offers.filter((o) => inView(o, "open")).length} selected={show === "open"} onClick={() => setShow("open")} />
+          <Chip label={t("common.all")} count={offers.length} selected={show === "all"} onClick={() => setShow("all")} />
         </ChipRow>
         {hasBoth ? (
-          <ChipRow label="Kind">
-            <Chip label="Both" selected={kind === "all"} onClick={() => setKind("all")} />
-            <Chip label="Offers" selected={kind === "offer"} onClick={() => setKind("offer")} />
-            <Chip label="Bids" selected={kind === "bid"} onClick={() => setKind("bid")} />
+          <ChipRow label={t("creator.offers.kind")}>
+            <Chip label={t("creator.offers.both")} selected={kind === "all"} onClick={() => setKind("all")} />
+            <Chip label={t("creator.offers.offers")} selected={kind === "offer"} onClick={() => setKind("offer")} />
+            <Chip label={t("creator.offers.bids")} selected={kind === "bid"} onClick={() => setKind("bid")} />
           </ChipRow>
         ) : null}
         <ReadError error={error} />
         {list.length === 0 ? (
           <Empty
             icon="pricetags-outline"
-            title={show === "waiting" ? "Nothing waiting on you" : "No offers yet"}
-            body="When a brand makes an offer or a bid on one of your spaces, it lands here to accept, counter or decline."
+            title={show === "waiting" ? t("creator.offers.nothingWaiting") : t("creator.offers.emptyTitle")}
+            body={t("creator.offers.emptyBody")}
           />
         ) : null}
         {open.length ? (
           <>
-            <SectionLabel>Waiting on you</SectionLabel>
+            <SectionLabel>{t("creator.offers.waitingOnYou")}</SectionLabel>
             {open.map(row)}
           </>
         ) : null}
         {earlier.length ? (
           <>
-            <SectionLabel>Earlier</SectionLabel>
+            <SectionLabel>{t("creator.offers.earlier")}</SectionLabel>
             {earlier.map(row)}
           </>
         ) : null}

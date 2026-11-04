@@ -1,0 +1,710 @@
+/**
+ * Groups, the arithmetic and the rules, with nothing React in it so it can be
+ * checked on its own with `npx sucrase-node`.
+ *
+ * The split previews copy the server's rules (hihodl-backend
+ * server/services/groups-rules.ts, documentation/groups-splitwise-grade.md
+ * §4.2) unit for unit, so what the form shows before Add is what the server
+ * will write. The server still has the last word, and the screens show its
+ * shares after a save, never these.
+ *
+ * MONEY IS A STRING OF MINOR UNITS, END TO END: read with BigInt, printed with
+ * `formatMinor`, never through a float.
+ */
+
+import { t } from "./i18n";
+import { fmtFiat } from "./i18n/format";
+
+/* ── Minor units ──────────────────────────────────────────────────── */
+
+/** The backend's MINOR_EXPONENT table (group-expenses.service.ts), unchanged. */
+const MINOR_EXPONENT: Record<string, number> = {
+  BIF: 0, CLP: 0, DJF: 0, GNF: 0, ISK: 0, JPY: 0, KMF: 0, KRW: 0,
+  PYG: 0, RWF: 0, UGX: 0, UYI: 0, VND: 0, VUV: 0, XAF: 0, XOF: 0, XPF: 0,
+  BHD: 3, IQD: 3, JOD: 3, KWD: 3, LYD: 3, OMR: 3, TND: 3,
+};
+
+export function minorExponent(currency: string): number {
+  return MINOR_EXPONENT[currency.toUpperCase()] ?? 2;
+}
+
+export function toBig(minor: string | bigint | null | undefined): bigint {
+  if (typeof minor === "bigint") return minor;
+  return typeof minor === "string" && /^-?\d+$/.test(minor) ? BigInt(minor) : 0n;
+}
+
+/**
+ * "12.00" from "1200" in USD, "1,200" from "1200" in JPY. Thousands are
+ * grouped with commas, the sign is kept, and nothing passes through a float.
+ */
+export function formatMinor(minor: string | bigint, currency: string): string {
+  const exp = minorExponent(currency);
+  const n = toBig(minor);
+  const neg = n < 0n;
+  const digits = (neg ? -n : n).toString().padStart(exp + 1, "0");
+  const whole = exp ? digits.slice(0, -exp) : digits;
+  const frac = exp ? digits.slice(-exp) : "";
+  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return `${neg ? "-" : ""}${grouped}${frac ? `.${frac}` : ""}`;
+}
+
+/**
+ * An amount in its own currency, in the viewer's language: "$12.00",
+ * "12,00 €". Never converted (a group keeps its currency). The float only
+ * carries the value to Intl; the digits are the currency's own.
+ */
+export function moneyText(minor: string | bigint, currency: string): string {
+  const code = currency.toUpperCase();
+  const exp = minorExponent(code);
+  return fmtFiat(Number(formatMinor(minor, code).replace(/,/g, "")), code, { digits: exp });
+}
+
+/** "1200" in USD as "12.00" with no grouping, to prefill an input. */
+export function minorToInput(minor: string | bigint, currency: string): string {
+  return formatMinor(minor, currency).replace(/,/g, "");
+}
+
+/**
+ * What somebody typed, in minor units: "12.5" in USD is "1250". A comma is
+ * read as the decimal point ("12,5"), spaces are dropped, and more decimals
+ * than the currency has is refused rather than rounded: money nobody typed is
+ * not added or taken away. Null for anything that is not a positive amount.
+ */
+export function parseMajorToMinor(text: string, currency: string): string | null {
+  const minor = parseMajorAllowZero(text, currency);
+  return minor !== null && BigInt(minor) > 0n ? minor : null;
+}
+
+/** As `parseMajorToMinor`, but "0" is an amount (an exact split may give someone nothing). Empty is null. */
+export function parseMajorAllowZero(text: string, currency: string): string | null {
+  const exp = minorExponent(currency);
+  const clean = text.replace(/\s/g, "").replace(",", ".");
+  const m = /^(\d{0,15})(?:\.(\d*))?$/.exec(clean);
+  if (!m || (!m[1] && !m[2])) return null;
+  const frac = m[2] ?? "";
+  if (frac.length > exp) return null;
+  return BigInt(`${m[1] || "0"}${frac.padEnd(exp, "0")}` || "0").toString();
+}
+
+/** abs(), as a string, for "You owe 4.00" from a net of -400. */
+export function absMinor(minor: string): string {
+  const n = toBig(minor);
+  return (n < 0n ? -n : n).toString();
+}
+
+/* ── Splits (the server's rules, copied) ──────────────────────────── */
+
+export type SplitMode = "equal" | "percent" | "exact" | "shares";
+export type PreviewShare = { userId: string; shareMinor: bigint };
+
+/** Each person gets floor(total·w/W); the units left go one each to the largest remainders, ties to the lowest userId. */
+export function largestRemainder(total: bigint, weights: { userId: string; weight: bigint }[]): PreviewShare[] {
+  const W = weights.reduce((a, w) => a + w.weight, 0n);
+  if (!weights.length || W <= 0n) return [];
+  const rows = weights.map((w) => ({ userId: w.userId, base: (total * w.weight) / W, rem: (total * w.weight) % W }));
+  let left = total - rows.reduce((a, r) => a + r.base, 0n);
+  const order = [...rows].sort((a, b) =>
+    a.rem === b.rem ? (a.userId < b.userId ? -1 : a.userId > b.userId ? 1 : 0) : a.rem > b.rem ? -1 : 1,
+  );
+  const extra = new Set<string>();
+  for (const r of order) {
+    if (left <= 0n) break;
+    extra.add(r.userId);
+    left -= 1n;
+  }
+  return rows.map((r) => ({ userId: r.userId, shareMinor: r.base + (extra.has(r.userId) ? 1n : 0n) }));
+}
+
+/** The remainder goes to the payer when they share, else to the first participant by id. */
+export function splitEqual(total: bigint, participants: readonly string[], payerUserId: string): PreviewShare[] {
+  const people = [...new Set(participants)].sort();
+  if (!people.length) return [];
+  const n = BigInt(people.length);
+  const base = total / n;
+  const remainder = total - base * n;
+  const carrier = people.includes(payerUserId) ? payerUserId : people[0];
+  return people.map((userId) => ({ userId, shareMinor: base + (userId === carrier ? remainder : 0n) }));
+}
+
+/** "33.33" as 3333 hundredths; null when it is not 0 to 100 with at most two decimals. Empty is 0. */
+export function parsePercent(text: string): bigint | null {
+  const s = text.trim().replace(",", ".");
+  if (!s) return 0n;
+  const m = /^(\d{1,3})(?:\.(\d{0,2}))?$/.exec(s);
+  if (!m) return null;
+  const bp = BigInt(m[1]) * 100n + BigInt((m[2] ?? "").padEnd(2, "0") || "0");
+  return bp > 10000n ? null : bp;
+}
+
+/** A share weight: a whole number 0 to 1000. Empty is 0; anything else is null. */
+export function parseWeight(text: string): bigint | null {
+  const s = text.trim();
+  if (!s) return 0n;
+  if (!/^\d{1,4}$/.test(s)) return null;
+  const n = BigInt(s);
+  return n > 1000n ? null : n;
+}
+
+/** 3333 hundredths as "33.33", 5000 as "50". */
+export function bpText(bp: bigint): string {
+  const neg = bp < 0n;
+  const a = neg ? -bp : bp;
+  const whole = a / 100n;
+  const frac = (a % 100n).toString().padStart(2, "0").replace(/0+$/, "");
+  return `${neg ? "-" : ""}${whole}${frac ? `.${frac}` : ""}`;
+}
+
+export interface SplitDraft {
+  mode: SplitMode;
+  /** In the paid currency. Null while the amount is not a valid positive amount. */
+  totalMinor: string | null;
+  currency: string;
+  payerUserId: string | null;
+  /** Who shares it, in the order the form lists them. */
+  people: readonly string[];
+  /** Per person, what was typed: a percent in percent mode, an amount in exact mode, a whole-number weight in shares mode. */
+  inputs: Readonly<Record<string, string>>;
+}
+
+export type SplitCheck =
+  | { ok: true; shares: PreviewShare[] }
+  | { ok: false; reason: "no_amount" | "no_people" | "bad_input" | "percent_left" | "percent_over" | "amount_left" | "amount_over" | "all_zero"; shares: PreviewShare[]; leftMinor?: bigint; leftBp?: bigint; badUserIds?: string[] };
+
+/**
+ * The form's live check and per-person preview, in the PAID currency.
+ *
+ *   equal    the people chosen, the server's remainder rule
+ *   percent  must total exactly 100.00; shares by largest remainder
+ *   exact    must total exactly the amount; the shares ARE the amounts
+ *   shares   whole-number weights 0 to 1000, at least one above 0; shares by
+ *            largest remainder, the same rule as percent
+ *
+ * A different paid currency is converted on the server; the preview is then
+ * in the paid currency, and the screen says so.
+ */
+export function checkSplit(d: SplitDraft): SplitCheck {
+  if (!d.people.length) return { ok: false, reason: "no_people", shares: [] };
+  const total = d.totalMinor !== null ? toBig(d.totalMinor) : null;
+
+  if (d.mode === "equal") {
+    if (total === null || total <= 0n) return { ok: false, reason: "no_amount", shares: [] };
+    return { ok: true, shares: splitEqual(total, d.people, d.payerUserId ?? "") };
+  }
+
+  if (d.mode === "percent") {
+    const bad: string[] = [];
+    const weights = d.people.map((userId) => {
+      const bp = parsePercent(d.inputs[userId] ?? "");
+      if (bp === null) bad.push(userId);
+      return { userId, weight: bp ?? 0n };
+    });
+    if (bad.length) return { ok: false, reason: "bad_input", shares: [], badUserIds: bad };
+    const sum = weights.reduce((a, w) => a + w.weight, 0n);
+    // The preview of a partial entry uses each person's own percent of the whole, not a rescale.
+    const partial = total !== null && total > 0n ? weights.map((w) => ({ userId: w.userId, shareMinor: (total * w.weight) / 10000n })) : [];
+    if (sum === 0n) return { ok: false, reason: "all_zero", shares: partial, leftBp: 10000n };
+    if (sum < 10000n) return { ok: false, reason: "percent_left", shares: partial, leftBp: 10000n - sum };
+    if (sum > 10000n) return { ok: false, reason: "percent_over", shares: partial, leftBp: 10000n - sum };
+    if (total === null || total <= 0n) return { ok: false, reason: "no_amount", shares: [] };
+    return { ok: true, shares: largestRemainder(total, weights) };
+  }
+
+  if (d.mode === "shares") {
+    const bad: string[] = [];
+    const weights = d.people.map((userId) => {
+      const w = parseWeight(d.inputs[userId] ?? "");
+      if (w === null) bad.push(userId);
+      return { userId, weight: w ?? 0n };
+    });
+    if (bad.length) return { ok: false, reason: "bad_input", shares: [], badUserIds: bad };
+    if (weights.every((w) => w.weight === 0n)) return { ok: false, reason: "all_zero", shares: [] };
+    if (total === null || total <= 0n) return { ok: false, reason: "no_amount", shares: [] };
+    return { ok: true, shares: largestRemainder(total, weights) };
+  }
+
+  const bad: string[] = [];
+  const amounts = d.people.map((userId) => {
+    const raw = (d.inputs[userId] ?? "").trim();
+    const v = raw ? parseMajorAllowZero(raw, d.currency) : "0";
+    if (v === null) bad.push(userId);
+    return { userId, shareMinor: toBig(v ?? "0") };
+  });
+  if (bad.length) return { ok: false, reason: "bad_input", shares: amounts, badUserIds: bad };
+  if (total === null || total <= 0n) return { ok: false, reason: "no_amount", shares: amounts };
+  const sum = amounts.reduce((a, x) => a + x.shareMinor, 0n);
+  if (sum === 0n) return { ok: false, reason: "all_zero", shares: amounts, leftMinor: total };
+  if (sum < total) return { ok: false, reason: "amount_left", shares: amounts, leftMinor: total - sum };
+  if (sum > total) return { ok: false, reason: "amount_over", shares: amounts, leftMinor: total - sum };
+  return { ok: true, shares: amounts };
+}
+
+/** What the server is sent for a checked draft. Percents go as strings, amounts as minor-unit strings. */
+export function splitBody(d: SplitDraft, everyone: boolean):
+  | { mode: "equal"; participants?: string[] }
+  | { mode: "percent"; percents: { userId: string; percent: string }[] }
+  | { mode: "exact"; amounts: { userId: string; amountMinor: string }[] }
+  | { mode: "shares"; weights: { userId: string; weight: number }[] } {
+  if (d.mode === "equal") return everyone ? { mode: "equal" } : { mode: "equal", participants: [...d.people] };
+  if (d.mode === "shares") {
+    return { mode: "shares", weights: d.people.map((userId) => ({ userId, weight: Number(parseWeight(d.inputs[userId] ?? "") ?? 0n) })) };
+  }
+  if (d.mode === "percent") {
+    return { mode: "percent", percents: d.people.map((userId) => ({ userId, percent: bpText(parsePercent(d.inputs[userId] ?? "") ?? 0n) })) };
+  }
+  return {
+    mode: "exact",
+    amounts: d.people.map((userId) => ({ userId, amountMinor: (parseMajorAllowZero((d.inputs[userId] ?? "").trim() || "0", d.currency) ?? "0") })),
+  };
+}
+
+/** Everyone gets the same percent, the rest of 100.00 on the first ones, so the preset always sums. */
+export function evenPercents(people: readonly string[]): Record<string, string> {
+  if (!people.length) return {};
+  const n = BigInt(people.length);
+  const base = 10000n / n;
+  let left = 10000n - base * n;
+  const out: Record<string, string> = {};
+  for (const id of people) {
+    const extra = left > 0n ? 1n : 0n;
+    left -= extra;
+    out[id] = bpText(base + extra);
+  }
+  return out;
+}
+
+
+/**
+ * The Amount tab, as Revolut fills it: every amount somebody typed stays, and
+ * what is left of the total is shared equally between the people nobody typed
+ * for (the server's equal rule: the odd unit to the payer when they are among
+ * them, else to the first by id). Typed amounts that already pass the total
+ * leave the others at 0, and the check says by how much it is over.
+ */
+export function autoFillAmounts(total: bigint, people: readonly string[], typed: Readonly<Record<string, bigint>>, payerUserId: string): Record<string, bigint> {
+  const out: Record<string, bigint> = {};
+  let used = 0n;
+  const free: string[] = [];
+  for (const id of people) {
+    const t = typed[id];
+    if (t !== undefined) {
+      out[id] = t;
+      used += t;
+    } else free.push(id);
+  }
+  const left = total - used;
+  if (free.length) {
+    if (left <= 0n) for (const id of free) out[id] = 0n;
+    else for (const s of splitEqual(left, free, payerUserId)) out[s.userId] = s.shareMinor;
+  }
+  return out;
+}
+
+/* ── Bills (what is being split) ──────────────────────────────────── */
+
+export type SourceKind = "transfer" | "stay" | "card";
+
+/** One thing from the person's own activity, or a bill they typed, ready to split. */
+export interface Bill {
+  /** `custom:<n>` for a typed bill; the source's own id otherwise. */
+  key: string;
+  kind: SourceKind | "custom";
+  /** The transfer id or booking id. Absent on a custom bill. */
+  ref?: string;
+  label: string;
+  /** In `currency`, minor units. */
+  amountMinor: string;
+  currency: string;
+  /** Its dollar value in cents, when it has one (a stablecoin, or a frozen price). */
+  usdCents?: string | null;
+  occurredAt?: string;
+}
+
+export type BillTotal =
+  | { ok: true; amountMinor: string; currency: string; converted: boolean }
+  | { ok: false; reason: "none" | "mixed_currencies"; currencies: string[] };
+
+/**
+ * The dollar fallback for `billsTotal`: in one currency the bills add up in
+ * it; in several, in dollars when every one of them has a frozen dollar value.
+ * Used only when GET /groups/fx has no rate to give (an older server, or the
+ * rate source down).
+ */
+export function billTotal(bills: readonly Bill[]): BillTotal {
+  if (!bills.length) return { ok: false, reason: "none", currencies: [] };
+  const currencies = [...new Set(bills.map((b) => b.currency.toUpperCase()))];
+  if (currencies.length === 1) {
+    return { ok: true, amountMinor: bills.reduce((a, b) => a + toBig(b.amountMinor), 0n).toString(), currency: currencies[0], converted: false };
+  }
+  if (bills.every((b) => b.usdCents && /^\d+$/.test(b.usdCents))) {
+    return { ok: true, amountMinor: bills.reduce((a, b) => a + toBig(b.usdCents!), 0n).toString(), currency: "USD", converted: true };
+  }
+  return { ok: false, reason: "mixed_currencies", currencies };
+}
+
+/* ── Rates (GET /groups/fx, contract §10.3) ───────────────────────── */
+
+/** `rates[X]` turns one unit of X into the base currency, as a decimal string. */
+export type Rates = Readonly<Record<string, string>>;
+
+type Ratio = { n: bigint; d: bigint };
+
+/** "0.9200000000" as an exact fraction; null for anything that is not a positive decimal. */
+export function parseRate(text: string | null | undefined): Ratio | null {
+  const m = /^(\d+)(?:\.(\d+))?$/.exec((text ?? "").trim());
+  if (!m) return null;
+  const f = m[2] ?? "";
+  const n = BigInt(`${m[1]}${f}`);
+  return n > 0n ? { n, d: 10n ** BigInt(f.length) } : null;
+}
+
+/** n/d to the nearest whole unit, half up. */
+export function roundHalfUp(n: bigint, d: bigint): bigint {
+  return (n * 2n + d) / (2n * d);
+}
+
+/** An amount in `from` minor units as an exact fraction of `to` minor units, or null without a rate. */
+function convertExact(amountMinor: string, from: string, to: string, rates: Rates | null | undefined): Ratio | null {
+  const a = toBig(amountMinor);
+  if (from.toUpperCase() === to.toUpperCase()) return { n: a, d: 1n };
+  const r = parseRate(rates?.[from.toUpperCase()]);
+  if (!r) return null;
+  return { n: a * r.n * 10n ** BigInt(minorExponent(to)), d: r.d * 10n ** BigInt(minorExponent(from)) };
+}
+
+/**
+ * An amount in one currency as minor units of another, at the rate the server
+ * quoted, rounded half up. The server converts with the same rate, so this is
+ * a preview to within the last unit: the screen puts "≈" in front of it.
+ */
+export function convertMinor(amountMinor: string, from: string, to: string, rates: Rates | null | undefined): string | null {
+  const x = convertExact(amountMinor, from, to, rates);
+  return x ? roundHalfUp(x.n, x.d).toString() : null;
+}
+
+export type BillsTotal =
+  | {
+      ok: true;
+      amountMinor: string;
+      currency: string;
+      /** same: one currency; fx: converted into the group's at the day's rate; usd: added up from frozen dollar values (no rate to be had). */
+      basis: "same" | "fx" | "usd";
+      /** Each bill in `currency`, in order; they sum exactly to `amountMinor` (the last takes the rounding unit). */
+      converted: string[];
+    }
+  | { ok: false; reason: "none" | "mixed_currencies"; currencies: string[] };
+
+/**
+ * Several bills as one expense (contract §10.1). One currency adds up in it.
+ * Several are converted into the group's currency with the rates from
+ * GET /groups/fx, the exact sum rounded once. Without a rate for some
+ * currency, the frozen dollar values are the fallback when every bill has
+ * one; otherwise the currencies with no rate are named and nothing is guessed.
+ */
+export function billsTotal(bills: readonly Bill[], groupCurrency: string, rates: Rates | null | undefined): BillsTotal {
+  if (!bills.length) return { ok: false, reason: "none", currencies: [] };
+  const currencies = [...new Set(bills.map((b) => b.currency.toUpperCase()))];
+  if (currencies.length === 1) {
+    return { ok: true, amountMinor: bills.reduce((a, b) => a + toBig(b.amountMinor), 0n).toString(), currency: currencies[0], basis: "same", converted: bills.map((b) => toBig(b.amountMinor).toString()) };
+  }
+  const target = groupCurrency.toUpperCase();
+  const exact = bills.map((b) => convertExact(b.amountMinor, b.currency, target, rates));
+  const missing = [...new Set(bills.filter((_, i) => !exact[i]).map((b) => b.currency.toUpperCase()))];
+  if (!missing.length) {
+    let n = 0n;
+    let d = 1n;
+    for (const x of exact as Ratio[]) {
+      n = n * x.d + x.n * d;
+      d = d * x.d;
+    }
+    const total = roundHalfUp(n, d);
+    const each = (exact as Ratio[]).map((x) => roundHalfUp(x.n, x.d));
+    const head = each.slice(0, -1).reduce((a, x) => a + x, 0n);
+    each[each.length - 1] = total - head;
+    return { ok: true, amountMinor: total.toString(), currency: target, basis: "fx", converted: each.map(String) };
+  }
+  const usd = billTotal(bills);
+  if (usd.ok) return { ok: true, amountMinor: usd.amountMinor, currency: usd.currency, basis: "usd", converted: bills.map((b) => toBig(b.usdCents ?? "0").toString()) };
+  return { ok: false, reason: "mixed_currencies", currencies: missing };
+}
+
+/** An expense holds at most 50 bills and names at most 20 of your own payments (contract §10.1, §9.2). */
+export const MAX_ITEMS = 50;
+export const MAX_SOURCES = 20;
+
+/** One bill as POST/PATCH `items` carries it. */
+export interface ItemBody {
+  label: string;
+  amountMinor: string;
+  currency: string;
+  sourceKind?: SourceKind;
+  sourceRef?: string;
+}
+
+/** The bills as the server's `items`, each in its own currency, a picked one naming its source. */
+export function itemsBody(bills: readonly Bill[]): ItemBody[] {
+  return bills.map((b) => ({
+    label: b.label.trim().slice(0, 120) || t("groups.bills.fallbackLabel"),
+    amountMinor: toBig(b.amountMinor).toString(),
+    currency: b.currency.toUpperCase(),
+    ...(b.kind !== "custom" && b.ref ? { sourceKind: b.kind, sourceRef: b.ref } : {}),
+  }));
+}
+
+/** A title for several bills nobody named: "Dinner", "Dinner and Taxi", "Dinner, Taxi and 2 more". */
+export function billsTitle(bills: readonly Bill[]): string | null {
+  const custom = t("groups.bills.custom");
+  const labels = bills.map((b) => b.label.trim()).filter((l) => l && l !== custom && l !== "Custom bill");
+  if (!labels.length) return null;
+  const out =
+    labels.length === 1
+      ? labels[0]
+      : labels.length === 2
+        ? t("groups.bills.titleTwo", { a: labels[0], b: labels[1] })
+        : t("groups.bills.titleMany", { a: labels[0], b: labels[1], count: labels.length - 2 });
+  return out.slice(0, 120);
+}
+
+/* ── Categories (contract §10.2) ──────────────────────────────────── */
+
+export type ExpenseCategory = "food" | "drinks" | "transport" | "stay" | "activities" | "groceries" | "shopping" | "other";
+
+export const EXPENSE_CATEGORIES: readonly ExpenseCategory[] = ["food", "drinks", "transport", "stay", "activities", "groceries", "shopping", "other"];
+
+/** A category's name, in the viewer's language. */
+export function categoryLabel(c: ExpenseCategory): string {
+  switch (c) {
+    case "food":
+      return t("groups.category.food");
+    case "drinks":
+      return t("groups.category.drinks");
+    case "transport":
+      return t("groups.category.transport");
+    case "stay":
+      return t("groups.category.stay");
+    case "activities":
+      return t("groups.category.activities");
+    case "groceries":
+      return t("groups.category.groceries");
+    case "shopping":
+      return t("groups.category.shopping");
+    default:
+      return t("groups.category.other");
+  }
+}
+
+/** Kept for the screens that index it: each entry reads the language when it is read. */
+export const CATEGORY_LABEL: Readonly<Record<ExpenseCategory, string>> = {
+  get food() { return categoryLabel("food"); },
+  get drinks() { return categoryLabel("drinks"); },
+  get transport() { return categoryLabel("transport"); },
+  get stay() { return categoryLabel("stay"); },
+  get activities() { return categoryLabel("activities"); },
+  get groceries() { return categoryLabel("groceries"); },
+  get shopping() { return categoryLabel("shopping"); },
+  get other() { return categoryLabel("other"); },
+};
+
+/** A category from the wire, or null: an older response, or one this build doesn't know, reads as none. */
+export function asCategory(v: unknown): ExpenseCategory | null {
+  return typeof v === "string" && (EXPENSE_CATEGORIES as readonly string[]).includes(v) ? (v as ExpenseCategory) : null;
+}
+
+/** "12.3456" of a token as minor units of `currency`, rounded half up. Null for anything that is not a positive number. */
+export function decimalToMinor(text: string, currency: string): string | null {
+  const m = /^(\d+)(?:\.(\d+))?$/.exec(text.trim());
+  if (!m) return null;
+  const exp = minorExponent(currency);
+  const frac = m[2] ?? "";
+  const kept = frac.slice(0, exp).padEnd(exp, "0");
+  let n = BigInt(`${m[1]}${kept}`);
+  if (frac.length > exp && Number(frac[exp]) >= 5) n += 1n;
+  return n > 0n ? n.toString() : null;
+}
+
+/* ── The calculator keypad ────────────────────────────────────────── */
+
+/**
+ * The custom bill's keypad: digits, the decimal point, + − × ÷ and =.
+ *
+ * The expression is kept with "." and ASCII operators (`+ - * /`) whatever the
+ * locale; the screen prints the locale's decimal separator. Arithmetic is exact
+ * (fractions of BigInts), and only the result is rounded, half up, to the
+ * currency's decimals. Each number may have at most the decimals the currency
+ * has, so "0,005" can't be typed in euros.
+ */
+export type CalcKey = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "." | "+" | "-" | "*" | "/" | "=" | "back" | "clear";
+
+const OPS = new Set(["+", "-", "*", "/"]);
+const MAX_EXPR = 40;
+
+export function pressKey(expr: string, key: CalcKey, currency: string): string {
+  const exp = minorExponent(currency);
+  if (key === "clear") return "";
+  if (key === "back") return expr.slice(0, -1);
+  if (key === "=") {
+    const v = evaluate(expr, currency);
+    return v === null ? expr : minorToPlain(v, currency);
+  }
+  const last = expr.slice(-1);
+  if (OPS.has(key)) {
+    if (!expr) return "";
+    if (OPS.has(last)) return expr.slice(0, -1) + key;
+    if (last === ".") return expr.slice(0, -1) + key;
+    return expr.length >= MAX_EXPR ? expr : expr + key;
+  }
+  if (expr.length >= MAX_EXPR) return expr;
+  const current = expr.split(/[+\-*/]/).pop() ?? "";
+  if (key === ".") {
+    if (exp === 0 || current.includes(".")) return expr;
+    return expr + (current === "" ? "0." : ".");
+  }
+  // A digit.
+  if (current.includes(".") && current.split(".")[1].length >= exp) return expr;
+  if (current === "0") return expr.slice(0, -1) + key;
+  if (current.replace(".", "").length >= 12) return expr;
+  return expr + key;
+}
+
+type Frac = { n: bigint; d: bigint };
+
+function frac(text: string): Frac | null {
+  const m = /^(\d+)(?:\.(\d*))?$/.exec(text);
+  if (!m) return null;
+  const f = m[2] ?? "";
+  return { n: BigInt(`${m[1]}${f}` || "0"), d: 10n ** BigInt(f.length) };
+}
+
+/**
+ * The expression's value in minor units, or null when it is not a number yet
+ * (empty, or ends on an operator), divides by zero, or comes out negative.
+ * × and ÷ bind before + and −, as on any calculator people trust.
+ */
+export function evaluate(expr: string, currency: string): bigint | null {
+  const e = expr.replace(/[+\-*/]$/, "");
+  if (!e) return null;
+  const tokens = e.match(/\d+(?:\.\d*)?|[+\-*/]/g);
+  if (!tokens || tokens.join("") !== e) return null;
+  // Terms joined by + and −, each a product of factors.
+  const terms: { sign: 1n | -1n; value: Frac }[] = [];
+  let sign: 1n | -1n = 1n;
+  let acc: Frac | null = null;
+  let pending: "*" | "/" | null = null;
+  for (const t of tokens) {
+    if (t === "+" || t === "-") {
+      if (!acc) return null;
+      terms.push({ sign, value: acc });
+      sign = t === "+" ? 1n : -1n;
+      acc = null;
+      continue;
+    }
+    if (t === "*" || t === "/") {
+      if (!acc) return null;
+      pending = t;
+      continue;
+    }
+    const v = frac(t);
+    if (!v) return null;
+    if (!acc) acc = v;
+    else if (pending === "*") acc = { n: acc.n * v.n, d: acc.d * v.d };
+    else if (pending === "/") {
+      if (v.n === 0n) return null;
+      acc = { n: acc.n * v.d, d: acc.d * v.n };
+    } else return null;
+    pending = null;
+  }
+  if (!acc) return null;
+  terms.push({ sign, value: acc });
+  // Sum as one fraction, then to minor units, half up.
+  let n = 0n;
+  let d = 1n;
+  for (const t of terms) {
+    n = n * t.value.d + t.sign * t.value.n * d;
+    d = d * t.value.d;
+  }
+  if (n < 0n) return null;
+  const scale = 10n ** BigInt(minorExponent(currency));
+  const scaled = n * scale;
+  return (scaled * 2n + d) / (2n * d);
+}
+
+/** 1250 minor units in EUR as "12.5", in JPY as "1250": what "=" leaves on the display. */
+export function minorToPlain(minor: bigint, currency: string): string {
+  const exp = minorExponent(currency);
+  if (!exp) return minor.toString();
+  const s = minor.toString().padStart(exp + 1, "0");
+  const whole = s.slice(0, -exp);
+  const f = s.slice(-exp).replace(/0+$/, "");
+  return f ? `${whole}.${f}` : whole;
+}
+
+/** The expression as the screen prints it: the locale's decimal separator, × and ÷. */
+export function displayExpression(expr: string, decimal: string): string {
+  return expr.replace(/\./g, decimal).replace(/\*/g, " × ").replace(/\//g, " ÷ ").replace(/\+/g, " + ").replace(/-/g, " − ");
+}
+
+/** True when the expression has an operator in it, so "=" means something. */
+export function hasOperator(expr: string): boolean {
+  return /[+\-*/]/.test(expr.replace(/[+\-*/]$/, ""));
+}
+
+/* ── The thread ───────────────────────────────────────────────────── */
+
+/**
+ * Who has seen a message: every member whose read position is at or after it,
+ * except its author. Instants, not strings (the server's `seenBy`).
+ */
+export function seenBy(item: { userId: string; at: string }, reads: readonly { userId: string; lastReadAt: string }[]): string[] {
+  const at = Date.parse(item.at);
+  if (!Number.isFinite(at)) return [];
+  return reads
+    .filter((r) => r.userId !== item.userId && Date.parse(r.lastReadAt) >= at)
+    .map((r) => r.userId)
+    .sort();
+}
+
+/** "Seen by Ana", "Seen by Ana and Luis", "Seen by Ana, Luis and 2 more", "Seen by everyone". */
+export function seenLine(seen: readonly string[], othersCount: number, name: (id: string) => string): string | null {
+  if (!seen.length) return null;
+  if (othersCount > 1 && seen.length >= othersCount) return t("groups.seen.everyone");
+  const names = seen.map(name);
+  if (names.length === 1) return t("groups.seen.one", { name: names[0] });
+  if (names.length === 2) return t("groups.seen.two", { a: names[0], b: names[1] });
+  return t("groups.seen.many", { a: names[0], b: names[1], count: names.length - 2 });
+}
+
+/* ── Faces ────────────────────────────────────────────────────────── */
+
+export type Face = { kind: "photo"; url: string } | { kind: "emoji"; emoji: string } | { kind: "initials"; text: string } | { kind: "hold" };
+
+/** The contract's order: the photo, else the emoji, else initials (or the HOLD mark for a private person). */
+export function faceOf(p: { avatarUrl?: string | null; avatarEmoji?: string | null; displayName?: string | null; aliasHandle?: string | null; profileVisibility?: string | null }): Face {
+  if (p.avatarUrl) return { kind: "photo", url: p.avatarUrl };
+  if (p.avatarEmoji?.trim()) return { kind: "emoji", emoji: p.avatarEmoji.trim() };
+  if (p.profileVisibility === "private") return { kind: "hold" };
+  const source = (p.displayName?.trim() || (p.aliasHandle ?? "").replace(/^@+/, "")).trim();
+  const text =
+    source
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((w) => w[0]?.toUpperCase() ?? "")
+      .join("") || "?";
+  return { kind: "initials", text };
+}
+
+/* ── Dates ────────────────────────────────────────────────────────── */
+
+/** Today as YYYY-MM-DD in the viewer's own calendar (not UTC's). */
+export function todayLocal(now: Date = new Date()): string {
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/** The day an ISO instant falls on, for a date input. A `YYYY-MM-DD` stored at 12:00 UTC reads as that day everywhere. */
+export function isoToDateInput(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return "";
+  return todayLocal(new Date(t));
+}

@@ -9,8 +9,7 @@
 
 import { useEffect, useState } from "react";
 
-import { PLAY_STORE_URL } from "@/lib/appLinks";
-import { appIntent, openInAppUrl } from "@/lib/link/intent";
+import { openOnPhone } from "@/lib/link/intent";
 import { phoneOf, type Phone } from "@/lib/link/ua";
 
 /** undefined until read in the browser; null on a computer. */
@@ -26,14 +25,7 @@ export function usePhone(): Phone | null | undefined {
  * iPhone. null on a computer, where there is no app to open.
  */
 export function inAppHref(path: string, phone: Phone | null | undefined): string | null {
-  if (phone === "android") return appIntent(path);
-  if (phone === "ios") return openInAppUrl(path);
-  return null;
-}
-
-/** "Get HOLD on Google Play": the app when it is installed on this Android phone, the store otherwise. */
-export function playHref(phone: Phone | null | undefined): string {
-  return phone === "android" ? appIntent("") : PLAY_STORE_URL;
+  return openOnPhone(path, phone);
 }
 
 /**

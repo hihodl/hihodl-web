@@ -17,46 +17,53 @@ import { useEffect, useState } from "react";
 import { CheckoutError, acceptProduction, askForRevision, rememberBrandToken } from "@/lib/ad-space/checkout-client";
 import { CHAIN_LABEL, usageText } from "@/lib/ad-space/format";
 import type { BrandProduction, BriefBody, Order, PackageView, ProductionView, Space } from "@/lib/ad-space/types";
+import { t as tNow, type MessageKey } from "@/lib/app/i18n";
+import { fmtDate, fmtNumber } from "@/lib/app/i18n/format";
+import { useT } from "@/lib/app/i18n/react";
 
 import { btnPrimary, btnSecondary, btnSmallSecondary, card, eyebrow, input, pill } from "./ui";
 
 /* ── Shared words ──────────────────────────────────────────────────── */
 
-export const GOALS: readonly { value: BriefBody["goal"]; label: string; body: string }[] = [
-  { value: "awareness", label: "Awareness", body: "More people know the brand after the event." },
-  { value: "product_launch", label: "Product launch", body: "Something new, shown and explained on camera." },
-  { value: "hiring", label: "Hiring", body: "The team and what it is like to work there." },
-  { value: "community", label: "Community", body: "The people around the brand, and the room." },
+/** Each goal's words are keys, read at render in the language on screen. */
+export const GOALS: readonly { value: BriefBody["goal"]; labelKey: MessageKey; bodyKey: MessageKey }[] = [
+  { value: "awareness", labelKey: "offers.production.goal.awareness", bodyKey: "offers.production.goal.awarenessBody" },
+  {
+    value: "product_launch",
+    labelKey: "offers.production.goal.productLaunch",
+    bodyKey: "offers.production.goal.productLaunchBody",
+  },
+  { value: "hiring", labelKey: "offers.production.goal.hiring", bodyKey: "offers.production.goal.hiringBody" },
+  { value: "community", labelKey: "offers.production.goal.community", bodyKey: "offers.production.goal.communityBody" },
 ];
 
-const GOAL_LABEL: Record<string, string> = Object.fromEntries(GOALS.map((g) => [g.value, g.label]));
+function goalLabel(goal: string): string {
+  const g = GOALS.find((x) => x.value === goal);
+  return g ? tNow(g.labelKey) : goal;
+}
 
 /** What a spot includes, as a brand reads it before paying. Sells, so it is plain and specific. */
 export function PackageLines({ pkg }: { pkg: PackageView }) {
+  const t = useT();
   return (
     <div className="flex flex-col gap-3">
       <ul className="flex flex-col gap-1.5">
         {pkg.lines.map((l) => (
           <li key={l.key} className="flex items-baseline justify-between gap-4 text-small">
             <span className="text-sp-ink">{l.label}</span>
-            <span className="tabular-nums text-sp-ink/85">× {l.count}</span>
+            <span className="tabular-nums text-sp-ink/85">× {fmtNumber(l.count)}</span>
           </li>
         ))}
       </ul>
       <p className="text-tiny text-sp-ink/85">
-        Delivered to you within {pkg.turnaroundHours} hours of the shoot day. {usageText(pkg)} One round of changes
-        included.
+        {t("offers.production.packageNote", { hours: pkg.turnaroundHours, usage: usageText(pkg) })}
       </p>
     </div>
   );
 }
 
 function when(iso: string): string {
-  const d = new Date(iso);
-  return `${d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}, ${d.toLocaleTimeString("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-  })}`;
+  return fmtDate(iso, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
 /* ── The brief, in the checkout ────────────────────────────────────── */
@@ -85,15 +92,15 @@ export const EMPTY_BRIEF: BriefDraft = {
 
 /** The brief as the API takes it, or the first thing still missing, in words. */
 export function briefBodyOf(d: BriefDraft): { body: BriefBody } | { problem: string } {
-  if (!d.goal) return { problem: "Pick what this is for." };
+  if (!d.goal) return { problem: tNow("offers.production.problem.goal") };
   const messages = d.keyMessages.map((m) => m.trim()).filter(Boolean);
-  if (messages.length === 0) return { problem: "Write at least one key message." };
-  if (messages.some((m) => m.length > 140)) return { problem: "Keep each key message under 140 characters." };
+  if (messages.length === 0) return { problem: tNow("offers.production.problem.noMessage") };
+  if (messages.some((m) => m.length > 140)) return { problem: tNow("offers.production.problem.messageMax", { max: 140 }) };
   const url = d.assetsUrl.trim();
-  if (url && !/^https:\/\/\S+$/i.test(url)) return { problem: "The brand assets link should start with https://." };
+  if (url && !/^https:\/\/\S+$/i.test(url)) return { problem: tNow("offers.production.problem.assetsUrl") };
   const handle = d.contactValue.trim().replace(/^@/, "");
   const ok = d.contactKind === "x" ? /^[A-Za-z0-9_]{1,15}$/.test(handle) : /^[A-Za-z0-9_]{5,32}$/.test(handle);
-  if (!ok) return { problem: `Add the shoot-day contact's ${d.contactKind === "x" ? "X" : "Telegram"} handle.` };
+  if (!ok) return { problem: tNow("offers.production.problem.contact", { kind: d.contactKind === "x" ? "X" : "Telegram" }) };
   return {
     body: {
       goal: d.goal,
@@ -124,9 +131,10 @@ export function BriefForm({
   busy: boolean;
   creatorHandle: string | null;
 }) {
+  const t = useT();
   const [problem, setProblem] = useState<string | null>(null);
   const set = (change: Partial<BriefDraft>) => onChange({ ...draft, ...change });
-  const who = creatorHandle ? `@${creatorHandle}` : "the creator";
+  const who = creatorHandle ? `@${creatorHandle}` : t("offers.booking.theCreator");
 
   return (
     <form
@@ -143,14 +151,12 @@ export function BriefForm({
       }}
     >
       <div>
-        <p className="text-body text-sp-ink">You bring the brief</p>
-        <p className="mt-1 text-small text-sp-ink/85">
-          What {who} films is built on this. Only {who}, their team and you see it.
-        </p>
+        <p className="text-body text-sp-ink">{t("offers.production.briefTitle")}</p>
+        <p className="mt-1 text-small text-sp-ink/85">{t("offers.production.briefBody", { who })}</p>
       </div>
 
       <fieldset className="flex flex-col gap-2">
-        <legend className="mb-2 text-small text-sp-ink">What is it for?</legend>
+        <legend className="mb-2 text-small text-sp-ink">{t("offers.production.whatFor")}</legend>
         <div className="grid grid-cols-2 gap-2">
           {GOALS.map((g) => {
             const on = draft.goal === g.value;
@@ -164,8 +170,8 @@ export function BriefForm({
                   on ? "border-amber bg-amber/10" : "border-[color:var(--color-hairline-strong)] hover:bg-sp-ink/5"
                 }`}
               >
-                <span className="text-small text-sp-ink">{g.label}</span>
-                <span className="text-tiny text-sp-ink/85">{g.body}</span>
+                <span className="text-small text-sp-ink">{t(g.labelKey)}</span>
+                <span className="text-tiny text-sp-ink/85">{t(g.bodyKey)}</span>
               </button>
             );
           })}
@@ -173,15 +179,15 @@ export function BriefForm({
       </fieldset>
 
       <div className="flex flex-col gap-2">
-        <p className="text-small text-sp-ink">Key messages, up to 3</p>
+        <p className="text-small text-sp-ink">{t("offers.production.keyMessages", { max: 3 })}</p>
         {draft.keyMessages.map((m, i) => (
           <input
             key={i}
             className={input}
             value={m}
             maxLength={140}
-            placeholder={i === 0 ? "e.g. Pay anyone in USDC, no gas" : "Another message"}
-            aria-label={`Key message ${i + 1}`}
+            placeholder={i === 0 ? t("offers.production.keyMessagePlaceholder") : t("offers.production.anotherMessage")}
+            aria-label={t("offers.production.keyMessageAria", { n: i + 1 })}
             onChange={(e) => set({ keyMessages: draft.keyMessages.map((x, j) => (j === i ? e.target.value : x)) })}
           />
         ))}
@@ -191,67 +197,67 @@ export function BriefForm({
             className="w-fit text-tiny text-white/80 hover:text-sp-ink"
             onClick={() => set({ keyMessages: [...draft.keyMessages, ""] })}
           >
-            + Add a message
+            {t("offers.sheet.addMessage")}
           </button>
         ) : null}
       </div>
 
       <label className="flex flex-col gap-2">
-        <span className="text-small text-sp-ink">Who to interview, and when they are there</span>
+        <span className="text-small text-sp-ink">{t("offers.production.interviewees")}</span>
         <textarea
           className={`${input} resize-y`}
           rows={2}
           maxLength={280}
           value={draft.interviewees}
-          placeholder="Optional. e.g. Our CEO, day two after 3pm at booth B12"
+          placeholder={t("offers.production.intervieweesPlaceholder")}
           onChange={(e) => set({ interviewees: e.target.value })}
         />
       </label>
 
       <label className="flex flex-col gap-2">
-        <span className="text-small text-sp-ink">Brand assets link</span>
+        <span className="text-small text-sp-ink">{t("offers.production.assets")}</span>
         <input
           className={input}
           type="url"
           value={draft.assetsUrl}
           maxLength={300}
-          placeholder="https://… logo, fonts, guidelines"
+          placeholder={t("offers.production.assetsPlaceholder")}
           onChange={(e) => set({ assetsUrl: e.target.value })}
         />
       </label>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-2">
-          <span className="text-small text-sp-ink">Do</span>
+          <span className="text-small text-sp-ink">{t("offers.production.dos")}</span>
           <textarea
             className={`${input} resize-y`}
             rows={2}
             maxLength={500}
             value={draft.dos}
-            placeholder="Optional"
+            placeholder={t("common.optional")}
             onChange={(e) => set({ dos: e.target.value })}
           />
         </label>
         <label className="flex flex-col gap-2">
-          <span className="text-small text-sp-ink">Don&rsquo;t</span>
+          <span className="text-small text-sp-ink">{t("offers.production.donts")}</span>
           <textarea
             className={`${input} resize-y`}
             rows={2}
             maxLength={500}
             value={draft.donts}
-            placeholder="Optional"
+            placeholder={t("common.optional")}
             onChange={(e) => set({ donts: e.target.value })}
           />
         </label>
       </div>
 
       <div className="flex flex-col gap-2">
-        <p className="text-small text-sp-ink">Contact on the shoot day</p>
+        <p className="text-small text-sp-ink">{t("offers.production.shootContact")}</p>
         <div className="flex gap-2">
           <select
             className={`${input} w-auto`}
             value={draft.contactKind}
-            aria-label="Contact on"
+            aria-label={t("offers.production.contactOn")}
             onChange={(e) => set({ contactKind: e.target.value as "x" | "telegram" })}
           >
             <option value="telegram" className="bg-night">
@@ -264,8 +270,8 @@ export function BriefForm({
           <input
             className={input}
             value={draft.contactValue}
-            placeholder="@handle"
-            aria-label="Handle"
+            placeholder={t("offers.production.handlePlaceholder")}
+            aria-label={t("offers.production.handle")}
             maxLength={33}
             onChange={(e) => set({ contactValue: e.target.value })}
           />
@@ -280,7 +286,7 @@ export function BriefForm({
 
       <div>
         <button type="submit" className={btnPrimary} disabled={busy}>
-          {busy ? "Saving…" : "Continue to payment"}
+          {busy ? t("common.saving") : t("offers.production.continueToPayment")}
         </button>
       </div>
     </form>
@@ -289,16 +295,17 @@ export function BriefForm({
 
 /** The brief in one line, in the payment step, with the way back to it. */
 export function BriefReady({ brief, onEdit }: { brief: BriefBody; onEdit: () => void }) {
+  const t = useT();
   return (
     <div className="flex items-center justify-between gap-3 rounded-input border border-success/30 bg-success/[0.06] px-4 py-3">
       <span className="min-w-0">
-        <span className="block text-small text-sp-ink">Brief ready</span>
+        <span className="block text-small text-sp-ink">{t("offers.production.briefReady")}</span>
         <span className="block truncate text-tiny text-sp-ink/85">
-          {GOAL_LABEL[brief.goal]} · {brief.keyMessages.length} key {brief.keyMessages.length === 1 ? "message" : "messages"}
+          {goalLabel(brief.goal)} · {t("offers.production.keyMessageCount", { count: brief.keyMessages.length })}
         </span>
       </span>
       <button type="button" className={btnSmallSecondary} onClick={onEdit}>
-        Edit
+        {t("common.edit")}
       </button>
     </div>
   );
@@ -312,6 +319,7 @@ function brandLinkFor(token: string): string {
 }
 
 export function PaidProduction({ order, space }: { order: Order; space: Space }) {
+  const t = useT();
   const handle = space.creator.xHandle;
   const [token, setToken] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -321,20 +329,16 @@ export function PaidProduction({ order, space }: { order: Order; space: Space })
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <p className={`${eyebrow} text-sp-ok`}>Paid</p>
-        <h3 className="mt-2 font-display text-h3 font-light text-sp-ink">Your production spot is booked.</h3>
+        <p className={`${eyebrow} text-sp-ok`}>{t("offers.production.paid")}</p>
+        <h3 className="mt-2 font-display text-h3 font-light text-sp-ink">{t("offers.production.booked")}</h3>
         <p className="mt-3 text-small text-sp-ink/85">
-          {order.sponsorPaysUsdc} USDC on {CHAIN_LABEL[order.chain]}. @{handle} has your brief and will reach your
-          shoot-day contact.
+          {t("offers.production.paidBody", { amount: order.sponsorPaysUsdc, chain: CHAIN_LABEL[order.chain], handle })}
         </p>
       </div>
       {link ? (
         <div className="flex flex-col gap-3 rounded-card border border-amber/40 bg-amber/[0.06] p-4">
-          <p className="text-body text-sp-ink">Save this link: your delivery arrives here.</p>
-          <p className="text-small text-sp-ink/85">
-            It is where you open the files, accept them or ask for one round of changes. Anyone with it can do that, so
-            keep it to yourself.
-          </p>
+          <p className="text-body text-sp-ink">{t("offers.production.link.save")}</p>
+          <p className="text-small text-sp-ink/85">{t("offers.production.link.body")}</p>
           <p className="break-all rounded-input border border-[color:var(--color-hairline-strong)] bg-sp-ink/[0.04] px-3 py-2 font-mono text-tiny text-sp-ink">
             {link}
           </p>
@@ -352,16 +356,16 @@ export function PaidProduction({ order, space }: { order: Order; space: Space })
                   .catch(() => setCopied(false))
               }
             >
-              {copied ? "Copied" : "Copy the link"}
+              {copied ? t("common.copied") : t("offers.link.copy")}
             </button>
             <a href={`/p/${token}`} target="_blank" rel="noreferrer" className={btnSmallSecondary}>
-              Open it
+              {t("offers.link.open")}
             </a>
           </div>
         </div>
       ) : (
         <p className="rounded-card border border-amber/30 bg-amber/[0.05] px-4 py-3 text-small text-sp-ink/85" role="status">
-          Your delivery link hasn&rsquo;t reached this page yet. Reload the page in this browser to get it.
+          {t("offers.production.link.missing")}
         </p>
       )}
     </div>
@@ -372,59 +376,58 @@ export function PaidProduction({ order, space }: { order: Order; space: Space })
 
 type BrandScreen = "delivery" | "revision";
 
-const STATE: Record<ProductionView["state"], { label: string; cls: string }> = {
-  awaiting_delivery: { label: "Being made", cls: pill.open },
-  overdue: { label: "Running late", cls: pill.attention },
-  delivered: { label: "Ready for you", cls: pill.attention },
-  revision_requested: { label: "Revision asked", cls: pill.open },
-  accepted: { label: "Accepted", cls: pill.done },
+const STATE: Record<ProductionView["state"], { labelKey: MessageKey; cls: string }> = {
+  awaiting_delivery: { labelKey: "offers.production.state.awaitingDelivery", cls: pill.open },
+  overdue: { labelKey: "offers.production.state.overdue", cls: pill.attention },
+  delivered: { labelKey: "offers.production.state.delivered", cls: pill.attention },
+  revision_requested: { labelKey: "offers.production.state.revisionRequested", cls: pill.open },
+  accepted: { labelKey: "offers.production.state.accepted", cls: pill.done },
 };
 
 export function BrandProductionPanel({ token, initial }: { token: string; initial: BrandProduction }) {
+  const t = useT();
   const [data, setData] = useState(initial);
   const [screen, setScreen] = useState<BrandScreen>("delivery");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState<"accept" | "revision" | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const p = data.production;
-  const who = data.creatorHandle ? `@${data.creatorHandle}` : "The creator";
+  const who = data.creatorHandle ? `@${data.creatorHandle}` : t("offers.booking.theCreatorStart");
   const state = STATE[p.state];
 
   const explain = (e: unknown) =>
     e instanceof CheckoutError
       ? e.code === "already_accepted"
-        ? "This delivery is already accepted."
+        ? t("offers.production.error.alreadyAccepted")
         : e.code === "revision_already_used"
-          ? "The one round of changes has been used."
+          ? t("offers.production.error.revisionUsed")
           : e.code === "revision_note_invalid"
-            ? "Say what to change, in up to 500 characters."
-            : "That didn't go through. Try again in a moment."
-      : "That didn't go through. Try again in a moment.";
+            ? t("offers.production.error.noteInvalid", { max: 500 })
+            : t("offers.production.error.generic")
+      : t("offers.production.error.generic");
 
   if (screen === "revision") {
     return (
       <div className="flex flex-col gap-6">
         <button type="button" onClick={() => setScreen("delivery")} className="w-fit text-tiny text-white/80 hover:text-sp-ink">
-          ← Back
+          ← {t("common.back")}
         </button>
         <div>
           <p className={`${eyebrow} text-sp-amber`}>{data.space.title}</p>
-          <h1 className="mt-3 font-display text-h3 font-light text-sp-ink">Ask for a revision</h1>
-          <p className="mt-3 max-w-xl text-small text-sp-ink/85">
-            One round, so say everything you want changed in one go. {who} delivers the new cut to this page.
-          </p>
+          <h1 className="mt-3 font-display text-h3 font-light text-sp-ink">{t("offers.production.askRevision")}</h1>
+          <p className="mt-3 max-w-xl text-small text-sp-ink/85">{t("offers.production.revisionBody", { who })}</p>
         </div>
         <label className="flex flex-col gap-2">
-          <span className="text-small text-sp-ink">What should change</span>
+          <span className="text-small text-sp-ink">{t("offers.production.whatChange")}</span>
           <textarea
             className={`${input} resize-y`}
             rows={6}
             maxLength={500}
             value={note}
-            placeholder="e.g. Shorter cuts, under 30 seconds. Use the second interview take."
+            placeholder={t("offers.production.revisionPlaceholder")}
             onChange={(e) => setNote(e.target.value)}
           />
-          <span className="text-right text-tiny tabular-nums text-sp-ink/80">{note.trim().length} / 500</span>
+          <span className="text-right text-tiny tabular-nums text-sp-ink/80">{fmtNumber(note.trim().length)} / {fmtNumber(500)}</span>
         </label>
         {notice ? (
           <p className="rounded-input border border-amber/30 bg-amber/10 px-4 py-3 text-small text-sp-ink" role="status">
@@ -448,10 +451,10 @@ export function BrandProductionPanel({ token, initial }: { token: string; initia
                 .finally(() => setBusy(null));
             }}
           >
-            {busy === "revision" ? "Sending…" : "Send the revision"}
+            {busy === "revision" ? t("offers.sheet.sending") : t("offers.production.sendRevision")}
           </button>
           <button type="button" className={btnSecondary} onClick={() => setScreen("delivery")}>
-            Cancel
+            {t("common.cancel")}
           </button>
         </div>
       </div>
@@ -462,11 +465,14 @@ export function BrandProductionPanel({ token, initial }: { token: string; initia
     <div className="flex flex-col gap-8">
       <div>
         <p className={`${eyebrow} text-sp-amber`}>
-          {data.space.eventName ? `${data.space.eventName} · ` : ""}Content production
+          {data.space.eventName ? `${data.space.eventName} · ` : ""}
+          {t("offers.production.eyebrow")}
         </p>
         <h1 className="mt-3 font-display text-h3 font-light text-sp-ink md:text-h2">{data.space.title}</h1>
         <p className="mt-3 text-small text-sp-ink/85">
-          By {who}. {data.positionLabel ? `${data.positionLabel}. ` : ""}Paid on {CHAIN_LABEL[data.chain]}.
+          {data.positionLabel
+            ? t("offers.production.byWithPosition", { who, position: data.positionLabel, chain: CHAIN_LABEL[data.chain] })
+            : t("offers.production.by", { who, chain: CHAIN_LABEL[data.chain] })}
         </p>
       </div>
 
@@ -475,26 +481,29 @@ export function BrandProductionPanel({ token, initial }: { token: string; initia
           <div className="min-w-0">
             <p className="text-body text-sp-ink">
               {p.state === "accepted"
-                ? "Delivered and accepted"
+                ? t("offers.production.status.accepted")
                 : p.delivery
                   ? p.state === "revision_requested"
-                    ? "Your revision is with the creator"
-                    : "Your content is ready"
-                  : "Your content is being made"}
+                    ? t("offers.production.status.revision")
+                    : t("offers.production.status.ready")
+                  : t("offers.production.status.making")}
             </p>
             <p className="mt-1 text-tiny text-sp-ink/85">
               {p.delivery
-                ? `Delivered ${when(p.delivery.deliveredAt)}.`
-                : `Filmed ${new Date(`${p.shootOn}T12:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}. Due ${when(p.dueAt)}.`}
+                ? t("offers.production.deliveredAt", { when: when(p.delivery.deliveredAt) })
+                : t("offers.production.filmedDue", {
+                    filmed: fmtDate(`${p.shootOn}T12:00:00Z`, { weekday: "long", day: "numeric", month: "long" }),
+                    due: when(p.dueAt),
+                  })}
             </p>
           </div>
-          <span className={state.cls}>{state.label}</span>
+          <span className={state.cls}>{t(state.labelKey)}</span>
         </div>
 
         {p.delivery ? (
           <>
             <a href={p.delivery.url} target="_blank" rel="noreferrer" className={btnPrimary}>
-              Open the files
+              {t("offers.production.openFiles")}
             </a>
             {p.package ? (
               <ul className="flex flex-col gap-1.5">
@@ -504,7 +513,7 @@ export function BrandProductionPanel({ token, initial }: { token: string; initia
                     <li key={l.key} className="flex items-baseline justify-between gap-4 text-small">
                       <span className="text-sp-ink/85">{l.label}</span>
                       <span className={`tabular-nums ${got >= l.count ? "text-sp-ok" : "text-sp-amber"}`}>
-                        {got} of {l.count}
+                        {t("offers.production.gotOf", { got, total: l.count })}
                       </span>
                     </li>
                   );
@@ -518,7 +527,7 @@ export function BrandProductionPanel({ token, initial }: { token: string; initia
 
         {p.revision ? (
           <div className="rounded-input border border-[color:var(--color-hairline-strong)] px-4 py-3">
-            <p className="text-tiny text-sp-ink/85">Your revision, {when(p.revision.requestedAt)}</p>
+            <p className="text-tiny text-sp-ink/85">{t("offers.production.yourRevision", { when: when(p.revision.requestedAt) })}</p>
             <p className="mt-1 whitespace-pre-line text-small text-sp-ink">{p.revision.note}</p>
           </div>
         ) : null}
@@ -539,18 +548,18 @@ export function BrandProductionPanel({ token, initial }: { token: string; initia
                     .finally(() => setBusy(null));
                 }}
               >
-                {busy === "accept" ? "Accepting…" : "Accept"}
+                {busy === "accept" ? t("offers.production.accepting") : t("offers.production.accept")}
               </button>
               {p.revisionAvailable ? (
                 <button type="button" className={btnSecondary} disabled={busy !== null} onClick={() => setScreen("revision")}>
-                  Ask for a revision
+                  {t("offers.production.askRevision")}
                 </button>
               ) : null}
             </div>
             {p.autoAcceptAt ? (
               <p className="text-tiny text-sp-ink/85">
-                If you say nothing, it is accepted on {when(p.autoAcceptAt)}.
-                {p.revisionAvailable ? " You have one round of changes." : " Your round of changes has been used."}
+                {t("offers.production.autoAccept", { when: when(p.autoAcceptAt) })}
+                {p.revisionAvailable ? ` ${t("offers.production.roundLeft")}` : ` ${t("offers.production.roundUsed")}`}
               </p>
             ) : null}
           </div>
@@ -558,7 +567,9 @@ export function BrandProductionPanel({ token, initial }: { token: string; initia
 
         {p.state === "accepted" && p.accepted ? (
           <p className="text-tiny text-sp-ink/85">
-            {p.accepted.auto ? `Accepted automatically ${when(p.accepted.at)}, 72 hours after delivery.` : `You accepted it ${when(p.accepted.at)}.`}
+            {p.accepted.auto
+              ? t("offers.production.acceptedAuto", { when: when(p.accepted.at) })
+              : t("offers.production.acceptedByYou", { when: when(p.accepted.at) })}
           </p>
         ) : null}
 

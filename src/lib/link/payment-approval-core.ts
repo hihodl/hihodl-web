@@ -8,6 +8,8 @@
  * server, approved on the phone".
  */
 
+import { t } from "../app/i18n";
+
 export type PaymentKind = "spot" | "stay";
 
 export type PaymentApprovalStatus = "pending" | "approved" | "rejected" | "expired" | "cancelled" | "submitted";
@@ -96,12 +98,29 @@ export function isDecided(s: PaymentApprovalStatus): boolean {
 export function endedWithoutPaying(status: "rejected" | "expired" | "cancelled"): string {
   switch (status) {
     case "rejected":
-      return "You declined it on your phone. Nothing has been charged.";
+      return t("link.refusal.declined");
     case "expired":
-      return "It was not approved on your phone within ten minutes. Nothing has been charged.";
+      return t("link.refusal.expired");
     case "cancelled":
-      return "Cancelled. Nothing has been charged.";
+      return t("link.refusal.cancelled");
   }
+}
+
+/** The default phone's platform, as the server names it (`approver.platform`, a 409's `details.platform`). */
+export type PhonePlatform = "ios" | "android";
+
+export function phonePlatformOf(v: unknown): PhonePlatform | null {
+  return v === "ios" || v === "android" ? v : null;
+}
+
+/**
+ * "Open HOLD on your iPhone to approve": only the default phone approves the
+ * web (documentation/the-default-phone-approves.md), so every wait for an
+ * approval, and the server's 409 APPROVE_ON_YOUR_DEFAULT_PHONE, name it.
+ * Unknown (an older server) says "your phone".
+ */
+export function approveOnDefaultPhone(platform: PhonePlatform | null | undefined): string {
+  return t("link.defaultPhone.approve", { platform: platform ?? "other" });
 }
 
 /**
@@ -112,56 +131,57 @@ export function endedWithoutPaying(status: "rejected" | "expired" | "cancelled")
  * up here one day still reads as a fact and never as a code. Each one is
  * said before anything was signed, so "nothing has been charged" is true.
  */
-export function describeApprovalRefusal(code: string, kind: PaymentKind): string {
-  const thing = kind === "spot" ? "spot" : "stay";
+export function describeApprovalRefusal(code: string, kind: PaymentKind, details?: { platform?: unknown } | null): string {
+  const spot = kind === "spot";
   switch (code) {
+    case "APPROVE_ON_YOUR_DEFAULT_PHONE":
+      return approveOnDefaultPhone(phonePlatformOf(details?.platform));
     case "VALIDATION_ERROR":
-      return `We couldn't ask your phone about this ${thing}. Nothing has been charged. Try again.`;
+      return spot ? t("link.refusal.validationSpot") : t("link.refusal.validationStay");
     case "NO_PHONE_LINKED":
-      return "Your phone is no longer linked. Nothing has been charged.";
+    case "LINK_YOUR_PHONE_FIRST":
+      return t("link.refusal.linkFirst");
+    case "APPROVE_ON_YOUR_PHONE":
+      return t("link.refusal.approveOnPhone");
     case "NO_WALLET":
-      return "This account has no wallet to pay from yet. Nothing has been charged.";
+      return t("link.refusal.noWalletGetApp");
     case "NOT_FOUND":
     case "not_found":
-      return kind === "spot"
-        ? "We couldn't find that order any more. Nothing has been charged. Pick the spot again."
-        : "We couldn't find that booking any more. Nothing has been charged. Pick the room again.";
+      return spot ? t("link.refusal.notFoundSpot") : t("link.refusal.notFoundStay");
     case "ALREADY_PAID":
-      return kind === "spot" ? "This spot is already paid for." : "This stay is already paid for.";
+      return spot ? t("link.refusal.alreadyPaidSpot") : t("link.refusal.alreadyPaidStay");
     case "NOT_PAYABLE":
-      return kind === "spot"
-        ? "This spot can't be paid from your phone right now. Nothing has been charged."
-        : "This stay can't be paid from your phone right now. Nothing has been charged.";
+      return spot ? t("link.refusal.notPayableSpot") : t("link.refusal.notPayableStay");
     case "NOT_YOUR_WALLET":
-      return "This spot is held for another wallet. Nothing has been charged.";
+      return t("link.refusal.notYourWallet");
     case "NO_PAYMENT_OPEN":
-      return "The payment for this stay isn't open yet. Nothing has been charged. Try again.";
+      return t("link.refusal.noPaymentOpen");
     case "NOT_PENDING":
-      return "Your phone already answered this one.";
+      return t("link.refusal.notPending");
     case "NOT_BUILT":
     case "BUILD_EXPIRED":
-      return "Your phone has to prepare the payment again. Nothing has been charged.";
+      return t("link.refusal.notBuilt");
     case "APPROVAL_EXPIRED":
-      return "It was not approved on your phone within ten minutes. Nothing has been charged.";
+      return t("link.refusal.expired");
     case "NOT_THE_ISSUED_TRANSACTION":
     case "NOT_SIGNED_BY_WALLET":
     case "DEVICE_SIGNATURE_INVALID":
-      return "Your phone's approval didn't match this payment, so it was not sent. Nothing has been charged.";
+      return t("link.refusal.mismatch");
     case "HOLD_EXPIRED":
-      return "The hold on this spot ran out. Nothing has been charged. Pick the spot again.";
+      return t("link.refusal.holdExpired");
     case "SPACE_CLOSED":
-      return "That listing has closed. Nothing has been charged.";
+      return t("link.refusal.spaceClosed");
     case "CHAIN_UNAVAILABLE":
     case "RELAYER_NOT_CONFIGURED":
-      return "Payments are briefly unavailable. Nothing has been charged. Try again in a moment.";
+      return t("link.refusal.unavailable");
     case "NO_ROUTE":
     case "ROUTE_TOO_EXPENSIVE":
-      return "We couldn't find a way to move this payment right now. Nothing has been charged. Try again in a moment.";
+      return t("link.refusal.noRoute");
     case "rate_limited":
-      return "Too many tries in a row. Nothing has been charged. Wait a minute and try again.";
+      return t("link.refusal.rateLimited");
     case "network":
-      return "We couldn't reach HOLD. Nothing has been charged. Check your connection and try again.";
+      return t("link.refusal.network");
     default:
-      return `We couldn't ask your phone to approve this ${thing}. Nothing has been charged. Try again.`;
+      return spot ? t("link.refusal.defaultSpot") : t("link.refusal.defaultStay");
   }
 }

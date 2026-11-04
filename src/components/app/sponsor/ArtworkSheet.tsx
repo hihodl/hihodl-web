@@ -49,17 +49,25 @@ import { sendArtwork, uploadOrderImage, type MyOrder } from "@/lib/app/sponsor";
 import { listingSpots } from "@/lib/app/storefront";
 import { CreatorApiError } from "@/lib/creator/api";
 
+import { t as tr } from "@/lib/app/i18n";
+import { useT } from "@/lib/app/i18n/react";
+
 import { Ion } from "../ion";
 import { Chip, ChipRow, Divider, Field, fieldLabel, inputCls } from "../spaces/kit";
 import { Sheet } from "./SponsorFlow";
 
-const KIND_LABEL: Record<ContentKind, string> = { logo: "Logo", qr: "QR code", text: "Text", photo: "Photo" };
+const KIND_LABEL = {
+  logo: "sponsor.artwork.kind.logo",
+  qr: "sponsor.artwork.kind.qr",
+  text: "sponsor.artwork.kind.text",
+  photo: "sponsor.artwork.kind.photo",
+} as const satisfies Record<ContentKind, string>;
 
 /** What the creator has done with what was sent, in the brand's words. */
 function reviewLine(status: MyOrder["contentStatus"], creator: string): string | null {
-  if (status === "approved") return "Approved. It is on the board.";
-  if (status === "pending") return `Waiting for ${creator} to approve it. You can send a new version while you wait.`;
-  if (status === "rejected") return `${creator} asked for a change. Send a new version below.`;
+  if (status === "approved") return tr("sponsor.artwork.review.approved");
+  if (status === "pending") return tr("sponsor.artwork.review.pending", { name: creator });
+  if (status === "rejected") return tr("sponsor.artwork.review.rejected", { name: creator });
   return null;
 }
 
@@ -79,9 +87,11 @@ export function ArtworkSheet({
    * hand-over: `logo` is what every space accepts, and the server refuses
    * anything it does not, which is the honest fallback.
    */
+  const t = useT();
   const [accepts, setAccepts] = useState<ContentKind[] | null>(null);
   /* Read from the same listing as `accepts`, so the copy names a person rather than "the creator". */
-  const [creatorName, setCreatorName] = useState("The creator");
+  const [handle, setCreatorName] = useState<string | null>(null);
+  const creatorName = handle ?? t("sponsor.artwork.theCreator");
   const [kind, setKind] = useState<ContentKind>("logo");
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
@@ -149,11 +159,11 @@ export function ArtworkSheet({
       if (err instanceof ImageProblem) {
         setNotice(describeImageProblem(err.reason));
       } else if (err instanceof CreatorApiError && err.status === 422) {
-        setNotice("Something in the form was not accepted. Check the name, link and image, then send it again.");
+        setNotice(t("sponsor.artwork.error.rejected"));
       } else if (err instanceof CreatorApiError && err.status === 0) {
-        setNotice("We could not reach HOLD. Check your connection and send it again.");
+        setNotice(t("sponsor.artwork.error.network"));
       } else {
-        setNotice("That did not go through. Try again in a moment.");
+        setNotice(t("sponsor.artwork.error.other"));
       }
     } finally {
       setBusy(false);
@@ -163,7 +173,7 @@ export function ArtworkSheet({
   const line = reviewLine(status, creatorName);
 
   return (
-    <Sheet title="What goes on your spot" crumb={order.spaceTitle} onBack={null} onClose={onClose}>
+    <Sheet title={t("sponsor.artwork.title")} crumb={order.spaceTitle} onBack={null} onClose={onClose}>
       <form onSubmit={submit} className="flex flex-col gap-4 pb-2" noValidate>
         {line ? (
           <p
@@ -183,11 +193,11 @@ export function ArtworkSheet({
           </p>
         ) : (
           <p className="text-[13px] leading-[18px] text-white/65">
-            {creatorName} approves it before it shows on the board. You can send a new version at any time.
+            {t("sponsor.artwork.intro", { name: creatorName })}
           </p>
         )}
 
-        <Field label="Name to credit">
+        <Field label={t("sponsor.artwork.field.name")}>
           <input
             className={inputCls}
             value={name}
@@ -199,7 +209,7 @@ export function ArtworkSheet({
         </Field>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field label="Link (optional)">
+          <Field label={t("sponsor.artwork.field.link")}>
             <input
               className={inputCls}
               value={url}
@@ -209,7 +219,7 @@ export function ArtworkSheet({
               autoComplete="url"
             />
           </Field>
-          <Field label="X handle (optional)">
+          <Field label={t("sponsor.artwork.field.xHandle")}>
             <input
               className={inputCls}
               value={xHandle}
@@ -222,9 +232,9 @@ export function ArtworkSheet({
         </div>
 
         {kinds.length > 1 ? (
-          <ChipRow label="What to print">
+          <ChipRow label={t("sponsor.artwork.field.kind")}>
             {kinds.map((k) => (
-              <Chip key={k} label={KIND_LABEL[k]} selected={kind === k} onClick={() => setKind(k)} />
+              <Chip key={k} label={t(KIND_LABEL[k])} selected={kind === k} onClick={() => setKind(k)} />
             ))}
           </ChipRow>
         ) : null}
@@ -232,7 +242,7 @@ export function ArtworkSheet({
 
         {wantsImage ? (
           <div className="flex flex-col gap-2">
-            <span className={fieldLabel}>{kind === "logo" ? "Logo" : "Photo"}</span>
+            <span className={fieldLabel}>{kind === "logo" ? t("sponsor.artwork.kind.logo") : t("sponsor.artwork.kind.photo")}</span>
             <div className="flex items-center gap-3">
               <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-[14px] bg-white">
                 {preview ? (
@@ -250,13 +260,13 @@ export function ArtworkSheet({
               />
             </div>
             <span className="text-[12px] leading-[17px] text-white/55">
-              PNG, JPEG or WebP. We straighten and shrink it before sending.
+              {t("sponsor.artwork.imageHint")}
             </span>
           </div>
         ) : null}
 
         {kind === "qr" ? (
-          <Field label="Link the QR code opens">
+          <Field label={t("sponsor.artwork.field.qr")}>
             <input
               className={inputCls}
               value={text}
@@ -268,7 +278,7 @@ export function ArtworkSheet({
         ) : null}
 
         {kind === "text" ? (
-          <Field label="Line to print">
+          <Field label={t("sponsor.artwork.field.text")}>
             <input
               className={inputCls}
               value={text}
@@ -292,7 +302,7 @@ export function ArtworkSheet({
           disabled={busy}
           className="inline-flex h-12 items-center justify-center rounded-[14px] bg-amber text-[15px] font-bold text-text-on-amber transition-colors hover:bg-amber-glow disabled:bg-white/[0.12] disabled:text-white/50"
         >
-          {busy ? "Sending…" : status ? "Send a new version" : "Send for approval"}
+          {busy ? t("sponsor.artwork.sending") : status ? t("sponsor.artwork.sendNew") : t("sponsor.artwork.send")}
         </button>
       </form>
     </Sheet>

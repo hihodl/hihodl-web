@@ -17,6 +17,8 @@ import {
   type TemplateKind,
 } from "@/lib/creator/listing";
 import type { TeamMember, WorkDeliverable, WorkListing, WorkSlot } from "@/lib/creator/team";
+import { t, type MessageKey } from "@/lib/app/i18n";
+import { fmtDate } from "@/lib/app/i18n/format";
 
 /* ── Role ─────────────────────────────────────────────────────────── */
 
@@ -78,12 +80,17 @@ function productionState(p: ProductionView): DeliveryState {
   }
 }
 
-const GOAL_TEXT: Record<string, string> = {
-  awareness: "Awareness",
-  product_launch: "Product launch",
-  hiring: "Hiring",
-  community: "Community",
+const GOAL_TEXT: Record<string, MessageKey> = {
+  awareness: "spaces.goal.awareness",
+  product_launch: "spaces.goal.productLaunch",
+  hiring: "spaces.goal.hiring",
+  community: "spaces.goal.community",
 };
+
+function goalText(goal: string): string | null {
+  const k = GOAL_TEXT[goal];
+  return k ? t(k) : null;
+}
 
 function productionItem(
   spaceId: string,
@@ -100,26 +107,29 @@ function productionItem(
     spaceId,
     listing,
     title: label,
-    sub: [sponsorName, production.brief ? GOAL_TEXT[production.brief.goal] ?? null : null].filter(Boolean).join(" · ") || "Production",
+    sub: [sponsorName, production.brief ? goalText(production.brief.goal) : null].filter(Boolean).join(" · ") || t("spaces.delivery.production"),
     // An instant, not a day: the countdown is to the hour.
     due: production.state === "accepted" ? null : production.dueAt,
     production,
   };
 }
 
-const KIND_TEXT: Record<string, string> = {
-  in_person: "In person",
-  photo_post: "Photo post",
-  video: "Video",
-  story: "Story",
-  thank_you_post: "Thank-you post",
-  mention: "Mention",
-  custom: "Custom",
+const KIND_TEXT: Record<string, MessageKey> = {
+  in_person: "spaces.promiseKind.inPerson",
+  photo_post: "spaces.promiseKind.photoPost",
+  video: "spaces.promiseKind.video",
+  story: "spaces.promiseKind.story",
+  thank_you_post: "spaces.promiseKind.thankYouPost",
+  mention: "spaces.promiseKind.mention",
+  custom: "spaces.promiseKind.custom",
 };
 
 function promiseTitle(d: { kind: string; platform: string | null; count: number }): string {
-  const kind = KIND_TEXT[d.kind] ?? d.kind.replace(/_/g, " ");
-  return `${d.count} × ${kind}${d.platform ? ` · ${d.platform}` : ""}`;
+  const key = KIND_TEXT[d.kind];
+  const kind = key ? t(key) : d.kind.replace(/_/g, " ");
+  return d.platform
+    ? t("spaces.delivery.promiseTitlePlatform", { count: d.count, kind, platform: d.platform })
+    : t("spaces.delivery.promiseTitle", { count: d.count, kind });
 }
 
 /** From the creator's own listings, whole. */
@@ -135,7 +145,7 @@ export function ownerDeliveries(spaces: readonly SpaceView[]): DeliveryItem[] {
           state: "todo",
           spaceId: space.id,
           listing,
-          title: `Artwork · ${p.sponsor.name ?? "Sponsor"}`,
+          title: t("spaces.delivery.artworkTitle", { sponsor: p.sponsor.name ?? t("spaces.delivery.sponsor") }),
           sub: p.title ?? p.label,
           due: null,
           owner: { space, position: p },
@@ -154,7 +164,7 @@ export function ownerDeliveries(spaces: readonly SpaceView[]): DeliveryItem[] {
           spaceId: space.id,
           listing,
           title: p.title ?? p.label,
-          sub: p.sponsor?.name ?? "Sold",
+          sub: p.sponsor?.name ?? t("spaces.delivery.sold"),
           due: space.deliverBy,
           owner: { space, position: p },
           member: null,
@@ -169,7 +179,7 @@ export function ownerDeliveries(spaces: readonly SpaceView[]): DeliveryItem[] {
         spaceId: space.id,
         listing,
         title: promiseTitle(d),
-        sub: d.note ?? "Promise",
+        sub: d.note ?? t("spaces.delivery.promise"),
         due: d.dueDate,
         owner: { space, deliverable: d },
         member: null,
@@ -188,7 +198,7 @@ export function memberDeliveries(work: readonly WorkListing[], skip: ReadonlySet
     for (const s of w.slots) {
       if (s.production) {
         out.push({
-          ...productionItem(w.spaceId, w.title, s.id, s.label ?? s.zoneKey ?? "Spot", s.sponsorName, s.production),
+          ...productionItem(w.spaceId, w.title, s.id, s.label ?? s.zoneKey ?? t("spaces.delivery.spot"), s.sponsorName, s.production),
           owner: null,
           member: { listing: w, slot: s },
         });
@@ -200,8 +210,8 @@ export function memberDeliveries(work: readonly WorkListing[], skip: ReadonlySet
         state: s.deliveredUrl ? "done" : s.contentStatus === "pending" ? "waiting" : "todo",
         spaceId: w.spaceId,
         listing: w.title,
-        title: s.label ?? s.zoneKey ?? "Spot",
-        sub: s.sponsorName ?? "Sold",
+        title: s.label ?? s.zoneKey ?? t("spaces.delivery.spot"),
+        sub: s.sponsorName ?? t("spaces.delivery.sold"),
         due: w.deliverBy,
         owner: null,
         member: { listing: w, slot: s },
@@ -215,7 +225,7 @@ export function memberDeliveries(work: readonly WorkListing[], skip: ReadonlySet
         spaceId: w.spaceId,
         listing: w.title,
         title: promiseTitle(d),
-        sub: d.note ?? "Promise",
+        sub: d.note ?? t("spaces.delivery.promise"),
         due: d.dueDate,
         owner: null,
         member: { listing: w, deliverable: d },
@@ -270,7 +280,7 @@ export function salesByWeek(sales: SalesSummary | null | undefined, weeks = 8): 
   start.setDate(start.getDate() - start.getDay() - (weeks - 1) * 7);
   const points: SalesPoint[] = Array.from({ length: weeks }, (_, i) => {
     const d = new Date(start.getTime() + i * 7 * 86_400_000);
-    return { label: d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }), cents: 0, orders: 0 };
+    return { label: fmtDate(d, { day: "numeric", month: "short" }), cents: 0, orders: 0 };
   });
   for (const r of sales?.recent ?? []) {
     if (!r.paidAt) continue;
@@ -410,9 +420,9 @@ export function kindsText(kinds: readonly (TemplateKind | null)[]): string {
   const services = kinds.filter((k) => k === "service").length;
   const other = kinds.length - spaces - services;
   const parts: string[] = [];
-  if (spaces) parts.push(`${spaces} ad ${spaces === 1 ? "space" : "spaces"}`);
-  if (services) parts.push(`${services} ${services === 1 ? "service" : "services"}`);
-  if (other) parts.push(`${other} ${other === 1 ? "listing" : "listings"}`);
+  if (spaces) parts.push(t("spaces.kinds.adSpaces", { count: spaces }));
+  if (services) parts.push(t("spaces.kinds.services", { count: services }));
+  if (other) parts.push(t("spaces.kinds.listings", { count: other }));
   return parts.join(" · ");
 }
 

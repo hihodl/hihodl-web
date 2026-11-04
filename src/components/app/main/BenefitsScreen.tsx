@@ -12,14 +12,24 @@ import Link from "next/link";
 import { waitingOnYou } from "@/lib/app/spaces-model";
 import { useOffers } from "@/lib/app/spaces-data";
 
+import { t } from "@/lib/app/i18n";
+import { Rich, useT } from "@/lib/app/i18n/react";
+
 import { useProductHref } from "../base";
 import { useShell } from "../Shell";
 import { glass } from "../ui";
-import { PRODUCTS, ProductIcon } from "./products";
+import { SPACES_BUY_PATH } from "../nav";
+import { PRODUCTS, ProductIcon, type Product } from "./products";
+
+/** Spaces as a brand meets it: the Board, to sponsor a creator. */
+function spacesToBuy(p: Product): Product {
+  return { ...p, path: SPACES_BUY_PATH, door: t("home.products.spaces.buyDoor"), sub: t("home.products.spaces.buySub") };
+}
 
 export function BenefitsScreen() {
+  const t = useT();
   const href = useProductHref();
-  const { role, listings } = useShell();
+  const { role, listings, adSpace } = useShell();
   const offers = useOffers(role === "creator");
   const live = listings.filter((l) => l.status === "live").length;
   const waiting = offers.data ? waitingOnYou(offers.data).length : 0;
@@ -27,11 +37,12 @@ export function BenefitsScreen() {
   return (
     <div className="flex flex-1 flex-col gap-4">
       <section className={`${glass} flex flex-col gap-1 px-5 py-4`}>
-        <h2 className="text-body font-medium text-text">Products</h2>
-        <p className="text-small text-[#9FB7C2]">What you can buy, and sell, through HOLD.</p>
+        <h2 className="text-body font-medium text-text">{t("home.benefits.title")}</h2>
+        <p className="text-small text-[#9FB7C2]">{t("home.benefits.lead")}</p>
       </section>
       <div className="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-3">
-        {PRODUCTS.map((p) => (
+        {/* Spaces' door is "sell" for somebody Ad Space is open to (HOLD Partners), "sponsor" on the Board for everybody else. */}
+        {PRODUCTS.map((base) => (base.key === "spaces" && !adSpace ? spacesToBuy(base) : base)).map((p) => (
           <Link
             key={p.key}
             href={href(p.path)}
@@ -40,16 +51,20 @@ export function BenefitsScreen() {
             <div className="flex items-start justify-between gap-3">
               <ProductIcon product={p} size={52} />
               <span className="inline-flex h-6 items-center rounded-[12px] border border-white/10 px-2.5 text-[11px] text-[#9FB7C2]">
-                {p.web ? "On the web" : "In the app"}
+                {p.web ? t("home.benefits.onWeb") : t("home.benefits.inApp")}
               </span>
             </div>
             <div>
               <p className="text-[22px] font-medium leading-tight text-text">{p.name}</p>
               <p className="mt-1 text-small text-text">{p.door}</p>
               <p className="mt-0.5 text-tiny text-[#9FB7C2]">{p.sub}</p>
-              {p.key === "spaces" && role === "creator" ? (
+              {p.key === "spaces" && role === "creator" && adSpace ? (
                 <p className="mt-3 text-tiny text-[#CFE3EC]">
-                  {live} live · <span className={waiting ? "text-amber" : ""}>{waiting} waiting on you</span>
+                  <Rich
+                    k="home.benefits.spacesStatus"
+                    vars={{ live, waiting }}
+                    tags={{ w: (c) => <span className={waiting ? "text-amber" : ""}>{c}</span> }}
+                  />
                 </p>
               ) : null}
             </div>

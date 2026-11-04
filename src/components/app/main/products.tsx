@@ -6,13 +6,20 @@
  * `web` says whether the product has screens here yet; the ones that do not
  * open an honest card that sends the person to the app. When Stays or eSIM
  * get web screens, flipping `web` and adding their routes is the whole change.
+ *
+ * The words are getters: each reads the language on screen when it is read,
+ * at render, never when this module loads. A component drawing them calls
+ * useT() so it re-renders when the language changes.
  */
 
 import type { ComponentType, ReactNode, SVGProps } from "react";
 
 import { APP_STORE_URL, PLAY_STORE_URL } from "@/lib/appLinks";
+import { t } from "@/lib/app/i18n";
+import { useT } from "@/lib/app/i18n/react";
 
 import { IconBed, IconChevronRight, IconMegaphone, IconSim } from "../icons";
+import { Ion } from "../ion";
 
 export type ProductKey = "stays" | "esim" | "spaces";
 
@@ -34,34 +41,54 @@ export interface Product {
 export const PRODUCTS: readonly Product[] = [
   {
     key: "stays",
-    name: "Stays",
+    get name() {
+      return t("home.products.stays.name");
+    },
     path: "/travel",
     icon: IconBed,
     tone: "#2FBE8A",
-    door: "Find a stay",
-    sub: "Search hotels wherever you're going",
-    about: "Hotels wherever you're going, priced in the app, and HiPoints back on the nights you book.",
+    get door() {
+      return t("home.products.stays.door");
+    },
+    get sub() {
+      return t("home.products.stays.sub");
+    },
+    get about() {
+      return t("home.products.stays.about");
+    },
     web: true,
   },
   {
     key: "esim",
+    // A product name, the same in every language.
     name: "eSIM",
     path: "/esim",
     icon: IconSim,
     tone: "#7CC2D1",
-    door: "Data abroad",
-    sub: "No roaming bill",
-    about: "Mobile data for the country you're going to. Pick a plan in the app, install the eSIM, and you're online when you land.",
+    get door() {
+      return t("home.products.esim.door");
+    },
+    get sub() {
+      return t("home.products.esim.sub");
+    },
+    get about() {
+      return t("home.products.esim.about");
+    },
     web: false,
   },
   {
     key: "spaces",
+    // The product's name, the same in every language.
     name: "Spaces",
     path: "/spaces",
     icon: IconMegaphone,
     tone: "#FFB703",
-    door: "Sell sponsor spots",
-    sub: "On your gear or your content, paid in USDC straight to you",
+    get door() {
+      return t("home.products.spaces.door");
+    },
+    get sub() {
+      return t("home.products.spaces.sub");
+    },
     about: "",
     web: true,
   },
@@ -87,6 +114,7 @@ export function ProductIcon({ product, size = 40 }: { product: Product; size?: n
 
 /** A row that is a door: icon, the product's words, a chevron. */
 export function DoorRow({ product, right }: { product: Product; right?: ReactNode }) {
+  useT();
   return (
     <>
       <ProductIcon product={product} />
@@ -101,17 +129,29 @@ export function DoorRow({ product, right }: { product: Product; right?: ReactNod
 }
 
 /** The two store buttons. Real links from lib/appLinks, never a guessed one. */
-export function StoreButtons() {
+/**
+ * The App Store and Google Play badges, as the website draws them (its
+ * StoreButton, app/page.tsx): the store's mark, "Download on the" or "Get it
+ * on", and the store's name, white on the dark ground. The store names are
+ * the stores' own and are never translated.
+ */
+export function StoreButtons({ className = "" }: { className?: string } = {}) {
+  const t = useT();
   const cls =
-    "inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-[12px] border border-white/10 bg-white/[0.06] px-4 text-small font-medium text-text transition-colors hover:bg-white/10";
+    "inline-flex h-[52px] items-center gap-3 whitespace-nowrap rounded-[14px] bg-white px-4 text-[#0A0500] transition-opacity hover:opacity-90";
+  const badge = (icon: "logo-apple" | "logo-google", eyebrow: string, label: string, href: string) => (
+    <a href={href} target="_blank" rel="noopener noreferrer" className={cls} aria-label={`${eyebrow} ${label}`}>
+      <Ion name={icon} size={22} />
+      <span className="flex flex-col items-start leading-none">
+        <span className="text-[11px] opacity-70">{eyebrow}</span>
+        <span className="mt-0.5 text-[16px] font-medium">{label}</span>
+      </span>
+    </a>
+  );
   return (
-    <div className="flex flex-wrap gap-2">
-      <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer" className={cls}>
-        App Store
-      </a>
-      <a href={PLAY_STORE_URL} target="_blank" rel="noopener noreferrer" className={cls}>
-        Google Play
-      </a>
+    <div className={`flex flex-wrap gap-2 ${className}`}>
+      {badge("logo-apple", t("shell.stores.downloadOnThe"), "App Store", APP_STORE_URL)}
+      {badge("logo-google", t("shell.stores.getItOn"), "Google Play", PLAY_STORE_URL)}
     </div>
   );
 }

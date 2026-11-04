@@ -19,6 +19,7 @@ import { Members, Seats } from "@/components/creator/team/Members";
 import { Earnings, Owed } from "@/components/creator/team/Money";
 import { useRefresh } from "@/lib/app/spaces-data";
 import { pendingSeat } from "@/lib/creator/team";
+import { useT } from "@/lib/app/i18n/react";
 
 import { useHref } from "../base";
 import { useShell } from "../Shell";
@@ -27,6 +28,7 @@ import { Chip, ChipRow, SectionLabel, SheetRow } from "./kit";
 type Tab = "members" | "owed" | "teams" | "earnings";
 
 export function TeamScreen({ tab }: { tab: string | null }) {
+  const t = useT();
   const { role, seats } = useShell();
   const href = useHref();
   const router = useRouter();
@@ -45,46 +47,46 @@ export function TeamScreen({ tab }: { tab: string | null }) {
   const tabs: { key: Tab; label: string }[] = [
     ...(role === "creator"
       ? [
-          { key: "members" as const, label: "Members" },
-          { key: "owed" as const, label: "Owed to team" },
+          { key: "members" as const, label: t("creator.teamScreen.members") },
+          { key: "owed" as const, label: t("creator.teamScreen.owedToTeam") },
         ]
       : []),
     ...(onTeams
       ? [
-          { key: "teams" as const, label: "Teams you’re on" },
-          { key: "earnings" as const, label: "Owed to you" },
+          { key: "teams" as const, label: t("creator.teamScreen.teamsOn") },
+          { key: "earnings" as const, label: t("creator.teamScreen.owedToYou") },
         ]
       : []),
   ];
-  const active: Tab = tabs.some((t) => t.key === tab) ? (tab as Tab) : tabs[0]?.key ?? "members";
+  const active: Tab = tabs.some((x) => x.key === tab) ? (tab as Tab) : tabs[0]?.key ?? "members";
 
   return (
     <div className="mx-auto flex w-full max-w-[720px] flex-col gap-2.5">
       {tabs.length > 1 ? (
-        <ChipRow label="Team">
-          {tabs.map((t) => (
-            <Chip key={t.key} label={t.label} selected={active === t.key} href={`${href("/team")}?tab=${t.key}`} />
+        <ChipRow label={t("creator.teamScreen.team")}>
+          {tabs.map((x) => (
+            <Chip key={x.key} label={x.label} selected={active === x.key} href={`${href("/team")}?tab=${x.key}`} />
           ))}
         </ChipRow>
       ) : null}
       {active === "members" ? (
         <>
           <Members onChanged={onTeamChanged} />
-          <SectionLabel>Money</SectionLabel>
+          <SectionLabel>{t("creator.teamScreen.money")}</SectionLabel>
           <SheetRow
             icon="receipt-outline"
-            title="What you owe, and what you're owed"
-            meta="Your own records. You pay your team yourself."
+            title={t("creator.teamScreen.moneyTitle")}
+            meta={t("creator.teamScreen.moneyMeta")}
             href={`${href("/team")}?tab=owed`}
           />
           {onTeams ? (
             <>
-              <SectionLabel>Teams you&apos;re on</SectionLabel>
+              <SectionLabel>{t("creator.teamScreen.teamsOnLabel")}</SectionLabel>
               <Seats version={0} />
               <SheetRow
                 icon="checkbox-outline"
-                title="What you have to deliver"
-                meta="The listings you were put on, and what's still to do"
+                title={t("creator.teamScreen.deliverTitle")}
+                meta={t("creator.teamScreen.deliverMeta")}
                 href={href("/deliveries")}
               />
             </>
@@ -97,8 +99,8 @@ export function TeamScreen({ tab }: { tab: string | null }) {
           <Seats version={0} />
           <SheetRow
             icon="checkbox-outline"
-            title="What you have to deliver"
-            meta="The listings you were put on, and what's still to do"
+            title={t("creator.teamScreen.deliverTitle")}
+            meta={t("creator.teamScreen.deliverMeta")}
             href={href("/deliveries")}
           />
         </>

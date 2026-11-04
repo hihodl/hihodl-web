@@ -10,14 +10,15 @@
  * app goes on the phone and we cannot know which one that is.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
+import { Rich } from "@/lib/app/i18n/react";
 import { APP_STORE_URL, PLAY_STORE_URL } from "@/lib/appLinks";
 import { thisDevice, type Phone } from "@/lib/link/ua";
 
 const linkCls = "text-[#CFE3EC] underline decoration-white/30 underline-offset-2 hover:text-text";
 
-function StoreLink({ href, children }: { href: string; children: string }) {
+function StoreLink({ href, children }: { href: string; children: ReactNode }) {
   return (
     <a href={href} target="_blank" rel="noopener noreferrer" className={linkCls}>
       {children}
@@ -33,16 +34,19 @@ export function MoreChainsLine({ className = "" }: { className?: string }) {
 
   return (
     <p className={`text-tiny text-[#9FB7C2] ${className}`}>
-      Want Base or Polygon too?{" "}
-      {phone === "ios" ? (
-        <StoreLink href={APP_STORE_URL}>Get the HOLD app</StoreLink>
-      ) : phone === "android" ? (
-        <StoreLink href={PLAY_STORE_URL}>Get the HOLD app</StoreLink>
+      {phone === "ios" || phone === "android" ? (
+        <Rich
+          k="shell.moreChains.oneStore"
+          tags={{ link: (c) => <StoreLink href={phone === "ios" ? APP_STORE_URL : PLAY_STORE_URL}>{c}</StoreLink> }}
+        />
       ) : (
-        <>
-          Get the HOLD app on the <StoreLink href={APP_STORE_URL}>App Store</StoreLink> or{" "}
-          <StoreLink href={PLAY_STORE_URL}>Google Play</StoreLink>
-        </>
+        <Rich
+          k="shell.moreChains.bothStores"
+          tags={{
+            appStore: (c) => <StoreLink href={APP_STORE_URL}>{c}</StoreLink>,
+            play: (c) => <StoreLink href={PLAY_STORE_URL}>{c}</StoreLink>,
+          }}
+        />
       )}
     </p>
   );

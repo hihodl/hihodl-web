@@ -20,6 +20,9 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 
+import { useT } from "@/lib/app/i18n/react";
+import { fmtUsd } from "@/lib/app/i18n/format";
+
 import { qrMatrix } from "./qr-matrix";
 import { Ion, type IonName } from "../ion";
 
@@ -52,13 +55,14 @@ export function AppScreen({
   children: ReactNode;
   className?: string;
 }) {
+  const t = useT();
   return (
     <section className={`mx-auto flex w-full max-w-[460px] flex-col text-white ${className}`}>
       {title !== undefined || onBack || right ? (
         <header className="grid h-[42px] grid-cols-[45px_minmax(0,1fr)_45px] items-center">
           <div className="flex items-center">
             {onBack ? (
-              <button type="button" onClick={onBack} aria-label="Back" className="flex h-9 w-9 items-center justify-center rounded-[10px] text-white transition-colors hover:bg-white/[0.06]">
+              <button type="button" onClick={onBack} aria-label={t("common.back")} className="flex h-9 w-9 items-center justify-center rounded-[10px] text-white transition-colors hover:bg-white/[0.06]">
                 <Ion name="chevron-back" size={22} />
               </button>
             ) : null}
@@ -117,7 +121,7 @@ export function ContinueButton({ children, onClick, disabled }: { children: Reac
   );
 }
 
-/** Passkeys' "Add another device": glass plate, amber words. */
+/** The app's secondary button: glass plate, amber words. */
 export function SecondaryButton({
   children,
   icon,
@@ -152,14 +156,13 @@ export function Card({ children, className = "" }: { children: ReactNode; classN
   return <div className={`${cardClass} ${className}`}>{children}</div>;
 }
 
-/** The passkeys / backup section label: 12/700, uppercase, tracked. */
+/** The app's section label: 12/700, uppercase, tracked. */
 export function SectionLabel({ children }: { children: ReactNode }) {
   return <p className="mb-3 px-0.5 text-[12px] font-strong uppercase tracking-[0.6px] text-white/55">{children}</p>;
 }
 
 /**
- * The app's hero card (Passkeys "Protect this device", Backup "Your safety
- * net"): amber-tinted plate, an icon in a 54pt amber disc, a 17/800 title,
+ * The app's hero card (Backup "Your safety net"): amber-tinted plate, an icon in a 54pt amber disc, a 17/800 title,
  * a centred 13/19 line, then whatever it asks the person to do.
  */
 export function HeroCard({ icon, title, children }: { icon: IonName; title: ReactNode; children?: ReactNode }) {
@@ -223,7 +226,7 @@ export function WarningNote({ children }: { children: ReactNode }) {
   );
 }
 
-/** The app's quiet info box (Passkeys, unsupported device). */
+/** The app's quiet info box. */
 export function InfoBox({ icon = "alert-circle-outline", children }: { icon?: IonName; children: ReactNode }) {
   return (
     <div className="flex items-start gap-3 rounded-[12px] bg-white/[0.05] p-4">
@@ -235,9 +238,15 @@ export function InfoBox({ icon = "alert-circle-outline", children }: { icon?: Io
 
 /* ── Dashboard ────────────────────────────────────────────────────── */
 
-/** HeroBalance: "$" + en-US grouping + two decimals, 48/800, line-height 52. */
+/**
+ * HeroBalance: a dollar value in the person's display currency, with the
+ * currency's own decimals ("$1,234.56" in English and dollars), 48/800,
+ * line-height 52. Every caller shows a value the product knows in dollars
+ * (a balance, an activity row's USD value, savings, invest, analytics):
+ * nothing paid goes through here. A component that shows it calls useT().
+ */
 export function money(n: number): string {
-  return "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return fmtUsd(n);
 }
 
 export function HeroBalance({ value, loading }: { value: string | null; loading?: boolean }) {

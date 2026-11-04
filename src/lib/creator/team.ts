@@ -25,6 +25,7 @@
 
 import { spacesPath } from "@/lib/app/paths";
 import type { ProductionView } from "@/lib/creator/listing";
+import { fmtDate, fmtPercent } from "@/lib/app/i18n/format";
 
 /** `manager` sells on the creator's behalf; `rep` turns up and does the thing, and sees no money. */
 export type TeamRole = "manager" | "rep";
@@ -51,6 +52,12 @@ export interface TeamMember {
   creatorHandle?: string | null;
   creatorName?: string | null;
   creatorAvatarUrl?: string | null;
+  /**
+   * The owner's user id, on a seat read from the member's side, once the
+   * backend sends it: the business console acts for that owner with
+   * `?asBusiness=` (business-roles-and-activity-contract.md). Absent today.
+   */
+  ownerUserId?: string | null;
 }
 
 /**
@@ -213,10 +220,9 @@ export function isSeatCode(v: string | null | undefined): v is string {
 
 /* ── Shares ───────────────────────────────────────────────────────── */
 
-/** "12.5%" for 1,250 basis points, the way `shareText` on the server prints it. */
+/** "12.5%" for 1,250 basis points, as the person's language writes a percentage. */
 export function shareText(bps: number): string {
-  const pct = bps / 100;
-  return `${Number.isInteger(pct) ? pct : pct.toFixed(2).replace(/0+$/, "").replace(/\.$/, "")}%`;
+  return fmtPercent(bps / 10_000);
 }
 
 /**
@@ -233,7 +239,9 @@ export function bpsFromPercent(typed: string): number | null {
 
 /** Basis points back into the box, without trailing zeros. */
 export function percentFromBps(bps: number): string {
-  return shareText(bps).replace(/%$/, "");
+  // What goes back into the input: plain digits and a dot, which bpsFromPercent reads.
+  const pct = bps / 100;
+  return `${Number.isInteger(pct) ? pct : pct.toFixed(2).replace(/0+$/, "").replace(/\.$/, "")}`;
 }
 
 /**
@@ -338,7 +346,7 @@ export function dayText(iso: string | null | undefined): string {
   if (!iso) return "";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  return fmtDate(d, { day: "numeric", month: "short", year: "numeric" });
 }
 
 /* ── An invitation waiting for a sign-in ──────────────────────────── */

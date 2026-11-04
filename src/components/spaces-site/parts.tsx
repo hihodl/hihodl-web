@@ -133,10 +133,31 @@ export function SpacesPhotoHero({
   titleMuted?: ReactNode;
   lead: ReactNode;
   actions: ReactNode;
-  photo: { wide: string; square: string; alt: string };
+  photo: { wide: string; square: string; ambient?: string; alt: string };
 }) {
   return (
     <section className="relative overflow-hidden bg-[#0a1929]">
+      {/* Wide screens: the band is wider than the photo can cover without
+          cutting her head and feet, and the margin left of the text was a flat
+          block of navy. The same terminal, mirrored and blurred to light, fills
+          it, and fades to solid navy before the text column begins. */}
+      {photo.ambient ? (
+        <>
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 hidden bg-cover bg-center opacity-70 lg:block"
+            style={{ backgroundImage: `url(${photo.ambient})` }}
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 hidden lg:block"
+            style={{
+              background:
+                "linear-gradient(90deg, rgba(10,25,41,0.35) 0%, rgba(10,25,41,0.7) max(0px, calc(50% - 900px)), #0a1929 max(0px, calc(50% - 620px)))",
+            }}
+          />
+        </>
+      ) : null}
       {/* From lg the photo starts at the middle of the band, never before
           660px: the text column is at most 560px from the content's edge, so
           the copy never runs onto the picture at any width. */}

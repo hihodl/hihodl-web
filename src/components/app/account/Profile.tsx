@@ -15,45 +15,53 @@
  * creator's public pages print it, and it sits on the avatar screen.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CreatorApiError, describeCreatorError } from "@/lib/creator/api";
+import { t as tr, type MessageKey } from "@/lib/app/i18n";
+import { fmtDate } from "@/lib/app/i18n/format";
+import { useT } from "@/lib/app/i18n/react";
 import {
   checkUsername,
   chosenUsername,
   cleanUsername,
   cropToJpeg,
+  describeProfileError,
   loadImage,
   removeAvatar,
   updateMe,
   uploadAvatar,
   type CropRect,
+  type Me,
+  type ProfileVisibility,
   type UsernameVerdict,
 } from "@/lib/app/me";
 import { useMe, useRefresh } from "@/lib/app/spaces-data";
 
-import { Avatar } from "../front/kit";
+import { DEFAULT_AVATAR_EMOJI, EmojiAvatar } from "../front/kit";
 import { BackHeader, Column, ctaCommit, HoldCard, holdCard, MenuRow, Notice, SectionTitle } from "../hold";
-import { Ion } from "../ion";
+import { Ion, type IonName } from "../ion";
+import { Sheet } from "../payments/group-kit";
 import { useShell } from "../Shell";
 import { Skeleton } from "../ui";
 import { AvatarCropper } from "./AvatarCropper";
 import { UserAvatar } from "./UserAvatar";
 
 function dayText(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "long" });
+  return fmtDate(iso, { day: "numeric", month: "long" });
 }
 
 /** The hub's hero: the avatar, big and centred (tap to edit), and the @handle under it. */
 export function ProfileHero({ onAvatar }: { onAvatar: () => void }) {
   const me = useMe();
+  const t = useT();
   if (!me.data) {
     return me.error ? <Notice>{describeCreatorError(me.error)}</Notice> : <Skeleton className="mb-6 h-[190px] rounded-[28px]" />;
   }
   const username = chosenUsername(me.data);
   return (
     <HoldCard className="mb-6 flex flex-col items-center px-[18px] py-[22px]">
-      <button type="button" onClick={onAvatar} aria-label="Edit avatar" className="mb-3 rounded-[48px] transition-opacity hover:opacity-90">
+      <button type="button" onClick={onAvatar} aria-label={t("account.profile.editAvatar")} className="mb-3 rounded-[48px] transition-opacity hover:opacity-90">
         <UserAvatar size={96} round fallbackName={username ? `@${username}` : me.data.profile.displayName} />
       </button>
       <p className="max-w-full truncate text-[20px] font-strong tracking-[0.1px] text-white">{username ? `@${username}` : "@—"}</p>
@@ -64,7 +72,7 @@ export function ProfileHero({ onAvatar }: { onAvatar: () => void }) {
 
 /* ── Avatar and name (AvatarSheet) ────────────────────────────────── */
 
-export function ProfileEdit({ onBack }: { onBack: () => void }) {
+export function ProfileEdit({ onBack, onEmoji }: { onBack: () => void; onEmoji: () => void }) {
   const me = useMe();
   const { session } = useShell();
   const refresh = useRefresh();
@@ -77,6 +85,7 @@ export function ProfileEdit({ onBack }: { onBack: () => void }) {
   const [notice, setNotice] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const input = useRef<HTMLInputElement>(null);
+  const t = useT();
 
   // Filled once the profile is read; typing is never overwritten by a re-read.
   const filled = useRef(false);
@@ -89,13 +98,12 @@ export function ProfileEdit({ onBack }: { onBack: () => void }) {
   if (!m) {
     return (
       <Column>
-        <BackHeader title="Avatar" onBack={onBack} />
+        <BackHeader title={t("account.profile.avatarTitle")} onBack={onBack} />
         <Skeleton className="h-[320px] rounded-[28px]" />
       </Column>
     );
   }
   const uid = m.supabaseUid ?? session.user.id;
-  const current = chosenUsername(m);
 
   const nameChanged = name.trim() !== (m.profile.displayName ?? "") && name.trim() !== "";
 
@@ -124,7 +132,7 @@ export function ProfileEdit({ onBack }: { onBack: () => void }) {
     try {
       setPicked(await loadImage(f));
     } catch {
-      setNotice("That file is not an image we can read. Try a JPEG or a PNG.");
+      setNotice(t("account.profile.notImage"));
     }
   };
 
@@ -137,7 +145,7 @@ export function ProfileEdit({ onBack }: { onBack: () => void }) {
       await refresh("me");
       setPicked(null);
     } catch (e) {
-      setNotice(e instanceof CreatorApiError ? describeCreatorError(e) : "Couldn't save that photo. Try again, or pick a different image.");
+      setNotice(e instanceof CreatorApiError ? describeCreatorError(e) : t("account.profile.photoFailed"));
     } finally {
       setBusy(null);
     }
@@ -156,10 +164,11 @@ export function ProfileEdit({ onBack }: { onBack: () => void }) {
     }
   };
 
-  const shownName = name.trim() || (current ? `@${current}` : "?");
+  // An API that predates the emoji avatar sends no `avatarEmoji` key at all.
+  const emojiSupported = "avatarEmoji" in m.profile;
   return (
     <Column>
-      <BackHeader title="Avatar" onBack={onBack} />
+      <BackHeader title={t("account.profile.avatarTitle")} onBack={onBack} />
 
       {picked ? (
         <AvatarCropper
@@ -173,22 +182,23 @@ export function ProfileEdit({ onBack }: { onBack: () => void }) {
         />
       ) : (
         <>
-          <p className="mb-5 text-center text-[13px] text-[#9FB7C2]">Pick how your avatar should look.</p>
+          <p className="mb-5 text-center text-[13px] text-[#9FB7C2]">{t("account.profile.pickHow")}</p>
 
           <div className="mb-6 flex justify-center">
-            <Avatar src={m.profile.avatarUrl} name={shownName} size={96} round />
+            <UserAvatar size={96} round />
           </div>
 
           <HoldCard>
             <MenuRow
               icon="image-outline"
-              label="Choose from library"
-              sub="Pick a photo, then choose the part that shows."
+              label={t("account.profile.library")}
+              sub={t("account.profile.librarySub")}
               disabled={busy !== null}
               onClick={() => input.current?.click()}
             />
+            {emojiSupported ? <MenuRow icon="happy-outline" label={t("account.profile.pickEmoji")} sub={t("account.profile.pickEmojiSub")} disabled={busy !== null} onClick={onEmoji} /> : null}
             {m.profile.avatarUrl ? (
-              <MenuRow icon="trash-outline" label="Remove photo" sub="Go back to your initial." disabled={busy !== null} onClick={() => void clearPhoto()} />
+              <MenuRow icon="trash-outline" label={t("account.profile.removePhoto")} sub={t("account.profile.removePhotoSub")} disabled={busy !== null} onClick={() => void clearPhoto()} />
             ) : null}
           </HoldCard>
         </>
@@ -204,16 +214,16 @@ export function ProfileEdit({ onBack }: { onBack: () => void }) {
         }}
       />
 
-      <SectionTitle>Display name</SectionTitle>
+      <SectionTitle>{t("account.home.displayName")}</SectionTitle>
       <HoldCard className="px-[18px] py-3">
         <label htmlFor="acc-name" className="sr-only">
-          Display name
+          {t("account.home.displayName")}
         </label>
         <input
           id="acc-name"
           className="h-11 w-full bg-transparent text-[16px] text-white outline-none placeholder:text-white/40"
           maxLength={60}
-          placeholder="Your name"
+          placeholder={t("account.profile.namePlaceholder")}
           value={name}
           onChange={(e) => {
             setName(e.target.value);
@@ -222,7 +232,7 @@ export function ProfileEdit({ onBack }: { onBack: () => void }) {
           disabled={busy !== null}
         />
       </HoldCard>
-      <p className="mt-2 px-1 text-[12px] text-[#9FB7C2]">Shown on your public pages, next to your @.</p>
+      <p className="mt-2 px-1 text-[12px] text-[#9FB7C2]">{t("account.profile.nameHint")}</p>
 
       {notice ? (
         <div className="mt-4">
@@ -231,10 +241,242 @@ export function ProfileEdit({ onBack }: { onBack: () => void }) {
       ) : null}
       <div className="mt-6">
         <button type="button" className={ctaCommit} disabled={!nameChanged || busy !== null} onClick={() => void save()}>
-          {busy === "save" ? "Saving…" : saved ? "Saved" : "Save"}
+          {busy === "save" ? t("common.saving") : saved ? t("common.saved") : t("common.save")}
         </button>
       </div>
     </Column>
+  );
+}
+
+/* ── Emoji and visibility: saved at once, put back if HOLD refuses ── */
+
+type ProfileChoice = Partial<Pick<Me["profile"], "avatarEmoji" | "profileVisibility">>;
+
+/**
+ * Save one choice the way the app does (tap and it applies), but honestly:
+ * the /me cache shows the choice at once, is put back as it was if PATCH /me
+ * refuses, and is read again after a success so every face (UserAvatar, the
+ * sign-in door's remembered face, group lists) follows.
+ */
+function useSaveProfileChoice(): (patch: ProfileChoice) => Promise<void> {
+  const me = useMe();
+  const refresh = useRefresh();
+  const { data, mutate } = me;
+  return useCallback(
+    async (patch: ProfileChoice) => {
+      if (!data) return;
+      const before: Me = data;
+      await mutate({ ...before, profile: { ...before.profile, ...patch } }, { revalidate: false });
+      try {
+        await updateMe({ avatarEmoji: patch.avatarEmoji, profileVisibility: patch.profileVisibility ?? undefined });
+      } catch (e) {
+        await mutate(before, { revalidate: false });
+        throw e;
+      }
+      await refresh("me");
+    },
+    [data, mutate, refresh],
+  );
+}
+
+/** profile/avatar-emoji.tsx's set, in its order. */
+const AVATAR_EMOJIS: readonly string[] = [
+  "🚀", "🔥", "🔒", "🔮", "🖼️", "💯", "🔌", "⛓️", "🌙", "👻",
+  "👾", "🤖", "😎", "💎", "🙌", "🧠", "📱", "🤑", "🪙", "🧭",
+  "🏴‍☠️", "🛡️", "⚡️", "🌐", "🦊", "🐼", "🐳", "🦄", "🐵", "🐉",
+  "🐯", "🐻", "🦁", "🕊️", "🌈", "🌋", "🌊", "🌪️", "🌟", "✨",
+  "🛰️", "🪐", "🌌", "🗝️",
+];
+
+/** The app's keyword search: a hit moves to the front, the rest of the grid stays. */
+const EMOJI_KEYWORDS: Record<string, readonly string[]> = {
+  rocket: ["🚀"],
+  fire: ["🔥"],
+  lock: ["🔒"],
+  crystal: ["🔮"],
+  diamond: ["💎"],
+  moon: ["🌙"],
+  ghost: ["👻"],
+  robot: ["🤖"],
+  fox: ["🦊"],
+  coin: ["🪙"],
+  brain: ["🧠"],
+  phone: ["📱"],
+  star: ["🌟", "✨"],
+  wave: ["🌊"],
+};
+
+/** profile/avatar-emoji.tsx: the preview, the search, the grid. A tap saves and goes back. */
+export function EmojiScreen({ onBack }: { onBack: () => void }) {
+  const me = useMe();
+  const save = useSaveProfileChoice();
+  const [search, setSearch] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const t = useT();
+  const m = me.data;
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return AVATAR_EMOJIS;
+    return Array.from(new Set([...(EMOJI_KEYWORDS[q] ?? []), ...AVATAR_EMOJIS]));
+  }, [search]);
+
+  if (!m) {
+    return (
+      <Column>
+        <BackHeader title={t("account.profile.pickEmoji")} onBack={onBack} />
+        {me.error ? <Notice>{describeCreatorError(me.error)}</Notice> : <Skeleton className="h-[320px] rounded-[28px]" />}
+      </Column>
+    );
+  }
+  if (!("avatarEmoji" in m.profile)) {
+    return (
+      <Column>
+        <BackHeader title={t("account.profile.pickEmoji")} onBack={onBack} />
+        <Notice tone="calm">{t("account.emoji.unavailable")}</Notice>
+      </Column>
+    );
+  }
+  const current = m.profile.avatarEmoji?.trim() || DEFAULT_AVATAR_EMOJI;
+
+  const pick = async (emoji: string) => {
+    if (busy) return;
+    if (emoji === current) return onBack();
+    setBusy(true);
+    setNotice(null);
+    try {
+      await save({ avatarEmoji: emoji });
+      onBack();
+    } catch (e) {
+      setNotice(describeProfileError(e, describeCreatorError));
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Column>
+      <BackHeader title={t("account.profile.pickEmoji")} onBack={onBack} />
+      <div className="mb-4 mt-1 flex justify-center">
+        <EmojiAvatar emoji={current} size={96} />
+      </div>
+      {m.profile.avatarUrl ? <p className="mb-4 text-center text-[13px] text-[#9FB7C2]">{t("account.emoji.photoNote")}</p> : null}
+
+      <label className="mb-2 flex items-center rounded-[16px] border border-white/[0.08] bg-white/[0.06] px-3.5 py-3">
+        <Ion name="search" size={16} className="mr-2 shrink-0 text-white/65" />
+        <span className="sr-only">{t("account.emoji.searchLabel")}</span>
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={t("account.emoji.placeholder")}
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          className="min-w-0 flex-1 bg-transparent text-[14px] text-white outline-none placeholder:text-white/65"
+        />
+      </label>
+
+      {notice ? (
+        <div className="mb-2">
+          <Notice>{notice}</Notice>
+        </div>
+      ) : null}
+
+      <div role="listbox" aria-label={t("account.emoji.gridLabel")} aria-busy={busy} className="grid grid-cols-6 gap-1.5">
+        {filtered.map((e) => {
+          const selected = e === current;
+          return (
+            <button
+              key={e}
+              type="button"
+              role="option"
+              aria-selected={selected}
+              aria-label={t("account.emoji.select", { emoji: e })}
+              disabled={busy}
+              onClick={() => void pick(e)}
+              className={`flex aspect-square items-center justify-center rounded-[14px] border text-[28px] transition-colors disabled:cursor-wait ${
+                selected ? "border-[rgba(255,183,3,0.45)] bg-[rgba(255,183,3,0.12)]" : "border-transparent bg-white/[0.03] hover:bg-white/[0.08]"
+              }`}
+            >
+              {e}
+            </button>
+          );
+        })}
+      </div>
+    </Column>
+  );
+}
+
+/** The row's value on the Profile hub. */
+export function visibilityLabel(v: ProfileVisibility | null | undefined): string {
+  return v === "private" ? tr("account.visibility.private") : v === "invisible" ? tr("account.visibility.invisible") : tr("account.visibility.public");
+}
+
+const VISIBILITY_OPTIONS: { id: ProfileVisibility; icon: IonName; title: MessageKey; body: MessageKey }[] = [
+  { id: "public", icon: "globe-outline", title: "account.visibility.public", body: "account.visibility.publicBody" },
+  { id: "private", icon: "shield-outline", title: "account.visibility.private", body: "account.visibility.privateBody" },
+  { id: "invisible", icon: "eye-off-outline", title: "account.visibility.invisible", body: "account.visibility.invisibleBody" },
+];
+
+/** profile/_components/VisibilitySheet.tsx: three rows, a tap saves and closes. */
+export function VisibilitySheet({ onClose }: { onClose: () => void }) {
+  const me = useMe();
+  const save = useSaveProfileChoice();
+  const [busy, setBusy] = useState<ProfileVisibility | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const t = useT();
+  const current: ProfileVisibility = me.data?.profile.profileVisibility ?? "public";
+
+  const choose = async (id: ProfileVisibility) => {
+    if (busy) return;
+    if (id === current) return onClose();
+    setBusy(id);
+    setNotice(null);
+    try {
+      await save({ profileVisibility: id });
+      onClose();
+    } catch (e) {
+      setNotice(describeProfileError(e, describeCreatorError));
+      setBusy(null);
+    }
+  };
+
+  return (
+    <Sheet title={t("account.home.visibility")} onClose={onClose} busy={busy !== null} wide>
+      <p className="text-[14px] leading-5 text-white/65">{t("account.visibility.intro")}</p>
+      {notice ? <Notice>{notice}</Notice> : null}
+      <div role="radiogroup" aria-label={t("account.home.visibility")} className="flex flex-col gap-3">
+        {VISIBILITY_OPTIONS.map((opt) => {
+          const selected = current === opt.id;
+          return (
+            <button
+              key={opt.id}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              disabled={busy !== null}
+              onClick={() => void choose(opt.id)}
+              className={`flex items-start gap-3.5 rounded-[16px] border px-4 py-[18px] text-left transition-colors disabled:cursor-wait ${
+                selected ? "border-[rgba(255,183,3,0.28)] bg-[rgba(255,183,3,0.06)]" : "border-white/[0.08] bg-white/[0.06] hover:bg-white/10"
+              }`}
+            >
+              <span className={`mt-px flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] ${selected ? "bg-[rgba(255,183,3,0.12)] text-[#FFB703]" : "bg-[rgba(143,211,227,0.10)] text-[#8FD3E3]"}`}>
+                <Ion name={opt.icon} size={20} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[16px] font-bold text-white">{t(opt.title)}</span>
+                <span className="mt-[5px] block text-[14px] leading-5 text-white/65">{t(opt.body)}</span>
+              </span>
+              {busy === opt.id ? (
+                <span className="mt-0.5 h-5 w-5 shrink-0 animate-spin rounded-[10px] border-2 border-white/30 border-t-white/80" aria-hidden />
+              ) : (
+                <Ion name={selected ? "radio-button-on" : "radio-button-off"} size={20} className={`mt-0.5 shrink-0 ${selected ? "text-[#FFB703]" : "text-white/45"}`} />
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </Sheet>
   );
 }
 
@@ -255,6 +497,7 @@ export function UsernameScreen({ onBack }: { onBack: () => void }) {
   const [notice, setNotice] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const asked = useRef("");
+  const t = useT();
 
   const filled = useRef(false);
   useEffect(() => {
@@ -294,7 +537,7 @@ export function UsernameScreen({ onBack }: { onBack: () => void }) {
       onBack();
     } catch (e) {
       if (e instanceof CreatorApiError && e.code === "CONFLICT") setVerdict("taken");
-      else if (e instanceof CreatorApiError && e.code === "RATE_LIMIT_EXCEEDED") setNotice(e.serverMessage ?? "You can only change your username once every 14 days.");
+      else if (e instanceof CreatorApiError && e.code === "RATE_LIMIT_EXCEEDED") setNotice(e.serverMessage ?? t("account.username.limit"));
       else setNotice(describeCreatorError(e));
       setConfirm(false);
     } finally {
@@ -305,27 +548,27 @@ export function UsernameScreen({ onBack }: { onBack: () => void }) {
   // handle.tsx's status pill: neutral while checking, green when free, orange when not. Never red.
   const pill =
     !changed || !verdict || verdict === "own" ? null : verdict === "checking" ? (
-      <StatusPill tone="neutral">Checking…</StatusPill>
+      <StatusPill tone="neutral">{t("account.username.checking")}</StatusPill>
     ) : verdict === "available" ? (
-      <StatusPill tone="good">Username is available</StatusPill>
+      <StatusPill tone="good">{t("account.username.available")}</StatusPill>
     ) : verdict === "error" ? (
-      <StatusPill tone="warn">We could not check that right now.</StatusPill>
+      <StatusPill tone="warn">{t("account.username.checkFailed")}</StatusPill>
     ) : verdict === "invalid" ? (
-      <StatusPill tone="warn">3 or more letters, numbers, _ . or -</StatusPill>
+      <StatusPill tone="warn">{t("account.username.rule")}</StatusPill>
     ) : (
-      <StatusPill tone="warn">Username is not available</StatusPill>
+      <StatusPill tone="warn">{t("account.username.notAvailable")}</StatusPill>
     );
 
   return (
     <Column>
-      <BackHeader title="Username" onBack={onBack} />
+      <BackHeader title={t("account.home.username")} onBack={onBack} />
       {!m ? (
         <Skeleton className="h-40 rounded-[28px]" />
       ) : (
         <div className="flex flex-col items-center px-6 pt-4">
-          <p className="mb-3 text-center text-[15px] font-medium text-[#9FB7C2]">Choose your handle</p>
+          <p className="mb-3 text-center text-[15px] font-medium text-[#9FB7C2]">{t("account.username.choose")}</p>
           <label htmlFor="acc-username" className="sr-only">
-            Username
+            {t("account.home.username")}
           </label>
           <input
             id="acc-username"
@@ -341,12 +584,12 @@ export function UsernameScreen({ onBack }: { onBack: () => void }) {
           />
           {locked ? (
             <p className="mt-5 text-center text-[12px] font-medium text-[#9FB7C2]">
-              You can only change your username once every 14 days. Next change: {dayText(changeableAt ?? "")}.
+              {t("account.username.locked", { date: dayText(changeableAt ?? "") })}
             </p>
           ) : pill ? (
             <div className="mt-5">{pill}</div>
           ) : (
-            <p className="mt-5 text-center text-[12px] font-medium text-[#9FB7C2]">3 or more letters, numbers, _ . or -</p>
+            <p className="mt-5 text-center text-[12px] font-medium text-[#9FB7C2]">{t("account.username.rule")}</p>
           )}
           <p className="mt-3.5 text-[12px] font-medium text-[#9FB7C2]">{username.length}/50</p>
         </div>
@@ -360,19 +603,19 @@ export function UsernameScreen({ onBack }: { onBack: () => void }) {
 
       {confirm ? (
         <div className={`${holdCard} mt-8 flex flex-col gap-3 p-5`}>
-          <p className="text-[17px] font-strong text-white">Change username?</p>
-          <p className="text-[14px] leading-5 text-white/[0.72]">If you change your username now, you won&apos;t be able to change it again for 14 days.</p>
+          <p className="text-[17px] font-strong text-white">{t("account.username.confirmTitle")}</p>
+          <p className="text-[14px] leading-5 text-white/[0.72]">{t("account.username.confirmBody")}</p>
           <button type="button" className={ctaCommit} disabled={busy} onClick={() => void save()}>
-            {busy ? "Saving…" : "Change"}
+            {busy ? t("common.saving") : t("account.username.change")}
           </button>
           <button type="button" className="h-11 text-[15px] font-strong text-white/80 hover:text-white" disabled={busy} onClick={() => setConfirm(false)}>
-            Cancel
+            {t("common.cancel")}
           </button>
         </div>
       ) : (
         <div className="mt-10">
           <button type="button" className={ctaCommit} disabled={!canContinue} onClick={() => setConfirm(true)}>
-            Continue
+            {t("common.continue")}
           </button>
         </div>
       )}

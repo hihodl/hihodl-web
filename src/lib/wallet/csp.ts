@@ -28,7 +28,8 @@ function originOf(url: string | undefined): string | null {
  * on app.hihodl.xyz, `/app/wallet` elsewhere)?
  *
  * Not only the Wallet. Every page that decrypts the seed to sign counts:
- * - `/welcome`: its last step can create the wallet.
+ * - `/welcome`: its link step can open an older web wallet's secret to seal
+ *   it to the phone (no wallet is made there any more).
  * - `/travel/stay/<id>/book`: paying for a stay (lib/app/stay-payment.ts).
  * - `/spaces/board`, `/spaces/bought`, `/payments`: buying a spot
  *   (lib/app/sponsor.ts `payForSpot`, from SponsorFlow; Payments opens it from

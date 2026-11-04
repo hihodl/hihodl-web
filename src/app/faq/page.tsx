@@ -15,8 +15,10 @@ export const metadata: Metadata = {
  * then one question per product, then the money-is-safe questions, then price,
  * then the long tail.
  *
- * Every number here has to match src/lib/rates.config.ts and the plan cards on
- * the homepage. This list quoted Pro at "$2,000/month gas-free and 0.15% above
+ * Every number here has to match src/lib/rates.config.ts and the plan card on
+ * the homepage. There is one plan: the paid plan does not launch now
+ * (24-sep-2026), so no answer here offers, prices or promises it. This list
+ * quoted a paid plan at "$2,000/month gas-free and 0.15% above
  * the cap" until 16-aug-2026 — a plan that has never existed in code, on the
  * same site as a plan card saying no cap and no markup. A FAQ that contradicts
  * the pricing section costs more trust than the FAQ ever earned.
@@ -40,7 +42,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "What are HiPoints and what can I spend them on?",
-    a: "HiPoints are earned inside the app: referrals that activate, challenges, and fees you would otherwise have paid. They are spent on things that cost real money — a hotel booking made in the app, or your Pro subscription. A point is worth the same wherever you spend it; we do not vary the rate by product.",
+    a: "HiPoints are earned inside the app: referrals that activate, challenges, and fees you would otherwise have paid. They are spent on things that cost real money, such as a hotel booking made in the app. A point is worth the same wherever you spend it; we do not vary the rate by product.",
   },
   {
     q: "Can I book travel with HOLD?",
@@ -52,7 +54,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "How much does HOLD cost?",
-    a: "Free is $0/month. On the first $500 you convert each month we cover the network fee for you, up to $0.10 per conversion — if the network is congested and the real cost is higher, you pay only the excess. Above $500/month, 0.50% all-in on the excess. Pro is $9.99/month: the network fee is covered with no monthly cap and there is no markup at any volume. Both plans have a $2 minimum conversion. Savings and Benefits are on both plans.",
+    a: "Free is $0/month. On the first $500 you convert each month we cover the network fee for you, up to $0.10 per conversion — if the network is congested and the real cost is higher, you pay only the excess. Above $500/month, 0.50% all-in on the excess. There is a $2 minimum conversion. Savings and Benefits are included.",
   },
   {
     q: "What chains does HOLD support?",
@@ -72,7 +74,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "What is HUSD?",
-    a: "HUSD is HOLD's native stablecoin, designed for people who earn in one country and live in another. Launching in 2027. Newsletter subscribers and Pro users get priority access.",
+    a: "HUSD is HOLD's native stablecoin, designed for people who earn in one country and live in another. Launching in 2027. Newsletter subscribers get priority access.",
   },
   {
     q: "Does HOLD have an AI assistant?",
@@ -92,11 +94,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "What are pockets?",
-    a: "Pockets let you split one balance into labelled buckets — Travel, Rent, whatever your month looks like — without juggling several accounts. Free includes 3 pockets; Pro includes unlimited.",
-  },
-  {
-    q: "Who can see what I earn?",
-    a: "Nobody but you. On Pro, each payment you receive arrives at a freshly derived address, so a client who paid you once cannot go back and watch what you earned afterwards, and no one can add your income up into a single figure. You see one balance and one clean list. You can reveal it selectively when you actually need to — taxes, an audit, your own records. Automatic address rotation is a Pro feature; a Free account receives at a single address.",
+    a: "Pockets let you split one balance into labelled buckets — Travel, Rent, whatever your month looks like — without juggling several accounts. Every account includes 3 pockets.",
   },
   {
     q: "Can I send money by username?",

@@ -2,7 +2,7 @@
  * The product's navigation, on two levels, like the app.
  *
  * MAIN is HOLD itself — Home, Invest, Analytics, Payments, Benefits and the products
- * under it (Stays, eSIM, Spaces) — and Menu at the foot, which holds the
+ * under it (Stays, eSIM, Spaces, Partners) — and Menu at the foot, which holds the
  * person, Settings, Security, recovery, help, the wallet and signing out.
  *
  * THE COLUMN LISTS PLACES, AND A PLACE IS SOMEWHERE HOME CANNOT ALREADY TAKE
@@ -27,6 +27,7 @@
 
 import type { ComponentType, SVGProps } from "react";
 
+import { t, type MessageKey } from "@/lib/app/i18n";
 import type { ShellRole } from "@/lib/app/spaces-model";
 
 import {
@@ -34,6 +35,8 @@ import {
   IconActivity,
   IconAdd,
   IconBed,
+  IconBriefs,
+  IconBusiness,
   IconDeliveries,
   IconGift,
   IconHome,
@@ -74,13 +77,16 @@ export type NavKey =
   | "stays"
   | "esim"
   | "spaces"
+  | "partners"
   | "account"
   // Spaces
   | "overview"
   | "listings"
   | "offers"
+  | "briefs"
   | "sales"
   | "deliveries"
+  | "business"
   | "team"
   | "crew"
   | "inspire"
@@ -93,7 +99,8 @@ export type Level = "main" | "spaces";
 
 export interface NavItem {
   key: NavKey;
-  label: string;
+  /** Its name, as a message key: resolved at render with navLabel (never at module load). */
+  labelKey: MessageKey;
   /** Relative to the product: "" is Home, "/spaces" is Spaces' home. */
   path: string;
   icon: ComponentType<SVGProps<SVGSVGElement>>;
@@ -105,8 +112,19 @@ export interface NavItem {
 }
 
 export interface NavGroup {
-  title: string | null;
+  /** The group's heading, as a message key: resolved at render with navGroupTitle. */
+  titleKey: MessageKey | null;
   items: readonly NavItem[];
+}
+
+/** An entry's name, in the person's language. Call at render. */
+export function navLabel(item: Pick<NavItem, "labelKey">): string {
+  return t(item.labelKey);
+}
+
+/** A group's heading in the person's language, or null for the untitled group. Call at render. */
+export function navGroupTitle(group: Pick<NavGroup, "titleKey">): string | null {
+  return group.titleKey ? t(group.titleKey) : null;
 }
 
 const ALL: readonly ShellRole[] = ["creator", "manager", "rep"];
@@ -115,21 +133,23 @@ const ALL: readonly ShellRole[] = ["creator", "manager", "rep"];
 
 export const MAIN_GROUPS: readonly NavGroup[] = [
   {
-    title: null,
+    titleKey: null,
     items: [
-      { key: "home", label: "Home", path: "", icon: IconHome, keywords: "home dashboard balance summary pockets accounts savings earn move" },
-      { key: "invest", label: "Invest", path: "/invest", icon: IconInvest, keywords: "portfolio holdings tokens coins performance profit loss" },
+      { key: "home", labelKey: "shell.nav.home", path: "", icon: IconHome, keywords: "home dashboard balance summary pockets accounts savings earn move" },
+      { key: "invest", labelKey: "shell.nav.invest", path: "/invest", icon: IconInvest, keywords: "portfolio holdings tokens coins performance profit loss" },
       // Analytics has its own line, right under Invest. In the app it is the
       // round disc beside Search on Home, and the phone web draws that disc
       // too; but a wide screen has no such header, so without this line the
       // desktop had no door into it at all.
-      { key: "analytics", label: "Analytics", path: "/analytics", icon: IconInsights, keywords: "spending analytics spent income cashflow net saved categories budgets month recurring subscriptions where my money goes" },
-      { key: "payments", label: "Payments", path: "/payments", icon: IconPayments, keywords: "sent received requests scheduled transactions history payouts pay links chat messages" },
-      { key: "benefits", label: "Benefits", path: "/benefits", icon: IconGift, keywords: "products rewards points" },
+      { key: "analytics", labelKey: "shell.nav.analytics", path: "/analytics", icon: IconInsights, keywords: "spending analytics spent income cashflow net saved categories budgets month recurring subscriptions where my money goes" },
+      { key: "payments", labelKey: "shell.nav.payments", path: "/payments", icon: IconPayments, keywords: "sent received requests scheduled transactions history payouts pay links chat messages" },
+      { key: "benefits", labelKey: "shell.nav.benefits", path: "/benefits", icon: IconGift, keywords: "products rewards points" },
       // The app's Benefits products, in the app's order (benefits/index.tsx productTiles).
-      { key: "stays", label: "Stays", path: "/travel", icon: IconBed, keywords: "travel hotels hi travel", child: true },
-      { key: "esim", label: "eSIM", path: "/esim", icon: IconSim, keywords: "data roaming abroad", child: true },
-      { key: "spaces", label: "Spaces", path: "/spaces", icon: IconMegaphone, keywords: "sponsors listings creator ad space", child: true },
+      { key: "stays", labelKey: "shell.nav.stays", path: "/travel", icon: IconBed, keywords: "travel hotels hi travel", child: true },
+      { key: "esim", labelKey: "shell.nav.esim", path: "/esim", icon: IconSim, keywords: "data roaming abroad", child: true },
+      { key: "spaces", labelKey: "shell.nav.spaces", path: "/spaces", icon: IconMegaphone, keywords: "sponsors listings creator ad space", child: true },
+      // HOLD Partners: agencies, creators and organisers who bring travellers and earn on their bookings.
+      { key: "partners", labelKey: "shell.nav.partners", path: "/partners", icon: IconCrew, keywords: "partners agency travel agency group trips organiser commission earn affiliate link qr deposits payouts", child: true },
     ],
   },
 ];
@@ -137,7 +157,7 @@ export const MAIN_GROUPS: readonly NavGroup[] = [
 export const MAIN_FOOT: readonly NavItem[] = [
   {
     key: "menu",
-    label: "Menu",
+    labelKey: "shell.nav.menu",
     path: "/menu",
     icon: IconMenuDots,
     keywords: "account profile settings security account recovery sign-in help about statements plan invite friends sign out log out",
@@ -162,30 +182,44 @@ export const MAIN_FOOT: readonly NavItem[] = [
  * Account recovery already are, which is the Menu, not beside the balance.
  */
 export const MAIN_HIDDEN: readonly NavItem[] = [
-  { key: "account", label: "Account", path: "/account", icon: IconAccount, keywords: "profile photo name username email x twitter payout wallet address" },
-  { key: "wallet", label: "Wallet", path: "/wallet", icon: IconWallet, keywords: "solana usdc address receive passkey recovery phrase words export balance withdraw" },
+  { key: "account", labelKey: "shell.nav.account", path: "/account", icon: IconAccount, keywords: "profile photo name username email x twitter payout wallet address" },
+  { key: "wallet", labelKey: "shell.nav.wallet", path: "/wallet", icon: IconWallet, keywords: "solana usdc address receive balance withdraw" },
   // Savings is a SCOPE of Home, not a place: /savings opens Home on that pill.
-  { key: "savings", label: "Savings", path: "/savings", icon: IconSavings, keywords: "savings pockets goals yield interest apy earn aave kamino ways to earn" },
+  { key: "savings", labelKey: "shell.nav.savings", path: "/savings", icon: IconSavings, keywords: "savings pockets goals yield interest apy earn aave kamino ways to earn" },
   // Activity is Home's own card, opened in full: its "See all" pill goes here.
-  { key: "activity", label: "Activity", path: "/activity", icon: IconActivity, keywords: "activity history everything that moved transactions receipts" },
-  { key: "add", label: "Add money", path: "/add", icon: IconAdd, keywords: "receive crypto qr code address deposit top up add cash bank transfer" },
+  { key: "activity", labelKey: "shell.nav.activity", path: "/activity", icon: IconActivity, keywords: "activity history everything that moved transactions receipts" },
+  { key: "add", labelKey: "shell.nav.addMoney", path: "/add", icon: IconAdd, keywords: "receive crypto qr code address deposit top up add cash bank transfer" },
   // Groups are a chip on Payments, as in the app; listed here so ⌘K finds them.
-  { key: "groups", label: "Groups", path: "/payments/groups", icon: IconTeam, keywords: "groups split expenses bills share costs settle up owe owed trip flatmates crew chat" },
+  { key: "groups", labelKey: "shell.nav.groups", path: "/payments/groups", icon: IconTeam, keywords: "groups split expenses bills share costs settle up owe owed trip flatmates crew chat" },
   // The app's pay links live behind a tile on Add money, not in a menu either.
-  { key: "pay-links", label: "Pay links", path: "/pay-links", icon: IconPayments, keywords: "pay link get paid by anyone from any wallet usdc invoice charge someone without hold" },
+  { key: "pay-links", labelKey: "shell.nav.payLinks", path: "/pay-links", icon: IconPayments, keywords: "pay link get paid by anyone from any wallet usdc invoice charge someone without hold" },
 ];
 
 /* ── Spaces ───────────────────────────────────────────────────────── */
 
 export const SPACES_GROUPS: readonly NavGroup[] = [
   {
-    title: null,
+    titleKey: null,
     items: [
-      { key: "overview", label: "Overview", path: "/spaces", icon: IconOverview, roles: ["creator", "manager"], keywords: "home kpi summary" },
-      { key: "listings", label: "Listings", path: "/spaces/listings", icon: IconListings, roles: ["creator", "manager"], keywords: "my spaces services drafts live" },
-      { key: "offers", label: "Offers & bids", path: "/spaces/offers", icon: IconOffers, roles: ["creator", "manager"], keywords: "inbox bids counter accept decline" },
-      { key: "sales", label: "Sales", path: "/spaces/sales", icon: IconSales, roles: ["creator"], keywords: "orders money received usdc" },
-      { key: "deliveries", label: "Deliveries", path: "/spaces/deliveries", icon: IconDeliveries, roles: ALL, keywords: "work artwork approve deliver due promises" },
+      { key: "overview", labelKey: "shell.nav.overview", path: "/spaces", icon: IconOverview, roles: ["creator", "manager"], keywords: "home kpi summary" },
+      { key: "listings", labelKey: "shell.nav.listings", path: "/spaces/listings", icon: IconListings, roles: ["creator", "manager"], keywords: "my spaces services drafts live" },
+      { key: "offers", labelKey: "shell.nav.offers", path: "/spaces/offers", icon: IconOffers, roles: ["creator", "manager"], keywords: "inbox bids counter accept decline" },
+      // The other direction: a brand writes what it wants and creators apply.
+      // Everybody, because it is the same person on both sides — anybody may
+      // write a brief and anybody may apply to somebody else's.
+      { key: "briefs", labelKey: "shell.nav.briefs", path: "/spaces/briefs", icon: IconBriefs, roles: ALL, keywords: "brand asks open call campaign apply applications brief write a brief flight hotel covered winner" },
+      { key: "sales", labelKey: "shell.nav.sales", path: "/spaces/sales", icon: IconSales, roles: ["creator"], keywords: "orders money received usdc" },
+      { key: "deliveries", labelKey: "shell.nav.deliveries", path: "/spaces/deliveries", icon: IconDeliveries, roles: ALL, keywords: "work artwork approve deliver due promises" },
+      // A company's desk: profile, treasury, enquiries, invoices, who did what.
+      // Everybody: a seller's own business, or the one their seat works for.
+      {
+        key: "business",
+        labelKey: "shell.nav.business",
+        path: "/spaces/business",
+        icon: IconBusiness,
+        roles: ALL,
+        keywords: "business company profile treasury vault multisig squads enquiries inbox quotes invoices receipts csv accountant activity log audit team roles",
+      },
     ],
   },
   /*
@@ -201,18 +235,18 @@ export const SPACES_GROUPS: readonly NavGroup[] = [
    * these two are for.
    */
   {
-    title: "Sponsor",
+    titleKey: "shell.navGroup.sponsor",
     items: [
       {
         key: "board",
-        label: "Find a spot",
+        labelKey: "shell.nav.board",
         path: "/spaces/board",
         icon: IconSearch,
         keywords: "buy sponsor book a spot brand board marketplace what creators sell advertise place my logo",
       },
       {
         key: "bought",
-        label: "Your spots",
+        labelKey: "shell.nav.bought",
         path: "/spaces/bought",
         icon: IconGrid,
         keywords: "bought orders sponsored paid receipts artwork my sponsorships",
@@ -220,19 +254,19 @@ export const SPACES_GROUPS: readonly NavGroup[] = [
     ],
   },
   {
-    title: "Grow",
+    titleKey: "shell.navGroup.grow",
     items: [
-      { key: "team", label: "Team", path: "/spaces/team", icon: IconTeam, roles: ALL, keywords: "members invite shares owed paid teams" },
+      { key: "team", labelKey: "shell.nav.team", path: "/spaces/team", icon: IconTeam, roles: ALL, keywords: "members invite shares owed paid teams" },
       {
         key: "crew",
-        label: "Crew",
+        labelKey: "shell.nav.crew",
         path: "/spaces/crew",
         icon: IconCrew,
         roles: ALL,
         keywords: "crew collab package together split creators featuring expenses group",
       },
-      { key: "insights", label: "Insights", path: "/spaces/insights", icon: IconInsights, roles: ["creator"], keywords: "market data what sells pricing timing brands buying pitch a brand" },
-      { key: "inspire", label: "Inspire", path: "/spaces/inspire", icon: IconInspire, roles: ["creator"], keywords: "templates ideas new listing" },
+      { key: "insights", labelKey: "shell.nav.insights", path: "/spaces/insights", icon: IconInsights, roles: ["creator"], keywords: "market data what sells pricing timing brands buying pitch a brand" },
+      { key: "inspire", labelKey: "shell.nav.inspire", path: "/spaces/inspire", icon: IconInspire, roles: ["creator"], keywords: "templates ideas new listing" },
     ],
   },
 ];
@@ -241,7 +275,7 @@ export const SPACES_GROUPS: readonly NavGroup[] = [
 export const SPACES_FOOT: readonly NavItem[] = [
   {
     key: "spaces-settings",
-    label: "Spaces settings",
+    labelKey: "shell.nav.spacesSettings",
     path: "/spaces/settings",
     icon: IconSettings,
     roles: ["creator"],
@@ -265,15 +299,45 @@ export function levelOf(rel: string): Level {
 }
 
 /**
+ * Spaces' selling pages: what Ad Space opens with HOLD Partners
+ * (lib/app/ad-space-access). Somebody it is not open to lands on one and sees
+ * the Partners panel instead (spaces/PartnersOnly); buying (Board, Bought),
+ * briefs, deliveries and the business desk stay open to everybody, and the
+ * Spaces entry stays in the main column, opening on Board (SPACES_BUY_PATH).
+ */
+export const AD_SPACE_SELLING: ReadonlySet<NavKey> = new Set<NavKey>([
+  "overview",
+  "listings",
+  "offers",
+  "sales",
+  "insights",
+  "inspire",
+  "crew",
+  "team",
+  "spaces-settings",
+]);
+
+/**
  * What this person may open. `team` is false for a creator who runs no team
  * and sits on nobody else's; `wallet` is the backend's rollout gate
- * (lib/wallet/enabled).
+ * (lib/wallet/enabled); `adSpace` is false for somebody Ad Space is not open
+ * to, which takes Spaces' selling pages out of its column (Spaces itself
+ * stays in the main one, for buying).
  */
-export function visible(item: NavItem, role: ShellRole, team: boolean, wallet = false): boolean {
+export function visible(item: NavItem, role: ShellRole, team: boolean, wallet = false, adSpace = true): boolean {
   if (item.roles && !item.roles.includes(role)) return false;
   if (item.key === "team" && !team) return false;
   if (item.key === "wallet" && !wallet) return false;
+  if (!adSpace && AD_SPACE_SELLING.has(item.key)) return false;
   return true;
+}
+
+/** Where Spaces opens for somebody who can buy but not sell: the Board. */
+export const SPACES_BUY_PATH = "/spaces/board";
+
+/** The item as this person should follow it: Spaces opens on Board when selling is not open to them. */
+export function routed(item: NavItem, adSpace: boolean): NavItem {
+  return !adSpace && item.key === "spaces" ? { ...item, path: SPACES_BUY_PATH } : item;
 }
 
 function every(level: Level): NavItem[] {
@@ -282,8 +346,8 @@ function every(level: Level): NavItem[] {
   return [...l.groups.flatMap((g) => g.items), ...l.foot, ...hidden];
 }
 
-export function itemsFor(level: Level, role: ShellRole, team = true, wallet = false): NavItem[] {
-  return every(level).filter((i) => visible(i, role, team, wallet));
+export function itemsFor(level: Level, role: ShellRole, team = true, wallet = false, adSpace = true): NavItem[] {
+  return every(level).filter((i) => visible(i, role, team, wallet, adSpace));
 }
 
 /** The product's prefix from Spaces' base: `` on app.hihodl.xyz, `/app` elsewhere. */
@@ -322,27 +386,28 @@ export function openToAll(rel: string): boolean {
   return /^\/wallet\/(link|send)\/?$/.test(rel.replace(/\/+$/, "") || "/");
 }
 
-/** The top bar's title for a product-relative path. */
+/** The top bar's title for a product-relative path, in the person's language. Call at render. */
 export function titleFor(rel: string): string {
   // Stays' own pages. They are sub-paths of one nav entry, so the entry's own
   // label ("Stays") would sit over a booking, a checkout and a property alike.
-  if (/^\/travel\/trips\/[^/]+/.test(rel)) return "Booking";
-  if (/^\/travel\/trips\/?$/.test(rel)) return "Your trips";
-  if (/^\/travel\/stay\/[^/]+\/book\/?$/.test(rel)) return "Confirm and pay";
-  if (/^\/travel\/stay\/[^/]+/.test(rel)) return "Stay";
-  if (/^\/travel\/search\/?$/.test(rel)) return "Stays";
-  if (/^\/payments\/groups\/[^/]+/.test(rel)) return "Group";
-  if (/^\/payments\/groups\/?$/.test(rel)) return "Groups";
-  if (/^\/spaces\/listings\/new\/?$/.test(rel)) return "New listing";
-  if (/^\/spaces\/listings\/[^/]+\/edit\/?$/.test(rel)) return "Edit draft";
-  if (/^\/spaces\/listings\/[^/]+/.test(rel)) return "Listing";
-  if (/^\/spaces\/x\/?$/.test(rel)) return "X account";
-  if (/^\/invest\/performance\/?$/.test(rel)) return "Portfolio";
-  if (/^\/invest\/report\/?$/.test(rel)) return "Realised gains";
-  if (/^\/invest\/cost\/[^/]+/.test(rel)) return "What you paid";
-  if (/^\/wallet\/link\/?$/.test(rel)) return "Link your phone";
-  if (/^\/wallet\/send\/?$/.test(rel)) return "Send";
+  if (/^\/travel\/trips\/[^/]+/.test(rel)) return t("shell.title.booking");
+  if (/^\/travel\/trips\/?$/.test(rel)) return t("shell.title.yourTrips");
+  if (/^\/travel\/stay\/[^/]+\/book\/?$/.test(rel)) return t("shell.title.confirmAndPay");
+  if (/^\/travel\/stay\/[^/]+/.test(rel)) return t("shell.title.stay");
+  if (/^\/travel\/search\/?$/.test(rel)) return t("shell.nav.stays");
+  if (/^\/payments\/groups\/[^/]+/.test(rel)) return t("shell.title.group");
+  if (/^\/payments\/groups\/?$/.test(rel)) return t("shell.nav.groups");
+  if (/^\/spaces\/listings\/new\/?$/.test(rel)) return t("shell.title.newListing");
+  if (/^\/spaces\/listings\/[^/]+\/edit\/?$/.test(rel)) return t("shell.title.editDraft");
+  if (/^\/spaces\/listings\/[^/]+/.test(rel)) return t("shell.title.listing");
+  if (/^\/spaces\/x\/?$/.test(rel)) return t("shell.title.xAccount");
+  if (/^\/invest\/performance\/?$/.test(rel)) return t("shell.title.portfolio");
+  if (/^\/invest\/report\/?$/.test(rel)) return t("shell.title.realisedGains");
+  if (/^\/invest\/cost\/[^/]+/.test(rel)) return t("shell.title.whatYouPaid");
+  if (/^\/wallet\/link\/?$/.test(rel)) return t("shell.title.linkYourPhone");
+  if (/^\/wallet\/send\/?$/.test(rel)) return t("common.send");
   const key = activeKey(rel);
   const all = [...every("main"), ...every("spaces")];
-  return all.find((i) => i.key === key)?.label ?? "HOLD";
+  const item = all.find((i) => i.key === key);
+  return item ? navLabel(item) : "HOLD";
 }

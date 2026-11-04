@@ -18,8 +18,11 @@
 import Link from "next/link";
 import { useMemo, useState, type ReactNode } from "react";
 
+import type { MessageKey } from "@/lib/app/i18n";
+import { useLocale, useT } from "@/lib/app/i18n/react";
 import { computeSpendingAnalytics } from "@/lib/app/spending/analytics";
-import { currentMonthRange, isMonthRange, rollingRange, type SpendRange } from "@/lib/app/spending/range";
+import { categoryName } from "@/lib/app/spending/categories";
+import { currentMonthRange, isMonthRange, rangeLabel, rollingRange, type SpendRange } from "@/lib/app/spending/range";
 import type { IonName } from "../ion";
 
 import { useProductHref } from "../base";
@@ -27,31 +30,36 @@ import { BackHeader } from "../hold";
 import { Ion } from "../ion";
 import { ReadFailed } from "../money/kit";
 import { Skeleton } from "../ui";
-import { GREEN, MetricChart, Note, WHITE, fmt, glassCard, rangeFromQuery, rangeQuery, signed, useSpendingRows, type MetricKind } from "./parts";
+import { GREEN, MetricChart, Note, WHITE, fmt, glassCard, pct0, rangeFromQuery, rangeQuery, signed, useSpendingRows, type MetricKind } from "./parts";
 
 type MetricKey = "spend" | "income" | "cashflow";
 
-const META: Record<MetricKey, { title: string; kind: MetricKind; color: string }> = {
-  spend: { title: "Spent", kind: "spend", color: WHITE },
-  income: { title: "Income", kind: "income", color: GREEN },
-  cashflow: { title: "Net cashflow", kind: "cashflow", color: GREEN },
+const META: Record<MetricKey, { titleKey: MessageKey; kind: MetricKind; color: string }> = {
+  spend: { titleKey: "analytics.metric.spendTitle", kind: "spend", color: WHITE },
+  income: { titleKey: "analytics.metric.incomeTitle", kind: "income", color: GREEN },
+  cashflow: { titleKey: "analytics.metric.cashflowTitle", kind: "cashflow", color: GREEN },
 };
 
-const PILLS: { id: string; label: string; make: () => SpendRange }[] = [
-  { id: "1w", label: "1W", make: () => rollingRange(7) },
-  { id: "1m", label: "1M", make: () => currentMonthRange() },
-  { id: "6m", label: "6M", make: () => rollingRange(182) },
-  { id: "1y", label: "1Y", make: () => rollingRange(365) },
+const PILLS: { id: string; labelKey: MessageKey; make: () => SpendRange }[] = [
+  { id: "1w", labelKey: "analytics.metric.pillWeek", make: () => rollingRange(7) },
+  { id: "1m", labelKey: "analytics.metric.pillMonth", make: () => currentMonthRange() },
+  { id: "6m", labelKey: "analytics.metric.pillSixMonths", make: () => rollingRange(182) },
+  { id: "1y", labelKey: "analytics.metric.pillYear", make: () => rollingRange(365) },
 ];
 
 export function MetricScreen({ metric, query }: { metric: string; query: Record<string, string | string[] | undefined> }) {
+  const t = useT();
+  const locale = useLocale();
   const productHref = useProductHref();
   const key: MetricKey = metric === "income" ? "income" : metric === "cashflow" ? "cashflow" : "spend";
   const meta = META[key];
 
   const [range, setRange] = useState<SpendRange>(() => rangeFromQuery(query));
   const data = useSpendingRows();
-  const a = useMemo(() => computeSpendingAnalytics(data.rows, range, data.hasMore), [data.rows, data.hasMore, range]);
+  // The chart's axis labels are written by the computation, so a change of
+  // language has to recompute it.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const a = useMemo(() => computeSpendingAnalytics(data.rows, range, data.hasMore), [data.rows, data.hasMore, range, locale]);
 
   const value = key === "income" ? a.income : key === "cashflow" ? a.netKept : a.spend;
   const deltaPct = key === "income" ? a.incomeDeltaPct : key === "cashflow" ? null : a.spendDeltaPct;
@@ -70,15 +78,15 @@ export function MetricScreen({ metric, query }: { metric: string; query: Record<
 
   const subtitle =
     key === "cashflow"
-      ? `${signed(a.income)} in · −${fmt(a.spend)} out`
+      ? t("analytics.metric.cashflowSubtitle", { income: signed(a.income), spend: `−${fmt(a.spend)}` })
       : deltaPct != null
-        ? `${deltaPct >= 0 ? "↑" : "↓"} ${Math.abs(Math.round(deltaPct * 100))}% vs last period`
-        : range.label;
+        ? t("analytics.metric.deltaVsLastPeriod", { arrow: deltaPct >= 0 ? "↑" : "↓", pct: pct0(Math.abs(deltaPct)) })
+        : rangeLabel(range);
 
-  const txs = (n: number) => `${n} ${n === 1 ? "transaction" : "transactions"}`;
+  const txs = (n: number) => t("analytics.metric.transactions", { count: n });
 
   const byCategory = a.categories.map((c) => (
-    <BreakdownRow key={c.id} icon={c.def.icon} color={c.color} label={c.def.label} sub={txs(c.txCount)} amount={`−${fmt(c.amount)}`} pct={c.pct} href={categoryHref(c.id)} />
+    <BreakdownRow key={c.id} icon={c.def.icon} color={c.color} label={categoryName(c.id)} sub={txs(c.txCount)} amount={`−${fmt(c.amount)}`} pct={c.pct} href={categoryHref(c.id)} />
   ));
   const bySource = a.incomeSources.map((s) => (
     <BreakdownRow key={s.key} icon="arrow-down-outline" color={GREEN} label={s.label} sub={txs(s.txCount)} amount={`+${fmt(s.amount)}`} pct={s.pct} />
@@ -86,11 +94,11 @@ export function MetricScreen({ metric, query }: { metric: string; query: Record<
 
   return (
     <div className="mx-auto flex w-full max-w-[560px] flex-col pb-8">
-      <BackHeader title={meta.title} backHref={productHref("/analytics")} />
+      <BackHeader title={t(meta.titleKey)} backHref={productHref("/analytics")} />
 
       {data.failed ? (
         <div className={`${glassCard} mt-2 rounded-[18px]`}>
-          <ReadFailed title="We couldn't load your activity" body="This is worked out from your activity, and it did not answer. Nothing has changed." onRetry={data.retry} />
+          <ReadFailed title={t("analytics.readFailed.title")} body={t("analytics.readFailed.metric")} onRetry={data.retry} />
         </div>
       ) : !data.loaded ? (
         <div className="mt-2 flex flex-col gap-3" aria-busy>
@@ -112,7 +120,7 @@ export function MetricScreen({ metric, query }: { metric: string; query: Record<
             <MetricChart kind={meta.kind} series={a.series} priorSeries={a.priorSeries} color={meta.color} />
           </section>
 
-          <div className="mb-1.5 flex gap-2" role="group" aria-label="Timeframe">
+          <div className="mb-1.5 flex gap-2" role="group" aria-label={t("analytics.metric.timeframe")}>
             {PILLS.map((p) => {
               const on = activePill === p.id;
               return (
@@ -125,31 +133,29 @@ export function MetricScreen({ metric, query }: { metric: string; query: Record<
                     on ? "border-white/90 bg-white/90 text-[#0A121A]" : "border-white/[0.22] bg-white/10 text-white/70 hover:bg-white/[0.14]"
                   }`}
                 >
-                  {p.label}
+                  {t(p.labelKey)}
                 </button>
               );
             })}
           </div>
 
-          {key === "spend" ? <Section title="BY CATEGORY">{byCategory.length ? byCategory : <Empty text="No spending in this period." />}</Section> : null}
-          {key === "income" ? <Section title="BY SOURCE">{bySource.length ? bySource : <Empty text="No money in during this period." />}</Section> : null}
+          {key === "spend" ? <Section title={t("analytics.metric.byCategory")}>{byCategory.length ? byCategory : <Empty text={t("analytics.metric.emptySpend")} />}</Section> : null}
+          {key === "income" ? <Section title={t("analytics.metric.bySource")}>{bySource.length ? bySource : <Empty text={t("analytics.metric.emptyIncome")} />}</Section> : null}
           {key === "cashflow" ? (
             <>
-              <Section title="MONEY IN" right={`+${fmt(a.income)}`}>
-                {bySource.length ? bySource : <Empty text="No money in." />}
+              <Section title={t("analytics.metric.moneyIn")} right={`+${fmt(a.income)}`}>
+                {bySource.length ? bySource : <Empty text={t("analytics.metric.emptyIn")} />}
               </Section>
-              <Section title="MONEY OUT" right={`−${fmt(a.spend)}`}>
-                {byCategory.length ? byCategory : <Empty text="No spending." />}
+              <Section title={t("analytics.metric.moneyOut")} right={`−${fmt(a.spend)}`}>
+                {byCategory.length ? byCategory : <Empty text={t("analytics.metric.emptyOut")} />}
               </Section>
             </>
           ) : null}
 
           {a.payouts > 0 && key !== "income" ? (
-            <Note className="mt-[18px]">
-              {fmt(a.payouts)} in bank payouts (off-ramps) is tracked separately — money sent to a bank isn&apos;t consumption.
-            </Note>
+            <Note className="mt-[18px]">{t("analytics.metric.payoutsNote", { amount: fmt(a.payouts) })}</Note>
           ) : null}
-          {a.capped ? <Note>Showing your most recent activity. Older transactions in a long range may not be included yet.</Note> : null}
+          {a.capped ? <Note>{t("analytics.note.capped")}</Note> : null}
         </>
       )}
     </div>
@@ -180,7 +186,7 @@ function BreakdownRow({ icon, color, label, sub, amount, pct, href }: { icon: Io
       </span>
       <span className="shrink-0 text-right">
         <span className="block text-[15px] font-bold tabular-nums text-white">{amount}</span>
-        <span className="mt-0.5 block text-[12px] font-semibold text-white/55">{Math.round(pct * 100)}%</span>
+        <span className="mt-0.5 block text-[12px] font-semibold text-white/55">{pct0(pct)}</span>
       </span>
     </>
   );

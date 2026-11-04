@@ -31,10 +31,13 @@
 import { Ion } from "../ion";
 
 import { Photo, ScorePill } from "./kit";
-import { P, count, money, nights as nightsWord, provablyCheaper, ratingLabel } from "./look";
+import { P, count, money, pointsOff, provablyCheaper, ratingLabel } from "./look";
 import type { StayResult } from "@/lib/app/stays";
+import { fmtNumber } from "@/lib/app/i18n/format";
+import { useT } from "@/lib/app/i18n/react";
 
 function Tag({ refundable }: { refundable: boolean }) {
+  const t = useT();
   return (
     <span
       className="mb-0.5 shrink-0 rounded-[8px] px-[9px] py-[5px] text-[11px] font-semibold tracking-[-0.1px]"
@@ -43,7 +46,7 @@ function Tag({ refundable }: { refundable: boolean }) {
         color: refundable ? P.greenText : P.textMuted,
       }}
     >
-      {refundable ? "Free cancellation" : "Non-refundable"}
+      {refundable ? t("stays.rate.freeCancellation") : t("stays.rate.nonRefundable")}
     </span>
   );
 }
@@ -62,9 +65,10 @@ export function StayCard({
   seen?: boolean;
   onOpen: () => void;
 }) {
+  const t = useT();
   const { rate } = stay;
   const was = provablyCheaper(rate) ? money(rate.publicPrice!, rate.currency) : null;
-  const sub = `total · ${nightsWord(nights)}`;
+  const sub = t("trips.card.total", { count: nights });
   const word = ratingLabel(stay.guestRating);
 
   if (!hero) {
@@ -88,7 +92,7 @@ export function StayCard({
           {stay.guestRating !== null ? (
             <span className="flex items-center gap-1.5">
               <span className="text-[12px] font-extrabold tabular-nums tracking-[-0.2px]" style={{ color: P.text }}>
-                {stay.guestRating.toFixed(1)}
+                {fmtNumber(stay.guestRating, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
               </span>
               {word ? (
                 <span className="truncate text-[12px]" style={{ color: P.textDim }}>
@@ -133,7 +137,7 @@ export function StayCard({
             style={{ background: "rgba(10,20,32,0.72)", border: `0.5px solid rgba(255,183,3,0.34)`, color: P.caution }}
           >
             <Ion name="star" size={10} />
-            {`${count(rate.maxPointsRedeemable)} pts off`}
+            {pointsOff(rate.maxPointsRedeemable)}
           </span>
         ) : null}
       </span>

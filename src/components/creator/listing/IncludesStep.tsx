@@ -10,6 +10,8 @@
 
 "use client";
 
+import type { MessageKey } from "@/lib/app/i18n";
+import { useT } from "@/lib/app/i18n/react";
 import {
   PRODUCTION_DELIVERABLE_LABEL,
   PRODUCTION_DELIVERABLE_MAX,
@@ -28,12 +30,12 @@ import { Card, Chip, ChipRow, Divider, Stepper } from "@/components/app/spaces/k
 import { Block, Choice, Problems } from "./parts";
 import { StepCard } from "./StepPager";
 
-const LINE_HINT: Record<ProductionDeliverable, string> = {
-  interviews: "Someone from the brand, or people they name, on camera.",
-  shortForm: "Edited vertical cuts, ready to post.",
-  brollPack: "Raw clips of the floor, the booth, the city.",
-  photoSet: "Edited stills from the day.",
-  socialAssets: "Cut-downs, captions and thumbnails.",
+const LINE_HINT: Record<ProductionDeliverable, MessageKey> = {
+  interviews: "listings.includes.hint.interviews",
+  shortForm: "listings.includes.hint.shortForm",
+  brollPack: "listings.includes.hint.brollPack",
+  photoSet: "listings.includes.hint.photoSet",
+  socialAssets: "listings.includes.hint.socialAssets",
 };
 
 export function IncludesStep({
@@ -45,14 +47,15 @@ export function IncludesStep({
   onChange: (next: ListingDraft) => void;
   problems: readonly Problem[];
 }) {
+  const t = useT();
   const pkg = draft.production;
   const set = (change: Partial<ProductionPackage>) => onChange({ ...draft, production: { ...pkg, ...change } });
   const setCount = (key: ProductionDeliverable, n: number) =>
     set({ deliverables: { ...pkg.deliverables, [key]: Math.max(0, Math.min(PRODUCTION_DELIVERABLE_MAX, n)) } });
 
   return (
-    <StepCard title="What a spot includes" help="Every brand that buys a spot gets this package. Set a line to 0 to leave it out.">
-      <Block title="The package">
+    <StepCard title={t("listings.wizard.stage.includes")} help={t("listings.includes.help")}>
+      <Block title={t("listings.includes.package")}>
         <Card className="!gap-0 !py-1">
           {PRODUCTION_DELIVERABLES.map((key, i) => {
             const n = pkg.deliverables[key];
@@ -62,15 +65,15 @@ export function IncludesStep({
                 <div className="flex items-center justify-between gap-3 py-3">
                   <span className="min-w-0">
                     <span className={`block text-[14.5px] font-bold ${n > 0 ? "text-white" : "text-white/[0.62]"}`}>{PRODUCTION_DELIVERABLE_LABEL[key]}</span>
-                    <span className="mt-0.5 block text-[12.5px] leading-[17px] text-white/55">{LINE_HINT[key]}</span>
+                    <span className="mt-0.5 block text-[12.5px] leading-[17px] text-white/55">{t(LINE_HINT[key])}</span>
                   </span>
                   <Stepper
                     value={n}
                     min={0}
                     max={PRODUCTION_DELIVERABLE_MAX}
                     onChange={(v) => setCount(key, v)}
-                    labelLess={`Fewer: ${PRODUCTION_DELIVERABLE_LABEL[key]}`}
-                    labelMore={`More: ${PRODUCTION_DELIVERABLE_LABEL[key]}`}
+                    labelLess={t("listings.includes.fewer", { label: PRODUCTION_DELIVERABLE_LABEL[key] })}
+                    labelMore={t("listings.includes.more", { label: PRODUCTION_DELIVERABLE_LABEL[key] })}
                   />
                 </div>
               </div>
@@ -80,38 +83,38 @@ export function IncludesStep({
         <Problems list={problemsAt(problems, "production:deliverables")} />
       </Block>
 
-      <Block title="Turnaround" why="How soon after each shoot day the brand has everything.">
+      <Block title={t("listings.includes.turnaround")} why={t("listings.includes.turnaroundWhy")}>
         <Choice
           name="turnaround"
           value={String(pkg.turnaroundHours)}
           onChange={(v) => set({ turnaroundHours: Number(v) as ProductionPackage["turnaroundHours"] })}
           options={[
-            { value: "24", label: "24 hours", body: "Same-night edits." },
-            { value: "48", label: "48 hours", body: "A proper edit, still news." },
-            { value: "72", label: "72 hours", body: "Room for a longer cut." },
+            { value: "24", label: t("listings.includes.hours", { count: 24 }), body: t("listings.includes.body24") },
+            { value: "48", label: t("listings.includes.hours", { count: 48 }), body: t("listings.includes.body48") },
+            { value: "72", label: t("listings.includes.hours", { count: 72 }), body: t("listings.includes.body72") },
           ]}
         />
         <Problems list={problemsAt(problems, "production:turnaround")} />
       </Block>
 
-      <Block title="Usage rights the brand gets" why="What they may do with what you deliver.">
+      <Block title={t("listings.includes.usage")} why={t("listings.includes.usageWhy")}>
         <Choice
           name="usage-scope"
           value={pkg.usage.scope}
           onChange={(scope) => set({ usage: { ...pkg.usage, scope } })}
           options={[
-            { value: "organic", label: USAGE_SCOPE_LABEL.organic, body: "Their own posts, no ad spend." },
-            { value: "organic_and_paid", label: USAGE_SCOPE_LABEL.organic_and_paid, body: "They may also run it as ads." },
+            { value: "organic", label: USAGE_SCOPE_LABEL.organic, body: t("listings.includes.organicBody") },
+            { value: "organic_and_paid", label: USAGE_SCOPE_LABEL.organic_and_paid, body: t("listings.includes.paidBody") },
           ]}
         />
-        <ChipRow label="How long">
+        <ChipRow label={t("listings.includes.howLong")}>
           {(["6m", "12m", "perpetual"] as const).map((term) => (
             <Chip key={term} label={USAGE_TERM_LABEL[term]} selected={pkg.usage.term === term} onClick={() => set({ usage: { ...pkg.usage, term } })} />
           ))}
         </ChipRow>
       </Block>
 
-      <Notice tone="calm">The brand briefs you before paying; 72 hours of silence on a delivery counts as accepted.</Notice>
+      <Notice tone="calm">{t("listings.includes.notice")}</Notice>
     </StepCard>
   );
 }

@@ -5,20 +5,73 @@
  * Codes follow the backend rule: 8 characters, no 0, 1, i, l or o.
  *
  *   /pay/k7x2m9qa   active, fixed $150, Solana and Base
- *   /pay/dana4pay   active, open amount up to $1,000, every chain, an owner named with no handle
+ *   /pay/dana4pay   active, open amount up to $1,000, every chain, an owner named with no handle,
+ *                   bank transfer in EUR and USD (made-up account numbers)
  *   /pay/n2wnerxy   active, fixed $20, an owner with no name and no handle
- *   /pay/pa2dpa2d   single use, already paid
- *   /pay/c2sedxyz   closed by its owner
- *   /pay/exp2red9   expired
+ *   /pay/pa2dpa2d   single use, already paid (sends on to @demo, nothing carried)
+ *   /pay/c2sedxyz   closed by its owner (sends on to @demo with $50 and its title)
+ *   /pay/exp2red9   expired (no personal link: nowhere to send on)
+ *   /pay/fr2zenpy   frozen, no ways to pay (sends on to @demo_creator with $75 and its title)
  *   /pay/dsab2ed3   disabled by us after reports (everything the owner wrote is null)
+ *   /pay/@demo      a personal link: open amount, a verified private profile (initials), card, Apple Pay and Google Pay, USDC and EURC
+ *   /pay/@demo_creator  the same, with a public profile photo
  *   /pay/r/fixture_receipt_base
  *   /pay/r/fixture_receipt_disabled (the link was disabled since: no title)
  */
 
-import type { PayLinkPublic, PayReceipt } from "./types";
+import type { PayLinkCardOffer, PayLinkPublic, PayReceipt } from "./types";
 
 const OWNER = { displayName: "Dana Okafor", handle: "dana", label: "@dana" };
 const PAY_TO = { solana: "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU", evm: "0xAb5801a7D398351b8bE11C439e05C5B3259aeC9B" };
+
+const CARD: PayLinkCardOffer = {
+  methods: ["card", "applePay", "googlePay"],
+  currencies: ["USD", "EUR", "GBP", "CAD", "AUD", "CHF", "MXN", "BRL", "COP", "PEN"],
+  minUsdCents: 100,
+  maxUsdCents: 50_000,
+};
+
+/** Personal links by handle. Made-up people only: never a real person's handle. */
+const PERSONAL: Record<string, PayLinkPublic> = {
+  demo: {
+    code: "demapays",
+    personal: true,
+    title: "Pay @demo",
+    note: null,
+    amount: { mode: "open", maxCents: null },
+    chains: ["solana", "base", "polygon"],
+    status: "active",
+    // A private profile: no photo, so the page draws the initials.
+    owner: { displayName: "Demo C.", handle: "demo", label: "@demo", face: { avatarUrl: null }, verified: true },
+    payTo: PAY_TO,
+    card: CARD,
+    tokens: ["usdc", "eurc"],
+  },
+  demo_creator: {
+    code: "demcrtr2",
+    personal: true,
+    title: "Pay @demo_creator",
+    note: null,
+    amount: { mode: "open", maxCents: null },
+    chains: ["solana", "base"],
+    status: "active",
+    // The HOLD icon stands in for a photo: a picture of nobody.
+    owner: {
+      displayName: "Demo Creator",
+      handle: "demo_creator",
+      label: "@demo_creator",
+      face: { avatarUrl: "https://hihodl.xyz/icon-512.png" },
+    },
+    payTo: PAY_TO,
+    card: CARD,
+  },
+};
+
+const DEMO = PERSONAL.demo.owner;
+
+export function fixturePersonalPayLink(handle: string): PayLinkPublic | null {
+  return PERSONAL[handle] ?? null;
+}
 
 const LINKS: Record<string, PayLinkPublic> = {
   k7x2m9qa: {
@@ -30,6 +83,7 @@ const LINKS: Record<string, PayLinkPublic> = {
     status: "active",
     owner: OWNER,
     payTo: PAY_TO,
+    card: CARD,
   },
   dana4pay: {
     code: "dana4pay",
@@ -41,6 +95,27 @@ const LINKS: Record<string, PayLinkPublic> = {
     // A handle the text filter refused: the label falls back to the display name.
     owner: { displayName: "Dana Okafor", handle: null, label: "Dana Okafor" },
     payTo: PAY_TO,
+    methods: [
+      { kind: "hold" },
+      { kind: "stablecoins" },
+      { kind: "bank_transfer", currency: "EUR", payerMustBeBusiness: true },
+      { kind: "bank_transfer", currency: "USD", payerMustBeBusiness: true },
+    ],
+    // Made-up numbers: the IBAN is the textbook example, the US ones are nobody's.
+    bankTransfers: [
+      {
+        currency: "EUR",
+        reference: "HOLD-DANA4PAY",
+        payerMustBeBusiness: true,
+        account: { iban: "DE89370400440532013000", bic: "COBADEFFXXX", holderName: "Dana Okafor" },
+      },
+      {
+        currency: "USD",
+        reference: "HOLD-DANA4PAY",
+        payerMustBeBusiness: true,
+        account: { accountNumber: "000123456789", routingNumber: "000000000", holderName: "Dana Okafor", rails: ["ach", "wire"] },
+      },
+    ],
   },
   n2wnerxy: {
     code: "n2wnerxy",
@@ -59,8 +134,9 @@ const LINKS: Record<string, PayLinkPublic> = {
     amount: { mode: "fixed", cents: 40000 },
     chains: ["base"],
     status: "paid",
-    owner: OWNER,
+    owner: DEMO,
     payTo: PAY_TO,
+    fallback: { handle: "demo", path: "/pay/@demo" },
   },
   c2sedxyz: {
     code: "c2sedxyz",
@@ -69,8 +145,21 @@ const LINKS: Record<string, PayLinkPublic> = {
     amount: { mode: "fixed", cents: 5000 },
     chains: ["solana"],
     status: "closed",
-    owner: OWNER,
+    owner: DEMO,
     payTo: PAY_TO,
+    fallback: { handle: "demo", path: "/pay/@demo" },
+  },
+  fr2zenpy: {
+    code: "fr2zenpy",
+    title: "Sponsored post, one week",
+    note: null,
+    amount: { mode: "fixed", cents: 7500 },
+    chains: ["solana", "base"],
+    status: "frozen",
+    owner: PERSONAL.demo_creator.owner,
+    payTo: null,
+    methods: [],
+    fallback: { handle: "demo_creator", path: "/pay/@demo_creator" },
   },
   exp2red9: {
     code: "exp2red9",

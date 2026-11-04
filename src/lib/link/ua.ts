@@ -27,7 +27,7 @@ export type AppleDevice = "iPhone" | "iPad";
 /**
  * Which Apple device, by the name the person knows it by, for copy only.
  * `phoneOf` files an iPad under "ios" because it behaves like one (Safari,
- * passkeys, no QR to scan), but "You are on your iPhone" on an iPad is wrong.
+ * no QR to scan), but "You are on your iPhone" on an iPad is wrong.
  * iPadOS 13+ says "Macintosh"; touch points give it away.
  */
 export function appleDeviceOf(ua: string, maxTouchPoints = 0): AppleDevice | null {

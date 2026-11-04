@@ -1,145 +1,51 @@
-"use client";
+import type { Metadata } from "next";
+import { headers } from "next/headers";
 
-import { useEffect } from "react";
-import { useParams } from "next/navigation";
+import { API_BASE } from "@/lib/ad-space/config";
+import { upstreamHeaders } from "@/lib/ad-space/server";
+import { groupCardOf, invitePreview, isGroupCode } from "@/lib/invite/card";
 
-import { productUrl } from "@/lib/app/paths";
-import { APP_STORE_URL, PLAY_STORE_URL } from "@/lib/appLinks";
+import InviteRedirect from "./InviteRedirect";
 
-export default function InviteRedirect() {
-  const { code } = useParams<{ code: string }>();
+/**
+ * /invite/<code>: a friend's invite, a Partner's link, a creator's seat or
+ * crew, or a group's join link (`?group=<code>`). The page is InviteRedirect;
+ * this server half only gives a group's join link its own link card
+ * ("Join 🏝️ Lisbon trip on HOLD"), so the people in the chat it lands in see
+ * which group it is before they tap. Every other invite keeps the site's card.
+ */
 
-  useEffect(() => {
-    if (!code) return;
+const BANNER = { url: "/banner-social.png", width: 1200, height: 630, alt: "HOLD", type: "image/png" };
 
-    // A creator's team invitation is this same link with `?seat=<code>` on the
-    // end. The app's deep link below carries the invite code and nothing after
-    // it, and the store fallback carries nothing at all, so a seat sent that
-    // way was lost on every device. The creator console takes seats in the
-    // browser with no install (HOLD Spaces, app.hihodl.xyz), so a link carrying
-    // one goes there instead. The
-    // seat alone says whose invitation it is; the invite code is not passed on.
-    // Read from `location` rather than `useSearchParams`: this runs once, after
-    // mount, and needs no Suspense boundary around the whole page for it.
-    // A crew invitation is the lead's link with `?crew=<code>`: same reasoning
-    // as a seat, taken in the browser at app.hihodl.xyz/spaces/crew.
-    const crew = new URLSearchParams(window.location.search).get("crew");
-    if (crew && /^[A-Za-z0-9_-]{16,128}$/.test(crew)) {
-      const q = new URLSearchParams({ join: crew });
-      window.location.replace(productUrl(`/spaces/crew?${q.toString()}`));
-      return;
-    }
+export async function generateMetadata({ searchParams }: { searchParams: { group?: string | string[] } }): Promise<Metadata> {
+  const group = searchParams.group;
+  if (!isGroupCode(group)) return {};
+  let card = null;
+  try {
+    const res = await fetch(`${API_BASE}/group-cards/${encodeURIComponent(group)}`, {
+      headers: upstreamHeaders(headers()),
+      // A rename shows within minutes; a chat app reads a card once per share.
+      next: { revalidate: 300 },
+      signal: AbortSignal.timeout(3000),
+    });
+    card = res.ok ? groupCardOf(await res.json()) : null;
+  } catch {
+    card = null;
+  }
+  if (!card) return {};
+  const preview = invitePreview(card);
+  return {
+    // Absolute: the layout's "%s | HOLD" would say HOLD twice.
+    title: { absolute: preview.title },
+    description: preview.description,
+    // A group's link is a secret for joining: never in a search engine.
+    robots: { index: false, follow: false },
+    alternates: { canonical: null },
+    openGraph: { type: "website", siteName: "HOLD", title: preview.title, description: preview.description, images: [BANNER] },
+    twitter: { card: "summary_large_image", site: "@hiihodl", title: preview.title, description: preview.description, images: [BANNER.url] },
+  };
+}
 
-    const seat = new URLSearchParams(window.location.search).get("seat");
-    if (seat && /^[A-Za-z0-9_-]{16,128}$/.test(seat)) {
-      const q = new URLSearchParams({ seat });
-      window.location.replace(productUrl(`/spaces/team?${q.toString()}`));
-      return;
-    }
-
-    // Try to open the app via deep link.
-    //
-    // `hihodl`, not `hold`: the app registers exactly one custom scheme, and
-    // that is it — `scheme: "hihodl"` in app.json, `hihodl` in Info.plist and
-    // in the Android manifest. `hold://` is registered on neither platform, so
-    // it opened nothing and every invite fell through to the store, code lost.
-    window.location.href = `hihodl://invite/${code}`;
-
-    // Fallback: after 1.5s, redirect to the appropriate store
-    const timer = setTimeout(() => {
-      const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
-      const isAndroid = /Android/.test(navigator.userAgent);
-
-      if (isIOS) {
-        window.location.href = APP_STORE_URL;
-      } else if (isAndroid) {
-        window.location.href = PLAY_STORE_URL;
-      } else {
-        // Desktop fallback — go to homepage
-        window.location.href = "https://hihodl.xyz";
-      }
-    }, 1500);
-
-    return () => clearTimeout(timer);
-  }, [code]);
-
-  return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: "#0A1929",
-        color: "#fff",
-        fontFamily: "system-ui, -apple-system, sans-serif",
-        padding: 24,
-        textAlign: "center",
-      }}
-    >
-      <div style={{ marginBottom: 24 }}>
-        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-          <circle cx="24" cy="24" r="24" fill="#FFB703" />
-          <text
-            x="24"
-            y="30"
-            textAnchor="middle"
-            fill="#0A1929"
-            fontSize="20"
-            fontWeight="900"
-          >
-            H
-          </text>
-        </svg>
-      </div>
-      <h1 style={{ fontSize: 28, fontWeight: 900, marginBottom: 8 }}>
-        You&apos;ve been invited to HOLD
-      </h1>
-      <p
-        style={{
-          fontSize: 16,
-          color: "rgba(255,255,255,0.6)",
-          marginBottom: 32,
-          maxWidth: 400,
-        }}
-      >
-        Your friend invited you to join HOLD — the gasless stablecoin wallet.
-        Sign up and swap $5+ to earn them a free month of Pro.
-      </p>
-      <p style={{ fontSize: 14, color: "rgba(255,255,255,0.4)" }}>
-        Redirecting to the app...
-      </p>
-      <div style={{ marginTop: 32, display: "flex", gap: 16 }}>
-        <a
-          href={APP_STORE_URL}
-          style={{
-            padding: "12px 24px",
-            backgroundColor: "rgba(255,255,255,0.1)",
-            borderRadius: 12,
-            color: "#fff",
-            textDecoration: "none",
-            fontSize: 14,
-            fontWeight: 600,
-          }}
-        >
-          App Store
-        </a>
-        <a
-          href={PLAY_STORE_URL}
-          style={{
-            padding: "12px 24px",
-            backgroundColor: "rgba(255,255,255,0.1)",
-            borderRadius: 12,
-            color: "#fff",
-            textDecoration: "none",
-            fontSize: 14,
-            fontWeight: 600,
-          }}
-        >
-          Google Play
-        </a>
-      </div>
-    </div>
-  );
+export default function InvitePage() {
+  return <InviteRedirect />;
 }

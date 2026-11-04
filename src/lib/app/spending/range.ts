@@ -9,6 +9,9 @@
 // Every range also knows how to produce the PRIOR window of equal length, so
 // the UI can show honest "vs last period" deltas.
 
+import { t } from "../i18n";
+import { fmtDate } from "../i18n/format";
+
 export type RangeMode = "month" | "rolling" | "custom";
 
 export interface SpendRange {
@@ -38,20 +41,24 @@ function endOfDay(ms: number): number {
 
 function monthLabel(year: number, monthIndex: number): string {
   const d = new Date(year, monthIndex, 1);
-  try {
-    return d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
-  } catch {
-    return `${d.getFullYear()}-${d.getMonth() + 1}`;
-  }
+  return fmtDate(d, { month: "long", year: "numeric" }) || `${d.getFullYear()}-${d.getMonth() + 1}`;
 }
 
 function shortDay(ms: number): string {
   const d = new Date(ms);
-  try {
-    return d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
-  } catch {
-    return `${d.getDate()}/${d.getMonth() + 1}`;
-  }
+  return fmtDate(d, { day: "numeric", month: "short" }) || `${d.getDate()}/${d.getMonth() + 1}`;
+}
+
+function rollingLabel(days: number): string {
+  return days >= 360
+    ? t("analytics.range.last12Months")
+    : days >= 90
+      ? t("analytics.range.last90Days")
+      : t("analytics.range.lastDays", { count: days });
+}
+
+function customLabel(start: number, end: number): string {
+  return startOfDay(start) === startOfDay(end) ? shortDay(start) : t("analytics.range.span", { start: shortDay(start), end: shortDay(end) });
 }
 
 // ─── Month ───────────────────────────────────────────────────────────────────
@@ -81,8 +88,7 @@ export function shiftMonth(range: SpendRange, delta: number): SpendRange {
 export function rollingRange(days: number, nowMs: number = Date.now()): SpendRange {
   const end = endOfDay(nowMs);
   const start = startOfDay(nowMs - (days - 1) * DAY);
-  const label =
-    days >= 360 ? "Last 12 months" : days >= 90 ? "Last 90 days" : `Last ${days} days`;
+  const label = rollingLabel(days);
   return { mode: "rolling", start, end, label, rollingDays: days };
 }
 
@@ -93,8 +99,7 @@ export function customRange(startMs: number, endMs: number): SpendRange {
   const start = startOfDay(a);
   const end = endOfDay(b);
   const days = Math.round((end - start) / DAY) + 1;
-  const label =
-    startOfDay(a) === startOfDay(b) ? shortDay(a) : `${shortDay(a)} – ${shortDay(b)}`;
+  const label = customLabel(a, b);
   return { mode: "custom", start, end, label, rollingDays: days };
 }
 
@@ -140,6 +145,21 @@ export function rangeFromParams(p: Record<string, string | string[] | undefined>
     label: pick(p.label) || "",
     rollingDays: rollingDaysRaw ? Number(rollingDaysRaw) : undefined,
   };
+}
+
+/**
+ * The range's label in the language on screen NOW. `range.label` is written
+ * when the range is made (and travels in the address), so a screen draws this
+ * instead: a change of language relabels a range already on screen.
+ */
+export function rangeLabel(range: SpendRange): string {
+  if (range.mode === "month") {
+    const d = new Date(range.start);
+    return monthLabel(d.getFullYear(), d.getMonth());
+  }
+  if (range.mode === "rolling" && range.rollingDays) return rollingLabel(range.rollingDays);
+  if (range.mode === "custom") return customLabel(range.start, range.end);
+  return range.label;
 }
 
 /** Whether this range can be shifted month-by-month (only pure month ranges). */

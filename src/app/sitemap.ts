@@ -1,6 +1,8 @@
 import type { MetadataRoute } from "next";
 
-import { listPublicEvents } from "@/lib/ad-space/server";
+import { listPublicBriefs, listPublicEvents } from "@/lib/ad-space/server";
+import { esimPath } from "@/lib/esim/countries";
+import { getEsimPrices } from "@/lib/esim/prices";
 
 /**
  * The sitemap.
@@ -42,9 +44,17 @@ const PAGES: Entry[] = [
   // One entry per product, never a combined one. "esim japan" and "hotel
   // cashback" are different searches by different people a month apart, and a
   // page that answers both ranks for neither.
-  { path: "/esim", priority: 0.8, changeFrequency: "monthly" },
+  { path: "/esim", priority: 0.8, changeFrequency: "weekly" },
   { path: "/travel", priority: 0.7, changeFrequency: "monthly" },
+  // HOLD Partners: agencies, creators and organisers who bring travellers.
+  { path: "/partners", priority: 0.7, changeFrequency: "monthly" },
   { path: "/faq", priority: 0.6, changeFrequency: "monthly" },
+  // HOLD for AI agents: the connect steps and the developer reference. Beta,
+  // invite only, but the page is public: it is what a developer searching
+  // "hold mcp" or "x402 pay" should land on.
+  { path: "/agents", priority: 0.6, changeFrequency: "monthly" },
+  // Every upcoming event a sponsor can buy into, the way into each event page.
+  { path: "/events", priority: 0.6, changeFrequency: "daily" },
   // The technical section. Lower priority than a product page because nobody
   // searches for these by name — but they are what a suspicious reader finds
   // when they search "is HOLD safe" or "hold non custodial", and losing that
@@ -60,11 +70,16 @@ const PAGES: Entry[] = [
   // Linked from the eSIM checkout in the app, so it is read far more often than
   // a legal page normally is — and it is the page that says who the seller is.
   { path: "/legal/esim", priority: 0.3, changeFrequency: "yearly" },
+  { path: "/legal/flights", priority: 0.3, changeFrequency: "yearly" },
+  { path: "/legal/stays", priority: 0.3, changeFrequency: "yearly" },
+  { path: "/legal/experiences", priority: 0.3, changeFrequency: "yearly" },
+  { path: "/legal/hipoints", priority: 0.3, changeFrequency: "yearly" },
   // Referenced from both legal pages and quoted to counterparties in compliance
   // reviews, so it is checked far more often than a yearly page. It also changes
   // whenever an integration does, which is the whole reason it exists.
   { path: "/legal/providers", priority: 0.3, changeFrequency: "monthly" },
   { path: "/legal/referral-terms", priority: 0.2, changeFrequency: "yearly" },
+  { path: "/legal/partner-terms", priority: 0.2, changeFrequency: "yearly" },
   { path: "/e-sign", priority: 0.2, changeFrequency: "yearly" },
 ];
 
@@ -96,5 +111,31 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
-  return [...pages, ...eventPages];
+  // Open briefs: a brand's call is written to be found, and unlike a creator's
+  // space it is not reachable from an event page. Only the open ones — a
+  // decided brief keeps working as a link, but it is not somewhere to send
+  // anybody new.
+  const briefs = await listPublicBriefs(50);
+  const briefPages: MetadataRoute.Sitemap = briefs.map((b) => ({
+    url: `${SITE}/brief/${encodeURIComponent(b.slug)}`,
+    lastModified,
+    changeFrequency: "daily",
+    priority: 0.6,
+  }));
+
+  // One page per destination on sale, from the same price table the pages read.
+  // "esim japan" is the search; each country is its own answer. On any API
+  // failure this is empty, like the events above.
+  const esim = await getEsimPrices();
+  const esimPages: MetadataRoute.Sitemap =
+    esim.kind === "ok"
+      ? [...esim.byCode.keys()].map((code) => ({
+          url: `${SITE}${esimPath(code)}`,
+          lastModified,
+          changeFrequency: "weekly",
+          priority: 0.7,
+        }))
+      : [];
+
+  return [...pages, ...eventPages, ...briefPages, ...esimPages];
 }

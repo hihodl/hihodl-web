@@ -1,10 +1,11 @@
 /**
- * The web wallet's calls to the backend, straight from the browser with the
+ * The wallet's calls to the backend, straight from the browser with the
  * person's Supabase token (the same authed CORS the Spaces console uses).
  *
- * What travels: ciphertext, wrappings, the pepper, a passkey's public
- * registration, and a public Solana address for its balance. What never
- * travels: the mnemonic, userSecret, a PRF output, a private key.
+ * Read only: whose wallet this is and who approves a payment started here
+ * (GET /wallet-backup/status), and a public address's balance. The web makes,
+ * opens and signs with no wallet (Alex, 2026-09-24): no passkey, no backup,
+ * no key ever reaches this page.
  */
 
 "use client";
@@ -12,7 +13,7 @@
 import { API_BASE } from "@/lib/ad-space/config";
 import { accessToken } from "@/lib/creator/session";
 
-import type { CipherBlobV2, WrappedSecret } from "./core";
+import type { CanPayFromWeb } from "@/lib/app/app-wallet-gate";
 
 export class WalletApiError extends Error {
   constructor(
@@ -28,8 +29,8 @@ export class WalletApiError extends Error {
 type Method = "GET" | "POST" | "PUT" | "DELETE";
 
 /**
- * One call. `raw` is for the two passkey routes that answer with a bare body
- * instead of `{ data }`.
+ * One call. `raw` is for a route that answers with a bare body instead of
+ * `{ data }` (the Solana RPC proxy).
  */
 export async function send<T>(path: string, init: { method?: Method; json?: unknown; auth?: boolean; raw?: boolean } = {}): Promise<T> {
   const headers: Record<string, string> = { accept: "application/json" };
@@ -70,15 +71,9 @@ export async function send<T>(path: string, init: { method?: Method; json?: unkn
   return body.data as T;
 }
 
-/* ── Wallet backup v2 ─────────────────────────────────────────────── */
+/* ── Whose wallet, and who approves ───────────────────────────────── */
 
 export type WalletState = "none" | "app_wallet" | "web_wallet";
-
-export interface WrappingMeta {
-  credential_id: string;
-  label: string | null;
-  created_at: string;
-}
 
 export interface WalletStatus {
   state: WalletState;
@@ -90,153 +85,30 @@ export interface WalletStatus {
   enabled?: boolean;
   /** The Solana address the backend watches for this account, if any. */
   registered_address?: string | null;
-  current_blob_hash: string | null;
-  wrappings: WrappingMeta[];
-  email_verified: boolean;
   /**
-   * Who approves a payment started on the web (documentation/one-wallet-every-device.md):
-   *   web_passkey  a web wallet with no Android phone: a passkey here
-   *   app          an Android phone is linked: it approves and signs
-   *   link_first   a wallet made in the app, no Android phone: link it first
-   *   none         nothing to pay from
-   * An older backend does not send it: read it through `payerOf`.
+   * Who approves a payment started on the web (documentation/one-wallet-every-device.md).
+   * The web never pays by itself (2026-09-24), so it is always the phone:
+   *   app          a phone (iPhone or Android) with a device key is linked:
+   *                it approves and signs
+   *   link_first   a wallet, and no phone linked: link it first
+   *   none         nothing to pay from: the wallet is made in the HOLD app
+   * Read it through `payerOf`.
    */
   canPayFromWeb?: CanPayFromWeb;
+  /**
+   * The default phone, the one that approves the web: only it gets the push,
+   * and a signature from another phone is refused with 409
+   * APPROVE_ON_YOUR_DEFAULT_PHONE (documentation/the-default-phone-approves.md).
+   * null with no phone linked; absent from an older server.
+   */
+  approver?: { deviceId: string; platform: "ios" | "android" | string } | null;
 }
 
-export type CanPayFromWeb = "web_passkey" | "app" | "link_first" | "none";
-
-/**
- * `canPayFromWeb`, or what the web did before the server said it: a web
- * wallet pays with the passkey (the server still picks the phone when one is
- * linked), and a wallet made in the app is paid from the app.
- */
-export function payerOf(s: Pick<WalletStatus, "state" | "canPayFromWeb"> | null | undefined): CanPayFromWeb {
-  const said = s?.canPayFromWeb ?? (s as { can_pay_from_web?: unknown } | null | undefined)?.can_pay_from_web;
-  if (said === "web_passkey" || said === "app" || said === "link_first" || said === "none") return said;
-  return s?.state === "web_wallet" ? "web_passkey" : "none";
-}
-
-export interface WalletBackup {
-  cipher_blob: CipherBlobV2;
-  current_blob_hash: string;
-  wrappings: (WrappingMeta & { wrapped: WrappedSecret })[];
-}
+// Pure, in lib/app/app-wallet-gate so its check script can run it.
+export { payerOf, type CanPayFromWeb } from "@/lib/app/app-wallet-gate";
 
 export function getWalletStatus(): Promise<WalletStatus> {
   return send<WalletStatus>("wallet-backup/status");
-}
-
-export function getWalletBackup(): Promise<WalletBackup> {
-  return send<WalletBackup>("wallet-backup");
-}
-
-/** Create, once. `previous_blob_hash: null` is the compare-and-swap against nothing. */
-export function createWalletBackup(body: {
-  cipher_blob: CipherBlobV2;
-  wrapping: { credential_id: string; wrapped: WrappedSecret; label: string | null };
-}): Promise<{ saved: boolean; idempotent: boolean; current_blob_hash: string }> {
-  return send("wallet-backup", { method: "PUT", json: { ...body, previous_blob_hash: null } });
-}
-
-export function addWrapping(body: { credential_id: string; wrapped: WrappedSecret; label: string | null }): Promise<{ added: boolean }> {
-  return send("wallet-backup/wrappings", { method: "POST", json: body });
-}
-
-export function removeWrapping(credentialId: string): Promise<{ removed: boolean }> {
-  return send(`wallet-backup/wrappings/${encodeURIComponent(credentialId)}`, { method: "DELETE" });
-}
-
-/**
- * Registering this wallet's address so the backend watches it for deposits
- * (the app does the same through register-primary). A single-use challenge,
- * signed as a message by the unlocked key; never a transaction.
- */
-export function addressChallenge(address: string): Promise<{ nonce: string; message: string; expires_in_minutes: number }> {
-  return send("wallet-backup/address/challenge", { json: { address } });
-}
-
-export function registerAddress(body: { address: string; nonce: string; signature: string }): Promise<{ address: string; registered: boolean; idempotent: boolean }> {
-  return send("wallet-backup/address", { json: body });
-}
-
-/**
- * The EVM side of a web-made wallet (ethereum, base, polygon), registered the
- * way the app's completeWalletSetup registers it: the server runs the same
- * code as the app's POST /xpubs. The challenge says, per chain, whether the
- * xpub is there, missing (with a single-use nonce) or another xpub's.
- */
-export type EvmChain = "ethereum" | "base" | "polygon";
-export type EvmChainState = "registered" | "to_register" | "conflict";
-
-export interface EvmChallenge {
-  account_id: string;
-  path_prefix: string;
-  address: string;
-  timestamp: number;
-  chains: { chain: EvmChain; state: EvmChainState; nonce: string | null }[];
-}
-
-export function evmChallenge(body: { xpub: string; address: string }): Promise<EvmChallenge> {
-  return send("wallet-backup/evm/challenge", { json: body });
-}
-
-export function registerEvm(body: {
-  xpub: string;
-  signed_by_address: string;
-  timestamp: number;
-  registrations: { chain: EvmChain; nonce: string; signature: string }[];
-}): Promise<{ address: string; results: { chain: EvmChain; ok: boolean; status: number; idempotent: boolean; code: string | null }[] }> {
-  return send("wallet-backup/evm", { json: body });
-}
-
-/** The per-person pepper (half of v1's key, one of three inputs to v2's). */
-export async function getPepper(): Promise<string> {
-  const d = await send<{ pepper: string }>("security/pepper");
-  return d.pepper;
-}
-
-/* ── Passkeys (the existing /passkeys routes) ─────────────────────── */
-
-export interface RegistrationOptionsJSON {
-  challenge: string;
-  rp: { name: string; id?: string };
-  user: { id: string; name: string; displayName: string };
-  pubKeyCredParams: { type: "public-key"; alg: number }[];
-  timeout?: number;
-  excludeCredentials?: { id: string; type: "public-key"; transports?: string[] }[];
-  authenticatorSelection?: Record<string, unknown>;
-  attestation?: string;
-  extensions?: Record<string, unknown>;
-}
-
-export async function beginPasskeyRegistration(email: string, supabaseUid: string): Promise<RegistrationOptionsJSON> {
-  const body = await send<{ publicKey: RegistrationOptionsJSON }>("passkeys/register/begin", {
-    json: { email, userId: supabaseUid },
-    raw: true,
-  });
-  return body.publicKey;
-}
-
-export function completePasskeyRegistration(credential: {
-  id: string;
-  rawId: string;
-  type: "public-key";
-  response: { clientDataJSON: string; attestationObject: string };
-}): Promise<{ success: boolean; credentialId: string }> {
-  return send("passkeys/register/complete", { json: { credential } });
-}
-
-export interface RegisteredPasskey {
-  id: string;
-  name: string;
-  deviceType: string | null;
-  createdAt: string;
-}
-
-export async function listPasskeys(): Promise<RegisteredPasskey[]> {
-  const d = await send<{ passkeys: RegisteredPasskey[] }>("passkeys/list");
-  return d.passkeys;
 }
 
 /* ── Balances (the authed Solana RPC proxy) ───────────────────────── */

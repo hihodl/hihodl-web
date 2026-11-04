@@ -27,6 +27,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { fmtDate, weekdayName } from "@/lib/app/i18n/format";
+import { useT } from "@/lib/app/i18n/react";
+
 import { Ion } from "@/components/app/ion";
 import { Chip, dayText, fieldLabel } from "@/components/app/spaces/kit";
 
@@ -87,6 +90,7 @@ export function MonthCalendar({
   max: string;
   onPick: (day: string) => void;
 }) {
+  const t = useT();
   const startAt = parseDay(value) ?? parseDay(min);
   const [cursor, setCursor] = useState<Cursor>(() => {
     const now = new Date();
@@ -100,12 +104,10 @@ export function MonthCalendar({
   const canPrev = asMonths(cursor) > lowest;
   const canNext = asMonths(cursor) < highest;
 
-  const monthLabel = new Date(cursor.y, cursor.m, 1).toLocaleDateString("en-GB", { month: "long", year: "numeric" });
-  // Monday-first weekday initials, as the app draws them.
-  const weekdays = useMemo(
-    () => [0, 1, 2, 3, 4, 5, 6].map((i) => new Date(Date.UTC(2024, 0, 1 + i)).toLocaleDateString("en-GB", { weekday: "narrow", timeZone: "UTC" })),
-    [],
-  );
+  const monthLabel = fmtDate(new Date(cursor.y, cursor.m, 1), { month: "long", year: "numeric" });
+  // Monday-first weekday initials, as the app draws them, in the language on
+  // screen (read each render: `useT` above re-renders on a change of language).
+  const weekdays = [1, 2, 3, 4, 5, 6, 0].map((d) => weekdayName(d, "narrow"));
 
   const first = new Date(cursor.y, cursor.m, 1);
   const lead = (first.getDay() + 6) % 7;
@@ -124,11 +126,11 @@ export function MonthCalendar({
   return (
     <div className="flex flex-col">
       <div className="flex items-center justify-between py-1">
-        <button type="button" aria-label="Previous month" disabled={!canPrev} onClick={() => move(-1)} className={head}>
+        <button type="button" aria-label={t("listings.when.previousMonth")} disabled={!canPrev} onClick={() => move(-1)} className={head}>
           <Ion name="chevron-back" size={18} />
         </button>
         <span className="text-[15px] font-extrabold text-white">{monthLabel}</span>
-        <button type="button" aria-label="Next month" disabled={!canNext} onClick={() => move(1)} className={head}>
+        <button type="button" aria-label={t("listings.when.nextMonth")} disabled={!canNext} onClick={() => move(1)} className={head}>
           <Ion name="chevron-forward" size={18} />
         </button>
       </div>
@@ -267,7 +269,7 @@ export function DayField({
   max,
   hint,
   problems = [],
-  placeholder = "Pick a day",
+  placeholder,
 }: {
   label: string;
   value: string;
@@ -278,6 +280,7 @@ export function DayField({
   problems?: readonly string[];
   placeholder?: string;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   return (
     <div className="flex min-w-0 flex-col gap-1.5">
@@ -285,7 +288,7 @@ export function DayField({
       <Opener
         icon="calendar-outline"
         value={value ? dayText(value) : ""}
-        placeholder={placeholder}
+        placeholder={placeholder ?? t("listings.when.pickDay")}
         open={open}
         attention={problems.length > 0}
         onClick={() => setOpen((v) => !v)}
@@ -335,6 +338,7 @@ export function DayTimeField({
   hint?: string;
   problems?: readonly string[];
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const { day, time } = splitLocal(value);
 
@@ -346,7 +350,7 @@ export function DayTimeField({
       <Opener
         icon="calendar-outline"
         value={shown}
-        placeholder="Pick a day and a time"
+        placeholder={t("listings.when.pickDayAndTime")}
         open={open}
         attention={problems.length > 0}
         onClick={() => setOpen((v) => !v)}
@@ -356,9 +360,9 @@ export function DayTimeField({
           <MonthCalendar value={day} min={min} max={max} onPick={(d) => onChange(`${d}T${time || DEFAULT_TIME}`)} />
           <div className="flex items-center gap-2 pt-1">
             <Ion name="time-outline" size={16} className="shrink-0 text-white/[0.62]" />
-            <span className="text-[12.5px] font-bold text-white/[0.62]">Time</span>
+            <span className="text-[12.5px] font-bold text-white/[0.62]">{t("listings.when.time")}</span>
           </div>
-          <TimeStrip value={time || DEFAULT_TIME} onPick={(t) => onChange(`${day || min}T${t}`)} />
+          <TimeStrip value={time || DEFAULT_TIME} onPick={(hm) => onChange(`${day || min}T${hm}`)} />
         </Panel>
       ) : null}
       {problems.length ? <Problems list={problems} /> : hint ? <p className="text-[12px] leading-4 text-white/55">{hint}</p> : null}

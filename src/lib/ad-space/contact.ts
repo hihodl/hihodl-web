@@ -5,27 +5,40 @@
  * the contract validates the same way.
  */
 
+import { t } from "@/lib/app/i18n";
+
 import { CONTACT_KIND_LABEL } from "./format";
 import type { ContactKind } from "./types";
 
 export const CONTACT_KINDS: ContactKind[] = ["telegram", "x", "email"];
 
+/** Read at render: each placeholder is a getter, so it is in the language on screen. */
 export const CONTACT_PLACEHOLDER: Record<ContactKind, string> = {
-  x: "@yourhandle",
-  telegram: "@yourname",
-  email: "you@company.com",
+  get x() {
+    return t("offers.contact.placeholder.x");
+  },
+  get telegram() {
+    return t("offers.contact.placeholder.telegram");
+  },
+  get email() {
+    return t("offers.contact.placeholder.email");
+  },
 };
 
 /** Our reading of what each kind accepts. The server's `contact_invalid` is the real check. */
-export function contactProblem(kind: ContactKind, value: string, whoReaches = "the creator"): string | null {
+export function contactProblem(kind: ContactKind, value: string, whoReaches?: string): string | null {
   const v = value.trim();
-  if (!v) return `Add your ${CONTACT_KIND_LABEL[kind]} so ${whoReaches} can reach you.`;
-  if (kind === "x" && !/^@?[A-Za-z0-9_]{1,15}$/.test(v)) return "An X handle is up to 15 letters, numbers or underscores.";
+  if (!v) {
+    return whoReaches
+      ? t("offers.contact.problem.empty", { kind: CONTACT_KIND_LABEL[kind], who: whoReaches })
+      : t("offers.contact.problem.emptyCreator", { kind: CONTACT_KIND_LABEL[kind] });
+  }
+  if (kind === "x" && !/^@?[A-Za-z0-9_]{1,15}$/.test(v)) return t("offers.contact.problem.x");
   if (kind === "telegram" && !/^@?[A-Za-z0-9_]{5,32}$/.test(v)) {
-    return "A Telegram username is 5 to 32 letters, numbers or underscores.";
+    return t("offers.contact.problem.telegram");
   }
   if (kind === "email" && (v.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v))) {
-    return "That email address doesn't look complete.";
+    return t("offers.contact.problem.email");
   }
   return null;
 }

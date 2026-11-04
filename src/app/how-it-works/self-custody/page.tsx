@@ -45,7 +45,7 @@ const FAQ = [
   },
   {
     q: "Can you see my balance?",
-    a: "Yes. We can see the addresses your account uses, so we can see what is in them and what has moved — that is how the app shows you a balance at all, and anyone else looking at the public network can see the same thing. What we cannot do is anything about it. On Pro, your incoming payments land on rotating addresses, so an outside observer watching one address does not get your whole income history.",
+    a: "Yes. We can see the addresses your account uses, so we can see what is in them and what has moved — that is how the app shows you a balance at all, and anyone else looking at the public network can see the same thing. What we cannot do is anything about it.",
   },
   {
     q: "Do I have to write down twelve words?",

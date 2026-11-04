@@ -38,6 +38,7 @@ import {
 import type { PayoutAddressView, PayoutChain } from "@/lib/creator/types";
 import { connectSolana, describeWalletError, signSolanaMessage } from "@/lib/creator/wallets";
 import { MoreChainsLine } from "@/components/app/MoreChains";
+import { useT } from "@/lib/app/i18n/react";
 
 import { Address, Loading, Notice, Section, Status } from "./parts";
 
@@ -60,6 +61,7 @@ export function PayoutAddress({ onChange }: { onChange?: (view: PayoutAddressVie
   const [view, setView] = useState<PayoutAddressView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const t = useT();
 
   const load = useCallback(async () => {
     try {
@@ -80,19 +82,19 @@ export function PayoutAddress({ onChange }: { onChange?: (view: PayoutAddressVie
   }, [load]);
 
   return (
-    <Section label="Step two" title="Payout wallet">
-      <p className="text-tiny text-text-muted">Sponsors pay this address directly.</p>
+    <Section label={t("account.payoutAddress.step")} title={t("account.payoutAddress.title")}>
+      <p className="text-tiny text-text-muted">{t("account.payoutAddress.sub")}</p>
 
       {loading ? (
         <div className="mt-6">
-          <Loading what="your addresses" />
+          <Loading what={t("account.payoutAddress.loadingWhat")} />
         </div>
       ) : error ? (
         <div className="mt-6 flex flex-col gap-4">
           <Notice>{error}</Notice>
           <div>
             <button type="button" className={btnSmallSecondary} onClick={() => void load()}>
-              Try again
+              {t("common.tryAgain")}
             </button>
           </div>
         </div>
@@ -127,6 +129,7 @@ function ChainCard({
   const [challenge, setChallenge] = useState<{ nonce: string; message: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const t = useT();
 
   function reset() {
     setStep("idle");
@@ -201,7 +204,7 @@ function ChainCard({
           <p className="text-tiny text-text-faint">{copy.networks}</p>
         </div>
         <Status state={entry.address ? "done" : "todo"}>
-          {entry.source === "hold" ? "Your HOLD wallet" : entry.address ? "Proved" : "Nothing yet"}
+          {entry.source === "hold" ? t("account.payoutAddress.yourHold") : entry.address ? t("account.payoutAddress.proved") : t("account.payoutAddress.nothingYet")}
         </Status>
       </div>
 
@@ -209,19 +212,19 @@ function ChainCard({
         <div className="mt-4 flex flex-col gap-3">
           <Address value={entry.address} />
           {entry.source === "hold" ? (
-            <p className="text-small text-text-muted">Your HOLD wallet.</p>
+            <p className="text-small text-text-muted">{t("account.payoutAddress.yourHoldBody")}</p>
           ) : (
-            <p className="text-small text-text-muted">Proved by signature. A HOLD wallet, if you add one, takes over.</p>
+            <p className="text-small text-text-muted">{t("account.payoutAddress.provedBody")}</p>
           )}
         </div>
       ) : (
         <div className="mt-4 flex flex-col gap-4">
           {step === "idle" ? (
             <>
-              <p className="text-small text-text-muted">Connect, then sign one message. No fee, no transaction.</p>
+              <p className="text-small text-text-muted">{t("account.payoutAddress.connectHint")}</p>
               <div>
                 <button type="button" className={btnSmall} disabled={busy} onClick={() => void connect()}>
-                  {busy ? "Waiting for your wallet…" : `Connect ${copy.wallet}`}
+                  {busy ? t("account.payoutAddress.waiting") : t("account.payoutAddress.connect", { wallet: copy.wallet })}
                 </button>
               </div>
             </>
@@ -230,13 +233,13 @@ function ChainCard({
           {step === "connected" && address ? (
             <>
               <Address value={address} />
-              <p className="text-small text-text-muted">Signing moves no money and costs no fee.</p>
+              <p className="text-small text-text-muted">{t("account.payoutAddress.noFee")}</p>
               <div className="flex flex-wrap gap-3">
                 <button type="button" className={btnPrimary} disabled={busy} onClick={() => void ask()}>
-                  {busy ? "Preparing…" : "Show me what I sign"}
+                  {busy ? t("account.payoutAddress.preparing") : t("account.payoutAddress.show")}
                 </button>
                 <button type="button" className={btnSmallSecondary} disabled={busy} onClick={reset}>
-                  Use another wallet
+                  {t("account.payoutAddress.another")}
                 </button>
               </div>
             </>
@@ -245,17 +248,17 @@ function ChainCard({
           {step === "challenged" && challenge ? (
             <>
               <p className="text-small text-text-muted">
-                This is exactly what your wallet will show you. Read it, then approve it there.
+                {t("account.payoutAddress.exactly")}
               </p>
               <pre className="min-w-0 overflow-x-auto whitespace-pre-wrap break-words rounded-input border border-[color:var(--color-hairline-strong)] bg-white/[0.04] px-4 py-3 font-mono text-tiny text-text-muted [overflow-wrap:anywhere]">
                 {challenge.message}
               </pre>
               <div className="flex flex-wrap gap-3">
                 <button type="button" className={btnPrimary} disabled={busy} onClick={() => void sign()}>
-                  {busy ? "Waiting for your wallet…" : `Sign in ${copy.wallet}`}
+                  {busy ? t("account.payoutAddress.waiting") : t("account.payoutAddress.sign", { wallet: copy.wallet })}
                 </button>
                 <button type="button" className={btnSmallSecondary} disabled={busy} onClick={reset}>
-                  Not now
+                  {t("account.payoutAddress.notNow")}
                 </button>
               </div>
             </>

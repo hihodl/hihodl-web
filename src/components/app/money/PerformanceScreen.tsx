@@ -39,6 +39,9 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { maskTokenSymbol } from "@/lib/app/display-mode";
+import { listText } from "@/lib/app/i18n";
+import { fmtNumber } from "@/lib/app/i18n/format";
+import { useLocale, useT } from "@/lib/app/i18n/react";
 import {
   isStable,
   useAllBalances,
@@ -56,6 +59,7 @@ import {
   ringColours,
   ringSlices,
   shortDate,
+  signedUsd,
   summarisePerformance,
   summariseTaxYear,
   tokenUnits,
@@ -73,16 +77,16 @@ import { AssetMark, InAppNote, ReadFailed } from "./kit";
 import { AllocationCard, AMBER, PortfolioHeader, Pill, UP, glassCard, type DonutSlice } from "./portfolio-kit";
 
 const SECTIONS = [
-  { id: "overview", label: "Overview" },
-  { id: "earn", label: "Earn" },
-  { id: "sold", label: "Sold" },
+  { id: "overview", labelKey: "money.performance.section.overview" },
+  { id: "earn", labelKey: "money.performance.section.earn" },
+  { id: "sold", labelKey: "money.performance.section.sold" },
 ] as const;
 type SectionId = (typeof SECTIONS)[number]["id"];
 
 /** Two columns, not three: the ring IS the allocation view. */
 const COLUMNS = [
-  { id: "value", label: "Holdings" },
-  { id: "profit", label: "All-time Profit" },
+  { id: "value", labelKey: "money.performance.column.holdings" },
+  { id: "profit", labelKey: "money.performance.column.profit" },
 ] as const;
 type ColumnId = (typeof COLUMNS)[number]["id"];
 
@@ -100,6 +104,9 @@ function symbolOf(b: { symbol?: string; tokenId?: string }): string {
 }
 
 export function PerformanceScreen() {
+  const t = useT();
+  // "Others" and the list of names are words: a new language rebuilds them.
+  const locale = useLocale();
   const href = useProductHref();
   const { displayMode } = useShellPrefs();
   const container = useContainer();
@@ -141,7 +148,8 @@ export function PerformanceScreen() {
     return summarisePerformance(legs);
   }, [rows, prices.data, basis.data, working.sol, working.solUsd]);
 
-  const ring = useMemo(() => ringSlices(summary.rows), [summary.rows]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const ring = useMemo(() => ringSlices(summary.rows), [summary.rows, locale]);
   const slices: DonutSlice[] = useMemo(() => {
     const colours = ringColours(ring);
     return ring.map((sl) => ({
@@ -167,9 +175,10 @@ export function PerformanceScreen() {
     if (syms.length === 1) return { names: syms[0], count: 1 };
     const shown = syms.slice(0, 3);
     const rest = syms.length - shown.length;
-    const names = rest > 0 ? `${shown.join(", ")} and ${rest} ${rest === 1 ? "other" : "others"}` : `${shown.slice(0, -1).join(", ")} and ${shown[shown.length - 1]}`;
+    const names = rest > 0 ? t("money.performance.namesAndOthers", { names: shown.join(", "), count: rest }) : listText(shown);
     return { names, count: syms.length };
-  }, [summary.rows, displayMode]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [summary.rows, displayMode, locale]);
   const holdsSol = summary.rows.some((r) => r.symbol === "SOL") || working.sol > 0;
 
   const mood = moodFor(summary);
@@ -196,7 +205,7 @@ export function PerformanceScreen() {
 
   return (
     <div className="mx-auto flex w-full max-w-[720px] flex-1 flex-col">
-      <PortfolioHeader title="Portfolio" back={back} />
+      <PortfolioHeader title={t("money.performance.title")} back={back} />
 
       {loading ? (
         <div className="flex flex-col gap-3">
@@ -206,36 +215,31 @@ export function PerformanceScreen() {
         </div>
       ) : failed ? (
         <div className={glassCard}>
-          <ReadFailed title="We couldn't load your portfolio" onRetry={retry} />
+          <ReadFailed title={t("money.performance.readFailed")} onRetry={retry} />
         </div>
       ) : (
         <>
           {/* The value first, the gain under it: the one figure that is true
               whether or not we know what anything cost. */}
           <div className="px-5 pb-3.5">
-            <p className="text-[13px] font-strong text-white/[0.7]">{mood === "empty" ? "Nothing invested yet" : "Your investments"}</p>
+            <p className="text-[13px] font-strong text-white/[0.7]">{mood === "empty" ? t("money.performance.nothingInvested") : t("money.performance.yourInvestments")}</p>
             <p className="mt-0.5 truncate text-[40px] font-bold leading-[1.15] tracking-[-1.3px] tabular-nums text-white">{usd(summary.totalValueUsd)}</p>
             {summary.gainUsd != null && mood !== "empty" ? (
               <p className="mt-1 text-[14px] font-bold tabular-nums">
-                <span className="text-white/[0.6]">All-time </span>
+                <span className="text-white/[0.6]">{t("money.performance.allTime")} </span>
                 <span style={{ color: mood === "up" ? UP : "#FFFFFF" }}>
-                  {mood === "up" ? "+" : mood === "down" ? "−" : ""}
-                  {usd(summary.gainUsd)}
+                  {signedUsd(summary.gainUsd)}
                   {summary.gainPct != null ? `  ${pct(summary.gainPct)}` : ""}
                 </span>
               </p>
             ) : null}
             {summary.gainUsd == null && mood !== "empty" ? (
               <p className="mt-2 text-[12.5px] leading-[17px] text-white/[0.8]">
-                {basis.error && !basis.data
-                  ? "We couldn't read what these cost you just now, so there's no gain to show — only what they're worth today."
-                  : "We don't know what these cost you, so there's no gain to show — only what they're worth today."}
+                {basis.error && !basis.data ? t("money.performance.basisFailed") : t("money.performance.basisUnknown")}
               </p>
             ) : null}
             {working.failed ? (
-              <p className="mt-2 text-[12.5px] leading-[17px] text-white/[0.8]">
-                Kamino didn&apos;t answer, so any Solana you have at work is not in this total.
-              </p>
+              <p className="mt-2 text-[12.5px] leading-[17px] text-white/[0.8]">{t("money.performance.kaminoFailed")}</p>
             ) : null}
           </div>
 
@@ -244,7 +248,7 @@ export function PerformanceScreen() {
               const on = section === sec.id;
               return (
                 <button key={sec.id} type="button" role="tab" aria-selected={on} onClick={() => setSection(sec.id)} className="flex flex-col items-center">
-                  <span className={`text-[16px] ${on ? "font-bold text-white" : "font-strong text-white/[0.6] hover:text-white"}`}>{sec.label}</span>
+                  <span className={`text-[16px] ${on ? "font-bold text-white" : "font-strong text-white/[0.6] hover:text-white"}`}>{t(sec.labelKey)}</span>
                   <span className="mt-[7px] h-0.5 self-stretch rounded-[1px]" style={{ backgroundColor: on ? AMBER : "transparent" }} />
                 </button>
               );
@@ -254,25 +258,19 @@ export function PerformanceScreen() {
           {section === "overview" ? (
             mood === "empty" ? (
               <div className={`${glassCard} p-4`}>
-                <p className="text-[15px] font-bold text-white">Nothing here yet</p>
-                <p className="mt-1 text-[13px] leading-[19px] text-white/[0.8]">
-                  Your dollars are on Home. When you buy something whose price moves — Solana, Ethereum, a stock — it shows up here with what you paid and what it&apos;s worth today.
-                </p>
+                <p className="text-[15px] font-bold text-white">{t("money.performance.emptyTitle")}</p>
+                <p className="mt-1 text-[13px] leading-[19px] text-white/[0.8]">{t("money.performance.emptyBody")}</p>
               </div>
             ) : (
               <>
                 {summary.uncostedRows > 0 && summary.gainUsd != null ? (
                   <p className="mb-2 px-1 text-[12.5px] leading-[17px] text-white/[0.8]">
-                    {summary.uncostedRows === 1
-                      ? "1 holding isn't in that figure — we don't have what it cost."
-                      : `${summary.uncostedRows} holdings aren't in that figure — we don't have what they cost.`}
+                    {t("money.performance.uncosted", { count: summary.uncostedRows })}
                   </p>
                 ) : null}
                 {summary.unpricedRows > 0 ? (
                   <p className="mb-2 px-1 text-[12.5px] leading-[17px] text-white/[0.8]">
-                    {summary.unpricedRows === 1
-                      ? "1 holding has no price right now, so it's not in the total."
-                      : `${summary.unpricedRows} holdings have no price right now, so they're not in the total.`}
+                    {t("money.performance.unpriced", { count: summary.unpricedRows })}
                   </p>
                 ) : null}
 
@@ -282,15 +280,15 @@ export function PerformanceScreen() {
                 <div className="mt-1 flex gap-2">
                   {COLUMNS.map((c) => (
                     <Pill key={c.id} on={column === c.id} onClick={() => setColumn(c.id)}>
-                      {c.label}
+                      {t(c.labelKey)}
                     </Pill>
                   ))}
                 </div>
 
                 <div className="mt-3.5 flex items-center px-4 pb-2 text-[11px] font-bold tracking-[0.4px] text-white/[0.6]">
-                  <span className="flex-1">Asset</span>
-                  <span className="w-[82px] text-right">Price</span>
-                  <span className="w-[104px] text-right">{COLUMNS.find((c) => c.id === column)?.label}</span>
+                  <span className="flex-1">{t("money.performance.asset")}</span>
+                  <span className="w-[82px] text-right">{t("money.performance.price")}</span>
+                  <span className="w-[104px] text-right">{t(column === "value" ? "money.performance.column.holdings" : "money.performance.column.profit")}</span>
                 </div>
                 <div className={`${glassCard} px-4`}>
                   {summary.rows.map((r, i) => {
@@ -299,7 +297,7 @@ export function PerformanceScreen() {
                       <Link
                         key={r.key}
                         href={href(`/invest/cost/${encodeURIComponent(r.symbol)}`)}
-                        aria-label={`What you paid for ${label}`}
+                        aria-label={t("money.performance.paidForAria", { asset: label })}
                         className={`flex items-center py-[13px] transition-opacity hover:opacity-80 ${i > 0 ? "border-t border-white/[0.08]" : ""}`}
                       >
                         <span className="mr-3">
@@ -320,20 +318,19 @@ export function PerformanceScreen() {
                           ) : r.gainUsd != null ? (
                             <>
                               <span className="text-[15px] font-bold tabular-nums" style={{ color: r.gainUsd > 0 ? UP : "#FFFFFF" }}>
-                                {r.gainUsd > 0 ? "+" : r.gainUsd < 0 ? "−" : ""}
-                                {usd(r.gainUsd)}
+                                {signedUsd(r.gainUsd)}
                               </span>
                               {r.gainPct != null ? (
                                 <span className="mt-0.5 text-[12px] font-strong tabular-nums text-white/[0.7]">
                                   {pct(r.gainPct)}
-                                  {r.partialBasis ? " (part of it)" : ""}
+                                  {r.partialBasis ? ` ${t("money.performance.partOfIt")}` : ""}
                                 </span>
                               ) : null}
                             </>
                           ) : (
                             <>
                               <span className="text-[15px] font-bold text-white/[0.45]">—</span>
-                              <span className="mt-0.5 text-[12px] font-strong text-white/[0.7]">cost unknown</span>
+                              <span className="mt-0.5 text-[12px] font-strong text-white/[0.7]">{t("money.performance.costUnknown")}</span>
                             </>
                           )}
                         </span>
@@ -351,7 +348,7 @@ export function PerformanceScreen() {
                       aria-expanded={pastOpen}
                       className="mt-[18px] flex items-center gap-1.5 py-2 pl-1 text-[12px] font-bold uppercase tracking-[0.4px] text-white/[0.7] hover:text-white"
                     >
-                      Sold or sent elsewhere ({past.length})
+                      {t("money.performance.pastToggle", { count: fmtNumber(past.length) })}
                       <Ion name={pastOpen ? "chevron-up" : "chevron-down"} size={14} className="text-white/[0.6]" />
                     </button>
                     {pastOpen ? (
@@ -360,13 +357,13 @@ export function PerformanceScreen() {
                           <Link
                             key={h.symbol}
                             href={href(`/invest/cost/${encodeURIComponent(h.symbol)}`)}
-                            aria-label={`What you paid for ${h.symbol}`}
+                            aria-label={t("money.performance.paidForAria", { asset: h.symbol })}
                             className={`flex items-center py-[13px] hover:opacity-80 ${i > 0 ? "border-t border-white/[0.08]" : ""}`}
                           >
                             <span className="min-w-0 flex-1 pr-2.5">
                               <span className="block text-[15px] font-bold text-white">{maskTokenSymbol(h.symbol, displayMode) || h.symbol}</span>
                               <span className="mt-0.5 block text-[12px] font-strong text-white/[0.7]">
-                                {h.lots} {h.lots === 1 ? "purchase" : "purchases"} · last one {shortDate(h.lastAt)}
+                                {t("money.performance.pastLine", { count: h.lots, date: shortDate(h.lastAt) })}
                               </span>
                             </span>
                             <Ion name="chevron-forward" size={16} className="text-white/[0.45]" />
@@ -389,23 +386,21 @@ export function PerformanceScreen() {
                       Null means we did not track the principal, which is not zero. */}
                   {working.sol > 0 && working.earnedSol != null && working.earnedSol >= MIN_SHOWABLE_EARNED_SOL ? (
                     <p className="mt-2 px-1 text-[13px] font-bold tabular-nums" style={{ color: UP }}>
-                      {working.earnedSol.toFixed(4)} SOL earned so far
+                      {t("money.performance.solEarned", { amount: fmtNumber(working.earnedSol, { minimumFractionDigits: 4, maximumFractionDigits: 4 }) })}
                     </p>
                   ) : null}
                   <div className="mt-2.5">
-                    <InAppNote>Putting Solana to work, and taking it back, happens in the HOLD app, where it is signed on your phone.</InAppNote>
+                    <InAppNote>{t("money.performance.earnInApp")}</InAppNote>
                   </div>
                 </>
               ) : null}
               {heldNames ? (
                 <p className="mt-2 px-1 text-[12.5px] leading-[17px] text-white/[0.8]">
-                  {heldNames.names} {heldNames.count === 1 ? "doesn't" : "don't"} earn anything yet — Solana is the one asset with a venue we can reach today.
+                  {t("money.performance.notEarning", { names: heldNames.names, count: heldNames.count })}
                 </p>
               ) : null}
               {!holdsSol && !heldNames ? (
-                <p className="mt-2.5 text-[14px] leading-[21px] text-white/[0.8]">
-                  Nothing you hold can earn yet. Solana is the one asset with a venue we can reach today.
-                </p>
+                <p className="mt-2.5 text-[14px] leading-[21px] text-white/[0.8]">{t("money.performance.nothingEarns")}</p>
               ) : null}
             </>
           ) : null}
@@ -414,34 +409,36 @@ export function PerformanceScreen() {
             <>
               <div className={`${glassCard} mb-4 p-[22px]`}>
                 {realised.error && !realised.data ? (
-                  <ReadFailed compact title="We couldn't load what you sold" body="That's not the same as having sold nothing." onRetry={() => void realised.mutate()} />
+                  <ReadFailed
+                    compact
+                    title={t("money.performance.soldFailed")}
+                    body={t("money.performance.soldFailedBody")}
+                    onRetry={() => void realised.mutate()}
+                  />
                 ) : !sold ? (
                   <Skeleton className="h-[64px]" />
                 ) : (
                   <>
-                    <p className="text-[14px] font-strong text-white/[0.8]">{sold.sales === 0 ? "You haven't sold anything yet" : "What you made on what you sold"}</p>
+                    <p className="text-[14px] font-strong text-white/[0.8]">{sold.sales === 0 ? t("money.performance.soldNothing") : t("money.performance.soldMade")}</p>
                     {sold.sales > 0 ? (
                       <>
                         <p className="mt-1 text-[44px] font-bold leading-[1.1] tracking-[-1.4px] tabular-nums" style={{ color: sold.gainUsd > 0 ? UP : "#FFFFFF" }}>
-                          {sold.gainUsd > 0 ? "+" : sold.gainUsd < 0 ? "−" : ""}
-                          {usd(sold.gainUsd)}
+                          {signedUsd(sold.gainUsd)}
                         </p>
                         <p className="mt-1.5 text-[13px] font-strong text-white/[0.7]">
-                          across {sold.sales} {sold.sales === 1 ? "sale" : "sales"}
+                          {t("money.acrossSales", { count: sold.sales })}
                         </p>
                       </>
                     ) : (
-                      <p className="mt-2.5 text-[14px] leading-[21px] text-white/[0.8]">
-                        A gain becomes real — and reportable — the day something leaves. Everything you still hold is under Overview.
-                      </p>
+                      <p className="mt-2.5 text-[14px] leading-[21px] text-white/[0.8]">{t("money.performance.soldEmptyBody")}</p>
                     )}
                   </>
                 )}
               </div>
               <Link href={href("/invest/report")} className={`${glassCard} flex items-center p-4 transition-opacity hover:opacity-85`}>
                 <span className="min-w-0 flex-1 pr-2.5">
-                  <span className="block text-[15px] font-bold text-white">Your tax year</span>
-                  <span className="mt-0.5 block text-[12.5px] font-strong text-white/[0.7]">The year in full, and the spreadsheet your accountant wants</span>
+                  <span className="block text-[15px] font-bold text-white">{t("money.performance.taxYear")}</span>
+                  <span className="mt-0.5 block text-[12.5px] font-strong text-white/[0.7]">{t("money.performance.taxYearSub")}</span>
                 </span>
                 <Ion name="chevron-forward" size={18} className="text-white/[0.5]" />
               </Link>
