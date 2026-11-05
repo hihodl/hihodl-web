@@ -14,6 +14,7 @@ import board from "./board";
 import business from "./business";
 import common from "./common";
 import creator from "./creator";
+import developers from "./developers";
 import enquiries from "./enquiries";
 import front from "./front";
 import groupThread from "./groupThread";
@@ -67,6 +68,7 @@ export const NAMESPACES = {
   stays,
   trips,
   payPage,
+  developers,
   enquiries,
   publicPages,
 } as const;

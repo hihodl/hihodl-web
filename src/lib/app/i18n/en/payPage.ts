@@ -177,6 +177,15 @@ const payPage = {
   "bankUseReference": "Use this reference so it reaches {name}",
   "bankCopy": "Copy {label}",
 
+  // A creator's checkout (/pay/c/<id>): the way back to their site, and test mode
+  "testMode": "Test mode",
+  "testModeBody": "No money moves. Pick how this payment ends.",
+  "simulatePaid": "Simulate paid",
+  "simulateFailed": "Simulate failed",
+  "simulateError": "That didn't work. Try again.",
+  "cancelCheckout": "Cancel",
+  "returningTo": "Taking you back to {site}…",
+  "continueTo": "Continue to {site}",
   // A recurring link: paying it is subscribing (components/pay-links/RecurringPay.tsx)
   "recurring.per": "{period, select, week {/ week} other {/ month}}",
   "recurring.terms": "{amount} now, then {period, select, week {every week} other {every month}}.",

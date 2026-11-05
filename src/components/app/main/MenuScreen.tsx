@@ -708,6 +708,7 @@ function PersonalizationScreen({ onBack }: { onBack: () => void }) {
 function SettingsScreen({ onBack, open }: { onBack: () => void; open: (s: Screen) => void }) {
   const { hideBalances, setHideBalances } = useShellPrefs();
   const t = useT();
+  const productHref = useProductHref();
   const locale = useLocale();
   const { currency } = useDisplayCurrency();
   const [sessions] = useSessions();
@@ -748,6 +749,11 @@ function SettingsScreen({ onBack, open }: { onBack: () => void; open: (s: Screen
           { icon: "shield-outline", label: t("menu.settings.protection"), where: t("menu.settings.protectionWhere"), to: "send-protection" },
         ]}
       />
+
+      <SectionTitle>{t("developers.title")}</SectionTitle>
+      <HoldCard>
+        <MenuRow icon="code-slash-outline" label={t("developers.menuRow")} sub={t("developers.menuRowSub")} chevron href={productHref("/developers")} />
+      </HoldCard>
 
       <SectionTitle>{t("menu.settings.support")}</SectionTitle>
       <HoldCard>
