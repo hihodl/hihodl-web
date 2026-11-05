@@ -123,14 +123,45 @@ export function forgetThisBrowser(): void {
   }
 }
 
+/** The browser's IANA zone ("Asia/Jakarta"), or nothing when it has none to give. */
+function browserTimezone(): string | undefined {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return typeof tz === "string" && tz.includes("/") && tz.length <= 60 ? tz : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * The registration in flight, per person. After an OAuth redirect supabase-js
+ * fires INITIAL_SESSION and SIGNED_IN for the same session, and both reached
+ * here before the first answer was remembered: two identical POSTs, and the
+ * backend answered the second one 500 (newmanager01, 05-Nov-2026).
+ */
+const inFlight = new Map<string, Promise<void>>();
+
 /**
  * Register this browser's session once per signed-in person. Best effort, as
  * in the app: a failure leaves the list without this row until the next try.
+ *
+ * Also tells the backend this browser's timezone: the app does that through a
+ * header and push registration, neither of which the web has, so every
+ * web-only account kept the default Europe/Madrid.
  */
-export async function registerThisBrowser(userId: string, refreshToken: string | undefined): Promise<void> {
-  if (!refreshToken || refreshToken.length < 10) return;
-  if (remembered()?.userId === userId) return;
+export function registerThisBrowser(userId: string, refreshToken: string | undefined): Promise<void> {
+  if (!refreshToken || refreshToken.length < 10) return Promise.resolve();
+  if (remembered()?.userId === userId) return Promise.resolve();
+  const running = inFlight.get(userId);
+  if (running) return running;
+  const p = registerNow(userId, refreshToken).finally(() => inFlight.delete(userId));
+  inFlight.set(userId, p);
+  return p;
+}
+
+async function registerNow(userId: string, refreshToken: string): Promise<void> {
   const id = deviceId();
+  const timezone = browserTimezone();
   const ua = typeof navigator === "undefined" ? "" : navigator.userAgent;
   const touch = typeof navigator === "undefined" ? 0 : navigator.maxTouchPoints ?? 0;
   const { name, type } = browserDeviceName(ua, touch);
@@ -142,6 +173,7 @@ export async function registerThisBrowser(userId: string, refreshToken: string |
         deviceName: name,
         deviceType: type,
         platform: "web",
+        ...(timezone ? { timezone } : {}),
       },
     });
     if (typeof r?.sessionId === "string") store()?.setItem(SESSION_KEY, JSON.stringify({ userId, sessionId: r.sessionId }));
