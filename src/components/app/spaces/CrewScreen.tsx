@@ -9,6 +9,8 @@
  * holds none of it. The crew also shares an expenses group, for the coffee at
  * the event: "Group expenses & chat" opens that group's thread, the same screen
  * Payments › Groups opens (components/app/payments/GroupThread), never a copy.
+ * Under it, one row per event the crew has sold at (`eventGroups`): each event
+ * gets its own group, so Singapore's taxis and Istanbul's hotel stay apart.
  *
  * WHAT THIS SCREEN DOES
  *
@@ -32,6 +34,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { BackHeader, ctaPrimary, ctaSecondary, Notice as HoldNotice } from "@/components/app/hold";
 import { Ion } from "@/components/app/ion";
+import { eventDates } from "@/lib/ad-space/format";
 import {
   agreeToCrew,
   createCrew,
@@ -527,6 +530,19 @@ function CrewDetail({ crew, onChanged, onLeft }: { crew: Crew; onChanged: (c: Cr
           <Body dim>{t("spaces.crew.noExpensesGroup")}</Body>
         </Card>
       )}
+      {crew.eventGroups?.length ? (
+        <div className="flex flex-col gap-2">
+          {crew.eventGroups.map((g) => (
+            <SheetRow
+              key={g.groupId}
+              icon="location-outline"
+              title={g.eventName}
+              meta={eventDates(g.startsOn, g.endsOn)}
+              href={productHref(`/payments/groups/${encodeURIComponent(g.groupId)}?crew=${crew.id}`)}
+            />
+          ))}
+        </div>
+      ) : null}
 
       <Sales crewId={crew.id} />
 
