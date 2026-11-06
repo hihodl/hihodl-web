@@ -9,8 +9,13 @@
  * expiring spent first (hipoints.service.ts), stay points credited only once the
  * stay is completed and points spent on a cancelled stay given back with a new
  * window (booking-points.service.ts), no cash-out and no transfer. How many
- * points a booking earns is a share of our margin and changes, so this page
+ * points a stay earns is a share of our margin and changes, so this page
  * never states a rate: the checkout shows the number before you pay.
+ *
+ * What earns, as of 6 Nov 2026: stays, referrals (referral-terms) and HOLD
+ * Spaces sponsors on what they pay. Flights, eSIMs and experiences can be paid
+ * with points and earn none. There is no card and no cashback. Do not list a
+ * product here as earning until the backend credits it.
  */
 
 import React from "react";
@@ -20,12 +25,12 @@ export default function HiPointsTermsPage() {
   return (
     <LegalDoc
       title="HiPoints Terms"
-      reviewed="October 18, 2026"
+      reviewed="November 6, 2026"
       callout={
         <>
           <p>
-            HiPoints are HOLD&apos;s rewards: points you earn on some purchases in the app and spend as a discount on
-            others. The programme is run by HIHODL TECHNOLOGIES OÜ, an Estonian company (registry code 17460059).
+            HiPoints are HOLD&apos;s rewards: points you earn on stays and by inviting friends, and spend as a discount
+            at checkout. The programme is run by HIHODL TECHNOLOGIES OÜ, an Estonian company (registry code 17460059).
           </p>
           <p>
             HiPoints are not money, not a digital asset, and not held in your wallet. They cannot be cashed out, sold or
@@ -39,19 +44,25 @@ export default function HiPointsTermsPage() {
           body: (
             <>
               <P>
-                Purchases that earn HiPoints show how many points they earn before you pay. The number depends on the
-                product, the price and your plan, and we may change how many points a product earns at any time; the
-                number shown when you confirmed is the one you get.
+                Stays booked in the app earn HiPoints. The checkout shows how many points a stay earns before you pay.
+                The number depends on the stay, the price and your plan, and we may change how many points a stay earns
+                at any time; the number shown when you confirmed is the one you get.
               </P>
               <P>
-                Points are credited when the purchase is used, not when it is paid: a stay after check-out, an
-                experience after it takes place, a data plan when it is activated. Until then they are shown as pending.
-                If the purchase is cancelled or refunded before that, its points are not credited.
+                Stay points are credited after check-out, not when you pay. Until then they are shown as pending. If the
+                stay is cancelled or refunded before check-out, its points are not credited.
               </P>
               <P>
-                Bonuses, such as for inviting a friend under the referral programme, are credited as their own terms
-                say. Earning may not be available on every account or in every country while the programme is rolling
-                out.
+                Flights, eSIMs and experiences do not earn HiPoints. You can pay for them with points where the checkout
+                offers it.
+              </P>
+              <P>
+                You also earn points by inviting friends. When a friend joins with your invite link and, within 90 days,
+                completes a stay of $100 or more or keeps $100 in Savings for 30 days, you get 2,500 points and your
+                friend gets 1,000, for up to 10 friends, as the <A href="/legal/referral-terms">Referral Terms</A> set
+                out. HOLD Spaces sponsors, who are HOLD partners, earn points on what they pay for a Space, as their
+                agreement with us says. Earning may not be available on every account or in every country while the
+                programme is rolling out.
               </P>
             </>
           ),
@@ -62,12 +73,12 @@ export default function HiPointsTermsPage() {
             <>
               <P>
                 One HiPoint is worth USD 0.01 as a discount, converted into the currency of the purchase at the rate shown
-                when you spend it. You can spend points where the app offers them, for example on our fee for a stay or
-                on fees for some wallet services. Where a purchase accepts points, the checkout shows how many you can use
+                when you spend it. You can spend points where the app offers them: at checkout on stays, flights, eSIMs
+                and experiences, and on some fees. Where a purchase accepts points, the checkout shows how many you can use
                 and what they take off; points cover our part of the price only, never the supplier&apos;s.
               </P>
               <P>
-                A flight earns HiPoints, and accepts them as a discount, only where the flight checkout shows it. Points
+                A flight does not earn HiPoints. It accepts them as a discount where the flight checkout shows it. Points
                 used on a flight you cancel yourself are not returned; the{" "}
                 <A href="/legal/flights">Flight Terms</A> explain when they are.
               </P>
@@ -85,6 +96,10 @@ export default function HiPointsTermsPage() {
               <P>
                 If you spend points on a booking that is then cancelled, fails or is not completed, the points come back
                 to you with a new 180-day period.
+              </P>
+              <P>
+                If a purchase is refunded after its points were credited, we take those points back. If some of them have
+                already been spent or have expired, we take back only what is left of them.
               </P>
             </>
           ),

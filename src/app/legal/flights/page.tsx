@@ -7,7 +7,7 @@
  * Every number here is the backend's (hihodl-backend, server/services/travel):
  * the 8 EUR service fee per booking and per change (flight-pricing.ts), the
  * extras markup (EUR 4 a bag, EUR 3 a seat, nothing on cancellation cover),
- * HiPoints on flights (flight-points.service.ts), refunds in USDC to the paying wallet at the rate paid
+ * HiPoints spent on flights (flight-points.service.ts; flights earn none), refunds in USDC to the paying wallet at the rate paid
  * (flight-refund.service.ts), up to 4 travellers and no more lap infants than
  * adults (flights.router.ts). Change one there, change it here.
  */
@@ -19,7 +19,7 @@ export default function FlightTermsPage() {
   return (
     <LegalDoc
       title="Flight Terms"
-      reviewed="October 18, 2026"
+      reviewed="November 6, 2026"
       callout={
         <>
           <p>
@@ -159,8 +159,7 @@ export default function FlightTermsPage() {
             <>
               <P>
                 We do not add frequent flyer numbers to bookings made in HOLD, so we cannot promise that an airline
-                will credit miles for them. Where the checkout shows it, a flight earns HiPoints instead, credited once
-                the flight has departed; a booking cancelled before departure earns none.
+                will credit miles for them. A flight does not earn HiPoints either.
               </P>
               <P>
                 Where the checkout offers it, you can use HiPoints as a discount on our part of the price. If the
