@@ -38,7 +38,8 @@ import { HOLD_KEEPS, RATE_DISCLAIMER, bps } from "@/lib/rates.config";
  * "Commission" — not on this page and not in the app. The guest's number is the
  * guest's number; the word invites the question of whose margin it came out of.
  *
- * "Cashback" — the card pays cashback, in dollars, and that word is spoken for.
+ * "Cashback" — kept for the HOLD card, which is not out yet (6-nov-2026: no
+ * cashback is paid anywhere in HOLD today), and that word is spoken for.
  * A stay earns points. Letting the two share a word is how a guest ends up
  * expecting a transfer that is never coming.
  *
@@ -148,7 +149,7 @@ export default function TravelPage() {
               />
               <Fact
                 title="You earn points, not money back"
-                body="A stay pays HiPoints. It does not pay dollars, and nothing is transferred to your balance afterwards — the whole of what you get out of booking here is in the price you paid and the points you earned. The card is the product that pays cash."
+                body="A stay pays HiPoints. It does not pay dollars, and nothing is transferred to your balance afterwards. What you get out of booking here is the price you paid and the points you earned. No cashback is paid on a stay, or anywhere in HOLD today."
               />
               <Fact
                 title="Cancellations follow the hotel"
