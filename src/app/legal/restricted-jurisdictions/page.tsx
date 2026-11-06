@@ -25,7 +25,10 @@ const REGS_PROHIBITED = [
   "Australia",
 ];
 
-// Sanctioned / OFAC regions excluded from all regulated features.
+// Sanctioned / OFAC regions excluded from all regulated features. The same 19
+// countries as the app and the server (hihodl-backend
+// server/config/sanctioned-countries.ts): AF BY CU IR IQ LB LY MM NI KP PA RU
+// SO SS SD SY VE YE ZW. Change them together.
 const SANCTIONED = [
   "Afghanistan",
   "Belarus",
@@ -37,6 +40,7 @@ const SANCTIONED = [
   "Myanmar",
   "Nicaragua",
   "North Korea",
+  "Panama",
   "Russia",
   "Somalia",
   "South Sudan",
@@ -89,7 +93,7 @@ export default function RestrictedJurisdictionsPage() {
               Tokenized Stocks — Restricted Jurisdictions
             </h1>
             <p className="text-base sm:text-lg text-[#94a3b8ff] font-['Inter'] font-[400]">
-              Last updated: July 14, 2026
+              Last updated: November 6, 2026
             </p>
           </div>
 
@@ -115,6 +119,9 @@ export default function RestrictedJurisdictionsPage() {
                 In addition, tokenized stocks (like all of HOLD&apos;s regulated features) are not available to persons resident in, or otherwise connected to, jurisdictions subject to comprehensive sanctions or heightened financial-crime controls, including:
               </p>
               <CountryList items={SANCTIONED} />
+              <p className="text-[#94a3b8ff]">
+                The HOLD wallet itself works everywhere the App Store and Google Play offer it, these countries included: you can hold, send, receive and swap dollars without verifying your identity. What is not offered there are the products provided with regulated partners: bank accounts, the HOLD card, tokenized stocks and the identity verification they need.
+              </p>
               <p className="text-[#94a3b8ff]">
                 This list may be updated to reflect changes in applicable sanctions and regulatory requirements.
               </p>
