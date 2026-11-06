@@ -12,7 +12,6 @@ import {
   RATE_DISCLAIMER,
   PUBLIC_TIERS,
   bestLtvPct,
-  bestNetApyPct,
   blendedCashbackBps,
   bps,
   headlineCashbackBps,
@@ -35,11 +34,16 @@ import {
  * comparison, then an asset table with the rate and the borrowing limit side by
  * side, then footnotes. Nobody needs to learn a new layout to compare us.
  *
- * Two rules this page enforces in code, not in review:
+ * Three rules this page enforces in code, not in review:
  *
- * 1. EVERY headline is "up to". Yields float and bands step down, so a flat
- *    claim is false the moment the market moves. `bestNetApyPct()` and
- *    `headlineCashbackBps()` are always rendered behind "up to".
+ * 0. It promises only what the product pays TODAY. Since 6-nov-2026: HiPoints
+ *    are earned on stays and invites (not flights, eSIMs, experiences, swaps or
+ *    balances), the HOLD card does not exist yet and no cashback is paid. The
+ *    plan table stays as a provisional plan and must never read as live. The
+ *    savings headline points to the live rate in the app instead of a number
+ *    measured once, because a rate quoted here goes stale on its own.
+ * 1. EVERY rate is "up to". Yields float and bands step down, so a flat claim
+ *    is false the moment the market moves.
  * 2. EVERY rate on this page is NET of our share. `netApyPct()` runs the market
  *    rate through the tier's fee before it is displayed. The savings share
  *    itself belongs to Savings and is stated on /savings, linked
@@ -54,7 +58,7 @@ import {
 export const metadata: Metadata = {
   title: "HiPoints",
   description:
-    "How HOLD pays you back: HiPoints, plan tiers, cashback bands and monthly limits, and what every asset earns and can borrow against. Rates are variable and not guaranteed.",
+    "HiPoints: earned on stays and by inviting friends, worth $0.01 each off our part of a price, and spent at checkout. Plus the provisional plans for the HOLD card, which is not available yet, and what each asset can borrow against. Rates are variable and not guaranteed.",
   alternates: { canonical: "/hipoints" },
 };
 
@@ -65,9 +69,7 @@ export default function HiPointsPage() {
     year: "numeric",
   });
 
-  const bestApy = bestNetApyPct();
   const bestLtv = bestLtvPct();
-  const bestCashback = Math.max(...PUBLIC_TIERS.map((t) => headlineCashbackBps(t.id)));
   const anyProvisional = PUBLIC_TIERS.some((t) => t.provisional);
 
   // The tier whose savings terms are best — the one the "up to" APY belongs to.
@@ -87,13 +89,14 @@ export default function HiPointsPage() {
             <div className="max-w-3xl">
               <p className="text-tiny uppercase tracking-wider text-moonlight">HiPoints</p>
               <h1 className="mt-6 font-display text-h1 font-light text-text leading-tight">
-                Three ways your
+                What HOLD pays you back,
                 <br />
-                <span className="text-text-muted">money pays you back.</span>
+                <span className="text-text-muted">and what it does not yet.</span>
               </h1>
               <p className="mt-8 text-lead text-text-muted">
-                What your balance earns, what your card gives back, and what you can borrow
-                without selling. Every rate below is net of our share — and where a row is
+                Today you earn HiPoints on stays and by inviting friends, and your savings earn
+                a variable rate you can see live in the app. The HOLD card is not available yet,
+                so no cashback is paid. Every rate below is net of our share, and where a row is
                 not somewhere a HOLD balance can be supplied, it says so.
               </p>
             </div>
@@ -101,13 +104,14 @@ export default function HiPointsPage() {
             <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-5">
               <Headline
                 label="Your dollars earn"
-                value={`up to ${pct(bestApy)}`}
-                sub={`Annual rate, net of everything. ${bestTier.name} plan.`}
+                value="Live rate"
+                sub="Variable, net of our share. Today's rate is in the app, on Savings."
               />
               <Headline
-                label="Your card gives back"
-                value={`up to ${bps(bestCashback)}`}
-                sub="On the first slice of what you spend each month."
+                label="One HiPoint is"
+                value={usd(HIPOINT_USD)}
+                sub="Off our part of a price at checkout. Earned on stays and invites."
+                marked={false}
               />
               <Headline
                 label="You can borrow"
@@ -129,10 +133,14 @@ export default function HiPointsPage() {
           <div className="container-page section relative">
             <div className="max-w-2xl">
               <h2 className="font-display text-h2 font-light text-text">Plans</h2>
-              <p className="mt-6 text-body text-text-muted leading-relaxed">
-                Cashback steps down as you spend more in a month and stops at a monthly
-                limit. That is how every honest banded programme works, and it is why the
-                headline is a first slice rather than a flat rate on everything.
+              <p className="mt-6 text-body text-text leading-relaxed">
+                The HOLD card is not available yet, and no cashback is paid today.
+              </p>
+              <p className="mt-4 text-body text-text-muted leading-relaxed">
+                The table below is our plan for the card, not something you can sign up for.
+                When it launches, cashback is planned to step down as you spend more in a
+                month and stop at a monthly limit, which is why the top rate applies only to a
+                first slice of spending, not to everything.
               </p>
               {anyProvisional && (
                 <p className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-pill border border-amber/30 bg-amber/[0.05] text-small text-text-muted">
@@ -174,7 +182,7 @@ export default function HiPointsPage() {
                     render={(t) => t.gate ?? "Open to anyone"}
                   />
                   <ComparisonRow
-                    label="Cashback"
+                    label="Planned card cashback"
                     accent
                     render={(t) => `up to ${bps(headlineCashbackBps(t.id))}`}
                   />
@@ -215,22 +223,22 @@ export default function HiPointsPage() {
 
             <ul className="mt-8 flex flex-col gap-2 max-w-3xl">
               <Note>
-                Cashback bands step down within a month. &ldquo;Typical rate&rdquo; is what
-                someone spending $1,500 a month actually blends to across all the bands and
-                after the monthly limit — the honest average behind the headline.
+                No cashback is paid today. The cashback rows describe the HOLD card, which is
+                not available yet, and they start only when it launches.
               </Note>
               <Note>
-                Cashback is paid in dollars into your savings, where it keeps earning. It is
-                withdrawable money, not store credit.
+                Planned cashback bands step down within a month. &ldquo;Typical rate&rdquo; is
+                what someone spending $1,500 a month would blend to across all the bands and
+                after the monthly limit, the honest average behind the top rate.
               </Note>
               <Note>
-                Cash-like purchases earn nothing: ATM withdrawals, money transfers,
-                stored-value top-ups, gambling and tax payments.
+                Once the card launches, cash-like purchases will earn nothing: ATM
+                withdrawals, money transfers, stored-value top-ups, gambling and tax payments.
               </Note>
               <Note>
-                {RATE_DISCLAIMER} Cashback is paid out of what the card networks
-                pay us on a purchase. We are not passing on a cost — if a
-                purchase earns nothing, it is because we were paid nothing on it.
+                {RATE_DISCLAIMER} Planned cashback would be paid out of what the card networks
+                pay us on a purchase. If a purchase would earn nothing, it is because we
+                would be paid nothing on it.
               </Note>
             </ul>
           </div>
@@ -342,32 +350,41 @@ export default function HiPointsPage() {
             <div className="max-w-2xl">
               <h2 className="font-display text-h2 font-light text-text">HiPoints</h2>
               <p className="mt-6 text-body text-text-muted leading-relaxed">
-                Points are the currency inside the product. You earn them by moving and
-                holding money, and you spend them on our fees and on partner perks. One
-                point is {usd(HIPOINT_USD)}.
+                Points are the rewards inside the product. You earn them on stays and by
+                inviting friends, and you spend them at checkout. One point is{" "}
+                {usd(HIPOINT_USD)} off our part of a price.
               </p>
             </div>
 
             <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-5">
               <Card
                 title="Earn"
-                body="On swaps and on money you put to work. Deposits are the ticket to earn, not the thing rewarded."
+                body="On stays, credited after check-out and pending until then. And by inviting friends: 2,500 points for you and 1,000 for them when they book a $100 stay or keep $100 in Savings for 30 days, within 90 days. Up to 10 friends."
               />
               <Card
                 title="Spend"
-                body="Cover a fee with points. Points never expire quietly: you get a reminder before they do."
+                body="At checkout on stays, flights, eSIMs and experiences, and on some fees, where the app offers it. Flights, eSIMs and experiences can be paid with points but do not earn them."
               />
               <Card
-                title="Perks"
-                body="Redeem against partner perks. The list grows as agreements are signed; we name a partner once the deal is done."
+                title="Not money"
+                body="Points are a discount, not money. They cannot be withdrawn, cashed out, sold or transferred."
               />
             </div>
 
             <ul className="mt-8 flex flex-col gap-2 max-w-3xl">
-              <Note>Points expire 12 months after they are earned.</Note>
               <Note>
-                Points are not cashback and do not convert to cash. Cashback is paid in
-                dollars, separately.
+                Points expire 180 days after they are credited. The ones that expire soonest
+                are used first, and you get a reminder before any expire.
+              </Note>
+              <Note>Points are not cashback and do not convert to cash.</Note>
+              <Note>
+                If a booking is cancelled, the points you spent on it usually come back with a
+                fresh 180 days, and points it would have earned are not credited. The full
+                rules, exceptions included, are in the{" "}
+                <Link href="/legal/hipoints" className="text-amber hover:underline">
+                  HiPoints Terms
+                </Link>
+                .
               </Note>
             </ul>
 
@@ -379,15 +396,7 @@ export default function HiPointsPage() {
               </h2>
               <div className="mt-8 space-y-6 text-body text-text-muted">
                 <p>
-                  Two ways, and neither of them is a charge on your balance.
-                </p>
-                <p>
-                  <span className="text-text">Card networks pay us when you
-                  spend.</span> Every card in the world earns its issuer a small
-                  cut of a purchase, paid by the merchant&rsquo;s bank rather than by
-                  you. Most issuers keep it. Cashback is us handing part of it
-                  back, which is why cash-like purchases earn nothing — nobody
-                  pays us on those.
+                  Not by charging your balance.
                 </p>
                 <p>
                   <span className="text-text">We keep a share of the interest
@@ -397,6 +406,15 @@ export default function HiPointsPage() {
                     the Smart Account page
                   </Link>
                   .
+                </p>
+                <p>
+                  <span className="text-text">Once the card launches, card
+                  networks will pay us when you spend.</span> Every card in the
+                  world earns its issuer a small cut of a purchase, paid by the
+                  merchant&rsquo;s bank rather than by you. Most issuers keep it.
+                  Planned cashback is us handing part of it back, which is why
+                  cash-like purchases will earn nothing: nobody pays us on those.
+                  Until then there is no card and no cashback.
                 </p>
               </div>
             </div>
@@ -411,15 +429,28 @@ export default function HiPointsPage() {
 
 /* ────────────────────────────────────────────────────────────── */
 
-function Headline({ label, value, sub }: { label: string; value: string; sub: string }) {
+function Headline({
+  label,
+  value,
+  sub,
+  marked = true,
+}: {
+  label: string;
+  value: string;
+  sub: string;
+  /** Points at the rate footnote. Off for a value that is not a rate. */
+  marked?: boolean;
+}) {
   return (
     <div className="rounded-card p-8 border border-[color:var(--color-hairline)] bg-white/[0.03]">
       <p className="text-tiny uppercase tracking-wider text-text-faint">{label}</p>
       <p className="mt-5 font-display text-h2 font-light text-amber tabular-nums">
         {value}
-        <span className="text-text-faint text-h4" aria-hidden>
-          *
-        </span>
+        {marked && (
+          <span className="text-text-faint text-h4" aria-hidden>
+            *
+          </span>
+        )}
       </p>
       <p className="mt-4 text-small text-text-muted">{sub}</p>
     </div>

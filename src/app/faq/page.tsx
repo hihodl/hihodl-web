@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { SiteJsonLd } from "@/components/site/SiteJsonLd";
 import { TopNav } from "@/components/site/TopNav";
 import { Footer } from "@/components/site/Footer";
@@ -23,7 +24,7 @@ export const metadata: Metadata = {
  * same site as a plan card saying no cap and no markup. A FAQ that contradicts
  * the pricing section costs more trust than the FAQ ever earned.
  */
-const FAQS: { q: string; a: string }[] = [
+const FAQS: { q: string; a: string; link?: { href: string; label: string } }[] = [
   {
     q: "What is HOLD?",
     a: "HOLD is one account for people who earn in one country and live in another. It does four things: payments (get paid and send money), savings (your balance earns interest), investing (one portfolio with your cost basis) and benefits (points, stays and eSIM data). The money is held in stablecoins and the keys stay on your phone, so it is your account in the literal sense — we cannot move or freeze it.",
@@ -42,7 +43,8 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "What are HiPoints and what can I spend them on?",
-    a: "HiPoints are earned inside the app: referrals that activate, challenges, and fees you would otherwise have paid. They are spent on things that cost real money, such as a hotel booking made in the app. A point is worth the same wherever you spend it; we do not vary the rate by product.",
+    a: "You earn HiPoints on stays booked in the app, credited after check-out, and by inviting friends: 2,500 points for you and 1,000 for them when they book a $100 stay or keep $100 in Savings for 30 days, within 90 days. A point is worth $0.01 off our part of a price, and you spend points at checkout on stays, flights, eSIMs and experiences, and on some fees, where the app offers it. Flights, eSIMs and experiences can be paid with points but do not earn them. Each batch of points expires 180 days after it is credited, and we remind you before it does. Points are a discount, not money: they cannot be withdrawn, cashed out, sold or transferred.",
+    link: { href: "/legal/hipoints", label: "Read the HiPoints Terms" },
   },
   {
     q: "Can I book travel with HOLD?",
@@ -128,7 +130,7 @@ export default function FaqPage() {
             </div>
 
             <div className="mt-16 max-w-3xl flex flex-col gap-4">
-              {FAQS.map(({ q, a }) => (
+              {FAQS.map(({ q, a, link }) => (
                 <details
                   key={q}
                   className="group rounded-card border border-[color:var(--color-hairline)] bg-white/[0.03] p-6 open:bg-white/[0.05] transition-colors"
@@ -145,6 +147,13 @@ export default function FaqPage() {
                     </span>
                   </summary>
                   <p className="mt-4 text-body text-text-muted leading-relaxed">{a}</p>
+                  {link && (
+                    <p className="mt-3 text-body">
+                      <Link href={link.href} className="text-amber hover:underline">
+                        {link.label}
+                      </Link>
+                    </p>
+                  )}
                 </details>
               ))}
             </div>

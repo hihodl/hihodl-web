@@ -64,7 +64,7 @@ export default function LeaderboardPage() {
               Referral Leaderboard
             </h1>
             <p className="max-w-[768px] text-center font-['Inter'] font-[400] -tracking-[0.01em] text-[#94a3b8ff] text-base sm:text-lg md:text-xl leading-relaxed">
-              Climb the ranks by inviting friends. Top 100 earners unlock exclusive perks.
+              Climb the ranks by inviting friends.
             </p>
           </div>
         </motion.section>

@@ -72,10 +72,10 @@ const PRODUCTS: Product[] = [
   {
     id: "benefits",
     eyebrow: "Benefits",
-    title: "Spending that gives something back.",
-    body: "HiPoints for the things you already do in the app, and somewhere real to spend them. Book a stay or top up data and pay straight from your balance.",
+    title: "Stays and invites that give something back.",
+    body: "HiPoints on every stay you book and every friend you invite, and somewhere real to spend them. Book a stay or top up data and pay straight from your balance.",
     points: [
-      "Points for referrals, challenges and fees you'd otherwise pay",
+      "Points on stays and for friends you invite",
       "Stays — real hotel inventory, booked and paid in the app",
       "eSIM data for wherever you land next",
     ],

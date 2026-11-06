@@ -176,7 +176,7 @@ export default function InviteRedirect() {
         ) : partnerName ? (
           <>
             Book stays, flights and eSIMs at HOLD&rsquo;s prices, earn HiPoints
-            on every booking, and pay in dollars straight from your phone.
+            on every stay, and pay in dollars straight from your phone.
           </>
         ) : (
           <>

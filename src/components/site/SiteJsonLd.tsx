@@ -110,7 +110,7 @@ const jsonLd = {
           name: "What are HiPoints?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "HiPoints are earned inside HOLD — referrals that activate, challenges, and fees you would otherwise have paid — and spent on things that cost real money, such as a hotel booking made in the app. A point is worth the same wherever it is spent; the rate does not vary by product.",
+            text: `You earn HiPoints on stays booked in the app, credited after check-out, and by inviting friends: 2,500 points for you and 1,000 for them when they book a $100 stay or keep $100 in Savings for 30 days, within 90 days. A point is worth $0.01 off our part of a price, and you spend points at checkout on stays, flights, eSIMs and experiences, and on some fees, where the app offers it. Flights, eSIMs and experiences can be paid with points but do not earn them. Each batch of points expires 180 days after it is credited, and we remind you before it does. Points are a discount, not money: they cannot be withdrawn, cashed out, sold or transferred. The full rules are in the HiPoints Terms: ${SITE}/legal/hipoints.`,
           },
         },
         {

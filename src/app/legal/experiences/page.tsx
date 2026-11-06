@@ -21,7 +21,7 @@ export default function ExperienceTermsPage() {
   return (
     <LegalDoc
       title="Experience Terms"
-      reviewed="October 15, 2026"
+      reviewed="November 6, 2026"
       callout={
         <>
           <p>
@@ -159,8 +159,8 @@ export default function ExperienceTermsPage() {
           title: "HiPoints",
           body: (
             <P>
-              An experience earns or uses HiPoints only where the checkout in the app shows it; see the{" "}
-              <A href="/legal/hipoints">HiPoints Terms</A>. A ticket bought on Tiqets&apos; site earns none.
+              An experience does not earn HiPoints. Where the checkout in the app offers it, you can use HiPoints as a
+              discount on our part of the price; see the <A href="/legal/hipoints">HiPoints Terms</A>.
             </P>
           ),
         },
