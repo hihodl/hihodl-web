@@ -122,7 +122,7 @@ export default function HiPointsTermsPage() {
             <P>
               We may correct a balance credited by mistake, and remove points earned through fraud or abuse of the
               programme, telling you why. Where an account is closed for breach of our Terms of Service, its points end
-              with it.
+              with it. If you close your account yourself, your points also end with it, so spend them first.
             </P>
           ),
         },
