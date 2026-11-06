@@ -42,7 +42,7 @@ const NAV_ITEMS: NavItem[] = [
     label: "Benefits",
     href: "/#benefits",
     menu: [
-      { href: "/hipoints", label: "HiPoints", blurb: "Earned on what you already spend" },
+      { href: "/hipoints", label: "HiPoints", blurb: "Earned on stays and invites" },
       { href: "/travel", label: "Stays", blurb: "Book hotels, pay from your balance" },
       { href: "/esim", label: "eSIM", blurb: "Data for the country you land in" },
       { href: "/spaces", label: "Spaces", blurb: "Creators sell sponsorship, brands pay them directly" },

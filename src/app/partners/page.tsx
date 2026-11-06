@@ -110,7 +110,7 @@ export default function PartnersPage() {
               },
               {
                 title: "Your travellers never pay more",
-                body: "They get HOLD's own prices plus HiPoints on what they book. There is never a markup for coming through you.",
+                body: "They get HOLD's own prices plus HiPoints on every stay they book. There is never a markup for coming through you.",
               },
               {
                 title: "Every number in one place",
