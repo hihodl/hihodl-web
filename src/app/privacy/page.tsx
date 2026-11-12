@@ -49,7 +49,7 @@ export default function PrivacyPage() {
               Privacy Policy
             </h1>
             <p className="text-base sm:text-lg text-[#94a3b8ff] font-['Inter'] font-[400]">
-              Last updated: October 23, 2026
+              Last updated: November 12, 2026
             </p>
           </div>
 
@@ -139,6 +139,7 @@ export default function PrivacyPage() {
                 <li>Read the bookings you forward, share or that we find in a Gmail or Outlook account you connected, and add each one to the trip it belongs to</li>
                 <li>Keep your bookings in the HOLD calendar of a Google or Microsoft account you connected, and tell you when a new booking clashes with your calendar</li>
                 <li>Let Hi, the assistant in the app, write to you about a trip of yours when it notices something worth knowing, for example a night with nowhere to stay; you can turn these trip ideas off in Settings, or for one trip or one kind of idea from the message itself</li>
+                <li>Let Hi remember what helps it help you without asking again: places you tell it (such as home or work, with their address), the apps and companies you use for each thing, the venues you return to, your tastes and your routines. Hi learns these from what you tell it, from your bookings and the booking and appointment emails we read for you, from payments with your HOLD card, and from the names of repeating events in a calendar you connected and allowed Hi to read. Hi never keeps passwords, card numbers, codes, documents or health conditions. You can see, correct and delete everything Hi remembers in Settings, under What Hi knows about you, or by asking Hi to forget it. Hi uses it only in your own chat with Hi, never in a group or a chat with another person</li>
               </ul>
             </section>
 
@@ -264,7 +265,7 @@ export default function PrivacyPage() {
             <section className="flex flex-col gap-4">
               <h2 className="text-2xl font-[700] text-[#eaf6ffff]">14. Data Retention</h2>
               <p className="text-[#94a3b8ff]">
-                We retain personal information only for as long as necessary for the purposes described in this Policy, including to provide the services, comply with legal and anti-money-laundering obligations, resolve disputes, and enforce our agreements. KYC and biometric data captured by Sumsub are retained and deleted in accordance with Sumsub&apos;s retention practices and applicable law; HOLD does not hold this data. Retention periods required by anti-money-laundering law may extend beyond account closure. Trip details read from a booking are kept as part of the plan they were added to. The original booking email, file or image is not kept after it has been read.
+                We retain personal information only for as long as necessary for the purposes described in this Policy, including to provide the services, comply with legal and anti-money-laundering obligations, resolve disputes, and enforce our agreements. KYC and biometric data captured by Sumsub are retained and deleted in accordance with Sumsub&apos;s retention practices and applicable law; HOLD does not hold this data. Retention periods required by anti-money-laundering law may extend beyond account closure. Trip details read from a booking are kept as part of the plan they were added to. The original booking email, file or image is not kept after it has been read. What you tell Hi to remember is kept until you delete it or close your account. What Hi learns from your bookings, emails, card payments and calendar is not copied: it is read from them when Hi needs it, so it goes when they go, and when you ask Hi to forget something, HOLD keeps only its name, so Hi does not learn it again; closing your account deletes that too.
               </p>
             </section>
 
