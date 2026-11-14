@@ -154,7 +154,7 @@ export default function StayTermsPage() {
               </P>
               <P>
                 Questions or complaints: <A href="mailto:legal@hihodl.xyz">legal@hihodl.xyz</A>, with your booking
-                reference. How we handle complaints is set out in Section 19 of the Terms of Service.
+                reference. How we handle complaints is set out in Section 20 of the Terms of Service.
               </P>
             </>
           ),

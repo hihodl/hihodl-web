@@ -210,7 +210,7 @@ export default function ExperienceTermsPage() {
               />
               <P>
                 How we handle complaints, including referral to the Estonian Consumer Disputes Committee
-                (Tarbijavaidluste komisjon), is set out in Section 19 of the Terms of Service.
+                (Tarbijavaidluste komisjon), is set out in Section 20 of the Terms of Service.
               </P>
             </>
           ),
