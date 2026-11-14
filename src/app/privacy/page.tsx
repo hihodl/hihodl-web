@@ -49,7 +49,7 @@ export default function PrivacyPage() {
               Privacy Policy
             </h1>
             <p className="text-base sm:text-lg text-[#94a3b8ff] font-['Inter'] font-[400]">
-              Last updated: November 12, 2026
+              Last updated: November 14, 2026
             </p>
           </div>
 
@@ -107,6 +107,17 @@ export default function PrivacyPage() {
                   <p className="mt-3">
                     <strong>Connecting a Microsoft account.</strong> You can also connect an Outlook, Hotmail or work Microsoft account. Microsoft asks you to let HOLD read your mail and read and write your calendars, because Microsoft offers no narrower permission. HOLD only uses that access the way it is described above for Gmail and Google Calendar: we look for travel bookings among new messages in your inbox, read only messages whose subject looks like a booking, and keep only the trip details; we write only the HOLD calendar we create; we look at your busy times around a new booking; and we read event names or move an event only if you turned those on. We keep your account address and an encrypted access token. When you disconnect, we delete the HOLD calendar from your account, stop reading and delete the token; Microsoft does not let apps withdraw their own access, so the app also shows you where to remove HOLD in your Microsoft account.
                   </p>
+                  <p className="mt-3">
+                    <strong>When Hi uses a website for you.</strong> Hi can check you in for a flight, sign you up for an event, reserve a table or prepare an order in a browser that runs on our servers, and you can watch it live. To decide each step, Hi sends screenshots of that page to our AI provider; they are used to do your task and not to train models. What we handle:
+                  </p>
+                  <ul className="list-disc list-inside space-y-2 ml-4 mt-2">
+                    <li><em>Your sign in on that site.</em> Hi may fill in the email address or phone number you use there. You type your password and any one-time code yourself; what you type goes to the page once and is never logged or kept. HOLD never keeps a password.</li>
+                    <li><em>Which login you use where.</em> For each site and kind of site (flights, hotels, restaurants, rides, shopping, events), Hi remembers the email addresses or phone numbers you use there, labelled work or personal, so it tries the right one. It learns them from what you tell it, from a login that worked before, and from the address a booking confirmation was first sent to. They are kept on our servers only.</li>
+                    <li><em>Staying signed in.</em> After you sign in, we keep that site&apos;s session (its cookies), encrypted, so the next task starts signed in. To have them removed, write to <a href="mailto:privacy@hihodl.xyz" className="text-brand-ffb703 underline underline-offset-2 hover:opacity-80 transition">privacy@hihodl.xyz</a> and we delete them.</li>
+                    <li><em>What the site needs.</em> For a reservation, the site receives your name, email address and phone number from your profile, as it would if you booked yourself. These go to that task only and are not stored with it.</li>
+                    <li><em>A check-in you schedule.</em> The passengers&apos; names and travel document details (type, number, expiry date and issuing country) are kept encrypted until the check-in ends or you cancel it, and are then deleted. The flight is kept without its booking reference.</li>
+                    <li><em>The result.</em> We keep a screenshot of the last screen of each task as proof of what happened and, for a check-in, the boarding pass the airline showed, so you can see them in the app.</li>
+                  </ul>
                 </div>
                 <div>
                   <h3 className="text-xl font-[600] text-[#eaf6ffff] mb-2">2.2 Automatically Collected Information</h3>
@@ -140,6 +151,7 @@ export default function PrivacyPage() {
                 <li>Keep your bookings in the HOLD calendar of a Google or Microsoft account you connected, and tell you when a new booking clashes with your calendar</li>
                 <li>Let Hi, the assistant in the app, write to you about a trip of yours when it notices something worth knowing, for example a night with nowhere to stay; you can turn these trip ideas off in Settings, or for one trip or one kind of idea from the message itself</li>
                 <li>Let Hi remember what helps it help you without asking again: places you tell it (such as home or work, with their address), the apps and companies you use for each thing, the venues you return to, your tastes and your routines. Hi learns these from what you tell it, from your bookings and the booking and appointment emails we read for you, from payments with your HOLD card, and from the names of repeating events in a calendar you connected and allowed Hi to read. Hi never keeps passwords, card numbers, codes, documents or health conditions. You can see, correct and delete everything Hi remembers in Settings, under What Hi knows about you, or by asking Hi to forget it. Hi uses it only in your own chat with Hi, never in a group or a chat with another person</li>
+                <li>Let Hi use a website for you when you ask it to, signed in as you, as described in section 2.1 under When Hi uses a website for you</li>
               </ul>
             </section>
 
