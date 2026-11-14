@@ -49,7 +49,7 @@ export default function TermsPage() {
               Terms of Service
             </h1>
             <p className="text-base sm:text-lg text-[#94a3b8ff] font-['Inter'] font-[400]">
-              Last updated: October 15, 2026
+              Last updated: November 14, 2026
             </p>
           </div>
 
@@ -121,7 +121,7 @@ export default function TermsPage() {
               </p>
               <ul className="list-disc list-inside space-y-2 ml-4 text-[#94a3b8ff]">
                 <li>You are the sole owner and controller of your wallet, and you are solely responsible for the security of your private keys, seed phrase (recovery phrase), and PIN</li>
-                <li>Your keys are generated on your own device. We do not hold, control, or take custody of your digital assets, we cannot sign a transaction on your behalf, and we cannot move, spend, freeze, or seize your funds. Only you can authorize a transaction, from your device</li>
+                <li>Your keys are generated on your own device, and we never hold them. We cannot sign with your wallet, and we cannot freeze or seize your funds. Money leaves your wallet only when you authorise it: either one payment at a time from your device, or through a spending permission you signed for a specific feature, within the limit you chose (Section 5.2)</li>
                 <li>You are solely responsible for all transactions you authorize from your wallet and bear all risk of any resulting losses</li>
                 <li>We never receive your PIN, and we do not transmit your recovery phrase to our servers in readable form</li>
                 <li>You must keep your recovery information secure and confidential, and you are responsible for the acts of anyone to whom you grant access to your wallet or device</li>
@@ -141,6 +141,18 @@ export default function TermsPage() {
               <p className="text-[#94a3b8ff]">
                 Any optional time-lock, allowlist, spending-limit, or smart-wallet recovery features are tools you configure and control; they do not transfer custody of your keys or assets to us.
               </p>
+              <h3 className="text-xl font-[600] text-[#eaf6ffff] mt-2">5.2 Spending permissions you sign</h3>
+              <p className="text-[#94a3b8ff]">
+                Some features pay for things later without asking you to approve each payment: Hi Go (Hi paying for a booking from the budget you set), the automatic renewal of a data plan, your share of a monthly group bill, and any other feature that says so before you turn it on. To make that possible, you sign one permission on the blockchain that lets a key held by HOLD take money from your wallet later, up to a maximum you choose. You should know how this works:
+              </p>
+              <ul className="list-disc list-inside space-y-2 ml-4 text-[#94a3b8ff]">
+                <li>Before you sign, we show you what the permission is for, the token, the network, and the maximum. In total, the key can never take more than that maximum. Taking more needs a new signature from you.</li>
+                <li>Each feature has its own key, used only for that feature. A permission you signed for data plan renewals cannot be used to pay for a hotel, and the other way round.</li>
+                <li>On the blockchain, the permission has no end date. It lasts until it is used up or you withdraw it. Any tighter limits the feature offers, such as a weekly budget, a per purchase limit, or the kinds of things it may pay for, are applied by our systems before each payment, not by the blockchain.</li>
+                <li>You can withdraw a permission at any time: in the app where the feature offers it (Hi Go and data plan renewals do), and in every case by setting it to zero on the blockchain with any compatible wallet. Withdrawing stops future payments; it does not undo payments already made.</li>
+                <li>We can pause every payment made this way at once if something looks wrong. A paused payment takes nothing.</li>
+                <li>We keep these keys secure and use them only as described here. If one of them were ever compromised, the most it could take from you is what is left of the permission you signed.</li>
+              </ul>
             </section>
 
             <section className="flex flex-col gap-4">
@@ -220,6 +232,10 @@ export default function TermsPage() {
                 <li>Attempt to gain unauthorized access to our systems or other users&apos; accounts</li>
                 <li>Interfere with or disrupt the integrity or performance of our services</li>
                 <li>Use our services for money laundering, terrorist financing, or other criminal activities</li>
+                <li>Use Hi to impersonate someone, to deceive a merchant or another person, or to make a purchase or booking you are not entitled to make</li>
+                <li>Use Hi on an account, website, or service you are not entitled to use, or to get around its security checks</li>
+                <li>Use Hi to harass, threaten, or spam people, or to contact people who have not agreed to be contacted</li>
+                <li>Game referrals, HiPoints, rewards, or the limits we set on Hi</li>
               </ul>
             </section>
 
@@ -272,7 +288,7 @@ export default function TermsPage() {
                 <li><span className="text-[#eaf6ffff] font-[600]">Your responsibility.</span> You are solely responsible for your own compliance with immigration, residence, and tax laws, and for the accuracy of the information you enter.</li>
               </ul>
               <p className="text-[#94a3b8ff]">
-                The &quot;as is&quot; / no-warranty disclaimer in Section 11 and the limitation of liability in Section 13 apply in full to the Informational Tools. Further detail on how these estimates are produced, the data behind them, and their limits is available at{" "}
+                The &quot;as is&quot; / no-warranty disclaimer in Section 11 and the limitation of liability in Section 14 apply in full to the Informational Tools. Further detail on how these estimates are produced, the data behind them, and their limits is available at{" "}
                 <a href="/legal/traveler" className="text-brand-ffb703 underline underline-offset-2 hover:opacity-80 transition">
                   hihodl.xyz/legal/traveler
                 </a>
@@ -281,7 +297,58 @@ export default function TermsPage() {
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">13. Limitation of Liability</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">13. Hi, Your Assistant</h2>
+              <p className="text-[#94a3b8ff]">
+                Hi is the AI assistant built into HOLD. It can answer questions, plan trips, find and book travel, read the bookings you forward or that it finds in an account you connected, use websites for you in a browser that runs on our servers, and, if you turn on Hi Go, pay for some bookings from a budget you set. Hi is software, not a person. In the app you may give it another name; these Terms still apply.
+              </p>
+              <h3 className="text-xl font-[600] text-[#eaf6ffff] mt-2">13.1 What you authorise</h3>
+              <p className="text-[#94a3b8ff]">
+                When you ask Hi to do something, you authorise HOLD to take the steps reasonably needed to do it, within what you asked and the limits you set. Hi is designed to ask you before going further when a request is unclear, when what it found is materially different from what you asked for, or when it would cost you money you have not approved. It may decline or stop a task when it cannot do it safely, when it cannot confirm that you are entitled to do it, or when the outcome is uncertain. You can stop a task Hi is running at any time.
+              </p>
+              <h3 className="text-xl font-[600] text-[#eaf6ffff] mt-2">13.2 Payments and bookings</h3>
+              <p className="text-[#94a3b8ff]">
+                Apart from Hi Go and the other spending permissions in Section 5.2, Hi does not pay for anything without your approval on your phone. Hi shows you what a booking is and what it costs before you approve it. A payment belongs to one booking. If the price or offer Hi found is no longer available when it comes to pay, Hi does not pay a different price on its own: it tells you, and you decide. Each booking is governed by its product terms (Section 2.1).
+              </p>
+              <h3 className="text-xl font-[600] text-[#eaf6ffff] mt-2">13.3 Hi Go</h3>
+              <p className="text-[#94a3b8ff]">
+                If you turn on Hi Go, you choose a budget, what Hi may pay for (for example stays, flights, or data plans), and the amount above which Hi must ask you first. Hi may then pay for a booking it found for you and you chose, within those limits, without asking you to approve that payment on your phone. Hi Go pays through a spending permission you sign, as Section 5.2 explains. Every payment Hi makes appears in Hi Go&apos;s Activity. You can lower your limits or turn Hi Go off at any time; doing so does not cancel bookings already made.
+              </p>
+              <h3 className="text-xl font-[600] text-[#eaf6ffff] mt-2">13.4 Websites and your accounts with other companies</h3>
+              <p className="text-[#94a3b8ff]">
+                Hi can use a website for you in a browser that runs on our servers, for example to check you in for a flight, sign you up for an event, or reserve a table. You can watch it while it works. When a site asks you to sign in, Hi may fill in the email address or phone number you use on that site. You type your own password and any one-time code yourself, in the live view. We never store your passwords or one-time codes. So that you do not have to sign in every time, we keep the signed-in session for the sites you use with Hi, the way a browser remembers you; you can remove them in Settings › Connected sites. When a site asks for payment, you enter it yourself, and the step that confirms a booking needs your approval.
+              </p>
+              <p className="text-[#94a3b8ff]">
+                If you ask Hi to do something later, such as checking you in when check-in opens, it does it at that time without asking you again; you can cancel it in the app until it starts. Unless you tell it otherwise, Hi picks options that cost nothing extra, such as a free seat.
+              </p>
+              <p className="text-[#94a3b8ff]">
+                On those sites Hi acts as you, with your account. You remain responsible for that account and for following that site&apos;s terms. Some sites do not allow automated use, and a site may refuse, limit, or close an account; those decisions are the site&apos;s, not ours.
+              </p>
+              <h3 className="text-xl font-[600] text-[#eaf6ffff] mt-2">13.5 Connected accounts and what Hi remembers</h3>
+              <p className="text-[#94a3b8ff]">
+                When you connect an email account or a calendar, you authorise HOLD to use the access you grant only as our{" "}
+                <a href="/privacy" className="text-brand-ffb703 underline underline-offset-2 hover:opacity-80 transition">Privacy Policy</a>
+                {" "}describes. You can disconnect it in the app or with the provider at any time. The Privacy Policy also explains what Hi remembers about you, where it learns it, and how to delete it.
+              </p>
+              <h3 className="text-xl font-[600] text-[#eaf6ffff] mt-2">13.6 Other people</h3>
+              <p className="text-[#94a3b8ff]">
+                When you ask Hi to book for, message, charge, or add other people, for example in a group, a shared plan, or a bill, you confirm that you are entitled to share their details and to contact them in that way.
+              </p>
+              <h3 className="text-xl font-[600] text-[#eaf6ffff] mt-2">13.7 Hi can be wrong</h3>
+              <p className="text-[#94a3b8ff]">
+                Hi&apos;s answers and suggestions are generated by AI and can be incomplete, out of date, or wrong, including prices, times, rules, and entry requirements. Check what matters before you rely on it, especially before you pay, travel, or make a decision with financial, legal, medical, or immigration consequences. Hi is not a financial, legal, tax, medical, or immigration adviser. What Hi says about visas, days abroad, or tax is an Informational Tool under Section 12.
+              </p>
+              <h3 className="text-xl font-[600] text-[#eaf6ffff] mt-2">13.8 Your content</h3>
+              <p className="text-[#94a3b8ff]">
+                You keep ownership of what you give Hi, including messages, voice notes, files, and bookings. You give HOLD a limited licence to host, process, and transmit it only to provide and secure the services and as the Privacy Policy describes. You may use what Hi creates for you; it may not be unique, and other people may receive similar results.
+              </p>
+              <h3 className="text-xl font-[600] text-[#eaf6ffff] mt-2">13.9 Availability</h3>
+              <p className="text-[#94a3b8ff]">
+                Some of Hi&apos;s features are released gradually. They may be available only to some users or on some plans, have monthly limits, or change or be paused. The &quot;as is&quot; disclaimer in Section 11 and the limitation of liability in Section 14 apply to Hi.
+              </p>
+            </section>
+
+            <section className="flex flex-col gap-4">
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">14. Limitation of Liability</h2>
               <p className="text-[#94a3b8ff]">
                 To the maximum extent permitted by law, HOLD and its affiliates, officers, employees, and agents shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including but not limited to loss of profits, data, use, goodwill, or other intangible losses, resulting from:
               </p>
@@ -293,6 +360,7 @@ export default function TermsPage() {
                 <li>Any loss of funds due to loss of private keys or seed phrases</li>
                 <li>Any blockchain network issues or failures</li>
                 <li>Any act or omission of an airline, property, network operator, or other supplier in providing a service you booked through HOLD</li>
+                <li>Any decision a website or company makes about an account of yours that Hi used on your instructions</li>
               </ul>
               <p className="text-[#94a3b8ff]">
                 To the maximum extent permitted by law, our total liability to you for all claims arising out of or relating to the services in any twelve-month period is limited to the greater of (a) the fees you paid to HOLD in that period and (b) EUR 100. Amounts you paid to a supplier for a booking are governed by the product terms for that booking and are not reduced by this limit.
@@ -303,14 +371,14 @@ export default function TermsPage() {
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">14. Indemnification</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">15. Indemnification</h2>
               <p className="text-[#94a3b8ff]">
                 You agree to indemnify, defend, and hold harmless HOLD and its affiliates, officers, employees, and agents from any claims, damages, losses, liabilities, and expenses (including legal fees) arising out of or relating to your use of our services, violation of these terms, or infringement of any rights of another.
               </p>
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">15. Termination</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">16. Termination</h2>
               <p className="text-[#94a3b8ff]">
                 You may stop using HOLD and close your account at any time. We may end these Terms or suspend your access with 30 days&apos; notice, or immediately where you have seriously or repeatedly breached them, where we are required to by law or by a provider or authority, or where it is necessary to protect you, other users, or the services from fraud or a security threat. We will tell you why unless the law prevents us.
               </p>
@@ -320,28 +388,28 @@ export default function TermsPage() {
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">16. Governing Law</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">17. Governing Law</h2>
               <p className="text-[#94a3b8ff]">
                 HOLD is operated by HIHODL TECHNOLOGIES OÜ, a company incorporated in Estonia. Except where mandatory local consumer-protection law of your country of residence provides otherwise, these Terms of Service shall be governed by and construed in accordance with the laws of Estonia, without regard to its conflict of law provisions. Any disputes arising from these terms or your use of our services shall be resolved through appropriate legal channels.
               </p>
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">17. Changes to Terms</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">18. Changes to Terms</h2>
               <p className="text-[#94a3b8ff]">
                 We may update these Terms. If a change materially affects your rights or obligations, we will give you at least 30 days&apos; notice in the app or by email before it takes effect, and you may close your account before then if you do not agree. Changes required by law, or that only add features or fix errors, may take effect sooner. Each booking is governed by the terms in force when you confirmed it.
               </p>
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">18. Severability</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">19. Severability</h2>
               <p className="text-[#94a3b8ff]">
                 If any provision of these Terms of Service is held to be invalid or unenforceable by a court, the remaining provisions will remain in effect. These Terms of Service, the product terms referred to in Section 2.1, and our Privacy Policy together constitute the entire agreement between you and HOLD regarding our services. These Terms are written in English; where we provide a translation, the English version prevails to the extent permitted by law.
               </p>
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">19. Complaints</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">20. Complaints</h2>
               <p className="text-[#94a3b8ff]">
                 If something has gone wrong, write to{" "}
                 <a href="mailto:legal@hihodl.xyz" className="text-brand-ffb703 underline underline-offset-2 hover:opacity-80 transition">legal@hihodl.xyz</a>
@@ -350,7 +418,7 @@ export default function TermsPage() {
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">20. Contact Information</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">21. Contact Information</h2>
               <p className="text-[#94a3b8ff]">
                 If you have any questions about these Terms of Service, please contact us at:
               </p>
