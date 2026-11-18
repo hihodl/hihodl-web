@@ -32,7 +32,8 @@ import { usePayLocale } from "./pay-i18n";
 const FACE_GRADIENT = "linear-gradient(135deg,#FFD25A 0%,#FFB703 100%)";
 const FACE_INK = "#241A02";
 
-export function OwnerFace({ owner, size = 88 }: { owner: PayLinkOwner | null; size?: number }) {
+/** `plain`: no HOLD badge, for a face too small to carry one. */
+export function OwnerFace({ owner, size = 88, plain = false }: { owner: PayLinkOwner | null; size?: number; plain?: boolean }) {
   const url = safeAvatarUrl(owner?.face?.avatarUrl);
   const [failed, setFailed] = useState(false);
   const badge = Math.round(size * 0.3);
@@ -60,6 +61,7 @@ export function OwnerFace({ owner, size = 88 }: { owner: PayLinkOwner | null; si
           {initialsFor(owner?.displayName, owner?.handle)}
         </span>
       )}
+      {plain ? null : (
       <span
         aria-hidden
         className="absolute flex items-center justify-center overflow-hidden rounded-full bg-[#0D1820]"
@@ -68,6 +70,7 @@ export function OwnerFace({ owner, size = 88 }: { owner: PayLinkOwner | null; si
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/favicon.png" alt="" width={badge} height={badge} className="rounded-full" style={{ width: badge, height: badge }} />
       </span>
+      )}
     </span>
   );
 }
@@ -166,7 +169,7 @@ export function LanguageButton() {
 
 function PayLanguageSheet({ onClose }: { onClose: () => void }) {
   const { locale, choose } = usePayLocale();
-  return <LanguageSheet locales={PAY_LOCALES} current={locale} onPick={choose} onClose={onClose} />;
+  return <LanguageSheet locales={PAY_LOCALES} current={locale} onPick={choose} onClose={onClose} float />;
 }
 
 /**
@@ -178,11 +181,14 @@ export function LanguageSheet<C extends string>({
   current,
   onPick,
   onClose,
+  float = false,
 }: {
   locales: readonly { code: C; native: string; english: string; country: string }[];
   current: C;
   onPick: (code: C) => void;
   onClose: () => void;
+  /** The pay page's floating sheet. */
+  float?: boolean;
 }) {
   const t = useT();
   const flags = useFlags();
@@ -194,7 +200,7 @@ export function LanguageSheet<C extends string>({
     onClose();
   };
   return (
-    <Modal onClose={onClose} title={t("payPage.language")} size="sm">
+    <Modal onClose={onClose} title={t("payPage.language")} size="sm" float={float}>
       <SearchField value={query} onChange={setQuery} placeholder={t("payPage.searchLanguage")} />
       <div className={sheetCard}>
         {items.length ? (
@@ -321,7 +327,7 @@ function CurrencySheet({ current, choices, onClose, onPick }: { current: string;
     .map((code) => ({ code, name: nameOf(code), english: ENGLISH_NAME[code] ?? code }))
     .filter((c) => !q || c.code.toLowerCase().includes(q) || c.name.toLowerCase().includes(q) || c.english.toLowerCase().includes(q));
   return (
-    <Modal onClose={onClose} title={t("payPage.currency")} size="sm">
+    <Modal onClose={onClose} title={t("payPage.currency")} size="sm" float>
       {choices.length > 6 ? <SearchField value={query} onChange={setQuery} placeholder={t("payPage.searchCurrency")} /> : null}
       <div className={sheetCard}>
         {items.length ? (
@@ -382,7 +388,7 @@ export function StoreBadges() {
 export function HoldSheet({ pageUrl, onClose }: { pageUrl: string; onClose: () => void }) {
   const t = useT();
   return (
-    <Modal onClose={onClose} title={t("payPage.holdTitle")} size="sm">
+    <Modal onClose={onClose} title={t("payPage.holdTitle")} size="sm" float>
       <div className="flex flex-col items-center gap-4 pb-1 pt-1 text-center">
         <div className="w-full max-w-[220px] rounded-[20px] bg-white p-3">
           <QrCode text={pageUrl} title={t("payPage.holdTitle")} className="h-auto w-full" />

@@ -169,5 +169,14 @@
   "recurring.renewWith": "{wallet} से नवीनीकृत करें",
   "recurring.renewing": "नवीनीकृत हो रहा है…",
   "recurring.renewedTitle": "नवीनीकृत",
-  "recurring.renewedBody": "{payee} को फिर से आपसे {period, select, week {हर हफ़्ते} other {हर महीने}} {amount} मिलेंगे।"
+  "recurring.renewedBody": "{payee} को फिर से आपसे {period, select, week {हर हफ़्ते} other {हर महीने}} {amount} मिलेंगे।",
+  "sheetToName": "{name} को",
+  "payAmountWith": "{wallet} से {amount} चुकाएँ",
+  "openYourWallet": "अपना वॉलेट खोलें",
+  "stable.exactly": "{token} · उन्हें ठीक इतना ही मिलेगा",
+  "stable.feeSolana": "नेटवर्क फ़ीस HOLD देता है। {wallet} फिर भी फ़ीस दिखा सकता है: वह आपसे नहीं ली जाएगी।",
+  "stable.feeEvm": "आप सिर्फ़ साइन करते हैं। HOLD इसे भेजता है और नेटवर्क फ़ीस देता है।",
+  "stable.feeCovered": "नेटवर्क फ़ीस HOLD देता है",
+  "stable.otherWays": "दूसरा वॉलेट या QR कोड",
+  "stable.paid": "चुका दिया"
 }

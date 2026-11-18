@@ -169,5 +169,14 @@
   "recurring.renewWith": "التجديد عبر {wallet}",
   "recurring.renewing": "جارٍ التجديد…",
   "recurring.renewedTitle": "تم التجديد",
-  "recurring.renewedBody": "يحصل {payee} مجددًا على {amount} منك {period, select, week {كل أسبوع} other {كل شهر}}."
+  "recurring.renewedBody": "يحصل {payee} مجددًا على {amount} منك {period, select, week {كل أسبوع} other {كل شهر}}.",
+  "sheetToName": "إلى {name}",
+  "payAmountWith": "ادفع {amount} عبر {wallet}",
+  "openYourWallet": "افتح محفظتك",
+  "stable.exactly": "{token} · يصله هذا المبلغ بالضبط",
+  "stable.feeSolana": "تدفع HOLD رسوم الشبكة. قد تعرض {wallet} رسومًا مع ذلك: لن تُخصم منك.",
+  "stable.feeEvm": "أنت توقّع فقط. ترسلها HOLD وتدفع رسوم الشبكة.",
+  "stable.feeCovered": "تدفع HOLD رسوم الشبكة",
+  "stable.otherWays": "محفظة أخرى أو رمز QR",
+  "stable.paid": "تم الدفع"
 }

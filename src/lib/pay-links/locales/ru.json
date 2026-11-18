@@ -286,5 +286,16 @@
   "payPage.recurring.renewWith": "Продлить через {wallet}",
   "payPage.recurring.renewing": "Продление…",
   "payPage.recurring.renewedTitle": "Продлено",
-  "payPage.recurring.renewedBody": "{payee} снова получает от вас {amount} {period, select, week {каждую неделю} other {каждый месяц}}."
+  "payPage.recurring.renewedBody": "{payee} снова получает от вас {amount} {period, select, week {каждую неделю} other {каждый месяц}}.",
+  "payPage.sheetToName": "Для {name}",
+  "payPage.payAmountWith": "Оплатить {amount} через {wallet}",
+  "payPage.openYourWallet": "Откройте свой кошелёк",
+  "payPage.stable.exactly": "{token} · получатель получит ровно эту сумму",
+  "payPage.stable.feeSolana": "Комиссию сети платит HOLD. {wallet} может всё равно её показать: с вас её не возьмут.",
+  "payPage.stable.feeEvm": "Вы только подписываете. HOLD отправляет платёж и платит комиссию сети.",
+  "payPage.stable.feeCovered": "Комиссию сети платит HOLD",
+  "payPage.stable.otherWays": "Другой кошелёк или QR-код",
+  "payPage.stable.paid": "Оплачено",
+  "home.payLinks.pay.walletChanged": "Ваш кошелёк изменил этот платёж при подписи, поэтому мы его не отправили. Ничего не оплачено. Попробуйте ещё раз или отсканируйте QR-код кошельком.",
+  "home.payLinks.pay.broadcastRefused": "Сеть {net} отклонила этот платёж. Ничего не оплачено. Проверьте USDC в кошельке и попробуйте ещё раз."
 }

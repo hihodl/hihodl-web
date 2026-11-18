@@ -169,5 +169,14 @@
   "recurring.renewWith": "Rinnova con {wallet}",
   "recurring.renewing": "Rinnovo in corso…",
   "recurring.renewedTitle": "Rinnovato",
-  "recurring.renewedBody": "{payee} riceve di nuovo {amount} da te {period, select, week {ogni settimana} other {ogni mese}}."
+  "recurring.renewedBody": "{payee} riceve di nuovo {amount} da te {period, select, week {ogni settimana} other {ogni mese}}.",
+  "sheetToName": "A {name}",
+  "payAmountWith": "Paga {amount} con {wallet}",
+  "openYourWallet": "Apri il tuo wallet",
+  "stable.exactly": "{token} · riceve esattamente questo",
+  "stable.feeSolana": "HOLD paga la commissione di rete. {wallet} potrebbe comunque mostrarla: non ti viene addebitata.",
+  "stable.feeEvm": "Firmi e basta. HOLD lo invia e paga la commissione di rete.",
+  "stable.feeCovered": "HOLD paga la commissione di rete",
+  "stable.otherWays": "Un altro wallet o codice QR",
+  "stable.paid": "Pagato"
 }

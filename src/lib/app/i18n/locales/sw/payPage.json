@@ -169,5 +169,14 @@
   "recurring.renewWith": "Sasisha kwa {wallet}",
   "recurring.renewing": "Inasasisha…",
   "recurring.renewedTitle": "Imesasishwa",
-  "recurring.renewedBody": "{payee} anapokea tena {amount} kutoka kwako {period, select, week {kila wiki} other {kila mwezi}}."
+  "recurring.renewedBody": "{payee} anapokea tena {amount} kutoka kwako {period, select, week {kila wiki} other {kila mwezi}}.",
+  "sheetToName": "Kwa {name}",
+  "payAmountWith": "Lipa {amount} kwa {wallet}",
+  "openYourWallet": "Fungua wallet yako",
+  "stable.exactly": "{token} · anapokea kiasi hiki kamili",
+  "stable.feeSolana": "HOLD inalipa ada ya mtandao. {wallet} inaweza bado kuonyesha ada: hutatozwa.",
+  "stable.feeEvm": "Unasaini tu. HOLD inatuma na kulipa ada ya mtandao.",
+  "stable.feeCovered": "HOLD inalipa ada ya mtandao",
+  "stable.otherWays": "Wallet nyingine au msimbo wa QR",
+  "stable.paid": "Imelipwa"
 }

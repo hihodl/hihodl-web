@@ -169,5 +169,14 @@
   "recurring.renewWith": "使用 {wallet} 续订",
   "recurring.renewing": "正在续订…",
   "recurring.renewedTitle": "已续订",
-  "recurring.renewedBody": "{payee} 将再次{period, select, week {每周} other {每月}}从你这里收到 {amount}。"
+  "recurring.renewedBody": "{payee} 将再次{period, select, week {每周} other {每月}}从你这里收到 {amount}。",
+  "sheetToName": "付给 {name}",
+  "payAmountWith": "用 {wallet} 支付 {amount}",
+  "openYourWallet": "打开你的钱包",
+  "stable.exactly": "{token} · 对方收到的就是这个金额",
+  "stable.feeSolana": "网络费由 HOLD 支付。{wallet} 可能仍会显示网络费：不会向你收取。",
+  "stable.feeEvm": "你只需签名。HOLD 负责发送并支付网络费。",
+  "stable.feeCovered": "网络费由 HOLD 支付",
+  "stable.otherWays": "其他钱包或二维码",
+  "stable.paid": "已支付"
 }

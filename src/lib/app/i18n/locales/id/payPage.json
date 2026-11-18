@@ -169,5 +169,14 @@
   "recurring.renewWith": "Perbarui dengan {wallet}",
   "recurring.renewing": "Memperbarui…",
   "recurring.renewedTitle": "Diperbarui",
-  "recurring.renewedBody": "{payee} kembali menerima {amount} darimu {period, select, week {setiap minggu} other {setiap bulan}}."
+  "recurring.renewedBody": "{payee} kembali menerima {amount} darimu {period, select, week {setiap minggu} other {setiap bulan}}.",
+  "sheetToName": "Ke {name}",
+  "payAmountWith": "Bayar {amount} dengan {wallet}",
+  "openYourWallet": "Buka dompetmu",
+  "stable.exactly": "{token} · diterima persis segini",
+  "stable.feeSolana": "HOLD membayar biaya jaringan. {wallet} mungkin tetap menampilkannya: kamu tidak dikenai biaya itu.",
+  "stable.feeEvm": "Kamu cukup menandatangani. HOLD mengirimnya dan membayar biaya jaringan.",
+  "stable.feeCovered": "HOLD membayar biaya jaringan",
+  "stable.otherWays": "Dompet lain atau kode QR",
+  "stable.paid": "Lunas"
 }

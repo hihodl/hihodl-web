@@ -165,6 +165,16 @@ const payPage = {
   "scanQr": "Scan QR code",
   "back": "Back",
   "openInWalletBrowser": "Open this page in your wallet's browser to pay.",
+  // The redesigned sheet (18-Nov-2026): the amount big, who pays the fee, the pay button with the amount
+  "sheetToName": "To {name}",
+  "payAmountWith": "Pay {amount} with {wallet}",
+  "openYourWallet": "Open your wallet",
+  "stable.exactly": "{token} · they get exactly this",
+  "stable.feeSolana": "HOLD pays the network fee. {wallet} may still show one: you won't be charged it.",
+  "stable.feeEvm": "You only sign. HOLD sends it and pays the network fee.",
+  "stable.feeCovered": "HOLD pays the network fee",
+  "stable.otherWays": "Another wallet or QR code",
+  "stable.paid": "Paid",
 
   // Bank transfer: the owner's own account and the link's reference
   "bank": "Bank transfer",

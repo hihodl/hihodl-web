@@ -169,5 +169,14 @@
   "recurring.renewWith": "{wallet} ile yenile",
   "recurring.renewing": "Yenileniyor…",
   "recurring.renewedTitle": "Yenilendi",
-  "recurring.renewedBody": "{payee} yeniden {period, select, week {her hafta} other {her ay}} senden {amount} alıyor."
+  "recurring.renewedBody": "{payee} yeniden {period, select, week {her hafta} other {her ay}} senden {amount} alıyor.",
+  "sheetToName": "{name} kişisine",
+  "payAmountWith": "{wallet} ile {amount} öde",
+  "openYourWallet": "Cüzdanını aç",
+  "stable.exactly": "{token} · tam olarak bu tutar ulaşır",
+  "stable.feeSolana": "Ağ ücretini HOLD öder. {wallet} yine de bir ücret gösterebilir: senden alınmaz.",
+  "stable.feeEvm": "Sen sadece imzalarsın. HOLD gönderir ve ağ ücretini öder.",
+  "stable.feeCovered": "Ağ ücretini HOLD öder",
+  "stable.otherWays": "Başka bir cüzdan veya QR kod",
+  "stable.paid": "Ödendi"
 }

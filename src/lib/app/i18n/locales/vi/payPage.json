@@ -169,5 +169,14 @@
   "recurring.renewWith": "Gia hạn bằng {wallet}",
   "recurring.renewing": "Đang gia hạn…",
   "recurring.renewedTitle": "Đã gia hạn",
-  "recurring.renewedBody": "{payee} lại nhận {amount} từ bạn {period, select, week {mỗi tuần} other {mỗi tháng}}."
+  "recurring.renewedBody": "{payee} lại nhận {amount} từ bạn {period, select, week {mỗi tuần} other {mỗi tháng}}.",
+  "sheetToName": "Gửi {name}",
+  "payAmountWith": "Thanh toán {amount} bằng {wallet}",
+  "openYourWallet": "Mở ví của bạn",
+  "stable.exactly": "{token} · người nhận nhận đúng số này",
+  "stable.feeSolana": "HOLD trả phí mạng. {wallet} có thể vẫn hiện phí: bạn sẽ không bị tính.",
+  "stable.feeEvm": "Bạn chỉ cần ký. HOLD gửi và trả phí mạng.",
+  "stable.feeCovered": "HOLD trả phí mạng",
+  "stable.otherWays": "Ví khác hoặc mã QR",
+  "stable.paid": "Đã thanh toán"
 }
