@@ -786,7 +786,7 @@ export function PayLinkPay({
 
   if (phase.kind === "confirming") {
     return (
-      <Result spinning title={t("payPage.stable.confirming", { net: CHAIN_LABEL[phase.payment.chain] })} body={t("payPage.stable.updatesOwn")} />
+      <Result spinning title={t("payPage.stable.confirming")} />
     );
   }
 
