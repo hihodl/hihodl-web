@@ -313,7 +313,11 @@ export function walletBrowseUrl(id: Exclude<WalletLinkId, "hold">, pageUrl: stri
   const ref = encodeURIComponent(origin);
   switch (id) {
     case "phantom":
-      return `https://phantom.app/ul/browse/${u}?ref=${ref}`;
+      // phantom.com, not phantom.app: phantom.app no longer serves the file
+      // that tells iOS to open the app (18-Nov-2026), it 301s to phantom.com,
+      // and iOS never opens an app after a redirect. The tap landed on
+      // Phantom's "Open this link in the Phantom app" web page instead.
+      return `https://phantom.com/ul/browse/${u}?ref=${ref}`;
     case "solflare":
       return `https://solflare.com/ul/v1/browse/${u}?ref=${ref}`;
     case "backpack":

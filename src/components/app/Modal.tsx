@@ -7,7 +7,7 @@
  *   phone    a sheet from the foot: the grab handle (40 x 4, white at 28%),
  *            the teal head fading to the app's navy, the lit top edge, a
  *            dimmed backdrop. It springs in, and it closes by a tap on the
- *            backdrop, Escape, or dragging it down by its head
+ *            backdrop, Escape, or dragging it down from anywhere on it
  *   desktop  the same surface as a centred dialog, faded and lifted in
  *
  * Focus moves into it and stays there (Tab and Shift-Tab wrap), and goes back
@@ -135,7 +135,7 @@ export function Modal({
   const [mounted, setMounted] = useState(false);
   const [phase, setPhase] = useState<"in" | "open" | "out">("in");
   const [drag, setDrag] = useState(0);
-  const dragStart = useRef<{ y: number; t: number } | null>(null);
+  const [dragging, setDragging] = useState(false);
   const busyRef = useRef(busy);
   busyRef.current = busy;
 
@@ -206,36 +206,90 @@ export function Modal({
     return () => document.removeEventListener("keydown", onKey);
   }, [id, close]);
 
-  /* Dragging down by the head, on a touch screen or with a pen. */
-  const onPointerDown = (e: React.PointerEvent) => {
-    if (e.pointerType === "mouse" || busy) return;
-    if (typeof window !== "undefined" && window.matchMedia("(min-width: 640px)").matches) return;
-    dragStart.current = { y: e.clientY, t: performance.now() };
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-  };
-  const onPointerMove = (e: React.PointerEvent) => {
-    const s = dragStart.current;
-    if (!s) return;
-    const dy = e.clientY - s.y;
-    // Upwards it gives a little and no more, as a native sheet does.
-    setDrag(dy > 0 ? dy : -Math.sqrt(-dy) * 2);
-  };
-  const onPointerUp = (e: React.PointerEvent) => {
-    const s = dragStart.current;
-    dragStart.current = null;
-    if (!s) return;
-    const dy = e.clientY - s.y;
-    const v = dy / Math.max(1, performance.now() - s.t);
-    if (dy > DRAG_CLOSE_PX || (dy > 24 && v > DRAG_CLOSE_VELOCITY)) {
+  /*
+   * Dragging it down, from anywhere on the sheet, as a native sheet does.
+   * It was the head only, and on the floating sheet the head is just the
+   * grab handle: a finger on the sheet's face moved nothing (18-Nov-2026).
+   * A drag starts only downwards, only when what is under the finger is
+   * scrolled to its top, and a sideways move or a tap is left alone. Touch
+   * listeners, not pointer ones: the body scrolls (`touch-pan-y`), so the
+   * browser cancels pointer events the moment a finger moves, and only a
+   * non-passive touchmove can take the gesture back.
+   */
+  useEffect(() => {
+    const el = panel.current;
+    if (!mounted || !el || size === "full" || bare) return;
+    if (window.matchMedia("(min-width: 640px)").matches) return;
+
+    let start: { x: number; y: number; t: number; scroller: HTMLElement | null } | null = null;
+    let active = false;
+
+    const scrollerOf = (node: EventTarget | null): HTMLElement | null => {
+      let n = node instanceof HTMLElement ? node : null;
+      while (n && n !== el) {
+        if (n.scrollHeight > n.clientHeight + 1) {
+          const oy = getComputedStyle(n).overflowY;
+          if (oy === "auto" || oy === "scroll") return n;
+        }
+        n = n.parentElement;
+      }
+      return null;
+    };
+
+    const onStart = (e: TouchEvent) => {
+      if (busyRef.current || closing.current || e.touches.length !== 1) {
+        start = null;
+        return;
+      }
+      const tch = e.touches[0];
+      start = { x: tch.clientX, y: tch.clientY, t: performance.now(), scroller: scrollerOf(e.target) };
+      active = false;
+    };
+    const onMove = (e: TouchEvent) => {
+      if (!start) return;
+      const tch = e.touches[0];
+      const dy = tch.clientY - start.y;
+      const dx = tch.clientX - start.x;
+      if (!active) {
+        if (Math.abs(dy) < 3 && Math.abs(dx) < 3) return; // a tap's jitter
+        if (dy <= 0 || Math.abs(dx) > Math.abs(dy) || (start.scroller && start.scroller.scrollTop > 0)) {
+          start = null; // a scroll or a swipe sideways: not ours
+          return;
+        }
+        active = true;
+        setDragging(true);
+      }
+      if (e.cancelable) e.preventDefault();
+      setDrag(dy > 0 ? dy : -Math.sqrt(-dy) * 2);
+    };
+    const onEnd = (e: TouchEvent) => {
+      const s = start;
+      start = null;
+      if (!s || !active) return;
+      active = false;
+      setDragging(false);
+      const tch = e.changedTouches[0];
+      const dy = tch ? tch.clientY - s.y : 0;
+      const v = dy / Math.max(1, performance.now() - s.t);
       setDrag(0);
-      close();
-    } else setDrag(0);
-  };
+      if (dy > DRAG_CLOSE_PX || (dy > 24 && v > DRAG_CLOSE_VELOCITY)) close();
+    };
+
+    el.addEventListener("touchstart", onStart, { passive: true });
+    el.addEventListener("touchmove", onMove, { passive: false });
+    el.addEventListener("touchend", onEnd);
+    el.addEventListener("touchcancel", onEnd);
+    return () => {
+      el.removeEventListener("touchstart", onStart);
+      el.removeEventListener("touchmove", onMove);
+      el.removeEventListener("touchend", onEnd);
+      el.removeEventListener("touchcancel", onEnd);
+    };
+  }, [mounted, size, bare, close]);
 
   if (!mounted) return null;
 
   const shown = phase === "open";
-  const dragging = dragStart.current !== null;
   const full = size === "full";
   const floating = float && !full && !bare;
   const surface = bare
@@ -246,10 +300,6 @@ export function Modal({
 
   const head = (
     <div
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
       className={`relative shrink-0 touch-none select-none ${bare ? "" : "px-4"}`}
     >
       {!bare && !floating ? <span aria-hidden className="absolute inset-x-0 top-0 h-px bg-white/[0.16] sm:rounded-t-[24px]" /> : null}
