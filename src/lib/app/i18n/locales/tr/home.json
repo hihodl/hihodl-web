@@ -173,6 +173,8 @@
   "payLinks.pay.ownAddress": "Bu cüzdan, bu bağlantının ödeme yaptığı cüzdan. Farklı bir cüzdandan öde.",
   "payLinks.pay.invalidAddress": "Cüzdanın bize {net} üzerinde kullanamayacağımız bir adres verdi. Yeniden bağla ve tekrar dene.",
   "payLinks.pay.badSignature": "Bu imza ödemeyle eşleşmedi, bu yüzden göndermedik. Hiçbir şey ödenmedi.",
+  "payLinks.pay.walletChanged": "Cüzdanın bu ödemeyi imzalarken değiştirdi, bu yüzden göndermedik. Hiçbir şey ödenmedi. Tekrar dene ya da QR kodu cüzdanınla tara.",
+  "payLinks.pay.broadcastRefused": "{net} ağı bu ödemeyi reddetti. Hiçbir şey ödenmedi. Cüzdanındaki USDC'yi kontrol et ve tekrar dene.",
   "payLinks.pay.expired": "Bu ödemenin imzalanması çok uzun sürdü, bu yüzden artık gönderilemez. Hiçbir şey ödenmedi; baştan başla.",
   "payLinks.pay.keyReused": "Bu ödeme farklı bir cüzdan veya ağla başlatıldı. Hiçbir şey ödenmedi; baştan başla.",
   "payLinks.pay.inFlight": "Bu sayfa zaten bir ödeme başlatıyor. Biraz bekleyip tekrar dene.",

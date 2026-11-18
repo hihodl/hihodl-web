@@ -173,6 +173,8 @@
   "payLinks.pay.ownAddress": "该钱包正是此链接的收款钱包。请使用其他钱包付款。",
   "payLinks.pay.invalidAddress": "你的钱包提供的地址无法在 {net} 上使用。请重新连接后重试。",
   "payLinks.pay.badSignature": "该签名与付款不符，因此我们没有发送。未支付任何款项。",
+  "payLinks.pay.walletChanged": "你的钱包在签名时更改了这笔付款，因此我们没有发送。未支付任何款项。请重试，或用钱包扫描二维码。",
+  "payLinks.pay.broadcastRefused": "{net} 网络拒绝了这笔付款。未支付任何款项。请检查钱包中的 USDC 后重试。",
   "payLinks.pay.expired": "签名耗时过长，这笔付款已无法发送。未支付任何款项；请重新开始。",
   "payLinks.pay.keyReused": "这笔付款是用其他钱包或网络发起的。未支付任何款项；请重新开始。",
   "payLinks.pay.inFlight": "此页面正在发起一笔付款。请稍等片刻再试。",

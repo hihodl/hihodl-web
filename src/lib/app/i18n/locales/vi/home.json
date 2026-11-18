@@ -173,6 +173,8 @@
   "payLinks.pay.ownAddress": "Đó chính là ví mà link này trả vào. Hãy trả từ ví khác.",
   "payLinks.pay.invalidAddress": "Ví của bạn đưa ra địa chỉ không dùng được trên {net}. Hãy kết nối lại và thử lại.",
   "payLinks.pay.badSignature": "Chữ ký không khớp với khoản thanh toán nên chúng tôi chưa gửi. Chưa có gì được trả.",
+  "payLinks.pay.walletChanged": "Ví của bạn đã thay đổi khoản thanh toán này khi ký nên chúng tôi chưa gửi. Chưa có gì được trả. Hãy thử lại hoặc quét mã QR bằng ví của bạn.",
+  "payLinks.pay.broadcastRefused": "Mạng {net} đã từ chối khoản thanh toán này. Chưa có gì được trả. Hãy kiểm tra USDC trong ví rồi thử lại.",
   "payLinks.pay.expired": "Khoản thanh toán mất quá lâu để ký nên không gửi được nữa. Chưa có gì được trả; hãy bắt đầu lại.",
   "payLinks.pay.keyReused": "Khoản thanh toán này đã được bắt đầu với ví hoặc mạng khác. Chưa có gì được trả; hãy bắt đầu lại.",
   "payLinks.pay.inFlight": "Trang này đang khởi tạo một khoản thanh toán. Chờ một chút rồi thử lại.",

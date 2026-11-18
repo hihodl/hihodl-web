@@ -173,6 +173,8 @@
   "payLinks.pay.ownAddress": "Essa carteira é a que este link paga. Pague de outra carteira.",
   "payLinks.pay.invalidAddress": "Sua carteira nos deu um endereço que não podemos usar na {net}. Reconecte e tente de novo.",
   "payLinks.pay.badSignature": "Essa assinatura não bateu com o pagamento, então não enviamos. Nada foi pago.",
+  "payLinks.pay.walletChanged": "Sua carteira alterou este pagamento ao assinar, então não enviamos. Nada foi pago. Tente de novo ou escaneie o QR code com sua carteira.",
+  "payLinks.pay.broadcastRefused": "A rede {net} recusou este pagamento. Nada foi pago. Confira o USDC na sua carteira e tente de novo.",
   "payLinks.pay.expired": "Esse pagamento demorou demais para ser assinado, então não pode mais ser enviado. Nada foi pago; comece de novo.",
   "payLinks.pay.keyReused": "Este pagamento foi iniciado com outra carteira ou rede. Nada foi pago; comece de novo.",
   "payLinks.pay.inFlight": "Esta página já está iniciando um pagamento. Espere um pouco e tente de novo.",

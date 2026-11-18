@@ -173,6 +173,8 @@
   "payLinks.pay.ownAddress": "Diese Wallet ist die, an die dieser Link zahlt. Zahl aus einer anderen Wallet.",
   "payLinks.pay.invalidAddress": "Deine Wallet hat uns eine Adresse gegeben, die wir auf {net} nicht verwenden können. Verbinde sie neu und versuch es nochmal.",
   "payLinks.pay.badSignature": "Diese Signatur passte nicht zur Zahlung, daher haben wir sie nicht gesendet. Es wurde nichts bezahlt.",
+  "payLinks.pay.walletChanged": "Deine Wallet hat diese Zahlung beim Signieren verändert, daher haben wir sie nicht gesendet. Es wurde nichts bezahlt. Versuch es noch einmal oder scann den QR-Code mit deiner Wallet.",
+  "payLinks.pay.broadcastRefused": "Das {net}-Netzwerk hat diese Zahlung abgelehnt. Es wurde nichts bezahlt. Prüf das USDC in deiner Wallet und versuch es noch einmal.",
   "payLinks.pay.expired": "Das Signieren dieser Zahlung hat zu lange gedauert, daher kann sie nicht mehr gesendet werden. Es wurde nichts bezahlt; fang nochmal an.",
   "payLinks.pay.keyReused": "Diese Zahlung wurde mit einer anderen Wallet oder einem anderen Netzwerk gestartet. Es wurde nichts bezahlt; fang nochmal an.",
   "payLinks.pay.inFlight": "Diese Seite startet bereits eine Zahlung. Warte kurz und versuch es nochmal.",

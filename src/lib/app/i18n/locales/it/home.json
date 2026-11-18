@@ -173,6 +173,8 @@
   "payLinks.pay.ownAddress": "Questo è proprio il portafoglio che il link paga. Paga da un portafoglio diverso.",
   "payLinks.pay.invalidAddress": "Il tuo portafoglio ci ha dato un indirizzo che non possiamo usare su {net}. Ricollegalo e riprova.",
   "payLinks.pay.badSignature": "La firma non corrispondeva al pagamento, quindi non l'abbiamo inviato. Non è stato pagato nulla.",
+  "payLinks.pay.walletChanged": "Il tuo portafoglio ha modificato questo pagamento mentre lo firmava, quindi non l'abbiamo inviato. Non è stato pagato nulla. Riprova o scansiona il codice QR con il tuo portafoglio.",
+  "payLinks.pay.broadcastRefused": "La rete {net} ha rifiutato questo pagamento. Non è stato pagato nulla. Controlla gli USDC nel tuo portafoglio e riprova.",
   "payLinks.pay.expired": "La firma del pagamento ha richiesto troppo tempo, quindi non può più essere inviato. Non è stato pagato nulla; ricomincia.",
   "payLinks.pay.keyReused": "Questo pagamento è stato avviato con un portafoglio o una rete diversi. Non è stato pagato nulla; ricomincia.",
   "payLinks.pay.inFlight": "Questa pagina sta già avviando un pagamento. Aspetta un attimo e riprova.",

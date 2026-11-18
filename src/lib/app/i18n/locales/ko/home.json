@@ -173,6 +173,8 @@
   "payLinks.pay.ownAddress": "이 링크가 돈을 보내는 지갑이에요. 다른 지갑으로 결제하세요.",
   "payLinks.pay.invalidAddress": "지갑이 {net}에서 사용할 수 없는 주소를 보냈어요. 다시 연결하고 시도하세요.",
   "payLinks.pay.badSignature": "서명이 결제와 일치하지 않아 보내지 않았어요. 결제된 금액은 없어요.",
+  "payLinks.pay.walletChanged": "지갑이 서명하면서 이 결제를 바꿔서 보내지 않았어요. 결제된 금액은 없어요. 다시 시도하거나 지갑으로 QR 코드를 스캔하세요.",
+  "payLinks.pay.broadcastRefused": "{net} 네트워크가 이 결제를 거절했어요. 결제된 금액은 없어요. 지갑의 USDC를 확인하고 다시 시도하세요.",
   "payLinks.pay.expired": "서명하는 데 너무 오래 걸려서 더 이상 보낼 수 없어요. 결제된 금액은 없어요. 다시 시작하세요.",
   "payLinks.pay.keyReused": "이 결제는 다른 지갑이나 네트워크로 시작됐어요. 결제된 금액은 없어요. 다시 시작하세요.",
   "payLinks.pay.inFlight": "이 페이지에서 이미 결제를 시작하고 있어요. 잠시 후 다시 시도하세요.",
