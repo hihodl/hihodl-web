@@ -473,7 +473,18 @@ export function describePayError(e: unknown, chain: Chain | null, ctx: PayErrorC
       case "bad_signature":
         return t("home.payLinks.pay.badSignature");
       case "payment_expired":
+      // The signed payment's blockhash ran out, or the payment closed before it was sent.
+      case "blockhash_expired":
+      case "payment_not_open":
         return t("home.payLinks.pay.expired");
+      // The wallet handed back a payment it had changed in a way we do not send.
+      case "wallet_signature_refused":
+        return t("home.payLinks.pay.walletChanged");
+      // The Solana network refused the signed payment when we sent it.
+      case "broadcast_refused":
+        return t("home.payLinks.pay.broadcastRefused", { net });
+      case "link_disabled":
+        return t("home.payLinks.pay.gone.disabled");
       case "checkout_key_reused":
         return t("home.payLinks.pay.keyReused");
       case "checkout_in_flight":
@@ -481,6 +492,8 @@ export function describePayError(e: unknown, chain: Chain | null, ctx: PayErrorC
       case "checkout_key_required":
       case "invalid_checkout":
       case "not_an_evm_payment":
+      case "not_a_solana_payment":
+      case "token_not_accepted":
         return t("home.payLinks.pay.cantStart");
       case MISMATCH_CODE:
         return t("home.payLinks.pay.mismatch");

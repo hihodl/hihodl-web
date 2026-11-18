@@ -173,6 +173,8 @@
   "payLinks.pay.ownAddress": "Dat is de wallet waar deze link naartoe betaalt. Betaal vanuit een andere wallet.",
   "payLinks.pay.invalidAddress": "Je wallet gaf ons een adres dat we op {net} niet kunnen gebruiken. Koppel hem opnieuw en probeer het nog eens.",
   "payLinks.pay.badSignature": "Die handtekening kwam niet overeen met de betaling, dus we hebben hem niet verstuurd. Er is niets betaald.",
+  "payLinks.pay.walletChanged": "Je wallet heeft deze betaling bij het ondertekenen gewijzigd, dus we hebben hem niet verstuurd. Er is niets betaald. Probeer het opnieuw of scan de QR-code met je wallet.",
+  "payLinks.pay.broadcastRefused": "Het {net}-netwerk heeft deze betaling geweigerd. Er is niets betaald. Controleer de USDC in je wallet en probeer het opnieuw.",
   "payLinks.pay.expired": "Het ondertekenen van die betaling duurde te lang, dus hij kan niet meer worden verstuurd. Er is niets betaald; begin opnieuw.",
   "payLinks.pay.keyReused": "Deze betaling is gestart met een andere wallet of een ander netwerk. Er is niets betaald; begin opnieuw.",
   "payLinks.pay.inFlight": "Deze pagina is al een betaling aan het starten. Wacht even en probeer het opnieuw.",

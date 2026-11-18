@@ -173,6 +173,8 @@
   "payLinks.pay.ownAddress": "Pochi hiyo ndiyo inayolipwa na kiungo hiki. Lipa kutoka pochi nyingine.",
   "payLinks.pay.invalidAddress": "Pochi yako imetupa anwani tusiyoweza kutumia kwenye {net}. Iunganishe upya kisha ujaribu tena.",
   "payLinks.pay.badSignature": "Sahihi hiyo haikulingana na malipo, kwa hiyo hatukuyatuma. Hakuna kilicholipwa.",
+  "payLinks.pay.walletChanged": "Pochi yako ilibadilisha malipo haya ilipoyatia sahihi, kwa hiyo hatukuyatuma. Hakuna kilicholipwa. Jaribu tena, au changanua msimbo wa QR kwa pochi yako.",
+  "payLinks.pay.broadcastRefused": "Mtandao wa {net} umekataa malipo haya. Hakuna kilicholipwa. Angalia USDC kwenye pochi yako kisha ujaribu tena.",
   "payLinks.pay.expired": "Malipo hayo yalichukua muda mrefu mno kutiwa sahihi, kwa hiyo hayawezi kutumwa tena. Hakuna kilicholipwa; anza upya.",
   "payLinks.pay.keyReused": "Malipo haya yalianzishwa kwa pochi au mtandao mwingine. Hakuna kilicholipwa; anza upya.",
   "payLinks.pay.inFlight": "Ukurasa huu tayari unaanzisha malipo. Subiri kidogo kisha ujaribu tena.",

@@ -173,6 +173,8 @@
   "payLinks.pay.ownAddress": "Dompet itu adalah dompet tujuan link ini. Bayar dari dompet lain.",
   "payLinks.pay.invalidAddress": "Dompetmu memberi alamat yang tidak bisa kami pakai di {net}. Hubungkan ulang lalu coba lagi.",
   "payLinks.pay.badSignature": "Tanda tangan itu tidak cocok dengan pembayarannya, jadi tidak kami kirim. Tidak ada yang dibayar.",
+  "payLinks.pay.walletChanged": "Dompetmu mengubah pembayaran ini saat menandatanganinya, jadi tidak kami kirim. Tidak ada yang dibayar. Coba lagi, atau pindai kode QR dengan dompetmu.",
+  "payLinks.pay.broadcastRefused": "Jaringan {net} menolak pembayaran ini. Tidak ada yang dibayar. Periksa USDC di dompetmu dan coba lagi.",
   "payLinks.pay.expired": "Pembayaran itu terlalu lama ditandatangani, jadi tidak bisa dikirim lagi. Tidak ada yang dibayar; mulai lagi.",
   "payLinks.pay.keyReused": "Pembayaran ini dimulai dengan dompet atau jaringan yang berbeda. Tidak ada yang dibayar; mulai lagi.",
   "payLinks.pay.inFlight": "Halaman ini sedang memulai pembayaran. Tunggu sebentar lalu coba lagi.",

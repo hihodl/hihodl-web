@@ -220,6 +220,8 @@ const home = {
   "payLinks.pay.ownAddress": "That wallet is the one this link pays. Pay from a different wallet.",
   "payLinks.pay.invalidAddress": "Your wallet gave us an address we can't use on {net}. Reconnect it and try again.",
   "payLinks.pay.badSignature": "That signature didn't match the payment, so we didn't send it. Nothing was paid.",
+  "payLinks.pay.walletChanged": "Your wallet changed this payment when it signed it, so we didn't send it. Nothing was paid. Try again, or scan the QR code with your wallet.",
+  "payLinks.pay.broadcastRefused": "The {net} network refused this payment. Nothing was paid. Check the USDC in your wallet and try again.",
   "payLinks.pay.expired": "That payment took too long to sign, so it can't be sent any more. Nothing was paid; start again.",
   "payLinks.pay.keyReused": "This payment was started with a different wallet or network. Nothing was paid; start again.",
   "payLinks.pay.inFlight": "This page is already starting a payment. Wait a moment and try again.",

@@ -173,6 +173,8 @@
   "payLinks.pay.ownAddress": "Ce wallet est celui que ce lien paie. Payez depuis un autre wallet.",
   "payLinks.pay.invalidAddress": "Votre wallet nous a donné une adresse inutilisable sur {net}. Reconnectez-le et réessayez.",
   "payLinks.pay.badSignature": "Cette signature ne correspondait pas au paiement, nous ne l'avons donc pas envoyé. Rien n'a été payé.",
+  "payLinks.pay.walletChanged": "Votre wallet a modifié ce paiement en le signant, nous ne l'avons donc pas envoyé. Rien n'a été payé. Réessayez, ou scannez le QR code avec votre wallet.",
+  "payLinks.pay.broadcastRefused": "Le réseau {net} a refusé ce paiement. Rien n'a été payé. Vérifiez les USDC de votre wallet et réessayez.",
   "payLinks.pay.expired": "La signature de ce paiement a pris trop de temps, il ne peut plus être envoyé. Rien n'a été payé ; recommencez.",
   "payLinks.pay.keyReused": "Ce paiement a été lancé avec un autre wallet ou un autre réseau. Rien n'a été payé ; recommencez.",
   "payLinks.pay.inFlight": "Cette page lance déjà un paiement. Patientez un instant et réessayez.",
