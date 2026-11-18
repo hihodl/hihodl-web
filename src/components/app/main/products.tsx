@@ -128,14 +128,16 @@ export function DoorRow({ product, right }: { product: Product; right?: ReactNod
   );
 }
 
-/** The two store buttons. Real links from lib/appLinks, never a guessed one. */
 /**
  * The App Store and Google Play badges, as the website draws them (its
  * StoreButton, app/page.tsx): the store's mark, "Download on the" or "Get it
  * on", and the store's name, white on the dark ground. The store names are
- * the stores' own and are never translated.
+ * the stores' own and are never translated. Real links from lib/appLinks.
+ *
+ * `only`: the page is open on that phone, so only its own store is drawn (an
+ * Android phone has no use for the App Store, and the other way round).
  */
-export function StoreButtons({ className = "" }: { className?: string } = {}) {
+export function StoreButtons({ className = "", only = null }: { className?: string; only?: "ios" | "android" | null } = {}) {
   const t = useT();
   const cls =
     "inline-flex h-[52px] items-center gap-3 whitespace-nowrap rounded-[14px] bg-white px-4 text-[#0A0500] transition-opacity hover:opacity-90";
@@ -150,8 +152,8 @@ export function StoreButtons({ className = "" }: { className?: string } = {}) {
   );
   return (
     <div className={`flex flex-wrap gap-2 ${className}`}>
-      {badge("logo-apple", t("shell.stores.downloadOnThe"), "App Store", APP_STORE_URL)}
-      {badge("logo-google", t("shell.stores.getItOn"), "Google Play", PLAY_STORE_URL)}
+      {only !== "android" ? badge("logo-apple", t("shell.stores.downloadOnThe"), "App Store", APP_STORE_URL) : null}
+      {only !== "ios" ? badge("logo-google", t("shell.stores.getItOn"), "Google Play", PLAY_STORE_URL) : null}
     </div>
   );
 }
