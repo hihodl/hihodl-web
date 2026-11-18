@@ -6,7 +6,7 @@
  * Exits 1 on the first failure.
  */
 
-import { hasAppWallet, openWithoutApp, payerOf, SPACES_OPEN_WITHOUT_APP } from "./app-wallet-gate";
+import { hasAppWallet, openWithoutApp, payerOf, SPACES_OPEN_WITHOUT_APP, spacesWithoutApp } from "./app-wallet-gate";
 
 let failures = 0;
 function check(name: string, ok: boolean) {
@@ -23,6 +23,13 @@ for (const rel of ["", "/", "/wallet", "/wallet/send", "/wallet/link", "/payment
   check(`needs the app: ${rel || "(home)"}`, !openWithoutApp(rel));
 }
 check("closing Spaces closes /spaces/board too", !openWithoutApp("/spaces/board", false));
+
+// Spaces without the app: HOLD Partners only (2026-11-18).
+check("a partner opens Spaces without the app", spacesWithoutApp({ allowed: true }));
+check("a non partner does not", !spacesWithoutApp({ allowed: false }));
+check("an unread access does not", !spacesWithoutApp(null) && !spacesWithoutApp(undefined) && !spacesWithoutApp({}));
+check("a truthy non boolean does not", !spacesWithoutApp({ allowed: "true" }));
+check("Spaces closed: not even a partner", !spacesWithoutApp({ allowed: true }, false));
 
 check("app_wallet lets in", hasAppWallet({ state: "app_wallet" }));
 check("none does not", !hasAppWallet({ state: "none" }));

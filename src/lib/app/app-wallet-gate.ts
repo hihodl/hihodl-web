@@ -13,23 +13,42 @@
  * What stays reachable WITHOUT a wallet from the app:
  *
  *   inside the shell   every Spaces route (the creator's console, a brand's
- *                      /spaces/board and /spaces/bought, /spaces/team?seat=),
- *                      while SPACES_OPEN_WITHOUT_APP is true
+ *                      /spaces/board and /spaces/bought), but ONLY for a HOLD
+ *                      Partner (spacesWithoutApp), while SPACES_OPEN_WITHOUT_APP
+ *                      is true
  *   outside the shell  /app/preview/*, /app/link/*, /auth/callback, /welcome,
- *                      and every public token page (/p/ /b/ /o/ /pay/ /s/
- *                      /events/ /invite/): none of them is drawn by the shell,
- *                      so this gate never sees them
+ *                      the invitation page /spaces/team?seat=, and every public
+ *                      token page (/p/ /b/ /o/ /pay/ /s/ /events/ /invite/):
+ *                      none of them is drawn behind this gate
  */
 
 /**
- * Spaces is open to creators and brands who have no wallet from the app yet.
- * Set to false to close Spaces behind the app too: every Spaces page then
- * asks for the app like the rest of the product. A money action inside Spaces
- * already shows "Get the HOLD app" to someone without a wallet.
+ * Spaces is open without a wallet from the app, to HOLD Partners only.
+ *
+ * Alex, 2026-11-18: Spaces is for HOLD Partners. Before this, every Spaces
+ * page opened for anybody signed in, and "Get the HOLD app" offered "Go to
+ * Spaces" to everyone: a traveller who signed up on the web on their phone
+ * went from "Get the HOLD app" into the brands' Board and briefs, empty, and
+ * left without ever seeing a way to the app. Now a person without a wallet
+ * from the app opens Spaces only when GET /ad-space/access says allowed
+ * (an active partner team, or someone who already owns a space, lists or
+ * hosts an event, or holds a seat). Everybody else gets "Get the HOLD app",
+ * with no way around it.
+ *
+ * Set to false to close Spaces behind the app for partners too.
  */
 export const SPACES_OPEN_WITHOUT_APP = true;
 
-/** Whether this product-relative path (`/spaces/listings`, `/wallet`, `` for Home) opens without a wallet from the app. */
+/**
+ * Whether a person WITHOUT a wallet from the app may open Spaces, from
+ * GET /ad-space/access. Only an explicit `allowed: true` opens it: no answer,
+ * a failed read or an unknown body is never read as permission.
+ */
+export function spacesWithoutApp(access: { allowed?: unknown } | null | undefined, spacesOpen: boolean = SPACES_OPEN_WITHOUT_APP): boolean {
+  return spacesOpen && access?.allowed === true;
+}
+
+/** Whether this product-relative path (`/spaces/listings`, `/wallet`, `` for Home) may open without a wallet from the app: for a partner (spacesWithoutApp). */
 export function openWithoutApp(rel: string, spacesOpen: boolean = SPACES_OPEN_WITHOUT_APP): boolean {
   if (!spacesOpen) return false;
   const path = rel.split(/[?#]/)[0];

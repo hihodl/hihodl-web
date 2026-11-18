@@ -25,8 +25,9 @@
  *
  * Signed out, it is HOLD's door (front/Door: welcome, or welcome back) and
  * nothing else. Signed in, it needs a wallet made in the HOLD app: anything
- * else gets "Get the HOLD app" (main/GetTheApp), except the pages that open
- * without it (lib/app/app-wallet-gate: Spaces, while SPACES_OPEN_WITHOUT_APP). An invitation link (`/spaces/team?seat=…`) is the one page
+ * else gets "Get the HOLD app" (main/GetTheApp), except Spaces for a HOLD
+ * Partner (lib/app/app-wallet-gate, 2026-11-18: Spaces is for partners, and
+ * nobody else is offered a way into it). An invitation link (`/spaces/team?seat=…`) is the one page
  * that renders without the shell, because the person holding it may have no
  * account yet.
  */
@@ -51,7 +52,7 @@ import type { MessageKey } from "@/lib/app/i18n";
 import { useLocale, useRatesRefresh, useServerPrefs, useT } from "@/lib/app/i18n/react";
 import { asDisplayMode, DEFAULT_DISPLAY_MODE, type DisplayMode } from "@/lib/app/display-mode";
 import { chosenUsername } from "@/lib/app/me";
-import { openWithoutApp, SPACES_OPEN_WITHOUT_APP } from "@/lib/app/app-wallet-gate";
+import { openWithoutApp } from "@/lib/app/app-wallet-gate";
 import { useDoor } from "@/lib/app/onboarding";
 import { useSignOutWhenRemovedElsewhere } from "@/lib/app/sessions";
 import { roleOf, waitingOnYou, type ShellRole } from "@/lib/app/spaces-model";
@@ -225,15 +226,16 @@ function Gate({ children }: { children: ReactNode }) {
 /**
  * The way in, after sign-in:
  *
- *   1. a wallet made in the HOLD app, on every page that needs one
- *      (`needsApp`): read from the server on every load, never from this
- *      browser's memory. Without one, "Get the HOLD app"; a failed read, Retry
+ *   1. a wallet made in the HOLD app: read from the server on every load,
+ *      never from this browser's memory. Without one, "Get the HOLD app"; a
+ *      failed read, Retry. On Spaces (`needsApp` false) a HOLD Partner comes
+ *      in without it, and only a partner is offered "Go to Spaces"
  *   2. onboarding, once: a person without a username or recovery codes is sent to /welcome, which brings them back here. Everybody
  *      else never sees it. A full load, not a client navigation: /welcome
  *      carries the wallet pages' strict CSP, which only a response can set
  */
 function Onboarded({ session, skip, needsApp, children }: { session: Session; skip: boolean; needsApp: boolean; children: ReactNode }) {
-  const { door, checking, recheck } = useDoor(session, skip, needsApp);
+  const { door, checking, recheck, spaces } = useDoor(session, skip, needsApp);
   const base = useSpacesBase();
   const productHref = useProductHref();
   useEffect(() => {
@@ -247,7 +249,7 @@ function Onboarded({ session, skip, needsApp, children }: { session: Session; sk
         failed={door === "failed"}
         checking={checking}
         onCheck={recheck}
-        spacesHref={SPACES_OPEN_WITHOUT_APP ? productHref("/spaces") : null}
+        spacesHref={spaces && needsApp ? productHref("/spaces") : null}
       />
     );
   }

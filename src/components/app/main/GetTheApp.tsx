@@ -11,16 +11,21 @@
  *
  *   GetTheAppScreen   the whole page, in the shell's gate (Shell.tsx): the
  *                     look of InTheAppScreen, "I've made it, check again",
- *                     Sign out, and Spaces while it stays open without the app
+ *                     Sign out, and "Go to Spaces" for a HOLD Partner only.
+ *                     On a phone, only that phone's store (2026-11-18: an
+ *                     Android sign up saw both badges, a way to Spaces, and
+ *                     left without the app)
  *   GetTheAppCard     the same words in a card, for a sheet or a screen that
  *                     needed a wallet (a spot's checkout, a stay's, Payout)
  */
 
 import Link from "next/link";
+import { useState } from "react";
 
 import { t } from "@/lib/app/i18n";
 import { useT } from "@/lib/app/i18n/react";
 import { signOut } from "@/lib/creator/session";
+import { thisDevice } from "@/lib/link/ua";
 
 import { glass } from "../ui";
 import { StoreButtons } from "./products";
@@ -57,11 +62,13 @@ export function GetTheAppScreen({
   /** The status could not be read: the screen asks to retry, and lets nobody in. */
   failed?: boolean;
   onCheck: () => void;
-  /** Spaces, while it stays open without the app (SPACES_OPEN_WITHOUT_APP). */
+  /** Spaces, for a HOLD Partner only (useDoor's `spaces`); null for everybody else. */
   spacesHref?: string | null;
 }) {
   const t = useT();
   const words = getTheApp();
+  // The shell draws this only in the browser, after the session is read.
+  const [phone] = useState(() => thisDevice().phone);
   const small = "rounded-[8px] px-2 py-1 text-small text-[#9FB7C2] hover:bg-white/10 hover:text-text";
   return (
     <div className="flex min-h-[100dvh] w-full flex-col items-center justify-center px-4 py-10">
@@ -91,7 +98,7 @@ export function GetTheAppScreen({
               <p className="text-small font-medium text-text">{t("shell.getApp.noWebWallet")}</p>
               <p className="mt-0.5 text-tiny text-[#9FB7C2]">{t("shell.getApp.makeOnce")}</p>
             </div>
-            <StoreButtons />
+            <StoreButtons only={phone} />
             <button
               type="button"
               onClick={onCheck}
