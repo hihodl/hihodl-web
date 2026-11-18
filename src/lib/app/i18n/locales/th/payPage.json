@@ -169,5 +169,14 @@
   "recurring.renewWith": "ต่ออายุด้วย {wallet}",
   "recurring.renewing": "กำลังต่ออายุ…",
   "recurring.renewedTitle": "ต่ออายุแล้ว",
-  "recurring.renewedBody": "{payee} จะได้รับ {amount} จากคุณ{period, select, week {ทุกสัปดาห์} other {ทุกเดือน}}อีกครั้ง"
+  "recurring.renewedBody": "{payee} จะได้รับ {amount} จากคุณ{period, select, week {ทุกสัปดาห์} other {ทุกเดือน}}อีกครั้ง",
+  "sheetToName": "ถึง {name}",
+  "payAmountWith": "จ่าย {amount} ด้วย {wallet}",
+  "openYourWallet": "เปิดวอลเล็ตของคุณ",
+  "stable.exactly": "{token} · ผู้รับได้ยอดนี้เต็มจำนวน",
+  "stable.feeSolana": "HOLD จ่ายค่าธรรมเนียมเครือข่ายให้ {wallet} อาจยังแสดงค่าธรรมเนียม แต่คุณจะไม่ถูกเรียกเก็บ",
+  "stable.feeEvm": "คุณแค่เซ็น HOLD ส่งให้และจ่ายค่าธรรมเนียมเครือข่าย",
+  "stable.feeCovered": "HOLD จ่ายค่าธรรมเนียมเครือข่าย",
+  "stable.otherWays": "วอลเล็ตอื่นหรือคิวอาร์โค้ด",
+  "stable.paid": "จ่ายแล้ว"
 }

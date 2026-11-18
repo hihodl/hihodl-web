@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { Ion, type IonName } from "@/components/app/ion";
-import { QrCode } from "@/components/ad-space/qr";
+import { HoldQrCode } from "@/components/ad-space/qr";
 import {
   CheckoutError,
   checkoutId,
@@ -58,6 +58,7 @@ import {
   type PayToken,
 } from "@/lib/pay-links/client";
 import { usePhone } from "@/components/app/link/in-app";
+import { OwnerFace } from "./pay-parts";
 import { appSchemeUrl, holdPayHref, offers, payStateUrl, walletBrowseUrl, type WalletLinkId } from "@/lib/pay-links/page-rules";
 import type { PayLinkEvmPayload, PayLinkPayment, ShownPayLink, TimedPayLinkCheckout } from "@/lib/pay-links/types";
 import {
@@ -180,6 +181,8 @@ export function PayLinkPay({
   const [phase, setPhase] = useState<Phase>({ kind: "loading" });
   /** The options, or the QR code the payer asked for in their place. */
   const [view, setView] = useState<"options" | "qr">("options");
+  /** Inside a wallet: the payer asked for the other wallets and the code too. */
+  const [others, setOthers] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [solWallets, setSolWallets] = useState<SolanaWallet[]>([]);
   const [evmWallets, setEvmWallets] = useState<EvmWallet[]>([]);
@@ -749,7 +752,16 @@ export function PayLinkPay({
   if (!canPay && (phase.kind === "loading" || phase.kind === "choose" || phase.kind === "lapsed")) return noticeLine;
 
   if (phase.kind === "paid") {
-    return <Paid payment={phase.payment} payee={payee} unit={unit} money={money} onPayAgain={link.status === "active" ? payAgain : null} />;
+    return (
+      <Paid
+        payment={phase.payment}
+        owner={link.owner}
+        name={link.owner?.displayName?.trim() || payee}
+        unit={unit}
+        money={money}
+        onPayAgain={link.status === "active" ? payAgain : null}
+      />
+    );
   }
 
   if (phase.kind === "duplicate") {
@@ -819,10 +831,35 @@ export function PayLinkPay({
   const showQrArea = chain === "solana" || walletConnect;
   const busyLabel = phase.kind === "busy" ? phase.label : null;
   const showLedger = walletConnect && canPay;
+  const bigName = link.owner?.displayName?.trim() || payee;
+  const handle = link.owner?.handle ? `@${link.owner.handle}` : null;
+  const toLine = t("payPage.sheetToName", { name: `\u2068${bigName}\u2069` }) + (handle && handle !== bigName ? ` · ${handle}` : "");
+  const parts = amountParts(shownAmount);
+  /** The face, who, the amount big, and that they get exactly it. */
   const header = (
-    <p className="text-center text-[14px] text-[#CFE3EC]">
-      <span className="font-extrabold text-white">{shownAmount}</span> {t("payPage.sheetTo", { name: `\u2068${link.owner?.displayName?.trim() || payee}\u2069` })}
-    </p>
+    <div className="flex flex-col items-center pt-1 text-center">
+      <OwnerFace owner={link.owner} size={56} />
+      <p className="mt-2.5 max-w-full truncate text-[15px] text-[#C8D0D9]" dir="auto">
+        {toLine}
+      </p>
+      <BigAmount parts={parts} size={56} />
+      <p className="mt-2 text-[12px] font-extrabold uppercase tracking-[1px] text-[#9FB7C2]">{t("payPage.stable.exactly", { token: unit })}</p>
+    </div>
+  );
+  /** One line: the face, who, the token, and the amount at the right. For the list of wallets and the code. */
+  const compactHeader = (
+    <div className="flex items-center gap-3 px-0.5 pt-1">
+      <OwnerFace owner={link.owner} size={44} />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[14px] text-[#C8D0D9]" dir="auto">
+          {t("payPage.sheetToName", { name: `\u2068${bigName}\u2069` })}
+        </p>
+        <p className="mt-0.5 text-[12px] font-extrabold uppercase tracking-[1px] text-[#9FB7C2]">
+          {view === "qr" ? t("payPage.onNetwork", { token: unit, net: CHAIN_LABEL[chain] }) : unit}
+        </p>
+      </div>
+      <BigAmount parts={parts} size={34} inline />
+    </div>
   );
 
   if (view === "qr" && showQrArea) {
@@ -838,17 +875,17 @@ export function PayLinkPay({
             <Ion name="chevron-back" size={18} className="rtl:rotate-180" />
             {t("payPage.back")}
           </button>
-          <h3 className="text-[15px] font-extrabold text-white">{t("payPage.scanQr")}</h3>
+          <h3 className="text-[17px] font-extrabold text-white">{t("payPage.scanQr")}</h3>
         </div>
 
-        {header}
+        {compactHeader}
 
         {busyLabel && !qrText ? <BusyLine label={busyLabel} /> : null}
 
         <div className="flex flex-col items-center gap-3">
-          <div className="flex aspect-square w-full max-w-[236px] items-center justify-center rounded-[24px] bg-white p-3.5 shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
+          <div className="flex aspect-square w-full max-w-[250px] items-center justify-center rounded-[28px] bg-white p-4 shadow-[0_0_0_6px_rgba(255,183,3,0.10),0_18px_40px_rgba(0,0,0,0.35)]">
             {qrText ? (
-              <QrCode text={qrText} title={t("payPage.stable.qrTitle")} logo="/favicon.png" className="h-auto w-full" />
+              <HoldQrCode text={qrText} title={t("payPage.stable.qrTitle")} logo="/favicon.png" className="h-auto w-full" />
             ) : phase.kind === "choose" ? (
               // A refusal, or a pairing the wallet closed: the payer reads why, then asks again.
               <button
@@ -864,7 +901,7 @@ export function PayLinkPay({
               <span className="h-7 w-7 animate-spin rounded-full border-[3px] border-[#0A1420]/15 border-t-[#0A1420]" aria-hidden />
             )}
           </div>
-          <p className="max-w-[300px] text-center text-[12.5px] leading-[17px] text-[#9FB7C2]">
+          <p className="max-w-[300px] text-center text-[14px] leading-[20px] text-[#C8D0D9]">
             {phase.kind === "qr" && phase.scanned
               ? t("payPage.stable.qrScanned")
               : chain === "solana" && phase.kind !== "wc"
@@ -878,17 +915,35 @@ export function PayLinkPay({
     );
   }
 
-  const openRows = !injectedHere && mobile && stateUrl;
+  const listed = !injectedHere || others;
+  const openRows = listed && mobile && stateUrl;
   const holdRow = openRows && holdHref && token === "usdc" && offers(link, "hold");
-  const ledgerRow = !injectedHere && showLedger;
-  const qrRow = showQrArea && canPay;
+  const ledgerRow = listed && showLedger;
+  const qrRow = showQrArea && canPay && listed;
+  // Phantom and the others show a network fee on Solana that our relayer pays: say so before they see it.
+  const feeLine =
+    injectedHere && !others
+      ? chain === "solana"
+        ? t("payPage.stable.feeSolana", { wallet: solWallets[0]?.name ?? "" })
+        : t("payPage.stable.feeEvm")
+      : null;
 
   return (
-    <div className="flex flex-col gap-4">
-      {header}
+    <div className="flex flex-1 flex-col gap-4">
+      {injectedHere && others ? (
+        <button
+          type="button"
+          onClick={() => setOthers(false)}
+          className="-mb-2 inline-flex h-9 items-center gap-1 self-start rounded-[18px] pe-3 ps-1.5 text-[14px] font-bold text-white/80 transition-colors hover:text-white"
+        >
+          <Ion name="chevron-back" size={18} className="rtl:rotate-180" />
+          {t("payPage.back")}
+        </button>
+      ) : null}
+      {injectedHere && !others ? header : compactHeader}
 
       {chains.length > 1 ? (
-        <div role="radiogroup" aria-label={t("payPage.network")} className="flex h-11 gap-1 rounded-[22px] bg-white/[0.06] p-1">
+        <div role="radiogroup" aria-label={t("payPage.network")} className="flex h-11 gap-[3px] rounded-[22px] border border-white/[0.12] bg-[rgba(13,24,32,0.66)] p-[3px]">
           {chains.map((c) => (
             <button
               key={c}
@@ -896,8 +951,8 @@ export function PayLinkPay({
               role="radio"
               aria-checked={chain === c}
               onClick={() => switchNetwork(c)}
-              className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[18px] text-[13.5px] font-bold transition-colors ${
-                chain === c ? "bg-white text-[#0A1420]" : "text-white/75 hover:text-white"
+              className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[18px] text-[13px] font-bold transition-colors ${
+                chain === c ? "bg-white text-[#0B0F14]" : "text-white hover:bg-white/[0.06]"
               }`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -907,49 +962,23 @@ export function PayLinkPay({
           ))}
         </div>
       ) : (
-        <p className="flex items-center justify-center gap-1.5 text-[13px] font-bold text-white/80">
+        <p className="flex h-11 items-center justify-center gap-2 rounded-[22px] border border-white/[0.12] bg-[rgba(13,24,32,0.66)] text-[14px] font-bold text-white">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={NETWORK_LOGO[chain]} alt="" width={18} height={18} className="h-[18px] w-[18px] rounded-[5px]" />
           {t("payPage.onNetwork", { token: unit, net: CHAIN_LABEL[chain] })}
         </p>
       )}
 
-      {/* Already inside a wallet: one tap. */}
-      {chain === "solana"
-        ? solWallets.map((w) => (
-            <button key={w.name} type="button" className={amberCta} disabled={waiting || !!busyLabel} onClick={() => void payWithSolanaWallet(w)}>
-              {w.icon ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={w.icon} alt="" width={22} height={22} className="h-[22px] w-[22px] rounded-[6px]" />
-              ) : null}
-              {t("payPage.payWithWallet", { wallet: w.name })}
-            </button>
-          ))
-        : evmWallets.map((w) => (
-            <button
-              key={w.id}
-              type="button"
-              className={amberCta}
-              disabled={waiting || !!busyLabel}
-              onClick={() => {
-                wcRun.current++;
-                void payWithEvm(chain as EvmPayChain, w.provider, w.name);
-              }}
-            >
-              {w.icon ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={w.icon} alt="" width={22} height={22} className="h-[22px] w-[22px] rounded-[6px]" />
-              ) : null}
-              {t("payPage.payWithWallet", { wallet: w.name })}
-            </button>
-          ))}
+      {feeLine ? <FeeNote>{feeLine}</FeeNote> : null}
 
       {busyLabel ? <BusyLine label={busyLabel} /> : null}
 
       {openRows || ledgerRow || qrRow ? (
         <div className="flex flex-col gap-2">
-          {openRows || ledgerRow ? <p className="px-1 text-[13px] font-strong text-[#9FB7C2]">{t("payPage.orOpenWallet")}</p> : null}
-          <div className="overflow-hidden rounded-[20px] border border-white/[0.08] bg-white/[0.05]">
+          {openRows || ledgerRow ? (
+            <p className="px-1 text-[12px] font-extrabold uppercase tracking-[0.6px] text-[#9FB7C2]">{t("payPage.openYourWallet")}</p>
+          ) : null}
+          <div className="overflow-hidden rounded-[22px] border border-white/[0.09] bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.03))]">
             {holdRow && holdHref ? <WalletRow href={holdHref} logo={WALLET_LOGO.hold} name="HOLD" /> : null}
             {openRows
               ? walletLinks.map((id, i) => (
@@ -975,7 +1004,48 @@ export function PayLinkPay({
         <p className="text-center text-[13px] leading-[18px] text-[#9FB7C2]">{t("payPage.openInWalletBrowser")}</p>
       ) : null}
 
+      {/* On Base, Polygon and Arc every way here only signs, and our relayer pays. A Solana code is sent by the payer's own wallet, which pays its fee. */}
+      {listed && chain !== "solana" ? (
+        <p className="flex items-center justify-center gap-1.5 text-[12.5px] text-[#B4BEC9]">
+          <Ion name="shield-checkmark-outline" size={14} className="text-[#8ECAE6]" />
+          {t("payPage.stable.feeCovered")}
+        </p>
+      ) : null}
+
       {noticeLine}
+
+      {/* Already inside a wallet: one tap, at the foot of the sheet. */}
+      {injectedHere && !others ? (
+        <div className="mt-auto flex flex-col gap-2.5 pt-2">
+          {chain === "solana"
+            ? solWallets.map((w) => (
+                <button key={w.name} type="button" className={payCta} disabled={waiting || !!busyLabel} onClick={() => void payWithSolanaWallet(w)}>
+                  <WalletMark icon={w.icon} />
+                  {t("payPage.payAmountWith", { amount: shownAmount, wallet: w.name })}
+                </button>
+              ))
+            : evmWallets.map((w) => (
+                <button
+                  key={w.id}
+                  type="button"
+                  className={payCta}
+                  disabled={waiting || !!busyLabel}
+                  onClick={() => {
+                    wcRun.current++;
+                    void payWithEvm(chain as EvmPayChain, w.provider, w.name);
+                  }}
+                >
+                  <WalletMark icon={w.icon} />
+                  {t("payPage.payAmountWith", { amount: shownAmount, wallet: w.name })}
+                </button>
+              ))}
+          {showLedger || showQrArea ? (
+            <button type="button" className={glassCta} disabled={!!busyLabel} onClick={() => setOthers(true)}>
+              {t("payPage.stable.otherWays")}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -984,8 +1054,64 @@ export function PayLinkPay({
 
 const amberCta =
   "inline-flex h-[52px] w-full items-center justify-center gap-2.5 rounded-[26px] bg-amber px-5 text-[16px] font-extrabold text-[#0F0F1A] transition-opacity hover:opacity-90 disabled:opacity-50";
+/** The pay button: the app's 58pt amber pill, lit from above. */
+const payCta =
+  "inline-flex h-[58px] w-full min-w-0 items-center justify-center gap-2.5 rounded-[29px] bg-amber px-5 text-[17px] font-extrabold text-[#0B0F14] shadow-[0_10px_30px_rgba(255,183,3,0.28),inset_0_1px_0_rgba(255,255,255,0.45)] transition-opacity hover:opacity-90 disabled:opacity-50";
 const glassCta =
-  "inline-flex h-12 w-full items-center justify-center gap-2 rounded-[24px] border border-white/[0.22] bg-white/10 px-5 text-[15px] font-bold text-white";
+  "inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-[26px] border border-white/[0.26] bg-white/[0.14] px-5 text-[16px] font-extrabold text-white transition-colors hover:bg-white/[0.18] disabled:opacity-50";
+
+/** "$2.00" as the symbol, the whole part and the cents, for the big amount. */
+function amountParts(text: string): { before: string; whole: string; frac: string; after: string } {
+  const m = text.match(/^(\D*?)([\d.,\s\u00a0\u202f]*\d)(?:([.,])(\d{1,2}))?(\D*)$/);
+  if (!m) return { before: "", whole: text, frac: "", after: "" };
+  return { before: m[1].trim(), whole: m[2], frac: m[4] ? `${m[3]}${m[4]}` : "", after: m[5].trim() };
+}
+
+function BigAmount({ parts, size, inline = false }: { parts: ReturnType<typeof amountParts>; size: number; inline?: boolean }) {
+  const small = Math.round(size / 2);
+  return (
+    <p className={`${inline ? "shrink-0" : "mt-2"} leading-none tabular-nums text-white`} dir="ltr">
+      {parts.before ? (
+        <span className="relative align-top font-bold text-[#DCE7EE]" style={{ fontSize: small, top: Math.round(size * 0.1) }}>
+          {parts.before}
+        </span>
+      ) : null}
+      <span className="font-extrabold" style={{ fontSize: size, letterSpacing: size >= 48 ? -2 : -1 }}>
+        {parts.whole}
+      </span>
+      {parts.frac ? (
+        <span className="font-bold text-[#AFBBC6]" style={{ fontSize: small }}>
+          {parts.frac}
+        </span>
+      ) : null}
+      {parts.after ? (
+        <span className="ms-1 font-bold text-[#DCE7EE]" style={{ fontSize: small }}>
+          {parts.after}
+        </span>
+      ) : null}
+    </p>
+  );
+}
+
+function FeeNote({ children }: { children: ReactNode }) {
+  return (
+    <p className="flex items-start gap-2.5 rounded-[18px] border border-[rgba(142,202,230,0.20)] bg-[rgba(142,202,230,0.08)] px-3.5 py-3 text-[13.5px] leading-[19px] text-[#DCE7EE]">
+      <Ion name="shield-checkmark-outline" size={18} className="mt-px shrink-0 text-[#8ECAE6]" />
+      <span>{children}</span>
+    </p>
+  );
+}
+
+/** The wallet's own icon on the pay button, on a small tile. */
+function WalletMark({ icon }: { icon?: string | null }) {
+  if (!icon) return null;
+  return (
+    <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-[8px]">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={icon} alt="" width={28} height={28} className="h-full w-full object-cover" />
+    </span>
+  );
+}
 
 function WalletRow({
   href,
@@ -1003,26 +1129,21 @@ function WalletRow({
   disabled?: boolean;
 } & ({ logo: string; icon?: undefined } | { logo?: undefined; icon: IonName }) &
   ({ href: string; onClick?: undefined } | { href?: undefined; onClick: () => void })) {
-  const row = `flex w-full items-center gap-3 px-4 py-3 text-start transition-colors hover:bg-white/[0.04] disabled:opacity-50 ${last ? "" : "border-b border-white/[0.06]"}`;
+  const row = `flex h-[54px] w-full items-center gap-3 px-3.5 text-start transition-colors hover:bg-white/[0.04] disabled:opacity-50 ${last ? "" : "border-b border-white/[0.07]"}`;
   const body = (
     <>
       {icon ? (
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-white/[0.1] text-white">
+        <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[10px] bg-white/[0.12] text-white">
           <Ion name={icon} size={18} />
         </span>
       ) : (
-        <span className={`flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-[9px] bg-white ${inset ? "p-[5px]" : ""}`}>
+        <span className={`flex h-[34px] w-[34px] shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-white ${inset ? "p-[5px]" : ""}`}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={logo} alt="" width={32} height={32} className="h-full w-full object-contain" />
         </span>
       )}
-      <span className="min-w-0 flex-1 truncate text-[15px] font-bold text-white">{name}</span>
-      {/* A row that opens another app says so; the code stays in this sheet. */}
-      {onClick && icon ? (
-        <Ion name="chevron-forward" size={15} className="shrink-0 text-white/40 rtl:rotate-180" />
-      ) : (
-        <Ion name="open-outline" size={15} className="shrink-0 text-white/40" />
-      )}
+      <span className="min-w-0 flex-1 truncate text-[15.5px] font-bold text-white">{name}</span>
+      <Ion name="chevron-forward" size={15} className="shrink-0 text-[#9FB7C2] rtl:rotate-180" />
     </>
   );
   if (onClick) {
@@ -1086,15 +1207,21 @@ function Result({
   );
 }
 
+/**
+ * Paid, the receipt's way: a mint tick, the amount big, who got it, and the
+ * receipt and the transaction under it.
+ */
 function Paid({
   payment,
-  payee,
+  owner,
+  name,
   unit,
   money,
   onPayAgain,
 }: {
   payment: PayLinkPayment;
-  payee: string;
+  owner: ShownPayLink["owner"];
+  name: string;
   unit: string;
   money: (cents: number) => string;
   onPayAgain: (() => void) | null;
@@ -1103,22 +1230,33 @@ function Paid({
   const receipt = receiptPath(payment.receiptUrl);
   const explorer = paymentExplorerUrl(payment);
   return (
-    <Result
-      title={t("payPage.stable.paidSent", { amount: money(payment.amountCents), payee })}
-      body={t("payPage.stable.paidIn", { token: unit, net: CHAIN_LABEL[payment.chain] })}
-    >
-      {receipt ? (
-        <Link href={receipt} className={glassCta}>
-          {t("payPage.stable.receiptOpen")}
-        </Link>
-      ) : null}
-      {explorer ? <GlassLink href={explorer}>{t("payPage.stable.viewTx")}</GlassLink> : null}
-      {onPayAgain ? (
-        <button type="button" className={glassCta} onClick={onPayAgain}>
-          {t("payPage.stable.another")}
-        </button>
-      ) : null}
-    </Result>
+    <div className="flex flex-1 flex-col items-center pt-3 text-center" role="status">
+      <span className="flex h-16 w-16 items-center justify-center rounded-full border border-[rgba(125,211,168,0.45)] bg-[rgba(125,211,168,0.16)] text-[#7DD3A8]">
+        <Ion name="checkmark" size={30} />
+      </span>
+      <p className="mt-3 text-[15px] font-bold text-[#7DD3A8]">{t("payPage.stable.paid")}</p>
+      <BigAmount parts={amountParts(money(payment.amountCents))} size={64} />
+      <p className="mt-3 flex max-w-full items-center justify-center gap-2 text-[16px] font-bold text-white">
+        <OwnerFace owner={owner} size={26} plain />
+        <span className="min-w-0 truncate" dir="auto">
+          {t("payPage.sheetToName", { name: `\u2068${name}\u2069` })}
+        </span>
+      </p>
+      <p className="mt-1.5 text-[13px] text-[#9FB7C2]">{t("payPage.stable.paidIn", { token: unit, net: CHAIN_LABEL[payment.chain] })}</p>
+      <div className="mt-auto flex w-full flex-col gap-2.5 pt-6">
+        {receipt ? (
+          <Link href={receipt} className={glassCta}>
+            {t("payPage.stable.receiptOpen")}
+          </Link>
+        ) : null}
+        {explorer ? <GlassLink href={explorer}>{t("payPage.stable.viewTx")}</GlassLink> : null}
+        {onPayAgain ? (
+          <button type="button" className="h-11 text-[15px] font-bold text-[#C8D0D9] hover:text-white" onClick={onPayAgain}>
+            {t("payPage.stable.another")}
+          </button>
+        ) : null}
+      </div>
+    </div>
   );
 }
 

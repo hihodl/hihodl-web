@@ -153,17 +153,19 @@ export function PayPage({ state, checkout }: { state: PayPageState; checkout?: C
  * mid-scroll. A fixed layer has no document to pull: the layer stops at the
  * foot, and `overscroll-none` keeps even it from bouncing.
  *
- * The navy is painted on <html> and <body> too, so nothing else shows behind
- * the layer, and when the keyboard goes down iOS can leave the window panned
- * to where it was: it is put back at the top.
+ * The ground is the app's mesh (the HiChat Plan look, 13-Nov-2026): deep
+ * blue at the top to navy, with an amber light across it. Its navy is
+ * painted on <html> and <body> too, so nothing else shows behind the layer,
+ * and when the keyboard goes down iOS can leave the window panned to where
+ * it was: it is put back at the top.
  */
 function Ground({ children }: { children: ReactNode }) {
   useEffect(() => {
     const html = document.documentElement;
     const body = document.body;
     const before = [html.style.backgroundColor, body.style.backgroundColor, html.style.overflow, body.style.overflow];
-    html.style.backgroundColor = "#0D1820";
-    body.style.backgroundColor = "#0D1820";
+    html.style.backgroundColor = GROUND_NAVY;
+    body.style.backgroundColor = GROUND_NAVY;
     html.style.overflow = "hidden";
     body.style.overflow = "hidden";
 
@@ -193,17 +195,18 @@ function Ground({ children }: { children: ReactNode }) {
     };
   }, []);
   return (
-    <div className="fixed inset-0 overflow-y-auto overflow-x-hidden overscroll-none bg-[#0D1820] text-white [-webkit-overflow-scrolling:touch]">
+    <div className="fixed inset-0 overflow-y-auto overflow-x-hidden overscroll-none bg-[#0a1929] text-white [-webkit-overflow-scrolling:touch]">
       <div className="relative flex min-h-full flex-col">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-[280px] bg-[linear-gradient(180deg,rgba(0,194,255,0.45)_0%,rgba(54,224,255,0)_100%)]"
-        />
+        <div aria-hidden className="pointer-events-none fixed inset-0" style={{ background: GROUND_MESH }} />
         <div className="relative mx-auto flex w-full max-w-[480px] flex-1 flex-col px-4 pb-[max(16px,env(safe-area-inset-bottom))]">{children}</div>
       </div>
     </div>
   );
 }
+
+const GROUND_NAVY = "#0a1929";
+const GROUND_MESH =
+  "linear-gradient(236deg,rgba(255,183,3,0) 8%,rgba(255,183,3,0.13) 22%,rgba(255,183,3,0.04) 40%,rgba(255,183,3,0) 60%),linear-gradient(180deg,#1a5276 0%,#0f3555 37.5%,#0a1929 75%,#0a1929 100%)";
 
 function TopBar() {
   return (
@@ -772,12 +775,12 @@ function Shown({ link, checkout }: { link: ShownPayLink; checkout: CheckoutView 
 
       {sheet === "hold" ? <HoldSheet pageUrl={pageUrl || `https://hihodl.xyz/pay/${link.personal && link.owner?.handle ? `@${link.owner.handle}` : link.code}`} onClose={() => setSheet(null)} /> : null}
       {sheet === "stable" && active && !link.recurring ? (
-        <Modal onClose={() => setSheet(null)} title={t("payPage.payWithToken", { token: token === "eurc" ? "EURC" : "USDC" })} size="lg" tall>
+        <Modal onClose={() => setSheet(null)} title={t("payPage.payWithToken", { token: token === "eurc" ? "EURC" : "USDC" })} hideTitle size="lg" tall float>
           <PayLinkPay link={link} token={token} amountCents={stableCents} amountText={fixed === null ? amountText : null} network={startNetwork} />
         </Modal>
       ) : null}
       {bank && active ? (
-        <Modal onClose={() => setSheet(null)} title={t("payPage.bankTitle")} size="lg">
+        <Modal onClose={() => setSheet(null)} title={t("payPage.bankTitle")} size="lg" float>
           <BankSheet transfer={bank} amount={bankAmount(bank)} payee={bigName} />
         </Modal>
       ) : null}

@@ -169,5 +169,14 @@
   "recurring.renewWith": "Verlengen met {wallet}",
   "recurring.renewing": "Verlengen…",
   "recurring.renewedTitle": "Verlengd",
-  "recurring.renewedBody": "{payee} krijgt weer {amount} van je, {period, select, week {elke week} other {elke maand}}."
+  "recurring.renewedBody": "{payee} krijgt weer {amount} van je, {period, select, week {elke week} other {elke maand}}.",
+  "sheetToName": "Aan {name}",
+  "payAmountWith": "Betaal {amount} met {wallet}",
+  "openYourWallet": "Open je wallet",
+  "stable.exactly": "{token} · krijgt precies dit",
+  "stable.feeSolana": "HOLD betaalt de netwerkkosten. {wallet} kan ze toch tonen: je betaalt ze niet.",
+  "stable.feeEvm": "Je tekent alleen. HOLD verstuurt het en betaalt de netwerkkosten.",
+  "stable.feeCovered": "HOLD betaalt de netwerkkosten",
+  "stable.otherWays": "Andere wallet of QR-code",
+  "stable.paid": "Betaald"
 }

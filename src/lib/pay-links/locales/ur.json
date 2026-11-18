@@ -286,5 +286,16 @@
   "payPage.recurring.renewWith": "{wallet} سے تجدید کریں",
   "payPage.recurring.renewing": "تجدید ہو رہی ہے…",
   "payPage.recurring.renewedTitle": "تجدید ہو گئی",
-  "payPage.recurring.renewedBody": "{payee} کو دوبارہ {period, select, week {ہر ہفتے} other {ہر مہینے}} آپ سے {amount} ملیں گے۔"
+  "payPage.recurring.renewedBody": "{payee} کو دوبارہ {period, select, week {ہر ہفتے} other {ہر مہینے}} آپ سے {amount} ملیں گے۔",
+  "payPage.sheetToName": "{name} کے لیے",
+  "payPage.payAmountWith": "{wallet} سے {amount} ادا کریں",
+  "payPage.openYourWallet": "اپنا والیٹ کھولیں",
+  "payPage.stable.exactly": "{token} · انہیں بالکل یہی رقم ملے گی",
+  "payPage.stable.feeSolana": "نیٹ ورک فیس HOLD ادا کرتا ہے۔ {wallet} پھر بھی فیس دکھا سکتا ہے: آپ سے نہیں لی جائے گی۔",
+  "payPage.stable.feeEvm": "آپ صرف دستخط کرتے ہیں۔ HOLD اسے بھیجتا ہے اور نیٹ ورک فیس ادا کرتا ہے۔",
+  "payPage.stable.feeCovered": "نیٹ ورک فیس HOLD ادا کرتا ہے",
+  "payPage.stable.otherWays": "کوئی اور والیٹ یا QR کوڈ",
+  "payPage.stable.paid": "ادا ہو گیا",
+  "home.payLinks.pay.walletChanged": "دستخط کرتے وقت آپ کے والیٹ نے یہ ادائیگی بدل دی، اس لیے ہم نے اسے نہیں بھیجا۔ کچھ ادا نہیں ہوا۔ دوبارہ کوشش کریں، یا والیٹ سے QR کوڈ اسکین کریں۔",
+  "home.payLinks.pay.broadcastRefused": "{net} نیٹ ورک نے یہ ادائیگی رد کر دی۔ کچھ ادا نہیں ہوا۔ والیٹ میں اپنا USDC دیکھیں اور دوبارہ کوشش کریں۔"
 }

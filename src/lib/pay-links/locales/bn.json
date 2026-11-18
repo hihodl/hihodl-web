@@ -286,5 +286,16 @@
   "payPage.recurring.renewWith": "{wallet} দিয়ে রিনিউ করুন",
   "payPage.recurring.renewing": "রিনিউ হচ্ছে…",
   "payPage.recurring.renewedTitle": "রিনিউ হয়েছে",
-  "payPage.recurring.renewedBody": "{payee} আবার {period, select, week {প্রতি সপ্তাহে} other {প্রতি মাসে}} আপনার কাছ থেকে {amount} পাবেন।"
+  "payPage.recurring.renewedBody": "{payee} আবার {period, select, week {প্রতি সপ্তাহে} other {প্রতি মাসে}} আপনার কাছ থেকে {amount} পাবেন।",
+  "payPage.sheetToName": "{name}-কে",
+  "payPage.payAmountWith": "{wallet} দিয়ে {amount} পেমেন্ট করুন",
+  "payPage.openYourWallet": "আপনার ওয়ালেট খুলুন",
+  "payPage.stable.exactly": "{token} · ঠিক এই পরিমাণই পৌঁছাবে",
+  "payPage.stable.feeSolana": "নেটওয়ার্ক ফি HOLD দেয়। {wallet} তবুও ফি দেখাতে পারে: আপনার কাছ থেকে নেওয়া হবে না।",
+  "payPage.stable.feeEvm": "আপনি শুধু সাইন করেন। HOLD পাঠায় এবং নেটওয়ার্ক ফি দেয়।",
+  "payPage.stable.feeCovered": "নেটওয়ার্ক ফি HOLD দেয়",
+  "payPage.stable.otherWays": "অন্য ওয়ালেট বা QR কোড",
+  "payPage.stable.paid": "পেমেন্ট হয়েছে",
+  "home.payLinks.pay.walletChanged": "সাইন করার সময় আপনার ওয়ালেট এই পেমেন্টটি বদলে দিয়েছে, তাই আমরা এটি পাঠাইনি। কিছুই পেমেন্ট হয়নি। আবার চেষ্টা করুন, অথবা ওয়ালেট দিয়ে QR কোডটি স্ক্যান করুন।",
+  "home.payLinks.pay.broadcastRefused": "{net} নেটওয়ার্ক এই পেমেন্টটি প্রত্যাখ্যান করেছে। কিছুই পেমেন্ট হয়নি। ওয়ালেটে আপনার USDC দেখে আবার চেষ্টা করুন।"
 }

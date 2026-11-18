@@ -169,5 +169,14 @@
   "recurring.renewWith": "{wallet} で更新",
   "recurring.renewing": "更新中…",
   "recurring.renewedTitle": "更新しました",
-  "recurring.renewedBody": "{payee} は再び{period, select, week {毎週} other {毎月}} {amount} を受け取ります。"
+  "recurring.renewedBody": "{payee} は再び{period, select, week {毎週} other {毎月}} {amount} を受け取ります。",
+  "sheetToName": "{name} さんへ",
+  "payAmountWith": "{wallet} で {amount} を支払う",
+  "openYourWallet": "ウォレットを開く",
+  "stable.exactly": "{token} · この金額がそのまま届きます",
+  "stable.feeSolana": "ネットワーク手数料は HOLD が支払います。{wallet} に手数料が表示されても、あなたには請求されません。",
+  "stable.feeEvm": "署名するだけです。送金とネットワーク手数料は HOLD が行います。",
+  "stable.feeCovered": "ネットワーク手数料は HOLD が負担",
+  "stable.otherWays": "別のウォレットまたは QR コード",
+  "stable.paid": "支払い済み"
 }

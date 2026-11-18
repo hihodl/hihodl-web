@@ -169,5 +169,14 @@
   "recurring.renewWith": "{wallet}(으)로 갱신",
   "recurring.renewing": "갱신 중…",
   "recurring.renewedTitle": "갱신됨",
-  "recurring.renewedBody": "{payee}님이 다시 {period, select, week {매주} other {매달}} {amount}를 받아요."
+  "recurring.renewedBody": "{payee}님이 다시 {period, select, week {매주} other {매달}} {amount}를 받아요.",
+  "sheetToName": "{name}님에게",
+  "payAmountWith": "{wallet}(으)로 {amount} 결제",
+  "openYourWallet": "지갑 열기",
+  "stable.exactly": "{token} · 이 금액 그대로 받아요",
+  "stable.feeSolana": "네트워크 수수료는 HOLD가 내요. {wallet}에 수수료가 표시돼도 청구되지 않아요.",
+  "stable.feeEvm": "서명만 하면 돼요. 전송과 네트워크 수수료는 HOLD가 처리해요.",
+  "stable.feeCovered": "네트워크 수수료는 HOLD가 내요",
+  "stable.otherWays": "다른 지갑 또는 QR 코드",
+  "stable.paid": "결제 완료"
 }

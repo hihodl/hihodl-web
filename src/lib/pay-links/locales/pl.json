@@ -286,5 +286,16 @@
   "payPage.recurring.renewWith": "Odnów przez {wallet}",
   "payPage.recurring.renewing": "Odnawianie…",
   "payPage.recurring.renewedTitle": "Odnowiono",
-  "payPage.recurring.renewedBody": "{payee} znów dostaje od ciebie {amount} {period, select, week {co tydzień} other {co miesiąc}}."
+  "payPage.recurring.renewedBody": "{payee} znów dostaje od ciebie {amount} {period, select, week {co tydzień} other {co miesiąc}}.",
+  "payPage.sheetToName": "Dla {name}",
+  "payPage.payAmountWith": "Zapłać {amount} przez {wallet}",
+  "payPage.openYourWallet": "Otwórz swój portfel",
+  "payPage.stable.exactly": "{token} · odbiorca dostanie dokładnie tyle",
+  "payPage.stable.feeSolana": "Opłatę sieciową płaci HOLD. {wallet} może ją mimo to pokazać: nie zostanie Ci pobrana.",
+  "payPage.stable.feeEvm": "Ty tylko podpisujesz. HOLD wysyła płatność i płaci opłatę sieciową.",
+  "payPage.stable.feeCovered": "Opłatę sieciową płaci HOLD",
+  "payPage.stable.otherWays": "Inny portfel lub kod QR",
+  "payPage.stable.paid": "Zapłacono",
+  "home.payLinks.pay.walletChanged": "Twój portfel zmienił tę płatność przy podpisywaniu, więc jej nie wysłaliśmy. Nic nie zostało zapłacone. Spróbuj ponownie albo zeskanuj kod QR portfelem.",
+  "home.payLinks.pay.broadcastRefused": "Sieć {net} odrzuciła tę płatność. Nic nie zostało zapłacone. Sprawdź USDC w portfelu i spróbuj ponownie."
 }

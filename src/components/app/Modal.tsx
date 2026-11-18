@@ -103,6 +103,7 @@ export function Modal({
   showClose = true,
   label,
   tall = false,
+  float = false,
 }: {
   onClose: () => void;
   /** The heading, centred under the handle as in the app. */
@@ -120,6 +121,12 @@ export function Modal({
   label?: string;
   /** A phone sheet that opens at one height, whatever it holds. */
   tall?: boolean;
+  /**
+   * The app's floating sheet (12-Nov-2026): 8px off the screen's edges, 44px
+   * corners, dark glass over a lighter, barely blurred backdrop, and a lit
+   * hairline round its edge. The pay page's sheets.
+   */
+  float?: boolean;
 }) {
   const t = useT();
   const id = useId();
@@ -230,9 +237,12 @@ export function Modal({
   const shown = phase === "open";
   const dragging = dragStart.current !== null;
   const full = size === "full";
+  const floating = float && !full && !bare;
   const surface = bare
     ? ""
-    : "bg-[linear-gradient(180deg,#122C36_0%,#0A1921_55%,#08151C_100%)] shadow-[0_-12px_48px_rgba(0,0,0,0.45)] sm:shadow-[0_24px_70px_rgba(0,0,0,0.55)]";
+    : floating
+      ? "bg-[rgba(13,24,32,0.66)] backdrop-blur-[40px] shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_30px_80px_rgba(0,0,0,0.5)]"
+      : "bg-[linear-gradient(180deg,#122C36_0%,#0A1921_55%,#08151C_100%)] shadow-[0_-12px_48px_rgba(0,0,0,0.45)] sm:shadow-[0_24px_70px_rgba(0,0,0,0.55)]";
 
   const head = (
     <div
@@ -242,7 +252,7 @@ export function Modal({
       onPointerCancel={onPointerUp}
       className={`relative shrink-0 touch-none select-none ${bare ? "" : "px-4"}`}
     >
-      {!bare ? <span aria-hidden className="absolute inset-x-0 top-0 h-px bg-white/[0.16] sm:rounded-t-[24px]" /> : null}
+      {!bare && !floating ? <span aria-hidden className="absolute inset-x-0 top-0 h-px bg-white/[0.16] sm:rounded-t-[24px]" /> : null}
       {!full && !bare ? (
         <div className="flex justify-center pb-0.5 pt-2.5 sm:hidden" aria-hidden>
           <span className="h-1 w-10 rounded-[2px] bg-white/[0.28]" />
@@ -265,7 +275,7 @@ export function Modal({
           onClick={close}
           disabled={busy}
           aria-label={t("common.close")}
-          className={`absolute right-3 ${full ? "top-3" : "top-4 sm:top-3.5"} flex h-9 w-9 items-center justify-center rounded-[18px] bg-white/[0.06] text-white/75 transition-colors hover:bg-white/[0.12] hover:text-white disabled:opacity-40 ${full ? "" : "max-sm:hidden"}`}
+          className={`absolute right-3 ${full ? "top-3" : "top-4 sm:top-3.5"} flex h-9 w-9 items-center justify-center rounded-[18px] bg-white/[0.06] text-white/75 transition-colors hover:bg-white/[0.12] hover:text-white disabled:opacity-40 ${full ? "" : floating ? "hidden sm:flex" : "max-sm:hidden"}`}
         >
           <Ion name="close" size={19} />
         </button>
@@ -275,7 +285,7 @@ export function Modal({
 
   return createPortal(
     <div
-      className={`fixed inset-0 z-[80] flex ${full ? "items-stretch sm:items-center" : "items-end sm:items-center"} justify-center sm:p-4`}
+      className={`fixed inset-0 z-[80] flex ${full ? "items-stretch sm:items-center" : "items-end sm:items-center"} justify-center sm:p-4 ${floating ? "p-2 pb-[max(8px,env(safe-area-inset-bottom))]" : ""}`}
       role="presentation"
     >
       <button
@@ -283,7 +293,7 @@ export function Modal({
         tabIndex={-1}
         aria-label={t("common.close")}
         onClick={close}
-        className={`absolute inset-0 cursor-default bg-[#02070c]/60 backdrop-blur-[3px] transition-opacity duration-300 ${shown ? "opacity-100" : "opacity-0"}`}
+        className={`absolute inset-0 cursor-default transition-opacity duration-300 ${floating ? "bg-[rgba(4,10,18,0.22)] backdrop-blur-[5px] backdrop-saturate-[1.15]" : "bg-[#02070c]/60 backdrop-blur-[3px]"} ${shown ? "opacity-100" : "opacity-0"}`}
       />
       <div
         ref={panel}
@@ -297,13 +307,24 @@ export function Modal({
           transition: dragging ? "none" : `transform ${phase === "out" ? CLOSE_MS : OPEN_MS}ms ${EASE}, opacity ${phase === "out" ? CLOSE_MS : 260}ms ease`,
         }}
         className={`relative flex w-full flex-col overflow-hidden outline-none ${WIDTH[size]} ${surface} ${
-          full ? "h-[100dvh] sm:h-[min(820px,90dvh)] sm:rounded-[24px]" : `max-h-[92dvh] rounded-t-[28px] pb-[max(env(safe-area-inset-bottom),16px)] sm:max-h-[88dvh] sm:rounded-[24px] sm:pb-0 ${tall ? "max-sm:h-[min(600px,82dvh)]" : ""}`
-        } ${bare ? "bg-transparent" : "sm:border sm:border-white/[0.1]"} ${
+          full
+            ? "h-[100dvh] sm:h-[min(820px,90dvh)] sm:rounded-[24px]"
+            : floating
+              ? `max-h-[calc(100dvh-16px)] rounded-[44px] pb-2 sm:max-h-[88dvh] sm:rounded-[36px] ${tall ? "max-sm:h-[min(620px,calc(100dvh-24px))]" : ""}`
+              : `max-h-[92dvh] rounded-t-[28px] pb-[max(env(safe-area-inset-bottom),16px)] sm:max-h-[88dvh] sm:rounded-[24px] sm:pb-0 ${tall ? "max-sm:h-[min(600px,82dvh)]" : ""}`
+        } ${bare ? "bg-transparent" : floating ? "" : "sm:border sm:border-white/[0.1]"} ${
           shown ? "opacity-100" : `${full ? "translate-y-[6%]" : "translate-y-full"} opacity-100 sm:translate-y-3 sm:scale-[0.98] sm:opacity-0`
         } motion-reduce:!transition-none`}
       >
+        {floating ? (
+          // The lit hairline: brighter at the top, faint down the sides, a glint at the foot.
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-0 rounded-[inherit] p-px [background:linear-gradient(180deg,rgba(255,255,255,0.30)_0%,rgba(255,255,255,0.08)_35%,rgba(255,255,255,0.05)_70%,rgba(255,255,255,0.14)_100%)] [mask-composite:exclude] [-webkit-mask-composite:xor] [mask:linear-gradient(#000_0_0)_content-box,linear-gradient(#000_0_0)]"
+          />
+        ) : null}
         {head}
-        <div className={`flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y [&>*]:shrink-0 ${bare ? "" : "gap-3 px-4 pb-4"}`}>{children}</div>
+        <div className={`flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y [&>*]:shrink-0 ${bare ? "" : floating ? "gap-3 px-[18px] pb-3" : "gap-3 px-4 pb-4"}`}>{children}</div>
         {footer ? <div className="shrink-0 border-t border-white/[0.06] px-4 pb-4 pt-3">{footer}</div> : null}
       </div>
     </div>,
