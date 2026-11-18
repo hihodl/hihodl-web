@@ -44,6 +44,7 @@ import {
   ownerName,
   payKeyScope,
   payLinkSolanaPay,
+  payWalletOf,
   paymentExplorerUrl,
   previousAttemptSentence,
   receiptPath,
@@ -431,7 +432,7 @@ export function PayLinkPay({
    * it starts over once on a new key, then gives up before any wallet sees it.
    */
   async function checkedCheckout<T>(
-    body: { chain: Chain; payerAddress: string; amountCents?: number },
+    body: { chain: Chain; payerAddress: string; amountCents?: number; payerWallet?: ReturnType<typeof payWalletOf> },
     check: (res: TimedPayLinkCheckout) => { ok: T } | { problem: string },
   ): Promise<T> {
     const full = token === "eurc" ? { ...body, token } : body;
@@ -481,7 +482,7 @@ export function PayLinkPay({
       const expect: ExpectedPayment = { cents: amount.expected, chain: "solana", payerAddress, payTo: link.payTo };
       const checkout = () =>
         checkedCheckout<{ payment: PayLinkPayment; tx: VersionedTransaction; first: VersionedTransaction | null }>(
-          { chain: "solana", payerAddress, ...(amount.cents ? { amountCents: amount.cents } : {}) },
+          { chain: "solana", payerAddress, payerWallet: payWalletOf(wallet.name), ...(amount.cents ? { amountCents: amount.cents } : {}) },
           (res) => {
             if (!("solana" in res)) return { problem: "shape" };
             let tx: VersionedTransaction;
@@ -591,7 +592,7 @@ export function PayLinkPay({
         payment: PayLinkPayment;
         evm: PayLinkEvmPayload;
         skewMs: number;
-      }>({ chain: evmChain, payerAddress, ...(amount.cents ? { amountCents: amount.cents } : {}) }, (res) => {
+      }>({ chain: evmChain, payerAddress, payerWallet: payWalletOf(walletName), ...(amount.cents ? { amountCents: amount.cents } : {}) }, (res) => {
         const problem = evmCheckoutProblem(res, expect);
         if (problem || !("evm" in res)) return { problem: problem ?? "shape" };
         return { ok: { payment: res.payment, evm: res.evm, skewMs: res.skewMs } };

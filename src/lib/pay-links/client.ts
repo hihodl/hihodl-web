@@ -59,10 +59,31 @@ export function clockSkewMs(serverTime: unknown, receivedAt: number): number {
 export async function startPayCheckout(
   code: string,
   key: string,
-  body: { chain: Chain; payerAddress: string; amountCents?: number; token?: PayToken },
+  body: { chain: Chain; payerAddress: string; amountCents?: number; token?: PayToken; payerWallet?: PayWalletId },
 ): Promise<TimedPayLinkCheckout> {
   const res = await apiRequest<PayLinkCheckout>(`${PUBLIC}/${encodeURIComponent(code)}/checkout`, { key, json: body });
   return { ...res, skewMs: clockSkewMs(res.serverTime, Date.now()) };
+}
+
+/**
+ * The wallet apps the server records a payment as coming from, so its owner
+ * reads "From Phantom" (server pay-links/rules.ts PAY_WALLETS).
+ */
+export type PayWalletId = "phantom" | "solflare" | "backpack" | "metamask" | "coinbase" | "trust" | "ledger" | "walletconnect";
+
+/** A wallet's own name ("Phantom", "Coinbase Wallet") as the id the server keeps, or nothing for a wallet it doesn't list. */
+export function payWalletOf(name: string | null | undefined): PayWalletId | undefined {
+  const n = (name ?? "").trim().toLowerCase();
+  if (!n) return undefined;
+  if (n.includes("phantom")) return "phantom";
+  if (n.includes("solflare")) return "solflare";
+  if (n.includes("backpack")) return "backpack";
+  if (n.includes("metamask")) return "metamask";
+  if (n.includes("coinbase")) return "coinbase";
+  if (n.includes("trust")) return "trust";
+  if (n.includes("ledger")) return "ledger";
+  if (n.includes("walletconnect")) return "walletconnect";
+  return undefined;
 }
 
 /** A Solana signature, as the confirm route accepts it. */
