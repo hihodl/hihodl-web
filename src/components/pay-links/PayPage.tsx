@@ -266,6 +266,8 @@ function Shown({ link, checkout }: { link: ShownPayLink; checkout: CheckoutView 
   const [tags, setTags] = useState<string[]>([]);
   const [amountText, setAmountText] = useState("");
   const [startNetwork, setStartNetwork] = useState<Chain | null>(null);
+  /** The payment attempt HOLD (or this page) opened the wallet for; see ATTEMPT_RE. */
+  const [attempt, setAttempt] = useState<string | null>(null);
   const [sheet, setSheet] = useState<"hold" | "stable" | "bank" | null>(null);
   const [bankCurrency, setBankCurrency] = useState<string | null>(null);
   const [note, setNote] = useState("");
@@ -284,6 +286,7 @@ function Shown({ link, checkout }: { link: ShownPayLink; checkout: CheckoutView 
     if (back.currency) setPicked(back.currency);
     if (back.amount && fixed === null) setAmountText(back.amount);
     if (back.network) setStartNetwork(back.network as Chain);
+    if (back.attempt) setAttempt(back.attempt);
     // A recurring link has no stablecoin sheet: its own block subscribes.
     if (back.stablecoins && stableOffered && !link.recurring) setSheet("stable");
     // A link that can't be paid sends its title here as the note; the payer can change it.
@@ -776,7 +779,7 @@ function Shown({ link, checkout }: { link: ShownPayLink; checkout: CheckoutView 
       {sheet === "hold" ? <HoldSheet pageUrl={pageUrl || `https://hihodl.xyz/pay/${link.personal && link.owner?.handle ? `@${link.owner.handle}` : link.code}`} onClose={() => setSheet(null)} /> : null}
       {sheet === "stable" && active && !link.recurring ? (
         <Modal onClose={() => setSheet(null)} title={t("payPage.payWithToken", { token: token === "eurc" ? "EURC" : "USDC" })} hideTitle size="lg" tall float>
-          <PayLinkPay link={link} token={token} amountCents={stableCents} amountText={fixed === null ? amountText : null} network={startNetwork} />
+          <PayLinkPay link={link} token={token} amountCents={stableCents} amountText={fixed === null ? amountText : null} network={startNetwork} attempt={attempt} />
         </Modal>
       ) : null}
       {bank && active ? (

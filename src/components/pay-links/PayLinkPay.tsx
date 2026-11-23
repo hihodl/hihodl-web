@@ -64,6 +64,7 @@ import {
   appSchemeUrl,
   holdPayHref,
   offers,
+  newAttemptId,
   pastPaymentIsThisOne,
   payStateUrl,
   walletBrowseUrl,
@@ -169,6 +170,7 @@ export function PayLinkPay({
   token = "usdc",
   amountText = null,
   network = null,
+  attempt = null,
 }: {
   link: ShownPayLink;
   /** An open link's amount, in the token's cents (validated by the page). Ignored on a fixed link. */
@@ -178,11 +180,16 @@ export function PayLinkPay({
   amountText?: string | null;
   /** The network to start on (a page reopened inside a wallet). */
   network?: Chain | null;
+  /** The payment attempt this page was opened for (page-rules ATTEMPT_RE); null on a plain visit. */
+  attempt?: string | null;
 }) {
   const router = useRouter();
   // Re-render when the language changes; `t` reads whichever is on screen.
   useT();
-  const scope = payKeyScope(link.code);
+  // With an attempt the key, and so the payment and its hash, belong to that attempt alone.
+  const scope = payKeyScope(link.code, attempt);
+  /** The attempt a wallet opened from here carries: this one, or a new one for this visit. */
+  const [walletAttempt] = useState(() => attempt ?? newAttemptId());
   const chains = networksFor(link, token);
   const [chain, setChain] = useState<Chain>(
     network && chains.includes(network) ? network : chains.includes("solana") ? "solana" : chains[0] ?? "base",
@@ -257,8 +264,12 @@ export function PayLinkPay({
         try {
           let payment = await currentPayment(existing);
           if (cancelled) return;
+          // With an attempt id the key is this attempt's, so its payment is this one, from any tab.
+          // Without one (an older HOLD build, a typed link) a payment for another amount is not.
+          const sameAsked = (p: { amountCents: number }) =>
+            Boolean(attempt) || expectedRef.current <= 0 || p.amountCents === expectedRef.current;
           if (payment?.status === "awaiting_payment") {
-            if (payment.txHash || sentHere(payment.id)) {
+            if ((payment.txHash || sentHere(payment.id)) && sameAsked(payment)) {
               setChain(payment.chain);
               return setPhase({ kind: "confirming", payment });
             }
@@ -270,11 +281,15 @@ export function PayLinkPay({
             if (cancelled) return;
           }
           const finished = payment?.status === "paid" || payment?.status === "paid_duplicate";
-          if (payment && finished && pastPaymentIsThisOne(payment, expectedRef.current, sentHere(payment.id))) {
+          // Without an attempt id only this tab's payment for this amount is this one.
+          if (payment && finished && (attempt || pastPaymentIsThisOne(payment, expectedRef.current, sentHere(payment.id)))) {
             return setPhase(payment.status === "paid" ? { kind: "paid", payment } : { kind: "duplicate", payment });
           }
-          // An earlier payment (another visit, another amount) is history: start a new one.
-          if (finished || payment?.status === "unpaid") keyRef.current = rotateCheckoutKey(scope);
+          // Anything else the key holds (another visit, another amount, a lapsed quote) is
+          // history: a new key, so the server opens a new payment for what the page asks.
+          if (payment && (finished || payment.status === "unpaid" || !sameAsked(payment))) {
+            keyRef.current = rotateCheckoutKey(scope);
+          }
         } catch {
           // Could not ask; a spent key is replaced on refusal.
         }
@@ -284,7 +299,7 @@ export function PayLinkPay({
     return () => {
       cancelled = true;
     };
-  }, [scope]);
+  }, [scope, attempt]);
 
   const ticking = phase.kind === "evm-sign" || waiting;
   useEffect(() => {
@@ -841,7 +856,7 @@ export function PayLinkPay({
   const scheme = appSchemeUrl(link);
   // Through the site's bridge on a phone: the app when installed, its store when not.
   const holdHref = scheme ? holdPayHref(scheme, amountText, "USD", phone) : null;
-  const stateUrl = pageUrl ? payStateUrl(pageUrl, { amount: amountText, currency: token === "eurc" ? "EUR" : "USD", network: chain }) : "";
+  const stateUrl = pageUrl ? payStateUrl(pageUrl, { amount: amountText, currency: token === "eurc" ? "EUR" : "USD", network: chain, attempt: walletAttempt }) : "";
   const qrText = phase.kind === "qr" ? phase.link : phase.kind === "wc" ? phase.uri : null;
   const showQrArea = chain === "solana" || walletConnect;
   const busyLabel = phase.kind === "busy" ? phase.label : null;

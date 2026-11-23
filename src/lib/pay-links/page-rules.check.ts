@@ -22,6 +22,7 @@ import {
   walletBrowseUrl,
   payStateUrl,
   readPayState,
+  payPagePath,
   holdPayUrl,
   holdPayHref,
   offers,
@@ -29,6 +30,8 @@ import {
   bankTransfersOf,
   groupIban,
   pastPaymentIsThisOne,
+  newAttemptId,
+  ATTEMPT_RE,
   fallbackHref,
   payHandleOf,
   cleanPrefillNote,
@@ -115,10 +118,10 @@ eq("backpack", walletBrowseUrl("backpack", "https://hihodl.xyz/pay/x"), "https:/
 eq("metamask", walletBrowseUrl("metamask", "https://hihodl.xyz/pay/x?a=1"), "https://metamask.app.link/dapp/hihodl.xyz/pay/x?a=1");
 eq("coinbase", walletBrowseUrl("coinbase", "https://hihodl.xyz/pay/x"), "https://go.cb-w.com/dapp?cb_url=https%3A%2F%2Fhihodl.xyz%2Fpay%2Fx");
 eq("trust", walletBrowseUrl("trust", "https://hihodl.xyz/pay/x"), "https://link.trustwallet.com/open_url?coin_id=60&url=https%3A%2F%2Fhihodl.xyz%2Fpay%2Fx");
-eq("state url", payStateUrl("https://hihodl.xyz/pay/@demo?amount=1#x", { amount: "25.00", currency: "EUR", network: "base" }), page);
-eq("state read", readPayState(new URL(page).search), { amount: "25.00", currency: "EUR", stablecoins: true, network: "base", note: null });
+eq("state url", payStateUrl("https://hihodl.xyz/pay/@demo?amount=1#x", { amount: "25.00", currency: "EUR", network: "base" }), "https://hihodl.xyz/pay/@demo/w/EUR-25.00-base");
+eq("state read", readPayState(new URL(page).search), { amount: "25.00", currency: "EUR", stablecoins: true, network: "base", note: null, attempt: null });
 eq("state read arc", readPayState("?amount=5&currency=USD&network=arc").network, "arc");
-eq("state read junk", readPayState("?amount=1e9&currency=GBP&network=eth"), { amount: null, currency: null, stablecoins: false, network: null, note: null });
+eq("state read junk", readPayState("?amount=1e9&currency=GBP&network=eth"), { amount: null, currency: null, stablecoins: false, network: null, note: null, attempt: null });
 eq("state read note", readPayState("?amount=150.00&currency=USD&note=Pitch%20deck%20review").note, "Pitch deck review");
 eq("note: controls and overrides go", cleanPrefillNote("a\u202Eb\nc\u0000d"), "a b c d");
 eq("note: blank is none", cleanPrefillNote("  \u200B "), null);
@@ -225,6 +228,15 @@ eq("old paid: other tab", pastPaymentIsThisOne({ amountCents: 100 }, 100, false)
 eq("old paid: other amount", pastPaymentIsThisOne({ amountCents: 100 }, 200, true), false);
 eq("paid here, same amount", pastPaymentIsThisOne({ amountCents: 200 }, 200, true), true);
 eq("paid here, no amount asked", pastPaymentIsThisOne({ amountCents: 200 }, 0, true), true);
+eq("attempt in the path", payStateUrl("https://hihodl.xyz/pay/@demo", { amount: "2.00", currency: "USD", network: "solana", attempt: "k3j9x0q2m8w1" }), "https://hihodl.xyz/pay/@demo/w/USD-2.00-solana-k3j9x0q2m8w1");
+eq("bad attempt dropped", payStateUrl("https://hihodl.xyz/pay/@demo", { amount: "2.00", currency: "USD", network: "solana", attempt: "../x" }), "https://hihodl.xyz/pay/@demo/w/USD-2.00-solana");
+eq("attempt read back", readPayState("", "/pay/@demo/w/USD-2.00-solana-k3j9x0q2m8w1").attempt, "k3j9x0q2m8w1");
+eq("attempt keeps the rest", readPayState("", "/pay/@demo/w/USD-2.00-solana-k3j9x0q2m8w1").amount, "2.00");
+eq("older link: no attempt", readPayState("", "/pay/@demo/w/USD-2.00-solana").attempt, null);
+eq("older link still reads", readPayState("", "/pay/@demo/w/USD-2.00-solana").network, "solana");
+eq("attempt path is the page", payPagePath("/pay/@demo/w/USD-2.00-solana-k3j9x0q2m8w1"), "/pay/@demo");
+eq("new attempt is valid", ATTEMPT_RE.test(newAttemptId()), true);
+eq("two attempts differ", newAttemptId() === newAttemptId(), false);
 eq("iban grouped", groupIban("DE89370400440532013000"), "DE89 3704 0044 0532 0130 00");
 
 if (fails) {
