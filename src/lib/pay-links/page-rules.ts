@@ -375,7 +375,7 @@ export function walletBrowserOf(
  */
 export function payStateUrl(
   base: string,
-  s: { amount: string | null; currency: string; network: string | null },
+  s: { amount: string | null; currency: string; network: string | null; attempt?: string | null },
 ): string {
   let u: URL;
   try {
@@ -388,9 +388,33 @@ export function payStateUrl(
   u.pathname = payPagePath(u.pathname);
   const amount = s.amount ? s.amount.replace(",", ".") : "";
   const cur = (s.currency || "USD").toUpperCase();
-  const seg = [cur, /^\d{1,9}(?:\.\d{0,2})?$/.test(amount) ? amount : "0", s.network ?? "any"].join("-");
+  const seg = [
+    cur,
+    /^\d{1,9}(?:\.\d{0,2})?$/.test(amount) ? amount : "0",
+    s.network ?? "any",
+    ...(s.attempt && ATTEMPT_RE.test(s.attempt) ? [s.attempt] : []),
+  ].join("-");
   u.pathname = `${u.pathname.replace(/\/+$/, "")}/${STATE_SEGMENT}/${seg}`;
   return u.toString();
+}
+
+/**
+ * One payment attempt: HOLD makes a new one on every Continue, and so does
+ * this page each time it opens itself in a wallet. It rides last in the state
+ * segment (`USD-2.00-solana-k3j9x0q2m8w1`) and the checkout key is kept per
+ * attempt (payKeyScope), so the server's payment, and the transaction hash it
+ * records, belong to exactly one attempt. The same attempt reloaded (a wallet
+ * reopening the page after paying) finds its own payment; a new Continue,
+ * even for the same amount a minute later, starts a new one (Alex, 23-Nov-2026:
+ * the page opened on "Paid 1 $" when HOLD asked for 2 $).
+ */
+export const ATTEMPT_RE = /^[a-z0-9]{8,32}$/;
+
+/** A fresh attempt id: 16 lowercase letters and digits from the browser's crypto. */
+export function newAttemptId(): string {
+  const bytes = new Uint8Array(16);
+  globalThis.crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => "abcdefghijklmnopqrstuvwxyz0123456789"[b % 36]).join("");
 }
 
 /** The path marker before the state a wallet's browser brings back. */
@@ -427,10 +451,12 @@ export function readPayState(
   stablecoins: boolean;
   network: string | null;
   note: string | null;
+  /** The attempt this page was opened for (ATTEMPT_RE), or null from an older link. */
+  attempt: string | null;
 } {
   const q = new URLSearchParams(search);
   // What a wallet's browser brought back rides in the path (payStateUrl); an older page's link, in the query.
-  const inPath = pathname.match(new RegExp(`^/pay/(?:c/)?[^/]+/${STATE_SEGMENT}/([A-Za-z]{3})-([\\d.,]+)-([a-z]+)/?$`));
+  const inPath = pathname.match(new RegExp(`^/pay/(?:c/)?[^/]+/${STATE_SEGMENT}/([A-Za-z]{3})-([\\d.,]+)-([a-z]+)(?:-([a-z0-9]{8,32}))?/?$`));
   const amount = inPath ? (inPath[2] === "0" ? null : inPath[2]) : q.get("amount");
   const currency = (inPath ? inPath[1] : q.get("currency") ?? "").toUpperCase();
   const network = inPath ? inPath[3] : q.get("network");
@@ -440,6 +466,7 @@ export function readPayState(
     stablecoins: inPath !== null || q.get("pay") === "stablecoins",
     network: network === "solana" || network === "base" || network === "polygon" || network === "arc" ? network : null,
     note: cleanPrefillNote(q.get("note")),
+    attempt: inPath?.[4] ?? null,
   };
 }
 
@@ -521,4 +548,26 @@ export function holdPayHref(scheme: string, amount: string | null, currency: str
   if (!HOLD_PAY.test(scheme)) return null;
   const url = holdPayUrl(scheme, amount, currency);
   return openOnPhone(url.slice("hihodl://".length), phone) ?? url;
+}
+
+/**
+ * For a page opened WITHOUT an attempt id (an older HOLD build, a link typed
+ * by hand): whether a finished payment this browser's key already holds is the
+ * one the payer is making now, so the sheet may open on "Paid" for it. With an
+ * attempt id the key itself answers that (ATTEMPT_RE).
+ *
+ * The key lives in localStorage per link, so a personal @handle link, which
+ * takes many payments, kept handing back the LAST one: HOLD opened Phantom on
+ * the page asking for 2 $, and the sheet said "Paid 1,00 $" from the day
+ * before (Alex, iPhone, 23-Nov-2026). Only a payment this tab sent (the
+ * wallet reloading the page after paying) for the amount the page asks for is
+ * this one; anything else is history, and the payer starts a new payment.
+ */
+export function pastPaymentIsThisOne(
+  payment: { amountCents: number },
+  expectedCents: number,
+  sentInThisTab: boolean,
+): boolean {
+  if (!sentInThisTab) return false;
+  return expectedCents <= 0 || payment.amountCents === expectedCents;
 }

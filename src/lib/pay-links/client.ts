@@ -34,8 +34,9 @@ export type PayToken = "usdc" | "eurc";
 export const EURC_BASE = "0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42";
 
 /** The checkout-key scope for a link, so its key never collides with a HiSpace position's. */
-export function payKeyScope(code: string): string {
-  return `pay:${code}`;
+export function payKeyScope(code: string, attempt?: string | null): string {
+  // One key per payment attempt when the page knows it (page-rules ATTEMPT_RE).
+  return attempt ? `pay:${code}:${attempt}` : `pay:${code}`;
 }
 
 /**
