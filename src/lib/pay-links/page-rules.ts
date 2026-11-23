@@ -522,3 +522,23 @@ export function holdPayHref(scheme: string, amount: string | null, currency: str
   const url = holdPayUrl(scheme, amount, currency);
   return openOnPhone(url.slice("hihodl://".length), phone) ?? url;
 }
+
+/**
+ * Whether a finished payment this browser's key already holds is the one the
+ * payer is making now, so the sheet may open on "Paid" for it.
+ *
+ * The key lives in localStorage per link, so a personal @handle link, which
+ * takes many payments, kept handing back the LAST one: HOLD opened Phantom on
+ * the page asking for 2 $, and the sheet said "Paid 1,00 $" from the day
+ * before (Alex, iPhone, 23-Nov-2026). Only a payment this tab sent (the
+ * wallet reloading the page after paying) for the amount the page asks for is
+ * this one; anything else is history, and the payer starts a new payment.
+ */
+export function pastPaymentIsThisOne(
+  payment: { amountCents: number },
+  expectedCents: number,
+  sentInThisTab: boolean,
+): boolean {
+  if (!sentInThisTab) return false;
+  return expectedCents <= 0 || payment.amountCents === expectedCents;
+}

@@ -60,7 +60,15 @@ import {
 } from "@/lib/pay-links/client";
 import { usePhone } from "@/components/app/link/in-app";
 import { OwnerFace } from "./pay-parts";
-import { appSchemeUrl, holdPayHref, offers, payStateUrl, walletBrowseUrl, type WalletLinkId } from "@/lib/pay-links/page-rules";
+import {
+  appSchemeUrl,
+  holdPayHref,
+  offers,
+  pastPaymentIsThisOne,
+  payStateUrl,
+  walletBrowseUrl,
+  type WalletLinkId,
+} from "@/lib/pay-links/page-rules";
 import type { PayLinkEvmPayload, PayLinkPayment, ShownPayLink, TimedPayLinkCheckout } from "@/lib/pay-links/types";
 import {
   connectWalletConnect,
@@ -216,6 +224,9 @@ export function PayLinkPay({
   const maxCents = link.amount.mode === "open" ? Math.min(link.amount.maxCents ?? MAX_CENTS, MAX_CENTS) : MAX_CENTS;
   const errorContext = { limits: { minCents: MIN_CENTS, maxCents }, accepts: chains, payee };
   const waiting = retryAt !== null && retryAt > now;
+  /** What the page asks for, read once by the resume below. */
+  const expectedRef = useRef(expectedCents);
+  expectedRef.current = expectedCents;
 
   useEffect(() => {
     setMobile(isMobile());
@@ -258,9 +269,12 @@ export function PayLinkPay({
             }
             if (cancelled) return;
           }
-          if (payment?.status === "paid") return setPhase({ kind: "paid", payment });
-          if (payment?.status === "paid_duplicate") return setPhase({ kind: "duplicate", payment });
-          if (payment?.status === "unpaid") keyRef.current = rotateCheckoutKey(scope);
+          const finished = payment?.status === "paid" || payment?.status === "paid_duplicate";
+          if (payment && finished && pastPaymentIsThisOne(payment, expectedRef.current, sentHere(payment.id))) {
+            return setPhase(payment.status === "paid" ? { kind: "paid", payment } : { kind: "duplicate", payment });
+          }
+          // An earlier payment (another visit, another amount) is history: start a new one.
+          if (finished || payment?.status === "unpaid") keyRef.current = rotateCheckoutKey(scope);
         } catch {
           // Could not ask; a spent key is replaced on refusal.
         }

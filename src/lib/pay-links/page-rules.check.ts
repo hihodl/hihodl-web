@@ -28,6 +28,7 @@ import {
   walletMethodKind,
   bankTransfersOf,
   groupIban,
+  pastPaymentIsThisOne,
   fallbackHref,
   payHandleOf,
   cleanPrefillNote,
@@ -220,6 +221,10 @@ eq("bank: both", bankTransfersOf({ methods: [bankMethod("EUR"), bankMethod("USD"
 eq("bank: listed but no account sent", bankTransfersOf({ methods: [bankMethod("EUR")], bankTransfers: [] }).length, 0);
 eq("bank: no holder, no row", bankTransfersOf({ methods: [bankMethod("EUR")], bankTransfers: [{ ...EUR_BT, account: { ...EUR_BT.account, holderName: " " } }] }).length, 0);
 eq("bank: no reference, no row", bankTransfersOf({ methods: [bankMethod("EUR")], bankTransfers: [{ ...EUR_BT, reference: "" }] }).length, 0);
+eq("old paid: other tab", pastPaymentIsThisOne({ amountCents: 100 }, 100, false), false);
+eq("old paid: other amount", pastPaymentIsThisOne({ amountCents: 100 }, 200, true), false);
+eq("paid here, same amount", pastPaymentIsThisOne({ amountCents: 200 }, 200, true), true);
+eq("paid here, no amount asked", pastPaymentIsThisOne({ amountCents: 200 }, 0, true), true);
 eq("iban grouped", groupIban("DE89370400440532013000"), "DE89 3704 0044 0532 0130 00");
 
 if (fails) {
