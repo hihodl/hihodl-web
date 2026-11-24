@@ -49,7 +49,7 @@ export default function PrivacyPage() {
               Privacy Policy
             </h1>
             <p className="text-base sm:text-lg text-[#94a3b8ff] font-['Inter'] font-[400]">
-              Last updated: November 14, 2026
+              Last updated: November 24, 2026
             </p>
           </div>
 
@@ -168,8 +168,53 @@ export default function PrivacyPage() {
               </ul>
             </section>
 
+            <section id="google-user-data" className="flex flex-col gap-4">
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">5. Google User Data</h2>
+              <p className="text-[#94a3b8ff]">
+                This section describes, in one place, how HOLD accesses, uses, shares, protects, keeps and deletes data it receives from Google when you connect your Google account. It applies only if you choose to connect one, in Settings, Connected accounts.
+              </p>
+              <p className="text-[#94a3b8ff]">
+                <strong>Limited Use.</strong> HOLD&apos;s use and transfer to any other app of information received from Google APIs will adhere to the 
+                <a href="https://developers.google.com/terms/api-services-user-data-policy" className="text-brand-ffb703 underline underline-offset-2 hover:opacity-80 transition">Google API Services User Data Policy</a>
+                , including the Limited Use requirements. The use of raw or derived user data received from Workspace APIs will adhere to the Google User Data Policy, including the Limited Use requirements.
+              </p>
+              <h3 className="text-xl font-[600] text-[#eaf6ffff] mt-2">5.1 What we access</h3>
+              <ul className="list-disc list-inside space-y-2 ml-4 text-[#94a3b8ff]">
+                <li><strong>Your Google Account email address</strong>, to show you which account is connected and to recognise booking emails you forward from it.</li>
+                <li><strong>Google Calendar.</strong> A secondary calendar named HOLD that HOLD creates in your account, and the events HOLD puts in it; your free and busy times around a new booking; and, only if you turn them on, the names and times of your own events around your bookings (Show event names) and the ability to move one of your events after you tap yes (Let Hi move my events).</li>
+                <li><strong>Gmail</strong>, only where it is offered and only if you tick it when you connect: read only access to messages that a travel bookings search returns (flights, stays, trains, events and similar). HOLD never sends, deletes or changes email.</li>
+              </ul>
+              <h3 className="text-xl font-[600] text-[#eaf6ffff] mt-2">5.2 How we use it</h3>
+              <p className="text-[#94a3b8ff]">
+                Only to provide the features you see in the app: keeping your bookings in the HOLD calendar, warning you when a new booking clashes with something, answering you when you ask Hi about your agenda, moving an event when you ask and confirm, and adding the bookings found in your Gmail to your trips. We do not use Google user data for advertising, retargeting or interest based ads, to determine credit worthiness or for lending, or to build profiles unrelated to these features. We do not use it, raw or aggregated or anonymized, to develop, improve or train AI or machine learning models.
+              </p>
+              <h3 className="text-xl font-[600] text-[#eaf6ffff] mt-2">5.3 Who we share it with</h3>
+              <p className="text-[#94a3b8ff]">
+                We do not sell Google user data and do not share it with advertisers, data brokers or information resellers. It reaches only the service providers needed to run these features, under contracts that limit them to doing so:
+              </p>
+              <ul className="list-disc list-inside space-y-2 ml-4 text-[#94a3b8ff]">
+                <li><strong>Anthropic</strong> (the AI model behind Hi): to read the trip details from a booking email found in your Gmail, and, when you ask Hi about your agenda, the busy times and event names it needs to answer you. Anthropic processes this data only to return the answer to us, under commercial terms under which it does not use it to train its models.</li>
+                <li><strong>Supabase</strong> (our database) and <strong>Render</strong> (our servers), which store and run the encrypted token and the trip details described below.</li>
+              </ul>
+              <p className="text-[#94a3b8ff]">
+                Nobody at HOLD reads your Google data, except with your explicit permission for a specific message, when needed for security (such as investigating abuse), or to comply with the law. The full list of our providers is on our 
+                <a href="/legal/providers" className="text-brand-ffb703 underline underline-offset-2 hover:opacity-80 transition">providers page</a>
+                .
+              </p>
+              <h3 className="text-xl font-[600] text-[#eaf6ffff] mt-2">5.4 How we protect it</h3>
+              <p className="text-[#94a3b8ff]">
+                Data travels only over encrypted connections (TLS). We keep only the refresh token Google gives us, encrypted at rest with AES-256-GCM and bound to your account, so it cannot be used for anyone else; no screen or API ever returns it. Access to production systems is limited to the people who run the service.
+              </p>
+              <h3 className="text-xl font-[600] text-[#eaf6ffff] mt-2">5.5 How long we keep it and how to delete it</h3>
+              <p className="text-[#94a3b8ff]">
+                Email messages are read once and never stored: no body, header or attachment is kept, only the trip details of a booking (kind, dates and times, places, booking reference, names of the travellers and price) and an identifier that stops the same message being read twice. Event names and busy times are fetched when needed and not stored, except a clash message, which is kept for at most 30 days. You can disconnect at any time in Settings, Connected accounts, or at 
+                <a href="https://myaccount.google.com/permissions" className="text-brand-ffb703 underline underline-offset-2 hover:opacity-80 transition">myaccount.google.com/permissions</a>
+                . Disconnecting stops all access at once, removes the HOLD calendar from your Google account and deletes the token. Trip details already added to a plan stay there until you delete them or close your account, and you can ask us to delete everything at any time by writing to the address in Contact Us.
+              </p>
+            </section>
+
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">5. Identity Verification (KYC) Data</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">6. Identity Verification (KYC) Data</h2>
               <p className="text-[#94a3b8ff]">
                 When you choose to access features that require identity verification (such as on/off-ramps, fiat payment rails, fiat accounts, and the payment card), the following identity data is collected and processed by our verification partner, Sumsub (Sum and Substance Ltd.), and not by HOLD:
               </p>
@@ -185,7 +230,7 @@ export default function PrivacyPage() {
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">6. Biometric and Special-Category Data</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">7. Biometric and Special-Category Data</h2>
               <p className="text-[#94a3b8ff]">
                 Facial biometric data is &quot;special category&quot; or sensitive personal data under the GDPR, UK GDPR, and comparable laws (for example, LGPD).
               </p>
@@ -196,7 +241,7 @@ export default function PrivacyPage() {
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">7. Sharing With Regulated Providers</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">8. Sharing With Regulated Providers</h2>
               <p className="text-[#94a3b8ff]">
                 To unlock features you request, we and/or Sumsub may share your verification result and relevant compliance data (such as country of residence and identifying details required by the provider) with regulated third-party providers, including:
               </p>
@@ -214,11 +259,11 @@ export default function PrivacyPage() {
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">8. Data Security</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">9. Data Security</h2>
               <p className="text-[#94a3b8ff]">
                 We implement appropriate technical and organizational security measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction. However, no method of transmission over the Internet or electronic storage is 100% secure, and we cannot guarantee absolute security.
               </p>
-              <h3 className="text-xl font-[600] text-[#eaf6ffff] mt-2">8.1 Encrypted backup of your wallet recovery phrase</h3>
+              <h3 className="text-xl font-[600] text-[#eaf6ffff] mt-2">9.1 Encrypted backup of your wallet recovery phrase</h3>
               <p className="text-[#94a3b8ff]">
                 So that you can restore your wallet on a new device by signing in, we store an encrypted copy of your wallet recovery phrase. It is encrypted and decrypted on your device and is never transmitted to us in readable form. The key that encrypts it is currently derived from values held on our systems rather than from a secret only you know, which means HOLD is technically capable of decrypting that backup. We do not do so, and we are replacing this design with one in which no single party, HOLD included, can decrypt it alone. This is explained in full, including how to have the backup deleted, in{" "}
                 <a href="/terms" className="text-brand-ffb703 underline underline-offset-2 hover:opacity-80 transition">Section 5.1 of our Terms of Service</a>
@@ -227,7 +272,7 @@ export default function PrivacyPage() {
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">9. Your Rights and Choices</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">10. Your Rights and Choices</h2>
               <p className="text-[#94a3b8ff]">
                 Depending on your location, you may have certain rights regarding your personal information, including:
               </p>
@@ -247,49 +292,49 @@ export default function PrivacyPage() {
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">10. Cookies and Tracking Technologies</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">11. Cookies and Tracking Technologies</h2>
               <p className="text-[#94a3b8ff]">
                 We use cookies and similar tracking technologies to track activity on our website and store certain information. You can instruct your browser to refuse all cookies or to indicate when a cookie is being sent. However, if you do not accept cookies, you may not be able to use some portions of our website.
               </p>
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">11. Third-Party Links</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">12. Third-Party Links</h2>
               <p className="text-[#94a3b8ff]">
                 Our website may contain links to third-party websites or services. We are not responsible for the privacy practices of these external sites. We encourage you to review the privacy policies of any third-party sites you visit.
               </p>
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">12. Children&apos;s Privacy</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">13. Children&apos;s Privacy</h2>
               <p className="text-[#94a3b8ff]">
                 Our services are not intended for individuals under the age of 18. We do not knowingly collect personal information from children. If you believe we have collected information from a child, please contact us immediately.
               </p>
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">13. International Data Transfers</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">14. International Data Transfers</h2>
               <p className="text-[#94a3b8ff]">
                 Your information may be transferred to and maintained on computers located outside of your state, province, country, or other governmental jurisdiction where data protection laws may differ, including by Sumsub, our cloud providers, and downstream regulated providers. Where required, such transfers are protected by appropriate safeguards, such as standard contractual clauses or an adequacy decision. By using our services, you consent to the transfer of your information to these facilities.
               </p>
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">14. Data Retention</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">15. Data Retention</h2>
               <p className="text-[#94a3b8ff]">
                 We retain personal information only for as long as necessary for the purposes described in this Policy, including to provide the services, comply with legal and anti-money-laundering obligations, resolve disputes, and enforce our agreements. KYC and biometric data captured by Sumsub are retained and deleted in accordance with Sumsub&apos;s retention practices and applicable law; HOLD does not hold this data. Retention periods required by anti-money-laundering law may extend beyond account closure. Trip details read from a booking are kept as part of the plan they were added to. The original booking email, file or image is not kept after it has been read. What you tell Hi to remember is kept until you delete it or close your account. What Hi learns from your bookings, emails, card payments and calendar is not copied: it is read from them when Hi needs it, so it goes when they go, and when you ask Hi to forget something, HOLD keeps only its name, so Hi does not learn it again; closing your account deletes that too.
               </p>
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">15. Changes to This Privacy Policy</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">16. Changes to This Privacy Policy</h2>
               <p className="text-[#94a3b8ff]">
                 We may update this Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the &quot;Last updated&quot; date. You are advised to review this Privacy Policy periodically for any changes.
               </p>
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">16. Contact Us</h2>
+              <h2 className="text-2xl font-[700] text-[#eaf6ffff]">17. Contact Us</h2>
               <p className="text-[#94a3b8ff]">
                 If you have any questions about this Privacy Policy, please contact us at:
               </p>
