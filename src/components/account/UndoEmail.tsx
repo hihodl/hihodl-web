@@ -25,6 +25,7 @@ import {
   type UndoNote,
   type UndoView,
 } from "@/lib/account/undo-email";
+import { UNDO_COPY, pickUndoLocale, type UndoKey, type UndoLocale } from "@/lib/account/undo-email-copy";
 
 const TAB_KEY = "hold.undoEmail.token";
 
@@ -45,14 +46,23 @@ function rememberToken(t: string | null): void {
   }
 }
 
-const NOTE: Record<UndoNote, string> = {
-  again: "That did not go through. Try again.",
-  later: "Too many tries. Try again later.",
+const NOTE: Record<UndoNote, UndoKey> = {
+  again: "noteAgain",
+  later: "noteLater",
 };
+
+type T = (k: UndoKey, vars?: Record<string, string>) => string;
+
+function translator(l: UndoLocale): T {
+  return (k, vars = {}) => UNDO_COPY[l][k].replace(/\{(\w+)\}/g, (m, n: string) => vars[n] ?? m);
+}
 
 export function UndoEmail() {
   const token = useRef<string | null | undefined>(undefined);
   const [view, setView] = useState<UndoView>({ kind: "loading" });
+  // The account's language from the email's `?l=`, else the browser's. Null
+  // until read on the client, so the page is never drawn in English first.
+  const [locale, setLocale] = useState<UndoLocale | null>(null);
 
   const check = useCallback(async () => {
     const t = token.current;
@@ -72,6 +82,7 @@ export function UndoEmail() {
     // Read once: a second run (React's dev double effect) finds the query gone.
     if (token.current !== undefined) return;
     const fromUrl = tokenFrom(window.location.search);
+    setLocale(pickUndoLocale(window.location.search, navigator.languages ?? [navigator.language]));
     token.current = fromUrl ?? rememberedToken();
     if (fromUrl) rememberToken(fromUrl);
     try {
@@ -97,9 +108,16 @@ export function UndoEmail() {
     }
   };
 
+  if (!locale) return <section className={`${card} flex flex-col gap-4 p-5 md:p-6`} aria-busy="true" />;
+  const rtl = locale === "ar-AE";
   return (
-    <section className={`${card} flex flex-col gap-4 p-5 md:p-6`} aria-live="polite">
-      <Body view={view} onUndo={undo} onRetry={check} />
+    <section
+      className={`${card} flex flex-col gap-4 p-5 md:p-6`}
+      aria-live="polite"
+      lang={rtl ? "ar" : locale}
+      dir={rtl ? "rtl" : "ltr"}
+    >
+      <Body view={view} onUndo={undo} onRetry={check} t={translator(locale)} />
     </section>
   );
 }
@@ -113,18 +131,18 @@ function Line({ children }: { children: ReactNode }) {
 }
 
 /** Attention is the amber tint, never red. */
-function Note({ note }: { note: UndoNote }) {
+function Note({ note, t }: { note: UndoNote; t: T }) {
   return (
     <p role="status" className="rounded-input border border-amber/40 bg-amber/10 px-4 py-3 text-small text-sp-amber">
-      {NOTE[note]}
+      {t(NOTE[note])}
     </p>
   );
 }
 
-function Support() {
+function Support({ t }: { t: T }) {
   return (
     <Line>
-      Contact{" "}
+      {t("contact")}{" "}
       <a href={`mailto:${SUPPORT_EMAIL}`} className="text-text underline underline-offset-4 hover:text-amber">
         {SUPPORT_EMAIL}
       </a>
@@ -132,24 +150,24 @@ function Support() {
   );
 }
 
-function Body({ view, onUndo, onRetry }: { view: UndoView; onUndo: () => void; onRetry: () => void }) {
+function Body({ view, onUndo, onRetry, t }: { view: UndoView; onUndo: () => void; onRetry: () => void; t: T }) {
   switch (view.kind) {
     case "loading":
       return (
         <>
-          <p className={`${eyebrow} text-text-faint`}>Login email</p>
-          <Line>Checking the link…</Line>
+          <p className={`${eyebrow} text-text-faint`}>{t("eyebrow")}</p>
+          <Line>{t("checking")}</Line>
         </>
       );
     case "ask":
       return (
         <>
-          <Title>Undo the login email change?</Title>
-          {view.masked ? <Line>Your login email was changed to {view.masked}.</Line> : null}
-          {view.note ? <Note note={view.note} /> : null}
+          <Title>{t("askTitle")}</Title>
+          {view.masked ? <Line>{t("changedTo", { email: view.masked })}</Line> : null}
+          {view.note ? <Note note={view.note} t={t} /> : null}
           <div>
             <button type="button" className={btnPrimary} onClick={onUndo} disabled={view.busy} aria-busy={view.busy}>
-              {view.busy ? "Undoing…" : "Undo it"}
+              {view.busy ? t("undoing") : t("undoIt")}
             </button>
           </div>
         </>
@@ -157,12 +175,12 @@ function Body({ view, onUndo, onRetry }: { view: UndoView; onUndo: () => void; o
     case "unchecked":
       return (
         <>
-          <Title>Undo the login email change?</Title>
-          <Note note={view.note} />
+          <Title>{t("askTitle")}</Title>
+          <Note note={view.note} t={t} />
           {view.note === "again" ? (
             <div>
               <button type="button" className={btnPrimary} onClick={onRetry}>
-                Try again
+                {t("tryAgain")}
               </button>
             </div>
           ) : null}
@@ -171,27 +189,27 @@ function Body({ view, onUndo, onRetry }: { view: UndoView; onUndo: () => void; o
     case "done":
       return (
         <>
-          <Title>Change undone. Every device was signed out.</Title>
-          <Line>Sign in again with this address in HOLD.</Line>
+          <Title>{t("doneTitle")}</Title>
+          <Line>{t("doneLine")}</Line>
         </>
       );
     case "already":
-      return <Title>This change was already undone.</Title>;
+      return <Title>{t("already")}</Title>;
     case "expired":
       return (
         <>
-          <Title>This link expired.</Title>
-          <Support />
+          <Title>{t("expired")}</Title>
+          <Support t={t} />
         </>
       );
     case "taken":
       return (
         <>
-          <Title>This change can&rsquo;t be undone here.</Title>
-          <Support />
+          <Title>{t("taken")}</Title>
+          <Support t={t} />
         </>
       );
     case "invalid":
-      return <Title>This link is not valid.</Title>;
+      return <Title>{t("invalid")}</Title>;
   }
 }
