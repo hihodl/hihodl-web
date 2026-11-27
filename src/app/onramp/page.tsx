@@ -25,7 +25,8 @@ export const metadata: Metadata = {
 
 export default function OnrampPage() {
   return (
-    <main className="fixed inset-0 overflow-y-auto bg-[#070C12]">
+    // Stripe's dark onramp ink: the app's screen around it is the same colour.
+    <main className="fixed inset-0 overflow-y-auto bg-[#1A1B24]">
       <OnrampMount />
     </main>
   );

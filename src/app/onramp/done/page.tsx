@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 
 export default function OnrampDonePage() {
   return (
-    <main className="fixed inset-0 overflow-y-auto bg-[#070C12]">
+    <main className="fixed inset-0 overflow-y-auto bg-[#1A1B24]">
       <p className="px-6 pt-24 text-center text-base text-[#94a3b8]">You can go back to HOLD now.</p>
     </main>
   );
