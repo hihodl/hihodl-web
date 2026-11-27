@@ -119,17 +119,26 @@ export function OnrampMount() {
 
   if (state === "outside") {
     return (
-      <p className="px-6 pt-24 text-center text-base text-[#94a3b8]">
+      <p className="px-6 pt-24 text-center text-base text-[#9a9cab]">
         Open Add money in the HOLD app to buy USDC with a card.
       </p>
     );
   }
   if (state === "failed") {
     return (
-      <p className="px-6 pt-24 text-center text-base text-[#94a3b8]">
+      <p className="px-6 pt-24 text-center text-base text-[#9a9cab]">
         Stripe could not load. Close this and try again.
       </p>
     );
   }
-  return <div ref={host} className="mx-auto w-full max-w-[480px]" />;
+  // Stripe draws its widget as a card: a 1px grey border with 8px corners on
+  // its own ink (#1A1B24). The page wears that same ink and the frame is cut
+  // off (10px top and bottom clears the corners, 2px each side the border), so
+  // the widget reads as the screen itself, not a web page dropped into it.
+  // Nothing inside Stripe's frame is touched.
+  return (
+    <div className="mx-auto w-full max-w-[480px] overflow-hidden">
+      <div ref={host} style={{ margin: "-10px -2px" }} />
+    </div>
+  );
 }
